@@ -6308,7 +6308,7 @@ round 83 (2026-10-26).** The user asked for the remaining items. Work dir
   the explanation. Training on the pilot the net serves did not help it
   serve that pilot. An open question, not a lead, without a second recipe.
 
-## Round 84 — rated opponents for FRA (+19.7) and SOS (+10.7); round 83's loss is not the pilot; deck shape +0.5 at 64 candidates; counter reads null; round 84 net training (2026-10-26)
+## Round 84 — rated opponents for FRA (+19.7) and SOS (+10.7); round 83's loss is not the pilot; deck shape +0.5 at 64 candidates; counter reads null; the round-84 net ties round 82, and the gate is a point harder than it reads (2026-10-26)
 
 The six leads from the round-83 report, all queued at once. Work dir
 `.ladder/r84/`; each run's script there carries its pre-registered reading.
@@ -6371,4 +6371,35 @@ The six leads from the round-83 report, all queued at once. Work dir
   (the plain reserve: 49.3 / 49.4). The read removes most of the reserve's
   cost and none of it turns into a gain: FRA's counters are few and the
   development lost is still the larger term.
-- **#5 — round 84: the FRA net on rated-built decks.** Round 82's recipe plus `--actor-rated-decks` (new: actors build with `heuristic_sealed_build_rated` on a pool the ratings cover), `--actor-fra-fixes` dropped. Pre-registration and gate: `.ladder/run_r84_fra.sh` (scored on the rated field — `bot_ladder` `CRAB_SEALED_BUILDER=rated`, new — and the default field, then search). Training; the gate follows.
+- **#5 — round 84: the FRA net on rated-built decks. NOT adopted (ties
+  round 82).** Round 82's recipe plus `--actor-rated-decks` (new: actors
+  build with `heuristic_sealed_build_rated` on a pool the ratings cover),
+  `--actor-fra-fixes` dropped. Holdout AUC 0.808 / 0.800 / 0.803 / 0.806.
+  Pre-registered gate (`.ladder/run_r84_fra.sh`): `net67-fixes` vs
+  `fra-fixes`, 1,000 x 12, ladder seeds 43 / 97, on the RATED field
+  (`bot_ladder` `CRAB_SEALED_BUILDER=rated`, new) and the default one. Fresh
+  − r82: rated **−0.85 [−2.23, +0.53]**, default **−2.15 [−3.48, −0.82]**;
+  bar (rated > +0.5) not met, search cells not run, the r82 net stays.
+
+  **The gate reads a point low.** The reference, `nets/fra-champion`, is
+  round 82's seed 97, chosen as the best of four on these same ladder seeds.
+  Round 82's other three seeds in the same cells put the champion **+0.77
+  (rated) / +1.14 (default)** above its own round's seed mean, so "fresh −
+  champion" over four fresh seeds starts a round about a point behind (the
+  winner's curse). Against round 82's seed mean, round 84 is **−0.07
+  [−1.45, +1.30]** (rated) and **−1.01 [−2.40, +0.37]** (default): a tie on
+  the decks it trained on. Round 83's −2.21 overstates its loss by about
+  the same point. A later gate should race the best fresh seed against the
+  champion on ladder seeds neither was chosen on, or seed mean against seed
+  mean (`.ladder/r84/train/seed_means.txt`).
+
+  **Seed order is learner pacing.** Steps per game, set by how loaded the
+  CPU was when each driver ran (the GPU learner keeps stepping while
+  contended actors slow down), lines up with play strength in both rounds:
+  round 82 at 0.274 steps a game 50.70 / 51.05 (rated field, seeds 43 /
+  97), at 0.175 49.80 / 49.55; round 84 at 0.19 51.35 / 50.20, at 0.159
+  50.00 / 49.25. Every round so far has paired seeds 43 / 97 first, under
+  whatever else ran. The ratio is uncontrolled and moves the result about
+  as much as any recipe change measured here. The next recipe change
+  should pin it (round 83's 0.31–0.34 lost, but that is confounded with its
+  `fra-fixes` actors).
