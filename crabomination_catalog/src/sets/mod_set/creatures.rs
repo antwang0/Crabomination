@@ -2455,13 +2455,18 @@ pub fn fertilid() -> CardDefinition {
             discard_cost: None,
             mana_cost: cost(&[generic(1), g()]),
             remove_counter_cost: Some((CounterType::PlusOnePlusOne, 1)),
-            effect: Effect::Search {
-                who: PlayerRef::You,
-                filter: SelectionRequirement::IsBasicLand,
-                to: ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: true,
-                },
+            // CR 115.1 — "target player searches **their** library": the
+            // player is the target and the land enters under their control.
+            effect: Effect::TargetPlayerThen {
+                filter: SelectionRequirement::Player,
+                then: Box::new(Effect::Search {
+                    who: PlayerRef::Target(0),
+                    filter: SelectionRequirement::IsBasicLand,
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::Target(0),
+                        tapped: true,
+                    },
+                }),
             },
             ..Default::default()
         }],

@@ -537,7 +537,9 @@ mod offboard_gate {
             ("Shiko", catalog::shiko_paragon_of_the_way().triggered_abilities[0].effect.clone()),
             ("The Eldest Reborn", catalog::the_eldest_reborn().saga_chapters[2].1.clone()),
             ("Ghost Vacuum", catalog::ghost_vacuum().activated_abilities[0].effect.clone()),
-            ("Scrabbling Claws", catalog::scrabbling_claws().activated_abilities[0].effect.clone()),
+            // Ability 1, the sacrifice: ability 0 prints "target **player**
+            // exiles a card from their graveyard", so its target is a seat.
+            ("Scrabbling Claws", catalog::scrabbling_claws().activated_abilities[1].effect.clone()),
             ("Scavenging Ooze", catalog::scavenging_ooze().activated_abilities[0].effect.clone()),
             (
                 "Barkform Harvester",

@@ -2315,3 +2315,14 @@ one row `audit_target_opponent` still prints, 2-player pool); Portal Manipulator
 Chong and Lily, Nomads 2; Frantic Salvage 2; Bone Harvest 2; Tocasia, Dig Site Mentor 1; Graceful Takedown 1;
 Turtle Tracks 1; Drafna's Restoration 1; Cabal Conditioning 1; Weaver of Lies / Reward the Faithful / Piper's
 Melody / Embolden 0.
+
+## "Target player [acts]" modelled without a player target (2026-10-26)
+
+`scripts/audit_target_player_acts.py` — the printed clause makes a PLAYER the target and has them act
+("target player searches their library", "target player exiles a card from their graveyard"), but the body
+names no player target, so player hexproof, "becomes the target" and the seat choice at N > 2 are all missing
+(CR 115.1). Closed this pass: Fertilid (41 seats — it searched the CONTROLLER's library and put the land on
+their own side, with no target at all) and Scrabbling Claws' tap ability. **Open, by seats:** Lonis,
+Cryptozoologist 54 (the resolver owns the reveal); Jace, the Perfected Mind 12 (a loyalty ability carries one
+target — the Jeska row); Vindictive Lich 5 (its modes target, the sacrifice choice is the engine's); End of the
+Hunt 2; Cabal Therapist / Cabal Therapy / Careful Consideration / Sméagol 1 each; eleven more at 0 seats.

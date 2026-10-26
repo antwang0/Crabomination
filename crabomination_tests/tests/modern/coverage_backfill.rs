@@ -2254,14 +2254,39 @@ fn fertilid_trades_a_counter_to_fetch_a_basic() {
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Search(Some(forest_in_lib)),
     ]));
+    // CR 115.1 — "target player searches their library": the engine's own
+    // slot fill names the controller for this friendly ramp.
+    let effect = catalog::fertilid().activated_abilities[0].effect.clone();
+    assert_eq!(g.auto_targets_for_effect_all_slots(&effect, 0, None).0, Some(Target::Player(0)));
     g.perform_action(GameAction::ActivateAbility {
-        card_id: id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        card_id: id, ability_index: 0, target: Some(Target::Player(0)), additional_targets: Vec::new(), x_value: None, mode: None,
     }).expect("ability activates");
     drain_stack(&mut g);
     assert!(g.battlefield_find(forest_in_lib).is_some(),
         "fetched a basic onto the battlefield");
+    assert_eq!(g.battlefield_find(forest_in_lib).unwrap().controller, 0);
     assert_eq!(g.battlefield.iter().find(|c| c.id == id).unwrap()
         .counter_count(CounterType::PlusOnePlusOne), 1, "spent a +1/+1 counter");
+}
+
+/// CR 115.1 — Fertilid can ramp a targeted OPPONENT: their library is
+/// searched and the land enters under their control.
+#[test]
+fn fertilid_can_target_another_player() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_library(1, catalog::forest());
+    let id = g.add_card_to_battlefield(0, catalog::fertilid());
+    g.battlefield_find_mut(id).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 2);
+    g.clear_sickness(id);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Search(Some(theirs))]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id, ability_index: 0, target: Some(Target::Player(1)), additional_targets: Vec::new(), x_value: None, mode: None,
+    }).expect("target the opponent");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(theirs).map(|c| c.controller), Some(1), "their own basic, their side");
 }
 
 #[test]
