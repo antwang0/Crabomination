@@ -167,7 +167,8 @@ pub fn rated_sealed_build_lands(pool: &[CardFactory], n: usize, seed: u64, color
 /// build the same deck either way), best of 64 — `fra_card_eval --build`'s
 /// `--candidates` — **50.43 % [50.10, 50.76] / 50.53 % [50.21, 50.85]**.
 /// The term can only pick among the shapes the candidates offer, so it pays
-/// with more of them.
+/// with more of them. On SOS (`--set sos --pilot dflt`) best of 16 reads
+/// **50.83 % [50.56, 51.09] / 50.53 % [50.27, 50.80]**.
 pub const RATED_SHAPE_JUDGE: bool = true;
 
 /// The best of `n` rated v3 builds under `cfg` (its builder flags forced on).
@@ -181,14 +182,63 @@ pub fn rated_sealed_build_shaped(pool: &[CardFactory], n: usize, seed: u64, shap
     rated_sealed_build_judged(pool, n, seed, SimConfig::default(), shape)
 }
 
+/// Does the rated builder build half its candidates to the measured deck
+/// shape (`SimConfig::shape_slots`)? See [`build_candidates_shaped`]. Off:
+/// against unshaped candidates, both judged with the shape term
+/// (`fra_card_eval --ab --best N --slots`, seeds 43 / 97): FRA best of 16
+/// **50.27 / 49.93**, best of 64 **49.50 [49.12, 49.88] / 49.89**; SOS best
+/// of 16 50.26 / 50.18. Offered shaped decks, the judge takes them and they
+/// play no better (worse at 64): the residual curve
+/// [`crate::card_ratings::shape_penalty`] fits is partly the pool (a pool
+/// short of creatures is short of other things), so building to the shape
+/// does not buy what the judge's term prices.
+pub const RATED_SHAPE_SLOTS: bool = false;
+
 fn rated_sealed_build_judged(pool: &[CardFactory], n: usize, seed: u64, cfg: SimConfig, shape: bool) -> Vec<CardFactory> {
+    rated_sealed_build_slotted(pool, n, seed, cfg, shape, RATED_SHAPE_SLOTS)
+}
+
+/// [`rated_sealed_build_shaped`] (judge term on) with the generator's
+/// shape slots chosen by the caller — the two arms `fra_card_eval --ab
+/// --best N --slots` races.
+pub fn rated_sealed_build_slots(pool: &[CardFactory], n: usize, seed: u64, slots: bool) -> Vec<CardFactory> {
+    rated_sealed_build_slotted(pool, n, seed, SimConfig::default(), true, slots)
+}
+
+fn rated_sealed_build_slotted(
+    pool: &[CardFactory],
+    n: usize,
+    seed: u64,
+    cfg: SimConfig,
+    shape: bool,
+    slots: bool,
+) -> Vec<CardFactory> {
     let cfg = SimConfig { builder_v3: true, rated_cards: true, ..cfg };
     let judge = |d: &[CardFactory]| {
         let spells: Vec<CardFactory> = d.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).collect();
         let shape_term = if shape { crate::card_ratings::shape_penalty(&spells) } else { 0 };
         crate::recommend::static_build_score_v3(&spells, spells.len(), true) + shape_term
     };
-    build_candidates_cfg(pool, n, seed, &cfg).into_iter().max_by_key(|d| judge(d)).unwrap_or_default()
+    let cands = if slots { build_candidates_shaped(pool, n, seed, &cfg) } else { build_candidates_cfg(pool, n, seed, &cfg) };
+    cands.into_iter().max_by_key(|d| judge(d)).unwrap_or_default()
+}
+
+/// [`build_candidates_cfg`] with every odd-numbered candidate built under
+/// `SimConfig::shape_slots`: the same lattice, the same seeds, so the even
+/// half is exactly the unshaped set's and the judge chooses between a
+/// strictly-by-score build and a shaped one of the same colours.
+pub fn build_candidates_shaped(pool: &[CardFactory], n: usize, seed: u64, cfg: &SimConfig) -> Vec<Vec<CardFactory>> {
+    let scores = crate::recommend::PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro, cfg.rated_cards);
+    let shapes = crate::recommend::enumerate_shapes(&scores, cfg);
+    let shaped = SimConfig { shape_slots: true, ..cfg.clone() };
+    (0..n as u64)
+        .map(|i| {
+            let mut rng =
+                StdRng::seed_from_u64(seed ^ i.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(7));
+            let c = if i % 2 == 1 { &shaped } else { cfg };
+            crate::recommend::build_random_deck_from(&shapes, &scores, c, &mut rng).cards
+        })
+        .collect()
 }
 
 /// A random sealed opponent: a fresh 6-pack pool, built by the same

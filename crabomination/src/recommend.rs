@@ -92,6 +92,11 @@ pub struct SimConfig {
     /// Reality Fracture only, and the training field and every gate deck
     /// are built without them.
     pub rated_cards: bool,
+    /// Build the spells to the deck shape [`crate::card_ratings::shape_penalty`]
+    /// measured flat — creatures, mana value ≤ 2 and ≥ 5 inside their ranges
+    /// ([`ShapeSlots`]) — instead of strictly by score. The rated builder
+    /// turns it on for half its candidates and lets the judge choose.
+    pub shape_slots: bool,
     /// Restrict the shape lattice to one colour identity: a shape is
     /// enumerated only when its main colours **and** its splash sit inside
     /// this set, so `{Red, White}` builds a Lorehold deck and nothing else
@@ -112,6 +117,7 @@ impl Default for SimConfig {
             builder_v3: false,
             curve_aggro: false,
             rated_cards: false,
+            shape_slots: false,
             build_temperature: 1.0,
             spell_count_range: (22, 24),
             land_count_range: (16, 18),
@@ -407,6 +413,7 @@ struct MainDeck {
 
 /// [`suggest_main_deck_in_colors_with`] keeping the land index the shape
 /// builder's land assignment wants. See [`MainDeck`].
+#[allow(clippy::too_many_arguments)]
 fn suggest_main_deck_shape<R: Rng>(
     scores: &PoolScores<'_>,
     colors: &[Color],
@@ -415,6 +422,7 @@ fn suggest_main_deck_shape<R: Rng>(
     noise: i32,
     rng: &mut R,
     detail: Detail,
+    shape_slots: bool,
 ) -> MainDeck {
     let picks = scores.picks;
     // `leftovers`/`lands` exist for `assemble_lands` and nothing else, so a
@@ -514,6 +522,7 @@ fn suggest_main_deck_shape<R: Rng>(
         leftovers: &mut Vec<CardFactory>,
         full: bool,
         curve: Option<&mut CurveSlots>,
+        shape: Option<&mut ShapeSlots>,
         deferred: &mut Vec<u32>,
     ) {
         let f = scores.picks[at as usize];
@@ -524,6 +533,14 @@ fn suggest_main_deck_shape<R: Rng>(
             if full {
                 leftovers.push(f);
             }
+            return;
+        }
+        // The shape before the curve: the rated builder that sets it never
+        // runs `curve_aggro`, and a refused shape must not leak a curve slot.
+        if let Some(sh) = shape
+            && !sh.claim(scores.cards[at as usize].0)
+        {
+            deferred.push(at);
             return;
         }
         if let Some(c) = curve
@@ -539,19 +556,20 @@ fn suggest_main_deck_shape<R: Rng>(
     let mut main = Vec::with_capacity(target_spells);
     let mut leftovers = Vec::with_capacity(if full { picks.len() } else { 0 });
     let mut curve = scores.aggro.then(|| CurveSlots::new(target_spells));
+    let mut shape = shape_slots.then(|| ShapeSlots::new(target_spells));
     let mut deferred: Vec<u32> = Vec::new();
     if let Some(order) = ordered {
         for &i in order {
             if allow[i as usize >> 6] & (1u64 << (i & 63)) != 0 {
                 take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full,
-                     curve.as_mut(), &mut deferred);
+                     curve.as_mut(), shape.as_mut(), &mut deferred);
             }
         }
     } else {
         scored.sort_by_key(|(_, s)| std::cmp::Reverse(*s));
         for (i, _) in scored {
             take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full,
-                 curve.as_mut(), &mut deferred);
+                 curve.as_mut(), shape.as_mut(), &mut deferred);
         }
     }
     // Second pass, unconstrained: the curve is a target, not a quota the
@@ -561,7 +579,7 @@ fn suggest_main_deck_shape<R: Rng>(
     // left, still in score order.
     for i in std::mem::take(&mut deferred) {
         take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full,
-             None, &mut Vec::new());
+             None, None, &mut Vec::new());
     }
     if full {
         // `off` is appended whole, so a land's index in `leftovers` is its
@@ -760,6 +778,46 @@ impl CurveSlots {
             self.top -= 1;
         }
         self.open -= 1;
+        true
+    }
+}
+
+/// The deck shape a build is held to under `SimConfig::shape_slots`: the
+/// ranges where [`crate::card_ratings::shape_penalty`]'s residual was flat
+/// on FRA — 16–19 creatures, 8–11 spells of mana value ≤ 2, 2–5 of ≥ 5 —
+/// scaled from 23 spells to the build's count. A pick is refused when it
+/// would push a count past its maximum, or leave too few slots to reach a
+/// minimum; refused picks go to the same unconstrained second pass as
+/// [`CurveSlots`]', so a pool that cannot meet the ranges still fills.
+struct ShapeSlots {
+    left: usize,
+    have: [usize; 3],
+    min: [usize; 3],
+    max: [usize; 3],
+}
+
+impl ShapeSlots {
+    fn new(target_spells: usize) -> Self {
+        let at = |n: usize| ((n * target_spells) as f32 / 23.0).round() as usize;
+        Self { left: target_spells, have: [0; 3], min: [at(16), at(8), at(2)], max: [at(19), at(11), at(5)] }
+    }
+
+    /// Take a slot for a spell with these traits, or refuse it.
+    fn claim(&mut self, brief: &crate::cube::CardBrief) -> bool {
+        if self.left == 0 {
+            return false;
+        }
+        let traits = [brief.is_creature, brief.cmc <= 2, brief.cmc >= 5];
+        let mut next = self.have;
+        for (n, &t) in next.iter_mut().zip(&traits) {
+            *n += usize::from(t);
+        }
+        let left = self.left - 1;
+        if (0..3).any(|k| next[k] > self.max[k] || self.min[k].saturating_sub(next[k]) > left) {
+            return false;
+        }
+        self.have = next;
+        self.left = left;
         true
     }
 }
@@ -1037,7 +1095,7 @@ fn rank_shape<R: Rng>(
         return None;
     }
     let MainDeck { main, counts, leftovers, lands: land_slots } =
-        suggest_main_deck_shape(scores, colors, &splash, spells, noise, rng, detail);
+        suggest_main_deck_shape(scores, colors, &splash, spells, noise, rng, detail, cfg.shape_slots);
     if main.is_empty() {
         return None;
     }
@@ -3370,7 +3428,7 @@ mod tests {
             let cols: Vec<Color> = Color::ALL.iter().copied().filter(|c| colors.get(*c) > 0).collect();
             let mut rng = StdRng::seed_from_u64(7);
             let MainDeck { main, .. } =
-                suggest_main_deck_shape(&scores, &cols, &[], 10, 0, &mut rng, Detail::Full);
+                suggest_main_deck_shape(&scores, &cols, &[], 10, 0, &mut rng, Detail::Full, false);
             let spells: Vec<u32> =
                 main.iter().map(|&f| crate::cube::card_brief(f).cmc).collect();
             spells.iter().sum::<u32>() as f64 / spells.len().max(1) as f64
@@ -3411,6 +3469,38 @@ mod tests {
         assert!(!c.claim(1), "23 cards and no more");
     }
 
+    /// `ShapeSlots` at 23 spells: the 20th creature is refused (cap 19),
+    /// and once the remaining slots only just cover the creature minimum a
+    /// noncreature is refused too.
+    #[test]
+    fn shape_slots_hold_the_creature_range() {
+        let brief = |f: CardFactory| crate::cube::card_brief(f);
+        let (bear, giant, bolt) =
+            (brief(crate::catalog::grizzly_bears), brief(crate::catalog::hill_giant), brief(crate::catalog::lightning_bolt));
+        let mut s = ShapeSlots::new(23);
+        assert_eq!((s.min, s.max), ([16, 8, 2], [19, 11, 5]));
+        // Eight cheap creatures, then eleven four-drop creatures: nineteen.
+        for _ in 0..8 {
+            assert!(s.claim(bear));
+        }
+        for i in 0..11 {
+            assert!(s.claim(giant), "creature {}", 9 + i);
+        }
+        assert!(!s.claim(giant), "a 20th creature is over the cap");
+        // Four slots left and the top-end minimum (two at mana value >= 5)
+        // unmet: the bolts fit while two slots stay free for it.
+        assert!(s.claim(bolt) && s.claim(bolt));
+        assert!(!s.claim(bolt), "the last two slots are the top end's");
+
+        // From empty: seven noncreatures fit, the eighth would leave fifteen
+        // slots for sixteen creatures.
+        let mut s = ShapeSlots::new(23);
+        for _ in 0..7 {
+            assert!(s.claim(bolt) || s.claim(brief(crate::catalog::divination)));
+        }
+        assert!(!s.claim(brief(crate::catalog::divination)), "16 creatures still have to fit");
+    }
+
     /// End to end: a pool whose best cards are all expensive still builds to
     /// a curve under the flag. Before this the assembly took strictly by
     /// score, so the deck was whatever the pool's top of curve happened to
@@ -3440,7 +3530,7 @@ mod tests {
                 Color::ALL.iter().copied().filter(|c| colors.get(*c) > 0).collect();
             let mut rng = StdRng::seed_from_u64(11);
             let MainDeck { main, .. } =
-                suggest_main_deck_shape(&scores, &cols, &[], 23, 0, &mut rng, Detail::Full);
+                suggest_main_deck_shape(&scores, &cols, &[], 23, 0, &mut rng, Detail::Full, false);
             assert_eq!(main.len(), 23, "the constraint reshapes the deck, never shrinks it");
             let cmcs: Vec<u32> = main.iter().map(|&f| crate::cube::card_brief(f).cmc).collect();
             (

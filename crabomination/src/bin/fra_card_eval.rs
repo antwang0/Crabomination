@@ -160,9 +160,12 @@ fn open_pack(by_rarity: &HashMap<char, Vec<usize>>, rng: &mut StdRng) -> Vec<usi
 /// `--best N` races the client's sealed-opponent recipes instead: best of
 /// N rated builds against `selfplay::v3_opponent_build` (best of N, curve);
 /// `--best N --shape` races the rated judge with its deck-shape term
-/// (`card_ratings::shape_penalty`) against the judge without it.
+/// (`card_ratings::shape_penalty`) against the judge without it;
+/// `--best N --slots` half the candidates built to that shape
+/// (`selfplay::build_candidates_shaped`) against none, the judge's term on.
 fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: usize, best: usize) {
     let shape = std::env::args().any(|a| a == "--shape");
+    let slots = std::env::args().any(|a| a == "--slots");
     let next = AtomicUsize::new(0);
     let rows = std::sync::Mutex::new(Vec::with_capacity(pools));
     let start = std::time::Instant::now();
@@ -176,7 +179,12 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                 let salt = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (i as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93);
                 let mut rng = StdRng::seed_from_u64(salt);
                 let pool = roll_pool(&mut rng);
-                let (old, new) = if best > 0 && shape {
+                let (old, new) = if best > 0 && slots {
+                    (
+                        crabomination::selfplay::rated_sealed_build_slots(&pool, best, salt ^ 1, false),
+                        crabomination::selfplay::rated_sealed_build_slots(&pool, best, salt ^ 1, true),
+                    )
+                } else if best > 0 && shape {
                     (
                         crabomination::selfplay::rated_sealed_build_shaped(&pool, best, salt ^ 1, false),
                         crabomination::selfplay::rated_sealed_build_shaped(&pool, best, salt ^ 1, true),
