@@ -100,8 +100,8 @@ pub fn kabira_outrider() -> CardDefinition {
 
 /// Tajuru Paragon — {1}{G} 3/2 Elf that's also a Cleric, Rogue, Warrior, and
 /// Wizard, so it can fill any one party slot (still only one — CR 700.8).
-/// Kicker {3}; if kicked, dig six for a creature card. (The "shares a creature
-/// type" filter is approximated as any creature.)
+/// Kicker {3}; if kicked, dig six for a card that shares a creature type with
+/// it (its four added types included).
 pub fn tajuru_paragon() -> CardDefinition {
     CardDefinition {
         name: "Tajuru Paragon",
@@ -138,7 +138,7 @@ pub fn tajuru_paragon() -> CardDefinition {
                 rest_bottom_random: true,
                 who: PlayerRef::You,
                 count: Value::Const(6),
-                pick_filter: Some(R::Creature),
+                pick_filter: Some(R::SharesCreatureTypeWithSource),
     ..Default::default()
 }))),
             else_: Box::new(Effect::Noop),

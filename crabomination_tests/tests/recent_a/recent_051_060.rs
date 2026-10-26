@@ -2318,6 +2318,21 @@ mod recent58 {
         assert_eq!(tokens, 2, "one creature fills at most one slot → party 2, not 4");
     }
 
+    /// Tajuru Paragon, kicked: "a card that shares a creature type with it"
+    /// reads its added types too — a Wizard qualifies, a Bear doesn't.
+    #[test]
+    fn tajuru_paragon_digs_for_a_shared_creature_type() {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+        let wizard = g.add_card_to_library(0, role(CreatureType::Wizard));
+        let tp = g.add_card_to_battlefield(0, catalog::tajuru_paragon());
+        g.battlefield_find_mut(tp).unwrap().kicked = true;
+        g.fire_self_etb_triggers(tp, 0);
+        drain_stack(&mut g);
+        let hand: Vec<_> = g.players[0].hand.iter().map(|c| c.id).collect();
+        assert!(hand.contains(&wizard) && !hand.contains(&bear));
+    }
+
     #[test]
     fn squad_commander_full_party_buffs_team_at_combat() {
         let mut g = two_player_game();
