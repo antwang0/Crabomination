@@ -751,6 +751,33 @@ fn doom_reigns_supreme_cashes_in_at_five() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears" && c.controller == 0).count(), 2);
 }
 
+/// CR 603.12 — a Plan's "sacrifice it. When you do, target opponent …" is a
+/// reflexive trigger: the payoff resolves as its own stack object after the
+/// sacrifice, so players get priority between the two.
+#[test]
+fn plan_payoff_is_a_reflexive_trigger_after_the_sacrifice() {
+    let mut g = pod(3);
+    let doom = ready(&mut g, 0, catalog::doom_reigns_supreme());
+    g.battlefield_find_mut(doom).unwrap().add_counters(CounterType::Plan, 4);
+    for seat in [1, 2] {
+        g.players[seat].library.clear();
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::grizzly_bears());
+        }
+    }
+    let libs = |g: &GameState| g.players[1].library.len() + g.players[2].library.len();
+    let add = Effect::AddCounter { what: Selector::This, kind: CounterType::Plan, amount: Value::ONE };
+    let evs = g.resolve_effect(&add, &EffectContext::for_trigger(doom, 0, None, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.stack.len(), 1, "the fifth-counter trigger");
+    g.resolve_top_of_stack().unwrap();
+    assert!(g.battlefield_find(doom).is_none(), "sacrificed first");
+    assert_eq!(g.stack.len(), 1, "the reflexive payoff waits on the stack");
+    assert_eq!(libs(&g), 10, "nothing exiled yet");
+    drain_stack(&mut g);
+    assert_eq!(libs(&g), 5, "one target opponent exiled five");
+}
+
 /// Construct a Cosmic Cube makes a Villain on your second draw each turn.
 #[test]
 fn construct_a_cosmic_cube_makes_villains_on_the_second_draw() {

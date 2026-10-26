@@ -1584,18 +1584,21 @@ fn stegron_formula_from_hand() {
 // ── Closers for the Villain, Goblin and Runaways decks (`decks::cmdr_01dj_f`) ─
 
 /// Bolg sacrifices a creature and hits another with its power; the excess
-/// amasses Goblins (CR 120.4a excess damage).
+/// amasses Goblins (CR 120.4a excess damage). The "when you do" is a
+/// reflexive trigger (CR 603.12) and reads the sacrificed creature's
+/// last-known power (CR 608.2h): a 3/3 with two +1/+1 counters deals 5.
 #[test]
 fn bolg_of_the_north_flings_and_amasses() {
     let mut g = pod(2);
     let fodder = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.battlefield_find_mut(fodder).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 2);
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     let bolg = g.add_card_to_hand(0, catalog::bolg_of_the_north());
     g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
     cast_targets(&mut g, bolg, &[]);
     assert!(g.battlefield_find(fodder).is_none(), "sacrificed");
-    assert!(g.battlefield_find(bear).is_none(), "3 damage to the 2/2");
-    assert_eq!(plus(&g, army(&g, 0).expect("Army")), 1, "one excess");
+    assert!(g.battlefield_find(bear).is_none(), "5 damage to the 2/2");
+    assert_eq!(plus(&g, army(&g, 0).expect("Army")), 3, "three excess");
 }
 
 /// The Balrog goes to the bottom of its owner's library when an opponent's

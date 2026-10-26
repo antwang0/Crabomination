@@ -81,9 +81,9 @@ fn basic_landcycling() -> Keyword {
 }
 
 /// Bolg of the North — {3}{B}{R} legendary 5/5 Goblin Soldier. Enters: you
-/// may sacrifice another creature; then Bolg deals damage equal to its power
-/// to another target creature, and excess damage amasses Goblins that much.
-/// (The reflexive trigger's target is chosen with the ETB's.)
+/// may sacrifice another creature; when you do (CR 603.12), Bolg deals damage
+/// equal to its last-known power to another target creature, and excess
+/// damage amasses Goblins that much.
 pub fn bolg_of_the_north() -> CardDefinition {
     let excess = || Value::ExcessDamageDealtThisResolution;
     CardDefinition {
@@ -97,12 +97,10 @@ pub fn bolg_of_the_north() -> CardDefinition {
                 },
                 Effect::If {
                     cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
-                    then: Box::new(Effect::Seq(vec![
+                    then: Box::new(Effect::ReflexiveTrigger { body: Box::new(Effect::Seq(vec![
                         Effect::DealDamage {
                             to: target_filtered(R::Creature.and(R::OtherThanSource)),
-                            amount: Value::PowerOf(Box::new(Selector::SacrificedThisResolution {
-                                filter: R::Creature,
-                            })),
+                            amount: Value::SacrificedPower,
                         },
                         Effect::If {
                             cond: Predicate::ValueAtLeast(excess(), Value::ONE),
@@ -113,7 +111,7 @@ pub fn bolg_of_the_north() -> CardDefinition {
                             }),
                             else_: Box::new(Effect::Noop),
                         },
-                    ])),
+                    ])) }),
                     else_: Box::new(Effect::Noop),
                 },
             ])),

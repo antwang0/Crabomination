@@ -1165,7 +1165,9 @@ pub(super) fn plan_payoff(n: u32, then: Effect) -> TriggeredAbility {
             Effect::SacrificeSource,
             Effect::If {
                 cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
-                then: Box::new(then),
+                // CR 603.12 — "when you do" is a reflexive trigger: its own
+                // stack object, targeting after the sacrifice.
+                then: Box::new(Effect::ReflexiveTrigger { body: Box::new(then) }),
                 else_: Box::new(Effect::Noop),
             },
         ]),
