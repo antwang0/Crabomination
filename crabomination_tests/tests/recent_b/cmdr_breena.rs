@@ -289,6 +289,24 @@ fn stinging_study_ignores_a_commander_in_the_graveyard() {
     assert_eq!((g.players[0].hand.len(), g.players[0].life), (h, l));
 }
 
+/// Stinging Study's ruling — with two commanders you choose which one's mana
+/// value is X (CR 608.2d), not the greater: here Kydele (4) over Sengir (6),
+/// one in the command zone and one on the battlefield.
+#[test]
+fn stinging_study_x_is_the_commander_you_choose() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 8);
+    let ids = g.seat_commanders(0, vec![catalog::kydele_chosen_of_kruphix(), catalog::sengir_the_dark_baron()]);
+    let pos = g.players[0].command.iter().position(|c| c.id == ids[1]).unwrap();
+    let sengir = g.players[0].command.remove(pos);
+    g.battlefield.push(sengir);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![ids[0]])]));
+    let (h, l) = (g.players[0].hand.len(), g.players[0].life);
+    let ss = g.add_card_to_hand(0, catalog::stinging_study());
+    cast(&mut g, 0, ss, None).expect("cast");
+    assert_eq!((g.players[0].hand.len(), g.players[0].life), (h + 4, l - 4));
+}
+
 /// Author of Shadows exiles the opponents' graveyards and lets you cast a
 /// nonland card from among them.
 #[test]

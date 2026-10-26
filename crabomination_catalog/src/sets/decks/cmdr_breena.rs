@@ -480,17 +480,30 @@ pub fn pendant_of_prosperity() -> CardDefinition {
 }
 
 /// Stinging Study — draw X and lose X, X the mana value of a commander you
-/// own on the battlefield or in the command zone.
+/// own on the battlefield or in the command zone; with two, you choose which
+/// (its ruling), so it is a resolution pick (CR 608.2d), not the greater.
 pub fn stinging_study() -> CardDefinition {
-    let mv = Value::GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef::You);
+    let mv = || Value::ManaValueOf(Box::new(Selector::SeparatedPile { chosen: true }));
     CardDefinition {
         name: "Stinging Study",
         cost: cost(&[generic(4), b()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::Seq(vec![
-            Effect::Draw { who: Selector::You, amount: mv.clone() },
-            Effect::LoseLife { who: Selector::You, amount: mv },
-        ]),
+        effect: Effect::ChooseOneAmong {
+            what: Selector::Both(
+                Box::new(Selector::OwnedBy { who: PlayerRef::You, filter: R::IsCommander }),
+                Box::new(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Command,
+                    filter: R::IsCommander,
+                }),
+            ),
+            chooser: PlayerRef::You,
+            chosen: Box::new(Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: mv() },
+                Effect::LoseLife { who: Selector::You, amount: mv() },
+            ])),
+            other: Box::new(Effect::Noop),
+        },
         ..Default::default()
     }
 }
