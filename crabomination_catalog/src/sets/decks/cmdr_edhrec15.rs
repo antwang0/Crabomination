@@ -3776,24 +3776,20 @@ pub fn faerie_slumber_party() -> CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
         ..token("Faerie", 1, 1, vec![Color::Blue], vec![CreatureType::Faerie])
     };
-    let theirs = || Selector::ControlledBy { who: PlayerRef::Triggerer, filter: R::Creature };
+    // One simultaneous bounce; the opponents who controlled a creature are
+    // counted off the board it leaves.
+    let all = || Selector::EachPermanent(R::Creature);
     spell(
         "Faerie Slumber Party",
         cost(&[generic(4), u(), u()]),
         CardType::Sorcery,
-        Effect::Seq(vec![
-            Effect::Move { what: Selector::ControlledBy { who: PlayerRef::You, filter: R::Creature }, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
-            Effect::ForEachOpponent {
-                body: Box::new(Effect::If {
-                    cond: Predicate::SelectorExists(theirs()),
-                    then: Box::new(Effect::Seq(vec![
-                        Effect::Move { what: theirs(), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
-                        make(Value::Const(2), faerie),
-                    ])),
-                    else_: Box::new(Effect::Noop),
-                }),
-            },
-        ]),
+        Effect::WithX {
+            x: Value::OpponentsControllingAnyOf(Box::new(all())),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move { what: all(), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
+                make(Value::Times(Box::new(Value::Const(2)), Box::new(Value::XFromCost)), faerie),
+            ])),
+        },
     )
 }
 

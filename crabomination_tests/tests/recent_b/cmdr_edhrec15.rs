@@ -1673,6 +1673,13 @@ fn faerie_slumber_party_counts_opponents_with_creatures() {
     assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none());
     assert!(g.players[1].hand.iter().any(|c| c.id == theirs));
     assert_eq!(tokens_named(&g, "Faerie"), 2, "only one opponent had a creature");
+    // Two opponents with creatures: four Faeries from one bounce.
+    let mut g = pod(3);
+    ready(&mut g, 1, catalog::grizzly_bears());
+    ready(&mut g, 2, catalog::grizzly_bears());
+    let p = g.add_card_to_hand(0, catalog::faerie_slumber_party());
+    cast(&mut g, p, &[]).expect("party");
+    assert_eq!(tokens_named(&g, "Faerie"), 4);
 }
 
 /// Tezzeret, Artifice Master: +1 makes a flying Thopter; 0 draws two with
