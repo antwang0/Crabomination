@@ -604,7 +604,10 @@ pub fn killmonger_scourge_of_wakanda() -> CardDefinition {
             description: "Sacrifice another creature to destroy a nonland permanent?".into(),
             filter: R::Creature.and(R::OtherThanSource),
             count: Value::ONE,
-            then: Box::new(Effect::Destroy { what: target_filtered(R::Nonland.and(R::Permanent).and(R::ControlledByOpponent)) }),
+            // CR 603.12 — "When you do": the target is chosen after the sacrifice.
+            then: Box::new(Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Destroy { what: target_filtered(R::Nonland.and(R::Permanent).and(R::ControlledByOpponent)) }),
+            }),
             else_: None,
         })],
         static_abilities: vec![StaticAbility {

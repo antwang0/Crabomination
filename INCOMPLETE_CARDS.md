@@ -2301,7 +2301,8 @@ Armix (73 seats), Ancient Bronze Dragon, Leyline Tyrant, The Fugitive Doctor, Ea
 creature you control", was any creature), Eastfarthing Farmer, The Fire Nation Drill (`MayTap` on `IsSource`: a
 tapped Drill can't "do"), Doombot Harbinger (`MayExileSelfThen`), Escape Protocol, Foray of Orcs, Dream Eater, Dáin Ironfoot
 (`ResolutionCarry` now carries `LastCreatedToken`), Spellbook Vendor, Blaster Hulk, Curious Forager, Ty Lee, Artful
-Acrobat, Faebloom Trick; the script now strips reminder text (madness / conspire / casualty) and counts an exert
+Acrobat, Faebloom Trick, Killmonger, Meanders Guide, Sandbender Scavengers, Unscrupulous Contractor, Zoraline,
+Atraxa's Skitterfang (an absent oil counter no longer "does"), Edgar's Awakening (was an untargeted pick); the script now strips reminder text (madness / conspire / casualty) and counts an exert
 trigger as the reflexive one;
 **Open:** Guide
 of Souls 46 (cube pool — frozen; it also grants flying instead of a flying counter and makes the Angel type

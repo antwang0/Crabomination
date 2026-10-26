@@ -336,16 +336,19 @@ pub fn unscrupulous_contractor() -> CardDefinition {
                     .into(),
                 filter: R::Creature,
                 count: Value::ONE,
-                then: Box::new(Effect::Seq(vec![
-                    Effect::Draw {
-                        who: Selector::Player(PlayerRef::Target(0)),
-                        amount: Value::Const(2),
-                    },
-                    Effect::LoseLife {
-                        who: Selector::Player(PlayerRef::Target(0)),
-                        amount: Value::Const(2),
-                    },
-                ])),
+                // CR 603.12 — "When you do": the player is targeted after the sacrifice.
+                then: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Draw {
+                            who: Selector::Player(PlayerRef::Target(0)),
+                            amount: Value::Const(2),
+                        },
+                        Effect::LoseLife {
+                            who: Selector::Player(PlayerRef::Target(0)),
+                            amount: Value::Const(2),
+                        },
+                    ])),
+                }),
                 else_: None,
             },
         }],

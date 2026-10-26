@@ -6117,19 +6117,27 @@ pub fn atraxas_skitterfang() -> CardDefinition {
             ),
             effect: Effect::MayDo {
                 description: "Remove an oil counter to grant a keyword?".into(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::RemoveCounter {
-                        what: Selector::This,
-                        kind: CounterType::Oil,
-                        amount: Value::ONE,
-                    },
-                    Effect::ChooseMode(vec![
-                        grant(Keyword::Flying),
-                        grant(Keyword::Vigilance),
-                        grant(Keyword::Deathtouch),
-                        grant(Keyword::Lifelink),
-                    ]),
-                ])),
+                // CR 603.12 — "When you do": only a removed counter triggers
+                // the payoff, which targets after the removal.
+                body: Box::new(Effect::If {
+                    cond: Predicate::SourceHasCountersAtLeast { counter: CounterType::Oil, n: 1 },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::RemoveCounter {
+                            what: Selector::This,
+                            kind: CounterType::Oil,
+                            amount: Value::ONE,
+                        },
+                        Effect::ReflexiveTrigger {
+                            body: Box::new(Effect::ChooseMode(vec![
+                                grant(Keyword::Flying),
+                                grant(Keyword::Vigilance),
+                                grant(Keyword::Deathtouch),
+                                grant(Keyword::Lifelink),
+                            ])),
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                }),
             },
         }],
         ..Default::default()

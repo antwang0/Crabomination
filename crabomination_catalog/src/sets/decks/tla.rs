@@ -5673,19 +5673,19 @@ pub fn sandbender_scavengers() -> CardDefinition {
                     amount: Value::ONE,
                 },
             },
-            on_dies(Effect::MayDo {
-                description: "Exile Sandbender Scavengers, then return a creature card with mana value ≤ its power.".into(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: Selector::This, to: ZoneDest::Exile },
-                    Effect::Move {
+            // CR 603.12 — "you may exile it. When you do": the return targets
+            // after the exile (Undead Butler's shape).
+            on_dies(Effect::MayExileSelfThen {
+                body: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Move {
                         what: target_filtered(
                             SelectionRequirement::Creature
                                 .and(SelectionRequirement::InYourGraveyard)
                                 .and(SelectionRequirement::ManaValueAtMostSourcePower),
                         ),
                         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                    },
-                ])),
+                    }),
+                }),
             }),
         ],
         ..Default::default()

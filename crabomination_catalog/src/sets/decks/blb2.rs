@@ -203,22 +203,27 @@ pub fn zoraline_cosmos_caller() -> CardDefinition {
     let rebuy = || Effect::MayPay {
         description: "Pay {W}{B} and 2 life to reanimate?".into(),
         mana_cost: cost(&[w(), b()]),
+        // CR 603.12 — "When you do": the target is chosen after the payment.
         body: Box::new(Effect::Seq(vec![
             Effect::LoseLife { who: Selector::You, amount: Value::Const(2) },
-            Effect::Move {
-                what: Selector::TargetFiltered {
-                    slot: 0,
-                    filter: R::PermanentCard
-                        .and(R::Nonland)
-                        .and(R::ManaValueAtMost(3))
-                        .and(R::InYourGraveyard),
-                },
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            },
-            Effect::AddCounter {
-                what: Selector::LastMoved,
-                kind: CounterType::Finality,
-                amount: Value::ONE,
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Move {
+                        what: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: R::PermanentCard
+                                .and(R::Nonland)
+                                .and(R::ManaValueAtMost(3))
+                                .and(R::InYourGraveyard),
+                        },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    },
+                    Effect::AddCounter {
+                        what: Selector::LastMoved,
+                        kind: CounterType::Finality,
+                        amount: Value::ONE,
+                    },
+                ])),
             },
         ])),
         else_: None,

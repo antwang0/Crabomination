@@ -122,14 +122,17 @@ pub fn meanders_guide() -> CardDefinition {
                 description: "Tap another untapped Merfolk to return a creature card with mana value 3 or less?".into(),
                 filter: merfolk().and(R::ControlledByYou).and(R::OtherThanSource),
                 count: Value::ONE,
-                then: Box::new(Effect::Move {
-                    what: target_filtered(
-                        R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMost(3)),
-                    ),
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
+                // CR 603.12 — "When you do": the target is chosen after the tap.
+                then: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(
+                            R::Creature.and(R::InYourGraveyard).and(R::ManaValueAtMost(3)),
+                        ),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: false,
+                        },
+                    }),
                 }),
                 else_: None,
             },

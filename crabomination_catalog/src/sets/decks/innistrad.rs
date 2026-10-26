@@ -3344,9 +3344,14 @@ pub fn edgars_awakening() -> CardDefinition {
             effect: Effect::MayPay {
                 description: "Pay {B} to return a creature card from your graveyard to your hand?".into(),
                 mana_cost: cost(&[b()]),
-                body: Box::new(Effect::ReturnGraveyardCardsToHand {
-                    filter: SelectionRequirement::Creature,
-                    max: Value::ONE,
+                // CR 603.12 — "When you do, return target creature card".
+                body: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(
+                            SelectionRequirement::Creature.and(SelectionRequirement::InYourGraveyard),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
                 }),
                 else_: None,
             },
