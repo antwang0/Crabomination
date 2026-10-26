@@ -2308,8 +2308,8 @@ hostile player slot now aims at an opponent at two seats too (Leyline Tyrant hit
 trigger as the reflexive one;
 **Open:** Guide
 of Souls 46 (cube pool — frozen; it also grants flying instead of a flying counter and makes the Angel type
-end-of-turn, printed indefinite), Earth Rumble 10 and Curse of the Werefox 4 (a spell whose cast-time slot
-the reflexive payoff also names — "that creature"), Kappa Tech-Wrecker 5 (no predicate for "a deathtouch counter
+end-of-turn, printed indefinite), Earth Rumble and Curse of the Werefox are done (the Werefox's "that creature" is the Role's host — `AttachedTo(LastCreatedToken)`
+through the carry); Earth Rumble's "up to one" creature of yours is modelled as one. Kappa Tech-Wrecker 5 (no predicate for "a deathtouch counter
 was removed"), Savai Thundermane and Awaken the Honored Dead (cube — frozen), Miasma Demon (its "up to that many" cap on a
 reflexive's slots is untested). Anthropede's "discard a card or pay {2}" still offers only the payment. The bot declines a "may [cost]. When you do" whose payoff has no legal target
 (`reflexive_payoff_untargetable`). ⚠ A "may [cost]. When you do" wrapper

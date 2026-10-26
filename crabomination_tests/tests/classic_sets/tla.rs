@@ -3260,7 +3260,8 @@ fn serpent_of_the_pass_no_flash_without_lessons() {
     }).is_err(), "sorcery-speed only without the Lesson gate");
 }
 
-/// Earth Rumble earthbends a land and makes your creature fight an opponent's.
+/// Earth Rumble earthbends a land; then a reflexive trigger (CR 603.12),
+/// targeting after the earthbend, makes your creature fight an opponent's.
 #[test]
 fn earth_rumble_earthbends_and_fights() {
     use crabomination::game::types::Target;
@@ -3273,10 +3274,11 @@ fn earth_rumble_earthbends_and_fights() {
     g.players[0].mana_pool.add_colorless(3);
     g.perform_action(GameAction::CastSpell {
         card_id: er, target: Some(Target::Permanent(land)),
-        additional_targets: vec![Target::Permanent(mine), Target::Permanent(foe)],
+        additional_targets: vec![],
         mode: None, x_value: None,
     }).expect("cast Earth Rumble");
     drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(mine).unwrap().damage, 2, "the Angel fought");
     assert_eq!(g.battlefield_find(land).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 2,
         "earthbend 2 on the land");
     assert!(g.battlefield_find(foe).is_none(), "the 2/2 died to the 4/4 fight");

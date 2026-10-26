@@ -316,26 +316,28 @@ pub fn curse_of_the_werefox() -> CardDefinition {
         name: "Curse of the Werefox",
         cost: cost(&[generic(2), g()]),
         card_types: vec![CardType::Sorcery],
-        // `OptionalTargets`, not `ApplyToTargets`: the latter rebinds the
-        // target list to one element per iteration, so the fight's
-        // `Target(1)` resolved to nothing and its `Target(0)` was the
-        // opponent's creature — the card fought itself, or nothing.
-        effect: Effect::OptionalTargets {
-            min: 1,
-            body: Box::new(Effect::Seq(vec![
-                Effect::CreateTokenAttachedTo {
-                    target: target_filtered(R::Creature.and(R::ControlledByYou)),
-                    definition: std::sync::Arc::new(monster_role()),
-                },
-                Effect::Fight {
-                    attacker: Selector::Target(0),
-                    defender: Selector::TargetFiltered {
-                        slot: 1,
-                        filter: R::Creature.and(R::ControlledByOpponent),
-                    },
-                },
-            ])),
-        },
+        // CR 603.12 — "When you do, that creature fights up to one target
+        // creature you don't control": the reflexive trigger targets after the
+        // Role exists, and "that creature" is the Role's host (the carry names
+        // the token).
+        effect: Effect::Seq(vec![
+            Effect::CreateTokenAttachedTo {
+                target: target_filtered(R::Creature.and(R::ControlledByYou)),
+                definition: std::sync::Arc::new(monster_role()),
+            },
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Fight {
+                        attacker: Selector::AttachedTo(Box::new(Selector::LastCreatedToken)),
+                        defender: Selector::TargetFiltered {
+                            slot: 0,
+                            filter: R::Creature.and(R::ControlledByOpponent),
+                        },
+                    }),
+                }),
+            },
+        ]),
         ..Default::default()
     }
 }

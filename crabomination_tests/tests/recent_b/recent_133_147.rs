@@ -447,6 +447,21 @@ mod recent135 {
         drain_stack(g);
     }
 
+    /// Curse of the Werefox (CR 603.12): the Role goes on your creature, then
+    /// the reflexive trigger has that creature fight an opponent's.
+    #[test]
+    fn curse_of_the_werefox_roles_then_fights() {
+        let mut g = two_player_game();
+        let angel = g.add_card_to_battlefield(0, catalog::serra_angel());
+        let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let curse = g.add_card_to_hand(0, catalog::curse_of_the_werefox());
+        g.players[0].mana_pool.add(Color::Green, 3);
+        cast(&mut g, curse, Some(Target::Permanent(angel)));
+        assert!(g.battlefield.iter().any(|c| c.attached_to == Some(angel)), "the Monster Role");
+        assert!(g.battlefield_find(bears).is_none(), "a 5/4 fought the Bears");
+        assert_eq!(g.battlefield_find(angel).unwrap().damage, 2);
+    }
+
     fn kill(g: &mut GameState, id: CardId) {
         let ctl = g.battlefield_find(id).unwrap().controller;
         let ctx = crabomination::game::effects::EffectContext::for_ability(id, ctl, Some(Target::Permanent(id)));

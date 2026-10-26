@@ -4790,29 +4790,33 @@ pub fn allies_at_last() -> CardDefinition {
     }
 }
 
-/// Earth Rumble — {3}{G} Sorcery. Earthbend 2 (slot 0 = a land you control),
-/// then a creature you control (slot 1) fights a creature an opponent controls
-/// (slot 2).
+/// Earth Rumble — {3}{G} Sorcery. Earthbend 2 (the spell's target land); when
+/// you do, a creature you control fights a creature an opponent controls.
 pub fn earth_rumble() -> CardDefinition {
     CardDefinition {
         name: "Earth Rumble",
         cost: cost(&[generic(3), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::OptionalTargets { min: 1, body: Box::new(Effect::Seq(vec![
+        // CR 603.12 — "Earthbend 2. When you do, …": the fighters are the
+        // reflexive trigger's own targets, chosen after the earthbend. "Up to
+        // one" creature of yours is modelled as one (none fights nothing).
+        effect: Effect::Seq(vec![
             Effect::Earthbend { n: Value::Const(2) },
-            Effect::Fight {
-                attacker: Selector::TargetFiltered {
-                    slot: 1,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByYou),
-                },
-                defender: Selector::TargetFiltered {
-                    slot: 2,
-                    filter: SelectionRequirement::Creature
-                        .and(SelectionRequirement::ControlledByOpponent),
-                },
+            Effect::ReflexiveTrigger {
+                body: Box::new(Effect::Fight {
+                    attacker: Selector::TargetFiltered {
+                        slot: 0,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou),
+                    },
+                    defender: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByOpponent),
+                    },
+                }),
             },
-        ])) },
+        ]),
         ..Default::default()
     }
 }

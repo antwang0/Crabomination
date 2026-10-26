@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01WvrAp6`) — the CR 603.12 lane, dropped "may"s, the loop-splice ratchet](#fixedopen-2026-10-26-commander-run-01wvrap6--the-cr-60312-lane-dropped-mays-the-loop-splice-ratchet) | 36 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01AsBSRF`) — 40 seated-deck cards, six engine primitives, two stale-row sweeps](#fixedopen-2026-10-26-commander-run-01asbsrf--40-seated-deck-cards-six-engine-primitives-two-stale-row-sweeps) | 34 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01GQxp2B`) — 26 seated-deck cards, stale residual docs, the mana-ability lock](#fixedopen-2026-10-26-commander-run-01gqxp2b--26-seated-deck-cards-stale-residual-docs-the-mana-ability-lock) | 32 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-25 (Commander run, `01NTUmZf`) — a CR 732.2a drain shortcut, eight player-chosen returns, bot protection picks](#fixedopen-2026-10-25-commander-run-01ntumzf--a-cr-7322a-drain-shortcut-eight-player-chosen-returns-bot-protection-picks) | 27 |
@@ -287,6 +288,42 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 **`013mwV6T`'s gates line, moved verbatim from TODO's Commander NEXT by `01M3bbRx`:**
 
 **Gates (`013mwV6T`):** full suite (`CRAB_ANSWER_LOG=strict`) found two failures from this run's changes (Livio's bot shape, the granted-trigger READS census), both fixed; the final full run (after the loyalty-protection fix, tip `b313ba94b` + trackers) read **28,992 / 0 / 7**; workspace clippy **0**; `--bench` byte-identical again at it, cube/sos/sealed seed 10168 7,500 decided, pods seed 10168 × 200 at 3/4/6/8 seats 800 decided, cube/sos/sealed seed 10164 7,498 decided + 2 CR 104.4a draws (the same with the pre-fix binary); the seat test: its `overflow` build restarted this container; `01M2Ffkh` then ran it green at the merged tip); workspace clippy **0**; `--bench` (release-fast) **27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok, A/B vs base `ab833866a` on this box -0.32 % (noise; this box reads ~155 k decisions/s where the last read 196 k); cube/sos/sealed × 300 (seed 10163) 7,500 decided; pods seed 10161 × 200 at 2..8 seats 1,400 decided; the 430 decks holding a changed card × 20 (seed 10162) 2,119/2,120 (one CR 104.4a draw). ⚠ A concurrent pair of clippy commits each added `CastReplay` and the tip did not compile — fixed `87113f40f`; **build after every rebase**. **Next:** ENGINE_BACKLOG `013mwV6T`'s OPEN list (Bilbo's Gambit 31, Agadeem's Awakening 29, Sakashima's Protege 27; a side-aware `RemoveCountersUpTo` pick closes Heartless Act + Rhys); INCOMPLETE's Aegar / Jeska rows as `01M2Ffkh` described them.
+
+## FIXED/OPEN 2026-10-26 (Commander run, `01WvrAp6`) — the CR 603.12 lane, dropped "may"s, the loop-splice ratchet
+
+No seats. Ranked INCOMPLETE's 🟡 rows and three audits by seated-deck count (`audit_when_you_do.py`,
+`audit_dropped_may.py`, `audit_loop_splice.py`). Every change has a test or rides an existing one.
+- **`audit_loop_splice` back to 0 unexplained (20/20/0):** Wheel of Misfortune's discard prompt suspended a UI seat
+  and the loop dropped every later wheeler (new test fails without the splice); Tempting Offer's decliner loop
+  splices; six engine-built choiceless sites allowlisted with their reasons.
+- **CR 603.12, 45 "When you do" payoffs made reflexive triggers** (Armix 73 seats … the zero-seat tail; list in
+  INCOMPLETE). Engine with it: `ResolutionCarry.last_created_token` (Dáin's Axe, Forum Filibuster's "that token");
+  `push_reflexive_trigger` aims a hostile player slot at an opponent at two seats too (Leyline Tyrant and Heart-Piercer
+  Manticore hit their own controller); `SacrificeAndRemember` keeps `sacrifice_one`'s count/total tally; the bot
+  declines a "may [cost]. When you do" whose payoff has no legal target (`reflexive_payoff_untargetable`).
+  `audit_when_you_do.py` strips reminder text and counts an exert trigger. Card bugs found on the way: Earthbender
+  Ascension targeted any creature (printed: yours), Edgar's Awakening / Icewrought Sentry / Diregraf Horde picked
+  untargeted, Atraxa's Skitterfang "did" with no oil counter, Kishla Trawlers returned with no creature card exiled.
+- **Dropped "may"s:** Mirrormind Crown (a ballot; decline spends the first time), Moonlit Meditation (UI seats asked
+  before the mint, one replay cursor with Esix), Terrasymbiosis (`once_each_turn_on_take`), Currency Converter,
+  `LookTopLandToHandElseBin` (Traveling Botanist / Sarinth — UI seats asked), Masked Vandal and Forgotten Harvest exile
+  ONE card. Headless paths unchanged for every 2-player-pool card.
+- **Rows:** Frostwalk Bastion animates as an artifact; Unholy Indenture's counter is part of the entry (CR 614.1c).
+
+OPEN:
+- ⚠ **A modal payoff cannot be a reflexive trigger:** `push_reflexive_trigger` picks no mode, so a `ChooseMode` inside
+  `ReflexiveTrigger` resolves at mode 0 unasked (`stack::modal_reachability` catches it). Skitterfang stays inline.
+  The fix is `pick_trigger_mode` + `.mode(m)` in the push and `Some(mode)` to the auto-target walk.
+- Cube-frozen, written up not built: Detective's Phoenix's bestow (`bestow_additional_cost: Vec<AdditionalCastCost>`
+  appended on a bestow cast + `StaticEffect::CastSelfFromGraveyardWithBestow` read by `cast_bestow` through
+  `cast_hopped_from_graveyard`, the bot's BESTOW block widened to the graveyard — ~45 lines, written and reverted);
+  Guide of Souls, Savai Thundermane, Awaken the Honored Dead (reflexive), The One Ring's "if you cast it".
+- Fatal Grudge's later opponents match the first opponent's sacrifice: `SharesCardTypeWithFirstSacrificed` needs the
+  COST's types, which only `sacrificed_card` holds and the first in-resolution sacrifice overwrites; seeding
+  `first_sacrificed_types` in `WithSacrificedPt` would store into the scratch on every sacrifice-cost resolution.
+- Kappa Tech-Wrecker (no keyword-counter predicate), Miasma Demon (a reflexive's "up to that many" under
+  `CapTargetsAt`). Earth Rumble and Curse of the Werefox were done late in the run (the Werefox's "that creature" is
+  `AttachedTo(LastCreatedToken)` through the carry).
 
 ## FIXED/OPEN 2026-10-26 (Commander run, `01AsBSRF`) — 40 seated-deck cards, six engine primitives, two stale-row sweeps
 
