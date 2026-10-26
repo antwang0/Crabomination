@@ -5012,6 +5012,7 @@ impl GameState {
                 .and_then(|t| t.as_ref())
                 .is_none_or(|o| self.targets_share_card_type(o, target)),
             R::NameDiffersFromOtherTargets => self.name_differs_from_other_targets(target, slots),
+            R::ManaValueDiffersFromOtherTargets => self.mana_value_differs_from_other_targets(target, slots),
             _ => true,
         }
     }
@@ -5080,6 +5081,17 @@ impl GameState {
         };
         let Some(mine) = name(target) else { return true };
         slots.iter().flatten().filter(|o| *o != target).all(|o| name(o) != Some(mine))
+    }
+
+    /// `ManaValueDiffersFromOtherTargets` — no other chosen target has this
+    /// one's mana value (a card's, wherever it is).
+    fn mana_value_differs_from_other_targets(&self, target: &Target, slots: &[Option<Target>]) -> bool {
+        let mv = |t: &Target| match t {
+            Target::Permanent(cid) => self.find_card_anywhere(*cid).map(|c| self.zone_mana_value(c)),
+            Target::Player(_) => None,
+        };
+        let Some(mine) = mv(target) else { return true };
+        slots.iter().flatten().filter(|o| *o != target).all(|o| mv(o) != Some(mine))
     }
 
     /// Two permanent targets share a creature type (a changeling shares all).
@@ -5923,6 +5935,9 @@ impl GameState {
                 .and_then(|t| t.as_ref())
                 .is_none_or(|other| self.targets_share_card_type(other, target)),
             R::NameDiffersFromOtherTargets => self.name_differs_from_other_targets(target, &self.target_slots_scratch),
+            R::ManaValueDiffersFromOtherTargets => {
+                self.mana_value_differs_from_other_targets(target, &self.target_slots_scratch)
+            }
             R::OtherThanTargetSlot(slot) => {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => other != target,
@@ -8013,6 +8028,7 @@ impl GameState {
             | R::SharesCreatureTypeWithTargetSlot(_)
             | R::SharesCardTypeWithTargetSlot(_)
             | R::NameDiffersFromOtherTargets
+            | R::ManaValueDiffersFromOtherTargets
             | R::SameGraveyardAsTargetSlot(_) => true,
             R::SharesCreatureTypeWithCreatureYouControl => {
                 let mine = &card.definition.subtypes.creature_types;

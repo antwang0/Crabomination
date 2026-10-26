@@ -3629,6 +3629,11 @@ pub enum SelectionRequirement {
     /// ("up to six target creature cards with different names" — Behold the
     /// Sinister Six!). Read against every slot chosen so far.
     NameDiffersFromOtherTargets,
+    /// CR 601.2c — cross-slot filter: a mana value no other chosen target has
+    /// ("any number of target creature cards that each have a different mana
+    /// value" — Agadeem's Awakening, Long Rest). Read like
+    /// `NameDiffersFromOtherTargets`.
+    ManaValueDiffersFromOtherTargets,
     /// CR 601.2c — "target cards from **a single graveyard**": in the same
     /// graveyard as the card already chosen for slot `.0`. Vacuously true
     /// while that slot is unchosen; read like `SameControllerAsTargetSlot`.
@@ -5101,6 +5106,7 @@ impl SelectionRequirement {
             | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::SharesCardTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
+            | Self::ManaValueDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
             | Self::SlotsTotalManaValueAtMostX
@@ -5126,6 +5132,7 @@ impl SelectionRequirement {
             | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::SharesCardTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
+            | Self::ManaValueDiffersFromOtherTargets
             | Self::SameGraveyardAsTargetSlot(_)
             | Self::SlotsTotalManaValueAtMost(_)
             | Self::SlotsTotalManaValueAtMostX
