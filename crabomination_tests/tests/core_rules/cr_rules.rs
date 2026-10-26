@@ -13455,6 +13455,10 @@ fn cr_603_12_reflexive_that_player_is_the_damaged_seat() {
             g.add_card_to_battlefield(0, e());
         }
         g.clear_sickness(a);
+        // Kappa's ETB deathtouch counter is what its reflexive cost removes.
+        g.fire_self_etb_triggers(a, 0);
+        drain_stack(&mut g);
+        g.priority.player_with_priority = 0;
         let rings = [g.add_card_to_battlefield(1, catalog::sol_ring()), g.add_card_to_battlefield(2, catalog::sol_ring())];
         let lands = [g.add_card_to_battlefield(1, catalog::swamp()), g.add_card_to_battlefield(2, catalog::swamp())];
         let hands = [g.add_card_to_hand(1, catalog::serra_angel()), g.add_card_to_hand(2, catalog::serra_angel())];

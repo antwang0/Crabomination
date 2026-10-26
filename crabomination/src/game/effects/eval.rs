@@ -4064,6 +4064,10 @@ impl GameState {
                 .and_then(|cid| self.battlefield_find(cid))
                 .map(|c| c.counter_count(*counter) >= *n)
                 .unwrap_or(false),
+            Predicate::SourceHasKeywordCounter(kw) => ctx
+                .source
+                .and_then(|cid| self.battlefield_find(cid))
+                .is_some_and(|c| c.keyword_counters.get(kw).is_some()),
             Predicate::SourceClassLevelIs(n) => ctx
                 .source
                 .and_then(|cid| self.battlefield_find(cid))

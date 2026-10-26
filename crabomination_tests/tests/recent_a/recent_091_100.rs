@@ -1048,6 +1048,33 @@ mod recent97 {
         assert!(g.battlefield_find(art).is_none(), "artifact exiled by Kappa");
     }
 
+    /// CR 603.12 — with no deathtouch counter to remove, Kappa can't "do",
+    /// so nothing is exiled.
+    #[test]
+    fn kappa_without_its_counter_exiles_nothing() {
+        let mut g = two_player_game();
+        let art = g.add_card_to_battlefield(1, catalog::bonesplitter());
+        let kappa = g.add_card_to_battlefield(0, catalog::kappa_tech_wrecker());
+        g.clear_sickness(kappa);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.decider = Box::new(ScriptedDecider::new([
+            DecisionAnswer::Bool(true),
+            DecisionAnswer::Target(Target::Permanent(art)),
+        ]));
+        while g.step != TurnStep::DeclareAttackers {
+            g.perform_action(GameAction::PassPriority).unwrap();
+        }
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+            attacker: kappa,
+            target: AttackTarget::Player(1),
+        }]))
+        .expect("kappa attacks");
+        drain_stack(&mut g);
+        pass_through_combat(&mut g);
+        assert!(g.battlefield_find(art).is_some(), "no counter, no exile");
+    }
+
     /// Biting-Palm Ninja enters with a menace keyword counter.
     #[test]
     fn biting_palm_enters_with_menace_counter() {

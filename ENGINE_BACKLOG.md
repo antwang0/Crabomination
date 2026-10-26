@@ -321,8 +321,8 @@ OPEN:
 - Fatal Grudge's later opponents match the first opponent's sacrifice: `SharesCardTypeWithFirstSacrificed` needs the
   COST's types, which only `sacrificed_card` holds and the first in-resolution sacrifice overwrites; seeding
   `first_sacrificed_types` in `WithSacrificedPt` would store into the scratch on every sacrifice-cost resolution.
-- Kappa Tech-Wrecker (no keyword-counter predicate), Miasma Demon (a reflexive's "up to that many" under
-  `CapTargetsAt`). Earth Rumble and Curse of the Werefox were done late in the run (the Werefox's "that creature" is
+- Miasma Demon (a reflexive's "up to that many" under `CapTargetsAt`). Kappa Tech-Wrecker was done late in the run
+  (`Predicate::SourceHasKeywordCounter`). Earth Rumble and Curse of the Werefox were done late in the run (the Werefox's "that creature" is
   `AttachedTo(LastCreatedToken)` through the carry).
 
 ## FIXED/OPEN 2026-10-26 (Commander run, `01AsBSRF`) — 40 seated-deck cards, six engine primitives, two stale-row sweeps

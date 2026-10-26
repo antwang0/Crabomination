@@ -37,18 +37,26 @@ pub fn kappa_tech_wrecker() -> CardDefinition {
                 effect: Effect::MayDo {
                     description: "Remove a deathtouch counter to exile an artifact or enchantment?"
                         .into(),
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::RemoveKeywordCounter {
-                            what: Selector::This,
-                            keyword: Keyword::Deathtouch,
-                            amount: Value::Const(1),
-                        },
-                        Effect::Exile {
-                            what: target_filtered(
-                                R::Artifact.or(R::Enchantment).and(R::ControlledByTriggerPlayer),
-                            ),
-                        },
-                    ])),
+                    // CR 603.12 — only a removed counter "does"; the exile is
+                    // a reflexive trigger targeting after the removal.
+                    body: Box::new(Effect::If {
+                        cond: Predicate::SourceHasKeywordCounter(Keyword::Deathtouch),
+                        then: Box::new(Effect::Seq(vec![
+                            Effect::RemoveKeywordCounter {
+                                what: Selector::This,
+                                keyword: Keyword::Deathtouch,
+                                amount: Value::Const(1),
+                            },
+                            Effect::ReflexiveTrigger {
+                                body: Box::new(Effect::Exile {
+                                    what: target_filtered(
+                                        R::Artifact.or(R::Enchantment).and(R::ControlledByTriggerPlayer),
+                                    ),
+                                }),
+                            },
+                        ])),
+                        else_: Box::new(Effect::Noop),
+                    }),
                 },
             },
         ],

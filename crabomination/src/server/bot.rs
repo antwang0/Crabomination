@@ -6322,17 +6322,15 @@ fn find_maydo_body<'a>(eff: &'a Effect, desc: &str) -> Option<&'a Effect> {
 /// Whether `body` gates a reflexive payoff (`ReflexiveTrigger`) that requires
 /// a slot-0 target none of which exists for `source`'s controller now.
 fn reflexive_payoff_untargetable(state: &GameState, source: CardId, body: &Effect) -> bool {
-    let inner = match body {
-        Effect::ReflexiveTrigger { body } => body,
-        Effect::Seq(v) => match v.iter().find_map(|e| match e {
+    fn reflexive(e: &Effect) -> Option<&Effect> {
+        match e {
             Effect::ReflexiveTrigger { body } => Some(body),
+            Effect::Seq(v) => v.iter().find_map(reflexive),
+            Effect::If { then, .. } => reflexive(then),
             _ => None,
-        }) {
-            Some(b) => b,
-            None => return false,
-        },
-        _ => return false,
-    };
+        }
+    }
+    let Some(inner) = reflexive(body) else { return false };
     if inner.target_filter_for_slot_in_mode_kicked(0, None, false).is_none() || inner.target_slot_optional_x(0, None, 0) {
         return false;
     }

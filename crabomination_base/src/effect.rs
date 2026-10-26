@@ -2884,6 +2884,9 @@ pub enum Predicate {
     /// [kind] counters on it, …" intervening-`if` riders (Charitable Levy's
     /// three-collection-counter sacrifice threshold).
     SourceHasCountersAtLeast { counter: crate::card::CounterType, n: u32 },
+    /// `ctx.source` has a `keyword` counter on it (CR 122.1b) — "you may
+    /// remove a deathtouch counter from it. When you do" (Kappa Tech-Wrecker).
+    SourceHasKeywordCounter(crate::card::Keyword),
     /// CR 716.2 — true when `ctx.source` (a Class enchantment) is exactly at
     /// level `n`. Gates a Class's `{cost}: Level N` activated ability (its
     /// `condition` is `SourceClassLevelIs(N-1)`) and its "when this Class
