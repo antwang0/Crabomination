@@ -112,10 +112,9 @@ pub fn you_look_upon_the_tarrasque() -> CardDefinition {
             Effect::Seq(vec![
                 pump(target_filtered(R::Creature), Value::Const(5), Value::Const(5)),
                 grant(Selector::Target(0), Keyword::Indestructible),
-                Effect::MustBlockTarget {
-                    blocker: Selector::EachPermanent(R::Creature.and(R::ControlledByOpponent)),
-                    attacker: Selector::Target(0),
-                },
+                // CR 509.1c — a Lure requirement on the creature, so one that
+                // enters later this turn is bound too.
+                grant(Selector::Target(0), Keyword::AllMustBlock),
             ]),
         ]),
     )

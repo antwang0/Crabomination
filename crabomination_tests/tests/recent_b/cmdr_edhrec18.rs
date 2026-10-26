@@ -121,6 +121,21 @@ fn tarrasque_mode_two_forces_blocks() {
     block(&mut g, 1, vec![(wall, bear)]).expect("block");
 }
 
+/// "Able to block that creature this turn do so" binds a creature that
+/// enters after the spell resolves too (CR 509.1c, the requirement is on
+/// the attacker).
+#[test]
+fn tarrasque_mode_two_binds_a_later_blocker() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let s = g.add_card_to_hand(0, catalog::you_look_upon_the_tarrasque());
+    cast_full(&mut g, 0, s, &[perm(bear)], Some(1), None).expect("cast");
+    let late = ready(&mut g, 1, catalog::grizzly_bears());
+    declare(&mut g, 0, &[(bear, 1)]).expect("attack");
+    assert!(block(&mut g, 1, vec![]).is_err(), "the late bear must block too");
+    block(&mut g, 1, vec![(late, bear)]).expect("block");
+}
+
 /// Spellwild Ouphe discounts ANY player's spell that targets it (2007-05-01).
 #[test]
 fn spellwild_ouphe_discounts_opponents_too() {
