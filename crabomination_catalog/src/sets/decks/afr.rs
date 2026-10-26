@@ -620,9 +620,9 @@ pub fn devoted_paladin() -> CardDefinition {
 }
 
 /// Ellywick Tumblestrum — {2}{G}{G} Legendary Planeswalker, loyalty 4.
-/// +1: venture. −2: dig 6 for a creature to hand (legendary lifegain rider
-/// omitted). −7: emblem — your creatures have trample, haste, and +2/+2
-/// while you've completed a dungeon (per-dungeon scaling approximated).
+/// +1: venture. −2: dig 6 for a creature to hand (3 life if it is
+/// legendary). −7: emblem — your creatures have trample, haste, and +2/+2
+/// for each differently named dungeon you've completed.
 pub fn ellywick_tumblestrum() -> CardDefinition {
     use crate::card::Supertype;
     use crate::effect::LoyaltyAbility;
@@ -661,18 +661,25 @@ pub fn ellywick_tumblestrum() -> CardDefinition {
                     who: PlayerRef::You,
                     name: "Ellywick Tumblestrum".into(),
                     triggered: vec![],
-                    statics: vec![StaticAbility {
-                        description: "Creatures you control have trample and haste and get +2/+2 for each dungeon you've completed.",
-                        effect: StaticEffect::PumpTeamIf {
-                            condition: completed_a_dungeon(),
-                            applies_to: Selector::EachPermanent(
-                                R::Creature.and(R::ControlledByYou),
-                            ),
-                            power: 2,
-                            toughness: 2,
-                            keywords: vec![Keyword::Trample, Keyword::Haste],
-                        },
-                    }],
+                    statics: {
+                        let yours = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou));
+                        let per = || Value::Times(Box::new(Value::Const(2)), Box::new(Value::DistinctDungeonsCompleted));
+                        let desc = "Creatures you control have trample and haste and get +2/+2 for each differently named dungeon you've completed.";
+                        vec![
+                            StaticAbility {
+                                description: desc,
+                                effect: StaticEffect::PumpPTByValue { applies_to: yours(), power: per(), toughness: per() },
+                            },
+                            StaticAbility {
+                                description: desc,
+                                effect: StaticEffect::GrantKeyword { applies_to: yours(), keyword: Keyword::Trample },
+                            },
+                            StaticAbility {
+                                description: desc,
+                                effect: StaticEffect::GrantKeyword { applies_to: yours(), keyword: Keyword::Haste },
+                            },
+                        ]
+                    },
                 },
                 ..Default::default()
             },

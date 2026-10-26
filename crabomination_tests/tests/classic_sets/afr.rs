@@ -407,7 +407,8 @@ fn shessra_pays_two_life_to_draw_after_a_death() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "drew a card");
 }
 
-/// Ellywick +1 ventures; the -7 emblem anthems once a dungeon is completed.
+/// Ellywick +1 ventures; the -7 emblem grants trample and haste outright and
+/// +2/+2 per differently named dungeon completed (a repeat counts once).
 #[test]
 fn ellywick_ventures_and_emblem_anthems() {
     let mut g = two_player_game();
@@ -427,10 +428,16 @@ fn ellywick_ventures_and_emblem_anthems() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].emblems.len(), 1, "emblem minted");
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    g.players[0].dungeons_completed = 1;
     let b = g.computed_permanent(bear).unwrap();
-    assert_eq!((b.power, b.toughness), (4, 4), "+2/+2 from the emblem");
+    assert_eq!((b.power, b.toughness), (2, 2), "no dungeon completed yet");
     assert!(b.keywords().contains(&crabomination::card::Keyword::Trample), "trample granted");
+    assert!(b.keywords().contains(&crabomination::card::Keyword::Haste), "haste granted");
+    for d in ["Tomb of Annihilation", "Lost Mine of Phandelver", "Tomb of Annihilation"] {
+        g.players[0].completed_dungeons.push(d.into());
+    }
+    g.players[0].dungeons_completed = 3;
+    let b = g.computed_permanent(bear).unwrap();
+    assert_eq!((b.power, b.toughness), (6, 6), "+2/+2 for each of two distinct dungeons");
 }
 
 /// Ellywick -2: the picked creature to hand, "if it's legendary, you gain 3
