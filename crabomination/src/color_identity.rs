@@ -120,7 +120,14 @@ fn walk(v: &Value, out: &mut ColorSet) {
             // card makes (Staff of Titania's Forest Dryad) it's no symbol on
             // the card at all.
             let intrinsic = basic_colors_of(m);
+            // CR 111.3 / 903.4 — a token's defined mana cost is reminder text
+            // ("It's a {3}{W}{W} … Baneslayer Angel" leaves Balefang mono-red).
+            // `colors` + `card_types` is a `TokenDefinition`'s shape.
+            let token = m.contains_key("colors") && m.contains_key("card_types");
             for (tag, p) in m {
+                if token && tag == "cost" {
+                    continue;
+                }
                 if tag == "activated_abilities" && !intrinsic.is_empty() {
                     for ab in p.as_array().into_iter().flatten() {
                         if !is_intrinsic_land_mana(ab, &intrinsic) {
