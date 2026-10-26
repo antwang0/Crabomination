@@ -589,6 +589,23 @@ fn cr_704_5a_pact_weapon_keeps_you_alive_while_attached() {
     assert!(!g.players[0].is_alive(), "unattached: the loss applies");
 }
 
+/// Pact Weapon's attack trigger: X is the mana value of the card it draws
+/// (Hill Giant, 4) — the bearer gets +4/+4 and you lose 4 life.
+#[test]
+fn pact_weapon_pumps_by_the_drawn_cards_mana_value() {
+    let mut g = pod(2);
+    let pact = ready(&mut g, 0, catalog::pact_weapon());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.add_card_to_hand(0, catalog::island());
+    activate(&mut g, pact, 0, Some(perm(bear))).expect("equip by discarding");
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
+    let life = g.players[0].life;
+    declare(&mut g, 0, &[(bear, 1)]).expect("attack");
+    assert!(g.players[0].hand.iter().any(|c| c.id == giant), "drew the Giant");
+    assert_eq!(g.computed_permanent(bear).unwrap().power, 6);
+    assert_eq!(g.players[0].life, life - 4);
+}
+
 /// Tainted Sigil: gain the turn's total life lost.
 #[test]
 fn tainted_sigil_refunds_the_turns_losses() {

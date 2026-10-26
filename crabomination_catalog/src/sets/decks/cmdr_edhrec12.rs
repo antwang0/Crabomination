@@ -993,20 +993,22 @@ pub fn pact_weapon() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                // X is the top card's mana value, read before the draw moves it.
-                effect: Effect::WithX {
-                    x: Value::ManaValueOf(Box::new(Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE })),
-                    body: Box::new(Effect::Seq(vec![
-                        draw(1),
-                        Effect::PumpPT {
-                            what: Selector::This,
-                            power: Value::XFromCost,
-                            toughness: Value::XFromCost,
-                            duration: Duration::EndOfTurn,
-                        },
-                        Effect::LoseLife { who: Selector::You, amount: Value::XFromCost },
-                    ])),
-                },
+                // X is the drawn card's mana value, read after the draw.
+                effect: Effect::Seq(vec![
+                    draw(1),
+                    Effect::WithX {
+                        x: Value::ManaValueOf(Box::new(Selector::LastCardYouDrew)),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::PumpPT {
+                                what: Selector::This,
+                                power: Value::XFromCost,
+                                toughness: Value::XFromCost,
+                                duration: Duration::EndOfTurn,
+                            },
+                            Effect::LoseLife { who: Selector::You, amount: Value::XFromCost },
+                        ])),
+                    },
+                ]),
             }],
             ..Default::default()
         }),

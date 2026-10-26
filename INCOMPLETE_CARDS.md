@@ -2093,7 +2093,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Karn, Living Legacy | the emblem's ability is granted to each artifact as "{T}: 1 damage": a summoning-sick artifact creature can't use it, and the artifact (not the emblem) is the source | emblems carry no activated abilities; `GrantActivatedAbility` in the emblem's statics is the lane |
 | 🟡 Rootweaver Druid | the land given away is the engine's pick among the searched ones, not the searching opponent's | `Selector::one_of(LastMoved)` |
 | 🟡 Game Plan | no assist: nobody else may pay toward it | there is no assist keyword |
-| 🟡 Pact Weapon | the drawn card isn't revealed; X is read off the library top before the draw | no "last drawn card" value; Dark Confidant's top-of-library read is the lane |
 | 🟡 Baba Lysaga, Night Witch | can't sacrifice itself; a headless seat sacrifices a full three-type batch or nothing | `sac_any_number_filter` excludes the source; `distinct_type_sac_batch` is the auto-line |
 | 🟡 Sheltering Ancient | every counter of an upkeep goes on the opponents' smallest creature (the engine's pick) | `CumulativeUpkeepCost::PutCounterOnOpponentCreature` auto-pays |
 | 🟡 Tolarian Contempt | the owner's top-or-bottom choice is the engine's | `LibraryPosition::OwnerChoice` auto-picks |
