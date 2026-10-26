@@ -333,6 +333,26 @@ fn teferi_who_slows_the_sunset_untaps_yours_and_taps_theirs() {
     assert_eq!(g.players[0].life, life + 2);
 }
 
+/// CR 502.3 — Teferi's −7 emblem untaps your permanents *in* each
+/// opponent's untap step (Seedborn Muse's static on an emblem), not at upkeep.
+#[test]
+fn cr_502_3_teferis_emblem_untaps_in_an_opponents_untap_step() {
+    let mut g = pod(3);
+    let teferi = ready(&mut g, 0, catalog::teferi_who_slows_the_sunset());
+    g.battlefield_find_mut(teferi).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 3);
+    act(&mut g, GameAction::ActivateLoyaltyAbility { card_id: teferi, ability_index: 2, target: None, x_value: None })
+        .expect("-7");
+    assert_eq!(g.players[0].emblems.len(), 1);
+    let land = ready(&mut g, 0, catalog::forest());
+    let theirs = ready(&mut g, 2, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().tapped = true;
+    g.battlefield_find_mut(theirs).unwrap().tapped = true;
+    g.active_player_idx = 1;
+    g.do_untap();
+    assert!(!g.battlefield_find(land).unwrap().tapped, "yours untap in seat 1's untap step");
+    assert!(g.battlefield_find(theirs).unwrap().tapped, "a non-active opponent's don't");
+}
+
 /// Toluz, Clever Conductor: cards you discard are exiled with it, and come
 /// back to hand when it dies.
 #[test]

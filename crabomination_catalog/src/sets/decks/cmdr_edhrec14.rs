@@ -2026,14 +2026,12 @@ pub fn teferi_who_slows_the_sunset() -> CardDefinition {
                 Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Teferi, Who Slows the Sunset".into(),
-                    triggered: vec![
-                        on_their_step(
-                            TurnStep::Upkeep,
-                            Effect::Untap { what: Selector::EachPermanent(R::ControlledByYou), up_to: None },
-                        ),
-                        on_their_step(TurnStep::Draw, draw(1)),
-                    ],
-                    statics: vec![],
+                    triggered: vec![on_their_step(TurnStep::Draw, draw(1))],
+                    // CR 502.3 — untapped in each opponent's untap step.
+                    statics: vec![crate::card::StaticAbility {
+                        description: "Untap all permanents you control during each opponent's untap step.",
+                        effect: crate::effect::StaticEffect::UntapAllYoursEachUntapStep,
+                    }],
                 },
             ),
         ],
