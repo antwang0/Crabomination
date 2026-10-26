@@ -2297,7 +2297,8 @@ creature you control", was any creature), Eastfarthing Farmer, The Fire Nation D
 tapped Drill can't "do"), Doombot Harbinger (`MayExileSelfThen`), Escape Protocol, Foray of Orcs, Dream Eater, Dáin Ironfoot
 (`ResolutionCarry` now carries `LastCreatedToken`), Spellbook Vendor, Blaster Hulk, Curious Forager, Ty Lee, Artful
 Acrobat, Faebloom Trick, Killmonger, Meanders Guide, Sandbender Scavengers, Unscrupulous Contractor, Zoraline,
-Atraxa's Skitterfang (an absent oil counter no longer "does"), Edgar's Awakening (was an untargeted pick), General
+Atraxa's Skitterfang (an absent oil counter no longer "does"; its keyword is a mode, so the payoff stays inline —
+a modal reflexive trigger would resolve at mode 0 unasked), Edgar's Awakening (was an untargeted pick), General
 Traag, Heart-Piercer Manticore, Hurska Sweet-Tooth, Icewrought Sentry (was an untargeted pick), Saheeli, Radiant
 Creator, Snaremaster Sprite, Aurora Shifter, Merry Bards, Selfcraft Mechan, Forum Filibuster, and the zero-seat
 Anthropede, Boilerbilges Ripper, Cornered Crook, Cyclops Superconductor, Diregraf Horde (was an untargeted pick),

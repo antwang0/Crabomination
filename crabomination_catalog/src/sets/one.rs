@@ -6117,8 +6117,10 @@ pub fn atraxas_skitterfang() -> CardDefinition {
             ),
             effect: Effect::MayDo {
                 description: "Remove an oil counter to grant a keyword?".into(),
-                // CR 603.12 — "When you do": only a removed counter triggers
-                // the payoff, which targets after the removal.
+                // CR 603.12 — only a removed counter "does". The keyword
+                // choice is a mode the trigger picks as it's put on the stack
+                // (`governing_modal`), so the payoff stays inline: a modal
+                // reflexive trigger would resolve at mode 0 unasked.
                 body: Box::new(Effect::If {
                     cond: Predicate::SourceHasCountersAtLeast { counter: CounterType::Oil, n: 1 },
                     then: Box::new(Effect::Seq(vec![
@@ -6127,14 +6129,12 @@ pub fn atraxas_skitterfang() -> CardDefinition {
                             kind: CounterType::Oil,
                             amount: Value::ONE,
                         },
-                        Effect::ReflexiveTrigger {
-                            body: Box::new(Effect::ChooseMode(vec![
-                                grant(Keyword::Flying),
-                                grant(Keyword::Vigilance),
-                                grant(Keyword::Deathtouch),
-                                grant(Keyword::Lifelink),
-                            ])),
-                        },
+                        Effect::ChooseMode(vec![
+                            grant(Keyword::Flying),
+                            grant(Keyword::Vigilance),
+                            grant(Keyword::Deathtouch),
+                            grant(Keyword::Lifelink),
+                        ]),
                     ])),
                     else_: Box::new(Effect::Noop),
                 }),
