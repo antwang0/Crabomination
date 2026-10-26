@@ -3799,6 +3799,10 @@ impl Effect {
                 | Effect::OptionalTargets { body, .. }
                 | Effect::MayPayX { body, .. } | Effect::MayPayXTimes { body, .. } | Effect::MayPayXPlus { body, .. } | Effect::MayPayXOfColor { body, .. } | Effect::MayPayXUpTo { body, .. }
                 | Effect::Repeat { body, .. } => hostile(body),
+                // Every step hostile ("each lose 2 life and sacrifice a
+                // creature" — Priest of Forgotten Gods); a mixed body ("draws
+                // two and loses 2 life") stays friendly.
+                Effect::Seq(v) => !v.is_empty() && v.iter().all(hostile),
                 _ => false,
             }
         }

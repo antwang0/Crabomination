@@ -522,14 +522,22 @@ pub fn priest_of_forgotten_gods() -> CardDefinition {
             tap_cost: true,
             sac_other_filter: Some((SelectionRequirement::Creature, 2)),
             effect: Effect::Seq(vec![
-                Effect::LoseLife {
-                    who: Selector::Target(0),
-                    amount: Value::Const(2),
-                },
-                Effect::Sacrifice {
-                    who: Selector::Target(0),
-                    count: Value::ONE,
-                    filter: SelectionRequirement::Creature,
+                // "Any number of target players" (CR 115.1).
+                Effect::ApplyToTargets {
+                    max_targets: 8,
+                    min_targets: 0,
+                    filter: SelectionRequirement::Player,
+                    effect: Box::new(Effect::Seq(vec![
+                        Effect::LoseLife {
+                            who: Selector::Target(0),
+                            amount: Value::Const(2),
+                        },
+                        Effect::Sacrifice {
+                            who: Selector::Target(0),
+                            count: Value::ONE,
+                            filter: SelectionRequirement::Creature,
+                        },
+                    ])),
                 },
                 Effect::AddMana {
                     who: PlayerRef::You,

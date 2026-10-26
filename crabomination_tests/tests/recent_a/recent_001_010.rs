@@ -10532,6 +10532,35 @@ mod recent6 {
         assert_eq!(g.players[0].hand.len(), hand + 1, "you drew a card");
     }
 
+    /// CR 115.1 — "any number of target players": in a pod the engine's slot
+    /// walk names every opponent (never the controller), and each loses 2 and
+    /// sacrifices a creature.
+    #[test]
+    fn priest_of_forgotten_gods_hits_every_targeted_opponent() {
+        let mut g = crabomination::game::multi_player_game(4);
+        g.step = TurnStep::PreCombatMain;
+        let priest = g.add_card_to_battlefield(0, catalog::priest_of_forgotten_gods());
+        g.clear_sickness(priest);
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let foes: Vec<_> = (1..4).map(|p| g.add_card_to_battlefield(p, catalog::grizzly_bears())).collect();
+        g.add_card_to_library(0, catalog::forest());
+        let effect = catalog::priest_of_forgotten_gods().activated_abilities[0].effect.clone();
+        let (target, additional_targets) = g.auto_targets_for_effect_all_slots(&effect, 0, None);
+        let mut named: Vec<_> = target.iter().chain(additional_targets.iter()).cloned().collect();
+        named.sort_by_key(|t| format!("{t:?}"));
+        assert_eq!(named, vec![Target::Player(1), Target::Player(2), Target::Player(3)]);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: priest, ability_index: 0, target, additional_targets, x_value: None, mode: None,
+        }).expect("activate Priest");
+        drain_stack(&mut g);
+        for (p, foe) in (1..4).zip(foes) {
+            assert_eq!(g.players[p].life, 18, "seat {p} lost 2");
+            assert!(g.battlefield_find(foe).is_none(), "seat {p} sacrificed");
+        }
+    }
+
     /// Spawn of Mayhem's upkeep ping hits each player for 1.
     #[test]
     fn spawn_of_mayhem_upkeep_pings_each_player() {
