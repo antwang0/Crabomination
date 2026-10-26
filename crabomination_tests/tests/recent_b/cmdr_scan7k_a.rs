@@ -3397,7 +3397,8 @@ fn blink_dog_teleports() {
     assert!(g.battlefield_find(dog).is_none(), "phased out");
 }
 
-/// Xathrid Gorgon petrifies: a defender, colorless artifact that can't activate.
+/// Xathrid Gorgon petrifies: a defender, colorless artifact that can't
+/// activate abilities, mana abilities included.
 #[test]
 fn xathrid_gorgon_petrifies_a_creature() {
     let mut g = pod(2);
@@ -3409,6 +3410,11 @@ fn xathrid_gorgon_petrifies_a_creature() {
     assert!(cp.card_types().contains(&crabomination::card::CardType::Artifact));
     assert!(cp.colors.is_empty());
     assert_eq!(g.battlefield_find(elf).unwrap().counter_count(CounterType::Petrification), 1);
+    // CR 602.5 / 605.1a — "its activated abilities can't be activated"
+    // includes the Elf's mana ability.
+    g.priority.player_with_priority = 1;
+    let tap = GameAction::ActivateAbility { card_id: elf, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None };
+    assert!(g.perform_action(tap).is_err(), "no {{G}} from a petrified Elf");
 }
 
 /// Errand-Rider bottoms a card without a legendary creature; Esquire of the
