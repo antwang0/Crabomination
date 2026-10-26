@@ -593,6 +593,32 @@ fn thraben_charm_scaling_damage() {
     assert!(g.battlefield_find(victim).is_none(), "2/2 took 4 damage and died");
 }
 
+/// Thraben Charm mode 2 exiles only the targeted players' graveyards — not
+/// every graveyard (CR 115.1, "any number of target players").
+#[test]
+fn thraben_charm_exiles_only_the_targeted_graveyards() {
+    let mut g = crabomination::game::multi_player_game(3);
+    g.step = TurnStep::PreCombatMain;
+    let mine = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let other = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::thraben_charm());
+    fill_mana(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: Some(Target::Player(1)), additional_targets: vec![], mode: Some(2), x_value: None,
+    }).expect("cast Thraben Charm mode 2");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == theirs), "the target's graveyard");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == mine), "yours stays");
+    assert!(g.players[2].graveyard.iter().any(|c| c.id == other), "an untargeted opponent's stays");
+    // The engine's pick for the mode aims at opponents, never the caster.
+    let crabomination::effect::Effect::ChooseMode(modes) = catalog::thraben_charm().effect else { panic!() };
+    let (first, rest) = g.auto_targets_for_effect_all_slots(&modes[2], 0, None);
+    let picked: Vec<_> = first.into_iter().chain(rest).collect();
+    assert!(!picked.is_empty() && !picked.contains(&Target::Player(0)), "{picked:?}");
+}
+
 /// Voidpouncer kicked enters as a 5/3 with a trample counter and haste.
 #[test]
 fn voidpouncer_kicked_enters_pumped() {

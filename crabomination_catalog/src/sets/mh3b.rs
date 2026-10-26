@@ -290,9 +290,12 @@ pub fn thraben_charm() -> CardDefinition {
             Effect::Destroy {
                 what: target_filtered(R::Enchantment),
             },
-            Effect::ExileAllGraveyards {
-                filter: None,
-                opponents_only: false,
+            // "Exile any number of target players' graveyards" (CR 115.1).
+            Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 0,
+                filter: R::Player,
+                effect: Box::new(Effect::ExilePlayerGraveyard { who: PlayerRef::Target(0), filter: None }),
             },
         ]),
         ..Default::default()
