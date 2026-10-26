@@ -1774,6 +1774,27 @@ fn winternight_stories_draws_three_discards_two() {
     assert_eq!(g.players[0].hand.len(), hand_before, "net hand size unchanged (draw 3, discard 2)");
 }
 
+/// Winternight Stories: a creature card among the draws is the one discard
+/// ("discard two cards unless you discard a creature card").
+#[test]
+fn winternight_stories_discards_one_creature_instead() {
+    let mut g = two_player_game();
+    for _ in 0..2 { g.add_card_to_library(0, catalog::forest()); }
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_hand(0, catalog::winternight_stories());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand_before = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Winternight Stories");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "-1 spell, +3, -1 creature");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Grizzly Bears"));
+}
+
 /// Heritage Reclamation mode 0 destroys a target artifact.
 #[test]
 fn heritage_reclamation_destroys_artifact() {

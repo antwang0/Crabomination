@@ -1793,9 +1793,8 @@ pub fn lotus_eye_mystics() -> CardDefinition {
     }
 }
 
-/// Winternight Stories — {2}{U} Sorcery. Draw three cards, then discard two.
-/// Harmonize {4}{U}. (The "unless you discard a creature card" clause is
-/// approximated as the plain discard-two downside.)
+/// Winternight Stories — {2}{U} Sorcery. Draw three cards, then discard two
+/// unless you discard a creature card. Harmonize {4}{U}.
 pub fn winternight_stories() -> CardDefinition {
     CardDefinition {
         name: "Winternight Stories",
@@ -1807,10 +1806,10 @@ pub fn winternight_stories() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(2),
-                random: false,
+            Effect::DiscardUnlessKind {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                instead: SelectionRequirement::Creature,
             },
         ]),
         ..Default::default()
