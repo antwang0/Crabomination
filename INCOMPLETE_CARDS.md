@@ -2104,7 +2104,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Press the Enemy | the spell / permanent choice is offered as two modes | one slot cannot hold either a spell or a permanent |
 | 🟡 Sorcerous Squall | casts a copy of the exiled card from any opponent's graveyard rather than the card from the milled player's | `ExileWithSource` + `CopyCardAndCastFree`, as Rootha |
 | ~~Altar of the Wretched // Wretched Bonemass~~ ✅ | fixed 2026-10-24: twelve `SelfHasKeywordWhilePredicate` statics read the exiled crafting cards (protection, parametrized, is not copied) | — |
-| 🟡 Game of Chaos | whoever wins a flip decides to flip again by the auto policy (`AnyPlayerMayAccept`); the stakes cap at 2^16 | `Effect::GameOfChaosRound` |
+| 🟡 Game of Chaos | the stakes cap at 2^16 (the winner is asked whether to flip again) | `Effect::GameOfChaosRound` |
 | 🟡 The Aesir Escape Valhalla | the exiled permanent card is the engine's pick (the priciest) | `Selector::best_of` |
 | 🟡 The Creation of Avacyn | the tutored card is exiled face up (the face-down hiding isn't modelled) | `ZoneDest::ExileWithSourceStamp` |
 | 🟡 Magar of the Magic Strings | a snapshot reload rebuilds the face-down puppet as a plain 2/2 (as it does Missy's Cybermen) | the serde wire stores only `face_down_permanent` |
@@ -2167,7 +2167,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Koh, the Face Stealer | a new choice reverts every baked grant on Koh, not only the old borrow | `BorrowAbilitiesOfChosenExiled` |
 | 🟡 Lethal Exploit | the modified creatures are counted as it resolves, not as it is cast | `PumpPT` with `CountOf` |
 | 🟡 Fall of the Impostor | a tie for greatest power exiles the first in battlefield order, not the controller's choice | `TakeGreatestPower` |
-| 🟡 Devout Invocation | one yes/no per untapped creature instead of a single subset pick | `ForEach` + `MayDo` + `PermanentsTappedThisEffect` |
 | 🟡 The Phasing of Zhalfir | the phase-in lock ends when the Saga leaves the battlefield, not when you lose control of it | `PhaseOut { until_source_leaves }` |
 | 🟡 Shah of Naar Isle | "up to three" is three yes/no draws | `EachPlayerDoes` + `MayDo` |
 | 🟡 Azor, the Lawbringer | the {X}{W}{U}{U} attack payment is from floating mana only | `MayPayXPlus` |
@@ -2198,7 +2197,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kargan Intimidator | the mode and its target are picked at resolution (auto-targeted), not as the ability is activated (CR 700.2) | `ChooseUnchosenModeThisTurn` |
 | 🟡 Obsidian Battle-Axe | the attach offer fires only for Warriors entering under your control (attaching to an opponent's is legal, never wanted) | `EventScope::YourControl` + `MayDo(Attach)` |
 | 🟡 Nick Fury, Spymaster | the put-in creature attacks the attacker's defender or the most hostile opponent, not a chosen one (CR 508.4) | `DeployCreatureFromHandAttacking` |
-| 🟡 Feed the Pack | the sacrificed nontoken creature is auto-picked (weakest first), so X isn't the toughness you'd choose | `MaySacrifice` + `SacrificedToughness` |
 | 🟡 Planar Atlas | the look keeps any one of the four on top (not only a land) and isn't optional | `LookTopKeepOneRestToGraveyard { rest_bottom_random }` |
 | 🟡 Portal Manipulator | the player and the attackers are picked as the trigger resolves, not targeted as it triggers; every attack on you that you could redirect moves (CR 115.1) | `AttackersNowAttackChosenPlayer` |
 | 🟡 Aurora Awakener | "put any number of those permanent cards onto the battlefield" puts all of them | `RevealUntilMatchingToBattlefield` |

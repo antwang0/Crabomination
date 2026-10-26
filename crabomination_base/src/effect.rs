@@ -5466,9 +5466,9 @@ pub enum Effect {
     /// "You may sacrifice [count] [filter]. If you do, [then]." — the
     /// reflexive sacrifice cost (Bloodcrazed Socialite's attack +2/+2,
     /// Gut, True Soul Zealot's attack-sac → Skeleton). Asks the controller
-    /// yes/no (gated on owning a legal candidate); on yes, the weakest
-    /// non-source matching permanent(s) are sacrificed (the cost is almost
-    /// always a token, so the auto-pick is faithful) and `then` runs.
+    /// yes/no (gated on owning a legal candidate); on yes, the seat picks
+    /// which non-source matching permanent(s) to sacrifice (weakest first is
+    /// the headless default) and `then` runs.
     MaySacrifice {
         description: String,
         filter: SelectionRequirement,
