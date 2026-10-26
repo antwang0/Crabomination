@@ -5206,20 +5206,28 @@ pub fn ominous_roost() -> CardDefinition {
 }
 
 /// Serpentine Ambush — {1}{U} Instant. Until end of turn, target creature
-/// becomes a 5/5 Serpent. (Color set to blue is approximated.)
+/// becomes a blue 5/5 Serpent.
 pub fn serpentine_ambush() -> CardDefinition {
     CardDefinition {
         name: "Serpentine Ambush",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::BecomeCreature {
-            what: target_filtered(SelectionRequirement::Creature),
-            power: Value::Const(5),
-            toughness: Value::Const(5),
-            creature_types: vec![CreatureType::Serpent],
-            keywords: vec![],
-            duration: Duration::EndOfTurn,
-        },
+        effect: Effect::Seq(vec![
+            Effect::BecomeCreature {
+                what: target_filtered(SelectionRequirement::Creature),
+                power: Value::Const(5),
+                toughness: Value::Const(5),
+                creature_types: vec![CreatureType::Serpent],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+            Effect::BecomeColor {
+                what: Selector::Target(0),
+                colors: vec![crate::mana::Color::Blue],
+                duration: Duration::EndOfTurn,
+                additive: false,
+            },
+        ]),
         ..Default::default()
     }
 }

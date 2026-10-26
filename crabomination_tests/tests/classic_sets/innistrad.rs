@@ -2448,7 +2448,7 @@ fn ominous_roost_etb_bird() {
     assert!(bird.definition.keywords.contains(&Keyword::CanBlockOnlyFlying));
 }
 
-/// Serpentine Ambush turns a creature into a 5/5 Serpent.
+/// Serpentine Ambush turns a creature into a blue 5/5 Serpent.
 #[test]
 fn serpentine_ambush_makes_serpent() {
     let mut g = two_player_game();
@@ -2459,6 +2459,7 @@ fn serpentine_ambush_makes_serpent() {
     let cp = g.computed_permanent(bear).unwrap();
     assert_eq!((cp.power, cp.toughness), (5, 5), "becomes 5/5");
     assert!(cp.subtypes().creature_types.contains(&CreatureType::Serpent), "is a Serpent");
+    assert_eq!(cp.colors.to_vec(), vec![crabomination::mana::Color::Blue], "a blue Serpent, no longer green");
 }
 
 /// Turn the Earth shuffles graveyard cards back and gains 2 life.
