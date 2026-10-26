@@ -120,7 +120,7 @@ pub fn shimmerdrift_vale() -> CardDefinition {
 }
 
 /// Frostwalk Bastion — snow land. {T}: {C}. {1}{S}: until end of turn it's a
-/// 2/3 Construct creature (still a land). Dealing combat damage to a
+/// 2/3 Construct artifact creature (still a land). Dealing combat damage to a
 /// creature taps it, and it doesn't untap during its controller's next untap
 /// step.
 pub fn frostwalk_bastion() -> CardDefinition {
@@ -136,14 +136,19 @@ pub fn frostwalk_bastion() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: with_snow(cost(&[generic(1)]), 1),
-                effect: Effect::BecomeCreature {
-                    what: Selector::This,
-                    power: Value::Const(2),
-                    toughness: Value::Const(3),
-                    creature_types: vec![CreatureType::Construct],
-                    keywords: vec![],
-                    duration: Duration::EndOfTurn,
-                },
+                // "a 2/3 Construct artifact creature": the artifact type rides
+                // the turn, as the colorless manlands' does.
+                effect: Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(2),
+                        toughness: Value::Const(3),
+                        creature_types: vec![CreatureType::Construct],
+                        keywords: vec![],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Artifact, until_eot: true },
+                ]),
                 ..Default::default()
             },
         ],

@@ -2290,3 +2290,23 @@ fn slight_malfunction_targets_up_to_the_result() {
     assert_eq!(dead, 3, "three of the four 1/1s");
     assert!(g.battlefield_find(bogle).is_some(), "hexproof: never a target");
 }
+
+/// Frostwalk Bastion animates as a 2/3 Construct **artifact** creature land
+/// until end of turn.
+#[test]
+fn frostwalk_bastion_becomes_an_artifact_creature_land() {
+    let mut g = pod(2);
+    let bastion = ready(&mut g, 0, catalog::frostwalk_bastion());
+    ready(&mut g, 0, catalog::snow_covered_forest());
+    g.players[0].mana_pool.add_colorless(1);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: bastion, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("animate");
+    drain_stack(&mut g);
+    let c = g.computed_permanent(bastion).expect("on the battlefield");
+    assert_eq!((c.power, c.toughness), (2, 3));
+    use crabomination::card::CardType;
+    assert!(c.card_types().contains(&CardType::Artifact) && c.card_types().contains(&CardType::Land));
+}

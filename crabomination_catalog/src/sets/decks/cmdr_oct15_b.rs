@@ -2625,10 +2625,15 @@ fn reanimating_aura(name: &'static str, mana: ManaCost, counter: bool) -> CardDe
         to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
     };
     let effect = if counter {
+        // "with a +1/+1 counter on it": the counter is part of the entry
+        // (CR 614.1c), so its enters triggers see it.
         Effect::Seq(vec![
-            Effect::ClearLastMoved,
+            Effect::SpellEntersWithCounters {
+                what: Selector::TriggerSource,
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            },
             back,
-            Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
         ])
     } else {
         back
@@ -2660,8 +2665,7 @@ pub fn unhallowed_pact() -> CardDefinition {
 }
 
 /// Unholy Indenture — {2}{B} Aura. When enchanted creature dies, return that
-/// card under your control with a +1/+1 counter. Residual: the counter is put
-/// on just after it enters.
+/// card under your control with a +1/+1 counter.
 pub fn unholy_indenture() -> CardDefinition {
     reanimating_aura("Unholy Indenture", cost(&[generic(2), b()]), true)
 }

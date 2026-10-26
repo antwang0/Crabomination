@@ -2080,7 +2080,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Fleeting Memories | an artifact that is a Clue only through Senator Peacock doesn't count as a Clue once sacrificed | `lki_clone` snapshots creature types, not artifact subtypes |
 | 🟡 Metamorphic Alteration | the copy starts when an enters trigger resolves (respondable), not as the Aura enters, and moving the Aura to another creature doesn't copy the new host | `BecomeCopyOfFor` with `WhileSourceAttached`; no static layer-1 copy for an attachment |
 | 🟡 The Capitoline Triad | the exiled cards are auto-picked (fewest, highest mana value first) even for a manual-mana player | `exile_other_total_mv` has no `ChooseCards` ask |
-| 🟡 Mirrormind Crown | "you may instead" is always taken — a prompting seat isn't asked | the replacement in `token_replacement_for` has no ballot |
 | 🟡 Hama, the Bloodbender | the exiled card is cast for its mana value in any mana while it stays exiled — your artifacts and creatures can't help pay (CR 701.67), it isn't limited to your turn, and losing Hama doesn't end it | `GrantMayPlay { pay_own_cost, any_color }` |
 | ~~Myojin of Blooming Dawn~~ ✅ | fixed 2026-10-24: gated on `WasCastFromHand` (a table test covers all ten Myojins: hand, reanimated, cast from exile) | — |
 | 🟡 Primal Surge | after each card put onto the battlefield it asks "repeat?" separately from "put it?" (declining either stops), and a seat past 150 permanents stops putting | `Effect::RepeatWhileMay` re-asks each loop; the board bound is the engine's, not the card's |
@@ -2175,7 +2174,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Nishoba Brawler | domain counts printed land types while the layers compute (CR 613.8), so a basic type a land only gains (Navigator's Compass) doesn't raise its power | `SelfBasePtFromValue { DomainCount }` |
 | 🟡 Crush Underfoot | the Giant is the greatest-power one you control, picked automatically rather than chosen (ties go to the first) | `DealDamageEqualToPower { TakeGreatestPower }` |
 | 🟡 Nimble Hobbit | with a Food out, sacrificing a Food is the only offered cost (paying {2}{W} is offered only with no Food) | `If(SelectorExists Food)` |
-| 🟡 Unholy Indenture | the +1/+1 counter is put on just after the card returns, so its enters triggers don't see it | `Move` + `AddCounter { LastMoved }` |
 | 🟡 Raven Clan War-Axe | "you may search your library and/or graveyard" takes Eivor from the graveyard when one is there, else searches the library; the search can't be declined | `If(CardsInZone gy) Move else Search` |
 | 🟡 Master Skald | the exiled creature card is picked automatically (first in the graveyard), not chosen | `MayDo { Move(take 1) + Move(target) }` |
 | 🟡 Lens of Clarity | the look-at-top half is `MayLookAtOwnLibraryTop`; looking at face-down creatures you don't control isn't surfaced to the seat's view | — |
@@ -2229,7 +2227,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Curse of Surveillance | "any number of target players other than that player" is only you | `Draw { who: You }` |
 | 🟡 Accursed Witch // Infectious Curse | the Witch's {1} discount also reaches your own spells targeting it; Infectious Curse's "spells you cast that target enchanted player cost {1} less" is not modelled | `CostReductionForYourSpellsTargetingThis { any_caster: true }` |
 | 🟡 The Unluckiest Planeswalker | the +1's Gremlin rides your next Aura spell this turn, not the spending of that specific mana | `OnYourNextSpellMatchingThisTurn` |
-| 🟡 Frostwalk Bastion | its {1}{S} animation makes a 2/3 Construct creature land but not an *artifact* | `Effect::BecomeCreature` |
 | 🟡 Winter's Chill | X isn't capped at your snow lands, and the "pay only {1}: prevent its combat damage" middle option is dropped — each target's controller pays {2} or it's destroyed at end of combat | `CapTargetsAtX` + `UnlessPlayerPays` |
 | 🟡 Rimewind Cryomancer | "target activated ability" is a permanent with an ability on the stack and no triggered one there | `HasAbilityOnStack ∧ ¬HasTriggeredAbilityOnStack` |
 | ~~Slight Malfunction~~ ✅ | fixed 2026-10-24: the die arm is a reflexive trigger over `CapTargetsAt { LastDieRoll, ApplyToTargets }` — targeted, up to the result | — |
@@ -2304,14 +2301,18 @@ tapped Drill can't "do"), Doombot Harbinger (`MayExileSelfThen`), Escape Protoco
 Acrobat, Faebloom Trick, Killmonger, Meanders Guide, Sandbender Scavengers, Unscrupulous Contractor, Zoraline,
 Atraxa's Skitterfang (an absent oil counter no longer "does"), Edgar's Awakening (was an untargeted pick), General
 Traag, Heart-Piercer Manticore, Hurska Sweet-Tooth, Icewrought Sentry (was an untargeted pick), Saheeli, Radiant
-Creator, Snaremaster Sprite, Aurora Shifter, Merry Bards, Selfcraft Mechan, Forum Filibuster; a reflexive trigger's
+Creator, Snaremaster Sprite, Aurora Shifter, Merry Bards, Selfcraft Mechan, Forum Filibuster, and the zero-seat
+Anthropede, Boilerbilges Ripper, Cornered Crook, Cyclops Superconductor, Diregraf Horde (was an untargeted pick),
+Gastal Blockbuster, Kishla Trawlers (no creature card exiled, no payoff), Mount Velus Manticore, Sample Collector,
+Sunfire Torch, Wick's Patrol; a reflexive trigger's
 hostile player slot now aims at an opponent at two seats too (Leyline Tyrant hit its own controller); the script now strips reminder text (madness / conspire / casualty) and counts an exert
 trigger as the reflexive one;
 **Open:** Guide
 of Souls 46 (cube pool — frozen; it also grants flying instead of a flying counter and makes the Angel type
 end-of-turn, printed indefinite), Earth Rumble 10 and Curse of the Werefox 4 (a spell whose cast-time slot
 the reflexive payoff also names — "that creature"), Kappa Tech-Wrecker 5 (no predicate for "a deathtouch counter
-was removed"), Savai Thundermane and Awaken the Honored Dead (cube — frozen), then the zero-seat tail. The bot declines a "may [cost]. When you do" whose payoff has no legal target
+was removed"), Savai Thundermane and Awaken the Honored Dead (cube — frozen), Miasma Demon (its "up to that many" cap on a
+reflexive's slots is untested). Anthropede's "discard a card or pay {2}" still offers only the payment. The bot declines a "may [cost]. When you do" whose payoff has no legal target
 (`reflexive_payoff_untargetable`). ⚠ A "may [cost]. When you do" wrapper
 changes what `optional_trigger_beneficial` / the may-discard ask can see of the payoff — check the bot's
 decline still holds when no target exists before converting one (Armix's discard).
