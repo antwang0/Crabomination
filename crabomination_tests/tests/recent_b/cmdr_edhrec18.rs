@@ -553,6 +553,26 @@ fn rise_of_sozin_chapters() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Fire Lord Sozin"));
 }
 
+/// The Rise of Sozin II targets one opponent and exiles up to four cards
+/// with the chosen name from that player's zones only.
+#[test]
+fn rise_of_sozin_chapter_two_strips_the_target_opponent() {
+    let mut g = pod(3);
+    let def = catalog::the_rise_of_sozin();
+    assert!(def.saga_chapters[1].1.requires_target(), "target opponent");
+    for _ in 0..3 {
+        g.add_card_to_graveyard(2, catalog::grizzly_bears());
+        g.add_card_to_hand(2, catalog::grizzly_bears());
+    }
+    let other = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::NamedCard("Grizzly Bears".to_string())]));
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.targets = vec![Target::Player(2)];
+    g.resolve_effect(&def.saga_chapters[1].1, &ctx).unwrap();
+    assert_eq!(g.exile.iter().filter(|c| c.owner == 2).count(), 4, "up to four");
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == other), "another opponent's are untouched");
+}
+
 /// Hinata: your spells cost {1} less per target, an opponent's {1} more.
 #[test]
 fn hinata_shifts_costs_per_target() {

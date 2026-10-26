@@ -1010,9 +1010,9 @@ pub fn fire_lord_sozin() -> CardDefinition {
 }
 
 /// The Rise of Sozin — {4}{B}{B} Saga. I: destroy all creatures. II: name a
-/// card; exile the cards with that name from an opponent's graveyard, hand and
-/// library, then they shuffle (every copy, not "up to four" — a singleton deck
-/// holds one; INCOMPLETE_CARDS). III: exile it, then return it transformed.
+/// card; exile up to four cards with that name from target opponent's
+/// graveyard, hand and library, then they shuffle (Ancient Vendetta's
+/// `NameCardThenExileFromZones`). III: exile it, then return it transformed.
 pub fn the_rise_of_sozin() -> CardDefinition {
     CardDefinition {
         name: "The Rise of Sozin",
@@ -1021,7 +1021,7 @@ pub fn the_rise_of_sozin() -> CardDefinition {
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
         saga_chapters: vec![
             (1, Effect::Destroy { what: Selector::EachPermanent(R::Creature) }),
-            (2, Effect::NameCardExileMatchingAllZones),
+            (2, Effect::NameCardThenExileFromZones { who: PlayerRef::Target(0), count: 4 }),
             (3, Effect::ExileSelfReturnTransformed),
         ],
         back_face: Some(Box::new(fire_lord_sozin())),
