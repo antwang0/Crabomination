@@ -53251,9 +53251,9 @@ pub fn undying_malice() -> CardDefinition {
     death_protection_rider("Undying Malice")
 }
 
-/// Urza's Bauble — {0} Artifact. {T}, Sacrifice: look at a random card in
-/// target player's hand (information-only — not modeled); draw a card at
-/// the beginning of the next turn's upkeep.
+/// Urza's Bauble — {0} Artifact. {T}, Sacrifice: look at a card at random in
+/// target player's hand; draw a card at the beginning of the next turn's
+/// upkeep. The look is `RevealRandomFromHand`, which publishes nothing.
 pub fn urzas_bauble() -> CardDefinition {
     CardDefinition {
         name: "Urza's Bauble",
@@ -53262,12 +53262,17 @@ pub fn urzas_bauble() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_cost: true,
-            effect: Effect::AtNextTurnsUpkeep {
-                body: Box::new(Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                }),
-            },
+            effect: Effect::Seq(vec![
+                Effect::RevealRandomFromHand {
+                    who: crate::effect::shortcut::target_filtered(SelectionRequirement::Player),
+                },
+                Effect::AtNextTurnsUpkeep {
+                    body: Box::new(Effect::Draw {
+                        who: Selector::You,
+                        amount: Value::Const(1),
+                    }),
+                },
+            ]),
             ..Default::default()
         }],
         ..Default::default()
