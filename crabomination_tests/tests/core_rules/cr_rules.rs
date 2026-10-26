@@ -13697,3 +13697,33 @@ fn cr_106_6_restricted_float_pays_a_mana_abilitys_cost() {
         assert_eq!(g.players[0].mana_pool.total(), 1, "{r:?}: plus the one mana Urn made");
     }
 }
+
+// ── CR 602.5 / 605.1a — "can't be activated" covers mana abilities ──────────
+/// Arrest's "its activated abilities can't be activated" stops a mana
+/// ability too (a mana ability is an activated ability, CR 605.1a): the Elf
+/// neither taps by hand nor pays a cost through the auto-tapper. Faith's
+/// Fetters prints "unless they're mana abilities" and leaves it a source.
+#[test]
+fn cr_602_5_an_arrested_mana_creature_makes_no_mana() {
+    for (aura, taps) in [(catalog::arrest as fn() -> _, false), (catalog::faiths_fetters, true)] {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let elf = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+        g.clear_sickness(elf);
+        g.add_card_to_battlefield(0, catalog::forest());
+        let a = g.add_card_to_battlefield(1, aura());
+        g.battlefield_find_mut(a).unwrap().attached_to = Some(elf);
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        let cast = g.perform_action(GameAction::CastSpell {
+            card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+        });
+        assert_eq!(cast.is_ok(), taps, "{}: {cast:?}", aura().name);
+        if !taps {
+            let r = g.perform_action(GameAction::ActivateAbility {
+                card_id: elf, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+            });
+            assert!(r.is_err(), "Arrest: the Elf's {{T}}: Add {{G}} can't be activated");
+        }
+    }
+}

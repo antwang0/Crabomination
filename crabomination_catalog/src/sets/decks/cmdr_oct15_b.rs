@@ -683,7 +683,7 @@ pub fn pitiless_gorgon() -> CardDefinition {
 /// Xathrid Gorgon — {5}{B} 3/6 deathtouch Gorgon. {2}{B}, {T}: a
 /// petrification counter on target creature; it gains defender, becomes a
 /// colorless artifact in addition to its other types, and its activated
-/// abilities can't be activated. Residual: its mana abilities still can.
+/// abilities can't be activated (mana abilities too, CR 605.1a).
 pub fn xathrid_gorgon() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Deathtouch],

@@ -2455,12 +2455,15 @@ pub enum Keyword {
     /// CR 509.1b restriction — "can't block creatures with power equal to or
     /// greater than this creature's toughness" (Ironclaw Curse).
     CantBlockPowerAtLeastOwnToughness,
-    /// CR 602.5c — "[This permanent]'s activated abilities can't be
-    /// activated." A static restriction on the bearer (or an Aura grant —
-    /// Detention Vortex, Stupor-style locks). Enforced from the *computed*
-    /// keyword set in `activate_ability`; mana abilities are unaffected
-    /// (they aren't "activated" through the normal permission gate).
+    /// CR 602.5 — "[This permanent]'s activated abilities can't be
+    /// activated" (Arrest, Detention Vortex). Mana abilities are activated
+    /// abilities (CR 605.1a), so they are locked too: `activate_ability` and
+    /// every mana walker (`GameState::mana_abilities_lock`) read it.
     CantActivateAbilities,
+    /// "… its activated abilities can't be activated unless they're mana
+    /// abilities" (Faith's Fetters, Bound in Gold): `CantActivateAbilities`
+    /// sparing mana abilities.
+    CantActivateNonManaAbilities,
     /// CR 702.98 — Unleash. The "may enter with a +1/+1 counter" half is
     /// asked as the permanent enters (`game::as_enters`), printed or granted;
     /// the "can't block while it has a +1/+1 counter" half is injected as a
@@ -9902,7 +9905,10 @@ pub mod gather_spec {
 /// family fold cannot disagree with the gates that consume them.
 #[inline]
 pub fn is_ability_lock_keyword(k: &Keyword) -> bool {
-    matches!(k, Keyword::CantActivateTapAbilities | Keyword::CantActivateAbilities)
+    matches!(
+        k,
+        Keyword::CantActivateTapAbilities | Keyword::CantActivateAbilities | Keyword::CantActivateNonManaAbilities
+    )
 }
 
 /// The [`gather_spec`] bits `effect` can contribute.

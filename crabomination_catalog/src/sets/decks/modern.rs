@@ -17893,7 +17893,7 @@ pub fn bound_in_gold() -> CardDefinition {
             keywords: vec![
                 Keyword::CantAttack,
                 Keyword::CantBlock,
-                Keyword::CantActivateAbilities,
+                Keyword::CantActivateNonManaAbilities,
             ],
             ..Default::default()
         }),

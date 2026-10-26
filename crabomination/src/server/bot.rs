@@ -18708,7 +18708,13 @@ fn available_mana(state: &GameState, seat: usize) -> AvailableMana {
         // `AB_DAMAGE` gate audit at cube seed 729 (2026-09-09). Its non-tap
         // abilities still reach the opaque arm; a tapped land's one ability
         // is a `{T}` and costs the loop one compare.
-        let no_tap = p.tapped || (p.summoning_sick && state.tap_ability_summoning_sick(p, seat));
+        // CR 602.5 — an Arrested permanent makes nothing, a tap-locked one
+        // nothing off a {T} ability: the engine's one answer.
+        let (locked_all, locked_tap) = state.mana_abilities_lock(p, &scan);
+        if locked_all {
+            continue;
+        }
+        let no_tap = p.tapped || locked_tap || (p.summoning_sick && state.tap_ability_summoning_sick(p, seat));
         // The cheap read first: a tapped land has one `{T}` ability and no
         // business in the grant walk below, so only a permanent that prints
         // a non-tap mana ability goes on. The same read the opaque arm and

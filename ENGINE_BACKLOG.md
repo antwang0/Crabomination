@@ -308,14 +308,14 @@ residual of (`pod_residuals.py`'s per-card ranking); clean seated decks **4,649 
   card is in the cube pool.
 
 OPEN:
-- **CR 602.5 / Arrest ruling — "its activated abilities can't be activated" stops mana abilities too.**
-  `Keyword::CantActivateAbilities` is checked only for non-mana activations (`actions.rs`, the CR 602.5c gate), so
-  23 cards (Arrest, Lawmage's Binding, Petrify, Prison Term, Encrust, Detention Vortex, Xathrid Gorgon, …) leave a
-  mana dork tapping. Two users (Faith's Fetters, Bound in Gold) print "unless they're mana abilities" and are right
-  today, so the fix needs a second keyword for them, then the lock in the shared mana walkers. The walkers already
-  disagree for Scheming Fence: `GrantScan::locked` is honoured by `mana_source_table` only, not by the payability
-  check (`actions.rs` ~19215), the per-colour count (~19578) or the bot's `available_mana`. One predicate in
-  `effective_mana_abilities_into` would cover all three engine walkers.
+- ✅ **FIXED (same session) — CR 602.5 / 605.1a, "its activated abilities can't be activated" stops mana abilities.**
+  `Keyword::CantActivateAbilities` now locks mana abilities at the activation gate and in every mana walker through
+  one predicate, `GameState::mana_abilities_lock` (the source table and its memo fast path, `effective_mana_abilities_into`
+  — the payability check and the colour count — and the bot's `available_mana`); Scheming Fence's `GrantScan::locked`
+  and Serra Bestiary's tap lock ride the same predicate, so the walkers can't disagree again. Faith's Fetters and
+  Bound in Gold ("unless they're mana abilities") moved to the new `Keyword::CantActivateNonManaAbilities`.
+  `cr_rules::cr_602_5_an_arrested_mana_creature_makes_no_mana`. `--bench` byte-identical, A/B -0.31 % median (noise);
+  cube / sos × 200 identical outcomes.
 - Rogue Class (cards exiled before level 3 never become playable), Galadriel's Dismissal (kicked: the creature
   target is not chosen — needs a target-only permanent slot), Cruel Calculations (counts every card into the
   graveyard, `milled_ids_this_turn` is the exact count) — rows unchanged.

@@ -220,6 +220,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CanBlockAdditional(_)
         | Keyword::CanBlockAnyNumber
         | Keyword::CantAttack | Keyword::CantBeAttacked | Keyword::CantActivateAbilities
+        | Keyword::CantActivateNonManaAbilities
         | Keyword::MustBeBlocked | Keyword::MustBeBlockedByAtLeast(_) | Keyword::AllMustBlock
         | Keyword::MustAttack | Keyword::MustBlock | Keyword::MustAttackOrBlock
         | Keyword::MustAttackIfAnotherAttacks

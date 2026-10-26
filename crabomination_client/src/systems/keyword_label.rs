@@ -216,7 +216,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         Reconfigure(_) => "Rcfg",
         // Ability-lock granted by auras/effects (Petrify) — its activated
         // abilities can't be activated, worth surfacing alongside NoAtk/NoBlk.
-        CantActivateAbilities => "NoAbil",
+        CantActivateAbilities | CantActivateNonManaAbilities => "NoAbil",
         // Resilience: regenerate shields and totem/umbra armor both mean "the
         // next destruction is soaked" — it changes how an opponent trades.
         Regenerate(_) => "Rgn",

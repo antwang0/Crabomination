@@ -156,7 +156,7 @@ pub fn faiths_fetters() -> CardDefinition {
             keywords: vec![
                 Keyword::CantAttack,
                 Keyword::CantBlock,
-                Keyword::CantActivateAbilities,
+                Keyword::CantActivateNonManaAbilities,
             ],
             ..Default::default()
         }),

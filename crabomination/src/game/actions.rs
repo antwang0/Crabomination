@@ -19728,9 +19728,11 @@ impl GameState {
             if only.is_some_and(|set| !set.contains(&c.id)) {
                 continue;
             }
-            // Scheming Fence's chosen permanent activates nothing, mana
-            // abilities included.
-            if !scan.locked.is_empty() && scan.locked.contains(&c.id) {
+            // Scheming Fence's chosen permanent and an Arrested one activate
+            // nothing, mana abilities included; a tap-locked one goes the
+            // slow path, whose ability list drops its {T} abilities.
+            let (locked_all, locked_tap) = self.mana_abilities_lock(c, &scan);
+            if locked_all {
                 continue;
             }
             // CR 302.6 — a summoning-sick creature's {T} mana abilities can't
@@ -19739,6 +19741,7 @@ impl GameState {
             let sick = c.summoning_sick && self.tap_ability_summoning_sick(c, player);
             if printed_only
                 && !sick
+                && !locked_tap
                 && self.grants_nothing(c, &scan)
                 && let Some(w) = c.mana_summary(mana_summary_of)
             {
@@ -20603,6 +20606,27 @@ impl GameState {
     /// One buffer hoisted to the loop head is the same list at one allocation
     /// per loop; every element borrows from `&'a self`, so reusing it across
     /// cards is sound.
+    /// CR 602.5 — which of `card`'s mana abilities can't be activated right
+    /// now: `(all, tap)` — every one (Scheming Fence's pick, Arrest's
+    /// `CantActivateAbilities`), or those with {T} in the cost (Serra
+    /// Bestiary's `CantActivateTapAbilities`). One answer for every mana
+    /// walker — the source table, the payability check, the colour count and
+    /// the bot's `available_mana` — so none counts a source the activation
+    /// gate refuses.
+    pub(crate) fn mana_abilities_lock(&self, card: &crate::card::CardInstance, scan: &GrantScan<'_>) -> (bool, bool) {
+        if !scan.locked.is_empty() && scan.locked.contains(&card.id) {
+            return (true, true);
+        }
+        let all = self.ability_lock_possible_on(card, &Keyword::CantActivateAbilities);
+        let tap = self.ability_lock_possible_on(card, &Keyword::CantActivateTapAbilities);
+        if !all && !tap {
+            return (false, false);
+        }
+        let Some(cp) = self.computed_permanent(card.id) else { return (false, false) };
+        let kws = cp.keywords();
+        (all && kws.has_kw(&Keyword::CantActivateAbilities), tap && kws.has_kw(&Keyword::CantActivateTapAbilities))
+    }
+
     pub(crate) fn effective_mana_abilities_into<'a>(
         &'a self,
         card: &'a crate::card::CardInstance,
@@ -20610,6 +20634,10 @@ impl GameState {
         out: &mut Vec<(usize, AbilityRef<'a>)>,
     ) {
         out.clear();
+        let (locked_all, locked_tap) = self.mana_abilities_lock(card, scan);
+        if locked_all {
+            return;
+        }
         let card_id = card.id;
         let printed_count = card.definition.activated_abilities.len();
         // One layer read for the whole list. Both CR 305.6 checks below ask
@@ -20705,6 +20733,9 @@ impl GameState {
             .enumerate()
         {
             out.push((printed_count + gc + k, AbilityRef::Synth(Box::new(a))));
+        }
+        if locked_tap {
+            out.retain(|(_, a)| !(a.tap_cost || a.untap_self_cost));
         }
     }
 
@@ -21865,6 +21896,7 @@ impl GameState {
                 && Self::printed_land_mana_basic(src, ability_index).is_some())
             || self.ability_strip_possible()
             || self.ability_lock_possible_on(src, &Keyword::CantActivateTapAbilities)
+            || self.ability_lock_possible_on(src, &Keyword::CantActivateAbilities)
             || self.board_has_mana_static()
         {
             return None;
@@ -22875,17 +22907,21 @@ impl GameState {
             return Err(GameError::SummoningSickness(card_id));
         }
 
-        // CR 602.5c — a permanent whose *computed* keyword set carries
-        // `CantActivateAbilities` (Detention Vortex's Aura grant, etc.) can't
-        // activate its non-mana abilities. Battlefield sources only.
+        // CR 602.5 — a permanent whose *computed* keyword set carries
+        // `CantActivateAbilities` (Arrest, Detention Vortex) activates
+        // nothing, mana abilities included (CR 605.1a);
+        // `CantActivateNonManaAbilities` (Faith's Fetters) spares those.
+        // Battlefield sources only.
         if on_battlefield
-            && !ability_is_mana
             && bf_src!().is_some_and(|src| {
                 self.ability_lock_possible_on(src, &Keyword::CantActivateAbilities)
+                    || (!ability_is_mana
+                        && self.ability_lock_possible_on(src, &Keyword::CantActivateNonManaAbilities))
             })
-            && bf_cp!()
-                .as_ref()
-                .is_some_and(|c| c.keywords().has_kw(&Keyword::CantActivateAbilities))
+            && bf_cp!().as_ref().is_some_and(|c| {
+                c.keywords().has_kw(&Keyword::CantActivateAbilities)
+                    || (!ability_is_mana && c.keywords().has_kw(&Keyword::CantActivateNonManaAbilities))
+            })
         {
             return Err(GameError::AbilitySuppressedByNamedCard);
         }
