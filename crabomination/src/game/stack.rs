@@ -405,6 +405,14 @@ impl GameState {
             | Effect::IfDiscardedForCost { then: body, .. }
             | Effect::ExileFaceDown { body }
             | Effect::Investigate { body }
+            // The wrappers a push carries a resolution's scratch under: the
+            // pushed effect is `BindScratch { ChooseMode }` whenever the
+            // resolution had anything to carry (`carry_into_reflexive`), and a
+            // modal this walk cannot see resolves at mode 0 for ever.
+            | Effect::BindScratch { body, .. }
+            | Effect::BindTargetSlot { body, .. }
+            | Effect::BindTargetObjects { body, .. }
+            | Effect::WithX { body, .. }
             | Effect::OneSearch { body } => Self::governing_modal(body),
             Effect::MayPay { body, .. } | Effect::MayPayLife { body, .. } => {
                 Self::governing_modal(body)
@@ -10498,7 +10506,22 @@ mod modal_reachability {
                     continue;
                 }
                 checked += 1;
-                if super::GameState::governing_modal(eff).is_none() {
+                // CR 603.12 — a reflexive body goes on the stack as its own
+                // trigger (`push_reflexive_trigger`), which runs
+                // `pick_trigger_mode` on it, so each one is its own scope.
+                fn reachable(e: &Effect) -> bool {
+                    if super::GameState::governing_modal(e).is_some() {
+                        return true;
+                    }
+                    e.any_nested(&|inner| {
+                        matches!(
+                            inner,
+                            Effect::Reflexive { body } | Effect::ReflexiveTrigger { body }
+                                if super::GameState::governing_modal(body).is_some()
+                        )
+                    })
+                }
+                if !reachable(eff) {
                     unreachable.push(format!("{} [{kind}]", def.name));
                 }
             }
