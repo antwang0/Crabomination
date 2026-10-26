@@ -14954,10 +14954,28 @@ impl GameState {
                         *friendly_seats = seats;
                     }
                 }
-                // Live-conditional team anthems (`PumpTeamIf`) don't fold
-                // through `push_static_ability_effects` — evaluate the gate
-                // against the emblem's owner here (Ellywick's −7 emblem).
+                // Live-conditional and value-scaled team anthems (`PumpTeamIf`,
+                // `PumpPTByValue`) don't fold through
+                // `push_static_ability_effects` — evaluate them against the
+                // emblem's owner here (Ellywick's −7 emblem).
                 for sa in &synth.definition.static_abilities {
+                    if let crate::effect::StaticEffect::PumpPTByValue { applies_to, power, toughness } = &sa.effect {
+                        let Some(affected) = selector_to_affected(applies_to, &synth) else { continue };
+                        let ctx = crate::game::effects::EffectContext::for_ability(sid, seat, None);
+                        let (p, t) = (self.evaluate_value(power, &ctx), self.evaluate_value(toughness, &ctx));
+                        if p != 0 || t != 0 {
+                            all_effects.push(ContinuousEffect {
+                                timestamp: synth.object_timestamp(),
+                                source: sid,
+                                affected,
+                                layer: Layer::L7PowerTough,
+                                sublayer: Some(PtSublayer::Modify),
+                                duration: EffectDuration::Indefinite,
+                                modification: Modification::ModifyPowerToughness(p, t),
+                            });
+                        }
+                        continue;
+                    }
                     let crate::effect::StaticEffect::PumpTeamIf {
                         condition,
                         applies_to,

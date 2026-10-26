@@ -1934,6 +1934,9 @@ pub enum Value {
     /// Grandeur, Stinging Study); one in a library, hand, graveyard or exile
     /// adds nothing.
     GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef),
+    /// [`Value::DungeonsCompleted`] counting each dungeon name once —
+    /// "each differently named dungeon you've completed" (Ellywick's emblem).
+    DistinctDungeonsCompleted,
 }
 
 impl Value {
