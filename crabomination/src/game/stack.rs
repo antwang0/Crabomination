@@ -4597,6 +4597,21 @@ impl GameState {
                     }
                 }
             }
+            // An emblem's "untap all permanents you control during each
+            // opponent's untap step" (Teferi, Who Slows the Sunset). Emblems
+            // live on the player, outside the board lane above.
+            for (q, pl) in self.players.iter().enumerate() {
+                if q != p
+                    && pl.is_alive()
+                    && !u.contains(&q)
+                    && !self.same_team(q, p)
+                    && pl.emblems.iter().any(|e| {
+                        e.statics.iter().any(|sa| matches!(sa.effect, StaticEffect::UntapAllYoursEachUntapStep))
+                    })
+                {
+                    u.push(q);
+                }
+            }
             u
         };
         // CR 502.3 — the filtered sibling (Prophet of Kruphix): an off-turn
