@@ -1177,7 +1177,9 @@ mod recent127 {
         let d = g.add_card_to_battlefield(0, catalog::dust_animus());
         g.fire_self_etb_triggers(d, 0);
         drain_stack(&mut g);
-        assert_eq!(g.computed_permanent(d).unwrap().power, 4, "2/3 + two +1/+1 = 4/5");
+        let cp = g.computed_permanent(d).unwrap();
+        assert_eq!(cp.power, 4, "2/3 + two +1/+1 = 4/5");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Lifelink), "and a lifelink counter");
     }
 
     /// Claim Jumper ramps a Plains when behind on lands.

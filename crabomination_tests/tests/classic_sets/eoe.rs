@@ -3366,6 +3366,23 @@ fn pull_through_the_weft_returns_perms_to_hand() {
         "both nonland permanents returned to hand");
 }
 
+/// Pull Through the Weft's second half: up to two land cards come back onto
+/// the battlefield tapped.
+#[test]
+fn pull_through_the_weft_returns_lands_tapped() {
+    let mut g = two_player_game();
+    let f1 = to_gy(&mut g, catalog::forest());
+    let f2 = to_gy(&mut g, catalog::island());
+    let f3 = to_gy(&mut g, catalog::plains());
+    let id = g.add_card_to_hand(0, catalog::pull_through_the_weft());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, id);
+    let back: Vec<_> = [f1, f2, f3].into_iter().filter(|id| g.battlefield_find(*id).is_some()).collect();
+    assert_eq!(back.len(), 2, "up to two lands");
+    assert!(back.iter().all(|id| g.battlefield_find(*id).unwrap().tapped));
+}
+
 /// Close Encounter deals damage equal to your greatest creature's power.
 #[test]
 fn close_encounter_deals_greatest_power() {

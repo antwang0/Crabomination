@@ -499,8 +499,8 @@ pub fn betrayal_at_the_vault() -> CardDefinition {
 }
 
 /// Dust Animus — {1}{W} 2/3 Spirit with flying, Plot {1}{W}. If you control five
-/// or more untapped lands, it enters with two +1/+1 counters. (The lifelink
-/// counter is approximated as an extra +1/+1 — no keyword-counter primitive.)
+/// or more untapped lands, it enters with two +1/+1 counters and a lifelink
+/// counter (CR 122.1b; put on by its ETB rather than as it enters).
 pub fn dust_animus() -> CardDefinition {
     CardDefinition {
         name: "Dust Animus",
@@ -519,11 +519,14 @@ pub fn dust_animus() -> CardDefinition {
                 sel: Selector::EachPermanent(R::Land.and(R::ControlledByYou).and(R::Untapped)),
                 n: Value::Const(5),
             },
-            then: Box::new(Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::Const(2),
-            }),
+            then: Box::new(Effect::Seq(vec![
+                Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(2),
+                },
+                Effect::AddKeywordCounter { what: Selector::This, keyword: Keyword::Lifelink, amount: Value::ONE },
+            ])),
             else_: Box::new(Effect::Noop),
         })],
         ..Default::default()

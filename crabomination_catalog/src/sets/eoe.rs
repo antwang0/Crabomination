@@ -8075,18 +8075,31 @@ pub fn weftwalking() -> CardDefinition {
 }
 
 /// Pull Through the Weft — {3}{G}{G} Sorcery. Return up to two nonland permanent
-/// cards from your graveyard to your hand. (The "then up to two land cards to
-/// the battlefield tapped" half is dropped — no graveyard-land-to-battlefield
-/// primitive.)
+/// cards from your graveyard to your hand, then up to two land cards to the
+/// battlefield tapped. (Approximation: both halves are picked as it resolves
+/// rather than targeted.)
 pub fn pull_through_the_weft() -> CardDefinition {
     CardDefinition {
         name: "Pull Through the Weft",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ReturnGraveyardCardsToHand {
-            filter: SelectionRequirement::PermanentCard.and(SelectionRequirement::Nonland),
-            max: Value::Const(2),
-        },
+        effect: Effect::Seq(vec![
+            Effect::ReturnGraveyardCardsToHand {
+                filter: SelectionRequirement::PermanentCard.and(SelectionRequirement::Nonland),
+                max: Value::Const(2),
+            },
+            Effect::MoveChosen {
+                from: Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Graveyard,
+                    filter: SelectionRequirement::Land,
+                },
+                filter: None,
+                count: Value::Const(2),
+                up_to: true,
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+        ]),
         ..Default::default()
     }
 }
