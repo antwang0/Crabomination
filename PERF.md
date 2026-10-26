@@ -20455,6 +20455,16 @@ is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
 
+### 2026-10-26 — Homunculus Horde's once-a-turn doubling is 47 s of release for ONE game
+
+4-seat pod `--pod-decks 58,1035,2657,5346 --seed 12282 --first 1 --threads 1`, `release`: **47.7 s**, decided at
+turn 103, 11,469 actions, no board cap and no undecided column. The engine is correct — "whenever you draw your
+second card each turn, create a token that's a copy of this creature" doubles the Hordes once a turn, so the
+stack holds **839** Horde triggers at turn 56 — but a strict `debug` run of that game exceeds **600 s** and was
+the only hit in an 800-group / 1,600-game strict debug campaign (seed 11500). Not profiled; same family as the
+~100-token flying board below (every token is a copy with a trigger of its own). A debug smoke that bounds its
+games needs a per-game timeout well over 600 s, or to read this family's hits as slow rather than hung.
+
 ### 2026-10-25 — a ~100-token flying board costs ~130 ms an action (Commander only)
 
 6-seat pod `--pod-decks 6054,2881,4375,3323,4191,834 --seed 1073858`, `release`: Inspired Skypainter's prepare loop
