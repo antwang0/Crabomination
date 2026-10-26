@@ -47161,7 +47161,8 @@ impl GameState {
                 seats.dedup();
                 self.apnap_sort(seats)
             }
-            PlayerRef::EachWithFewestControlled(filter) => {
+            PlayerRef::EachWithFewestControlled(filter) | PlayerRef::EachWithMostControlled(filter) => {
+                let most = matches!(pref, PlayerRef::EachWithMostControlled(_));
                 let count = |p: usize| {
                     self.battlefield
                         .iter()
@@ -47173,8 +47174,9 @@ impl GameState {
                 };
                 let alive: Vec<(usize, usize)> =
                     self.living_seats().map(|p| (p, count(p))).collect();
-                let least = alive.iter().map(|&(_, n)| n).min().unwrap_or(0);
-                self.apnap_sort(alive.into_iter().filter(|&(_, n)| n == least).map(|(p, _)| p).collect())
+                let counts = alive.iter().map(|&(_, n)| n);
+                let pick = if most { counts.max() } else { counts.min() }.unwrap_or(0);
+                self.apnap_sort(alive.into_iter().filter(|&(_, n)| n == pick).map(|(p, _)| p).collect())
             }
             PlayerRef::EachPlayerWithoutMaxSpeed => self.apnap_sort(
                 (0..self.players.len())
@@ -47470,7 +47472,8 @@ impl GameState {
             PlayerRef::EachPlayerExceptControllerOf(_)
             | PlayerRef::EachPlayerSourceAttackedThisTurn
             | PlayerRef::EachPlayerYouAreAttacking
-            | PlayerRef::EachWithFewestControlled(_) => self.resolve_players(pref, ctx).into_iter().next(),
+            | PlayerRef::EachWithFewestControlled(_)
+            | PlayerRef::EachWithMostControlled(_) => self.resolve_players(pref, ctx).into_iter().next(),
             PlayerRef::EnchantedPlayer => ctx
                 .source
                 .and_then(|src| self.battlefield_find(src))

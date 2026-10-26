@@ -186,6 +186,10 @@ pub enum PlayerRef {
     /// ability naming it stays one (CR 605.1a). `Effect::AddMana` asks it as a
     /// seat ballot led by you; any other reader takes you (Victory Chimes).
     PlayerOfYourChoice,
+    /// [`Self::EachWithFewestControlled`]'s mirror: every living player tied
+    /// for the most matching permanents, APNAP ("each player who controls the
+    /// most creatures investigates" — No Witnesses).
+    EachWithMostControlled(Box<SelectionRequirement>),
 }
 
 impl PlayerRef {
@@ -213,6 +217,7 @@ impl PlayerRef {
                 | PlayerRef::EachPlayerSourceAttackedThisTurn
                 | PlayerRef::EachPlayerYouAreAttacking
                 | PlayerRef::EachWithFewestControlled(_)
+                | PlayerRef::EachWithMostControlled(_)
         )
     }
 }
