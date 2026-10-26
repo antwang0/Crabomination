@@ -2291,3 +2291,14 @@ Elenda, Gorm, Olivia, Storrev, Surrak, Tomik, Yosei; 2026-10-23 second: Kang, Mm
 | Card | Missing | Needs |
 | --- | --- | --- |
 | 🟡 Gogo / Arachne | Gogo's "can't be copied"; the hand look | cosmetic or minor |
+
+## "When you do" payoffs that target too early (CR 603.12, 2026-10-26)
+
+`scripts/audit_when_you_do.py` lists the implemented cards whose printed "When you do, … target …" has no
+`Reflexive` / `ReflexiveTrigger` in its factory: the payoff targets as the outer trigger goes on the stack,
+before the cost or choice that gates it, and resolves inline (no response window). **80 cards**; top by pod
+seats: Armix, Filigree Thrasher 73, Ancient Bronze Dragon 60, Guide of Souls 46, Leyline Tyrant 46, The Fugitive
+Doctor 39, Earthbender Ascension 33, Cut Your Losses 22, Dáin Ironfoot 19. Closed this pass: the Plans
+(`plan_payoff`), Bolg of the North, Yotia Declares War, Undead Butler. ⚠ A "may [cost]. When you do" wrapper
+changes what `optional_trigger_beneficial` / the may-discard ask can see of the payoff — check the bot's
+decline still holds when no target exists before converting one (Armix's discard).
