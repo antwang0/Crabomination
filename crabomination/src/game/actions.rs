@@ -17914,7 +17914,12 @@ impl GameState {
                         && matches!(
                             &dt.kind,
                             crate::game::types::DelayedKind::YourNextSpellMatchingThisTurn(f)
-                                if self.evaluate_requirement_on_card(f, &cast, controller)
+                                if self.evaluate_requirement_on_card(
+                                    // "… less than or equal to Loki's power": the watcher's source, last known.
+                                    &f.resolve_source_power(self.source_power_lki(dt.source).unwrap_or(0)),
+                                    &cast,
+                                    controller,
+                                )
                         )
                 })
                 .collect();

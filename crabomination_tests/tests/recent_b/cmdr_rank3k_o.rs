@@ -168,6 +168,22 @@ fn loki_copies_cheap_spells() {
     assert_eq!(plus(&g, loki), 2);
 }
 
+/// CR 603.7c — Loki's watch is for the next instant or sorcery with mana value
+/// at most his power: a pricier one (Lava Axe, 5 > 2) leaves it armed, and the
+/// Bolt after it is copied.
+#[test]
+fn loki_skips_a_spell_above_his_power_and_copies_the_next() {
+    let mut g = pod(2);
+    let loki = ready(&mut g, 0, catalog::loki_laufeyson());
+    activate(&mut g, loki, 0, None);
+    let axe = g.add_card_to_hand(0, catalog::lava_axe());
+    cast(&mut g, axe, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 15, "Lava Axe, not copied");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)));
+    assert_eq!(g.players[1].life, 9, "Bolt and its copy");
+}
+
 /// CR 603.2 — Wanda's Vision fires on the second spell each turn.
 #[test]
 fn wandas_vision_cascades_on_the_second_spell() {

@@ -196,17 +196,14 @@ pub fn loki_laufeyson() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),
                 tap_cost: true,
-                effect: Effect::OnYourNextInstantSorceryThisTurn {
-                    body: Box::new(Effect::If {
-                        cond: Predicate::ValueAtLeast(
-                            Value::PowerOf(Box::new(Selector::This)),
-                            Value::ManaValueOf(Box::new(Selector::TriggerSource)),
-                        ),
-                        then: Box::new(Effect::CopySpellMayChooseTargets {
-                            what: Selector::TriggerSource,
-                            count: Value::ONE,
-                        }),
-                        else_: Box::new(Effect::Noop),
+                // A pricier instant or sorcery leaves the watch armed (CR 603.7c).
+                effect: Effect::OnYourNextSpellMatchingThisTurn {
+                    filter: R::HasCardType(CardType::Instant)
+                        .or(R::HasCardType(CardType::Sorcery))
+                        .and(R::ManaValueAtMostSourcePower),
+                    body: Box::new(Effect::CopySpellMayChooseTargets {
+                        what: Selector::TriggerSource,
+                        count: Value::ONE,
                     }),
                 },
                 ..Default::default()
