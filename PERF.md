@@ -3136,6 +3136,25 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-26 (Commander run, `01WvrAp6`) — guardrail; reflexive pushes, the bot's reflexive-target screen, Moonlit's ask
+
+New on paths a 2-player game can reach: `optional_trigger_beneficial` walks a may-body for a `ReflexiveTrigger`
+(`reflexive_payoff_untargetable`); `push_reflexive_trigger` asks `governing_modal` and flips a seat flag around its
+target walk; `CreateToken` reads `seat_prompts` per player before Moonlit's ask. `release` bot_ladder, 4-core Xeon,
+base `22a17016b` (origin before this run's commits) vs tip `fb9ae9d0a`, each built in its own worktree target dir:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism
+                 ok; thread_determinism ok (3 vs 1); peak_rss_mib 50.2
+bench_ab.py      16 pairs base vs tip: +0.65 % median, +0.88 % mean (sd 7.63 — noise; no regression)
+pools            cube / sos / sealed x 300 (seed 14200): outcomes identical base vs tip (cube's 1 draw on both)
+pods             seed 14401 x 1,000 at 2..8 seats: 7,000 / 7,000 decided, turns/game 19.53 / 32.53 / 45.70 / 58.48 /
+                 69.86 / 82.02 / 97.73
+random pods      random_pods.sh 4 500 3 14501: 1 hit in 1,500 (a CR 104.4b draw); 6 300 2 14901: 0 hits in 600
+targeted pods    48 four-seat groups holding every changed card x 100 (seeds 14101-14121, 15001-15027): 4,800 games,
+                 3 draws, 0 panics; strict debug (CRAB_ANSWER_LOG=strict) 14 groups x 20: 280 / 280 decided
+```
+
 ### 2026-10-26 (Commander run, `01AsBSRF`) — guardrail; copy-stamp refactor, emblem untap walk, token cost field
 
 New on hot-ish paths: `revert_copy_on_leave` reads one cold `Option` (`next_entries_copy`) per battlefield leave;

@@ -224,11 +224,20 @@ pub fn thorin_mountain_king() -> CardDefinition {
                     ),
                     to: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
                 },
+                // CR 603.12 — "When one or more Equipment become attached …
+                // this way": a reflexive trigger targeting after the attach;
+                // "that creature" is the attached Equipment's host (the carry
+                // keeps the moved Equipment).
                 Effect::If {
                     cond: Predicate::ValueAtLeast(Value::count(Selector::LastMoved), Value::ONE),
-                    then: Box::new(Effect::DealDamageEqualToPower {
-                        source: Selector::Target(0),
-                        target: Selector::TargetFiltered { slot: 1, filter: R::Creature },
+                    then: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::OptionalTargets {
+                            min: 0,
+                            body: Box::new(Effect::DealDamageEqualToPower {
+                                source: Selector::AttachedTo(Box::new(Selector::LastMoved)),
+                                target: Selector::TargetFiltered { slot: 0, filter: R::Creature },
+                            }),
+                        }),
                     }),
                     else_: Box::new(Effect::Noop),
                 },

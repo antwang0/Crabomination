@@ -140,7 +140,8 @@ fn invasion_of_regatha_burns_and_its_back_adds_two() {
 }
 
 /// Thorin, Mountain-king: Bonesplitter moves onto the bear, which then bites
-/// the giant for 4; with nothing to attach, the bite never happens.
+/// the giant for 4 — a reflexive trigger (CR 603.12) that targets after the
+/// attach; with nothing to attach, the bite never happens.
 #[test]
 fn thorin_mountain_king_equips_then_bites() {
     let run = |with_equipment: bool| {
@@ -154,7 +155,7 @@ fn thorin_mountain_king_equips_then_bites() {
         let etb = catalog::thorin_mountain_king().triggered_abilities[0].effect.clone();
         let mut ctx = EffectContext::for_spell(0, None, 0, 0);
         ctx.source = Some(thorin);
-        ctx.targets = vec![Target::Permanent(bear), Target::Permanent(giant)];
+        ctx.targets = vec![Target::Permanent(bear)];
         let evs = g.resolve_effect(&etb, &ctx).unwrap();
         g.dispatch_triggers_for_events(&evs);
         drain_stack(&mut g);
