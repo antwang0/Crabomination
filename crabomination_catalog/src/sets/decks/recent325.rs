@@ -519,10 +519,8 @@ pub fn rite_of_renewal() -> CardDefinition {
 /// printed land makes **only white**, which is what the mana ratchet caught.
 ///
 /// The third ability sets up a delayed attack trigger (CR 603.7e,
-/// `OnYourNextAttackThisTurn`): the Warriors join your next attack this turn
-/// and go at the next end step. Residual: the printed trigger is "whenever
-/// you attack this turn", so an extra combat on the same turn gets no second
-/// pair.
+/// `EachAttackThisTurn`): Warriors join each attack you make this turn and
+/// go at the next end step.
 pub fn dalkovan_encampment() -> CardDefinition {
     CardDefinition {
         name: "Dalkovan Encampment",
@@ -553,7 +551,9 @@ pub fn dalkovan_encampment() -> CardDefinition {
             ActivatedAbility {
                 tap_cost: true,
                 mana_cost: cost(&[generic(2), w()]),
-                effect: Effect::OnYourNextAttackThisTurn {
+                // "Whenever you attack this turn": every attack, an added combat's too.
+                effect: Effect::DelayUntil {
+                    kind: crate::effect::DelayedTriggerKind::EachAttackThisTurn,
                     body: Box::new(Effect::CreateTokenAttacking {
                         who: PlayerRef::You,
                         count: Value::Const(2),

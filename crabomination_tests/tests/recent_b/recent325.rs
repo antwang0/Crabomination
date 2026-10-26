@@ -308,6 +308,8 @@ fn dalkovan_encampment_taps_for_white_and_musters_attackers() {
         g.battlefield.iter().filter(|c| c.definition.name == "Warrior").collect();
     assert_eq!(warriors.len(), 2);
     assert!(warriors.iter().all(|c| c.tapped), "tapped and attacking");
+    // "Whenever", not "when you next": still watching for an added combat.
+    assert!(g.delayed_triggers.iter().any(|dt| dt.source == land), "armed for the rest of the turn");
 }
 
 /// Silent Hallcreeper never repeats a mode.

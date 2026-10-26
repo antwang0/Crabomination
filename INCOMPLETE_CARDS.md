@@ -2115,7 +2115,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Demonic Embrace | the graveyard cast is modelled as an alternative cost (its own mana + 3 life + a discard), so it can't combine with another alternative cost | `AlternativeCost { from_graveyard }` |
 | 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |
 | ~~Quilled Greatwurm~~ ✅ | fixed 2026-10-24: `CastSelfFromGraveyardWithCost(RemoveCountersFromCreatures { count: 6 })` | — |
-| 🟡 Dalkovan Encampment | "whenever you attack this turn" fires on your next attack only, so an extra combat that turn gets no second pair of Warriors | `OnYourNextAttackThisTurn` |
 | 🟡 Vaevictis Asmadi, the Dire | its per-player target is mandatory in print; `ForEachPlayerTarget` lets a seat leave one out | `ForEachPlayerTarget`'s "up to" |
 | 🟡 Soul Exchange | the +2/+2 counter "if the exiled creature was a Thrull" is dropped — the cast's exile-a-creature cost isn't remembered | `AdditionalCastCost::ExilePermanent` |
 | 🟡 Gix's Command | "up to one creature" for the counters mode is the engine's pick among yours | `Selector::one_of` |
