@@ -8487,11 +8487,15 @@ pub fn suncleanser() -> CardDefinition {
     }
 }
 
-/// Bound by Moonsilver — {2}{W} Aura. Enchanted creature can't attack or
-/// block (or transform — not modelled). Sacrifice another permanent: attach
-/// it to target creature; sorcery speed, once each turn.
+/// Bound by Moonsilver — {2}{W} Aura. Enchanted creature can't attack, block,
+/// or transform. Sacrifice another permanent: attach it to target creature;
+/// sorcery speed, once each turn.
 pub fn bound_by_moonsilver() -> CardDefinition {
     CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature can't transform.",
+            effect: StaticEffect::CantTransform { filter: R::IsHostOfSource },
+        }],
         activated_abilities: vec![ActivatedAbility {
             sac_other_filter: Some((R::Permanent.and(R::OtherThanSource), 1)),
             sorcery_speed: true,

@@ -4014,3 +4014,20 @@ fn corpse_hauler_returns_another_creature_card() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bear));
     assert!(g.players[0].graveyard.iter().any(|c| c.id == hauler));
 }
+
+/// Bound by Moonsilver: "enchanted creature can't … transform" — a transform
+/// of Delver of Secrets does nothing while the Aura is on it, and works again
+/// once it's gone (CR 701.28).
+#[test]
+fn bound_by_moonsilver_stops_transforming() {
+    let mut g = pod(2);
+    let delver = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
+    let aura = g.add_card_to_battlefield(1, catalog::bound_by_moonsilver());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(delver);
+    let mut evs = Vec::new();
+    g.transform_permanent(delver, &mut evs);
+    assert!(!g.battlefield_find(delver).unwrap().transformed, "locked");
+    g.battlefield_find_mut(aura).unwrap().attached_to = None;
+    g.transform_permanent(delver, &mut evs);
+    assert!(g.battlefield_find(delver).unwrap().transformed, "unlocked");
+}

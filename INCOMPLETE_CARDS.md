@@ -2252,7 +2252,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Graven Abomination | exiles a card from any opponent's graveyard, not specifically the defending player's | a defending-player graveyard target filter |
 | 🟡 Suncleanser | the opponent mode removes their counters but not the "can't get counters" lock | a player-scoped counter lock |
 | 🟡 Moonlace | only permanents are offered as targets (not spells) | a spell-color layer |
-| 🟡 Bound by Moonsilver | "can't transform" is not modelled | a transform lock |
+| ~~Bound by Moonsilver~~ ✅ | fixed 2026-10-27: `StaticEffect::CantTransform { IsHostOfSource }` | — |
 | 🟡 Sacred Boon | its +0/+1 counters land as the damage is prevented, not at the beginning of the next end step | a delayed per-prevention payout |
 | 🟡 Farmstead | the upkeep "pay {W}{W}: gain 1" trigger rides the Aura (the Aura controller's upkeep), not the enchanted land | a granted-trigger static on `AttachedTo(This)` |
 | 🟡 Jester's Scepter | the exiled card paid as the cost is always one that names the target spell (paying with a non-matching card — legal, pointless — isn't offered); the controller can't look at the face-down cards in the client | a free pick of the exiled card as a cost |
