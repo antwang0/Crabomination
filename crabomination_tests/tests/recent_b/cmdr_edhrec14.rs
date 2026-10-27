@@ -523,3 +523,27 @@ fn brazen_cannonade_raid_card_lasts_until_your_next_combat_ends() {
     assert!(saw_next_combat, "still playable during your next combat");
     assert!(!live(&g), "gone once that combat ended");
 }
+
+/// You're Ambushed on the Road's Stand and Fight pumps ANY target creature
+/// (+1/+3); Alley Evasion's pump stays on your own creatures.
+#[test]
+fn youre_ambushed_on_the_road_pumps_any_creature() {
+    for (def, ok) in [(catalog::youre_ambushed_on_the_road as fn() -> _, true), (catalog::alley_evasion, false)] {
+        let mut g = pod(2);
+        let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+        let spell = g.add_card_to_hand(0, def());
+        g.players[0].mana_pool.add(Color::White, 1);
+        let cast = g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Permanent(theirs)),
+            additional_targets: vec![],
+            mode: Some(0),
+            x_value: None,
+        });
+        assert_eq!(cast.is_ok(), ok);
+        if ok {
+            drain_stack(&mut g);
+            assert_eq!(g.computed_permanent(theirs).unwrap().toughness, 5);
+        }
+    }
+}

@@ -74,8 +74,8 @@ pub fn unable_to_scream() -> CardDefinition {
 }
 
 /// Sporogenic Infection — {1}{B} Aura. On enter, target player sacrifices a
-/// creature. When enchanted creature is dealt damage, destroy it. (The
-/// "other than enchanted creature" sacrifice clause is approximated away.)
+/// creature other than enchanted creature. When enchanted creature is dealt
+/// damage, destroy it.
 pub fn sporogenic_infection() -> CardDefinition {
     CardDefinition {
         name: "Sporogenic Infection",
@@ -95,7 +95,7 @@ pub fn sporogenic_infection() -> CardDefinition {
             etb(Effect::Sacrifice {
                 who: target_filtered(R::Player),
                 count: Value::ONE,
-                filter: R::Creature,
+                filter: R::Creature.and(R::Not(Box::new(R::IsHostOfSource))),
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::DealtDamage, EventScope::EnchantedBySource),

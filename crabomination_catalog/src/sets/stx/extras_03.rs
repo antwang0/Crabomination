@@ -74,12 +74,9 @@ pub fn brackish_trudge() -> CardDefinition {
 
 // ── Lurking Deadeye (STX 2021 Witherbloom uncommon creature) ───────────────
 
-/// Lurking Deadeye — {3}{B}, 4/2 Snake Assassin (STX 2021 uncommon).
 /// Lurking Deadeye — {3}{B} 4/2 Human Assassin with Flash. "When this creature
-/// enters, destroy target creature that was dealt damage this turn."
-/// `SelectionRequirement::DealtDamageThisTurn` is the target rider; the old
-/// "-2/-2 to any creature" approximation (and the note that no such tally
-/// existed) predated it.
+/// enters, destroy target creature that was dealt damage this turn"
+/// (`SelectionRequirement::DealtDamageThisTurn`).
 pub fn lurking_deadeye() -> CardDefinition {
     CardDefinition {
         name: "Lurking Deadeye",

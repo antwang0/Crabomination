@@ -34,9 +34,8 @@ pub fn overwhelm() -> CardDefinition {
 }
 
 /// Spawnbroker — {2}{U} 1/1 Human Wizard. When it enters, you may exchange
-/// control of target creature you control and target creature an opponent
-/// controls (the printed power ≤ restriction on the opponent's creature is
-/// approximated).
+/// control of target creature you control and target creature with power less
+/// than or equal to that creature's power an opponent controls.
 pub fn spawnbroker() -> CardDefinition {
     CardDefinition {
         name: "Spawnbroker",
@@ -57,7 +56,7 @@ pub fn spawnbroker() -> CardDefinition {
                 },
                 b: Selector::TargetFiltered {
                     slot: 1,
-                    filter: R::Creature.and(R::ControlledByOpponent),
+                    filter: R::Creature.and(R::ControlledByOpponent).and(R::PowerAtMostTargetSlot(0)),
                 },
             }),
         })],

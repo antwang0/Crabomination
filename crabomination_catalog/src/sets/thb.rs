@@ -133,8 +133,8 @@ pub fn medomais_prophecy() -> CardDefinition {
 }
 
 /// Haktos the Unscarred — {R}{R}{W}{W} 6/1 Human Warrior. Attacks each combat;
-/// as it enters, choose 2/3/4 at random (modeled as a d3) and gain protection
-/// from each mana value other than that number.
+/// as it enters, choose 2/3/4 at random (a d3 roll) and gain protection from
+/// each mana value other than that number.
 pub fn haktos_the_unscarred() -> CardDefinition {
     use crate::card::Keyword as Kw;
     let grant = |n: u32| Effect::GrantKeyword {
@@ -2852,8 +2852,8 @@ pub fn nessian_hornbeetle() -> CardDefinition {
 /// Phalanx Tactics — {1}{W} Instant. Target creature you control gets +2/+1;
 /// each other creature you control gets +1/+1 until end of turn.
 ///
-/// Modeled as "each creature you control gets +1/+1, then the target gets an
-/// additional +1/+0" — nets +2/+1 on the target and +1/+1 on the rest.
+/// Built as "each creature you control gets +1/+1, then the target gets an
+/// additional +1/+0" — the same +2/+1 on the target and +1/+1 on the rest.
 pub fn phalanx_tactics() -> CardDefinition {
     CardDefinition {
         name: "Phalanx Tactics",

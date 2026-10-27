@@ -3097,14 +3097,14 @@ pub fn meticulous_excavation() -> CardDefinition {
     }
 }
 
-fn pump_or_bounce(name: &'static str, p: i32, t: i32) -> CardDefinition {
+fn pump_or_bounce(name: &'static str, p: i32, t: i32, pump: R) -> CardDefinition {
     CardDefinition {
         name,
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
         effect: Effect::ChooseMode(vec![
             Effect::PumpPT {
-                what: target_filtered(R::Creature.and(R::ControlledByYou)),
+                what: target_filtered(pump),
                 power: Value::Const(p),
                 toughness: Value::Const(t),
                 duration: Duration::EndOfTurn,
@@ -3117,14 +3117,13 @@ fn pump_or_bounce(name: &'static str, p: i32, t: i32) -> CardDefinition {
 
 /// Alley Evasion — {W} instant. Your creature gets +1/+2, or returns to hand.
 pub fn alley_evasion() -> CardDefinition {
-    pump_or_bounce("Alley Evasion", 1, 2)
+    pump_or_bounce("Alley Evasion", 1, 2, R::Creature.and(R::ControlledByYou))
 }
 
 /// You're Ambushed on the Road — {W} instant. Your creature returns to hand,
-/// or target creature gets +1/+3. Residual: the pump is limited to your
-/// creatures, like Alley Evasion's.
+/// or target creature (any) gets +1/+3.
 pub fn youre_ambushed_on_the_road() -> CardDefinition {
-    pump_or_bounce("You're Ambushed on the Road", 1, 3)
+    pump_or_bounce("You're Ambushed on the Road", 1, 3, R::Creature)
 }
 
 /// Kazarov, Sengir Pureblood — {5}{B}{B} legendary 4/4 flying Vampire.

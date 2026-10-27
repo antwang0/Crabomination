@@ -923,6 +923,28 @@ mod recent204 {
         assert!(c.subtypes().creature_types.contains(&CreatureType::Angel), "and still an Angel");
     }
 
+    /// Sporogenic Infection's edict is "a creature other than enchanted
+    /// creature": with the weaker creature enchanted, the stronger one goes.
+    #[test]
+    fn sporogenic_infection_edict_spares_the_host() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let host = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+        let aura = g.add_card_to_hand(0, catalog::sporogenic_infection());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: aura, target: Some(Target::Permanent(host)),
+            additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast Sporogenic Infection");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(host).is_some(), "the enchanted creature can't be the sacrifice");
+        assert!(g.battlefield_find(angel).is_none(), "the other creature went");
+    }
+
     /// Sporogenic Infection edicts on enter and destroys the host when it's damaged.
     #[test]
     fn sporogenic_infection_edicts_then_destroys_on_damage() {

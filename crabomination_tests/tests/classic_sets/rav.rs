@@ -1585,6 +1585,24 @@ fn spawnbroker_swaps_control() {
     assert_eq!(g.battlefield_find(theirs).unwrap().controller, 0, "their creature is now mine");
 }
 
+/// CR 601.2c — Spawnbroker's second target must have power at most the first's:
+/// a Grizzly Bears can't fetch a Serra Angel, only another 2-power creature.
+#[test]
+fn spawnbroker_second_target_has_lesser_or_equal_power() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for (strong, swaps) in [(true, false), (false, true)] {
+        let mut g = two_player_game();
+        let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let theirs = g.add_card_to_battlefield(1, if strong { catalog::serra_angel() } else { catalog::grizzly_bears() });
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        let broker = g.add_card_to_battlefield(0, catalog::spawnbroker());
+        g.fire_self_etb_triggers(broker, 0);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(theirs).unwrap().controller == 0, swaps, "opponent's is stronger: {strong}");
+        assert_eq!(g.battlefield_find(mine).unwrap().controller == 1, swaps);
+    }
+}
+
 /// Firemane Angel returns itself from the graveyard during your upkeep.
 #[test]
 fn firemane_angel_recurs_from_graveyard() {
