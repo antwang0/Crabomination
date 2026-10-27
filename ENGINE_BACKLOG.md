@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6pH`) — seven primitives, 19 seated-deck rows, stale docs](#fixedopen-2026-10-27-commander-run-01wruxc6ph--seven-primitives-19-seated-deck-rows-stale-docs) | 34 |
-| Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6`) — emblem abilities, the Revolt funnel class, five primitives](#fixedopen-2026-10-27-commander-run-01wruxc6--emblem-abilities-the-revolt-funnel-class-five-primitives) | 28 |
+| Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6yK`) — emblem abilities, the Revolt funnel class, five primitives](#fixedopen-2026-10-27-commander-run-01wruxc6yk--emblem-abilities-the-revolt-funnel-class-five-primitives) | 28 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc5`) — 70 seated-deck residuals, two primitives, the creature-damage watcher class](#fixedopen-2026-10-27-commander-run-01wruxc5--70-seated-deck-residuals-two-primitives-the-creature-damage-watcher-class) | 37 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01WvrAp6`) — the CR 603.12 lane, dropped "may"s, the loop-splice ratchet](#fixedopen-2026-10-26-commander-run-01wvrap6--the-cr-60312-lane-dropped-mays-the-loop-splice-ratchet) | 36 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01AsBSRF`) — 40 seated-deck cards, six engine primitives, two stale-row sweeps](#fixedopen-2026-10-26-commander-run-01asbsrf--40-seated-deck-cards-six-engine-primitives-two-stale-row-sweeps) | 34 |
@@ -326,7 +326,7 @@ OPEN:
   the sacrifice on resume — check that before nesting prompts in `else_`).
 - The top `pod_residuals --rank` rows left are auto-picks (Goldberry, Baron Zemo, Scrap Welder, Rhys, Thorin, Loki).
 
-## FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6`) — emblem abilities, the Revolt funnel class, five primitives
+## FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6yK`) — emblem abilities, the Revolt funnel class, five primitives
 
 No seats. `pod_residuals.py --rank` worked top-down with the cube/sos pools skipped; clean seated decks **5,176 → 5,24x / 6,093**.
 - **Bug class:** the generic `Effect::Move` route (`move_card_to`) and the meld lift never set Revolt's
@@ -344,6 +344,14 @@ No seats. `pod_residuals.py --rank` worked top-down with the cube/sos pools skip
 - **Cards:** Rogue Class's level 3 plays earlier exiles; Woodland Champion one trigger a batch (CR 603.2c); Beatrix's
   any-number attach; Honest Work's "{T}: Add {C}"; Glimpse of Nature draws per creature *spell*; Graven Abomination the
   defending player's graveyard; Alex Wilder counts a command-zone cast (CR 903.8); Loki Laufeyson's stale note.
+
+- **Late batch — the "exact in 1v1" doc class:** grep a seated card's doc for "redundant", "1v1", "duel", "lone
+  opponent" before trusting it. Found: Shinryu's "chosen player loses → you win" (`YouWinWhenChosenPlayerLoses`,
+  `game/chosen_player_loss.rs`), 14 `ForEachOpponentTarget` ceilings below seven
+  (`structural_audit::for_each_opponent_targets_reach_every_opponent_of_an_eight_seat_pod`), Phyrexian Atlas / Feed the
+  Infection's per-opponent Corrupted drain, Seifer's "attacking one of your opponents", Reverse the Sands (trade with
+  the richest opponent, or nobody), Donnie & April / Mikey & Mona's distinct-player modes, Lightwheel Enhancements'
+  max-speed graveyard cast (`flashback_condition`).
 
 OPEN:
 - ✅ Reckless Blaze (the watcher binds `DamagedBySourceThisTurn` off the death LKI) and CR 603.7d's delayed-trigger
@@ -385,13 +393,13 @@ OPEN:
 - Cube-frozen, written up not built: **Vryn Wingmare** (`AdditionalCost`, a real defect), Exquisite Firecraft
   (`CantBeCounteredIfCastCondition` + `as_cast_condition: spell_mastery_gate()`), Lava Coil
   (`ExileIfWouldDieThisTurn` + damage), Pyrotechnic Performer (`YourControl` + `DealDamageEqualToPower`).
-- Looked at, needs a primitive: ~~Karn, Living Legacy~~ (✅ `01WRuXc6`, `emblem_ability`), Reckless Blaze
+- Looked at, needs a primitive: ~~Karn, Living Legacy~~ (✅ `01WRuXc6yK`, `emblem_ability`), Reckless Blaze
   (the dies-this-turn watcher evaluates its filter with no source, so `DamagedBySourceThisTurn` can't gate it),
-  ~~Kutzil's Flanker~~ (✅ `01WRuXc6`), Glimpse the Cosmos (a graveyard alt
-  cast's exile rider), ~~Invasion of Ravnica~~, ~~Graven Abomination~~ (✅ `01WRuXc6`), Casting of Bones (a drawn-this-effect discard filter), Anti-Magic Aura / Consecrate Land (an
-  Aura-legality filter), ~~Phyrexian Marauder~~ (✅ `01WRuXc6`).
+  ~~Kutzil's Flanker~~ (✅ `01WRuXc6yK`), Glimpse the Cosmos (a graveyard alt
+  cast's exile rider), ~~Invasion of Ravnica~~, ~~Graven Abomination~~ (✅ `01WRuXc6yK`), Casting of Bones (a drawn-this-effect discard filter), Anti-Magic Aura / Consecrate Land (an
+  Aura-legality filter), ~~Phyrexian Marauder~~ (✅ `01WRuXc6yK`).
 
-## The Commander NEXT's line 9 as `01WRuXc6` found it (moved verbatim, 2026-10-27)
+## The Commander NEXT's line 9 as `01WRuXc6yK` found it (moved verbatim, 2026-10-27)
 9. **`01AsBSRF` (residual lane, no seats; ENGINE_BACKLOG `01AsBSRF`):** clean seated decks **4,826 → 4,984**. Six primitives (`EachWithMostControlled`, `TokenDefinition.cost` — skipped by the CR 903.4 identity walk, `ExileAtNextEndStepUnless`, `DistributeCountersAmong` target slots, `stamp_copy` + Mystic Reflection's LKI, an emblem's Seedborn untap) and ~30 cards. **Next:** that section's OPEN list — five audited-cheap rows that each need a bot-pick decision (Gix's Command, Rootweaver, Aesir Escape Valhalla, Battle-Axe), then `scripts/pod_residuals.py --rank` (sole residual per seated deck) for the rest. Doomsday Excruciator (cube pool) waits for a pool-change batch beside Wilt-Leaf Liege.
 
 ## The Commander NEXT's line 10 as `01WRuXc5` found it (moved verbatim, 2026-10-27)

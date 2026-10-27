@@ -19,8 +19,8 @@ Moved to `SHIPPED.md` (size trigger). Check it before proposing anything.
 The map for the next Commander run — **audited 2026-09-18 against the tree and
 against the shipped CR text (now `crabomination/MagicCompRules_20260925.txt`; the 2026-09-25 edition replaced 2026-04-17 on 2026-09-28 — its 605.1a / 800.4i / battle changes are in), not
 against this file's history**. Don't re-audit; update rows as they move.
-Per-deck card completion lives in `DECK_FEATURES.md`. Last touched 2026-10-27 (`01WRuXc6`): no row moved —
-the seated-deck residual lane again (ENGINE_BACKLOG `01WRuXc6`: emblem abilities, CR 603.7d delayed-trigger
+Per-deck card completion lives in `DECK_FEATURES.md`. Last touched 2026-10-27 (`01WRuXc6yK`): no row moved —
+the seated-deck residual lane again (ENGINE_BACKLOG `01WRuXc6yK`: emblem abilities, CR 603.7d delayed-trigger
 sources, the Revolt leave-funnel class; clean decks 5,176 → 5,25x).
 
 ### Format core (CR 903)

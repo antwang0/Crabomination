@@ -3136,7 +3136,7 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
-### 2026-10-27 (Commander run, `01WRuXc6`) — guardrail; the Revolt funnel helper, emblem-ability gates, filtered next-spell grants
+### 2026-10-27 (Commander run, `01WRuXc6yK`) — guardrail; the Revolt funnel helper, emblem-ability gates, filtered next-spell grants
 
 New on paths a 2-player game can reach: `move_card_to` reads `computed_is_creature` once per non-battlefield leave
 (`note_permanent_left_battlefield`); `activate_ability_inner` reads `ability.emblem_ability` at four gates; casts walk
