@@ -7170,6 +7170,11 @@ pub struct EquipBonus {
     /// only the granting Aura itself from the 704.5m shed.
     #[serde(default)]
     pub protection_keeps_self: bool,
+    /// "Enchanted permanent can't be enchanted by other Auras" (Anti-Magic
+    /// Aura, Consecrate Land): any other Aura on the host is shed by the
+    /// CR 704.5m sweep.
+    #[serde(default)]
+    pub no_other_auras: bool,
     /// CR 702.16k — "This effect doesn't remove Auras and Equipment you
     /// control that are already attached to it" (Benevolent Blessing): the
     /// 704.5m shed spares Auras sharing this one's controller.

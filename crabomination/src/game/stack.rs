@@ -8972,6 +8972,13 @@ impl GameState {
         let illegally_attached: Vec<CardId> = if !scan.aura {
             Vec::new()
         } else {
+            // (lock Aura, its host) for each "can't be enchanted by other Auras".
+            let lock_auras: Vec<(CardId, CardId)> = self
+                .battlefield
+                .iter()
+                .filter(|a| a.definition.equipped_bonus.as_ref().is_some_and(|b| b.no_other_auras))
+                .filter_map(|a| Some((a.id, a.attached_to?)))
+                .collect();
             self.battlefield
             .iter()
             .filter(|c| c.definition.is_aura() && !c.bestowed)
@@ -9014,6 +9021,11 @@ impl GameState {
                     .as_ref()
                     .is_some_and(|b| b.protection_keeps_self);
                 if !keeps_auras && !keeps_self && self.is_protected_from(c.id, host) {
+                    return Some(c.id);
+                }
+                // "Can't be enchanted by other Auras" — a lock Aura on the host
+                // sheds every other Aura (CR 704.5m).
+                if lock_auras.iter().any(|&(lock, h)| h == host && lock != c.id) {
                     return Some(c.id);
                 }
                 let filter = c.definition.aura_enchant_filter()?;
