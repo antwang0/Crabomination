@@ -25024,7 +25024,13 @@ impl GameState {
             Effect::NextSpellOfSourceChosenTypeFreeThisTurn => {
                 let chosen = ctx.source.and_then(|s| self.battlefield_find(s)).and_then(|c| c.chosen_card_type.clone());
                 if let (Some(t), Some(pl)) = (chosen, self.players.get_mut(ctx.controller)) {
-                    pl.free_next_spell_types.push(t);
+                    pl.free_next_spells.push(crate::card::SelectionRequirement::HasCardType(t));
+                }
+                Ok(())
+            }
+            Effect::GrantNextMatchingSpellFreeThisTurn { filter } => {
+                if let Some(pl) = self.players.get_mut(ctx.controller) {
+                    pl.free_next_spells.push(filter.clone());
                 }
                 Ok(())
             }

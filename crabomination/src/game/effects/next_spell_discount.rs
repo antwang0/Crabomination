@@ -39,12 +39,13 @@ impl GameState {
 }
 
 impl GameState {
-    /// The index of `seat`'s Apex Observatory grant that `card` spends, if any.
-    pub(crate) fn free_next_spell_type(&self, seat: usize, card: &CardInstance) -> Option<usize> {
-        let grants = &self.players.get(seat)?.free_next_spell_types;
+    /// The index of `seat`'s "next [filter] spell is free" grant that `card`
+    /// spends, if any (Apex Observatory, World War Hulk).
+    pub(crate) fn free_next_spell(&self, seat: usize, card: &CardInstance) -> Option<usize> {
+        let grants = &self.players.get(seat)?.free_next_spells;
         if grants.is_empty() {
             return None;
         }
-        grants.iter().position(|t| card.definition.card_types.contains(t))
+        grants.iter().position(|f| self.evaluate_requirement_on_card(f, card, seat))
     }
 }

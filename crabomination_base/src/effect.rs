@@ -10280,6 +10280,10 @@ pub enum Effect {
     /// that matches `filter`, which takes the discount and consumes it; a
     /// cast that doesn't match passes it by. Cleared at end of turn.
     GrantNextMatchingSpellDiscountThisTurn { filter: crate::card::SelectionRequirement, amount: u32 },
+    /// "The next [filter] spell you cast this turn can be cast without paying
+    /// its mana cost" (World War Hulk I): `Player.free_next_spells`, spent by
+    /// the first matching cast, cleared at end of turn.
+    GrantNextMatchingSpellFreeThisTurn { filter: crate::card::SelectionRequirement },
     /// Support N (CR 701.32): "Put a +1/+1 counter on each of up to N target
     /// creatures." Each of slots `0..max_targets` is an optional creature
     /// target (filtered by `filter`); every supplied target gains one +1/+1

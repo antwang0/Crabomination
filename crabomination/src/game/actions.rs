@@ -11623,8 +11623,8 @@ impl GameState {
             // or library cast (Gisa and Geralf) hops through this path. {0}
             // is never worse, so it is taken (CR 118.9).
             crate::mana::ManaCost::default()
-        } else if self.free_next_spell_type(p, &card).is_some() {
-            // Apex Observatory's grant — taken for the same reason, and spent
+        } else if self.free_next_spell(p, &card).is_some() {
+            // Apex Observatory's / World War Hulk's grant — taken for the same reason, and spent
             // by the cast below.
             crate::mana::ManaCost::default()
         } else {
@@ -13398,8 +13398,8 @@ impl GameState {
             }
         }
         self.consume_next_matching_spell_discounts(p, face.as_ref().unwrap_or(&card));
-        if let Some(i) = self.free_next_spell_type(p, face.as_ref().unwrap_or(&card)) {
-            self.players[p].free_next_spell_types.remove(i);
+        if let Some(i) = self.free_next_spell(p, face.as_ref().unwrap_or(&card)) {
+            self.players[p].free_next_spells.remove(i);
         }
         self.spells_cast_this_turn += 1;
         if card.cast_from_graveyard && !self.players[p].used_graveyard_this_turn {

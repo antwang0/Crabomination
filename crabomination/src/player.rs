@@ -587,11 +587,11 @@ pub struct PlayerData {
     /// as the spell is cast, not as it's granted.
     #[serde(default)]
     pub pending_affinity_next_spell: crate::oftenempty::OftenEmpty<u32>,
-    /// "The next spell you cast this turn of the chosen type can be cast
-    /// without paying its mana cost" (Apex Observatory): one card type per
-    /// grant, spent by a matching cast, cleared at end of turn.
+    /// "The next [filter] spell you cast this turn can be cast without paying
+    /// its mana cost" (Apex Observatory, World War Hulk): one filter per grant,
+    /// spent by a matching cast, cleared at end of turn.
     #[serde(default)]
-    pub free_next_spell_types: crate::oftenempty::OftenEmpty<crate::card::CardType>,
+    pub free_next_spells: crate::oftenempty::OftenEmpty<crate::card::SelectionRequirement>,
     /// As `pending_affinity_next_spell`, for the next *noncreature* spell (Don
     /// & Raph, Hard Science): `noncreature_spells_cast_this_game_turn` at grant.
     #[serde(default)]
@@ -2086,7 +2086,7 @@ impl Player {
             pending_spell_discounts: Default::default(),
             next_matching_spell_discounts: Default::default(),
             pending_affinity_next_spell: Default::default(),
-            free_next_spell_types: Default::default(),
+            free_next_spells: Default::default(),
             pending_affinity_next_noncreature: Default::default(),
             face_down_discount_this_turn: 0,
             next_face_down_discount_this_turn: 0,

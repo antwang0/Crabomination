@@ -537,7 +537,7 @@ fn cr_702_167_eye_of_ojer_taq_crafts_on_a_shared_type() {
         .expect("free cast");
     drain_stack(&mut g);
     assert_eq!(g.players[0].hand.len(), hand + 1, "cast for free and resolved");
-    assert!(g.players[0].free_next_spell_types.is_empty(), "the grant is spent");
+    assert!(g.players[0].free_next_spells.is_empty(), "the grant is spent");
 }
 
 /// CR 706.6 — Monitor Monitor pays {1} to reroll a low die once a turn: the 1
