@@ -889,6 +889,28 @@ fn lara_croft_raids_tombs() {
     assert_eq!(tokens_of(&g, 0, "Treasure"), 1);
 }
 
+/// Lara Croft's "you may play A card from exile with a discovery counter":
+/// the grants share one play — a land drop through one spends the other.
+#[test]
+fn lara_croft_plays_one_discovery_card_not_all() {
+    let mut g = pod(2);
+    let lara = ready(&mut g, 0, catalog::lara_croft_tomb_raider());
+    let relic = g.add_card_to_graveyard(1, catalog::the_millennium_calendar());
+    let forest = g.add_card_to_exile(0, catalog::forest());
+    g.exile.iter_mut().find(|c| c.id == forest).unwrap().counters.insert(CounterType::Discovery, 1);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: lara, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count() >= 2, "both playable");
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::PlayLand(forest)).expect("play the Forest from exile");
+    let c = g.exile.iter().find(|c| c.id == relic).expect("still exiled");
+    assert!(c.may_play_until.is_none(), "the one play is spent");
+}
+
 /// Widespread Thieving: a multicolored spell makes a Treasure.
 #[test]
 fn widespread_thieving_pays_for_gold_spells() {

@@ -1266,8 +1266,8 @@ pub fn lady_octopus_inspired_inventor() -> CardDefinition {
 /// strike and reach. Attacking, she exiles up to one target legendary
 /// artifact or land card from a graveyard with a discovery counter; you may
 /// play a card with a discovery counter from exile this turn. Raid — at end
-/// of combat on your turn, if you attacked, a Treasure. Residual: every
-/// discovery card is playable that turn, not "a card" (one).
+/// of combat on your turn, if you attacked, a Treasure. The grants share one
+/// play (`OneCastAmongGranted`).
 pub fn lara_croft_tomb_raider() -> CardDefinition {
     let relic = R::HasSupertype(Supertype::Legendary).and(R::Artifact.or(R::Land)).and(R::InGraveyard);
     CardDefinition {
@@ -1292,6 +1292,14 @@ pub fn lara_croft_tomb_raider() -> CardDefinition {
                     exile_after: false,
                     pay_own_cost: true,
                     any_color: false,
+                },
+                // "You may play A card" — one play between them, a land drop included.
+                Effect::OneCastAmongGranted {
+                    what: Selector::CardsInZone {
+                        who: PlayerRef::EachPlayer,
+                        zone: Zone::Exile,
+                        filter: R::WithCounter(CounterType::Discovery),
+                    },
                 },
             ])),
             TriggeredAbility {
