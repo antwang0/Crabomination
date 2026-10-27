@@ -239,7 +239,8 @@ pub fn explosive_getaway() -> CardDefinition {
 }
 
 /// Lightwheel Enhancements — {W} Aura. Start your engines! Enchant creature or
-/// Vehicle; it gets +1/+1 and has vigilance. (Max-speed graveyard-cast dropped.)
+/// Vehicle; it gets +1/+1 and has vigilance. Max speed — you may cast it from
+/// your graveyard (`GraveyardCast` gated by `flashback_condition`).
 pub fn lightwheel_enhancements() -> CardDefinition {
     CardDefinition {
         name: "Lightwheel Enhancements",
@@ -249,7 +250,8 @@ pub fn lightwheel_enhancements() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        keywords: vec![Keyword::StartYourEngines],
+        keywords: vec![Keyword::StartYourEngines, Keyword::GraveyardCast],
+        flashback_condition: Some(crate::card::Predicate::SpeedAtLeast { who: PlayerRef::You, speed: 4 }),
         effect: Effect::Attach {
             what: Selector::This,
             to: Selector::TargetFiltered {

@@ -2434,6 +2434,30 @@ mod recent175 {
         assert_eq!(g.players[0].speed, 1, "Start your engines! seeded speed 1");
     }
 
+    /// CR 702.179 — Lightwheel Enhancements' "Max speed — you may cast this card
+    /// from your graveyard": refused at speed 3, cast (and kept, not exiled) at 4.
+    #[test]
+    fn lightwheel_enhancements_casts_from_the_graveyard_at_max_speed() {
+        use crabomination::game::types::{GameAction, Target};
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let aura = g.add_card_to_graveyard(0, catalog::lightwheel_enhancements());
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let cast = |g: &mut crabomination::game::GameState| {
+            g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+            g.perform_action(GameAction::CastFlashback {
+                card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+            })
+        };
+        g.players[0].speed = 3;
+        assert!(cast(&mut g).is_err(), "not at max speed");
+        g.players[0].speed = 4;
+        cast(&mut g).expect("max speed");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(aura).and_then(|c| c.attached_to), Some(bear));
+    }
+
     /// Thopter Fabricator mints a Thopter on your second draw each turn (once).
     #[test]
     fn thopter_fabricator_mints_on_second_draw() {
