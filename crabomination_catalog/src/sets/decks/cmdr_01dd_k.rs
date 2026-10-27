@@ -796,7 +796,7 @@ pub fn out_of_bounds() -> CardDefinition {
 }
 
 /// Consecrate Land — {W} Aura, enchant land. Enchanted land has
-/// indestructible. (Its "can't be enchanted by other Auras" is not modeled.)
+/// indestructible and can't be enchanted by other Auras.
 pub fn consecrate_land() -> CardDefinition {
     CardDefinition {
         name: "Consecrate Land",
@@ -807,7 +807,11 @@ pub fn consecrate_land() -> CardDefinition {
             ..Default::default()
         },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Land) },
-        equipped_bonus: Some(crate::card::EquipBonus { keywords: vec![Keyword::Indestructible], ..Default::default() }),
+        equipped_bonus: Some(crate::card::EquipBonus {
+            keywords: vec![Keyword::Indestructible],
+            no_other_auras: true,
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

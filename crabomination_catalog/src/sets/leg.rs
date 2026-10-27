@@ -603,13 +603,12 @@ pub fn gaseous_form() -> CardDefinition {
 }
 
 /// Anti-Magic Aura — the creature can't be the target of spells (abilities
-/// still reach it — it shipped as shroud). ⚠ "Can't be enchanted by other
-/// Auras" is dropped.
+/// still reach it — it shipped as shroud) and sheds every other Aura.
 pub fn anti_magic_aura() -> CardDefinition {
     aura_shell(
         "Anti-Magic Aura",
         cost(&[generic(2), crate::mana::u()]),
-        EquipBonus { keywords: vec![Keyword::CantBeTargetedBySpells], ..Default::default() },
+        EquipBonus { keywords: vec![Keyword::CantBeTargetedBySpells], no_other_auras: true, ..Default::default() },
     )
 }
 

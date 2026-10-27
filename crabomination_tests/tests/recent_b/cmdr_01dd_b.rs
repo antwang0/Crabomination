@@ -630,6 +630,22 @@ fn consecrate_land_makes_the_land_indestructible() {
     assert!(g.computed_permanent(land).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
 }
 
+/// Consecrate Land: "can't be enchanted by other Auras" — a Wild Growth cast
+/// on the land is shed to the graveyard by the CR 704.5m sweep.
+#[test]
+fn cr_704_5m_consecrate_land_sheds_other_auras() {
+    let mut g = pod(2);
+    let land = g.add_card_to_battlefield(0, catalog::forest());
+    let aura = g.add_card_to_hand(0, catalog::consecrate_land());
+    cast(&mut g, aura, Some(Target::Permanent(land)));
+    let growth = g.add_card_to_hand(0, catalog::wild_growth());
+    cast(&mut g, growth, Some(Target::Permanent(land)));
+    let _ = g.check_state_based_actions();
+    assert!(g.battlefield_find(growth).is_none(), "Wild Growth can't stay attached");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == growth));
+    assert!(g.battlefield_find(aura).is_some(), "the lock Aura itself stays");
+}
+
 /// CR 702.167a — Throne of the Grim Captain crafts with one each of four
 /// types (a missing one refuses the craft); The Grim Captain's attack makes
 /// each opponent sacrifice and returns a crafted creature card attacking.
