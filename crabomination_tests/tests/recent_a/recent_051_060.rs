@@ -1534,6 +1534,8 @@ mod recent54 {
         )
         .unwrap();
         let shift = g.add_card_to_hand(0, catalog::bioshift());
+        // CR 122.5 — "any number": the caster names how many (here, all).
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(3)]));
         g.players[0].mana_pool.add(Color::Green, 1);
         g.step = TurnStep::PreCombatMain;
         g.priority.player_with_priority = 0;
@@ -1548,6 +1550,35 @@ mod recent54 {
         drain_stack(&mut g);
         assert_eq!(counters(&g, from), 0);
         assert_eq!(counters(&g, to), 3, "counters moved to the second creature");
+    }
+
+    /// Bioshift moves only +1/+1 counters ("any number of +1/+1 counters");
+    /// it shipped as `MoveAllCounters`, which carried every kind across.
+    #[test]
+    fn bioshift_leaves_other_counter_kinds_behind() {
+        let mut g = two_player_game();
+        let from = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let to = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.battlefield_find_mut(from).unwrap().counters.insert(CounterType::PlusOnePlusOne, 2);
+        g.battlefield_find_mut(from).unwrap().counters.insert(CounterType::Charge, 1);
+        let shift = g.add_card_to_hand(0, catalog::bioshift());
+        // CR 122.5 — "any number": the caster names how many (here, all).
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(3)]));
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: shift,
+            target: Some(Target::Permanent(from)),
+            additional_targets: vec![Target::Permanent(to)],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast bioshift");
+        drain_stack(&mut g);
+        assert_eq!(counters(&g, to), 2);
+        assert_eq!(g.battlefield_find(from).unwrap().counter_count(CounterType::Charge), 1, "the charge counter stays");
+        assert_eq!(g.battlefield_find(to).unwrap().counter_count(CounterType::Charge), 0);
     }
 
     #[test]

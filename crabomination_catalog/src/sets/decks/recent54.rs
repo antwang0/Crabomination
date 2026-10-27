@@ -487,13 +487,15 @@ pub fn cold_eyed_selkie() -> CardDefinition {
 }
 
 /// Bioshift — {G/U} Instant. Move any number of +1/+1 counters from target
-/// creature onto another target creature. (Any-number modeled as all.)
+/// creature onto another target creature with the same controller. Only
+/// +1/+1 counters move (it shipped moving every kind, -1/-1 and stun too).
 pub fn bioshift() -> CardDefinition {
     CardDefinition {
         name: "Bioshift",
         cost: crate::mana::ManaCost::new(vec![hybrid(Color::Green, Color::Blue)]),
         card_types: vec![CardType::Instant],
-        effect: Effect::MoveAllCounters {
+        effect: Effect::MoveAnyNumberOfCounters {
+            kind: Some(crate::card::CounterType::PlusOnePlusOne),
             from: Selector::TargetFiltered {
                 slot: 0,
                 filter: R::Creature,
