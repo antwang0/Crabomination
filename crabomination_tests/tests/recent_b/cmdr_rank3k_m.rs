@@ -145,6 +145,31 @@ fn seifer_goads_the_attacked_player() {
     assert!(g.goaded_by_player(g.battlefield_find(bear).unwrap(), 0));
 }
 
+/// Seifer: ANY creature attacking one of your opponents gains deathtouch when
+/// two or more creatures block it — another player's attacker included; one
+/// attacking you doesn't.
+#[test]
+fn seifer_grants_deathtouch_to_any_double_blocked_attacker_of_an_opponent() {
+    for (defender, expect) in [(2usize, true), (0, false)] {
+        let mut g = pod(3);
+        ready(&mut g, 0, catalog::seifer_balamb_rival());
+        let raider = ready(&mut g, 1, catalog::craw_wurm());
+        let a = ready(&mut g, defender, catalog::grizzly_bears());
+        let b = ready(&mut g, defender, catalog::grizzly_bears());
+        g.active_player_idx = 1;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: raider, target: AttackTarget::Player(defender) }]))
+            .expect("attack");
+        drain_stack(&mut g);
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = defender;
+        g.perform_action(GameAction::DeclareBlockers(vec![(a, raider), (b, raider)])).expect("double block");
+        drain_stack(&mut g);
+        assert_eq!(g.computed_permanent(raider).unwrap().keywords().contains(&Keyword::Deathtouch), expect, "defender {defender}");
+    }
+}
+
 /// CR 506.4 — Nivea pulls a blocked creature out of combat, untapped.
 #[test]
 fn nivea_rescues_a_blocked_creature() {

@@ -2120,7 +2120,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Invoke the Ancients | each Spirit's keyword-counter pick is "up to one", so a seat may leave one without a counter | `ChooseUpToN { max: 1 }` per token |
 | 🟡 Rinoa, Angel Wing | the once-a-turn cap is spent by the first attacking creature's death even when you decline the return | `EventSpec::once_per_turn` |
 | ~~Rona, Disciple of Gix~~ ✅ | stale row: both grants already ride `RestrictMayPlayToCasting` (`rona_cant_play_an_exiled_land`) | — |
-| 🟡 Seifer, Balamb Rival | the double-block deathtouch rider watches only your own attackers, not every creature attacking one of your opponents | `BecomesBlockedByNOrMore(2)` / `YourControl` |
 | ~~Wanda's Vision~~ ✅ | fixed 2026-10-24: `ExileTopUntilNonland` + `CastWithoutPayingImmediate` during the resolution | — |
 | 🟡 Stardew Valley | the gift goes to an opponent of your choice, not any other player (the same set outside team formats) | `ChooseOpponentThen` |
 | 🟡 Stangg, Echo Warrior | copies of the Auras and Equipment attached to Stangg aren't made for Stangg Twin | `CreateTokenAttacking` |

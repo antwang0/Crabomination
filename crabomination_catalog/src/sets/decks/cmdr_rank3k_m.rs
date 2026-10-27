@@ -140,9 +140,12 @@ pub fn seifer_balamb_rival() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(
-                    EventKind::BecomesBlockedByNOrMore(2),
-                    EventScope::YourControl,
+                // Any creature attacking one of your opponents, not only yours.
+                event: EventSpec::new(EventKind::BecomesBlockedByNOrMore(2), EventScope::AnyPlayer).with_filter(
+                    crate::card::Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::IsAttackingOpponentPlayer,
+                    },
                 ),
                 effect: Effect::GrantKeyword {
                     what: Selector::TriggerSource,
