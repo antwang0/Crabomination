@@ -4427,9 +4427,8 @@ pub fn akki_underling() -> CardDefinition {
     }
 }
 
-/// Samurai of the Pale Curtain — {W}{W} Fox Samurai 2/2. Bushido 1; cards bound
-/// for a graveyard are exiled instead (graveyard hate; the printed clause is
-/// permanent-only, here modeled as the broader Rest-in-Peace replacement).
+/// Samurai of the Pale Curtain — {W}{W} Fox Samurai 2/2. Bushido 1; a permanent
+/// that would be put into a graveyard is exiled instead.
 pub fn samurai_of_the_pale_curtain() -> CardDefinition {
     CardDefinition {
         name: "Samurai of the Pale Curtain",
@@ -4441,14 +4440,9 @@ pub fn samurai_of_the_pale_curtain() -> CardDefinition {
         keywords: vec![Keyword::Bushido(1)],
         static_abilities: vec![StaticAbility {
             description: "If a permanent would be put into a graveyard, exile it instead.",
-            effect: StaticEffect::ExileCardsBoundForGraveyard {
-                opponents_only: false,
-                own_only: false,
-                colors: None,
-                card_types: None,
-                void_counter: false,
-                stamp_source: false,
-            },
+            // CR 700.4 — a permanent put into a graveyard dies; cards from
+            // other zones are untouched.
+            effect: StaticEffect::DiesToExileInstead { filter: SelectionRequirement::Permanent },
         }],
         ..Default::default()
     }

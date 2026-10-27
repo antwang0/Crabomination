@@ -510,7 +510,7 @@ pub fn aetherjacket() -> CardDefinition {
 }
 
 /// Dynamite Diver — {R} 1/1 Goblin Pilot. When it dies, it deals 1 damage to
-/// any target. (Its saddle/crew power bonus is dropped — no engine hook yet.)
+/// any target. It saddles and crews as though its power were 2 greater.
 pub fn dynamite_diver() -> CardDefinition {
     CardDefinition {
         name: "Dynamite Diver",
@@ -523,6 +523,10 @@ pub fn dynamite_diver() -> CardDefinition {
         power: 1,
         toughness: 1,
         triggered_abilities: vec![on_dies(deal(1, target_any()))],
+        static_abilities: vec![StaticAbility {
+            description: "This creature saddles Mounts and crews Vehicles as though its power were 2 greater.",
+            effect: StaticEffect::CrewSaddlePowerBonus { applies_to: Selector::This, amount: 2 },
+        }],
         ..Default::default()
     }
 }

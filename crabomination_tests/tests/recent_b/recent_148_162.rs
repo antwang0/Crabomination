@@ -890,6 +890,8 @@ mod recent155 {
         assert!(g.battlefield_find(dead).is_some(), "reanimated to the battlefield");
         assert!(g.computed_permanent(dead).unwrap().keywords().contains(&Keyword::Flying),
             "the flying counter grants flying");
+        assert!(g.computed_permanent(dead).unwrap().subtypes().creature_types
+            .contains(&crabomination::card::CreatureType::Spirit), "a Spirit in addition to its other types");
     }
 }
 

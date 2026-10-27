@@ -5853,23 +5853,30 @@ pub fn magmatic_galleon() -> CardDefinition {
 }
 
 /// Relic's Roar — {U} Instant. Until end of turn, target artifact or creature
-/// becomes a 4/3 Dinosaur creature in addition to its other types. (The
-/// granted artifact card type is approximated away.)
+/// becomes a 4/3 Dinosaur artifact creature in addition to its other types.
 pub fn relics_roar() -> CardDefinition {
     CardDefinition {
         name: "Relic's Roar",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::BecomeCreature {
-            what: target_filtered(
-                SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
-            ),
-            power: Value::Const(4),
-            toughness: Value::Const(3),
-            creature_types: vec![CreatureType::Dinosaur],
-            keywords: vec![],
-            duration: Duration::EndOfTurn,
-        },
+        effect: Effect::Seq(vec![
+            Effect::BecomeCreature {
+                what: target_filtered(
+                    SelectionRequirement::Artifact.or(SelectionRequirement::Creature),
+                ),
+                power: Value::Const(4),
+                toughness: Value::Const(3),
+                creature_types: vec![CreatureType::Dinosaur],
+                keywords: vec![],
+                duration: Duration::EndOfTurn,
+            },
+            // `BecomeCreature` adds Creature only; the artifact type rides beside it.
+            Effect::AddCardTypeIndefinitely {
+                what: Selector::Target(0),
+                card_type: CardType::Artifact,
+                until_eot: true,
+            },
+        ]),
         ..Default::default()
     }
 }

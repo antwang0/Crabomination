@@ -78,7 +78,6 @@ pub fn palladia_mors_the_ruiner() -> CardDefinition {
 /// Jiang Yanggu, Alone — {4}{R} legendary 4/4 menace Human Berserker. Whenever
 /// a creature you control attacks a player alone, discard a card, then draw a
 /// card; then a +1/+1 counter on it for each card you've discarded this turn.
-/// (Residual: an attack alone on a planeswalker or battle triggers too.)
 pub fn jiang_yanggu_alone() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace],

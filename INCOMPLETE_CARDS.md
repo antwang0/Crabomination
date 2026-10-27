@@ -733,7 +733,7 @@ Three approximations the fixes left standing, each documented at its variant:
 
 | Card | Residual |
 | --- | --- |
-| Scrabbling Claws | 🟡 fixed 2026-10-26 to target the **player** (`TargetPlayerThen` + `ExileFromGraveyard { Target(0) }`, CR 115.1); residual: *which* card that player exiles is the engine's pick (their cheapest), not their choice. |
+| Scrabbling Claws | ✅ targets the **player** (`TargetPlayerThen` + `ExileFromGraveyard { Target(0) }`, CR 115.1) and that player picks the card (`ExileFromGraveyard` asks the exiling seat; the headless pick is the cheapest). |
 | Goblin Welder | ✅ fixed 2026-10-26: the graveyard card is slot 1, `InGraveyardOfTargetSlotController(0)` (CR 601.2c), and `WeldArtifacts { a, b }` does nothing unless both are still legal. |
 | Ambush Wolf / Angel of Serenity | 🟡 "up to one" / "up to three **other**" — the Angel's `other` is now in the filter; the Wolf's "up to one" still fizzles the trigger rather than declining it, which differs only when a graveyard is empty. |
 
@@ -2317,8 +2317,7 @@ decline still holds when no target exists before converting one (Armix's discard
 construct (`max_targets` / `ApplyToTargets` / `ForEach*Target` / a slot past 0). Closed this pass: Priest of
 Forgotten Gods (79 seats), Brago, King Eternal (39 — and it is now a legal target of its own ability, per the
 2020-11-10 ruling), Hollow Marauder, Thraben Charm, Officious Interrogation. **Open, by seats:** Command the Dreadhorde 8 (the resolver owns the graveyard walk, `audit_target_zone`'s one exemption);
-Iname, Life Aspect 7; Divine Resilience 7 (the unkicked half is one target, the kicked half every creature —
-printed is "any number" either way); Paradoxical Outcome 6; Nethroi, Apex of Death 6 and Reunion of the House 5
+Iname, Life Aspect 7; Paradoxical Outcome 6; Nethroi, Apex of Death 6 and Reunion of the House 5
 (total power 10 or less — needs `SlotsTotalManaValueAtMost`'s power sibling); Ral Zarek, Guest Lecturer 5 (the
 one row `audit_target_opponent` still prints, 2-player pool); Portal Manipulator 4; Curse of Surveillance 2;
 Chong and Lily, Nomads 2; Frantic Salvage 2; Bone Harvest 2; Tocasia, Dig Site Mentor 1; Graceful Takedown 1;

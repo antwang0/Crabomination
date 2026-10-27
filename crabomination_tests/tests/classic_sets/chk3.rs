@@ -249,3 +249,20 @@ fn ninja_combat_triggers_only_reach_the_damaged_players_board() {
         );
     }
 }
+
+/// CR 700.4 — Samurai of the Pale Curtain exiles a *permanent* that would be
+/// put into a graveyard (an opponent's dying creature); a card discarded from
+/// hand still reaches the graveyard.
+#[test]
+fn cr_700_4_samurai_of_the_pale_curtain_exiles_only_permanents() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::samurai_of_the_pale_curtain());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    cast(&mut g, 0, catalog::lightning_bolt(), Some(Target::Permanent(bear)));
+    assert!(g.exile.iter().any(|c| c.id == bear), "the dying bear is exiled");
+    assert!(g.players[0].graveyard.iter().any(|c| c.definition.name == "Lightning Bolt"), "a resolved spell isn't a permanent");
+    let card = g.add_card_to_hand(1, catalog::forest());
+    let mut events = Vec::new();
+    g.discard_card(1, card, &mut events);
+    assert!(g.players[1].graveyard.iter().any(|c| c.id == card), "a discard isn't a permanent");
+}

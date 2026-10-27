@@ -1448,12 +1448,19 @@ fn resolute_strike_pumps() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 4, "2 + 2");
 }
 
-/// Resolute Strike on a Warrior attaches an Equipment you control to it; on a
-/// non-Warrior it only pumps.
+/// Resolute Strike on a Warrior lets you attach an Equipment you control to it
+/// (a "may": declining leaves it unattached); on a non-Warrior it only pumps.
 #[test]
 fn resolute_strike_equips_a_warrior() {
-    for (make, equips) in [(catalog::keldon_halberdier as fn() -> _, true), (catalog::grizzly_bears, false)] {
+    for (make, accept, equips) in [
+        (catalog::keldon_halberdier as fn() -> _, true, true),
+        (catalog::keldon_halberdier, false, false),
+        (catalog::grizzly_bears, true, false),
+    ] {
         let mut g = two_player_game();
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(accept),
+        ]));
         let host = g.add_card_to_battlefield(0, make());
         let saw = g.add_card_to_battlefield(0, catalog::bone_saw());
         let rs = g.add_card_to_hand(0, catalog::resolute_strike());

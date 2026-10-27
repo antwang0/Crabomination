@@ -87,7 +87,7 @@ pub fn agency_coroner() -> CardDefinition {
 
 /// Call a Surprise Witness — {1}{W} Sorcery. Return a target creature card with
 /// mana value 3 or less from your graveyard to the battlefield with a flying
-/// counter. (The added Spirit type is omitted.)
+/// counter; it's a Spirit in addition to its other types.
 pub fn call_a_surprise_witness() -> CardDefinition {
     CardDefinition {
         name: "Call a Surprise Witness",
@@ -105,6 +105,11 @@ pub fn call_a_surprise_witness() -> CardDefinition {
                 what: Selector::Target(0),
                 keyword: Keyword::Flying,
                 amount: Value::ONE,
+            },
+            Effect::AddCreatureTypes {
+                what: Selector::Target(0),
+                creature_types: vec![CreatureType::Spirit],
+                duration: Duration::Permanent,
             },
         ]),
         ..Default::default()

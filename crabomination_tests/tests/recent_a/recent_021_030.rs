@@ -907,6 +907,21 @@ mod recent23 {
         assert_eq!(g.players[1].life, 19, "dies trigger pinged the opponent for 1");
     }
 
+    /// Dynamite Diver (power 1) crews a Crew 2 Vehicle alone: it crews as though
+    /// its power were 2 greater (CR 702.122b).
+    #[test]
+    fn dynamite_diver_crews_as_though_power_greater() {
+        let mut g = two_player_game();
+        let beetle = g.add_card_to_battlefield(0, catalog::debris_beetle()); // Crew 2
+        let diver = g.add_card_to_battlefield(0, catalog::dynamite_diver());
+        g.clear_sickness(diver);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::Crew { vehicle: beetle, crew_creatures: vec![diver] })
+            .expect("a 1-power Diver crews Crew 2");
+    }
+
     /// Gas Guzzler starts your engines, enters tapped, and its max-speed ability is
     /// gated until speed 4.
     #[test]

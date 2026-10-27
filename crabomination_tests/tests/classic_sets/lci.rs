@@ -2874,6 +2874,26 @@ fn relics_roar_animates_artifact() {
     assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Dinosaur), "Dinosaur");
 }
 
+/// Relic's Roar on a creature makes it an artifact too ("Dinosaur artifact
+/// creature ... in addition to its other types"), until end of turn.
+#[test]
+fn relics_roar_makes_a_creature_an_artifact() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rr = g.add_card_to_hand(0, catalog::relics_roar());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast_at(&mut g, rr, Target::Permanent(bear));
+    let is_artifact = |g: &GameState| {
+        g.computed_permanent(bear).unwrap().card_types().contains(&crabomination::card::CardType::Artifact)
+    };
+    assert!(is_artifact(&g), "an artifact until end of turn");
+    g.expire_end_of_turn_effects();
+    assert!(!is_artifact(&g), "and not after");
+}
+
 /// Hurl into History counters an artifact/creature spell and discovers its MV.
 #[test]
 fn hurl_into_history_counters_and_discovers() {

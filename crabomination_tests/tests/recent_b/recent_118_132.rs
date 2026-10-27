@@ -345,24 +345,28 @@ mod recent120 {
         assert!(cp.keywords().contains(&crabomination::card::Keyword::Prowess), "has prowess");
     }
 
-    /// Divine Resilience unkicked protects one creature; kicked it protects the team.
+    /// Divine Resilience kicked protects any number of *target* creatures you
+    /// control — an untargeted one stays destructible.
     #[test]
-    fn divine_resilience_kicked_protects_team() {
+    fn divine_resilience_kicked_protects_its_targets() {
         let mut g = two_player_game();
         g.step = TurnStep::PreCombatMain;
         let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let c = g.add_card_to_battlefield(0, catalog::grizzly_bears());
         let spell = g.add_card_to_hand(0, catalog::divine_resilience());
         g.players[0].mana_pool.add(Color::White, 2);
         g.players[0].mana_pool.add_colorless(2);
         g.perform_action(GameAction::CastSpellKicked {
             card_id: spell, target: Some(Target::Permanent(a)),
-            additional_targets: vec![], mode: None, x_value: None,
+            additional_targets: vec![Target::Permanent(b)], mode: None, x_value: None,
         }).expect("cast Divine Resilience kicked");
         drain_stack(&mut g);
-        assert!(g.computed_permanent(a).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible));
-        assert!(g.computed_permanent(b).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible),
-            "kicked → both creatures protected");
+        let ind = |g: &GameState, id| {
+            g.computed_permanent(id).unwrap().keywords().contains(&crabomination::card::Keyword::Indestructible)
+        };
+        assert!(ind(&g, a) && ind(&g, b), "both targets protected");
+        assert!(!ind(&g, c), "an untargeted creature isn't");
     }
 }
 

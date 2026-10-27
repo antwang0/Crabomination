@@ -596,8 +596,7 @@ pub fn kilnmouth_dragon() -> CardDefinition {
 
 /// Scrabbling Claws — {1} Artifact. {T}: target **player** exiles a card from
 /// their graveyard. {1}, Sacrifice this artifact: exile target card from a
-/// graveyard, draw a card. (Which card the targeted player exiles is the
-/// engine's pick, their cheapest.)
+/// graveyard, draw a card. The targeted player picks the card they exile.
 pub fn scrabbling_claws() -> CardDefinition {
     CardDefinition {
         name: "Scrabbling Claws",

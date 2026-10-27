@@ -32824,8 +32824,7 @@ pub fn subtle_strike() -> CardDefinition {
 }
 
 /// Resolute Strike — {W} Instant. Target creature gets +2/+2 until end of turn.
-/// If it's a Warrior, an Equipment you control (the caster's pick) attaches to
-/// it. (Approximation: the attach isn't optional.)
+/// If it's a Warrior, you may attach an Equipment you control to it.
 pub fn resolute_strike() -> CardDefinition {
     CardDefinition {
         name: "Resolute Strike",
@@ -32843,17 +32842,20 @@ pub fn resolute_strike() -> CardDefinition {
                     what: Selector::Target(0),
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Warrior),
                 },
-                then: Box::new(Effect::ChooseOneAmong {
-                    what: Selector::EachPermanent(
-                        SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
-                            .and(SelectionRequirement::ControlledByYou),
-                    ),
-                    chooser: PlayerRef::You,
-                    chosen: Box::new(Effect::Attach {
-                        what: Selector::SeparatedPile { chosen: true },
-                        to: Selector::Target(0),
+                then: Box::new(Effect::MayDo {
+                    description: "Attach an Equipment you control to it?".into(),
+                    body: Box::new(Effect::ChooseOneAmong {
+                        what: Selector::EachPermanent(
+                            SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
+                                .and(SelectionRequirement::ControlledByYou),
+                        ),
+                        chooser: PlayerRef::You,
+                        chosen: Box::new(Effect::Attach {
+                            what: Selector::SeparatedPile { chosen: true },
+                            to: Selector::Target(0),
+                        }),
+                        other: Box::new(Effect::Noop),
                     }),
-                    other: Box::new(Effect::Noop),
                 }),
                 else_: Box::new(Effect::Noop),
             },

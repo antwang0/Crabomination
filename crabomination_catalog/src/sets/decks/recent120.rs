@@ -296,26 +296,29 @@ pub fn elementalist_adept() -> CardDefinition {
 }
 
 /// Divine Resilience — {W} Instant with kicker {2}{W}. Target creature you
-/// control gains indestructible until end of turn; if kicked, each creature you
-/// control does instead. ("Any number of target creatures" is modeled as all
-/// your creatures when kicked.)
+/// control gains indestructible until end of turn; if kicked, any number of
+/// target creatures you control do instead.
 pub fn divine_resilience() -> CardDefinition {
     CardDefinition {
         name: "Divine Resilience",
         cost: cost(&[w()]),
         card_types: vec![CardType::Instant],
         keywords: vec![Keyword::Kicker(cost(&[generic(2), w()]))],
-        effect: Effect::If {
-            cond: Predicate::SpellWasKicked,
-            then: Box::new(Effect::GrantKeyword {
-                what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
-            }),
-            else_: Box::new(Effect::GrantKeyword {
-                what: target_filtered(R::Creature.and(R::ControlledByYou)),
-                keyword: Keyword::Indestructible,
-                duration: Duration::EndOfTurn,
+        // One target unkicked, up to the slot ceiling kicked (Blood Beckoning's shape).
+        effect: Effect::CapTargetsAt {
+            amount: Value::Sum(vec![
+                Value::ONE,
+                Value::Times(Box::new(Value::OneIf(Box::new(Predicate::SpellWasKicked))), Box::new(Value::Const(7))),
+            ]),
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 8,
+                min_targets: 1,
+                filter: R::Creature.and(R::ControlledByYou),
+                effect: Box::new(Effect::GrantKeyword {
+                    what: Selector::Target(0),
+                    keyword: Keyword::Indestructible,
+                    duration: Duration::EndOfTurn,
+                }),
             }),
         },
         ..Default::default()
