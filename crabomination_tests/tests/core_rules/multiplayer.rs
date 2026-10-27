@@ -7920,6 +7920,7 @@ fn cr_800_4a_a_departed_players_emblems_leave_too() {
         statics: vec![],
         this_turn: false,
         until_your_next_turn: false,
+        source: None,
     });
     assert_eq!(g.players[2].emblems.len(), 1);
     g.concede(2);

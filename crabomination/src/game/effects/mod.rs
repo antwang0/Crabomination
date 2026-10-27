@@ -45382,6 +45382,7 @@ impl GameState {
                             statics: statics.clone(),
                             this_turn: false,
                             until_your_next_turn: false,
+                            source: None,
                         });
                         self.offboard_keyword_grants = true;
                     }
@@ -45403,6 +45404,7 @@ impl GameState {
                     statics: statics.clone(),
                     this_turn: true,
                     until_your_next_turn: false,
+                    source: None,
                 });
                 self.offboard_keyword_grants = true;
                 Ok(())
@@ -45419,6 +45421,7 @@ impl GameState {
                     statics: Vec::new(),
                     this_turn,
                     until_your_next_turn: !this_turn,
+                    source: ctx.source,
                 });
                 Ok(())
             }

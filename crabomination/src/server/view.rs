@@ -5330,6 +5330,7 @@ mod tests {
             statics: vec![],
             this_turn: false,
             until_your_next_turn: false,
+            source: None,
         });
         let view = project(&state, 0);
         assert_eq!(view.players[0].emblems, vec!["Professor Dellian Fel".to_string()]);
@@ -5353,6 +5354,7 @@ mod tests {
             }],
             this_turn: false,
             until_your_next_turn: false,
+            source: None,
         });
         let view = project(&state, 0);
         assert_eq!(

@@ -70,6 +70,11 @@ pub struct Emblem {
     /// its owner's next turn begins.
     #[serde(default)]
     pub until_your_next_turn: bool,
+    /// CR 603.7d — a delayed trigger's source is the spell or ability that
+    /// made it: `TriggersThisTurn` / `TriggersUntilYourNextTurn` record the
+    /// creating card, a real emblem (CR 114) has none (`CardId(0)`).
+    #[serde(default)]
+    pub source: Option<crate::card::CardId>,
 }
 
 /// CR 702.50 — a resolved Epic spell, snapshotted for the per-upkeep copy.

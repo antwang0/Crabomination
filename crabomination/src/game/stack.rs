@@ -1646,7 +1646,7 @@ impl GameState {
                         && (matches!(t.event.scope, EventScope::AnyPlayer)
                             || (scoped_to_owner && seat == active))
                     {
-                        candidates.push((CardId(0), t.effect.clone(), seat, t.event.filter.clone()));
+                        candidates.push((em.source.unwrap_or(CardId(0)), t.effect.clone(), seat, t.event.filter.clone()));
                     }
                 }
             }

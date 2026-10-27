@@ -1823,3 +1823,17 @@ fn cr_702_139_a_bounce_through_a_move_effect_counts_as_leaving() {
     assert!(g.players[0].creature_left_battlefield_this_turn);
     assert_eq!(g.players[0].creatures_left_battlefield_count, 1);
 }
+
+/// CR 603.7d — a delayed triggered ability's source is the spell that made it:
+/// Glimpse of Nature's "whenever you cast a creature spell this turn" records
+/// the Glimpse, where a real emblem (CR 114) records none.
+#[test]
+fn cr_603_7d_a_this_turn_trigger_remembers_its_spell() {
+    let mut g = main_phase();
+    let glimpse = g.add_card_to_hand(0, catalog::glimpse_of_nature());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    cast(&mut g, glimpse);
+    let em = g.players[0].emblems.last().expect("the this-turn trigger");
+    assert!(em.this_turn);
+    assert_eq!(em.source, Some(glimpse));
+}

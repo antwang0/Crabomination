@@ -27937,6 +27937,7 @@ impl GameState {
         for seat_idx in 0..self.players.len() {
             for em_idx in 0..self.players[seat_idx].emblems.len() {
                 let triggers = self.players[seat_idx].emblems[em_idx].triggered.clone();
+                let em_source = self.players[seat_idx].emblems[em_idx].source.unwrap_or(CardId(0));
                 for ta in &triggers {
                     if matches!(
                         ta.event.kind,
@@ -27949,7 +27950,7 @@ impl GameState {
                             candidates.push(TriggerCandidate {
                                 from_mana_ability: false,
                             actor: crate::game::effects::events::event_actor(self, ev),
-                                source: CardId(0),
+                                source: em_source,
                                 effect: crate::game::effects::for_trigger_event(self, &ta.effect, ev),
                                 controller: seat_idx,
                                 filter: ta.event.filter.clone(),
