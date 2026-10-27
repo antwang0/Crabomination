@@ -3136,6 +3136,25 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-27 (Commander run, `01WRuXc6pH`) — guardrail; seven card primitives, an Aura-lock sweep
+
+New on paths a 2-player game can reach: the CR 704.5m Aura sweep builds a (lock Aura, host) list once per pass when
+Auras are on the battlefield (`no_other_auras`, empty almost always); `MoveChosen` clones its filter through
+`resolve_x`; `move_any_number_of_counters` checks a kind filter per counter kind. `release` bot_ladder, 4-core Xeon, base
+`d72b0871d` (origin before this run) vs tip `ed8e72899`, the tip built in its own worktree target dir:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism
+                 ok (all pairs split); peak_rss_mib 50.0
+bench_ab.py      16 pairs base vs tip: +0.60 % median, +0.42 % mean (sd 10.32) — noise, no regression
+pools            cube / sos / sealed x 300 (seed 18001): outcomes identical base vs tip, 7,500 decided
+pods             seed 18100 x 500 at 2..8 seats: 3,500 / 3,500 decided, turns/game 19.68 / 32.80 / 46.42 / 58.79 /
+                 69.94 / 82.59 / 98.88
+random pods      random_pods.sh 4 300 3 18200, 8 60 2 18600: 0 hits in 1,020
+targeted pods    15 four-seat groups holding every changed card x 100 (seeds 18001-18015): 1,500 / 1,500 decided
+strict debug     CRAB_ANSWER_LOG=strict, random_pods.sh 4 60 3 17700 + 6 20 2 17800: 220 games, 1 CR 104.4b draw, 0 panics
+```
+
 ### 2026-10-27 (Commander run, `01WRuXc6yK`) — guardrail; the Revolt funnel helper, emblem-ability gates, filtered next-spell grants
 
 New on paths a 2-player game can reach: `move_card_to` reads `computed_is_creature` once per non-battlefield leave

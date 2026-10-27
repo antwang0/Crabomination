@@ -34,6 +34,8 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
+Commander run `01WRuXc6pH` (2026-10-27): no new seats — 19 seated-deck rows closed (Bioshift, Inscription of Insight, Intrepid Adversary, Bane, Lara Croft, Fiery Annihilation, Consecrate Land, Casting of Bones, Ziatora's Envoy …) plus two stale rows; clean decks 5,258 → 5,289 / 6,093. Detail: ENGINE_BACKLOG `01WRuXc6pH`.
+
 Commander run `01WRuXc5` (2026-10-27): no new seats — ~70 shipped-card residuals closed by seated-deck rank (Teferi, Who Slows the Sunset's emblem draw, Samurai of the Pale Curtain, Salvage Drone, No Mercy / Dread, Black Widow, Impossible Man, Spawnbroker …) and ~30 stale residual docs; clean decks 5,062 → 5,176 / 6,093 (`pod_residuals.py --summary`). Detail: ENGINE_BACKLOG `01WRuXc5`.
 
 Commander run `01Y6ZRFx` (2026-10-25): 5 seats — 6089 Major Teroh (W), 6090 Irini Sengir (B), 6091 Stockman, Mad Fly-entist (U), 6092 Molly Hayes, Runaway (R), 6093 Spider-Man, Hometown Hero (R): the last legal unseated EDHREC singles (a fresh 69-page `commanders/year.json` scan leaves 112 unseated, all Unfinity / acorn or Star Trek — not legal until 2026-11-13). 45 cards in `decks::cmdr_01y6_a`..`_e` (tests `recent_b/cmdr_01y6_a.rs`..`_e.rs`); residual: Drought's mana-ability half (INCOMPLETE_CARDS).
