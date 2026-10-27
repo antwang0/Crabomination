@@ -1513,9 +1513,8 @@ pub fn crystal_fragments() -> CardDefinition {
 
 /// Zenos yae Galvus // Shinryu, Transcendent Rival — {3}{B}{B} 4/4 whose ETB
 /// picks an opponent's creature, shrinks everything else, and transforms into
-/// an 8/8 flier when that creature leaves. (Shinryu's "when the chosen player
-/// loses the game, you win" is redundant in a two-player game and needs a
-/// player-loses event; the choose-an-opponent half is kept.)
+/// an 8/8 flier when that creature leaves; Shinryu chooses an opponent as it
+/// transforms, and when that player loses the game, you win the game.
 pub fn zenos_yae_galvus() -> CardDefinition {
     CardDefinition {
         name: "Zenos yae Galvus",
@@ -1566,6 +1565,10 @@ pub fn zenos_yae_galvus() -> CardDefinition {
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Transformed, EventScope::SelfSource),
                 effect: Effect::RememberPlayerOnSource { who: PlayerRef::HostileOpponent },
+            }],
+            static_abilities: vec![crate::card::StaticAbility {
+                description: "Burning Chains — When the chosen player loses the game, you win the game.",
+                effect: crate::effect::StaticEffect::YouWinWhenChosenPlayerLoses,
             }],
             ..Default::default()
         })),

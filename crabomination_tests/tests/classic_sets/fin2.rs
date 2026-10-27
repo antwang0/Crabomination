@@ -614,6 +614,32 @@ fn zenos_spares_the_chosen_creature_then_transforms() {
     assert!(back.definition.keywords.contains(&Keyword::Flying));
 }
 
+/// CR 603.2 / 104.2a — Shinryu's Burning Chains in a four-player pod: when
+/// the chosen opponent loses the game, Shinryu's controller wins it, with two
+/// other players still in.
+#[test]
+fn shinryu_wins_when_the_chosen_player_loses() {
+    let mut g = multi_player_game(4);
+    let chosen = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let zenos = g.move_card_to_battlefield_for_test(0, catalog::zenos_yae_galvus());
+    drain_stack(&mut g);
+    let mut evs = vec![];
+    g.destroy_permanent(chosen, false, &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(zenos).unwrap().definition.name, "Shinryu, Transcendent Rival");
+    g.battlefield_find_mut(zenos).unwrap().chosen_player = Some(2);
+    // Another player losing first wins nothing.
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.game_over.is_none());
+    g.players[2].life = 0;
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(g.game_over, Some(Some(0)), "the chosen player lost: Shinryu's controller wins");
+}
+
 /// The fourth "another creature dies" drain flips Sephiroth and mints the
 /// Super Nova emblem, which keeps draining afterwards.
 #[test]
