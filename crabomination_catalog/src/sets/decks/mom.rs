@@ -8,7 +8,7 @@ use crate::card::{
     EventSpec, Keyword, Predicate, SelectionRequirement, Selector, Subtypes, Supertype,
     TriggeredAbility, Value,
 };
-use crate::effect::shortcut::{etb, target_filtered};
+use crate::effect::shortcut::{etb, exactly_two_colors, target_filtered};
 use crate::effect::{Effect, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
@@ -182,9 +182,10 @@ pub fn invasion_of_amonkhet() -> CardDefinition {
 }
 
 /// Invasion of Ravnica // Guildpact Paragon — {5} Siege, defense 4. ETB: exile
-/// target nonland permanent an opponent controls (the "isn't exactly two
-/// colors" restriction is omitted). Back: a 5/5 artifact Construct (its
-/// two-color cast trigger is omitted).
+/// target nonland permanent an opponent controls that isn't exactly two colors.
+/// Back: a 5/5 artifact Construct; whenever you cast a spell that's exactly two
+/// colors, look at the top six, you may reveal an exactly-two-colors card and
+/// put it into your hand, the rest on the bottom in a random order.
 pub fn invasion_of_ravnica() -> CardDefinition {
     let paragon = CardDefinition {
         name: "Guildpact Paragon",
@@ -195,6 +196,17 @@ pub fn invasion_of_ravnica() -> CardDefinition {
         },
         power: 5,
         toughness: 5,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(exactly_two_colors())),
+            effect: Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                count: Value::Const(6),
+                pick_filter: Some(exactly_two_colors()),
+                optional: true,
+                rest_bottom_random: true,
+                ..Default::default()
+            })),
+        }],
         ..Default::default()
     };
     CardDefinition {
@@ -205,7 +217,9 @@ pub fn invasion_of_ravnica() -> CardDefinition {
         defense: 4,
         triggered_abilities: vec![etb(Effect::Exile {
             what: target_filtered(
-                SelectionRequirement::Nonland.and(SelectionRequirement::ControlledByOpponent),
+                SelectionRequirement::Nonland
+                    .and(SelectionRequirement::ControlledByOpponent)
+                    .and(SelectionRequirement::Not(Box::new(exactly_two_colors()))),
             ),
         })],
         back_face: Some(Box::new(paragon)),

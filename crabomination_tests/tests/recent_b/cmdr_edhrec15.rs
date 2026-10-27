@@ -2484,6 +2484,44 @@ fn invasion_of_ergamon_rummages_then_charges() {
     assert!(g.players[0].hand.iter().any(|c| c.id == forest), "fetched the Forest");
 }
 
+/// Invasion of Ravnica exiles a nonland permanent that isn't exactly two colors
+/// (CR 105.4); defeated, Guildpact Paragon digs six for a two-color card off a
+/// two-color spell.
+#[test]
+fn invasion_of_ravnica_spares_two_colors_and_paragon_digs_for_them() {
+    use crabomination::decision::{DecisionAnswer as A, ScriptedDecider};
+    let mut g = pod(2);
+    let wolf = ready(&mut g, 1, catalog::watchwolf());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let inv = g.add_card_to_hand(0, catalog::invasion_of_ravnica());
+    cast(&mut g, inv, &[]).expect("the Siege");
+    assert!(g.battlefield_find(wolf).is_some(), "exactly two colors: not a legal target");
+    assert!(g.battlefield_find(bear).is_none(), "mono-green is exiled");
+    g.decider = Box::new(ScriptedDecider::new([A::Bool(true)]));
+    g.battlefield_find_mut(inv).unwrap().remove_counters(CounterType::Defense, 4);
+    g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Guildpact Paragon"), "back face");
+    g.decider = Box::new(crabomination::decision::AutoDecider);
+    library(&mut g, 0, 5);
+    let deep = g.add_card_to_library(0, catalog::boros_charm());
+    let spell = g.add_card_to_hand(0, catalog::watchwolf());
+    cast(&mut g, spell, &[]).expect("a two-color spell");
+    assert!(g.players[0].hand.iter().any(|c| c.id == deep), "the two-color card six deep");
+}
+
+/// Graven Abomination exiles from the DEFENDING player's graveyard, not any
+/// opponent's (CR 506.2), at four seats.
+#[test]
+fn graven_abomination_reads_the_defending_players_graveyard() {
+    let mut g = pod(4);
+    let ga = ready(&mut g, 0, catalog::graven_abomination());
+    let far = g.add_card_to_graveyard(2, catalog::grizzly_bears());
+    declare(&mut g, &[(ga, 1)]).expect("attack seat 1");
+    drain_stack(&mut g);
+    assert!(g.players[2].graveyard.iter().any(|c| c.id == far), "another opponent's card isn't a legal target");
+}
+
 /// The Tarrasque cast from the command zone "was cast" (CR 601.2): it has
 /// haste; one put onto the battlefield by an effect doesn't.
 #[test]

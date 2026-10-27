@@ -7939,12 +7939,14 @@ pub fn raven_wings() -> CardDefinition {
 }
 
 /// Graven Abomination — {3} 3/1 artifact creature Horror. Whenever it
-/// attacks, exile target card from an opponent's graveyard (the defending
-/// player's in a duel).
+/// attacks, exile target card from defending player's graveyard.
 pub fn graven_abomination() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
-        triggered_abilities: vec![on_attack(Effect::Move { what: target_filtered(R::InOpponentGraveyard), to: ZoneDest::Exile })],
+        triggered_abilities: vec![on_attack(Effect::Move {
+            what: target_filtered(R::InOpponentGraveyard.and(R::OwnedByDefendingPlayer)),
+            to: ZoneDest::Exile,
+        })],
         ..creature("Graven Abomination", cost(&[generic(3)]), vec![CreatureType::Horror], 3, 1)
     }
 }
