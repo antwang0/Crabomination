@@ -2294,6 +2294,16 @@ pub fn cost_reduction_for_spell_zoned(
     cost_reduction_for_spell_full(state, caster, card, target, from_graveyard, false)
 }
 
+/// CR 702.41a — the artifacts `caster` controls, by their current types, for
+/// an affinity a spell gained (Saheeli's +1, Chiss-Goria's grant).
+fn artifacts_for_affinity(state: &crate::game::GameState, caster: usize) -> u32 {
+    state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == caster && state.computed_has_card_type(c, crate::card::CardType::Artifact))
+        .count() as u32
+}
+
 /// Full cost-reduction scan with both `from_graveyard` and `from_exile` zone
 /// toggles. Exile-cast paths (foretell / adventure-creature / plotted / impulse
 /// pay-own-cost) pass `from_exile: true` so `ExileCastCostReduction` (Doc
@@ -2339,9 +2349,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
     // CR 702.41a — a grant that gives the spell affinity for artifacts
     // (Chiss-Goria), counted as the spell is cast.
     if from_exile && card.may_play_until.as_ref().is_some_and(|m| m.affinity_for_artifacts && m.player == caster) {
-        let artifacts =
-            state.battlefield.iter().filter(|c| c.controller == caster && c.definition.is_artifact()).count();
-        reduction = reduction.saturating_add(artifacts as u32);
+        reduction = reduction.saturating_add(artifacts_for_affinity(state, caster));
     }
     // CR 315.5 — a face-up conspiracy's cost statics apply from the command
     // zone (Hymn of the Wilds, Brago's Favor), so walk those too.
@@ -2726,12 +2734,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
         // CR 702.41a — affinity for artifacts, counted as the spell is cast
         // (Saheeli, the Gifted's +1).
         if state.players[caster].pending_affinity_next_spell.contains(&cast_so_far) {
-            let artifacts = state
-                .battlefield
-                .iter()
-                .filter(|c| c.controller == caster && c.definition.is_artifact())
-                .count() as u32;
-            reduction = reduction.saturating_add(artifacts);
+            reduction = reduction.saturating_add(artifacts_for_affinity(state, caster));
         }
         reduction = reduction.saturating_add(state.noncreature_affinity_reduction(caster, card));
     }

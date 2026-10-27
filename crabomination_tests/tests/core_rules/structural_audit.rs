@@ -1712,7 +1712,7 @@ fn printed_type_line_reads_only_shrink() {
         ("definition.subtypes.creature_types.contains", 22),
         ("definition.subtypes.land_types.contains", 10),
         ("definition.has_creature_type(", 2),
-        ("definition.is_artifact()", 8),
+        ("definition.is_artifact()", 7),
         ("definition.is_enchantment()", 0),
         ("definition.is_planeswalker()", 5),
     ];
