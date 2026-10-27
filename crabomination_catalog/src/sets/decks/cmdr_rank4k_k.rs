@@ -318,8 +318,7 @@ pub fn autumn_willow_harmony() -> CardDefinition {
 /// Donnie & April, Adorkable Duo — {4}{U} legendary 3/3 Mutant Ninja Human
 /// Turtle. ETB, choose one or both (each mode targets a different player):
 /// target player draws two cards; target player returns an artifact,
-/// instant, or sorcery card from their graveyard to their hand. (Residual:
-/// the "different player" constraint isn't enforced.)
+/// instant, or sorcery card from their graveyard to their hand.
 pub fn donnie_and_april_adorkable_duo() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::ChooseN { up_to: None,
@@ -330,7 +329,9 @@ pub fn donnie_and_april_adorkable_duo() -> CardDefinition {
                     amount: Value::Const(2),
                 },
                 Effect::ForEach {
-                    selector: target_filtered(R::Player),
+                    // CR 700.2 — each mode targets a different player: this
+                    // mode's slot is the second, so it can't repeat the first's.
+                    selector: target_filtered(R::Player.and(R::OtherThanTargetSlot(0))),
                     body: Box::new(Effect::Move {
                         what: Selector::Take {
                             inner: Box::new(Selector::CardsInZone {
