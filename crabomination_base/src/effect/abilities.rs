@@ -4777,6 +4777,11 @@ pub struct ActivatedAbility {
     /// zone (a Vanguard avatar).
     #[serde(default)]
     pub from_command_zone: bool,
+    /// CR 114.4 — an emblem's ability granted to the permanent that pays it
+    /// ("Tap an untapped artifact you control: this emblem deals …"): the
+    /// `tap_cost` is not a {T} (CR 302.6 doesn't gate it) and the emblem is the source.
+    #[serde(default)]
+    pub emblem_ability: bool,
     /// Optional gating predicate. When set, the activation is rejected
     /// before any cost is paid unless the predicate evaluates to true
     /// against the source/controller context. Used by activated abilities

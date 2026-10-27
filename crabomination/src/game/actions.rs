@@ -22707,7 +22707,7 @@ impl GameState {
         // test that crosses the two (Skyseer's Chariot naming Radiant Lotus)
         // named a card whose only ability was wrongly a mana ability and so
         // never reached this gate.
-        if !ability_is_mana {
+        if !ability_is_mana && !ability.emblem_ability {
             let source_name = if source_in_gy {
                 self.players[source_owner].graveyard.iter()
                     .find(|c| c.id == card_id)
@@ -22760,7 +22760,7 @@ impl GameState {
         // static is in play (global — affects every player). A source on the
         // battlefield is checked for its artifact type; gy/hand sources of an
         // artifact (rare) are caught the same way.
-        if !ability_is_mana {
+        if !ability_is_mana && !ability.emblem_ability {
             let src_is_artifact = if source_in_gy {
                 self.players[source_owner].graveyard.iter()
                     .find(|c| c.id == card_id)
@@ -22920,7 +22920,7 @@ impl GameState {
         // take `ability_lock_possible_on` off the permanent this frame has
         // already found rather than the `CardId` form, which opens with a
         // second `battlefield_find`.
-        let tap_gated = ability.tap_cost || ability.untap_self_cost;
+        let tap_gated = (ability.tap_cost && !ability.emblem_ability) || ability.untap_self_cost;
         let on_battlefield = !source_in_gy && !source_in_hand && !source_in_command;
 
         // CR 602.5 — "activated abilities with {T} in their costs can't be
@@ -23149,7 +23149,8 @@ impl GameState {
         // and self-targeting abilities don't pass a target so they bypass.
         if let Some(tgt) = &target {
             self.check_target_legality(tgt, p)?;
-            if self.ability_target_has_protection(tgt, card_id) {
+            // An emblem has no characteristics for protection to see (CR 114.4).
+            if !ability.emblem_ability && self.ability_target_has_protection(tgt, card_id) {
                 return Err(GameError::TargetHasProtection(card_id));
             }
             // Ward enforcement happens via push_ward_triggers_for_targets
@@ -23198,7 +23199,7 @@ impl GameState {
                     if let Err(e) = self.check_target_legality(tgt, p) {
                         return Some(e);
                     }
-                    if self.ability_target_has_protection(tgt, card_id) {
+                    if !ability.emblem_ability && self.ability_target_has_protection(tgt, card_id) {
                         return Some(GameError::TargetHasProtection(card_id));
                     }
                     let filter = ability
@@ -26424,8 +26425,11 @@ impl GameState {
             } else {
                 activated_x
             };
+            // CR 114.4 — an emblem's ability is the emblem's, not its payer's
+            // (the `CardId(0)` an emblem trigger carries).
+            let ability_source = if ability.emblem_ability { CardId(0) } else { card_id };
             self.push_stack(
-                TriggerPush::new(card_id, p, queued_effect)
+                TriggerPush::new(ability_source, p, queued_effect)
                     .target(target)
                     .additional_targets(additional_targets.clone())
                     .mode(mode)
