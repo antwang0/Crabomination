@@ -194,8 +194,9 @@ pub fn depth_defiler() -> CardDefinition {
     }
 }
 
-/// Dog Umbra — {1}{W} flash Aura. Enchant creature with umbra armor. (The
-/// "can't attack/block while another player controls it" rider is dropped.)
+/// Dog Umbra — {1}{W} flash Aura. Enchant creature. While another player
+/// controls the enchanted creature it can't attack or block; otherwise this
+/// Aura has umbra armor.
 pub fn dog_umbra() -> CardDefinition {
     CardDefinition {
         name: "Dog Umbra",
@@ -205,7 +206,7 @@ pub fn dog_umbra() -> CardDefinition {
             enchantment_subtypes: vec![EnchantmentSubtype::Aura],
             ..Default::default()
         },
-        keywords: vec![Keyword::Flash, Keyword::UmbraArmor],
+        keywords: vec![Keyword::Flash, Keyword::UmbraArmorWhileHostIsYours],
         effect: Effect::Attach {
             what: Selector::This,
             to: Selector::TargetFiltered {
@@ -213,6 +214,14 @@ pub fn dog_umbra() -> CardDefinition {
                 filter: R::Creature,
             },
         },
+        equipped_bonus: Some(crate::card::EquipBonus {
+            conditional: vec![crate::card::ConditionalEquipBonus {
+                host_filter: R::Not(Box::new(R::ControlledByYou)),
+                keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
+                ..Default::default()
+            }],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }

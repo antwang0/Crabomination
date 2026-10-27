@@ -163,6 +163,22 @@ fn dog_umbra_saves_enchanted_creature() {
     assert!(g.battlefield_find(umbra).is_none(), "aura destroyed instead");
 }
 
+/// Dog Umbra on an opponent's creature: it can't attack or block, and the
+/// umbra armor is off — lethal damage kills it (CR 702.89 only "otherwise").
+#[test]
+fn dog_umbra_on_an_opponents_creature_locks_it_without_armor() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let umbra = g.add_card_to_hand(0, catalog::dog_umbra());
+    cast(&mut g, umbra, Some(Target::Permanent(bear)));
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.keywords().contains(&Keyword::CantAttack) && cp.keywords().contains(&Keyword::CantBlock));
+    g.battlefield_find_mut(bear).unwrap().damage = 5;
+    g.check_state_based_actions();
+    assert!(g.battlefield_find(bear).is_none(), "no umbra armor for another player's creature");
+}
+
 /// Thief of Existence exiles an opponent's small noncreature permanent and
 /// gains a leaves-the-battlefield draw trigger.
 #[test]
