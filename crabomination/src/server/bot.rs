@@ -4270,7 +4270,7 @@ fn decide_pending_policy_inner(
                     if state.players[seat].commanders.is_empty() {
                         (*max).min(state.players[seat].mana_pool.total())
                     } else {
-                        *max
+                        max.saturating_sub(super::pod_attack::x_held_for_attack_tax(state, seat, *max))
                     }
                 }
                 // Devour and God-Eternal Bontu: `max` is every permanent we

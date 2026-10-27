@@ -141,6 +141,34 @@ pub(crate) fn retarget_taxed_attacks(
     moved
 }
 
+/// CR 508.1g — how much of a pre-combat "you may pay {X}" (`max` X at most)
+/// `seat` leaves unpaid so the attack it plans can still pay its tax. Numa,
+/// Joraga Chieftain's beginning-of-combat {X}{X} tapped its seat out under
+/// Ghostly Prison every turn and its 4,000-power Elf never attacked again:
+/// 1,459 frozen turns, `--pod-decks 605,3041,5751,5998 --seed 15255`.
+/// 0 off `seat`'s turn, from declare attackers on, and on an untaxed board.
+pub(crate) fn x_held_for_attack_tax(state: &GameState, seat: usize, max: u32) -> u32 {
+    use crate::game::types::TurnStep;
+    if max == 0 || state.active_player_idx != seat || state.step > TurnStep::BeginCombat {
+        return 0;
+    }
+    let statics = crate::game::combat::attack_static_scan(state);
+    if !state.attack_tax_possible(statics) {
+        return 0;
+    }
+    let attacks = super::bot::pick_attacks(state, seat);
+    let keyword_tax = |id: CardId| {
+        state.computed_permanent(id).map(|cp| state.attack_block_keyword_tax(id, cp.keywords(), true)).unwrap_or(0)
+    };
+    let tax = state.attack_tax_for(&attacks, statics, keyword_tax);
+    if tax == 0 {
+        return 0;
+    }
+    // Mana an X costs, as the ask's `max` implies it ({X}{X} is two).
+    let per_x = (super::bot::mana_upper_bound(state, seat) / max).max(1);
+    tax.div_ceil(per_x).min(max)
+}
+
 /// CR 508.1g / 119.4 — a declaration under a life tax (Sivitri) that would
 /// cost `seat` its life, or more life than it has, loses taxed attackers from
 /// the back until it costs less than its life total. Without a life tax up anywhere
@@ -327,5 +355,30 @@ mod tests {
         assert_eq!(out.len(), 2);
         assert!(out.iter().all(|a| a.target != AttackTarget::Player(1)));
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
+    }
+
+    /// CR 508.1g — bug fix (seed 15255's 1,459-turn stalemate): before
+    /// combat, a pre-combat {X}{X} leaves Ghostly Prison's {2} unpaid, so the
+    /// big creature still attacks; off its turn, or untaxed, nothing is held.
+    #[test]
+    fn cr_508_1g_a_pre_combat_x_leaves_the_attack_tax_unpaid() {
+        let mut g = multi_player_game(2);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let giant = g.add_card_to_battlefield(0, crate::catalog::craw_wurm());
+        g.clear_sickness(giant);
+        for _ in 0..6 {
+            g.add_card_to_battlefield(0, crate::catalog::forest());
+        }
+        g.active_player_idx = 0;
+        g.step = TurnStep::BeginCombat;
+        g.priority.player_with_priority = 0;
+        assert_eq!(x_held_for_attack_tax(&g, 0, 3), 0, "untaxed");
+        g.add_card_to_battlefield(1, crate::catalog::ghostly_prison());
+        assert_eq!(x_held_for_attack_tax(&g, 0, 3), 1, "one X unit of {{X}}{{X}} covers the {{2}}");
+        g.step = TurnStep::DeclareBlockers;
+        assert_eq!(x_held_for_attack_tax(&g, 0, 3), 0, "attackers already declared");
+        g.step = TurnStep::BeginCombat;
+        g.active_player_idx = 1;
+        assert_eq!(x_held_for_attack_tax(&g, 0, 3), 0, "not our combat");
     }
 }
