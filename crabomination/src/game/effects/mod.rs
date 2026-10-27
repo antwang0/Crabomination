@@ -45387,6 +45387,17 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::StaticsThisTurn { statics } => {
+                self.players[ctx.controller].emblems.push(crate::player::Emblem {
+                    name: String::new(),
+                    triggered: Vec::new(),
+                    statics: statics.clone(),
+                    this_turn: true,
+                    until_your_next_turn: false,
+                });
+                self.offboard_keyword_grants = true;
+                Ok(())
+            }
             Effect::TriggersThisTurn { triggered } | Effect::TriggersUntilYourNextTurn { triggered } => {
                 let name = ctx
                     .source

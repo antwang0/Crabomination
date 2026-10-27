@@ -13894,6 +13894,10 @@ pub enum Effect {
     /// Harmony, Bonus Round): the controller gets a this-turn emblem with
     /// `triggered`, dropped at cleanup.
     TriggersThisTurn { triggered: Vec<TriggeredAbility> },
+    /// CR 611.2c — a rule-modifying "this turn" effect of a resolved spell
+    /// ("creatures can't block this turn", Barrage of Boulders): a this-turn
+    /// emblem carrying `statics`, so creatures arriving later are bound too.
+    StaticsThisTurn { statics: Vec<crate::card::StaticAbility> },
 
     /// CR 611.2b — "until your next turn, whenever [event], [effect]" (Don't
     /// Move): `TriggersThisTurn`'s emblem, dropped as the controller's next

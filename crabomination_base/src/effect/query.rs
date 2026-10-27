@@ -823,6 +823,7 @@ impl Effect {
             | Effect::GrantCastSpellRiders { .. }
             | Effect::GrantReboundToSpell { .. }
             | Effect::TriggersThisTurn { .. }
+            | Effect::StaticsThisTurn { .. }
             | Effect::TriggersUntilYourNextTurn { .. }
             | Effect::CapSpellsThisTurn { .. }
             | Effect::CastExiledFreeOwnersLoseLife { .. }
