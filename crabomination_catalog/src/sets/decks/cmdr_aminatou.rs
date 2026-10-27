@@ -449,7 +449,7 @@ pub fn yennett_cryptic_sovereign() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Flying, Keyword::Vigilance, Keyword::Menace],
-        triggered_abilities: vec![on_attack(Effect::CastTopFreeIfElseDraw { filter: R::ManaValueParity { odd: true } })],
+        triggered_abilities: vec![on_attack(Effect::CastTopFreeIfElseDraw { filter: R::ManaValueParity { odd: true }, land_or_hand: false })],
         ..creature(
             "Yennett, Cryptic Sovereign",
             cost(&[generic(2), w(), u(), b()]),

@@ -6746,8 +6746,14 @@ pub enum Effect {
     GrantFreeCastOnePerCardType { what: Selector },
     /// Yennett — "reveal the top card of your library. You may cast it
     /// without paying its mana cost if it matches `filter`. If you don't
-    /// cast it, draw a card."
-    CastTopFreeIfElseDraw { filter: crate::card::SelectionRequirement },
+    /// cast it, draw a card." `land_or_hand` is Ziatora's Envoy's shape: a
+    /// land on top may be played instead, and a miss is put into your hand
+    /// rather than drawn.
+    CastTopFreeIfElseDraw {
+        filter: crate::card::SelectionRequirement,
+        #[serde(default)]
+        land_or_hand: bool,
+    },
     /// Djinn of Wishes — "reveal the top card of your library. You may play
     /// that card without paying its mana cost. If you don't, exile it." A
     /// land needs a land play left on your own turn.

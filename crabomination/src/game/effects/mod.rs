@@ -39967,7 +39967,9 @@ impl GameState {
                 self.grant_free_cast_one_per_card_type(&ids, ctx);
                 Ok(())
             }
-            Effect::CastTopFreeIfElseDraw { filter } => self.cast_top_free_if_else_draw(filter, ctx, events),
+            Effect::CastTopFreeIfElseDraw { filter, land_or_hand } => {
+                self.cast_top_free_if_else_draw(filter, *land_or_hand, ctx, events)
+            }
             Effect::PlayTopFreeElseExile => self.play_top_free_else_exile(ctx, events),
             Effect::PlayLandAmongNow { what } => self.play_land_among_now(what, ctx, events, effect),
             Effect::EachPlayerChoosesColorExileOthers => {

@@ -312,11 +312,22 @@ impl GameState {
     pub(crate) fn cast_top_free_if_else_draw(
         &mut self,
         filter: &crate::card::SelectionRequirement,
+        land_or_hand: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
         let p = ctx.controller;
-        let Some(top) = self.players[p].library.first().map(|c| c.id) else { return Ok(()) };
+        let Some((top, land)) = self.players[p].library.first().map(|c| (c.id, c.definition.is_land())) else {
+            return Ok(());
+        };
+        // CR 305.2 — playing the land uses a land play: own turn, one left.
+        let pl = &self.players[p];
+        if land_or_hand && land && self.active_player_idx == p && pl.lands_played_this_turn < 1 + pl.extra_land_plays {
+            self.players[p].lands_played_this_turn += 1;
+            let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false };
+            self.move_card_to(top, &dest, ctx, events);
+            return Ok(());
+        }
         let castable = self.players[p].library.first().is_some_and(|c| {
             !c.definition.is_land() && self.evaluate_requirement_on_card(filter, c, p)
         });
@@ -335,7 +346,11 @@ impl GameState {
             )?;
         }
         if self.players[p].library.first().map(|c| c.id) == Some(top) {
-            self.run_effect(&Effect::Draw { who: Selector::You, amount: Value::ONE }, ctx, events)?;
+            if land_or_hand {
+                self.move_card_to(top, &ZoneDest::Hand(PlayerRef::Seat(p)), ctx, events);
+            } else {
+                self.run_effect(&Effect::Draw { who: Selector::You, amount: Value::ONE }, ctx, events)?;
+            }
         }
         Ok(())
     }
