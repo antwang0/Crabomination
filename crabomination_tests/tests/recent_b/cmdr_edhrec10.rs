@@ -1209,7 +1209,8 @@ fn relentless_dead_keeps_coming_back() {
 }
 
 /// Chiss-Goria: affinity for artifacts; attacking exiles the top five and
-/// one artifact among them may be cast this turn.
+/// one artifact among them may be cast this turn — with affinity for
+/// artifacts (CR 702.41a; it used to pay full price).
 #[test]
 fn chiss_goria_forges_from_the_top() {
     let mut g = pod(2);
@@ -1233,6 +1234,19 @@ fn chiss_goria_forges_from_the_top() {
     let granted = |id| g.exile.iter().any(|c| c.id == id && c.may_play_until.is_some());
     assert!(granted(ring) && granted(ring2));
     assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(cg)).count(), 5);
+    // Three Ornithopters pay Mind Stone's {2} with no mana up.
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: ring2,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Mind Stone with affinity");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ring2).is_some());
 }
 
 /// The Ghoul, Gunslinger: a nontoken Zombie of yours dying gives a target

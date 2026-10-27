@@ -1802,8 +1802,8 @@ pub fn relentless_dead() -> CardDefinition {
 
 /// Chiss-Goria, Forge Tyrant — {6}{R}{R}{R} 5/4 legendary flying, hasty
 /// Dragon with affinity for artifacts. Attacking, it exiles your top five;
-/// you may cast an artifact spell from among them this turn. Residual: that
-/// spell doesn't gain affinity for artifacts.
+/// you may cast an artifact spell from among them this turn, and it has
+/// affinity for artifacts.
 pub fn chiss_goria_forge_tyrant() -> CardDefinition {
     let exiled_artifacts = || Selector::CardsInZone {
         who: PlayerRef::You,
@@ -1823,6 +1823,7 @@ pub fn chiss_goria_forge_tyrant() -> CardDefinition {
                 pay_own_cost: true,
                 any_color: false,
             },
+            Effect::AffinityAfterGrantedCast { what: exiled_artifacts() },
             Effect::OneCastAmongGranted { what: exiled_artifacts() },
         ]))],
         ..legend("Chiss-Goria, Forge Tyrant", cost(&[generic(6), r(), r(), r()]), vec![CreatureType::Dragon], 5, 4)
