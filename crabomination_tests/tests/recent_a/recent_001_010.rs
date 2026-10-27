@@ -5019,24 +5019,31 @@ mod recent {
     }
 
     /// Intrepid Adversary's valor anthem scales the whole team by its valor
-    /// counters; its enters-with spec reads the multikicker count.
+    /// counters.
     #[test]
     fn intrepid_adversary_valor_anthem_scales() {
-        use crabomination::card::CounterType;
-        use crabomination::effect::Value;
         let mut g = two_player_game();
         let ally = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
         let adv = g.add_card_to_battlefield(0, catalog::intrepid_adversary()); // 3/1
-        // Two valor counters (as if kicked twice).
         g.battlefield_find_mut(adv).unwrap().counters.insert(CounterType::Valor, 2);
         // +2/+2 to every creature you control, including Intrepid Adversary itself.
         assert_eq!(g.computed_permanent(ally).map(|c| (c.power, c.toughness)), Some((4, 4)));
         assert_eq!(g.computed_permanent(adv).map(|c| (c.power, c.toughness)), Some((5, 3)));
-        // Counter count drives the multikicker-fed enters-with spec.
-        assert_eq!(
-            catalog::intrepid_adversary().enters_with_counters,
-            Some((CounterType::Valor, Value::TimesKicked))
-        );
+    }
+
+    /// Intrepid Adversary's "pay {1}{W} any number of times" is paid as the
+    /// ETB resolves, not as a kicker (CR 603.7 reflexive payoff): an Adversary
+    /// that was never cast still pays — twice here, two valor counters.
+    #[test]
+    fn intrepid_adversary_pays_on_enter_not_on_cast() {
+        let mut g = two_player_game();
+        g.players[0].mana_pool.add(Color::White, 2);
+        g.players[0].mana_pool.add_colorless(2);
+        g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+        let adv = g.move_card_to_battlefield_for_test(0, catalog::intrepid_adversary());
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(adv).unwrap().counter_count(CounterType::Valor), 2);
+        assert_eq!(g.computed_permanent(adv).map(|c| (c.power, c.toughness)), Some((5, 3)));
     }
 
     /// Bloodthirsty Adversary has haste, multikicker, and a kick-scaled +1/+1 spec.

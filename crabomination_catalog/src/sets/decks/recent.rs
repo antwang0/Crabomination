@@ -637,9 +637,9 @@ pub fn bloodcrazed_socialite() -> CardDefinition {
 }
 
 /// Intrepid Adversary — {1}{W} 3/1 Human Scout. Lifelink. ETB pay {1}{W} any
-/// number of times for that many valor counters; creatures you control get
-/// +1/+1 for each valor counter on it. (The any-number ETB payment is modeled
-/// as Multikicker — paid at cast time — which is functionally identical here.)
+/// number of times; when you pay one or more times, that many valor counters
+/// (a CR 603.7 reflexive trigger — paid as the ETB resolves, so a blink or a
+/// reanimation pays again); creatures you control get +1/+1 per valor counter.
 pub fn intrepid_adversary() -> CardDefinition {
     use crate::card::{CounterType, StaticAbility, StaticEffect};
     CardDefinition {
@@ -652,11 +652,29 @@ pub fn intrepid_adversary() -> CardDefinition {
         },
         power: 3,
         toughness: 1,
-        keywords: vec![
-            Keyword::Lifelink,
-            Keyword::Multikicker(cost(&[generic(1), w()])),
-        ],
-        enters_with_counters: Some((CounterType::Valor, Value::TimesKicked)),
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::MayPayRepeatedly {
+                who: PlayerRef::You,
+                description: "Pay {1}{W} (again) for Intrepid Adversary?".into(),
+                mana_cost: cost(&[generic(1), w()]),
+                body: Box::new(Effect::Noop),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::TimesPaidThisEffect, Value::ONE),
+                then: Box::new(Effect::WithX {
+                    x: Value::TimesPaidThisEffect,
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::AddCounter {
+                            what: Selector::This,
+                            kind: CounterType::Valor,
+                            amount: Value::XFromCost,
+                        }),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
         static_abilities: vec![StaticAbility {
             description: "Creatures you control get +1/+1 for each valor counter on this creature.",
             effect: StaticEffect::PumpPTPerCounterOnSource {
