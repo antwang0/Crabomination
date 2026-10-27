@@ -104,7 +104,7 @@ pub fn incursion_specialist() -> CardDefinition {
 fn primordial_etb(filter: R, effect: Effect) -> TriggeredAbility {
     etb(Effect::ForEachOpponentTarget {
         body: Box::new(Effect::ApplyToTargets {
-            max_targets: 5,
+            max_targets: 15,
             min_targets: 0,
             filter,
             effect: Box::new(effect),

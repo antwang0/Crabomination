@@ -1188,7 +1188,7 @@ pub fn shellshock() -> CardDefinition {
         CardType::Instant,
         Effect::ForEachOpponentTarget {
             body: Box::new(Effect::ApplyToTargets {
-                max_targets: 1,
+                max_targets: 15,
                 min_targets: 0,
                 filter: R::Creature.and(R::ControlledByOpponent),
                 effect: Box::new(Effect::Seq(vec![

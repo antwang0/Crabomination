@@ -274,7 +274,7 @@ pub fn celebrate_the_mountain_king() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::ForEachOpponentTarget {
                 body: Box::new(Effect::ApplyToTargets {
-                    max_targets: 5,
+                    max_targets: 15,
                     min_targets: 0,
                     filter: R::Permanent.and(R::Nonland).and(R::ControlledByOpponent),
                     effect: Box::new(Effect::ExileUntilSourceLeaves {

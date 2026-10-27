@@ -514,7 +514,7 @@ pub fn hapatra_the_desert_frost() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::ForEachOpponentTarget {
             body: Box::new(Effect::ApplyToTargets {
-                max_targets: 5,
+                max_targets: 15,
                 min_targets: 0,
                 filter: R::Creature.and(R::ControlledByOpponent),
                 effect: Box::new(tap_and_stun(Selector::Target(0))),

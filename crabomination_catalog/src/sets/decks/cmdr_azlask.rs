@@ -211,7 +211,7 @@ pub fn hideous_taskmaster() -> CardDefinition {
         keywords: vec![Keyword::Trample, Keyword::Haste, Keyword::Annihilator(1)],
         triggered_abilities: vec![on_cast(Effect::ForEachOpponentTarget {
             body: Box::new(Effect::ApplyToTargets {
-                max_targets: 5,
+                max_targets: 15,
                 min_targets: 0,
                 filter: R::Creature.and(R::ControlledByOpponent),
                 effect: Box::new(Effect::Seq(vec![

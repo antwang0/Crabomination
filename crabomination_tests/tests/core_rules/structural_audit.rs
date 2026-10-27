@@ -2120,3 +2120,45 @@ fn no_aura_or_equipment_selects_what_is_attached_to_itself() {
     bad.dedup();
     assert!(bad.is_empty(), "an Aura / Equipment selects what is attached to itself: {bad:?}");
 }
+
+/// CR 601.2c / 800 — "for each opponent, … up to one target … that player
+/// controls" names one target per opponent, and a pod seats up to eight
+/// (seven opponents): a `ForEachOpponentTarget` whose `ApplyToTargets` ceiling
+/// is below seven silently drops opponents past it. Shellshock carried 1 and
+/// thirteen cards 5. Bug fix. (Protector of the Wastes reuses the wrapper for
+/// "two targets controlled by different players".)
+#[test]
+fn for_each_opponent_targets_reach_every_opponent_of_an_eight_seat_pod() {
+    fn ceilings(v: &serde_json::Value, inside: bool, out: &mut Vec<u64>) {
+        match v {
+            serde_json::Value::Object(m) => {
+                for (k, sub) in m {
+                    let here = inside || k == "ForEachOpponentTarget";
+                    if here && k == "max_targets" {
+                        out.extend(sub.as_u64());
+                    }
+                    ceilings(sub, here, out);
+                }
+            }
+            serde_json::Value::Array(a) => a.iter().for_each(|x| ceilings(x, inside, out)),
+            _ => {}
+        }
+    }
+    let (mut bad, mut seen) = (Vec::new(), 0);
+    for factory in all_known_factories() {
+        let def = factory();
+        if def.name == "Protector of the Wastes" {
+            continue;
+        }
+        let mut out = Vec::new();
+        ceilings(&serde_json::to_value(&def).expect("CardDefinition serializes"), false, &mut out);
+        seen += usize::from(!out.is_empty());
+        if out.iter().any(|&n| n < 7) {
+            bad.push(def.name);
+        }
+    }
+    assert!(seen >= 20, "the walk found only {seen} per-opponent target cards — has the serde shape changed?");
+    bad.sort_unstable();
+    bad.dedup();
+    assert!(bad.is_empty(), "a per-opponent target ceiling below seven: {bad:?}");
+}

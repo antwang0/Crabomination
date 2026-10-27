@@ -332,7 +332,7 @@ pub fn grasp_of_fate() -> CardDefinition {
             // permanent that player controls until this leaves".
             effect: Effect::ForEachOpponentTarget {
                 body: Box::new(Effect::ApplyToTargets {
-                    max_targets: 5,
+                    max_targets: 15,
                     min_targets: 0,
                     filter: SelectionRequirement::Nonland
                         .and(SelectionRequirement::ControlledByOpponent),

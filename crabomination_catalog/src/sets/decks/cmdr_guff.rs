@@ -689,7 +689,7 @@ pub fn vronos_masked_inquisitor() -> CardDefinition {
                 -2,
                 Effect::ForEachOpponentTarget {
                     body: Box::new(Effect::ApplyToTargets {
-                        max_targets: 5,
+                        max_targets: 15,
                         min_targets: 0,
                         filter: R::Nonland.and(R::ControlledByOpponent),
                         effect: Box::new(Effect::Move {

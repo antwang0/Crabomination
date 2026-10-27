@@ -892,9 +892,7 @@ pub fn hofri_ghostforge() -> CardDefinition {
 /// ✅ Permanent `GainControl` of *up to one* opponent-controlled
 /// creature or planeswalker with MV ≤ 3, via `ApplyToTargets {
 /// max_targets: 1, min_targets: 0 }` (the printed "up to one" — the
-/// caster may cast it targetless). The printed text is per-opponent;
-/// with the engine's targeting this grabs one such permanent, which is
-/// exact in 1v1.
+/// caster may cast it targetless), one per opponent (`ForEachOpponentTarget`).
 pub fn tempted_by_the_oriq() -> CardDefinition {
     CardDefinition {
         name: "Tempted by the Oriq",
@@ -904,7 +902,7 @@ pub fn tempted_by_the_oriq() -> CardDefinition {
         // creature or planeswalker that player controls with mana value 3 or
         // less": one per opponent, none of them sharing a controller.
         effect: Effect::ForEachOpponentTarget { body: Box::new(Effect::ApplyToTargets {
-            max_targets: 5,
+            max_targets: 15,
             min_targets: 0,
             filter: SelectionRequirement::ControlledByOpponent
                 .and(SelectionRequirement::ManaValueAtMost(3))

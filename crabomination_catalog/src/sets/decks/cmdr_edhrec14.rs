@@ -982,7 +982,7 @@ pub fn frenzied_gorespawn() -> CardDefinition {
         triggered_abilities: vec![
             etb(Effect::ForEachOpponentTarget {
                 body: Box::new(Effect::ApplyToTargets {
-                    max_targets: 5,
+                    max_targets: 15,
                     min_targets: 0,
                     filter: R::Creature.and(R::ControlledByOpponent),
                     effect: Box::new(Effect::Goad { what: Selector::Target(0) }),

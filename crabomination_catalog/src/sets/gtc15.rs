@@ -146,7 +146,7 @@ pub fn diluvian_primordial() -> CardDefinition {
         // card per opponent's graveyard.
         triggered_abilities: vec![etb(Effect::ForEachOpponentTarget {
             body: Box::new(Effect::ApplyToTargets {
-                max_targets: 5,
+                max_targets: 15,
                 min_targets: 0,
                 filter: R::HasCardType(CardType::Instant)
                     .or(R::HasCardType(CardType::Sorcery))

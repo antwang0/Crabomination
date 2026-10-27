@@ -118,7 +118,7 @@ pub fn desecrate_reality() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::ForEachOpponentTarget {
                 body: Box::new(Effect::ApplyToTargets {
-                    max_targets: 5,
+                    max_targets: 15,
                     min_targets: 0,
                     filter: R::Permanent.and(R::ControlledByOpponent).and(R::ManaValueParity { odd: false }),
                     effect: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Exile }),

@@ -661,7 +661,7 @@ pub fn haytham_kenway() -> CardDefinition {
         ],
         triggered_abilities: vec![etb(Effect::ForEachOpponentTarget {
             body: Box::new(Effect::ApplyToTargets {
-                max_targets: 5,
+                max_targets: 15,
                 min_targets: 0,
                 filter: R::Creature.and(R::ControlledByOpponent),
                 effect: Box::new(Effect::ExileUntilSourceLeaves {
@@ -1151,7 +1151,7 @@ pub fn tolarian_contempt() -> CardDefinition {
                 event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::YourControl),
                 effect: Effect::ForEachOpponentTarget {
                     body: Box::new(Effect::ApplyToTargets {
-                        max_targets: 5,
+                        max_targets: 15,
                         min_targets: 0,
                         filter: R::Creature.and(R::ControlledByOpponent).and(R::WithCounter(CounterType::Rejection)),
                         effect: Box::new(Effect::Move {

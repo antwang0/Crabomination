@@ -8349,7 +8349,7 @@ pub fn omega_heartless_evolution() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::ForEachOpponentTarget {
                 body: Box::new(Effect::ApplyToTargets {
-                    max_targets: 5,
+                    max_targets: 15,
                     min_targets: 0,
                     filter: SelectionRequirement::Permanent
                         .and(SelectionRequirement::Nonland)
