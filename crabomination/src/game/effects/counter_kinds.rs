@@ -293,10 +293,12 @@ impl GameState {
     /// kind of counter on it, the controller says how many move onto `to` —
     /// all asks first (the replay-log contract), then the moves. A headless
     /// seat moves everything but a counter nobody wants on their own side.
+    /// `only` keeps the asks to one plain counter kind.
     pub(super) fn move_any_number_of_counters(
         &mut self,
         from: &Selector,
         to: &Selector,
+        only: Option<crate::card::CounterType>,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
@@ -308,6 +310,9 @@ impl GameState {
         let mut moves: Vec<(CardId, CounterKind, u32)> = Vec::new();
         for src in sources {
             for kind in self.counter_kinds_on(src) {
+                if only.is_some_and(|k| !matches!(kind, CounterKind::Plain(p) if p == k)) {
+                    continue;
+                }
                 let Some(c) = self.battlefield_find(src) else { continue };
                 let have = match &kind {
                     CounterKind::Plain(k) => c.counter_count(*k),

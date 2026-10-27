@@ -9980,7 +9980,13 @@ pub enum Effect {
     /// (Resourceful Defense, Slippery Bogbonder): per source and per kind of
     /// counter, the controller chooses how many move. `from` may name several
     /// permanents ("from among creatures you control"); `to` is never a source.
-    MoveAnyNumberOfCounters { from: Selector, to: Selector },
+    /// `kind` limits it to one counter kind ("any number of +1/+1 counters").
+    MoveAnyNumberOfCounters {
+        from: Selector,
+        to: Selector,
+        #[serde(default)]
+        kind: Option<crate::card::CounterType>,
+    },
     /// CR 603.7 — a reflexive "when you do, …" sub-trigger: push `body`
     /// onto the stack as a triggered ability of the same source and
     /// controller instead of resolving it inline. The containing

@@ -460,6 +460,7 @@ pub fn slippery_bogbonder() -> CardDefinition {
             Effect::MoveAnyNumberOfCounters {
                 from: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
                 to: Selector::Target(0),
+                kind: None,
             },
         ]))],
         ..creature(

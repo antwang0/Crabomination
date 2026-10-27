@@ -391,7 +391,7 @@ pub fn resourceful_defense() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4), w()]),
-            effect: Effect::MoveAnyNumberOfCounters { from: yours_target(0), to: yours_target(1) },
+            effect: Effect::MoveAnyNumberOfCounters { from: yours_target(0), to: yours_target(1), kind: None },
             ..Default::default()
         }],
         ..Default::default()

@@ -2295,7 +2295,7 @@ impl Effect {
             // Untargeted fan-out over creatures you control (Okinec Ahau).
             Effect::AddCountersForPowerOverBase { .. } => false,
             Effect::MoveAllCounters { from, to }
-            | Effect::MoveAnyNumberOfCounters { from, to }
+            | Effect::MoveAnyNumberOfCounters { from, to, .. }
             | Effect::MoveOneCounter { from, to } => sel_has_target(from) || sel_has_target(to),
             Effect::MoveCounter { from, to, amount, .. } => {
                 sel_has_target(from) || sel_has_target(to) || value_has_target(amount)
@@ -3559,7 +3559,7 @@ impl Effect {
             | Effect::Explore { who: what }
             | Effect::ExploreAfterScry { who: what } => sel_filter(what),
             Effect::MoveAllCounters { from, to }
-            | Effect::MoveAnyNumberOfCounters { from, to }
+            | Effect::MoveAnyNumberOfCounters { from, to, .. }
             | Effect::MoveCounter { from, to, .. }
             | Effect::MoveOneCounter { from, to }
             | Effect::MoveOneOfEachAbsentKind { from, to }
@@ -6072,7 +6072,7 @@ impl Effect {
                 Effect::LandsDontUntapNextUntapStep { who }
                 | Effect::CreaturesDontUntapNextUntapStep { who } => sel_find(who, slot),
                 Effect::MoveAllCounters { from, to }
-                | Effect::MoveAnyNumberOfCounters { from, to }
+                | Effect::MoveAnyNumberOfCounters { from, to, .. }
                 | Effect::MoveCounter { from, to, .. }
                 | Effect::MoveOneCounter { from, to }
                 | Effect::MoveOneOfEachAbsentKind { from, to }

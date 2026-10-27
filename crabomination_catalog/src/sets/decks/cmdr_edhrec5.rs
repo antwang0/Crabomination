@@ -1546,6 +1546,7 @@ pub fn scrounging_bandar() -> CardDefinition {
             effect: Effect::MoveAnyNumberOfCounters {
                 from: Selector::This,
                 to: target_filtered(R::Creature.and(R::OtherThanSource)),
+                kind: Some(CounterType::PlusOnePlusOne),
             },
         }],
         ..creature("Scrounging Bandar", cost(&[generic(1), g()]), vec![CreatureType::Cat, CreatureType::Monkey], 0, 0)
