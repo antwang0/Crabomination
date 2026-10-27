@@ -5013,6 +5013,10 @@ impl GameState {
                 .get(*slot as usize)
                 .and_then(|t| t.as_ref())
                 .is_none_or(|o| self.target_mana_value(target) <= self.target_mana_value(o)),
+            R::PowerAtMostTargetSlot(slot) => slots
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|o| self.target_power_at_most(target, o)),
             R::SameToughnessAsTargetSlot(slot) => {
                 slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| {
                     self.target_toughness(o).is_some() && self.target_toughness(o) == self.target_toughness(target)
@@ -5184,6 +5188,15 @@ impl GameState {
             Target::Permanent(cid) => self.computed_permanent(*cid).map(|cp| cp.toughness),
             Target::Player(_) => None,
         }
+    }
+
+    /// Both are permanents and `t`'s power is at most `other`'s.
+    fn target_power_at_most(&self, t: &Target, other: &Target) -> bool {
+        let power = |t: &Target| match t {
+            Target::Permanent(cid) => self.computed_permanent(*cid).map(|cp| cp.power),
+            Target::Player(_) => None,
+        };
+        matches!((power(t), power(other)), (Some(a), Some(b)) if a <= b)
     }
 
     /// CR 400.7 — does `def` share a card type with a card this source
@@ -5946,6 +5959,11 @@ impl GameState {
                 .get(*slot as usize)
                 .and_then(|t| t.as_ref())
                 .is_none_or(|other| self.target_mana_value(target) <= self.target_mana_value(other)),
+            R::PowerAtMostTargetSlot(slot) => self
+                .target_slots_scratch
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|other| self.target_power_at_most(target, other)),
             R::SameToughnessAsTargetSlot(slot) => {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => {
@@ -8056,6 +8074,7 @@ impl GameState {
             | R::OtherThanTargetSlot(_)
             | R::SameToughnessAsTargetSlot(_)
             | R::ManaValueAtMostTargetSlot(_)
+            | R::PowerAtMostTargetSlot(_)
             | R::SharesCreatureTypeWithTargetSlot(_)
             | R::SharesCardTypeWithTargetSlot(_)
             | R::NameDiffersFromOtherTargets

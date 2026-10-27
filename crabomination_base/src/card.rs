@@ -3621,6 +3621,10 @@ pub enum SelectionRequirement {
     /// value", Puca's Mischief). Vacuously true while slot N is unchosen;
     /// read like `SameToughnessAsTargetSlot`.
     ManaValueAtMostTargetSlot(u8),
+    /// CR 601.2c — the candidate's power is at most slot N's ("target creature
+    /// with power less than or equal to that creature's power an opponent
+    /// controls", Spawnbroker). Vacuously true while slot N is unchosen.
+    PowerAtMostTargetSlot(u8),
     /// CR 601.2c — cross-slot filter: shares a creature type with the
     /// creature already chosen for slot `.0` ("two target creatures you
     /// control that share a creature type" — Secret Tunnel). Vacuously true
@@ -5112,6 +5116,7 @@ impl SelectionRequirement {
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
             | Self::ManaValueAtMostTargetSlot(_)
+            | Self::PowerAtMostTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::SharesCardTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
@@ -5139,6 +5144,7 @@ impl SelectionRequirement {
             | Self::OtherThanTargetSlot(_)
             | Self::SameToughnessAsTargetSlot(_)
             | Self::ManaValueAtMostTargetSlot(_)
+            | Self::PowerAtMostTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::SharesCardTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
@@ -5165,6 +5171,7 @@ impl SelectionRequirement {
             Self::OtherThanTargetSlot(n) => Self::OtherThanTargetSlot(s(n)),
             Self::SameToughnessAsTargetSlot(n) => Self::SameToughnessAsTargetSlot(s(n)),
             Self::ManaValueAtMostTargetSlot(n) => Self::ManaValueAtMostTargetSlot(s(n)),
+            Self::PowerAtMostTargetSlot(n) => Self::PowerAtMostTargetSlot(s(n)),
             Self::SharesCreatureTypeWithTargetSlot(n) => Self::SharesCreatureTypeWithTargetSlot(s(n)),
             Self::SharesCardTypeWithTargetSlot(n) => Self::SharesCardTypeWithTargetSlot(s(n)),
             Self::SameGraveyardAsTargetSlot(n) => Self::SameGraveyardAsTargetSlot(s(n)),
