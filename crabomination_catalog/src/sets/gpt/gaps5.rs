@@ -131,17 +131,14 @@ pub fn parallectric_feedback() -> CardDefinition {
 }
 
 /// Quicken — {U} Instant. The next sorcery spell you cast this turn can be cast
-/// as though it had flash. Draw a card. (Approximated as all your sorceries
-/// gaining flash until end of turn.)
+/// as though it had flash. Draw a card.
 pub fn quicken() -> CardDefinition {
     CardDefinition {
         name: "Quicken",
         cost: cost(&[u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::GrantSorceriesAsFlash {
-                who: PlayerRef::You,
-            },
+            Effect::NextMatchingSpellHasFlashThisTurn { filter: crate::card::SelectionRequirement::HasCardType(CardType::Sorcery) },
             Effect::Draw {
                 who: Selector::You,
                 amount: Value::ONE,

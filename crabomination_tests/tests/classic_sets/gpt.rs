@@ -1183,15 +1183,30 @@ fn parallectric_feedback_burns_by_mana_value() {
     assert_eq!(g.players[0].life, 14, "6 damage = the wurm's mana value to its controller");
 }
 
-/// Quicken draws a card and grants your sorceries flash.
+/// Quicken draws a card, and only the NEXT sorcery spell you cast this turn
+/// can be cast as though it had flash.
 #[test]
-fn quicken_cantrips_and_grants_flash() {
+fn quicken_cantrips_and_flashes_the_next_sorcery() {
     let mut g = two_player_game();
-    g.add_card_to_library(0, catalog::island());
+    for _ in 0..6 {
+        g.add_card_to_library(0, catalog::island());
+    }
     let before = g.players[0].hand.len();
     resolve_spell(&mut g, catalog::quicken(), vec![]);
     assert_eq!(g.players[0].hand.len(), before + 1, "drew a card");
-    assert!(g.players[0].sorceries_as_flash, "sorceries gain flash");
+    g.active_player_idx = 1;
+    g.step = crabomination::game::types::TurnStep::BeginCombat;
+    g.priority.player_with_priority = 0;
+    let first = g.add_card_to_hand(0, catalog::preordain());
+    let second = g.add_card_to_hand(0, catalog::preordain());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    let cast = |g: &mut GameState, id| g.perform_action(crabomination::game::types::GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    });
+    cast(&mut g, first).expect("the first sorcery has flash");
+    drain_stack(&mut g);
+    g.priority.player_with_priority = 0;
+    assert!(cast(&mut g, second).is_err(), "the grant is spent");
 }
 
 /// Wurmweaver Coil buffs +6/+6 and can be sacrificed for a 6/6 Wurm.
