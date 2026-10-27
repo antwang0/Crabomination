@@ -2130,7 +2130,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Spider-Verse~~ ✅ | fixed 2026-10-24: `once_each_turn_on_take` — the use is spent on a copy taken (Riveteers Ascendancy had the same shape, fixed with it) | — |
 | 🟡 Casting of Bones | "discard one of them" is a plain discard of one: the pick isn't limited to the three cards drawn | `Draw` + `Discard` |
 | 🟡 Skill Borrower | the top card of your library is only visible to you, not revealed to the table | `MayLookAtOwnLibraryTop` |
-| 🟡 Doctor Jane Foster | with life gained this turn the returned card passes through your hand before the battlefield | `Move` to hand, then `LastMoved` to battlefield |
+| ~~Doctor Jane Foster~~ ✅ | fixed 2026-10-27: with life gained this turn the card moves graveyard → battlefield in one move (`If` picks the destination) | — |
 | 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |
 | 🟡 Mikey & Mona, Mutant Sitters | "each mode must target a different player" is not enforced | `ChooseN` over two `TargetPlayerThen` + `AsPlayer` modes |
 | 🟡 Sensation Gorger | the top card is checked before you choose to look; a non-sharing top card is never offered | `If` over `SharesCreatureTypeWithSource`, then `MayDo` |

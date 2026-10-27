@@ -291,30 +291,22 @@ pub fn blessed_reversal() -> CardDefinition {
 /// Doctor Jane Foster — {3}{W} legendary 2/3 vigilance Human Doctor. ETB:
 /// return target creature card with mana value 3 or less from your graveyard
 /// to your hand; if you gained life this turn, to the battlefield instead.
-/// (Residual: with life gained, the card passes through your hand first.)
 pub fn doctor_jane_foster() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ClearLastMoved,
-            Effect::Move {
+        // "Return that card to the battlefield instead" — one move, straight
+        // from the graveyard, never through the hand.
+        triggered_abilities: vec![etb(Effect::If {
+            cond: Predicate::PlayerGainedLifeThisTurn { who: PlayerRef::You },
+            then: Box::new(Effect::Move {
+                what: target_filtered(R::Creature.and(R::ManaValueAtMost(3)).from_your_graveyard()),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            else_: Box::new(Effect::Move {
                 what: target_filtered(R::Creature.and(R::ManaValueAtMost(3)).from_your_graveyard()),
                 to: ZoneDest::Hand(PlayerRef::You),
-            },
-            Effect::If {
-                cond: Predicate::PlayerGainedLifeThisTurn {
-                    who: PlayerRef::You,
-                },
-                then: Box::new(Effect::Move {
-                    what: Selector::LastMoved,
-                    to: ZoneDest::Battlefield {
-                        controller: PlayerRef::You,
-                        tapped: false,
-                    },
-                }),
-                else_: Box::new(Effect::Noop),
-            },
-        ]))],
+            }),
+        })],
         ..legend(
             "Doctor Jane Foster",
             cost(&[generic(3), w()]),
