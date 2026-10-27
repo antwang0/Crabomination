@@ -3136,6 +3136,27 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-27 (Commander run, `01WRuXc6`) — guardrail; the Revolt funnel helper, emblem-ability gates, filtered next-spell grants
+
+New on paths a 2-player game can reach: `move_card_to` reads `computed_is_creature` once per non-battlefield leave
+(`note_permanent_left_battlefield`); `activate_ability_inner` reads `ability.emblem_ability` at four gates; casts walk
+`free_next_spells` / `next_matching_spell_flash` (empty almost always). `release` bot_ladder, 4-core Xeon, base
+`106ad3429` (origin before this run) vs tip `880be57c1`, each built in its own worktree target dir:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism
+                 ok; thread_determinism ok (3 vs 1); peak_rss_mib 49.8
+bench_ab.py      16 pairs base vs tip: -2.50 % median, +0.50 % mean (sd 9.88); 24 more: -0.28 % median, -1.05 % mean
+                 (sd 7.82) — noise, no regression
+pools            cube / sos / sealed x 300 (seed 16700): 7,500 decided, 0 undecided (outcomes NOT compared: the
+                 Revolt fix is an intended behavior change for pools holding a Revolt card)
+pods             seed 16600 x 300 at 2..8 seats: 2,100 / 2,100 decided, turns/game 19.91 / 33.24 / 45.51 / 59.13 /
+                 70.19 / 81.16 / 95.33
+random pods      random_pods.sh 4 150 3 15800, 6 60 2 16000, 3 100 3 16200, 8 30 2 16400: 0 hits in 930
+targeted pods    20 four-seat groups holding every changed card x 50 (seeds 15711-15720) and x 100 (15731-15740):
+                 1,500 / 1,500 decided, 0 panics
+```
+
 ### 2026-10-26 (Commander run, `01WvrAp6`) — guardrail; reflexive pushes, the bot's reflexive-target screen, Moonlit's ask
 
 New on paths a 2-player game can reach: `optional_trigger_beneficial` walks a may-body for a `ReflexiveTrigger`
