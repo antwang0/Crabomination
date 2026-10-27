@@ -5129,8 +5129,8 @@ pub fn flip_the_switch() -> CardDefinition {
 }
 
 /// Jack-o'-Lantern — {1} Artifact. {1}, {T}, Sacrifice this: exile up to one
-/// target card from a graveyard, then draw a card. (The graveyard mana ability
-/// is dropped.)
+/// target card from a graveyard, then draw a card. {1}, exile it from your
+/// graveyard: one mana of any color.
 pub fn jack_o_lantern() -> CardDefinition {
     CardDefinition {
         name: "Jack-o'-Lantern",

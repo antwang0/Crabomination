@@ -6674,8 +6674,9 @@ pub fn starwinder() -> CardDefinition {
 }
 
 /// Pinnacle Starcage — {1}{W}{W} Artifact. ETB: exile all artifacts and
-/// creatures with mana value 2 or less until this leaves. (The `{6}{W}{W}`
-/// dump-to-graveyard-and-make-Robots activated payoff is dropped.)
+/// creatures with mana value 2 or less until this leaves. {6}{W}{W}: each card
+/// exiled with it goes to its owner's graveyard, a 2/2 Robot per card that got
+/// there, then sacrifice it.
 pub fn pinnacle_starcage() -> CardDefinition {
     CardDefinition {
         name: "Pinnacle Starcage",
@@ -6690,6 +6691,30 @@ pub fn pinnacle_starcage() -> CardDefinition {
             ),
             return_to: crate::card::ExileReturnZone::Battlefield,
         })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(6), w(), w()]),
+            effect: Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::EachMatching {
+                        zone: crate::effect::ZoneRef::Exile,
+                        filter: SelectionRequirement::ExiledWithSource,
+                    },
+                    to: ZoneDest::Graveyard,
+                },
+                // "for each card put into a graveyard this way" — a card a
+                // replacement exiled instead doesn't count.
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::CountOf(Box::new(Selector::MatchingAmong {
+                        inner: Box::new(Selector::LastMoved),
+                        filter: SelectionRequirement::InGraveyard,
+                    })),
+                    definition: std::sync::Arc::new(robot_2_2()),
+                },
+                Effect::SacrificePermanent { what: Selector::This },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

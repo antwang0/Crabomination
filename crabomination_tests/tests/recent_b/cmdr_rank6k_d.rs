@@ -131,6 +131,26 @@ fn black_widow_steals_a_spell() {
     assert!(g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"));
 }
 
+/// Black Widow: the +1/+1 counter and the cast are exclusive — "you may put a
+/// +1/+1 counter on Black Widow. If you don't, you may cast the exiled card".
+#[test]
+fn black_widow_counter_or_cast_not_both() {
+    for take_counter in [true, false] {
+        let mut g = pod(2);
+        let bw = ready(&mut g, 0, catalog::black_widow_super_spy());
+        g.add_card_to_library(1, catalog::grizzly_bears());
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+            crabomination::decision::DecisionAnswer::Bool(take_counter),
+        ]));
+        declare(&mut g, vec![(bw, 1)]);
+        finish_combat(&mut g);
+        let counters = g.battlefield_find(bw).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne);
+        let castable = g.exile.iter().any(|c| c.definition.name == "Grizzly Bears" && c.may_play_until.is_some());
+        assert_eq!(counters == 1, take_counter);
+        assert_eq!(castable, !take_counter, "the cast is open only without the counter");
+    }
+}
+
 /// CR 702.178 — Petty Larceny exiles an opponent's top two and makes a
 /// Treasure.
 #[test]

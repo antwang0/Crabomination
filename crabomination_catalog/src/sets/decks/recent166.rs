@@ -437,9 +437,9 @@ pub fn ragost_deft_gastronaut() -> CardDefinition {
 }
 
 /// Invasion Submersible — {2}{U} Artifact — Vehicle 0/0. When it enters, return
-/// up to one other target nonland permanent to its owner's hand. Exhaust — {3}:
-/// This Vehicle becomes an artifact creature; put three +1/+1 counters on it.
-/// (Waterbend {3} is approximated as a plain {3} cost.)
+/// up to one other target nonland permanent to its owner's hand. Exhaust —
+/// Waterbend {3}: This Vehicle becomes an artifact creature; put three +1/+1
+/// counters on it.
 pub fn invasion_submersible() -> CardDefinition {
     CardDefinition {
         name: "Invasion Submersible",
@@ -463,6 +463,7 @@ pub fn invasion_submersible() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(3)]),
             exhaust: true,
+            waterbend: true,
             effect: Effect::Seq(vec![
                 Effect::AddCardTypeIndefinitely {
                     what: Selector::This,

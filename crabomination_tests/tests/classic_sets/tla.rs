@@ -3679,14 +3679,19 @@ fn toph_hardheaded_lesson_adds_a_counter() {
 }
 
 /// Avatar Destiny buffs its host by graveyard-creature count and makes it an
-/// Avatar; when the host dies it returns to hand and reanimates a gy creature.
+/// Avatar; when the host dies it mills its power, returns to hand and puts a
+/// creature card MILLED THIS WAY onto the battlefield — not one that was
+/// already in the graveyard.
 #[test]
 fn avatar_destiny_scales_and_recurs() {
-    use crabomination::card::{CreatureType, CardType};
+    use crabomination::card::CreatureType;
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears()); // 2/2
-    g.add_card_to_graveyard(0, catalog::grizzly_bears());
-    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let old = [g.add_card_to_graveyard(0, catalog::grizzly_bears()), g.add_card_to_graveyard(0, catalog::grizzly_bears())];
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let giant = g.add_card_to_library(0, catalog::hill_giant());
     let aura = g.add_card_to_hand(0, catalog::avatar_destiny());
     g.players[0].mana_pool.add(crabomination::mana::Color::Green, 2);
     g.players[0].mana_pool.add_colorless(2);
@@ -3703,11 +3708,8 @@ fn avatar_destiny_scales_and_recurs() {
     g.dispatch_triggers_for_events(&events);
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == aura), "aura back in hand");
-    assert!(
-        g.battlefield.iter().any(|c| c.controller == 0
-            && c.definition.card_types.contains(&CardType::Creature)),
-        "a creature was reanimated from the graveyard"
-    );
+    assert!(g.battlefield_find(giant).is_some(), "the milled creature card came back");
+    assert!(old.iter().all(|id| g.battlefield_find(*id).is_none()), "the older graveyard creatures stay");
 }
 
 /// Toph, the First Metalbender turns your nontoken artifacts into lands and

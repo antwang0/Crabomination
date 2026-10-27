@@ -2398,10 +2398,8 @@ pub fn sparring_dummy() -> CardDefinition {
 }
 
 /// Buzzard-Wasp Colony — {3}{B} 2/2 Bird Insect. Flying. When it enters, you
-/// may sacrifice an artifact or creature; if you do, draw a card. (The
-/// "another creature you control dies → move its counters onto this" rider is
-/// dropped — observer death-triggers can't read the dead creature's LKI
-/// counters yet; tracked in TODO.md.)
+/// may sacrifice an artifact or creature; if you do, draw a card. Whenever
+/// another creature you control dies, its counters move onto this.
 pub fn buzzard_wasp_colony() -> CardDefinition {
     CardDefinition {
         name: "Buzzard-Wasp Colony",
@@ -6173,9 +6171,8 @@ pub fn toph_hardheaded_teacher() -> CardDefinition {
 /// Avatar Destiny — {2}{G}{G} Aura. Enchant creature you control. Enchanted
 /// creature gets +1/+1 for each creature card in your graveyard and is an Avatar
 /// in addition to its other types. When it dies, mill cards equal to its power,
-/// return this to hand, and return up to one creature card from your graveyard
-/// to the battlefield. ("Milled this way" is approximated as "from your
-/// graveyard".)
+/// return this to hand, and return up to one creature card milled this way to
+/// the battlefield.
 pub fn avatar_destiny() -> CardDefinition {
     use crate::card::{EquipBonus, EquipScale};
     CardDefinition {
@@ -6213,20 +6210,21 @@ pub fn avatar_destiny() -> CardDefinition {
                     who: Selector::You,
                     amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
                 },
+                // The milled cards are `LastMoved` until the next move, so the
+                // creature comes back before this returns to hand.
                 Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-                },
-                Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
+                    what: Selector::one_of(Selector::MatchingAmong {
+                        inner: Box::new(Selector::LastMoved),
                         filter: SelectionRequirement::Creature,
                     }),
                     to: ZoneDest::Battlefield {
                         controller: PlayerRef::You,
                         tapped: false,
                     },
+                },
+                Effect::Move {
+                    what: Selector::This,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                 },
             ]),
         }],

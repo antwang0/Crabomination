@@ -51,8 +51,8 @@ pub fn turtleshell_changeling() -> CardDefinition {
 }
 
 /// Ego Erasure — {2}{U} Kindred instant — Shapeshifter, changeling.
-/// Creatures target player controls get -2/-0 until end of turn. (Residual:
-/// "and lose all creature types until end of turn" is not modelled.)
+/// Creatures target player controls get -2/-0 and lose all creature types until
+/// end of turn.
 pub fn ego_erasure() -> CardDefinition {
     CardDefinition {
         name: "Ego Erasure",
@@ -64,12 +64,20 @@ pub fn ego_erasure() -> CardDefinition {
             filter: R::Player,
             then: Box::new(Effect::AsPlayer {
                 who: PlayerRef::Target(0),
-                body: Box::new(Effect::PumpPT {
-                    what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
-                    power: Value::Const(-2),
-                    toughness: Value::ZERO,
-                    duration: Duration::EndOfTurn,
-                }),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::PumpPT {
+                        what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                        power: Value::Const(-2),
+                        toughness: Value::ZERO,
+                        duration: Duration::EndOfTurn,
+                    },
+                    // Layer 4: an empty creature-type set.
+                    Effect::BecomeCreatureType {
+                        what: Selector::EachPermanent(R::Creature.and(R::ControlledByYou)),
+                        creature_types: vec![],
+                        duration: Duration::EndOfTurn,
+                    },
+                ])),
             }),
         },
         ..Default::default()

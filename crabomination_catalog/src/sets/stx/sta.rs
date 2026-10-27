@@ -56,7 +56,7 @@ pub fn blue_suns_zenith() -> CardDefinition {
 /// of your library until you reveal a card of the chosen kind; put it into your
 /// hand and the rest on the bottom in a random order.
 ///
-/// Modeled as a `ChooseN` over two `RevealUntilFind` arms (misses bottomed).
+/// Built as a `ChooseN` over two `RevealUntilFind` arms (misses bottomed).
 pub fn abundant_harvest() -> CardDefinition {
     let dig = |find: SelectionRequirement| Effect::RevealUntilFind {
         who: PlayerRef::You,

@@ -4143,12 +4143,9 @@ pub fn cloud_of_faeries() -> CardDefinition {
 /// Tainted Remedy — {2}{B} Enchantment (ORI). "If an opponent would gain
 /// life, that player loses that much life instead."
 ///
-/// CR 614 life-gain replacement. `StaticEffect::LifeGainBecomesLoss` was
-/// written for this card and had shipped without it — ⚠ and a doc comment on
-/// `PlayerStaticTarget::EachOpponent` had meanwhile offered
-/// `PlayerCannotGainLife` as a "Tainted Remedy approximation", which merely
-/// stops the gain where the card reverses it. The exact primitive was two
-/// files away the whole time (`audit_doc_card_names.py`).
+/// CR 614 life-gain replacement: `StaticEffect::LifeGainBecomesLoss` (it once
+/// shipped as `PlayerCannotGainLife`, which stops the gain where the card
+/// reverses it — `audit_doc_card_names.py`).
 pub fn tainted_remedy() -> CardDefinition {
     CardDefinition {
         name: "Tainted Remedy",
@@ -5837,12 +5834,11 @@ pub fn distress() -> CardDefinition {
 /// Vryn Wingmare — {2}{W} Creature — Bird Soldier. 2/1 Flying.
 /// Noncreature spells cost {1} more to cast.
 ///
-/// Reuses Thalia's `StaticEffect::AdditionalCostAfterFirstSpell`
-/// filtered to `Noncreature`. The Oracle's tax applies on the *first*
-/// spell too — Thalia/Vryn Wingmare share the same simplification
-/// (the engine's static currently applies after the first spell each
-/// turn since it reuses Damping Sphere's plumbing). Functionally
-/// matches Thalia minus the first-strike body.
+/// ⚠ DEFECT, cube pool (frozen): it carries Damping Sphere's
+/// `AdditionalCostAfterFirstSpell`, so each player's FIRST noncreature spell
+/// a turn is untaxed. Thalia uses the right static — the fix is
+/// `StaticEffect::AdditionalCost { filter: Noncreature, amount: 1 }`, held
+/// back only because the card is dealt in cube games (approximated).
 pub fn vryn_wingmare() -> CardDefinition {
     use crate::card::StaticAbility;
     use crate::effect::StaticEffect;

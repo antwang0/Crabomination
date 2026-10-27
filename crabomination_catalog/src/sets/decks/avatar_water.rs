@@ -170,8 +170,8 @@ pub fn waterbenders_restoration() -> CardDefinition {
 }
 
 /// Ruinous Waterbending — {1}{B}{B} Sorcery (Lesson). You may waterbend {4}.
-/// All creatures get -2/-2 until end of turn. (The paid-rider death-lifegain is
-/// dropped — no delayed dies-trigger primitive for one-shot spells yet.)
+/// All creatures get -2/-2 until end of turn; if waterbent, whenever a creature
+/// dies this turn, you gain 1 life.
 pub fn ruinous_waterbending() -> CardDefinition {
     CardDefinition {
         name: "Ruinous Waterbending",

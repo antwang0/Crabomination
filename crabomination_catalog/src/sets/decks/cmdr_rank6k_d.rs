@@ -6,7 +6,7 @@ use crate::card::{
     EventSpec, Keyword, MayPlayDuration, Predicate, SelectionRequirement as R, StaticAbility,
     StaticEffect, Subtypes, Supertype, TriggeredAbility, Value,
 };
-use crate::effect::{Effect, PlayerRef, Selector};
+use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
 use crate::mana::{ManaCost, b, cost, generic, u};
 use std::sync::Arc;
 
@@ -96,27 +96,38 @@ pub fn eligeth_crossroads_augur() -> CardDefinition {
 /// Whenever she deals combat damage to a player, that player exiles from the
 /// top of their library until a nonland card; you may put a +1/+1 counter on
 /// her; if you don't, you may cast that card this turn, spending mana as
-/// though it were any type. (Residual: the counter and the cast aren't
-/// exclusive — the counter is offered, and the cast stays open either way.)
+/// though it were any type.
 pub fn black_widow_super_spy() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::Seq(vec![
-                Effect::ExileTopUntilNonlandMayPlay {
+                // The passed-over lands stay exiled; the nonland card is
+                // `LastMoved` for the cast grant.
+                Effect::RevealUntilFind {
                     who: PlayerRef::TriggerEventPlayer,
-                    duration: MayPlayDuration::EndOfThisTurn,
-                    free: false,
-                    hand_unless_mv_below: None,
-                    grant_to_exiling_player: false,
+                    find: R::Nonland,
+                    to: ZoneDest::Exile,
+                    cap: Value::Const(250),
+                    life_per_revealed: 0,
+                    miss_dest: crate::effect::RevealMissDest::Exile,
                 },
-                Effect::MayDo {
-                    description: "Put a +1/+1 counter on Black Widow?".into(),
+                // The counter and the cast are exclusive ("if you don't").
+                Effect::MayDoElse {
+                    description: "Put a +1/+1 counter on Black Widow (instead of the cast)?".into(),
                     body: Box::new(Effect::AddCounter {
                         what: Selector::This,
                         kind: CounterType::PlusOnePlusOne,
                         amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::GrantMayPlay {
+                        what: Selector::LastMoved,
+                        duration: MayPlayDuration::EndOfThisTurn,
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: true,
                     }),
                 },
             ]),

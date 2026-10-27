@@ -535,6 +535,21 @@ fn genku_makes_a_token_on_permanent_leaving() {
         "created a Fox token");
 }
 
+/// Charitable Levy taxes every noncreature spell — the first one each turn too
+/// (it carried Damping Sphere's after-the-first static until 2026-10-27).
+#[test]
+fn charitable_levy_taxes_the_first_noncreature_spell() {
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::charitable_levy());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).is_err(), "{{R}} alone doesn't pay the taxed first spell");
+}
+
 /// Charitable Levy taxes noncreature spells and, after three, sacrifices itself
 /// to draw a card and fetch a Plains.
 #[test]

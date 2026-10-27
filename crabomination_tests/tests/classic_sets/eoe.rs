@@ -3829,3 +3829,31 @@ fn larval_scoutlander_sacrifices_a_lander() {
     let forests = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Forest").count();
     assert_eq!(forests, 2, "two basics fetched");
 }
+
+/// Pinnacle Starcage's {6}{W}{W}: the cards it exiled go to their owners'
+/// graveyards, a 2/2 Robot for each, and the Starcage is sacrificed (so
+/// nothing comes back when it leaves).
+#[test]
+fn pinnacle_starcage_cashes_in_its_exiles() {
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    let cage = g.add_card_to_battlefield(0, catalog::pinnacle_starcage());
+    g.fire_self_etb_triggers(cage, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none() && g.battlefield_find(ring).is_none(), "both exiled");
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: cage, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("cash in");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cage).is_none(), "sacrificed");
+    assert_eq!(g.players[1].graveyard.len(), 2, "both cards in their owner's graveyard");
+    let robots = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Robot").count();
+    assert_eq!(robots, 2);
+}

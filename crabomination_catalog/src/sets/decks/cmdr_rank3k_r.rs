@@ -197,18 +197,33 @@ pub fn super_adaptoid() -> CardDefinition {
 
 /// Impossible Man — {2}{U} legendary 1/4 flying Alien Shapeshifter. {2}{U}: he
 /// becomes a copy of another target permanent until end of turn, except his
-/// name is Impossible Man. (Residual: the copy takes the copied name.)
+/// name is Impossible Man.
 pub fn impossible_man() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), u()]),
-            effect: Effect::BecomeCopyOfFor {
-                what: Selector::This,
-                source: target_filtered(R::Permanent.and(R::OtherThanSource)),
-                duration: Duration::EndOfTurn,
-                non_legendary: false,
-            },
+            effect: Effect::Seq(vec![
+                Effect::BecomeCopyOfFor {
+                    what: Selector::This,
+                    source: target_filtered(R::Permanent.and(R::OtherThanSource)),
+                    duration: Duration::EndOfTurn,
+                    non_legendary: false,
+                },
+                // CR 707.9b — "except his name is Impossible Man": copying your
+                // own legend doesn't put two of one name under the legend rule.
+                Effect::AmendCopy {
+                    what: Selector::This,
+                    keep_activated: vec![],
+                    keep_triggered: vec![],
+                    pt: None,
+                    keep_name: true,
+                    legendary: false,
+                    keywords: vec![],
+                    card_types: vec![],
+                    creature_types: vec![],
+                },
+            ]),
             ..Default::default()
         }],
         ..legend(

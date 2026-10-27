@@ -5140,8 +5140,8 @@ pub fn hopeless_nightmare() -> CardDefinition {
 }
 
 /// Hangar Scrounger — {2}{R} 2/1 Dwarf Pilot. Backup 1. Whenever it becomes
-/// tapped, you may discard a card; if you do, draw a card. (The backup-grant
-/// of the loot ability to the backed-up creature is omitted.)
+/// tapped, you may discard a card; if you do, draw a card — an ability backup
+/// grants to another creature it targets.
 pub fn hangar_scrounger() -> CardDefinition {
     let loot = TriggeredAbility {
         event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
@@ -5170,7 +5170,7 @@ pub fn hangar_scrounger() -> CardDefinition {
         },
         power: 2,
         toughness: 1,
-        triggered_abilities: vec![crate::effect::shortcut::backup(1, vec![]), loot],
+        triggered_abilities: vec![crate::effect::shortcut::backup_with(1, vec![], vec![loot.clone()]), loot],
         ..Default::default()
     }
 }

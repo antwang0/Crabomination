@@ -272,4 +272,15 @@ fn magus_of_the_unseen_borrows_an_artifact() {
     let c = g.battlefield_find(ring).unwrap();
     assert_eq!(c.controller, 0);
     assert!(!c.tapped);
+    // "When you lose control of the artifact, tap it" — as the steal ends in
+    // the cleanup step (CR 514.2).
+    while g.step != TurnStep::End {
+        g.advance_step(vec![]).expect("advance");
+        drain_stack(&mut g);
+    }
+    g.advance_step(vec![]).expect("to cleanup");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(ring).unwrap();
+    assert_eq!(c.controller, 1, "back to its owner");
+    assert!(c.tapped, "tapped when control was lost");
 }

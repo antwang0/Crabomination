@@ -195,6 +195,21 @@ fn impossible_man_copies_until_end_of_turn() {
     assert_eq!(pt(&g, im), (4, 4));
 }
 
+/// CR 707.9b — "except his name is Impossible Man": copying your own legend
+/// leaves both on the battlefield (no legend-rule clash, CR 704.5j).
+#[test]
+fn impossible_man_keeps_his_name_when_copying_a_legend() {
+    let mut g = pod(2);
+    let im = ready(&mut g, 0, catalog::impossible_man());
+    let legend = ready(&mut g, 0, catalog::jiang_yanggu_alone());
+    activate(&mut g, im, 0, Some(Target::Permanent(legend)));
+    let _ = g.check_state_based_actions();
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, im), (4, 4), "a copy of the 4/4");
+    assert_eq!(g.battlefield_find(im).unwrap().battlefield_name(), "Impossible Man");
+    assert!(g.battlefield_find(legend).is_some(), "the original legend stays");
+}
+
 /// CR 508.3a — Stangg's Twin joins the attack and is gone at the end step.
 #[test]
 fn stangg_brings_a_twin() {

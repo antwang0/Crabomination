@@ -1164,6 +1164,14 @@ mod recent {
             Some(1),
             "Backup 1 added a counter"
         );
+        // CR 702.164 — the backed-up creature gains the loot until end of turn.
+        g.add_card_to_hand(0, catalog::island());
+        g.add_card_to_library(0, catalog::island());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        let graveyard = g.players[0].graveyard.len();
+        g.dispatch_triggers_for_events(&[GameEvent::PermanentTapped { card_id: ally, actor: Some(0), as_attacker: false }]);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].graveyard.len(), graveyard + 1, "the ally's granted loot discarded a card");
     }
 
     /// Bristlebud Farmer makes two Food on ETB.

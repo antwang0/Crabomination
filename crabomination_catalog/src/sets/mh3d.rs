@@ -864,7 +864,9 @@ pub fn charitable_levy() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         static_abilities: vec![StaticAbility {
             description: "Noncreature spells cost {1} more to cast.",
-            effect: StaticEffect::AdditionalCostAfterFirstSpell {
+            // Every noncreature spell, the first one included (Thalia's
+            // static, not Damping Sphere's).
+            effect: StaticEffect::AdditionalCost {
                 filter: R::Noncreature,
                 amount: 1,
             },

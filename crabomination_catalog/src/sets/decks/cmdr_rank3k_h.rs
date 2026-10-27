@@ -151,8 +151,7 @@ pub fn the_darkhold() -> CardDefinition {
 
 /// Reckless Crew — {3}{R} sorcery. Create X 2/1 red Dwarf Berserkers, X the
 /// Vehicles plus Equipment you control; for each, you may attach an Equipment
-/// you control to it. (Residual: only unattached Equipment is offered, so an
-/// Equipment already on a creature stays put.)
+/// you control to it (one already on a creature may move).
 pub fn reckless_crew() -> CardDefinition {
     let count = Value::PermanentCountControlledByMatching(
         PlayerRef::You,
@@ -364,8 +363,7 @@ pub fn ajani_sleeper_agent() -> CardDefinition {
 
 /// Magus of the Unseen — {1}{U} 1/1 Human Wizard. {1}{U}, {T}: untap target
 /// artifact an opponent controls and gain control of it until end of turn; it
-/// gains haste. (Residual: the "when you lose control of the artifact, tap
-/// it" rider is dropped.)
+/// gains haste. When you lose control of it, tap it (Ray of Command's shape).
 pub fn magus_of_the_unseen() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
@@ -385,6 +383,10 @@ pub fn magus_of_the_unseen() -> CardDefinition {
                     what: Selector::Target(0),
                     keyword: Keyword::Haste,
                     duration: Duration::EndOfTurn,
+                },
+                Effect::DelayUntil {
+                    kind: crate::effect::DelayedTriggerKind::WhenYouLoseControlOfTarget,
+                    body: Box::new(Effect::Tap { what: Selector::Target(0) }),
                 },
             ]),
             ..Default::default()

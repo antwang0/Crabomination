@@ -2462,10 +2462,8 @@ pub fn postmortem_professor() -> CardDefinition {
 /// "Whenever one or more cards leave your graveyard, put a +1/+1 counter
 /// on this creature."
 ///
-/// Wired against the new `EventKind::CardLeftGraveyard` — a card
-/// removal from the controller's graveyard puts a +1/+1 counter on the
-/// Mascot. Trigger dispatch collapses a simultaneous multi-card exit
-/// to a single fire, matching the printed "one or more".
+/// `EventKind::CardLeftGraveyard`, once per batch: a simultaneous
+/// multi-card exit fires once, as the printed "one or more" reads.
 pub fn spirit_mascot() -> CardDefinition {
     use crate::card::CounterType;
     use crate::mana::r;

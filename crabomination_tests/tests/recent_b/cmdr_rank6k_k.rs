@@ -74,4 +74,7 @@ fn ego_erasure_shrinks_the_target_players_creatures() {
     cast(&mut g, s, Some(Target::Player(1)));
     assert_eq!(g.computed_permanent(theirs).unwrap().power, 1);
     assert_eq!(g.computed_permanent(other).unwrap().power, 3);
+    // "… and lose all creature types until end of turn" (CR 613.1d, layer 4).
+    assert!(g.computed_permanent(theirs).unwrap().subtypes().creature_types.is_empty());
+    assert!(!g.computed_permanent(other).unwrap().subtypes().creature_types.is_empty());
 }

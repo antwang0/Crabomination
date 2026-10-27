@@ -2121,14 +2121,12 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Reckless Blaze | the {R} rider watches every creature of yours that dies this turn, not only the ones it damaged | `CreatureDied` this-turn trigger |
 | 🟡 Mishra's Research Desk | both exiled cards stay playable; "choose one of them" collapses | `ExileTopAndGrantMayPlay` |
 | 🟡 Ajani, Sleeper Agent | a missed +1 reveal always goes to the bottom rather than "may" | `RevealTopTakeMatchingToHand` |
-| 🟡 Magus of the Unseen | the "when you lose control of the artifact, tap it" rider is dropped | `GainControl { EndOfTurn }` |
 | 🟡 Invoke the Ancients | each Spirit's keyword-counter pick is "up to one", so a seat may leave one without a counter | `ChooseUpToN { max: 1 }` per token |
 | 🟡 Rinoa, Angel Wing | the once-a-turn cap is spent by the first attacking creature's death even when you decline the return | `EventSpec::once_per_turn` |
 | 🟡 Rona, Disciple of Gix | a land card exiled with Rona can be played too (the grant is "may play", not "may cast spells") | `GrantMayPlay { WhileSourceOnBattlefield }` |
 | 🟡 Seifer, Balamb Rival | the double-block deathtouch rider watches only your own attackers, not every creature attacking one of your opponents | `BecomesBlockedByNOrMore(2)` / `YourControl` |
 | ~~Wanda's Vision~~ ✅ | fixed 2026-10-24: `ExileTopUntilNonland` + `CastWithoutPayingImmediate` during the resolution | — |
 | 🟡 Stardew Valley | the gift goes to an opponent of your choice, not any other player (the same set outside team formats) | `ChooseOpponentThen` |
-| 🟡 Impossible Man | the copy takes the copied permanent's name rather than keeping "Impossible Man" | `BecomeCopyOfFor { EndOfTurn }` |
 | 🟡 Stangg, Echo Warrior | copies of the Auras and Equipment attached to Stangg aren't made for Stangg Twin | `CreateTokenAttacking` |
 | 🟡 Arachne, Psionic Weaver | the look at an opponent's hand that informs the type choice isn't modelled | `ChooseCardTypeFromForSource` |
 | 🟡 Donnie & April, Adorkable Duo | "each mode must target a different player" isn't enforced; both modes may name the same player | `ChooseN` per-mode target slots |
@@ -2137,10 +2135,8 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Casting of Bones | "discard one of them" is a plain discard of one: the pick isn't limited to the three cards drawn | `Draw` + `Discard` |
 | 🟡 Skill Borrower | the top card of your library is only visible to you, not revealed to the table | `MayLookAtOwnLibraryTop` |
 | 🟡 Doctor Jane Foster | with life gained this turn the returned card passes through your hand before the battlefield | `Move` to hand, then `LastMoved` to battlefield |
-| 🟡 Black Widow, Super Spy | the +1/+1 counter and the cast aren't exclusive: the counter is offered and the exiled card stays castable either way | `ExileTopUntilNonlandMayPlay` + `MayDo` |
 | 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |
 | 🟡 Mikey & Mona, Mutant Sitters | "each mode must target a different player" is not enforced | `ChooseN` over two `TargetPlayerThen` + `AsPlayer` modes |
-| 🟡 Ego Erasure | "and lose all creature types until end of turn" is not modelled (only the -2/-0) | `TargetPlayerThen` + `AsPlayer` pump |
 | 🟡 Sensation Gorger | the top card is checked before you choose to look; a non-sharing top card is never offered | `If` over `SharesCreatureTypeWithSource`, then `MayDo` |
 | 🟡 Hydro-Man, Fluid Felon | the "{T}: Add {U}" he gains as a land is printed on the card, live only while he is a land, so he "has" a mana ability as a creature too (ability counts, Humility) | `ActivatedAbility::condition` (`This` is a Land) |
 | 🟡 Flying Drone | "costs {1}{U} less to activate if …" is two abilities: the full-price loot gated off the condition and a free one gated on it | two `ActivatedAbility::condition` arms |

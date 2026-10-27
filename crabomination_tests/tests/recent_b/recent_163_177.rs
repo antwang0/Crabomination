@@ -553,6 +553,24 @@ mod recent166 {
         assert!(!g.battlefield_find(ragost).unwrap().tapped, "Ragost untapped");
     }
 
+    /// Invasion Submersible's exhaust is "Waterbend {3}" (CR 701.67): two
+    /// tapped creatures and {1} pay it.
+    #[test]
+    fn invasion_submersible_exhaust_waterbends() {
+        let mut g = two_player_game();
+        let sub = g.add_card_to_battlefield(0, catalog::invasion_submersible());
+        let helpers = [g.add_card_to_battlefield(0, catalog::grizzly_bears()), g.add_card_to_battlefield(0, catalog::grizzly_bears())];
+        g.players[0].mana_pool.add_colorless(1);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbilityWaterbend {
+            card_id: sub, ability_index: 0, target: None, additional_targets: vec![], x_value: None, helpers: helpers.to_vec(),
+        })
+        .expect("waterbend {3} with two helpers");
+        drain_stack(&mut g);
+        assert!(helpers.iter().all(|h| g.battlefield_find(*h).unwrap().tapped), "the helpers tapped");
+        assert_eq!(g.battlefield_find(sub).unwrap().counter_count(CounterType::PlusOnePlusOne), 3);
+    }
+
     /// Invasion Submersible's exhaust animation turns it into a 3/3 artifact creature.
     #[test]
     fn invasion_submersible_exhaust_animates() {

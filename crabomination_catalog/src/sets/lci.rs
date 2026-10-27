@@ -423,8 +423,8 @@ pub fn lodestone_needle() -> CardDefinition {
 }
 
 /// Inverted Iceberg // Iceberg Titan — {1}{U} Artifact; ETB mill 1, then draw 1.
-/// Craft with artifact {4}{U}{U} → Iceberg Titan (6/6 Golem). (The attack
-/// tap/untap rider is omitted.)
+/// Craft with artifact {4}{U}{U} → Iceberg Titan (6/6 Golem; attacking, you may
+/// tap or untap target artifact or creature).
 pub fn inverted_iceberg() -> CardDefinition {
     let titan = CardDefinition {
         name: "Iceberg Titan",
@@ -435,6 +435,12 @@ pub fn inverted_iceberg() -> CardDefinition {
         },
         power: 6,
         toughness: 6,
+        triggered_abilities: vec![on_attack(Effect::MayDo {
+            description: "Tap or untap target artifact or creature?".into(),
+            body: Box::new(Effect::TapOrUntap {
+                what: target_filtered(SelectionRequirement::Artifact.or(SelectionRequirement::Creature)),
+            }),
+        })],
         ..Default::default()
     };
     CardDefinition {
@@ -508,8 +514,9 @@ pub fn oteclan_landmark() -> CardDefinition {
 }
 
 /// Dire Flail // Dire Blunderbuss — {R} Artifact Equipment, equipped +2/+0,
-/// Equip {1}. Craft with artifact {3}{R}{R} → Dire Blunderbuss (equipped +3/+0,
-/// Equip {1}). (The "attack-sac-artifact ping" granted ability is omitted.)
+/// Equip {1}. Craft with artifact {3}{R}{R} → Dire Blunderbuss (equipped +3/+0
+/// and "attacking, you may sacrifice another artifact; when you do, this deals
+/// damage equal to its power to target creature"; Equip {1}).
 pub fn dire_flail() -> CardDefinition {
     use crate::card::EquipBonus;
     let blunderbuss = CardDefinition {
@@ -523,6 +530,24 @@ pub fn dire_flail() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 3,
             toughness: 0,
+            // "an artifact other than Dire Blunderbuss": the Blunderbuss is
+            // the one attached to the attacker (the granted trigger's source).
+            triggered_abilities: vec![on_attack(Effect::MaySacrifice {
+                description: "Sacrifice an artifact for damage equal to its power?".into(),
+                filter: SelectionRequirement::Artifact.and(SelectionRequirement::Not(Box::new(
+                    SelectionRequirement::AttachedToSource
+                        .and(SelectionRequirement::HasName("Dire Blunderbuss".into())),
+                ))),
+                count: Value::ONE,
+                // CR 603.12 — "When you do": the target follows the sacrifice.
+                then: Box::new(Effect::ReflexiveTrigger {
+                    body: Box::new(Effect::DealDamageEqualToPower {
+                        source: Selector::This,
+                        target: target_filtered(SelectionRequirement::Creature),
+                    }),
+                }),
+                else_: None,
+            })],
             ..Default::default()
         }),
         ..Default::default()

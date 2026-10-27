@@ -3636,3 +3636,47 @@ fn hunters_blowgun_swaps_deathtouch_for_reach_by_turn() {
     g.active_player_idx = 1;
     assert_eq!(kws(&g), (false, true), "their turn: reach");
 }
+
+/// Iceberg Titan (Inverted Iceberg's crafted face): attacking, you may tap or
+/// untap target artifact or creature.
+#[test]
+fn iceberg_titan_taps_on_attack() {
+    use crabomination::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let titan = g.add_card_to_battlefield(0, *catalog::inverted_iceberg().back_face.unwrap());
+    g.clear_sickness(titan);
+    let blocker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: titan, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(blocker).unwrap().tapped, "the would-be blocker is tapped");
+}
+
+/// Dire Blunderbuss (Dire Flail's crafted face) grants "attacking, you may
+/// sacrifice another artifact; when you do, deal damage equal to this
+/// creature's power to target creature".
+#[test]
+fn dire_blunderbuss_trades_an_artifact_for_a_shot() {
+    use crabomination::game::{Attack, AttackTarget};
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let gun = g.add_card_to_battlefield(0, *catalog::dire_flail().back_face.unwrap());
+    g.battlefield_find_mut(gun).unwrap().attached_to = Some(bear);
+    let fodder = g.add_card_to_battlefield(0, catalog::sol_ring());
+    let foe = g.add_card_to_battlefield(1, catalog::hill_giant()); // 3/3
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(fodder).is_none(), "the other artifact was sacrificed");
+    assert!(g.battlefield_find(gun).is_some(), "not the Blunderbuss itself");
+    assert!(g.battlefield_find(foe).is_none(), "5 damage (2 + 3) killed the 3/3");
+}
