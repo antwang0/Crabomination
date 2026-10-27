@@ -173,6 +173,7 @@ mod declare_attackers_delayed;
 mod casualty_copy;
 mod prevent_attacking;
 mod loss_exile;
+mod chosen_player_loss;
 mod mystic_barrier;
 mod draw_skip_shield;
 mod loyalty_copy;
@@ -36310,6 +36311,7 @@ fn static_effect_to_effects(
             | StaticEffect::PlayFromLibraryTopByRemovingCounter { .. }
             | StaticEffect::TopOfLibraryRevealed
             | StaticEffect::MayLookAtOwnLibraryTop
+            | StaticEffect::YouWinWhenChosenPlayerLoses
             | StaticEffect::AllLibraryTopsRevealed
             // NamedSpellCantBeCast — consulted in cast_spell_with_convoke
             // (Meddling Mage); no layer effect.

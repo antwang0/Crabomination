@@ -2916,6 +2916,10 @@ pub enum StaticEffect {
     /// Isle) — the private sibling of [`TopOfLibraryRevealed`]: only the
     /// controller's own view carries `library_top`.
     MayLookAtOwnLibraryTop,
+    /// "When the chosen player loses the game, you win the game" (Shinryu,
+    /// Transcendent Rival) — the player is the source's `chosen_player`; the
+    /// SBA pass that eliminates them pushes the trigger (CR 603.2, 104.2a).
+    YouWinWhenChosenPlayerLoses,
     /// "Creatures you control of the chosen type get +P/+T" — a tribal anthem
     /// keyed to the source permanent's `chosen_creature_type` (set at ETB via
     /// `Effect::NameCreatureType`). Resolved live in `gather_continuous_effects`

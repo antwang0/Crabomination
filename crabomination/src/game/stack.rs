@@ -9316,6 +9316,9 @@ impl GameState {
         // CR 809.5b — a team loses when its emperor loses; the generals go
         // out with them and leave under the same CR 800.4a rules.
         newly_eliminated.extend(self.apply_emperor_losses());
+        if !newly_eliminated.is_empty() {
+            self.push_chosen_player_loss_wins(&newly_eliminated);
+        }
         // CR 800.4a — when a player leaves the game, every card and token
         // they own leaves with them, the spells and abilities they control
         // cease to exist, and permanents they controlled but didn't own
