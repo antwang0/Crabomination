@@ -387,8 +387,7 @@ pub fn empty_the_catacombs() -> CardDefinition {
 }
 
 /// Conclave's Blessing — {3}{W} Aura with Convoke. Enchant creature. Enchanted
-/// creature gets +0/+2 for each other creature you control. (The self-exclusion
-/// is approximated as all creatures you control.)
+/// creature gets +0/+2 for each other creature you control.
 pub fn conclaves_blessing() -> CardDefinition {
     CardDefinition {
         name: "Conclave's Blessing",
@@ -408,6 +407,7 @@ pub fn conclaves_blessing() -> CardDefinition {
                 filter: R::Creature.and(R::ControlledByYou),
                 per_power: 0,
                 per_toughness: 2,
+                exclude_host: true,
                 ..Default::default()
             }),
             ..Default::default()

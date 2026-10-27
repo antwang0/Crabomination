@@ -227,8 +227,8 @@ pub fn wrens_run_hydra() -> CardDefinition {
 }
 
 /// Ghost-Lit Drifter — {2}{U} 2/2 flying Spirit. {2}{U}: another target
-/// creature gains flying EOT. Channel—{X}{U}, Discard: target creature gains
-/// flying (the printed "X target creatures" is modeled as one target).
+/// creature gains flying EOT. Channel—{X}{U}, Discard: X target creatures gain
+/// flying EOT.
 pub fn ghost_lit_drifter() -> CardDefinition {
     let fly = |filter: R| Effect::GrantKeyword {
         what: target_filtered(filter),
@@ -256,7 +256,18 @@ pub fn ghost_lit_drifter() -> CardDefinition {
                 mana_cost: cost(&[x(), u()]),
                 from_hand: true,
                 discard_self_cost: true,
-                effect: fly(R::Creature),
+                effect: Effect::TargetsExactlyX {
+                    body: Box::new(Effect::ApplyToTargets {
+                        min_targets: 0,
+                        max_targets: 8,
+                        filter: R::Creature,
+                        effect: Box::new(Effect::GrantKeyword {
+                            what: Selector::Target(0),
+                            keyword: Keyword::Flying,
+                            duration: Duration::EndOfTurn,
+                        }),
+                    }),
+                },
                 ..Default::default()
             },
         ],

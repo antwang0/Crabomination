@@ -1584,8 +1584,7 @@ pub fn dual_sun_technique() -> CardDefinition {
 }
 
 /// Exosuit Savior — {2}{W} Creature — Human Soldier 2/2, flying. ETB: return
-/// another target permanent you control to its owner's hand. (The "up to one"
-/// optional rider is modeled as a plain target.)
+/// up to one other target permanent you control to its owner's hand.
 pub fn exosuit_savior() -> CardDefinition {
     CardDefinition {
         name: "Exosuit Savior",
@@ -1598,13 +1597,16 @@ pub fn exosuit_savior() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flying],
-        triggered_abilities: vec![etb(Effect::Move {
-            what: target_filtered(
-                SelectionRequirement::Permanent
-                    .and(SelectionRequirement::ControlledByYou)
-                    .and(SelectionRequirement::OtherThanSource),
-            ),
-            to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+        triggered_abilities: vec![etb(Effect::OptionalTargets {
+            min: 0,
+            body: Box::new(Effect::Move {
+                what: target_filtered(
+                    SelectionRequirement::Permanent
+                        .and(SelectionRequirement::ControlledByYou)
+                        .and(SelectionRequirement::OtherThanSource),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+            }),
         })],
         ..Default::default()
     }

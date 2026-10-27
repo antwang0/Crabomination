@@ -197,8 +197,7 @@ pub fn moonfolk_puzzlemaker() -> CardDefinition {
 
 /// Jukai Preserver — {3}{G} 3/3 Human Druid Enchantment Creature. ETB: put a
 /// +1/+1 counter on target creature you control. Channel — {2}{G}, Discard this
-/// card: put a +1/+1 counter on target creature you control. (The channel's "up
-/// to two target creatures" is modeled as a single target.)
+/// card: put a +1/+1 counter on each of up to two target creatures you control.
 pub fn jukai_preserver() -> CardDefinition {
     use crate::mana::g;
     let counter_one = || Effect::AddCounter {
@@ -221,7 +220,16 @@ pub fn jukai_preserver() -> CardDefinition {
             mana_cost: cost(&[generic(2), g()]),
             from_hand: true,
             discard_self_cost: true,
-            effect: counter_one(),
+            effect: Effect::ApplyToTargets {
+                min_targets: 0,
+                max_targets: 2,
+                filter: R::Creature.and(R::ControlledByYou),
+                effect: Box::new(Effect::AddCounter {
+                    what: Selector::Target(0),
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::Const(1),
+                }),
+            },
             ..Default::default()
         }],
         ..Default::default()

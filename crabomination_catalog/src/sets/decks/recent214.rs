@@ -567,9 +567,9 @@ pub fn wildborn_preserver() -> CardDefinition {
     }
 }
 
-/// Prayer of Binding — {3}{W} Enchantment with Flash. When it enters, exile a
-/// target nonland permanent an opponent controls until this leaves, and gain 2
-/// life. (Printed "up to one" modeled as one target — O-Ring style.)
+/// Prayer of Binding — {3}{W} Enchantment with Flash. When it enters, exile up
+/// to one target nonland permanent an opponent controls until this leaves, and
+/// gain 2 life.
 pub fn prayer_of_binding() -> CardDefinition {
     CardDefinition {
         name: "Prayer of Binding",
@@ -577,13 +577,16 @@ pub fn prayer_of_binding() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         keywords: vec![Keyword::Flash],
         triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::ExileUntilSourceLeaves {
-                what: target_filtered(
-                    R::Permanent
-                        .and(R::ControlledByOpponent)
-                        .and(R::Not(Box::new(R::Land))),
-                ),
-                return_to: crate::card::ExileReturnZone::Battlefield,
+            Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::ExileUntilSourceLeaves {
+                    what: target_filtered(
+                        R::Permanent
+                            .and(R::ControlledByOpponent)
+                            .and(R::Not(Box::new(R::Land))),
+                    ),
+                    return_to: crate::card::ExileReturnZone::Battlefield,
+                }),
             },
             Effect::GainLife {
                 who: Selector::You,

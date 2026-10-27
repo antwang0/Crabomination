@@ -200,6 +200,19 @@ fn ghost_lit_drifter_flying() {
     }).expect("grant flying");
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Flying));
+    // Channel — {X}{U}: X target creatures gain flying.
+    let channel = g.add_card_to_hand(0, catalog::ghost_lit_drifter());
+    let others = [g.add_card_to_battlefield(0, catalog::grizzly_bears()), g.add_card_to_battlefield(0, catalog::grizzly_bears())];
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: channel, ability_index: 1, target: Some(Target::Permanent(others[0])),
+        additional_targets: vec![Target::Permanent(others[1])], x_value: Some(2), mode: None,
+    }).expect("channel for X = 2");
+    drain_stack(&mut g);
+    for id in others {
+        assert!(g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying), "both targets fly");
+    }
 }
 
 /// Steel Dromedary stays tapped while countered, moves counters, then untaps.

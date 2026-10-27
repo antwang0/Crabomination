@@ -3376,8 +3376,7 @@ pub fn charmed_stray() -> CardDefinition {
 }
 
 /// Band Together — {2}{G} Instant. Up to two target creatures you control each
-/// deal damage equal to their power to another target creature. (The "another"
-/// exclusion is approximated as a plain creature slot.)
+/// deal damage equal to their power to another target creature.
 pub fn band_together() -> CardDefinition {
     let mine = R::Creature.and(R::ControlledByYou);
     CardDefinition {

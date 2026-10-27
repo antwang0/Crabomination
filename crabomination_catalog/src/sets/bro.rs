@@ -180,7 +180,7 @@ pub fn fallaji_dragon_engine() -> CardDefinition {
 
 /// Autonomous Assembler — {5} 4/5 Assembly-Worker. Prototype {1}{W} — 2/2.
 /// Vigilance. "{1}, {T}: Put a +1/+1 counter on target Assembly-Worker you
-/// control." (The "you control" rider is approximated as any Assembly-Worker.)
+/// control."
 pub fn autonomous_assembler() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {
@@ -195,9 +195,10 @@ pub fn autonomous_assembler() -> CardDefinition {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
             effect: Effect::AddCounter {
-                what: target_filtered(SelectionRequirement::HasCreatureType(
-                    CreatureType::AssemblyWorker,
-                )),
+                what: target_filtered(
+                    SelectionRequirement::HasCreatureType(CreatureType::AssemblyWorker)
+                        .and(SelectionRequirement::ControlledByYou),
+                ),
                 kind: CounterType::PlusOnePlusOne,
                 amount: Value::Const(1),
             },

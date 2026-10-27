@@ -737,6 +737,18 @@ mod recent95 {
             .map(|id| g.battlefield_find(*id).unwrap().counter_count(CounterType::PlusOnePlusOne))
             .sum();
         assert_eq!(mine, 1, "exactly one +1/+1 counter placed on a creature you control");
+        // Channel: a counter on each of up to two target creatures you control.
+        let channel = g.add_card_to_hand(0, catalog::jukai_preserver());
+        let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: channel, ability_index: 0, target: Some(Target::Permanent(other)),
+            additional_targets: vec![Target::Permanent(bear)], x_value: None, mode: None,
+        }).expect("channel");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(other).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+        assert!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne) >= 1);
     }
 
     /// Selfless Samurai grants lifelink to a lone Samurai/Warrior attacker.

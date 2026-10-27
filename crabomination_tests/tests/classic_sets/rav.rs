@@ -320,7 +320,7 @@ fn empty_the_catacombs_returns_all() {
         "the noncreature card stayed in the graveyard");
 }
 
-/// Conclave's Blessing grants +0/+2 for each creature you control.
+/// Conclave's Blessing grants +0/+2 for each OTHER creature you control.
 #[test]
 fn conclaves_blessing_scales_toughness() {
     use crabomination::game::types::Target;
@@ -336,8 +336,8 @@ fn conclaves_blessing_scales_toughness() {
         additional_targets: vec![], mode: None, x_value: None,
     }).expect("attach Conclave's Blessing");
     drain_stack(&mut g);
-    // Three creatures you control → +0/+6.
-    assert_eq!(g.computed_permanent(host).map(|c| c.toughness), Some(8), "+2 toughness per creature");
+    // Two other creatures you control → +0/+4 (the host doesn't count itself).
+    assert_eq!(g.computed_permanent(host).map(|c| c.toughness), Some(6), "+2 toughness per other creature");
 }
 
 /// Cackling Imp's tap ability drains a target player 1 life.

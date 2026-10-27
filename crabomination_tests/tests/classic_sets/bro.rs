@@ -234,6 +234,14 @@ fn autonomous_assembler_counters_an_assembly_worker() {
     }).expect("counter ability");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(tgt).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+    // "target Assembly-Worker you control" — an opponent's isn't a legal target.
+    let theirs = g.add_card_to_battlefield(1, catalog::autonomous_assembler());
+    g.battlefield_find_mut(src).unwrap().tapped = false;
+    g.players[0].mana_pool.add_colorless(1);
+    assert!(g.perform_action(GameAction::ActivateAbility {
+        card_id: src, ability_index: 0,
+        target: Some(Target::Permanent(theirs)), additional_targets: vec![], x_value: None, mode: None,
+    }).is_err());
 }
 
 /// Iron-Craw Crusher's attack trigger pumps a target attacker by its power
