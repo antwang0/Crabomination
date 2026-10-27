@@ -2115,7 +2115,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Leatherhead, Swamp Stalker~~ ✅ | fixed 2026-10-24: `StaticEffect::SelfEntersWithKeywordCounter` puts the hexproof counter on as she enters (CR 614.1c) — `leatherhead_enters_already_hexproof` | — |
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Steward of Solidarity | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
-| 🟡 Reckless Blaze | the {R} rider watches every creature of yours that dies this turn, not only the ones it damaged | `CreatureDied` this-turn trigger |
 | 🟡 Mishra's Research Desk | both exiled cards stay playable; "choose one of them" collapses | `ExileTopAndGrantMayPlay` |
 | 🟡 Ajani, Sleeper Agent | a missed +1 reveal always goes to the bottom rather than "may" | `RevealTopTakeMatchingToHand` |
 | 🟡 Invoke the Ancients | each Spirit's keyword-counter pick is "up to one", so a seat may leave one without a counter | `ChooseUpToN { max: 1 }` per token |

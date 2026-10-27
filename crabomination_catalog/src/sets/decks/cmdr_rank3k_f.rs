@@ -321,8 +321,8 @@ pub fn iroh_firebending_instructor() -> CardDefinition {
 
 /// Reckless Blaze — {3}{R}{R} sorcery — Lesson: 5 damage to each creature;
 /// whenever a creature you control dealt damage this way dies this turn, add
-/// {R}. (Residual: the {R} rider watches every creature of yours that dies
-/// this turn, not only the ones it damaged.)
+/// {R} — the watcher reads the dead creature's damage record against this
+/// spell (`DamagedBySourceThisTurn`, bound off the death LKI).
 pub fn reckless_blaze() -> CardDefinition {
     CardDefinition {
         subtypes: Subtypes { spell_subtypes: vec![crate::card::SpellSubtype::Lesson], ..Default::default() },
@@ -332,7 +332,7 @@ pub fn reckless_blaze() -> CardDefinition {
             CardType::Sorcery,
             Effect::Seq(vec![
                 Effect::WheneverCreatureDiesThisTurn {
-                    filter: R::ControlledByYou,
+                    filter: R::ControlledByYou.and(R::DamagedBySourceThisTurn),
                     body: Box::new(Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::Colors(vec![Color::Red]) }),
                 },
                 Effect::DealDamage { to: Selector::EachPermanent(R::Creature), amount: Value::Const(5) },

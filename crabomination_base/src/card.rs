@@ -4835,6 +4835,29 @@ impl SelectionRequirement {
     /// The cap of a `SlotsTotalManaValueAtMost` / `…AtMostX` atom in this
     /// tree (through `And`), with `x` for the X form — `None` when the
     /// filter has no total-mana-value budget.
+    /// Does a `DamagedBySourceThisTurn` leaf sit under the And/Or/Not spine?
+    pub fn mentions_damaged_by_source(&self) -> bool {
+        match self {
+            Self::DamagedBySourceThisTurn => true,
+            Self::And(a, b) | Self::Or(a, b) => a.mentions_damaged_by_source() || b.mentions_damaged_by_source(),
+            Self::Not(a) => a.mentions_damaged_by_source(),
+            _ => false,
+        }
+    }
+
+    /// The same tree with every `DamagedBySourceThisTurn` leaf answered `hit`
+    /// — for a sourceless walk over a card whose damage record was read already.
+    pub fn bind_damaged_by_source(&self, hit: bool) -> Self {
+        match self {
+            Self::DamagedBySourceThisTurn if hit => Self::Any,
+            Self::DamagedBySourceThisTurn => Self::Not(Box::new(Self::Any)),
+            Self::And(a, b) => Self::And(Box::new(a.bind_damaged_by_source(hit)), Box::new(b.bind_damaged_by_source(hit))),
+            Self::Or(a, b) => Self::Or(Box::new(a.bind_damaged_by_source(hit)), Box::new(b.bind_damaged_by_source(hit))),
+            Self::Not(a) => Self::Not(Box::new(a.bind_damaged_by_source(hit))),
+            other => other.clone(),
+        }
+    }
+
     pub fn slots_total_mana_value_cap(&self, x: u32) -> Option<u32> {
         match self {
             Self::SlotsTotalManaValueAtMost(n) => Some(*n),

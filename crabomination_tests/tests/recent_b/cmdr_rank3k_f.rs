@@ -260,6 +260,16 @@ fn uncle_iroh_pair() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().all(|c| !c.definition.is_creature()));
     assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "one of yours died");
+    // A creature of yours the Blaze never damaged dies later this turn: no {R}.
+    let late = ready(&mut g, 0, catalog::grizzly_bears());
+    let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    let evs = g
+        .resolve_effect(&kill, &crabomination::game::effects::EffectContext::for_spell(1, Some(Target::Permanent(late)), 0, 0))
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(late).is_none());
+    assert_eq!(g.players[0].mana_pool.amount(Color::Red), 1, "not dealt damage this way");
 }
 
 /// Casey Jones doubles his power for anyone's {4}; Improvised Arsenal counts

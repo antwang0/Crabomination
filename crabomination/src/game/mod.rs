@@ -26192,6 +26192,15 @@ impl GameState {
                         let DelayedKind::MatchingCreatureDiesThisTurn(ref filt) = dt.kind else {
                             continue;
                         };
+                        // The off-battlefield walk has no source, so "dealt damage
+                        // this way" (Reckless Blaze) is bound off the death LKI.
+                        let bound;
+                        let filt = if filt.mentions_damaged_by_source() {
+                            bound = filt.bind_damaged_by_source(snap.damaged_by_this_turn.contains(&dt.source));
+                            &bound
+                        } else {
+                            filt
+                        };
                         if !self.evaluate_requirement_on_card(filt, &snap, dt.controller) {
                             continue;
                         }
