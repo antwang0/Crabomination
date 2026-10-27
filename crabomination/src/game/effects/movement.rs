@@ -2878,6 +2878,11 @@ impl GameState {
                     self.died_card_snapshots.insert(cid, self.lki_clone(c));
                 }
             }
+            if !matches!(resolved_dest, ZoneDest::Battlefield { .. }) {
+                let was_creature = self.computed_is_creature(&self.battlefield[pos]);
+                let controller = self.battlefield[pos].controller;
+                self.note_permanent_left_battlefield(controller, was_creature);
+            }
             let mut card = self.battlefield.remove(pos);
             self.remove_effects_from_source(cid);
             self.collect_leaver_counters(&card);

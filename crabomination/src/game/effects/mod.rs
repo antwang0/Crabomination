@@ -19810,6 +19810,10 @@ impl GameState {
                 let mut parts = Vec::new();
                 for id in [source, partner_id] {
                     let stripped = self.lost_all_abilities(id);
+                    if let Some(c) = self.battlefield.find_by_id(id) {
+                        let (seat, was_creature) = (c.controller, self.computed_is_creature(c));
+                        self.note_permanent_left_battlefield(seat, was_creature);
+                    }
                     let Some(mut card) = self.battlefield.take_by_id(id) else {
                         continue;
                     };

@@ -1846,6 +1846,9 @@ pub enum Value {
     /// died under your control this turn"). The companion predicate is
     /// `Predicate::CreaturesDiedThisTurnAtLeast`.
     CreaturesDiedThisTurn(PlayerRef),
+    /// Creatures that left the battlefield under `who`'s control this turn,
+    /// by any route (Kutzil's Flanker). `Player.creatures_left_battlefield_count`.
+    CreaturesLeftBattlefieldThisTurn(PlayerRef),
     /// Number of permanents `who` has sacrificed so far this turn. Backed by
     /// `Player.permanents_sacrificed_this_turn`.
     PermanentsSacrificedThisTurn(PlayerRef),

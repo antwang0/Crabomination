@@ -5657,6 +5657,7 @@ impl GameState {
             if pl.permanent_left_battlefield_this_turn {
                 pl.permanent_left_battlefield_this_turn = false;
                 pl.creature_left_battlefield_this_turn = false;
+                pl.creatures_left_battlefield_count = 0;
             }
             if pl.bends_this_turn != 0 {
                 pl.bends_this_turn = 0;
@@ -9688,10 +9689,7 @@ impl GameState {
             }
             // CR 702.139 — Revolt: a permanent left the battlefield under its
             // controller this turn.
-            if card.controller < self.players.len() {
-                self.players[card.controller].permanent_left_battlefield_this_turn = true;
-                self.players[card.controller].creature_left_battlefield_this_turn |= was_creature;
-            }
+            self.note_permanent_left_battlefield(card.controller, was_creature);
             // EOE Void — a nonland permanent left the battlefield this turn.
             if !card.definition.is_land() {
                 self.nonland_permanent_left_bf_this_turn = true;
@@ -9795,6 +9793,17 @@ impl GameState {
     /// Return a permanent to its owner's hand, unwinding combat/attachments and
     /// emitting the leave-the-battlefield events. Used by cost lines that bounce
     /// the source (`ActivatedAbility::bounce_self_cost` — Magosi).
+    /// CR 702.139 — Revolt and its kin: a permanent (`was_creature`, read
+    /// last-known) left the battlefield under `controller` this turn. Every
+    /// battlefield-leave funnel calls this, so the flags can't drift apart.
+    pub(crate) fn note_permanent_left_battlefield(&mut self, controller: usize, was_creature: bool) {
+        if let Some(pl) = self.players.get_mut(controller) {
+            pl.permanent_left_battlefield_this_turn = true;
+            pl.creature_left_battlefield_this_turn |= was_creature;
+            pl.creatures_left_battlefield_count += u32::from(was_creature);
+        }
+    }
+
     pub fn remove_from_battlefield_to_hand(&mut self, id: CardId) -> Vec<GameEvent> {
         let stripped = self.lost_all_abilities(id);
         let mut events = Vec::new();
@@ -9819,10 +9828,7 @@ impl GameState {
             self.note_unattached(card.id, &card.definition, card.controller, host);
         }
         card.leave_battlefield_state();
-        if card.controller < self.players.len() {
-            self.players[card.controller].permanent_left_battlefield_this_turn = true;
-            self.players[card.controller].creature_left_battlefield_this_turn |= was_creature;
-        }
+        self.note_permanent_left_battlefield(card.controller, was_creature);
         if !card.definition.is_land() {
             self.nonland_permanent_left_bf_this_turn = true;
         }
@@ -9870,10 +9876,7 @@ impl GameState {
                 crate::card::Zone::Exile,
             );
             // CR 702.139 — Revolt: a permanent left the battlefield this turn.
-            if card.controller < self.players.len() {
-                self.players[card.controller].permanent_left_battlefield_this_turn = true;
-                self.players[card.controller].creature_left_battlefield_this_turn |= was_creature;
-            }
+            self.note_permanent_left_battlefield(card.controller, was_creature);
             // EOE Void — a nonland permanent left the battlefield this turn.
             if !card.definition.is_land() {
                 self.nonland_permanent_left_bf_this_turn = true;

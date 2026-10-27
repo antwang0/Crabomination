@@ -851,6 +851,10 @@ pub struct PlayerData {
     /// Momo), read last-known before the creature left. Reset with it.
     #[serde(default)]
     pub creature_left_battlefield_this_turn: bool,
+    /// How many creatures `creature_left_battlefield_this_turn` has seen
+    /// (Kutzil's Flanker). Reset with it.
+    #[serde(default)]
+    pub creatures_left_battlefield_count: u32,
     /// The bending actions this player took this turn, one
     /// [`crate::effect::BendKind::bit`] each (Avatar Aang). Reset per turn.
     #[serde(default)]
@@ -1991,6 +1995,7 @@ impl Player {
             pending_creature_etb_counters: Default::default(),
             permanent_left_battlefield_this_turn: false,
             creature_left_battlefield_this_turn: false,
+            creatures_left_battlefield_count: 0,
             bends_this_turn: 0,
             was_dealt_damage_this_turn: false,
             damage_taken_this_turn: 0,

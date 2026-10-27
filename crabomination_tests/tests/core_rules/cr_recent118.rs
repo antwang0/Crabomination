@@ -1807,3 +1807,19 @@ fn a_saturated_mana_amount_makes_a_bounded_pool() {
     assert!(total > 0 && total <= 10_000, "{total}");
     assert!(events.len() <= 10_001);
 }
+
+/// CR 702.139 — Revolt's "a permanent left the battlefield under your control
+/// this turn" sees a bounce through the generic move route (Unsummon), not
+/// only the dedicated hand / graveyard / exile funnels; so does the creature
+/// count Kutzil's Flanker reads.
+#[test]
+fn cr_702_139_a_bounce_through_a_move_effect_counts_as_leaving() {
+    let mut g = main_phase();
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let move_home = Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))) };
+    g.resolve_effect(&move_home, &EffectContext::for_spell(0, Some(Target::Permanent(bear)), 0, 0)).expect("bounce");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert!(g.players[0].permanent_left_battlefield_this_turn);
+    assert!(g.players[0].creature_left_battlefield_this_turn);
+    assert_eq!(g.players[0].creatures_left_battlefield_count, 1);
+}

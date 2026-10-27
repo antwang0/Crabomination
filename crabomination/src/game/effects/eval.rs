@@ -2619,6 +2619,10 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].creatures_died_this_turn as i32)
                 .unwrap_or(0),
+            Value::CreaturesLeftBattlefieldThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].creatures_left_battlefield_count as i32)
+                .unwrap_or(0),
             // Summed over a many-player ref (The Balrog, Durin's Bane's "each
             // permanent sacrificed this turn" reads `EachPlayer`).
             Value::PermanentsSacrificedThisTurn(p) => self
