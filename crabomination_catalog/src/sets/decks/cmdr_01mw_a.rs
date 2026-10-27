@@ -2390,7 +2390,8 @@ pub fn predictive_preparations() -> CardDefinition {
 
 /// Alex Wilder, Runaway — {1}{R} legendary 1/3 Human Hero Villain. It or
 /// another creature of yours entering, if cast from anywhere but your hand,
-/// gets +2/+0 and haste until end of turn. Escape—{2}{R}, exile three others.
+/// gets +2/+0 and haste until end of turn — the command zone counts (CR 903.8).
+/// Escape—{2}{R}, exile three others.
 pub fn alex_wilder_runaway() -> CardDefinition {
     use crate::card::Predicate;
     use crate::effect::Duration;
@@ -2409,7 +2410,7 @@ pub fn alex_wilder_runaway() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(Predicate::EntityMatches {
                 what: Selector::TriggerSource,
-                filter: R::Creature.and(R::WasCastFromLibrary.or(R::WasCastFromGraveyard).or(R::WasCastFromExile)),
+                filter: R::Creature.and(R::EnteredByCast).and(R::Not(Box::new(R::WasCastFromHand))),
             }),
             effect: Effect::Seq(vec![
                 Effect::PumpPT { what: Selector::TriggerSource, power: Value::Const(2), toughness: Value::ZERO, duration: Duration::EndOfTurn },

@@ -2522,6 +2522,31 @@ fn graven_abomination_reads_the_defending_players_graveyard() {
     assert!(g.players[2].graveyard.iter().any(|c| c.id == far), "another opponent's card isn't a legal target");
 }
 
+/// Alex Wilder, Runaway: "cast from anywhere other than your hand" includes
+/// the command zone (CR 903.8); a creature cast from hand gets nothing.
+#[test]
+fn alex_wilder_counts_a_command_zone_cast() {
+    let mut g = pod(2);
+    let alex = g.seat_commanders(0, vec![catalog::alex_wilder_runaway()])[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: alex,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast Alex from the command zone");
+    drain_stack(&mut g);
+    assert_eq!(pt(&g, alex), (3, 3), "+2/+0");
+    assert!(g.computed_permanent(alex).unwrap().keywords().contains(&Keyword::Haste));
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, bear, &[]).expect("bear");
+    assert_eq!(pt(&g, bear), (2, 2), "cast from hand: no bonus");
+}
+
 /// The Tarrasque cast from the command zone "was cast" (CR 601.2): it has
 /// haste; one put onto the battlefield by an effect doesn't.
 #[test]
