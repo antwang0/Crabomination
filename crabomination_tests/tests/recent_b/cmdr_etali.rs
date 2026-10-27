@@ -1097,8 +1097,9 @@ fn rishkars_expertise_draws_greatest_power_and_casts_free() {
     assert_eq!(g.players[0].hand.len(), 8);
 }
 
-/// World War Hulk: I free-casts a green creature, II adds three +1/+1
-/// counters, III doubles it and grants trample.
+/// World War Hulk: I makes the next red or green creature spell this turn
+/// free (a white one passes it by), II adds three +1/+1 counters, III doubles
+/// it and grants trample.
 #[test]
 fn world_war_hulk_chapters_cast_grow_and_double() {
     let mut g = b_main_phase();
@@ -1108,8 +1109,15 @@ fn world_war_hulk_chapters_cast_grow_and_double() {
     g.players[0].mana_pool.add(Color::Green, 2);
     g.players[0].mana_pool.add_colorless(3);
     cast(&mut g, saga);
-    assert!(g.battlefield_find(wurm).is_some(), "chapter I cast the green creature for free");
-    assert!(g.players[0].hand.iter().any(|c| c.id == angel), "a white creature isn't eligible");
+    assert_eq!(g.players[0].free_next_spells.len(), 1, "chapter I's grant waits");
+    assert!(g.players[0].hand.iter().any(|c| c.id == wurm), "nothing is cast as the chapter resolves");
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, angel);
+    assert_eq!(g.players[0].free_next_spells.len(), 1, "a white creature passes the grant by");
+    cast(&mut g, wurm);
+    assert!(g.battlefield_find(wurm).is_some(), "the green creature cast with an empty pool");
+    assert!(g.players[0].free_next_spells.is_empty(), "the grant is spent");
 
     g.saga_advance(saga);
     drain_stack(&mut g);

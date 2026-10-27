@@ -1175,10 +1175,8 @@ pub fn rishkars_expertise() -> CardDefinition {
 ///
 /// III doubles by pumping +P/+T equal to the target's current P/T (the Tifa's
 /// Limit Break shape).
-/// Approximation: chapter I casts a red or green creature spell from your hand
-/// for free as the chapter resolves (`CastFromHandWithoutPaying`). The printed
-/// discount waits for the next such spell this turn, from any zone (the
-/// command zone included).
+/// Chapter I's grant waits for the next such spell this turn, from any zone
+/// (`GrantNextMatchingSpellFreeThisTurn` — the command zone included).
 pub fn world_war_hulk() -> CardDefinition {
     let yours = || R::Creature.and(R::ControlledByYou);
     CardDefinition {
@@ -1192,10 +1190,8 @@ pub fn world_war_hulk() -> CardDefinition {
         saga_chapters: vec![
             (
                 1,
-                Effect::CastFromHandWithoutPaying {
-                    filter: Some(
-                        R::Creature.and(R::HasColor(Color::Red).or(R::HasColor(Color::Green))),
-                    ),
+                Effect::GrantNextMatchingSpellFreeThisTurn {
+                    filter: R::Creature.and(R::HasColor(Color::Red).or(R::HasColor(Color::Green))),
                 },
             ),
             (
