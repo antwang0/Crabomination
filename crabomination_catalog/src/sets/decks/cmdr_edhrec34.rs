@@ -48,26 +48,6 @@ fn once_a_turn_life_gain(effect: Effect) -> TriggeredAbility {
     TriggeredAbility { event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl).once_per_turn(), effect }
 }
 
-/// CR 105.4 — exactly two colors: one of the ten pairs and none of the rest.
-fn exactly_two_colors() -> R {
-    let all = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
-    let mut out: Option<R> = None;
-    for i in 0..5 {
-        for j in i + 1..5 {
-            let mut pair = R::HasColor(all[i]).and(R::HasColor(all[j]));
-            for (k, c) in all.iter().enumerate() {
-                if k != i && k != j {
-                    pair = pair.and(R::Not(Box::new(R::HasColor(*c))));
-                }
-            }
-            out = Some(match out {
-                Some(o) => o.or(pair),
-                None => pair,
-            });
-        }
-    }
-    out.expect("ten pairs")
-}
 
 // ── Niv-Mizzet Reborn / Niv-Mizzet Supreme ───────────────────────────────────
 
@@ -82,7 +62,7 @@ pub fn niv_mizzet_supreme() -> CardDefinition {
             effect: StaticEffect::GraveyardCardsHaveJumpStart {
                 filter: R::HasCardType(CardType::Instant)
                     .or(R::HasCardType(CardType::Sorcery))
-                    .and(exactly_two_colors()),
+                    .and(crate::effect::shortcut::exactly_two_colors()),
             },
         }],
         ..legend(

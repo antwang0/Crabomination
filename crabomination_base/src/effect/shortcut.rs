@@ -3552,3 +3552,24 @@ pub fn attach_moved_equipment_to_your_creature(may: bool) -> Effect {
         else_: Box::new(Effect::Noop),
     }
 }
+
+/// CR 105.4 — exactly two colors: one of the ten pairs and none of the rest.
+pub fn exactly_two_colors() -> SelectionRequirement {
+    let all = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+    let mut out: Option<SelectionRequirement> = None;
+    for i in 0..5 {
+        for j in i + 1..5 {
+            let mut pair = SelectionRequirement::HasColor(all[i]).and(SelectionRequirement::HasColor(all[j]));
+            for (k, c) in all.iter().enumerate() {
+                if k != i && k != j {
+                    pair = pair.and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasColor(*c))));
+                }
+            }
+            out = Some(match out {
+                Some(o) => o.or(pair),
+                None => pair,
+            });
+        }
+    }
+    out.expect("ten pairs")
+}
