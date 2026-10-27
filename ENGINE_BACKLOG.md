@@ -311,7 +311,9 @@ No seats. `pod_residuals.py --rank` worked top-down with the cube/sos pools skip
   defending player's graveyard; Alex Wilder counts a command-zone cast (CR 903.8); Loki Laufeyson's stale note.
 
 OPEN:
-- Still needs a primitive: Reckless Blaze (a this-turn dies watcher limited to creatures the spell damaged), Glimpse the
+- ✅ Reckless Blaze (the watcher binds `DamagedBySourceThisTurn` off the death LKI) and CR 603.7d's delayed-trigger
+  source (`Emblem.source`) landed late in the run.
+- Still needs a primitive: Glimpse the
   Cosmos (graveyard alt cast's exile rider), Casting of Bones (discard among the cards drawn), Anti-Magic Aura /
   Consecrate Land (Aura-legality filter), Wizard's Rockets (an {X} mana ability), Glowcap Lantern (an Equipment-granted
   "look at the top card" — view-only), Honest Work's rename, Donnie & April's "each mode targets a different player".
