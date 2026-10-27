@@ -2010,6 +2010,9 @@ pub enum Keyword {
     /// would be destroyed, instead remove all damage from it and destroy
     /// this Aura (Hyena Umbra, Spider Umbra).
     UmbraArmor,
+    /// `UmbraArmor` only while the Aura's controller also controls the
+    /// enchanted creature (Dog Umbra's "Otherwise, this Aura has umbra armor").
+    UmbraArmorWhileHostIsYours,
     Hexproof,
     /// CR 702.11e — "hexproof from [color]": can't be the target of
     /// [color] spells or abilities opponents control. The targeting-only

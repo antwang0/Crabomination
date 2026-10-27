@@ -304,7 +304,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CanBlockOnlyFlying
         | Keyword::CantBeCounteredIfXAtLeast(_)
         | Keyword::CantBeCounteredIfCastCondition
-        | Keyword::ProtectionFromCreatures | Keyword::UmbraArmor => return None,
+        | Keyword::ProtectionFromCreatures | Keyword::UmbraArmor | Keyword::UmbraArmorWhileHostIsYours => return None,
         Keyword::Unleash => "Unleash",
         Keyword::Riot => "Riot",
         Keyword::Bargain => "Bargain",

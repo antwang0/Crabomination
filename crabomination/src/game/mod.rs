@@ -19993,9 +19993,12 @@ impl GameState {
                     })
             })
         });
+        let host_controller = self.battlefield_find(id).map(|h| h.controller);
         let Some(aura_id) = self.battlefield.iter().find_map(|c| {
             (c.attached_to == Some(id)
                 && (c.definition.keywords.has_kw(&Keyword::UmbraArmor)
+                    || (c.definition.keywords.has_kw(&Keyword::UmbraArmorWhileHostIsYours)
+                        && host_controller == Some(c.controller))
                     || (granted && c.definition.is_aura())))
             .then_some(c.id)
         }) else {

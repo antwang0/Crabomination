@@ -220,7 +220,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Resilience: regenerate shields and totem/umbra armor both mean "the
         // next destruction is soaked" — it changes how an opponent trades.
         Regenerate(_) => "Rgn",
-        UmbraArmor => "TArm",
+        UmbraArmor | UmbraArmorWhileHostIsYours => "TArm",
         // Protection from creatures / a creature type is board-relevant: it
         // gates blocking and combat damage, not just spell targeting.
         ProtectionFromCreatures => "ProCr",
