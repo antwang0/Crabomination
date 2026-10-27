@@ -13,7 +13,7 @@ use crate::mana::{cost, g, generic};
 /// Lizard. ETB, one or both, each mode targeting a different player: target
 /// player chooses a creature they control and puts two +1/+1 counters on it;
 /// target player returns a creature or land card from their graveyard to
-/// their hand. (Residual: "a different player" per mode is not enforced.)
+/// their hand.
 pub fn mikey_mona_mutant_sitters() -> CardDefinition {
     CardDefinition {
         name: "Mikey & Mona, Mutant Sitters",
@@ -45,8 +45,10 @@ pub fn mikey_mona_mutant_sitters() -> CardDefinition {
                         }),
                     }),
                 },
+                // CR 700.2 — each mode targets a different player: the second
+                // mode's slot can't repeat the first's.
                 Effect::TargetPlayerThen {
-                    filter: R::Player,
+                    filter: R::Player.and(R::OtherThanTargetSlot(0)),
                     then: Box::new(Effect::AsPlayer {
                         who: PlayerRef::Target(0),
                         body: Box::new(Effect::ReturnGraveyardCardsToHand {
