@@ -343,6 +343,29 @@ fn reverse_the_sands_swaps_life_totals() {
     assert_eq!((g.players[0].life, g.players[1].life), (27, 4));
 }
 
+/// Reverse the Sands at four seats: the caster trades with the opponent who
+/// has the most life, and with no richer opponent redistributes nothing.
+#[test]
+fn reverse_the_sands_trades_with_the_richest_opponent() {
+    use crabomination::mana::Color::*;
+    for (mine, expect) in [(4, [30, 25, 4, 9]), (40, [40, 25, 30, 9])] {
+        let mut g = multi_player_game(4);
+        g.active_player_idx = 0;
+        g.step = crabomination::game::types::TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        for (p, l) in [mine, 25, 30, 9].into_iter().enumerate() {
+            g.players[p].life = l;
+        }
+        let s = g.add_card_to_hand(0, catalog::reverse_the_sands());
+        g.players[0].mana_pool.add(White, 2);
+        g.players[0].mana_pool.add_colorless(6);
+        g.perform_action(GameAction::CastSpell { card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players.iter().map(|p| p.life).collect::<Vec<_>>(), expect.to_vec());
+    }
+}
+
 /// Soulblast sacrifices the whole board as a cost and throws its total power.
 #[test]
 fn soulblast_throws_the_teams_total_power() {

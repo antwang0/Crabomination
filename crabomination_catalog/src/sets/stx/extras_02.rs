@@ -822,10 +822,8 @@ pub fn bone_to_ash() -> CardDefinition {
 /// that cost wasn't paid, you draw X cards."
 ///
 /// Base cast draws X (`Value::XFromCost`); the {2}{U} alternative cost
-/// carries an `effect_override` of Draw 3 → the opponent mints two
-/// Treasures and scries 2 (the "an opponent" choice collapses to
-/// `EachOpponent`, exact in 1v1 — same approximation as Tempted by the
-/// Oriq's per-opponent rider).
+/// carries an `effect_override` of Draw 3 → the chosen opponent
+/// (`ChooseOpponentThen`) mints two Treasures and scries 2.
 pub fn ingenious_mastery() -> CardDefinition {
     use crate::card::AlternativeCost;
     use crate::game::effects::treasure_token;

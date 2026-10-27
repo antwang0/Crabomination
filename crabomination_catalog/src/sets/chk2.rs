@@ -1663,16 +1663,24 @@ pub fn mana_seism() -> CardDefinition {
     }
 }
 
-/// Reverse the Sands — {6}{W}{W} Sorcery. Redistribute players' life totals
-/// (two-player: exchange them).
+/// Reverse the Sands — {6}{W}{W} Sorcery. Redistribute any number of players'
+/// life totals: you trade with the opponent who has the most life (CR 701.12c;
+/// the redistribution a caster wants, never a loss for them).
 pub fn reverse_the_sands() -> CardDefinition {
     CardDefinition {
         name: "Reverse the Sands",
         cost: cost(&[generic(6), w(), w()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::ExchangeLifeTotals {
-            a: Selector::You,
-            b: Selector::Player(PlayerRef::EachOpponent),
+        effect: Effect::If {
+            cond: Predicate::ValueAtLeast(
+                Value::LifeOf(PlayerRef::HighestLifeOpponent),
+                Value::Sum(vec![Value::LifeOf(PlayerRef::You), Value::ONE]),
+            ),
+            then: Box::new(Effect::ExchangeLifeTotals {
+                a: Selector::You,
+                b: Selector::Player(PlayerRef::HighestLifeOpponent),
+            }),
+            else_: Box::new(Effect::Noop),
         },
         ..Default::default()
     }
