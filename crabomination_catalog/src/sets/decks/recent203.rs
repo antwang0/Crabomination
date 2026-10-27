@@ -3,7 +3,7 @@
 //! combat-counter Wurm. Tests in `tests/recent203.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CounterType, CreatureType, Keyword, SelectionRequirement as R,
+    ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, Keyword, SelectionRequirement as R,
     StaticAbility, Subtypes, Supertype,
 };
 use crate::effect::shortcut::{deal, target_filtered};
@@ -94,9 +94,9 @@ pub fn infernal_vessel() -> CardDefinition {
     }
 }
 
-/// Fiery Annihilation — {2}{R} Instant. Deals 5 damage to target creature; if it
-/// would die this turn, exile it instead. (The exile-attached-Equipment rider is
-/// approximated away — no equipment second-target slot yet.)
+/// Fiery Annihilation — {2}{R} Instant. Deals 5 damage to target creature;
+/// exiles up to one target Equipment attached to that creature (slot 1); if
+/// the creature would die this turn, exile it instead.
 pub fn fiery_annihilation() -> CardDefinition {
     CardDefinition {
         name: "Fiery Annihilation",
@@ -104,12 +104,22 @@ pub fn fiery_annihilation() -> CardDefinition {
         card_types: vec![CardType::Instant],
         // Install the die→exile replacement first, then deal the damage, so a
         // creature this kills is exiled rather than buried.
-        effect: Effect::Seq(vec![
-            Effect::ExileIfWouldDieThisTurn {
-                what: target_filtered(R::Creature),
-            },
-            deal(5, target_filtered(R::Creature)),
-        ]),
+        // Slot 1, the Equipment, is "up to one".
+        effect: Effect::OptionalTargets {
+            min: 1,
+            body: Box::new(Effect::Seq(vec![
+                Effect::ExileIfWouldDieThisTurn {
+                    what: target_filtered(R::Creature),
+                },
+                deal(5, target_filtered(R::Creature)),
+                Effect::Exile {
+                    what: Selector::TargetFiltered {
+                        slot: 1,
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::AttachedToTargetSlot(0)),
+                    },
+                },
+            ])),
+        },
         ..Default::default()
     }
 }

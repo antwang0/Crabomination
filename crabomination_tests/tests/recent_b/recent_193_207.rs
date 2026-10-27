@@ -811,6 +811,34 @@ mod recent203 {
         assert!(!g.players[1].graveyard.iter().any(|c| c.id == victim), "not in graveyard");
     }
 
+    /// Fiery Annihilation's slot 1 (CR 601.2c): up to one target Equipment
+    /// attached to THAT creature — an unattached one is refused, the attached
+    /// one is exiled with it.
+    #[test]
+    fn fiery_annihilation_exiles_an_equipment_attached_to_the_creature() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let victim = g.add_card_to_battlefield(1, catalog::hill_giant());
+        let on = g.add_card_to_battlefield(1, catalog::bonesplitter());
+        g.battlefield_find_mut(on).unwrap().attached_to = Some(victim);
+        let loose = g.add_card_to_battlefield(1, catalog::short_sword());
+        let cast = |g: &mut GameState, eq: crabomination::card::CardId| {
+            let spell = g.add_card_to_hand(0, catalog::fiery_annihilation());
+            g.players[0].mana_pool.add(Color::Red, 1);
+            g.players[0].mana_pool.add_colorless(2);
+            g.perform_action(GameAction::CastSpell {
+                card_id: spell, target: Some(Target::Permanent(victim)),
+                additional_targets: vec![Target::Permanent(eq)], mode: None, x_value: None,
+            })
+        };
+        assert!(cast(&mut g, loose).is_err(), "not attached to the target creature");
+        cast(&mut g, on).expect("the Equipment on it");
+        drain_stack(&mut g);
+        assert!(g.exile.iter().any(|c| c.id == on), "Equipment exiled");
+        assert!(g.exile.iter().any(|c| c.id == victim), "creature exiled");
+    }
+
     /// Violent Urge grants +1/+0 and first strike; with delirium it adds double strike.
     #[test]
     fn violent_urge_first_strike_and_delirium_double_strike() {
