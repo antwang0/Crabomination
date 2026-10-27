@@ -1915,15 +1915,20 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// burn at creatures and for lethal, no X=0 Hydra, trades and free attacks,
 /// tricks with riders, counters in their counter mode, ...): this pilot with
 /// them beat it without them 56.0 [54.4, 57.5] / 55.9 [54.3, 57.4] (FRA sealed, 200 x 12,
-/// ladder seeds 43 / 97, `.ladder/fra_next`). `CRAB_FRA_FIXES=0` turns them
-/// off there; `CRAB_FRA_FIXES=1` turns them on in every other game.
+/// ladder seeds 43 / 97, `.ladder/fra_next`). A Sealed match (`sealed`, the
+/// menu's SOS sealed format) plays with them too: 53.5 [52.2, 54.9] / 53.9
+/// [52.6, 55.2] on SOS sealed with the champion leaf (round 85,
+/// `.ladder/r85`). Cube read 53.3 on seed 97 and its seed-43 cell stalled,
+/// so cube, Modern and the college decks stay off, unresolved or unmeasured.
+/// `CRAB_FRA_FIXES=0` turns them off; `CRAB_FRA_FIXES=1` turns them on in
+/// every game.
 ///
 /// An FRA game (`fra`, from `fra_mode::is_fra_game`) puts the Reality
 /// Fracture net under the search instead — `CRAB_FRA_NET` or
 /// `nets/fra-champion.safetensors`, loaded into its own slot. The champion
 /// is the SOS net: on FRA it adds nothing over the material leaf, and the
 /// FRA net makes the same search +3.75 (round 82, `ML_NOTES`).
-pub(crate) fn local_bot(n_seats: usize, fra: bool) -> Box<dyn crabomination::server::Bot> {
+pub(crate) fn local_bot(n_seats: usize, fra: bool, sealed: bool) -> Box<dyn crabomination::server::Bot> {
     if n_seats > 2 {
         return Box::new(HeuristicBot::new());
     }
@@ -1934,12 +1939,12 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool) -> Box<dyn crabomination::ser
     }
     let fixes = match std::env::var_os("CRAB_FRA_FIXES") {
         Some(v) => v != "0",
-        None => fra,
+        None => fra || sealed,
     };
     if fixes {
         weights = weights.with_fra_fixes();
         static SAID: std::sync::Once = std::sync::Once::new();
-        SAID.call_once(|| eprintln!("the local bot plays with the FRA fixes (CRAB_FRA_FIXES=0 turns them off)"));
+        SAID.call_once(|| eprintln!("the local bot plays with the FRA fixes bundle (CRAB_FRA_FIXES=0 turns it off)"));
     }
     Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
         iterations: 256,
@@ -2069,7 +2074,7 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
         name_seats(&mut state, &human_name, "Bot");
         state
     };
-    let occupants = local_occupants(server_seat, &state);
+    let occupants = local_occupants(server_seat, &state, format == MatchFormat::Sealed);
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![], Some(sink_for_match));
     });
@@ -2079,14 +2084,16 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
 }
 
 /// The human's seat 0 plus one local bot for every other seat of the state.
+/// `sealed`: the menu's Sealed format (see [`local_bot`]).
 pub(crate) fn local_occupants(
     human: crabomination::server::SeatChannel,
     state: &GameState,
+    sealed: bool,
 ) -> Vec<SeatOccupant> {
     let n_seats = state.players.len();
     let fra = crabomination::fra_mode::is_fra_game(state);
     std::iter::once(SeatOccupant::Human(human))
-        .chain((1..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats, fra))))
+        .chain((1..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats, fra, sealed))))
         .collect()
 }
 
@@ -2239,7 +2246,7 @@ pub(crate) fn host_lan_seats(
     }
     [SeatOccupant::Human(host), SeatOccupant::Human(joiner)]
         .into_iter()
-        .chain((2..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats, fra))))
+        .chain((2..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats, fra, false))))
         .collect()
 }
 
@@ -2661,7 +2668,7 @@ mod tests {
         assert_eq!(state.players[0].name, "Ann");
         assert_eq!(state.players[0].command.len(), 2, "Krark + Rograkh come back");
         let (seat, _client) = crabomination::server::seat_pair();
-        assert_eq!(local_occupants(seat, &state).len(), 3);
+        assert_eq!(local_occupants(seat, &state, false).len(), 3);
         // No deck: the stock Commander pod, still sized by the menu option.
         let stock_pod = build_local_match_state(MatchFormat::Commander, None, 2, PodDecks::default(), "Ann");
         assert_eq!(stock_pod.players.len(), 2);

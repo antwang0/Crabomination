@@ -6403,3 +6403,52 @@ The six leads from the round-83 report, all queued at once. Work dir
   as much as any recipe change measured here. The next recipe change
   should pin it (round 83's 0.31–0.34 lost, but that is confounded with its
   `fra-fixes` actors).
+
+## Round 85 — the FRA fixes on SOS and cube under the search: SOS sealed +3.7 (cube unresolved: a stalled game); deck shape in the generator: no; a CR 614.5 redirect loop found by the ladder (2026-10-26)
+
+Two of the round-84 report's leads (`.ladder/r85/`, readings pre-registered
+in each script).
+
+- **The `fra-fixes` bundle on the client's pilot outside FRA.**
+  `mcts-net67-fixes` vs `mcts-net67-256`, `CRAB_NET=nets/champion` (the
+  non-FRA leaf), 200 games x 12 decks, seeds 43 / 97. SOS sealed **53.5 %
+  [52.2, 54.9] / 53.9 % [52.6, 55.2]**; cube seed 97 **53.3 % [51.7, 54.9]**; cube seed 43 crashed
+  twice (the loops below), and on the fixed binary one game ran on a single
+  thread for over two hours, searching normally (a core dump of it shows
+  MCTS rollouts, no recursion) — a stalled game grinding toward the step
+  cap, since each step is a 256-iteration search. Cube is unresolved. The scored pilot had
+  read +0.7 / +1.2 on SOS (round "FRA bot audit"): the search leans on the
+  bundle's fixes harder than the scored pilot does, as on FRA (+2.4..+5.1
+  scored, +6 searched). By the pre-registered bar only SOS sealed
+  qualifies: the client's Sealed format now plays with the bundle
+  (`local_bot`'s `sealed`, also on the game-over rematch). The lobby has no
+  sealed format and cube is unresolved, so the lobby is unchanged; Modern
+  and the college decks were not measured. Open: which cube game stalls,
+  and whether the ladder wants a wall-clock cap per game.
+- **Cube seed 43 crashed: a CR 614.5 redirect loop.** The cell aborted with a
+  stack overflow; the core dump's backtrace is
+  `apply_prevention_shields_with` ↔ `deal_damage_to_from` without end. A
+  turn-long redirect shield (`PreventAllDamageThisTurn { redirect_to }`)
+  re-dealt its soaked damage as a new event, and every shield ran again on
+  it, itself included: two shields pointing at each other (or one whose
+  target covers its destination) recursed until the stack ran out. CR
+  614.5 gives a replacement effect one opportunity at an event and the
+  events that replace it; `movement.rs` now keeps the redirecting shields
+  of the current chain thread-locally and skips them on the redirected
+  damage. Regression test
+  `cr_614_5_a_redirect_shield_does_not_reapply_to_its_own_redirected_damage`
+  (overflows without the fix). The seed-43 cell was re-run on the fixed
+  binary.
+- **Deck shape in the generator. NOT adopted.** `SimConfig::shape_slots`
+  (`recommend::ShapeSlots`: 16–19 creatures, 8–11 at mana value ≤ 2, 2–5 at
+  ≥ 5, refused picks to the unconstrained second pass); half the rated
+  builder's candidates built under it (`selfplay::build_candidates_shaped`),
+  the judge with its shape term chooses. `fra_card_eval --ab --best N
+  --slots` against unshaped candidates: FRA best of 16 **50.27 / 49.93**,
+  best of 64 **49.50 [49.12, 49.88] / 49.89**; SOS best of 16 50.26 / 50.18.
+  Offered shaped decks, the judge takes them and they play no better, worse
+  at 64: the residual curve `shape_penalty` fits is partly the pool (a
+  pool short of creatures is short of other things too), not a shape a
+  build can choose. `RATED_SHAPE_SLOTS` off. The judge term itself holds
+  on SOS (it was turned on from FRA readings): best of 16 **50.83 % [50.56,
+  51.09] / 50.53 % [50.27, 50.80]**.
