@@ -559,6 +559,28 @@ mod recent152 {
         assert_eq!(g.players[0].life, life - 2, "lost 2 life");
     }
 
+    /// Bargained, Rowan's Grim Search looks at four, puts up to two back on top
+    /// and the rest into the graveyard — never three on top (not a surveil).
+    #[test]
+    fn rowans_grim_search_bargained_keeps_at_most_two() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        for _ in 0..6 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let food = g.add_token_to_battlefield(0, &crabomination::game::effects::food_token());
+        let id = g.add_card_to_hand(0, catalog::rowans_grim_search());
+        fill_mana(&mut g);
+        g.perform_action(GameAction::CastSpellBargain {
+            card_id: id, sacrifice: Some(food), target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).expect("cast bargained");
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Forest").count(), 2, "two of four binned");
+        // 6 - 2 binned - 2 drawn.
+        assert_eq!(g.players[0].library.len(), 2);
+    }
+
     /// Rite of the Moth reanimates a graveyard creature with a finality counter.
     #[test]
     fn rite_of_the_moth_reanimates_with_finality() {

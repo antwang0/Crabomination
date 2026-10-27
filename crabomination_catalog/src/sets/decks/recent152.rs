@@ -11,8 +11,9 @@ use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, ZoneDest};
 use crate::mana::{Color, b, cost, generic, r, u, w, x};
 
-/// Rowan's Grim Search — {2}{B} Instant. Bargain. If bargained, dig the top four
-/// (keep up to two; modeled as Surveil 4). You draw two and lose 2 life.
+/// Rowan's Grim Search — {2}{B} Instant. Bargain. If bargained, look at the top
+/// four, put up to two back on top and the rest into your graveyard. You draw
+/// two and lose 2 life.
 pub fn rowans_grim_search() -> CardDefinition {
     CardDefinition {
         name: "Rowan's Grim Search",
@@ -22,10 +23,14 @@ pub fn rowans_grim_search() -> CardDefinition {
         effect: Effect::Seq(vec![
             Effect::If {
                 cond: Predicate::SpellWasBargained,
-                then: Box::new(Effect::Surveil {
-                    who: PlayerRef::You,
-                    amount: Value::Const(4),
-                }),
+                then: Box::new(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                    count: Value::Const(4),
+                    take: Some(Value::Const(2)),
+                    optional: true,
+                    keep_on_top: true,
+                    rest_to_graveyard: true,
+                    ..Default::default()
+                }))),
                 else_: Box::new(Effect::Noop),
             },
             Effect::Draw {
