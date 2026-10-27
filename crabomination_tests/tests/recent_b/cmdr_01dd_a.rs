@@ -432,6 +432,34 @@ fn cr_614_enduring_angel_catches_a_lethal_loss() {
     assert_eq!(g.players[0].life, 2);
 }
 
+/// Enduring Angel's transform inside the life funnel is a real transform:
+/// the `Transformed` event dispatches with the action, so Neglected Heirloom
+/// on the Angel follows it to Ashmouth Blade (CR 701.28).
+#[test]
+fn enduring_angel_transform_is_seen_by_transform_watchers() {
+    let mut g = pod(2);
+    let angel = g.add_card_to_battlefield(0, catalog::enduring_angel());
+    let heirloom = g.add_card_to_battlefield(0, catalog::neglected_heirloom());
+    g.battlefield_find_mut(heirloom).unwrap().attached_to = Some(angel);
+    g.players[0].life = 2;
+    // "You have hexproof" — an untargeted Earthquake (the Angel flies).
+    let quake = g.add_card_to_hand(1, catalog::earthquake());
+    flood(&mut g, 1);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: quake,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(5),
+    })
+    .expect("earthquake");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 3);
+    assert_eq!(g.battlefield_find(heirloom).unwrap().definition.name, "Ashmouth Blade");
+}
+
 /// CR 104.3 / 614 — Exquisite Archangel exiles itself instead of its
 /// controller losing, and the life total resets to the starting total.
 #[test]

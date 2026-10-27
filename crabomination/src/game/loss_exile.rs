@@ -57,10 +57,12 @@ impl GameState {
             return delta;
         };
         let was = self.battlefield_find(id).map(|c| c.transformed);
-        // The Angel's own faces carry no transform trigger; the event is not
-        // dispatched (the funnel has no event channel, as for Nefarious Lich).
+        // The funnel has no event channel: the `Transformed` event waits in
+        // `pending_cost_events` for the action's dispatch, so "whenever a
+        // permanent transforms" watchers see it.
         let mut events = Vec::new();
         self.transform_permanent(id, &mut events);
+        self.scratch.pending_cost_events.extend(events);
         if self.battlefield_find(id).map(|c| c.transformed) == was && !self.player_cant_lose_game(seat) {
             self.players[seat].eliminated = true;
         }

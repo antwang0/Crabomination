@@ -2221,7 +2221,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Bamboozling Beeble | the ignored die is chosen by rule, not asked: an opponent's best face, a friendly roll's worst | `Effect::NextRollExtraDieThisTurn` |
 | 🟡 Selective Snare | "the creature type of your choice" is read off the targets: each must share a creature type with the first, not one type common to all | `SharesCreatureTypeWithTargetSlot(0)` |
 | 🟡 Illusory Gains | "you control enchanted creature" is an ETB/re-attach trigger holding the steal while attached (Control Magic's shape), not a layer-2 static | `GainControlWhileSourceAttached` |
-| 🟡 Enduring Angel | its transform inside the life funnel dispatches no `Transformed` event ("whenever a permanent transforms" watchers miss it) | `StaticEffect::LifeToZeroTransformsSelf` |
+| ~~Enduring Angel~~ ✅ | fixed 2026-10-27: the funnel's `Transformed` event waits in `pending_cost_events` and dispatches with the action (Neglected Heirloom follows it) | — |
 | 🟡 Sol'Kanar the Tainted | the donation's opponent is the engine's ranked hostile opponent, not asked | `GainControl { to: HostileOpponent }` |
 | 🟡 Tyrannical Pitlord | the leaves trigger sacrifices the chosen creature by whoever controls it (a stolen one is the thief's sacrifice, where the printed "you" does nothing) | `SacrificePermanent { ChosenPermanentOfSource }` |
 | 🟡 Realm Razer | the two printed triggers are one "until it leaves" exile: a Razer gone before its ETB resolves exiles nothing, where the printed wording exiles the lands for good | `ExileUntilSourceLeaves` |
