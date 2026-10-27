@@ -436,6 +436,11 @@ pub struct PlayerCold {
     /// spent by the next creature spell cast, cleared at the turn boundary.
     #[serde(default)]
     pub next_creature_spell_flash_this_turn: bool,
+    /// "The next [filter] spell you cast this turn can be cast as though it had
+    /// flash" (Quicken, `Effect::NextMatchingSpellHasFlashThisTurn`): one filter
+    /// per grant, spent by the first matching cast, cleared at the turn boundary.
+    #[serde(default)]
+    pub next_matching_spell_flash: crate::oftenempty::OftenEmpty<crate::card::SelectionRequirement>,
     /// CR 702.131b — a permanent with ascend has entered under this player's
     /// control, so permanent entries check for the city's blessing.
     #[serde(default)]

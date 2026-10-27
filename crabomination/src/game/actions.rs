@@ -12019,6 +12019,14 @@ impl GameState {
         if self.players[p].next_creature_spell_flash_this_turn && self.computed_is_creature(&card) {
             self.players[p].next_creature_spell_flash_this_turn = false;
         }
+        if !self.players[p].next_matching_spell_flash.is_empty()
+            && let Some(i) = self.players[p]
+                .next_matching_spell_flash
+                .iter()
+                .position(|f| self.evaluate_requirement_on_card(f, &card, p))
+        {
+            self.players[p].next_matching_spell_flash.remove(i);
+        }
         if !self.players[p].next_typed_spell_flash_this_turn.is_empty()
             && let Some(i) = self.players[p]
                 .next_typed_spell_flash_this_turn
@@ -18589,6 +18597,7 @@ impl GameState {
                 && self.computed_is_creature(card))
             || self.players[p].next_spell_flash_this_turn
             || (self.players[p].next_creature_spell_flash_this_turn && self.computed_is_creature(card))
+            || self.players[p].next_matching_spell_flash.iter().any(|f| self.evaluate_requirement_on_card(f, card, p))
             || self.players[p]
                 .next_typed_spell_flash_this_turn
                 .iter()

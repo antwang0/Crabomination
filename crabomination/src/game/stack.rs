@@ -5449,6 +5449,9 @@ impl GameState {
             if pl.next_creature_spell_flash_this_turn {
                 pl.next_creature_spell_flash_this_turn = false;
             }
+            if !pl.next_matching_spell_flash.is_empty() {
+                pl.next_matching_spell_flash.clear();
+            }
             pl.token_doublings_this_turn = 0;
             pl.steals_opponent_tokens_this_turn = false;
             pl.poison_capped_this_turn = false;

@@ -14457,6 +14457,9 @@ pub enum Effect {
     /// had flash" (Scout's Warning). Spent by that creature's cast; a
     /// noncreature spell in between leaves it armed.
     NextCreatureSpellHasFlashThisTurn,
+    /// "The next [filter] spell you cast this turn can be cast as though it
+    /// had flash" (Quicken — the next sorcery). Spent by the first match.
+    NextMatchingSpellHasFlashThisTurn { filter: crate::card::SelectionRequirement },
     /// "The next spell of the chosen type you cast this turn can be cast as
     /// though it had flash" (Progenitor's Icon) — the source's chosen
     /// creature type, read at resolution. Spent by the first spell of that

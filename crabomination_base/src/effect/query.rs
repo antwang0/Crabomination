@@ -1028,6 +1028,7 @@ impl Effect {
             | Effect::EachPlayerChoosesOpponentPermanentExile { .. }
             | Effect::NextSpellHasFlashThisTurn
             | Effect::NextCreatureSpellHasFlashThisTurn
+            | Effect::NextMatchingSpellHasFlashThisTurn { .. }
             | Effect::AnyPlayerMayPayLifeToCounterThis { .. }
             | Effect::AnyPlayerMaySacrificeToTopdeckSource { .. }
             | Effect::EachPlayerDiscardsAnyThenDrawsThatMany

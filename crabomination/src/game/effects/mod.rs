@@ -42637,6 +42637,10 @@ impl GameState {
                 self.players[ctx.controller].next_spell_flash_this_turn = true;
                 Ok(())
             }
+            Effect::NextMatchingSpellHasFlashThisTurn { filter } => {
+                self.players[ctx.controller].next_matching_spell_flash.push(filter.clone());
+                Ok(())
+            }
             Effect::NextCreatureSpellHasFlashThisTurn => {
                 self.players[ctx.controller].next_creature_spell_flash_this_turn = true;
                 Ok(())
