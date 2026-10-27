@@ -966,6 +966,30 @@ impl GameState {
                             }
                         }
                     }
+                    // Teferi, Who Slows the Sunset's emblem: each opponent of
+                    // the active player holding it draws next, in turn order,
+                    // off the stack (its 2021-09-24 ruling: no priority between).
+                    if self.players.iter().any(|pl| !pl.emblems.is_empty()) {
+                        let (a, n) = (self.active_player_idx, self.players.len());
+                        for q in (1..n).map(|d| (a + d) % n) {
+                            let holds = self.players[q].is_alive()
+                                && !self.same_team(q, a)
+                                && self.players[q].emblems.iter().any(|e| {
+                                    e.statics.iter().any(|sa| {
+                                        matches!(
+                                            sa.effect,
+                                            crate::effect::StaticEffect::DrawDuringEachOpponentsDrawStep
+                                        )
+                                    })
+                                });
+                            if holds && !self.draw_one_or_deck(q, &mut events) {
+                                self.check_state_based_actions_into(&mut events);
+                                if self.is_game_over() {
+                                    return Ok(events);
+                                }
+                            }
+                        }
+                    }
                 }
                 // CR 504.1 — "at the beginning of your draw step" triggers go
                 // on the stack after the turn-based draw (Armageddon Clock).

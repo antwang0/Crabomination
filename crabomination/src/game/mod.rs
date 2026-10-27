@@ -36809,6 +36809,8 @@ fn static_effect_to_effects(
             // UntapYoursEachUntapStepFiltered (Prophet of Kruphix) — consulted
             // by `do_untap`; no layer effect.
             | StaticEffect::UntapYoursEachUntapStepFiltered(_)
+            // Teferi's emblem draw — read by the draw step; no layer effect.
+            | StaticEffect::DrawDuringEachOpponentsDrawStep
             // GraveyardCardsUntargetable (Underworld Cerberus) — consulted by
             // `check_target_legality`; no layer effect.
             | StaticEffect::GraveyardCardsUntargetable

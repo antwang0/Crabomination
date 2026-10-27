@@ -4256,6 +4256,10 @@ pub enum StaticEffect {
     /// each other player's untap step" (Prophet of Kruphix). Only the
     /// controller's permanents matching the filter untap off-turn.
     UntapYoursEachUntapStepFiltered(SelectionRequirement),
+    /// "You draw a card during each opponent's draw step" (Teferi, Who Slows
+    /// the Sunset's emblem): not a trigger — the draw follows the active
+    /// player's turn-based draw with no priority between. Read by the draw step.
+    DrawDuringEachOpponentsDrawStep,
     /// "Cards in graveyards can't be the targets of spells or abilities"
     /// (Underworld Cerberus, Ground Seal). Enforced in
     /// `check_target_legality_with_source` — a target card id found in any
