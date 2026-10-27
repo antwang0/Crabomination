@@ -228,9 +228,8 @@ pub fn outlaw_stitcher() -> CardDefinition {
 }
 
 /// Kutzil's Flanker — {2}{W} Cat Warrior 3/1. Flash. When it enters, choose one
-/// — a +1/+1 counter per creature that left your control this turn (approximated
-/// as creatures that died this turn); gain 2 life and scry 2; or exile target
-/// player's graveyard.
+/// — a +1/+1 counter per creature that left the battlefield under your control
+/// this turn; gain 2 life and scry 2; or exile target player's graveyard.
 pub fn kutzils_flanker() -> CardDefinition {
     CardDefinition {
         name: "Kutzil's Flanker",
@@ -249,7 +248,7 @@ pub fn kutzils_flanker() -> CardDefinition {
                 Effect::AddCounter {
                     what: Selector::This,
                     kind: CounterType::PlusOnePlusOne,
-                    amount: Value::CreaturesDiedThisTurn(PlayerRef::You),
+                    amount: Value::CreaturesLeftBattlefieldThisTurn(PlayerRef::You),
                 },
                 Effect::Seq(vec![
                     Effect::GainLife {

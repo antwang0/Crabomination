@@ -229,6 +229,15 @@ mod recent239 {
         g.add_card_to_graveyard(1, catalog::grizzly_bears());
         g.resolve_effect(&modes[2], &EffectContext::for_trigger(flanker, 0, Some(Target::Player(1)), 0)).unwrap();
         assert!(g.players[1].graveyard.is_empty(), "opponent graveyard exiled");
+        // Mode 1 counts creatures that left the battlefield under your
+        // control by any route — a bounced Bear, not only a death.
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let unsummon = g.add_card_to_hand(0, catalog::unsummon());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+        g.priority.player_with_priority = 0;
+        crabomination::game::cast_at(&mut g, unsummon, Target::Permanent(bear));
+        g.resolve_effect(&modes[0], &EffectContext::for_trigger(flanker, 0, None, 0)).unwrap();
+        assert_eq!(g.battlefield_find(flanker).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
     }
 
     /// Stubborn Burrowfiend's saddle trigger mills two and pumps by graveyard
