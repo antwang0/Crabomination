@@ -1460,12 +1460,12 @@ pub fn brazen_cannonade() -> CardDefinition {
 
 /// Offspring's Revenge — {2}{R}{W}{B} enchantment. At the beginning of combat
 /// on your turn, exile target red, white or black creature card from your
-/// graveyard; create a 1/1 token copy of it with haste.
+/// graveyard; create a 1/1 token copy of it that gains haste until your next
+/// turn.
 pub fn offsprings_revenge() -> CardDefinition {
     let mut copy = crate::effect::shortcut::token_copy_of(PlayerRef::You, Value::ONE, Selector::Target(0));
-    if let Effect::CreateTokenCopyOf { override_pt, extra_keywords, .. } = &mut copy {
+    if let Effect::CreateTokenCopyOf { override_pt, .. } = &mut copy {
         *override_pt = Some((1, 1));
-        extra_keywords.push(Keyword::Haste);
     }
     CardDefinition {
         triggered_abilities: vec![at_your(
@@ -1480,6 +1480,12 @@ pub fn offsprings_revenge() -> CardDefinition {
                     to: ZoneDest::Exile,
                 },
                 copy,
+                // "It gains haste until your next turn" — not a copiable keyword.
+                Effect::GrantKeyword {
+                    what: Selector::LastCreatedToken,
+                    keyword: Keyword::Haste,
+                    duration: Duration::UntilNextTurn,
+                },
             ]),
         )],
         ..permanent("Offspring's Revenge", cost(&[generic(2), r(), w(), b()]), CardType::Enchantment)

@@ -2054,7 +2054,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Jade Monolith~~ ✅ | fixed 2026-10-25: `RedirectNextDamageTo { chosen_source }` keys the redirect on the source picked on resolution (Kor Chant shares it with `whole_turn`) — `jade_monolith_redirects_only_the_chosen_source` | — |
 | 🟡 Verdant Mastery, Fervent Mastery | their picks are still separate searches (two taxes under Leonin Arbiter) | left out of `OneSearch` (`01M3bbRx`): STX cards in the two-player pool |
 | ~~Lochmere Serpent~~ ✅ | fixed 2026-10-25: exactly five targets, all in one opponent's graveyard (`SameGraveyardAsTargetSlot(0)`, the 2019-10-04 ruling) — `lochmere_serpent_needs_five_targets_in_a_single_opponents_graveyard` | — |
-| 🟡 Offspring's Revenge | the token keeps haste past "until your next turn" | `CreateTokenCopyOf.extra_keywords` is permanent |
 | 🟡 Lagrella, the Magpie | exiles only opponents' creatures, and a returning card gets no +1/+1 counters | the "enters under your control" rider has no engine hook; your own creatures would come back without it |
 | 🟡 Battletide Alchemist | the "you may prevent" is always taken for its controller's side and never for an opponent | `ReduceDamageToYourTeamByCount` has no per-event prompt |
 | ~~King T'Challa // Black Panther, Hope Enduring~~ ✅ | fixed 2026-10-24: a modal DFC whose front also transforms (CR 712.11b) — the back face carries its {4}{W}{U} and is cast from hand | — |
@@ -2114,7 +2113,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Gix's Command | "up to one creature" for the counters mode is the engine's pick among yours | `Selector::one_of` |
 | 🟡 Ziatora's Envoy | the top card can't be played as a land, and a miss is drawn rather than put into hand | `CastTopFreeIfElseDraw` |
 | 🟡 Reed Richards, Smartest Man | on your own turn past the draw step, the draw-step draw is assumed to have happened (a skipped draw step mis-counts by one) | `FirstExtraDrawEachTurnBecomes` reads `cards_drawn_this_turn` |
-| 🟡 Dread | like No Mercy, damage from your own creatures is not watched | `PlayerDamaged` scoped to opponents' sources |
 | ~~Leatherhead, Swamp Stalker~~ ✅ | fixed 2026-10-24: `StaticEffect::SelfEntersWithKeywordCounter` puts the hexproof counter on as she enters (CR 614.1c) — `leatherhead_enters_already_hexproof` | — |
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Steward of Solidarity | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |

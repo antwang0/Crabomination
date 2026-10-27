@@ -877,6 +877,26 @@ fn no_mercy_destroys_the_creature_that_hit_you() {
     assert!(g.battlefield_find(attacker).is_none());
 }
 
+/// No Mercy: "whenever a CREATURE deals damage to you" — your own creature
+/// too, but never a noncreature source (it watched opponents' sources of
+/// every kind until 2026-10-27).
+#[test]
+fn no_mercy_watches_creatures_only_any_controller() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::no_mercy());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    for src in [mine, ring] {
+        let mut ev = vec![];
+        g.deal_damage_to_from(EntityRef::Player(0), 1, Some(src), &mut ev);
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(mine).is_none(), "your own creature is destroyed");
+    assert!(g.battlefield_find(ring).is_some(), "a noncreature source isn't");
+}
+
 /// Opal Champion animates on an opponent's creature spell — and only once.
 #[test]
 fn opal_champion_wakes_on_an_opponents_creature_spell() {

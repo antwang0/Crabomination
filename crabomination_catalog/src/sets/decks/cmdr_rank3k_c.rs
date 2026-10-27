@@ -372,16 +372,15 @@ pub fn ebondeath_dracolich() -> CardDefinition {
     }
 }
 
-/// Dread — {3}{B}{B}{B} 6/6 Elemental Incarnation, fear. Whenever a creature an
-/// opponent controls deals damage to you, destroy it. Put into a graveyard from
-/// anywhere: shuffled into its owner's library.
-/// (Residual: like No Mercy, your own creatures' damage is not watched.)
+/// Dread — {3}{B}{B}{B} 6/6 Elemental Incarnation, fear. Whenever a creature
+/// deals damage to you, destroy it (yours too; a noncreature source isn't).
+/// Put into a graveyard from anywhere: shuffled into its owner's library.
 pub fn dread() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Fear],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec::new(EventKind::PlayerDamaged, EventScope::OpponentSourceDamagedYou),
+                event: EventSpec::new(EventKind::PlayerDamaged, EventScope::SourceDamagedYou).dealt_by(R::Creature),
                 effect: Effect::Destroy { what: Selector::TriggerSource },
             },
             TriggeredAbility {

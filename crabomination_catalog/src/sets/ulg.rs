@@ -1635,7 +1635,10 @@ fn opal(
 pub fn no_mercy() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::OpponentSourceDamagedYou),
+            // "Whenever a CREATURE deals damage to you" — any controller's,
+            // and never a noncreature source.
+            event: EventSpec::new(EventKind::PlayerDamaged, EventScope::SourceDamagedYou)
+                .dealt_by(crate::card::SelectionRequirement::Creature),
             effect: Effect::Destroy { what: Selector::TriggerSource },
         }],
         ..enchantment("No Mercy", cost(&[generic(2), b(), b()]))

@@ -547,3 +547,20 @@ fn youre_ambushed_on_the_road_pumps_any_creature() {
         }
     }
 }
+
+/// Offspring's Revenge: the 1/1 token copy "gains haste until your next turn"
+/// — a granted keyword, not part of the copy (so a copy of the token wouldn't
+/// have it, and it wears off).
+#[test]
+fn offsprings_revenge_token_gains_haste_not_copies_it() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::offsprings_revenge());
+    g.add_card_to_graveyard(0, catalog::hill_giant());
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Hill Giant").map(|c| c.id).expect("a token copy");
+    let cp = g.computed_permanent(token).unwrap();
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+    assert!(cp.keywords().contains(&Keyword::Haste), "hasty now");
+    assert!(!g.battlefield_find(token).unwrap().definition.keywords.contains(&Keyword::Haste), "not a copiable keyword");
+}
