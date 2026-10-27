@@ -365,4 +365,41 @@ impl GameState {
         }
         self.check_state_based_actions_mid_resolution(events);
     }
+
+    /// `Effect::MoveOneOfEachAbsentKind` (Goldberry): one counter of each kind
+    /// on `from` that `to` lacks moves over — keyword counters included
+    /// (CR 122.1b). CR 122.5: the moved counter is *put* on `to`, so the
+    /// CR 614.16 chain scales it (Bioshift's 2013-01-24 ruling).
+    pub(super) fn move_one_of_each_absent_kind(
+        &mut self,
+        from: &Selector,
+        to: &Selector,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let Some(dst) = self.permanents_of(to, ctx).into_iter().next() else { return };
+        let Some(src) = self.permanents_of(from, ctx).into_iter().find(|id| *id != dst) else { return };
+        let have = self.counter_kinds_on(dst);
+        for kind in self.counter_kinds_on(src) {
+            if have.contains(&kind) || self.battlefield_find(dst).is_none() {
+                continue;
+            }
+            // Fear of Sleep Paralysis — a stun counter can't be moved off.
+            if matches!(kind, CounterKind::Plain(CounterType::Stun)) && self.stun_locked_on(src) {
+                continue;
+            }
+            let Some(s) = self.battlefield_find_mut(src) else { return };
+            let moved = match &kind {
+                CounterKind::Plain(k) => s.remove_counters(*k, 1),
+                CounterKind::Keyword(k) => s.keyword_counters.remove_up_to(k, 1),
+            };
+            if moved == 0 {
+                continue;
+            }
+            if let CounterKind::Plain(k) = kind {
+                events.push(GameEvent::CounterRemoved { card_id: src, counter_type: k, count: moved });
+            }
+            self.put_counter_kind(dst, &kind, moved, ctx, events);
+        }
+    }
 }

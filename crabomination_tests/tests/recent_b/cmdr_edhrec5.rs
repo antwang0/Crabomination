@@ -1249,8 +1249,8 @@ fn lore_count(g: &GameState, id: CardId) -> u32 {
     g.battlefield_find(id).map_or(0, |c| c.counter_count(crabomination::card::CounterType::Lore))
 }
 
-/// Goldberry takes one counter of each kind she lacks, then hands all of hers
-/// to another permanent and draws.
+/// Goldberry takes one counter of each kind she lacks — a keyword counter is a
+/// kind too (CR 122.1b; it was skipped) — then hands hers over and draws.
 #[test]
 fn goldberry_borrows_and_returns_counters() {
     let mut g = pod(2);
@@ -1261,11 +1261,14 @@ fn goldberry_borrows_and_returns_counters() {
         let b = g.battlefield_find_mut(bear).unwrap();
         b.add_counters(crabomination::card::CounterType::PlusOnePlusOne, 3);
         b.add_counters(crabomination::card::CounterType::Stun, 2);
+        b.keyword_counters.add(Keyword::Flying, 1);
     }
     activate(&mut g, gold, 0, Some(Target::Permanent(bear))).expect("borrow");
     let gc = g.battlefield_find(gold).unwrap();
     assert_eq!(gc.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
     assert_eq!(gc.counter_count(crabomination::card::CounterType::Stun), 1);
+    assert_eq!(gc.keyword_counters.get(&Keyword::Flying), Some(&1), "the flying counter moves");
+    assert_eq!(g.battlefield_find(bear).unwrap().keyword_counters.get(&Keyword::Flying), None);
     assert_eq!(counters(&g, bear), 2);
     g.battlefield_find_mut(gold).unwrap().tapped = false;
     let hand = g.players[0].hand.len();
