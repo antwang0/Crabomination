@@ -1996,6 +1996,12 @@ impl GameState {
                 })
                 .max()
                 .unwrap_or(0),
+            Value::CardsPutIntoGraveyardFromLibraryThisTurn(who) => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .map(|p| self.players[p].milled_ids_this_turn.len() as i32)
+                .max()
+                .unwrap_or(0),
             Value::DistinctManaCostsInGraveyard(who) => self
                 .resolve_players(who, ctx)
                 .into_iter()

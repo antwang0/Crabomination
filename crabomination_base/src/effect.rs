@@ -1942,6 +1942,9 @@ pub enum Value {
     /// [`Value::DungeonsCompleted`] counting each dungeon name once —
     /// "each differently named dungeon you've completed" (Ellywick's emblem).
     DistinctDungeonsCompleted,
+    /// Cards put into `who`'s graveyard from their library (milled) this turn —
+    /// Cruel Calculations' X. Surveil isn't counted.
+    CardsPutIntoGraveyardFromLibraryThisTurn(PlayerRef),
 }
 
 impl Value {

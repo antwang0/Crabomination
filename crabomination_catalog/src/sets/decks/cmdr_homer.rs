@@ -982,8 +982,8 @@ pub fn through_the_forest_gate() -> CardDefinition {
 }
 
 /// Cruel Calculations — {2}{U} Sorcery. Draw X cards, where X is the number of
-/// cards put into target player's graveyard from their library this turn.
-/// (Approximated: X counts every card put into that graveyard this turn.)
+/// cards put into target player's graveyard from their library this turn
+/// (milled; a surveilled card isn't counted).
 pub fn cruel_calculations() -> CardDefinition {
     spell(
         "Cruel Calculations",
@@ -993,7 +993,7 @@ pub fn cruel_calculations() -> CardDefinition {
             filter: R::Player,
             then: Box::new(Effect::Draw {
                 who: Selector::You,
-                amount: Value::CardsPutIntoGraveyardThisTurn(PlayerRef::Target(0)),
+                amount: Value::CardsPutIntoGraveyardFromLibraryThisTurn(PlayerRef::Target(0)),
             }),
         },
     )

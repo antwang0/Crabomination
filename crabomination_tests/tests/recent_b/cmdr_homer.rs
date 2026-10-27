@@ -615,11 +615,15 @@ fn through_the_forest_gate_puts_lands_in_play() {
     assert_eq!(g.players[0].library.len(), 14);
 }
 
-/// Cruel Calculations draws per card that hit the target's graveyard.
+/// Cruel Calculations draws per card put into the target's graveyard *from
+/// their library* — bug fix: a creature that died there counted too.
 #[test]
 fn cruel_calculations_draws_per_milled_card() {
     let mut g = main_phase(2);
     mill_seat(&mut g, 1, 3);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let mut evs = Vec::new();
+    g.destroy_permanent(bear, false, &mut evs);
     let cc = g.add_card_to_hand(0, catalog::cruel_calculations());
     g.players[0].mana_pool.add(Color::Blue, 1);
     g.players[0].mana_pool.add_colorless(2);
