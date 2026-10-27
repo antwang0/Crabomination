@@ -177,3 +177,27 @@ fn acererak_bounces_and_punishes() {
     attack(&mut g, &[id]);
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Zombie").count(), 1);
 }
+
+/// Ziatora's Envoy: a land on top is played (it uses the land play), and a
+/// spell over the damage dealt is put into your hand — not drawn.
+#[test]
+fn ziatoras_envoy_plays_a_top_land_and_hands_a_miss_without_drawing() {
+    let mut g = pod(2);
+    let envoy = g.add_card_to_battlefield(0, catalog::ziatoras_envoy());
+    let body = catalog::ziatoras_envoy().triggered_abilities[0].effect.clone();
+    let ctx = crabomination::game::effects::EffectContext {
+        event_amount: 5,
+        ..crabomination::game::effects::EffectContext::for_trigger(envoy, 0, None, 0)
+    };
+    g.players[0].library.clear();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    g.resolve_effect(&body, &ctx).unwrap();
+    assert!(g.battlefield_find(forest).is_some(), "the land was played");
+    assert_eq!(g.players[0].lands_played_this_turn, 1);
+
+    let big = g.add_card_to_library(0, catalog::doomsday_excruciator()); // mana value 6 > 5
+    let drawn = g.players[0].cards_drawn_this_turn;
+    g.resolve_effect(&body, &ctx).unwrap();
+    assert!(g.players[0].hand.iter().any(|c| c.id == big), "put into hand");
+    assert_eq!(g.players[0].cards_drawn_this_turn, drawn, "not a draw");
+}

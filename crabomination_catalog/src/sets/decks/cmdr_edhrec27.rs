@@ -299,8 +299,9 @@ pub fn eomer_marshal_of_rohan() -> CardDefinition {
 // ── Mr. Orfeo, the Boulder ───────────────────────────────────────────────────
 
 /// Ziatora's Envoy — {1}{B}{R}{G} 5/4 Lizard Warrior, trample, blitz
-/// {2}{B}{R}{G}. Its combat damage to a player looks at your top card: cast
-/// it free if its mana value is at most the damage, else it goes to hand.
+/// {2}{B}{R}{G}. Its combat damage to a player looks at your top card: a land
+/// is played (a land play), a spell with mana value at most the damage is
+/// cast free, and otherwise the card is put into your hand (not drawn).
 pub fn ziatoras_envoy() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
@@ -314,7 +315,10 @@ pub fn ziatoras_envoy() -> CardDefinition {
             EventScope::SelfSource,
             Effect::WithX {
                 x: Value::TriggerEventAmount,
-                body: Box::new(Effect::CastTopFreeIfElseDraw { filter: R::Nonland.and(R::ManaValueAtMostXFromCost) }),
+                body: Box::new(Effect::CastTopFreeIfElseDraw {
+                    filter: R::Nonland.and(R::ManaValueAtMostXFromCost),
+                    land_or_hand: true,
+                }),
             },
         )],
         ..creature("Ziatora's Envoy", cost(&[generic(1), b(), r(), g()]), vec![CreatureType::Lizard, CreatureType::Warrior], 5, 4)
