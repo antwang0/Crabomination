@@ -26288,6 +26288,9 @@ impl GameState {
                     })
                     .collect();
                 if let Some(f) = filter {
+                    // An X-relative filter reads the resolving X (Bane's
+                    // "equal or lesser toughness").
+                    let f = &f.resolve_x(ctx.x_value);
                     ids.retain(|id| {
                         self.evaluate_requirement_static(
                             f,
