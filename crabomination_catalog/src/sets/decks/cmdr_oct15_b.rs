@@ -3187,8 +3187,7 @@ pub fn cosmotronic_wave() -> CardDefinition {
 }
 
 /// Tobias, Doomed Conqueror — {2}{W}{U} legendary 3/2 flash Human Soldier.
-/// Dies: a 2/2 black Zombie per creature of yours that died this turn.
-/// Residual: tokens that died count too.
+/// Dies: a 2/2 black Zombie per nontoken creature of yours that died this turn.
 pub fn tobias_doomed_conqueror() -> CardDefinition {
     let zombie = TokenDefinition {
         name: "Zombie".into(),

@@ -169,8 +169,8 @@ pub fn rattleback_apothecary() -> CardDefinition {
 }
 
 /// Wrangler of the Damned — {3}{W}{U} 1/4 Human Soldier. Flash. At the beginning
-/// of your end step, if you haven't cast a spell this turn, create a 2/2 white
-/// Spirit with flying. (Approximated: any spell cast, not only from hand.)
+/// of your end step, if you haven't cast a spell from your hand this turn,
+/// create a 2/2 white Spirit with flying.
 pub fn wrangler_of_the_damned() -> CardDefinition {
     use crate::mana::Color;
     CardDefinition {
@@ -189,10 +189,7 @@ pub fn wrangler_of_the_damned() -> CardDefinition {
                 EventKind::StepBegins(crate::game::TurnStep::End),
                 EventScope::YourControl,
             )
-            .with_filter(Predicate::SpellsCastThisTurnEquals {
-                who: PlayerRef::You,
-                count: Value::ZERO,
-            }),
+            .with_filter(Predicate::NoSpellCastFromHandThisTurn { who: PlayerRef::You }),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,

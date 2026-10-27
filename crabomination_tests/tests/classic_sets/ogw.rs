@@ -270,20 +270,21 @@ fn vile_aggregate_power_scales_with_colorless_creatures() {
     assert_eq!(g.computed_permanent(id).unwrap().power, 3, "3 colorless creatures");
 }
 
-/// Salvage Drone optionally draws when it dies.
+/// Salvage Drone: when it dies you may draw a card; if you do, discard one
+/// (the loot was a free draw until 2026-10-27).
 #[test]
-fn salvage_drone_may_draw_on_death() {
+fn salvage_drone_may_loot_on_death() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     g.add_card_to_library(0, catalog::grizzly_bears());
     let id = g.add_card_to_battlefield(0, catalog::salvage_drone());
-    // Accept the optional "may draw" on death.
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     let hand_before = g.players[0].hand.len();
     g.battlefield_find_mut(id).unwrap().damage = 5;
     g.check_state_based_actions();
     drain_stack(&mut g);
-    assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew on death");
+    assert_eq!(g.players[0].hand.len(), hand_before, "drew one, discarded one");
+    assert_eq!(g.players[0].graveyard.len(), 2, "the Drone and the discard");
 }
 
 /// Skitterskin regenerates for {1}{B} — "only if you control another

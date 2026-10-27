@@ -166,7 +166,7 @@ pub fn trick_shot() -> CardDefinition {
 }
 
 /// Patient Naturalist — {2}{G} 2/3 Human Scout. ETB mill three; put a land from
-/// among them into your hand. (The "else make a Treasure" rider is dropped.)
+/// among them into your hand; if you can't, create a Treasure.
 pub fn patient_naturalist() -> CardDefinition {
     CardDefinition {
         name: "Patient Naturalist",

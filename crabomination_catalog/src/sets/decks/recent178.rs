@@ -75,8 +75,7 @@ pub fn fiendish_panda() -> CardDefinition {
 }
 
 /// Quick-Draw Katana — {2} Equipment. During your turn, equipped creature gets
-/// +2/+0 and has first strike. Equip {2}. (The +2/+0 is modeled as always-on;
-/// only the first-strike half is turn-gated.)
+/// +2/+0 and has first strike. Equip {2}.
 pub fn quick_draw_katana() -> CardDefinition {
     CardDefinition {
         name: "Quick-Draw Katana",
@@ -88,8 +87,7 @@ pub fn quick_draw_katana() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
-            power: 2,
-            toughness: 0,
+            during_your_turn_pt: (2, 0),
             during_your_turn_keywords: vec![Keyword::FirstStrike],
             ..Default::default()
         }),

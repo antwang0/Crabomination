@@ -719,6 +719,28 @@ mod recent66 {
         g.battlefield.iter().filter(|c| c.controller == controller && c.definition.name == name).count()
     }
 
+    /// Wrangler of the Damned only counts spells cast from your HAND: a spell
+    /// cast from elsewhere (a flashback from the graveyard) still lets the
+    /// end-step Spirit come.
+    #[test]
+    fn wrangler_of_the_damned_ignores_spells_not_from_hand() {
+        for (from_hand, spirits) in [(false, 1), (true, 0)] {
+            let mut g = two_player_game();
+            g.add_card_to_battlefield(0, catalog::wrangler_of_the_damned());
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            g.players[0].spells_cast_this_turn = 1;
+            g.players[0].spells_cast_this_game_turn = 1;
+            if from_hand {
+                g.players[0].spells_cast_from_hand_this_turn = 1;
+            }
+            g.step = TurnStep::PostCombatMain;
+            let _ = g.advance_step(Vec::new());
+            drain_stack(&mut g);
+            assert_eq!(count_named(&g, 0, "Spirit"), spirits);
+        }
+    }
+
     /// Cast Lava Spike at the opponent to commit a crime.
     fn commit_crime(g: &mut GameState) {
         let ls = g.add_card_to_hand(0, catalog::lava_spike());

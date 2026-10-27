@@ -1250,7 +1250,7 @@ pub fn glacier_godmaw() -> CardDefinition {
 }
 
 /// Kav Landseeker — {3}{R} Creature — Kavu Soldier 4/3, menace. ETB: create a
-/// Lander. (The "sacrifice it next end step" rider is dropped.)
+/// Lander, sacrificed at the beginning of the end step on your next turn.
 pub fn kav_landseeker() -> CardDefinition {
     CardDefinition {
         name: "Kav Landseeker",
@@ -1263,11 +1263,18 @@ pub fn kav_landseeker() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Menace],
-        triggered_abilities: vec![etb(Effect::CreateToken {
-            who: PlayerRef::You,
-            count: Value::Const(1),
-            definition: std::sync::Arc::new(lander_token()),
-        })],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(1),
+                definition: std::sync::Arc::new(lander_token()),
+            },
+            Effect::DelayUntilWithCapture {
+                kind: crate::effect::DelayedTriggerKind::YourNextTurnsEndStep,
+                capture: Selector::LastCreatedToken,
+                body: Box::new(Effect::SacrificePermanent { what: Selector::Target(0) }),
+            },
+        ]))],
         ..Default::default()
     }
 }
@@ -5781,8 +5788,8 @@ pub fn uthros_titanic_godcore() -> CardDefinition {
 // ── Creatures ───────────────────────────────────────────────────────────────
 
 /// Pulsar Squadron Ace — {1}{W} 1/2 Human Pilot. ETB: look at the top five, you
-/// may reveal a Spacecraft and put it into your hand, rest on the bottom. (The
-/// consolation +1/+1 counter when you whiff is dropped.)
+/// may reveal a Spacecraft and put it into your hand, rest on the bottom; if
+/// you didn't, a +1/+1 counter on it.
 pub fn pulsar_squadron_ace() -> CardDefinition {
     CardDefinition {
         name: "Pulsar Squadron Ace",

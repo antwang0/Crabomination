@@ -3777,3 +3777,33 @@ fn singularity_rupture_mills_only_the_targeted_players() {
     let libs: Vec<usize> = g.players.iter().map(|p| p.library.len()).collect();
     assert_eq!(libs, vec![5, 10, 5, 10], "only the two targeted players milled half");
 }
+
+/// Kav Landseeker's Lander is sacrificed at the beginning of the end step on
+/// your NEXT turn — it survives this turn's end step and the opponent's turn.
+#[test]
+fn kav_landseekers_lander_lasts_until_your_next_end_step() {
+    let mut g = two_player_game();
+    for seat in 0..2 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let kav = g.add_card_to_battlefield(0, catalog::kav_landseeker());
+    g.fire_self_etb_triggers(kav, 0);
+    drain_stack(&mut g);
+    let lander = g.battlefield.iter().find(|c| c.definition.name == "Lander").map(|c| c.id).expect("a Lander");
+    let start = g.turn_number;
+    while g.turn_number < start + 2 {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(lander).is_some(), "kept through turn {}", g.turn_number);
+    }
+    assert_eq!(g.active_player_idx, 0);
+    while g.turn_number == start + 2 {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.battlefield_find(lander).is_none(), "sacrificed at your next turn's end step");
+}

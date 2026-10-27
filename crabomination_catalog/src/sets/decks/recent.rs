@@ -3820,8 +3820,8 @@ pub fn cemetery_protector() -> CardDefinition {
 }
 
 /// Thornplate Intimidator — {3}{B} 4/3 Rat Rogue. Offspring {3}. When it
-/// enters, each opponent loses 3 life unless they sacrifice a nonland permanent
-/// or discard a card. (Modeled as each opponent; printed targets one.)
+/// enters, target opponent loses 3 life unless they sacrifice a nonland
+/// permanent or discard a card.
 pub fn thornplate_intimidator() -> CardDefinition {
     CardDefinition {
         name: "Thornplate Intimidator",

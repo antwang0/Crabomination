@@ -8010,15 +8010,18 @@ mod recent2 {
         assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Forest"), "explored land to hand");
     }
 
-    /// Steamcore Scholar draws two then discards two on entry.
+    /// Steamcore Scholar draws two then discards two on entry — or one, if it
+    /// is an instant/sorcery or a flying creature card.
     #[test]
     fn steamcore_scholar_draw_then_discard() {
-        let mut g = two_player_game();
-        for _ in 0..2 { g.add_card_to_library(0, catalog::island()); }
-        g.move_card_to_battlefield_for_test(0, catalog::steamcore_scholar());
-        drain_stack(&mut g);
-        // Net hand size unchanged (+2 draw, −2 discard); two cards now in graveyard.
-        assert_eq!(g.players[0].graveyard.len(), 2, "discarded two cards");
+        for (top, discarded) in [(catalog::island as fn() -> _, 2), (catalog::lightning_bolt, 1)] {
+            let mut g = two_player_game();
+            g.add_card_to_library(0, catalog::island());
+            g.add_card_to_library(0, top());
+            g.move_card_to_battlefield_for_test(0, catalog::steamcore_scholar());
+            drain_stack(&mut g);
+            assert_eq!(g.players[0].graveyard.len(), discarded);
+        }
     }
 
     /// Axgard Cavalry taps to grant haste.

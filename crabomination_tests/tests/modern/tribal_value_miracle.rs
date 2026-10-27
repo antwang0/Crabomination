@@ -315,6 +315,32 @@ fn stormwing_entity_scries_on_etb() {
     drain_stack(&mut g); // scry auto-resolves; no panic = pass
 }
 
+/// Stormwing Entity costs {2}{U} less once you've cast an instant or sorcery
+/// this turn: {1}{U} casts it then, and not before.
+#[test]
+fn stormwing_entity_is_cheaper_after_an_instant() {
+    use crabomination::game::types::Target;
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let s = g.add_card_to_hand(0, catalog::stormwing_entity());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    let cast = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpell { card_id: s, target: None, additional_targets: vec![], mode: None, x_value: None })
+    };
+    assert!(cast(&mut g).is_err(), "full cost with no instant cast yet");
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    cast(&mut g).expect("two mana after an instant");
+}
+
 /// Quirion Ranger untaps a creature by bouncing a Forest you control.
 #[test]
 fn quirion_ranger_bounces_forest_to_untap() {

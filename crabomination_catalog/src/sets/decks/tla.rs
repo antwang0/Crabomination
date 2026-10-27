@@ -2347,8 +2347,8 @@ pub fn cruel_administrator() -> CardDefinition {
 }
 
 /// Sparring Dummy — {1}{G} 1/3 Artifact Creature — Scarecrow. Defender. {T}:
-/// Mill a card; you may put a land milled this way into your hand. (The "gain 2
-/// life if a Lesson is milled" rider is dropped.)
+/// Mill a card; you may put a land milled this way into your hand; gain 2 life
+/// if a Lesson was milled.
 pub fn sparring_dummy() -> CardDefinition {
     CardDefinition {
         name: "Sparring Dummy",

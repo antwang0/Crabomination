@@ -1431,8 +1431,8 @@ pub fn subterranean_schooner() -> CardDefinition {
 }
 
 /// Steamcore Scholar — {2}{U} 2/2 Weird Detective with flying and vigilance.
-/// When it enters, draw two cards, then discard two cards. (The "unless you
-/// discard an instant/sorcery or a flyer" reprieve is dropped.)
+/// When it enters, draw two cards, then discard two cards unless you discard
+/// an instant or sorcery card or a creature card with flying.
 pub fn steamcore_scholar() -> CardDefinition {
     CardDefinition {
         name: "Steamcore Scholar",
@@ -1450,10 +1450,12 @@ pub fn steamcore_scholar() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(2),
             },
-            Effect::Discard {
-                who: Selector::You,
-                amount: Value::Const(2),
-                random: false,
+            Effect::DiscardUnlessKind {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                instead: SelectionRequirement::HasCardType(CardType::Instant)
+                    .or(SelectionRequirement::HasCardType(CardType::Sorcery))
+                    .or(SelectionRequirement::Creature.and(SelectionRequirement::HasKeyword(Keyword::Flying))),
             },
         ]))],
         ..Default::default()

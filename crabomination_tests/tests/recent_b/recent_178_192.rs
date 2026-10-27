@@ -57,7 +57,7 @@ mod recent178 {
         assert!(g.battlefield_find(dead).is_some(), "reanimated the non-Bear creature");
     }
 
-    /// Quick-Draw Katana grants +2/+0 always and first strike during your turn.
+    /// Quick-Draw Katana: +2/+0 and first strike, both only during your turn.
     #[test]
     fn quick_draw_katana_during_turn_bonus() {
         let mut g = two_player_game();
@@ -68,6 +68,10 @@ mod recent178 {
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!(cp.power, 4, "+2/+0 from the katana");
         assert!(cp.keywords().contains(&Keyword::FirstStrike), "first strike on your turn");
+        g.active_player_idx = 1;
+        let cp = g.computed_permanent(bear).unwrap();
+        assert_eq!(cp.power, 2, "no bonus on an opponent's turn");
+        assert!(!cp.keywords().contains(&Keyword::FirstStrike));
     }
 
     /// Salvation Swan blinks a nonflying creature you control when a Bird enters.

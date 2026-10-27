@@ -149,18 +149,18 @@ pub fn cultivator_drone() -> CardDefinition {
 }
 
 /// Salvage Drone — {U} 1/1 Eldrazi Drone. Devoid, Ingest; when it dies,
-/// you may draw a card. (The "if you do, lose 1 life" rider is dropped.)
+/// you may draw a card; if you do, discard a card.
 pub fn salvage_drone() -> CardDefinition {
     use crate::effect::{Selector, Value};
     CardDefinition {
         triggered_abilities: vec![
             ingest(),
             on_dies(Effect::MayDo {
-                description: "draw a card".into(),
-                body: Box::new(Effect::Draw {
-                    who: Selector::You,
-                    amount: Value::Const(1),
-                }),
+                description: "draw a card, then discard a card".into(),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+                    Effect::Discard { who: Selector::You, amount: Value::Const(1), random: false },
+                ])),
             }),
         ],
         ..drone("Salvage Drone", cost(&[u()]), 1, 1)

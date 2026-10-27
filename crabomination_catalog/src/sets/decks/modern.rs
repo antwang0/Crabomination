@@ -20826,7 +20826,9 @@ pub fn maze_of_ith() -> CardDefinition {
 
 /// Exquisite Firecraft — {1}{R}{R} Sorcery. Deal 4 damage to any target.
 ///
-/// The "spell mastery — this spell can't be countered" rider is omitted.
+/// The "spell mastery — this spell can't be countered" rider is omitted: the
+/// card is in the cube pool (frozen); the fix is `CantBeCounteredIfCastCondition`
+/// with `as_cast_condition: spell_mastery_gate()`.
 pub fn exquisite_firecraft() -> CardDefinition {
     CardDefinition {
         name: "Exquisite Firecraft",
@@ -32865,8 +32867,8 @@ pub fn resolute_strike() -> CardDefinition {
 }
 
 /// Adventure Awaits — {1}{G} Sorcery. Look at the top five cards; put a creature
-/// card from among them into your hand, rest on the bottom in a random order.
-/// (The "gain 4 life if you didn't find one" rider is dropped.)
+/// card from among them into your hand, rest on the bottom in a random order;
+/// if you didn't, draw a card.
 pub fn adventure_awaits() -> CardDefinition {
     CardDefinition {
         name: "Adventure Awaits",
@@ -38171,8 +38173,7 @@ pub fn kalitas_traitor_of_ghet() -> CardDefinition {
 }
 
 /// Stormwing Entity — {3}{U}{U} 3/3 Elemental with Flying and Prowess. ETB:
-/// scry 2. (The "costs {2}{U} less if you've cast an instant or sorcery this
-/// turn" reduction is dropped.)
+/// scry 2. Costs {2}{U} less if you've cast an instant or sorcery this turn.
 pub fn stormwing_entity() -> CardDefinition {
     CardDefinition {
         name: "Stormwing Entity",
@@ -38185,6 +38186,13 @@ pub fn stormwing_entity() -> CardDefinition {
         power: 3,
         toughness: 3,
         keywords: vec![Keyword::Flying, Keyword::Prowess],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {2}{U} less to cast if you've cast an instant or sorcery spell this turn.",
+            effect: StaticEffect::SelfColoredCostReducedIf {
+                condition: Predicate::InstantsOrSorceriesCastThisTurnAtLeast { who: PlayerRef::You, at_least: Value::ONE },
+                less: cost(&[generic(2), u()]),
+            },
+        }],
         triggered_abilities: vec![etb(Effect::Scry {
             who: PlayerRef::You,
             amount: Value::Const(2),
