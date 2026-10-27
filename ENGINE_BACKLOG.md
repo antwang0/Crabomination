@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6pH`) — seven primitives, 19 seated-deck rows, stale docs](#fixedopen-2026-10-27-commander-run-01wruxc6ph--seven-primitives-19-seated-deck-rows-stale-docs) | 34 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6`) — emblem abilities, the Revolt funnel class, five primitives](#fixedopen-2026-10-27-commander-run-01wruxc6--emblem-abilities-the-revolt-funnel-class-five-primitives) | 28 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc5`) — 70 seated-deck residuals, two primitives, the creature-damage watcher class](#fixedopen-2026-10-27-commander-run-01wruxc5--70-seated-deck-residuals-two-primitives-the-creature-damage-watcher-class) | 37 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01WvrAp6`) — the CR 603.12 lane, dropped "may"s, the loop-splice ratchet](#fixedopen-2026-10-26-commander-run-01wvrap6--the-cr-60312-lane-dropped-mays-the-loop-splice-ratchet) | 36 |
@@ -291,6 +292,40 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 
 **Gates (`013mwV6T`):** full suite (`CRAB_ANSWER_LOG=strict`) found two failures from this run's changes (Livio's bot shape, the granted-trigger READS census), both fixed; the final full run (after the loyalty-protection fix, tip `b313ba94b` + trackers) read **28,992 / 0 / 7**; workspace clippy **0**; `--bench` byte-identical again at it, cube/sos/sealed seed 10168 7,500 decided, pods seed 10168 × 200 at 3/4/6/8 seats 800 decided, cube/sos/sealed seed 10164 7,498 decided + 2 CR 104.4a draws (the same with the pre-fix binary); the seat test: its `overflow` build restarted this container; `01M2Ffkh` then ran it green at the merged tip); workspace clippy **0**; `--bench` (release-fast) **27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok, A/B vs base `ab833866a` on this box -0.32 % (noise; this box reads ~155 k decisions/s where the last read 196 k); cube/sos/sealed × 300 (seed 10163) 7,500 decided; pods seed 10161 × 200 at 2..8 seats 1,400 decided; the 430 decks holding a changed card × 20 (seed 10162) 2,119/2,120 (one CR 104.4a draw). ⚠ A concurrent pair of clippy commits each added `CastReplay` and the tip did not compile — fixed `87113f40f`; **build after every rebase**. **Next:** ENGINE_BACKLOG `013mwV6T`'s OPEN list (Bilbo's Gambit 31, Agadeem's Awakening 29, Sakashima's Protege 27; a side-aware `RemoveCountersUpTo` pick closes Heartless Act + Rhys); INCOMPLETE's Aegar / Jeska rows as `01M2Ffkh` described them.
 
+## FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6pH`) — seven primitives, 19 seated-deck rows, stale docs
+
+No seats. `pod_residuals.py --rank` filtered against the frozen pools (`cube.rs`/`sos_mode.rs`/`fra_mode.rs`/`draft.rs`),
+plus the previous pass's OPEN list; clean seated decks **5,258 → 5,289 / 6,093**.
+- **Primitives:** `MoveAnyNumberOfCounters { kind }` (only one counter kind is asked — Bioshift, Scrounging Bandar);
+  `CastTopFreeIfElseDraw { land_or_hand }` (a top land is played with a land play left, a miss goes to hand — Ziatora's
+  Envoy); `AlternativeCost.graveyard_cast_exiles` (Glimpse the Cosmos); `SelectionRequirement::AttachedToTargetSlot`
+  (CR 601.2c, both slot-aware walkers — Fiery Annihilation's Equipment slot); `EquipBonus.no_other_auras` (CR 704.5m —
+  Anti-Magic Aura, Consecrate Land); `Effect::DiscardOneOfDrawn` (Casting of Bones; also fits Krovikan Sorcerer, Soldevi
+  Sage, Read the Runes-style text); `MoveChosen` now resolves an `*XFromCost` filter against the resolving X (it read
+  false, so any X-keyed `MoveChosen` filter matched nothing).
+- **Real defects:** Bioshift moved every counter kind (`MoveAllCounters`); Enduring Angel's life-funnel transform
+  dispatched no `Transformed` event (now via `pending_cost_events`); Inscription of Insight bounced one creature and gave
+  the Illusion to you as a +1/+1-counter token (now up to two targets, target player, X/X at mint); Intrepid Adversary
+  paid at cast (multikicker) — now as the ETB resolves, a reflexive payoff; Doctor Jane Foster's card passed through the
+  hand; Lara Croft let every discovery card be played (now one, `OneCastAmongGranted`); Bane, Lord of Darkness always drew
+  (now the target opponent's `AnyPlayerMayAccept`, else a lesser-toughness creature from hand).
+- **Stale rows:** Rona (cast-only already), Mishra's Research Desk (one pick already; its test now asserts it).
+- Also: Bound by Moonsilver's "can't transform" (`CantTransform { IsHostOfSource }`).
+
+OPEN:
+- Cube-frozen, found and not shipped: Wilt-Leaf Liege (`opponent_discard_deploys` missing — Obstinate Baloth's field),
+  Doomsday Excruciator ("if it was cast" + face down: intervening-if `SourceWasCast` + `ExileFaceDown`), Hide in Plain
+  Sight (look at five, cloak two: `LookPick { take: 2, keep_on_top, rest_bottom_random }` then `Cloak 2`), Pull from the
+  Grave (two target slots: `ApplyToTargets { max: 2, min: 0 }`).
+- Looked at, not built: Wizard's Rockets (an `{X}` mana-cost mana ability — the auto-tapper would size X at 0 and sacrifice
+  it for nothing; X = 1 stays the safe shape), Tapestry Warden's "stations using toughness" (matters only beside a Station
+  card), Honest Work's rename (names aren't a layered characteristic), Donnie & April (the bot already keeps the two player
+  slots distinct), Market Gnome's craft-exile trigger (no craft-cost exile event), Krenko's Buzzcrusher's per-player
+  destroy (a per-player up-to pick the bot would also aim at its own lands), Nimble Hobbit's "sacrifice a Food or pay"
+  (a `MaySacrifice.else_` that prompts runs after the answer log is cleared, so a suspending `MayPay` there would re-ask
+  the sacrifice on resume — check that before nesting prompts in `else_`).
+- The top `pod_residuals --rank` rows left are auto-picks (Goldberry, Baron Zemo, Scrap Welder, Rhys, Thorin, Loki).
+
 ## FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6`) — emblem abilities, the Revolt funnel class, five primitives
 
 No seats. `pod_residuals.py --rank` worked top-down with the cube/sos pools skipped; clean seated decks **5,176 → 5,24x / 6,093**.
@@ -313,9 +348,8 @@ No seats. `pod_residuals.py --rank` worked top-down with the cube/sos pools skip
 OPEN:
 - ✅ Reckless Blaze (the watcher binds `DamagedBySourceThisTurn` off the death LKI) and CR 603.7d's delayed-trigger
   source (`Emblem.source`) landed late in the run.
-- Still needs a primitive: Glimpse the
-  Cosmos (graveyard alt cast's exile rider), Casting of Bones (discard among the cards drawn), Anti-Magic Aura /
-  Consecrate Land (Aura-legality filter), Wizard's Rockets (an {X} mana ability), Glowcap Lantern (an Equipment-granted
+- Still needs a primitive: ~~Glimpse the Cosmos~~, ~~Casting of Bones~~, ~~Anti-Magic Aura / Consecrate Land~~
+  (✅ `01WRuXc6pH`, whose OPEN says why the rest stay), Wizard's Rockets (an {X} mana ability), Glowcap Lantern (an Equipment-granted
   "look at the top card" — view-only), Honest Work's rename, Donnie & April's "each mode targets a different player".
 - Cube-frozen (unchanged, pool change needed): Vryn Wingmare, Exquisite Firecraft, Lava Coil, Pyrotechnic Performer,
   Mausoleum Turnkey's "of an opponent's choice", Ark of Hunger, Page, Loose Leaf.
