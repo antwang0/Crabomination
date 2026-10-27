@@ -188,8 +188,7 @@ pub fn eiganjo_exemplar() -> CardDefinition {
 /// Loki Laufeyson — {1}{R} legendary 2/1 God Sorcerer Villain. {1}, {T}: when
 /// you next cast an instant or sorcery spell with mana value at most Loki's
 /// power this turn, copy it (you may choose new targets). Power-up {4}{R}:
-/// two +1/+1 counters. (Residual: a bigger instant or sorcery spends the
-/// watch without a copy.)
+/// two +1/+1 counters.
 pub fn loki_laufeyson() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![

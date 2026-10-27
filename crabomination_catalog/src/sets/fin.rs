@@ -8420,7 +8420,7 @@ pub fn yshtola_rhul() -> CardDefinition {
 
 /// Beatrix, Loyal General — {4}{W}{W} 4/4 Legendary Human Soldier, vigilance.
 /// At the beginning of combat on your turn, attach any number of Equipment you
-/// control to target creature you control (modeled as "attach all of them").
+/// control to target creature you control.
 pub fn beatrix_loyal_general() -> CardDefinition {
     CardDefinition {
         name: "Beatrix, Loyal General",
@@ -8439,7 +8439,7 @@ pub fn beatrix_loyal_general() -> CardDefinition {
                 EventKind::StepBegins(crate::game::types::TurnStep::BeginCombat),
                 EventScope::YourControl,
             ),
-            effect: Effect::Attach {
+            effect: Effect::AttachAnyNumberTo {
                 what: Selector::EachPermanent(
                     SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Equipment)
                         .and(SelectionRequirement::ControlledByYou),

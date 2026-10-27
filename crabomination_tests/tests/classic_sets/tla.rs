@@ -3328,6 +3328,14 @@ fn honest_work_shrinks_and_taps() {
     assert!(g.battlefield_find(foe).unwrap().tapped, "tapped on ETB");
     assert_eq!(g.battlefield_find(foe).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 0,
         "counters removed");
+    // It keeps the Aura's "{T}: Add {C}" though it lost its own abilities.
+    g.battlefield_find_mut(foe).unwrap().tapped = false;
+    g.clear_sickness(foe);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: foe, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("tap for {C}");
+    assert_eq!(g.players[1].mana_pool.colorless_amount(), 1);
 }
 
 /// Bumi runs up to X modes (X = Lessons in graveyard). With 2 Lessons and the

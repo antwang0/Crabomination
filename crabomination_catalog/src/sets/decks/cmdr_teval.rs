@@ -1159,8 +1159,9 @@ fn level_up(mana: ManaCost, from_level: u8) -> ActivatedAbility {
 /// play cards exiled with this Class, and you may spend mana as though it were
 /// mana of any color to cast those spells.
 ///
-/// At level 3 the exile is `ExileTopFaceDownGrantPlay` (playable, mana as though of any color).
-/// Approximation: cards exiled before level 3 don't become playable later.
+/// At level 3 the exile is `ExileTopFaceDownGrantPlay` (playable, mana as though of any color),
+/// and reaching level 3 grants the same play to the cards exiled before it while the Class
+/// stays (paid as mana of any type — the same payments bar a {C} pip).
 pub fn rogue_class() -> CardDefinition {
     CardDefinition {
         subtypes: Subtypes {
@@ -1197,7 +1198,20 @@ pub fn rogue_class() -> CardDefinition {
         }],
         activated_abilities: vec![
             level_up(cost(&[generic(1), u(), b()]), 1),
-            level_up(cost(&[generic(2), u(), b()]), 2),
+            ActivatedAbility {
+                effect: Effect::Seq(vec![
+                    Effect::AdvanceClassLevel,
+                    Effect::GrantMayPlay {
+                        what: Selector::EachMatching { zone: crate::effect::ZoneRef::Exile, filter: R::ExiledWithSource },
+                        duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield { source: crate::card::CardId(0), one_spell_a_turn: false },
+                        to_owner: false,
+                        exile_after: false,
+                        pay_own_cost: true,
+                        any_color: true,
+                    },
+                ]),
+                ..level_up(cost(&[generic(2), u(), b()]), 2)
+            },
         ],
         ..permanent("Rogue Class", cost(&[u(), b()]), vec![CardType::Enchantment])
     }

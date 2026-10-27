@@ -4539,8 +4539,8 @@ fn yshtola_rhul_blinks_and_extends_first_end_step() {
     assert_eq!(g.additional_end_steps, 1, "first end step banks an extra");
 }
 
-/// Beatrix attaches every Equipment you control to the chosen creature at
-/// combat.
+/// Beatrix may attach any number of the Equipment you control to the targeted
+/// creature at combat (headless: every one).
 #[test]
 fn beatrix_attaches_all_equipment_at_combat() {
     let mut g = two_player_game();

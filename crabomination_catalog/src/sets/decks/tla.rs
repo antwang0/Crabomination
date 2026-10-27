@@ -4710,7 +4710,7 @@ pub fn bumi_king_of_three_trials() -> CardDefinition {
 
 /// Honest Work — {U} Aura. Enchant a creature an opponent controls. ETB: tap it
 /// and remove all its counters. It loses all abilities and becomes a 1/1
-/// Citizen. (The granted "{T}: Add {C}" / rename rider is omitted.)
+/// Citizen with "{T}: Add {C}". (The rename to Humble Merchant is omitted.)
 pub fn honest_work() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -4731,6 +4731,7 @@ pub fn honest_work() -> CardDefinition {
             set_base_pt: Some((1, 1)),
             set_creature_types: Some(vec![CreatureType::Citizen]),
             remove_abilities: true,
+            activated_abilities: vec![crate::catalog::sets::tap_add_colorless()],
             ..Default::default()
         }),
         triggered_abilities: vec![etb(Effect::Seq(vec![

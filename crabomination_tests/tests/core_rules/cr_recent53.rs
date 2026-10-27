@@ -442,9 +442,8 @@ fn cr_603_6_an_etb_watcher_fires_once_per_entering_token() {
     assert_eq!(g.players[0].life, life + 3, "one Soul Warden trigger per token, not one per batch");
 }
 
-/// CR 603.6 — "put **that many** +1/+1 counters" is spelled as one counter per
-/// entering token, so the fan-out is what makes the total right. Pinning this
-/// one with `once_per_batch` would put a single counter for a batch of three.
+/// CR 603.6 / 603.2c — "whenever one or more tokens … enter, put **that many**
+/// +1/+1 counters": one trigger for the batch, counting every token in it.
 #[test]
 fn cr_603_6_woodland_champion_counts_the_whole_token_batch() {
     let mut g = two_player_game();

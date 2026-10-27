@@ -949,8 +949,12 @@ fn rogue_class_exiles_on_hit_and_levels_into_menace() {
     activate(&mut g, class, 0, None);
     assert!(has_keyword(&g, bears, Keyword::Menace));
 
-    // Level 3: the next hit's card is playable.
-    g.battlefield_find_mut(class).unwrap().class_level = 3;
+    // Level 3 — "you may play cards exiled with this Class": the Bolt exiled
+    // at level 1 becomes playable as the class levels up.
+    activate(&mut g, class, 1, None);
+    assert_eq!(g.battlefield_find(class).unwrap().class_level, 3);
+    let early = g.exile.iter().find(|c| c.id == top).unwrap();
+    assert_eq!(early.may_play_until.unwrap().player, 0, "earlier exile playable at level 3");
     let second = g.add_card_to_library(1, catalog::grizzly_bears());
     g.battlefield_find_mut(bears).unwrap().tapped = false;
     swing(&mut g, bears);
