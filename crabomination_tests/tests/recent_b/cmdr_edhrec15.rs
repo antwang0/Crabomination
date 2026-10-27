@@ -3,6 +3,7 @@
 
 use crabomination::card::{CardId, CardType, CounterType, Keyword};
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, StackItem, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -1341,8 +1342,34 @@ fn bane_turns_indestructible_at_half_life() {
     let bear = ready(&mut g, 0, catalog::grizzly_bears());
     let hand = g.players[0].hand.len();
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)])); // the opponent lets Bane draw
     cast_as(&mut g, 1, bolt, &[perm(bear)]).expect("bolt");
     assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// Bane's other branch: the target opponent declines the draw, so its
+/// controller may put a creature card with toughness at most the dead one's
+/// (a 2/2 Bear: the 2/1 Elves fits, the 3/3 Giant doesn't) onto the battlefield.
+#[test]
+fn bane_opponent_declines_the_draw_and_a_smaller_creature_enters() {
+    let mut g = pod(2);
+    library(&mut g, 0, 2);
+    ready(&mut g, 0, catalog::bane_lord_of_darkness());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    let elves = g.add_card_to_hand(0, catalog::llanowar_elves());
+    let hand = g.players[0].hand.len();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    // The opponent declines; Bane's controller names the Giant first — not a
+    // candidate, so the pick falls to the Elves.
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Bool(false),
+        DecisionAnswer::Cards(vec![giant, elves]),
+    ]));
+    cast_as(&mut g, 1, bolt, &[perm(bear)]).expect("bolt");
+    assert!(g.battlefield_find(elves).is_some(), "toughness 1 <= 2");
+    assert!(g.battlefield_find(giant).is_none(), "toughness 3 > 2");
+    assert_eq!(g.players[0].hand.len(), hand - 1, "no draw");
 }
 
 /// Body Launderer: dying returns a non-Rogue creature card with lesser or

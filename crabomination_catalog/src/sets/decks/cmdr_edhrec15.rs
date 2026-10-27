@@ -3280,8 +3280,9 @@ pub fn rise_of_the_dread_marn() -> CardDefinition {
 
 /// Bane, Lord of Darkness — {1}{W}{U}{B} 5/2 legendary God. Indestructible
 /// while your life is at most half your starting life. Another nontoken
-/// creature of yours dying draws you a card (the opponent's choice to offer a
-/// creature from your hand instead isn't modeled).
+/// creature of yours dying: target opponent may have you draw a card; if they
+/// don't, you may put a creature card with equal or lesser toughness from
+/// your hand onto the battlefield.
 pub fn bane_lord_of_darkness() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![static_ab(
@@ -3297,7 +3298,25 @@ pub fn bane_lord_of_darkness() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
                 .with_filter(trigger_is(R::Not(Box::new(R::IsToken)).and(R::OtherThanSource))),
-            effect: draw(1),
+            effect: Effect::TargetPlayerThen {
+                filter: R::OpponentPlayer,
+                then: Box::new(Effect::AnyPlayerMayAccept {
+                    who: PlayerRef::Target(0),
+                    prompt: "Have Bane's controller draw a card (else they may put a creature onto the battlefield)?"
+                        .into(),
+                    accepted: Box::new(draw(1)),
+                    otherwise: Box::new(Effect::WithX {
+                        x: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
+                        body: Box::new(Effect::MoveChosen {
+                            from: Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Hand, filter: R::Creature },
+                            filter: Some(R::ToughnessAtMostXFromCost),
+                            count: Value::ONE,
+                            up_to: true,
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                        }),
+                    }),
+                }),
+            },
         }],
         ..legend("Bane, Lord of Darkness", cost(&[generic(1), w(), u(), b()]), vec![CreatureType::God], 5, 2)
     }
