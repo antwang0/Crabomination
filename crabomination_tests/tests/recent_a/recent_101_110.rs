@@ -221,7 +221,7 @@ mod recent101 {
         let before = g.players[0].hand.len(); // spell still in hand
         g.perform_action(GameAction::CastSpell {
             card_id: spell,
-            target: None,
+            target: Some(crabomination::game::types::Target::Player(0)),
             additional_targets: vec![],
             mode: None,
             x_value: None,

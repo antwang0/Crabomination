@@ -5882,7 +5882,9 @@ pub fn vryn_wingmare() -> CardDefinition {
 /// printed-Oracle edge case where prior damage marked on the creature
 /// would combine with Lava Coil's 4 to kill it is not captured (no
 /// general damage-replacement-with-exile primitive on the engine
-/// yet). Functionally close enough for typical play.
+/// yet). Functionally close enough for typical play. ⚠ Cube pool (frozen):
+/// the exact shape now exists — `ExileIfWouldDieThisTurn` on the target, then
+/// the 4 damage.
 pub fn lava_coil() -> CardDefinition {
     use crate::card::Predicate;
     CardDefinition {
@@ -13788,7 +13790,9 @@ pub fn rakish_scoundrel() -> CardDefinition {
 
 /// Pyrotechnic Performer — {1}{R} 3/2 Lizard Assassin. When it's turned face up,
 /// it deals damage equal to its power to each opponent. Disguise {R}. (MKM — the
-/// "another creature you control" clause is simplified to this creature.)
+/// "another creature you control" clause is simplified to this creature; cube
+/// pool, frozen — the fix is `EventScope::YourControl` with
+/// `DealDamageEqualToPower { source: TriggerSource }`.)
 pub fn pyrotechnic_performer() -> CardDefinition {
     CardDefinition {
         name: "Pyrotechnic Performer",
@@ -62754,12 +62758,25 @@ pub fn mythos_of_nethroi() -> CardDefinition {
 }
 
 /// Mutual Destruction — {B} Sorcery. As an additional cost, sacrifice a
-/// creature. Destroy target creature. (Conditional flash is dropped.)
+/// creature. Destroy target creature. Flash while you control a permanent with
+/// flash.
 pub fn mutual_destruction() -> CardDefinition {
     CardDefinition {
         name: "Mutual Destruction",
         cost: cost(&[b()]),
         card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "This spell has flash as long as you control a permanent with flash.",
+            effect: StaticEffect::SelfFlashIf {
+                condition: Predicate::SelectorCountAtLeast {
+                    sel: Selector::ControlledBy {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasKeyword(Keyword::Flash),
+                    },
+                    n: Value::ONE,
+                },
+            },
+        }],
         additional_cast_cost: vec![crate::card::AdditionalCastCost::SacrificePermanent {
             filter: SelectionRequirement::Creature.and(SelectionRequirement::ControlledByYou),
             count: 1,

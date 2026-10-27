@@ -245,9 +245,8 @@ pub fn suit_up() -> CardDefinition {
     }
 }
 
-/// Careful Consideration — {2}{U}{U} Instant. You draw four cards, then discard
-/// three (two if cast in your main phase). (Printed "target player" is modeled as
-/// you — the standard self-cast.)
+/// Careful Consideration — {2}{U}{U} Instant. Target player draws four cards,
+/// then discards three (two if you cast it during your main phase).
 pub fn careful_consideration() -> CardDefinition {
     use crate::game::types::TurnStep;
     CardDefinition {
@@ -256,7 +255,7 @@ pub fn careful_consideration() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Draw {
-                who: Selector::You,
+                who: target_filtered(R::Player),
                 amount: Value::Const(4),
             },
             Effect::If {
@@ -269,12 +268,12 @@ pub fn careful_consideration() -> CardDefinition {
                     ]),
                 ]),
                 then: Box::new(Effect::Discard {
-                    who: Selector::You,
+                    who: Selector::Player(PlayerRef::Target(0)),
                     amount: Value::Const(2),
                     random: false,
                 }),
                 else_: Box::new(Effect::Discard {
-                    who: Selector::You,
+                    who: Selector::Player(PlayerRef::Target(0)),
                     amount: Value::Const(3),
                     random: false,
                 }),

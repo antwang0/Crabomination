@@ -5880,13 +5880,13 @@ pub fn sunset_saboteur() -> CardDefinition {
 
 /// Station Monitor — {W}{U} 2/2 Lizard Artificer. Whenever you cast your second
 /// spell each turn, create a 1/1 colorless Drone artifact creature token with
-/// flying. (The "can block only flyers" rider on the token is dropped.)
+/// flying that can block only creatures with flying.
 pub fn station_monitor() -> CardDefinition {
     let drone = TokenDefinition {
         name: "Drone".into(),
         power: 1,
         toughness: 1,
-        keywords: vec![Keyword::Flying],
+        keywords: vec![Keyword::Flying, Keyword::CanBlockOnlyFlying],
         card_types: vec![CardType::Artifact, CardType::Creature],
         subtypes: Subtypes {
             creature_types: vec![CreatureType::Drone],

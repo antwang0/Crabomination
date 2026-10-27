@@ -1315,8 +1315,24 @@ fn careful_consideration_discount_needs_your_main_phase() {
         g.add_card_to_library(0, catalog::island());
     }
     let cc = g.add_card_to_hand(0, catalog::careful_consideration());
-    cast(&mut g, cc, &[]).expect("instant");
+    cast(&mut g, cc, &[Target::Player(0)]).expect("instant");
     assert_eq!(g.players[0].hand.len(), 1, "drew four, discarded three");
+}
+
+/// CR 115.1 — Careful Consideration's "target player" can be an opponent: they
+/// draw four and discard (two — it's the caster's main phase that counts).
+#[test]
+fn careful_consideration_targets_a_player() {
+    let mut g = pod(2);
+    g.players[1].hand.clear();
+    for _ in 0..4 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    let mine = g.players[0].hand.len();
+    let cc = g.add_card_to_hand(0, catalog::careful_consideration());
+    cast(&mut g, cc, &[Target::Player(1)]).expect("cast at seat 1");
+    assert_eq!(g.players[1].hand.len(), 2, "they drew four and discarded two");
+    assert_eq!(g.players[0].hand.len(), mine, "the caster drew nothing");
 }
 
 /// Nightveil Specter — "You may play lands and cast spells from among cards

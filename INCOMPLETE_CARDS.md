@@ -2336,4 +2336,4 @@ a legal choice, and the three "target **player**" ones (Cabal Therapy, Brain Pry
 slot only in `primary_target_filter` — so the ACTIVATION / CAST validator took a target the enumerator never
 offered, and Cabal Therapy cast with no target at all. **Open, by seats:** Jace, the Perfected Mind 12 (a loyalty ability carries one
 target — the Jeska row); Vindictive Lich 5 (its modes target, the sacrifice choice is the engine's); End of the
-Hunt 2; Cabal Therapist / Cabal Therapy / Careful Consideration / Sméagol 1 each; eleven more at 0 seats.
+Hunt 2; Cabal Therapist / Cabal Therapy / Sméagol 1 each (Careful Consideration closed 2026-10-27); eleven more at 0 seats.

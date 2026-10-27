@@ -1768,8 +1768,8 @@ pub fn professor_zei_anthropologist() -> CardDefinition {
 }
 
 /// Foggy Swamp Spirit Keeper — {1}{U}{B} 2/4 Human Druid Ally. Lifelink. On
-/// your second draw each turn, make a 1/1 Spirit token. (The token's
-/// Spirit-only block restriction is approximated as a vanilla 1/1.)
+/// your second draw each turn, make a 1/1 Spirit token that can't block or be
+/// blocked by non-Spirit creatures.
 pub fn foggy_swamp_spirit_keeper() -> CardDefinition {
     CardDefinition {
         name: "Foggy Swamp Spirit Keeper",

@@ -1972,9 +1972,10 @@ fn station_monitor_second_spell_makes_drone() {
         card_id: s2, target: Some(Target::Permanent(d2)), additional_targets: vec![], mode: None, x_value: None,
     }).expect("second spell");
     drain_stack(&mut g);
+    let drone = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Drone");
     assert!(
-        g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Drone"),
-        "second spell created a Drone"
+        drone.is_some_and(|d| d.definition.keywords.contains(&Keyword::CanBlockOnlyFlying)),
+        "second spell created a Drone that blocks only flyers"
     );
 }
 

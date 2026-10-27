@@ -1851,6 +1851,30 @@ fn mutual_destruction_sacs_and_destroys() {
     assert!(g.battlefield_find(victim).is_none(), "destroyed target creature");
 }
 
+/// Mutual Destruction has flash only while you control a permanent with flash.
+#[test]
+fn mutual_destruction_flash_needs_a_flash_permanent() {
+    for (flasher, ok) in [(false, false), (true, true)] {
+        let mut g = two_player_game();
+        g.active_player_idx = 1;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let md = g.add_card_to_hand(0, catalog::mutual_destruction());
+        let fodder = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        if flasher {
+            g.add_card_to_battlefield(0, catalog::ambush_viper());
+        }
+        let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![fodder])]));
+        let cast = g.perform_action(GameAction::CastSpell {
+            card_id: md, target: Some(Target::Permanent(victim)),
+            additional_targets: vec![], mode: None, x_value: None,
+        });
+        assert_eq!(cast.is_ok(), ok, "on the opponent's turn, flash permanent: {flasher}");
+    }
+}
+
 /// Everquill Phoenix's mutate trigger mints a Feather token whose sac ability
 /// reanimates a Phoenix from the graveyard.
 #[test]
