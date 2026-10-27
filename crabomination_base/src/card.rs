@@ -1622,6 +1622,11 @@ pub struct MayPlayPermission {
     /// `Effect::EntersTappedAfterGrantedPlay`.
     #[serde(default)]
     pub enters_tapped: bool,
+    /// CR 702.41a — "if you do, it has affinity for artifacts" (Chiss-Goria,
+    /// Forge Tyrant): a cast through this grant costs {1} less per artifact
+    /// its caster controls. Set by `Effect::AffinityAfterGrantedCast`.
+    #[serde(default)]
+    pub affinity_for_artifacts: bool,
 }
 
 /// The engine's bound on counters of one kind on one object. The rules set

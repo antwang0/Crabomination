@@ -9876,6 +9876,7 @@ impl GameState {
                 pay_life: false,
                 bottom_after: false,
                 undaunted: false,
+                affinity_for_artifacts: false,
                 enters_tapped: false,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
@@ -12234,6 +12235,7 @@ impl GameState {
                 pay_life: false,
                 bottom_after: false,
                 undaunted: false,
+                affinity_for_artifacts: false,
                 enters_tapped: false,
             });
             self.exile.push(card);
@@ -23725,6 +23727,7 @@ impl GameState {
                 pay_life: false,
                 bottom_after: false,
                 undaunted: false,
+                affinity_for_artifacts: false,
                 enters_tapped: false,
             });
             let card_id = card.id;
@@ -23749,6 +23752,7 @@ impl GameState {
                 pay_life: false,
                 bottom_after: false,
                 undaunted: false,
+                affinity_for_artifacts: false,
                 enters_tapped: false,
             });
             let card_id = card.id;
@@ -24518,6 +24522,7 @@ impl GameState {
                 pay_life: false,
                 bottom_after: false,
                 undaunted: false,
+                affinity_for_artifacts: false,
                 enters_tapped: false,
             });
             card.granted_alt_cast_cost_eot = Some(cost);
@@ -31358,6 +31363,7 @@ impl GameState {
                             pay_life: true,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                     }
@@ -32047,6 +32053,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                         card.granted_alt_cast_cost_eot = Some(taxed);

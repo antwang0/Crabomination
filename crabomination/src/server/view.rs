@@ -5311,6 +5311,7 @@ mod tests {
             pay_life: false,
             bottom_after: false,
             undaunted: false,
+            affinity_for_artifacts: false,
             enters_tapped: false,
         });
         state.exile.push(bolt);

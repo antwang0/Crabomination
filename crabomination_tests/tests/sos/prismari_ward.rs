@@ -1300,6 +1300,7 @@ fn practiced_scrollsmith_may_play_expires_after_controllers_next_turn() {
         pay_life: false,
         bottom_after: false,
         undaunted: false,
+        affinity_for_artifacts: false,
         enters_tapped: false,
     });
     g.exile.push(pox);
@@ -1565,6 +1566,7 @@ fn may_play_granted_on_your_own_turn_survives_until_your_next_turn_ends() {
                 pay_life: false,
                 bottom_after: false,
                 undaunted: false,
+                affinity_for_artifacts: false,
                 enters_tapped: false,
             });
         }
@@ -1613,6 +1615,7 @@ fn may_play_land_is_a_land_drop_not_a_cast() {
             pay_life: false,
             bottom_after: false,
             undaunted: false,
+            affinity_for_artifacts: false,
             enters_tapped: false,
         });
     }
@@ -2332,6 +2335,7 @@ fn nita_trigger_fans_counters_when_casting_unowned_spell() {
         pay_life: false,
         bottom_after: false,
         undaunted: false,
+        affinity_for_artifacts: false,
         enters_tapped: false,
     });
     let bolt_id = bolt.id;

@@ -2400,6 +2400,7 @@ impl Effect {
             | Effect::LockSpellsAfterGrantedCast { what }
             | Effect::BottomInsteadAfterGrantedCast { what }
             | Effect::EntersTappedAfterGrantedPlay { what }
+            | Effect::AffinityAfterGrantedCast { what }
             | Effect::OneCastAmongGranted { what }
             | Effect::GrantedCastOnly { what }
             | Effect::OneCastPerTurnAmongGranted { what }
@@ -3539,6 +3540,7 @@ impl Effect {
             | Effect::LockSpellsAfterGrantedCast { what }
             | Effect::BottomInsteadAfterGrantedCast { what }
             | Effect::EntersTappedAfterGrantedPlay { what }
+            | Effect::AffinityAfterGrantedCast { what }
             | Effect::OneCastAmongGranted { what }
             | Effect::GrantedCastOnly { what }
             | Effect::OneCastPerTurnAmongGranted { what }

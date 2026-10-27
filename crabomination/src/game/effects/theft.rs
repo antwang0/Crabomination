@@ -65,6 +65,7 @@ impl GameState {
                 pay_life: false,
                 bottom_after: false,
                 undaunted: false,
+                affinity_for_artifacts: false,
                 enters_tapped: false,
             });
             card.granted_alt_cast_cost_eot =

@@ -4368,6 +4368,7 @@ impl GameState {
                     pay_life: false,
                     bottom_after: false,
                     undaunted: false,
+                    affinity_for_artifacts: false,
                     enters_tapped: false,
                 });
                 card.exiled_with = ctx.source;
@@ -15754,6 +15755,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                         card.granted_alt_cast_cost_eot = Some(cost);
@@ -20785,6 +20787,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                         card.granted_alt_cast_cost_eot =
@@ -25351,6 +25354,7 @@ impl GameState {
                                         pay_life: false,
                                         bottom_after: false,
                                         undaunted: false,
+                                        affinity_for_artifacts: false,
                                         enters_tapped: false,
                                     });
                                     // No granted cost: the cast is free.
@@ -29612,6 +29616,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: *grant == G::CreatureMayWhileExiled,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                     }
@@ -31730,6 +31735,7 @@ impl GameState {
                         pay_life: false,
                         bottom_after: false,
                         undaunted: false,
+                        affinity_for_artifacts: false,
                         enters_tapped: false,
                     });
                     card.exiled_with = Some(source);
@@ -32955,6 +32961,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                     }
@@ -33353,6 +33360,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                         self.exile.push(*card);
@@ -37489,6 +37497,7 @@ impl GameState {
                         pay_life: false,
                         bottom_after: false,
                         undaunted: false,
+                        affinity_for_artifacts: false,
                         enters_tapped: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![]));
@@ -42795,6 +42804,7 @@ impl GameState {
                                 pay_life: false,
                                 bottom_after: false,
                                 undaunted: false,
+                                affinity_for_artifacts: false,
                                 enters_tapped: false,
                             });
                             // Pay-to-cast rider (CR 609.4b): "any color" is
@@ -42875,6 +42885,7 @@ impl GameState {
                         pay_life: false,
                         bottom_after: false,
                         undaunted: false,
+                        affinity_for_artifacts: false,
                         enters_tapped: false,
                     });
                     card.granted_alt_cast_cost_eot = Some(card.definition.cost.clone());
@@ -43588,6 +43599,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                     }
@@ -43972,6 +43984,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                         if *pay_own_cost {
@@ -44015,6 +44028,7 @@ impl GameState {
                             pay_life: true,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                     }
@@ -44061,6 +44075,18 @@ impl GameState {
                         && let Some(perm) = card.may_play_until.as_mut()
                     {
                         perm.enters_tapped = true;
+                    }
+                }
+                Ok(())
+            }
+
+            Effect::AffinityAfterGrantedCast { what } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
+                    if let Some(card) = self.find_card_anywhere_mut(cid)
+                        && let Some(perm) = card.may_play_until.as_mut()
+                    {
+                        perm.affinity_for_artifacts = true;
                     }
                 }
                 Ok(())
@@ -44562,6 +44588,7 @@ impl GameState {
                             pay_life: false,
                             bottom_after: false,
                             undaunted: false,
+                            affinity_for_artifacts: false,
                             enters_tapped: false,
                         });
                         if !*free {

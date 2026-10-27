@@ -9715,6 +9715,7 @@ impl GameState {
                         one_cast_group: None,
                         bottom_after: false,
                         undaunted: false,
+                        affinity_for_artifacts: false,
                         enters_tapped: false,
                     });
                     // Cast paying its own cost (the alt cost shares the grant's lifetime).

@@ -361,7 +361,7 @@ fn party_thrasher_gives_exile_casts_convoke() {
         c.may_play_until = Some(MayPlayPermission {
             cast_only: false, locks_further_casts: false, one_cast_group: None, player: 0,
             granted_turn: g.turn_number, duration: MayPlayDuration::EndOfThisTurn, exile_after: false,
-            miracle: false, pay_life: false, bottom_after: false, undaunted: false, enters_tapped: false,
+            miracle: false, pay_life: false, bottom_after: false, undaunted: false, affinity_for_artifacts: false, enters_tapped: false,
         });
         c.granted_alt_cast_cost_eot = Some(c.definition.cost.clone());
         g.exile.push(c);

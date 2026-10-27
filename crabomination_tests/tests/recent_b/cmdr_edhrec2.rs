@@ -821,6 +821,7 @@ fn exiled_playable(g: &mut GameState, seat: usize, def: crabomination::card::Car
         one_cast_group: None,
         bottom_after: false,
         undaunted: false,
+        affinity_for_artifacts: false,
         enters_tapped: false,
     });
     id

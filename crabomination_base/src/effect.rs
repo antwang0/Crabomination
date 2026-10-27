@@ -11274,6 +11274,10 @@ pub enum Effect {
     /// or a permanent spell cast through the grant enters the battlefield
     /// tapped (Kaldring, the Rimestaff; CR 614.1c).
     EntersTappedAfterGrantedPlay { what: Selector },
+    /// Mark the may-play permission on each card `what` resolves to (chain
+    /// after `GrantMayPlay`): "if you cast a spell this way, it has affinity
+    /// for artifacts" (Chiss-Goria, Forge Tyrant; CR 702.41a).
+    AffinityAfterGrantedCast { what: Selector },
     /// Mark the may-play permissions on each card `what` resolves to as one
     /// group (chain after `GrantMayPlay`): "you may cast a spell from among
     /// them" — the first cast through any of them consumes the rest.

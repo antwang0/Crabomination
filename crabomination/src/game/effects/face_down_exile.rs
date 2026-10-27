@@ -42,6 +42,7 @@ impl GameState {
             pay_life: false,
             bottom_after: false,
             undaunted: false,
+            affinity_for_artifacts: false,
             enters_tapped: false,
         });
         // CR 609.4b — "mana of any type can be spent": paying the

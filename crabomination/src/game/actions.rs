@@ -2336,6 +2336,13 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
     if from_exile && card.may_play_until.as_ref().is_some_and(|m| m.undaunted && m.player == caster) {
         reduction += state.opponents_of(caster).len() as u32;
     }
+    // CR 702.41a — a grant that gives the spell affinity for artifacts
+    // (Chiss-Goria), counted as the spell is cast.
+    if from_exile && card.may_play_until.as_ref().is_some_and(|m| m.affinity_for_artifacts && m.player == caster) {
+        let artifacts =
+            state.battlefield.iter().filter(|c| c.controller == caster && c.definition.is_artifact()).count();
+        reduction = reduction.saturating_add(artifacts as u32);
+    }
     // CR 315.5 — a face-up conspiracy's cost statics apply from the command
     // zone (Hymn of the Wilds, Brago's Favor), so walk those too.
     for src in srcs {
@@ -17690,6 +17697,7 @@ impl GameState {
             pay_life: false,
             bottom_after: false,
             undaunted: false,
+            affinity_for_artifacts: false,
             enters_tapped: false,
         });
         card.granted_alt_cast_cost_eot = Some(crate::mana::ManaCost::new(vec![

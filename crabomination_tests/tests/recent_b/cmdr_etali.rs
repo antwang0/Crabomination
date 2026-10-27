@@ -606,6 +606,7 @@ fn passionate_archaeologist_burns_for_exile_casts() {
         pay_life: false,
         bottom_after: false,
         undaunted: false,
+        affinity_for_artifacts: false,
         enters_tapped: false,
     });
     g.exile.push(card);
@@ -672,6 +673,7 @@ fn b_grant_free(g: &mut GameState, id: CardId) {
         pay_life: false,
         bottom_after: false,
         undaunted: false,
+        affinity_for_artifacts: false,
         enters_tapped: false,
     });
 }

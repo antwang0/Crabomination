@@ -67,6 +67,7 @@ fn cr_601_3a_play_card_exiled_with_grant() {
             pay_life: false,
             bottom_after: false,
             undaunted: false,
+            affinity_for_artifacts: false,
             enters_tapped: false,
         });
         // "You may play them" pays the card's own cost (Nightveil's pay_own_cost).
