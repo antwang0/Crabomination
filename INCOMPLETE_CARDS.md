@@ -2082,7 +2082,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Suppressor Skyguard | the shield lasts the turn, not just that combat | `PreventAllCombatDamageToPlayerThisTurn` has no per-combat duration |
 | 🟡 Zethi, Arcane Blademaster | the ETB chooses its instants (the cheapest) instead of targeting them | `Effect::ExileFromGraveyard` with `Value::TimesKicked`; an ETB's auto-targeting fills one slot of a `CapTargetsAt` |
 | ~~Yasharn, Implacable Earth~~ ✅ | fixed 2026-10-24: emerge, offering, casualty and bargain sacrifices ask `sacrificeable_for_cost` like the additional-cost and alternative-cost paths | — |
-| 🟡 Karn, Living Legacy | the emblem's ability is granted to each artifact as "{T}: 1 damage": a summoning-sick artifact creature can't use it, and the artifact (not the emblem) is the source | emblems carry no activated abilities; `GrantActivatedAbility` in the emblem's statics is the lane |
 | 🟡 Rootweaver Druid | the land given away is the engine's pick among the searched ones, not the searching opponent's | `Selector::one_of(LastMoved)` |
 | 🟡 Game Plan | no assist: nobody else may pay toward it | there is no assist keyword |
 | 🟡 Baba Lysaga, Night Witch | can't sacrifice itself; a headless seat sacrifices a full three-type batch or nothing | `sac_any_number_filter` excludes the source; `distinct_type_sac_batch` is the auto-line |

@@ -204,8 +204,8 @@ fn zethi_stores_and_replays_instants() {
     assert_eq!(g.exile.iter().filter(|c| c.counter_count(CounterType::Kick) == 1).count(), 2, "the originals stay");
 }
 
-/// CR 114.4 — Karn, Living Legacy's −7 emblem gives each artifact "{T}: 1
-/// damage to any target"; its −1 digs X deep.
+/// CR 114.4 — Karn, Living Legacy's −7 emblem: "Tap an untapped artifact you
+/// control: this emblem deals 1 damage to any target".
 #[test]
 fn cr_114_4_karn_living_legacy_emblem_pings() {
     let mut g = pod(2);
@@ -226,6 +226,14 @@ fn cr_114_4_karn_living_legacy_emblem_pings() {
     // Index 1: Sol Ring's printed mana ability, then the emblem's grant.
     activate(&mut g, rock, 1, Some(Target::Player(1))).expect("ping");
     assert_eq!(g.players[1].life, life - 1);
+    // "Tap an untapped artifact you control" is not a {T}: a summoning-sick
+    // artifact creature pays it (CR 302.6), and the emblem — not the artifact —
+    // deals the damage, so protection from artifacts doesn't stop it.
+    let thopter = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let chosen = ready(&mut g, 1, catalog::tel_jilad_chosen());
+    activate(&mut g, thopter, 0, Some(perm(chosen))).expect("sick ping");
+    assert!(g.battlefield_find(thopter).unwrap().tapped);
+    assert!(g.battlefield_find(chosen).is_none(), "the emblem's 1 damage kills the pro-artifacts 2/1");
 }
 
 /// Fomori Vault: X = artifacts you control.

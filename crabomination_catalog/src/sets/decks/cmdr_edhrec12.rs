@@ -369,9 +369,9 @@ pub fn yasharn_implacable_earth() -> CardDefinition {
 /// Karn, Living Legacy — {4} Karn, loyalty 4. +1: a tapped Powerstone. −1:
 /// pay any amount of mana, look at that many cards, one into your hand, the
 /// rest on the bottom in a random order. −7: an emblem with "Tap an untapped
-/// artifact you control: this emblem deals 1 damage to any target" (granted
-/// to each artifact as its own {T} ability — the residual is in
-/// INCOMPLETE_CARDS).
+/// artifact you control: this emblem deals 1 damage to any target" — granted
+/// to each artifact as an `emblem_ability`, so a summoning-sick artifact
+/// creature can pay it and the emblem is the source (CR 114.4).
 pub fn karn_living_legacy() -> CardDefinition {
     CardDefinition {
         name: "Karn, Living Legacy",
@@ -413,6 +413,7 @@ pub fn karn_living_legacy() -> CardDefinition {
                             applies_to: Selector::EachPermanent(R::Artifact.and(R::ControlledByYou)),
                             ability: ActivatedAbility {
                                 tap_cost: true,
+                                emblem_ability: true,
                                 effect: Effect::DealDamage { to: target_filtered(R::any_target()), amount: Value::ONE },
                                 ..Default::default()
                             },
