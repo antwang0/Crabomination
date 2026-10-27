@@ -194,7 +194,7 @@ fn while_rona() -> MayPlayDuration {
 /// Rona, Disciple of Gix — {1}{U}{B} legendary 2/2 Human Artificer. ETB: you
 /// may exile target historic card from your graveyard. You may cast spells
 /// from among cards exiled with Rona. {4}, {T}: exile the top card of your
-/// library. (Residual: a land exiled with Rona can be played too.)
+/// library. A land exiled with Rona can't be played (cast-only grants).
 pub fn rona_disciple_of_gix() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::OptionalTargets {

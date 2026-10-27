@@ -196,6 +196,8 @@ fn mishras_research_desk_impulses_and_unearths() {
     }
     activate(&mut g, desk, 0, None);
     assert_eq!(g.exile.len(), 2);
+    // "Choose one of them" — only the chosen card is playable.
+    assert_eq!(g.exile.iter().filter(|c| c.may_play_until.is_some()).count(), 1);
     assert!(g.players[0].graveyard.iter().any(|c| c.id == desk));
     activate(&mut g, desk, 1, None);
     assert!(g.battlefield_find(desk).is_some(), "unearthed");
