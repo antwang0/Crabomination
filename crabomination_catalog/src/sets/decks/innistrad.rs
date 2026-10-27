@@ -4576,7 +4576,7 @@ pub fn wanderlight_spirit() -> CardDefinition {
 }
 
 /// Dreadlight Monstrosity — {4}{U}{U} 5/5 Crab Horror, Ward {2}. {3}{U}{U}: it
-/// can't be blocked this turn (the own-a-card-in-exile gate is approximated).
+/// can't be blocked this turn; activate only if you own a card in exile.
 pub fn dreadlight_monstrosity() -> CardDefinition {
     CardDefinition {
         name: "Dreadlight Monstrosity",

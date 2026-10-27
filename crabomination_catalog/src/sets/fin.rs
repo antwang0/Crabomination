@@ -1745,9 +1745,9 @@ pub fn goobbue_gardener() -> CardDefinition {
     }
 }
 
-/// Blazing Bomb — {R} 1/1 Elemental. Whenever you cast an expensive noncreature
-/// spell, grow. Blow Up — {T}, Sacrifice this: deal damage equal to its power to
-/// target creature. (The "four mana spent" gate is modeled as mana value ≥ 4.)
+/// Blazing Bomb — {R} 1/1 Elemental. Whenever you cast a noncreature spell, if
+/// at least four mana was spent to cast it, a +1/+1 counter on it. Blow Up —
+/// {T}, sacrifice it: damage equal to its power to target creature; sorcery speed.
 pub fn blazing_bomb() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {
@@ -1764,13 +1764,18 @@ pub fn blazing_bomb() -> CardDefinition {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
                 Predicate::All(vec![
                     Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
-                    Predicate::CastSpellMatches(SelectionRequirement::ManaValueAtLeast(4)),
+                    Predicate::CastSpellManaSpentAtLeast(4),
                 ]),
             ),
-            effect: Effect::AddCounter {
-                what: Selector::This,
-                kind: CounterType::PlusOnePlusOne,
-                amount: Value::ONE,
+            // Intervening "if" (CR 603.4): asked again as it resolves.
+            effect: Effect::If {
+                cond: Predicate::CastSpellManaSpentAtLeast(4),
+                then: Box::new(Effect::AddCounter {
+                    what: Selector::This,
+                    kind: CounterType::PlusOnePlusOne,
+                    amount: Value::ONE,
+                }),
+                else_: Box::new(Effect::Noop),
             },
         }],
         activated_abilities: vec![ActivatedAbility {

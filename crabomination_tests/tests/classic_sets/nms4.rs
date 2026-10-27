@@ -386,3 +386,22 @@ fn stronghold_gambit_deploys_the_cheapest_revealed_creature() {
 }
 
 
+
+/// Angelic Favor: "Cast this spell only during combat" (CR 506.1) — rejected in
+/// a main phase, cast in the declare blockers step.
+#[test]
+fn angelic_favor_is_cast_only_during_combat() {
+    for (step, ok) in [(TurnStep::PreCombatMain, false), (TurnStep::DeclareBlockers, true)] {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = step;
+        g.priority.player_with_priority = 0;
+        let favor = g.add_card_to_hand(0, catalog::angelic_favor());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        let cast = g.perform_action(GameAction::CastSpell {
+            card_id: favor, target: None, additional_targets: vec![], mode: None, x_value: None,
+        });
+        assert_eq!(cast.is_ok(), ok, "{step:?}");
+    }
+}

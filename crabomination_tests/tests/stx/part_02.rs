@@ -1465,6 +1465,34 @@ fn ingenious_mastery_draws_three_stacks_two_and_opp_draws() {
     assert_eq!(opp_treasures, 2, "opp created two Treasure tokens");
 }
 
+/// At three seats the {2}{U} cast hands two Treasures to ONE opponent ("an
+/// opponent creates two Treasure tokens and they scry 2"), not to each.
+#[test]
+fn ingenious_mastery_gifts_one_opponent_in_a_pod() {
+    let mut g = crabomination::game::multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = crabomination::game::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for seat in 0..3 {
+        for _ in 0..4 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    let id = g.add_card_to_hand(0, catalog::ingenious_mastery());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpellAlternative {
+        card_id: id, pitch_card: None, target: None,
+        additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("alternative cost");
+    drain_stack(&mut g);
+    let treasures = |seat| g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == "Treasure").count();
+    assert_eq!(treasures(0), 0);
+    assert_eq!(treasures(1) + treasures(2), 2, "two Treasures in all");
+    assert!(treasures(1) == 0 || treasures(2) == 0, "one opponent gets both");
+}
+
 #[test]
 fn ingenious_mastery_full_cost_draws_x() {
     // Full {X}{2}{U} cost: "If that cost wasn't paid, you draw X cards."

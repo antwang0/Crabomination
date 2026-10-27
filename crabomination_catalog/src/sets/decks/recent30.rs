@@ -303,8 +303,9 @@ pub fn autarch_mammoth() -> CardDefinition {
     }
 }
 
-/// Earthrumbler — {4}{G} 7/6 Vehicle with vigilance and trample. Crew 3.
-/// (The exile-from-graveyard self-crew alternative is dropped.)
+/// Earthrumbler — {4}{G} 7/6 Vehicle with vigilance and trample. Crew 3. Exile
+/// an artifact or creature card from your graveyard: it becomes an artifact
+/// creature until end of turn.
 pub fn earthrumbler() -> CardDefinition {
     CardDefinition {
         name: "Earthrumbler",
@@ -444,8 +445,8 @@ pub fn collision_course() -> CardDefinition {
 }
 
 /// Back on Track — {4}{B} Sorcery. Return target creature or Vehicle card from
-/// your graveyard to the battlefield, then create a 1/1 colorless Pilot.
-/// (The Pilot's enhanced crew/saddle rider is dropped.)
+/// your graveyard to the battlefield, then create a 1/1 colorless Pilot that
+/// crews and saddles as though its power were 2 greater.
 pub fn back_on_track() -> CardDefinition {
     let pilot = TokenDefinition {
         name: "Pilot".into(),

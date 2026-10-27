@@ -1546,9 +1546,9 @@ pub fn experimental_synthesizer() -> CardDefinition {
     }
 }
 
-/// Hexgold Slith — {1}{W} 2/1 Slith. When it enters, you get {E}{E}. Whenever
-/// it deals combat damage to a player, put a +1/+1 counter on it. (The optional
-/// "pay {E}{E} for first strike" attack ability is dropped.)
+/// Hexgold Slith — {1}{W} 2/1 Slith. When it enters, you get {E}{E}. Attacking,
+/// you may pay {E}{E} for first strike. Combat damage to a player puts a +1/+1
+/// counter on it.
 pub fn hexgold_slith() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {

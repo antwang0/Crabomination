@@ -14,8 +14,8 @@ fn mode(c: ManaCost, effect: Effect) -> SpreeMode {
 }
 
 /// Metamorphic Blast — {U} Instant. Spree: +{1} until end of turn, target
-/// creature becomes a 0/1 Rabbit; +{3} target player draws two cards. (The
-/// Rabbit's white color is approximated — only its base P/T and type change.)
+/// creature becomes a white Rabbit with base P/T 0/1; +{3} target player draws
+/// two cards.
 pub fn metamorphic_blast() -> CardDefinition {
     CardDefinition {
         name: "Metamorphic Blast",
@@ -24,14 +24,22 @@ pub fn metamorphic_blast() -> CardDefinition {
         effect: spree(vec![
             mode(
                 cost(&[generic(1)]),
-                Effect::BecomeCreature {
-                    what: target_filtered(R::Creature),
-                    power: Value::Const(0),
-                    toughness: Value::Const(1),
-                    creature_types: vec![CreatureType::Rabbit],
-                    keywords: vec![],
-                    duration: Duration::EndOfTurn,
-                },
+                Effect::Seq(vec![
+                    Effect::BecomeCreature {
+                        what: target_filtered(R::Creature),
+                        power: Value::Const(0),
+                        toughness: Value::Const(1),
+                        creature_types: vec![CreatureType::Rabbit],
+                        keywords: vec![],
+                        duration: Duration::EndOfTurn,
+                    },
+                    Effect::BecomeColor {
+                        what: Selector::Target(0),
+                        colors: vec![crate::mana::Color::White],
+                        duration: Duration::EndOfTurn,
+                        additive: false,
+                    },
+                ]),
             ),
             mode(
                 cost(&[generic(3)]),

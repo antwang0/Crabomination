@@ -116,10 +116,18 @@ fn anthem(filter: R, power: i32, toughness: i32, all_players: bool) -> StaticEff
 
 // ── White ────────────────────────────────────────────────────────────────────
 
-/// Angelic Favor — {3}{W}. A combat-trick Angel; a Plains lets you tap a
-/// creature instead of paying. (The "only during combat" window is dropped.)
+/// Angelic Favor — {3}{W} instant, cast only during combat: a 4/4 flying Angel,
+/// exiled at the next end step. With a Plains you may tap an untapped creature
+/// you control rather than pay its mana cost.
 pub fn angelic_favor() -> CardDefinition {
     CardDefinition {
+        // "Cast this spell only during combat" (CR 506.1).
+        cast_condition: Some(Predicate::Any(
+            [TurnStep::BeginCombat, TurnStep::DeclareAttackers, TurnStep::DeclareBlockers, TurnStep::FirstStrikeDamage, TurnStep::CombatDamage, TurnStep::EndCombat]
+                .into_iter()
+                .map(Predicate::CurrentStepIs)
+                .collect(),
+        )),
         alternative_cost: Some(AlternativeCost {
             tap_creatures: Some((R::Creature, 1)),
             condition: Some(controls_land(true, LandType::Plains)),

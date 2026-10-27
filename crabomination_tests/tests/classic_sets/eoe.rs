@@ -3808,3 +3808,24 @@ fn kav_landseekers_lander_lasts_until_your_next_end_step() {
     }
     assert!(g.battlefield_find(lander).is_none(), "sacrificed at your next turn's end step");
 }
+
+/// Larval Scoutlander may sacrifice a land OR a Lander for its two-basic ramp.
+#[test]
+fn larval_scoutlander_sacrifices_a_lander() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let lander = g.add_card_to_battlefield(0, catalog::kav_landseeker());
+    g.fire_self_etb_triggers(lander, 0);
+    drain_stack(&mut g);
+    let token = g.battlefield.iter().find(|c| c.definition.name == "Lander").map(|c| c.id).unwrap();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let scout = g.add_card_to_battlefield(0, catalog::larval_scoutlander());
+    g.fire_self_etb_triggers(scout, 0);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(token).is_none(), "the Lander (the only sacrifice) went");
+    let forests = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Forest").count();
+    assert_eq!(forests, 2, "two basics fetched");
+}

@@ -2967,9 +2967,8 @@ pub fn fungal_fortitude() -> CardDefinition {
     }
 }
 
-/// Armored Kincaller — {2}{G} 3/3 Dinosaur. ETB: if you control another
-/// Dinosaur, gain 3 life. (The "reveal a Dinosaur from hand" alternative is
-/// approximated by the control check.)
+/// Armored Kincaller — {2}{G} 3/3 Dinosaur. ETB: you may reveal a Dinosaur card
+/// from your hand; if you do or you control another Dinosaur, gain 3 life.
 pub fn armored_kincaller() -> CardDefinition {
     CardDefinition {
         name: "Armored Kincaller",
@@ -2981,15 +2980,24 @@ pub fn armored_kincaller() -> CardDefinition {
         },
         power: 3,
         toughness: 3,
+        // A Dinosaur in hand is always worth revealing, so the "may reveal"
+        // is the hand check.
         triggered_abilities: vec![etb(Effect::If {
-            cond: Predicate::SelectorCountAtLeast {
-                sel: Selector::EachPermanent(
-                    SelectionRequirement::HasCreatureType(CreatureType::Dinosaur)
-                        .and(SelectionRequirement::ControlledByYou)
-                        .and(SelectionRequirement::OtherThanSource),
-                ),
-                n: Value::Const(1),
-            },
+            cond: Predicate::Any(vec![
+                Predicate::SelectorCountAtLeast {
+                    sel: Selector::EachPermanent(
+                        SelectionRequirement::HasCreatureType(CreatureType::Dinosaur)
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::OtherThanSource),
+                    ),
+                    n: Value::Const(1),
+                },
+                Predicate::SelectorExists(Selector::CardsInZone {
+                    who: PlayerRef::You,
+                    zone: crate::card::Zone::Hand,
+                    filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
+                }),
+            ]),
             then: Box::new(Effect::GainLife {
                 who: Selector::You,
                 amount: Value::Const(3),

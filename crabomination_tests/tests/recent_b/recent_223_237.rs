@@ -1125,6 +1125,7 @@ mod recent233 {
         let cp = g.computed_permanent(bear).unwrap();
         assert_eq!((cp.power, cp.toughness), (0, 1), "becomes a 0/1");
         assert!(cp.subtypes().creature_types.contains(&crabomination::card::CreatureType::Rabbit), "a Rabbit");
+        assert_eq!(cp.colors.to_vec(), vec![crabomination::mana::Color::White], "a WHITE Rabbit");
     }
 
     /// Return the Favor's copy mode duplicates an instant/sorcery spell on the

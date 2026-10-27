@@ -1938,6 +1938,17 @@ mod recent56 {
         let p1p1 = crabomination::card::CounterType::PlusOnePlusOne;
         assert_eq!(g.battlefield_find(uni).unwrap().counter_count(p1p1), 1, "Unicorn +1 counter");
         assert_eq!(g.battlefield_find(comp).unwrap().counter_count(p1p1), 2, "Gideon's Company +2 counters");
+        // {3}{W}: a loyalty counter on target Gideon planeswalker.
+        let gideon = g.add_card_to_battlefield(0, catalog::gideon_ally_of_zendikar());
+        let loyalty = g.battlefield_find(gideon).unwrap().counter_count(crabomination::card::CounterType::Loyalty);
+        g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: comp, ability_index: 0, target: Some(crabomination::game::types::Target::Permanent(gideon)),
+            additional_targets: vec![], x_value: None, mode: None,
+        }).expect("loyalty");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(gideon).unwrap().counter_count(crabomination::card::CounterType::Loyalty), loyalty + 1);
     }
 
     #[test]

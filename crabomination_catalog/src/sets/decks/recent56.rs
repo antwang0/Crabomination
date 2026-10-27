@@ -705,8 +705,8 @@ pub fn regal_bloodlord() -> CardDefinition {
     }
 }
 
-/// Gideon's Company — {3}{W} 3/3 Human Soldier. Gain life → two +1/+1 counters
-/// on this. (The Gideon-loyalty activated ability is omitted — fringe.)
+/// Gideon's Company — {3}{W} 3/3 Human Soldier. Whenever you gain life, two
+/// +1/+1 counters on it. {3}{W}: a loyalty counter on target Gideon planeswalker.
 pub fn gideons_company() -> CardDefinition {
     CardDefinition {
         name: "Gideon's Company",
@@ -721,6 +721,17 @@ pub fn gideons_company() -> CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
             effect: plus_one_counter(Selector::This, 2),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), w()]),
+            effect: Effect::AddCounter {
+                what: target_filtered(
+                    R::Planeswalker.and(R::HasPlaneswalkerType(crate::card::PlaneswalkerSubtype::Gideon)),
+                ),
+                kind: crate::card::CounterType::Loyalty,
+                amount: Value::ONE,
+            },
+            ..Default::default()
         }],
         ..Default::default()
     }

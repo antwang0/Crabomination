@@ -14,7 +14,7 @@ use crate::game::types::TurnStep;
 use crate::mana::{b, cost, generic, u};
 
 /// Don't Make a Sound — {1}{U} Instant. Counter target spell unless its controller
-/// pays {2}. (The reflexive surveil-2 rider is approximated away.)
+/// pays {2}; if they do, surveil 2.
 pub fn dont_make_a_sound() -> CardDefinition {
     CardDefinition {
         name: "Don't Make a Sound",

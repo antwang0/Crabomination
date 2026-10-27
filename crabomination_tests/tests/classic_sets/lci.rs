@@ -1156,6 +1156,21 @@ fn armored_kincaller_gains_life_with_dino() {
     assert_eq!(g.players[0].life, 23, "gained 3 with another Dino");
 }
 
+/// Armored Kincaller's other route: reveal a Dinosaur card from your hand.
+#[test]
+fn armored_kincaller_gains_life_revealing_a_dino() {
+    for (in_hand, life) in [(true, 23), (false, 20)] {
+        let mut g = two_player_game();
+        g.players[0].life = 20;
+        if in_hand {
+            g.add_card_to_hand(0, catalog::nurturing_bristleback());
+        }
+        g.move_card_to_battlefield_for_test(0, catalog::armored_kincaller());
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].life, life);
+    }
+}
+
 
 /// Brackish Blunder bounces; a tapped target also yields a Map.
 #[test]

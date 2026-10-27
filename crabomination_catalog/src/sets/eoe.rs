@@ -1964,9 +1964,8 @@ pub fn sledge_class_seedship() -> CardDefinition {
 }
 
 /// Larval Scoutlander — {2}{G} Artifact — Spacecraft. ETB: you may sacrifice a
-/// land. If you do, search your library for up to two basic lands and put them
-/// onto the battlefield tapped. Station; {7+}: 3/3 with flying. (The "or
-/// Lander" sacrifice option is approximated as land-only.)
+/// land or Lander. If you do, search your library for up to two basic lands and
+/// put them onto the battlefield tapped. Station; {7+}: 3/3 with flying.
 pub fn larval_scoutlander() -> CardDefinition {
     CardDefinition {
         name: "Larval Scoutlander",
@@ -1977,8 +1976,8 @@ pub fn larval_scoutlander() -> CardDefinition {
             ..Default::default()
         },
         triggered_abilities: vec![etb(Effect::MaySacrifice {
-            description: "Sacrifice a land".into(),
-            filter: SelectionRequirement::Land,
+            description: "Sacrifice a land or Lander".into(),
+            filter: SelectionRequirement::Land.or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Lander)),
             count: Value::Const(1),
             then: Box::new(Effect::SearchUpToN {
                 who: PlayerRef::You,

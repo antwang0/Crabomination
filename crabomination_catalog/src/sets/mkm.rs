@@ -336,9 +336,9 @@ pub fn get_a_leg_up() -> CardDefinition {
     }
 }
 
-/// Inside Source — {2}{W} 1/1 Human Citizen. "When this enters, create a 2/2
-/// white and blue Detective creature token." (The pump-a-Detective activated
-/// ability is omitted.)
+/// Inside Source — {2}{W} 1/1 Human Citizen. When it enters, create a 2/2 white
+/// and blue Detective. {3}, {T}: target Detective you control gets +2/+0 and
+/// vigilance until end of turn; sorcery speed.
 pub fn inside_source() -> CardDefinition {
     CardDefinition {
         name: "Inside Source",
