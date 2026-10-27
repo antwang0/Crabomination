@@ -65,3 +65,51 @@ fn cr_615_6_prevention_shield_soaks_damage() {
     assert!(g.battlefield_find(bear).is_some(), "shielded creature survives");
     assert_eq!(g.battlefield_find(bear).unwrap().damage, 0, "all damage prevented");
 }
+
+/// CR 614.5 — a replacement effect gets one opportunity at an event and at
+/// the events that replace it. Two turn-long redirect shields pointing at
+/// each other (damage to the bear goes to the giant, damage to the giant to
+/// the bear): the bear's shield sends 2 to the giant, the giant's sends it
+/// back, and the bear's shield has already applied, so the bear takes it.
+/// Before, the redirected damage re-ran every shield and recursed until the
+/// stack overflowed (a cube ladder game, 2026-10-26).
+#[test]
+fn cr_614_5_a_redirect_shield_does_not_reapply_to_its_own_redirected_damage() {
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(0, catalog::gutter_skulk()); // 2/2
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant()); // 3/3
+    for (from, to) in [(bear, giant), (giant, bear)] {
+        let mut ctx = EffectContext::for_ability(crabomination::card::CardId(0), 0, Some(Target::Permanent(from)));
+        ctx.targets.push(Target::Permanent(to));
+        g.resolve_effect(&Effect::PreventAllDamageThisTurn { target: Selector::Target(0), redirect_to: Some(Selector::Target(1)) }, &ctx)
+            .unwrap();
+    }
+    let dctx = EffectContext::for_ability(crabomination::card::CardId(0), 1, Some(Target::Permanent(bear)));
+    g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(2) }, &dctx).unwrap();
+    drain_stack(&mut g);
+    let damage = |id| g.battlefield_find(id).map(|c| c.damage);
+    assert_eq!(damage(giant), Some(0), "the giant's shield sent it on");
+    assert_eq!(g.battlefield_find(bear).map(|c| c.damage).unwrap_or(2), 2, "the bear takes the damage its own shield already redirected");
+}
+
+/// CR 614.5 / 104.4b — a Comeuppance on each side: damage to player 1 from
+/// player 0's card is reflected at player 0, player 0's Comeuppance reflects
+/// it back, and player 1's shield has already applied to that chain, so
+/// player 1 takes it. On paper the two shields are a mandatory loop; the
+/// engine has to stop, and the per-shield rule is where it stops. Before,
+/// this recursed until the stack overflowed (a cube ladder game).
+#[test]
+fn cr_614_5_two_comeuppances_do_not_reflect_forever() {
+    let mut g = two_player_game();
+    let theirs = g.add_card_to_hand(0, catalog::comeuppance());
+    let mine = g.add_card_to_hand(1, catalog::comeuppance());
+    for (card, seat) in [(theirs, 0), (mine, 1)] {
+        let ctx = EffectContext::for_ability(card, seat, None);
+        g.resolve_effect(&Effect::PreventOpposingDamageThisTurnReflecting { target: Selector::You }, &ctx).unwrap();
+    }
+    let dctx = EffectContext::for_ability(theirs, 0, Some(Target::Player(1)));
+    g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) }, &dctx).unwrap();
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 20, "player 0's reflection was prevented by player 0's own shield");
+    assert_eq!(g.players[1].life, 17, "the damage lands on player 1 once its shield has had its turn");
+}

@@ -11,6 +11,35 @@ use crate::card::{CardId, CardInstance, CounterType};
 use crate::effect::{LibraryPosition, PlayerRef, ZoneDest};
 use crate::game::{GameEvent, GameState, TriggerPush};
 
+/// A re-dealing shield's identity within one damage event's chain: its
+/// target, source scope, redirect destinations and reflector.
+type RedirectKey =
+    (crate::game::types::PreventionTarget, Option<CardId>, Option<CardId>, Option<usize>, Option<CardId>, bool);
+
+thread_local! {
+    /// CR 614.5 — the shields whose soaked damage is being re-dealt right now
+    /// (redirects: Carom, Sivvi's Valor; reflections: Deflecting Palm,
+    /// Comeuppance). A replacement effect gets one opportunity at an event
+    /// and at the events that replace it, so a shield in this chain does not
+    /// apply again to the damage it sent on: two turn-long redirects pointing
+    /// at each other, or a Comeuppance on each side reflecting the other's
+    /// damage (a mandatory loop on paper, CR 104.4b), otherwise recursed
+    /// through `deal_damage_to_from` until the stack overflowed (cube ladder
+    /// games, 2026-10-26). Thread-local, not on the state: it lives only
+    /// inside one synchronous re-deal, and the common path reads one empty
+    /// `Vec`.
+    static REDIRECT_CHAIN: std::cell::RefCell<Vec<RedirectKey>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+fn redirect_key(s: &crate::game::types::PreventionShield) -> RedirectKey {
+    (s.target, s.source, s.redirect_to, s.redirect_to_player, s.reflect_by, s.reflect)
+}
+
+/// Does this shield send its soaked damage on (and so take part in the chain)?
+fn re_deals(s: &crate::game::types::PreventionShield) -> bool {
+    s.redirect_to.is_some() || s.redirect_to_player.is_some() || s.reflect_by.is_some() || s.reflect
+}
+
 /// Which of the damage-prevention funnel's battlefield statics exist right
 /// now, as a bit per family, gathered in one walk.
 ///
@@ -1336,6 +1365,10 @@ impl GameState {
             None
         };
         let mut reflected_by: Vec<(crate::card::CardId, u32)> = Vec::new();
+        // CR 614.5 — shields already redirecting this event's damage.
+        let chain: Option<Vec<RedirectKey>> =
+            REDIRECT_CHAIN.with(|c| (!c.borrow().is_empty()).then(|| c.borrow().clone()));
+        let mut redirect_keys: Vec<RedirectKey> = Vec::new();
         for (i, shield) in self
             .turn
             .prevention_shields
@@ -1350,6 +1383,7 @@ impl GameState {
                     && (!src_known || s.source_color.is_none_or(|c| src_colors.contains(&c)))
                     && s.not_from_controller.is_none_or(|p| src_ctrl.is_some_and(|c| c != p))
                     && (combat || !s.combat_only)
+                    && chain.as_ref().is_none_or(|ch| !re_deals(s) || !ch.contains(&redirect_key(s)))
             })
         {
             if remaining == 0 {
@@ -1396,15 +1430,21 @@ impl GameState {
             if shield.reflect {
                 reflected += soak;
                 reflect_ctrl = reflect_ctrl.or(shield.source_controller);
+                if soak > 0 {
+                    redirect_keys.push(redirect_key(shield));
+                }
             }
             if soak > 0 && let Some(by) = shield.reflect_by {
                 reflected_by.push((by, soak));
+                redirect_keys.push(redirect_key(shield));
             }
             if soak > 0 && let Some(dst) = shield.redirect_to {
                 redirected.push((dst, soak));
+                redirect_keys.push(redirect_key(shield));
             }
             if soak > 0 && let Some(seat) = shield.redirect_to_player {
                 redirected_players.push((seat, soak));
+                redirect_keys.push(redirect_key(shield));
             }
             if shield.destroy && soak > 0 {
                 destroy_after = to_card;
@@ -1463,6 +1503,19 @@ impl GameState {
         // Carom / Razia — redirect the soaked damage onto the chosen
         // permanent. Its own event, keyed to the original source so
         // protection/prevention on the new target still applies.
+        let depth = REDIRECT_CHAIN.with(|c| {
+            let mut c = c.borrow_mut();
+            let depth = c.len();
+            c.extend(redirect_keys);
+            depth
+        });
+        // A backstop under the per-shield rule: a chain this deep is a loop
+        // through some shield shape the key does not tell apart, and the
+        // soaked damage stays prevented rather than overflow the stack.
+        if depth >= 64 {
+            REDIRECT_CHAIN.with(|c| c.borrow_mut().truncate(depth));
+            return remaining;
+        }
         for (dst, amt) in redirected {
             if self.battlefield_find(dst).is_some() {
                 self.deal_damage_to_from(EntityRef::Permanent(dst), amt, source, events);
@@ -1491,6 +1544,7 @@ impl GameState {
                 self.deal_damage_to_from(EntityRef::Player(ctrl), amt, Some(by), events);
             }
         }
+        REDIRECT_CHAIN.with(|c| c.borrow_mut().truncate(depth));
         remaining
     }
 
