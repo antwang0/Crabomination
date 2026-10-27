@@ -2525,6 +2525,10 @@ pub enum Keyword {
     /// `CantAttackOrBlockUnlessPay`; paid out of the same declare-attackers
     /// pool as the Propaganda tax.
     CantAttackUnlessPay(u32),
+    /// CR 508.1g cost — `CantAttackUnlessPay` scaled by the source's own
+    /// counters: "can't attack unless you pay {1} for each +1/+1 counter on
+    /// it" (Phyrexian Marauder). Attack-only sibling of the per-counter tax.
+    CantAttackUnlessPayPerCounter(CounterType),
     /// CR 502.3 — "This doesn't untap during its controller's untap step if it
     /// attacked during their last turn" (Goblin Rock Sled, Tangle Kelp).
     DoesntUntapIfAttackedLastTurn,

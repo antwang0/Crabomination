@@ -709,6 +709,7 @@ impl GameState {
                     // seat can produce the tax (pool + auto-tappable sources).
                     Keyword::CantAttackOrBlockUnlessPay(_)
                     | Keyword::CantAttackUnlessPay(_)
+                    | Keyword::CantAttackUnlessPayPerCounter(_)
                     | Keyword::CantAttackOrBlockUnlessPayPerCounter(_)
                     | Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand
                     | Keyword::CantAttackOrBlockUnlessPayPerPermanent(_) => self.could_pay_generic(

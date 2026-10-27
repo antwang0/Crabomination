@@ -239,6 +239,7 @@ fn keyword_name(kw: &Keyword) -> Option<String> {
         | Keyword::CantAttackOrBlockUnlessDelirium
         | Keyword::CantAttackOrBlockUnlessPay(_)
         | Keyword::CantAttackUnlessPay(_)
+        | Keyword::CantAttackUnlessPayPerCounter(_)
         | Keyword::DoesntUntapIfAttackedLastTurn
         | Keyword::CantBeTargetedBySpellsUnlessAttackedOrBlocked
         | Keyword::CantAttackOrBlockUnlessPayPerCounter(_)

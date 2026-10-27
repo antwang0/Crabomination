@@ -7259,6 +7259,9 @@ impl GameState {
                 Keyword::CantAttackOrBlockUnlessPayPerCounter(kind) => {
                     self.battlefield_find(id).map(|c| c.counter_count(*kind)).unwrap_or(0)
                 }
+                Keyword::CantAttackUnlessPayPerCounter(kind) if for_attack => {
+                    self.battlefield_find(id).map(|c| c.counter_count(*kind)).unwrap_or(0)
+                }
                 // Cowed by Wisdom — one per card in each granting Aura's
                 // controller's hand.
                 Keyword::CantAttackOrBlockUnlessPayPerCardInEnchanterHand => self

@@ -271,7 +271,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         // Attack tolls the controller has to cover before the swing is legal
         // (Brainwash's {N}, Leviathan's two Islands) — the player needs to see
         // the price before declaring, not after the rejection.
-        CantAttackUnlessPay(_) | AttackCostSacrifice(_, _) => "Atk$",
+        CantAttackUnlessPay(_) | CantAttackUnlessPayPerCounter(_) | AttackCostSacrifice(_, _) => "Atk$",
         // "Doesn't untap if it attacked during your last turn" (Goblin Rock
         // Sled, Tangle Kelp) — the swing costs a whole turn of availability.
         DoesntUntapIfAttackedLastTurn => "Rest",
