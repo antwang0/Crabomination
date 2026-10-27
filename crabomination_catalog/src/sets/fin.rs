@@ -9065,8 +9065,7 @@ pub fn summon_brynhildr() -> CardDefinition {
 
 /// Stiltzkin, Moogle Merchant — {W} 1/2 Moogle with lifelink. {2}, {T}: Target
 /// opponent gains control of another target permanent you control. You draw a
-/// card. (The opponent recipient is auto-bound to the lone opponent; the
-/// per-opponent choice is a multiplayer follow-up.)
+/// card. The opponent is the second target (slot 1), as on Harmless Offering.
 pub fn stiltzkin_moogle_merchant() -> CardDefinition {
     CardDefinition {
         name: "Stiltzkin, Moogle Merchant",
