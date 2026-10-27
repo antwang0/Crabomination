@@ -2226,7 +2226,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Tyrannical Pitlord | the leaves trigger sacrifices the chosen creature by whoever controls it (a stolen one is the thief's sacrifice, where the printed "you" does nothing) | `SacrificePermanent { ChosenPermanentOfSource }` |
 | 🟡 Realm Razer | the two printed triggers are one "until it leaves" exile: a Razer gone before its ETB resolves exiles nothing, where the printed wording exiles the lands for good | `ExileUntilSourceLeaves` |
 | 🟡 Out of Bounds | assist (another player paying up to {3} of the cost) is not modeled | an `AdditionalCastCost::Assist` with a per-seat payment ask |
-| 🟡 Consecrate Land | "can't be enchanted by other Auras" is dropped (only the indestructible half) | an Aura-legality filter on the host |
+| ~~Consecrate Land~~ ✅ | fixed 2026-10-27: `EquipBonus.no_other_auras` sheds every other Aura on the land (CR 704.5m; Anti-Magic Aura shares it) | — |
 | 🟡 The End | the name sweep and the refund read the permanent's owner's zones, not "its controller's" (a stolen permanent differs) | an `ExileSameNameAsTarget` keyed on the controller |
 | 🟡 The Celestial Toymaker | the attack trigger's face-down pile is face down to no one: a headless defender reads its names when picking | a hidden-pile option in `run_separate_into_piles` |
 | 🟡 Phyrexian Portal | the opponent's two piles are face down, but the headless exile pick reads their names | the same hidden-pile option |
