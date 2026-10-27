@@ -1614,7 +1614,14 @@ fn run_jobs(
         eprintln!("note: --games is odd; playing {} pairs ({} games) per archetype", per_arch, per_arch * 2);
     }
     let mut jobs = Vec::new();
+    // `CRAB_LADDER_ONLY=<i>`: play only the field's `i`-th archetype. The
+    // field itself is untouched, so the archetype keeps its index and its
+    // jobs keep their seeds — a game seen in a full run replays exactly.
+    let only: Option<usize> = std::env::var("CRAB_LADDER_ONLY").ok().and_then(|v| v.parse().ok());
     for (ai, _) in field.iter().enumerate() {
+        if only.is_some_and(|o| o != ai) {
+            continue;
+        }
         let mut done = 0;
         while done < per_arch {
             let n = CHUNK.min(per_arch - done);
@@ -1702,13 +1709,19 @@ fn run_jobs(
                         }
                         let cx: Option<&mut CrossGame> = peer.as_deref_mut();
                         let d = &field[job.arch].deck;
+                        // `CRAB_MAX_ACTIONS=N` lowers the per-game action cap
+                        // (default 50,000), so a game that loops under the
+                        // search ends in minutes instead of hours — with
+                        // `CRAB_DUMP_TRACES` that is its trace.
+                        let max_actions: usize =
+                            std::env::var("CRAB_MAX_ACTIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(50_000);
                         let (wins_a, wins_b, undecided, pairs, job_cost) = if args.paired {
                             let t = simulate_match_pairs_cross(
                                 d,
                                 d,
                                 job.units,
                                 [args.a, args.b],
-                                50_000,
+                                max_actions,
                                 job.seed,
                                 cx,
                                 true,
@@ -1747,7 +1760,7 @@ fn run_jobs(
                                 d,
                                 job.units,
                                 [args.a, args.b],
-                                50_000,
+                                max_actions,
                                 Some(job.seed),
                                 cx,
                                 true,

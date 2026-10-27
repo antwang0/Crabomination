@@ -2061,6 +2061,62 @@ impl GameTrace {
     }
 }
 
+/// `CRAB_SETTLE_CHECK=1` — the action-cap loop finder. Every time the loop
+/// adopts a bot's `settled` state it also runs the action for real on a
+/// clone and reports when the two disagree; it reports an accepted action
+/// that left the board's fingerprint unchanged, and a rejected decision
+/// answer with its error and the decision it answered (a rejected answer
+/// drops its decision, so a prompt whose every answer fails sends the
+/// caster back before the cast: the cube stall of 2026-10-27, Arc
+/// Lightning's extra-target prompt offering a protected creature).
+/// `CRAB_SETTLE_MATCH=<substring>` also reports every action whose debug
+/// text contains it. With `bot_ladder`'s `CRAB_LADDER_ONLY` and
+/// `CRAB_MAX_ACTIONS`. A diagnostic; read once.
+fn settle_check() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("CRAB_SETTLE_CHECK").is_some_and(|v| v != "0"))
+}
+
+/// `CRAB_SETTLE_MATCH=<substring>`: does `label` contain it? Read once.
+fn settle_match(label: &str) -> bool {
+    static PAT: std::sync::OnceLock<Option<String>> = std::sync::OnceLock::new();
+    PAT.get_or_init(|| std::env::var("CRAB_SETTLE_MATCH").ok()).as_deref().is_some_and(|m| label.contains(m))
+}
+
+fn settle_fingerprint(g: &GameState) -> String {
+    let p = |i: usize| {
+        let pl = &g.players[i];
+        format!("life {} hand {} gy {} lib {}", pl.life, pl.hand.len(), pl.graveyard.len(), pl.library.len())
+    };
+    format!(
+        "T{} {:?} prio {} stack {} bf {} pending {} | {} | {}",
+        g.turn_number,
+        g.step,
+        g.priority.player_with_priority,
+        g.stack.len(),
+        g.battlefield.len(),
+        g.pending_decision.is_some(),
+        p(0),
+        p(1)
+    )
+}
+
+fn settle_diag(before: &GameState, settled: &GameState, label: &str, action: crate::game::GameAction) {
+    let mut real = before.clone();
+    let res = real.perform_action(action);
+    let (b, st, r) = (settle_fingerprint(before), settle_fingerprint(settled), settle_fingerprint(&real));
+    let matched = settle_match(label);
+    if st != r || st == b || matched {
+        eprintln!(
+            "settle-check: {label}\n  before  {b}\n  settled {st}\n  real    {r} ({})",
+            match &res {
+                Ok(_) => "Ok".to_string(),
+                Err(e) => format!("Err {e:?}"),
+            }
+        );
+    }
+}
+
 /// `CRAB_STUCK_DIAG=1` — when a game stops as stuck (no bot action accepted
 /// for [`STALE_ROUNDS`] rounds), print the pending ask and what each seat
 /// wanted and why the engine refused it. Read only on a stuck game.
@@ -2329,18 +2385,46 @@ fn play_one_game_traced(
             // action a second time. Self-play discards events, so nothing
             // here needs a `Vec<GameEvent>` back.
             let ok = if let Some(settled) = settled {
+                if settle_check() {
+                    settle_diag(&g, &settled, &format!("p{s} {action:?}"), action.clone());
+                }
                 g = *settled;
                 true
             } else {
                 // The comment above says self-play discards the events; hand
                 // the buffer back for its capacity rather than dropping the
                 // allocation (`GameState::recycle_events`, PERF `(-80)`).
+                let before = settle_check().then(|| (settle_fingerprint(&g), format!("p{s} {action:?}")));
+                // The pre-action board, for the rejected-answer report.
+                let snap = settle_check().then(|| g.clone());
                 match g.perform_action(action) {
                     Ok(events) => {
+                        if let Some((b, label)) = before
+                            && (b == settle_fingerprint(&g)
+                                || settle_match(&label))
+                        {
+                            eprintln!(
+                                "settle-check: accepted {label}\n  before {b}\n  after  {}\n  events {}",
+                                settle_fingerprint(&g),
+                                events.len()
+                            );
+                        }
                         g.recycle_events(events);
                         true
                     }
-                    Err(_) => false,
+                    Err(e) => {
+                        if settle_check()
+                            && let Some((_, label)) = &before
+                            && label.contains("SubmitDecision")
+                            && let Some(state) = &snap
+                        {
+                            eprintln!(
+                                "settle-check: REJECTED {label}: {e:?}\n  pending {:?}",
+                                state.pending_decision.as_ref().map(|d| format!("{:?}", d.decision))
+                            );
+                        }
+                        false
+                    }
                 }
             };
             if ok {

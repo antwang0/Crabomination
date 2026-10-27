@@ -6452,3 +6452,29 @@ in each script).
   build can choose. `RATED_SHAPE_SLOTS` off. The judge term itself holds
   on SOS (it was turned on from FRA readings): best of 16 **50.83 % [50.56,
   51.09] / 50.53 % [50.27, 50.80]**.
+- **Cube, resolved: the bundle ON in cube too (2026-10-27).** The seed-43
+  cell finished after 10,069 s (seed 97: 1,229 s): **54.1 % [52.6, 55.7]**
+  paired, 3 games undecided at the 50,000-action cap. With seed 97's 53.3
+  both cube seeds clear the bar, so the client's Cube format
+  (`MatchFormat::is_limited`) and the lobby's Cube duels (`default_bot`'s
+  format) now play with the bundle; Modern and the college decks stay
+  unmeasured and off.
+- **The stall: a target prompt whose every answer fails.** `bot_ladder`'s
+  new `CRAB_LADDER_ONLY=<i>` (one archetype, its job seeds unchanged) and
+  `CRAB_MAX_ACTIONS=<n>` replayed the seed-43 "cube RW" pairing in 17
+  minutes: the same three games capped, each repeating one Arc Lightning
+  cast (or one answer to its target prompt) with nothing changing. The
+  scored pilots on the same decks never stalled (0 of 1,600). The loop
+  finder `recommend`'s `CRAB_SETTLE_CHECK` (new) named it: Arc Lightning's
+  extra-target prompt (`pose_extra_cast_target`, posed to `wants_ui`
+  seats, which bot seats are) listed creatures with **protection from
+  red** — its filter ran `check_target_legality` (hexproof / shroud,
+  caster-based) but not the source-based checks the cast enforces. The
+  answer failed with `TargetHasProtection`, `perform_action` dropped the
+  answered decision and rolled back to before the cast, and the bot cast
+  again into the same prompt. The prompt now filters protection from the
+  spell's colour (CR 702.16b), hexproof from its colour (CR 702.11e) and a
+  player's protection from its type (CR 702.16j). Regression test
+  `cr_702_16b_extra_target_prompt_skips_protected_creatures` (fails
+  without the fix). The RW pairing at the full cap: **200 decided, 0
+  undecided, 129 s** (twice), no rejected answers.

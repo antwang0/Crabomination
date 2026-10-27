@@ -56,16 +56,21 @@ use super::{
 /// encoder is two-seat (`net_eval::net_for_state`), and the search over the
 /// material leaf has never been measured in a pod, where the scored bot is
 /// what every pod census and test plays.
-fn default_bot(seats: usize) -> Box<dyn super::Bot> {
+///
+/// A Cube duel plays with the FRA bot fixes bundle
+/// ([`super::EvalWeights::with_fra_fixes`]): this pilot with them beat it
+/// without them **53.3 % [51.7, 54.9] / 54.1 % [52.6, 55.7]** on cube
+/// (seeds 97 / 43, 200 x 8, round 85, `.ladder/r85`). Modern and the SOS
+/// college decks are unmeasured and stay on the default.
+fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::Bot> {
     if seats > 2 {
         return Box::new(super::HeuristicBot::new());
     }
-    Box::new(MctsBot::new(MctsConfig {
-        iterations: 256,
-        horizon_turns: 3,
-        weights: super::EvalWeights::net_on_default(),
-        ..MctsConfig::default()
-    }))
+    let mut weights = super::EvalWeights::net_on_default();
+    if format == crate::net::LobbyFormat::Cube {
+        weights = weights.with_fra_fixes();
+    }
+    Box::new(MctsBot::new(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() }))
 }
 
 /// Callback invoked when a lobby-started match finishes, with its gamemode,
@@ -1007,7 +1012,7 @@ fn apply<G: Send + 'static>(
                     humans += 1;
                 }
                 SeatSpec::Bot => {
-                    occupants.push(SeatOccupant::Bot(default_bot(start.seats.len())));
+                    occupants.push(SeatOccupant::Bot(default_bot(start.seats.len(), start.format)));
                     bots += 1;
                 }
             }

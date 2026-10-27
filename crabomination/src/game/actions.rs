@@ -14417,6 +14417,17 @@ impl GameState {
             // `check_target_legality` opens a scope of its own per call —
             // so unfrozen this re-gathers every continuous effect in the
             // game once per battlefield permanent *plus* once per player.
+            // The spell itself, for the checks that read its qualities: the
+            // cast rejects a slot naming a creature with protection from its
+            // colour (CR 702.16b), hexproof from its colour (CR 702.11e) or a
+            // player with protection from its type (CR 702.16j), so a slot
+            // offering one is a prompt whose answer always fails — and
+            // `perform_action` drops a failed answer's decision, which lands
+            // the caster back before the cast with the same prompt waiting:
+            // a bot that picked the protected creature recast forever (Arc
+            // Lightning at a Kor Firewalker, cube ladder games capped at
+            // 50,000 actions, 2026-10-27).
+            let spell = self.find_card_anywhere(card_id).cloned();
             let candidates: Vec<Target> = self.with_frozen_layers(|s| {
                 s.battlefield
                     .iter()
@@ -14428,6 +14439,14 @@ impl GameState {
                                 || s.target_controller_key(t).is_none_or(|k| !named_controllers.contains(&k)))
                             && s.evaluate_requirement_static(&filter, t, p, Some(card_id))
                             && s.check_target_legality(t, p).is_ok()
+                            && spell.as_ref().is_none_or(|sp| {
+                                !(matches!(*t, Target::Permanent(cid) if s.spell_protection_blocks(sp, p, cid))
+                                    || s.spell_color_hexproof_blocks(sp, p, t)
+                                    || matches!(*t, Target::Player(tp) if tp != p
+                                        && s.player_protection_card_types(tp)
+                                            .iter()
+                                            .any(|ty| sp.definition.card_types.contains(ty))))
+                            })
                     })
                     .collect()
             });

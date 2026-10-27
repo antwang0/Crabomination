@@ -173,6 +173,12 @@ pub enum MatchFormat {
 }
 
 impl MatchFormat {
+    /// Sealed and Cube: the 40-card formats the FRA fixes bundle was
+    /// measured in under the client's pilot (see [`local_bot`]).
+    pub(crate) fn is_limited(self) -> bool {
+        matches!(self, MatchFormat::Sealed | MatchFormat::Cube)
+    }
+
     /// Build a fresh `GameState` for this format. Public so the
     /// game-over "New Game" button can launch a follow-up match
     /// without going back through the menu UI.
@@ -1915,20 +1921,19 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// burn at creatures and for lethal, no X=0 Hydra, trades and free attacks,
 /// tricks with riders, counters in their counter mode, ...): this pilot with
 /// them beat it without them 56.0 [54.4, 57.5] / 55.9 [54.3, 57.4] (FRA sealed, 200 x 12,
-/// ladder seeds 43 / 97, `.ladder/fra_next`). A Sealed match (`sealed`, the
-/// menu's SOS sealed format) plays with them too: 53.5 [52.2, 54.9] / 53.9
-/// [52.6, 55.2] on SOS sealed with the champion leaf (round 85,
-/// `.ladder/r85`). Cube read 53.3 on seed 97 and its seed-43 cell stalled,
-/// so cube, Modern and the college decks stay off, unresolved or unmeasured.
-/// `CRAB_FRA_FIXES=0` turns them off; `CRAB_FRA_FIXES=1` turns them on in
-/// every game.
+/// ladder seeds 43 / 97, `.ladder/fra_next`). A Sealed or Cube match
+/// (`limited`) plays with them too, on the champion leaf (round 85,
+/// `.ladder/r85`): SOS sealed 53.5 [52.2, 54.9] / 53.9 [52.6, 55.2], cube
+/// 54.1 [52.6, 55.7] / 53.3 [51.7, 54.9] (seeds 43 / 97). Modern and the
+/// college decks are unmeasured and stay off. `CRAB_FRA_FIXES=0` turns them
+/// off; `CRAB_FRA_FIXES=1` turns them on in every game.
 ///
 /// An FRA game (`fra`, from `fra_mode::is_fra_game`) puts the Reality
 /// Fracture net under the search instead — `CRAB_FRA_NET` or
 /// `nets/fra-champion.safetensors`, loaded into its own slot. The champion
 /// is the SOS net: on FRA it adds nothing over the material leaf, and the
 /// FRA net makes the same search +3.75 (round 82, `ML_NOTES`).
-pub(crate) fn local_bot(n_seats: usize, fra: bool, sealed: bool) -> Box<dyn crabomination::server::Bot> {
+pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn crabomination::server::Bot> {
     if n_seats > 2 {
         return Box::new(HeuristicBot::new());
     }
@@ -1939,7 +1944,7 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool, sealed: bool) -> Box<dyn crab
     }
     let fixes = match std::env::var_os("CRAB_FRA_FIXES") {
         Some(v) => v != "0",
-        None => fra || sealed,
+        None => fra || limited,
     };
     if fixes {
         weights = weights.with_fra_fixes();
@@ -2074,7 +2079,7 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
         name_seats(&mut state, &human_name, "Bot");
         state
     };
-    let occupants = local_occupants(server_seat, &state, format == MatchFormat::Sealed);
+    let occupants = local_occupants(server_seat, &state, format.is_limited());
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![], Some(sink_for_match));
     });
@@ -2084,16 +2089,16 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
 }
 
 /// The human's seat 0 plus one local bot for every other seat of the state.
-/// `sealed`: the menu's Sealed format (see [`local_bot`]).
+/// `limited`: the menu's Sealed or Cube format (see [`local_bot`]).
 pub(crate) fn local_occupants(
     human: crabomination::server::SeatChannel,
     state: &GameState,
-    sealed: bool,
+    limited: bool,
 ) -> Vec<SeatOccupant> {
     let n_seats = state.players.len();
     let fra = crabomination::fra_mode::is_fra_game(state);
     std::iter::once(SeatOccupant::Human(human))
-        .chain((1..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats, fra, sealed))))
+        .chain((1..n_seats).map(|_| SeatOccupant::Bot(local_bot(n_seats, fra, limited))))
         .collect()
 }
 

@@ -113,3 +113,38 @@ fn cr_614_5_two_comeuppances_do_not_reflect_forever() {
     assert_eq!(g.players[0].life, 20, "player 0's reflection was prevented by player 0's own shield");
     assert_eq!(g.players[1].life, 17, "the damage lands on player 1 once its shield has had its turn");
 }
+
+/// CR 702.16b — Arc Lightning's extra-target prompt does not offer a creature
+/// with protection from red. The cast rejects such a slot, and a rejected
+/// answer drops its decision, so offering one sent a prompting caster back
+/// before the cast with the same prompt: a bot that picked Kor Firewalker
+/// recast Arc Lightning until the game's action cap (cube ladder games,
+/// 2026-10-27).
+#[test]
+fn cr_702_16b_extra_target_prompt_skips_protected_creatures() {
+    let mut g = two_player_game();
+    g.players[0].wants_ui = true;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::mountain());
+    }
+    let arc = g.add_card_to_hand(0, catalog::arc_lightning());
+    let firewalker = g.add_card_to_battlefield(1, catalog::kor_firewalker()); // protection from red
+    let bear = g.add_card_to_battlefield(1, catalog::gutter_skulk());
+    g.perform_action(GameAction::CastSpell {
+        card_id: arc,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("the cast suspends on its second slot");
+    let legal = match g.pending_decision.as_ref().map(|d| &d.decision) {
+        Some(crabomination::decision::Decision::ChooseTarget { legal, .. }) => legal.clone(),
+        other => panic!("expected the extra-slot prompt, got {other:?}"),
+    };
+    assert!(legal.contains(&Target::Permanent(bear)), "an unprotected creature is offered");
+    assert!(!legal.contains(&Target::Permanent(firewalker)), "protection from red keeps Kor Firewalker off the list");
+}
