@@ -9089,6 +9089,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DiscardOneOfDrawn { count } => {
+                self.discard_one_of_drawn(count, ctx, events, effect);
+                Ok(())
+            }
+
             Effect::MayDiscardMatching { description, count, filter, then, else_ } => {
                 // Filtered reflexive discard: offer the choice only when the
                 // controller holds `n` cards matching `filter`; the seat picks

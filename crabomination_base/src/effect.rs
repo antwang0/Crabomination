@@ -5532,6 +5532,9 @@ pub enum Effect {
     /// `count` matching cards; the auto-picker discards the highest-MV
     /// matches. "Sacrifice this unless you discard a noncreature card"
     /// (Drekavac) rides this with `then: Noop, else_: SacrificeSource`.
+    /// "…, then discard `count` of them" (Casting of Bones): the controller
+    /// discards from among the cards they drew earlier in this resolution.
+    DiscardOneOfDrawn { count: Value },
     MayDiscardMatching {
         description: String,
         count: Value,

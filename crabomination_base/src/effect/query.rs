@@ -1911,6 +1911,7 @@ impl Effect {
                 value_has_target(amount) || value_has_target(take)
             }
             Effect::Discard { who, amount, .. } => sel_has_target(who) || value_has_target(amount),
+            Effect::DiscardOneOfDrawn { count } => value_has_target(count),
             Effect::PlayerMayStampSourceTurn { who } => sel_has_target(who),
             Effect::DiscardMatchingAtRandom { who, .. } => player_has_target(who),
             Effect::ExileFromHand { who, amount } | Effect::ExileFromHandLinked { who, amount } => {

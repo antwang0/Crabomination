@@ -56,4 +56,47 @@ impl GameState {
         }
         Some(picks)
     }
+
+    /// `Effect::DiscardOneOfDrawn`: discard `count` of the cards the
+    /// controller drew earlier in this resolution — read off this batch's
+    /// `CardDrawn` events, else the hand's last `cards_drawn_this_resolution`
+    /// cards (a resumed resolution's events start empty).
+    pub(crate) fn discard_one_of_drawn(
+        &mut self,
+        count: &crate::effect::Value,
+        ctx: &crate::game::effects::EffectContext,
+        events: &mut Vec<crate::game::GameEvent>,
+        effect: &Effect,
+    ) {
+        let p = ctx.controller;
+        let n = self.evaluate_value(count, ctx).max(0) as usize;
+        if n == 0 || self.player_cant_be_made_to_discard(p) {
+            return;
+        }
+        let hand = &self.players[p].hand;
+        let mut drawn: Vec<CardId> = events
+            .iter()
+            .filter_map(|e| match e {
+                crate::game::GameEvent::CardDrawn { player, card_id } if *player == p => Some(*card_id),
+                _ => None,
+            })
+            .filter(|id| hand.iter().any(|c| c.id == *id))
+            .collect();
+        if drawn.is_empty() {
+            let k = (self.cards_drawn_this_resolution as usize).min(hand.len());
+            drawn = hand.iter().skip(hand.len() - k).map(|c| c.id).collect();
+        }
+        if drawn.is_empty() {
+            return;
+        }
+        let n = n.min(drawn.len());
+        let mut cursor = 0;
+        let Some(picks) = self.pick_discards(&mut cursor, p, ctx.source.unwrap_or(CardId(0)), drawn, n, effect) else {
+            return;
+        };
+        self.clear_answer_log();
+        for id in picks {
+            self.discard_card(p, id, events);
+        }
+    }
 }
