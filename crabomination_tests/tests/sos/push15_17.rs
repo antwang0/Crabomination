@@ -1925,7 +1925,7 @@ fn berserk_doubles_power_and_grants_trample() {
     assert!(c.keywords().contains(&Keyword::Trample));
 }
 
-/// Glimpse of Nature: creatures entering this turn each draw a card.
+/// Glimpse of Nature: each creature SPELL cast this turn draws a card.
 #[test]
 fn glimpse_of_nature_draws_per_creature() {
     let mut g = two_player_game();
@@ -1946,6 +1946,17 @@ fn glimpse_of_nature_draws_per_creature() {
     drain_stack(&mut g);
     // +1 (add bear) -1 (cast bear) +1 (Glimpse draw) = +1 net.
     assert_eq!(g.players[0].hand.len(), hand_before + 1, "drew for the creature");
+    // A creature token entering (not cast) draws nothing.
+    let hand = g.players[0].hand.len();
+    let mint = crabomination::effect::Effect::CreateToken {
+        who: crabomination::effect::PlayerRef::You,
+        count: crabomination::effect::Value::ONE,
+        definition: std::sync::Arc::new(crabomination_base::tokens::stx_pest_token()),
+    };
+    let evs = g.resolve_effect(&mint, &crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand, "an uncast entry is not a cast");
 }
 
 /// Akroma's Will mode 0 grants flying/vigilance/double strike to your team.

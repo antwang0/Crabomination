@@ -319,20 +319,18 @@ pub fn berserk() -> CardDefinition {
 }
 
 /// Glimpse of Nature — {G} Sorcery. "Whenever you cast a creature spell
-/// this turn, draw a card." Approximated with the First Day of Class
-/// machinery: a draw per creature you control ENTERING this turn (a cast
-/// creature spell resolves into an entering creature; token mints also
-/// count — the known drift).
+/// this turn, draw a card." A this-turn delayed trigger (CR 603.7c).
 pub fn glimpse_of_nature() -> CardDefinition {
     CardDefinition {
         name: "Glimpse of Nature",
         cost: cost(&[g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::CreaturesYouControlEnteringThisTurn {
-            body: Box::new(Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            }),
+        effect: Effect::TriggersThisTurn {
+            triggered: vec![crate::card::TriggeredAbility {
+                event: crate::card::EventSpec::new(crate::card::EventKind::SpellCast, crate::card::EventScope::YourControl)
+                    .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Creature)),
+                effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+            }],
         },
         ..Default::default()
     }
