@@ -3146,13 +3146,19 @@ pub fn kazarov_sengir_pureblood() -> CardDefinition {
     }
 }
 
+/// CR 611.2c — "[filter] can't block this turn" is rule-modifying: creatures
+/// that arrive later this turn are bound too.
 fn no_blocks_for(filter: R) -> Effect {
-    Effect::GrantKeyword { what: Selector::EachPermanent(filter), keyword: Keyword::CantBlock, duration: Duration::EndOfTurn }
+    Effect::StaticsThisTurn {
+        statics: vec![StaticAbility {
+            description: "can't block this turn",
+            effect: StaticEffect::GrantKeyword { applies_to: Selector::EachPermanent(filter), keyword: Keyword::CantBlock },
+        }],
+    }
 }
 
 /// Barrage of Boulders — {2}{R} sorcery. 1 damage to each creature you don't
-/// control. Ferocious — creatures can't block this turn. Residual: "can't
-/// block" covers the creatures on the battlefield as it resolves.
+/// control. Ferocious — creatures can't block this turn.
 pub fn barrage_of_boulders() -> CardDefinition {
     CardDefinition {
         name: "Barrage of Boulders",

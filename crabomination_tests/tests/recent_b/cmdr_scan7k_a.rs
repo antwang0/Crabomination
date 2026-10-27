@@ -4642,6 +4642,13 @@ fn kazarov_grows_off_cosmotronic_wave() {
     cast(&mut g, cw);
     assert_eq!(plus(&g, kz), 1);
     assert!(g.permanent_has_keyword(giant, &Keyword::CantBlock));
+    // CR 611.2c — rule-modifying: an opposing creature arriving later this
+    // turn can't block either; the caster's own can; it ends with the turn.
+    let late = ready(&mut g, 1, catalog::hill_giant());
+    assert!(g.permanent_has_keyword(late, &Keyword::CantBlock), "a later creature is bound too");
+    assert!(!g.permanent_has_keyword(kz, &Keyword::CantBlock));
+    step_to(&mut g, 1, TurnStep::Upkeep);
+    assert!(!g.permanent_has_keyword(late, &Keyword::CantBlock), "this turn only");
 }
 
 /// Tobias makes a Zombie per creature of yours that died this turn; Inga
