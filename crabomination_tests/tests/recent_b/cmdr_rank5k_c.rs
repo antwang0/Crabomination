@@ -153,3 +153,34 @@ fn doctor_doom_brings_doombots_and_indestructibility() {
     assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Doombot").count(), 2);
     assert!(keywords(&g, id).contains(&Keyword::Indestructible));
 }
+
+/// Casting of Bones: "draw three cards, then discard one of THEM" — the
+/// discard is among the three drawn, so the costlier card already in hand
+/// (which a headless seat would bin first) stays.
+#[test]
+fn casting_of_bones_discards_one_of_the_drawn_cards() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let kept = g.add_card_to_hand(0, catalog::doomsday_excruciator());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::casting_of_bones());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(bear);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == kept), "the card already in hand isn't one of them");
+    assert_eq!(g.players[0].hand.iter().filter(|c| c.definition.name == "Island").count(), 2);
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Island").count(), 1);
+}

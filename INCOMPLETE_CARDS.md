@@ -2128,7 +2128,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Donnie & April, Adorkable Duo | "each mode must target a different player" isn't enforced; both modes may name the same player | `ChooseN` per-mode target slots |
 | 🟡 Captain James T. Kirk | with an empty hand, "choose one or more" is an up-to-three pick, so zero modes is offered | `ChooseUpToN { max: 3 }` |
 | ~~Spider-Verse~~ ✅ | fixed 2026-10-24: `once_each_turn_on_take` — the use is spent on a copy taken (Riveteers Ascendancy had the same shape, fixed with it) | — |
-| 🟡 Casting of Bones | "discard one of them" is a plain discard of one: the pick isn't limited to the three cards drawn | `Draw` + `Discard` |
+| ~~Casting of Bones~~ ✅ | fixed 2026-10-27: `Effect::DiscardOneOfDrawn` picks among this resolution's `CardDrawn` cards | — |
 | 🟡 Skill Borrower | the top card of your library is only visible to you, not revealed to the table | `MayLookAtOwnLibraryTop` |
 | ~~Doctor Jane Foster~~ ✅ | fixed 2026-10-27: with life gained this turn the card moves graveyard → battlefield in one move (`If` picks the destination) | — |
 | 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |

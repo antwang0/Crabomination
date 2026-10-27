@@ -503,14 +503,9 @@ pub fn set_phasers_to() -> CardDefinition {
 /// three cards, then discard one of them.
 pub fn casting_of_bones() -> CardDefinition {
     CardDefinition {
-        // "Discard one of them" is a plain discard of one: the pick isn't
-        // restricted to the three drawn (INCOMPLETE_CARDS).
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::EnchantedBySource),
-            effect: Effect::Seq(vec![
-                draw(3),
-                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-            ]),
+            effect: Effect::Seq(vec![draw(3), Effect::DiscardOneOfDrawn { count: Value::ONE }]),
         }],
         ..aura("Casting of Bones", cost(&[generic(2), b()]))
     }
