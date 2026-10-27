@@ -5021,6 +5021,10 @@ impl GameState {
                 .get(*slot as usize)
                 .and_then(|t| t.as_ref())
                 .is_none_or(|o| self.target_power_at_most(target, o)),
+            R::AttachedToTargetSlot(slot) => slots
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|o| self.target_attached_to(target, o)),
             R::SameToughnessAsTargetSlot(slot) => {
                 slots.get(*slot as usize).and_then(|t| t.as_ref()).is_none_or(|o| {
                     self.target_toughness(o).is_some() && self.target_toughness(o) == self.target_toughness(target)
@@ -5201,6 +5205,16 @@ impl GameState {
             Target::Player(_) => None,
         };
         matches!((power(t), power(other)), (Some(a), Some(b)) if a <= b)
+    }
+
+    /// Is `t` a permanent attached to the permanent `other`?
+    fn target_attached_to(&self, t: &Target, other: &Target) -> bool {
+        match (t, other) {
+            (Target::Permanent(a), Target::Permanent(b)) => {
+                self.battlefield_find(*a).is_some_and(|c| c.attached_to == Some(*b))
+            }
+            _ => false,
+        }
     }
 
     /// CR 400.7 — does `def` share a card type with a card this source
@@ -5968,6 +5982,11 @@ impl GameState {
                 .get(*slot as usize)
                 .and_then(|t| t.as_ref())
                 .is_none_or(|other| self.target_power_at_most(target, other)),
+            R::AttachedToTargetSlot(slot) => self
+                .target_slots_scratch
+                .get(*slot as usize)
+                .and_then(|t| t.as_ref())
+                .is_none_or(|other| self.target_attached_to(target, other)),
             R::SameToughnessAsTargetSlot(slot) => {
                 match self.target_slots_scratch.get(*slot as usize).and_then(|t| t.as_ref()) {
                     Some(other) => {
@@ -8079,6 +8098,7 @@ impl GameState {
             | R::SameToughnessAsTargetSlot(_)
             | R::ManaValueAtMostTargetSlot(_)
             | R::PowerAtMostTargetSlot(_)
+            | R::AttachedToTargetSlot(_)
             | R::SharesCreatureTypeWithTargetSlot(_)
             | R::SharesCardTypeWithTargetSlot(_)
             | R::NameDiffersFromOtherTargets

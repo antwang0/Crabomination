@@ -3632,6 +3632,10 @@ pub enum SelectionRequirement {
     /// with power less than or equal to that creature's power an opponent
     /// controls", Spawnbroker). Vacuously true while slot N is unchosen.
     PowerAtMostTargetSlot(u8),
+    /// CR 601.2c — the candidate is attached to slot N's permanent ("up to one
+    /// target Equipment attached to that creature", Fiery Annihilation).
+    /// Vacuously true while slot N is unchosen.
+    AttachedToTargetSlot(u8),
     /// CR 601.2c — cross-slot filter: shares a creature type with the
     /// creature already chosen for slot `.0` ("two target creatures you
     /// control that share a creature type" — Secret Tunnel). Vacuously true
@@ -5147,6 +5151,7 @@ impl SelectionRequirement {
             | Self::SameToughnessAsTargetSlot(_)
             | Self::ManaValueAtMostTargetSlot(_)
             | Self::PowerAtMostTargetSlot(_)
+            | Self::AttachedToTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::SharesCardTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
@@ -5175,6 +5180,7 @@ impl SelectionRequirement {
             | Self::SameToughnessAsTargetSlot(_)
             | Self::ManaValueAtMostTargetSlot(_)
             | Self::PowerAtMostTargetSlot(_)
+            | Self::AttachedToTargetSlot(_)
             | Self::SharesCreatureTypeWithTargetSlot(_)
             | Self::SharesCardTypeWithTargetSlot(_)
             | Self::NameDiffersFromOtherTargets
@@ -5202,6 +5208,7 @@ impl SelectionRequirement {
             Self::SameToughnessAsTargetSlot(n) => Self::SameToughnessAsTargetSlot(s(n)),
             Self::ManaValueAtMostTargetSlot(n) => Self::ManaValueAtMostTargetSlot(s(n)),
             Self::PowerAtMostTargetSlot(n) => Self::PowerAtMostTargetSlot(s(n)),
+            Self::AttachedToTargetSlot(n) => Self::AttachedToTargetSlot(s(n)),
             Self::SharesCreatureTypeWithTargetSlot(n) => Self::SharesCreatureTypeWithTargetSlot(s(n)),
             Self::SharesCardTypeWithTargetSlot(n) => Self::SharesCardTypeWithTargetSlot(s(n)),
             Self::SameGraveyardAsTargetSlot(n) => Self::SameGraveyardAsTargetSlot(s(n)),
