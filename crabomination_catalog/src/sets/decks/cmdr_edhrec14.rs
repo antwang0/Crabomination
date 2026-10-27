@@ -1991,10 +1991,6 @@ pub fn teferi_who_slows_the_sunset() -> CardDefinition {
         then: Box::new(Effect::Untap { what: Selector::TargetFiltered { slot, filter: filter.clone() }, up_to: None }),
         else_: Box::new(Effect::Tap { what: Selector::TargetFiltered { slot, filter } }),
     };
-    let on_their_step = |step: TurnStep, effect: Effect| TriggeredAbility {
-        event: EventSpec::new(EventKind::StepBegins(step), EventScope::OpponentControl),
-        effect,
-    };
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
         subtypes: Subtypes {
@@ -2026,12 +2022,19 @@ pub fn teferi_who_slows_the_sunset() -> CardDefinition {
                 Effect::CreateEmblem {
                     who: PlayerRef::You,
                     name: "Teferi, Who Slows the Sunset".into(),
-                    triggered: vec![on_their_step(TurnStep::Draw, draw(1))],
-                    // CR 502.3 — untapped in each opponent's untap step.
-                    statics: vec![crate::card::StaticAbility {
-                        description: "Untap all permanents you control during each opponent's untap step.",
-                        effect: crate::effect::StaticEffect::UntapAllYoursEachUntapStep,
-                    }],
+                    triggered: vec![],
+                    // CR 502.3 — untapped in each opponent's untap step; the
+                    // draw follows theirs without using the stack (ruling).
+                    statics: vec![
+                        crate::card::StaticAbility {
+                            description: "Untap all permanents you control during each opponent's untap step.",
+                            effect: crate::effect::StaticEffect::UntapAllYoursEachUntapStep,
+                        },
+                        crate::card::StaticAbility {
+                            description: "You draw a card during each opponent's draw step.",
+                            effect: crate::effect::StaticEffect::DrawDuringEachOpponentsDrawStep,
+                        },
+                    ],
                 },
             ),
         ],

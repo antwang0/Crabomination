@@ -372,6 +372,33 @@ fn cr_502_3_teferis_emblem_untaps_in_an_opponents_untap_step() {
     assert!(g.battlefield_find(theirs).unwrap().tapped, "a non-active opponent's don't");
 }
 
+/// Teferi's −7 emblem draws you a card during each opponent's draw step right
+/// after their turn-based draw, off the stack (ruling 2021-09-24: no priority
+/// between the two draws), and not during your own draw step.
+#[test]
+fn teferis_emblem_draws_in_an_opponents_draw_step_without_the_stack() {
+    let mut g = pod(3);
+    let teferi = ready(&mut g, 0, catalog::teferi_who_slows_the_sunset());
+    g.battlefield_find_mut(teferi).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 3);
+    act(&mut g, GameAction::ActivateLoyaltyAbility { card_id: teferi, ability_index: 2, target: None, x_value: None })
+        .expect("-7");
+    for seat in 0..3 {
+        library(&mut g, seat, 3);
+    }
+    let hands = |g: &GameState| [0, 1, 2].map(|s| g.players[s].hand.len());
+    let before = hands(&g);
+    g.active_player_idx = 2;
+    g.step = TurnStep::Upkeep;
+    let _ = g.advance_step(Vec::new());
+    assert_eq!(g.step, TurnStep::Draw);
+    assert!(g.stack.is_empty(), "the emblem's draw doesn't use the stack");
+    assert_eq!(hands(&g), [before[0] + 1, before[1], before[2] + 1], "seat 2 draws, then you");
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    let _ = g.advance_step(Vec::new());
+    assert_eq!(hands(&g), [before[0] + 2, before[1], before[2] + 1], "your own draw step is one card");
+}
+
 /// Toluz, Clever Conductor: cards you discard are exiled with it, and come
 /// back to hand when it dies.
 #[test]

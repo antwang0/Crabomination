@@ -2055,7 +2055,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Verdant Mastery, Fervent Mastery | their picks are still separate searches (two taxes under Leonin Arbiter) | left out of `OneSearch` (`01M3bbRx`): STX cards in the two-player pool |
 | ~~Lochmere Serpent~~ ✅ | fixed 2026-10-25: exactly five targets, all in one opponent's graveyard (`SameGraveyardAsTargetSlot(0)`, the 2019-10-04 ruling) — `lochmere_serpent_needs_five_targets_in_a_single_opponents_graveyard` | — |
 | 🟡 Offspring's Revenge | the token keeps haste past "until your next turn" | `CreateTokenCopyOf.extra_keywords` is permanent |
-| 🟡 Teferi, Who Slows the Sunset | the −7 emblem's "you draw a card during each opponent's draw step" is a trigger at the step's start (it uses the stack); its untap is exact since 2026-10-26 (`UntapAllYoursEachUntapStep` on the emblem) | emblem triggers fire at `StepBegins`; there is no emblem draw-step static |
 | 🟡 Lagrella, the Magpie | exiles only opponents' creatures, and a returning card gets no +1/+1 counters | the "enters under your control" rider has no engine hook; your own creatures would come back without it |
 | 🟡 Battletide Alchemist | the "you may prevent" is always taken for its controller's side and never for an opponent | `ReduceDamageToYourTeamByCount` has no per-event prompt |
 | ~~King T'Challa // Black Panther, Hope Enduring~~ ✅ | fixed 2026-10-24: a modal DFC whose front also transforms (CR 712.11b) — the back face carries its {4}{W}{U} and is cast from hand | — |
