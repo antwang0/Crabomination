@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc5`) — 70 seated-deck residuals, two primitives, the creature-damage watcher class](#fixedopen-2026-10-27-commander-run-01wruxc5--70-seated-deck-residuals-two-primitives-the-creature-damage-watcher-class) | 37 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01WvrAp6`) — the CR 603.12 lane, dropped "may"s, the loop-splice ratchet](#fixedopen-2026-10-26-commander-run-01wvrap6--the-cr-60312-lane-dropped-mays-the-loop-splice-ratchet) | 36 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01AsBSRF`) — 40 seated-deck cards, six engine primitives, two stale-row sweeps](#fixedopen-2026-10-26-commander-run-01asbsrf--40-seated-deck-cards-six-engine-primitives-two-stale-row-sweeps) | 34 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-26 (Commander run, `01GQxp2B`) — 26 seated-deck cards, stale residual docs, the mana-ability lock](#fixedopen-2026-10-26-commander-run-01gqxp2b--26-seated-deck-cards-stale-residual-docs-the-mana-ability-lock) | 32 |
@@ -288,6 +289,48 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 **`013mwV6T`'s gates line, moved verbatim from TODO's Commander NEXT by `01M3bbRx`:**
 
 **Gates (`013mwV6T`):** full suite (`CRAB_ANSWER_LOG=strict`) found two failures from this run's changes (Livio's bot shape, the granted-trigger READS census), both fixed; the final full run (after the loyalty-protection fix, tip `b313ba94b` + trackers) read **28,992 / 0 / 7**; workspace clippy **0**; `--bench` byte-identical again at it, cube/sos/sealed seed 10168 7,500 decided, pods seed 10168 × 200 at 3/4/6/8 seats 800 decided, cube/sos/sealed seed 10164 7,498 decided + 2 CR 104.4a draws (the same with the pre-fix binary); the seat test: its `overflow` build restarted this container; `01M2Ffkh` then ran it green at the merged tip); workspace clippy **0**; `--bench` (release-fast) **27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok, A/B vs base `ab833866a` on this box -0.32 % (noise; this box reads ~155 k decisions/s where the last read 196 k); cube/sos/sealed × 300 (seed 10163) 7,500 decided; pods seed 10161 × 200 at 2..8 seats 1,400 decided; the 430 decks holding a changed card × 20 (seed 10162) 2,119/2,120 (one CR 104.4a draw). ⚠ A concurrent pair of clippy commits each added `CastReplay` and the tip did not compile — fixed `87113f40f`; **build after every rebase**. **Next:** ENGINE_BACKLOG `013mwV6T`'s OPEN list (Bilbo's Gambit 31, Agadeem's Awakening 29, Sakashima's Protege 27; a side-aware `RemoveCountersUpTo` pick closes Heartless Act + Rhys); INCOMPLETE's Aegar / Jeska rows as `01M2Ffkh` described them.
+
+## FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc5`) — 70 seated-deck residuals, two primitives, the creature-damage watcher class
+
+No seats. `pod_residuals.py --rank` worked top-down, then the doc-flagged tail; clean seated decks **5,062 → 5,176 / 6,093**.
+Every change has a test or extends the card's existing one.
+- **Primitives:** `StaticEffect::DrawDuringEachOpponentsDrawStep` (Teferi, Who Slows the Sunset's emblem draws off
+  the stack right after the active player's draw — 2021-09-24 ruling; behind an any-emblems guard in the draw step);
+  `SelectionRequirement::PowerAtMostTargetSlot` (Spawnbroker), wired into both slot-aware walkers,
+  `mentions_cross_slot` / `without_cross_slot` / `shift_target_slots`.
+- **Real defects (not doc drift):** Salvage Drone's loot had no discard (a free card); Samurai of the Pale Curtain
+  was a Rest in Peace for every card (now `DiesToExileInstead`, CR 700.4); Charitable Levy and Vryn Wingmare carried
+  Damping Sphere's after-the-first static, so the first noncreature spell a turn went untaxed (Levy fixed; **Vryn
+  Wingmare is cube-pool — written into its doc, not shipped**); No Mercy / Dread destroyed an opponent's noncreature
+  damage source and ignored your own creatures (`SourceDamagedYou` + `dealt_by(Creature)`); Sporogenic Infection's
+  edict could take its own host; Careful Consideration had no player target; Ingenious Mastery's gift went to the
+  hostile pick, not a chosen opponent; Black Widow's counter and cast weren't exclusive; Impossible Man took the
+  copied name (legend rule); Blazing Bomb read mana value, not mana spent; Angelic Favor wasn't combat-only;
+  Conclave's Blessing counted its own host; Divine Resilience kicked hit every creature, not its targets.
+- **Missing halves built:** Kav Landseeker's Lander sacrifice (`DelayUntilWithCapture` + `YourNextTurnsEndStep`),
+  Stormwing Entity's discount, Steamcore Scholar's reprieve, Mutual Destruction's conditional flash, Magus of the
+  Unseen's tap-on-loss, Ego Erasure's type strip, Iceberg Titan, Dire Blunderbuss (granted reflexive trigger), Hangar
+  Scrounger's backup grant, Pinnacle Starcage's cash-in, Invasion Submersible's waterbend, Gideon's Company's loyalty
+  ability, Avatar Destiny's "milled this way", plus ~25 smaller rows (up-to-one / X / up-to-two target slots, types,
+  colors, crew bonuses).
+- **Stale docs:** ~30 residual notes described gaps already closed (Jiang Yanggu, Scrabbling Claws, Tobias,
+  Thornplate Intimidator, Don't Make a Sound, Buzzard-Wasp Colony, Jack-o'-Lantern, …) — `pod_residuals` counts docs,
+  so drift there under-reports clean decks.
+
+OPEN:
+- Cube-frozen, written up not built: **Vryn Wingmare** (`AdditionalCost`, a real defect), Exquisite Firecraft
+  (`CantBeCounteredIfCastCondition` + `as_cast_condition: spell_mastery_gate()`), Lava Coil
+  (`ExileIfWouldDieThisTurn` + damage), Pyrotechnic Performer (`YourControl` + `DealDamageEqualToPower`).
+- Looked at, needs a primitive: Karn, Living Legacy (an emblem activated ability — a `GameAction`), Reckless Blaze
+  (the dies-this-turn watcher evaluates its filter with no source, so `DamagedBySourceThisTurn` can't gate it),
+  Kutzil's Flanker (a creatures-left-the-battlefield count; only a bool exists), Glimpse the Cosmos (a graveyard alt
+  cast's exile rider), Invasion of Ravnica (an exactly-N-colors requirement), Graven Abomination (a defending-player
+  graveyard filter), Casting of Bones (a drawn-this-effect discard filter), Anti-Magic Aura / Consecrate Land (an
+  Aura-legality filter), Phyrexian Marauder (a self attack tax).
+
+## The Commander NEXT's line 10 as `01WRuXc5` found it (moved verbatim, 2026-10-27)
+
+10. **`01Q9JUQw` (2026-10-27, no seats): six fixes** — the Numa stall (line 6); Goldberry's "a counter of each kind" moving keyword counters (CR 122.1b, `counter_kinds.rs`); Cruel Calculations' X library-only (`Value::CardsPutIntoGraveyardFromLibraryThisTurn`); Chiss-Goria's granted affinity (`MayPlayPermission.affinity_for_artifacts` + `Effect::AffinityAfterGrantedCast`, CR 702.41a); affinity counting artifacts by current type (ratchet 8 → 7); **`MayPayGenericUpTo` paid from the floating pool only, so every Commander bot skipped it** (Hawkeye, Well of Lost Dreams + 3) — a CLASS: grep a resolution-time payment for `mana_pool.total()` as its budget. Gates: suite **29,166 / 0 / 8** (strict, seat test then alone: **6,093 seats green**), **29,168 / 0 / 8 at the closing tip**; workspace clippy **0** (both tips); `release-fast` check clean; `--bench` byte-identical 196,176 / 27.64 / 613.0 / 0 at both tips; cube/sos/sealed × 300 (seed 18001) byte-identical across this run's binaries. Pods: strict debug `random_pods.sh 4 250 2 17000` (500) and `6 100 2 17500` (200) **nothing**; release `4 400 3 16100` (1,200), `6 300 3 18100` (900), `3 400 3 18500` (1,200), `8 150 2 18900` (300) — **0 stalls, 0 panics**, 4 CR 104.4a draws, every one Descent into Avernus killing the last seats at once; seed 16000 × 300 at 2/4/6/8 seats all decided (turns 19.41 / 46.44 / 69.44 / 96.67). `pod_residuals.py --rank` tops left: Karn, Living Legacy (an emblem activated ability = a new `GameAction`), Baron Zemo / Scrap Welder / Rhys (only a prompting seat sees them), Teferi Who Slows the Sunset (emblem draw-step trigger), World War Hulk (a filtered next-spell-free grant: `free_next_spell_types` is by `CardType` only).
 
 ## The Commander NEXT's line 8 as `01WvrAp6` found it (moved verbatim, 2026-10-26)
 
