@@ -3159,6 +3159,34 @@ fn glimpse_the_cosmos_digs_three_takes_one() {
     assert_eq!(g.players[0].library.len(), lib_before - 1, "other two stayed in library (bottom)");
 }
 
+/// Glimpse the Cosmos from the graveyard: {U} while you control a Giant,
+/// refused without one, and the graveyard cast is exiled as it resolves.
+#[test]
+fn glimpse_the_cosmos_recasts_from_graveyard_with_a_giant_then_exiles() {
+    let mut g = two_player_game();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let spell = g.add_card_to_graveyard(0, catalog::glimpse_the_cosmos());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.step = TurnStep::PreCombatMain;
+    let cast = |g: &mut GameState| {
+        g.perform_action(GameAction::CastSpellAlternative {
+            card_id: spell,
+            pitch_card: None,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(cast(&mut g).is_err(), "no Giant, no graveyard cast");
+    g.add_card_to_battlefield(0, catalog::hill_giant());
+    cast(&mut g).expect("{U} from the graveyard with a Giant");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == spell), "exiled instead of returning to the graveyard");
+}
+
 /// Honor the God-Pharaoh: discard a card as a cost, draw two, amass Zombies 1.
 #[test]
 fn honor_the_god_pharaoh_discard_draw_amass() {

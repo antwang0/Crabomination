@@ -64281,13 +64281,22 @@ pub fn ferocious_tigorilla() -> CardDefinition {
 }
 
 /// Glimpse the Cosmos — {1}{U} Sorcery. Look at the top three cards of your
-/// library, put one into your hand, and the rest on the bottom. (The "cast
-/// from graveyard while you control a Giant" rider is dropped.)
+/// library, put one into your hand, and the rest on the bottom. While you
+/// control a Giant, castable from your graveyard for {U} (then exiled).
 pub fn glimpse_the_cosmos() -> CardDefinition {
     CardDefinition {
         name: "Glimpse the Cosmos",
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Sorcery],
+        alternative_cost: Some(crate::card::AlternativeCost {
+            from_graveyard: true,
+            graveyard_cast_exiles: true,
+            mana_cost: cost(&[u()]),
+            condition: Some(Predicate::SelectorExists(Selector::EachPermanent(
+                SelectionRequirement::HasCreatureType(CreatureType::Giant).and(SelectionRequirement::ControlledByYou),
+            ))),
+            ..Default::default()
+        }),
         effect: Effect::LookPickToHand(Box::new(LookPick {
             who: PlayerRef::You,
             count: Value::Const(3),
