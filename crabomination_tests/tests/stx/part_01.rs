@@ -4212,6 +4212,39 @@ fn inscription_of_insight_default_mode_bounces_a_creature() {
         "to its OWNER's hand, not the caster's");
 }
 
+/// Inscription of Insight kicked (CR 700.2 — "choose any number instead"):
+/// the bounce takes up to two targets, and the Illusion goes to the TARGET
+/// player as an X/X for the cards in their hand as it resolves — after the
+/// bounce, in printed order.
+#[test]
+fn inscription_of_insight_kicked_bounces_two_and_targets_the_illusions_player() {
+    let mut g = two_player_game();
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.players[1].hand.clear();
+    let io = g.add_card_to_hand(0, catalog::inscription_of_insight());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    g.players[0].mana_pool.add_colorless(5);
+    g.perform_action(GameAction::CastSpellSpree {
+        card_id: io,
+        spree_modes: vec![0, 2],
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b), Target::Player(1)],
+        x_value: None,
+    })
+    .expect("kicked Inscription castable for {5}{U}{U}{U}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "both bounced");
+    let illusion = g
+        .battlefield
+        .iter()
+        .find(|c| c.definition.name == "Illusion")
+        .expect("an Illusion");
+    assert_eq!(illusion.controller, 1, "the target player creates it");
+    let cp = g.computed_permanent(illusion.id).unwrap();
+    assert_eq!((cp.power, cp.toughness), (2, 2), "X = the two bounced Bears in their hand");
+}
+
 /// Memory Lapse — after the new `CounterSpellToZone` wiring, the
 /// countered spell lands on top of its owner's library rather than in
 /// the graveyard. The printed "instead" clause overrides CR 701.6a's

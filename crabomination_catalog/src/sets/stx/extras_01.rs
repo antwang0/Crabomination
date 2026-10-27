@@ -1125,10 +1125,9 @@ pub fn stonebound_mentor() -> CardDefinition {
 /// draw two cards. • Target player creates an X/X blue Illusion creature
 /// token, where X is the number of cards in their hand."
 ///
-/// Two approximations remain: the bounce is one target rather than "up to
-/// two", and the Illusion's controller is you rather than a targeted player.
+/// Kicked, any subset of modes runs in printed order, each targeting mode on
+/// its own slots (CR 700.2 / 601.2c) — Atlantis Attacks' shape.
 pub fn inscription_of_insight() -> CardDefinition {
-    use crate::card::CounterType;
     CardDefinition {
         name: "Inscription of Insight",
         cost: cost(&[generic(3), u()]),
@@ -1140,43 +1139,50 @@ pub fn inscription_of_insight() -> CardDefinition {
             max: 1,
             allow_repeats: false,
             modes: vec![
-                // Mode 0: return target creature to its owner's hand.
-                Effect::Move {
-                    what: target_filtered(SelectionRequirement::Creature),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                // Mode 0: return up to two target creatures to their owners' hands.
+                Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 0,
+                    filter: SelectionRequirement::Creature,
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::Target(0)))),
+                    }),
                 },
                 // Mode 1: scry 2, then draw two.
                 Effect::Seq(vec![
                     Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
                     Effect::Draw { who: Selector::You, amount: Value::Const(2) },
                 ]),
-                // Mode 2: an X/X blue Illusion, X = cards in hand. Minted 0/0
-                // and grown by counters, the `Wild Hypothesis` idiom.
-                Effect::Seq(vec![
-                    Effect::CreateToken {
-                        who: PlayerRef::You,
+                // Mode 2: target player creates an X/X blue Illusion, X = cards
+                // in their hand as it resolves (a mint-time printed P/T).
+                Effect::TargetPlayerThen {
+                    filter: SelectionRequirement::Player,
+                    then: Box::new(Effect::CreateToken {
+                        who: PlayerRef::Target(0),
                         count: Value::Const(1),
                         definition: std::sync::Arc::new(crate::card::TokenDefinition {
                             name: "Illusion".into(),
-                            power: 0,
-                            toughness: 0,
                             card_types: vec![CardType::Creature],
                             colors: vec![crate::mana::Color::Blue],
                             subtypes: crate::card::Subtypes {
                                 creature_types: vec![crate::card::CreatureType::Illusion],
                                 ..Default::default()
                             },
+                            dynamic_pt: Some((hand_size(), hand_size())),
                             ..Default::default()
-                        }.entering_with(CounterType::PlusOnePlusOne, Value::CardsInHandMatching {
-                            who: PlayerRef::You,
-                            filter: SelectionRequirement::Any,
-                        })),
-                    },
-                ]),
+                        }),
+                    }),
+                },
             ],
         },
         ..Default::default()
     }
+}
+
+/// Cards in the targeted player's hand (Inscription of Insight's X).
+fn hand_size() -> Value {
+    Value::CardsInHandMatching { who: PlayerRef::Target(0), filter: SelectionRequirement::Any }
 }
 
 // ── Eureka Moment (STX — Quandrix common) ──────────────────────────────────
