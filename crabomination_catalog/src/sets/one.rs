@@ -4606,8 +4606,7 @@ pub fn myr_custodian() -> CardDefinition {
 }
 
 /// Feed the Infection — {3}{B} Sorcery. Draw three, lose 3. Corrupted — each
-/// opponent with three or more poison counters loses 3 life (1v1: gated on
-/// the Corrupted check).
+/// opponent with three or more poison counters loses 3 life.
 pub fn feed_the_infection() -> CardDefinition {
     CardDefinition {
         name: "Feed the Infection",
@@ -4619,16 +4618,7 @@ pub fn feed_the_infection() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::Const(3),
             },
-            Effect::If {
-                cond: Predicate::CorruptedActive {
-                    who: PlayerRef::You,
-                },
-                then: Box::new(Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::EachOpponent),
-                    amount: Value::Const(3),
-                }),
-                else_: Box::new(Effect::Noop),
-            },
+            poisoned_opponents_lose(3),
         ]),
         ..Default::default()
     }
@@ -5847,7 +5837,7 @@ pub fn transplant_theorist() -> CardDefinition {
 }
 
 /// Phyrexian Atlas — {3} Artifact. {T}: any color. Corrupted — on becoming
-/// tapped, each poisoned-out opponent loses 1 life (exact in two-player).
+/// tapped, each opponent with three or more poison counters loses 1 life.
 pub fn phyrexian_atlas() -> CardDefinition {
     CardDefinition {
         name: "Phyrexian Atlas",
@@ -5867,12 +5857,24 @@ pub fn phyrexian_atlas() -> CardDefinition {
                     who: PlayerRef::You,
                 },
             ),
-            effect: Effect::LoseLife {
-                who: Selector::Player(PlayerRef::EachOpponent),
-                amount: Value::ONE,
-            },
+            effect: poisoned_opponents_lose(1),
         }],
         ..Default::default()
+    }
+}
+
+/// Corrupted, per opponent — "each opponent who has three or more poison
+/// counters loses `n` life": the others lose nothing in a pod.
+fn poisoned_opponents_lose(n: i32) -> Effect {
+    Effect::ForEachOpponent {
+        body: Box::new(Effect::If {
+            cond: Predicate::ValueAtLeast(Value::PoisonCountersOf(PlayerRef::Triggerer), Value::Const(3)),
+            then: Box::new(Effect::LoseLife {
+                who: Selector::Player(PlayerRef::Triggerer),
+                amount: Value::Const(n),
+            }),
+            else_: Box::new(Effect::Noop),
+        }),
     }
 }
 

@@ -2383,6 +2383,19 @@ fn feed_the_infection_corrupted_gate() {
     assert_eq!(g.players[1].life, 17, "Corrupted — opponent lost 3");
 }
 
+/// CR 702.166 — at four seats only the opponents who have three or more poison
+/// counters lose life, not every opponent once one is corrupted.
+#[test]
+fn feed_the_infection_drains_only_poisoned_opponents_in_a_pod() {
+    let mut g = multi_player_game(4);
+    for _ in 0..3 { g.add_card_to_library(0, catalog::forest()); }
+    g.players[2].poison_counters = 3;
+    resolve_for(&mut g, 0, catalog::feed_the_infection().effect);
+    assert_eq!(g.players[2].life, g.players[2].starting_life - 3, "the poisoned opponent");
+    assert_eq!(g.players[1].life, g.players[1].starting_life, "an unpoisoned opponent keeps its life");
+    assert_eq!(g.players[3].life, g.players[3].starting_life);
+}
+
 // ── Wave 4 ───────────────────────────────────────────────────────────────────
 
 /// Rustvine Cultivator banks oil then untaps a land with it.
