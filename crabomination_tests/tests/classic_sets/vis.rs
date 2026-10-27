@@ -562,6 +562,16 @@ fn phyrexian_marauder_enters_with_x_counters() {
     let cp = g.computed_permanent(marauder).expect("resolved");
     assert_eq!((cp.power, cp.toughness), (3, 3), "three +1/+1 counters");
     assert!(cp.keywords().contains(&Keyword::CantBlock));
+    // CR 508.1g — it can't attack unless you pay {1} per +1/+1 counter.
+    g.clear_sickness(marauder);
+    g.step = TurnStep::DeclareAttackers;
+    g.players[0].mana_pool = Default::default();
+    g.players[0].mana_pool.add_colorless(2);
+    let swing = || vec![Attack { attacker: marauder, target: AttackTarget::Player(1) }];
+    assert!(g.declare_attackers(swing()).is_err(), "{{2}} doesn't cover three counters");
+    g.players[0].mana_pool.add_colorless(1);
+    g.declare_attackers(swing()).expect("{3} pays the tax");
+    assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
 /// Miraculous Recovery reanimates with a +1/+1 counter.

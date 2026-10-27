@@ -1345,13 +1345,12 @@ pub fn scalebanes_elite() -> CardDefinition {
 }
 
 /// Phyrexian Marauder — {X} 0/0 Construct entering with X +1/+1 counters that
-/// can't block. (The "can't attack unless you pay {1} per counter" tax is
-/// dropped.)
+/// can't block, and can't attack unless you pay {1} for each +1/+1 counter on it.
 pub fn phyrexian_marauder() -> CardDefinition {
     CardDefinition {
         cost: cost(&[crate::mana::x()]),
         card_types: vec![CardType::Artifact, CardType::Creature],
-        keywords: vec![Keyword::CantBlock],
+        keywords: vec![Keyword::CantBlock, Keyword::CantAttackUnlessPayPerCounter(CounterType::PlusOnePlusOne)],
         enters_with_counters: Some((CounterType::PlusOnePlusOne, Value::XFromCost)),
         ..creature(
             "Phyrexian Marauder",
