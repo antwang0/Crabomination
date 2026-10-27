@@ -393,6 +393,12 @@ impl GameState {
         }
         if let Ok(evs) = &mut r {
             self.note_left_graveyard(p, card_id, evs);
+            if self.stack.iter().any(|si| {
+                matches!(si, StackItem::Spell { card, .. } if card.id == card_id
+                    && card.definition.alternative_cost.as_ref().is_some_and(|a| a.graveyard_cast_exiles))
+            }) {
+                self.mark_spell_exiles_on_resolve(card_id);
+            }
         }
         r
     }

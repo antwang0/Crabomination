@@ -7762,6 +7762,10 @@ pub struct AlternativeCost {
     /// ability" — Sabin, Master Monk).
     #[serde(default)]
     pub also_from_graveyard: bool,
+    /// "If you cast this spell this way and it would be put into a graveyard,
+    /// exile it instead" on a `from_graveyard` cast (Glimpse the Cosmos).
+    #[serde(default)]
+    pub graveyard_cast_exiles: bool,
     pub mana_cost: ManaCost,
     /// Life paid as additional cost.
     pub life_cost: u32,
