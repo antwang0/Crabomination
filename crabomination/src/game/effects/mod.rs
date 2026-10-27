@@ -8784,13 +8784,17 @@ impl GameState {
 
             Effect::MayPayGenericUpTo { max, body } => {
                 // "You may pay {X}, X ≤ max" — prompt for a number bounded by
-                // both the printed cap and the mana actually in the pool, spend
-                // that many generic, then run `body` with `event_amount` = paid
-                // (read back via `Value::TriggerEventAmount`). Well of Lost Dreams.
+                // both the printed cap and the mana the controller can make
+                // (`MayPayX`'s bound: the pool plus one per untapped source),
+                // pay that many generic, then run `body` with `event_amount` =
+                // paid (read back via `Value::TriggerEventAmount`). Well of
+                // Lost Dreams. It read the floating pool only, so a seat that
+                // floats nothing (every Commander bot) never paid (Hawkeye).
                 use crate::decision::{Decision, DecisionAnswer};
                 let cap = self.evaluate_value(max, ctx).max(0) as u32;
                 let pool = self.players[ctx.controller].mana_pool.total();
-                let cap = cap.min(pool);
+                let reach = pool + self.mana_source_candidates(ctx.controller).len() as u32;
+                let cap = cap.min(reach);
                 if cap == 0 {
                     return Ok(());
                 }
@@ -8822,7 +8826,16 @@ impl GameState {
                 if paid == 0 {
                     return Ok(());
                 }
-                self.players[ctx.controller].mana_pool.spend_generic(paid);
+                if paid <= pool {
+                    self.players[ctx.controller].mana_pool.spend_generic(paid);
+                } else if !self.pay_mana_cost_with_picks(
+                    ctx.controller,
+                    &crate::mana::ManaCost::new(vec![crate::mana::generic(paid)]),
+                    None,
+                    events,
+                ) {
+                    return Ok(());
+                }
                 let mut body_ctx = ctx.clone();
                 body_ctx.event_amount = paid;
                 self.run_effect(body, &body_ctx, events)?;

@@ -2148,7 +2148,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Lightmine Field | "each of those creatures" / "the number of attacking creatures" read every attacker as the trigger resolves, not the declaration that triggered it | `YouAttack` + `IsAttacking` |
 | 🟡 Pick Up the Pace | "cards exiled with this enchantment" stay playable after the enchantment leaves (the permission is not tied to it, like Neyali's) | `ExileTopAndGrantMayPlay { TurnsHolderAttacks }` |
 | 🟡 Volcano Hellion | "an amount of damage of your choice" is offered up to the target creature's toughness, not without limit | `PlayerChoosesNumber { max: ToughnessOf(Target(0)) }` |
-| 🟡 Hawkeye, Master Marksman | the up-to-{3} is paid from floating mana only (no land taps mid-resolution); modes are chosen as the trigger resolves and each targeted mode is its own reflexive trigger | `MayPayGenericUpTo` + `ChooseUpToN` + `Reflexive` |
+| 🟡 Hawkeye, Master Marksman | modes are chosen as the trigger resolves and each targeted mode is its own reflexive trigger | `MayPayGenericUpTo` + `ChooseUpToN` + `Reflexive` |
 | 🟡 Zareth San, the Trickster | the returned unblocked Rogue is auto-picked; `IsUnblocked` also holds in the declare-attackers step, before blocks | from-hand `bounce_other_filter` + `JoinCombatAttackingChosen` |
 | 🟡 Hew the Entwood | chosen cards enter one at a time in pick order (not all nonlands, then all lands); the bot sacrifices no lands | `SacrificeAnyNumber` + `LookPick` |
 | 🟡 Blaster, Combat DJ | the granted modular's death trigger is the creature one, so a Vehicle that isn't a creature when it dies keeps its counters | three statics + `modular_dies` |
@@ -2157,7 +2157,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Lethal Exploit | the modified creatures are counted as it resolves, not as it is cast | `PumpPT` with `CountOf` |
 | 🟡 Fall of the Impostor | a tie for greatest power exiles the first in battlefield order, not the controller's choice | `TakeGreatestPower` |
 | 🟡 Shah of Naar Isle | "up to three" is three yes/no draws | `EachPlayerDoes` + `MayDo` |
-| 🟡 Azor, the Lawbringer | the {X}{W}{U}{U} attack payment is from floating mana only | `MayPayXPlus` |
 | 🟡 The Kingpin of Crime | the attack trigger's "creatures with toughness greater than their power" is the set as it resolves; a creature that qualifies later in the turn doesn't assign by toughness (CR 611.2c) | `GrantKeyword { AssignsCombatDamageByToughness, EndOfTurn }` |
 | 🟡 Safe Passage | "creatures you control" are the ones you control as it resolves; a creature that enters later this turn is unshielded | two `PreventAllDamageThisTurn` |
 | 🟡 Mordor on the March | "exile a creature card from your graveyard" is a target (a hexproof-from-graveyard effect would stop it); each storm copy re-aims at another card | `CreateTokenCopyOf` + `Exile` + `DelayUntil` |

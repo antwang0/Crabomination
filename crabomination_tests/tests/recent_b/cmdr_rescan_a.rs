@@ -1093,6 +1093,22 @@ fn hawkeye_trick_arrows_pay_two_for_two_modes() {
     assert_eq!(g.players[0].hand.len(), 1);
 }
 
+/// Bug fix: the up-to-{3} taps lands — nothing floats, two Islands pay {2}
+/// (it read the floating pool only, so a Commander bot never paid).
+#[test]
+fn hawkeye_pays_from_untapped_lands() {
+    let mut g = pod(3);
+    let hawk = ready(&mut g, 0, catalog::hawkeye_master_marksman());
+    let islands: Vec<CardId> = (0..2).map(|_| ready(&mut g, 0, catalog::island())).collect();
+    g.add_card_to_hand(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let life = g.players[1].life;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2), DecisionAnswer::Modes(vec![1, 2])]));
+    declare(&mut g, vec![(hawk, 1)]);
+    assert!(islands.iter().all(|&i| g.battlefield_find(i).is_some_and(|c| c.tapped)));
+    assert_eq!(g.players[1].life, life - 2);
+}
+
 /// Zareth San swaps in for an unblocked attacking Rogue (tapped and attacking,
 /// CR 508.4), then connects to steal a permanent card from their graveyard.
 #[test]
@@ -1628,6 +1644,25 @@ fn azor_silences_each_opponents_next_turn() {
     assert!(try_bolt(&mut g).is_err(), "their next turn is locked");
     step_to(&mut g, 2, TurnStep::PreCombatMain);
     try_bolt(&mut g).expect("the lock lasted one turn");
+}
+
+/// Azor's attack payment {X}{W}{U}{U} taps lands: nothing floats, five lands
+/// pay X = 2 — two life, two cards.
+#[test]
+fn azor_pays_its_attack_x_from_lands() {
+    let mut g = pod(2);
+    let azor = ready(&mut g, 0, catalog::azor_the_lawbringer());
+    ready(&mut g, 0, catalog::plains());
+    for _ in 0..4 {
+        ready(&mut g, 0, catalog::island());
+    }
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(2)]));
+    declare(&mut g, vec![(azor, 1)]);
+    assert_eq!((g.players[0].life, g.players[0].hand.len()), (life + 2, hand + 2));
 }
 
 /// CR 702.30a — paying Shah of Naar Isle's echo {0} lets each opponent draw

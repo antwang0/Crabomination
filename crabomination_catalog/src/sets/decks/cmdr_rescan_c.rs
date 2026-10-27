@@ -777,9 +777,8 @@ pub fn hew_the_entwood() -> CardDefinition {
 /// strike, reach. Whenever he becomes tapped, you may pay {1} up to three
 /// times; choose up to that many: target creature can't block this turn / 2
 /// damage to target player / discard a card, then draw a card. Approximation:
-/// the {X} is paid from floating mana (no mid-resolution land taps, like every
-/// `MayPayGenericUpTo`), modes are chosen as the trigger resolves, and each
-/// targeted mode is its own reflexive trigger.
+/// modes are chosen as the trigger resolves, and each targeted mode is its own
+/// reflexive trigger.
 pub fn hawkeye_master_marksman() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::FirstStrike, Keyword::Reach],
@@ -1419,8 +1418,7 @@ pub fn knowledge_exploitation() -> CardDefinition {
 /// Azor, the Lawbringer — {2}{W}{W}{U}{U} legendary 6/6 flying Sphinx. When
 /// Azor enters, each opponent can't cast instant or sorcery spells during
 /// that player's next turn. Whenever Azor attacks, you may pay {X}{W}{U}{U};
-/// if you do, gain X life and draw X cards. (Approximation: the {X}{W}{U}{U}
-/// is paid from floating mana, like every `MayPayXPlus`.)
+/// if you do, gain X life and draw X cards.
 pub fn azor_the_lawbringer() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying],
