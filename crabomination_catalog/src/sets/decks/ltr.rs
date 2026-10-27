@@ -2046,7 +2046,8 @@ pub fn gollums_bite() -> CardDefinition {
 }
 
 /// Lembas — {2} Food artifact. When it enters, scry 1, then draw a card.
-/// {2}, {T}, Sacrifice this: you gain 3 life. (Death-shuffle clause omitted.)
+/// {2}, {T}, Sacrifice this: you gain 3 life. Put into a graveyard from the
+/// battlefield, its owner shuffles it into their library.
 pub fn lembas() -> CardDefinition {
     use crate::card::ArtifactSubtype;
     CardDefinition {

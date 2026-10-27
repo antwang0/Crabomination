@@ -37485,7 +37485,7 @@ pub fn treetop_sentries() -> CardDefinition {
 }
 
 /// Bushy Bodyguard — {1}{G} 2/1 Squirrel Warrior. ETB: you may forage; if you
-/// do, put two +1/+1 counters on it. (Offspring rider dropped.)
+/// do, put two +1/+1 counters on it. Offspring {2}.
 pub fn bushy_bodyguard() -> CardDefinition {
     CardDefinition {
         name: "Bushy Bodyguard",
