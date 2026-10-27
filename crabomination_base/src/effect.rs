@@ -15251,6 +15251,11 @@ pub struct LookPick {
     /// is kept only while the picks' mana values still sum to at most this.
     #[serde(default)]
     pub total_mana_value_cap: Option<Value>,
+    /// The picks stay on top of the library instead of moving ("put up to two
+    /// of them back on top … and the rest into your graveyard", Rowan's Grim
+    /// Search); the rest follow the usual routing.
+    #[serde(default)]
+    pub keep_on_top: bool,
 }
 
 impl Default for LookPick {
@@ -15276,6 +15281,7 @@ impl Default for LookPick {
             one_each: Vec::new(),
             rest_to_hand_if: None,
             total_mana_value_cap: None,
+            keep_on_top: false,
         }
     }
 }

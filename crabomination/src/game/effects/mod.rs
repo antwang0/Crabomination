@@ -28784,6 +28784,7 @@ impl GameState {
                     one_each,
                     rest_to_hand_if,
                     total_mana_value_cap,
+                    keep_on_top,
                 } = &**lp;
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
@@ -28861,7 +28862,7 @@ impl GameState {
                     take,
                     to_battlefield: *to_battlefield,
                     tapped: false,
-                    keep_on_top: false,
+                    keep_on_top: *keep_on_top,
                     gain_life_if_pick: gain_life_if_pick.clone(),
                     gain_life_greatest_power_rest: *gain_life_greatest_power_rest,
                     optional: *optional,
