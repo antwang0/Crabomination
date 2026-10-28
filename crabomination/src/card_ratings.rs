@@ -476,9 +476,12 @@ pub const SOS_SIM_VALUE: &[(&str, f32)] = &[
     ("Zimone's Experiment", 0.57),
 ];
 
+/// A re-rated table: name -> builder-score units (`None` under the deck cut).
+type RatingTable = std::sync::Arc<crate::fxhash::HashMap<String, Option<i32>>>;
+
 thread_local! {
     /// [`with_table`]'s override, `None` outside it.
-    static OVERRIDE: std::cell::RefCell<Option<std::sync::Arc<crate::fxhash::HashMap<String, Option<i32>>>>> =
+    static OVERRIDE: std::cell::RefCell<Option<RatingTable>> =
         const { std::cell::RefCell::new(None) };
 }
 
