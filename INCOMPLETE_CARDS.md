@@ -2323,3 +2323,22 @@ slot only in `primary_target_filter` — so the ACTIVATION / CAST validator took
 offered, and Cabal Therapy cast with no target at all. **Open, by seats:** Jace, the Perfected Mind 12 (a loyalty ability carries one
 target — the Jeska row); Vindictive Lich 5 (its modes target, the sacrifice choice is the engine's); End of the
 Hunt 2; Cabal Therapist / Cabal Therapy / Sméagol 1 each (Careful Consideration closed 2026-10-27); eleven more at 0 seats.
+
+## Star Trek Commander precons (2026-10-28)
+
+The three TRC precons (seats 6094-6096, `decks::trek_federation` / `trek_klingon` / `trek_borg`). Open 🟡 rows
+(each card plays; the clause named is approximated):
+
+| Card | Printed | Approximation |
+|---|---|---|
+| 🟡 B'Elanna Torres, Scrapper | "you may reveal the top card" | always revealed (`RevealTopThenIf`); a seat preferring the counters to an artifact draw can't decline |
+| 🟡 Guinan, Ancient Advisor | draws "if you put two or more +1/+1 counters" | draws when two or more of your creatures entered this turn — differs only when a counter can't be placed |
+| 🟡 Cmdr. Troi, Outgoing Empath | the opponent's free spell is copied | a UI opponent whose target pick parks the cast loses the copy rider (`PlayerMayCastFromHandFree`); headless seats are exact |
+| 🟡 Right of Vengeance | "whenever a creature deals combat damage to you" | a creature's damage to you during a combat damage step (a this-turn emblem can't hear the combat path's own `DealsCombatDamageToPlayer`), so a creature's noncombat ping in that step also triggers it |
+| 🟡 Kang, Suspicious Captain | goaded "for as long as you control Kang" | held while Kang is on the battlefield (`GoadLasts::WhileSourceOnBattlefield`) — differs only if Kang changes control |
+| 🟡 Martok, Hero of the Empire; Galvanizing Tenor | up to X targets | `CapTargetsAt` over a seven-slot ceiling, so an eight-seat game's seventh opponent is the most it can reach |
+| 🟡 Reconnaissance Partition | "remove a counter" of any kind | only a charge counter pays it (`remove_counter_cost`) |
+| 🟡 Võx, Child of the Collective | undaunted counts opponents as the spell is cast | the count is fixed when the grant resolves (`GrantNextMatchingSpellUndauntedThisTurn`) |
+| 🟡 The Borg Queen | the opponent "exiles" cards until a creature | they are revealed (the rest go to the bottom either way; nothing sees them exiled) |
+| 🟡 Assimilate (Borg Queen, Gift of Perfection, Assimilate the Wounded, Assimilation Assessor, The Best of Both Worlds) | enters "with a +1/+1 counter" | the counter is placed as it lands, after entering — an ETB that reads its counters sees none |
+| 🟡 Shore Leave Planet | "a Robot artifact in addition" is a copy exception | layer-4 additions until end of turn beside a nonlegendary layer-1 copy, so a copy of the copy lacks them |
