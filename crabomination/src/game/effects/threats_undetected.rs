@@ -111,7 +111,7 @@ impl GameState {
         for id in found.iter().filter(|id| !back_ids.contains(id)) {
             if let Some(pos) = self.players[me].library.iter().position(|c| c.id == *id) {
                 let card = self.players[me].library.remove(pos);
-                self.players[me].hand.push(card);
+                self.put_in_hand(me, card, crate::card::Zone::Library);
             }
         }
         self.shuffle_library(me, events);

@@ -24166,7 +24166,7 @@ impl GameState {
                 // draw event), as the other instead-of-draw digs.
                 let mut card = self.exile_remove_at(pos);
                 card.face_down = false;
-                self.players[p].hand.push(card);
+                self.put_in_hand(p, card, crate::card::Zone::Exile);
                 true
             }
             // Tomorrow, Azami's Familiar — look at the top N, keep one,
@@ -24614,7 +24614,7 @@ impl GameState {
             // CR 400.7 — a graveyard cast permission stays behind (Life from
             // the Loam dredged back with one; fuzzed audit pod, seed 3206523).
             card.forget_spell_choices();
-            self.players[p].hand.push(card);
+            self.put_in_hand(p, card, crate::card::Zone::Graveyard);
             self.players[p].cards_left_graveyard_this_turn = self.players[p]
                 .cards_left_graveyard_this_turn
                 .saturating_add(1);
@@ -31780,7 +31780,7 @@ impl GameState {
                             // CR 121.5 — putting a card into hand this way
                             // is NOT a draw: no CardDrawn event, no
                             // draw-trigger fire (Sheoldred/Bowmasters).
-                            self.players[player].hand.push(card);
+                            self.put_in_hand(player, card, crate::card::Zone::Library);
                         }
                     }
                 }
@@ -31806,7 +31806,7 @@ impl GameState {
                     if let Some(card) = Self::take_card(&mut self.players[player].library, *rid) {
                         if rest_to_hand {
                             // CR 121.5 — not a draw.
-                            self.players[player].hand.push(card);
+                            self.put_in_hand(player, card, crate::card::Zone::Library);
                         } else if rest_to_exile {
                             // Devourer of Destiny — the non-kept cards are
                             // exiled outright.
@@ -31887,7 +31887,7 @@ impl GameState {
                 if let Some(pick) = pick
                     && let Some(card) = Self::take_card(&mut self.players[player].library, pick) {
                     // CR 121.5 — put into hand, not drawn: no CardDrawn.
-                    self.players[player].hand.push(card);
+                    self.put_in_hand(player, card, crate::card::Zone::Library);
                 }
                 let mut exiled_events = Vec::new();
                 // Exile the rest of the revealed set.
@@ -31947,7 +31947,7 @@ impl GameState {
                 // bottom in a random order (CR 401.4 hidden arrangement).
                 for id in &taken {
                     if let Some(card) = Self::take_card(&mut self.players[player].library, *id) {
-                        self.players[player].hand.push(card);
+                        self.put_in_hand(player, card, crate::card::Zone::Library);
                     }
                 }
                 use rand::seq::SliceRandom;
@@ -32368,7 +32368,7 @@ impl GameState {
                     };
                     let matches = card.definition.has_name(name);
                     if matches {
-                        self.players[player].hand.push(card);
+                        self.put_in_hand(player, card, crate::card::Zone::Library);
                     } else {
                         self.route_to_graveyard(card, &mut events);
                     }
@@ -32568,7 +32568,7 @@ impl GameState {
             crate::game::types::MayCastDecline::ToHand => {
                 if let Some(c) = self.take_from_exile(card) {
                     let owner = c.owner;
-                    self.players[owner].hand.push(c);
+                    self.put_in_hand(owner, c, crate::card::Zone::Exile);
                 }
             }
             crate::game::types::MayCastDecline::ToBottom => {
@@ -33387,14 +33387,14 @@ impl GameState {
         if self.return_resolving_spell_to_hand {
             self.return_resolving_spell_to_hand = false;
             let owner = card.owner;
-            self.players[owner].hand.push(card);
+            self.put_in_hand(owner, card, crate::card::Zone::Stack);
             return Ok(events);
         }
         // Buyback (CR 702.27e): a spell cast paying its buyback cost returns
         // to its owner's hand instead of the graveyard as it resolves.
         if card.bought_back {
             let owner = card.owner;
-            self.players[owner].hand.push(card);
+            self.put_in_hand(owner, card, crate::card::Zone::Stack);
             return Ok(events);
         }
         // CR 702.127e — an Aftermath half (right half cast from the graveyard)

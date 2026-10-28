@@ -326,8 +326,9 @@ OPEN:
   prevention (Reverse Damage's `PreventNextDamageAndGainLife` fits).
 - ✅ Kotose: `WhileHolderControlsSource` + `OneCastAmongGranted` — exactly one card ever (rulings 2022-02-18; it was one
   a turn). Market Gnome's craft-exile trigger (6 seats) wants an "exiled while crafting" event.
-- Inline `hand.push` sites (`effects/mod.rs` graveyard/exile/library → hand) skip CR 903.9b's redirect; reachable only for
-  a commander its owner left in a graveyard/exile, which the bot never does outside an Adventure.
+- ✅ *2026-10-28 (`01WRuXc2pR`)*: inline `hand.push` sites (graveyard/exile/library/stack → hand, 38 of them) now go through
+  `put_in_hand` (`commander_return.rs`), which applies CR 903.9b's redirect (`cr_903_9b_a_commander_put_into_hand_from_the_graveyard_may_go_home`).
+  Left direct on purpose: the opening deal, cast hops (`helper_cast`, `milled_play`, `library_top_alt`), wishes from the sideboard, copies.
 - `audit_variant_coverage`: four dead `Effect` primitives (`DestroyWithinTotalManaValue`, `GrantCastBackFromGraveyard`,
   `LockSpellsAfterGrantedCast`, `RevealOpponentTopPutOntoBattlefield`) — left in place: removing variants is a vocab change.
 - Board caps seen, all finite exponentials (no loop): Scute Swarm + Doubling Season / landfall doublers, Katara doubling

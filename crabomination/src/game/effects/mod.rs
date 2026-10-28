@@ -6747,7 +6747,7 @@ impl GameState {
                 {
                     // "Put that card into your hand" — not a draw (CR 121.1).
                     let card = self.players[p].library.remove(pos);
-                    self.players[p].hand.push(card);
+                    self.put_in_hand(p, card, crate::card::Zone::Library);
                 }
                 self.shuffle_library(p, events);
                 Ok(())
@@ -11745,7 +11745,7 @@ impl GameState {
                     && let Some(cid) = picked.first()
                     && let Some(card) = Self::take_card(&mut self.players[p].graveyard, *cid)
                 {
-                    self.players[p].hand.push(card);
+                    self.put_in_hand(p, card, crate::card::Zone::Graveyard);
                     self.scratch.last_moved_cards.push(*cid);
                     self.note_returned_to_hand_from_graveyard(p, *cid, events);
                 }
@@ -11825,7 +11825,7 @@ impl GameState {
                         for cid in picked.into_iter().take(take as usize) {
                             if let Some(card) = Self::take_card(&mut self.players[p].graveyard, cid)
                             {
-                                self.players[p].hand.push(card);
+                                self.put_in_hand(p, card, crate::card::Zone::Graveyard);
                                 self.note_returned_to_hand_from_graveyard(p, cid, events);
                                 taken += 1;
                             }
@@ -11941,7 +11941,7 @@ impl GameState {
                     .collect();
                 for cid in keep {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, cid) {
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
                     }
                 }
                 Ok(())
@@ -12215,7 +12215,7 @@ impl GameState {
                 };
                 let card = self.players[victim].library.remove(0);
                 if card.definition.name == named {
-                    self.players[victim].hand.push(card);
+                    self.put_in_hand(victim, card, crate::card::Zone::Library);
                 } else {
                     self.players[victim].send_to_graveyard(card);
                 }
@@ -12259,7 +12259,7 @@ impl GameState {
                     let card = self.players[p].library.remove(0);
                     events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
                     if hit {
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
                         return Ok(());
                     }
                     let cid = card.id;
@@ -14282,7 +14282,7 @@ impl GameState {
                 for (cid, _) in &top {
                     if chosen.contains(cid) {
                         if let Some(card) = Self::take_card(&mut self.players[p].library, *cid) {
-                            self.players[p].hand.push(card);
+                            self.put_in_hand(p, card, crate::card::Zone::Library);
                             taken += 1;
                         }
                     } else if let Some(card) = Self::take_card(&mut self.players[p].library, *cid) {
@@ -14358,7 +14358,7 @@ impl GameState {
                 for _ in 0..accepted {
                     let card = self.players[p].library.remove(0);
                     let mv = card.definition.cost.cmc() as i32;
-                    self.players[p].hand.push(card);
+                    self.put_in_hand(p, card, crate::card::Zone::Library);
                     if mv > 0 {
                         let applied = self.adjust_life_applied(p, -mv);
                         if applied < 0 {
@@ -22256,7 +22256,7 @@ impl GameState {
                         let mut card = self.exile_remove_at(i);
                         card.face_down = false;
                         card.exiled_with = None;
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Exile);
                     }
                 }
                 Ok(())
@@ -23462,7 +23462,7 @@ impl GameState {
                         let mut card = self.exile_remove_at(i);
                         card.face_down = false;
                         card.exiled_with = None;
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Exile);
                     }
                 }
                 Ok(())
@@ -23590,7 +23590,7 @@ impl GameState {
                 for cid in keep {
                     if let Some(i) = self.exile.iter().position(|c| c.id == cid) {
                         let card = self.exile_remove_at(i);
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Exile);
                     }
                 }
                 for cid in bin {
@@ -28379,7 +28379,7 @@ impl GameState {
                     let Some(&pick) = ids.choose(&mut self.rng.draw()) else { break };
                     let Some(card) = Self::take_card(&mut self.players[p].graveyard, pick)
                     else { break };
-                    self.players[p].hand.push(card);
+                    self.put_in_hand(p, card, crate::card::Zone::Graveyard);
                     self.note_returned_to_hand_from_graveyard(p, pick, events);
                     self.scratch.last_moved_cards.push(pick);
                 }
@@ -29121,7 +29121,7 @@ impl GameState {
                         self.note_exiled_from_library(p, *cid, events);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });
                     } else {
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
                     }
                 }
                 Ok(())
@@ -29540,7 +29540,7 @@ impl GameState {
                     card_name: card.definition.name,
                     is_land: card.definition.is_land(),
                 });
-                self.players[p].hand.push(card);
+                self.put_in_hand(p, card, crate::card::Zone::Library);
                 if mv > 0 {
                     for who in self.resolve_players(who, ctx) {
                         let applied = self.adjust_life_applied(who, -mv);
@@ -30183,7 +30183,7 @@ impl GameState {
                         is_land: card.definition.is_land(),
                     });
                     if hit {
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
                     } else {
                         self.players[p].library.push(card);
                     }
@@ -30612,7 +30612,7 @@ impl GameState {
                 }
                 for id in &taken {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, *id) {
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
                     }
                 }
                 // Bottom the rest in a random order (CR 401.4).
@@ -30668,7 +30668,7 @@ impl GameState {
                 for id in revealed {
                     let Some(card) = Self::take_card(&mut self.players[p].library, id) else { continue };
                     if card.definition.card_types.contains(&chosen) {
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
                     } else {
                         self.route_to_graveyard(card, events);
                     }
@@ -30919,7 +30919,7 @@ impl GameState {
                         .map(|c| c.id);
                     if let Some(id) = flyer
                         && let Some(card) = Self::take_card(&mut self.players[ctx.controller].library, id) {
-                        self.players[ctx.controller].hand.push(card);
+                        self.put_in_hand(ctx.controller, card, crate::card::Zone::Library);
                     }
                     self.shuffle_library(ctx.controller, events);
                 }
@@ -31020,7 +31020,7 @@ impl GameState {
                     .map(|c| c.id);
                 if let Some(id) = pick
                     && let Some(card) = Self::take_card(&mut self.players[p].library, id) {
-                    self.players[p].hand.push(card);
+                    self.put_in_hand(p, card, crate::card::Zone::Library);
                 }
                 self.shuffle_library(p, events);
                 Ok(())
@@ -31183,7 +31183,7 @@ impl GameState {
                     if self.exile.iter().any(|c| c.id == id)
                         && let Some(card) = self.take_from_exile(id)
                     {
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Exile);
                     }
                 }
                 Ok(())
@@ -31200,7 +31200,7 @@ impl GameState {
                 }).collect();
                 for id in &taken {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, *id) {
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
                     }
                 }
                 // The rest go to the graveyard (top-down order).
@@ -31620,7 +31620,7 @@ impl GameState {
                 for id in targeted.iter().filter(|id| !leave.contains(id)) {
                     if let Some(mut card) = Self::take_card(&mut self.players[p].graveyard, *id) {
                         card.forget_spell_choices(); // CR 400.7
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Graveyard);
                         self.note_returned_to_hand_from_graveyard(p, *id, events);
                     }
                 }
@@ -31942,7 +31942,7 @@ impl GameState {
                 }
                 for id in &taken {
                     if let Some(card) = Self::take_card(&mut self.players[p].library, *id) {
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
                     }
                 }
                 use rand::seq::SliceRandom;
@@ -34343,7 +34343,7 @@ impl GameState {
                     });
                     if matches {
                         let card = self.players[p].library.remove(0);
-                        self.players[p].hand.push(card);
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
                         // Intentionally no CardDrawn event (CR 121.5).
                     } else if bin {
                         let card = self.players[p].library.remove(0);
@@ -49247,7 +49247,7 @@ impl GameState {
                                 if let Some(card) =
                                     Self::take_card(&mut self.players[payer].graveyard, id)
                                 {
-                                    self.players[payer].hand.push(card);
+                                    self.put_in_hand(payer, card, crate::card::Zone::Graveyard);
                                     self.note_left_graveyard(payer, id, events);
                                 }
                                 true

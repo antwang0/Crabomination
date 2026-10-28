@@ -4160,6 +4160,35 @@ fn doom_bladed_commander(wants_ui: bool) -> (GameState, crabomination::card::Car
     (g, cmd)
 }
 
+/// CR 903.9b — "put into its owner's hand from anywhere": a commander its
+/// owner left in the graveyard, returned by an effect that puts cards into a
+/// hand directly (Make a Wish), is offered the command zone; "yes" sends it
+/// home, "no" keeps it in hand.
+#[test]
+fn cr_903_9b_a_commander_put_into_hand_from_the_graveyard_may_go_home() {
+    for yes in [true, false] {
+        let mut g = two_player_game();
+        let cmd = g.seat_commanders(0, vec![test_commander()])[0];
+        let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
+        let card = g.players[0].command.remove(pos);
+        g.players[0].graveyard.push(card);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let wish = g.add_card_to_hand(0, catalog::make_a_wish());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Green, 4);
+        g.decider = Box::new(crabomination::decision::ScriptedDecider::new([DecisionAnswer::Bool(yes)]));
+        g.perform_action(GameAction::CastSpell {
+            card_id: wish, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .unwrap();
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].command.iter().any(|c| c.id == cmd), yes);
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == cmd), !yes);
+        assert!(g.players[0].graveyard.iter().all(|c| c.id != cmd));
+    }
+}
+
 /// CR 903.9a — the return is the OWNER's "may": a prompting seat is asked
 /// through a pending `CommanderRedirect` once the action settles, not
 /// answered by the game-wide decider inside the sweep. Until it answers the

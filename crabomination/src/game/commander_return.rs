@@ -225,6 +225,21 @@ impl GameState {
         None
     }
 
+    /// Put `card` into `seat`'s hand from `from` (not a draw). CR 903.9b — a
+    /// commander bound for its owner's hand may go to the command zone
+    /// instead; every effect-driven "put into your hand" funnels here.
+    pub(crate) fn put_in_hand(&mut self, seat: usize, card: crate::card::CardInstance, from: Zone) {
+        let card = if card.owner == seat && self.players[seat].commanders.contains(&card.id) {
+            match self.commander_zone_redirect(card, from, Zone::Hand) {
+                Some(card) => card,
+                None => return,
+            }
+        } else {
+            card
+        };
+        self.players[seat].hand.push(card);
+    }
+
     /// [`commander_zone_redirect`](Self::commander_zone_redirect) over a batch
     /// a mass move lifted (a hand or graveyard shuffled into a library): the
     /// commanders that go home leave `cards`. Every mass library move funnels

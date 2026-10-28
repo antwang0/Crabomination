@@ -165,7 +165,7 @@ impl GameState {
         let mut rest = Vec::new();
         for card in top {
             if keep.contains(&card.id) {
-                self.players[p].hand.push(card);
+                self.put_in_hand(p, card, crate::card::Zone::Library);
             } else {
                 rest.push(card);
             }
