@@ -166,6 +166,18 @@ fn open_pack(by_rarity: &HashMap<char, Vec<usize>>, rng: &mut StdRng) -> Vec<usi
 fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: usize, best: usize) {
     let shape = std::env::args().any(|a| a == "--shape");
     let slots = std::env::args().any(|a| a == "--slots");
+    // `--table FILE` (`scripts/fra_card_table.py RATINGS MIN --tsv`): the
+    // rated builder on a re-rated table against the same builder on the
+    // compiled one — a re-rate's paired gate.
+    let table: Option<crabomination::card_ratings::TableOverride> = arg("--table").map(|path| {
+        let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("{path}: {e}"));
+        let map = text
+            .lines()
+            .filter_map(|l| l.split_once('\t'))
+            .map(|(n, v)| (n.to_string(), v.trim().parse::<i32>().ok()))
+            .collect();
+        std::sync::Arc::new(map)
+    });
     let next = AtomicUsize::new(0);
     let rows = std::sync::Mutex::new(Vec::with_capacity(pools));
     let start = std::time::Instant::now();
@@ -179,7 +191,16 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                 let salt = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (i as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93);
                 let mut rng = StdRng::seed_from_u64(salt);
                 let pool = roll_pool(&mut rng);
-                let (old, new) = if best > 0 && slots {
+                let rated = |pool: &[Factory]| {
+                    if best > 0 {
+                        crabomination::selfplay::rated_sealed_build(pool, best, salt ^ 1)
+                    } else {
+                        crabomination::selfplay::heuristic_sealed_build_rated(pool, salt ^ 1)
+                    }
+                };
+                let (old, new) = if let Some(t) = &table {
+                    (rated(&pool), crabomination::card_ratings::with_table(t.clone(), || rated(&pool)))
+                } else if best > 0 && slots {
                     (
                         crabomination::selfplay::rated_sealed_build_slots(&pool, best, salt ^ 1, false),
                         crabomination::selfplay::rated_sealed_build_slots(&pool, best, salt ^ 1, true),
@@ -229,7 +250,8 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     let half = 1.96 * sd / n.sqrt();
     let (wa, wb): (u32, u32) = rows.iter().fold((0, 0), |a, r| (a.0 + r.0, a.1 + r.1));
     println!(
-        "rated vs v3: {mean:.2}% [{:.2}, {:.2}] pool-level 95% (n={} pools, {identical} identical decks); games {wa}-{wb} ({:.2}%)",
+        "{}: {mean:.2}% [{:.2}, {:.2}] pool-level 95% (n={} pools, {identical} identical decks); games {wa}-{wb} ({:.2}%)",
+        if table.is_some() { "table vs compiled" } else { "rated vs v3" },
         mean - half,
         mean + half,
         shares.len(),

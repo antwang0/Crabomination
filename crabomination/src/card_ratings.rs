@@ -476,8 +476,35 @@ pub const SOS_SIM_VALUE: &[(&str, f32)] = &[
     ("Zimone's Experiment", 0.57),
 ];
 
+thread_local! {
+    /// [`with_table`]'s override, `None` outside it.
+    static OVERRIDE: std::cell::RefCell<Option<std::sync::Arc<crate::fxhash::HashMap<String, Option<i32>>>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Run `f` with `table` (name -> builder-score units, `None` for a card the
+/// re-rate measured but left under its deck cut) in place of the compiled
+/// tables on this thread: the paired race of a re-rated table against the
+/// shipped one (`fra_card_eval --ab --table`), both builders on the same
+/// pool in one process. A card the override does not name at all is read
+/// from the compiled tables as usual (the other set's cards).
+pub type TableOverride = std::sync::Arc<crate::fxhash::HashMap<String, Option<i32>>>;
+pub fn with_table<R>(table: TableOverride, f: impl FnOnce() -> R) -> R {
+    let prev = OVERRIDE.with(|o| o.borrow_mut().replace(table));
+    let r = f();
+    OVERRIDE.with(|o| *o.borrow_mut() = prev);
+    r
+}
+
 /// A card's measured value in builder-score units, when it has one.
 pub fn rated_score(name: &str) -> Option<i32> {
+    match OVERRIDE.with(|o| o.borrow().as_ref().and_then(|t| t.get(name).copied())) {
+        Some(listed) => listed,
+        None => compiled_score(name),
+    }
+}
+
+fn compiled_score(name: &str) -> Option<i32> {
     static MAP: std::sync::OnceLock<crate::fxhash::HashMap<&'static str, i32>> = std::sync::OnceLock::new();
     MAP.get_or_init(|| {
         let fra = FRA_SIM_VALUE.iter().map(|&(n, v)| (n, (OFFSET + SCALE * v).round() as i32));
