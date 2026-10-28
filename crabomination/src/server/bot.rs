@@ -20987,7 +20987,8 @@ fn clock_points(state: &GameState, att: usize, def: usize) -> i32 {
     }
     // (power, flying, shadow, menace, unblockable) per attacker; (flying or
     // reach, shadow, used) per blocker.
-    let mut attackers: smallvec::SmallVec<[(i32, bool, bool, bool, bool); 16]> = smallvec::SmallVec::new();
+    type ClockAttacker = (i32, bool, bool, bool, bool);
+    let mut attackers: smallvec::SmallVec<[ClockAttacker; 16]> = smallvec::SmallVec::new();
     let mut blockers: smallvec::SmallVec<[(bool, bool, bool); 16]> = smallvec::SmallVec::new();
     for c in &state.battlefield {
         if !state.computed_is_creature(c) {

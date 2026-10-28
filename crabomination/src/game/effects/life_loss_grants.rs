@@ -177,10 +177,9 @@ impl GameState {
         }
     }
 
-    /// CR 611.2b — "for as long as you control [source]": a control change in
-    /// `events` that takes a source away from a grant's holder ends the grant
-    /// for good (control coming back does not restart it).
-    /// A `follows_control` static grant moves to the source's new controller.
+    /// CR 611.2b — a control change in `events` that takes a source away from
+    /// a grant's holder ends a "for as long as you control" grant for good,
+    /// and moves a `follows_control` static grant to the new controller.
     pub(crate) fn end_lost_control_grants(&mut self, events: &[crate::game::GameEvent]) {
         let moved = |source: crate::card::CardId, holder: usize| {
             events.iter().find_map(|e| match *e {
