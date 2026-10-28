@@ -7142,12 +7142,16 @@ fn decide_choose_cards(
                 .collect();
             return fill_to_min(chosen);
         }
-        // Beneficial: take the biggest card(s) we can.
+        // Beneficial: take the biggest card(s) we can — but, CR 104.4b, not
+        // one whose arrival starts a mandatory loop (Minion of the Mighty
+        // putting Draconic Visitor beside Ganax: every Dragon's Treasure is a
+        // Dragon, pod seed 10893 board-capped).
         let mut ranked: Vec<(crate::card::CardId, i32, i32)> = candidates
             .iter()
             .filter_map(|(id, _)| {
                 let c = state.players[seat].hand.iter().find(|c| c.id == *id)?;
-                Some((*id, c.definition.cost.cmc() as i32, c.definition.power))
+                (!super::loop_hazard::entry_starts_loop(state, seat, &c.definition.arc(), w))
+                    .then_some((*id, c.definition.cost.cmc() as i32, c.definition.power))
             })
             .collect();
         // Biggest first: highest mana value, then highest power.

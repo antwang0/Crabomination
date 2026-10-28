@@ -477,6 +477,21 @@ mod tests {
         assert_eq!(answer, crate::decision::DecisionAnswer::Cards(vec![b]));
     }
 
+    /// CR 104.4b — a Draconic Visitor put from hand beside Ganax (Minion of
+    /// the Mighty's pack tactics) loops: each Dragon's Treasure becomes a
+    /// Dragon. The hand pick takes the plain Dragon (pod seed 10893).
+    #[test]
+    fn a_draconic_visitor_beside_ganax_stays_in_hand() {
+        let (mut g, _) = arcade_game();
+        g.add_card_to_battlefield(0, crate::catalog::ganax_astral_hunter());
+        let w = crate::server::bot::EvalWeights::default();
+        let v = g.add_card_to_hand(0, crate::catalog::draconic_visitor());
+        let d = g.add_card_to_hand(0, crate::catalog::shivan_dragon());
+        let cands = vec![(v, "Draconic Visitor".to_string()), (d, "Shivan Dragon".to_string())];
+        let answer = crate::server::bot::decide_choose_cards_for_test(&w, &g, 0, crate::decision::PickValue::Gain, &cands, 0, 2);
+        assert_eq!(answer, crate::decision::DecisionAnswer::Cards(vec![d]));
+    }
+
     /// CR 104.4b — unlocking Secret Arcade under a Gremlin Tamer sets the loop
     /// up (any later permanent starts it); once set up, a permanent spell
     /// starts it and an instant doesn't.
