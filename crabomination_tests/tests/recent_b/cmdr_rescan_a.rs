@@ -1204,6 +1204,31 @@ fn baron_zemo_boast_counts_black_pips_and_casts_three_copies() {
     assert!(g.game_over.is_none());
 }
 
+/// "You may cast up to three of the copies" is the controller's pick (it was
+/// always the priciest three): here one of the four.
+#[test]
+fn baron_zemo_casts_only_the_copies_his_controller_names() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let zemo = ready(&mut g, 0, catalog::baron_helmut_zemo());
+    let obliterators: Vec<_> = (0..4).map(|_| g.add_card_to_graveyard(0, catalog::phyrexian_obliterator())).collect();
+    declare(&mut g, vec![(zemo, 1)]);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![obliterators[2]])]));
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: zemo,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("16 black pips");
+    drain_stack(&mut g);
+    let copies = g.battlefield.iter().filter(|c| c.definition.name == "Phyrexian Obliterator").count();
+    assert_eq!(copies, 1);
+}
+
 /// Zemo connives when you cast a black spell from your hand, not a red one.
 #[test]
 fn baron_zemo_connives_on_black_spells_from_hand() {

@@ -2140,7 +2140,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Zareth San, the Trickster | the returned unblocked Rogue is auto-picked; `IsUnblocked` also holds in the declare-attackers step, before blocks | from-hand `bounce_other_filter` + `JoinCombatAttackingChosen` |
 | 🟡 Hew the Entwood | chosen cards enter one at a time in pick order (not all nonlands, then all lands); the bot sacrifices no lands | `SacrificeAnyNumber` + `LookPick` |
 | 🟡 Blaster, Combat DJ | the granted modular's death trigger is the creature one, so a Vehicle that isn't a creature when it dies keeps its counters | three statics + `modular_dies` |
-| 🟡 Baron Helmut Zemo | the up-to-three casts (priciest first) are auto-picked; the boast's exiled set is a manual seat's pick since 2026-10-28 | `CopyCardsAndCastFreeUpTo` |
+| ~~Baron Helmut Zemo~~ ✅ | fixed 2026-10-28: a manual seat names the boast's exiled set, and the controller picks which copies (up to three) to cast | — |
 | 🟡 Koh, the Face Stealer | a new choice reverts every baked grant on Koh, not only the old borrow | `BorrowAbilitiesOfChosenExiled` |
 | 🟡 Lethal Exploit | the modified creatures are counted as it resolves, not as it is cast | `PumpPT` with `CountOf` |
 | 🟡 Fall of the Impostor | a tie for greatest power exiles the first in battlefield order, not the controller's choice | `TakeGreatestPower` |

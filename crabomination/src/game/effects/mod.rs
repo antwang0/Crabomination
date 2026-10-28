@@ -30289,8 +30289,8 @@ impl GameState {
             }
 
             Effect::CopyCardsAndCastFreeUpTo { what, max } => {
-                // Baron Helmut Zemo — every card is copied; up to `max` copies
-                // are cast, the priciest first.
+                // Baron Helmut Zemo — every card is copied; the controller casts
+                // up to `max` of the copies (headless: the priciest first).
                 let mut ids: Vec<(u32, CardId)> = self
                     .resolve_selector(what, ctx)
                     .into_iter()
@@ -30298,8 +30298,30 @@ impl GameState {
                     .filter_map(|id| self.find_card_anywhere(id).map(|c| (c.definition.cost.cmc(), id)))
                     .collect();
                 ids.sort_by_key(|&(mv, id)| (std::cmp::Reverse(mv), id));
+                let ranked: Vec<CardId> = ids.into_iter().map(|(_, id)| id).collect();
+                let picks = if ranked.len() as u32 > *max {
+                    let candidates = ranked
+                        .iter()
+                        .filter_map(|id| self.find_card_anywhere(*id).map(|c| (*id, c.definition.name.to_string())))
+                        .collect();
+                    let Some(picked) = self.choose_up_to_cards(
+                        ctx.controller,
+                        format!("Cast up to {max} of the copies"),
+                        ctx.source.unwrap_or(CardId(0)),
+                        candidates,
+                        *max,
+                        PickValue::Gain,
+                        effect,
+                        ranked.clone(),
+                    ) else {
+                        return Ok(());
+                    };
+                    picked.into_iter().filter(|id| ranked.contains(id)).take(*max as usize).collect()
+                } else {
+                    ranked
+                };
                 let mut cast = 0;
-                for (_, id) in ids {
+                for id in picks {
                     if cast >= *max {
                         break;
                     }
