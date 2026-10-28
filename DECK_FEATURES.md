@@ -35,6 +35,8 @@ Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 
 they call a deck 🟡, the table wins.
 
 Commander run `01WRuXc6pH` (2026-10-27): no new seats — 19 seated-deck rows closed (Bioshift, Inscription of Insight, Intrepid Adversary, Bane, Lara Croft, Fiery Annihilation, Consecrate Land, Casting of Bones, Ziatora's Envoy …) plus two stale rows; clean decks 5,258 → 5,289 / 6,093. Detail: ENGINE_BACKLOG `01WRuXc6pH`.
+Commander run `01WRuXc2p1` (2026-10-28): no new seats — pod-mined bot losses (Pact upkeep, Draconic Visitor beside Ganax), an "add X mana" OOM, the CR 611.2b control-bound may-play class (Lightning, Victor Mancha, Taster of Wares, Ghost-Spider, Hama, Kotose, Nightveil Specter, Hedonist's Trove …), soulbond on a control change, Jeska's −X targets; clean decks 5,399 → 5,414 / 6,093. Detail: ENGINE_BACKLOG `01WRuXc2p1`.
+
 Commander run `01WRuXc3Wv` (2026-10-28): no new seats — 26 seated-deck rows closed (Goldberry, Baron Zemo, Rhys, Loki, Scuttlemutt, Stangg, Gix's Command, Nine Lives, Roshan, The Enigma Jewel, Capitoline Triad, Cantankerous Keepers, Planar Atlas, Kyodai …) plus two stale rows; clean decks 5,294 → 5,399 / 6,093. Detail: ENGINE_BACKLOG `01WRuXc3Wv`.
 
 Commander run `01WRuXc5` (2026-10-27): no new seats — ~70 shipped-card residuals closed by seated-deck rank (Teferi, Who Slows the Sunset's emblem draw, Samurai of the Pale Curtain, Salvage Drone, No Mercy / Dread, Black Widow, Impossible Man, Spawnbroker …) and ~30 stale residual docs; clean decks 5,062 → 5,176 / 6,093 (`pod_residuals.py --summary`). Detail: ENGINE_BACKLOG `01WRuXc5`.
