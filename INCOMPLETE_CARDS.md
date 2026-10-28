@@ -2049,7 +2049,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
 | 🟡 Fell Beast's Shriek | splice onto instant or sorcery isn't offered; a creature with hexproof or protection from the caster can't be the chosen one | `Keyword::Splice` takes a `SpellSubtype` quality (Arcane), not "instant or sorcery"; `OpponentChoosesPermanentThen` keeps only picks that are legal targets for the caster |
 | ~~Nine Lives~~ ✅ | fixed 2026-10-28: its replacement (and The Mindskinner's) is a prevention — unpreventable damage is dealt (CR 615.12) | — |
-| 🟡 Roshan, Hidden Magister | only creatures on the battlefield become Assassins (not creature spells or cards you own elsewhere) | `AddCreatureTypeToMatching` covers permanents; `OwnedCardsOffBattlefieldAreChosenTypeToo` reads a chosen type |
+| ~~Roshan, Hidden Magister~~ ✅ | fixed 2026-10-28: creature spells and owned cards off the battlefield are Assassins too (`OwnedCardsOffBattlefieldAreTypeToo`) | — |
 | ~~Gandalf the White~~ ✅ | fixed 2026-10-24: `StaticEffect::DoubleControllerLeaveTriggers` doubles a trigger a leaving legendary permanent or artifact causes | — |
 | ~~Jade Monolith~~ ✅ | fixed 2026-10-25: `RedirectNextDamageTo { chosen_source }` keys the redirect on the source picked on resolution (Kor Chant shares it with `whole_turn`) — `jade_monolith_redirects_only_the_chosen_source` | — |
 | 🟡 Verdant Mastery, Fervent Mastery | their picks are still separate searches (two taxes under Leonin Arbiter) | left out of `OneSearch` (`01M3bbRx`): STX cards in the two-player pool |
@@ -2075,7 +2075,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kyodai, Soul of Kamigawa | the indestructible lasts while Kyodai is on the battlefield, not only while you control it | `Duration::WhileSourceOnBattlefield` has no control rider |
 | 🟡 Fleeting Memories | an artifact that is a Clue only through Senator Peacock doesn't count as a Clue once sacrificed | `lki_clone` snapshots creature types, not artifact subtypes |
 | 🟡 Metamorphic Alteration | the copy starts when an enters trigger resolves (respondable), not as the Aura enters, and moving the Aura to another creature doesn't copy the new host | `BecomeCopyOfFor` with `WhileSourceAttached`; no static layer-1 copy for an attachment |
-| 🟡 The Capitoline Triad | the exiled cards are auto-picked (fewest, highest mana value first) even for a manual-mana player | `exile_other_total_mv` has no `ChooseCards` ask |
+| ~~The Capitoline Triad~~ ✅ | fixed 2026-10-28: a manual seat names the exiled set (a short total takes the auto-pick) | — |
 | 🟡 Hama, the Bloodbender | the exiled card is cast for its mana value in any mana while it stays exiled — your artifacts and creatures can't help pay (CR 701.67), it isn't limited to your turn, and losing Hama doesn't end it | `GrantMayPlay { pay_own_cost, any_color }` |
 | ~~Myojin of Blooming Dawn~~ ✅ | fixed 2026-10-24: gated on `WasCastFromHand` (a table test covers all ten Myojins: hand, reanimated, cast from exile) | — |
 | 🟡 Primal Surge | after each card put onto the battlefield it asks "repeat?" separately from "put it?" (declining either stops), and a seat past 150 permanents stops putting | `Effect::RepeatWhileMay` re-asks each loop; the board bound is the engine's, not the card's |
@@ -2103,7 +2103,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Ride Down | the creatures it blocked "this combat" are read as "this turn" | `Selector::CreaturesBlockedByThisTurn` |
 | 🟡 Tranquil Frillback | each {G} payment buys one mode under its own reflexive trigger, not one trigger choosing up to that many | three `MayPay` → `ReflexiveTrigger` |
 | 🟡 Dino DNA | the copied card is chosen at resolution among those it exiled, not targeted | `ChooseOneAmong` over `R::ExiledWithSource` |
-| 🟡 Experimental Overload | the returned instant or sorcery is the engine's pick (the priciest) | `Selector::take_priciest` |
+| ~~Experimental Overload~~ ✅ | stale 2026-10-28: the return is already a `MayDo` + `MoveChosen` pick | — |
 | 🟡 Demonic Embrace | the graveyard cast is modelled as an alternative cost (its own mana + 3 life + a discard), so it can't combine with another alternative cost | `AlternativeCost { from_graveyard }` |
 | 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |
 | ~~Quilled Greatwurm~~ ✅ | fixed 2026-10-24: `CastSelfFromGraveyardWithCost(RemoveCountersFromCreatures { count: 6 })` | — |
@@ -2140,7 +2140,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Zareth San, the Trickster | the returned unblocked Rogue is auto-picked; `IsUnblocked` also holds in the declare-attackers step, before blocks | from-hand `bounce_other_filter` + `JoinCombatAttackingChosen` |
 | 🟡 Hew the Entwood | chosen cards enter one at a time in pick order (not all nonlands, then all lands); the bot sacrifices no lands | `SacrificeAnyNumber` + `LookPick` |
 | 🟡 Blaster, Combat DJ | the granted modular's death trigger is the creature one, so a Vehicle that isn't a creature when it dies keeps its counters | three statics + `modular_dies` |
-| 🟡 Baron Helmut Zemo | the boast's exiled set (fewest cards, highest pips first) and the up-to-three casts (priciest first) are auto-picked | `exile_other_total_pips` + `CopyCardsAndCastFreeUpTo` |
+| 🟡 Baron Helmut Zemo | the up-to-three casts (priciest first) are auto-picked; the boast's exiled set is a manual seat's pick since 2026-10-28 | `CopyCardsAndCastFreeUpTo` |
 | 🟡 Koh, the Face Stealer | a new choice reverts every baked grant on Koh, not only the old borrow | `BorrowAbilitiesOfChosenExiled` |
 | 🟡 Lethal Exploit | the modified creatures are counted as it resolves, not as it is cast | `PumpPT` with `CountOf` |
 | 🟡 Fall of the Impostor | a tie for greatest power exiles the first in battlefield order, not the controller's choice | `TakeGreatestPower` |

@@ -256,6 +256,36 @@ fn the_capitoline_triad_discounts_and_crowns_your_creatures() {
     assert_eq!((cp.power, cp.toughness), (9, 9));
 }
 
+/// "Exile any number of historic cards … with total mana value 30 or
+/// greater": a manual seat names the set (it was always the auto-pick), here
+/// three Triads and a Sol Ring.
+#[test]
+fn the_capitoline_triad_lets_a_manual_seat_name_the_exiled_set() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = pod(2);
+    let rings: Vec<_> = (0..4).map(|_| g.add_card_to_graveyard(0, catalog::sol_ring())).collect();
+    let triads: Vec<_> = (0..3).map(|_| g.add_card_to_graveyard(0, catalog::the_capitoline_triad())).collect();
+    let triad = ready(&mut g, 0, catalog::the_capitoline_triad());
+    g.players[0].manual_mana = true;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: triad,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("asks");
+    assert!(g.pending_decision.is_some(), "the exiled set is asked");
+    let mut pick = triads.clone();
+    pick.push(rings[0]);
+    g.submit_decision(DecisionAnswer::Cards(pick)).expect("thirty-one mana value");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].graveyard.len(), 3, "the chosen Sol Ring went too");
+    assert!(!g.players[0].graveyard.iter().any(|c| c.id == rings[0]));
+}
+
 /// Lavinia investigates on your second spell each turn; her {C}{C} only taps
 /// on an opponent's turn.
 #[test]

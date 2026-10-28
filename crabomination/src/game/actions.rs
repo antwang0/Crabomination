@@ -23519,7 +23519,49 @@ impl GameState {
                 if sum < total {
                     return Err(GameError::SelectionRequirementViolated);
                 }
-                picks
+                // "Exile any number … with total N or greater": a manual seat
+                // names the set; one short of the total takes the auto-pick.
+                let chosen = chosen_exile_other.map(|mut ids| {
+                    ids.retain(|id| candidates.contains(id));
+                    ids.sort();
+                    ids.dedup();
+                    ids
+                });
+                match chosen {
+                    Some(ids) if ids.iter().map(&mv).sum::<u32>() >= total => ids,
+                    Some(_) => picks,
+                    None if self.players[p].manual_mana && candidates.len() > picks.len() => {
+                        let source_name =
+                            self.battlefield_find(card_id).map(|c| c.definition.name.to_string()).unwrap_or_default();
+                        let measure = match pip_color {
+                            Some(color) => format!("{color:?} mana symbols"),
+                            None => "mana value".to_string(),
+                        };
+                        let named = self.graveyard_card_names(p, &candidates);
+                        self.pending_decision = Some(Box::new(crate::game::types::PendingDecision {
+                            decision: crate::decision::Decision::ChooseCards {
+                                source: card_id,
+                                prompt: format!("{source_name}: exile cards with {total} or more total {measure}"),
+                                candidates: named,
+                                min: 1,
+                                max: candidates.len() as u32,
+                                eligible: None,
+                                value: PickValue::Cost,
+                            },
+                            resume: crate::game::types::ResumeContext::ActivateAbilityChoice {
+                                activator: p,
+                                card_id,
+                                ability_index,
+                                target,
+                                additional_targets: additional_targets.clone(),
+                                x_value,
+                                kind: crate::game::types::AbilityCostChoice::ExileOther,
+                            },
+                        }));
+                        return Ok(());
+                    }
+                    None => picks,
+                }
             } else if ability.exile_other_top {
                 // "Exile the top [filter] card of your graveyard" — the
                 // graveyard is ordered, so the last matches are forced.
