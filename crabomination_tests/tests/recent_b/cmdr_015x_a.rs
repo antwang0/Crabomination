@@ -606,6 +606,11 @@ fn kotose_steals_a_name_and_plays_one() {
     .expect("their bear, with blue");
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(in_hand).map(|c| c.controller), Some(0));
+    // Rulings 2022-02-18: exactly one of them — the others stay exiled, on
+    // this turn and every later one.
+    for id in [anchor, in_lib] {
+        assert!(g.exile.iter().any(|c| c.id == id && c.may_play_until.is_none()), "{id:?} is spent");
+    }
 }
 
 /// Flamewar converts off a sacrificed artifact; the Operative's combat damage

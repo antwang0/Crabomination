@@ -884,17 +884,17 @@ pub fn kotose_the_silent_spider() -> CardDefinition {
             Effect::ExileSameNameAsTarget {
                 what: target_filtered(R::InOpponentGraveyard.and(R::IsBasicLand.negate())),
             },
+            // Exactly one of them, ever, and only while you control Kotose
+            // (rulings 2022-02-18; CR 611.2b).
             Effect::GrantMayPlay {
                 what: Selector::LastMoved,
-                duration: MayPlayDuration::WhileSourceOnBattlefield {
-                    source: crate::card::CardId(0),
-                    one_spell_a_turn: true,
-                },
+                duration: MayPlayDuration::WhileHolderControlsSource { source: crate::card::CardId(0), your_turn: false },
                 to_owner: false,
                 exile_after: false,
                 pay_own_cost: true,
                 any_color: true,
             },
+            Effect::OneCastAmongGranted { what: Selector::LastMoved },
         ]))],
         ..Default::default()
     })

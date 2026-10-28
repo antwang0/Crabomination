@@ -293,6 +293,34 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 
 **Gates (`013mwV6T`):** full suite (`CRAB_ANSWER_LOG=strict`) found two failures from this run's changes (Livio's bot shape, the granted-trigger READS census), both fixed; the final full run (after the loyalty-protection fix, tip `b313ba94b` + trackers) read **28,992 / 0 / 7**; workspace clippy **0**; `--bench` byte-identical again at it, cube/sos/sealed seed 10168 7,500 decided, pods seed 10168 × 200 at 3/4/6/8 seats 800 decided, cube/sos/sealed seed 10164 7,498 decided + 2 CR 104.4a draws (the same with the pre-fix binary); the seat test: its `overflow` build restarted this container; `01M2Ffkh` then ran it green at the merged tip); workspace clippy **0**; `--bench` (release-fast) **27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok, A/B vs base `ab833866a` on this box -0.32 % (noise; this box reads ~155 k decisions/s where the last read 196 k); cube/sos/sealed × 300 (seed 10163) 7,500 decided; pods seed 10161 × 200 at 2..8 seats 1,400 decided; the 430 decks holding a changed card × 20 (seed 10162) 2,119/2,120 (one CR 104.4a draw). ⚠ A concurrent pair of clippy commits each added `CastReplay` and the tip did not compile — fixed `87113f40f`; **build after every rebase**. **Next:** ENGINE_BACKLOG `013mwV6T`'s OPEN list (Bilbo's Gambit 31, Agadeem's Awakening 29, Sakashima's Protege 27; a side-aware `RemoveCountersUpTo` pick closes Heartless Act + Rhys); INCOMPLETE's Aegar / Jeska rows as `01M2Ffkh` described them.
 
+## FIXED/OPEN 2026-10-28 (Commander run, `01WRuXc2p1`) — pod-mined bot losses, a control-duration class, multi-target loyalty asks
+
+No seats. Fresh-seed pod fuzz first (seeds 10774-11571, 20774-24401; ~20,000 random-pool games over 2..8 seats, 2,600
+with `CRAB_POD_CONCEDE`), then INCOMPLETE rows by seat count with the frozen pools filtered out up front.
+- **Bot:** a Pact (Negation / Slaughter / Summoner's / Titan / Intervention) is cast only when the seat's mana sources
+  cover next upkeep's payment plus every `PayOrLoseGame` it already owes, per colour (`server/pact_guard.rs`; a pod seat
+  countered off three lands and lost — `--pod-decks 1488,3487,3488,4965,5487,5935 --seed 11073 --first 2`). A
+  hand-to-battlefield gain pick asks `loop_hazard::entry_starts_loop` like the library branch (Minion of the Mighty put
+  Draconic Visitor beside Ganax — `--pod-decks 1187,1613,1645,2132 --seed 10893 --first 2`, board cap).
+- **Primitive:** `MayPlayDuration::WhileHolderControlsSource { your_turn }` (CR 611.2b): ends as the source leaves or a
+  `ControlChanged` takes it from the holder, and stays ended. Lightning Security Sergeant, Victor Mancha, Taster of
+  Wares, Ghost-Spider rode `WhileSourceOnBattlefield` (a stolen source kept the grant); Hama is your-turn-only now.
+- **Decision plumbing:** a prompting seat names each extra slot of a multi-target loyalty ability
+  (`ResumeContext::LoyaltyExtraTargetPick`, Jeska's −X; CR 115.3 distinct, nothing paid until named).
+- **Docs:** Baron Helmut Zemo's doc called its picks auto-only (stale since `cfd6ccfa9` / `6e56f174e`).
+
+OPEN:
+- Cube-frozen, re-confirmed not built: Detective's Phoenix (the `01WvrAp6` write-up is exact), Intervention Pact's
+  prevention (Reverse Damage's `PreventNextDamageAndGainLife` fits).
+- ✅ Kotose: `WhileHolderControlsSource` + `OneCastAmongGranted` — exactly one card ever (rulings 2022-02-18; it was one
+  a turn). Market Gnome's craft-exile trigger (6 seats) wants an "exiled while crafting" event.
+- Inline `hand.push` sites (`effects/mod.rs` graveyard/exile/library → hand) skip CR 903.9b's redirect; reachable only for
+  a commander its owner left in a graveyard/exile, which the bot never does outside an Adventure.
+- `audit_variant_coverage`: four dead `Effect` primitives (`DestroyWithinTotalManaValue`, `GrantCastBackFromGraveyard`,
+  `LockSpellsAfterGrantedCast`, `RevealOpponentTopPutOntoBattlefield`) — left in place: removing variants is a vocab change.
+- Board caps seen, all finite exponentials (no loop): Scute Swarm + Doubling Season / landfall doublers, Katara doubling
+  Aang and Katara's Allies, Mondrak doubling Ocelot Pride copies.
+
 ## FIXED/OPEN 2026-10-28 (Commander run, `01WRuXc3Wv`) — 26 seated-deck rows, seven primitives, a prevention class
 
 No seats. `pod_residuals.py --rank` top-down, frozen pools (`cube.rs`/`sos_mode.rs`/`fra_mode.rs`/`draft.rs`) skipped;
