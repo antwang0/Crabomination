@@ -985,7 +985,8 @@ pub fn raffines_silencer() -> CardDefinition {
 }
 
 /// Roshan, Hidden Magister — {3}{B} 4/4 Human Assassin. Your other creatures
-/// are Assassins; your face-down creatures have menace; turning a permanent
+/// (and creature spells and cards of yours elsewhere) are Assassins; your
+/// face-down creatures have menace; turning a permanent
 /// of yours face up draws a card for 1 life.
 pub fn roshan_hidden_magister() -> CardDefinition {
     CardDefinition {
@@ -996,6 +997,10 @@ pub fn roshan_hidden_magister() -> CardDefinition {
                     applies_to: Selector::EachPermanent(mine().and(R::OtherThanSource)),
                     creature_type: CreatureType::Assassin,
                 },
+            ),
+            static_ab(
+                "The same is true for creature spells you control and creature cards you own that aren't on the battlefield.",
+                StaticEffect::OwnedCardsOffBattlefieldAreTypeToo { filter: R::Creature, creature_type: CreatureType::Assassin },
             ),
             static_ab(
                 "Face-down creatures you control have menace.",

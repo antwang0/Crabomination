@@ -326,3 +326,19 @@ fn gandalf_the_white_doubles_triggers_a_leaving_legend_causes() {
     }
     assert_eq!(life - g.players[1].life, 3);
 }
+
+/// Roshan: creature cards you own off the battlefield are Assassins too (it
+/// typed only permanents); an opponent's aren't.
+#[test]
+fn roshan_makes_your_creature_cards_assassins_everywhere() {
+    use crabomination::card::{CreatureType, SelectionRequirement as R};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::roshan_hidden_magister());
+    let assassin = R::HasCreatureType(CreatureType::Assassin);
+    let mine = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let card = g.find_card_anywhere(mine).unwrap().clone();
+    assert!(g.evaluate_requirement_on_card(&assassin, &card, 0));
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let card = g.find_card_anywhere(theirs).unwrap().clone();
+    assert!(!g.evaluate_requirement_on_card(&assassin, &card, 0));
+}
