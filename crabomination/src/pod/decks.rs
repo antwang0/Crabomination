@@ -171152,3 +171152,33 @@ pub const JEAN_LUC_PICARD_MAIN: &[CardFactory] = &[
     island, island, island, island, island, plains, plains, plains, plains, mountain, mountain,
     mountain, mountain,
 ];
+
+pub const WORF_COMMANDERS: &[CardFactory] = &[worf_defiant_commander];
+
+/// **Klingon Fury** (Star Trek Commander, TRC), card for card from the
+/// official decklist (magic.wizards.com, fetched 2026-10-28): 84 nonbasic
+/// cards + 5 Mountains + 5 Plains + 5 Swamps = 99.
+pub const WORF_MAIN: &[CardFactory] = &[
+    kor_cause_of_vengeance, ambassador_kehleyr, imperial_hullbreachers, indelicate_healer,
+    korok_liberated_rage, martok_hero_of_the_empire, merciful_mandate, right_of_vengeance,
+    blood_sport_champion, kurn_son_of_mogh, the_promise_of_kahless, voq_torchbearer,
+    the_beacon_of_kahless, ferocious_colonist, gagh_slinger, galvanizing_tenor,
+    glory_to_the_empire, gnarling_targ, grilka_widowed_warrior, kang_suspicious_captain,
+    koloth_tribble_hunter, own_the_day, qonos_quartermaster, alexander_ships_fool,
+    chancellor_gorkon, curzon_dax_bound_by_blood, rite_of_ascension, sins_of_the_father,
+    i_k_s_neghvar_imperial_flagship, ktinga_class_battle_cruiser, kvort_class_raider,
+    the_sword_of_kahless, concerted_effort, duelists_heritage, vanquish_the_horde,
+    painful_truths, combat_celebrant, disrupt_decorum, professional_face_breaker,
+    shared_animosity, world_at_war, pest_control, ruinous_ultimatum, vindicate, warleaders_call,
+    sword_of_light_and_shadow, battlefield_forge, canyon_slough, clifftop_retreat,
+    dragonskull_summit, eclipsed_steppe, exotic_orchard, foreboding_ruins, furycalm_snarl,
+    glittering_massif, isolated_chapel, radiant_summit, shineshadow_snarl, smoldering_marsh,
+    temple_of_malice, umbral_expanse, vault_of_champions, chadich_investigator, path_to_exile,
+    return_to_dust, valorous_stance, nights_whisper, rite_of_oblivion, terminate, arcane_signet,
+    heralds_horn, lightning_greaves, mind_stone, sol_ring, talisman_of_conviction,
+    talisman_of_hierarchy, talisman_of_indulgence, command_tower, evolving_wilds, nomad_outpost,
+    path_of_ancestry, rogues_passage, shattered_landscape, terramorphic_expanse,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains,
+    swamp, swamp, swamp, swamp, swamp,
+];

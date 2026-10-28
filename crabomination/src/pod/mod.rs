@@ -37020,6 +37020,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JEAN_LUC_PICARD_COMMANDERS,
             main: decks::JEAN_LUC_PICARD_MAIN,
         },
+        // Seat 6095: Klingon Fury (Star Trek Commander precon). `--pod-decks 6095`.
+        PodDeck {
+            name: "Worf, Defiant Commander (WBR)",
+            commanders: decks::WORF_COMMANDERS,
+            main: decks::WORF_MAIN,
+        },
     ]
 }
 
@@ -45075,6 +45081,7 @@ mod tests {
             ("Molly Hayes, Runaway", &[0x21E2]),
             ("Spider-Man, Hometown Hero", &[0x21E3]),
             ("Jean-Luc Picard, Luminary", &[0x21E4]),
+            ("Worf, Defiant Commander", &[0x21E5]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

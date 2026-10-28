@@ -1431,3 +1431,6 @@ pub use cmdr_01y6_e::*;
 #[path = "../../../src/sets/decks/trek_federation.rs"]
 mod trek_federation;
 pub use trek_federation::*;
+#[path = "../../../src/sets/decks/trek_klingon.rs"]
+mod trek_klingon;
+pub use trek_klingon::*;

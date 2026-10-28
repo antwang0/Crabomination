@@ -108,7 +108,7 @@ fn seek_out_fires_on_the_second_draw_only() {
 fn picard_draws_for_big_historic_permanents() {
     let mut g = pod(2);
     g.add_card_to_battlefield(0, catalog::jean_luc_picard_luminary());
-    let mut enter = |g: &mut GameState, def| {
+    let enter = |g: &mut GameState, def| {
         let id = g.add_card_to_hand(0, def);
         flood(g, 0);
         cast(g, id, None);

@@ -391,3 +391,4 @@ mod cmdr_01y6_c;
 mod cmdr_01y6_d;
 mod cmdr_01y6_e;
 mod trek_federation;
+mod trek_klingon;
