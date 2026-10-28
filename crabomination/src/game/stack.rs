@@ -8513,6 +8513,16 @@ impl GameState {
         let dies_suppressed =
             !dead.is_empty() && crate::game::actions::creature_dies_triggers_suppressed(self);
 
+        // Dr. McCoy reads the board before any of the dead leaves.
+        let mut dead = dead;
+        if dead.len() > 1 {
+            let lethal_toughness = |g: &Self, id: CardId| {
+                g.battlefield.find_by_id(id).is_some_and(|c| {
+                    computed.iter().find(|cp| cp.id == id).map_or_else(|| c.toughness(), |cp| cp.toughness) <= 0
+                })
+            };
+            dead.retain(|&id| lethal_toughness(self, id) || !self.shed_counters_instead_of_destroyed(id));
+        }
         for id in dead {
             // CR 701.15 — regeneration shields replace destruction by
             // *damage* (lethal damage / deathtouch), but never destruction
@@ -8538,6 +8548,9 @@ impl GameState {
                 .unwrap_or(false);
             if has_regen && !dies_by_lethal_toughness {
                 self.apply_regeneration(id, events);
+                continue;
+            }
+            if !dies_by_lethal_toughness && self.shed_counters_instead_of_destroyed(id) {
                 continue;
             }
             // CR 702.89 — umbra armor replaces destruction (not the

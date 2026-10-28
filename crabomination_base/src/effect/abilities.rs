@@ -2354,6 +2354,10 @@ pub enum StaticEffect {
     /// Troll; CR 701.15): an unending regeneration shield, read wherever a
     /// shield is (`has_regeneration`).
     RegeneratesInsteadOfDestroyed,
+    /// "If another creature you control with a +1/+1 counter on it would be
+    /// destroyed, instead remove all +1/+1 counters from it and all damage
+    /// already dealt to it is healed" (Dr. McCoy, Surly Surgeon; CR 614.8).
+    OtherCounteredCreaturesShedCountersInsteadOfDestroyed,
     /// "Planeswalkers you control aren't put into their owners' graveyards
     /// for having 0 loyalty" (Sanctum Lurker) — exempts them from CR 704.5i.
     YourPlaneswalkersSurviveZeroLoyalty,

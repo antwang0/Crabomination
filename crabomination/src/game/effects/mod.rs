@@ -52,6 +52,7 @@ mod exile_power;
 mod delayed;
 mod eval;
 mod free_cast;
+mod shed_counters;
 mod assimilate;
 mod parade;
 mod graveyard_swap;
@@ -3922,6 +3923,9 @@ impl GameState {
                     c.counters.remove(&crate::card::CounterType::Shield);
                 }
             }
+            return false;
+        }
+        if self.shed_counters_instead_of_destroyed(cid) {
             return false;
         }
         // CR 701.15 — regeneration shield replaces destruction (skipped for
@@ -15462,7 +15466,12 @@ impl GameState {
                 // Indestructible check, Shield-counter replacement) is
                 // identical to plain `Destroy`.
                 let no_regen = matches!(effect, Effect::DestroyNoRegen { .. });
-                let entities = self.resolve_selector(what, ctx);
+                let mut entities = self.resolve_selector(what, ctx);
+                // Simultaneous destruction: Dr. McCoy's replacement is read
+                // while every victim, McCoy included, is still here.
+                if entities.len() > 1 {
+                    entities.retain(|e| !e.as_permanent_id().is_some_and(|cid| self.shed_before_simultaneous_destroy(cid)));
+                }
                 for ent in entities {
                     if let Some(cid) = ent.as_permanent_id() {
                         let victim = self

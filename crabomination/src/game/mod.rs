@@ -36421,6 +36421,7 @@ fn static_effect_to_effects(
             | StaticEffect::CopyAttachedPlaneswalkerLoyaltyAbilities
             | StaticEffect::FirstTokensEachTurnCopyEquipped
             | StaticEffect::RegeneratesInsteadOfDestroyed
+            | StaticEffect::OtherCounteredCreaturesShedCountersInsteadOfDestroyed
             | StaticEffect::YourPlaneswalkersSurviveZeroLoyalty
             // PlayFromLibraryTop / TopOfLibraryRevealed — read by the play/
             // cast paths and the view projection; no layer effect.

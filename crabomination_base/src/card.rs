@@ -423,6 +423,10 @@ pub enum CreatureType {
     Android,
     // Star Trek Commander (Koloth, Tribble Hunter's tokens).
     Tribble,
+    // Star Trek (Dathon, D'Vana Tendi, Hemmer).
+    Tamarian,
+    Orion,
+    Aenar,
 }
 
 /// Land subtypes (basic land types + others).
