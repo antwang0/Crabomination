@@ -2,7 +2,7 @@
 //! (`goaded_by`, until the goader's next turn), a held goad (`goad_holds`,
 //! "as long as", CR 611.2b), an attached Aura or Equipment that says the
 //! creature "is goaded" (`StaticEffect::AttachedIsGoaded`), and a board-wide
-//! static (Baeloth Barrityl, Mocking Doppelganger). Every reader of goad asks
+//! static (Baeloth Barrityl, Mocking Doppelganger, Koloth). Every reader of goad asks
 //! here so the four can't disagree.
 
 use smallvec::SmallVec;
@@ -61,6 +61,9 @@ impl GameState {
             Some(StaticEffect::OthersNamedLikeThisAreGoaded) => {
                 c.id != a.id && self.computed_is_creature(c) && c.definition.name == a.definition.name
             }
+            Some(StaticEffect::MatchingAreGoaded { filter }) => {
+                self.computed_is_creature(c) && self.evaluate_requirement_on_card(filter, c, a.controller)
+            }
             _ => false,
         })
     }
@@ -73,6 +76,7 @@ impl GameState {
                 sa.effect,
                 StaticEffect::OpponentCreaturesWithLesserPowerAreGoaded
                     | StaticEffect::OthersNamedLikeThisAreGoaded
+                    | StaticEffect::MatchingAreGoaded { .. }
             )
         })
     }

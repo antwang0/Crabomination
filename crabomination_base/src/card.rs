@@ -421,6 +421,8 @@ pub enum CreatureType {
     Ferengi,
     Betazoid,
     Android,
+    // Star Trek Commander (Koloth, Tribble Hunter's tokens).
+    Tribble,
 }
 
 /// Land subtypes (basic land types + others).

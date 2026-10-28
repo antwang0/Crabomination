@@ -412,6 +412,9 @@ pub enum StaticEffect {
     /// CR 701.15 — "Other creatures with the same name as this creature are
     /// goaded" (Mocking Doppelganger's copy rider). Read by `goaders`.
     OthersNamedLikeThisAreGoaded,
+    /// CR 701.15 — "All [filter] are goaded" (Koloth, Tribble Hunter's
+    /// Tribbles), goaded by this permanent's controller. Read by `goaders`.
+    MatchingAreGoaded { filter: SelectionRequirement },
     /// "Each [creature_type] creature gets +P/+T for each *other*
     /// [creature_type] on the battlefield" (Sliver Legion). State-aware:
     /// gathered with the live battlefield count, one effect per matching

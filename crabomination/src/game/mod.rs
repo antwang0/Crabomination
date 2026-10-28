@@ -2709,6 +2709,10 @@ pub struct ResolutionScratch {
     /// `Value::LandCardsRevealedThisEffect` inside its body (Phabine).
     #[serde(skip)]
     pub(crate) parley_lands_revealed: u32,
+    /// Transient: the greatest mana value the last `Effect::Parley` revealed,
+    /// read by `Value::ParleyGreatestManaValue` (Alexander, Ship's Fool).
+    #[serde(skip)]
+    pub(crate) parley_greatest_mv: u32,
     /// Transient: the mana value of the card the last `Effect::Discover` hit
     /// (the cap when it hit nothing), read by `Value::DiscoveredManaValue`
     /// (Hit the Mother Lode's Treasures).
@@ -37257,6 +37261,7 @@ fn static_effect_to_effects(
             // Board-wide goad — read by `goad::goaders`; no layer.
             | StaticEffect::OpponentCreaturesWithLesserPowerAreGoaded
             | StaticEffect::OthersNamedLikeThisAreGoaded
+            | StaticEffect::MatchingAreGoaded { .. }
             // Attack-permission static, read in `ignores_defender_for_attack`.
             | StaticEffect::CanAttackIgnoringDefenderWhile { .. }
             | StaticEffect::CanAttackPlayersWhoAttackedYouLastTurn

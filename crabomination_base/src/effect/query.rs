@@ -5207,7 +5207,7 @@ impl Effect {
                 | Selector::CreaturesInCombatWith(i)
                 | Selector::SharingNameWith(i)
                 | Selector::SharingColorWith(i) => sel_find(i, slot),
-                Selector::Both(a, b) => sel_find(a, slot).or_else(|| sel_find(b, slot)),
+                Selector::Both(a, b) | Selector::Except(a, b) => sel_find(a, slot).or_else(|| sel_find(b, slot)),
                 Selector::MatchingAmong { inner, .. }
                 | Selector::Take { inner, .. }
                 | Selector::TakeRandom { inner, .. }
@@ -6775,7 +6775,7 @@ fn sel_has_target(s: &Selector) -> bool {
         | Selector::CreaturesInCombatWith(i)
         | Selector::SharingNameWith(i)
         | Selector::SharingColorWith(i) => sel_has_target(i),
-        Selector::Both(a, b) => sel_has_target(a) || sel_has_target(b),
+        Selector::Both(a, b) | Selector::Except(a, b) => sel_has_target(a) || sel_has_target(b),
         Selector::MatchingAmong { inner, .. } => sel_has_target(inner),
         Selector::PowerAbove { inner, than } => {
             sel_has_target(inner) || value_has_target(than)

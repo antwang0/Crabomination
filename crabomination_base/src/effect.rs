@@ -667,6 +667,10 @@ pub enum Selector {
     /// The union of two selectors, de-duplicated in left-then-right order.
     /// Lets one effect name two target slots at once (Barrin's Spite).
     Both(Box<Selector>, Box<Selector>),
+    /// The first selector's entities minus the second's — "all *other* …"
+    /// after a sacrifice (The Promise of Kahless: the graveyard's Klingons
+    /// except the one just sacrificed).
+    Except(Box<Selector>, Box<Selector>),
 
     /// One half of the split made by the enclosing `Effect::SeparateIntoPiles`
     /// — the pile the chooser picked (`chosen: true`) or the leftover.
@@ -1383,6 +1387,9 @@ pub enum Value {
     /// "if the discovered card's mana value is less than 10").
     DiscoveredManaValue,
     LandCardsRevealedThisEffect,
+    /// The greatest mana value among the cards the enclosing `Effect::Parley`
+    /// revealed (Alexander, Ship's Fool).
+    ParleyGreatestManaValue,
     /// Amount of {E} paid by an `Effect::PayAnyEnergy` earlier in the current
     /// resolution. Reset between independent resolutions. Aether Spike's
     /// "counter that spell unless its controller pays {1} for each {E} paid
@@ -2469,6 +2476,10 @@ pub enum Predicate {
     /// turn (Raid, CR 702.108 ability word). Backed by
     /// `Player.attacked_this_turn`.
     PlayerAttackedThisTurn { who: PlayerRef },
+    /// True if the controller attacked any player `who` resolves to this turn
+    /// (CR 508.1 — "for each opponent you attacked this turn": Rite of
+    /// Ascension under `ForEachOpponent`). Off the controller's turn, false.
+    YouAttackedPlayerThisTurn { who: PlayerRef },
     /// True if `who` has paid or lost at least `n` {E} this turn. Backed by
     /// `Player.energy_spent_this_turn` (Izzet Generatorium's "{T}: Draw a card.
     /// Activate only if you've paid or lost four or more {E} this turn").

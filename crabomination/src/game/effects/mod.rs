@@ -41729,10 +41729,11 @@ impl GameState {
                 // CR 701 ability word — no rules meaning of its own; the count
                 // it publishes is what the body reads.
                 let seats: Vec<usize> = self.apnap_sort(self.living_seats().collect());
-                let (mut nonland, mut lands) = (0u32, 0u32);
+                let (mut nonland, mut lands, mut greatest) = (0u32, 0u32, 0u32);
                 for &p in &seats {
                     let Some(top) = self.players[p].library.first() else { continue };
                     let (name, is_land) = (top.definition.name, top.definition.is_land());
+                    greatest = greatest.max(top.definition.cost.cmc());
                     events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
                     if is_land {
                         lands += 1;
@@ -41742,6 +41743,7 @@ impl GameState {
                 }
                 self.cards_revealed_this_resolution = nonland;
                 self.scratch.parley_lands_revealed = lands;
+                self.scratch.parley_greatest_mv = greatest;
                 self.run_effect(then, ctx, events)?;
                 for &p in &seats {
                     self.draw_one_or_deck(p, events);
@@ -46573,6 +46575,13 @@ impl GameState {
                     .filter(|c| wild || types.iter().any(|t| self.permanent_has_creature_type(c.id, *t)))
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
+            }
+
+            Selector::Except(a, b) => {
+                let drop = self.resolve_selector(b, ctx);
+                let mut out = self.resolve_selector(a, ctx);
+                out.retain(|e| !drop.contains(e));
+                out
             }
 
             Selector::Both(a, b) => {

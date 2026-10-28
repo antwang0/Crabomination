@@ -1921,6 +1921,26 @@ pub(crate) fn emblem_event_matches(
         EventScope::YouPutCounters => counter_placer(state, event).is_some_and(|p| p == controller),
         EventScope::OpponentPutsCountersOnTheirOwn => opponent_put_counters_on_their_own(state, event, controller),
         EventScope::YourCreatureCombatDamagedOpponent => your_creature_combat_damaged_opponent(state, event, controller),
+        // The player-damage scopes read only the event, so an emblem (a
+        // this-turn delayed trigger, Right of Vengeance) hears them as a
+        // permanent would.
+        EventScope::YourSourceDamagedOpponent => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
+                if *fc == controller && !state.same_team(*p, controller)
+        ),
+        EventScope::YourSourceDamagedAnyPlayer => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(_), from_controller: Some(fc), .. } if *fc == controller
+        ),
+        EventScope::OpponentSourceDamagedYou => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
+                if *p == controller && !state.same_team(*fc, controller)
+        ),
+        EventScope::SourceDamagedYou => {
+            matches!(event, GameEvent::DamageDealt { to_player: Some(p), .. } if *p == controller)
+        }
         EventScope::FromYourGraveyard
         | EventScope::FromYourGraveyardAnyPlayer
         | EventScope::FromYourGraveyardSourceDamagedOpponent
@@ -1931,10 +1951,6 @@ pub(crate) fn emblem_event_matches(
         | EventScope::OpponentCreatureTargetedByYou
         | EventScope::PlayerOrPermanentTargetedByYourAbility
         | EventScope::EnchantedBySource
-        | EventScope::YourSourceDamagedOpponent
-        | EventScope::YourSourceDamagedAnyPlayer
-        | EventScope::OpponentSourceDamagedYou
-        | EventScope::SourceDamagedYou
         | EventScope::OpponentSourceDamagedYourPermanent
         | EventScope::YourOtherSourceDamagedOpponent
         | EventScope::ControllerAttackedByOpponent

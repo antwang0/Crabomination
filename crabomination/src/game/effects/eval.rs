@@ -1645,6 +1645,7 @@ impl GameState {
             Value::CardsRevealedThisEffect => self.cards_revealed_this_resolution as i32,
             Value::SurveilKeptOnTopThisEffect => self.scratch.surveil_kept_top_this_resolution as i32,
             Value::LandCardsRevealedThisEffect => self.scratch.parley_lands_revealed as i32,
+            Value::ParleyGreatestManaValue => self.scratch.parley_greatest_mv as i32,
             Value::DiscoveredManaValue => self.scratch.discovered_mana_value as i32,
             Value::LastExiledPower => match self.scratch.exiled_card_ids_this_resolution.last() {
                 Some(id) => self
@@ -3540,6 +3541,14 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].attacked_this_turn),
+            Predicate::YouAttackedPlayerThisTurn { who } => {
+                let me = ctx.controller;
+                self.active_player_idx == me
+                    && self
+                        .resolve_players(who, ctx)
+                        .into_iter()
+                        .any(|p| self.players[me].attacked_players_this_turn.contains(&p))
+            }
             Predicate::EnergyPaidThisTurnAtLeast { who, n } => self
                 .resolve_players(who, ctx)
                 .into_iter()
