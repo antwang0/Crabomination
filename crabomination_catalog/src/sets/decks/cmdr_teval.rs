@@ -1203,7 +1203,7 @@ pub fn rogue_class() -> CardDefinition {
                     Effect::AdvanceClassLevel,
                     Effect::GrantMayPlay {
                         what: Selector::EachMatching { zone: crate::effect::ZoneRef::Exile, filter: R::ExiledWithSource },
-                        duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield { source: crate::card::CardId(0), one_spell_a_turn: false },
+                        duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield { source: crate::card::CardId(0), one_spell_a_turn: false, follows_control: true },
                         to_owner: false,
                         exile_after: false,
                         pay_own_cost: true,

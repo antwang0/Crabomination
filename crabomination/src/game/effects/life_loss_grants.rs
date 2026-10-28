@@ -180,26 +180,46 @@ impl GameState {
     /// CR 611.2b — "for as long as you control [source]": a control change in
     /// `events` that takes a source away from a grant's holder ends the grant
     /// for good (control coming back does not restart it).
+    /// A `follows_control` static grant moves to the source's new controller.
     pub(crate) fn end_lost_control_grants(&mut self, events: &[crate::game::GameEvent]) {
-        let lost = |c: &crate::card::CardInstance| {
+        let moved = |source: crate::card::CardId, holder: usize| {
+            events.iter().find_map(|e| match *e {
+                crate::game::GameEvent::ControlChanged { card_id, from, to } if card_id == source && from == holder => {
+                    Some(to)
+                }
+                _ => None,
+            })
+        };
+        let hit = |c: &crate::card::CardInstance| {
             c.cold_any(|k| {
                 k.may_play_until.as_ref().is_some_and(|m| match m.duration {
-                    MayPlayDuration::WhileHolderControlsSource { source, .. } => events.iter().any(|e| {
-                        matches!(*e, crate::game::GameEvent::ControlChanged { card_id, from, .. }
-                            if card_id == source && from == m.player)
-                    }),
+                    MayPlayDuration::WhileHolderControlsSource { source, .. }
+                    | MayPlayDuration::WhileSourceOnBattlefield { source, follows_control: true, .. } => {
+                        moved(source, m.player).is_some()
+                    }
                     _ => false,
                 })
             })
         };
         // Guarded walk: `iter_mut` unshares the zone (CoW).
-        if !self.exile.iter().any(lost) {
+        if !self.exile.iter().any(hit) {
             return;
         }
         for c in self.exile.iter_mut() {
-            if lost(c) {
-                c.may_play_until = None;
-                c.granted_alt_cast_cost_eot = None;
+            if !hit(c) {
+                continue;
+            }
+            let Some(perm) = c.may_play_until else { continue };
+            match perm.duration {
+                MayPlayDuration::WhileSourceOnBattlefield { source, .. } => {
+                    if let Some(to) = moved(source, perm.player) {
+                        c.may_play_until = Some(MayPlayPermission { player: to, ..perm });
+                    }
+                }
+                _ => {
+                    c.may_play_until = None;
+                    c.granted_alt_cast_cost_eot = None;
+                }
             }
         }
     }
@@ -215,7 +235,7 @@ impl GameState {
                         m.player != MAY_PLAY_DORMANT
                             && matches!(
                                 m.duration,
-                                MayPlayDuration::WhileSourceOnBattlefield { source: s, one_spell_a_turn: true } if s == source
+                                MayPlayDuration::WhileSourceOnBattlefield { source: s, one_spell_a_turn: true, .. } if s == source
                             )
                     })
                 })

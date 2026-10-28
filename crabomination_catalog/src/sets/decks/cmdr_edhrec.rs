@@ -2932,7 +2932,7 @@ pub fn grolnok_the_omnivore() -> CardDefinition {
                     Effect::AddCounter { what: Selector::LastMoved, kind: CounterType::Croak, amount: Value::ONE },
                     Effect::GrantMayPlay {
                         what: Selector::LastMoved,
-                        duration: MayPlayDuration::WhileSourceOnBattlefield { source: crate::card::CardId(0), one_spell_a_turn: false },
+                        duration: MayPlayDuration::WhileSourceOnBattlefield { source: crate::card::CardId(0), one_spell_a_turn: false, follows_control: false },
                         to_owner: false,
                         exile_after: false,
                         pay_own_cost: true,

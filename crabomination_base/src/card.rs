@@ -1430,7 +1430,16 @@ pub enum MayPlayDuration {
     /// `one_spell_a_turn` ("You can't cast more than one spell this way each
     /// turn"), a cast parks the source's other spell grants at
     /// [`MAY_PLAY_DORMANT`] until the next turn; land grants stay live.
-    WhileSourceOnBattlefield { source: CardId, one_spell_a_turn: bool },
+    /// Usable only while the holder controls `source` ("you" of the static).
+    /// With `follows_control` the grant moves to a new controller (Nightveil
+    /// Specter); without, it waits for its holder ("cards you own" —
+    /// Intrepid Paleontologist, Grolnok).
+    WhileSourceOnBattlefield {
+        source: CardId,
+        one_spell_a_turn: bool,
+        #[serde(default)]
+        follows_control: bool,
+    },
     /// "You may play that card for as long as you control [this]" (Lightning,
     /// Victor Mancha, Taster of Wares, Kotose, Ghost-Spider): ends as `source`
     /// leaves or the holder loses control of it, and stays ended if control
@@ -1527,8 +1536,8 @@ impl MayPlayDuration {
     /// `WhileSourceOnBattlefield` template to the granting permanent.
     pub fn bound_to_source(self, source: Option<CardId>) -> Self {
         match (self, source) {
-            (Self::WhileSourceOnBattlefield { one_spell_a_turn, .. }, Some(source)) => {
-                Self::WhileSourceOnBattlefield { source, one_spell_a_turn }
+            (Self::WhileSourceOnBattlefield { one_spell_a_turn, follows_control, .. }, Some(source)) => {
+                Self::WhileSourceOnBattlefield { source, one_spell_a_turn, follows_control }
             }
             (Self::WhileSourceOnBattlefieldWithThreshold { .. }, Some(source)) => {
                 Self::WhileSourceOnBattlefieldWithThreshold { source }

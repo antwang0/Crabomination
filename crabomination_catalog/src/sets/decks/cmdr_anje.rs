@@ -489,6 +489,7 @@ pub fn hedonists_trove() -> CardDefinition {
                 duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield {
                     source: crate::card::CardId(0),
                     one_spell_a_turn: true,
+                    follows_control: true,
                 },
                 to_owner: false,
                 exile_after: false,

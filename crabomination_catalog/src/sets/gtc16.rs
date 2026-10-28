@@ -67,6 +67,7 @@ pub fn nightveil_specter() -> CardDefinition {
                 duration: MayPlayDuration::WhileSourceOnBattlefield {
                     source: crate::card::CardId(0),
                     one_spell_a_turn: false,
+                    follows_control: true,
                 },
                 pay_any_color: false,
                 max_mana_value: None,

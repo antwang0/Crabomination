@@ -4171,6 +4171,7 @@ pub fn intrepid_paleontologist() -> CardDefinition {
                         duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield {
                             source: crate::card::CardId(0),
                             one_spell_a_turn: false,
+                            follows_control: false,
                         },
                         to_owner: false,
                         exile_after: false,

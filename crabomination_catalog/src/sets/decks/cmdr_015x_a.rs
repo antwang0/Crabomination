@@ -554,6 +554,7 @@ pub fn evelyn_the_covetous() -> CardDefinition {
                     duration: MayPlayDuration::WhileSourceOnBattlefield {
                         source: crate::card::CardId(0),
                         one_spell_a_turn: true,
+                        follows_control: false,
                     },
                     to_owner: false,
                     exile_after: false,

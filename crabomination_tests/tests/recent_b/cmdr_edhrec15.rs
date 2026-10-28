@@ -1891,6 +1891,32 @@ fn intrepid_paleontologist_casts_exiled_dinosaurs() {
     assert_eq!(c.counter_count(CounterType::Finality), 1);
 }
 
+/// CR 611.2b — "cards you own exiled with this creature" is usable only while
+/// you control the Paleontologist: a steal pauses it, the return resumes it.
+#[test]
+fn intrepid_paleontologist_grant_waits_for_its_controller() {
+    let mut g = pod(2);
+    let pal = ready(&mut g, 0, catalog::intrepid_paleontologist());
+    let dino = g.add_card_to_graveyard(0, catalog::ghalta_the_unstoppable());
+    activate(&mut g, pal, 1, Some(Target::Permanent(dino))).expect("exile");
+    let try_cast = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: dino,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    flood(&mut g, 0);
+    g.battlefield_find_mut(pal).unwrap().controller = 1;
+    g.dispatch_triggers_for_events(&[GameEvent::ControlChanged { card_id: pal, from: 0, to: 1 }]);
+    assert!(try_cast(&mut g).is_err(), "seat 0 no longer controls it");
+    g.battlefield_find_mut(pal).unwrap().controller = 0;
+    try_cast(&mut g).expect("back under seat 0's control");
+}
+
 /// Nashi, Moon's Legacy (CR 707.12): attacking exiles a legendary card from
 /// your graveyard and casts a copy of it, paying its cost — the copy of a
 /// permanent spell becomes a token.

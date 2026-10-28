@@ -5338,6 +5338,10 @@ impl GameState {
             crate::card::MayPlayDuration::WhileExiledAfterAnotherSpell => {
                 self.players.get(perm.player).is_some_and(|p| p.spells_cast_this_game_turn > 0)
             }
+            // "You" of a static grant is its source's controller.
+            crate::card::MayPlayDuration::WhileSourceOnBattlefield { source, .. } => {
+                self.battlefield_find(source).is_some_and(|c| c.controller == perm.player)
+            }
             crate::card::MayPlayDuration::WhileHolderControlsSource { source, your_turn } => {
                 self.battlefield_find(source).is_some_and(|c| c.controller == perm.player)
                     && (!your_turn || self.active_player_idx == perm.player)
@@ -15455,7 +15459,7 @@ impl GameState {
             self.spend_one_cast_group(group);
         }
         // Hedonist's Trove — one spell a turn through its grants.
-        if let Some(crate::card::MayPlayDuration::WhileSourceOnBattlefield { source, one_spell_a_turn: true }) =
+        if let Some(crate::card::MayPlayDuration::WhileSourceOnBattlefield { source, one_spell_a_turn: true, .. }) =
             card.may_play_until.map(|m| m.duration)
         {
             self.park_source_bound_spell_grants(source);

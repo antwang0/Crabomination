@@ -380,6 +380,23 @@ fn hedonists_trove_one_spell_a_turn_while_it_stays() {
     assert_eq!(granted_to(&g), None, "the permission left with the Trove");
 }
 
+/// CR 611.2b / 613 — the Trove's "you may cast" is its controller's: a steal
+/// hands the grants to the new controller, and the old one loses them.
+#[test]
+fn hedonists_trove_grants_follow_its_controller() {
+    let mut g = main_phase(2);
+    let bear = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let trove = g.add_card_to_hand(0, catalog::hedonists_trove());
+    flood(&mut g, 0);
+    cast(&mut g, trove, &[]).expect("cast");
+    g.battlefield_find_mut(trove).unwrap().controller = 1;
+    g.dispatch_triggers_for_events(&[GameEvent::ControlChanged { card_id: trove, from: 0, to: 1 }]);
+    let holder = g.exile.iter().find(|c| c.id == bear).and_then(|c| c.may_play_until).map(|m| m.player);
+    assert_eq!(holder, Some(1), "the new controller holds it");
+    flood(&mut g, 0);
+    assert!(cast_granted(&mut g, bear).is_err(), "not the old controller's any more");
+}
+
 /// Boneyard Parley brings creature cards from graveyards back under your
 /// control.
 #[test]
