@@ -82,4 +82,54 @@ impl GameState {
         self.bottom_in_random_order(p, &rest);
         Ok(())
     }
+
+    /// The walk only reads the library: the cast is offered where the card
+    /// lies (a re-run on a prompting seat's answer walks the same cards), then
+    /// every other revealed card goes to the bottom in a random order.
+    pub(super) fn reveal_until_may_cast_free(
+        &mut self,
+        max_mv: &Value,
+        filter: Option<&crate::card::SelectionRequirement>,
+        ctx: &EffectContext,
+        effect: &Effect,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let p = ctx.controller;
+        let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+        let lib = &self.players[p].library;
+        let hit = lib.iter().position(|c| {
+            !c.definition.is_land()
+                && self.zone_mana_value(c) <= cap
+                && filter.is_none_or(|f| self.evaluate_requirement_on_card(f, c, p))
+        });
+        let revealed: Vec<CardId> = lib[..hit.map_or(lib.len(), |i| i + 1)].iter().map(|c| c.id).collect();
+        let mut cast = None;
+        if let Some(i) = hit {
+            let card = &self.players[p].library[i];
+            let (id, name) = (card.id, card.definition.name.to_string());
+            let Some(picked) = self.choose_up_to_cards(
+                p,
+                "Cast the revealed card without paying its mana cost?".into(),
+                ctx.source.unwrap_or(CardId(0)),
+                vec![(id, name)],
+                1,
+                PickValue::Gain,
+                effect,
+                vec![id],
+            ) else {
+                return Ok(());
+            };
+            cast = picked.first().copied();
+        }
+        if let Some(pick) = cast
+            && let Some(def) = self.find_card_anywhere(pick).map(|c| c.definition.arc())
+        {
+            let target = self.auto_target_for_effect_avoiding(&def.effect, p, Some(pick));
+            events.extend(self.cast_card_for_free(p, pick, Zone::Library, target, vec![], None, None, false)?);
+        }
+        // CR 401.4 — the rest go to the bottom in a random order.
+        let rest: Vec<CardId> = revealed.into_iter().filter(|&cid| cast != Some(cid)).collect();
+        self.bottom_in_random_order(p, &rest);
+        Ok(())
+    }
 }

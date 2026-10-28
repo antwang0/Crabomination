@@ -107,12 +107,11 @@ pub fn faiths_reward() -> CardDefinition {
 
 /// Treasure Keeper — {4} 3/3 artifact creature Construct. When it dies,
 /// reveal from the top until a nonland card with mana value 3 or less; you may
-/// cast it free; the rest go to the bottom at random. 🟡 The walk exiles the
-/// cards as cascade does rather than revealing them (INCOMPLETE_CARDS).
+/// cast it free; the rest go to the bottom at random.
 pub fn treasure_keeper() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
-        triggered_abilities: vec![on_dies(Effect::Cascade { max_mv: Value::Const(4), filter: None })],
+        triggered_abilities: vec![on_dies(Effect::RevealUntilMayCastFree { max_mv: Value::Const(3), filter: None })],
         ..creature("Treasure Keeper", cost(&[generic(4)]), vec![CreatureType::Construct], 3, 3)
     }
 }

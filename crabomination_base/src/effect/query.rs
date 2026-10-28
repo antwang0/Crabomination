@@ -2425,7 +2425,9 @@ impl Effect {
             Effect::RegisterParadigm | Effect::CastFreeParadigmCopy => false,
             Effect::Cascade { .. } => false,
             Effect::Ripple { .. } => false,
-            Effect::RevealTopMayCastOneFree { .. } | Effect::RevealTopMayCastFreeKeepOnTop { .. } => false,
+            Effect::RevealTopMayCastOneFree { .. }
+            | Effect::RevealTopMayCastFreeKeepOnTop { .. }
+            | Effect::RevealUntilMayCastFree { .. } => false,
             Effect::EachPlayerDrawsDamageTheyDealtToSource => false,
             Effect::CopySpellOntoAnotherOpponentsPermanent { .. } | Effect::CopySpellForEachOtherOpponent { .. } => false,
             Effect::Sacrifice { who, count, .. } => sel_has_target(who) || value_has_target(count),

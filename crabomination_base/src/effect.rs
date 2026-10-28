@@ -11544,6 +11544,15 @@ pub enum Effect {
     /// stays on top (Powerbalance's "if the two spells have the same mana
     /// value", read through `WithX`).
     RevealTopMayCastFreeKeepOnTop { filter: SelectionRequirement },
+    /// "Reveal cards from the top of your library until you reveal a nonland
+    /// card with mana value `max_mv` or less [matching `filter`]. You may cast
+    /// it without paying its mana cost. Put the rest on the bottom in a random
+    /// order" — revealed, not exiled as cascade does (Treasure Keeper, Neera).
+    RevealUntilMayCastFree {
+        max_mv: Value,
+        #[serde(default)]
+        filter: Option<SelectionRequirement>,
+    },
     RevealTopMayCastOneFree {
         count: Value,
         max_mv: Value,

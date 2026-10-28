@@ -1160,9 +1160,7 @@ pub fn sigardas_splendor() -> CardDefinition {
 /// Neera, Wild Mage — {4}{U}{R} 2/7 Human Elf Shaman. Once each turn, a spell
 /// you cast may go to the bottom of its owner's library; if it does, you dig
 /// to your next nonland card and may cast it free, the misses going to the
-/// bottom in a random order. The dig is cascade's walk with no mana value
-/// cap (CR 702.85a): the passed-over cards end on the bottom the same way,
-/// they're just exiled rather than revealed while it walks.
+/// bottom in a random order.
 pub fn neera_wild_mage() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -1176,7 +1174,7 @@ pub fn neera_wild_mage() -> CardDefinition {
                             what: Selector::TriggerSource,
                             zone: crate::effect::CounteredSpellZone::OwnerLibraryBottom,
                         },
-                        Effect::Cascade { max_mv: Value::Const(1000), filter: None },
+                        Effect::RevealUntilMayCastFree { max_mv: Value::Const(i32::MAX), filter: None },
                     ])),
                 }),
                 else_: Box::new(Effect::Noop),

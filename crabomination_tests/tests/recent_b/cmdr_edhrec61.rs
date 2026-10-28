@@ -87,19 +87,27 @@ fn faiths_reward_returns_this_turns_dead() {
     assert!(g.battlefield_find(old).is_none());
 }
 
-/// Treasure Keeper's death casts a cheap spell off the top.
+/// Treasure Keeper's death reveals (not exiles, unlike cascade) down to the
+/// first nonland card with mana value 3 OR LESS, casts it free, and bottoms
+/// the passed-over cards.
 #[test]
 fn treasure_keeper_casts_on_death() {
     let mut g = pod(2);
     g.players[0].library.clear();
-    g.add_card_to_library(0, catalog::forest());
-    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let forest = g.add_card_to_library(0, catalog::forest());
+    let angel = g.add_card_to_library(0, catalog::serra_angel());
+    let courser = g.add_card_to_library(0, catalog::centaur_courser());
+    let under = g.add_card_to_library(0, catalog::grizzly_bears());
     let keeper = ready(&mut g, 0, catalog::treasure_keeper());
     let mut evs = Vec::new();
     g.destroy_permanent(keeper, false, &mut evs);
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
-    assert!(g.battlefield_find(bears).is_some(), "the Bears were cast free");
+    assert!(g.battlefield_find(courser).is_some(), "the three-drop was cast free");
+    assert!(g.exile.is_empty(), "the walk reveals; nothing is exiled");
+    let lib: Vec<CardId> = g.players[0].library.iter().map(|c| c.id).collect();
+    assert_eq!(lib[0], under, "the unrevealed card stays on top");
+    assert!(lib[1..].contains(&forest) && lib[1..].contains(&angel), "the misses go to the bottom");
 }
 
 /// Katilda counts Spirits and enchantments; disturbed, her Aura pumps the

@@ -359,8 +359,8 @@ OPEN:
 - Looked at, not built: Sen Triplets' "can't activate abilities" needs a player-level lock that also covers mana,
   loyalty and cycling activations (several activation paths, not one gate); "for as long as you control [this]"
   may-play grants (Gwen Stacy, Lightning, Victor Mancha, Taster of Wares) ride `MayPlayDuration::WhileSourceOnBattlefield`
-  and survive a control change — a controlled variant needs a control-change sweep; Treasure Keeper / Neera's
-  reveal-not-exile walk (only exile-matters cards see it); Primal Adversary's "up to that many target lands" after
+  and survive a control change — a controlled variant needs a control-change sweep (Treasure Keeper / Neera's
+  reveal-not-exile walk: `Effect::RevealUntilMayCastFree`, 2026-10-28); Primal Adversary's "up to that many target lands" after
   all payments (a reflexive `CapTargetsAtX` over `ApplyToTargets`); Deification's ballot of every planeswalker type
   (needs an enumerable `PlaneswalkerSubtype`).
 

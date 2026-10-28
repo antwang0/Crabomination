@@ -612,3 +612,22 @@ fn embalmers_tools_mills_with_a_zombie() {
     assert!(g.battlefield_find(z).unwrap().tapped);
     assert_eq!(g.players[1].graveyard.len(), 1);
 }
+
+/// Neera bottoms the cast spell, then REVEALS (nothing is exiled, unlike
+/// cascade) down to the next nonland card of any mana value and casts it free.
+#[test]
+fn neera_bottoms_the_spell_and_casts_the_next_nonland_free() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    library(&mut g, 0, 2);
+    let wurm = g.add_card_to_library(0, catalog::craw_wurm());
+    library(&mut g, 0, 1);
+    ready(&mut g, 0, catalog::neera_wild_mage());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![wurm])]));
+    cast(&mut g, bears, &[]).expect("cast");
+    assert!(g.battlefield_find(wurm).is_some(), "the six-drop was cast free");
+    assert!(g.players[0].library.iter().any(|c| c.id == bears), "the cast spell went to the library");
+    assert!(g.exile.is_empty(), "the walk reveals; nothing is exiled");
+    assert_eq!(g.players[0].library.len(), 4, "the spell plus the three Islands");
+}
