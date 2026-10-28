@@ -1932,7 +1932,10 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// Fracture net under the search instead — `CRAB_FRA_NET` or
 /// `nets/fra-champion.safetensors`, loaded into its own slot. The champion
 /// is the SOS net: on FRA it adds nothing over the material leaf, and the
-/// FRA net makes the same search +3.75 (round 82, `ML_NOTES`).
+/// FRA net makes the same search +3.75 (round 82, `ML_NOTES`). Since round
+/// 86 the file is that round's rated-deck seed-43 net (pinned 0.274 learner
+/// steps a game): +1.8 scored and +0.9 under this search over round 82's,
+/// on ladder seeds neither was chosen on.
 pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn crabomination::server::Bot> {
     if n_seats > 2 {
         return Box::new(HeuristicBot::new());
