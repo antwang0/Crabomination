@@ -19430,6 +19430,7 @@ static DECKS: &[Factory] = &[
     super::decks::khan_vengeful_heart,
     super::decks::sela_tal_shiar_paradox,
     super::decks::mega_flare,
+    super::decks::quark_humble_proprietor,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -860192,5 +860192,41 @@
       "G"
     ],
     "layout": "normal"
+  },
+  "HYDRA Assault Robot": {
+    "name": "HYDRA Assault Robot",
+    "mana_cost": "{1}{R}",
+    "cmc": 2.0,
+    "type_line": "Artifact Creature — Robot Villain",
+    "oracle_text": "Whenever another Villain and/or artifact you control enters, this creature deals 1 damage to target opponent.",
+    "power": "1",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "Machinesmith Automaton": {
+    "name": "Machinesmith Automaton",
+    "mana_cost": "{2}{R}",
+    "cmc": 3.0,
+    "type_line": "Artifact Creature — Robot Villain",
+    "oracle_text": "Trample\nWhenever another artifact you control enters, put a +1/+1 counter on this creature.",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [
+      "Trample"
+    ],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "layout": "normal"
   }
 }

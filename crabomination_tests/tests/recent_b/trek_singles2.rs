@@ -194,3 +194,32 @@ fn sela_makes_a_romulan_per_graveyard_batch() {
     assert_eq!(romulans.len(), 1);
     assert!(romulans[0].tapped);
 }
+
+/// Quark: a Treasure every upkeep, and none of your Treasures can be
+/// sacrificed — their own mana ability included.
+#[test]
+fn quark_hoards_treasures() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::quark_humble_proprietor());
+    g.step = TurnStep::Untap;
+    for _ in 0..20 {
+        if g.step == TurnStep::Upkeep {
+            break;
+        }
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    let t = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Treasure").map(|c| c.id).expect("a Treasure");
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let tried = g.perform_action(GameAction::ActivateAbility {
+        card_id: t,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(tried.is_err(), "can't be sacrificed");
+    assert!(g.battlefield_find(t).is_some());
+}

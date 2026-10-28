@@ -773,3 +773,25 @@ pub fn mega_flare() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Quark, Humble Proprietor — {2}{R} legendary 1/2 Ferengi Rogue. You can't
+/// sacrifice Treasure tokens (they can't be sacrificed while you control
+/// them, CR 701.21). At the beginning of each upkeep, a Treasure.
+pub fn quark_humble_proprietor() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "You can't sacrifice Treasure tokens.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(
+                    R::HasArtifactSubtype(ArtifactSubtype::Treasure).and(R::IsToken).and(R::ControlledByYou),
+                ),
+                keyword: Keyword::CantBeSacrificed,
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::AnyPlayer),
+            effect: crate::effect::shortcut::mint_treasures(1),
+        }],
+        ..legend("Quark, Humble Proprietor", cost(&[generic(2), r()]), vec![CreatureType::Ferengi, CreatureType::Rogue], 1, 2)
+    }
+}
