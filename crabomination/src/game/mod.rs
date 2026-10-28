@@ -2700,11 +2700,11 @@ pub struct ResolutionScratch {
     #[serde(skip)]
     pub(crate) destroyed_this_resolution: Vec<CardId>,
     /// Transient: parallel to `destroyed_this_resolution`, each destroyed
-    /// permanent's controller as it was destroyed, whether it was a creature
-    /// and whether it was a token — tokens included, which the card list can
+    /// permanent's controller as it was destroyed, whether it was a creature,
+    /// whether it was a token and whether it was an artifact — tokens included, which the card list can
     /// no longer find. Read by `Value::*DestroyedThisResolutionControlledBy`.
     #[serde(skip)]
-    pub(crate) destroyed_controllers_this_resolution: Vec<(usize, bool, bool)>,
+    pub(crate) destroyed_controllers_this_resolution: Vec<(usize, bool, bool, bool)>,
     /// Transient: the land cards the last `Effect::Parley` revealed, read by
     /// `Value::LandCardsRevealedThisEffect` inside its body (Phabine).
     #[serde(skip)]
@@ -8554,17 +8554,20 @@ impl GameState {
                     .filter(|sa| matches!(sa.effect, StaticEffect::ExtraPlusOneCounterOnSelf))
                     .count() as u32,
             );
-            // Benevolent Hydra / Ozolith — filtered "that many plus one".
+        }
+        // Benevolent Hydra / Ozolith (+1/+1) and Optimization Annex (any kind)
+        // — filtered "that many plus one".
+        if base > 0 {
             for src in self.battlefield.iter().filter(|s| s.controller == ctrl) {
                 for sa in &src.definition.static_abilities {
-                    if let StaticEffect::ExtraPlusOneCountersMatching { filter } = &sa.effect
-                        && self.evaluate_requirement_static(
-                            filter,
-                            &crate::game::Target::Permanent(cid),
-                            ctrl,
-                            Some(src.id),
-                        )
-                    {
+                    let filter = match &sa.effect {
+                        StaticEffect::ExtraPlusOneCountersMatching { filter } if kind == CounterType::PlusOnePlusOne => {
+                            filter
+                        }
+                        StaticEffect::ExtraCountersOfKindMatching { kind: k, filter } if *k == kind => filter,
+                        _ => continue,
+                    };
+                    if self.evaluate_requirement_static(filter, &crate::game::Target::Permanent(cid), ctrl, Some(src.id)) {
                         base = base.saturating_add(1);
                     }
                 }
@@ -20033,20 +20036,24 @@ impl GameState {
         use crate::effect::StaticEffect;
         let def = &card.definition;
         let instant_sorcery = def.is_instant() || def.is_sorcery();
-        self.battlefield
-            .iter()
-            .any(|c| {
-                c.controller == caster
-                    && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                        StaticEffect::YourISSpellsHaveReplicate => instant_sorcery,
-                        // Hatchery Sliver — "each Sliver spell you cast".
-                        StaticEffect::YourSpellsHaveReplicate { filter } => {
-                            self.evaluate_requirement_on_card(filter, card, caster)
-                        }
-                        _ => false,
-                    })
+        self.battlefield.iter().filter(|c| c.controller == caster).find_map(|c| {
+            c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
+                StaticEffect::YourISSpellsHaveReplicate if instant_sorcery => Some(def.cost.clone()),
+                // Hatchery Sliver — "each Sliver spell you cast".
+                StaticEffect::YourSpellsHaveReplicate { filter }
+                    if self.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    Some(def.cost.clone())
+                }
+                // Hugh — a printed cost.
+                StaticEffect::YourSpellsHaveReplicateFor { filter, cost }
+                    if self.evaluate_requirement_on_card(filter, card, caster) =>
+                {
+                    Some(cost.clone())
+                }
+                _ => None,
             })
-            .then(|| def.cost.clone())
+        })
     }
 
     /// Grant `kw` to a battlefield permanent until end of turn, stamping
@@ -36180,6 +36187,7 @@ fn static_effect_to_effects(
             | StaticEffect::DoublePlusOneCounters
             | StaticEffect::ExtraPlusOneCounters
             | StaticEffect::ExtraPlusOneCountersMatching { .. }
+            | StaticEffect::ExtraCountersOfKindMatching { .. }
             | StaticEffect::ExtraPlusOneCounterOnSelf
             | StaticEffect::ExtraCounterAllKinds
             | StaticEffect::ExtraCounterOnCreaturePlaneswalkerOrYou
@@ -36445,6 +36453,7 @@ fn static_effect_to_effects(
             // no continuous-layer effect.
             | StaticEffect::YourISSpellsHaveReplicate
             | StaticEffect::YourSpellsHaveReplicate { .. }
+            | StaticEffect::YourSpellsHaveReplicateFor { .. }
             // HasActivatedAbilitiesOfCounteredCreatures — surfaced as virtual
             // activated abilities, not a layer effect.
             | StaticEffect::HasActivatedAbilitiesOfCounteredCreatures

@@ -658,7 +658,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
                 | CreatureOfAnyTypes(_) | InstantSorceryOrTypes(_)
                 | LandAbilitiesOnly | CreatureOnly | CreatureOnlyFromCreature | MarksCast(_)
                 | CreatureSpellsOrAbilities | CreatureAbilitiesOnly | NoNonartifactSpells | AbilitiesOnly
-                | LessonSpellsOnly | LessonOrShrineSpellsOnly | DevoidSpellsOnly | ForetellOnly | ForetellActionOrInstantSorcery | InstantSorceryUncounterable
+                | LessonSpellsOnly | LessonOrShrineSpellsOnly | CommanderSpellsOnly | DevoidSpellsOnly | ForetellOnly | ForetellActionOrInstantSorcery | InstantSorceryUncounterable
                 | EquipmentOnly | ColorlessSpellsOrAbilities | HighMvOrX | SpellManaValueAtLeast4 | DragonOrOmenSpell
                 | EnchantmentSpell | NotGeneric | MulticoloredSpell | ColoredSpellWithoutX
                 | PlaneswalkerSpellsOnly
@@ -715,6 +715,7 @@ fn cr_106_6_every_rider_allows_every_payment() {
             NoNonartifactSpells,
             AbilitiesOnly,
             LessonSpellsOnly,
+            CommanderSpellsOnly,
             DevoidSpellsOnly,
             ForetellOnly,
             ForetellActionOrInstantSorcery,

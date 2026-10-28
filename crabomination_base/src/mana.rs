@@ -750,6 +750,9 @@ pub enum SpendRestriction {
     /// any ability activation regardless of the source's card type.
     AbilitiesOnly,
     /// "Spend this mana only to cast Lesson spells." (Hermitic Herbalist.)
+    /// "Spend this mana only to cast your commander" (Queen's Diamond):
+    /// `SpellKind::commander`, spells only.
+    CommanderSpellsOnly,
     LessonSpellsOnly,
     /// "Spend this mana only to cast a Lesson or Shrine spell" (White Lotus
     /// Hideout).
@@ -1030,6 +1033,7 @@ impl SpendRestriction {
             SpendRestriction::AbilitiesOnly => "only activated abilities",
             SpendRestriction::SpellsOnly => "only spells",
             SpendRestriction::LessonSpellsOnly => "only Lesson spells",
+            SpendRestriction::CommanderSpellsOnly => "only to cast your commander",
             SpendRestriction::LessonOrShrineSpellsOnly => "only Lesson or Shrine spells",
             SpendRestriction::DevoidSpellsOnly => "only devoid spells",
             SpendRestriction::ForetellOnly => "only to foretell or cast foretell spells",
@@ -1192,6 +1196,7 @@ impl SpendRestriction {
             SpendRestriction::AbilitiesOnly => kind.activating_ability,
             SpendRestriction::SpellsOnly => !kind.activating_ability,
             SpendRestriction::LessonSpellsOnly => kind.lesson,
+            SpendRestriction::CommanderSpellsOnly => kind.commander && !kind.activating_ability,
             SpendRestriction::LessonOrShrineSpellsOnly => kind.lesson || kind.shrine,
             SpendRestriction::DevoidSpellsOnly => kind.devoid,
             SpendRestriction::ForetellOnly => kind.foretell,

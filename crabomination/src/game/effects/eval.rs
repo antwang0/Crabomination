@@ -1811,7 +1811,7 @@ impl GameState {
                 self.scratch
                     .destroyed_controllers_this_resolution
                     .iter()
-                    .filter(|&&(c, creature, _)| creature && c == p)
+                    .filter(|&&(c, creature, _, _)| creature && c == p)
                     .count() as i32
             }
             Value::NontokenCreaturesDestroyedThisResolutionControlledBy(who) => {
@@ -1819,13 +1819,19 @@ impl GameState {
                 self.scratch
                     .destroyed_controllers_this_resolution
                     .iter()
-                    .filter(|&&(c, creature, token)| creature && !token && c == p)
+                    .filter(|&&(c, creature, token, _)| creature && !token && c == p)
                     .count() as i32
             }
             Value::PermanentsDestroyedThisResolutionControlledBy(who) => {
                 let Some(p) = self.resolve_player(who, ctx) else { return 0 };
-                self.scratch.destroyed_controllers_this_resolution.iter().filter(|&&(c, _, _)| c == p).count() as i32
+                self.scratch.destroyed_controllers_this_resolution.iter().filter(|&&(c, _, _, _)| c == p).count() as i32
             }
+            Value::NonartifactCreaturesDestroyedThisResolution => self
+                .scratch
+                .destroyed_controllers_this_resolution
+                .iter()
+                .filter(|&&(_, creature, _, artifact)| creature && !artifact)
+                .count() as i32,
             Value::ConvergedValue => ctx.converged_value as i32,
             Value::DistinctColorsSpent => ctx.mana_spent_by_color.iter().filter(|(_, n)| *n > 0).count() as i32,
             Value::CreaturesThatCombatDamagedAPlayerThisTurn(who) => {

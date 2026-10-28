@@ -9527,6 +9527,9 @@ pub struct CardCold {
     /// Modes this permanent has already picked for a "choose one that hasn't
     /// been chosen" ability (Captive Audience). Persists across turns.
     pub modes_chosen: Vec<u8>,
+    /// The source that assimilated this permanent (`Effect::Assimilate`), read
+    /// by `Selector::AssimilatedBySource`.
+    pub assimilated_by: Option<CardId>,
     /// Indices of activated abilities flagged `once_per_turn` that have
     /// already been used this turn. Cleared at the start of each turn by
     /// `clean_per_turn_state`. Empty for the common case (most abilities
@@ -13141,6 +13144,9 @@ impl CardInstance {
         if !self.modes_chosen.is_empty() {
             self.modes_chosen.clear();
         }
+        if self.assimilated_by.is_some() {
+            self.assimilated_by = None;
+        }
     }
 
     /// CR 122.2 — counters cease to exist as the object changes zones, unless
@@ -13457,6 +13463,8 @@ struct CardInstanceWire {
     #[serde(default)]
     modes_chosen: Vec<u8>,
     #[serde(default)]
+    assimilated_by: Option<CardId>,
+    #[serde(default)]
     may_cast_back_from_graveyard: bool,
     chosen_creature_type: Option<CreatureType>,
     #[serde(default)]
@@ -13740,6 +13748,7 @@ impl serde::Serialize for CardInstance {
             cast_from_library: self.cast_from_library,
             cast_from_graveyard: self.cast_from_graveyard,
             modes_chosen: self.modes_chosen.clone(),
+            assimilated_by: self.assimilated_by,
             may_cast_back_from_graveyard: self.may_cast_back_from_graveyard,
             chosen_creature_type: self.chosen_creature_type,
             chosen_land_type: self.chosen_land_type,
@@ -13915,6 +13924,9 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
         c.cast_from_library = wire.cast_from_library;
         c.cast_from_graveyard = wire.cast_from_graveyard;
         c.modes_chosen = wire.modes_chosen;
+        if wire.assimilated_by.is_some() {
+            c.assimilated_by = wire.assimilated_by;
+        }
         c.chosen_creature_type = wire.chosen_creature_type;
         c.chosen_land_type = wire.chosen_land_type;
         c.chosen_number = wire.chosen_number;

@@ -955,7 +955,8 @@ impl Effect {
             Effect::SpellsCostMoreThisTurn { who, .. } => player_has_target(who),
             Effect::DealDamageToChosenCreatureOrPlayer { .. } => false,
             Effect::NextSpellCantBeCountered { .. } => false,
-            Effect::GrantNextMatchingSpellDiscountThisTurn { .. } => false,
+            Effect::GrantNextMatchingSpellDiscountThisTurn { .. }
+            | Effect::GrantNextMatchingSpellUndauntedThisTurn { .. } => false,
             Effect::GrantNextMatchingSpellFreeThisTurn { .. } => false,
             Effect::WhenPlayedThisWayThisTurn { .. } => false,
             Effect::Noop
@@ -979,6 +980,7 @@ impl Effect {
             | Effect::MayCastPermanentFromHandFree { .. }
             | Effect::MayCastFromHandFreeMatching { .. }
             | Effect::PlayerMayCastFromHandFree { .. }
+            | Effect::RevealUntilCreatureAssimilate { .. }
             | Effect::PreventNextDamageToYouFromChosenSourceWithRider { .. }
             | Effect::SacrificeSourceUnlessReturn { .. }
             | Effect::SacrificeSourceUnlessCost { .. }
@@ -2127,6 +2129,7 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
+            | Effect::Assimilate { what }
             | Effect::FlipUntilLossThenTokenCopies { what }
             | Effect::ExileReturnAtYourNextUpkeep { what }
             | Effect::ExileReturnToOwnerNextEndStep { what, .. }
@@ -3045,6 +3048,7 @@ impl Effect {
             | Effect::ExileUntilSourceLeaves { what, .. }
             | Effect::ExileUntilOpponentMonarch { what }
             | Effect::ExileReturnNextEndStep { what }
+            | Effect::Assimilate { what }
             | Effect::FlipUntilLossThenTokenCopies { what }
             | Effect::ExileReturnAtYourNextUpkeep { what }
             | Effect::ExileReturnToOwnerNextEndStep { what, .. }
@@ -6016,6 +6020,7 @@ impl Effect {
                 | Effect::ExileReturnAtYourNextUpkeep { what }
             | Effect::ExileReturnToOwnerNextEndStep { what, .. }
                 | Effect::ExileReturnNextEndStep { what }
+                | Effect::Assimilate { what }
                 | Effect::FlipUntilLossThenTokenCopies { what }
                 | Effect::RemoveAllCountersDiscountNextSpell { what }
                 | Effect::Goad { what }

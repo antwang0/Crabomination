@@ -52,6 +52,7 @@ mod exile_power;
 mod delayed;
 mod eval;
 mod free_cast;
+mod assimilate;
 mod parade;
 mod graveyard_swap;
 mod named_search;
@@ -3939,6 +3940,8 @@ impl GameState {
             return false;
         }
         let is_creature = self.permanent_is_creature(cid);
+        let is_artifact = is_creature
+            && self.computed_permanent(cid).is_some_and(|c| c.card_types().contains(&crate::card::CardType::Artifact));
         let (controller, is_token) =
             self.battlefield_find(cid).map_or((None, false), |c| (Some(c.controller), c.is_token));
         // Cache the dying card's snapshot for AnotherOfYours-scope triggers,
@@ -3957,7 +3960,7 @@ impl GameState {
             self.permanents_destroyed_this_resolution.saturating_add(1);
         self.scratch.destroyed_this_resolution.push(cid);
         if let Some(controller) = controller {
-            self.scratch.destroyed_controllers_this_resolution.push((controller, is_creature, is_token));
+            self.scratch.destroyed_controllers_this_resolution.push((controller, is_creature, is_token, is_artifact));
         }
         true
     }
@@ -6893,6 +6896,11 @@ impl GameState {
                     effect,
                     events,
                 )
+            }
+
+            Effect::Assimilate { what } => self.assimilate(what, ctx, events),
+            Effect::RevealUntilCreatureAssimilate { who, one_of_all } => {
+                self.reveal_until_creature_assimilate(who, *one_of_all, ctx, events)
             }
 
             Effect::PlayerMayCastFromHandFree { who, if_cast, else_ } => {
@@ -25075,6 +25083,11 @@ impl GameState {
             }
             Effect::GrantNextMatchingSpellDiscountThisTurn { filter, amount } => {
                 self.grant_next_matching_spell_discount(ctx.controller, filter, *amount);
+                Ok(())
+            }
+            Effect::GrantNextMatchingSpellUndauntedThisTurn { filter } => {
+                let opponents = self.evaluate_value(&crate::effect::Value::OpponentCount, ctx).max(0) as u32;
+                self.grant_next_matching_spell_discount(ctx.controller, filter, opponents);
                 Ok(())
             }
             Effect::SpellsCostMoreThisTurn { who, amount } => {
@@ -46576,6 +46589,13 @@ impl GameState {
                     .map(|c| EntityRef::Permanent(c.id))
                     .collect()
             }
+
+            Selector::AssimilatedBySource => self
+                .battlefield
+                .iter()
+                .filter(|c| ctx.source.is_some() && c.cold_any(|k| k.assimilated_by == ctx.source))
+                .map(|c| EntityRef::Permanent(c.id))
+                .collect(),
 
             Selector::Except(a, b) => {
                 let drop = self.resolve_selector(b, ctx);

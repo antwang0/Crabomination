@@ -1728,6 +1728,10 @@ pub enum StaticEffect {
     /// this permanent as the source (Benevolent Hydra's "another creature",
     /// Ozolith's "artifact or creature"). Read in `scaled_counter_count_on`.
     ExtraPlusOneCountersMatching { filter: crate::card::SelectionRequirement },
+    /// "If one or more `kind` counters would be put on [filter] you control,
+    /// that many plus one are put on it instead" (Optimization Annex's charge
+    /// counters on an artifact). Read in `scaled_counter_count_on`.
+    ExtraCountersOfKindMatching { kind: crate::card::CounterType, filter: crate::card::SelectionRequirement },
     /// CR 614.16 self-scoped additive variant — "If one or more +1/+1 counters
     /// would be put on THIS, that many plus one are put on it instead." Mowu,
     /// Loyal Companion. Like `ExtraPlusOneCounters` but only for placements onto
@@ -4014,6 +4018,10 @@ pub enum StaticEffect {
     /// replicate cost is equal to its mana cost" (CR 702.107). The filtered
     /// sibling of `YourISSpellsHaveReplicate`.
     YourSpellsHaveReplicate { filter: SelectionRequirement },
+    /// "[filter] spells you cast have replicate [cost]" (Hugh, First of Many's
+    /// artifact spells, {2}{U}) — a printed replicate cost rather than the
+    /// spell's own.
+    YourSpellsHaveReplicateFor { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// Experiment Kraj — the source has all activated abilities of each other
     /// creature with a +1/+1 counter on it. Surfaced as virtual abilities by
     /// `granted_abilities_for`, like Necrotic Ooze's graveyard sibling.

@@ -8183,7 +8183,9 @@ impl BoardFacts {
                     SE::GraveyardCardsHaveRetrace { .. }
                     | SE::GraveyardPermanentsHaveRetraceDuringYourTurn => f.grants_retrace = true,
                     SE::GraveyardCardsHaveJumpStart { .. } => f.grants_jump_start = true,
-                    SE::YourISSpellsHaveReplicate | SE::YourSpellsHaveReplicate { .. } => {
+                    SE::YourISSpellsHaveReplicate
+                    | SE::YourSpellsHaveReplicate { .. }
+                    | SE::YourSpellsHaveReplicateFor { .. } => {
                         f.grants_replicate = true
                     }
                     SE::MayCastPermanentsFromGraveyard

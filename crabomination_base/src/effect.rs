@@ -671,6 +671,9 @@ pub enum Selector {
     /// after a sacrifice (The Promise of Kahless: the graveyard's Klingons
     /// except the one just sacrificed).
     Except(Box<Selector>, Box<Selector>),
+    /// The permanents this source assimilated (`Effect::Assimilate`) — The
+    /// Best of Both Worlds' "the Borg assimilated with this Saga".
+    AssimilatedBySource,
 
     /// One half of the split made by the enclosing `Effect::SeparateIntoPiles`
     /// — the pile the chooser picked (`chosen: true`) or the leftover.
@@ -1921,6 +1924,9 @@ pub enum Value {
     /// destroyed this way, its controller may search". Reads the same scratch
     /// as `CreaturesDestroyedThisResolutionControlledBy`.
     PermanentsDestroyedThisResolutionControlledBy(PlayerRef),
+    /// Nonartifact creatures destroyed earlier in this resolution, tokens
+    /// included (Join the Collective's Borg).
+    NonartifactCreaturesDestroyedThisResolution,
     /// Number of snow permanents (CR 205.4g — supertype Snow) controlled by
     /// the resolved player. Powers Skred ("deals damage to target creature
     /// equal to the number of snow permanents you control") and other
@@ -6348,6 +6354,16 @@ pub enum Effect {
     /// the priciest); `if_cast` runs as the controller with `Target(0)` bound
     /// to the cast spell.
     PlayerMayCastFromHandFree { who: PlayerRef, if_cast: Box<Effect>, else_: Box<Effect> },
+    /// Assimilate (Star Trek) — each card `what` names enters under the
+    /// controller's control (a permanent: its control is gained) with a +1/+1
+    /// counter, an artifact creature whose only creature type is Borg.
+    Assimilate { what: Selector },
+    /// "[who] reveals cards from the top of their library until they reveal a
+    /// creature card. Assimilate that card. … the rest on the bottom in a
+    /// random order" (The Borg Queen); with `one_of_all`, each player `who`
+    /// names reveals and only one of the creature cards is assimilated (Gift
+    /// of Perfection).
+    RevealUntilCreatureAssimilate { who: PlayerRef, one_of_all: bool },
     /// Process (Battle for Zendikar / OGW) — "you may put up to `count` cards
     /// an opponent owns from exile into that player's graveyard. If you do,
     /// [`then`]." The controller is asked yes/no (`Decision::OptionalTrigger`);
@@ -10328,6 +10344,10 @@ pub enum Effect {
     /// that matches `filter`, which takes the discount and consumes it; a
     /// cast that doesn't match passes it by. Cleared at end of turn.
     GrantNextMatchingSpellDiscountThisTurn { filter: crate::card::SelectionRequirement, amount: u32 },
+    /// "The next [filter] spell you cast this turn has undaunted" (Võx, Child
+    /// of the Collective; CR 702.125): the discount grant above at {1} per
+    /// opponent, counted as this resolves.
+    GrantNextMatchingSpellUndauntedThisTurn { filter: crate::card::SelectionRequirement },
     /// "The next [filter] spell you cast this turn can be cast without paying
     /// its mana cost" (World War Hulk I): `Player.free_next_spells`, spent by
     /// the first matching cast, cleared at end of turn.
