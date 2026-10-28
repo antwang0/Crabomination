@@ -239,6 +239,32 @@ fn victor_mancha_replays_a_graveyard_card() {
     assert!(g.battlefield_find(ring).is_some());
 }
 
+/// CR 611.2b — "for as long as you control Victor Mancha": a steal ends the
+/// grant, and it stays ended when Victor comes back.
+#[test]
+fn victor_mancha_grant_ends_when_control_is_lost() {
+    use crabomination::effect::{Duration, Selector};
+    let mut g = pod(2);
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let vm = ready(&mut g, 0, catalog::victor_mancha_runaway());
+    let etb = catalog::victor_mancha_runaway().triggered_abilities[0].effect.clone();
+    resolve_at(&mut g, &etb, vm, Some(Target::Permanent(ring)), 0);
+    let granted = |g: &GameState| g.exile.iter().any(|c| c.id == ring && c.may_play_until.is_some());
+    assert!(granted(&g));
+    let steal = |g: &mut GameState, to: usize| {
+        let ctx = EffectContext::for_spell(to, Some(Target::Permanent(vm)), 0, 0);
+        let evs = g
+            .resolve_effect(&Effect::GainControl { what: Selector::Target(0), to: None, duration: Duration::Permanent }, &ctx)
+            .unwrap();
+        g.dispatch_triggers_for_events(&evs);
+    };
+    steal(&mut g, 1);
+    assert_eq!(g.battlefield_find(vm).unwrap().controller, 1);
+    assert!(!granted(&g), "seat 0 no longer controls Victor");
+    steal(&mut g, 0);
+    assert!(!granted(&g), "control coming back does not restart it");
+}
+
 /// CR 701.14a — Yoshimaru's entry makes a friendly creature fight.
 #[test]
 fn yoshimaru_starts_a_fight() {

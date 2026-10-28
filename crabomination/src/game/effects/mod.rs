@@ -42807,6 +42807,7 @@ impl GameState {
                         | crate::card::MayPlayDuration::HolderTurnsAfterOpponentLostLife { .. }
                         | crate::card::MayPlayDuration::TurnsLoreCounterPutOnSource { .. }
                         | crate::card::MayPlayDuration::WhileSourceOnBattlefield { .. }
+                        | crate::card::MayPlayDuration::WhileHolderControlsSource { .. }
                 );
                 if linked && let Some(src) = ctx.source {
                     for c in self.exile.iter_mut().filter(|c| c.exiled_with == Some(src)) {

@@ -151,6 +151,7 @@ impl GameState {
             perm.duration,
             MayPlayDuration::WhileSourceOnBattlefield { source: s, .. }
                 | MayPlayDuration::WhileSourceOnBattlefieldWithThreshold { source: s }
+                | MayPlayDuration::WhileHolderControlsSource { source: s }
                 | MayPlayDuration::HolderTurnsAfterNontokenSacrifice { source: s, .. }
                 | MayPlayDuration::HolderTurnsAfterOpponentLostLife { source: s, .. }
                 | MayPlayDuration::HolderTurnsWhileSource { source: s, .. } if s == source
@@ -170,6 +171,33 @@ impl GameState {
         }
         for c in self.exile.iter_mut() {
             if hit(c) {
+                c.may_play_until = None;
+                c.granted_alt_cast_cost_eot = None;
+            }
+        }
+    }
+
+    /// CR 611.2b — "for as long as you control [source]": a control change in
+    /// `events` that takes a source away from a grant's holder ends the grant
+    /// for good (control coming back does not restart it).
+    pub(crate) fn end_lost_control_grants(&mut self, events: &[crate::game::GameEvent]) {
+        let lost = |c: &crate::card::CardInstance| {
+            c.cold_any(|k| {
+                k.may_play_until.as_ref().is_some_and(|m| match m.duration {
+                    MayPlayDuration::WhileHolderControlsSource { source } => events.iter().any(|e| {
+                        matches!(*e, crate::game::GameEvent::ControlChanged { card_id, from, .. }
+                            if card_id == source && from == m.player)
+                    }),
+                    _ => false,
+                })
+            })
+        };
+        // Guarded walk: `iter_mut` unshares the zone (CoW).
+        if !self.exile.iter().any(lost) {
+            return;
+        }
+        for c in self.exile.iter_mut() {
+            if lost(c) {
                 c.may_play_until = None;
                 c.granted_alt_cast_cost_eot = None;
             }

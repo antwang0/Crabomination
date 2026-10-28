@@ -6392,10 +6392,7 @@ pub fn lightning_security_sergeant() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::ONE,
-                duration: crate::card::MayPlayDuration::WhileSourceOnBattlefield {
-                    source: crate::card::CardId(0),
-                    one_spell_a_turn: false,
-                },
+                duration: crate::card::MayPlayDuration::WhileHolderControlsSource { source: crate::card::CardId(0) },
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,

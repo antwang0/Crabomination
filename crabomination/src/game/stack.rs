@@ -6363,7 +6363,8 @@ impl GameState {
                     | crate::card::MayPlayDuration::UntilSourceExilesAnother => false,
                     // Ends with its source; re-armed below.
                     crate::card::MayPlayDuration::WhileSourceOnBattlefield { .. }
-                    | crate::card::MayPlayDuration::WhileSourceOnBattlefieldWithThreshold { .. } => false,
+                    | crate::card::MayPlayDuration::WhileSourceOnBattlefieldWithThreshold { .. }
+                    | crate::card::MayPlayDuration::WhileHolderControlsSource { .. } => false,
                     // Parked and woken as a fetch player enters or leaves.
                     crate::card::MayPlayDuration::WhileHolderControlsFetchPlayer { .. } => false,
                     // Swept as the holder's end step begins, not here.

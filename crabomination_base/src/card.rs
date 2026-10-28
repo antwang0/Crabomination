@@ -1431,6 +1431,11 @@ pub enum MayPlayDuration {
     /// turn"), a cast parks the source's other spell grants at
     /// [`MAY_PLAY_DORMANT`] until the next turn; land grants stay live.
     WhileSourceOnBattlefield { source: CardId, one_spell_a_turn: bool },
+    /// "You may play that card for as long as you control [this]" (Lightning,
+    /// Victor Mancha, Taster of Wares, Kotose, Ghost-Spider): ends as `source`
+    /// leaves or the holder loses control of it, and stays ended if control
+    /// comes back (CR 611.2b). Printed with `CardId(0)`.
+    WhileHolderControlsSource { source: CardId },
     /// "Threshold — As long as there are seven or more cards in your
     /// graveyard, you may cast the exiled card" (Null Summoner): a static
     /// grant of `source`'s, so it ends as `source` leaves (CR 611.3a), and
@@ -1527,6 +1532,7 @@ impl MayPlayDuration {
             (Self::WhileSourceOnBattlefieldWithThreshold { .. }, Some(source)) => {
                 Self::WhileSourceOnBattlefieldWithThreshold { source }
             }
+            (Self::WhileHolderControlsSource { .. }, Some(source)) => Self::WhileHolderControlsSource { source },
             (Self::HolderTurnsAfterNontokenSacrifice { holder, .. }, Some(source)) => {
                 Self::HolderTurnsAfterNontokenSacrifice { holder, source }
             }

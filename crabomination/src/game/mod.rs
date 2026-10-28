@@ -26714,6 +26714,7 @@ impl GameState {
         }
         if events.iter().any(|e| matches!(e, GameEvent::ControlChanged { .. })) {
             self.release_lapsed_control_goads(events);
+            self.end_lost_control_grants(events);
         }
         // Phase 1: collect candidate triggers while the borrow on
         // `self.battlefield` is shared. Phase 2 will mutate `self.stack`
