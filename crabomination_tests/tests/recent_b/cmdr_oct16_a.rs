@@ -647,10 +647,14 @@ fn web_of_life_and_destiny_deploys_at_beginning_of_combat() {
 }
 
 /// Cantankerous Keepers: two Elves out cut its cost by two, and every Elf
-/// among the four milled goes to hand while the rest stay binned.
+/// among the four milled goes to hand while the rest stay binned — "all",
+/// so a seat answering an empty pick still gets them (it was an up-to-four ask).
 #[test]
 fn cantankerous_keepers_takes_every_milled_elf() {
     let mut g = pod(2);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::Cards(vec![]),
+    ]));
     let elves: Vec<_> = (0..2).map(|_| g.add_card_to_library(0, catalog::llanowar_elves())).collect();
     for _ in 0..2 {
         g.add_card_to_library(0, catalog::lightning_bolt());

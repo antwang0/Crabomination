@@ -372,12 +372,14 @@ pub fn cantankerous_keepers() -> CardDefinition {
             description: "Affinity for Elves (This spell costs {1} less to cast for each Elf you control.)",
             effect: StaticEffect::SelfCostReducedPerPermanentMatching { filter: elf().and(R::ControlledByYou), per: 1 },
         }],
-        triggered_abilities: vec![etb(Effect::MillThenToHandN {
-            amount: Value::Const(4),
-            filter: elf(),
-            take: Value::Const(4),
-            otherwise: None,
-        })],
+        // "Put all Elf cards from among them" — every one, no pick.
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Mill { who: Selector::You, amount: Value::Const(4) },
+            Effect::Move {
+                what: Selector::MatchingAmong { inner: Box::new(Selector::LastMoved), filter: elf() },
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]))],
         ..creature("Cantankerous Keepers", cost(&[generic(5), g()]), vec![CreatureType::Elf, CreatureType::Soldier], 4, 3)
     }
 }

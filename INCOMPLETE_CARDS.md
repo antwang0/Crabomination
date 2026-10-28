@@ -2163,7 +2163,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Jasmine Boreal of the Seven | an *attacker's* "no abilities" reads its printed card (an anthem's keyword doesn't disqualify it); the blocker side reads granted keywords and lose-all-abilities | `GrantKeyword { CantBeBlockedBy }` filtered `HasNoAbilities` |
 | 🟡 Rhino, Terrible Trampler | the ETB is two triggers (destroy; distribute + trample) rather than one, so a response can land between them and the distribution still resolves if the destroy's target goes | two `etb` triggers |
 | 🟡 Patch Up | the three cards are picked cheapest-first at resolution, not targeted | `MoveWithinTotalManaValue` |
-| 🟡 Cantankerous Keepers | "put all Elf cards" is an up-to-four pick that the bot fills | `MillThenToHandN { take: 4 }` |
+| ~~Cantankerous Keepers~~ ✅ | fixed 2026-10-28: `Mill` then `Move` of every Elf among `LastMoved` — no pick | — |
 | 🟡 Wonder Man, Hollywood Hero | two Wonder Men still allow only one extra activation (it's legendary) | `StaticEffect::PowerUpOnceMore` |
 | 🟡 Rhino's Rampage | the excess-damage check reads the creature's excess damage this turn, so excess dealt to it earlier the same turn also counts | `ExcessDamageDealtThisTurnTo` + `ReflexiveTrigger` |
 | 🟡 Sméagol, Helpful Guide | "target opponent" is the most hostile opponent, not a target (no ward/hexproof check) | `RevealUntilFind { who: HostileOpponent }` |
