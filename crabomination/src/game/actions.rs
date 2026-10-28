@@ -5338,8 +5338,9 @@ impl GameState {
             crate::card::MayPlayDuration::WhileExiledAfterAnotherSpell => {
                 self.players.get(perm.player).is_some_and(|p| p.spells_cast_this_game_turn > 0)
             }
-            crate::card::MayPlayDuration::WhileHolderControlsSource { source } => {
+            crate::card::MayPlayDuration::WhileHolderControlsSource { source, your_turn } => {
                 self.battlefield_find(source).is_some_and(|c| c.controller == perm.player)
+                    && (!your_turn || self.active_player_idx == perm.player)
             }
             // CR 702.36 — threshold: seven or more cards in the holder's graveyard.
             crate::card::MayPlayDuration::WhileSourceOnBattlefieldWithThreshold { .. } => {

@@ -227,7 +227,7 @@ pub fn victor_mancha_runaway() -> CardDefinition {
             },
             Effect::GrantMayPlay {
                 what: Selector::LastMoved,
-                duration: MayPlayDuration::WhileHolderControlsSource { source: crate::card::CardId(0) },
+                duration: MayPlayDuration::WhileHolderControlsSource { source: crate::card::CardId(0), your_turn: false },
                 to_owner: false,
                 exile_after: false,
                 pay_own_cost: true,

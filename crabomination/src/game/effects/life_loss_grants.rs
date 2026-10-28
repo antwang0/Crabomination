@@ -151,7 +151,7 @@ impl GameState {
             perm.duration,
             MayPlayDuration::WhileSourceOnBattlefield { source: s, .. }
                 | MayPlayDuration::WhileSourceOnBattlefieldWithThreshold { source: s }
-                | MayPlayDuration::WhileHolderControlsSource { source: s }
+                | MayPlayDuration::WhileHolderControlsSource { source: s, .. }
                 | MayPlayDuration::HolderTurnsAfterNontokenSacrifice { source: s, .. }
                 | MayPlayDuration::HolderTurnsAfterOpponentLostLife { source: s, .. }
                 | MayPlayDuration::HolderTurnsWhileSource { source: s, .. } if s == source
@@ -184,7 +184,7 @@ impl GameState {
         let lost = |c: &crate::card::CardInstance| {
             c.cold_any(|k| {
                 k.may_play_until.as_ref().is_some_and(|m| match m.duration {
-                    MayPlayDuration::WhileHolderControlsSource { source } => events.iter().any(|e| {
+                    MayPlayDuration::WhileHolderControlsSource { source, .. } => events.iter().any(|e| {
                         matches!(*e, crate::game::GameEvent::ControlChanged { card_id, from, .. }
                             if card_id == source && from == m.player)
                     }),

@@ -78,7 +78,7 @@ pub fn taster_of_wares() -> CardDefinition {
                     inner: Box::new(Selector::LastMoved),
                     filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
                 },
-                duration: MayPlayDuration::WhileHolderControlsSource { source: CardId(0) },
+                duration: MayPlayDuration::WhileHolderControlsSource { source: CardId(0), your_turn: false },
                 to_owner: false,
                 exile_after: false,
                 pay_own_cost: true,

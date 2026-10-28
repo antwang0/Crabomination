@@ -316,7 +316,7 @@ pub fn gwen_stacy() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::ExileTopAndGrantMayPlay {
             who: PlayerRef::You,
             count: Value::ONE,
-            duration: MayPlayDuration::WhileHolderControlsSource { source: CardId(0) },
+            duration: MayPlayDuration::WhileHolderControlsSource { source: CardId(0), your_turn: false },
             pay_any_color: false,
             max_mana_value: None,
             pay_own_cost: true,

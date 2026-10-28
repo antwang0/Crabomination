@@ -1434,8 +1434,9 @@ pub enum MayPlayDuration {
     /// "You may play that card for as long as you control [this]" (Lightning,
     /// Victor Mancha, Taster of Wares, Kotose, Ghost-Spider): ends as `source`
     /// leaves or the holder loses control of it, and stays ended if control
-    /// comes back (CR 611.2b). Printed with `CardId(0)`.
-    WhileHolderControlsSource { source: CardId },
+    /// comes back (CR 611.2b). `your_turn`: only during the holder's turn
+    /// (Hama, the Bloodbender). Printed with `CardId(0)`.
+    WhileHolderControlsSource { source: CardId, your_turn: bool },
     /// "Threshold — As long as there are seven or more cards in your
     /// graveyard, you may cast the exiled card" (Null Summoner): a static
     /// grant of `source`'s, so it ends as `source` leaves (CR 611.3a), and
@@ -1532,7 +1533,9 @@ impl MayPlayDuration {
             (Self::WhileSourceOnBattlefieldWithThreshold { .. }, Some(source)) => {
                 Self::WhileSourceOnBattlefieldWithThreshold { source }
             }
-            (Self::WhileHolderControlsSource { .. }, Some(source)) => Self::WhileHolderControlsSource { source },
+            (Self::WhileHolderControlsSource { your_turn, .. }, Some(source)) => {
+                Self::WhileHolderControlsSource { source, your_turn }
+            }
             (Self::HolderTurnsAfterNontokenSacrifice { holder, .. }, Some(source)) => {
                 Self::HolderTurnsAfterNontokenSacrifice { holder, source }
             }

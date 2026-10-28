@@ -336,7 +336,10 @@ pub fn hama_the_bloodbender() -> CardDefinition {
                     },
                     Effect::GrantMayPlay {
                         what: Selector::LastMoved,
-                        duration: crate::card::MayPlayDuration::WhileExiled,
+                        duration: crate::card::MayPlayDuration::WhileHolderControlsSource {
+                            source: crate::card::CardId(0),
+                            your_turn: true,
+                        },
                         to_owner: false,
                         exile_after: false,
                         pay_own_cost: true,

@@ -276,6 +276,26 @@ fn hama_exiles_a_spell_to_cast() {
     cast(&mut g, hama, &[Target::Player(1)]).expect("hama");
     let exiled = g.exile.iter().find(|c| c.id == bolt).expect("the Bolt is exiled");
     assert!(exiled.may_play_until.is_some(), "castable from exile");
+    // CR 611.2b — "during your turn", "for as long as you control Hama".
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let shoot = |g: &mut GameState| {
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastFromZoneWithoutPaying {
+            card_id: bolt,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    g.active_player_idx = 1;
+    assert!(shoot(&mut g).is_err(), "not on an opponent's turn");
+    g.active_player_idx = 0;
+    let mut stolen = g.clone();
+    stolen.battlefield_find_mut(hama).unwrap().controller = 1;
+    stolen.dispatch_triggers_for_events(&[GameEvent::ControlChanged { card_id: hama, from: 0, to: 1 }]);
+    assert!(stolen.exile.iter().any(|c| c.id == bolt && c.may_play_until.is_none()), "ends as Hama is stolen");
+    shoot(&mut g).expect("on Hama's controller's turn");
 }
 
 /// Roll-Roll-Roll-Roll: each chapter blinks a creature of yours until the
