@@ -37032,6 +37032,162 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_BORG_QUEEN_COMMANDERS,
             main: decks::THE_BORG_QUEEN_MAIN,
         },
+        // Seat 6097: Captain Michael Burnham's EDHREC average deck. `--pod-decks 6097`.
+        PodDeck {
+            name: "Captain Michael Burnham (R)",
+            commanders: decks::CAPTAIN_MICHAEL_BURNHAM_COMMANDERS,
+            main: decks::CAPTAIN_MICHAEL_BURNHAM_MAIN,
+        },
+        // Seat 6098: Cmdr. Troi, Outgoing Empath's EDHREC average deck. `--pod-decks 6098`.
+        PodDeck {
+            name: "Cmdr. Troi, Outgoing Empath (UR)",
+            commanders: decks::CMDR_TROI_COMMANDERS,
+            main: decks::CMDR_TROI_MAIN,
+        },
+        // Seat 6099: Constable Odo's EDHREC average deck. `--pod-decks 6099`.
+        PodDeck {
+            name: "Constable Odo (WU)",
+            commanders: decks::CONSTABLE_ODO_COMMANDERS,
+            main: decks::CONSTABLE_ODO_MAIN,
+        },
+        // Seat 6100: Data, Exploring Humanity's EDHREC average deck. `--pod-decks 6100`.
+        PodDeck {
+            name: "Data, Exploring Humanity (U)",
+            commanders: decks::DATA_COMMANDERS,
+            main: decks::DATA_MAIN,
+        },
+        // Seat 6101: Dathon, His Heart Open's EDHREC average deck. `--pod-decks 6101`.
+        PodDeck {
+            name: "Dathon, His Heart Open (URG)",
+            commanders: decks::DATHON_COMMANDERS,
+            main: decks::DATHON_MAIN,
+        },
+        // Seat 6102: Deanna Troi, Psychic Counsel's EDHREC average deck. `--pod-decks 6102`.
+        PodDeck {
+            name: "Deanna Troi, Psychic Counsel (W)",
+            commanders: decks::DEANNA_TROI_COMMANDERS,
+            main: decks::DEANNA_TROI_MAIN,
+        },
+        // Seat 6103: Dr. McCoy, Surly Surgeon's EDHREC average deck. `--pod-decks 6103`.
+        PodDeck {
+            name: "Dr. McCoy, Surly Surgeon (W)",
+            commanders: decks::DR_MCCOY_COMMANDERS,
+            main: decks::DR_MCCOY_MAIN,
+        },
+        // Seat 6104: D'Vana Tendi, Optimistic Ensign's EDHREC average deck. `--pod-decks 6104`.
+        PodDeck {
+            name: "D'Vana Tendi, Optimistic Ensign (UG)",
+            commanders: decks::DVANA_TENDI_COMMANDERS,
+            main: decks::DVANA_TENDI_MAIN,
+        },
+        // Seat 6105: Grand Nagus Zek's EDHREC average deck. `--pod-decks 6105`.
+        PodDeck {
+            name: "Grand Nagus Zek (B)",
+            commanders: decks::GRAND_NAGUS_ZEK_COMMANDERS,
+            main: decks::GRAND_NAGUS_ZEK_MAIN,
+        },
+        // Seat 6106: Guinan, Ancient Advisor's EDHREC average deck. `--pod-decks 6106`.
+        PodDeck {
+            name: "Guinan, Ancient Advisor (W)",
+            commanders: decks::GUINAN_COMMANDERS,
+            main: decks::GUINAN_MAIN,
+        },
+        // Seat 6107: Hemmer, Fixing What Is Broken's EDHREC average deck. `--pod-decks 6107`.
+        PodDeck {
+            name: "Hemmer, Fixing What Is Broken (WU)",
+            commanders: decks::HEMMER_COMMANDERS,
+            main: decks::HEMMER_MAIN,
+        },
+        // Seat 6108: Korok, Liberated Rage's EDHREC average deck. `--pod-decks 6108`.
+        PodDeck {
+            name: "Korok, Liberated Rage (W)",
+            commanders: decks::KOROK_COMMANDERS,
+            main: decks::KOROK_MAIN,
+        },
+        // Seat 6109: Locutus, the One Who Speaks's EDHREC average deck. `--pod-decks 6109`.
+        PodDeck {
+            name: "Locutus, the One Who Speaks (WB)",
+            commanders: decks::LOCUTUS_COMMANDERS,
+            main: decks::LOCUTUS_MAIN,
+        },
+        // Seat 6110: Mr. Spock, Science Officer's EDHREC average deck. `--pod-decks 6110`.
+        PodDeck {
+            name: "Mr. Spock, Science Officer (U)",
+            commanders: decks::MR_SPOCK_COMMANDERS,
+            main: decks::MR_SPOCK_MAIN,
+        },
+        // Seat 6111: Nyota Uhura, Communications's EDHREC average deck. `--pod-decks 6111`.
+        PodDeck {
+            name: "Nyota Uhura, Communications (U)",
+            commanders: decks::NYOTA_UHURA_COMMANDERS,
+            main: decks::NYOTA_UHURA_MAIN,
+        },
+        // Seat 6112: One, Borg Evolved's EDHREC average deck. `--pod-decks 6112`.
+        PodDeck {
+            name: "One, Borg Evolved (WUB)",
+            commanders: decks::ONE_COMMANDERS,
+            main: decks::ONE_MAIN,
+        },
+        // Seat 6113: Queen's Diamond's EDHREC average deck. `--pod-decks 6113`.
+        PodDeck {
+            name: "Queen's Diamond (C)",
+            commanders: decks::QUEENS_DIAMOND_COMMANDERS,
+            main: decks::QUEENS_DIAMOND_MAIN,
+        },
+        // Seat 6114: Reg Barclay, Fidgety Fantasist's EDHREC average deck. `--pod-decks 6114`.
+        PodDeck {
+            name: "Reg Barclay, Fidgety Fantasist (UR)",
+            commanders: decks::REG_BARCLAY_COMMANDERS,
+            main: decks::REG_BARCLAY_MAIN,
+        },
+        // Seat 6115: Rom and Leeta, Unlikely Pair's EDHREC average deck. `--pod-decks 6115`.
+        PodDeck {
+            name: "Rom and Leeta, Unlikely Pair (R)",
+            commanders: decks::ROM_AND_LEETA_COMMANDERS,
+            main: decks::ROM_AND_LEETA_MAIN,
+        },
+        // Seat 6116: Spot, Felis catus's EDHREC average deck. `--pod-decks 6116`.
+        PodDeck {
+            name: "Spot, Felis catus (W)",
+            commanders: decks::SPOT_COMMANDERS,
+            main: decks::SPOT_MAIN,
+        },
+        // Seat 6117: Starship Enterprise's EDHREC average deck. `--pod-decks 6117`.
+        PodDeck {
+            name: "Starship Enterprise (C)",
+            commanders: decks::STARSHIP_ENTERPRISE_COMMANDERS,
+            main: decks::STARSHIP_ENTERPRISE_MAIN,
+        },
+        // Seat 6118: The Doctor, EMH's EDHREC average deck. `--pod-decks 6118`.
+        PodDeck {
+            name: "The Doctor, EMH (WG)",
+            commanders: decks::THE_DOCTOR_COMMANDERS,
+            main: decks::THE_DOCTOR_MAIN,
+        },
+        // Seat 6119: U.S.S. Discovery, at Black Alert's EDHREC average deck. `--pod-decks 6119`.
+        PodDeck {
+            name: "U.S.S. Discovery, at Black Alert (G)",
+            commanders: decks::U_S_S_DISCOVERY_COMMANDERS,
+            main: decks::U_S_S_DISCOVERY_MAIN,
+        },
+        // Seat 6120: U.S.S. Reliant, From Hell's Heart's EDHREC average deck. `--pod-decks 6120`.
+        PodDeck {
+            name: "U.S.S. Reliant, From Hell's Heart (B)",
+            commanders: decks::U_S_S_RELIANT_COMMANDERS,
+            main: decks::U_S_S_RELIANT_MAIN,
+        },
+        // Seat 6121: Vic Fontaine, One Night Only's EDHREC average deck. `--pod-decks 6121`.
+        PodDeck {
+            name: "Vic Fontaine, One Night Only (WR)",
+            commanders: decks::VIC_FONTAINE_COMMANDERS,
+            main: decks::VIC_FONTAINE_MAIN,
+        },
+        // Seat 6122: Worf, Chief Tactical Officer's EDHREC average deck. `--pod-decks 6122`.
+        PodDeck {
+            name: "Worf, Chief Tactical Officer (W)",
+            commanders: decks::WORF_2_COMMANDERS,
+            main: decks::WORF_2_MAIN,
+        },
     ]
 }
 
@@ -45089,6 +45245,32 @@ mod tests {
             ("Jean-Luc Picard, Luminary", &[0x21E4]),
             ("Worf, Defiant Commander", &[0x21E5]),
             ("The Borg Queen", &[0x21E6]),
+            ("Captain Michael Burnham", &[0x21E7]),
+            ("Cmdr. Troi, Outgoing Empath", &[0x21E8]),
+            ("Constable Odo", &[0x21E9]),
+            ("Data, Exploring Humanity", &[0x21EA]),
+            ("Dathon, His Heart Open", &[0x21EB]),
+            ("Deanna Troi, Psychic Counsel", &[0x21EC]),
+            ("Dr. McCoy, Surly Surgeon", &[0x21ED]),
+            ("D'Vana Tendi, Optimistic Ensign", &[0x21EE]),
+            ("Grand Nagus Zek", &[0x21EF]),
+            ("Guinan, Ancient Advisor", &[0x21F0]),
+            ("Hemmer, Fixing What Is Broken", &[0x21F1]),
+            ("Korok, Liberated Rage", &[0x21F2]),
+            ("Locutus, the One Who Speaks", &[0x21F3]),
+            ("Mr. Spock, Science Officer", &[0x21F4]),
+            ("Nyota Uhura, Communications", &[0x21F5]),
+            ("One, Borg Evolved", &[0x21F6]),
+            ("Queen's Diamond", &[0x21F7]),
+            ("Reg Barclay, Fidgety Fantasist", &[0x21F8]),
+            ("Rom and Leeta, Unlikely Pair", &[0x21F9]),
+            ("Spot, Felis catus", &[0x21FA]),
+            ("Starship Enterprise", &[0x21FB]),
+            ("The Doctor, EMH", &[0x21FC]),
+            ("U.S.S. Discovery, at Black Alert", &[0x21FD]),
+            ("U.S.S. Reliant, From Hell's Heart", &[0x21FE]),
+            ("Vic Fontaine, One Night Only", &[0x21FF]),
+            ("Worf, Chief Tactical Officer", &[0x2200]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
