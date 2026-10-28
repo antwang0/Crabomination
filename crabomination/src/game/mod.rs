@@ -29807,6 +29807,19 @@ impl GameState {
         target: Option<Target>,
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
+        self.activate_loyalty_ability_picked(card_id, ability_index, target, x_value, None)
+    }
+
+    /// `activate_loyalty_ability` with a prompting seat's slot-1+ picks so far
+    /// and whether it declined the rest (`ResumeContext::LoyaltyExtraTargetPick`).
+    fn activate_loyalty_ability_picked(
+        &mut self,
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        x_value: Option<u32>,
+        picked: Option<(Vec<Target>, bool)>,
+    ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         let pos = self
             .battlefield
@@ -29998,6 +30011,79 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
+        // CR 602.2b + 601.2c — a prompting seat names every target as it
+        // announces the ability, not just slot 0: each pick is validated like
+        // slot 0, then the next slot is asked (suspend + clean replay — no
+        // loyalty has been paid). Other seats get `auto_extra_targets_for`.
+        let prompted = picked.is_some() || (target.is_some() && self.seat_prompts(p));
+        let (picks, closed) = picked.unwrap_or_default();
+        let distinct = ability.effect.distinct_target_range(None).map(|(first, _)| usize::from(first));
+        for (i, tgt) in picks.iter().enumerate() {
+            let slot = u8::try_from(i + 1).map_err(|_| GameError::InvalidTarget)?;
+            self.check_target_legality(tgt, p)?;
+            if self.ability_target_has_protection(tgt, card_id) {
+                return Err(GameError::TargetHasProtection(card_id));
+            }
+            // CR 115.3 — one "target" word names distinct objects.
+            let earlier = std::iter::once(target.as_ref()).flatten().chain(picks[..i].iter());
+            if distinct.is_some_and(|first| first <= i + 1 && earlier.skip(first).any(|t| t == tgt))
+                || ability
+                    .effect
+                    .target_filter_for_slot(slot)
+                    .is_none_or(|f| !self.evaluate_requirement_static(&f.resolve_x(x_value.unwrap_or(0)), tgt, p, Some(card_id)))
+            {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+        }
+        if prompted && !closed && target.is_some() {
+            let x = x_value.unwrap_or(0);
+            let slot = u8::try_from(1 + picks.len()).unwrap_or(u8::MAX);
+            let filter = (!ability.effect.slot_past_x_cap(slot, x))
+                .then(|| ability.effect.target_filter_for_slot(slot).map(|f| f.resolve_x(x)))
+                .flatten();
+            if let Some(filter) = filter {
+                let chosen: Vec<&Target> = target.iter().chain(picks.iter()).collect();
+                let legal: Vec<Target> = self.with_frozen_layers(|s| {
+                    s.battlefield
+                        .iter()
+                        .map(|c| Target::Permanent(c.id))
+                        .chain((0..s.players.len()).filter(|&q| s.players[q].is_alive()).map(Target::Player))
+                        .filter(|t| {
+                            distinct.is_none_or(|first| !chosen.iter().skip(first).any(|c| *c == t))
+                                && s.evaluate_requirement_static(&filter, t, p, Some(card_id))
+                                && s.check_target_legality(t, p).is_ok()
+                                && !s.ability_target_has_protection(t, card_id)
+                        })
+                        .collect()
+                });
+                if !legal.is_empty() {
+                    let source_name = self.battlefield[pos].definition.name.to_string();
+                    self.pending_decision = Some(Box::new(PendingDecision {
+                        decision: Decision::ChooseTarget {
+                            optional: ability.effect.target_slot_optional_x(slot, None, x),
+                            source: card_id,
+                            legal,
+                            source_name,
+                            description: ability
+                                .effect
+                                .target_slot_text(slot, None)
+                                .unwrap_or_else(|| crate::decision::EXTRA_CAST_TARGET_PROMPT.to_string()),
+                            extra_cast_slot: false,
+                        },
+                        resume: ResumeContext::LoyaltyExtraTargetPick {
+                            caster: p,
+                            card_id,
+                            ability_index,
+                            target,
+                            picked: picks,
+                            x_value,
+                        },
+                    }));
+                    return Ok(vec![]);
+                }
+            }
+        }
+
         // CR 606 — opponents' loyalty-tax statics (Eidolon of Obstruction)
         // make this activation cost extra generic mana. Pay it before the
         // loyalty cost so an unpayable tax aborts cleanly.
@@ -30102,7 +30188,11 @@ impl GameState {
         // Push ability effects onto the stack. Auto-fill additional target
         // slots (Domri Rade's −2 "target creature you control fights another
         // target creature"); the single-target action only carries slot 0.
-        let extra_targets = self.auto_extra_targets_for(&ability.effect, card_id, p, target.clone());
+        let extra_targets = if prompted {
+            picks
+        } else {
+            self.auto_extra_targets_for(&ability.effect, card_id, p, target.clone())
+        };
         let all_targets: Vec<Target> =
             target.iter().cloned().chain(extra_targets.iter().cloned()).collect();
         // CR 606.1 — a loyalty ability is an activated ability: "copy that
@@ -30890,6 +30980,24 @@ impl GameState {
                     Some(id) => self.settle_prepare_after_cast(id, result),
                     None => result,
                 };
+            }
+            ResumeContext::LoyaltyExtraTargetPick { caster, card_id, ability_index, target, mut picked, x_value } => {
+                let _ = caster;
+                let closed = match answer {
+                    DecisionAnswer::Target(t) => {
+                        picked.push(t);
+                        false
+                    }
+                    DecisionAnswer::DeclineTarget => true,
+                    _ => return Err(GameError::DecisionAnswerMismatch),
+                };
+                return self.activate_loyalty_ability_picked(
+                    card_id,
+                    ability_index,
+                    target,
+                    x_value,
+                    Some((picked, closed)),
+                );
             }
             ResumeContext::CastSlot0TargetPick { caster, action } => {
                 let DecisionAnswer::Cards(ids) = answer else {

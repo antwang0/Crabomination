@@ -421,8 +421,8 @@ fn jeska_loyalty_counts_commander_casts_and_triples_combat_damage() {
     assert_eq!(g.players[1].life, life - 6, "2 power, tripled");
 }
 
-/// Jeska's −X: X damage to the target, X loyalty paid. (Slots 2 and 3 are
-/// the engine's auto-fill — INCOMPLETE_CARDS.)
+/// Jeska's −X: X damage to the target, X loyalty paid. (A headless seat's
+/// slots 2 and 3 are the engine's auto-fill.)
 #[test]
 fn jeska_minus_x_pays_x_and_deals_x() {
     let mut g = pod(3);
@@ -448,6 +448,43 @@ fn jeska_minus_x_fills_a_player_slot() {
     activate_loyalty(&mut g, jeska, 1, Some(Target::Permanent(b)), Some(2));
     assert!(g.battlefield_find(b).is_none());
     assert_eq!((1..3).map(|p| g.players[p].life).sum::<i32>(), life - 2, "an opponent took the X too");
+}
+
+/// CR 602.2b + 601.2c — a prompting seat names every target of Jeska's −X as
+/// it activates: slot 2 is asked (its own creature is a legal pick, the
+/// slot-0 creature is not — CR 115.3), slot 3 is declined, and only the
+/// named targets take X. Nothing is paid until the targets are named.
+#[test]
+fn jeska_minus_x_asks_a_prompting_seat_for_each_extra_target() {
+    use crabomination::decision::{Decision, DecisionAnswer};
+    let mut g = pod(3);
+    g.players[0].wants_ui = true;
+    let jeska = g.add_card_to_battlefield(0, catalog::jeska_thrice_reborn());
+    g.battlefield_find_mut(jeska).unwrap().add_counters(crabomination::card::CounterType::Loyalty, 3);
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: jeska, ability_index: 1, target: Some(Target::Permanent(a)), x_value: Some(2),
+    })
+    .expect("announce");
+    let Some(Decision::ChooseTarget { legal, optional, .. }) = g.pending_decision.as_ref().map(|d| &d.decision) else {
+        panic!("slot 2 is asked");
+    };
+    assert!(*optional, "up to three");
+    assert!(legal.contains(&Target::Permanent(mine)) && legal.contains(&Target::Player(2)));
+    assert!(!legal.contains(&Target::Permanent(a)), "slot 0's creature is not offered again");
+    assert_eq!(g.battlefield_find(jeska).unwrap().counter_count(crabomination::card::CounterType::Loyalty), 3, "unpaid");
+    g.submit_decision(DecisionAnswer::Target(Target::Permanent(mine))).expect("slot 2");
+    assert!(matches!(g.pending_decision.as_ref().map(|d| &d.decision), Some(Decision::ChooseTarget { .. })), "slot 3 is asked");
+    g.submit_decision(DecisionAnswer::DeclineTarget).expect("decline slot 3");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(mine).is_none(), "both named creatures took 2");
+    assert!(g.battlefield_find(b).is_some_and(|c| c.damage == 0), "the unnamed one did not");
+    assert_eq!(g.players.iter().map(|p| p.life).collect::<Vec<_>>(), life, "no player was named");
+    assert_eq!(g.battlefield_find(jeska).unwrap().counter_count(crabomination::card::CounterType::Loyalty), 1);
 }
 
 /// Tevesh Szat's +1 draws a third card when the sacrificed permanent was a

@@ -1592,6 +1592,7 @@ impl PendingDecision {
             ResumeContext::CastExtraTargetPick { caster, .. } => *caster,
             ResumeContext::CastXPick { caster, .. } => *caster,
             ResumeContext::CastSlot0TargetPick { caster, .. } => *caster,
+            ResumeContext::LoyaltyExtraTargetPick { caster, .. } => *caster,
         }
     }
 }
@@ -1840,6 +1841,7 @@ impl ResumeContext {
                 | ResumeContext::CastExtraTargetPick { .. }
                 | ResumeContext::CastXPick { .. }
                 | ResumeContext::CastSlot0TargetPick { .. }
+                | ResumeContext::LoyaltyExtraTargetPick { .. }
         )
     }
 }
@@ -2094,6 +2096,18 @@ pub enum ResumeContext {
     CastSlot0TargetPick {
         caster: usize,
         action: Box<GameAction>,
+    },
+    /// A prompting seat's multi-target loyalty ability (Jeska's −X "each of
+    /// up to three targets") suspended to name its next slot before any
+    /// cost was paid; on answer the pick joins `picked` (a decline closes
+    /// the list) and the activation re-runs.
+    LoyaltyExtraTargetPick {
+        caster: usize,
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        picked: Vec<Target>,
+        x_value: Option<u32>,
     },
 }
 

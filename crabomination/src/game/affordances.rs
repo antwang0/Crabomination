@@ -367,7 +367,11 @@ impl GameState {
             if ok
                 && !template.players.get(acting).is_some_and(|p| p.manual_mana)
                 && probe.pending_decision.as_ref().is_some_and(|pd| {
-                    matches!(pd.resume, crate::game::types::ResumeContext::CastExtraTargetPick { .. })
+                    matches!(
+                        pd.resume,
+                        crate::game::types::ResumeContext::CastExtraTargetPick { .. }
+                            | crate::game::types::ResumeContext::LoyaltyExtraTargetPick { .. }
+                    )
                         && matches!(pd.decision, crate::decision::Decision::ChooseTarget { optional: true, .. })
                 })
             {
