@@ -6478,3 +6478,74 @@ in each script).
   `cr_702_16b_extra_target_prompt_skips_protected_creatures` (fails
   without the fix). The RW pairing at the full cap: **200 decided, 0
   undecided, 129 s** (twice), no rejected answers.
+
+## Round 86 — no other answer-rejecting prompt in a million; a race term in `fra-fixes` (+1.3 scored, free under the search); the learner's ratio pinned, and rated-deck training +1.8 once it is (2026-10-28)
+
+Three of the round-85 report's leads (`.ladder/r86/`; each script carries
+its pre-registered reading).
+
+- **The offer census: clean.** `recommend`'s new `CRAB_OFFER_CHECK=1`
+  answers every option of every pending prompt (targets, modes, colours,
+  library searches, options) on a clone and reports the ones the engine
+  rejects — the cube stall's class, which a bot only reveals if it happens
+  to pick the bad option. Ladder seats are `wants_ui`, so every prompt the
+  bots meet is posed. `offer-probed: N` lines prove coverage. Five seeds
+  each of cube (1 500 games x 8), `--decks all` (600), FRA and SOS sealed
+  (600 x 36 decks), plus four search cells (`mcts-net67-fixes` vs
+  `mcts-net67-256`, cube and FRA): **more than a million prompts probed,
+  zero rejected options.** The two resolution-time `ChooseTarget` prompts in
+  `effects/mod.rs` that round 85 left unread are sacrifice choices, which
+  do not target.
+- **The race term, `EvalWeights::clock_eval`: ADOPTED at 4, in
+  `fra-fixes`.** The trades round's open "cause 2": the material eval prices
+  a 4/2-for-2/2 trade as a loss with the defender at 5, because it never
+  asks how soon either side dies. `clock_points` reads each side's
+  next-swing clock — the power that gets past the defender's best
+  one-on-one blocks (biggest attackers blocked first, flying / reach,
+  shadow, menace, unblockable; tapped state ignored) — as 10 / 6 / 3 / 1
+  points for lethal in one to four swings, and the eval adds
+  `clock_eval * unit` per point of (ours − theirs), duels only. On top of
+  `fra-fixes`, paired, FRA sealed 1 000 x 12 (seeds 43 / 97 means): weight
+  1 / 2 / **4** / 8 = 50.70 / 51.15 / **51.35** / 51.10. Weight 4 on fresh
+  seed 211 **51.3 %**, SOS 50.8 / 50.6, cube 50.3 / 50.1. Under the client's
+  search (net leaf; the material eval only in its heuristic paths)
+  `mcts-net67-fixes+mat4` vs `mcts-net67-fixes`, FRA 200 x 12: **49.75 /
+  50.48**, mean +0.12, over its −0.5 bar. So the scored pilot gains a point
+  and the client pays nothing.
+- **The same term on the net leaf, `clock_net`: NOT adopted.** Scored net
+  leaf 50 / **150** / 400 basis points a point: 50.30 / **50.45** / 50.25,
+  150 on seed 211 50.6; under the search 50.50 / 50.46, mean +0.48, under
+  its +0.5 bar. The net already prices most of the race.
+- **The learner's steps per game, pinned.** `selfplay_train
+  --steps-per-game F`: the learner waits when it is ahead of the actors and
+  the actors wait (before claiming a game) when they are ahead of it,
+  within `max(actors, 8)` games, so the ratio is the recipe's and not the
+  box's. Round 84 had found it set by contention (0.27 / 0.27 / 0.18 / 0.17
+  across one recipe's four seeds). Round 86 trained 2 arms x 4 seeds at the
+  champion's own 0.274: A = round 82's recipe (heuristic decks), B = the
+  same + `--actor-rated-decks`. Instrument check: **all eight 0.274** over
+  generation (the tail after the actors finish adds its usual ~6 k steps).
+  Gate on ladder seeds 211 / 307, which no champion was chosen on,
+  `net67-fixes` vs `fra-fixes`, 1 000 x 12:
+
+  | field | champion | r82 (4 seeds) | A heur | B rated | B − A (t, 4 seeds) |
+  |---|---|---|---|---|---|
+  | rated | 50.95 | 49.66 | 48.85 | **50.62** | **+1.78 [+0.07, +3.48]** |
+  | default | 52.20 | 51.20 | 50.29 | 51.02 | +0.74 [−1.14, +2.62] |
+
+  Q1 passes: **rated-deck training helps** once the ratio is equal (round
+  84's tie was the ratio: its rated runs got 0.16–0.19). Q2, pinned A vs
+  unpinned r82 (no bar): −0.81 / −0.91, inside the noise; three of A's four
+  seeds stopped on stale early (131 k–226 k games), all four of B's ran to
+  250 k. The champion sits **+1.3 over its own recipe's seed mean** on seeds
+  it was not chosen on — round 84's winner's-curse estimate, confirmed.
+- **Q3, the candidate: `nets_r86_rated_s43`** (best on the rated field,
+  51.0). Fresh seed 401, rated field: **52.4 % vs the champion's 50.6 %**
+  (+1.8, over +0.5).
+  Under the client's search (`mcts-net67-fixes` vs `mcts-fixes-256`, 300
+  x 12, rated field), each net as the leaf: seed 401 **51.88 vs 50.86**,
+  seed 503 **52.36 vs 51.61**, mean **+0.90** (over +0.5). Both halves of
+  the bar clear on seeds no net was chosen on: **PROPOSED** as
+  `nets/fra-champion.safetensors` — the user's call; the r82 champion stays
+  until then. The pinned recipe for the next round: `--steps-per-game
+  0.274 --actor-rated-decks`, gated seed mean vs seed mean on fresh seeds.
