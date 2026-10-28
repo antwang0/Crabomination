@@ -1158,3 +1158,19 @@ fn renari_gives_artifacts_flash() {
     cast(&mut g, ring);
     assert!(g.battlefield_find(ring).is_some());
 }
+
+/// Master Skald: the creature card exiled is the controller's pick (it was the
+/// first in the graveyard); the artifact comes back.
+#[test]
+fn master_skald_exiles_the_chosen_creature_card() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+    let ring = g.add_card_to_graveyard(0, catalog::sol_ring());
+    let skald = g.add_card_to_hand(0, catalog::master_skald());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![wurm])]));
+    cast_with(&mut g, skald, None, None);
+    assert!(g.exile.iter().any(|c| c.id == wurm));
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear));
+    assert!(g.players[0].hand.iter().any(|c| c.id == ring));
+}

@@ -1825,7 +1825,13 @@ pub fn master_skald() -> CardDefinition {
             then: Box::new(Effect::MayDo {
                 description: "Exile a creature card from your graveyard to return an artifact or enchantment card?".into(),
                 body: Box::new(Effect::Seq(vec![
-                    Effect::Move { what: Selector::take(creature_cards, Value::ONE), to: ZoneDest::Exile },
+                    Effect::MoveChosen {
+                        from: creature_cards,
+                        filter: None,
+                        count: Value::ONE,
+                        up_to: false,
+                        to: ZoneDest::Exile,
+                    },
                     Effect::Move {
                         what: target_filtered(R::InYourGraveyard.and(R::Artifact.or(R::Enchantment))),
                         to: ZoneDest::Hand(PlayerRef::You),

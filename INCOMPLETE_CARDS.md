@@ -2158,7 +2158,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Crush Underfoot | the Giant is the greatest-power one you control, picked automatically rather than chosen (ties go to the first) | `DealDamageEqualToPower { TakeGreatestPower }` |
 | 🟡 Nimble Hobbit | with a Food out, sacrificing a Food is the only offered cost (paying {2}{W} is offered only with no Food) | `If(SelectorExists Food)` |
 | 🟡 Raven Clan War-Axe | "you may search your library and/or graveyard" takes Eivor from the graveyard when one is there, else searches the library; the search can't be declined | `If(CardsInZone gy) Move else Search` |
-| 🟡 Master Skald | the exiled creature card is picked automatically (first in the graveyard), not chosen | `MayDo { Move(take 1) + Move(target) }` |
+| ~~Master Skald~~ ✅ | fixed 2026-10-28: the exiled creature card is the controller's pick (`MoveChosen`, a cost pick) | — |
 | 🟡 Lens of Clarity | the look-at-top half is `MayLookAtOwnLibraryTop`; looking at face-down creatures you don't control isn't surfaced to the seat's view | — |
 | 🟡 Jasmine Boreal of the Seven | an *attacker's* "no abilities" reads its printed card (an anthem's keyword doesn't disqualify it); the blocker side reads granted keywords and lose-all-abilities | `GrantKeyword { CantBeBlockedBy }` filtered `HasNoAbilities` |
 | 🟡 Rhino, Terrible Trampler | the ETB is two triggers (destroy; distribute + trample) rather than one, so a response can land between them and the distribution still resolves if the destroy's target goes | two `etb` triggers |
