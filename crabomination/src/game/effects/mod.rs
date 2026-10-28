@@ -6895,6 +6895,10 @@ impl GameState {
                 )
             }
 
+            Effect::PlayerMayCastFromHandFree { who, if_cast, else_ } => {
+                self.player_may_cast_from_hand_free(who, if_cast, else_, ctx, effect, events)
+            }
+
             // The Gitrog — "put up to N land cards from your hand onto the
             // battlefield tapped". The picker takes the cheapest lands first;
             // any land is a land drop this effect doesn't count against.

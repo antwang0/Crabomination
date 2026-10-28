@@ -6331,6 +6331,12 @@ pub enum Effect {
     /// don't, `else_`" (Baral and Kari Zev's "lesser mana value that shares a
     /// card type"). `filter` is read off the hand card.
     MayCastFromHandFreeMatching { filter: SelectionRequirement, max_mv: Value, else_: Box<Effect> },
+    /// "[`who`] may cast a spell from their hand without paying its mana
+    /// cost. If they do, `if_cast`. If they don't, `else_`" (Cmdr. Troi,
+    /// Outgoing Empath). `who` picks among their nonland hand cards (headless:
+    /// the priciest); `if_cast` runs as the controller with `Target(0)` bound
+    /// to the cast spell.
+    PlayerMayCastFromHandFree { who: PlayerRef, if_cast: Box<Effect>, else_: Box<Effect> },
     /// Process (Battle for Zendikar / OGW) — "you may put up to `count` cards
     /// an opponent owns from exile into that player's graveyard. If you do,
     /// [`then`]." The controller is asked yes/no (`Decision::OptionalTrigger`);

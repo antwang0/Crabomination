@@ -8,7 +8,7 @@ use super::{EffectContext, PickValue};
 use crate::card::{CardId, CardInstance};
 use crate::effect::{Effect, Selector};
 use crate::game::GameState;
-use crate::game::types::{GameError, GameEvent, Target};
+use crate::game::types::{GameError, GameEvent, StackItem, Target};
 
 impl GameState {
     /// Offer the controller one hand card `eligible` accepts (a headless seat
@@ -68,6 +68,69 @@ impl GameState {
 }
 
 impl GameState {
+    /// Cmdr. Troi — `who` may cast a nonland card from their own hand for
+    /// free (CR 608.2g: timing is ignored); then `if_cast` runs as the
+    /// controller with `Target(0)` on that spell, else `else_`.
+    pub(super) fn player_may_cast_from_hand_free(
+        &mut self,
+        who: &crate::effect::PlayerRef,
+        if_cast: &Effect,
+        else_: &Effect,
+        ctx: &EffectContext,
+        effect: &Effect,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
+        if !self.players.get(seat).is_some_and(|p| p.is_alive()) {
+            return Ok(());
+        }
+        let hand = &self.players[seat].hand;
+        let eligible = |c: &&CardInstance| !c.definition.is_land();
+        let candidates: Vec<(CardId, String)> =
+            hand.iter().filter(eligible).map(|c| (c.id, c.definition.name.to_string())).collect();
+        let auto: Vec<CardId> =
+            hand.iter().filter(eligible).max_by_key(|c| c.definition.cost.cmc()).map(|c| c.id).into_iter().collect();
+        let picked = if candidates.is_empty() {
+            Vec::new()
+        } else {
+            let Some(p) = self.choose_up_to_cards(
+                seat,
+                "Cast a spell from your hand for free?".into(),
+                ctx.source.unwrap_or(CardId(0)),
+                candidates,
+                1,
+                PickValue::Gain,
+                effect,
+                auto,
+            ) else {
+                return Ok(());
+            };
+            p
+        };
+        let Some(pick) = picked.first().copied() else { return self.run_effect(else_, ctx, events) };
+        self.run_effect(
+            &Effect::CastWithoutPayingImmediate {
+                what: Selector::Target(0),
+                source_zone: crate::card::Zone::Hand,
+                exile_after: false,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            },
+            &EffectContext { controller: seat, targets: vec![Target::Permanent(pick)], ..ctx.clone() },
+            events,
+        )?;
+        // A UI caster's target pick parked the cast; the copy rider is lost.
+        if self.suspend_signal.is_some() {
+            return Ok(());
+        }
+        let cast = self.stack.iter().any(|si| matches!(si, StackItem::Spell { card, .. } if card.id == pick));
+        if !cast {
+            return self.run_effect(else_, ctx, events);
+        }
+        self.run_effect(if_cast, &EffectContext { targets: vec![Target::Permanent(pick)], ..ctx.clone() }, events)
+    }
+
     /// Anrakyr the Traveller — offer one `filter` card from the controller's
     /// hand or graveyard whose mana value their life can cover (CR 119.4),
     /// cast it without paying its mana cost and bill that much life instead.

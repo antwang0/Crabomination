@@ -413,6 +413,14 @@ pub enum CreatureType {
     Shiar,
     // Unfinity (The Most Dangerous Gamer — "Human Gamer Guest").
     Gamer,
+    // Star Trek Commander (the Federation Fleet precon).
+    Trill,
+    ElAurian,
+    Ocampa,
+    Bajoran,
+    Ferengi,
+    Betazoid,
+    Android,
 }
 
 /// Land subtypes (basic land types + others).
