@@ -411,6 +411,25 @@ fn loki_draws_when_an_ability_targets() {
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
 
+/// CR 115.1 — Loki hears a *player or permanent* becoming an ability's
+/// target: Scavenging Ooze aiming at a graveyard card draws nothing (the
+/// `ChoseTargets` listener drew for it), Glasses of Urza aiming at a player does.
+#[test]
+fn loki_ignores_an_ability_aimed_only_at_a_graveyard_card() {
+    let mut g = pod(2);
+    library(&mut g, 0, 3);
+    ready(&mut g, 0, catalog::loki_god_of_mischief());
+    let ooze = ready(&mut g, 0, catalog::scavenging_ooze());
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let hand = g.players[0].hand.len();
+    activate(&mut g, ooze, 0, Some(perm(dead))).expect("exile a graveyard card");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == dead), "the Ooze resolved");
+    assert_eq!(g.players[0].hand.len(), hand, "a graveyard card isn't a permanent");
+    let gl = ready(&mut g, 0, catalog::glasses_of_urza());
+    activate(&mut g, gl, 0, Some(Target::Player(1))).expect("look");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "a player is");
+}
+
 /// Glasses of Urza: {T}: look at a player's hand (an ability that targets).
 #[test]
 fn glasses_of_urza_peeks() {

@@ -2024,7 +2024,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Scrounging Bandar~~ ✅ | fixed 2026-10-27: `MoveAnyNumberOfCounters { kind: Some(+1/+1) }` asks only about +1/+1 counters (Bioshift shares it) | — |
 | 🟡 Shelob, Child of Ungoliant; Supper for Spiders | the copy / the returned cards enter as the creature and become Food artifacts right after (CR 707.9b / 614.1c want them to enter as Food) | `CreateTokenCopyOf` and `Move` have no type-replacing entry rider; `Effect::BecomeFoodArtifact` rewrites them on the battlefield |
 | ~~Myojin of Cryptic Dreams~~ ✅ | fixed 2026-10-24: enters with the counter (`SelfEntersWithKeywordCounter{if_cast_from_hand}`, also Grim Betrayal), no trigger window — `myojins_count_only_a_cast_from_hand` | — |
-| 🟡 Goldberry, River-Daughter | "move one or more counters" moves all of hers (a keyword counter is a kind of its own and moves on her first ability since 2026-10-27) | `MoveAllCounters` (one of the legal choices) stands in for the pick |
+| ~~Goldberry, River-Daughter~~ ✅ | fixed 2026-10-28: the {U} ability asks a count per kind (`MoveAnyNumberOfCounters`) and draws only if her total fell | — |
 | ~~Court of Locthwain~~ ✅ | fixed 2026-10-24: the monarch's free cast is `MayCastExiledWithSource` during the resolution, so no exiled card's lasting permission is replaced | — |
 | 🟡 Elemental Teachings | the four lands and the opponent's two are picked by `SearchSplitWithOpponent`'s heuristic (library order; the first two denied), not asked of either seat | the split has no decision of its own; Ecological Appreciation shares it |
 | 🟡 Night Shift of the Living Dead | a UI seat isn't asked: it takes the headless shift (+1 when that reaches a later results arm or a die-trigger threshold) | the shift is offered inside `RollDie`'s resolver after the dice land; it can't park there and resume with the same faces |
@@ -2043,7 +2043,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Smaug the Impenetrable | combat damage to it still puts its trigger on the stack (it resolves to nothing) | `EventKind` has no bit left for a noncombat kind; `Effect::IfTriggerDamageNoncombat` gates the body per event instead |
 | 🟡 Rhys, the Evermore | "remove any number of counters" is not asked: the harmful kinds come off your creature and a +1/+1 counter stays | `RemoveCountersUpTo { only_helpful }` has no any-number counter ballot |
 | ~~Lara Croft, Tomb Raider~~ ✅ | fixed 2026-10-27: the grants form one `OneCastAmongGranted` group — one play, a land drop included | — |
-| 🟡 Loki, God of Mischief | an ability of yours targeting only cards in graveyards or on the stack draws too | the trigger is `ChoseTargets` from a non-spell source; the targeted objects' kinds aren't read |
+| ~~Loki, God of Mischief~~ ✅ | fixed 2026-10-28: listens to `BecameTarget` under `EventScope::PlayerOrPermanentTargetedByYourAbility` (battlefield permanents and players only) | — |
 | 🟡 Sentinel Tower | the count reads only your own instants and sorceries this turn; one an opponent cast during your turn adds nothing to a later shot (and theirs triggers it for your count) | `Value::InstantsOrSorceriesCastThisTurn` is per player; there is no table-wide instant/sorcery tally |
 | ~~Wernog, Rider's Chaplain~~ ✅ | fixed 2026-10-24: `TemptingOffer::declined` runs "loses 1 life" under each opponent who declined | — |
 | 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
