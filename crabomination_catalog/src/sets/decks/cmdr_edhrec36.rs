@@ -220,7 +220,7 @@ pub fn kyodai_soul_of_kamigawa() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::GrantKeyword {
             what: target_filtered(R::Permanent.and(R::OtherThanSource)),
             keyword: Keyword::Indestructible,
-            duration: Duration::WhileSourceOnBattlefield,
+            duration: Duration::WhileYouControlSource,
         })],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w(), u(), b(), r(), g()]),

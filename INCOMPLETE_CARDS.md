@@ -2072,7 +2072,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Woolly Razorback | with an ice counter it assigns no combat damage rather than having it prevented ("can't be prevented" doesn't restore it) | `Keyword::DealsNoCombatDamage` stands in for the prevention |
 | ~~The Enigma Jewel~~ ✅ | fixed 2026-10-28: "four or more" (`ActivatedAbility.craft_or_more`) exiles every matching graveyard card past four (Ore-Rich Stalactite shares it) | — |
 | 🟡 Elda, Conjurer of Spectacle | entering after a nonlegendary creature spell this turn, the next one still gets demonstrate | a once-per-turn cast trigger, not a count of this turn's nonlegendary creature spells |
-| 🟡 Kyodai, Soul of Kamigawa | the indestructible lasts while Kyodai is on the battlefield, not only while you control it | `Duration::WhileSourceOnBattlefield` has no control rider |
+| ~~Kyodai, Soul of Kamigawa~~ ✅ | fixed 2026-10-28: `Duration::WhileYouControlSource` (CR 611.2b) | — |
 | 🟡 Fleeting Memories | an artifact that is a Clue only through Senator Peacock doesn't count as a Clue once sacrificed | `lki_clone` snapshots creature types, not artifact subtypes |
 | 🟡 Metamorphic Alteration | the copy starts when an enters trigger resolves (respondable), not as the Aura enters, and moving the Aura to another creature doesn't copy the new host | `BecomeCopyOfFor` with `WhileSourceAttached`; no static layer-1 copy for an attachment |
 | ~~The Capitoline Triad~~ ✅ | fixed 2026-10-28: a manual seat names the exiled set (a short total takes the auto-pick) | — |

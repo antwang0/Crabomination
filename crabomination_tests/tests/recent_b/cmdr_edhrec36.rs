@@ -161,3 +161,20 @@ fn gravitic_punch_and_immolating_gyre() {
     assert!(g.battlefield_find(wurm).is_some());
     assert!(g.players[0].graveyard.iter().any(|c| c.definition.card_types.contains(&CardType::Sorcery)));
 }
+
+/// CR 611.2b — Kyodai's indestructible lasts "for as long as you control
+/// Kyodai": it ends when an opponent takes Kyodai (it lasted while Kyodai
+/// stayed on the battlefield).
+#[test]
+fn kyodai_shield_ends_when_kyodai_changes_control() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let kyodai = g.add_card_to_hand(0, catalog::kyodai_soul_of_kamigawa());
+    cast(&mut g, kyodai, &[]).expect("Kyodai");
+    let has = |g: &GameState| g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Indestructible);
+    assert!(has(&g));
+    g.battlefield_find_mut(kyodai).unwrap().controller = 1;
+    let _ = g.check_state_based_actions();
+    assert!(!has(&g), "an opponent controls Kyodai");
+}
