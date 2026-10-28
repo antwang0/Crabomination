@@ -590,7 +590,10 @@ pub fn the_enigma_jewel() -> CardDefinition {
                 },
                 ..Default::default()
             },
-            craft(cost(&[generic(8), u()]), R::Nonland.and(R::HasActivatedAbility), 4),
+            ActivatedAbility {
+                craft_or_more: true,
+                ..craft(cost(&[generic(8), u()]), R::Nonland.and(R::HasActivatedAbility), 4)
+            },
         ],
         back_face: Some(Box::new(locus)),
         ..Default::default()

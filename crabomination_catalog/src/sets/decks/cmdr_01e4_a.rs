@@ -5344,11 +5344,14 @@ pub fn ore_rich_stalactite() -> CardDefinition {
                 },
                 ..Default::default()
             },
-            crate::effect::shortcut::craft(
-                cost(&[generic(3), r(), r()]),
-                R::HasColor(Color::Red).and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
-                4,
-            ),
+            ActivatedAbility {
+                craft_or_more: true,
+                ..crate::effect::shortcut::craft(
+                    cost(&[generic(3), r(), r()]),
+                    R::HasColor(Color::Red).and(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
+                    4,
+                )
+            },
         ],
         back_face: Some(Box::new(catalyst)),
         ..spell("Ore-Rich Stalactite", cost(&[generic(1), r()]), CardType::Artifact, Effect::Noop)

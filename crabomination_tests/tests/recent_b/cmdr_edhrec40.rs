@@ -367,6 +367,20 @@ fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>)
     Ok(())
 }
 
+/// "Craft with four **or more**": every matching graveyard card goes (it was
+/// exactly four), here five Timebugs from the graveyard.
+#[test]
+fn the_enigma_jewel_crafts_with_more_than_four() {
+    let mut g = pod(2);
+    let jewel = g.add_card_to_battlefield(0, catalog::the_enigma_jewel());
+    for _ in 0..5 {
+        g.add_card_to_graveyard(0, catalog::jhoiras_timebug());
+    }
+    flood(&mut g, 0);
+    activate(&mut g, jewel, 1, None).expect("craft");
+    assert_eq!(g.exile.iter().filter(|c| c.exiled_with == Some(jewel)).count(), 5);
+}
+
 /// CR 702.167 / 602.5b — The Enigma Jewel crafts with four nonlands that have
 /// activated abilities; the Locus borrows their abilities, each once a turn,
 /// and copies every non-mana ability its controller activates.

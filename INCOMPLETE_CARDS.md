@@ -2070,7 +2070,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Scrap Welder | the returned artifact card is chosen as the ability resolves, not targeted | targets are fixed before the sacrifice that sets X |
 | 🟡 Angel of Condemnation | the exert is paid as the ability resolves (`SkipNextUntap`), not as a cost | no exert activation cost |
 | 🟡 Woolly Razorback | with an ice counter it assigns no combat damage rather than having it prevented ("can't be prevented" doesn't restore it) | `Keyword::DealsNoCombatDamage` stands in for the prevention |
-| 🟡 The Enigma Jewel | craft takes exactly four nonlands with activated abilities, never more | `craft_exile_cost` is a fixed count |
+| ~~The Enigma Jewel~~ ✅ | fixed 2026-10-28: "four or more" (`ActivatedAbility.craft_or_more`) exiles every matching graveyard card past four (Ore-Rich Stalactite shares it) | — |
 | 🟡 Elda, Conjurer of Spectacle | entering after a nonlegendary creature spell this turn, the next one still gets demonstrate | a once-per-turn cast trigger, not a count of this turn's nonlegendary creature spells |
 | 🟡 Kyodai, Soul of Kamigawa | the indestructible lasts while Kyodai is on the battlefield, not only while you control it | `Duration::WhileSourceOnBattlefield` has no control rider |
 | 🟡 Fleeting Memories | an artifact that is a Clue only through Senator Peacock doesn't count as a Clue once sacrificed | `lki_clone` snapshots creature types, not artifact subtypes |
