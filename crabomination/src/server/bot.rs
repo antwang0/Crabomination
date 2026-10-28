@@ -4820,7 +4820,9 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
     // the cheap test already answers.
     let sweep = SweepMana::new(state, seat);
     for c in counters {
-        if !can_afford_in_state_with(state, seat, c, w, &sweep) {
+        if !can_afford_in_state_with(state, seat, c, w, &sweep)
+            || !super::pact_guard::pact_payable(state, seat, &c.definition)
+        {
             continue;
         }
         let action = match &c.definition.effect {
@@ -4898,7 +4900,9 @@ fn pick_sweeper_shield(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
     }
     let sweep = SweepMana::new(state, seat);
     for c in shields {
-        if !can_afford_in_state_with(state, seat, c, w, &sweep) {
+        if !can_afford_in_state_with(state, seat, c, w, &sweep)
+            || !super::pact_guard::pact_payable(state, seat, &c.definition)
+        {
             continue;
         }
         // Every slot on our own side (the slot walker stops after slot 0).
@@ -5066,7 +5070,9 @@ fn pick_ability_counter_response(
     // sources and an empty pool**.
     let sweep = SweepMana::new(state, seat);
     for c in counters {
-        if !can_afford_in_state_with(state, seat, c, w, &sweep) {
+        if !can_afford_in_state_with(state, seat, c, w, &sweep)
+            || !super::pact_guard::pact_payable(state, seat, &c.definition)
+        {
             continue;
         }
         let action = GameAction::CastSpell {
@@ -8436,6 +8442,14 @@ pub(super) fn cast_candidates<'a>(
     shared: Option<&SweepMana<'a>>,
 ) -> Vec<(GameAction, bool)> {
     let mut out = cast_candidates_all(state, seat, w, shared);
+    out.retain(|(a, _)| {
+        let GameAction::CastSpell { card_id, .. } = a else { return true };
+        state.players[seat]
+            .hand
+            .iter()
+            .find(|c| c.id == *card_id)
+            .is_none_or(|c| super::pact_guard::pact_payable(state, seat, &c.definition))
+    });
     if w.counter_reserve || ((w.counter_read || w.counter_read_board) && counter_read_holds(state, seat, w)) {
         counter_reserve_filter(state, seat, w, &mut out);
     }
@@ -22637,6 +22651,7 @@ fn pick_stack_response_scored(state: &GameState, seat: usize, w: &EvalWeights) -
                 && counter_cast_mode(&c.definition.effect, w.modal_counters).is_some()
         })
         .filter(|c| can_afford_in_state_with(state, seat, c, w, &sweep))
+        .filter(|c| super::pact_guard::pact_payable(state, seat, &c.definition))
         .collect();
     if counters.is_empty() {
         return None;

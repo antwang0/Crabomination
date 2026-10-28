@@ -97,6 +97,7 @@ mod activation_cap;
 mod loop_hazard;
 mod mutate;
 mod fog;
+mod pact_guard;
 mod trigger_copy;
 mod voyage;
 mod accept_offer;
