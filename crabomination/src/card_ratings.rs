@@ -490,14 +490,37 @@ thread_local! {
 /// from the compiled tables as usual (the other set's cards).
 pub type TableOverride = std::sync::Arc<crate::fxhash::HashMap<String, Option<i32>>>;
 pub fn with_table<R>(table: TableOverride, f: impl FnOnce() -> R) -> R {
+    OVERRIDE_ON.store(true, std::sync::atomic::Ordering::Relaxed);
     let prev = OVERRIDE.with(|o| o.borrow_mut().replace(table));
     let r = f();
     OVERRIDE.with(|o| *o.borrow_mut() = prev);
     r
 }
 
+/// Has any thread ever entered [`with_table`]? One relaxed load keeps the
+/// override's thread-local off the builder's path in every process that
+/// never races a table.
+static OVERRIDE_ON: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// The builder's read of a card's rating: `brief.rated` (cached per card for
+/// the process, from the compiled tables), or [`with_table`]'s override on
+/// this thread. The cache is why the override has to be read here and not
+/// only in [`rated_score`]: a brief is built once, before any race.
+pub fn brief_rated(brief: &crate::cube::CardBrief) -> Option<i32> {
+    if !OVERRIDE_ON.load(std::sync::atomic::Ordering::Relaxed) || brief.is_land {
+        return brief.rated;
+    }
+    match OVERRIDE.with(|o| o.borrow().as_ref().and_then(|t| t.get(brief.def.name).copied())) {
+        Some(listed) => listed,
+        None => brief.rated,
+    }
+}
+
 /// A card's measured value in builder-score units, when it has one.
 pub fn rated_score(name: &str) -> Option<i32> {
+    if !OVERRIDE_ON.load(std::sync::atomic::Ordering::Relaxed) {
+        return compiled_score(name);
+    }
     match OVERRIDE.with(|o| o.borrow().as_ref().and_then(|t| t.get(name).copied())) {
         Some(listed) => listed,
         None => compiled_score(name),

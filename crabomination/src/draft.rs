@@ -458,7 +458,7 @@ pub(crate) fn score_brief_rated(
 ) -> i32 {
     let seat = seat_colors.support();
     let off_cost = if seat.is_empty() { 0 } else { brief.off_pips(seat) * 10 };
-    brief.rated.unwrap_or(brief.base_score + brief.quality) - off_cost
+    crate::card_ratings::brief_rated(brief).unwrap_or(brief.base_score + brief.quality) - off_cost
 }
 
 /// [`score_brief_quality`] plus [`aggro_curve_delta`] — the sealed builder's
