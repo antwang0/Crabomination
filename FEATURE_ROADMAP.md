@@ -19,10 +19,9 @@ Moved to `SHIPPED.md` (size trigger). Check it before proposing anything.
 The map for the next Commander run — **audited 2026-09-18 against the tree and
 against the shipped CR text (now `crabomination/MagicCompRules_20260925.txt`; the 2026-09-25 edition replaced 2026-04-17 on 2026-09-28 — its 605.1a / 800.4i / battle changes are in), not
 against this file's history**. Don't re-audit; update rows as they move.
-Per-deck card completion lives in `DECK_FEATURES.md`. Last touched 2026-10-27 by two concurrent sessions, neither
-moving a row: `01WRuXc6pH` (ENGINE_BACKLOG `01WRuXc6pH`: seven primitives incl. CR 601.2c `AttachedToTargetSlot` and
-the CR 704.5m `no_other_auras` shed; clean decks 5,258 → 5,289) and `01WRuXc6yK` (emblem abilities, CR 603.7d
-delayed-trigger sources, the Revolt leave-funnel class, a late multiplayer-wording batch).
+Per-deck card completion lives in `DECK_FEATURES.md`. Last touched 2026-10-28 by `01WRuXc3Wv` (ENGINE_BACKLOG
+`01WRuXc3Wv`: no row moved — card-level primitives, CR 615.12 preventions for two "prevent that damage" replacements,
+clean decks 5,294 → 5,399).
 
 ### Format core (CR 903)
 | Feature | State | Where |

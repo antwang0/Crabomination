@@ -3136,6 +3136,23 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-28 (Commander run, `01WRuXc3Wv`) — guardrail; card primitives off the hot paths
+
+New on paths a 2-player game can reach: `replace_damage_to_player` takes the damage source and, under the damage-replacement
+lane only, asks `damage_is_unpreventable_now` for The Mindskinner / Nine Lives; the `BecameTarget` scope match gained one arm;
+an up-to `ChooseSomeAmong` default filters by team. No draw-path change shipped (Quantum Riddler's draw static was built and
+reverted for the cube freeze). `release` bot_ladder at tip `859e8aeb6`+, 4-core Xeon @ 2.10 GHz (a new box — wall clock not
+comparable to earlier rows; no bench_ab base was built):
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism
+                 ok (all pairs split); peak_rss_mib 48.9; 277.4 games/s
+pools            cube / sos / sealed x 300 (seed 19101): 7,500 games, 3 CR 104.4b draws, 0 stalls, 0 panics
+pods             seed 19200 x 300 at 2..8 seats: 2,100 / 2,100 decided; random 4-seat 150x3 (19300) + 6-seat 50x2
+                 (19500) all decided; 45 targeted 4-seat groups x 50 over every changed card (release-fast, 19000-19044):
+                 2,250 games, 1 CR 104.4b draw, 0 stalls, 0 panics
+```
+
 ### 2026-10-27 (Commander run, `01WRuXc6pH`) — guardrail; seven card primitives, an Aura-lock sweep
 
 New on paths a 2-player game can reach: the CR 704.5m Aura sweep builds a (lock Aura, host) list once per pass when
