@@ -907,8 +907,8 @@ pub fn fabrication_foundry() -> CardDefinition {
 /// you cast a black spell from your hand, he connives. Boast — exile any
 /// number of black cards from your graveyard with fifteen or more black mana
 /// symbols among their mana costs: copy those cards; cast up to three of the
-/// copies free. Approximation: the exiled set and the three casts are
-/// auto-picked (fewest cards, then the priciest copies). (The Master of
+/// copies free. A manual seat names the exiled set and the copies it casts;
+/// headless takes the fewest cards, then the priciest copies. (The Master of
 /// Lake-town, M.O.D.O.K.)
 pub fn baron_helmut_zemo() -> CardDefinition {
     CardDefinition {
