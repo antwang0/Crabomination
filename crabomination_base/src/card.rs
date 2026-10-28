@@ -427,6 +427,8 @@ pub enum CreatureType {
     Tamarian,
     Orion,
     Aenar,
+    Excalbian,
+    Romulan,
 }
 
 /// Land subtypes (basic land types + others).

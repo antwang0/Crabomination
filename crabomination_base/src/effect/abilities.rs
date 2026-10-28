@@ -1732,6 +1732,10 @@ pub enum StaticEffect {
     /// that many plus one are put on it instead" (Optimization Annex's charge
     /// counters on an artifact). Read in `scaled_counter_count_on`.
     ExtraCountersOfKindMatching { kind: crate::card::CounterType, filter: crate::card::SelectionRequirement },
+    /// "If you would put one or more `kind` counters on [filter] you control,
+    /// put twice that many instead" (Lt. Cmdr. Geordi La Forge's charge
+    /// counters) — `DoubleCountersMatching` for one kind.
+    DoubleCountersOfKindMatching { kind: crate::card::CounterType, filter: crate::card::SelectionRequirement },
     /// CR 614.16 self-scoped additive variant — "If one or more +1/+1 counters
     /// would be put on THIS, that many plus one are put on it instead." Mowu,
     /// Loyal Companion. Like `ExtraPlusOneCounters` but only for placements onto

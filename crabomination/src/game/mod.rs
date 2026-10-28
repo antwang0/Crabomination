@@ -8585,9 +8585,13 @@ impl GameState {
         if n > 0 {
             for src in self.battlefield.iter().filter(|s| s.controller == ctrl) {
                 for sa in &src.definition.static_abilities {
-                    if let StaticEffect::DoubleCountersMatching { filter } = &sa.effect
-                        && self.evaluate_requirement_static(filter, &crate::game::Target::Permanent(cid), ctrl, Some(src.id))
-                    {
+                    let filter = match &sa.effect {
+                        StaticEffect::DoubleCountersMatching { filter } => filter,
+                        // Lt. Cmdr. Geordi La Forge — one kind only.
+                        StaticEffect::DoubleCountersOfKindMatching { kind: k, filter } if *k == kind => filter,
+                        _ => continue,
+                    };
+                    if self.evaluate_requirement_static(filter, &crate::game::Target::Permanent(cid), ctrl, Some(src.id)) {
                         n = n.saturating_mul(2);
                     }
                 }
@@ -36184,6 +36188,7 @@ fn static_effect_to_effects(
             | StaticEffect::CountersByPlacerDoubledOpponentsHalved
             | StaticEffect::CountersByPlacerDoubled
             | StaticEffect::DoubleCountersMatching { .. }
+            | StaticEffect::DoubleCountersOfKindMatching { .. }
             | StaticEffect::DoublePlusOneCounters
             | StaticEffect::ExtraPlusOneCounters
             | StaticEffect::ExtraPlusOneCountersMatching { .. }
