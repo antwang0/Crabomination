@@ -2116,7 +2116,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Hope Tender | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | 🟡 Steward of Solidarity | the exert lands as the ability resolves; there is no exert activation cost | `SkipNextUntap` in the effect |
 | ~~Mishra's Research Desk~~ ✅ | stale row: `impulse_choose_one` grants only the chosen card (`mishras_research_desk_impulses_and_unearths`) | — |
-| 🟡 Ajani, Sleeper Agent | a missed +1 reveal always goes to the bottom rather than "may" | `RevealTopTakeMatchingToHand` |
+| ~~Ajani, Sleeper Agent~~ ✅ | fixed 2026-10-28: a missed +1 reveal may stay on top | — |
 | 🟡 Invoke the Ancients | each Spirit's keyword-counter pick is "up to one", so a seat may leave one without a counter | `ChooseUpToN { max: 1 }` per token |
 | 🟡 Rinoa, Angel Wing | the once-a-turn cap is spent by the first attacking creature's death even when you decline the return | `EventSpec::once_per_turn` |
 | ~~Rona, Disciple of Gix~~ ✅ | stale row: both grants already ride `RestrictMayPlayToCasting` (`rona_cant_play_an_exiled_land`) | — |
@@ -2171,7 +2171,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kargan Intimidator | the mode and its target are picked at resolution (auto-targeted), not as the ability is activated (CR 700.2) | `ChooseUnchosenModeThisTurn` |
 | 🟡 Obsidian Battle-Axe | the attach offer fires only for Warriors entering under your control (attaching to an opponent's is legal, never wanted) | `EventScope::YourControl` + `MayDo(Attach)` |
 | 🟡 Nick Fury, Spymaster | the put-in creature attacks the attacker's defender or the most hostile opponent, not a chosen one (CR 508.4) | `DeployCreatureFromHandAttacking` |
-| 🟡 Planar Atlas | the look keeps any one of the four on top (not only a land) and isn't optional | `LookTopKeepOneRestToGraveyard { rest_bottom_random }` |
+| ~~Planar Atlas~~ ✅ | fixed 2026-10-28: an optional look that keeps up to one LAND on top (`LookPick { pick_filter: Land, keep_on_top }`), the rest bottomed at random | — |
 | 🟡 Portal Manipulator | the player and the attackers are picked as the trigger resolves, not targeted as it triggers; every attack on you that you could redirect moves (CR 115.1) | `AttackersNowAttackChosenPlayer` |
 | 🟡 Aurora Awakener | "put any number of those permanent cards onto the battlefield" puts all of them | `RevealUntilMatchingToBattlefield` |
 | 🟡 Thorin, Mountain-king | the Equipment aren't targeted (ward/hexproof on one is ignored); the bite is a reflexive trigger since 2026-10-26 (`01WvrAp6`) | `AttachAnyNumberTo` + `If(count(LastMoved))` + `DealDamageEqualToPower` |

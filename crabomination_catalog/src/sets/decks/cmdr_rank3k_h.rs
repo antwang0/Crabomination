@@ -283,11 +283,10 @@ pub fn roads_go_ever_ever_on() -> CardDefinition {
 
 /// Ajani, Sleeper Agent — {1}{G}{G/W/P}{W} planeswalker, loyalty 4,
 /// compleated. +1: reveal the top card; a creature or planeswalker card goes
-/// to your hand, otherwise to the bottom. −3: distribute three +1/+1 counters
+/// to your hand. −3: distribute three +1/+1 counters
 /// among up to three target creatures; they gain vigilance until end of turn.
 /// −6: an emblem — whenever you cast a creature or planeswalker spell, target
-/// opponent gets two poison counters. (Residual: a missed reveal always goes
-/// to the bottom rather than "may".)
+/// opponent gets two poison counters. A missed reveal may go to the bottom.
 pub fn ajani_sleeper_agent() -> CardDefinition {
     let loyalty = |cost: i32, effect: Effect| crate::card::LoyaltyAbility {
         loyalty_cost: cost,
@@ -306,12 +305,26 @@ pub fn ajani_sleeper_agent() -> CardDefinition {
         loyalty_abilities: vec![
             loyalty(
                 1,
-                Effect::RevealTopTakeMatchingToHand {
-                    who: PlayerRef::You,
-                    count: Value::ONE,
-                    filter: cast_cw(),
-                    distinct_powers: false,
-                },
+                Effect::Seq(vec![
+                    Effect::RevealTopOfLibrary { who: PlayerRef::You },
+                    Effect::If {
+                        cond: Predicate::EntityMatches {
+                            what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                            filter: cast_cw(),
+                        },
+                        then: Box::new(Effect::Move {
+                            what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                            to: ZoneDest::Hand(PlayerRef::You),
+                        }),
+                        else_: Box::new(Effect::MayDo {
+                            description: "Put the revealed card on the bottom of your library?".into(),
+                            body: Box::new(Effect::Move {
+                                what: Selector::TopOfLibrary { who: PlayerRef::You, count: Value::ONE },
+                                to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Bottom },
+                            }),
+                        }),
+                    },
+                ]),
             ),
             loyalty(
                 -3,

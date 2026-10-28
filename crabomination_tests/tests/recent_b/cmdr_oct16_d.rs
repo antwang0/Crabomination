@@ -1787,3 +1787,22 @@ fn savior_of_ollenbock_jails_on_training() {
     cast(&mut g, atlas, None);
     assert!(g.battlefield_find(atlas).unwrap().tapped);
 }
+
+/// Planar Atlas: "you may look at the top four … reveal up to one LAND card
+/// from among them, then put that card on top and the rest on the bottom" —
+/// it kept any one card, nonland too.
+#[test]
+fn planar_atlas_keeps_only_a_land_on_top() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for f in [catalog::grizzly_bears, catalog::lightning_bolt, catalog::mountain, catalog::grizzly_bears, catalog::island] {
+        g.add_card_to_library(0, f());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let atlas = g.add_card_to_hand(0, catalog::planar_atlas());
+    cast(&mut g, atlas, None);
+    let lib: Vec<&str> = g.players[0].library.iter().map(|c| c.definition.name).collect();
+    assert_eq!(lib[0], "Mountain", "the land kept on top: {lib:?}");
+    assert_eq!(lib[1], "Island", "the fifth card, untouched");
+    assert_eq!(lib.len(), 5);
+}

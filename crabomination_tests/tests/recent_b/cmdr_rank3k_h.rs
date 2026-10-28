@@ -263,6 +263,21 @@ fn ajani_sleeper_agent_digs_and_distributes() {
     );
 }
 
+/// Ajani's +1: a missed reveal "may" go to the bottom — declined, it stays on
+/// top (it always went to the bottom).
+#[test]
+fn ajani_sleeper_agent_may_keep_a_missed_reveal_on_top() {
+    let mut g = pod(2);
+    let ajani = ready(&mut g, 0, catalog::ajani_sleeper_agent());
+    g.players[0].library.clear();
+    let mountain = g.add_card_to_library(0, catalog::mountain());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    act(&mut g, GameAction::ActivateLoyaltyAbility { card_id: ajani, ability_index: 0, target: None, x_value: None });
+    assert!(g.players[0].hand.is_empty());
+    assert_eq!(g.players[0].library[0].id, mountain, "kept on top");
+}
+
 /// CR 613.1b — Magus of the Unseen borrows an opponent's artifact with haste.
 #[test]
 fn magus_of_the_unseen_borrows_an_artifact() {

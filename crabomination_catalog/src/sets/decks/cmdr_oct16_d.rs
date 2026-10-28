@@ -3499,11 +3499,19 @@ pub fn planar_atlas() -> CardDefinition {
         cost: cost(&[generic(2)]),
         card_types: vec![CardType::Artifact],
         static_abilities: vec![crate::sets::enters_tapped()],
-        triggered_abilities: vec![etb(Effect::LookTopKeepOneRestToGraveyard {
-            count: Value::Const(4),
-            who: None,
-            exile_rest: false,
-            rest_bottom_random: true,
+        // "You may look … reveal up to one land card … put that card on top
+        // and the rest on the bottom in a random order."
+        triggered_abilities: vec![etb(Effect::MayDo {
+            description: "Look at the top four cards of your library?".into(),
+            body: Box::new(Effect::LookPickToHand(Box::new(crate::effect::LookPick {
+                count: Value::Const(4),
+                take: Some(Value::ONE),
+                pick_filter: Some(R::Land),
+                optional: true,
+                keep_on_top: true,
+                rest_bottom_random: true,
+                ..Default::default()
+            }))),
         })],
         activated_abilities: vec![crate::sets::tap_add_colorless()],
         ..Default::default()
