@@ -21696,6 +21696,11 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RemoveAnyNumberOfCounters { what } => {
+                self.remove_any_number_of_counters(what, effect, ctx, events);
+                Ok(())
+            }
+
             Effect::MoveAnyNumberOfCounters { from, to, kind } => {
                 self.move_any_number_of_counters(from, to, *kind, effect, ctx, events);
                 Ok(())

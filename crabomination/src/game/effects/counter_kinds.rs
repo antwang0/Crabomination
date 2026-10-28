@@ -371,6 +371,69 @@ impl GameState {
         self.check_state_based_actions_mid_resolution(events);
     }
 
+    /// `Effect::RemoveAnyNumberOfCounters` (CR 122.8): for each permanent and
+    /// each kind on it, the controller says how many come off — all asks
+    /// first, then the removals. A headless seat strips the kinds the
+    /// permanent's controller doesn't want (a -1/-1 on a friend, a +1/+1 on a
+    /// foe) and leaves the rest.
+    pub(super) fn remove_any_number_of_counters(
+        &mut self,
+        what: &Selector,
+        effect: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) {
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let mut removals: Vec<(CardId, CounterKind, u32)> = Vec::new();
+        for id in self.permanents_of(what, ctx) {
+            for kind in self.counter_kinds_on(id) {
+                let Some(c) = self.battlefield_find(id) else { continue };
+                let have = match &kind {
+                    CounterKind::Plain(k) => c.counter_count(*k),
+                    CounterKind::Keyword(k) => c.keyword_counters.get(k).copied().unwrap_or(0),
+                };
+                let unwanted = kind.is_harmful() == self.same_team(c.controller, ctx.controller);
+                let prompt = format!("Remove how many {} counters from {}?", kind.label(), c.definition.name);
+                let ask = if unwanted {
+                    crate::decision::AmountKind::Upside
+                } else {
+                    crate::decision::AmountKind::Cost { free: 0 }
+                };
+                let Some(n) = self.ask_seat_amount(&mut cursor, ctx.controller, prompt, source, have, ask, effect)
+                else {
+                    return;
+                };
+                if n > 0 {
+                    removals.push((id, kind, n));
+                }
+            }
+        }
+        self.clear_answer_log();
+        for (id, kind, n) in removals {
+            let Some(c) = self.battlefield_find_mut(id) else { continue };
+            let ctrl = c.controller;
+            match kind {
+                CounterKind::Plain(k) => {
+                    let removed = c.remove_counters(k, n);
+                    if removed == 0 {
+                        continue;
+                    }
+                    events.push(GameEvent::CounterRemoved { card_id: id, counter_type: k, count: removed });
+                    self.counters_removed_this_effect += removed;
+                    if k == CounterType::Oil {
+                        self.players[ctrl].oil_activity_this_turn = true;
+                    }
+                }
+                CounterKind::Keyword(k) => {
+                    let removed = c.keyword_counters.remove_up_to(&k, n);
+                    self.counters_removed_this_effect += removed;
+                    self.board_instance_keywords = true;
+                }
+            }
+        }
+    }
+
     /// `Effect::MoveOneOfEachAbsentKind` (Goldberry): one counter of each kind
     /// on `from` that `to` lacks moves over — keyword counters included
     /// (CR 122.1b). CR 122.5: the moved counter is *put* on `to`, so the

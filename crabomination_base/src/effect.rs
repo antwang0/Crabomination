@@ -9998,6 +9998,11 @@ pub enum Effect {
     /// counter, the controller chooses how many move. `from` may name several
     /// permanents ("from among creatures you control"); `to` is never a source.
     /// `kind` limits it to one counter kind ("any number of +1/+1 counters").
+    /// CR 122.8 — "remove any number of counters from [what]" (Rhys, the
+    /// Evermore): per permanent and per kind (keyword counters too), the
+    /// controller says how many come off. Headless: every kind its owner
+    /// would rather lose, none of the rest.
+    RemoveAnyNumberOfCounters { what: Selector },
     MoveAnyNumberOfCounters {
         from: Selector,
         to: Selector,

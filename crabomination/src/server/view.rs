@@ -3017,7 +3017,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::AddCounter { .. } => "Add counter",
         Effect::RemoveCounter { .. } => "Remove counter",
         Effect::RemoveAnyCounter { .. } => "Remove a counter",
-        Effect::RemoveCountersUpTo { .. } => "Remove counters",
+        Effect::RemoveCountersUpTo { .. } | Effect::RemoveAnyNumberOfCounters { .. } => "Remove counters",
         Effect::ExileReturnNextEndStep { .. } | Effect::ExileReturnToOwnerNextEndStep { .. } => {
             "Flicker until end of turn"
         }
