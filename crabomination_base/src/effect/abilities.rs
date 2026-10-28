@@ -3693,7 +3693,8 @@ pub enum StaticEffect {
     /// CR 614 — "If damage would be dealt to you, put that many `kind`
     /// counters on this permanent instead" (Delaying Shield). With `one`,
     /// each damage event puts a single counter instead of that many (Nine
-    /// Lives' "prevent that damage and put an incarnation counter").
+    /// Lives' "prevent that damage and put an incarnation counter") — a
+    /// prevention (CR 615), so damage that can't be prevented is dealt.
     ReplaceDamageToYouWithCountersOnSource {
         kind: CounterType,
         #[serde(default)]

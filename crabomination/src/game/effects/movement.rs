@@ -162,11 +162,14 @@ impl GameState {
     /// mill, Crumbling Sanctuary's library exile, Delaying Shield's counters,
     /// Nefarious Lich's graveyard exile. `true` when one applied — the damage
     /// is not dealt. The noncombat and combat damage paths both ask this.
+    /// The two worded "prevent that damage" (The Mindskinner, Nine Lives) are
+    /// preventions (CR 615): damage from `source` that can't be prevented is dealt.
     pub(crate) fn replace_damage_to_player(
         &mut self,
         p: usize,
         amount: u32,
         dealer: Option<usize>,
+        source: Option<crate::card::CardId>,
         events: &mut Vec<GameEvent>,
     ) -> bool {
         // One lane read in front of the four player-damage
@@ -183,7 +186,9 @@ impl GameState {
             && amount > 0
             && let Some(dealer) = dealer
             && self.damage_to_opponent_becomes_mill(dealer, p)
+            && !self.damage_is_unpreventable_now(source)
         {
+            events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });
             self.mill_each_live_opponent(dealer, amount, events);
             return true;
         }
@@ -226,8 +231,11 @@ impl GameState {
                     }
                 })
             }).flatten()
-        }) {
+        }) && !(shield.2 && self.damage_is_unpreventable_now(source)) {
             let (cid, kind, one) = shield;
+            if one {
+                events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });
+            }
             let n = self.place_counters(cid, kind, if one { 1 } else { amount });
             if n > 0 {
                 events.push(GameEvent::CounterAdded {
@@ -2162,7 +2170,7 @@ impl GameState {
                 // Mindskinner, Crumbling Sanctuary, Delaying Shield,
                 // Nefarious Lich); combat damage takes the same walk.
                 let dealer = source.and_then(|src| self.battlefield_find(src).map(|c| c.controller));
-                if self.replace_damage_to_player(p, amount, dealer, events) {
+                if self.replace_damage_to_player(p, amount, dealer, source, events) {
                     return;
                 }
                 // Phyrexian Unlife — at ≤ 0 life all damage lands as poison.

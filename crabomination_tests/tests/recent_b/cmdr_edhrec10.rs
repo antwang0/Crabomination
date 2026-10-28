@@ -1805,6 +1805,20 @@ fn nine_lives_counts_down_to_a_loss() {
     assert!(!g.players[0].is_alive());
 }
 
+/// CR 615.12 — Nine Lives *prevents* (CR 615), so under "damage can't be
+/// prevented" the bolt is dealt and no counter goes on (it was a replacement).
+#[test]
+fn nine_lives_cannot_prevent_unpreventable_damage() {
+    let mut g = pod(2);
+    let nl = ready(&mut g, 0, catalog::nine_lives());
+    g.damage_cant_be_prevented_this_turn = true;
+    let life = g.players[0].life;
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, &[Target::Player(0)]).expect("bolt");
+    assert_eq!(g.players[0].life, life - 3);
+    assert_eq!(g.battlefield_find(nl).unwrap().counter_count(CounterType::Incarnation), 0);
+}
+
 /// Bag of Holding: a discarded card is exiled with it, and sacrificing it
 /// returns that card to hand.
 #[test]

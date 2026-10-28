@@ -2048,7 +2048,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Wernog, Rider's Chaplain~~ ✅ | fixed 2026-10-24: `TemptingOffer::declined` runs "loses 1 life" under each opponent who declined | — |
 | 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
 | 🟡 Fell Beast's Shriek | splice onto instant or sorcery isn't offered; a creature with hexproof or protection from the caster can't be the chosen one | `Keyword::Splice` takes a `SpellSubtype` quality (Arcane), not "instant or sorcery"; `OpponentChoosesPermanentThen` keeps only picks that are legal targets for the caster |
-| 🟡 Nine Lives | damage that can't be prevented still becomes an incarnation counter instead of being dealt | `ReplaceDamageToYouWithCountersOnSource` is a replacement (CR 614), not a prevention (CR 615) |
+| ~~Nine Lives~~ ✅ | fixed 2026-10-28: its replacement (and The Mindskinner's) is a prevention — unpreventable damage is dealt (CR 615.12) | — |
 | 🟡 Roshan, Hidden Magister | only creatures on the battlefield become Assassins (not creature spells or cards you own elsewhere) | `AddCreatureTypeToMatching` covers permanents; `OwnedCardsOffBattlefieldAreChosenTypeToo` reads a chosen type |
 | ~~Gandalf the White~~ ✅ | fixed 2026-10-24: `StaticEffect::DoubleControllerLeaveTriggers` doubles a trigger a leaving legendary permanent or artifact causes | — |
 | ~~Jade Monolith~~ ✅ | fixed 2026-10-25: `RedirectNextDamageTo { chosen_source }` keys the redirect on the source picked on resolution (Kor Chant shares it with `whole_turn`) — `jade_monolith_redirects_only_the_chosen_source` | — |

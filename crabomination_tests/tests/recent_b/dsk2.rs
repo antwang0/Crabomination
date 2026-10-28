@@ -195,6 +195,22 @@ fn mindskinner_mills_instead_of_burning() {
     assert_eq!(g.players[1].graveyard.len(), 3, "milled 3 instead");
 }
 
+/// CR 615.12 — The Mindskinner's "prevent that damage" is a prevention:
+/// damage that can't be prevented is dealt, and nothing is milled.
+#[test]
+fn mindskinner_deals_unpreventable_damage() {
+    let mut g = main_phase();
+    let skinner = g.add_card_to_battlefield(0, catalog::the_mindskinner());
+    for _ in 0..12 {
+        g.add_card_to_library(1, catalog::island());
+    }
+    g.damage_cant_be_prevented_this_turn = true;
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(1), 3, Some(skinner), &mut evs);
+    assert_eq!(g.players[1].life, 17);
+    assert!(g.players[1].graveyard.is_empty());
+}
+
 /// The Rollercrusher Ride doubles your noncombat damage under delirium.
 #[test]
 fn rollercrusher_ride_doubles_under_delirium() {

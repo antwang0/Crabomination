@@ -6313,7 +6313,7 @@ impl GameState {
                 // CR 614.1 — combat damage is damage too: The Mindskinner,
                 // Crumbling Sanctuary, Delaying Shield and Nefarious Lich
                 // replace it exactly as they replace a spell's.
-                if amount > 0 && self.replace_damage_to_player(p, amount, Some(atk.controller), events) {
+                if amount > 0 && self.replace_damage_to_player(p, amount, Some(atk.controller), Some(atk.id), events) {
                     return 0;
                 }
                 // CR 614 — Undead Alchemist: a matching attacker's combat
