@@ -37014,6 +37014,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SPIDER_MAN_8_COMMANDERS,
             main: decks::SPIDER_MAN_8_MAIN,
         },
+        // Seat 6094: Federation Fleet (Star Trek Commander precon). `--pod-decks 6094`.
+        PodDeck {
+            name: "Jean-Luc Picard, Luminary (WUR)",
+            commanders: decks::JEAN_LUC_PICARD_COMMANDERS,
+            main: decks::JEAN_LUC_PICARD_MAIN,
+        },
     ]
 }
 
@@ -45068,6 +45074,7 @@ mod tests {
             ("Stockman, Mad Fly-entist", &[0x21E1]),
             ("Molly Hayes, Runaway", &[0x21E2]),
             ("Spider-Man, Hometown Hero", &[0x21E3]),
+            ("Jean-Luc Picard, Luminary", &[0x21E4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

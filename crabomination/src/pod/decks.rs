@@ -171119,3 +171119,36 @@ pub const SPIDER_MAN_8_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const JEAN_LUC_PICARD_COMMANDERS: &[CardFactory] = &[jean_luc_picard_luminary];
+
+/// **Federation Fleet** (Star Trek Commander, TRC), card for card from the
+/// official decklist (magic.wizards.com, fetched 2026-10-28): 86 nonbasic
+/// cards + 5 Islands + 4 Plains + 4 Mountains = 99.
+pub const JEAN_LUC_PICARD_MAIN: &[CardFactory] = &[
+    captain_janeway_endgame, ambassador_kehleyr, beverly_crusher_ships_doctor,
+    dr_pulaski_cynical_clinician, ensign_harry_kim_operations, ezri_dax_newly_joined,
+    guinan_ancient_advisor, julian_bashir_frontier_doctor, spot_felis_catus,
+    u_s_s_enterprise_e_sovereign, chief_miles_obrien, data_exploring_humanity,
+    geordi_la_forge_innovator, kes_evolving_telepath, on_the_shoulders_of_giants,
+    seven_of_nine_tertiary_adjunct, temporal_tribulation, tuvok_chief_tactical_officer,
+    ro_laren_double_agent, rom_and_leeta_unlikely_pair, belanna_torres_scrapper,
+    cmdr_troi_outgoing_empath, commander_william_riker, reg_barclay_fidgety_fantasist,
+    tom_paris_risk_taker, unification, vic_fontaine_one_night_only, worf_son_of_mogh,
+    u_s_s_defiant_tough_little_ship, u_s_s_enterprise_c_time_tossed, u_s_s_prometheus_prototype,
+    u_s_s_stargazer_here_and_there, grand_crescendo, loran_of_the_third_path,
+    promise_of_loyalty, cryptic_command, chain_reaction, fevered_visions, fractured_identity,
+    supreme_verdict, alhammarrets_archive, howling_mine, battlefield_forge, clifftop_retreat,
+    coastal_peak, command_beacon, desolate_lighthouse, exotic_orchard, fabled_passage,
+    frostboil_snarl, furycalm_snarl, glacial_fortress, glittering_massif, irrigated_farmland,
+    port_town, prairie_stream, radiant_summit, scorched_geyser, sulfur_falls, training_center,
+    malfunctioning_holodeck, chronomantic_escape, swords_to_plowshares, frantic_search, negate,
+    pongify, abrade, thrill_of_possibility, faithful_mending, arcane_signet, commanders_sphere,
+    hedron_archive, mind_stone, sol_ring, stonespeaker_crystal, talisman_of_conviction,
+    talisman_of_creativity, talisman_of_progress, thought_vessel, command_tower, evolving_wilds,
+    mystic_monastery, path_of_ancestry, perilous_landscape, reliquary_tower,
+    terramorphic_expanse,
+    // Basics
+    island, island, island, island, island, plains, plains, plains, plains, mountain, mountain,
+    mountain, mountain,
+];

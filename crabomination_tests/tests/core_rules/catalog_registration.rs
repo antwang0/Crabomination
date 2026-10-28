@@ -2455,8 +2455,9 @@ fn every_card_carries_its_printed_numbers() {
         }
         if def.dynamic_pt.is_none() {
             // CR 721 — a Spacecraft is a 0/0 artifact until it stations; the
-            // printed P/T is the last band's, which is what the cache holds.
-            let station_pt = def.station.last().and_then(|b| b.pt);
+            // printed P/T is the last band that sets one (a later band may add
+            // only abilities — U.S.S. Prometheus), which is what the cache holds.
+            let station_pt = def.station.iter().rev().find_map(|b| b.pt);
             let (ours_p, ours_t) = station_pt.unwrap_or((def.power, def.toughness));
             for (field, ours) in [("power", ours_p), ("toughness", ours_t)] {
                 if let Some(printed) = numeric(entry.get(field))
