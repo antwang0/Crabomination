@@ -1440,3 +1440,6 @@ pub use trek_borg::*;
 #[path = "../../../src/sets/decks/trek_singles.rs"]
 mod trek_singles;
 pub use trek_singles::*;
+#[path = "../../../src/sets/decks/trek_singles2.rs"]
+mod trek_singles2;
+pub use trek_singles2::*;

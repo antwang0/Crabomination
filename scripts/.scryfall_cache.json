@@ -859630,5 +859630,567 @@
       "G"
     ],
     "layout": "normal"
+  },
+  "D-7 Battle Cruiser": {
+    "name": "D-7 Battle Cruiser",
+    "mana_cost": "{1}{R}",
+    "cmc": 2.0,
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "Station (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 8+.)\n3+ | At the beginning of combat on your turn, create a 2/1 red Klingon Warrior creature token with haste. Sacrifice it at the beginning of the next end step.\n8+ | Flying",
+    "power": "3",
+    "toughness": "3",
+    "keywords": [
+      "Station"
+    ],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "Dr. Joseph M'Benga": {
+    "name": "Dr. Joseph M'Benga",
+    "mana_cost": "{2}{G}{G}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Human Doctor",
+    "oracle_text": "Other creatures you control with counters on them have hexproof.\nIf you would put one or more counters on a creature you control, put twice that many of each of those kinds of counters on that creature instead.",
+    "power": "3",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "layout": "normal"
+  },
+  "Lt. Cmdr. Geordi La Forge": {
+    "name": "Lt. Cmdr. Geordi La Forge",
+    "mana_cost": "{2}{U}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Human Artificer",
+    "oracle_text": "If you would put one or more charge counters on an artifact you control, put twice that many charge counters on that artifact instead.",
+    "power": "3",
+    "toughness": "2",
+    "keywords": [],
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Nog, Ambitious Cadet": {
+    "name": "Nog, Ambitious Cadet",
+    "mana_cost": "{B}{G}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Ferengi Rogue",
+    "oracle_text": "Menace\n{1}: If Nog is a Rogue, he becomes a Ferengi Scout with base power and toughness 3/4 and gains \"Whenever Nog becomes tapped, surveil 2.\"\n{3}: If Nog is a Scout, he becomes a Ferengi Officer and gains \"You may play lands from your graveyard\" and \"You may play an additional land on each of your turns.\"",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [
+      "Surveil",
+      "Menace"
+    ],
+    "colors": [
+      "B",
+      "G"
+    ],
+    "color_identity": [
+      "B",
+      "G"
+    ],
+    "layout": "normal"
+  },
+  "Seven of Nine, Unassimilated": {
+    "name": "Seven of Nine, Unassimilated",
+    "mana_cost": "{1}{U}",
+    "cmc": 2.0,
+    "type_line": "Legendary Artifact Creature — Human Officer",
+    "oracle_text": "At the beginning of your first main phase, draw a card. Then discard a card unless you control five or more differently named lands.\n{6}{U}: Seven of Nine's base power and toughness become 7/9. Activate only if you control seven or more differently named lands.",
+    "power": "0",
+    "toughness": "4",
+    "keywords": [],
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Class-F Shuttlecraft": {
+    "name": "Class-F Shuttlecraft",
+    "mana_cost": "{3}",
+    "cmc": 3.0,
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "{T}: Add one mana of any color.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 6+.)\n6+ | Flying, vigilance",
+    "power": "2",
+    "toughness": "4",
+    "keywords": [
+      "Station"
+    ],
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Data, New Life": {
+    "name": "Data, New Life",
+    "mana_cost": "{1}{U}",
+    "cmc": 2.0,
+    "type_line": "Legendary Artifact Creature — Android Scientist",
+    "oracle_text": "Whenever you draw a card, put a +1/+1 counter on Data.",
+    "power": "0",
+    "toughness": "1",
+    "keywords": [],
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Lieutenant Commander Data": {
+    "name": "Lieutenant Commander Data",
+    "mana_cost": "{2}{U}",
+    "cmc": 3.0,
+    "type_line": "Legendary Artifact Creature — Android Scientist",
+    "oracle_text": "Whenever a player casts a noncreature spell, put a +1/+1 counter on Lieutenant Commander Data.\n{1}, Remove three counters from among creatures you control: Draw a card.",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [],
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Starfleet Academy": {
+    "name": "Starfleet Academy",
+    "mana_cost": "",
+    "cmc": 0.0,
+    "type_line": "Legendary Land",
+    "oracle_text": "{T}: Add {C}.\nFederation — {5}, {T}: Choose a color. Add an amount of mana of that color equal to the number of creature types among non-Borg creatures you control.",
+    "keywords": [],
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "C",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Federation Outpost": {
+    "name": "Federation Outpost",
+    "mana_cost": "",
+    "cmc": 0.0,
+    "type_line": "Land",
+    "oracle_text": "This land enters tapped unless you control two or more other lands.\nWhen this land enters untapped, choose one —\n• You gain 2 life.\n• Surveil 1.\n{T}: Add {W}.",
+    "keywords": [
+      "Surveil"
+    ],
+    "colors": [],
+    "color_identity": [
+      "W"
+    ],
+    "produced_mana": [
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Ensign Pavel Chekov": {
+    "name": "Ensign Pavel Chekov",
+    "mana_cost": "{3}{U}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Human Pilot",
+    "oracle_text": "Strange new worlds — When Ensign Chekov enters, each opponent exiles the top X cards of their library, where X is the number of differently named lands you control. For each opponent, choose a land card that player owns exiled this way. You may play the chosen cards for as long as they remain exiled.",
+    "power": "1",
+    "toughness": "5",
+    "keywords": [
+      "Strange new worlds"
+    ],
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Starfleet Communicator": {
+    "name": "Starfleet Communicator",
+    "mana_cost": "{3}",
+    "cmc": 3.0,
+    "type_line": "Artifact — Communicator Equipment",
+    "oracle_text": "When you cast this spell, copy it. (The copy becomes a token.)\nEquipped creature has \"Whenever this creature attacks, draw X cards, then you may put up to X land cards from your hand onto the battlefield tapped, where X is the number of other creatures you control with a Communicator attached to them.\"\nEquip {1}",
+    "keywords": [
+      "Equip"
+    ],
+    "colors": [],
+    "color_identity": [],
+    "layout": "normal"
+  },
+  "Gwyndala, the Progeny": {
+    "name": "Gwyndala, the Progeny",
+    "mana_cost": "{1}{U}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Vau-N'Akat Advisor",
+    "oracle_text": "When Gwyndala enters, create a colorless Equipment artifact token named Neuroflux Heirloom with \"Equipped creature gets +1/+1\" and equip {2}. Attach it to Gwyndala.\n{2}: Each Equipment token you control becomes a copy of target Equipment you control until end of turn.",
+    "power": "1",
+    "toughness": "1",
+    "keywords": [],
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Jadzia Dax, Living Legacy": {
+    "name": "Jadzia Dax, Living Legacy",
+    "mana_cost": "{1}{G}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Trill Scientist",
+    "oracle_text": "At the beginning of your first main phase, put a +1/+1 counter on Jadzia Dax, then add an amount of {G} equal to the number of counters on her.\nTransfer Symbiont — {2}{G}, Discard this card: Put two +1/+1 counters on target creature.",
+    "power": "0",
+    "toughness": "1",
+    "keywords": [],
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "produced_mana": [
+      "G"
+    ],
+    "layout": "normal"
+  },
+  "Sarek, Federation Ambassador": {
+    "name": "Sarek, Federation Ambassador",
+    "mana_cost": "{1}{G}{W}{U}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Vulcan Advisor",
+    "oracle_text": "Federation — At the beginning of combat on your turn, draw a card for every five creature types among non-Borg creatures you control. If you draw three or more cards this way, put two +1/+1 counters on each creature you control.",
+    "power": "0",
+    "toughness": "5",
+    "keywords": [],
+    "colors": [
+      "G",
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "U",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Captain Jonathan Archer": {
+    "name": "Captain Jonathan Archer",
+    "mana_cost": "{2}{G}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Human Officer",
+    "oracle_text": "When Captain Archer enters, create Porthos, a legendary 1/1 green Dog creature token.\nFederation — {G}, {T}: Target creature you control gets +X/+X until end of turn, where X is the number of creature types among non-Borg creatures you control. Activate only as a sorcery.",
+    "power": "3",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "layout": "normal"
+  },
+  "Quark, Humble Proprietor": {
+    "name": "Quark, Humble Proprietor",
+    "mana_cost": "{2}{R}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Ferengi Rogue",
+    "oracle_text": "You can't sacrifice Treasure tokens.\nAt the beginning of each upkeep, create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+    "power": "1",
+    "toughness": "2",
+    "keywords": [
+      "Treasure"
+    ],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Quark's Bar": {
+    "name": "Quark's Bar",
+    "mana_cost": "",
+    "cmc": 0.0,
+    "type_line": "Land",
+    "oracle_text": "This land enters tapped unless you control two or more other lands.\nWhen this land enters untapped, choose one —\n• This land deals 1 damage to each opponent.\n• Surveil 1.\n{T}: Add {R}.",
+    "keywords": [
+      "Surveil"
+    ],
+    "colors": [],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "Excalbian Gamemaster": {
+    "name": "Excalbian Gamemaster",
+    "mana_cost": "{5}{W}",
+    "cmc": 6.0,
+    "type_line": "Creature — Excalbian",
+    "oracle_text": "Strange new worlds — When this creature enters, create X 1/1 red Officer creature tokens, where X is the number of differently named lands you control.\nWhenever this creature or another creature you control dies, put a +1/+1 counter on target creature you control.",
+    "power": "6",
+    "toughness": "6",
+    "keywords": [
+      "Strange new worlds"
+    ],
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Khan, Vengeful Heart": {
+    "name": "Khan, Vengeful Heart",
+    "mana_cost": "{2}{B}{B}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Human Warrior",
+    "oracle_text": "When Khan enters, you may sacrifice another creature or artifact. If you do, draw two cards.\nYou may cast this card from exile.",
+    "power": "5",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "layout": "normal"
+  },
+  "Sela, Tal Shiar Paradox": {
+    "name": "Sela, Tal Shiar Paradox",
+    "mana_cost": "{3}{B}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Romulan Human Rogue",
+    "oracle_text": "Whenever Sela attacks, exile up to one target card from a graveyard.\nWhenever one or more cards leave your graveyard, create a tapped 2/2 black Romulan creature token.",
+    "power": "3",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "layout": "normal"
+  },
+  "Zero, Incorporeal Sensate": {
+    "name": "Zero, Incorporeal Sensate",
+    "mana_cost": "{1}{W/B}{W/B}",
+    "cmc": 3.0,
+    "type_line": "Legendary Artifact Creature — Medusan Scientist",
+    "oracle_text": "Lifelink\nWhen Zero enters, look at target opponent's hand. You may exile a nonland card from it. For as long as that card remains exiled, its owner may play it. A spell cast this way costs {2} more to cast.",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [
+      "Lifelink"
+    ],
+    "colors": [
+      "B",
+      "W"
+    ],
+    "color_identity": [
+      "B",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Jake Sisko, War Correspondent": {
+    "name": "Jake Sisko, War Correspondent",
+    "mana_cost": "{1}{G}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Human Citizen",
+    "oracle_text": "Landfall — Whenever a land you control enters, you gain 1 life. If this is the second time this ability has resolved this turn, investigate. (Create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [
+      "Investigate",
+      "Landfall"
+    ],
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "layout": "normal"
+  },
+  "Dal R'El, Augment Orphan": {
+    "name": "Dal R'El, Augment Orphan",
+    "mana_cost": "{1}{R}{G}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Human Mutant Rogue",
+    "oracle_text": "Landfall — Whenever a land you control enters, add {R} or {G}.\n{3}, Sacrifice a land: Draw a card.",
+    "power": "3",
+    "toughness": "3",
+    "keywords": [
+      "Landfall"
+    ],
+    "colors": [
+      "G",
+      "R"
+    ],
+    "color_identity": [
+      "G",
+      "R"
+    ],
+    "produced_mana": [
+      "G",
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "Exploratory Mission": {
+    "name": "Exploratory Mission",
+    "mana_cost": "{2}{R}{R}",
+    "cmc": 4.0,
+    "type_line": "Enchantment",
+    "oracle_text": "Landfall — Whenever a land you control enters, put a quest counter on this enchantment. Then exile cards from the top of your library until you exile a nonland card. You may play that card this turn. If this enchantment has five or more quest counters on it, add {R}{R}.",
+    "keywords": [
+      "Landfall"
+    ],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "produced_mana": [
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "Gray and Adira, Forever Joined": {
+    "name": "Gray and Adira, Forever Joined",
+    "mana_cost": "{2}{U/R}{U/R}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Trill Human Officer",
+    "oracle_text": "At the beginning of combat on your turn, if you've cast a noncreature spell this turn, create a token that's a copy of target creature you control, except it isn't legendary. It gains haste until end of turn. Sacrifice it at the beginning of the next end step.",
+    "power": "2",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "R",
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Spock, Always Your Friend": {
+    "name": "Spock, Always Your Friend",
+    "mana_cost": "{U}{R}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Vulcan Human Scientist",
+    "oracle_text": "When Spock enters, look at the top four cards of your library. You may reveal a noncreature, nonland card from among them and put it into your hand. Put the rest on the bottom of your library in any order.",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [],
+    "colors": [
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "R",
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Peace in Our Time": {
+    "name": "Peace in Our Time",
+    "mana_cost": "{3}{W}",
+    "cmc": 4.0,
+    "type_line": "Enchantment",
+    "oracle_text": "At the beginning of combat on each player's turn, that player may draw a card. If they do, they can't attack this turn and you put a peace counter on this enchantment.\nAt the beginning of your upkeep, if this enchantment has twelve or more peace counters on it, you win the game.",
+    "keywords": [],
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Guiding Hydra": {
+    "name": "Guiding Hydra",
+    "mana_cost": "{X}{W}",
+    "cmc": 1.0,
+    "type_line": "Creature — Hydra Horror",
+    "oracle_text": "This creature enters with X +1/+1 counters on it.\nAt the beginning of combat on your turn, you may remove a +1/+1 counter from this creature. If you do, put a +1/+1 counter on each other creature you control.",
+    "power": "1",
+    "toughness": "0",
+    "keywords": [],
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Simulacrum Shaper": {
+    "name": "Simulacrum Shaper",
+    "mana_cost": "{1}{G}{G}",
+    "cmc": 3.0,
+    "type_line": "Creature — Elf Druid",
+    "oracle_text": "When this creature enters, you may search your library for a basic land card, put that card onto the battlefield tapped, then shuffle.\nWhen this creature dies, draw a card.",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [],
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "layout": "normal"
   }
 }

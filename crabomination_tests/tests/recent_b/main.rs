@@ -394,3 +394,4 @@ mod trek_federation;
 mod trek_klingon;
 mod trek_borg;
 mod trek_singles;
+mod trek_singles2;
