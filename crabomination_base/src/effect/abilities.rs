@@ -5373,6 +5373,10 @@ pub struct ActivatedAbility {
     /// matching graveyard card, else one permanent. Defaults to None.
     #[serde(default)]
     pub craft_exile_cost: Option<(SelectionRequirement, u32)>,
+    /// "Craft with N **or more**" (The Enigma Jewel): N is a floor, and the
+    /// auto-picker exiles every matching graveyard card past it.
+    #[serde(default)]
+    pub craft_or_more: bool,
     /// CR 702.167a — "Craft with a Dinosaur, a Merfolk, a Pirate, and a
     /// Vampire": one distinct object per requirement, each from among
     /// permanents you control and/or cards in your graveyard (Throne of the

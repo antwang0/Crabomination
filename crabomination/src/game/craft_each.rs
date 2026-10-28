@@ -126,6 +126,7 @@ impl GameState {
         source: CardId,
         filter: &SelectionRequirement,
         count: u32,
+        or_more: bool,
     ) -> Option<Vec<(CardId, bool)>> {
         let gy: Vec<CardId> = self.players[p]
             .graveyard
@@ -160,6 +161,7 @@ impl GameState {
         if gy.len() + bf.len() < count {
             return None;
         }
+        let count = if or_more { count.max(gy.len()) } else { count };
         let mut picks: Vec<(CardId, bool)> = gy.into_iter().take(count).map(|id| (id, true)).collect();
         if picks.len() < count {
             let need = count - picks.len();

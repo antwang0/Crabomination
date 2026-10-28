@@ -111,7 +111,7 @@ pub(super) fn pick_craft_into_creature(state: &GameState, seat: usize) -> Option
             let picks = if !ab.craft_exile_each.is_empty() {
                 state.craft_each_picks(seat, card.id, &ab.craft_exile_each)
             } else if let Some((filter, n)) = ab.craft_exile_cost.as_ref() {
-                state.craft_cost_picks(seat, card.id, filter, *n)
+                state.craft_cost_picks(seat, card.id, filter, *n, ab.craft_or_more)
             } else {
                 None
             };

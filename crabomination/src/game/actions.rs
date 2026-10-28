@@ -23664,7 +23664,8 @@ impl GameState {
         let craft_exile_picks: Vec<(CardId, bool)> = if let Some((filter, count)) =
             ability.craft_exile_cost.as_ref()
         {
-            self.craft_cost_picks(p, card_id, filter, *count).ok_or(GameError::SelectionRequirementViolated)?
+            self.craft_cost_picks(p, card_id, filter, *count, ability.craft_or_more)
+                .ok_or(GameError::SelectionRequirementViolated)?
         } else if !ability.craft_exile_each.is_empty() {
             self.craft_each_picks(p, card_id, &ability.craft_exile_each)
                 .ok_or(GameError::SelectionRequirementViolated)?
