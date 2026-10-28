@@ -15397,6 +15397,7 @@ pub fn static_effect_changes_creature_types(effect: &StaticEffect) -> bool {
         // the hidden-zone evaluator to look (`off_battlefield_type_grants`).
         | SE::YourGraveyardCreaturesHaveChosenType
         | SE::OwnedCardsOffBattlefieldAreChosenTypeToo { .. }
+        | SE::OwnedCardsOffBattlefieldAreTypeToo { .. }
         | SE::OwnedCardsOffBattlefieldAreEveryCreatureType { .. } => true,
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }

@@ -36581,6 +36581,7 @@ fn static_effect_to_effects(
             // card evaluator (`off_battlefield_type_grants`); no layer effect.
             | StaticEffect::YourGraveyardCreaturesHaveChosenType
             | StaticEffect::OwnedCardsOffBattlefieldAreChosenTypeToo { .. }
+            | StaticEffect::OwnedCardsOffBattlefieldAreTypeToo { .. }
             | StaticEffect::OwnedCardsOffBattlefieldAreEveryCreatureType { .. }
             | StaticEffect::OwnedLandCardsOffBattlefieldHaveLandType(_)
             | StaticEffect::OwnedCardsOffBattlefieldHaveCardType { .. }

@@ -223,6 +223,11 @@ impl GameState {
                     {
                         out.chosen.extend(c.chosen_creature_type);
                     }
+                    SE::OwnedCardsOffBattlefieldAreTypeToo { filter, creature_type }
+                        if self.evaluate_requirement_on_card(filter, card, who) =>
+                    {
+                        out.chosen.push(*creature_type);
+                    }
                     SE::OwnedCardsOffBattlefieldAreEveryCreatureType { filter }
                         if self.evaluate_requirement_on_card(filter, card, who) =>
                     {

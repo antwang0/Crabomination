@@ -2455,6 +2455,10 @@ pub enum StaticEffect {
     /// of Transformation). Pairs with `MatchingAreChosenTypeToo` for the
     /// battlefield half, which layers handle.
     OwnedCardsOffBattlefieldAreChosenTypeToo { filter: SelectionRequirement },
+    /// The fixed-type sibling: matching creature spells you control and cards
+    /// you own off the battlefield are `creature_type` too (Roshan, Hidden
+    /// Magister's Assassins; the battlefield half is `AddCreatureTypeToMatching`).
+    OwnedCardsOffBattlefieldAreTypeToo { filter: SelectionRequirement, creature_type: crate::card::CreatureType },
     /// Maskwood Nexus's off-battlefield half: matching creature spells you
     /// control and cards you own that aren't on the battlefield are every
     /// creature type (CR 205.3). The battlefield half is a changeling grant.
