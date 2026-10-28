@@ -2223,6 +2223,7 @@ impl Effect {
             Effect::EscalatingThisTurn { modes } => modes.iter().any(|e| e.requires_target()),
             Effect::EachPlayerMayPutPermanentFromHand { .. } => false,
             Effect::BecomeChosenColor { what, .. }
+            | Effect::BecomeChosenColors { what, .. }
             | Effect::BecomeChosenCreatureType { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::BecomeLegendary { what, .. }
@@ -3529,6 +3530,7 @@ impl Effect {
             | Effect::AddCardTypeIndefinitely { what, .. }
             | Effect::LoseCardTypeUntilEot { what, .. }
             | Effect::BecomeChosenColor { what, .. }
+            | Effect::BecomeChosenColors { what, .. }
             | Effect::BecomeChosenCreatureType { what, .. }
             | Effect::BecomeColor { what, .. }
             | Effect::BecomeLegendary { what, .. }
@@ -6040,6 +6042,7 @@ impl Effect {
                 | Effect::AddMissingCounterKindFromYours { what }
                 | Effect::ExileSameNameInvestigate { what }
                 | Effect::BecomeChosenColor { what, .. }
+                | Effect::BecomeChosenColors { what, .. }
                 | Effect::BecomeChosenCreatureType { what, .. }
                 | Effect::BecomeColor { what, .. }
                 | Effect::BecomeLegendary { what, .. }

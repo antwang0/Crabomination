@@ -20009,7 +20009,8 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::BecomeChosenColor { what, duration } => {
+            Effect::BecomeChosenColor { what, duration } | Effect::BecomeChosenColors { what, duration } => {
+                let several = matches!(effect, Effect::BecomeChosenColors { .. });
                 let duration_kind = self.effect_duration_for(*duration, ctx.controller);
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
@@ -20029,6 +20030,7 @@ impl GameState {
                         Color::ALL.iter().copied().filter(|c| !already.contains(c)).collect();
                     let legal = if legal.is_empty() { Color::ALL.to_vec() } else { legal };
                     let color = self.chosen_color_for_source(ctx.controller, Some(source), &legal);
+                    let colors = if several { self.chosen_color_set(source, color) } else { vec![color] };
                     let ts = self.next_timestamp();
                     self.add_continuous_effect(ContinuousEffect {
                         timestamp: ts,
@@ -20037,7 +20039,7 @@ impl GameState {
                         layer: Layer::L5Color,
                         sublayer: None,
                         duration: duration_kind.clone(),
-                        modification: Modification::SetColors(vec![color]),
+                        modification: Modification::SetColors(colors),
                     });
                 }
                 Ok(())

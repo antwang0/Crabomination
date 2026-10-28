@@ -3217,7 +3217,9 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         | Effect::BecomeChosenColorWithHexproof { .. }
         | Effect::GrantProtectionFromColorsOf { .. } => "Grant protection",
         Effect::BecomeChosenCreatureType { .. } => "Change creature type",
-        Effect::BecomeChosenColor { .. } | Effect::BecomeColor { .. } => "Change colour",
+        Effect::BecomeChosenColor { .. } | Effect::BecomeChosenColors { .. } | Effect::BecomeColor { .. } => {
+            "Change colour"
+        }
         Effect::RedirectNextDamage { .. } | Effect::RedirectNextDamageTo { .. } => {
             "Redirect damage"
         }

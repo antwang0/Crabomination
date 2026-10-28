@@ -4883,6 +4883,33 @@ impl crate::game::GameState {
         }
     }
 
+    /// "The color or colors of your choice": a ballot of every nonempty set of
+    /// colors, `best` alone first — what a headless seat (or one answering
+    /// out of range) names.
+    pub(crate) fn chosen_color_set(&mut self, source: CardId, best: ManaColor) -> Vec<ManaColor> {
+        if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
+            return vec![best];
+        }
+        let subset = |m: u8| -> Vec<ManaColor> {
+            ManaColor::ALL.iter().enumerate().filter(|(i, _)| m & (1 << i) != 0).map(|(_, c)| *c).collect()
+        };
+        let sets: Vec<Vec<ManaColor>> = std::iter::once(vec![best])
+            .chain((1u8..32).map(subset).filter(|set| set.as_slice() != [best]))
+            .collect();
+        let options = sets
+            .iter()
+            .map(|set| set.iter().map(|c| format!("{c:?}")).collect::<Vec<_>>().join(" and "))
+            .collect();
+        match self.decider.decide(&crate::decision::Decision::ChooseOption {
+            source,
+            prompt: "Choose a color or colors".into(),
+            options,
+        }) {
+            crate::decision::DecisionAnswer::Amount(i) => sets.get(i as usize).cloned().unwrap_or(vec![best]),
+            _ => vec![best],
+        }
+    }
+
     /// The color words a permanent actually prints (CR 612.2) — today the
     /// `Protection(color)` keywords, the only place a color word appears in a
     /// modeled rules text.
