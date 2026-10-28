@@ -19,7 +19,8 @@ Moved to `SHIPPED.md` (size trigger). Check it before proposing anything.
 The map for the next Commander run — **audited 2026-09-18 against the tree and
 against the shipped CR text (now `crabomination/MagicCompRules_20260925.txt`; the 2026-09-25 edition replaced 2026-04-17 on 2026-09-28 — its 605.1a / 800.4i / battle changes are in), not
 against this file's history**. Don't re-audit; update rows as they move.
-Per-deck card completion lives in `DECK_FEATURES.md`. Last touched 2026-10-28 by `01WRuXc2p1` (ENGINE_BACKLOG
+Per-deck card completion lives in `DECK_FEATURES.md`. Last touched 2026-10-28 by `01WRuXc2pR` (no row moved: `Effect::RevealUntilMayCastFree`, and a 3,100-game
+random-sample pod smoke over all 6,093 seats at 3-8 seats — 0 panics, TODO's Commander NEXT line 3) and before that by `01WRuXc2p1` (ENGINE_BACKLOG
 `01WRuXc2p1`: no row moved — CR 611.2b control-bound may-play grants, CR 702.95e soulbond on a control change, a
 prompting seat's loyalty extra targets, two pod-found bot losses and an "add X mana" OOM).
 
