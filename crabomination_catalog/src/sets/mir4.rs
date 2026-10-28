@@ -418,7 +418,7 @@ pub fn prismatic_lace() -> CardDefinition {
     instant(
         "Prismatic Lace",
         cost(&[u()]),
-        Effect::BecomeChosenColor {
+        Effect::BecomeChosenColors {
             what: target_filtered(R::Permanent),
             duration: Duration::Permanent,
         },

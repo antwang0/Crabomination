@@ -951,7 +951,7 @@ pub fn govern_the_guildless() -> CardDefinition {
         },
         activated_abilities: vec![forecast(
             cost(&[generic(1), u()]),
-            Effect::BecomeChosenColor {
+            Effect::BecomeChosenColors {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
             },

@@ -116,7 +116,7 @@ pub fn quickchange() -> CardDefinition {
         cost: cost(&[generic(1), u()]),
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
-            Effect::BecomeChosenColor {
+            Effect::BecomeChosenColors {
                 what: target_filtered(R::Creature),
                 duration: Duration::EndOfTurn,
             },

@@ -964,14 +964,14 @@ pub fn scorn_effigy() -> CardDefinition {
 }
 
 /// Scuttlemutt — {3} 2/2. {T}: any color; {T}: a creature becomes the color
-/// of your choice until end of turn.
+/// or colors of your choice until end of turn.
 pub fn scuttlemutt() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![
             ActivatedAbility { tap_cost: true, effect: any_color_mana(), ..Default::default() },
             ActivatedAbility {
                 tap_cost: true,
-                effect: Effect::BecomeChosenColor { what: target_filtered(R::Creature), duration: Duration::EndOfTurn },
+                effect: Effect::BecomeChosenColors { what: target_filtered(R::Creature), duration: Duration::EndOfTurn },
                 ..Default::default()
             },
         ],

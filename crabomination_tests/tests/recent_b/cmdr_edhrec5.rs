@@ -1447,3 +1447,19 @@ fn breeches_picks_a_new_mode_per_pirate() {
     let impulses = g.exile.iter().filter(|c| c.may_play_until.is_some()).count();
     assert!(treasures <= 1 && impulses <= 1, "no mode twice: {treasures} {impulses}");
 }
+
+/// Scuttlemutt: "the color or colors of your choice" — any nonempty set (it
+/// named one): Red is the heuristic pick, the ballot's fourth set is white
+/// and blue.
+#[test]
+fn scuttlemutt_paints_a_creature_two_colors() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let mutt = ready(&mut g, 0, catalog::scuttlemutt());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Color(Color::Red), DecisionAnswer::Amount(3)]));
+    activate(&mut g, mutt, 1, Some(Target::Permanent(bear))).expect("paint");
+    let cp = g.computed_permanent(bear).unwrap();
+    assert!(cp.colors.contains(Color::White) && cp.colors.contains(Color::Blue));
+    assert!(!cp.colors.contains(Color::Green));
+}

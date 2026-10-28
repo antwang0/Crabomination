@@ -342,7 +342,7 @@ pub fn dream_coat() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             once_per_turn: true,
-            effect: Effect::BecomeChosenColor { what: host(), duration: Duration::Permanent },
+            effect: Effect::BecomeChosenColors { what: host(), duration: Duration::Permanent },
             ..Default::default()
         }],
         ..aura("Dream Coat", cost(&[u()]), R::Creature)
