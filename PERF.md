@@ -3136,6 +3136,16 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-28 (Commander run, `01WRuXc2pR`) — guardrail; one resolver off the hot paths
+
+New: `Effect::RevealUntilMayCastFree` (Treasure Keeper, Neera — neither in the fixed pool); no shared path touched.
+`release` bot_ladder at `db5d546c3`, 4-core box, nothing else running:
+
+```
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism
+                 ok (all pairs split); peak_rss_mib 48.4; 214.7 games/s (3 threads; box differs from the row below)
+```
+
 ### 2026-10-28 (Commander run, `01WRuXc3Wv`) — guardrail; card primitives off the hot paths
 
 New on paths a 2-player game can reach: `replace_damage_to_player` takes the damage source and, under the damage-replacement
