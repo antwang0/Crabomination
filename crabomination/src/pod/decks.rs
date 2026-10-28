@@ -172414,3 +172414,59 @@ pub const U_S_S_PROMETHEUS_MAIN: &[CardFactory] = &[
     wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
     wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
 ];
+
+pub const QUARK_COMMANDERS: &[CardFactory] = &[quark_humble_proprietor];
+
+/// **Quark, Humble Proprietor**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Mountains = 99.
+/// Quark, Humble Proprietor (EDHREC, fetched 2026-10-28).
+pub const QUARK_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, arc_reactor, arcane_signet, blinkmoth_urn, brotherhood_vertibird,
+    clock_of_omens, dowsing_device, dragonspark_reactor, idol_of_oblivion, improvised_arsenal,
+    inspiring_statuary, nettlecyst, ruby_medallion, sol_ring, the_one_ring, the_reaver_cleaver,
+    fomori_vault, great_furnace, inventors_fair, quarks_bar, secluded_starforge, treasure_vault,
+    urzas_saga, war_room, academy_manufactor, chiss_goria_forge_tyrant, craterclaw_colossus,
+    depthshaker_titan, draconic_visitor, fathom_fleet_swordjack, goldspan_dragon,
+    hydra_assault_robot, hedron_detonator, hellkite_tyrant, ingenious_artillerist,
+    knuckles_the_echidna, machinesmith_automaton, magda_brazen_outlaw, memnarch_the_warden,
+    panther_robot, professional_face_breaker, quicksmith_genius, reckless_fireweaver,
+    smaug_the_magnificent, storm_kiln_artist, stridehangar_automaton, sunshot_militia,
+    weftstalker_ardent, xorn, alchemists_talent, descent_into_avernus, ghirapur_aether_grid,
+    shiny_impetus, spiteful_banditry, abrade, big_score, bottle_cap_blast, chaos_warp,
+    deflecting_swat, demand_answers, lightning_bolt, unexpected_windfall, untimely_malfunction,
+    tezzeret_cruel_captain, blasphemous_act, crackle_with_power, faithless_looting, jeskas_will,
+    saheelis_directive, seize_the_spoils, strike_it_rich, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const WORF_3_COMMANDERS: &[CardFactory] = &[worf_intelligence_contractor];
+
+/// **Worf, Intelligence Contractor**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Worf, Intelligence Contractor (EDHREC, fetched 2026-10-28).
+pub const WORF_3_MAIN: &[CardFactory] = &[
+    altar_of_the_brood, arcane_signet, ashnods_altar, bag_end_banquet, chrome_mox,
+    conquerors_flail, cursed_mirror, fellwar_stone, heirloom_blade, lions_eye_diamond,
+    liquimetal_torque, mana_vault, mox_diamond, phyrexian_altar, relic_of_legends,
+    ruby_medallion, sol_ring, sundial_of_the_infinite, vessel_of_endless_rest,
+    nykthos_shrine_to_nyx, valakut_the_molten_pinnacle, academy_manufactor, agate_instigator,
+    anjes_ravager, ardent_elementalist, blast_furnace_hellkite, byway_barterer,
+    cavern_hoard_dragon, chrome_dome, conspiracy_theorist, dark_dweller_oracle,
+    draconautics_engineer, dualcaster_mage, goblin_engineer, goblin_matron, goblin_welder,
+    goldspan_dragon, herigast_erupting_nullkite, hexing_squelcher, humble_defector,
+    imperial_recruiter, knuckles_the_echidna, magda_brazen_outlaw, pinnacle_monk,
+    professional_face_breaker, quark_humble_proprietor, ragavan_nimble_pilferer,
+    raphael_the_nightwatcher, smaug_the_magnificent, tempestra_dame_of_games,
+    vindictive_flamestoker, voldaren_epicure, yuffie_materia_hunter, curse_of_opulence,
+    underworld_breach, final_fortune, fury_storm, pyroblast, raphaels_technique,
+    red_elemental_blast, shellshock, karn_the_great_creator, gamble, grapeshot, hex_magic,
+    jeskas_will, mega_flare, molten_duplication, twinflame, warriors_oath, wheel_of_fortune,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

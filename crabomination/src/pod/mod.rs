@@ -37284,6 +37284,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::U_S_S_PROMETHEUS_COMMANDERS,
             main: decks::U_S_S_PROMETHEUS_MAIN,
         },
+        // Seat 6139: Quark, Humble Proprietor's EDHREC average deck. `--pod-decks 6139`.
+        PodDeck {
+            name: "Quark, Humble Proprietor (R)",
+            commanders: decks::QUARK_COMMANDERS,
+            main: decks::QUARK_MAIN,
+        },
+        // Seat 6140: Worf, Intelligence Contractor's EDHREC average deck. `--pod-decks 6140`.
+        PodDeck {
+            name: "Worf, Intelligence Contractor (R)",
+            commanders: decks::WORF_3_COMMANDERS,
+            main: decks::WORF_3_MAIN,
+        },
     ]
 }
 
@@ -45383,6 +45395,8 @@ mod tests {
             ("Seven of Nine, Unassimilated", &[0x220E]),
             ("Spock, Logical Choice", &[0x220F]),
             ("U.S.S. Prometheus, Prototype", &[0x2210]),
+            ("Quark, Humble Proprietor", &[0x2211]),
+            ("Worf, Intelligence Contractor", &[0x2212]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
