@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-28 (Commander run, `01WRuXc3Wv`) — 26 seated-deck rows, seven primitives, a prevention class](#fixedopen-2026-10-28-commander-run-01wruxc3wv--26-seated-deck-rows-seven-primitives-a-prevention-class) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6pH`) — seven primitives, 19 seated-deck rows, stale docs](#fixedopen-2026-10-27-commander-run-01wruxc6ph--seven-primitives-19-seated-deck-rows-stale-docs) | 34 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6yK`) — emblem abilities, the Revolt funnel class, five primitives](#fixedopen-2026-10-27-commander-run-01wruxc6yk--emblem-abilities-the-revolt-funnel-class-five-primitives) | 28 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc5`) — 70 seated-deck residuals, two primitives, the creature-damage watcher class](#fixedopen-2026-10-27-commander-run-01wruxc5--70-seated-deck-residuals-two-primitives-the-creature-damage-watcher-class) | 37 |
@@ -291,6 +292,37 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 **`013mwV6T`'s gates line, moved verbatim from TODO's Commander NEXT by `01M3bbRx`:**
 
 **Gates (`013mwV6T`):** full suite (`CRAB_ANSWER_LOG=strict`) found two failures from this run's changes (Livio's bot shape, the granted-trigger READS census), both fixed; the final full run (after the loyalty-protection fix, tip `b313ba94b` + trackers) read **28,992 / 0 / 7**; workspace clippy **0**; `--bench` byte-identical again at it, cube/sos/sealed seed 10168 7,500 decided, pods seed 10168 × 200 at 3/4/6/8 seats 800 decided, cube/sos/sealed seed 10164 7,498 decided + 2 CR 104.4a draws (the same with the pre-fix binary); the seat test: its `overflow` build restarted this container; `01M2Ffkh` then ran it green at the merged tip); workspace clippy **0**; `--bench` (release-fast) **27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok, A/B vs base `ab833866a` on this box -0.32 % (noise; this box reads ~155 k decisions/s where the last read 196 k); cube/sos/sealed × 300 (seed 10163) 7,500 decided; pods seed 10161 × 200 at 2..8 seats 1,400 decided; the 430 decks holding a changed card × 20 (seed 10162) 2,119/2,120 (one CR 104.4a draw). ⚠ A concurrent pair of clippy commits each added `CastReplay` and the tip did not compile — fixed `87113f40f`; **build after every rebase**. **Next:** ENGINE_BACKLOG `013mwV6T`'s OPEN list (Bilbo's Gambit 31, Agadeem's Awakening 29, Sakashima's Protege 27; a side-aware `RemoveCountersUpTo` pick closes Heartless Act + Rhys); INCOMPLETE's Aegar / Jeska rows as `01M2Ffkh` described them.
+
+## FIXED/OPEN 2026-10-28 (Commander run, `01WRuXc3Wv`) — 26 seated-deck rows, seven primitives, a prevention class
+
+No seats. `pod_residuals.py --rank` top-down, frozen pools (`cube.rs`/`sos_mode.rs`/`fra_mode.rs`/`draft.rs`) skipped;
+clean seated decks **5,294 → 5,399 / 6,093**.
+- **Primitives:** `EventScope::PlayerOrPermanentTargetedByYourAbility` (CR 115.1 — `BecameTarget` from a non-spell
+  source, battlefield permanents and players only; Loki drew off a graveyard-only target via `ChoseTargets`);
+  `StaticEffect::OwnedCardsOffBattlefieldAreTypeToo` (Roshan); `Effect::BecomeChosenColors` (the "color or colors"
+  ballot — five cards); `Effect::RemoveAnyNumberOfCounters` (CR 122.8, per kind, keyword counters too — Rhys);
+  `ActivatedAbility.craft_or_more` ("craft with N or more" — Enigma Jewel, Ore-Rich Stalactite); a manual seat names
+  the set for a graveyard-exile cost with a total (Capitoline Triad, Baron Zemo); `CopyCardsAndCastFreeUpTo` asks
+  which copies.
+- **Classes:** "prevent that damage" replacements are preventions (CR 615.12): Nine Lives and The Mindskinner now
+  deal unpreventable damage and emit `DamagePrevented`; an up-to `ChooseSomeAmong` gain pick defaults to none of an
+  opponent's (Gix's Command could grow an opponent's creature).
+- **Cards:** Goldberry (a count per kind; "if you do" reads her total), Cantankerous Keepers (every Elf, no pick),
+  Gix's Command, Stangg (copies of his Auras/Equipment on the Twin, all sacrificed), Planar Atlas (only a land on
+  top, optional look), Ajani Sleeper Agent (missed reveal may stay), Master Skald (chosen exile), Kyodai
+  (`WhileYouControlSource`). Stale rows: Experimental Overload, Braided Net.
+
+OPEN:
+- Cube-frozen, written up not built: **Quantum Riddler** — "with one or fewer cards in hand, each draw instruction
+  draws one more" (a `StaticEffect` read once per `draw_n` after Alms Collector and before the cap, plus the
+  draw-step draw; built and reverted for the pool freeze). Its Warp is already shipped.
+- Looked at, not built: Sen Triplets' "can't activate abilities" needs a player-level lock that also covers mana,
+  loyalty and cycling activations (several activation paths, not one gate); "for as long as you control [this]"
+  may-play grants (Gwen Stacy, Lightning, Victor Mancha, Taster of Wares) ride `MayPlayDuration::WhileSourceOnBattlefield`
+  and survive a control change — a controlled variant needs a control-change sweep; Treasure Keeper / Neera's
+  reveal-not-exile walk (only exile-matters cards see it); Primal Adversary's "up to that many target lands" after
+  all payments (a reflexive `CapTargetsAtX` over `ApplyToTargets`); Deification's ballot of every planeswalker type
+  (needs an enumerable `PlaneswalkerSubtype`).
 
 ## FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6pH`) — seven primitives, 19 seated-deck rows, stale docs
 
