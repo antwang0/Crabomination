@@ -180,9 +180,12 @@ impl GameState {
         if keeps {
             default.retain(|id| self.battlefield_find(*id).is_none_or(|c| c.controller == seat));
         }
-        // "Any number" of a harm needs none of the chooser's own (min is 0).
-        if up_to && !gain {
-            default.retain(|id| self.battlefield_find(*id).is_none_or(|c| !self.same_team(c.controller, seat)));
+        // "Any number" of a harm needs none of the chooser's own (min is 0),
+        // and of a gain none of an opponent's (Gix's Command's counters).
+        if up_to {
+            default.retain(|id| {
+                self.battlefield_find(*id).is_none_or(|c| self.same_team(c.controller, seat) == gain)
+            });
         }
         default.truncate(n);
         // A forced pick asks for at least one (as many as there are, to `n`),
