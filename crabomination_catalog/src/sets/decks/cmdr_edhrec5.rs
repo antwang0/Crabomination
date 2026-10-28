@@ -2288,10 +2288,11 @@ fn tutor(filter: R) -> Effect {
 }
 
 /// Goldberry, River-Daughter — {1}{U} 1/3. {T}: a counter of each kind she
-/// lacks from another permanent of yours onto her; {U}, {T}: her counters
-/// onto another permanent of yours, and draw.
+/// lacks from another permanent of yours onto her; {U}, {T}: one or more of
+/// her counters (CR 122.5, any number per kind) onto another, and if any moved, draw.
 pub fn goldberry_river_daughter() -> CardDefinition {
     let other = || target_filtered(yours(R::Permanent).and(R::OtherThanSource));
+    let on_her = || Value::TotalCountersOn { what: Box::new(Selector::This) };
     CardDefinition {
         activated_abilities: vec![
             ActivatedAbility {
@@ -2303,13 +2304,17 @@ pub fn goldberry_river_daughter() -> CardDefinition {
                 mana_cost: cost(&[u()]),
                 tap_cost: true,
                 condition: Some(Predicate::EntityMatches { what: Selector::This, filter: R::WithAnyCounter }),
-                effect: Effect::If {
-                    cond: Predicate::EntityMatches { what: Selector::This, filter: R::WithAnyCounter },
-                    then: Box::new(Effect::Seq(vec![
-                        Effect::MoveAllCounters { from: Selector::This, to: other() },
-                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                // X holds her count before the move: "if you do" reads whether it fell.
+                effect: Effect::WithX {
+                    x: on_her(),
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::MoveAnyNumberOfCounters { from: Selector::This, to: other(), kind: None },
+                        Effect::If {
+                            cond: Predicate::ValueAtMost(on_her(), Value::Sum(vec![Value::XFromCost, Value::Const(-1)])),
+                            then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                            else_: Box::new(Effect::Noop),
+                        },
                     ])),
-                    else_: Box::new(Effect::Noop),
                 },
                 ..Default::default()
             },

@@ -1272,9 +1272,36 @@ fn goldberry_borrows_and_returns_counters() {
     assert_eq!(counters(&g, bear), 2);
     g.battlefield_find_mut(gold).unwrap().tapped = false;
     let hand = g.players[0].hand.len();
+    // CR 122.5 — a count per kind she carries (+1/+1, stun, flying): all of each.
+    let all = crabomination::decision::DecisionAnswer::Amount(9);
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([all.clone(), all.clone(), all]));
     activate(&mut g, gold, 1, Some(Target::Permanent(bear))).expect("return");
     assert_eq!(counters(&g, bear), 3);
     assert_eq!(g.players[0].hand.len(), hand + 1);
+}
+
+/// CR 122.5 — "one or more counters" is the controller's count per kind (it
+/// moved all of them); "if you do" draws only when at least one moved.
+#[test]
+fn goldberry_hands_over_a_chosen_count_and_draws_only_if_one_moved() {
+    use crabomination::card::CounterType::PlusOnePlusOne;
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_library(0, catalog::island());
+    let gold = ready(&mut g, 0, catalog::goldberry_river_daughter());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(gold).unwrap().add_counters(PlusOnePlusOne, 3);
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(1)]));
+    activate(&mut g, gold, 1, Some(Target::Permanent(bear))).expect("hand over one");
+    assert_eq!((counters(&g, gold), counters(&g, bear)), (2, 1));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one moved: draw");
+    g.battlefield_find_mut(gold).unwrap().tapped = false;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(0)]));
+    activate(&mut g, gold, 1, Some(Target::Permanent(bear))).expect("hand over none");
+    assert_eq!((counters(&g, gold), counters(&g, bear)), (2, 1));
+    assert_eq!(g.players[0].hand.len(), hand + 1, "none moved: no draw");
 }
 
 /// Satsuki's {T} adds a lore counter to each Saga of yours (chapter II
