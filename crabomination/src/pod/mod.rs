@@ -37188,6 +37188,102 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WORF_2_COMMANDERS,
             main: decks::WORF_2_MAIN,
         },
+        // Seat 6123: Commander William Riker's EDHREC average deck. `--pod-decks 6123`.
+        PodDeck {
+            name: "Commander William Riker (WR)",
+            commanders: decks::COMMANDER_WILLIAM_RIKER_COMMANDERS,
+            main: decks::COMMANDER_WILLIAM_RIKER_MAIN,
+        },
+        // Seat 6124: Dal R'El, Augment Orphan's EDHREC average deck. `--pod-decks 6124`.
+        PodDeck {
+            name: "Dal R'El, Augment Orphan (RG)",
+            commanders: decks::DAL_REL_COMMANDERS,
+            main: decks::DAL_REL_MAIN,
+        },
+        // Seat 6125: Data, New Life's EDHREC average deck. `--pod-decks 6125`.
+        PodDeck {
+            name: "Data, New Life (U)",
+            commanders: decks::DATA_2_COMMANDERS,
+            main: decks::DATA_2_MAIN,
+        },
+        // Seat 6126: Dr. Joseph M'Benga's EDHREC average deck. `--pod-decks 6126`.
+        PodDeck {
+            name: "Dr. Joseph M'Benga (G)",
+            commanders: decks::DR_JOSEPH_MBENGA_COMMANDERS,
+            main: decks::DR_JOSEPH_MBENGA_MAIN,
+        },
+        // Seat 6127: Ensign Harry Kim, Operations's EDHREC average deck. `--pod-decks 6127`.
+        PodDeck {
+            name: "Ensign Harry Kim, Operations (W)",
+            commanders: decks::ENSIGN_HARRY_KIM_COMMANDERS,
+            main: decks::ENSIGN_HARRY_KIM_MAIN,
+        },
+        // Seat 6128: Ezri Dax, Newly Joined's EDHREC average deck. `--pod-decks 6128`.
+        PodDeck {
+            name: "Ezri Dax, Newly Joined (W)",
+            commanders: decks::EZRI_DAX_COMMANDERS,
+            main: decks::EZRI_DAX_MAIN,
+        },
+        // Seat 6129: Gray and Adira, Forever Joined's EDHREC average deck. `--pod-decks 6129`.
+        PodDeck {
+            name: "Gray and Adira, Forever Joined (UR)",
+            commanders: decks::GRAY_AND_ADIRA_COMMANDERS,
+            main: decks::GRAY_AND_ADIRA_MAIN,
+        },
+        // Seat 6130: Jadzia Dax, Living Legacy's EDHREC average deck. `--pod-decks 6130`.
+        PodDeck {
+            name: "Jadzia Dax, Living Legacy (G)",
+            commanders: decks::JADZIA_DAX_COMMANDERS,
+            main: decks::JADZIA_DAX_MAIN,
+        },
+        // Seat 6131: Jake Sisko, War Correspondent's EDHREC average deck. `--pod-decks 6131`.
+        PodDeck {
+            name: "Jake Sisko, War Correspondent (G)",
+            commanders: decks::JAKE_SISKO_COMMANDERS,
+            main: decks::JAKE_SISKO_MAIN,
+        },
+        // Seat 6132: Khan, Vengeful Heart's EDHREC average deck. `--pod-decks 6132`.
+        PodDeck {
+            name: "Khan, Vengeful Heart (B)",
+            commanders: decks::KHAN_COMMANDERS,
+            main: decks::KHAN_MAIN,
+        },
+        // Seat 6133: Lt. Cmdr. Geordi La Forge's EDHREC average deck. `--pod-decks 6133`.
+        PodDeck {
+            name: "Lt. Cmdr. Geordi La Forge (U)",
+            commanders: decks::LT_CMDR_GEORDI_LA_FORGE_COMMANDERS,
+            main: decks::LT_CMDR_GEORDI_LA_FORGE_MAIN,
+        },
+        // Seat 6134: Sarek, Federation Ambassador's EDHREC average deck. `--pod-decks 6134`.
+        PodDeck {
+            name: "Sarek, Federation Ambassador (WUG)",
+            commanders: decks::SAREK_COMMANDERS,
+            main: decks::SAREK_MAIN,
+        },
+        // Seat 6135: Seven of Nine, Tertiary Adjunct's EDHREC average deck. `--pod-decks 6135`.
+        PodDeck {
+            name: "Seven of Nine, Tertiary Adjunct (U)",
+            commanders: decks::SEVEN_OF_NINE_COMMANDERS,
+            main: decks::SEVEN_OF_NINE_MAIN,
+        },
+        // Seat 6136: Seven of Nine, Unassimilated's EDHREC average deck. `--pod-decks 6136`.
+        PodDeck {
+            name: "Seven of Nine, Unassimilated (U)",
+            commanders: decks::SEVEN_OF_NINE_2_COMMANDERS,
+            main: decks::SEVEN_OF_NINE_2_MAIN,
+        },
+        // Seat 6137: Spock, Logical Choice's EDHREC average deck. `--pod-decks 6137`.
+        PodDeck {
+            name: "Spock, Logical Choice (U)",
+            commanders: decks::SPOCK_COMMANDERS,
+            main: decks::SPOCK_MAIN,
+        },
+        // Seat 6138: U.S.S. Prometheus, Prototype's EDHREC average deck. `--pod-decks 6138`.
+        PodDeck {
+            name: "U.S.S. Prometheus, Prototype (C)",
+            commanders: decks::U_S_S_PROMETHEUS_COMMANDERS,
+            main: decks::U_S_S_PROMETHEUS_MAIN,
+        },
     ]
 }
 
@@ -45271,6 +45367,22 @@ mod tests {
             ("U.S.S. Reliant, From Hell's Heart", &[0x21FE]),
             ("Vic Fontaine, One Night Only", &[0x21FF]),
             ("Worf, Chief Tactical Officer", &[0x2200]),
+            ("Commander William Riker", &[0x2201]),
+            ("Dal R'El, Augment Orphan", &[0x2202]),
+            ("Data, New Life", &[0x2203]),
+            ("Dr. Joseph M'Benga", &[0x2204]),
+            ("Ensign Harry Kim, Operations", &[0x2205]),
+            ("Ezri Dax, Newly Joined", &[0x2206]),
+            ("Gray and Adira, Forever Joined", &[0x2207]),
+            ("Jadzia Dax, Living Legacy", &[0x2208]),
+            ("Jake Sisko, War Correspondent", &[0x2209]),
+            ("Khan, Vengeful Heart", &[0x220A]),
+            ("Lt. Cmdr. Geordi La Forge", &[0x220B]),
+            ("Sarek, Federation Ambassador", &[0x220C]),
+            ("Seven of Nine, Tertiary Adjunct", &[0x220D]),
+            ("Seven of Nine, Unassimilated", &[0x220E]),
+            ("Spock, Logical Choice", &[0x220F]),
+            ("U.S.S. Prometheus, Prototype", &[0x2210]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
