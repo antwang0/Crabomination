@@ -157,6 +157,20 @@ fn gixs_command_default_modes() {
     assert!(g.battlefield_find(small).is_some());
 }
 
+/// "Up to one creature" is any creature, chosen as the mode resolves (it was
+/// an engine pick among yours); with none of its own a seat picks nothing
+/// rather than growing an opponent's.
+#[test]
+fn gixs_command_never_grows_an_opponents_creature_by_default() {
+    let mut g = pod(2);
+    let small = ready(&mut g, 1, catalog::grizzly_bears());
+    let big = ready(&mut g, 1, catalog::hill_giant());
+    let cmd = g.add_card_to_hand(0, catalog::gixs_command());
+    cast(&mut g, 0, cmd, &[]).expect("cast");
+    assert!(g.battlefield_find(big).is_none(), "their biggest is sacrificed");
+    assert_eq!(pt(&g, small), (2, 2));
+}
+
 /// Katilda and Lier: casting a Human gives a graveyard instant flashback.
 #[test]
 fn katilda_grants_flashback_on_humans() {

@@ -151,7 +151,6 @@ pub fn lichs_relic() -> CardDefinition {
 /// less; return up to two creature cards from your graveyard to your hand;
 /// each opponent sacrifices their greatest-power creature.
 pub fn gixs_command() -> CardDefinition {
-    let yours = Selector::one_of(Selector::EachPermanent(R::Creature.and(R::ControlledByYou)));
     spell(
         "Gix's Command",
         cost(&[generic(3), b(), b()]),
@@ -159,12 +158,17 @@ pub fn gixs_command() -> CardDefinition {
         Effect::ChooseN { up_to: None,
             picks: vec![0, 3],
             modes: vec![
-                Effect::ForEach {
-                    selector: yours,
-                    body: Box::new(Effect::Seq(vec![
-                        plus_one(Selector::TriggerSource, 2),
-                        until_eot(Selector::TriggerSource, Keyword::Lifelink),
+                // "Up to one creature" is chosen as the mode resolves (no target).
+                Effect::ChooseSomeAmong {
+                    what: Selector::EachPermanent(R::Creature),
+                    chooser: PlayerRef::You,
+                    count: Value::ONE,
+                    up_to: true,
+                    chosen: Box::new(Effect::Seq(vec![
+                        plus_one(Selector::SeparatedPile { chosen: true }, 2),
+                        until_eot(Selector::SeparatedPile { chosen: true }, Keyword::Lifelink),
                     ])),
+                    other: Box::new(Effect::Noop),
                 },
                 Effect::Destroy { what: Selector::EachPermanent(R::Creature.and(R::PowerAtMost(2))) },
                 Effect::MoveChosen {
