@@ -158,12 +158,7 @@ pub fn emrakuls_messenger() -> CardDefinition {
         toughness: 1,
         keywords: vec![Keyword::Devoid, Keyword::Flying],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                    who: PlayerRef::Triggerer,
-                    n: 2,
-                })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -1779,12 +1774,7 @@ pub fn mindless_conscription() -> CardDefinition {
         triggered_abilities: vec![
             etb(amass_zombies(3)),
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                    .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                        who: PlayerRef::Triggerer,
-                        n: 3,
-                    })
-                    .once_per_turn(),
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(3), EventScope::YourControl),
                 effect: amass_zombies(3),
             },
         ],

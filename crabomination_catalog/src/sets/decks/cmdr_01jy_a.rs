@@ -287,9 +287,7 @@ pub fn inscribed_tablet() -> CardDefinition {
 pub fn bloodhaze_wolverine() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn { who: PlayerRef::Triggerer, n: 2 })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: Effect::Seq(vec![
                 Effect::PumpPT {
                     what: Selector::This,

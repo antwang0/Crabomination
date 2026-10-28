@@ -388,12 +388,7 @@ pub fn prince_imrahil_the_fair() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                    who: PlayerRef::Triggerer,
-                    n: 2,
-                })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::Const(1),
@@ -1239,12 +1234,7 @@ pub fn knights_of_dol_amroth() -> CardDefinition {
         power: 3,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                    who: PlayerRef::Triggerer,
-                    n: 2,
-                })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

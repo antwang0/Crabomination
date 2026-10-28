@@ -41,12 +41,7 @@ pub fn jolrael_mwonvuli_recluse() -> CardDefinition {
         power: 1,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                    who: PlayerRef::You,
-                    n: 2,
-                })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,

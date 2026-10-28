@@ -17,12 +17,7 @@ use crate::mana::{Color, ManaSymbol, b, cost, g, generic, r, u, w, x};
 /// Trigger for "whenever you draw your second card each turn".
 fn on_second_draw(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
-        event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-            .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                who: PlayerRef::You,
-                n: 2,
-            })
-            .once_per_turn(),
+        event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
         effect,
     }
 }

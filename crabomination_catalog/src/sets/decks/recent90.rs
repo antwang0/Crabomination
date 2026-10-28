@@ -165,12 +165,7 @@ pub fn improbable_alliance() -> CardDefinition {
         cost: cost(&[u(), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                    who: PlayerRef::You,
-                    n: 2,
-                })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,

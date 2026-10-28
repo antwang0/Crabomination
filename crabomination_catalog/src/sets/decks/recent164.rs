@@ -4,7 +4,7 @@
 
 use crate::card::{
     CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
-    Predicate, SelectionRequirement as R, Selector, Subtypes, TokenDefinition, TriggeredAbility,
+    SelectionRequirement as R, Selector, Subtypes, TokenDefinition, TriggeredAbility,
     Value,
 };
 use crate::effect::shortcut::target_filtered;
@@ -91,12 +91,7 @@ pub fn homunculus_horde() -> CardDefinition {
         power: 2,
         toughness: 2,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                    who: PlayerRef::You,
-                    n: 2,
-                })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: Effect::CreateTokenCopyOf {
                 who: PlayerRef::You,
                 count: Value::ONE,

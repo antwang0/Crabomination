@@ -1088,6 +1088,29 @@ mod recent241 {
         assert!(c.keywords().contains(&Keyword::Vigilance), "gains vigilance on the second draw");
     }
 
+    /// Bug fix (2026-10-28): "your second card each turn" is that draw only.
+    /// Fourteen cards modelled it as "any draw once you have drawn two",
+    /// once a turn — so one entering after the second draw fired on the
+    /// third. The `NthCardDrawnThisTurn(2)` event doesn't.
+    #[test]
+    fn a_second_draw_trigger_ignores_the_third_draw() {
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let draw = |g: &mut crabomination::game::GameState| {
+            let mut evs = vec![];
+            g.draw_one(0, &mut evs);
+            g.dispatch_triggers_for_events(&evs);
+            drain_stack(g);
+        };
+        draw(&mut g);
+        draw(&mut g);
+        let jaded = g.add_card_to_battlefield(0, catalog::jaded_analyst());
+        draw(&mut g);
+        assert!(g.computed_permanent(jaded).unwrap().keywords().contains(&Keyword::Defender));
+    }
+
     /// Jaded Analyst sheds defender and gains vigilance on the second draw.
     #[test]
     fn jaded_analyst_loses_defender_on_second_draw() {

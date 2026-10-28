@@ -25,16 +25,7 @@ pub fn erudite_wizard() -> CardDefinition {
         power: 2,
         toughness: 3,
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec {
-                once_per_turn: true,
-                once_per_batch: false,
-                ..EventSpec::new(EventKind::CardDrawn, EventScope::YourControl).with_filter(
-                    Predicate::PlayerDrewAtLeastThisTurn {
-                        who: PlayerRef::You,
-                        n: 2,
-                    },
-                )
-            },
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: Effect::AddCounter {
                 what: Selector::This,
                 kind: CounterType::PlusOnePlusOne,

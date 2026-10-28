@@ -1062,12 +1062,7 @@ pub fn tiger_seal() -> CardDefinition {
                 },
             },
             TriggeredAbility {
-                event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                    .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                        who: PlayerRef::Triggerer,
-                        n: 2,
-                    })
-                    .once_per_turn(),
+                event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
                 effect: Effect::Untap {
                     what: Selector::This,
                     up_to: None,
@@ -1780,12 +1775,7 @@ pub fn foggy_swamp_spirit_keeper() -> CardDefinition {
         toughness: 4,
         keywords: vec![Keyword::Lifelink],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardDrawn, EventScope::YourControl)
-                .with_filter(Predicate::PlayerDrewAtLeastThisTurn {
-                    who: PlayerRef::Triggerer,
-                    n: 2,
-                })
-                .once_per_turn(),
+            event: EventSpec::new(EventKind::NthCardDrawnThisTurn(2), EventScope::YourControl),
             effect: Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
