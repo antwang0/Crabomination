@@ -957,6 +957,30 @@ pub struct EvalWeights {
     /// defender at 5. On top of `fra-fixes`: 49.9 / 50.0 (the attacking the
     /// user asked for, at no measured cost). In `fra-fixes`.
     pub trade_pressure: bool,
+    /// The race term (round 86, the trades round's open "cause 2"): the
+    /// material eval prices a 4/2-for-2/2 trade as a loss even with the
+    /// defender at 5, because it counts bodies and life and never asks how
+    /// soon either side dies. [`clock_points`] reads each side's next-swing
+    /// clock (unblocked power after the defender's best one-on-one blocks,
+    /// evasion counted) as points by turns to lethal — 10 / 6 / 3 / 1 for
+    /// one to four turns — and the eval adds `clock_eval * unit` per point
+    /// of (our clock − theirs). Duels only. 0 = off, the historical eval.
+    ///
+    /// Round 86 (`.ladder/r86/clock`, paired, on top of `fra-fixes`), FRA
+    /// sealed 1 000 x 12: weight 1 / 2 / **4** / 8 read 50.70 / 51.15 /
+    /// **51.35** / 51.10 (seeds 43 / 97); 4 on fresh seed 211 **51.3**, SOS
+    /// 50.8 / 50.6, cube 50.3 / 50.1. Under the client's search (net leaf,
+    /// which reads this only in its heuristic paths) 49.75 / 50.48, mean
+    /// +0.12: no cost. **4, in `fra-fixes`.**
+    pub clock_eval: i32,
+    /// The same race term on the net leaf, in the net score's basis points
+    /// (10 000 = a certain win) per clock point. 0 = off.
+    ///
+    /// Round 86: scored net leaf on FRA 50 / **150** / 400 read 50.30 /
+    /// **50.45** / 50.25, 150 on fresh seed 211 50.6; under the client's
+    /// search 50.50 / 50.46, mean +0.48 — under its +0.5 bar. NOT adopted:
+    /// the net already prices most of the race.
+    pub clock_net: i32,
     /// A pump instant that carries a harmless rider — a keyword, untap or
     /// counter on the pumped creature, or card flow for the caster (Empower
     /// Jace, a draw, scry / surveil, an impulse) — is a combat trick to the
@@ -1567,6 +1591,8 @@ impl EvalWeights {
             counter_read: false,
             counter_read_board: false,
             trade_pressure: false,
+            clock_eval: 0,
+            clock_net: 0,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1705,6 +1731,8 @@ impl EvalWeights {
             counter_read: false,
             counter_read_board: false,
             trade_pressure: false,
+            clock_eval: 0,
+            clock_net: 0,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -1826,6 +1854,8 @@ impl EvalWeights {
             counter_read: false,
             counter_read_board: false,
             trade_pressure: false,
+            clock_eval: 0,
+            clock_net: 0,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -2984,6 +3014,8 @@ impl EvalWeights {
             counter_read: false,
             counter_read_board: false,
             trade_pressure: false,
+            clock_eval: 0,
+            clock_net: 0,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3131,6 +3163,8 @@ impl EvalWeights {
             counter_read: false,
             counter_read_board: false,
             trade_pressure: false,
+            clock_eval: 0,
+            clock_net: 0,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -3296,8 +3330,8 @@ impl EvalWeights {
     /// The 2026-10-23/24 FRA fixes together: burn creature arms, the X=0
     /// death hold, the counter-shed guard, the target polarity guard, kill
     /// debuffs off the combat-only rule, the duel ability sinks, lethal over
-    /// planeswalkers, free attacks and pump tricks with riders (profile
-    /// `fra-fixes`).
+    /// planeswalkers, free attacks and pump tricks with riders, and since
+    /// round 86 the race term `clock_eval` 4 (profile `fra-fixes`).
     pub const fn fra_fixes_on() -> Self {
         Self::default_const().with_fra_fixes()
     }
@@ -3324,6 +3358,7 @@ impl EvalWeights {
             duel_pumps: true,
             hand_abilities: true,
             trade_pressure: true,
+            clock_eval: 4,
             ..self
         }
     }
@@ -3376,6 +3411,8 @@ impl EvalWeights {
             counter_read: false,
             counter_read_board: false,
             trade_pressure: false,
+            clock_eval: 0,
+            clock_net: 0,
             free_attacks: false,
             trick_riders: false,
             burn_for_lethal: false,
@@ -20781,7 +20818,8 @@ fn eval_material_frozen(state: &GameState, seat: usize, w: &EvalWeights) -> i32 
             }
             return eval_material_inner(state, seat, w, false) + bias;
         }
-        return (p * 10_000.0) as i32;
+        let edge = if w.clock_net != 0 { w.clock_net.saturating_mul(clock_edge(state, seat)) } else { 0 };
+        return ((p * 10_000.0) as i32).saturating_add(edge);
     }
     eval_material_inner(state, seat, w, false)
 }
@@ -20896,7 +20934,98 @@ fn eval_material_inner(
             v -= material;
         }
     }
+    if w.clock_eval != 0 {
+        v = v.saturating_add(w.clock_eval.saturating_mul(w.unit).saturating_mul(clock_edge(state, seat)));
+    }
     v
+}
+
+/// `seat`'s race edge in a duel: [`clock_points`] of its clock on the
+/// opponent minus the opponent's on it. 0 outside duels.
+fn clock_edge(state: &GameState, seat: usize) -> i32 {
+    if state.players.len() != 2 || state.game_over.is_some() {
+        return 0;
+    }
+    let opp = 1 - seat;
+    clock_points(state, seat, opp) - clock_points(state, opp, seat)
+}
+
+/// How soon `att`'s creatures kill `def` if they all swing next turn, as
+/// points: 10 / 6 / 3 / 1 for lethal in one to four swings, else 0 —
+/// `EvalWeights::clock_eval`'s unit.
+///
+/// The defender blocks the biggest attackers first, one blocker each (two for
+/// menace), from the creatures that could block them: flying needs flying or
+/// reach, shadow needs shadow, `Unblockable` gets through, a `CantBlock`
+/// creature blocks nothing. What gets past is the clock. Tapped state is
+/// ignored — this is the next swing's race, not this combat's — and so are
+/// tricks, removal and the attacker's own risk: a deliberately rough read
+/// of the one thing the material count cannot see.
+fn clock_points(state: &GameState, att: usize, def: usize) -> i32 {
+    use crate::card::Keyword;
+    let life = state.effective_life(def);
+    if life <= 0 || !state.players[def].is_alive() {
+        return 0;
+    }
+    // (power, flying, shadow, menace, unblockable) per attacker; (flying or
+    // reach, shadow, used) per blocker.
+    let mut attackers: smallvec::SmallVec<[(i32, bool, bool, bool, bool); 16]> = smallvec::SmallVec::new();
+    let mut blockers: smallvec::SmallVec<[(bool, bool, bool); 16]> = smallvec::SmallVec::new();
+    for c in &state.battlefield {
+        if !state.computed_is_creature(c) {
+            continue;
+        }
+        let Some(cp) = state.computed_permanent(c.id) else { continue };
+        let kw = cp.keywords();
+        if c.controller == att {
+            if cp.power <= 0 || kw.has_kw(&Keyword::Defender) || kw.has_kw(&Keyword::CantAttack) {
+                continue;
+            }
+            let p = if kw.has_kw(&Keyword::DoubleStrike) { cp.power.saturating_mul(2) } else { cp.power };
+            attackers.push((
+                p,
+                kw.has_kw(&Keyword::Flying),
+                kw.has_kw(&Keyword::Shadow),
+                kw.has_kw(&Keyword::Menace),
+                kw.has_kw(&Keyword::Unblockable),
+            ));
+        } else if c.controller == def && !kw.has_kw(&Keyword::CantBlock) {
+            blockers.push((kw.has_kw(&Keyword::Flying) || kw.has_kw(&Keyword::Reach), kw.has_kw(&Keyword::Shadow), false));
+        }
+    }
+    attackers.sort_unstable_by_key(|a| std::cmp::Reverse(a.0));
+    let mut through = 0i32;
+    for &(power, flying, shadow, menace, unblockable) in &attackers {
+        let need = if menace { 2 } else { 1 };
+        let can = |b: &(bool, bool, bool)| !b.2 && (!flying || b.0) && b.1 == shadow;
+        if unblockable || blockers.iter().filter(|b| can(b)).count() < need {
+            through = through.saturating_add(power);
+            continue;
+        }
+        // Spend the least flexible blockers first: a ground blocker on a
+        // ground attacker keeps the flyers and reach for the flyers.
+        for _ in 0..need {
+            let pick = blockers
+                .iter()
+                .enumerate()
+                .filter(|(_, b)| can(b))
+                .min_by_key(|(_, b)| b.0)
+                .map(|(i, _)| i);
+            if let Some(i) = pick {
+                blockers[i].2 = true;
+            }
+        }
+    }
+    if through <= 0 {
+        return 0;
+    }
+    match turns_to_lethal(life, through) {
+        1 => 10,
+        2 => 6,
+        3 => 3,
+        4 => 1,
+        _ => 0,
+    }
 }
 
 /// Material value of one emblem for `seat`. Emblems are ultimates and
@@ -24637,6 +24766,41 @@ mod tests {
         assert!(add_pressure_trades(&g, 0, vec![], &EvalWeights::default()).is_empty(), "off by default");
         g.players[0].life = 2;
         assert!(add_pressure_trades(&g, 0, vec![], &on).is_empty(), "the 2/2 swing back kills us");
+    }
+
+    /// `clock_eval`: a 4/2 and a 2/2 against a lone 2/2 at 5 life is a
+    /// three-swing clock (the 2/2 blocks the 4/2); after the 4/2 trades with
+    /// it and the 2/2 connects, a 2/2 against 3 life is two swings. The race
+    /// term scores the trade by exactly that, and a flyer is unblocked by a
+    /// ground creature.
+    #[test]
+    fn clock_eval_counts_the_trade_that_shortens_the_race() {
+        let ape = || CardDefinition {
+            name: "Ape",
+            card_types: vec![crate::card::CardType::Creature],
+            power: 4,
+            toughness: 2,
+            ..Default::default()
+        };
+        let mut hold = two_player_game();
+        let big = hold.add_card_to_battlefield(0, ape());
+        hold.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let blocker = hold.add_card_to_battlefield(1, catalog::grizzly_bears());
+        hold.players[1].life = 5;
+        assert_eq!(clock_points(&hold, 0, 1), 3, "2 through a turn, 5 life: three swings");
+        assert_eq!(clock_points(&hold, 1, 0), 0, "their 2/2 meets two blockers");
+        let mut traded = hold.clone();
+        traded.battlefield.retain(|c| c.id != big && c.id != blocker);
+        traded.players[1].life = 3;
+        assert_eq!(clock_edge(&traded, 0), 6, "2 through, 3 life: two swings");
+        let on = EvalWeights { clock_eval: 4, ..EvalWeights::default() };
+        let gain = |w: &EvalWeights| eval_material(&traded, 0, w) - eval_material(&hold, 0, w);
+        assert_eq!(gain(&on) - gain(&EvalWeights::default()), 4 * on.unit * 3);
+        let mut fly = two_player_game();
+        fly.add_card_to_battlefield(0, catalog::wind_drake());
+        fly.add_card_to_battlefield(1, catalog::grizzly_bears());
+        fly.players[1].life = 4;
+        assert_eq!(clock_points(&fly, 0, 1), 6, "the Drake flies over the bear");
     }
 
     /// `counter_reserve`: four Islands, Counterspell and Wind Drake in hand,

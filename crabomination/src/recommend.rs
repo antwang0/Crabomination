@@ -2117,6 +2117,92 @@ fn settle_diag(before: &GameState, settled: &GameState, label: &str, action: cra
     }
 }
 
+/// `CRAB_OFFER_CHECK=1` — the census behind the settle check. At every
+/// pending prompt it answers each offered option on a clone and reports the
+/// ones the engine rejects: an option a prompt offers and then refuses is
+/// the cube stall's class (a rejected answer drops the decision and rolls
+/// the action back), and a bot only reveals it if it happens to pick that
+/// option. One line per (source, prompt, error) the first time it is seen,
+/// prefixed `offer-check:`; `ALL` marks a prompt with no accepted option.
+/// Covers the prompts whose options are enumerable — targets, modes,
+/// colours, library searches, options. `offer-probed: N` lines count the
+/// prompts probed, at each power of two from 1 024. A diagnostic; read once.
+fn offer_check() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("CRAB_OFFER_CHECK").is_some_and(|v| v != "0"))
+}
+
+fn offer_probe(g: &GameState) {
+    use crate::decision::{Decision, DecisionAnswer as A};
+    static SEEN: std::sync::Mutex<Option<std::collections::HashSet<String>>> = std::sync::Mutex::new(None);
+    let Some(pd) = g.pending_decision.as_ref() else { return };
+    let name = |id: crate::card::CardId| {
+        g.find_card_anywhere(id).map(|c| c.definition.name.to_string()).unwrap_or_else(|| format!("{id:?}"))
+    };
+    let (src, what, answers): (String, String, Vec<A>) = match &pd.decision {
+        Decision::ChooseTarget { source, legal, description, .. } => {
+            (name(*source), format!("ChooseTarget {description:?}"), legal.iter().cloned().map(A::Target).collect())
+        }
+        Decision::ChooseMode { source, num_modes, .. } => {
+            (name(*source), "ChooseMode".into(), (0..*num_modes).map(A::Mode).collect())
+        }
+        Decision::ChooseColor { source, legal } => {
+            (name(*source), "ChooseColor".into(), legal.iter().copied().map(A::Color).collect())
+        }
+        Decision::ChooseOption { source, prompt, options } => {
+            (name(*source), format!("ChooseOption {prompt:?}"), (0..options.len() as u32).map(A::Amount).collect())
+        }
+        Decision::SearchLibrary { candidates, eligible, .. } => (
+            "search".into(),
+            "SearchLibrary".into(),
+            match eligible {
+                Some(e) => e.iter().map(|id| A::Search(Some(*id))).collect(),
+                None => candidates.iter().map(|(id, _)| A::Search(Some(*id))).collect(),
+            },
+        ),
+        _ => return,
+    };
+    if answers.is_empty() {
+        return;
+    }
+    // Proof of coverage, so a quiet census reads as "probed and clean", not
+    // "never ran": a line at each power of two from 1 024 of prompts probed.
+    static PROBED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+    let n = PROBED.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
+    if n.is_power_of_two() && n >= 1024 {
+        eprintln!("offer-probed: {n} prompts");
+    }
+    let mut rejected = Vec::new();
+    for a in &answers {
+        let mut probe = g.clone();
+        if let Err(e) = probe.perform_action(crate::game::GameAction::SubmitDecision(a.clone())) {
+            rejected.push((a.clone(), e));
+        }
+    }
+    if rejected.is_empty() {
+        return;
+    }
+    let all = rejected.len() == answers.len();
+    let mut seen = SEEN.lock().unwrap();
+    let seen = seen.get_or_insert_with(Default::default);
+    for (a, e) in rejected {
+        let err = format!("{e:?}");
+        let key = format!("{src} | {what} | {}", err.split(['(', ' ', '{']).next().unwrap_or(""));
+        if seen.insert(key) {
+            let shown = match &a {
+                A::Target(crate::game::types::Target::Permanent(id)) => format!("Permanent({})", name(*id)),
+                other => format!("{other:?}"),
+            };
+            eprintln!(
+                "offer-check:{} {src} | {what} | answer {shown} | {err} | T{} {:?}",
+                if all { " ALL" } else { "" },
+                g.turn_number,
+                g.step
+            );
+        }
+    }
+}
+
 /// `CRAB_STUCK_DIAG=1` — when a game stops as stuck (no bot action accepted
 /// for [`STALE_ROUNDS`] rounds), print the pending ask and what each seat
 /// wanted and why the engine refused it. Read only on a stuck game.
@@ -2336,6 +2422,9 @@ fn play_one_game_traced(
         }
         let mut any = false;
         for (s, bot) in bots.iter_mut().enumerate() {
+            if offer_check() {
+                offer_probe(&g);
+            }
             // Cross-binary: poll only the seat this process pilots and
             // publish what it chose; the other seat's action arrives on the
             // link, carrying the peer's digest of the state it chose in.

@@ -238,6 +238,33 @@ fn sealed_archetypes(seed: u64, count: usize) -> Vec<Archetype> {
 }
 
 fn parse_profile(name: &str) -> Option<Pilot> {
+    // Round 86's race term at a chosen weight, on top of `fra-fixes`:
+    // `fixes+clock<N>` (material leaf, `clock_eval`), `net67-fixes+clock<N>`
+    // and `mcts-net67-fixes+clock<N>` (net leaf, `clock_net` basis points).
+    if let Some(n) = name.strip_prefix("fixes+clock").and_then(|n| n.parse().ok()) {
+        return Some(Pilot::Scored(EvalWeights { clock_eval: n, ..EvalWeights::fra_fixes_on() }));
+    }
+    if let Some(n) = name.strip_prefix("net67-fixes+clock").and_then(|n| n.parse().ok()) {
+        return Some(Pilot::Scored(EvalWeights { clock_net: n, ..EvalWeights::net_on_default().with_fra_fixes() }));
+    }
+    if let Some(n) = name.strip_prefix("mcts-net67-fixes+clock").and_then(|n| n.parse().ok()) {
+        return Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights { clock_net: n, ..EvalWeights::net_on_default().with_fra_fixes() },
+            ..MctsConfig::default()
+        }));
+    }
+    // The material race term under the client's search (net leaf): what
+    // putting `clock_eval` in `with_fra_fixes` would do to the client.
+    if let Some(n) = name.strip_prefix("mcts-net67-fixes+mat").and_then(|n| n.parse().ok()) {
+        return Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights { clock_eval: n, ..EvalWeights::net_on_default().with_fra_fixes() },
+            ..MctsConfig::default()
+        }));
+    }
     match name {
         "baseline" => Some(Pilot::Scored(EvalWeights::baseline())),
         "landseq" => Some(Pilot::Scored(EvalWeights::land_sequencing())),

@@ -15,7 +15,8 @@
 //!
 //! ```text
 //! selfplay_train [--actors N] [--games N] [--steps N] [--batch N]
-//!                [--lr F] [--reuse F] [--lambda F] [--relabel-every N]
+//!                [--lr F] [--reuse F] [--steps-per-game F]
+//!                [--lambda F] [--relabel-every N]
 //!                [--window N] [--min-window N]
 //!                [--checkpoint-every N] [--out DIR] [--seed N]
 //!                [--use-best WEIGHTS.safetensors] [--seed-emb DECK.safetensors]
@@ -84,6 +85,20 @@ struct Args {
     batch: usize,
     lr: f64,
     reuse: f64,
+    /// Learner steps per generated game, held exactly: the learner waits
+    /// when it runs ahead of the actors and the actors wait when they run
+    /// ahead of it (within a few games either way). 0 (default) leaves the
+    /// ratio to whichever side is faster, as every run before round 86 did.
+    ///
+    /// Round 84 measured why that matters. The learner is the bottleneck
+    /// (it never slept, and reuse stayed under a tenth of the 6x cap), so
+    /// the ratio was set by how fast the *actors* happened to run: r82's
+    /// four FRA seeds read 0.274 / 0.274 / 0.176 / 0.173 steps a game
+    /// because two of them shared the box with another job, and strength
+    /// tracked the ratio in both r82 and r84 — about as large an effect as
+    /// any recipe change measured. A pinned ratio makes the recipe, not
+    /// the box, decide it.
+    steps_per_game: f64,
     /// TD(lambda) mixing for the win target. 1.0 (default) is the
     /// historical pure Monte Carlo label — the row's own game result —
     /// so every prior gate round is reproducible. Below 1.0 the target
@@ -412,6 +427,7 @@ fn parse_args() -> Args {
         batch: 256,
         lr: 1e-3,
         reuse: 6.0,
+        steps_per_game: 0.0,
         bce: false,
         record_decisions: false,
         policy_every: 4,
@@ -489,6 +505,7 @@ fn parse_args() -> Args {
             "--batch" => a.batch = val().parse().expect("--batch"),
             "--lr" => a.lr = val().parse().expect("--lr"),
             "--reuse" => a.reuse = val().parse().expect("--reuse"),
+            "--steps-per-game" => a.steps_per_game = val().parse().expect("--steps-per-game"),
             "--bce" => a.bce = true,
             "--record-decisions" => a.record_decisions = true,
             "--record-combat" => a.record_combat = true,
@@ -786,6 +803,21 @@ struct Shared {
     /// has stopped improving, so further generation is compute spent
     /// making `latest` worse. Actors finish their current game and exit.
     stop: AtomicBool,
+    /// `--steps-per-game`'s two sides. The learner publishes its step
+    /// count and, at its first step, how many games were done then (the
+    /// pin's origin: nothing trains before `--min-window` fills);
+    /// `learner_done` releases actors waiting on a learner that has
+    /// stopped (a `--steps` cap leaves the actors playing out `--games`).
+    learner_step: AtomicU64,
+    pin_origin: AtomicU64,
+    learner_done: AtomicBool,
+}
+
+/// Games either side of `--steps-per-game` may drift before it waits: wide
+/// enough that the actors' in-flight games can never hold both sides
+/// waiting at once (that needs more than twice this many in flight).
+fn pin_slack(args: &Args) -> u64 {
+    (args.actors as u64).max(8)
 }
 
 const DECK_WINDOW_CAP: usize = 200_000;
@@ -821,6 +853,21 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
     loop {
         if shared.stop.load(Ordering::Relaxed) {
             break;
+        }
+        // `--steps-per-game`: hold off claiming a game while the learner is
+        // behind the pinned ratio.
+        if args.steps_per_game > 0.0 {
+            let origin = shared.pin_origin.load(Ordering::Relaxed);
+            let claimed = shared.next_game.load(Ordering::Relaxed);
+            let step = shared.learner_step.load(Ordering::Relaxed);
+            if origin != u64::MAX
+                && !shared.learner_done.load(Ordering::Relaxed)
+                && (step as f64)
+                    < args.steps_per_game * claimed.saturating_sub(origin + pin_slack(args)) as f64
+            {
+                std::thread::sleep(std::time::Duration::from_millis(20));
+                continue;
+            }
         }
         let n = shared.next_game.fetch_add(1, Ordering::Relaxed);
         if let Some(max) = args.games
@@ -1867,6 +1914,9 @@ fn main() {
         stalls_stuck: AtomicU64::new(0),
         live_actors: AtomicU64::new(args.actors as u64),
         stop: AtomicBool::new(false),
+        learner_step: AtomicU64::new(0),
+        pin_origin: AtomicU64::new(u64::MAX),
+        learner_done: AtomicBool::new(false),
     };
     let mcts_all = args.use_best.is_some() && args.mcts_actors > 0;
     let fleet_split = mcts_all && args.mcts_fleet > 0 && args.mcts_fleet < args.actors;
@@ -2033,7 +2083,16 @@ fn main() {
                 break;
             }
             let budget = (args.reuse * pushed as f64) as u64;
-            if pushed < args.min_window || consumed + unit > budget {
+            // `--steps-per-game`, the learner's side: wait while it is
+            // ahead of the actors. Off once generation ends (the tail).
+            let games_done = shared.games_done.load(Ordering::Relaxed);
+            let pin_ahead = args.steps_per_game > 0.0 && actors_live && {
+                let origin = shared.pin_origin.load(Ordering::Relaxed);
+                origin != u64::MAX
+                    && step as f64
+                        >= args.steps_per_game * (games_done.saturating_sub(origin) + pin_slack(&args)) as f64
+            };
+            if pushed < args.min_window || consumed + unit > budget || pin_ahead {
                 if !actors_live {
                     break; // no more data coming and the reuse budget is spent
                 }
@@ -2041,6 +2100,9 @@ fn main() {
                 std::thread::sleep(std::time::Duration::from_millis(200));
                 timing.sleep += t0.elapsed();
                 continue;
+            }
+            if shared.pin_origin.load(Ordering::Relaxed) == u64::MAX {
+                shared.pin_origin.store(games_done, Ordering::Relaxed);
             }
             if !pg_only {
                 // Refresh the λ-returns periodically: they are computed
@@ -2076,6 +2138,7 @@ fn main() {
                 timing.step += t0.elapsed();
                 consumed += args.batch as u64;
                 step += 1;
+                shared.learner_step.store(step, Ordering::Relaxed);
                 for (ema, part) in loss_ema
                     .iter_mut()
                     .zip([loss.total, loss.win, loss.life, loss.len, loss.opp])
@@ -2199,6 +2262,7 @@ fn main() {
                     if pg_only {
                         consumed += args.pg_batch as u64;
                         step += 1;
+                        shared.learner_step.store(step, Ordering::Relaxed);
                     }
                 }
             }
@@ -2287,6 +2351,7 @@ fn main() {
                 &mut prev_interval,
             );
         }
+        shared.learner_done.store(true, Ordering::Relaxed);
         eprintln!(
             "learner done: {} steps, {} rows consumed; waiting for actors...",
             step, consumed
