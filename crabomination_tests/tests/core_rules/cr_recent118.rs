@@ -896,6 +896,28 @@ fn cr_702_95e_a_bounced_partner_is_unpaired() {
     assert_eq!(g.players[0].hand.iter().find(|c| c.id == a).expect("bounced").soulbond_partner, None);
 }
 
+/// CR 702.95e — another player gaining control of either creature unpairs
+/// them, and the pair stays broken when control comes back.
+#[test]
+fn cr_702_95e_a_stolen_partner_is_unpaired_for_good() {
+    let mut g = main_phase();
+    let a = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield_find_mut(a).unwrap().soulbond_partner = Some(b);
+    g.battlefield_find_mut(b).unwrap().soulbond_partner = Some(a);
+    resolve(&mut g, a, Some(Target::Permanent(b)), &Effect::GainControl {
+        what: Selector::Target(0),
+        to: Some(PlayerRef::Seat(1)),
+        duration: crabomination::effect::Duration::EndOfTurn,
+    });
+    g.check_state_based_actions();
+    assert_eq!(g.battlefield_find(b).unwrap().controller, 1);
+    assert!([a, b].iter().all(|id| g.battlefield_find(*id).unwrap().soulbond_partner.is_none()));
+    g.battlefield_find_mut(b).unwrap().controller = 0;
+    g.check_state_based_actions();
+    assert!([a, b].iter().all(|id| g.battlefield_find(*id).unwrap().soulbond_partner.is_none()), "stays broken");
+}
+
 /// CR 302.6 — summoning sickness is about control since the turn began, so a
 /// skipped untap step lifts it all the same: the skip kept the seat out of
 /// the untap loop that clears it (a pod's Kotori stayed sick all turn, seed

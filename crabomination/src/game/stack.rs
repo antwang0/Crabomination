@@ -9165,15 +9165,24 @@ impl GameState {
             }
         }
 
-        // CR 702.95h — Soulbond pairs break when either creature leaves the
-        // battlefield. Clear any link that points at a card no longer in play.
+        // CR 702.95e — a pair breaks when either creature leaves the
+        // battlefield, stops being a creature, or comes under another player's
+        // control; once broken it stays broken.
         if scan.soulbond {
-            let on_bf: crate::fxhash::HashSet<CardId> =
-                self.battlefield.iter().map(|c| c.id).collect();
+            let broken: Vec<CardId> = self
+                .battlefield
+                .iter()
+                .filter(|c| {
+                    c.soulbond_partner.is_some_and(|p| {
+                        self.battlefield_find(p)
+                            .is_none_or(|q| q.controller != c.controller || !self.computed_is_creature(q))
+                            || !self.computed_is_creature(c)
+                    })
+                })
+                .map(|c| c.id)
+                .collect();
             for c in self.battlefield.iter_mut() {
-                if let Some(p) = c.soulbond_partner
-                    && !on_bf.contains(&p)
-                {
+                if broken.contains(&c.id) {
                     c.soulbond_partner = None;
                 }
             }
