@@ -37026,6 +37026,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WORF_COMMANDERS,
             main: decks::WORF_MAIN,
         },
+        // Seat 6096: We Are the Borg (Star Trek Commander precon). `--pod-decks 6096`.
+        PodDeck {
+            name: "The Borg Queen (WUB)",
+            commanders: decks::THE_BORG_QUEEN_COMMANDERS,
+            main: decks::THE_BORG_QUEEN_MAIN,
+        },
     ]
 }
 
@@ -45082,6 +45088,7 @@ mod tests {
             ("Spider-Man, Hometown Hero", &[0x21E3]),
             ("Jean-Luc Picard, Luminary", &[0x21E4]),
             ("Worf, Defiant Commander", &[0x21E5]),
+            ("The Borg Queen", &[0x21E6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four

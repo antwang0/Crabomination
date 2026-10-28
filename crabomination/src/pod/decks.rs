@@ -171182,3 +171182,33 @@ pub const WORF_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, plains, plains, plains, plains, plains,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const THE_BORG_QUEEN_COMMANDERS: &[CardFactory] = &[the_borg_queen];
+
+/// **We Are the Borg** (Star Trek Commander, TRC), card for card from the
+/// official decklist (magic.wizards.com, fetched 2026-10-28): 87 nonbasic
+/// cards + 4 Plains + 4 Islands + 4 Swamps = 99.
+pub const THE_BORG_QUEEN_MAIN: &[CardFactory] = &[
+    locutus_of_borg, borg_incursion, emergency_regeneration, join_the_collective,
+    korok_liberated_rage, maturation_chamber, stratagem_emulator, supplementation_node,
+    type_03_borg_vessel, ambulatory_reactor, borg_scout_sphere, co_option_adjutant,
+    gift_of_perfection, optimization_annex, seven_of_nine_tertiary_adjunct, transwarp_hub,
+    vox_child_of_the_collective, assimilate_the_wounded, assimilation_assessor,
+    battle_of_wolf_359, extraction_integrant, reclamation_specialist, the_best_of_both_worlds,
+    collective_override, deliver_from_chaos, hugh_first_of_many, jurati_cordial_queen,
+    one_borg_evolved, class_4_tactical_cube, queens_diamond, reconnaissance_partition,
+    shore_leave_planet, tempered_steel, disallow, toxic_deluge, anguished_unmaking,
+    astral_cornucopia, darksteel_plate, door_of_destinies, forsaken_monument, the_immortal_sun,
+    skullclamp, unwinding_clock, academy_ruins, choked_estuary, drowned_catacomb,
+    eclipsed_steppe, exotic_orchard, fetid_pools, glacial_fortress, irrigated_farmland,
+    isolated_chapel, morphic_pool, port_town, prairie_stream, shineshadow_snarl,
+    skycloud_expanse, spire_of_industry, sunken_hollow, umbral_expanse, underground_river,
+    command_subadjunct, conquest_mission, hive_mind_coprocessor, locutus_the_one_who_speaks,
+    dispatch, return_to_dust, thirst_for_knowledge, thoughtcast, bitter_triumph, arcane_signet,
+    commanders_sphere, everflowing_chalice, sol_ring, stonespeaker_crystal, swiftfoot_boots,
+    talisman_of_dominance, talisman_of_hierarchy, talisman_of_progress, wayfarers_bauble,
+    arcane_sanctum, command_tower, contaminated_landscape, evolving_wilds, path_of_ancestry,
+    rogues_passage, terramorphic_expanse,
+    // Basics
+    plains, plains, plains, plains, island, island, island, island, swamp, swamp, swamp, swamp,
+];
