@@ -1437,3 +1437,6 @@ pub use trek_klingon::*;
 #[path = "../../../src/sets/decks/trek_borg.rs"]
 mod trek_borg;
 pub use trek_borg::*;
+#[path = "../../../src/sets/decks/trek_singles.rs"]
+mod trek_singles;
+pub use trek_singles::*;

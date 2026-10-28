@@ -859168,5 +859168,467 @@
       "W"
     ],
     "layout": "normal"
+  },
+  "Captain Michael Burnham": {
+    "name": "Captain Michael Burnham",
+    "mana_cost": "{2}{R}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Human Officer",
+    "oracle_text": "Trample\nLandfall — Whenever a land you control enters, Captain Burnham deals 1 damage to each opponent. If this is the second time this ability has resolved this turn, put a +1/+1 counter on Captain Burnham.",
+    "power": "3",
+    "toughness": "3",
+    "keywords": [
+      "Trample",
+      "Landfall"
+    ],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "Mr. Spock, Science Officer": {
+    "name": "Mr. Spock, Science Officer",
+    "mana_cost": "{2}{U}{U}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Vulcan Human Scientist",
+    "oracle_text": "If you would draw a card, draw two cards instead.",
+    "power": "2",
+    "toughness": "4",
+    "keywords": [],
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Constable Odo": {
+    "name": "Constable Odo",
+    "mana_cost": "{3}{W/U}{W/U}",
+    "cmc": 5.0,
+    "type_line": "Legendary Creature — Shapeshifter Detective",
+    "oracle_text": "When Constable Odo enters, choose one —\n• Tap target creature an opponent controls. Put two stun counters on it. (If a permanent with a stun counter would become untapped, remove one from it instead.)\n• Investigate twice. (To investigate, create a Clue token. It's an artifact with \"{2}, Sacrifice this token: Draw a card.\")",
+    "power": "4",
+    "toughness": "3",
+    "keywords": [
+      "Investigate"
+    ],
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Dathon, His Heart Open": {
+    "name": "Dathon, His Heart Open",
+    "mana_cost": "{G}{U}{R}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Tamarian Officer",
+    "oracle_text": "Whenever you cast an enchantment spell, draw a card. If it's a Saga spell, Dathon deals 2 damage to each opponent.\n{2}: Choose a counter on target enchantment you control. Put another counter of that kind on it. Activate only as a sorcery.",
+    "power": "3",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "G",
+      "R",
+      "U"
+    ],
+    "color_identity": [
+      "G",
+      "R",
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Deanna Troi, Psychic Counsel": {
+    "name": "Deanna Troi, Psychic Counsel",
+    "mana_cost": "{1}{W}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Betazoid Human Advisor",
+    "oracle_text": "Other creatures you control enter with an additional +1/+1 counter on them.",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [],
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Dr. McCoy, Surly Surgeon": {
+    "name": "Dr. McCoy, Surly Surgeon",
+    "mana_cost": "{2}{W}{W}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Human Doctor",
+    "oracle_text": "When Dr. McCoy enters, put a +1/+1 counter on another target creature you control.\nIf another creature you control with a +1/+1 counter on it would be destroyed, instead remove all +1/+1 counters from it and all damage already dealt to it is healed.",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [
+      "Heal"
+    ],
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "D'Vana Tendi, Optimistic Ensign": {
+    "name": "D'Vana Tendi, Optimistic Ensign",
+    "mana_cost": "{1}{G/U}{G/U}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Orion Scientist",
+    "oracle_text": "{T}: Untap another target permanent.\n{3}: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
+    "power": "2",
+    "toughness": "4",
+    "keywords": [
+      "Surveil"
+    ],
+    "colors": [
+      "G",
+      "U"
+    ],
+    "color_identity": [
+      "G",
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Grand Nagus Zek": {
+    "name": "Grand Nagus Zek",
+    "mana_cost": "{2}{B}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Ferengi Noble",
+    "oracle_text": "Grand Nagus Zek gets +1/+1 for each Treasure you control.\nWhenever another creature dies, create a Treasure token. This ability triggers only once each turn. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+    "power": "1",
+    "toughness": "1",
+    "keywords": [
+      "Treasure"
+    ],
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Hemmer, Fixing What Is Broken": {
+    "name": "Hemmer, Fixing What Is Broken",
+    "mana_cost": "{W}{U}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Aenar Artificer",
+    "oracle_text": "During your turn, Spacecraft you control have hexproof. (They can't be the targets of spells or abilities your opponents control.)\nWhenever Hemmer becomes tapped, draw a card, then discard a card.",
+    "power": "2",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "U",
+      "W"
+    ],
+    "color_identity": [
+      "U",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Kira Nerys, Firebrand": {
+    "name": "Kira Nerys, Firebrand",
+    "mana_cost": "{1}{R}{W}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Bajoran Soldier",
+    "oracle_text": "Trample\nIf a creature you control would enter while you control an attacking creature, instead it enters tapped and attacking.\nWhenever another creature you control enters, it gets +1/+1 until end of turn.",
+    "power": "4",
+    "toughness": "3",
+    "keywords": [
+      "Trample"
+    ],
+    "colors": [
+      "R",
+      "W"
+    ],
+    "color_identity": [
+      "R",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Nyota Uhura, Communications": {
+    "name": "Nyota Uhura, Communications",
+    "mana_cost": "{2}{U}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Human Officer",
+    "oracle_text": "Hailing Frequencies — As Nyota Uhura enters, choose a number between 0 and 10.\nOpen a Channel — Whenever an opponent casts a spell with mana value equal to the chosen number, you draw a card.",
+    "power": "2",
+    "toughness": "4",
+    "keywords": [],
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "layout": "normal"
+  },
+  "Q, Stacking the Deck": {
+    "name": "Q, Stacking the Deck",
+    "mana_cost": "{2}{R}{R}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Q",
+    "oracle_text": "When Q enters, shuffle your library, then exile cards from the top of your library until you exile a nonland card. That nonland card gains \"Exile a card from your hand: Create a copy of this card. You may cast the copy. Activate only during your turn and only if this card is exiled.\"",
+    "power": "4",
+    "toughness": "4",
+    "keywords": [],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "The Doctor, EMH": {
+    "name": "The Doctor, EMH",
+    "mana_cost": "{3}{G/W}{G/W}",
+    "cmc": 5.0,
+    "type_line": "Legendary Artifact Creature — Illusion Doctor",
+    "oracle_text": "When The Doctor enters, put a +1/+1 counter on target creature. Then put a +1/+1 counter on each creature you control with a counter on it.",
+    "power": "3",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "G",
+      "W"
+    ],
+    "color_identity": [
+      "G",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "U.S.S. Discovery, at Black Alert": {
+    "name": "U.S.S. Discovery, at Black Alert",
+    "mana_cost": "{3}{G}{G}",
+    "cmc": 5.0,
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "Whenever U.S.S. Discovery enters or attacks, discover 5. (Exile cards from the top of your library until you exile a nonland card with mana value 5 or less. Cast it without paying its mana cost or put it into your hand. Put the rest on the bottom in a random order.)\nStation\n6+ | Flying",
+    "power": "5",
+    "toughness": "5",
+    "keywords": [
+      "Station",
+      "Discover"
+    ],
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "layout": "normal"
+  },
+  "U.S.S. Reliant, From Hell's Heart": {
+    "name": "U.S.S. Reliant, From Hell's Heart",
+    "mana_cost": "{2}{B}{B}",
+    "cmc": 4.0,
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "Whenever U.S.S. Reliant enters or deals combat damage to a player, return target creature card with mana value 4 or less from your graveyard to the battlefield with a finality counter on it.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 10+.)\n10+ | Flying",
+    "power": "4",
+    "toughness": "3",
+    "keywords": [
+      "Station"
+    ],
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "layout": "normal"
+  },
+  "Starship Enterprise": {
+    "name": "Starship Enterprise",
+    "mana_cost": "{5}",
+    "cmc": 5.0,
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "Landfall — Whenever a land you control enters, put four charge counters on Starship Enterprise.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 16+.)\n16+ | Flying\nWhenever Starship Enterprise deals combat damage to a player, draw that many cards.",
+    "power": "4",
+    "toughness": "6",
+    "keywords": [
+      "Station",
+      "Landfall"
+    ],
+    "colors": [],
+    "color_identity": [],
+    "layout": "normal"
+  },
+  "Deep Space 9": {
+    "name": "Deep Space 9",
+    "mana_cost": "{9}",
+    "cmc": 9.0,
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "When Deep Space 9 enters and at the beginning of your upkeep, exile the top four cards of your library. Put all permanent cards exiled this way onto the battlefield.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery.)\n9+ | Creatures you control get +3/+3.",
+    "keywords": [
+      "Station"
+    ],
+    "colors": [],
+    "color_identity": [],
+    "layout": "normal"
+  },
+  "U.S.S. Enterprise-A, Free Spirit": {
+    "name": "U.S.S. Enterprise-A, Free Spirit",
+    "mana_cost": "{3}{W}{W}",
+    "cmc": 5.0,
+    "type_line": "Legendary Artifact — Spacecraft",
+    "oracle_text": "Ward {2}\nWhen U.S.S. Enterprise-A enters, create three 1/1 red Officer creature tokens.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 6+.)\n6+ | Flying, lifelink",
+    "power": "5",
+    "toughness": "5",
+    "keywords": [
+      "Station",
+      "Ward"
+    ],
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Captain Jean-Luc Picard": {
+    "name": "Captain Jean-Luc Picard",
+    "mana_cost": "{2}{W}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Human Officer",
+    "oracle_text": "Other creatures you control get +1/+1.\nWhenever you cast a creature or Spacecraft spell, create a 1/1 red Officer creature token.\nTap seven untapped Officers you control: Search your library for a Spacecraft card, put it onto the battlefield with seven charge counters on it, then shuffle.",
+    "power": "2",
+    "toughness": "3",
+    "keywords": [],
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Lwaxana Troi, Charming Guest": {
+    "name": "Lwaxana Troi, Charming Guest",
+    "mana_cost": "{1}{R}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Betazoid Advisor",
+    "oracle_text": "You may choose not to untap Lwaxana Troi during your untap step.\n{2}, {T}: Choose another target creature you control. For as long as Lwaxana Troi remains tapped, if a triggered ability of that creature triggers, that ability triggers an additional time.",
+    "power": "2",
+    "toughness": "2",
+    "keywords": [],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "Worf, Intelligence Contractor": {
+    "name": "Worf, Intelligence Contractor",
+    "mana_cost": "{2}{R}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Klingon Warrior Spy",
+    "oracle_text": "When Worf enters, for each opponent, gain control of up to one target creature that player controls with mana value 3 or less until end of turn. Untap those creatures. Until end of turn, they become Warriors in addition to their other types and gain haste.",
+    "power": "3",
+    "toughness": "2",
+    "keywords": [],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "Vision of Love": {
+    "name": "Vision of Love",
+    "mana_cost": "{1}{R}",
+    "cmc": 2.0,
+    "type_line": "Instant",
+    "oracle_text": "You may sacrifice an artifact or discard a card. If you do, draw two cards.",
+    "keywords": [],
+    "colors": [
+      "R"
+    ],
+    "color_identity": [
+      "R"
+    ],
+    "layout": "normal"
+  },
+  "Daily Bugle Newspaper": {
+    "name": "Daily Bugle Newspaper",
+    "mana_cost": "{2}",
+    "cmc": 2.0,
+    "type_line": "Artifact",
+    "oracle_text": "{2}, {T}: Draw a card, then discard a card. Create a Treasure token. (It's an artifact with \"{T}, Sacrifice this token: Add one mana of any color.\")",
+    "keywords": [
+      "Treasure"
+    ],
+    "colors": [],
+    "color_identity": [],
+    "produced_mana": [
+      "B",
+      "G",
+      "R",
+      "U",
+      "W"
+    ],
+    "layout": "normal"
+  },
+  "Cosmic Cube": {
+    "name": "Cosmic Cube",
+    "mana_cost": "{5}",
+    "cmc": 5.0,
+    "type_line": "Artifact",
+    "oracle_text": "Ward {2}\nWhenever you attack, look at the top six cards of your library. You may cast a spell from among them with mana value less than or equal to the greatest power among attacking creatures you control without paying its mana cost. Put the rest on the bottom of your library in a random order.",
+    "keywords": [
+      "Ward"
+    ],
+    "colors": [],
+    "color_identity": [],
+    "layout": "normal"
+  },
+  "Verdant Kraken": {
+    "name": "Verdant Kraken",
+    "mana_cost": "{4}{G}{G}{G}",
+    "cmc": 7.0,
+    "type_line": "Creature — Plant Kraken",
+    "oracle_text": "At the beginning of each player's upkeep, you create a 3/3 green Forest Tentacle land creature token. (It has \"{T}: Add {G}.\" It's affected by summoning sickness until your next turn.)",
+    "power": "6",
+    "toughness": "6",
+    "keywords": [],
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "produced_mana": [
+      "G"
+    ],
+    "layout": "normal"
   }
 }
