@@ -240,9 +240,9 @@ pub fn impossible_man() -> CardDefinition {
 
 /// Stangg, Echo Warrior — {2}{R}{G} legendary 3/4 Human Warrior. Whenever he
 /// attacks, create Stangg Twin, a legendary 3/4 red and green Human Warrior
-/// token, tapped and attacking; sacrifice it at the beginning of the next end
-/// step. (Residual: copies of the Auras and Equipment attached to Stangg
-/// aren't made for the Twin.)
+/// token, tapped and attacking, plus a token copy of each Aura and Equipment
+/// attached to him, attached to the Twin; all of them are sacrificed at the
+/// beginning of the next end step.
 pub fn stangg_echo_warrior() -> CardDefinition {
     let twin = TokenDefinition {
         name: "Stangg Twin".into(),
@@ -258,13 +258,30 @@ pub fn stangg_echo_warrior() -> CardDefinition {
         ..Default::default()
     };
     CardDefinition {
-        triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
-            who: PlayerRef::You,
-            count: Value::ONE,
-            definition: Arc::new(twin),
-            cleanup: AttackingTokenCleanup::SacrificeAtNextEndStep,
-            defender: None,
-        })],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::CreateTokenAttacking {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: Arc::new(twin),
+                cleanup: AttackingTokenCleanup::None,
+                defender: None,
+            },
+            Effect::ForEach {
+                selector: Selector::EachPermanent(
+                    R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Aura)
+                        .or(R::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment))
+                        .and(R::AttachedToThisSource),
+                ),
+                body: Box::new(Effect::CreateTokenCopyOfAttachedToEach {
+                    source: Selector::TriggerSource,
+                    hosts: Selector::EachPermanent(
+                        R::HasName("Stangg Twin".into()).and(R::IsToken).and(R::ControlledByYou),
+                    ),
+                }),
+            },
+            // "Sacrifice all tokens created this way" — the Twin and the copies.
+            Effect::SacrificeLastCreatedTokensAtNextEndStep,
+        ]))],
         ..legend(
             "Stangg, Echo Warrior",
             cost(&[generic(2), r(), g()]),

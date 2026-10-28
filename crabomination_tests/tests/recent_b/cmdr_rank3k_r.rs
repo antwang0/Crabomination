@@ -210,6 +210,33 @@ fn impossible_man_keeps_his_name_when_copying_a_legend() {
     assert!(g.battlefield_find(legend).is_some(), "the original legend stays");
 }
 
+/// Stangg: each Aura and Equipment on him is copied onto the Twin (CR 707.2;
+/// it was dropped), and every token made this way goes at the end step.
+#[test]
+fn stangg_twin_carries_copies_of_his_attachments() {
+    let mut g = pod(2);
+    let stangg = ready(&mut g, 0, catalog::stangg_echo_warrior());
+    let axe = ready(&mut g, 0, catalog::bonesplitter());
+    g.battlefield_find_mut(axe).unwrap().attached_to = Some(stangg);
+    declare(&mut g, vec![(stangg, 1)]);
+    let twin = g.battlefield.iter().find(|c| c.definition.name == "Stangg Twin").map(|c| c.id).expect("twin");
+    let copy = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Bonesplitter").expect("copy");
+    assert_eq!(copy.attached_to, Some(twin));
+    assert_eq!(pt(&g, twin), (5, 4));
+    finish_combat(&mut g);
+    assert_eq!(g.players[1].life, 10);
+    for _ in 0..4 {
+        let evs = g.advance_step(Vec::new()).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(&mut g);
+        if g.step == TurnStep::End {
+            break;
+        }
+    }
+    assert_eq!(named(&g, 0, "Stangg Twin"), 0);
+    assert_eq!(named(&g, 0, "Bonesplitter"), 1, "the copy is sacrificed, the original stays");
+}
+
 /// CR 508.3a — Stangg's Twin joins the attack and is gone at the end step.
 #[test]
 fn stangg_brings_a_twin() {
