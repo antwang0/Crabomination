@@ -208,9 +208,10 @@ fn event_payload_matches(
     source: Option<&CardInstance>,
 ) -> bool {
     match (&spec.kind, event) {
-        (EventKind::BecameTarget, GameEvent::PlayerBecameTarget { .. }) => {
-            spec.scope == EventScope::YouOrYourPermanentTargetedByOpponent
-        }
+        (EventKind::BecameTarget, GameEvent::PlayerBecameTarget { .. }) => matches!(
+            spec.scope,
+            EventScope::YouOrYourPermanentTargetedByOpponent | EventScope::PlayerOrPermanentTargetedByYourAbility
+        ),
         (
             EventKind::CreatureOrArtifactDied,
             GameEvent::PermanentDied { is_creature, is_artifact, .. },
@@ -957,6 +958,7 @@ fn event_matches_spec_rest(
         && spec.scope != EventScope::YourCreatureOrCreatureSpellTargetedByOpponent
         && spec.scope != EventScope::YourCreatureTargeted
         && spec.scope != EventScope::OpponentCreatureTargetedByYou
+        && spec.scope != EventScope::PlayerOrPermanentTargetedByYourAbility
         && spec.scope != EventScope::AnyPlayer
         // "When enchanted creature becomes the target": the subject is the
         // Aura's host, matched by the scope arm below.
@@ -1326,6 +1328,24 @@ fn event_matches_spec_rest(
                     })
             } else {
                 false
+            }
+        }
+        EventScope::PlayerOrPermanentTargetedByYourAbility => {
+            // A spell targets as the card on the stack (`by`); anything else
+            // declaring targets is an ability (activated or triggered).
+            let by_ability = |by: &Option<CardId>| {
+                !by.is_some_and(|b| {
+                    state.stack.iter().any(|si| {
+                        matches!(si, crate::game::types::StackItem::Spell { card, .. } if card.id == b)
+                    })
+                })
+            };
+            match event {
+                GameEvent::BecameTarget { target, caster, by } => {
+                    *caster == source.controller && by_ability(by) && state.battlefield_find(*target).is_some()
+                }
+                GameEvent::PlayerBecameTarget { caster, by, .. } => *caster == source.controller && by_ability(by),
+                _ => false,
             }
         }
         EventScope::OpponentCreatureTargetedByYou => {
@@ -1909,6 +1929,7 @@ pub(crate) fn emblem_event_matches(
         | EventScope::YourCreatureOrCreatureSpellTargetedByOpponent
         | EventScope::YourCreatureTargeted
         | EventScope::OpponentCreatureTargetedByYou
+        | EventScope::PlayerOrPermanentTargetedByYourAbility
         | EventScope::EnchantedBySource
         | EventScope::YourSourceDamagedOpponent
         | EventScope::YourSourceDamagedAnyPlayer

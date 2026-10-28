@@ -4581,6 +4581,10 @@ pub enum EventScope {
     /// `EventKind::BecameTarget` — Willbreaker. The targeted creature is the
     /// trigger source (`Selector::TriggerSource`).
     OpponentCreatureTargetedByYou,
+    /// CR 115.1 — a player or a battlefield permanent becomes the target of
+    /// an *ability* the source's controller controls (a spell's targets
+    /// don't count; nor do cards in other zones). Loki, God of Mischief.
+    PlayerOrPermanentTargetedByYourAbility,
     /// A creature an **opponent** controls attacks the source's controller
     /// or a planeswalker they control — the "attacks you or a planeswalker
     /// you control" wording (a bare "attacks you" is
