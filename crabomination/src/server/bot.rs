@@ -6195,10 +6195,14 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
     // the branch used to be `description.starts_with("Exploit")`, one rename
     // away from silently reverting every exploiter to a blanket decline.
     if body.is_some_and(is_sacrifice_then_payoff) {
-        let Some(ctrl) = state.battlefield.find_by_id(source).map(|c| c.controller) else {
-            return false;
-        };
-        return sacrifice_fodder_available(state, ctrl);
+        if let Some(ctrl) = state.battlefield.find_by_id(source).map(|c| c.controller) {
+            return sacrifice_fodder_available(state, ctrl);
+        }
+        // A resolving spell's "you may sacrifice …. If you do" (The Promise of
+        // Kahless) has no exploiter to spare: any creature is fodder.
+        return state
+            .resolving_spell_caster
+            .is_some_and(|seat| state.battlefield.iter().any(|c| c.controller == seat && c.definition.is_creature()));
     }
     // A "you may exile / destroy / bounce target X" whose chosen target is the
     // bot's own permanent is a self-cost the body cannot show — the target
@@ -24163,6 +24167,20 @@ mod tests {
     /// CR 508.1a — Orzhov Advokist's offer is free while another opponent is
     /// left to attack, and a forfeit of every attack when the offerer is the
     /// last one (617 Pegasi sat home for twenty turns of an 8-seat pod).
+    /// A resolving sorcery's "you may sacrifice …. If you do" (The Promise of
+    /// Kahless) has no battlefield source for the exploit screen to read: it
+    /// was declined outright. Taken with a creature to feed it.
+    #[test]
+    fn bot_takes_a_resolving_spells_sacrifice_payoff() {
+        let mut g = crate::game::two_player_game();
+        let promise = g.add_card_to_graveyard(0, crate::catalog::the_promise_of_kahless());
+        let ask = "Sacrifice a Klingon or Warrior?";
+        g.resolving_spell_caster = Some(0);
+        assert!(!optional_trigger_beneficial(&g, promise, ask), "nothing to sacrifice");
+        g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        assert!(optional_trigger_beneficial(&g, promise, ask));
+    }
+
     #[test]
     fn peace_offer_is_declined_against_the_last_opponent() {
         use crate::decision::OptionalKind as K;
