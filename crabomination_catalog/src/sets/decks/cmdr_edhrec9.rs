@@ -1312,14 +1312,8 @@ pub fn rhys_the_evermore() -> CardDefinition {
             mana_cost: cost(&[w()]),
             tap_cost: true,
             sorcery_speed: true,
-            // "Any number of counters": the remover's pick (`RemoveCountersUpTo`);
-            // `only_helpful` takes the harmful ones off its own creature and
-            // leaves a +1/+1 counter.
-            effect: Effect::RemoveCountersUpTo {
-                what: target_filtered(mine()),
-                amount: Value::Const(i32::MAX),
-                only_helpful: true,
-            },
+            // "Any number of counters": a count per kind (CR 122.8).
+            effect: Effect::RemoveAnyNumberOfCounters { what: target_filtered(mine()) },
             ..Default::default()
         }],
         ..legend("Rhys, the Evermore", cost(&[generic(1), w()]), vec![CreatureType::Elf, CreatureType::Warrior], 2, 2)

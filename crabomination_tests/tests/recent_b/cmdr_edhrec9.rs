@@ -568,8 +568,9 @@ fn froghemoth_eats_only_the_damaged_players_graveyard() {
     assert!(other.iter().all(|id| g.players[2].graveyard.iter().any(|c| c.id == *id)), "not the other opponent's");
 }
 
-/// Rhys, the Evermore's "remove any number of counters": the harmful ones go
-/// (a stun counter) and a +1/+1 counter stays.
+/// Rhys, the Evermore's "remove any number of counters" (CR 122.8): a count
+/// per kind — here the stun counters go and the +1/+1 counter stays (it was
+/// a fixed "harmful only" rule; any count is legal now).
 #[test]
 fn rhys_removes_the_harmful_counters_and_keeps_the_good_ones() {
     let mut g = pod(2);
@@ -580,6 +581,7 @@ fn rhys_removes_the_harmful_counters_and_keeps_the_good_ones() {
         b.add_counters(CounterType::PlusOnePlusOne, 1);
         b.add_counters(CounterType::Stun, 2);
     }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(0), DecisionAnswer::Amount(2)]));
     activate(&mut g, rhys, 0, Some(Target::Permanent(bear))).expect("{W}, {T}");
     let b = g.battlefield_find(bear).unwrap();
     assert_eq!((b.counter_count(CounterType::Stun), b.counter_count(CounterType::PlusOnePlusOne)), (0, 1));

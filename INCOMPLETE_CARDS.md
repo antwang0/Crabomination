@@ -2041,7 +2041,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Sen Triplets | the chosen opponent can still activate mana abilities | `PlayerCantActivateNonManaAbilitiesThisTurn` (Abeyance's lock) is the nearest; there is no all-abilities lock |
 | ~~Teferi, Temporal Pilgrim~~ ✅ | fixed 2026-10-24: the −12 runs `EachPlayerDoes { Target(0) }` over a `MoveChosen` to hand before the shuffle — the opponent's pick, not a target | — |
 | 🟡 Smaug the Impenetrable | combat damage to it still puts its trigger on the stack (it resolves to nothing) | `EventKind` has no bit left for a noncombat kind; `Effect::IfTriggerDamageNoncombat` gates the body per event instead |
-| 🟡 Rhys, the Evermore | "remove any number of counters" is not asked: the harmful kinds come off your creature and a +1/+1 counter stays | `RemoveCountersUpTo { only_helpful }` has no any-number counter ballot |
+| ~~Rhys, the Evermore~~ ✅ | fixed 2026-10-28: a count per counter kind (`RemoveAnyNumberOfCounters`, keyword counters too); headless strips what its owner doesn't want | — |
 | ~~Lara Croft, Tomb Raider~~ ✅ | fixed 2026-10-27: the grants form one `OneCastAmongGranted` group — one play, a land drop included | — |
 | ~~Loki, God of Mischief~~ ✅ | fixed 2026-10-28: listens to `BecameTarget` under `EventScope::PlayerOrPermanentTargetedByYourAbility` (battlefield permanents and players only) | — |
 | 🟡 Sentinel Tower | the count reads only your own instants and sorceries this turn; one an opponent cast during your turn adds nothing to a later shot (and theirs triggers it for your count) | `Value::InstantsOrSorceriesCastThisTurn` is per player; there is no table-wide instant/sorcery tally |
