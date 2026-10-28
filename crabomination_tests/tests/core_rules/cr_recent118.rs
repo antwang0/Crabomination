@@ -1859,3 +1859,31 @@ fn cr_603_7d_a_this_turn_trigger_remembers_its_spell() {
     assert!(em.this_turn);
     assert_eq!(em.source, Some(glimpse));
 }
+
+/// CR 106.1 / 605 — a power-sized "add X mana" is exact however large X is,
+/// without one event per mana: Kami of Whispered Hopes at a 54,740-life pod
+/// board (seed 26255) pushed millions of `ManaAdded` and ran a process past
+/// 6 GB inside a bot probe.
+#[test]
+fn cr_106_1_a_huge_power_sized_mana_ability_stays_bounded() {
+    let mut g = main_phase();
+    let kami = g.add_card_to_battlefield(0, catalog::kami_of_whispered_hopes());
+    {
+        let k = g.battlefield_find_mut(kami).unwrap();
+        k.summoning_sick = false;
+        k.add_counters(crabomination::card::CounterType::PlusOnePlusOne, 10_000_000);
+    }
+    let events = g
+        .perform_action(crabomination::game::types::GameAction::ActivateAbility {
+            card_id: kami,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("tap for mana");
+    assert_eq!(g.players[0].mana_pool.total(), 10_000_001);
+    assert!(events.len() < 20_000, "{} events", events.len());
+}
+

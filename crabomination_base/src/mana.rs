@@ -1621,11 +1621,12 @@ impl ManaPool {
     }
 
     pub fn add(&mut self, color: Color, amount: u32) {
-        *self.slot_mut(color) += amount;
+        let slot = self.slot_mut(color);
+        *slot = slot.saturating_add(amount);
     }
 
     pub fn add_colorless(&mut self, amount: u32) {
-        self.colorless += amount;
+        self.colorless = self.colorless.saturating_add(amount);
     }
 
     /// "Double the amount of each type of unspent mana you have" (Doubling
@@ -1841,7 +1842,7 @@ impl ManaPool {
             .iter_mut()
             .find(|(c, _, r)| *c == color && *r == restriction)
         {
-            entry.1 += amount;
+            entry.1 = entry.1.saturating_add(amount);
         } else {
             self.restricted.push((color, amount, restriction));
         }
@@ -1857,7 +1858,7 @@ impl ManaPool {
             .iter_mut()
             .find(|(_, r)| *r == restriction)
         {
-            entry.0 += amount;
+            entry.0 = entry.0.saturating_add(amount);
         } else {
             self.restricted_colorless.push((amount, restriction));
         }

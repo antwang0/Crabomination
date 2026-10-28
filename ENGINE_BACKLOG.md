@@ -305,6 +305,13 @@ with `CRAB_POD_CONCEDE`), then INCOMPLETE rows by seat count with the frozen poo
 - **Primitive:** `MayPlayDuration::WhileHolderControlsSource { your_turn }` (CR 611.2b): ends as the source leaves or a
   `ControlChanged` takes it from the holder, and stays ended. Lightning Security Sergeant, Victor Mancha, Taster of
   Wares, Ghost-Spider rode `WhileSourceOnBattlefield` (a stolen source kept the grant); Hama is your-turn-only now.
+- **Control class (CR 611.2b / 702.95e):** a static "you may play cards exiled with this" grant is usable only while its
+  holder controls the source; `follows_control` hands it to a new controller (Nightveil Specter, Hedonist's Trove,
+  Colfenor's Plans, Rogue Class, Rona) where "cards you own" grants wait (Paleontologist, Grolnok, Evelyn). A soulbond
+  pair breaks on a control change or a non-creature partner, for good (the sweep only checked leaving).
+- **Runaway (audit-profile pod, rc 137):** "add X mana" adds in bulk and emits at most `SCALE_CEILING` per-unit events;
+  `ManaPool` adds saturate. Kami of Whispered Hopes at power ~millions pushed one `ManaAdded` per mana inside a bot
+  probe and took the process past 6 GB (`--pod-decks 2337,2718,4792,5418 --seed 26255 --first 0`, pre-existing).
 - **Decision plumbing:** a prompting seat names each extra slot of a multi-target loyalty ability
   (`ResumeContext::LoyaltyExtraTargetPick`, Jeska's −X; CR 115.3 distinct, nothing paid until named).
 - **Docs:** Baron Helmut Zemo's doc called its picks auto-only (stale since `cfd6ccfa9` / `6e56f174e`).

@@ -14630,13 +14630,20 @@ impl GameState {
                     .iter()
                     .find(|(seat, _)| *seat == p)
                     .map(|(_, c)| *c);
-                let add_one = |state: &mut Self, p: usize, c: Color| {
+                let add_n = |state: &mut Self, p: usize, c: Color, n: u32| {
                     let c = recolor.unwrap_or(c);
+                    let amount = mult.saturating_mul(n);
                     match restriction {
-                        Some(r) => state.players[p].mana_pool.add_restricted(c, mult, r),
-                        None => state.players[p].mana_pool.add(c, mult),
+                        Some(r) => state.players[p].mana_pool.add_restricted(c, amount, r),
+                        None => state.players[p].mana_pool.add(c, amount),
                     }
                 };
+                let add_one = |state: &mut Self, p: usize, c: Color| add_n(state, p, c, 1);
+                // One `ManaAdded` per mana, up to `MANA_EVENT_CAP`: a power-sized
+                // X (Kami of Whispered Hopes at a 54,740-life pod board, seed
+                // 26255) pushed millions and took the process past 6 GB.
+                const MANA_EVENT_CAP: u32 = crate::player::SCALE_CEILING as u32;
+                let unit_events = |n: u32| n.min(MANA_EVENT_CAP);
                 // The three land-tap replacements below each asked "is the
                 // source a land" with its own `battlefield_find`, and two of
                 // them then took a whole-board `static_abilities` walk for a
@@ -14762,14 +14769,13 @@ impl GameState {
                     }
                     ManaPayload::Colorless(v) => {
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
-                        for _ in 0..n {
-                            match restriction {
-                                // Powerstone tokens — restricted {C}.
-                                Some(r) => self.players[p]
-                                    .mana_pool
-                                    .add_restricted_colorless(mult, r),
-                                None => self.players[p].mana_pool.add_colorless(mult),
-                            }
+                        let amount = mult.saturating_mul(n);
+                        match restriction {
+                            // Powerstone tokens — restricted {C}.
+                            Some(r) => self.players[p].mana_pool.add_restricted_colorless(amount, r),
+                            None => self.players[p].mana_pool.add_colorless(amount),
+                        }
+                        for _ in 0..unit_events(n) {
                             events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
                         }
                     }
@@ -14779,8 +14785,8 @@ impl GameState {
                         // power-scaled mana abilities (Topiary Lecturer,
                         // Rofellos when promoted to per-Forest scaling).
                         let n = self.evaluate_value(v, ctx).max(0) as u32;
-                        for _ in 0..n {
-                            add_one(self, p, *color);
+                        add_n(self, p, *color, n);
+                        for _ in 0..unit_events(n) {
                             events.push(GameEvent::ManaAdded { player: p, color: *color, source: ctx.source });
                         }
                     }
@@ -14832,8 +14838,8 @@ impl GameState {
                             crate::decision::DecisionAnswer::Color(c) => c,
                             _ => Color::White,
                         };
-                        for _ in 0..n {
-                            add_one(self, p, color);
+                        add_n(self, p, color, n);
+                        for _ in 0..unit_events(n) {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
@@ -14934,8 +14940,8 @@ impl GameState {
                             _ => Color::White,
                         };
                         let n = self.devotion_to(p, &[color]).max(0) as u32;
-                        for _ in 0..n {
-                            self.players[p].mana_pool.add(color, mult);
+                        self.players[p].mana_pool.add(color, mult.saturating_mul(n));
+                        for _ in 0..unit_events(n) {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
@@ -15140,13 +15146,13 @@ impl GameState {
                         let legal: Vec<Color> = colors.iter().collect();
                         if !legal.is_empty() {
                             let color = self.chosen_mana_color(p, &legal, ctx.source);
-                            for _ in 0..n {
-                                add_one(self, p, color);
+                            add_n(self, p, color, n);
+                            for _ in 0..unit_events(n) {
                                 events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                             }
                         } else if colorless {
-                            for _ in 0..n {
-                                self.players[p].mana_pool.add_colorless(mult);
+                            self.players[p].mana_pool.add_colorless(mult.saturating_mul(n));
+                            for _ in 0..unit_events(n) {
                                 events.push(GameEvent::ColorlessManaAdded { player: p, source: ctx.source });
                             }
                         }
