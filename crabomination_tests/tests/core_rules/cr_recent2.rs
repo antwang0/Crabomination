@@ -165,3 +165,33 @@ fn cr_702_2c_deathtouch_one_point_is_lethal() {
         "1 point of deathtouch damage is lethal to the 1/3",
     );
 }
+
+/// CR 716.2d — a Class put onto the battlefield (not cast) has no level and is
+/// treated as level 1: its level-2 bar is activatable, the level becomes 2
+/// (not 1), and the "becomes level 2" trigger fires (Wizard Class draws two).
+#[test]
+fn cr_716_2d_a_class_without_a_level_is_level_one() {
+    use crabomination::game::types::{GameAction, TurnStep};
+    let mut g = two_player_game();
+    let class = g.add_card_to_battlefield(0, catalog::wizard_class());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: class,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("level 2");
+    crabomination::game::drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(class).unwrap().class_level, 2);
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the level-2 trigger drew two");
+}

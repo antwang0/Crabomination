@@ -25057,7 +25057,9 @@ impl GameState {
                 if !card.definition.is_class() {
                     return Ok(());
                 }
-                card.class_level = card.class_level.saturating_add(1);
+                // CR 716.2a / 716.2d — "becomes N" from the level it is
+                // treated as having (1 when it has none).
+                card.class_level = card.level().saturating_add(1);
                 let level = card.class_level;
                 let player = card.controller;
                 events.push(GameEvent::ClassLevelReached { source: src, player, level });

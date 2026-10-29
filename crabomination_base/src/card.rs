@@ -12561,6 +12561,12 @@ impl CardInstance {
         }
     }
 
+    /// CR 716.2d — the level every rule reads: a permanent with no level is
+    /// treated as level 1 (a Class put onto the battlefield, not cast).
+    pub fn level(&self) -> u8 {
+        self.class_level.max(1)
+    }
+
     /// CR 716.2 — the Class level is battlefield-only; clear it as a Class
     /// leaves the battlefield so it re-enters at level 1.
     pub fn reset_class_level(&mut self) {

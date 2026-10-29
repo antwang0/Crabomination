@@ -150,7 +150,7 @@ impl GameState {
             .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
             .filter_map(|(c, sa)| {
                 let eff = match &sa.effect {
-                    StaticEffect::WhileClassLevelAtLeast { n, inner } if c.class_level >= *n => inner.as_ref(),
+                    StaticEffect::WhileClassLevelAtLeast { n, inner } if c.level() >= *n => inner.as_ref(),
                     other => other,
                 };
                 match eff {

@@ -213,6 +213,27 @@ mod tests {
         let _ = bears;
     }
 
+    /// Wizard Class levels up with spare mana in the post-combat main phase
+    /// (CR 716.2a; never taken in an 80-group census, seed 28040).
+    #[test]
+    fn wizard_class_levels_up_with_spare_mana() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let class = g.add_card_to_battlefield(0, crate::catalog::wizard_class());
+        for _ in 0..4 {
+            g.add_card_to_library(0, crate::catalog::island());
+        }
+        g.players[0].mana_pool.add(crate::mana::Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        let got = pick_generic_ability(&g, 0, &EvalWeights::default());
+        assert!(
+            matches!(got, Some(GameAction::ActivateAbility { card_id, ability_index: 0, .. }) if card_id == class),
+            "got {got:?}"
+        );
+    }
+
     /// Mikaeus, the Lunarch spends a counter to grow three other creatures
     /// rather than growing itself.
     #[test]

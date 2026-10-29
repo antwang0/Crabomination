@@ -4099,12 +4099,12 @@ impl GameState {
             Predicate::SourceClassLevelIs(n) => ctx
                 .source
                 .and_then(|cid| self.battlefield_find(cid))
-                .map(|c| c.class_level == *n)
+                .map(|c| c.level() == *n)
                 .unwrap_or(false),
             Predicate::SourceClassLevelAtLeast(n) => ctx
                 .source
                 .and_then(|cid| self.battlefield_find(cid))
-                .map(|c| c.class_level >= *n)
+                .map(|c| c.level() >= *n)
                 .unwrap_or(false),
             Predicate::CastSpellFromExile => {
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {

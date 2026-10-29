@@ -8343,7 +8343,7 @@ impl GameState {
         loop {
             let (open, inner) = match eff {
                 StaticEffect::WhileClassLevelAtLeast { n, inner } => {
-                    (card.class_level >= *n, inner)
+                    (card.level() >= *n, inner)
                 }
                 StaticEffect::WhileYourTurn { inner } => {
                     (self.active_player_idx == card.controller, inner)
@@ -35498,7 +35498,7 @@ fn static_effect_to_effects(
             // CR 716.2 — a level-gated Class static: emit its inner effect
             // only while the source Class is at level `n` or higher.
             StaticEffect::WhileClassLevelAtLeast { n, inner } => {
-                if card.class_level >= *n {
+                if card.level() >= *n {
                     static_effect_to_effects(inner, card, timestamp, your_turn, out)
                 }
             }

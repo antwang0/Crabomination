@@ -602,7 +602,7 @@ fn known_library_top(
         state.battlefield.iter().any(|c| {
             c.controller == player_seat
                 && c.definition.static_abilities.iter().any(|sa| match &sa.effect {
-                    StaticEffect::WhileClassLevelAtLeast { n, inner } => c.class_level >= *n && pred(inner),
+                    StaticEffect::WhileClassLevelAtLeast { n, inner } => c.level() >= *n && pred(inner),
                     e => pred(e),
                 })
         })
