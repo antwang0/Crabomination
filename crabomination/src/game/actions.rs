@@ -13098,9 +13098,13 @@ impl GameState {
                         let need = *count as usize - picked.len();
                         picked.extend(cands.into_iter().take(need).map(|c| c.id));
                     }
+                    // The resolution reads what was exiled (`Selector::CostExiledCards`
+                    // — Soul Exchange's "if the exiled creature was a Thrull").
+                    clear_cold!(self.cost_exiled_cards);
                     for id in picked {
                         let ctx = EffectContext::for_spell(p, None, 0, 0);
                         self.move_card_to(id, &crate::effect::ZoneDest::Exile, &ctx, &mut events);
+                        self.cost_exiled_cards.push(id);
                     }
                 }
                 A::BeholdAndExile { filter } => {
