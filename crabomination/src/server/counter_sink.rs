@@ -141,14 +141,20 @@ fn pick_level_up(state: &GameState, seat: usize) -> Option<GameAction> {
 /// Lion, Arbor Colossus): idle mana — a main phase's, or an opponent's end
 /// step's, since monstrosity is instant speed — makes a creature that isn't
 /// monstrous yet monstrous. Eleven pod cards were never activated by any bot
-/// path (6-seat census over all 271 decks, seed 4401).
+/// path (6-seat census over all 271 decks, seed 4401). Harnessing an
+/// Infinity Stone (CR 701.64a, The Mind Stone) is the same one-way upgrade.
 pub(super) fn pick_monstrosity(state: &GameState, seat: usize) -> Option<GameAction> {
     if !super::bot::pod_sinks_on(state, seat) || !state.stack.is_empty() {
         return None;
     }
-    state.battlefield.iter().filter(|c| c.controller == seat && !c.monstrous).find_map(|c| {
+    state.battlefield.iter().filter(|c| c.controller == seat).find_map(|c| {
         let idx = c.definition.activated_abilities.iter().position(|ab| {
-            matches!(ab.effect, Effect::Monstrosity { .. }) && !ab.mana_cost.has_x() && !ab.sac_cost
+            let upgrade = match ab.effect {
+                Effect::Monstrosity { .. } => !c.monstrous,
+                Effect::Harness { what: Selector::This } => !c.harnessed,
+                _ => false,
+            };
+            upgrade && !ab.mana_cost.has_x() && !ab.sac_cost
         })?;
         let action = GameAction::ActivateAbility {
             card_id: c.id,
@@ -503,6 +509,21 @@ mod tests {
             pick_discard_charge(&g, 0),
             Some(GameAction::ActivateAbility { card_id, ability_index: 0, .. }) if card_id == book
         ));
+    }
+
+    /// The Mind Stone is harnessed with idle mana, once.
+    #[test]
+    fn the_mind_stone_is_harnessed_with_idle_mana() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 1;
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let stone = g.add_card_to_battlefield(0, crate::catalog::the_mind_stone());
+        g.players[0].mana_pool.add(crate::mana::Color::White, 6);
+        assert!(matches!(pick_monstrosity(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == stone));
+        g.battlefield_find_mut(stone).unwrap().harnessed = true;
+        assert!(pick_monstrosity(&g, 0).is_none(), "already harnessed");
     }
 
     /// Coretapper charges the Darksteel Reactor at an opponent's end step —
