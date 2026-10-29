@@ -252,13 +252,22 @@ pub fn bitterheart_witch() -> CardDefinition {
 
 /// Accursed Witch // Infectious Curse — {3}{B} 4/2 Human Shaman; spells your
 /// opponents cast targeting it cost {1} less; dying, it returns transformed
-/// attached to target opponent. Infectious Curse: at the beginning of
-/// enchanted player's upkeep, they lose 1 life and you gain 1.
+/// attached to target opponent. Infectious Curse: your spells targeting
+/// enchanted player cost {1} less; at the beginning of enchanted player's
+/// upkeep, they lose 1 life and you gain 1.
 pub fn accursed_witch() -> CardDefinition {
     let infectious = CardDefinition {
         name: "Infectious Curse",
         card_types: vec![CardType::Enchantment],
         subtypes: curse_types(),
+        static_abilities: vec![StaticAbility {
+            description: "Spells you cast that target enchanted player cost {1} less to cast.",
+            effect: StaticEffect::CostReductionForYourSpellsTargetingThis {
+                amount: 1,
+                any_caster: false,
+                opponents_only: false,
+            },
+        }],
         triggered_abilities: vec![at_enchanted_players(
             TurnStep::Upkeep,
             Effect::Seq(vec![
@@ -281,7 +290,11 @@ pub fn accursed_witch() -> CardDefinition {
         back_face: Some(Box::new(infectious)),
         static_abilities: vec![StaticAbility {
             description: "Spells your opponents cast that target this creature cost {1} less to cast.",
-            effect: StaticEffect::CostReductionForYourSpellsTargetingThis { amount: 1, any_caster: true },
+            effect: StaticEffect::CostReductionForYourSpellsTargetingThis {
+                amount: 1,
+                any_caster: false,
+                opponents_only: true,
+            },
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),

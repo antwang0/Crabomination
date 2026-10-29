@@ -1610,6 +1610,40 @@ fn accursed_witch_returns_as_infectious_curse() {
     assert_eq!((g.players[0].life, g.players[1].life), (21, 19));
 }
 
+/// CR 601.2f — Accursed Witch's {1} discount is only for its controller's
+/// opponents; Infectious Curse's is for its controller's spells aimed at the
+/// enchanted player.
+#[test]
+fn accursed_witch_and_infectious_curse_discounts() {
+    // Murder ({1}{B}{B}) at the Witch: an opponent pays {B}{B}, its owner can't.
+    for (seat, ok) in [(1usize, true), (0, false)] {
+        let mut g = pod(2);
+        let witch = ready(&mut g, 0, catalog::accursed_witch());
+        let murder = g.add_card_to_hand(seat, catalog::murder());
+        g.active_player_idx = seat;
+        g.priority.player_with_priority = seat;
+        g.players[seat].mana_pool.add(Color::Black, 2);
+        assert_eq!(cast(&mut g, murder, Some(Target::Permanent(witch))).is_ok(), ok, "seat {seat}");
+    }
+    // Lava Axe ({4}{R}) at the cursed player for {3}{R}; at another, not.
+    for (victim, ok) in [(1usize, true), (2, false)] {
+        let mut g = pod(3);
+        let witch = ready(&mut g, 0, catalog::accursed_witch());
+        let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+        let mut ctx = EffectContext::for_spell(1, None, 0, 0);
+        ctx.targets = vec![Target::Permanent(witch)];
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+        g.resolve_effect(&kill, &ctx).unwrap();
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(witch).and_then(|c| c.attached_to_player), Some(1));
+        let axe = g.add_card_to_hand(0, catalog::lava_axe());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        g.priority.player_with_priority = 0;
+        assert_eq!(cast(&mut g, axe, Some(Target::Player(victim))).is_ok(), ok, "victim {victim}");
+    }
+}
+
 /// Bitterheart Witch dying fetches a Curse onto an opponent.
 #[test]
 fn bitterheart_witch_fetches_a_curse() {
