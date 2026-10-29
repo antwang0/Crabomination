@@ -1857,11 +1857,12 @@ pub fn witchstalker() -> CardDefinition {
 }
 
 /// Primal Adversary — {2}{G} 4/3 trample Wolf. When it enters, you may pay
-/// {1}{G} any number of times; each payment puts a +1/+1 counter on it and
-/// makes a land you control a 3/3 haste Wolf creature that's still a land.
+/// {1}{G} any number of times; when you pay one or more times, a reflexive
+/// trigger (CR 603.12) puts that many +1/+1 counters on it, then up to that
+/// many target lands you control become 3/3 haste Wolf creatures that are
+/// still lands (the Bloodthirsty Adversary shape).
 pub fn primal_adversary() -> CardDefinition {
-    use crate::card::CounterType;
-    use crate::effect::shortcut::{choose_some_then, chosen_one};
+    use crate::card::{CounterType, Predicate};
     use crate::effect::Duration;
     CardDefinition {
         name: "Primal Adversary",
@@ -1871,28 +1872,45 @@ pub fn primal_adversary() -> CardDefinition {
         power: 4,
         toughness: 3,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::MayPayRepeatedly {
-            who: PlayerRef::You,
-            description: "Pay {1}{G} for a +1/+1 counter and a 3/3 Wolf land?".into(),
-            mana_cost: cost(&[generic(1), g()]),
-            body: Box::new(Effect::Seq(vec![
-                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
-                choose_some_then(
-                    Selector::EachPermanent(R::Land.and(R::Not(Box::new(R::Creature))).and(R::ControlledByYou)),
-                    PlayerRef::You,
-                    Value::ONE,
-                    true,
-                    Effect::BecomeCreature {
-                        what: chosen_one(),
-                        power: Value::Const(3),
-                        toughness: Value::Const(3),
-                        creature_types: vec![CreatureType::Wolf],
-                        keywords: vec![Keyword::Haste],
-                        duration: Duration::Permanent,
-                    },
-                ),
-            ])),
-        })],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::MayPayRepeatedly {
+                who: PlayerRef::You,
+                description: "Pay {1}{G} (again) for Primal Adversary?".into(),
+                mana_cost: cost(&[generic(1), g()]),
+                body: Box::new(Effect::Noop),
+            },
+            Effect::If {
+                cond: Predicate::ValueAtLeast(Value::TimesPaidThisEffect, Value::ONE),
+                then: Box::new(Effect::WithX {
+                    x: Value::TimesPaidThisEffect,
+                    body: Box::new(Effect::ReflexiveTrigger {
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::AddCounter {
+                                what: Selector::This,
+                                kind: CounterType::PlusOnePlusOne,
+                                amount: Value::XFromCost,
+                            },
+                            Effect::CapTargetsAtX {
+                                body: Box::new(Effect::ApplyToTargets {
+                                    max_targets: 8,
+                                    min_targets: 0,
+                                    filter: R::Land.and(R::ControlledByYou),
+                                    effect: Box::new(Effect::BecomeCreature {
+                                        what: Selector::Target(0),
+                                        power: Value::Const(3),
+                                        toughness: Value::Const(3),
+                                        creature_types: vec![CreatureType::Wolf],
+                                        keywords: vec![Keyword::Haste],
+                                        duration: Duration::Permanent,
+                                    }),
+                                }),
+                            },
+                        ])),
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
         ..Default::default()
     }
 }

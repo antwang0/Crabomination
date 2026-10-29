@@ -847,8 +847,9 @@ fn becomes_blocked_triggers_find_the_blocker_and_defender() {
     assert_eq!([g.players[1].life, g.players[2].life], [lives[0], lives[1] - 1], "the Helm hits the defender");
 }
 
-/// Primal Adversary paid twice: two +1/+1 counters and two Forests standing
-/// up as 3/3 haste Wolves that are still lands.
+/// Primal Adversary paid twice: the reflexive trigger (CR 603.12) puts two
+/// +1/+1 counters on it and targets up to two lands, which stand up as 3/3
+/// haste Wolves that are still lands; the third Forest stays a land.
 #[test]
 fn primal_adversary_wakes_lands_per_payment() {
     use crabomination::card::CardType;
@@ -859,9 +860,7 @@ fn primal_adversary_wakes_lands_per_payment() {
     g.players[0].mana_pool.add_colorless(4);
     g.decider = Box::new(ScriptedDecider::new([
         DecisionAnswer::Bool(true),
-        DecisionAnswer::Cards(vec![lands[0]]),
         DecisionAnswer::Bool(true),
-        DecisionAnswer::Cards(vec![lands[1]]),
         DecisionAnswer::Bool(false),
     ]));
     cast(&mut g, pa);
