@@ -3334,6 +3334,10 @@ pub enum Predicate {
     /// (Acererak the Archlich's "if you haven't completed Tomb of
     /// Annihilation"). Reads `PlayerCold::completed_dungeons`.
     CompletedDungeon { who: PlayerRef, name: String },
+    /// `who` has cast a spell named `name` this turn (Sift Through Sands'
+    /// "a spell named Peer Through Depths"). Reads
+    /// `Player::spell_names_cast_this_turn`.
+    CastSpellNamedThisTurn { who: PlayerRef, name: String },
 }
 
 // ── Duration ─────────────────────────────────────────────────────────────────

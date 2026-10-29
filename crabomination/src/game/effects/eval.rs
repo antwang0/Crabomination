@@ -3146,6 +3146,10 @@ impl GameState {
                 .resolve_players(who, ctx)
                 .into_iter()
                 .any(|p| self.players[p].completed_dungeons.iter().any(|d| d == name)),
+            Predicate::CastSpellNamedThisTurn { who, name } => self
+                .resolve_players(who, ctx)
+                .into_iter()
+                .any(|p| self.players[p].spell_names_cast_this_turn.iter().any(|n| *n == name.as_str())),
             Predicate::HasInitiative { who } => self
                 .resolve_players(who, ctx)
                 .into_iter()
