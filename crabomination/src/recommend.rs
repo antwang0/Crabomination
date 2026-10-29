@@ -938,6 +938,66 @@ fn basic_split(
     out
 }
 
+/// Does the rated builder give a colour holding a double-pip spell at least
+/// [`DOUBLE_PIP_SOURCES`] sources? [`basic_split`] weights each pip by
+/// (7 − mana value), so a {B}{B} six-drop barely counts and the spot check
+/// (2026-10-29) found five Swamps under two Apex Witchstalkers and
+/// Overwrite the Multiverse. **Off:** with the floor against without
+/// (`fra_card_eval --ab --best 16 --trial floor`, 2,000 pools x 8 pairs,
+/// `--pilot fra-fixes`, seeds 43 / 97): FRA 50.19 % [50.07, 50.31] / 50.15 %
+/// [50.03, 50.26] (one deck in seven changes), SOS 50.03 / 50.02; on top of
+/// the judge polish FRA 52.79 / 52.84 against the polish's 52.64 / 52.66.
+/// Real but small — under the +0.3 bar set before the run.
+pub const RATED_PIP_FLOOR: bool = false;
+
+/// The source count [`RATED_PIP_FLOOR`] guarantees: about what a strong
+/// limited player runs under a colour's {C}{C} cards in a 16–17 land deck.
+pub const DOUBLE_PIP_SOURCES: u32 = 7;
+
+thread_local! {
+    static PIP_FLOOR: std::cell::Cell<bool> = const { std::cell::Cell::new(RATED_PIP_FLOOR) };
+}
+
+fn pip_floor_on() -> bool {
+    PIP_FLOOR.get()
+}
+
+/// Run `f` with [`RATED_PIP_FLOOR`] set to `on` — the trial arm of
+/// `fra_card_eval --ab --trial`.
+pub fn with_pip_floor<R>(on: bool, f: impl FnOnce() -> R) -> R {
+    let was = PIP_FLOOR.replace(on);
+    let r = f();
+    PIP_FLOOR.set(was);
+    r
+}
+
+/// Move basics toward any main colour with a double-pip spell until it has
+/// [`DOUBLE_PIP_SOURCES`] sources (basics plus duals that make it), taking
+/// them from the colour with the most basics that can spare one — its own
+/// floor is that number too if it has a double pip, one source otherwise.
+fn double_pip_floor(main: &[CardFactory], colors: &[Color], duals: &[CardFactory], basics: &mut HashMap<Color, u32>) {
+    let double = |c: Color| main.iter().any(|&f| crate::cube::card_brief(f).pips.get(c) >= 2);
+    let dual_sources = |c: Color| duals.iter().filter(|&&f| crate::cube::card_brief(f).produces.contains(&c)).count() as u32;
+    let sources = |b: &HashMap<Color, u32>, c: Color| b.get(&c).copied().unwrap_or(0) + dual_sources(c);
+    let floor = |c: Color| if double(c) { DOUBLE_PIP_SOURCES } else { 1 };
+    for &c in colors {
+        if !double(c) {
+            continue;
+        }
+        while sources(basics, c) < DOUBLE_PIP_SOURCES {
+            let Some(&d) = colors
+                .iter()
+                .filter(|&&d| d != c && basics.get(&d).copied().unwrap_or(0) > 0 && sources(basics, d) > floor(d))
+                .max_by_key(|&&d| basics.get(&d).copied().unwrap_or(0))
+            else {
+                break;
+            };
+            *basics.get_mut(&d).unwrap() -= 1;
+            *basics.entry(c).or_insert(0) += 1;
+        }
+    }
+}
+
 thread_local! {
     static OLD_DUALS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
@@ -1158,8 +1218,11 @@ impl ShapeBuild {
                 land_colors.push(c);
             }
         }
-        let (duals, basics) =
+        let (duals, mut basics) =
             assemble_lands(&mut leftovers, &land_slots, &main, &land_colors, lands, cfg.builder_v2);
+        if cfg.rated_cards && pip_floor_on() {
+            double_pip_floor(&main, colors, &duals, &mut basics);
+        }
         CandidateBuild {
             static_score,
             label: candidate_label(colors, splash),

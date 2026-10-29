@@ -6700,3 +6700,38 @@ under the bar — an open lead for more seeds, not adopted.
   ratings build green in 10 of 12 pools, blue in none.
 - SOS: Tragedy Feaster's end-step sacrifice ate four lands; Paradigm copies
   re-register their delayed trigger each time.
+
+## Builder: the judge polishes its own pick (FRA +2.65, SOS +0.78); a double-pip land floor is real but small (2026-10-29)
+
+From the spot check's deck review: best-of-16 only *chooses* among noisy
+candidates, so the pick kept 1-for-1 swaps its own judge prefers (Murmuring
+Volume, the lowest-rated card in any deck, in 5 of 20 FRA decks); and
+`basic_split` weights a pip by (7 − mana value), so a colour whose double
+pips sit on expensive cards can get five sources.
+
+- **`RATED_JUDGE_POLISH` (selfplay.rs) — ON.** After the best-of-`n` pick,
+  `hill_climb_build_by` (3 passes) under the same judge, over the pool cards
+  the deck's lands can cast (`CardBrief::fits` of the lands' colours; lands
+  untouched). 0.3 ms a build.
+- **`RATED_PIP_FLOOR` (recommend.rs) — off.** A main colour with a
+  double-pip spell gets 7 sources (basics + duals), basics moved from the
+  colour with the most that can spare one.
+
+`fra_card_eval --ab --best 16 --trial polish|floor|both` (the trial arm
+against the same builder with both off; positive control: 193 / 200 and
+22 / 200 decks changed), 2 000 pools x 8 pairs, `--pilot fra-fixes`,
+pool-level:
+
+| trial | FRA s43 | FRA s97 | SOS s43 | SOS s97 |
+|---|---|---|---|---|
+| polish | **52.64** [52.23, 53.05] | **52.66** [52.23, 53.09] | **50.84** [50.56, 51.12] | **50.72** [50.44, 51.00] |
+| floor | 50.19 [50.07, 50.31] | 50.15 [50.03, 50.26] | 50.03 | 50.02 |
+| both | 52.79 | 52.84 | 50.90 | 50.75 |
+
+Bar (set before the run, as round 87's): both seeds > 50 and mean > +0.3.
+The polish clears it on both sets; the floor is positive on FRA (one deck
+in seven changes) but +0.17 — off, a candidate if a later round wants the
+last +0.15. The user's own pool builds the same deck either way (its
+64-candidate static build was already the judge's local optimum). Training
+actors (`heuristic_sealed_build_rated`, one sample, no judge) are
+untouched; the client opponent (FRA, SOS) and `--build` get the polish.

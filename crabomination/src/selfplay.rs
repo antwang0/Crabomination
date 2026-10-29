@@ -220,7 +220,59 @@ fn rated_sealed_build_slotted(
         crate::recommend::static_build_score_v3(&spells, spells.len(), true) + shape_term
     };
     let cands = if slots { build_candidates_shaped(pool, n, seed, &cfg) } else { build_candidates_cfg(pool, n, seed, &cfg) };
-    cands.into_iter().max_by_key(|d| judge(d)).unwrap_or_default()
+    let best = cands.into_iter().max_by_key(|d| judge(d)).unwrap_or_default();
+    if !polish_on() || best.is_empty() {
+        return best;
+    }
+    judge_polish(pool, best, |d| judge(d) as f64)
+}
+
+/// Does the rated builder hill-climb its best-of-`n` pick under the same
+/// judge? The candidates are noisy builds (each pick jittered by
+/// `build_temperature`), and the judge only chooses among them, so a pick
+/// kept 1-for-1 swaps its own judge prefers: Murmuring Volume, the
+/// lowest-rated card in any deck, made 5 of 20 client-built FRA decks
+/// (spot check, 2026-10-29). **On:** polished against unpolished, best of
+/// 16 (`fra_card_eval --ab --best 16 --trial polish`, 2,000 pools x 8
+/// pairs, `--pilot fra-fixes`, seeds 43 / 97, pool-level): FRA **52.64 %
+/// [52.23, 53.05] / 52.66 % [52.23, 53.09]** (19 decks in 20 change), SOS
+/// **50.84 % [50.56, 51.12] / 50.72 % [50.44, 51.00]**. About 0.3 ms a build.
+pub const RATED_JUDGE_POLISH: bool = true;
+
+thread_local! {
+    static POLISH: std::cell::Cell<bool> = const { std::cell::Cell::new(RATED_JUDGE_POLISH) };
+}
+
+fn polish_on() -> bool {
+    POLISH.get()
+}
+
+/// Run `f` with [`RATED_JUDGE_POLISH`] set to `on` — the trial arm of
+/// `fra_card_eval --ab --trial`.
+pub fn with_judge_polish<R>(on: bool, f: impl FnOnce() -> R) -> R {
+    let was = POLISH.replace(on);
+    let r = f();
+    POLISH.set(was);
+    r
+}
+
+/// [`hill_climb_build_by`] over the pool cards the deck's lands can cast:
+/// the judge reads spells only, so a swap that needs a colour the mana base
+/// lacks would score as a gain and play as a dead card.
+fn judge_polish(pool: &[CardFactory], deck: Vec<CardFactory>, judge: impl FnMut(&[CardFactory]) -> f64) -> Vec<CardFactory> {
+    let mana = deck
+        .iter()
+        .filter(|f| crate::cube::card_def(**f).is_land())
+        .fold(ColorSet::empty(), |s, f| ColorSet(s.0 | crate::cube::card_brief(*f).produces.0));
+    let castable: Vec<CardFactory> = pool
+        .iter()
+        .copied()
+        .filter(|f| {
+            let b = crate::cube::card_brief(*f);
+            b.def.is_land() || deck.contains(f) || b.fits(mana)
+        })
+        .collect();
+    hill_climb_build_by(&castable, deck, 3, judge)
 }
 
 /// [`build_candidates_cfg`] with every odd-numbered candidate built under
@@ -1141,6 +1193,26 @@ mod tests {
             );
             assert!(top <= 8, "seed {seed}: {top} five-plus-drops is top-heavy");
         }
+    }
+
+    /// The judge polish takes an upgrade the lands can cast and never one
+    /// they can't: a Forest deck swaps a Bear for Craw Wurm, not Serra Angel,
+    /// though the judge (summed mana value here) likes both.
+    #[test]
+    fn judge_polish_swaps_only_what_the_lands_cast() {
+        use crate::catalog;
+        let mut deck: Vec<CardFactory> = vec![catalog::forest; 17];
+        deck.extend(std::iter::repeat_n(catalog::grizzly_bears as CardFactory, 23));
+        let mut pool = deck.clone();
+        pool.push(catalog::craw_wurm);
+        pool.push(catalog::serra_angel);
+        let judge = |d: &[CardFactory]| d.iter().map(|f| crate::cube::card_def(*f).cost.cmc() as f64).sum::<f64>();
+        let out = judge_polish(&pool, deck, judge);
+        let n = |f: CardFactory| out.iter().filter(|&&g| g as usize == f as usize).count();
+        assert_eq!(out.len(), 40);
+        assert_eq!(n(catalog::craw_wurm), 1, "the green upgrade went in");
+        assert_eq!(n(catalog::serra_angel), 0, "no white card off seventeen Forests");
+        assert_eq!(n(catalog::forest), 17, "lands untouched");
     }
 
     #[test]

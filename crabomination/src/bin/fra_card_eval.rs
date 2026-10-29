@@ -169,6 +169,14 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     // `--old-duals`: the rated builder against itself blind to the "{T}: add
     // {W} or {U}" duals it could not see before 2026-10-29.
     let old_duals = std::env::args().any(|a| a == "--old-duals");
+    // `--trial polish|floor|both`: the rated builder with the judge polish
+    // and/or the double-pip land floor against itself with neither.
+    let trial: Option<(bool, bool)> = arg("--trial").map(|t| match t.as_str() {
+        "polish" => (true, false),
+        "floor" => (false, true),
+        "both" => (true, true),
+        other => panic!("--trial {other}: polish, floor or both"),
+    });
     // `--table FILE` (`scripts/fra_card_table.py RATINGS MIN --tsv`): the
     // rated builder on a re-rated table against the same builder on the
     // compiled one — a re-rate's paired gate.
@@ -201,7 +209,14 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                         crabomination::selfplay::heuristic_sealed_build_rated(pool, salt ^ 1)
                     }
                 };
-                let (old, new) = if old_duals {
+                let (old, new) = if let Some((polish, floor)) = trial {
+                    let arm = |p: bool, f: bool| {
+                        crabomination::selfplay::with_judge_polish(p, || {
+                            crabomination::recommend::with_pip_floor(f, || rated(&pool))
+                        })
+                    };
+                    (arm(false, false), arm(polish, floor))
+                } else if old_duals {
                     (crabomination::recommend::with_old_duals(|| rated(&pool)), rated(&pool))
                 } else if let Some(t) = &table {
                     (rated(&pool), crabomination::card_ratings::with_table(t.clone(), || rated(&pool)))
