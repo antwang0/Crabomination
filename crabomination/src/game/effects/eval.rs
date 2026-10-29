@@ -476,6 +476,15 @@ impl GameState {
         // to Victory copies cast back to back each saw the board before the
         // previous copy's Composer triggers resolved.
         let mut fan_out: i64 = self.pending_stack_tokens();
+        // Each land the spell puts onto the battlefield fires the board's
+        // landfall token triggers: Worldsoul's Rage for X 4 under 540 Scute
+        // Swarms and a Greenwarden stacked 4,320 triggers (seed 2811250).
+        if let Some(card) = self.find_card_anywhere(id) {
+            let lands = self.effect_land_entry_estimate(&card.definition.effect, &ctx);
+            if lands > 0 {
+                fan_out += lands * self.landfall_token_estimate(caster);
+            }
+        }
         for c in self.battlefield.iter().filter(|c| c.controller == caster) {
             for t in &c.definition.triggered_abilities {
                 if t.event.kind == crate::card::EventKind::SpellCast
@@ -512,6 +521,29 @@ impl GameState {
         // Ancient Greenwarden fires each of them once more (a 540-Swarm board
         // under one stacked 4,320 triggers off four lands, seed 2811250).
         n * (1 + self.land_entry_trigger_extra_fires(seat) as i64)
+    }
+
+    /// Lands `e` would put onto the battlefield — an upper bound over the
+    /// counted shapes, read only by the board gates' landfall fan-out.
+    pub(crate) fn effect_land_entry_estimate(&self, e: &crate::effect::Effect, ctx: &EffectContext) -> i64 {
+        use crate::effect::{Effect, ZoneDest};
+        let n = |v: &crate::effect::Value| i64::from(self.evaluate_value(v, ctx).max(0));
+        match e {
+            Effect::DeployLandsFromHandAndGraveyard { count }
+            | Effect::PutLandsFromHandOntoBattlefieldTapped { count }
+            | Effect::DigForLandToBattlefield { count }
+            | Effect::LookTopTakeOneDeployLandsRestGraveyard { count }
+            | Effect::RevealUntilLandsToBattlefield { count, .. }
+            | Effect::SearchUpToN { to: ZoneDest::Battlefield { .. }, count, .. } => n(count),
+            Effect::SearchEachBasicLandType { .. } => 5,
+            Effect::Search { to: ZoneDest::Battlefield { .. }, .. } => 1,
+            Effect::Seq(es) => es.iter().map(|e| self.effect_land_entry_estimate(e, ctx)).sum(),
+            Effect::MayDo { body, .. } | Effect::OneSearch { body } => self.effect_land_entry_estimate(body, ctx),
+            Effect::If { then, else_, .. } => {
+                self.effect_land_entry_estimate(then, ctx).max(self.effect_land_entry_estimate(else_, ctx))
+            }
+            _ => 0,
+        }
     }
 
     /// Tokens `attacker`'s own "whenever this attacks" triggers would mint
@@ -8711,5 +8743,23 @@ mod tests {
         let total = Value::TotalCountersOn { what: Box::new(Selector::EachPermanent(R::Creature)) };
         assert_eq!(g.evaluate_value(&total, &ctx), i32::MAX);
         assert_eq!(g.counters_among_permanents_of(0), u32::MAX);
+    }
+
+    /// The cast gate prices the lands a spell puts onto the battlefield at the
+    /// board's landfall fan-out: Worldsoul's Rage for X 4 under 300 Scute
+    /// Swarms and an Ancient Greenwarden is 4 x 300 x 2 tokens (a six-seat
+    /// audit pod stacked 4,320 Swarm triggers that way, seed 2811250).
+    #[test]
+    fn a_spell_that_puts_lands_onto_the_battlefield_prices_their_landfall() {
+        let mut g = crate::game::multi_player_game(2);
+        for _ in 0..6 {
+            g.add_card_to_battlefield(0, crate::catalog::forest());
+        }
+        for _ in 0..300 {
+            g.add_card_to_battlefield(0, crate::catalog::scute_swarm());
+        }
+        g.add_card_to_battlefield(0, crate::catalog::ancient_greenwarden());
+        let rage = g.add_card_to_hand(0, crate::catalog::worldsouls_rage());
+        assert_eq!(g.spell_token_estimate_cast(rage, 0, &[], 4), 4 * 300 * 2);
     }
 }
