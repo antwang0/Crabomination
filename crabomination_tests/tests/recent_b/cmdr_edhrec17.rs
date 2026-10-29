@@ -132,6 +132,20 @@ fn game_of_chaos_moves_life_between_the_two() {
     assert_eq!(g.players[0].life + g.players[1].life, a + b);
 }
 
+/// Game of Chaos's stakes keep doubling while both players live and the
+/// winner flips again (they stopped at 2^16 before): at a million life apiece
+/// it ends only with one of them dead.
+#[test]
+fn game_of_chaos_doubles_until_someone_dies() {
+    let mut g = pod(2);
+    g.players[0].life = 1_000_000;
+    g.players[1].life = 1_000_000;
+    g.decider = Box::new(ScriptedDecider::new((0..40).map(|_| DecisionAnswer::Bool(true))));
+    let gc = g.add_card_to_hand(0, catalog::game_of_chaos());
+    cast(&mut g, gc, &[Target::Player(1)]).expect("chaos");
+    assert!(g.players[0].life <= 0 || g.players[1].life <= 0, "{} / {}", g.players[0].life, g.players[1].life);
+}
+
 /// Molten Birth makes two Elementals; Creepy Doll is indestructible.
 #[test]
 fn yusri_coin_cards() {

@@ -37496,37 +37496,52 @@ impl GameState {
             Effect::GameOfChaosRound { opponent, stake } => {
                 let me = ctx.controller;
                 let Some(opp) = self.resolve_player(opponent, ctx) else { return Ok(()) };
-                let won = self.flip_one_coin(me);
-                events.push(if won {
-                    GameEvent::CoinFlipWon { player: me }
-                } else {
-                    GameEvent::CoinFlipLost { player: me }
-                });
-                let (winner, loser) = if won { (me, opp) } else { (opp, me) };
-                let amount = crate::game::life_amount(*stake);
-                let applied = self.adjust_life_applied(winner, amount);
-                if applied > 0 {
-                    events.push(GameEvent::LifeGained { player: winner, amount: applied as u32 });
+                // A loop, not a recursion: twenty nested rounds overflowed the
+                // stack. As `CoinFlipDestroyLoop`, a replayed flip already moved
+                // its life, so only a fresh flip (`flipped`) moves it.
+                let mut stake = *stake;
+                let mut cursor = 0;
+                loop {
+                    let (won, flipped) = self.flip_one_coin_logged(&mut cursor, me);
+                    let (winner, loser) = if won { (me, opp) } else { (opp, me) };
+                    if flipped {
+                        events.push(if won {
+                            GameEvent::CoinFlipWon { player: me }
+                        } else {
+                            GameEvent::CoinFlipLost { player: me }
+                        });
+                        let amount = crate::game::life_amount(stake);
+                        let applied = self.adjust_life_applied(winner, amount);
+                        if applied > 0 {
+                            events.push(GameEvent::LifeGained { player: winner, amount: applied as u32 });
+                        }
+                        let lost = self.adjust_life_applied(loser, -amount);
+                        if lost < 0 {
+                            events.push(GameEvent::LifeLost { player: loser, amount: (-lost) as u32 });
+                        }
+                    }
+                    // Doubling stops at 2^31, past every life total an `i32`
+                    // holds: the flip there kills its loser unless they can't
+                    // lose life, and then the bound is what ends it.
+                    if stake >= 1 << 31 || !self.players[me].is_alive() || !self.players[opp].is_alive() {
+                        break;
+                    }
+                    let Some(again) = self.ask_seat_bool(
+                        &mut cursor,
+                        winner,
+                        format!("Game of Chaos: flip again for {} life?", stake * 2),
+                        ctx.source.unwrap_or(CardId(0)),
+                        effect,
+                        OptionalKind::MayBody,
+                    ) else {
+                        return Ok(());
+                    };
+                    if !again {
+                        break;
+                    }
+                    stake *= 2;
                 }
-                let lost = self.adjust_life_applied(loser, -amount);
-                if lost < 0 {
-                    events.push(GameEvent::LifeLost { player: loser, amount: (-lost) as u32 });
-                }
-                if *stake < (1 << 16) && self.players[me].is_alive() && self.players[opp].is_alive() {
-                    return self.run_effect(
-                        &Effect::AnyPlayerMayAccept {
-                            who: PlayerRef::Seat(winner),
-                            prompt: format!("Game of Chaos: flip again for {} life?", stake * 2),
-                            accepted: Box::new(Effect::GameOfChaosRound {
-                                opponent: PlayerRef::Seat(opp),
-                                stake: stake * 2,
-                            }),
-                            otherwise: Box::new(Effect::Noop),
-                        },
-                        ctx,
-                        events,
-                    );
-                }
+                self.clear_answer_log();
                 Ok(())
             }
 

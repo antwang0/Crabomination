@@ -2088,7 +2088,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Soulfire Grand Master | the buyback rider catches the next instant or sorcery cast from any zone, not only from your hand, and rides a trigger | `Effect::OnYourNextInstantSorceryThisTurn` + `SpellReturnsToHandOnResolve` |
 | 🟡 Sorcerous Squall | casts a copy of the exiled card from any opponent's graveyard rather than the card from the milled player's | `ExileWithSource` + `CopyCardAndCastFree`, as Rootha |
 | ~~Altar of the Wretched // Wretched Bonemass~~ ✅ | fixed 2026-10-24: twelve `SelfHasKeywordWhilePredicate` statics read the exiled crafting cards (protection, parametrized, is not copied) | — |
-| 🟡 Game of Chaos | the stakes cap at 2^16 (the winner is asked whether to flip again) | `Effect::GameOfChaosRound` |
 | 🟡 The Aesir Escape Valhalla | the exiled permanent card is the engine's pick (the priciest) | `Selector::best_of` |
 | 🟡 The Creation of Avacyn | the tutored card is exiled face up (the face-down hiding isn't modelled) | `ZoneDest::ExileWithSourceStamp` |
 | 🟡 Magar of the Magic Strings | a snapshot reload rebuilds the face-down puppet as a plain 2/2 (as it does Missy's Cybermen) | the serde wire stores only `face_down_permanent` |

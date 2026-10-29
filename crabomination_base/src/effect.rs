@@ -13153,7 +13153,7 @@ pub enum Effect {
     CopyNextInstantSorceryThisTurn { count: Value },
     /// Game of Chaos, one round at `stake`: flip a coin; the winner gains
     /// `stake` life and the loser loses it, then the winner may play the next
-    /// round at twice the stake (asked of them; capped at 2^16).
+    /// round at twice the stake (asked of them; doubling stops at 2^31).
     GameOfChaosRound { opponent: PlayerRef, stake: u32 },
     /// CR 603.7e — one-shot "when you next cast a spell of `card_type` this
     /// turn, [body]"; the cast spell is `Selector::TriggerSource`. Casts of
