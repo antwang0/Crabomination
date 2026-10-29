@@ -1925,7 +1925,7 @@ pub fn nick_fury_spymaster() -> CardDefinition {
             event: EventSpec::new(EventKind::Attacks, EventScope::YourControl).with_filter(Predicate::AttackingAlone),
             effect: Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: Value::ONE },
-                Effect::DeployCreatureFromHandAttacking { filter: R::Creature.and(R::ManaValueAtMost(3)), return_to_hand_eot: false },
+                Effect::DeployCreatureFromHandAttacking { filter: R::Creature.and(R::ManaValueAtMost(3)), return_to_hand_eot: false, same_defender: false },
                 Effect::GrantKeyword { what: Selector::LastMoved, keyword: Keyword::Indestructible, duration: Duration::EndOfTurn },
             ]),
         }],

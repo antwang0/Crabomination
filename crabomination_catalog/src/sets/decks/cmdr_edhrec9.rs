@@ -1448,7 +1448,7 @@ pub fn arni_metalbrow() -> CardDefinition {
             mana_cost: cost(&[generic(1), r()]),
             body: Box::new(Effect::DeployCreatureFromHandAttacking {
                 filter: R::Creature.and(R::ManaValueAtMostXFromCost),
-                return_to_hand_eot: false,
+                return_to_hand_eot: false, same_defender: false,
             }),
             else_: None,
         }),

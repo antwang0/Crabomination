@@ -12335,15 +12335,19 @@ pub enum Effect {
     ExileTopFaceDownTokenReturns { token: std::sync::Arc<crate::card::TokenDefinition> },
 
     /// "You may put a creature card from your hand onto the battlefield tapped
-    /// and attacking [the defender the source is attacking]. Return that
-    /// creature to its owner's hand at the beginning of the next end step"
-    /// (Ilharg, the Raze-Boar; Kaalia-style deploy). CR 508.4 — the creature
-    /// enters attacking without being declared, so no attack triggers fire.
+    /// and attacking. Return that creature to its owner's hand at the
+    /// beginning of the next end step" (Ilharg, the Raze-Boar). CR 508.4 — the
+    /// creature enters attacking without being declared, so no attack
+    /// triggers fire, and its controller chooses what it attacks.
     DeployCreatureFromHandAttacking {
         filter: SelectionRequirement,
         /// `true` returns the creature to hand at the next end step; `false`
         /// leaves it (a permanent deploy).
         return_to_hand_eot: bool,
+        /// "… attacking that opponent" (Kaalia of the Vast): it attacks the
+        /// source's defender, no choice.
+        #[serde(default)]
+        same_defender: bool,
     },
 
     /// "Put up to `count` land cards from your hand and/or graveyard onto the

@@ -99,7 +99,7 @@ pub fn kinscaer_sentry() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike, Keyword::Lifelink],
         triggered_abilities: vec![on_attack(Effect::DeployCreatureFromHandAttacking {
             filter: R::Creature.and(R::ManaValueAtMostYourCount(Box::new(yours().and(R::IsAttacking)))),
-            return_to_hand_eot: false,
+            return_to_hand_eot: false, same_defender: false,
         })],
         ..creature("Kinscaer Sentry", cost(&[generic(1), w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 2, 2)
     }

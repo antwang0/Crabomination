@@ -740,7 +740,7 @@ pub fn paladin_elizabeth_taggerdy() -> CardDefinition {
             draw(1),
             Effect::DeployCreatureFromHandAttacking {
                 filter: R::Creature.and(R::ManaValueAtMostSourcePower),
-                return_to_hand_eot: false,
+                return_to_hand_eot: false, same_defender: false,
             },
         ]))],
         ..legend(

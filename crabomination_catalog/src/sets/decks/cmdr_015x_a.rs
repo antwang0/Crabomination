@@ -726,7 +726,7 @@ pub fn ultra_magnus_tactician() -> CardDefinition {
             Effect::ClearLastMoved,
             Effect::DeployCreatureFromHandAttacking {
                 filter: R::Artifact.and(R::Creature),
-                return_to_hand_eot: false,
+                return_to_hand_eot: false, same_defender: false,
             },
             Effect::If {
                 cond: Predicate::ValueAtLeast(Value::CountOf(Box::new(Selector::LastMoved)), Value::ONE),

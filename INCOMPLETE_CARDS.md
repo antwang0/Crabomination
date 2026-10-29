@@ -2168,7 +2168,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Glamerdye / Sleight of Mind | the color-word swap targets a permanent only; "target spell" isn't offered | `ReplaceColorWord` |
 | 🟡 Kargan Intimidator | the mode and its target are picked at resolution (auto-targeted), not as the ability is activated (CR 700.2) | `ChooseUnchosenModeThisTurn` |
 | 🟡 Obsidian Battle-Axe | the attach offer fires only for Warriors entering under your control (attaching to an opponent's is legal, never wanted) | `EventScope::YourControl` + `MayDo(Attach)` |
-| 🟡 Nick Fury, Spymaster | the put-in creature attacks the attacker's defender or the most hostile opponent, not a chosen one (CR 508.4) | `DeployCreatureFromHandAttacking` |
 | ~~Planar Atlas~~ ✅ | fixed 2026-10-28: an optional look that keeps up to one LAND on top (`LookPick { pick_filter: Land, keep_on_top }`), the rest bottomed at random | — |
 | 🟡 Portal Manipulator | the player and the attackers are picked as the trigger resolves, not targeted as it triggers; every attack on you that you could redirect moves (CR 115.1) | `AttackersNowAttackChosenPlayer` |
 | 🟡 Aurora Awakener | "put any number of those permanent cards onto the battlefield" puts all of them | `RevealUntilMatchingToBattlefield` |

@@ -5120,7 +5120,7 @@ pub fn ilharg_the_raze_boar() -> CardDefinition {
         triggered_abilities: vec![
             on_attack(Effect::DeployCreatureFromHandAttacking {
                 filter: R::Any,
-                return_to_hand_eot: true,
+                return_to_hand_eot: true, same_defender: false,
             }),
             dies,
             exiled,

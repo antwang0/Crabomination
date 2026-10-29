@@ -276,7 +276,7 @@ pub fn kaalia_of_the_vast() -> CardDefinition {
         filter: R::HasCreatureType(CreatureType::Angel)
             .or(R::HasCreatureType(CreatureType::Demon))
             .or(R::HasCreatureType(CreatureType::Dragon)),
-        return_to_hand_eot: false,
+        return_to_hand_eot: false, same_defender: true,
     });
     t.event = t.event.with_filter(Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingOpponentPlayer });
     legendary(CardDefinition {

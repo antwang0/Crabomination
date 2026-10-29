@@ -1133,7 +1133,7 @@ pub fn shadowfax_lord_of_horses() -> CardDefinition {
         }],
         triggered_abilities: vec![on_attack(Effect::DeployCreatureFromHandAttacking {
             filter: R::Creature.and(R::PowerLessThanSource),
-            return_to_hand_eot: false,
+            return_to_hand_eot: false, same_defender: false,
         })],
         ..creature("Shadowfax, Lord of Horses", cost(&[generic(3), r(), w()]), vec![CreatureType::Horse], 4, 4)
     })

@@ -223,6 +223,32 @@ fn kaalia_drops_an_angel_into_the_attack() {
     assert!(g.attacking.iter().any(|x| x.attacker == angel && x.target == AttackTarget::Player(2)));
 }
 
+/// CR 508.4 — a creature put onto the battlefield attacking attacks what its
+/// controller chooses (Ilharg names no defender), but Kaalia's "attacking that
+/// opponent" pins Kaalia's: a scripted pick of another seat is never asked.
+#[test]
+fn cr_508_4_a_deployed_attacker_attacks_the_chosen_defender_unless_pinned() {
+    let mut g = pod(3);
+    let ilharg = g.add_card_to_battlefield(0, catalog::ilharg_the_raze_boar());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![bears]),
+        DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    attack(&mut g, ilharg, 2);
+    assert!(g.attacking.iter().any(|x| x.attacker == bears && x.target == AttackTarget::Player(1)));
+
+    let mut g = pod(3);
+    let kaalia = g.add_card_to_battlefield(0, catalog::kaalia_of_the_vast());
+    let angel = g.add_card_to_hand(0, catalog::serra_angel());
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![angel]),
+        DecisionAnswer::Target(Target::Player(1)),
+    ]));
+    attack(&mut g, kaalia, 2);
+    assert!(g.attacking.iter().any(|x| x.attacker == angel && x.target == AttackTarget::Player(2)));
+}
+
 /// Kaalia's trigger is "whenever Kaalia attacks an opponent": attacking a
 /// planeswalker drops nothing in.
 #[test]

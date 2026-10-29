@@ -1306,7 +1306,7 @@ pub fn preeminent_captain() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-            effect: Effect::DeployCreatureFromHandAttacking { filter: soldier_creature(), return_to_hand_eot: false },
+            effect: Effect::DeployCreatureFromHandAttacking { filter: soldier_creature(), return_to_hand_eot: false, same_defender: false },
         }],
         ..creature("Preeminent Captain", cost(&[generic(2), w()]), vec![CreatureType::Kithkin, CreatureType::Soldier], 2, 2)
     }

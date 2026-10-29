@@ -27219,7 +27219,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::DeployCreatureFromHandAttacking { filter, return_to_hand_eot } => {
+            Effect::DeployCreatureFromHandAttacking { filter, return_to_hand_eot, same_defender } => {
                 // "with mana value less than that creature's" (Arni Metalbrow)
                 // rides an X bound by `WithX`.
                 let mut filter = filter.resolve_x(ctx.x_value);
@@ -27229,7 +27229,6 @@ impl GameState {
                     filter = filter.resolve_source_power(self.effective_power(src));
                 }
                 let filter = &filter;
-                use crate::game::types::AttackTarget;
                 // Only meaningful mid-combat (the source is attacking).
                 if self.attacking.is_empty() {
                     return Ok(());
@@ -27279,25 +27278,11 @@ impl GameState {
                 if !self.players[p].hand.iter().any(|c| c.id == cid) {
                     return Ok(());
                 }
-                let target = ctx
-                    .source
-                    .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
-                    .map(|a| a.target)
-                    .or_else(|| {
-                        // CR 506.2 / 800.4a — a departed seat is not a legal
-                        // defending player.
-                        self.default_hostile_opponent(p).map(AttackTarget::Player)
-                    });
                 let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: true };
                 self.move_card_to(cid, &dest, ctx, events);
                 // `Selector::LastMoved` names it for a rider ("… and it gains
                 // indestructible until end of turn" — Nick Fury, Spymaster).
                 self.scratch.last_moved_cards.push(cid);
-                if let Some(target) = target
-                    && !self.attacking.iter().any(|a| a.attacker == cid)
-                {
-                    self.put_into_combat_attacking(cid, target);
-                }
                 if *return_to_hand_eot {
                     self.delayed_triggers.push(crate::game::types::DelayedTrigger {
                         controller: ctx.controller,
@@ -27314,7 +27299,24 @@ impl GameState {
                         expires_after_turn: None,
                     });
                 }
-                Ok(())
+                // "… attacking that opponent" (Kaalia): the source's defender.
+                if *same_defender {
+                    if let Some(target) =
+                        ctx.source.and_then(|src| self.attacking.iter().find(|a| a.attacker == src)).map(|a| a.target)
+                    {
+                        self.put_into_combat_attacking(cid, target);
+                    }
+                    return Ok(());
+                }
+                // CR 508.4 — its controller chooses the player or planeswalker
+                // it attacks (the source's defender by default); a suspended
+                // ask parks as that choice alone, the card already moved.
+                self.join_combat_attacking_chosen(
+                    &Selector::ExactObjects(vec![cid]),
+                    crate::effect::AttackingTokenCleanup::None,
+                    ctx,
+                    effect,
+                )
             }
 
             Effect::DeployLandsFromHandAndGraveyard { count } => {
