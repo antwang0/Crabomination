@@ -241,6 +241,12 @@ thread_local! {
     static SEARCH: std::cell::RefCell<Option<StdRng>> = const { std::cell::RefCell::new(None) };
 }
 
+/// `CRAB_MCTS_ROOT` — read once.
+fn root_log() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("CRAB_MCTS_ROOT").is_some_and(|v| v != "0"))
+}
+
 /// The next seed off the pinned search stream, when there is one.
 fn search_draw() -> Option<u64> {
     SEARCH.with(|s| s.borrow_mut().as_mut().map(|r| r.random()))
@@ -1059,6 +1065,26 @@ impl MctsBot {
                 best = cast;
             }
         }
+        // `CRAB_MCTS_ROOT=1`: every root decision's arms on stderr — visits,
+        // mean reward, the card each names — for reading why one replayed
+        // game passed where it might have cast.
+        if root_log() {
+            let mut line = format!("mcts-root T{} {:?} p{seat} pick {best}:", state.turn_number, state.step);
+            for (i, a) in candidates.iter().enumerate() {
+                let name = match a {
+                    GameAction::CastSpell { card_id, .. }
+                    | GameAction::ActivateAbility { card_id, .. }
+                    | GameAction::PlayLand(card_id) => {
+                        state.find_card_anywhere(*card_id).map_or("?", |c| c.definition.name)
+                    }
+                    GameAction::PassPriority => "pass",
+                    _ => "other",
+                };
+                let (v, m) = if visits[i] == u32::MAX { (0, f64::NAN) } else { (visits[i], total[i] / visits[i].max(1) as f64) };
+                line += &format!(" | {i} {name} n{v} {m:.3}");
+            }
+            eprintln!("{line}");
+        }
         // Record the root decision with the search's per-arm means, so a
         // policy target can be distilled from what the *search* concluded
         // rather than from which action it happened to output. Without
@@ -1452,7 +1478,19 @@ impl Bot for MctsBot {
         // will always find a reason to. Score zero — the do-nothing
         // baseline every candidate's score is implicitly measured against.
         candidates.push((GameAction::PassPriority, 0));
-        Some(self.search(state, seat, candidates))
+        if self.cfg.weights.mcts_sink_arm
+            && let Some(a) = super::bot::main_phase_sink_action(state, seat, &self.cfg.weights)
+        {
+            candidates.push((a, 0));
+        }
+        let picked = self.search(state, seat, candidates);
+        if self.cfg.weights.mcts_pass_sinks
+            && matches!(picked, GameAction::PassPriority)
+            && let Some(a) = super::bot::main_phase_sink_action(state, seat, &self.cfg.weights)
+        {
+            return Some(a);
+        }
+        Some(picked)
     }
 }
 

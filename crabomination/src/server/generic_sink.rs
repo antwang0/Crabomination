@@ -80,6 +80,14 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
             ) {
                 continue;
             }
+            // An until-end-of-turn gain reads as permanent to the evaluator,
+            // and after combat it buys nothing: firebreathing, "gains flying",
+            // a manland's animation. Shivan Dragon pumped 119 times after
+            // combat or at an end step in 80 self-play games (cube, FRA, SOS,
+            // 2026-10-29).
+            if ability_is_temporary(&ab.effect) {
+                continue;
+            }
             let cmc = ab.mana_cost.cmc();
             let budget = *mana.get_or_insert_with(|| mana_upper_bound(state, seat));
             if cmc > 0 && cmc > budget {
@@ -175,6 +183,24 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
     best.map(|(_, a)| a)
 }
 
+/// Every gain in `e` ends with the turn or the combat: a stat change, a
+/// keyword grant or an animation. A rider that lasts (a draw, a counter)
+/// keeps the ability in the probe.
+fn ability_is_temporary(e: &Effect) -> bool {
+    use crate::effect::Duration::{EndOfCombat, EndOfTurn};
+    match e {
+        Effect::PumpPT { duration: EndOfTurn | EndOfCombat, .. }
+        | Effect::SetBasePT { duration: EndOfTurn | EndOfCombat, .. }
+        | Effect::SwitchPT { duration: EndOfTurn | EndOfCombat, .. }
+        | Effect::GrantKeyword { duration: EndOfTurn | EndOfCombat, .. }
+        | Effect::GrantKeywords { duration: EndOfTurn | EndOfCombat, .. }
+        | Effect::BecomeCreature { duration: EndOfTurn | EndOfCombat, .. } => true,
+        Effect::Seq(v) => !v.is_empty() && v.iter().all(ability_is_temporary),
+        Effect::MayDo { body, .. } => ability_is_temporary(body),
+        _ => false,
+    }
+}
+
 /// A sweep whose filter reads the ability's X ("destroy each nonland permanent
 /// with mana value X").
 fn sweeps_by_x(e: &Effect) -> bool {
@@ -232,6 +258,25 @@ mod tests {
             matches!(got, Some(GameAction::ActivateAbility { card_id, ability_index: 0, .. }) if card_id == class),
             "got {got:?}"
         );
+    }
+
+    /// Firebreathing after combat buys nothing, and the material eval reads
+    /// the +1/+0 as permanent: Shivan Dragon pumped 119 times post-combat
+    /// in 80 self-play games before the temporary-ability skip.
+    #[test]
+    fn a_post_combat_pump_is_not_a_sink() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let d = g.add_card_to_battlefield(0, crate::catalog::shivan_dragon());
+        g.clear_sickness(d);
+        g.add_card_to_battlefield(0, crate::catalog::undulating_witness());
+        g.add_card_to_battlefield(0, crate::catalog::afterthought_sentry());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 4);
+        g.players[0].mana_pool.add_colorless(4);
+        let got = pick_generic_ability(&g, 0, &EvalWeights::default());
+        assert!(got.is_none(), "got {got:?}");
     }
 
     /// Mikaeus, the Lunarch spends a counter to grow three other creatures

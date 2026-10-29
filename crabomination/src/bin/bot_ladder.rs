@@ -222,13 +222,28 @@ fn sealed_archetypes(seed: u64, count: usize) -> Vec<Archetype> {
             // `CRAB_SEALED_BUILDER=rated`: the field's decks from the rated
             // builder on a pool the ratings cover (what round 84's actors
             // and the client's opponent build), one noisy sample as before.
-            let rated = std::env::var("CRAB_SEALED_BUILDER").as_deref() == Ok("rated")
-                && crabomination::card_ratings::rates_pool(&pool);
-            let deck = if rated {
+            // `CRAB_SEALED_BUILDER=client`: the client opponent's recipe
+            // instead (`sealed_opponent_build`, best of 16).
+            let builder = std::env::var("CRAB_SEALED_BUILDER").unwrap_or_default();
+            let rated = builder == "rated" && crabomination::card_ratings::rates_pool(&pool);
+            let deck = if builder == "client" {
+                crabomination::selfplay::sealed_opponent_build(&pool, 16, salt(2), Default::default())
+            } else if rated {
                 crabomination::selfplay::heuristic_sealed_build_rated(&pool, salt(2))
             } else {
                 crabomination::selfplay::heuristic_sealed_build(&pool, salt(2))
             };
+            // `CRAB_SEALED_PRINT=1`: each pool and the deck built from it, on
+            // stderr, for reading a field by eye.
+            if std::env::var_os("CRAB_SEALED_PRINT").is_some() {
+                let names = |v: &[crabomination::cube::CardFactory]| {
+                    let mut n: Vec<&str> = v.iter().map(|f| f().name).collect();
+                    n.sort_unstable();
+                    n.join("; ")
+                };
+                eprintln!("sealed #{i} pool ({}): {}", pool.len(), names(&pool));
+                eprintln!("sealed #{i} deck ({}): {}", deck.len(), names(&deck));
+            }
             Archetype {
                 name: Box::leak(format!("sealed #{i}").into_boxed_str()),
                 deck,
@@ -264,6 +279,26 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights: EvalWeights { clock_eval: n, ..EvalWeights::net_on_default().with_fra_fixes() },
             ..MctsConfig::default()
         }));
+    }
+    // The 2026-10-29 spot-check candidates on the client pilot (and the
+    // scored `fra-fixes` pilot): `+sinks` (`mcts_pass_sinks`), `+sinkarm`
+    // (`mcts_sink_arm`), `+targeteval` (`target_eval`), `+both`.
+    let spot = |w: EvalWeights, m: &str| match m {
+        "sinks" => Some(EvalWeights { mcts_pass_sinks: true, ..w }),
+        "targeteval" => Some(EvalWeights { target_eval: true, ..w }),
+        "both" => Some(EvalWeights { mcts_pass_sinks: true, target_eval: true, ..w }),
+        "sinkarm" => Some(EvalWeights { mcts_sink_arm: true, ..w }),
+        _ => None,
+    };
+    if let Some(m) = name.strip_prefix("mcts-net67-fixes+")
+        && let Some(weights) = spot(EvalWeights::net_on_default().with_fra_fixes(), m)
+    {
+        return Some(Pilot::Mcts(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() }));
+    }
+    if let Some(m) = name.strip_prefix("fra-fixes+")
+        && let Some(w) = spot(EvalWeights::fra_fixes_on(), m)
+    {
+        return Some(Pilot::Scored(w));
     }
     match name {
         "baseline" => Some(Pilot::Scored(EvalWeights::baseline())),

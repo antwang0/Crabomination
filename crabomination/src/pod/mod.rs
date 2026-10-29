@@ -46086,9 +46086,13 @@ mod tests {
         // Voidwalker exile Kokusho and Judith, whose own death triggers used
         // to fire anyway; bisected to `70983b332` alone): 0xC0FFEE and 43
         // unmoved; 4242 same winner and turns, 4050→3966 actions.
+        // Re-blessed 2026-10-29 (the generic sink skips until-end-of-turn
+        // activations — a post-combat firebreath or animation buys nothing;
+        // bisected to that hunk alone): 4242 unmoved; 0xC0FFEE 2490→2487 and
+        // 43 3800→3801 actions, same winners and turns.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
-            (0xC0FFEE, Some(2), 54, 2490),
-            (43, Some(0), 74, 3800),
+            (0xC0FFEE, Some(2), 54, 2487),
+            (43, Some(0), 74, 3801),
             (4242, Some(0), 82, 3966),
         ];
         let decks = rofellos_pod(4);

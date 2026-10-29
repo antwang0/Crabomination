@@ -6607,3 +6607,96 @@ reading pre-registered).
   both with and without the bug; the positive control (the re-rated table,
   135 / 200 decks changed) is the one that tells them apart. Any override
   gate needs both.
+
+## Spot check — the client bot against itself, read by eye: six engine/builder bugs, `target_eval` into `fra-fixes` (+1.15 under the search), the search's missing ability arm measured and left off (2026-10-29)
+
+The user asked for a spot check of decks and self-play games. `bot_ladder`
+gained `CRAB_SEALED_BUILDER=client` (the client opponent's best-of-16
+recipe) and `CRAB_SEALED_PRINT=1` (each pool and its deck on stderr);
+`mcts.rs` gained `CRAB_MCTS_ROOT=1` (every root decision's arms, visits and
+means on stderr). The client pilot (`mcts-net67-fixes`, FRA champion leaf
+on FRA) played itself: 40 FRA sealed games on 20 client-built decks, 24 SOS
+on 12, 16 cube on 8, every game dumped (`CRAB_DUMP_TRACES`) and condensed
+(`.ladder/spot/condense.py`: decks, then each non-pass action under the
+board it was made on). Five readers (one for the 32 decks against their
+pools, four for the games) and a mechanical census.
+
+**Bugs found and fixed (each with a regression test that fails without the
+fix):**
+- **Seven of FRA's ten duals were invisible to the builder.**
+  `land_produced_colors` read `ManaPayload::Colors` and `AnyOneColor` only;
+  the five Annexes and Innovative / Transformative Commons tap through
+  `OfColors`. 119 pool copies made 0 of 20 decks. Measured with the new
+  `fra_card_eval --ab --old-duals` (rated best-of-16 vs itself blind to
+  them; positive control 63 / 200 decks changed): **50.01 / 49.97** (2 000
+  pools x 8 pairs, seeds 43 / 97, about a third of decks changed) — the
+  duals enter tapped without a planeswalker, so they are a wash for a
+  two-colour deck. Kept as the correctness fix (the user's own `--build`
+  now sees them).
+- **Hybrid pip beside a fixed pip of its colour** (`auto_tap_for_cost_inner`):
+  the hybrid pass counted the fixed pip's source as still free, so
+  {B}{B/G}{G} off a Swamp and two Forests reserved the Swamp twice and
+  failed. Essenceknit Scholar sat uncastable for nine turns.
+- **Repartee off a graveyard card** (CR 109.2): `cast_spell_targets_matching`
+  ran the `Creature` test on a graveyard card; Glorious Decay's exile mode
+  pumped Inkshape Demonstrator.
+- **Free casts declined at 5 life or less even when free of life**
+  (`K::CastFree`); the rule was for Decorum Dissertation's drain.
+- **The generic sink took until-end-of-turn activations after combat**
+  (`action_outcome_is_temporary` only reads spells): Shivan Dragon
+  firebreathed 119 times post-combat or at an end step in 80 games,
+  manlands animated with nothing to attack. Skipped now; it moved the pod
+  digests (bisected to that hunk alone, re-blessed with the reason).
+- A reader's "Tooth and Nail costs {7}{G}{G}" was wrong — the printed-cost
+  test caught the "fix" (it is {5}{G}{G}; 9 is with entwine). Reverted.
+
+**`target_eval` re-run on FRA — ADOPTED into `fra-fixes`.** Round 53
+measured it on SOS, where mid-resolution targets are removal-shaped and it
+had no incidence. FRA is full of beneficial ETB targets: Rampart Hunter's
+"+2/+2 and deathtouch" went to the opponent's creature in all 7 casts the
+readers checked. FRA sealed, rated field:
+
+| pilot | seed 43 | seed 97 |
+|---|---|---|
+| `fra-fixes+targeteval` vs `fra-fixes` (1 000 x 12) | 50.5 [50.3, 50.8] | 50.4 [50.2, 50.6] |
+| `mcts-net67-fixes+targeteval` vs `mcts-net67-fixes` (200 x 12) | 50.5 [49.2, 51.9] | **51.8** [50.5, 53.2] |
+
+Bar (pre-registered): mean > +0.5 with neither seed under 49.5 — the
+client pilot +1.15.
+
+**The search has no ability arm.** `main_phase_candidates_for_mcts` offers
+casts, a land and pass; loyalty abilities, equip, crew and every ability
+sink live in the tail of `main_phase_action_with`, which the heuristic
+reaches only once nothing is castable — and the search reaches only when
+its candidate list is empty. So a held castable card cost the turn's
+walker activation and equip: 8 Equipment casts made 0 equips in 16 cube
+games. Two fixes, both off:
+
+| flag | FRA s43 | FRA s97 | cube s43 |
+|---|---|---|---|
+| `mcts_pass_sinks` (take the sink pass's pick when the search passes) | 49.0 | 49.8 | 49.1 |
+| `mcts_sink_arm` (the sink pass's pick as one more searched arm) | 51.6 | 49.2 | 50.6 |
+
+The unsearched pick fires the heuristic's trades the search would price
+(Edgar, Ancient Bloodlord sacrificing another creature for a counter); the
+searched arm leans positive (+0.4 on FRA, +0.6 on cube) with one seed
+under the bar — an open lead for more seeds, not adopted.
+
+**Other findings, not fixed** (readers' reports, the clear ones):
+- Trigger / later-slot targets: fixed by `target_eval` above where the
+  outcome sees it; Perfected Theory's 1/1 mode on its own Ghalta and
+  end-of-combat pumps on the opponent's creature are cast-path gaps the
+  polarity guard misses.
+- Combat: blockers' damage read off printed power (Ghalta the Immovable's
+  toughness damage is invisible to `block_outcomes`); a facing-lethal block
+  that died at 9 when a split survived; low-life swings that left no
+  blockers (SOS, FRA).
+- Cast affordability misses granted land types (Yavimaya, Cradle of
+  Growth): an R/W cube deck's green cards stayed uncast for 20 turns while
+  `could_pay_cost` said payable.
+- Builder: best-of-16 keeps swaps its own judge prefers (Murmuring Volume,
+  the lowest-rated card in any deck, made 5 of 20 FRA decks); the land split
+  weights pips by (7 − mana value), so a BB six-drop barely counts; SOS
+  ratings build green in 10 of 12 pools, blue in none.
+- SOS: Tragedy Feaster's end-step sacrifice ate four lands; Paradigm copies
+  re-register their delayed trigger each time.

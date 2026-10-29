@@ -562,7 +562,9 @@ fn the_sick_wall_of_roots_pair_passes_the_gate_audit() {
 type PodDigest = (usize, u64, Option<usize>, usize, usize, u32);
 const POD_DIGESTS: &[PodDigest] = &[
     (3, 0x903_0001, Some(0), 1730, 238, 50),
-    (4, 0x903_0002, Some(0), 3401, 364, 67),
+    // 2026-10-29: 3401 -> 3391 actions, 364 -> 362 plays — the generic sink
+    // no longer spends mana on until-end-of-turn activations after combat.
+    (4, 0x903_0002, Some(0), 3391, 362, 67),
 ];
 
 #[test]

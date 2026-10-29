@@ -903,6 +903,23 @@ pub struct EvalWeights {
     /// with vs without read 49.5 ±2.2 (FRA, 100 x 12) — 31 % of the misses
     /// came at 6+ lands, 5 % at 3 or fewer: mostly flood. In `fra-fixes`.
     pub mcts_land_first: bool,
+    /// MCTS main phase: when the search picks "pass", the heuristic's sink
+    /// pass runs anyway — loyalty abilities, equip, crew, the ability sinks
+    /// ([`main_phase_sink_action`]). The search's menu holds only casts, a
+    /// land and pass, and the heuristic reaches its sinks only once nothing
+    /// is castable, so a held card cost the walker's activation and the
+    /// equip too: 8 Equipment casts made 0 equips in 16 cube self-play games
+    /// (spot check, 2026-10-29). **Measured and left off:** client pilot
+    /// with vs without, FRA sealed 49.0 / 49.8 (200 x 12, seeds 43 / 97),
+    /// cube 49.1 — the unsearched pick fires trades the search would price.
+    pub mcts_pass_sinks: bool,
+    /// [`Self::mcts_pass_sinks`]' activation as one more searched arm
+    /// instead of taken whenever the search passes: the heuristic's sinks
+    /// include trades the search should price (Edgar, Ancient Bloodlord's
+    /// sacrifice-another-creature counter). **Measured and left off (an
+    /// open lead):** FRA sealed 51.6 / 49.2, cube 50.6 — positive lean, one
+    /// seed under the 49.5 floor.
+    pub mcts_sink_arm: bool,
     /// The counterspell pickers see a "choose one" instant with a counter
     /// mode and cast it in that mode. `effect_counters_spells` never looked
     /// inside `ChooseMode`, so Icy Reception (counter a creature or legendary
@@ -1306,6 +1323,14 @@ pub struct EvalWeights {
     /// trigger-denser pool (modern/cube) before re-judging
     /// ([`target_eval_on`](Self::target_eval_on), profile `targeteval`,
     /// `.ladder/run_r53_targeteval.sh`).
+    ///
+    /// **Re-run on FRA 2026-10-29 and ADOPTED into `fra-fixes`.** A
+    /// self-play spot check found Rampart Hunter's "+2/+2 and deathtouch"
+    /// ETB on the opponent's creature in all 7 casts read and Predictive
+    /// Preparations' second counter on theirs. FRA sealed, rated field:
+    /// scored `fra-fixes` 50.5 / 50.4 (1 000 x 12, seeds 43 / 97, both
+    /// intervals clear of 50); the client pilot `mcts-net67-fixes` on the
+    /// FRA champion **50.5 / 51.8** (200 x 12).
     pub target_eval: bool,
     /// Mid-resolution option asks judged by settled outcome:
     /// `Decision::ChooseOption` had no arm in the policy table, so
@@ -1583,6 +1608,8 @@ impl EvalWeights {
             tap_timing: false,
             no_empty_attacks: false,
             mcts_land_first: false,
+            mcts_pass_sinks: false,
+            mcts_sink_arm: false,
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
@@ -1723,6 +1750,8 @@ impl EvalWeights {
             tap_timing: false,
             no_empty_attacks: false,
             mcts_land_first: false,
+            mcts_pass_sinks: false,
+            mcts_sink_arm: false,
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
@@ -1846,6 +1875,8 @@ impl EvalWeights {
             tap_timing: false,
             no_empty_attacks: false,
             mcts_land_first: false,
+            mcts_pass_sinks: false,
+            mcts_sink_arm: false,
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
@@ -3006,6 +3037,8 @@ impl EvalWeights {
             tap_timing: false,
             no_empty_attacks: false,
             mcts_land_first: false,
+            mcts_pass_sinks: false,
+            mcts_sink_arm: false,
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
@@ -3155,6 +3188,8 @@ impl EvalWeights {
             tap_timing: false,
             no_empty_attacks: false,
             mcts_land_first: false,
+            mcts_pass_sinks: false,
+            mcts_sink_arm: false,
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
@@ -3330,8 +3365,10 @@ impl EvalWeights {
     /// The 2026-10-23/24 FRA fixes together: burn creature arms, the X=0
     /// death hold, the counter-shed guard, the target polarity guard, kill
     /// debuffs off the combat-only rule, the duel ability sinks, lethal over
-    /// planeswalkers, free attacks and pump tricks with riders, and since
-    /// round 86 the race term `clock_eval` 4 (profile `fra-fixes`).
+    /// planeswalkers, free attacks and pump tricks with riders, since
+    /// round 86 the race term `clock_eval` 4, and since 2026-10-29 the
+    /// outcome-judged mid-resolution target `target_eval` (profile
+    /// `fra-fixes`).
     pub const fn fra_fixes_on() -> Self {
         Self::default_const().with_fra_fixes()
     }
@@ -3359,6 +3396,7 @@ impl EvalWeights {
             hand_abilities: true,
             trade_pressure: true,
             clock_eval: 4,
+            target_eval: true,
             ..self
         }
     }
@@ -3403,6 +3441,8 @@ impl EvalWeights {
             tap_timing: false,
             no_empty_attacks: false,
             mcts_land_first: false,
+            mcts_pass_sinks: false,
+            mcts_sink_arm: false,
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
@@ -5995,12 +6035,14 @@ pub fn decide_optional_trigger(
         // A free cast is pure upside unless the card's own body drains life
         // the bot can't spare — Decorum Dissertation's draw-2-lose-2 recurs
         // every main phase, and a blanket yes played it straight into the
-        // state-based loss.
+        // state-based loss. A card that costs no life is a yes at any life:
+        // the low-life refusal declined Germination Practicum's free copy
+        // at 2 life (SOS spot check, 2026-10-29).
         K::CastFree => {
             let loss = optional_trigger_def(state, source)
                 .map(|d| self_life_loss(&d.effect))
                 .unwrap_or(0);
-            (state.effective_life(seat) - loss > 5, false)
+            (loss <= 0 || state.effective_life(seat) - loss > 5, false)
         }
         // The `AutoDecider` arms of Forage / collect evidence use the same
         // rule: pay out of a graveyard with spare depth.
@@ -11506,10 +11548,25 @@ fn main_phase_action_with(
         }
     }
 
+    main_phase_sinks(state, seat, w, &have_mana)
+}
+
+/// `mcts_pass_sinks`: the activations [`main_phase_action_with`] reaches once
+/// nothing is left to cast — loyalty abilities, equip, crew, the ability
+/// sinks — for a search that chose to pass while holding a castable card.
+/// The search's menu is casts, a land and pass, so a held card used to cost
+/// the turn's walker activation and equip too.
+pub(crate) fn main_phase_sink_action(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    let have_mana = SweepMana::new(state, seat);
+    let step = main_phase_sinks(state, seat, w, &have_mana);
+    (!matches!(step.action, GameAction::PassPriority)).then_some(step.action)
+}
+
+fn main_phase_sinks<'a>(state: &'a GameState, seat: usize, w: &EvalWeights, have_mana: &SweepMana<'a>) -> BotStep {
     // Below here the bot has no cast and no land, and every generator that
     // follows used to take its own walk of the seat's board to ask "is there
     // anything here for me". One walk answers all of them — see `sink`.
-    let sinks = sink_facts(state, seat, &have_mana);
+    let sinks = sink_facts(state, seat, have_mana);
 
     // Morph / Disguise (CR 702.36 / 702.166): cast a hand card face down for
     // {3} as a 2/2 (with ward {2} for Disguise). Reached only when no normal
@@ -24199,6 +24256,20 @@ mod tests {
         g.check_state_based_actions();
         assert!(!g.players[2].is_alive());
         assert!(!ask(&g), "the offerer is the last opponent");
+    }
+
+    /// A free cast that costs no life is taken at any life total; the
+    /// low-life refusal is for a body that drains (Decorum Dissertation).
+    #[test]
+    fn a_free_cast_without_a_life_cost_is_taken_at_low_life() {
+        let mut g = two_player_game();
+        let w = EvalWeights::default();
+        let src = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.players[0].life = 2;
+        let ask = |g: &crate::game::GameState| {
+            decide_optional_trigger(g, 0, src, &crate::decision::OptionalKind::CastFree, "", &w, false)
+        };
+        assert!(ask(&g), "free and painless at 2 life");
     }
 
     /// The kinds that used to fall through to the blanket yes. Each one is an
