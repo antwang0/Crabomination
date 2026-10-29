@@ -4261,6 +4261,10 @@ pub enum SelectionRequirement {
     /// Architect of Ascension's "protection from each mana value among
     /// artifacts you control" (CR 702.16b).
     ManaValueEqualsOneAmong(Box<SelectionRequirement>),
+    /// Mana value less than that of at least one battlefield permanent
+    /// matching the inner filter, from the evaluating controller's side —
+    /// Scrap Welder's target, payable by some artifact it could sacrifice.
+    ManaValueLessThanOneAmong(Box<SelectionRequirement>),
     /// A land whose activated abilities include at least one that isn't a mana
     /// ability (CR 605.1a) — Tsabo's Web's untap lock.
     HasNonManaActivatedAbility,

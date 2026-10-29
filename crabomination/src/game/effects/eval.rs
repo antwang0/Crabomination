@@ -245,16 +245,19 @@ impl GameState {
             .map_or((card.definition.power, card.definition.toughness), |cp| cp.base_pt())
     }
 
-    /// `R::ManaValueEqualsOneAmong` — `mv` is the mana value of some
+    /// `R::ManaValueEqualsOneAmong` (`below` false) / `ManaValueLessThanOneAmong`
+    /// (`below` true) — `mv` equals / is under the mana value of some
     /// battlefield permanent matching `filter` from `controller`'s side.
     fn mana_value_matches_one_among(
         &self,
         mv: u32,
         filter: &crate::card::SelectionRequirement,
         controller: usize,
+        below: bool,
     ) -> bool {
         self.battlefield.iter().any(|c| {
-            c.definition.cost.cmc() == mv
+            let other = c.definition.cost.cmc();
+            (if below { mv < other } else { mv == other })
                 && self.evaluate_requirement_static(filter, &Target::Permanent(c.id), controller, None)
         })
     }
@@ -7217,7 +7220,10 @@ impl GameState {
                         card.definition.cost.cmc() == self.chosen_number_this_resolution
                     }
                     R::ManaValueEqualsOneAmong(f) => {
-                        self.mana_value_matches_one_among(card.definition.cost.cmc(), f, controller)
+                        self.mana_value_matches_one_among(card.definition.cost.cmc(), f, controller, false)
+                    }
+                    R::ManaValueLessThanOneAmong(f) => {
+                        self.mana_value_matches_one_among(card.definition.cost.cmc(), f, controller, true)
                     }
                     R::HasNonManaActivatedAbility => card
                         .definition
@@ -8302,7 +8308,10 @@ impl GameState {
                 card.definition.cost.cmc() == self.chosen_number_this_resolution
             }
             R::ManaValueEqualsOneAmong(f) => {
-                self.mana_value_matches_one_among(card.definition.cost.cmc(), f, controller)
+                self.mana_value_matches_one_among(card.definition.cost.cmc(), f, controller, false)
+            }
+            R::ManaValueLessThanOneAmong(f) => {
+                self.mana_value_matches_one_among(card.definition.cost.cmc(), f, controller, true)
             }
             R::HasNonManaActivatedAbility => card
                 .definition

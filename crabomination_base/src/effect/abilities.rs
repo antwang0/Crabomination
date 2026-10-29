@@ -5063,6 +5063,12 @@ pub struct ActivatedAbility {
     /// picks must carry distinct names (Transmutation Font's artifact tokens).
     #[serde(default)]
     pub sac_other_distinct_names: bool,
+    /// "Sacrifice an artifact with mana value X: … target … with mana value
+    /// less than X" (Scrap Welder): only a permanent whose mana value exceeds
+    /// the slot-0 target's pays `sac_other_filter`; the auto-pick takes the
+    /// cheapest such.
+    #[serde(default)]
+    pub sac_other_mv_above_target: bool,
     /// "Sacrifice **a** creature:" printed on a creature, not "another" (Viscera
     /// Seer, Carrion Feeder): the source itself may pay `sac_other_filter`.
     /// The auto-pick takes it only when nothing else matches.

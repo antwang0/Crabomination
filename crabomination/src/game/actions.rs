@@ -23871,6 +23871,24 @@ impl GameState {
             } else {
                 candidates
             };
+            // "Sacrifice an artifact with mana value X: … less than X" — only
+            // a permanent above the target's mana value pays (Scrap Welder).
+            let floor = ability
+                .sac_other_mv_above_target
+                .then(|| {
+                    target
+                        .as_ref()
+                        .and_then(|t| match t {
+                            Target::Permanent(id) => self.find_card_anywhere(*id),
+                            Target::Player(_) => None,
+                        })
+                        .map_or(u32::MAX, |c| c.definition.cost.cmc())
+                });
+            let mv_of = |id: &CardId| self.battlefield_find(*id).map_or(0, |c| c.definition.cost.cmc());
+            let candidates: Vec<CardId> = match floor {
+                Some(f) => candidates.into_iter().filter(|id| mv_of(id) > f).collect(),
+                None => candidates,
+            };
             if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
@@ -23878,13 +23896,23 @@ impl GameState {
             // whose ability this is only when nothing else can pay.
             let others: Vec<CardId> = candidates.iter().copied().filter(|&id| id != card_id).collect();
             let auto_pool = if others.len() >= count { &others } else { &candidates };
+            let auto_pick = |g: &Self, pool: &[CardId]| -> Vec<CardId> {
+                if floor.is_some() {
+                    let mut by_mv = pool.to_vec();
+                    by_mv.sort_by_key(|id| (mv_of(id), *id));
+                    by_mv.truncate(count);
+                    by_mv
+                } else {
+                    g.auto_pick_lowest_power(pool, count)
+                }
+            };
             if let Some(chosen) = chosen_sac_other {
                 // Replay path: honor the player's pick if it's still a valid
                 // candidate; otherwise fall back to the auto-pick.
                 if candidates.contains(&chosen) {
                     vec![chosen]
                 } else {
-                    self.auto_pick_lowest_power(auto_pool, count)
+                    auto_pick(self, auto_pool)
                 }
             } else if count == 1 && candidates.len() > 1 && self.players[p].manual_mana {
                 let source_name = self
@@ -23912,7 +23940,7 @@ impl GameState {
                 }));
                 return Ok(());
             } else {
-                self.auto_pick_lowest_power(auto_pool, count)
+                auto_pick(self, auto_pool)
             }
         } else {
             Vec::new()
