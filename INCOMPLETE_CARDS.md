@@ -2017,7 +2017,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 
 | Card | Residual | Why |
 |---|---|---|
-| 🟡 Galadriel's Dismissal | kicked, the cast targets only the player (the creature target the printed text still names is not chosen) | modelled as `If SpellWasKicked { TargetPlayerThen } else { target creature }`; a kicker-only extra slot beside a required one needs per-branch slot counts |
 | 🟡 Exchange of Words | the text-box exchange outlasts the enchantment (it ends only as either creature leaves) | `ExchangeTextBoxes` bakes the swap into the two instances; a "for as long as this remains" duration needs a reversible layer-3 effect |
 | 🟡 Mikey & Don, Party Planners | "if you cast a creature spell this way" also counts a Mutant, Ninja or Turtle creature cast off the library top through another permission (Vizier of the Menagerie) | the extra counter keys on `R::WasCastFromLibrary`; an uncapped `PlayFromLibraryTop` cast records no granting source |
 | ~~Scuttlemutt~~ ✅ | fixed 2026-10-28: "the color or colors of your choice" is any nonempty set (`BecomeChosenColors`; Quickchange, Dream Coat, Govern the Guildless's forecast and Prismatic Lace share it) | — |

@@ -1750,8 +1750,8 @@ pub fn arboreal_alliance() -> CardDefinition {
 }
 
 /// Galadriel's Dismissal — {W} Instant, kicker {2}{W}. Target creature phases
-/// out; kicked, each creature target player controls phases out instead (the
-/// kicked cast targets only the player).
+/// out; kicked, the cast also targets a player (slot 1), and each creature that
+/// player controls phases out instead.
 pub fn galadriels_dismissal() -> CardDefinition {
     CardDefinition {
         name: "Galadriel's Dismissal",
@@ -1760,12 +1760,13 @@ pub fn galadriels_dismissal() -> CardDefinition {
         keywords: vec![Keyword::Kicker(cost(&[generic(2), w()]))],
         effect: Effect::If {
             cond: Predicate::SpellWasKicked,
-            then: Box::new(Effect::TargetPlayerThen {
-                filter: R::Player,
-                then: Box::new(Effect::PhaseOut {
-                    what: Selector::ControlledBy { who: PlayerRef::Target(0), filter: R::Creature },
-                    until_source_leaves: false,
-                }),
+            // The creature slot is still chosen (and takes nothing: `Take 0`).
+            then: Box::new(Effect::PhaseOut {
+                what: Selector::Both(
+                    Box::new(Selector::ControlledBy { who: PlayerRef::Target(1), filter: R::Creature }),
+                    Box::new(Selector::Take { inner: Box::new(target_filtered(R::Creature)), count: Box::new(Value::Const(0)) }),
+                ),
+                until_source_leaves: false,
             }),
             else_: Box::new(Effect::PhaseOut { what: target_filtered(R::Creature), until_source_leaves: false }),
         },

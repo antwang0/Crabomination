@@ -1122,22 +1122,34 @@ fn arboreal_alliance_makes_an_x_x_treefolk() {
     assert_eq!((cp.power, cp.toughness), (3, 3));
 }
 
-/// Galadriel's Dismissal: unkicked, one creature phases out; kicked, every
-/// creature the target player controls does.
+/// Galadriel's Dismissal: unkicked, one creature phases out; kicked, it also
+/// targets a player (CR 601.2c — the kicker's "target player" is a second
+/// target), and every creature that player controls phases out instead: the
+/// targeted creature, someone else's, stays.
 #[test]
 fn galadriels_dismissal_one_creature_or_a_whole_side() {
-    let mut g = pod(2);
+    let mut g = pod(3);
     let a = ready(&mut g, 1, catalog::grizzly_bears());
     let b = ready(&mut g, 1, catalog::serra_angel());
+    let c = ready(&mut g, 2, catalog::grizzly_bears());
     let gd = g.add_card_to_hand(0, catalog::galadriels_dismissal());
     flood(&mut g);
     cast_at(&mut g, gd, Some(Target::Permanent(a)));
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_some());
     let gd = g.add_card_to_hand(0, catalog::galadriels_dismissal());
-    g.perform_action(GameAction::CastSpellKicked { card_id: gd, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None })
-        .expect("kicked");
+    flood(&mut g);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpellKicked {
+        card_id: gd,
+        target: Some(Target::Permanent(c)),
+        additional_targets: vec![Target::Player(1)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("kicked");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(b).is_none());
+    assert!(g.battlefield_find(b).is_none(), "seat 1's Angel phases out");
+    assert!(g.battlefield_find(c).is_some(), "the targeted creature of seat 2 stays");
     assert_eq!(g.phased_out.len(), 2);
 }
 
