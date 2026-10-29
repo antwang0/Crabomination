@@ -166,6 +166,9 @@ fn open_pack(by_rarity: &HashMap<char, Vec<usize>>, rng: &mut StdRng) -> Vec<usi
 fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: usize, best: usize) {
     let shape = std::env::args().any(|a| a == "--shape");
     let slots = std::env::args().any(|a| a == "--slots");
+    // `--old-duals`: the rated builder against itself blind to the "{T}: add
+    // {W} or {U}" duals it could not see before 2026-10-29.
+    let old_duals = std::env::args().any(|a| a == "--old-duals");
     // `--table FILE` (`scripts/fra_card_table.py RATINGS MIN --tsv`): the
     // rated builder on a re-rated table against the same builder on the
     // compiled one — a re-rate's paired gate.
@@ -198,7 +201,9 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                         crabomination::selfplay::heuristic_sealed_build_rated(pool, salt ^ 1)
                     }
                 };
-                let (old, new) = if let Some(t) = &table {
+                let (old, new) = if old_duals {
+                    (crabomination::recommend::with_old_duals(|| rated(&pool)), rated(&pool))
+                } else if let Some(t) = &table {
                     (rated(&pool), crabomination::card_ratings::with_table(t.clone(), || rated(&pool)))
                 } else if best > 0 && slots {
                     (

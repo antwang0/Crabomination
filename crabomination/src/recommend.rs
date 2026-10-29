@@ -481,7 +481,7 @@ fn suggest_main_deck_shape<R: Rng>(
     for (i, (&f, &(brief, base))) in picks.iter().zip(&scores.cards).enumerate() {
         if !allowed(f, brief) {
             if full {
-                if brief.is_land {
+                if brief.is_land && !(OLD_DUALS.get() && taps_of_colors(brief.def)) {
                     lands.push((off.len() as u32, brief.produces));
                 }
                 off.push(f);
@@ -938,6 +938,26 @@ fn basic_split(
     out
 }
 
+thread_local! {
+    static OLD_DUALS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Run `f` with the builder blind to `OfColors` duals, as it was before
+/// [`land_produced_colors`] read them — `fra_card_eval --ab --old-duals`'s
+/// control arm.
+pub fn with_old_duals<R>(f: impl FnOnce() -> R) -> R {
+    OLD_DUALS.set(true);
+    let r = f();
+    OLD_DUALS.set(false);
+    r
+}
+
+fn taps_of_colors(def: &crate::card::CardDefinition) -> bool {
+    def.activated_abilities.iter().any(|ab| {
+        matches!(&ab.effect, crate::effect::Effect::AddMana { pool: crate::effect::ManaPayload::OfColors(..), .. })
+    })
+}
+
 /// Colors a land taps for — the union of its `AddMana` ability payloads
 /// (an any-color payload counts as all five).
 pub(crate) fn land_produced_colors(def: &crate::card::CardDefinition) -> crate::mana::ColorSet {
@@ -946,11 +966,16 @@ pub(crate) fn land_produced_colors(def: &crate::card::CardDefinition) -> crate::
     for ab in &def.activated_abilities {
         if let Effect::AddMana { pool, .. } = &ab.effect {
             match pool {
-                ManaPayload::Colors(cs) => {
+                // "{T}: Add {W} or {U}" is `OfColors` (the FRA Annexes and
+                // Commons): without it seven of FRA's ten duals tapped for
+                // nothing here, and 119 pool copies made 0 of 20 decks
+                // (spot check, 2026-10-29).
+                ManaPayload::Colors(cs) | ManaPayload::OfColors(cs, _) => {
                     for c in cs {
                         seen.insert(*c);
                     }
                 }
+                ManaPayload::OfColor(c, _) => seen.insert(*c),
                 ManaPayload::AnyOneColor(_) => seen = crate::mana::ColorSet::all(),
                 _ => {}
             }
