@@ -732,6 +732,32 @@ mod answer_log_tests {
             "order is the arm's ask order, park or no park"
         );
     }
+
+    /// CR 605.3a — a mana ability resolved while a resolution is parked on a
+    /// decision is a side resolution: the parked replay survives it. The exit
+    /// net dropped it as garbage, and strict mode aborted a bot's probe on it
+    /// (three-seat audit pod, seed 2813391).
+    #[test]
+    fn a_side_resolution_under_a_parked_decision_keeps_the_replay() {
+        let mut g = GameState::new(vec![Player::new(0, "Alice"), Player::new(1, "Bob")]);
+        g.scratch.resolution_answer_log.push(DecisionAnswer::Bool(true));
+        g.pending_decision = Some(Box::new(PendingDecision {
+            decision: crate::decision::Decision::OptionalTrigger {
+                source: CardId(0),
+                description: "Pay?".into(),
+                kind: OptionalKind::MayBody,
+            },
+            resume: ResumeContext::CleanupDiscard { player: 0 },
+        }));
+        let add = Effect::AddMana {
+            who: crate::effect::PlayerRef::You,
+            pool: crate::effect::ManaPayload::Colors(vec![crate::mana::Color::Blue]),
+        };
+        let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
+        g.resolve_effect(&add, &ctx).expect("mana");
+        assert_eq!(g.players[0].mana_pool.amount(crate::mana::Color::Blue), 1);
+        assert_eq!(g.scratch.resolution_answer_log, vec![DecisionAnswer::Bool(true)], "the parked replay is intact");
+    }
 }
 
 #[cfg(test)]

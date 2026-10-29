@@ -3439,6 +3439,27 @@ impl GameState {
         out: &mut Vec<GameEvent>,
         resuming: bool,
     ) -> Result<(), GameError> {
+        // CR 605.3a — a resolution begun while another is parked on a decision
+        // (a mana ability tapped mid-ask, a bot's affordability probe) is a side
+        // resolution: the resume channel is the parked arm's, so it is set
+        // aside and restored. The exit net below dropped it, and the side
+        // resolution's own asks would have replayed it (three-seat audit pod,
+        // seed 2813391: a bot's attack-tax probe tapped a mana ability under a
+        // parked ask).
+        if self.resolution_depth == 0
+            && !resuming
+            && self.pending_decision.is_some()
+            && (!self.scratch.resolution_answer_log.is_empty() || self.scratch.stashed_resolution_answer.is_some())
+        {
+            let log = std::mem::take(&mut self.scratch.resolution_answer_log);
+            let seats = std::mem::take(&mut self.scratch.resolution_answer_seats);
+            let stash = take_opt_scratch!(self.stashed_resolution_answer);
+            let ran = self.resolve_effect_into_kind(effect, ctx, out, resuming);
+            self.scratch.resolution_answer_log = log;
+            self.scratch.resolution_answer_seats = seats;
+            self.scratch.stashed_resolution_answer = stash;
+            return ran;
+        }
         let mark = out.len();
         let mut events = std::mem::take(out);
         // A RESUMED resolution is the same resolution: the arm that suspended is
