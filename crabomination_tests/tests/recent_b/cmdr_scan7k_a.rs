@@ -4683,6 +4683,20 @@ fn sphinx_of_false_conclusions_returns_as_a_token() {
     assert_eq!(named_count(&g, 0, "Sphinx of False Conclusions"), 0, "a token doesn't copy itself");
 }
 
+/// CR 603.10a — killed by lethal damage (the state-based death, a combat
+/// trade), the Sphinx still leaves its token copy.
+#[test]
+fn cr_603_10a_sphinx_of_false_conclusions_copies_itself_after_lethal_damage() {
+    let mut g = pod(2);
+    let sp = ready(&mut g, 0, catalog::sphinx_of_false_conclusions());
+    g.battlefield_find_mut(sp).unwrap().damage = 2;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(sp).is_none());
+    assert_eq!(named_count(&g, 0, "Sphinx of False Conclusions"), 1, "the token copy");
+}
+
 /// Twisted Spider-Clone tops up countered creatures; Kapow! fights; Venom
 /// Blast hits for the grown power.
 #[test]
