@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::effect::shortcut::{etb, magecraft, on_attack, on_dies, target_filtered};
 use crate::effect::{Duration, PlayerRef, ZoneDest};
-use crate::mana::{b, cost, g, generic, r, u, w};
+use crate::mana::{b, cost, g, generic, r, u, w, x};
 
 /// Birthday Escape — {U} Sorcery. Draw a card. The Ring tempts you.
 pub fn birthday_escape() -> CardDefinition {
@@ -282,9 +282,8 @@ pub fn banish_from_edoras() -> CardDefinition {
 
 /// Wizard's Rockets — {1} Artifact. Enters tapped. {X}, {T}, Sacrifice: add X
 /// mana in any combination of colors. When it's put into a graveyard from the
-/// battlefield, draw a card. (The X-mana ability is approximated at X = 1:
-/// {1}, {T}, sacrifice for one mana of any colour — a colour filter, as the
-/// printed card is at X = 1. It shipped with no mana cost until 2026-09-07.)
+/// battlefield, draw a card. The auto-tapper activates it at X = 1 (a colour
+/// filter); an explicit activation names X, X = 0 included.
 pub fn wizards_rockets() -> CardDefinition {
     use crate::card::{StaticAbility, StaticEffect};
     use crate::effect::ManaPayload;
@@ -300,11 +299,11 @@ pub fn wizards_rockets() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            mana_cost: cost(&[generic(1)]),
+            mana_cost: cost(&[x()]),
             sac_cost: true,
             effect: Effect::AddMana {
                 who: PlayerRef::You,
-                pool: ManaPayload::AnyOneColor(Value::Const(1)),
+                pool: ManaPayload::AnyColors(Value::XFromCost),
             },
             ..Default::default()
         }],

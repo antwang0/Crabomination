@@ -345,23 +345,42 @@ fn banish_from_edoras_exiles_tapped_for_less() {
     assert!(g.exile.iter().any(|c| c.id == foe), "creature exiled");
 }
 
-/// Wizard's Rockets: sacrificing it for mana draws a card.
+/// Wizard's Rockets: "{X}, {T}, Sacrifice: add X mana in any combination of
+/// colors" sizes to the named X (CR 107.3), X = 0 just cycles it, and the
+/// auto-tapper spends it at X = 1 as a colour filter.
 #[test]
-fn wizards_rockets_sac_for_mana_draws() {
+fn wizards_rockets_adds_x_mana_and_draws() {
+    let rockets_ready = |g: &mut GameState| {
+        let id = g.add_card_to_battlefield(0, catalog::wizards_rockets());
+        g.battlefield_find_mut(id).unwrap().tapped = false;
+        g.add_card_to_library(0, catalog::forest());
+        id
+    };
+    for x in [3u32, 0] {
+        let mut g = two_player_game();
+        let rockets = rockets_ready(&mut g);
+        let hand = g.players[0].hand.len();
+        g.players[0].mana_pool.add_colorless(x);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: rockets, ability_index: 0, target: None, additional_targets: vec![], x_value: Some(x), mode: None,
+        }).expect("activate mana ability");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(rockets).is_none(), "X={x}: sacrificed");
+        assert_eq!(g.players[0].hand.len(), hand + 1, "X={x}: drew on death");
+        assert_eq!(g.players[0].mana_pool.total(), x, "X={x}: X mana added");
+        assert_eq!(g.players[0].mana_pool.colorless_amount(), 0, "X={x}: every pip coloured");
+    }
+    // Auto-pay: a Mountain's {R} through Rockets for Swords' {W}.
     let mut g = two_player_game();
-    let rockets = g.add_card_to_battlefield(0, catalog::wizards_rockets());
-    g.battlefield_find_mut(rockets).unwrap().tapped = false;
-    g.add_card_to_library(0, catalog::forest());
-    let hand = g.players[0].hand.len();
-    // {X}, {T}, sacrifice at the modelled X = 1.
-    g.players[0].mana_pool.add_colorless(1);
-    g.perform_action(GameAction::ActivateAbility {
-        card_id: rockets, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
-    }).expect("activate mana ability");
+    rockets_ready(&mut g);
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let swords = g.add_card_to_hand(0, catalog::swords_to_plowshares());
+    g.perform_action(GameAction::CastSpell {
+        card_id: swords, target: Some(Target::Permanent(foe)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("Rockets fixes the white pip");
     drain_stack(&mut g);
-    assert!(g.battlefield_find(rockets).is_none(), "sacrificed");
-    assert_eq!(g.players[0].hand.len(), hand + 1, "drew on death");
-    assert!(g.players[0].mana_pool.total() >= 1, "mana added");
+    assert!(g.exile.iter().any(|c| c.id == foe));
 }
 
 /// Erebor Flamesmith pings each opponent when you cast an instant.
