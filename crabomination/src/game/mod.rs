@@ -8924,6 +8924,33 @@ impl GameState {
         }
     }
 
+    /// The counters a filtered enters-with rider (`MatchingEntersWithExtraCounters`,
+    /// `MatchingEntersWithCountersPer`) on `src` adds to `entering`, if its
+    /// filter admits it; read on creature and noncreature entrants alike.
+    fn filtered_enter_counters(
+        &self,
+        effect: &crate::effect::StaticEffect,
+        src: &CardInstance,
+        entering: CardId,
+        controller: usize,
+    ) -> Option<(crate::card::CounterType, u32)> {
+        use crate::effect::StaticEffect;
+        let admits = |filter: &SelectionRequirement| {
+            self.evaluate_requirement_static(filter, &crate::game::Target::Permanent(entering), controller, Some(src.id))
+        };
+        match effect {
+            StaticEffect::MatchingEntersWithExtraCounters { filter, kind, amount } if *amount > 0 => {
+                admits(&filter.resolve_named_by_source(src.named_card.as_deref())).then_some((*kind, *amount))
+            }
+            StaticEffect::MatchingEntersWithCountersPer { filter, kind, value } => {
+                let ctx = crate::game::effects::EffectContext::for_ability(src.id, src.controller, None);
+                let n = self.evaluate_value(value, &ctx).max(0) as u32;
+                (n > 0 && admits(filter)).then_some((*kind, n))
+            }
+            _ => None,
+        }
+    }
+
     pub fn chosen_type_etb_counter_specs(
         &self,
         entering: CardId,
@@ -8968,6 +8995,18 @@ impl GameState {
             }
         }
         if !self.computed_is_creature(ec) {
+            // CR 614.1c — a filtered rider names its own types: Thunderous
+            // Velocipede's and Blaster's reach a Vehicle that isn't a creature.
+            for src in self.all_static_sources() {
+                if src.controller != controller || src.id == entering {
+                    continue;
+                }
+                for sa in &src.definition.static_abilities {
+                    if let Some(e) = self.active_static(&sa.effect, src) {
+                        pw_specs.extend(self.filtered_enter_counters(e, src, entering, controller));
+                    }
+                }
+            }
             return pw_specs;
         }
         let entering_types = ec.definition.subtypes.creature_types.clone();
@@ -9031,32 +9070,9 @@ impl GameState {
                     // Muzzio's Preparations — a filtered enters-with rider; the
                     // filter's `NamedBySource` leaves read the source's own
                     // named card (CR 702.106 hidden agenda).
-                    StaticEffect::MatchingEntersWithExtraCounters { filter, kind, amount }
-                        if *amount > 0 =>
-                    {
-                        let filter = filter.resolve_named_by_source(src.named_card.as_deref());
-                        if self.evaluate_requirement_static(
-                            &filter,
-                            &crate::game::Target::Permanent(entering),
-                            controller,
-                            Some(src.id),
-                        ) {
-                            specs.push((*kind, *amount));
-                        }
-                    }
-                    StaticEffect::MatchingEntersWithCountersPer { filter, kind, value } => {
-                        let ctx = crate::game::effects::EffectContext::for_ability(src.id, src.controller, None);
-                        let n = self.evaluate_value(value, &ctx).max(0) as u32;
-                        if n > 0
-                            && self.evaluate_requirement_static(
-                                filter,
-                                &crate::game::Target::Permanent(entering),
-                                controller,
-                                Some(src.id),
-                            )
-                        {
-                            specs.push((*kind, n));
-                        }
+                    e @ (StaticEffect::MatchingEntersWithExtraCounters { .. }
+                    | StaticEffect::MatchingEntersWithCountersPer { .. }) => {
+                        specs.extend(self.filtered_enter_counters(e, src, entering, controller));
                     }
                     // Master Biomancer — any other creature you control enters
                     // with additional counters equal to the source's live power.

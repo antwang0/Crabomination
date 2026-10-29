@@ -3174,15 +3174,16 @@ impl GameState {
                         }
                     }
                     // Metallic Mimic-style chosen-type ETB counters (any matching
-                    // creature entry the caster controls) — plus Oath of
-                    // Gideon's loyalty rider, which is the planeswalker case
-                    // the same collector serves.
+                    // creature entry the caster controls), Oath of Gideon's
+                    // loyalty rider, and a filtered rider that admits a
+                    // noncreature (Thunderous Velocipede's Vehicles) — the
+                    // collector decides, as on every other entry path.
+                    for (kind, n) in self.chosen_type_etb_counter_specs(card_id, caster) {
+                        counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
+                    }
                     if is_creature_resolve || self.battlefield.iter().any(|c| {
                         c.id == card_id && self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
                     }) {
-                        for (kind, n) in self.chosen_type_etb_counter_specs(card_id, caster) {
-                            counter_specs.push((kind, crate::effect::Value::Const(n as i32)));
-                        }
                         self.spend_ench_creature_etb_bonus(card_id, caster);
                     }
                     if is_creature_resolve {

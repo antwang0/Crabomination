@@ -407,4 +407,9 @@ fn thunderous_velocipede_scales_by_mana_value() {
     assert_eq!(counters(&g, cheap), 1, "a 2-drop gets one");
     assert_eq!(counters(&g, dear), 3, "a 6-drop gets three");
     assert_eq!(counters(&g, velo), 0, "not itself");
+    // CR 614.1c — "each other Vehicle": an uncrewed one isn't a creature, and
+    // got nothing while the collector asked creatures only.
+    let copter = g.add_card_to_hand(0, catalog::smugglers_copter());
+    cast(&mut g, copter, None);
+    assert_eq!(counters(&g, copter), 1, "a Vehicle gets one");
 }
