@@ -2102,7 +2102,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |
 | ~~Quilled Greatwurm~~ ✅ | fixed 2026-10-24: `CastSelfFromGraveyardWithCost(RemoveCountersFromCreatures { count: 6 })` | — |
 | 🟡 Vaevictis Asmadi, the Dire | its per-player target is mandatory in print; `ForEachPlayerTarget` lets a seat leave one out | `ForEachPlayerTarget`'s "up to" |
-| 🟡 Soul Exchange | the +2/+2 counter "if the exiled creature was a Thrull" is dropped — the cast's exile-a-creature cost isn't remembered | `AdditionalCastCost::ExilePermanent` |
 | ~~Gix's Command~~ ✅ | fixed 2026-10-28: the counters mode's "up to one creature" is any creature, chosen as it resolves (`ChooseSomeAmong`) | — |
 | ~~Ziatora's Envoy~~ ✅ | fixed 2026-10-27: `CastTopFreeIfElseDraw { land_or_hand }` plays a top land with a land play left and puts a miss into hand | — |
 | 🟡 Reed Richards, Smartest Man | on your own turn past the draw step, the draw-step draw is assumed to have happened (a skipped draw step mis-counts by one) | `FirstExtraDrawEachTurnBecomes` reads `cards_drawn_this_turn` |

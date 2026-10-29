@@ -204,16 +204,20 @@ fn whisper_trades_two_for_one() {
     assert!(g.battlefield_find(wurm).is_some());
 }
 
-/// Soul Exchange exiles a creature to reanimate another.
+/// Soul Exchange exiles a creature to reanimate another; only a Thrull paid
+/// as the cost adds the +2/+2 counter.
 #[test]
 fn soul_exchange_exiles_to_reanimate() {
-    let mut g = pod(2);
-    let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
-    let bear = ready(&mut g, 0, catalog::grizzly_bears());
-    let id = g.add_card_to_hand(0, catalog::soul_exchange());
-    cast(&mut g, 0, id, &[Target::Permanent(wurm)]).expect("cast");
-    assert!(g.battlefield_find(wurm).is_some());
-    assert!(g.exile.iter().any(|c| c.id == bear));
+    use crabomination::card::CounterType;
+    for (fodder, counters) in [(catalog::grizzly_bears(), 0), (catalog::mindstab_thrull(), 1)] {
+        let mut g = pod(2);
+        let wurm = g.add_card_to_graveyard(0, catalog::craw_wurm());
+        let paid = ready(&mut g, 0, fodder);
+        let id = g.add_card_to_hand(0, catalog::soul_exchange());
+        cast(&mut g, 0, id, &[Target::Permanent(wurm)]).expect("cast");
+        assert!(g.exile.iter().any(|c| c.id == paid));
+        assert_eq!(g.battlefield_find(wurm).expect("returned").counter_count(CounterType::PlusTwoPlusTwo), counters);
+    }
 }
 
 /// Soulbright Flamekin's third resolution in a turn adds eight red.

@@ -231,7 +231,7 @@ pub fn whisper_blood_liturgist() -> CardDefinition {
 
 /// Soul Exchange — {B}{B} sorcery. Additional cost: exile a creature you
 /// control. Return target creature card from your graveyard to the
-/// battlefield.
+/// battlefield; put a +2/+2 counter on it if the exiled creature was a Thrull.
 pub fn soul_exchange() -> CardDefinition {
     CardDefinition {
         additional_cast_cost: vec![AdditionalCastCost::ExilePermanent { filter: R::Creature, count: 1 }],
@@ -239,10 +239,24 @@ pub fn soul_exchange() -> CardDefinition {
             "Soul Exchange",
             cost(&[b(), b()]),
             CardType::Sorcery,
-            Effect::Move {
-                what: target_filtered(R::Creature.from_your_graveyard()),
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-            },
+            Effect::Seq(vec![
+                Effect::Move {
+                    what: target_filtered(R::Creature.from_your_graveyard()),
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+                Effect::If {
+                    cond: Predicate::EntityMatchesAny {
+                        what: Selector::CostExiledCards,
+                        filter: R::HasCreatureType(CreatureType::Thrull),
+                    },
+                    then: Box::new(Effect::AddCounter {
+                        what: Selector::Target(0),
+                        kind: CounterType::PlusTwoPlusTwo,
+                        amount: Value::ONE,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
         )
     }
 }
