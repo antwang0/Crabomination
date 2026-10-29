@@ -132,6 +132,20 @@ fn arachne_taxes_the_chosen_type() {
     assert_eq!(crabomination::game::actions::extra_cost_for_spell(&g, 1, &card, None), 1);
 }
 
+/// Arachne looks at an opponent's hand as she enters, and the headless pick
+/// names the type that hand holds most of.
+#[test]
+fn arachne_looks_at_a_hand_before_choosing() {
+    let mut g = pod(2);
+    g.add_card_to_hand(1, catalog::divination());
+    g.add_card_to_hand(1, catalog::divination());
+    g.add_card_to_hand(1, catalog::lightning_bolt());
+    let arachne = g.add_card_to_hand(0, catalog::arachne_psionic_weaver());
+    cast(&mut g, arachne, None, None);
+    assert!(g.hands_revealed_to.contains(&(0, 1)), "the hand was looked at");
+    assert_eq!(g.battlefield_find(arachne).unwrap().chosen_card_type, Some(crabomination::card::CardType::Sorcery));
+}
+
 /// The Arkenstone pumps your team and draws at your end step.
 #[test]
 fn the_arkenstone_pumps_and_draws() {

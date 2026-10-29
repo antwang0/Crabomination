@@ -2118,7 +2118,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Wanda's Vision~~ ✅ | fixed 2026-10-24: `ExileTopUntilNonland` + `CastWithoutPayingImmediate` during the resolution | — |
 | 🟡 Stardew Valley | the gift goes to an opponent of your choice, not any other player (the same set outside team formats) | `ChooseOpponentThen` |
 | ~~Stangg, Echo Warrior~~ ✅ | fixed 2026-10-28: a token copy of each Aura and Equipment on him enters attached to the Twin (`CreateTokenCopyOfAttachedToEach`), all sacrificed at the next end step | — |
-| 🟡 Arachne, Psionic Weaver | the look at an opponent's hand that informs the type choice isn't modelled | `ChooseCardTypeFromForSource` |
 | 🟡 Captain James T. Kirk | with an empty hand, "choose one or more" is an up-to-three pick, so zero modes is offered | `ChooseUpToN { max: 3 }` |
 | ~~Spider-Verse~~ ✅ | fixed 2026-10-24: `once_each_turn_on_take` — the use is spent on a copy taken (Riveteers Ascendancy had the same shape, fixed with it) | — |
 | ~~Casting of Bones~~ ✅ | fixed 2026-10-27: `Effect::DiscardOneOfDrawn` picks among this resolution's `CardDrawn` cards | — |

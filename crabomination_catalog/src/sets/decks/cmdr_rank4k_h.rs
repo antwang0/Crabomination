@@ -128,9 +128,8 @@ pub fn gideon_the_oathless() -> CardDefinition {
 // ── Arachne, Psionic Weaver ──────────────────────────────────────────────────
 
 /// Arachne, Psionic Weaver — {2}{W} legendary 3/3 Spider Human Hero;
-/// web-slinging {W}. As she enters, choose a card type other than creature;
-/// spells of the chosen type cost {1} more. (Residual: the look at an
-/// opponent's hand that informs the choice isn't modelled.)
+/// web-slinging {W}. As she enters, look at an opponent's hand, then choose a
+/// card type other than creature; spells of the chosen type cost {1} more.
 pub fn arachne_psionic_weaver() -> CardDefinition {
     CardDefinition {
         alternative_cost: Some(AlternativeCost {
@@ -138,15 +137,23 @@ pub fn arachne_psionic_weaver() -> CardDefinition {
             return_to_hand: Some((R::Creature.and(R::Tapped), 1)),
             ..Default::default()
         }),
-        as_enters_effect: Some(Effect::ChooseCardTypeFromForSource {
-            options: vec![
-                CardType::Instant,
-                CardType::Sorcery,
-                CardType::Artifact,
-                CardType::Enchantment,
-                CardType::Planeswalker,
-            ],
-        }),
+        as_enters_effect: Some(Effect::Seq(vec![
+            Effect::ChooseOpponentThen {
+                then: Box::new(Effect::LookAtHand { who: Selector::Player(PlayerRef::ChosenPlayerOfSource) }),
+            },
+            Effect::ChooseCardTypeFromForSource {
+                options: vec![
+                    CardType::Instant,
+                    CardType::Sorcery,
+                    CardType::Artifact,
+                    CardType::Enchantment,
+                    CardType::Planeswalker,
+                    CardType::Battle,
+                    CardType::Kindred,
+                    CardType::Land,
+                ],
+            },
+        ])),
         static_abilities: vec![StaticAbility {
             description: "Spells of the chosen type cost {1} more to cast.",
             effect: StaticEffect::ChosenCardTypeSpellsCostMore { amount: 1 },
