@@ -22687,6 +22687,13 @@ impl GameState {
             }));
             return Ok(());
         }
+        // An {X} mana ability activated with no X (the auto-tapper, which
+        // wants one mana from it): X = 1. Wizard's Rockets' "{X}, {T},
+        // Sacrifice: add X mana in any combination of colors" fixes one pip.
+        let x_value = match x_value {
+            None if ability_is_mana && ability.mana_cost.has_x() => Some(1),
+            v => v,
+        };
 
         // Spend context for restricted mana: an ArtifactOnly pool entry
         // (Power Depot) may fund abilities of artifact sources.
