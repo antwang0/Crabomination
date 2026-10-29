@@ -295,3 +295,22 @@ fn ashnod_trades_a_creature_for_a_powerstone() {
         .expect("Powerstone");
     assert!(stone.tapped);
 }
+
+/// CR 700.2 — with an empty hand Kirk's "choose one or more" never runs zero
+/// modes: a named pick runs just those, an empty answer runs all three.
+#[test]
+fn captain_kirk_empty_hand_runs_one_or_more_modes() {
+    let officers = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Officer").count();
+    for (answer, tokens) in [(vec![1u8], 1), (vec![], 1)] {
+        let mut g = pod(2);
+        let bear = ready(&mut g, 0, catalog::grizzly_bears());
+        g.players[0].hand.clear();
+        g.add_card_to_library(0, catalog::forest());
+        let kirk = g.add_card_to_hand(0, catalog::captain_james_t_kirk());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Modes(answer.clone())]));
+        cast(&mut g, kirk, None, None);
+        assert_eq!(officers(&g), tokens, "{answer:?}");
+        let pumped = g.computed_permanent(bear).unwrap().power == 3;
+        assert_eq!(pumped, answer.is_empty(), "{answer:?}: the +1/+0 runs only with every mode");
+    }
+}

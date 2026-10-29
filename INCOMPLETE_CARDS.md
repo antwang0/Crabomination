@@ -1101,7 +1101,7 @@ all fixed in one commit (tests re-pinned to the printed costs):
 | Tome of the Infinite | {2}, {T} (a synthesized cantrip under an Alchemy name) | {U}, {T}; the draw stands in for conjure |
 | Waker of Waves | {2}{U}{U}, discard | {1}{U}, discard |
 | Tome of the Guildpact | an invented "{2}, {T}: draw" under a real name | "whenever you cast a multicolored spell, draw"; {T}: add any colour |
-| Wizard's Rockets | {T}, sac: one mana of any colour (free) | {X}, {T}, sac: X mana — modelled at X = 1 ({1}), the documented approximation and the one row the column still lists |
+| Wizard's Rockets | {T}, sac: one mana of any colour (free) | {X}, {T}, sac: X mana in any combination — ✅ printed since 2026-10-29 (the auto-tapper names X = 1) |
 
 The four false positives taught the reader its three rules: an
 ability-word prefix ("Delirium — {2}{G}{G}: ..") is still an activation
@@ -2108,12 +2108,10 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Mishra's Research Desk~~ ✅ | stale row: `impulse_choose_one` grants only the chosen card (`mishras_research_desk_impulses_and_unearths`) | — |
 | ~~Ajani, Sleeper Agent~~ ✅ | fixed 2026-10-28: a missed +1 reveal may stay on top | — |
 | 🟡 Invoke the Ancients | each Spirit's keyword-counter pick is "up to one", so a seat may leave one without a counter | `ChooseUpToN { max: 1 }` per token |
-| 🟡 Rinoa, Angel Wing | the once-a-turn cap is spent by the first attacking creature's death even when you decline the return | `EventSpec::once_per_turn` |
 | ~~Rona, Disciple of Gix~~ ✅ | stale row: both grants already ride `RestrictMayPlayToCasting` (`rona_cant_play_an_exiled_land`) | — |
 | ~~Wanda's Vision~~ ✅ | fixed 2026-10-24: `ExileTopUntilNonland` + `CastWithoutPayingImmediate` during the resolution | — |
 | 🟡 Stardew Valley | the gift goes to an opponent of your choice, not any other player (the same set outside team formats) | `ChooseOpponentThen` |
 | ~~Stangg, Echo Warrior~~ ✅ | fixed 2026-10-28: a token copy of each Aura and Equipment on him enters attached to the Twin (`CreateTokenCopyOfAttachedToEach`), all sacrificed at the next end step | — |
-| 🟡 Captain James T. Kirk | with an empty hand, "choose one or more" is an up-to-three pick, so zero modes is offered | `ChooseUpToN { max: 3 }` |
 | ~~Spider-Verse~~ ✅ | fixed 2026-10-24: `once_each_turn_on_take` — the use is spent on a copy taken (Riveteers Ascendancy had the same shape, fixed with it) | — |
 | ~~Casting of Bones~~ ✅ | fixed 2026-10-27: `Effect::DiscardOneOfDrawn` picks among this resolution's `CardDrawn` cards | — |
 | 🟡 Skill Borrower | the top card of your library is only visible to you, not revealed to the table | `MayLookAtOwnLibraryTop` |
@@ -2137,7 +2135,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Mordor on the March | "exile a creature card from your graveyard" is a target (a hexproof-from-graveyard effect would stop it); each storm copy re-aims at another card | `CreateTokenCopyOf` + `Exile` + `DelayUntil` |
 | 🟡 Whtz, the Bibliophile | the "{3} less with 200 or more cards in your starting deck" discount isn't modelled (no starting-deck size is kept; every seated deck has 100) | `ActivatedAbility` |
 | 🟡 Aragorn, Company Leader | "one of each of those kinds" is one trigger per kind put, so two kinds at once may land on two different creatures | `AddCounterOfTriggerKind` on `YouPutCounters` |
-| 🟡 The Everforger | "do this only once each turn" counts the trigger, so declining the copy still spends the turn's | `SpellCast` `.once_per_turn()` + `MayDo { CopySpell }` |
 | 🟡 Touch of Moonglove | the granted "a creature it damaged dies" trigger doesn't look back (CR 603.10a) when the pumped creature dies in the same event as its victim | `GrantTriggeredAbility { EndOfTurn }` |
 | 🟡 Ib Halfheart, Goblin Tactician | the blocked Goblin deals its 4 just before it is sacrificed (the blockers leave the block map with it), and only while it is still yours | `DealDamageFrom` + `SacrificeSelected` |
 | 🟡 Tocasia, Dig Site Mentor | the graveyard ability returns cheapest-first rather than the chosen targets | `MoveWithinTotalManaValue` |
@@ -2189,7 +2186,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Bloodfeather Phoenix | only an instant or sorcery's damage to an *opponent* returns it — damage to a battle doesn't | `FromYourGraveyardSourceDamagedOpponent` + `dealt_by` |
 | 🟡 Curse of Shaken Faith | "or copies a spell" doesn't trigger it — only a cast after the first | `SpellCast` + `SpellsCastThisTurnEquals` |
 | 🟡 Curse of Surveillance | "any number of target players other than that player" is only you | `Draw { who: You }` |
-| 🟡 Accursed Witch // Infectious Curse | the Witch's {1} discount also reaches your own spells targeting it; Infectious Curse's "spells you cast that target enchanted player cost {1} less" is not modelled | `CostReductionForYourSpellsTargetingThis { any_caster: true }` |
 | 🟡 The Unluckiest Planeswalker | the +1's Gremlin rides your next Aura spell this turn, not the spending of that specific mana | `OnYourNextSpellMatchingThisTurn` |
 | 🟡 Winter's Chill | X isn't capped at your snow lands, and the "pay only {1}: prevent its combat damage" middle option is dropped — each target's controller pays {2} or it's destroyed at end of combat | `CapTargetsAtX` + `UnlessPlayerPays` |
 | 🟡 Rimewind Cryomancer | "target activated ability" is a permanent with an ability on the stack and no triggered one there | `HasAbilityOnStack ∧ ¬HasTriggeredAbilityOnStack` |

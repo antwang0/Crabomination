@@ -446,8 +446,8 @@ pub fn joel_resolute_survivor() -> CardDefinition {
 
 /// Captain James T. Kirk — {2}{R} legendary 2/2 Human Officer. Enters or
 /// attacks: choose one (one or more with an empty hand) — loot; a 1/1 red
-/// Officer; creatures you control get +1/+0 until end of turn. (Residual: the
-/// empty-hand "one or more" is an up-to-three pick.)
+/// Officer; creatures you control get +1/+0 until end of turn. The empty-hand
+/// "one or more" is `ChooseUpToN` (3): an empty answer runs all three.
 pub fn captain_james_t_kirk() -> CardDefinition {
     let officer = TokenDefinition {
         name: "Officer".into(),

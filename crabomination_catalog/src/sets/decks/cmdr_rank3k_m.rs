@@ -128,7 +128,6 @@ pub fn sifa_grent() -> CardDefinition {
 /// Mercenary. Whenever you attack a player, goad target creature that player
 /// controls. Whenever a creature attacking one of your opponents becomes
 /// blocked by two or more creatures, it gains deathtouch until end of turn.
-/// (Residual: the double-block rider watches only your own attackers.)
 pub fn seifer_balamb_rival() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::FirstStrike],
