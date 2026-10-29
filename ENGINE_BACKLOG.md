@@ -329,8 +329,8 @@ Then `pod_residuals --rank` top-down, frozen pools checked first.
   Shriek (splice onto instant or sorcery). Clean decks **5,525 → 5,587 / 6,140**.
 - Gates: `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical, determinism + thread determinism ok;
   cube / sos / sealed × 300 (seed 28010) outcome-identical base (`e3dbdf3d8`) vs tip; release pods 2..8 seats × 300
-  (seed 28020) 2,100/2,100 decided. ⚠ **8-seat turns/game at seed 9103 now reads 97.59 (92.63 when first recorded) —
-  identical on the base and the tip, so the drift is older than this run;** turns/game 20.26 / 33.36 / 47.20 / 57.94
+  (seed 28020) 2,100/2,100 decided. 8-seat turns/game at seed 9103 reads 97.59 on the base and the tip alike (92.63 when first
+  recorded; PERF's pod rows have read ~97 since the 23,768-test tip); turns/game 20.26 / 33.36 / 47.20 / 57.94
   / 69.06 / 83.94 / 99.34 at seed 28020.
 
 OPEN:
