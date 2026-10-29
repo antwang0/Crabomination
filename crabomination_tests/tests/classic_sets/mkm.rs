@@ -958,9 +958,7 @@ fn unyielding_gatekeeper_blinks_yours_and_pays_for_theirs() {
 /// ⚠ The rider was `Search { who: EachPlayer }`, whose arm resolves `who`
 /// singularly — so seat 0 fetched a basic whether or not a land of theirs had
 /// been destroyed, and a seat-1 Buzzcrusher ramped its own victim's opponent.
-/// The destroy half stays an approximation (the card is "for each player,
-/// destroy up to one nonbasic land that player controls"); the rider is exact
-/// for the land that died.
+/// The rider is per land that died (the per-player destroy: the test below).
 #[test]
 fn krenkos_buzzcrusher_ramps_the_destroyed_lands_controller() {
     let mut g = two_player_game();
@@ -986,4 +984,31 @@ fn krenkos_buzzcrusher_ramps_the_destroyed_lands_controller() {
     let b = g.battlefield_find(theirs).expect("its controller fetched a basic");
     assert_eq!((b.controller, b.tapped), (1, true), "their basic, tapped");
     assert!(g.battlefield_find(mine).is_none(), "the caster fetched nothing");
+}
+
+/// CR 601.2c — "for each player, destroy up to one nonbasic land that player
+/// controls": in a pod each opponent loses one and fetches its own basic; the
+/// caster's own nonbasic is spared by the pick.
+#[test]
+fn krenkos_buzzcrusher_hits_one_nonbasic_per_player() {
+    let mut g = multi_player_game(3);
+    let own = g.add_card_to_battlefield(0, catalog::valakut_the_molten_pinnacle());
+    let a = g.add_card_to_battlefield(1, catalog::valakut_the_molten_pinnacle());
+    let b = g.add_card_to_battlefield(2, catalog::valakut_the_molten_pinnacle());
+    for seat in 1..3 {
+        g.add_card_to_library(seat, catalog::mountain());
+    }
+    let id = g.add_card_to_hand(0, catalog::krenkos_buzzcrusher());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add_colorless(2);
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "each opponent's nonbasic died");
+    assert!(g.battlefield_find(own).is_some(), "own nonbasic spared");
+    for seat in 1..3 {
+        assert!(g.battlefield.iter().any(|c| c.controller == seat && c.definition.name == "Mountain" && c.tapped), "seat {seat} fetched");
+    }
 }

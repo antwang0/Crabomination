@@ -580,35 +580,33 @@ pub fn tolsimir_midnights_light() -> CardDefinition {
     }
 }
 
-/// Krenko's Buzzcrusher — {2}{R}{R} 4/4 flying trample; its entry blows up a
-/// nonbasic land, whose controller may fetch a basic tapped.
-///
-/// Approximated on the destroy half: the card is "for each player, destroy up
-/// to one nonbasic land that player controls", and the engine has no
-/// per-player unrestricted choice, so this destroys one targeted nonbasic land.
-/// The rider is then exact for the land that died — `ControllerOf(Target(0))`,
-/// White Orchid Phantom's shape. It used to be `Search { who: EachPlayer }`,
-/// whose arm resolves `who` singularly, so the first living seat fetched a
-/// basic whether or not a land of theirs had been destroyed.
+/// Krenko's Buzzcrusher — {2}{R}{R} 4/4 flying trample; on entry, for each
+/// player, destroy up to one nonbasic land that player controls; each land's
+/// controller may fetch a basic tapped. The per-player pick is
+/// `ForEachPlayerTarget` (CR 601.2c), so it targets where the card chooses —
+/// hexproof lands are out of reach; the fetch is per land, by its controller.
 pub fn krenkos_buzzcrusher() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::Seq(vec![
-            Effect::Destroy {
-                what: target_filtered(
-                    SelectionRequirement::Land
-                        .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsBasicLand))),
-                ),
-            },
-            Effect::Search {
-                who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
-                filter: SelectionRequirement::IsBasicLand,
-                to: crate::effect::ZoneDest::Battlefield {
-                    controller: PlayerRef::You,
-                    tapped: true,
-                },
-            },
-        ]))],
+        triggered_abilities: vec![etb(Effect::ForEachPlayerTarget {
+            body: Box::new(Effect::ApplyToTargets {
+                max_targets: 15,
+                min_targets: 0,
+                filter: SelectionRequirement::Land
+                    .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsBasicLand))),
+                effect: Box::new(Effect::Seq(vec![
+                    Effect::Destroy { what: Selector::Target(0) },
+                    Effect::Search {
+                        who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                        filter: SelectionRequirement::IsBasicLand,
+                        to: crate::effect::ZoneDest::Battlefield {
+                            controller: PlayerRef::You,
+                            tapped: true,
+                        },
+                    },
+                ])),
+            }),
+        })],
         ..CardDefinition {
             card_types: vec![CardType::Artifact, CardType::Creature],
             ..creature(
