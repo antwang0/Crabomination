@@ -506,6 +506,27 @@ fn the_bot_holds_a_land_that_would_double_a_scute_swarm_board() {
     assert!(!matches!(action, Some(GameAction::PlayLand(_))), "{action:?}");
 }
 
+/// The same hold counts Ancient Greenwarden's extra landfall fire: 300
+/// Swarms alone fit under the bound, but doubled they don't (a six-seat
+/// audit pod stacked 4,320 Swarm triggers under one, seed 2811250).
+#[test]
+fn the_bot_holds_a_land_a_greenwarden_would_double_past_the_bound() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = main_phase(2);
+    for _ in 0..6 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    g.add_card_to_hand(0, catalog::forest());
+    for _ in 0..300 {
+        g.add_card_to_battlefield(0, catalog::scute_swarm());
+    }
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(matches!(action, Some(GameAction::PlayLand(_))), "300 more fit: {action:?}");
+    g.add_card_to_battlefield(0, catalog::ancient_greenwarden());
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert!(!matches!(action, Some(GameAction::PlayLand(_))), "600 more don't: {action:?}");
+}
+
 /// CR 608.2d — Rampant Frogantua puts any number of the milled lands onto
 /// the battlefield: the controller picks which.
 #[test]

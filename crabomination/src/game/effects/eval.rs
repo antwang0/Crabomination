@@ -509,7 +509,9 @@ impl GameState {
                 }
             }
         }
-        n
+        // Ancient Greenwarden fires each of them once more (a 540-Swarm board
+        // under one stacked 4,320 triggers off four lands, seed 2811250).
+        n * (1 + self.land_entry_trigger_extra_fires(seat) as i64)
     }
 
     /// Tokens `attacker`'s own "whenever this attacks" triggers would mint
