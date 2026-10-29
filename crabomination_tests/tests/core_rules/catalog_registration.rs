@@ -3996,3 +3996,17 @@ fn every_target_of_a_spell_trigger_ignores_abilities() {
     }
     assert!(bad.is_empty(), "{bad:?}");
 }
+
+/// CR 603.3d vs a printed "you may … Do this only once each turn": the use is
+/// spent where the may is taken (`shortcut::once_each_turn_on_take`), not by
+/// the trigger — Rinoa, The Everforger, Cosmic Crucible, Irreverent Gremlin,
+/// Pantlaza and Krile capped the trigger, so a declined may spent the turn's.
+#[test]
+fn every_optional_once_each_turn_is_spent_by_the_take() {
+    clause_ratchet(
+        "you may … do this only once each turn",
+        20,
+        |t, _| t.contains("do this only once each turn") && t.contains("you may"),
+        |_, body| body.contains("MarkDoneThisTurn") || body.contains("PayLifeToShiftDieOnceEachTurn"),
+    );
+}

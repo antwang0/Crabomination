@@ -604,6 +604,8 @@ pub fn screeching_scorchbeast() -> CardDefinition {
         effect: may("Create that many Zombie Mutants?", make(zombie_mutant(), Value::TriggerEventAmount)),
     };
     spawn.event.once_per_turn = true;
+    // "Do this only once each turn": spent where the may is taken.
+    let spawn = crate::effect::shortcut::once_each_turn_on_take(spawn);
     CardDefinition {
         keywords: vec![Keyword::Flying, Keyword::Menace],
         triggered_abilities: vec![on_attack(rad(PlayerRef::EachPlayer, 2)), spawn],

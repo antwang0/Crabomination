@@ -122,7 +122,10 @@ pub fn tidus_yunas_guardian() -> CardDefinition {
         ),
         effect: may("Draw a card and proliferate?", Effect::Seq(vec![draw(Value::ONE), Effect::Proliferate])),
     };
-    cheer.event.once_per_turn = true;
+    // "Whenever one or more … deal combat damage to a player" (CR 603.2c),
+    // and "do this only once each turn" is spent where the may is taken.
+    cheer.event = cheer.event.once_per_batch_across_players();
+    let cheer = crate::effect::shortcut::once_each_turn_on_take(cheer);
     legendary(CardDefinition {
         triggered_abilities: vec![
             begin_combat_on_your_turn(may(

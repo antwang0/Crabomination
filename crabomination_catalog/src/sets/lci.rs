@@ -3952,18 +3952,18 @@ pub fn pantlaza_sun_favored() -> CardDefinition {
         },
         power: 4,
         toughness: 4,
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .with_filter(Predicate::EntityMatches {
+        // "You may discover X. Do this only once each turn": a declined
+        // discover keeps the turn's.
+        triggered_abilities: vec![crate::effect::shortcut::may_once_each_turn(
+            EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl).with_filter(
+                Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::HasCreatureType(CreatureType::Dinosaur),
-                })
-                .once_per_turn(),
-            effect: Effect::Discover {
-                n: Value::ToughnessOf(Box::new(Selector::TriggerSource)),
-                filter: None,
-            },
-        }],
+                },
+            ),
+            "Discover X (X = its toughness)?",
+            Effect::Discover { n: Value::ToughnessOf(Box::new(Selector::TriggerSource)), filter: None },
+        )],
         ..Default::default()
     }
 }

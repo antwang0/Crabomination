@@ -209,15 +209,13 @@ pub fn archnemesis() -> CardDefinition {
 pub fn baron_strucker_hydra_overlord() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![villain_cost_reduction()],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
-                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: villain() })
-                .once_per_turn(),
-            effect: Effect::MayDo {
-                description: "Have it connive?".into(),
-                body: Box::new(Effect::Connive { what: Selector::TriggerSource, amount: Value::ONE }),
-            },
-        }],
+        // "Do this only once each turn": spent by a connive, not a decline.
+        triggered_abilities: vec![crate::effect::shortcut::may_once_each_turn(
+            EventSpec::new(EventKind::EntersBattlefield, EventScope::AnotherOfYours)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: villain() }),
+            "Have it connive?",
+            Effect::Connive { what: Selector::TriggerSource, amount: Value::ONE },
+        )],
         ..legend(
             "Baron Strucker, HYDRA Overlord",
             cost(&[generic(2), b()]),

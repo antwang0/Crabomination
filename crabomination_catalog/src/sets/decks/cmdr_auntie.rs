@@ -113,6 +113,8 @@ pub fn the_reaper_king_no_more() -> CardDefinition {
         }),
     };
     steal.event.once_per_turn = true;
+    // "Do this only once each turn": spent where the may is taken.
+    let steal = crate::effect::shortcut::once_each_turn_on_take(steal);
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
         triggered_abilities: vec![
@@ -616,14 +618,17 @@ pub fn lasting_tarfire() -> CardDefinition {
 /// dead creature's last-known counters) and "another" is the dying creature
 /// (`OtherThanTriggerSubject`).
 pub fn pucas_covenant() -> CardDefinition {
-    let mut trigger = TriggeredAbility {
-        event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl)
-            .with_filter(trigger_is(R::WithAnyCounter)),
+    // "Do this only once each turn": gated on the source's use, spent by a
+    // taken return (`shortcut::once_each_turn_on_take`'s shape, under `WithX`).
+    let trigger = TriggeredAbility {
+        event: EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
+            crate::card::Predicate::All(vec![trigger_is(R::WithAnyCounter), crate::card::Predicate::Not(Box::new(crate::card::Predicate::SourceDoneThisTurn))]),
+        ),
         effect: Effect::WithX {
             x: Value::TotalCountersOn { what: Box::new(Selector::TriggerSource) },
             body: Box::new(may(
                 "Return a permanent card from your graveyard to your hand?",
-                Effect::Move {
+                Effect::Seq(vec![Effect::MarkDoneThisTurn, Effect::Move {
                     what: target_filtered(
                         R::PermanentCard
                             .and(R::InYourGraveyard)
@@ -631,11 +636,10 @@ pub fn pucas_covenant() -> CardDefinition {
                             .and(R::OtherThanTriggerSubject),
                     ),
                     to: ZoneDest::Hand(PlayerRef::You),
-                },
+                }]),
             )),
         },
     };
-    trigger.event.once_per_turn = true;
     CardDefinition { triggered_abilities: vec![trigger], ..enchantment("Puca's Covenant", cost(&[generic(2), g()])) }
 }
 

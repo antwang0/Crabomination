@@ -262,20 +262,32 @@ pub fn emet_selch_of_the_third_seat() -> CardDefinition {
             effect: StaticEffect::GraveyardCastCostReduction { amount: 2 },
         }],
         triggered_abilities: vec![TriggeredAbility {
+            // "Do this only once each turn": spent by a cast — the card left
+            // the graveyard — not by a declined or unaffordable one.
             event: EventSpec {
                 once_per_batch: true,
-                ..EventSpec::new(EventKind::LifeLost, EventScope::OpponentControl).once_per_turn()
+                ..EventSpec::new(EventKind::LifeLost, EventScope::OpponentControl).with_filter(crate::card::Predicate::Not(Box::new(crate::card::Predicate::SourceDoneThisTurn)))
             },
             // The cast is optional on its own: a paid cast the controller
             // declines (or can't afford) is skipped.
-            effect: Effect::CastWithoutPayingImmediate {
-                what: target_filtered(instant_or_sorcery().and(R::InYourGraveyard)),
-                source_zone: Zone::Graveyard,
-                exile_after: true,
-                copy: false,
-                reduce_generic: 0,
-                pay_own_cost: true,
-            },
+            effect: Effect::Seq(vec![
+                Effect::CastWithoutPayingImmediate {
+                    what: target_filtered(instant_or_sorcery().and(R::InYourGraveyard)),
+                    source_zone: Zone::Graveyard,
+                    exile_after: true,
+                    copy: false,
+                    reduce_generic: 0,
+                    pay_own_cost: true,
+                },
+                Effect::If {
+                    cond: crate::card::Predicate::Not(Box::new(crate::card::Predicate::EntityMatches {
+                        what: Selector::Target(0),
+                        filter: R::InYourGraveyard,
+                    })),
+                    then: Box::new(Effect::MarkDoneThisTurn),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
         }],
         ..creature(
             "Emet-Selch of the Third Seat",
@@ -544,15 +556,16 @@ pub fn into_the_story() -> CardDefinition {
 pub fn krile_baldesion() -> CardDefinition {
     legendary(CardDefinition {
         keywords: vec![Keyword::Lifelink],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(R::Noncreature))
-                .once_per_turn(),
-            effect: Effect::Move {
+        // "You may return … Do this only once each turn": spent by a return.
+        triggered_abilities: vec![crate::effect::shortcut::may_once_each_turn(
+            EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Noncreature)),
+            "Return a creature card with that mana value?",
+            Effect::Move {
                 what: target_filtered(R::Creature.and(R::ManaValueEqualsTriggerAmount).and(R::InYourGraveyard)),
                 to: ZoneDest::Hand(PlayerRef::You),
             },
-        }],
+        )],
         ..creature("Krile Baldesion", cost(&[w(), u()]), vec![CreatureType::Dwarf, CreatureType::Wizard], 2, 1)
     })
 }

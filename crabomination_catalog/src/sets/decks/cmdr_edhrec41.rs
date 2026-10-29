@@ -257,12 +257,16 @@ pub fn amzu_swarms_hunger() -> CardDefinition {
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl).once_per_batch().once_per_turn(),
+            // "Do this only once each turn": spent by a taken may.
+            event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl)
+                .once_per_batch()
+                .with_filter(crate::card::Predicate::Not(Box::new(crate::card::Predicate::SourceDoneThisTurn))),
             effect: Effect::OverTriggerBatch {
                 ids: vec![],
                 body: Box::new(Effect::MayDo {
                     description: "Create an Insect with counters equal to the greatest mana value among them?".into(),
                     body: Box::new(Effect::Seq(vec![
+                        Effect::MarkDoneThisTurn,
                         Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: insect_token() },
                         Effect::AddCounter {
                             what: Selector::LastCreatedToken,

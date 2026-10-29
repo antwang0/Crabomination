@@ -326,6 +326,7 @@ fn krile_traces_aether() {
     let m = g.add_card_to_graveyard(0, catalog::merchant_raiders());
     let s = g.add_card_to_hand(0, catalog::observed_stasis());
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     cast_at(&mut g, s, &[Target::Permanent(bear)]).expect("a four-drop");
     assert!(g.players[0].hand.iter().any(|c| c.id == m));
 }

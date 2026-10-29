@@ -1715,6 +1715,7 @@ fn pantlaza_discovers_on_dino_etb() {
     g.add_card_to_battlefield(0, catalog::pantlaza_sun_favored());
     let lib_before = g.players[0].library.len();
     let dino = g.add_card_to_battlefield(0, catalog::huatlis_snubhorn()); // toughness 2
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Bool(true)]));
     g.dispatch_triggers_for_events(&[GameEvent::PermanentEntered { card_id: dino }]);
     drain_stack(&mut g);
     assert!(g.players[0].library.len() < lib_before, "discover dug into the library");

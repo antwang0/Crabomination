@@ -1272,12 +1272,17 @@ pub fn legolas_counter_of_kills() -> CardDefinition {
         keywords: vec![Keyword::Reach],
         triggered_abilities: vec![
             TriggeredAbility {
-                event: EventSpec { once_per_turn: true, ..EventSpec::new(EventKind::Scried, EventScope::YourControl).with_filter(tapped.clone()) },
+                // "Do this only once each turn": spent by a taken untap.
+                event: EventSpec::new(EventKind::Scried, EventScope::YourControl)
+                    .with_filter(Predicate::All(vec![tapped.clone(), crate::card::Predicate::Not(Box::new(crate::card::Predicate::SourceDoneThisTurn))])),
                 effect: Effect::If {
                     cond: tapped,
                     then: Box::new(Effect::MayDo {
                         description: "Untap Legolas?".into(),
-                        body: Box::new(Effect::Untap { what: Selector::This, up_to: None }),
+                        body: Box::new(Effect::Seq(vec![
+                            Effect::MarkDoneThisTurn,
+                            Effect::Untap { what: Selector::This, up_to: None },
+                        ])),
                     }),
                     else_: Box::new(Effect::Noop),
                 },
