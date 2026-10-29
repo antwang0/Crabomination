@@ -2646,6 +2646,10 @@ pub struct ResolutionScratch {
     /// Cleared between resolutions.
     #[serde(skip)]
     pub(crate) last_moved_cards: Vec<CardId>,
+    /// Transient: the Army this resolution's last amass chose, read by
+    /// `Selector::AmassedArmy` (CR 701.47c).
+    #[serde(skip)]
+    pub(crate) amassed_army: Option<CardId>,
     /// Transient: the permanents a proliferate in the current resolution put
     /// a counter on, read by `Selector::ProliferatedThisResolution` (Ripples
     /// of Potential). Cleared between resolutions.

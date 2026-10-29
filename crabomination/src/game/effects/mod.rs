@@ -2049,6 +2049,7 @@ impl GameState {
             last_exiled: self.scratch.exiled_card_ids_this_resolution.last().copied(),
             last_moved: self.scratch.last_moved_cards.clone(),
             last_created_token: self.last_created_token,
+            amassed_army: self.scratch.amassed_army,
         }
     }
 
@@ -2061,6 +2062,9 @@ impl GameState {
         self.last_discarded_mana_value = c.last_discarded_mana_value;
         self.greatest_discarded_mv_this_resolution = c.greatest_discarded_mv;
         self.last_created_token = c.last_created_token;
+        if self.scratch.amassed_army != c.amassed_army {
+            self.scratch.amassed_army = c.amassed_army;
+        }
     }
 
     /// CR 603.7c — a reflexive body bound to the scratch it was created
@@ -3511,6 +3515,7 @@ impl GameState {
             // Scrollsmith's ETB chains Move → GrantMayPlay on the same
             // moved card via this scratch).
             clear_scratch!(self.last_moved_cards);
+            clear_opt_scratch!(self.amassed_army);
             clear_scratch!(self.proliferated_this_resolution);
             // Reset cards-discarded scratch — `Value::CardsDiscardedThisEffect`
             // only counts discards from *this* resolution (Borrowed Knowledge
@@ -24408,6 +24413,24 @@ impl GameState {
                             .unwrap_or(CardId(u32::MAX))
                     }
                 };
+                // CR 701.47a / 701.47c — the chosen Army becomes the subtype
+                // too, and is "the amassed Army" with or without counters.
+                if self.battlefield.find_by_id(army).is_some() {
+                    self.scratch.amassed_army = Some(army);
+                    if let Some(t) = extra_type
+                        && !self.permanent_is_creature_of_type(army, *t)
+                    {
+                        self.run_effect(
+                            &Effect::AddCreatureTypes {
+                                what: Selector::ExactObjects(vec![army]),
+                                creature_types: vec![*t],
+                                duration: crate::effect::Duration::Permanent,
+                            },
+                            ctx,
+                            events,
+                        )?;
+                    }
+                }
                 // CR 614.16 — counter replacement effects apply to the amass.
                 if n > 0 && self.battlefield.find_by_id(army).is_some() {
                     let scaled = self.scaled_counter_count_on(army, CounterType::PlusOnePlusOne, n);
@@ -46384,6 +46407,12 @@ impl GameState {
                 .and_then(|c| c.soulbond_partner)
                 .filter(|&partner| self.battlefield.find_by_id(partner).is_some())
                 .map(|partner| vec![EntityRef::Permanent(partner)])
+                .unwrap_or_default(),
+            Selector::AmassedArmy => self
+                .scratch
+                .amassed_army
+                .filter(|&id| self.battlefield.find_by_id(id).is_some())
+                .map(|id| vec![EntityRef::Permanent(id)])
                 .unwrap_or_default(),
             Selector::LastRevealedCard => self
                 .last_revealed_from_hand

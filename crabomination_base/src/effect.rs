@@ -396,6 +396,10 @@ pub enum Selector {
     /// Applied Geometry). Resets between resolution roots — within a
     /// single `Effect::Seq`, the latest CreateToken's id is visible.
     LastCreatedToken,
+    /// CR 701.47c — "the amassed Army": the Army the current resolution's
+    /// last `Effect::Amass` chose, whether or not it got counters (Goblin
+    /// Plate Mail).
+    AmassedArmy,
     /// The card `Effect::RevealRandomFromHand` last revealed this resolution
     /// (Planeswalker's Mischief exiles it). Empty when nothing was revealed.
     LastRevealedCard,
@@ -15157,6 +15161,10 @@ pub struct ResolutionCarry {
     /// it" (Dáin Ironfoot's Axe).
     #[serde(default)]
     pub last_created_token: Option<crate::card::CardId>,
+    /// `Selector::AmassedArmy` — "amass. When you do, … the amassed Army's
+    /// power" (Foray of Orcs, CR 701.47c).
+    #[serde(default)]
+    pub amassed_army: Option<crate::card::CardId>,
 }
 
 impl Default for Effect {
