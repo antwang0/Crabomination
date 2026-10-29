@@ -6798,8 +6798,16 @@ impl GameState {
                     R::IsAttackingSameAsSource => self.attacking_same_as_source(card.id, source),
                     R::ControlledByChosenPlayerOfSource => self.controlled_by_chosen_player_of(card.id, source),
                     R::IsAttackingTriggerPlayer => self.attacking_trigger_player(card.id),
+                    // CR 509.1h — "unblocked" exists only once blockers are
+                    // declared; in the declare attackers step it is neither.
                     R::IsUnblocked => {
-                        self.attacking.iter().any(|a| a.attacker == card.id)
+                        matches!(
+                            self.step,
+                            crate::game::TurnStep::DeclareBlockers
+                                | crate::game::TurnStep::FirstStrikeDamage
+                                | crate::game::TurnStep::CombatDamage
+                                | crate::game::TurnStep::EndCombat
+                        ) && self.attacking.iter().any(|a| a.attacker == card.id)
                             && !self.blocked_attackers.contains(&card.id)
                     }
                     R::IsBlocked => self.blocked_attackers.contains(&card.id),

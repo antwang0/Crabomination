@@ -1121,6 +1121,17 @@ fn zareth_san_swaps_for_an_unblocked_rogue_and_steals() {
     let zareth = g.add_card_to_hand(0, catalog::zareth_san_the_trickster());
     let ring = g.add_card_to_graveyard(1, catalog::sol_ring());
     declare(&mut g, vec![(rogue, 1), (bear, 1)]);
+    // CR 509.1h — before blocks the Rogue is not yet unblocked.
+    flood(&mut g);
+    let early = g.perform_action(GameAction::ActivateAbility {
+        card_id: zareth,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    });
+    assert!(early.is_err(), "no unblocked Rogue in the declare attackers step");
     g.step = TurnStep::DeclareBlockers;
     g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
     drain_stack(&mut g);
