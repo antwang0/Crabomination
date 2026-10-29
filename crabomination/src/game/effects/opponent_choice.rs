@@ -21,6 +21,7 @@ impl GameState {
         body: &Effect,
         chooser: Option<&crate::effect::PlayerRef>,
         theirs: bool,
+        untargeted: bool,
         effect: &Effect,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
@@ -60,7 +61,8 @@ impl GameState {
             .filter(|c| (!theirs || c.controller == chooser) && self.evaluate_requirement_on_card(filter, c, me))
             .filter(|c| {
                 let t = Target::Permanent(c.id);
-                self.check_target_legality(&t, me).is_ok() && !self.ability_target_has_protection(&t, source)
+                untargeted
+                    || self.check_target_legality(&t, me).is_ok() && !self.ability_target_has_protection(&t, source)
             })
             .collect();
         if candidates.is_empty() {

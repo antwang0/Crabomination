@@ -6921,10 +6921,12 @@ pub enum Effect {
     /// and `body` runs with it bound as `Target(0)` (Volcanic Offering).
     /// `chooser` names the picking player instead (Bladegriff Prototype's
     /// "of that player's choice"); `theirs` keeps the pick among the chooser's
-    /// own ("… they control", Magus of the Arena). Every user prints "target",
-    /// so the pick must be a legal target for you (CR 115.4). The spell's own
-    /// targets follow the pick, from `Target(1)` on. Nothing happens without a
-    /// match.
+    /// own ("… they control", Magus of the Arena). A "target … of an
+    /// opponent's choice" pick must be a legal target for you (CR 115.4);
+    /// `untargeted` is a plain choice ("target opponent chooses a creature
+    /// they control" — Wei Assassins), where hexproof doesn't stop it. The
+    /// spell's own targets follow the pick, from `Target(1)` on. Nothing
+    /// happens without a match.
     /// "You and `who` each secretly choose a [filter] that player controls.
     /// Then those choices are revealed, and that player sacrifices those
     /// permanents" (Malik, Grim Manipulator). Neither pick sees the other's;
@@ -6938,6 +6940,8 @@ pub enum Effect {
         chooser: Option<PlayerRef>,
         #[serde(default)]
         theirs: bool,
+        #[serde(default)]
+        untargeted: bool,
     },
     /// CR 701.49 — Venture into the dungeon: enter the first room of a
     /// chosen dungeon (auto: Lost Mine of Phandelver) or advance to the

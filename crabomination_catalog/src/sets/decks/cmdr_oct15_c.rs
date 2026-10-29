@@ -578,6 +578,7 @@ pub fn arena() -> CardDefinition {
                     ])),
                     chooser: None,
                     theirs: true,
+                    untargeted: false,
                 },
             ]),
             ..Default::default()

@@ -1589,6 +1589,7 @@ pub fn diaochan_artful_beauty() -> CardDefinition {
                     body: Box::new(Effect::Destroy { what: Selector::Target(0) }),
                     chooser: None,
                     theirs: false,
+                    untargeted: false,
                 },
             ]),
             ..Default::default()

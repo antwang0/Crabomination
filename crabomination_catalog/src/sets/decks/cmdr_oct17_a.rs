@@ -454,6 +454,7 @@ pub fn linessa_zephyr_mage() -> CardDefinition {
         body: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) }),
         chooser: Some(PlayerRef::Target(0)),
         theirs: true,
+        untargeted: true,
     };
     CardDefinition {
         supertypes: vec![Supertype::Legendary],

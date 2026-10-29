@@ -13947,8 +13947,8 @@ impl GameState {
             Effect::YouAndPlayerChooseTheirPermanentsToSacrifice { who, filter } => {
                 self.you_and_player_choose_their_permanents_to_sacrifice(who, filter, effect, ctx, events)
             }
-            Effect::OpponentChoosesPermanentThen { filter, body, chooser, theirs } => {
-                self.opponent_chooses_permanent_then(filter, body, chooser.as_ref(), *theirs, effect, ctx, events)
+            Effect::OpponentChoosesPermanentThen { filter, body, chooser, theirs, untargeted } => {
+                self.opponent_chooses_permanent_then(filter, body, chooser.as_ref(), *theirs, *untargeted, effect, ctx, events)
             }
             Effect::ReturnTargetCardsAtRandom { count } => self.return_target_cards_at_random(count, ctx, events),
             Effect::PutAnyNumberFromGraveyardOnTop { filter } => {

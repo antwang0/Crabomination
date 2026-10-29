@@ -941,6 +941,20 @@ fn wei_assassins_destroys_the_opponents_pick() {
     assert_eq!(died, 1, "exactly one opposing creature is destroyed");
 }
 
+/// CR 702.11b — Wei Assassins' opponent *chooses* a creature (no target), so
+/// their only creature dies even with hexproof.
+#[test]
+fn cr_702_11b_wei_assassins_reaches_a_hexproof_creature() {
+    let mut g = pod(2);
+    let bogle = ready(&mut g, 1, catalog::slippery_bogle());
+    let wa = g.add_card_to_hand(0, catalog::wei_assassins());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: wa, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bogle).is_none());
+}
+
 /// CR 603.4 — Nightsquad Commando's Soldier needs an attack this turn.
 #[test]
 fn nightsquad_commando_needs_an_attack() {

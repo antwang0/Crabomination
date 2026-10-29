@@ -857,6 +857,7 @@ pub fn sakashimas_will() -> CardDefinition {
                     body: Box::new(Effect::GainControl { what: Selector::Target(0), to: None, duration: Duration::Permanent }),
                     chooser: Some(PlayerRef::Target(0)),
                     theirs: true,
+                    untargeted: true,
                 },
                 choose_one_then(
                     Selector::EachPermanent(yours()),

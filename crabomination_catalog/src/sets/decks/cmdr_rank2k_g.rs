@@ -185,6 +185,7 @@ pub fn blizzard_specter() -> CardDefinition {
                     body: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) }),
                     chooser: Some(defender()),
                     theirs: true,
+                    untargeted: true,
                 },
                 Effect::Discard { who: Selector::Player(defender()), amount: Value::ONE, random: false },
             ]),

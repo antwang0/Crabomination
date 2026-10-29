@@ -337,6 +337,7 @@ pub fn volcanic_offering() -> CardDefinition {
                 body: Box::new(Effect::Destroy { what: Selector::Target(0) }),
                 chooser: None,
                 theirs: false,
+                untargeted: false,
             },
             Effect::DealDamage {
                 to: Selector::TargetFiltered { slot: 1, filter: creature() },
@@ -347,6 +348,7 @@ pub fn volcanic_offering() -> CardDefinition {
                 body: Box::new(Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(7) }),
                 chooser: None,
                 theirs: false,
+                untargeted: false,
             },
         ]),
         ..Default::default()

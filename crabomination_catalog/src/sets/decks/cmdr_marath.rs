@@ -219,6 +219,7 @@ pub fn magus_of_the_arena() -> CardDefinition {
                     ])),
                     chooser: None,
                     theirs: true,
+                    untargeted: false,
                 },
             ]),
             ..Default::default()

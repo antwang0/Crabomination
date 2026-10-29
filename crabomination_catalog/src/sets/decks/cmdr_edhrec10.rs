@@ -2671,25 +2671,29 @@ pub fn cloudsteel_kirin() -> CardDefinition {
 }
 
 /// Fell Beast's Shriek — {U}{R} sorcery: each opponent chooses a creature they
-/// control; tap and goad the chosen creatures. Splice onto instant or sorcery
-/// {2}{U}{R} (not modelled — INCOMPLETE_CARDS).
+/// control (a choice, not a target); tap and goad the chosen creatures.
+/// Splice onto instant or sorcery {2}{U}{R} (CR 702.47a).
 pub fn fell_beasts_shriek() -> CardDefinition {
-    spell(
-        "Fell Beast's Shriek",
-        cost(&[u(), r()]),
-        CardType::Sorcery,
-        Effect::ForEachOpponent {
-            body: Box::new(Effect::OpponentChoosesPermanentThen {
-                filter: R::Creature,
-                body: Box::new(Effect::Seq(vec![
-                    Effect::Tap { what: Selector::Target(0) },
-                    Effect::Goad { what: Selector::Target(0) },
-                ])),
-                chooser: Some(PlayerRef::Triggerer),
-                theirs: true,
-            }),
-        },
-    )
+    CardDefinition {
+        keywords: vec![Keyword::SpliceOntoInstantOrSorcery(cost(&[generic(2), u(), r()]))],
+        ..spell(
+            "Fell Beast's Shriek",
+            cost(&[u(), r()]),
+            CardType::Sorcery,
+            Effect::ForEachOpponent {
+                body: Box::new(Effect::OpponentChoosesPermanentThen {
+                    filter: R::Creature,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: Selector::Target(0) },
+                        Effect::Goad { what: Selector::Target(0) },
+                    ])),
+                    chooser: Some(PlayerRef::Triggerer),
+                    theirs: true,
+                    untargeted: true,
+                }),
+            },
+        )
+    }
 }
 
 /// Scheming Symmetry — {B} sorcery: two target players each search their

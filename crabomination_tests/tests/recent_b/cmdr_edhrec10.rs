@@ -1516,11 +1516,12 @@ fn cloudsteel_kirin_keeps_its_bearer_alive() {
 }
 
 /// Fell Beast's Shriek: each opponent's chosen creature is tapped and goaded
-/// (CR 701.15).
+/// (CR 701.15). The pick is a choice, not a target: a hexproof creature is
+/// chosen too (CR 702.11b).
 #[test]
 fn fell_beasts_shriek_taps_and_goads_one_each() {
     let mut g = pod(3);
-    let bears = ready(&mut g, 1, catalog::grizzly_bears());
+    let bears = ready(&mut g, 1, catalog::slippery_bogle());
     let lions = ready(&mut g, 2, catalog::savannah_lions());
     let s = g.add_card_to_hand(0, catalog::fell_beasts_shriek());
     cast(&mut g, s, &[]).expect("cast");
@@ -1529,6 +1530,35 @@ fn fell_beasts_shriek_taps_and_goads_one_each() {
         assert!(c.tapped);
         assert!(g.goaded_by_player(c, 0));
     }
+}
+
+/// CR 702.47a — Fell Beast's Shriek splices onto Lightning Bolt: the Bolt
+/// hits and the opponent's creature is tapped and goaded; the Shriek stays
+/// in hand.
+#[test]
+fn cr_702_47a_fell_beasts_shriek_splices_onto_a_bolt() {
+    let mut g = pod(2);
+    let lions = ready(&mut g, 1, catalog::savannah_lions());
+    let shriek = g.add_card_to_hand(0, catalog::fell_beasts_shriek());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::CastSpellSpliced {
+        card_id: bolt,
+        splice_cards: vec![shriek],
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("Bolt + Shriek");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 3);
+    let c = g.battlefield_find(lions).unwrap();
+    assert!(c.tapped && g.goaded_by_player(c, 0));
+    assert!(g.players[0].hand.iter().any(|c| c.id == shriek));
 }
 
 /// Scheming Symmetry: both target players search (CR 701.23).

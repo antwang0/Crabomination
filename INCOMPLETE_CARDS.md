@@ -2045,7 +2045,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Sentinel Tower | the count reads only your own instants and sorceries this turn; one an opponent cast during your turn adds nothing to a later shot (and theirs triggers it for your count) | `Value::InstantsOrSorceriesCastThisTurn` is per player; there is no table-wide instant/sorcery tally |
 | ~~Wernog, Rider's Chaplain~~ ✅ | fixed 2026-10-24: `TemptingOffer::declined` runs "loses 1 life" under each opponent who declined | — |
 | 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
-| 🟡 Fell Beast's Shriek | splice onto instant or sorcery isn't offered; a creature with hexproof or protection from the caster can't be the chosen one | `Keyword::Splice` takes a `SpellSubtype` quality (Arcane), not "instant or sorcery"; `OpponentChoosesPermanentThen` keeps only picks that are legal targets for the caster |
 | ~~Nine Lives~~ ✅ | fixed 2026-10-28: its replacement (and The Mindskinner's) is a prevention — unpreventable damage is dealt (CR 615.12) | — |
 | ~~Roshan, Hidden Magister~~ ✅ | fixed 2026-10-28: creature spells and owned cards off the battlefield are Assassins too (`OwnedCardsOffBattlefieldAreTypeToo`) | — |
 | ~~Gandalf the White~~ ✅ | fixed 2026-10-24: `StaticEffect::DoubleControllerLeaveTriggers` doubles a trigger a leaving legendary permanent or artifact causes | — |

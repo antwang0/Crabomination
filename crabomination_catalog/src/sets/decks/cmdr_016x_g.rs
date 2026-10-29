@@ -192,6 +192,7 @@ pub fn wei_assassins() -> CardDefinition {
                 body: Box::new(Effect::Destroy { what: Selector::Target(0) }),
                 chooser: Some(PlayerRef::Target(0)),
                 theirs: true,
+                untargeted: true,
             }),
         })],
         ..creature(

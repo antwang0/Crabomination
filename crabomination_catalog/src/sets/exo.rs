@@ -800,6 +800,7 @@ pub fn mana_breach() -> CardDefinition {
                 body: Box::new(Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) }),
                 chooser: Some(PlayerRef::ControllerOf(Box::new(Selector::TriggerSource))),
                 theirs: true,
+                untargeted: true,
             },
         }],
         ..enchantment("Mana Breach", cost(&[generic(2), u()]))
