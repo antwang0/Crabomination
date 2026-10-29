@@ -318,7 +318,9 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`) over every deck first,
 then the rank list's top and the OPEN rows the sweeps pointed at. Seeds 28100 (4, 6 seats), 28101 (3, 5, 7, 8 seats,
 `CRAB_POD_CONCEDE=20`), 28102 (2, 4, 6 seats, concede), 28103 (4, 5 seats, `CRAB_POD_FUZZ=2500` + concede) and 28104
-(8 seats, `--a dflt` + fuzz): **16,640 games, 2 strict aborts (both fixed), 0 panics**; the rest of the undecided are
+(8 seats, `--a dflt` + fuzz), and after the closing gates 28105 (3, 6 seats, `--a dflt` + fuzz, 3,071 games, 7
+undecided — Descent into Avernus draws, Visitor + Ganax under fuzz, and Reshape the Earth's ten lands under 512 Swarms,
+which the cast-gate fix below now prices): **19,711 games, 2 strict aborts (both fixed), 0 panics**; the rest of the undecided are
 CR 104.4a / 104.4b draws (Polyraptor + Marauding Raptor and a fuzzed Draconic Visitor beside Ganax are real mandatory
 loops) and finite exponentials (Scute Swarm + Greenwarden, Growing Ranks populating Ojer Taq tokens, Quantum
 Misalignment on Ojer Taq — gated now).
@@ -343,7 +345,11 @@ Misalignment on Ojer Taq — gated now).
 - **Game of Chaos:** the round recursed through `AnyPlayerMayAccept` and overflowed the debug stack at ~20 rounds (the
   2^16 cap hid it); it loops on `flip_one_coin_logged` now, doubling to 2^31.
 - **Bot (pods):** a token tripler counts as two doublings and `token_blowup` screens casts too (Quantum Misalignment on
-  Ojer Taq under Anointed Procession, seed 2811128); the land-drop gate counts Greenwarden's extra landfall fire.
+  Ojer Taq under Anointed Procession, seed 2811128); the land-drop gate counts Greenwarden's extra landfall fire; the
+  cast gate prices a spell's lands-onto-battlefield at the landfall fan-out (`effect_land_entry_estimate` — Worldsoul's
+  Rage X 4 under 540 Swarms + Greenwarden, seed 2811250, still capped after the land-drop fix).
+- **CR 608.2:** `TapAnyNumberThen` / `TapAnyNumberThenDraw` ran their body as a fresh nested resolution, resetting the
+  outer scratch (LastMoved read empty after the taps) — the same hazard as the mana-ability one; `run_effect` now.
 - **Cards:** Sift Through Sands' Unspeakable rider (`Predicate::CastSpellNamedThisTurn`); Zareth San's INCOMPLETE row
   lost its stale `IsUnblocked` clause.
 - Gates at the closing tip `30dfbfd80`: suite **29,328 / 0 / 8** (strict answer log, precon-seat test excluded;
@@ -355,8 +361,6 @@ Misalignment on Ojer Taq — gated now).
   Tireless Provisioner trigger when replayed.
 
 OPEN:
-- An effect that puts several lands onto the battlefield at once is not board-gated (the 4,320-trigger Swarm stack,
-  seed 2811250, came from one), only the land drop is.
 - `RevealTopLandToBattlefieldElseHand` / `LookTopLandToHandElseBin` move a card after each seat's ask: latent (every
   shipped use is `who: You`), a seat-looping use needs the two-pass split.
 - Queen Kayla's simultaneous return, Metamorphic Alteration's layer-1 static, Market Gnome's craft-exile event: each a
