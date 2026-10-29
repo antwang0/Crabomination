@@ -214,6 +214,75 @@ pub(super) fn pick_self_counter_sink(state: &GameState, seat: usize) -> Option<G
     })
 }
 
+/// "Put a charge counter on target artifact" (Coretapper), under the same
+/// cost bar as [`grows_self`].
+fn charges_target(ab: &crate::card::ActivatedAbility) -> bool {
+    matches!(
+        ab.effect,
+        Effect::AddCounter {
+            what: Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. },
+            kind: CounterType::Charge,
+            ..
+        }
+    ) && grows_self(&crate::card::ActivatedAbility {
+        effect: Effect::AddCounter { what: Selector::This, kind: CounterType::Charge, amount: crate::card::Value::ONE },
+        ..ab.clone()
+    })
+}
+
+/// Does `def` spend or count charge counters (a removal cost, a
+/// counter-placed trigger, an accumulator, a read of its own count)? Its own
+/// "put one on target artifact" abilities don't count — Coretapper has no use
+/// for one.
+fn uses_charge(def: &crate::card::CardDefinition) -> bool {
+    let on_target = |ab: &&crate::card::ActivatedAbility| {
+        matches!(ab.effect, Effect::AddCounter { what: Selector::Target(0) | Selector::TargetFiltered { slot: 0, .. }, .. })
+    };
+    let own: Vec<_> = def.activated_abilities.iter().filter(|ab| !on_target(ab)).collect();
+    format!("{own:?}{:?}", def.triggered_abilities).contains("Charge")
+}
+
+/// A charge counter for `seat`'s own artifact that uses one, most-charged
+/// first (Darksteel Reactor's twenty) — at an opponent's end step, like
+/// [`pick_self_counter_sink`]. Coretapper was never activated in a census of
+/// the 47 newest seats.
+pub(super) fn pick_charge_sink(state: &GameState, seat: usize) -> Option<GameAction> {
+    if !super::bot::pod_sinks_on(state, seat) || !state.stack.is_empty() || state.active_player_idx == seat {
+        return None;
+    }
+    let chargers: Vec<(crate::card::CardId, usize)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat)
+        .flat_map(|c| {
+            c.definition.activated_abilities.iter().enumerate().filter(|(_, ab)| charges_target(ab)).map(|(i, _)| (c.id, i))
+        })
+        .collect();
+    if chargers.is_empty() {
+        return None;
+    }
+    let mut targets: Vec<(u32, crate::card::CardId)> = state
+        .battlefield
+        .iter()
+        .filter(|c| c.controller == seat && c.definition.is_artifact() && uses_charge(&c.definition))
+        .map(|c| (c.counter_count(CounterType::Charge), c.id))
+        .collect();
+    targets.sort_by_key(|&(n, id)| (std::cmp::Reverse(n), id));
+    chargers.into_iter().find_map(|(card_id, ability_index)| {
+        targets.iter().find_map(|&(_, t)| {
+            let action = GameAction::ActivateAbility {
+                card_id,
+                ability_index,
+                target: Some(Target::Permanent(t)),
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            state.would_accept(action.clone()).then_some(action)
+        })
+    })
+}
+
 /// Lands at which a land in hand is spare enough to discard.
 const SPARE_LAND_AT: usize = 4;
 /// Hand size at which the cheapest card is spare even when it isn't a land.
@@ -433,6 +502,27 @@ mod tests {
         assert!(matches!(
             pick_discard_charge(&g, 0),
             Some(GameAction::ActivateAbility { card_id, ability_index: 0, .. }) if card_id == book
+        ));
+    }
+
+    /// Coretapper charges the Darksteel Reactor at an opponent's end step —
+    /// never a Sol Ring, which has no use for the counter.
+    #[test]
+    fn coretapper_charges_an_artifact_that_counts_charge() {
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 1;
+        g.step = TurnStep::End;
+        g.priority.player_with_priority = 0;
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        let tapper = g.add_card_to_battlefield(0, crate::catalog::coretapper());
+        g.clear_sickness(tapper);
+        g.add_card_to_battlefield(0, crate::catalog::sol_ring());
+        assert!(pick_charge_sink(&g, 0).is_none(), "nothing uses a charge counter");
+        let reactor = g.add_card_to_battlefield(0, crate::catalog::darksteel_reactor());
+        assert!(matches!(
+            pick_charge_sink(&g, 0),
+            Some(GameAction::ActivateAbility { card_id, ability_index: 0, target: Some(Target::Permanent(t)), .. })
+                if card_id == tapper && t == reactor
         ));
     }
 
