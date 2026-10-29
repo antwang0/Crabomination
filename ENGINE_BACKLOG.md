@@ -356,6 +356,8 @@ Misalignment on Ojer Taq — gated now).
   **29,332 / 0 / 8** rebased on the concurrent session's seven commits);
   workspace clippy **0** (98m23s, `-j 2`; three lints in this run's code fixed); `--bench` 196,176 / 27.64 / 613.0 / 0
   stalls byte-identical; bench_ab noise on both legs; cube / sos / sealed decision-identical within each leg (PERF row).
+  After the last two code commits (`4ef25f8ce`): suite **29,334 / 0 / 8**, clippy 0 on the engine and test crates,
+  `--bench` and the pools unchanged again.
 - Census (`--card-census`, 100 random four-seat groups × 6, seed 28120): no new class — the channel lands' "never
   activated" rows are lands the bot played (a played channel land can't channel); Solemn / Psychosis Crawler /
   Tireless Provisioner trigger when replayed.

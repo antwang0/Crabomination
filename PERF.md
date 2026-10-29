@@ -3154,6 +3154,8 @@ bench_ab.py      leg 1, 16 pairs: -0.40 % median, -0.64 % mean (sd 8.41); leg 2,
 pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: decision-identical within each leg
                  (leg 1 372,578 / 215,896 / 517,792; leg 2 372,578 / 213,776 / 520,724 — the sos / sealed move lies
                  in the concurrent session's eight commits between the legs: Repartee, the sealed builder, target_eval)
+leg 3            `30dfbfd80` vs `4ef25f8ce` (the cast gate's lands, TapAnyNumberThen's run_effect): --bench byte-identical,
+                 cube / sos / sealed decision-identical (372,578 / 213,776 / 520,724), 252.0 games/s
 ```
 
 ### 2026-10-29 (Commander run, `01WRuXc672`) — guardrail; two filter arms, one cost record
