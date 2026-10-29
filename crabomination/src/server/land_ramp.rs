@@ -60,6 +60,30 @@ pub(super) fn pick_land_ramp(state: &GameState, seat: usize) -> Option<GameActio
     if state.players.len() <= 2 || !state.stack.is_empty() || !window {
         return None;
     }
+    fetch_lands(state, seat, true, |_, _| true)
+}
+
+/// A land whose fetch costs mana (Myriad Landscape's {2}, Krosan Verge's),
+/// cracked first in its controller's precombat main: by the later windows the
+/// casts have tapped it for {C} (census seed 29109: never activated in 15
+/// groups).
+pub(super) fn pick_land_ramp_early(state: &GameState, seat: usize) -> Option<GameAction> {
+    if state.players.len() <= 2
+        || !state.stack.is_empty()
+        || state.step != TurnStep::PreCombatMain
+        || state.active_player_idx != seat
+    {
+        return None;
+    }
+    fetch_lands(state, seat, false, |card, ab| card.definition.is_land() && ab.mana_cost.cmc() > 0)
+}
+
+fn fetch_lands(
+    state: &GameState,
+    seat: usize,
+    from_hand: bool,
+    source_ok: impl Fn(&CardInstance, &ActivatedAbility) -> bool,
+) -> Option<GameAction> {
     let lands = state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();
     if lands >= ENOUGH_LANDS {
         return None;
@@ -69,6 +93,7 @@ pub(super) fn pick_land_ramp(state: &GameState, seat: usize) -> Option<GameActio
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
             let fetches = land_fetches(&ab.effect);
             if fetches.is_empty()
+                || !source_ok(card, ab)
                 || ab.from_hand
                 || ab.from_graveyard
                 || (ab.tap_cost && card.tapped)
@@ -93,6 +118,9 @@ pub(super) fn pick_land_ramp(state: &GameState, seat: usize) -> Option<GameActio
     // "{cost}, discard this: search for a basic land" from hand (Greater
     // Tanuki's channel — never activated in a 183-deck census): taken while
     // the seat has fewer lands than the card costs, so it can't cast it yet.
+    if !from_hand {
+        return None;
+    }
     for card in state.players[seat].hand.iter().filter(|c| !c.definition.is_land()) {
         if lands as u32 >= card.definition.cost.cmc() {
             continue;
@@ -204,5 +232,47 @@ mod tests {
         end_step_before_seat_0(&mut g);
         let got = pick_land_ramp(&g, 0);
         assert!(matches!(got, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == hart), "got {got:?}");
+    }
+
+    /// Myriad Landscape pays its {2} from other lands, never by tapping
+    /// itself for {C} (census seed 29109: never activated in 15 groups).
+    #[test]
+    fn myriad_landscape_pays_from_other_lands() {
+        let mut g = crate::game::multi_player_game(3);
+        let land = g.add_card_to_battlefield(0, crate::catalog::myriad_landscape());
+        g.battlefield_find_mut(land).unwrap().tapped = false;
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, crate::catalog::forest());
+        }
+        g.add_card_to_library(0, crate::catalog::forest());
+        g.add_card_to_library(0, crate::catalog::forest());
+        end_step_before_seat_0(&mut g);
+        let got = pick_land_ramp(&g, 0);
+        assert!(matches!(got, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == land), "got {got:?}");
+        g.perform_action(got.unwrap()).expect("activate");
+        crate::game::drain_stack(&mut g);
+        assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Forest").count(), 4);
+    }
+
+    /// In its controller's precombat main the costed fetch land goes first;
+    /// Sakura-Tribe Elder (a body, a free fetch) waits for the later windows.
+    #[test]
+    fn a_costed_fetch_land_is_cracked_before_the_casts() {
+        let mut g = crate::game::multi_player_game(3);
+        let land = g.add_card_to_battlefield(0, crate::catalog::myriad_landscape());
+        let elder = g.add_card_to_battlefield(0, crate::catalog::sakura_tribe_elder());
+        g.clear_sickness(elder);
+        g.battlefield_find_mut(land).unwrap().tapped = false;
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, crate::catalog::forest());
+            g.add_card_to_library(0, crate::catalog::forest());
+        }
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let got = pick_land_ramp_early(&g, 0);
+        assert!(matches!(got, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == land), "got {got:?}");
+        g.battlefield_find_mut(land).unwrap().tapped = true;
+        assert!(pick_land_ramp_early(&g, 0).is_none(), "the Elder waits");
     }
 }

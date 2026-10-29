@@ -11213,6 +11213,11 @@ fn main_phase_action_with(
     if let Some(action) = super::hideaway::pick_hideaway_play(state, seat) {
         return BotStep::plain(action);
     }
+    // Pods: a land whose fetch costs mana (Myriad Landscape), ahead of the
+    // casts that would tap it for {C} (`server/land_ramp.rs`).
+    if let Some(action) = super::land_ramp::pick_land_ramp_early(state, seat) {
+        return BotStep::plain(action);
+    }
     // Pods: Rowan's turn-long discount, ahead of the casts it cheapens
     // (`server/spell_discount.rs`).
     if let Some(action) = super::spell_discount::pick_spell_discount(state, seat) {
