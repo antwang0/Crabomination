@@ -3960,6 +3960,7 @@ impl HeuristicBot {
                         .or_else(|| super::modal_wipe::pick_modal_wipe(state, seat))
                         .or_else(|| super::channel::pick_channel(state, seat, &self.weights))
                         .or_else(|| super::goad_attach::pick_goad_attach(state, seat))
+                        .or_else(|| super::graveyard_hate::pick_sorcery_graveyard_hate(state, seat))
                         .or_else(|| super::grant_cast::pick_grant_cast(state, seat, &self.weights))
                         .or_else(|| super::library_top::pick_library_top(state, seat))
                         .or_else(|| super::command_zone::pick_command_zone_ability(state, seat, &self.weights))
