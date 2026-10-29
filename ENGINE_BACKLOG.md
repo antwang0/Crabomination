@@ -298,6 +298,38 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 9. **`01WRuXc6pH` (2026-10-27, no seats; ENGINE_BACKLOG `01WRuXc6pH`): clean decks **5,258 → 5,289**, frozen pools skipped.** Seven primitives — `MoveAnyNumberOfCounters { kind }`, `CastTopFreeIfElseDraw { land_or_hand }`, `AlternativeCost.graveyard_cast_exiles`, `SelectionRequirement::AttachedToTargetSlot` (CR 601.2c), `EquipBonus.no_other_auras` (CR 704.5m), `Effect::DiscardOneOfDrawn`, and `MoveChosen` resolving `*XFromCost` filters (they read false before). Real defects: Bioshift moved every counter kind, Enduring Angel's transform dispatched no event, Inscription of Insight / Intrepid Adversary / Doctor Jane Foster / Lara Croft / Bane / Fiery Annihilation / Bound by Moonsilver / Casting of Bones / Ziatora's Envoy / Glimpse the Cosmos / Anti-Magic Aura / Consecrate Land. ⚠ **Cube-frozen finds written up, not shipped:** Wilt-Leaf Liege, Doomsday Excruciator, Hide in Plain Sight, Pull from the Grave (exact fixes in the ENGINE_BACKLOG section). Gates: suite **29,212 / 0 / 8** at this run's tip and **29,219 / 0 / 8** on the tip merged with `01WRuXc6yK` (`86025df3b`; strict, seat test skipped — not re-run, run it alone under `--cargo-profile overflow`); workspace clippy **0** (91 min cold, `-j 3`); `release-fast` check clean; `--bench` **196,176 / 27.64 / 613.0 / 0 stalls byte-identical**, determinism ok, bench_ab 16 pairs +0.60 % median (noise); cube/sos/sealed × 300 (18001) identical base vs tip; pods (release, seeds 17001-18615): fixed 2..8 seats × 500 (3,500), 15 targeted groups × 100 over every changed card, random 4-seat 300×3 + 8-seat 60×2, strict debug 220 — **0 panics, 0 stalls**, 2 CR 104.4b draws in the earlier tip sweeps; PERF row `01WRuXc6pH`. **Next seed 19000.** Next: the `pod_residuals --rank` tops are auto-picks; the cube-frozen batch wants a sanctioned pool change.
 11. **`01WRuXc3Wv` (2026-10-28, no seats; ENGINE_BACKLOG `01WRuXc3Wv`): clean decks **5,294 → 5,399**, frozen pools skipped.** Primitives: `EventScope::PlayerOrPermanentTargetedByYourAbility` (CR 115.1), `OwnedCardsOffBattlefieldAreTypeToo`, `BecomeChosenColors`, `RemoveAnyNumberOfCounters` (CR 122.8), `craft_or_more`, a manual pick for total-measure graveyard-exile costs, `CopyCardsAndCastFreeUpTo` asks. Classes: "prevent that damage" replacements are CR 615 preventions (Nine Lives, The Mindskinner); up-to gain picks never default to an opponent's. ⚠ Quantum Riddler is cube-frozen (its exact fix is written up). ⚠ **Disk filled mid-suite** (30 GB allowance): `rm -rf target/*/incremental` + the `deps` prune before every full suite / optimized build. Gates: suite **29,234 / 0 / 7** (strict, seat test skipped, not re-run); workspace clippy **0** (69m52s, `-j 3`); `--bench` **196,176 / 27.64 / 613.0 / 0 stalls byte-identical**; pools 7,500, pods 2,100 fixed + 550 random + 2,250 targeted — 0 panics, 0 stalls. **Next seed 19600.** Next: `pod_residuals --rank` tops are auto-picks/UI asks (Scrap Welder, Thorin, Hydro-Man, Galadriel's Dismissal) — the OPEN list in ENGINE_BACKLOG `01WRuXc3Wv` has the concrete builds.
 
+## The Commander NEXT's line 9 as `01WRuXc33x` found it (moved verbatim, 2026-10-29)
+
+9. **`01WRuXc2p1` (2026-10-28, no seats; ENGINE_BACKLOG `01WRuXc2p1`): pod-mined first, then the control class.** Fresh-seed fuzz (~20,000 random-pool games at 2..8 seats, 2,600 with `CRAB_POD_CONCEDE`, 2,000+ on the debug-assertions `overflow` build) found two bot losses (a Pact cast it could not pay — `server/pact_guard.rs`; Draconic Visitor put beside Ganax — the hand branch of the loop probe) and one **OOM** ("add X mana" pushed one event per mana at power ~millions). CR 611.2b: `MayPlayDuration::WhileHolderControlsSource { your_turn }` (Lightning, Victor Mancha, Taster of Wares, Ghost-Spider, Hama, Kotose's one-card cap), `WhileSourceOnBattlefield { follows_control }` (static exile grants are the controller's), soulbond unpairs on a control change (CR 702.95e). A prompting seat names a loyalty ability's extra targets (Jeska). **Use `ps`/`memwatch` on an rc 137** — one was a real runaway, one was the host OOM killer during a test build. ⚠ Check the frozen pools (`cube.rs`/`sos_mode.rs`/`fra_mode.rs`/`draft.rs`) BEFORE building a card fix — Detective's Phoenix was built and reverted twice now. Gates: see the section. **Next seed 27800.** Next: `pod_residuals --rank` minus frozen pools is all auto-picks/UI asks now; the bug lane is the debug-assertions pod sweep (`target-audit`, ~16 min cold) at fresh seeds and more seats.
+
+## FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc33x`) — seated-deck rows by rank, CR 508.4's defender pick, untap / charge sinks
+
+No seats. Audit-build (`overflow` + `-C debug-assertions=yes`) pod sweeps over every deck first —
+`pod_sweep.py` seeds 28001 (3, 5 seats), 28002 (4, 6, `CRAB_POD_CONCEDE=20`), 28003 (7, 8): **7,480 games, 0 panics,
+0 assertion hits, 2 undecided — both CR 104.4a draws** (Descent into Avernus damages *each* player and killed the last
+two seats at once; in 28002 three seats had conceded first). Then `pod_residuals --rank` top-down, frozen pools checked.
+- **CR 508.4:** `DeployCreatureFromHandAttacking` (Ilharg, Nick Fury Spymaster, Shadowfax, Arni, Preeminent Captain,
+  Kinscaer Sentry, Taggerdy, Ultra Magnus) hands the defender to `join_combat_attacking_chosen` — a prompting seat picks;
+  `same_defender` pins Kaalia's "attacking that opponent". The pick list gained battles a defending player protects.
+- **Primitives:** `R::ManaValueLessThanOneAmong` + `ActivatedAbility.sac_other_mv_above_target` (Scrap Welder targets,
+  CR 601.2c; the cost pays with the cheapest artifact above the target — the lowest-power auto-pick had sacrificed a
+  Treasure for nothing); `ActivatedAbility.exert_cost` (CR 701.43a — Angel of Condemnation, Pride Sovereign, Basri,
+  Hope Tender, Steward of Solidarity; Arena of Glory left as a mana ability); `EquipBonus.library_top_look` (Glowcap
+  Lantern, CR 401.5 view); the `ChooseCardTypeFromForSource` headless pick ranks by the hands its controller has seen.
+- **Cards:** Galadriel's Dismissal kicked targets creature + player; Arachne looks at an opponent's hand first (and her
+  list gains Battle / Kindred / Land); Ark of Hunger's "sorcery-speed" note was stale (test pins instant + land play).
+- **Bot (pods):** `untap_ramp` takes any untapper on any tapped mana source, probed through resolution (Clock of Omens,
+  Ioreth, Clever Conjurer now fire); `pick_charge_sink` (Coretapper → an artifact that counts charge); harness rides
+  `pick_monstrosity`. A 6-seat census of seats 6094-6140 (seed 28100): never-activated 293 → 279.
+- Clean decks **5,456 → 5,525 / 6,140**.
+
+OPEN:
+- Stardew Valley's "another player" differs from its opponent ballot only in team formats — left.
+- Dawnhand Dissident's blight-cost and counter-removal picks stay automatic: a `ResumeContext::ActivateAbilityChoice`
+  kind per cost (the `ExilePermanent` shape) would let a prompting seat choose; the bot path wouldn't move.
+- Coretapper / Minamo / Thousand-Year Elixir still show in some census groups — situational (sick at the first opposing
+  end step; no charge artifact or nothing castable after the untap), not a missing path.
+
 ## FIXED/OPEN 2026-10-28 (Commander run, `01WRuXc2p1`) — pod-mined bot losses, a control-duration class, multi-target loyalty asks
 
 No seats. Fresh-seed pod fuzz first (seeds 10774-11571, 20774-24401; ~20,000 random-pool games over 2..8 seats, 2,600
