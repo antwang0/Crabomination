@@ -21,7 +21,7 @@ impl GameState {
         };
         if tapped > 0 {
             let draw = Effect::Draw { who: Selector::You, amount: Value::Const(tapped) };
-            self.resolve_effect_into(&draw, ctx, events)?;
+            self.run_effect(&draw, ctx, events)?;
         }
         Ok(())
     }

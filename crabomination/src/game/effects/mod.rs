@@ -17616,8 +17616,10 @@ impl GameState {
                     return Ok(());
                 };
                 if tapped > 0 {
+                    // `run_effect`, not a fresh resolution: the body is this
+                    // one's tail and must see its scratch (CR 608.2).
                     let run = Effect::WithX { x: crate::effect::Value::Const(tapped), body: body.clone() };
-                    self.resolve_effect_into(&run, ctx, events)?;
+                    self.run_effect(&run, ctx, events)?;
                 }
                 Ok(())
             }

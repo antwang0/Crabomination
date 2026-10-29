@@ -1927,3 +1927,22 @@ fn cr_603_10a_a_granted_put_into_a_graveyard_trigger_fires() {
         assert_eq!(g.players[0].hand.len(), hand + 1, "{what}: the granted trigger drew");
     }
 }
+
+/// CR 608.2 — "tap any number …, then [body]" runs its body as the same
+/// resolution's tail: a later step still reads what the effect did before
+/// the taps (it was a fresh nested resolution that reset `LastMoved`).
+#[test]
+fn tap_any_number_then_keeps_the_resolutions_scratch() {
+    use crabomination::card::SelectionRequirement as R;
+    use crabomination::effect::Value;
+    let mut g = main_phase();
+    let top = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let effect = Effect::Seq(vec![
+        Effect::Mill { who: Selector::You, amount: Value::ONE },
+        Effect::TapAnyNumberThen { filter: R::Creature.and(R::ControlledByYou), body: Box::new(Effect::Noop) },
+        Effect::Move { what: Selector::LastMoved, to: ZoneDest::Hand(PlayerRef::You) },
+    ]);
+    resolve(&mut g, top, None, &effect);
+    assert!(g.players[0].hand.iter().any(|c| c.id == top), "the milled card came back");
+}
