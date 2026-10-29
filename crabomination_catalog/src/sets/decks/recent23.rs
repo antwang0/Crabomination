@@ -45,8 +45,8 @@ pub fn doran_the_siege_tower() -> CardDefinition {
 
 /// Tapestry Warden — {3}{G} 3/4 artifact Robot Soldier with vigilance. Each
 /// creature you control with toughness greater than its power assigns combat
-/// damage equal to its toughness rather than its power. (The "stations using
-/// toughness" half is dropped.)
+/// damage equal to its toughness rather than its power, and stations
+/// permanents using its toughness rather than its power.
 pub fn tapestry_warden() -> CardDefinition {
     CardDefinition {
         name: "Tapestry Warden",
@@ -68,6 +68,13 @@ pub fn tapestry_warden() -> CardDefinition {
                         .and(SelectionRequirement::ToughnessGreaterThanPower),
                 ),
                 keyword: Keyword::AssignsCombatDamageByToughness,
+            },
+        }, StaticAbility {
+            description: "Your creatures with toughness > power station using toughness",
+            effect: StaticEffect::StationsWithToughness {
+                filter: SelectionRequirement::Creature
+                    .and(SelectionRequirement::ControlledByYou)
+                    .and(SelectionRequirement::ToughnessGreaterThanPower),
             },
         }],
         ..Default::default()

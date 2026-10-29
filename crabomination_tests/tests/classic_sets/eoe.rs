@@ -429,6 +429,22 @@ fn station_charges_from_tapped_power_then_band_makes_creature() {
     assert!(post.keywords().contains(&Keyword::Flying));
 }
 
+/// CR 702.184a — Tapestry Warden (3/4) stations with its toughness: four
+/// charge counters, not three.
+#[test]
+fn tapestry_warden_stations_with_toughness() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(0, catalog::wurmwall_sweeper());
+    g.add_card_to_battlefield(0, catalog::tapestry_warden());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ship, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).expect("station the Warden");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(ship).unwrap().counter_count(CounterType::Charge), 4);
+}
+
 /// Charge counters accumulate across multiple stationings; a higher `{N+}`
 /// band (Atmospheric Greenhouse, {8+}) only applies once the total is reached.
 #[test]
