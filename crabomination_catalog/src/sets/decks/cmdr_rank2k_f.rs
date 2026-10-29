@@ -427,22 +427,22 @@ pub fn rune_of_speed() -> CardDefinition {
 }
 
 /// Scrap Welder — {2}{R} 3/3 Goblin Artificer. {T}, sacrifice an artifact
-/// with mana value X: an artifact card with mana value less than X returns
-/// from your graveyard with haste. (The card is chosen as it resolves rather
-/// than targeted — its legality rests on the sacrifice, which the engine pays
-/// after targets are fixed.)
+/// with mana value X: target artifact card with mana value less than X returns
+/// from your graveyard with haste. The target needs an artifact of yours above
+/// its mana value, and only such an artifact pays (`sac_other_mv_above_target`).
 pub fn scrap_welder() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             sac_other_filter: Some((R::Artifact, 1)),
+            sac_other_mv_above_target: true,
             effect: Effect::Seq(vec![
                 Effect::Move {
-                    what: Selector::one_of(Selector::CardsInZone {
-                        who: PlayerRef::You,
-                        zone: Zone::Graveyard,
-                        filter: R::Artifact.and(R::ManaValueLessThanSacrificed),
-                    }),
+                    what: target_filtered(
+                        R::Artifact
+                            .from_your_graveyard()
+                            .and(R::ManaValueLessThanOneAmong(Box::new(R::Artifact.and(R::ControlledByYou)))),
+                    ),
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
                 },
                 Effect::GrantKeyword { what: Selector::LastMoved, keyword: Keyword::Haste, duration: Duration::EndOfTurn },

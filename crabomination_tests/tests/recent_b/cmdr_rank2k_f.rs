@@ -46,18 +46,26 @@ fn named(g: &GameState, name: &str) -> usize {
     g.battlefield.iter().filter(|c| c.definition.name == name).count()
 }
 
-/// Scrap Welder returns an artifact card with mana value below the
-/// sacrificed artifact's — never one as large.
+/// Scrap Welder targets an artifact card under some artifact it can sacrifice
+/// (CR 601.2c: targets before costs) and pays with the cheapest artifact above
+/// it, per the 2022-02-18 ruling "less than X" — never one as large.
 #[test]
 fn scrap_welder_returns_a_smaller_artifact() {
     let mut g = pod(2);
     let welder = ready(&mut g, 0, catalog::scrap_welder());
     let big = g.add_card_to_graveyard(0, catalog::solemn_simulacrum());
     let small = g.add_card_to_graveyard(0, catalog::sol_ring());
-    ready(&mut g, 0, catalog::thran_temporal_gateway());
-    activate(&mut g, welder, 0, None);
-    assert!(g.battlefield_find(small).is_some(), "Sol Ring (1) under the Gateway (4)");
-    assert!(g.battlefield_find(big).is_none(), "Solemn (4) is not less than 4");
+    let gateway = ready(&mut g, 0, catalog::thran_temporal_gateway());
+    let stone = ready(&mut g, 0, catalog::mind_stone());
+    flood(&mut g);
+    let at = |id| GameAction::ActivateAbility {
+        card_id: welder, ability_index: 0, target: Some(Target::Permanent(id)), additional_targets: vec![], x_value: None, mode: None,
+    };
+    assert!(g.perform_action(at(big)).is_err(), "Solemn (4) is not less than the Gateway (4)");
+    activate(&mut g, welder, 0, Some(Target::Permanent(small)));
+    assert!(g.battlefield_find(small).is_some(), "Sol Ring (1) returns");
+    assert!(g.battlefield_find(stone).is_none(), "the Mind Stone (2) paid");
+    assert!(g.battlefield_find(gateway).is_some(), "the Gateway (4) stays");
 }
 
 /// Kaalia, Zenith Seeker takes one Angel, one Demon and one Dragon.
