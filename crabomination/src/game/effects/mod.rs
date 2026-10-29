@@ -7162,8 +7162,27 @@ impl GameState {
                 } else {
                     Vec::new()
                 };
+                // A printed list leads, headless, with the type most common in
+                // the opponents' hands its controller has seen (Arachne looks
+                // first); unseen, the printed order stands.
+                let ranked: Vec<CardType> = match effect {
+                    Effect::ChooseCardTypeFromForSource { options } if !options.is_empty() => {
+                        let seen = |t: &CardType| {
+                            self.hands_revealed_to
+                                .iter()
+                                .filter(|&&(viewer, _)| viewer == ctx.controller)
+                                .flat_map(|&(_, owner)| self.players[owner].hand.iter())
+                                .filter(|c| c.definition.card_types.contains(t))
+                                .count()
+                        };
+                        let mut ranked = options.clone();
+                        ranked.sort_by_key(|t| std::cmp::Reverse(seen(t)));
+                        ranked
+                    }
+                    _ => Vec::new(),
+                };
                 let options: &[CardType] = match effect {
-                    Effect::ChooseCardTypeFromForSource { options } if !options.is_empty() => options,
+                    Effect::ChooseCardTypeFromForSource { options } if !options.is_empty() => &ranked,
                     Effect::ChooseCardTypeSharedByExiledWithSource => &shared,
                     _ => &ALL,
                 };
