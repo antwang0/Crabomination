@@ -6549,3 +6549,61 @@ its pre-registered reading).
   `nets/fra-champion.safetensors` — the user's call; the r82 champion stays
   until then. The pinned recipe for the next round: `--steps-per-game
   0.274 --actor-rated-decks`, gated seed mean vs seed mean on fresh seeds.
+
+## Round 87 — at a pinned ratio, fixes actors still do not help and 0.274 is the best of three ratios; card values re-rated under the fixes pilot: no gain where the client builds (2026-10-29)
+
+Three of round 86's leads (`.ladder/run_r87_fra.sh`, `.ladder/r87/`; each
+reading pre-registered).
+
+- **Training at a pinned ratio, four arms x four seeds** (rated decks, FRA,
+  round 86's recipe otherwise): R274 = round 86's rated arm (the reference),
+  F274 = + `--actor-fra-fixes` (the client's bundle, `clock_eval` 4
+  included), R40 / R18 = 0.40 / 0.18 steps a game. Instrument check: all
+  sixteen at their target over generation. Gate on fresh ladder seeds 601 /
+  701, `net67-fixes` vs `fra-fixes`, 1 000 x 12, means over the two seeds,
+  t intervals over the four training seeds, paired by seed:
+
+  | arm − R274 | rated field | default field |
+  |---|---|---|
+  | F274 (fixes actors) | −0.46 [−2.08, +1.15] | −1.11 [−3.26, +1.03] |
+  | R40 | −0.63 [−1.45, +0.20] | −0.55 [−1.27, +0.17] |
+  | R18 | −0.68 [−1.35, −0.00] | −1.29 [−2.95, +0.37] |
+
+  **Q1: fixes actors do not help** (bar: rated > +0.5). Round 83's −2.2
+  was partly its ratio, but at an equal ratio the sign is still negative:
+  training on the pilot the client plays makes no better a leaf for it.
+  **Q2: 0.274 stays the recipe's ratio** — both neighbours read lower on
+  both fields, so it sits near an interior optimum (no bar was wholly above
+  zero). Arm means on the rated field: R274 50.64, F274 50.17, R40 50.01,
+  R18 49.96.
+- **Q3: the champion stays.** The best new net by the 601 / 701 cells
+  (F274 s199, 51.0) read **50.5 % against the champion's 51.2 %** on fresh
+  seed 809 (rated field). That fails the scored half of the bar, so the
+  four search cells (≈ 4 h) were stopped unrun (`gate.stopped`). The
+  champion (round 86's R274 s43) reads 51.35 on 601 / 701 against its arm's
+  50.64: +0.7 of selection, half round 82's.
+- **Card values re-rated under `fra-fixes`: NOT adopted.** FRA's table was
+  rated on the bundle before the race term, SOS's on `dflt`; both re-rated
+  under today's `fra-fixes` (16 000 pools, `--explore 3`, seed 7, cut 30;
+  FRA SCALE 1.460 OFFSET 5.947, SOS 1.969 / 7.795). New gate, paired on the
+  same pools: `fra_card_eval --ab --table FILE` (rated builder on the
+  re-rated table vs on the compiled one; `card_ratings::with_table`,
+  `fra_card_table.py --tsv`), 2 000 pools x 8 pairs, seeds 43 / 97:
+
+  | | FRA best-of-16 | FRA single | SOS best-of-16 | SOS single |
+  |---|---|---|---|---|
+  | new − compiled | 50.16 / 50.04 | 50.57 / 50.90 | 50.03 / 50.25 | 50.54 / 50.94 |
+
+  Bar (best-of-16, the client opponent's recipe): both > 50 and mean >
+  +0.3 — FRA +0.10, SOS +0.14, neither. The single-sample builder gains
+  ~+0.7 (both sets), but best-of-16's judge evens the difference out and
+  only the training actors build single samples. The compiled tables stay.
+- **A bug the null control could not catch.** The first race read 2 000 of
+  2 000 identical decks under a table that moved 114 cards: `CardBrief`
+  caches each card's rating once per process, so the override reached
+  `rated_score` but never the builder. `score_brief_rated` now reads
+  `card_ratings::brief_rated`, behind a flag no ordinary process sets. A
+  null control (the shipped table's own ratings, 200 / 200 identical) passes
+  both with and without the bug; the positive control (the re-rated table,
+  135 / 200 decks changed) is the one that tells them apart. Any override
+  gate needs both.
