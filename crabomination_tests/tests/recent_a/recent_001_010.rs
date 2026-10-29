@@ -3457,6 +3457,31 @@ mod recent {
       }
     }
 
+    /// The same drain when the auto-tapper sacrifices the Treasure to pay a
+    /// spell's cost (CR 605.3a — a mana ability activated while paying).
+    #[test]
+    fn nadiers_nightblade_drains_on_a_treasure_the_auto_tapper_spends() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::nadiers_nightblade());
+        let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+        let mint = Effect::CreateToken {
+            who: crabomination::effect::PlayerRef::You,
+            count: crabomination::card::Value::ONE,
+            definition: std::sync::Arc::new(crabomination_base::tokens::treasure_token()),
+        };
+        g.resolve_effect(&mint, &ctx).unwrap();
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        let (me, opp) = (g.players[0].life, g.players[1].life);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("Treasure pays for the Bolt");
+        drain_stack(&mut g);
+        assert!(!g.battlefield.iter().any(|c| c.definition.name == "Treasure"));
+        assert_eq!((g.players[0].life, g.players[1].life), (me + 1, opp - 4), "drain 1 + Bolt 3");
+    }
+
     /// Gnarlroot Pallbearer pumps a creature by your graveyard's creature count.
     #[test]
     fn gnarlroot_pallbearer_scales_with_graveyard() {

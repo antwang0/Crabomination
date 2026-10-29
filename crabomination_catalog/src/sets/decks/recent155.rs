@@ -59,8 +59,8 @@ pub fn benthic_criminologists() -> CardDefinition {
 }
 
 /// Agency Coroner — {4}{B} 3/6 Ogre Cleric. {2}{B}, sacrifice another creature:
-/// draw a card. (The extra card for a suspected sacrifice is omitted — the engine
-/// has no suspect tracker yet.)
+/// draw a card. (The extra card for a suspected sacrifice is omitted: the
+/// cost's `SacrificedTraits` don't carry the suspected flag to resolution.)
 pub fn agency_coroner() -> CardDefinition {
     CardDefinition {
         name: "Agency Coroner",
