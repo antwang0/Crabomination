@@ -1859,7 +1859,7 @@ pub fn seluma_light_of_aysen() -> CardDefinition {
 /// The Everforger — {6} legendary 4/5 artifact Construct. Rulebreaker:
 /// artifact creature and Equipment cards of any color identity and any basic
 /// lands. Casting an artifact creature or Equipment spell, you may copy it,
-/// once each turn (a declined copy spends the turn's — INCOMPLETE_CARDS).
+/// once each turn (spent by a copy, not by a declined trigger).
 pub fn the_everforger() -> CardDefinition {
     CardDefinition {
         cost: cost(&[generic(6)]),
@@ -1868,17 +1868,13 @@ pub fn the_everforger() -> CardDefinition {
             "Rulebreaker — artifact creature and Equipment cards of any color identity, and any basic land cards.",
             crate::effect::RulebreakerCards::ArtifactCreaturesAndEquipment,
         )],
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(trigger_is(
-                    R::Artifact.and(R::Creature).or(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
-                ))
-                .once_per_turn(),
-            effect: Effect::MayDo {
-                description: "Copy that spell?".into(),
-                body: Box::new(Effect::CopySpell { what: Selector::TriggerSource, count: Value::ONE }),
-            },
-        }],
+        triggered_abilities: vec![crate::effect::shortcut::may_once_each_turn(
+            EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(trigger_is(
+                R::Artifact.and(R::Creature).or(R::HasArtifactSubtype(ArtifactSubtype::Equipment)),
+            )),
+            "Copy that spell?",
+            Effect::CopySpell { what: Selector::TriggerSource, count: Value::ONE },
+        )],
         ..legend("The Everforger", vec![CreatureType::Construct], 4, 5)
     }
 }

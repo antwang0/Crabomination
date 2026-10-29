@@ -716,11 +716,11 @@ pub fn baxter_building() -> CardDefinition {
 /// Cosmic Crucible — four mana at your first main phase; once a turn, copy a
 /// noncreature spell you cast.
 pub fn cosmic_crucible() -> CardDefinition {
-    let mut copy = on_cast_noncreature(may("Copy that spell?", Effect::CopySpell {
-        what: Selector::TriggerSource,
-        count: Value::ONE,
-    }));
-    copy.event.once_per_turn = true;
+    // "Do this only once each turn": a declined copy keeps the turn's.
+    let copy = crate::effect::shortcut::once_each_turn_on_take(on_cast_noncreature(may(
+        "Copy that spell?",
+        Effect::CopySpell { what: Selector::TriggerSource, count: Value::ONE },
+    )));
     CardDefinition {
         name: "Cosmic Crucible",
         cost: cost(&[generic(4), g(), u()]),

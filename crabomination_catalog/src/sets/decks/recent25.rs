@@ -233,9 +233,9 @@ pub fn irreverent_gremlin() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Menace],
-        triggered_abilities: vec![TriggeredAbility {
+        // "Do this only once each turn": spent by the loot, not the trigger.
+        triggered_abilities: vec![crate::effect::shortcut::once_each_turn_on_take(TriggeredAbility {
             event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
-                .once_per_turn()
                 .with_filter(Predicate::EntityMatches {
                     what: Selector::TriggerSource,
                     filter: SelectionRequirement::Creature
@@ -256,7 +256,7 @@ pub fn irreverent_gremlin() -> CardDefinition {
                     },
                 ])),
             },
-        }],
+        })],
         ..Default::default()
     }
 }

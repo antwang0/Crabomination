@@ -161,6 +161,23 @@ fn rinoa_returns_a_fallen_attacker() {
     );
 }
 
+/// "Do this only once each turn" is spent by the return, not the trigger: a
+/// declined death leaves the turn's return for the next, which then spends it.
+#[test]
+fn rinoa_declined_return_keeps_the_turns_use() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::rinoa_angel_wing());
+    let bears: Vec<_> = (0..3).map(|_| ready(&mut g, 0, catalog::grizzly_bears())).collect();
+    g.step = TurnStep::BeginCombat;
+    declare(&mut g, bears.iter().map(|&b| (b, 1)).collect());
+    let returned = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Grizzly Bears").count();
+    for (b, take, left) in [(bears[0], false, 2), (bears[1], true, 2), (bears[2], true, 1)] {
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(take)]));
+        kill(&mut g, b);
+        assert_eq!(returned(&g), left, "after {b:?} (take {take})");
+    }
+}
+
 /// CR 601.3b — Fated Clash is a sorcery that can be cast mid-combat once a
 /// creature attacks and another blocks; it spares its two targets.
 #[test]

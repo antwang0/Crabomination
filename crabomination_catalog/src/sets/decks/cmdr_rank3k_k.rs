@@ -124,10 +124,9 @@ pub fn raphaels_technique() -> CardDefinition {
 
 /// Rinoa, Angel Wing — {2}{W} legendary 2/4 Human Rebel Warlock. Beginning of
 /// combat on your turn: your flyers get +1/+1 and vigilance until end of turn.
-/// Whenever an attacking creature you control dies, you may return it to the
-/// battlefield tapped under its owner's control with a flying counter; once
-/// each turn. (Residual: the once-a-turn cap is spent by the first such death
-/// even when you decline.)
+/// Whenever one or more attacking creatures you control die, you may return
+/// one of them tapped under its owner's control with a flying counter; once
+/// each turn (spent only when the return is taken).
 pub fn rinoa_angel_wing() -> CardDefinition {
     let flyers = || {
         Selector::EachPermanent(
@@ -136,13 +135,14 @@ pub fn rinoa_angel_wing() -> CardDefinition {
                 .and(R::HasKeyword(Keyword::Flying)),
         )
     };
+    // "Whenever one or more attacking creatures you control die" (CR 603.2c).
     let mut died = EventSpec::new(EventKind::CreatureDied, EventScope::YourControl).with_filter(
         Predicate::EntityMatches {
             what: Selector::TriggerSource,
             filter: R::IsAttacking,
         },
     );
-    died.once_per_turn = true;
+    died.once_per_batch = true;
     CardDefinition {
         triggered_abilities: vec![
             TriggeredAbility {
@@ -164,27 +164,25 @@ pub fn rinoa_angel_wing() -> CardDefinition {
                     },
                 ]),
             },
-            TriggeredAbility {
-                event: died,
-                effect: Effect::MayDo {
-                    description: "Return the creature tapped with a flying counter?".into(),
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::ClearLastMoved,
-                        Effect::Move {
-                            what: Selector::TriggerSource,
-                            to: ZoneDest::Battlefield {
-                                controller: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
-                                tapped: true,
-                            },
+            crate::effect::shortcut::may_once_each_turn(
+                died,
+                "Return the creature tapped with a flying counter?",
+                Effect::Seq(vec![
+                    Effect::ClearLastMoved,
+                    Effect::Move {
+                        what: Selector::TriggerSource,
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::OwnerOf(Box::new(Selector::TriggerSource)),
+                            tapped: true,
                         },
-                        Effect::AddKeywordCounter {
-                            what: Selector::LastMoved,
-                            keyword: Keyword::Flying,
-                            amount: Value::ONE,
-                        },
-                    ])),
-                },
-            },
+                    },
+                    Effect::AddKeywordCounter {
+                        what: Selector::LastMoved,
+                        keyword: Keyword::Flying,
+                        amount: Value::ONE,
+                    },
+                ]),
+            ),
         ],
         ..legend(
             "Rinoa, Angel Wing",
