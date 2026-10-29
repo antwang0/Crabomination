@@ -626,7 +626,12 @@ fn known_library_top(
                 | StaticEffect::PlayFromLibraryTopBySacrificing { .. }
                 | StaticEffect::PlayFromLibraryTopByRemovingCounter { .. }
                 | StaticEffect::MayLookAtOwnLibraryTop))
-            || state.players[player_seat].play_from_top_this_turn);
+            || state.players[player_seat].play_from_top_this_turn
+            // Glowcap Lantern — the equipped creature's controller may look.
+            || state.battlefield.iter().any(|c| {
+                c.definition.equipped_bonus.as_ref().is_some_and(|b| b.library_top_look)
+                    && c.attached_to.and_then(|h| state.battlefield_find(h)).is_some_and(|h| h.controller == player_seat)
+            }));
     // Xanathar — "you may look at the top card of their library any time".
     let granted_look = state.players.get(viewer_seat).is_some_and(|v| v.may_play_library_top_of.contains(&player_seat));
     if revealed_to_all || owner_may_look || granted_look {

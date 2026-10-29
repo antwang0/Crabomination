@@ -3113,9 +3113,9 @@ pub fn diamond_pick_axe() -> CardDefinition {
     }
 }
 
-/// Glowcap Lantern — {G} Artifact Equipment. Equipped creature has "Whenever
-/// this creature attacks, it explores." Equip {2}. (The "look at the top card
-/// any time" rider is omitted.)
+/// Glowcap Lantern — {G} Artifact Equipment. Equipped creature has "You may
+/// look at the top card of your library any time" and "Whenever this creature
+/// attacks, it explores." Equip {2}.
 pub fn glowcap_lantern() -> CardDefinition {
     use crate::card::EquipBonus;
     CardDefinition {
@@ -3131,6 +3131,7 @@ pub fn glowcap_lantern() -> CardDefinition {
             triggered_abilities: vec![on_attack(Effect::Explore {
                 who: Selector::This,
             })],
+            library_top_look: true,
             ..Default::default()
         }),
         ..Default::default()

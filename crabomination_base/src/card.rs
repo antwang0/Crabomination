@@ -7230,6 +7230,10 @@ pub struct EquipBonus {
     /// Rune of Mortality): the bonus lands on the equipped creature.
     #[serde(default)]
     pub relays_through_equipment: bool,
+    /// Equipped creature has "You may look at the top card of your library
+    /// any time" (Glowcap Lantern): its controller sees that card (CR 401.5).
+    #[serde(default)]
+    pub library_top_look: bool,
     /// Activated abilities granted to the equipped creature (CR 702.6e). Each
     /// resolves as though printed on the creature — its `{T}` taps the
     /// creature, `Selector::This` reads the creature. Surfaced through

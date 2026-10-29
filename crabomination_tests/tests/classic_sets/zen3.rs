@@ -99,6 +99,20 @@ fn sphinx_of_jwar_isle_shows_its_controller_the_top_card() {
     }
 }
 
+/// Glowcap Lantern grants the look to the creature it equips: its controller
+/// sees the top card only while the Lantern is attached.
+#[test]
+fn glowcap_lantern_shows_the_equipped_creatures_controller_the_top_card() {
+    let mut g = two_player_game();
+    g.add_card_to_library(0, catalog::island());
+    let lantern = g.add_card_to_battlefield(0, catalog::glowcap_lantern());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let known = |g: &GameState, v| crabomination::server::view::project(g, v).players[0].library.known_top.len();
+    assert_eq!(known(&g, 0), 0, "unattached");
+    g.battlefield_find_mut(lantern).unwrap().attached_to = Some(bear);
+    assert_eq!((known(&g, 0), known(&g, 1)), (1, 0));
+}
+
 // ── Landfall ────────────────────────────────────────────────────────────────
 
 /// The landfall pumps/grants fire off a land drop.
