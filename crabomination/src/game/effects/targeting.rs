@@ -390,7 +390,7 @@ impl GameState {
             }
             // A slot that also takes a permanent ("target spell or nonland
             // permanent" — Press the Enemy, Venser) never settles for its own
-            // controller's spell: an opponent's permanent below outranks it.
+            // controller's spell: the battlefield walk after this one picks.
             if let Some(t) = hostile.or(friendly.filter(|_| prefer_friendly || !admits_off_stack(req))) {
                 return Some(t);
             }

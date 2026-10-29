@@ -130,8 +130,8 @@ impl GameState {
             s.first_sacrificed_types = scratch.first_sacrificed_types.clone();
             s.sacrificed_lki_this_resolution = scratch.sacrificed_lki_this_resolution.clone();
             s.named_card_this_resolution = scratch.named_card_this_resolution.clone();
-            s.token_replacement_pick = scratch.token_replacement_pick.clone();
-            s.mirrormind_active = scratch.mirrormind_active.clone();
+            s.token_replacement_pick = scratch.token_replacement_pick;
+            s.mirrormind_active = scratch.mirrormind_active;
             s.names_this_resolution = scratch.names_this_resolution.clone();
             s.cost_sacrificed_batch = scratch.cost_sacrificed_batch.clone();
         }
