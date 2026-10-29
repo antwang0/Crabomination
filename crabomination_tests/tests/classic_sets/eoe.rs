@@ -3376,36 +3376,25 @@ fn weftwalking_wheels_into_seven() {
     assert!(g.players[0].graveyard.is_empty(), "graveyard shuffled away");
 }
 
-/// Pull Through the Weft returns up to two nonland permanent cards to hand.
+/// Pull Through the Weft targets both groups (CR 601.2c): two nonland
+/// permanent cards to hand, two land cards onto the battlefield tapped; a
+/// third of each stays.
 #[test]
-fn pull_through_the_weft_returns_perms_to_hand() {
-    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+fn pull_through_the_weft_targets_two_of_each() {
     let mut g = two_player_game();
-    let a = to_gy(&mut g, catalog::grizzly_bears());
-    let b = to_gy(&mut g, catalog::hill_giant());
-    g.add_card_to_battlefield(0, catalog::forest()); // a land also in gy shouldn't be returnable
+    let perms = [to_gy(&mut g, catalog::grizzly_bears()), to_gy(&mut g, catalog::hill_giant()), to_gy(&mut g, catalog::serra_angel())];
+    let lands = [to_gy(&mut g, catalog::forest()), to_gy(&mut g, catalog::island()), to_gy(&mut g, catalog::plains())];
     let id = g.add_card_to_hand(0, catalog::pull_through_the_weft());
     g.players[0].mana_pool.add(Color::Green, 2);
     g.players[0].mana_pool.add_colorless(3);
-    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![a, b])]));
-    cast(&mut g, id);
-    assert!(g.players[0].hand.iter().any(|c| c.id == a) && g.players[0].hand.iter().any(|c| c.id == b),
-        "both nonland permanents returned to hand");
-}
-
-/// Pull Through the Weft's second half: up to two land cards come back onto
-/// the battlefield tapped.
-#[test]
-fn pull_through_the_weft_returns_lands_tapped() {
-    let mut g = two_player_game();
-    let f1 = to_gy(&mut g, catalog::forest());
-    let f2 = to_gy(&mut g, catalog::island());
-    let f3 = to_gy(&mut g, catalog::plains());
-    let id = g.add_card_to_hand(0, catalog::pull_through_the_weft());
-    g.players[0].mana_pool.add(Color::Green, 2);
-    g.players[0].mana_pool.add_colorless(3);
-    cast(&mut g, id);
-    let back: Vec<_> = [f1, f2, f3].into_iter().filter(|id| g.battlefield_find(*id).is_some()).collect();
+    // The bot's picker fills both groups.
+    let (t, extra) = g.auto_targets_for_effect_all_slots(&catalog::pull_through_the_weft().effect, 0, None);
+    g.perform_action(GameAction::CastSpell { card_id: id, target: t, additional_targets: extra, mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let in_hand = perms.iter().filter(|p| g.players[0].hand.iter().any(|c| c.id == **p)).count();
+    assert_eq!(in_hand, 2, "two nonland permanents to hand");
+    let back: Vec<_> = lands.into_iter().filter(|id| g.battlefield_find(*id).is_some()).collect();
     assert_eq!(back.len(), 2, "up to two lands");
     assert!(back.iter().all(|id| g.battlefield_find(*id).unwrap().tapped));
 }

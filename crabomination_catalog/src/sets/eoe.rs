@@ -8114,31 +8114,27 @@ pub fn weftwalking() -> CardDefinition {
     }
 }
 
-/// Pull Through the Weft — {3}{G}{G} Sorcery. Return up to two nonland permanent
-/// cards from your graveyard to your hand, then up to two land cards to the
-/// battlefield tapped. (Approximation: both halves are picked as it resolves
-/// rather than targeted.)
+/// Pull Through the Weft — {3}{G}{G} Sorcery. Return up to two target nonland
+/// permanent cards from your graveyard to your hand, then return up to two
+/// target land cards from your graveyard to the battlefield tapped. Two
+/// target groups (`SlotGroups`, CR 601.2c).
 pub fn pull_through_the_weft() -> CardDefinition {
+    let group = |filter: SelectionRequirement, to: ZoneDest| Effect::ApplyToTargets {
+        max_targets: 2,
+        min_targets: 0,
+        filter: filter.and(SelectionRequirement::InYourGraveyard),
+        effect: Box::new(Effect::Move { what: Selector::Target(0), to }),
+    };
     CardDefinition {
         name: "Pull Through the Weft",
         cost: cost(&[generic(3), g(), g()]),
         card_types: vec![CardType::Sorcery],
-        effect: Effect::Seq(vec![
-            Effect::ReturnGraveyardCardsToHand {
-                filter: SelectionRequirement::PermanentCard.and(SelectionRequirement::Nonland),
-                max: Value::Const(2),
-            },
-            Effect::MoveChosen {
-                from: Selector::CardsInZone {
-                    who: PlayerRef::You,
-                    zone: crate::card::Zone::Graveyard,
-                    filter: SelectionRequirement::Land,
-                },
-                filter: None,
-                count: Value::Const(2),
-                up_to: true,
-                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-            },
+        effect: Effect::SlotGroups(vec![
+            group(
+                SelectionRequirement::PermanentCard.and(SelectionRequirement::Nonland),
+                ZoneDest::Hand(PlayerRef::You),
+            ),
+            group(SelectionRequirement::Land, ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true }),
         ]),
         ..Default::default()
     }
