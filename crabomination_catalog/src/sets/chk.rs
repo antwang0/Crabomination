@@ -8,7 +8,7 @@ use crate::card::{
     Supertype, TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{gain_life, offering, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, StaticEffect};
+use crate::effect::{Duration, Effect, PlayerRef, Predicate, StaticEffect, ZoneDest};
 use crate::mana::{b, cost, g, generic, r, u, w};
 
 fn spirit(types: Vec<CreatureType>) -> Subtypes {
@@ -5315,8 +5315,11 @@ pub fn strange_inversion() -> CardDefinition {
 }
 
 /// Sift Through Sands — {1}{U}{U} Instant — Arcane. Draw two cards, then
-/// discard a card. (The "Unspeakable" search rider is omitted.)
+/// discard a card. If you've cast Peer Through Depths and Reach Through Mists
+/// this turn, you may search for The Unspeakable and put it onto the
+/// battlefield.
 pub fn sift_through_sands() -> CardDefinition {
+    let cast = |name: &str| Predicate::CastSpellNamedThisTurn { who: PlayerRef::You, name: name.into() };
     CardDefinition {
         name: "Sift Through Sands",
         cost: cost(&[generic(1), u(), u()]),
@@ -5331,6 +5334,18 @@ pub fn sift_through_sands() -> CardDefinition {
                 who: Selector::You,
                 amount: Value::ONE,
                 random: false,
+            },
+            Effect::If {
+                cond: Predicate::All(vec![cast("Peer Through Depths"), cast("Reach Through Mists")]),
+                then: Box::new(Effect::MayDo {
+                    description: "Search your library for The Unspeakable?".into(),
+                    body: Box::new(Effect::Search {
+                        who: PlayerRef::You,
+                        filter: SelectionRequirement::HasName("The Unspeakable".into()),
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
+                }),
+                else_: Box::new(Effect::Noop),
             },
         ]),
         ..Default::default()

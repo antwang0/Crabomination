@@ -1941,6 +1941,34 @@ fn peer_through_depths_takes_instant_to_hand() {
     assert!(g.players[0].hand.iter().any(|c| c.id == bolt), "Bolt to hand");
 }
 
+/// Sift Through Sands fetches The Unspeakable onto the battlefield only after
+/// Peer Through Depths and Reach Through Mists were both cast this turn.
+#[test]
+fn sift_through_sands_finds_the_unspeakable_after_both_spells() {
+    for cast_both in [false, true] {
+        let mut g = two_player_game();
+        let top = g.add_card_to_library(0, catalog::island());
+        for _ in 0..2 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let unspeakable = g.add_card_to_library(0, catalog::the_unspeakable());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Discard(vec![top]), DecisionAnswer::Bool(true)]));
+        g.players[0].spell_names_cast_this_turn.push("Peer Through Depths");
+        if cast_both {
+            g.players[0].spell_names_cast_this_turn.push("Reach Through Mists");
+        }
+        let id = g.add_card_to_hand(0, catalog::sift_through_sands());
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(unspeakable).is_some(), cast_both, "both named spells cast: {cast_both}");
+    }
+}
+
 /// Malevolent Rumble digs four for a permanent and makes a Spawn that
 /// sacrifices for {C}.
 #[test]
