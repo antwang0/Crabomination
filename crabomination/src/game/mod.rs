@@ -25186,6 +25186,21 @@ impl GameState {
             })
     }
 
+    /// CR 702.184a — does a `StationsWithToughness` static (Tapestry Warden)
+    /// make `cid` station with its toughness?
+    pub(crate) fn stations_with_toughness(&self, cid: crate::card::CardId) -> bool {
+        use crate::effect::StaticEffect;
+        let t = Target::Permanent(cid);
+        self.battlefield.iter().any(|src| {
+            src.definition.static_abilities.iter().any(|sa| match &sa.effect {
+                StaticEffect::StationsWithToughness { filter } => {
+                    self.evaluate_requirement_static(filter, &t, src.controller, Some(src.id))
+                }
+                _ => false,
+            })
+        })
+    }
+
     /// CR 702.122 — the cheapest crew N this permanent has, printed or
     /// granted (Kotori's "Vehicles you control have crew 2"; a permanent with
     /// several crew abilities may use any of them).
@@ -36566,6 +36581,8 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCrewsSaddlesWithToughness
             | StaticEffect::CrewPowerBonus { .. }
             | StaticEffect::SelfCrewsWithToughness
+            // Read by the Station cost in `activate_ability`.
+            | StaticEffect::StationsWithToughness { .. }
             // GrantTriggeredAbility — surfaced by `statics_granted_triggers_for`
             // in both trigger dispatchers; no layer effect.
             | StaticEffect::GrantTriggeredAbility { .. }

@@ -26178,8 +26178,17 @@ impl GameState {
         // power, which is the computed one. Read before the `&mut`.
         let mut tap_other_power: Option<i32> = None;
         if let Some(other_cid) = tap_other_pick {
-            tap_other_power =
-                self.battlefield_find(other_cid).map(|c| self.effective_power_on(c));
+            let station = matches!(
+                &ability.effect,
+                Effect::AddCounter { kind: crate::card::CounterType::Charge, amount: crate::effect::Value::TappedForCostPower, .. }
+            );
+            tap_other_power = self.battlefield_find(other_cid).map(|c| {
+                if station && self.stations_with_toughness(other_cid) {
+                    self.effective_toughness_on(c)
+                } else {
+                    self.effective_power_on(c)
+                }
+            });
             if let Some(c) = self.battlefield.find_by_id_mut(other_cid) {
                 c.tapped = true;
             }

@@ -4694,6 +4694,11 @@ pub enum StaticEffect {
     /// `SelfCrewsSaddlesWithToughness`'s crew-only sibling: "crews Vehicles
     /// using its toughness rather than its power" (Giant Ox).
     SelfCrewsWithToughness,
+    /// CR 702.184a — "Each creature you control with toughness greater than
+    /// its power stations permanents using its toughness rather than its
+    /// power" (Tapestry Warden): a Station cost's tapped creature matching
+    /// `filter` (read as this static's controller) counts its toughness.
+    StationsWithToughness { filter: SelectionRequirement },
 }
 
 impl StaticEffect {
