@@ -46090,10 +46090,14 @@ mod tests {
         // activations — a post-combat firebreath or animation buys nothing;
         // bisected to that hunk alone): 4242 unmoved; 0xC0FFEE 2490→2487 and
         // 43 3800→3801 actions, same winners and turns.
+        // Re-blessed 2026-10-29 (pods crack a cantrip mana rock at an
+        // opponent's end step — `server/cantrip_rock.rs`): 0xC0FFEE unmoved;
+        // 43 74→48 turns, 3801→2205 actions; 4242 seat 0 → seat 1, 82→75
+        // turns, 3966→3458 actions.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 54, 2487),
-            (43, Some(0), 74, 3801),
-            (4242, Some(0), 82, 3966),
+            (43, Some(0), 48, 2205),
+            (4242, Some(1), 75, 3458),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

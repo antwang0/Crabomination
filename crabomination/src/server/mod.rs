@@ -110,6 +110,7 @@ mod regenerate;
 mod counter_sink;
 mod modal_wipe;
 mod combat_grant;
+mod cantrip_rock;
 mod end_step_ping;
 mod graveyard_hate;
 mod pre_combat_tap;

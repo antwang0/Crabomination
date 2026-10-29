@@ -4041,6 +4041,7 @@ impl HeuristicBot {
                         .or_else(|| super::end_step_ping::pick_end_step_ping(state, seat))
                         .or_else(|| super::graveyard_hate::pick_graveyard_hate(state, seat))
                         .or_else(|| super::land_ramp::pick_land_ramp(state, seat))
+                        .or_else(|| super::cantrip_rock::pick_cantrip_rock(state, seat))
                         .or_else(|| super::generic_sink::pick_generic_ability(state, seat, &self.weights))
                         .or_else(|| super::channel::pick_hand_ability(state, seat, &self.weights))
                 {
