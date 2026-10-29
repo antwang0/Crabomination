@@ -86,11 +86,18 @@ impl GameState {
                         .filter(|c| c.controller == p && self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
                         .map(|c| Target::Permanent(c.id)),
                 );
+                // … or a battle that defending player protects (CR 508.4).
+                legal.extend(
+                    self.battlefield
+                        .iter()
+                        .filter(|c| c.protected_by == Some(p) && self.computed_has_card_type(c, crate::card::CardType::Battle))
+                        .map(|c| Target::Permanent(c.id)),
+                );
             }
             let default = match source_target {
                 Some(AttackTarget::Player(p)) => Some(Target::Player(p)),
-                Some(AttackTarget::Planeswalker(pw)) => Some(Target::Permanent(pw)),
-                _ => None,
+                Some(AttackTarget::Planeswalker(pw) | AttackTarget::Battle(pw)) => Some(Target::Permanent(pw)),
+                None => None,
             }
             .filter(|t| legal.contains(t))
             .or_else(|| legal.first().cloned());
@@ -121,6 +128,9 @@ impl GameState {
             };
             let target = match pick {
                 Target::Player(p) => AttackTarget::Player(p),
+                Target::Permanent(b) if self.battlefield_find(b).is_some_and(|c| c.protected_by.is_some()) => {
+                    AttackTarget::Battle(b)
+                }
                 Target::Permanent(pw) => AttackTarget::Planeswalker(pw),
             };
             picks.push((id, target));

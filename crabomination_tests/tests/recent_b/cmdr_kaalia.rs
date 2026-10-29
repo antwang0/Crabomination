@@ -1,6 +1,6 @@
 //! Commander: the Heavenly Inferno precon (CMD, Kaalia, `decks::cmdr_kaalia`).
 
-use crabomination::card::{CardId, Keyword};
+use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
@@ -247,6 +247,23 @@ fn cr_508_4_a_deployed_attacker_attacks_the_chosen_defender_unless_pinned() {
     ]));
     attack(&mut g, kaalia, 2);
     assert!(g.attacking.iter().any(|x| x.attacker == angel && x.target == AttackTarget::Player(2)));
+
+    // … or a battle a defending player protects: your own Siege, seat 1's.
+    let mut g = pod(3);
+    let ilharg = g.add_card_to_battlefield(0, catalog::ilharg_the_raze_boar());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let battle = g.add_card_to_battlefield(0, catalog::invasion_of_zendikar());
+    {
+        let b = g.battlefield_find_mut(battle).unwrap();
+        b.counters.insert(CounterType::Defense, 3);
+        b.protected_by = Some(1);
+    }
+    g.decider = Box::new(ScriptedDecider::new([
+        DecisionAnswer::Cards(vec![bears]),
+        DecisionAnswer::Target(Target::Permanent(battle)),
+    ]));
+    attack(&mut g, ilharg, 2);
+    assert!(g.attacking.iter().any(|x| x.attacker == bears && x.target == AttackTarget::Battle(battle)));
 }
 
 /// Kaalia's trigger is "whenever Kaalia attacks an opponent": attacking a
