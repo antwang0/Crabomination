@@ -1429,6 +1429,22 @@ fn cr_302_6_hybrid_pips_do_not_count_a_summoning_sick_producer() {
         .expect("Forest + Plains + Plains pay {1}{G/W}{G/W}");
 }
 
+/// CR 107.4e — a hybrid pip beside a fixed pip of one of its colours: the
+/// fixed {B} has the only Swamp, so {B/G} must take a Forest. The hybrid
+/// pass used to count the Swamp as still free and reserve it twice.
+#[test]
+fn cr_107_4e_a_hybrid_pip_does_not_reuse_a_fixed_pips_source() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::swamp());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let scholar = g.add_card_to_hand(0, catalog::essenceknit_scholar());
+    g.perform_action(GameAction::CastSpell { card_id: scholar, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("Swamp + Forest + Forest pay {B}{B/G}{G}");
+}
+
 /// CR 302.6 — a stolen creature is summoning-sick under its new controller.
 #[test]
 fn cr_302_6_gain_control_sets_summoning_sickness() {

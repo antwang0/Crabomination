@@ -23,6 +23,16 @@ impl GameState {
         };
         let mut seen: Vec<&Target> = Vec::new();
         for t in target.into_iter().chain(extra.iter()) {
+            // CR 109.2: "a spell that targets a creature" means a creature on
+            // the battlefield — a creature card in a graveyard is a card.
+            // Glorious Decay exiling one fed Repartee (SOS spot check,
+            // 2026-10-29). A filter that names another zone keeps it.
+            if let Target::Permanent(id) = t
+                && self.battlefield_find(*id).is_none()
+                && !filter.mentions_offboard_zone()
+            {
+                continue;
+            }
             if !seen.contains(&t) && self.evaluate_requirement_static(filter, t, ctx.controller, ctx.source) {
                 seen.push(t);
             }

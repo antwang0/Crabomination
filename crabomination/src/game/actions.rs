@@ -20147,6 +20147,15 @@ impl GameState {
             for c in ManaColor::ALL {
                 prod[color_index(c)] = self.untapped_producers_of(player, c);
             }
+            // The fixed-colour pips already reserved their sources: {B}{B/G}{G}
+            // off a Swamp and two Forests has no spare black, so the hybrid
+            // is forced green. Counted as free, the Swamp was reserved twice
+            // and the cast failed (Essenceknit Scholar, never castable off
+            // one black source in an SOS spot check, 2026-10-29).
+            for c in &still_need_colors {
+                let p = &mut prod[color_index(*c)];
+                *p = p.saturating_sub(1);
+            }
             while !hybrids.is_empty() {
                 let idx = hybrids
                     .iter()

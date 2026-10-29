@@ -56,6 +56,30 @@ fn graduation_day_does_not_fire_when_targeting_player() {
     );
 }
 
+/// CR 109.2 — a creature card in a graveyard is not a creature: Glorious
+/// Decay exiling one is no Repartee trigger (an SOS spot check, 2026-10-29,
+/// saw it pump Inkshape Demonstrator).
+#[test]
+fn repartee_ignores_a_creature_card_in_a_graveyard() {
+    let mut g = two_player_game();
+    let _gd = g.add_card_to_battlefield(0, catalog::graduation_day());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let decay = g.add_card_to_hand(0, catalog::glorious_decay());
+    g.add_card_to_library(0, catalog::forest()); // its draw
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: decay, target: Some(Target::Permanent(dead)),
+        additional_targets: vec![],
+        mode: Some(2), x_value: None,
+    })
+    .expect("Glorious Decay castable on a graveyard card");
+    drain_stack(&mut g);
+    assert!(g.players[1].graveyard.iter().all(|c| c.id != dead), "the card was exiled");
+    let unpumped = g.battlefield.iter().find(|c| c.id == bear).unwrap();
+    assert_eq!(unpumped.counter_count(CounterType::PlusOnePlusOne), 0, "no Repartee off a graveyard card");
+}
+
 // ── Stirring Hopesinger Repartee improvement ───────────────────────────────
 
 #[test]
