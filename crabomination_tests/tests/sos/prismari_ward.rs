@@ -1717,6 +1717,39 @@ fn ark_of_hunger_mill_activation_grants_may_play() {
     assert!(milled.may_play_until.is_some(), "milled card may-play granted");
 }
 
+/// Ark of Hunger's "you may play that card this turn" keeps the card's own
+/// timing (CR 117.1a): a milled instant casts in the upkeep, and a milled land
+/// is played as the turn's land drop (CR 305.1), not cast.
+#[test]
+fn ark_of_hunger_plays_the_milled_card_with_its_own_timing() {
+    let mut g = two_player_game();
+    let ark_id = g.add_card_to_battlefield(0, catalog::ark_of_hunger());
+    let bolt = g.add_card_to_library(0, catalog::lightning_bolt());
+    g.step = TurnStep::Upkeep;
+    let mill = GameAction::ActivateAbility {
+        card_id: ark_id, ability_index: 0, target: None, additional_targets: Vec::new(), x_value: None, mode: None };
+    g.perform_action(mill.clone()).expect("Ark mill activation");
+    drain_stack(&mut g);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bolt, target: Some(Target::Player(1)), additional_targets: vec![], mode: None, x_value: None,
+    }).expect("an instant milled in the upkeep casts there");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 16, "Bolt's 3, plus Ark's 1 as the Bolt left the graveyard");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "the bolt's own {{R}} was paid");
+
+    for c in g.battlefield.iter_mut().filter(|c| c.id == ark_id) {
+        c.tapped = false;
+    }
+    let land = g.add_card_to_library(0, catalog::mountain());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(mill).expect("Ark mill activation");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::PlayLandFromGraveyard(land)).expect("a milled land is played");
+    assert!(g.battlefield.iter().any(|c| c.id == land));
+    assert_eq!(g.players[0].lands_played_this_turn, 1, "it used the land drop");
+}
+
 #[test]
 fn improvisation_capstone_exiles_four_cards_and_registers_paradigm() {
     let mut g = two_player_game();

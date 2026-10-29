@@ -375,9 +375,8 @@ pub fn resonating_lute() -> CardDefinition {
 /// turn" rider is **now wired** via `Effect::GrantMayPlay` +
 /// `Selector::LastMoved`. Printed text is a normal play, so the
 /// permission carries `pay_own_cost: true` — the controller pays the
-/// milled card's real cost to play it. Approximation: the play happens
-/// at a sorcery-speed window (no instant-speed instants, no land plays
-/// through this path).
+/// milled card's real cost to play it, at the card's own timing (a land
+/// is played as the land drop).
 pub fn ark_of_hunger() -> CardDefinition {
     use crate::mana::{r, w};
     CardDefinition {
