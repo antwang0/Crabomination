@@ -520,9 +520,25 @@ pub enum BattleSubtype {
     Siege,
 }
 
-/// Planeswalker subtypes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum PlaneswalkerSubtype {
+/// Declares [`PlaneswalkerSubtype`] and its [`PlaneswalkerSubtype::ALL`] list
+/// from one variant list, so the two can't drift.
+macro_rules! planeswalker_subtypes {
+    ($($v:ident),* $(,)?) => {
+        /// Planeswalker subtypes.
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+        pub enum PlaneswalkerSubtype {
+            $($v),*
+        }
+
+        impl PlaneswalkerSubtype {
+            /// Every planeswalker type, in declaration order — "choose a
+            /// planeswalker type" (Deification) may name any of them.
+            pub const ALL: &'static [PlaneswalkerSubtype] = &[$(PlaneswalkerSubtype::$v),*];
+        }
+    };
+}
+
+planeswalker_subtypes! {
     Chandra, Jace, Liliana, Ajani, Garruk, Elspeth, Gideon, Nissa, Sorin,
     Teferi, Karn, Ugin, Bolas, Ashiok, Nahiri, Vraska, Domri, Ral, Vivien,
     Tezzeret, Oko, Quintorius,

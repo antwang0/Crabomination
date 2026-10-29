@@ -2184,7 +2184,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Goblin Plate Mail | "attach this Equipment to the amassed Army" attaches to the first Army you control, which is the amassed one unless you control two | `Amass` + `Attach { EachPermanent(Army) }` |
 | 🟡 Titania, Rugged Rumbler | Ward's "discard a card or pay {2}" auto-pays the mana when it can (no menu); the discard is the hand's first card | `WardCost::ManaOrDiscard` |
 | 🟡 Norritt | "controlled continuously since the beginning of the turn" reads "didn't enter this turn" (a creature that changed control this turn qualifies) | `R::Not(EnteredThisTurn)` + `DelayUntilWithCapture` |
-| 🟡 Deification | the planeswalker-type ballot offers only the types among cards its controller owns (a seat owning none names nothing) | `Effect::NamePlaneswalkerType` |
 | 🟡 Chandra's Embercat | its {R} pays for Elemental spells only; "or a Chandra planeswalker spell" has no `SpendRestriction` | `SpendRestriction::CreatureOfType(Elemental)` |
 | 🟡 Thelon of Havenwood | "each Fungus creature gets +1/+1 per spore counter" pumps only the Fungi its controller controls (`PumpTeamByControlledPermanents` is you-scoped) | `per_own_counter: Some(Spore)` |
 | 🟡 The Ruinous Wrecking Crew | the up-to-X modes are chosen as the trigger resolves (CR 700.2b chooses them as it is put on the stack), so a target is named for every targeted mode up front | `ChooseN { up_to: Some(XFromCost) }` |

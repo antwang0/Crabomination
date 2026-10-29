@@ -33,9 +33,9 @@ impl GameState {
         tally.into_iter().map(|(t, _)| t).collect()
     }
 
-    /// `Effect::NamePlaneswalkerType` — the controller picks from the types
-    /// they own (a seat with none names nothing); the pick is stamped on the
-    /// entering permanent.
+    /// `Effect::NamePlaneswalkerType` — the controller names any planeswalker
+    /// type, the ones they own offered first (most-held leads); the pick is
+    /// stamped on the entering permanent.
     pub(crate) fn name_planeswalker_type(&mut self, what: &Selector, ctx: &EffectContext, effect: &Effect) {
         let Some(id) = self
             .resolve_selector(what, ctx)
@@ -48,10 +48,8 @@ impl GameState {
         else {
             return;
         };
-        let types = self.owned_planeswalker_types(ctx.controller);
-        if types.is_empty() {
-            return;
-        }
+        let mut types = self.owned_planeswalker_types(ctx.controller);
+        types.extend(PlaneswalkerSubtype::ALL.iter().filter(|t| !types.contains(t)).collect::<Vec<_>>());
         let labels = types.iter().map(|t| format!("{t:?}")).collect();
         let mut cursor = 0;
         let Some(i) =

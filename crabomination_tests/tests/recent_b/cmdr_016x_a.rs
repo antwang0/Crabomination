@@ -347,6 +347,20 @@ fn deification_leaves_the_chosen_walker_at_one_loyalty() {
     }
 }
 
+/// "Choose a planeswalker type" may name any type, not only one its
+/// controller owns: a seat with no walker still names one (Jace, picked).
+#[test]
+fn deification_names_any_planeswalker_type() {
+    use crabomination::card::PlaneswalkerSubtype;
+    let mut g = pod(2);
+    let d = g.add_card_to_hand(0, catalog::deification());
+    flood(&mut g, 0);
+    let jace = PlaneswalkerSubtype::ALL.iter().position(|t| *t == PlaneswalkerSubtype::Jace).unwrap();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Amount(jace as u32)]));
+    cast(&mut g, d, None).expect("deification");
+    assert_eq!(g.battlefield_find(d).unwrap().chosen_planeswalker_type, Some(PlaneswalkerSubtype::Jace));
+}
+
 // ── Tomik, Orzhov Lawmage / Tobias Andrion ──────────────────────────────────
 
 /// Way of the Healer empowers Jace 5, and that Jace has the granted [−2]:
