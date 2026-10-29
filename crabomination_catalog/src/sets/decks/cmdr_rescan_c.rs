@@ -941,9 +941,8 @@ pub fn baron_helmut_zemo() -> CardDefinition {
 /// put +1/+1 counters on Blaster, convert it. Back: legendary artifact with
 /// modular 3 and "{X}, {T}: move X +1/+1 counters from Blaster onto another
 /// target artifact; it gains haste; with no counters left, convert Blaster"
-/// (sorcery speed). Approximation: the granted modular's death trigger is the
-/// creature one, so a Vehicle that isn't a creature when it dies doesn't move
-/// its counters. (Balthier and Fran.)
+/// (sorcery speed). The granted modular is "put into a graveyard", so an
+/// uncrewed Vehicle moves its counters too (CR 702.43a). (Balthier and Fran.)
 pub fn blaster_combat_dj() -> CardDefinition {
     use crate::card::{AlternativeCost, ArtifactSubtype};
     use crate::mana::{g, x};
@@ -1015,7 +1014,10 @@ pub fn blaster_combat_dj() -> CardDefinition {
                 description: "(Modular 1: when they die, their +1/+1 counters may move to an artifact creature.)",
                 effect: StaticEffect::GrantTriggeredAbility {
                     filter: granted.clone(),
-                    ability: Box::new(crate::effect::shortcut::modular_dies()),
+                    ability: Box::new(TriggeredAbility {
+                        event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+                        ..crate::effect::shortcut::modular_dies()
+                    }),
                 },
             },
             StaticAbility {

@@ -1331,6 +1331,29 @@ fn blaster_grants_modular_and_converts_on_counters() {
     assert_eq!(g.battlefield_find(blaster).unwrap().definition.name, "Blaster, Morale Booster");
 }
 
+/// CR 702.43a — the modular Blaster grants is "put into a graveyard from the
+/// battlefield": an uncrewed Vehicle (not a creature) moves its counter too.
+#[test]
+fn cr_702_43a_blaster_modular_moves_an_uncrewed_vehicles_counter() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let blaster = ready(&mut g, 0, catalog::blaster_combat_dj());
+    let copter = g.add_card_to_hand(0, catalog::smugglers_copter());
+    cast_with(&mut g, copter, None, vec![], None);
+    assert_eq!(plus(&g, copter), 1, "entered with modular 1's counter");
+    let thopter = ready(&mut g, 0, catalog::ornithopter());
+    let before = plus(&g, thopter) + plus(&g, blaster);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = EffectContext::for_ability(copter, 0, Some(Target::Permanent(copter)));
+    let evs = g
+        .resolve_effect(&crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) }, &ctx)
+        .expect("destroy");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(copter).is_none());
+    assert_eq!(plus(&g, thopter) + plus(&g, blaster), before + 1, "the Vehicle's counter moved");
+}
+
 /// CR 702.15 — Firesong gives red instants and sorceries lifelink; a red
 /// spell's lifelink gain isn't a white spell's, so the 3-damage trigger stays
 /// quiet.
