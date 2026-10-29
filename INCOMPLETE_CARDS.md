@@ -2125,7 +2125,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Doctor Jane Foster~~ ✅ | fixed 2026-10-27: with life gained this turn the card moves graveyard → battlefield in one move (`If` picks the destination) | — |
 | 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |
 | 🟡 Sensation Gorger | the top card is checked before you choose to look; a non-sharing top card is never offered | `If` over `SharesCreatureTypeWithSource`, then `MayDo` |
-| 🟡 Hydro-Man, Fluid Felon | the "{T}: Add {U}" he gains as a land is printed on the card, live only while he is a land, so he "has" a mana ability as a creature too (ability counts, Humility) | `ActivatedAbility::condition` (`This` is a Land) |
 | 🟡 Flying Drone | "costs {1}{U} less to activate if …" is two abilities: the full-price loot gated off the condition and a free one gated on it | two `ActivatedAbility::condition` arms |
 | 🟡 Lightmine Field | "each of those creatures" / "the number of attacking creatures" read every attacker as the trigger resolves, not the declaration that triggered it | `YouAttack` + `IsAttacking` |
 | 🟡 Pick Up the Pace | "cards exiled with this enchantment" stay playable after the enchantment leaves (the permission is not tied to it, like Neyali's) | `ExileTopAndGrantMayPlay { TurnsHolderAttacks }` |

@@ -307,9 +307,11 @@ fn hydro_man_is_a_land_until_your_next_turn() {
     step_to(&mut g, 0, TurnStep::PreCombatMain);
     assert!(is_type(&g, hydro, CardType::Creature));
     assert!(!is_type(&g, hydro, CardType::Land));
+    // CR 611.2c — the gained "{T}: Add {U}" ends with the land-ness.
+    assert!(g.battlefield_find(hydro).unwrap().granted_activated_abilities.is_empty(), "the gained ability is gone");
 }
 
-/// Hydro-Man's mana ability is dead while he is a creature.
+/// Hydro-Man has no mana ability as a creature: it is gained with the land-ness.
 #[test]
 fn hydro_man_cannot_tap_for_mana_as_a_creature() {
     let mut g = pod(2);

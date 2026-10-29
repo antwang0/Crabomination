@@ -9,7 +9,7 @@ use crate::card::{
     TriggeredAbility, Value,
 };
 use crate::effect::shortcut::{add_colorless, add_mana, draw, lose_life, mint_token, target_filtered};
-use crate::effect::{Duration, Effect, PlayerRef, Selector};
+use crate::effect::{DelayedTriggerKind, Duration, Effect, PlayerRef, Selector};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, r, u, w};
 
@@ -403,17 +403,11 @@ pub fn weather_maker() -> CardDefinition {
 /// you cast a blue spell, if he's a creature, +1/+1 until end of turn. At the
 /// beginning of your end step, untap him; until your next turn he becomes a
 /// land with "{T}: Add {U}" and isn't a creature. (The Blue Spirit,
-/// Hydro-Man, Blue Marvel.) The granted mana ability is printed here, live
-/// only while he is a land.
+/// Hydro-Man, Blue Marvel.)
 pub fn hydro_man_fluid_felon() -> CardDefinition {
     let this_is = |filter| Predicate::EntityMatches { what: Selector::This, filter };
+    let tap_blue = ActivatedAbility { tap_cost: true, effect: add_mana(vec![Color::Blue]), ..Default::default() };
     CardDefinition {
-        activated_abilities: vec![ActivatedAbility {
-            tap_cost: true,
-            effect: add_mana(vec![Color::Blue]),
-            condition: Some(this_is(R::Land)),
-            ..Default::default()
-        }],
         triggered_abilities: vec![
             TriggeredAbility {
                 event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
@@ -440,6 +434,21 @@ pub fn hydro_man_fluid_felon() -> CardDefinition {
                         what: Selector::This,
                         card_types: vec![CardType::Land],
                         duration: Duration::UntilNextTurn,
+                    },
+                    // CR 611.2c — the gained ability is his until your next
+                    // turn; your next upkeep is the first point a delayed
+                    // trigger reaches (Song of Freyalise's shape).
+                    Effect::GrantActivatedAbilityToMatching {
+                        filter: R::IsSource,
+                        ability: Box::new(tap_blue.clone()),
+                        duration: Duration::Permanent,
+                    },
+                    Effect::DelayUntil {
+                        kind: DelayedTriggerKind::YourNextUpkeep,
+                        body: Box::new(Effect::RevokeGrantedActivatedAbility {
+                            filter: R::IsSource,
+                            ability: Box::new(tap_blue),
+                        }),
                     },
                 ]),
             },
