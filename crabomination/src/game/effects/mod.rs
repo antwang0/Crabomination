@@ -24985,11 +24985,11 @@ impl GameState {
                 };
                 let runaway = |id: CardId| {
                     self.battlefield_find(id).is_some_and(|c| {
-                        (self.token_doublers_for(p).saturating_add(made) >= crate::recommend::TOKEN_DOUBLER_CEILING
-                            && c.definition
-                                .static_abilities
-                                .iter()
-                                .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::DoubleTokens)))
+                        (Self::token_multiplier_weight(c) > 0
+                            && self
+                                .token_doubling_equivalents(p)
+                                .saturating_add(made.saturating_mul(Self::token_multiplier_weight(c)))
+                                >= crate::recommend::TOKEN_DOUBLER_CEILING)
                             || (populates(c)
                                 && self
                                     .battlefield

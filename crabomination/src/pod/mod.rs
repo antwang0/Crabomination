@@ -37534,35 +37534,49 @@ impl RepeatGuard {
 /// [`crate::recommend::TOKEN_DOUBLER_CEILING`], the pod loop's name for it.
 const POD_TOKEN_DOUBLER_CEILING: u32 = crate::recommend::TOKEN_DOUBLER_CEILING;
 
-/// An activation the bot picked that would carry the battlefield past the
-/// board gate — its tokens under the seat's doublers (CR 614.13), or token
-/// copies of a doubler that take the seat to [`POD_TOKEN_DOUBLER_CEILING`]
-/// doublings. Romana II copying a token Mondrak, Glory Dominus each turn ran
-/// an eight-seat pod to 901 Mondraks and the board cap (seed 990872, game 5).
+/// An activation or cast the bot picked that would carry the battlefield past
+/// the board gate — its tokens under the seat's doublers (CR 614.13), or token
+/// copies of a doubler or tripler that take the seat to
+/// [`POD_TOKEN_DOUBLER_CEILING`] doublings. Romana II copying a token Mondrak,
+/// Glory Dominus each turn ran an eight-seat pod to 901 Mondraks (seed 990872,
+/// game 5); Quantum Misalignment copying Ojer Taq under Anointed Procession made
+/// six triplers, and the rebound's next copy 1,458 Lorans (seed 2811128).
 /// The loop plays a pass instead; mana abilities are never gated.
 fn token_blowup(g: &GameState, seat: usize, action: &crate::game::GameAction) -> bool {
-    use crate::effect::{Effect, StaticEffect};
-    let crate::game::GameAction::ActivateAbility { card_id, ability_index, target, .. } = action else {
-        return false;
+    use crate::effect::Effect;
+    use crate::game::GameAction;
+    let (card_id, target, effect) = match action {
+        GameAction::ActivateAbility { card_id, ability_index, target, .. } => {
+            let Some(ab) = g.battlefield_find(*card_id).and_then(|c| c.definition.activated_abilities.get(*ability_index))
+            else {
+                return false;
+            };
+            (*card_id, target, &ab.effect)
+        }
+        GameAction::CastSpell { card_id, target, .. } => {
+            let Some(c) = g.players.get(seat).and_then(|p| p.hand.iter().find(|c| c.id == *card_id)) else {
+                return false;
+            };
+            (*card_id, target, &c.definition.effect)
+        }
+        _ => return false,
     };
-    let Some(ab) = g.battlefield_find(*card_id).and_then(|c| c.definition.activated_abilities.get(*ability_index))
-    else {
-        return false;
-    };
-    if !ab.effect.any_nested(&|e| matches!(e, Effect::CreateToken { .. } | Effect::CreateTokenCopyOf { .. })) {
+    if !effect.any_nested(&|e| matches!(e, Effect::CreateToken { .. } | Effect::CreateTokenCopyOf { .. })) {
         return false;
     }
-    let mut ctx = crate::game::effects::EffectContext::for_ability(*card_id, seat, target.clone());
-    ctx.source = Some(*card_id);
-    let made = g.effect_token_estimate(&ab.effect, &ctx);
+    let mut ctx = crate::game::effects::EffectContext::for_ability(card_id, seat, target.clone());
+    ctx.source = Some(card_id);
+    let made = g.effect_token_estimate(effect, &ctx);
     if g.battlefield.len() as i64 + made > crate::recommend::BOARD_GATE as i64 {
         return true;
     }
-    let copies_doubler = matches!(target, Some(crate::game::Target::Permanent(t)) if g
-        .battlefield_find(*t)
-        .is_some_and(|c| c.definition.static_abilities.iter().any(|sa| matches!(sa.effect, StaticEffect::DoubleTokens))))
-        && ab.effect.any_nested(&|e| matches!(e, Effect::CreateTokenCopyOf { .. }));
-    copies_doubler && i64::from(g.token_doublers_for(seat)) + made >= i64::from(POD_TOKEN_DOUBLER_CEILING)
+    let weight = match target {
+        Some(crate::game::Target::Permanent(t)) => g.battlefield_find(*t).map_or(0, GameState::token_multiplier_weight),
+        _ => 0,
+    };
+    weight > 0
+        && effect.any_nested(&|e| matches!(e, Effect::CreateTokenCopyOf { .. }))
+        && i64::from(g.token_doubling_equivalents(seat)) + made * i64::from(weight) >= i64::from(POD_TOKEN_DOUBLER_CEILING)
 }
 
 /// `CRAB_POD_TRACE=<n>`: from action `n` on, every accepted action of a pod
@@ -45710,6 +45724,27 @@ mod tests {
             g.add_card_to_battlefield(0, crate::catalog::mondrak_glory_dominus());
         }
         assert!(token_blowup(&g, 0, &act), "nine doublers: 512 more");
+    }
+
+    /// CR 614.13 / 616.1 — a tripler counts too, and a spell is gated like an
+    /// activation: Quantum Misalignment copying Ojer Taq under Anointed
+    /// Procession is six more triplers (seed 2811128 board-capped at 1,458
+    /// Lorans two turns later); with no doubler beside it, the copy is three.
+    #[test]
+    fn cr_614_13_a_tripler_copy_spell_past_the_ceiling_is_passed() {
+        let mut g = crate::game::multi_player_game(4);
+        let ojer = g.add_card_to_battlefield(0, crate::catalog::ojer_taq_deepest_foundation());
+        let qm = g.add_card_to_hand(0, crate::catalog::quantum_misalignment());
+        let act = crate::game::GameAction::CastSpell {
+            card_id: qm,
+            target: Some(crate::game::Target::Permanent(ojer)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        assert!(!token_blowup(&g, 0, &act), "one tripler: 2 + 3 x 2 = 8 doublings");
+        g.add_card_to_battlefield(0, crate::catalog::anointed_procession());
+        assert!(token_blowup(&g, 0, &act), "tripler + doubler: 3 + 6 x 2 = 15 doublings");
     }
 
     #[test]

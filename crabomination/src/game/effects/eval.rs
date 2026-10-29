@@ -352,12 +352,19 @@ impl GameState {
     pub(crate) fn effect_token_estimate(&self, e: &crate::effect::Effect, ctx: &EffectContext) -> i64 {
         use crate::effect::Effect;
         match e {
-            Effect::CreateToken { count, .. }
-            | Effect::CreateTokenCopyOf { count, .. }
-            | Effect::CreateTokenAttacking { count, .. } => {
+            Effect::CreateToken { count, definition, .. } | Effect::CreateTokenAttacking { count, definition, .. } => {
                 let n = self.evaluate_value(count, ctx).max(0) as u32;
+                let creature = definition.card_types.contains(&crate::card::CardType::Creature);
                 // A Mondrak board turned one Romana II copy into 901 tokens.
-                i64::from(if n == 0 { 0 } else { self.doubled_token_count(ctx.controller, n) })
+                i64::from(if n == 0 { 0 } else { self.scaled_token_count(ctx.controller, n, creature) })
+            }
+            Effect::CreateTokenCopyOf { count, source, .. } => {
+                let n = self.evaluate_value(count, ctx).max(0) as u32;
+                // A copy of a creature is a creature token: Ojer Taq triples it.
+                let creature = self.resolve_selector(source, ctx).iter().any(|e| {
+                    e.as_card_id().and_then(|id| self.battlefield_find(id)).is_some_and(|c| self.computed_is_creature(c))
+                });
+                i64::from(if n == 0 { 0 } else { self.scaled_token_count(ctx.controller, n, creature) })
             }
             Effect::Populate { .. } => 1,
             Effect::MayDo { body, .. } => self.effect_token_estimate(body, ctx),
@@ -390,14 +397,14 @@ impl GameState {
                         made *= 2;
                     }
                     total = (total + made).min(cap);
-                    let doubles = matches!(t, crate::game::types::Target::Permanent(id) if self
-                        .battlefield_find(*id)
-                        .is_some_and(|c| c.definition.static_abilities.iter().any(|sa| matches!(
-                            sa.effect,
-                            crate::effect::StaticEffect::DoubleTokens | crate::effect::StaticEffect::DoubleTokensEveryone
-                        ))));
-                    if doubles && body.any_nested(&|e| matches!(e, Effect::CreateTokenCopyOf { .. })) {
-                        extra = extra.saturating_add(made.min(64) as u32);
+                    let weight = match t {
+                        crate::game::types::Target::Permanent(id) => {
+                            self.battlefield_find(*id).map_or(0, GameState::token_multiplier_weight)
+                        }
+                        _ => 0,
+                    };
+                    if weight > 0 && body.any_nested(&|e| matches!(e, Effect::CreateTokenCopyOf { .. })) {
+                        extra = extra.saturating_add((made.min(64) as u32).saturating_mul(weight));
                     }
                 }
                 total

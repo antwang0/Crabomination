@@ -8206,6 +8206,28 @@ impl GameState {
         n.min(cap)
     }
 
+    /// `seat`'s token multipliers in doublings: a doubler is one, a creature
+    /// tripler two (3 > 2^1.58, rounded up so the runaway gates stay safe).
+    pub fn token_doubling_equivalents(&self, seat: usize) -> u32 {
+        self.token_doublers_for(seat).saturating_add(2 * self.creature_token_triplers_for(seat))
+    }
+
+    /// Doublings one more copy of `c` adds to its controller's token
+    /// multipliers ([`Self::token_doubling_equivalents`]'s weights); 0 when
+    /// `c` multiplies no tokens.
+    pub fn token_multiplier_weight(c: &CardInstance) -> u32 {
+        use crate::effect::StaticEffect;
+        c.definition
+            .static_abilities
+            .iter()
+            .map(|sa| match sa.effect {
+                StaticEffect::DoubleTokens | StaticEffect::DoubleTokensEveryone => 1,
+                StaticEffect::TripleCreatureTokens => 2,
+                _ => 0,
+            })
+            .sum()
+    }
+
     /// Number of `StaticEffect::TripleCreatureTokens` permanents `seat`
     /// controls (Ojer Taq).
     pub fn creature_token_triplers_for(&self, seat: usize) -> u32 {
