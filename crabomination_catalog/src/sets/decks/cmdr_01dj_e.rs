@@ -335,7 +335,7 @@ pub fn goblin_plate_mail() -> CardDefinition {
             amass(Value::ONE),
             Effect::Attach {
                 what: Selector::This,
-                to: Selector::EachPermanent(mine().and(R::HasCreatureType(CreatureType::Army))),
+                to: Selector::AmassedArmy,
             },
         ]))],
         ..Default::default()

@@ -221,10 +221,7 @@ pub fn grishnakh_brash_instigator() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             amass(Value::Const(2)),
             Effect::WithX {
-                // Your Army (you control at most one once amass has run).
-                x: Value::PowerOf(Box::new(Selector::EachPermanent(
-                    R::HasCreatureType(CreatureType::Army).and(R::ControlledByYou),
-                ))),
+                x: Value::PowerOf(Box::new(Selector::AmassedArmy)),
                 body: Box::new(Effect::Reflexive {
                     body: Box::new(Effect::ApplyToTargets {
                         max_targets: 1,

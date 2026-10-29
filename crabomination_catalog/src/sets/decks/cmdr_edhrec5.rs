@@ -1308,9 +1308,9 @@ fn amass_goblins(count: Value) -> Effect {
     Effect::Amass { who: PlayerRef::You, count, extra_type: Some(CreatureType::Goblin) }
 }
 
-/// The amassed Army: the one a player normally controls.
+/// The amassed Army's power (CR 701.47c).
 fn army_power() -> Value {
-    Value::PowerOf(Box::new(Selector::GreatestPowerControlledMatching(R::HasCreatureType(CreatureType::Army))))
+    Value::PowerOf(Box::new(Selector::AmassedArmy))
 }
 
 fn team_eot(keyword: Keyword) -> Effect {

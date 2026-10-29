@@ -4138,7 +4138,7 @@ pub fn widespread_brutality() -> CardDefinition {
                 extra_type: Some(CreatureType::Zombie),
             },
             Effect::DealDamageEqualToPowerToEach {
-                source: Selector::EachPermanent(army().and(R::ControlledByYou)),
+                source: Selector::AmassedArmy,
                 targets: Selector::EachPermanent(R::Creature.and(army().negate())),
                 each_opponent: false,
             },

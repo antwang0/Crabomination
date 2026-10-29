@@ -1273,6 +1273,25 @@ fn goblin_amass_pair_and_plate_mail() {
     assert!(cp.keywords().contains(&Keyword::Menace));
 }
 
+/// CR 701.47a / 701.47c — amassing Goblins onto an Orc Army makes it a Goblin
+/// too, and Goblin Plate Mail attaches to that amassed Army.
+#[test]
+fn cr_701_47a_amass_adds_its_subtype_to_an_existing_army() {
+    use crabomination::card::CreatureType;
+    let mut g = pod(2);
+    let muster = g.add_card_to_hand(0, catalog::mordor_muster());
+    g.add_card_to_library(0, catalog::island());
+    cast_targets(&mut g, muster, &[]);
+    let a = army(&g, 0).expect("an Orc Army");
+    let mail = g.add_card_to_hand(0, catalog::goblin_plate_mail());
+    cast_targets(&mut g, mail, &[]);
+    assert_eq!(plus(&g, a), 2, "the same Army got the second counter");
+    let cp = g.computed_permanent(a).unwrap();
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Goblin), "it's also a Goblin now");
+    assert!(cp.subtypes().creature_types.contains(&CreatureType::Orc), "and still an Orc");
+    assert_eq!(g.battlefield_find(mail).unwrap().attached_to, Some(a));
+}
+
 /// Gathering of Darkness returns a creature card and amasses Goblins 3.
 #[test]
 fn gathering_of_darkness_returns_and_amasses() {

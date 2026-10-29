@@ -2125,7 +2125,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Pick Up the Pace | "cards exiled with this enchantment" stay playable after the enchantment leaves (the permission is not tied to it, like Neyali's) | `ExileTopAndGrantMayPlay { TurnsHolderAttacks }` |
 | 🟡 Volcano Hellion | "an amount of damage of your choice" is offered up to the target creature's toughness, not without limit | `PlayerChoosesNumber { max: ToughnessOf(Target(0)) }` |
 | 🟡 Hawkeye, Master Marksman | modes are chosen as the trigger resolves and each targeted mode is its own reflexive trigger | `MayPayGenericUpTo` + `ChooseUpToN` + `Reflexive` |
-| 🟡 Zareth San, the Trickster | the returned unblocked Rogue is auto-picked; `IsUnblocked` also holds in the declare-attackers step, before blocks | from-hand `bounce_other_filter` + `JoinCombatAttackingChosen` |
+| 🟡 Zareth San, the Trickster | the returned unblocked Rogue is auto-picked | from-hand `bounce_other_filter` + `JoinCombatAttackingChosen` |
 | 🟡 Hew the Entwood | chosen cards enter one at a time in pick order (not all nonlands, then all lands); the bot sacrifices no lands | `SacrificeAnyNumber` + `LookPick` |
 | 🟡 Blaster, Combat DJ | the granted modular's death trigger is the creature one, so a Vehicle that isn't a creature when it dies keeps its counters | three statics + `modular_dies` |
 | ~~Baron Helmut Zemo~~ ✅ | fixed 2026-10-28: a manual seat names the boast's exiled set, and the controller picks which copies (up to three) to cast | — |
@@ -2174,7 +2174,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Nathan Drake, Treasure Hunter | "spend mana as though any color" covers only the spell his attack casts (and that one only when you do not own it), not other unowned spells or abilities of permanents you control but do not own; the cast takes the first eligible exiled card, an unowned one first | `CastImmediateAnyManaType` / `CastWithoutPayingImmediate` |
 | 🟡 Kotose, the Silent Spider | "you may play one of the exiled cards" is one a turn while Kotose stays (`WhileSourceOnBattlefield { one_spell_a_turn }`), not exactly one ever; lands among them stay playable beside it | `GrantMayPlay` over the swept `LastMoved` |
 | 🟡 Soundwave, Sonic Spy | the instant or sorcery card is chosen as the trigger resolves (`MoveChosen` from the damaged player's graveyard), not targeted as it triggers | `MoveChosen` + `CastWithoutPayingImmediate { copy }` + `CastImmediatelyThisResolution` |
-| 🟡 Goblin Plate Mail | "attach this Equipment to the amassed Army" attaches to the first Army you control, which is the amassed one unless you control two | `Amass` + `Attach { EachPermanent(Army) }` |
 | 🟡 Titania, Rugged Rumbler | Ward's "discard a card or pay {2}" auto-pays the mana when it can (no menu); the discard is the hand's first card | `WardCost::ManaOrDiscard` |
 | 🟡 Norritt | "controlled continuously since the beginning of the turn" reads "didn't enter this turn" (a creature that changed control this turn qualifies) | `R::Not(EnteredThisTurn)` + `DelayUntilWithCapture` |
 | 🟡 Chandra's Embercat | its {R} pays for Elemental spells only; "or a Chandra planeswalker spell" has no `SpendRestriction` | `SpendRestriction::CreatureOfType(Elemental)` |
