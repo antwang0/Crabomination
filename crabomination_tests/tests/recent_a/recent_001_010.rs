@@ -3422,6 +3422,41 @@ mod recent {
         assert_eq!(g.players[0].life, 21, "you gained 1");
     }
 
+    /// CR 603.6c — Nadier's Nightblade also hears a noncreature token leaving
+    /// for the graveyard: a Clue sacrificed to draw and a Treasure sacrificed
+    /// for mana each drain (census: never triggered in 7 pod groups).
+    #[test]
+    fn nadiers_nightblade_drains_on_a_sacrificed_treasure() {
+      for tok in [crabomination_base::tokens::clue_token(), crabomination_base::tokens::treasure_token()] {
+        let name = tok.name.clone();
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::nadiers_nightblade());
+        let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+        let mint = Effect::CreateToken {
+            who: crabomination::effect::PlayerRef::You,
+            count: crabomination::card::Value::ONE,
+            definition: std::sync::Arc::new(tok),
+        };
+        g.resolve_effect(&mint, &ctx).unwrap();
+        let t = g.battlefield.iter().find(|c| c.definition.name == name).unwrap().id;
+        g.players[0].mana_pool.add_colorless(2);
+        let (me, opp) = (g.players[0].life, g.players[1].life);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: t,
+            ability_index: 0,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("sacrifice for mana");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(t).is_none());
+        assert_eq!((g.players[0].life, g.players[1].life), (me + 1, opp - 1), "{name}");
+      }
+    }
+
     /// Gnarlroot Pallbearer pumps a creature by your graveyard's creature count.
     #[test]
     fn gnarlroot_pallbearer_scales_with_graveyard() {

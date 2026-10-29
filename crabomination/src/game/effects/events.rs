@@ -58,7 +58,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
     match event {
         E::PermanentEntered { .. } => bits!(K::EntersBattlefield),
         E::CreatureDied { .. } => bits!(K::CreatureDied, K::PermanentLeavesBattlefield),
-        E::PermanentDied { .. } => bits!(K::CreatureOrArtifactDied, K::PermanentDied),
+        E::PermanentDied { .. } => bits!(K::CreatureOrArtifactDied, K::PermanentDied, K::PermanentLeavesBattlefield),
         E::CreatureSacrificed { .. } => bits!(K::CreatureSacrificed),
         E::PermanentSacrificed { .. } => bits!(K::PermanentSacrificed),
         E::CreatureLeftWithoutDying { .. } => bits!(K::CreatureLeavesBattlefieldNotDying),
@@ -216,6 +216,10 @@ fn event_payload_matches(
             EventKind::CreatureOrArtifactDied,
             GameEvent::PermanentDied { is_creature, is_artifact, .. },
         ) => *is_creature || *is_artifact,
+        // CR 603.6c — a noncreature permanent put into a graveyard left the
+        // battlefield too (a sacrificed Treasure or Clue); a creature's leave
+        // is its `CreatureDied`, so it isn't heard twice.
+        (EventKind::PermanentLeavesBattlefield, GameEvent::PermanentDied { is_creature, .. }) => !*is_creature,
         // Both excess events share the kind's bit; the noncombat-only form
         // (Fall of Cair Andros) skips combat excess.
         (EventKind::DealtExcessDamage { noncombat_only }, GameEvent::ExcessCombatDamage { .. }) => !noncombat_only,
@@ -355,6 +359,7 @@ fn reference_event_kind_matches(
         (EventKind::CreatureSacrificed, GameEvent::CreatureSacrificed { .. }) => true,
         (EventKind::PermanentSacrificed, GameEvent::PermanentSacrificed { .. }) => true,
         (EventKind::PermanentLeavesBattlefield, GameEvent::CreatureDied { .. }) => true,
+        (EventKind::PermanentLeavesBattlefield, GameEvent::PermanentDied { is_creature, .. }) => !*is_creature,
         (EventKind::PermanentLeavesBattlefield, GameEvent::PermanentLeftBattlefield { .. }) => true,
         (
             EventKind::CreatureLeavesBattlefieldNotDying,
