@@ -168,18 +168,12 @@ pub fn commit_memory() -> CardDefinition {
             "Commit // Memory",
             cost(&[generic(3), u()]),
             true,
-            // "Target spell or nonland permanent": one mode per kind, as
-            // Sudden Setback does.
-            Effect::ChooseMode(vec![
-                Effect::MoveSpellToZone {
-                    what: target_filtered(R::IsSpellOnStack),
-                    zone: crate::effect::CounteredSpellZone::OwnerLibrarySecondFromTop,
-                },
-                Effect::Move {
-                    what: target_filtered(R::Permanent.and(R::Nonland)),
-                    to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::FromTop(1) },
-                },
-            ]),
+            // "Target spell or nonland permanent": one slot, `Move` lifts a
+            // spell off the stack.
+            Effect::Move {
+                what: target_filtered(R::Permanent.and(R::Nonland).or(R::IsSpellOnStack)),
+                to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::FromTop(1) },
+            },
         )
     }
 }

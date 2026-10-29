@@ -9792,10 +9792,7 @@ mod recent5 {
         g.players[0].mana_pool.add(Color::Blue, 2);
         g.players[0].mana_pool.add_colorless(2);
         g.priority.player_with_priority = 0;
-        g.decider = Box::new(ScriptedDecider::new([
-            DecisionAnswer::Mode(1),
-            DecisionAnswer::Target(Target::Permanent(bear)),
-        ]));
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Permanent(bear))]));
         g.perform_action(GameAction::CastSpell {
             card_id: venser, target: None, additional_targets: vec![], mode: None, x_value: None,
         }).expect("flash in Venser");
@@ -9803,6 +9800,30 @@ mod recent5 {
         assert!(g.battlefield_find(venser).is_some(), "Venser resolved");
         assert!(g.players[1].hand.iter().any(|c| c.id == bear), "the bear spell went back to hand");
         assert!(g.battlefield_find(bear).is_none(), "and never resolved");
+    }
+
+    /// CR 115.1 — Venser's one slot takes a spell or a permanent; the headless
+    /// pick never settles for its controller's own spell while an opponent's
+    /// permanent is there (the stack walk's friendly fallback bounced it).
+    #[test]
+    fn venser_headless_pick_skips_its_own_spell() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        let venser = g.add_card_to_hand(0, catalog::venser_shaper_savant());
+        g.players[0].mana_pool.add(Color::Blue, 2);
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        for id in [bear, venser] {
+            g.perform_action(GameAction::CastSpell {
+                card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+            }).expect("cast");
+        }
+        drain_stack(&mut g);
+        assert!(g.players[1].hand.iter().any(|c| c.id == angel), "the opponent's permanent bounced");
+        assert!(g.battlefield_find(bear).is_some(), "our own spell resolved");
     }
 
     /// Hullbreaker Horror ships flash + can't-be-countered and bounces a permanent

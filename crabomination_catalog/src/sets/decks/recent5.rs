@@ -205,18 +205,12 @@ pub fn venser_shaper_savant() -> CardDefinition {
         power: 2,
         toughness: 2,
         keywords: vec![Keyword::Flash],
-        // One mode per kind, as Hullbreaker Horror: the spell rides
-        // `MoveSpellToZone` (off the stack, not countered).
-        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
-            Effect::Move {
-                what: target_filtered(SelectionRequirement::Permanent),
-                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-            },
-            Effect::MoveSpellToZone {
-                what: target_filtered(SelectionRequirement::IsSpellOnStack),
-                zone: crate::effect::CounteredSpellZone::OwnerHand,
-            },
-        ]))],
+        // One slot holds either kind: `Move` lifts a spell off the stack
+        // (not countered).
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(SelectionRequirement::Permanent.or(SelectionRequirement::IsSpellOnStack)),
+            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        })],
         ..Default::default()
     }
 }

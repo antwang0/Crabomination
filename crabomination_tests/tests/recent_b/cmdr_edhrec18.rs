@@ -1675,3 +1675,28 @@ fn nahiri_casts_exiled_equipment_free() {
     drain_stack(&mut g);
     assert!(g.battlefield.iter().any(|c| c.id == top));
 }
+
+/// CR 115.1 — Press the Enemy has ONE target, "spell or nonland permanent an
+/// opponent controls" (it was two modes, one per kind): the same cast takes an
+/// opponent's spell off the stack or a permanent off the battlefield.
+#[test]
+fn press_the_enemy_returns_a_spell_or_a_permanent_in_one_slot() {
+    let mut g = pod(3);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    flood(&mut g, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast the bear");
+    let press = g.add_card_to_hand(0, catalog::press_the_enemy());
+    cast(&mut g, press, &[perm(bear)]).expect("Press on the spell");
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "the spell went back to hand");
+    assert!(g.battlefield_find(bear).is_none(), "and never resolved");
+
+    let angel = ready(&mut g, 2, catalog::serra_angel());
+    let press = g.add_card_to_hand(0, catalog::press_the_enemy());
+    cast(&mut g, press, &[perm(angel)]).expect("Press on the permanent");
+    assert!(g.players[2].hand.iter().any(|c| c.id == angel), "the permanent went back to hand");
+}

@@ -4792,7 +4792,7 @@ fn divide_by_zero_bounces_permanent_and_cantrips() {
     assert_eq!(g.players[0].library.len(), lib_before - 1);
 }
 
-/// CR 115.1 / 608.2 — Divide by Zero's spell mode returns a spell on the
+/// CR 115.1 / 608.2 — Divide by Zero's one slot also returns a spell on the
 /// stack to its owner's hand: it leaves the stack and never resolves.
 #[test]
 fn divide_by_zero_bounces_a_spell_off_the_stack() {
@@ -4812,7 +4812,7 @@ fn divide_by_zero_bounces_a_spell_off_the_stack() {
     g.players[0].mana_pool.add_colorless(2);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::CastSpell {
-        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: Some(1), x_value: None,
+        card_id: id, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
     })
     .expect("Divide by Zero on the bear spell");
     drain_stack(&mut g);

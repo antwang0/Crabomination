@@ -13,7 +13,7 @@ use crate::effect::shortcut::{
     on_dies, target_any, target_filtered, target_n,
 };
 use crate::effect::{
-    CounteredSpellZone, Duration, Effect, LibraryPosition, LookPick, ManaPayload, PlayerRef,
+    Duration, Effect, LibraryPosition, LookPick, ManaPayload, PlayerRef,
     Predicate, Selector, StaticEffect, Value, ZoneDest,
 };
 use crate::mana::{Color, b, cost, g, generic, hybrid, r, u, w};
@@ -275,19 +275,11 @@ pub fn sudden_setback() -> CardDefinition {
         name: "Sudden Setback",
         cost: cost(&[generic(2), u(), u()]),
         card_types: vec![CardType::Instant],
-        effect: Effect::ChooseMode(vec![
-            Effect::MoveSpellToZone {
-                what: target_filtered(R::IsSpellOnStack),
-                zone: CounteredSpellZone::OwnerLibraryTopOrBottom,
-            },
-            Effect::Move {
-                what: target_filtered(R::Permanent.and(R::Nonland)),
-                to: ZoneDest::Library {
-                    who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
-                    pos: LibraryPosition::OwnerChoice,
-                },
-            },
-        ]),
+        // One slot holds either kind: `Move` lifts a spell off the stack.
+        effect: Effect::Move {
+            what: target_filtered(R::Permanent.and(R::Nonland).or(R::IsSpellOnStack)),
+            to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::OwnerChoice },
+        },
         ..Default::default()
     }
 }

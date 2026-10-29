@@ -195,7 +195,7 @@ fn break_out_deploys_a_cheap_creature_with_haste() {
     assert_eq!(g.players[0].library.len(), 5, "the rest went to the bottom");
 }
 
-/// Sudden Setback's permanent mode sends a nonland permanent to its owner's
+/// Sudden Setback sends a nonland permanent to its owner's
 /// library.
 #[test]
 fn sudden_setback_libraries_a_permanent() {
@@ -203,7 +203,6 @@ fn sudden_setback_libraries_a_permanent() {
     let victim = g.add_card_to_battlefield(1, catalog::serra_angel());
     let ctx = crabomination::game::effects::EffectContext {
         targets: vec![Target::Permanent(victim)],
-        mode: 1,
         ..crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None)
     };
     g.resolve_effect(&catalog::sudden_setback().effect, &ctx).expect("Setback");

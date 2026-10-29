@@ -356,6 +356,20 @@ impl GameState {
                 _ => false,
             }
         }
+        /// Whether `r` admits some object that isn't a spell on the stack.
+        fn admits_off_stack(r: &crate::card::SelectionRequirement) -> bool {
+            use crate::card::SelectionRequirement as R;
+            match r {
+                R::IsSpellOnStack
+                | R::SpellTargetsControllerOrControlled
+                | R::SpellTargetsCreature
+                | R::SpellWithSingleTarget
+                | R::SpellWithAnyTarget => false,
+                R::Or(a, b) => admits_off_stack(a) || admits_off_stack(b),
+                R::And(a, b) => admits_off_stack(a) && admits_off_stack(b),
+                _ => true,
+            }
+        }
         if mentions_spell_on_stack(req) {
             use crate::game::types::StackItem;
             // Topmost first: iterate the stack in reverse.
@@ -374,7 +388,10 @@ impl GameState {
                     }
                 }
             }
-            if let Some(t) = hostile.or(friendly) {
+            // A slot that also takes a permanent ("target spell or nonland
+            // permanent" — Press the Enemy, Venser) never settles for its own
+            // controller's spell: an opponent's permanent below outranks it.
+            if let Some(t) = hostile.or(friendly.filter(|_| prefer_friendly || !admits_off_stack(req))) {
                 return Some(t);
             }
         }

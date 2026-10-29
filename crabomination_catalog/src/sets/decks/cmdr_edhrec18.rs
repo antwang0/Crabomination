@@ -10,7 +10,7 @@ use crate::card::{
 use crate::game::types::TurnStep;
 use std::sync::Arc;
 use crate::effect::shortcut::{etb, heroic, on_dies, target_filtered};
-use crate::effect::{ActivatedAbility, CounteredSpellZone, Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{ActivatedAbility, Duration, Effect, ManaPayload, PlayerRef, ZoneDest};
 use crate::mana::{b, cost, g, generic, hybrid, r, u, w, x, Color, ManaCost};
 
 fn creature(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
@@ -1284,21 +1284,15 @@ pub fn press_the_enemy() -> CardDefinition {
         "Press the Enemy",
         cost(&[generic(2), u(), u()]),
         CardType::Instant,
-        Effect::ChooseMode(vec![
-            Effect::Seq(vec![
-                Effect::Move {
-                    what: target_filtered(R::Permanent.and(R::Nonland).and(R::ControlledByOpponent)),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-                },
-                free(),
-            ]),
-            Effect::Seq(vec![
-                Effect::MoveSpellToZone {
-                    what: target_filtered(R::IsSpellOnStack.and(R::ControlledByOpponent)),
-                    zone: CounteredSpellZone::OwnerHand,
-                },
-                free(),
-            ]),
+        // One slot holds either kind: `Move` lifts a spell off the stack.
+        Effect::Seq(vec![
+            Effect::Move {
+                what: target_filtered(
+                    R::Permanent.and(R::Nonland).or(R::IsSpellOnStack).and(R::ControlledByOpponent),
+                ),
+                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+            },
+            free(),
         ]),
     )
 }

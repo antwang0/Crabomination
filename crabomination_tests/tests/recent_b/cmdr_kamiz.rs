@@ -150,9 +150,9 @@ fn commit_memory_tucks_and_resets() {
     let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
     let c = g.add_card_to_hand(0, catalog::commit_memory());
     act(&mut g, GameAction::CastSpell {
-        card_id: c, target: Some(Target::Permanent(ring)), additional_targets: vec![], mode: Some(1), x_value: None,
+        card_id: c, target: Some(Target::Permanent(ring)), additional_targets: vec![], mode: None, x_value: None,
     })
-    .expect("Commit, the permanent mode");
+    .expect("Commit on a permanent");
     assert_eq!(g.players[1].library.get(1).map(|c| c.id), Some(ring));
     stock(&mut g, 0, 8);
     act(&mut g, GameAction::CastAftermath { card_id: c, target: None, additional_targets: vec![], mode: None, x_value: None })

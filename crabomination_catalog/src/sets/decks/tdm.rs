@@ -2542,7 +2542,7 @@ pub fn jeskai_revelation() -> CardDefinition {
         card_types: vec![CardType::Instant],
         effect: Effect::Seq(vec![
             Effect::Move {
-                what: Selector::TargetFiltered { slot: 0, filter: R::Any },
+                what: Selector::TargetFiltered { slot: 0, filter: R::Permanent.or(R::IsSpellOnStack) },
                 to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
             },
             Effect::DealDamage {
