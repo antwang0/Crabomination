@@ -22096,6 +22096,29 @@ impl GameState {
         chosen_mode: Option<usize>,
         events: &mut Vec<GameEvent>,
     ) -> Result<(), GameError> {
+        // CR 605.3a — mid-resolution, a mana ability leaves that resolution's
+        // scratch alone (`game/mana_side_scratch.rs`).
+        if self.mana_ability_inside_a_resolution(card_id, ability_index) {
+            return self.keeping_outer_resolution_scratch(|g| {
+                g.activate_ability_into_unguarded(
+                    card_id, ability_index, target, additional_targets, x_value, chosen_mode, events,
+                )
+            });
+        }
+        self.activate_ability_into_unguarded(card_id, ability_index, target, additional_targets, x_value, chosen_mode, events)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn activate_ability_into_unguarded(
+        &mut self,
+        card_id: CardId,
+        ability_index: usize,
+        target: Option<Target>,
+        additional_targets: Vec<Target>,
+        x_value: Option<u32>,
+        chosen_mode: Option<usize>,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
         let p = self.priority.player_with_priority;
         let mark = events.len();
         // Mana produced by a *creature* is marked as such (CR 106.12

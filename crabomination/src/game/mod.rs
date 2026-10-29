@@ -213,6 +213,7 @@ mod drain_shortcut;
 mod mana_pips;
 mod venture_limit;
 mod craft_each;
+mod mana_side_scratch;
 mod copy_loop;
 // "When you lose control of it" delayed triggers (Ray of Command).
 mod lose_control;

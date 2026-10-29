@@ -497,6 +497,29 @@ fn ripples_of_undeath_mills_and_returns_one() {
     assert_eq!(g.players[0].life, life - 3, "paid 3 life");
 }
 
+/// Ripples of Undeath paying its {1} by tapping a mana rock: the mana ability
+/// resolving mid-trigger must not reset "milled this way" (CR 605.3a).
+#[test]
+fn ripples_of_undeath_paid_from_a_mana_rock_still_finds_the_milled_cards() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::ripples_of_undeath());
+    g.add_card_to_battlefield(0, catalog::mind_stone());
+    let mut milled = vec![];
+    for _ in 0..3 {
+        milled.push(g.add_card_to_library(0, catalog::grizzly_bears()));
+    }
+    let hand_before = g.players[0].hand.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![milled[0]])]));
+    g.step = TurnStep::Upkeep;
+    while g.step != TurnStep::PreCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("advance");
+    }
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].life, 17, "paid 3 life (and the {{1}})");
+    assert_eq!(g.players[0].hand.len(), hand_before + 1, "one milled card in hand");
+    assert_eq!(g.players[0].graveyard.len(), 2, "milled three, took one back");
+}
+
 /// Ripples of Undeath without the {1}: the three stay milled.
 #[test]
 fn ripples_of_undeath_without_the_mana_keeps_them_milled() {
