@@ -1887,3 +1887,43 @@ fn cr_106_1_a_huge_power_sized_mana_ability_stays_bounded() {
     assert!(events.len() < 20_000, "{} events", events.len());
 }
 
+
+/// CR 603.10a — a statics-granted "when this is put into a graveyard from the
+/// battlefield" (`PermanentDied` / `SelfSource`) looks back in time like a
+/// printed one, on a creature and a noncreature artifact alike.
+#[test]
+fn cr_603_10a_a_granted_put_into_a_graveyard_trigger_fires() {
+    use crabomination::card::{
+        CardDefinition, CardType, EventKind, EventScope, EventSpec, SelectionRequirement as R, StaticAbility,
+        TriggeredAbility,
+    };
+    use crabomination::effect::{StaticEffect, Value};
+    let mut g = main_phase();
+    let trig = TriggeredAbility {
+        event: EventSpec::new(EventKind::PermanentDied, EventScope::SelfSource),
+        effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+    };
+    g.add_card_to_battlefield(0, CardDefinition {
+        name: "Test Granter",
+        card_types: vec![CardType::Enchantment],
+        static_abilities: vec![StaticAbility {
+            description: "Your artifacts have \"when this is put into a graveyard, draw a card.\"",
+            effect: StaticEffect::GrantTriggeredAbility {
+                filter: R::Artifact.and(R::ControlledByYou),
+                ability: Box::new(trig),
+            },
+        }],
+        ..Default::default()
+    });
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let walker = g.add_card_to_battlefield(0, catalog::ornithopter());
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    for (id, what) in [(walker, "artifact creature"), (rock, "noncreature artifact")] {
+        let hand = g.players[0].hand.len();
+        resolve(&mut g, id, Some(Target::Permanent(id)), &Effect::Destroy { what: Selector::Target(0) });
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + 1, "{what}: the granted trigger drew");
+    }
+}

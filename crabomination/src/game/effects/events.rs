@@ -983,6 +983,12 @@ fn event_matches_spec_rest(
             event,
             GameEvent::CreatureDied { card_id } if *card_id == source.id
         ) || matches!(
+            // CR 603.10a — "when this is put into a graveyard from the
+            // battlefield", read off the death snapshot: only a static-granted
+            // copy reaches here (the death path collects the printed one).
+            event,
+            GameEvent::PermanentDied { card_id, .. } if *card_id == source.id
+        ) || matches!(
             event,
             GameEvent::CreatureSacrificed { card_id, .. } if *card_id == source.id
         ) || matches!(
