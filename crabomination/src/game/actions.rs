@@ -25965,6 +25965,16 @@ impl GameState {
             self.pay_blight(p, ability.blight_cost, events);
         }
 
+        // CR 701.43a — "Exert this creature" as a cost.
+        if ability.exert_cost
+            && let Some(c) = self.battlefield_find_mut(card_id)
+        {
+            c.skip_next_untap = true;
+            if !self.exerted_this_turn.contains(&card_id) {
+                self.exerted_this_turn.push(card_id);
+            }
+        }
+
         // Exile-top-of-library-as-cost (CR 602.5b — Arc-Slogger). Paid after
         // tap/mana, before the ability resolves; a short library exiles what
         // it has. The last exiled card's mana value rides

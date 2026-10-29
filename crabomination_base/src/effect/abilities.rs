@@ -5456,6 +5456,11 @@ pub struct ActivatedAbility {
     /// the other non-mana costs (`game/blight_cost.rs`).
     #[serde(default)]
     pub blight_cost: u32,
+    /// CR 701.43a — "Exert this creature" as an activation cost (Angel of
+    /// Condemnation): it won't untap during its controller's next untap step.
+    /// Always payable (CR 701.43b), and paid even if the ability fizzles.
+    #[serde(default)]
+    pub exert_cost: bool,
     /// CR 602.5b — "Exile the top N cards of your library:" as an activation
     /// cost (Arc-Slogger). Gated on the library holding that many; paid after
     /// tap/mana but before the effect resolves.
