@@ -324,7 +324,9 @@ Then `pod_residuals --rank` top-down, frozen pools checked first.
   battlefield any other way had a dead first level bar. CR 603.6c — `EventKind::PermanentLeavesBattlefield` never
   heard a noncreature's `PermanentDied`: a sacrificed Treasure or Clue was silent to Nadier's Nightblade and every
   "whenever a permanent leaves" listener (a creature's leave stays its `CreatureDied`; the dying card's own LTB still
-  rides the death path). Bot (pods): a sorcery-speed graveyard exile goes in its controller's main phase (Dino DNA's
+  rides the death path). CR 603.10a — the lethal-damage (SBA) death path now collects `PermanentDied` self-triggers
+  as the destroy / sacrifice path did: Sphinx of False Conclusions (a 4/2 keyed on `PermanentDied`) left no token
+  copy after any combat trade, nor did an animated Lembas shuffle itself away. Bot (pods): a sorcery-speed graveyard exile goes in its controller's main phase (Dino DNA's
   imprint, `ExileLinked`, was never activated). Most other census rows were situational — Phyrexian Arena / Mirkwood
   Bats / Storm-Kiln / Tireless Provisioner triggered fine when replayed; Wizard Class's 5-mana level 3 and Rogue's
   Passage want idle mana the bot spends first.
@@ -336,16 +338,23 @@ Then `pod_residuals --rank` top-down, frozen pools checked first.
   trigger after every payment, up to that many target lands), Dino DNA (copies a target it exiled), Pull Through the
   Weft (two target groups), Soul Exchange (+2/+2 on a Thrull), Tapestry Warden (stations with toughness), Fell Beast's
   Shriek (splice onto instant or sorcery). Clean decks **5,525 → 5,587 / 6,140**.
-- Gates at the closing tip: suite **29,310 / 0 / 8** (strict, precon-seat test excluded); workspace clippy 0
-  (95m22s, `-j 3`); `--bench` 196,176 / 27.64 /
+- Gates at the closing tip `df4df4f2f`: suite **29,312 / 0 / 8** (strict, precon-seat test excluded); workspace clippy 0
+  (95m22s cold, `-j 3`); `--bench` 196,176 / 27.64 /
   613.0 / 0 stalls byte-identical, determinism + thread determinism ok; cube / sos / sealed × 300 (seed 28010)
-  outcome-identical base (`e3dbdf3d8`) vs tip; release pods 2..8 seats × 300 (seeds 28020, 28080) 4,200/4,200
-  decided; all-deck release sweep 28081 (4, 6 seats): 2,559 games, 1 CR 104.4a draw, 1 board cap identical on the
+  outcome-identical base (`e3dbdf3d8`) vs tip; release pods 2..8 seats × 300 (seeds 28020, 28080, 28090 — the last on the closing binary) 6,300/6,300
+  decided; a 1,535-game all-deck concession sweep (28091, 4 seats, `CRAB_POD_CONCEDE=20`) clean; all-deck release sweep 28081 (4, 6 seats): 2,559 games, 1 CR 104.4a draw, 1 board cap identical on the
   base (Kodama of the East Tree + Springheart Nantuko token copies of Kodama — a finite exponential). 8-seat turns/game at seed 9103 reads 97.59 on the base and the tip alike (92.63 when first
   recorded; PERF's pod rows have read ~97 since the 23,768-test tip); turns/game 20.26 / 33.36 / 47.20 / 57.94
   / 69.06 / 83.94 / 99.34 at seed 28020.
 
 OPEN:
+- ⚠ **Cube-frozen, written up, not shipped: Power Depot's modular never fires** — `shortcut::modular_dies` is
+  `on_dies` (`CreatureDied`) and Power Depot is a noncreature artifact land (CR 702.43a: "put into a graveyard").
+  The fix is Blaster's back-face shape (`EventKind::PermanentDied` on Power Depot's own trigger, now safe on both
+  death paths); changing the shared helper would move the Arcbound cube cards too.
+- Blaster's *granted* modular stays `CreatureDied`: a statics-granted `PermanentDied` self-trigger doesn't fire from
+  the dispatcher's LKI lane (probed: stack empty even for a creature), so an uncrewed Vehicle keeps its counters
+  (INCOMPLETE's row). The creature case works — a headless `MayDo` declines, which is why a quick probe reads 0.
 - Press the Enemy and the mode-per-kind family (Sudden Setback, Divide by Zero, Venser…): one slot for "spell or
   permanent" needs a target filter spanning stack and battlefield; the outcomes already match.
 - Zareth San's from-hand ability is never activated in census pods (seed 28030, 4351/2559/2560/3303) on base and tip
