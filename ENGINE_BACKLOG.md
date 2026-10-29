@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc2ns`) — strict-sweep answer-log leaks, mid-resolution mana abilities, granted graveyard triggers](#fixedopen-2026-10-29-commander-run-01wruxc2ns--strict-sweep-answer-log-leaks-mid-resolution-mana-abilities-granted-graveyard-triggers) | 48 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc672`) — target-shaped residuals, four rules classes, audit and census sweeps](#fixedopen-2026-10-29-commander-run-01wruxc672--target-shaped-residuals-four-rules-classes-audit-and-census-sweeps) | 43 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc33x`) — seated-deck rows by rank, CR 508.4's defender pick, untap / charge sinks](#fixedopen-2026-10-29-commander-run-01wruxc33x--seated-deck-rows-by-rank-cr-5084s-defender-pick-untap--charge-sinks) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-28 (Commander run, `01WRuXc3Wv`) — 26 seated-deck rows, seven primitives, a prevention class](#fixedopen-2026-10-28-commander-run-01wruxc3wv--26-seated-deck-rows-seven-primitives-a-prevention-class) | 33 |
@@ -307,6 +308,59 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 ## The Commander NEXT's line 9 as `01WRuXc672` found it (moved verbatim, 2026-10-29)
 
 9. **`01WRuXc33x` (2026-10-29, no seats; ENGINE_BACKLOG `01WRuXc33x`): audit sweeps first, then the residual rank.** Seeds 28001-28003 over every deck at 3-8 seats (`pod_sweep.py`, audit build, one with `CRAB_POD_CONCEDE=20`): 7,480 games, 0 panics, 2 CR 104.4a draws. Clean decks **5,456 → 5,525**: Scrap Welder targets (`R::ManaValueLessThanOneAmong`, `sac_other_mv_above_target`), CR 508.4's defender pick for `DeployCreatureFromHandAttacking` (+ battles), `exert_cost` (five cards), Glowcap's top-card look, Galadriel's Dismissal's two targets, Arachne's hand look. Bot: untap/charge/harness sinks. Gates: suite **29,303 / 0 / 8** (strict answer log, precon-seat test excluded), clippy 0, `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical. **Next seed 28004.** Next: rank list top is Thorin (12, Equipment not targeted), Hydro-Man (10), Deification (10, enumerable `PlaneswalkerSubtype`), Press the Enemy (9), Dawnhand's cost picks (9, an `AbilityCostChoice` kind).
+
+## The Commander NEXT's line 9 as `01WRuXc2ns` found it (moved verbatim, 2026-10-29)
+
+9. **`01WRuXc672` (2026-10-29, no seats; ENGINE_BACKLOG `01WRuXc672`): audit sweeps, then target-shaped residuals.** Seeds 28004-28005 over every deck at 3-8 seats (audit build, one with `CRAB_POD_CONCEDE=20`): 9,161 games, 0 panics, 3 CR 104.4a draws, 2 finite board caps. Clean decks **5,525 → 5,587**: Thorin/Pull Through the Weft as `SlotGroups` targets, Hydro-Man, Deification (`PlaneswalkerSubtype::ALL`), Primal Adversary, Dino DNA, Soul Exchange, Tapestry Warden (`StationsWithToughness`), Fell Beast's Shriek's splice. Classes: `OpponentChoosesPermanentThen.untargeted` (CR 702.11b), `R::IsUnblocked` only after blocks (CR 509.1h), and census-mined: CR 716.2d `CardInstance::level()`, CR 603.6c noncreature deaths fire leaves-the-battlefield triggers, CR 603.10a the SBA death path collects `PermanentDied` self-triggers (Sphinx of False Conclusions); Power Depot's dead modular is cube-frozen (written up); bot: sorcery-speed graveyard hate (Dino DNA). Gates at `df4df4f2f`: suite **29,312 / 0 / 8** (strict, precon-seat test excluded; **29,320 / 0 / 8** rebased on the concurrent session's eight commits), workspace clippy **0**, `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical, pools outcome-identical base vs tip, 6,300 release pods + a 2,559-game all-deck sweep + 1,535 concession games decided but 1 draw / 1 pre-existing cap. 8-seat turns/game reads 97.6 at seed 9103 on base and tip alike (PERF rows have read ~97 since the 23,768-test tip; 92.6 was older). **Next seed 28040.** Next: `--card-census` replays are the bug mine (two classes this run) — replay each "never triggered" row before believing it; the rank list below 5 seats (Press the Enemy / Goblin Plate Mail closed by a concurrent session).
+
+## FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc2ns`) — strict-sweep answer-log leaks, mid-resolution mana abilities, granted graveyard triggers
+
+No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`) over every deck first,
+then the rank list's top and the OPEN rows the sweeps pointed at. Seeds 28100 (4, 6 seats), 28101 (3, 5, 7, 8 seats,
+`CRAB_POD_CONCEDE=20`), 28102 (2, 4, 6 seats, concede), 28103 (4, 5 seats, `CRAB_POD_FUZZ=2500` + concede) and 28104
+(8 seats, `--a dflt` + fuzz): **16,640 games, 2 strict aborts (both fixed), 0 panics**; the rest of the undecided are
+CR 104.4a / 104.4b draws (Polyraptor + Marauding Raptor and a fuzzed Draconic Visitor beside Ganax are real mandatory
+loops) and finite exponentials (Scute Swarm + Greenwarden, Growing Ranks populating Ojer Taq tokens, Quantum
+Misalignment on Ojer Taq — gated now).
+- **Answer-log class:** `AnyPlayerMayPayLifeToCounterThis` (Dash Hopes, `punisher_counter.rs`) cleared on neither path;
+  `scripts/audit_answer_log.py` only read `effects/mod.rs` and now walks `game/**` (200 blocks / 196 asking / 13
+  suspicious, 0 NO-CLEAR, each explained in its docstring). A depth-0 resolution begun under a parked decision (a bot's
+  attack-tax probe tapping a mana ability) dropped the parked replay at the exit net: such a side resolution now parks
+  the log, seats and stash (CR 605.3a), generalising `apply_pending_effect_answer`'s park.
+- **CR 605.3a, the scratch half:** a mana ability activated mid-resolution reset the resolving object's cost and
+  per-resolution scratch (LastMoved, discards, damage, the causer and token stamps) — Ripples of Undeath paid from a
+  Mind Stone found no milled card. `game/mana_side_scratch.rs` saves and restores them around the activation.
+- **CR 603.10a:** a static-granted `PermanentDied` / SelfSource trigger never matched (`event_matches_spec`'s SelfSource
+  arm had no `PermanentDied`). **CR 614.1c:** a filtered enters-with rider never reached a noncreature (the collector
+  returned early and the cast path skipped it) — Thunderous Velocipede's and Blaster's Vehicles. Blaster's granted
+  modular is `PermanentDied` now (INCOMPLETE row closed).
+- **CR 115.1:** "target spell or permanent" is one slot (`Move` lifts a spell off the stack) — Press the Enemy, Venser,
+  Divide by Zero, Sudden Setback, Commit // Memory, Jeskai Revelation (its slot was `R::Any`); the headless picker's
+  stack walk no longer settles for its controller's own spell on a slot that also takes a permanent. Aether Gust is
+  cube-frozen and keeps its two modes.
+- **CR 701.47a/c:** Amass makes the chosen Army the subtype and records it (`Selector::AmassedArmy`, carried into
+  reflexive bodies): Goblin Plate Mail, Grishnákh, Widespread Brutality, Foray / Surrounded by Orcs.
+- **Game of Chaos:** the round recursed through `AnyPlayerMayAccept` and overflowed the debug stack at ~20 rounds (the
+  2^16 cap hid it); it loops on `flip_one_coin_logged` now, doubling to 2^31.
+- **Bot (pods):** a token tripler counts as two doublings and `token_blowup` screens casts too (Quantum Misalignment on
+  Ojer Taq under Anointed Procession, seed 2811128); the land-drop gate counts Greenwarden's extra landfall fire.
+- **Cards:** Sift Through Sands' Unspeakable rider (`Predicate::CastSpellNamedThisTurn`); Zareth San's INCOMPLETE row
+  lost its stale `IsUnblocked` clause.
+- Gates at the closing tip `30dfbfd80`: suite **29,328 / 0 / 8** (strict answer log, precon-seat test excluded;
+  **29,332 / 0 / 8** rebased on the concurrent session's seven commits);
+  workspace clippy **0** (98m23s, `-j 2`; three lints in this run's code fixed); `--bench` 196,176 / 27.64 / 613.0 / 0
+  stalls byte-identical; bench_ab noise on both legs; cube / sos / sealed decision-identical within each leg (PERF row).
+- Census (`--card-census`, 100 random four-seat groups × 6, seed 28120): no new class — the channel lands' "never
+  activated" rows are lands the bot played (a played channel land can't channel); Solemn / Psychosis Crawler /
+  Tireless Provisioner trigger when replayed.
+
+OPEN:
+- An effect that puts several lands onto the battlefield at once is not board-gated (the 4,320-trigger Swarm stack,
+  seed 2811250, came from one), only the land drop is.
+- `RevealTopLandToBattlefieldElseHand` / `LookTopLandToHandElseBin` move a card after each seat's ask: latent (every
+  shipped use is `who: You`), a seat-looping use needs the two-pass split.
+- Queen Kayla's simultaneous return, Metamorphic Alteration's layer-1 static, Market Gnome's craft-exile event: each a
+  primitive for ≤6 seats (Wizard's Rockets' {X} landed from a concurrent session, `8e025723f`).
 
 ## FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc672`) — target-shaped residuals, four rules classes, audit and census sweeps
 

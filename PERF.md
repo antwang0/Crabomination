@@ -3136,6 +3136,26 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-29 (Commander run, `01WRuXc2ns`) — guardrail; a mana-ability scratch save, a parked-log guard, two bot gates
+
+Touched shared paths: `activate_ability_into` reads `resolution_depth` / `pending_decision` before every
+activation (the save runs only for a mana ability inside a resolution); `resolve_effect_into_kind` adds the
+same two reads at depth 0; the cast path asks the enters-with collector for every permanent spell (its board
+gate short-circuits); `effect_token_estimate` resolves a token copy's source (pod gates only); the headless
+picker's stack walk gains one filter walk. Two legs, because a concurrent session's eight commits landed between
+them: base `ece89d21a` vs `6463d7db7` (this run's first nine commits), then `4a4f78e6f` (theirs on top) vs the
+final tip `30dfbfd80` (this run's last seven). `release`, 4-core box (Xeon @ 2.10GHz), nothing else running:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical on all four binaries; determinism ok;
+                 peak_rss_mib 50.0; 225.0 games/s at the final tip (3 threads)
+bench_ab.py      leg 1, 16 pairs: -0.40 % median, -0.64 % mean (sd 8.41); leg 2, 16 pairs: -1.20 % median,
+                 +0.07 % mean (sd 6.95) — noise both
+pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: decision-identical within each leg
+                 (leg 1 372,578 / 215,896 / 517,792; leg 2 372,578 / 213,776 / 520,724 — the sos / sealed move lies
+                 in the concurrent session's eight commits between the legs: Repartee, the sealed builder, target_eval)
+```
+
 ### 2026-10-29 (Commander run, `01WRuXc672`) — guardrail; two filter arms, one cost record
 
 Touched shared paths: `R::IsUnblocked` gains a step test; `ExilePermanent` casts push to `cost_exiled_cards`
