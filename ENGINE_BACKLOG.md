@@ -355,11 +355,10 @@ OPEN:
 - Blaster's *granted* modular stays `CreatureDied`: a statics-granted `PermanentDied` self-trigger doesn't fire from
   the dispatcher's LKI lane (probed: stack empty even for a creature), so an uncrewed Vehicle keeps its counters
   (INCOMPLETE's row). The creature case works — a headless `MayDo` declines, which is why a quick probe reads 0.
-- Press the Enemy and the mode-per-kind family (Sudden Setback, Divide by Zero, Venser…): one slot for "spell or
-  permanent" needs a target filter spanning stack and battlefield; the outcomes already match.
 - Zareth San's from-hand ability is never activated in census pods (seed 28030, 4351/2559/2560/3303) on base and tip
   alike — as a commander he rarely sits in hand.
-- Queen Kayla's simultaneous return, Goblin Plate Mail's amassed-Army pick, Metamorphic Alteration's layer-1 static,
+- (Press the Enemy's one slot and Goblin Plate Mail's amassed Army landed from a concurrent session, `b0de1a5ee` /
+  `6463d7db7`.) Queen Kayla's simultaneous return, Metamorphic Alteration's layer-1 static,
   Market Gnome's craft-exile event: each a primitive for ≤6 seats.
 
 ## FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc33x`) — seated-deck rows by rank, CR 508.4's defender pick, untap / charge sinks
