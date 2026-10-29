@@ -265,7 +265,7 @@ pub fn elderwood_scion() -> CardDefinition {
         static_abilities: vec![
             StaticAbility {
                 description: "Spells you cast that target this creature cost {2} less to cast.",
-                effect: StaticEffect::CostReductionForYourSpellsTargetingThis { amount: 2, any_caster: false },
+                effect: StaticEffect::CostReductionForYourSpellsTargetingThis { amount: 2, any_caster: false, opponents_only: false },
             },
             StaticAbility {
                 description: "Spells your opponents cast that target this creature cost {2} more to cast.",

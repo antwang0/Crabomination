@@ -2636,9 +2636,16 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
                 // Elderwood Scion: your spells targeting this permanent cost
                 // {amount} less (the tax half is `TaxOpponentSpellsTargetingThis`);
                 // Spellwild Ouphe's discount is anyone's.
-                StaticEffect::CostReductionForYourSpellsTargetingThis { amount, any_caster }
-                    if (*any_caster || src.controller == caster)
-                        && matches!(target, Some(crate::game::Target::Permanent(pid)) if *pid == src.id) =>
+                StaticEffect::CostReductionForYourSpellsTargetingThis { amount, any_caster, opponents_only }
+                    if (if *opponents_only {
+                        !state.same_team(src.controller, caster)
+                    } else {
+                        *any_caster || src.controller == caster
+                    }) && match target {
+                        Some(crate::game::Target::Permanent(pid)) => *pid == src.id,
+                        Some(crate::game::Target::Player(p)) => src.attached_to_player == Some(*p),
+                        None => false,
+                    } =>
                 {
                     reduction += amount;
                 }

@@ -178,7 +178,7 @@ pub fn spellwild_ouphe() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Spells that target this creature cost {2} less to cast.",
-            effect: StaticEffect::CostReductionForYourSpellsTargetingThis { amount: 2, any_caster: true },
+            effect: StaticEffect::CostReductionForYourSpellsTargetingThis { amount: 2, any_caster: true, opponents_only: false },
         }],
         ..creature("Spellwild Ouphe", cost(&[generic(1), g()]), vec![CreatureType::Ouphe], 1, 3)
     }

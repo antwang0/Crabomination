@@ -905,11 +905,15 @@ pub enum StaticEffect {
     /// Elderwood Scion — "spells you cast that target this creature cost
     /// {amount} less". Read with the cast's chosen target by
     /// `cost_reduction_for_spell`. `any_caster`: any player's spells
-    /// (Spellwild Ouphe).
+    /// (Spellwild Ouphe); `opponents_only`: only its controller's opponents'
+    /// (Accursed Witch). On a Curse, "this" is the player it enchants
+    /// (Infectious Curse's "spells you cast that target enchanted player").
     CostReductionForYourSpellsTargetingThis {
         amount: u32,
         #[serde(default)]
         any_caster: bool,
+        #[serde(default)]
+        opponents_only: bool,
     },
     /// "Each [`spell_filter`] spell costs {1} more to cast for each
     /// [`count_filter`] its controller controls" (Hum of the Radix). The tax
