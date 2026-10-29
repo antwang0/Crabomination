@@ -3139,7 +3139,9 @@ re-takes its own base rather than diffing against one of them.
 ### 2026-10-29 (Commander run, `01WRuXc672`) — guardrail; two filter arms, one cost record
 
 Touched shared paths: `R::IsUnblocked` gains a step test; `ExilePermanent` casts push to `cost_exiled_cards`
-(guarded); a Station cost scans statics. `release` bot_ladder at `4c93ac1a5`, 4-core box, nothing else running:
+(guarded); a Station cost scans statics; `PermanentDied` carries the `PermanentLeavesBattlefield` bit; level reads
+go through `CardInstance::level()`. `release` bot_ladder at `4c93ac1a5`, re-read at `1f24c88b3` (211.7 games/s,
+peak_rss_mib 48.4, same invariants and pool outcomes), 4-core box, nothing else running:
 
 ```
 --bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok (all pairs split);
