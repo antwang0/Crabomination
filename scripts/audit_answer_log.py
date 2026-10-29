@@ -70,6 +70,16 @@ Every remaining row is explained, which is the point of quoting the number:
 
 So a NEW row is the signal, not the count.
 
+**Reading 2026-10-29 (every module under `game/`, not `effects/mod.rs` only):
+200 cursor blocks, 196 with asks, 13 suspicious, and no NO-CLEAR.** The widened
+walk found `AnyPlayerMayPayLifeToCounterThis` (`punisher_counter.rs`) clearing on
+neither path (a strict six-seat pod, seed 2810270). The new rows are explained:
+`AnyPlayerMaySacrificeToTopdeckSource` and the punisher counter are terminal tail
+calls; `GameOfChaosRound`'s PRE is its flip's life, carried like
+`CoinFlipDestroyLoop`'s (`flip_one_coin_logged`); the two `RevealTopLand…` /
+`LookTopLand…` MIDs are latent, because every shipped card is `who: You` (one ask).
+A seat-looping use would need the two-pass split.
+
 **Injection (eighteenth pass):** deleting `MayDoBy`'s `clear_answer_log()`
 takes this suspicious count up by one (8 -> 9 then, 7 -> 8 now).
 
@@ -81,7 +91,8 @@ import sys
 PATH = "crabomination/src/game/effects/mod.rs"
 ASK = re.compile(
     r"\b(ask_seat_bool|ask_seat_amount|ask_seat_option|ask_seat_cards_logged"
-    r"|ask_seat_cards|choose_up_to_cards|ask_ward_discards|ask_mana_sources)\b"
+    r"|ask_seat_cards|choose_up_to_cards|ask_ward_discards|ask_mana_sources"
+    r"|ask_seat_target_logged|ask_seat_target_maybe_logged|choose_attach_host)\b"
 )
 CLEAR = re.compile(r"\bclear_answer_log\(\)")
 LOOP = re.compile(r"^\s*(for |while |loop\s*\{|'[a-z_]+: loop)")
@@ -97,7 +108,7 @@ MUTATE = re.compile(
     r"|tap_permanent|untap_permanent|run_effect|create_token|ante_top_card)\s*\("
 )
 DECL = re.compile(r"^(\s*)let mut cursor = 0")
-FN = re.compile(r"\s*(?:pub(?:\(crate\))?\s+)?(?:async\s+)?fn (\w+)")
+FN = re.compile(r"\s*(?:pub(?:\((?:crate|super)\))?\s+)?(?:async\s+)?fn (\w+)")
 
 
 ARM = re.compile(r"^\s*(?:\|\s*)?Effect::([A-Za-z0-9_]+)")
@@ -142,11 +153,14 @@ def log_arm_variants(lines):
 
 
 def enclosing_fn(lines):
+    """Line -> enclosing fn name; `None` inside a `#[test]` fn (whose asks
+    exercise the channel on purpose)."""
     out, cur = {}, None
     for i, l in enumerate(lines):
         m = FN.match(l)
         if m:
-            cur = m.group(1)
+            is_test = any("#[test]" in lines[j] for j in range(max(0, i - 3), i))
+            cur = None if is_test else m.group(1)
         out[i] = cur
     return out
 
@@ -163,25 +177,45 @@ def block_end(lines, start, indent):
 
 
 def main():
-    lines = open(PATH).read().split("\n")
     if "--variants" in sys.argv:
-        names = log_arm_variants(lines)
+        names = log_arm_variants(open(PATH).read().split("\n"))
         print(f"    // {len(names)} arms, from scripts/audit_answer_log.py --variants")
         for n in names:
             print(f'        "{n}",')
         return
-    fn_at = enclosing_fn(lines)
+    # Every module under `game/`: arms that moved out of `effects/mod.rs`
+    # (`punisher_counter.rs` leaked under a strict pod, seed 2810270) ask too.
+    import glob
     rows = []
+    for path in sorted(glob.glob("crabomination/src/game/**/*.rs", recursive=True)):
+        scan(path, open(path).read().split("\n"), rows)
+    asking = [r for r in rows if r[3] != "NO-ASK"]
+    bad = [r for r in rows if r[3] == "NO-CLEAR" or r[6]]
+    print(f"{len(rows)} cursor blocks, {len(asking)} with asks, {len(bad)} suspicious\n")
+    for path, line, fn, status, nasks, nclears, risky in bad:
+        print(f"{path}:{line}  fn {fn}  [{status}] asks={nasks} clears={nclears}")
+        for rl, txt in risky[:6]:
+            print(f"    ~{rl}: {txt}")
+    inline_asks_without_clear()
+
+
+def scan(path, lines, rows):
+    fn_at = enclosing_fn(lines)
     for i, l in enumerate(lines):
         m = DECL.match(l)
-        if not m:
+        if not m or (fn_at[i] is None and "#[test]" in "\n".join(lines[max(0, i - 40) : i])):
             continue
         indent = len(m.group(1))
-        body = lines[i : block_end(lines, i, indent)]
+        end = block_end(lines, i, indent)
+        body = lines[i:end]
+        # A cursor declared inside an `else` branch clears on the first line
+        # after it (Populate, Hideaway): count a clear just past the block.
+        after = [s for s in lines[end : end + 6] if s.strip()][:3]
+        cleared_after = any(CLEAR.search(s) for s in after)
         asks = [k for k, s in enumerate(body) if ASK.search(s)]
         clears = [k for k, s in enumerate(body) if CLEAR.search(s)]
         if not asks:
-            rows.append((i + 1, fn_at[i], "NO-ASK", 0, 0, []))
+            rows.append((path, i + 1, fn_at[i], "NO-ASK", 0, 0, []))
             continue
         # Mutations BEFORE the first ask: the re-run repeats them.
         pre = [
@@ -229,17 +263,8 @@ def main():
                 continue  # the suspend path: the log IS the resume's replay
             risky.append((i + 1 + k, ("ERR? " if is_try else "RET  ") + s.strip()[:88]))
         rows.append((
-            i + 1, fn_at[i], "ok" if clears else "NO-CLEAR", len(asks), len(clears), risky,
+            path, i + 1, fn_at[i], "ok" if clears or cleared_after else "NO-CLEAR", len(asks), len(clears), risky,
         ))
-
-    asking = [r for r in rows if r[2] != "NO-ASK"]
-    bad = [r for r in rows if r[2] == "NO-CLEAR" or r[5]]
-    print(f"{len(rows)} cursor blocks, {len(asking)} with asks, {len(bad)} suspicious\n")
-    for line, fn, status, nasks, nclears, risky in bad:
-        print(f"{PATH}:{line}  fn {fn}  [{status}] asks={nasks} clears={nclears}")
-        for rl, txt in risky[:6]:
-            print(f"    ~{rl}: {txt}")
-    inline_asks_without_clear()
 
 
 def inline_asks_without_clear():

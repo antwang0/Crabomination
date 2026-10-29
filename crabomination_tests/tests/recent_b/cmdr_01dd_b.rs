@@ -825,6 +825,51 @@ fn cr_119_4_dash_hopes_is_countered_by_a_life_payment() {
     }
 }
 
+/// CR 119.4 — a prompting seat answers Dash Hopes' "pay 5 life?" and the
+/// resolution leaves no answer in the log. The arm cleared on neither path,
+/// which `CRAB_ANSWER_LOG=strict` aborted on (six-seat audit pod, seed 2810270).
+#[test]
+fn cr_119_4_dash_hopes_prompting_payer_leaves_no_answer_behind() {
+    let mut g = pod(3);
+    g.players[1].wants_ui = true;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(2)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    let hopes = g.add_card_to_hand(0, catalog::dash_hopes());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell {
+        card_id: hopes,
+        target: Some(Target::Permanent(bolt)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("dash hopes");
+    let mut asked = false;
+    for _ in 0..20 {
+        if g.pending_decision.is_some() {
+            asked = true;
+            g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true))).expect("pay");
+        } else if g.stack.is_empty() {
+            break;
+        } else {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+    }
+    assert!(asked, "the prompting seat was asked");
+    assert_eq!(g.players[1].life, 15, "paid 5 life");
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == hopes), "Dash Hopes was countered");
+}
+
 /// The End exiles a creature and every same-named card of its owner's, and
 /// its owner draws one per card exiled from their hand.
 #[test]

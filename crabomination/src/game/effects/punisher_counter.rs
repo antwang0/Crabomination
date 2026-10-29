@@ -65,10 +65,12 @@ impl GameState {
                     && self.players[seat].life - life as i32 >= HEADLESS_MARGIN
             };
             if pays {
+                self.clear_answer_log();
                 self.pay_life_cost(seat, life);
                 return self.run_effect(&Effect::CounterSpell { what: Selector::This }, ctx, events);
             }
         }
+        self.clear_answer_log();
         Ok(())
     }
 }
