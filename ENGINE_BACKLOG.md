@@ -19,6 +19,8 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc672`) — target-shaped residuals, two rules classes, audit sweeps](#fixedopen-2026-10-29-commander-run-01wruxc672--target-shaped-residuals-two-rules-classes-audit-sweeps) | 34 |
+| Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc33x`) — seated-deck rows by rank, CR 508.4's defender pick, untap / charge sinks](#fixedopen-2026-10-29-commander-run-01wruxc33x--seated-deck-rows-by-rank-cr-5084s-defender-pick-untap--charge-sinks) | 27 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-28 (Commander run, `01WRuXc3Wv`) — 26 seated-deck rows, seven primitives, a prevention class](#fixedopen-2026-10-28-commander-run-01wruxc3wv--26-seated-deck-rows-seven-primitives-a-prevention-class) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6pH`) — seven primitives, 19 seated-deck rows, stale docs](#fixedopen-2026-10-27-commander-run-01wruxc6ph--seven-primitives-19-seated-deck-rows-stale-docs) | 34 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-27 (Commander run, `01WRuXc6yK`) — emblem abilities, the Revolt funnel class, five primitives](#fixedopen-2026-10-27-commander-run-01wruxc6yk--emblem-abilities-the-revolt-funnel-class-five-primitives) | 28 |
@@ -301,6 +303,45 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 ## The Commander NEXT's line 9 as `01WRuXc33x` found it (moved verbatim, 2026-10-29)
 
 9. **`01WRuXc2p1` (2026-10-28, no seats; ENGINE_BACKLOG `01WRuXc2p1`): pod-mined first, then the control class.** Fresh-seed fuzz (~20,000 random-pool games at 2..8 seats, 2,600 with `CRAB_POD_CONCEDE`, 2,000+ on the debug-assertions `overflow` build) found two bot losses (a Pact cast it could not pay — `server/pact_guard.rs`; Draconic Visitor put beside Ganax — the hand branch of the loop probe) and one **OOM** ("add X mana" pushed one event per mana at power ~millions). CR 611.2b: `MayPlayDuration::WhileHolderControlsSource { your_turn }` (Lightning, Victor Mancha, Taster of Wares, Ghost-Spider, Hama, Kotose's one-card cap), `WhileSourceOnBattlefield { follows_control }` (static exile grants are the controller's), soulbond unpairs on a control change (CR 702.95e). A prompting seat names a loyalty ability's extra targets (Jeska). **Use `ps`/`memwatch` on an rc 137** — one was a real runaway, one was the host OOM killer during a test build. ⚠ Check the frozen pools (`cube.rs`/`sos_mode.rs`/`fra_mode.rs`/`draft.rs`) BEFORE building a card fix — Detective's Phoenix was built and reverted twice now. Gates: see the section. **Next seed 27800.** Next: `pod_residuals --rank` minus frozen pools is all auto-picks/UI asks now; the bug lane is the debug-assertions pod sweep (`target-audit`, ~16 min cold) at fresh seeds and more seats.
+
+## The Commander NEXT's line 9 as `01WRuXc672` found it (moved verbatim, 2026-10-29)
+
+9. **`01WRuXc33x` (2026-10-29, no seats; ENGINE_BACKLOG `01WRuXc33x`): audit sweeps first, then the residual rank.** Seeds 28001-28003 over every deck at 3-8 seats (`pod_sweep.py`, audit build, one with `CRAB_POD_CONCEDE=20`): 7,480 games, 0 panics, 2 CR 104.4a draws. Clean decks **5,456 → 5,525**: Scrap Welder targets (`R::ManaValueLessThanOneAmong`, `sac_other_mv_above_target`), CR 508.4's defender pick for `DeployCreatureFromHandAttacking` (+ battles), `exert_cost` (five cards), Glowcap's top-card look, Galadriel's Dismissal's two targets, Arachne's hand look. Bot: untap/charge/harness sinks. Gates: suite **29,303 / 0 / 8** (strict answer log, precon-seat test excluded), clippy 0, `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical. **Next seed 28004.** Next: rank list top is Thorin (12, Equipment not targeted), Hydro-Man (10), Deification (10, enumerable `PlaneswalkerSubtype`), Press the Enemy (9), Dawnhand's cost picks (9, an `AbilityCostChoice` kind).
+
+## FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc672`) — target-shaped residuals, two rules classes, audit sweeps
+
+No seats. Audit-build (`overflow` + `-C debug-assertions=yes`) pod sweeps first — `pod_sweep.py` seed 28004 (4, 6 seats
+× 2 games, every deck) and 28005 (3, 5, 8 seats × 1, `CRAB_POD_CONCEDE=20`): **9,161 games, 0 panics, 0 assertion
+hits, 5 undecided** — 3 CR 104.4a draws (Descent into Avernus killing the last two seats at once, twice after
+concessions) and 2 finite exponential board caps (Scute Swarm + Tireless Tracker; Nesting Dovehawk + Ocelot Pride).
+Then `pod_residuals --rank` top-down, frozen pools checked first.
+- **Classes:** `OpponentChoosesPermanentThen.untargeted` — six of its thirteen users print "chooses" with no target
+  (Wei Assassins, Sakashima's Will, Blizzard Specter, Linessa, Mana Breach, Fell Beast's Shriek), yet the pick was
+  filtered to legal targets, so hexproof dodged them (CR 702.11b). `R::IsUnblocked` held in the declare attackers
+  step (CR 509.1h): Zareth San's return cost and every "target unblocked creature" spell could fire before blocks.
+- **Primitives:** `PlaneswalkerSubtype::ALL` (one macro declares the enum and the list); `AttachAnyNumberTo` skips its
+  ask when the attachments are target slots; `AdditionalCastCost::ExilePermanent` records `CostExiledCards`;
+  `StaticEffect::StationsWithToughness` (CR 702.184a).
+- **Cards:** Thorin, Mountain-king (Equipment are `SlotGroups` targets), Hydro-Man (the "{T}: Add {U}" is gained with
+  the land-ness, revoked at your next upkeep), Deification (any type, owned first), Primal Adversary (one reflexive
+  trigger after every payment, up to that many target lands), Dino DNA (copies a target it exiled), Pull Through the
+  Weft (two target groups), Soul Exchange (+2/+2 on a Thrull), Tapestry Warden (stations with toughness), Fell Beast's
+  Shriek (splice onto instant or sorcery). Clean decks **5,525 → 5,587 / 6,140**.
+- Gates: `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical, determinism + thread determinism ok;
+  cube / sos / sealed × 300 (seed 28010) outcome-identical base (`e3dbdf3d8`) vs tip; release pods 2..8 seats × 300
+  (seed 28020) 2,100/2,100 decided. ⚠ **8-seat turns/game at seed 9103 now reads 97.59 (92.63 when first recorded) —
+  identical on the base and the tip, so the drift is older than this run;** turns/game 20.26 / 33.36 / 47.20 / 57.94
+  / 69.06 / 83.94 / 99.34 at seed 28020.
+
+OPEN:
+- Press the Enemy and the mode-per-kind family (Sudden Setback, Divide by Zero, Venser…): one slot for "spell or
+  permanent" needs a target filter spanning stack and battlefield; the outcomes already match.
+- Zareth San's from-hand ability is never activated in census pods (seed 28030, 4351/2559/2560/3303) on base and tip
+  alike — as a commander he rarely sits in hand.
+- Dino DNA's imprint (#0) is never activated in census pods (1062/1393/3921/4114) — a bot sink for "exile target card
+  from a graveyard" at sorcery speed is missing.
+- Queen Kayla's simultaneous return, Goblin Plate Mail's amassed-Army pick, Metamorphic Alteration's layer-1 static,
+  Market Gnome's craft-exile event: each a primitive for ≤6 seats.
 
 ## FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc33x`) — seated-deck rows by rank, CR 508.4's defender pick, untap / charge sinks
 

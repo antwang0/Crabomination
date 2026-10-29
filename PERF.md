@@ -3136,6 +3136,18 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-29 (Commander run, `01WRuXc672`) — guardrail; two filter arms, one cost record
+
+Touched shared paths: `R::IsUnblocked` gains a step test; `ExilePermanent` casts push to `cost_exiled_cards`
+(guarded); a Station cost scans statics. `release` bot_ladder at `4c93ac1a5`, 4-core box, nothing else running:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok (all pairs split);
+                 thread_determinism ok (3 vs 1); peak_rss_mib 50.3; 196.2 games/s (3 threads)
+pools            cube / sos / sealed x 300 per archetype, seed 28010: outcome-identical to base `e3dbdf3d8`
+pods             8 seats x 2,000, seed 9103: turns/game 97.59 on base AND tip (92.63 when first recorded — older drift)
+```
+
 ### 2026-10-28 (Commander run, `01WRuXc2pR`) — guardrail; one resolver off the hot paths
 
 New: `Effect::RevealUntilMayCastFree` (Treasure Keeper, Neera — neither in the fixed pool); no shared path touched.
