@@ -1666,3 +1666,35 @@ fn witherbloom_soilbleeder_etb_optional_sac_drains_three() {
     assert_eq!(g.players[0].life, p0_before + 3);
     assert_eq!(g.players[1].life, p1_before - 3);
 }
+
+/// Mob Mentality: when every non-Wall creature you control attacks, the
+/// enchanted creature gets +X/+0 (X = attackers); a Wall may stay home, any
+/// other creature held back stops it.
+#[test]
+fn mob_mentality_pumps_when_all_non_walls_attack() {
+    use crabomination::game::types::{Attack, AttackTarget, GameAction, Target, TurnStep};
+    for hold_back in [false, true] {
+        let mut g = two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let wall = g.add_card_to_battlefield(0, catalog::wall_of_omens());
+        for id in [bear, other, wall] {
+            g.clear_sickness(id);
+        }
+        let aura = g.add_card_to_hand(0, catalog::mob_mentality());
+        g.players[0].mana_pool.add(Color::Red, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: aura, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+        }).expect("aura");
+        drain_stack(&mut g);
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let attackers: Vec<_> = if hold_back { vec![bear] } else { vec![bear, other] };
+        g.perform_action(GameAction::DeclareAttackers(
+            attackers.iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(1) }).collect(),
+        )).expect("attack");
+        drain_stack(&mut g);
+        let want = if hold_back { 2 } else { 4 };
+        assert_eq!(g.computed_permanent(bear).unwrap().power, want, "hold back: {hold_back}");
+    }
+}

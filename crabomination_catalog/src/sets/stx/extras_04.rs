@@ -1541,14 +1541,10 @@ pub fn wisdom_of_the_ancients() -> CardDefinition {
 
 // ── Mob Mentality ──────────────────────────────────────────────────────────
 
-/// Mob Mentality — {R} Aura. Enchanted creature has trample.
-///
-/// It shipped as a synthesised "{R} Instant: creatures you control get +1/+1,
-/// and first strike if you cast another spell" under a name Scryfall already
-/// owns — the catalog's own rule is that a synthesised card carries a name the
-/// oracle does not (2026-08-30). The printed card's second clause ("whenever
-/// all non-Wall creatures you control attack, enchanted creature gets +X/+0")
-/// wants an all-attack trigger and is the residual.
+/// Mob Mentality — {R} Aura. Enchanted creature has trample. Whenever all
+/// non-Wall creatures you control attack, enchanted creature gets +X/+0 until
+/// end of turn, X = the number of attacking creatures. "All attack" is a
+/// declaration that leaves no non-Wall creature of yours home.
 pub fn mob_mentality() -> CardDefinition {
     use crate::card::{EnchantmentSubtype, EquipBonus};
     CardDefinition {
@@ -1567,6 +1563,27 @@ pub fn mob_mentality() -> CardDefinition {
             keywords: vec![Keyword::Trample],
             ..Default::default()
         }),
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(crate::card::EventKind::YouAttack, crate::card::EventScope::YourControl)
+                .with_filter(crate::card::Predicate::Not(Box::new(crate::card::Predicate::SelectorExists(
+                    Selector::EachPermanent(
+                        SelectionRequirement::Creature
+                            .and(SelectionRequirement::ControlledByYou)
+                            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::HasCreatureType(
+                                crate::card::CreatureType::Wall,
+                            ))))
+                            .and(SelectionRequirement::Not(Box::new(SelectionRequirement::IsAttacking))),
+                    ),
+                )))),
+            effect: Effect::PumpPT {
+                what: Selector::AttachedTo(Box::new(Selector::This)),
+                power: Value::count(Selector::EachPermanent(
+                    SelectionRequirement::Creature.and(SelectionRequirement::IsAttacking),
+                )),
+                toughness: Value::ZERO,
+                duration: crate::effect::Duration::EndOfTurn,
+            },
+        }],
         ..Default::default()
     }
 }
