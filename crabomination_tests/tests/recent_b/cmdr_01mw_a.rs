@@ -139,29 +139,29 @@ fn invasion_of_regatha_burns_and_its_back_adds_two() {
     assert_eq!(g.scale_damage_to(Some(disciples), EntityRef::Player(1), 4), 4, "a creature source");
 }
 
-/// Thorin, Mountain-king: Bonesplitter moves onto the bear, which then bites
-/// the giant for 4 — a reflexive trigger (CR 603.12) that targets after the
-/// attach; with nothing to attach, the bite never happens.
+/// Thorin, Mountain-king: cast for real, the ETB targets the Equipment (CR
+/// 601.2c, slots 1..) and moves both onto one creature, which then bites the
+/// giant — a reflexive trigger (CR 603.12); with nothing to attach, no bite.
 #[test]
 fn thorin_mountain_king_equips_then_bites() {
     let run = |with_equipment: bool| {
         let mut g = pod(2);
-        let thorin = ready(&mut g, 0, catalog::thorin_mountain_king());
         let bear = ready(&mut g, 0, catalog::grizzly_bears());
-        if with_equipment {
-            ready(&mut g, 0, catalog::bonesplitter());
-        }
+        let gear = with_equipment.then(|| [ready(&mut g, 0, catalog::bonesplitter()), ready(&mut g, 0, catalog::short_sword())]);
         let giant = ready(&mut g, 1, catalog::hill_giant());
-        let etb = catalog::thorin_mountain_king().triggered_abilities[0].effect.clone();
-        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
-        ctx.source = Some(thorin);
-        ctx.targets = vec![Target::Permanent(bear)];
-        let evs = g.resolve_effect(&etb, &ctx).unwrap();
-        g.dispatch_triggers_for_events(&evs);
+        let thorin = g.add_card_to_hand(0, catalog::thorin_mountain_king());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(3);
+        cast(&mut g, thorin);
         drain_stack(&mut g);
+        if let Some([a, b]) = gear {
+            let host = g.battlefield_find(a).unwrap().attached_to.expect("Bonesplitter attached");
+            assert_eq!(g.battlefield_find(b).unwrap().attached_to, Some(host), "both on one creature");
+            assert!([bear, thorin].contains(&host));
+        }
         g.battlefield_find(giant).is_none()
     };
-    assert!(run(true), "a 4-power bite kills the giant");
+    assert!(run(true), "the equipped creature's bite kills the giant");
     assert!(!run(false), "nothing attached, no bite");
 }
 

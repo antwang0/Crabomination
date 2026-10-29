@@ -2167,7 +2167,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Planar Atlas~~ ✅ | fixed 2026-10-28: an optional look that keeps up to one LAND on top (`LookPick { pick_filter: Land, keep_on_top }`), the rest bottomed at random | — |
 | 🟡 Portal Manipulator | the player and the attackers are picked as the trigger resolves, not targeted as it triggers; every attack on you that you could redirect moves (CR 115.1) | `AttackersNowAttackChosenPlayer` |
 | 🟡 Aurora Awakener | "put any number of those permanent cards onto the battlefield" puts all of them | `RevealUntilMatchingToBattlefield` |
-| 🟡 Thorin, Mountain-king | the Equipment aren't targeted (ward/hexproof on one is ignored); the bite is a reflexive trigger since 2026-10-26 (`01WvrAp6`) | `AttachAnyNumberTo` + `If(count(LastMoved))` + `DealDamageEqualToPower` |
 | 🟡 Tetsuo, Imperial Champion | N reads every permanent attached to Tetsuo (an Aura's mana value counts, not only Equipment) | `HighestManaValueAmong(AttachedToMe(This))` |
 | 🟡 Wicked Slumber | with two targets the two stun counters go one each; "both on either" isn't offered | `ApplyToTargets` + `If(count(AllTargets) <= 1)` |
 | 🟡 Arc Spitter | the granted ping may also aim at a creature the wearer is blocking, not only one blocking it | `R::BlockingOrBlockedBySource` |

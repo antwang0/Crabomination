@@ -92,7 +92,12 @@ impl GameState {
             })
             .collect();
         let max = candidates.len() as u32;
-        let Some(picked) = self.choose_up_to_cards(
+        // CR 601.2c — attachments chosen as targets ("attach any number of
+        // target Equipment" — Thorin, Mountain-king) were picked on the stack.
+        let picked = if matches!(what, Selector::TargetsFrom(_) | Selector::AllTargets) {
+            Some(candidates.iter().map(|(id, _)| *id).collect::<Vec<_>>())
+        } else {
+            self.choose_up_to_cards(
             me,
             "Choose any number to attach".into(),
             ctx.source.unwrap_or(CardId(0)),
@@ -101,7 +106,9 @@ impl GameState {
             PickValue::Gain,
             effect,
             auto,
-        ) else {
+        )
+        };
+        let Some(picked) = picked else {
             return Ok(());
         };
         let (on_card, on_player) = match host {

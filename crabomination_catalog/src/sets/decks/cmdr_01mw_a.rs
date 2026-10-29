@@ -201,9 +201,9 @@ pub fn invasion_of_regatha() -> CardDefinition {
 }
 
 /// Thorin, Mountain-king — {3}{R} legendary 3/4 trample Dwarf Noble. When it
-/// enters, attach any number of Equipment you control to target creature you
-/// control; if one or more became attached, that creature deals damage equal
-/// to its power to up to one target creature.
+/// enters, attach any number of target Equipment you control to target
+/// creature you control; when one or more become attached this way, that
+/// creature deals damage equal to its power to up to one target creature.
 pub fn thorin_mountain_king() -> CardDefinition {
     use crate::card::{ArtifactSubtype, Predicate};
     CardDefinition {
@@ -215,15 +215,24 @@ pub fn thorin_mountain_king() -> CardDefinition {
         power: 3,
         toughness: 4,
         keywords: vec![Keyword::Trample],
-        triggered_abilities: vec![etb(Effect::OptionalTargets {
-            min: 1,
-            body: Box::new(Effect::Seq(vec![
-                Effect::AttachAnyNumberTo {
-                    what: Selector::EachPermanent(
-                        R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou),
-                    ),
-                    to: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
-                },
+        // CR 601.2c — slot 0 is the creature, slots 1.. the Equipment
+        // (`SlotGroups`, the Spinning Wheel Kick shape).
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+                Effect::SlotGroups(vec![
+                    Effect::ApplyToTargets {
+                        max_targets: 1,
+                        min_targets: 1,
+                        filter: R::Creature.and(R::ControlledByYou),
+                        effect: Box::new(Effect::Noop),
+                    },
+                    Effect::ApplyToTargets {
+                        max_targets: 15,
+                        min_targets: 0,
+                        filter: R::HasArtifactSubtype(ArtifactSubtype::Equipment).and(R::ControlledByYou),
+                        effect: Box::new(Effect::Noop),
+                    },
+                ]),
+                Effect::AttachAnyNumberTo { what: Selector::TargetsFrom(1), to: Selector::Target(0) },
                 // CR 603.12 — "When one or more Equipment become attached …
                 // this way": a reflexive trigger targeting after the attach;
                 // "that creature" is the attached Equipment's host (the carry
@@ -241,8 +250,7 @@ pub fn thorin_mountain_king() -> CardDefinition {
                     }),
                     else_: Box::new(Effect::Noop),
                 },
-            ])),
-        })],
+            ]))],
         ..Default::default()
     }
 }
