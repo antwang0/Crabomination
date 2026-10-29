@@ -8611,8 +8611,11 @@ impl GameState {
                         // battlefield") fires on any departure, including a
                         // lethal-damage death (Thought-Knot Seer); CreatureDied
                         // is suppressed by Hushbringer-style statics.
+                        // CR 603.10a — "when this is put into a graveyard from
+                        // the battlefield" on an animated noncreature (Lembas)
+                        // is a death too, as on the destroy / sacrifice path.
                         .filter(|t| match t.event.kind {
-                            EventKind::CreatureDied => !dies_suppressed,
+                            EventKind::CreatureDied | EventKind::PermanentDied => !dies_suppressed,
                             EventKind::PermanentLeavesBattlefield => true,
                             _ => false,
                         })
@@ -8630,7 +8633,7 @@ impl GameState {
                         // control dies" (YourControl) must not fire when the
                         // dying source itself fails the filter.
                         .map(|t| {
-                            let dies = t.event.kind == EventKind::CreatureDied;
+                            let dies = t.event.kind != EventKind::PermanentLeavesBattlefield;
                             (c.id, t.effect.clone(), c.controller, t.event.filter.clone(), dies)
                         })
                         .collect();

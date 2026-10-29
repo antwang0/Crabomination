@@ -195,3 +195,35 @@ fn cr_716_2d_a_class_without_a_level_is_level_one() {
     assert_eq!(g.battlefield_find(class).unwrap().class_level, 2);
     assert_eq!(g.players[0].hand.len(), hand + 2, "the level-2 trigger drew two");
 }
+
+/// CR 603.10a / 704.5g — an animated noncreature dying to lethal damage still
+/// fires its own "when this is put into a graveyard from the battlefield"
+/// (the state-based death path collects it as the destroy path does): an
+/// animated Lembas shuffles itself into its owner's library.
+#[test]
+fn cr_603_10a_an_animated_artifact_killed_by_damage_fires_its_graveyard_trigger() {
+    use crabomination::effect::{Duration, Effect, Selector};
+    use crabomination::card::Value;
+    let mut g = two_player_game();
+    let lembas = g.add_card_to_battlefield(0, catalog::lembas());
+    let ctx = EffectContext::for_ability(lembas, 0, None);
+    g.resolve_effect(
+        &Effect::BecomeCreature {
+            what: Selector::This,
+            power: Value::Const(2),
+            toughness: Value::Const(2),
+            creature_types: vec![],
+            keywords: vec![],
+            duration: Duration::EndOfTurn,
+        },
+        &ctx,
+    )
+    .unwrap();
+    assert!(g.computed_permanent(lembas).unwrap().card_types().contains(&CardType::Creature));
+    g.battlefield.iter_mut().find(|c| c.id == lembas).unwrap().damage = 3;
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    crabomination::game::drain_stack(&mut g);
+    assert!(g.battlefield_find(lembas).is_none());
+    assert!(g.players[0].library.iter().any(|c| c.id == lembas), "shuffled into the library");
+}
