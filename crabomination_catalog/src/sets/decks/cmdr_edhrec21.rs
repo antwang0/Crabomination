@@ -8,7 +8,7 @@ use crate::card::{
     StaticEffect, Subtypes, Supertype, TokenDefinition, Value, Zone,
 };
 use crate::effect::shortcut::{etb, partner_with_search, target_filtered};
-use crate::effect::{ActivatedAbility, Duration, Effect, LookPick, PlayerRef, ZoneDest, ZoneRef};
+use crate::effect::{ActivatedAbility, Duration, Effect, LookPick, PlayerRef, ZoneDest};
 use crate::mana::{cost, g, generic, hybrid, r, u, Color, ManaCost};
 use std::sync::Arc;
 
@@ -267,7 +267,8 @@ pub fn cresting_mosasaurus() -> CardDefinition {
 
 /// Dino DNA — {1} artifact. Imprint — {1}, {T}: exile target creature card
 /// from a graveyard (sorcery speed). {6}: a token copy of a creature card
-/// exiled with it, except a 6/6 green Dinosaur with trample (sorcery speed).
+/// exiled with it (targeted), except a 6/6 green Dinosaur with trample
+/// (sorcery speed).
 pub fn dino_dna() -> CardDefinition {
     let exiled = || R::ExiledWithSource.and(R::Creature);
     CardDefinition {
@@ -285,42 +286,34 @@ pub fn dino_dna() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(6)]),
                 sorcery_speed: true,
-                condition: Some(Predicate::SelectorExists(Selector::EachMatching {
-                    zone: ZoneRef::Exile,
-                    filter: exiled(),
-                })),
-                effect: Effect::ChooseOneAmong {
-                    what: Selector::EachMatching { zone: ZoneRef::Exile, filter: exiled() },
-                    chooser: PlayerRef::You,
-                    chosen: Box::new(Effect::Seq(vec![
-                        Effect::CreateTokenCopyOf {
-                            who: PlayerRef::You,
-                            count: Value::ONE,
-                            source: Selector::SeparatedPile { chosen: true },
-                            extra_creature_types: vec![],
-                            extra_card_types: vec![],
-                            override_pt: Some((6, 6)),
-                            override_colors: Some(vec![Color::Green]),
-                            enters_tapped: false,
-                            non_legendary: false,
-                            legendary: false,
-                            extra_keywords: vec![Keyword::Trample],
-                            no_mana_cost: false,
-                            enters_with_counters: None,
-                            remove_keywords: vec![],
-                        },
-                        Effect::AmendCopiableValues {
-                            what: Selector::LastCreatedToken,
-                            name: None,
-                            set_creature_types: Some(vec![CreatureType::Dinosaur]),
-                            add_creature_types: vec![],
-                            legendary: false,
-                            add_colors: vec![],
-                            set_card_types: None,
-                        },
-                    ])),
-                    other: Box::new(Effect::Noop),
-                },
+                // CR 601.2c / 607.1 — targets a creature card the Imprint exiled.
+                effect: Effect::Seq(vec![
+                    Effect::CreateTokenCopyOf {
+                        who: PlayerRef::You,
+                        count: Value::ONE,
+                        source: target_filtered(exiled()),
+                        extra_creature_types: vec![],
+                        extra_card_types: vec![],
+                        override_pt: Some((6, 6)),
+                        override_colors: Some(vec![Color::Green]),
+                        enters_tapped: false,
+                        non_legendary: false,
+                        legendary: false,
+                        extra_keywords: vec![Keyword::Trample],
+                        no_mana_cost: false,
+                        enters_with_counters: None,
+                        remove_keywords: vec![],
+                    },
+                    Effect::AmendCopiableValues {
+                        what: Selector::LastCreatedToken,
+                        name: None,
+                        set_creature_types: Some(vec![CreatureType::Dinosaur]),
+                        add_creature_types: vec![],
+                        legendary: false,
+                        add_colors: vec![],
+                        set_card_types: None,
+                    },
+                ]),
                 ..Default::default()
             },
         ],

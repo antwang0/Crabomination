@@ -2097,7 +2097,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Intimidation Bolt | "other creatures can't attack this turn" is fixed at resolution: a creature entering later can attack | `CantAttackThisTurn` over a resolved set |
 | 🟡 Ride Down | the creatures it blocked "this combat" are read as "this turn" | `Selector::CreaturesBlockedByThisTurn` |
 | 🟡 Tranquil Frillback | each {G} payment buys one mode under its own reflexive trigger, not one trigger choosing up to that many | three `MayPay` → `ReflexiveTrigger` |
-| 🟡 Dino DNA | the copied card is chosen at resolution among those it exiled, not targeted | `ChooseOneAmong` over `R::ExiledWithSource` |
 | ~~Experimental Overload~~ ✅ | stale 2026-10-28: the return is already a `MayDo` + `MoveChosen` pick | — |
 | 🟡 Demonic Embrace | the graveyard cast is modelled as an alternative cost (its own mana + 3 life + a discard), so it can't combine with another alternative cost | `AlternativeCost { from_graveyard }` |
 | 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |

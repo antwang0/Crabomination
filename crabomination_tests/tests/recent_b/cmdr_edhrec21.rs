@@ -219,7 +219,8 @@ fn cresting_mosasaurus_bounces_non_dinosaurs_only_when_cast() {
 }
 
 /// Dino DNA exiles a creature card from any graveyard, then mints a 6/6 green
-/// trampling Dinosaur copy of it.
+/// trampling Dinosaur copy of it — the copied card is a target (CR 601.2c), so
+/// a card it didn't exile is no legal choice.
 #[test]
 fn dino_dna_imprints_and_copies() {
     let mut g = pod(2);
@@ -228,7 +229,11 @@ fn dino_dna_imprints_and_copies() {
     activate(&mut g, dna, 1, None, None).expect_err("nothing imprinted yet");
     activate(&mut g, dna, 0, Some(Target::Permanent(elf)), None).expect("imprint");
     assert!(g.players[1].graveyard.is_empty());
-    activate(&mut g, dna, 1, None, None).expect("copy");
+    let stray = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    activate(&mut g, dna, 1, Some(Target::Permanent(stray)), None).expect_err("not exiled with it");
+    let copy = catalog::dino_dna().activated_abilities[1].effect.clone();
+    assert_eq!(g.auto_targets_for_effect_all_slots_sourced(&copy, 0, None, Some(dna)).0, Some(Target::Permanent(elf)), "the bot finds it");
+    activate(&mut g, dna, 1, Some(Target::Permanent(elf)), None).expect("copy");
     let tok = g.battlefield.iter().find(|c| c.is_token).expect("token");
     let cp = g.computed_permanent(tok.id).unwrap();
     assert_eq!((cp.power, cp.toughness), (6, 6));
