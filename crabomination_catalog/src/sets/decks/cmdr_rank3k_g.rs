@@ -511,27 +511,23 @@ pub fn steward_of_solidarity() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            effect: Effect::Seq(vec![
-                Effect::SkipNextUntap {
-                    what: Selector::This,
-                },
-                make(
-                    Value::ONE,
-                    TokenDefinition {
-                        name: "Warrior".into(),
-                        power: 1,
-                        toughness: 1,
-                        card_types: vec![CardType::Creature],
-                        colors: vec![Color::White],
-                        keywords: vec![Keyword::Vigilance],
-                        subtypes: Subtypes {
-                            creature_types: vec![CreatureType::Warrior],
-                            ..Default::default()
-                        },
+            exert_cost: true,
+            effect: make(
+                Value::ONE,
+                TokenDefinition {
+                    name: "Warrior".into(),
+                    power: 1,
+                    toughness: 1,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::White],
+                    keywords: vec![Keyword::Vigilance],
+                    subtypes: Subtypes {
+                        creature_types: vec![CreatureType::Warrior],
                         ..Default::default()
                     },
-                ),
-            ]),
+                    ..Default::default()
+                },
+            ),
             ..Default::default()
         }],
         ..creature(

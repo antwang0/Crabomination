@@ -100,16 +100,11 @@ pub fn angel_of_condemnation() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(2), w()]),
                 tap_cost: true,
-                // CR 701.43a — exerting is "it won't untap during your next
-                // untap step", paid beside the effect (no card here watches
-                // "whenever you exert").
-                effect: Effect::Seq(vec![
-                    Effect::SkipNextUntap { what: Selector::This },
-                    Effect::ExileUntilSourceLeaves {
-                        what: target_filtered(R::Creature.and(R::OtherThanSource)),
-                        return_to: crate::card::ExileReturnZone::Battlefield,
-                    },
-                ]),
+                exert_cost: true,
+                effect: Effect::ExileUntilSourceLeaves {
+                    what: target_filtered(R::Creature.and(R::OtherThanSource)),
+                    return_to: crate::card::ExileReturnZone::Battlefield,
+                },
                 ..Default::default()
             },
         ],

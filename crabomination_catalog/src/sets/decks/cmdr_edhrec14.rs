@@ -833,7 +833,8 @@ pub fn pride_sovereign() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[w()]),
             tap_cost: true,
-            effect: Effect::Seq(vec![Effect::SkipNextUntap { what: Selector::This }, make(2, cat)]),
+            exert_cost: true,
+            effect: make(2, cat),
             ..Default::default()
         }],
         ..creature("Pride Sovereign", cost(&[generic(2), g()]), vec![CreatureType::Cat], 2, 2)

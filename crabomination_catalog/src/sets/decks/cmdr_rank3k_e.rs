@@ -86,15 +86,13 @@ pub fn hope_tender() -> CardDefinition {
             ActivatedAbility {
                 mana_cost: cost(&[generic(1)]),
                 tap_cost: true,
-                effect: Effect::Seq(vec![
-                    Effect::SkipNextUntap { what: Selector::This },
-                    Effect::ApplyToTargets {
-                        max_targets: 2,
-                        min_targets: 1,
-                        filter: R::Land,
-                        effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
-                    },
-                ]),
+                exert_cost: true,
+                effect: Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 1,
+                    filter: R::Land,
+                    effect: Box::new(Effect::Untap { what: Selector::Target(0), up_to: None }),
+                },
                 ..Default::default()
             },
         ],

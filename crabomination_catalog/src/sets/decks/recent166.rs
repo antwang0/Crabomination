@@ -670,10 +670,8 @@ pub fn basri_tomorrows_champion() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[w()]),
-            effect: Effect::Seq(vec![
-                Effect::SkipNextUntap { what: Selector::This },
-                Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: std::sync::Arc::new(cat()) },
-            ]),
+            exert_cost: true,
+            effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: std::sync::Arc::new(cat()) },
             ..Default::default()
         }],
         triggered_abilities: vec![TriggeredAbility {

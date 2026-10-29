@@ -68,6 +68,23 @@ fn scrap_welder_returns_a_smaller_artifact() {
     assert!(g.battlefield_find(gateway).is_some(), "the Gateway (4) stays");
 }
 
+/// CR 701.43a — Angel of Condemnation's exert is a cost: paid as the ability
+/// is activated, before it resolves, then the creature is exiled.
+#[test]
+fn angel_of_condemnation_exerts_as_a_cost() {
+    let mut g = pod(2);
+    let angel = ready(&mut g, 0, catalog::angel_of_condemnation());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: angel, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("activate");
+    assert!(g.battlefield_find(angel).unwrap().skip_next_untap, "exerted on activation");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_none(), "exiled until the Angel leaves");
+}
+
 /// Kaalia, Zenith Seeker takes one Angel, one Demon and one Dragon.
 #[test]
 fn kaalia_takes_one_of_each() {
