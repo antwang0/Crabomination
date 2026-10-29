@@ -856,15 +856,17 @@ pub fn cosmic_epiphany() -> CardDefinition {
     }
 }
 
-/// Beyond the Quiet — {3}{W}{W} Sorcery. Exile all creatures. (Spacecraft aren't
-/// modeled as a distinct type; the creature half is faithful.)
+/// Beyond the Quiet — {3}{W}{W} Sorcery. Exile all creatures and Spacecraft.
 pub fn beyond_the_quiet() -> CardDefinition {
     CardDefinition {
         name: "Beyond the Quiet",
         cost: cost(&[generic(3), w(), w()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ForEach {
-            selector: Selector::EachPermanent(SelectionRequirement::Creature),
+            selector: Selector::EachPermanent(
+                SelectionRequirement::Creature
+                    .or(SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+            ),
             body: Box::new(Effect::Exile {
                 what: Selector::TriggerSource,
             }),
@@ -6243,8 +6245,8 @@ pub fn space_time_anomaly() -> CardDefinition {
 }
 
 /// Systems Override — {2}{R} Sorcery. Gain control of target artifact or creature
-/// until end of turn; untap it; it gains haste. (The Spacecraft charge rider is
-/// dropped.)
+/// until end of turn; untap it; it gains haste. A Spacecraft also gets ten
+/// charge counters, removed at the beginning of the next end step.
 pub fn systems_override() -> CardDefinition {
     CardDefinition {
         name: "Systems Override",
@@ -6266,6 +6268,25 @@ pub fn systems_override() -> CardDefinition {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
                 duration: Duration::EndOfTurn,
+            },
+            Effect::If {
+                cond: Predicate::EntityMatches {
+                    what: Selector::Target(0),
+                    filter: SelectionRequirement::HasArtifactSubtype(ArtifactSubtype::Spacecraft),
+                },
+                then: Box::new(Effect::Seq(vec![
+                    Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Charge, amount: Value::Const(10) },
+                    Effect::DelayUntilWithCapture {
+                        kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                        capture: Selector::Target(0),
+                        body: Box::new(Effect::RemoveCounter {
+                            what: Selector::Target(0),
+                            kind: CounterType::Charge,
+                            amount: Value::Const(10),
+                        }),
+                    },
+                ])),
+                else_: Box::new(Effect::Noop),
             },
         ]),
         ..Default::default()

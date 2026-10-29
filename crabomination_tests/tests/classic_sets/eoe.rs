@@ -3862,3 +3862,26 @@ fn pinnacle_starcage_cashes_in_its_exiles() {
     let robots = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.name == "Robot").count();
     assert_eq!(robots, 2);
 }
+
+/// Beyond the Quiet exiles a Spacecraft that isn't a creature too; Systems
+/// Override loads a stolen Spacecraft with ten charge counters until the next
+/// end step.
+#[test]
+fn spacecraft_riders_of_beyond_the_quiet_and_systems_override() {
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(1, catalog::wurmwall_sweeper());
+    resolve_targeted(&mut g, 0, catalog::beyond_the_quiet().effect.clone(), &[]);
+    assert!(g.exile.iter().any(|c| c.id == ship), "the uncrewed Spacecraft is exiled");
+
+    let mut g = two_player_game();
+    let ship = g.add_card_to_battlefield(1, catalog::wurmwall_sweeper());
+    resolve_targeted(&mut g, 0, catalog::systems_override().effect.clone(), &[ship]);
+    let charge = |g: &GameState| g.battlefield_find(ship).unwrap().counter_count(CounterType::Charge);
+    assert_eq!(charge(&g), 10);
+    g.step = TurnStep::PostCombatMain;
+    let evs = g.advance_step(Vec::new()).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.step, TurnStep::End);
+    assert_eq!(charge(&g), 0, "removed at the next end step");
+}
