@@ -91,21 +91,28 @@ pub fn curse_of_obsession() -> CardDefinition {
 }
 
 /// Curse of Shaken Faith — {1}{R}. Whenever enchanted player casts a spell
-/// other than their first this turn, it deals 2 damage to them.
+/// other than their first this turn, or copies a spell, it deals 2 damage to
+/// them.
 pub fn curse_of_shaken_faith() -> CardDefinition {
     curse(
         "Curse of Shaken Faith",
         cost(&[generic(1), r()]),
-        vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(Predicate::All(vec![
-                enchanted_player_casts(),
-                Predicate::Not(Box::new(Predicate::SpellsCastThisTurnEquals {
-                    who: PlayerRef::EnchantedPlayer,
-                    count: Value::ONE,
-                })),
-            ])),
-            effect: Effect::DealDamage { to: enchanted(), amount: Value::Const(2) },
-        }],
+        vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::AnyPlayer).with_filter(Predicate::All(vec![
+                    enchanted_player_casts(),
+                    Predicate::Not(Box::new(Predicate::SpellsCastThisTurnEquals {
+                        who: PlayerRef::EnchantedPlayer,
+                        count: Value::ONE,
+                    })),
+                ])),
+                effect: Effect::DealDamage { to: enchanted(), amount: Value::Const(2) },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCopied, EventScope::AnyPlayer).with_filter(enchanted_player_casts()),
+                effect: Effect::DealDamage { to: enchanted(), amount: Value::Const(2) },
+            },
+        ],
     )
 }
 

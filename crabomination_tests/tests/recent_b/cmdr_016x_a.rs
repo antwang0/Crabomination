@@ -1533,6 +1533,26 @@ fn curse_of_shaken_faith_hits_the_second_spell() {
     assert_eq!(g.players[1].life, 18);
 }
 
+/// Curse of Shaken Faith: copying a spell punishes the enchanted player even
+/// when nothing they cast this turn was a second spell (Reverberate is their
+/// first cast; its copy of an opponent's Bolt triggers it).
+#[test]
+fn curse_of_shaken_faith_hits_a_copy() {
+    let mut g = pod(2);
+    curse_on(&mut g, 0, catalog::curse_of_shaken_faith(), 1);
+    flood(&mut g, 0);
+    flood(&mut g, 1);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let rev = g.add_card_to_hand(1, catalog::reverberate());
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt");
+    g.priority.player_with_priority = 1;
+    cast(&mut g, rev, Some(Target::Permanent(bolt))).expect("reverberate");
+    assert_eq!(g.players[1].life, 18, "the copy triggers it; the first cast doesn't");
+}
+
 /// CR 707.10c — Curse of Echoes: the other player copies the enchanted
 /// player's instant and aims it back.
 #[test]
