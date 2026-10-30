@@ -688,3 +688,31 @@ fn field_of_reality_bounces_itself_to_hand() {
     assert!(g.battlefield_find(aura).is_none(), "left the battlefield");
     assert!(g.players[0].hand.iter().any(|c| c.id == aura), "back in hand");
 }
+
+/// CR 603.2c — Tide of War flips once for a whole block declaration: two
+/// blockers mean one flip (heads: the blockers go), not a second flip that
+/// could sacrifice the attackers too.
+#[test]
+fn tide_of_war_flips_once_per_block_declaration() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::tide_of_war());
+    let attackers: Vec<_> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+    let blockers: Vec<_> = (0..2).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+    for &a in &attackers {
+        g.clear_sickness(a);
+    }
+    advance_to(&mut g, TurnStep::DeclareAttackers);
+    g.perform_action(GameAction::DeclareAttackers(
+        attackers.iter().map(|&a| Attack { attacker: a, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack");
+    drain_stack(&mut g);
+    advance_to(&mut g, TurnStep::DeclareBlockers);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(false)]));
+    g.perform_action(GameAction::DeclareBlockers(vec![(blockers[0], attackers[0]), (blockers[1], attackers[1])]))
+        .expect("block");
+    drain_stack(&mut g);
+    assert!(blockers.iter().all(|&b| g.battlefield_find(b).is_none()), "heads: the blockers are sacrificed");
+    assert!(attackers.iter().all(|&a| g.battlefield_find(a).is_some()), "no second flip takes the attackers");
+}

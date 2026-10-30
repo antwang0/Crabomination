@@ -1712,11 +1712,10 @@ pub fn tide_of_war() -> CardDefinition {
         cost: cost(&[generic(4), r(), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec {
-                once_per_turn: false,
-                once_per_batch: false,
-                ..EventSpec::new(EventKind::BlocksNOrMore(1), EventScope::AnyPlayer)
-            },
+            // "Whenever one or more creatures block" (CR 603.2c): one flip per
+            // declaration, not one per blocker — a second flip could sacrifice
+            // the other side too.
+            event: EventSpec::new(EventKind::BlocksNOrMore(1), EventScope::AnyPlayer).once_per_batch(),
             effect: Effect::FlipCoin {
                 count: Value::ONE,
                 on_heads: Box::new(Effect::SacrificeAllMatching {
