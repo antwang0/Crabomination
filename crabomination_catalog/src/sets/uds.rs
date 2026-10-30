@@ -943,11 +943,16 @@ pub fn mark_of_fury() -> CardDefinition {
 }
 
 /// Chime of Night — {1}{B}. Kills a nonblack creature when it falls off.
+/// "Put into a graveyard from the battlefield" (CR 603.6c): `PermanentDied`,
+/// since an Aura never "dies" (`on_dies` is `CreatureDied` and never fired).
 pub fn chime_of_night() -> CardDefinition {
     CardDefinition {
-        triggered_abilities: vec![on_dies(Effect::Destroy {
-            what: target_filtered(R::Creature.and(R::Not(Box::new(R::HasColor(Color::Black))))),
-        })],
+        triggered_abilities: vec![crate::card::TriggeredAbility {
+            event: crate::card::EventSpec::new(crate::card::EventKind::PermanentDied, crate::card::EventScope::SelfSource),
+            effect: Effect::Destroy {
+                what: target_filtered(R::Creature.and(R::Not(Box::new(R::HasColor(Color::Black))))),
+            },
+        }],
         ..aura("Chime of Night", cost(&[generic(1), b()]), EquipBonus::default())
     }
 }

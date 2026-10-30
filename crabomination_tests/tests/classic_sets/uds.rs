@@ -702,3 +702,25 @@ fn goblin_festival_changes_hands_on_a_lost_flip() {
     assert_eq!(g.players[1].life, life - 1);
     assert_eq!(g.battlefield_find(festival).unwrap().controller, 1);
 }
+
+/// CR 603.6c / 704.5m — Chime of Night's "put into a graveyard from the
+/// battlefield" fires when its creature dies and the Aura follows by SBA.
+#[test]
+fn chime_of_night_destroys_when_it_falls_off() {
+    let mut g = two_player_game();
+    let host = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let victim = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let chime = g.add_card_to_hand(0, catalog::chime_of_night());
+    mana(&mut g, 0);
+    cast(&mut g, chime, Some(Target::Permanent(host)));
+    assert_eq!(g.battlefield_find(chime).and_then(|c| c.attached_to), Some(host));
+    let kill = crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) };
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(1, None, 1, 0);
+    ctx.targets = vec![Target::Permanent(host)];
+    g.resolve_effect(&kill, &ctx).unwrap();
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(chime).is_none(), "the Aura went to the graveyard");
+    assert!(g.battlefield_find(victim).is_none(), "its trigger destroyed the nonblack creature");
+}
