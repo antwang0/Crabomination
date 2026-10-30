@@ -355,8 +355,9 @@ No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANS
 5,629) and 29302 (8 seats, `--a dflt`; 768) — **13,109 games** — then, after the gates, 29400 (3, 4, 5, concede + fuzz;
 4,810) and 29401 (6, 7, `--a dflt` + fuzz;
 1,902: the CR 610.3c abort below, three Ganax + Draconic Visitor draws the fuzz forces past `loop_hazard`) and, on the rebased tip, 29402 (2, 3, 5, concede + fuzz;
-6,345: one CR 104.4a Parker Luck draw after three concessions) — **26,166 in all**. ⚠ A concurrent session (`01WRuXc6Fk`) swept 29300-29301 too, at
-other seat lists, so the games mostly differ — **next seed 29403**. **2 strict aborts (both fixed below), 0 panics**; the
+6,345: one CR 104.4a Parker Luck draw after three concessions) and 29403 (4, 8, `--a dflt` + concede; 2,303,
+all decided) — **28,469 in all**. ⚠ A concurrent session (`01WRuXc6Fk`) swept 29300-29301 too, at
+other seat lists, so the games mostly differ — **next seed 29404**. **2 strict aborts (both fixed below), 0 panics**; the
 undecided are CR 104.4a/b draws (Descent into Avernus; Scute Swarm; Altar of the Brood + Worldspine Wurm + Zellix, a
 real mandatory mill loop at 8 seats; Descent again at 8 seats) and finite board caps (Black Sun's Zenith X = 19 into
 Nest of Scarabs; Ghalta at 1,536 counters, then Ferrafor's Saprolings, fuzzed; Myrel + Mondrak, line 6's shape).
@@ -370,7 +371,8 @@ Nest of Scarabs; Ghalta at 1,536 counters, then Ferrafor's Saprolings, fuzzed; M
   probe found two more: `GainControlWhileSourceRemains` (Sower of Temptation killed in response stole **for ever** —
   the unwind hook had already run) and its controlled / tapped siblings (Shackles untapped in response), and the
   parked `ExileChosenUntilSourceLeavesPending` answer (a source that left while the pick waited). Three `cr_recent119`
-  tests, each proven to fail without its fix.
+  tests, each proven to fail without its fix. Ashiok's Erasure (two triggers, not an "until") now exiles a spell
+  for good, unlinked, when the Erasure left before its ETB resolved.
 - **CR 608.2, latent:** `RevealTopLandToBattlefieldElseHand` / `LookTopLandToHandElseBin` take every seat's answer
   before any card moves (the previous OPEN row; `cr_recent119`).
 - **`exile_from::CRAFT`:** `EventKind` is at its 128-tag mask, so the craft cost loop ORs an origin bit into the
