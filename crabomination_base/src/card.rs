@@ -9352,6 +9352,9 @@ pub enum ExileReturnZone {
     SpiritToken,
     /// Return to its owner's graveyard (Gravegouger).
     Graveyard,
+    /// Return under its owner's control; one entering under the control of
+    /// the source's controller gets `n` +1/+1 counters (Lagrella, the Magpie).
+    BattlefieldCountersIfYours(u8),
 }
 
 /// Records that a card sits in exile because of another permanent's

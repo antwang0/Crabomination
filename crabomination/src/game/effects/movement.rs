@@ -3972,6 +3972,20 @@ impl GameState {
             if !self.players.get(owner).is_some_and(|pl| pl.is_alive()) {
                 continue;
             }
+            // "When an exiled card enters under your control this way, put
+            // two +1/+1 counters on it" — you being the source's controller.
+            let bonus = match return_to {
+                Some(ExileReturnZone::BattlefieldCountersIfYours(n)) => {
+                    let you = self
+                        .battlefield_find(source)
+                        .or_else(|| self.leaves_bf_lki.get(&source))
+                        .map(|c| c.controller)
+                        .or_else(|| self.find_card_anywhere(source).map(|c| c.owner));
+                    (you == Some(owner)).then_some(u32::from(n))
+                }
+                _ => None,
+            };
+            let entering = card.id;
             let dest = match return_to {
                 Some(ExileReturnZone::Hand) => ZoneDest::Hand(PlayerRef::Seat(owner)),
                 Some(ExileReturnZone::Graveyard) => ZoneDest::Graveyard,
@@ -3985,6 +3999,18 @@ impl GameState {
                 },
             };
             self.place_card_in_dest(card, owner, &dest, events);
+            if let Some(n) = bonus {
+                let kind = crate::card::CounterType::PlusOnePlusOne;
+                let n = self.place_counters(entering, kind, n);
+                if n > 0 {
+                    events.push(GameEvent::CounterAdded {
+                        card_id: entering,
+                        counter_type: kind,
+                        count: n,
+                        placer: Some(owner),
+                    });
+                }
+            }
         }
     }
 
