@@ -17010,7 +17010,12 @@ impl GameState {
                 // CR 603.6e — controller picks any subset of their matching
                 // permanents (other than the source); each is exiled linked to
                 // the source and returns when it leaves. Lumbering Battlement.
-                let Some(source) = ctx.source else { return Ok(()) };
+                // CR 610.3c — a source already gone exiles nothing (a token
+                // Abdel Adrian the legend rule took before its ETB resolved
+                // left nineteen permanents exiled for ever; audit pod seed 2941996).
+                let Some(source) = ctx.source.filter(|s| self.battlefield_find(*s).is_some()) else {
+                    return Ok(());
+                };
                 let p = ctx.controller;
                 let candidates: Vec<(CardId, String)> = self
                     .battlefield

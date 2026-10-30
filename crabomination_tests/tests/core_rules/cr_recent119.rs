@@ -5,7 +5,7 @@
 use crabomination::card::{CardDefinition, CardType};
 use crabomination::catalog;
 use crabomination::decision::DecisionAnswer;
-use crabomination::effect::{Effect, PlayerRef};
+use crabomination::effect::{Effect, PlayerRef, Selector};
 use crabomination::game::types::{GameAction, TurnStep};
 use crabomination::game::*;
 
@@ -68,4 +68,24 @@ fn cr_701_40a_a_blocked_manifest_leaves_the_library_card_face_up() {
     g.resolve_effect(&manifest, &EffectContext::for_ability(src, 0, None)).expect("resolves");
     let card = g.players[1].library.iter().find(|c| c.id == top).expect("still in the library");
     assert!(!card.face_down, "face up again where it stayed");
+}
+
+/// CR 610.3c — "exile … until [this] leaves the battlefield" exiles nothing
+/// once the source has already left: a token copy of Abdel Adrian the legend
+/// rule removed before its ETB resolved still exiled every chosen permanent,
+/// with no leave left to return them (audit pod seed 2941996, six seats).
+#[test]
+fn cr_610_3c_a_gone_source_exiles_nothing_until_it_leaves() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = multi_player_game(2);
+    let abdel = g.add_card_to_battlefield(0, catalog::abdel_adrian_gorions_ward());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let etb = catalog::abdel_adrian_gorions_ward().triggered_abilities[0].effect.clone();
+    let mut gone = g.clone();
+    gone.resolve_effect(&Effect::Exile { what: Selector::ExactObjects(vec![abdel]) }, &EffectContext::for_ability(abdel, 0, None))
+        .expect("exile Abdel");
+    gone.resolve_effect(&etb, &EffectContext::for_ability(abdel, 0, None)).expect("the ETB resolves");
+    assert!(gone.battlefield_find(bear).is_some(), "nothing exiled: the source already left");
+    g.resolve_effect(&etb, &EffectContext::for_ability(abdel, 0, None)).expect("the ETB resolves");
+    assert!(g.exile.iter().any(|c| c.id == bear), "with Abdel present the Bears are exiled");
 }
