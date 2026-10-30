@@ -4046,7 +4046,7 @@ impl GameState {
                 mana_spent: 0,
                 uncounterable: false, // a copy is a spell; it can be countered (CR 707.10)
             });
-            events.push(GameEvent::SpellsCopied { original: new_id, count: 1, controller: p });
+            events.push(GameEvent::SpellsCopied { copy: new_id, count: 1, controller: p });
         }
         events
     }

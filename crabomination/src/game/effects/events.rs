@@ -1725,7 +1725,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // The spell, or the ability's source, that chose targets (Loki, God
         // of Mischief tells the two apart).
         GameEvent::ChoseTargets { object, .. } => Some(EntityRef::Card(*object)),
-        GameEvent::SpellsCopied { original, .. } => Some(EntityRef::Card(*original)),
+        GameEvent::SpellsCopied { copy, .. } => Some(EntityRef::Card(*copy)),
         GameEvent::PermanentEntered { card_id } => Some(EntityRef::Permanent(*card_id)),
         GameEvent::CreatureFought { card_id, .. }
         | GameEvent::Exploited { card_id, .. }
@@ -2311,7 +2311,7 @@ mod tests {
             E::LoyaltyAbilityActivated { planeswalker: c, loyalty_change: 1 },
             E::LoyaltyChanged { card_id: c, new_loyalty: 3 },
             E::PlaneswalkerDied { card_id: c },
-            E::SpellsCopied { original: c, count: 1, controller: 0 },
+            E::SpellsCopied { copy: c, count: 1, controller: 0 },
             E::SurveilPerformed { player: 0, looked_at: 1, graveyarded: 1 },
             E::CardLeftGraveyard { player: 0, card_id: c },
             E::CardPutIntoGraveyard { player: 0, card_id: c, is_land: true },

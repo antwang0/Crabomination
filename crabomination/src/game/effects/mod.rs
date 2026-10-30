@@ -2332,6 +2332,7 @@ impl GameState {
             _ => Vec::new(),
         };
         let spreads = choose_new_targets && caster == orig_caster && Self::copy_spreads_removal(&orig_card_def.effect);
+        let mut last = cid;
         for i in 0..n {
             let mut default_target = default_target.clone();
             if spreads && i > 0 && matches!(target, Some(Target::Permanent(_))) {
@@ -2373,6 +2374,7 @@ impl GameState {
                 (target.clone(), additional_targets.clone())
             };
             let new_id = self.next_id();
+            last = new_id;
             let mut copy_inst = crate::card::CardInstance::new(new_id, orig_card_def.clone(), caster);
             // CR 707.10a — a copy of a spell ceases to exist off the stack.
             copy_inst.is_token = true;
@@ -2392,7 +2394,7 @@ impl GameState {
                 uncounterable: false,
             });
         }
-        events.push(GameEvent::SpellsCopied { original: cid, count: n as u32, controller: caster });
+        events.push(GameEvent::SpellsCopied { copy: last, count: n as u32, controller: caster });
     }
 
     /// CR 706 — put a copy of the *resolving* spell on the stack under
@@ -33994,8 +33996,10 @@ impl GameState {
                     .filter(|t| *t != original)
                     .collect();
                 let count = others.len() as u32;
+                let mut last = spell_id;
                 for t in others {
                     let new_id = self.next_id();
+                    last = new_id;
                     let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), caster);
                     copy_inst.is_token = true;
                     choices.apply(&mut copy_inst);
@@ -34013,7 +34017,7 @@ impl GameState {
                 }
                 if count > 0 {
                     events.push(GameEvent::SpellsCopied {
-                        original: spell_id,
+                        copy: last,
                         count,
                         controller: caster,
                     });

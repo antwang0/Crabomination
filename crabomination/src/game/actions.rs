@@ -13739,6 +13739,7 @@ impl GameState {
             };
             let mut aimed = Vec::new();
             Self::note_copy_aim(&def, x_value, &target, &mut aimed);
+            let mut last = card_id;
             for _ in 0..n {
                 let copy_target = if target.is_some() {
                     let default = self.storm_copy_default(&def, p, &target, &aimed, x_value);
@@ -13749,6 +13750,7 @@ impl GameState {
                     None
                 };
                 let new_id = self.next_id();
+                last = new_id;
                 let mut copy_inst = crate::card::CardInstance::new(new_id, def.clone(), p);
                 copy_inst.is_token = true;
                 copy_inst.cast_bf_slots = self.battlefield_target_slots(copy_target.as_ref(), &additional_targets);
@@ -13771,7 +13773,7 @@ impl GameState {
             // magecraft hear storm copies like any other.
             if n > 0 {
                 self.dispatch_triggers_for_events(&[GameEvent::SpellsCopied {
-                    original: card_id,
+                    copy: last,
                     count: n,
                     controller: p,
                 }]);

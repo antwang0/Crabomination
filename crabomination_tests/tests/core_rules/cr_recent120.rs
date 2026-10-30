@@ -91,3 +91,32 @@ fn cr_608_2d_gruesome_menagerie_takes_one_of_each_value() {
     let ones = [a, b].iter().filter(|id| g.battlefield_find(**id).is_some()).count();
     assert_eq!(ones, 1, "one creature of mana value 1");
 }
+
+/// CR 707.10c — a copy is controlled by the player who copied it, so "whenever
+/// an opponent copies a spell, they lose 1 life" (Mage Hunter) hits the
+/// copier, not the original spell's caster (the copy event's subject was the
+/// original, and `Triggerer` read its caster).
+#[test]
+fn cr_707_10c_a_copy_trigger_reads_the_copier() {
+    use crabomination::game::types::Target;
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::mage_hunter());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let rev = g.add_card_to_hand(1, catalog::reverberate());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[1].mana_pool.add(crabomination::mana::Color::Red, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("bolt");
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: rev, target: Some(Target::Permanent(bolt)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("reverberate");
+    drain_stack(&mut g);
+    // The copy may be re-aimed at seat 0's face; the Hunter costs it nothing.
+    assert_eq!((20 - g.players[0].life) % 3, 0, "the original's caster copied nothing");
+    assert_eq!(g.players[1].life, 18, "one for the cast, one for the copy");
+}

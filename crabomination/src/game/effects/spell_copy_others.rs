@@ -109,7 +109,7 @@ impl GameState {
                 uncounterable: false,
             });
             events.push(GameEvent::SpellsCopied {
-                original: spell_id,
+                copy: new_id,
                 count: 1,
                 controller: caster,
             });

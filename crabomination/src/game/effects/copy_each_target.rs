@@ -58,7 +58,7 @@ impl GameState {
                 mana_spent: 0,
                 uncounterable: false,
             });
-            events.push(GameEvent::SpellsCopied { original: spell_id, count: 1, controller: caster });
+            events.push(GameEvent::SpellsCopied { copy: new_id, count: 1, controller: caster });
         }
         Ok(())
     }
@@ -123,7 +123,7 @@ impl GameState {
                 mana_spent: 0,
                 uncounterable: false,
             });
-            events.push(GameEvent::SpellsCopied { original: spell_id, count: 1, controller: me });
+            events.push(GameEvent::SpellsCopied { copy: new_id, count: 1, controller: me });
         }
         Ok(())
     }

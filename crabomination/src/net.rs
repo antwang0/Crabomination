@@ -3429,8 +3429,9 @@ impl From<&GameEvent> for GameEventWire {
             GameEvent::PlaneswalkerDied { card_id } => {
                 GameEventWire::PlaneswalkerDied { card_id: *card_id }
             }
-            GameEvent::SpellsCopied { original, count, .. } => GameEventWire::SpellsCopied {
-                original: *original,
+            // The wire keeps its field name; the copy carries the spell's name.
+            GameEvent::SpellsCopied { copy, count, .. } => GameEventWire::SpellsCopied {
+                original: *copy,
                 count: *count,
             },
             GameEvent::SurveilPerformed { player, looked_at, graveyarded } => {
