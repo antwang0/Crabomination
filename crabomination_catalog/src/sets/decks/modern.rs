@@ -1017,10 +1017,10 @@ pub fn electrostatic_field() -> CardDefinition {
     }
 }
 
-/// Kessig Flamebreather — {1}{R} 1/3. Whenever you cast an instant or sorcery,
+/// Kessig Flamebreather — {1}{R} 1/3. Whenever you cast a noncreature spell,
 /// deal 1 damage to each opponent.
 pub fn kessig_flamebreather() -> CardDefinition {
-    use crate::effect::shortcut::{each_opponent, magecraft};
+    use crate::effect::shortcut::{each_opponent, on_cast_noncreature};
     CardDefinition {
         name: "Kessig Flamebreather",
         cost: cost(&[generic(1), r()]),
@@ -1031,7 +1031,7 @@ pub fn kessig_flamebreather() -> CardDefinition {
         },
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![magecraft(Effect::DealDamage {
+        triggered_abilities: vec![on_cast_noncreature(Effect::DealDamage {
             to: each_opponent(),
             amount: Value::Const(1),
         })],

@@ -442,6 +442,23 @@ fn kessig_flamebreather_pings_on_instant() {
     assert_eq!(g.players[1].life, 20 - 3 - 1, "Bolt + Flamebreather ping");
 }
 
+/// "Whenever you cast a noncreature spell": an artifact spell pings too, a
+/// creature spell doesn't (it rode `magecraft`, instants and sorceries only).
+#[test]
+fn kessig_flamebreather_pings_on_any_noncreature_spell() {
+    for (def, ping) in [(catalog::sol_ring(), true), (catalog::grizzly_bears(), false)] {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::kessig_flamebreather());
+        let id = g.add_card_to_hand(0, def);
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, 20 - i32::from(ping));
+    }
+}
+
 /// Play with Fire deals 2 to a player.
 #[test]
 fn play_with_fire_deals_two() {

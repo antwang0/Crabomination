@@ -2856,7 +2856,7 @@ pub fn the_mechanist_aerial_artisan() -> CardDefinition {
         ]),
         power: 1,
         toughness: 3,
-        triggered_abilities: vec![crate::effect::shortcut::magecraft(investigate(1))],
+        triggered_abilities: vec![crate::effect::shortcut::on_cast_noncreature(investigate(1))],
         // "{T}: Until end of turn, target artifact token you control becomes a
         // 3/1 Construct artifact creature with flying." The whole ability was
         // missing, which left the Clue-making half with nothing to do.
