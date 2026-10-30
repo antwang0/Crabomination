@@ -47795,7 +47795,10 @@ impl GameState {
                         self.players.iter().position(|pl| {
                             pl.hand.iter().chain(&pl.graveyard).any(|c| c.id == cid)
                         })
-                    }),
+                    })
+                    // A card discarded or milled into exile (Rest in Peace)
+                    // is still its owner's: Megrim's "that player" read nobody.
+                    .or_else(|| self.exile.iter().find(|c| c.id == cid).map(|c| c.owner)),
             }),
             PlayerRef::Target(idx) => ctx.targets.get(*idx as usize).and_then(|t| match t {
                 Target::Player(p) => Some(*p),

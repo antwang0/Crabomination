@@ -159,3 +159,21 @@ fn cr_800_4a_a_parked_demonstrate_ask_whose_spell_is_gone_copies_nothing() {
     let _ = g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true)));
     assert!(g.stack.iter().all(|si| !matches!(si, StackItem::Spell { .. })), "no copy of a spell that is gone");
 }
+
+/// CR 614.6 — a card discarded under Rest in Peace goes to exile, and it is
+/// still its owner's discard: Megrim's "deals 2 damage to that player" found no
+/// player (`Triggerer` looked for the card in hand and graveyard only).
+#[test]
+fn cr_614_6_a_discard_replaced_into_exile_still_names_the_discarder() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::megrim());
+    g.add_card_to_battlefield(0, catalog::rest_in_peace());
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let discard = Effect::Discard { who: Selector::Player(PlayerRef::Seat(1)), amount: Value::ONE, random: false };
+    let evs = g.resolve_effect(&discard, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bears), "Rest in Peace exiled it");
+    assert_eq!(g.players[1].life, 18, "Megrim hit the discarder");
+}
