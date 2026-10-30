@@ -354,8 +354,9 @@ No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANS
 28110 (4, 6 seats; 2,559 games), 29300 (3, 5, 7, `CRAB_POD_CONCEDE=20`; 4,153), 29301 (2, 4, 6, `CRAB_POD_FUZZ=2500`;
 5,629) and 29302 (8 seats, `--a dflt`; 768) — **13,109 games** — then, after the gates, 29400 (3, 4, 5, concede + fuzz;
 4,810) and 29401 (6, 7, `--a dflt` + fuzz;
-1,902: the CR 610.3c abort below, three Ganax + Draconic Visitor draws the fuzz forces past `loop_hazard`) — **19,821 in all**. ⚠ A concurrent session (`01WRuXc6Fk`) swept 29300-29301 too, at
-other seat lists, so the games mostly differ — **next seed 29402**. **2 strict aborts (both fixed below), 0 panics**; the
+1,902: the CR 610.3c abort below, three Ganax + Draconic Visitor draws the fuzz forces past `loop_hazard`) and, on the rebased tip, 29402 (2, 3, 5, concede + fuzz;
+6,345: one CR 104.4a Parker Luck draw after three concessions) — **26,166 in all**. ⚠ A concurrent session (`01WRuXc6Fk`) swept 29300-29301 too, at
+other seat lists, so the games mostly differ — **next seed 29403**. **2 strict aborts (both fixed below), 0 panics**; the
 undecided are CR 104.4a/b draws (Descent into Avernus; Scute Swarm; Altar of the Brood + Worldspine Wurm + Zellix, a
 real mandatory mill loop at 8 seats; Descent again at 8 seats) and finite board caps (Black Sun's Zenith X = 19 into
 Nest of Scarabs; Ghalta at 1,536 counters, then Ferrafor's Saprolings, fuzzed; Myrel + Mondrak, line 6's shape).
