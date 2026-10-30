@@ -25536,11 +25536,15 @@ impl GameState {
                 if let StackItem::Spell { card, .. } = self.stack.remove(pos) {
                     let name = card.definition.name.to_string();
                     let mut card = *card;
-                    card.exiled_by = Some(crate::card::ExileLink {
-                        source,
-                        return_to: crate::card::ExileReturnZone::Hand,
-                        monarch_guard: None,
-                    });
+                    // Two triggers, not "until" (CR 610.3c doesn't apply): an
+                    // Erasure already gone exiles the spell for good, unlinked.
+                    if self.battlefield_find(source).is_some() {
+                        card.exiled_by = Some(crate::card::ExileLink {
+                            source,
+                            return_to: crate::card::ExileReturnZone::Hand,
+                            monarch_guard: None,
+                        });
+                    }
                     events.push(GameEvent::PermanentExiled { card_id: card.id });
                     self.exile.push(card);
                     if let Some(src) = self.battlefield_find_mut(source) {

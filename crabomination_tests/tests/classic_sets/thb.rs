@@ -4134,6 +4134,29 @@ fn ashioks_erasure_exiles_locks_and_returns() {
     assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "exiled card returns to owner's hand on leave");
 }
 
+/// Two triggers, not an "until" (so CR 610.3c doesn't spare the spell): an
+/// Erasure gone before its ETB resolves still exiles the spell — for good,
+/// linked to nothing, since its leave trigger has already resolved.
+#[test]
+fn ashioks_erasure_gone_before_its_etb_exiles_for_good() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt, target: Some(Target::Player(0)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("opp bolt on stack");
+    let erasure = g.add_card_to_battlefield(0, catalog::ashioks_erasure());
+    let etb = catalog::ashioks_erasure().triggered_abilities[0].effect.clone();
+    g.remove_from_battlefield_to_graveyard_raw(erasure);
+    let ctx = EffectContext { targets: vec![Target::Permanent(bolt)], ..EffectContext::for_ability(erasure, 0, None) };
+    g.resolve_effect(&etb, &ctx).expect("the ETB resolves");
+    let exiled = g.exile.iter().find(|c| c.id == bolt).expect("the Bolt is exiled");
+    assert!(exiled.exiled_by.is_none(), "linked to nothing that could return it");
+}
+
 /// Entrancing Lyre taps a creature with power ≤ X and locks it from untapping
 /// while the Lyre stays tapped; the lock releases once the Lyre leaves.
 #[test]
