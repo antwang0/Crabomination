@@ -199,7 +199,7 @@ pub fn tale_of_tinuviel() -> CardDefinition {
 }
 
 /// The Aesir Escape Valhalla — {2}{G} Saga. I: exile a permanent card from
-/// your graveyard (the priciest) and gain life equal to its mana value. II:
+/// your graveyard (your pick, offered priciest first) and gain life equal to its mana value. II:
 /// that many +1/+1 counters on target creature you control. III: return this
 /// Saga and the exiled card to their owner's hand.
 pub fn the_aesir_escape_valhalla() -> CardDefinition {
@@ -211,12 +211,14 @@ pub fn the_aesir_escape_valhalla() -> CardDefinition {
             (
                 1,
                 Effect::Seq(vec![
-                    Effect::Move {
-                        what: Selector::best_of(Selector::CardsInZone {
-                            who: PlayerRef::You,
-                            zone: Zone::Graveyard,
-                            filter: R::PermanentCard,
-                        }),
+                    Effect::MoveChosen {
+                        from: Selector::take_priciest(
+                            Selector::CardsInZone { who: PlayerRef::You, zone: Zone::Graveyard, filter: R::PermanentCard },
+                            Value::Const(i32::MAX),
+                        ),
+                        filter: None,
+                        count: Value::ONE,
+                        up_to: false,
                         to: ZoneDest::ExileWithSourceStamp,
                     },
                     Effect::GainLife { who: Selector::You, amount: mv() },

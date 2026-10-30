@@ -187,6 +187,23 @@ fn aesir_escape_valhalla_round_trip() {
     assert!(in_hand(&g, 0, giant) && in_hand(&g, 0, saga), "both went home");
 }
 
+/// The Aesir Escape Valhalla's chapter I exile is the controller's choice, not
+/// the priciest card — and chapter II reads the mana value of the one chosen.
+#[test]
+fn aesir_escape_valhalla_exiles_the_chosen_card() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let elf = g.add_card_to_graveyard(0, catalog::llanowar_elves());
+    let saga = g.add_card_to_hand(0, catalog::the_aesir_escape_valhalla());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![elf])]));
+    cast(&mut g, saga, &[]).expect("cast");
+    assert!(in_exile(&g, elf) && !in_exile(&g, giant));
+    assert_eq!(g.players[0].life, 21, "Llanowar Elves' mana value is 1");
+    lore(&mut g, saga);
+    assert_eq!(g.battlefield_find(bear).unwrap().counter_count(CounterType::PlusOnePlusOne), 1);
+}
+
 /// The Creation of Avacyn: tutor to exile, pay its mana value in life if
 /// it's a creature, then put it onto the battlefield.
 #[test]

@@ -735,7 +735,7 @@ Three approximations the fixes left standing, each documented at its variant:
 | --- | --- |
 | Scrabbling Claws | ✅ targets the **player** (`TargetPlayerThen` + `ExileFromGraveyard { Target(0) }`, CR 115.1) and that player picks the card (`ExileFromGraveyard` asks the exiling seat; the headless pick is the cheapest). |
 | Goblin Welder | ✅ fixed 2026-10-26: the graveyard card is slot 1, `InGraveyardOfTargetSlotController(0)` (CR 601.2c), and `WeldArtifacts { a, b }` does nothing unless both are still legal. |
-| Ambush Wolf / Angel of Serenity | 🟡 "up to one" / "up to three **other**" — the Angel's `other` is now in the filter; the Wolf's "up to one" still fizzles the trigger rather than declining it, which differs only when a graveyard is empty. |
+| Ambush Wolf / Angel of Serenity | ✅ closed 2026-10-30: the Wolf's "up to one" is `OptionalTargets { min: 0 }` (declines, never takes its own card) and the Angel is `ApplyToTargets { min_targets: 0 }` with `OtherThanSource`. |
 
 ## A layer observation, filed by the card that surfaced it (2026-09-20)
 
@@ -2087,7 +2087,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Hooded Blightfang~~ ✅ | fixed 2026-10-24: `DealsDamage` (combat or not) gated on a planeswalker in slot 0; the noncombat funnel now fires it for planeswalker / battle hits | — |
 | 🟡 Soulfire Grand Master | the buyback rider catches the next instant or sorcery cast from any zone, not only from your hand, and rides a trigger | `Effect::OnYourNextInstantSorceryThisTurn` + `SpellReturnsToHandOnResolve` |
 | ~~Altar of the Wretched // Wretched Bonemass~~ ✅ | fixed 2026-10-24: twelve `SelfHasKeywordWhilePredicate` statics read the exiled crafting cards (protection, parametrized, is not copied) | — |
-| 🟡 The Aesir Escape Valhalla | the exiled permanent card is the engine's pick (the priciest) | `Selector::best_of` |
 | 🟡 The Creation of Avacyn | the tutored card is exiled face up (the face-down hiding isn't modelled) | `ZoneDest::ExileWithSourceStamp` |
 | 🟡 Magar of the Magic Strings | a snapshot reload rebuilds the face-down puppet as a plain 2/2 (as it does Missy's Cybermen) | the serde wire stores only `face_down_permanent` |
 | 🟡 Intimidation Bolt | "other creatures can't attack this turn" is fixed at resolution: a creature entering later can attack | `CantAttackThisTurn` over a resolved set |
@@ -2124,7 +2123,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Zareth San, the Trickster | the returned unblocked Rogue is auto-picked | from-hand `bounce_other_filter` + `JoinCombatAttackingChosen` |
 | 🟡 Hew the Entwood | chosen cards enter one at a time in pick order (not all nonlands, then all lands); the bot sacrifices no lands | `SacrificeAnyNumber` + `LookPick` |
 | ~~Baron Helmut Zemo~~ ✅ | fixed 2026-10-28: a manual seat names the boast's exiled set, and the controller picks which copies (up to three) to cast | — |
-| 🟡 Koh, the Face Stealer | a new choice reverts every baked grant on Koh, not only the old borrow | `BorrowAbilitiesOfChosenExiled` |
 | 🟡 Lethal Exploit | the modified creatures are counted as it resolves, not as it is cast | `PumpPT` with `CountOf` |
 | 🟡 Fall of the Impostor | a tie for greatest power exiles the first in battlefield order, not the controller's choice | `TakeGreatestPower` |
 | 🟡 Shah of Naar Isle | "up to three" is three yes/no draws | `EachPlayerDoes` + `MayDo` |
