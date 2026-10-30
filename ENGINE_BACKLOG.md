@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc3kK`) — strict sweeps, a face-down manifest leak, a craft-exile origin, cast-condition probes](#fixedopen-2026-10-30-commander-run-01wruxc3kk--strict-sweeps-a-face-down-manifest-leak-a-craft-exile-origin-cast-condition-probes) | 40 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc6Fk`) — the take-spent once-a-turn class, residual rank, pod sinks](#fixedopen-2026-10-29-commander-run-01wruxc6fk--the-take-spent-once-a-turn-class-residual-rank-pod-sinks) | 42 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc2ns`) — strict-sweep answer-log leaks, mid-resolution mana abilities, granted graveyard triggers](#fixedopen-2026-10-29-commander-run-01wruxc2ns--strict-sweep-answer-log-leaks-mid-resolution-mana-abilities-granted-graveyard-triggers) | 48 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc672`) — target-shaped residuals, four rules classes, audit and census sweeps](#fixedopen-2026-10-29-commander-run-01wruxc672--target-shaped-residuals-four-rules-classes-audit-and-census-sweeps) | 43 |
@@ -309,6 +310,53 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 ## The Commander NEXT's line 9 as `01WRuXc672` found it (moved verbatim, 2026-10-29)
 
 9. **`01WRuXc33x` (2026-10-29, no seats; ENGINE_BACKLOG `01WRuXc33x`): audit sweeps first, then the residual rank.** Seeds 28001-28003 over every deck at 3-8 seats (`pod_sweep.py`, audit build, one with `CRAB_POD_CONCEDE=20`): 7,480 games, 0 panics, 2 CR 104.4a draws. Clean decks **5,456 → 5,525**: Scrap Welder targets (`R::ManaValueLessThanOneAmong`, `sac_other_mv_above_target`), CR 508.4's defender pick for `DeployCreatureFromHandAttacking` (+ battles), `exert_cost` (five cards), Glowcap's top-card look, Galadriel's Dismissal's two targets, Arachne's hand look. Bot: untap/charge/harness sinks. Gates: suite **29,303 / 0 / 8** (strict answer log, precon-seat test excluded), clippy 0, `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical. **Next seed 28004.** Next: rank list top is Thorin (12, Equipment not targeted), Hydro-Man (10), Deification (10, enumerable `PlaneswalkerSubtype`), Press the Enemy (9), Dawnhand's cost picks (9, an `AbilityCostChoice` kind).
+
+## The Commander NEXT's line 9 as `01WRuXc3kK` found it (moved verbatim, 2026-10-30)
+
+9. **`01WRuXc6Fk` (2026-10-29, no seats; ENGINE_BACKLOG `01WRuXc6Fk`): audit sweeps, the residual rank, a census, one class.** Seeds 29001-29002 over every deck at 3-8 seats (audit build, one with `CRAB_POD_CONCEDE=20`): 9,161 games, 0 panics, 3 CR 104.4 draws, 4 finite board caps (Council of Reeds' per-combat self-copy is the new shape). **Class (CR 603.3d): a printed "you may … Do this only once each turn" capped the trigger** — sixteen cards, now spent by the take; Tide of War flipped once per blocker (CR 603.2c), Chime of Night's Aura trigger rode `CreatureDied` (CR 603.6c), Cockatrice / Thicket Basilisk stood in deathtouch for an end-of-combat destroy, Kessig Flamebreather / The Mechanist rode `magecraft` for "noncreature spell", Veyran's Magecraft ignored copies (ratchet both ways) (`once_each_turn_on_take`), ratchet `every_optional_once_each_turn_is_spent_by_the_take`. Cards: Wizard's Rockets' {X} (`{X}` mana abilities default to X = 1 for the auto-tapper), Accursed Witch / Infectious Curse discounts, Krenko's Buzzcrusher per player, Systems Override / Beyond the Quiet Spacecraft, Mob Mentality. Bot (pods): cantrip mana rocks cracked at an opponent's end step, Myriad Landscape before the casts. Clean decks **5,619 → 5,649 / 6,140**. Gates at the closing tip: suite **29,339 / 0 / 8** (strict, precon-seat test excluded; **29,344 / 0 / 8** rebased on `01WRuXc2ns`'s seven commits, pod outcome table unmoved by the merge; **29,347 / 0 / 8** at the closing tip); workspace clippy **0** (three warnings from earlier commits fixed); `--bench` **196,176 / 27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok; cube / sos / sealed × 300 (seed 29010) all decided; release pods 2..8 seats × 300 (seed 29020) 2,100/2,100 decided, turns/game 20.31 / 33.22 / 46.22 / 59.40 / 69.81 / 85.26 / 97.36. Post-merge strict sweeps on the closing tip (audit build, `CRAB_ANSWER_LOG=strict`): 29300 (2, 3 seats, `CRAB_POD_CONCEDE=20`) and 29301 (5, 7 seats) — **7,223 games, 0 panics, 0 strict aborts, 1 undecided (a Descent into Avernus CR 104.4a draw)**. **Next seed 29302.** Next: the rank list is now mostly choice-exposure rows (Dawnhand, Battletide, Hawkeye); a 120-group census (seed 29100) replayed as situational — census yield is thinning; prefer class sweeps (an oracle phrase vs a definition shape, then a `clause_ratchet` in `catalog_registration`), which found sixteen cards this run.
+
+## FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc3kK`) — strict sweeps, a face-down manifest leak, a craft-exile origin, cast-condition probes
+
+No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`) over every deck:
+28110 (4, 6 seats; 2,559 games), 29300 (3, 5, 7, `CRAB_POD_CONCEDE=20`; 4,153), 29301 (2, 4, 6, `CRAB_POD_FUZZ=2500`;
+5,629) and 29302 (8 seats, `--a dflt`; 768) — **13,109 games**. ⚠ A concurrent session (`01WRuXc6Fk`) swept 29300-29301 too, at
+other seat lists, so the games mostly differ — **next seed 29400**. **1 strict abort (fixed below), 0 panics**; the
+undecided are CR 104.4a/b draws (Descent into Avernus; Scute Swarm; Altar of the Brood + Worldspine Wurm + Zellix, a
+real mandatory mill loop at 8 seats; Descent again at 8 seats) and finite board caps (Black Sun's Zenith X = 19 into
+Nest of Scarabs; Ghalta at 1,536 counters, then Ferrafor's Saprolings, fuzzed; Myrel + Mondrak, line 6's shape).
+- **CR 701.40a / 708, the face-down leak (seed 2814860, 4 seats):** Orochi Soul-Reaver's
+  `ManifestTopOfLibraryUnderYou` turned the top card face down before `move_card_to`; Grafdigger's Cage kept it in
+  the library face down. It and fateshift's exile-then-manifest go through `face_down_onto_battlefield` now — no
+  raw `turn_face_down()` + move remains (the face-down cast is the one other site).
+- **CR 608.2, latent:** `RevealTopLandToBattlefieldElseHand` / `LookTopLandToHandElseBin` take every seat's answer
+  before any card moves (the previous OPEN row; `cr_recent119`).
+- **`exile_from::CRAFT`:** `EventKind` is at its 128-tag mask, so the craft cost loop ORs an origin bit into the
+  battlefield `CardExiledFrom` it caused; the exile-zone self walk serves `CardExiledFrom` beside `CardExiled`.
+  Market Gnome's "exiled while you're activating a craft ability" (the previous OPEN row; 6 seats).
+- **Oracle-phrase probes** (a scratch `phrase.py`: oracle regex vs a definition-body regex): "if you cast it" / "if
+  it was cast" / "during your main phase" found Might of Old Krosa reading *your turn* (fixed) and four cube-pool
+  defects (below; two were already on INCOMPLETE's frozen row — check it before fixing a cube card); Raid, Morbid, Hellbent, "another spell this turn", "if it's attacking", "if you control a
+  commander", monarch / initiative / goad probes came back clean. Weftwalking's and Iridescent Tiger's docs claimed
+  their shipped cast gates were dropped.
+- **Cards:** Stardew Valley's row closed — "another player" is every opponent while no team format is played;
+  Silumgar Scavenger's exploit haste; Spawning Pool's Skeleton regenerate grant; Falkenrath Aristocrat's stale doc.
+  Clean decks **5,649 → 5,669**, then **5,391 / 6,140** once the four cube-frozen gaps below are named in their
+  docs (`pod_residuals` reads docs) — **The One Ring is now the top residual: 286 decks, 267 of them sole.**
+- Gates: suite **29,350 / 0 / 7** (strict answer log, precon-seat test excluded) at `77e522948`; workspace clippy
+  **0** after two fixes (107m31s at `-j 2`; one in the sealed builder's code); `--bench` **196,176 / 27.64 / 613.0 / 0
+  stalls — byte-identical**, determinism ok, thread_determinism ok (3 vs 1); cube / sos / sealed × 300 an archetype
+  (seed 29410) 2,400 / 1,500 / 3,600 decided, 0 undecided. ⚠ Disk hit 0 once mid-run (`target/debug/deps` stale
+  hashes): prune before the suite, not after.
+
+OPEN:
+- ⚠ **Cube-frozen, written up, not shipped** (each doc names the fix; landed and reverted in this run, `9a104ccda`):
+  Amped Raptor (the printed card exiles until a *nonland* card, charges {E} equal to its mana value, and only when
+  cast from hand — the reverted `ExileUntilNonlandMayPayEnergyToCast` is in `c7b0dc4c8`), The One Ring and Doomsday
+  Excruciator (no "if you cast it" gate — `TriggerSourceEnteredByCast`), Wilt-Leaf Liege (no opponent-discard deploy
+  — `opponent_discard_deploys`). Apply with the next net retrain. The Ring and the Raptor were already on
+  INCOMPLETE's cube-frozen row; the Excruciator and the Liege join it.
+- Market Gnome's craft trigger rides the *battlefield* craft pick only; a Gnome exiled from a graveyard to craft is
+  not "exiled from the battlefield" and correctly does nothing.
 
 ## The Commander NEXT's line 9 as `01WRuXc6Fk` found it (moved verbatim, 2026-10-29)
 
