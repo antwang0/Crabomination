@@ -350,6 +350,11 @@ Spiritdancer). Then `pod_residuals --rank` top-down with the frozen pools filter
   Simic Basilisk's granted deathtouch stays (its trigger needs the damage too). `audit_keyword_drift`'s four MISSING
   rows: Noctis ("Warp-Strike" is an ability name) and Sapling Nursery (`SelfCostReducedPerPermanentMatching`) are
   false positives; Detective's Phoenix is cube-frozen; Light Up the Night's flashback wants a remove-X-loyalty cost.
+- **Cast-filter probes:** "whenever you cast a noncreature spell" on **Kessig Flamebreather and The Mechanist** rode
+  `magecraft` (instants and sorceries only) — now `shortcut::on_cast_noncreature` (the three file-local copies of it
+  folded in). Magecraft's "cast **or copy**": **Veyran's own** trigger was cast-only — `or_copy`, and the ratchet
+  `every_cast_or_copy_trigger_hears_copies_and_no_cast_trigger_does` holds both directions (Archmage Emeritus
+  SOS-frozen, signed off). Opponent / any-player / mana-value / historic / kicked cast clauses came back clean.
 - **Primitives:** an `{X}` mana ability activated with no X uses X = 1 (the auto-tapper's fixer); the target-discount
   static (`CostReductionForYourSpellsTargetingThis`) gains `opponents_only`, and on a Curse "this" is the enchanted
   player.
