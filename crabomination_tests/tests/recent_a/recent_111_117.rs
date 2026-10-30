@@ -1107,6 +1107,22 @@ mod recent113 {
         drain_stack(&mut g);
         let cp = g.computed_permanent(scav).unwrap();
         assert_eq!((cp.power, cp.toughness), (3, 4), "+1/+1 counter from the death");
+        assert!(!cp.keywords().contains(&crabomination::card::Keyword::Haste), "not exploited: no haste");
+    }
+
+    /// "It gains haste until end of turn if it exploited that creature."
+    #[test]
+    fn silumgar_scavenger_exploit_grants_haste() {
+        use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let scav = g.add_card_to_battlefield(0, catalog::silumgar_scavenger());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        g.fire_self_etb_triggers(scav, 0);
+        drain_stack(&mut g);
+        let cp = g.computed_permanent(scav).unwrap();
+        assert_eq!((cp.power, cp.toughness), (3, 4), "the exploited Bears' death grew it");
+        assert!(cp.keywords().contains(&crabomination::card::Keyword::Haste), "and it has haste");
     }
 }
 

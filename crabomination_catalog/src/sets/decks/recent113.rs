@@ -1225,8 +1225,9 @@ pub fn rank_officer() -> CardDefinition {
 }
 
 /// Silumgar Scavenger — {4}{B} 2/3 Zombie Bird. Flying; exploit; whenever
-/// another creature you control dies, put a +1/+1 counter on it. (The
-/// haste-if-exploited rider is approximated away.)
+/// another creature you control dies, put a +1/+1 counter on it, and it gains
+/// haste until end of turn if it exploited that creature — granted by the
+/// exploit payoff itself (a self-exploit leaves nothing to hasten).
 pub fn silumgar_scavenger() -> CardDefinition {
     use crate::effect::shortcut::exploit;
     CardDefinition {
@@ -1241,7 +1242,11 @@ pub fn silumgar_scavenger() -> CardDefinition {
         toughness: 3,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
-            exploit(Effect::Noop),
+            exploit(Effect::GrantKeyword {
+                what: Selector::This,
+                keyword: Keyword::Haste,
+                duration: Duration::EndOfTurn,
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
                 effect: Effect::AddCounter {

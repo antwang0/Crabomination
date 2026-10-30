@@ -68,6 +68,18 @@ mod recent41 {
         let cp = g.computed_permanent(pool).unwrap();
         assert_eq!((cp.power, cp.toughness), (1, 1), "1/1 Skeleton");
         assert!(cp.card_types().contains(&crabomination::card::CardType::Land), "still a land");
+        // The Skeleton's "{B}: Regenerate this creature" (granted after the two printed abilities).
+        g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: pool, ability_index: 2, target: None, additional_targets: Vec::new(), x_value: None, mode: None,
+        }).expect("regenerate");
+        drain_stack(&mut g);
+        let ctx = crabomination::game::effects::EffectContext::for_ability(pool, 1, None);
+        let wrath = crabomination::effect::Effect::Destroy {
+            what: crabomination::effect::Selector::EachPermanent(crabomination::card::SelectionRequirement::Creature),
+        };
+        g.resolve_effect(&wrath, &ctx).unwrap();
+        assert!(g.battlefield_find(pool).is_some(), "regenerated");
     }
 }
 

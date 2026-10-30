@@ -12801,8 +12801,8 @@ pub fn pitiless_plunderer() -> CardDefinition {
 }
 
 /// Falkenrath Aristocrat — {2}{B}{R} 4/1 Vampire Noble. Flying, haste. Sacrifice
-/// a creature: this gains indestructible until end of turn. (The "+1/+1 if the
-/// sacrificed creature was a Human" rider is approximated away.)
+/// a creature: this gains indestructible until end of turn; if the sacrificed
+/// creature was a Human, put a +1/+1 counter on it.
 pub fn falkenrath_aristocrat() -> CardDefinition {
     use crate::card::ActivatedAbility;
     CardDefinition {

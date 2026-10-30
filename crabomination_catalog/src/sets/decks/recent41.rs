@@ -120,8 +120,8 @@ pub fn scale_up() -> CardDefinition {
 }
 
 /// Spawning Pool — Land that enters tapped. `{T}: Add {B}.` `{1}{B}: becomes a
-/// 1/1 black Skeleton until end of turn (still a land).` (The animated Skeleton's
-/// `{B}: Regenerate` grant is approximated away.)
+/// 1/1 black Skeleton with "{B}: Regenerate this creature" until end of turn
+/// (still a land).`
 pub fn spawning_pool() -> CardDefinition {
     CardDefinition {
         name: "Spawning Pool",
@@ -138,14 +138,25 @@ pub fn spawning_pool() -> CardDefinition {
             },
             ActivatedAbility {
                 mana_cost: cost(&[generic(1), b()]),
-                effect: crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
-                    what: Selector::This,
-                    power: Value::Const(1),
-                    toughness: Value::Const(1),
-                    creature_types: vec![CreatureType::Skeleton],
-                    keywords: vec![],
-                    duration: Duration::EndOfTurn,
-                }, &[crate::mana::Color::Black]),
+                effect: Effect::Seq(vec![
+                    crate::effect::shortcut::colored_animation(Effect::BecomeCreature {
+                        what: Selector::This,
+                        power: Value::Const(1),
+                        toughness: Value::Const(1),
+                        creature_types: vec![CreatureType::Skeleton],
+                        keywords: vec![],
+                        duration: Duration::EndOfTurn,
+                    }, &[crate::mana::Color::Black]),
+                    Effect::GrantActivatedAbilityToMatching {
+                        filter: R::IsSource,
+                        ability: Box::new(ActivatedAbility {
+                            mana_cost: cost(&[b()]),
+                            effect: Effect::Regenerate { what: Selector::This },
+                            ..Default::default()
+                        }),
+                        duration: Duration::EndOfTurn,
+                    },
+                ]),
                 ..Default::default()
             },
         ],
