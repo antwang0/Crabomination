@@ -165,3 +165,44 @@ fn craft_rejected_without_enough_fodder() {
     });
     assert!(err.is_err(), "craft-with-two rejected with one creature");
 }
+
+/// Market Gnome: "When this creature is exiled from the battlefield while
+/// you're activating a craft ability, you gain 1 life and draw a card"
+/// (CR 702.167a — the exile is part of the craft cost). Any other exile from
+/// the battlefield does not trigger it.
+#[test]
+fn market_gnome_exiled_to_craft_gains_and_draws() {
+    let mut g = two_player_game();
+    let blade = g.add_card_to_battlefield(0, catalog::tithing_blade());
+    let gnome = g.add_card_to_battlefield(0, catalog::market_gnome());
+    g.add_card_to_library(0, catalog::island());
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(4);
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: blade, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("activate craft");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gnome), "the Gnome paid the craft");
+    assert_eq!(g.players[0].life, life + 1);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+
+    let mut g = two_player_game();
+    let gnome = g.add_card_to_battlefield(0, catalog::market_gnome());
+    let (life, hand) = (g.players[0].life, g.players[0].hand.len());
+    let swords = g.add_card_to_hand(1, catalog::swords_to_plowshares());
+    g.players[1].mana_pool.add(Color::White, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: swords, target: Some(Target::Permanent(gnome)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("Swords the Gnome");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == gnome));
+    assert_eq!(g.players[0].hand.len(), hand, "no draw outside a craft");
+    assert_eq!(g.players[0].life, life, "no gain: Swords gives a 0-power Gnome's controller 0");
+}

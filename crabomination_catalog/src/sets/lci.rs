@@ -1397,9 +1397,21 @@ pub fn cartographers_companion() -> CardDefinition {
     }
 }
 
-/// Market Gnome — {W} 0/3 Artifact Creature — Gnome. When it dies, gain 1 life
-/// and draw a card. (The duplicate "exiled while crafting" trigger is omitted.)
+/// Market Gnome — {W} 0/3 Artifact Creature — Gnome. When it dies, or is exiled
+/// from the battlefield to pay a craft cost, gain 1 life and draw a card.
 pub fn market_gnome() -> CardDefinition {
+    let body = || {
+        Effect::Seq(vec![
+            Effect::GainLife {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+            Effect::Draw {
+                who: Selector::You,
+                amount: Value::Const(1),
+            },
+        ])
+    };
     CardDefinition {
         name: "Market Gnome",
         cost: cost(&[w()]),
@@ -1410,16 +1422,16 @@ pub fn market_gnome() -> CardDefinition {
         },
         power: 0,
         toughness: 3,
-        triggered_abilities: vec![on_dies(Effect::Seq(vec![
-            Effect::GainLife {
-                who: Selector::You,
-                amount: Value::Const(1),
+        triggered_abilities: vec![
+            on_dies(body()),
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CardExiledFrom(crate::effect::exile_from::CRAFT),
+                    EventScope::SelfSource,
+                ),
+                effect: body(),
             },
-            Effect::Draw {
-                who: Selector::You,
-                amount: Value::Const(1),
-            },
-        ]))],
+        ],
         ..Default::default()
     }
 }
