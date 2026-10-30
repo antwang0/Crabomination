@@ -932,6 +932,16 @@ pub fn magecraft(effect: Effect) -> TriggeredAbility {
     }
 }
 
+/// "Whenever you cast a noncreature spell" — any noncreature type, cast only
+/// (Kessig Flamebreather, The Mechanist; `magecraft` is instants and sorceries).
+pub fn on_cast_noncreature(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+            .with_filter(Predicate::CastSpellMatches(SelectionRequirement::Noncreature)),
+        effect,
+    }
+}
+
 /// Mark a cast trigger "whenever you cast **or copy** …" (`EventSpec::or_copy`):
 /// the printed Magecraft wording. `magecraft` itself stays cast-only — it is
 /// also the builder behind plain "whenever you cast an instant or sorcery

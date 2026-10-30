@@ -90,13 +90,7 @@ fn combat_if_cast_noncreature(effect: Effect) -> TriggeredAbility {
 }
 
 /// "Whenever you cast a noncreature spell, [effect]."
-fn on_cast_noncreature(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-            .with_filter(Predicate::CastSpellMatches(R::Noncreature)),
-        effect,
-    }
-}
+use crate::effect::shortcut::on_cast_noncreature;
 
 fn keyword_eot(what: Selector, keyword: Keyword) -> Effect {
     Effect::GrantKeyword { what, keyword, duration: Duration::EndOfTurn }

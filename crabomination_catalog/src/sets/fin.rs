@@ -5631,14 +5631,7 @@ fn job_select_etb() -> TriggeredAbility {
 }
 
 /// Trigger: "Whenever you cast a noncreature spell, [effect]" fired off the host.
-fn on_cast_noncreature(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
-            Predicate::CastSpellMatches(SelectionRequirement::Noncreature),
-        ),
-        effect,
-    }
-}
+use crate::effect::shortcut::on_cast_noncreature;
 
 /// Astrologian's Planisphere — {1}{U} Equipment. Job select. Equipped creature is
 /// a Wizard and has "Whenever you cast a noncreature spell, put a +1/+1 counter on

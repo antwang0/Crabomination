@@ -72,13 +72,7 @@ fn equipment(name: &'static str, mana: ManaCost, equip: ManaCost, bonus: EquipBo
 }
 
 /// "Whenever you cast a noncreature spell, [effect]".
-fn on_cast_noncreature(effect: Effect) -> TriggeredAbility {
-    TriggeredAbility {
-        event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-            .with_filter(Predicate::CastSpellMatches(R::Noncreature)),
-        effect,
-    }
-}
+use crate::effect::shortcut::on_cast_noncreature;
 
 fn draw(n: Value) -> Effect {
     Effect::Draw { who: Selector::You, amount: n }
