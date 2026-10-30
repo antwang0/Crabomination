@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc6Fk`) — the take-spent once-a-turn class, residual rank, pod sinks](#fixedopen-2026-10-29-commander-run-01wruxc6fk--the-take-spent-once-a-turn-class-residual-rank-pod-sinks) | 42 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc2ns`) — strict-sweep answer-log leaks, mid-resolution mana abilities, granted graveyard triggers](#fixedopen-2026-10-29-commander-run-01wruxc2ns--strict-sweep-answer-log-leaks-mid-resolution-mana-abilities-granted-graveyard-triggers) | 48 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc672`) — target-shaped residuals, four rules classes, audit and census sweeps](#fixedopen-2026-10-29-commander-run-01wruxc672--target-shaped-residuals-four-rules-classes-audit-and-census-sweeps) | 43 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc33x`) — seated-deck rows by rank, CR 508.4's defender pick, untap / charge sinks](#fixedopen-2026-10-29-commander-run-01wruxc33x--seated-deck-rows-by-rank-cr-5084s-defender-pick-untap--charge-sinks) | 27 |
@@ -308,6 +309,58 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 ## The Commander NEXT's line 9 as `01WRuXc672` found it (moved verbatim, 2026-10-29)
 
 9. **`01WRuXc33x` (2026-10-29, no seats; ENGINE_BACKLOG `01WRuXc33x`): audit sweeps first, then the residual rank.** Seeds 28001-28003 over every deck at 3-8 seats (`pod_sweep.py`, audit build, one with `CRAB_POD_CONCEDE=20`): 7,480 games, 0 panics, 2 CR 104.4a draws. Clean decks **5,456 → 5,525**: Scrap Welder targets (`R::ManaValueLessThanOneAmong`, `sac_other_mv_above_target`), CR 508.4's defender pick for `DeployCreatureFromHandAttacking` (+ battles), `exert_cost` (five cards), Glowcap's top-card look, Galadriel's Dismissal's two targets, Arachne's hand look. Bot: untap/charge/harness sinks. Gates: suite **29,303 / 0 / 8** (strict answer log, precon-seat test excluded), clippy 0, `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical. **Next seed 28004.** Next: rank list top is Thorin (12, Equipment not targeted), Hydro-Man (10), Deification (10, enumerable `PlaneswalkerSubtype`), Press the Enemy (9), Dawnhand's cost picks (9, an `AbilityCostChoice` kind).
+
+## The Commander NEXT's line 9 as `01WRuXc6Fk` found it (moved verbatim, 2026-10-29)
+
+9. **`01WRuXc2ns` (2026-10-29, no seats; ENGINE_BACKLOG `01WRuXc2ns`): strict sweeps first, then the classes they named.** Seeds 28100-28105 over every deck (audit build, `CRAB_ANSWER_LOG=strict`; 28101/28102 with `CRAB_POD_CONCEDE=20`, 28103 `CRAB_POD_FUZZ=2500`, 28104 eight seats `--a dflt` + fuzz): 19,711 games (28105: 3 + 6 seats `--a dflt` + fuzz), 2 strict aborts (both fixed below), 0 panics; the undecided are CR 104.4a/b draws (Polyraptor + Marauding Raptor, a fuzzed Draconic Visitor beside Ganax) and finite exponentials (Scute + Greenwarden, populate on Ojer Taq tokens). Classes: answer-log (Dash Hopes cleared on neither path; `audit_answer_log.py` now walks `game/**`; a depth-0 side resolution under a parked decision parks the log), CR 605.3a a mana ability mid-resolution keeps the outer scratch (`mana_side_scratch.rs`, Ripples of Undeath), CR 603.10a static-granted `PermanentDied`, CR 614.1c filtered enters-with on noncreatures (Velocipede, Blaster), CR 115.1 one spell-or-permanent slot (Press the Enemy +5), CR 701.47 `Selector::AmassedArmy` (5 cards), Game of Chaos loops; bot: tripler-aware token gates, Greenwarden in the land gate, a spell's lands priced at the landfall fan-out; CR 608.2 `TapAnyNumberThen` keeps the resolution's scratch. Clean decks **5,587 → 5,619**. Gates: suite **29,328 / 0 / 8** (strict, precon-seat test excluded; **29,332 / 0 / 8** rebased on the concurrent session's seven commits), workspace clippy **0**, `--bench` 196,176 / 27.64 / 613.0 / 0 stalls byte-identical, bench_ab noise and pools decision-identical on both A/B legs (a concurrent session landed eight commits between them — PERF row). **Next seed 28110.** Next: the rank list is all bot-invisible now (a concurrent session took Wizard's Rockets, Kirk and Krenko's Buzzcrusher the same afternoon); strict sweeps found two leaks this run where census found none — keep sweeping new configs (`--a dflt`, fuzz, 2-3 seats); grep for arms that call `resolve_effect_into` mid-resolution (two were fixed; a fresh nested resolution resets the outer scratch).
+
+## FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc6Fk`) — the take-spent once-a-turn class, residual rank, pod sinks
+
+No seats. Audit-build (`overflow` + `-C debug-assertions=yes`) sweeps over every deck first — `pod_sweep.py` seed
+29001 (4, 6 seats × 2 games) and 29002 (3, 5, 8 × 1, `CRAB_POD_CONCEDE=20`): **9,161 games, 0 panics, 0 assertion
+hits, 7 undecided** — 3 CR 104.4a/b draws (Descent into Avernus twice; Vigor + Syr Konrad) and 4 finite board caps
+(Council of Reeds doubling itself each combat, `--pod-decks 2252,5591,3679,1677 --seed 2904932 --first 1`;
+Quasiduplicate + Captain America; Cathars' Crusade + Anim Pakal; a 59-turn 6-seat board, The One Ring / Ondu
+Spiritdancer). Then `pod_residuals --rank` top-down with the frozen pools filtered (cube / SOS / FRA), then a
+120-group 4-seat `--card-census` (seed 29100, `scratchpad` driver aggregating "never" rows across groups).
+- **Class (CR 603.3d):** a printed "you may … Do this only once each turn" capped the *trigger*, so a declined may
+  spent the turn's use — sixteen cards: Rinoa, Angel Wing (also once per batch: "one or more attacking creatures
+  die", CR 603.2c), The Everforger, Cosmic Crucible, Irreverent Gremlin, Pantlaza and Krile Baldesion (their may was
+  mandatory), Baron Strucker, Screeching Scorchbeast, The Reaper, Tidus (also once per batch), Puca's Covenant, Amzu,
+  Legolas, Emet-Selch (spent by a cast that left the graveyard). `shortcut::once_each_turn_on_take` where the may is
+  top-level, the gate + `MarkDoneThisTurn` by hand where it is nested; ratchet
+  `catalog_registration::every_optional_once_each_turn_is_spent_by_the_take`. The sweep that found the first six was
+  a 40-line oracle-vs-definition script (oracle phrase present, `once_per_turn` set, no `MarkDoneThisTurn`); the
+  ratchet found the other eight, whose cap was set by assignment rather than the builder.
+- **"Whenever one or more" probe (a throwaway `clause_ratchet` over every such card, no batching marker in the
+  `Debug`):** 40 of 277 rows — counter placements (one event a placement already: Scurry Oak, Simic Ascendancy,
+  Shalai and Hallar …), events batched by construction (`CardsExiledFromHandOrByYou`, `CardsPutIntoLibrary`), signed-off
+  attack riders, idempotent or per-card-additive effects (monarch, Hedge Shredder, Hero of Bretagard) — and one real bug:
+  **Tide of War** rode `BlocksNOrMore(1)` once per blocker, so two blockers flipped twice and a heads-then-tails
+  sacrificed both sides. `once_per_batch` (CR 603.2c), `chk2::tide_of_war_flips_once_per_block_declaration`.
+- **Primitives:** an `{X}` mana ability activated with no X uses X = 1 (the auto-tapper's fixer); the target-discount
+  static (`CostReductionForYourSpellsTargetingThis`) gains `opponents_only`, and on a Curse "this" is the enchanted
+  player.
+- **Cards:** Wizard's Rockets' printed `{X}` (any combination; X = 0 cycles it); Accursed Witch's discount is
+  opponents' only and Infectious Curse's discount on spells at the cursed player is modelled; Krenko's Buzzcrusher
+  destroys one nonbasic per player (`ForEachPlayerTarget`, CR 601.2c); Systems Override's Spacecraft charge rider;
+  Beyond the Quiet exiles Spacecraft; Mob Mentality's all-non-Wall-attack +X/+0. Stale docs: Captain Kirk (an empty
+  `ChooseUpToN` answer already runs every mode — pinned), Seifer, Agency Coroner.
+- **Bot (pods):** a cantrip mana rock (Chromatic Star / Sphere, Wizard's Rockets at X = 0) is cracked at an
+  opponent's end step (`server/cantrip_rock.rs`; the pod outcome table re-blessed in that commit); a land whose
+  fetch costs mana (Myriad Landscape) is cracked before the precombat casts tap it for {C} (`pick_land_ramp_early`).
+- Census reading: most "never" rows replayed as situational — Esper Sentinel / Replicating Ring cast at turn 36-40,
+  Nadier's Nightblade's controller died five turns after casting it (the auto-tapper's Treasure sacrifice is now
+  pinned too), Syr Konrad removed three turns in. Activated rows are thresholds by design (`pick_cash_in` waits for
+  six lands; Rogue's Passage, Karn's Bastion, War Room, Loran want idle mana the bot spends first).
+
+OPEN:
+- Agency Coroner's suspected-sacrifice draw: `SacrificedTraits` would need a `suspected` flag, i.e. a `GameState`
+  field (at its 1,680-byte cap) — a `ColdState` home first.
+- Airtight Alibi's "can't become suspected" wants a grant `Effect::Suspect` checks; Unexpected Request's optional
+  Equipment attach (`ChooseSomeAmong` + `AttachAnyNumberTo` + a captured unattach) — two seats each.
+- Rhino, Terrible Trampler stays two triggers: as one `SlotGroups` the distribution's required first slot would
+  remove the whole trigger (the destroy too) when Rhino enters alone.
 
 ## The Commander NEXT's line 9 as `01WRuXc2ns` found it (moved verbatim, 2026-10-29)
 
