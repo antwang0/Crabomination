@@ -20387,8 +20387,8 @@ pub fn tasigur_the_golden_fang() -> CardDefinition {
 }
 
 /// Doomsday Excruciator — {B}{B}{B}{B}{B}{B} 6/6 Flying Demon. ETB: each
-/// player exiles all but the bottom six cards of their library. At your
-/// upkeep, draw a card. (The "if it was cast" / face-down riders are dropped.)
+/// player exiles all but the bottom six cards of their library, if it was cast
+/// (CR 603.4). At your upkeep, draw a card. (The face-down rider is dropped.)
 pub fn doomsday_excruciator() -> CardDefinition {
     CardDefinition {
         name: "Doomsday Excruciator",
@@ -20402,9 +20402,13 @@ pub fn doomsday_excruciator() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
-            etb(Effect::ExileLibraryExceptBottom {
-                who: PlayerRef::EachPlayer,
-                keep: Value::Const(6),
+            etb(Effect::If {
+                cond: Predicate::SourceWasCast,
+                then: Box::new(Effect::ExileLibraryExceptBottom {
+                    who: PlayerRef::EachPlayer,
+                    keep: Value::Const(6),
+                }),
+                else_: Box::new(Effect::Noop),
             }),
             TriggeredAbility {
                 event: EventSpec::new(
@@ -42669,8 +42673,8 @@ pub fn sylvan_advocate() -> CardDefinition {
 }
 
 /// Wilt-Leaf Liege — {1}{G/W}{G/W}{G/W} 4/4 Elf Knight. Other green creatures you
-/// control get +1/+1; other white creatures you control get +1/+1. (The
-/// opponent-discard payoff is dropped.)
+/// control get +1/+1; other white creatures you control get +1/+1. An
+/// opponent-caused discard puts it onto the battlefield (CR 614, Baloth's shape).
 pub fn wilt_leaf_liege() -> CardDefinition {
     use crate::mana::hybrid;
     let others_of = |color| {
@@ -42683,6 +42687,7 @@ pub fn wilt_leaf_liege() -> CardDefinition {
     };
     CardDefinition {
         name: "Wilt-Leaf Liege",
+        opponent_discard_deploys: Some((crate::card::CounterType::PlusOnePlusOne, 0)),
         cost: cost(&[
             generic(1),
             hybrid(Color::Green, Color::White),

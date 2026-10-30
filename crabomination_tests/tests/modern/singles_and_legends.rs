@@ -454,17 +454,30 @@ fn coveted_jewel_etb_draws_three() {
 
 // ── Doomsday Excruciator ────────────────────────────────────────────────────
 
+/// "When this creature enters, if it was cast, …" (CR 603.4): cast, each
+/// player keeps six; put onto the battlefield, nothing is exiled.
 #[test]
 fn doomsday_excruciator_etb_leaves_each_player_six_cards() {
     let mut g = two_player_game();
     for _ in 0..15 { g.add_card_to_library(0, catalog::island()); }
     for _ in 0..15 { g.add_card_to_library(1, catalog::forest()); }
-    let id = g.add_card_to_battlefield(0, catalog::doomsday_excruciator());
-    g.fire_self_etb_triggers(id, 0);
+    let id = g.add_card_to_hand(0, catalog::doomsday_excruciator());
+    g.players[0].mana_pool.add(Color::Black, 6);
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Doomsday Excruciator");
     drain_stack(&mut g);
     assert_eq!(g.players[0].library.len(), 6, "controller keeps bottom six");
     assert_eq!(g.players[1].library.len(), 6, "opponent keeps bottom six");
     assert!(g.exile.len() >= 18, "the rest are exiled");
+
+    let mut g = two_player_game();
+    for _ in 0..15 { g.add_card_to_library(1, catalog::forest()); }
+    let id = g.add_card_to_battlefield(0, catalog::doomsday_excruciator());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].library.len(), 15, "not cast: no exile");
 }
 
 // ── Planar Nexus ────────────────────────────────────────────────────────────
