@@ -304,8 +304,10 @@ pub fn fyndhorn_elder() -> CardDefinition {
     }
 }
 
-/// Thicket Basilisk — {3}{G}{G} 2/4 Basilisk. Destroys creatures it fights in
-/// combat (modeled as deathtouch — it always deals combat damage).
+/// Thicket Basilisk — {3}{G}{G} 2/4 Basilisk. Whenever it blocks or becomes
+/// blocked by a non-Wall creature, destroy that creature at end of combat
+/// (`combat_partner_punisher`; it used to stand in deathtouch, which a
+/// prevented or first-strike-killed fight never reached).
 pub fn thicket_basilisk() -> CardDefinition {
     CardDefinition {
         name: "Thicket Basilisk",
@@ -317,13 +319,15 @@ pub fn thicket_basilisk() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        keywords: vec![Keyword::Deathtouch],
+        triggered_abilities: crate::effect::shortcut::combat_partner_punisher(
+            R::HasCreatureType(CreatureType::Wall).negate(),
+        ),
         ..Default::default()
     }
 }
 
-/// Cockatrice — {3}{G}{G} 2/4 Cockatrice. Flying; deathtouch (see Thicket
-/// Basilisk).
+/// Cockatrice — {3}{G}{G} 2/4 Cockatrice. Flying; Thicket Basilisk's
+/// end-of-combat destroy.
 pub fn cockatrice() -> CardDefinition {
     CardDefinition {
         name: "Cockatrice",
@@ -335,7 +339,10 @@ pub fn cockatrice() -> CardDefinition {
         },
         power: 2,
         toughness: 4,
-        keywords: vec![Keyword::Flying, Keyword::Deathtouch],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: crate::effect::shortcut::combat_partner_punisher(
+            R::HasCreatureType(CreatureType::Wall).negate(),
+        ),
         ..Default::default()
     }
 }

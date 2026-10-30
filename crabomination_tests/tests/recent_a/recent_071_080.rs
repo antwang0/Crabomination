@@ -730,8 +730,6 @@ mod recent76 {
     #[test]
     fn recent76_static_stats() {
         assert!(catalog::cockatrice().keywords.contains(&Keyword::Flying));
-        assert!(catalog::cockatrice().keywords.contains(&Keyword::Deathtouch));
-        assert!(catalog::thicket_basilisk().keywords.contains(&Keyword::Deathtouch));
         assert!(catalog::bird_maiden().keywords.contains(&Keyword::Flying));
         assert!(catalog::alaborn_grenadier().keywords.contains(&Keyword::Vigilance));
         assert_eq!((catalog::skeletal_snake().power, catalog::skeletal_snake().toughness), (2, 1));

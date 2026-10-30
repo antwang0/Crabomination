@@ -340,3 +340,26 @@ fn stangg_arrives_with_his_twin() {
     cast(&mut g, 0, stangg, None);
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Stangg Twin"));
 }
+
+/// Cockatrice / Thicket Basilisk: a non-Wall creature that blocks one dies at
+/// end of combat whatever the damage (a 2/4 survives the 2); a Wall walks away.
+/// They used to stand in deathtouch, which needs the damage to land.
+#[test]
+fn basilisks_destroy_their_non_wall_blockers_at_end_of_combat() {
+    for def in [catalog::cockatrice(), catalog::thicket_basilisk()] {
+        let name = def.name;
+        let mut g = main_phase();
+        let basilisk = g.add_card_to_battlefield(0, def.clone());
+        let giant = g.add_card_to_battlefield(1, catalog::giant_spider());
+        block(&mut g, basilisk, giant);
+        assert!(g.battlefield_find(giant).is_some(), "{name}: the 2 damage doesn't kill it");
+        to_end_of_combat(&mut g);
+        assert!(g.battlefield_find(giant).is_none(), "{name}: destroyed at end of combat");
+        let mut g = main_phase();
+        let basilisk = g.add_card_to_battlefield(0, def);
+        let wall = g.add_card_to_battlefield(1, catalog::wall_of_air());
+        block(&mut g, basilisk, wall);
+        to_end_of_combat(&mut g);
+        assert!(g.battlefield_find(wall).is_some(), "{name}: a Wall survives");
+    }
+}
