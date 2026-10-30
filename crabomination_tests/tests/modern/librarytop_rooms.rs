@@ -1679,13 +1679,6 @@ fn the_one_ring_protection_until_your_next_turn() {
     g.active_player_idx = 0;
     g.do_untap();
     assert!(!g.players[0].protected_from_everything, "expires on your turn");
-
-    // "If you cast it" (CR 603.4): put onto the battlefield, no protection.
-    let mut g = two_player_game();
-    let ring = g.add_card_to_battlefield(0, catalog::the_one_ring());
-    g.fire_self_etb_triggers(ring, 0);
-    drain_stack(&mut g);
-    assert!(!g.players[0].protected_from_everything, "not cast: no protection");
 }
 
 // ── CR 614.5 — damage halving (Ghosts of the Innocent) ──────────────────────

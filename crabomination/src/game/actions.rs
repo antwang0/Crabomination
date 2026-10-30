@@ -15312,7 +15312,7 @@ impl GameState {
         // effect-resolution call sites took it with `?`**: `Cascade`,
         // `Discover`, `Ripple`, `KnowledgePool`, `PossibilityStorm`,
         // `CastAnyOrderWithoutPaying`, `CastFromHandWithoutPaying`,
-        // `CastFreeParadigmCopy` and `ExileUntilNonlandMayPayEnergyToCast`. An `Err`
+        // `CastFreeParadigmCopy` and `ExileTopMayPayEnergyToCast`. An `Err`
         // out of a resolution leaves the stack item
         // `resolve_top_of_stack_inner` has already popped, so the
         // round-closing `PassPriority` comes back `Err` with the state moved

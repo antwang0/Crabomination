@@ -18827,9 +18827,11 @@ pub fn enduring_innocence() -> CardDefinition {
     }
 }
 
-/// Amped Raptor — {1}{R} Creature — Dinosaur. 2/1 first strike.
-/// ETB: you get {E}{E}; then if you cast it from your hand, exile until a
-/// nonland card, which you may cast by paying {E} equal to its mana value.
+/// Amped Raptor — {1}{R} Creature — Dinosaur. 2/1.
+/// ETB: you get {E}{E}, then exile the top card of your library; you may pay
+/// {E}{E}{E}{E} to cast it without paying its mana cost. ⚠ Cube-frozen
+/// approximation: the printed card exiles until a nonland card, charges {E}
+/// equal to its mana value, and only if the Raptor was cast from hand.
 pub fn amped_raptor() -> CardDefinition {
     CardDefinition {
         name: "Amped Raptor",
@@ -18844,11 +18846,8 @@ pub fn amped_raptor() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::AddEnergy(Value::Const(2)),
-            Effect::If {
-                cond: Predicate::SourceCastFromOwnersHand,
-                then: Box::new(Effect::ExileUntilNonlandMayPayEnergyToCast),
-                else_: Box::new(Effect::Noop),
-            },
+            // CR 107.16 — exile top card; may pay {E}{E}{E}{E} to free-cast it.
+            Effect::ExileTopMayPayEnergyToCast { energy: 4 },
         ]))],
         ..Default::default()
     }
@@ -20392,8 +20391,8 @@ pub fn tasigur_the_golden_fang() -> CardDefinition {
 }
 
 /// Doomsday Excruciator — {B}{B}{B}{B}{B}{B} 6/6 Flying Demon. ETB: each
-/// player exiles all but the bottom six cards of their library, if it was cast
-/// (CR 603.4). At your upkeep, draw a card. (The face-down rider is dropped.)
+/// player exiles all but the bottom six cards of their library. At your
+/// upkeep, draw a card. (The "if it was cast" / face-down riders are dropped.)
 pub fn doomsday_excruciator() -> CardDefinition {
     CardDefinition {
         name: "Doomsday Excruciator",
@@ -20407,14 +20406,12 @@ pub fn doomsday_excruciator() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
-            {
-                let mut t = etb(Effect::ExileLibraryExceptBottom {
-                    who: PlayerRef::EachPlayer,
-                    keep: Value::Const(6),
-                });
-                t.event = t.event.with_filter(Predicate::TriggerSourceEnteredByCast);
-                t
-            },
+            // ⚠ Cube-frozen: ungated; the fix is Iridescent Tiger's
+            // `TriggerSourceEnteredByCast` filter (CR 603.4).
+            etb(Effect::ExileLibraryExceptBottom {
+                who: PlayerRef::EachPlayer,
+                keep: Value::Const(6),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
@@ -42678,8 +42675,9 @@ pub fn sylvan_advocate() -> CardDefinition {
 }
 
 /// Wilt-Leaf Liege — {1}{G/W}{G/W}{G/W} 4/4 Elf Knight. Other green creatures you
-/// control get +1/+1; other white creatures you control get +1/+1. An
-/// opponent-caused discard puts it onto the battlefield (CR 614, Baloth's shape).
+/// control get +1/+1; other white creatures you control get +1/+1. (The
+/// opponent-discard payoff is dropped: cube-frozen — the fix is Obstinate
+/// Baloth's `opponent_discard_deploys`.)
 pub fn wilt_leaf_liege() -> CardDefinition {
     use crate::mana::hybrid;
     let others_of = |color| {
@@ -42692,7 +42690,6 @@ pub fn wilt_leaf_liege() -> CardDefinition {
     };
     CardDefinition {
         name: "Wilt-Leaf Liege",
-        opponent_discard_deploys: Some((crate::card::CounterType::PlusOnePlusOne, 0)),
         cost: cost(&[
             generic(1),
             hybrid(Color::Green, Color::White),
@@ -48443,8 +48440,8 @@ pub fn living_end() -> CardDefinition {
 
 // ── modern_decks-20 ──────────────────────────────────────────────────────────
 
-/// The One Ring — {4} Legendary Artifact, indestructible. ETB, if you cast it:
-/// protection from everything until your next turn. {T}: add a burden counter, draw
+/// The One Ring — {4} Legendary Artifact, indestructible. ETB: protection
+/// from everything until your next turn (the "if you cast it" gate is dropped). {T}: add a burden counter, draw
 /// that many. Upkeep: lose 1 life per burden counter.
 pub fn the_one_ring() -> CardDefinition {
     CardDefinition {
@@ -48454,10 +48451,10 @@ pub fn the_one_ring() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Indestructible],
         triggered_abilities: vec![
-            // "When The One Ring enters, if you cast it, …" (CR 603.4).
+            // ⚠ Cube-frozen: "if you cast it" (CR 603.4) is not gated — the
+            // fix is `.with_filter(Predicate::TriggerSourceEnteredByCast)`.
             TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
-                    .with_filter(Predicate::TriggerSourceEnteredByCast),
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
                 effect: Effect::PlayerProtectionUntilNextTurn {
                     who: PlayerRef::You,
                 },

@@ -11232,37 +11232,18 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileUntilNonlandMayPayEnergyToCast => {
+            Effect::ExileTopMayPayEnergyToCast { energy } => {
                 use crate::card::Zone;
                 use crate::decision::{Decision, DecisionAnswer};
                 use crate::effect::ZoneDest;
                 let p = ctx.controller;
-                let top_id = loop {
-                    let Some((id, land)) =
-                        self.players[p].library.first().map(|c| (c.id, c.definition.is_land()))
-                    else {
-                        return Ok(());
-                    };
-                    self.move_card_to(id, &ZoneDest::Exile, ctx, events);
-                    if !land {
-                        break id;
-                    }
-                    // A replacement that kept the land in the library ends the walk.
-                    if self.players[p].library.first().is_some_and(|c| c.id == id) {
-                        return Ok(());
-                    }
-                };
-                let Some(energy) = self
-                    .exile
-                    .iter()
-                    .find(|c| c.id == top_id)
-                    .map(|c| c.definition.cost.cmc())
-                else {
+                let Some(top_id) = self.players[p].library.first().map(|c| c.id) else {
                     return Ok(());
                 };
+                self.move_card_to(top_id, &ZoneDest::Exile, ctx, events);
                 // CR 107.16 — only offer the pay-and-cast if the controller
                 // can actually afford the energy.
-                if self.players[p].energy < energy {
+                if self.players[p].energy < *energy {
                     return Ok(());
                 }
                 let src = ctx.source.unwrap_or(CardId(0));
@@ -11288,7 +11269,7 @@ impl GameState {
                 if !take {
                     return Ok(());
                 }
-                self.spend_energy(p, energy);
+                self.spend_energy(p, *energy);
                 let card_def = self.find_card_anywhere(top_id).map(|c| c.definition.arc());
                 if let Some(card_def) = card_def {
                     let auto_target =

@@ -200,10 +200,10 @@ fn obstinate_baloth_deploys_on_an_opponents_discard() {
     assert_eq!(g.players[1].life, life + 4, "and it entered, so the ETB gained 4");
 }
 
-/// Loxodon Smiter and Wilt-Leaf Liege carry the same replacement (CR 614).
+/// Loxodon Smiter carries the same replacement (CR 614).
 #[test]
 fn loxodon_smiter_deploys_on_an_opponents_discard() {
-    for def in [catalog::loxodon_smiter, catalog::wilt_leaf_liege] {
+    for def in [catalog::loxodon_smiter] {
         let mut g = two_player_game();
         let smiter = g.add_card_to_hand(1, def());
         let rot = g.add_card_to_hand(0, catalog::mind_rot());
