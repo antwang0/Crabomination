@@ -44202,6 +44202,13 @@ impl GameState {
                         }
                         d => (recipient, d.bound_to_source(ctx.source)),
                     };
+                    // CR 400.7 — a commander that went home instead of where
+                    // the grant expected it (a discard redirected to the
+                    // command zone, then "exile it; you may play it") is a
+                    // new object the grant never saw (pod seed 2945154).
+                    if self.in_a_command_zone(cid) {
+                        continue;
+                    }
                     if let Some(card) = self.find_card_anywhere_mut(cid) {
                         card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: recipient,
@@ -44246,6 +44253,9 @@ impl GameState {
                         EntityRef::Card(id) | EntityRef::Permanent(id) => id,
                         _ => continue,
                     };
+                    if self.in_a_command_zone(cid) {
+                        continue;
+                    }
                     if let Some(card) = self.find_card_anywhere_mut(cid) {
                         card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player,

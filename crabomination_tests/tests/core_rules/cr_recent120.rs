@@ -194,3 +194,26 @@ fn cr_603_10a_a_dying_token_names_its_last_controller() {
     drain_stack(&mut g);
     assert_eq!(g.players[1].life, 18, "the token's controller loses 2");
 }
+
+/// CR 400.7 / 903.9a — a discarded commander its owner sent to the command
+/// zone is a new object: Containment Construct's "you may play it this turn"
+/// grant, resolving with the discard as its subject, never reaches it (a pod's
+/// invariant check aborted on the leftover permission, seed 2945154).
+#[test]
+fn cr_400_7_a_commander_sent_home_takes_no_play_grant() {
+    use crabomination::game::effects::EntityRef;
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let construct = g.add_card_to_battlefield(0, catalog::containment_construct());
+    let cmdr = g.seat_commanders(0, vec![catalog::grizzly_bears()])[0];
+    let body = catalog::containment_construct().triggered_abilities[0].effect.clone();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(construct);
+    ctx.trigger_source = Some(EntityRef::Card(cmdr));
+    let _ = g.resolve_effect(&body, &ctx);
+    let home = g.players[0].command.iter().find(|c| c.id == cmdr).expect("still at home");
+    assert!(home.may_play_until.is_none(), "no play permission on the commander at home");
+}

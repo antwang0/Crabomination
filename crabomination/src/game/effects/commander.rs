@@ -12,6 +12,11 @@ use crate::game::types::TriggerPush;
 use crate::mana::{SpellKind, SpendRestriction};
 
 impl GameState {
+    /// Whether `id` sits in any player's command zone (CR 408).
+    pub(crate) fn in_a_command_zone(&self, id: CardId) -> bool {
+        self.players.iter().any(|p| p.command.iter().any(|c| c.id == id))
+    }
+
     /// Geode Golem — cast one of `seat`'s commanders from the command zone
     /// without paying its mana cost (the tax is still paid; see
     /// `cast_from_command_zone_as`). With two in the zone (Partner) the seat

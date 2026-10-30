@@ -45422,6 +45422,10 @@ pub fn thrun_the_last_troll() -> CardDefinition {
 
 /// Containment Construct — {2} 2/1 Construct. Whenever you discard a card,
 /// exile it from your graveyard instead — you may play it this turn.
+/// ⚠ Cube-frozen: the move isn't limited to the graveyard (a madness card in
+/// exile is re-granted); the fix is `MatchingAmong { TriggerSource, InGraveyard }`
+/// and a grant over `LastMoved`. A discarded commander that went home is refused
+/// by `GrantMayPlay` itself (CR 400.7).
 pub fn containment_construct() -> CardDefinition {
     use crate::card::MayPlayDuration;
     CardDefinition {
