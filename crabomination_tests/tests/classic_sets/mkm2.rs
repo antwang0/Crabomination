@@ -253,6 +253,13 @@ fn jetsam_caps_the_free_cast_at_one_per_opponent() {
     let ctx = crabomination::game::effects::EffectContext::for_ability(CardId(0), 0, None);
     g.resolve_effect(&right, &ctx).expect("Jetsam");
     assert_eq!(g.stack.len(), 1, "one opponent → one free cast");
+    // "If a spell cast this way would be put into a graveyard, exile it instead."
+    let bolt = match g.stack.last() {
+        Some(crabomination::game::types::StackItem::Spell { card, .. }) => card.id,
+        _ => panic!("the free Bolt is on the stack"),
+    };
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == bolt), "exiled, not binned");
 }
 
 /// Bustle pumps the team and flips a face-down creature up.

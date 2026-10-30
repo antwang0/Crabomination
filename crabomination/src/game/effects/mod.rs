@@ -21945,6 +21945,7 @@ impl GameState {
                             filter: None,
                             cap: Some(crate::effect::Value::ONE),
                             total_mana_value: None,
+                            exile_after: false,
                         });
                     }
                 }
@@ -45143,7 +45144,7 @@ impl GameState {
                 self.cast_immediate(what, source_zone, exile_after, &true, &false, &0, Some(&total), false, ctx, events)
             }
 
-            Effect::CastAnyOrderWithoutPaying { what, source_zone, filter, cap, total_mana_value } => {
+            Effect::CastAnyOrderWithoutPaying { what, source_zone, filter, cap, total_mana_value, exile_after } => {
                 // "Cast any number ... without paying" with CONTROLLER-CHOSEN
                 // ORDER: offer each remaining castable card; after any accept,
                 // re-offer the declined ones (so declining A to cast B first,
@@ -45243,7 +45244,7 @@ impl GameState {
                             vec![],
                             None,
                             None,
-                            false,
+                            *exile_after,
                         )?;
                         events.extend(cast_events);
                         remaining.retain(|c| *c != cid);

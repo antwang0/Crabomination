@@ -310,6 +310,7 @@ pub fn fevered_suspicion() -> CardDefinition {
                     filter: None,
                     cap: None,
                     total_mana_value: None,
+                    exile_after: false,
                 },
             ]),
         )

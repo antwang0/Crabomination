@@ -427,6 +427,7 @@ pub fn forgers_foundry() -> CardDefinition {
                     filter: None,
                     cap: None,
                     total_mana_value: None,
+                    exile_after: false,
                 },
                 ..Default::default()
             },

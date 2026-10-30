@@ -11500,6 +11500,10 @@ pub enum Effect {
         /// mana value would overrun what is left is skipped.
         #[serde(default)]
         total_mana_value: Option<Value>,
+        /// "If that spell would be put into a graveyard, exile it instead"
+        /// (Jetsam, Sorcerous Squall).
+        #[serde(default)]
+        exile_after: bool,
     },
     /// "You may cast a [filter] spell from your hand without paying its
     /// mana cost" (Maelstrom Archangel; Oracle of Bones restricts to

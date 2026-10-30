@@ -60,6 +60,7 @@ pub fn epic_experiment() -> CardDefinition {
                 ),
                 cap: None,
                 total_mana_value: None,
+                exile_after: false,
             },
             Effect::Move {
                 what: Selector::CardExiledWithSource,
@@ -123,6 +124,7 @@ pub fn jace_architect_of_thought() -> CardDefinition {
                         filter: None,
                         cap: None,
                         total_mana_value: None,
+                        exile_after: false,
                     },
                 ]),
                 ..Default::default()

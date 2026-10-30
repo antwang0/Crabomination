@@ -708,6 +708,7 @@ pub fn wand_of_wonder() -> CardDefinition {
                 filter: None,
                 cap: Some(Value::Const(x)),
                 total_mana_value: None,
+                exile_after: false,
             },
         ])
     };

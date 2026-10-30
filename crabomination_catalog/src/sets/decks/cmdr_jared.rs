@@ -339,6 +339,7 @@ pub fn primeval_spawn() -> CardDefinition {
                     filter: None,
                     cap: None,
                     total_mana_value: Some(Value::Const(10)),
+                    exile_after: false,
                 },
             ]),
         }],

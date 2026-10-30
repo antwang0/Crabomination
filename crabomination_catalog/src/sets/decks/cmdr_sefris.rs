@@ -539,6 +539,7 @@ pub fn rod_of_absorption() -> CardDefinition {
                 filter: None,
                 cap: None,
                 total_mana_value: Some(Value::XFromCost),
+                exile_after: false,
             },
             ..Default::default()
         }],

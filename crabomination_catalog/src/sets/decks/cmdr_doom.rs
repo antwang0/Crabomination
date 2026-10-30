@@ -429,6 +429,7 @@ pub fn glorious_purpose() -> CardDefinition {
                                 filter: None,
                                 cap: None,
                                 total_mana_value: None,
+                                exile_after: false,
                             },
                             Effect::Move { what: Selector::CardExiledWithSource, to: ZoneDest::Hand(PlayerRef::You) },
                         ])),

@@ -1231,6 +1231,7 @@ pub fn doom_reigns_supreme() -> CardDefinition {
                         filter: None,
                         cap: Some(Value::Const(2)),
                         total_mana_value: None,
+                        exile_after: false,
                     },
                 ]),
             ),

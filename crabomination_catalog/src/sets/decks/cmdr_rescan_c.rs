@@ -493,6 +493,7 @@ pub fn kuroki_thief_of_talents() -> CardDefinition {
                         filter: None,
                         cap: Some(Value::ONE),
                         total_mana_value: None,
+                        exile_after: false,
                     },
                 ])),
                 otherwise: Box::new(Effect::AddCounter {

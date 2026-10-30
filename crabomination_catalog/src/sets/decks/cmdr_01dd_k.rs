@@ -647,6 +647,7 @@ pub fn jaces_mindseeker() -> CardDefinition {
                 filter: Some(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
                 cap: Some(Value::ONE),
                 total_mana_value: None,
+                exile_after: false,
             },
         ]))],
         ..creature(

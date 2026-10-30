@@ -406,6 +406,7 @@ pub fn villainous_wealth() -> CardDefinition {
                 filter: Some(R::Nonland.and(R::ManaValueAtMostXFromCost)),
                 cap: None,
                 total_mana_value: None,
+                exile_after: false,
             },
         ]),
         ..Default::default()

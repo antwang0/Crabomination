@@ -721,6 +721,7 @@ pub fn emergent_ultimatum() -> CardDefinition {
                 filter: None,
                 cap: None,
                 total_mana_value: None,
+                exile_after: false,
             },
         ]),
         ..Default::default()

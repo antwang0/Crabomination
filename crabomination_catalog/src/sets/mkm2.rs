@@ -331,7 +331,7 @@ pub fn push_pull() -> CardDefinition {
 
 /// Flotsam // Jetsam — {1}{G/U} // {4}{U/B}{U/B} Instant // Sorcery. Flotsam
 /// mills three and investigates; Jetsam mills each opponent three, then casts a
-/// free spell out of an opponent's graveyard.
+/// free spell out of each opponent's graveyard, exiled instead of binned.
 pub fn flotsam_jetsam() -> CardDefinition {
     CardDefinition {
         name: "Flotsam // Jetsam",
@@ -364,6 +364,7 @@ pub fn flotsam_jetsam() -> CardDefinition {
                         filter: None,
                         cap: Some(Value::OpponentCount),
                         total_mana_value: None,
+                        exile_after: true,
                     },
                 ]),
             },
@@ -1051,6 +1052,7 @@ pub fn kylox_visionary_inventor() -> CardDefinition {
                 ),
                 cap: None,
                 total_mana_value: None,
+                exile_after: false,
             },
         ]))],
         ..legend(
@@ -1092,6 +1094,7 @@ pub fn kyloxs_voltstrider() -> CardDefinition {
             filter: Some(R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery))),
             cap: Some(Value::ONE),
             total_mana_value: None,
+            exile_after: false,
         })],
         ..Default::default()
     }

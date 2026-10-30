@@ -163,6 +163,7 @@ pub fn dance_with_calamity() -> CardDefinition {
                     filter: None,
                     cap: None,
                     total_mana_value: None,
+                    exile_after: false,
                 }),
             },
         ]),

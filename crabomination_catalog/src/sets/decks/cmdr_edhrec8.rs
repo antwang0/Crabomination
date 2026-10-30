@@ -844,6 +844,7 @@ pub fn talent_of_the_telepath() -> CardDefinition {
                             else_: Box::new(Value::ONE),
                         }),
                         total_mana_value: None,
+                        exile_after: false,
                     },
                     Effect::Move {
                         what: Selector::TopOfLibrary {

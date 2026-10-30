@@ -489,6 +489,7 @@ pub fn smugglers_buggy() -> CardDefinition {
                                 filter: None,
                                 cap: Some(Value::ONE),
                                 total_mana_value: None,
+                                exile_after: false,
                             },
                             Effect::Move { what: Selector::This, to: ZoneDest::Hand(PlayerRef::OwnerOfMoved) },
                         ])),

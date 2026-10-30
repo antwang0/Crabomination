@@ -255,6 +255,7 @@ pub fn gix_yawgmoth_praetor() -> CardDefinition {
                         filter: None,
                         cap: None,
                         total_mana_value: None,
+                        exile_after: false,
                     },
                 ])),
             },

@@ -2188,6 +2188,7 @@ pub fn improvisation_capstone() -> CardDefinition {
                 source_zone: Zone::Exile,
                 cap: None,
                 total_mana_value: None,
+                exile_after: false,
             },
             Effect::RegisterParadigm,
         ]),

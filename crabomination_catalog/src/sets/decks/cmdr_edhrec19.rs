@@ -452,6 +452,7 @@ pub fn brilliant_ultimatum() -> CardDefinition {
                         filter: None,
                         cap: None,
                         total_mana_value: None,
+                        exile_after: false,
                     },
                 ])),
                 other: Box::new(Effect::Noop),
