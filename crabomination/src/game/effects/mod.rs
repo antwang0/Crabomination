@@ -34653,8 +34653,11 @@ impl GameState {
                 Ok(())
             }
 
+            // Two passes: every seat's answer first, then the moves — a park
+            // after an earlier seat's move would replay against a new top card.
             Effect::RevealTopLandToBattlefieldElseHand { who, tapped, nonland_stays, may } => {
                 let mut cursor = 0;
+                let mut plan: Vec<(usize, CardId, &'static str, bool, bool)> = Vec::new();
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };
                     let (cid, name, is_land) =
@@ -34675,6 +34678,9 @@ impl GameState {
                     } else {
                         is_land
                     };
+                    plan.push((p, cid, name, is_land, deploy));
+                }
+                for (p, cid, name, is_land, deploy) in plan {
                     events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
                     let dest = if deploy {
                         ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: *tapped }
@@ -34693,6 +34699,7 @@ impl GameState {
 
             Effect::LookTopLandToHandElseBin { who } => {
                 let mut cursor = 0;
+                let mut plan: Vec<(usize, CardId, &'static str, bool)> = Vec::new();
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else { continue };
                     let (cid, name, is_land) =
@@ -34714,6 +34721,9 @@ impl GameState {
                             continue;
                         }
                     }
+                    plan.push((p, cid, name, is_land));
+                }
+                for (p, cid, name, is_land) in plan {
                     events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
                     let dest = if is_land {
                         ZoneDest::Hand(PlayerRef::Seat(p))
