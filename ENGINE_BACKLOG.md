@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc48R`) — 99-card library caps, own-side "up to one" slots, Koh](#fixedopen-2026-10-30-commander-run-01wruxc48r--99-card-library-caps-own-side-up-to-one-slots-koh) | 25 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc3kK`) — strict sweeps, a face-down manifest leak, a craft-exile origin, cast-condition probes](#fixedopen-2026-10-30-commander-run-01wruxc3kk--strict-sweeps-a-face-down-manifest-leak-a-craft-exile-origin-cast-condition-probes) | 40 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc6Fk`) — the take-spent once-a-turn class, residual rank, pod sinks](#fixedopen-2026-10-29-commander-run-01wruxc6fk--the-take-spent-once-a-turn-class-residual-rank-pod-sinks) | 42 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc2ns`) — strict-sweep answer-log leaks, mid-resolution mana abilities, granted graveyard triggers](#fixedopen-2026-10-29-commander-run-01wruxc2ns--strict-sweep-answer-log-leaks-mid-resolution-mana-abilities-granted-graveyard-triggers) | 48 |
@@ -314,6 +315,38 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 ## The Commander NEXT's line 9 as `01WRuXc3kK` found it (moved verbatim, 2026-10-30)
 
 9. **`01WRuXc6Fk` (2026-10-29, no seats; ENGINE_BACKLOG `01WRuXc6Fk`): audit sweeps, the residual rank, a census, one class.** Seeds 29001-29002 over every deck at 3-8 seats (audit build, one with `CRAB_POD_CONCEDE=20`): 9,161 games, 0 panics, 3 CR 104.4 draws, 4 finite board caps (Council of Reeds' per-combat self-copy is the new shape). **Class (CR 603.3d): a printed "you may … Do this only once each turn" capped the trigger** — sixteen cards, now spent by the take; Tide of War flipped once per blocker (CR 603.2c), Chime of Night's Aura trigger rode `CreatureDied` (CR 603.6c), Cockatrice / Thicket Basilisk stood in deathtouch for an end-of-combat destroy, Kessig Flamebreather / The Mechanist rode `magecraft` for "noncreature spell", Veyran's Magecraft ignored copies (ratchet both ways) (`once_each_turn_on_take`), ratchet `every_optional_once_each_turn_is_spent_by_the_take`. Cards: Wizard's Rockets' {X} (`{X}` mana abilities default to X = 1 for the auto-tapper), Accursed Witch / Infectious Curse discounts, Krenko's Buzzcrusher per player, Systems Override / Beyond the Quiet Spacecraft, Mob Mentality. Bot (pods): cantrip mana rocks cracked at an opponent's end step, Myriad Landscape before the casts. Clean decks **5,619 → 5,649 / 6,140**. Gates at the closing tip: suite **29,339 / 0 / 8** (strict, precon-seat test excluded; **29,344 / 0 / 8** rebased on `01WRuXc2ns`'s seven commits, pod outcome table unmoved by the merge; **29,347 / 0 / 8** at the closing tip); workspace clippy **0** (three warnings from earlier commits fixed); `--bench` **196,176 / 27.64 / 613.0 / 0 stalls — byte-identical**, determinism + thread determinism ok; cube / sos / sealed × 300 (seed 29010) all decided; release pods 2..8 seats × 300 (seed 29020) 2,100/2,100 decided, turns/game 20.31 / 33.22 / 46.22 / 59.40 / 69.81 / 85.26 / 97.36. Post-merge strict sweeps on the closing tip (audit build, `CRAB_ANSWER_LOG=strict`): 29300 (2, 3 seats, `CRAB_POD_CONCEDE=20`) and 29301 (5, 7 seats) — **7,223 games, 0 panics, 0 strict aborts, 1 undecided (a Descent into Avernus CR 104.4a draw)**. **Next seed 29302.** Next: the rank list is now mostly choice-exposure rows (Dawnhand, Battletide, Hawkeye); a 120-group census (seed 29100) replayed as situational — census yield is thinning; prefer class sweeps (an oracle phrase vs a definition shape, then a `clause_ratchet` in `catalog_registration`), which found sixteen cards this run.
+
+## The Commander NEXT's line 9 as `01WRuXc48R` found it (moved verbatim, 2026-10-30)
+
+9. **`01WRuXc3kK` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc3kK`): strict sweeps, then oracle-phrase probes.** Seeds 28110, 29300-29302 over every deck (audit build, strict answer log; concede, fuzz, 8 seats `--a dflt`): **13,109 games**, 1 strict abort (CR 701.40a — a manifest Grafdigger's Cage blocked left the card face down in the library; fixed, no raw `turn_face_down` + move remains), 0 panics; the undecided are CR 104.4 draws and finite board caps. Also: per-seat reveal-top asks answer before any move (CR 608.2), `exile_from::CRAFT` (Market Gnome), Might of Old Krosa's main phase, Stardew Valley's row closed. ⚠ **Four cube-pool fixes were landed and reverted** (`9a104ccda`) — The One Ring, Doomsday Excruciator, Wilt-Leaf Liege, Amped Raptor: the cube pool is frozen; **check INCOMPLETE's cube-frozen row before fixing a card in `cube.rs`** (two were already on it). Clean decks **5,649 → 5,669**, then **5,391** once the frozen gaps are named in their docs — **The One Ring is the top residual (286 decks, 267 sole) and its fix is one filter, frozen with the cube: apply the four at the next net retrain.** Gates: suite **29,350 / 0 / 7** (strict), clippy **0**, `--bench` **196,176 / 27.64 / 613.0 byte-identical**, pools decided. ⚠ `01WRuXc6Fk` swept 29300-29301 the same hour — **next seed 29400**. Next: phrase probes beyond cast conditions (a scratch regex pair per clause family finds what the audits' fixed shapes miss); the rank list is choice-exposure rows (Dawnhand, Battletide, Hawkeye).
+
+## FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc48R`) — 99-card library caps, own-side "up to one" slots, Koh
+
+No seats. Ranked residuals (`pod_residuals.py --rank`), `audit_up_to_one.py --pod`, then a literal-cap census.
+- **CR 903.5a, the 60-card cap class:** eleven `RevealUntilFind { cap: 60 }` "reveal until" effects (Chaos Wand,
+  Dazzling Sphinx, Gríma, Page, Plargg, Sacred Guide, Spinner of Souls, Thicket Elemental, Clifftop Lookout, The
+  Regalia, Warrior of Light) stopped 60 cards down a 99-card library; now `1000` (the resolver clamps to the library).
+  Selective Memory's "any number" search and The Bath Song's "any number of target cards" were capped at 60 too.
+  Byte-identical for 2-player pools (no 40/60-card library reaches 60). Left alone: `99`/`100` caps (a library
+  only passes 99 by growing) — re-check if a pod game ever shows one binding.
+- **"Up to one target" hitting its own side** (`audit_up_to_one --pod`): Koh's ETB, Psychic Pickpocket's reflexive
+  bounce, Rhino's Rampage's reflexive destroy (its own Sol Ring), Sol'Kanar's damage mode — `OptionalTargets { min: 0 }`;
+  `ExileLinked` / `ExileWithSource` join `permanent_slot_is_hostile`. The audit's remaining "either" rows are
+  upside picks (Aragorn, Inspirit, Giant Inheritance), "that player's" slots, or false positives whose marker the
+  regex misses (Dawnsire's `min_targets: 0`, Baseball Bat's granted trigger). Open: Marchesa's "remove all counters
+  from up to one target permanent" (not hostile by the walker — removing -1/-1s from your own is upside).
+- **Koh, the Face Stealer:** a re-choice dropped every baked grant; it now removes only the previous lender's
+  abilities (remembered in `chosen_permanent`). **The Aesir Escape Valhalla:** chapter I's exile is a `MoveChosen`.
+- **Pods (release, the run's start tree):** seed 29400, 4 seats × 300 groups × 5 = 1,500 games, 1 board cap (Rabble
+  Rousing's doubling Citizens, `--pod-decks 650,750,4954,5239 --seed 29686 --first 1`, NEXT line 6's shape); seed 29700,
+  6 seats × 150 × 4 = 600 games, all decided. Closing tree: 29800 / 29900 / 30000 / 30100 at 3 / 5 / 8 / 4 seats,
+  1,550 games, 2 board caps (Innkeeper's Talent + The Great Henge, `--pod-decks 312,1517,3440,5168 --seed 30174
+  --first 1`; Eidolon of Blossoms + Shizuko, `588,2548,3003,3883,5827 --seed 29939 --first 0` — growth engines,
+  not yet confirmed finite). 0 panics. Gates: suite 29,360 / 0 / 8 (strict), clippy 0, `--bench` 196,176 / 613.0
+  byte-identical, determinism ok.
+- **Remaining rank top** (all choice-exposure, invisible to bots): Dawnhand Dissident (blight pick is a cost,
+  needs cost-payment plumbing), Battletide Alchemist, Hawkeye (modes at resolution), Queen Kayla (needs a
+  simultaneous put across per-MV picks), Mikey & Don, Demonic Embrace.
 
 ## FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc3kK`) — strict sweeps, a face-down manifest leak, a craft-exile origin, cast-condition probes
 
