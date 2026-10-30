@@ -26328,12 +26328,21 @@ impl GameState {
                 self.players[p].cards_exiled_this_turn =
                     self.players[p].cards_exiled_this_turn.saturating_add(1);
             } else {
+                let mark = events.len();
                 self.move_card_to(
                     other_cid,
                     &crate::effect::ZoneDest::Exile,
                     &crate::game::effects::EffectContext::for_ability(card_id, p, None),
                     events,
                 );
+                // Market Gnome's "exiled … while you're activating a craft ability".
+                for e in &mut events[mark..] {
+                    if let GameEvent::CardExiledFrom { card_id: c, from, .. } = e
+                        && *c == other_cid
+                    {
+                        *from |= crate::effect::exile_from::CRAFT;
+                    }
+                }
             }
             link(self);
         }

@@ -27671,11 +27671,18 @@ impl GameState {
         // at all. Read off the batch mask rather than walked: `CardExiled` is
         // reached by `GameEvent::PermanentExiled` and by nothing else, so the
         // bit test is not an approximation here, it is the same question.
-        if batch_bits & const { crate::effect::EventKind::CardExiled.bit() } != 0 {
+        // `CardExiledFrom` joins it: an origin-scoped self exile (Market
+        // Gnome's craft-cost exile).
+        let exile_bits = const {
+            crate::effect::EventKind::CardExiled.bit() | crate::effect::EventKind::CardExiledFrom(0).bit()
+        };
+        if batch_bits & exile_bits != 0 {
             for card in &self.exile {
                 for ta in &card.definition.triggered_abilities {
-                    if ta.event.kind != crate::effect::EventKind::CardExiled
-                        || ta.event.scope != crate::effect::EventScope::SelfSource
+                    if !matches!(
+                        ta.event.kind,
+                        crate::effect::EventKind::CardExiled | crate::effect::EventKind::CardExiledFrom(_)
+                    ) || ta.event.scope != crate::effect::EventScope::SelfSource
                     {
                         continue;
                     }

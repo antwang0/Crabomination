@@ -4522,6 +4522,9 @@ pub mod exile_from {
     pub const BATTLEFIELD: u8 = 1;
     pub const GRAVEYARD: u8 = 2;
     pub const LIBRARY: u8 = 4;
+    /// Set beside `BATTLEFIELD` on a permanent exiled to pay a craft cost
+    /// ("exiled from the battlefield while you're activating a craft ability").
+    pub const CRAFT: u8 = 8;
 }
 
 /// Whose events does this trigger listen for?

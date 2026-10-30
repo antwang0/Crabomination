@@ -1000,6 +1000,10 @@ fn event_matches_spec_rest(
             event,
             GameEvent::PermanentExiled { card_id } if *card_id == source.id
         ) || matches!(
+            // The origin-scoped twin (Market Gnome's craft-cost exile).
+            event,
+            GameEvent::CardExiledFrom { card_id, .. } if *card_id == source.id
+        ) || matches!(
             // CR 717.5 — the visit ability belongs to the Attraction that was
             // visited, so only that object's trigger fires.
             event,
