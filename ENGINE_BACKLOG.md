@@ -327,8 +327,9 @@ No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANS
 block): **29404** (3/4/6 seats, fuzz; 4,606 games), **29405** (2/5/8, concede; 5,066), **29406** (4/6/7, `--a dflt` +
 fuzz; 3,437), then on the fixed tip **29407** (3/7, concede + fuzz; 2,925) and **29408** (4/5/6, concede + fuzz;
 3,787), **29409** (3/8, concede + fuzz; 2,815) and **29410** (4/6, concede + fuzz; 2,559, all decided) and **29411**
-(2/5/7, concede + fuzz; 5,176, one CR 104.4a Descent into Avernus draw) — **30,371 games, 3 finds (all fixed below), 0
-panics**. **Next seed 29412.**
+(2/5/7, concede + fuzz; 5,176, one CR 104.4a Descent into Avernus draw), then on the tip merged with `01WRuXc2Es` **29412**
+(3/4/6, `--a dflt` + concede; 4,606: a Descent draw after a concession, a Hare Apparent board cap) — **34,977 games, 3
+finds (all fixed below), 0 panics**. **Next seed 29413.**
   Gates (closing tip): suite **29,373 / 0 / 7** (strict, seat test skipped); cube/sos/sealed/fixed × 300 (seed 30004)
   identical base vs tip; `release-fast` check clean. Earlier gates: suite 29,370 / 0 / 7, workspace clippy **0** (client excluded), `--bench`
   **196,176 / 27.64 / 613.0 / 0 stalls byte-identical**, determinism ok; overflow-build bench A/B base vs tip 80.0 / 79.5
