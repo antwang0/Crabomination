@@ -230,24 +230,26 @@ pub fn extended_absence() -> CardDefinition {
 /// Rhino, Terrible Trampler — {4}{G}{G} legendary 7/6 trample Human Villain.
 /// ETB: destroy target artifact or land; distribute three +1/+1 counters among
 /// up to three other target creatures, which gain trample until end of turn.
-/// (Two triggers — the destroy's target and the distribution's slots would
-/// collide in one `Seq`.)
+/// One trigger: `SlotGroups` gives the destroy slot 0 and the distribution
+/// slots 1-3.
 pub fn rhino_terrible_trampler() -> CardDefinition {
     let trample = |n| Effect::GrantKeyword { what: Selector::Target(n), keyword: Keyword::Trample, duration: Duration::EndOfTurn };
     CardDefinition {
         keywords: vec![Keyword::Trample],
         triggered_abilities: vec![
-            etb(Effect::Destroy { what: target_filtered(R::Artifact.or(R::Land)) }),
-            etb(Effect::Seq(vec![
-                Effect::DistributeCounters {
-                    total: Value::Const(3),
-                    counter: CounterType::PlusOnePlusOne,
-                    filter: R::Creature.and(R::OtherThanSource),
-                    max_targets: 3,
-                },
-                trample(0),
-                trample(1),
-                trample(2),
+            etb(Effect::SlotGroups(vec![
+                Effect::Destroy { what: target_filtered(R::Artifact.or(R::Land)) },
+                Effect::Seq(vec![
+                    Effect::DistributeCounters {
+                        total: Value::Const(3),
+                        counter: CounterType::PlusOnePlusOne,
+                        filter: R::Creature.and(R::OtherThanSource),
+                        max_targets: 3,
+                    },
+                    trample(0),
+                    trample(1),
+                    trample(2),
+                ]),
             ])),
         ],
         ..legend(creature(

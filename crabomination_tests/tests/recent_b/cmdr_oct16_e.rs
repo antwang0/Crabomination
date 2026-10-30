@@ -744,3 +744,28 @@ fn neheb_pumps_minotaurs_with_an_empty_hand() {
     g.add_card_to_hand(0, catalog::forest());
     assert_eq!(g.computed_permanent(neheb).unwrap().power, 2);
 }
+
+/// CR 603.3 — Rhino, Terrible Trampler's ETB is one trigger: it destroys the
+/// artifact and spreads three counters (with trample) over the other
+/// creatures; with no other creature it still destroys.
+#[test]
+fn rhino_terrible_trampler_is_one_trigger() {
+    for others in [2usize, 0] {
+        let mut g = pod(3);
+        let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+        let bears: Vec<_> = (0..others).map(|_| ready(&mut g, 0, catalog::grizzly_bears())).collect();
+        let rhino = g.add_card_to_hand(0, catalog::rhino_terrible_trampler());
+        g.players[0].mana_pool.add(Color::Green, 2);
+        g.players[0].mana_pool.add_colorless(4);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell { card_id: rhino, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        g.resolve_top_of_stack().expect("Rhino resolves");
+        assert_eq!(g.stack.len(), 1, "one enters trigger ({others} others)");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(ring).is_none(), "the Sol Ring is destroyed ({others} others)");
+        let counters: u32 = bears.iter().map(|b| g.battlefield_find(*b).unwrap().counter_count(CounterType::PlusOnePlusOne)).sum();
+        assert_eq!(counters, if others > 0 { 3 } else { 0 });
+        assert!(bears.iter().all(|b| has(&g, *b, &Keyword::Trample)));
+    }
+}
