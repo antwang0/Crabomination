@@ -32196,6 +32196,11 @@ impl GameState {
                 let DecisionAnswer::Discard(card_ids) = answer else {
                     return Err(GameError::DecisionAnswerMismatch);
                 };
+                // CR 610.3c — a source that left while the ask was parked (its
+                // controller conceded) exiles nothing.
+                if self.battlefield_find(source).is_none() {
+                    return Ok(Vec::new());
+                }
                 let mut events = Vec::with_capacity(card_ids.len());
                 for cid in card_ids {
                     // Move the chosen card from hand to exile and link it to

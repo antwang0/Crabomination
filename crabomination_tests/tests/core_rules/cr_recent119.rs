@@ -109,3 +109,42 @@ fn cr_611_2b_a_gone_source_steals_nothing_for_as_long_as_it_remains() {
     g.dispatch_triggers_for_events(&evs);
     assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "the Bears stay with their owner");
 }
+
+/// CR 610.3c — the same rule across a parked ask: Brain Maggot's pick is
+/// answered after the Maggot left (its controller's seat conceded in a pod),
+/// so the chosen card stays in hand rather than exiled with nothing to return it.
+#[test]
+fn cr_610_3c_a_parked_exile_pick_whose_source_left_exiles_nothing() {
+    use crabomination::decision::DecisionAnswer;
+    let mut g = multi_player_game(2);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].wants_ui = true;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let maggot = g.add_card_to_hand(0, catalog::brain_maggot());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 1);
+    g.players[0].mana_pool.add_colorless(1);
+    g.perform_action(GameAction::CastSpell { card_id: maggot, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast Brain Maggot");
+    let mut picked = false;
+    for _ in 0..12 {
+        match g.pending_decision.as_ref().map(|d| &d.decision) {
+            Some(crabomination::decision::Decision::ChooseTarget { .. }) => {
+                g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Player(1)))).expect("target");
+            }
+            Some(_) => {
+                picked = true;
+                break;
+            }
+            None => {
+                let _ = g.resolve_top_of_stack();
+            }
+        }
+    }
+    assert!(picked, "the controller is asked which card to exile");
+    g.remove_from_battlefield_to_graveyard_raw(maggot);
+    let _ = g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Discard(vec![bolt])));
+    assert!(g.players[1].hand.iter().any(|c| c.id == bolt), "the Bolt stays in hand");
+    assert!(!g.exile.iter().any(|c| c.id == bolt));
+}
