@@ -325,7 +325,8 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 
 No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`, every deck, one game a
 block): **29404** (3/4/6 seats, fuzz; 4,606 games), **29405** (2/5/8, concede; 5,066), **29406** (4/6/7, `--a dflt` +
-fuzz; 3,437) — **13,109 games, 2 finds (both fixed below), 0 panics**. **Next seed 29407.**
+fuzz; 3,437), then on the fixed tip **29407** (3/7, concede + fuzz; 2,925) and **29408** (4/5/6, concede + fuzz;
+3,787) — **19,821 games, 2 finds (both fixed below), 0 panics**. **Next seed 29409.**
   Gates: suite **29,370 / 0 / 7** (strict, seat test skipped), workspace clippy **0** (client excluded), `--bench`
   **196,176 / 27.64 / 613.0 / 0 stalls byte-identical**, determinism ok; overflow-build bench A/B base vs tip 80.0 / 79.5
   games/s (3 runs each, noise); golden traces (Commander pod digests included) unchanged.
@@ -341,6 +342,12 @@ fuzz; 3,437) — **13,109 games, 2 finds (both fixed below), 0 panics**. **Next 
   `PlayerRef::Triggerer` read the original's caster — Mage Hunter's "an opponent copies → they lose 1" charged the
   wrong seat. The event now carries the (last) copy (`copy`); the net wire keeps its field name. Curse of Shaken
   Faith gained its "or copies a spell" trigger on top of it.
+- **`PlayerRef::Triggerer`, the subject-in-no-zone class:** after the stack and battlefield it looked only in hands and
+  graveyards. A dying token (Massacre Wurm's "that player loses 2 life" — CR 603.10a) and a discard Rest in Peace
+  exiled (Megrim) read nobody; a stolen creature's death named its owner. It now reads the subject's LKI (died
+  snapshot, then the `leaves_bf_lki` kept until the trigger resolves) and the exile zone's owner. Commander pod digest
+  0x9030001 moved (1730 → 1624 actions); 2-player pools identical. ⚠ `PlayerRef::TriggerEventPlayer`
+  (`ctx.event_player`) is the event's actor and already exists — prefer it for "that player" on a new card.
 - **CR 800.4a, a parked demonstrate ask (seed 2946692, 8 seats, strict abort):** the spell's controller conceded while
   the caster's "copy it?" waited; the resumed `Demonstrate` found no spell and left the answer logged. Cleared.
 - **New primitives:** `Effect::ChoosePerManaValue` (every per-MV pick before one `Move` — Queen Kayla's returns enter
