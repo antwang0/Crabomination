@@ -343,6 +343,13 @@ Spiritdancer). Then `pod_residuals --rank` top-down with the frozen pools filter
   (`uds::chime_of_night_destroys_when_it_falls_off`). The same text sweep over "leaves the battlefield", "if you cast
   it", "second spell each turn" and "can't be countered" came back clean (helpers: `flurry`, `myojin`'s
   `CastFromHand`, `ExileLink` returns).
+- **Self-attack / self-block probes** (compiled `clause_ratchet`s, thrown away): 25 of 847 "whenever this attacks"
+  rows are all "attacks and isn't blocked" (their own event) bar Borderland Marauder (a static "while attacking"
+  pump, cube-frozen); of 143 "blocks / becomes blocked" rows, **Cockatrice and Thicket Basilisk** stood in deathtouch
+  for "destroy that creature at end of combat" — now `combat_partner_punisher` (non-Wall), `leg5::basilisks_destroy_*`.
+  Simic Basilisk's granted deathtouch stays (its trigger needs the damage too). `audit_keyword_drift`'s four MISSING
+  rows: Noctis ("Warp-Strike" is an ability name) and Sapling Nursery (`SelfCostReducedPerPermanentMatching`) are
+  false positives; Detective's Phoenix is cube-frozen; Light Up the Night's flashback wants a remove-X-loyalty cost.
 - **Primitives:** an `{X}` mana ability activated with no X uses X = 1 (the auto-tapper's fixer); the target-discount
   static (`CostReductionForYourSpellsTargetingThis`) gains `opponents_only`, and on a Curse "this" is the enchanted
   player.
