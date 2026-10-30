@@ -352,8 +352,10 @@ No seats. Ranked residuals (`pod_residuals.py --rank`), `audit_up_to_one.py --po
 
 No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`) over every deck:
 28110 (4, 6 seats; 2,559 games), 29300 (3, 5, 7, `CRAB_POD_CONCEDE=20`; 4,153), 29301 (2, 4, 6, `CRAB_POD_FUZZ=2500`;
-5,629) and 29302 (8 seats, `--a dflt`; 768) — **13,109 games**. ⚠ A concurrent session (`01WRuXc6Fk`) swept 29300-29301 too, at
-other seat lists, so the games mostly differ — **next seed 29400**. **1 strict abort (fixed below), 0 panics**; the
+5,629) and 29302 (8 seats, `--a dflt`; 768) — **13,109 games** — then, after the gates, 29400 (3, 4, 5, concede + fuzz;
+4,810) and 29401 (6, 7, `--a dflt` + fuzz;
+1,902: the CR 610.3c abort below, three Ganax + Draconic Visitor draws the fuzz forces past `loop_hazard`) — **19,821 in all**. ⚠ A concurrent session (`01WRuXc6Fk`) swept 29300-29301 too, at
+other seat lists, so the games mostly differ — **next seed 29402**. **2 strict aborts (both fixed below), 0 panics**; the
 undecided are CR 104.4a/b draws (Descent into Avernus; Scute Swarm; Altar of the Brood + Worldspine Wurm + Zellix, a
 real mandatory mill loop at 8 seats; Descent again at 8 seats) and finite board caps (Black Sun's Zenith X = 19 into
 Nest of Scarabs; Ghalta at 1,536 counters, then Ferrafor's Saprolings, fuzzed; Myrel + Mondrak, line 6's shape).
@@ -361,6 +363,13 @@ Nest of Scarabs; Ghalta at 1,536 counters, then Ferrafor's Saprolings, fuzzed; M
   `ManifestTopOfLibraryUnderYou` turned the top card face down before `move_card_to`; Grafdigger's Cage kept it in
   the library face down. It and fateshift's exile-then-manifest go through `face_down_onto_battlefield` now — no
   raw `turn_face_down()` + move remains (the face-down cast is the one other site).
+- **CR 610.3c / 611.2b, the gone-source class (seed 2941996, 6 seats `--a dflt` + fuzz, strict abort):** a token
+  Abdel Adrian (Preston's copy) the legend rule took before its ETB resolved still exiled nineteen permanents "until it
+  leaves" — `ExileAnyNumberUntilSourceLeaves` was the one until-leaves arm without the gone-source guard. The class
+  probe found two more: `GainControlWhileSourceRemains` (Sower of Temptation killed in response stole **for ever** —
+  the unwind hook had already run) and its controlled / tapped siblings (Shackles untapped in response), and the
+  parked `ExileChosenUntilSourceLeavesPending` answer (a source that left while the pick waited). Three `cr_recent119`
+  tests, each proven to fail without its fix.
 - **CR 608.2, latent:** `RevealTopLandToBattlefieldElseHand` / `LookTopLandToHandElseBin` take every seat's answer
   before any card moves (the previous OPEN row; `cr_recent119`).
 - **`exile_from::CRAFT`:** `EventKind` is at its 128-tag mask, so the craft cost loop ORs an origin bit into the
@@ -372,8 +381,12 @@ Nest of Scarabs; Ghalta at 1,536 counters, then Ferrafor's Saprolings, fuzzed; M
   commander", monarch / initiative / goad probes came back clean. Weftwalking's and Iridescent Tiger's docs claimed
   their shipped cast gates were dropped.
 - **Cards:** Stardew Valley's row closed — "another player" is every opponent while no team format is played;
-  Silumgar Scavenger's exploit haste; Spawning Pool's Skeleton regenerate grant; Falkenrath Aristocrat's stale doc.
-  Clean decks **5,649 → 5,669**, then **5,391 / 6,140** once the four cube-frozen gaps below are named in their
+  Silumgar Scavenger's exploit haste; Spawning Pool's Skeleton regenerate grant; Thraben Exorcism's "creature with
+  disturb" (`R::HasDisturb`); Possibility Technician's "if you control a Kavu" (`WhileExiledIfHolderControls`);
+  **Sorcerous Squall** casts the card itself from the milled player's graveyard (it copied a card from *any*
+  opponent's — wrong at N > 2), via `CastAnyOrderWithoutPaying` + a new `exile_after` field, which Jetsam's printed
+  "exile it instead" now uses too; stale docs (Falkenrath Aristocrat, Fleeting Reflection).
+  Clean decks **5,649 → 5,677** by the fixes, then **5,397 / 6,140** once the four cube-frozen gaps below are named in their
   docs (`pod_residuals` reads docs) — **The One Ring is now the top residual: 286 decks, 267 of them sole.**
 - Gates: suite **29,350 / 0 / 7** (strict answer log, precon-seat test excluded) at `77e522948`; workspace clippy
   **0** after two fixes (107m31s at `-j 2`; one in the sealed builder's code); `--bench` **196,176 / 27.64 / 613.0 / 0
