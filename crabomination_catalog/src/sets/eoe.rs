@@ -7686,9 +7686,8 @@ pub fn secluded_starforge() -> CardDefinition {
 }
 
 /// Possibility Technician — {2}{R} 3/3 Kavu Artificer, Warp {1}{R}. Whenever
-/// this or another Kavu you control enters, exile the top card; you may play it
-/// for as long as it remains exiled. (The "if you control a Kavu" play
-/// condition is dropped.)
+/// this or another Kavu you control enters, exile the top card; for as long as
+/// it remains exiled, you may play it if you control a Kavu.
 pub fn possibility_technician() -> CardDefinition {
     CardDefinition {
         name: "Possibility Technician",
@@ -7709,7 +7708,9 @@ pub fn possibility_technician() -> CardDefinition {
             effect: Effect::ExileTopAndGrantMayPlay {
                 who: PlayerRef::You,
                 count: Value::Const(1),
-                duration: crate::card::MayPlayDuration::WhileExiled,
+                duration: crate::card::MayPlayDuration::WhileExiledIfHolderControls {
+                    creature_type: CreatureType::Kavu,
+                },
                 pay_any_color: false,
                 max_mana_value: None,
                 pay_own_cost: true,

@@ -3174,6 +3174,16 @@ fn possibility_technician_etb_exiles_top_grants_may_play() {
         g.exile.iter().any(|c| c.controller == 0 && c.may_play_until.is_some()),
         "exiled top card is playable",
     );
+    // "… you may play it if you control a Kavu": with the Technician gone, not.
+    let forest = g.exile.iter().find(|c| c.definition.name == "Forest").map(|c| c.id).expect("the Forest");
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let mut gone = g.clone();
+    let ctx = crabomination::game::effects::EffectContext::for_ability(id, 1, None);
+    gone.resolve_effect(&crabomination::effect::Effect::Exile { what: crabomination::effect::Selector::ExactObjects(vec![id]) }, &ctx)
+        .unwrap();
+    assert!(gone.perform_action(GameAction::PlayLand(forest)).is_err(), "no Kavu, no play");
+    g.perform_action(GameAction::PlayLand(forest)).expect("a Kavu: play the exiled land");
 }
 
 /// Roving Actuator: with Void active, recast a cheap instant from your graveyard.
