@@ -4116,7 +4116,11 @@ pub(crate) fn decide_pending_policy(
 ) -> crate::decision::DecisionAnswer {
     // Read-only, and reached once per pending decision inside the attack /
     // block sims on a cloned (unfrozen) state — share one gather.
-    state.with_frozen_layers(|s| decide_pending_policy_inner(s, seat, w, decision, eval_modes))
+    let decide = || state.with_frozen_layers(|s| decide_pending_policy_inner(s, seat, w, decision, eval_modes));
+    // The in-sim convention covers the loop probe too, itself a clone and
+    // resolve: an attack sim's gain pick probed every candidate and held a
+    // 6-seat strict sweep block past 20 minutes (seed 2943032).
+    if eval_modes { decide() } else { super::loop_hazard::in_lookahead(decide) }
 }
 
 fn decide_pending_policy_inner(
@@ -10726,6 +10730,7 @@ fn cast_candidates_all<'a>(
     // play out, so the bot holds it.
     // A prepared spell is priced off its creature: the fan-out is the part
     // that matters (Dirgur Focusmage's Braingeyser over 500 Composers).
+    let _memo = crate::game::token_scale_memo::Scope::open(state);
     out.retain(|(a, _)| match a.cast_card_id().or(match a {
         GameAction::CastPrepareSpell { creature_id, .. } => Some(*creature_id),
         _ => None,

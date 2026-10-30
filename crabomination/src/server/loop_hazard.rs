@@ -491,6 +491,21 @@ mod tests {
         let cands = vec![(p, "Polyraptor".to_string()), (b, "Grizzly Bears".to_string())];
         let answer = crate::server::bot::decide_choose_cards_for_test(&w, &g, 0, crate::decision::PickValue::Gain, &cands, 0, 2);
         assert_eq!(answer, crate::decision::DecisionAnswer::Cards(vec![b]));
+        // The in-sim policy (`eval_modes: false`) is a lookahead too: an
+        // attack sim's gain pick probed every candidate and held a 6-seat
+        // sweep block past 20 minutes (seed 2943032).
+        let ask = crate::decision::Decision::ChooseCards {
+            source: crate::card::CardId(0),
+            prompt: String::new(),
+            candidates: cands,
+            min: 0,
+            max: 2,
+            eligible: None,
+            value: crate::decision::PickValue::Gain,
+        };
+        let pick = |eval| crate::server::bot::decide_pending_policy(&g, 0, &w, &ask, eval);
+        assert_eq!(pick(true), crate::decision::DecisionAnswer::Cards(vec![b]));
+        assert!(matches!(pick(false), crate::decision::DecisionAnswer::Cards(c) if c.contains(&p)), "no probe in a sim");
     }
 
     /// CR 104.4b — a Draconic Visitor put from hand beside Ganax (Minion of
