@@ -2606,7 +2606,7 @@ pub fn the_bath_song() -> CardDefinition {
                 3,
                 Effect::Seq(vec![
                     Effect::ApplyToTargets {
-                        max_targets: 60,
+                        max_targets: u8::MAX,
                         min_targets: 0,
                         filter: R::Any.from_your_graveyard(),
                         effect: Box::new(Effect::Move {

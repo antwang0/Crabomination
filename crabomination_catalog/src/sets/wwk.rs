@@ -606,7 +606,7 @@ pub fn selective_memory() -> CardDefinition {
             who: PlayerRef::You,
             filter: R::Nonland,
             to: ZoneDest::Exile,
-            count: Value::Const(60),
+            count: Value::Const(1000),
         },
     )
 }
