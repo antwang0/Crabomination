@@ -564,3 +564,35 @@ fn offsprings_revenge_token_gains_haste_not_copies_it() {
     assert!(cp.keywords().contains(&Keyword::Haste), "hasty now");
     assert!(!g.battlefield_find(token).unwrap().definition.keywords.contains(&Keyword::Haste), "not a copiable keyword");
 }
+
+/// Lagrella, the Magpie: when it leaves, a card it exiled that returns under
+/// its controller's control gets two +1/+1 counters; the opponent's comes back
+/// bare. (The ETB's own targets are the bot's pick; the link is what's new.)
+#[test]
+fn lagrella_returns_your_creature_with_two_counters() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = pod(2);
+    let mine = ready(&mut g, 0, catalog::grizzly_bears());
+    let theirs = ready(&mut g, 1, catalog::grizzly_bears());
+    let lagrella = ready(&mut g, 0, catalog::lagrella_the_magpie());
+    let crabomination::effect::Effect::ForEachPlayerTarget { body } =
+        catalog::lagrella_the_magpie().triggered_abilities[0].effect.clone()
+    else {
+        panic!("per-player targets")
+    };
+    let Effect::ApplyToTargets { effect: exile, .. } = *body else { panic!("apply to targets") };
+    for id in [mine, theirs] {
+        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+        ctx.source = Some(lagrella);
+        ctx.targets = vec![Target::Permanent(id)];
+        g.resolve_effect(&exile, &ctx).unwrap();
+    }
+    assert!(g.battlefield_find(mine).is_none() && g.battlefield_find(theirs).is_none(), "both exiled");
+    let kill = Effect::Destroy { what: Selector::ExactObjects(vec![lagrella]) };
+    let evs = g.resolve_effect(&kill, &EffectContext::for_spell(1, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    let counters = |id| g.battlefield_find(id).map(|c| c.counter_count(CounterType::PlusOnePlusOne));
+    assert_eq!(counters(mine), Some(2), "returned under its controller's control");
+    assert_eq!(counters(theirs), Some(0), "returned under the opponent's");
+}

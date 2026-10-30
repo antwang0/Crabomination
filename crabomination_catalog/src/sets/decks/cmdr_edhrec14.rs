@@ -2051,17 +2051,18 @@ pub fn teferi_who_slows_the_sunset() -> CardDefinition {
 
 /// Lagrella, the Magpie — {G}{W}{U} 2/3 legendary Human Soldier. When it
 /// enters, exile any number of other target creatures controlled by different
-/// players until Lagrella leaves the battlefield.
+/// players until Lagrella leaves the battlefield; one returning under your
+/// control gets two +1/+1 counters (put on as it returns, not by a trigger).
 pub fn lagrella_the_magpie() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::ForEachPlayerTarget {
             body: Box::new(Effect::ApplyToTargets {
                 max_targets: 8,
                 min_targets: 0,
-                filter: R::Creature.and(R::OtherThanSource).and(R::Not(Box::new(R::ControlledByYou))),
+                filter: R::Creature.and(R::OtherThanSource),
                 effect: Box::new(Effect::ExileUntilSourceLeaves {
                     what: Selector::Target(0),
-                    return_to: crate::card::ExileReturnZone::Battlefield,
+                    return_to: crate::card::ExileReturnZone::BattlefieldCountersIfYours(2),
                 }),
             }),
         })],

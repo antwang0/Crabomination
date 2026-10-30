@@ -2051,7 +2051,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Jade Monolith~~ ✅ | fixed 2026-10-25: `RedirectNextDamageTo { chosen_source }` keys the redirect on the source picked on resolution (Kor Chant shares it with `whole_turn`) — `jade_monolith_redirects_only_the_chosen_source` | — |
 | 🟡 Verdant Mastery, Fervent Mastery | their picks are still separate searches (two taxes under Leonin Arbiter) | left out of `OneSearch` (`01M3bbRx`): STX cards in the two-player pool |
 | ~~Lochmere Serpent~~ ✅ | fixed 2026-10-25: exactly five targets, all in one opponent's graveyard (`SameGraveyardAsTargetSlot(0)`, the 2019-10-04 ruling) — `lochmere_serpent_needs_five_targets_in_a_single_opponents_graveyard` | — |
-| 🟡 Lagrella, the Magpie | exiles only opponents' creatures, and a returning card gets no +1/+1 counters | the "enters under your control" rider has no engine hook; your own creatures would come back without it |
+| 🟡 Lagrella, the Magpie | the two +1/+1 counters go on as the card returns, not by a separate trigger | fixed 2026-10-30 otherwise: any creature (yours too) may be exiled, and one returning under your control gets the counters (`ExileReturnZone::BattlefieldCountersIfYours`) |
 | 🟡 Battletide Alchemist | the "you may prevent" is always taken for its controller's side and never for an opponent | `ReduceDamageToYourTeamByCount` has no per-event prompt |
 | ~~King T'Challa // Black Panther, Hope Enduring~~ ✅ | fixed 2026-10-24: a modal DFC whose front also transforms (CR 712.11b) — the back face carries its {4}{W}{U} and is cast from hand | — |
 | 🟡 Dire Undercurrents | the discard trigger can only target an opponent | the bot never targets itself with it anyway |
