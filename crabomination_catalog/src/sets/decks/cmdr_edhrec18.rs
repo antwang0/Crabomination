@@ -1298,9 +1298,8 @@ pub fn press_the_enemy() -> CardDefinition {
 }
 
 /// Sorcerous Squall — {6}{U}{U}{U} sorcery, delve. Target opponent mills
-/// nine; then you may cast an instant or sorcery spell from an opponent's
-/// graveyard free, exiled after (cast as a copy of the exiled card —
-/// INCOMPLETE_CARDS).
+/// nine; then you may cast an instant or sorcery spell from that player's
+/// graveyard without paying its mana cost, exiled instead of binned.
 pub fn sorcerous_squall() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Delve],
@@ -1310,13 +1309,18 @@ pub fn sorcerous_squall() -> CardDefinition {
             CardType::Sorcery,
             Effect::Seq(vec![
                 Effect::Mill { who: target_filtered(R::OpponentPlayer), amount: Value::Const(9) },
-                Effect::Reflexive {
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::ExileWithSource {
-                            what: target_filtered(instant_or_sorcery().and(R::InOpponentGraveyard)),
-                        },
-                        Effect::CopyCardAndCastFree { what: Selector::Target(0) },
-                    ])),
+                // Not targeted: the spell is chosen as this resolves.
+                Effect::CastAnyOrderWithoutPaying {
+                    what: Selector::CardsInZone {
+                        who: PlayerRef::Target(0),
+                        zone: crate::card::Zone::Graveyard,
+                        filter: instant_or_sorcery(),
+                    },
+                    source_zone: crate::card::Zone::Graveyard,
+                    filter: None,
+                    cap: Some(Value::ONE),
+                    total_mana_value: None,
+                    exile_after: true,
                 },
             ]),
         )

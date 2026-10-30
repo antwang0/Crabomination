@@ -1700,3 +1700,28 @@ fn press_the_enemy_returns_a_spell_or_a_permanent_in_one_slot() {
     cast(&mut g, press, &[perm(angel)]).expect("Press on the permanent");
     assert!(g.players[2].hand.iter().any(|c| c.id == angel), "the permanent went back to hand");
 }
+
+/// Sorcerous Squall: "Target opponent mills nine cards, then you may cast an
+/// instant or sorcery spell from that player's graveyard without paying its
+/// mana cost. If that spell would be put into a graveyard, exile it instead."
+/// The card itself is cast (not a copy), from the milled player's graveyard
+/// only — a third seat's instant is not offered (it had been, at N > 2).
+#[test]
+fn sorcerous_squall_casts_from_the_milled_players_graveyard() {
+    let mut g = pod(3);
+    let theirs = g.add_card_to_graveyard(2, catalog::divination());
+    g.players[1].library.clear();
+    let milled = g.add_card_to_library(1, catalog::divination());
+    for _ in 0..8 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let hand = g.players[0].hand.len();
+    let squall = g.add_card_to_hand(0, catalog::sorcerous_squall());
+    cast(&mut g, squall, &[Target::Player(1)]).expect("cast Sorcerous Squall");
+    assert_eq!(g.players[0].hand.len(), hand + 2, "the milled Divination drew two for its caster");
+    assert!(g.exile.iter().any(|c| c.id == milled), "cast from seat 1's graveyard, then exiled");
+    assert!(g.players[2].graveyard.iter().any(|c| c.id == theirs), "seat 2's instant untouched");
+}
