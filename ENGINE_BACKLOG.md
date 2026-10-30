@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc67u`) — a 25-minute pod decision, a copy event's subject, strict sweeps](#fixedopen-2026-10-30-commander-run-01wruxc67u--a-25-minute-pod-decision-a-copy-events-subject-strict-sweeps) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc48R`) — 99-card library caps, own-side "up to one" slots, Koh](#fixedopen-2026-10-30-commander-run-01wruxc48r--99-card-library-caps-own-side-up-to-one-slots-koh) | 25 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc3kK`) — strict sweeps, a face-down manifest leak, a craft-exile origin, cast-condition probes](#fixedopen-2026-10-30-commander-run-01wruxc3kk--strict-sweeps-a-face-down-manifest-leak-a-craft-exile-origin-cast-condition-probes) | 40 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-29 (Commander run, `01WRuXc6Fk`) — the take-spent once-a-turn class, residual rank, pod sinks](#fixedopen-2026-10-29-commander-run-01wruxc6fk--the-take-spent-once-a-turn-class-residual-rank-pod-sinks) | 42 |
@@ -319,6 +320,40 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 ## The Commander NEXT's line 9 as `01WRuXc48R` found it (moved verbatim, 2026-10-30)
 
 9. **`01WRuXc3kK` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc3kK`): strict sweeps, then oracle-phrase probes.** Seeds 28110, 29300-29302 over every deck (audit build, strict answer log; concede, fuzz, 8 seats `--a dflt`): **13,109 games**, 1 strict abort (CR 701.40a — a manifest Grafdigger's Cage blocked left the card face down in the library; fixed, no raw `turn_face_down` + move remains), 0 panics; the undecided are CR 104.4 draws and finite board caps. Also: per-seat reveal-top asks answer before any move (CR 608.2), `exile_from::CRAFT` (Market Gnome), Might of Old Krosa's main phase, Stardew Valley's row closed. ⚠ **Four cube-pool fixes were landed and reverted** (`9a104ccda`) — The One Ring, Doomsday Excruciator, Wilt-Leaf Liege, Amped Raptor: the cube pool is frozen; **check INCOMPLETE's cube-frozen row before fixing a card in `cube.rs`** (two were already on it). Clean decks **5,649 → 5,669**, then **5,391** once the frozen gaps are named in their docs — **The One Ring is the top residual (286 decks, 267 sole) and its fix is one filter, frozen with the cube: apply the four at the next net retrain.** Gates: suite **29,350 / 0 / 7** (strict), clippy **0**, `--bench` **196,176 / 27.64 / 613.0 byte-identical**, pools decided. ⚠ `01WRuXc6Fk` swept 29300-29301 the same hour — **next seed 29400**. Next: phrase probes beyond cast conditions (a scratch regex pair per clause family finds what the audits' fixed shapes miss); the rank list is choice-exposure rows (Dawnhand, Battletide, Hawkeye).
+
+## FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc67u`) — a 25-minute pod decision, a copy event's subject, strict sweeps
+
+No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`, every deck, one game a
+block): **29404** (3/4/6 seats, fuzz; 4,606 games), **29405** (2/5/8, concede; 5,066), **29406** (4/6/7, `--a dflt` +
+fuzz; 3,437) — **13,109 games, 2 finds (both fixed below), 0 panics**. **Next seed 29407.**
+  Gates: suite **29,370 / 0 / 7** (strict, seat test skipped), workspace clippy **0** (client excluded), `--bench`
+  **196,176 / 27.64 / 613.0 / 0 stalls byte-identical**, determinism ok; overflow-build bench A/B base vs tip 80.0 / 79.5
+  games/s (3 runs each, noise); golden traces (Commander pod digests included) unchanged.
+- **The 25-minute pod decision (seed 2942155, 3 seats, decks 2483,1387,2910):** a strict sweep block never ended.
+  `loop_hazard::entry_starts_loop` probed every gain-pick candidate with a full resolution probe, and the bot's own
+  lookaheads (`settle_to_quiescence` under `pick_sacrifice_value`, `resolve_probe` under `action_starts_loop`) answer
+  their asks through the same policy — a probe per candidate per pass, nested. A thread-local `LOOKAHEAD` flag
+  (`loop_hazard::in_lookahead`) stands the gate down inside any probe or settle; the game now ends in 45 s. Commander
+  seats only, so 2-player play is byte-identical (cube/sos/sealed × 300, seed 30001, base vs tip identical).
+  ⚠ **A sweep block that never returned was invisible**: `pod_sweep.py` prints in block order, so one hung block held
+  every later line back. It now reports a block past `--timeout` (default 1200 s) as `HUNG` with its command.
+- **CR 707.10c, the copy event's subject:** `GameEvent::SpellsCopied` named the *original* spell, so
+  `PlayerRef::Triggerer` read the original's caster — Mage Hunter's "an opponent copies → they lose 1" charged the
+  wrong seat. The event now carries the (last) copy (`copy`); the net wire keeps its field name. Curse of Shaken
+  Faith gained its "or copies a spell" trigger on top of it.
+- **CR 800.4a, a parked demonstrate ask (seed 2946692, 8 seats, strict abort):** the spell's controller conceded while
+  the caster's "copy it?" waited; the resumed `Demonstrate` found no spell and left the answer logged. Cleared.
+- **New primitives:** `Effect::ChoosePerManaValue` (every per-MV pick before one `Move` — Queen Kayla's returns enter
+  together, CR 603.6a; Gruesome Menagerie added on it); `ExileReturnZone::BattlefieldCountersIfYours` (Lagrella).
+- **Cards:** Demonic Embrace's graveyard cast pays 3 life and a discard as additional costs (two
+  `CastSelfFromGraveyardWithCost` statics), Tetsuo's N reads Equipment only, Lagrella may exile your own creature and it
+  returns with two counters. Clean decks **5,413 → 5,429**.
+- **Undecided in the sweeps, all known shapes:** CR 104.4a draws (Price of Progress killing the last seats; Divine
+  Intervention), Ganax + Draconic Visitor under fuzz, Zellix + Altar of the Brood's mandatory mill loop at 6 seats;
+  board caps Scute Swarm, Second Harvest + Nesting Dovehawk (4,958 triggers), Gilanra + End-Raze Forerunners,
+  Mondrak + Panharmonicon; Dina + Exquisite Blood with a can't-lose seat (a real mandatory loop, CR 104.4b).
+- **Open:** the rank top is still choice exposure (Dawnhand Dissident, Battletide Alchemist, Hawkeye, Mikey & Don);
+  Sphere of Annihilation's exile is one object at a time (no MV-vs-counters filter for one simultaneous `Exile`).
 
 ## FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc48R`) — 99-card library caps, own-side "up to one" slots, Koh
 
