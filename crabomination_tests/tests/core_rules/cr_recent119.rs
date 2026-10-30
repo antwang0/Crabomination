@@ -89,3 +89,23 @@ fn cr_610_3c_a_gone_source_exiles_nothing_until_it_leaves() {
     g.resolve_effect(&etb, &EffectContext::for_ability(abdel, 0, None)).expect("the ETB resolves");
     assert!(g.exile.iter().any(|c| c.id == bear), "with Abdel present the Bears are exiled");
 }
+
+/// CR 611.2b — "gain control … for as long as [this] remains on the
+/// battlefield" does nothing if the source left before it resolved: Sower of
+/// Temptation killed in response to its ETB steals nothing (the unwind hook
+/// had already run, so the steal would never end).
+#[test]
+fn cr_611_2b_a_gone_source_steals_nothing_for_as_long_as_it_remains() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = multi_player_game(2);
+    let sower = g.add_card_to_battlefield(0, catalog::sower_of_temptation());
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let etb = catalog::sower_of_temptation().triggered_abilities[0].effect.clone();
+    let ctx = EffectContext { targets: vec![Target::Permanent(bear)], ..EffectContext::for_ability(sower, 0, None) };
+    g.resolve_effect(&Effect::Exile { what: Selector::ExactObjects(vec![sower]) }, &EffectContext::for_ability(sower, 0, None))
+        .expect("exile the Sower");
+    g.resolve_effect(&etb, &ctx).expect("the ETB resolves");
+    let evs = g.check_state_based_actions();
+    g.dispatch_triggers_for_events(&evs);
+    assert_eq!(g.battlefield_find(bear).unwrap().controller, 1, "the Bears stay with their owner");
+}

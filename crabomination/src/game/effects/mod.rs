@@ -21962,8 +21962,12 @@ impl GameState {
 
             Effect::GainControlWhileSourceRemains { what } => {
                 // CR 611.2c — the steal lasts while the source stays on the
-                // battlefield; `on_left_battlefield` unwinds it.
-                let Some(src) = ctx.source else { return Ok(()) };
+                // battlefield; `on_left_battlefield` unwinds it. CR 611.2b — a
+                // source already gone steals nothing (the unwind had already run,
+                // so a Sower killed in response stole for ever).
+                let Some(src) = ctx.source.filter(|s| self.battlefield_find(*s).is_some()) else {
+                    return Ok(());
+                };
                 let new_ctrl = ctx.controller;
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -21990,8 +21994,11 @@ impl GameState {
 
             Effect::GainControlWhileYouControlSource { what } => {
                 // CR 611.2c — the SBA sweep (`stack.rs`, beside Shackles)
-                // hands it back once the source leaves or changes hands.
-                let Some(src) = ctx.source else { return Ok(()) };
+                // hands it back once the source leaves or changes hands; CR
+                // 611.2b — a source already gone steals nothing.
+                let Some(src) = ctx.source.filter(|s| self.battlefield_find(*s).is_some()) else {
+                    return Ok(());
+                };
                 let new_ctrl = ctx.controller;
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
@@ -22129,7 +22136,10 @@ impl GameState {
                 // (and, for the second form, its controller keeps it); the SBA
                 // sweep unwinds it when that ends.
                 let and_controlled = matches!(effect, Effect::GainControlWhileYouControlSourceTapped { .. });
-                let Some(src) = ctx.source else { return Ok(()) };
+                // CR 611.2b — a source already gone or untapped steals nothing.
+                let Some(src) = ctx.source.filter(|s| self.battlefield_find(*s).is_some_and(|c| c.tapped)) else {
+                    return Ok(());
+                };
                 let new_ctrl = ctx.controller;
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
