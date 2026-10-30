@@ -12639,10 +12639,14 @@ impl GameState {
     /// Controllers of permanents that have the granted "you can't lose the
     /// game and your opponents can't win the game" (`Keyword::ControllerCantLoseGame`).
     /// Read only once a loss or a win is already on the table.
+    /// The layers are computed only where the keyword is possible: the bot's
+    /// opponent pick asks per opponent per target slot, and a layer pass per
+    /// permanent stalled a 3,000-token pod board (sweep seed 2942180).
     fn granted_cant_lose_controllers(&self) -> impl Iterator<Item = usize> + '_ {
+        let kw = crate::card::Keyword::ControllerCantLoseGame;
         self.battlefield
             .iter()
-            .filter(|c| self.permanent_has_keyword(c.id, &crate::card::Keyword::ControllerCantLoseGame))
+            .filter(move |c| self.card_keyword_possible_on(c, |k| *k == kw) && self.permanent_has_keyword(c.id, &kw))
             .map(|c| c.controller)
     }
 
@@ -14249,6 +14253,12 @@ impl GameState {
     /// on every activation, and on the ordinary board every leg is a word
     /// load or an empty list.
     pub(crate) fn ability_lock_possible_on(&self, c: &CardInstance, kw: &Keyword) -> bool {
+        self.ability_lock_on_instance(c, kw) || self.ability_lock_grant_in_scope(kw)
+    }
+
+    /// [`ability_lock_possible_on`](Self::ability_lock_possible_on)'s
+    /// per-card legs: printed, granted until end of turn, or a keyword counter.
+    pub(crate) fn ability_lock_on_instance(&self, c: &CardInstance, kw: &Keyword) -> bool {
         // Both instance sources are `CardCold` members — `(-350)`'s gate, on
         // the one keyword ask that does not go through `has_keyword`.
         let cold_pristine = c.cold_pristine();
@@ -14262,7 +14272,6 @@ impl GameState {
             || (!cold_pristine
                 && (c.granted_keywords_eot.has_kw(kw)
                     || c.keyword_counters.iter().any(|(k, n)| *n > 0 && k == kw)))
-            || self.ability_lock_grant_in_scope(kw)
     }
 
     /// The same device for the one layer-7 question a caller can ask without

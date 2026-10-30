@@ -194,9 +194,26 @@ pub(crate) struct GrantScan<'a> {
     /// first time the grants-nothing gate meets a permanent with counters —
     /// so a scan over a counter-free board never asks (PERF `(-199)`).
     cauldron: std::cell::Cell<Option<bool>>,
+    /// [`GameState::ability_lock_grant_in_scope`] for `CantActivateAbilities`
+    /// and `CantActivateTapAbilities`, filled on first use: a board past the
+    /// grant member list's 64 walks itself per ask, and `mana_source_table`
+    /// asks per mana source (a 4-seat Homunculus Horde pod, seed 12282).
+    lock_grants: [std::cell::Cell<Option<bool>>; 2],
 }
 
 impl GrantScan<'_> {
+    /// [`GrantScan::lock_grants`]' slot for `kw`, filled on first use.
+    fn lock_grant(&self, g: &GameState, slot: usize, kw: &Keyword) -> bool {
+        match self.lock_grants[slot].get() {
+            Some(b) => b,
+            None => {
+                let b = g.ability_lock_grant_in_scope(kw);
+                self.lock_grants[slot].set(Some(b));
+                b
+            }
+        }
+    }
+
     /// [`GrantScan::cauldron`], filled on first use.
     #[inline]
     fn cauldron(&self, g: &GameState) -> bool {
@@ -20733,8 +20750,9 @@ impl GameState {
         if !scan.locked.is_empty() && scan.locked.contains(&card.id) {
             return (true, true);
         }
-        let all = self.ability_lock_possible_on(card, &Keyword::CantActivateAbilities);
-        let tap = self.ability_lock_possible_on(card, &Keyword::CantActivateTapAbilities);
+        let (kw_all, kw_tap) = (Keyword::CantActivateAbilities, Keyword::CantActivateTapAbilities);
+        let all = self.ability_lock_on_instance(card, &kw_all) || scan.lock_grant(self, 0, &kw_all);
+        let tap = self.ability_lock_on_instance(card, &kw_tap) || scan.lock_grant(self, 1, &kw_tap);
         if !all && !tap {
             return (false, false);
         }
