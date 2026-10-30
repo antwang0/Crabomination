@@ -18825,9 +18825,9 @@ pub fn enduring_innocence() -> CardDefinition {
     }
 }
 
-/// Amped Raptor — {1}{R} Creature — Dinosaur. 2/1.
-/// ETB: you get {E}{E}, then exile the top card of your library; you may pay
-/// {E}{E}{E}{E} to cast it without paying its mana cost.
+/// Amped Raptor — {1}{R} Creature — Dinosaur. 2/1 first strike.
+/// ETB: you get {E}{E}; then if you cast it from your hand, exile until a
+/// nonland card, which you may cast by paying {E} equal to its mana value.
 pub fn amped_raptor() -> CardDefinition {
     CardDefinition {
         name: "Amped Raptor",
@@ -18842,8 +18842,11 @@ pub fn amped_raptor() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::AddEnergy(Value::Const(2)),
-            // CR 107.16 — exile top card; may pay {E}{E}{E}{E} to free-cast it.
-            Effect::ExileTopMayPayEnergyToCast { energy: 4 },
+            Effect::If {
+                cond: Predicate::SourceCastFromOwnersHand,
+                then: Box::new(Effect::ExileUntilNonlandMayPayEnergyToCast),
+                else_: Box::new(Effect::Noop),
+            },
         ]))],
         ..Default::default()
     }

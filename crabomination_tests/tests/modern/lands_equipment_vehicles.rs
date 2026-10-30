@@ -88,6 +88,8 @@ fn darkbore_pathway_plays_either_face() {
 #[test]
 fn amped_raptor_etb_gets_two_energy() {
     let mut g = two_player_game();
+    g.players[0].library.clear();
+    g.add_card_to_library(0, catalog::serra_angel());
     let id = g.add_card_to_hand(0, catalog::amped_raptor());
     g.players[0].mana_pool.add(Color::Red, 1);
     g.players[0].mana_pool.add_colorless(1);
@@ -96,20 +98,25 @@ fn amped_raptor_etb_gets_two_energy() {
     })
     .expect("Amped Raptor castable for {1}{R}");
     drain_stack(&mut g);
-    // Only 2 energy after ETB — can't afford the {E}{E}{E}{E} free-cast, so
-    // the top card stays exiled and energy is untouched.
+    // Only 2 energy after ETB — can't afford the mana value 5 Angel, so it
+    // stays exiled and energy is untouched.
     assert_eq!(g.players[0].energy, 2, "ETB grants {{E}}{{E}}");
     let c = g.battlefield_find(id).unwrap();
     assert_eq!((c.definition.power, c.definition.toughness), (2, 1));
 }
 
+/// "Exile cards from the top of your library until you exile a nonland card.
+/// You may cast that card by paying an amount of {E} equal to its mana value"
+/// (CR 107.16): the Forest on top is skipped and the Bears cost {E}{E}. It had
+/// exiled one card, land or not, at a flat {E}x4.
 #[test]
 fn amped_raptor_pays_energy_to_free_cast_exiled_card() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
+    g.players[0].library.clear();
+    let forest = g.add_card_to_library(0, catalog::forest());
     let bears = g.add_card_to_library(0, catalog::grizzly_bears());
-    // Pre-float 2 energy → 4 after the ETB {E}{E}, enough to pay {E}×4.
-    g.players[0].energy = 2;
+    g.players[0].energy = 1;
     g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     let id = g.add_card_to_hand(0, catalog::amped_raptor());
     g.players[0].mana_pool.add(Color::Red, 1);
@@ -119,9 +126,19 @@ fn amped_raptor_pays_energy_to_free_cast_exiled_card() {
     })
     .expect("Amped Raptor castable for {1}{R}");
     drain_stack(&mut g);
-    assert_eq!(g.players[0].energy, 0, "paid all 4 energy to free-cast");
-    assert!(g.battlefield.iter().any(|c| c.id == bears),
-        "the exiled top card was cast for free onto the battlefield");
+    assert!(g.exile.iter().any(|c| c.id == forest), "the land was exiled on the way");
+    assert!(g.battlefield.iter().any(|c| c.id == bears), "the Bears were cast for {{E}}{{E}}");
+    assert_eq!(g.players[0].energy, 1, "1 + 2 from the ETB - 2 for mana value 2");
+
+    // "Then if you cast it from your hand" — put onto the battlefield, only the energy.
+    let mut g = two_player_game();
+    g.players[0].library.clear();
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let id = g.add_card_to_battlefield(0, catalog::amped_raptor());
+    g.fire_self_etb_triggers(id, 0);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].energy, 2);
+    assert!(g.players[0].library.iter().any(|c| c.id == bears), "nothing exiled");
 }
 
 #[test]

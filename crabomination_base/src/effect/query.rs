@@ -2759,7 +2759,7 @@ impl Effect {
             }
             Effect::PayEnergyOrElse { otherwise, .. } => otherwise.requires_target(),
             Effect::PayManaOrElse { otherwise, .. } => otherwise.requires_target(),
-            Effect::ExileTopMayPayEnergyToCast { .. } => false,
+            Effect::ExileUntilNonlandMayPayEnergyToCast => false,
             Effect::DoubleCountersOnEach { what, .. } => sel_has_target(what),
             Effect::DoubleAllCountersOn { what } => sel_has_target(what),
             Effect::SacrificePermanent { what } => sel_has_target(what),
