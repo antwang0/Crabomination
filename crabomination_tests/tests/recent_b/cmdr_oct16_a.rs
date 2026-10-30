@@ -1041,6 +1041,20 @@ fn rhinos_rampage_excess_destroys_an_artifact() {
     assert!(g.battlefield_find(ring).is_none(), "excess damage → Sol Ring destroyed");
 }
 
+/// Rhino's Rampage's reflexive destroy is "up to one": with only its caster's
+/// own Sol Ring eligible, it declines instead of destroying it (CR 601.2c).
+#[test]
+fn rhinos_rampage_spares_its_own_artifact() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let mine = ready(&mut g, 0, catalog::sol_ring());
+    let elf = ready(&mut g, 1, catalog::llanowar_elves());
+    let spell = g.add_card_to_hand(0, catalog::rhinos_rampage());
+    cast_with(&mut g, spell, Some(Target::Permanent(bears)), vec![Target::Permanent(elf)]).expect("cast");
+    assert!(g.battlefield_find(elf).is_none());
+    assert!(g.battlefield_find(mine).is_some(), "own Sol Ring survives");
+}
+
 /// Sméagol: Mirrormere Guardian dying tempts you, so an opponent reveals until
 /// a land — the land is yours tapped, the cards above it go to their graveyard.
 #[test]
@@ -1153,6 +1167,18 @@ fn psychic_pickpocket_connives_and_bounces() {
     let pp = g.add_card_to_hand(0, catalog::psychic_pickpocket());
     cast(&mut g, pp);
     assert!(g.players[1].hand.iter().any(|c| c.id == angel));
+}
+
+/// Psychic Pickpocket's bounce is "up to one": alone with its own permanents it
+/// bounces nothing.
+#[test]
+fn psychic_pickpocket_spares_its_own_permanents() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 5);
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let pp = g.add_card_to_hand(0, catalog::psychic_pickpocket());
+    cast(&mut g, pp);
+    assert!(g.battlefield_find(ring).is_some() && g.battlefield_find(pp).is_some());
 }
 
 /// King of the Oathbreakers phases out when a spell targets it (the Bolt

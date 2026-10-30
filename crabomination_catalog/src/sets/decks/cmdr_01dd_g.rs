@@ -52,9 +52,13 @@ pub fn sol_kanar_the_tainted() -> CardDefinition {
                 modes: vec![
                     Effect::Draw { who: Selector::You, amount: Value::ONE },
                     drain(2, Selector::Player(PlayerRef::EachOpponent)),
-                    Effect::DealDamage {
-                        to: target_filtered(R::Creature.or(R::Planeswalker).and(R::OtherThanSource)),
-                        amount: Value::Const(3),
+                    // "Up to one": optional, so it never hits its controller's own.
+                    Effect::OptionalTargets {
+                        min: 0,
+                        body: Box::new(Effect::DealDamage {
+                            to: target_filtered(R::Creature.or(R::Planeswalker).and(R::OtherThanSource)),
+                            amount: Value::Const(3),
+                        }),
                     },
                     Effect::Seq(vec![
                         Effect::ExileAndReturnToOwner { what: Selector::This },

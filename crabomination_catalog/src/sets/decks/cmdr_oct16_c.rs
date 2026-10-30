@@ -1025,8 +1025,12 @@ pub fn rhinos_rampage() -> CardDefinition {
             Effect::If {
                 cond: Predicate::ValueAtLeast(Value::ExcessDamageDealtThisTurnTo(Box::new(Selector::Target(1))), Value::ONE),
                 then: Box::new(Effect::ReflexiveTrigger {
-                    body: Box::new(Effect::Destroy {
-                        what: target_filtered(R::Artifact.and(R::Not(Box::new(R::Creature))).and(R::ManaValueAtMost(3))),
+                    // "Up to one": optional, so it never destroys its controller's own.
+                    body: Box::new(Effect::OptionalTargets {
+                        min: 0,
+                        body: Box::new(Effect::Destroy {
+                            what: target_filtered(R::Artifact.and(R::Not(Box::new(R::Creature))).and(R::ManaValueAtMost(3))),
+                        }),
                     }),
                 }),
                 else_: Box::new(Effect::Noop),
@@ -1193,9 +1197,13 @@ pub fn psychic_pickpocket() -> CardDefinition {
         triggered_abilities: vec![etb(Effect::Seq(vec![
             Effect::Connive { what: Selector::This, amount: Value::ONE },
             Effect::ReflexiveTrigger {
-                body: Box::new(Effect::Move {
-                    what: target_filtered(R::Permanent.and(R::Not(Box::new(R::Land)))),
-                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                // "Up to one": optional, so it never bounces its controller's own.
+                body: Box::new(Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(R::Permanent.and(R::Not(Box::new(R::Land)))),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                    }),
                 }),
             },
         ]))],
