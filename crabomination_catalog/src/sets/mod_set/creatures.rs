@@ -6854,7 +6854,7 @@ pub fn massacre_wurm() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
                 effect: Effect::LoseLife {
-                    who: Selector::Player(PlayerRef::Triggerer),
+                    who: Selector::Player(PlayerRef::TriggerEventPlayer),
                     amount: Value::Const(2),
                 },
             },

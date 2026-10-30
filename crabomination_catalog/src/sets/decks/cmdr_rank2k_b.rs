@@ -365,7 +365,7 @@ pub fn nazgul_battle_mace() -> CardDefinition {
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken },
                 ),
                 effect: Effect::UnlessPlayerPays {
-                    who: PlayerRef::Triggerer,
+                    who: PlayerRef::TriggerEventPlayer,
                     cost: WardCost::Life(3),
                     then: Box::new(Effect::Move {
                         what: Selector::TriggerSource,

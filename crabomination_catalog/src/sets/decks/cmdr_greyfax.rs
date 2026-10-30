@@ -76,7 +76,7 @@ pub fn assault_intercessor() -> CardDefinition {
         keywords: vec![Keyword::FirstStrike, Keyword::Menace],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
-            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(2) },
+            effect: Effect::LoseLife { who: Selector::Player(PlayerRef::TriggerEventPlayer), amount: Value::Const(2) },
         }],
         ..creature("Assault Intercessor", cost(&[generic(1), w(), b()]), vec![CreatureType::Astartes, CreatureType::Warrior], 3, 2)
     }

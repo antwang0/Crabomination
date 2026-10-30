@@ -264,3 +264,23 @@ fn tales_of_master_seshiro_grows_then_transforms() {
     let cp = g.computed_permanent(tales).expect("returned transformed");
     assert_eq!((cp.power, cp.toughness), (5, 5));
 }
+
+/// CR 603.10a — "unless that player pays 3 life" asks the sacrificer: a
+/// stolen Forest the defender sacrifices lands in its owner's graveyard, but
+/// the defender pays (`Triggerer` asked the owner).
+#[test]
+fn nazgul_battle_mace_asks_the_sacrificer_not_the_owner() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let mace = ready(&mut g, 0, catalog::nazgul_battle_mace());
+    flood(&mut g);
+    g.perform_action(GameAction::Equip { equipment: mace, target: bear }).expect("equip");
+    drain_stack(&mut g);
+    let land = g.add_card_to_battlefield(2, catalog::forest());
+    g.battlefield_find_mut(land).unwrap().controller = 1;
+    let (l1, l2) = (g.players[1].life, g.players[2].life);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack(&mut g, &[bear], 1);
+    assert_eq!((g.players[1].life, g.players[2].life), (l1 - 3, l2), "the defender paid");
+    assert!(g.players[2].graveyard.iter().any(|c| c.id == land), "the Forest stayed in its owner's graveyard");
+}

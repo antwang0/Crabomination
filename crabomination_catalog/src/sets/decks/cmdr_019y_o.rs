@@ -151,7 +151,7 @@ pub fn shriek_treblemaker() -> CardDefinition {
             },
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::OpponentControl),
-                effect: Effect::DealDamage { to: Selector::Player(PlayerRef::Triggerer), amount: Value::ONE },
+                effect: Effect::DealDamage { to: Selector::Player(PlayerRef::TriggerEventPlayer), amount: Value::ONE },
             },
         ],
         ..Default::default()

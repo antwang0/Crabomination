@@ -217,3 +217,25 @@ fn cr_400_7_a_commander_sent_home_takes_no_play_grant() {
     let home = g.players[0].command.iter().find(|c| c.id == cmdr).expect("still at home");
     assert!(home.may_play_until.is_none(), "no play permission on the commander at home");
 }
+
+/// CR 603.10a — a stolen nontoken creature that dies is in its owner's
+/// graveyard, but Massacre Wurm's "that player" is the player who controlled
+/// it as it died (`TriggerEventPlayer`; `Triggerer` named the owner).
+#[test]
+fn cr_603_10a_a_stolen_creature_dying_costs_its_last_controller() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.add_card_to_battlefield(0, catalog::massacre_wurm());
+    let stolen = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.battlefield_find_mut(stolen).unwrap().controller = 1;
+    let start = g.players[1].life;
+    let kill = Effect::Destroy { what: Selector::ExactObjects(vec![stolen]) };
+    let evs = g.resolve_effect(&kill, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.players[2].graveyard.iter().any(|c| c.id == stolen), "in its owner's graveyard");
+    assert_eq!((g.players[1].life, g.players[2].life), (start - 2, start), "the controller loses 2, not the owner");
+}
