@@ -332,8 +332,8 @@ No seats. Ranked residuals (`pod_residuals.py --rank`), `audit_up_to_one.py --po
 - **"Up to one target" hitting its own side** (`audit_up_to_one --pod`): Koh's ETB, Psychic Pickpocket's reflexive
   bounce, Rhino's Rampage's reflexive destroy (its own Sol Ring), Sol'Kanar's damage mode — `OptionalTargets { min: 0 }`;
   `ExileLinked` / `ExileWithSource` join `permanent_slot_is_hostile`. The audit's remaining "either" rows are
-  upside picks (Aragorn, Inspirit, Giant Inheritance), "that player's" slots, or false positives whose marker the
-  regex misses (Dawnsire's `min_targets: 0`, Baseball Bat's granted trigger). Open: Marchesa's "remove all counters
+  upside picks (Aragorn, Inspirit, Giant Inheritance), "that player's" slots, or false positives because `dump_cards --effects`
+  never dumps a station or granted trigger (Dawnsire's `min_targets: 0`, Baseball Bat's). Open: Marchesa's "remove all counters
   from up to one target permanent" (not hostile by the walker — removing -1/-1s from your own is upside).
 - **Koh, the Face Stealer:** a re-choice dropped every baked grant; it now removes only the previous lender's
   abilities (remembered in `chosen_permanent`). **The Aesir Escape Valhalla:** chapter I's exile is a `MoveChosen`.
