@@ -24021,6 +24021,9 @@ impl GameState {
             Effect::ChoosePerDistinctPower { filter, up_to, chosen, other } => {
                 self.choose_per_distinct_power(filter, *up_to, chosen, other, ctx, events, effect)
             }
+            Effect::ChoosePerManaValue { what, values, up_to, chosen, other } => {
+                self.choose_per_mana_value(what, values, *up_to, chosen, other, ctx, events, effect)
+            }
             Effect::ChooseSomeAmong { what, chooser, count, up_to, chosen, other } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 self.choose_some_among(what, chooser, n, *up_to, chosen, other, ctx, events, effect)

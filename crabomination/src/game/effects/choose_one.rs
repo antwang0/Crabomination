@@ -287,4 +287,63 @@ impl GameState {
         self.separated_piles = (picked, rest);
         self.run_piles_then_clear(chosen, other, ctx, events)
     }
+
+    /// `Effect::ChoosePerManaValue` — the controller picks, value by value,
+    /// one of `what` with that mana value (or with `up_to` may pass). Every
+    /// pick is asked before the piles run. Headless: the best per value.
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn choose_per_mana_value(
+        &mut self,
+        what: &Selector,
+        values: &[u32],
+        up_to: bool,
+        chosen: &Effect,
+        other: &Effect,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+        effect: &Effect,
+    ) -> Result<(), GameError> {
+        let p = ctx.controller;
+        let ids: Vec<CardId> = self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()).collect();
+        let (gain, _) = self.pick_cuts_as_gain(&ids, p, chosen);
+        let ranked: Vec<(CardId, u32, String)> = self
+            .rank_picks(&ids, p, gain)
+            .into_iter()
+            .filter_map(|id| self.find_card_anywhere(id).map(|c| (id, c.definition.cost.cmc(), c.definition.name.to_string())))
+            .collect();
+        let asks = self.seat_prompts(p) || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto);
+        let value = if gain { PickValue::Gain } else { PickValue::Cost };
+        let source = ctx.source.unwrap_or(CardId(0));
+        let mut cursor = 0;
+        let mut picked: Vec<CardId> = Vec::new();
+        for &v in values {
+            let group: Vec<(CardId, String)> =
+                ranked.iter().filter(|c| c.1 == v && !picked.contains(&c.0)).map(|c| (c.0, c.2.clone())).collect();
+            let Some(&(headless, _)) = group.first() else { continue };
+            if !asks || (group.len() == 1 && !up_to) {
+                picked.push(headless);
+                continue;
+            }
+            let min = u32::from(!up_to);
+            let Some(pick) = self.ask_seat_cards_logged(
+                &mut cursor,
+                p,
+                format!("Choose a card with mana value {v}"),
+                source,
+                group,
+                min,
+                1,
+                value,
+                effect,
+                vec![headless],
+            ) else {
+                return Ok(());
+            };
+            picked.extend(pick.first().copied().or((!up_to).then_some(headless)));
+        }
+        self.clear_answer_log();
+        let rest: Vec<CardId> = ids.into_iter().filter(|id| !picked.contains(id)).collect();
+        self.separated_piles = (picked, rest);
+        self.run_piles_then_clear(chosen, other, ctx, events)
+    }
 }

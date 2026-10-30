@@ -3514,6 +3514,7 @@ static DECKS: &[Factory] = &[
     super::decks::titania_gaea_incarnate,
     super::decks::mishra_excavation_prodigy,
     super::decks::urza_powerstone_prodigy,
+    super::decks::gruesome_menagerie,
     super::decks::queen_kayla_bin_kroog,
     super::decks::nexus_of_becoming,
     super::decks::drillworks_mole,

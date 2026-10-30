@@ -3531,24 +3531,31 @@ pub fn urza_powerstone_prodigy() -> CardDefinition {
     }
 }
 
+/// Gruesome Menagerie — {3}{B}{B} sorcery. Choose a creature card with mana
+/// value 1 in your graveyard, then 2 and 3; return those cards together.
+pub fn gruesome_menagerie() -> CardDefinition {
+    CardDefinition {
+        name: "Gruesome Menagerie",
+        cost: cost(&[generic(3), b(), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChoosePerManaValue {
+            what: Selector::CardsInZone { who: PlayerRef::You, zone: crate::card::Zone::Graveyard, filter: R::Creature },
+            values: vec![1, 2, 3],
+            up_to: false,
+            chosen: Box::new(Effect::Move {
+                what: Selector::SeparatedPile { chosen: true },
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+            }),
+            other: Box::new(Effect::Noop),
+        },
+        ..Default::default()
+    }
+}
+
 /// Queen Kayla bin-Kroog — {1}{R}{W} 2/3. {4},{T} (sorcery): discard your
 /// hand, draw that many, then return up to one discarded artifact or
-/// creature card of each mana value 1, 2 and 3. (The three return one after
-/// another rather than together.)
+/// creature card of each mana value 1, 2 and 3, together.
 pub fn queen_kayla_bin_kroog() -> CardDefinition {
-    let back = |n: u32| Effect::ChooseSomeAmong {
-        what: Selector::DiscardedThisResolution {
-            filter: R::Artifact.or(R::Creature).and(R::ManaValueAtLeast(n)).and(R::ManaValueAtMost(n)),
-        },
-        chooser: PlayerRef::You,
-        count: Value::ONE,
-        up_to: true,
-        chosen: Box::new(Effect::Move {
-            what: Selector::SeparatedPile { chosen: true },
-            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-        }),
-        other: Box::new(Effect::Noop),
-    };
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(4)]),
@@ -3556,9 +3563,16 @@ pub fn queen_kayla_bin_kroog() -> CardDefinition {
             sorcery_speed: true,
             effect: Effect::Seq(vec![
                 Effect::DiscardHandDrawThatMany { who: Selector::You },
-                back(1),
-                back(2),
-                back(3),
+                Effect::ChoosePerManaValue {
+                    what: Selector::DiscardedThisResolution { filter: R::Artifact.or(R::Creature) },
+                    values: vec![1, 2, 3],
+                    up_to: true,
+                    chosen: Box::new(Effect::Move {
+                        what: Selector::SeparatedPile { chosen: true },
+                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                    }),
+                    other: Box::new(Effect::Noop),
+                },
             ]),
             ..Default::default()
         }],

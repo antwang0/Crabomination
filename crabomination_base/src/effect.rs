@@ -5788,6 +5788,17 @@ pub enum Effect {
         chosen: Box<Effect>,
         other: Box<Effect>,
     },
+    /// "Choose a [card] with mana value 1, then do the same for 2 and 3.
+    /// Return those cards" (Queen Kayla, Gruesome Menagerie): one pick of
+    /// `what` per listed mana value, every pick asked before the piles run,
+    /// so `chosen` moves them together. With `up_to` a value may be passed.
+    ChoosePerManaValue {
+        what: Selector,
+        values: Vec<u32>,
+        up_to: bool,
+        chosen: Box<Effect>,
+        other: Box<Effect>,
+    },
     /// `ChooseOneAmong` for `count` picks — exactly `count` (as many as there
     /// are), or with `up_to` any number to `count`. Haunting Voyage's "up to
     /// two", Insatiable Frugivore's three.

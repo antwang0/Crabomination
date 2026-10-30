@@ -64,6 +64,7 @@ fn has_mode_choice(e: &Effect) -> bool {
             | Effect::ChooseUnchosenModeThisTurn { .. }
             | Effect::ChooseOneAmong { .. }
             | Effect::ChooseSomeAmong { .. }
+            | Effect::ChoosePerManaValue { .. }
             | Effect::ChooseOneAtRandomAmong { .. }
     ) {
         return true;
