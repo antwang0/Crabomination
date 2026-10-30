@@ -369,10 +369,8 @@ impl GameState {
     }
 
     /// `Effect::BorrowAbilitiesOfChosenExiled` — Koh, the Face Stealer. The
-    /// source's definition goes back to what it was before any baked grant,
-    /// then takes the chosen card's activated and triggered abilities, so
-    /// only the last chosen card lends. (Another baked grant on the source
-    /// is dropped with the old borrow.)
+    /// source drops the previous lender's activated and triggered abilities
+    /// and takes the chosen card's, so only the last chosen card lends.
     pub(super) fn borrow_abilities_of_chosen_exiled(
         &mut self,
         filter: &SelectionRequirement,
@@ -410,11 +408,30 @@ impl GameState {
         };
         let Some(&pick) = picked.first() else { return };
         let Some(lender) = self.exile.iter().find(|c| c.id == pick).map(|c| c.definition.arc()) else { return };
+        // The previous lender is remembered in `chosen_permanent`; only its
+        // abilities go, so another baked grant on the source survives.
+        let prev = self.battlefield_find(src).and_then(|c| c.chosen_permanent);
+        let prev_def = prev.and_then(|id| self.find_card_anywhere(id)).map(|c| c.definition.arc());
         if let Some(me) = self.battlefield_find_mut(src) {
-            me.revert_baked_grants();
+            if prev.is_some() && prev_def.is_none() {
+                me.revert_baked_grants();
+            }
             let def = me.bake_grant();
+            if let Some(old) = prev_def {
+                for a in &old.activated_abilities {
+                    if let Some(i) = def.activated_abilities.iter().rposition(|x| x == a) {
+                        def.activated_abilities.remove(i);
+                    }
+                }
+                for t in &old.triggered_abilities {
+                    if let Some(i) = def.triggered_abilities.iter().rposition(|x| x == t) {
+                        def.triggered_abilities.remove(i);
+                    }
+                }
+            }
             def.activated_abilities.extend(lender.activated_abilities.iter().cloned());
             def.triggered_abilities.extend(lender.triggered_abilities.iter().cloned());
+            me.chosen_permanent = Some(pick);
         }
     }
 

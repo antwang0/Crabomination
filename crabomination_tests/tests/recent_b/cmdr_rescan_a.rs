@@ -1421,6 +1421,48 @@ fn koh_wears_the_last_chosen_face() {
     assert!(!matches!(borrowed.effect, crabomination::effect::Effect::AddMana { .. }));
 }
 
+/// CR 601.2c / 603.3d — Koh's enter trigger exiles "up to one" other creature:
+/// with no opposing creature it declines rather than exiling its controller's.
+#[test]
+fn koh_enters_without_exiling_its_own_creature() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let koh = g.add_card_to_hand(0, catalog::koh_the_face_stealer());
+    cast_with(&mut g, koh, None, vec![], None);
+    assert!(g.battlefield_find(koh).is_some());
+    assert!(g.battlefield_find(bear).is_some(), "the bear stays");
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grizzly_bears());
+    let foe = ready(&mut g, 1, catalog::grizzly_bears());
+    let koh = g.add_card_to_hand(0, catalog::koh_the_face_stealer());
+    cast_with(&mut g, koh, None, vec![], None);
+    assert!(g.exile.iter().any(|c| c.id == foe), "an opposing creature is still taken");
+}
+
+/// Koh's new choice drops only the old borrow: another ability baked onto Koh
+/// (here a granted trigger) survives the swap.
+#[test]
+fn koh_new_face_keeps_other_grants() {
+    let mut g = pod(2);
+    let koh = ready(&mut g, 0, catalog::koh_the_face_stealer());
+    let elves = ready(&mut g, 1, catalog::llanowar_elves());
+    let sorcerer = ready(&mut g, 1, catalog::prodigal_sorcerer());
+    for victim in [elves, sorcerer] {
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+        cast_with(&mut g, bolt, Some(Target::Permanent(victim)), vec![], None);
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![elves])]));
+    activate(&mut g, koh, 0, None);
+    let granted = catalog::blood_artist().triggered_abilities[0].clone();
+    g.battlefield_find_mut(koh).unwrap().bake_grant().triggered_abilities.push(granted.clone());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![sorcerer])]));
+    activate(&mut g, koh, 0, None);
+    let def = &g.battlefield_find(koh).unwrap().definition;
+    assert!(def.triggered_abilities.contains(&granted), "the other grant stays");
+    assert!(!def.activated_abilities.iter().any(|a| matches!(a.effect, crabomination::effect::Effect::AddMana { .. })));
+}
+
 /// CR 700.9 — Lethal Exploit's shrink grows by one per modified creature you
 /// control: two +1/+1-countered bears take a Serra Angel to -4/-4.
 #[test]

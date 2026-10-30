@@ -1074,7 +1074,11 @@ pub fn firesong_and_sunspeaker() -> CardDefinition {
 pub fn koh_the_face_stealer() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![
-            etb(Effect::ExileLinked { what: target_filtered(R::Creature.and(R::OtherThanSource)) }),
+            // "Up to one": optional, so it never exiles its controller's own creature.
+            etb(Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::ExileLinked { what: target_filtered(R::Creature.and(R::OtherThanSource)) }),
+            }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer).with_filter(
                     Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::NotToken.and(R::OtherThanSource) },

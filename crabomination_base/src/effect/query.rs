@@ -3849,6 +3849,8 @@ impl Effect {
                 | Effect::Exile { .. }
                 | Effect::Tap { .. }
                 | Effect::ExileUntilSourceLeaves { .. }
+                | Effect::ExileLinked { .. }
+                | Effect::ExileWithSource { .. }
                 | Effect::DealDamage { .. }
                 | Effect::Fight { .. }
                 | Effect::DealDamageToEachOther { .. }
