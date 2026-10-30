@@ -437,6 +437,21 @@ mod recent121 {
         assert!(land.unwrap().tapped, "and it entered tapped");
     }
 
+    /// CR 903.5a — a Commander library holds 99 cards: "reveal until a land"
+    /// digs past a 60-card deck's depth (its cap used to stop at 60).
+    #[test]
+    fn clifftop_lookout_digs_a_commander_sized_library() {
+        let mut g = two_player_game();
+        g.add_card_to_library(0, catalog::forest());
+        for _ in 0..80 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        let lookout = g.add_card_to_battlefield(0, catalog::clifftop_lookout());
+        g.fire_self_etb_triggers(lookout, 0);
+        drain_stack(&mut g);
+        assert!(g.battlefield.iter().any(|c| c.definition.name == "Forest"), "the 81st card is found");
+    }
+
     /// Brambleguard Captain pumps a creature by its own power at combat.
     #[test]
     fn brambleguard_captain_begin_combat_pump() {

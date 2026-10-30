@@ -272,7 +272,7 @@ pub fn thicket_elemental() -> CardDefinition {
                     who: PlayerRef::You,
                     find: R::Creature,
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
-                    cap: Value::Const(60),
+                    cap: Value::Const(1000),
                     life_per_revealed: 0,
                     miss_dest: crate::effect::RevealMissDest::ShuffleIntoLibrary,
                 }),

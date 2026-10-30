@@ -1695,7 +1695,7 @@ pub fn sacred_guide() -> CardDefinition {
                 who: PlayerRef::You,
                 find: R::HasColor(Color::White),
                 to: ZoneDest::Hand(PlayerRef::You),
-                cap: Value::Const(60),
+                cap: Value::Const(1000),
                 life_per_revealed: 0,
                 miss_dest: crate::effect::RevealMissDest::Exile,
             },

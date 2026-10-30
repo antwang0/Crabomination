@@ -107,7 +107,7 @@ pub fn dazzling_sphinx() -> CardDefinition {
                     who: PlayerRef::TriggerEventPlayer,
                     find: instant_or_sorcery(),
                     to: ZoneDest::Exile,
-                    cap: Value::Const(60),
+                    cap: Value::Const(1000),
                     life_per_revealed: 0,
                     miss_dest: RevealMissDest::BottomRandom,
                 },

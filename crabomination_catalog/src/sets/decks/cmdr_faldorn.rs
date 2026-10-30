@@ -157,7 +157,7 @@ pub fn chaos_wand() -> CardDefinition {
                         find: R::HasCardType(CardType::Instant)
                             .or(R::HasCardType(CardType::Sorcery)),
                         to: ZoneDest::Exile,
-                        cap: Value::Const(60),
+                        cap: Value::Const(1000),
                         life_per_revealed: 0,
                         miss_dest: RevealMissDest::BottomRandom,
                     },

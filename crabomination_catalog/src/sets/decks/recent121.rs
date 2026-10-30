@@ -97,7 +97,7 @@ pub fn clifftop_lookout() -> CardDefinition {
                 controller: PlayerRef::You,
                 tapped: true,
             },
-            cap: Value::Const(60),
+            cap: Value::Const(1000),
             life_per_revealed: 0,
             miss_dest: RevealMissDest::BottomRandom,
         })],

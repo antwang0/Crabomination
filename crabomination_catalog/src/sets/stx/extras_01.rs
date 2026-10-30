@@ -540,7 +540,7 @@ pub fn plargg_dean_of_chaos() -> CardDefinition {
                         who: PlayerRef::You,
                         find: nonleg_cheap,
                         to: ZoneDest::Exile,
-                        cap: Value::Const(60),
+                        cap: Value::Const(1000),
                         life_per_revealed: 0,
                         miss_dest: crate::effect::RevealMissDest::BottomRandom,
                     },

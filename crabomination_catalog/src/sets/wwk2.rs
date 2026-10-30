@@ -822,7 +822,7 @@ pub fn treasure_hunt() -> crate::card::CardDefinition {
             who: PlayerRef::You,
             find: R::Nonland,
             to: ZoneDest::Hand(PlayerRef::You),
-            cap: Value::Const(60),
+            cap: Value::Const(1000),
             life_per_revealed: 0,
             miss_dest: crate::effect::RevealMissDest::WithFind,
         },

@@ -2002,7 +2002,7 @@ pub fn warrior_of_light() -> CardDefinition {
                         .and(SelectionRequirement::Nonland)
                         .and(SelectionRequirement::ManaValueLessThanEventAmount),
                     to: ZoneDest::Exile,
-                    cap: Value::Const(60),
+                    cap: Value::Const(1000),
                     life_per_revealed: 0,
                     miss_dest: RevealMissDest::BottomRandom,
                 },
@@ -4623,7 +4623,7 @@ pub fn the_regalia() -> CardDefinition {
                     controller: PlayerRef::You,
                     tapped: true,
                 },
-                cap: Value::Const(60), // "until a land" — capped past any library size
+                cap: Value::Const(1000), // "until a land" — past any library size
                 life_per_revealed: 0,
                 miss_dest: crate::effect::RevealMissDest::BottomRandom,
             },

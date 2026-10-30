@@ -155,7 +155,7 @@ pub fn spinner_of_souls() -> CardDefinition {
                     who: PlayerRef::You,
                     find: R::Creature,
                     to: ZoneDest::Hand(PlayerRef::You),
-                    cap: Value::Const(60),
+                    cap: Value::Const(1000),
                     miss_dest: RevealMissDest::BottomRandom,
                     life_per_revealed: 0,
                 }),

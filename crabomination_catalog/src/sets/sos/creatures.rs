@@ -4803,28 +4803,12 @@ pub fn stone_docent() -> CardDefinition {
 /// instant or sorcery card. Put that card into your hand and the rest
 /// on the bottom of your library in a random order."
 ///
-/// Body wired (0/2 Legendary Construct) + the printed `{T}: Add {C}`
-/// mana ability via the shared `tap_add_colorless()` helper. The
-/// Grandeur ability is wired too, as a second `ActivatedAbility` gated
-/// on another card named Page, Loose Leaf in hand — see the push
-/// comment inside for the cost approximation details.
+/// Grandeur's discard is a name-restricted activation cost (`discard_cost`
+/// with `HasName`).
 pub fn page_loose_leaf() -> CardDefinition {
     use super::super::tap_add_colorless;
     use crate::card::{ActivatedAbility, Predicate, Supertype, Zone};
     use crate::effect::{RevealMissDest, ZoneDest};
-    // Push (modern_decks, batch 92): Grandeur "Discard another card
-    // named Page, Loose Leaf: reveal until an instant or sorcery →
-    // hand, rest → bottom random" wired as an activated ability with
-    // zero mana cost, gated on `Predicate::SameNamedInZoneAtLeast {
-    // who: You, zone: Hand, at_least: 1 }` (≥ 1 other Page in hand),
-    // and body = `Seq(Discard 1, RevealUntilFind(Instant ∨ Sorcery,
-    // → Hand, miss=BottomRandom))`. The "discard another Page" cost is
-    // approximated by gating on another Page in hand + auto-discarding
-    // 1 card — the auto-decider picks the first hand card, which in a
-    // tested deck with multiple Pages will frequently be the other
-    // Page. The Predicate now reads from `ctx.source` as a fallback
-    // (engine-wide tweak in batch 92 alongside this card) so the
-    // activation-time gate fires correctly for non-spell paths.
     CardDefinition {
         name: "Page, Loose Leaf",
         cost: cost(&[generic(2)]),
@@ -4854,7 +4838,7 @@ pub fn page_loose_leaf() -> CardDefinition {
                     find: SelectionRequirement::HasCardType(CardType::Instant)
                         .or(SelectionRequirement::HasCardType(CardType::Sorcery)),
                     to: ZoneDest::Hand(PlayerRef::You),
-                    cap: Value::Const(60),
+                    cap: Value::Const(1000),
                     life_per_revealed: 0,
                     miss_dest: RevealMissDest::BottomRandom,
                 }]),
