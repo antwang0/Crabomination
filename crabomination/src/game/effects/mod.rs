@@ -47787,6 +47787,15 @@ impl GameState {
                         _ => None,
                     })
                     .or_else(|| self.battlefield_find(cid).map(|c| c.controller))
+                    // A permanent that just died or left is its last
+                    // controller's (CR 603.10a): a dead token is nowhere, and a
+                    // stolen creature's graveyard is its owner's (Massacre Wurm).
+                    .or_else(|| {
+                        self.died_card_snapshots
+                            .get(&cid)
+                            .or_else(|| self.leaves_bf_lki.get(&cid))
+                            .map(|c| c.controller)
+                    })
                     // A just-drawn / discarded card lives in a player's
                     // hand/graveyard/etc. — bind Triggerer to that player
                     // (Sheoldred's "whenever an opponent draws a card, they

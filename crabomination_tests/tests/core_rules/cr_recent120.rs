@@ -177,3 +177,21 @@ fn cr_614_6_a_discard_replaced_into_exile_still_names_the_discarder() {
     assert!(g.exile.iter().any(|c| c.id == bears), "Rest in Peace exiled it");
     assert_eq!(g.players[1].life, 18, "Megrim hit the discarder");
 }
+
+/// CR 603.10a / 111.7 — a dying token has no zone to be found in afterwards,
+/// and a stolen creature's death is its controller's: Massacre Wurm's "that
+/// player loses 2 life" reads the creature's last controller, so a Wurm-killed
+/// Saproling still costs its controller 2 (`Triggerer` read nobody).
+#[test]
+fn cr_603_10a_a_dying_token_names_its_last_controller() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = main_phase();
+    g.add_card_to_battlefield(0, catalog::massacre_wurm());
+    let token = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.battlefield_find_mut(token).unwrap().is_token = true;
+    let kill = Effect::Destroy { what: Selector::ExactObjects(vec![token]) };
+    let evs = g.resolve_effect(&kill, &EffectContext::for_spell(0, None, 0, 0)).unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, 18, "the token's controller loses 2");
+}
