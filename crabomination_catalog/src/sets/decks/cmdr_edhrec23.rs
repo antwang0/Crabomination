@@ -4,7 +4,7 @@
 //! `tests/recent_b/cmdr_edhrec23.rs`.
 
 use crate::card::{
-    AlternativeCost, ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
+    ArtifactSubtype, CardDefinition, CardType, CreatureType, EnchantmentSubtype, EquipBonus,
     EventKind, EventScope, EventSpec, Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility,
     StaticEffect, Subtypes, Supertype, TriggeredAbility, Value,
 };
@@ -82,10 +82,9 @@ pub fn kamahls_druidic_vow() -> CardDefinition {
 /// flying, and is a Demon too. You may cast it from your graveyard by paying
 /// 3 life and discarding a card in addition to its other costs.
 pub fn demonic_embrace() -> CardDefinition {
-    let mana = cost(&[generic(1), b(), b()]);
     CardDefinition {
         name: "Demonic Embrace",
-        cost: mana.clone(),
+        cost: cost(&[generic(1), b(), b()]),
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
@@ -96,13 +95,16 @@ pub fn demonic_embrace() -> CardDefinition {
             add_creature_types: vec![CreatureType::Demon],
             ..Default::default()
         }),
-        alternative_cost: Some(AlternativeCost {
-            from_graveyard: true,
-            mana_cost: mana,
-            life_cost: 3,
-            discard_filters: vec![(R::Any, 1)],
-            ..Default::default()
-        }),
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may cast this card from your graveyard by paying 3 life and discarding a card in addition to paying its other costs.",
+                effect: StaticEffect::CastSelfFromGraveyardWithCost(crate::card::AdditionalCastCost::PayLife { amount: 3 }),
+            },
+            StaticAbility {
+                description: "Casting it from your graveyard also discards a card.",
+                effect: StaticEffect::CastSelfFromGraveyardWithCost(crate::card::AdditionalCastCost::Discard { count: 1, filter: None }),
+            },
+        ],
         ..Default::default()
     }
 }

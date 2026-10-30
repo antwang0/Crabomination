@@ -2058,7 +2058,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Phyrexian Purge | the 3 life per target is lost as the spell resolves, not paid as a cast cost | no per-target life surcharge in the cast pipeline |
 | 🟡 Primal Prayers | a creature cast for {E} doesn't gain flash | `EnergyAlternativeCostForFilter` has no timing rider |
 | ~~Bane, Lord of Darkness~~ ✅ | fixed 2026-10-27: `AnyPlayerMayAccept` asks the target opponent; declined, `MoveChosen` with `ToughnessAtMostXFromCost` (X = the dead creature's LKI toughness; `MoveChosen` now resolves X in its filter) | — |
-| 🟡 Queen Kayla bin-Kroog | the mana value 1, 2 and 3 cards return one after another, not together (their enter triggers see each other in order) | `ChooseSomeAmong` per mana value; no shared simultaneous put |
+| ~~Queen Kayla bin-Kroog~~ ✅ | fixed 2026-10-30: `Effect::ChoosePerManaValue` asks every mana value first, then one `Move` returns the picks together (Gruesome Menagerie shares it) | — |
 | ~~The Fifteenth Doctor~~ ✅ | fixed 2026-10-24: gated on `CastSpellThisTurnWithout { types: [Artifact] }`; the improvise grant also never applied through its gate before this (`spell_granted_improvise` now peels) | — |
 | 🟡 The Muckslinger Gang | "creature spells you control and creature cards you own in any zone other than the battlefield or the stack get +3/+3" is not modelled — only the battlefield half (other creatures not attacking or blocking get +3/+3) | an off-battlefield P/T static read by every hand/graveyard/stack power check; no free board-presence lane to gate it |
 | 🟡 Hostile Negotiations | the face-up pile is fixed (the second three), not turned up by your choice | rides `FaceDownFaceUpPiles` |
@@ -2093,7 +2093,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Ride Down | the creatures it blocked "this combat" are read as "this turn" | `Selector::CreaturesBlockedByThisTurn` |
 | 🟡 Tranquil Frillback | each {G} payment buys one mode under its own reflexive trigger, not one trigger choosing up to that many | three `MayPay` → `ReflexiveTrigger` |
 | ~~Experimental Overload~~ ✅ | stale 2026-10-28: the return is already a `MayDo` + `MoveChosen` pick | — |
-| 🟡 Demonic Embrace | the graveyard cast is modelled as an alternative cost (its own mana + 3 life + a discard), so it can't combine with another alternative cost | `AlternativeCost { from_graveyard }` |
+| ~~Demonic Embrace~~ ✅ | fixed 2026-10-30: two `CastSelfFromGraveyardWithCost` statics (3 life, a discard) — additional costs on its graveyard cast (CR 601.2f), no longer an alternative cost | — |
 | 🟡 Kraven the Hunter | "greatest power among creatures that player controls" compares the dead creature with the survivors, so two of the biggest dying together both count | `GreatestPowerControlled` after the death |
 | ~~Quilled Greatwurm~~ ✅ | fixed 2026-10-24: `CastSelfFromGraveyardWithCost(RemoveCountersFromCreatures { count: 6 })` | — |
 | 🟡 Vaevictis Asmadi, the Dire | its per-player target is mandatory in print; `ForEachPlayerTarget` lets a seat leave one out | `ForEachPlayerTarget`'s "up to" |

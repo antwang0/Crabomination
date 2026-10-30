@@ -85,7 +85,8 @@ fn kamahls_druidic_vow_deploys_lands_and_legends() {
 }
 
 /// Demonic Embrace: +3/+1, flying and a Demon; castable from the graveyard
-/// for 3 life and a discard on top of its mana cost.
+/// for 3 life and a discard on top of its mana cost — additional costs, not
+/// an alternative one (CR 601.2f), so a plain cast from the graveyard pays them.
 #[test]
 fn demonic_embrace_returns_from_the_graveyard() {
     let mut g = pod(2);
@@ -93,9 +94,8 @@ fn demonic_embrace_returns_from_the_graveyard() {
     let aura = g.add_card_to_graveyard(0, catalog::demonic_embrace());
     g.add_card_to_hand(0, catalog::island());
     flood(&mut g, 0);
-    g.perform_action(GameAction::CastSpellAlternative {
+    g.perform_action(GameAction::CastSpell {
         card_id: aura,
-        pitch_card: None,
         target: Some(Target::Permanent(bear)),
         additional_targets: vec![],
         mode: None,
