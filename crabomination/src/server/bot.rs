@@ -21482,6 +21482,12 @@ pub(super) fn settle_to_quiescence(
         }
     };
     let mut fuel = 64u32;
+    super::loop_hazard::in_lookahead(|| settle_loop(&mut g, &mut fuel, w))?;
+    Some(g)
+}
+
+/// [`settle_to_quiescence`]'s steps, run as a loop-probe-free lookahead.
+fn settle_loop(g: &mut GameState, fuel: &mut u32, w: &EvalWeights) -> Option<()> {
     loop {
         if g.is_game_over() {
             break;
@@ -21491,23 +21497,23 @@ pub(super) fn settle_to_quiescence(
         // swarm in a 23-seat pod stacked 150-320 triggers on a 399-permanent
         // board, and every candidate spent its whole fuel to come back `None`
         // anyway: 2.3 s a priority pass (seed 10011, game 23).
-        if g.stack.len() as u32 > fuel {
+        if g.stack.len() as u32 > *fuel {
             return None;
         }
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
-                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
+                decide_pending_policy(g, pending.acting_player(), w, &pending.decision, false)
             };
-            dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
+            dry_run(g, GameAction::SubmitDecision(answer)).ok()?;
         } else if g.stack.is_empty() {
             break;
         } else {
-            dry_run(&mut g, GameAction::PassPriority).ok()?;
+            dry_run(g, GameAction::PassPriority).ok()?;
         }
-        fuel = fuel.checked_sub(1)?;
+        *fuel = fuel.checked_sub(1)?;
     }
-    Some(g)
+    Some(())
 }
 
 /// The board `score_settled_state` scores, handed back whole: `g` itself

@@ -169,6 +169,26 @@ enum Probe {
 /// Resolve `g` in place with every seat passing and each ask answered by the
 /// asked seat's policy.
 fn resolve_probe(g: &mut GameState, w: &super::bot::EvalWeights) -> Probe {
+    in_lookahead(|| resolve_probe_inner(g, w))
+}
+
+thread_local! {
+    /// Set while a probe or a bot lookahead plays a cloned game forward. Its
+    /// asks are answered by the bot policy, which would probe again for every
+    /// gain pick it meets: a probe per candidate per pass, nested, held one
+    /// 3-seat pod decision past 25 minutes (sweep seed 2942155).
+    static LOOKAHEAD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Run `f` as a lookahead: [`entry_starts_loop`] stands down inside it.
+pub(super) fn in_lookahead<T>(f: impl FnOnce() -> T) -> T {
+    let was = LOOKAHEAD.replace(true);
+    let out = f();
+    LOOKAHEAD.set(was);
+    out
+}
+
+fn resolve_probe_inner(g: &mut GameState, w: &super::bot::EvalWeights) -> Probe {
     let board0 = g.battlefield.len();
     // Tokens minted, not board size: Eloise under March of the Machines
     // investigates into a 0/0 Clue that dies and investigates again, so the
@@ -265,12 +285,7 @@ pub(super) fn entry_starts_loop(
     def: &std::sync::Arc<crate::card::CardDefinition>,
     w: &super::bot::EvalWeights,
 ) -> bool {
-    thread_local! {
-        /// The probe answers its own asks with the bot policy, which picks
-        /// through here again: one level deep only.
-        static PROBING: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
-    }
-    if PROBING.get()
+    if LOOKAHEAD.get()
         || state.players[seat].commanders.is_empty()
         || !(makes_tokens_repeatably(def) || watch(state, seat))
     {
@@ -280,10 +295,7 @@ pub(super) fn entry_starts_loop(
     let mut events = Vec::new();
     h.mint_token_onto_battlefield(def.clone(), seat, false, &mut events);
     h.dispatch_triggers_for_events(&events);
-    PROBING.set(true);
-    let looped = sets_up_loop(state, &h, seat, w);
-    PROBING.set(false);
-    looped
+    sets_up_loop(state, &h, seat, w)
 }
 
 /// The last gate on any pod action but a pass, an answer or a combat
@@ -470,6 +482,10 @@ mod tests {
         let bear = std::sync::Arc::new(crate::catalog::grizzly_bears());
         assert!(entry_starts_loop(&g, 0, &poly, &w));
         assert!(!entry_starts_loop(&g, 0, &bear, &w));
+        // Inside a probe or a lookahead the gate stands down: a nested probe
+        // per candidate per pass hung a pod decision (sweep seed 2942155).
+        assert!(!in_lookahead(|| entry_starts_loop(&g, 0, &poly, &w)));
+        assert!(entry_starts_loop(&g, 0, &poly, &w), "the flag is restored");
         let p = g.add_card_to_library(0, crate::catalog::polyraptor());
         let b = g.add_card_to_library(0, crate::catalog::grizzly_bears());
         let cands = vec![(p, "Polyraptor".to_string()), (b, "Grizzly Bears".to_string())];
