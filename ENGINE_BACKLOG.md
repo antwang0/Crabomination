@@ -392,7 +392,8 @@ Nest of Scarabs; Ghalta at 1,536 counters, then Ferrafor's Saprolings, fuzzed; M
   **0** after two fixes (107m31s at `-j 2`; one in the sealed builder's code); `--bench` **196,176 / 27.64 / 613.0 / 0
   stalls — byte-identical**, determinism ok, thread_determinism ok (3 vs 1); cube / sos / sealed × 300 an archetype
   (seed 29410) 2,400 / 1,500 / 3,600 decided, 0 undecided. ⚠ Disk hit 0 once mid-run (`target/debug/deps` stale
-  hashes): prune before the suite, not after.
+  hashes): prune before the suite, not after. After the late fixes: suite **29,356 / 0 / 7** (strict), workspace
+  clippy **0** (96m00s, `-j 2`, rebased on the concurrent session's five commits).
 
 OPEN:
 - ⚠ **Cube-frozen, written up, not shipped** (each doc names the fix; landed and reverted in this run, `9a104ccda`):
