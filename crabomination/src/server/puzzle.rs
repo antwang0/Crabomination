@@ -474,7 +474,7 @@ fn playout_bots(g: &GameState) -> [HeuristicBot; 2] {
 
 /// One fresh heuristic bot, latched to the combat declarations already in
 /// `g`. See [`playout_bots`] for why this is not optional.
-fn synced_bot(g: &GameState) -> HeuristicBot {
+pub(crate) fn synced_bot(g: &GameState) -> HeuristicBot {
     let mut b = HeuristicBot::new();
     if !g.attacking().is_empty() {
         b.note_external_declaration(g, true);

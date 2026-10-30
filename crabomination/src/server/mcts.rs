@@ -1321,6 +1321,36 @@ impl MctsBot {
         base
     }
 
+    /// The action-gap audit's probe (`server::action_gap`): the mean of `n`
+    /// rollouts after each of `actions`, every arm the same `n` — the
+    /// search's own rollout and reward, at a budget and over a menu it
+    /// never has. `None` for an action the engine rejects.
+    ///
+    /// A combat declaration is followed by passes until its step is over:
+    /// the rollout's fresh policy bots carry no "already declared" latch,
+    /// and would otherwise re-declare over an empty declaration (the
+    /// failure `puzzle::playout_bots` documents).
+    pub fn probe_actions(&self, state: &GameState, seat: usize, actions: &[GameAction], n: u32) -> Vec<Option<f64>> {
+        actions
+            .iter()
+            .map(|a| {
+                let mut root = state.clone();
+                root.perform_action(a.clone()).ok()?;
+                if matches!(a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)) {
+                    let step = root.step;
+                    let mut fuel = 32;
+                    while fuel > 0 && root.step == step && !root.is_game_over() {
+                        fuel -= 1;
+                        if root.perform_action(GameAction::PassPriority).is_err() {
+                            break;
+                        }
+                    }
+                }
+                Some((0..n.max(1)).map(|_| self.rollout(root.clone(), seat)).sum::<f64>() / n.max(1) as f64)
+            })
+            .collect()
+    }
+
     /// The round-51 fetch arms: search a pending `SearchLibrary` instead of
     /// letting it fall through to the heuristic. Every other pending
     /// decision still does fall through — this is the one whose answer is a

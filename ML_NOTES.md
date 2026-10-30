@@ -6735,3 +6735,111 @@ last +0.15. The user's own pool builds the same deck either way (its
 64-candidate static build was already the judge's local optimum). Training
 actors (`heuristic_sealed_build_rated`, one sample, no judge) are
 untouched; the client opponent (FRA, SOS) and `--build` get the polish.
+
+## Blunder benchmark and the legal-action gap: where the bad plays come from (2026-10-30)
+
+The user's report: the bot "does obviously bad things" and "isn't really
+considering all legal actions". Two instruments, both in `bot_puzzles`.
+
+**What decides what.** The client's pilot (`mcts-net67-256-fixes`) runs the
+search only in its own main phase with an empty stack, over at most six
+casts, the land drop and pass (`mcts.rs` `next_action`). Attacks, blocks,
+activated abilities (sinks, after nothing is castable), every play on the
+opponent's turn and in combat steps, and most targets are the heuristic's.
+The value net is consulted only as the leaf of those main-phase rollouts
+(and by the scored pickers on `net67` profiles).
+
+### 1. The blunder set (`server/blunder.rs`, `bot_puzzles --blunders`)
+
+22 positions, each scored on what seat 0 does (attacks / blocks / casts /
+activations, and what is dead or alive when the window closes) rather than
+on a certified line. A "never do X" item has a **twin** where X is right
+(the 0/4 gains an attack trigger, the deathtoucher is tapped, the seat is
+at 4 instead of 20); a pair scores only when both pass. Test
+`the_null_pilot_fails_every_pair_and_every_solo_item` keeps the set honest.
+Deterministic for the heuristic, a rate for the search (`--reps 5`); the
+whole set runs in 12 s release-fast for four profiles.
+
+| profile | items / 22 | pairs / 6 | fails |
+|---|---|---|---|
+| `pass` (null) | 4 | 0 | — |
+| `dflt` | 19 | 5 | zero-power attack, kill-the-flier, flash blocker |
+| `fixes` | 20 | 6 | kill-the-flier, flash blocker |
+| `net67` | 18 | 4 | attacks into deathtouch, won't attack past a tapped first striker, kill-the-flier, flash blocker |
+| `net67-fixes` | 19 | 5 | attacks into deathtouch, kill-the-flier, flash blocker |
+| `mcts-dflt-256` | 20 | 5 | zero-power attack, flash blocker |
+| `mcts-net67-256` | 19 | 4 | attacks into deathtouch, tapped first striker, flash blocker |
+| **`mcts-net67-256-fixes`** (client) | 20 | 5 | **attacks a 4/4 into untapped Typhoid Rats; never flashes in Ambush Viper to block** |
+
+Read by eye (`--show-lines`), every failure is the pilot's: `dflt` swings a
+vanilla 0/4 into a 2/2; the scored pickers Murder the walled 3/3 (the
+biggest body) and die to the 2/2 flier — the search fixes that one, its
+main-phase menu carries the other target; every pilot passes the block
+window with Ambush Viper in hand and flashes it in at end of turn. The two
+`net67` attack failures are net-only: the default's attack picker on the
+net leaf attacks a 4/4 into a 1/1 deathtoucher, and keeps a 2/2 home past a
+*tapped* first striker.
+
+### 2. The legal-action gap (`server/action_gap.rs`, `bot_puzzles --action-gap`)
+
+Sealed games between client-built decks, the client pilot on both seats.
+At a quarter of decision points (pending prompts aside) every
+engine-validated legal action (`puzzle::legal_actions`, deduped by play:
+an untargeted spell's ignored target, two Swamps) is scored by
+`MctsBot::probe_actions` — the search's own rollouts and leaf, 24 per
+action — **twice, independently**: pass A picks the best, pass B prices it
+and the pilot's move, so the winner's curse can't read as a gap (expected
+regret is zero when all actions are equal). Positive control:
+`the_probe_prices_the_flier_kill_above_the_ogre_kill`.
+
+60 games, seed 43, unscored (the search's) rollouts:
+
+| context | SOS points | SOS mean regret | SOS > 0.10 | FRA points | FRA mean regret | FRA > 0.10 |
+|---|---|---|---|---|---|---|
+| own main (searched) | 659 | +0.018 ±0.003 | 7 % | 786 | +0.009 ±0.002 | 4 % |
+| attack | 439 | +0.010 ±0.003 | 5 % | 484 | +0.008 ±0.002 | 4 % |
+| block | 140 | +0.018 ±0.004 | 6 % | 146 | +0.007 ±0.004 | 4 % |
+| own other (combat steps, upkeep, draw) | 698 | +0.021 ±0.003 | 8 % | 629 | +0.017 ±0.002 | 7 % |
+| their turn | 371 | +0.010 ±0.003 | 6 % | 293 | +0.003 ±0.002 | 1 % |
+
+Own main: the probe's best was **off the search's menu** at 24 % (SOS) /
+37 % (FRA) of points, 32 / 21 of them by more than 0.10. The better move
+in the > 0.10 tail is overwhelmingly a **cast** (instants and tricks in
+combat steps, removal held past the window it was needed in) or an
+**activated ability** — SOS 97 casts and 30 abilities of 157, attacks 14,
+blocks 7.
+
+**Caveat, and its control.** The probe's continuation is the search's
+unscored rollout policy, which may never make a play the pilot would make a
+step later — "pass in the draw step" against "cast the removal now" then
+reads the rollout policy's weakness as the pilot's regret. The same bias is
+inside the search's own judgement, but it inflates the "own other" row
+especially. The control re-runs the probe on the scored heuristic
+(`--scored-rollouts`):
+
+| context | SOS mean regret (scored) | SOS > 0.10 | FRA mean regret (scored) | FRA > 0.10 |
+|---|---|---|---|---|
+| own main | +0.014 ±0.002 | 5 % | +0.017 ±0.002 | 6 % |
+| attack | +0.011 ±0.003 | 4 % | +0.007 ±0.002 | 3 % |
+| block | +0.009 ±0.004 | 5 % | +0.004 ±0.003 | 3 % |
+| own other | +0.017 ±0.003 | 7 % | +0.009 ±0.002 | 4 % |
+| their turn | +0.016 ±0.003 | 7 % | +0.007 ±0.003 | 4 % |
+
+Off-menu at own main: 23 % (SOS) / 36 % (FRA). The gap survives the
+control at about the same size, so it is not the rollout policy's. The
+± are per-point and understate: one game's held card is sampled at several
+windows (Burrog Barrage, an instant bite, tops the SOS list at nine
+windows of two games — never cast).
+
+**Readings.** (1) The bad plays are spread over every window, not
+concentrated where the search runs — the heuristic-only windows (combat
+steps, the opponent's turn, attacks, blocks) carry regret as large as the
+searched main phase. (2) The missing class is instant-speed casts and
+activated abilities, in every window; attack and block declarations are a
+smaller share. (3) A third of the searched window's better moves are off
+its menu on FRA. (4) None of this is the value net's training: the net is
+not asked about these choices. Next (the plan's step 3): fix the blunder
+set's failures where they live (the attack picker on the net leaf, the
+flash-blocker window, the bite that is never cast), then widen the
+search's menu to abilities and instant-speed casts, gated by both
+instruments and the paired ladder.

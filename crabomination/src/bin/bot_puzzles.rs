@@ -63,13 +63,12 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
         // default on the net leaf, and both under 256-iteration search.
         "dflt" => EvalWeights::default(),
         "net67" => EvalWeights::net_on_default(),
-        "mcts-dflt-256" | "mcts-net67-256" => {
-            return Some(Box::new(MctsBot::new(MctsConfig {
-                iterations: 256,
-                horizon_turns: 3,
-                weights: if profile == "mcts-dflt-256" { EvalWeights::default() } else { EvalWeights::net_on_default() },
-                ..MctsConfig::default()
-            })));
+        // The FRA fixes bundle, which the client plays in FRA, Sealed and
+        // Cube games; `mcts-net67-256-fixes` is the client's limited pilot.
+        "fixes" => EvalWeights::default().with_fra_fixes(),
+        "net67-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
+        "mcts-dflt-256" | "mcts-net67-256" | "mcts-net67-256-fixes" => {
+            return Some(Box::new(MctsBot::new(mcts_cfg(profile).expect("an MCTS profile"))));
         }
         "mcts-net-deep" => {
             return Some(Box::new(MctsBot::new(MctsConfig {
@@ -82,6 +81,131 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
         _ => return None,
     };
     Some(Box::new(HeuristicBot::with_weights(w)))
+}
+
+/// The 256-iteration search profiles' configurations.
+fn mcts_cfg(profile: &str) -> Option<MctsConfig> {
+    let weights = match profile {
+        "mcts-dflt-256" => EvalWeights::default(),
+        "mcts-net67-256" => EvalWeights::net_on_default(),
+        "mcts-net67-256-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
+        _ => return None,
+    };
+    Some(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() })
+}
+
+/// `--action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S]
+/// [PROFILE]`: the legal-action gap (`server::action_gap`) over sealed
+/// games between client-built decks (`CRAB_SEALED_SET=fra` for FRA pools;
+/// `CRAB_NET` picks the leaf). PROFILE is a search profile, default the
+/// client's limited pilot.
+fn run_action_gap(games: usize) {
+    use crabomination::server::action_gap::{Class, Context, GapConfig, Point, audit_game};
+    let a: Vec<String> = std::env::args().collect();
+    let flag = |k: &str| a.iter().position(|x| x == k).and_then(|i| a.get(i + 1)).cloned();
+    let mut cfg = GapConfig::default();
+    if let Some(v) = flag("--probe") {
+        cfg.probe = v.parse().expect("--probe N");
+    }
+    if let Some(v) = flag("--sample") {
+        cfg.sample = v.parse().expect("--sample P");
+    }
+    cfg.scored_rollouts = a.iter().any(|x| x == "--scored-rollouts");
+    let threads: usize = flag("--threads").map_or(8, |v| v.parse().expect("--threads T"));
+    let seed: u64 = flag("--seed").map_or(43, |v| v.parse().expect("--seed S"));
+    let profile = a
+        .iter()
+        .skip(1)
+        .find(|x| mcts_cfg(x).is_some())
+        .cloned()
+        .unwrap_or_else(|| "mcts-net67-256-fixes".to_string());
+    let pilot = mcts_cfg(&profile).expect("checked");
+    println!(
+        "action gap: {games} games, {profile}, probe {} {} rollouts x 2 passes, sample {}, {threads} threads, seed {seed}\n",
+        cfg.probe,
+        if cfg.scored_rollouts { "scored" } else { "unscored" },
+        cfg.sample
+    );
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let points: Vec<Point> = std::thread::scope(|sc| {
+        let hs: Vec<_> = (0..threads)
+            .map(|_| {
+                sc.spawn(|| {
+                    let mut mine = Vec::new();
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if i >= games {
+                            break;
+                        }
+                        let s = seed ^ (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+                        let build = |k: u64| {
+                            let pool = crabomination::selfplay::sealed_pool(s ^ k);
+                            crabomination::selfplay::sealed_opponent_build(&pool, 16, s ^ (k << 8), Default::default())
+                        };
+                        let template = crabomination::selfplay::sealed_game_template(&build(1), &build(2));
+                        mine.extend(audit_game(&template, pilot, cfg, s));
+                        eprint!(".");
+                    }
+                    mine
+                })
+            })
+            .collect();
+        hs.into_iter().flat_map(|h| h.join().expect("worker")).collect()
+    });
+    eprintln!();
+    let stats = |ps: &[&Point]| {
+        let n = ps.len() as f64;
+        let r: Vec<f64> = ps.iter().map(|p| p.regret()).collect();
+        let mean = r.iter().sum::<f64>() / n.max(1.0);
+        let var = r.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n - 1.0).max(1.0);
+        (mean, (var / n.max(1.0)).sqrt(), r.iter().filter(|&&x| x > 0.10).count())
+    };
+    println!(
+        "{:<11} {:>6} {:>7} {:>9} {:>16} {:>9}  better move's class when regret > 0.10",
+        "context", "points", "legal", "same", "mean regret", ">0.10"
+    );
+    for ctx in Context::ALL {
+        let ps: Vec<&Point> = points.iter().filter(|p| p.context == ctx).collect();
+        if ps.is_empty() {
+            continue;
+        }
+        let (mean, se, big) = stats(&ps);
+        let same = ps.iter().filter(|p| p.same).count();
+        let legal = ps.iter().map(|p| p.legal).sum::<usize>() as f64 / ps.len() as f64;
+        let classes: Vec<String> = Class::ALL
+            .iter()
+            .filter_map(|&c| {
+                let k = ps.iter().filter(|p| p.regret() > 0.10 && Class::of(&p.best) == c).count();
+                (k > 0).then(|| format!("{} {k}", c.name()))
+            })
+            .collect();
+        println!(
+            "{:<11} {:>6} {:>7.1} {:>8.0}% {:>+8.3} ±{:.3} {:>8.0}%  {}",
+            ctx.name(),
+            ps.len(),
+            legal,
+            100.0 * same as f64 / ps.len() as f64,
+            mean,
+            se,
+            100.0 * big as f64 / ps.len() as f64,
+            classes.join(", ")
+        );
+    }
+    let main: Vec<&Point> = points.iter().filter(|p| p.best_on_menu.is_some()).collect();
+    let off = main.iter().filter(|p| p.best_on_menu == Some(false)).count();
+    let off_big: Vec<&&Point> = main.iter().filter(|p| p.best_on_menu == Some(false) && p.regret() > 0.10).collect();
+    println!(
+        "\nown main: the better move was off the search's menu at {off} of {} points ({:.0}%), {} of them with regret > 0.10",
+        main.len(),
+        100.0 * off as f64 / main.len().max(1) as f64,
+        off_big.len()
+    );
+    let mut worst: Vec<&Point> = points.iter().collect();
+    worst.sort_by(|x, y| y.regret().partial_cmp(&x.regret()).unwrap_or(std::cmp::Ordering::Equal));
+    println!("\nthe 25 largest regrets:");
+    for p in worst.iter().take(25) {
+        println!("  {:+.3} [{}] {}", p.regret(), p.context.name(), p.note);
+    }
 }
 
 fn goal_name(g: Goal) -> String {
@@ -199,12 +323,79 @@ fn run_scoring(profiles: &[String]) {
     }
 }
 
+/// `--blunders`: score each profile on the blunder set (`server::blunder`),
+/// `--reps N` times an item (the search draws its own random stream, so a
+/// searched pilot's verdict is a rate; the heuristic's repeats).
+fn run_blunders(profiles: &[String]) {
+    use crabomination::server::blunder::{Area, items, judge};
+    let a: Vec<String> = std::env::args().collect();
+    let reps: usize = a.iter().position(|x| x == "--reps").and_then(|i| a.get(i + 1)).map_or(1, |v| v.parse().expect("--reps N"));
+    let verbose = a.iter().any(|x| x == "--show-lines");
+    let all = items();
+    let pairs = all.iter().filter(|i| i.twin.is_some_and(|t| i.id < t)).count();
+    println!("blunder set: {} items ({pairs} twin pairs), {reps} rep(s) each\n", all.len());
+    for profile in profiles {
+        if bot_for(profile).is_none() {
+            eprintln!("unknown profile {profile}");
+            continue;
+        }
+        // Per item: passes out of `reps`.
+        let mut score: Vec<usize> = Vec::with_capacity(all.len());
+        let mut notes: Vec<String> = Vec::new();
+        for it in &all {
+            let mut ok = 0;
+            for _ in 0..reps {
+                let mut bot = bot_for(profile).expect("checked above");
+                let v = judge(it, bot.as_mut());
+                if v.ok() {
+                    ok += 1;
+                } else if notes.last().is_none_or(|n| !n.starts_with(it.id)) {
+                    notes.push(format!("{}: failed to {}", it.id, v.failed.join(", ")));
+                    if verbose {
+                        for act in &v.actions {
+                            notes.push(format!("{}      {act:?}", it.id));
+                        }
+                    }
+                }
+            }
+            score.push(ok);
+        }
+        let rate = |i: usize| score[i] as f64 / reps as f64;
+        let items_ok: f64 = (0..all.len()).map(rate).sum();
+        // A pair scores the chance both halves pass — the product of the
+        // two rates, which is 0/1 for a deterministic pilot.
+        let mut pair_ok = 0.0;
+        for (i, it) in all.iter().enumerate() {
+            if let Some(t) = it.twin.filter(|t| it.id < *t) {
+                let j = all.iter().position(|o| o.id == t).expect("twin");
+                pair_ok += rate(i) * rate(j);
+            }
+        }
+        println!("{profile}: items {items_ok:.1}/{}, pairs {pair_ok:.1}/{pairs}", all.len());
+        let areas = [Area::Attack, Area::HoldBack, Area::Block, Area::Removal, Area::Instant, Area::Mana, Area::Polarity];
+        for area in areas {
+            let idx: Vec<usize> = (0..all.len()).filter(|&i| all[i].area == area).collect();
+            if !idx.is_empty() {
+                let s: f64 = idx.iter().map(|&i| rate(i)).sum();
+                println!("    {:<9} {s:.1}/{}", area.name(), idx.len());
+            }
+        }
+        for n in &notes {
+            println!("    {n}");
+        }
+        println!();
+    }
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|a| a == "-h" || a == "--help") {
         println!(
-            "bot_puzzles [--set core|fra] [--depth N] [--certify] [PROFILE ...]\n\n\
-             PROFILE: pass (null control) | dflt | net67 | mcts-dflt-256 | mcts-net67-256 | gang | atk-sim | net | mcts-net-deep\n\
+            "bot_puzzles [--set core|fra] [--depth N] [--certify] [PROFILE ...]\n\
+             bot_puzzles --blunders [--reps N] [--show-lines] [PROFILE ...]\n\
+             bot_puzzles --action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S] [--scored-rollouts] [MCTS PROFILE]\n\n\
+             PROFILE: pass (null control) | dflt | fixes | net67 | net67-fixes | mcts-dflt-256 | mcts-net67-256 |\n\
+             \x20        mcts-net67-256-fixes (the client's limited pilot) | gang | atk-sim | net | mcts-net-deep\n\
              --certify reports which candidates are real puzzles. CRAB_NET overrides the champion."
         );
         return;
@@ -219,6 +410,17 @@ fn main() {
             std::path::Path::new(&net),
         )
         .expect("load the value net");
+    }
+    if let Some(i) = args.iter().position(|a| a == "--action-gap") {
+        let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(40);
+        run_action_gap(games);
+        return;
+    }
+    if args.iter().any(|a| a == "--blunders") {
+        let profiles: Vec<String> = args.iter().filter(|a| !a.starts_with("--") && a.parse::<usize>().is_err()).cloned().collect();
+        let profiles = if profiles.is_empty() { vec!["pass".to_string(), "dflt".to_string()] } else { profiles };
+        run_blunders(&profiles);
+        return;
     }
     if args.iter().any(|a| a == "--certify") {
         run_certify();

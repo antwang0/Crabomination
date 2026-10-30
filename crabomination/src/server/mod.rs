@@ -164,6 +164,8 @@ pub mod vocab_snapshot;
 pub mod decision_capture;
 pub mod leaf_capture;
 pub mod net_eval;
+pub mod action_gap;
+pub mod blunder;
 pub mod puzzle;
 pub mod puzzle_corpus;
 pub mod puzzle_fra;
