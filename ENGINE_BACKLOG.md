@@ -326,7 +326,7 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`, every deck, one game a
 block): **29404** (3/4/6 seats, fuzz; 4,606 games), **29405** (2/5/8, concede; 5,066), **29406** (4/6/7, `--a dflt` +
 fuzz; 3,437), then on the fixed tip **29407** (3/7, concede + fuzz; 2,925) and **29408** (4/5/6, concede + fuzz;
-3,787) — **19,821 games, 2 finds (both fixed below), 0 panics**. **Next seed 29409.**
+3,787) and **29409** (3/8, concede + fuzz; 2,815) — **22,636 games, 3 finds (all fixed below), 0 panics**. **Next seed 29410.**
   Gates: suite **29,370 / 0 / 7** (strict, seat test skipped), workspace clippy **0** (client excluded), `--bench`
   **196,176 / 27.64 / 613.0 / 0 stalls byte-identical**, determinism ok; overflow-build bench A/B base vs tip 80.0 / 79.5
   games/s (3 runs each, noise); golden traces (Commander pod digests included) unchanged.
@@ -350,6 +350,10 @@ fuzz; 3,437), then on the fixed tip **29407** (3/7, concede + fuzz; 2,925) and *
   Massacre Wurm (the two cards want opposite answers off one `Triggerer`). Commander pod digest
   0x9030001 moved (1730 → 1624 actions); 2-player pools identical. ⚠ `PlayerRef::TriggerEventPlayer`
   (`ctx.event_player`) is the event's actor and already exists — prefer it for "that player" on a new card.
+- **CR 400.7, a play grant on a commander at home (seed 2945154, 3 seats, invariant abort):** Demand Answers'
+  discard cost sent a commander home (CR 903.9a), and Containment Construct's trigger, its subject that card, stamped
+  "you may play it this turn" on it in the command zone. `GrantMayPlay` / `GrantMayPlayForLife` skip a command-zone
+  card (`GameState::in_a_command_zone`). The Construct's own graveyard-only fix is cube-frozen (named in its doc).
 - **CR 800.4a, a parked demonstrate ask (seed 2946692, 8 seats, strict abort):** the spell's controller conceded while
   the caster's "copy it?" waited; the resumed `Demonstrate` found no spell and left the answer logged. Cleared.
 - **New primitives:** `Effect::ChoosePerManaValue` (every per-MV pick before one `Move` — Queen Kayla's returns enter
