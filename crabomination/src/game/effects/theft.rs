@@ -325,15 +325,9 @@ impl GameState {
     ) -> Result<(), GameError> {
         let Some(seat) = self.resolve_player(who, ctx) else { return Ok(()) };
         let Some(id) = self.players[seat].library.first().map(|c| c.id) else { return Ok(()) };
-        if let Some(c) = self.players[seat].library.iter_mut().find(|c| c.id == id) {
-            c.turn_face_down();
-        }
-        self.move_card_to(
-            id,
-            &crate::effect::ZoneDest::Battlefield { controller: PlayerRef::Seat(ctx.controller), tapped: false },
-            ctx,
-            events,
-        );
+        // Through `manifest_card`: a card that stays in the library (the board
+        // bound, a replacement) is face up again (audit pod seed 2814860).
+        self.manifest_card(id, ctx.controller, ctx, events);
         Ok(())
     }
 }

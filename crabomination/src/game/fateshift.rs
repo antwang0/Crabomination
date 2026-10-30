@@ -82,10 +82,11 @@ impl GameState {
         }
         pile.shuffle(&mut self.rng.draw());
         for cid in pile {
-            let Some(c) = self.exile.iter_mut().find(|c| c.id == cid) else { continue };
-            c.turn_face_down();
+            if !self.exile.iter().any(|c| c.id == cid) {
+                continue;
+            }
             let dest = ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false };
-            self.move_card_to(cid, &dest, ctx, events);
+            self.face_down_onto_battlefield(cid, crate::card::CardInstance::turn_face_down, &dest, ctx, events);
         }
     }
 
