@@ -14889,9 +14889,9 @@ pub enum Effect {
 
     /// A damage trigger's "noncombat" gate (Smaug, the Impenetrable — "is
     /// dealt noncombat damage"): rewritten per event as the trigger is
-    /// collected (`for_trigger_event`) into `body` for noncombat damage and
-    /// `Noop` for combat damage. `EventKind` has no bit left for a noncombat
-    /// kind of its own.
+    /// collected (`for_trigger_event`) into `body` for noncombat damage; the
+    /// battlefield walk skips a combat-damage event outright (CR 603.2).
+    /// `EventKind` has no bit left for a noncombat kind of its own.
     IfTriggerDamageNoncombat { body: Box<Effect> },
 
     /// "Counter target spell. If that spell is countered this way, exile it

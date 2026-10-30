@@ -2038,7 +2038,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Lightning Storm | deals 3: its "discard a land card: two charge counters, you may retarget" ability — any player, only while it is on the stack — is missing, so no counter lands | no ability activates from the stack (legal actions walk permanents and cards in zones, not stack items) |
 | 🟡 Sen Triplets | the chosen opponent can still activate mana abilities | `PlayerCantActivateNonManaAbilitiesThisTurn` (Abeyance's lock) is the nearest; there is no all-abilities lock |
 | ~~Teferi, Temporal Pilgrim~~ ✅ | fixed 2026-10-24: the −12 runs `EachPlayerDoes { Target(0) }` over a `MoveChosen` to hand before the shuffle — the opponent's pick, not a target | — |
-| 🟡 Smaug the Impenetrable | combat damage to it still puts its trigger on the stack (it resolves to nothing) | `EventKind` has no bit left for a noncombat kind; `Effect::IfTriggerDamageNoncombat` gates the body per event instead |
 | ~~Rhys, the Evermore~~ ✅ | fixed 2026-10-28: a count per counter kind (`RemoveAnyNumberOfCounters`, keyword counters too); headless strips what its owner doesn't want | — |
 | ~~Lara Croft, Tomb Raider~~ ✅ | fixed 2026-10-27: the grants form one `OneCastAmongGranted` group — one play, a land drop included | — |
 | ~~Loki, God of Mischief~~ ✅ | fixed 2026-10-28: listens to `BecameTarget` under `EventScope::PlayerOrPermanentTargetedByYourAbility` (battlefield permanents and players only) | — |

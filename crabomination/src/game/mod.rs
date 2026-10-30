@@ -27399,6 +27399,14 @@ impl GameState {
                     {
                         continue;
                     }
+                    // CR 603.2 — "noncombat damage is dealt to it" is not
+                    // triggered by combat damage at all (Smaug), not a trigger
+                    // that resolves to nothing.
+                    if matches!(ta.effect, crate::effect::Effect::IfTriggerDamageNoncombat { .. })
+                        && matches!(ev, GameEvent::DamageDealt { combat: true, .. })
+                    {
+                        continue;
+                    }
                     candidates.push(TriggerCandidate {
                         source: trig_source,
                         effect: self.trigger_effect_for(&ta.effect, &ta.event, card, ev, events),

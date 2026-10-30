@@ -93,6 +93,21 @@ fn smaug_turns_noncombat_damage_into_treasure() {
     assert_eq!(tokens_named(&g, "Treasure"), 3);
 }
 
+/// CR 603.2 — combat damage to Smaug doesn't trigger it: nothing goes on the
+/// stack (the trigger used to be put there and resolve to nothing).
+#[test]
+fn smaug_ignores_combat_damage() {
+    use crabomination::game::types::GameEvent;
+    let mut g = pod(2);
+    let s = ready(&mut g, 0, catalog::smaug_the_impenetrable());
+    let hit = GameEvent::DamageDealt {
+        amount: 3, to_player: None, to_card: Some(s), combat: true, from_controller: Some(1), from_card: None,
+    };
+    g.dispatch_triggers_for_events(&[hit]);
+    assert!(g.stack.is_empty(), "no trigger");
+    assert_eq!(tokens_named(&g, "Treasure"), 0);
+}
+
 /// Heliod, the Warped Eclipse: spells cost {1} less per card the opponents
 /// drew this turn (summed over every opponent).
 #[test]
