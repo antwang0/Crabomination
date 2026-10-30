@@ -338,6 +338,11 @@ Spiritdancer). Then `pod_residuals --rank` top-down with the frozen pools filter
   attack riders, idempotent or per-card-additive effects (monarch, Hedge Shredder, Hero of Bretagard) — and one real bug:
   **Tide of War** rode `BlocksNOrMore(1)` once per blocker, so two blockers flipped twice and a heads-then-tails
   sacrificed both sides. `once_per_batch` (CR 603.2c), `chk2::tide_of_war_flips_once_per_block_declaration`.
+- **Noncreature "put into a graveyard from the battlefield" on a creature-only event:** Chime of Night (an Aura) rode
+  `on_dies` (`CreatureDied`), so its destroy never fired — `PermanentDied`, pinned through the CR 704.5m fall-off
+  (`uds::chime_of_night_destroys_when_it_falls_off`). The same text sweep over "leaves the battlefield", "if you cast
+  it", "second spell each turn" and "can't be countered" came back clean (helpers: `flurry`, `myojin`'s
+  `CastFromHand`, `ExileLink` returns).
 - **Primitives:** an `{X}` mana ability activated with no X uses X = 1 (the auto-tapper's fixer); the target-discount
   static (`CostReductionForYourSpellsTargetingThis`) gains `opponents_only`, and on a Curse "this" is the enchanted
   player.
