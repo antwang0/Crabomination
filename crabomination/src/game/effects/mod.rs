@@ -47787,15 +47787,6 @@ impl GameState {
                         _ => None,
                     })
                     .or_else(|| self.battlefield_find(cid).map(|c| c.controller))
-                    // A permanent that just died or left is its last
-                    // controller's (CR 603.10a): a dead token is nowhere, and a
-                    // stolen creature's graveyard is its owner's (Massacre Wurm).
-                    .or_else(|| {
-                        self.died_card_snapshots
-                            .get(&cid)
-                            .or_else(|| self.leaves_bf_lki.get(&cid))
-                            .map(|c| c.controller)
-                    })
                     // A just-drawn / discarded card lives in a player's
                     // hand/graveyard/etc. — bind Triggerer to that player
                     // (Sheoldred's "whenever an opponent draws a card, they
@@ -47807,7 +47798,17 @@ impl GameState {
                     })
                     // A card discarded or milled into exile (Rest in Peace)
                     // is still its owner's: Megrim's "that player" read nobody.
-                    .or_else(|| self.exile.iter().find(|c| c.id == cid).map(|c| c.owner)),
+                    .or_else(|| self.exile.iter().find(|c| c.id == cid).map(|c| c.owner))
+                    // A token that died is in no zone (CR 603.10a): its last
+                    // controller, from the subject's LKI (Massacre Wurm). A
+                    // card in a zone keeps its owner above — Patron of the
+                    // Nezumi's "an opponent's graveyard" is the owner's.
+                    .or_else(|| {
+                        self.died_card_snapshots
+                            .get(&cid)
+                            .or_else(|| self.leaves_bf_lki.get(&cid))
+                            .map(|c| c.controller)
+                    }),
             }),
             PlayerRef::Target(idx) => ctx.targets.get(*idx as usize).and_then(|t| match t {
                 Target::Player(p) => Some(*p),

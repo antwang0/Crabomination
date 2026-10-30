@@ -344,8 +344,10 @@ fuzz; 3,437), then on the fixed tip **29407** (3/7, concede + fuzz; 2,925) and *
   Faith gained its "or copies a spell" trigger on top of it.
 - **`PlayerRef::Triggerer`, the subject-in-no-zone class:** after the stack and battlefield it looked only in hands and
   graveyards. A dying token (Massacre Wurm's "that player loses 2 life" — CR 603.10a) and a discard Rest in Peace
-  exiled (Megrim) read nobody; a stolen creature's death named its owner. It now reads the subject's LKI (died
-  snapshot, then the `leaves_bf_lki` kept until the trigger resolves) and the exile zone's owner. Commander pod digest
+  exiled (Megrim) read nobody. It now falls back to the exile zone's owner, then the subject's LKI controller (died
+  snapshot, then the `leaves_bf_lki` kept until the trigger resolves) — *after* the zone owners, because Patron of the
+  Nezumi's "an opponent's graveyard" wants the owner. Open: a stolen nontoken's death still names its owner for
+  Massacre Wurm (the two cards want opposite answers off one `Triggerer`). Commander pod digest
   0x9030001 moved (1730 → 1624 actions); 2-player pools identical. ⚠ `PlayerRef::TriggerEventPlayer`
   (`ctx.event_player`) is the event's actor and already exists — prefer it for "that player" on a new card.
 - **CR 800.4a, a parked demonstrate ask (seed 2946692, 8 seats, strict abort):** the spell's controller conceded while

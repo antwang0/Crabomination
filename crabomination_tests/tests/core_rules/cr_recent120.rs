@@ -178,10 +178,9 @@ fn cr_614_6_a_discard_replaced_into_exile_still_names_the_discarder() {
     assert_eq!(g.players[1].life, 18, "Megrim hit the discarder");
 }
 
-/// CR 603.10a / 111.7 — a dying token has no zone to be found in afterwards,
-/// and a stolen creature's death is its controller's: Massacre Wurm's "that
-/// player loses 2 life" reads the creature's last controller, so a Wurm-killed
-/// Saproling still costs its controller 2 (`Triggerer` read nobody).
+/// CR 603.10a / 111.7 — a dying token has no zone to be found in afterwards:
+/// Massacre Wurm's "that player loses 2 life" reads its last controller, so a
+/// Wurm-killed token still costs its controller 2 (`Triggerer` read nobody).
 #[test]
 fn cr_603_10a_a_dying_token_names_its_last_controller() {
     use crabomination::effect::{Effect, Selector};
