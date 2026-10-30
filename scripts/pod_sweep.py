@@ -12,6 +12,7 @@ named by the last 60 actions' stack tops (a loop names its triggers). Build
 BIN as NEXT's audit build; `--a dflt` is the production pilot (~10x slower
 than the default `baseline`). `--decks LO-HI` sweeps only that range of target
 decks (1-based, inclusive) — the newest seats, say, where recent code lives.
+`--timeout` (default 1200 s) reports a block that never returns as HUNG.
 """
 import argparse, collections, os, random, re, subprocess, sys
 from concurrent.futures import ThreadPoolExecutor
@@ -20,6 +21,7 @@ ap = argparse.ArgumentParser()
 ap.add_argument('bin'); ap.add_argument('seed', type=int); ap.add_argument('seats'); ap.add_argument('games', type=int)
 ap.add_argument('--jobs', type=int, default=1); ap.add_argument('--a'); ap.add_argument('--env', nargs='*', default=[])
 ap.add_argument('--classify', action='store_true')
+ap.add_argument('--timeout', type=int, default=1200, help='seconds a block may run before it is reported as hung')
 ap.add_argument('--decks', help='LO-HI: sweep only these target decks (1-based, inclusive)')
 a = ap.parse_args()
 env = dict(os.environ, **dict(kv.split('=', 1) for kv in a.env))
@@ -51,7 +53,12 @@ def classify(k, decks, seed, game):
 
 def run(w):
     k, decks, seed = w
-    p = subprocess.run(cmd(k, decks, seed, a.games), capture_output=True, text=True, env=env)
+    try:
+        p = subprocess.run(cmd(k, decks, seed, a.games), capture_output=True, text=True, env=env, timeout=a.timeout)
+    except subprocess.TimeoutExpired:
+        # Output is printed in block order, so a block that never returns
+        # would hold every later line back without saying why (seed 2942155).
+        return f"BAD k={k} seed={seed} decks={decks} HUNG past {a.timeout}s: {' '.join(cmd(k, decks, seed, a.games))}"
     out = p.stdout + p.stderr
     m = re.search(r'decided (\d+).*undecided (\d+)', out)
     games = [int(g) for g in re.findall(r'undecided game (\d+):', out)]
