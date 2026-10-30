@@ -4010,3 +4010,27 @@ fn every_optional_once_each_turn_is_spent_by_the_take() {
         |_, body| body.contains("MarkDoneThisTurn") || body.contains("PayLifeToShiftDieOnceEachTurn"),
     );
 }
+
+/// Magecraft is "whenever you cast **or copy** an instant or sorcery spell"
+/// (an ability word, CR 207.2c — the wording is the rule): the trigger hears copies
+/// (`EventSpec::or_copy`, or a second `SpellCopied` trigger). The plain "whenever
+/// you cast an instant or sorcery spell" must not. Veyran's own Magecraft was
+/// cast-only.
+#[test]
+fn every_cast_or_copy_trigger_hears_copies_and_no_cast_trigger_does() {
+    /// SOS-frozen pool: changing its cards moves the trained nets' games.
+    const FROZEN: &[&str] = &["Archmage Emeritus"];
+    let hears = |body: &str| body.contains("or_copy: true") || body.contains("SpellCopied");
+    clause_ratchet(
+        "whenever you cast or copy",
+        10,
+        |t, _| t.contains("whenever you cast or copy"),
+        |def, body| FROZEN.contains(&def.name) || hears(body),
+    );
+    clause_ratchet(
+        "whenever you cast an instant or sorcery (no copy)",
+        10,
+        |t, _| t.contains("whenever you cast an instant or sorcery") && !t.contains("or copy"),
+        |_, body| !body.contains("or_copy: true"),
+    );
+}
