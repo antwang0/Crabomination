@@ -35343,6 +35343,14 @@ impl GameState {
                         .count() as u32;
                     free = free.max(cheap.min(returnable));
                 }
+                // "Sacrifice any number of lands" with nothing per land pays
+                // off in what follows (Hew the Entwood reveals that many): the
+                // lands already tapped this turn are the cheap ones to give.
+                if matches!(**per_each, Effect::Noop) && matches!(filter, crate::card::SelectionRequirement::Land) {
+                    let tapped = |id: &CardId| self.battlefield_find(*id).is_some_and(|c| c.tapped);
+                    candidates.sort_by_key(|id| !tapped(id));
+                    free = free.max(candidates.iter().filter(|id| tapped(id)).count() as u32);
+                }
                 let decision = Decision::ChooseAmount {
                     source,
                     prompt: "Sacrifice how many?".to_string(),

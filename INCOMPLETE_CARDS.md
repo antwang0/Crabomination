@@ -2120,7 +2120,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Volcano Hellion | "an amount of damage of your choice" is offered up to the target creature's toughness, not without limit | `PlayerChoosesNumber { max: ToughnessOf(Target(0)) }` |
 | 🟡 Hawkeye, Master Marksman | modes are chosen as the trigger resolves and each targeted mode is its own reflexive trigger | `MayPayGenericUpTo` + `ChooseUpToN` + `Reflexive` |
 | 🟡 Zareth San, the Trickster | the returned unblocked Rogue is auto-picked | from-hand `bounce_other_filter` + `JoinCombatAttackingChosen` |
-| 🟡 Hew the Entwood | chosen cards enter one at a time in pick order (not all nonlands, then all lands); the bot sacrifices no lands | `SacrificeAnyNumber` + `LookPick` |
+| 🟡 Hew the Entwood | chosen cards enter one at a time in pick order (not all nonlands, then all lands) | `LookPick`; a headless seat sacrifices its tapped lands (`SacrificeAnyNumber`'s `free`) |
 | ~~Baron Helmut Zemo~~ ✅ | fixed 2026-10-28: a manual seat names the boast's exiled set, and the controller picks which copies (up to three) to cast | — |
 | 🟡 Lethal Exploit | the modified creatures are counted as it resolves, not as it is cast | `PumpPT` with `CountOf` |
 | 🟡 Fall of the Impostor | a tie for greatest power exiles the first in battlefield order, not the controller's choice | `TakeGreatestPower` |

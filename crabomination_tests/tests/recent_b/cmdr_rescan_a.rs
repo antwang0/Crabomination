@@ -1908,3 +1908,33 @@ fn diaochan_destroys_two_before_attackers() {
     let creatures = g.battlefield.iter().filter(|c| c.definition.card_types.contains(&crabomination::card::CardType::Creature)).count();
     assert_eq!(creatures, 1, "the opponent's pick died too");
 }
+
+/// Hew the Entwood, headless: the lands tapped to cast it are the ones given
+/// up (it used to sacrifice none and reveal nothing); the untapped one stays.
+#[test]
+fn hew_the_entwood_headless_gives_its_tapped_lands() {
+    let mut g = pod(2);
+    let forests: Vec<_> = (0..6).map(|_| ready(&mut g, 0, catalog::mountain())).collect();
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::sol_ring());
+    }
+    let hew = g.add_card_to_hand(0, catalog::hew_the_entwood());
+    for &f in &forests[..5] {
+        g.battlefield_find_mut(f).unwrap().tapped = true;
+    }
+    // The pod policy's answer to a sacrifice count: exactly the `free` ones.
+    struct Free;
+    impl crabomination::decision::Decider for Free {
+        fn decide(&mut self, d: &crabomination::decision::Decision) -> DecisionAnswer {
+            use crabomination::decision::{AmountKind, AutoDecider, Decision};
+            match d {
+                Decision::ChooseAmount { kind: AmountKind::Cost { free }, .. } => DecisionAnswer::Amount(*free),
+                d => AutoDecider.decide(d),
+            }
+        }
+    }
+    g.decider = Box::new(Free);
+    cast_with(&mut g, hew, None, vec![], None);
+    assert!(g.battlefield_find(forests[5]).is_some(), "the untapped land is kept");
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Sol Ring").count(), 5);
+}
