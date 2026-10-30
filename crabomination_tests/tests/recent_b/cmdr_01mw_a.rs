@@ -275,7 +275,18 @@ fn wicked_slumber_splits_two_stun_counters() {
 fn tetsuo_burns_for_its_greatest_equipment_mana_value() {
     let mut g = pod(2);
     let t = ready(&mut g, 0, catalog::tetsuo_imperial_champion());
-    for def in [catalog::bonesplitter(), catalog::lightning_greaves()] {
+    // A five-mana Aura on it doesn't count: N is among Equipment only.
+    let aura = crabomination::card::CardDefinition {
+        name: "Heavy Aura",
+        cost: crabomination::mana::cost(&[crabomination::mana::generic(5)]),
+        card_types: vec![crabomination::card::CardType::Enchantment],
+        subtypes: crabomination::card::Subtypes {
+            enchantment_subtypes: vec![crabomination::card::EnchantmentSubtype::Aura],
+            ..Default::default()
+        },
+        ..Default::default()
+    };
+    for def in [catalog::bonesplitter(), catalog::lightning_greaves(), aura] {
         let e = ready(&mut g, 0, def);
         g.battlefield_find_mut(e).unwrap().attached_to = Some(t);
     }

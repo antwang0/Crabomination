@@ -482,12 +482,17 @@ pub fn wicked_slumber() -> CardDefinition {
 }
 
 /// Tetsuo, Imperial Champion — {U}{B}{R} legendary 3/3 Human Samurai. When it
-/// attacks equipped, choose one, N = the greatest mana value among what's
-/// attached to it: N damage to any target; or cast an instant or sorcery with
-/// mana value N or less from your hand free.
+/// attacks equipped, choose one, N = the greatest mana value among Equipment
+/// attached to it (an Aura's doesn't count): N damage to any target; or cast an
+/// instant or sorcery with mana value N or less from your hand free.
 pub fn tetsuo_imperial_champion() -> CardDefinition {
     use crate::card::Predicate;
-    let n = || Value::HighestManaValueAmong(Box::new(Selector::AttachedToMe(Box::new(Selector::This))));
+    let n = || {
+        Value::HighestManaValueAmong(Box::new(Selector::MatchingAmong {
+            inner: Box::new(Selector::AttachedToMe(Box::new(Selector::This))),
+            filter: R::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment),
+        }))
+    };
     CardDefinition {
         name: "Tetsuo, Imperial Champion",
         cost: cost(&[u(), crate::mana::b(), r()]),

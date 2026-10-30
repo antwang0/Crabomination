@@ -2153,7 +2153,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Planar Atlas~~ ✅ | fixed 2026-10-28: an optional look that keeps up to one LAND on top (`LookPick { pick_filter: Land, keep_on_top }`), the rest bottomed at random | — |
 | 🟡 Portal Manipulator | the player and the attackers are picked as the trigger resolves, not targeted as it triggers; every attack on you that you could redirect moves (CR 115.1) | `AttackersNowAttackChosenPlayer` |
 | 🟡 Aurora Awakener | "put any number of those permanent cards onto the battlefield" puts all of them | `RevealUntilMatchingToBattlefield` |
-| 🟡 Tetsuo, Imperial Champion | N reads every permanent attached to Tetsuo (an Aura's mana value counts, not only Equipment) | `HighestManaValueAmong(AttachedToMe(This))` |
+| ~~Tetsuo, Imperial Champion~~ ✅ | fixed 2026-10-30: N is the greatest mana value among attached *Equipment* (`MatchingAmong` over `AttachedToMe`), so an Aura no longer counts | — |
 | 🟡 Wicked Slumber | with two targets the two stun counters go one each; "both on either" isn't offered | `ApplyToTargets` + `If(count(AllTargets) <= 1)` |
 | 🟡 Arc Spitter | the granted ping may also aim at a creature the wearer is blocking, not only one blocking it | `R::BlockingOrBlockedBySource` |
 | 🟡 Alhammarret, High Arbiter | the name is any nonland card, not one revealed from the opponents' hands (no reveal step) | `NameCard { restrict_to: Nonland }` + `OpponentsCantCastNamed` |
@@ -2180,7 +2180,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Floodchaser | "target land becomes an Island until end of turn" adds Island instead of replacing its land types (the attack gate reads the type; the land keeps its own mana ability) | `Effect::GainLandType` |
 | 🟡 Magical Hack | the basic-land-type text change can target a permanent only, not a spell on the stack | `Effect::ReplaceBasicLandType` |
 | 🟡 Bloodfeather Phoenix | only an instant or sorcery's damage to an *opponent* returns it — damage to a battle doesn't | `FromYourGraveyardSourceDamagedOpponent` + `dealt_by` |
-| 🟡 Curse of Shaken Faith | "or copies a spell" doesn't trigger it — only a cast after the first | `SpellCast` + `SpellsCastThisTurnEquals` |
+| ~~Curse of Shaken Faith~~ ✅ | fixed 2026-10-30: a second trigger on `SpellCopied` by the enchanted player (any copy, first spell or not) | — |
 | 🟡 Curse of Surveillance | "any number of target players other than that player" is only you | `Draw { who: You }` |
 | 🟡 The Unluckiest Planeswalker | the +1's Gremlin rides your next Aura spell this turn, not the spending of that specific mana | `OnYourNextSpellMatchingThisTurn` |
 | 🟡 Winter's Chill | X isn't capped at your snow lands, and the "pay only {1}: prevent its combat damage" middle option is dropped — each target's controller pays {2} or it's destroyed at end of combat | `CapTargetsAtX` + `UnlessPlayerPays` |
