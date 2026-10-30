@@ -977,7 +977,7 @@ pub fn with_pip_floor<R>(on: bool, f: impl FnOnce() -> R) -> R {
 /// floor is that number too if it has a double pip, one source otherwise.
 fn double_pip_floor(main: &[CardFactory], colors: &[Color], duals: &[CardFactory], basics: &mut HashMap<Color, u32>) {
     let double = |c: Color| main.iter().any(|&f| crate::cube::card_brief(f).pips.get(c) >= 2);
-    let dual_sources = |c: Color| duals.iter().filter(|&&f| crate::cube::card_brief(f).produces.contains(&c)).count() as u32;
+    let dual_sources = |c: Color| duals.iter().filter(|&&f| crate::cube::card_brief(f).produces.contains(c)).count() as u32;
     let sources = |b: &HashMap<Color, u32>, c: Color| b.get(&c).copied().unwrap_or(0) + dual_sources(c);
     let floor = |c: Color| if double(c) { DOUBLE_PIP_SOURCES } else { 1 };
     for &c in colors {
