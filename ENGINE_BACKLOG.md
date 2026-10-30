@@ -355,6 +355,11 @@ Spiritdancer). Then `pod_residuals --rank` top-down with the frozen pools filter
   folded in). Magecraft's "cast **or copy**": **Veyran's own** trigger was cast-only — `or_copy`, and the ratchet
   `every_cast_or_copy_trigger_hears_copies_and_no_cast_trigger_does` holds both directions (Archmage Emeritus
   SOS-frozen, signed off). Opponent / any-player / mana-value / historic / kicked cast clauses came back clean.
+- Post-merge strict sweeps (audit build rebuilt on the tip with `01WRuXc2ns`'s commits, `CRAB_ANSWER_LOG=strict`):
+  29300 at 2 and 3 seats with `CRAB_POD_CONCEDE=20` (5,117 games, all decided) and 29301 at 5 and 7 seats (2,106 games,
+  one Descent into Avernus CR 104.4a draw) — 0 panics, 0 strict aborts. Further text probes clean: event scopes
+  (gain / draw / discard / lose life / sacrifice / cycle), static self-restrictions (can't block / attack / untap), and
+  Equipment / Aura printed bonuses (the Swords and `sac_on_damage_aura` are helpers).
 - **Primitives:** an `{X}` mana ability activated with no X uses X = 1 (the auto-tapper's fixer); the target-discount
   static (`CostReductionForYourSpellsTargetingThis`) gains `opponents_only`, and on a Curse "this" is the enchanted
   player.
