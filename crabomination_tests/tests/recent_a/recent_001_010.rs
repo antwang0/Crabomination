@@ -6172,6 +6172,29 @@ mod recent {
         assert!(g.exile.iter().any(|c| c.id == spirit), "Spirit exiled");
     }
 
+    /// "Exile target Spirit, creature with disturb, or enchantment": a Human
+    /// with disturb (Devoted Grafkeeper) is a legal target, a Bear is not.
+    #[test]
+    fn thraben_exorcism_targets_a_creature_with_disturb() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let keeper = g.add_card_to_battlefield(1, catalog::devoted_grafkeeper());
+        let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let cast = |g: &mut GameState, t: CardId| {
+            let ex = g.add_card_to_hand(0, catalog::thraben_exorcism());
+            g.players[0].mana_pool.add(crabomination::mana::Color::White, 1);
+            g.players[0].mana_pool.add_colorless(1);
+            g.perform_action(GameAction::CastSpell {
+                card_id: ex, target: Some(Target::Permanent(t)), additional_targets: vec![], mode: None, x_value: None,
+            })
+        };
+        assert!(cast(&mut g.clone(), bear).is_err(), "a Bear is no Spirit, disturb creature or enchantment");
+        cast(&mut g, keeper).expect("a creature with disturb is a legal target");
+        drain_stack(&mut g);
+        assert!(g.exile.iter().any(|c| c.id == keeper));
+    }
+
     /// Falkenrath Celebrants makes two Blood tokens on entry.
     #[test]
     fn falkenrath_celebrants_makes_two_blood() {

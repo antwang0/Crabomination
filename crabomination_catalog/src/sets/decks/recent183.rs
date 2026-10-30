@@ -83,7 +83,8 @@ pub fn freestrider_lookout() -> CardDefinition {
 
 /// Fleeting Reflection — {1}{U} Instant. Target creature you control gains
 /// hexproof until end of turn and untaps; until end of turn it becomes a copy of
-/// up to one other target creature. (The copy target is modeled as required.)
+/// up to one other target creature (`OptionalTargets { min: 1 }`: the copy slot
+/// may be left empty).
 pub fn fleeting_reflection() -> CardDefinition {
     CardDefinition {
         name: "Fleeting Reflection",

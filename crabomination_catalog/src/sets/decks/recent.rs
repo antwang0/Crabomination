@@ -12192,8 +12192,8 @@ pub fn path_to_the_festival() -> CardDefinition {
     }
 }
 
-/// Thraben Exorcism — {1}{W} Instant. Exile target Spirit or enchantment. (The
-/// "creature with disturb" sub-filter is approximated away.)
+/// Thraben Exorcism — {1}{W} Instant. Exile target Spirit, creature with
+/// disturb, or enchantment.
 pub fn thraben_exorcism() -> CardDefinition {
     CardDefinition {
         name: "Thraben Exorcism",
@@ -12202,6 +12202,7 @@ pub fn thraben_exorcism() -> CardDefinition {
         effect: Effect::Move {
             what: target_filtered(
                 SelectionRequirement::HasCreatureType(CreatureType::Spirit)
+                    .or(SelectionRequirement::Creature.and(SelectionRequirement::HasDisturb))
                     .or(SelectionRequirement::Enchantment),
             ),
             to: ZoneDest::Exile,
