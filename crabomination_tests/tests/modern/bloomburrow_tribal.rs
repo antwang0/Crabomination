@@ -297,31 +297,28 @@ fn sylvan_caryatid_taps_for_one_mana_of_chosen_color() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Black), 1);
 }
 
+/// "If you cast this spell during your main phase" — your main phase is +4/+4;
+/// your combat step and an opponent's turn are +2/+2 (it had read "your turn").
 #[test]
 fn might_of_old_krosa_scales_with_whose_turn() {
-    // Your turn → +4/+4.
-    let mut g = two_player_game();
-    g.active_player_idx = 0;
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let mok = g.add_card_to_hand(0, catalog::might_of_old_krosa());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: mok, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: None }).expect("cast on your turn");
-    drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(bear).unwrap().power(), 2 + 4, "+4/+4 on your turn");
-
-    // Opponent's turn → +2/+2.
-    let mut g = two_player_game();
-    g.active_player_idx = 1;
-    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-    let mok = g.add_card_to_hand(0, catalog::might_of_old_krosa());
-    g.players[0].mana_pool.add(Color::Green, 1);
-    g.perform_action(GameAction::CastSpell {
-        card_id: mok, target: Some(Target::Permanent(bear)),
-        additional_targets: vec![], mode: None, x_value: None }).expect("cast on opp turn");
-    drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(bear).unwrap().power(), 2 + 2, "+2/+2 on opponent's turn");
+    for (active, step, pump) in [
+        (0, TurnStep::PreCombatMain, 4),
+        (0, TurnStep::DeclareBlockers, 2),
+        (1, TurnStep::PreCombatMain, 2),
+    ] {
+        let mut g = two_player_game();
+        g.active_player_idx = active;
+        g.step = step;
+        g.priority.player_with_priority = 0;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let mok = g.add_card_to_hand(0, catalog::might_of_old_krosa());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: mok, target: Some(Target::Permanent(bear)),
+            additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(bear).unwrap().power(), 2 + pump, "active {active}, {step:?}");
+    }
 }
 
 #[test]

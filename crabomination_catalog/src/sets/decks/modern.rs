@@ -1112,7 +1112,9 @@ pub fn might_of_old_krosa() -> CardDefinition {
         cost: cost(&[g()]),
         card_types: vec![CardType::Instant],
         effect: Effect::If {
-            cond: crate::card::Predicate::IsTurnOf(PlayerRef::You),
+            // "If you cast this spell during your main phase" — not merely
+            // on your turn: a combat-step cast gets +2/+2.
+            cond: crate::card::Predicate::YourMainPhase,
             then: Box::new(pump(4)),
             else_: Box::new(pump(2)),
         },
@@ -20405,14 +20407,14 @@ pub fn doomsday_excruciator() -> CardDefinition {
         toughness: 6,
         keywords: vec![Keyword::Flying],
         triggered_abilities: vec![
-            etb(Effect::If {
-                cond: Predicate::SourceWasCast,
-                then: Box::new(Effect::ExileLibraryExceptBottom {
+            {
+                let mut t = etb(Effect::ExileLibraryExceptBottom {
                     who: PlayerRef::EachPlayer,
                     keep: Value::Const(6),
-                }),
-                else_: Box::new(Effect::Noop),
-            }),
+                });
+                t.event = t.event.with_filter(Predicate::TriggerSourceEnteredByCast);
+                t
+            },
             TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(crate::game::types::TurnStep::Upkeep),
@@ -48441,8 +48443,8 @@ pub fn living_end() -> CardDefinition {
 
 // ── modern_decks-20 ──────────────────────────────────────────────────────────
 
-/// The One Ring — {4} Legendary Artifact, indestructible. ETB: protection
-/// from everything until your next turn. {T}: add a burden counter, draw
+/// The One Ring — {4} Legendary Artifact, indestructible. ETB, if you cast it:
+/// protection from everything until your next turn. {T}: add a burden counter, draw
 /// that many. Upkeep: lose 1 life per burden counter.
 pub fn the_one_ring() -> CardDefinition {
     CardDefinition {
@@ -48452,8 +48454,10 @@ pub fn the_one_ring() -> CardDefinition {
         supertypes: vec![Supertype::Legendary],
         keywords: vec![Keyword::Indestructible],
         triggered_abilities: vec![
+            // "When The One Ring enters, if you cast it, …" (CR 603.4).
             TriggeredAbility {
-                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
+                event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource)
+                    .with_filter(Predicate::TriggerSourceEnteredByCast),
                 effect: Effect::PlayerProtectionUntilNextTurn {
                     who: PlayerRef::You,
                 },

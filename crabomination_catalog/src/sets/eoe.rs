@@ -8110,8 +8110,8 @@ pub fn scout_for_survivors() -> CardDefinition {
 }
 
 /// Weftwalking — {4}{U}{U} Enchantment. When it enters, shuffle your hand and
-/// graveyard into your library, then draw seven cards. (The "if you cast it"
-/// gate and the "first spell each player is free" static are dropped.)
+/// graveyard into your library, then draw seven cards, if you cast it. (The
+/// "first spell each player is free" static is dropped.)
 pub fn weftwalking() -> CardDefinition {
     CardDefinition {
         name: "Weftwalking",

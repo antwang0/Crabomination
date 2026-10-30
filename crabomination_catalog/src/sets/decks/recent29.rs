@@ -98,8 +98,7 @@ pub fn meticulous_artisan() -> CardDefinition {
     }
 }
 
-/// Iridescent Tiger — {4}{R} 3/4 Cat. ETB: add {W}{U}{B}{R}{G}. (The "if you
-/// cast it" gate is dropped — minor.)
+/// Iridescent Tiger — {4}{R} 3/4 Cat. ETB, if you cast it: add {W}{U}{B}{R}{G}.
 pub fn iridescent_tiger() -> CardDefinition {
     CardDefinition {
         name: "Iridescent Tiger",
