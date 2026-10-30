@@ -202,8 +202,8 @@ pub fn hot_dog_cart() -> CardDefinition {
 /// Stardew Valley — land. {T}: add {C}. {2}, {T}, tap an untapped creature
 /// you control: a Food. {3}, {T}: choose target permanent you control; draw a
 /// card, then another player of your choice may gain control of that
-/// permanent. Sorcery speed. (Residual: "another player" is an opponent of
-/// your choice — the same set in free-for-all.)
+/// permanent. Sorcery speed. "Another player" is chosen among opponents: the
+/// engine plays no team format (2HG is tracked, not played), so the sets agree.
 pub fn stardew_valley() -> CardDefinition {
     CardDefinition {
         activated_abilities: vec![
