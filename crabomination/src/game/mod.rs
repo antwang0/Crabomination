@@ -192,6 +192,7 @@ mod own_creature_target;
 mod required_target;
 mod unattach;
 mod empty_draw;
+pub(crate) mod token_scale_memo;
 // CR 702.63a — vanishing's last-counter sacrifice trigger.
 mod vanishing;
 mod commander_return;
@@ -8175,22 +8176,23 @@ impl GameState {
         if let Some(frozen) = self.scratch.token_doubler_freeze.as_ref().and_then(|f| f.get(seat)) {
             return *frozen;
         }
-        self.battlefield
-            .iter()
-            .map(|c| {
-                c.definition
-                    .static_abilities
-                    .iter()
-                    .filter(|sa| match sa.effect {
-                        StaticEffect::DoubleTokens => c.controller == seat,
-                        // Primal Vigor doubles every player's tokens.
-                        StaticEffect::DoubleTokensEveryone => true,
-                        _ => false,
-                    })
-                    .count() as u32
-            })
-            .sum::<u32>()
-            + u32::from(self.players[seat].token_doublings_this_turn)
+        token_scale_memo::cached(self, seat, 0, || {
+            self.battlefield
+                .iter()
+                .map(|c| {
+                    c.definition
+                        .static_abilities
+                        .iter()
+                        .filter(|sa| match sa.effect {
+                            StaticEffect::DoubleTokens => c.controller == seat,
+                            // Primal Vigor doubles every player's tokens.
+                            StaticEffect::DoubleTokensEveryone => true,
+                            _ => false,
+                        })
+                        .count() as u32
+                })
+                .sum::<u32>()
+        }) + u32::from(self.players[seat].token_doublings_this_turn)
     }
 
     /// Spells on the stack (copies included; abilities not).
@@ -8263,12 +8265,14 @@ impl GameState {
     /// controls (Ojer Taq).
     pub fn creature_token_triplers_for(&self, seat: usize) -> u32 {
         use crate::effect::StaticEffect;
-        self.battlefield
-            .iter()
-            .filter(|c| c.controller == seat)
-            .flat_map(|c| c.definition.static_abilities.iter())
-            .filter(|sa| matches!(sa.effect, StaticEffect::TripleCreatureTokens))
-            .count() as u32
+        token_scale_memo::cached(self, seat, 1, || {
+            self.battlefield
+                .iter()
+                .filter(|c| c.controller == seat)
+                .flat_map(|c| c.definition.static_abilities.iter())
+                .filter(|sa| matches!(sa.effect, StaticEffect::TripleCreatureTokens))
+                .count() as u32
+        })
     }
 
     /// CR 614 — the host of `seat`'s live

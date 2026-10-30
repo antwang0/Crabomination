@@ -416,6 +416,7 @@ impl GameState {
     /// Tokens the spells and triggers already on the stack would mint as
     /// they resolve — the board a new token effect has to fit beside.
     pub(crate) fn pending_stack_tokens(&self) -> i64 {
+        let _memo = crate::game::token_scale_memo::Scope::open(self);
         self.stack
             .iter()
             .map(|si| {
@@ -444,6 +445,7 @@ impl GameState {
     /// [`Self::spell_token_estimate`] for a cast with its `targets` and `x`
     /// chosen: a per-target or X-scaled token spell is priced as cast.
     pub(crate) fn spell_token_estimate_cast(&self, id: CardId, caster: usize, targets: &[Target], x: u32) -> i64 {
+        let _memo = crate::game::token_scale_memo::Scope::open(self);
         let mut ctx = EffectContext::for_spell(caster, None, 0, x);
         ctx.targets = targets.to_vec();
         let own = match self.find_card_anywhere(id) {
@@ -503,6 +505,7 @@ impl GameState {
     /// on every land drop (two 1,000-game pods ended at the board cap on a
     /// Tricky Terrain turn of extra land drops). Small boards read 0.
     pub(crate) fn landfall_token_estimate(&self, seat: usize) -> i64 {
+        let _memo = crate::game::token_scale_memo::Scope::open(self);
         if self.battlefield.len() < crate::recommend::MAX_BATTLEFIELD / 4 {
             return 0;
         }
