@@ -20577,6 +20577,16 @@ is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
 
+### 2026-10-30 — an 8-seat attack sim re-gathers layers per attacker (Commander only)
+
+8-seat pod `--pod-decks 603,5307,1232,3522,2959,3007,3662,4518 --seed 2941252 --a dflt`, `CRAB_POD_FUZZ=2500`,
+overflow audit build: past **1,500 s** for one game. Six gdb samples, all inside `simulate_attack_leaf` →
+`sim_step` → `resolve_combat_into` → `deal_combat_damage_to_target` → `fire_combat_damage_to_player_triggers`, in
+`permanent_has_creature_type` (the CR 702.173a freerunning gate) or `permanents_with_abilities_removed_cold`, each a
+fresh `gather_continuous_effects` per attacker because a creature-type changer is in scope on that board. Not built:
+the walk is `(-68)`/`(-307)`/`(-318)`'s tuned code. Cheapest lead: test `is_commander` before the Assassin type read,
+and a freeze scope around the per-attacker damage loop if the gathers can't change inside it.
+
 ### 2026-10-26 — Homunculus Horde's once-a-turn doubling is 47 s of release for ONE game
 
 4-seat pod `--pod-decks 58,1035,2657,5346 --seed 12282 --first 1 --threads 1`, `release`: **47.7 s**, decided at
@@ -20586,6 +20596,8 @@ stack holds **839** Horde triggers at turn 56 — but a strict `debug` run of th
 the only hit in an 800-group / 1,600-game strict debug campaign (seed 11500). Not profiled; same family as the
 ~100-token flying board below (every token is a copy with a trigger of its own). A debug smoke that bounds its
 games needs a per-game timeout well over 600 s, or to read this family's hits as slow rather than hung.
+✅ *2026-10-30 (`01WRuXc2Es`)*: profiled — `mana_source_table` asked the ability-lock grant per mana source, a board
+walk each past 64 permanents. `GrantScan` fills it once: **713 s → 37 s** on the overflow audit build, same game.
 
 ### 2026-10-25 — a ~100-token flying board costs ~130 ms an action (Commander only)
 

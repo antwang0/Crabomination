@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc2Es`) — three hung sweep blocks, two board-size quadratics, stolen-permanent "that player"](#fixedopen-2026-10-30-commander-run-01wruxc2es--three-hung-sweep-blocks-two-board-size-quadratics-stolen-permanent-that-player) | 34 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc67u`) — a 25-minute pod decision, a copy event's subject, strict sweeps](#fixedopen-2026-10-30-commander-run-01wruxc67u--a-25-minute-pod-decision-a-copy-events-subject-strict-sweeps) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc48R`) — 99-card library caps, own-side "up to one" slots, Koh](#fixedopen-2026-10-30-commander-run-01wruxc48r--99-card-library-caps-own-side-up-to-one-slots-koh) | 25 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc3kK`) — strict sweeps, a face-down manifest leak, a craft-exile origin, cast-condition probes](#fixedopen-2026-10-30-commander-run-01wruxc3kk--strict-sweeps-a-face-down-manifest-leak-a-craft-exile-origin-cast-condition-probes) | 40 |
@@ -320,6 +321,38 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 ## The Commander NEXT's line 9 as `01WRuXc48R` found it (moved verbatim, 2026-10-30)
 
 9. **`01WRuXc3kK` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc3kK`): strict sweeps, then oracle-phrase probes.** Seeds 28110, 29300-29302 over every deck (audit build, strict answer log; concede, fuzz, 8 seats `--a dflt`): **13,109 games**, 1 strict abort (CR 701.40a — a manifest Grafdigger's Cage blocked left the card face down in the library; fixed, no raw `turn_face_down` + move remains), 0 panics; the undecided are CR 104.4 draws and finite board caps. Also: per-seat reveal-top asks answer before any move (CR 608.2), `exile_from::CRAFT` (Market Gnome), Might of Old Krosa's main phase, Stardew Valley's row closed. ⚠ **Four cube-pool fixes were landed and reverted** (`9a104ccda`) — The One Ring, Doomsday Excruciator, Wilt-Leaf Liege, Amped Raptor: the cube pool is frozen; **check INCOMPLETE's cube-frozen row before fixing a card in `cube.rs`** (two were already on it). Clean decks **5,649 → 5,669**, then **5,391** once the frozen gaps are named in their docs — **The One Ring is the top residual (286 decks, 267 sole) and its fix is one filter, frozen with the cube: apply the four at the next net retrain.** Gates: suite **29,350 / 0 / 7** (strict), clippy **0**, `--bench` **196,176 / 27.64 / 613.0 byte-identical**, pools decided. ⚠ `01WRuXc6Fk` swept 29300-29301 the same hour — **next seed 29400**. Next: phrase probes beyond cast conditions (a scratch regex pair per clause family finds what the audits' fixed shapes miss); the rank list is choice-exposure rows (Dawnhand, Battletide, Hawkeye).
+
+## FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc2Es`) — three hung sweep blocks, two board-size quadratics, stolen-permanent "that player"
+
+No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`, every deck, one game a
+block): **29410** (3/5 seats, concede + fuzz; 3,275 games, 2 CR 104.4a draws after concessions) and **29411** (4/6/8
+seats, `--a dflt` + fuzz; ~3,300 games): **four blocks HUNG past 1,200 s**, the rest decided or known shapes (Scute
+Swarm exponentials, CR 104.4 draws). 0 panics. **Next seed 29413** (`01WRuXc67u` swept 29410-29412 at other seat lists).
+- **The in-sim loop probe (seed 2943032, 6 seats):** `loop_hazard::entry_starts_loop` stood down inside settle and
+  resolve probes (`01WRuXc67u`) but the attack / block sims answer asks through `decide_pending_policy(.., false)` and
+  probed every gain-pick candidate, nested. `eval_modes: false` already means "no nested clone-and-resolve", so it now
+  runs under `in_lookahead` — every sim caller at once. Hung → 207 s, decided.
+- **Token estimates, O(stack × board) (seed 2942180, 6 seats, a doubling Scute board):** every mint the board-bound
+  gates priced (`pending_stack_tokens`, `landfall_token_estimate`, the cast-candidate gate) walked the battlefield for
+  doublers / triplers. `game/token_scale_memo.rs`: a scoped thread-local memo keyed on the borrowed state. Hung →
+  432 s, decided.
+- **Grant asks per permanent:** `mana_source_table` asked `ability_lock_grant_in_scope` per mana source, and past the
+  grant member list's 64 permanents each ask walks the board — `GrantScan` fills the two lock answers once. The
+  Homunculus Horde pod (PERF candidates 2026-10-26, `--pod-decks 58,1035,2657,5346 --seed 12282 --first 1`) **713 s →
+  37 s** on the audit build, same game. `granted_cant_lose_controllers` (the bot's opponent pick, per opponent per
+  slot) computed every permanent's layers; it tests `card_keyword_possible_on` first. Seed 2944124 (8 seats): hung → 65 s.
+- **Open: seed 2941252** (8 seats, `--pod-decks 603,5307,1232,3522,2959,3007,3662,4518 --a dflt`, fuzz) still runs past
+  1,500 s: the attack sims' `resolve_combat` re-gathers continuous effects per attacker
+  (`fire_combat_damage_to_player_triggers` → `permanent_has_creature_type` / `permanents_with_abilities_removed_cold`)
+  on a board where a creature-type changer is in scope. Engine perf, PERF candidates.
+- **CR 603.10a, "that player" of a stolen permanent:** Massacre Wurm, Assault Intercessor, Shriek and Nazgûl
+  Battle-Mace read `Triggerer` (a graveyard card → its owner); now `TriggerEventPlayer` (died-snapshot controller, the
+  sacrificer). Phrase probe over the Scryfall cache: no other dies/sacrifice "that player" reads the owner.
+- **Cards:** Smaug ignores combat damage outright (CR 603.2, no empty trigger); Rhino, Terrible Trampler's ETB is one
+  trigger (`SlotGroups`); Hew the Entwood's headless seat sacrifices its tapped lands (it sacrificed none).
+- **Census note:** a 24-group × 16-game `--card-census` reads "never activated" for Class levels and planeswalker
+  plus-abilities, but the bot takes both in isolation (`generic_sink`'s Class test, a fresh Garruk) — at that sample
+  size the census is sampling noise, not a bot gap.
 
 ## FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc67u`) — a 25-minute pod decision, a copy event's subject, strict sweeps
 
