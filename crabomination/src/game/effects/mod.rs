@@ -39111,7 +39111,12 @@ impl GameState {
                     Some(c) => c,
                     None => match ctx.trigger_source.and_then(|e| e.as_card_id()).filter(|&c| on_stack(c)) {
                         Some(c) => c,
-                        None => return Ok(()),
+                        // CR 800.4a — the spell's controller left while the ask
+                        // waited (8-seat sweep seed 2946692): spend the answer.
+                        None => {
+                            self.clear_answer_log();
+                            return Ok(());
+                        }
                     },
                 };
                 // CR 702.144a — "you **may** copy it".

@@ -120,3 +120,42 @@ fn cr_707_10c_a_copy_trigger_reads_the_copier() {
     assert_eq!((20 - g.players[0].life) % 3, 0, "the original's caster copied nothing");
     assert_eq!(g.players[1].life, 18, "one for the cast, one for the copy");
 }
+
+/// CR 800.4a — a demonstrate ask answered after the spell ceased to exist (its
+/// controller left the game while the ask waited, 8-seat sweep seed 2946692)
+/// copies nothing and spends the answer (a strict answer log aborted on it).
+#[test]
+fn cr_800_4a_a_parked_demonstrate_ask_whose_spell_is_gone_copies_nothing() {
+    use crabomination::decision::Decision;
+    use crabomination::game::types::{StackItem, Target};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].wants_ui = true;
+    let bears = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::healing_technique());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(bears)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("cast");
+    let mut asked = false;
+    for _ in 0..8 {
+        match g.pending_decision.as_ref().map(|d| &d.decision) {
+            Some(Decision::OptionalTrigger { .. }) => {
+                asked = true;
+                break;
+            }
+            Some(_) => break,
+            None => {
+                let _ = g.resolve_top_of_stack();
+            }
+        }
+    }
+    assert!(asked, "the caster is asked whether to demonstrate");
+    g.stack.retain(|si| !matches!(si, StackItem::Spell { card, .. } if card.id == spell));
+    let _ = g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Bool(true)));
+    assert!(g.stack.iter().all(|si| !matches!(si, StackItem::Spell { .. })), "no copy of a spell that is gone");
+}
