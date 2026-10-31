@@ -322,6 +322,32 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 
 9. **`01WRuXc3kK` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc3kK`): strict sweeps, then oracle-phrase probes.** Seeds 28110, 29300-29302 over every deck (audit build, strict answer log; concede, fuzz, 8 seats `--a dflt`): **13,109 games**, 1 strict abort (CR 701.40a — a manifest Grafdigger's Cage blocked left the card face down in the library; fixed, no raw `turn_face_down` + move remains), 0 panics; the undecided are CR 104.4 draws and finite board caps. Also: per-seat reveal-top asks answer before any move (CR 608.2), `exile_from::CRAFT` (Market Gnome), Might of Old Krosa's main phase, Stardew Valley's row closed. ⚠ **Four cube-pool fixes were landed and reverted** (`9a104ccda`) — The One Ring, Doomsday Excruciator, Wilt-Leaf Liege, Amped Raptor: the cube pool is frozen; **check INCOMPLETE's cube-frozen row before fixing a card in `cube.rs`** (two were already on it). Clean decks **5,649 → 5,669**, then **5,391** once the frozen gaps are named in their docs — **The One Ring is the top residual (286 decks, 267 sole) and its fix is one filter, frozen with the cube: apply the four at the next net retrain.** Gates: suite **29,350 / 0 / 7** (strict), clippy **0**, `--bench` **196,176 / 27.64 / 613.0 byte-identical**, pools decided. ⚠ `01WRuXc6Fk` swept 29300-29301 the same hour — **next seed 29400**. Next: phrase probes beyond cast conditions (a scratch regex pair per clause family finds what the audits' fixed shapes miss); the rank list is choice-exposure rows (Dawnhand, Battletide, Hawkeye).
 
+## FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc4Xa`) — the last open hang: unbudgeted attack / block chains, per-defender attacker caps
+
+No seats. Sweeps: **29414** (audit build, strict, 4/6 seats, concede; 2,559 games, 0 bad — `01WRuXc2Es` swept 29414 at
+7 seats the same hour), **29415** (audit, strict, 3/5 seats, `--a dflt` + fuzz; part-run — a worker restart killed it;
+3 undecided: a Secret Arcade + Ajani's Chosen mandatory Cat loop, CR 104.4b — every permanent is an enchantment, so
+each Cat retriggers it; Underworld Breach + Three Visits and one more board cap, both finite), **29416** (release tip,
+8 seats, `--a dflt` + fuzz; 768 games, one Scute Swarm board cap, **no hang**) and **29417** (release tip, 5/6 seats,
+`--a dflt` + fuzz; 2,252 games: four Descent into Avernus CR 104.4a draws, one Authority of the Consuls board cap, no
+hang). 0 panics. **Next seed 29418.**
+- ✅ **Seed 2941252 (8 seats) was the CHAINS, not the gather.** Release base: 529 s for the game, **414 s of it one
+  block step** — `block_chain_candidate` offered 868 (blocker, attacker) moves, ~0.6 s a sim on the audit build, then
+  816 more; the attack chain priced pairs + six growth steps of seven-turn `pod_horizon` sims (1.7 s each at 155
+  permanents). `CHAIN_SIM_BUDGET` (`bot.rs`): 1,024 sims ÷ (turns × board²) for attacks, ÷ (board × attackers) for
+  blocks, floors 64 permanents / 4 attackers so a duel keeps the whole budget; a block step past it keeps its
+  cheapest-blocker prefix. **529 s → 95 s, longest decision 414 s → 15 s.** Test
+  `chain_budgets_shrink_with_turns_board_and_attackers`. The per-combat-damage gather is still the per-sim floor
+  (PERF candidates).
+- ✅ **CR 506.2 per-defender attacker caps were invisible to the bot:** Tomik, Orzhov Lawmage (one attacker per
+  planeswalker) and Crawlspace (two per player) reject the whole declaration, and the same game logged three
+  `REJECT … InvalidAttackTarget(7)` — three seats' whole combats. `pod_attack::fit_attacker_caps` runs last on the
+  declaration (Commander seats only): the surplus re-aims at a live opponent with room or stays home. Test
+  `cr_506_2_attacks_past_a_defender_s_cap_re_aim`. 0 REJECTs in the re-run.
+- Gates: suite **29,383 / 0 / 7** (strict answer log, precon-seat test skipped); `--bench` **196,176 / 613.0 / 0
+  stalls — byte-identical**, determinism ok; cube / sos / sealed `--games 100 --seed 28200` decision-identical base vs
+  tip (372,578 / 213,776 / 520,724).
+
 ## FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc2Es`) — three hung sweep blocks, two board-size quadratics, stolen-permanent "that player"
 
 No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANSWER_LOG=strict`, every deck, one game a
@@ -348,7 +374,7 @@ Swarm exponentials, CR 104.4 draws). 0 panics. **Next seed 29413** (`01WRuXc67u`
   Homunculus Horde pod (PERF candidates 2026-10-26, `--pod-decks 58,1035,2657,5346 --seed 12282 --first 1`) **713 s →
   37 s** on the audit build, same game. `granted_cant_lose_controllers` (the bot's opponent pick, per opponent per
   slot) computed every permanent's layers; it tests `card_keyword_possible_on` first. Seed 2944124 (8 seats): hung → 65 s.
-- **Open: seed 2941252** (8 seats, `--pod-decks 603,5307,1232,3522,2959,3007,3662,4518 --a dflt`, fuzz) still runs past
+- ✅ *Fixed by `01WRuXc4Xa` (chain budgets, see its section):* **seed 2941252** (8 seats, `--pod-decks 603,5307,1232,3522,2959,3007,3662,4518 --a dflt`, fuzz) still runs past
   1,500 s: the attack sims' `resolve_combat` re-gathers continuous effects per attacker
   (`fire_combat_damage_to_player_triggers` → `permanent_has_creature_type` / `permanents_with_abilities_removed_cold`)
   on a board where a creature-type changer is in scope. Engine perf, PERF candidates.

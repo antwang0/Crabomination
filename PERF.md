@@ -20588,6 +20588,12 @@ the walk is `(-68)`/`(-307)`/`(-318)`'s tuned code. Cheapest lead: test `is_comm
 and a freeze scope around the per-attacker damage loop if the gathers can't change inside it.
 `permanents_with_abilities_removed_cold` is the bigger half: with a `RemoveAllAbilities` effect live it runs a
 whole-board `apply_layers` per attacker (O(attackers × board × effects)) unless a freeze scope is already open.
+✅ *2026-10-31 (`01WRuXc4Xa`)*: the per-attacker gather is real but was not the multiplier — the CHAINS were. Release,
+same game: **529 s**, 414 s of it one block step (868 moves, ~0.6 s a sim on the audit build); the attack chain priced
+pairs + six steps of seven-turn `pod_horizon` sims (1.7 s each at 155 permanents). `CHAIN_SIM_BUDGET` (1,024 sims ÷
+turns × board², or ÷ board × attackers for blocks; floors 64 / 4) → **95 s**, longest decision 15 s. `--bench`
+196,176 / 613.0 byte-identical; cube / sos / sealed `--games 100 --seed 28200` decision-identical. Still open, and now
+the per-sim floor: the gather per combat damage event (the lead above).
 
 ### 2026-10-26 — Homunculus Horde's once-a-turn doubling is 47 s of release for ONE game
 
