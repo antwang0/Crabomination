@@ -216,19 +216,31 @@ pub(crate) fn reaim_prohibited_attacks(state: &GameState, seat: usize, mut attac
     // A seat no creature may attack (The Second Doctor's "can't attack you or
     // permanents you control during their next turn", CR 508.1): the
     // planner's fallback defender can be one (6-seat pod, seed 778020).
+    // So can an attacker's own per-defender bar (Chaos Dragon's "can't attack
+    // those players", CR 508.1a; seed 779101, thirteen rejected declarations).
     let barred = |a: &Attack| {
-        let open = match a.target {
-            AttackTarget::Player(d) => defenders.contains(&d),
-            AttackTarget::Planeswalker(pw) => state.battlefield_find(pw).is_some_and(|c| defenders.contains(&c.controller)),
-            AttackTarget::Battle(_) => true,
+        let defender = match a.target {
+            AttackTarget::Player(d) => Some(d),
+            AttackTarget::Planeswalker(pw) => state.battlefield_find(pw).map(|c| c.controller),
+            AttackTarget::Battle(_) => None,
         };
-        !open || state.attack_target_prohibited(a, statics).is_some()
+        let own_bar = |d: usize| {
+            let kws = state.computed_permanent(a.attacker).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
+            state.attacker_target_block(seat, a.attacker, &kws, Some(d)).is_some()
+        };
+        defender.is_some_and(|d| !defenders.contains(&d) || own_bar(d))
+            || state.attack_target_prohibited(a, statics).is_some()
     };
-    if !attacks.iter().any(barred) {
+    // CR 508.1d / 701.15b — an attack obeys as many defender-naming
+    // requirements as any other it could make: a goaded creature at its goader
+    // while another seat is open sank the batch (6-seat pod, seed 779124).
+    let requirements = state.any_goad_present() || !state.attack_player_requirements.is_empty();
+    let obeys = |a: &Attack| !requirements || state.attack_target_obeys_most(seat, a.attacker, a.target);
+    if !attacks.iter().any(|a| barred(a) || !obeys(a)) {
         return attacks;
     }
     attacks.retain_mut(|a| {
-        if !barred(a) {
+        if !barred(a) && obeys(a) {
             return true;
         }
         let kws = state.computed_permanent(a.attacker).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
@@ -239,13 +251,15 @@ pub(crate) fn reaim_prohibited_attacks(state: &GameState, seat: usize, mut attac
                 let AttackTarget::Player(d) = c.target else { return false };
                 state.attacker_target_block(seat, a.attacker, &kws, Some(d)).is_none()
                     && state.attack_target_prohibited(c, statics).is_none()
+                    && obeys(c)
             });
         match open {
             Some(c) => {
                 *a = c;
                 true
             }
-            None => false,
+            // No open seat obeys more: an attack only short of the most stays.
+            None => !barred(a),
         }
     });
     attacks
@@ -488,6 +502,45 @@ mod tests {
         assert_eq!(out, vec![Attack { attacker: bears[0], target: AttackTarget::Player(3) }]);
         g.players[0].next_turn_attack_bans.push((3, 4));
         assert!(reaim_prohibited_attacks(&g, 0, at).is_empty());
+    }
+
+    /// CR 508.1a — bug fix (seed 779101): Chaos Dragon "can't attack those
+    /// players" after its roll; the planner aimed it at the barred seat and
+    /// the whole declaration was rejected. It re-aims at an open seat.
+    #[test]
+    fn cr_508_1a_an_attacker_s_own_seat_bar_re_aims() {
+        let (mut g, _) = table([40; 4]);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let dragon = g.add_card_to_battlefield(0, crate::catalog::chaos_dragon());
+        g.clear_sickness(dragon);
+        let grant = crate::effect::Effect::GrantKeyword {
+            what: crate::effect::Selector::ExactObjects(vec![dragon]),
+            keyword: crate::card::Keyword::CantAttackPlayer(1),
+            duration: crate::effect::Duration::EndOfCombat,
+        };
+        g.resolve_effect(&grant, &crate::game::effects::EffectContext::for_ability(dragon, 0, None)).unwrap();
+        let out = reaim_prohibited_attacks(&g, 0, vec![Attack { attacker: dragon, target: AttackTarget::Player(1) }]);
+        assert_eq!(out.len(), 1);
+        assert_ne!(out[0].target, AttackTarget::Player(1));
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
+    }
+
+    /// CR 508.1d / 701.15b — bug fix (seed 779124): a Bear goaded by seat 1
+    /// and aimed at seat 1 while seats 2 and 3 are open re-aims at a
+    /// non-goader.
+    #[test]
+    fn cr_701_15b_a_goaded_attack_at_its_goader_re_aims() {
+        let (mut g, bears) = table([40; 4]);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.clear_sickness(bears[0]);
+        let ctx = crate::game::effects::EffectContext::for_ability(CardId(0), 1, None);
+        g.resolve_effect(&crate::effect::Effect::Goad { what: crate::effect::Selector::ExactObjects(vec![bears[0]]) }, &ctx)
+            .unwrap();
+        let at = vec![Attack { attacker: bears[0], target: AttackTarget::Player(1) }];
+        assert!(!g.would_accept(crate::game::GameAction::DeclareAttackers(at.clone())));
+        let out = reaim_prohibited_attacks(&g, 0, at);
+        assert!(matches!(out[..], [Attack { target: AttackTarget::Player(2 | 3), .. }]), "{out:?}");
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
     }
 
     /// CR 508.1g — bug fix (seed 15255's 1,459-turn stalemate): before
