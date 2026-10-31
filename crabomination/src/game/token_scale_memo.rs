@@ -8,9 +8,11 @@ use std::cell::RefCell;
 
 use super::GameState;
 
+/// Open scopes, the state they read, and each seat's (doublers, triplers).
+type Memo = (u32, usize, Vec<[Option<u32>; 2]>);
+
 thread_local! {
-    /// Open scopes, the state they read, and each seat's (doublers, triplers).
-    static MEMO: RefCell<(u32, usize, Vec<[Option<u32>; 2]>)> = const { RefCell::new((0, 0, Vec::new())) };
+    static MEMO: RefCell<Memo> = const { RefCell::new((0, 0, Vec::new())) };
 }
 
 /// Held for one estimate: while any is alive, [`cached`] serves the state it
