@@ -51,22 +51,20 @@ pub(super) fn pact_payable(state: &GameState, seat: usize, def: &CardDefinition)
     let mut have_total = 0;
     let mut have = [0u32; 5];
     for p in state.battlefield.iter().filter(|p| p.controller == seat) {
-        let colors = p
+        // A plain tap ability only: a sacrifice / discard / mana-cost source
+        // (Skirk Prospector, a Signet) is no free mana at the upkeep.
+        let mut abilities = p
             .definition
             .activated_abilities
             .iter()
-            .fold(crate::mana::ColorSet::empty(), |acc, a| {
-                acc.union(crate::game::actions::effect_produced_colors(&a.effect))
-            });
-        if colors.is_empty()
-            && !p
-                .definition
-                .activated_abilities
-                .iter()
-                .any(crate::game::mana_shape::is_countable_mana_ability)
-        {
+            .filter(|a| crate::game::mana_shape::is_countable_mana_ability(a))
+            .peekable();
+        if abilities.peek().is_none() {
             continue;
         }
+        let colors = abilities.fold(crate::mana::ColorSet::empty(), |acc, a| {
+            acc.union(crate::game::actions::effect_produced_colors(&a.effect))
+        });
         have_total += 1;
         for (i, c) in Color::ALL.into_iter().enumerate() {
             have[i] += u32::from(colors.contains(c));
@@ -114,5 +112,21 @@ mod tests {
             reds.add_card_to_battlefield(0, catalog::mountain());
         }
         assert!(!pact_payable(&reds, 0, &pact), "no blue source");
+    }
+
+    /// Bug fix (precon seat test, The Ninth Doctor seed 6308): Judith cast
+    /// Slaughter Pact off a Swamp, a Mountain and Skirk Prospector — whose
+    /// "sacrifice a Goblin: add {R}" counted as a third source — and lost at
+    /// her upkeep.
+    #[test]
+    fn a_sacrifice_mana_ability_does_not_pay_a_pact() {
+        let mut g = crate::game::multi_player_game(4);
+        let pact = catalog::slaughter_pact();
+        g.add_card_to_battlefield(0, catalog::swamp());
+        g.add_card_to_battlefield(0, catalog::mountain());
+        g.add_card_to_battlefield(0, catalog::skirk_prospector());
+        assert!(!pact_payable(&g, 0, &pact), "two lands and a sacrifice outlet");
+        g.add_card_to_battlefield(0, catalog::mountain());
+        assert!(pact_payable(&g, 0, &pact), "three lands");
     }
 }
