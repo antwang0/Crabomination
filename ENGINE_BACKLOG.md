@@ -340,7 +340,7 @@ No seats. `pod_residuals.py --rank`, reading each ranked 🟡 row for a game-sta
 - **Sentinel Tower** counts every player's instants and sorceries (`Value::InstantsOrSorceriesCastThisTurn` sums
   over a fan-out ref; no card read one). **Elda** demonstrates only the turn's first nonlegendary creature spell,
   counting casts before she arrived (`CastSpellFirstMatchingThisTurn`).
-- Clean decks 5,437 → 5,446 / 6,140. Gates: suite **29,392 / 0 / 8** (strict), `--bench` **196,176 / 27.64 / 613.0 / 0
+- Clean decks 5,437 → 5,446 / 6,140. Gates: suite **29,392 / 0 / 8** (strict), clippy **0**, `--bench` **196,176 / 27.64 / 613.0 / 0
   stalls byte-identical**, determinism + thread determinism ok. Pods (release): **29418** 4 seats × every deck, 1,535
   games, all decided, 0 bad; **29419** 6 seats × every deck, 1,024 games, 1,023 decided + one CR 104.4a draw (Descent into Avernus
   takes the last two seats from 4 together, `--pod-decks 3280,4670,809,145,5031,4618 --seed 2942524`), 0 panics, 0 hangs..
