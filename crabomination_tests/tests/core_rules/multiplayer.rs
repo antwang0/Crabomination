@@ -9152,6 +9152,23 @@ fn cr_508_1d_no_open_defender_frees_a_goaded_creature() {
     declare_for_seat0(&mut g, vec![]).expect("the banned seat's planeswalker is barred with it");
 }
 
+/// CR 508.1d — a "must attack" Port Razer that has already attacked every
+/// open seat this turn is able to attack no one, so the empty declaration is
+/// legal. Bug fix (6-seat pod, seed 4506217): the ability test's fast path
+/// skipped Port Razer's per-defender bar and required the attack.
+#[test]
+fn cr_508_1d_port_razer_out_of_seats_is_not_required() {
+    let mut def = catalog::port_razer();
+    def.keywords.push(crabomination::card::Keyword::MustAttack);
+    let mut g = multi_player_game(3);
+    let razer = g.add_card_to_battlefield(0, def);
+    g.clear_sickness(razer);
+    g.battlefield_find_mut(razer).unwrap().combat_defenders.get_or_insert_with(Vec::new).push(1);
+    assert!(declare_for_seat0(&mut g.clone(), vec![]).is_err(), "seat 2 is still open");
+    g.battlefield_find_mut(razer).unwrap().combat_defenders.get_or_insert_with(Vec::new).push(2);
+    declare_for_seat0(&mut g, vec![]).expect("every seat attacked: nothing binds");
+}
+
 /// CR 509.1a / 509.1c — each defending player declares their own blocks, so
 /// a "blocks each combat if able" creature binds only its controller's
 /// declaration. Bug fix (6-seat pod, seed 780059): seat 5's idle Khârn the

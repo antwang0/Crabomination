@@ -1012,6 +1012,10 @@ impl GameState {
                     | Keyword::CantAttackUnlessMoreCreaturesThanDefender
                     | Keyword::CantAttackUnlessMoreLandsThanDefender
                     | Keyword::CantAttackUnlessDefenderGraveyardAtLeast(_)
+                    // CR 508.1d — Port Razer (or a copy) that has attacked
+                    // every open seat this turn is able to attack nobody; the
+                    // fast path required it (6-seat pod, seed 4506217).
+                    | Keyword::CantAttackPlayerAttackedThisTurn
             )
         })
     }
