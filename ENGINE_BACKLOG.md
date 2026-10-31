@@ -422,6 +422,9 @@ sessions within the hour (the duplicates were dropped on rebase).
 - **Concession sweep**: random pods at 3-8 seats under `CRAB_POD_CONCEDE=30` (4501) and `=10 --a dflt` (4502), 300 games each,
   overflow build — 0 panics, 0 rejections, 0 undecided. (Recipe: per game `random.Random(seed)` picks seats and decks, game
   seed `seed*1000+i`, `CRAB_POD_TRACE=0` to see REJECT lines.)
+- ⏳ **CLAIMED by `01WRuXc4hq` (audit-build sweep 4505-4506, 6-8 seats, strict):** an `InvalidAttackTarget` (`--seats 6
+  --pod-decks 5581,142,2219,1297,3658,440 --seed 4505111`, Drannith Magistrate seat) and an empty declaration refused
+  `CannotAttack` (`--seats 6 --pod-decks 5695,1661,4014,58,6129,5168 --seed 4506217 --a dflt`, `CRAB_POD_CONCEDE=15`).
 - Gates: suite **29,422 / 0 / 8** (strict, precon-seat test excluded — not re-run this session); `clippy -p crabomination
   --all-targets` 0 (workspace clippy not re-run: only the engine crate changed); `--bench` **196,176 / 27.64 / 613.0 / 0 stalls
   byte-identical**, determinism ok, 239.5 games/s; cube / sos / sealed × 300 (seed 4601) 0 undecided.
