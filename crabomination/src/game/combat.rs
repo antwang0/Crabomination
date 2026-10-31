@@ -7181,6 +7181,15 @@ impl GameState {
         if min_b <= 1 {
             return true;
         }
+        // CR 506.2 / 509.1c — a combat-wide block cap (Silent Arbiter) with
+        // fewer free slots than the count needs leaves the requirement no
+        // legal form: a must-be-blocked menace Jon Irenicus under a cap of one
+        // rejected every declaration (7-seat pod, seed 806097).
+        if let Some(cap) = self.combat_participation_cap(true)
+            && (cap as usize).saturating_sub(self.block_map.len()) + self.blocker_count_of(attacker) < min_b
+        {
+            return false;
+        }
         let Some(defender_idx) = self.attacking.iter().find(|a| a.attacker == attacker).and_then(
             |a| self.defender_for(a.target),
         ) else {

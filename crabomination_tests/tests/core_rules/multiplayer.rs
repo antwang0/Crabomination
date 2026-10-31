@@ -9253,6 +9253,32 @@ fn cr_509_1c_a_lure_capped_at_one_blocker_is_met_by_one() {
     g.perform_action(GameAction::DeclareBlockers(vec![(b1, boar)])).expect("one blocker obeys the most");
 }
 
+/// CR 506.2 / 509.1c — a "must be blocked if able" attacker with menace
+/// under Silent Arbiter (no more than one creature can block each combat)
+/// can't be blocked legally, so the requirement doesn't bind and no blocks
+/// is legal. Bug fix (7-seat pod, seed 806097): every declaration was refused.
+#[test]
+fn cr_509_1c_a_block_cap_below_the_menace_count_unbinds_must_be_blocked() {
+    use crabomination::card::Keyword;
+    let mut g = multi_player_game(3);
+    let mut def = catalog::grizzly_bears();
+    def.keywords.extend([Keyword::MustBeBlocked, Keyword::Menace]);
+    let jon = g.add_card_to_battlefield(0, def);
+    g.clear_sickness(jon);
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: jon, target: AttackTarget::Player(1) }]))
+        .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.clone().perform_action(GameAction::DeclareBlockers(vec![])).is_err(), "two able bodies: it binds");
+    g.add_card_to_battlefield(2, catalog::silent_arbiter());
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("one block slot can't meet menace");
+}
+
 /// CR 725.4 — when the monarch leaves, the active player BECOMES the
 /// monarch, and that is an event ("whenever you become the monarch"). The
 /// leave path set the designation but dropped its events.
