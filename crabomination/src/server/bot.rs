@@ -3850,6 +3850,7 @@ impl HeuristicBot {
                         if blocks.len() != before {
                             drop_underfilled_blocks(state, &mut blocks);
                         }
+                        drop_partial_all_blocks(state, seat, &mut blocks);
                         drop_lone_cant_block_alone(state, &mut blocks);
                     }
                     Some(BotStep::plain(GameAction::DeclareBlockers(blocks)))
@@ -18064,6 +18065,32 @@ fn drop_underfilled_blocks(state: &GameState, blocks: &mut Vec<(CardId, CardId)>
     blocks.retain(|(_, a)| !short.contains(a));
 }
 
+/// CR 509.1b — Tromokratis ("can't be blocked unless all creatures defending
+/// player controls block it"): a plan that blocks such an attacker with some
+/// but not every able body of `seat` leaves it unblocked instead (8-seat pod,
+/// seed 808044: five Elf Warriors on it, a sixth able creature elsewhere).
+fn drop_partial_all_blocks(state: &GameState, seat: usize, blocks: &mut Vec<(CardId, CardId)>) {
+    use crate::card::Keyword;
+    let partial: Vec<CardId> = state
+        .attacking()
+        .iter()
+        .map(|a| a.attacker)
+        .filter(|&a| {
+            blocks.iter().any(|(_, x)| *x == a)
+                && state.computed_permanent(a).is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBeBlockedUnlessAllBlock))
+                && state.battlefield.iter().any(|b| {
+                    b.controller == seat
+                        && !state.blocks(b.id, a)
+                        && !blocks.iter().any(|(bid, x)| *bid == b.id && *x == a)
+                        && state.block_requirement_able(b, a)
+                })
+        })
+        .collect();
+    if !partial.is_empty() {
+        blocks.retain(|(_, a)| !partial.contains(a));
+    }
+}
+
 /// CR 509.1c — "can't attack or block alone": a plan whose only blocker
 /// carries it, with nobody else blocking this combat yet, blocks nothing
 /// (7-seat pod, seed 797126: a lone Beast sank the declaration).
@@ -24857,6 +24884,33 @@ mod tests {
         enforce_block_requirements(&g, 1, &mut blocks);
         assert_eq!(blocks, vec![(small, lure)]);
         assert!(g.would_accept(GameAction::DeclareBlockers(blocks)));
+    }
+
+    /// CR 509.1b — bug fix (8-seat pod, seed 808044): a plan blocking a
+    /// Tromokratis-style attacker with only some of the able bodies drops it.
+    #[test]
+    fn a_partial_block_on_an_all_block_attacker_is_dropped() {
+        let mut g = two_player_game();
+        let mut def = catalog::grizzly_bears();
+        def.keywords.push(crate::card::Keyword::CantBeBlockedUnlessAllBlock);
+        let tromo = g.add_card_to_battlefield(0, def);
+        g.clear_sickness(tromo);
+        let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: tromo, target: AttackTarget::Player(1) }]))
+            .unwrap();
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let mut partial = vec![(b1, tromo)];
+        assert!(!g.would_accept(GameAction::DeclareBlockers(partial.clone())));
+        drop_partial_all_blocks(&g, 1, &mut partial);
+        assert!(partial.is_empty());
+        let mut all = vec![(b1, tromo), (b2, tromo)];
+        drop_partial_all_blocks(&g, 1, &mut all);
+        assert_eq!(all.len(), 2, "every able body on it stays");
     }
 
     /// `no_empty_attacks`: Living Library (0/4) stays home on an open board
