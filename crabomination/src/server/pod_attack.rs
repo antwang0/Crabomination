@@ -212,12 +212,23 @@ pub(crate) fn reaim_prohibited_attacks(state: &GameState, seat: usize, mut attac
         return attacks;
     }
     let statics = crate::game::combat::attack_static_scan(state);
-    if attacks.iter().all(|a| state.attack_target_prohibited(a, statics).is_none()) {
+    let defenders = state.attackable_players_for(seat);
+    // A seat no creature may attack (The Second Doctor's "can't attack you or
+    // permanents you control during their next turn", CR 508.1): the
+    // planner's fallback defender can be one (6-seat pod, seed 778020).
+    let barred = |a: &Attack| {
+        let open = match a.target {
+            AttackTarget::Player(d) => defenders.contains(&d),
+            AttackTarget::Planeswalker(pw) => state.battlefield_find(pw).is_some_and(|c| defenders.contains(&c.controller)),
+            AttackTarget::Battle(_) => true,
+        };
+        !open || state.attack_target_prohibited(a, statics).is_some()
+    };
+    if !attacks.iter().any(barred) {
         return attacks;
     }
-    let defenders = state.attackable_players_for(seat);
     attacks.retain_mut(|a| {
-        if state.attack_target_prohibited(a, statics).is_none() {
+        if !barred(a) {
             return true;
         }
         let kws = state.computed_permanent(a.attacker).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
@@ -459,6 +470,24 @@ mod tests {
         assert_eq!(out.iter().filter(|a| a.target == AttackTarget::Planeswalker(walker)).count(), 1);
         assert_eq!(aimed(&out), [0, 2, 2, 1], "{out:?}");
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
+    }
+
+    /// CR 508.1 — bug fix (seed 778020): The Second Doctor's controller can't
+    /// be attacked by a seat that drew off "How Civil of You", and the
+    /// planner's fallback aimed there anyway; with seat 2 also banned the
+    /// attacker re-aims at seat 3, and with every seat banned it stays home.
+    #[test]
+    fn cr_508_1_an_attack_on_a_banned_seat_re_aims_or_stays_home() {
+        let (mut g, bears) = table([40; 4]);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.clear_sickness(bears[0]);
+        g.turn_number = 5;
+        g.players[0].next_turn_attack_bans = vec![(1, 4), (2, 4)];
+        let at = vec![Attack { attacker: bears[0], target: AttackTarget::Player(1) }];
+        let out = reaim_prohibited_attacks(&g, 0, at.clone());
+        assert_eq!(out, vec![Attack { attacker: bears[0], target: AttackTarget::Player(3) }]);
+        g.players[0].next_turn_attack_bans.push((3, 4));
+        assert!(reaim_prohibited_attacks(&g, 0, at).is_empty());
     }
 
     /// CR 508.1g — bug fix (seed 15255's 1,459-turn stalemate): before
