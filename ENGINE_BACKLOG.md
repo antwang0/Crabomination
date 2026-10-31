@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc2jM`) — the three open REJECT replays, a fresh census](#fixedopen-2026-10-31-commander-run-01wruxc2jm--the-three-open-reject-replays-a-fresh-census) | 30 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc5DB`) — seated-deck rows by rank: an attachment copy, board-wide attack locks, a table tally](#fixedopen-2026-10-31-commander-run-01wruxc5db--seated-deck-rows-by-rank-an-attachment-copy-board-wide-attack-locks-a-table-tally) | 20 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc2Es`) — three hung sweep blocks, two board-size quadratics, stolen-permanent "that player"](#fixedopen-2026-10-30-commander-run-01wruxc2es--three-hung-sweep-blocks-two-board-size-quadratics-stolen-permanent-that-player) | 34 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc67u`) — a 25-minute pod decision, a copy event's subject, strict sweeps](#fixedopen-2026-10-30-commander-run-01wruxc67u--a-25-minute-pod-decision-a-copy-events-subject-strict-sweeps) | 33 |
@@ -323,6 +324,37 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 
 9. **`01WRuXc3kK` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc3kK`): strict sweeps, then oracle-phrase probes.** Seeds 28110, 29300-29302 over every deck (audit build, strict answer log; concede, fuzz, 8 seats `--a dflt`): **13,109 games**, 1 strict abort (CR 701.40a — a manifest Grafdigger's Cage blocked left the card face down in the library; fixed, no raw `turn_face_down` + move remains), 0 panics; the undecided are CR 104.4 draws and finite board caps. Also: per-seat reveal-top asks answer before any move (CR 608.2), `exile_from::CRAFT` (Market Gnome), Might of Old Krosa's main phase, Stardew Valley's row closed. ⚠ **Four cube-pool fixes were landed and reverted** (`9a104ccda`) — The One Ring, Doomsday Excruciator, Wilt-Leaf Liege, Amped Raptor: the cube pool is frozen; **check INCOMPLETE's cube-frozen row before fixing a card in `cube.rs`** (two were already on it). Clean decks **5,649 → 5,669**, then **5,391** once the frozen gaps are named in their docs — **The One Ring is the top residual (286 decks, 267 sole) and its fix is one filter, frozen with the cube: apply the four at the next net retrain.** Gates: suite **29,350 / 0 / 7** (strict), clippy **0**, `--bench` **196,176 / 27.64 / 613.0 byte-identical**, pools decided. ⚠ `01WRuXc6Fk` swept 29300-29301 the same hour — **next seed 29400**. Next: phrase probes beyond cast conditions (a scratch regex pair per clause family finds what the audits' fixed shapes miss); the rank list is choice-exposure rows (Dawnhand, Battletide, Hawkeye).
 
+## FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc2jM`) — the three open REJECT replays, a fresh census
+
+No seats. Started on `01WRuXc4Xa`'s three open REJECT replays; all three were **engine/bot predicate mismatches**, not
+planner choices.
+- ✅ **CR 508.1d — the requirement scorer counted seats a restriction bars** (goaded Yuna, `--seats 6 --pod-decks
+  3787,5606,949,5497,2508,2391 --seed 779124`): `attack_target_options` skipped range, seat bans, Blazing Archon and
+  `attack_target_prohibited` (Island Sanctuary, filtered "can't attack you"), so an attack at the goader failed "obeys
+  the most" while the better-scoring seat was refused. Scorer and `attacker_is_able`'s slow path now share
+  `player_open_to_attack` + `attack_target_prohibited`. Test `cr_508_1d_a_barred_seat_is_no_option_for_a_requirement`.
+- ✅ **CR 508.1d — nothing is able to attack when no defender is open** (`--seats 5 --pod-decks 3134,5591,4440,5284,1734
+  --seed 780004`): a goaded Archangel's sole goader had The Second Doctor's next-turn ban on it; `attacker_is_able`'s
+  fast path (no defender-reading keyword) said able. The declaration's `able_to_attack` now asks once, lazily, whether
+  any seat — or a walker / battle of an unbanned seat — is open. Test `cr_508_1d_no_open_defender_frees_a_goaded_creature`.
+- ✅ **CR 509.1c — block requirements charged other defenders' creatures** (`--seats 6 --pod-decks
+  3140,380,195,1659,1136,506 --seed 780059`): defenders submit blocks independently and the batches merge, but every
+  requirement loop (must be blocked, Gorm, Baseball Bat, Lure, provoke, Tromokratis, MustBlock) read any defending
+  player's idle creatures — seat 5's Khârn rejected seat 1's blocks. The loops read the declaring player's team (the
+  priority holder when it may declare blocks; a block chooser or an active-player caller keeps the old reading). Test
+  `cr_509_1c_a_block_requirement_binds_only_its_controller_s_declaration`.
+- ✅ **CR 508.1g — a forced attacker aimed at a taxed planeswalker** (fresh census, `--seats 3 --pod-decks 747,835,2503
+  --seed 785089 --a dflt`): `retarget_taxed_attacks` moved only player attacks, so a Toski aimed at an Onakke
+  Oathkeeper seat's walker was trimmed for the tax with a free seat open. Walker attacks re-aim too (a lured walker
+  keeps its attacker). Test `a_taxed_walker_attack_re_aims_at_a_free_seat`.
+- **REJECT census** (`scripts/pod_rejects.py`, release): seeds 781-783 × 150 games, 0 rejections; 784-786 × 200 games
+  `--a dflt`, 1 (the Toski class above). **1,050 pods, one class, fixed.**
+- Gates: suite **29,401 / 0 / 8** (strict, precon-seat test separate); `--bench` **196,176 / 27.64 / 613.0 / 0 stalls —
+  byte-identical**, determinism ok, 228.5 games/s (246.2 on the merged tip); precon-seat shards green (301 / 299 s,
+  `-p crabomination --lib --cargo-profile overflow`). Sweep **29421** (release, 4/6 seats × every deck): 2,559 games, 0
+  panics, one Divine Intervention printed draw (`--seats 4 --pod-decks 4769,6002,3896,1725 --seed 2945700`), one Martial
+  Coup board cap (`--seats 6 --pod-decks 152,2958,5382,1183,5421,4965 --seed 2945586`).
+
 ## FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc5DB`) — seated-deck rows by rank: an attachment copy, board-wide attack locks, a table tally
 
 No seats. `pod_residuals.py --rank`, reading each ranked 🟡 row for a game-state error rather than a bot-invisible pick.
@@ -401,6 +433,10 @@ Ascension board cap; **no hang**). 0 panics. Precon-seat shards green on the mer
 - Gates: suite **29,393 / 0 / 7** at the closing tip (29,383 before the pact / REJECT fixes; strict answer log, precon-seat test skipped); `--bench` **196,176 / 613.0 / 0
   stalls — byte-identical**, determinism ok; cube / sos / sealed `--games 100 --seed 28200` decision-identical base vs
   tip (372,578 / 213,776 / 520,724).
+
+- **The Commander NEXT's line 14 as `01WRuXc2jM` found it** (moved verbatim; its open replays are closed above):
+
+  14. **`01WRuXc4Xa` (2026-10-31, no seats; ENGINE_BACKLOG `01WRuXc4Xa`): the last open hang (seed 2941252) is FIXED — it was the bot's attack / block CHAINS, unbudgeted, not the gather** (one 8-seat block step: 868 moves, 414 s of a 529 s release game). `CHAIN_SIM_BUDGET` scales by turns × board² (attacks) or board × attackers (blocks); a duel keeps the whole 1,024. → 95 s. Also CR 506.2: Tomik / Crawlspace caps sank whole declarations; `pod_attack::fit_attacker_caps`. ⚠ **The precon-seat test (`--cargo-profile overflow`, `CRAB_SEAT_SHARD`) had gone red unnoticed** — a pact guard counting sacrifice mana; fixed, both shards green. Run it whenever a pod-bot change lands. ⚠ **A REJECT census is the cheapest bug finder this run found** (ENGINE_BACKLOG `01WRuXc4Xa`): five illegal-declaration classes fixed (CR 508.1d tax never binds a requirement; goad / Second Doctor / Chaos Dragon re-aims); menace closed by a final block-count repair; three replays left open there (goaded Yuna, an empty declaration, one MustBeBlockedIfAble) — **start the next run on them.** Gates (closing tip): suite **29,393 / 0 / 7**, `--bench` 196,176 / 613.0 byte-identical after every fix, pools decision-identical, precon-seat shards green. ⚠ **Before trusting a "hang" from the audit build, time it on `release`** — the audit build's per-hit memo audits are an O(board) walk each, so it is ~3-10x slower on big boards. Next: the per-combat-damage layer gather (PERF candidates 2026-10-30) is now each sim's floor. Sweeps 29414-29420 (~13,000 games): 0 panics, 0 hangs; every undecided game a known shape. **Next seed 29421.**
 
 ## FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc2Es`) — three hung sweep blocks, two board-size quadratics, stolen-permanent "that player"
 
