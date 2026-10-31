@@ -9224,6 +9224,35 @@ fn cr_508_1d_a_goader_s_filtered_lock_frees_the_goaded_creature() {
     declare_for_seat0(&mut g, vec![]).expect("Reverence bars the only seat: nothing is able to attack");
 }
 
+/// CR 509.1c — requirements are obeyed only as far as the restrictions
+/// allow: a Lure attacker that can't be blocked by more than one creature
+/// takes one blocker, and the second able creature stays home. Bug fix
+/// (8-seat pod, seed 791012): a Nessian Boar granted the restriction
+/// rejected every declaration, one blocker or two.
+#[test]
+fn cr_509_1c_a_lure_capped_at_one_blocker_is_met_by_one() {
+    let mut g = multi_player_game(3);
+    let mut boar_def = catalog::nessian_boar();
+    boar_def.keywords.push(crabomination::card::Keyword::CantBeBlockedByMoreThanOne);
+    let boar = g.add_card_to_battlefield(0, boar_def);
+    g.clear_sickness(boar);
+    let b1 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b2 = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: boar, target: AttackTarget::Player(1) }]))
+        .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    assert!(g.clone().perform_action(GameAction::DeclareBlockers(vec![])).is_err(), "the Lure binds one");
+    assert!(
+        g.clone().perform_action(GameAction::DeclareBlockers(vec![(b1, boar), (b2, boar)])).is_err(),
+        "no more than one"
+    );
+    g.perform_action(GameAction::DeclareBlockers(vec![(b1, boar)])).expect("one blocker obeys the most");
+}
+
 /// CR 725.4 — when the monarch leaves, the active player BECOMES the
 /// monarch, and that is an event ("whenever you become the monarch"). The
 /// leave path set the designation but dropped its events.

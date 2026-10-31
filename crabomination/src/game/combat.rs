@@ -3425,6 +3425,17 @@ impl GameState {
             }
         }
 
+        // CR 509.1c — the requirements are obeyed only as far as the
+        // restrictions allow: an attacker that can't be blocked by more than
+        // one creature and already has its one takes no further blocker,
+        // whatever a Lure or a "blocks each combat" asks. A granted
+        // no-more-than-one on Nessian Boar rejected every declaration that
+        // left a second able creature home (8-seat pod, seed 791012).
+        let full = |a: CardId| {
+            self.attacking.iter().zip(atk_reqs.iter()).any(|(x, r)| x.attacker == a && r.no_more_than_one)
+                && self.blocker_count_of(a) + assignments.iter().filter(|(_, x)| *x == a).count() >= 1
+        };
+
         // CR 509.1c — "must be blocked if able" (Lure / Academic Dispute).
         // If such an attacker is left unblocked while the defender controls
         // an idle creature that could legally block it, reject the
@@ -3464,7 +3475,7 @@ impl GameState {
         if self.board_keyword_matching(|k| matches!(k, Keyword::MustBeBlockedByAtLeast(_))) {
             for atk in self.attacking.iter() {
                 let Some(n) = self.must_be_blocked_by_at_least(atk.attacker) else { continue };
-                if !self.block_requirement_binds(atk.attacker) {
+                if !self.block_requirement_binds(atk.attacker) || full(atk.attacker) {
                     continue;
                 }
                 let Some(defender_idx) = self.defender_for(atk.target) else { continue };
@@ -3526,7 +3537,7 @@ impl GameState {
         // Every idle defender creature that *can* legally block such an
         // attacker must be assigned to it in the merged block set.
         for (atk, reqs) in self.attacking.iter().zip(atk_reqs.iter()) {
-            if !reqs.all_must_block || !self.block_requirement_binds(atk.attacker) {
+            if !reqs.all_must_block || !self.block_requirement_binds(atk.attacker) || full(atk.attacker) {
                 continue;
             }
             let Some(defender_idx) = self.defender_for(atk.target) else { continue };
@@ -3560,6 +3571,7 @@ impl GameState {
             // bind, and a CR 509.1b count it cannot reach un-binds it too.
             if !self.attacking.iter().any(|a| a.attacker == required)
                 || !self.block_requirement_binds(required)
+                || (full(required) && !assignments.iter().any(|(bid, aid)| *bid == b.id && *aid == required))
             {
                 continue;
             }
@@ -3629,6 +3641,7 @@ impl GameState {
                     .is_some_and(|d| self.same_team(b.controller, d))
                     && self.block_requirement_able(b, atk.attacker)
                     && self.block_requirement_binds(atk.attacker)
+                    && !full(atk.attacker)
             });
             if could_block && !self.block_cap_shuts_out(&assignments) {
                 return Err(block_reject(line!(), GameError::MustBeBlockedIfAble(b.id)));
