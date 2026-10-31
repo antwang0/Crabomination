@@ -326,6 +326,29 @@ pub(crate) fn fit_attacker_caps(state: &GameState, seat: usize, mut attacks: Vec
     attacks
 }
 
+/// The last pass over a Commander seat's declaration: the stages after the
+/// greedy pick (re-aims, free attackers, pressure trades, caps) can aim an
+/// attacker at a taxed seat or leave a lone attacker that can't attack
+/// alone, and either sinks the whole declaration. CR 508.1g — the tax is
+/// trimmed once more on the final aims (7-seat pod, seed 792037); CR 508.1c —
+/// a lone "can't attack alone" attacker stays home (8-seat pod, seed 794095).
+pub(crate) fn settle_declaration(state: &GameState, seat: usize, mut attacks: Vec<Attack>) -> Vec<Attack> {
+    use crate::card::{Keyword, KeywordSlice};
+    if attacks.is_empty() || state.players.get(seat).is_none_or(|p| p.commanders.is_empty()) {
+        return attacks;
+    }
+    let statics = crate::game::combat::attack_static_scan(state);
+    super::bot::trim_attacks_to_payable_tax(state, seat, statics, &mut attacks);
+    if let [only] = attacks.as_slice()
+        && state.computed_permanent(only.attacker).is_some_and(|cp| {
+            cp.keywords().has_kw(&Keyword::CantAttackAlone) || cp.keywords().has_kw(&Keyword::CantAttackOrBlockAlone)
+        })
+    {
+        attacks.clear();
+    }
+    attacks
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -478,6 +501,20 @@ mod tests {
         let out = reaim_prohibited_attacks(&g, 0, vec![Attack { attacker: bears[0], target: AttackTarget::Player(1) }]);
         assert!(out.is_empty(), "{out:?}");
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
+    }
+
+    /// CR 508.1c — bug fix (8-seat pod, seed 794095): a lone attacker that
+    /// can't attack alone, left alone by the stages after the pick, stays home.
+    #[test]
+    fn settle_keeps_a_lone_cant_attack_alone_creature_home() {
+        let (mut g, _) = table([40; 4]);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        let kronch = g.add_card_to_battlefield(0, crate::catalog::raging_kronch());
+        g.clear_sickness(kronch);
+        let lone = vec![Attack { attacker: kronch, target: AttackTarget::Player(1) }];
+        assert!(!g.would_accept(crate::game::GameAction::DeclareAttackers(lone.clone())));
+        let out = settle_declaration(&g, 0, lone);
+        assert!(out.is_empty(), "{out:?}");
     }
 
     /// CR 508.1 — bug fix: a Bear aimed at a player behind Island Sanctuary's

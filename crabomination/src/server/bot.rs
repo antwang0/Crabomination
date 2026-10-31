@@ -3921,6 +3921,7 @@ impl HeuristicBot {
                     let attacks = add_free_attackers(state, seat, attacks, &self.weights);
                     let attacks = add_pressure_trades(state, seat, attacks, &self.weights);
                     let attacks = super::pod_attack::fit_attacker_caps(state, seat, attacks);
+                    let attacks = super::pod_attack::settle_declaration(state, seat, attacks);
                     Some(BotStep::plain(GameAction::DeclareAttackers(attacks)))
                 } else {
                     Some(BotStep::plain(GameAction::PassPriority))
@@ -14793,7 +14794,7 @@ fn payable_generic_budget(state: &GameState, seat: usize, want: u32) -> u32 {
     lo
 }
 
-fn trim_attacks_to_payable_tax(
+pub(crate) fn trim_attacks_to_payable_tax(
     state: &GameState,
     seat: usize,
     statics: u32,
