@@ -219,6 +219,50 @@ fn metamorphic_alteration_copies_the_chosen_creature() {
     assert_eq!(g.computed_permanent(bear).expect("bear").def.name, "Grizzly Bears");
 }
 
+/// Metamorphic Alteration's copy is a static ability, not a trigger: it is in
+/// place as the Aura resolves, with no window to respond (CR 707.2, 611.3a). The
+/// values lock as it first applies — the chosen creature leaving changes nothing —
+/// and moving the Aura copies the new host while the old one reverts (CR 611.2c).
+#[test]
+fn metamorphic_alteration_locks_the_copy_and_follows_the_aura() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let wolf = ready(&mut g, 1, catalog::savannah_lions());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![giant])]));
+    let aura = g.add_card_to_hand(0, catalog::metamorphic_alteration());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: aura,
+        target: Some(Target::Permanent(bear)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    for _ in 0..2 {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    assert!(g.stack.is_empty(), "no copy trigger goes on the stack");
+    assert_eq!(g.computed_permanent(bear).expect("bear").def.name, "Hill Giant");
+    g.remove_from_battlefield_to_graveyard_raw(giant);
+    assert_eq!(g.computed_permanent(bear).expect("bear").def.name, "Hill Giant", "locked in");
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, None, 0, 0);
+    let moved = g
+        .resolve_effect(
+            &crabomination::effect::Effect::Attach {
+                what: crabomination::effect::Selector::ExactObjects(vec![aura]),
+                to: crabomination::effect::Selector::ExactObjects(vec![wolf]),
+            },
+            &ctx,
+        )
+        .expect("move the Aura");
+    g.dispatch_triggers_for_events(&moved);
+    g.check_state_based_actions();
+    assert_eq!(g.computed_permanent(wolf).expect("wolf").def.name, "Hill Giant", "the new host copies");
+    assert_eq!(g.computed_permanent(bear).expect("bear").def.name, "Grizzly Bears", "the old host reverts");
+}
+
 /// The Capitoline Triad: {1} less per historic card in your graveyard; its
 /// ability exiles the fewest historic cards worth 30 mana value for an emblem
 /// that makes your creatures 9/9.

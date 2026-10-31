@@ -10,7 +10,7 @@ use crate::card::{
 };
 use crate::card::MayPlayDuration;
 use crate::effect::shortcut::{flurry, investigate, renown, target_filtered};
-use crate::effect::{Duration, Effect, KeywordAct, ManaPayload, PlayerRef, ZoneDest};
+use crate::effect::{Effect, KeywordAct, ManaPayload, PlayerRef, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{cost, g, generic, hybrid, r, u, w, Color, ManaCost};
 use std::sync::Arc;
@@ -314,7 +314,7 @@ pub fn gor_muldrak_amphinologist() -> CardDefinition {
 
 /// Metamorphic Alteration — {1}{U} Aura (enchant creature). As it enters,
 /// choose a creature; enchanted creature is a copy of the chosen creature
-/// (CR 707.2, values locked in as chosen).
+/// (CR 707.2) — applied with the attachment, values locked as it first applies.
 pub fn metamorphic_alteration() -> CardDefinition {
     CardDefinition {
         name: "Metamorphic Alteration",
@@ -323,14 +323,9 @@ pub fn metamorphic_alteration() -> CardDefinition {
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
         as_enters_effect: Some(Effect::ChoosePermanentForSource { filter: R::Creature }),
-        triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::SelfSource),
-            effect: Effect::BecomeCopyOfFor {
-                what: Selector::AttachedTo(Box::new(Selector::This)),
-                source: Selector::ChosenPermanentOfSource,
-                duration: Duration::WhileSourceAttached,
-                non_legendary: false,
-            },
+        static_abilities: vec![StaticAbility {
+            description: "Enchanted creature is a copy of the chosen creature.",
+            effect: StaticEffect::AttachedIsCopyOfChosen,
         }],
         ..Default::default()
     }

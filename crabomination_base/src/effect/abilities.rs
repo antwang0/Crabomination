@@ -374,6 +374,11 @@ pub enum StaticEffect {
     /// while this stays attached to it (CR 611.2c, the `WhileSourceAttached`
     /// copy sweep).
     AttachedTakesChosenNameAndType,
+    /// "Enchanted creature is a copy of the chosen creature" (Metamorphic
+    /// Alteration, CR 707.2): applied with each attachment by
+    /// `apply_as_attached_choices`, from the chosen creature's copiable values
+    /// as the effect first began to apply; ends with the attachment (CR 611.2c).
+    AttachedIsCopyOfChosen,
     /// "Triggered abilities you control can't cause you to sacrifice or
     /// exile creature tokens you control" (The Master, Multiplied). Read by
     /// `game/token_shield.rs` while one of its controller's triggered

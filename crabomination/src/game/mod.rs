@@ -1759,6 +1759,12 @@ pub struct ColdState {
     /// that card enters, dropped at the next turn's start.
     #[serde(default)]
     pub(crate) pending_etb_keyword_grants: Vec<(CardId, crate::card::Keyword, crate::effect::Duration)>,
+    /// `StaticEffect::AttachedIsCopyOfChosen`: each Aura's locked model —
+    /// the chosen creature's copiable values as the copy first applied.
+    /// Dropped as the Aura leaves (`revert_copy_on_leave`); a snapshot reloads
+    /// without it and falls back to the chosen permanent's current values.
+    #[serde(skip)]
+    pub(crate) attached_copy_models: Vec<(CardId, std::sync::Arc<crate::card::CardDefinition>)>,
     /// Mana sources the auto-tapper is activating right now whose mana
     /// ability itself costs mana (Blood Celebrant's {B}, a Signet's {1}): such
     /// a source is never re-entered to pay its own cost — it recursed until
@@ -20509,6 +20515,7 @@ impl GameState {
         {
             n.lki = Some(card.copiable_definition());
         }
+        retain_cold!(self.attached_copy_models, |(aura, _)| *aura != card.id);
         // The oldest entry holds the original printed definition.
         if let Some(pos) = self.temporary_copies.iter().position(|tc| tc.card == card.id) {
             if let Some(def) = self.temporary_copies[pos].original_def() {
@@ -36626,6 +36633,7 @@ fn static_effect_to_effects(
             | StaticEffect::LibraryTopEquipmentAttachesOnEntry
             | StaticEffect::ChooseColorAsAttached
             | StaticEffect::AttachedTakesChosenNameAndType
+            | StaticEffect::AttachedIsCopyOfChosen
             | StaticEffect::YourTriggersCantRemoveYourCreatureTokens
             | StaticEffect::LibraryTopCastGainsHaste { .. }
             | StaticEffect::OpponentsWhoAttackedCantCast
