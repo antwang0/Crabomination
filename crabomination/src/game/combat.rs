@@ -3054,6 +3054,22 @@ impl GameState {
             return Err(block_reject(line!(), GameError::NotYourPriority));
         }
 
+        // CR 509.1a / 509.1c — each defending player declares their own
+        // blocks (the batches merge), so a requirement is checked against the
+        // declaring player's creatures only: seat 5's idle Khârn rejected
+        // seat 1's declaration (6-seat pod, seed 780059). `None` (a block
+        // chooser, or a caller without the defender's priority) is every
+        // defending creature, as before.
+        let declarer: Option<SmallVec<[usize; 4]>> = match self.block_chooser() {
+            Some(_) => None,
+            None => {
+                let q = self.priority.player_with_priority;
+                (q != self.active_player_idx && self.may_declare_blocks(q))
+                    .then(|| (0..self.players.len()).filter(|&t| self.same_team(t, q)).collect())
+            }
+        };
+        let for_declarer = |ctl: usize| declarer.as_ref().is_none_or(|team| team.contains(&ctl));
+
         // One layer pass for the whole declaration. Every consumer below is a
         // `find(id)` on the declared blockers and their attackers, the
         // creatures already attacking, or the blockers already declared —
@@ -3423,6 +3439,7 @@ impl GameState {
             }
             let idle_able_blocker = self.battlefield.iter().any(|b| {
                 self.same_team(b.controller, defender_idx)
+                    && for_declarer(b.controller)
                     && !self.is_blocking(b.id)
                     && !assignments.iter().any(|(bid, _)| *bid == b.id)
                     && self.block_requirement_able(b, atk.attacker)
@@ -3453,6 +3470,7 @@ impl GameState {
                     .iter()
                     .filter(|b| {
                         self.same_team(b.controller, defender_idx)
+                    && for_declarer(b.controller)
                             && !self.is_blocking(b.id)
                             && !assignments.iter().any(|(bid, _)| *bid == b.id)
                             && self.block_requirement_able(b, atk.attacker)
@@ -3484,6 +3502,7 @@ impl GameState {
             }
             let idle_able = self.battlefield.iter().any(|b| {
                 self.same_team(b.controller, defender_idx)
+                    && for_declarer(b.controller)
                     && !self.is_blocking(b.id)
                     && !assignments.iter().any(|(bid, _)| *bid == b.id)
                     && matches(b.id)
@@ -3508,6 +3527,7 @@ impl GameState {
             }
             let unmet = self.battlefield.iter().any(|b| {
                 self.same_team(b.controller, defender_idx)
+                    && for_declarer(b.controller)
                     && self.block_requirement_able(b, atk.attacker)
                     // Able to block it but not assigned to it (here or earlier).
                     && !self.blocks(b.id, atk.attacker)
@@ -3525,6 +3545,9 @@ impl GameState {
         // resolution, so "able" reduces to the normal can-block checks.
         for b in &self.battlefield {
             let Some(required) = b.must_block else { continue };
+            if !for_declarer(b.controller) {
+                continue;
+            }
             // The provoker must still be attacking for the requirement to
             // bind, and a CR 509.1b count it cannot reach un-binds it too.
             if !self.attacking.iter().any(|a| a.attacker == required)
@@ -3560,6 +3583,7 @@ impl GameState {
             }
             let unmet = self.battlefield.iter().any(|b| {
                 self.same_team(b.controller, defender_idx)
+                    && for_declarer(b.controller)
                     && !self.blocks(b.id, atk.attacker)
                     && !assignments
                         .iter()
@@ -3581,6 +3605,9 @@ impl GameState {
         for b in must_block_scan {
             // One `kws_of` for the pair: it is a linear `find` over the
             // subset, so asking twice was two finds (PERF `(-337)`).
+            if !for_declarer(b.controller) {
+                continue;
+            }
             let bkw = kws_of(b.id);
             if !(bkw.has_kw(&Keyword::MustBlock) || bkw.has_kw(&Keyword::MustAttackOrBlock)) {
                 continue;

@@ -9149,6 +9149,35 @@ fn cr_508_1d_no_open_defender_frees_a_goaded_creature() {
     declare_for_seat0(&mut g, vec![]).expect("no defender is open: nothing is able to attack");
 }
 
+/// CR 509.1a / 509.1c — each defending player declares their own blocks, so
+/// a "blocks each combat if able" creature binds only its controller's
+/// declaration. Bug fix (6-seat pod, seed 780059): seat 5's idle Khârn the
+/// Betrayer rejected seat 1's declaration, costing seat 1 its blocks.
+#[test]
+fn cr_509_1c_a_block_requirement_binds_only_its_controller_s_declaration() {
+    let mut g = multi_player_game(3);
+    let a1 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let a2 = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(a1);
+    g.clear_sickness(a2);
+    let kharn = g.add_card_to_battlefield(2, catalog::kharn_the_betrayer());
+    g.clear_sickness(kharn);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![
+        Attack { attacker: a1, target: AttackTarget::Player(1) },
+        Attack { attacker: a2, target: AttackTarget::Player(2) },
+    ]))
+    .unwrap();
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("seat 1 owes no block for seat 2's Khârn");
+    g.priority.player_with_priority = 2;
+    assert!(g.clone().perform_action(GameAction::DeclareBlockers(vec![])).is_err(), "Khârn must block");
+    g.perform_action(GameAction::DeclareBlockers(vec![(kharn, a2)])).expect("Khârn blocks");
+}
+
 /// CR 725.4 — when the monarch leaves, the active player BECOMES the
 /// monarch, and that is an event ("whenever you become the monarch"). The
 /// leave path set the designation but dropped its events.
