@@ -9077,6 +9077,34 @@ fn cr_701_15b_a_goaded_creature_cant_attack_a_planeswalker_instead() {
     declare_for_seat0(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Player(2) }]).expect("the non-goader");
 }
 
+/// CR 508.1d — "If a creature can't attack unless a player pays a cost, that
+/// player is not required to pay that cost": a goaded creature with both
+/// opponents behind a Ghostly Prison may stay home with {2}
+/// floating. Bug fix (5-seat pod, seed 777042): a payable tax counted as
+/// "able", so the empty declaration was rejected and the seat lost its
+/// combat. With only the non-goader taxed, CR 701.15b still binds it to the
+/// goader, which costs nothing.
+#[test]
+fn cr_508_1d_a_requirement_never_obliges_paying_an_attack_tax() {
+    use crabomination::effect::{Effect, Selector};
+    let table = |taxed: &[usize]| {
+        let mut g = multi_player_game(3);
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bears);
+        for &seat in taxed {
+            g.add_card_to_battlefield(seat, catalog::ghostly_prison());
+        }
+        let ctx = EffectContext::for_ability(crabomination::card::CardId(0), 1, None);
+        g.resolve_effect(&Effect::Goad { what: Selector::ExactObjects(vec![bears]) }, &ctx).unwrap();
+        g.players[0].mana_pool.add_colorless(2);
+        (g, bears)
+    };
+    declare_for_seat0(&mut table(&[1, 2]).0, vec![]).expect("every attack is taxed: the tax need not be paid");
+    let (mut g, bears) = table(&[2]);
+    assert!(declare_for_seat0(&mut g.clone(), vec![]).is_err(), "the goader is open and free");
+    declare_for_seat0(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]).expect("at the goader");
+}
+
 /// CR 725.4 — when the monarch leaves, the active player BECOMES the
 /// monarch, and that is an event ("whenever you become the monarch"). The
 /// leave path set the designation but dropped its events.

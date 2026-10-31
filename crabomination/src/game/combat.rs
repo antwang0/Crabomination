@@ -1160,7 +1160,7 @@ impl GameState {
                 && self.players[d].is_alive()
                 && self.player_in_range_of(p, d)
                 && self.attacker_target_block(p, card.id, kws, Some(d)).is_none()
-                && (!taxed || self.attack_cost_payable(p, card.id, kws, d, statics))
+                && (!taxed || self.attack_is_untaxed(card.id, kws, d, statics))
         })
     }
 
@@ -1174,24 +1174,16 @@ impl GameState {
             || self.players.iter().any(|pl| pl.attack_tax_until_your_turn > 0)
     }
 
-    /// CR 508.1g — could `p` pay what it costs for `id` to attack `d`?
-    ///
-    /// **A creature whose attack cost cannot be paid is not *able* to attack,
-    /// so CR 508.1d must not require it.** Without this, a Juggernaut behind a
-    /// Propaganda its controller has no mana for is required to attack by the
-    /// requirement loops and rejected for attacking by the tax gate below
-    /// them — the seat has no legal declaration in either direction and loses
-    /// its whole combat. `build_cube_state_seeded(3637)` is that board.
-    ///
-    /// The probe is a state clone plus an auto-tap ([`could_pay_generic`]), so
-    /// every caller reaches it behind [`attack_tax_possible`] *and* behind a
-    /// must-attack presence gate. It prices this attacker alone; the batch's
-    /// total is the declaration gate's business, and asking the narrower
-    /// question here is the safe direction — a requirement that is weaker than
-    /// the gate leaves a legal declaration, and one that is stronger does not.
-    fn attack_cost_payable(
+    /// CR 508.1d — does `id` attack `d` for free? "If a creature can't attack
+    /// unless a player pays a cost, that player is not required to pay that
+    /// cost", so a requirement binds only the attacks that cost nothing.
+    /// Asking "could the tax be paid" instead required a goaded creature to
+    /// attack through Ghostly Prison and rejected the empty declaration (5-seat
+    /// pod, seed 777042); with no mana it made a Juggernaut behind Propaganda
+    /// both required and rejected (`build_cube_state_seeded(3637)`). It prices
+    /// this attacker alone; the batch's total is the declaration gate's.
+    fn attack_is_untaxed(
         &self,
-        p: usize,
         id: CardId,
         kws: &[Keyword],
         d: usize,
@@ -1201,7 +1193,7 @@ impl GameState {
         let tax = self.attack_tax_for(std::slice::from_ref(&atk), statics, |_| {
             self.attack_block_keyword_tax(id, kws, true)
         });
-        tax == 0 || self.could_pay_generic(p, tax)
+        tax == 0
     }
 
 
