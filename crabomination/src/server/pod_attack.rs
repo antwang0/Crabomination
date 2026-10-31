@@ -98,9 +98,12 @@ pub(crate) fn attackable_or(state: &GameState, seat: usize, pick: usize) -> usiz
 }
 
 /// CR 508.1g — re-aim each attacker whose declared player costs a tax at the
-/// cheapest defender it may legally attack instead (a goader only if nothing
-/// else is open, CR 701.15b). Returns whether any attack moved. A duel has
-/// one defender and never moves.
+/// cheapest defender it may legally attack instead. A goader comes after
+/// every other *free* seat but before a taxed one: CR 508.1d never obliges
+/// the tax, so a goaded creature whose non-goaders are all taxed attacks its
+/// goader (CR 701.15b) — the taxed pick left it to be dropped and the empty
+/// batch rejected (5-seat pod, seed 777042). Returns whether any attack
+/// moved. A duel has one defender and never moves.
 pub(crate) fn retarget_taxed_attacks(
     state: &GameState,
     seat: usize,
@@ -128,10 +131,10 @@ pub(crate) fn retarget_taxed_attacks(
             .filter(|&d| state.attacker_target_block(seat, a.attacker, &kws, Some(d)).is_none())
             .map(|d| {
                 let cost = tax(&Attack { attacker: a.attacker, target: AttackTarget::Player(d) });
-                (state.goaded_by_player(c, d), cost, d)
+                (cost > 0, state.goaded_by_player(c, d), cost, d)
             })
             .min();
-        if let Some((_, cost, d)) = best
+        if let Some((_, _, cost, d)) = best
             && cost < now
         {
             a.target = AttackTarget::Player(d);
@@ -385,6 +388,26 @@ mod tests {
         );
         let mut g2 = g.clone();
         g2.declare_attackers(attacks).expect("a legal declaration");
+    }
+
+    /// CR 508.1d / 701.15b — bug fix (seed 777042): a Bear goaded by seat 1
+    /// with seat 2 behind Ghostly Prison and no mana attacks its goader, which
+    /// costs nothing, instead of being dropped for the tax and sinking the
+    /// declaration.
+    #[test]
+    fn cr_701_15b_a_goaded_attacker_falls_back_to_its_free_goader() {
+        let (mut g, bears) = table([40; 4]);
+        g.players[3].eliminated = true;
+        g.clear_sickness(bears[0]);
+        g.add_card_to_battlefield(2, crate::catalog::ghostly_prison());
+        let ctx = crate::game::effects::EffectContext::for_ability(CardId(0), 1, None);
+        g.resolve_effect(&crate::effect::Effect::Goad { what: crate::effect::Selector::ExactObjects(vec![bears[0]]) }, &ctx)
+            .unwrap();
+        let statics = crate::game::combat::attack_static_scan(&g);
+        let mut attacks = vec![Attack { attacker: bears[0], target: AttackTarget::Player(2) }];
+        assert!(retarget_taxed_attacks(&g, 0, statics, &|_| 0, &mut attacks));
+        assert_eq!(attacks[0].target, AttackTarget::Player(1));
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(attacks)));
     }
 
     /// CR 508.1 — bug fix: a Bear aimed at a player behind Island Sanctuary's
