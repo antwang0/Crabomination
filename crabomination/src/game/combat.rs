@@ -1565,15 +1565,8 @@ impl GameState {
 
         // Angelic Arbiter — an opponent who cast a spell this turn can't
         // attack with creatures at all.
-        if !attacks.is_empty() {
-            let p = self.active_player_idx;
-            if self.players[p].spells_cast_this_game_turn > 0
-                && self.opponent_has_static(p, |e| {
-                    matches!(e, crate::effect::StaticEffect::OpponentsWhoCastCantAttack)
-                })
-            {
-                return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
-            }
+        if !attacks.is_empty() && self.cast_bars_attacks(self.active_player_idx) {
+            return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
         }
 
         // CR 508.1c — "attacks only alone" (Master of Cruelties). If any
@@ -1656,8 +1649,9 @@ impl GameState {
         let no_defender = || {
             *no_defender.get_or_init(|| {
                 // A banned seat's permanents are barred with it ("you or
-                // permanents you control").
-                self.attackable_players_for(p).is_empty()
+                // permanents you control"); Angelic Arbiter bars them all.
+                self.cast_bars_attacks(p)
+                    || (self.attackable_players_for(p).is_empty()
                     && !self.battlefield.iter().any(|c| {
                         let d = if self.computed_has_card_type(c, crate::card::CardType::Planeswalker) {
                             Some(c.controller)
@@ -1667,7 +1661,7 @@ impl GameState {
                             None
                         };
                         d.is_some_and(|d| d != p && !self.next_turn_attack_banned(p, d))
-                    })
+                    }))
             })
         };
         let able_to_attack = |c: &crate::card::CardInstance| {
@@ -4188,11 +4182,20 @@ impl GameState {
     /// one entry (or none) by the attack-left / attack-right option; under a
     /// limited range of influence, only opponents inside `seat`'s range.
     pub fn attackable_players_for(&self, seat: usize) -> Vec<usize> {
-        if self.active_player_idx != seat {
+        if self.active_player_idx != seat || self.cast_bars_attacks(seat) {
             return Vec::new();
         }
         let restriction = self.attack_left_right_defender();
         (0..self.players.len()).filter(|&p| self.player_open_to_attack(seat, p, restriction)).collect()
+    }
+
+    /// CR 508.1 — Angelic Arbiter: `seat` cast a spell this turn and an
+    /// opponent's static bars its creatures from attacking at all.
+    pub(crate) fn cast_bars_attacks(&self, seat: usize) -> bool {
+        self.players.get(seat).is_some_and(|pl| pl.spells_cast_this_game_turn > 0)
+            && self.opponent_has_static(seat, |e| {
+                matches!(e, crate::effect::StaticEffect::OpponentsWhoCastCantAttack)
+            })
     }
 
     /// One seat of [`Self::attackable_players_for`]: `defender` is a live

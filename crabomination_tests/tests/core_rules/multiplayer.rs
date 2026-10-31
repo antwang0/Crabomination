@@ -9181,6 +9181,31 @@ fn cr_509_1c_a_block_requirement_binds_only_its_controller_s_declaration() {
     g.perform_action(GameAction::DeclareBlockers(vec![(kharn, a2)])).expect("Khârn blocks");
 }
 
+/// CR 508.1 / 508.1d — Angelic Arbiter: a seat that cast a spell this turn
+/// can't attack at all, so a goaded creature is not able and the empty
+/// declaration is legal. Bug fix (7-seat pod, seed 788005: eleven declarations
+/// refused in one game): the bot attacked into the bar, and the engine would
+/// have required the goaded attack the bar forbids.
+#[test]
+fn cr_508_1d_angelic_arbiter_excuses_a_requirement_after_a_cast() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    g.add_card_to_battlefield(2, catalog::angelic_arbiter());
+    let ctx = EffectContext::for_ability(crabomination::card::CardId(0), 1, None);
+    g.resolve_effect(&Effect::Goad { what: Selector::ExactObjects(vec![bears]) }, &ctx).unwrap();
+    assert!(declare_for_seat0(&mut g.clone(), vec![]).is_err(), "no spell cast: the goad binds");
+    g.players[0].spells_cast_this_game_turn = 1;
+    g.active_player_idx = 0;
+    assert!(g.attackable_players_for(0).is_empty(), "the bar closes every seat");
+    assert!(
+        declare_for_seat0(&mut g.clone(), vec![Attack { attacker: bears, target: AttackTarget::Player(2) }]).is_err(),
+        "Arbiter bars the attack"
+    );
+    declare_for_seat0(&mut g, vec![]).expect("nothing is able to attack");
+}
+
 /// CR 725.4 — when the monarch leaves, the active player BECOMES the
 /// monarch, and that is an event ("whenever you become the monarch"). The
 /// leave path set the designation but dropped its events.

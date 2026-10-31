@@ -465,6 +465,21 @@ mod tests {
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(attacks)));
     }
 
+    /// CR 508.1 — bug fix (7-seat pod, seed 788005): under an opponent's
+    /// Angelic Arbiter, a seat that cast a spell this turn attacks with
+    /// nothing rather than having the whole declaration refused.
+    #[test]
+    fn angelic_arbiter_after_a_cast_leaves_every_attacker_home() {
+        let (mut g, bears) = table([40; 4]);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.clear_sickness(bears[0]);
+        g.add_card_to_battlefield(2, crate::catalog::angelic_arbiter());
+        g.players[0].spells_cast_this_game_turn = 1;
+        let out = reaim_prohibited_attacks(&g, 0, vec![Attack { attacker: bears[0], target: AttackTarget::Player(1) }]);
+        assert!(out.is_empty(), "{out:?}");
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
+    }
+
     /// CR 508.1 — bug fix: a Bear aimed at a player behind Island Sanctuary's
     /// shield re-aims at an open opponent instead of sinking the declaration.
     #[test]
