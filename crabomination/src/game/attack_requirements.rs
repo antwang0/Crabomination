@@ -92,9 +92,22 @@ impl GameState {
                     }) == 0
                 })
         };
+        // CR 508.1d — only defenders the attack could legally be declared
+        // at count: a seat barred to every creature (range, Second Doctor,
+        // Blazing Archon) or to this one (Island Sanctuary, a filtered
+        // "can't attack you") is no option. Counting one made the engine
+        // demand an attack nothing could make (goaded Yuna, 6-seat pod 779124).
+        let prohibited = |target: AttackTarget| {
+            self.attack_target_prohibited(&Attack { attacker: id, target }, statics).is_some()
+        };
+        let restriction = self.attack_restriction();
         for q in self.seats_in_turn_order_from(p) {
             let target = AttackTarget::Player(q);
-            if q != p && !self.same_team(p, q) && self.players[q].is_alive() && free(target, q) {
+            if q != p
+                && self.player_open_to_attack(p, q, restriction)
+                && free(target, q)
+                && !prohibited(target)
+            {
                 out.push((target, self.attack_target_score(p, id, goaders, target)));
             }
         }
@@ -103,6 +116,7 @@ impl GameState {
             if let Some(d) = self.battlefield_find(pw).map(|w| w.controller)
                 && !out.iter().any(|(t, _)| *t == target)
                 && free(target, d)
+                && !prohibited(target)
             {
                 out.push((target, self.attack_target_score(p, id, goaders, target)));
             }

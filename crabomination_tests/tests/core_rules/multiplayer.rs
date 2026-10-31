@@ -9105,6 +9105,50 @@ fn cr_508_1d_a_requirement_never_obliges_paying_an_attack_tax() {
     declare_for_seat0(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]).expect("at the goader");
 }
 
+/// CR 508.1d — a requirement is obeyed only as far as the restrictions
+/// allow: a seat no creature may attack (Blazing Archon) is no option for a
+/// goad's "a player other than the goader". Bug fix (6-seat pod, seed
+/// 779124): the scorer counted the barred non-goader, so attacking the goader
+/// failed "obeys the most", the barred seat was refused, and the empty
+/// declaration broke the goad — the seat had no legal declaration at all.
+#[test]
+fn cr_508_1d_a_barred_seat_is_no_option_for_a_requirement() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = multi_player_game(3);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    g.add_card_to_battlefield(2, catalog::blazing_archon());
+    let ctx = EffectContext::for_ability(crabomination::card::CardId(0), 1, None);
+    g.resolve_effect(&Effect::Goad { what: Selector::ExactObjects(vec![bears]) }, &ctx).unwrap();
+    assert!(declare_for_seat0(&mut g.clone(), vec![]).is_err(), "the goader is open: the goad still binds");
+    assert!(
+        declare_for_seat0(&mut g.clone(), vec![Attack { attacker: bears, target: AttackTarget::Player(2) }]).is_err(),
+        "Blazing Archon bars seat 2"
+    );
+    declare_for_seat0(&mut g, vec![Attack { attacker: bears, target: AttackTarget::Player(1) }]).expect("at the goader");
+}
+
+/// CR 508.1d / 701.15b — a goaded creature is not able to attack when its
+/// goader is the only opponent and has banned its attacks (The Second
+/// Doctor's "can't attack you or permanents you control during their next
+/// turn"), so the empty declaration is legal. Bug fix (5-seat pod, seed
+/// 780004): the engine required the attack the ban forbade, so the seat's
+/// every declaration was refused.
+#[test]
+fn cr_508_1d_no_open_defender_frees_a_goaded_creature() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = multi_player_game(3);
+    g.players[2].eliminated = true;
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    let ctx = EffectContext::for_ability(crabomination::card::CardId(0), 1, None);
+    g.resolve_effect(&Effect::Goad { what: Selector::ExactObjects(vec![bears]) }, &ctx).unwrap();
+    assert!(declare_for_seat0(&mut g.clone(), vec![]).is_err(), "unbanned, the goad binds");
+    let turn = g.turn_number;
+    g.players[0].next_turn_attack_bans.push((1, turn - 1));
+    declare_for_seat0(&mut g, vec![]).expect("no defender is open: nothing is able to attack");
+}
+
 /// CR 725.4 — when the monarch leaves, the active player BECOMES the
 /// monarch, and that is an event ("whenever you become the monarch"). The
 /// leave path set the designation but dropped its events.

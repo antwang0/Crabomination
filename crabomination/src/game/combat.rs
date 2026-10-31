@@ -1155,12 +1155,19 @@ impl GameState {
         {
             return true;
         }
+        // CR 508.1d — able means some defender takes the attack without a
+        // restriction: a seat barred to everyone (Blazing Archon, a Second
+        // Doctor ban) or to this creature (Island Sanctuary) is none. The same
+        // seats `attack_target_options` scores, so a requirement never binds
+        // an attack the scorer can't place.
+        let restriction = self.attack_left_right_defender();
         (0..self.players.len()).any(|d| {
-            !self.same_team(p, d)
-                && self.players[d].is_alive()
-                && self.player_in_range_of(p, d)
+            self.player_open_to_attack(p, d, restriction)
                 && self.attacker_target_block(p, card.id, kws, Some(d)).is_none()
                 && (!taxed || self.attack_is_untaxed(card.id, kws, d, statics))
+                && self
+                    .attack_target_prohibited(&Attack { attacker: card.id, target: AttackTarget::Player(d) }, statics)
+                    .is_none()
         })
     }
 
@@ -1639,8 +1646,26 @@ impl GameState {
         // below and for the declaration gate under them. Asking a narrower
         // question here than the gate asks is what leaves a seat with no
         // legal declaration in either direction: see `attacker_is_able`.
+        // CR 508.1d — and no creature is able to attack when no defender is
+        // open: every opponent banned (The Second Doctor's "can't attack you
+        // or permanents you control during their next turn") and no
+        // planeswalker or battle to aim at. Asked once, only when a
+        // requirement loop asks at all (5-seat pod, seed 780004: a goaded
+        // Archangel was required to attack its goader's ban).
+        let no_defender = std::cell::OnceCell::new();
+        let no_defender = || {
+            *no_defender.get_or_init(|| {
+                self.attackable_players_for(p).is_empty()
+                    && !self.battlefield.iter().any(|c| {
+                        (self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
+                            || self.computed_has_card_type(c, crate::card::CardType::Battle))
+                            && c.controller != p
+                    })
+            })
+        };
         let able_to_attack = |c: &crate::card::CardInstance| {
-            self.attacker_is_able(
+            !no_defender()
+                && self.attacker_is_able(
                 p,
                 c,
                 computed.iter().find(|x| x.id == c.id),
@@ -4133,16 +4158,29 @@ impl GameState {
             return Vec::new();
         }
         let restriction = self.attack_left_right_defender();
-        (0..self.players.len())
-            .filter(|p| {
-                self.players[*p].is_alive()
-                    && !self.same_team(seat, *p)
-                    && restriction.is_none_or(|only| only == Some(*p))
-                    && self.player_in_range_of(seat, *p)
-                    && self.seat_attackable_from(seat, *p)
-                    && !self.player_cant_be_attacked_at_all(seat, *p)
-            })
-            .collect()
+        (0..self.players.len()).filter(|&p| self.player_open_to_attack(seat, p, restriction)).collect()
+    }
+
+    /// One seat of [`Self::attackable_players_for`]: `defender` is a live
+    /// opponent `seat` may declare attacks against at all. `restriction` is
+    /// [`Self::attack_left_right_defender`], taken once by the caller.
+    pub(crate) fn player_open_to_attack(
+        &self,
+        seat: usize,
+        defender: usize,
+        restriction: Option<Option<usize>>,
+    ) -> bool {
+        self.players.get(defender).is_some_and(|pl| pl.is_alive())
+            && !self.same_team(seat, defender)
+            && restriction.is_none_or(|only| only == Some(defender))
+            && self.player_in_range_of(seat, defender)
+            && self.seat_attackable_from(seat, defender)
+            && !self.player_cant_be_attacked_at_all(seat, defender)
+    }
+
+    /// [`Self::attack_left_right_defender`] for callers outside this module.
+    pub(crate) fn attack_restriction(&self) -> Option<Option<usize>> {
+        self.attack_left_right_defender()
     }
 
     /// CR 508.1 — `defender` can't be attacked by `seat` no matter which
