@@ -331,7 +331,11 @@ each Cat retriggers it; Underworld Breach + Three Visits and one more board cap,
 8 seats, `--a dflt` + fuzz; 768 games, one Scute Swarm board cap, **no hang**) and **29417** (release tip, 5/6 seats,
 `--a dflt` + fuzz; 2,252 games: four Descent into Avernus CR 104.4a draws, one Authority of the Consuls board cap, no
 hang), **29418** (audit, strict, 3/4 seats, concede, after the pact fix; 3,582 games, one Descent into Avernus CR
-104.4a draw). 0 panics. **Next seed 29419.**
+104.4a draw), **29419** (audit, strict, 6/7 seats, `--a dflt` + fuzz; part-run, one Acidic Soil CR 104.4a draw),
+**29420** (release closing tip, 4/8 seats, `--a dflt` + fuzz; 2,303 games: mandatory-loop CR 104.4b draws — Soultether
+Golem + Kate Stewart, Archon of Sun's Grace with every permanent an enchantment ×2 — two CR 104.4a draws, one Luminarch
+Ascension board cap; **no hang**). 0 panics. Precon-seat shards green on the merged closing tip (280 / 294 s).
+**Next seed 29421.**
 - ✅ **Seed 2941252 (8 seats) was the CHAINS, not the gather.** Release base: 529 s for the game, **414 s of it one
   block step** — `block_chain_candidate` offered 868 (blocker, attacker) moves, ~0.6 s a sim on the audit build, then
   816 more; the attack chain priced pairs + six growth steps of seven-turn `pod_horizon` sims (1.7 s each at 155
