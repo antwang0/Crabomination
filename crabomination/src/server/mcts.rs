@@ -403,7 +403,32 @@ pub struct MctsConfig {
     /// condition reads the merged means, so it runs serially after the
     /// workers join.
     pub search_threads: usize,
+    /// Phase 4 of "the net makes every decision" (`ML_NOTES` 2026-10-31):
+    /// the decision windows searched over the COMPLETE move list
+    /// (`decision_menu`), a bitmask of [`MENU_MAIN`], [`MENU_INSTANT`],
+    /// [`MENU_COMBAT`], [`MENU_PROMPT`]. 0 (default) is the client's search,
+    /// unchanged. A window in the mask replaces its old handling — the main
+    /// window the six-cast menu, the rest the heuristic.
+    pub menu_windows: u8,
+    /// The net whose policy head ranks a menu window's moves and gives the
+    /// search its priors (`policy_pilot`'s candidate states, kind-aware
+    /// logits). 0 = uniform priors over the list, cut in list order.
+    pub policy_slot: u8,
+    /// Most arms a menu window searches: the policy's top moves.
+    pub menu_arms: usize,
+    /// Skip the search when the policy's favourite holds at least this
+    /// share of the softmax over the arms; > 1 (default) never skips.
+    pub menu_confident: f64,
 }
+
+/// [`MctsConfig::menu_windows`]: own main phase, empty stack.
+pub const MENU_MAIN: u8 = 1;
+/// Every other priority window (combat steps, upkeep, the opponent's turn).
+pub const MENU_INSTANT: u8 = 2;
+/// Attack and block declarations.
+pub const MENU_COMBAT: u8 = 4;
+/// Pending prompts.
+pub const MENU_PROMPT: u8 = 8;
 
 impl Default for MctsConfig {
     fn default() -> Self {
@@ -424,6 +449,10 @@ impl Default for MctsConfig {
             gumbel_c_visit: 50.0,
             gumbel_c_scale: 0.1,
             search_threads: 1,
+            menu_windows: 0,
+            policy_slot: 0,
+            menu_arms: 8,
+            menu_confident: 2.0,
         }
     }
 }
@@ -629,6 +658,9 @@ fn leader_decided(visits: &[u32], totals: &[f64], parent: f64, exploration: f64)
 pub struct MctsBot {
     cfg: MctsConfig,
     fallback: HeuristicBot,
+    /// The (turn, step) a menu window last declared in — an empty
+    /// declaration leaves the step where it was (see `policy_pilot`).
+    menu_declared: Option<(u32, TurnStep)>,
 }
 
 /// Stack for a root-parallel search worker. The engine's other worker
@@ -640,7 +672,7 @@ use crate::server::ENGINE_STACK_BYTES as WORKER_STACK_BYTES;
 
 impl MctsBot {
     pub fn new(cfg: MctsConfig) -> Self {
-        Self { cfg, fallback: HeuristicBot::with_weights(cfg.weights) }
+        Self { cfg, fallback: HeuristicBot::with_weights(cfg.weights), menu_declared: None }
     }
 
     /// Score a finished rollout on a 0..=1 scale.
@@ -1351,6 +1383,117 @@ impl MctsBot {
             .collect()
     }
 
+    /// Phase 4: a decision in one of [`MctsConfig::menu_windows`], searched
+    /// over its complete move list. `None` hands the decision on (window
+    /// off, nothing to decide, a forced move).
+    fn menu_window(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        use super::decision_menu::Kind;
+        let mut m = super::decision_menu::menu(state, seat, &self.cfg.weights)?;
+        let declaring = matches!(m.kind, Kind::Attack | Kind::Block);
+        if declaring && self.menu_declared == Some((state.turn_number, state.step)) {
+            m.moves.retain(|a| !matches!(a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)));
+            m.kind = Kind::Priority;
+        }
+        let window = match m.kind {
+            Kind::Attack | Kind::Block => MENU_COMBAT,
+            Kind::Prompt(_) => MENU_PROMPT,
+            Kind::Priority
+                if state.active_player_idx == seat
+                    && state.stack.is_empty()
+                    && matches!(state.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain) =>
+            {
+                MENU_MAIN
+            }
+            Kind::Priority => MENU_INSTANT,
+        };
+        if self.cfg.menu_windows & window == 0 || m.moves.len() < 2 {
+            return None;
+        }
+        let (arms, logits) = super::policy_pilot::ranked_arms(state, seat, &m, self.cfg.policy_slot, self.cfg.menu_arms);
+        if arms.is_empty() {
+            return None;
+        }
+        let pick = if arms.len() == 1 || self.confident(&logits) {
+            arms[0].clone()
+        } else {
+            self.prior_search(state, seat, arms, logits)
+        };
+        if declaring {
+            self.menu_declared = Some((state.turn_number, state.step));
+            self.fallback.note_external_declaration(state, m.kind == Kind::Attack);
+        }
+        Some(pick)
+    }
+
+    /// The policy's favourite holds `menu_confident` of the softmax.
+    fn confident(&self, logits: &[f64]) -> bool {
+        if self.cfg.menu_confident > 1.0 {
+            return false;
+        }
+        let m = logits.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
+        let z: f64 = logits.iter().map(|l| (l - m).exp()).sum();
+        1.0 / z >= self.cfg.menu_confident
+    }
+
+    /// [`gumbel_search`](Self::gumbel_search) over given arms and prior
+    /// logits (arms ranked best-first). Each rollout redeals the hidden
+    /// zones *before* the arm is applied, so an answer that draws at once
+    /// ("you may draw") cannot read the real top card; a declaration arm is
+    /// stepped past its declaration window first, as in `probe_actions`.
+    fn prior_search(&self, state: &GameState, seat: usize, arms: Vec<GameAction>, logits: Vec<f64>) -> GameAction {
+        let n = arms.len();
+        timing::count(&timing::DECISIONS, 1);
+        let noise: Vec<f64> = {
+            let mut r = rng();
+            (0..n).map(|_| gumbel_noise(&mut r)).collect()
+        };
+        let mut live: Vec<usize> = (0..n).collect();
+        let mut visits = vec![0u32; n];
+        let mut total = vec![0.0f64; n];
+        let mut dead = vec![false; n];
+        for (m, per_arm) in sequential_halving_plan(n, self.cfg.iterations) {
+            let sig = completed_sigma(&visits, &total, self.cfg.gumbel_c_visit, self.cfg.gumbel_c_scale);
+            live.retain(|&i| !dead[i]);
+            if live.is_empty() {
+                break;
+            }
+            live.sort_by(|&a, &b| {
+                (noise[b] + logits[b] + sig[b]).partial_cmp(&(noise[a] + logits[a] + sig[a])).unwrap_or(std::cmp::Ordering::Equal)
+            });
+            live.truncate(m);
+            for &i in &live {
+                for _ in 0..per_arm {
+                    let mut g = state.clone();
+                    self.determinise(&mut g, seat, &mut rng());
+                    if g.perform_action(arms[i].clone()).is_err() {
+                        dead[i] = visits[i] == 0;
+                        break;
+                    }
+                    if matches!(arms[i], GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)) {
+                        let step = g.step;
+                        let mut fuel = 32;
+                        while fuel > 0 && g.step == step && !g.is_game_over() {
+                            fuel -= 1;
+                            if g.perform_action(GameAction::PassPriority).is_err() {
+                                break;
+                            }
+                        }
+                    }
+                    total[i] += self.rollout(g, seat);
+                    visits[i] += 1;
+                }
+            }
+        }
+        let sig = completed_sigma(&visits, &total, self.cfg.gumbel_c_visit, self.cfg.gumbel_c_scale);
+        let best = (0..n)
+            .filter(|&i| visits[i] > 0)
+            .max_by(|&a, &b| {
+                (noise[a] + logits[a] + sig[a]).partial_cmp(&(noise[b] + logits[b] + sig[b])).unwrap_or(std::cmp::Ordering::Equal)
+            })
+            .unwrap_or(0);
+        arms[best].clone()
+    }
+
     /// The round-51 fetch arms: search a pending `SearchLibrary` instead of
     /// letting it fall through to the heuristic. Every other pending
     /// decision still does fall through — this is the one whose answer is a
@@ -1469,6 +1612,11 @@ impl Bot for MctsBot {
     }
 
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        if self.cfg.menu_windows != 0
+            && let Some(a) = self.menu_window(state, seat)
+        {
+            return Some(a);
+        }
         if self.cfg.search_combat
             && let Some(a) = self.combat_search(state, seat)
         {

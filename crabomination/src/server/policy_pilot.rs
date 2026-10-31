@@ -447,6 +447,36 @@ impl Bot for PolicyBot {
     }
 }
 
+// ── The search's arms (phase 4) ────────────────────────────────────────
+
+/// The search's arms at a menu decision: up to `k` moves from `m`, ranked
+/// best-first by the policy head in `slot` over their candidate states
+/// (the same states the policy pilot scores), with their logits. A
+/// declaration list is ranked as whole sets — every set on the list scored
+/// once, settled. With no policy (`slot` 0 or a headless net) the arms are
+/// the list's first `k` at equal logits.
+pub fn ranked_arms(g: &GameState, seat: usize, m: &decision_menu::Menu, slot: u8, k: usize) -> (Vec<GameAction>, Vec<f64>) {
+    let k = k.max(1);
+    if slot == 0 || !super::net_eval::slot_has_policy(slot) {
+        let arms: Vec<GameAction> = m.moves.iter().take(k).cloned().collect();
+        let n = arms.len();
+        return (arms, vec![0.0; n]);
+    }
+    let base = hidden_safe(g, seat, (g.turn_number as u64) << 20 ^ (seat as u64) << 8 ^ g.step as u64);
+    let mut scored: Vec<(GameAction, f64)> = m
+        .moves
+        .iter()
+        .filter_map(|a| {
+            let st = candidate_state(&base, seat, m.kind, a)?;
+            let l = super::net_eval::policy_logit_kind(&st, seat, slot, m.kind.index())?;
+            Some((a.clone(), l as f64))
+        })
+        .collect();
+    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    scored.truncate(k);
+    scored.into_iter().unzip()
+}
+
 // ── Agreement with a teacher ───────────────────────────────────────────
 
 /// One decision of a teacher's game, against the policy pilot's pick.
@@ -835,5 +865,52 @@ mod tests {
         assert!(after.stack.is_empty(), "resolved");
         assert!(after.battlefield_find(bear).is_none(), "the bear died");
         assert_eq!(after.player_with_priority(), 0, "and it's our priority again");
+    }
+
+    /// Phase 4's search over every window plays a legal game: every move
+    /// it makes, in every window, is one the engine takes.
+    #[test]
+    fn the_search_over_every_window_plays_a_legal_game() {
+        use crate::server::mcts::{MENU_COMBAT, MENU_INSTANT, MENU_MAIN, MENU_PROMPT, MctsBot, MctsConfig};
+        let _g = SLOT.lock().unwrap_or_else(|e| e.into_inner());
+        let slot = super::super::net_eval::SLOT_FRA;
+        super::super::net_eval::set_slot(slot, Some(std::sync::Arc::new(HashPolicy)));
+        let cfg = MctsConfig {
+            iterations: 6,
+            horizon_turns: 1,
+            weights: EvalWeights::default(),
+            menu_windows: MENU_MAIN | MENU_INSTANT | MENU_COMBAT | MENU_PROMPT,
+            policy_slot: slot,
+            menu_arms: 4,
+            ..MctsConfig::default()
+        };
+        let seed = 7u64;
+        let mut g = super::super::action_gap::start_game(&sealed_template(seed), &cfg.weights, seed);
+        let mut bots = [MctsBot::new(cfg), MctsBot::new(cfg)];
+        let (mut fuel, mut stalled, mut declared) = (4000, 0, 0);
+        while fuel > 0 && !g.is_game_over() && g.turn_number <= 8 && stalled < 50 {
+            fuel -= 1;
+            let mut acted = false;
+            for (seat, bot) in bots.iter_mut().enumerate() {
+                let Some(a) = bot.next_action(&g, seat) else { continue };
+                if matches!(a, GameAction::DeclareAttackers(ref v) if !v.is_empty()) {
+                    declared += 1;
+                }
+                let r = g.perform_action(a.clone());
+                assert!(r.is_ok(), "the engine refused the search's {a:?}: {r:?}");
+                acted = true;
+                break;
+            }
+            if acted {
+                stalled = 0;
+            } else {
+                stalled += 1;
+                let _ = g.perform_action(GameAction::PassPriority);
+            }
+        }
+        super::super::net_eval::set_slot(slot, None);
+        assert!(stalled < 50, "stalled at {:?}", g.step);
+        assert!(g.turn_number > 3, "the game advanced");
+        let _ = declared;
     }
 }

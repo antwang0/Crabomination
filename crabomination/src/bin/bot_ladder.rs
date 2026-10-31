@@ -295,6 +295,37 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     {
         return Some(Pilot::Mcts(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() }));
     }
+    // Phase 4: the client's pilot with the listed windows searched over
+    // the complete move list — `mcts-net67-menu-<windows>[-conf<pct>]`,
+    // windows any of m(ain) i(nstant) c(ombat) p(rompt) — on the policy
+    // priors of `CRAB_POLICY_NET` (the candidate slot; the value net stays
+    // the champion). `-conf90` plays the policy's pick unsearched when it
+    // holds 90 % of the arms' softmax.
+    if let Some(rest) = name.strip_prefix("mcts-net67-menu-") {
+        let (w, conf) = match rest.split_once("-conf") {
+            Some((w, c)) => (w, c.parse::<f64>().ok()? / 100.0),
+            None => (rest, 2.0),
+        };
+        let mut mask = 0u8;
+        for ch in w.chars() {
+            mask |= match ch {
+                'm' => crabomination::server::mcts::MENU_MAIN,
+                'i' => crabomination::server::mcts::MENU_INSTANT,
+                'c' => crabomination::server::mcts::MENU_COMBAT,
+                'p' => crabomination::server::mcts::MENU_PROMPT,
+                _ => return None,
+            };
+        }
+        return Some(Pilot::Mcts(MctsConfig {
+            iterations: 256,
+            horizon_turns: 3,
+            weights: EvalWeights::net_on_default().with_fra_fixes(),
+            menu_windows: mask,
+            policy_slot: crabomination::server::net_eval::SLOT_CANDIDATE,
+            menu_confident: conf,
+            ..MctsConfig::default()
+        }));
+    }
     if let Some(m) = name.strip_prefix("fra-fixes+")
         && let Some(w) = spot(EvalWeights::fra_fixes_on(), m)
     {
@@ -1314,6 +1345,18 @@ fn parse_args() -> Result<Args, String> {
             std::path::Path::new(&path),
         )?;
         eprintln!("loaded value net from {path}");
+        // The menu windows' policy priors (phase 4): a policy-headed net in
+        // the candidate slot. Required by a `-menu-` profile — without it
+        // the priors are uniform and the cell measures something else.
+        if let Ok(pp) = std::env::var("CRAB_POLICY_NET") {
+            crabomination::server::net_eval::load_slot(
+                crabomination::server::net_eval::SLOT_CANDIDATE,
+                std::path::Path::new(&pp),
+            )?;
+            eprintln!("loaded policy net (menu priors) from {pp}");
+        } else if a_name.contains("-menu-") || b_name.contains("-menu-") {
+            return Err("a `-menu-` profile needs CRAB_POLICY_NET=<policy-headed weights>".into());
+        }
         // A `-pol` profile without the policy head would silently measure
         // `net67` — and the head swap is the whole cell — so it is an
         // error, not a fallback (unlike the gumbel prior below, where the
