@@ -97,8 +97,9 @@ pub(crate) fn attackable_or(state: &GameState, seat: usize, pick: usize) -> usiz
         .unwrap_or(pick)
 }
 
-/// CR 508.1g — re-aim each attacker whose declared player costs a tax at the
-/// cheapest defender it may legally attack instead. A goader comes after
+/// CR 508.1g — re-aim each attacker whose declared player (or planeswalker)
+/// costs a tax at the cheapest defender it may legally attack instead. A
+/// goader comes after
 /// every other *free* seat but before a taxed one: CR 508.1d never obliges
 /// the tax, so a goaded creature whose non-goaders are all taxed attacks its
 /// goader (CR 701.15b) — the taxed pick left it to be dropped and the empty
@@ -118,7 +119,16 @@ pub(crate) fn retarget_taxed_attacks(
     let tax = |a: &Attack| state.attack_tax_for(std::slice::from_ref(a), statics, keyword_tax);
     let mut moved = false;
     for a in attacks.iter_mut() {
-        let AttackTarget::Player(_) = a.target else { continue };
+        // A walker attack re-aims too (Ghostly Prison taxes its controller's
+        // planeswalkers): a forced Toski aimed at a taxed walker with a free
+        // seat open was trimmed and the batch rejected (3-seat pod, seed
+        // 785089). A lured walker (CR 508.1d) keeps its attacker.
+        match a.target {
+            AttackTarget::Player(_) => {}
+            AttackTarget::Planeswalker(pw)
+                if state.attack_lure_of(seat) != Some(pw) && state.creature_lure_of(seat, a.attacker) != Some(pw) => {}
+            _ => continue,
+        }
         let now = tax(a);
         if now == 0 {
             continue;
@@ -430,6 +440,26 @@ mod tests {
             .unwrap();
         let statics = crate::game::combat::attack_static_scan(&g);
         let mut attacks = vec![Attack { attacker: bears[0], target: AttackTarget::Player(2) }];
+        assert!(retarget_taxed_attacks(&g, 0, statics, &|_| 0, &mut attacks));
+        assert_eq!(attacks[0].target, AttackTarget::Player(1));
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(attacks)));
+    }
+
+    /// CR 508.1g / 508.1d — bug fix (3-seat pod, seed 785089): a must-attacker
+    /// aimed at a planeswalker its controller taxes (Onakke Oathkeeper) re-aims
+    /// at the free seat instead of being trimmed for the tax it can't pay.
+    #[test]
+    fn a_taxed_walker_attack_re_aims_at_a_free_seat() {
+        let mut g = multi_player_game(3);
+        g.add_card_to_battlefield(2, crate::catalog::onakke_oathkeeper());
+        let jace = g.add_card_to_battlefield(2, crate::catalog::jace_beleren());
+        let jugg = g.add_card_to_battlefield(0, crate::catalog::juggernaut());
+        g.clear_sickness(jugg);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let statics = crate::game::combat::attack_static_scan(&g);
+        let mut attacks = vec![Attack { attacker: jugg, target: AttackTarget::Planeswalker(jace) }];
         assert!(retarget_taxed_attacks(&g, 0, statics, &|_| 0, &mut attacks));
         assert_eq!(attacks[0].target, AttackTarget::Player(1));
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(attacks)));
