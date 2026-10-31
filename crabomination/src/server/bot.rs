@@ -3842,6 +3842,14 @@ impl HeuristicBot {
                     // 779066, 780183). Commander seats only.
                     if !is_active && !state.players[seat].commanders.is_empty() {
                         repair_block_candidate(state, seat, &mut blocks);
+                        // CR 509.1d — and the tax measured against the
+                        // engine's auto-tap; a trimmed multi-block left short
+                        // of its CR 509.1b count goes with it.
+                        let before = blocks.len();
+                        trim_blocks_to_payable_tax(state, seat, &mut blocks, true);
+                        if blocks.len() != before {
+                            drop_underfilled_blocks(state, &mut blocks);
+                        }
                     }
                     Some(BotStep::plain(GameAction::DeclareBlockers(blocks)))
                 } else if state.blockers_declared() && state.stack.is_empty() {
@@ -16735,7 +16743,7 @@ pub(crate) fn block_candidates_for_mcts(
     // the rules force and the pool cannot pay is left for the engine to
     // reject rather than quietly made illegal a second way.
     let repair = |c: &mut Vec<(CardId, CardId)>| {
-        trim_blocks_to_payable_tax(state, seat, c);
+        trim_blocks_to_payable_tax(state, seat, c, false);
         repair_block_candidate(state, seat, c);
     };
     if (w.block_search == 0 || greedy.is_empty()) && chumps.is_empty() {
@@ -17093,7 +17101,7 @@ fn repair_block_plans(state: &GameState, seat: usize, candidates: &mut Vec<Vec<(
             return;
         }
         for c in candidates.iter_mut() {
-            trim_blocks_to_payable_tax(state, seat, c);
+            trim_blocks_to_payable_tax(state, seat, c, false);
             repair_block_candidate(state, seat, c);
         }
     });
@@ -17887,7 +17895,7 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
                 true
             });
         }
-        trim_blocks_to_payable_tax(state, seat, &mut blocks);
+        trim_blocks_to_payable_tax(state, seat, &mut blocks, false);
         blocks
     })
 }
@@ -17909,10 +17917,14 @@ fn pick_blocks(state: &GameState, seat: usize) -> Vec<(CardId, CardId)> {
 /// damage value descending, kept while the running cost fits. `available_mana`
 /// is deliberately optimistic, so this drops the batches that are clearly
 /// unaffordable and leaves the engine to reject the rest.
+///
+/// `measured` swaps the estimate for the engine's own auto-tap (see below):
+/// once, on the plan a pod seat submits.
 fn trim_blocks_to_payable_tax(
     state: &GameState,
     seat: usize,
     blocks: &mut Vec<(CardId, CardId)>,
+    measured: bool,
 ) {
     if blocks.is_empty() {
         return;
@@ -17960,7 +17972,10 @@ fn trim_blocks_to_payable_tax(
     // +/-1.47 %) for a defect the census never observed: the block half was
     // already 0 rejections on every pool and seed swept. Measure the budget
     // where it is wrong, not everywhere it is used.
-    let budget = available_mana(state, seat).total;
+    // The submitted plan is the one place it is measured: the estimate
+    // over-counted a pod seat's mana and the engine refused its whole block
+    // twice in one game (6-seat pod, seed 788049).
+    let budget = if measured { payable_generic_budget(state, seat, owed.0) } else { available_mana(state, seat).total };
     let life = state.players[seat].life.max(0) as u32;
     if owed.0 <= budget && owed.1 <= life {
         return;
@@ -17991,6 +18006,20 @@ fn trim_blocks_to_payable_tax(
         }
     }
     blocks.retain(|(b, _)| keep.contains(b));
+}
+
+/// CR 509.1b — drop every block on an attacker left short of the blockers
+/// it needs (menace, "two or more") once a trim has removed some of them.
+fn drop_underfilled_blocks(state: &GameState, blocks: &mut Vec<(CardId, CardId)>) {
+    let short: Vec<CardId> = blocks
+        .iter()
+        .map(|&(_, a)| a)
+        .filter(|&a| {
+            let need = state.computed_permanent(a).map_or(1, |cp| min_blockers_required_kws(cp.keywords()));
+            need > 1 && blocks.iter().filter(|(_, x)| *x == a).count() + state.blocker_count_of(a) < need
+        })
+        .collect();
+    blocks.retain(|(_, a)| !short.contains(a));
 }
 
 /// CR 509.1b — flying/reach evasion, off the **computed** keyword sets on
