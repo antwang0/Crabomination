@@ -369,6 +369,10 @@ planner choices.
     --seed 795143`): `trim_attacks_to_payable_tax` kept each forced attacker whose own tax fit the *whole* budget.
   - ✅ **CR 509.1c — a lone "can't attack or block alone" blocker** (7-seat `--pod-decks 2716,404,3659,1720,4765,5072,2240
     --seed 797126`): the bot had no block-side handling; `drop_lone_cant_block_alone` on the submitted Commander plan.
+  - ✅ **CR 509.1c — must-be-blocked** (803-806, `--a dflt` 6-8 seats, 400 games: 1 rejection; `--seats 7 --pod-decks
+    4075,103,388,235,2193,5773,2442 --seed 806097 --a dflt`): the bot left a granted-Lure Jon Irenicus unblocked
+    (`enforce_block_requirements` now pins the cheapest able bodies, as many as its count needs), and with menace under
+    Silent Arbiter the requirement had no legal form — `block_requirement_binds` now reads the combat-wide block cap.
   **Census trend at 6-8 seats: 13 → 6 → 2 → 0 rejections per 600 pods** (799-801 at 6-8 seats, 802 at 3-6 `--a dflt`:
   0 in 600). Sweep **29422** (release, 3/5/8 seats × every deck): 4,043 games, 0 panics, one Ganax + Dragon Tempest board
   cap (`--seats 8 --pod-decks 4689,5273,4976,1503,1786,1435,5889,1059 --seed 2947344`). Closing suite **29,412 / 0 / 8**
