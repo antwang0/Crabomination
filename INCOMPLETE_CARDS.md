@@ -2041,7 +2041,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Rhys, the Evermore~~ ✅ | fixed 2026-10-28: a count per counter kind (`RemoveAnyNumberOfCounters`, keyword counters too); headless strips what its owner doesn't want | — |
 | ~~Lara Croft, Tomb Raider~~ ✅ | fixed 2026-10-27: the grants form one `OneCastAmongGranted` group — one play, a land drop included | — |
 | ~~Loki, God of Mischief~~ ✅ | fixed 2026-10-28: listens to `BecameTarget` under `EventScope::PlayerOrPermanentTargetedByYourAbility` (battlefield permanents and players only) | — |
-| 🟡 Sentinel Tower | the count reads only your own instants and sorceries this turn; one an opponent cast during your turn adds nothing to a later shot (and theirs triggers it for your count) | `Value::InstantsOrSorceriesCastThisTurn` is per player; there is no table-wide instant/sorcery tally |
 | ~~Wernog, Rider's Chaplain~~ ✅ | fixed 2026-10-24: `TemptingOffer::declined` runs "loses 1 life" under each opponent who declined | — |
 | 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
 | ~~Nine Lives~~ ✅ | fixed 2026-10-28: its replacement (and The Mindskinner's) is a prevention — unpreventable damage is dealt (CR 615.12) | — |
@@ -2064,10 +2063,8 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Fortune's Favor | the opponent's split has no face-down pile — you see both | rides `FactOrFiction` |
 | 🟡 Woolly Razorback | with an ice counter it assigns no combat damage rather than having it prevented ("can't be prevented" doesn't restore it) | `Keyword::DealsNoCombatDamage` stands in for the prevention |
 | ~~The Enigma Jewel~~ ✅ | fixed 2026-10-28: "four or more" (`ActivatedAbility.craft_or_more`) exiles every matching graveyard card past four (Ore-Rich Stalactite shares it) | — |
-| 🟡 Elda, Conjurer of Spectacle | entering after a nonlegendary creature spell this turn, the next one still gets demonstrate | a once-per-turn cast trigger, not a count of this turn's nonlegendary creature spells |
 | ~~Kyodai, Soul of Kamigawa~~ ✅ | fixed 2026-10-28: `Duration::WhileYouControlSource` (CR 611.2b) | — |
 | 🟡 Fleeting Memories | an artifact that is a Clue only through Senator Peacock doesn't count as a Clue once sacrificed | `lki_clone` snapshots creature types, not artifact subtypes |
-| 🟡 Metamorphic Alteration | the copy starts when an enters trigger resolves (respondable), not as the Aura enters, and moving the Aura to another creature doesn't copy the new host | `BecomeCopyOfFor` with `WhileSourceAttached`; no static layer-1 copy for an attachment |
 | ~~The Capitoline Triad~~ ✅ | fixed 2026-10-28: a manual seat names the exiled set (a short total takes the auto-pick) | — |
 | 🟡 Hama, the Bloodbender | the exiled card is cast for its mana value in any mana — your artifacts and creatures can't help pay (CR 701.67). Your-turn-only and "for as long as you control Hama" are modelled since 2026-10-28 | `GrantMayPlay { pay_own_cost, any_color }` + `WhileHolderControlsSource { your_turn }` |
 | ~~Myojin of Blooming Dawn~~ ✅ | fixed 2026-10-24: gated on `WasCastFromHand` (a table test covers all ten Myojins: hand, reanimated, cast from exile) | — |
@@ -2088,7 +2085,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Altar of the Wretched // Wretched Bonemass~~ ✅ | fixed 2026-10-24: twelve `SelfHasKeywordWhilePredicate` statics read the exiled crafting cards (protection, parametrized, is not copied) | — |
 | 🟡 The Creation of Avacyn | the tutored card is exiled face up (the face-down hiding isn't modelled) | `ZoneDest::ExileWithSourceStamp` |
 | 🟡 Magar of the Magic Strings | a snapshot reload rebuilds the face-down puppet as a plain 2/2 (as it does Missy's Cybermen) | the serde wire stores only `face_down_permanent` |
-| 🟡 Intimidation Bolt | "other creatures can't attack this turn" is fixed at resolution: a creature entering later can attack | `CantAttackThisTurn` over a resolved set |
 | 🟡 Ride Down | the creatures it blocked "this combat" are read as "this turn" | `Selector::CreaturesBlockedByThisTurn` |
 | 🟡 Tranquil Frillback | each {G} payment buys one mode under its own reflexive trigger, not one trigger choosing up to that many | three `MayPay` → `ReflexiveTrigger` |
 | ~~Experimental Overload~~ ✅ | stale 2026-10-28: the return is already a `MayDo` + `MoveChosen` pick | — |

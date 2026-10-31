@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc5DB`) — seated-deck rows by rank: an attachment copy, board-wide attack locks, a table tally](#fixedopen-2026-10-31-commander-run-01wruxc5db--seated-deck-rows-by-rank-an-attachment-copy-board-wide-attack-locks-a-table-tally) | 20 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc2Es`) — three hung sweep blocks, two board-size quadratics, stolen-permanent "that player"](#fixedopen-2026-10-30-commander-run-01wruxc2es--three-hung-sweep-blocks-two-board-size-quadratics-stolen-permanent-that-player) | 34 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc67u`) — a 25-minute pod decision, a copy event's subject, strict sweeps](#fixedopen-2026-10-30-commander-run-01wruxc67u--a-25-minute-pod-decision-a-copy-events-subject-strict-sweeps) | 33 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-30 (Commander run, `01WRuXc48R`) — 99-card library caps, own-side "up to one" slots, Koh](#fixedopen-2026-10-30-commander-run-01wruxc48r--99-card-library-caps-own-side-up-to-one-slots-koh) | 25 |
@@ -321,6 +322,32 @@ Worklist: `scripts/pod_residuals.py --cards`, each flagged card counted over the
 ## The Commander NEXT's line 9 as `01WRuXc48R` found it (moved verbatim, 2026-10-30)
 
 9. **`01WRuXc3kK` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc3kK`): strict sweeps, then oracle-phrase probes.** Seeds 28110, 29300-29302 over every deck (audit build, strict answer log; concede, fuzz, 8 seats `--a dflt`): **13,109 games**, 1 strict abort (CR 701.40a — a manifest Grafdigger's Cage blocked left the card face down in the library; fixed, no raw `turn_face_down` + move remains), 0 panics; the undecided are CR 104.4 draws and finite board caps. Also: per-seat reveal-top asks answer before any move (CR 608.2), `exile_from::CRAFT` (Market Gnome), Might of Old Krosa's main phase, Stardew Valley's row closed. ⚠ **Four cube-pool fixes were landed and reverted** (`9a104ccda`) — The One Ring, Doomsday Excruciator, Wilt-Leaf Liege, Amped Raptor: the cube pool is frozen; **check INCOMPLETE's cube-frozen row before fixing a card in `cube.rs`** (two were already on it). Clean decks **5,649 → 5,669**, then **5,391** once the frozen gaps are named in their docs — **The One Ring is the top residual (286 decks, 267 sole) and its fix is one filter, frozen with the cube: apply the four at the next net retrain.** Gates: suite **29,350 / 0 / 7** (strict), clippy **0**, `--bench` **196,176 / 27.64 / 613.0 byte-identical**, pools decided. ⚠ `01WRuXc6Fk` swept 29300-29301 the same hour — **next seed 29400**. Next: phrase probes beyond cast conditions (a scratch regex pair per clause family finds what the audits' fixed shapes miss); the rank list is choice-exposure rows (Dawnhand, Battletide, Hawkeye).
+
+## FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc5DB`) — seated-deck rows by rank: an attachment copy, board-wide attack locks, a table tally
+
+No seats. `pod_residuals.py --rank`, reading each ranked 🟡 row for a game-state error rather than a bot-invisible pick.
+- **Metamorphic Alteration** (5 decks): the copy was an ETB trigger (respondable) that never followed the Aura. Now
+  `StaticEffect::AttachedIsCopyOfChosen`, applied by the as-attached funnel (`game/as_attached.rs`) with the
+  attachment, from values locked as it first applied (`ColdState::attached_copy_models`; its rulings). ⚠ **A cast
+  Aura's own attach reports `GameEvent::AuraAttached`, not `AttachmentMoved`** (`stack.rs`) — the funnel's header said
+  "every attach path"; a future as-attached static on an Aura must read both (only the copy does today).
+- **"[Other] creatures can't attack this turn"** (Intimidation Bolt, Festival, kicked Orim's Chant): a per-card ban
+  set at resolution let a later arrival attack. A board-wide `CantAttackThisTurn` (`EachPermanent` /
+  `EachPermanentExceptTargets`) now pushes `TurnRegistries::attack_locks`, read by `attacker_self_block` (CR 611.2c
+  binds only characteristics). Orim's Chant's kicked half moved off a `CantAttack` grant — which surfaced a
+  **target-walker gap: the silence effects named no slot**, and the chant's player slot had been filtered by the
+  grant's `Creature` (`core_rules::target_walkers`); `SilencePlayers*` / `NextDrawThisTurnBecomesImpulse` now `pref_find`.
+- **Sentinel Tower** counts every player's instants and sorceries (`Value::InstantsOrSorceriesCastThisTurn` sums
+  over a fan-out ref; no card read one). **Elda** demonstrates only the turn's first nonlegendary creature spell,
+  counting casts before she arrived (`CastSpellFirstMatchingThisTurn`).
+- Clean decks 5,437 → 5,446 / 6,140. Gates: suite **29,392 / 0 / 8** (strict), `--bench` **196,176 / 27.64 / 613.0 / 0
+  stalls byte-identical**, determinism + thread determinism ok. Pods (release): **29418** 4 seats × every deck, 1,535
+  games, all decided, 0 bad; **29419** 6 seats × every deck, 1,024 games, 1,023 decided + one CR 104.4a draw (Descent into Avernus
+  takes the last two seats from 4 together, `--pod-decks 3280,4670,809,145,5031,4618 --seed 2942524`), 0 panics, 0 hangs..
+- **Remaining rank top is choice exposure** (Dawnhand Dissident, Battletide Alchemist, Hawkeye, Mikey & Don, Flying
+  Drone's two-ability cost — `cost_reduction_if` is generic-only, a coloured "{1}{U} less" needs a mana-cost
+  reduction), plus Pick Up the Pace (a source-bound `MayPlayDuration`), Phyrexian Purge (per-target life surcharge at
+  cast), Curse of Surveillance ("any number of target players").
 
 ## FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc4Xa`) — the last open hang: unbudgeted attack / block chains, per-defender attacker caps
 
