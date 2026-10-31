@@ -27,7 +27,7 @@
 //!                [--sample-temp N] [--sample-turns N] [--mcts-actors N]
 //!                [--record-decisions] [--policy-every N] [--policy-temp F]
 //!                [--policy-head] [--mcts-gumbel] [--best-metric auc|policy]
-//!                [--menu-decisions] [--policy-kinds]
+//!                [--menu-decisions] [--policy-kinds] [--init-from W.safetensors]
 //!                [--mcts-fleet N] [--opp-head] [--search-value-weight F]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
 //!                [--gate-builder GAMES_PER_POOL] [--gate-builder-v3 GAMES_PER_POOL]
@@ -130,6 +130,13 @@ struct Args {
     /// Build the policy head's decision-kind table (`NetConfig::
     /// policy_kinds`). Implies `--policy-head`.
     policy_kinds: bool,
+    /// `--init-from W.safetensors`: a fresh run's learner takes W's shape
+    /// (widths, attention, belief head) plus the policy head (and the kind
+    /// table under `--policy-kinds`), every tensor W carries, and the policy
+    /// head seeded from the win head — the warm start `--pg` uses, for an
+    /// imitation run that should not relearn the trunk from noise. Ignored
+    /// on resume.
+    init_from: Option<PathBuf>,
     /// Learner steps between policy steps when `--record-decisions` is
     /// on. 1 = a policy step every value step.
     ///
@@ -442,6 +449,7 @@ fn parse_args() -> Args {
         record_decisions: false,
         menu_decisions: false,
         policy_kinds: false,
+        init_from: None,
         policy_every: 4,
         policy_temp: 0.1,
         policy_head: false,
@@ -524,6 +532,10 @@ fn parse_args() -> Args {
                 a.menu_decisions = true;
                 a.record_decisions = true;
                 continue; // bare flag, consumes no value
+            }
+            "--init-from" => {
+                a.init_from = Some(PathBuf::from(val()));
+                a.policy_head = true;
             }
             "--policy-kinds" => {
                 a.policy_kinds = true;
@@ -1746,11 +1758,18 @@ fn main() {
     // Under `--pg` the learner's shape follows the pilot's file (widths,
     // attention, belief head), plus the policy head — the run trains on
     // top of that net, not beside it.
-    let cfg = match &args.use_best {
-        Some(best) if args.pg => {
+    let cfg = match (&args.use_best, &args.init_from) {
+        (Some(best), _) if args.pg => {
             let mut c = file_net_config(best, vocab.size())
                 .unwrap_or_else(|| panic!("--pg: cannot read the pilot net {}", best.display()));
             c.policy = true;
+            c
+        }
+        (_, Some(init)) => {
+            let mut c = file_net_config(init, vocab.size())
+                .unwrap_or_else(|| panic!("--init-from: cannot read {}", init.display()));
+            c.policy = true;
+            c.policy_kinds = args.policy_kinds;
             c
         }
         _ => net_config(&args, vocab.size()),
@@ -1814,6 +1833,22 @@ fn main() {
     if latest.exists() {
         trainer.load(&latest).expect("resume from latest.safetensors (delete it to start fresh)");
         eprintln!("resumed weights from {}", latest.display());
+    } else if let Some(init) = args.init_from.as_ref().filter(|_| !args.pg) {
+        // A file that already carries the policy head (a previous imitation
+        // run) loads whole; one without it gets the head seeded from the
+        // win head.
+        if trainer.load(init).is_ok() {
+            eprintln!("init: every tensor from {}", init.display());
+        } else {
+            trainer
+                .load_missing_ok(
+                    init,
+                    &["head_policy.weight", "head_policy.bias", "head_policy_kind.weight", "head_policy_kind.bias"],
+                )
+                .expect("--init-from: load the net into the learner");
+            trainer.init_policy_head_from_win().expect("--init-from: seed head_policy from head_win");
+            eprintln!("init: weights from {}, head_policy initialised from head_win", init.display());
+        }
     } else if args.pg {
         // The warm start (round 72): every tensor from the pilot, and the
         // policy head as a copy of the win head, so the policy's first

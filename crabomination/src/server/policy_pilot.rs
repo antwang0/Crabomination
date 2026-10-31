@@ -20,6 +20,14 @@
 //! one" — no hypothetical encoding, no new features. A step's kind is the
 //! declaration's.
 //!
+//! # Candidate states
+//!
+//! Every candidate is scored from one determinized copy of the position
+//! per decision (hidden zones redealt — no peeking at the next card), a
+//! mulligan as the hand put back, a block settled through combat damage;
+//! see [`candidate_state`]. The recorder builds its rows the same way, so
+//! training and play read the same states.
+//!
 //! # Imitation rows
 //!
 //! [`record`] turns any pilot's move at a decision into the same rows the
@@ -108,10 +116,124 @@ fn declaration(kind: Kind, set: &[Member]) -> GameAction {
     }
 }
 
-/// The engine state after `a`, or `None` if it refuses.
-fn successor(g: &GameState, a: &GameAction) -> Option<GameState> {
-    let mut next = g.clone();
-    next.perform_action(a.clone()).ok().map(|_| next)
+/// The state a decision's candidates are scored from: `g` with every
+/// hidden zone redealt (both libraries, the opponent's hand — the search's
+/// `determinize_hidden`) and the engine's random stream reseeded. One base
+/// per decision, shared by its candidates, so they differ by the move and
+/// not by the sample. Without it a successor read the real next card: the
+/// state after "take a mulligan" showed the next seven, after "may draw"
+/// the card drawn.
+fn hidden_safe(g: &GameState, seat: usize, salt: u64) -> GameState {
+    let mut h = g.clone();
+    super::bot::determinize_hidden(&mut h, seat, salt);
+    h.rng.reseed(salt ^ 0x9E37_79B9_7F4A_7C15);
+    h
+}
+
+/// A candidate's successor, from a [`hidden_safe`] base: the engine state
+/// after the move, with two exceptions.
+///
+/// * **A mulligan** is the base with the hand put back in the library — a
+///   fixed stand-in, so the head learns "is this hand worth keeping" rather
+///   than scoring one random redraw.
+/// * **A block** is settled through combat damage with both players
+///   passing: the block's worth is who dies, and at declaration nothing
+///   has. No choice of the seat's is made in the settle (prompts it raises
+///   take the engine's default answer), so the net still decides.
+/// * **A cast or an activation** in a priority window is settled until the
+///   item it put on the stack resolves, the opponent passing: a spell's
+///   worth is what it does, and on the stack it has done nothing (a 25 %
+///   imitation pilot acted a quarter of the times its teacher passed). The
+///   settle stops at any prompt the resolution raises, so the seat's own
+///   choices stay the head's.
+/// * **An attack** is settled the same way after the defender's blocks,
+///   which come from the unscored heuristic — the opponent model the
+///   search's playouts use — because an attack's worth is how it is
+///   blocked, and at declaration nobody has.
+fn candidate_state(base: &GameState, seat: usize, kind: Kind, a: &GameAction) -> Option<GameState> {
+    use crate::decision::DecisionAnswer;
+    if kind == Kind::Prompt("Mulligan")
+        && matches!(a, GameAction::SubmitDecision(DecisionAnswer::TakeMulligan | DecisionAnswer::SerumPowder(_)))
+    {
+        let mut h = base.clone();
+        while !h.players[seat].hand.is_empty() {
+            let c = h.players[seat].hand.remove(0);
+            h.players[seat].library.push(c);
+        }
+        return Some(h);
+    }
+    let mut next = base.clone();
+    let depth = next.stack.len();
+    next.perform_action(a.clone()).ok()?;
+    if kind == Kind::Priority && next.stack.len() > depth {
+        settle_stack(&mut next, depth);
+    }
+    if kind == Kind::Block {
+        settle_combat(&mut next);
+    }
+    // Every declaration, the empty one too, so "no attack" is compared at
+    // the same point of the turn as the attacks are.
+    if kind == Kind::Attack && matches!(a, GameAction::DeclareAttackers(_) | GameAction::PassPriority) {
+        settle_attack(&mut next, seat);
+    }
+    Some(next)
+}
+
+/// Through the defender's block declaration (the unscored heuristic's) and
+/// then combat damage.
+fn settle_attack(g: &mut GameState, seat: usize) {
+    let defender = g.next_alive_seat(seat);
+    let mut opp = super::bot::HeuristicBot::uniform_baseline();
+    opp.note_external_declaration(g, true);
+    let mut fuel = 64;
+    while fuel > 0 && !g.is_game_over() && g.step == TurnStep::DeclareAttackers {
+        fuel -= 1;
+        if g.perform_action(GameAction::PassPriority).is_err() {
+            return;
+        }
+    }
+    if g.step == TurnStep::DeclareBlockers && !g.blockers_declared() {
+        let blocks = opp.next_action(g, defender);
+        let declared = blocks.is_some_and(|b| matches!(b, GameAction::DeclareBlockers(_)) && g.perform_action(b).is_ok());
+        if !declared {
+            let _ = g.perform_action(GameAction::DeclareBlockers(Vec::new()));
+        }
+    }
+    settle_combat(g);
+}
+
+/// Pass until the stack is back to `depth` items — what was put on it has
+/// resolved — stopping at any prompt, or at game over.
+fn settle_stack(g: &mut GameState, depth: usize) {
+    let mut fuel = 64;
+    while fuel > 0 && !g.is_game_over() && g.pending_decision.is_none() && g.stack.len() > depth {
+        fuel -= 1;
+        if g.perform_action(GameAction::PassPriority).is_err() {
+            return;
+        }
+    }
+}
+
+/// Pass (and default-answer) through the rest of combat damage.
+fn settle_combat(g: &mut GameState) {
+    use crate::decision::{AutoDecider, Decider};
+    let mut fuel = 64;
+    while fuel > 0 && !g.is_game_over() {
+        fuel -= 1;
+        if let Some(p) = &g.pending_decision {
+            let ans = AutoDecider.decide(&p.decision);
+            if g.perform_action(GameAction::SubmitDecision(ans)).is_err() {
+                return;
+            }
+            continue;
+        }
+        if !matches!(g.step, TurnStep::DeclareBlockers | TurnStep::FirstStrikeDamage | TurnStep::CombatDamage) {
+            return;
+        }
+        if g.perform_action(GameAction::PassPriority).is_err() {
+            return;
+        }
+    }
 }
 
 /// One step of building a declaration from `set`: the additions (each a
@@ -214,6 +336,12 @@ pub struct PolicyBot {
     /// Decisions made, and how many fell to the forced-move shortcut.
     pub decisions: u64,
     pub forced: u64,
+    /// The ablation control (`CRAB_POLICY_DELEGATE=Mulligan,block,...`,
+    /// kind names as `Kind::name`): these kinds go to the heuristic instead
+    /// of the head — how much each kind costs the pilot, read off the
+    /// ladder. Empty by default.
+    delegate: Vec<String>,
+    fallback: super::bot::HeuristicBot,
 }
 
 impl PolicyBot {
@@ -223,11 +351,26 @@ impl PolicyBot {
             "the policy pilot needs a net with a policy head in slot {}",
             weights.net_slot
         );
-        Self { weights, temp, rng: StdRng::seed_from_u64(seed), declared: None, decisions: 0, forced: 0 }
+        let delegate = std::env::var("CRAB_POLICY_DELEGATE")
+            .map(|v| v.split(',').map(|k| k.trim().to_string()).filter(|k| !k.is_empty()).collect())
+            .unwrap_or_default();
+        Self {
+            weights,
+            temp,
+            rng: StdRng::seed_from_u64(seed),
+            declared: None,
+            decisions: 0,
+            forced: 0,
+            delegate,
+            fallback: super::bot::HeuristicBot::with_weights(weights),
+        }
     }
 
     fn decide(&mut self, g: &GameState, seat: usize) -> Option<GameAction> {
         let mut m = decision_menu::menu(g, seat, &self.weights)?;
+        if !self.delegate.is_empty() && self.delegate.iter().any(|k| k == m.kind.name()) {
+            return self.fallback.next_action(g, seat);
+        }
         let latched = self.declared == Some((g.turn_number, g.step));
         if latched && matches!(m.kind, Kind::Attack | Kind::Block) {
             m.moves.retain(|a| !matches!(a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)));
@@ -235,16 +378,27 @@ impl PolicyBot {
         }
         self.decisions += 1;
         if matches!(m.kind, Kind::Attack | Kind::Block) {
-            let a = self.build_declaration(g, seat, m.kind).or_else(|| m.moves.first().cloned());
             self.declared = Some((g.turn_number, g.step));
-            return a;
+        }
+        self.choose_from(g, seat, m)
+    }
+
+    /// The pilot's pick from the list `m` (built for `seat` in `g`), with
+    /// no latch bookkeeping — what [`agreement_game`] asks at a decision
+    /// another pilot is making.
+    pub fn choose_from(&mut self, g: &GameState, seat: usize, m: decision_menu::Menu) -> Option<GameAction> {
+        if matches!(m.kind, Kind::Attack | Kind::Block) {
+            return self.build_declaration(g, seat, m.kind).or_else(|| m.moves.first().cloned());
         }
         if m.moves.len() <= 1 {
             self.forced += 1;
             return m.moves.into_iter().next();
         }
+        use rand::RngExt;
+        let base = hidden_safe(g, seat, self.rng.random());
+        let kind = m.kind;
         let (moves, states): (Vec<GameAction>, Vec<GameState>) =
-            m.moves.into_iter().filter_map(|a| successor(g, &a).map(|s| (a, s))).unzip();
+            m.moves.into_iter().filter_map(|a| candidate_state(&base, seat, kind, &a).map(|s| (a, s))).unzip();
         if moves.is_empty() {
             return None;
         }
@@ -254,6 +408,8 @@ impl PolicyBot {
 
     /// Build an attack or block declaration one member at a time.
     fn build_declaration(&mut self, g: &GameState, seat: usize, kind: Kind) -> Option<GameAction> {
+        use rand::RngExt;
+        let base = hidden_safe(g, seat, self.rng.random());
         let mut set: Vec<Member> = Vec::new();
         loop {
             let (adds, stop) = combat_step(g, seat, kind, &set);
@@ -270,7 +426,7 @@ impl PolicyBot {
                 .filter_map(|o| {
                     let mut s = set.clone();
                     s.extend(o.iter().flatten().copied());
-                    successor(g, &declaration(kind, &s))
+                    candidate_state(&base, seat, kind, &declaration(kind, &s))
                 })
                 .collect();
             if states.len() != options.len() {
@@ -289,6 +445,90 @@ impl Bot for PolicyBot {
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         self.decide(state, seat)
     }
+}
+
+// ── Agreement with a teacher ───────────────────────────────────────────
+
+/// One decision of a teacher's game, against the policy pilot's pick.
+#[derive(Debug, Clone)]
+pub struct AgreeRow {
+    pub kind: Kind,
+    pub moves: usize,
+    /// The teacher passed (or declared nothing).
+    pub teacher_passed: bool,
+    pub policy_passed: bool,
+    pub agree: bool,
+}
+
+/// Play a game with `teachers` on both seats and ask `policy`, at every
+/// decision with two or more moves, what it would have played — the
+/// imitation run's on-policy read, split the way its failures are: by kind,
+/// and by whether the teacher acted or passed.
+pub fn agreement_game(
+    template: &GameState,
+    teachers: &mut [Box<dyn Bot>; 2],
+    policy: &mut PolicyBot,
+    w: &EvalWeights,
+    seed: u64,
+) -> Vec<AgreeRow> {
+    let mut g = super::action_gap::start_game(template, w, seed);
+    let mut out = Vec::new();
+    let mut declared: [Option<(u32, TurnStep)>; 2] = [None, None];
+    let passed = |a: &GameAction| match a {
+        GameAction::PassPriority => true,
+        GameAction::DeclareAttackers(v) => v.is_empty(),
+        GameAction::DeclareBlockers(v) => v.is_empty(),
+        _ => false,
+    };
+    let mut fuel = 6000u32;
+    while fuel > 0 && !g.is_game_over() && g.turn_number <= 30 {
+        fuel -= 1;
+        let mut acted = false;
+        for seat in 0..2 {
+            let mut m = decision_menu::menu(&g, seat, w);
+            if let Some(mm) = m.as_mut()
+                && declared[seat] == Some((g.turn_number, g.step))
+                && matches!(mm.kind, Kind::Attack | Kind::Block)
+            {
+                mm.moves.retain(|a| !matches!(a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)));
+                mm.kind = Kind::Priority;
+            }
+            let Some(a) = teachers[seat].next_action(&g, seat) else { continue };
+            let before = g.clone();
+            if g.perform_action(a.clone()).is_err() {
+                continue;
+            }
+            acted = true;
+            if let Some(m) = m
+                && m.moves.len() >= 2
+            {
+                let (kind, moves) = (m.kind, m.moves.len());
+                if matches!(kind, Kind::Attack | Kind::Block) {
+                    declared[seat] = Some((before.turn_number, before.step));
+                }
+                if let Some(p) = policy.choose_from(&before, seat, m) {
+                    let canon = |x: &GameAction| match x {
+                        // Passing at a declaration is declaring nothing.
+                        GameAction::PassPriority if kind == Kind::Attack => GameAction::DeclareAttackers(Vec::new()),
+                        GameAction::PassPriority if kind == Kind::Block => GameAction::DeclareBlockers(Vec::new()),
+                        _ => x.clone(),
+                    };
+                    out.push(AgreeRow {
+                        kind,
+                        moves,
+                        teacher_passed: passed(&a),
+                        policy_passed: passed(&p),
+                        agree: decision_menu::key(&before, seat, &canon(&a)) == decision_menu::key(&before, seat, &canon(&p)),
+                    });
+                }
+            }
+            break;
+        }
+        if !acted && g.perform_action(GameAction::PassPriority).is_err() {
+            break;
+        }
+    }
+    out
 }
 
 // ── Imitation rows ─────────────────────────────────────────────────────
@@ -317,7 +557,8 @@ pub fn record(g: &GameState, seat: usize, chosen: &GameAction, w: &EvalWeights, 
     idx.push(ci);
     idx.shuffle(rng);
     let chosen_at = idx.iter().position(|&i| i == ci).expect("kept");
-    let successors: Vec<Option<GameState>> = idx.iter().map(|&i| successor(g, &m.moves[i])).collect();
+    let base = hidden_safe(g, seat, rand::RngExt::random(rng));
+    let successors: Vec<Option<GameState>> = idx.iter().map(|&i| candidate_state(&base, seat, m.kind, &m.moves[i])).collect();
     decision_capture::maybe_successors(g, seat, successors, chosen_at, Provenance { kind: m.kind.index(), ..Default::default() });
 }
 
@@ -336,6 +577,7 @@ fn members_of(a: &GameAction) -> Option<Vec<Member>> {
 /// every addition still inside `target` (uniform, as logits 0 vs −30), and
 /// "stop" once `target` is reached.
 fn record_declaration(g: &GameState, seat: usize, kind: Kind, target: &[Member], rng: &mut StdRng) {
+    let base = hidden_safe(g, seat, rand::RngExt::random(rng));
     let mut set: Vec<Member> = Vec::new();
     for _ in 0..=target.len() {
         let (adds, stop) = combat_step(g, seat, kind, &set);
@@ -363,7 +605,7 @@ fn record_declaration(g: &GameState, seat: usize, kind: Kind, target: &[Member],
                 .map(|&i| {
                     let mut s = set.clone();
                     s.extend(options[i].iter().flatten().copied());
-                    successor(g, &declaration(kind, &s))
+                    candidate_state(&base, seat, kind, &declaration(kind, &s))
                 })
                 .collect();
             let logits: Vec<f32> = idx.iter().map(|i| if goods.contains(i) { 0.0 } else { -30.0 }).collect();
@@ -510,5 +752,88 @@ mod tests {
         let steps: Vec<_> = rows.iter().filter(|r| r.kind == Kind::Attack.index() || r.kind == Kind::Block.index()).collect();
         assert!(steps.iter().all(|r| r.values_are_logits && r.values.as_ref().is_some_and(|v| v[r.chosen] == 0.0)));
         assert!(rows.iter().filter(|r| r.kind == Kind::Priority.index()).all(|r| r.values.is_none()));
+    }
+
+    /// "Take a mulligan" is the hand put back — never the real next seven
+    /// — and a block is read after the damage it leads to.
+    #[test]
+    fn a_mulligan_is_the_hand_put_back_and_a_block_is_read_after_damage() {
+        use crate::card::{CardDefinition, CardType};
+        use crate::decision::DecisionAnswer;
+        let mut g = crate::game::two_player_game();
+        for seat in 0..2 {
+            for _ in 0..10 {
+                g.add_card_to_library(seat, crate::catalog::island());
+            }
+        }
+        for _ in 0..7 {
+            g.add_card_to_hand(0, crate::catalog::forest());
+        }
+        let base = hidden_safe(&g, 0, 9);
+        let mull = candidate_state(&base, 0, Kind::Prompt("Mulligan"), &GameAction::SubmitDecision(DecisionAnswer::TakeMulligan))
+            .expect("stand-in");
+        assert!(mull.players[0].hand.is_empty());
+        assert_eq!(mull.players[0].library.len(), base.players[0].library.len() + 7);
+
+        // A 1/1 blocks a 3/3: read after damage, the 1/1 is gone.
+        let body = |name: &'static str, p: i32, t: i32| CardDefinition {
+            name,
+            card_types: vec![CardType::Creature],
+            power: p,
+            toughness: t,
+            ..Default::default()
+        };
+        let chump = g.add_card_to_battlefield(0, body("Chump", 1, 1));
+        let ogre = g.add_card_to_battlefield(1, body("Ogre", 3, 3));
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.clear_sickness(ogre);
+        while g.step != TurnStep::DeclareAttackers {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ogre, target: AttackTarget::Player(0) }]))
+            .expect("attack");
+        while g.step != TurnStep::DeclareBlockers {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        let base = hidden_safe(&g, 0, 9);
+        let blocked = candidate_state(&base, 0, Kind::Block, &GameAction::DeclareBlockers(vec![(chump, ogre)])).expect("block");
+        assert!(blocked.battlefield_find(chump).is_none(), "the chump died in the settle");
+        let open = candidate_state(&base, 0, Kind::Block, &GameAction::DeclareBlockers(Vec::new())).expect("no block");
+        assert_eq!(open.players[0].life, base.players[0].life - 3, "unblocked, the 3 went through");
+    }
+
+    /// A cast is read after it resolves: a Lightning Bolt's successor has the
+    /// creature dead and the Bolt in the graveyard, not the Bolt on the stack.
+    #[test]
+    fn a_cast_is_read_after_it_resolves() {
+        use crate::card::{CardDefinition, CardType};
+        let mut g = crate::game::two_player_game();
+        for seat in 0..2 {
+            for _ in 0..5 {
+                g.add_card_to_library(seat, crate::catalog::island());
+            }
+        }
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let m = g.add_card_to_battlefield(0, crate::catalog::mountain());
+        g.clear_sickness(m);
+        let bolt = g.add_card_to_hand(0, crate::catalog::lightning_bolt());
+        let bear = g.add_card_to_battlefield(
+            1,
+            CardDefinition { name: "Bear", card_types: vec![CardType::Creature], power: 2, toughness: 2, ..Default::default() },
+        );
+        let cast = GameAction::CastSpell {
+            card_id: bolt,
+            target: Some(crate::game::Target::Permanent(bear)),
+            additional_targets: Vec::new(),
+            mode: None,
+            x_value: None,
+        };
+        let base = hidden_safe(&g, 0, 3);
+        let after = candidate_state(&base, 0, Kind::Priority, &cast).expect("cast");
+        assert!(after.stack.is_empty(), "resolved");
+        assert!(after.battlefield_find(bear).is_none(), "the bear died");
+        assert_eq!(after.player_with_priority(), 0, "and it's our priority again");
     }
 }

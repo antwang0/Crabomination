@@ -307,6 +307,79 @@ fn run_menu_census(games: usize) {
     }
 }
 
+/// `--policy-agree GAMES [--threads T] [--seed S] [TEACHER]`: the policy
+/// pilot (`CRAB_NET`'s policy head) against a teacher's moves at every
+/// decision of the teacher's own sealed games — by kind, and by whether the
+/// teacher acted or passed. TEACHER is any profile (default the client's
+/// limited pilot).
+fn run_policy_agree(games: usize) {
+    use crabomination::server::policy_pilot::{AgreeRow, PolicyBot, agreement_game};
+    let a: Vec<String> = std::env::args().collect();
+    let flag = |k: &str| a.iter().position(|x| x == k).and_then(|i| a.get(i + 1)).cloned();
+    let threads: usize = flag("--threads").map_or(8, |v| v.parse().expect("--threads T"));
+    let seed: u64 = flag("--seed").map_or(43, |v| v.parse().expect("--seed S"));
+    let teacher = a
+        .iter()
+        .skip(1)
+        .find(|x| !x.starts_with("--") && x.parse::<u64>().is_err() && bot_for(x).is_some())
+        .cloned()
+        .unwrap_or_else(|| "mcts-net67-256-fixes".to_string());
+    let w = EvalWeights::net_on_default().with_fra_fixes();
+    println!("policy agreement: {games} games, teacher {teacher}, {threads} threads, seed {seed}\n");
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let rows: Vec<AgreeRow> = std::thread::scope(|sc| {
+        let hs: Vec<_> = (0..threads)
+            .map(|t| {
+                let teacher = teacher.clone();
+                let next = &next;
+                sc.spawn(move || {
+                    let mut mine = Vec::new();
+                    let mut policy = PolicyBot::new(w, 0.0, t as u64);
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if i >= games {
+                            break;
+                        }
+                        let s = seed ^ (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+                        let build = |k: u64| {
+                            let pool = crabomination::selfplay::sealed_pool(s ^ k);
+                            crabomination::selfplay::sealed_opponent_build(&pool, 16, s ^ (k << 8), Default::default())
+                        };
+                        let template = crabomination::selfplay::sealed_game_template(&build(1), &build(2));
+                        let mut teachers = [bot_for(&teacher).expect("teacher"), bot_for(&teacher).expect("teacher")];
+                        mine.extend(agreement_game(&template, &mut teachers, &mut policy, &w, s));
+                        eprint!(".");
+                    }
+                    mine
+                })
+            })
+            .collect();
+        hs.into_iter().flat_map(|h| h.join().expect("worker")).collect()
+    });
+    eprintln!();
+    let pct = |n: usize, d: usize| 100.0 * n as f64 / d.max(1) as f64;
+    let agree = rows.iter().filter(|r| r.agree).count();
+    println!("decisions with 2+ moves: {} — agreement {:.1} %\n", rows.len(), pct(agree, rows.len()));
+    println!("{:<20} {:>7} {:>7} {:>9} {:>11} {:>11} {:>13}", "kind", "count", "moves", "agree", "t acted", "agree|act", "pol passed|act");
+    let mut kinds: Vec<_> = rows.iter().map(|r| r.kind).collect();
+    kinds.sort();
+    kinds.dedup();
+    for k in kinds {
+        let rs: Vec<&AgreeRow> = rows.iter().filter(|r| r.kind == k).collect();
+        let acted: Vec<&&AgreeRow> = rs.iter().filter(|r| !r.teacher_passed).collect();
+        println!(
+            "{:<20} {:>7} {:>7.1} {:>8.1}% {:>10.1}% {:>10.1}% {:>12.1}%",
+            k.name(),
+            rs.len(),
+            rs.iter().map(|r| r.moves).sum::<usize>() as f64 / rs.len() as f64,
+            pct(rs.iter().filter(|r| r.agree).count(), rs.len()),
+            pct(acted.len(), rs.len()),
+            pct(acted.iter().filter(|r| r.agree).count(), acted.len()),
+            pct(acted.iter().filter(|r| r.policy_passed).count(), acted.len()),
+        );
+    }
+}
+
 fn goal_name(g: Goal) -> String {
     match g {
         Goal::WinThisTurn => "win".into(),
@@ -493,7 +566,8 @@ fn main() {
             "bot_puzzles [--set core|fra] [--depth N] [--certify] [PROFILE ...]\n\
              bot_puzzles --blunders [--reps N] [--show-lines] [PROFILE ...]\n\
              bot_puzzles --action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S] [--scored-rollouts] [MCTS PROFILE]\n\
-             bot_puzzles --menu-census GAMES [--threads T] [--seed S] [MCTS PROFILE]\n\n\
+             bot_puzzles --menu-census GAMES [--threads T] [--seed S] [MCTS PROFILE]\n\
+             bot_puzzles --policy-agree GAMES [--threads T] [--seed S] [TEACHER]  (CRAB_NET's policy head)\n\n\
              PROFILE: pass (null control) | policy (CRAB_NET's policy head) | dflt | fixes | net67 | net67-fixes | mcts-dflt-256 | mcts-net67-256 |\n\
              \x20        mcts-net67-256-fixes (the client's limited pilot) | gang | atk-sim | net | mcts-net-deep\n\
              --certify reports which candidates are real puzzles. CRAB_NET overrides the champion."
@@ -510,6 +584,11 @@ fn main() {
             std::path::Path::new(&net),
         )
         .expect("load the value net");
+    }
+    if let Some(i) = args.iter().position(|a| a == "--policy-agree") {
+        let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(20);
+        run_policy_agree(games);
+        return;
     }
     if let Some(i) = args.iter().position(|a| a == "--menu-census") {
         let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(40);

@@ -6954,3 +6954,72 @@ same coverage; `CRAB_MENU_SEARCH_ARMS=1` restores them.
   and encoder features for the prompt's source and question (the
   successor plus the kind row carry them for now; a layout break waits
   for evidence it is needed).
+
+### Phase 3 — the net alone, by imitation (2026-10-31, in progress)
+
+Teacher: the scored heuristic with the fixes bundle (`--actor-fra-fixes`,
+no net — cheap, ~45 games/s on 4 actors). Learner: CPU (the GPU was the
+user's all day), warm-started from `nets/champion.safetensors`
+(`--init-from`: every tensor it has, the policy head seeded from the win
+head, the kind table at zero), `--menu-decisions --policy-kinds
+--policy-every 1`; ~1.5–1.9 steps/s, which binds everything below.
+Instruments: `bot_puzzles --policy-agree` (the pilot's pick against the
+teacher's at every decision of the teacher's games, by kind and by
+whether the teacher acted) and `CRAB_POLICY_DELEGATE=kind,...` (those
+kinds to the heuristic — what each kind costs, off the ladder).
+Ladder reads: `policy-net-fixes` vs `dflt`, sealed, 100 × 12, seed 43,
+±2.2.
+
+| net | inference | vs `dflt` |
+|---|---|---|
+| A step 3000 (raw successors) | raw | 15.5 % |
+| A step 3000 | determinized + settled combat | 18.3 % |
+| A step 5000 | determinized + settled combat | 25.8 % |
+| B step 3000 (trained on determinized + settled combat) | same | 24.8 % |
+| B step 6000 | same | 25.0 % (plateau; held-out top-1 0.76 from step 3000) |
+| B step 6000 | + casts settled | 28.5 % |
+
+What the instruments found, in order:
+
+1. **A successor leaked hidden information.** Candidates were scored on
+   the real state, so "take a mulligan" showed the real next seven and
+   "may draw" the card. Now every decision's candidates are scored from
+   one determinized copy (`hidden_safe`: both libraries and the
+   opponent's hand redealt, the engine stream reseeded), shared by its
+   candidates. A mulligan is a fixed stand-in (the hand put back); the
+   A-step-3000 pilot was at chance on keep/mulligan, and delegating
+   mulligans was worth +5.6.
+2. **Combat was scored before anything happened.** A block's successor
+   is now settled through damage (both passing), an attack's through the
+   defender's blocks (the unscored heuristic — the playouts' opponent
+   model) and damage. Delegating attacks / blocks was worth +7.8 / +10.1
+   on A; on B, +3.7 / +3.9.
+3. **Casts were scored on the stack.** On B the biggest loss was
+   priority play (delegating it: 25.0 → 41.6): the pilot acted on ~26 %
+   of the decisions its teacher passed on and agreed 69 % when the
+   teacher acted. A cast or activation is now settled until it resolves
+   (the opponent passing; stopping at any prompt it raises) — +3.5 at
+   inference alone on B's net, retrained in run C.
+
+**Run C** (fixes teacher, casts settled too, warm-started from B): step
+2000 30.9 %, 4000 33.3 %, 6000 33.2 % (plateau, held-out top-1 0.76).
+**Full gate on C's final net** (`.ladder/p3/gate.sh`, `policy-net-fixes`
+vs `dflt`, 200 × 12 sealed, paired): **34.6 % [33.0, 36.2] (seed 43) /
+35.3 % [33.7, 37.0] (seed 97)**; blunder set **14 / 22**, 2 / 6 pairs —
+and it passes `flash_in_the_blocker`, which every heuristic and search
+pilot fails. Its misses: attacks into deathtouch and first strike, won't
+attack past a tapped first striker or into an empty board, the hold-back
+pair, kill-the-flier, chumps at 20, never activates Jayemdae Tome.
+Delegation on C (base 33.2): attack 37.0, block 41.8, priority 45.2, all
+prompts + combat 43.8 — combat (attack agreement 48 % when the teacher
+attacks, the pilot declaring nothing 43 % of those times) and priority
+play remain the losses.
+
+**Run D** (the client's pilot as the teacher: `--use-best
+nets/champion.safetensors --pilot net67 --actor-fra-fixes --mcts-actors
+256`, warm-started from C; GPU learner once the user's job ended, 4.0–4.4
+steps/s against the CPU's 1.5–2.0; 12 search actors ~1.8 games/s):
+step 2000 31.8 %, 4000 33.8 %, 6000 31.3 % (±2.2) — flat at C's level on
+2,600 games. A stronger teacher has not moved the imitator so far, which
+points at what the policy can represent (each move scored as its
+successor's pooled summary) rather than at the teacher.
