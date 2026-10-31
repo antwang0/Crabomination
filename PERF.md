@@ -3145,7 +3145,9 @@ declarer's team (inline `SmallVec`) once a declaration. Everything else is Comma
 
 ```
 --bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical at every tip; determinism ok
-games_per_s      228.5 / 246.2 / 245.5 / 206.9 (then 241.3, 219.0 re-run, same binary) / 243.3 — single-run noise
+games_per_s      228.5 / 246.2 / 245.5 / 206.9 (then 241.3, 219.0 re-run, same binary) / 243.3 / 229.0 — single-run noise
+pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: decision-identical, `e9d041de5` vs the
+                 closing tip (372,578 / 213,776 / 520,724 — the same as `01WRuXc2ns`'s leg 2)
 ```
 
 ### 2026-10-29 (Commander run, `01WRuXc2ns`) — guardrail; a mana-ability scratch save, a parked-log guard, two bot gates
