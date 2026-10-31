@@ -384,11 +384,12 @@ planner choices.
     seats × every deck): 2,413 games, 0 panics, two Descent into Avernus CR 104.4a draws, one prison stall to the board
     cap (Ghostly Prison + Propaganda + Omen Machine against a Tendershoot Saproling engine, 195 turns without an attack:
     `--seats 7 --pod-decks 4643,2517,3413,5355,743,86,605 --seed 2945408` — a 4-mana-per-attacker tax the bot rightly
-    declines, not a rules bug). Bench byte-identical, cube / sos / sealed decision-identical.
+    declines, not a rules bug). Bench byte-identical, cube / sos / sealed decision-identical. Closing suite **29,421 /
+    0 / 8** (strict), precon-seat shards green (293 / 299 s).
   **Census trend at 6-8 seats: 13 → 6 → 2 → 0 → 4 → 0 rejections per 600 pods** (799-801 at 6-8 seats, 802 at 3-6 `--a dflt`:
   0 in 600). Sweep **29422** (release, 3/5/8 seats × every deck): 4,043 games, 0 panics, one Ganax + Dragon Tempest board
   cap (`--seats 8 --pod-decks 4689,5273,4976,1503,1786,1435,5889,1059 --seed 2947344`). Closing suite **29,412 / 0 / 8**
-  (strict), workspace clippy **0**, `--bench` byte-identical (243.3 games/s). **Next seed 29423, census seed 803.**
+  (strict), workspace clippy **0**, `--bench` byte-identical (243.3 games/s). **Next seed 29424, census seed 815.**
 - ✅ *(closed the same hour by `01WRuXc4hq`, `847bb0332`)* a *duel* bot attacked into Angelic Arbiter after casting (the
   re-aim was Commander-only): `reaim_prohibited_attacks` empties the declaration in any format. Test
   `angelic_arbiter_bars_a_duel_attack_after_a_cast`. (This run's own copy of the gate was dropped as a duplicate.)
