@@ -1352,20 +1352,7 @@ impl GameState {
                     }
                 }
                 AttackTarget::Planeswalker(pw_id) => {
-                    let pw = self
-                        .battlefield_find(pw_id)
-                        .ok_or(GameError::InvalidPlaneswalkerAttackTarget(pw_id))?;
-                    if !self.computed_has_card_type(pw, crate::card::CardType::Planeswalker)
-                        // CR 506.2 — "can't be attacked" (The Aetherspark
-                        // while attached to a creature).
-                        || self.permanent_cant_be_attacked(pw_id)
-                        || self.sentinel_bound(atk.attacker)
-                        || self.same_team(self.active_player_idx, pw.controller)
-                        || !self.players[pw.controller].is_alive()
-                        || seat_restriction.is_some_and(|only| only != Some(pw.controller))
-                        || !self.player_in_range_of(p, pw.controller)
-                        || !self.seat_attackable_from(p, pw.controller)
-                    {
+                    if !self.planeswalker_attackable(p, pw_id, atk.attacker, seat_restriction) {
                         return Err(GameError::InvalidPlaneswalkerAttackTarget(pw_id));
                     }
                 }
@@ -4207,6 +4194,29 @@ impl GameState {
         }
         let restriction = self.attack_left_right_defender();
         (0..self.players.len()).filter(|&p| self.player_open_to_attack(seat, p, restriction)).collect()
+    }
+
+    /// CR 506.2 / 508.1b — `attacker` may be declared at planeswalker
+    /// `pw_id` by `p`. One walker for the declaration and the pod bot's
+    /// settle pass. `restriction` is [`Self::attack_left_right_defender`].
+    pub(crate) fn planeswalker_attackable(
+        &self,
+        p: usize,
+        pw_id: CardId,
+        attacker: CardId,
+        restriction: Option<Option<usize>>,
+    ) -> bool {
+        let Some(pw) = self.battlefield_find(pw_id) else { return false };
+        self.computed_has_card_type(pw, crate::card::CardType::Planeswalker)
+            // CR 506.2 — "can't be attacked" (The Aetherspark while attached
+            // to a creature).
+            && !self.permanent_cant_be_attacked(pw_id)
+            && !self.sentinel_bound(attacker)
+            && !self.same_team(self.active_player_idx, pw.controller)
+            && self.players[pw.controller].is_alive()
+            && restriction.is_none_or(|only| only == Some(pw.controller))
+            && self.player_in_range_of(p, pw.controller)
+            && self.seat_attackable_from(p, pw.controller)
     }
 
     /// CR 508.1 — Angelic Arbiter: `seat` cast a spell this turn and an

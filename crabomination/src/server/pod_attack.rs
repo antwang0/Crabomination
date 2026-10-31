@@ -352,6 +352,20 @@ pub(crate) fn settle_declaration(state: &GameState, seat: usize, mut attacks: Ve
     if attacks.is_empty() || state.players.get(seat).is_none_or(|p| p.commanders.is_empty()) {
         return attacks;
     }
+    // CR 506.2 / 508.1b — a walker aim the engine refuses (Gideon, the
+    // Oathsworn's seat, 6-seat pod 809022) goes at a live player instead, and
+    // CR 508.1 — an attacker added after the re-aim (free attackers, pressure
+    // trades) gets it too (a barred Lightning Rager, 6-seat pod 809141).
+    let restriction = state.attack_restriction();
+    for a in attacks.iter_mut() {
+        if let AttackTarget::Planeswalker(pw) = a.target
+            && !state.planeswalker_attackable(seat, pw, a.attacker, restriction)
+        {
+            let owner = state.battlefield_find(pw).map_or(seat, |c| c.controller);
+            a.target = AttackTarget::Player(attackable_or(state, seat, owner));
+        }
+    }
+    let mut attacks = reaim_prohibited_attacks(state, seat, attacks);
     let statics = crate::game::combat::attack_static_scan(state);
     super::bot::trim_attacks_to_payable_tax(state, seat, statics, &mut attacks);
     if let [only] = attacks.as_slice()
@@ -575,6 +589,21 @@ mod tests {
         assert!(!g.would_accept(crate::game::GameAction::DeclareAttackers(lone.clone())));
         let out = settle_declaration(&g, 0, lone);
         assert!(out.is_empty(), "{out:?}");
+    }
+
+    /// CR 506.2 / 508.1b — bug fix (6-seat pod, seed 809022): a walker aim
+    /// the engine refuses goes at the permanent's controller instead.
+    #[test]
+    fn settle_re_aims_a_walker_attack_the_engine_refuses() {
+        let (mut g, bears) = table([40; 4]);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        g.clear_sickness(bears[0]);
+        let not_a_walker = g.add_card_to_battlefield(2, crate::catalog::grizzly_bears());
+        let aim = vec![Attack { attacker: bears[0], target: AttackTarget::Planeswalker(not_a_walker) }];
+        assert!(!g.would_accept(crate::game::GameAction::DeclareAttackers(aim.clone())));
+        let out = settle_declaration(&g, 0, aim);
+        assert_eq!(out, vec![Attack { attacker: bears[0], target: AttackTarget::Player(2) }]);
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
     }
 
     /// CR 508.1 — bug fix: a Bear aimed at a player behind Island Sanctuary's
