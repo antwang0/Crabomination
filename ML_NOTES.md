@@ -7023,3 +7023,24 @@ step 2000 31.8 %, 4000 33.8 %, 6000 31.3 % (±2.2) — flat at C's level on
 2,600 games. A stronger teacher has not moved the imitator so far, which
 points at what the policy can represent (each move scored as its
 successor's pooled summary) rather than at the teacher.
+
+**D's final net** (step 16,000, 7,067 search games; stopped there — the
+learner sleeping 89 % on the reuse cap, the value head memorising its
+small window: train win MSE 0.03 against 0.28 held out): **34.5 %
+[32.9, 36.1] / 36.6 % [35.0, 38.2]**, blunder set 14 / 22 (1 / 6 pairs).
+Against C's 34.6 / 35.3, +0.6 pooled — inside the noise. Agreement with
+its own teacher: priority 64 % when the search acts (8 % passing), attack
+64 % (C on its teacher: 48 %), block 40 %.
+
+**Phase 3 verdict.** The net now makes every decision of a game on its
+own and reaches **~35 % against `dflt`** (from 0.2 % at the smoke run);
+the pre-set gate (beats `dflt`) is **not met**. Two teachers a long way
+apart in strength produce the same plateau, and each of B and C
+plateaued within ~3,000 steps of its start, so the binding constraint is
+what the policy can represent — every move scored by a linear head over
+its successor's pooled summary — not the data or the teacher. Two ways
+on: (1) phase 4, the search at every decision on this net's prior and the
+champion's value, where the lookahead covers the policy's misses; (2) an
+action-conditioned policy (score the move's objects against the state's
+per-object embeddings rather than a pooled successor), which raises the
+imitation ceiling and is what a phase-5 distillation would need.
