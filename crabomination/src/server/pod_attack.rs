@@ -138,7 +138,16 @@ pub(crate) fn retarget_taxed_attacks(
         let best = defenders
             .iter()
             .copied()
-            .filter(|&d| state.attacker_target_block(seat, a.attacker, &kws, Some(d)).is_none())
+            // CR 508.1 — never onto a seat a defender-reading prohibition bars
+            // (Storm, Windrider's "creatures with flying can't attack you"):
+            // a flyer moved off a Propaganda seat there sank the batch (4-seat
+            // pod, seed 804070, fourteen refused declarations).
+            .filter(|&d| {
+                state.attacker_target_block(seat, a.attacker, &kws, Some(d)).is_none()
+                    && state
+                        .attack_target_prohibited(&Attack { attacker: a.attacker, target: AttackTarget::Player(d) }, statics)
+                        .is_none()
+            })
             .map(|d| {
                 let cost = tax(&Attack { attacker: a.attacker, target: AttackTarget::Player(d) });
                 (cost > 0, state.goaded_by_player(c, d), cost, d)
@@ -492,6 +501,32 @@ mod tests {
         assert!(retarget_taxed_attacks(&g, 0, statics, &|_| 0, &mut attacks));
         assert_eq!(attacks[0].target, AttackTarget::Player(1));
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(attacks)));
+    }
+
+    /// CR 508.1 / 508.1g — bug fix (4-seat pod, seed 804070): a taxed flyer
+    /// does not re-aim at a cheaper seat whose Storm, Windrider bars flyers.
+    #[test]
+    fn a_taxed_attack_never_re_aims_at_a_barred_seat() {
+        let mut g = multi_player_game(3);
+        g.add_card_to_battlefield(1, crate::catalog::ghostly_prison());
+        g.add_card_to_battlefield(1, crate::catalog::propaganda());
+        g.add_card_to_battlefield(2, crate::catalog::ghostly_prison());
+        g.add_card_to_battlefield(2, crate::catalog::storm_windrider());
+        let drake = g.add_card_to_battlefield(0, crate::catalog::wind_drake());
+        let bear = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.clear_sickness(drake);
+        g.clear_sickness(bear);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let statics = crate::game::combat::attack_static_scan(&g);
+        let mut attacks = vec![
+            Attack { attacker: drake, target: AttackTarget::Player(1) },
+            Attack { attacker: bear, target: AttackTarget::Player(1) },
+        ];
+        assert!(retarget_taxed_attacks(&g, 0, statics, &|_| 0, &mut attacks));
+        assert_eq!(attacks[0].target, AttackTarget::Player(1), "the flyer can't go to Storm's seat");
+        assert_eq!(attacks[1].target, AttackTarget::Player(2), "the bear takes the cheaper seat");
     }
 
     /// CR 508.1 — bug fix (7-seat pod, seed 788005): under an opponent's
