@@ -5886,6 +5886,11 @@ impl Effect {
                 // Garland) reads its slot out of `ControllerOf(TargetFiltered)`.
                 | Effect::BecomeMonarch { who }
                 | Effect::CantBecomeMonarchThisTurn { who }
+                // "Target player can't cast spells this turn" (Orim's Chant,
+                // whose kicked half names no slot of its own).
+                | Effect::SilencePlayersThisTurn { who }
+                | Effect::SilencePlayersUntilTheirNextTurn { who }
+                | Effect::NextDrawThisTurnBecomesImpulse { who }
                 | Effect::YouAndPlayerChooseTheirPermanentsToSacrifice { who, .. } => pref_find(who, slot),
                 Effect::WaiveShroudForPlayerThisTurn { player } => {
                     pref_find(player, slot)
