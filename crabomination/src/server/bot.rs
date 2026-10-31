@@ -16934,6 +16934,43 @@ fn enforce_block_requirements(
         }
     }
 
+    // CR 509.1c — "must be blocked if able" (a granted Lure-lite: Nemesis
+    // Mask, Irresistible Prey): the planner prices which body to spend, but a
+    // plan that left it unblocked with an idle able body home was refused
+    // whole (7-seat pod, seed 806097) — pin the cheapest one.
+    if state.board_keyword_in_scope(&[Keyword::MustBeBlocked]) {
+        for atk in state.attacking().iter() {
+            if state.defender_for(atk.target) != Some(seat)
+                || !state.block_requirement_binds(atk.attacker)
+                || state.blocker_count_of(atk.attacker) > 0
+                || blocks.iter().any(|(_, aid)| *aid == atk.attacker)
+                || !state.computed_permanent(atk.attacker).is_some_and(|cp| cp.keywords().has_kw(&Keyword::MustBeBlocked))
+            {
+                continue;
+            }
+            let mut idle: Vec<&crate::card::CardInstance> = state
+                .battlefield
+                .iter()
+                .filter(|b| {
+                    b.controller == seat
+                        && !state.is_blocking(b.id)
+                        && !blocks.iter().any(|(bid, _)| *bid == b.id)
+                        && state.block_requirement_able(b, atk.attacker)
+                        && state.blocker_can_block_attacker(b.id, atk.attacker)
+                })
+                .collect();
+            // CR 509.1b — as many bodies as its count needs (menace), or none.
+            let need = state.computed_permanent(atk.attacker).map_or(1, |cp| min_blockers_required_kws(cp.keywords()));
+            if idle.len() < need {
+                continue;
+            }
+            idle.sort_by_key(|b| (b.power(), b.id));
+            for b in idle.into_iter().take(need) {
+                pin(blocks, b.id, atk.attacker);
+            }
+        }
+    }
+
     // CR 509.1c — "must be blocked by N or more if able" (Gorm the Great):
     // top it up to N with the cheapest idle able bodies when N is reachable.
     if state.board_keyword_matching(|k| matches!(k, Keyword::MustBeBlockedByAtLeast(_))) {
@@ -24796,6 +24833,30 @@ mod tests {
             }
             _ => panic!("expected an activate-ability action"),
         }
+    }
+
+    /// CR 509.1c — bug fix (7-seat pod, seed 806097): a "must be blocked if
+    /// able" attacker the plan left open is pinned with the cheapest able body.
+    #[test]
+    fn a_must_be_blocked_attacker_left_open_is_pinned() {
+        let mut g = two_player_game();
+        let mut def = catalog::grizzly_bears();
+        def.keywords.push(crate::card::Keyword::MustBeBlocked);
+        let lure = g.add_card_to_battlefield(0, def);
+        g.clear_sickness(lure);
+        let small = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.add_card_to_battlefield(1, catalog::hill_giant());
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: lure, target: AttackTarget::Player(1) }]))
+            .unwrap();
+        g.step = TurnStep::DeclareBlockers;
+        g.priority.player_with_priority = 1;
+        let mut blocks = Vec::new();
+        enforce_block_requirements(&g, 1, &mut blocks);
+        assert_eq!(blocks, vec![(small, lure)]);
+        assert!(g.would_accept(GameAction::DeclareBlockers(blocks)));
     }
 
     /// `no_empty_attacks`: Living Library (0/4) stays home on an open board
