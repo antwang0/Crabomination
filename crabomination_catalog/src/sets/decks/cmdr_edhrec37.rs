@@ -114,10 +114,9 @@ pub fn elda_conjurer_of_spectacle() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
-                .with_filter(Predicate::CastSpellMatches(
+                .with_filter(Predicate::CastSpellFirstMatchingThisTurn(
                     R::Creature.and(R::Not(Box::new(R::HasSupertype(Supertype::Legendary)))),
-                ))
-                .once_per_turn(),
+                )),
             effect: Effect::Demonstrate,
         }],
         ..legend(

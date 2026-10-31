@@ -60,6 +60,21 @@ fn elda_demonstrates_the_first_creature_spell() {
     assert_eq!(named(&g, 0, "Grizzly Bears").len(), 3, "only the first each turn");
 }
 
+/// "The first nonlegendary creature spell you cast each turn" counts the spells
+/// cast before Elda arrived: entering after one, she gives the next none.
+#[test]
+fn elda_skips_the_turn_when_a_creature_spell_came_first() {
+    let mut g = pod(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    let first = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, first, None).expect("bear before Elda");
+    g.add_card_to_battlefield(0, catalog::elda_conjurer_of_spectacle());
+    let second = g.add_card_to_hand(0, catalog::grizzly_bears());
+    cast(&mut g, second, None).expect("second bear");
+    assert_eq!(named(&g, 0, "Grizzly Bears").len(), 2, "no demonstrate copy");
+    assert_eq!(named(&g, 1, "Grizzly Bears").len(), 0);
+}
+
 /// Fungus Sliver: a Sliver that survives damage grows; Reflex Sliver gives
 /// every Sliver haste, an opponent's included.
 #[test]
