@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Count the actions the engine refuses from the pod bots, by (action, error).
 
-    scripts/pod_rejects.py BIN SEED GAMES [--a PILOT]
+    scripts/pod_rejects.py BIN SEED GAMES [--a PILOT] [--seats 3,4,5,6]
 
-Plays GAMES random 3-6-seat Commander pods (one game each, seeds SEED*1000+i)
+Plays GAMES random Commander pods (seat counts drawn from `--seats`, default 3-6) (one game each, seeds SEED*1000+i)
 under `CRAB_POD_TRACE=0`, which prints a `REJECT …` line for every refused
 action, and prints each class with one replay command. A rejected declaration
 costs the seat its whole combat, so every class is a bot (or engine) bug. Add
@@ -14,13 +14,14 @@ import argparse, collections, random, re, subprocess
 ap = argparse.ArgumentParser()
 ap.add_argument('bin'); ap.add_argument('seed', type=int); ap.add_argument('games', type=int)
 ap.add_argument('--a')
+ap.add_argument('--seats', default='3,4,5,6', help='comma list of seat counts to draw from')
 a = ap.parse_args()
 rng = random.Random(a.seed)
 probe = subprocess.run([a.bin, '--commander', '--pod-decks', '99999,1', '--games', '1'], capture_output=True, text=True)
 ndecks = int(re.findall(r'1\.\.=(\d+)', probe.stdout + probe.stderr)[-1])
 count, example = collections.Counter(), {}
 for i in range(a.games):
-    k = rng.choice([3, 4, 5, 6])
+    k = rng.choice([int(x) for x in a.seats.split(',')])
     decks = ','.join(str(rng.randint(1, ndecks)) for _ in range(k))
     seed = a.seed * 1000 + i
     cmd = [a.bin, '--commander', '--seats', str(k), '--pod-decks', decks, '--games', '1', '--seed', str(seed), '--threads', '1']
