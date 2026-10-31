@@ -330,7 +330,8 @@ No seats. Sweeps: **29414** (audit build, strict, 4/6 seats, concede; 2,559 game
 each Cat retriggers it; Underworld Breach + Three Visits and one more board cap, both finite), **29416** (release tip,
 8 seats, `--a dflt` + fuzz; 768 games, one Scute Swarm board cap, **no hang**) and **29417** (release tip, 5/6 seats,
 `--a dflt` + fuzz; 2,252 games: four Descent into Avernus CR 104.4a draws, one Authority of the Consuls board cap, no
-hang). 0 panics. **Next seed 29418.**
+hang), **29418** (audit, strict, 3/4 seats, concede, after the pact fix; 3,582 games, one Descent into Avernus CR
+104.4a draw). 0 panics. **Next seed 29419.**
 - ✅ **Seed 2941252 (8 seats) was the CHAINS, not the gather.** Release base: 529 s for the game, **414 s of it one
   block step** — `block_chain_candidate` offered 868 (blocker, attacker) moves, ~0.6 s a sim on the audit build, then
   816 more; the attack chain priced pairs + six growth steps of seven-turn `pod_horizon` sims (1.7 s each at 155
@@ -349,7 +350,24 @@ hang). 0 panics. **Next seed 29418.**
   mana ability `pact_guard::pact_payable` counted as a source, and lost at her upkeep. Sources now count only through
   `is_countable_mana_ability`. Test `a_sacrifice_mana_ability_does_not_pay_a_pact`; both `overflow` shards green
   (~255 s each).
-- Gates: suite **29,383 / 0 / 7** (strict answer log, precon-seat test skipped); `--bench` **196,176 / 613.0 / 0
+- ✅ **A REJECT census: illegal pod-bot declarations, by error.** `CRAB_POD_TRACE=0` prints a `REJECT …` line for
+  every action the engine refuses; 120-300 random 3-6-seat release pods a round, counted by (action, error), name the
+  classes (`scripts/pod_rejects.py BIN SEED GAMES`; `CRAB_SIM_REJECTS=names` adds the `combat.rs` line). Five classes fixed, each a seat's whole combat:
+  CR 508.1d an attack **tax** never makes a requirement bind (`attack_cost_payable` → `attack_is_untaxed`; a goaded
+  Sapphire Dragon had to attack through Ghostly Prison, seed 777042); CR 701.15b a goaded attacker whose non-goaders
+  are all taxed re-aims at its free goader (`retarget_taxed_attacks` ranked a taxed non-goader first); CR 508.1 The
+  Second Doctor's next-turn ban (seed 778020); CR 508.1a Chaos Dragon's granted `CantAttackPlayer` (seed 779101, 13
+  rejections); CR 508.1d / 701.15b a goaded attack at its goader with another seat open (seed 779124's first form) —
+  the last three in `pod_attack::reaim_prohibited_attacks`. **Open** (replays, `bot_ladder --commander --threads 1`):
+  `--seats 6 --pod-decks 3787,5606,949,5497,2508,2391 --seed 779124` (goaded Yuna now dropped — the re-aim finds no
+  seat that both `attacker_target_block` and `attack_target_obeys_most` accept, yet the engine requires her);
+  `--seats 5 --pod-decks 3134,5591,4440,5284,1734 --seed 780004` (empty declaration, `CannotAttack(250)`, 7);
+  menace — a single blocker on an attacker granted menace after declaration (Blood-Chin Rager's "Warriors gain
+  menace"): `--seats 3 --pod-decks 5932,374,1189 --seed 779066`, `--seats 4 --pod-decks 3243,3005,1379,4342 --seed
+  780183` (both pre-existing; the block repair reads the computed view, so the single block comes from elsewhere);
+  `MustBeBlockedIfAble`: `--seats 6 --pod-decks 3140,380,195,1659,1136,506 --seed 780059`. Census rate after the
+  fixes: 10 rejections in 300 games (seed 780).
+- Gates: suite **29,393 / 0 / 7** at the closing tip (29,383 before the pact / REJECT fixes; strict answer log, precon-seat test skipped); `--bench` **196,176 / 613.0 / 0
   stalls — byte-identical**, determinism ok; cube / sos / sealed `--games 100 --seed 28200` decision-identical base vs
   tip (372,578 / 213,776 / 520,724).
 
