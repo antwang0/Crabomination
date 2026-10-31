@@ -9206,6 +9206,24 @@ fn cr_508_1d_angelic_arbiter_excuses_a_requirement_after_a_cast() {
     declare_for_seat0(&mut g, vec![]).expect("nothing is able to attack");
 }
 
+/// CR 508.1d / 701.15b — a goaded creature its sole goader's filtered lock
+/// bars (Reverence: power 2 or less can't attack you) is not able to attack,
+/// so the empty declaration is legal. Bug fix (6-seat pod, seed 793022): the
+/// able test's fast path skipped every defender check for a `goaded_by` goad.
+#[test]
+fn cr_508_1d_a_goader_s_filtered_lock_frees_the_goaded_creature() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = multi_player_game(3);
+    g.players[2].eliminated = true;
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bears);
+    let ctx = EffectContext::for_ability(crabomination::card::CardId(0), 1, None);
+    g.resolve_effect(&Effect::Goad { what: Selector::ExactObjects(vec![bears]) }, &ctx).unwrap();
+    assert!(declare_for_seat0(&mut g.clone(), vec![]).is_err(), "unlocked, the goad binds");
+    g.add_card_to_battlefield(1, catalog::reverence());
+    declare_for_seat0(&mut g, vec![]).expect("Reverence bars the only seat: nothing is able to attack");
+}
+
 /// CR 725.4 — when the monarch leaves, the active player BECOMES the
 /// monarch, and that is an event ("whenever you become the monarch"). The
 /// leave path set the designation but dropped its events.

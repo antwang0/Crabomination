@@ -1149,9 +1149,16 @@ impl GameState {
         }
         let kws: &[Keyword] = cp.map(|c| c.keywords()).unwrap_or(&[]);
         let taxed = self.attack_tax_possible(statics);
+        // The fast path: nothing about *which* defender can matter. A goad
+        // (either field), a "can't attack you" lock or an Island Sanctuary
+        // shield can bar every seat, so each takes the walk below — a goaded
+        // Arabella whose sole goader's lock barred her was required to attack
+        // (6-seat pod, seed 793022).
         if !Self::has_defender_dependent_restriction(kws)
             && !taxed
-            && !card.cold_any(|k| !k.goad_holds.is_empty())
+            && statics & attack_static::CANT_ATTACK_CONTROLLER == 0
+            && !card.cold_any(|k| !k.goad_holds.is_empty() || !k.goaded_by.is_empty())
+            && !self.players.iter().any(|pl| pl.attackable_only_by_until_next_turn.is_some())
         {
             return true;
         }
