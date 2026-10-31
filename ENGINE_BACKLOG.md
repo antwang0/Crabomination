@@ -373,7 +373,19 @@ planner choices.
     4075,103,388,235,2193,5773,2442 --seed 806097 --a dflt`): the bot left a granted-Lure Jon Irenicus unblocked
     (`enforce_block_requirements` now pins the cheapest able bodies, as many as its count needs), and with menace under
     Silent Arbiter the requirement had no legal form — `block_requirement_binds` now reads the combat-wide block cap.
-  **Census trend at 6-8 seats: 13 → 6 → 2 → 0 rejections per 600 pods** (799-801 at 6-8 seats, 802 at 3-6 `--a dflt`:
+  - 807-810 (600, 6-8 seats) after those: **4 rejections, three classes, fixed** — a partial block on a Tromokratis-style
+    attacker (`drop_partial_all_blocks`, 8-seat `--pod-decks 4274,3141,3575,5335,291,4112,357,5442 --seed 808044`); a
+    walker aim the engine refuses (`planeswalker_attackable`, one predicate for the declaration and the settle pass;
+    6-seat `--pod-decks 2283,839,4323,5629,2032,4694 --seed 809022`); a barred attacker added after the re-aim by the
+    free-attacker / pressure-trade stages (settle re-runs the re-aim; 6-seat `--pod-decks 3275,892,46,2639,5248,2627
+    --seed 809141`). ⚠ `InvalidPlaneswalkerAttackTarget` and a few other declaration errors return without an
+    `attack_reject` line, so `CRAB_SIM_REJECTS=names` prints nothing for them — read the error, not the missing line.
+  - 811-814 (600, 6-8 seats, one block `--a dflt`) on the fixed tip: **0 rejections.** Sweep **29423** (release, 4/7
+    seats × every deck): 2,413 games, 0 panics, two Descent into Avernus CR 104.4a draws, one prison stall to the board
+    cap (Ghostly Prison + Propaganda + Omen Machine against a Tendershoot Saproling engine, 195 turns without an attack:
+    `--seats 7 --pod-decks 4643,2517,3413,5355,743,86,605 --seed 2945408` — a 4-mana-per-attacker tax the bot rightly
+    declines, not a rules bug). Bench byte-identical, cube / sos / sealed decision-identical.
+  **Census trend at 6-8 seats: 13 → 6 → 2 → 0 → 4 → 0 rejections per 600 pods** (799-801 at 6-8 seats, 802 at 3-6 `--a dflt`:
   0 in 600). Sweep **29422** (release, 3/5/8 seats × every deck): 4,043 games, 0 panics, one Ganax + Dragon Tempest board
   cap (`--seats 8 --pod-decks 4689,5273,4976,1503,1786,1435,5889,1059 --seed 2947344`). Closing suite **29,412 / 0 / 8**
   (strict), workspace clippy **0**, `--bench` byte-identical (243.3 games/s). **Next seed 29423, census seed 803.**
