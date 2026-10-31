@@ -20586,6 +20586,8 @@ overflow audit build: past **1,500 s** for one game. Six gdb samples, all inside
 fresh `gather_continuous_effects` per attacker because a creature-type changer is in scope on that board. Not built:
 the walk is `(-68)`/`(-307)`/`(-318)`'s tuned code. Cheapest lead: test `is_commander` before the Assassin type read,
 and a freeze scope around the per-attacker damage loop if the gathers can't change inside it.
+`permanents_with_abilities_removed_cold` is the bigger half: with a `RemoveAllAbilities` effect live it runs a
+whole-board `apply_layers` per attacker (O(attackers × board × effects)) unless a freeze scope is already open.
 
 ### 2026-10-26 — Homunculus Horde's once-a-turn doubling is 47 s of release for ONE game
 

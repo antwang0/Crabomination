@@ -333,7 +333,8 @@ Swarm exponentials, CR 104.4 draws). 0 panics. **Next seed 29413** (`01WRuXc67u`
   clippy **0** (client excluded; one `type_complexity` in the new module fixed), `--bench` **196,176 / 27.64 / 613.0 /
   0 stalls — byte-identical to the committed invariant**, determinism ok, thread determinism ok (3 vs 1);
   cube / sos / sealed × 300 (seed 30010) all decided; golden traces (Commander pod digests included) unchanged.
-  **Next seed 29414.**
+  Then **29414** (7 seats, `--a dflt` + fuzz, the hangs' own config; 878 games, 2 Ganax + Draconic Visitor CR 104.4b
+  draws under fuzz, **no hang**). **Next seed 29415.**
 - **The in-sim loop probe (seed 2943032, 6 seats):** `loop_hazard::entry_starts_loop` stood down inside settle and
   resolve probes (`01WRuXc67u`) but the attack / block sims answer asks through `decide_pending_policy(.., false)` and
   probed every gain-pick candidate, nested. `eval_modes: false` already means "no nested clone-and-resolve", so it now
