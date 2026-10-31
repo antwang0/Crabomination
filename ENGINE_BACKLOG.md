@@ -364,6 +364,12 @@ planner choices.
     Island Sanctuary shield now takes the per-seat walk.
   - ✅ **CR 509.1c — an attacker capped at one blocker is full once it has one** (8-seat 791012): a Nessian Boar granted
     `CantBeBlockedByMoreThanOne` rejected one blocker and two; Lure / provoke / Gorm / MustBlock skip a full attacker.
+  795-798 (600 games, 6-8 seats) on that tip: **2 rejections**, both fixed:
+  - ✅ **CR 508.1g — forced taxed attackers share the budget** (8-seat `--pod-decks 4562,5240,3873,1488,2292,4054,2786,256
+    --seed 795143`): `trim_attacks_to_payable_tax` kept each forced attacker whose own tax fit the *whole* budget.
+  - ✅ **CR 509.1c — a lone "can't attack or block alone" blocker** (7-seat `--pod-decks 2716,404,3659,1720,4765,5072,2240
+    --seed 797126`): the bot had no block-side handling; `drop_lone_cant_block_alone` on the submitted Commander plan.
+  **Census trend at 6-8 seats: 13 → 6 → 2 rejections per 600 pods.**
 - Gates: suite **29,401 / 0 / 8** (strict, precon-seat test separate); `--bench` **196,176 / 27.64 / 613.0 / 0 stalls —
   byte-identical**, determinism ok, 228.5 games/s (246.2 on the merged tip); precon-seat shards green (301 / 299 s,
   `-p crabomination --lib --cargo-profile overflow`). Sweep **29421** (release, 4/6 seats × every deck): 2,559 games, 0
