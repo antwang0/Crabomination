@@ -1556,7 +1556,7 @@ pub fn eradicator_valkyrie() -> CardDefinition {
 
 /// Sentinel Tower — {4} artifact. An instant or sorcery spell cast during
 /// your turn makes it deal 1 plus the instants and sorceries cast before it
-/// this turn to any target. Residual: only your own earlier casts count.
+/// this turn, by any player, to any target.
 pub fn sentinel_tower() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
@@ -1569,7 +1569,7 @@ pub fn sentinel_tower() -> CardDefinition {
                 amount: Value::Sum(vec![
                     Value::ONE,
                     Value::Diff(
-                        Box::new(Value::InstantsOrSorceriesCastThisTurn(PlayerRef::You)),
+                        Box::new(Value::InstantsOrSorceriesCastThisTurn(PlayerRef::EachPlayer)),
                         Box::new(Value::ONE),
                     ),
                 ]),

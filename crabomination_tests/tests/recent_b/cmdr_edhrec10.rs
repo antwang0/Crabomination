@@ -1093,6 +1093,34 @@ fn sentinel_tower_escalates() {
     assert_eq!(g.players[1].life, life - 3, "1 then 2");
 }
 
+/// Sentinel Tower counts every instant and sorcery cast before the trigger's
+/// spell this turn, whoever cast it — an opponent's instant on your turn raises
+/// the next shot (its oracle: "spells cast before that spell this turn").
+#[test]
+fn sentinel_tower_counts_an_opponents_instant() {
+    let mut g = pod(2);
+    g.players[0].hostile_player_targets = true;
+    ready(&mut g, 0, catalog::sentinel_tower());
+    library(&mut g, 0, 4);
+    library(&mut g, 1, 4);
+    let theirs = g.add_card_to_hand(1, catalog::union_of_the_third_path());
+    flood(&mut g, 1);
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::CastSpell {
+        card_id: theirs,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("their instant");
+    drain_stack(&mut g);
+    let life = g.players[1].life;
+    let u = g.add_card_to_hand(0, catalog::union_of_the_third_path());
+    cast(&mut g, u, &[]).expect("cast");
+    assert_eq!(g.players[1].life, life - 2, "1 plus their earlier instant");
+}
+
 /// Mishra's Self-Replicator copies itself off a historic spell for {1}.
 #[test]
 fn mishras_self_replicator_copies() {

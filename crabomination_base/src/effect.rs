@@ -1071,8 +1071,8 @@ pub enum Value {
     /// Spectral Sergeant: "noted **for it**"). Backed by `CardCold::exile_note`.
     GreatestManaValueNotedForSource,
     OtherSpellsCastThisTurn(PlayerRef),
-    /// Instant and sorcery spells `who` has cast so far this turn (max over
-    /// the resolved players). Backed by
+    /// Instant and sorcery spells `who` has cast so far this turn (summed over
+    /// the resolved players — `EachPlayer` is the table's tally). Backed by
     /// `Player.instants_or_sorceries_cast_this_turn` — the `Value` sibling of
     /// `Predicate::InstantsOrSorceriesCastThisTurnAtLeast` (Rionya, Fire
     /// Dancer's "one plus the number of instant and sorcery spells you've
