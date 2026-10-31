@@ -1655,11 +1655,18 @@ impl GameState {
         let no_defender = std::cell::OnceCell::new();
         let no_defender = || {
             *no_defender.get_or_init(|| {
+                // A banned seat's permanents are barred with it ("you or
+                // permanents you control").
                 self.attackable_players_for(p).is_empty()
                     && !self.battlefield.iter().any(|c| {
-                        (self.computed_has_card_type(c, crate::card::CardType::Planeswalker)
-                            || self.computed_has_card_type(c, crate::card::CardType::Battle))
-                            && c.controller != p
+                        let d = if self.computed_has_card_type(c, crate::card::CardType::Planeswalker) {
+                            Some(c.controller)
+                        } else if self.computed_has_card_type(c, crate::card::CardType::Battle) {
+                            c.protected_by
+                        } else {
+                            None
+                        };
+                        d.is_some_and(|d| d != p && !self.next_turn_attack_banned(p, d))
                     })
             })
         };

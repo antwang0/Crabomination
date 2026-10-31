@@ -389,7 +389,7 @@ Ascension board cap; **no hang**). 0 panics. Precon-seat shards green on the mer
   are all taxed re-aims at its free goader (`retarget_taxed_attacks` ranked a taxed non-goader first); CR 508.1 The
   Second Doctor's next-turn ban (seed 778020); CR 508.1a Chaos Dragon's granted `CantAttackPlayer` (seed 779101, 13
   rejections); CR 508.1d / 701.15b a goaded attack at its goader with another seat open (seed 779124's first form) —
-  the last three in `pod_attack::reaim_prohibited_attacks`. **Open** (replays, `bot_ladder --commander --threads 1`):
+  the last three in `pod_attack::reaim_prohibited_attacks`. ✅ *All three replays below fixed by `01WRuXc2jM` (its section):* (replays, `bot_ladder --commander --threads 1`):
   `--seats 6 --pod-decks 3787,5606,949,5497,2508,2391 --seed 779124` (goaded Yuna now dropped — the re-aim finds no
   seat that both `attacker_target_block` and `attack_target_obeys_most` accept, yet the engine requires her);
   `--seats 5 --pod-decks 3134,5591,4440,5284,1734 --seed 780004` (empty declaration, `CannotAttack(250)`, 7);

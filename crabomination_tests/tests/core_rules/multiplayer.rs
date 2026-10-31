@@ -9146,7 +9146,10 @@ fn cr_508_1d_no_open_defender_frees_a_goaded_creature() {
     assert!(declare_for_seat0(&mut g.clone(), vec![]).is_err(), "unbanned, the goad binds");
     let turn = g.turn_number;
     g.players[0].next_turn_attack_bans.push((1, turn - 1));
-    declare_for_seat0(&mut g, vec![]).expect("no defender is open: nothing is able to attack");
+    declare_for_seat0(&mut g.clone(), vec![]).expect("no defender is open: nothing is able to attack");
+    // The ban covers the goader's permanents too: their planeswalker opens nothing.
+    g.add_card_to_battlefield(1, catalog::jace_beleren());
+    declare_for_seat0(&mut g, vec![]).expect("the banned seat's planeswalker is barred with it");
 }
 
 /// CR 509.1a / 509.1c — each defending player declares their own blocks, so
