@@ -3915,7 +3915,9 @@ impl HeuristicBot {
                     if !state.players[seat].commanders.is_empty()
                         && state.combat_phases_this_turn > MAX_VOLUNTARY_COMBATS_PER_TURN
                     {
-                        return Some(BotStep::plain(GameAction::DeclareAttackers(forced_attacks(state))));
+                        let forced = super::pod_attack::fit_attacker_caps(state, seat, forced_attacks(state));
+                        let forced = super::pod_attack::settle_declaration(state, seat, forced);
+                        return Some(BotStep::plain(GameAction::DeclareAttackers(forced)));
                     }
                     let attacks = board_bound_attacks(state, pick_attacks_scored(state, seat, &self.weights));
                     let attacks = super::tap_maker::hold_tap_token_makers(state, seat, attacks, &self.weights);
@@ -4610,40 +4612,49 @@ fn decide_combat_damage_order(
 /// creatures that "attack each combat if able" (CR 508.1d — `MustAttack` or
 /// goaded). Master Warcraft's outside chooser declares this and nothing else.
 fn forced_attacks(state: &GameState) -> Vec<Attack> {
-    use crate::card::Keyword;
+    use crate::card::{Keyword, KeywordSlice};
     let active = state.active_player_idx;
-    let computed = state.compute_battlefield();
+    let statics = crate::game::combat::attack_static_scan(state);
+    let caps = state.attack_power_caps(statics);
+    let defenders = state.attackable_players_for(active);
     let mut out = Vec::new();
+    let mut if_another = Vec::new();
+    // CR 508.1d — the engine's own requirement set and ability test: a
+    // hand-written copy read only MustAttack and goad, so a creature bound
+    // another way (a per-combat requirement, MustAttackOrBlock) or barred
+    // from the seat it picked sank the declaration (6-seat pod, seed 4506217).
     for c in state.battlefield.iter().filter(|c| c.controller == active) {
-        let kws = computed
-            .iter()
-            .find(|p| p.id == c.id)
-            .map(|p| p.keywords())
-            .unwrap_or(&[]);
-        let goaders = state.goaders(c);
-        if !kws.has_kw(&Keyword::MustAttack) && goaders.is_empty() {
+        let Some(cp) = state.computed_permanent(c.id) else { continue };
+        let kws = cp.keywords();
+        let chosen = kws.has_kw(&Keyword::MustAttackChosenPlayer)
+            && c.chosen_player.is_some_and(|q| state.players.get(q).is_some_and(|pl| pl.is_alive()) && !state.same_team(active, q));
+        let must = kws.has_kw(&Keyword::MustAttack)
+            || kws.has_kw(&Keyword::MustAttackOrBlock)
+            || chosen
+            || state.is_goaded(c)
+            || state.must_attack_a_player_this_combat(active, c.id);
+        if !must && !kws.has_kw(&Keyword::MustAttackIfAnotherAttacks) {
             continue;
         }
-        let able = c.definition.is_creature()
-            && !c.tapped
-            && (!kws.has_kw(&Keyword::Defender) || state.ignores_defender_for_attack(c))
-            && !kws.has_kw(&Keyword::CantAttack)
-            && (!c.summoning_sick || kws.has_kw(&Keyword::Haste));
-        if !able {
+        if !state.attacker_is_able(active, c, Some(&cp), &caps, statics) {
             continue;
         }
-        let opponents = || {
-            (0..state.players.len()).filter(|&q| {
-                !state.same_team(active, q) && state.players[q].is_alive() && !state.obligated_to(c, q)
-            })
+        let open = |q: usize| {
+            let atk = Attack { attacker: c.id, target: AttackTarget::Player(q) };
+            state.attacker_target_block(active, c.id, kws, Some(q)).is_none()
+                && state.attack_target_prohibited(&atk, statics).is_none()
         };
-        let Some(target) = opponents()
-            .find(|q| !goaders.contains(q))
-            .or_else(|| opponents().next())
+        let obeys = |q: usize| state.attack_target_obeys_most(active, c.id, AttackTarget::Player(q));
+        let Some(q) = defenders.iter().copied().find(|&q| open(q) && obeys(q)).or_else(|| defenders.iter().copied().find(|&q| open(q)))
         else {
             continue;
         };
-        out.push(Attack { attacker: c.id, target: AttackTarget::Player(target) });
+        let atk = Attack { attacker: c.id, target: AttackTarget::Player(q) };
+        if must { out.push(atk) } else { if_another.push(atk) }
+    }
+    // Ekundu Cyclops joins only an attack someone else started.
+    if !out.is_empty() {
+        out.extend(if_another);
     }
     out
 }
@@ -28070,6 +28081,32 @@ mod tests {
         let blocks = pick_blocks_for_test(&g, 1);
         assert_eq!(blocks, vec![(wall, atk)],
             "the wall chumps to keep the 3-power attacker off the 2-loyalty walker");
+    }
+
+    /// CR 508.1d — bug fix (6-seat pod, seed 4506217): the forced-only
+    /// declaration reads the engine's requirement set and per-seat bars — a
+    /// Port Razer that already hit seat 1 must attack seat 2 instead.
+    #[test]
+    fn forced_attacks_obey_the_engine_s_requirements_and_bars() {
+        use crate::card::Keyword;
+        use crate::game::types::{AttackTarget, TurnStep};
+        let mut g = crate::game::multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let mut razer_def = catalog::port_razer();
+        razer_def.keywords.push(Keyword::MustAttack);
+        let razer = g.add_card_to_battlefield(0, razer_def);
+        g.clear_sickness(razer);
+        let mut either_def = catalog::grizzly_bears();
+        either_def.keywords.push(Keyword::MustAttackOrBlock);
+        let either = g.add_card_to_battlefield(0, either_def);
+        g.clear_sickness(either);
+        g.battlefield_find_mut(razer).unwrap().combat_defenders.get_or_insert_with(Vec::new).push(1);
+        let out = forced_attacks(&g);
+        assert!(out.iter().any(|a| a.attacker == either), "MustAttackOrBlock binds too: {out:?}");
+        assert!(out.iter().any(|a| a.attacker == razer && a.target == AttackTarget::Player(2)), "{out:?}");
+        assert!(g.would_accept(GameAction::DeclareAttackers(out)));
     }
 
     /// The flip side of the above: when the planeswalker would survive the
