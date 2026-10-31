@@ -328,6 +328,12 @@ No seats. Strict audit sweeps (`overflow` + `-C debug-assertions=yes`, `CRAB_ANS
 block): **29410** (3/5 seats, concede + fuzz; 3,275 games, 2 CR 104.4a draws after concessions) and **29411** (4/6/8
 seats, `--a dflt` + fuzz; ~3,300 games): **four blocks HUNG past 1,200 s**, the rest decided or known shapes (Scute
 Swarm exponentials, CR 104.4 draws). 0 panics. **Next seed 29413** (`01WRuXc67u` swept 29410-29412 at other seat lists).
+  Then on the fixed tip **29413** (3/5/6 seats, concede + fuzz; 4,299 games, one Descent into Avernus CR 104.4a draw
+  after concessions, **no hang**). Gates (closing tip): suite **29,378 / 0 / 7** (strict, seat test skipped), workspace
+  clippy **0** (client excluded; one `type_complexity` in the new module fixed), `--bench` **196,176 / 27.64 / 613.0 /
+  0 stalls — byte-identical to the committed invariant**, determinism ok, thread determinism ok (3 vs 1);
+  cube / sos / sealed × 300 (seed 30010) all decided; golden traces (Commander pod digests included) unchanged.
+  **Next seed 29414.**
 - **The in-sim loop probe (seed 2943032, 6 seats):** `loop_hazard::entry_starts_loop` stood down inside settle and
   resolve probes (`01WRuXc67u`) but the attack / block sims answer asks through `decide_pending_policy(.., false)` and
   probed every gain-pick candidate, nested. `eval_modes: false` already means "no nested clone-and-resolve", so it now
