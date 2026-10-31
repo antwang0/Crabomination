@@ -3830,11 +3830,19 @@ impl HeuristicBot {
                     // (Master Warcraft, Invasion Plans), so submit only what
                     // CR 509.1c forces — and aim each forced blocker at the
                     // attacker most likely to kill it.
-                    let blocks = if is_active {
+                    let mut blocks = if is_active {
                         forced_blocks(state)
                     } else {
                         pick_blocks_scored(state, seat, &self.weights)
                     };
+                    // CR 509.1b — the count rule once more on the plan as
+                    // submitted: a lone blocker on an attacker given menace
+                    // after declaration (Blood-Chin Rager's Warriors) still
+                    // reached the engine and sank the whole block (seeds
+                    // 779066, 780183). Commander seats only.
+                    if !is_active && !state.players[seat].commanders.is_empty() {
+                        repair_block_candidate(state, seat, &mut blocks);
+                    }
                     Some(BotStep::plain(GameAction::DeclareBlockers(blocks)))
                 } else if state.blockers_declared() && state.stack.is_empty() {
                     if let Some(a) = super::combat_only::pick_combat_only_spell(state, seat, &self.weights)
