@@ -1072,7 +1072,7 @@ impl GameState {
     /// requirement the gate then rejects has no legal answer.
     /// CR 508.1 — the tightest "no more than N creatures can attack you"
     /// cap seat `d` controls (Crawlspace).
-    fn attacker_cap_against(&self, d: usize) -> Option<usize> {
+    pub(crate) fn attacker_cap_against(&self, d: usize) -> Option<usize> {
         self.battlefield
             .iter()
             .filter(|c| c.controller == d)
@@ -1090,7 +1090,7 @@ impl GameState {
 
     /// Tomik — the smallest `YourPlaneswalkersAttackerCap` among `d`'s
     /// permanents: how many creatures may attack each of `d`'s planeswalkers.
-    fn planeswalker_attacker_cap(&self, d: usize) -> Option<usize> {
+    pub(crate) fn planeswalker_attacker_cap(&self, d: usize) -> Option<usize> {
         self.battlefield
             .iter()
             .filter(|c| c.controller == d)

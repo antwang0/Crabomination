@@ -237,6 +237,57 @@ pub(crate) fn reaim_prohibited_attacks(state: &GameState, seat: usize, mut attac
     attacks
 }
 
+/// CR 506.2 — a per-defender attacker cap (Crawlspace's "no more than two
+/// creatures can attack you", Tomik's "no more than one creature can attack
+/// this planeswalker") rejects the whole declaration when exceeded, so an
+/// attack past a full defender re-aims at a player with room, or stays home
+/// (8-seat pod, seed 2941252: three declarations at Tomik's walkers sunk).
+/// Commander games only; with no cap on the board nothing is touched.
+pub(crate) fn fit_attacker_caps(state: &GameState, seat: usize, mut attacks: Vec<Attack>) -> Vec<Attack> {
+    use crate::game::combat::attack_static;
+    if state.players.get(seat).is_none_or(|p| p.commanders.is_empty()) {
+        return attacks;
+    }
+    let statics = crate::game::combat::attack_static_scan(state);
+    if statics & attack_static::ATTACKER_CAP == 0 {
+        return attacks;
+    }
+    let cap_of = |t: AttackTarget| match t {
+        AttackTarget::Player(d) => state.attacker_cap_against(d),
+        AttackTarget::Planeswalker(pw) => {
+            state.battlefield_find(pw).and_then(|c| state.planeswalker_attacker_cap(c.controller))
+        }
+        AttackTarget::Battle(_) => None,
+    };
+    let defenders = state.attackable_players_for(seat);
+    let mut taken: Vec<(AttackTarget, usize)> = Vec::new();
+    let room = |taken: &[(AttackTarget, usize)], t: AttackTarget| {
+        let n = taken.iter().find(|(k, _)| *k == t).map_or(0, |&(_, n)| n);
+        cap_of(t).is_none_or(|cap| n < cap)
+    };
+    attacks.retain_mut(|a| {
+        if !room(&taken, a.target) {
+            let kws = state.computed_permanent(a.attacker).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
+            let open = defenders.iter().map(|&d| AttackTarget::Player(d)).find(|&t| {
+                let AttackTarget::Player(d) = t else { return false };
+                room(&taken, t)
+                    && state.attacker_target_block(seat, a.attacker, &kws, Some(d)).is_none()
+                    && state.attack_target_prohibited(&Attack { attacker: a.attacker, target: t }, statics).is_none()
+            });
+            match open {
+                Some(t) => a.target = t,
+                None => return false,
+            }
+        }
+        match taken.iter_mut().find(|(k, _)| *k == a.target) {
+            Some((_, n)) => *n += 1,
+            None => taken.push((a.target, 1)),
+        }
+        true
+    });
+    attacks
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -354,6 +405,36 @@ mod tests {
         let out = reaim_prohibited_attacks(&g, 0, attacks);
         assert_eq!(out.len(), 2);
         assert!(out.iter().all(|a| a.target != AttackTarget::Player(1)));
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
+    }
+
+    /// CR 506.2 — bug fix (seed 2941252): two Bears at a Tomik seat's
+    /// planeswalker and three at a Crawlspace seat were one rejected
+    /// declaration; the surplus now re-aims at a seat with room or stays home.
+    #[test]
+    fn cr_506_2_attacks_past_a_defender_s_cap_re_aim() {
+        let (mut g, bears) = table([40; 4]);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        for &b in &bears {
+            g.clear_sickness(b);
+        }
+        g.add_card_to_battlefield(1, crate::catalog::tomik_orzhov_lawmage());
+        let walker = g.add_card_to_battlefield(1, crate::catalog::jace_beleren());
+        g.add_card_to_battlefield(2, crate::catalog::crawlspace());
+        g.add_card_to_battlefield(3, crate::catalog::crawlspace());
+        let at = |i: usize, target| Attack { attacker: bears[i], target };
+        let attacks = vec![
+            at(0, AttackTarget::Planeswalker(walker)),
+            at(1, AttackTarget::Planeswalker(walker)),
+            at(2, AttackTarget::Player(2)),
+            at(3, AttackTarget::Player(2)),
+            at(4, AttackTarget::Player(2)),
+            at(5, AttackTarget::Player(3)),
+        ];
+        assert!(!g.would_accept(crate::game::GameAction::DeclareAttackers(attacks.clone())));
+        let out = fit_attacker_caps(&g, 0, attacks);
+        assert_eq!(out.iter().filter(|a| a.target == AttackTarget::Planeswalker(walker)).count(), 1);
+        assert_eq!(aimed(&out), [0, 2, 2, 1], "{out:?}");
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
     }
 

@@ -3904,6 +3904,7 @@ impl HeuristicBot {
                     let attacks = super::pod_attack::reaim_prohibited_attacks(state, seat, attacks);
                     let attacks = add_free_attackers(state, seat, attacks, &self.weights);
                     let attacks = add_pressure_trades(state, seat, attacks, &self.weights);
+                    let attacks = super::pod_attack::fit_attacker_caps(state, seat, attacks);
                     Some(BotStep::plain(GameAction::DeclareAttackers(attacks)))
                 } else {
                     Some(BotStep::plain(GameAction::PassPriority))
