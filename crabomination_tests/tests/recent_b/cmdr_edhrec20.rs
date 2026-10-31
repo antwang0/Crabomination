@@ -189,6 +189,25 @@ fn intimidation_bolt_lets_a_surviving_target_attack() {
     g.perform_action(GameAction::DeclareAttackers(attack(wall))).expect("the target may attack");
 }
 
+/// "Other creatures can't attack this turn" is a rules effect, not a change to
+/// characteristics, so it binds a creature that arrives after the spell resolved
+/// (CR 611.2c covers only characteristics and control). Intimidation Bolt and the
+/// whole board-wide `CantAttackThisTurn` class (Festival, kicked Orim's Chant).
+#[test]
+fn intimidation_bolt_binds_a_creature_that_enters_later() {
+    let mut g = pod(2);
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let bolt = g.add_card_to_hand(0, catalog::intimidation_bolt());
+    cast(&mut g, bolt, &[Target::Permanent(giant)]).expect("cast");
+    let late = ready(&mut g, 0, catalog::grizzly_bears());
+    g.step = TurnStep::DeclareAttackers;
+    let r = g.perform_action(GameAction::DeclareAttackers(vec![Attack {
+        attacker: late,
+        target: AttackTarget::Player(1),
+    }]));
+    assert!(r.is_err(), "a creature entering after the Bolt can't attack either");
+}
+
 /// Justice Strike: the creature hits itself for its power.
 #[test]
 fn justice_strike_self_damage() {

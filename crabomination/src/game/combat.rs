@@ -688,6 +688,9 @@ impl GameState {
         if !is_creature_now
             || card.detained_by.is_some()
             || card.attack_ban == crate::card::AttackBan::Active
+            || self.turn.attack_locks.iter().any(|(f, ctrl, except)| {
+                !except.contains(&id) && self.evaluate_requirement_static_on(f, card, *ctrl, None)
+            })
         {
             return Some((line!(), GameError::CannotAttack(id)));
         }

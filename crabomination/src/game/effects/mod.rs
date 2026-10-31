@@ -13728,6 +13728,26 @@ impl GameState {
             }
 
             Effect::CantAttackThisTurn { what } => {
+                // A board-wide ban is a lock over every matching creature, ones
+                // that enter later included (CR 611.2c binds only characteristics).
+                let lock = match what {
+                    Selector::EachPermanent(f) => Some((f.resolve_x(ctx.x_value), Vec::new())),
+                    Selector::EachPermanentExceptTargets(f) => Some((
+                        f.resolve_x(ctx.x_value),
+                        ctx.targets
+                            .iter()
+                            .filter_map(|t| match t {
+                                Target::Permanent(id) => Some(*id),
+                                _ => None,
+                            })
+                            .collect(),
+                    )),
+                    _ => None,
+                };
+                if let Some((filter, except)) = lock {
+                    self.turn.attack_locks.push((filter, ctx.controller, except));
+                    return Ok(());
+                }
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
                     if let Some(c) = self.battlefield_find_mut(cid) {

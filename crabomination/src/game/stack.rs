@@ -6189,6 +6189,7 @@ impl GameState {
         clear_turn!(self.artifact_damage_to_players_this_turn);
         clear_turn!(self.red_noncombat_damage_this_turn);
         clear_turn!(self.cant_become_monarch_this_turn);
+        clear_turn!(self.attack_locks);
         clear_cold!(self.combat_damage_redirect_this_turn);
         clear_cold!(self.doubled_damage_sources_this_turn);
         clear_cold!(self.assigns_no_combat_damage_this_turn);

@@ -57770,10 +57770,8 @@ pub fn orims_chant() -> CardDefinition {
             },
             Effect::If {
                 cond: Predicate::SpellWasKicked,
-                then: Box::new(Effect::GrantKeyword {
+                then: Box::new(Effect::CantAttackThisTurn {
                     what: Selector::EachPermanent(SelectionRequirement::Creature),
-                    keyword: Keyword::CantAttack,
-                    duration: crate::effect::Duration::EndOfTurn,
                 }),
                 else_: Box::new(Effect::Noop),
             },

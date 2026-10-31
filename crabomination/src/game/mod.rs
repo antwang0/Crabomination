@@ -1612,6 +1612,12 @@ pub struct TurnRegistries {
     /// Carthalion, True Heir). `set_monarch` skips them. Cleared at cleanup.
     #[serde(default)]
     pub cant_become_monarch_this_turn: Vec<usize>,
+    /// "[Other] creatures can't attack this turn" (Festival, Intimidation
+    /// Bolt): `(filter, controller, excepted)`. A rules effect, not a
+    /// characteristic, so it binds creatures that arrive later too (CR 611.2c
+    /// covers only the latter); read by `attacker_self_block`. Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) attack_locks: Vec<(crate::card::SelectionRequirement, usize, Vec<CardId>)>,
     /// `(sorcery card id, caster, damage dealt)` for every sorcery spell that
     /// has dealt damage this turn — Backdraft's "half the damage dealt by one
     /// of those sorcery spells". Cleared at cleanup.
