@@ -296,7 +296,13 @@ pub(crate) fn reaim_prohibited_attacks(state: &GameState, seat: usize, mut attac
 /// attack past a full defender re-aims at a player with room, or stays home
 /// (8-seat pod, seed 2941252: three declarations at Tomik's walkers sunk).
 /// Commander games only; with no cap on the board nothing is touched.
-pub(crate) fn fit_attacker_caps(state: &GameState, seat: usize, mut attacks: Vec<Attack>) -> Vec<Attack> {
+pub(crate) fn fit_attacker_caps(state: &GameState, seat: usize, attacks: Vec<Attack>) -> Vec<Attack> {
+    fit_attacker_caps_with(state, seat, attacks, true)
+}
+
+/// [`fit_attacker_caps`]; `reaim: false` only sends the excess home — the
+/// final pass after the settle's re-aims, which can refill a capped seat.
+fn fit_attacker_caps_with(state: &GameState, seat: usize, mut attacks: Vec<Attack>, reaim: bool) -> Vec<Attack> {
     use crate::game::combat::attack_static;
     if state.players.get(seat).is_none_or(|p| p.commanders.is_empty()) {
         return attacks;
@@ -320,6 +326,9 @@ pub(crate) fn fit_attacker_caps(state: &GameState, seat: usize, mut attacks: Vec
     };
     attacks.retain_mut(|a| {
         if !room(&taken, a.target) {
+            if !reaim {
+                return false;
+            }
             let kws = state.computed_permanent(a.attacker).map(|cp| cp.keywords().to_vec()).unwrap_or_default();
             let open = defenders.iter().map(|&d| AttackTarget::Player(d)).find(|&t| {
                 let AttackTarget::Player(d) = t else { return false };
@@ -368,6 +377,9 @@ pub(crate) fn settle_declaration(state: &GameState, seat: usize, mut attacks: Ve
     let mut attacks = reaim_prohibited_attacks(state, seat, attacks);
     let statics = crate::game::combat::attack_static_scan(state);
     super::bot::trim_attacks_to_payable_tax(state, seat, statics, &mut attacks);
+    // CR 506.2 — the re-aims above can refill a seat the cap pass emptied
+    // (Crawlspace-style cap, 6-seat pod, seed 4505111): the excess stays home.
+    let mut attacks = fit_attacker_caps_with(state, seat, attacks, false);
     if let [only] = attacks.as_slice()
         && state.computed_permanent(only.attacker).is_some_and(|cp| {
             cp.keywords().has_kw(&Keyword::CantAttackAlone) || cp.keywords().has_kw(&Keyword::CantAttackOrBlockAlone)
@@ -515,6 +527,25 @@ mod tests {
         assert!(retarget_taxed_attacks(&g, 0, statics, &|_| 0, &mut attacks));
         assert_eq!(attacks[0].target, AttackTarget::Player(1));
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(attacks)));
+    }
+
+    /// CR 506.2 — bug fix (6-seat pod, seed 4505111): the settle pass's
+    /// re-aims run after the cap pass, so the settle itself leaves a capped
+    /// seat at its cap.
+    #[test]
+    fn settle_holds_a_seat_to_its_attacker_cap() {
+        let (mut g, bears) = table([40; 4]);
+        g.seat_commanders(0, vec![crate::catalog::grizzly_bears()]);
+        for &b in &bears {
+            g.clear_sickness(b);
+        }
+        g.add_card_to_battlefield(1, crate::catalog::crawlspace());
+        g.priority.player_with_priority = 0;
+        let over: Vec<Attack> = bears[..3].iter().map(|&b| Attack { attacker: b, target: AttackTarget::Player(1) }).collect();
+        assert!(!g.would_accept(crate::game::GameAction::DeclareAttackers(over.clone())));
+        let out = settle_declaration(&g, 0, over);
+        assert_eq!(out.len(), 2, "{out:?}");
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
     }
 
     /// CR 506.2 / 301.5 — bug fix (6-seat pod, seed 808174): a Gideon wearing
