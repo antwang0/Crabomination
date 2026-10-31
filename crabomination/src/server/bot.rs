@@ -3850,6 +3850,7 @@ impl HeuristicBot {
                         if blocks.len() != before {
                             drop_underfilled_blocks(state, &mut blocks);
                         }
+                        drop_lone_cant_block_alone(state, &mut blocks);
                     }
                     Some(BotStep::plain(GameAction::DeclareBlockers(blocks)))
                 } else if state.blockers_declared() && state.stack.is_empty() {
@@ -14860,7 +14861,10 @@ pub(crate) fn trim_attacks_to_payable_tax(
         // it unconditionally is what cost seat 0 its whole combat on
         // `build_cube_state_seeded(3637)` — a Juggernaut behind a two-mana tax
         // with no mana, required to attack and rejected for attacking.
-        if forced && t <= budget {
+        // Against what is left, not the whole budget: two forced attackers
+        // each under it but not together sank the batch (8-seat pod, seed
+        // 795143).
+        if forced && t <= budget.saturating_sub(spend) {
             spend += t;
             continue;
         }
@@ -18021,6 +18025,21 @@ fn drop_underfilled_blocks(state: &GameState, blocks: &mut Vec<(CardId, CardId)>
         })
         .collect();
     blocks.retain(|(_, a)| !short.contains(a));
+}
+
+/// CR 509.1c — "can't attack or block alone": a plan whose only blocker
+/// carries it, with nobody else blocking this combat yet, blocks nothing
+/// (7-seat pod, seed 797126: a lone Beast sank the declaration).
+fn drop_lone_cant_block_alone(state: &GameState, blocks: &mut Vec<(CardId, CardId)>) {
+    let Some(&(first, _)) = blocks.first() else { return };
+    if state.block_map().is_empty()
+        && blocks.iter().all(|(b, _)| *b == first)
+        && state
+            .computed_permanent(first)
+            .is_some_and(|cp| cp.keywords().has_kw(&crate::card::Keyword::CantAttackOrBlockAlone))
+    {
+        blocks.clear();
+    }
 }
 
 /// CR 509.1b — flying/reach evasion, off the **computed** keyword sets on

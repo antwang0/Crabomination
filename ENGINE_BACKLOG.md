@@ -348,7 +348,22 @@ planner choices.
   Oathkeeper seat's walker was trimmed for the tax with a free seat open. Walker attacks re-aim too (a lured walker
   keeps its attacker). Test `a_taxed_walker_attack_re_aims_at_a_free_seat`.
 - **REJECT census** (`scripts/pod_rejects.py`, release): seeds 781-783 × 150 games, 0 rejections; 784-786 × 200 games
-  `--a dflt`, 1 (the Toski class above). **1,050 pods, one class, fixed.**
+  `--a dflt`, 1 (the Toski class above). **1,050 pods, one class, fixed.** Then at **6-8 seats** (`--seats 6,7,8`, new):
+  787-790 (600 games) **13 rejections**, 791-794 (600) **6** — every class below fixed, each replay clean:
+  - ✅ **CR 508.1 — Angelic Arbiter** (11 of the 13; 7-seat `--pod-decks 5373,740,558,2070,3725,5881,6011 --seed 788005`,
+    8-seat 787023): a seat that cast a spell attacked into the bar. `cast_bars_attacks` is one predicate for the gate,
+    `attackable_players_for` (so every pod re-aim and the client view see no seat) and the no-open-defender test.
+    ⚠ A **duel** bot still attacks into it (the re-aim is Commander-only); harmless rejection, filed here.
+  - ✅ **CR 509.1d — block tax over the estimate** (`--seats 6 --pod-decks 989,1315,2593,1668,2072,5575 --seed 788049`):
+    the submitted Commander block plan is re-trimmed against `payable_generic_budget`; a trimmed multi-block short of its
+    count is dropped (`drop_underfilled_blocks`). Per-candidate trims keep the estimate (PERF: measuring there is +2 %).
+  - ✅ **Final-declaration settle** (`pod_attack::settle_declaration`): the stages after the pick re-aimed at a taxed seat
+    (CR 508.1g, 7-seat 792037) or left a lone Raging Kronch-style attacker (CR 508.1c, 8-seat 794095).
+  - ✅ **CR 508.1d — `attacker_is_able`'s fast path skipped `goaded_by`** (6-seat 793022): a goaded Arabella whose sole
+    goader's Reverence-style lock barred her was required. A goad of either field, a `CANT_ATTACK_CONTROLLER` lock or an
+    Island Sanctuary shield now takes the per-seat walk.
+  - ✅ **CR 509.1c — an attacker capped at one blocker is full once it has one** (8-seat 791012): a Nessian Boar granted
+    `CantBeBlockedByMoreThanOne` rejected one blocker and two; Lure / provoke / Gorm / MustBlock skip a full attacker.
 - Gates: suite **29,401 / 0 / 8** (strict, precon-seat test separate); `--bench` **196,176 / 27.64 / 613.0 / 0 stalls —
   byte-identical**, determinism ok, 228.5 games/s (246.2 on the merged tip); precon-seat shards green (301 / 299 s,
   `-p crabomination --lib --cargo-profile overflow`). Sweep **29421** (release, 4/6 seats × every deck): 2,559 games, 0
