@@ -4207,13 +4207,19 @@ impl GameState {
         restriction: Option<Option<usize>>,
     ) -> bool {
         let Some(pw) = self.battlefield_find(pw_id) else { return false };
+        !self.sentinel_bound(attacker) && self.walker_open_to(p, pw, restriction)
+    }
+
+    /// [`Self::planeswalker_attackable`] short of the attacker's own bar: the
+    /// walkers the bot's pickers may aim at. Reads the *computed* type, so
+    /// Luxior's "isn't a planeswalker" closes it (6-seat pod, seed 808174).
+    pub(crate) fn walker_open_to(&self, p: usize, pw: &CardInstance, restriction: Option<Option<usize>>) -> bool {
         self.computed_has_card_type(pw, crate::card::CardType::Planeswalker)
             // CR 506.2 — "can't be attacked" (The Aetherspark while attached
             // to a creature).
-            && !self.permanent_cant_be_attacked(pw_id)
-            && !self.sentinel_bound(attacker)
+            && !self.permanent_cant_be_attacked(pw.id)
             && !self.same_team(self.active_player_idx, pw.controller)
-            && self.players[pw.controller].is_alive()
+            && self.players.get(pw.controller).is_some_and(|pl| pl.is_alive())
             && restriction.is_none_or(|only| only == Some(pw.controller))
             && self.player_in_range_of(p, pw.controller)
             && self.seat_attackable_from(p, pw.controller)

@@ -14478,13 +14478,9 @@ fn pick_attacks_inner(
     let mut walker_targets: Vec<(crate::card::CardId, u32)> = state
         .battlefield
         .iter()
-        .filter(|c| {
-            c.definition.is_planeswalker()
-                && c.controller != seat
-                && state.players[c.controller].is_alive()
-                // CR 506.2 — The Aetherspark while attached.
-                && !state.permanent_cant_be_attacked(c.id)
-        })
+        // CR 506.2 / 508.1 — the gate's own walker test: a walker Luxior
+        // makes a non-planeswalker sank 8 declarations (6-seat pod, seed 808174).
+        .filter(|c| c.controller != seat && state.walker_open_to(seat, c, state.attack_restriction()))
         .map(|c| {
             let loyalty = c
                 .counters
@@ -14992,12 +14988,7 @@ pub(crate) fn attack_candidates_for_mcts(
         && let Some(walker) = state
             .battlefield
             .iter()
-            .filter(|c| {
-                c.definition.is_planeswalker()
-                    && c.controller != seat
-                    && state.players[c.controller].is_alive()
-                    && !state.permanent_cant_be_attacked(c.id)
-            })
+            .filter(|c| c.controller != seat && state.walker_open_to(seat, c, state.attack_restriction()))
             .min_by_key(|c| c.counter_count(crate::card::CounterType::Loyalty))
         && let Some(i) = greedy
             .iter()

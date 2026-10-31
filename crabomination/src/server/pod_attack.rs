@@ -517,6 +517,25 @@ mod tests {
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(attacks)));
     }
 
+    /// CR 506.2 / 301.5 — bug fix (6-seat pod, seed 808174): a Gideon wearing
+    /// Luxior "isn't a planeswalker", so no attack aims at it as one.
+    #[test]
+    fn a_walker_luxior_unmade_is_no_attack_target() {
+        let (mut g, bears) = table([40; 4]);
+        for &b in &bears {
+            g.clear_sickness(b);
+        }
+        let gideon = g.add_card_to_battlefield(1, crate::catalog::gideon_martial_paragon());
+        g.priority.player_with_priority = 0;
+        let aimed_at_gideon =
+            |g: &GameState| super::super::bot::pick_attacks(g, 0).iter().any(|a| a.target == AttackTarget::Planeswalker(gideon));
+        assert!(aimed_at_gideon(&g), "a bare walker draws attackers");
+        let luxior = g.add_card_to_battlefield(1, crate::catalog::luxior_giadas_gift());
+        g.battlefield_find_mut(luxior).unwrap().attached_to = Some(gideon);
+        assert!(!aimed_at_gideon(&g));
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(super::super::bot::pick_attacks(&g, 0))));
+    }
+
     /// CR 508.1 / 508.1g — bug fix (4-seat pod, seed 804070): a taxed flyer
     /// does not re-aim at a cheaper seat whose Storm, Windrider bars flyers.
     #[test]
