@@ -373,8 +373,9 @@ planner choices.
   0 in 600). Sweep **29422** (release, 3/5/8 seats × every deck): 4,043 games, 0 panics, one Ganax + Dragon Tempest board
   cap (`--seats 8 --pod-decks 4689,5273,4976,1503,1786,1435,5889,1059 --seed 2947344`). Closing suite **29,412 / 0 / 8**
   (strict), workspace clippy **0**, `--bench` byte-identical (243.3 games/s). **Next seed 29423, census seed 803.**
-- ✅ *(closed the same run)* a *duel* bot attacked into Angelic Arbiter after casting (the re-aim is Commander-only):
-  `cast_bars_attacks` is asked once a real declaration (off the sims). Test `angelic_arbiter_after_a_cast_declares_no_attack`.
+- ✅ *(closed the same hour by `01WRuXc4hq`, `847bb0332`)* a *duel* bot attacked into Angelic Arbiter after casting (the
+  re-aim was Commander-only): `reaim_prohibited_attacks` empties the declaration in any format. Test
+  `angelic_arbiter_bars_a_duel_attack_after_a_cast`. (This run's own copy of the gate was dropped as a duplicate.)
 - Gates: suite **29,401 / 0 / 8** (strict, precon-seat test separate); `--bench` **196,176 / 27.64 / 613.0 / 0 stalls —
   byte-identical**, determinism ok, 228.5 games/s (246.2 on the merged tip); precon-seat shards green (301 / 299 s,
   `-p crabomination --lib --cargo-profile overflow`). Sweep **29421** (release, 4/6 seats × every deck): 2,559 games, 0

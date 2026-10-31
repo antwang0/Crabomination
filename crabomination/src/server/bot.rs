@@ -3916,12 +3916,6 @@ impl HeuristicBot {
                     {
                         return Some(BotStep::plain(GameAction::DeclareAttackers(forced_attacks(state))));
                     }
-                    // CR 508.1 — Angelic Arbiter after a cast: no creature may
-                    // attack, and no requirement binds (the engine's own
-                    // predicate). Asked once a declaration, off the sims.
-                    if state.cast_bars_attacks(seat) {
-                        return Some(BotStep::plain(GameAction::DeclareAttackers(Vec::new())));
-                    }
                     let attacks = board_bound_attacks(state, pick_attacks_scored(state, seat, &self.weights));
                     let attacks = super::tap_maker::hold_tap_token_makers(state, seat, attacks, &self.weights);
                     let attacks = super::pod_attack::reaim_prohibited_attacks(state, seat, attacks);
@@ -24802,23 +24796,6 @@ mod tests {
             }
             _ => panic!("expected an activate-ability action"),
         }
-    }
-
-    /// CR 508.1 — Angelic Arbiter: after a cast the duel bot declares no
-    /// attack instead of a declaration the engine refuses.
-    #[test]
-    fn angelic_arbiter_after_a_cast_declares_no_attack() {
-        let mut g = two_player_game();
-        g.active_player_idx = 0;
-        g.step = TurnStep::DeclareAttackers;
-        g.priority.player_with_priority = 0;
-        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
-        g.clear_sickness(bear);
-        g.add_card_to_battlefield(1, catalog::angelic_arbiter());
-        g.players[0].spells_cast_this_game_turn = 1;
-        let action = HeuristicBot::new().next_action(&g, 0);
-        assert!(matches!(&action, Some(GameAction::DeclareAttackers(a)) if a.is_empty()), "{action:?}");
-        assert!(g.would_accept(action.unwrap()));
     }
 
     /// `no_empty_attacks`: Living Library (0/4) stays home on an open board
