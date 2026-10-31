@@ -15157,7 +15157,9 @@ fn attack_chain_candidate(
     };
     let mut remaining: Vec<Attack> =
         pool.into_iter().filter(|a| !current.iter().any(|c| c.attacker == a.attacker)).collect();
-    let mut sims = 0u64;
+    let sims = std::cell::Cell::new(0u64);
+    let budget = attack_chain_sim_budget(state, seat, w);
+    let pair_count = |n: usize| (n * n.saturating_sub(1) / 2) as u64;
     let mut served = 0u64;
     // Candidate 0 is always "finalize": the set so far, at its known score.
     // First-wins-ties in `choose_scored` makes a tie stop the chain.
@@ -15180,7 +15182,7 @@ fn attack_chain_candidate(
                 scored.push((i, s));
                 continue;
             }
-            sims += 1;
+            sims.set(sims.get() + 1);
             if let Some(s) = simulate_attack_outcome_from(starts, seat, c, w) {
                 scored.push((i, s));
             }
@@ -15200,10 +15202,15 @@ fn attack_chain_candidate(
         let pairs = step == 0
             && w.attack_chain_wide
             && remaining.len() >= 2
-            && (from_empty || !w.attack_pairs_empty_only);
+            && (from_empty || !w.attack_pairs_empty_only)
+            && sims.get() + remaining.len() as u64 + pair_count(remaining.len()) <= budget;
+        let room = budget.saturating_sub(sims.get()) as usize;
+        if room == 0 {
+            break;
+        }
         let mut cands: Vec<Vec<Attack>> = Vec::with_capacity(remaining.len() + 1);
         cands.push(current.clone());
-        for a in &remaining {
+        for a in remaining.iter().take(room) {
             let mut c = current.clone();
             c.push(*a);
             cands.push(c);
@@ -15224,9 +15231,43 @@ fn attack_chain_candidate(
         current = cands.swap_remove(chosen);
         remaining.retain(|a| !current.iter().any(|c| c.attacker == a.attacker));
     }
-    attack_census::add(10, sims);
+    attack_census::add(10, sims.get());
     attack_census::add(35, served);
     Some((current, current_score))
+}
+
+/// The attack and block chains' sims on a small board: a duel's chain
+/// stays under it. A sim's cost grows with the board twice over (more
+/// actions, each re-gathering the layers), with the turns it plays and the
+/// attackers it resolves, so the budgets below divide it by those.
+const CHAIN_SIM_BUDGET: u64 = 1024;
+
+/// The board size [`CHAIN_SIM_BUDGET`] is quoted at.
+const CHAIN_BUDGET_BOARD: u64 = 64;
+
+/// The attack chain's sims: [`CHAIN_SIM_BUDGET`] over the turns a sim plays
+/// (every live opponent's under [`EvalWeights::pod_horizon`], as
+/// [`simulate_attack_leaf`] does) and the board squared. An 8-seat chain
+/// priced ~1,000 seven-turn sims at 155 permanents for one declaration
+/// (seed 2941252, 1.7 s a sim on the audit build).
+fn attack_chain_sim_budget(state: &GameState, seat: usize, w: &EvalWeights) -> u64 {
+    let turns = if w.pod_horizon && state.battlefield.len() <= POD_HORIZON_MAX_BOARD {
+        state.players.iter().enumerate().filter(|&(i, p)| i != seat && p.is_alive()).count().max(1) as u64
+    } else {
+        1
+    };
+    let board = (state.battlefield.len() as u64).max(CHAIN_BUDGET_BOARD);
+    (CHAIN_SIM_BUDGET * CHAIN_BUDGET_BOARD * CHAIN_BUDGET_BOARD / (turns * board * board)).max(1)
+}
+
+/// The block chain's sims: [`CHAIN_SIM_BUDGET`] over the board and the
+/// attackers each sim's combat resolves (floor four). One 8-seat block
+/// step offered 868 (blocker, attacker) moves and took 540 s on the audit
+/// build (seed 2941252, 414 s of a 529 s release game).
+fn block_chain_sim_budget(state: &GameState) -> u64 {
+    let board = (state.battlefield.len() as u64).max(CHAIN_BUDGET_BOARD);
+    let attackers = (state.attacking.len() as u64).max(4);
+    (CHAIN_SIM_BUDGET * CHAIN_BUDGET_BOARD * 4 / (board * attackers)).max(1)
 }
 
 /// No opposing seat controls a creature, planeswalker or battle — the board
@@ -17180,6 +17221,7 @@ fn block_chain_candidate(
     };
     let mut sims = 0u64;
     let mut served = 0u64;
+    let budget = block_chain_sim_budget(state);
     for _ in 0..w.block_chain {
         let free: Vec<usize> = order
             .iter()
@@ -17232,6 +17274,8 @@ fn block_chain_candidate(
             cands.push(c);
         }
         repair_block_plans(state, seat, &mut cands);
+        // Cheapest blockers first, so a step past the budget keeps those.
+        cands.truncate(1 + budget.saturating_sub(sims) as usize);
         if cands.len() < 2 {
             break;
         }
@@ -25702,6 +25746,31 @@ mod tests {
         let (near, far) = (EvalWeights::pod_horizon_off(), EvalWeights::default());
         assert!(score(&near, &swing) > score(&near, &[]), "one turn out, the swing is free damage");
         assert!(score(&far, &swing) < score(&far, &[]), "through seat 2's turn, the swing loses the game");
+    }
+
+    /// The chains' budgets are in simulated work: a duel's small board keeps
+    /// the whole 1,024 sims; an 8-seat pod (seven turns a sim under
+    /// `pod_horizon`) a seventh, a departed seat plays no turn (CR 800.4a),
+    /// and a doubled board a quarter. Seed 2941252's 8-seat game spent 414 s
+    /// of 529 on one block step without them.
+    #[test]
+    fn chain_budgets_shrink_with_turns_board_and_attackers() {
+        let w = EvalWeights::default();
+        let duel = two_player_game();
+        assert_eq!(attack_chain_sim_budget(&duel, 0, &w), 1024);
+        assert_eq!(block_chain_sim_budget(&duel), 1024);
+        let mut pod = crate::game::multi_player_game(8);
+        assert_eq!(attack_chain_sim_budget(&pod, 0, &w), 1024 / 7);
+        assert_eq!(attack_chain_sim_budget(&pod, 0, &EvalWeights::pod_horizon_off()), 1024);
+        for seat in 3..8 {
+            pod.players[seat].eliminated = true;
+        }
+        assert_eq!(attack_chain_sim_budget(&pod, 0, &w), 1024 / 2);
+        let mut big = two_player_game();
+        let bears: Vec<CardId> = (0..128).map(|_| big.add_card_to_battlefield(0, catalog::grizzly_bears())).collect();
+        assert_eq!(attack_chain_sim_budget(&big, 0, &w), 1024 / 4);
+        big.attacking = bears[..16].iter().map(|&b| Attack { attacker: b, target: AttackTarget::Player(1) }).collect();
+        assert_eq!(block_chain_sim_budget(&big), 1024 / 8);
     }
 
     /// `pod_share_eval` is the duel's plain difference, exactly, and at three
