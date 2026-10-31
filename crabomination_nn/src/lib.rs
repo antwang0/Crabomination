@@ -378,6 +378,14 @@ impl Default for EncodedObject {
 /// instead of at the horizon. Terminal rows carry zero deltas.
 pub const AUX_FEATS: usize = 4;
 
+/// Rows of the policy head's decision-kind table (`head_policy_kind.*`):
+/// one per kind of decision the engine's move list distinguishes (priority,
+/// attack, block, each prompt kind — `server::decision_menu::Kind::index`),
+/// with headroom. A policy logit is the shared head's plus the kind's row,
+/// so the same successor state can score differently as the answer to a
+/// discard than as a main-phase play.
+pub const POLICY_KINDS: usize = 32;
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrainRow {
     pub state: EncodedState,
@@ -1210,6 +1218,12 @@ pub struct PlayNet {
     /// which is every checkpoint before round 37.
     policy_w: Option<Tensor2>, // [1, h2]
     policy_b: f32,
+    /// The decision-kind table (`head_policy_kind.*`, [POLICY_KINDS, h2] +
+    /// [POLICY_KINDS]): kind `k`'s logit adds row `k`'s dot with the trunk
+    /// and bias `k` to the shared head's. Present only with the policy
+    /// head, all-or-nothing; absent means every kind reads the shared head.
+    policy_kind_w: Option<Tensor2>,
+    policy_kind_b: Vec<f32>,
     /// The opponent-hand belief head (`head_opp.*`, [vocab, h2] + [vocab]),
     /// round 39. Consumed at inference by belief-weighted determinization
     /// (`determinize_hidden_belief`), so it loads all-or-nothing like the
@@ -1485,6 +1499,8 @@ impl PlayNet {
             head_win_b: get("head_win.bias")?.data,
             policy_w: None,
             policy_b: 0.0,
+            policy_kind_w: None,
+            policy_kind_b: Vec::new(),
             opp_w: None,
             opp_b: Vec::new(),
             attn: None,
@@ -1518,6 +1534,30 @@ impl PlayNet {
             _ => {
                 return Err(NnError::BadTensor(
                     "head_policy.*",
+                    "one of weight/bias present without the other".into(),
+                ));
+            }
+        };
+
+        // The kind table, same all-or-nothing rule — and only beside the
+        // head it adds to.
+        let kind_present = ["head_policy_kind.weight", "head_policy_kind.bias"]
+            .iter()
+            .filter(|n| st.tensor(n).is_ok())
+            .count();
+        let net = match (kind_present, net.policy_w.is_some()) {
+            (2, true) => PlayNet {
+                policy_kind_w: Some(get("head_policy_kind.weight")?),
+                policy_kind_b: get("head_policy_kind.bias")?.data,
+                ..net
+            },
+            (0, _) => net,
+            (2, false) => {
+                return Err(NnError::BadTensor("head_policy_kind.*", "present without head_policy.*".into()));
+            }
+            _ => {
+                return Err(NnError::BadTensor(
+                    "head_policy_kind.*",
                     "one of weight/bias present without the other".into(),
                 ));
             }
@@ -1654,6 +1694,12 @@ impl PlayNet {
                 net.policy_w
                     .as_ref()
                     .is_none_or(|w| w.cols == net.trunk2_w.rows && w.rows == 1),
+            ),
+            (
+                "head_policy_kind.weight",
+                net.policy_kind_w.as_ref().is_none_or(|w| {
+                    w.cols == net.trunk2_w.rows && w.rows == POLICY_KINDS && net.policy_kind_b.len() == POLICY_KINDS
+                }),
             ),
             (
                 "head_opp.weight",
@@ -1858,8 +1904,31 @@ impl PlayNet {
         Some(out[0] + self.policy_b)
     }
 
+    /// [`forward_policy`](Self::forward_policy) for a decision of kind
+    /// `kind` (`< POLICY_KINDS`): the shared logit plus the kind table's
+    /// row, when the net carries the table; the shared logit alone when it
+    /// doesn't, or for an out-of-range kind.
+    pub fn forward_policy_kind(&self, s: &EncodedState, kind: usize) -> Option<f32> {
+        let w = self.policy_w.as_ref()?;
+        let t2 = self.trunk_out(s);
+        let mut out = [0.0f32];
+        w.matvec(&t2, &mut out);
+        let mut z = out[0] + self.policy_b;
+        if let Some(kw) = &self.policy_kind_w
+            && kind < kw.rows
+        {
+            let row = &kw.data[kind * kw.cols..(kind + 1) * kw.cols];
+            z += row.iter().zip(&t2).map(|(a, b)| a * b).sum::<f32>() + self.policy_kind_b[kind];
+        }
+        Some(z)
+    }
+
     pub fn has_policy_head(&self) -> bool {
         self.policy_w.is_some()
+    }
+
+    pub fn has_policy_kinds(&self) -> bool {
+        self.policy_kind_w.is_some()
     }
 
     /// Per-name probabilities that the *opponent* currently holds each
@@ -1999,6 +2068,14 @@ pub trait NetEvaluator: Send + Sync {
         None
     }
 
+    /// [`eval_policy`](Self::eval_policy) for a decision of kind `kind`
+    /// (see [`POLICY_KINDS`]). Default: the kind-free logit, which is
+    /// exact for a net without the kind table.
+    fn eval_policy_kind(&self, s: EncodedState, kind: u8) -> Option<f32> {
+        let _ = kind;
+        self.eval_policy(s)
+    }
+
     /// Whether [`eval_policy`](Self::eval_policy) can answer at all, so a
     /// profile can report which prior it will actually run with instead
     /// of discovering mid-game.
@@ -2027,6 +2104,10 @@ impl NetEvaluator for PlayNet {
 
     fn eval_policy(&self, s: EncodedState) -> Option<f32> {
         self.forward_policy(&s)
+    }
+
+    fn eval_policy_kind(&self, s: EncodedState, kind: u8) -> Option<f32> {
+        self.forward_policy_kind(&s, kind as usize)
     }
 
     fn has_policy(&self) -> bool {
@@ -2219,6 +2300,67 @@ mod tests {
         // Narrowing is refused: the encoder would have no index for the
         // rows the net carries.
         assert!(net.pad_vocab(3).is_err());
+    }
+
+    /// The kind table adds its row to the shared logit, loads only beside
+    /// the head, and leaves every kind-free answer as it was.
+    #[test]
+    fn policy_kind_table_adds_its_row_and_loads_only_with_the_head() {
+        let h_obj = 1usize;
+        let trunk_in = NUM_GROUPS * 2 * h_obj + GLOBAL_FEATS;
+        let mut obj_w = vec![0.0f32; 1 + OBJ_FEATS];
+        obj_w[0] = 1.0;
+        obj_w[1] = 1.0;
+        let base: Vec<(&str, Vec<usize>, Vec<f32>)> = vec![
+            ("emb.weight", vec![2, 1], vec![0.0, 2.0]),
+            ("obj.weight", vec![1, 1 + OBJ_FEATS], obj_w),
+            ("obj.bias", vec![1], vec![0.0]),
+            ("trunk1.weight", vec![1, trunk_in], vec![1.0; trunk_in]),
+            ("trunk1.bias", vec![1], vec![0.0]),
+            ("trunk2.weight", vec![1, 1], vec![1.0]),
+            ("trunk2.bias", vec![1], vec![0.0]),
+            ("head_win.weight", vec![1, 1], vec![1.0]),
+            ("head_win.bias", vec![1], vec![0.0]),
+        ];
+        let kw: Vec<f32> = (0..POLICY_KINDS).map(|k| k as f32).collect();
+        let kb: Vec<f32> = (0..POLICY_KINDS).map(|k| -(k as f32) * 0.5).collect();
+        let mut full = base.clone();
+        full.push(("head_policy.weight", vec![1, 1], vec![3.0]));
+        full.push(("head_policy.bias", vec![1], vec![-1.0]));
+        full.push(("head_policy_kind.weight", vec![POLICY_KINDS, 1], kw.clone()));
+        full.push(("head_policy_kind.bias", vec![POLICY_KINDS], kb.clone()));
+        let net = PlayNet::load(&to_safetensors(&full)).expect("kind net loads");
+        assert!(net.has_policy_kinds());
+        // t2 = 5.25 (as in `forward_matches_hand_computation`); shared 14.75.
+        let mut feats = [0.0; OBJ_FEATS];
+        feats[0] = 0.5;
+        let mut s = EncodedState::default();
+        s.push(G_BF_SELF, EncodedObject { card: 1, feats });
+        s.global[3] = 0.25;
+        assert!((net.forward_policy(&s).unwrap() - 14.75).abs() < 1e-5);
+        for k in [0usize, 3, 31] {
+            let want = 14.75 + k as f32 * 5.25 - k as f32 * 0.5;
+            let got = net.forward_policy_kind(&s, k).unwrap();
+            assert!((got - want).abs() < 1e-4, "kind {k}: {got} vs {want}");
+        }
+        assert!((net.forward_policy_kind(&s, POLICY_KINDS).unwrap() - 14.75).abs() < 1e-5, "out of range reads the shared head");
+
+        // Without the table every kind is the shared head.
+        let mut head_only = base.clone();
+        head_only.push(("head_policy.weight", vec![1, 1], vec![3.0]));
+        head_only.push(("head_policy.bias", vec![1], vec![-1.0]));
+        let plain = PlayNet::load(&to_safetensors(&head_only)).unwrap();
+        assert!(!plain.has_policy_kinds());
+        assert!((plain.forward_policy_kind(&s, 5).unwrap() - 14.75).abs() < 1e-5);
+
+        // The table without the head, or half a table, is a mismatch.
+        let mut orphan = base.clone();
+        orphan.push(("head_policy_kind.weight", vec![POLICY_KINDS, 1], kw.clone()));
+        orphan.push(("head_policy_kind.bias", vec![POLICY_KINDS], kb));
+        assert!(PlayNet::load(&to_safetensors(&orphan)).is_err());
+        let mut half = head_only.clone();
+        half.push(("head_policy_kind.weight", vec![POLICY_KINDS, 1], kw));
+        assert!(PlayNet::load(&to_safetensors(&half)).is_err());
     }
 
     /// The policy head reads the same trunk as the win head and answers

@@ -37820,7 +37820,7 @@ fn play_pod_game(
             player.converge_rarest = w.converge_rarest;
         }
         player.hostile_player_targets = match pilot {
-            Pilot::Scored(w) => w.hostile_player_targets,
+            Pilot::Scored(w) | Pilot::Policy(w) => w.hostile_player_targets,
             Pilot::Mcts(cfg) => cfg.weights.hostile_player_targets,
             Pilot::Uniform => false,
         };

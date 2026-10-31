@@ -1483,6 +1483,9 @@ pub enum Pilot {
     Uniform,
     /// The Monte Carlo search bot.
     Mcts(MctsConfig),
+    /// The policy pilot (`server::policy_pilot`): every decision by the
+    /// policy head of the net in the weights' slot, at temperature 0.
+    Policy(EvalWeights),
 }
 
 impl Pilot {
@@ -1491,7 +1494,7 @@ impl Pilot {
     /// bot) onto the seat before the game starts.
     pub(crate) fn weights(self) -> Option<EvalWeights> {
         match self {
-            Pilot::Scored(w) => Some(w),
+            Pilot::Scored(w) | Pilot::Policy(w) => Some(w),
             Pilot::Uniform | Pilot::Mcts(_) => None,
         }
     }
@@ -1501,6 +1504,7 @@ impl Pilot {
             Pilot::Scored(w) => Box::new(HeuristicBot::with_weights(w)),
             Pilot::Uniform => Box::new(HeuristicBot::uniform_baseline()),
             Pilot::Mcts(cfg) => Box::new(MctsBot::new(cfg)),
+            Pilot::Policy(w) => Box::new(crate::server::policy_pilot::PolicyBot::new(w, 0.0, 0)),
         }
     }
 }
@@ -2455,17 +2459,17 @@ fn play_one_game_traced(
         // other seat flags keep their Scored-only push (a search seat has
         // never carried `smart_tap`, and its baselines are read that way).
         g.players[seat].hostile_player_targets = match pilot {
-            Pilot::Scored(w) => w.hostile_player_targets,
+            Pilot::Scored(w) | Pilot::Policy(w) => w.hostile_player_targets,
             Pilot::Mcts(cfg) => cfg.weights.hostile_player_targets,
             Pilot::Uniform => false,
         };
         g.players[seat].duel_sinks = match pilot {
-            Pilot::Scored(w) => w.duel_sinks,
+            Pilot::Scored(w) | Pilot::Policy(w) => w.duel_sinks,
             Pilot::Mcts(cfg) => cfg.weights.duel_sinks,
             _ => false,
         };
         g.players[seat].tap_timing = match pilot {
-            Pilot::Scored(w) => w.tap_timing,
+            Pilot::Scored(w) | Pilot::Policy(w) => w.tap_timing,
             Pilot::Mcts(cfg) => cfg.weights.tap_timing,
             _ => false,
         };

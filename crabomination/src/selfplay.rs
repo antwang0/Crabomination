@@ -822,6 +822,9 @@ fn play_recorded_game_mcts_inner(
     // is confined to the opening so the *outcome* still reflects
     // competent play and the win labels stay meaningful.
     let explore_plies = rng.random_range(0..=EXPLORE_PLIES);
+    // The move-list recorder's candidate sampling (`policy_pilot::record`),
+    // its own stream so the game's draws are untouched.
+    let mut menu_rng = StdRng::seed_from_u64(seed ^ 0x3E_7A_11_57);
     let mut bots: Vec<Box<dyn Bot>> = weights
         .into_iter()
         .map(|w| -> Box<dyn Bot> {
@@ -943,9 +946,17 @@ fn play_recorded_game_mcts_inner(
         // Uniform picks for the opening window, then the real policy.
         let acting =
             if actions < explore_plies { &mut explorers } else { &mut bots };
+        let record_menu = actions >= explore_plies && crate::server::decision_capture::menu_only();
         for (s, bot) in acting.iter_mut().enumerate() {
             let Some(a) = bot.next_action(&g, s) else { continue };
+            // The move-list recorder (`decision_capture::set_menu_only`):
+            // the pre-move state, recorded once the engine has taken the move.
+            let pre = (record_menu && crate::server::decision_capture::enabled()).then(|| g.clone());
+            let played = a.clone();
             if g.perform_action(a).is_ok() {
+                if let Some(pre) = pre {
+                    crate::server::policy_pilot::record(&pre, s, &played, &weights[s], &mut menu_rng);
+                }
                 any = true;
                 actions += 1;
                 if g.is_game_over() {

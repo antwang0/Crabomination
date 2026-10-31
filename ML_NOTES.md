@@ -6898,5 +6898,59 @@ pass dropped by the brute force's own truncation; the generator's pick lost
 when its fan-out replaced it; landcycling (pauses on a pick); a modal spell
 cast with no mode (the engine asks on resolution); menace blocks.
 The 7 + 4 misses left are wide combats past the 256-set cap — the
-case phase 2's one-creature-at-a-time combat replaces. Not measured yet:
-the list's build time per decision, which prices phase 2.
+case phase 2's one-creature-at-a-time combat replaces.
+
+**Price** (release-fast, 40 games, under the pilot's load): the list
+**91 µs** a decision on SOS and **150 µs** on FRA; building and encoding
+every move's successor 17 / 22 µs more. The first version spent 231 /
+307 µs — `puzzle::legal_actions` probes every card against every
+permanent — and now seeds one untargeted move per card and fans out over
+the targets its effect takes (coverage unchanged, 99.99 %). The search's
+own arms (`main_phase_candidates_for_mcts`, +80 µs) were dropped for the
+same coverage; `CRAB_MENU_SEARCH_ARMS=1` restores them.
+
+### Phase 2 — one policy head for every decision (2026-10-31)
+
+- **The kind table** (`head_policy_kind.*`, `POLICY_KINDS` = 32 rows ×
+  h2 + 32, zero-initialised): a kind-`k` decision scores its candidates by
+  the shared policy head plus row `k` (`PlayNet::forward_policy_kind`,
+  `NetEvaluator::eval_policy_kind`; candle `forward_win_policy_kinds`,
+  `NetConfig::policy_kinds`, `--policy-kinds`). Loads all-or-nothing and
+  only beside `head_policy.*`; a net without it reads the shared head for
+  every kind, so every older checkpoint is unchanged. Tests: candle ↔
+  engine parity for every kind at 1e-4 (random table), and a fit only the
+  table can make (same two successors, kind 3 picks the first and kind 9
+  the second: top-1 1.0 with the table, < 0.75 without).
+- **The policy pilot** (`server/policy_pilot.rs`, `PolicyBot`; profiles
+  `bot_ladder policy-net` / `policy-net-fixes`, `bot_puzzles policy`):
+  every decision is the move list scored by the policy head over each
+  move's successor state plus the kind row; argmax or a softmax sample.
+  No picker, no sim, no search. **Combat one member at a time**: from the
+  set so far, "declare it" or "add one more" (an attacker at a target; a
+  blocker on an attacker, or a pair where only a pair is legal), every
+  successor the real engine state of declaring that set — so there is no
+  set cap and no hypothetical encoding. A per-step latch stops an empty
+  declaration being re-offered. Test: plays a sealed game on a hash
+  policy with every move accepted and combats declared.
+- **The imitation stream** (`policy_pilot::record`, `selfplay_train
+  --menu-decisions`, `decision_capture::set_menu_only`): every decision of
+  the actors' pilot after the opening plies becomes rows over the move
+  list (sampled to 8 with the pick kept, kind attached), a declaration one
+  row per step with a uniform soft target over the members still to add
+  and "stop" last; the pickers' own capture sites are muted so nothing is
+  recorded twice.
+- **Smoke run** (300 games, 8 actors, CPU learner, `--menu-decisions
+  --policy-kinds --policy-every 1`): held-out policy top-1 **0.71 against
+  0.36 chance** after 373 steps; the exported net loads with its table and
+  drives the policy pilot through 480 ladder games and the blunder set —
+  at **0.2 %** against `dflt` and 5 / 22 items (the null pilot's 4). That
+  is plumbing, not a reading: 373 steps, and most recorded decisions are
+  passes the pilot was right to make, so a barely trained head passes.
+  Phase 3 owns the training (and the imbalance — weight real choices, or
+  sample passes down).
+- **Not built in phase 2:** the GPU collator's `eval_policy_kind` (the
+  default trait method serves the kind-free logit, exact for a net without
+  the table; batched actors need it before they search on the kind head),
+  and encoder features for the prompt's source and question (the
+  successor plus the kind row carry them for now; a layout break waits
+  for evidence it is needed).

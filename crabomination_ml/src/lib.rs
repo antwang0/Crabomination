@@ -27,7 +27,7 @@ use candle_nn::{
 };
 use crabomination_nn::{
     ATTN_HEADS, AUX_FEATS, DeckRow, EMB_DIM, EncodedState, GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS,
-    OBJ_HIDDEN, TRUNK_H1, TRUNK_H2, TrainRow,
+    OBJ_HIDDEN, POLICY_KINDS, TRUNK_H1, TRUNK_H2, TrainRow,
 };
 use rand::{Rng, RngExt};
 
@@ -67,6 +67,13 @@ pub struct NetConfig {
     /// of its own gate. Unlike the life/length heads the engine consumes
     /// this one, so exports carry it and `PlayNet` loads it.
     pub policy: bool,
+    /// Build the policy head's decision-kind table (`head_policy_kind.*`,
+    /// [`POLICY_KINDS`] × h2 + [`POLICY_KINDS`], zero-initialised): a
+    /// decision of kind `k` scores its candidates by the shared head plus
+    /// row `k` — what lets one head serve a main-phase play and a discard.
+    /// Needs [`Self::policy`]. Off by default, so every run without it
+    /// stays bit-reachable.
+    pub policy_kinds: bool,
     /// Build the opponent-hand belief head (`head_opp.*`, h2 → vocab,
     /// round 39): per-name probabilities that the opponent currently
     /// holds each card, trained with multi-label BCE against the
@@ -89,6 +96,7 @@ impl NetConfig {
             aux: false,
             blocks: 0,
             policy: false,
+            policy_kinds: false,
             opp: false,
         }
     }
@@ -116,6 +124,9 @@ pub struct PlayModel {
     head_len: Linear,
     head_aux: Option<Linear>,
     head_policy: Option<Linear>,
+    /// `(weight [POLICY_KINDS, h2], bias [POLICY_KINDS])` — see
+    /// [`NetConfig::policy_kinds`].
+    head_policy_kind: Option<(Tensor, Tensor)>,
     head_opp: Option<Linear>,
 }
 
@@ -193,6 +204,16 @@ pub fn build_model(cfg: &NetConfig, vb: VarBuilder) -> CResult<PlayModel> {
         },
         head_policy: if cfg.policy {
             Some(linear(cfg.h2, 1, vb.pp("head_policy"))?)
+        } else {
+            None
+        },
+        head_policy_kind: if cfg.policy_kinds {
+            assert!(cfg.policy, "the kind table adds to the policy head");
+            let v = vb.pp("head_policy_kind");
+            Some((
+                v.get_with_hints((POLICY_KINDS, cfg.h2), "weight", candle_nn::Init::Const(0.0))?,
+                v.get_with_hints(POLICY_KINDS, "bias", candle_nn::Init::Const(0.0))?,
+            ))
         } else {
             None
         },
@@ -540,11 +561,35 @@ impl PlayModel {
         batch: &Batch,
         detach_trunk: bool,
     ) -> CResult<(Tensor, Option<Tensor>)> {
+        self.forward_win_policy_kinds(batch, None, detach_trunk)
+    }
+
+    /// [`forward_win_policy_opt`](Self::forward_win_policy_opt) with each
+    /// row's decision kind (`[B]` u32, below [`POLICY_KINDS`]): the policy
+    /// logit adds the kind table's row when the model has the table.
+    /// `None`, or no table, is the kind-free logit.
+    pub fn forward_win_policy_kinds(
+        &self,
+        batch: &Batch,
+        kinds: Option<&Tensor>,
+        detach_trunk: bool,
+    ) -> CResult<(Tensor, Option<Tensor>)> {
         let t2 = self.trunk_out(batch)?;
         let t2 = if detach_trunk { t2.detach() } else { t2 };
         let win = candle_nn::ops::sigmoid(&self.head_win.forward(&t2)?)?;
         let policy = match &self.head_policy {
-            Some(h) => Some(h.forward(&t2)?),
+            Some(h) => {
+                let base = h.forward(&t2)?;
+                match (&self.head_policy_kind, kinds) {
+                    (Some((w, b)), Some(k)) => {
+                        let rows = w.index_select(k, 0)?;
+                        let dot = t2.mul(&rows)?.sum_keepdim(1)?;
+                        let bias = b.index_select(k, 0)?.unsqueeze(1)?;
+                        Some(base.add(&dot)?.add(&bias)?)
+                    }
+                    _ => Some(base),
+                }
+            }
             None => None,
         };
         Ok((win, policy))
@@ -552,6 +597,10 @@ impl PlayModel {
 
     pub fn has_policy_head(&self) -> bool {
         self.head_policy.is_some()
+    }
+
+    pub fn has_policy_kinds(&self) -> bool {
+        self.head_policy_kind.is_some()
     }
 
     pub fn has_opp_head(&self) -> bool {
@@ -672,6 +721,10 @@ pub struct DecisionRow {
     /// game decides; NaN until then, and a NaN row takes no part in a
     /// policy-gradient step.
     pub ret: f32,
+    /// The decision's kind (`server::decision_menu::Kind::index`, below
+    /// [`POLICY_KINDS`]) — the kind table's row its candidates are scored
+    /// with. 0 (priority) for every capture site before the move list.
+    pub kind: u8,
 }
 
 impl Default for DecisionRow {
@@ -690,6 +743,7 @@ impl Default for DecisionRow {
             ply: 0,
             settled: false,
             ret: f32::NAN,
+            kind: 0,
         }
     }
 }
@@ -1499,11 +1553,19 @@ impl Trainer {
         }
 
         let batch = make_state_batch(&flat, &self.dev)?;
+        // Each candidate carries its row's decision kind; read only when the
+        // model has the kind table, so every run without it is unchanged.
+        let kinds = if self.model.has_policy_kinds() {
+            let ks: Vec<u32> = usable.iter().flat_map(|r| std::iter::repeat_n(r.kind as u32, k)).collect();
+            Some(Tensor::from_vec(ks, b * k, &self.dev)?)
+        } else {
+            None
+        };
         // One trunk pass serves both objectives. The ranking loss trains
         // the policy head when the model has one; without it, the
         // historical shared-win-head path (recover the logit from the
         // sigmoid) stays bit-reachable as the control.
-        let (win, pol) = self.model.forward_win_policy(&batch)?;
+        let (win, pol) = self.model.forward_win_policy_kinds(&batch, kinds.as_ref(), false)?;
         let logits = match pol {
             Some(l) => l.reshape((b, k))?,
             None => logit_of(&win)?.reshape((b, k))?,
@@ -1839,6 +1901,16 @@ impl Trainer {
             }
         }
         Ok(out)
+    }
+
+    /// [`predict_policy_states`](Self::predict_policy_states) with each
+    /// state's decision kind — the trainer-side twin of
+    /// `PlayNet::forward_policy_kind`. `None` without a policy head.
+    pub fn predict_policy_kinds(&self, states: &[&EncodedState], kinds: &[u8]) -> CResult<Option<Vec<f32>>> {
+        let batch = make_state_batch(states, &self.dev)?;
+        let k = Tensor::from_vec(kinds.iter().map(|&x| x as u32).collect::<Vec<u32>>(), kinds.len(), &self.dev)?;
+        let (_, pol) = self.model.forward_win_policy_kinds(&batch, Some(&k), false)?;
+        pol.map(|p| p.flatten_all()?.to_vec1::<f32>()).transpose()
     }
 
     /// Win probability and (when the head exists) policy logits in one
@@ -2571,6 +2643,7 @@ mod tests {
             aux: false,
             blocks: 0,
             policy: false,
+            policy_kinds: false,
             opp: false,
         }
     }
@@ -2693,6 +2766,69 @@ mod tests {
                 "state {i} policy: engine {got_pol} vs candle {want_pol}"
             );
         }
+    }
+
+    /// The kind table's parity surface: trained in candle (here, set to
+    /// random values so a zero table can't pass by accident), exported, and
+    /// the engine's `forward_policy_kind` reproduces every kind's logit.
+    #[test]
+    fn policy_kind_table_matches_engine_inference() {
+        let cfg = NetConfig { policy: true, policy_kinds: true, ..small_cfg() };
+        let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        {
+            let data = trainer.varmap.data().lock().unwrap();
+            let mut rng = StdRng::seed_from_u64(7);
+            for name in ["head_policy_kind.weight", "head_policy_kind.bias"] {
+                let v = data.get(name).expect(name);
+                let n = v.elem_count();
+                let vals: Vec<f32> = (0..n).map(|_| rng.random_range(-1.0f32..1.0)).collect();
+                v.set(&Tensor::from_vec(vals, v.shape(), v.device()).unwrap()).unwrap();
+            }
+        }
+        let path = std::env::temp_dir().join(format!("crab_kind_parity_{}.safetensors", std::process::id()));
+        trainer.save(&path).expect("save");
+        let bytes = std::fs::read(&path).expect("read");
+        let _ = std::fs::remove_file(&path);
+        let net = PlayNet::load(&bytes).expect("engine loads the kind table");
+        assert!(net.has_policy_kinds());
+        let mut rng = StdRng::seed_from_u64(43);
+        let states: Vec<EncodedState> = (0..6).map(|_| random_state(&mut rng, cfg.vocab)).collect();
+        let kinds: Vec<u8> = vec![0, 1, 2, 7, 19, 31];
+        let refs: Vec<&EncodedState> = states.iter().collect();
+        let want = trainer.predict_policy_kinds(&refs, &kinds).expect("candle").expect("head");
+        for (i, s) in states.iter().enumerate() {
+            let got = net.forward_policy_kind(s, kinds[i] as usize).expect("engine");
+            assert!((got - want[i]).abs() < 1e-4, "state {i} kind {}: engine {got} vs candle {}", kinds[i], want[i]);
+        }
+        // And the kind rows actually move the logit.
+        let shared = net.forward_policy(&states[3]).unwrap();
+        assert!((net.forward_policy_kind(&states[3], 7).unwrap() - shared).abs() > 1e-3);
+    }
+
+    /// Only the kind table can learn this: the same two successors, kind 3
+    /// always picks the first and kind 9 the second. A kind-free head is
+    /// stuck at a coin flip on one of them; with the table both are fit.
+    #[test]
+    fn the_kind_table_separates_kinds_over_the_same_candidates() {
+        let mut rng = StdRng::seed_from_u64(5);
+        let (a, b) = (random_state(&mut rng, 12), random_state(&mut rng, 12));
+        let row = |kind: u8, chosen: usize| DecisionRow { successors: vec![a.clone(), b.clone()], chosen, kind, ..Default::default() };
+        let rows: Vec<DecisionRow> = (0..16).map(|i| if i % 2 == 0 { row(3, 0) } else { row(9, 1) }).collect();
+        let refs: Vec<&DecisionRow> = rows.iter().collect();
+        let fit = |kinds: bool| {
+            let cfg = NetConfig { policy: true, policy_kinds: kinds, ..small_cfg() };
+            let mut t = Trainer::new(&cfg, 1e-2).expect("trainer");
+            let mut last = PolicyStats { loss: 0.0, top1: 0.0, n: 0, sv: 0.0 };
+            for _ in 0..300 {
+                last = t.train_policy_step(&refs).expect("step");
+            }
+            last
+        };
+        let with = fit(true);
+        let without = fit(false);
+        assert!(with.top1 > 0.99, "with the table: {with:?}");
+        assert!(without.top1 < 0.75, "without it the two kinds collide: {without:?}");
+        assert!(with.loss < 0.1 && without.loss > 0.6, "{with:?} vs {without:?}");
     }
 
     /// A checkpoint from an earlier encoder generation loads into the
@@ -3882,6 +4018,7 @@ mod tests {
                 aux: false,
                 blocks: 0,
                 policy: false,
+                policy_kinds: false,
                 opp: false,
             };
         let mut play = Trainer::new(&cfg, 1e-3).expect("play trainer");

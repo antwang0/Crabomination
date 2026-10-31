@@ -123,6 +123,13 @@ pub fn policy_logit(state: &GameState, seat: usize, slot: u8) -> Option<f32> {
     net.eval_policy(encode_state(state, seat, vocab()))
 }
 
+/// [`policy_logit`] for a decision of kind `kind` (`decision_menu::Kind::
+/// index`): the shared head plus the kind table's row when the net has one.
+pub fn policy_logit_kind(state: &GameState, seat: usize, slot: u8, kind: u8) -> Option<f32> {
+    let net = net_for_state(state, slot)?;
+    net.eval_policy_kind(encode_state(state, seat, vocab()), kind)
+}
+
 /// Whether the slot's net can answer [`policy_logit`] at all — the check
 /// a profile makes at startup so "learned priors" vs "heuristic fallback"
 /// is reported once rather than discovered mid-game.

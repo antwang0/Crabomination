@@ -3114,23 +3114,38 @@ mod tests {
         let mut b = bf(vec![crate::catalog::grizzly_bears(), crate::catalog::grave_titan()]);
         let Err(epoch) = b.trigger_members() else { panic!("unknown until filled") };
         b.store_trigger_members(epoch, triggerer_bits(&b));
-        assert_eq!(b.trigger_members(), Ok(0b10));
+        // The epoch is process-wide (`card::definition_epoch`): a game in
+        // another test thread that rewrites a definition makes every memo
+        // read stale, correctly (seen failing this test beside the policy
+        // pilot's whole-game tests, 2026-10-31). When the epoch moved since
+        // the last stamp, re-stamp and read again: what this checks is that
+        // the writes keep the list exact, not that no other thread ran.
+        let mut stamped = epoch;
+        let mut members = |b: &Battlefield| match b.trigger_members() {
+            Err(e) if e != stamped => {
+                stamped = e;
+                b.store_trigger_members(e, triggerer_bits(b));
+                b.trigger_members()
+            }
+            r => r,
+        };
+        assert_eq!(members(&b), Ok(0b10));
         b.push(CardInstance::new(CardId(9), crate::catalog::grizzly_bears(), 0));
-        assert_eq!(b.trigger_members(), Ok(0b10), "push kept the list");
+        assert_eq!(members(&b), Ok(0b10), "push kept the list");
         b.remove(0);
-        assert_eq!(b.trigger_members(), Ok(0b01), "a removal shifted it");
+        assert_eq!(members(&b), Ok(0b01), "a removal shifted it");
         for i in 0..61 {
             b.push(CardInstance::new(CardId(100 + i), crate::catalog::grizzly_bears(), 0));
         }
         b.push(CardInstance::new(CardId(200), crate::catalog::grave_titan(), 0));
         assert_eq!(b.len(), 64);
-        assert_eq!(b.trigger_members(), Ok(1 | (1 << 63)), "the 64th card is bit 63");
+        assert_eq!(members(&b), Ok(1 | (1 << 63)), "the 64th card is bit 63");
         // Removing the last index of a full list shifts nothing above it —
         // the shift-by-64 the closing grid found (PERF `(-214)`'s fix).
         assert!(b.remove(63).definition.name == "Grave Titan");
-        assert_eq!(b.trigger_members(), Ok(1), "index 63 left, nothing above it to shift");
+        assert_eq!(members(&b), Ok(1), "index 63 left, nothing above it to shift");
         b.push(CardInstance::new(CardId(201), crate::catalog::grave_titan(), 0));
-        assert_eq!(b.trigger_members(), Ok(1 | (1 << 63)));
+        assert_eq!(members(&b), Ok(1 | (1 << 63)));
         b.push(CardInstance::new(CardId(202), crate::catalog::grizzly_bears(), 0));
         assert!(b.trigger_members().is_err(), "the 65th card drops the list");
     }

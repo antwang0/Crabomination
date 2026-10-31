@@ -60,6 +60,22 @@ static ENABLED: AtomicBool = AtomicBool::new(false);
 /// states through [`maybe_states`]; the flag never changes a pick.
 static SETTLED: AtomicBool = AtomicBool::new(false);
 
+/// Record every decision through the move list (`policy_pilot::record`,
+/// fed by the actor loop) and nothing from the pickers' own capture sites,
+/// which would otherwise record the same decisions a second time over their
+/// shortlists. Off by default.
+static MENU_ONLY: AtomicBool = AtomicBool::new(false);
+
+/// Switch between the pickers' captures and the move list's (see
+/// [`MENU_ONLY`]).
+pub fn set_menu_only(on: bool) {
+    MENU_ONLY.store(on, Ordering::Relaxed);
+}
+
+pub fn menu_only() -> bool {
+    MENU_ONLY.load(Ordering::Relaxed)
+}
+
 /// Switch the recorder to settled successors (see [`SETTLED`]).
 pub fn set_settled(on: bool) {
     SETTLED.store(on, Ordering::Relaxed);
@@ -145,6 +161,9 @@ pub struct CapturedDecision {
     /// True when `successors` are settled states ([`set_settled`]), false
     /// when they are one-action successors.
     pub settled: bool,
+    /// The decision's kind (`decision_menu::Kind::index`) — the policy
+    /// head's kind-table row. 0 (priority) for the pickers' capture sites.
+    pub kind: u8,
 }
 
 thread_local! {
@@ -191,6 +210,8 @@ pub struct Provenance<'a> {
     pub temp: i32,
     /// Whether `scores` are net units.
     pub net_scored: bool,
+    /// The decision's kind — see [`CapturedDecision::kind`].
+    pub kind: u8,
 }
 
 /// Turn capture on or off for this process.
@@ -256,7 +277,7 @@ pub fn maybe_full(
     chosen: usize,
     prov: Provenance<'_>,
 ) {
-    if !recordable(state) || candidates.len() < 2 {
+    if !recordable(state) || candidates.len() < 2 || menu_only() {
         return;
     }
     let successors: Vec<Option<GameState>> = candidates
@@ -285,10 +306,26 @@ pub fn maybe_states(
     chosen: usize,
     prov: Provenance<'_>,
 ) {
-    if !recordable(state) || successors.len() < 2 {
+    if !recordable(state) || successors.len() < 2 || menu_only() {
         return;
     }
     record(state, seat, successors, chosen, prov, true);
+}
+
+/// [`maybe_states`] for one-action successors the caller built — the
+/// policy pilot's recorder (`policy_pilot::record`), whose candidates are
+/// the move list's and, for a declaration, its step sets.
+pub fn maybe_successors(
+    state: &GameState,
+    seat: usize,
+    successors: Vec<Option<GameState>>,
+    chosen: usize,
+    prov: Provenance<'_>,
+) {
+    if !recordable(state) || successors.len() < 2 {
+        return;
+    }
+    record(state, seat, successors, chosen, prov, false);
 }
 
 /// Capture is on and `state` is a live two-seat game. A pod has no
@@ -369,6 +406,7 @@ fn record(
             net_scored: prov.net_scored,
             ply: ply(),
             settled,
+            kind: prov.kind,
         });
     });
 }

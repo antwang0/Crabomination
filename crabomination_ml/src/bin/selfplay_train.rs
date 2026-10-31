@@ -27,6 +27,7 @@
 //!                [--sample-temp N] [--sample-turns N] [--mcts-actors N]
 //!                [--record-decisions] [--policy-every N] [--policy-temp F]
 //!                [--policy-head] [--mcts-gumbel] [--best-metric auc|policy]
+//!                [--menu-decisions] [--policy-kinds]
 //!                [--mcts-fleet N] [--opp-head] [--search-value-weight F]
 //!                [--emb-dim N] [--obj-hidden N] [--h1 N] [--h2 N]
 //!                [--gate-builder GAMES_PER_POOL] [--gate-builder-v3 GAMES_PER_POOL]
@@ -120,6 +121,15 @@ struct Args {
     /// once per candidate rather than once per position, so it is not
     /// free.
     record_decisions: bool,
+    /// Record EVERY decision through the move list instead of the pickers'
+    /// shortlists (`decision_capture::set_menu_only`): one row over the move
+    /// list per decision, one per step for a combat declaration, each with
+    /// its decision kind — the imitation stream for the policy pilot
+    /// (`server::policy_pilot`). Implies `--record-decisions`.
+    menu_decisions: bool,
+    /// Build the policy head's decision-kind table (`NetConfig::
+    /// policy_kinds`). Implies `--policy-head`.
+    policy_kinds: bool,
     /// Learner steps between policy steps when `--record-decisions` is
     /// on. 1 = a policy step every value step.
     ///
@@ -430,6 +440,8 @@ fn parse_args() -> Args {
         steps_per_game: 0.0,
         bce: false,
         record_decisions: false,
+        menu_decisions: false,
+        policy_kinds: false,
         policy_every: 4,
         policy_temp: 0.1,
         policy_head: false,
@@ -508,6 +520,16 @@ fn parse_args() -> Args {
             "--steps-per-game" => a.steps_per_game = val().parse().expect("--steps-per-game"),
             "--bce" => a.bce = true,
             "--record-decisions" => a.record_decisions = true,
+            "--menu-decisions" => {
+                a.menu_decisions = true;
+                a.record_decisions = true;
+                continue; // bare flag, consumes no value
+            }
+            "--policy-kinds" => {
+                a.policy_kinds = true;
+                a.policy_head = true;
+                continue; // bare flag, consumes no value
+            }
             "--record-combat" => a.record_combat = true,
             "--policy-temp" => a.policy_temp = val().parse().expect("--policy-temp"),
             "--policy-head" => {
@@ -667,6 +689,7 @@ fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
     cfg.aux = args.aux;
     cfg.blocks = args.blocks;
     cfg.policy = args.policy_head;
+    cfg.policy_kinds = args.policy_kinds;
     cfg.opp = args.opp_head;
     assert!(
         !(cfg.attn && cfg.blocks > 0),
@@ -728,6 +751,7 @@ fn file_net_config(
         aux: false,
         blocks,
         policy: n.has_policy_head(),
+        policy_kinds: n.has_policy_kinds(),
         opp: n.has_opp_head(),
     })
 }
@@ -984,6 +1008,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                                 turn: d.turn,
                                 ply: d.ply,
                                 settled: d.settled,
+                                kind: d.kind,
                                 ret,
                             },
                         )
@@ -1859,6 +1884,7 @@ fn main() {
 
     if args.record_decisions {
         crabomination::server::decision_capture::set_enabled(true);
+        crabomination::server::decision_capture::set_menu_only(args.menu_decisions);
         if args.capture_settled {
             crabomination::server::decision_capture::set_settled(true);
             eprintln!("recording SETTLED successors (round 73)");

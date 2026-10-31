@@ -55,6 +55,10 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
     if profile == "pass" {
         return Some(Box::new(PassBot(HeuristicBot::new())));
     }
+    // The policy pilot on the loaded net's policy head (`CRAB_NET`).
+    if profile == "policy" {
+        return Some(Box::new(crabomination::server::policy_pilot::PolicyBot::new(EvalWeights::net_on_default(), 0.0, 0)));
+    }
     let w = match profile {
         "gang" => EvalWeights::default(),
         "atk-sim" => EvalWeights::attack_search_sim(),
@@ -257,17 +261,26 @@ fn run_menu_census(games: usize) {
     kinds.sort();
     kinds.dedup();
     let covered = rows.iter().filter(|r| r.covered).count();
+    let tot = |f: fn(&CensusRow) -> f64| rows.iter().map(f).sum::<f64>();
+    println!(
+        "time per decision (release build, under the pilot's load): list {:.0} µs, successors {:.0} µs",
+        tot(|r| r.menu_us) / rows.len().max(1) as f64,
+        tot(|r| r.succ_us) / rows.len().max(1) as f64
+    );
     println!(
         "all decisions: {} — the pilot's move on the list at {covered} ({:.2} %)\n",
         rows.len(),
         100.0 * covered as f64 / rows.len().max(1) as f64
     );
-    println!("{:<24} {:>8} {:>9} {:>10} {:>8} {:>6} {:>9}", "kind", "count", "covered", "truncated", "mean", "max", "rejected");
+    println!(
+        "{:<24} {:>8} {:>9} {:>10} {:>8} {:>6} {:>9} {:>9} {:>9}",
+        "kind", "count", "covered", "truncated", "mean", "max", "rejected", "list µs", "succ µs"
+    );
     for k in kinds {
         let rs: Vec<&CensusRow> = rows.iter().filter(|r| r.kind == k).collect();
         let n = rs.len() as f64;
         println!(
-            "{:<24} {:>8} {:>8.2}% {:>9.2}% {:>8.1} {:>6} {:>9}",
+            "{:<24} {:>8} {:>8.2}% {:>9.2}% {:>8.1} {:>6} {:>9} {:>9.0} {:>9.0}",
             k.name(),
             rs.len(),
             100.0 * rs.iter().filter(|r| r.covered).count() as f64 / n,
@@ -275,6 +288,8 @@ fn run_menu_census(games: usize) {
             rs.iter().map(|r| r.moves).sum::<usize>() as f64 / n,
             rs.iter().map(|r| r.moves).max().unwrap_or(0),
             rs.iter().map(|r| r.rejected).sum::<usize>(),
+            rs.iter().map(|r| r.menu_us).sum::<f64>() / n,
+            rs.iter().map(|r| r.succ_us).sum::<f64>() / n,
         );
     }
     let mut misses: Vec<(String, usize, String)> = Vec::new();
@@ -479,7 +494,7 @@ fn main() {
              bot_puzzles --blunders [--reps N] [--show-lines] [PROFILE ...]\n\
              bot_puzzles --action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S] [--scored-rollouts] [MCTS PROFILE]\n\
              bot_puzzles --menu-census GAMES [--threads T] [--seed S] [MCTS PROFILE]\n\n\
-             PROFILE: pass (null control) | dflt | fixes | net67 | net67-fixes | mcts-dflt-256 | mcts-net67-256 |\n\
+             PROFILE: pass (null control) | policy (CRAB_NET's policy head) | dflt | fixes | net67 | net67-fixes | mcts-dflt-256 | mcts-net67-256 |\n\
              \x20        mcts-net67-256-fixes (the client's limited pilot) | gang | atk-sim | net | mcts-net-deep\n\
              --certify reports which candidates are real puzzles. CRAB_NET overrides the champion."
         );

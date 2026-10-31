@@ -167,6 +167,7 @@ pub mod net_eval;
 pub mod action_gap;
 pub mod blunder;
 pub mod decision_menu;
+pub mod policy_pilot;
 pub mod puzzle;
 pub mod puzzle_corpus;
 pub mod puzzle_fra;

@@ -3,16 +3,20 @@
 //!
 //! Three kinds of decision, one list shape:
 //!
-//! * **Priority** — [`puzzle::legal_actions`]' brute force (lands, casts
-//!   and flashback casts, activated and loyalty abilities, prepared spells,
-//!   each over every target), plus the bot's own cast generator, which knows
-//!   the alternative casts (kicker, adventure, bestow, ...) the brute force
-//!   doesn't, plus the bot's main-phase sink. Every cast and activation is
-//!   then fanned out over its targets slot by slot (second targets
-//!   included), its X values and its modes, each fan-out kept only if the
-//!   engine accepts it (`would_accept`).
-//! * **Combat** — every attack and block subset, engine-validated (the same
-//!   enumeration, capped at eight creatures).
+//! * **Priority** — one untargeted base move per thing the seat could do
+//!   (a land, a cast from hand, a flashback cast, each activated and
+//!   loyalty ability, a prepared spell), plus the bot's own cast generator,
+//!   which knows the alternative casts (kicker, adventure, bestow, ...),
+//!   the main-phase sink, and the hand / other-zone activations. Every cast
+//!   and activation is then fanned out over its targets slot by slot
+//!   (second targets included), its X values and its modes — no mode
+//!   included — each kept only if the engine accepts it (`would_accept`,
+//!   or a cost prompt some answer completes).
+//! * **Combat** — every attack set (the player, planeswalkers and battles
+//!   as targets) and block set (a blocker may join a block that is only
+//!   legal in company — menace), engine-validated, capped at eight
+//!   creatures and 256 sets. The policy pilot builds declarations a member
+//!   at a time instead (`policy_pilot`), so the cap is the list's only.
 //! * **Prompts** — the pending [`Decision`]'s answers, built from its own
 //!   fields (its legal targets, its cards, its count). An answer space that
 //!   is a permutation or a subset is enumerated up to [`MAX_MOVES`] and the
@@ -35,7 +39,6 @@ use crate::game::types::TurnStep;
 use crate::game::{GameAction, GameState, Target};
 
 use super::bot::EvalWeights;
-use super::puzzle;
 
 /// Most moves one list carries; a list cut here is marked truncated.
 pub const MAX_MOVES: usize = 256;
@@ -129,8 +132,7 @@ pub fn menu(g: &GameState, seat: usize, w: &EvalWeights) -> Option<Menu> {
     if !attack && !block && g.player_with_priority() != seat {
         return None;
     }
-    let e = puzzle::legal_actions(g, seat);
-    let mut truncated = e.truncated;
+    let mut truncated = false;
     let mut moves: Vec<GameAction> = Vec::new();
     let mut keys: Vec<String> = Vec::new();
     let push = |a: GameAction, moves: &mut Vec<GameAction>, keys: &mut Vec<String>| {
@@ -141,25 +143,17 @@ pub fn menu(g: &GameState, seat: usize, w: &EvalWeights) -> Option<Menu> {
         }
     };
     // Pass first: a list cut at the cap must still carry it.
-    let mut seeds: Vec<GameAction> = e.actions;
-    // (`legal_actions` adds it last and truncates after, so a wide
-    // position can drop it there.)
-    seeds.retain(|a| !matches!(a, GameAction::PassPriority));
+    let mut seeds: Vec<GameAction> = Vec::new();
     if g.player_with_priority() == seat {
-        seeds.insert(0, GameAction::PassPriority);
+        seeds.push(GameAction::PassPriority);
+        seeds.extend(base_moves(g, seat));
     }
     if attack {
-        // The brute force swings at the player only; a planeswalker or a
-        // battle is an attack target too.
-        seeds.retain(|a| !matches!(a, GameAction::DeclareAttackers(_)));
         let (decls, cut) = attack_declarations(g, seat);
         truncated |= cut;
         seeds.extend(decls);
     }
     if block {
-        // The brute force tries each blocker alone, so an attacker only two
-        // can block (menace) was never offered (`Apex Witchstalker`, FRA).
-        seeds.retain(|a| !matches!(a, GameAction::DeclareBlockers(_)));
         let (decls, cut) = block_declarations(g, seat);
         truncated |= cut;
         seeds.extend(decls);
@@ -172,7 +166,9 @@ pub fn menu(g: &GameState, seat: usize, w: &EvalWeights) -> Option<Menu> {
         seeds.extend(other_moves(g, seat));
         // The search's own arms in the window it runs (its alternative
         // targetings and X sizes are built there, not in the generators).
-        if g.active_player_idx == seat
+        // Behind `CRAB_MENU_SEARCH_ARMS` while their price is measured.
+        if std::env::var_os("CRAB_MENU_SEARCH_ARMS").is_some()
+            && g.active_player_idx == seat
             && g.stack.is_empty()
             && matches!(g.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
         {
@@ -208,6 +204,65 @@ pub fn menu(g: &GameState, seat: usize, w: &EvalWeights) -> Option<Menu> {
         Kind::Priority
     };
     Some(Menu { kind, moves, truncated })
+}
+
+/// One untargeted base move per thing the seat could do — a land from
+/// hand, a cast from hand, a flashback cast, each non-mana activated and
+/// loyalty ability, a prepared creature's spell — for [`fan_out`] to aim
+/// over the targets its effect can take. (`puzzle::legal_actions` tries
+/// every card at every permanent instead, one engine probe each: most of a
+/// list's build time, census 2026-10-31.)
+fn base_moves(g: &GameState, seat: usize) -> Vec<GameAction> {
+    let p = &g.players[seat];
+    let mut out: Vec<GameAction> = Vec::new();
+    for c in p.hand.iter() {
+        if c.definition.is_land() {
+            out.push(GameAction::PlayLand(c.id));
+        } else {
+            out.push(GameAction::CastSpell { card_id: c.id, target: None, additional_targets: Vec::new(), mode: None, x_value: None });
+        }
+    }
+    for c in p.graveyard.iter() {
+        out.push(GameAction::CastFlashback { card_id: c.id, target: None, additional_targets: Vec::new(), mode: None, x_value: None });
+    }
+    for c in g.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
+            if !crate::game::actions::is_mana_ability(&ab.effect) {
+                out.push(GameAction::ActivateAbility {
+                    card_id: c.id,
+                    ability_index: idx,
+                    target: None,
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                    mode: None,
+                });
+            }
+        }
+        let loyalty = crate::game::effective_loyalty_abilities(c, &g.battlefield);
+        let max_x = c.counter_count(crate::card::CounterType::Loyalty).min(8);
+        for idx in 0..loyalty.len() {
+            for x in std::iter::once(None).chain((1..=max_x).map(Some)) {
+                out.push(GameAction::ActivateLoyaltyAbility { card_id: c.id, ability_index: idx, target: None, x_value: x });
+            }
+        }
+        if c.counter_count(crate::card::CounterType::Prepared) > 0 {
+            // The prepared spell's effect isn't on this card, so its targets
+            // are tried directly (players and permanents).
+            let pool = std::iter::once(None)
+                .chain((0..g.players.len()).map(|p| Some(Target::Player(p))))
+                .chain(g.battlefield.iter().map(|b| Some(Target::Permanent(b.id))));
+            for target in pool {
+                out.push(GameAction::CastPrepareSpell {
+                    creature_id: c.id,
+                    target,
+                    additional_targets: Vec::new(),
+                    mode: None,
+                    x_value: None,
+                });
+            }
+        }
+    }
+    out
 }
 
 /// Moves no other generator offers: hand activations (cycling,
@@ -835,6 +890,11 @@ pub struct CensusRow {
     pub chosen: String,
     /// Prompt answers on the list that the engine refused on a clone.
     pub rejected: usize,
+    /// Microseconds to build the list, and to build and encode every
+    /// move's successor state (what a policy decision costs before the
+    /// net's forward passes).
+    pub menu_us: f64,
+    pub succ_us: f64,
 }
 
 /// Play a game with `pilot` on both seats and check every decision either
@@ -850,7 +910,19 @@ pub fn census_game(template: &GameState, pilot: super::MctsConfig, seed: u64) ->
         fuel -= 1;
         let mut acted = false;
         for (seat, bot) in bots.iter_mut().enumerate() {
+            let t0 = std::time::Instant::now();
             let m = menu(&g, seat, &w);
+            let menu_us = t0.elapsed().as_secs_f64() * 1e6;
+            let succ_us = m.as_ref().map_or(0.0, |m| {
+                let t1 = std::time::Instant::now();
+                for x in &m.moves {
+                    let mut next = g.clone();
+                    if next.perform_action(x.clone()).is_ok() {
+                        std::hint::black_box(super::encode::encode_state(&next, seat, super::net_eval::vocab()));
+                    }
+                }
+                t1.elapsed().as_secs_f64() * 1e6
+            });
             let Some(a) = bot.next_action(&g, seat) else { continue };
             let before = g.clone();
             if g.perform_action(a.clone()).is_err() {
@@ -880,6 +952,8 @@ pub fn census_game(template: &GameState, pilot: super::MctsConfig, seed: u64) ->
                     variant,
                     chosen,
                     rejected,
+                    menu_us,
+                    succ_us,
                 });
             }
             break;
