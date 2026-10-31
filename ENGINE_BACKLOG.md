@@ -366,9 +366,9 @@ Ascension board cap; **no hang**). 0 panics. Precon-seat shards green on the mer
   `--seats 6 --pod-decks 3787,5606,949,5497,2508,2391 --seed 779124` (goaded Yuna now dropped — the re-aim finds no
   seat that both `attacker_target_block` and `attack_target_obeys_most` accept, yet the engine requires her);
   `--seats 5 --pod-decks 3134,5591,4440,5284,1734 --seed 780004` (empty declaration, `CannotAttack(250)`, 7);
-  menace — a single blocker on an attacker granted menace after declaration (Blood-Chin Rager's "Warriors gain
-  menace"): `--seats 3 --pod-decks 5932,374,1189 --seed 779066`, `--seats 4 --pod-decks 3243,3005,1379,4342 --seed
-  780183` (both pre-existing; the block repair reads the computed view, so the single block comes from elsewhere);
+  ✅ *(fixed after: `repair_block_candidate` now runs on the submitted plan)* menace — a single blocker on an attacker
+  granted menace after declaration (Blood-Chin Rager): seeds 779066, 780183 — the planner path that produced the lone
+  block is still unidentified;
   `MustBeBlockedIfAble`: `--seats 6 --pod-decks 3140,380,195,1659,1136,506 --seed 780059`. Census rate after the
   fixes: 10 rejections in 300 games (seed 780).
 - Gates: suite **29,393 / 0 / 7** at the closing tip (29,383 before the pact / REJECT fixes; strict answer log, precon-seat test skipped); `--bench` **196,176 / 613.0 / 0
