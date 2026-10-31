@@ -344,6 +344,11 @@ hang). 0 panics. **Next seed 29418.**
   `REJECT … InvalidAttackTarget(7)` — three seats' whole combats. `pod_attack::fit_attacker_caps` runs last on the
   declaration (Commander seats only): the surplus re-aims at a live opponent with room or stays home. Test
   `cr_506_2_attacks_past_a_defender_s_cap_re_aim`. 0 REJECTs in the re-run.
+- ✅ **The precon-seat test was red on the branch before this run** (shard 1/2: The Ninth Doctor seed 6308 a CR
+  104.4a draw, base binary identical): Judith cast Slaughter Pact off two lands and Skirk Prospector, whose sacrifice
+  mana ability `pact_guard::pact_payable` counted as a source, and lost at her upkeep. Sources now count only through
+  `is_countable_mana_ability`. Test `a_sacrifice_mana_ability_does_not_pay_a_pact`; both `overflow` shards green
+  (~255 s each).
 - Gates: suite **29,383 / 0 / 7** (strict answer log, precon-seat test skipped); `--bench` **196,176 / 613.0 / 0
   stalls — byte-identical**, determinism ok; cube / sos / sealed `--games 100 --seed 28200` decision-identical base vs
   tip (372,578 / 213,776 / 520,724).
