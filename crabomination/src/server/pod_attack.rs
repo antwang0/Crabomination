@@ -216,8 +216,14 @@ fn cant_be_spilled_at(state: &GameState, d: usize) -> bool {
 /// player the attacker may attack, or the attacker stays home. A barred
 /// attack used to sink the whole declaration, so the seat attacked with
 /// nothing — two Sanctuary seats passed for 3,000 turns (8-seat pod, seed
-/// 31664). Commander games only; a declaration nothing bars is untouched.
+/// 31664). Commander games only — except Angelic Arbiter's bar, which closes
+/// every defender in any format; a declaration nothing bars is untouched.
 pub(crate) fn reaim_prohibited_attacks(state: &GameState, seat: usize, mut attacks: Vec<Attack>) -> Vec<Attack> {
+    // CR 508.1 — under an opponent's Angelic Arbiter a seat that cast a spell
+    // can't attack with creatures at all, so a duel declaration was refused.
+    if !attacks.is_empty() && state.cast_bars_attacks(seat) {
+        return Vec::new();
+    }
     if state.players.get(seat).is_none_or(|p| p.commanders.is_empty()) {
         return attacks;
     }
@@ -499,6 +505,25 @@ mod tests {
         g.add_card_to_battlefield(2, crate::catalog::angelic_arbiter());
         g.players[0].spells_cast_this_game_turn = 1;
         let out = reaim_prohibited_attacks(&g, 0, vec![Attack { attacker: bears[0], target: AttackTarget::Player(1) }]);
+        assert!(out.is_empty(), "{out:?}");
+        assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
+    }
+
+    /// CR 508.1 — bug fix: the Arbiter bar holds in a duel too (no commander
+    /// seated), where the re-aim used to pass the refused declaration through.
+    #[test]
+    fn angelic_arbiter_bars_a_duel_attack_after_a_cast() {
+        let mut g = multi_player_game(2);
+        g.active_player_idx = 0;
+        g.step = TurnStep::DeclareAttackers;
+        let bear = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.add_card_to_battlefield(1, crate::catalog::angelic_arbiter());
+        let swing = vec![Attack { attacker: bear, target: AttackTarget::Player(1) }];
+        assert_eq!(reaim_prohibited_attacks(&g, 0, swing.clone()), swing, "no cast, no bar");
+        g.players[0].spells_cast_this_game_turn = 1;
+        assert!(!g.would_accept(crate::game::GameAction::DeclareAttackers(swing.clone())));
+        let out = reaim_prohibited_attacks(&g, 0, swing);
         assert!(out.is_empty(), "{out:?}");
         assert!(g.would_accept(crate::game::GameAction::DeclareAttackers(out)));
     }
