@@ -208,6 +208,90 @@ fn run_action_gap(games: usize) {
     }
 }
 
+/// `--menu-census GAMES [--threads T] [--seed S] [MCTS PROFILE]`: the move
+/// list's coverage (`server::decision_menu`) — at every decision the pilot
+/// makes in sealed games between client-built decks, is its move on the
+/// list? (`CRAB_SEALED_SET=fra` for FRA pools; `CRAB_NET` the leaf.)
+fn run_menu_census(games: usize) {
+    use crabomination::server::decision_menu::{CensusRow, census_game};
+    let a: Vec<String> = std::env::args().collect();
+    let flag = |k: &str| a.iter().position(|x| x == k).and_then(|i| a.get(i + 1)).cloned();
+    let threads: usize = flag("--threads").map_or(8, |v| v.parse().expect("--threads T"));
+    let seed: u64 = flag("--seed").map_or(43, |v| v.parse().expect("--seed S"));
+    let profile = a
+        .iter()
+        .skip(1)
+        .find(|x| mcts_cfg(x).is_some())
+        .cloned()
+        .unwrap_or_else(|| "mcts-net67-256-fixes".to_string());
+    let pilot = mcts_cfg(&profile).expect("checked");
+    println!("menu census: {games} games, {profile}, {threads} threads, seed {seed}\n");
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let rows: Vec<CensusRow> = std::thread::scope(|sc| {
+        let hs: Vec<_> = (0..threads)
+            .map(|_| {
+                sc.spawn(|| {
+                    let mut mine = Vec::new();
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if i >= games {
+                            break;
+                        }
+                        let s = seed ^ (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+                        let build = |k: u64| {
+                            let pool = crabomination::selfplay::sealed_pool(s ^ k);
+                            crabomination::selfplay::sealed_opponent_build(&pool, 16, s ^ (k << 8), Default::default())
+                        };
+                        let template = crabomination::selfplay::sealed_game_template(&build(1), &build(2));
+                        mine.extend(census_game(&template, pilot, s));
+                        eprint!(".");
+                    }
+                    mine
+                })
+            })
+            .collect();
+        hs.into_iter().flat_map(|h| h.join().expect("worker")).collect()
+    });
+    eprintln!();
+    let mut kinds: Vec<_> = rows.iter().map(|r| r.kind).collect();
+    kinds.sort();
+    kinds.dedup();
+    let covered = rows.iter().filter(|r| r.covered).count();
+    println!(
+        "all decisions: {} — the pilot's move on the list at {covered} ({:.2} %)\n",
+        rows.len(),
+        100.0 * covered as f64 / rows.len().max(1) as f64
+    );
+    println!("{:<24} {:>8} {:>9} {:>10} {:>8} {:>6} {:>9}", "kind", "count", "covered", "truncated", "mean", "max", "rejected");
+    for k in kinds {
+        let rs: Vec<&CensusRow> = rows.iter().filter(|r| r.kind == k).collect();
+        let n = rs.len() as f64;
+        println!(
+            "{:<24} {:>8} {:>8.2}% {:>9.2}% {:>8.1} {:>6} {:>9}",
+            k.name(),
+            rs.len(),
+            100.0 * rs.iter().filter(|r| r.covered).count() as f64 / n,
+            100.0 * rs.iter().filter(|r| r.truncated).count() as f64 / n,
+            rs.iter().map(|r| r.moves).sum::<usize>() as f64 / n,
+            rs.iter().map(|r| r.moves).max().unwrap_or(0),
+            rs.iter().map(|r| r.rejected).sum::<usize>(),
+        );
+    }
+    let mut misses: Vec<(String, usize, String)> = Vec::new();
+    for r in rows.iter().filter(|r| !r.covered) {
+        let v = format!("{} in {}", r.variant, r.kind.name());
+        match misses.iter_mut().find(|m| m.0 == v) {
+            Some(m) => m.1 += 1,
+            None => misses.push((v, 1, r.chosen.clone())),
+        }
+    }
+    misses.sort_by_key(|m| std::cmp::Reverse(m.1));
+    println!("\nmisses by the pilot's move:");
+    for (v, n, ex) in &misses {
+        println!("  {n:>6}  {v:<36} e.g. {}", ex.chars().take(160).collect::<String>());
+    }
+}
+
 fn goal_name(g: Goal) -> String {
     match g {
         Goal::WinThisTurn => "win".into(),
@@ -393,7 +477,8 @@ fn main() {
         println!(
             "bot_puzzles [--set core|fra] [--depth N] [--certify] [PROFILE ...]\n\
              bot_puzzles --blunders [--reps N] [--show-lines] [PROFILE ...]\n\
-             bot_puzzles --action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S] [--scored-rollouts] [MCTS PROFILE]\n\n\
+             bot_puzzles --action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S] [--scored-rollouts] [MCTS PROFILE]\n\
+             bot_puzzles --menu-census GAMES [--threads T] [--seed S] [MCTS PROFILE]\n\n\
              PROFILE: pass (null control) | dflt | fixes | net67 | net67-fixes | mcts-dflt-256 | mcts-net67-256 |\n\
              \x20        mcts-net67-256-fixes (the client's limited pilot) | gang | atk-sim | net | mcts-net-deep\n\
              --certify reports which candidates are real puzzles. CRAB_NET overrides the champion."
@@ -410,6 +495,11 @@ fn main() {
             std::path::Path::new(&net),
         )
         .expect("load the value net");
+    }
+    if let Some(i) = args.iter().position(|a| a == "--menu-census") {
+        let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(40);
+        run_menu_census(games);
+        return;
     }
     if let Some(i) = args.iter().position(|a| a == "--action-gap") {
         let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(40);

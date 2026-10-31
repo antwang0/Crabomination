@@ -182,11 +182,11 @@ impl Default for GapConfig {
     }
 }
 
-/// Play `template` with `pilot` on both seats and sample decision points.
-pub fn audit_game(template: &GameState, pilot: MctsConfig, cfg: GapConfig, seed: u64) -> Vec<Point> {
-    use rand::RngExt;
+/// A sealed game ready to play, the way the training actors start one: the
+/// engine-read seat flags pushed from the pilot's weights, libraries
+/// shuffled and the in-game rolls keyed off `seed`, mulligans begun.
+pub fn start_game(template: &GameState, w: &super::bot::EvalWeights, seed: u64) -> GameState {
     let mut g = template.clone();
-    let w = pilot.weights;
     for p in g.players.iter_mut() {
         p.smart_tap = w.smart_tap;
         p.converge_rarest = w.converge_rarest;
@@ -200,6 +200,15 @@ pub fn audit_game(template: &GameState, pilot: MctsConfig, cfg: GapConfig, seed:
     }
     g.rng.reseed(seed ^ 0x5EED_600D_C0DE_1234);
     g.start_mulligan_phase();
+    g
+}
+
+/// Play `template` with `pilot` on both seats and sample decision points.
+pub fn audit_game(template: &GameState, pilot: MctsConfig, cfg: GapConfig, seed: u64) -> Vec<Point> {
+    use rand::RngExt;
+    let w = pilot.weights;
+    let mut g = start_game(template, &w, seed);
+    let mut rng = StdRng::seed_from_u64(seed);
     let mut bots = [MctsBot::new(pilot), MctsBot::new(pilot)];
     let prober = MctsBot::new(MctsConfig { heuristic_rollouts: cfg.scored_rollouts, ..pilot });
     let mut out = Vec::new();
@@ -207,9 +216,9 @@ pub fn audit_game(template: &GameState, pilot: MctsConfig, cfg: GapConfig, seed:
     while fuel > 0 && !g.is_game_over() && g.turn_number <= cfg.max_turns {
         fuel -= 1;
         let mut acted = false;
-        for seat in 0..2 {
+        for (seat, bot) in bots.iter_mut().enumerate() {
             let sample = g.pending_decision.is_none() && rng.random::<f64>() < cfg.sample;
-            let Some(a) = bots[seat].next_action(&g, seat) else { continue };
+            let Some(a) = bot.next_action(&g, seat) else { continue };
             if sample && let Some(p) = probe_point(&g, seat, &a, &prober, &w, cfg, &mut rng) {
                 out.push(p);
             }
@@ -235,14 +244,14 @@ fn probe_point(
     cfg: GapConfig,
     rng: &mut StdRng,
 ) -> Option<Point> {
-    // One action per distinct play: the enumerator tries every target on
-    // every spell, and the engine accepts (and ignores) a target on one
-    // that has none, so "cast X" came back once per permanent; two Swamps
-    // are one land drop. Keyed by the canonical description.
+    // One action per distinct play (`decision_menu::key`): the enumerator
+    // tries every target on every spell, and the engine accepts (and
+    // ignores) a target on one that has none, so "cast X" came back once
+    // per permanent; two Swamps are one land drop.
     let mut keys: Vec<String> = Vec::new();
     let mut actions: Vec<GameAction> = Vec::new();
     for a in puzzle::legal_actions(g, seat).actions {
-        let k = key(g, seat, &a);
+        let k = super::decision_menu::key(g, seat, &a);
         if !keys.contains(&k) {
             keys.push(k);
             actions.push(a);
@@ -251,7 +260,7 @@ fn probe_point(
     if actions.len() < 2 {
         return None;
     }
-    let chosen_key = key(g, seat, chosen);
+    let chosen_key = super::decision_menu::key(g, seat, chosen);
     let mut order: Vec<usize> = (0..actions.len()).collect();
     order.shuffle(rng);
     order.truncate(cfg.max_actions);
@@ -272,7 +281,7 @@ fn probe_point(
     let best_on_menu = (context == Context::OwnMain).then(|| {
         let menu = super::bot::main_phase_candidates_for_mcts(g, seat, w);
         matches!(actions[best], GameAction::PassPriority | GameAction::PlayLand(_))
-            || menu.iter().any(|(m, _)| key(g, seat, m) == keys[best])
+            || menu.iter().any(|(m, _)| super::decision_menu::key(g, seat, m) == keys[best])
     });
     Some(Point {
         context,
@@ -294,35 +303,6 @@ fn probe_point(
             describe(g, &actions[best]),
         ),
     })
-}
-
-/// The dedupe key: the description, with the target dropped from a spell
-/// or ability that has none to take.
-fn key(g: &GameState, seat: usize, a: &GameAction) -> String {
-    let untargeted = |e: &crate::effect::Effect| !e.requires_target();
-    let mut a = a.clone();
-    match &mut a {
-        GameAction::CastSpell { card_id, target, .. } => {
-            if g.players[seat].hand.iter().find(|c| c.id == *card_id).is_some_and(|c| untargeted(&c.definition.effect)) {
-                *target = None;
-            }
-        }
-        GameAction::CastFlashback { card_id, target, .. } => {
-            if g.players[seat].graveyard.iter().find(|c| c.id == *card_id).is_some_and(|c| untargeted(&c.definition.effect)) {
-                *target = None;
-            }
-        }
-        GameAction::ActivateAbility { card_id, ability_index, target, .. } => {
-            if g.battlefield_find(*card_id)
-                .and_then(|c| c.definition.activated_abilities.get(*ability_index))
-                .is_some_and(|ab| untargeted(&ab.effect))
-            {
-                *target = None;
-            }
-        }
-        _ => {}
-    }
-    describe(g, &a)
 }
 
 /// An action with card names in place of ids.

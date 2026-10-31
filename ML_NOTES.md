@@ -6843,3 +6843,60 @@ set's failures where they live (the attack picker on the net leaf, the
 flash-blocker window, the bite that is never cast), then widen the
 search's menu to abilities and instant-speed casts, gated by both
 instruments and the paired ladder.
+
+## The net makes every decision — the plan, and phase 1: every legal move (2026-10-31)
+
+The user asked for the net to make every decision. Today it judges the
+search's main-phase casts (playout leaf) and the end positions of a few
+heuristic sims (attacks, blocks, combat removal, X, mid-resolution targets,
+optional triggers); mulligans, abilities, all instant-speed play outside
+those, nearly every prompt and every playout move are rules. The plan (in
+chat): **(1)** a complete move list at every decision; **(2)** one policy
+head scoring each move by the position it leads to plus a decision-kind
+token, combat built one creature at a time; **(3)** the net alone, by
+imitation of the client's pilot (plumbing, not strength — gate: beats
+`dflt`); **(4)** search at every decision on the net's prior, value and
+playouts, run only where the policy is unsure (gate: beats the client
+pilot, paired); **(5)** expert iteration over generations with completed-Q
+targets, read against a fixed anchor, the blunder set and the gap audit,
+stop after two flat generations; **(6)** per-kind client switches.
+
+### Phase 1 — `server/decision_menu.rs`, `bot_puzzles --menu-census`
+
+`menu(g, seat, w)` → the moves at any decision: priority (the brute force,
+the bot's cast generator for alternative casts, the main-phase sink, the
+search's own arms, hand activations, lands from other zones, equip; each
+cast and activation fanned out over every target slot — second targets in
+`additional_targets` — X and mode, no-mode included), attack and block
+sets (planeswalkers and battles as attack targets; a blocker may join a
+block only legal in company — menace), and all 25 prompt kinds from the
+decision's own fields (permutations and subsets up to 256; the type and
+card-name prompts are their suggestions and say truncated). Every priority
+and combat move is engine-validated; a move that pauses on its own cost
+prompt (landcycling) counts if some answer completes it, which
+`would_accept` refuses for bots. Moves are deduped by a key: debug text with
+card ids named, unordered answers sorted, a target dropped where the spell
+takes none.
+
+**Census** (every decision of the client pilot, both seats, 100 games each,
+seed 43; misses = the pilot's move not on its list):
+
+| | SOS | FRA |
+|---|---|---|
+| decisions | 45,067 | 59,975 |
+| covered | **99.99 %** | **99.99 %** |
+| priority | 100.00 % (mean 1.9 moves, max 54) | 100.00 % (2.5, max 119) |
+| attack | 100.00 % (5.1, max 245) | 99.91 % (8.0, cap 256) |
+| block | 99.53 % (10.3, cap 256) | 99.65 % (9.6, cap 256) |
+| prompts | 100 % in every kind seen (14 kinds) | 100 % (16 kinds) |
+| prompt answers the engine refused | 0 | 0 |
+
+The four rounds it took, each a class the first census named: attacks at
+planeswalkers (the brute force swung at the player only); unordered
+declarations compared in order; passing as the "none" declaration and the
+pass dropped by the brute force's own truncation; the generator's pick lost
+when its fan-out replaced it; landcycling (pauses on a pick); a modal spell
+cast with no mode (the engine asks on resolution); menace blocks.
+The 7 + 4 misses left are wide combats past the 256-set cap — the
+case phase 2's one-creature-at-a-time combat replaces. Not measured yet:
+the list's build time per decision, which prices phase 2.
