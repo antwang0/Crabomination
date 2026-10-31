@@ -3136,6 +3136,18 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-10-31 (Commander run, `01WRuXc2jM`) — guardrail; attack / block requirement predicates, pod-bot declaration repairs
+
+Touched shared paths: `attacker_is_able`'s fast path adds a `statics` bit test, a `goaded_by` read and a per-player shield
+read; `trim_attacks_to_payable_tax` budgets forced attackers against what is left; `declare_blockers` builds the
+declarer's team (inline `SmallVec`) once a declaration. Everything else is Commander-seat or requirement-path only.
+`release`, 4-core box (Xeon @ 2.10GHz), checked after each engine commit against the committed invariant:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical at every tip; determinism ok
+games_per_s      228.5 / 246.2 / 245.5 / 206.9 (then 241.3, 219.0 re-run, same binary) / 243.3 — single-run noise
+```
+
 ### 2026-10-29 (Commander run, `01WRuXc2ns`) — guardrail; a mana-ability scratch save, a parked-log guard, two bot gates
 
 Touched shared paths: `activate_ability_into` reads `resolution_depth` / `pending_decision` before every
