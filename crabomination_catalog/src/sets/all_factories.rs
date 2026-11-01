@@ -19459,6 +19459,12 @@ static DECKS: &[Factory] = &[
     super::decks::the_guardian_of_forever,
     super::decks::highly_illogical,
     super::decks::deep_space_scan,
+    super::decks::command_chair,
+    super::decks::warp_core,
+    super::decks::test_of_priorities,
+    super::decks::primary_unimatrix_adjunct,
+    super::decks::replicator,
+    super::decks::hologram_stalker,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

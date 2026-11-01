@@ -429,6 +429,8 @@ pub enum CreatureType {
     Aenar,
     Excalbian,
     Romulan,
+    // Star Trek (Hologram Stalker).
+    Hirogen,
 }
 
 /// Land subtypes (basic land types + others).

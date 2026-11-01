@@ -739,3 +739,162 @@ pub fn deep_space_scan() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Command Chair — {6} artifact, enters tapped. {T}: three mana of any one
+/// color. {T}: X mana of any one color, X the greatest mana value among
+/// commanders you control.
+pub fn command_chair() -> CardDefinition {
+    let tap_any = |n: Value| ActivatedAbility {
+        tap_cost: true,
+        effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::AnyOneColor(n) },
+        ..Default::default()
+    };
+    CardDefinition {
+        name: "Command Chair",
+        cost: cost(&[generic(6)]),
+        card_types: vec![CardType::Artifact],
+        static_abilities: vec![StaticAbility {
+            description: "This artifact enters tapped.",
+            effect: StaticEffect::EntersTapped { applies_to: Selector::This },
+        }],
+        activated_abilities: vec![
+            tap_any(Value::Const(3)),
+            tap_any(Value::ManaValueOf(Box::new(Selector::GreatestManaValueControlledMatching {
+                who: PlayerRef::You,
+                filter: R::IsCommander,
+            }))),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Warp Core — {2} artifact. Entering, you may search for a basic land to
+/// hand. {1}, {T}: two charge counters on target Spacecraft; sorcery speed.
+pub fn warp_core() -> CardDefinition {
+    CardDefinition {
+        name: "Warp Core",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::MayDo {
+            description: "Search your library for a basic land card?".into(),
+            body: Box::new(Effect::Search { who: PlayerRef::You, filter: R::Land.and(R::HasSupertype(Supertype::Basic)), to: ZoneDest::Hand(PlayerRef::You) }),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            sorcery_speed: true,
+            effect: Effect::AddCounter {
+                what: target_filtered(R::HasArtifactSubtype(ArtifactSubtype::Spacecraft)),
+                kind: CounterType::Charge,
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Test of Priorities — {1}{U} instant. Choose one: surveil 2, then draw; or
+/// exile target creature you control, returning it at the next end step.
+pub fn test_of_priorities() -> CardDefinition {
+    CardDefinition {
+        name: "Test of Priorities",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ]),
+            Effect::ExileReturnToOwnerNextEndStep { what: target_filtered(your_creature()), tapped: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Primary Unimatrix Adjunct — {3}{W} 2/3 Borg artifact creature. Artifact
+/// creatures you control have double strike.
+pub fn primary_unimatrix_adjunct() -> CardDefinition {
+    let mut c = creature("Primary Unimatrix Adjunct", cost(&[generic(3), w()]), vec![CreatureType::Borg], 2, 3);
+    c.card_types.insert(0, CardType::Artifact);
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Artifact creatures you control have double strike.",
+            effect: StaticEffect::GrantKeyword {
+                applies_to: Selector::EachPermanent(your_creature().and(R::Artifact)),
+                keyword: Keyword::DoubleStrike,
+            },
+        }],
+        ..c
+    }
+}
+
+/// Replicator — {2} artifact. Entering makes a Food. {2}, {T}: a tapped copy
+/// of target token you control.
+pub fn replicator() -> CardDefinition {
+    CardDefinition {
+        name: "Replicator",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![crate::effect::shortcut::etb(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: Arc::new(crabomination_base::tokens::food_token()),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            effect: Effect::CreateTokenCopyOf {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                source: target_filtered(R::IsToken.and(R::ControlledByYou)),
+                extra_creature_types: Vec::new(),
+                extra_card_types: Vec::new(),
+                override_pt: None,
+                override_colors: None,
+                enters_tapped: true,
+                non_legendary: false,
+                legendary: false,
+                extra_keywords: Vec::new(),
+                no_mana_cost: false,
+                enters_with_counters: None,
+                remove_keywords: Vec::new(),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Hologram Stalker — {4}{G}{G} 2/2 Hirogen Warrior. Entering returns target
+/// permanent card from your graveyard to hand. A card leaving your graveyard
+/// makes a 3/3 colorless Illusion artifact creature, once each turn.
+pub fn hologram_stalker() -> CardDefinition {
+    let illusion = Arc::new(TokenDefinition {
+        name: "Illusion".into(),
+        power: 3,
+        toughness: 3,
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Illusion], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(Effect::Move {
+                what: target_filtered(R::Permanent.and(R::InYourGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::CardLeftGraveyard, EventScope::YourControl).once_per_turn(),
+                effect: Effect::CreateToken { who: PlayerRef::You, count: Value::ONE, definition: illusion },
+            },
+        ],
+        ..creature(
+            "Hologram Stalker",
+            cost(&[generic(4), g(), g()]),
+            vec![CreatureType::Hirogen, CreatureType::Warrior],
+            2,
+            2,
+        )
+    }
+}

@@ -377,3 +377,73 @@ fn deep_space_scan_lifts_the_hand_limit_until_your_next_turn() {
     drain_stack(&mut g);
     assert_eq!(g.players[0].max_hand_size, Some(7));
 }
+
+/// Command Chair (CR 903.3): its second ability makes X mana of one color, X
+/// the greatest mana value among commanders you control.
+#[test]
+fn command_chair_taps_for_your_commanders_mana_value() {
+    let mut g = pod(2);
+    let cmd = g.seat_commanders(0, vec![catalog::tpring_never_parted()])[0];
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastFromCommandZone {
+        card_id: cmd,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+        alternative: false,
+        pitch_card: None,
+    })
+    .expect("cast the commander");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cmd).is_some());
+    g.players[0].mana_pool = Default::default();
+    let chair = ready(&mut g, 0, catalog::command_chair());
+    g.battlefield_find_mut(chair).unwrap().tapped = false;
+    activate(&mut g, chair, 1, None);
+    assert_eq!(g.players[0].mana_pool.total(), 5, "T'Pring's mana value");
+}
+
+/// Hologram Stalker: its own return is a card leaving your graveyard, which
+/// makes an Illusion — once each turn (CR 603.3d... "only once each turn").
+#[test]
+fn hologram_stalker_illusion_once_each_turn() {
+    let mut g = pod(2);
+    g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    let stalker = g.add_card_to_hand(0, catalog::hologram_stalker());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: stalker, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let illusions = |g: &GameState| g.battlefield.iter().filter(|c| c.definition.name == "Illusion").count();
+    assert_eq!(g.players[0].graveyard.len(), 1, "one card returned");
+    assert_eq!(illusions(&g), 1);
+    let ctx = EffectContext::for_spell(0, Some(Target::Permanent(giant)), 0, 0);
+    resolve(
+        &mut g,
+        Effect::Move {
+            what: Selector::Target(0),
+            to: crabomination::effect::ZoneDest::Hand(crabomination::effect::PlayerRef::You),
+        },
+        &ctx,
+    );
+    assert_eq!(illusions(&g), 1, "only once each turn");
+}
+
+/// Replicator: a Food on arrival, then a tapped copy of a token you control.
+#[test]
+fn replicator_copies_a_token_tapped() {
+    let mut g = pod(2);
+    let rep = g.add_card_to_hand(0, catalog::replicator());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: rep, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let food = g.battlefield.iter().find(|c| c.definition.name == "Food").expect("food").id;
+    g.clear_sickness(rep);
+    activate(&mut g, rep, 0, Some(Target::Permanent(food)));
+    let foods: Vec<_> = g.battlefield.iter().filter(|c| c.definition.name == "Food").collect();
+    assert_eq!(foods.len(), 2);
+    assert!(foods.iter().any(|c| c.tapped));
+}
