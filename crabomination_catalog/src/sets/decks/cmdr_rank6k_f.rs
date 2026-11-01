@@ -152,12 +152,11 @@ pub fn titanbones_towering_heart() -> CardDefinition {
 }
 
 /// Trelane, Squire of Gothos — {5}{U} 4/5 legendary Q, vigilance, ward {2},
-/// can't be blocked. Residual: the engine has no `Q` creature type, so it
-/// has no creature type.
+/// can't be blocked.
 pub fn trelane_squire_of_gothos() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Ward(WardCost::Mana(cost(&[generic(2)]))), Keyword::Unblockable],
-        ..legend("Trelane, Squire of Gothos", cost(&[generic(5), u()]), vec![], 4, 5)
+        ..legend("Trelane, Squire of Gothos", cost(&[generic(5), u()]), vec![CreatureType::Q], 4, 5)
     }
 }
 
