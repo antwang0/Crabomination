@@ -2224,6 +2224,10 @@ pub enum StaticEffect {
     /// "Damage isn't removed from this creature during cleanup steps"
     /// (Ancient Adamantoise) — the CR 514.2 sweep skips it.
     KeepsDamageThroughCleanup,
+    /// CR 614.1c / 508.4 — "If a creature you control would enter while you
+    /// control an attacking creature, instead it enters tapped and attacking"
+    /// (Kira Nerys, Firebrand). Applied by `apply_enters_attacking_replacement`.
+    YourCreaturesEnterAttacking,
     /// "[filter] spells you cast from exile have convoke" (Party Thrasher,
     /// CR 702.51). Read by the may-play cast path only, which taps the
     /// fewest untapped creatures that make the cost payable.

@@ -3632,6 +3632,31 @@ pub(crate) fn ally_trigger_extra_fires(
     controller: usize,
     source: crate::card::CardId,
 ) -> usize {
+    linked_trigger_extra_fires(state, source) + static_trigger_extra_fires(state, controller, source)
+}
+
+/// Lwaxana Troi — one extra fire per live `TriggersAdditionalTime` effect on
+/// `source` (CR 611.2c: each ends when its source untaps). A one-word gate.
+fn linked_trigger_extra_fires(state: &crate::game::GameState, source: crate::card::CardId) -> usize {
+    use crate::game::layers::{AffectedPermanents, Modification, mod_families};
+    if !state.continuous_effects.has_family(mod_families::TRIGGER_DOUBLE) {
+        return 0;
+    }
+    state
+        .continuous_effects
+        .iter()
+        .filter(|e| {
+            matches!(e.modification, Modification::TriggersAdditionalTime)
+                && matches!(&e.affected, AffectedPermanents::Specific(ids) if ids.contains(&source))
+        })
+        .count()
+}
+
+fn static_trigger_extra_fires(
+    state: &crate::game::GameState,
+    controller: usize,
+    source: crate::card::CardId,
+) -> usize {
     use crate::effect::StaticEffect;
     // Presence gate. The layer read below is a whole-game gather and this
     // runs once per trigger dispatch, on boards that almost never carry a
@@ -6200,6 +6225,7 @@ impl GameState {
         self.apply_enters_under_opponent_control(card_id);
         // CR 614.13 — apply enters-tapped replacements before ETB triggers fire.
         self.apply_enters_tapped_replacement(card_id);
+        self.apply_enters_attacking_replacement(card_id);
         // CR 702.179 — a "Start your engines!" permanent entering gives its
         // controller speed 1 if they have none.
         if controller < self.players.len()

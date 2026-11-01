@@ -3096,6 +3096,7 @@ impl GameState {
                     // cast permanents too.
                     self.apply_enters_under_opponent_control(card_id);
                     self.apply_enters_tapped_replacement(card_id);
+                    self.apply_enters_attacking_replacement(card_id);
                     // CR 709.5d — a Room enters with the cast door unlocked
                     // (709.5h: its unlock trigger fires).
                     if let Some(door) = room_door {

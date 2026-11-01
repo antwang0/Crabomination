@@ -1183,6 +1183,8 @@ pub enum CounterType {
     Echo,
     /// CR 717 — a midway counter on an Attraction (Myra the Magnificent).
     Midway,
+    /// Beckett Mariner, Impetuous Ensign's promotion counters.
+    Promotion,
 }
 
 /// Every zone a card can occupy.

@@ -173,6 +173,10 @@ pub enum Modification {
     /// a strip that leaves the printed mana abilities activatable
     /// ([`ComputedPermanent::keeps_mana_abilities`]).
     RemoveAllAbilitiesButMana,
+    /// "If a triggered ability of that creature triggers, that ability
+    /// triggers an additional time" (Lwaxana Troi). Changes no
+    /// characteristic; `linked_trigger_extra_fires` counts the entries.
+    TriggersAdditionalTime,
 
     // ── Layer 7 ──────────────────────────────────────────────────────────────
     SetPowerToughness(i32, i32),   // 7b
@@ -249,6 +253,8 @@ pub mod mod_families {
     pub const KEYWORD_EDIT: u32 = 1 << 8;
     /// `SetPowerToughnessLive` — the gather's rewrite pass asks for it.
     pub const LIVE_PT: u32 = 1 << 9;
+    /// `TriggersAdditionalTime` — the trigger-dispatch gate reads one word.
+    pub const TRIGGER_DOUBLE: u32 = 1 << 10;
     /// The fold is computed; bit 31, so a zero word is "unknown".
     pub(super) const VALID: u32 = 1 << 31;
 }
@@ -281,6 +287,7 @@ pub fn modification_families(m: &Modification) -> u32 {
         M::RemoveKeyword(_) | M::CantHaveKeyword(_) | M::ReplaceColorWord(..) => F::KEYWORD_EDIT,
         M::RemoveAllAbilities | M::RemoveAllAbilitiesButMana => F::STRIP,
         M::SetPowerToughnessLive(_) => F::LIVE_PT,
+        M::TriggersAdditionalTime => F::TRIGGER_DOUBLE,
         // Family-less, each for the same reason: **nothing gates on it**. The
         // requirement walker's `has_stype` and `has_atype` closures read the
         // computed view unconditionally, and controller changes are asked
@@ -1608,6 +1615,8 @@ fn compute_permanent_pass(
                 full_strip = true;
                 strip_all_ts = effect.timestamp;
             }
+            // Changes no characteristic (trigger dispatch counts it).
+            Modification::TriggersAdditionalTime => {}
             Modification::RemoveAllAbilitiesButMana => {
                 keywords.clear();
                 lost_all_abilities = true;

@@ -10160,6 +10160,10 @@ pub enum Effect {
         what: Selector,
         keyword: crate::card::Keyword,
     },
+    /// CR 611.2c sibling — "for as long as [source] remains tapped, if a
+    /// triggered ability of [what] triggers, that ability triggers an
+    /// additional time" (Lwaxana Troi, Charming Guest).
+    DoubleTriggersWhileSourceTapped { what: Selector },
     /// Mindblaze's back half — the controller picks a number greater than 0,
     /// the resolved player reveals their library, and if it holds *exactly*
     /// that many cards with the name a preceding `Effect::NameCard` stamped,

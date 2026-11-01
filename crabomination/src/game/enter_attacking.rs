@@ -170,6 +170,45 @@ impl GameState {
         true
     }
 
+    /// Kira Nerys, Firebrand (`StaticEffect::YourCreaturesEnterAttacking`) —
+    /// an entering creature of a seat that controls an attacking creature
+    /// enters tapped and attacking (CR 508.4: never declared). Headless defender
+    /// pick: the first attack of that seat's still in combat.
+    pub(crate) fn apply_enters_attacking_replacement(&mut self, id: CardId) {
+        if self.attacking.is_empty() || self.attacking.iter().any(|a| a.attacker == id) {
+            return;
+        }
+        let Some(seat) = self.battlefield.find_by_id(id).map(|c| c.controller) else { return };
+        let replaces = self.battlefield.iter().any(|s| {
+            s.controller == seat
+                && s.id != id
+                && s.definition.static_abilities.iter().any(|sa| {
+                    matches!(
+                        self.active_static(&sa.effect, s),
+                        Some(crate::effect::StaticEffect::YourCreaturesEnterAttacking)
+                    )
+                })
+        });
+        if !replaces {
+            return;
+        }
+        let Some(target) = self
+            .attacking
+            .iter()
+            .find(|a| self.battlefield.find_by_id(a.attacker).is_some_and(|c| c.controller == seat))
+            .map(|a| a.target)
+        else {
+            return;
+        };
+        if !self.computed_permanent(id).is_some_and(|cp| cp.card_types().contains(&CardType::Creature)) {
+            return;
+        }
+        if let Some(c) = self.battlefield.find_by_id_mut(id) {
+            c.tapped = true;
+        }
+        self.put_into_combat_attacking(id, target);
+    }
+
     /// What the permanent `ctx.source` is attached to is attacking — an
     /// attachment's own combat trigger reads its host (CR 603.3a).
     pub(crate) fn attack_of_source_host(&self, ctx: &crate::game::effects::EffectContext) -> Option<AttackTarget> {

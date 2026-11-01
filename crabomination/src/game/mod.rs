@@ -36542,6 +36542,7 @@ fn static_effect_to_effects(
             | StaticEffect::EquippedSelfAndEquipmentTriggersTwice
             // Read by the CR 514.2 cleanup sweep; no layer effect.
             | StaticEffect::KeepsDamageThroughCleanup
+            | StaticEffect::YourCreaturesEnterAttacking
             // Read by the may-play exile cast's payment; no layer effect.
             | StaticEffect::ExileCastSpellsHaveConvoke { .. }
             // Read at activation-cost time; no layer effect.

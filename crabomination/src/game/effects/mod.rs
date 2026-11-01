@@ -22268,6 +22268,24 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::DoubleTriggersWhileSourceTapped { what } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let ts = self.next_timestamp();
+                    self.add_continuous_effect(crate::game::layers::ContinuousEffect {
+                        timestamp: ts,
+                        source: src,
+                        affected: crate::game::layers::AffectedPermanents::just(cid),
+                        layer: crate::game::layers::Layer::L6Ability,
+                        sublayer: None,
+                        duration: crate::game::layers::EffectDuration::WhileSourceTapped,
+                        modification: crate::game::layers::Modification::TriggersAdditionalTime,
+                    });
+                }
+                Ok(())
+            }
+
             Effect::GrantKeywordWhileSourceTapped { what, keyword } => {
                 // CR 611.2c — the grant rides a layer-6 continuous effect with
                 // a `WhileSourceTapped` duration; the SBA sweep drops it when

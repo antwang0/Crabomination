@@ -2253,6 +2253,7 @@ impl Effect {
             | Effect::GainProtectionFromPlayer { what, .. }
             | Effect::CantBeBlockedByPlayer { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
+            | Effect::DoubleTriggersWhileSourceTapped { what }
             | Effect::SacrificeThenRevealUntilSharedType { what }
             | Effect::ExileThenRevealUntilSharedType { what } => sel_has_target(what),
             Effect::RevealLibraryNamedCountPunish { who, .. }
@@ -3099,6 +3100,7 @@ impl Effect {
             | Effect::GainControlWhileMonarch { what, .. }
             | Effect::GainKeywordsYourCreaturesHave { what, .. }
             | Effect::GrantKeywordWhileSourceTapped { what, .. }
+            | Effect::DoubleTriggersWhileSourceTapped { what }
             | Effect::SacrificeThenRevealUntilSharedType { what }
             | Effect::ExileThenRevealUntilSharedType { what }
             | Effect::ExileFromGraveyardBecomeCopy { what }
@@ -5815,6 +5817,7 @@ impl Effect {
             | Effect::GainControlWhileMonarch { what, .. }
                 | Effect::GainKeywordsYourCreaturesHave { what, .. }
                     | Effect::GrantKeywordWhileSourceTapped { what, .. }
+                    | Effect::DoubleTriggersWhileSourceTapped { what }
                 | Effect::SacrificeThenRevealUntilSharedType { what }
                 | Effect::ExileThenRevealUntilSharedType { what }
                 | Effect::CounterAbilityAndDestroySource { what }
