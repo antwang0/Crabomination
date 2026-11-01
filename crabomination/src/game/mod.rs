@@ -2958,6 +2958,11 @@ pub struct ResolutionScratch {
     /// hold no event list of their own.
     #[serde(skip, default)]
     pub(crate) pending_cost_events: Vec<GameEvent>,
+    /// CR 603.10a — a cost sacrificed this action: its death snapshots
+    /// outlive the action's out-of-band batches (a cast's `Expended`, an
+    /// activation's `BecameTarget`) until the action's own events dispatch.
+    #[serde(skip, default)]
+    pub(crate) death_snapshot_hold: bool,
     /// Something phased in or out, or an untap / upkeep expiry ended an
     /// effect or a copy, since the last step-advance sweep: neither leaves an
     /// event, so the CR 704.3 gate at the end of `advance_step` reads this
@@ -19358,6 +19363,17 @@ impl GameState {
                     cp.subtypes().creature_types.clone();
             }
         }
+        // CR 608.2h — the same for card types and their subtypes: an
+        // artifact Senator Peacock made a Clue was a Clue as it was
+        // sacrificed. Gated like the creature-type read above.
+        if self.card_type_change_in_scope()
+            && let Some(cp) = self.computed_permanent(c.id)
+            && (cp.card_types() != &snap.definition.card_types || cp.subtypes() != &snap.definition.subtypes)
+        {
+            let d = snap.definition_make_mut();
+            d.card_types = cp.card_types().clone();
+            d.subtypes = cp.subtypes().clone();
+        }
         if self.computed_is_creature(c) && !self.layer_reads_are_printed() {
             snap.power_bonus = snap.power_bonus.saturating_add(self.effective_power(c) - c.power());
             snap.toughness_bonus =
@@ -22593,6 +22609,9 @@ impl GameState {
         // life-loss event; surface it after the action so loss triggers fire.
         if !self.scratch.pending_cost_events.is_empty() {
             events.extend(std::mem::take(&mut self.scratch.pending_cost_events));
+        }
+        if self.scratch.death_snapshot_hold {
+            self.scratch.death_snapshot_hold = false;
         }
         self.dispatch_triggers_for_events(&events);
         if !self.scratch.quiet_events.is_empty() {
@@ -28875,9 +28894,14 @@ impl GameState {
     /// (an exile mid-resolution dispatches its own batch) or suspended on a
     /// pending decision (its re-run reads the same objects): CR 608.2h — "its
     /// controller" of a stolen creature Path to Exile exiled is the thief, not
-    /// the owner. The next dispatch outside a resolution clears them.
+    /// the owner. The next dispatch outside a resolution clears them. A cost
+    /// sacrifice holds them until its action's own batch (CR 603.10a).
     fn clear_died_snapshots_unless_suspended(&mut self) {
-        if self.pending_decision.is_none() && self.resolution_depth == 0 && !self.died_card_snapshots.is_empty() {
+        if self.pending_decision.is_none()
+            && self.resolution_depth == 0
+            && !self.scratch.death_snapshot_hold
+            && !self.died_card_snapshots.is_empty()
+        {
             self.died_card_snapshots.clear();
         }
     }

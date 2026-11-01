@@ -12849,10 +12849,13 @@ impl GameState {
                             self.stamp_sacrificed_card(id);
                         }
                         self.scratch.cost_sacrificed_batch.push(id);
+                        // CR 603.10a — every sacrificed permanent is looked
+                        // back at ("whenever you sacrifice a Clue").
+                        if let Some(c) = self.dying_snapshot(id) {
+                            self.died_card_snapshots.insert(id, c);
+                            self.scratch.death_snapshot_hold = true;
+                        }
                         if is_creature {
-                            if let Some(c) = self.dying_snapshot(id) {
-                                self.died_card_snapshots.insert(id, c);
-                            }
                             events.push(GameEvent::CreatureSacrificed { card_id: id, who: p });
                             events.push(GameEvent::CreatureDied { card_id: id });
                         }
@@ -25752,7 +25755,7 @@ impl GameState {
                 // `Effect::SacrificeAndRemember`.
                 let snap_pt = self
                     .battlefield_find(card_id)
-                    .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), c.clone()));
+                    .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), self.lki_clone(c)));
                 if let Some((p_val, t_val, mv, snap)) = snap_pt {
                     self.sacrificed_power = Some(p_val);
                     self.sacrificed_toughness = Some(t_val);
@@ -25766,6 +25769,7 @@ impl GameState {
                     // triggers and type-filter predicates fire off
                     // sacrifices even when the dying card is a token.
                     self.died_card_snapshots.insert(card_id, snap.clone());
+                    self.scratch.death_snapshot_hold = true;
                     // CR 603.10 — also stash it as leaves-battlefield LKI so a
                     // body that reads the sacrificed source's own counters at
                     // resolution (Twitching Doll's "Spider per counter on it")
@@ -25777,13 +25781,14 @@ impl GameState {
                 // CR 701.21 — emit the sacrifice-specific event first.
                 events.push(GameEvent::CreatureSacrificed { card_id, who: sac_who });
                 events.push(GameEvent::CreatureDied { card_id });
-            } else if let Some(snap) = self.battlefield_find(card_id).cloned() {
+            } else if let Some(snap) = self.battlefield_find(card_id).map(|c| self.lki_clone(c)) {
                 // CR 603.10 — a noncreature `sac_cost` source whose body reads
                 // its own last-known counters at resolution (Ratchet Bomb's
                 // "destroy each nonland with mana value = charge counters")
                 // needs the same leaves-battlefield LKI stash; counters are
                 // stripped on the move to the graveyard (CR 122.2).
                 self.died_card_snapshots.insert(card_id, snap.clone());
+                self.scratch.death_snapshot_hold = true;
                 self.leaves_bf_lki.insert(card_id, snap);
             }
             // Generic permanent-sacrifice event (CR 701.16) — fires for

@@ -157,6 +157,44 @@ fn senator_peacock_and_fleeting_memories_reward_clue_sacrifices() {
     assert_eq!(g.players[1].library.len() + 3, lib1, "Fleeting Memories mills the target player");
 }
 
+/// CR 608.2h / 603.10a — a sacrificed artifact is looked back at with the
+/// types it had: Senator Peacock made Aeolipile a Clue, so sacrificing it is
+/// "you sacrifice a Clue" for Fleeting Memories. Bugs: the LKI kept the
+/// printed type line, and a targeted sacrifice-cost ability's BecameTarget
+/// batch cleared the death snapshots before the sacrifice dispatched.
+#[test]
+fn a_peacock_made_clue_sacrificed_is_a_clue_to_fleeting_memories() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    ready(&mut g, 0, catalog::senator_peacock());
+    ready(&mut g, 0, catalog::fleeting_memories());
+    let pile = ready(&mut g, 0, catalog::aeolipile());
+    flood(&mut g, 0);
+    let (life, lib1) = (g.players[1].life, g.players[1].library.len());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    activate(&mut g, pile, 0, Some(Target::Player(1))).expect("Aeolipile");
+    assert_eq!(g.players[1].life, life - 2);
+    assert_eq!(g.players[1].library.len() + 3, lib1, "the sacrificed Aeolipile was a Clue");
+}
+
+/// CR 603.10a — the same look-back for a spell's sacrifice cost: Deadly
+/// Dispute paid with a Peacock-made Clue is "you sacrifice a Clue".
+#[test]
+fn deadly_dispute_paid_with_a_peacock_clue_triggers_fleeting_memories() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    ready(&mut g, 0, catalog::senator_peacock());
+    ready(&mut g, 0, catalog::fleeting_memories());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    flood(&mut g, 0);
+    let lib1 = g.players[1].library.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    let dispute = g.add_card_to_hand(0, catalog::deadly_dispute());
+    cast(&mut g, dispute, None).expect("Deadly Dispute");
+    assert!(g.battlefield_find(ring).is_none(), "Sol Ring paid the cost");
+    assert_eq!(g.players[1].library.len() + 3, lib1, "the sacrificed Sol Ring was a Clue");
+}
+
 /// Start Your Engines animates Vehicles and gives the team +2/+0; Speedway
 /// Fanatic's crew gives the Vehicle haste.
 #[test]

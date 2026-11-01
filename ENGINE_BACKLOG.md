@@ -2777,7 +2777,7 @@ decks hold the card).
   path bound only slot 0 of an "up to N target" trigger (CR 115.1c). (3) `Selector::ControlledBy` /
   `OwnedBy` over a fan-out `PlayerRef` resolved the first seat only — nine cards say "permanents
   your opponents control"; a 6-seat pod tripped the fan-out assert.
-- **OPEN:** Senator Peacock's granted Clue subtype is gone from the sacrificed card, so Fleeting
+- ✅ ~~**OPEN:**~~ *(fixed 2026-11-01, `01WRuXc3Wo`: `lki_clone` bakes computed card types / subtypes; cost sacrifices snapshot every permanent and hold the snapshots to the action's own batch)* Senator Peacock's granted Clue subtype is gone from the sacrificed card, so Fleeting
   Memories / Morska-style "whenever you sacrifice a Clue" miss a Peacock-made Clue (Peacock's own
   trigger reads "an artifact", which is exact while Peacock is out). `lki_clone` snapshots
   creature types only.
