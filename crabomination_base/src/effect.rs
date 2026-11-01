@@ -1204,6 +1204,10 @@ pub enum Value {
     /// The Federation count — creature types among the controller's non-Borg
     /// creatures (Hoshi Sato, Exolinguist).
     DistinctCreatureTypesAmongYourNonBorgCreatures,
+    /// The Federation count over the non-Borg creatures you ALREADY control —
+    /// the context's trigger source (an enters-with rider's entrant, CR
+    /// 614.12) excluded (Jean-Luc, Mon Capitaine).
+    DistinctCreatureTypesAmongYourOtherNonBorgCreatures,
     /// The greatest number of cards any one opponent of the controller has
     /// drawn this turn (Thought Sponge).
     GreatestCardsDrawnThisTurnByAnOpponent,

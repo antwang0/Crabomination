@@ -6034,6 +6034,7 @@ impl GameState {
         // at cleanup is the canonical "until end of turn" scope.
         clear_turn!(self.permanents_gained_counter_this_turn);
         clear_turn!(self.p1p1_put_this_turn);
+        clear_turn!(self.counter_put_this_turn);
         clear_turn!(self.excess_damaged_seats);
         clear_turn!(self.one_cast_groups_spent_this_turn);
         clear_turn!(self.granted_cast_mv_caps);

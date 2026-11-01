@@ -3429,6 +3429,10 @@ pub enum SelectionRequirement {
     /// Beast): "you" placed one, read off the dispatched `CounterAdded`
     /// (`TurnRegistries::p1p1_put_this_turn`). A layer leaf, as above.
     YouPutPlusOneCounterOnThisTurn,
+    /// "…that you've put a counter on this turn" — any kind, any permanent
+    /// (La Forge, Thoughtful as Ever; `TurnRegistries::counter_put_this_turn`).
+    /// A layer leaf, as above.
+    YouPutCounterOnThisTurn,
     /// "…with N or more [kind] counters on it" (Bomb Squad's fuse check).
     WithCounterAtLeast(CounterType, u32),
     /// True when the candidate has at least one counter of any kind on it —
@@ -7684,6 +7688,10 @@ pub enum DynamicPt {
     /// Power = toughness = `base` + the number of lands the controller
     /// controls. Lumra, Bellow of the Woods (base 0/0).
     LandsControlled { base: i32 },
+    /// CR 604.3 — power and toughness each equal the number of differently
+    /// named lands the controller controls (Star Trek's strange new worlds:
+    /// Lt. Arex, Ever-Adapting).
+    DistinctLandNamesControlled,
     /// Power = `base_p` + the lands the controller controls; toughness is
     /// the fixed `base_t`. `*`-power Vehicles whose power tracks lands
     /// while toughness is printed (Lumbering Worldwagon, `*/8`).

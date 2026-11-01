@@ -1558,6 +1558,11 @@ pub struct TurnRegistries {
     /// Loki's "you've put one or more +1/+1 counters on". Cleared at cleanup.
     #[serde(default)]
     pub(crate) p1p1_put_this_turn: Vec<(CardId, u8)>,
+    /// (permanent, placer) for each counter of ANY kind put on a permanent
+    /// this turn — La Forge's "each permanent you control that you've put a
+    /// counter on this turn". Cleared at cleanup.
+    #[serde(default)]
+    pub(crate) counter_put_this_turn: Vec<(CardId, u8)>,
     /// Seats whose creature or planeswalker was dealt excess damage this
     /// turn (CR 120.4a/120.10 — Rith, Liberated Primeval). Cleared at cleanup.
     #[serde(default)]
@@ -8964,7 +8969,10 @@ impl GameState {
                 admits(&filter.resolve_named_by_source(src.named_card.as_deref())).then_some((*kind, *amount))
             }
             StaticEffect::MatchingEntersWithCountersPer { filter, kind, value } => {
-                let ctx = crate::game::effects::EffectContext::for_ability(src.id, src.controller, None);
+                // The entrant rides as the trigger source, so a value can
+                // leave it out ("you already control", CR 614.12).
+                let mut ctx = crate::game::effects::EffectContext::for_ability(src.id, src.controller, None);
+                ctx.trigger_source = Some(crate::game::effects::EntityRef::Permanent(entering));
                 let n = self.evaluate_value(value, &ctx).max(0) as u32;
                 (n > 0 && admits(filter)).then_some((*kind, n))
             }
@@ -14626,6 +14634,7 @@ impl GameState {
                 | (t.turned_face_up_this_turn.len() as u64) << 32
                 | (t.fought_this_turn.len() as u64) << 48,
         );
+        lists = mix(lists, t.counter_put_this_turn.len() as u64);
         GatherKey {
             scalars: [
                 self.battlefield.writes(),
@@ -18012,6 +18021,18 @@ impl GameState {
                         c.controller == card.controller && c.definition.is_land()
                     }).count() as i32;
                     (base + n, base + n)
+                }
+                crate::card::DynamicPt::DistinctLandNamesControlled => {
+                    let mut names: Vec<&str> = self
+                        .battlefield
+                        .iter()
+                        .filter(|c| c.controller == card.controller && c.definition.is_land())
+                        .map(|c| c.definition.name)
+                        .collect();
+                    names.sort_unstable();
+                    names.dedup();
+                    let n = names.len() as i32;
+                    (n, n)
                 }
                 crate::card::DynamicPt::LandsControlledPower { base_p, base_t } => {
                     let n = self.battlefield.iter().filter(|c| {
@@ -26430,6 +26451,18 @@ impl GameState {
                     c.tapped_again_this_turn = true;
                 } else {
                     c.tapped_this_turn = true;
+                }
+            }
+        }
+        for e in events {
+            if let GameEvent::CounterAdded { card_id, count, .. } | GameEvent::KeywordCounterAdded { card_id, count, .. } = e
+                && *count > 0
+                && let Some(p) = crate::game::effects::events::counter_placer(self, e)
+                && self.battlefield_find(*card_id).is_some()
+            {
+                let key = (*card_id, p.min(u8::MAX as usize) as u8);
+                if !self.turn.counter_put_this_turn.contains(&key) {
+                    self.turn.counter_put_this_turn.push(key);
                 }
             }
         }
@@ -37522,6 +37555,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
         | R::FoughtThisTurn
         | R::GainedCounterThisTurn
         | R::YouPutPlusOneCounterOnThisTurn
+        | R::YouPutCounterOnThisTurn
         // A counter-count threshold (Runadi's "three or more +1/+1 counters").
         | R::WithCounterAtLeast(..)
         | R::HasSuspend

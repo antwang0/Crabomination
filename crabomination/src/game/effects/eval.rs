@@ -1424,10 +1424,16 @@ impl GameState {
                 .map(|q| self.players[q].cards_drawn_this_turn as i32)
                 .max()
                 .unwrap_or(0),
-            Value::DistinctCreatureTypesAmongYourCreatures | Value::DistinctCreatureTypesAmongYourNonBorgCreatures => {
-                let skip_borg = matches!(v, Value::DistinctCreatureTypesAmongYourNonBorgCreatures);
+            Value::DistinctCreatureTypesAmongYourCreatures
+            | Value::DistinctCreatureTypesAmongYourNonBorgCreatures
+            | Value::DistinctCreatureTypesAmongYourOtherNonBorgCreatures => {
+                let skip_borg = !matches!(v, Value::DistinctCreatureTypesAmongYourCreatures);
+                let skip = match (v, ctx.trigger_source) {
+                    (Value::DistinctCreatureTypesAmongYourOtherNonBorgCreatures, Some(EntityRef::Permanent(id))) => Some(id),
+                    _ => None,
+                };
                 let mut seen: Vec<crate::card::CreatureType> = Vec::new();
-                for c in self.battlefield.iter().filter(|c| c.controller == ctx.controller) {
+                for c in self.battlefield.iter().filter(|c| c.controller == ctx.controller && Some(c.id) != skip) {
                     let Some(cp) = self.computed_permanent(c.id) else { continue };
                     if !cp.card_types().contains(&crate::card::CardType::Creature)
                         || (skip_borg && cp.subtypes().creature_types.contains(&crate::card::CreatureType::Borg))
@@ -8611,6 +8617,9 @@ impl GameState {
             R::GainedCounterThisTurn => self.turn.permanents_gained_counter_this_turn.contains(&card.id),
             R::YouPutPlusOneCounterOnThisTurn => {
                 self.turn.p1p1_put_this_turn.iter().any(|&(id, p)| id == card.id && p as usize == controller)
+            }
+            R::YouPutCounterOnThisTurn => {
+                self.turn.counter_put_this_turn.iter().any(|&(id, p)| id == card.id && p as usize == controller)
             }
             // CR 603.10 — a blocker that just left reads as blocking (Death
             // Tyrant's "a blocking creature an opponent controls dies").

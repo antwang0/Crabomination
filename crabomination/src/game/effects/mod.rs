@@ -35690,6 +35690,9 @@ impl GameState {
                     tapped: *tapped,
                 };
                 for land in lands {
+                    // Recorded for `Selector::LastMoved` (Will Riker's "sacrifice
+                    // those lands").
+                    self.scratch.last_moved_cards.push(land.id);
                     self.place_card_in_dest(land, p, &dest, events);
                 }
                 self.check_state_based_actions_mid_resolution(events);
