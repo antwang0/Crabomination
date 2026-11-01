@@ -145,13 +145,15 @@ pub fn mirror_mockery() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         effect: Effect::Attach { what: Selector::This, to: target_filtered(R::Creature) },
+        // The Aura's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::MayDo {
                     description: "Create a token copy of the enchanted creature?".into(),
                     body: Box::new(Effect::Seq(vec![
-                        copy_of(Selector::This),
+                        copy_of(Selector::AttachedTo(Box::new(Selector::This))),
                         Effect::StampTokenCopyExceptions {
                             artifact_subtypes: vec![],
                             activated: vec![],

@@ -214,6 +214,22 @@ fn armadillo_cloak_drains_on_damage() {
     assert_eq!(g.players[0].life, before + 4);
 }
 
+/// CR 603.3a — Armadillo Cloak's "you gain that much life" is the Aura
+/// controller's, also on an opponent's creature.
+#[test]
+fn armadillo_cloak_on_an_opponent_s_creature_gains_its_controller_life() {
+    let mut g = main_phase();
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let cloak = g.add_card_to_hand(0, catalog::armadillo_cloak());
+    cast(&mut g, 0, cloak, Some(Target::Permanent(bears)));
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    let mut evs = Vec::new();
+    g.deal_damage_to_from(crabomination::game::effects::EntityRef::Player(0), 4, Some(bears), &mut evs);
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (mine - 4 + 4, theirs));
+}
+
 /// Exotic Curse shrinks by Domain.
 #[test]
 fn exotic_curse_shrinks_by_domain() {

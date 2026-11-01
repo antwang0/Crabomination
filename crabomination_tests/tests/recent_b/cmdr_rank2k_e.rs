@@ -87,6 +87,26 @@ fn mirror_mockery_copy_leaves_at_end_of_combat() {
     assert_eq!(named(&g, "Grizzly Bears"), 1, "the copy is gone");
 }
 
+/// CR 603.3a — Mirror Mockery's trigger is the Aura's: on an opponent's
+/// attacker, the copy is the Aura controller's (bug: it rode the host as a
+/// granted trigger and the attacking player got the copy).
+#[test]
+fn mirror_mockery_on_an_opponent_s_attacker_copies_for_its_controller() {
+    let mut g = pod(3);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let mockery = g.add_card_to_hand(0, catalog::mirror_mockery());
+    cast(&mut g, mockery, Some(Target::Permanent(bear)));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(2) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    let bears = |p: usize| g.battlefield.iter().filter(|c| c.controller == p && c.definition.name == "Grizzly Bears").count();
+    assert_eq!((bears(0), bears(1)), (1, 1), "the copy is the Mockery controller's");
+}
+
 /// Mirage Mockery entwined copies both an artifact creature and a
 /// nonartifact one.
 #[test]

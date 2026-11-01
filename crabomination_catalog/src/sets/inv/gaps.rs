@@ -666,6 +666,8 @@ pub fn armadillo_cloak() -> CardDefinition {
             power: 2,
             toughness: 2,
             keywords: vec![Keyword::Trample],
+            // The Aura's own trigger (CR 603.3a): its controller gains.
+            triggers_on_equipment: true,
             triggered_abilities: vec![damage_lifelink()],
             ..Default::default()
         }),

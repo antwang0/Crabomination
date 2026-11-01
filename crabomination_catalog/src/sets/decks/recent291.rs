@@ -693,7 +693,9 @@ pub fn necromantic_thirst() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(R::Creature),
         },
+        // The Aura's own trigger (CR 603.3a): its controller's graveyard.
         equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::MayDo {

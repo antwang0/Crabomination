@@ -420,6 +420,15 @@ games, 0 bad**).
   clone (types printed) — same class, open.
 - ✅ **Brinebound Gift** — its "enchanted creature becomes the target of an Aura spell" Spirit went to the host's controller
   (an `EquipBonus` trigger); now the Aura's own `EnchantedBySource` trigger.
+- ✅ **CR 603.3a, the class** — an Aura's unquoted "whenever enchanted creature …, you …" is the *Aura's* ability, but an
+  `EquipBonus.triggered_abilities` entry is granted to the host (CR 702.6e) and fires for the host's controller. Probed
+  with a scratch scan (Auras with `EquipBonus` triggers, oracle line outside quotes, not "Enchant creature you
+  control"): **Mirror Mockery** (the attacker got the copy), **Mark of Eviction** (bounced on the host's upkeep),
+  **Armadillo Cloak**, **Necromantic Thirst** → `triggers_on_equipment: true` (`This` = the Aura). The attack-trigger
+  path (`combat.rs` declare loop) bound every Attacks trigger to the attacker — an attachment-sourced one now takes its
+  controller. Aqueous Form is cube-frozen (INCOMPLETE). ⚠ **OPEN, the Equipment half:** ~90 Equipment carry unquoted
+  "whenever equipped creature …" triggers as grants, so a *stolen* equipped creature's controller gets the Sword's
+  payoff; each needs its `This` reads reviewed before flipping the flag.
 
 ## FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc4hq`) — REJECT census beside `01WRuXc2jM`, a concession sweep
 

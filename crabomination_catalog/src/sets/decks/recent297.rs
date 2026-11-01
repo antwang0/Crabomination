@@ -204,24 +204,23 @@ pub fn mark_of_eviction() -> CardDefinition {
             what: Selector::This,
             to: target_filtered(R::Creature),
         },
+        // The Aura's own trigger (CR 603.3a): "your upkeep" is its
+        // controller's, whoever controls the enchanted creature. The creature
+        // and every Aura on it (this one among them) leave together.
         equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(
                     EventKind::StepBegins(TurnStep::Upkeep),
                     EventScope::YourControl,
                 ),
-                // Granted to the host, so `This` is the creature: the Auras
-                // attached to it (this one among them) go first, then it.
-                effect: Effect::Seq(vec![
-                    Effect::Move {
-                        what: Selector::AttachedToMe(Box::new(Selector::This)),
-                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-                    },
-                    Effect::Move {
-                        what: Selector::This,
-                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-                    },
-                ]),
+                effect: Effect::Move {
+                    what: Selector::Both(
+                        Box::new(Selector::AttachedTo(Box::new(Selector::This))),
+                        Box::new(Selector::AttachedToMe(Box::new(Selector::AttachedTo(Box::new(Selector::This))))),
+                    ),
+                    to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                },
             }],
             ..Default::default()
         }),

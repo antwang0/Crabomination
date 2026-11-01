@@ -98,6 +98,30 @@ fn necromancers_assistant_mills_three() {
     assert_eq!(g.players[0].graveyard.len(), gy + 3, "milled three cards");
 }
 
+/// CR 603.3a — "at the beginning of your upkeep" is the Aura controller's:
+/// on an opponent's creature, its upkeep bounces nothing, yours bounces both
+/// to their owners (bug: the trigger rode the host, so the host's upkeep).
+#[test]
+fn mark_of_eviction_on_an_opponent_s_creature_fires_on_your_upkeep() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = two_player_game();
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::mark_of_eviction());
+    let ctx = EffectContext::for_ability(aura, 0, Some(Target::Permanent(bear)));
+    g.resolve_effect(&catalog::mark_of_eviction().effect, &ctx).unwrap();
+    drain_stack(&mut g);
+    g.active_player_idx = 1;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some(), "the host's upkeep is not the Mark's");
+    g.active_player_idx = 0;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == bear), "the creature goes to its owner's hand");
+    assert!(g.players[0].hand.iter().any(|c| c.id == aura), "the Mark to its owner's");
+}
+
 #[test]
 fn mark_of_eviction_bounces_creature_and_itself_on_upkeep() {
     use crabomination::game::effects::EffectContext;

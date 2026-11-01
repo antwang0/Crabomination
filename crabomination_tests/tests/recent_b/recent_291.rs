@@ -431,6 +431,30 @@ fn necromantic_thirst_returns_a_creature_on_combat_damage() {
         "combat damage to a player returned a creature card from the graveyard");
 }
 
+/// CR 603.3a — Necromantic Thirst's return is the Aura controller's, from
+/// their graveyard, whoever controls the enchanted creature.
+#[test]
+fn necromantic_thirst_on_an_opponent_s_creature_returns_to_its_controller() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    let aura = g.add_card_to_battlefield(0, catalog::necromantic_thirst());
+    g.battlefield_find_mut(aura).unwrap().attached_to = Some(attacker);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Cards(vec![dead])]));
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.clear_sickness(attacker);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    while g.step != TurnStep::PostCombatMain && g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).unwrap();
+    }
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == dead), "the Thirst's controller returns their creature card");
+}
+
 #[test]
 fn aura_mutation_destroys_enchantment_and_makes_saprolings_by_mv() {
     let mut g = two_player_game();
