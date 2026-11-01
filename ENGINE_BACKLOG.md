@@ -416,8 +416,8 @@ games, 0 bad**).
   `lki_clone` bakes computed card types / subtypes (behind `card_type_change_in_scope`); spell sacrifice costs snapshot
   noncreatures; `ResolutionScratch::death_snapshot_hold` holds the snapshots until the action's batch (released in
   `perform_action_dispatch`). Tests `a_peacock_made_clue_sacrificed_is_a_clue_to_fleeting_memories`,
-  `deadly_dispute_paid_with_a_peacock_clue_triggers_fleeting_memories`. ⚠ The `sac_other_picks` path still stores a raw
-  clone (types printed) — same class, open.
+  `deadly_dispute_paid_with_a_peacock_clue_triggers_fleeting_memories`. ✅ *(`16f1e7c50`)* the `sac_other_picks` path
+  takes `lki_clone` + the hold too (Atog eating a Peacock Clue).
 - ✅ **Brinebound Gift** — its "enchanted creature becomes the target of an Aura spell" Spirit went to the host's controller
   (an `EquipBonus` trigger); now the Aura's own `EnchantedBySource` trigger.
 - ✅ **CR 603.3a, the class** — an Aura's unquoted "whenever enchanted creature …, you …" is the *Aura's* ability, but an
