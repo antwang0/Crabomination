@@ -898,3 +898,109 @@ pub fn hologram_stalker() -> CardDefinition {
         )
     }
 }
+
+fn spacecraft_legend(name: &'static str, mana: ManaCost, band: StationBand) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        activated_abilities: vec![crate::effect::shortcut::station()],
+        station: vec![band],
+        ..Default::default()
+    }
+}
+
+/// U.S.S. Farragut, Bold Explorer — {6} legendary Spacecraft. Landfall: you
+/// may put a creature card from your hand onto the battlefield with haste; at
+/// the next end step it goes to the bottom of its owner's library, and if it
+/// does you draw. Station; 7+: 4/4 flying.
+pub fn u_s_s_farragut_bold_explorer() -> CardDefinition {
+    let bottom_then_draw = Effect::DelayUntilWithCapture {
+        kind: crate::effect::DelayedTriggerKind::NextEndStep,
+        capture: Selector::LastMoved,
+        body: Box::new(Effect::If {
+            cond: Predicate::EntityMatches { what: Selector::Target(0), filter: R::OnBattlefield },
+            then: Box::new(Effect::Seq(vec![
+                Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Library {
+                        who: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        pos: crate::effect::LibraryPosition::Bottom,
+                    },
+                },
+                Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ])),
+            else_: Box::new(Effect::Noop),
+        }),
+    };
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::EntersBattlefield, EventScope::YourControl)
+                .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::Land }),
+            // Already a "you may" (the pick's minimum is zero).
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: R::Creature,
+                count: Value::ONE,
+                tapped: false,
+                haste: true,
+                sacrifice_eot: false,
+                return_eot: false,
+                then: Some(Box::new(bottom_then_draw)),
+            },
+        }],
+        ..spacecraft_legend(
+            "U.S.S. Farragut, Bold Explorer",
+            cost(&[generic(6)]),
+            StationBand { min: 7, keywords: vec![Keyword::Flying], pt: Some((4, 4)), ..Default::default() },
+        )
+    }
+}
+
+/// S.S. Botany Bay — {3} legendary Spacecraft. {T}: each opponent exiles a
+/// card from their graveyard (the engine picks it); you may exile one of
+/// yours — both with it. Station; 8+: 3/5 flying, and combat damage to a
+/// player returns each creature card you own exiled with it.
+pub fn s_s_botany_bay() -> CardDefinition {
+    let exile_one = |who: PlayerRef| Effect::Move {
+        what: Selector::one_of(Selector::EachMatching { zone: ZoneRef::Graveyard(who), filter: R::Any }),
+        to: ZoneDest::ExileWithSourceStamp,
+    };
+    let mut c = spacecraft_legend(
+        "S.S. Botany Bay",
+        cost(&[generic(3)]),
+        StationBand {
+            min: 8,
+            keywords: vec![Keyword::Flying],
+            pt: Some((3, 5)),
+            triggers: vec![TriggeredAbility {
+                event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::EachMatching {
+                        zone: ZoneRef::Exile,
+                        filter: R::Creature.and(R::ExiledWithSource).and(R::OwnedByYou),
+                    },
+                    to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
+                },
+            }],
+            ..Default::default()
+        },
+    );
+    c.activated_abilities.insert(
+        0,
+        ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::Seq(vec![
+                Effect::ForEachOpponent { body: Box::new(exile_one(PlayerRef::Triggerer)) },
+                Effect::MayDo {
+                    description: "Exile a card from your graveyard?".into(),
+                    body: Box::new(exile_one(PlayerRef::You)),
+                },
+            ]),
+            ..Default::default()
+        },
+    );
+    c
+}

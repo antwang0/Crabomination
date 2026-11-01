@@ -447,3 +447,52 @@ fn replicator_copies_a_token_tapped() {
     assert_eq!(foods.len(), 2);
     assert!(foods.iter().any(|c| c.tapped));
 }
+
+/// U.S.S. Farragut: landfall puts a creature from hand in with haste; at the
+/// next end step it goes to the bottom of its owner's library and you draw.
+#[test]
+fn farragut_borrows_a_creature_until_the_end_step() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::u_s_s_farragut_bold_explorer());
+    let giant = g.add_card_to_hand(0, catalog::hill_giant());
+    play_land(&mut g, 0);
+    assert!(g.battlefield_find(giant).is_some(), "put onto the battlefield");
+    let hand = g.players[0].hand.len();
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(giant).is_none());
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(giant), "on the bottom");
+    assert_eq!(g.players[0].hand.len(), hand + 1, "and you draw");
+}
+
+/// S.S. Botany Bay: its tap exiles a card from each opponent's graveyard (and
+/// one of yours); stationed, combat damage returns your creature cards exiled
+/// with it.
+#[test]
+fn botany_bay_exiles_and_returns_your_creatures() {
+    let mut g = pod(3);
+    let ship = ready(&mut g, 0, catalog::s_s_botany_bay());
+    g.add_card_to_graveyard(1, catalog::island());
+    g.add_card_to_graveyard(2, catalog::forest());
+    let giant = g.add_card_to_graveyard(0, catalog::hill_giant());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    activate(&mut g, ship, 0, None);
+    assert!(g.players[1].graveyard.is_empty() && g.players[2].graveyard.is_empty());
+    assert!(g.exile.iter().any(|c| c.id == giant));
+    g.battlefield_find_mut(ship).unwrap().counters.add(CounterType::Charge, 8);
+    g.battlefield_find_mut(ship).unwrap().tapped = false;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: ship, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    g.step = TurnStep::DeclareBlockers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareBlockers(vec![])).expect("no blocks");
+    g.step = TurnStep::CombatDamage;
+    let ev = g.resolve_combat().expect("damage");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == giant && c.controller == 0), "the Giant returns");
+}

@@ -19465,6 +19465,8 @@ static DECKS: &[Factory] = &[
     super::decks::primary_unimatrix_adjunct,
     super::decks::replicator,
     super::decks::hologram_stalker,
+    super::decks::u_s_s_farragut_bold_explorer,
+    super::decks::s_s_botany_bay,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
