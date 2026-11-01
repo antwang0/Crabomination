@@ -1440,6 +1440,9 @@ pub fn heirloom_blade() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 3,
             toughness: 1,
+            // The Equipment's own trigger (CR 603.3a); "it" is the dead
+            // creature, which the reveal's type filter falls back to.
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_dies(Effect::MayDo {
                 description: "Reveal until a creature card that shares a creature type with it?"
                     .into(),

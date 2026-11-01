@@ -91,3 +91,30 @@ fn cr_603_3a_captains_claws_token_attacks_its_hosts_defender() {
         assert_eq!(a.target, AttackTarget::Player(defender));
     }
 }
+
+/// Mage Slayer's own attack trigger: the equipped creature deals damage equal
+/// to its power to the player it attacks (`AttackedBySource` reads the host).
+#[test]
+fn cr_603_3a_mage_slayer_hits_what_its_host_attacks() {
+    let (mut g, bear, _) = lent(catalog::mage_slayer, catalog::grizzly_bears);
+    attack(&mut g, bear);
+    assert_eq!((g.players[0].life, g.players[2].life), (20, 18));
+}
+
+/// Heirloom Blade's own dies trigger: the Blade's controller reveals from
+/// their library for a card sharing a type with the dead creature (a Human).
+#[test]
+fn cr_603_3a_heirloom_blade_finds_a_card_sharing_the_dead_creatures_type() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    use crabomination::effect::{Effect, Selector};
+    let (mut g, human, _) = lent(catalog::heirloom_blade, catalog::thraben_inspector);
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    let inspector = g.add_card_to_library(0, catalog::thraben_inspector());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let ctx = crabomination::game::effects::EffectContext::for_spell(2, None, 0, 0);
+    let ev = g.resolve_effect(&Effect::Destroy { what: Selector::ExactObjects(vec![human]) }, &ctx).expect("destroy");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == inspector), "the Human went to the Blade controller's hand");
+}

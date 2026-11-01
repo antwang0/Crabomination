@@ -38257,15 +38257,21 @@ impl GameState {
                 // the (possibly dead) source's last-known types.
                 let types_resolved;
                 let find: &SelectionRequirement = if find.mentions_source_creature_types() {
-                    let (types, wild) = ctx
-                        .source
-                        .and_then(|s| self.lki_snapshot(s))
-                        .map(|s| {
+                    let types_of = |id: CardId| {
+                        self.lki_snapshot(id).map(|s| {
                             (
                                 s.definition.subtypes.creature_types.clone(),
                                 s.has_keyword(&crate::card::Keyword::Changeling),
                             )
                         })
+                    };
+                    // CR 603.3a — an Equipment's own dies trigger ("with it")
+                    // reads the dead creature, the trigger's subject.
+                    let (types, wild) = ctx
+                        .source
+                        .and_then(types_of)
+                        .filter(|(types, wild)| !types.is_empty() || *wild)
+                        .or_else(|| ctx.trigger_source.and_then(|e| e.as_card_id()).and_then(types_of))
                         .unwrap_or_default();
                     types_resolved = find.resolve_source_creature_types(&types, wild);
                     &types_resolved
@@ -46273,7 +46279,11 @@ impl GameState {
                 _ => ctx.trigger_source.and_then(|e| e.as_permanent_id()),
             }
                 .and_then(|src| self.attacking.iter().find(|a| a.attacker == src))
-                .map(|a| match a.target {
+                .map(|a| a.target)
+                // CR 603.3a — an attachment's own trigger: what its host attacks
+                // (Mage Slayer's "the player or planeswalker it's attacking").
+                .or_else(|| matches!(sel, Selector::AttackedBySource).then(|| self.attack_of_source_host(ctx)).flatten())
+                .map(|target| match target {
                     crate::game::types::AttackTarget::Player(p) => EntityRef::Player(p),
                     crate::game::types::AttackTarget::Planeswalker(id)
                     | crate::game::types::AttackTarget::Battle(id) => EntityRef::Permanent(id),

@@ -414,8 +414,9 @@ No seats. Seeds claimed: see TODO's Commander NEXT.
   creature", definition carrying `EquipBonus.triggered_abilities` without `triggers_on_equipment`) found 75; **62 flipped**
   (`triggers_on_equipment: true`, the host read through `AttachedTo(This)` — `TriggerSource` for dies / dealt-damage — and
   "it deals" as `DealDamageFrom` the host: Tormentor's Helm, Trailblazer's Torch, Fiendlash). 8 were false positives (already
-  the Equipment's own `EnchantedBySource` trigger, or ward reminder text). Open: Heirloom Blade, Mage Slayer (INCOMPLETE), Sword
-  of Body and Mind (cube — frozen). The Sword-cycle `sword()` helper already set the flag.
+  the Equipment's own `EnchantedBySource` trigger, or ward reminder text). Heirloom Blade and Mage Slayer followed
+  (`AttackedBySource` and the reveal's "shares a type with it" fall back to the host / the dead subject); Sword of Body and
+  Mind is cube-frozen (INCOMPLETE). The Sword-cycle `sword()` helper already set the flag.
 - ✅ **Engine:** `PlayerRef::DefendingPlayer` and `CreateTokenAttacking { defender: None }` fall back to the attack of the
   source's host (`enter_attacking.rs::attack_of_source_host`) — an attachment-sourced attack trigger is pushed with no subject,
   so a Captain's Claws / Inquisitorial Rosette token would have attacked the controller's default opponent at N > 2.

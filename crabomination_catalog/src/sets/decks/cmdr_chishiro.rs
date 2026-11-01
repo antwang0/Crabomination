@@ -324,10 +324,12 @@ pub fn mage_slayer() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a); "it" deals the damage.
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(Effect::DealDamageFrom {
-                source: Selector::This,
+                source: Selector::AttachedTo(Box::new(Selector::This)),
                 to: Selector::AttackedBySource,
-                amount: Value::PowerOf(Box::new(Selector::This)),
+                amount: Value::PowerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
             })],
             ..Default::default()
         }),
