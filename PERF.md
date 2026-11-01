@@ -20591,6 +20591,14 @@ is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
 
+### 2026-11-01 — `stamp_ability_id` scans the whole stack per push (O(n²) on a big trigger batch)
+
+`stack_ability.rs::stamp_ability_id` takes the max ability id over every stack item (and its targets) on each
+`push_stack`, so one dispatch that pushes n triggers costs O(n²). gdb on the Delina + Wyll sim hang (pod seed
+2947889, `01WRuXc3Wo`) sat in `push_stack` for 10 minutes; the hang itself was the sims' unbounded optional loop
+(fixed, `server/sim_answer.rs`), this was its amplifier. Not built: a counter costs `GameState` bytes it has none of
+(1,680 cap); a cheaper scan would read only the top item's id when no stack target names an ability id.
+
 ### 2026-10-30 — an 8-seat attack sim re-gathers layers per attacker (Commander only)
 
 8-seat pod `--pod-decks 603,5307,1232,3522,2959,3007,3662,4518 --seed 2941252 --a dflt`, `CRAB_POD_FUZZ=2500`,
