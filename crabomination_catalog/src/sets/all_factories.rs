@@ -19455,6 +19455,10 @@ static DECKS: &[Factory] = &[
     super::decks::faerie_swarm,
     super::decks::tpring_never_parted,
     super::decks::federation_resupply,
+    super::decks::dominion_saboteur,
+    super::decks::the_guardian_of_forever,
+    super::decks::highly_illogical,
+    super::decks::deep_space_scan,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

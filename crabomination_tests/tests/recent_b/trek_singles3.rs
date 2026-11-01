@@ -315,3 +315,65 @@ fn tpring_fight_draws_for_the_creature_that_died() {
     assert!(g.battlefield_find(bear).is_none(), "the Bears died fighting");
     assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "one creature died: one card");
 }
+
+/// Dominion Saboteur (CR 707.9b + 614.1c): a copy of a legend that isn't
+/// legendary, entering with the copied permanent's counters, kind for kind.
+#[test]
+fn dominion_saboteur_copies_the_counters_and_drops_legendary() {
+    let mut g = pod(2);
+    let kira = g.add_card_to_battlefield(1, catalog::kira_nerys_firebrand());
+    {
+        let k = g.battlefield_find_mut(kira).unwrap();
+        k.counters.add(CounterType::PlusOnePlusOne, 2);
+        k.counters.add(CounterType::Charge, 1);
+    }
+    let sab = g.add_card_to_hand(0, catalog::dominion_saboteur());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell { card_id: sab, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    let c = g.battlefield_find(sab).expect("entered");
+    assert_eq!(c.definition.name, "Kira Nerys, Firebrand");
+    assert!(!c.definition.supertypes.contains(&crabomination::card::Supertype::Legendary));
+    assert_eq!(c.counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(c.counter_count(CounterType::Charge), 1);
+}
+
+/// The Guardian of Forever: the sacrificed nontoken creature card returns at
+/// the beginning of the next end step.
+#[test]
+fn guardian_of_forever_returns_the_sacrificed_card_at_end_step() {
+    let mut g = pod(2);
+    let guardian = ready(&mut g, 0, catalog::the_guardian_of_forever());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    activate(&mut g, guardian, 0, None);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == bear), "sacrificed");
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears" && c.controller == 0), "returned");
+}
+
+/// Deep Space Scan: a card per differently named land, and no maximum hand
+/// size until your next turn — seven again at your next upkeep.
+#[test]
+fn deep_space_scan_lifts_the_hand_limit_until_your_next_turn() {
+    let mut g = pod(2);
+    for land in [catalog::island(), catalog::forest(), catalog::forest()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    let scan = g.add_card_to_hand(0, catalog::deep_space_scan());
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    g.perform_action(GameAction::CastSpell { card_id: scan, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2, "two land names");
+    assert_eq!(g.players[0].max_hand_size, None);
+    g.turn_number += 2;
+    g.step = TurnStep::Upkeep;
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.players[0].max_hand_size, Some(7));
+}

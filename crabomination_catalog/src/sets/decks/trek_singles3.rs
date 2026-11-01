@@ -657,3 +657,85 @@ pub fn federation_resupply() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Dominion Saboteur — {4}{U} 3/3 Shapeshifter. It may enter as a copy of
+/// any artifact or creature, except not legendary and with the copied
+/// permanent's counters.
+pub fn dominion_saboteur() -> CardDefinition {
+    CardDefinition {
+        enters_as_copy: Some(crate::card::EntersAsCopy {
+            filter: R::Artifact.or(R::Creature),
+            non_legendary: true,
+            mirror_counters: true,
+            ..Default::default()
+        }),
+        ..creature("Dominion Saboteur", cost(&[generic(4), u()]), vec![CreatureType::Shapeshifter], 3, 3)
+    }
+}
+
+/// The Guardian of Forever — {3} legendary 0/6 Construct artifact creature,
+/// defender. {4}, sacrifice another nontoken creature: that card returns
+/// under its owner's control at the beginning of the next end step.
+pub fn the_guardian_of_forever() -> CardDefinition {
+    let mut c = legend("The Guardian of Forever", cost(&[generic(3)]), vec![CreatureType::Construct], 0, 6);
+    c.card_types.insert(0, CardType::Artifact);
+    CardDefinition {
+        keywords: vec![Keyword::Defender],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(4)]),
+            sac_other_filter: Some((R::Creature.and(R::NotToken), 1)),
+            effect: Effect::DelayUntilWithCapture {
+                kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                capture: Selector::SacrificedCard,
+                body: Box::new(Effect::Move {
+                    what: Selector::Target(0),
+                    to: ZoneDest::Battlefield {
+                        controller: PlayerRef::OwnerOf(Box::new(Selector::Target(0))),
+                        tapped: false,
+                    },
+                }),
+            },
+            ..Default::default()
+        }],
+        ..c
+    }
+}
+
+/// Highly Illogical — {1}{U} instant, kicker {1}{U}. Counter target spell
+/// with mana value 2 or less; kicked, any target spell.
+pub fn highly_illogical() -> CardDefinition {
+    CardDefinition {
+        name: "Highly Illogical",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::Kicker(cost(&[generic(1), u()]))],
+        effect: Effect::If {
+            cond: Predicate::SpellWasKicked,
+            then: Box::new(Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) }),
+            else_: Box::new(Effect::CounterSpell {
+                what: target_filtered(R::IsSpellOnStack.and(R::ManaValueAtMost(2))),
+            }),
+        },
+        ..Default::default()
+    }
+}
+
+/// Deep Space Scan — {4}{U}{U} sorcery. Strange new worlds — draw a card per
+/// differently named land you control; no maximum hand size until your next
+/// turn (restored to seven at your next upkeep).
+pub fn deep_space_scan() -> CardDefinition {
+    CardDefinition {
+        name: "Deep Space Scan",
+        cost: cost(&[generic(4), u(), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::Draw { who: Selector::You, amount: Value::DistinctNamesControlledMatching(R::Land) },
+            Effect::SetNoMaxHandSize { who: Selector::You },
+            Effect::DelayUntil {
+                kind: crate::effect::DelayedTriggerKind::YourNextUpkeep,
+                body: Box::new(Effect::SetMaxHandSize { who: Selector::You, size: Value::Const(7) }),
+            },
+        ]),
+        ..Default::default()
+    }
+}
