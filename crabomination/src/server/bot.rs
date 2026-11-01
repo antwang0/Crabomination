@@ -7691,6 +7691,7 @@ fn settle_answer_with(
     let mut g = state.clone();
     dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
     let mut fuel = 64u32;
+    let mut sim_yes = 0u16;
     loop {
         if g.is_game_over() {
             break;
@@ -7706,9 +7707,13 @@ fn settle_answer_with(
         if g.pending_decision.is_some() {
             let answer = {
                 let pending = g.pending_decision.as_ref().unwrap();
-                nested(&pending.decision).unwrap_or_else(|| {
-                    decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
-                })
+                match nested(&pending.decision) {
+                    Some(a) => a,
+                    None => {
+                        let Some(a) = super::sim_answer::sim_pending_answer(&g, w, &mut sim_yes) else { break };
+                        a
+                    }
+                }
             };
             dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
         } else if g.stack.is_empty() {
@@ -16462,6 +16467,7 @@ fn simulate_attack_leaf(
     // engine happily accepts, so every candidate silently collapses back to
     // the alpha strike and the whole search scores one line N times.
     declared.insert((g.turn_number, TurnStep::DeclareAttackers));
+    let mut sim_yes = 0u16;
     while !g.is_game_over() {
         // Stop once the opponent's combat is resolved — the first board on
         // which a creature held back has actually done anything. Under
@@ -16482,10 +16488,7 @@ fn simulate_attack_leaf(
         }
         fuel = fuel.checked_sub(1)?;
         if g.pending_decision.is_some() {
-            let answer = {
-                let pending = g.pending_decision.as_ref().unwrap();
-                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
-            };
+            let Some(answer) = super::sim_answer::sim_pending_answer(&g, w, &mut sim_yes) else { break };
             dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
             continue;
         }
@@ -17857,13 +17860,11 @@ fn simulate_block_leaf(
     dry_run(&mut g, GameAction::DeclareBlockers(blocks.to_vec())).ok()?;
     let turn = g.turn_number;
     let mut fuel = 200u32;
+    let mut sim_yes = 0u16;
     while !g.is_game_over() && g.turn_number == turn && g.step < TurnStep::EndCombat {
         fuel = fuel.checked_sub(1)?;
         if g.pending_decision.is_some() {
-            let answer = {
-                let pending = g.pending_decision.as_ref().unwrap();
-                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
-            };
+            let Some(answer) = super::sim_answer::sim_pending_answer(&g, w, &mut sim_yes) else { break };
             dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
             continue;
         }
@@ -21874,12 +21875,10 @@ fn improves_this_turn(
         }
     };
     let mut fuel = 64u32;
+    let mut sim_yes = 0u16;
     while !g.is_game_over() {
         if g.pending_decision.is_some() {
-            let answer = {
-                let pending = g.pending_decision.as_ref().unwrap();
-                decide_pending_policy(&g, pending.acting_player(), w, &pending.decision, false)
-            };
+            let Some(answer) = super::sim_answer::sim_pending_answer(&g, w, &mut sim_yes) else { break };
             if dry_run(&mut g, GameAction::SubmitDecision(answer)).is_err() {
                 return true;
             }

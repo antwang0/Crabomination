@@ -88,6 +88,7 @@ pub const ENGINE_STACK_BYTES: usize = 32 * 1024 * 1024;
 pub mod mcts;
 pub mod bot;
 mod pod_attack;
+mod sim_answer;
 mod combat_only;
 mod sneak_pick;
 mod suspend;
