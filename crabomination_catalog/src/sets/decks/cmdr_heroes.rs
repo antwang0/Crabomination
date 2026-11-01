@@ -908,9 +908,16 @@ pub fn foot_chopper() -> CardDefinition {
             keywords: vec![Keyword::Flying],
             triggered_abilities: vec![on_combat_damage_to_player(may(
                 "Sacrifice this creature to draw cards equal to its power?",
+                // Sacrifice first; "if you do", draw its last-known power (0 if not).
                 Effect::Seq(vec![
-                    draw(Value::PowerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This))))),
-                    Effect::SacrificePermanent { what: Selector::AttachedTo(Box::new(Selector::This)) },
+                    // CR 701.21a — only if you control it.
+                    Effect::SacrificePermanent {
+                        what: Selector::MatchingAmong {
+                            inner: Box::new(Selector::AttachedTo(Box::new(Selector::This))),
+                            filter: R::ControlledByYou,
+                        },
+                    },
+                    draw(Value::SacrificedTotalPower),
                 ]),
             ))],
             ..Default::default()

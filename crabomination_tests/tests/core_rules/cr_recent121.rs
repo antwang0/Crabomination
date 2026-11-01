@@ -154,3 +154,35 @@ fn slab_hammer_pumps_only_if_a_land_was_returned() {
     let c = g.computed_permanent(bear).unwrap();
     assert_eq!((c.power, c.toughness), (2, 2));
 }
+
+/// Foot Chopper — "you may sacrifice it. If you do, draw cards equal to its
+/// power" (bug: it drew first and drew even when the sacrifice failed). On a
+/// lent creature the Chopper's controller can't sacrifice it (CR 701.21a),
+/// so nothing is drawn; on its own, the draw reads the sacrificed power.
+#[test]
+fn foot_chopper_draws_only_if_it_sacrificed() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for own in [true, false] {
+        let mut g = multi_player_game(3);
+        let seat = if own { 0 } else { 1 };
+        g.active_player_idx = seat;
+        g.priority.player_with_priority = seat;
+        let bear = g.add_card_to_battlefield(seat, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        let chopper = g.add_card_to_battlefield(0, catalog::foot_chopper());
+        g.battlefield.retain(|c| !c.definition.name.contains("Ninja"));
+        g.battlefield_find_mut(chopper).unwrap().attached_to = Some(bear);
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        let hand = g.players[0].hand.len();
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+        attack(&mut g, bear);
+        g.step = TurnStep::CombatDamage;
+        let ev = g.resolve_combat().expect("damage");
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(&mut g);
+        assert_eq!(g.battlefield_find(bear).is_none(), own, "own={own}: sacrificed only if controlled");
+        assert_eq!(g.players[0].hand.len() - hand, if own { 2 } else { 0 }, "own={own}");
+    }
+}
