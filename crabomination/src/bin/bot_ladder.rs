@@ -304,13 +304,21 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     // Suffixes: `-np<N>` plays the rollouts with the policy pilot at N
     // iterations (`MctsConfig::policy_rollouts`), `-it<N>` sets the
     // iterations of heuristic rollouts (the budget-matched control),
-    // `-h<N>` the horizon.
+    // `-h<N>` the horizon. Phase 5: `-pb` reads its priors from
+    // `CRAB_POLICY_NET_B` and `-vb` its leaf from `CRAB_NET_B`, so two
+    // generations of the loop can meet in one cell.
     if let Some(rest) = name.strip_prefix("mcts-net67-menu-") {
         let mut parts = rest.split('-');
         let w = parts.next()?;
         let (mut conf, mut pol, mut horizon, mut iters) = (2.0, None, 3u32, 256u32);
+        let mut policy_slot = crabomination::server::net_eval::SLOT_CANDIDATE;
+        let mut weights = EvalWeights::net_on_default().with_fra_fixes();
         for p in parts {
-            if let Some(c) = p.strip_prefix("conf") {
+            if p == "pb" {
+                policy_slot = crabomination::server::net_eval::SLOT_POLICY_B;
+            } else if p == "vb" {
+                weights.net_slot = crabomination::server::net_eval::SLOT_VALUE_B;
+            } else if let Some(c) = p.strip_prefix("conf") {
                 conf = c.parse::<f64>().ok()? / 100.0;
             } else if let Some(n) = p.strip_prefix("np") {
                 pol = Some(n.parse::<u32>().ok()?);
@@ -333,9 +341,9 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         return Some(Pilot::Mcts(MctsConfig {
             iterations: pol.unwrap_or(iters),
             horizon_turns: horizon,
-            weights: EvalWeights::net_on_default().with_fra_fixes(),
+            weights,
             menu_windows: mask,
-            policy_slot: crabomination::server::net_eval::SLOT_CANDIDATE,
+            policy_slot,
             menu_confident: conf,
             policy_rollouts: pol.is_some(),
             ..MctsConfig::default()
@@ -1371,6 +1379,20 @@ fn parse_args() -> Result<Args, String> {
             eprintln!("loaded policy net (menu priors) from {pp}");
         } else if a_name.contains("-menu-") || b_name.contains("-menu-") {
             return Err("a `-menu-` profile needs CRAB_POLICY_NET=<policy-headed weights>".into());
+        }
+        for (var, slot, tag) in [
+            ("CRAB_POLICY_NET_B", crabomination::server::net_eval::SLOT_POLICY_B, "-pb"),
+            ("CRAB_NET_B", crabomination::server::net_eval::SLOT_VALUE_B, "-vb"),
+        ] {
+            let wants = [&a_name, &b_name].iter().any(|n| n.split('-').any(|p| p == &tag[1..]));
+            match std::env::var(var) {
+                Ok(pp) => {
+                    crabomination::server::net_eval::load_slot(slot, std::path::Path::new(&pp))?;
+                    eprintln!("loaded {var} from {pp}");
+                }
+                Err(_) if wants => return Err(format!("a `{tag}` profile needs {var}=<weights>")),
+                Err(_) => {}
+            }
         }
         // A `-pol` profile without the policy head would silently measure
         // `net67` — and the head swap is the whole cell — so it is an

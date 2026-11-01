@@ -426,6 +426,12 @@ pub struct MctsConfig {
     /// rollout's price, so it goes with a small `iterations`.
     pub policy_rollouts: bool,
     pub rollout_temp: f32,
+    /// Phase 5's actors: draw a menu window's arms by Gumbel-top-k over the
+    /// policy's logits (the noise then reused by the halving, as in Gumbel
+    /// AlphaZero) instead of taking its top `menu_arms`, so a move the
+    /// policy underrates still gets searched now and then. Off (default)
+    /// is phase 4's deterministic top-k.
+    pub menu_sample: bool,
 }
 
 /// [`MctsConfig::menu_windows`]: own main phase, empty stack.
@@ -462,6 +468,7 @@ impl Default for MctsConfig {
             menu_confident: 2.0,
             policy_rollouts: false,
             rollout_temp: 1.0,
+            menu_sample: false,
         }
     }
 }
@@ -566,6 +573,62 @@ fn completed_sigma(
         }
     }
     out
+}
+
+/// What [`MctsBot::prior_search`] spent and found, per arm: the pick, the
+/// rollouts and their summed reward, and the arms the engine refused.
+struct PriorStats {
+    best: usize,
+    visits: Vec<u32>,
+    total: Vec<f64>,
+    dead: Vec<bool>,
+}
+
+/// Phase 5's policy target for a searched menu decision: the Gumbel
+/// improved policy, `logit + σ(q̂)`, over the arms' candidate states (the
+/// states the prior was read from), recorded as logits with the decision's
+/// kind. Unlike the search's own selection, q̂ is the raw mean reward, not
+/// min-max scaled across the arms: with eight arms and tens of rollouts
+/// each, the scaling stretches a noise-sized gap to the full σ range and
+/// would make every target one-hot. An unvisited arm takes the visited
+/// arms' mean (the mixed value's visit-weighted part); a refused arm is
+/// dropped.
+fn record_search_target(
+    state: &GameState,
+    seat: usize,
+    kind: u8,
+    states: Vec<GameState>,
+    logits: &[f64],
+    st: &PriorStats,
+    cfg: &MctsConfig,
+) {
+    let (n, sum): (u32, f64) = (st.visits.iter().sum(), st.total.iter().sum());
+    if n == 0 {
+        return;
+    }
+    let mean = sum / n as f64;
+    let max_v = st.visits.iter().copied().max().unwrap_or(0);
+    let target: Vec<f32> = (0..logits.len())
+        .map(|i| {
+            let q = if st.visits[i] > 0 { st.total[i] / st.visits[i] as f64 } else { mean };
+            (logits[i] + sigma_q(q, max_v, cfg.gumbel_c_visit, cfg.gumbel_c_scale)) as f32
+        })
+        .collect();
+    let successors: Vec<Option<GameState>> =
+        states.into_iter().enumerate().map(|(i, g)| (!st.dead[i]).then_some(g)).collect();
+    super::decision_capture::maybe_successors(
+        state,
+        seat,
+        successors,
+        st.best,
+        super::decision_capture::Provenance {
+            values: Some(&target),
+            values_are_logits: true,
+            visits: Some(&st.visits),
+            kind,
+            ..Default::default()
+        },
+    );
 }
 
 /// Standard-Gumbel noise: `-ln(-ln u)`, u uniform in (0, 1). Added once
@@ -1437,20 +1500,63 @@ impl MctsBot {
         if self.cfg.menu_windows & window == 0 || m.moves.len() < 2 {
             return None;
         }
-        let (arms, logits) = super::policy_pilot::ranked_arms(state, seat, &m, self.cfg.policy_slot, self.cfg.menu_arms);
+        let (arms, logits, states, noise) = self.menu_arms(state, seat, &m);
         if arms.is_empty() {
             return None;
         }
         let pick = if arms.len() == 1 || self.confident(&logits) {
             arms[0].clone()
         } else {
-            self.prior_search(state, seat, arms, logits)
+            let st = self.prior_search(state, seat, &arms, &logits, noise);
+            if let Some(states) = states
+                && super::decision_capture::enabled()
+            {
+                record_search_target(state, seat, m.kind.index(), states, &logits, &st, &self.cfg);
+            }
+            arms[st.best].clone()
         };
         if declaring {
             self.menu_declared = Some((state.turn_number, state.step));
             self.fallback.note_external_declaration(state, m.kind == Kind::Attack);
         }
         Some(pick)
+    }
+
+    /// A menu window's arms, best-first, with their prior logits; the
+    /// candidate states the logits were read from (`None` without a
+    /// policy); and, under [`MctsConfig::menu_sample`], the Gumbel noise
+    /// that drew them, for the halving to reuse.
+    #[allow(clippy::type_complexity)]
+    fn menu_arms(
+        &self,
+        state: &GameState,
+        seat: usize,
+        m: &super::decision_menu::Menu,
+    ) -> (Vec<GameAction>, Vec<f64>, Option<Vec<GameState>>, Option<Vec<f64>>) {
+        let k = self.cfg.menu_arms.max(1);
+        let mut scored = super::policy_pilot::scored_moves(state, seat, m, self.cfg.policy_slot);
+        if scored.is_empty() {
+            let (arms, logits) = super::policy_pilot::ranked_arms(state, seat, m, self.cfg.policy_slot, k);
+            return (arms, logits, None, None);
+        }
+        let noise: Option<Vec<f64>> = self.cfg.menu_sample.then(|| {
+            let mut r = rng();
+            (0..scored.len()).map(|_| gumbel_noise(&mut r)).collect()
+        });
+        let mut order: Vec<usize> = (0..scored.len()).collect();
+        let key = |i: usize| scored[i].1 + noise.as_ref().map_or(0.0, |g| g[i]);
+        order.sort_by(|&a, &b| key(b).partial_cmp(&key(a)).unwrap_or(std::cmp::Ordering::Equal));
+        order.truncate(k);
+        let noise = noise.map(|g| order.iter().map(|&i| g[i]).collect());
+        let mut slots: Vec<Option<(GameAction, f64, GameState)>> = scored.drain(..).map(Some).collect();
+        let (mut arms, mut logits, mut states) = (Vec::new(), Vec::new(), Vec::new());
+        for i in order {
+            let (a, l, st) = slots[i].take().expect("each index once");
+            arms.push(a);
+            logits.push(l);
+            states.push(st);
+        }
+        (arms, logits, Some(states), noise)
     }
 
     /// The policy's favourite holds `menu_confident` of the softmax.
@@ -1468,13 +1574,22 @@ impl MctsBot {
     /// zones *before* the arm is applied, so an answer that draws at once
     /// ("you may draw") cannot read the real top card; a declaration arm is
     /// stepped past its declaration window first, as in `probe_actions`.
-    fn prior_search(&self, state: &GameState, seat: usize, arms: Vec<GameAction>, logits: Vec<f64>) -> GameAction {
+    /// `noise` is the arms' Gumbel draw when the caller sampled them with it
+    /// ([`MctsConfig::menu_sample`]); `None` draws it here.
+    fn prior_search(
+        &self,
+        state: &GameState,
+        seat: usize,
+        arms: &[GameAction],
+        logits: &[f64],
+        noise: Option<Vec<f64>>,
+    ) -> PriorStats {
         let n = arms.len();
         timing::count(&timing::DECISIONS, 1);
-        let noise: Vec<f64> = {
+        let noise: Vec<f64> = noise.unwrap_or_else(|| {
             let mut r = rng();
             (0..n).map(|_| gumbel_noise(&mut r)).collect()
-        };
+        });
         let mut live: Vec<usize> = (0..n).collect();
         let mut visits = vec![0u32; n];
         let mut total = vec![0.0f64; n];
@@ -1519,7 +1634,7 @@ impl MctsBot {
                 (noise[a] + logits[a] + sig[a]).partial_cmp(&(noise[b] + logits[b] + sig[b])).unwrap_or(std::cmp::Ordering::Equal)
             })
             .unwrap_or(0);
-        arms[best].clone()
+        PriorStats { best, visits, total, dead }
     }
 
     /// The round-51 fetch arms: search a pending `SearchLibrary` instead of

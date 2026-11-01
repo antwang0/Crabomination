@@ -173,6 +173,15 @@ thread_local! {
     /// the bot it drives share a thread, and the hook has no view of the
     /// recorder's counters otherwise.
     static PLY: std::cell::Cell<u16> = const { std::cell::Cell::new(0) };
+    /// Decisions pushed on this thread since it started — see [`pushed`].
+    static PUSHED: std::cell::Cell<u64> = const { std::cell::Cell::new(0) };
+}
+
+/// Decisions this thread has pushed so far. A recorder compares it across a
+/// bot's move to learn whether the bot recorded the decision itself (phase
+/// 5: a searched menu window records its own target).
+pub fn pushed() -> u64 {
+    PUSHED.with(|c| c.get())
 }
 
 /// Decisions the cap discarded, process-wide. The cap used to be a silent
@@ -389,6 +398,7 @@ fn record(
             DROPPED.fetch_add(1, Ordering::Relaxed);
             return;
         }
+        PUSHED.with(|c| c.set(c.get() + 1));
         let n = successors.len();
         let values = (prov.values.is_some() && kept_values.len() == n).then_some(kept_values);
         let visits = (prov.visits.is_some() && kept_visits.len() == n).then_some(kept_visits);

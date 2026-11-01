@@ -127,6 +127,18 @@ struct Args {
     /// its decision kind — the imitation stream for the policy pilot
     /// (`server::policy_pilot`). Implies `--record-decisions`.
     menu_decisions: bool,
+    /// `--menu-search mc`: phase 5's actors — the MCTS actors search these
+    /// windows over the complete move list (`MctsConfig::menu_windows`;
+    /// letters m(ain) i(nstant) c(ombat) p(rompt)) on the priors of
+    /// `--use-policy`, drawing arms by Gumbel-top-k (`menu_sample`), and
+    /// every searched decision records the search's improved policy as its
+    /// policy target; the decisions the search leaves to the heuristic are
+    /// recorded as imitation rows, as under `--menu-decisions` (implied).
+    /// Needs `--mcts-actors`.
+    menu_search: u8,
+    /// The policy-headed net giving `--menu-search` its priors, loaded into
+    /// the candidate slot (CPU forwards; the value net stays `--use-best`).
+    use_policy: Option<PathBuf>,
     /// Build the policy head's decision-kind table (`NetConfig::
     /// policy_kinds`). Implies `--policy-head`.
     policy_kinds: bool,
@@ -448,6 +460,8 @@ fn parse_args() -> Args {
         bce: false,
         record_decisions: false,
         menu_decisions: false,
+        menu_search: 0,
+        use_policy: None,
         policy_kinds: false,
         init_from: None,
         policy_every: 4,
@@ -533,6 +547,20 @@ fn parse_args() -> Args {
                 a.record_decisions = true;
                 continue; // bare flag, consumes no value
             }
+            "--menu-search" => {
+                for ch in val().chars() {
+                    a.menu_search |= match ch {
+                        'm' => crabomination::server::mcts::MENU_MAIN,
+                        'i' => crabomination::server::mcts::MENU_INSTANT,
+                        'c' => crabomination::server::mcts::MENU_COMBAT,
+                        'p' => crabomination::server::mcts::MENU_PROMPT,
+                        other => panic!("--menu-search: window {other:?} (expected m, i, c, p)"),
+                    };
+                }
+                a.menu_decisions = true;
+                a.record_decisions = true;
+            }
+            "--use-policy" => a.use_policy = Some(PathBuf::from(val())),
             "--init-from" => {
                 a.init_from = Some(PathBuf::from(val()));
                 a.policy_head = true;
@@ -802,6 +830,9 @@ struct Shared {
     /// Decisions pushed to the training deque — the PG-only throttle's
     /// unit, as `rows_pushed` is the value loop's.
     decisions_pushed: AtomicU64,
+    /// Of those, the rows a searched menu window recorded (`--menu-search`:
+    /// the improved policy, with its rollout counts) — the rest imitate.
+    decisions_searched: AtomicU64,
     /// Next self-play game index to claim — also the per-game seed salt.
     next_game: AtomicU64,
     games_done: AtomicU64,
@@ -886,6 +917,17 @@ fn load_deck_net(path: &std::path::Path, vocab: &Vocab, why: &str) -> DeckNet {
 }
 
 fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&DeckNet>, mcts: bool) {
+    let actor_search = crabomination::selfplay::actor_mcts(args.mcts_actors, args.mcts_gumbel).map(|c| {
+        if args.menu_search == 0 {
+            return c;
+        }
+        crabomination::server::MctsConfig {
+            menu_windows: args.menu_search,
+            policy_slot: crabomination::server::net_eval::SLOT_CANDIDATE,
+            menu_sample: true,
+            ..c
+        }
+    });
     loop {
         if shared.stop.load(Ordering::Relaxed) {
             break;
@@ -971,8 +1013,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
             salt(5),
             4_000,
             vocab,
-            if mcts { args.mcts_actors } else { 0 },
-            args.mcts_gumbel,
+            if mcts { actor_search } else { None },
         );
         if mcts && args.mcts_actors > 0 {
             shared.games_mcts.fetch_add(1, Ordering::Relaxed);
@@ -1029,6 +1070,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                 let mut v = shared.decisions_val.lock().unwrap();
                 let mut d = shared.decisions.lock().unwrap();
                 let mut pushed = 0u64;
+                let mut searched = 0u64;
                 for (held, row) in converted {
                     if held {
                         if v.len() < DECISION_VAL_CAP {
@@ -1038,6 +1080,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                         if d.len() == DECISION_CAP {
                             d.pop_front();
                         }
+                        searched += (row.values_are_logits && row.visits.is_some()) as u64;
                         d.push_back(row);
                         pushed += 1;
                     }
@@ -1045,6 +1088,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                 drop(d);
                 drop(v);
                 shared.decisions_pushed.fetch_add(pushed, Ordering::Relaxed);
+                shared.decisions_searched.fetch_add(searched, Ordering::Relaxed);
             }
         }
         shared.games_done.fetch_add(1, Ordering::Relaxed);
@@ -1917,6 +1961,18 @@ fn main() {
         }
     }
 
+    if args.menu_search != 0 {
+        assert!(args.mcts_actors > 0, "--menu-search shapes the MCTS actors' search; it needs --mcts-actors > 0");
+        let p = args.use_policy.as_ref().expect("--menu-search needs --use-policy <policy-headed weights>");
+        crabomination::server::net_eval::load_slot(crabomination::server::net_eval::SLOT_CANDIDATE, p)
+            .expect("--use-policy weights load");
+        assert!(
+            crabomination::server::net_eval::slot_has_policy(crabomination::server::net_eval::SLOT_CANDIDATE),
+            "--use-policy {}: no policy head",
+            p.display()
+        );
+        eprintln!("menu-search actors (windows {:#x}) on the policy priors of {}", args.menu_search, p.display());
+    }
     if args.record_decisions {
         crabomination::server::decision_capture::set_enabled(true);
         crabomination::server::decision_capture::set_menu_only(args.menu_decisions);
@@ -1964,6 +2020,7 @@ fn main() {
         decisions_val: Mutex::new(Vec::new()),
         rows_pushed: AtomicU64::new(0),
         decisions_pushed: AtomicU64::new(0),
+        decisions_searched: AtomicU64::new(0),
         next_game: AtomicU64::new(0),
         games_done: AtomicU64::new(0),
         run_start: Instant::now(),
@@ -2436,6 +2493,13 @@ fn main() {
         shared.stalls.load(Ordering::Relaxed),
         secs
     );
+    if args.record_decisions {
+        eprintln!(
+            "decisions: {} trained-side rows, {} of them searched",
+            shared.decisions_pushed.load(Ordering::Relaxed),
+            shared.decisions_searched.load(Ordering::Relaxed)
+        );
+    }
     if actor_s > 0.0 {
         let share = 100.0 * actor_s / secs.max(0.001);
         eprintln!(

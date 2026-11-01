@@ -7108,3 +7108,43 @@ is what phase 3 predicted: a ~35 %-vs-`dflt` policy is no better a
 rollout player than the unscored heuristic. Net-played rollouts wait for
 a stronger policy (phase 5's loop, or the action-conditioned policy);
 until then the adopted shape is `mc` with the heuristic's 256 rollouts.
+
+### Phase 5 — expert iteration: the search teaches the policy (2026-11-01)
+
+**The loop.** A generation is one `selfplay_train` run. Its actors are
+the phase-4 search (`--mcts-actors 256 --menu-search mc`: main + combat
+over the complete move list, the client's pilot weights, the champion's
+value leaf) on the previous generation's policy priors (`--use-policy`,
+the candidate slot), and each searched decision records the search's
+**improved policy** as its policy target (`mcts::record_search_target`):
+`logit + σ(q̂)` over the arms' candidate states, at temperature 1, with
+the rollouts behind each arm and the decision's kind. q̂ is the raw mean
+reward, not the min-max scaling the search selects with: over eight arms
+of tens of rollouts the scaling would stretch a noise-sized gap to the
+full σ range (≈12 logits) and make every target one-hot. Arms are drawn
+by Gumbel-top-k over the policy's logits (`MctsConfig::menu_sample`, the
+noise reused by the halving), so an underrated move is searched now and
+then. Decisions the search leaves to the heuristic (instant speed,
+prompts) are imitation rows as in phase 3. The learner warm-starts from
+the previous generation (`--init-from`) and trains policy and value; the
+policy it ends with is the next generation's prior. Gen 0 is run D's net
+(`.ladder/p3/mcts_s43_final`).
+
+**Pre-registered reads, per generation k** (SOS sealed, paired, seeds 43
+and 97):
+
+1. *Progress* (the one the stop rule reads): `mcts-net67-menu-mc` on
+   P_k against `mcts-net67-menu-mc-pb` on P_{k-1}, the champion leaf on
+   both, 120 × 12 per seed. **Moved** = pooled ≥ +1.0 with both seeds
+   above 50.
+2. *The policy alone*: `policy-net-fixes` vs `dflt`, 200 × 12 (D: 34.5 /
+   36.6); blunder set (D: 14 / 22); agreement with the search teacher.
+3. *The value head* (a by-product): P_k's search on P_k's leaf (`-vb`)
+   against the champion's leaf. It replaces the actors' leaf only if it
+   would itself count as moved.
+4. After the last generation, the best P_k against the client's pilot,
+   120 × 12 (gen 0 = run D's prior: 57.1 / 54.1).
+
+**Stop:** two consecutive generations that do not move (read 1) end the
+loop, as does generation 4. No tuning between generations beyond what is
+written here.

@@ -726,12 +726,23 @@ pub fn play_recorded_game(
     max_actions: usize,
     vocab: &Vocab,
 ) -> RecordedGame {
-    play_recorded_game_mcts(template, weights, seed, max_actions, vocab, 0, false)
+    play_recorded_game_mcts(template, weights, seed, max_actions, vocab, None)
+}
+
+/// The MCTS actors' search: `iterations` rollouts, the round-26 3-turn
+/// horizon, Gumbel at the root when `gumbel`. 0 iterations is no search.
+pub fn actor_mcts(iterations: u32, gumbel: bool) -> Option<crate::server::MctsConfig> {
+    (iterations > 0).then(|| crate::server::MctsConfig {
+        iterations,
+        horizon_turns: 3,
+        gumbel,
+        ..crate::server::MctsConfig::default()
+    })
 }
 
 /// [`play_recorded_game`] with the seats piloted by net-evaluated MCTS
-/// (`mcts_iterations` > 0, 3-turn horizon — the round-26 adopted shape)
-/// instead of the scored bot. This is the training side of search
+/// (`mcts`: the search's config, each seat's `weights` written into it —
+/// `actor_mcts` builds the round-26 adopted shape) instead of the scored bot. This is the training side of search
 /// amplification: labels from games played ~3–5 points stronger than the
 /// plain net pilot. `weights` still parameterizes the reward and the
 /// exploration openings.
@@ -741,8 +752,7 @@ pub fn play_recorded_game_mcts(
     seed: u64,
     max_actions: usize,
     vocab: &Vocab,
-    mcts_iterations: u32,
-    mcts_gumbel: bool,
+    mcts: Option<crate::server::MctsConfig>,
 ) -> RecordedGame {
     // Pin the bot's tie-break / sampling stream to this game's seed, so the
     // game is a replay of itself: TODO item 7's open question, answered by the
@@ -761,8 +771,7 @@ pub fn play_recorded_game_mcts(
         seed,
         max_actions,
         vocab,
-        mcts_iterations,
-        mcts_gumbel,
+        mcts,
     );
     if pinned {
         crate::server::bot::set_jitter_seed(None);
@@ -776,8 +785,7 @@ fn play_recorded_game_mcts_inner(
     seed: u64,
     max_actions: usize,
     vocab: &Vocab,
-    mcts_iterations: u32,
-    mcts_gumbel: bool,
+    mcts: Option<crate::server::MctsConfig>,
 ) -> RecordedGame {
     let mut g = template.clone();
     // Profile settings the ENGINE reads off the seat, not the bot — the
@@ -828,14 +836,8 @@ fn play_recorded_game_mcts_inner(
     let mut bots: Vec<Box<dyn Bot>> = weights
         .into_iter()
         .map(|w| -> Box<dyn Bot> {
-            if mcts_iterations > 0 {
-                Box::new(crate::server::MctsBot::new(crate::server::MctsConfig {
-                    iterations: mcts_iterations,
-                    horizon_turns: 3,
-                    weights: w,
-                    gumbel: mcts_gumbel,
-                    ..crate::server::MctsConfig::default()
-                }))
+            if let Some(cfg) = mcts {
+                Box::new(crate::server::MctsBot::new(crate::server::MctsConfig { weights: w, ..cfg }))
             } else {
                 Box::new(HeuristicBot::with_weights(w))
             }
@@ -948,10 +950,16 @@ fn play_recorded_game_mcts_inner(
             if actions < explore_plies { &mut explorers } else { &mut bots };
         let record_menu = actions >= explore_plies && crate::server::decision_capture::menu_only();
         for (s, bot) in acting.iter_mut().enumerate() {
+            let pushed = crate::server::decision_capture::pushed();
             let Some(a) = bot.next_action(&g, s) else { continue };
             // The move-list recorder (`decision_capture::set_menu_only`):
-            // the pre-move state, recorded once the engine has taken the move.
-            let pre = (record_menu && crate::server::decision_capture::enabled()).then(|| g.clone());
+            // the pre-move state, recorded once the engine has taken the move
+            // — unless the bot recorded the decision itself (a searched menu
+            // window's improved policy, phase 5).
+            let pre = (record_menu
+                && crate::server::decision_capture::enabled()
+                && crate::server::decision_capture::pushed() == pushed)
+                .then(|| g.clone());
             let played = a.clone();
             if g.perform_action(a).is_ok() {
                 if let Some(pre) = pre {

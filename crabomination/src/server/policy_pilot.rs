@@ -475,19 +475,29 @@ pub fn ranked_arms(g: &GameState, seat: usize, m: &decision_menu::Menu, slot: u8
         let n = arms.len();
         return (arms, vec![0.0; n]);
     }
+    let mut scored = scored_moves(g, seat, m, slot);
+    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+    scored.truncate(k);
+    scored.into_iter().map(|(a, l, _)| (a, l)).unzip()
+}
+
+/// Every move on `m` the policy in `slot` can score, in list order, with
+/// its logit and the candidate state the logit was read from — the
+/// unranked form of [`ranked_arms`], for a caller that samples its arms
+/// or records the states (phase 5's search targets). Empty with no policy.
+pub fn scored_moves(g: &GameState, seat: usize, m: &decision_menu::Menu, slot: u8) -> Vec<(GameAction, f64, GameState)> {
+    if slot == 0 || !super::net_eval::slot_has_policy(slot) {
+        return Vec::new();
+    }
     let base = hidden_safe(g, seat, (g.turn_number as u64) << 20 ^ (seat as u64) << 8 ^ g.step as u64);
-    let mut scored: Vec<(GameAction, f64)> = m
-        .moves
+    m.moves
         .iter()
         .filter_map(|a| {
             let st = candidate_state(&base, seat, m.kind, a)?;
             let l = super::net_eval::policy_logit_kind(&st, seat, slot, m.kind.index())?;
-            Some((a.clone(), l as f64))
+            Some((a.clone(), l as f64, st))
         })
-        .collect();
-    scored.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-    scored.truncate(k);
-    scored.into_iter().unzip()
+        .collect()
 }
 
 // ── Agreement with a teacher ───────────────────────────────────────────
@@ -893,7 +903,38 @@ mod tests {
         search_plays_a_legal_game(true);
     }
 
+    /// Phase 5: with capture on, a searched menu decision records the
+    /// search's improved policy over its arms — logits, the rollouts behind
+    /// each, the decision's kind — and the arms are drawn by Gumbel-top-k.
+    #[test]
+    fn the_sampled_search_records_its_improved_policy() {
+        let _serial = decision_capture::TEST_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        decision_capture::set_enabled(true);
+        decision_capture::set_menu_only(true);
+        let _ = decision_capture::drain();
+        let before = decision_capture::pushed();
+        search_game(false, true, 4);
+        let rows = decision_capture::drain();
+        decision_capture::set_menu_only(false);
+        decision_capture::set_enabled(false);
+        assert!(!rows.is_empty(), "no searched decision recorded");
+        assert_eq!(decision_capture::pushed() - before, rows.len() as u64);
+        for r in &rows {
+            let v = r.values.as_ref().expect("a target");
+            assert!(r.values_are_logits);
+            assert_eq!(v.len(), r.successors.len());
+            assert!(r.visits.as_ref().is_some_and(|n| n.len() == v.len() && n.iter().any(|&x| x > 0)));
+            assert!(r.chosen < v.len() && v.iter().all(|x| x.is_finite()));
+            assert!(r.successors.len() <= 4, "at most menu_arms arms");
+        }
+        assert!(rows.iter().any(|r| r.kind == Kind::Priority.index()), "a main-phase row");
+    }
+
     fn search_plays_a_legal_game(policy_rollouts: bool) {
+        search_game(policy_rollouts, false, if policy_rollouts { 5 } else { 8 });
+    }
+
+    fn search_game(policy_rollouts: bool, menu_sample: bool, last_turn: u32) {
         use crate::server::mcts::{MENU_COMBAT, MENU_INSTANT, MENU_MAIN, MENU_PROMPT, MctsBot, MctsConfig};
         let _g = SLOT.lock().unwrap_or_else(|e| e.into_inner());
         let slot = super::super::net_eval::SLOT_FRA;
@@ -906,13 +947,13 @@ mod tests {
             policy_slot: slot,
             menu_arms: 4,
             policy_rollouts,
+            menu_sample,
             ..MctsConfig::default()
         };
         let seed = 7u64;
         let mut g = super::super::action_gap::start_game(&sealed_template(seed), &cfg.weights, seed);
         let mut bots = [MctsBot::new(cfg), MctsBot::new(cfg)];
         let (mut fuel, mut stalled, mut declared) = (4000, 0, 0);
-        let last_turn = if policy_rollouts { 5 } else { 8 };
         while fuel > 0 && !g.is_game_over() && g.turn_number <= last_turn && stalled < 50 {
             fuel -= 1;
             let mut acted = false;
