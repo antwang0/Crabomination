@@ -428,7 +428,7 @@ pub fn cosmium_confluence() -> CardDefinition {
 /// Disturb {W}{U}: Brinebound Gift, an Aura — whenever it enters or enchanted
 /// creature becomes the target of an Aura spell, create a 1/1 Spirit.
 pub fn brine_comber() -> CardDefinition {
-    use crate::card::{EquipBonus, TokenDefinition};
+    use crate::card::TokenDefinition;
     use crate::mana::Color;
     let spirit = || Effect::CreateToken {
         who: PlayerRef::You,
@@ -458,8 +458,18 @@ pub fn brine_comber() -> CardDefinition {
         subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
         color_indicator: vec![Color::White, Color::Blue],
         effect: Effect::Attach { what: Selector::This, to: crate::effect::shortcut::target_filtered(R::Creature) },
-        triggered_abilities: vec![crate::effect::shortcut::etb(spirit())],
-        equipped_bonus: Some(EquipBonus { triggered_abilities: vec![targeted()], ..Default::default() }),
+        // The Aura's own trigger: its controller creates the Spirit, whoever
+        // controls the enchanted creature.
+        triggered_abilities: vec![
+            crate::effect::shortcut::etb(spirit()),
+            TriggeredAbility {
+                event: EventSpec {
+                    causer_filter: Some(aura_spell()),
+                    ..EventSpec::new(EventKind::BecameTarget, EventScope::EnchantedBySource)
+                },
+                effect: spirit(),
+            },
+        ],
         ..Default::default()
     };
     CardDefinition {

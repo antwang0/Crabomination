@@ -506,6 +506,27 @@ fn brine_comber_makes_spirits_from_aura_spells() {
     .expect("rancor");
     drain_stack(&mut g);
     assert_eq!(spirits(&g), 2, "enchanted creature targeted by an Aura spell");
+
+    // The Gift's "create a Spirit" is its controller's, whoever controls the
+    // enchanted creature (bug: the trigger rode the host, so an opponent's
+    // creature handed the opponent the Spirit).
+    let mut g = pod(3);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let bc = g.add_card_to_graveyard(0, catalog::brine_comber());
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.perform_action(GameAction::CastDisturb { card_id: bc, target: Some(Target::Permanent(bear)), additional_targets: vec![] })
+        .expect("disturb onto an opponent's bear");
+    drain_stack(&mut g);
+    let rancor = g.add_card_to_hand(0, catalog::rancor());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: rancor, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("rancor");
+    drain_stack(&mut g);
+    let of = |g: &GameState, p: usize| g.battlefield.iter().filter(|c| c.controller == p && c.definition.name == "Spirit").count();
+    assert_eq!((of(&g, 0), of(&g, 1)), (2, 0), "both Spirits are the Gift controller's");
 }
 
 /// CR 707.10 — Scientist Supreme copies Ichor Wellspring's enters trigger
