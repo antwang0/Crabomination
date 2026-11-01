@@ -2301,7 +2301,6 @@ The three TRC precons (seats 6094-6096, `decks::trek_federation` / `trek_klingon
 
 | Card | Printed | Approximation |
 |---|---|---|
-| 🟡 B'Elanna Torres, Scrapper | "you may reveal the top card" | always revealed (`RevealTopThenIf`); a seat preferring the counters to an artifact draw can't decline |
 | 🟡 Guinan, Ancient Advisor | draws "if you put two or more +1/+1 counters" | draws when two or more of your creatures entered this turn — differs only when a counter can't be placed |
 | 🟡 Cmdr. Troi, Outgoing Empath | the opponent's free spell is copied | a UI opponent whose target pick parks the cast loses the copy rider (`PlayerMayCastFromHandFree`); headless seats are exact |
 | 🟡 Right of Vengeance | "whenever a creature deals combat damage to you" | a creature's damage to you during a combat damage step (a this-turn emblem can't hear the combat path's own `DealsCombatDamageToPlayer`), so a creature's noncombat ping in that step also triggers it |
@@ -2310,5 +2309,4 @@ The three TRC precons (seats 6094-6096, `decks::trek_federation` / `trek_klingon
 | 🟡 Reconnaissance Partition | "remove a counter" of any kind | only a charge counter pays it (`remove_counter_cost`) |
 | 🟡 Võx, Child of the Collective | undaunted counts opponents as the spell is cast | the count is fixed when the grant resolves (`GrantNextMatchingSpellUndauntedThisTurn`) |
 | 🟡 The Borg Queen | the opponent "exiles" cards until a creature | they are revealed (the rest go to the bottom either way; nothing sees them exiled) |
-| 🟡 Assimilate (Borg Queen, Gift of Perfection, Assimilate the Wounded, Assimilation Assessor, The Best of Both Worlds) | enters "with a +1/+1 counter" | the counter is placed as it lands, after entering — an ETB that reads its counters sees none |
 | 🟡 Shore Leave Planet | "a Robot artifact in addition" is a copy exception | layer-4 additions until end of turn beside a nonlegendary layer-1 copy, so a copy of the copy lacks them |

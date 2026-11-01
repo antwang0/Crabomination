@@ -86,6 +86,24 @@ fn borg_queen_assimilates_the_first_creature_card_down() {
     assert_eq!((c.power, c.toughness), (6, 6));
 }
 
+/// CR 614.1c / 122.6 — an assimilated library card enters *with* its +1/+1
+/// counter (stamped before the move): Experiment One's evolve (CR 702.100a)
+/// sees a 2/2 Elves beside a 1/1.
+#[test]
+fn cr_614_1c_an_assimilated_card_enters_with_its_counter() {
+    let mut g = pod(2);
+    let ooze = g.add_card_to_battlefield(0, catalog::experiment_one());
+    let elf = g.add_card_to_library(1, catalog::llanowar_elves());
+    let ctx = EffectContext::for_spell(0, Some(Target::Permanent(elf)), 0, 0);
+    let evs = g
+        .resolve_effect(&crabomination::effect::Effect::Assimilate { what: crabomination::effect::Selector::Target(0) }, &ctx)
+        .expect("assimilate");
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert_assimilated(&g, elf, 0);
+    assert_eq!(g.battlefield_find(ooze).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "evolved");
+}
+
 /// Gift of Perfection: every opponent reveals, but only one creature card is
 /// assimilated — the biggest.
 #[test]

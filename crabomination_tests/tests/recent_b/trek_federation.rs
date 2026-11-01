@@ -389,3 +389,28 @@ fn ezri_dax_copies_a_creature_that_died_this_turn() {
     assert!(c.supertypes().contains(&Supertype::Legendary));
     assert!(c.subtypes().creature_types.contains(&CreatureType::Trill));
 }
+
+/// B'Elanna Torres: "you may reveal" — declining with an artifact on top is
+/// "you don't draw a card this way", so she takes the two counters instead.
+#[test]
+fn belanna_torres_may_decline_the_reveal_for_counters() {
+    let mut g = multi_player_game(2);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_library(0, catalog::sol_ring());
+    for _ in 0..5 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let belanna = ready(&mut g, 0, catalog::belanna_torres_scrapper());
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
+        crabomination::decision::DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![] },
+        crabomination::decision::DecisionAnswer::Bool(false),
+    ]));
+    activate(&mut g, belanna, 0, None).expect("activate");
+    assert_eq!(g.players[0].hand.len(), hand, "declined: no draw");
+    assert_eq!(g.battlefield_find(belanna).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.players[0].library[0].definition.name, "Sol Ring");
+}

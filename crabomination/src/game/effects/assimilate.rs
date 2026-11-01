@@ -82,13 +82,18 @@ impl GameState {
         let me = ctx.controller;
         for &id in ids {
             let one = EffectContext { targets: vec![Target::Permanent(id)], ..ctx.clone() };
-            if self.battlefield_find(id).is_some() {
+            let entering = self.battlefield_find(id).is_none();
+            if !entering {
                 self.run_effect(
                     &Effect::GainControl { what: Selector::Target(0), to: None, duration: Duration::Permanent },
                     &one,
                     events,
                 )?;
             } else {
+                // CR 614.1c: it enters *with* the counter, so an ETB reads it.
+                if let Some(c) = self.find_card_anywhere_mut(id) {
+                    c.pending_etb_counters.push((CounterType::PlusOnePlusOne, 1));
+                }
                 self.move_card_to(
                     id,
                     &ZoneDest::Battlefield { controller: PlayerRef::Seat(me), tapped: false },
@@ -100,8 +105,12 @@ impl GameState {
                 }
                 self.scratch.last_moved_cards.push(id);
             }
-            for e in [
-                Effect::AddCounter { what: Selector::Target(0), kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            let counter = (!entering).then_some(Effect::AddCounter {
+                what: Selector::Target(0),
+                kind: CounterType::PlusOnePlusOne,
+                amount: Value::ONE,
+            });
+            for e in counter.into_iter().chain([
                 Effect::AddCardTypeIndefinitely { what: Selector::Target(0), card_type: CardType::Artifact, until_eot: false },
                 Effect::AddCardTypeIndefinitely { what: Selector::Target(0), card_type: CardType::Creature, until_eot: false },
                 Effect::BecomeCreatureType {
@@ -109,7 +118,7 @@ impl GameState {
                     creature_types: vec![CreatureType::Borg],
                     duration: Duration::Permanent,
                 },
-            ] {
+            ]) {
                 self.run_effect(&e, &one, events)?;
             }
             if let (Some(src), Some(c)) = (ctx.source, self.battlefield_find_mut(id)) {

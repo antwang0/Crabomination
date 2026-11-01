@@ -602,9 +602,8 @@ pub fn rom_and_leeta_unlikely_pair() -> CardDefinition {
 }
 
 /// B'Elanna Torres, Scrapper — {1}{U}{R} legendary 2/2 Klingon Human
-/// Artificer, vigilance, trample. {2}, {T}: surveil 2, then reveal the top
-/// card; an artifact is drawn, otherwise two +1/+1 counters on her. (The
-/// "may reveal" is always taken.)
+/// Artificer, vigilance, trample. {2}, {T}: surveil 2, then you may reveal the
+/// top card; an artifact is drawn, otherwise two +1/+1 counters on her.
 pub fn belanna_torres_scrapper() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Vigilance, Keyword::Trample],
@@ -613,11 +612,16 @@ pub fn belanna_torres_scrapper() -> CardDefinition {
             tap_cost: true,
             effect: Effect::Seq(vec![
                 Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
-                Effect::RevealTopThenIf {
-                    who: PlayerRef::You,
-                    filter: R::Artifact,
-                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
-                    else_: Some(Box::new(counters(Selector::This, CounterType::PlusOnePlusOne, 2))),
+                // "You may reveal": declining is "you don't draw this way".
+                Effect::MayDoElse {
+                    description: "Reveal the top card of your library?".into(),
+                    body: Box::new(Effect::RevealTopThenIf {
+                        who: PlayerRef::You,
+                        filter: R::Artifact,
+                        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                        else_: Some(Box::new(counters(Selector::This, CounterType::PlusOnePlusOne, 2))),
+                    }),
+                    else_: Box::new(counters(Selector::This, CounterType::PlusOnePlusOne, 2)),
                 },
             ]),
             ..Default::default()
