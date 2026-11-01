@@ -431,6 +431,12 @@ pub enum CreatureType {
     Romulan,
     // Star Trek (Hologram Stalker).
     Hirogen,
+    // Star Trek (Gwyndala, the Progeny).
+    VauNAkat,
+    // Star Trek (Q, Stacking the Deck).
+    Q,
+    // Star Trek (Lt. Arex, Ever-Adapting).
+    Edosian,
 }
 
 /// Land subtypes (basic land types + others).
@@ -498,6 +504,8 @@ pub enum ArtifactSubtype {
     Vibranium,
     // Marvel: the Infinity Stones (CR 205.3g; their ∞ abilities, CR 702.186).
     Infinity, Stone,
+    // Star Trek: Starfleet Communicator.
+    Communicator,
 }
 
 /// Enchantment subtypes.

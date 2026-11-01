@@ -396,3 +396,7 @@ mod trek_borg;
 mod trek_singles;
 mod trek_singles2;
 mod trek_singles3;
+mod trek_singles4;
+mod trek_singles5;
+mod trek_singles6;
+mod trek_singles7;
