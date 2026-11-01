@@ -10514,6 +10514,31 @@ fn cast_candidates_all<'a>(
         castable.push((action, false));
     }
 
+    // Abilities that function from exile (CR 113.6), printed or gained there
+    // (Q, Stacking the Deck's grant). `would_accept` enforces the condition,
+    // the timing and the costs.
+    for c in state.exile.iter().filter(|c| c.owner == seat) {
+        let printed = c.definition.activated_abilities.iter();
+        for (idx, ab) in printed.chain(c.granted_activated_abilities.iter()).enumerate() {
+            if !ab.from_exile {
+                continue;
+            }
+            let (target, additional_targets) = if ab.effect.requires_target() {
+                let (t, extras) = state.auto_targets_for_effect_all_slots(&ab.effect, seat, None);
+                if t.is_none() {
+                    continue;
+                }
+                (t, extras)
+            } else {
+                (None, vec![])
+            };
+            let action = GameAction::ActivateAbility {
+                card_id: c.id, ability_index: idx, target, additional_targets, x_value: None, mode: None,
+            };
+            castable.push((action, false));
+        }
+    }
+
     // `Effect::GrantMayPlay` permissions: a card in a graveyard or in exile
     // that this seat may play right now, cast with
     // `GameAction::CastFromZoneWithoutPaying`.

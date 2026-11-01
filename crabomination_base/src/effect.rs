@@ -7509,6 +7509,10 @@ pub enum Effect {
     /// (Reenact the Crime) — mints a token copy of the card `what` resolves to
     /// and offers a free cast of it.
     CopyCardAndCastFree { what: Selector },
+    /// "Create a copy of this card. You may cast the copy." — paying its costs
+    /// (CR 707.12; Q, Stacking the Deck's granted ability). The copy is staged
+    /// in exile as a token and ceases to exist if it isn't cast.
+    CopyCardMayCast { what: Selector },
     /// Myra the Magnificent — exile the card `what` names and choose an
     /// Attraction you control without a midway counter: put one on it, link
     /// the card to it (`exiled_with`), and give it "whenever you visit this,

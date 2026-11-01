@@ -1441,6 +1441,7 @@ impl Effect {
             Effect::PutExiledCreatureOntoBattlefield { .. } => false,
             Effect::DeployExiledCreature { what, .. } => sel_has_target(what),
             Effect::CopyCardAndCastFree { what }
+            | Effect::CopyCardMayCast { what }
             | Effect::ExileOntoAttractionWithMidway { what }
             | Effect::CopyCardsAndCastFreeUpTo { what, .. }
             | Effect::CopyCardsAndCastFreeTotalMv { what, .. } => sel_has_target(what),

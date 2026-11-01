@@ -41,6 +41,11 @@ impl GameState {
     pub(crate) fn exile_remove_at(&mut self, pos: usize) -> CardInstance {
         let mut card = self.exile.remove(pos);
         card.exiled_by = None;
+        // CR 400.7 — an ability the exiled card gained there is the old
+        // object's (Q, Stacking the Deck's grant).
+        if card.cold_any(|k| !k.granted_activated_abilities.is_empty()) {
+            card.granted_activated_abilities.clear();
+        }
         if !card.definition.keeps_counters_off_battlefield {
             if !card.counters.is_empty() {
                 card.counters.clear();

@@ -22524,10 +22524,19 @@ impl GameState {
                 ability_index,
             )?
         } else if source_in_exile {
-            HeldAbility::printed_of(
-                self.exile.iter().find(|c| c.id == card_id),
-                ability_index,
-            )?
+            let card = self.exile.iter().find(|c| c.id == card_id);
+            let printed = card.map_or(0, |c| c.definition.activated_abilities.len());
+            match card {
+                // An instance grant past the printed list (Q, Stacking the
+                // Deck's "this card gains …").
+                Some(c) if ability_index >= printed => HeldAbility::Owned(
+                    c.granted_activated_abilities
+                        .get(ability_index - printed)
+                        .cloned()
+                        .ok_or(GameError::AbilityIndexOutOfBounds)?,
+                ),
+                _ => HeldAbility::printed_of(card, ability_index)?,
+            }
         } else if source_in_command {
             HeldAbility::printed_of(
                 self.players[source_owner].command.iter().find(|c| c.id == card_id),

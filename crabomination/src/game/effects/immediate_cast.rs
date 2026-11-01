@@ -328,4 +328,43 @@ impl GameState {
             }
         }
     }
+
+    /// CR 707.12 — a copy of the card `id` (wherever it is), staged in exile
+    /// as a token and offered as a cast that pays its own costs (Garth One-Eye's
+    /// shape over a real card: Q, Stacking the Deck). Uncast, it ceases to
+    /// exist; a land copy can't be cast, so it never is.
+    pub(super) fn copy_card_and_cast_paying(
+        &mut self,
+        id: CardId,
+        ctx: &EffectContext,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let Some(def) = self.find_card_anywhere(id).map(|c| c.definition.arc()) else { return Ok(()) };
+        if def.is_land() || def.name.is_empty() {
+            return Ok(());
+        }
+        let copy = self.next_id();
+        let mut inst = crate::card::CardInstance::new(copy, def, ctx.controller);
+        inst.is_token = true;
+        self.exile.push(inst);
+        if self.battlefield.len() as i64 + self.spell_token_estimate(copy, ctx.controller)
+            > crate::recommend::BOARD_GATE as i64
+        {
+            self.exile.retain(|c| c.id != copy);
+            return Ok(());
+        }
+        let cast = crate::effect::Effect::CastWithoutPayingImmediate {
+            what: crate::effect::Selector::ExactObjects(vec![copy]),
+            source_zone: Zone::Exile,
+            exile_after: false,
+            copy: false,
+            reduce_generic: 0,
+            pay_own_cost: true,
+        };
+        let out = self.run_effect(&cast, ctx, events);
+        if self.exile.iter().any(|c| c.id == copy) {
+            self.exile.retain(|c| c.id != copy);
+        }
+        out
+    }
 }

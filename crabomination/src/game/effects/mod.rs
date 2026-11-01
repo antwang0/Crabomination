@@ -30535,6 +30535,13 @@ impl GameState {
                 }
                 Ok(())
             }
+            Effect::CopyCardMayCast { what } => {
+                if let Some(id) = self.resolve_selector(what, ctx).into_iter().filter_map(|e| e.as_card_id()).next() {
+                    self.copy_card_and_cast_paying(id, ctx, events)?;
+                }
+                Ok(())
+            }
+
             Effect::CopyCardAndCastFree { what } => {
                 // Reenact the Crime — copy the card wherever it now is and
                 // offer the copy as a free cast (CR 707.12).
@@ -44191,6 +44198,13 @@ impl GameState {
                         } else {
                             c.granted_activated_abilities.push((**ability).clone());
                         }
+                    } else if ability.from_exile
+                        && let Some(c) = self.exile.iter_mut().find(|c| c.id == id)
+                    {
+                        // CR 113.6 — an exiled card that "gains" an ability
+                        // which functions from exile (Q, Stacking the Deck);
+                        // `exile_remove_at` drops it with the object.
+                        c.granted_activated_abilities.push((**ability).clone());
                     }
                 }
                 Ok(())
