@@ -2953,6 +2953,21 @@ impl GameState {
                 }
             }
         }
+        // Dominion Saboteur — the copied permanent's counters, kind for kind.
+        if spec.mirror_counters
+            && let Some(crate::game::types::Target::Permanent(copied)) = ctx.targets.first().cloned()
+        {
+            let bag: Vec<(crate::card::CounterType, u32)> = self
+                .battlefield_find(copied)
+                .map(|c| c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, n)| (*k, *n)).collect())
+                .unwrap_or_default();
+            for (kind, n) in bag {
+                let n = self.place_counters(card_id, kind, n);
+                if n > 0 {
+                    events.push(GameEvent::CounterAdded { card_id, counter_type: kind, count: n, placer: Some(controller) });
+                }
+            }
+        }
         // "Enter TAPPED as a copy" (Vesuva): the tapping is part of this
         // replacement, so it survives the copy overwriting the printed text.
         if spec.tapped

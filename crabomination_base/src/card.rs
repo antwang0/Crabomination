@@ -6659,6 +6659,11 @@ pub struct EntersAsCopy {
     /// from the copier's controller's view) rather than the copy.
     #[serde(default)]
     pub copied_counters: Vec<(SelectionRequirement, CounterType, u32)>,
+    /// CR 707.9 + 614.1c — "it enters with additional counters on it equal
+    /// to the same number and kinds of counters the copied permanent has on
+    /// it" (Dominion Saboteur). Plain counters; keyword counters are not read.
+    #[serde(default)]
+    pub mirror_counters: bool,
     /// "except it's a Vehicle artifact with crew N and it loses all other
     /// card types" (Imposter Mech): the copy is an artifact only, with the
     /// Vehicle subtype and crew N; subtypes of the lost types go with them.
