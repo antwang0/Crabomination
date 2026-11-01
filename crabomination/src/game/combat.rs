@@ -2295,6 +2295,13 @@ impl GameState {
             {
                 self.players[p].attacked_walkers_of_this_turn.push(d);
             }
+            // CR 603.3a — an attachment's own Attacks trigger
+            // (`triggers_on_equipment`: Mirror Mockery on an opponent's
+            // creature) is its controller's, not the attacker's.
+            let equip_ctrl: Vec<usize> = equip_granted
+                .iter()
+                .map(|(s, _)| if *s == id { p } else { self.battlefield_find(*s).map_or(p, |c| c.controller) })
+                .collect();
             let card = self
                 .battlefield
                 .iter_mut()
@@ -2356,9 +2363,10 @@ impl GameState {
             let own = printed
                 .iter()
                 .enumerate()
-                .map(|(i, t)| (id, Some(i), t))
-                .chain(granted.iter().chain(static_granted.iter()).map(|t| (id, None, t)));
-            for (src, idx, t) in own.chain(equip_granted.iter().map(|(s, t)| (*s, None, t))) {
+                .map(|(i, t)| (id, Some(i), t, p))
+                .chain(granted.iter().chain(static_granted.iter()).map(|t| (id, None, t, p)));
+            let equipped = equip_granted.iter().zip(&equip_ctrl).map(|((s, t), c)| (*s, None, t, *c));
+            for (src, idx, t, ctrl) in own.chain(equipped) {
                 // Only SelfSource Attacks triggers are hardcoded here.
                 // YourControl-scoped Attacks triggers (Exalted via
                 // `Predicate::AttackingAlone`, Battle Banner, …) are
@@ -2371,7 +2379,7 @@ impl GameState {
                     && t.event.scope == crate::effect::EventScope::SelfSource
                     && exerted_now
                 {
-                    triggers.push((src, t.effect.clone(), p, t.event.filter.clone(), once_key(idx, t)));
+                    triggers.push((src, t.effect.clone(), ctrl, t.event.filter.clone(), once_key(idx, t)));
                 }
                 if t.event.kind == EventKind::Attacks
                     && t.event.scope == crate::effect::EventScope::SelfSource
@@ -2380,7 +2388,7 @@ impl GameState {
                     // re-evaluate it AFTER the entire attacker batch is
                     // declared (CR 506.5 "attacking alone" semantics
                     // require the post-batch view).
-                    triggers.push((src, t.effect.clone(), p, t.event.filter.clone(), once_key(idx, t)));
+                    triggers.push((src, t.effect.clone(), ctrl, t.event.filter.clone(), once_key(idx, t)));
                 }
             }
             // CR 702.147 — Decayed. "When it attacks, sacrifice it at end of
