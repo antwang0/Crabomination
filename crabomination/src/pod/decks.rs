@@ -172950,3 +172950,146 @@ pub const T_PRING_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     island, island, island, island,
 ];
+
+pub const SPOCK_2_COMMANDERS: &[CardFactory] = &[spock_always_your_friend];
+
+/// **Spock, Always Your Friend**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 7 Islands + 9 Mountains = 99.
+/// Spock, Always Your Friend (EDHREC, fetched 2026-11-01).
+pub const SPOCK_2_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, chrome_mox, cursed_mirror, fellwar_stone, izzet_signet,
+    midnight_clock, mind_stone, mox_amber, mox_opal, relic_of_legends, sol_ring,
+    talisman_of_creativity, thought_vessel, bloodstained_mire, command_beacon, command_tower,
+    fabled_passage, fiery_islet, mistrise_village, misty_rainforest, mystic_sanctuary,
+    polluted_delta, prismatic_vista, riverpyre_verge, scalding_tarn, scorched_geyser,
+    steam_vents, talon_gates_of_madara, temple_of_the_false_god, thundering_falls,
+    training_center, agate_instigator, archmage_emeritus, displacer_kitten, electrostatic_field,
+    firebrand_archer, guttersnipe, hermes_overseer_of_elpis, mocking_sprite, niv_mizzet_parun,
+    ragavan_nimble_pilferer, storm_kiln_artist, stormcatch_mentor, thermo_alchemist,
+    thor_god_of_thunder, tzaangor_shaman, valeria_richards_precocious, vivi_ornitier,
+    witty_roastmaster, fiery_inscription, gossips_talent, impact_tremors, abrade, arcane_denial,
+    blur, chain_of_vapor, chaos_warp, cyber_conversion, displace, essence_flux, ghostly_flicker,
+    hide_on_the_ceiling, highly_illogical, izzet_charm, lightning_bolt, planar_incision,
+    pongify, rapid_hybridization, reality_shift, redirect_lightning, refute, sirens_ruse, snap,
+    spaceshift, swan_song, teferis_time_twist, waterbenders_restoration, consuming_tide,
+    deep_space_scan, splash_portal, vandalblast, windfall,
+    // Basics
+    island, island, island, island, island, island, island, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const CHIEF_MILES_O_BRIEN_COMMANDERS: &[CardFactory] = &[chief_miles_obrien];
+
+/// **Chief Miles O'Brien**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Islands = 99.
+/// Chief Miles O'Brien (EDHREC, fetched 2026-11-01).
+pub const CHIEF_MILES_O_BRIEN_MAIN: &[CardFactory] = &[
+    aetheric_amplifier, astral_cornucopia, clearwater_goblet, darksteel_reactor,
+    empowered_autogenerator, everflowing_chalice, gavel_of_the_righteous, gemstone_array,
+    infused_arrows, insight_engine, jefferies_tube, lux_cannon, midnight_clock, panoptic_mirror,
+    pentad_prism, power_conduit, replicating_ring, rotating_fireplace, sol_ring, surge_node,
+    the_eternity_elevator, the_millennium_calendar, vexing_puzzlebox, ancient_tomb,
+    fabled_passage, lotus_field, lotus_vale, misty_rainforest, prismatic_vista, scorched_ruins,
+    seat_of_the_synod, shore_leave_planet, the_mycosynth_gardens, trenzalore_clocktower,
+    urzas_saga, consecrated_sphinx, coretapper, data_exploring_humanity, dominion_saboteur,
+    harmonized_trio, lady_octopus_inspired_inventor, lt_cmdr_geordi_la_forge,
+    mr_spock_science_officer, pensive_professor, phyrexian_metamorph, reconnaissance_partition,
+    sakashima_of_a_thousand_faces, seven_of_nine_tertiary_adjunct, spark_double,
+    twenty_toed_toad, vedalken_infuser, wan_shi_tong_librarian, archmage_ascension, as_foretold,
+    court_of_vantress, extravagant_replication, brainstorm, brainsurge, consider,
+    delightful_discovery, frantic_search, hieroglyphic_illumination, meeting_of_minds, negate,
+    opt, pongify, sphinxs_approach, sublime_epiphany, you_find_the_villains_lair,
+    flash_photography, irenicuss_vile_duplication, multiversal_recruitment, preordain,
+    quantum_misalignment,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island,
+];
+
+pub const THE_GUARDIAN_OF_FOREVER_COMMANDERS: &[CardFactory] = &[the_guardian_of_forever];
+
+/// **The Guardian of Forever**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 14 Wastes = 99.
+/// The Guardian of Forever (EDHREC, fetched 2026-11-01).
+pub const THE_GUARDIAN_OF_FOREVER_MAIN: &[CardFactory] = &[
+    ancient_stone_idol, anticausal_vestige, archive_arbiter, behemoth_of_vault_0,
+    big_mother_mouser, bronze_walrus, canoptek_spyder, canoptek_tomb_sentinel, cathodion,
+    circuit_mender, clockwork_fox, clone_shell, cryptic_trilobite, cybermen_squadron,
+    dauntless_scrapbot, dross_scorpion, duplicant, filigree_familiar, friendly_teddy,
+    galactus_devourer_of_worlds, herbie_scout_unit, kozilek_the_broken_reality, matter_reshaper,
+    meteor_golem, myr_battlesphere, phyrexian_triniform, sandstone_oracle, solemn_simulacrum,
+    su_chi_cave_guard, summoners_egg, treasure_keeper, tri_sentinel_act_of_vengeance,
+    triplicate_titan, wurmcoil_engine, kozileks_command, null_elemental_blast, all_is_dust,
+    all_fates_scroll, arc_reactor, bitterthorn_nissas_animus, blinkmoth_urn, chromatic_orrery,
+    cloud_key, collectors_vault, coveted_jewel, dreamstone_hedron, everflowing_chalice,
+    fellwar_stone, forsaken_monument, golden_argosy, heartstone, hedron_archive,
+    interdimensional_web_watch, isolinear_processor, lightning_greaves, liquimetal_torque,
+    meekstone, mind_stone, sol_ring, thran_dynamo, worn_powerstone, echoes_of_eternity,
+    arid_archway, baxter_building, big_apple_3_a_m, blinkmoth_nexus, bonders_enclave,
+    buried_ruin, capital_city, command_beacon, conduit_pylons, crystal_grotto, dark_depths,
+    darksteel_citadel, dragon_cursed_halls, fomori_vault, fountainport,
+    gallifrey_council_chamber, geier_reach_sanitarium, hall_of_tagsin, hidden_grotto,
+    high_market, inventors_fair, lazotep_quarry, rumble_arena,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+    wastes, wastes, wastes,
+];
+
+pub const U_S_S_FARRAGUT_COMMANDERS: &[CardFactory] = &[u_s_s_farragut_bold_explorer];
+
+/// **U.S.S. Farragut, Bold Explorer**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 13 Wastes = 99.
+/// U.S.S. Farragut, Bold Explorer (EDHREC, fetched 2026-11-01).
+pub const U_S_S_FARRAGUT_MAIN: &[CardFactory] = &[
+    anticausal_vestige, archive_arbiter, artisan_of_kozilek, bane_of_bala_ged,
+    blightsteel_colossus, burnished_hart, cityscape_leveler, cybermen_squadron,
+    dauntless_scrapbot, duplicant, emrakul_the_exigent_doom, galactus_devourer_of_worlds,
+    herbie_scout_unit, it_that_betrays, kozilek_butcher_of_truth, memnarch_the_warden,
+    meteor_golem, myr_battlesphere, omnath_locus_of_the_void, pathrazer_of_ulamog,
+    planet_killer, pupu_ufo, sandstone_oracle, scampering_surveyor, scaretiller,
+    solemn_simulacrum, summon_bahamut, troop_of_ponies, ulamog_the_infinite_gyre,
+    ultima_origin_of_oblivion, walking_atlas, eldrazi_confluence, kozileks_command, all_is_dust,
+    calamity_of_the_titans, command_chair, conjurers_closet, coveted_jewel, crucible_of_worlds,
+    darksteel_monolith, expedition_map, forsaken_monument, fractured_powerstone,
+    ghirapur_orrery, golden_argosy, grim_monolith, liquimetal_torque, mind_stone,
+    moonsilver_key, sol_ring, thaumatic_compass, the_one_ring, the_ten_rings, thought_vessel,
+    thran_dynamo, voyager_staff, wayfarers_bauble, world_map, echoes_of_eternity,
+    ugin_eye_of_the_storms, abstergo_entertainment, ancient_tomb, buried_ruin, command_beacon,
+    crystal_vein, elven_passage, escape_tunnel, evolving_wilds, fabled_passage, field_of_ruin,
+    guildless_commons, hobbit_hole, inventors_fair, prismatic_vista, reliquary_tower,
+    scavenger_grounds, shire_terrace, terramorphic_expanse, thespians_stage, ugins_labyrinth,
+    urzas_mine, urzas_power_plant, urzas_saga, urzas_tower, vibrant_cityscape, war_room,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+    wastes, wastes,
+];
+
+pub const S_S_BOTANY_BAY_COMMANDERS: &[CardFactory] = &[s_s_botany_bay];
+
+/// **S.S. Botany Bay**'s EDHREC average deck, card for card:
+/// 83 nonbasic cards + 16 Wastes = 99.
+/// S.S. Botany Bay (EDHREC, fetched 2026-11-01).
+pub const S_S_BOTANY_BAY_MAIN: &[CardFactory] = &[
+    abstruse_archaic, automated_artificer, bane_of_bala_ged, blightsteel_colossus,
+    breaker_of_armies, canoptek_tomb_sentinel, canoptek_wraith, cityscape_leveler, coretapper,
+    cryptothrall, emrakul_the_exigent_doom, emrakul_the_world_anew, endbringer,
+    glaring_fleshraker, herbie_lovable_robot, it_that_heralds_the_end, memnarch_the_warden,
+    meteor_golem, millikin, palladium_myr, pathrazer_of_ulamog, the_warring_triad,
+    tri_sentinel_act_of_vengeance, ultima_origin_of_oblivion, voltaic_construct,
+    eldritch_immunity, aangs_journey, all_is_dust, introduction_to_prophecy, aetheric_amplifier,
+    anvil_of_bogardan, arc_reactor, blinkmoth_urn, buried_treasure, buster_sword,
+    class_f_shuttlecraft, codex_shredder, collectors_vault, commanders_plate,
+    daily_bugle_newspaper, deep_space_9, elaborate_firecannon, everflowing_chalice,
+    eye_of_vecna, fellwar_stone, forsaken_monument, grimoire_of_the_dead, grinding_station,
+    hedron_archive, isolinear_processor, minds_eye, mystic_forge, perpetual_timepiece, sol_ring,
+    thran_dynamo, thrors_map, unwinding_clock, voltaic_key, warp_core, tezzeret_cruel_captain,
+    adventurers_inn, arcane_lighthouse, arch_of_orazca, blast_zone, blasted_landscape,
+    bonders_enclave, buried_ruin, cloudpost, command_beacon, conduit_pylons, darksteel_citadel,
+    fomori_vault, geier_reach_sanitarium, homeward_path, muraganda_raceway,
+    shrine_of_the_forsaken_gods, urzas_factory, urzas_mine, urzas_power_plant, urzas_saga,
+    urzas_tower, urzas_workshop, war_room,
+    // Basics
+    wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes, wastes,
+    wastes, wastes, wastes, wastes, wastes,
+];

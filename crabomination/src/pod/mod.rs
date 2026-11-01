@@ -37398,6 +37398,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::T_PRING_COMMANDERS,
             main: decks::T_PRING_MAIN,
         },
+        // Seat 6158: Spock, Always Your Friend's EDHREC average deck. `--pod-decks 6158`.
+        PodDeck {
+            name: "Spock, Always Your Friend (UR)",
+            commanders: decks::SPOCK_2_COMMANDERS,
+            main: decks::SPOCK_2_MAIN,
+        },
+        // Seat 6159: Chief Miles O'Brien's EDHREC average deck. `--pod-decks 6159`.
+        PodDeck {
+            name: "Chief Miles O'Brien (U)",
+            commanders: decks::CHIEF_MILES_O_BRIEN_COMMANDERS,
+            main: decks::CHIEF_MILES_O_BRIEN_MAIN,
+        },
+        // Seat 6160: The Guardian of Forever's EDHREC average deck. `--pod-decks 6160`.
+        PodDeck {
+            name: "The Guardian of Forever (C)",
+            commanders: decks::THE_GUARDIAN_OF_FOREVER_COMMANDERS,
+            main: decks::THE_GUARDIAN_OF_FOREVER_MAIN,
+        },
+        // Seat 6161: U.S.S. Farragut, Bold Explorer's EDHREC average deck. `--pod-decks 6161`.
+        PodDeck {
+            name: "U.S.S. Farragut, Bold Explorer (C)",
+            commanders: decks::U_S_S_FARRAGUT_COMMANDERS,
+            main: decks::U_S_S_FARRAGUT_MAIN,
+        },
+        // Seat 6162: S.S. Botany Bay's EDHREC average deck. `--pod-decks 6162`.
+        PodDeck {
+            name: "S.S. Botany Bay (C)",
+            commanders: decks::S_S_BOTANY_BAY_COMMANDERS,
+            main: decks::S_S_BOTANY_BAY_MAIN,
+        },
     ]
 }
 
