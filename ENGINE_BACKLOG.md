@@ -20,7 +20,6 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc5aX`) — the Equipment half of CR 603.3a](#fixedopen-2026-11-01-commander-run-01wruxc5ax--the-equipment-half-of-cr-6033a) | 14 |
-| Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc3Wo`) — cost-sacrifice LKI, an Aura's trigger owner](#fixedopen-2026-11-01-commander-run-01wruxc3wo--cost-sacrifice-lki-an-auras-trigger-owner) | 18 |
 | Bugs & robustness | [The Commander NEXT's lines 10-12 as `01WRuXc3Wo` found them (moved verbatim, 2026-11-01)](#the-commander-nexts-lines-10-12-as-01wruxc3wo-found-them-moved-verbatim-2026-11-01) | 5 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc3Wo`) — cost-sacrifice LKI, an Aura's trigger owner](#fixedopen-2026-11-01-commander-run-01wruxc3wo--cost-sacrifice-lki-an-auras-trigger-owner) | 40 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc4hq`) — REJECT census beside `01WRuXc2jM`, a concession sweep](#fixedopen-2026-10-31-commander-run-01wruxc4hq--reject-census-beside-01wruxc2jm-a-concession-sweep) | 24 |
