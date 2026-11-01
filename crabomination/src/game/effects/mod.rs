@@ -37353,9 +37353,19 @@ impl GameState {
                 // otherwise nest a `run_effect` frame per repeat. A prompting
                 // seat's "again?" goes through `MayDo` re-entering this
                 // effect, so its suspend resumes at the right repeat.
+                // CR 732.2 — a headless seat names how many times it repeats an
+                // optional loop: at most `HEADLESS_REPEAT_CAP`. Delina copying
+                // Wyll adds a die per copy, so "roll again" nears certainty and
+                // an always-yes answer never stopped (pod seed 2947889).
+                const HEADLESS_REPEAT_CAP: u32 = 30;
+                let mut repeats = 0u32;
                 loop {
                     self.run_effect(body, ctx, events)?;
                     if self.suspend_signal.is_some() || self.game_over.is_some() || !self.evaluate_predicate(again, ctx) {
+                        return Ok(());
+                    }
+                    repeats += 1;
+                    if repeats > HEADLESS_REPEAT_CAP && !self.seat_prompts(ctx.controller) {
                         return Ok(());
                     }
                     if self.seat_prompts(ctx.controller) {

@@ -10076,3 +10076,24 @@ fn cr_506_4_an_attacked_planeswalker_that_changes_control_leaves_combat() {
     );
     assert_eq!(g.players.iter().map(|p| p.life).collect::<Vec<_>>(), lives);
 }
+
+/// CR 732.2 — a headless seat that always answers "again" to an optional
+/// loop names a bound: `RepeatWhileMay` stops after 30 repeats (bug: Delina,
+/// Wild Mage copying Wyll's extra dice rolled again for ever in the bot's
+/// attack sim, 3-seat pod seed 2947889).
+#[test]
+fn cr_732_2_a_headless_optional_loop_stops_at_its_bound() {
+    use crabomination::decision::ScriptedDecider;
+    use crabomination::effect::{Effect, Predicate, Selector, Value};
+    let mut g = multi_player_game(3);
+    let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new(std::iter::repeat_n(DecisionAnswer::Bool(true), 100)));
+    let life = g.players[0].life;
+    let loop_ = Effect::RepeatWhileMay {
+        body: Box::new(Effect::GainLife { who: Selector::You, amount: Value::ONE }),
+        again: Predicate::True,
+        description: "again?".into(),
+    };
+    g.resolve_effect(&loop_, &EffectContext::for_ability(src, 0, None)).unwrap();
+    assert_eq!(g.players[0].life, life + 31, "the first pass and 30 repeats");
+}

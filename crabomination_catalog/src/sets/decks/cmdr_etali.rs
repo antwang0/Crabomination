@@ -191,7 +191,8 @@ fn a_delina_copy(source: Selector) -> Effect {
 }
 
 /// Delina's d20: each roll makes one attacking copy; on 15–20 you may roll
-/// again, without bound (`RepeatWhileMay` over `LastDieRoll`).
+/// again (`RepeatWhileMay` over `LastDieRoll`; a headless seat stops after 30
+/// repeats, CR 732.2).
 fn a_delina_roll() -> Effect {
     Effect::RepeatWhileMay {
         body: Box::new(Effect::RollDie {
@@ -333,7 +334,8 @@ pub fn orthion_hero_of_lavabrink() -> CardDefinition {
 /// attacks, choose target creature you control, then roll a d20. 1–14: create a
 /// tapped and attacking non-legendary token copy of it that's exiled at end of
 /// combat. 15–20: create one of those tokens; you may roll again.
-/// "You may roll again" is asked each time, without bound (`RepeatWhileMay`);
+/// "You may roll again" is asked each time (`RepeatWhileMay`; a headless seat
+/// stops after 30 repeats);
 /// each token's end-of-combat exile is its own copiable text.
 pub fn delina_wild_mage() -> CardDefinition {
     CardDefinition {
