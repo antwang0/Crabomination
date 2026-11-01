@@ -37296,6 +37296,108 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WORF_3_COMMANDERS,
             main: decks::WORF_3_MAIN,
         },
+        // Seat 6141: Julian Bashir, Frontier Doctor's EDHREC average deck. `--pod-decks 6141`.
+        PodDeck {
+            name: "Julian Bashir, Frontier Doctor (W)",
+            commanders: decks::JULIAN_BASHIR_COMMANDERS,
+            main: decks::JULIAN_BASHIR_MAIN,
+        },
+        // Seat 6142: Tom Paris, Risk-Taker's EDHREC average deck. `--pod-decks 6142`.
+        PodDeck {
+            name: "Tom Paris, Risk-Taker (UR)",
+            commanders: decks::TOM_PARIS_COMMANDERS,
+            main: decks::TOM_PARIS_MAIN,
+        },
+        // Seat 6143: Kira Nerys, Firebrand's EDHREC average deck. `--pod-decks 6143`.
+        PodDeck {
+            name: "Kira Nerys, Firebrand (WR)",
+            commanders: decks::KIRA_NERYS_COMMANDERS,
+            main: decks::KIRA_NERYS_MAIN,
+        },
+        // Seat 6144: Koloth, Tribble Hunter's EDHREC average deck. `--pod-decks 6144`.
+        PodDeck {
+            name: "Koloth, Tribble Hunter (R)",
+            commanders: decks::KOLOTH_COMMANDERS,
+            main: decks::KOLOTH_MAIN,
+        },
+        // Seat 6145: Alexander, Ship's Fool's EDHREC average deck. `--pod-decks 6145`.
+        PodDeck {
+            name: "Alexander, Ship's Fool (WR)",
+            commanders: decks::ALEXANDER_COMMANDERS,
+            main: decks::ALEXANDER_MAIN,
+        },
+        // Seat 6146: Beckett Mariner, Impetuous Ensign's EDHREC average deck. `--pod-decks 6146`.
+        PodDeck {
+            name: "Beckett Mariner, Impetuous Ensign (R)",
+            commanders: decks::BECKETT_MARINER_COMMANDERS,
+            main: decks::BECKETT_MARINER_MAIN,
+        },
+        // Seat 6147: Troi, Winging It's EDHREC average deck. `--pod-decks 6147`.
+        PodDeck {
+            name: "Troi, Winging It (W)",
+            commanders: decks::TROI_2_COMMANDERS,
+            main: decks::TROI_2_MAIN,
+        },
+        // Seat 6148: Captain Jonathan Archer's EDHREC average deck. `--pod-decks 6148`.
+        PodDeck {
+            name: "Captain Jonathan Archer (G)",
+            commanders: decks::CAPTAIN_JONATHAN_ARCHER_COMMANDERS,
+            main: decks::CAPTAIN_JONATHAN_ARCHER_MAIN,
+        },
+        // Seat 6149: La Forge, Perceptive Engineer's EDHREC average deck. `--pod-decks 6149`.
+        PodDeck {
+            name: "La Forge, Perceptive Engineer (U)",
+            commanders: decks::LA_FORGE_2_COMMANDERS,
+            main: decks::LA_FORGE_2_MAIN,
+        },
+        // Seat 6150: Kurn, Son of Mogh's EDHREC average deck. `--pod-decks 6150`.
+        PodDeck {
+            name: "Kurn, Son of Mogh (B)",
+            commanders: decks::KURN_COMMANDERS,
+            main: decks::KURN_MAIN,
+        },
+        // Seat 6151: Chief Kyle, Transporter Tech's EDHREC average deck. `--pod-decks 6151`.
+        PodDeck {
+            name: "Chief Kyle, Transporter Tech (WU)",
+            commanders: decks::CHIEF_KYLE_COMMANDERS,
+            main: decks::CHIEF_KYLE_MAIN,
+        },
+        // Seat 6152: U.S.S. Voyager, Lone Wanderer's EDHREC average deck. `--pod-decks 6152`.
+        PodDeck {
+            name: "U.S.S. Voyager, Lone Wanderer (G)",
+            commanders: decks::U_S_S_VOYAGER_COMMANDERS,
+            main: decks::U_S_S_VOYAGER_MAIN,
+        },
+        // Seat 6153: Lwaxana Troi, Charming Guest's EDHREC average deck. `--pod-decks 6153`.
+        PodDeck {
+            name: "Lwaxana Troi, Charming Guest (R)",
+            commanders: decks::LWAXANA_TROI_COMMANDERS,
+            main: decks::LWAXANA_TROI_MAIN,
+        },
+        // Seat 6154: U.S.S. Enterprise-E, Sovereign's EDHREC average deck. `--pod-decks 6154`.
+        PodDeck {
+            name: "U.S.S. Enterprise-E, Sovereign (W)",
+            commanders: decks::U_S_S_ENTERPRISE_E_COMMANDERS,
+            main: decks::U_S_S_ENTERPRISE_E_MAIN,
+        },
+        // Seat 6155: David and Carol Marcus, Creators's EDHREC average deck. `--pod-decks 6155`.
+        PodDeck {
+            name: "David and Carol Marcus, Creators (G)",
+            commanders: decks::DAVID_AND_CAROL_MARCUS_COMMANDERS,
+            main: decks::DAVID_AND_CAROL_MARCUS_MAIN,
+        },
+        // Seat 6156: Sarcophagus, Ship of the Dead's EDHREC average deck. `--pod-decks 6156`.
+        PodDeck {
+            name: "Sarcophagus, Ship of the Dead (R)",
+            commanders: decks::SARCOPHAGUS_COMMANDERS,
+            main: decks::SARCOPHAGUS_MAIN,
+        },
+        // Seat 6157: T'Pring, Never Parted's EDHREC average deck. `--pod-decks 6157`.
+        PodDeck {
+            name: "T'Pring, Never Parted (UG)",
+            commanders: decks::T_PRING_COMMANDERS,
+            main: decks::T_PRING_MAIN,
+        },
     ]
 }
 
