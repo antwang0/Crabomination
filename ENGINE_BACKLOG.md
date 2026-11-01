@@ -422,9 +422,22 @@ sessions within the hour (the duplicates were dropped on rebase).
 - **Concession sweep**: random pods at 3-8 seats under `CRAB_POD_CONCEDE=30` (4501) and `=10 --a dflt` (4502), 300 games each,
   overflow build — 0 panics, 0 rejections, 0 undecided. (Recipe: per game `random.Random(seed)` picks seats and decks, game
   seed `seed*1000+i`, `CRAB_POD_TRACE=0` to see REJECT lines.)
-- ⏳ **CLAIMED by `01WRuXc4hq` (audit-build sweep 4505-4506, 6-8 seats, strict):** an `InvalidAttackTarget` (`--seats 6
-  --pod-decks 5581,142,2219,1297,3658,440 --seed 4505111`, Drannith Magistrate seat) and an empty declaration refused
-  `CannotAttack` (`--seats 6 --pod-decks 5695,1661,4014,58,6129,5168 --seed 4506217 --a dflt`, `CRAB_POD_CONCEDE=15`).
+- ✅ **Audit-build sweep** (`RUSTFLAGS=-C debug-assertions=yes`, overflow, strict answer log; 4503-4506, 1,600 random
+  pods, two blocks under `CRAB_POD_CONCEDE`): 0 assertions, 0 panics, 0 undecided, two REJECT classes, both fixed:
+  - **CR 506.2** — `settle_declaration`'s re-aims ran after `fit_attacker_caps` and refilled a capped seat (`--seats 6
+    --pod-decks 5581,142,2219,1297,3658,440 --seed 4505111`). A final send-home-only cap pass. Test
+    `settle_holds_a_seat_to_its_attacker_cap`. ⚠ That error is `combat.rs`'s cap loop, which prints **no** `attack_reject`.
+  - **CR 508.1d** — a MustAttack Gogo copying Port Razer, having attacked every open seat, was still required (`--seats 6
+    --pod-decks 5695,1661,4014,58,6129,5168 --seed 4506217 --a dflt`, `CRAB_POD_CONCEDE=15`): `has_defender_dependent_
+    restriction` lacked `CantAttackPlayerAttackedThisTurn`, so `attacker_is_able`'s fast path said able. ⚠ **That list must
+    name every keyword `attacker_target_block` reads** — add both together. Test
+    `cr_508_1d_port_razer_out_of_seats_is_not_required`. Also: `forced_attacks` (Master Warcraft / combat-cap fallback) was a
+    stale copy that knew MustAttack and goad only; it now reads the engine's requirement set and per-seat bars
+    (`forced_attacks_obey_the_engine_s_requirements_and_bars`).
+  - Fixed tip: 4507-4508 (1,000 pods, 5-8 seats, one block conceding at 15 `--a dflt`): 0 bad, 0 undecided.
+- Closing gates: suite **29,425 / 0 / 8** (strict), precon-seat shards green (284 / 298 s), `clippy -p crabomination -p
+  crabomination_tests --all-targets` 0, `--bench` **196,176 / 27.64 / 613.0 / 0 stalls byte-identical** (240.8 games/s),
+  determinism ok. **Next concede/audit seed 4509, census 815.**
 - Gates: suite **29,422 / 0 / 8** (strict, precon-seat test excluded — not re-run this session); `clippy -p crabomination
   --all-targets` 0 (workspace clippy not re-run: only the engine crate changed); `--bench` **196,176 / 27.64 / 613.0 / 0 stalls
   byte-identical**, determinism ok, 239.5 games/s; cube / sos / sealed × 300 (seed 4601) 0 undecided.
