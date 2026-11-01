@@ -195,6 +195,23 @@ fn deadly_dispute_paid_with_a_peacock_clue_triggers_fleeting_memories() {
     assert_eq!(g.players[1].library.len() + 3, lib1, "the sacrificed Sol Ring was a Clue");
 }
 
+/// CR 603.10a — and for a "sacrifice another" cost: Atog eating a
+/// Peacock-made Clue is "you sacrifice a Clue".
+#[test]
+fn atog_eating_a_peacock_clue_triggers_fleeting_memories() {
+    let mut g = pod(2);
+    stock_libraries(&mut g, 10);
+    ready(&mut g, 0, catalog::senator_peacock());
+    ready(&mut g, 0, catalog::fleeting_memories());
+    let atog = ready(&mut g, 0, catalog::atog());
+    let ring = ready(&mut g, 0, catalog::sol_ring());
+    let lib1 = g.players[1].library.len();
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Target(Target::Player(1))]));
+    activate(&mut g, atog, 0, None).expect("Atog");
+    assert!(g.battlefield_find(ring).is_none(), "Sol Ring paid the cost");
+    assert_eq!(g.players[1].library.len() + 3, lib1, "the sacrificed Sol Ring was a Clue");
+}
+
 /// Start Your Engines animates Vehicles and gives the team +2/+0; Speedway
 /// Fanatic's crew gives the Vehicle haste.
 #[test]

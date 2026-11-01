@@ -8013,6 +8013,7 @@ impl GameState {
         // (CR 603.3).
         if let Some(c) = self.dying_snapshot(sacrifice) {
             self.died_card_snapshots.insert(sacrifice, c);
+            self.scratch.death_snapshot_hold = true;
         }
         let mut events = vec![
             GameEvent::CreatureSacrificed { card_id: sacrifice, who: p },
@@ -8446,6 +8447,7 @@ impl GameState {
         for sac in &sacrifices {
             if let Some(c) = self.dying_snapshot(*sac) {
                 self.died_card_snapshots.insert(*sac, c);
+                self.scratch.death_snapshot_hold = true;
             }
             events.push(GameEvent::CreatureSacrificed { card_id: *sac, who: p });
             events.push(GameEvent::CreatureDied { card_id: *sac });
@@ -8636,6 +8638,7 @@ impl GameState {
             }
             if let Some(c) = self.dying_snapshot(sac) {
                 self.died_card_snapshots.insert(sac, c);
+                self.scratch.death_snapshot_hold = true;
             }
             events.push(GameEvent::PermanentSacrificed { card_id: sac, who: p });
             let mut die = self.remove_to_graveyard_as_cost(sac);
@@ -25935,7 +25938,7 @@ impl GameState {
             // sacrificed artifact's mana value").
             let snap_pt = self
                 .battlefield_find(other_cid)
-                .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), c.clone()));
+                .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), self.lki_clone(c)));
             if let Some((p_val, t_val, mv, snap)) = snap_pt {
                 self.sacrificed_power = Some(p_val);
                 self.sacrificed_toughness = Some(t_val);
@@ -25950,6 +25953,7 @@ impl GameState {
                 cost_sac_pt = Some((p_val, t_val));
                 cost_sac_mv = mv;
                 self.died_card_snapshots.insert(other_cid, snap);
+                self.scratch.death_snapshot_hold = true;
                 self.stamp_sacrificed_card(other_cid);
             }
             if is_creature {
