@@ -2321,3 +2321,12 @@ The three TRC precons (seats 6094-6096, `decks::trek_federation` / `trek_klingon
 | 🟡 S.S. Botany Bay | "each opponent exiles a card from their graveyard" — their pick | the engine picks each opponent's card (`Selector::one_of`) |
 | 🟡 Dominion Saboteur | the copied permanent's counters, "the same number and kinds" | plain counters only (`EntersAsCopy.mirror_counters`); keyword counters (flying, shield-as-keyword …) are not mirrored |
 | 🟡 Deep Space Scan | no maximum hand size "until your next turn" | the limit is set back to seven at your next upkeep — differs only if another effect had changed it |
+
+## Star Trek EDHREC closers, fourth to seventh batches (2026-11-01, `01WRuXc4Bu`)
+
+`decks::trek_singles4` .. `trek_singles7` (seats 6163-6188). Open 🟡 rows (each card plays; the clause named is
+approximated):
+
+| Card | Printed | Approximation |
+|---|---|---|
+| 🟡 Jean-Luc, Mon Capitaine | Faeries counted against the creatures you "already control" (CR 614.12) | the entrant itself is excluded (`DistinctCreatureTypesAmongYourOtherNonBorgCreatures`), but in a batch of Faeries entering together (Data's two) the later ones see the earlier ones' Faerie type — one counter more |

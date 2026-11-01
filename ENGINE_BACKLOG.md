@@ -19,6 +19,8 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc4Bu`) — 26 Star Trek seats, four primitives](#fixedopen-2026-11-01-commander-run-01wruxc4bu--26-star-trek-seats-four-primitives) | 25 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4Bu` found them (moved verbatim, 2026-11-01)](#the-commander-nexts-lines-as-01wruxc4bu-found-them-moved-verbatim-2026-11-01) | 4 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc3G1`) — 22 Star Trek seats, four primitives](#fixedopen-2026-11-01-commander-run-01wruxc3g1--22-star-trek-seats-four-primitives) | 19 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc3G1` found them (moved verbatim, 2026-11-01)](#the-commander-nexts-lines-as-01wruxc3g1-found-them-moved-verbatim-2026-11-01) | 13 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc5aX`) — the Equipment half of CR 603.3a](#fixedopen-2026-11-01-commander-run-01wruxc5ax--the-equipment-half-of-cr-6033a) | 14 |
@@ -408,6 +410,35 @@ planner choices.
 ## The Commander NEXT's line 9 as `01WRuXc4hq` found it (moved verbatim, 2026-10-31)
 
 9. **`01WRuXc48R` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc48R`): residual rank, `audit_up_to_one --pod`, a literal-cap census.** ⚠ **CR 903.5a bug class: eleven "reveal until" effects were `cap: 60` (a 60-card library's depth) and stopped 60 cards into a 99-card library** — now `1000` (Chaos Wand, Dazzling Sphinx, Gríma, Page, Plargg, Sacred Guide, Spinner of Souls, Thicket Elemental, Clifftop Lookout, The Regalia, Warrior of Light), plus Selective Memory / The Bath Song's "any number"; **grep `Const(60)` in any new card**. Four "up to one" slots hit their own side (Koh, Psychic Pickpocket, Rhino's Rampage, Sol'Kanar → `OptionalTargets { min: 0 }`; `ExileLinked`/`ExileWithSource` now hostile in `permanent_slot_is_hostile`); Koh's re-choice keeps other grants; Aesir chapter I is a pick. Gates: suite **29,360 / 0 / 8** (strict), clippy **0** (84 min cold on 4 cores — budget it), `--bench` **196,176 / 613.0 / 0 stalls byte-identical**, determinism ok. Pods: start-tree 29400 (4 seats, 1,500 games) and 29700 (6 seats, 600); closing-tree 29800/29900/30000/30100 at 3/5/8/4 seats, 1,550 games — **3,650 games, 0 panics, 3 finite board caps** (Rabble Rousing's Citizens `--pod-decks 650,750,4954,5239 --seed 29686 --first 1`; Innkeeper's Talent + The Great Henge `312,1517,3440,5168 --seed 30174 --first 1`; Eidolon of Blossoms / Shizuko `588,2548,3003,3883,5827 --seed 29939 --first 0`), no stalls, no draws. **Next seed 30200.** Next: the rank top is choice-exposure only (Dawnhand's blight is a cost — needs cost-payment plumbing; Queen Kayla needs a simultaneous put across per-MV picks); `audit_up_to_one` false positives come from `dump_cards --effects` not dumping station / granted triggers (Dawnsire, Baseball Bat) — widen the dump, not the regex.
+
+## FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc4Bu`) — 26 Star Trek seats, four primitives
+
+Seats 6163-6188 (EDHREC average decks, fetched 2026-11-01), closed by 38 cards in `decks::trek_singles4`..`7`; tests in
+`recent_b::trek_singles4`..`7`. Seeds claimed: see TODO's Commander NEXT.
+- ✅ **La Forge, Thoughtful as Ever** — `TurnRegistries::counter_put_this_turn` (permanent, placer) for every counter of
+  any kind, keyword counters included, read by the layer leaf `R::YouPutCounterOnThisTurn`; its length is mixed into
+  the gather key; written only when the key is new.
+- ✅ **Q, Stacking the Deck** — `Effect::GainActivatedAbility` reaches an EXILED card when the ability is `from_exile`
+  (CR 113.6); an exiled source's activation index is printed-then-instance-granted; `exile_remove_at` drops the grant
+  (CR 400.7); `Effect::CopyCardMayCast` stages a token copy in exile and casts it paying its costs (CR 707.12). The bot
+  now offers every `from_exile` ability of an owned exiled card (it offered none before — two printed cards had one).
+- ✅ **Lt. Arex** — `DynamicPt::DistinctLandNamesControlled` (CR 604.3).
+- ✅ **Jean-Luc, Mon Capitaine** — `Value::DistinctCreatureTypesAmongYourOtherNonBorgCreatures`; `filtered_enter_counters`
+  passes the entrant as the trigger source (CR 614.12 "already control"). 🟡 a simultaneous batch still sees itself.
+- ✅ `RevealUntilLandsToBattlefield` records its lands for `Selector::LastMoved` (Will Riker).
+- Found, not changed: The One Ring's dropped "if you cast it" gate is the residual of three new seats — cube-frozen.
+- OPEN: Chief Montgomery Scott (an "enters with X counters" rider on a put-from-hand), Worlds Within Worlds; the
+  three-card Star Trek decks (Georgiou, Brad Boimler, Scotty Miracle Worker, Zero, M'Ress, Armus, Khan).
+  `edhrec_scan_pairs.py --legal --max 0` lists ~20+ complete partner / Background / Doctor pairs not seated (closed by
+  earlier runs' cards, so not seated under the "your own cards" rule).
+- Closing gates: suite **29,500 / 1 / 8** (`CRAB_ANSWER_LOG=strict`, the per-seat pod test skipped) — the one failure was Trelane, Squire of Gothos missing the new `Q` type (`every_creature_carries_its_printed_subtypes`), fixed and re-run; `--bench` **196,176 / 27.64 / 613.0 / 0 stalls** byte-identical, determinism + thread_determinism ok; cube / sos / sealed decision-identical; `bench_ab.py` 12 pairs -1.63 % median (noise). Sweeps 29437-29442 (3,013 games: 0 panics; 1 undecided, a CR 104.4a draw). Clippy: see the closing note below.
+
+## The Commander NEXT's lines as `01WRuXc4Bu` found them (moved verbatim, 2026-11-01)
+
+3. **State (2026-11-01, `01WRuXc3G1`): 6,162 seats** — 6141-6162 are 22 more Star Trek EDHREC single-commander average decks (Bashir, Tom Paris, Kira Nerys, Koloth, Alexander, Beckett Mariner, Troi, Archer, La Forge, Kurn, Chief Kyle, Voyager, Lwaxana, Enterprise-E, David and Carol Marcus, Sarcophagus, T'Pring, Spock, O'Brien, Guardian of Forever, Farragut, Botany Bay), closed by 34 cards in `decks::trek_singles3` (4 🟡 rows in INCOMPLETE). Star Trek is Commander-legal from 2026-11-13. ⚠ **The legal frontier is exhausted:** over all 6,954 EDHREC commanders (`COMMANDER_PAGES = 80` in `commander_backlog.py` for the fetch — it ships at 6) only 160 are unseated, and every one but Sol'Kanar (already seated under another slug) is an Un-set / `mbc` / `slc` / unreleased card.
+5. **Next decks, by cards short:** one each — **Q, Stacking the Deck** (a granted exile-zone ability that creates and casts a copy of the card), **La Forge, Thoughtful as Ever** (needs a placer-aware "permanents you put a counter on this turn" registry for any kind — `TurnRegistries::p1p1_put_this_turn` is +1/+1 and creatures only; ⚠ widening it moves the gather key). Two: **Starfleet Communicator** (cast trigger copies it; closes Gwyndala / Chekov / Jurati with one more each), Hugh (Borg Cube + Death Is Irrelevant), Vash (Blastoneuron), Tilly (Storm the Festival), Arex (Warp Speed), Riker (Erica Ortegas). Re-run `edhrec_scan_top.py` after each batch.
+7. **`01WRuXc3G1` gotchas:** `PutFromHandOntoBattlefield` is already a "you may" (pick minimum 0) — wrapping it in `MayDo` makes the headless seat decline. `WhenTargetDiesThisTurn` reads the target *as it resolves*, so put it **before** the `Fight` that may kill it (T'Pring). Triggers dispatch after the whole resolution, so an "enters with" vs "put after entry" counter is invisible to ETB triggers — a test that claims to tell them apart needs a replacement or SBA reader. New primitives: `Effect::DoubleTriggersWhileSourceTapped` (a `TriggersAdditionalTime` layer-6 entry, `mod_families::TRIGGER_DOUBLE` gate, read in `ally_trigger_extra_fires`), `StaticEffect::YourCreaturesEnterAttacking`, `EntersAsCopy.mirror_counters`, `CounterType::Promotion`, `CreatureType::Hirogen`.
+8. **Sweeps this run (closing tip, release):** **29432** (17 new seats, 3-6 seats, 216 games: 1 CR 104.4a draw), **29433** (every deck at 4 seats, 1,540: **0 bad**), **29434** (the 22 new seats at 3-6, 230: 0 bad), **29435** (every deck at 6 seats, `CRAB_POD_CONCEDE=20`, 1,027: 1 Descent into Avernus CR 104.4a draw), **29436** (`--a dflt`, new seats at 4-5, 44: 0 bad); census **821** (`--a dflt`, 150 pods, 3-5 seats): **0 rejections**. Gates: suite **29,466 / 0 / 7** (strict), `--bench` **196,176 / 27.64 / 613.0** byte-identical, A/B +1.80 % median (noise), clippy **0** (91 min cold workspace run found one `needless_range_loop` in the new test; fixed and re-checked). **Next seed 29437, census 822.**
 
 ## FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc3G1`) — 22 Star Trek seats, four primitives
 

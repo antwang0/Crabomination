@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-01 (Commander run, `01WRuXc4Bu`) — guardrail; an any-kind counter registry, exile-zone grants
+
+Touched shared paths: `dispatch_triggers_for_events` walks the event list once more for `CounterAdded` /
+`KeywordCounterAdded` (a `Vec` push only for a new (permanent, placer) key); the gather key mixes one more length;
+`cast_candidates_all` walks the seat's own exiled cards for `from_exile` abilities; `filtered_enter_counters` sets one
+ctx field. Everything else is catalog / pod seats. `release`, 4-core box (Xeon @ 2.80GHz), base `5ad3e8d29` (the run's
+start) vs tip `fcb546a97`:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok,
+                 thread_determinism ok (3 vs 1); peak_rss_mib 48.4
+pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: 372,578 / 213,776 / 520,724, 0 stalls —
+                 decision-identical to `01WRuXc2jM`'s reading
+bench_ab.py      12 pairs: B/A median -1.63 %, mean -1.46 % (sd 4.29) — inside the instrument's noise; no regression
+```
+
 ### 2026-11-01 (Commander run, `01WRuXc3G1`) — guardrail; linked trigger doubling, the enters-attacking replacement
 
 Touched shared paths: `ally_trigger_extra_fires` reads the continuous-effects family fold (`TRIGGER_DOUBLE`) once per
