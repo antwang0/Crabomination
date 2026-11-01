@@ -431,7 +431,7 @@ Seats 6163-6188 (EDHREC average decks, fetched 2026-11-01), closed by 38 cards i
   three-card Star Trek decks (Georgiou, Brad Boimler, Scotty Miracle Worker, Zero, M'Ress, Armus, Khan).
   `edhrec_scan_pairs.py --legal --max 0` lists ~20+ complete partner / Background / Doctor pairs not seated (closed by
   earlier runs' cards, so not seated under the "your own cards" rule).
-- Closing gates: suite **29,500 / 1 / 8** (`CRAB_ANSWER_LOG=strict`, the per-seat pod test skipped) — the one failure was Trelane, Squire of Gothos missing the new `Q` type (`every_creature_carries_its_printed_subtypes`), fixed and re-run; `--bench` **196,176 / 27.64 / 613.0 / 0 stalls** byte-identical, determinism + thread_determinism ok; cube / sos / sealed decision-identical; `bench_ab.py` 12 pairs -1.63 % median (noise). Sweeps 29437-29442 (3,013 games: 0 panics; 1 undecided, a CR 104.4a draw). Clippy: see the closing note below.
+- Closing gates: suite **29,500 / 1 / 8** (`CRAB_ANSWER_LOG=strict`, the per-seat pod test skipped) — the one failure was Trelane, Squire of Gothos missing the new `Q` type (`every_creature_carries_its_printed_subtypes`), fixed and re-run; `--bench` **196,176 / 27.64 / 613.0 / 0 stalls** byte-identical, determinism + thread_determinism ok; cube / sos / sealed decision-identical; `bench_ab.py` 12 pairs -1.63 % median (noise). Sweeps 29437-29442 (3,013 games: 0 panics; 1 undecided, a CR 104.4a draw). `cargo clippy --workspace --exclude crabomination_client --all-targets`: **0** (86 min cold; a first run was killed at the 30-minute background limit and restarted).
 
 ## The Commander NEXT's lines as `01WRuXc4Bu` found them (moved verbatim, 2026-11-01)
 
