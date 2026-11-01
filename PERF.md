@@ -3136,6 +3136,20 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-01 (Commander run, `01WRuXc3G1`) — guardrail; linked trigger doubling, the enters-attacking replacement
+
+Touched shared paths: `ally_trigger_extra_fires` reads the continuous-effects family fold (`TRIGGER_DOUBLE`) once per
+trigger dispatch before its existing gate; every permanent entry asks `apply_enters_attacking_replacement`, which
+returns on an empty `attacking` list (combat entries walk the battlefield's statics once); the copy replacement reads
+one more `EntersAsCopy` flag. Everything else is catalog / pod seats. `release`, 4-core box (Xeon @ 2.10GHz), base
+`258dc3819` (the run's start) vs tip `cd2e34bc4`:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok,
+                 thread_determinism ok (3 vs 1); peak_rss_mib 50.7
+bench_ab.py      8 pairs: B/A median +1.80 %, mean +0.75 % (sd 12.62) — noise; no regression
+```
+
 ### 2026-10-31 (Commander run, `01WRuXc2jM`) — guardrail; attack / block requirement predicates, pod-bot declaration repairs
 
 Touched shared paths: `attacker_is_able`'s fast path adds a `statics` bit test, a `goaded_by` read and a per-player shield
