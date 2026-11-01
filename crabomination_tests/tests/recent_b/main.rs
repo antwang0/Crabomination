@@ -395,3 +395,4 @@ mod trek_klingon;
 mod trek_borg;
 mod trek_singles;
 mod trek_singles2;
+mod trek_singles3;

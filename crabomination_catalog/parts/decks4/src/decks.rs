@@ -1443,3 +1443,6 @@ pub use trek_singles::*;
 #[path = "../../../src/sets/decks/trek_singles2.rs"]
 mod trek_singles2;
 pub use trek_singles2::*;
+#[path = "../../../src/sets/decks/trek_singles3.rs"]
+mod trek_singles3;
+pub use trek_singles3::*;
