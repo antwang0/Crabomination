@@ -7044,3 +7044,67 @@ champion's value, where the lookahead covers the policy's misses; (2) an
 action-conditioned policy (score the move's objects against the state's
 per-object embeddings rather than a pooled successor), which raises the
 imitation ceiling and is what a phase-5 distillation would need.
+
+### Phase 4 — the search over the complete move list, window by window (2026-10-31)
+
+`MctsConfig::menu_windows` (`096c2b281`): in a chosen window the client's
+search takes the decision over the whole move list, its arms the phase-3
+policy's top 8 (`policy_pilot::ranked_arms` — kind-aware logits over the
+same candidate states the policy pilot reads, combat as whole
+declarations, settled), the 256 rollouts spent by Gumbel sequential
+halving on those logits; each rollout redeals hidden zones before the arm
+is applied. Priors from run D's net (`.ladder/p3/mcts_s43_final`, in the
+candidate slot); the value net is the champion, as in the client. Each
+window alone on the client's pilot (`mcts-net67-menu-<w>`) vs the
+client's pilot (`mcts-net67-fixes`), SOS sealed, 120 × 12, paired:
+
+| window | seed 43 | seed 97 | pooled |
+|---|---|---|---|
+| main (own main phase, empty stack: the whole list, abilities included, on policy priors — replaces the six-cast menu) | **53.0** [51.1, 54.8] | **52.3** [50.5, 54.1] | **+2.65** |
+| combat (attack and block declarations — the heuristic's sims before) | **52.4** [50.6, 54.1] | **53.0** [51.3, 54.7] | **+2.7** |
+| prompts | 50.2 [48.2, 52.2] | 50.7 [48.5, 52.9] | +0.45 (null) |
+| instant (every other priority window) | 48.2 [46.5, 49.9] | 49.7 [47.8, 51.5] | **−1.05** |
+
+**Readings.** (1) Searching combat on rollouts is now worth +2.7 — round
+31's −11 reversed. What changed is the arms (the policy's top 8
+declarations over settled states, not the sims' menu at 64 iterations)
+and the leaf (the champion net, not material). (2) The main window gains
+over the six-cast menu with abilities and the alternative targets in it
+— the off-menu share the gap audit measured. (3) Instant-speed search
+loses a point: three turns of unscored-heuristic rollouts are a poor
+judge of "cast it now or hold it", and the window is searched hundreds of
+times a game. (4) Prompts are a null at this budget.
+
+**Main + combat together** (`mcts-net67-menu-mc`): **57.1 % [55.2, 59.0]
+(seed 43) / 54.1 % [52.3, 55.9] (seed 97), pooled +5.6** over the
+client's pilot — more than the two windows apart (+2.65, +2.7). **Phase
+4's gate (beat the client's pilot, paired) is passed** by this
+configuration. Wall clock per 1,440-game cell on 20 threads (both seats,
+the client's pilot on one): main 1,367 s, combat 1,240 s, prompts
+1,519 s, main + combat 1,996 s; no client-vs-client cell was timed, so
+the search's own premium is not separated here.
+Not adopted in the client yet — it needs a policy-headed net shipped
+beside the champion, and an FRA read (these cells are SOS).
+
+**Option 2 — the policy pilot plays the rollouts** (`MctsConfig::
+policy_rollouts`, `PolicyBot::for_rollout`: both seats, prompts
+included, sampling at temperature 1, no per-decision redeal inside a
+rollout; profile suffix `-np<N>`; `-it<N>` is the budget-matched
+heuristic control). Main + combat, run D's policy, vs the client's
+pilot, 120 × 12 paired:
+
+| rollouts | horizon | seed 43 | seed 97 | cell s (43 / 97) |
+|---|---|---|---|---|
+| 256 unscored-heuristic (`mc`) | 3 | **57.1** | **54.1** | 1,996 / 1,517 |
+| 32 policy | 1 | 44.7 [42.7, 46.7] | 43.9 [42.0, 45.9] | 940 / 810 |
+| 32 policy | 2 | 48.4 [46.5, 50.3] | 43.8 [41.9, 45.6] | 1,880 / 1,937 |
+| 32 unscored-heuristic (control) | 1 | 44.9 [43.0, 46.7] | 44.3 [42.5, 46.1] | 675 / 659 |
+
+**Reading.** At an equal budget and horizon the policy's rollouts are
+worth exactly the heuristic's (44.7 / 43.9 vs 44.9 / 44.3) and cost more
+(cell time +31 % at horizon 1, with the client's own search in it); the
+loss against the client is the budget (32 vs 256), not who plays. That
+is what phase 3 predicted: a ~35 %-vs-`dflt` policy is no better a
+rollout player than the unscored heuristic. Net-played rollouts wait for
+a stronger policy (phase 5's loop, or the action-conditioned policy);
+until then the adopted shape is `mc` with the heuristic's 256 rollouts.

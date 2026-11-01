@@ -419,6 +419,13 @@ pub struct MctsConfig {
     /// Skip the search when the policy's favourite holds at least this
     /// share of the softmax over the arms; > 1 (default) never skips.
     pub menu_confident: f64,
+    /// Play the rollouts with the policy pilot (`policy_pilot::PolicyBot`
+    /// on [`Self::policy_slot`], sampling at [`Self::rollout_temp`]) for
+    /// both seats, prompts included, instead of the unscored heuristic —
+    /// the net makes the moves inside the search too. ~100× a heuristic
+    /// rollout's price, so it goes with a small `iterations`.
+    pub policy_rollouts: bool,
+    pub rollout_temp: f32,
 }
 
 /// [`MctsConfig::menu_windows`]: own main phase, empty stack.
@@ -453,6 +460,8 @@ impl Default for MctsConfig {
             policy_slot: 0,
             menu_arms: 8,
             menu_confident: 2.0,
+            policy_rollouts: false,
+            rollout_temp: 1.0,
         }
     }
 }
@@ -772,12 +781,19 @@ impl MctsBot {
             self.cfg.horizon_turns
         };
         let stop_turn = g.turn_number + horizon;
-        let mut policy: Vec<HeuristicBot> = (0..g.players.len())
-            .map(|_| {
-                if self.cfg.heuristic_rollouts {
-                    HeuristicBot::with_weights(self.cfg.weights)
+        let net_rollouts = self.cfg.policy_rollouts && super::net_eval::slot_has_policy(self.cfg.policy_slot);
+        let mut policy: Vec<Box<dyn Bot>> = (0..g.players.len())
+            .map(|s| -> Box<dyn Bot> {
+                if net_rollouts {
+                    Box::new(super::policy_pilot::PolicyBot::for_rollout(
+                        EvalWeights { net_slot: self.cfg.policy_slot, ..self.cfg.weights },
+                        self.cfg.rollout_temp,
+                        rng().random::<u64>() ^ s as u64,
+                    ))
+                } else if self.cfg.heuristic_rollouts {
+                    Box::new(HeuristicBot::with_weights(self.cfg.weights))
                 } else {
-                    HeuristicBot::uniform_baseline()
+                    Box::new(HeuristicBot::uniform_baseline())
                 }
             })
             .collect();
@@ -791,6 +807,18 @@ impl MctsBot {
         let mut stale = 0u32;
         while !g.is_game_over() && g.turn_number < stop_turn && fuel > 0 && (stale as usize) < STALE_ROUNDS {
             fuel -= 1;
+            if net_rollouts && let Some(owner) = g.pending_decision.as_ref().map(|p| p.acting_player()) {
+                // The policy answers its own prompts too.
+                actions += 1;
+                let answered = policy[owner].next_action(&g, owner).is_some_and(|a| g.perform_action(a).is_ok());
+                if !answered {
+                    let ans = AutoDecider.decide(&g.pending_decision.as_ref().unwrap().decision);
+                    if g.perform_action(GameAction::SubmitDecision(ans)).is_err() {
+                        break;
+                    }
+                }
+                continue;
+            }
             if g.pending_decision.is_some() {
                 let answer = {
                     let pending = g.pending_decision.as_ref().unwrap();

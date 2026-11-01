@@ -296,16 +296,30 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         return Some(Pilot::Mcts(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() }));
     }
     // Phase 4: the client's pilot with the listed windows searched over
-    // the complete move list — `mcts-net67-menu-<windows>[-conf<pct>]`,
+    // the complete move list — `mcts-net67-menu-<windows>[-conf<pct>][-np<N>][-h<N>]`,
     // windows any of m(ain) i(nstant) c(ombat) p(rompt) — on the policy
     // priors of `CRAB_POLICY_NET` (the candidate slot; the value net stays
     // the champion). `-conf90` plays the policy's pick unsearched when it
     // holds 90 % of the arms' softmax.
+    // Suffixes: `-np<N>` plays the rollouts with the policy pilot at N
+    // iterations (`MctsConfig::policy_rollouts`), `-it<N>` sets the
+    // iterations of heuristic rollouts (the budget-matched control),
+    // `-h<N>` the horizon.
     if let Some(rest) = name.strip_prefix("mcts-net67-menu-") {
-        let (w, conf) = match rest.split_once("-conf") {
-            Some((w, c)) => (w, c.parse::<f64>().ok()? / 100.0),
-            None => (rest, 2.0),
-        };
+        let mut parts = rest.split('-');
+        let w = parts.next()?;
+        let (mut conf, mut pol, mut horizon, mut iters) = (2.0, None, 3u32, 256u32);
+        for p in parts {
+            if let Some(c) = p.strip_prefix("conf") {
+                conf = c.parse::<f64>().ok()? / 100.0;
+            } else if let Some(n) = p.strip_prefix("np") {
+                pol = Some(n.parse::<u32>().ok()?);
+            } else if let Some(n) = p.strip_prefix("it") {
+                iters = n.parse().ok()?;
+            } else {
+                horizon = p.strip_prefix('h')?.parse().ok()?;
+            }
+        }
         let mut mask = 0u8;
         for ch in w.chars() {
             mask |= match ch {
@@ -317,12 +331,13 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             };
         }
         return Some(Pilot::Mcts(MctsConfig {
-            iterations: 256,
-            horizon_turns: 3,
+            iterations: pol.unwrap_or(iters),
+            horizon_turns: horizon,
             weights: EvalWeights::net_on_default().with_fra_fixes(),
             menu_windows: mask,
             policy_slot: crabomination::server::net_eval::SLOT_CANDIDATE,
             menu_confident: conf,
+            policy_rollouts: pol.is_some(),
             ..MctsConfig::default()
         }));
     }

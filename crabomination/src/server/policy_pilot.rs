@@ -342,6 +342,9 @@ pub struct PolicyBot {
     /// ladder. Empty by default.
     delegate: Vec<String>,
     fallback: super::bot::HeuristicBot,
+    /// Score each decision from a determinized copy (`hidden_safe`). Off
+    /// inside a search rollout, whose state the search has already redealt.
+    redeal: bool,
 }
 
 impl PolicyBot {
@@ -363,7 +366,19 @@ impl PolicyBot {
             forced: 0,
             delegate,
             fallback: super::bot::HeuristicBot::with_weights(weights),
+            redeal: true,
         }
+    }
+
+    /// The pilot as a search rollout's policy: no per-decision redeal (the
+    /// rollout's state is already determinized), no delegation.
+    pub fn for_rollout(weights: EvalWeights, temp: f32, seed: u64) -> Self {
+        Self { redeal: false, delegate: Vec::new(), ..Self::new(weights, temp, seed) }
+    }
+
+    fn base(&mut self, g: &GameState, seat: usize) -> GameState {
+        use rand::RngExt;
+        if self.redeal { hidden_safe(g, seat, self.rng.random()) } else { g.clone() }
     }
 
     fn decide(&mut self, g: &GameState, seat: usize) -> Option<GameAction> {
@@ -394,8 +409,7 @@ impl PolicyBot {
             self.forced += 1;
             return m.moves.into_iter().next();
         }
-        use rand::RngExt;
-        let base = hidden_safe(g, seat, self.rng.random());
+        let base = self.base(g, seat);
         let kind = m.kind;
         let (moves, states): (Vec<GameAction>, Vec<GameState>) =
             m.moves.into_iter().filter_map(|a| candidate_state(&base, seat, kind, &a).map(|s| (a, s))).unzip();
@@ -408,8 +422,7 @@ impl PolicyBot {
 
     /// Build an attack or block declaration one member at a time.
     fn build_declaration(&mut self, g: &GameState, seat: usize, kind: Kind) -> Option<GameAction> {
-        use rand::RngExt;
-        let base = hidden_safe(g, seat, self.rng.random());
+        let base = self.base(g, seat);
         let mut set: Vec<Member> = Vec::new();
         loop {
             let (adds, stop) = combat_step(g, seat, kind, &set);
@@ -871,24 +884,36 @@ mod tests {
     /// it makes, in every window, is one the engine takes.
     #[test]
     fn the_search_over_every_window_plays_a_legal_game() {
+        search_plays_a_legal_game(false);
+    }
+
+    /// ...and with the policy pilot playing its rollouts.
+    #[test]
+    fn the_search_with_policy_rollouts_plays_a_legal_game() {
+        search_plays_a_legal_game(true);
+    }
+
+    fn search_plays_a_legal_game(policy_rollouts: bool) {
         use crate::server::mcts::{MENU_COMBAT, MENU_INSTANT, MENU_MAIN, MENU_PROMPT, MctsBot, MctsConfig};
         let _g = SLOT.lock().unwrap_or_else(|e| e.into_inner());
         let slot = super::super::net_eval::SLOT_FRA;
         super::super::net_eval::set_slot(slot, Some(std::sync::Arc::new(HashPolicy)));
         let cfg = MctsConfig {
-            iterations: 6,
+            iterations: if policy_rollouts { 3 } else { 6 },
             horizon_turns: 1,
             weights: EvalWeights::default(),
             menu_windows: MENU_MAIN | MENU_INSTANT | MENU_COMBAT | MENU_PROMPT,
             policy_slot: slot,
             menu_arms: 4,
+            policy_rollouts,
             ..MctsConfig::default()
         };
         let seed = 7u64;
         let mut g = super::super::action_gap::start_game(&sealed_template(seed), &cfg.weights, seed);
         let mut bots = [MctsBot::new(cfg), MctsBot::new(cfg)];
         let (mut fuel, mut stalled, mut declared) = (4000, 0, 0);
-        while fuel > 0 && !g.is_game_over() && g.turn_number <= 8 && stalled < 50 {
+        let last_turn = if policy_rollouts { 5 } else { 8 };
+        while fuel > 0 && !g.is_game_over() && g.turn_number <= last_turn && stalled < 50 {
             fuel -= 1;
             let mut acted = false;
             for (seat, bot) in bots.iter_mut().enumerate() {
