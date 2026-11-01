@@ -823,21 +823,28 @@ pub fn slab_hammer() -> CardDefinition {
             triggers_on_equipment: true,
             triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::MayDo {
                 description: "Return a land you control to hand for +2/+2?".into(),
-                body: Box::new(Effect::Seq(vec![
-                    Effect::MoveChosen {
-                        from: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
-                        filter: None,
-                        count: Value::Const(1),
-                        up_to: false,
-                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
-                    },
-                    Effect::PumpPT {
-                        what: Selector::AttachedTo(Box::new(Selector::This)),
-                        power: Value::Const(2),
-                        toughness: Value::Const(2),
-                        duration: Duration::EndOfTurn,
-                    },
-                ])),
+                // "If you do": no land to return, no pump.
+                body: Box::new(Effect::If {
+                    cond: crate::effect::Predicate::SelectorExists(Selector::EachPermanent(
+                        R::Land.and(R::ControlledByYou),
+                    )),
+                    else_: Box::new(Effect::Noop),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::MoveChosen {
+                            from: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                            filter: None,
+                            count: Value::Const(1),
+                            up_to: false,
+                            to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                        },
+                        Effect::PumpPT {
+                            what: Selector::AttachedTo(Box::new(Selector::This)),
+                            power: Value::Const(2),
+                            toughness: Value::Const(2),
+                            duration: Duration::EndOfTurn,
+                        },
+                    ])),
+                }),
             })],
             ..Default::default()
         }),

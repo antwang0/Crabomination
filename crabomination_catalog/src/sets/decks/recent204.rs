@@ -33,7 +33,10 @@ pub fn saw() -> CardDefinition {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::MaySacrifice {
                     description: "Sacrifice another permanent to draw a card.".into(),
-                    filter: R::ControlledByYou,
+                    // "Other than that creature or this Equipment."
+                    filter: R::ControlledByYou
+                        .and(R::Not(Box::new(R::IsSource)))
+                        .and(R::Not(Box::new(R::IsHostOfSource))),
                     count: Value::ONE,
                     then: Box::new(draw(1)),
                     else_: None,

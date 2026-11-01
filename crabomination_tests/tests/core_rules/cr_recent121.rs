@@ -118,3 +118,39 @@ fn cr_603_3a_heirloom_blade_finds_a_card_sharing_the_dead_creatures_type() {
     drain_stack(&mut g);
     assert!(g.players[0].hand.iter().any(|c| c.id == inspector), "the Human went to the Blade controller's hand");
 }
+
+/// Saw — "sacrifice a permanent other than that creature or this Equipment"
+/// (bug: any permanent you controlled, the attacker and the Saw included).
+#[test]
+fn saw_never_sacrifices_its_creature_or_itself() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let saw = g.add_card_to_battlefield(0, catalog::saw());
+    g.battlefield_find_mut(saw).unwrap().attached_to = Some(bear);
+    let forest = g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_library(0, catalog::island());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some() && g.battlefield_find(saw).is_some());
+    assert!(g.battlefield_find(forest).is_none(), "the Forest is the only legal sacrifice");
+}
+
+/// Slab Hammer — "If you do, the creature gets +2/+2": no land returned, no
+/// pump (bug: the pump applied with no land to return).
+#[test]
+fn slab_hammer_pumps_only_if_a_land_was_returned() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let (mut g, bear, _) = lent(catalog::slab_hammer, catalog::grizzly_bears);
+    g.battlefield.retain(|c| !c.definition.card_types.contains(&crabomination::card::CardType::Land));
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    attack(&mut g, bear);
+    let c = g.computed_permanent(bear).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2));
+}
