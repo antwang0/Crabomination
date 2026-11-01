@@ -37428,6 +37428,162 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::S_S_BOTANY_BAY_COMMANDERS,
             main: decks::S_S_BOTANY_BAY_MAIN,
         },
+        // Seat 6163: Locutus of Borg's EDHREC average deck. `--pod-decks 6163`.
+        PodDeck {
+            name: "Locutus of Borg (WUB)",
+            commanders: decks::LOCUTUS_OF_BORG_COMMANDERS,
+            main: decks::LOCUTUS_OF_BORG_MAIN,
+        },
+        // Seat 6164: Hugh, First of Many's EDHREC average deck. `--pod-decks 6164`.
+        PodDeck {
+            name: "Hugh, First of Many (WUB)",
+            commanders: decks::HUGH_COMMANDERS,
+            main: decks::HUGH_MAIN,
+        },
+        // Seat 6165: Gwyndala, the Progeny's EDHREC average deck. `--pod-decks 6165`.
+        PodDeck {
+            name: "Gwyndala, the Progeny (U)",
+            commanders: decks::GWYNDALA_COMMANDERS,
+            main: decks::GWYNDALA_MAIN,
+        },
+        // Seat 6166: Ensign Pavel Chekov's EDHREC average deck. `--pod-decks 6166`.
+        PodDeck {
+            name: "Ensign Pavel Chekov (U)",
+            commanders: decks::ENSIGN_PAVEL_CHEKOV_COMMANDERS,
+            main: decks::ENSIGN_PAVEL_CHEKOV_MAIN,
+        },
+        // Seat 6167: Jurati, Cordial Queen's EDHREC average deck. `--pod-decks 6167`.
+        PodDeck {
+            name: "Jurati, Cordial Queen (WU)",
+            commanders: decks::JURATI_COMMANDERS,
+            main: decks::JURATI_MAIN,
+        },
+        // Seat 6168: Pavel Chekov, First Posting's EDHREC average deck. `--pod-decks 6168`.
+        PodDeck {
+            name: "Pavel Chekov, First Posting (UG)",
+            commanders: decks::PAVEL_CHEKOV_COMMANDERS,
+            main: decks::PAVEL_CHEKOV_MAIN,
+        },
+        // Seat 6169: U.S.S. Enterprise-A, Free Spirit's EDHREC average deck. `--pod-decks 6169`.
+        PodDeck {
+            name: "U.S.S. Enterprise-A, Free Spirit (W)",
+            commanders: decks::U_S_S_ENTERPRISE_A_COMMANDERS,
+            main: decks::U_S_S_ENTERPRISE_A_MAIN,
+        },
+        // Seat 6170: U.S.S. Enterprise-C, Time-Tossed's EDHREC average deck. `--pod-decks 6170`.
+        PodDeck {
+            name: "U.S.S. Enterprise-C, Time-Tossed (C)",
+            commanders: decks::U_S_S_ENTERPRISE_C_COMMANDERS,
+            main: decks::U_S_S_ENTERPRISE_C_MAIN,
+        },
+        // Seat 6171: La Forge, Thoughtful as Ever's EDHREC average deck. `--pod-decks 6171`.
+        PodDeck {
+            name: "La Forge, Thoughtful as Ever (U)",
+            commanders: decks::LA_FORGE_COMMANDERS,
+            main: decks::LA_FORGE_MAIN,
+        },
+        // Seat 6172: Scotty, Chief Engineer's EDHREC average deck. `--pod-decks 6172`.
+        PodDeck {
+            name: "Scotty, Chief Engineer (U)",
+            commanders: decks::SCOTTY_COMMANDERS,
+            main: decks::SCOTTY_MAIN,
+        },
+        // Seat 6173: Worf, Still Not Merry's EDHREC average deck. `--pod-decks 6173`.
+        PodDeck {
+            name: "Worf, Still Not Merry (WR)",
+            commanders: decks::WORF_4_COMMANDERS,
+            main: decks::WORF_4_MAIN,
+        },
+        // Seat 6174: Lieutenant Hikaru Sulu's EDHREC average deck. `--pod-decks 6174`.
+        PodDeck {
+            name: "Lieutenant Hikaru Sulu (UG)",
+            commanders: decks::LIEUTENANT_HIKARU_SULU_COMMANDERS,
+            main: decks::LIEUTENANT_HIKARU_SULU_MAIN,
+        },
+        // Seat 6175: Q, Stacking the Deck's EDHREC average deck. `--pod-decks 6175`.
+        PodDeck {
+            name: "Q, Stacking the Deck (R)",
+            commanders: decks::Q_COMMANDERS,
+            main: decks::Q_MAIN,
+        },
+        // Seat 6176: Jean-Luc, Mon Capitaine's EDHREC average deck. `--pod-decks 6176`.
+        PodDeck {
+            name: "Jean-Luc, Mon Capitaine (WUR)",
+            commanders: decks::JEAN_LUC_COMMANDERS,
+            main: decks::JEAN_LUC_MAIN,
+        },
+        // Seat 6177: Vash, Freelance Archaeologist's EDHREC average deck. `--pod-decks 6177`.
+        PodDeck {
+            name: "Vash, Freelance Archaeologist (BG)",
+            commanders: decks::VASH_COMMANDERS,
+            main: decks::VASH_MAIN,
+        },
+        // Seat 6178: Uhura, Xenolinguist's EDHREC average deck. `--pod-decks 6178`.
+        PodDeck {
+            name: "Uhura, Xenolinguist (U)",
+            commanders: decks::UHURA_COMMANDERS,
+            main: decks::UHURA_MAIN,
+        },
+        // Seat 6179: Sylvia Tilly, Joy of Discovery's EDHREC average deck. `--pod-decks 6179`.
+        PodDeck {
+            name: "Sylvia Tilly, Joy of Discovery (G)",
+            commanders: decks::SYLVIA_TILLY_COMMANDERS,
+            main: decks::SYLVIA_TILLY_MAIN,
+        },
+        // Seat 6180: B'Elanna Torres, Scrapper's EDHREC average deck. `--pod-decks 6180`.
+        PodDeck {
+            name: "B'Elanna Torres, Scrapper (UR)",
+            commanders: decks::BELANNA_TORRES_COMMANDERS,
+            main: decks::BELANNA_TORRES_MAIN,
+        },
+        // Seat 6181: Sam Kirk, Xenoanthropologist's EDHREC average deck. `--pod-decks 6181`.
+        PodDeck {
+            name: "Sam Kirk, Xenoanthropologist (U)",
+            commanders: decks::SAM_KIRK_COMMANDERS,
+            main: decks::SAM_KIRK_MAIN,
+        },
+        // Seat 6182: Fleet Captain Christopher Pike's EDHREC average deck. `--pod-decks 6182`.
+        PodDeck {
+            name: "Fleet Captain Christopher Pike (U)",
+            commanders: decks::FLEET_CAPTAIN_CHRISTOPHER_PIKE_COMMANDERS,
+            main: decks::FLEET_CAPTAIN_CHRISTOPHER_PIKE_MAIN,
+        },
+        // Seat 6183: Lt. Arex, Ever-Adapting's EDHREC average deck. `--pod-decks 6183`.
+        PodDeck {
+            name: "Lt. Arex, Ever-Adapting (UG)",
+            commanders: decks::LT_AREX_COMMANDERS,
+            main: decks::LT_AREX_MAIN,
+        },
+        // Seat 6184: Wesley Crusher, Starfleet Cadet's EDHREC average deck. `--pod-decks 6184`.
+        PodDeck {
+            name: "Wesley Crusher, Starfleet Cadet (U)",
+            commanders: decks::WESLEY_CRUSHER_COMMANDERS,
+            main: decks::WESLEY_CRUSHER_MAIN,
+        },
+        // Seat 6185: Q, Your Illustrious Host's EDHREC average deck. `--pod-decks 6185`.
+        PodDeck {
+            name: "Q, Your Illustrious Host (WUBRG)",
+            commanders: decks::Q_2_COMMANDERS,
+            main: decks::Q_2_MAIN,
+        },
+        // Seat 6186: Will Riker, First in the Field's EDHREC average deck. `--pod-decks 6186`.
+        PodDeck {
+            name: "Will Riker, First in the Field (R)",
+            commanders: decks::WILL_RIKER_COMMANDERS,
+            main: decks::WILL_RIKER_MAIN,
+        },
+        // Seat 6187: Dr. Leonard "Bones" McCoy's EDHREC average deck. `--pod-decks 6187`.
+        PodDeck {
+            name: "Dr. Leonard \"Bones\" McCoy (G)",
+            commanders: decks::DR_LEONARD_BONES_MCCOY_COMMANDERS,
+            main: decks::DR_LEONARD_BONES_MCCOY_MAIN,
+        },
+        // Seat 6188: Voq, Torchbearer's EDHREC average deck. `--pod-decks 6188`.
+        PodDeck {
+            name: "Voq, Torchbearer (B)",
+            commanders: decks::VOQ_COMMANDERS,
+            main: decks::VOQ_MAIN,
+        },
     ]
 }
 
@@ -45543,6 +45699,32 @@ mod tests {
             ("U.S.S. Prometheus, Prototype", &[0x2210]),
             ("Quark, Humble Proprietor", &[0x2211]),
             ("Worf, Intelligence Contractor", &[0x2212]),
+            ("Locutus of Borg", &[0x2213]),
+            ("Hugh, First of Many", &[0x2214]),
+            ("Gwyndala, the Progeny", &[0x2215]),
+            ("Ensign Pavel Chekov", &[0x2216]),
+            ("Jurati, Cordial Queen", &[0x2217]),
+            ("Pavel Chekov, First Posting", &[0x2218]),
+            ("U.S.S. Enterprise-A, Free Spirit", &[0x2219]),
+            ("U.S.S. Enterprise-C, Time-Tossed", &[0x221A]),
+            ("La Forge, Thoughtful as Ever", &[0x221B]),
+            ("Scotty, Chief Engineer", &[0x221C]),
+            ("Worf, Still Not Merry", &[0x221D]),
+            ("Lieutenant Hikaru Sulu", &[0x221E]),
+            ("Q, Stacking the Deck", &[0x221F]),
+            ("Jean-Luc, Mon Capitaine", &[0x2220]),
+            ("Vash, Freelance Archaeologist", &[0x2221]),
+            ("Uhura, Xenolinguist", &[0x2222]),
+            ("Sylvia Tilly, Joy of Discovery", &[0x2223]),
+            ("B'Elanna Torres, Scrapper", &[0x2224]),
+            ("Sam Kirk, Xenoanthropologist", &[0x2225]),
+            ("Fleet Captain Christopher Pike", &[0x2226]),
+            ("Lt. Arex, Ever-Adapting", &[0x2227]),
+            ("Wesley Crusher, Starfleet Cadet", &[0x2228]),
+            ("Q, Your Illustrious Host", &[0x2229]),
+            ("Will Riker, First in the Field", &[0x222A]),
+            ("Dr. Leonard \"Bones\" McCoy", &[0x222B]),
+            ("Voq, Torchbearer", &[0x222C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core: this
         // test is the suite's long pole (~630 s of a ~640 s debug run on four
