@@ -2310,3 +2310,14 @@ The three TRC precons (seats 6094-6096, `decks::trek_federation` / `trek_klingon
 | 🟡 Võx, Child of the Collective | undaunted counts opponents as the spell is cast | the count is fixed when the grant resolves (`GrantNextMatchingSpellUndauntedThisTurn`) |
 | 🟡 The Borg Queen | the opponent "exiles" cards until a creature | they are revealed (the rest go to the bottom either way; nothing sees them exiled) |
 | 🟡 Shore Leave Planet | "a Robot artifact in addition" is a copy exception | layer-4 additions until end of turn beside a nonlegendary layer-1 copy, so a copy of the copy lacks them |
+
+## Star Trek EDHREC closers, third batch (2026-11-01, `01WRuXc3G1`)
+
+`decks::trek_singles3` (seats 6141-6162). Open 🟡 rows (each card plays; the clause named is approximated):
+
+| Card | Printed | Approximation |
+|---|---|---|
+| 🟡 Kira Nerys, Firebrand | the entering creature attacks a defender its controller chooses (CR 508.4) | it attacks the defender of that seat's first attack still in combat (`apply_enters_attacking_replacement`), never asked |
+| 🟡 S.S. Botany Bay | "each opponent exiles a card from their graveyard" — their pick | the engine picks each opponent's card (`Selector::one_of`) |
+| 🟡 Dominion Saboteur | the copied permanent's counters, "the same number and kinds" | plain counters only (`EntersAsCopy.mirror_counters`); keyword counters (flying, shield-as-keyword …) are not mirrored |
+| 🟡 Deep Space Scan | no maximum hand size "until your next turn" | the limit is set back to seven at your next upkeep — differs only if another effect had changed it |
