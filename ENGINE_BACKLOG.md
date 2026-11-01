@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc3Wo`) — cost-sacrifice LKI, an Aura's trigger owner](#fixedopen-2026-11-01-commander-run-01wruxc3wo--cost-sacrifice-lki-an-auras-trigger-owner) | 18 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc4hq`) — REJECT census beside `01WRuXc2jM`, a concession sweep](#fixedopen-2026-10-31-commander-run-01wruxc4hq--reject-census-beside-01wruxc2jm-a-concession-sweep) | 24 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc2jM`) — the three open REJECT replays, a fresh census](#fixedopen-2026-10-31-commander-run-01wruxc2jm--the-three-open-reject-replays-a-fresh-census) | 30 |
 | Bugs & robustness | [FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc5DB`) — seated-deck rows by rank: an attachment copy, board-wide attack locks, a table tally](#fixedopen-2026-10-31-commander-run-01wruxc5db--seated-deck-rows-by-rank-an-attachment-copy-board-wide-attack-locks-a-table-tally) | 20 |
@@ -403,6 +404,22 @@ planner choices.
 ## The Commander NEXT's line 9 as `01WRuXc4hq` found it (moved verbatim, 2026-10-31)
 
 9. **`01WRuXc48R` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc48R`): residual rank, `audit_up_to_one --pod`, a literal-cap census.** ⚠ **CR 903.5a bug class: eleven "reveal until" effects were `cap: 60` (a 60-card library's depth) and stopped 60 cards into a 99-card library** — now `1000` (Chaos Wand, Dazzling Sphinx, Gríma, Page, Plargg, Sacred Guide, Spinner of Souls, Thicket Elemental, Clifftop Lookout, The Regalia, Warrior of Light), plus Selective Memory / The Bath Song's "any number"; **grep `Const(60)` in any new card**. Four "up to one" slots hit their own side (Koh, Psychic Pickpocket, Rhino's Rampage, Sol'Kanar → `OptionalTargets { min: 0 }`; `ExileLinked`/`ExileWithSource` now hostile in `permanent_slot_is_hostile`); Koh's re-choice keeps other grants; Aesir chapter I is a pick. Gates: suite **29,360 / 0 / 8** (strict), clippy **0** (84 min cold on 4 cores — budget it), `--bench` **196,176 / 613.0 / 0 stalls byte-identical**, determinism ok. Pods: start-tree 29400 (4 seats, 1,500 games) and 29700 (6 seats, 600); closing-tree 29800/29900/30000/30100 at 3/5/8/4 seats, 1,550 games — **3,650 games, 0 panics, 3 finite board caps** (Rabble Rousing's Citizens `--pod-decks 650,750,4954,5239 --seed 29686 --first 1`; Innkeeper's Talent + The Great Henge `312,1517,3440,5168 --seed 30174 --first 1`; Eidolon of Blossoms / Shizuko `588,2548,3003,3883,5827 --seed 29939 --first 0`), no stalls, no draws. **Next seed 30200.** Next: the rank top is choice-exposure only (Dawnhand's blight is a cost — needs cost-payment plumbing; Queen Kayla needs a simultaneous put across per-MV picks); `audit_up_to_one` false positives come from `dump_cards --effects` not dumping station / granted triggers (Dawnsire, Baseball Bat) — widen the dump, not the regex.
+
+## FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc3Wo`) — cost-sacrifice LKI, an Aura's trigger owner
+
+No seats. Seeds used (claim before reusing): **census 815** (`pod_rejects.py`, 400 pods, 6-8 seats, `--a dflt`: **0
+rejections**), **sweep 29424** (`pod_sweep.py`, every deck at 5 and 7 seats, `CRAB_POD_CONCEDE=20`, release: **2,106
+games, 0 bad**).
+- ✅ **CR 603.10a / 608.2h** — a sacrificed permanent was looked back at with its *printed* type line, and a cast's or
+  activation's out-of-band batch (`Expended`, `BecameTarget`) cleared `died_card_snapshots` before the cost's own events
+  dispatched: a Senator Peacock-made Clue sacrificed to Aeolipile or Deadly Dispute never triggered Fleeting Memories.
+  `lki_clone` bakes computed card types / subtypes (behind `card_type_change_in_scope`); spell sacrifice costs snapshot
+  noncreatures; `ResolutionScratch::death_snapshot_hold` holds the snapshots until the action's batch (released in
+  `perform_action_dispatch`). Tests `a_peacock_made_clue_sacrificed_is_a_clue_to_fleeting_memories`,
+  `deadly_dispute_paid_with_a_peacock_clue_triggers_fleeting_memories`. ⚠ The `sac_other_picks` path still stores a raw
+  clone (types printed) — same class, open.
+- ✅ **Brinebound Gift** — its "enchanted creature becomes the target of an Aura spell" Spirit went to the host's controller
+  (an `EquipBonus` trigger); now the Aura's own `EnchantedBySource` trigger.
 
 ## FIXED/OPEN 2026-10-31 (Commander run, `01WRuXc4hq`) — REJECT census beside `01WRuXc2jM`, a concession sweep
 
