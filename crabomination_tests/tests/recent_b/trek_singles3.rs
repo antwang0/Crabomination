@@ -152,8 +152,8 @@ fn artificial_anomaly_drains_each_opponent_and_makes_a_planet() {
     let life: Vec<i32> = g.players.iter().map(|p| p.life).collect();
     activate(&mut g, land, 1, None);
     assert_eq!(g.players[0].life, life[0] + 2);
-    for seat in 1..4 {
-        assert_eq!(g.players[seat].life, life[seat] - 2);
+    for (seat, before) in life.iter().enumerate().skip(1) {
+        assert_eq!(g.players[seat].life, before - 2);
     }
     assert!(g.battlefield_find(land).is_none(), "sacrificed");
     let planet = g.battlefield.iter().find(|c| c.definition.name == "New Planet").expect("planet");
