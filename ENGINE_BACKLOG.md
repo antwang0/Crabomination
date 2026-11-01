@@ -439,6 +439,7 @@ games, 0 bad**).
   past 16 optional yeses a run (the live bot already stopped at `OPTIONAL_LOOP_CAP` a step). The engine's headless
   `RepeatWhileMay` answer also stops after 30 repeats (`cr_732_2_a_headless_optional_loop_stops_at_its_bound`). Replays:
   26 turns / 0.1 s and 6.4 s, both decided.
+- ✅ Closing sweep **29427** on the fixed tip (`--a dflt`, every deck at 4/6/8 seats, `CRAB_POD_CONCEDE=15`): **3,327 games, 0 bad.**
 - ✅ **CR 603.3a, the class** — an Aura's unquoted "whenever enchanted creature …, you …" is the *Aura's* ability, but an
   `EquipBonus.triggered_abilities` entry is granted to the host (CR 702.6e) and fires for the host's controller. Probed
   with a scratch scan (Auras with `EquipBonus` triggers, oracle line outside quotes, not "Enchant creature you
