@@ -24611,6 +24611,8 @@ impl GameState {
                                 .find(|a| a.attacker == t)
                                 .and_then(|a| matches!(a.target, AttackTarget::Player(_)).then_some(a.target))
                         })
+                        // CR 603.3a — an Equipment's own attack trigger: its host's defender.
+                        .or_else(|| self.attack_of_source_host(ctx))
                         .or_else(|| {
                             // CR 506.2 / 800.4a — a seat that has left the
                             // game is not a legal defending player.
@@ -47907,6 +47909,9 @@ impl GameState {
                         .and_then(|target| self.defender_for(target)),
                     _ => None,
                 })
+                // CR 603.3a — an attachment's own trigger ("whenever equipped
+                // creature attacks, … defending player") reads its host's attack.
+                .or_else(|| self.attack_of_source_host(ctx).and_then(|target| self.defender_for(target)))
                 // Fallback for post-combat-damage triggers: by the time a
                 // `DealsCombatDamageToPlayer` body resolves, the attack
                 // record is gone, so `attack_for` returns nothing. The

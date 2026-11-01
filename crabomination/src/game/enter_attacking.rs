@@ -170,6 +170,13 @@ impl GameState {
         true
     }
 
+    /// What the permanent `ctx.source` is attached to is attacking — an
+    /// attachment's own combat trigger reads its host (CR 603.3a).
+    pub(crate) fn attack_of_source_host(&self, ctx: &crate::game::effects::EffectContext) -> Option<AttackTarget> {
+        let host = self.battlefield.find_by_id(ctx.source?)?.attached_to?;
+        self.attacking.iter().find(|a| a.attacker == host).map(|a| a.target)
+    }
+
     /// Whether `id` is attacking the player `seat` itself (CR 506.3) — not
     /// a planeswalker or battle of theirs.
     pub(crate) fn creature_is_attacking_seat(&self, id: CardId, seat: usize) -> bool {
