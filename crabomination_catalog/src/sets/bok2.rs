@@ -680,10 +680,9 @@ pub fn neko_te() -> CardDefinition {
                         EventKind::DealsDamageToCreature,
                         EventScope::SelfSource,
                     ),
-                    effect: Effect::Seq(vec![
-                        Effect::Tap { what: Selector::Target(0) },
-                        Effect::SkipNextUntap { what: Selector::Target(0) },
-                    ]),
+                    // "Doesn't untap … for as long as this Equipment remains
+                    // on the battlefield" — the source is the Neko-Te.
+                    effect: Effect::TapAndLockWhileSourcePresent { what: Selector::Target(0), while_you_control: false },
                 },
                 TriggeredAbility {
                     event: EventSpec::new(

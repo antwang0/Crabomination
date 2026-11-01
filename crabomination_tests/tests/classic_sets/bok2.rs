@@ -377,7 +377,9 @@ fn neko_te_taps_down_what_it_damages() {
     g.resolve_combat().expect("combat damage");
     drain_stack(&mut g);
     assert!(g.battlefield_find(victim).unwrap().tapped, "it got tapped");
-    assert!(g.battlefield_find(victim).unwrap().skip_next_untap);
+    // "For as long as this Equipment remains on the battlefield" (bug: one
+    // skipped untap step).
+    assert_eq!(g.battlefield_find(victim).unwrap().untap_locked_while_present, Some(te));
 }
 
 // ── Wave 3 ──────────────────────────────────────────────────────────────────
