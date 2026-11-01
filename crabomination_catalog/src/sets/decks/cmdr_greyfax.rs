@@ -464,7 +464,9 @@ pub fn inquisitorial_rosette() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(Effect::Seq(vec![
                 Effect::CreateTokenAttacking {
                     who: PlayerRef::You,

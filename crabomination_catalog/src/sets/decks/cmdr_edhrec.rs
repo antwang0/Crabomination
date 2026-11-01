@@ -5235,6 +5235,8 @@ pub fn staff_of_titania() -> CardDefinition {
                 per_toughness: 1,
                 ..Default::default()
             }),
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(mint(dryad, Value::ONE))],
             ..Default::default()
         }),
@@ -6972,8 +6974,14 @@ pub fn the_spear_of_leonidas() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(Effect::ChooseMode(vec![
-                Effect::GrantKeywords { what: Selector::This, keywords: vec![Keyword::DoubleStrike], duration: Duration::EndOfTurn },
+                Effect::GrantKeywords {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                    keywords: vec![Keyword::DoubleStrike],
+                    duration: Duration::EndOfTurn,
+                },
                 mint(phobos, Value::ONE),
                 Effect::Seq(vec![
                     Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },

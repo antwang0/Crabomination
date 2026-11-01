@@ -397,17 +397,18 @@ pub fn hedron_blade() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
-                // "One or more colorless creatures" is the blocking side; the
-                // ability is granted to the host, so `TriggerSource` here was
-                // the equipped creature testing its own colour.
+                // "One or more colorless creatures" is the blocking side: the
+                // creatures blocking the equipped creature (the subject).
                 event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource)
                     .with_filter(Predicate::EntityMatchesAny {
                         what: Selector::BlockingCreatures,
                         filter: R::Colorless,
                     }),
                 effect: Effect::GrantKeyword {
-                    what: Selector::This,
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
                     keyword: Keyword::Deathtouch,
                     duration: Duration::EndOfTurn,
                 },

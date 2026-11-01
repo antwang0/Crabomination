@@ -822,6 +822,8 @@ pub fn giants_skewer() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 1,
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToCreature, EventScope::SelfSource),
                 effect: food(),

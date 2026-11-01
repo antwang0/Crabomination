@@ -164,9 +164,10 @@ pub fn monstrous_growth() -> CardDefinition {
 /// (no regeneration).
 pub fn wooden_stake() -> CardDefinition {
     let stake = || Effect::DestroyNoRegen {
-        what: Selector::EachPermanent(
-            R::HasCreatureType(CreatureType::Vampire).and(R::InCombatWithSource),
-        ),
+        what: Selector::MatchingAmong {
+            inner: Box::new(Selector::CreaturesInCombatWith(Box::new(Selector::AttachedTo(Box::new(Selector::This))))),
+            filter: R::HasCreatureType(CreatureType::Vampire),
+        },
     };
     CardDefinition {
         subtypes: Subtypes {
@@ -176,6 +177,8 @@ pub fn wooden_stake() -> CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
         equipped_bonus: Some(EquipBonus {
             power: 1,
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![
                 TriggeredAbility {
                     event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource),

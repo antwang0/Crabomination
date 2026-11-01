@@ -72,6 +72,8 @@ pub fn adaptive_omnitool() -> CardDefinition {
                 per_toughness: 1,
                 ..Default::default()
             }),
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::LookPickToHand(Box::new(LookPick {

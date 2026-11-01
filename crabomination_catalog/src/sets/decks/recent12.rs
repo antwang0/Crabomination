@@ -358,10 +358,12 @@ pub fn armory_of_iroas() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::AddCounter {
-                    what: Selector::This,
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,
                 },

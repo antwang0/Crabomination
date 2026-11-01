@@ -430,6 +430,8 @@ pub fn sigiled_sword_of_valeron() -> CardDefinition {
             power: 2,
             keywords: vec![Keyword::Vigilance],
             add_creature_types: vec![CreatureType::Knight],
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::ONE,

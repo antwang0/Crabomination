@@ -617,7 +617,7 @@ pub fn wand_of_orcus() -> CardDefinition {
     });
     let deathtouch = || {
         Effect::Seq(vec![
-            Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
+            Effect::GrantKeyword { what: Selector::AttachedTo(Box::new(Selector::This)), keyword: Keyword::Deathtouch, duration: Duration::EndOfTurn },
             Effect::GrantKeyword {
                 what: Selector::EachPermanent(R::HasCreatureType(CreatureType::Zombie).and(R::ControlledByYou)),
                 keyword: Keyword::Deathtouch,
@@ -633,6 +633,8 @@ pub fn wand_of_orcus() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![
                 on_attack(deathtouch()),
                 crate::effect::shortcut::blocks(deathtouch()),

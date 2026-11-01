@@ -174,10 +174,12 @@ pub fn arm_mounted_anchor() -> CardDefinition {
                 amount: 2,
             },
         }],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
             power: 2,
             toughness: 2,
             keywords: vec![Keyword::Menace],
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_combat_damage(Effect::Seq(vec![
                 draw(2),
                 Effect::DiscardUnlessKind { who: PlayerRef::You, count: Value::Const(2), instead: pirate() },

@@ -903,12 +903,14 @@ pub fn foot_chopper() -> CardDefinition {
             Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
         ]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             keywords: vec![Keyword::Flying],
             triggered_abilities: vec![on_combat_damage_to_player(may(
                 "Sacrifice this creature to draw cards equal to its power?",
                 Effect::Seq(vec![
-                    draw(Value::PowerOf(Box::new(Selector::This))),
-                    Effect::SacrificePermanent { what: Selector::This },
+                    draw(Value::PowerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This))))),
+                    Effect::SacrificePermanent { what: Selector::AttachedTo(Box::new(Selector::This)) },
                 ]),
             ))],
             ..Default::default()

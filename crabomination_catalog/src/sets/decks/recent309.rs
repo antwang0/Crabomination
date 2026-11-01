@@ -1468,7 +1468,9 @@ pub fn the_key_to_the_vault() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2), u()]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(crate::card::EquipBonus {
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::LookTopExileOneMayPlay {

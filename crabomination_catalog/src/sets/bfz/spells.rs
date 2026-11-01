@@ -818,7 +818,9 @@ pub fn slab_hammer() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
             triggered_abilities: vec![crate::effect::shortcut::on_attack(Effect::MayDo {
                 description: "Return a land you control to hand for +2/+2?".into(),
                 body: Box::new(Effect::Seq(vec![
@@ -830,7 +832,7 @@ pub fn slab_hammer() -> CardDefinition {
                         to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     },
                     Effect::PumpPT {
-                        what: Selector::This,
+                        what: Selector::AttachedTo(Box::new(Selector::This)),
                         power: Value::Const(2),
                         toughness: Value::Const(2),
                         duration: Duration::EndOfTurn,

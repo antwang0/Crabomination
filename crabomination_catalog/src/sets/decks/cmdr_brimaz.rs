@@ -173,6 +173,8 @@ pub fn bitterthorn_nissas_animus() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(Effect::MayDo {
                 description: "Search for a basic land?".into(),
                 body: Box::new(Effect::Search {

@@ -270,6 +270,8 @@ pub fn scytheclaw() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             power: 1,
             toughness: 1,
             triggered_abilities: vec![on_combat_damage(Effect::LoseHalfLife {
@@ -384,6 +386,8 @@ pub fn whispersteel_dagger() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             power: 2,
             triggered_abilities: vec![on_combat_damage(Effect::Seq(vec![
                 Effect::GrantMayPlay {

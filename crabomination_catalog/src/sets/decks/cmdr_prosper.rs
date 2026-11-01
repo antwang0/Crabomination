@@ -357,11 +357,16 @@ pub fn fiendlash() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 2,
             keywords: vec![Keyword::Reach],
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealtDamage, EventScope::SelfSource),
-                effect: Effect::DealDamage {
+                // "It deals damage equal to its power": the damaged creature
+                // (the subject), read last-known if the damage killed it.
+                effect: Effect::DealDamageFrom {
+                    source: Selector::TriggerSource,
                     to: target_filtered(R::Player.or(R::Planeswalker)),
-                    amount: Value::PowerOf(Box::new(Selector::This)),
+                    amount: Value::PowerOf(Box::new(Selector::TriggerSource)),
                 },
             }],
             ..Default::default()

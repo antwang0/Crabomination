@@ -732,6 +732,8 @@ pub fn stormbeacon_blade() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 3,
             toughness: 0,
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::If {

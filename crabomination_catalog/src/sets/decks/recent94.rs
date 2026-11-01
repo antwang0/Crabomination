@@ -550,6 +550,8 @@ pub fn argentum_armor() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(6)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             power: 6,
             toughness: 6,
             triggered_abilities: vec![TriggeredAbility {

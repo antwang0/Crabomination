@@ -7959,8 +7959,10 @@ pub fn atomic_microsizer() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
             power: 1,
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::ApplyToTargets {

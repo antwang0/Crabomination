@@ -992,6 +992,8 @@ pub fn pact_weapon() -> CardDefinition {
             },
         )],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 // X is the drawn card's mana value, read after the draw.
@@ -1001,7 +1003,7 @@ pub fn pact_weapon() -> CardDefinition {
                         x: Value::ManaValueOf(Box::new(Selector::LastCardYouDrew)),
                         body: Box::new(Effect::Seq(vec![
                             Effect::PumpPT {
-                                what: Selector::This,
+                                what: Selector::AttachedTo(Box::new(Selector::This)),
                                 power: Value::XFromCost,
                                 toughness: Value::XFromCost,
                                 duration: Duration::EndOfTurn,

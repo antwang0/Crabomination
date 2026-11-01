@@ -523,6 +523,8 @@ pub fn strength_testing_hammer() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(roll(
                 6,
                 Value::ONE,
@@ -530,10 +532,10 @@ pub fn strength_testing_hammer() -> CardDefinition {
                     1,
                     u8::MAX,
                     Effect::Seq(vec![
-                        pump(Selector::This, Value::LastDieRoll, Value::ZERO),
+                        pump(Selector::AttachedTo(Box::new(Selector::This)), Value::LastDieRoll, Value::ZERO),
                         Effect::If {
                             cond: Predicate::EntityMatches {
-                                what: Selector::This,
+                                what: Selector::AttachedTo(Box::new(Selector::This)),
                                 filter: R::HasGreatestPowerAmongAllCreatures,
                             },
                             then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),

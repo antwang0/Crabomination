@@ -438,6 +438,8 @@ pub fn scepter_of_celebration() -> CardDefinition {
             power: 2,
             toughness: 0,
             keywords: vec![Keyword::Trample],
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: make(PlayerRef::You, Value::TriggerEventAmount, citizen()),

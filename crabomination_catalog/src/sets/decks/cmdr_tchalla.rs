@@ -856,6 +856,8 @@ pub fn the_spear_of_bashenga() -> CardDefinition {
             power: 2,
             toughness: 2,
             keywords: vec![Keyword::Vigilance],
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource)
                     .with_filter(Predicate::IsMonarch { who: PlayerRef::DefendingPlayer }),

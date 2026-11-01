@@ -1078,6 +1078,8 @@ pub fn ultima_weapon() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(7)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             power: 7,
             toughness: 7,
             triggered_abilities: vec![TriggeredAbility {
@@ -7708,6 +7710,8 @@ pub fn buster_sword() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             power: 3,
             toughness: 2,
             triggered_abilities: vec![TriggeredAbility {
@@ -8075,6 +8079,8 @@ pub fn genji_glove() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             keywords: vec![Keyword::DoubleStrike],
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
@@ -8082,7 +8088,7 @@ pub fn genji_glove() -> CardDefinition {
                     cond: Predicate::IsFirstCombatPhaseThisTurn,
                     then: Box::new(Effect::Seq(vec![
                         Effect::Untap {
-                            what: Selector::This,
+                            what: Selector::AttachedTo(Box::new(Selector::This)),
                             up_to: None,
                         },
                         Effect::AdditionalCombatPhase { count: Value::ONE },

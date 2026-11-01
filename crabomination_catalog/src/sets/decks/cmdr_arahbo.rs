@@ -308,6 +308,8 @@ pub fn quietus_spike() -> CardDefinition {
         vec![Keyword::Deathtouch],
     );
     if let Some(b) = d.equipped_bonus.as_mut() {
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+        b.triggers_on_equipment = true;
         b.triggered_abilities.push(TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
             effect: Effect::LoseHalfLife {

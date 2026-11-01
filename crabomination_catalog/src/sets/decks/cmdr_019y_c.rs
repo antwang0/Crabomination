@@ -144,14 +144,16 @@ pub fn seraphic_greatsword() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             power: 2,
             toughness: 2,
             triggered_abilities: vec![TriggeredAbility {
                 // CR 702.105a's dethrone shape: the player, not a planeswalker.
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(
                     Predicate::All(vec![
-                        Predicate::EntityMatches { what: Selector::This, filter: R::IsAttackingOpponentPlayer },
-                        Predicate::PlayerHasMostLife { who: PlayerRef::DefendingPlayer },
+                        Predicate::EntityMatches { what: Selector::AttachedTo(Box::new(Selector::This)), filter: R::IsAttackingOpponentPlayer },
+                        Predicate::PlayerHasMostLife { who: PlayerRef::DefendingPlayerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This)))) },
                     ]),
                 ),
                 effect: Effect::CreateTokenAttacking {
@@ -159,7 +161,7 @@ pub fn seraphic_greatsword() -> CardDefinition {
                     count: Value::ONE,
                     definition: Arc::new(angel),
                     cleanup: Default::default(),
-                    defender: Some(PlayerRef::DefendingPlayer),
+                    defender: Some(PlayerRef::DefendingPlayerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This))))),
                 },
             }],
             ..Default::default()

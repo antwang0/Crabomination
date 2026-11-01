@@ -120,12 +120,14 @@ pub fn trepanation_blade() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
                     Effect::MillUntilLands { who: Selector::Player(PlayerRef::DefendingPlayer), lands: Value::ONE },
                     Effect::PumpPT {
-                        what: Selector::This,
+                        what: Selector::AttachedTo(Box::new(Selector::This)),
                         power: Value::CardsMilledThisEffectMatching { filter: R::Any },
                         toughness: Value::Const(0),
                         duration: Duration::EndOfTurn,

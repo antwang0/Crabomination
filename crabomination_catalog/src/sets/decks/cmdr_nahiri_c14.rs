@@ -384,6 +384,8 @@ pub fn moonsilver_spear() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             keywords: vec![Keyword::FirstStrike],
             triggered_abilities: vec![on_attack(tokens(
                 PlayerRef::You,

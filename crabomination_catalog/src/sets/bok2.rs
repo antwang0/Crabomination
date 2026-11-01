@@ -672,6 +672,8 @@ pub fn neko_te() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![
                 TriggeredAbility {
                     event: EventSpec::new(

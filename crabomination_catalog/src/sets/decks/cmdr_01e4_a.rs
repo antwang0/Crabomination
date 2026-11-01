@@ -2695,12 +2695,16 @@ pub fn invasion_of_new_capenna() -> CardDefinition {
         color_indicator: vec![Color::White, Color::Black],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::AddCounter {
                     what: Selector::EachPermanent(
-                        R::Creature.and(R::ControlledByYou).and(R::SharesCreatureTypeWithSource.or(R::IsSource)),
+                        R::IsHostOfSource.or(
+                            R::Creature.and(R::ControlledByYou).and(R::SharesCreatureTypeWithAttachedHost),
+                        ),
                     ),
                     kind: CounterType::PlusOnePlusOne,
                     amount: Value::ONE,

@@ -2569,11 +2569,14 @@ fn spiked_ripsaw_sac_forest_for_trample() {
     assert_eq!(catalog::spiked_ripsaw().equipped_bonus.unwrap().power, 3, "+3/+3 bonus");
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let forest = g.add_card_to_battlefield(0, catalog::forest());
+    // The Ripsaw's own trigger (CR 603.3a): it resolves off the Equipment.
+    let saw = g.add_card_to_battlefield(0, catalog::spiked_ripsaw());
+    g.battlefield_find_mut(saw).unwrap().attached_to = Some(bear);
     g.decider = Box::new(crabomination::decision::ScriptedDecider::new([
         crabomination::decision::DecisionAnswer::Bool(true),
     ]));
     let trig = catalog::spiked_ripsaw().equipped_bonus.unwrap().triggered_abilities[0].effect.clone();
-    g.resolve_effect(&trig, &EffectContext::for_trigger(bear, 0, None, 0)).unwrap();
+    g.resolve_effect(&trig, &EffectContext::for_trigger(saw, 0, None, 0)).unwrap();
     drain_stack(&mut g);
     assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Trample), "gained trample");
     assert!(g.battlefield_find(forest).is_none(), "Forest sacrificed");

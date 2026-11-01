@@ -80,6 +80,8 @@ pub fn zephyr_boots() -> CardDefinition {
             toughness: 0,
             keywords: vec![Keyword::Flying],
             scale: None,
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::Seq(vec![

@@ -1470,12 +1470,15 @@ pub fn grappling_hook() -> CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
         equipped_bonus: Some(EquipBonus {
             keywords: vec![Keyword::DoubleStrike],
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::MayDo {
-                    description: "Target creature blocks this creature if able".into(),
-                    body: Box::new(Effect::MustBlockSource {
-                        what: target_filtered(R::Creature),                        chooser: None,
+                    description: "Target creature blocks the equipped creature if able".into(),
+                    body: Box::new(Effect::MustBlockTarget {
+                        blocker: target_filtered(R::Creature),
+                        attacker: Selector::AttachedTo(Box::new(Selector::This)),
                     }),
                 },
             }],
@@ -1498,6 +1501,8 @@ pub fn explorers_scope() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::RevealTopLandToBattlefieldElseHand { who: PlayerRef::You, tapped: true, nonland_stays: true, may: true },

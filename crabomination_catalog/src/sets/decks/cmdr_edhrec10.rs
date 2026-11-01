@@ -2588,7 +2588,7 @@ pub fn thunderblust() -> CardDefinition {
 /// turn.
 pub fn barrow_blade() -> CardDefinition {
     let strip = || Effect::LoseAllAbilities {
-        what: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
+        what: Selector::CreaturesInCombatWith(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
         duration: Duration::EndOfTurn,
     };
     CardDefinition {
@@ -2597,9 +2597,11 @@ pub fn barrow_blade() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
+            triggers_on_equipment: true,
             triggered_abilities: vec![
                 TriggeredAbility { event: EventSpec::new(EventKind::Blocks, EventScope::SelfSource), effect: strip() },
                 TriggeredAbility { event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource), effect: strip() },
@@ -3269,6 +3271,7 @@ pub fn malik_grim_manipulator() -> CardDefinition {
 /// Walker (a 2/2 black Zombie). Equip {4}.
 pub fn gisas_favorite_shovel() -> CardDefinition {
     let walker = token("Walker", 2, 2, vec![Color::Black], vec![CreatureType::Zombie]);
+    let defender = || PlayerRef::DefendingPlayerOf(Box::new(Selector::AttachedTo(Box::new(Selector::This))));
     CardDefinition {
         name: "Gisa's Favorite Shovel",
         cost: cost(&[generic(1), b()]),
@@ -3276,19 +3279,21 @@ pub fn gisas_favorite_shovel() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
             power: 2,
             keywords: vec![Keyword::Menace],
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
                 effect: Effect::Seq(vec![
                     Effect::Sacrifice {
-                        who: Selector::Player(PlayerRef::DefendingPlayer),
+                        who: Selector::Player(defender()),
                         count: Value::ONE,
                         filter: R::Creature,
                     },
                     Effect::If {
-                        cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::DefendingPlayer),
+                        cond: Predicate::PlayerSacrificedThisResolution(defender()),
                         then: Box::new(make(PlayerRef::You, Value::ONE, walker)),
                         else_: Box::new(Effect::Noop),
                     },

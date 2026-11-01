@@ -1838,14 +1838,16 @@ pub fn ardenn_intrepid_archaeologist() -> CardDefinition {
 pub fn halvar_god_of_battle() -> CardDefinition {
     let sword = CardDefinition {
         supertypes: vec![Supertype::Legendary],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(crate::card::EquipBonus {
             power: 2,
             keywords: vec![Keyword::Vigilance],
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::CreatureDied, EventScope::SelfSource),
                 effect: Effect::Move {
-                    what: Selector::This,
-                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::This))),
+                    what: Selector::TriggerSource,
+                    to: ZoneDest::Hand(PlayerRef::OwnerOf(Box::new(Selector::TriggerSource))),
                 },
             }],
             ..Default::default()

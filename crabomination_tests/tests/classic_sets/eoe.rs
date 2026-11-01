@@ -3327,9 +3327,15 @@ fn atomic_microsizer_shrinks_and_unblocks_target() {
         attacker: bear, target: AttackTarget::Player(1),
     }])).unwrap();
     drain_stack(&mut g);
-    let o = g.computed_permanent(ogre).unwrap();
-    assert_eq!((o.power, o.toughness), (1, 1), "target shrunk to 1/1");
-    assert!(o.keywords().contains(&Keyword::Unblockable), "target can't be blocked");
+    // The Microsizer's own trigger (CR 603.3a) may pick the bear too — an
+    // unblockable attacker is a fair use; whichever it picked shrinks.
+    let picked = [ogre, bear]
+        .into_iter()
+        .find(|&id| g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Unblockable))
+        .expect("a target can't be blocked");
+    let o = g.computed_permanent(picked).unwrap();
+    let base = if picked == bear { (2, 1) } else { (1, 1) };
+    assert_eq!((o.power, o.toughness), base, "target has base 1/1 (+1/+0 on the bear)");
 }
 
 /// Dyadrine enters with +1/+1 counters equal to the mana spent to cast it.

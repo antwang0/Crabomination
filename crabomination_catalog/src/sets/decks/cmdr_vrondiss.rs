@@ -420,15 +420,18 @@ pub fn skyship_stalker() -> CardDefinition {
 /// combat damage, roll a d12 and double its +1/+1 counters on a 12 or a
 /// result above the damage. Equip {2}.
 pub fn sword_of_hours() -> CardDefinition {
-    let double = || Effect::DoubleCountersOnEach { what: Selector::This, kind: CounterType::PlusOnePlusOne };
+    let wearer = || Selector::AttachedTo(Box::new(Selector::This));
+    let double = || Effect::DoubleCountersOnEach { what: wearer(), kind: CounterType::PlusOnePlusOne };
     CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
             triggered_abilities: vec![
                 TriggeredAbility {
                     event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                    effect: plus_one(Selector::This, Value::ONE),
+                    effect: plus_one(wearer(), Value::ONE),
                 },
                 TriggeredAbility {
                     event: EventSpec::new(EventKind::DealsCombatDamage, EventScope::SelfSource),

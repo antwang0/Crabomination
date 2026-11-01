@@ -253,8 +253,10 @@ pub fn captains_claws() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
             power: 1,
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(Effect::CreateTokenAttacking {
                 who: PlayerRef::You,
                 count: Value::ONE,

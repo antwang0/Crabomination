@@ -385,11 +385,13 @@ pub fn shield_of_the_righteous() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
             toughness: 2,
             keywords: vec![Keyword::Vigilance],
+            triggers_on_equipment: true,
             triggered_abilities: vec![blocks(Effect::SkipNextUntap {
-                what: Selector::BlockedAttacker,
+                what: Selector::CreaturesInCombatWith(Box::new(Selector::AttachedTo(Box::new(Selector::This)))),
             })],
             ..Default::default()
         }),

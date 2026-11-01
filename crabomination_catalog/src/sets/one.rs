@@ -2753,8 +2753,10 @@ pub fn infested_fleshcutter() -> CardDefinition {
             ..Default::default()
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2), w()]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
             power: 2,
+            triggers_on_equipment: true,
             triggered_abilities: vec![on_attack(Effect::CreateToken {
                 who: PlayerRef::You,
                 count: Value::ONE,
@@ -3032,6 +3034,8 @@ pub fn sword_of_forge_and_frontier() -> CardDefinition {
                 Keyword::Protection(Color::Red),
                 Keyword::Protection(Color::Green),
             ],
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
                 effect: Effect::Seq(vec![

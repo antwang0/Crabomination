@@ -5421,6 +5421,8 @@ pub fn spiked_ripsaw() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(3)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             power: 3,
             toughness: 3,
             triggered_abilities: vec![on_attack(Effect::MaySacrifice {
@@ -5428,7 +5430,7 @@ pub fn spiked_ripsaw() -> CardDefinition {
                 filter: SelectionRequirement::HasLandType(LandType::Forest),
                 count: Value::Const(1),
                 then: Box::new(Effect::GrantKeyword {
-                    what: Selector::This,
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
                     keyword: Keyword::Trample,
                     duration: Duration::EndOfTurn,
                 }),

@@ -162,8 +162,8 @@ pub fn homicide_investigator() -> CardDefinition {
     }
 }
 
-/// Lead Pipe — {B} Artifact — Clue Equipment. Equipped creature gets +2/+0 and
-/// "whenever this creature dies, each opponent loses 1 life". {2}, Sacrifice
+/// Lead Pipe — {B} Artifact — Clue Equipment. Equipped creature gets +2/+0.
+/// Whenever equipped creature dies, each opponent loses 1 life. {2}, Sacrifice
 /// this Equipment: Draw a card. Equip {2}.
 pub fn lead_pipe() -> CardDefinition {
     let dies = TriggeredAbility {
@@ -183,6 +183,8 @@ pub fn lead_pipe() -> CardDefinition {
         },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             power: 2,
             toughness: 0,
             triggered_abilities: vec![dies],

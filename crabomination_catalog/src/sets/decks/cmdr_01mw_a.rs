@@ -1790,9 +1790,16 @@ pub fn tormentors_helm() -> CardDefinition {
         equipped_bonus: Some(EquipBonus {
             power: 1,
             toughness: 1,
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
-                effect: Effect::DealDamage { to: Selector::Player(PlayerRef::DefendingPlayer), amount: Value::ONE },
+                // "It deals" — the equipped creature is the damage source.
+                effect: Effect::DealDamageFrom {
+                    source: Selector::AttachedTo(Box::new(Selector::This)),
+                    to: Selector::Player(PlayerRef::DefendingPlayer),
+                    amount: Value::ONE,
+                },
             }],
             ..Default::default()
         }),

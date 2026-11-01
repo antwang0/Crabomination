@@ -325,17 +325,17 @@ pub fn nightmare_lash() -> CardDefinition {
 pub fn dead_iron_sledge() -> CardDefinition {
     let mutual_kill = |kind: EventKind| TriggeredAbility {
         event: EventSpec::new(kind, EventScope::SelfSource),
-        effect: Effect::Seq(vec![
-            Effect::Destroy {
-                what: Selector::This,
-            },
-            Effect::Destroy {
-                what: Selector::CreaturesInCombatWith(Box::new(Selector::This)),
-            },
-        ]),
+        effect: Effect::Destroy {
+            what: Selector::Both(
+                Box::new(Selector::AttachedTo(Box::new(Selector::This))),
+                Box::new(Selector::CreaturesInCombatWith(Box::new(Selector::AttachedTo(Box::new(Selector::This))))),
+            ),
+        },
     };
     CardDefinition {
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![
                 mutual_kill(EventKind::Blocks),
                 mutual_kill(EventKind::BecomesBlocked),

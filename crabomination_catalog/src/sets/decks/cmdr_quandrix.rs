@@ -152,10 +152,15 @@ pub fn fractal_harness() -> CardDefinition {
             fractal(Value::XFromCost),
             Effect::Attach { what: Selector::This, to: Selector::LastCreatedToken },
         ]))],
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
         equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
-                effect: Effect::DoubleCountersOnEach { what: Selector::This, kind: CounterType::PlusOnePlusOne },
+                effect: Effect::DoubleCountersOnEach {
+                    what: Selector::AttachedTo(Box::new(Selector::This)),
+                    kind: CounterType::PlusOnePlusOne,
+                },
             }],
             ..Default::default()
         }),

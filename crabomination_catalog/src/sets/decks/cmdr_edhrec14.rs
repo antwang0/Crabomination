@@ -948,9 +948,11 @@ pub fn sigil_of_valor() -> CardDefinition {
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource).with_filter(Predicate::AttackingAlone),
-                effect: Effect::PumpPT { what: Selector::This, power: others(), toughness: others(), duration: Duration::EndOfTurn },
+                effect: Effect::PumpPT { what: Selector::AttachedTo(Box::new(Selector::This)), power: others(), toughness: others(), duration: Duration::EndOfTurn },
             }],
             ..Default::default()
         }),

@@ -169,7 +169,12 @@ pub fn fishing_gear() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(2)]))],
-        equipped_bonus: Some(EquipBonus { triggered_abilities: vec![trigger], ..Default::default() }),
+        // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+        equipped_bonus: Some(EquipBonus {
+            triggers_on_equipment: true,
+            triggered_abilities: vec![trigger],
+            ..Default::default()
+        }),
         ..Default::default()
     }
 }
@@ -583,10 +588,14 @@ pub fn trailblazers_torch() -> CardDefinition {
         keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
         triggered_abilities: vec![etb(Effect::TakeInitiative { who: PlayerRef::You })],
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a): "you" is its controller.
+            triggers_on_equipment: true,
             triggered_abilities: vec![TriggeredAbility {
                 event: EventSpec::new(EventKind::BecomesBlocked, EventScope::SelfSource),
-                effect: Effect::DealDamage {
-                    to: Selector::EachPermanent(R::Creature.and(R::BlockingOrBlockedBySource)),
+                // "It" — the equipped creature — deals the damage.
+                effect: Effect::DealDamageFrom {
+                    source: Selector::AttachedTo(Box::new(Selector::This)),
+                    to: Selector::EachPermanent(R::Creature.and(R::BlockingHostOfSource)),
                     amount: Value::Const(2),
                 },
             }],
@@ -2632,9 +2641,9 @@ pub fn sword_of_kaldra() -> CardDefinition {
         card_types: vec![CardType::Artifact],
         subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
         keywords: vec![Keyword::Equip(cost(&[generic(4)]))],
-        // The damage trigger rides on the bearer (the damaged creature binds
-        // to slot 0), the same grant Umezawa's Jitte's charge uses.
         equipped_bonus: Some(EquipBonus {
+            // The Equipment's own trigger (CR 603.3a); the damaged creature binds to slot 0.
+            triggers_on_equipment: true,
             power: 5,
             toughness: 5,
             triggered_abilities: vec![TriggeredAbility {
