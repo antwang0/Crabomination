@@ -7109,7 +7109,7 @@ rollout player than the unscored heuristic. Net-played rollouts wait for
 a stronger policy (phase 5's loop, or the action-conditioned policy);
 until then the adopted shape is `mc` with the heuristic's 256 rollouts.
 
-### Phase 5 — expert iteration: the search teaches the policy (2026-11-01)
+### Phase 5 — expert iteration: the search teaches the policy (2026-11-01/02): one real step, then flat; gen 3 +2.3 over gen 0, +6.9 over the client
 
 **The loop.** A generation is one `selfplay_train` run. Its actors are
 the phase-4 search (`--mcts-actors 256 --menu-search mc`: main + combat
@@ -7148,3 +7148,61 @@ and 97):
 **Stop:** two consecutive generations that do not move (read 1) end the
 loop, as does generation 4. No tuning between generations beyond what is
 written here.
+
+**What ran** (2026-11-01/02). Four generations, 6,000 games each, 18
+actors (22 for gen 4), 256 rollouts per searched decision; ~670 k
+trained-side policy rows a generation, 55 % of them searched (the rest
+imitation rows for the windows the search leaves to the heuristic);
+learner on the CPU for gens 1–3 and the GPU for gen 4, reuse cap 3,
+~7,000 steps a generation. A game costs ~30 actor-seconds; the rollouts'
+heuristic play is 94.7 % of the search's time and the leaf net 5.2 %
+(`CRAB_MCTS_TIMING`), so a GPU leaf would buy at most 5 %. Gens 2 and 3
+shared the machine with a gate and ran at 0.3 games/s against 0.6 alone;
+from gen 3 on the driver ran gates and training in turn.
+
+| gen | progress vs gen k−1 (43 / 97) | pooled | verdict | alone vs `dflt` | blunders | own leaf vs champion |
+|---|---|---|---|---|---|---|
+| 0 (run D) | — | — | — | 34.5 / 36.6 | 14 / 22 | — |
+| 1 | **52.2** [50.4, 53.9] / 50.3 [48.4, 52.2] | +1.25 | moved | **38.3 / 40.2** | **18** / 22 | 40.6 / 37.6 |
+| 2 | 49.7 [48.0, 51.3] / 50.6 [48.8, 52.3] | +0.15 | flat | 38.5 / 37.8 | 16 / 22 | 39.5 / 37.1 |
+| 3 | **52.2** [50.4, 54.0] / 50.3 [48.5, 52.1] | +1.25 | moved | 38.6 / 38.0 | 18 / 22 | 37.7 / 38.7 |
+| 4 | 47.8 [46.0, 49.7] / **52.2** [50.4, 53.9] | 0.0 | flat (cap) | 37.8 / 36.4 | 17 / 22 | 41.1 / 38.5 |
+
+**Closing reads, on gen 3** (the last generation that moved):
+
+- against the client's pilot (read 4): **58.0 % [56.0, 59.9] / 55.8 %
+  [53.9, 57.8], pooled +6.9** — gen 0's prior on the same cells was
+  57.1 / 54.1 (+5.6);
+- against gen 0 head-to-head (an extra read, not pre-registered — the
+  gates only compare neighbours): **52.4 % [50.5, 54.2] / 52.2 % [50.3,
+  54.0], pooled +2.3**, both seeds clear of 50.
+
+**Readings.** (1) **The loop is real but short.** Training on the
+search's improved policy lifted the policy past imitation's plateau in
+one generation (alone +3.7, blunders +4), and the search on gen 3's
+priors is +2.3 over gen 0's head-to-head and +1.3 more against the fixed
+anchor. After gen 1 the policy alone is flat (~38 %), and the in-search
+gain comes in steps the size of the noise. (2) **Seed-to-seed spread
+exceeds a cell's interval**: gen 4's two seeds disagree by 4.4 points
+(47.8 / 52.2), so the two "moved" verdicts (52.2 / 50.3 each) are each
+weaker than their intervals say; the direct gen 3 vs gen 0 read is the
+one to trust. (3) **The value head is not a by-product worth keeping**:
+every generation's leaf lost ~11 points to the champion's — it fits
+6,000 games and the train/held-out gap (train MSE ~0.03 vs 0.27 held
+out) is run D's. (4) The blunder set moves item by item between
+generations (kill-the-flier passes in gen 1, fails in 2–3; the Tome
+activation passes only in gen 3) — 22 items is a coarse instrument for
+differences this size. (5) **The binding limit is the representation**,
+as phase 3 concluded: two very different teachers, then better targets,
+then three more generations of data all leave the policy alone at
+35–38 %, with a train/held-out top-1 gap (0.80 / 0.65) that says more
+capacity of the same shape would memorize, not generalize. The next
+lever is the action-conditioned policy (score a move by its own objects
+against the state's per-object embeddings), not more generations,
+width, or tuning.
+
+**Not adopted.** Gen 3's policy (`.ladder/p5/gen3_final.safetensors`) is
+the strongest menu-search prior measured: `mcts-net67-menu-mc` on it
+beats the client's pilot by +6.9 on SOS. Shipping it means a policy net
+beside the champion in the client and an FRA read first — a proposal,
+not done. Scripts: `.ladder/p5/{gen,gate,driver2,final}.sh`.
