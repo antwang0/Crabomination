@@ -7286,3 +7286,22 @@ against a fixed teacher. (First attempt: two learners side by side OOM'd
 at 31.8 GB — the decision deque now carries a root state per row; and a
 `--steps` run without `--games` leaves its actors playing after the
 learner stops, so the script ends it at "learner done".)
+
+**Second read: one search-played generation with the head** (`gen5h`:
+gen 4's recipe — 6,000 games of the menu search on gen 3's priors, the
+learner from gen 3 — plus `--policy-action`; gen 4 is the control):
+
+| | vs gen 3 in the search (43 / 97) | alone vs `dflt` | blunders |
+|---|---|---|---|
+| gen 4 (no head) | 47.8 / 52.2 (0.0) | 37.8 / 36.4 | 17 / 22 |
+| gen 5h (head) | 48.9 [47.0, 50.7] / 50.7 [49.0, 52.4] (−0.2) | 36.9 / 38.2 | 17 / 22 |
+
+**Null.** Held-out top-1 against the search's targets 0.82. Read with the
+imitation result: most of the head's imitation gain was A *losing* gen 3's
+level (38.6 / 38.0 → 34.7 / 36.0) while B kept it (+1.15 over gen 3);
+under the search's targets nothing is lost, and the head adds nothing
+measurable. So the ~38 % alone is not only the pooled-successor
+representation either. Policy work stops here; the head stays in-tree,
+default off (no adopted net carries it). Next: fewer arms on gen 3's
+sharper prior, then the value net — the one component every phase-5
+generation failed to improve.

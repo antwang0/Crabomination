@@ -304,17 +304,22 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     // Suffixes: `-np<N>` plays the rollouts with the policy pilot at N
     // iterations (`MctsConfig::policy_rollouts`), `-it<N>` sets the
     // iterations of heuristic rollouts (the budget-matched control),
-    // `-h<N>` the horizon. Phase 5: `-pb` reads its priors from
-    // `CRAB_POLICY_NET_B` and `-vb` its leaf from `CRAB_NET_B`, so two
-    // generations of the loop can meet in one cell.
+    // `-h<N>` the horizon, `-a<N>` the arms searched (default 8). Phase 5:
+    // `-pb` reads its priors from `CRAB_POLICY_NET_B` and `-vb` its leaf
+    // from `CRAB_NET_B`, so two generations of the loop can meet in one cell.
     if let Some(rest) = name.strip_prefix("mcts-net67-menu-") {
         let mut parts = rest.split('-');
         let w = parts.next()?;
         let (mut conf, mut pol, mut horizon, mut iters) = (2.0, None, 3u32, 256u32);
         let mut policy_slot = crabomination::server::net_eval::SLOT_CANDIDATE;
         let mut weights = EvalWeights::net_on_default().with_fra_fixes();
+        let mut arms = MctsConfig::default().menu_arms;
         for p in parts {
-            if p == "pb" {
+            if let Some(n) = p.strip_prefix('a')
+                && let Ok(n) = n.parse::<usize>()
+            {
+                arms = n;
+            } else if p == "pb" {
                 policy_slot = crabomination::server::net_eval::SLOT_POLICY_B;
             } else if p == "vb" {
                 weights.net_slot = crabomination::server::net_eval::SLOT_VALUE_B;
@@ -344,6 +349,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             weights,
             menu_windows: mask,
             policy_slot,
+            menu_arms: arms,
             menu_confident: conf,
             policy_rollouts: pol.is_some(),
             ..MctsConfig::default()
