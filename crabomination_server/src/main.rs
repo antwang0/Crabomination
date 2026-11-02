@@ -81,6 +81,18 @@ fn main() {
         .unwrap_or_else(|e| panic!("value net {net_path}: {e}"));
         println!("value net loaded from {net_path}; lobby bots use MCTS-net");
     }
+    // The policy net, the same rule: Cube lobby bots search main phases and
+    // combat over every legal move on its priors (`lobby::default_bot`).
+    let policy_path =
+        env::var("CRAB_POLICY_NET").unwrap_or_else(|_| "nets/policy-champion.safetensors".to_string());
+    if std::path::Path::new(&policy_path).exists() {
+        crabomination::server::net_eval::load_slot(
+            crabomination::server::net_eval::SLOT_CANDIDATE,
+            std::path::Path::new(&policy_path),
+        )
+        .unwrap_or_else(|e| panic!("policy net {policy_path}: {e}"));
+        println!("policy net loaded from {policy_path}; Cube lobby bots search every legal move");
+    }
     let pairing_timeout = pairing_timeout_from_env();
     // Connection caps must be at least 1 — a `0` (typo or empty-string-ish
     // misconfig) would otherwise silently refuse every client, so treat

@@ -62,15 +62,29 @@ use super::{
 /// without them **53.3 % [51.7, 54.9] / 54.1 % [52.6, 55.7]** on cube
 /// (seeds 97 / 43, 200 x 8, round 85, `.ladder/r85`). Modern and the SOS
 /// college decks are unmeasured and stay on the default.
+///
+/// A Cube duel also searches its main phases and combat over the complete
+/// move list on the phase-5 policy's priors (`MctsConfig::menu_windows`,
+/// the client's pilot since 2026-11-02), when the server booted a
+/// policy-headed net into the candidate slot (`nets/policy-champion.
+/// safetensors` / `CRAB_POLICY_NET`): **54.0 [51.7, 56.2] / 54.1 [51.7,
+/// 56.5]** over this pilot without it on cube (seeds 43 / 97, 120 x 12,
+/// `.ladder/adopt`).
 fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::Bot> {
     if seats > 2 {
         return Box::new(super::HeuristicBot::new());
     }
     let mut weights = super::EvalWeights::net_on_default();
+    let mut cfg = MctsConfig { iterations: 256, horizon_turns: 3, ..MctsConfig::default() };
     if format == crate::net::LobbyFormat::Cube {
         weights = weights.with_fra_fixes();
+        let slot = super::net_eval::SLOT_CANDIDATE;
+        if super::net_eval::slot_has_policy(slot) {
+            cfg.menu_windows = super::mcts::MENU_MAIN | super::mcts::MENU_COMBAT;
+            cfg.policy_slot = slot;
+        }
     }
-    Box::new(MctsBot::new(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() }))
+    Box::new(MctsBot::new(MctsConfig { weights, ..cfg }))
 }
 
 /// Callback invoked when a lobby-started match finishes, with its gamemode,
