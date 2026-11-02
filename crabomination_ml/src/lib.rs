@@ -26,8 +26,8 @@ use candle_nn::{
     VarBuilder, VarMap, embedding, layer_norm, linear,
 };
 use crabomination_nn::{
-    ATTN_HEADS, AUX_FEATS, DeckRow, EMB_DIM, EncodedState, GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS,
-    OBJ_HIDDEN, POLICY_KINDS, TRUNK_H1, TRUNK_H2, TrainRow,
+    ACTION_MAX_REFS, ACTION_ROLES, ACTION_WIDTH, ATTN_HEADS, AUX_FEATS, ActionRef, DeckRow, EMB_DIM, EncodedState,
+    GLOBAL_FEATS, NUM_GROUPS, OBJ_FEATS, OBJ_HIDDEN, POLICY_KINDS, TRUNK_H1, TRUNK_H2, TrainRow,
 };
 use rand::{Rng, RngExt};
 
@@ -74,6 +74,12 @@ pub struct NetConfig {
     /// Needs [`Self::policy`]. Off by default, so every run without it
     /// stays bit-reachable.
     pub policy_kinds: bool,
+    /// Build the action head (`head_action.*`): a term on the policy logit
+    /// read from the decision state's per-object embeddings at the objects
+    /// each move involves — see `crabomination_nn::PlayNet::
+    /// forward_action_terms`. Its output layer starts at zero, so a warm
+    /// start scores exactly as before. Needs [`Self::policy`].
+    pub policy_action: bool,
     /// Build the opponent-hand belief head (`head_opp.*`, h2 → vocab,
     /// round 39): per-name probabilities that the opponent currently
     /// holds each card, trained with multi-label BCE against the
@@ -97,6 +103,7 @@ impl NetConfig {
             blocks: 0,
             policy: false,
             policy_kinds: false,
+            policy_action: false,
             opp: false,
         }
     }
@@ -127,7 +134,30 @@ pub struct PlayModel {
     /// `(weight [POLICY_KINDS, h2], bias [POLICY_KINDS])` — see
     /// [`NetConfig::policy_kinds`].
     head_policy_kind: Option<(Tensor, Tensor)>,
+    head_action: Option<ActionModel>,
     head_opp: Option<Linear>,
+}
+
+/// The candle mirror of `crabomination_nn`'s action head; tensor names
+/// `head_action.{obj,role,ctx,kind,out}.*` match the engine's loader.
+struct ActionModel {
+    obj: Linear,
+    role: Embedding,
+    ctx: Linear,
+    kind: Embedding,
+    out_w: Tensor, // [1, A]
+    out_b: Tensor, // [1]
+}
+
+/// The action head's references for a batch of decisions, flattened for
+/// gathers: per reference, the row into the roots' concatenated objects
+/// (`[B · N]`, the last row a zero vector for no object), its role, and the
+/// candidate slot (`[B · K]`) it adds into.
+pub struct ActionGather {
+    obj: Tensor,
+    role: Tensor,
+    slot: Tensor,
+    refs: usize,
 }
 
 /// Candle mirror of `crabomination_nn`'s `Attn`. Tensor names must match
@@ -214,6 +244,21 @@ pub fn build_model(cfg: &NetConfig, vb: VarBuilder) -> CResult<PlayModel> {
                 v.get_with_hints((POLICY_KINDS, cfg.h2), "weight", candle_nn::Init::Const(0.0))?,
                 v.get_with_hints(POLICY_KINDS, "bias", candle_nn::Init::Const(0.0))?,
             ))
+        } else {
+            None
+        },
+        head_action: if cfg.policy_action {
+            assert!(cfg.policy, "the action head adds to the policy head");
+            let v = vb.pp("head_action");
+            let o = v.pp("out");
+            Some(ActionModel {
+                obj: linear(cfg.obj_hidden, ACTION_WIDTH, v.pp("obj"))?,
+                role: embedding(ACTION_ROLES, ACTION_WIDTH, v.pp("role"))?,
+                ctx: linear(cfg.h2, ACTION_WIDTH, v.pp("ctx"))?,
+                kind: embedding(POLICY_KINDS, ACTION_WIDTH, v.pp("kind"))?,
+                out_w: o.get_with_hints((1, ACTION_WIDTH), "weight", candle_nn::Init::Const(0.0))?,
+                out_b: o.get_with_hints(1, "bias", candle_nn::Init::Const(0.0))?,
+            })
         } else {
             None
         },
@@ -641,6 +686,13 @@ impl PlayModel {
     /// The shared trunk: per-object encode, optional interaction, pool,
     /// two relu layers. Every head reads the returned `[B, h2]`.
     fn trunk_out(&self, batch: &Batch) -> CResult<Tensor> {
+        Ok(self.trunk_parts(batch)?.0)
+    }
+
+    /// The trunk's output and the per-group object embeddings it pooled
+    /// (`[B, N_g, H]` each, padding rows included) — the action head's
+    /// input.
+    fn trunk_parts(&self, batch: &Batch) -> CResult<(Tensor, Vec<Tensor>)> {
         // Per-object hidden states, one tensor per group.
         let mut hs: Vec<Tensor> = Vec::with_capacity(NUM_GROUPS);
         for g in 0..NUM_GROUPS {
@@ -674,8 +726,91 @@ impl PlayModel {
         let refs: Vec<&Tensor> = pooled.iter().collect();
         let t = Tensor::cat(&refs, 1)?;
         let t1 = self.trunk1.forward(&t)?.relu()?;
-        self.trunk2.forward(&t1)?.relu()
+        Ok((self.trunk2.forward(&t1)?.relu()?, hs))
     }
+
+    pub fn has_action_head(&self) -> bool {
+        self.head_action.is_some()
+    }
+
+    /// The action head's term for every candidate slot of a decision batch,
+    /// `[B, K]`: `roots` the decision states (one per row), `kinds` `[B]`,
+    /// `g` the references (see [`ActionGather`]). `None` without the head.
+    pub fn forward_action_terms(&self, roots: &Batch, kinds: &Tensor, g: &ActionGather, k: usize) -> CResult<Option<Tensor>> {
+        let Some(a) = &self.head_action else { return Ok(None) };
+        let (t2, hs) = self.trunk_parts(roots)?;
+        let b = t2.dim(0)?;
+        let base = self.ctx_base(a, &t2, kinds)?; // [B, A]
+        let base = base.unsqueeze(1)?.broadcast_as((b, k, ACTION_WIDTH))?.reshape((b * k, ACTION_WIDTH))?;
+        let z = if g.refs > 0 {
+            let refs: Vec<&Tensor> = hs.iter().collect();
+            let cat = Tensor::cat(&refs, 1)?; // [B, N, H]
+            let (_, n, h) = cat.dims3()?;
+            let flat = cat.reshape((b * n, h))?;
+            let flat = Tensor::cat(&[&flat, &Tensor::zeros((1, h), flat.dtype(), flat.device())?], 0)?;
+            let x = flat.index_select(&g.obj, 0)?; // [M, H]
+            let p = a.obj.forward(&x)?.add(&a.role.forward(&g.role)?)?.relu()?; // [M, A]
+            let acc = Tensor::zeros((b * k, ACTION_WIDTH), p.dtype(), p.device())?.index_add(&g.slot, &p, 0)?;
+            base.add(&acc)?.relu()?
+        } else {
+            base.relu()?
+        };
+        let term = z.matmul(&a.out_w.t()?)?.broadcast_add(&a.out_b)?; // [B·K, 1]
+        Ok(Some(term.reshape((b, k))?))
+    }
+
+    fn ctx_base(&self, a: &ActionModel, t2: &Tensor, kinds: &Tensor) -> CResult<Tensor> {
+        a.ctx.forward(t2)?.add(&a.kind.forward(kinds)?)
+    }
+}
+
+/// [`ActionGather`] for `rows` laid out as the padded batch `pad` (each
+/// row's refs sliced by its window, like every per-candidate slice), over
+/// the roots' batch whose per-group padded widths are `widths`. A row
+/// without refs contributes none.
+fn action_gather(rows: &[&DecisionRow], pad: &PaddedDecisions, roots: &[&EncodedState], widths: &[usize], dev: &Device) -> CResult<ActionGather> {
+    let n_tot: usize = widths.iter().sum();
+    let zero_row = (rows.len() * n_tot) as u32;
+    let (mut obj, mut role, mut slot) = (Vec::new(), Vec::new(), Vec::new());
+    for (i, r) in rows.iter().enumerate() {
+        let Some(refs) = r.refs.as_ref() else { continue };
+        let root = roots[i];
+        // Engine flat index -> (group, within) -> padded concat offset.
+        let mut starts = [0usize; NUM_GROUPS];
+        let mut lens = [0usize; NUM_GROUPS];
+        let mut acc = 0;
+        for gi in 0..NUM_GROUPS {
+            starts[gi] = acc;
+            lens[gi] = root.group(gi).len();
+            acc += lens[gi];
+        }
+        let mut pstart = [0usize; NUM_GROUPS];
+        let mut pacc = 0;
+        for gi in 0..NUM_GROUPS {
+            pstart[gi] = pacc;
+            pacc += widths[gi];
+        }
+        let (off, n) = (pad.offset[i], pad.n[i]);
+        for j in 0..n {
+            let Some(cand) = refs.get(off + j) else { continue };
+            for &(rl, o) in cand.iter().take(ACTION_MAX_REFS) {
+                let row = (0..NUM_GROUPS)
+                    .find(|&gi| (o as usize) >= starts[gi] && (o as usize) < starts[gi] + lens[gi])
+                    .map(|gi| (i * n_tot + pstart[gi] + (o as usize - starts[gi])) as u32)
+                    .unwrap_or(zero_row);
+                obj.push(row);
+                role.push((rl as u32).min(ACTION_ROLES as u32 - 1));
+                slot.push((i * pad.k + j) as u32);
+            }
+        }
+    }
+    let m = obj.len();
+    Ok(ActionGather {
+        obj: Tensor::from_vec(obj, m, dev)?,
+        role: Tensor::from_vec(role, m, dev)?,
+        slot: Tensor::from_vec(slot, m, dev)?,
+        refs: m,
+    })
 }
 
 
@@ -725,6 +860,11 @@ pub struct DecisionRow {
     /// [`POLICY_KINDS`]) — the kind table's row its candidates are scored
     /// with. 0 (priority) for every capture site before the move list.
     pub kind: u8,
+    /// The action head's input: the decision state, and each candidate's
+    /// references into it, aligned with `successors` — see
+    /// `crabomination::server::decision_capture::CapturedDecision::root`.
+    pub root: Option<EncodedState>,
+    pub refs: Option<Vec<Vec<ActionRef>>>,
 }
 
 impl Default for DecisionRow {
@@ -744,6 +884,8 @@ impl Default for DecisionRow {
             settled: false,
             ret: f32::NAN,
             kind: 0,
+            root: None,
+            refs: None,
         }
     }
 }
@@ -1513,8 +1655,8 @@ impl Trainer {
         }
         let pad = pad_decisions(&usable).expect("non-empty");
         let (b, k) = (pad.b, pad.k);
-        let flat = pad.flat;
-        let mask = pad.mask;
+        
+        let mask = pad.mask.clone();
         let mut onehot = vec![0f32; b * k];
         // Search-value regression targets and evidence weights, flat
         // over the same [b, k] layout; weight 0 = slot excluded.
@@ -1552,24 +1694,7 @@ impl Trainer {
             }
         }
 
-        let batch = make_state_batch(&flat, &self.dev)?;
-        // Each candidate carries its row's decision kind; read only when the
-        // model has the kind table, so every run without it is unchanged.
-        let kinds = if self.model.has_policy_kinds() {
-            let ks: Vec<u32> = usable.iter().flat_map(|r| std::iter::repeat_n(r.kind as u32, k)).collect();
-            Some(Tensor::from_vec(ks, b * k, &self.dev)?)
-        } else {
-            None
-        };
-        // One trunk pass serves both objectives. The ranking loss trains
-        // the policy head when the model has one; without it, the
-        // historical shared-win-head path (recover the logit from the
-        // sigmoid) stays bit-reachable as the control.
-        let (win, pol) = self.model.forward_win_policy_kinds(&batch, kinds.as_ref(), false)?;
-        let logits = match pol {
-            Some(l) => l.reshape((b, k))?,
-            None => logit_of(&win)?.reshape((b, k))?,
-        };
+        let (win, logits) = self.policy_logits(&usable, &pad)?;
         let mask_t = Tensor::from_vec(mask, (b, k), &self.dev)?;
         let onehot_t = Tensor::from_vec(onehot.clone(), (b, k), &self.dev)?;
         // Padding is pushed to -inf-ish so it takes no probability mass.
@@ -1824,27 +1949,108 @@ impl Trainer {
     /// Ranks with the policy head when the model has one, the win head
     /// otherwise — the same scores a search consuming this net would
     /// rank with, which is the whole point of the metric.
+    ///
+    /// Scored exactly as the training step scores (kind table and action
+    /// head included, the same candidate window) and judged the same way:
+    /// a hit is the net's favourite equalling the *target's* — the search's
+    /// top value where the row carries values, the played move otherwise.
+    /// (Until 2026-11-02 this read the shared head alone, without the kind
+    /// table, against the played move — so held-out and training top-1
+    /// measured different things.)
     pub fn policy_top1(&self, rows: &[&DecisionRow]) -> CResult<f32> {
-        let mut hit = 0usize;
-        let mut n = 0usize;
-        for r in rows {
-            if r.successors.len() < 2 || r.chosen >= r.successors.len() {
-                continue;
-            }
-            let refs: Vec<&EncodedState> = r.successors.iter().collect();
-            let p = self.predict_policy_states(&refs, 64)?;
-            let best = p
-                .iter()
-                .enumerate()
-                .max_by(|a, b| a.1.partial_cmp(b.1).unwrap_or(std::cmp::Ordering::Equal))
-                .map(|(j, _)| j)
-                .unwrap_or(0);
-            n += 1;
-            if best == r.chosen {
-                hit += 1;
+        let usable: Vec<&DecisionRow> =
+            rows.iter().copied().filter(|r| r.successors.len() >= 2 && r.chosen < r.successors.len()).collect();
+        let (mut hit, mut n) = (0usize, 0usize);
+        for part in usable.chunks(64) {
+            let Some(pad) = pad_decisions(part) else { continue };
+            let (_, logits) = self.policy_logits(part, &pad)?;
+            let scores = logits.to_vec2::<f32>()?;
+            for (i, r) in part.iter().enumerate() {
+                let (off, live) = (pad.offset[i], pad.n[i]);
+                let argmax = |xs: &[f32]| {
+                    (0..xs.len()).max_by(|&a, &b| xs[a].partial_cmp(&xs[b]).unwrap_or(std::cmp::Ordering::Equal)).unwrap_or(0)
+                };
+                let best = argmax(&scores[i][..live]);
+                let target = match r.values.as_ref().filter(|v| v.len() >= off + live) {
+                    Some(v) => argmax(&v[off..off + live]),
+                    None => pad.chosen[i],
+                };
+                n += 1;
+                hit += usize::from(best == target);
             }
         }
         Ok(if n == 0 { f32::NAN } else { hit as f32 / n as f32 })
+    }
+
+    /// The action head's term for each of `cands` over the decision state
+    /// `root` — the trainer-side twin of `PlayNet::forward_action_terms`,
+    /// through the training step's own gather. `None` without the head.
+    pub fn predict_action_terms(&self, root: &EncodedState, kind: u8, cands: &[Vec<ActionRef>]) -> CResult<Option<Vec<f32>>> {
+        if !self.model.has_action_head() || cands.len() < 2 {
+            return Ok(None);
+        }
+        let row = DecisionRow {
+            successors: vec![root.clone(); cands.len()],
+            kind,
+            root: Some(root.clone()),
+            refs: Some(cands.to_vec()),
+            ..Default::default()
+        };
+        let rows = [&row];
+        let pad = pad_decisions(&rows).expect("one row");
+        let rb = make_state_batch(&[root], &self.dev)?;
+        let widths: Vec<usize> = rb.ids.iter().map(|t| t.dim(1).unwrap_or(0)).collect();
+        let g = action_gather(&rows, &pad, &[root], &widths, &self.dev)?;
+        let k = if (kind as usize) < POLICY_KINDS { kind as u32 } else { 0 };
+        let rk = Tensor::from_vec(vec![k], 1, &self.dev)?;
+        let t = self.model.forward_action_terms(&rb, &rk, &g, pad.k)?.expect("head");
+        Ok(Some(t.to_vec2::<f32>()?[0][..pad.n[0]].to_vec()))
+    }
+
+    /// Per-candidate policy logits for a padded decision batch, `[b, k]`
+    /// (padding slots unmasked), beside the win head's `[b·k, 1]` — the one
+    /// scoring path the training step and the holdout share: the policy
+    /// head (or the win head's logit without one), the kind table, and the
+    /// action head's term for rows that carry its input.
+    fn policy_logits(&self, rows: &[&DecisionRow], pad: &PaddedDecisions) -> CResult<(Tensor, Tensor)> {
+        let (b, k) = (pad.b, pad.k);
+        let batch = make_state_batch(&pad.flat, &self.dev)?;
+        // Each candidate carries its row's decision kind; read only when the
+        // model has the kind table, so every run without it is unchanged.
+        let kinds = if self.model.has_policy_kinds() {
+            let ks: Vec<u32> = rows.iter().flat_map(|r| std::iter::repeat_n(r.kind as u32, k)).collect();
+            Some(Tensor::from_vec(ks, b * k, &self.dev)?)
+        } else {
+            None
+        };
+        // One trunk pass serves both objectives. The ranking loss trains
+        // the policy head when the model has one; without it, the
+        // historical shared-win-head path (recover the logit from the
+        // sigmoid) stays bit-reachable as the control.
+        let (win, pol) = self.model.forward_win_policy_kinds(&batch, kinds.as_ref(), false)?;
+        let mut logits = match pol {
+            Some(l) => l.reshape((b, k))?,
+            None => logit_of(&win)?.reshape((b, k))?,
+        };
+        if self.model.has_action_head() && rows.iter().any(|r| r.root.is_some() && r.refs.is_some()) {
+            let roots: Vec<&EncodedState> = rows
+                .iter()
+                .map(|r| r.root.as_ref().filter(|_| r.refs.is_some()).unwrap_or(&r.successors[0]))
+                .collect();
+            let rb = make_state_batch(&roots, &self.dev)?;
+            let widths: Vec<usize> = rb.ids.iter().map(|t| t.dim(1).unwrap_or(0)).collect();
+            let g = action_gather(rows, pad, &roots, &widths, &self.dev)?;
+            // Out of range reads row 0, as the engine's forward does.
+            let row_kinds: Vec<u32> =
+                rows.iter().map(|r| if (r.kind as usize) < POLICY_KINDS { r.kind as u32 } else { 0 }).collect();
+            let rk = Tensor::from_vec(row_kinds, b, &self.dev)?;
+            if let Some(t) = self.model.forward_action_terms(&rb, &rk, &g, k)? {
+                let has: Vec<f32> = rows.iter().map(|r| f32::from(u8::from(r.root.is_some() && r.refs.is_some()))).collect();
+                let has = Tensor::from_vec(has, (b, 1), &self.dev)?;
+                logits = logits.add(&t.broadcast_mul(&has)?)?;
+            }
+        }
+        Ok((win, logits))
     }
 
     /// Win probability for one encoded state — the trainer-side twin of
@@ -2644,6 +2850,7 @@ mod tests {
             blocks: 0,
             policy: false,
             policy_kinds: false,
+            policy_action: false,
             opp: false,
         }
     }
@@ -2808,6 +3015,100 @@ mod tests {
     /// Only the kind table can learn this: the same two successors, kind 3
     /// always picks the first and kind 9 the second. A kind-free head is
     /// stuck at a coin flip on one of them; with the table both are fit.
+    /// The action head's parity surface: random weights in candle,
+    /// exported, and the engine's `forward_action_terms` reproduces every
+    /// candidate's term — references into every group, players (no object),
+    /// a reference past the state's objects, an out-of-range kind.
+    #[test]
+    fn action_head_matches_engine_inference() {
+        use crabomination_nn::NO_OBJECT;
+        let cfg = NetConfig { policy: true, policy_kinds: true, policy_action: true, ..small_cfg() };
+        let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+        {
+            let data = trainer.varmap.data().lock().unwrap();
+            let mut rng = StdRng::seed_from_u64(9);
+            for (name, v) in data.iter() {
+                if !name.starts_with("head_action") {
+                    continue;
+                }
+                let n = v.elem_count();
+                let vals: Vec<f32> = (0..n).map(|_| rng.random_range(-1.0f32..1.0)).collect();
+                v.set(&Tensor::from_vec(vals, v.shape(), v.device()).unwrap()).unwrap();
+            }
+        }
+        let path = std::env::temp_dir().join(format!("crab_action_parity_{}.safetensors", std::process::id()));
+        trainer.save(&path).expect("save");
+        let bytes = std::fs::read(&path).expect("read");
+        let _ = std::fs::remove_file(&path);
+        let net = PlayNet::load(&bytes).expect("engine loads the action head");
+        assert!(net.has_action_head());
+        let mut rng = StdRng::seed_from_u64(44);
+        for (case, kind) in [0u8, 1, 2, 9, 31, 200].into_iter().enumerate() {
+            let root = random_state(&mut rng, cfg.vocab);
+            let n = root.len() as u16;
+            let cands: Vec<Vec<ActionRef>> = (0..5)
+                .map(|c| {
+                    let mut v: Vec<ActionRef> = (0..c)
+                        .map(|_| (rng.random_range(0..ACTION_ROLES as u8), rng.random_range(0..n.max(1))))
+                        .collect();
+                    if c == 3 {
+                        v.push((2, NO_OBJECT));
+                        v.push((4, n + 3));
+                    }
+                    v
+                })
+                .collect();
+            let want = trainer.predict_action_terms(&root, kind, &cands).expect("candle").expect("head");
+            let got = net.forward_action_terms(&root, kind as usize, &cands).expect("engine");
+            for (c, (g, w)) in got.iter().zip(&want).enumerate() {
+                assert!((g - w).abs() < 1e-4, "case {case} cand {c}: engine {g} vs candle {w}");
+            }
+        }
+    }
+
+    /// What the action head is for: two moves whose successors are the same
+    /// state differ only in which object they act with. The successor
+    /// policy cannot tell them apart; the action head learns which object's
+    /// card is the right one.
+    #[test]
+    fn the_action_head_separates_moves_the_successors_cannot() {
+        let mut rng = StdRng::seed_from_u64(6);
+        let rows: Vec<DecisionRow> = (0..32)
+            .map(|_| {
+                let mut s = random_state(&mut rng, 12);
+                let mut feats = [0.0f32; OBJ_FEATS];
+                feats[0] = 0.5;
+                // Two more objects (in the last group, the only one still
+                // open): card 3 is the right one to act with.
+                let base = s.len() as u16;
+                s.push(NUM_GROUPS - 1, EncodedObject { card: 3, feats });
+                s.push(NUM_GROUPS - 1, EncodedObject { card: 4, feats });
+                let (good, bad) = (base, base + 1);
+                let flip = rng.random_range(0..2) == 1;
+                let refs = if flip { vec![vec![(0, bad)], vec![(0, good)]] } else { vec![vec![(0, good)], vec![(0, bad)]] };
+                DecisionRow {
+                    successors: vec![s.clone(), s.clone()],
+                    chosen: usize::from(flip),
+                    root: Some(s),
+                    refs: Some(refs),
+                    ..Default::default()
+                }
+            })
+            .collect();
+        let refs: Vec<&DecisionRow> = rows.iter().collect();
+        let fit = |action: bool| {
+            let cfg = NetConfig { policy: true, policy_kinds: true, policy_action: action, ..small_cfg() };
+            let mut t = Trainer::new(&cfg, 1e-2).expect("trainer");
+            for _ in 0..300 {
+                t.train_policy_step(&refs).expect("step");
+            }
+            t.policy_top1(&refs).expect("top1")
+        };
+        let (with, without) = (fit(true), fit(false));
+        assert!(with > 0.95, "with the action head: {with}");
+        assert!(without < 0.7, "identical successors can't be told apart: {without}");
+    }
+
     #[test]
     fn the_kind_table_separates_kinds_over_the_same_candidates() {
         let mut rng = StdRng::seed_from_u64(5);
@@ -4019,6 +4320,7 @@ mod tests {
                 blocks: 0,
                 policy: false,
                 policy_kinds: false,
+                policy_action: false,
                 opp: false,
             };
         let mut play = Trainer::new(&cfg, 1e-3).expect("play trainer");

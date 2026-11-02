@@ -138,8 +138,25 @@ pub fn policy_logit_kind(state: &GameState, seat: usize, slot: u8, kind: u8) -> 
 /// Whether the slot's net can answer [`policy_logit`] at all — the check
 /// a profile makes at startup so "learned priors" vs "heuristic fallback"
 /// is reported once rather than discovered mid-game.
+/// The action head's term for each move of a decision (`refs[c]` move
+/// `c`'s objects in `root`'s encoding), from the net in `slot` — `None`
+/// when the slot is empty or its net has no action head.
+pub fn policy_action_terms(
+    root: &crabomination_nn::EncodedState,
+    slot: u8,
+    kind: u8,
+    refs: &[Vec<crabomination_nn::ActionRef>],
+) -> Option<Vec<f32>> {
+    net_for(slot)?.eval_action_terms(root.clone(), kind, refs)
+}
+
 pub fn slot_has_policy(slot: u8) -> bool {
     net_for(slot).is_some_and(|n| n.has_policy())
+}
+
+/// Whether the net in `slot` carries the action head.
+pub fn slot_has_action(slot: u8) -> bool {
+    net_for(slot).is_some_and(|n| n.has_action())
 }
 
 /// Per-name probabilities that the opponent holds each vocabulary card,

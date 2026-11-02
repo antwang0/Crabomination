@@ -252,6 +252,16 @@ fn search_draw() -> Option<u64> {
     SEARCH.with(|s| s.borrow_mut().as_mut().map(|r| r.random()))
 }
 
+/// A generator for one draw site: off the pinned search stream when the
+/// decision is pinned (so a position always gets the same reply), else
+/// seeded from the thread's entropy.
+fn draw_rng() -> StdRng {
+    match search_draw() {
+        Some(seed) => StdRng::seed_from_u64(seed),
+        None => StdRng::from_rng(&mut rng()),
+    }
+}
+
 /// A bot's randomness pinned to one seed on this thread until the guard
 /// drops: the scored bot's tie-break jitter and the search's rollouts, its
 /// worker threads' included. The live server pins each bot decision this
@@ -593,10 +603,12 @@ struct PriorStats {
 /// would make every target one-hot. An unvisited arm takes the visited
 /// arms' mean (the mixed value's visit-weighted part); a refused arm is
 /// dropped.
+#[allow(clippy::too_many_arguments)]
 fn record_search_target(
     state: &GameState,
     seat: usize,
     kind: u8,
+    arms: &[GameAction],
     states: Vec<GameState>,
     logits: &[f64],
     st: &PriorStats,
@@ -616,6 +628,10 @@ fn record_search_target(
         .collect();
     let successors: Vec<Option<GameState>> =
         states.into_iter().enumerate().map(|(i, g)| (!st.dead[i]).then_some(g)).collect();
+    // The action head's input, off the same determinized copy the arms'
+    // states were settled from.
+    let base = super::policy_pilot::decision_base(state, seat);
+    let (root, refs) = super::policy_pilot::action_inputs(&base, seat, arms);
     super::decision_capture::maybe_successors(
         state,
         seat,
@@ -626,6 +642,8 @@ fn record_search_target(
             values_are_logits: true,
             visits: Some(&st.visits),
             kind,
+            root: Some(&root),
+            refs: Some(&refs),
             ..Default::default()
         },
     );
@@ -1511,7 +1529,7 @@ impl MctsBot {
             if let Some(states) = states
                 && super::decision_capture::enabled()
             {
-                record_search_target(state, seat, m.kind.index(), states, &logits, &st, &self.cfg);
+                record_search_target(state, seat, m.kind.index(), &arms, states, &logits, &st, &self.cfg);
             }
             arms[st.best].clone()
         };
@@ -1540,7 +1558,7 @@ impl MctsBot {
             return (arms, logits, None, None);
         }
         let noise: Option<Vec<f64>> = self.cfg.menu_sample.then(|| {
-            let mut r = rng();
+            let mut r = draw_rng();
             (0..scored.len()).map(|_| gumbel_noise(&mut r)).collect()
         });
         let mut order: Vec<usize> = (0..scored.len()).collect();
@@ -1587,7 +1605,7 @@ impl MctsBot {
         let n = arms.len();
         timing::count(&timing::DECISIONS, 1);
         let noise: Vec<f64> = noise.unwrap_or_else(|| {
-            let mut r = rng();
+            let mut r = draw_rng();
             (0..n).map(|_| gumbel_noise(&mut r)).collect()
         });
         let mut live: Vec<usize> = (0..n).collect();
@@ -1604,26 +1622,17 @@ impl MctsBot {
                 (noise[b] + logits[b] + sig[b]).partial_cmp(&(noise[a] + logits[a] + sig[a])).unwrap_or(std::cmp::Ordering::Equal)
             });
             live.truncate(m);
-            for &i in &live {
-                for _ in 0..per_arm {
-                    let mut g = state.clone();
-                    self.determinise(&mut g, seat, &mut rng());
-                    if g.perform_action(arms[i].clone()).is_err() {
-                        dead[i] = visits[i] == 0;
-                        break;
+            // A halving round's rollouts are independent of one another, so
+            // `search_threads` splits them across workers with nothing about
+            // the schedule changed — the same arms, the same counts.
+            let jobs: Vec<usize> = live.iter().flat_map(|&i| std::iter::repeat_n(i, per_arm as usize)).collect();
+            for (i, r) in self.arm_rollouts(state, seat, arms, &jobs) {
+                match r {
+                    Some(r) => {
+                        total[i] += r;
+                        visits[i] += 1;
                     }
-                    if matches!(arms[i], GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)) {
-                        let step = g.step;
-                        let mut fuel = 32;
-                        while fuel > 0 && g.step == step && !g.is_game_over() {
-                            fuel -= 1;
-                            if g.perform_action(GameAction::PassPriority).is_err() {
-                                break;
-                            }
-                        }
-                    }
-                    total[i] += self.rollout(g, seat);
-                    visits[i] += 1;
+                    None => dead[i] |= visits[i] == 0,
                 }
             }
         }
@@ -1635,6 +1644,57 @@ impl MctsBot {
             })
             .unwrap_or(0);
         PriorStats { best, visits, total, dead }
+    }
+
+    /// One rollout per entry of `jobs` (an arm index), `None` where the
+    /// engine refused the arm; serial at `search_threads` 1, else split in
+    /// contiguous chunks across scoped workers, each on its own pinned
+    /// stream when the decision is pinned (as `parallel_iterations` does).
+    fn arm_rollouts(&self, state: &GameState, seat: usize, arms: &[GameAction], jobs: &[usize]) -> Vec<(usize, Option<f64>)> {
+        let workers = self.cfg.search_threads.min(jobs.len()).max(1);
+        if workers == 1 {
+            return jobs.iter().map(|&i| (i, self.arm_rollout(state, seat, &arms[i]))).collect();
+        }
+        let chunk = jobs.len().div_ceil(workers);
+        std::thread::scope(|scope| {
+            let mut handles = Vec::with_capacity(workers);
+            let mut inline = Vec::new();
+            for part in jobs.chunks(chunk) {
+                let pin = search_draw();
+                let run = move || {
+                    let _pin = pin.map(PinnedStreams::install);
+                    part.iter().map(|&i| (i, self.arm_rollout(state, seat, &arms[i]))).collect::<Vec<_>>()
+                };
+                match std::thread::Builder::new().stack_size(WORKER_STACK_BYTES).spawn_scoped(scope, run) {
+                    Ok(h) => handles.push(h),
+                    Err(_) => inline.extend(run()),
+                }
+            }
+            handles
+                .into_iter()
+                .flat_map(|h| h.join().unwrap_or_else(|e| std::panic::resume_unwind(e)))
+                .chain(inline)
+                .collect()
+        })
+    }
+
+    /// One rollout of `arm`: the hidden zones redealt *before* the arm is
+    /// applied, a declaration stepped past its window, then played out.
+    fn arm_rollout(&self, state: &GameState, seat: usize, arm: &GameAction) -> Option<f64> {
+        let mut g = state.clone();
+        self.determinise(&mut g, seat, &mut draw_rng());
+        g.perform_action(arm.clone()).ok()?;
+        if matches!(arm, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)) {
+            let step = g.step;
+            let mut fuel = 32;
+            while fuel > 0 && g.step == step && !g.is_game_over() {
+                fuel -= 1;
+                if g.perform_action(GameAction::PassPriority).is_err() {
+                    break;
+                }
+            }
+        }
+        Some(self.rollout(g, seat))
     }
 
     /// The round-51 fetch arms: search a pending `SearchLibrary` instead of

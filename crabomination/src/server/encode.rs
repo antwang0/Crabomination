@@ -244,6 +244,45 @@ pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     g.with_frozen_layers(|g| encode_state_inner(g, seat, vocab, &untapped_sources(g)))
 }
 
+/// [`encode_state`] with, beside it, the card each encoded object is, in
+/// the state's flat object order — what the action head's references
+/// (`crabomination_nn::ActionRef`) index. `None` for an object that is no
+/// single card: a library entry (one per name) and a stack trigger.
+pub fn encode_state_with_ids(g: &GameState, seat: usize, vocab: &Vocab) -> (EncodedState, Vec<Option<crate::card::CardId>>) {
+    use crate::game::types::StackItem;
+    let s = encode_state(g, seat, vocab);
+    let opp = 1 - seat;
+    let mut ids: Vec<Option<crate::card::CardId>> = Vec::with_capacity(s.len());
+    let mut group = |gi: usize, it: &mut dyn Iterator<Item = Option<crate::card::CardId>>| {
+        let n = s.group(gi).len();
+        let got: Vec<_> = it.take(n).collect();
+        // A group the encoder sized differently (an ablation) reads as
+        // anonymous rather than misaligned.
+        if got.len() == n {
+            ids.extend(got);
+        } else {
+            ids.extend(std::iter::repeat_n(None, n));
+        }
+    };
+    group(G_BF_SELF, &mut g.battlefield.iter().filter(|c| c.controller == seat).map(|c| Some(c.id)));
+    group(G_BF_OPP, &mut g.battlefield.iter().filter(|c| c.controller != seat).map(|c| Some(c.id)));
+    group(G_HAND_SELF, &mut g.players[seat].hand.iter().map(|c| Some(c.id)));
+    group(G_GY_SELF, &mut g.players[seat].graveyard.iter().map(|c| Some(c.id)));
+    group(G_GY_OPP, &mut g.players[opp].graveyard.iter().map(|c| Some(c.id)));
+    group(G_LIB_SELF, &mut std::iter::repeat(None));
+    for (gi, mine) in [(G_STACK_SELF, true), (G_STACK_OPP, false)] {
+        group(
+            gi,
+            &mut g.stack.iter().filter(|i| (stack_item_controller(i) == seat) == mine).map(|i| match i {
+                StackItem::Spell { card, .. } => Some(card.id),
+                _ => None,
+            }),
+        );
+    }
+    debug_assert_eq!(ids.len(), s.len());
+    (s, ids)
+}
+
 /// Both seats' encodings of one position, in one scope and off one pair
 /// of source tables. Each seat's castability block reads *both* seats'
 /// untapped sources, so two `encode_state` calls built the same two

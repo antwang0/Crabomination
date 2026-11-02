@@ -1936,6 +1936,17 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// 86 the file is that round's rated-deck seed-43 net (pinned 0.274 learner
 /// steps a game): +1.8 scored and +0.9 under this search over round 82's,
 /// on ladder seeds neither was chosen on.
+///
+/// Since 2026-11-02 the same games (`fra || limited`) search their main
+/// phases and combat over the complete move list (`MctsConfig::
+/// menu_windows`) on the priors of the phase-5 policy net
+/// (`nets/policy-champion.safetensors`, gen 3 of the expert-iteration loop;
+/// `CRAB_POLICY_NET` overrides it, `CRAB_MENU_SEARCH=0/1` turns the search
+/// off / on everywhere). Against this pilot without it, paired 120 x 12:
+/// SOS sealed 58.0 [56.0, 59.9] / 55.8 [53.9, 57.8], FRA sealed (FRA leaf)
+/// 57.5 [55.3, 59.7] / 57.6 [55.5, 59.7], cube 54.0 [51.7, 56.2] / 54.1 [51.7, 56.5]
+/// (seeds 43 / 97, `.ladder/p5`, `.ladder/adopt`). The rollout budget is
+/// the same 256, split across the same worker threads.
 pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn crabomination::server::Bot> {
     if n_seats > 2 {
         return Box::new(HeuristicBot::new());
@@ -1954,13 +1965,50 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn cra
         static SAID: std::sync::Once = std::sync::Once::new();
         SAID.call_once(|| eprintln!("the local bot plays with the FRA fixes bundle (CRAB_FRA_FIXES=0 turns it off)"));
     }
+    let menu = match std::env::var_os("CRAB_MENU_SEARCH") {
+        Some(v) => v != "0",
+        None => fra || limited,
+    } && load_policy_net_once();
+    let (menu_windows, policy_slot) = if menu {
+        use crabomination::server::mcts::{MENU_COMBAT, MENU_MAIN};
+        (MENU_MAIN | MENU_COMBAT, crabomination::server::net_eval::SLOT_CANDIDATE)
+    } else {
+        (0, 0)
+    };
     Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
         iterations: 256,
         horizon_turns: 3,
         weights,
         search_threads: bot_search_threads(),
+        menu_windows,
+        policy_slot,
         ..crabomination::server::MctsConfig::default()
     }))
+}
+
+/// Load the policy net — the menu search's priors — into the candidate
+/// slot, once per process; whether it is there. Missing or bad: announced,
+/// and the bot keeps the six-cast search.
+fn load_policy_net_once() -> bool {
+    use crabomination::server::net_eval;
+    static LOADED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *LOADED.get_or_init(|| {
+        let path = std::env::var("CRAB_POLICY_NET").unwrap_or_else(|_| "nets/policy-champion.safetensors".to_string());
+        match net_eval::load_slot(net_eval::SLOT_CANDIDATE, std::path::Path::new(&path)) {
+            Ok(()) if net_eval::slot_has_policy(net_eval::SLOT_CANDIDATE) => {
+                eprintln!("policy net loaded from {path}; the local bot searches main phases and combat over every legal move");
+                true
+            }
+            Ok(()) => {
+                eprintln!("policy net {path} carries no policy head; the local bot keeps the six-cast search");
+                false
+            }
+            Err(e) => {
+                eprintln!("policy net {path}: {e}; the local bot keeps the six-cast search");
+                false
+            }
+        }
+    })
 }
 
 /// Load the champion value net into the bot's slot, once per process.

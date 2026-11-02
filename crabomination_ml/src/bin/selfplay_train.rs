@@ -142,6 +142,11 @@ struct Args {
     /// Build the policy head's decision-kind table (`NetConfig::
     /// policy_kinds`). Implies `--policy-head`.
     policy_kinds: bool,
+    /// Build the action head (`NetConfig::policy_action`): the policy logit
+    /// gains a term read off the decision state's objects at the ones each
+    /// move involves. Implies `--policy-kinds`. On `--init-from` a file
+    /// without the head loads whole and the head starts at zero.
+    policy_action: bool,
     /// `--init-from W.safetensors`: a fresh run's learner takes W's shape
     /// (widths, attention, belief head) plus the policy head (and the kind
     /// table under `--policy-kinds`), every tensor W carries, and the policy
@@ -463,6 +468,7 @@ fn parse_args() -> Args {
         menu_search: 0,
         use_policy: None,
         policy_kinds: false,
+        policy_action: false,
         init_from: None,
         policy_every: 4,
         policy_temp: 0.1,
@@ -566,6 +572,12 @@ fn parse_args() -> Args {
                 a.policy_head = true;
             }
             "--policy-kinds" => {
+                a.policy_kinds = true;
+                a.policy_head = true;
+                continue; // bare flag, consumes no value
+            }
+            "--policy-action" => {
+                a.policy_action = true;
                 a.policy_kinds = true;
                 a.policy_head = true;
                 continue; // bare flag, consumes no value
@@ -730,6 +742,7 @@ fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
     cfg.blocks = args.blocks;
     cfg.policy = args.policy_head;
     cfg.policy_kinds = args.policy_kinds;
+    cfg.policy_action = args.policy_action;
     cfg.opp = args.opp_head;
     assert!(
         !(cfg.attn && cfg.blocks > 0),
@@ -792,6 +805,7 @@ fn file_net_config(
         blocks,
         policy: n.has_policy_head(),
         policy_kinds: n.has_policy_kinds(),
+        policy_action: n.has_action_head(),
         opp: n.has_opp_head(),
     })
 }
@@ -1062,6 +1076,8 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                                 ply: d.ply,
                                 settled: d.settled,
                                 kind: d.kind,
+                                root: d.root,
+                                refs: d.refs,
                                 ret,
                             },
                         )
@@ -1813,7 +1829,8 @@ fn main() {
             let mut c = file_net_config(init, vocab.size())
                 .unwrap_or_else(|| panic!("--init-from: cannot read {}", init.display()));
             c.policy = true;
-            c.policy_kinds = args.policy_kinds;
+            c.policy_kinds = args.policy_kinds || c.policy_kinds;
+            c.policy_action = args.policy_action || c.policy_action;
             c
         }
         _ => net_config(&args, vocab.size()),
@@ -1881,13 +1898,41 @@ fn main() {
         // A file that already carries the policy head (a previous imitation
         // run) loads whole; one without it gets the head seeded from the
         // win head.
+        const ACTION: [&str; 8] = [
+            "head_action.obj.weight",
+            "head_action.obj.bias",
+            "head_action.role.weight",
+            "head_action.ctx.weight",
+            "head_action.ctx.bias",
+            "head_action.kind.weight",
+            "head_action.out.weight",
+            "head_action.out.bias",
+        ];
         if trainer.load(init).is_ok() {
             eprintln!("init: every tensor from {}", init.display());
+        } else if args.policy_action && trainer.load_missing_ok(init, &ACTION).is_ok() {
+            // A policy-headed net gaining the action head: everything it
+            // has, the new head fresh (its output layer at zero, so the
+            // first ranking is the file's own).
+            eprintln!("init: every tensor from {}, the action head fresh", init.display());
         } else {
             trainer
                 .load_missing_ok(
                     init,
-                    &["head_policy.weight", "head_policy.bias", "head_policy_kind.weight", "head_policy_kind.bias"],
+                    &[
+                        "head_policy.weight",
+                        "head_policy.bias",
+                        "head_policy_kind.weight",
+                        "head_policy_kind.bias",
+                        "head_action.obj.weight",
+                        "head_action.obj.bias",
+                        "head_action.role.weight",
+                        "head_action.ctx.weight",
+                        "head_action.ctx.bias",
+                        "head_action.kind.weight",
+                        "head_action.out.weight",
+                        "head_action.out.bias",
+                    ],
                 )
                 .expect("--init-from: load the net into the learner");
             trainer.init_policy_head_from_win().expect("--init-from: seed head_policy from head_win");

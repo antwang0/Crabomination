@@ -386,6 +386,23 @@ pub const AUX_FEATS: usize = 4;
 /// discard than as a main-phase play.
 pub const POLICY_KINDS: usize = 32;
 
+/// The action head's object roles (`head_action.role.*` rows): what an
+/// object is to a move — see [`ActionRef`].
+pub const ACTION_ROLES: usize = 12;
+/// Most object references one move carries into the action head; a longer
+/// declaration keeps its first ones.
+pub const ACTION_MAX_REFS: usize = 16;
+/// The action head's hidden width the trainer builds (the engine reads it
+/// off the tensors).
+pub const ACTION_WIDTH: usize = 32;
+/// [`ActionRef`]'s object for a reference with no encoded object (a
+/// player): the role's own vector stands alone.
+pub const NO_OBJECT: u16 = u16::MAX;
+/// One object a move involves: its role, and its index in the decision
+/// state's flat object list ([`EncodedState::objects`], group order), or
+/// [`NO_OBJECT`].
+pub type ActionRef = (u8, u16);
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrainRow {
     pub state: EncodedState,
@@ -1197,6 +1214,24 @@ fn get_tensor(st: &safetensors::SafeTensors<'_>, name: &'static str) -> Result<T
     Ok(Tensor2::new(rows, cols, data))
 }
 
+/// [`PlayNet`]'s action head. For a move with references `R` in a
+/// decision of kind `k`, over the decision state's object embeddings `h`
+/// and trunk output `t`:
+/// `a = Σ_{(r, i) ∈ R} relu(obj · h_i + obj_b + role_r)` (`h_i` = 0 for
+/// [`NO_OBJECT`]), `z = relu(ctx · t + ctx_b + kind_k + a)`,
+/// `term = out · z + out_b`.
+#[derive(Debug, Clone)]
+struct ActionHead {
+    obj_w: Tensor2,  // [A, h_obj]
+    obj_b: Vec<f32>, // [A]
+    role: Tensor2,   // [ACTION_ROLES, A]
+    ctx_w: Tensor2,  // [A, h2]
+    ctx_b: Vec<f32>, // [A]
+    kind: Tensor2,   // [POLICY_KINDS, A]
+    out_w: Tensor2,  // [1, A]
+    out_b: f32,
+}
+
 /// The value net, loaded from a trainer-exported safetensors file.
 #[derive(Debug, Clone)]
 pub struct PlayNet {
@@ -1224,6 +1259,12 @@ pub struct PlayNet {
     /// head, all-or-nothing; absent means every kind reads the shared head.
     policy_kind_w: Option<Tensor2>,
     policy_kind_b: Vec<f32>,
+    /// The action head (`head_action.*`, phase 5's next step): a term added
+    /// to the policy logit that scores a move by the objects it involves,
+    /// read from the *decision* state's per-object embeddings rather than a
+    /// successor's pooled summary — see [`PlayNet::forward_action_terms`].
+    /// Present only beside the policy head, all-or-nothing.
+    action: Option<ActionHead>,
     /// The opponent-hand belief head (`head_opp.*`, [vocab, h2] + [vocab]),
     /// round 39. Consumed at inference by belief-weighted determinization
     /// (`determinize_hidden_belief`), so it loads all-or-nothing like the
@@ -1501,6 +1542,7 @@ impl PlayNet {
             policy_b: 0.0,
             policy_kind_w: None,
             policy_kind_b: Vec::new(),
+            action: None,
             opp_w: None,
             opp_b: Vec::new(),
             attn: None,
@@ -1561,6 +1603,39 @@ impl PlayNet {
                     "one of weight/bias present without the other".into(),
                 ));
             }
+        };
+
+        // The action head, same all-or-nothing rule, beside the policy head.
+        const ACTION_TENSORS: [&str; 8] = [
+            "head_action.obj.weight",
+            "head_action.obj.bias",
+            "head_action.role.weight",
+            "head_action.ctx.weight",
+            "head_action.ctx.bias",
+            "head_action.kind.weight",
+            "head_action.out.weight",
+            "head_action.out.bias",
+        ];
+        let action_present = ACTION_TENSORS.iter().filter(|n| st.tensor(n).is_ok()).count();
+        let net = match (action_present, net.policy_w.is_some()) {
+            (8, true) => PlayNet {
+                action: Some(ActionHead {
+                    obj_w: get("head_action.obj.weight")?,
+                    obj_b: get("head_action.obj.bias")?.data,
+                    role: get("head_action.role.weight")?,
+                    ctx_w: get("head_action.ctx.weight")?,
+                    ctx_b: get("head_action.ctx.bias")?.data,
+                    kind: get("head_action.kind.weight")?,
+                    out_w: get("head_action.out.weight")?,
+                    out_b: get("head_action.out.bias")?.data.first().copied().unwrap_or(0.0),
+                }),
+                ..net
+            },
+            (0, _) => net,
+            (8, false) => {
+                return Err(NnError::BadTensor("head_action.*", "present without head_policy.*".into()));
+            }
+            _ => return Err(NnError::BadTensor("head_action.*", "some of its tensors present without the rest".into())),
         };
 
         // The opponent-hand belief head, same all-or-nothing rule.
@@ -1699,6 +1774,23 @@ impl PlayNet {
                 "head_policy_kind.weight",
                 net.policy_kind_w.as_ref().is_none_or(|w| {
                     w.cols == net.trunk2_w.rows && w.rows == POLICY_KINDS && net.policy_kind_b.len() == POLICY_KINDS
+                }),
+            ),
+            (
+                "head_action.*",
+                net.action.as_ref().is_none_or(|a| {
+                    let w = a.obj_w.rows;
+                    a.obj_w.cols == net.obj_w.rows
+                        && a.obj_b.len() == w
+                        && a.role.rows == ACTION_ROLES
+                        && a.role.cols == w
+                        && a.ctx_w.rows == w
+                        && a.ctx_w.cols == net.trunk2_w.rows
+                        && a.ctx_b.len() == w
+                        && a.kind.rows == POLICY_KINDS
+                        && a.kind.cols == w
+                        && a.out_w.rows == 1
+                        && a.out_w.cols == w
                 }),
             ),
             (
@@ -1931,6 +2023,47 @@ impl PlayNet {
         self.policy_kind_w.is_some()
     }
 
+    pub fn has_action_head(&self) -> bool {
+        self.action.is_some()
+    }
+
+    /// The action head's term for each of a decision's moves (`cands[c]`
+    /// the references of move `c`, first [`ACTION_MAX_REFS`] read), from
+    /// one trunk pass over the decision state `root`. Added to each move's
+    /// [`forward_policy_kind`](Self::forward_policy_kind) logit over its
+    /// successor. `None` without the head. A reference past the state's
+    /// objects reads as [`NO_OBJECT`]; a kind past the table, row 0.
+    pub fn forward_action_terms(&self, root: &EncodedState, kind: usize, cands: &[Vec<ActionRef>]) -> Option<Vec<f32>> {
+        let a = self.action.as_ref()?;
+        let (t2, hs) = self.trunk_core(root);
+        let h_obj = self.obj_w.rows;
+        let n_obj = hs.len() / h_obj.max(1);
+        let w = a.obj_w.rows;
+        let k = if kind < POLICY_KINDS { kind } else { 0 };
+        let mut base = vec![0.0f32; w];
+        a.ctx_w.matvec(&t2, &mut base);
+        for ((b, cb), kb) in base.iter_mut().zip(&a.ctx_b).zip(&a.kind.data[k * w..(k + 1) * w]) {
+            *b += cb + kb;
+        }
+        let zero = vec![0.0f32; h_obj];
+        let mut proj = vec![0.0f32; w];
+        let mut out = Vec::with_capacity(cands.len());
+        for refs in cands {
+            let mut z = base.clone();
+            for &(role, obj) in refs.iter().take(ACTION_MAX_REFS) {
+                let h = if (obj as usize) < n_obj { &hs[obj as usize * h_obj..(obj as usize + 1) * h_obj] } else { &zero[..] };
+                a.obj_w.matvec(h, &mut proj);
+                let r = (role as usize).min(ACTION_ROLES - 1);
+                let role_row = &a.role.data[r * w..(r + 1) * w];
+                for (((zj, p), ob), rb) in z.iter_mut().zip(&proj).zip(&a.obj_b).zip(role_row) {
+                    *zj += (p + ob + rb).max(0.0);
+                }
+            }
+            out.push(a.out_b + a.out_w.data.iter().zip(&z).map(|(o, zj)| o * zj.max(0.0)).sum::<f32>());
+        }
+        Some(out)
+    }
+
     /// Per-name probabilities that the *opponent* currently holds each
     /// vocabulary card, `None` when the net carries no belief head.
     /// Index 0 (unknown) is emitted but meaningless — the sampler treats
@@ -1991,6 +2124,14 @@ impl PlayNet {
 
     #[inline(always)]
     fn trunk_out_body(&self, s: &EncodedState) -> Vec<f32> {
+        self.trunk_core(s).0
+    }
+
+    /// The trunk's output and, beside it, every object's embedding after
+    /// the interaction layers (`[n, h_obj]`, flat, the pooling's input) —
+    /// what the action head reads its moves' objects from.
+    #[inline(always)]
+    fn trunk_core(&self, s: &EncodedState) -> (Vec<f32>, Vec<f32>) {
         let h_obj = self.obj_w.rows;
         let mut trunk_in = vec![0.0f32; self.trunk1_w.cols];
 
@@ -2043,7 +2184,7 @@ impl PlayNet {
         for (v, b) in t2.iter_mut().zip(&self.trunk2_b) {
             *v = (*v + b).max(0.0);
         }
-        t2
+        (t2, hs)
     }
 }
 
@@ -2074,6 +2215,19 @@ pub trait NetEvaluator: Send + Sync {
     fn eval_policy_kind(&self, s: EncodedState, kind: u8) -> Option<f32> {
         let _ = kind;
         self.eval_policy(s)
+    }
+
+    /// The action head's term per move — see
+    /// [`PlayNet::forward_action_terms`]. Default `None`: no head, and the
+    /// policy is the successor logit alone.
+    fn eval_action_terms(&self, root: EncodedState, kind: u8, cands: &[Vec<ActionRef>]) -> Option<Vec<f32>> {
+        let _ = (root, kind, cands);
+        None
+    }
+
+    /// Whether [`eval_action_terms`](Self::eval_action_terms) can answer.
+    fn has_action(&self) -> bool {
+        false
     }
 
     /// Whether [`eval_policy`](Self::eval_policy) can answer at all, so a
@@ -2108,6 +2262,14 @@ impl NetEvaluator for PlayNet {
 
     fn eval_policy_kind(&self, s: EncodedState, kind: u8) -> Option<f32> {
         self.forward_policy_kind(&s, kind as usize)
+    }
+
+    fn eval_action_terms(&self, root: EncodedState, kind: u8, cands: &[Vec<ActionRef>]) -> Option<Vec<f32>> {
+        self.forward_action_terms(&root, kind as usize, cands)
+    }
+
+    fn has_action(&self) -> bool {
+        self.has_action_head()
     }
 
     fn has_policy(&self) -> bool {

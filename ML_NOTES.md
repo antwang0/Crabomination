@@ -7206,3 +7206,83 @@ the strongest menu-search prior measured: `mcts-net67-menu-mc` on it
 beats the client's pilot by +6.9 on SOS. Shipping it means a policy net
 beside the champion in the client and an FRA read first — a proposal,
 not done. Scripts: `.ladder/p5/{gen,gate,driver2,final}.sh`.
+
+### Adopted: the client searches main phases and combat on gen 3's policy (2026-11-02)
+
+The user approved adoption after an FRA read. `menu.rs::local_bot` now
+turns `menu_windows = MENU_MAIN | MENU_COMBAT` on for the games that play
+the fixes bundle (`fra || limited`: FRA, Sealed, Cube), priors from
+`nets/policy-champion.safetensors` (gen 3) in the candidate slot;
+`CRAB_MENU_SEARCH=0/1` and `CRAB_POLICY_NET` override. The lobby is
+unchanged. Against the client's pilot without it, paired 120 × 12:
+
+| pool (leaf) | seed 43 | seed 97 | pooled |
+|---|---|---|---|
+| SOS sealed (champion) | 58.0 [56.0, 59.9] | 55.8 [53.9, 57.8] | +6.9 |
+| FRA sealed (FRA net) | 57.5 [55.3, 59.7] | 57.6 [55.5, 59.7] | +7.55 |
+| cube (champion) | 54.0 [51.7, 56.2] | 54.1 [51.7, 56.5] | +4.05 |
+
+FRA gains as much as SOS though the policy never trained on an FRA game.
+Two engine changes came with it: the halving's rollouts within a round are
+independent, so `search_threads` now splits them (`MctsBot::arm_rollouts`;
+the client's 256 rollouts take the same wall clock as before — a decision
+is ~0.53 s of serial rollouts, ~0.15 s on its 4 workers), and the menu
+search's noise and redeals draw from the pinned decision stream
+(`draw_rng`), so the live server's take-back guarantee — the same position
+gets the same reply — holds for it (test
+`a_pinned_menu_search_replays_its_pick_serial_and_split`).
+
+**A correction to the phase-5 readings.** `Trainer::policy_top1` (the
+held-out `val_policy`) scored the shared head without the kind table and
+against the played move, while the training top-1 used the kind table
+and the target's argmax — so the 0.80 / 0.65 train / held-out gap cited
+above as over-fitting was mostly the metric. It now scores through the
+training step's path (`Trainer::policy_logits`). Measured that way, on a
+phase-3-style imitation run from gen 3, held-out and training top-1
+agree within ~0.01 (0.80 / 0.82): the policy is not over-fitting.
+
+### Step 2 — the action head: score a move by the objects it involves (2026-11-02, in progress)
+
+Phase 3 and phase 5 both ended at the policy's representation: each move
+scored as its successor's pooled summary through one linear head, so
+which object did what is averaged away before the score is read. The
+**action head** (`head_action.*`, `crabomination_nn::PlayNet::
+forward_action_terms`, candle `PlayModel::forward_action_terms`) adds a
+term to the policy logit from the *decision* state's per-object
+embeddings (after the interaction layers, before pooling): each move's
+references — `(role, object)` pairs from `policy_pilot::action_refs`
+(the card cast / played / activated, targets, a target player by side,
+attackers and what they attack, blockers and what they block, a prompt's
+chosen cards, the mode) — are projected and summed, joined with the
+trunk's output and the decision kind, and read by a 32-wide layer. Its
+output layer starts at zero, so a warm start scores exactly as before.
+The object ↔ card map is `encode::encode_state_with_ids` (the encoder's
+own order); captures carry the decision state and each candidate's
+references (`CapturedDecision::{root, refs}`), and the training step and
+the holdout both score through `Trainer::policy_logits`. Tests: engine ↔
+candle parity (`action_head_matches_engine_inference`), every reference
+naming the right card over a heuristic game
+(`action_refs_name_the_objects_each_move_involves`), and two moves with
+the *same* successor told apart by the object they act with — 0.5 without
+the head, >0.95 with (`the_action_head_separates_moves_the_successors_cannot`).
+`selfplay_train --policy-action`; `--init-from` a headless policy net
+loads every tensor and starts the head fresh.
+
+**First read: does it raise imitation's ceiling?** Two runs from gen 3,
+identical but for the head — phase 3's recipe (the fixes heuristic as
+teacher, 4 actors, GPU learner, 6,000 steps, seed 43):
+
+| run | held-out top-1 (teacher) | alone vs `dflt` (43 / 97) | blunders |
+|---|---|---|---|
+| A: gen 3's head | 0.805 | 34.7 [33.1, 36.3] / 36.0 [34.5, 37.6] | 16 / 22 |
+| B: + action head | **0.832** | **38.4** [36.7, 40.1] / **40.5** [38.8, 42.1] | 18 / 22 |
+
+**+2.7 points of held-out agreement and +4.1 alone** at equal steps. A
+drifts from gen 3's 38.6 / 38.0 back to imitation's plateau; B does not.
+One confound: B's learner (an extra root pass per row) ran slower, so its
+actors played 59 k games to A's 18.6 k in the same 6,000 steps — both saw
+each row less than once, so the fresher window should matter little
+against a fixed teacher. (First attempt: two learners side by side OOM'd
+at 31.8 GB — the decision deque now carries a root state per row; and a
+`--steps` run without `--games` leaves its actors playing after the
+learner stops, so the script ends it at "learner done".)

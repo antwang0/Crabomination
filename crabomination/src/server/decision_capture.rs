@@ -164,6 +164,11 @@ pub struct CapturedDecision {
     /// The decision's kind (`decision_menu::Kind::index`) — the policy
     /// head's kind-table row. 0 (priority) for the pickers' capture sites.
     pub kind: u8,
+    /// The action head's input (`policy_pilot::action_inputs`): the decision
+    /// state's encoding, and each surviving candidate's references into it,
+    /// aligned with `successors`. `None` from sites that don't record it.
+    pub root: Option<EncodedState>,
+    pub refs: Option<Vec<Vec<crabomination_nn::ActionRef>>>,
 }
 
 thread_local! {
@@ -221,6 +226,10 @@ pub struct Provenance<'a> {
     pub net_scored: bool,
     /// The decision's kind — see [`CapturedDecision::kind`].
     pub kind: u8,
+    /// The action head's input — see [`CapturedDecision::root`]; `refs`
+    /// aligned with the candidates and filtered alongside them.
+    pub root: Option<&'a EncodedState>,
+    pub refs: Option<&'a [Vec<crabomination_nn::ActionRef>]>,
 }
 
 /// Turn capture on or off for this process.
@@ -360,6 +369,7 @@ fn record(
     let mut kept_values: Vec<f32> = Vec::new();
     let mut kept_visits: Vec<u32> = Vec::new();
     let mut kept_scores: Vec<i32> = Vec::new();
+    let mut kept_refs: Vec<Vec<crabomination_nn::ActionRef>> = Vec::new();
     let mut chosen_idx = None;
     for (i, next) in candidates.iter().enumerate() {
         let Some(next) = next else { continue };
@@ -380,6 +390,11 @@ fn record(
             && let Some(x) = sc.get(i)
         {
             kept_scores.push(*x);
+        }
+        if let Some(r) = prov.refs
+            && let Some(x) = r.get(i)
+        {
+            kept_refs.push(x.clone());
         }
         successors.push(super::encode::encode_state(next, seat, vocab));
     }
@@ -403,6 +418,8 @@ fn record(
         let values = (prov.values.is_some() && kept_values.len() == n).then_some(kept_values);
         let visits = (prov.visits.is_some() && kept_visits.len() == n).then_some(kept_visits);
         let scores = (prov.scores.is_some() && kept_scores.len() == n).then_some(kept_scores);
+        let refs = (prov.root.is_some() && prov.refs.is_some() && kept_refs.len() == n).then_some(kept_refs);
+        let root = refs.as_ref().and(prov.root.cloned());
         b.push(CapturedDecision {
             successors,
             chosen,
@@ -417,6 +434,8 @@ fn record(
             ply: ply(),
             settled,
             kind: prov.kind,
+            root,
+            refs,
         });
     });
 }

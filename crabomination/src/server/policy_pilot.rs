@@ -45,6 +45,7 @@ use rand::rngs::StdRng;
 use rand::seq::SliceRandom;
 
 use crate::card::CardId;
+use crabomination_nn::ActionRef;
 use crate::game::types::TurnStep;
 use crate::game::{Attack, AttackTarget, GameAction, GameState};
 
@@ -302,6 +303,143 @@ fn policy_scores(states: &[GameState], seat: usize, slot: u8, kind: Kind) -> Opt
     states.iter().map(|s| super::net_eval::policy_logit_kind(s, seat, slot, kind.index())).collect()
 }
 
+/// [`policy_scores`] plus the action head's term for each move, read off
+/// the decision state `base` (the one the candidate states were settled
+/// from). A net without the head scores the successors alone.
+fn full_scores(base: &GameState, seat: usize, slot: u8, kind: Kind, moves: &[GameAction], states: &[GameState]) -> Option<Vec<f32>> {
+    let mut scores = policy_scores(states, seat, slot, kind)?;
+    if super::net_eval::slot_has_action(slot) {
+        let (root, refs) = action_inputs(base, seat, moves);
+        if let Some(t) = super::net_eval::policy_action_terms(&root, slot, kind.index(), &refs) {
+            for (s, t) in scores.iter_mut().zip(t) {
+                *s += t;
+            }
+        }
+    }
+    Some(scores)
+}
+
+// ── The action head's inputs ───────────────────────────────────────────
+
+/// [`ActionRef`] roles: what an object is to a move.
+pub mod role {
+    /// The card cast, played, activated or otherwise acted with.
+    pub const SOURCE: u8 = 0;
+    /// A targeted permanent or spell.
+    pub const TARGET: u8 = 1;
+    /// A targeted player: the decider, or the opponent.
+    pub const TARGET_SELF: u8 = 2;
+    pub const TARGET_OPP: u8 = 3;
+    pub const ATTACKER: u8 = 4;
+    /// A planeswalker or battle an attacker attacks.
+    pub const ATTACKED: u8 = 5;
+    pub const BLOCKER: u8 = 6;
+    /// The attacker a blocker blocks.
+    pub const BLOCKED: u8 = 7;
+    /// A card a prompt's answer names (discard, search, put back).
+    pub const CHOSEN: u8 = 8;
+    /// A modal choice: mode 0, 1, and 2 or later.
+    pub const MODE: u8 = 9;
+}
+
+/// The decision state's encoding for `seat` and every move's references
+/// into it — the action head's whole input.
+pub fn action_inputs(base: &GameState, seat: usize, moves: &[GameAction]) -> (crabomination_nn::EncodedState, Vec<Vec<ActionRef>>) {
+    let (root, ids) = super::encode::encode_state_with_ids(base, seat, super::net_eval::vocab());
+    let refs = moves.iter().map(|a| action_refs(seat, &ids, a)).collect();
+    (root, refs)
+}
+
+/// The objects move `a` involves, as references into a state whose
+/// objects are the cards `ids` ([`super::encode::encode_state_with_ids`]).
+/// A card not among them (an opponent's hidden card, a library card) keeps
+/// its role with no object.
+pub fn action_refs(seat: usize, ids: &[Option<CardId>], a: &GameAction) -> Vec<ActionRef> {
+    use crabomination_nn::NO_OBJECT;
+    let obj = |c: CardId| ids.iter().position(|x| *x == Some(c)).map_or(NO_OBJECT, |i| i as u16);
+    let mut out: Vec<ActionRef> = Vec::new();
+    match a {
+        GameAction::DeclareAttackers(v) => {
+            for at in v {
+                out.push((role::ATTACKER, obj(at.attacker)));
+                match at.target {
+                    AttackTarget::Player(_) => {}
+                    AttackTarget::Planeswalker(c) | AttackTarget::Battle(c) => out.push((role::ATTACKED, obj(c))),
+                }
+            }
+        }
+        GameAction::DeclareBlockers(v) => {
+            for (b, at) in v {
+                out.push((role::BLOCKER, obj(*b)));
+                out.push((role::BLOCKED, obj(*at)));
+            }
+        }
+        _ => {
+            if let Ok(v) = serde_json::to_value(a) {
+                walk_action(&v, None, seat, &obj, &mut out);
+            }
+        }
+    }
+    out.truncate(crabomination_nn::ACTION_MAX_REFS);
+    out
+}
+
+/// [`action_refs`]' walk over a serialized action: `card_id`s and a tuple
+/// variant's bare id are the source, `Permanent` / `Player` tags targets
+/// (players by side), a prompt answer's card lists the chosen, a `mode`
+/// the mode role.
+fn walk_action(v: &serde_json::Value, key: Option<&str>, seat: usize, obj: &dyn Fn(CardId) -> u16, out: &mut Vec<ActionRef>) {
+    use serde_json::Value;
+    let id = |v: &Value| v.as_u64().map(|n| CardId(n as u32));
+    match v {
+        Value::Object(m) => {
+            for (k, x) in m {
+                match (k.as_str(), x) {
+                    ("Permanent", _) => {
+                        if let Some(c) = id(x) {
+                            out.push((role::TARGET, obj(c)));
+                        }
+                    }
+                    ("Player", _) => {
+                        if let Some(p) = x.as_u64() {
+                            out.push((if p as usize == seat { role::TARGET_SELF } else { role::TARGET_OPP }, crabomination_nn::NO_OBJECT));
+                        }
+                    }
+                    ("card_id", _) => {
+                        if let Some(c) = id(x) {
+                            out.push((role::SOURCE, obj(c)));
+                        }
+                    }
+                    ("mode" | "Mode", Value::Number(n)) => {
+                        let m = n.as_u64().unwrap_or(0).min(2) as u8;
+                        out.push((role::MODE + m, crabomination_nn::NO_OBJECT));
+                    }
+                    ("Discard" | "PutOnLibrary" | "Search" | "SerumPowder", _) => {
+                        let mut each = |x: &Value| {
+                            if let Some(c) = id(x) {
+                                out.push((role::CHOSEN, obj(c)));
+                            }
+                        };
+                        match x {
+                            Value::Array(xs) => xs.iter().for_each(&mut each),
+                            x => each(x),
+                        }
+                    }
+                    (_, Value::Number(_)) if key.is_none() => {
+                        // A top-level tuple variant over one card: `PlayLand(id)`.
+                        if let Some(c) = id(x) {
+                            out.push((role::SOURCE, obj(c)));
+                        }
+                    }
+                    _ => walk_action(x, Some(k), seat, obj, out),
+                }
+            }
+        }
+        Value::Array(xs) => xs.iter().for_each(|x| walk_action(x, key, seat, obj, out)),
+        _ => {}
+    }
+}
+
 /// Index of the pick: the best score at `temp` 0, else a softmax sample.
 fn pick(scores: &[f32], temp: f32, rng: &mut StdRng) -> usize {
     use rand::RngExt;
@@ -416,7 +554,7 @@ impl PolicyBot {
         if moves.is_empty() {
             return None;
         }
-        let scores = policy_scores(&states, seat, self.weights.net_slot, m.kind)?;
+        let scores = full_scores(&base, seat, self.weights.net_slot, m.kind, &moves, &states)?;
         Some(moves[pick(&scores, self.temp, &mut self.rng)].clone())
     }
 
@@ -434,18 +572,19 @@ impl PolicyBot {
                 options.push(None);
             }
             options.extend(adds.into_iter().map(Some));
-            let states: Vec<GameState> = options
+            let decls: Vec<GameAction> = options
                 .iter()
-                .filter_map(|o| {
+                .map(|o| {
                     let mut s = set.clone();
                     s.extend(o.iter().flatten().copied());
-                    candidate_state(&base, seat, kind, &declaration(kind, &s))
+                    declaration(kind, &s)
                 })
                 .collect();
+            let states: Vec<GameState> = decls.iter().filter_map(|d| candidate_state(&base, seat, kind, d)).collect();
             if states.len() != options.len() {
                 return stop.then(|| declaration(kind, &set));
             }
-            let scores = policy_scores(&states, seat, self.weights.net_slot, kind)?;
+            let scores = full_scores(&base, seat, self.weights.net_slot, kind, &decls, &states)?;
             match &options[pick(&scores, self.temp, &mut self.rng)] {
                 None => return Some(declaration(kind, &set)),
                 Some(add) => set.extend(add.iter().copied()),
@@ -489,15 +628,33 @@ pub fn scored_moves(g: &GameState, seat: usize, m: &decision_menu::Menu, slot: u
     if slot == 0 || !super::net_eval::slot_has_policy(slot) {
         return Vec::new();
     }
-    let base = hidden_safe(g, seat, (g.turn_number as u64) << 20 ^ (seat as u64) << 8 ^ g.step as u64);
-    m.moves
+    let base = decision_base(g, seat);
+    let mut out: Vec<(GameAction, f64, GameState)> = m
+        .moves
         .iter()
         .filter_map(|a| {
             let st = candidate_state(&base, seat, m.kind, a)?;
             let l = super::net_eval::policy_logit_kind(&st, seat, slot, m.kind.index())?;
             Some((a.clone(), l as f64, st))
         })
-        .collect()
+        .collect();
+    if super::net_eval::slot_has_action(slot) {
+        let moves: Vec<GameAction> = out.iter().map(|x| x.0.clone()).collect();
+        let (root, refs) = action_inputs(&base, seat, &moves);
+        if let Some(t) = super::net_eval::policy_action_terms(&root, slot, m.kind.index(), &refs) {
+            for (x, t) in out.iter_mut().zip(t) {
+                x.1 += t as f64;
+            }
+        }
+    }
+    out
+}
+
+/// The determinized copy a search decision's candidates are settled from —
+/// a fixed function of the decision, so the arms' states and the action
+/// head's root can be rebuilt to match.
+pub fn decision_base(g: &GameState, seat: usize) -> GameState {
+    hidden_safe(g, seat, (g.turn_number as u64) << 20 ^ (seat as u64) << 8 ^ g.step as u64)
 }
 
 // ── Agreement with a teacher ───────────────────────────────────────────
@@ -612,7 +769,15 @@ pub fn record(g: &GameState, seat: usize, chosen: &GameAction, w: &EvalWeights, 
     let chosen_at = idx.iter().position(|&i| i == ci).expect("kept");
     let base = hidden_safe(g, seat, rand::RngExt::random(rng));
     let successors: Vec<Option<GameState>> = idx.iter().map(|&i| candidate_state(&base, seat, m.kind, &m.moves[i])).collect();
-    decision_capture::maybe_successors(g, seat, successors, chosen_at, Provenance { kind: m.kind.index(), ..Default::default() });
+    let moves: Vec<GameAction> = idx.iter().map(|&i| m.moves[i].clone()).collect();
+    let (root, refs) = action_inputs(&base, seat, &moves);
+    decision_capture::maybe_successors(
+        g,
+        seat,
+        successors,
+        chosen_at,
+        Provenance { kind: m.kind.index(), root: Some(&root), refs: Some(&refs), ..Default::default() },
+    );
 }
 
 fn members_of(a: &GameAction) -> Option<Vec<Member>> {
@@ -631,6 +796,7 @@ fn members_of(a: &GameAction) -> Option<Vec<Member>> {
 /// "stop" once `target` is reached.
 fn record_declaration(g: &GameState, seat: usize, kind: Kind, target: &[Member], rng: &mut StdRng) {
     let base = hidden_safe(g, seat, rand::RngExt::random(rng));
+    let (root, ids) = super::encode::encode_state_with_ids(&base, seat, super::net_eval::vocab());
     let mut set: Vec<Member> = Vec::new();
     for _ in 0..=target.len() {
         let (adds, stop) = combat_step(g, seat, kind, &set);
@@ -653,14 +819,16 @@ fn record_declaration(g: &GameState, seat: usize, kind: Kind, target: &[Member],
         idx.extend(rest.into_iter().take(ROW_CANDIDATES.saturating_sub(goods.len())));
         idx.truncate(ROW_CANDIDATES.max(1));
         if idx.len() >= 2 {
-            let successors: Vec<Option<GameState>> = idx
+            let decls: Vec<GameAction> = idx
                 .iter()
                 .map(|&i| {
                     let mut s = set.clone();
                     s.extend(options[i].iter().flatten().copied());
-                    candidate_state(&base, seat, kind, &declaration(kind, &s))
+                    declaration(kind, &s)
                 })
                 .collect();
+            let successors: Vec<Option<GameState>> = decls.iter().map(|d| candidate_state(&base, seat, kind, d)).collect();
+            let refs: Vec<Vec<ActionRef>> = decls.iter().map(|d| action_refs(seat, &ids, d)).collect();
             let logits: Vec<f32> = idx.iter().map(|i| if goods.contains(i) { 0.0 } else { -30.0 }).collect();
             let chosen_at = idx.iter().position(|&i| i == first_good).expect("kept");
             decision_capture::maybe_successors(
@@ -668,7 +836,14 @@ fn record_declaration(g: &GameState, seat: usize, kind: Kind, target: &[Member],
                 seat,
                 successors,
                 chosen_at,
-                Provenance { kind: kind.index(), values: Some(&logits), values_are_logits: true, ..Default::default() },
+                Provenance {
+                    kind: kind.index(),
+                    values: Some(&logits),
+                    values_are_logits: true,
+                    root: Some(&root),
+                    refs: Some(&refs),
+                    ..Default::default()
+                },
             );
         }
         if done {
@@ -928,6 +1103,118 @@ mod tests {
             assert!(r.successors.len() <= 4, "at most menu_arms arms");
         }
         assert!(rows.iter().any(|r| r.kind == Kind::Priority.index()), "a main-phase row");
+    }
+
+    /// A pinned decision (the live server's take-back guarantee) gets the
+    /// same reply from the menu search every time, serial or split across
+    /// workers.
+    #[test]
+    fn a_pinned_menu_search_replays_its_pick_serial_and_split() {
+        use crate::server::mcts::{MENU_COMBAT, MENU_MAIN, MctsBot, MctsConfig, PinnedStreams};
+        let _g = SLOT.lock().unwrap_or_else(|e| e.into_inner());
+        let slot = super::super::net_eval::SLOT_FRA;
+        super::super::net_eval::set_slot(slot, Some(std::sync::Arc::new(HashPolicy)));
+        let w = EvalWeights::default();
+        let seed = 11u64;
+        let mut g = super::super::action_gap::start_game(&sealed_template(seed), &w, seed);
+        let mut bots = [crate::server::HeuristicBot::with_weights(w), crate::server::HeuristicBot::with_weights(w)];
+        let mut fuel = 3000;
+        let seat = loop {
+            fuel -= 1;
+            assert!(fuel > 0 && !g.is_game_over(), "no searched main-phase decision reached");
+            let s = g.active_player_idx;
+            if g.turn_number >= 3
+                && g.stack.is_empty()
+                && g.pending_decision.is_none()
+                && g.player_with_priority() == s
+                && g.step == crate::game::TurnStep::PreCombatMain
+                && decision_menu::menu(&g, s, &w).is_some_and(|m| m.moves.len() >= 3)
+            {
+                break s;
+            }
+            let mut acted = false;
+            for (i, b) in bots.iter_mut().enumerate() {
+                if let Some(a) = b.next_action(&g, i) {
+                    acted = g.perform_action(a).is_ok();
+                    break;
+                }
+            }
+            if !acted {
+                let _ = g.perform_action(GameAction::PassPriority);
+            }
+        };
+        for threads in [1, 2] {
+            let cfg = MctsConfig {
+                iterations: 12,
+                horizon_turns: 1,
+                weights: w,
+                menu_windows: MENU_MAIN | MENU_COMBAT,
+                policy_slot: slot,
+                menu_arms: 4,
+                search_threads: threads,
+                ..MctsConfig::default()
+            };
+            let pick = || {
+                let _pin = PinnedStreams::install(99);
+                MctsBot::new(cfg).next_action(&g, seat)
+            };
+            let first = pick();
+            assert!(first.is_some());
+            assert_eq!(first, pick(), "threads {threads}");
+        }
+        super::super::net_eval::set_slot(slot, None);
+    }
+
+    /// The action head's references point at the right objects: through a
+    /// heuristic game, every move on the list maps its card, targets,
+    /// attackers and blockers to the encoded objects that are those cards,
+    /// and the id list lines up with the encoding object for object.
+    #[test]
+    fn action_refs_name_the_objects_each_move_involves() {
+        use crabomination_nn::NO_OBJECT;
+        let w = EvalWeights::default();
+        let seed = 13u64;
+        let mut g = super::super::action_gap::start_game(&sealed_template(seed), &w, seed);
+        let mut bots = [crate::server::HeuristicBot::with_weights(w), crate::server::HeuristicBot::with_weights(w)];
+        let (mut checked, mut sourced, mut combat) = (0usize, 0usize, 0usize);
+        for _ in 0..1500 {
+            if g.is_game_over() || g.turn_number > 9 {
+                break;
+            }
+            for seat in 0..2 {
+                let Some(m) = decision_menu::menu(&g, seat, &w) else { continue };
+                let (root, ids) = super::super::encode::encode_state_with_ids(&g, seat, super::super::net_eval::vocab());
+                assert_eq!(ids.len(), root.len());
+                for a in &m.moves {
+                    for (r, o) in action_refs(seat, &ids, a) {
+                        checked += 1;
+                        if o == NO_OBJECT {
+                            continue;
+                        }
+                        let id = ids[o as usize].expect("a reference names a card");
+                        let named = match a {
+                            GameAction::DeclareAttackers(v) => v.iter().any(|x| x.attacker == id),
+                            GameAction::DeclareBlockers(v) => v.iter().any(|(b, at)| *b == id || *at == id),
+                            _ => format!("{a:?}").contains(&format!("CardId({})", id.0)),
+                        };
+                        assert!(named, "{a:?}: role {r} -> {id:?}");
+                        sourced += usize::from(r == role::SOURCE);
+                        combat += usize::from(r == role::ATTACKER || r == role::BLOCKER);
+                    }
+                }
+            }
+            let mut acted = false;
+            for (i, b) in bots.iter_mut().enumerate() {
+                if let Some(a) = b.next_action(&g, i) {
+                    acted = g.perform_action(a).is_ok();
+                    break;
+                }
+            }
+            if !acted {
+                let _ = g.perform_action(GameAction::PassPriority);
+            }
+        }
+        assert!(sourced > 20 && combat > 5, "checked {checked}, sourced {sourced}, combat {combat}");
     }
 
     fn search_plays_a_legal_game(policy_rollouts: bool) {
