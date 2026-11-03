@@ -7425,3 +7425,31 @@ most 4 rows per held-out game reservoir-sampled over the whole run, and
 uses lr 3e-4: at step 4 k training win CE 0.76, held-out 0.57 sealed /
 0.55 cube / 0.61 pod2 / 1.22 pods (chance ≈ 0.69 / 0.69 / 0.69 / 1.35),
 all improving.
+
+**First gates, on run 2's step 10 000** (the checkpoint with the lowest
+mean held-out value CE, 0.703; later steps overfit pods — held-out pod CE
+1.14 at 10 k, 1.59 at 36 k, its Brier flat, i.e. overconfidence):
+
+- **G1 screen** (not the pre-registered 500 × 12 gate): `mcts-table-256`
+  (the 256-search on the table net's leaf, SOS pool) vs `mcts-net67-256`
+  (the champion's), SOS sealed, paired 120 × 12: **44.6 [42.7, 46.5] /
+  41.2 [39.3, 43.2], pooled −7.1** — far under G1's −0.5 floor, so the
+  full gate was not run.
+- **G3** (`bot_ladder --commander --a table --b dflt`; the pod runner's
+  two-seat refusal is lifted for the table net only): the scored pilot
+  judging by the table net in one seat of a `dflt` pod — **0.95x its due
+  share at 4 seats [0.88, 1.01] (2,000 games), 0.94x at 6 [0.88, 0.99]
+  (3,000)**: slightly under the heuristic's round-80 pod share.
+- **B1** (step 40 k): hand top-5 recall over the pool 0.293 sealed / 0.194
+  cube / 0.141 pod2 / 0.160 pods against the base-rate ranking's 0.172 /
+  0.192 / 0.105 / 0.122 (uniform 0.027 / 0.002 / 0.0002 / 0.0002) — the
+  pre-registered B1 (≥ 10 points over the uniform pool in cube and pods)
+  passes trivially; against popularity the head gains in sealed (+12) and
+  pods (+3.5 / +3.8), not in cube.
+
+**Reading.** The pipeline works end to end — any seat count, any pool, the
+leaf, the pod runner — and the first net is what 176 k heuristic games and
+40 minutes buy: below the duel specialist and level with the pod heuristic.
+Next for this line, the user's call: a training run at the scale the
+champion had (millions of games), the blocks on, and the pod overconfidence
+addressed (weight decay / label smoothing), before G1 / G3 again.
