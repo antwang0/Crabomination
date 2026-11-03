@@ -128,6 +128,22 @@ pub fn mode_pool(mode: Mode, vocab: &Vocab) -> &'static PoolIx {
     }
 }
 
+/// The pool a live game's states carry, judged off the game: more than two
+/// seats or a commander is Commander; an FRA deck (`fra_mode::is_fra_game`)
+/// is FRA; any other duel reads SOS's pool (the ladder's `--decks sealed`,
+/// and the closest of the three to a constructed duel).
+pub fn pool_for(g: &GameState, vocab: &Vocab) -> &'static PoolIx {
+    let commander = g.players.len() > 2 || g.players.iter().any(|p| !p.command.is_empty());
+    let mode = if commander {
+        Mode::Pod(4)
+    } else if crate::fra_mode::is_fra_game(g) {
+        Mode::SealedFra
+    } else {
+        Mode::SealedSos
+    };
+    mode_pool(mode, vocab)
+}
+
 /// The opening state of a `mode` game, decks drawn from `seed`.
 pub fn mode_template(mode: Mode, seed: u64) -> GameState {
     let mut rng = StdRng::seed_from_u64(seed ^ 0x7AB1_E5EE_D000_0001);

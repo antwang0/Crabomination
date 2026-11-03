@@ -107,9 +107,49 @@ fn net_for_state(state: &GameState, slot: u8) -> Option<Arc<dyn NetEvaluator>> {
     net_for(slot)
 }
 
+/// The table net (ML_NOTES "One model for every mode"): not a
+/// [`NetEvaluator`] — it reads a whole table ([`super::encode_table`]), any
+/// seat count — so it lives beside the slot table, addressed by this slot
+/// number in `EvalWeights::net_slot`.
+pub const SLOT_TABLE: u8 = 200;
+
+struct TableSlot {
+    net: crabomination_nn::table::TableNet,
+    /// The card pool its states carry, by game: `None` reads the game's own
+    /// (`table_selfplay::pool_for`).
+    pool: Option<&'static crate::table_selfplay::PoolIx>,
+}
+
+static TABLE: RwLock<Option<Arc<TableSlot>>> = RwLock::new(None);
+
+/// Load a table net (`table_train`'s export) for [`SLOT_TABLE`]; `pool`
+/// pins the card pool, else each game's own is used.
+pub fn load_table(path: &std::path::Path, pool: Option<&'static crate::table_selfplay::PoolIx>) -> Result<(), String> {
+    let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
+    let mut net = crabomination_nn::table::TableNet::load(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
+    net.pad_vocab(vocab().size()).map_err(|e| format!("{}: {e}", path.display()))?;
+    *TABLE.write().unwrap() = Some(Arc::new(TableSlot { net, pool }));
+    Ok(())
+}
+
+/// The table net's chance that `seat` wins, any seat count.
+fn table_win_prob(state: &GameState, seat: usize) -> Option<f32> {
+    let slot = TABLE.read().unwrap().clone()?;
+    let mut t = super::encode_table::encode_table(state, seat, vocab());
+    if slot.net.has_pool() {
+        let pool = slot.pool.unwrap_or_else(|| crate::table_selfplay::pool_for(state, vocab()));
+        t.pool = Some(pool.pool.clone());
+    }
+    Some(slot.net.win_prob(&t))
+}
+
 /// The net's win probability for `seat`, or `None` when the slot is empty
 /// or the state is not a two-seat game (callers fall back to the heuristic).
+/// [`SLOT_TABLE`] reads the table net, at any seat count.
 pub fn win_prob(state: &GameState, seat: usize, slot: u8) -> Option<f32> {
+    if slot == SLOT_TABLE {
+        return table_win_prob(state, seat);
+    }
     let net = net_for_state(state, slot)?;
     let enc = {
         let _t = super::mcts::timing::lap(&super::mcts::timing::ENC_NS);
