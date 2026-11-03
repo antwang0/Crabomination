@@ -136,6 +136,12 @@ struct Args {
     /// recorded as imitation rows, as under `--menu-decisions` (implied).
     /// Needs `--mcts-actors`.
     menu_search: u8,
+    /// Most decision rows the learner keeps (`--decision-cap`, default
+    /// 200 000). Each holds every candidate's encoded state (and the root),
+    /// so this is most of the trainer's memory: a 6,000-game FRA search run
+    /// peaked at 20.6 GB at the default and was OOM-killed beside the user's
+    /// own jobs (2026-11-03).
+    decision_cap: usize,
     /// The policy-headed net giving `--menu-search` its priors, loaded into
     /// the candidate slot (CPU forwards; the value net stays `--use-best`).
     use_policy: Option<PathBuf>,
@@ -466,6 +472,7 @@ fn parse_args() -> Args {
         record_decisions: false,
         menu_decisions: false,
         menu_search: 0,
+        decision_cap: 200_000,
         use_policy: None,
         policy_kinds: false,
         policy_action: false,
@@ -567,6 +574,7 @@ fn parse_args() -> Args {
                 a.record_decisions = true;
             }
             "--use-policy" => a.use_policy = Some(PathBuf::from(val())),
+            "--decision-cap" => a.decision_cap = val().parse().expect("--decision-cap"),
             "--init-from" => {
                 a.init_from = Some(PathBuf::from(val()));
                 a.policy_head = true;
@@ -1043,7 +1051,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         if args.record_decisions {
             let captured = crabomination::server::decision_capture::drain();
             if !captured.is_empty() {
-                const DECISION_CAP: usize = 200_000;
+                let decision_cap = args.decision_cap;
                 const DECISION_VAL_CAP: usize = 4_000;
                 let traj_base = (salt(5) as u32) << 1;
                 // The return is stamped here, where the game's result is in
@@ -1093,7 +1101,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                             v.push(row);
                         }
                     } else {
-                        if d.len() == DECISION_CAP {
+                        if d.len() >= decision_cap {
                             d.pop_front();
                         }
                         searched += (row.values_are_logits && row.visits.is_some()) as u64;

@@ -7453,3 +7453,13 @@ leaf, the pod runner — and the first net is what 176 k heuristic games and
 Next for this line, the user's call: a training run at the scale the
 champion had (millions of games), the blocks on, and the pod overconfidence
 addressed (weight decay / label smoothing), before G1 / G3 again.
+
+### The phase-5 loop on FRA (2026-11-03, in progress)
+
+The user's "3": the loop on FRA sealed (rated decks, the FRA net as the
+leaf), priors from gen 3, same reads and stop rule (`.ladder/fra5/`).
+**F1: 50.1 [48.0, 52.3] / 49.1 [47.0, 51.2] against gen 3 — flat**; alone
+vs `dflt` on FRA 33.6 / 23.9. F2 was OOM-killed at 23:00 after 1,401 games
+(the trainer at 17.8 GB, the user's own job at 25 GB); resumed from its
+step-2000 checkpoint for the remaining games with the decision deque
+halved (`selfplay_train --decision-cap 100000`, new).
