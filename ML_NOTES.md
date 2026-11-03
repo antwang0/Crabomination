@@ -7305,3 +7305,20 @@ representation either. Policy work stops here; the head stays in-tree,
 default off (no adopted net carries it). Next: fewer arms on gen 3's
 sharper prior, then the value net — the one component every phase-5
 generation failed to improve.
+
+**Arms around the adopted 8** (`-a<N>`, gen 3's priors, main + combat,
+256 rollouts, SOS sealed, paired 120 × 12, vs the adopted `-a8`):
+4 arms **48.3 [46.5, 50.0] / 48.7 [46.8, 50.5]** (−1.5), 12 arms **48.1
+[46.4, 49.8] / 49.9 [48.3, 51.6]** (−1.0). Eight stays: fewer starves the
+policy's 5th–8th picks, which still win often enough to pay, and more
+thins every arm's rollouts.
+
+**Where this leaves the program.** The adopted bot is the menu search on
+gen 3's policy (+4 to +7.5 over the old client pilot by pool, lobby Cube
+included). The policy is flat at ~38 % alone under every lever tried
+since — more generations, the action head, arm counts — and every value
+head trained in the loop lost ~11 points as the leaf, so the judge is the
+untouched lever. It is data-bound: a generation's 6,000 search games are
+too few for the value net, and the trainer keeps no rows between runs
+(a game's labelled rows are ~1 MB unencoded, so pooling 25 k search
+games wants compressed shards on a disk with ~50 GB free).
