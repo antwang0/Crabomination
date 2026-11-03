@@ -79,10 +79,16 @@ pub const SEALED_PACKS: usize = 6;
 /// stronger deck, which is how a bot opponent is given a handicap edge
 /// without touching the builder.
 pub fn sealed_pool_packs(seed: u64, packs: usize) -> Vec<CardFactory> {
-    let mut rng = StdRng::seed_from_u64(seed);
     // `CRAB_SEALED_SET=fra` opens Reality Fracture boosters instead
     // (`fra_mode`); unset, the pool is SOS's as before.
-    if crate::fra_mode::SealedSet::current() == crate::fra_mode::SealedSet::Fra {
+    sealed_pool_of(crate::fra_mode::SealedSet::current(), seed, packs)
+}
+
+/// [`sealed_pool_packs`] for a named set rather than the process's — what a
+/// caller mixing sets in one process (the table recorder's mode mixer) needs.
+pub fn sealed_pool_of(set: crate::fra_mode::SealedSet, seed: u64, packs: usize) -> Vec<CardFactory> {
+    let mut rng = StdRng::seed_from_u64(seed);
+    if set == crate::fra_mode::SealedSet::Fra {
         let rolls = crate::fra_mode::FraPacks::get();
         return (0..packs.max(1)).flat_map(|_| rolls.roll(&mut rng)).collect();
     }
@@ -1336,6 +1342,33 @@ mod tests {
     /// path, so the same seed played a *different* game every time and a panic
     /// at game 400 k of a training run could not be re-run with its seed in
     /// hand. `play_recorded_game_mcts` pins the stream per game.
+    /// Recording the move list (`decision_capture::set_menu_only`, the
+    /// policy pilot's imitation rows) does not change the game it records:
+    /// the recorder runs between the bots' moves, on clones. (Written after
+    /// `the_same_seed_records_the_same_game` failed once in four full lib
+    /// runs on 2026-11-03 beside the capture tests, unreproduced since; this
+    /// holds with the recorder on, so that flake is not the recorder.)
+    #[test]
+    fn recording_the_move_list_does_not_change_the_game() {
+        use crate::server::decision_capture;
+        let _serial = decision_capture::TEST_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+        let vocab = Vocab::sos_sealed();
+        let deck_a = heuristic_sealed_build(&sealed_pool(0xA11CE), 1);
+        let deck_b = heuristic_sealed_build(&sealed_pool(0xB0B), 2);
+        let template = sealed_game_template(&deck_a, &deck_b);
+        let play = || play_recorded_game(&template, [EvalWeights::default(), EvalWeights::default()], 78, 4000, &vocab);
+        let plain = play();
+        decision_capture::set_enabled(true);
+        decision_capture::set_menu_only(true);
+        let recorded = play();
+        let rows = decision_capture::drain();
+        decision_capture::set_menu_only(false);
+        decision_capture::set_enabled(false);
+        assert!(!rows.is_empty(), "the recorder recorded");
+        assert_eq!((plain.winner, plain.turns), (recorded.winner, recorded.turns));
+        assert!(plain.rows == recorded.rows, "every position replays identically");
+    }
+
     #[test]
     fn the_same_seed_records_the_same_game() {
         let vocab = Vocab::sos_sealed();

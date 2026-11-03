@@ -47,6 +47,7 @@ pub mod selfplay;
 pub mod server;
 pub mod snapshot;
 pub mod sos_mode;
+pub mod table_selfplay;
 pub mod team;
 pub mod zone;
 

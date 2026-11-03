@@ -89,6 +89,8 @@ pub const NO_DESC: u16 = u16::MAX;
 /// Standard trainer sizes (a file's shapes win at load time).
 pub const SEAT_HIDDEN: usize = 128;
 pub const VALUE_HIDDEN: usize = 64;
+/// The belief head's query/key width (`belief.*`).
+pub const BELIEF_HIDDEN: usize = 64;
 
 /// The tag row slot `slot` reads.
 #[inline]
@@ -111,6 +113,71 @@ impl Default for TableObject {
     }
 }
 
+/// A game's card pool: every card that can appear in it — the set for
+/// sealed, the cube list, the decklists' union for constructed and
+/// Commander — each as its name index and its descriptor tokens, so a card
+/// the name table never saw still has an identity. One per game, shared by
+/// every row of it (`Arc`); the model encodes it once per game, and the
+/// belief head scores its cards (ML_NOTES "One model for every mode — the
+/// user's 2026-11-02 additions").
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct TablePool {
+    cards: Vec<u16>,
+    desc_tokens: Vec<u16>,
+    desc_ends: Vec<u32>,
+}
+
+impl TablePool {
+    /// Append a card: its name index and descriptor tokens.
+    pub fn push(&mut self, card: u16, tokens: &[u16]) {
+        self.cards.push(card);
+        self.desc_tokens.extend_from_slice(tokens);
+        self.desc_ends.push(self.desc_tokens.len() as u32);
+    }
+
+    pub fn len(&self) -> usize {
+        self.cards.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.cards.is_empty()
+    }
+
+    /// Card `i`'s name index.
+    pub fn card(&self, i: usize) -> u16 {
+        self.cards[i]
+    }
+
+    /// Card `i`'s descriptor tokens.
+    pub fn desc(&self, i: usize) -> &[u16] {
+        let start = if i == 0 { 0 } else { self.desc_ends[i - 1] as usize };
+        &self.desc_tokens[start..self.desc_ends[i] as usize]
+    }
+
+    /// A content hash (FNV-1a over the cards and tokens): the engine's
+    /// per-game embedding cache and the shard writer's dedup key.
+    pub fn id(&self) -> u64 {
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        let mut eat = |x: u32| {
+            for b in x.to_le_bytes() {
+                h ^= b as u64;
+                h = h.wrapping_mul(0x100_0000_01b3);
+            }
+        };
+        eat(self.cards.len() as u32);
+        for &c in &self.cards {
+            eat(c as u32);
+        }
+        for &t in &self.desc_tokens {
+            eat(t as u32);
+        }
+        for &e in &self.desc_ends {
+            eat(e);
+        }
+        h
+    }
+}
+
 /// A whole table from one seat's point of view. Seats first
 /// ([`TableState::with_seats`]), then objects in group order — slot-major,
 /// zone-minor — in one buffer, like [`EncodedState`](crate::EncodedState).
@@ -125,6 +192,8 @@ pub struct TableState {
     desc_tokens: Vec<u16>,
     /// End offset of each descriptor in `desc_tokens`.
     desc_ends: Vec<u32>,
+    /// The game's card pool, when the recorder supplied one.
+    pub pool: Option<std::sync::Arc<TablePool>>,
 }
 
 impl Default for TableState {
@@ -143,6 +212,7 @@ impl TableState {
             counts: vec![0; n * TABLE_ZONES],
             desc_tokens: Vec::new(),
             desc_ends: Vec::new(),
+            pool: None,
         }
     }
 
@@ -257,6 +327,16 @@ pub struct TableRow {
     /// One trajectory per (game, encoded seat), as [`crate::TrainRow::traj`].
     pub traj: u32,
     pub ply: u16,
+    /// The absolute seat behind each slot — a trajectory's successor row can
+    /// have different slots (a seat left), so the per-slot λ-bootstrap maps
+    /// by seat, not by slot index.
+    pub seat_ids: Vec<u8>,
+    /// The hidden truth, per slot, as indices into the state's pool (empty
+    /// for slot 0, whose own cards the state shows, and without a pool):
+    /// the cards in that seat's hand — the belief head's target...
+    pub hand: Vec<Vec<u16>>,
+    /// ...and its library, `(pool index, copies)`.
+    pub library: Vec<Vec<(u16, u16)>>,
 }
 
 // ───────────────────────────── shard format ─────────────────────────────
@@ -264,19 +344,51 @@ pub struct TableRow {
 /// Table shards carry their own magic: a play-net shard must never decode
 /// as one of these, or the reverse.
 pub const TABLE_SHARD_MAGIC: [u8; 4] = *b"CRTB";
-pub const TABLE_SHARD_VERSION: u32 = 1;
+/// Version 2 (2026-11-03): the game's card pool (each distinct one once per
+/// shard), seat ids per slot, and each slot's hidden hand and library.
+pub const TABLE_SHARD_VERSION: u32 = 2;
 
 pub fn write_table_shard(rows: &[TableRow]) -> Vec<u8> {
     let mut out = Vec::with_capacity(16 + rows.len() * 1024);
     out.extend_from_slice(&TABLE_SHARD_MAGIC);
     out.extend_from_slice(&TABLE_SHARD_VERSION.to_le_bytes());
+    // Every distinct pool once, rows pointing at it by index.
+    let mut pools: Vec<(u64, &TablePool)> = Vec::new();
+    let pool_index: Vec<u32> = rows
+        .iter()
+        .map(|r| match &r.state.pool {
+            None => u32::MAX,
+            Some(p) => {
+                let id = p.id();
+                match pools.iter().position(|(i, q)| *i == id && **q == **p) {
+                    Some(i) => i as u32,
+                    None => {
+                        pools.push((id, p));
+                        (pools.len() - 1) as u32
+                    }
+                }
+            }
+        })
+        .collect();
+    out.extend_from_slice(&(pools.len() as u32).to_le_bytes());
+    for (_, p) in &pools {
+        out.extend_from_slice(&(p.len() as u32).to_le_bytes());
+        for i in 0..p.len() {
+            out.extend_from_slice(&p.card(i).to_le_bytes());
+            let toks = p.desc(i);
+            out.extend_from_slice(&(toks.len() as u16).to_le_bytes());
+            for t in toks {
+                out.extend_from_slice(&t.to_le_bytes());
+            }
+        }
+    }
     out.extend_from_slice(&(rows.len() as u32).to_le_bytes());
     let f32s = |out: &mut Vec<u8>, xs: &[f32]| {
         for v in xs {
             out.extend_from_slice(&v.to_le_bytes());
         }
     };
-    for row in rows {
+    for (row, &pi) in rows.iter().zip(&pool_index) {
         let s = &row.state;
         debug_assert_eq!(row.win.len(), s.seat_count());
         debug_assert_eq!(row.life.len(), s.seat_count());
@@ -306,6 +418,22 @@ pub fn write_table_shard(rows: &[TableRow]) -> Vec<u8> {
         f32s(&mut out, &[row.game_len]);
         out.extend_from_slice(&row.traj.to_le_bytes());
         out.extend_from_slice(&row.ply.to_le_bytes());
+        out.extend_from_slice(&pi.to_le_bytes());
+        debug_assert_eq!(row.seat_ids.len(), s.seat_count());
+        out.extend_from_slice(&row.seat_ids[..s.seat_count()]);
+        for slot in 0..s.seat_count() {
+            let hand = row.hand.get(slot).map_or(&[][..], |h| &h[..]);
+            out.extend_from_slice(&(hand.len() as u16).to_le_bytes());
+            for i in hand {
+                out.extend_from_slice(&i.to_le_bytes());
+            }
+            let lib = row.library.get(slot).map_or(&[][..], |l| &l[..]);
+            out.extend_from_slice(&(lib.len() as u16).to_le_bytes());
+            for (i, n) in lib {
+                out.extend_from_slice(&i.to_le_bytes());
+                out.extend_from_slice(&n.to_le_bytes());
+            }
+        }
     }
     out
 }
@@ -316,6 +444,23 @@ pub fn read_table_shard(bytes: &[u8]) -> Option<Vec<TableRow>> {
     let mut r = Reader { b: bytes, pos: 0 };
     if r.take(4)? != TABLE_SHARD_MAGIC || r.u32()? != TABLE_SHARD_VERSION {
         return None;
+    }
+    let n_pools = r.u32()? as usize;
+    let mut pools: Vec<std::sync::Arc<TablePool>> = Vec::with_capacity(n_pools);
+    let mut toks: Vec<u16> = Vec::new();
+    for _ in 0..n_pools {
+        let len = r.u32()? as usize;
+        let mut p = TablePool::default();
+        for _ in 0..len {
+            let card = r.u16()?;
+            let nt = r.u16()? as usize;
+            toks.clear();
+            for _ in 0..nt {
+                toks.push(r.u16()?);
+            }
+            p.push(card, &toks);
+        }
+        pools.push(std::sync::Arc::new(p));
     }
     let n = r.u32()? as usize;
     let mut rows = Vec::with_capacity(n);
@@ -368,7 +513,27 @@ pub fn read_table_shard(bytes: &[u8]) -> Option<Vec<TableRow>> {
         let game_len = r.f32()?;
         let traj = r.u32()?;
         let ply = r.u16()?;
-        rows.push(TableRow { state: s, win, life, game_len, traj, ply });
+        let pi = r.u32()?;
+        if pi != u32::MAX {
+            s.pool = Some(pools.get(pi as usize)?.clone());
+        }
+        let seat_ids = r.take(seats)?.to_vec();
+        let (mut hand, mut library) = (Vec::with_capacity(seats), Vec::with_capacity(seats));
+        for _ in 0..seats {
+            let nh = r.u16()? as usize;
+            let mut h = Vec::with_capacity(nh);
+            for _ in 0..nh {
+                h.push(r.u16()?);
+            }
+            hand.push(h);
+            let nl = r.u16()? as usize;
+            let mut l = Vec::with_capacity(nl);
+            for _ in 0..nl {
+                l.push((r.u16()?, r.u16()?));
+            }
+            library.push(l);
+        }
+        rows.push(TableRow { state: s, win, life, game_len, traj, ply, seat_ids, hand, library });
     }
     (r.pos == bytes.len()).then_some(rows)
 }
@@ -402,6 +567,40 @@ pub struct TableNet {
     value1_b: Vec<f32>,
     value2_w: Tensor2, // [1, VH]
     value2_b: Vec<f32>,
+    /// The trunk reads the game's card pool (`trunk1` is `2h` wider): see
+    /// [`TablePool`].
+    pool: bool,
+    belief: Option<TableBelief>,
+    /// Process-unique, so the pool-encoding cache can tell nets apart.
+    uid: u64,
+}
+
+/// `belief.*` — see the trainer's `BeliefModel`.
+#[derive(Debug, Clone)]
+struct TableBelief {
+    b1_w: Tensor2, // [BH, h2 + SH]
+    b1_b: Vec<f32>,
+    qh_w: Tensor2, // [BH, BH]
+    qh_b: Vec<f32>,
+    ql_w: Tensor2,
+    ql_b: Vec<f32>,
+    key_w: Tensor2, // [BH, h]
+    key_b: Vec<f32>,
+}
+
+/// A pool through one net's object layer: every card's embedding `[P, h]`
+/// and the mean ⊕ max summary the trunk reads.
+struct PoolEnc {
+    h: Vec<f32>,
+    summary: Vec<f32>,
+}
+
+thread_local! {
+    /// `(net uid, pool id) -> encoding`. A game's pool is encoded once per
+    /// net per thread; a leaf reads the summary for free. Small, cleared
+    /// when it grows past a handful of games' worth.
+    static POOL_CACHE: std::cell::RefCell<std::collections::HashMap<(u64, u64), std::rc::Rc<PoolEnc>>> =
+        std::cell::RefCell::new(std::collections::HashMap::new());
 }
 
 impl TableNet {
@@ -488,7 +687,45 @@ impl TableNet {
             value1_b: bias("value1.bias")?,
             value2_w: get("value2.weight")?,
             value2_b: bias("value2.bias")?,
+            pool: false,
+            belief: None,
+            uid: {
+                static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+                NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            },
         };
+        const BELIEF: [&str; 8] = [
+            "belief.b1.weight",
+            "belief.b1.bias",
+            "belief.q_hand.weight",
+            "belief.q_hand.bias",
+            "belief.q_lib.weight",
+            "belief.q_lib.bias",
+            "belief.key.weight",
+            "belief.key.bias",
+        ];
+        let belief_present = BELIEF.iter().filter(|n| st.tensor(n).is_ok()).count();
+        let belief = match belief_present {
+            0 => None,
+            8 => Some(TableBelief {
+                b1_w: get("belief.b1.weight")?,
+                b1_b: bias("belief.b1.bias")?,
+                qh_w: get("belief.q_hand.weight")?,
+                qh_b: bias("belief.q_hand.bias")?,
+                ql_w: get("belief.q_lib.weight")?,
+                ql_b: bias("belief.q_lib.bias")?,
+                key_w: get("belief.key.weight")?,
+                key_b: bias("belief.key.bias")?,
+            }),
+            _ => return Err(NnError::BadTensor("belief.*", "some of its tensors present without the rest".into())),
+        };
+        let mut net = net;
+        let (sh0, g0, h0) = (net.seat_w.rows, TABLE_GLOBAL_FEATS, net.obj_w.rows);
+        net.pool = net.trunk1_w.cols == 3 * sh0 + g0 + 2 * h0;
+        if belief.is_some() && !net.pool {
+            return Err(NnError::BadTensor("belief.*", "present without the pool input".into()));
+        }
+        net.belief = belief;
 
         let e = net.name_emb.cols;
         let h = net.obj_w.rows;
@@ -503,7 +740,7 @@ impl TableNet {
             ("seat.weight", net.seat_w.cols == TABLE_ZONES * 2 * h + SEAT_FEATS),
             ("seat.bias", net.seat_b.len() == sh),
             ("seat_slot.weight", net.seat_slot.rows == SLOT_TAGS && net.seat_slot.cols == sh),
-            ("trunk1.weight", net.trunk1_w.cols == 3 * sh + TABLE_GLOBAL_FEATS),
+            ("trunk1.weight", net.trunk1_w.cols == 3 * sh + TABLE_GLOBAL_FEATS + if net.pool { 2 * h } else { 0 }),
             ("trunk1.bias", net.trunk1_b.len() == h1),
             ("trunk2.weight", net.trunk2_w.cols == h1),
             ("trunk2.bias", net.trunk2_b.len() == h2),
@@ -517,6 +754,17 @@ impl TableNet {
                     name,
                     "shape inconsistent with the rest of the net".into(),
                 ));
+            }
+        }
+        if let Some(b) = &net.belief {
+            let bh = b.b1_w.rows;
+            let ok = b.b1_w.cols == h2 + sh
+                && b.b1_b.len() == bh
+                && (b.qh_w.rows, b.qh_w.cols, b.qh_b.len()) == (bh, bh, bh)
+                && (b.ql_w.rows, b.ql_w.cols, b.ql_b.len()) == (bh, bh, bh)
+                && (b.key_w.rows, b.key_w.cols, b.key_b.len()) == (bh, h, bh);
+            if !ok {
+                return Err(NnError::BadTensor("belief.*", "shapes inconsistent with the rest of the net".into()));
             }
         }
         if let Some(stk) = &net.stack {
@@ -566,11 +814,152 @@ impl TableNet {
         self.forward(s).first().copied().unwrap_or(0.0)
     }
 
+    /// Whether the net reads the card pool, and carries the belief head.
+    pub fn has_pool(&self) -> bool {
+        self.pool
+    }
+
+    pub fn has_belief(&self) -> bool {
+        self.belief.is_some()
+    }
+
     /// The value head's raw per-slot logits.
     pub fn logits(&self, s: &TableState) -> Vec<f32> {
+        let Some((t2, z)) = self.core(s) else { return Vec::new() };
+        let (seats, sh, h2) = (s.seat_count(), self.seat_w.rows, t2.len());
+        // One logit per slot off [trunk ⊕ that slot's seat vector].
+        let vin_w = self.value1_w.cols;
+        let mut vin = vec![0.0f32; seats * vin_w];
+        for slot in 0..seats {
+            let row = &mut vin[slot * vin_w..(slot + 1) * vin_w];
+            row[..h2].copy_from_slice(&t2);
+            row[h2..].copy_from_slice(&z[slot * sh..(slot + 1) * sh]);
+        }
+        let vh = self.value1_w.rows;
+        let mut u = vec![0.0f32; seats * vh];
+        self.value1_w.matmul_t(&vin, seats, &mut u);
+        for row in u.chunks_exact_mut(vh) {
+            for (v, b) in row.iter_mut().zip(&self.value1_b) {
+                *v = (*v + b).max(0.0);
+            }
+        }
+        let mut logits = vec![0.0f32; seats];
+        self.value2_w.matmul_t(&u, seats, &mut logits);
+        for l in logits.iter_mut() {
+            *l += self.value2_b[0];
+        }
+        logits
+    }
+
+    /// The belief head, per slot from 1: the logits over the state's pool of
+    /// that seat's hand and of its library (`(hand, library)`, each `[P]`,
+    /// softmaxed by the reader). `None` without the head or a pool.
+    pub fn belief(&self, s: &TableState) -> Option<Vec<(Vec<f32>, Vec<f32>)>> {
+        let b = self.belief.as_ref()?;
+        let pool = s.pool.as_ref()?;
+        let (t2, z) = self.core(s)?;
+        let enc = self.pool_enc(pool);
+        let (h, sh, bh) = (self.obj_w.rows, self.seat_w.rows, b.b1_w.rows);
+        let p = pool.len();
+        let mut keys = vec![0.0f32; p * bh];
+        b.key_w.matmul_t(&enc.h, p, &mut keys);
+        for row in keys.chunks_exact_mut(bh) {
+            for (v, bb) in row.iter_mut().zip(&b.key_b) {
+                *v += bb;
+            }
+        }
+        let _ = h;
+        let mut out = Vec::new();
+        let mut bin = vec![0.0f32; t2.len() + sh];
+        bin[..t2.len()].copy_from_slice(&t2);
+        for slot in 1..s.seat_count() {
+            bin[t2.len()..].copy_from_slice(&z[slot * sh..(slot + 1) * sh]);
+            let mut u = vec![0.0f32; bh];
+            b.b1_w.matvec_t(&bin, &mut u);
+            for (v, bb) in u.iter_mut().zip(&b.b1_b) {
+                *v = (*v + bb).max(0.0);
+            }
+            let q = |w: &Tensor2, bias: &[f32]| {
+                let mut q = vec![0.0f32; bh];
+                w.matvec_t(&u, &mut q);
+                for (v, bb) in q.iter_mut().zip(bias) {
+                    *v += bb;
+                }
+                q
+            };
+            let (qh, ql) = (q(&b.qh_w, &b.qh_b), q(&b.ql_w, &b.ql_b));
+            let dots = |q: &[f32]| -> Vec<f32> { keys.chunks_exact(bh).map(|k| k.iter().zip(q).map(|(a, b)| a * b).sum()).collect() };
+            out.push((dots(&qh), dots(&ql)));
+        }
+        Some(out)
+    }
+
+    /// `pool` through this net's object layer, cached per thread.
+    fn pool_enc(&self, pool: &TablePool) -> std::rc::Rc<PoolEnc> {
+        let key = (self.uid, pool.id());
+        if let Some(e) = POOL_CACHE.with(|c| c.borrow().get(&key).cloned()) {
+            return e;
+        }
+        let (e, h, k) = (self.name_emb.cols, self.obj_w.rows, self.obj_w.cols);
+        let p = pool.len();
+        let mut x = vec![0.0f32; p * k];
+        for i in 0..p {
+            let row = &mut x[i * k..(i + 1) * k];
+            let c = if (pool.card(i) as usize) < self.name_emb.rows { pool.card(i) as usize } else { 0 };
+            row[..e].copy_from_slice(&self.name_emb.data[c * e..(c + 1) * e]);
+            let toks = pool.desc(i);
+            if !toks.is_empty() {
+                for &t in toks {
+                    let t = if (t as usize) < self.tok_emb.rows { t as usize } else { 0 };
+                    for (acc, v) in row[e..2 * e].iter_mut().zip(&self.tok_emb.data[t * e..(t + 1) * e]) {
+                        *acc += v;
+                    }
+                }
+                let inv = 1.0 / toks.len() as f32;
+                for v in row[e..2 * e].iter_mut() {
+                    *v *= inv;
+                }
+            }
+        }
+        let mut hs = vec![0.0f32; p * h];
+        if p > 0 {
+            self.obj_w.matmul_t(&x, p, &mut hs);
+        }
+        for row in hs.chunks_exact_mut(h) {
+            for (v, b) in row.iter_mut().zip(&self.obj_b) {
+                *v = (*v + b).max(0.0);
+            }
+        }
+        let mut summary = vec![0.0f32; 2 * h];
+        if p > 0 {
+            summary[h..].fill(f32::NEG_INFINITY);
+            for row in hs.chunks_exact(h) {
+                for j in 0..h {
+                    summary[j] += row[j];
+                    summary[h + j] = summary[h + j].max(row[j]);
+                }
+            }
+            for v in summary[..h].iter_mut() {
+                *v /= p as f32;
+            }
+        }
+        let enc = std::rc::Rc::new(PoolEnc { h: hs, summary });
+        POOL_CACHE.with(|c| {
+            let mut c = c.borrow_mut();
+            if c.len() >= 16 {
+                c.clear();
+            }
+            c.insert(key, enc.clone());
+        });
+        enc
+    }
+
+    /// The shared trunk: `(t2, z)` — the trunk's output and every slot's seat
+    /// vector (`[seats · SH]`). `None` for a state with no seats.
+    fn core(&self, s: &TableState) -> Option<(Vec<f32>, Vec<f32>)> {
         let seats = s.seat_count();
         if seats == 0 {
-            return Vec::new();
+            return None;
         }
         let e = self.name_emb.cols;
         let h = self.obj_w.rows;
@@ -704,7 +1093,13 @@ impl TableNet {
                 *m *= inv;
             }
         }
-        trunk_in[3 * sh..].copy_from_slice(&s.global);
+        trunk_in[3 * sh..3 * sh + TABLE_GLOBAL_FEATS].copy_from_slice(&s.global);
+        if self.pool
+            && let Some(p) = &s.pool
+        {
+            let enc = self.pool_enc(p);
+            trunk_in[3 * sh + TABLE_GLOBAL_FEATS..].copy_from_slice(&enc.summary);
+        }
         let mut t1 = vec![0.0f32; self.trunk1_w.rows];
         self.trunk1_w.matvec_t(&trunk_in, &mut t1);
         for (v, b) in t1.iter_mut().zip(&self.trunk1_b) {
@@ -717,28 +1112,7 @@ impl TableNet {
             *v = (*v + b).max(0.0);
         }
 
-        // One logit per slot off [trunk ⊕ that slot's seat vector].
-        let vin_w = self.value1_w.cols;
-        let mut vin = vec![0.0f32; seats * vin_w];
-        for slot in 0..seats {
-            let row = &mut vin[slot * vin_w..(slot + 1) * vin_w];
-            row[..h2].copy_from_slice(&t2);
-            row[h2..].copy_from_slice(&z[slot * sh..(slot + 1) * sh]);
-        }
-        let vh = self.value1_w.rows;
-        let mut u = vec![0.0f32; seats * vh];
-        self.value1_w.matmul_t(&vin, seats, &mut u);
-        for row in u.chunks_exact_mut(vh) {
-            for (v, b) in row.iter_mut().zip(&self.value1_b) {
-                *v = (*v + b).max(0.0);
-            }
-        }
-        let mut logits = vec![0.0f32; seats];
-        self.value2_w.matmul_t(&u, seats, &mut logits);
-        for l in logits.iter_mut() {
-            *l += self.value2_b[0];
-        }
-        logits
+        Some((t2, z))
     }
 }
 
@@ -768,7 +1142,24 @@ mod tests {
         );
         let mut win = vec![0.0; seats];
         win[1] = 1.0;
-        TableRow { state: s, win, life: vec![0.75; seats], game_len: 0.4, traj: 9, ply: 2 }
+        let mut pool = TablePool::default();
+        pool.push(3, &[7, 8]);
+        pool.push(0, &[]);
+        pool.push(5, &[9]);
+        s.pool = Some(std::sync::Arc::new(pool));
+        let hand = (0..seats).map(|k| if k == 0 { vec![] } else { vec![0, 2] }).collect();
+        let library = (0..seats).map(|k| if k == 0 { vec![] } else { vec![(1, 3), (2, 1)] }).collect();
+        TableRow {
+            state: s,
+            win,
+            life: vec![0.75; seats],
+            game_len: 0.4,
+            traj: 9,
+            ply: 2,
+            seat_ids: (0..seats as u8).rev().collect(),
+            hand,
+            library,
+        }
     }
 
     #[test]

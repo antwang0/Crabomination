@@ -39,3 +39,9 @@ mimalloc = ["dep:mimalloc"]
 [[bin]]
 name = "selfplay_train"
 test = false
+
+# The table-net trainer (ML_NOTES "One model for every mode", step 2): no
+# tests of its own, same switch as `selfplay_train`.
+[[bin]]
+name = "table_train"
+test = false

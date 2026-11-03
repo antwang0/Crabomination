@@ -38097,6 +38097,21 @@ fn play_pod_game(
     into: Option<&mut ActionCensus>,
     concede_rate: Option<u32>,
 ) -> PodOutcome {
+    play_pod_game_observed(template, pilots, max_actions, seed, into, concede_rate, None)
+}
+
+/// [`play_pod_game`] calling `observe` with the state before every round of
+/// seat polls — the table recorder's snapshot hook
+/// (`table_selfplay::record_table_game`). `None` is the plain game.
+pub(crate) fn play_pod_game_observed(
+    template: &GameState,
+    pilots: &[Pilot],
+    max_actions: usize,
+    seed: u64,
+    into: Option<&mut ActionCensus>,
+    concede_rate: Option<u32>,
+    mut observe: Option<&mut dyn FnMut(&GameState)>,
+) -> PodOutcome {
     crate::server::bot::set_jitter_seed(Some(seed));
     let mut g = template.clone();
     let mut shuffle = StdRng::seed_from_u64(seed);
@@ -38165,6 +38180,9 @@ fn play_pod_game(
         }
     };
     while stop_reason(&g, spent(actions, plays, pass_streak), max_actions, stale).is_none() {
+        if let Some(o) = observe.as_mut() {
+            o(&g);
+        }
         let mut any = false;
         for (seat, bot) in bots.iter_mut().enumerate() {
             // Eliminated seats are polled like any other: the bot answers

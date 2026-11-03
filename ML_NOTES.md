@@ -7322,3 +7322,92 @@ untouched lever. It is data-bound: a generation's 6,000 search games are
 too few for the value net, and the trainer keeps no rows between runs
 (a game's labelled rows are ~1 MB unencoded, so pooling 25 k search
 games wants compressed shards on a disk with ~50 GB free).
+
+## One model for every mode — the user's 2026-11-02 additions, and step 2 begins (2026-11-03)
+
+The user asked for this line again, with two additions; it resumes the
+2026-09-28 plan at step 2 (step 1, the table net, encoder and parity, was
+built then and never trained).
+
+1. **The legal card pool is an input, arbitrary per game.** Every
+   `TableState` carries the game's pool — the cards that can appear in it:
+   the set for sealed, the cube list, the decklists' union for constructed
+   and Commander — each as its name index plus its descriptor tokens (so a
+   card the vocabulary has never seen still has an identity). The model
+   encodes each pool card with the object layer (features zero), and the
+   trunk reads a mean/max pool summary beside the globals. A cube is then
+   just another pool, not a retrain.
+2. **Hidden information is predicted, over the pool.** A belief head scores
+   every pool card for every opponent slot — `q_slot · e_card` from a
+   per-slot query (trunk ⊕ seat row) against the pool card's embedding —
+   giving P(card in that seat's hand) (BCE against the recorder's truth)
+   and the seat's library composition (softmax over the pool, cross-entropy
+   against the true remaining counts). Scoring against the pool rather than
+   a vocabulary-wide output row is what makes it work for any pool. Round
+   39's vocabulary-wide belief head learned (AUC-style gains) but paid
+   nothing as a redeal, because duel determinization already knows the
+   opponent's exact list; this head is aimed where the list is unknown
+   (cube, pods, an unseen deck, a human), and it is read first as a
+   predictor (top-k recall against the uniform-over-pool baseline, the
+   round-39 open question), then as a determinizer.
+
+**Step 2, as built in this order** (each piece tested before the next):
+(a) `TableRow` v2 — seat ids per slot (the λ-bootstrap's mapping, as the
+2026-09-29 note required before the first shard), the pool, and the hidden
+truth (each opponent's hand and library as pool indices); shard version 2.
+(b) The any-seat recorder over a mode mixer (sealed SOS / FRA, cube,
+modern, SoS colleges, Commander pods 2–6). **Re-registered:**
+`pod::target_decks()` now holds 6,188 decks (the EDHREC average decks
+joined the 183 precons), so the held-out set is every 31st by index —
+~200 decks, 3 % — not "~20 precons"; the Commander pool, every deck's cards,
+is 22,907 distinct cards (stored once per shard, embedded once per game). (c) The table trainer loop with the pool encoder and the belief
+head. Gates G1–G4 stand as pre-registered on 2026-09-28; the belief head
+adds **B1**: hand top-5 recall over the pool above the uniform baseline by
+≥ 10 points on held-out games in cube and pods.
+
+**What step 2 built (2026-11-03).**
+
+- `TableRow` v2 / shard version 2 (`crabomination_nn::table`): the game's
+  `TablePool` (name index + descriptor tokens per card; one `Arc` per game,
+  each distinct pool once per shard), `seat_ids` per slot, and each
+  opponent slot's hidden hand and library as pool indices.
+- The recorder (`crabomination::table_selfplay`): `Mode` (SOS / FRA sealed,
+  cube, Commander pods 2–6), `mode_pool` / `mode_template` / `draw_mode`,
+  and `record_table_game`, which drives the pod driver
+  (`pod::play_pod_game_observed`, a snapshot hook the plain driver passes
+  `None` to) and labels every living seat's rows. Modern and the SoS
+  colleges are not in the mixer yet. Pools: SOS 300-odd, FRA ~300, cube
+  ~540, Commander **22,907** cards (every deck's), stored once per game.
+- The model (`crabomination_ml::table`, mirrored in the engine's
+  `TableNet` with a parity test): `pool` (each pool card through the object
+  layer, features zero; mean ⊕ max beside the trunk's input) and `belief`
+  (per opponent slot, hand and library logits over the pool as
+  `q · key(h_card)`; sparse softmax cross-entropy against the truth). The
+  engine encodes a pool once per (net, game) and caches it per thread.
+  A synthetic test: an opponent's shown "archetype" predicts its hand —
+  held-out top-5 recall 0.51 against the uniform pool's 0.25 (≈ the
+  ceiling).
+- `table_train` (new bin): mixed-mode heuristic actors, GPU learner,
+  per-family held-out reads (value cross-entropy, slot-0 Brier, B1 against
+  the uniform pool and a base-rate ranking).
+
+**Learner speed — a candle pitfall worth knowing.** The first build ran
+~1.8 s a mixed step with the GPU "100 %" busy. Cause: candle 0.11's CUDA
+`index_add` (the backward of every `index_select` / embedding lookup)
+launches one thread per embedding *lane* and loops serially over every
+id — 32 threads for a 32-wide table, ~100 k object lookups plus the
+descriptors' tokens a pod batch. Fixed without changing a number (parity
+tests): lookups go through `fast_embed` (a gather along dim 1 of the table
+broadcast 256-fold, whose backward is a `scatter_add` over 256 × 32
+threads), descriptors are deduplicated per batch and averaged by a padded
+sum, the pool's name rows and descriptor means are read off the weights on
+the host without gradient, and the belief loss is read sparsely at the true
+cards. **Mixed step 1.8 s → ~150 ms; sealed-only 165 → 25 ms.** The play
+net's learner (`selfplay_train`, ~4 steps/s) embeds through the same
+`index_select` and probably pays the same tax — unmeasured.
+
+**Smoke read** (300 steps, 4 actors, pre-fix speed): held-out value
+cross-entropy sealed 0.65 / cube 0.74 / pod2 0.75 / pods 1.28 (chance ≈
+0.69 / 0.69 / 0.69 / ≈1.4); B1 hand top-5 recall 0.14–0.19, equal to the
+base-rate ranking and far above the uniform pool (0.0002–0.027) — at 300
+steps the head knows card popularity and nothing yet about the opponent.
