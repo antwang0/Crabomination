@@ -7411,3 +7411,17 @@ cross-entropy sealed 0.65 / cube 0.74 / pod2 0.75 / pods 1.28 (chance ≈
 0.69 / 0.69 / 0.69 / ≈1.4); B1 hand top-5 recall 0.14–0.19, equal to the
 base-rate ranking and far above the uniform pool (0.0002–0.027) — at 300
 steps the head knows card popularity and nothing yet about the opponent.
+
+**Run 1 → run 2: the value head memorised recent games.** Run 1 (lr 1e-3,
+every recorded row trained, a held-out set of the first 20 k rows): by step
+16 k training win cross-entropy was 0.34 while held-out swung between
+checkpoints and went *above chance* on pods (2.5 against ≈1.4) —
+overconfident on games it had not seen. Two causes, both in the harness:
+a game's hundreds of rows share one outcome, so the learner fit recent
+games from near-duplicates; and the held-out set filled within a minute,
+so it held a dozen pod games and one confidently-wrong game moved it.
+Run 2 keeps a quarter of the training rows (`--row-keep 0.25`), keeps at
+most 4 rows per held-out game reservoir-sampled over the whole run, and
+uses lr 3e-4: at step 4 k training win CE 0.76, held-out 0.57 sealed /
+0.55 cube / 0.61 pod2 / 1.22 pods (chance ≈ 0.69 / 0.69 / 0.69 / 1.35),
+all improving.

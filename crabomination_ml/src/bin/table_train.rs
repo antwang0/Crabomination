@@ -28,6 +28,7 @@ use crabomination::table_selfplay::{Mode, draw_mode, mode_pool, mode_template, r
 use crabomination_ml::table::{TableConfig, TableTrainer};
 use crabomination_nn::table::TableRow;
 use rand::rngs::StdRng;
+use rand::seq::SliceRandom;
 use rand::{RngExt, SeedableRng};
 
 #[cfg(feature = "mimalloc")]
@@ -49,6 +50,11 @@ struct Args {
     pool: bool,
     belief: bool,
     modes: Option<Vec<Mode>>,
+    /// Training rows kept per recorded row: a game's positions share one
+    /// outcome, and a pod makes hundreds, so the learner fit recent games
+    /// from near-duplicates (run 1: train win CE 0.34, held-out above
+    /// chance on pods). Subsampling decorrelates the window.
+    row_keep: f64,
     out: PathBuf,
     seed: u64,
 }
@@ -69,6 +75,7 @@ fn parse() -> Args {
         pool: true,
         belief: true,
         modes: None,
+        row_keep: 0.25,
         out: PathBuf::from("table_run"),
         seed: 43,
     };
@@ -106,6 +113,7 @@ fn parse() -> Args {
                         .collect(),
                 )
             }
+            "--row-keep" => a.row_keep = val().parse().expect("--row-keep"),
             "--out" => a.out = PathBuf::from(val()),
             "--seed" => a.seed = val().parse().expect("--seed"),
             other => panic!("unknown flag {other}"),
@@ -134,7 +142,9 @@ fn is_holdout(traj: u32, frac: f64) -> bool {
 
 struct Shared {
     window: Mutex<std::collections::VecDeque<TableRow>>,
-    val: Mutex<Vec<(Mode, TableRow)>>,
+    /// Held-out rows: at most 4 per held-out game, reservoir-sampled over
+    /// the whole run (run 1's first-come 20 k rows were a dozen pod games).
+    val: Mutex<(Vec<(Mode, TableRow)>, u64)>,
     /// Per pool id, how often each pool card sat in a training hand.
     hand_counts: Mutex<HashMap<u64, Vec<u32>>>,
     rows_pushed: AtomicU64,
@@ -165,13 +175,22 @@ fn actor(sh: &Shared, a: &Args) {
         let max_actions = if matches!(mode, Mode::Pod(n) if n > 2) { 20_000 } else { 4_000 };
         let game = record_table_game(&t, &pilots, seed, max_actions, vocab, pool);
         sh.games.fetch_add(1, Ordering::Relaxed);
-        let (val, train): (Vec<TableRow>, Vec<TableRow>) =
+        let (mut val, train): (Vec<TableRow>, Vec<TableRow>) =
             game.rows.into_iter().partition(|r| is_holdout(r.traj, a.holdout));
+        let train: Vec<TableRow> = train.into_iter().filter(|_| rng.random_bool(a.row_keep.clamp(0.0, 1.0))).collect();
         if !val.is_empty() {
+            val.shuffle(&mut rng);
+            val.truncate(4);
             let mut v = sh.val.lock().unwrap();
             for r in val {
-                if v.len() < 20_000 {
-                    v.push((mode, r));
+                v.1 += 1;
+                if v.0.len() < 20_000 {
+                    v.0.push((mode, r));
+                } else {
+                    let j = rng.random_range(0..v.1);
+                    if (j as usize) < v.0.len() {
+                        v.0[j as usize] = (mode, r);
+                    }
                 }
             }
         }
@@ -223,7 +242,7 @@ fn main() {
     );
     let sh = Shared {
         window: Mutex::new(std::collections::VecDeque::new()),
-        val: Mutex::new(Vec::new()),
+        val: Mutex::new((Vec::new(), 0)),
         hand_counts: Mutex::new(HashMap::new()),
         rows_pushed: AtomicU64::new(0),
         games: AtomicU64::new(0),
@@ -278,7 +297,8 @@ fn main() {
 
 /// The held-out reads, as one JSON line.
 fn checkpoint(t: &TableTrainer, sh: &Shared, step: u64, ema: [f32; 6], secs: f64) -> String {
-    let val = sh.val.lock().unwrap();
+    let guard = sh.val.lock().unwrap();
+    let val = &guard.0;
     let base: HashMap<u64, Vec<u16>> = sh
         .hand_counts
         .lock()
