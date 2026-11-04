@@ -7463,3 +7463,19 @@ vs `dflt` on FRA 33.6 / 23.9. F2 was OOM-killed at 23:00 after 1,401 games
 (the trainer at 17.8 GB, the user's own job at 25 GB); resumed from its
 step-2000 checkpoint for the remaining games with the decision deque
 halved (`selfplay_train --decision-cap 100000`, new).
+
+**FRA loop result — stopped on two flat generations.**
+
+| gen | vs the previous (43 / 97) | alone vs `dflt` on FRA (43 / 97) |
+|---|---|---|
+| F1 (priors gen 3) | 50.1 [48.0, 52.3] / 49.1 [47.0, 51.2] | 33.6 / 23.9 |
+| F2 (priors F1) | 50.0 [47.8, 52.2] / 49.9 [47.7, 52.1] | 29.2 / 22.1 |
+
+FRA's own search-played games teach gen 3's policy nothing it can use:
+the search on gen 3's priors already gains +7.55 on FRA over the client's
+pilot without having seen an FRA card, and nothing here moves it. Gen 3
+stays the FRA policy. (The policy *alone* on FRA is far below its SOS
+level — 33.6 / 23.9 and falling — and the two seeds disagree by ~10
+points: on FRA the policy is only ever a proposer, never a pilot.) FRA
+cells ran ~3 h each beside the user's jobs; the loop took 26 h of wall
+clock including the OOM restart.
