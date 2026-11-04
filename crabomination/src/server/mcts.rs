@@ -835,11 +835,7 @@ impl MctsBot {
         // over imagined hands.
         if self.cfg.weights.determinize > 0 {
             let salt = 0x3C75_0000 ^ r.random::<u32>() as u64;
-            if let Some(b) = super::bot::hand_belief(g, seat, &self.cfg.weights) {
-                super::bot::determinize_hidden_belief(g, seat, salt, &b);
-            } else {
-                super::bot::determinize_hidden(g, seat, salt);
-            }
+            super::bot::redeal_hidden(g, seat, salt, &self.cfg.weights);
         }
     }
 

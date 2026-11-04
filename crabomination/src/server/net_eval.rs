@@ -115,12 +115,24 @@ pub const SLOT_TABLE: u8 = 200;
 
 struct TableSlot {
     net: crabomination_nn::table::TableNet,
-    /// The card pool its states carry, by game: `None` reads the game's own
-    /// (`table_selfplay::pool_for`).
-    pool: Option<&'static crate::table_selfplay::PoolIx>,
 }
 
 static TABLE: RwLock<Option<Arc<TableSlot>>> = RwLock::new(None);
+
+/// The card pool the table net's states carry and the honest redeal deals
+/// from: `None` reads each game's own (`table_selfplay::pool_for`, which
+/// cannot tell a cube duel from a sealed one).
+static TABLE_POOL: RwLock<Option<&'static crate::table_selfplay::PoolIx>> = RwLock::new(None);
+
+/// Pin (or unpin) [`TABLE_POOL`] without reloading the net — a client
+/// starting a match of a known format.
+pub fn pin_table_pool(pool: Option<&'static crate::table_selfplay::PoolIx>) {
+    *TABLE_POOL.write().unwrap() = pool;
+}
+
+fn table_pool(state: &GameState) -> &'static crate::table_selfplay::PoolIx {
+    (*TABLE_POOL.read().unwrap()).unwrap_or_else(|| crate::table_selfplay::pool_for(state, vocab()))
+}
 
 /// Load a table net (`table_train`'s export) for [`SLOT_TABLE`]; `pool`
 /// pins the card pool, else each game's own is used.
@@ -128,7 +140,8 @@ pub fn load_table(path: &std::path::Path, pool: Option<&'static crate::table_sel
     let bytes = std::fs::read(path).map_err(|e| format!("{}: {e}", path.display()))?;
     let mut net = crabomination_nn::table::TableNet::load(&bytes).map_err(|e| format!("{}: {e}", path.display()))?;
     net.pad_vocab(vocab().size()).map_err(|e| format!("{}: {e}", path.display()))?;
-    *TABLE.write().unwrap() = Some(Arc::new(TableSlot { net, pool }));
+    *TABLE.write().unwrap() = Some(Arc::new(TableSlot { net }));
+    pin_table_pool(pool);
     Ok(())
 }
 
@@ -137,10 +150,48 @@ fn table_win_prob(state: &GameState, seat: usize) -> Option<f32> {
     let slot = TABLE.read().unwrap().clone()?;
     let mut t = super::encode_table::encode_table(state, seat, vocab());
     if slot.net.has_pool() {
-        let pool = slot.pool.unwrap_or_else(|| crate::table_selfplay::pool_for(state, vocab()));
+        let pool = table_pool(state);
         t.pool = Some(pool.pool.clone());
     }
     Some(slot.net.win_prob(&t))
+}
+
+/// The pool the honest redeal deals `state`'s hidden cards from: the table
+/// slot's pinned pool, else the game's own (`table_selfplay::pool_for`).
+/// `None` without a table net.
+pub fn redeal_pool(state: &GameState) -> Option<&'static crate::table_selfplay::PoolIx> {
+    TABLE.read().unwrap().as_ref()?;
+    Some(table_pool(state))
+}
+
+/// Whether the loaded table net carries the belief head (the honest
+/// redeal's input).
+pub fn table_has_belief() -> bool {
+    TABLE.read().unwrap().as_ref().is_some_and(|s| s.net.has_belief() && s.net.has_pool())
+}
+
+/// The table net's belief from `seat`'s view over `pool`: per slot from 1
+/// (`encode_table::table_slots` order), the `(hand, library)` logits over
+/// the pool. `None` without a table net or its belief head. The second
+/// value identifies the net, for a caller caching by state.
+pub fn table_belief(
+    state: &GameState,
+    seat: usize,
+    pool: &crate::table_selfplay::PoolIx,
+) -> Option<(crabomination_nn::table::TableState, usize)> {
+    let slot = TABLE.read().unwrap().clone()?;
+    if !slot.net.has_belief() || !slot.net.has_pool() {
+        return None;
+    }
+    let mut t = super::encode_table::encode_table(state, seat, vocab());
+    t.pool = Some(pool.pool.clone());
+    Some((t, Arc::as_ptr(&slot) as usize))
+}
+
+/// [`table_belief`]'s forward pass over an encoded state.
+pub fn table_belief_logits(t: &crabomination_nn::table::TableState) -> Option<Vec<(Vec<f32>, Vec<f32>)>> {
+    let slot = TABLE.read().unwrap().clone()?;
+    slot.net.belief(t)
 }
 
 /// The net's win probability for `seat`, or `None` when the slot is empty

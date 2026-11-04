@@ -220,6 +220,28 @@ impl TableState {
         self.seats.len()
     }
 
+    /// A hash of everything the state encodes but its pool (FNV-1a over the
+    /// features' bits): equal states hash equal, so a caller can cache a
+    /// forward pass by it.
+    pub fn fingerprint(&self) -> u64 {
+        let mut h: u64 = 0xcbf2_9ce4_8422_2325;
+        let mut eat = |x: u32| {
+            h ^= x as u64;
+            h = h.wrapping_mul(0x100_0000_01b3);
+        };
+        self.global.iter().for_each(|v| eat(v.to_bits()));
+        eat(self.seats.len() as u32);
+        self.seats.iter().flatten().for_each(|v| eat(v.to_bits()));
+        for o in &self.objs {
+            eat(o.card as u32 | (o.desc as u32) << 16);
+            o.feats.iter().for_each(|v| eat(v.to_bits()));
+        }
+        self.counts.iter().for_each(|&c| eat(c));
+        self.desc_tokens.iter().for_each(|&t| eat(t as u32));
+        self.desc_ends.iter().for_each(|&e| eat(e));
+        h
+    }
+
     pub fn seat(&self, slot: usize) -> &[f32; SEAT_FEATS] {
         &self.seats[slot]
     }
@@ -593,6 +615,8 @@ struct TableBelief {
 struct PoolEnc {
     h: Vec<f32>,
     summary: Vec<f32>,
+    /// The belief head's key per pool card, built on the first belief read.
+    keys: std::cell::OnceCell<Vec<f32>>,
 }
 
 thread_local! {
@@ -859,16 +883,20 @@ impl TableNet {
         let pool = s.pool.as_ref()?;
         let (t2, z) = self.core(s)?;
         let enc = self.pool_enc(pool);
-        let (h, sh, bh) = (self.obj_w.rows, self.seat_w.rows, b.b1_w.rows);
+        let (sh, bh) = (self.seat_w.rows, b.b1_w.rows);
         let p = pool.len();
-        let mut keys = vec![0.0f32; p * bh];
-        b.key_w.matmul_t(&enc.h, p, &mut keys);
-        for row in keys.chunks_exact_mut(bh) {
-            for (v, bb) in row.iter_mut().zip(&b.key_b) {
-                *v += bb;
+        // The keys read the pool alone, so they ride the pool's cache entry:
+        // a Commander pool's are 22,907 x BH, the bulk of a call's work.
+        let keys = enc.keys.get_or_init(|| {
+            let mut keys = vec![0.0f32; p * bh];
+            b.key_w.matmul_t(&enc.h, p, &mut keys);
+            for row in keys.chunks_exact_mut(bh) {
+                for (v, bb) in row.iter_mut().zip(&b.key_b) {
+                    *v += bb;
+                }
             }
-        }
-        let _ = h;
+            keys
+        });
         let mut out = Vec::new();
         let mut bin = vec![0.0f32; t2.len() + sh];
         bin[..t2.len()].copy_from_slice(&t2);
@@ -943,7 +971,7 @@ impl TableNet {
                 *v /= p as f32;
             }
         }
-        let enc = std::rc::Rc::new(PoolEnc { h: hs, summary });
+        let enc = std::rc::Rc::new(PoolEnc { h: hs, summary, keys: std::cell::OnceCell::new() });
         POOL_CACHE.with(|c| {
             let mut c = c.borrow_mut();
             if c.len() >= 16 {

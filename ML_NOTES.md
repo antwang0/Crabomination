@@ -7479,3 +7479,60 @@ level — 33.6 / 23.9 and falling — and the two seeds disagree by ~10
 points: on FRA the policy is only ever a proposer, never a pilot.) FRA
 cells ran ~3 h each beside the user's jobs; the loop took 26 h of wall
 clock including the OOM restart.
+
+### The honest redeal: hidden cards from the pool, not the real deck (2026-11-04, built, unmeasured)
+
+Every redeal in the program (`determinize_hidden`, round 39's
+`determinize_hidden_belief`) deals the opponent's hand from their *true*
+unseen cards: it never reads the hand, but it knows the decklist, in every
+mode — against a human in the client, the human's own sealed or cube build.
+Round 39's belief redeal measured 50.10 because, given the list, there is
+almost nothing left to guess. The table net's belief head predicts over the
+game's **pool** instead (B1 0.29 vs 0.17 popularity on sealed, 0.16 vs 0.12
+on pods at run 2), which is what an honest redeal needs.
+
+**Built (`server/honest.rs`, all default off):**
+
+* `EvalWeights::honest_redeal` (builder `honest()`, which also sets
+  `determinize ≥ 1`); one dispatcher `bot::redeal_hidden` now serves the
+  MCTS / menu-search rollouts and the scored sims, and the mulligan sim
+  checks the flag. Flag off, every path calls exactly what it called
+  before.
+* The redeal keeps the public zones and the zones' sizes; deals each
+  opponent's hand from the belief's hand distribution and library from
+  its library one; applies the deck rules a player knows — Commander
+  identity (CR 903.4) and singleton, else ≤ 4 of a non-basic, basics
+  free, public copies counted against the cap; reuses the hidden ids
+  (shuffled); marks library cards as already there (no CR 400.7 arrival).
+  Without a table net carrying the belief head it falls back to the old
+  redeal and counts it (`honest::stats`, printed by the ladder).
+* One belief forward per decision per thread (a thread-local cache keyed
+  by the encoded view); the belief head's pool keys now ride the pool's
+  encoding cache (they read the pool alone — 22,907 × 64 per call for
+  Commander before).
+* `PoolIx` carries each entry's factory (definitions built on first deal),
+  color identity and basic flag; the table pool pin moved out of the slot
+  (`net_eval::pin_table_pool`) so a client can pin per match.
+* Ladder: `<profile>+honest` on any profile (loads `CRAB_TABLE_NET`,
+  refuses a net without the belief head; `--decks cube` pins the cube pool,
+  since `pool_for` cannot tell cube from sealed). Client: `CRAB_HONEST=1`
+  with `CRAB_TABLE_NET`, Sealed and Cube only, off by default.
+* Tests: two tables differing only in the opponent's real hidden cards
+  redeal identically (and nothing public moves); a Commander deal stays in
+  identity and singleton; a belief sure of one card stops at the copy
+  limit.
+
+**Smoke (debug, run-2 net):** cube `dflt+honest` vs `dflt`, 870 redeals,
+0 fallbacks, 0 public cards off the pool; a 4-seat pod, 310 redeals, 0 / 0
+(after mapping a transformed DFC to its front face — 59 off-pool before).
+Under the search (release-fast, cube, `mcts-dflt-256+honest` vs
+`mcts-dflt-256`, 16 games): 106,829 redeals, 0 / 0; the cell took 68 s
+against 58 s for the plain mirror on a box at load ~21 — roughly +35 % on
+the honest seat's own time, a contended reading, not a PERF number.
+
+**Owed, not run (the user: "don't train it yet"):** the price of honesty —
+`X+honest` vs `X` on the client's search, cube and SOS, two seeds — and the
+same with a popularity sampler in place of the belief, which is the read
+that says whether the head earns its place. Expected negative against
+bots that still read the list; a mirror cannot price what it saves
+against a human.

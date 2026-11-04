@@ -651,6 +651,7 @@ fn rematch_in_place(
                 ),
             };
             // One occupant per seat: a Commander pod brings up to four.
+            crate::menu::honest_for(chosen, &state);
             let occupants = crate::menu::local_occupants(server_seat, &state, chosen.is_limited());
             std::thread::spawn(move || {
                 run_match_full(state, occupants, vec![], Some(sink_for_match));

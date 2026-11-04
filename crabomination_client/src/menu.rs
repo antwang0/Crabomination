@@ -1965,6 +1965,9 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn cra
         static SAID: std::sync::Once = std::sync::Once::new();
         SAID.call_once(|| eprintln!("the local bot plays with the FRA fixes bundle (CRAB_FRA_FIXES=0 turns it off)"));
     }
+    if limited && HONEST.load(std::sync::atomic::Ordering::Relaxed) {
+        weights = weights.honest();
+    }
     let menu = match std::env::var_os("CRAB_MENU_SEARCH") {
         Some(v) => v != "0",
         None => fra || limited,
@@ -1984,6 +1987,54 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn cra
         policy_slot,
         ..crabomination::server::MctsConfig::default()
     }))
+}
+
+/// Whether this match's local bots redeal honestly; set by [`honest_for`].
+static HONEST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// `CRAB_HONEST=1`, off by default: in Sealed and Cube the local bot's
+/// search stops reading your real decklist — it deals your hidden cards
+/// from the format's card pool by the table net's belief head
+/// (`CRAB_TABLE_NET`; `server::honest`) instead of reshuffling your actual
+/// hand and library. Unmeasured, so not the default. Call before the
+/// match's [`local_occupants`]: it pins the pool to `format`'s (cube's, or
+/// the sealed set the game is in) and arms [`local_bot`].
+pub(crate) fn honest_for(format: MatchFormat, state: &GameState) {
+    use crabomination::server::net_eval;
+    use crabomination::table_selfplay::{Mode, mode_pool, pool_for};
+    let on = format.is_limited() && std::env::var_os("CRAB_HONEST").is_some_and(|v| v != "0") && load_table_net_once();
+    if on {
+        let vocab = net_eval::vocab();
+        net_eval::pin_table_pool(Some(if format == MatchFormat::Cube { mode_pool(Mode::Cube, vocab) } else { pool_for(state, vocab) }));
+    }
+    HONEST.store(on, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Load `CRAB_TABLE_NET` into the table slot, once per process; whether it
+/// is there with the belief head the honest redeal reads.
+fn load_table_net_once() -> bool {
+    use crabomination::server::net_eval;
+    static LOADED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *LOADED.get_or_init(|| {
+        let Ok(path) = std::env::var("CRAB_TABLE_NET") else {
+            eprintln!("CRAB_HONEST needs CRAB_TABLE_NET=<table net>; the local bot keeps the old redeal");
+            return false;
+        };
+        match net_eval::load_table(std::path::Path::new(&path), None) {
+            Ok(()) if net_eval::table_has_belief() => {
+                eprintln!("table net loaded from {path}; the local bot deals your hidden cards from the pool");
+                true
+            }
+            Ok(()) => {
+                eprintln!("table net {path} carries no belief head; the local bot keeps the old redeal");
+                false
+            }
+            Err(e) => {
+                eprintln!("table net {path}: {e}; the local bot keeps the old redeal");
+                false
+            }
+        }
+    })
 }
 
 /// Load the policy net — the menu search's priors — into the candidate
@@ -2130,6 +2181,7 @@ fn spawn_inprocess_bot(world: &mut World, format: MatchFormat) {
         name_seats(&mut state, &human_name, "Bot");
         state
     };
+    honest_for(format, &state);
     let occupants = local_occupants(server_seat, &state, format.is_limited());
     std::thread::spawn(move || {
         run_match_full(state, occupants, vec![], Some(sink_for_match));

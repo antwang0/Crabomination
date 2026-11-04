@@ -253,6 +253,17 @@ fn sealed_archetypes(seed: u64, count: usize) -> Vec<Archetype> {
 }
 
 fn parse_profile(name: &str) -> Option<Pilot> {
+    // `<profile>+honest`: any profile with its hidden cards redealt from the
+    // pool by the table net's belief (`server::honest`) instead of from the
+    // opponent's real deck. Needs `CRAB_TABLE_NET` with the belief head.
+    if let Some(base) = name.strip_suffix("+honest") {
+        return Some(match parse_profile(base)? {
+            Pilot::Scored(w) => Pilot::Scored(w.honest()),
+            Pilot::Policy(w) => Pilot::Policy(w.honest()),
+            Pilot::Mcts(c) => Pilot::Mcts(MctsConfig { weights: c.weights.honest(), ..c }),
+            Pilot::Uniform => return None,
+        });
+    }
     // Round 86's race term at a chosen weight, on top of `fra-fixes`:
     // `fixes+clock<N>` (material leaf, `clock_eval`), `net67-fixes+clock<N>`
     // and `mcts-net67-fixes+clock<N>` (net leaf, `clock_net` basis points).
@@ -1363,8 +1374,10 @@ fn parse_args() -> Result<Args, String> {
         .ok_or_else(|| format!("unknown profile {a_name}; expected one of: {PROFILES}"))?;
     let b = parse_profile(&b_name)
         .ok_or_else(|| format!("unknown profile {b_name}; expected one of: {PROFILES}"))?;
-    if a_name.contains("table") || b_name.contains("table") {
-        let path = std::env::var("CRAB_TABLE_NET").map_err(|_| "a `table` profile needs CRAB_TABLE_NET=<table net>".to_string())?;
+    let honest = a_name.ends_with("+honest") || b_name.ends_with("+honest");
+    if a_name.contains("table") || b_name.contains("table") || honest {
+        let path = std::env::var("CRAB_TABLE_NET")
+            .map_err(|_| "a `table` or `+honest` profile needs CRAB_TABLE_NET=<table net>".to_string())?;
         let vocab = crabomination::server::net_eval::vocab();
         use crabomination::table_selfplay::{Mode, mode_pool};
         let pool = match std::env::var("CRAB_TABLE_POOL").as_deref() {
@@ -1373,10 +1386,19 @@ fn parse_args() -> Result<Args, String> {
             Ok("cube") => Some(mode_pool(Mode::Cube, vocab)),
             Ok("pod") => Some(mode_pool(Mode::Pod(4), vocab)),
             Ok(other) => return Err(format!("CRAB_TABLE_POOL={other}: expected sos, fra, cube or pod")),
+            // `pool_for` cannot tell a cube duel from a sealed one, and the
+            // honest redeal deals from the pool: pin it off `--decks`.
+            Err(_) if deck_set == "cube" && !commander => Some(mode_pool(Mode::Cube, vocab)),
             Err(_) => None,
         };
         crabomination::server::net_eval::load_table(std::path::Path::new(&path), pool)?;
         eprintln!("loaded table net from {path}");
+        if honest {
+            if !crabomination::server::net_eval::table_has_belief() {
+                return Err(format!("`+honest` needs a table net with the belief head; {path} has none"));
+            }
+            eprintln!("honest redeal: hidden cards dealt from the pool by {path}'s belief head");
+        }
     }
     if a_name.contains("net") || b_name.contains("net") {
         // The net profile silently equals atk-sim when the slot is empty,
@@ -2242,6 +2264,15 @@ fn bench_net(games: usize) {
     );
 }
 
+/// Which redeal a `+honest` run actually played (`server::honest::stats`):
+/// silent when no profile asked for it.
+fn report_honest() {
+    let (redeals, fallbacks, off_pool) = crabomination::server::honest::stats();
+    if redeals + fallbacks > 0 {
+        eprintln!("honest redeal: {redeals} redeals, {fallbacks} fell back to the true deck, {off_pool} public cards off the pool");
+    }
+}
+
 fn main() {
     let argv: Vec<String> = std::env::args().collect();
     if let Some(i) = argv.iter().position(|a| a == "--bench-net") {
@@ -2291,7 +2322,9 @@ fn main() {
                 .map(|n| n.get().saturating_sub(1).max(1))
                 .unwrap_or(1)
         };
-        std::process::exit(run_commander_pods(&args, threads));
+        let code = run_commander_pods(&args, threads);
+        report_honest();
+        std::process::exit(code);
     }
 
     const CUBE_PAIRS: usize = 8;
@@ -2322,7 +2355,9 @@ fn main() {
         }
     };
     if args.peer {
-        std::process::exit(run_peer(&field, &args));
+        let code = run_peer(&field, &args);
+        report_honest();
+        std::process::exit(code);
     }
     let threads = if args.threads > 0 {
         args.threads
@@ -2555,6 +2590,8 @@ fn main() {
             println!("        within-pair rho {:+.3}", p.rho);
         }
     }
+
+    report_honest();
 
     // State the conclusion the interval actually supports, rather than
     // leaving a bare number to be read as whatever the reader hoped for.

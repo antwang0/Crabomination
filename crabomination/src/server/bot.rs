@@ -1232,6 +1232,14 @@ pub struct EvalWeights {
     /// belief source at startup. Off by default — the uniform redeal is
     /// the historical behaviour and every adopted profile.
     pub belief_determinize: bool,
+    /// Redeal each opponent's hidden cards from the game's card pool by the
+    /// table net's belief head (`server::honest`) instead of from their real
+    /// deck, which every other redeal reads. Only meaningful with
+    /// `determinize > 0` (the [`honest`](Self::honest) builder sees to it)
+    /// and a table net with the belief head loaded; without one the redeal
+    /// falls back to the old one and `honest::stats` counts it. Off by
+    /// default — every adopted profile reads the true decklist.
+    pub honest_redeal: bool,
     /// Copied onto this seat's [`Player::smart_tap`] before the game
     /// starts: spend the most replaceable mana source for each pip
     /// instead of the first in battlefield order.
@@ -1636,6 +1644,7 @@ impl EvalWeights {
             block_gang: false,
             determinize: 0,
             belief_determinize: false,
+            honest_redeal: false,
             smart_tap: false,
             buff_2for1: false,
             converge_lands: false,
@@ -1778,6 +1787,7 @@ impl EvalWeights {
             block_gang: false,
             determinize: 0,
             belief_determinize: false,
+            honest_redeal: false,
             smart_tap: false,
             buff_2for1: false,
             converge_lands: false,
@@ -1903,6 +1913,7 @@ impl EvalWeights {
             block_gang: false,
             determinize: 0,
             belief_determinize: false,
+            honest_redeal: false,
             smart_tap: false,
             buff_2for1: false,
             converge_lands: false,
@@ -3371,6 +3382,13 @@ impl EvalWeights {
     /// `fra-fixes`).
     pub const fn fra_fixes_on() -> Self {
         Self::default_const().with_fra_fixes()
+    }
+
+    /// `self` redealing hidden cards honestly
+    /// ([`honest_redeal`](Self::honest_redeal)), with at least one redeal so
+    /// the flag has something to act on. The ladder's `+honest` suffix.
+    pub const fn honest(self) -> Self {
+        Self { honest_redeal: true, determinize: if self.determinize == 0 { 1 } else { self.determinize }, ..self }
     }
 
     /// `self` with the [`fra_fixes_on`](Self::fra_fixes_on) flags set —
@@ -7842,7 +7860,9 @@ fn mulligan_branch_value(
             lib.shuffle(&mut rng);
             p.library = lib;
         }
-        determinize_hidden(&mut g, seat, 0x4D55_0000 ^ s as u64);
+        if !(w.honest_redeal && super::honest::redeal(&mut g, seat, 0x4D55_0000 ^ s as u64)) {
+            determinize_hidden(&mut g, seat, 0x4D55_0000 ^ s as u64);
+        }
         if g.perform_action(GameAction::SubmitDecision(answer.clone())).is_err() {
             continue;
         }
@@ -17796,6 +17816,21 @@ pub(crate) fn determinize_hidden_belief(
     }
 }
 
+/// Redeal `g`'s hidden zones for `seat` the way `w` asks: from the pool by
+/// the table net's belief ([`super::honest`]) under `honest_redeal`, else
+/// from the true unseen cards — by the round-39 hand belief when the
+/// profile has one, uniformly otherwise.
+pub(crate) fn redeal_hidden(g: &mut GameState, seat: usize, salt: u64, w: &EvalWeights) {
+    if w.honest_redeal && super::honest::redeal(g, seat, salt) {
+        return;
+    }
+    if let Some(b) = hand_belief(g, seat, w) {
+        determinize_hidden_belief(g, seat, salt, &b);
+    } else {
+        determinize_hidden(g, seat, salt);
+    }
+}
+
 /// The belief a redeal should use, when the profile asks for one and the
 /// slot's net can answer. `None` — flag off, empty slot, or a net with
 /// no belief head — falls back to the uniform redeal, the historical
@@ -17815,11 +17850,7 @@ pub(crate) fn hand_belief(g: &GameState, seat: usize, w: &EvalWeights) -> Option
 fn sim_start_state(state: &GameState, seat: usize, w: &EvalWeights, k: u8) -> GameState {
     let mut g = state.clone();
     if w.determinize > 0 {
-        if let Some(b) = hand_belief(&g, seat, w) {
-            determinize_hidden_belief(&mut g, seat, 0x5EED_0000 ^ k as u64, &b);
-        } else {
-            determinize_hidden(&mut g, seat, 0x5EED_0000 ^ k as u64);
-        }
+        redeal_hidden(&mut g, seat, 0x5EED_0000 ^ k as u64, w);
     }
     g
 }

@@ -28,6 +28,7 @@ use crabomination_nn::table::{TablePool, TableRow};
 
 use crate::card::CardDefinition;
 use crate::game::{GameState, TurnStep};
+use crate::mana::ColorSet;
 use crate::pod::{PodDeck, PodOutcome};
 use crate::recommend::Pilot;
 use crate::server::card_tokens::definition_tokens;
@@ -36,10 +37,18 @@ use crate::server::encode_table::{encode_table, table_slots};
 
 type CardFactory = fn() -> CardDefinition;
 
-/// A game's pool and its name → pool-index map.
+/// A game's pool and its name → pool-index map, with what the honest
+/// redeal (`server::honest`) needs to deal a pool card into a hidden zone:
+/// each entry's factory, color identity and basic-land flag.
 pub struct PoolIx {
     pub pool: Arc<TablePool>,
     index: HashMap<String, u16>,
+    factories: Vec<CardFactory>,
+    /// Built on first deal: most of a 22,907-card Commander pool is never
+    /// dealt in a given process.
+    defs: Vec<OnceLock<Arc<CardDefinition>>>,
+    identity: Vec<ColorSet>,
+    basic: Vec<bool>,
 }
 
 impl PoolIx {
@@ -47,6 +56,7 @@ impl PoolIx {
     pub fn new(cards: impl IntoIterator<Item = CardFactory>, vocab: &Vocab) -> Self {
         let mut pool = TablePool::default();
         let mut index = HashMap::new();
+        let (mut factories, mut identity, mut basic) = (Vec::new(), Vec::new(), Vec::new());
         for f in cards {
             let def = f();
             let name: &str = def.name;
@@ -55,13 +65,33 @@ impl PoolIx {
             }
             index.insert(name.to_string(), pool.len() as u16);
             pool.push(vocab.index_of(name), &definition_tokens(&def));
+            factories.push(f);
+            identity.push(crate::color_identity::color_identity(&def));
+            basic.push(def.is_basic());
         }
-        Self { pool: Arc::new(pool), index }
+        let defs = factories.iter().map(|_| OnceLock::new()).collect();
+        Self { pool: Arc::new(pool), index, factories, defs, identity, basic }
     }
 
     /// `name`'s pool index, if the pool has it.
     pub fn of(&self, name: &str) -> Option<u16> {
         self.index.get(name).copied()
+    }
+
+    /// Card `i`'s definition, shared by every copy dealt from it.
+    pub fn def(&self, i: usize) -> Arc<CardDefinition> {
+        self.defs[i].get_or_init(|| Arc::new((self.factories[i])())).clone()
+    }
+
+    /// Card `i`'s color identity (CR 903.4).
+    pub fn identity(&self, i: usize) -> ColorSet {
+        self.identity[i]
+    }
+
+    /// Whether card `i` is a basic land — the one card a deck may run any
+    /// number of (CR 100.2a, 903.5b).
+    pub fn is_basic(&self, i: usize) -> bool {
+        self.basic[i]
     }
 
     pub fn len(&self) -> usize {
