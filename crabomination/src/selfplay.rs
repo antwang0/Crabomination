@@ -281,6 +281,67 @@ fn judge_polish(pool: &[CardFactory], deck: Vec<CardFactory>, judge: impl FnMut(
     hill_climb_build_by(&castable, deck, 3, judge)
 }
 
+/// The rated builder's best-of-`n` pick, *unpolished*, then polished under a
+/// learned deck value ([`crate::deck_value`]) by at most `swaps` single-spell
+/// swaps — each the best improving one over the pool cards the deck's lands
+/// cast and the value has priced. The step-1 play gate's arm (ML_NOTES "A
+/// deck net that builds decks"), raced by `fra_card_eval --ab --best 16
+/// --trial deckvalue` against the rated builder with its own polish. The
+/// swap cap is the trust region: the value was trained on builder decks with
+/// three spells swapped, and round 15 measured what an unbounded climb does
+/// to a learned judge.
+pub fn deck_value_build(pool: &[CardFactory], n: usize, seed: u64, dv: &crate::deck_value::DeckValue, swaps: usize) -> Vec<CardFactory> {
+    let pick = with_judge_polish(false, || rated_sealed_build(pool, n, seed));
+    let mana = pick
+        .iter()
+        .filter(|f| crate::cube::card_def(**f).is_land())
+        .fold(ColorSet::empty(), |s, f| ColorSet(s.0 | crate::cube::card_brief(*f).produces.0));
+    let castable: Vec<CardFactory> = pool
+        .iter()
+        .copied()
+        .filter(|f| {
+            let b = crate::cube::card_brief(*f);
+            !b.def.is_land() && b.fits(mana) && dv.knows(b.def.name)
+        })
+        .collect();
+    let mut deck = pick;
+    for _ in 0..swaps {
+        // What the pool still holds, by name: a copy in the deck is a copy
+        // out of the pool.
+        let mut avail: std::collections::BTreeMap<&'static str, (CardFactory, i32)> = std::collections::BTreeMap::new();
+        for f in &castable {
+            avail.entry(crate::cube::card_def(*f).name).or_insert((*f, 0)).1 += 1;
+        }
+        for f in &deck {
+            if let Some(e) = avail.get_mut(crate::cube::card_def(*f).name) {
+                e.1 -= 1;
+            }
+        }
+        let base = dv.value(&deck);
+        let mut best: Option<(f64, usize, CardFactory)> = None;
+        for i in 0..deck.len() {
+            if crate::cube::card_def(deck[i]).is_land() {
+                continue;
+            }
+            let old = deck[i];
+            for (name, (f, k)) in &avail {
+                if *k <= 0 || *name == crate::cube::card_def(old).name {
+                    continue;
+                }
+                deck[i] = *f;
+                let v = dv.value(&deck);
+                if v > base + 1e-9 && best.is_none_or(|b| v > b.0) {
+                    best = Some((v, i, *f));
+                }
+            }
+            deck[i] = old;
+        }
+        let Some((_, i, f)) = best else { break };
+        deck[i] = f;
+    }
+    deck
+}
+
 /// [`build_candidates_cfg`] with every odd-numbered candidate built under
 /// `SimConfig::shape_slots`: the same lattice, the same seeds, so the even
 /// half is exactly the unshaped set's and the judge chooses between a

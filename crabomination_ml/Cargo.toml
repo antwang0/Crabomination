@@ -45,3 +45,9 @@ test = false
 [[bin]]
 name = "table_train"
 test = false
+
+# The deck value trainer (ML_NOTES "A deck net that builds decks", step 1):
+# no tests in the binary.
+[[bin]]
+name = "deck_value_train"
+test = false

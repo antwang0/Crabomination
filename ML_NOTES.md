@@ -7536,3 +7536,107 @@ same with a popularity sampler in place of the belief, which is the read
 that says whether the head earns its place. Expected negative against
 bots that still read the list; a mirror cannot price what it saves
 against a human.
+
+## A deck net that builds decks — the plan, and step 1 pre-registered (2026-11-04)
+
+The user's ask: a deck net that *builds* decks, incrementally from the pool,
+and (their correction to my descriptor-token proposal) on the card embedding
+the play net already learned. Today's `DeckNet` only judges: it reads a
+40-card list, never the pool, scores the builder's 32 noisy candidates, and
+hill-climbing it is adversarial (round 15: the climbed decks won 11.6 /
+14.3 %). It was trained on win/loss labels against an unseen field, and its
+gates were all against the old static judge.
+
+**The end state** (steps 2–3, not pre-registered yet): a policy that adds one
+pool card at a time (plus "stop"; lands by the existing land builder at
+first), with a value head on the partial deck, warm-started by imitating the
+rated builder and improved by expert iteration with *played games* as the
+judge — never the net's own score.
+
+**Step 1 — does a context-aware deck value, on the play net's card encoder,
+predict matches better than the additive rating table?** A correction to my
+own pitch first: a deck's value depends on its cards, not on the pool cards
+it left out — the pool matters for *choosing*, which is step 2's policy. So
+step 1 is a deck value, and the question it answers is whether anything
+beyond "sum of per-card ratings" is learnable from the data we have.
+
+*Data* (both kept under `.ladder/deckval/`): the two rating runs behind the
+adopted tables — FRA `fra_eval_16kx` (16,000 pools, v3 builds with three
+spells swapped for left-out pool cards, 240,000 four-game matches under
+`fra-fixes`) and SOS `r84/sos_rate` (same shape, `dflt`). Split by deck
+(hash, 80 / 20): train on matches between two training decks, test on
+matches between two held-out decks (~9,600 matches, ~38 k games), the mixed
+matches for early stopping and the L2 grid.
+
+*Model*: `f(deck) = Σ_cards v(x_c, ctx) + w·feats`, `ctx` = the deck's mean
+card vector ⊕ its 16 deck features (`encode_deck`); per match, each game is
+won by A with `σ(f(A) − f(B))`, binomial likelihood over its four games.
+`x_c` is the arm:
+
+| arm | card vector `x_c` |
+|---|---|
+| A0 additive | none — one scalar per card name (the rating table's model, refit on the training split) |
+| A1 frozen | the play net's object layer on the card as a hand object (FRA: `fra-champion`, SOS: `champion`), frozen |
+| A2 fine-tuned | A1's layer, trained (encoder learning rate ×0.1) |
+| A3 fresh | the same layer shape, random init, trained |
+| A4 no context | A1 with `ctx` removed — splits "the encoder" from "the context" |
+
+*Read*: held-out per-game log-loss and pairwise accuracy, three training
+seeds per arm. **Bar to proceed**: the best of A1–A3 beats A0's test
+log-loss on both FRA and SOS by more than the arms' seed spread. Failing
+that, step 2 starts on the additive table, and the encoder question is
+closed for decklist data at this size.
+
+*Play gate, only if the read passes*: the rated builder's best-of-16 pick,
+then polished under the learned value with at most three swaps (the
+distance the training decks sit from a builder deck — the round-15 trust
+region), against the current rated builder with its rating polish
+(`fra_card_eval --ab` shape, 2,000 pools × 8 pairs, seeds 43 / 97, FRA and
+SOS). Bar: pooled ≥ +1 and both seeds > 50.
+
+**Step 1 result (2026-11-05): context pays on both sets; the play gate
+passes on SOS and fails on FRA; the pretrained encoder buys nothing.**
+
+Held-out test nats per game (three seeds at each arm's val-chosen λ; spread
+in brackets; `.ladder/deckval/{fra,sos}/runs.jsonl`):
+
+| arm | FRA | vs A0 | SOS | vs A0 |
+|---|---|---|---|---|
+| A0 additive | 0.65721 [0] | — | 0.66014 [0] | — |
+| A0f + deck-feature MLP (diag.) | 0.65450 [.0011] | −0.0027 | 0.65601 [.0007] | −0.0041 |
+| A1 frozen play-net encoder | 0.65317 [.0004] | −0.0040 | 0.65375 [.0001] | −0.0064 |
+| A2 fine-tuned | 0.65246 [.0002] | **−0.0048** | 0.65354 [.0002] | −0.0066 |
+| A3 fresh | 0.65255 [.0009] | −0.0047 | 0.65333 [.0004] | **−0.0068** |
+| A4 frozen, no context | 0.65721 [0] | 0.0000 | 0.66016 [0] | 0.0000 |
+
+* **The bar passes**: the best context arm beats the table by 5–15× the
+  seed spread on both sets (pairwise accuracy on decisive test matches
+  65.5 → 66.8 % FRA, 64.3 → 66.3 % SOS). A0 is converged (train = val;
+  lower learning rates read the same), so the gap is not a weak baseline.
+  Test-sample noise was not measured beyond the registered seed spread.
+* **The gain is all context.** A4 — the play net's encoder with no context —
+  reproduces A0 exactly: per card, the encoder adds nothing a per-name
+  scalar does not. About half the gain is deck shape (A0f's MLP over curve,
+  lands, creatures, pips); the card × deck interaction is the rest.
+* **The encoder question closes against the user's idea, at this data
+  size:** frozen, fine-tuned and fresh are within 0.0007 of each other, and
+  fresh is best on SOS. With ~270 cards and 16,000 decks a name embedding
+  learns itself; the play net's knowledge would have to show on cards the
+  data never built, which this split does not test.
+
+**Play gate** (the val-best arm per set exported — FRA A2 λ 100, SOS A3 λ
+100, engine parity checked on export; rated best-of-16 pick unpolished,
+then ≤ 3 best-improvement swaps under the value, against the rated builder
+with its own polish; 2,000 pools × 8 pairs; `.ladder/deckval/gate_*.txt`):
+
+| set | seed 43 | seed 97 | pooled | bar |
+|---|---|---|---|---|
+| FRA (`fra-fixes`) | 49.45 [49.01, 49.89] | 49.66 [49.22, 50.09] | −0.45 | **fails** |
+| SOS (`dflt`) | 51.82 [51.46, 52.18] | 51.91 [51.55, 52.27] | **+1.87** | **passes** |
+
+The arm replaces the rating polish rather than adding to it, and the two
+sets' rating polishes are not the same size: +2.65 on FRA, +0.78 on SOS
+(2026-10-29). Against SOS's weak polish the learned one wins by ~1.9; against
+FRA's strong one it gives back ~0.5. Not read: the learned polish *after* the
+rating polish (the obvious next cell), and a larger swap budget. Nothing is
+adopted — the SOS opponent builder is a default change and the user's call.

@@ -171,11 +171,22 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     let old_duals = std::env::args().any(|a| a == "--old-duals");
     // `--trial polish|floor|both`: the rated builder with the judge polish
     // and/or the double-pip land floor against itself with neither.
-    let trial: Option<(bool, bool)> = arg("--trial").map(|t| match t.as_str() {
+    // `--trial deckvalue` (with `--best N` and `CRAB_DECK_VALUE=FILE.json`,
+    // `deck_value_train --export`): the rated pick polished by the learned
+    // deck value, three swaps at most, against the rated builder as it
+    // stands (its own polish on) — step 1's play gate.
+    let deck_value: Option<crabomination::deck_value::DeckValue> = (arg("--trial").as_deref() == Some("deckvalue")).then(|| {
+        assert!(best > 0, "--trial deckvalue races best-of-N builds: pass --best 16");
+        let path = std::env::var("CRAB_DECK_VALUE").expect("--trial deckvalue needs CRAB_DECK_VALUE=<deck_value_train --export>");
+        let dv = crabomination::deck_value::DeckValue::load(std::path::Path::new(&path)).unwrap_or_else(|e| panic!("{e}"));
+        eprintln!("deck value {} ({} cards) from {path}", dv.arm, dv.cards.len());
+        dv
+    });
+    let trial: Option<(bool, bool)> = arg("--trial").filter(|t| t != "deckvalue").map(|t| match t.as_str() {
         "polish" => (true, false),
         "floor" => (false, true),
         "both" => (true, true),
-        other => panic!("--trial {other}: polish, floor or both"),
+        other => panic!("--trial {other}: polish, floor, both or deckvalue"),
     });
     // `--table FILE` (`scripts/fra_card_table.py RATINGS MIN --tsv`): the
     // rated builder on a re-rated table against the same builder on the
@@ -209,7 +220,9 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                         crabomination::selfplay::heuristic_sealed_build_rated(pool, salt ^ 1)
                     }
                 };
-                let (old, new) = if let Some((polish, floor)) = trial {
+                let (old, new) = if let Some(dv) = &deck_value {
+                    (rated(&pool), crabomination::selfplay::deck_value_build(&pool, best, salt ^ 1, dv, 3))
+                } else if let Some((polish, floor)) = trial {
                     let arm = |p: bool, f: bool| {
                         crabomination::selfplay::with_judge_polish(p, || {
                             crabomination::recommend::with_pip_floor(f, || rated(&pool))
@@ -271,7 +284,13 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     let (wa, wb): (u32, u32) = rows.iter().fold((0, 0), |a, r| (a.0 + r.0, a.1 + r.1));
     println!(
         "{}: {mean:.2}% [{:.2}, {:.2}] pool-level 95% (n={} pools, {identical} identical decks); games {wa}-{wb} ({:.2}%)",
-        if table.is_some() { "table vs compiled" } else { "rated vs v3" },
+        if deck_value.is_some() {
+            "deckvalue vs rated"
+        } else if table.is_some() {
+            "table vs compiled"
+        } else {
+            "rated vs v3"
+        },
         mean - half,
         mean + half,
         shares.len(),
@@ -835,6 +854,57 @@ fn pilot_named(name: &str) -> Pilot {
     }
 }
 
+/// `fra_card_eval --dump-cards DIR`: for a finished rating run's
+/// `DIR/decks.tsv`, the deck value trainer's inputs (ML_NOTES "A deck net
+/// that builds decks", step 1) — `DIR/card_feats.tsv`, each card name the
+/// decks use with its play-net vocabulary index and its 59 hand-object
+/// features (`encode_deck_card`), and `DIR/deck_feats.tsv`, each deck's 16
+/// `encode_deck` features.
+fn dump_cards(dir: &std::path::Path) {
+    let mut by_name: HashMap<String, Factory> = HashMap::new();
+    for f in all_catalog_card_factories() {
+        let d = f();
+        let front = d.name.split(" // ").next().unwrap_or(d.name).to_string();
+        by_name.entry(d.name.to_string()).or_insert(f);
+        by_name.entry(front).or_insert(f);
+    }
+    let vocab = crabomination::server::net_eval::vocab();
+    let text = std::fs::read_to_string(dir.join("decks.tsv")).expect("decks.tsv");
+    let mut names: Vec<String> = Vec::new();
+    let mut seen = std::collections::HashSet::new();
+    let mut decks = String::new();
+    for line in text.lines() {
+        let mut col = line.split('\t');
+        let id = col.next().expect("deck id");
+        let mut deck: Vec<Factory> = Vec::new();
+        for name in col {
+            let f = *by_name.get(name).unwrap_or_else(|| panic!("unknown card {name}"));
+            if seen.insert(name.to_string()) {
+                names.push(name.to_string());
+            }
+            deck.push(f);
+        }
+        let (_, feats) = crabomination::server::encode::encode_deck(&deck, vocab);
+        decks.push_str(id);
+        for v in feats {
+            decks.push_str(&format!("\t{v}"));
+        }
+        decks.push('\n');
+    }
+    let mut cards = String::new();
+    for name in &names {
+        let o = crabomination::server::encode::encode_deck_card(by_name[name](), vocab);
+        cards.push_str(&format!("{name}\t{}", o.card));
+        for v in o.feats {
+            cards.push_str(&format!("\t{v}"));
+        }
+        cards.push('\n');
+    }
+    std::fs::write(dir.join("card_feats.tsv"), cards).expect("write card_feats.tsv");
+    std::fs::write(dir.join("deck_feats.tsv"), decks).expect("write deck_feats.tsv");
+    eprintln!("{} cards, {} decks -> {}", names.len(), text.lines().count(), dir.display());
+}
+
 fn main() {
     let threads = num("--threads", std::thread::available_parallelism().map_or(8, |n| n.get()));
     if let Some(path) = arg("--build") {
@@ -862,6 +932,10 @@ fn main() {
         let pilot = pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes"));
         let out = arg("--out").expect("--out FILE.tsv");
         audit_builder(pilot, num("--pools", 200), num("--field", 60), num("--pairs", 2), num("--seed", 43) as u64, threads, &out);
+        return;
+    }
+    if let Some(dir) = arg("--dump-cards") {
+        dump_cards(std::path::Path::new(&dir));
         return;
     }
     if std::env::args().any(|a| a == "--ab") {

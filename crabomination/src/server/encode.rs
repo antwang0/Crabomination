@@ -1103,6 +1103,14 @@ pub(super) fn encode_card_object(c: &CardInstance, vocab: &Vocab) -> EncodedObje
     o
 }
 
+/// A card as the play net reads it in hand, outside any game: its name
+/// index and printed features, the castability bits a live hand sets
+/// (feats 25 / 26) left 0 — the deck value's card-encoder input (ML_NOTES
+/// "A deck net that builds decks").
+pub fn encode_deck_card(def: crate::card::CardDefinition, vocab: &Vocab) -> EncodedObject {
+    encode_card_object(&CardInstance::new(crate::card::CardId(0), def, 0), vocab)
+}
+
 /// [`encode_card_object`] writing through a handle the caller already owns.
 ///
 /// An `EncodedObject` is `{ u16, [f32; 53] }` = 216 bytes. Returned by value
