@@ -290,8 +290,18 @@ fn judge_polish(pool: &[CardFactory], deck: Vec<CardFactory>, judge: impl FnMut(
 /// swap cap is the trust region: the value was trained on builder decks with
 /// three spells swapped, and round 15 measured what an unbounded climb does
 /// to a learned judge.
-pub fn deck_value_build(pool: &[CardFactory], n: usize, seed: u64, dv: &crate::deck_value::DeckValue, swaps: usize) -> Vec<CardFactory> {
-    let pick = with_judge_polish(false, || rated_sealed_build(pool, n, seed));
+///
+/// `after_polish` keeps the rated builder's own polish and swaps on top of
+/// it (step 1b) instead of in its place.
+pub fn deck_value_build(
+    pool: &[CardFactory],
+    n: usize,
+    seed: u64,
+    dv: &crate::deck_value::DeckValue,
+    swaps: usize,
+    after_polish: bool,
+) -> Vec<CardFactory> {
+    let pick = with_judge_polish(after_polish, || rated_sealed_build(pool, n, seed));
     let mana = pick
         .iter()
         .filter(|f| crate::cube::card_def(**f).is_land())

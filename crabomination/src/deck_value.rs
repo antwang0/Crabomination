@@ -27,7 +27,7 @@ pub struct Layer {
 }
 
 impl Layer {
-    fn fwd(&self, x: &[f32], relu: bool) -> Vec<f32> {
+    pub(crate) fn fwd(&self, x: &[f32], relu: bool) -> Vec<f32> {
         self.w
             .iter()
             .zip(&self.b)

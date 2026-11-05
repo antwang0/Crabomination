@@ -51,3 +51,8 @@ test = false
 [[bin]]
 name = "deck_value_train"
 test = false
+
+# The add-one-card deck builder's trainer (step 2): no tests in the binary.
+[[bin]]
+name = "deck_policy_train"
+test = false

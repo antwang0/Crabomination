@@ -1093,6 +1093,42 @@ fn assemble_lands(
     (duals, basics)
 }
 
+/// The land half of a rated build for spells chosen some other way (the
+/// deck-building policy, `crate::deck_policy`): the spells' colours (hybrid
+/// pips read as the builder reads them), on-colour duals from what the pool
+/// has left, then basics split by pips — [`assemble_lands`] as
+/// `ShapeBuild::complete` calls it. `total` lands, fewer only when the
+/// spells carry no coloured pip at all and the pool no dual for them.
+pub fn lands_for_spells(pool: &[CardFactory], spells: &[CardFactory], total: u32) -> Vec<CardFactory> {
+    let counts = hybrid_aware_colors(spells);
+    let mut colors: Vec<Color> = Color::ALL.into_iter().filter(|&c| counts.get(c) > 0).collect();
+    if colors.is_empty() {
+        // An all-colourless main: the pool's own heaviest colour, so the
+        // basics have somewhere to go.
+        let pool_counts = colors_of_picks(pool);
+        colors.extend(Color::ALL.into_iter().max_by_key(|&c| pool_counts.get(c)));
+    }
+    let mut leftovers: Vec<CardFactory> = pool.to_vec();
+    for s in spells {
+        if let Some(i) = leftovers.iter().position(|f| *f as usize == *s as usize) {
+            leftovers.remove(i);
+        }
+    }
+    let slots: Vec<(u32, crate::mana::ColorSet)> = leftovers
+        .iter()
+        .enumerate()
+        .filter(|(_, f)| crate::cube::card_def(**f).is_land())
+        .map(|(i, f)| (i as u32, land_produced_colors(crate::cube::card_def(*f))))
+        .collect();
+    let (mut lands, basics) = assemble_lands(&mut leftovers, &slots, spells, &colors, total, true);
+    for c in Color::ALL {
+        for _ in 0..basics.get(&c).copied().unwrap_or(0) {
+            lands.push(basic_for(c));
+        }
+    }
+    lands
+}
+
 /// `"R/W"`, `"R/W + b"`. One `String`, pushed a char at a time: this runs
 /// once per shape in the lattice and every candidate build carries one, and
 /// the `map(to_string).collect::<Vec<_>>().join("/")` it replaces allocated a

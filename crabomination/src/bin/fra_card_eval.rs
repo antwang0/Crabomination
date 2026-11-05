@@ -175,18 +175,39 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     // `deck_value_train --export`): the rated pick polished by the learned
     // deck value, three swaps at most, against the rated builder as it
     // stands (its own polish on) — step 1's play gate.
-    let deck_value: Option<crabomination::deck_value::DeckValue> = (arg("--trial").as_deref() == Some("deckvalue")).then(|| {
+    // `--trial deckvalue-after`: the same swaps on top of the rated
+    // builder's own polish (step 1b).
+    let after_polish = arg("--trial").as_deref() == Some("deckvalue-after");
+    let deck_value: Option<crabomination::deck_value::DeckValue> = (arg("--trial").as_deref() == Some("deckvalue") || after_polish).then(|| {
         assert!(best > 0, "--trial deckvalue races best-of-N builds: pass --best 16");
         let path = std::env::var("CRAB_DECK_VALUE").expect("--trial deckvalue needs CRAB_DECK_VALUE=<deck_value_train --export>");
         let dv = crabomination::deck_value::DeckValue::load(std::path::Path::new(&path)).unwrap_or_else(|e| panic!("{e}"));
         eprintln!("deck value {} ({} cards) from {path}", dv.arm, dv.cards.len());
         dv
     });
-    let trial: Option<(bool, bool)> = arg("--trial").filter(|t| t != "deckvalue").map(|t| match t.as_str() {
+    // `--trial policy` / `--trial policy-value` (with `--best N` for the
+    // control, `CRAB_DECK_POLICY=FILE.json` from `deck_policy_train`, and for
+    // `policy-value` `CRAB_DECK_VALUE`): step 2's G2a — the add-one-card
+    // policy's greedy build — and G2b — the greedy build and 16 sampled ones,
+    // the value's pick — each against the rated builder as it stands.
+    let policy: Option<(crabomination::deck_policy::DeckPolicy, bool)> =
+        arg("--trial").filter(|t| t.starts_with("policy")).map(|t| {
+            assert!(best > 0, "--trial {t} races the rated builder's best-of-N: pass --best 16");
+            let path = std::env::var("CRAB_DECK_POLICY").expect("--trial policy needs CRAB_DECK_POLICY=<deck_policy_train --export>");
+            let p = crabomination::deck_policy::DeckPolicy::load(std::path::Path::new(&path)).unwrap_or_else(|e| panic!("{e}"));
+            eprintln!("deck policy ({} cards) from {path}", p.cards.len());
+            (p, t == "policy-value")
+        });
+    let policy_value: Option<crabomination::deck_value::DeckValue> = policy.as_ref().filter(|p| p.1).map(|_| {
+        let path = std::env::var("CRAB_DECK_VALUE").expect("--trial policy-value needs CRAB_DECK_VALUE");
+        crabomination::deck_value::DeckValue::load(std::path::Path::new(&path)).unwrap_or_else(|e| panic!("{e}"))
+    });
+    let trial: Option<(bool, bool)> =
+        arg("--trial").filter(|t| !t.starts_with("deckvalue") && !t.starts_with("policy")).map(|t| match t.as_str() {
         "polish" => (true, false),
         "floor" => (false, true),
         "both" => (true, true),
-        other => panic!("--trial {other}: polish, floor, both or deckvalue"),
+        other => panic!("--trial {other}: polish, floor, both, deckvalue, deckvalue-after, policy or policy-value"),
     });
     // `--table FILE` (`scripts/fra_card_table.py RATINGS MIN --tsv`): the
     // rated builder on a re-rated table against the same builder on the
@@ -220,8 +241,14 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                         crabomination::selfplay::heuristic_sealed_build_rated(pool, salt ^ 1)
                     }
                 };
-                let (old, new) = if let Some(dv) = &deck_value {
-                    (rated(&pool), crabomination::selfplay::deck_value_build(&pool, best, salt ^ 1, dv, 3))
+                let (old, new) = if let Some((p, _)) = &policy {
+                    let built = match &policy_value {
+                        Some(v) => p.build_valued(&pool, v, 16, &mut StdRng::seed_from_u64(salt ^ 3)),
+                        None => p.build(&pool, None),
+                    };
+                    (rated(&pool), built)
+                } else if let Some(dv) = &deck_value {
+                    (rated(&pool), crabomination::selfplay::deck_value_build(&pool, best, salt ^ 1, dv, 3, after_polish))
                 } else if let Some((polish, floor)) = trial {
                     let arm = |p: bool, f: bool| {
                         crabomination::selfplay::with_judge_polish(p, || {
@@ -284,7 +311,11 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     let (wa, wb): (u32, u32) = rows.iter().fold((0, 0), |a, r| (a.0 + r.0, a.1 + r.1));
     println!(
         "{}: {mean:.2}% [{:.2}, {:.2}] pool-level 95% (n={} pools, {identical} identical decks); games {wa}-{wb} ({:.2}%)",
-        if deck_value.is_some() {
+        if policy_value.is_some() {
+            "policy+value vs rated"
+        } else if policy.is_some() {
+            "policy vs rated"
+        } else if deck_value.is_some() {
             "deckvalue vs rated"
         } else if table.is_some() {
             "table vs compiled"

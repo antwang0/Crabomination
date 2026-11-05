@@ -32,6 +32,7 @@ pub mod crossplay;
 pub mod cube;
 pub mod decklist;
 pub mod deck_value;
+pub mod deck_policy;
 pub mod decision;
 pub mod demo;
 pub mod draft;

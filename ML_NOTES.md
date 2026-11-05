@@ -7640,3 +7640,85 @@ sets' rating polishes are not the same size: +2.65 on FRA, +0.78 on SOS
 FRA's strong one it gives back ~0.5. Not read: the learned polish *after* the
 rating polish (the obvious next cell), and a larger swap budget. Nothing is
 adopted — the SOS opponent builder is a default change and the user's call.
+
+**Step 1b, pre-registered (2026-11-05): the learned polish *after* the
+rating polish.** Same cells and bar as the step-1 gate (2,000 pools × 8
+pairs, seeds 43 / 97, FRA `fra-fixes` / SOS `dflt`; pooled ≥ +1 and both
+seeds > 50), but the arm keeps the rated builder's own polish and adds ≤ 3
+learned swaps on top (`--trial deckvalue-after`), so it can only differ
+from the control where the value disagrees with the polished deck.
+
+**Step 2, pre-registered (2026-11-05): the add-one-card builder, by
+imitation.** A policy that builds a deck's spells one pool card at a time,
+then hands the spells to the rated builder's own land step
+(`recommend::lands_for_spells`: the spells' colours, on-colour duals from
+the pool, basics split by pips).
+
+*Model* (`deck_policy_train`, exported to `crabomination::deck_policy`):
+each card a fresh name embedding ⊕ its 59 hand-object features through one
+layer (step 1: the pretrained encoder bought nothing); the state is the
+pool's mean card vector ⊕ the partial deck's ⊕ its 16 `encode_deck`
+features and its size; each available pool card scored from its vector,
+the state, its copies in the deck and its copies left; one "stop" score
+from the state. Stop is masked below 20 spells and forced at 25 (the
+rated builder plays 22–24).
+
+*Teacher*: the rated builder as it builds the bot's opponent decks today
+(`rated_sealed_build`, best of 16, polished), on 40,000 training pools per
+set (FRA and SOS boosters, seeds disjoint from the gate's), 5 % held out.
+Its deck is a set, so each training state is a random-order prefix of the
+target spells, and the loss counts any remaining target card (or stop,
+when complete) as correct.
+
+*Offline read* (held-out pools): next-step accuracy (the argmax is a card
+still in the target, or stop when complete) and the greedy build's spell
+overlap with the teacher's.
+
+*Gates* (FRA `fra-fixes`, SOS `dflt`, 2,000 pools × 8 pairs, seeds 43 / 97,
+against the rated builder):
+
+* **G2a — greedy policy alone.** A pipeline check, not an adoption
+  candidate: it works if pooled ≥ 48.5 (within 1.5 of its teacher).
+* **G2b — policy proposes, value chooses.** 16 sampled builds (temperature
+  1) plus the greedy one, the step-1 value (FRA A2, SOS A3) picks.
+  Adoption-candidate bar: pooled ≥ +1 and both seeds > 50.
+
+**Step 1b result: no change — the learned value overrides the polish
+either way.** FRA 49.79 [49.38, 50.20] / 49.57 [49.18, 49.97] (fails), SOS
+51.78 [51.45, 52.12] / 52.04 [51.72, 52.37] (passes, pooled +1.91) — within
+0.3 of step 1's cells on every one: given three swaps, the value reaches
+its own deck from the polished pick as from the unpolished one. The FRA
+deficit is the value's, not the missing polish's.
+
+**Step 2 result (2026-11-05): the add-one-card builder works on SOS and
+falls short on FRA; the miss is colour choice, and it compounds.**
+Trained on 76,000 teacher decks (both sets; 80,000 rated builds in 2 s),
+30,000 steps, best held-out loss 0.0196 at 25,000; engine parity 1.3e-5.
+
+| read | FRA | SOS |
+|---|---|---|
+| held-out next-step accuracy | 99.2 % (both sets) | |
+| greedy spell overlap with the teacher | 0.680 | 0.777 |
+| overlap < 0.5 / 0.5–0.8 / 0.8–0.95 / ≥ 0.95 (of 2,000) | 237 / 1079 / 342 / 342 | 233 / 534 / 200 / 1033 |
+| plays the teacher's colours (≥ 3 pips each) | 0.322 | 0.617 |
+| spells vs the teacher | −0.47 | −0.43 |
+| **G2a** greedy vs rated (43 / 97) | 46.02 / 46.07 — **fails** the 48.5 bar | 50.45 / 50.12 — passes |
+| **G2b** policy + value vs rated (43 / 97) | 48.17 / 48.31 — **fails** | 51.34 / 51.39 — **passes** (pooled +1.37) |
+
+* 99 % per-step and 68 % per-deck is compounding error: training states
+  are prefixes of the *teacher's* deck, so the first pick off its colours
+  puts the policy where it never trained. On FRA two builds in three end
+  in other colours — a different second colour or a third — and build a
+  coherent deck there, which is why the decks lose 4 points rather than 20.
+* On SOS the greedy policy already ties its teacher, and with the value
+  choosing among 17 builds it beats it — though by less than step 1's
+  value polish (+1.87), so it adds no adoption candidate beyond that one.
+* The land step is exact against the teacher's *unpolished* builds (100 %,
+  both sets): the 47 % / 74 % agreement on the final decks is the
+  teacher's polish swapping spells after its lands were built — the policy's
+  decks get lands built for the spells they play.
+
+Next for this line (not run): train on the policy's own states (DAgger —
+roll the policy, label each state with the teacher's cards it has not
+taken), which is the standard fix for exactly this failure, then re-gate
+G2a / G2b on FRA.
