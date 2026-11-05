@@ -7722,3 +7722,38 @@ Next for this line (not run): train on the policy's own states (DAgger —
 roll the policy, label each state with the teacher's cards it has not
 taken), which is the standard fix for exactly this failure, then re-gate
 G2a / G2b on FRA.
+
+**Step 2b, pre-registered (2026-11-05): DAgger.** Same model, teacher and
+pools as step 2. After 5,000 steps on teacher prefixes, every 5,000 steps
+the current policy builds each of 20,000 training pools twice (greedy and
+at temperature 1), and every state it passes through is labelled with the
+teacher's cards it has not taken (or stop, once it holds as many spells as
+the teacher); batches are half teacher prefixes, half the aggregated
+policy states. 30,000 steps in all. The checkpoint is chosen by greedy
+whole-deck overlap on 500 held-out pools per set (not by per-step loss on
+the teacher's path — the metric that hid step 2's compounding). Gates as
+step 2 (G2a pipeline ≥ 48.5; G2b pooled ≥ +1 and both seeds > 50), FRA the
+registered read, SOS re-run alongside as a regression check.
+
+**Step 2b result (2026-11-05): DAgger fixes most of the compounding; FRA
+now passes the pipeline bar, barely, and is still below its teacher.**
+Five rounds of ~990 k policy states each (4.95 M aggregated); the checkpoint
+by held-out greedy overlap is step 26,000 (0.859 over 1,000 pools).
+
+| read | FRA step 2 → 2b | SOS step 2 → 2b |
+|---|---|---|
+| greedy spell overlap with the teacher | 0.680 → **0.832** | 0.777 → **0.888** |
+| overlap < 0.5 / 0.5–0.8 / 0.8–0.95 / ≥ 0.95 | 237/1079/342/342 → 28/632/608/732 | 233/534/200/1033 → 59/350/268/1323 |
+| plays the teacher's colours | 0.322 → **0.581** | 0.617 → **0.762** |
+| spells vs the teacher | −0.47 → +0.05 | −0.43 → +0.06 |
+| **G2a** greedy vs rated (43 / 97) | 46.02 / 46.07 → **48.32 / 48.86** (pooled 48.59, passes 48.5) | 50.45 / 50.12 → 50.11 / 49.72 |
+| **G2b** policy + value (43 / 97) | 48.17 / 48.31 → 48.33 / 48.52 (**fails**) | 51.34 / 51.39 → 51.19 / 51.48 (passes, +1.33) |
+
+* The registered read: FRA G2a moved +2.5 points and now clears the 48.5
+  pipeline bar by 0.09 — a working builder, 1.4 below the deck it imitates.
+  G2b still fails on FRA: the step-1 FRA value, which already failed its
+  own gate, picks no better than the greedy build.
+* SOS holds its step-2 standing (G2a level, G2b +1.33): no regression.
+* What is left on FRA is still colour: 42 % of greedy builds play other
+  colours than the teacher. Imitation can at most tie the teacher; beating
+  it is step 3's job — expert iteration with played games as the judge.

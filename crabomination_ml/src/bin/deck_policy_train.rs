@@ -50,6 +50,12 @@ struct Args {
     export: std::path::PathBuf,
     /// Skip training: read this policy and run the offline read on it.
     load: Option<std::path::PathBuf>,
+    /// Step 2b: after `warmup` steps, every `dagger_every` the policy builds
+    /// `dagger_pools` training pools and trains on the states it reaches.
+    dagger: bool,
+    warmup: usize,
+    dagger_every: usize,
+    dagger_pools: usize,
 }
 
 fn parse_args() -> Args {
@@ -65,6 +71,10 @@ fn parse_args() -> Args {
         threads: num("--threads", std::thread::available_parallelism().map_or(8, |n| n.get())),
         export: get("--export").expect("--export FILE.json").into(),
         load: get("--load").map(Into::into),
+        dagger: a.iter().any(|x| x == "--dagger"),
+        warmup: num("--warmup", 5_000),
+        dagger_every: num("--dagger-every", 5_000),
+        dagger_pools: num("--dagger-pools", 20_000),
     }
 }
 
@@ -188,7 +198,9 @@ fn roll(set: SealedSet, i: usize, cards: &Cards) -> PoolRow {
     PoolRow { set, pool, avail, target, teacher, held_out: i.is_multiple_of(20), index: i }
 }
 
-/// One state: a prefix of a pool's target in some order.
+/// One state: a partial deck in a pool, and the teacher's cards it still
+/// lacks (empty: stop is the answer).
+#[derive(Clone)]
 struct State<'a> {
     row: &'a PoolRow,
     deck: Vec<usize>,
@@ -201,6 +213,93 @@ fn sample_state<'a>(row: &'a PoolRow, rng: &mut StdRng) -> State<'a> {
     let k = rng.random_range(0..=order.len());
     let remaining = order.split_off(k);
     State { row, deck: order, remaining }
+}
+
+/// The teacher's cards `deck` has not taken; none once it holds as many
+/// spells as the teacher, so stop is the answer there. DAgger's label for a
+/// state off the teacher's path: the expert's own completion.
+fn remaining_for(target: &[usize], deck: &[usize]) -> Vec<usize> {
+    if deck.len() >= target.len() {
+        return Vec::new();
+    }
+    let mut left = target.to_vec();
+    for d in deck {
+        if let Some(p) = left.iter().position(|x| x == d) {
+            left.swap_remove(p);
+        }
+    }
+    left
+}
+
+/// Whether a state's label is reachable: stop allowed when it is the
+/// answer, else some target card still in the pool.
+fn labelled(s: &State) -> bool {
+    if s.remaining.is_empty() {
+        return s.deck.len() >= MIN_SPELLS;
+    }
+    s.remaining.iter().any(|&i| {
+        let have = s.row.avail.iter().find(|a| a.0 == i).map_or(0, |a| a.1) as usize;
+        have > s.deck.iter().filter(|&&d| d == i).count()
+    })
+}
+
+fn indices(spells: &[CardFactory], cards: &Cards) -> Vec<usize> {
+    spells.iter().filter_map(|f| cards.index.get(crabomination::cube::card_def(*f).name).copied()).collect()
+}
+
+/// Every state `policy` passes through building `rows`' pools, once greedy
+/// and once at temperature 1, each labelled by [`remaining_for`].
+fn roll_states<'a>(policy: &DeckPolicy, rows: &[&'a PoolRow], cards: &Cards, seed: u64, threads: usize) -> Vec<State<'a>> {
+    let out = Mutex::new(Vec::new());
+    let next = AtomicUsize::new(0);
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            s.spawn(|| {
+                let mut mine = Vec::new();
+                loop {
+                    let j = next.fetch_add(1, Ordering::Relaxed);
+                    if j >= rows.len() {
+                        break;
+                    }
+                    let row = rows[j];
+                    let mut rng = StdRng::seed_from_u64(seed ^ (row.index as u64) << 1 ^ (row.set == SealedSet::Fra) as u64);
+                    for sampled in [false, true] {
+                        let spells = policy.spells(&row.pool, sampled.then_some((&mut rng, 1.0)));
+                        let idx = indices(&spells, cards);
+                        for k in 0..=idx.len().min(MAX_SPELLS - 1) {
+                            let deck = idx[..k].to_vec();
+                            let st = State { row, remaining: remaining_for(&row.target, &deck), deck };
+                            if labelled(&st) {
+                                mine.push(st);
+                            }
+                        }
+                    }
+                }
+                out.lock().unwrap().extend(mine);
+            });
+        }
+    });
+    out.into_inner().unwrap()
+}
+
+/// Mean greedy spell overlap with the teacher over `rows` — the step-2b
+/// checkpoint metric.
+fn greedy_overlap(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards) -> f64 {
+    let total: f64 = rows
+        .iter()
+        .map(|r| {
+            let mut left = r.target.clone();
+            let mut hit = 0usize;
+            for i in indices(&policy.spells(&r.pool, None), cards) {
+                if let Some(p) = left.iter().position(|&x| x == i) {
+                    left.swap_remove(p);
+                    hit += 1;
+                }
+            }
+            hit as f64 / r.target.len().max(1) as f64
+        })
+        .sum();
+    total / rows.len().max(1) as f64
 }
 
 /// A batch's tensors; candidates padded to the batch's widest pool.
@@ -429,6 +528,13 @@ fn main() -> CResult<()> {
     };
     let (mut best_loss, mut best_step) = (f64::INFINITY, 0);
     let mut best: Option<DeckPolicy> = None;
+    // Step 2b's checkpoint metric and its policy states.
+    let overlap_rows: Vec<&PoolRow> = [SealedSet::Fra, SealedSet::Sos]
+        .into_iter()
+        .flat_map(|set| hold.iter().copied().filter(move |r| r.set == set).take(500))
+        .collect();
+    let mut best_overlap = f64::NEG_INFINITY;
+    let mut dagger_states: Vec<State> = Vec::new();
     let t1 = std::time::Instant::now();
     let steps = if args.load.is_some() { 0 } else { args.steps };
     for step in 0..=steps {
@@ -438,18 +544,43 @@ fn main() -> CResult<()> {
         if step % 500 == 0 || step == steps {
             let (hl, ha) = eval(&model)?;
             eprintln!("step {step}: held-out loss {hl:.4} acc {ha:.4} ({:.0}s)", t1.elapsed().as_secs_f64());
-            if hl < best_loss {
+            if args.dagger {
+                let p = export(&model, &cards)?;
+                let o = greedy_overlap(&p, &overlap_rows, &cards);
+                eprintln!("step {step}: held-out greedy overlap {o:.4} ({} policy states)", dagger_states.len());
+                if o > best_overlap {
+                    best_overlap = o;
+                    best_loss = hl;
+                    best_step = step;
+                    best = Some(p);
+                }
+            } else if hl < best_loss {
                 best_loss = hl;
                 best_step = step;
                 best = Some(export(&model, &cards)?);
-            } else if step >= best_step + 5000 {
+            } else if !args.dagger && step >= best_step + 5000 {
                 break;
             }
         }
         if step == steps {
             break;
         }
-        let states: Vec<State> = (0..args.batch).map(|_| sample_state(train[rng.random_range(0..train.len())], &mut rng)).collect();
+        if args.dagger && step >= args.warmup && (step - args.warmup).is_multiple_of(args.dagger_every) {
+            let p = export(&model, &cards)?;
+            let pick: Vec<&PoolRow> = (0..args.dagger_pools.min(train.len())).map(|_| train[rng.random_range(0..train.len())]).collect();
+            let rolled = roll_states(&p, &pick, &cards, args.seed ^ step as u64, args.threads);
+            eprintln!("step {step}: rolled {} policy states from {} pools", rolled.len(), pick.len());
+            dagger_states.extend(rolled);
+        }
+        let states: Vec<State> = (0..args.batch)
+            .map(|j| {
+                if !dagger_states.is_empty() && j % 2 == 1 {
+                    dagger_states[rng.random_range(0..dagger_states.len())].clone()
+                } else {
+                    sample_state(train[rng.random_range(0..train.len())], &mut rng)
+                }
+            })
+            .collect();
         let bt = batch(&states, c, &cards.stats, &dev)?;
         let (l, _) = loss(&model, &bt)?;
         opt.step(&l.backward()?)?;
@@ -539,7 +670,11 @@ fn main() -> CResult<()> {
             count_diff as f64 / n.max(1) as f64
         );
     }
-    println!("best held-out loss {best_loss:.4} at step {best_step}; exported to {}", args.export.display());
+    println!(
+        "best checkpoint at step {best_step} (held-out loss {best_loss:.4}{}); exported to {}",
+        if args.dagger { format!(", greedy overlap {best_overlap:.4}") } else { String::new() },
+        args.export.display()
+    );
     Ok(())
 }
 
