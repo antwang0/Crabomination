@@ -70,7 +70,12 @@ impl DeckValue {
 
     pub fn load(path: &std::path::Path) -> Result<Self, String> {
         let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let mut d: Self = serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+        Self::from_json(&text).map_err(|e| format!("{}: {e}", path.display()))
+    }
+
+    /// A value from its exported JSON (a compiled-in table, or a file's text).
+    pub fn from_json(text: &str) -> Result<Self, String> {
+        let mut d: Self = serde_json::from_str(text).map_err(|e| e.to_string())?;
         d.reindex();
         Ok(d)
     }
@@ -86,9 +91,11 @@ impl DeckValue {
     }
 
     /// The deck's value, in game logits. Cards it does not know count for
-    /// nothing.
+    /// nothing. Summed in card order: a `HashMap`'s per-instance order made
+    /// two calls on one deck round differently, and a polish broke its ties
+    /// by that rounding — the same pool built two different decks.
     pub fn value(&self, deck: &[CardFactory]) -> f64 {
-        let mut counts: HashMap<usize, f32> = HashMap::new();
+        let mut counts: std::collections::BTreeMap<usize, f32> = std::collections::BTreeMap::new();
         for f in deck {
             if let Some(&i) = self.index.get(crate::cube::card_def(*f).name) {
                 *counts.entry(i).or_insert(0.0) += 1.0;

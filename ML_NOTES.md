@@ -7757,3 +7757,16 @@ by held-out greedy overlap is step 26,000 (0.859 over 1,000 pools).
 * What is left on FRA is still colour: 42 % of greedy builds play other
   colours than the teacher. Imitation can at most tie the teacher; beating
   it is step 3's job — expert iteration with played games as the judge.
+
+**Adopted (2026-11-05, the user's call): SOS sealed opponents get the
+learned polish.** `selfplay::sealed_opponent_build` — the client's Sealed
+opponent, `CRAB_SEALED_BUILDER=client` fields, `bot_puzzles` — now gives an
+SOS pool (`card_ratings::sos_pool`) the rated build plus ≤ 3 swaps under
+the step-1 SOS value (`SOS_VALUE_POLISH`, the gated step-1b arm: 51.78 /
+52.04). The export is compiled in (`nets/deck-value-sos.json`,
+`include_str!`), as the rating tables are. FRA pools keep the rated build;
+the default ladder fields do not use this builder. One fix on the way:
+`DeckValue::value` summed over a `HashMap`, so its rounding — and the
+polish's choice between equal swaps — varied between two calls on one
+deck; it sums in card order now (the gate's decks differ from today's only
+in which slot an equal swap took).

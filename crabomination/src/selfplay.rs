@@ -301,7 +301,22 @@ pub fn deck_value_build(
     swaps: usize,
     after_polish: bool,
 ) -> Vec<CardFactory> {
-    let pick = with_judge_polish(after_polish, || rated_sealed_build(pool, n, seed));
+    deck_value_build_in_colors(pool, n, seed, ColorSet::empty(), dv, swaps, after_polish)
+}
+
+/// [`deck_value_build`] with the rated pick confined to `colors`
+/// ([`rated_sealed_build_in_colors`]); the swaps stay castable off the
+/// pick's lands, so they keep its colours.
+pub fn deck_value_build_in_colors(
+    pool: &[CardFactory],
+    n: usize,
+    seed: u64,
+    colors: ColorSet,
+    dv: &crate::deck_value::DeckValue,
+    swaps: usize,
+    after_polish: bool,
+) -> Vec<CardFactory> {
+    let pick = with_judge_polish(after_polish, || rated_sealed_build_in_colors(pool, n, seed, colors));
     let mana = pick
         .iter()
         .filter(|f| crate::cube::card_def(**f).is_land())
@@ -560,6 +575,9 @@ pub fn best_build_v3_in_colors(
 /// 70.34] / 69.96 % [69.35, 70.57]** of FRA pools (`--pilot fra-fixes`) and
 /// **60.88 % [60.18, 61.58] / 60.58 % [59.89, 61.26]** of SOS pools
 /// (`--set sos --pilot dflt`).
+///
+/// **An SOS pool then gets the learned polish** ([`SOS_VALUE_POLISH`]): at
+/// most three swaps under the step-1 deck value on top of the rated build.
 pub fn sealed_opponent_build(
     pool: &[CardFactory],
     n: usize,
@@ -567,9 +585,32 @@ pub fn sealed_opponent_build(
     colors: ColorSet,
 ) -> Vec<CardFactory> {
     if crate::card_ratings::rates_pool(pool) {
+        if SOS_VALUE_POLISH && crate::card_ratings::sos_pool(pool) {
+            return deck_value_build_in_colors(pool, n, seed, colors, sos_deck_value(), 3, true);
+        }
         return rated_sealed_build_in_colors(pool, n, seed, colors);
     }
     v3_opponent_build(pool, n, seed, colors)
+}
+
+/// Does the SOS sealed opponent's rated build get the learned deck value's
+/// polish (≤ 3 swaps after its own)? **On**, adopted 2026-11-05 at the
+/// user's call (ML_NOTES "A deck net that builds decks", step 1b): against
+/// the rated builder as it stood (`fra_card_eval --set sos --ab --best 16
+/// --trial deckvalue-after`, 2,000 pools x 8 pairs, `--pilot dflt`, seeds
+/// 43 / 97, pool-level) **51.78 % [51.45, 52.12] / 52.04 % [51.72, 52.37]**.
+/// FRA's value failed the same gate (49.79 / 49.57), so FRA pools keep the
+/// rated build.
+pub const SOS_VALUE_POLISH: bool = true;
+
+/// The SOS deck value (arm A3, λ 100, seed 1 — the gated export), compiled
+/// in like the rating tables it refines.
+fn sos_deck_value() -> &'static crate::deck_value::DeckValue {
+    static DV: std::sync::OnceLock<crate::deck_value::DeckValue> = std::sync::OnceLock::new();
+    DV.get_or_init(|| {
+        crate::deck_value::DeckValue::from_json(include_str!("../../nets/deck-value-sos.json"))
+            .expect("the compiled SOS deck value parses")
+    })
 }
 
 /// [`sealed_opponent_build`]'s v3 recipe on any pool — the control
@@ -1261,6 +1302,25 @@ mod tests {
     /// curve work the assembly filled strictly by score, and a pool whose
     /// best cards were expensive produced an opponent that did nothing
     /// before turn four.
+    /// The adoption is the gated arm and nothing else: an SOS opponent is
+    /// the rated build with the learned value's swaps on top, built exactly
+    /// as `fra_card_eval --trial deckvalue-after` built it; an FRA pool keeps
+    /// the plain rated build.
+    #[test]
+    fn the_sos_opponent_is_the_gated_value_polish_and_fra_is_untouched() {
+        let mut changed = 0;
+        for seed in 0..12u64 {
+            let pool = sealed_pool_of(crate::fra_mode::SealedSet::Sos, seed, SEALED_PACKS);
+            let deck = sealed_opponent_build(&pool, 16, seed, ColorSet::empty());
+            assert_eq!(deck, deck_value_build(&pool, 16, seed, sos_deck_value(), 3, true));
+            assert_eq!(deck.len(), 40);
+            changed += usize::from(deck != rated_sealed_build(&pool, 16, seed));
+            let fra = sealed_pool_of(crate::fra_mode::SealedSet::Fra, seed, SEALED_PACKS);
+            assert_eq!(sealed_opponent_build(&fra, 16, seed, ColorSet::empty()), rated_sealed_build(&fra, 16, seed));
+        }
+        assert!(changed > 0, "the value moves some SOS decks");
+    }
+
     #[test]
     fn the_sealed_opponent_builds_to_a_curve() {
         for seed in [1u64, 7, 42, 1234] {

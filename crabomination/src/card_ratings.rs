@@ -588,6 +588,25 @@ pub fn rates_pool(pool: &[crate::cube::CardFactory]) -> bool {
     all > 0 && rated * 2 >= all
 }
 
+/// Is this a Secrets of Strixhaven pool: are at least half its nonland
+/// cards on [`SOS_SIM_VALUE`]? The sealed opponent's learned polish
+/// ([`crate::selfplay::sealed_opponent_build`]) is SOS's alone — FRA's
+/// failed its gate.
+pub fn sos_pool(pool: &[crate::cube::CardFactory]) -> bool {
+    static NAMES: std::sync::OnceLock<crate::fxhash::HashSet<&'static str>> = std::sync::OnceLock::new();
+    let names = NAMES.get_or_init(|| SOS_SIM_VALUE.iter().map(|&(n, _)| n).collect());
+    let (mut sos, mut all) = (0usize, 0usize);
+    for f in pool {
+        let def = crate::cube::card_def(*f);
+        if def.is_land() {
+            continue;
+        }
+        all += 1;
+        sos += usize::from(names.contains(def.name));
+    }
+    all > 0 && sos * 2 >= all
+}
+
 #[cfg(test)]
 mod tests {
     use crate::draft::{ColorCounts, colors_of_picks, score_brief_rated};
