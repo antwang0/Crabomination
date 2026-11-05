@@ -56,6 +56,11 @@ struct Args {
     warmup: usize,
     dagger_every: usize,
     dagger_pools: usize,
+    /// Step 3: generations of expert iteration after the step-2b recipe.
+    expert_iter: usize,
+    race_fra: usize,
+    race_sos: usize,
+    gen_steps: usize,
 }
 
 fn parse_args() -> Args {
@@ -75,6 +80,10 @@ fn parse_args() -> Args {
         warmup: num("--warmup", 5_000),
         dagger_every: num("--dagger-every", 5_000),
         dagger_pools: num("--dagger-pools", 20_000),
+        expert_iter: num("--expert-iter", 0),
+        race_fra: num("--race-fra", 8_000),
+        race_sos: num("--race-sos", 3_000),
+        gen_steps: num("--gen-steps", 10_000),
     }
 }
 
@@ -167,8 +176,11 @@ struct PoolRow {
     pool: Vec<CardFactory>,
     /// Distinct non-land known pool cards and their copies, first-seen order.
     avail: Vec<(usize, u32)>,
-    /// The teacher's spells, as card indices, and as built.
-    target: Vec<usize>,
+    /// The expert's spells, as card indices — the teacher's, until step 3's
+    /// races replace them — and its deck as built.
+    target: std::sync::RwLock<Vec<usize>>,
+    best: std::sync::RwLock<Vec<CardFactory>>,
+    /// The rated builder's deck, as built.
     teacher: Vec<CardFactory>,
     held_out: bool,
     index: usize,
@@ -195,7 +207,159 @@ fn roll(set: SealedSet, i: usize, cards: &Cards) -> PoolRow {
         .filter(|f| !crabomination::cube::card_def(**f).is_land())
         .filter_map(|f| cards.index.get(crabomination::cube::card_def(*f).name).copied())
         .collect();
-    PoolRow { set, pool, avail, target, teacher, held_out: i.is_multiple_of(20), index: i }
+    PoolRow {
+        set,
+        pool,
+        avail,
+        target: std::sync::RwLock::new(target),
+        best: std::sync::RwLock::new(teacher.clone()),
+        teacher,
+        held_out: i.is_multiple_of(20),
+        index: i,
+    }
+}
+
+impl PoolRow {
+    /// The rated builder's spells as card indices (what the offline reads
+    /// compare against, whatever step 3 has relabelled).
+    fn teacher_target(&self, cards: &Cards) -> Vec<usize> {
+        let spells: Vec<CardFactory> = self.teacher.iter().copied().filter(|f| !crabomination::cube::card_def(*f).is_land()).collect();
+        indices(&spells, cards)
+    }
+}
+
+/// The pilot `fra_card_eval`'s gates play each set with.
+fn pilot_for(set: SealedSet) -> crabomination::recommend::Pilot {
+    use crabomination::server::EvalWeights;
+    crabomination::recommend::Pilot::Scored(match set {
+        SealedSet::Fra => EvalWeights::fra_fixes_on(),
+        _ => EvalWeights::default(),
+    })
+}
+
+fn share(t: &crabomination::recommend::PairedTally) -> Option<f64> {
+    let n = t.wins_a + t.wins_b;
+    (n > 0).then(|| 100.0 * t.wins_a as f64 / n as f64)
+}
+
+fn deck_key(d: &[CardFactory]) -> Vec<usize> {
+    let mut v: Vec<usize> = d.iter().map(|f| *f as usize).collect();
+    v.sort_unstable();
+    v
+}
+
+/// Step 3's expert: on each row, the policy's greedy build and seven
+/// sampled ones (temperatures 1, 1, 1, 1.5, 1.5, 2, 2), deduplicated, race
+/// the row's current best deck — four pairs each, then sixteen fresh pairs
+/// for the top two — and the confirmed leader replaces it at ≥ `accept` %.
+/// Returns, per set, (rows raced, rows replaced, mean confirmed share of
+/// the replacements).
+fn race_generation(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards, seed: u64, threads: usize, accept: f64) -> Vec<(SealedSet, usize, usize, f64)> {
+    let next = AtomicUsize::new(0);
+    let out: Mutex<Vec<(SealedSet, Option<f64>)>> = Mutex::new(Vec::new());
+    let t0 = std::time::Instant::now();
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            s.spawn(|| loop {
+                let j = next.fetch_add(1, Ordering::Relaxed);
+                if j >= rows.len() {
+                    break;
+                }
+                let row = rows[j];
+                let pilot = pilot_for(row.set);
+                let salt = seed ^ (row.index as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ ((row.set == SealedSet::Fra) as u64) << 62;
+                let mut rng = StdRng::seed_from_u64(salt);
+                let reference = row.best.read().unwrap().clone();
+                let mut seen = vec![deck_key(&reference)];
+                let mut cands: Vec<Vec<CardFactory>> = Vec::new();
+                for t in [None, Some(1.0), Some(1.0), Some(1.0), Some(1.5), Some(1.5), Some(2.0), Some(2.0)] {
+                    let d = match t {
+                        None => policy.build(&row.pool, None),
+                        Some(t) => policy.build(&row.pool, Some((&mut rng, t))),
+                    };
+                    let k = deck_key(&d);
+                    if !seen.contains(&k) {
+                        seen.push(k);
+                        cands.push(d);
+                    }
+                }
+                let mut screened: Vec<(f64, usize)> = cands
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, d)| {
+                        let t = crabomination::recommend::simulate_match_pairs_piloted(d, &reference, 4, [pilot, pilot], 50_000, salt ^ 0x5C);
+                        share(&t).map(|x| (x, i))
+                    })
+                    .collect();
+                screened.sort_by(|a, b| b.0.total_cmp(&a.0));
+                let mut won: Option<(f64, usize)> = None;
+                for &(_, i) in screened.iter().take(2) {
+                    let t = crabomination::recommend::simulate_match_pairs_piloted(&cands[i], &reference, 16, [pilot, pilot], 50_000, salt ^ 0xC0F);
+                    if let Some(x) = share(&t)
+                        && x >= accept
+                        && won.is_none_or(|w| x > w.0)
+                    {
+                        won = Some((x, i));
+                    }
+                }
+                if let Some((_, i)) = won {
+                    let spells: Vec<CardFactory> = cands[i].iter().copied().filter(|f| !crabomination::cube::card_def(*f).is_land()).collect();
+                    *row.target.write().unwrap() = indices(&spells, cards);
+                    *row.best.write().unwrap() = cands[i].clone();
+                }
+                let mut o = out.lock().unwrap();
+                o.push((row.set, won.map(|w| w.0)));
+                if o.len().is_multiple_of(1000) {
+                    eprintln!("  raced {}/{} pools, {:.0}s", o.len(), rows.len(), t0.elapsed().as_secs_f64());
+                }
+            });
+        }
+    });
+    let out = out.into_inner().unwrap();
+    [SealedSet::Fra, SealedSet::Sos]
+        .into_iter()
+        .map(|set| {
+            let mine: Vec<&(SealedSet, Option<f64>)> = out.iter().filter(|r| r.0 == set).collect();
+            let won: Vec<f64> = mine.iter().filter_map(|r| r.1).collect();
+            (set, mine.len(), won.len(), won.iter().sum::<f64>() / won.len().max(1) as f64)
+        })
+        .collect()
+}
+
+/// The held-out play read: the greedy build against the rated builder's
+/// deck, four pairs a pool, under the gate's pilot — per set, the mean
+/// pool-level share and its 95 % half-width.
+fn play_read(policy: &DeckPolicy, rows: &[&PoolRow], threads: usize) -> Vec<(SealedSet, f64, f64)> {
+    let next = AtomicUsize::new(0);
+    let out: Mutex<Vec<(SealedSet, f64)>> = Mutex::new(Vec::new());
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            s.spawn(|| loop {
+                let j = next.fetch_add(1, Ordering::Relaxed);
+                if j >= rows.len() {
+                    break;
+                }
+                let row = rows[j];
+                let pilot = pilot_for(row.set);
+                let d = policy.build(&row.pool, None);
+                let t = crabomination::recommend::simulate_match_pairs_piloted(&d, &row.teacher, 4, [pilot, pilot], 50_000, 0x9EAD ^ row.index as u64);
+                if let Some(x) = share(&t) {
+                    out.lock().unwrap().push((row.set, x));
+                }
+            });
+        }
+    });
+    let out = out.into_inner().unwrap();
+    [SealedSet::Fra, SealedSet::Sos]
+        .into_iter()
+        .map(|set| {
+            let xs: Vec<f64> = out.iter().filter(|r| r.0 == set).map(|r| r.1).collect();
+            let n = xs.len().max(2) as f64;
+            let m = xs.iter().sum::<f64>() / n;
+            let sd = (xs.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (n - 1.0)).sqrt();
+            (set, m, 1.96 * sd / n.sqrt())
+        })
+        .collect()
 }
 
 /// One state: a partial deck in a pool, and the teacher's cards it still
@@ -208,7 +372,7 @@ struct State<'a> {
 }
 
 fn sample_state<'a>(row: &'a PoolRow, rng: &mut StdRng) -> State<'a> {
-    let mut order = row.target.clone();
+    let mut order = row.target.read().unwrap().clone();
     order.shuffle(rng);
     let k = rng.random_range(0..=order.len());
     let remaining = order.split_off(k);
@@ -268,7 +432,7 @@ fn roll_states<'a>(policy: &DeckPolicy, rows: &[&'a PoolRow], cards: &Cards, see
                         let idx = indices(&spells, cards);
                         for k in 0..=idx.len().min(MAX_SPELLS - 1) {
                             let deck = idx[..k].to_vec();
-                            let st = State { row, remaining: remaining_for(&row.target, &deck), deck };
+                            let st = State { row, remaining: remaining_for(&row.target.read().unwrap(), &deck), deck };
                             if labelled(&st) {
                                 mine.push(st);
                             }
@@ -288,7 +452,7 @@ fn greedy_overlap(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards) -> f64 
     let total: f64 = rows
         .iter()
         .map(|r| {
-            let mut left = r.target.clone();
+            let mut left = r.teacher_target(cards);
             let mut hit = 0usize;
             for i in indices(&policy.spells(&r.pool, None), cards) {
                 if let Some(p) = left.iter().position(|&x| x == i) {
@@ -296,7 +460,7 @@ fn greedy_overlap(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards) -> f64 
                     hit += 1;
                 }
             }
-            hit as f64 / r.target.len().max(1) as f64
+            hit as f64 / r.teacher_target(cards).len().max(1) as f64
         })
         .sum();
     total / rows.len().max(1) as f64
@@ -490,7 +654,7 @@ fn main() -> CResult<()> {
     let rows: Vec<PoolRow> = rows.into_iter().map(|r| r.1).collect();
     // Teachers outside the policy's stop window cannot be imitated exactly:
     // kept out of training, counted.
-    let usable = |r: &PoolRow| (MIN_SPELLS..=MAX_SPELLS).contains(&r.target.len());
+    let usable = |r: &PoolRow| (MIN_SPELLS..=MAX_SPELLS).contains(&r.target.read().unwrap().len());
     let train: Vec<&PoolRow> = rows.iter().filter(|r| !r.held_out && usable(r)).collect();
     let hold: Vec<&PoolRow> = rows.iter().filter(|r| r.held_out && usable(r)).collect();
     eprintln!(
@@ -535,6 +699,7 @@ fn main() -> CResult<()> {
         .collect();
     let mut best_overlap = f64::NEG_INFINITY;
     let mut dagger_states: Vec<State> = Vec::new();
+    let mut best_vars: Vec<Tensor> = Vec::new();
     let t1 = std::time::Instant::now();
     let steps = if args.load.is_some() { 0 } else { args.steps };
     for step in 0..=steps {
@@ -553,6 +718,7 @@ fn main() -> CResult<()> {
                     best_loss = hl;
                     best_step = step;
                     best = Some(p);
+                    best_vars = model.vars().iter().map(|v| v.as_tensor().copy()).collect::<CResult<_>>()?;
                 }
             } else if hl < best_loss {
                 best_loss = hl;
@@ -585,6 +751,68 @@ fn main() -> CResult<()> {
         let (l, _) = loss(&model, &bt)?;
         opt.step(&l.backward()?)?;
     }
+    // Step 3: expert iteration from the step-2b checkpoint.
+    if args.expert_iter > 0 {
+        assert!(args.dagger && !best_vars.is_empty(), "--expert-iter runs after the --dagger recipe");
+        for (v, t) in model.vars().iter().zip(&best_vars) {
+            v.set(t)?;
+        }
+        opt.set_learning_rate(args.lr * 0.3);
+        let play_rows: Vec<&PoolRow> = [SealedSet::Fra, SealedSet::Sos]
+            .into_iter()
+            .flat_map(|set| hold.iter().copied().filter(move |r| r.set == set).take(1000))
+            .collect();
+        let report = |g: usize, p: &DeckPolicy| {
+            for (set, m, h) in play_read(p, &play_rows, args.threads) {
+                println!("gen {g}: {set:?} greedy vs rated, held-out play read {m:.2} ± {h:.2}");
+            }
+        };
+        let p0 = best.clone().expect("evaluated at step 0");
+        report(0, &p0);
+        let stem = args.export.with_extension("");
+        p0.save(&std::path::PathBuf::from(format!("{}_gen0.json", stem.display()))).unwrap_or_else(|e| panic!("{e}"));
+        for g in 1..=args.expert_iter {
+            let p = export(&model, &cards)?;
+            let tg = std::time::Instant::now();
+            let mut race: Vec<&PoolRow> = Vec::new();
+            for (set, n) in [(SealedSet::Fra, args.race_fra), (SealedSet::Sos, args.race_sos)] {
+                let mut mine: Vec<&PoolRow> = train.iter().copied().filter(|r| r.set == set).collect();
+                mine.shuffle(&mut rng);
+                race.extend(mine.into_iter().take(n));
+            }
+            for (set, raced, won, mean) in race_generation(&p, &race, &cards, args.seed ^ (g as u64) << 32, args.threads, 55.0) {
+                println!("gen {g}: {set:?} raced {raced} pools, replaced {won} ({:.1} %), replacements' confirmed share {mean:.2} ({:.0}s)", 100.0 * won as f64 / raced.max(1) as f64, tg.elapsed().as_secs_f64());
+            }
+            let improved: Vec<&PoolRow> = train.iter().copied().filter(|r| *r.best.read().unwrap() != r.teacher).collect();
+            dagger_states.clear();
+            for step in 0..args.gen_steps {
+                if step.is_multiple_of(args.gen_steps / 2) {
+                    let p = export(&model, &cards)?;
+                    let pick: Vec<&PoolRow> = (0..args.dagger_pools.min(train.len())).map(|_| train[rng.random_range(0..train.len())]).collect();
+                    let rolled = roll_states(&p, &pick, &cards, args.seed ^ (g * 1_000_000 + step) as u64, args.threads);
+                    eprintln!("gen {g} step {step}: rolled {} policy states", rolled.len());
+                    dagger_states.extend(rolled);
+                }
+                // Half the batch prefixes (half of those from relabelled
+                // pools), half policy states labelled by the current expert.
+                let states: Vec<State> = (0..args.batch)
+                    .map(|j| match j % 4 {
+                        0 if !improved.is_empty() => sample_state(improved[rng.random_range(0..improved.len())], &mut rng),
+                        0 | 1 => sample_state(train[rng.random_range(0..train.len())], &mut rng),
+                        _ => dagger_states[rng.random_range(0..dagger_states.len())].clone(),
+                    })
+                    .collect();
+                let bt = batch(&states, c, &cards.stats, &dev)?;
+                let (l, _) = loss(&model, &bt)?;
+                opt.step(&l.backward()?)?;
+            }
+            let p = export(&model, &cards)?;
+            println!("gen {g}: {} train pools carry a replaced deck; held-out greedy overlap with the teacher {:.4}", improved.len(), greedy_overlap(&p, &overlap_rows, &cards));
+            report(g, &p);
+            p.save(&std::path::PathBuf::from(format!("{}_gen{g}.json", stem.display()))).unwrap_or_else(|e| panic!("{e}"));
+        }
+    }
+
     let policy = match &args.load {
         Some(path) => DeckPolicy::load(path).unwrap_or_else(|e| panic!("{e}")),
         None => {

@@ -7770,3 +7770,21 @@ the default ladder fields do not use this builder. One fix on the way:
 polish's choice between equal swaps — varied between two calls on one
 deck; it sums in card order now (the gate's decks differ from today's only
 in which slot an equal swap took).
+
+**Step 3, pre-registered (2026-11-05): expert iteration, games as the
+judge.** `deck_policy_train --dagger --expert-iter 3`: the step-2b recipe,
+its best checkpoint restored, then three generations. Each generation:
+12,000 FRA and 3,000 SOS training pools; on each, the policy's greedy build
+and seven sampled ones (temperature 1 ×4, 1.5 ×2, 2 ×2), deduplicated, race
+the pool's current best deck (the rated build until replaced) — 4 pairs
+each, then 16 fresh pairs for the top two under the gate's pilot
+(`fra-fixes` FRA, `dflt` SOS) — and the confirmed leader replaces it at
+≥ 55 %. Then 10,000 steps at 0.3x the learning rate: half prefixes of the
+current best decks (half of those from replaced pools), half policy states
+rolled twice per generation and labelled by the current best. Each
+generation reads greedy vs rated in games on 1,000 held-out training pools
+per set (4 pairs; not the gate seeds). The generation with the best FRA read
+goes to the gates as step 2: **G3a** greedy vs rated, both seeds > 50 and
+pooled ≥ 50.5 on FRA to count as beating the teacher; G2b's policy + value
+re-run alongside; SOS as a regression check. Stop rule: if the FRA read is
+flat (< +0.5) for two generations, the loop is done.
