@@ -201,7 +201,7 @@ impl DeckPolicy {
         let mut deck = self.spells(pool, sample.as_mut().map(|(r, t)| (&mut **r, *t)));
         let mut weight: Vec<(Color, u32)> =
             Color::ALL.into_iter().map(|c| (c, deck.iter().map(|f| crate::cube::card_brief(*f).pips.get(c)).sum())).filter(|w| w.1 > 0).collect();
-        weight.sort_by(|a, b| b.1.cmp(&a.1));
+        weight.sort_by_key(|w| std::cmp::Reverse(w.1));
         let main: Vec<Color> = weight.iter().take(2).map(|w| w.0).collect();
         let main_set = main.iter().fold(ColorSet::empty(), |mut s, &c| {
             s.insert(c);

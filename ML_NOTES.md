@@ -7865,3 +7865,10 @@ pointed at.**
 Then step 3 again from the step-2b recipe (raw weights saved this time,
 `*_gen0.safetensors`), 3 generations of 8,000 FRA / 2,000 SOS pools, the
 splash rule in every candidate build; gates and bar as step 3.
+
+**Step 3b part 1 result: the splash rule passes, kept.** Rule vs no rule
+on the step-2b policy: FRA **50.27 [50.08, 50.46] / 50.22 [50.03, 50.41]**,
+SOS 49.90 [49.69, 50.12] / 49.96 [49.76, 50.15]. 81 % of decks are
+identical (the rule only touches builds that splash), so on the FRA builds
+it changes it is worth about +1.3. G2a with it: FRA 48.73 / 49.16 (was
+48.32 / 48.86), SOS 50.15 / 49.84.
