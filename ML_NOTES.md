@@ -7788,3 +7788,60 @@ goes to the gates as step 2: **G3a** greedy vs rated, both seeds > 50 and
 pooled ≥ 50.5 on FRA to count as beating the teacher; G2b's policy + value
 re-run alongside; SOS as a regression check. Stop rule: if the FRA read is
 flat (< +0.5) for two generations, the loop is done.
+
+**Step 3 result (2026-11-06): flat — the loop trained mostly on noise; not
+adopted.** Held-out play read (greedy vs rated, 1,000 pools x 4 pairs):
+FRA 49.35 → 49.37 → 49.41 → 49.57, SOS 49.09 → 49.91 → 49.65 → 49.38 over
+generations 0–3 — the stop rule's flat case. The replacement rate never
+fell (FRA 36.4 / 36.6 / 37.5 %, confirmed share 60.6 each time): a 16-pair
+confirmation has a ~9-point SD, so an equal deck clears 55 % about a
+quarter of the time and the better of two about 40 % — most "improvements"
+were ties that drew well. Gates on generation 3: **G3a** FRA 48.89 / 49.46
+(pooled 49.18, bar 50.5: fails; +0.6 over step 2b), SOS 49.42 / 49.49;
+policy + value FRA 49.07 / 48.98 (fails), SOS 50.90 / 50.85 (pooled +0.88,
+fails the +1 bar). A redo needs a confirmation that an equal deck passes
+rarely: ≥ 64 pairs, or a second independent confirmation.
+
+**The user's FRA pool as a case study (2026-11-06,
+`fra_card_eval --analyze`, `.ladder/userpool/`).** `fra_sealed.txt` has a
+typo (`Extended Absencem`), so October's builds saw 81 cards; the corrected
+copy has Extended Absence ({3}{B}) back, and the rated builder's seed-0x5EA1
+pick turns W/B. Gauntlet: one field of 600 rated FRA decks x 8 pairs,
+`fra-fixes`, seed 43:
+
+| deck | colours | share | vs rated |
+|---|---|---|---|
+| user's W/G list (`fra_sealed_deck.txt`) | WG | **53.96 ± 1.15** | +1.12 ± 1.19 |
+| rated + FRA value polish | WB | 53.71 ± 1.07 | +0.87 ± 0.76 |
+| rated (best of 16, seed 0x5EA1) | WB | 52.84 ± 1.11 | — |
+| rated, seeds 1–4 | WG / WG / WUG / WG | 51.68 / 53.58 / 51.10 / 52.55 | −1.7 … +0.7 |
+| policy gen 0 greedy | WG | 51.86 ± 1.14 | −0.98 ± 1.20 |
+| policy gen 3 greedy (= gen 3 + value) | **WG + 2 black** | 49.33 ± 1.16 | **−3.51 ± 1.27** |
+| policy gen 0 + value | **WG + 2 black** | 47.15 ± 1.06 | **−5.69 ± 1.19** |
+| user's W/R list | WRG | 47.34 ± 1.06 | −5.50 ± 1.22 |
+
+What it shows about the deck net:
+1. **The builder splashes on one source.** Both bad builder decks are the
+   W/G deck plus Extended Absence and Break Under Pressure ({2}{B}) over
+   9 Plains / 5 Forest / 1 Swamp / Vigorbloom Annex. The policy picks
+   spells blind to sources, and the land step allots basics by pips, so a
+   two-card splash gets one Swamp. The step-1 value rates the splash deck
+   *higher* (2.218 vs 2.152) — it does not see castability either — and
+   step 3 made it worse: WBG went from 26 % of sampled builds (gen 0) to
+   42.5 % (gen 3), and gen 3's greedy deck splashes. The rated builder
+   only splashes through its explicit "X/Y + z" shapes, which fix for it.
+2. **Race noise** (above) is what the splash rode in on.
+3. **The teacher is noisy on this pool.** Five seeds of the rated builder
+   give W/B or W/G at 51.1–53.6, so imitation copies a choice that is
+   itself a coin flip between near-equal decks.
+4. **Pick order is certainty, not strength.** The first pick is Keeper of
+   the Quiet Hour (colourless 3/2, rated 1.25) at 0.53 in gen 0 and 0.91
+   in gen 3, ahead of Guiding Hydra (6.49): any card the expert will end up
+   playing counts as right at every step, so the sure colourless playable
+   goes first. Harmless to the deck; it means colour is settled by a
+   near-deterministic chain later, which is why sampling explores little.
+5. **The stop is a count.** Stop is < 3 % at 21–23 spells and 99–100 %
+   at 24, and it sets the land count (16) the rated builder chose from its
+   curve (17 on the original pool).
+6. The user's own ordering holds: W/G ≫ W/R (+6.6 here; +9.9 against
+   October's field).

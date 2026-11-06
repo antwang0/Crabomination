@@ -622,6 +622,120 @@ fn build_pool(path: &str, candidates: usize, colors: ColorSet, by_play: Option<B
     }
 }
 
+/// `--analyze POOL --out DIR` (with `CRAB_DECK_POLICY`, `CRAB_DECK_VALUE`,
+/// optional `--lists A,B` of hand-built decks): every builder's deck for one
+/// pool, written to `DIR/*.txt` for `--gauntlet`, with each deck's colours,
+/// learned value and difference from the rated deck; the policy's greedy
+/// trace; the colours 200 sampled builds land in; and the pool cards either
+/// model cannot see.
+fn analyze_pool(path: &str, out: &std::path::Path) {
+    use crabomination::deck_policy::DeckPolicy;
+    use crabomination::deck_value::DeckValue;
+    let (main, side) = read_list(path);
+    let pool: Vec<Factory> = main.iter().chain(&side).copied().collect();
+    let name = |f: Factory| crabomination::cube::card_def(f).name;
+    let is_land = |f: Factory| crabomination::cube::card_def(f).is_land();
+    let pp = std::env::var("CRAB_DECK_POLICY").expect("CRAB_DECK_POLICY");
+    let policy = DeckPolicy::load(std::path::Path::new(&pp)).unwrap_or_else(|e| panic!("{e}"));
+    let vp = std::env::var("CRAB_DECK_VALUE").expect("CRAB_DECK_VALUE");
+    let dv = DeckValue::load(std::path::Path::new(&vp)).unwrap_or_else(|e| panic!("{e}"));
+    let spells_in_pool: Vec<Factory> = pool.iter().copied().filter(|f| !is_land(*f)).collect();
+    println!("pool {path}: {} cards, {} non-land", pool.len(), spells_in_pool.len());
+    let mut blind_p: Vec<&str> = spells_in_pool.iter().map(|f| name(*f)).filter(|n| !policy.cards.iter().any(|c| c == n)).collect();
+    let mut blind_v: Vec<&str> = spells_in_pool.iter().map(|f| name(*f)).filter(|n| !dv.knows(n)).collect();
+    blind_p.dedup();
+    blind_v.dedup();
+    println!("policy cannot see: {blind_p:?}");
+    println!("value cannot see: {blind_v:?}");
+    let colors = |d: &[Factory]| -> String {
+        Color::ALL
+            .into_iter()
+            .filter(|&c| d.iter().filter(|f| !is_land(**f)).map(|f| crabomination::cube::card_brief(*f).pips.get(c)).sum::<u32>() >= 3)
+            .map(|c| c.short_name())
+            .collect()
+    };
+    let rated = crabomination::selfplay::rated_sealed_build(&pool, 16, 0x5EA1);
+    let mut decks: Vec<(String, Vec<Factory>)> = vec![
+        ("rated".into(), rated.clone()),
+        ("rated_value".into(), crabomination::selfplay::deck_value_build(&pool, 16, 0x5EA1, &dv, 3, true)),
+        ("policy_greedy".into(), policy.build(&pool, None)),
+        ("policy_value".into(), policy.build_valued(&pool, &dv, 16, &mut StdRng::seed_from_u64(3))),
+    ];
+    for seed in 1..=4u64 {
+        decks.push((format!("rated_seed{seed}"), crabomination::selfplay::rated_sealed_build(&pool, 16, seed)));
+    }
+    for l in arg("--lists").map(|s| s.split(',').map(str::to_string).collect::<Vec<_>>()).unwrap_or_default() {
+        let stem = std::path::Path::new(&l).file_stem().unwrap().to_string_lossy().to_string();
+        decks.push((format!("list_{stem}"), read_list(&l).0));
+    }
+    std::fs::create_dir_all(out).unwrap();
+    let rated_spells: Vec<&str> = rated.iter().filter(|f| !is_land(**f)).map(|f| name(*f)).collect();
+    println!("\n{:<22} {:>6} {:>6} {:>5} {:>5}  colours  vs rated (+ in, - out)", "deck", "value", "spells", "lands", "cards");
+    for (label, d) in &decks {
+        let sp: Vec<&str> = d.iter().filter(|f| !is_land(**f)).map(|f| name(*f)).collect();
+        let mut plus: Vec<&str> = sp.clone();
+        let mut minus: Vec<&str> = Vec::new();
+        for r in &rated_spells {
+            match plus.iter().position(|x| x == r) {
+                Some(i) => {
+                    plus.swap_remove(i);
+                }
+                None => minus.push(r),
+            }
+        }
+        println!("{label:<22} {:>6.3} {:>6} {:>5} {:>5}  {:<7}  +{plus:?} -{minus:?}", dv.value(d), sp.len(), d.len() - sp.len(), d.len(), colors(d));
+        let mut text = String::new();
+        let mut seen: Vec<(&str, usize)> = Vec::new();
+        for f in d {
+            match seen.iter_mut().find(|e| e.0 == name(*f)) {
+                Some(e) => e.1 += 1,
+                None => seen.push((name(*f), 1)),
+            }
+        }
+        for (n, k) in seen {
+            text += &format!("{k} {n}\n");
+        }
+        std::fs::write(out.join(format!("{label}.txt")), text).unwrap();
+    }
+    println!("\npolicy greedy trace (pick, its probability, the next three):");
+    let mut deck: Vec<Factory> = Vec::new();
+    loop {
+        let st = policy.step(&pool, &deck);
+        let mut opts: Vec<(Option<Factory>, f32)> = st.cards.iter().map(|&(f, v)| (Some(f), v)).collect();
+        if let Some(v) = st.stop {
+            opts.push((None, v));
+        }
+        let m = opts.iter().map(|o| o.1).fold(f32::MIN, f32::max);
+        let z: f32 = opts.iter().map(|o| (o.1 - m).exp()).sum();
+        opts.sort_by(|a, b| b.1.total_cmp(&a.1));
+        let show = |o: &(Option<Factory>, f32)| format!("{} {:.2}", o.0.map_or("STOP", name), (o.1 - m).exp() / z);
+        println!("{:>2}. {}   | {}", deck.len() + 1, show(&opts[0]), opts[1..opts.len().min(4)].iter().map(show).collect::<Vec<_>>().join(", "));
+        match opts[0].0 {
+            Some(f) if deck.len() < crabomination::deck_policy::MAX_SPELLS => deck.push(f),
+            _ => break,
+        }
+    }
+    println!("\n200 sampled builds (temperature 1): colours, share, mean value");
+    let mut rng = StdRng::seed_from_u64(7);
+    let mut by: Vec<(String, usize, f64)> = Vec::new();
+    for _ in 0..200 {
+        let d = policy.build(&pool, Some((&mut rng, 1.0)));
+        let c = colors(&d);
+        let v = dv.value(&d);
+        match by.iter_mut().find(|e| e.0 == c) {
+            Some(e) => {
+                e.1 += 1;
+                e.2 += v;
+            }
+            None => by.push((c, 1, v)),
+        }
+    }
+    by.sort_by(|a, b| b.1.cmp(&a.1));
+    for (c, n, v) in by {
+        println!("  {c:<6} {:>5.1} %  {:.3}", n as f64 / 2.0, v / n as f64);
+    }
+}
+
 /// `--gauntlet`: each list against one fixed field of rated FRA builds.
 fn gauntlet(paths: &[String], pilot: Pilot, field_pilot: Pilot, field: usize, pairs: usize, seed: u64, threads: usize) {
     let lists: Vec<Vec<Factory>> = paths
@@ -963,6 +1077,10 @@ fn main() {
         let pilot = pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes"));
         let out = arg("--out").expect("--out FILE.tsv");
         audit_builder(pilot, num("--pools", 200), num("--field", 60), num("--pairs", 2), num("--seed", 43) as u64, threads, &out);
+        return;
+    }
+    if let Some(path) = arg("--analyze") {
+        analyze_pool(&path, std::path::Path::new(&arg("--out").expect("--analyze needs --out DIR")));
         return;
     }
     if let Some(dir) = arg("--dump-cards") {
