@@ -7872,3 +7872,46 @@ SOS 49.90 [49.69, 50.12] / 49.96 [49.76, 50.15]. 81 % of decks are
 identical (the rule only touches builds that splash), so on the FRA builds
 it changes it is worth about +1.3. G2a with it: FRA 48.73 / 49.16 (was
 48.32 / 48.86), SOS 50.15 / 49.84.
+
+**Step 3b part 2 result (2026-11-06): the loop now learns, but slowly; FRA
+G3a fails its bar again; not adopted.** The 96-pair final did what it was
+for: replacement fell from 36–37 % of FRA pools to 6.8–7.0 % (SOS 9–11 %),
+and the finalists' mean final share is 51.0–51.1 FRA / 51.8–52.3 SOS
+(the smoke's 48.5 was the old stages passing noise). Held-out play read
+(greedy vs rated, 1,000 pools x 4 pairs, ±1.0):
+
+| gen | 0 | 1 | 2 | 3 |
+|---|---|---|---|---|
+| FRA | 48.73 | 49.56 | 49.97 | **50.40** |
+| SOS | 48.90 | 49.80 | 50.06 | 49.25 |
+
+Gates on generation 3 (chosen by that FRA read, so its 50.40 is the
+winner's pick; the gate seeds are fresh):
+
+| cell (43 / 97) | FRA | SOS |
+|---|---|---|
+| **G3a** greedy vs rated | 49.53 / 49.45 (pooled 49.49; bar 50.5: **fails**) | 49.10 / 49.53 (pooled 49.32) |
+| step-2b policy + splash rule, same read (part 1) | 48.73 / 49.16 (48.95) | 50.15 / 49.84 (50.00) |
+| policy + value vs rated | 49.59 / 49.96 (49.78, fails) | 51.34 / 50.75 (+1.05) |
+
+* FRA gained +0.54 over the step-2b policy; the first step 3 gained +0.6
+  with noise labels and a splash, so this is a cleaner gain of the same
+  size, not a bigger one. SOS gave back 0.7 on the greedy read.
+* Why it is slow: 93 % of the pools' labels are still the rated build, so
+  the policy is pulled back to its teacher (overlap 0.837 FRA / 0.877 SOS,
+  unchanged from step 2b). Each generation replaces only ~550 FRA pools
+  (7 %) with decks that won ≥ 56 % over 96 pairs; a label change that
+  small fits the read's slope of ~+0.4 a generation.
+* SOS policy + value (51.05) does not beat the adopted SOS polish (rated +
+  value, 51.78 / 52.04), so there is no new candidate on either set.
+* The user's pool, re-built by generation 3 with the splash rule
+  (`.ladder/userpool/gen3b/`, same gauntlet as the case study): greedy is
+  W/G again, 51.50 (−1.34 vs rated; was WG+B at −3.51); policy + value is a
+  legal W/G + black splash with 3 Swamps, 53.59 (+0.75; was −5.69 on one
+  Swamp); the user's list stays best at 53.96.
+
+Where the line stands: imitation plus game-judged relabels gets a learned
+builder to within ~0.5 of the rated builder on FRA and to parity on SOS.
+More generations would continue at ~+0.4 each at ~40 min of racing each.
+Racing more candidates per pool would find more improvements, and those
+improvements could be the training target directly.
