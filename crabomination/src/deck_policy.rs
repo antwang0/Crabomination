@@ -241,6 +241,24 @@ impl DeckPolicy {
         deck
     }
 
+    /// The greedy build held to the two colours `pair` (and colourless
+    /// cards), with the rated land step — a race candidate per colour pair
+    /// (ML_NOTES step 3c). `None` when the pool has too few such cards to
+    /// reach [`MIN_SPELLS`].
+    pub fn build_in(&self, pool: &[CardFactory], pair: [Color; 2]) -> Option<Vec<CardFactory>> {
+        let mut want = ColorSet::empty();
+        want.insert(pair[0]);
+        want.insert(pair[1]);
+        let mut deck = Vec::new();
+        self.extend(pool, &mut deck, None, Some(want));
+        if deck.len() < MIN_SPELLS {
+            return None;
+        }
+        let lands = crate::recommend::lands_for_spells(pool, &deck, DECK_SIZE.saturating_sub(deck.len()) as u32);
+        deck.extend(lands);
+        Some(deck)
+    }
+
     /// The step-2 build, before the splash rule: [`spells`](Self::spells)
     /// and the land step alone — the control the rule was gated against.
     pub fn build_unchecked(&self, pool: &[CardFactory], sample: Option<(&mut StdRng, f32)>) -> Vec<CardFactory> {
@@ -306,5 +324,18 @@ mod tests {
         let mut rng = <StdRng as rand::SeedableRng>::seed_from_u64(5);
         let sampled = p.spells(&pool, Some((&mut rng, 1.0)));
         assert!((MIN_SPELLS..=MAX_SPELLS).contains(&sampled.len()), "a sampled build stops inside the window: {}", sampled.len());
+        // A pair build stays in its pair, or declines.
+        let mut built = 0;
+        for pair in [[Color::White, Color::Blue], [Color::Black, Color::Green], [Color::Red, Color::Green]] {
+            let mut want = ColorSet::empty();
+            want.insert(pair[0]);
+            want.insert(pair[1]);
+            if let Some(d) = p.build_in(&pool, pair) {
+                built += 1;
+                assert_eq!(d.len(), DECK_SIZE);
+                assert!(d.iter().filter(|f| !crate::cube::card_def(**f).is_land()).all(|f| fits(*f, want)), "{pair:?} build leaves its pair");
+            }
+        }
+        assert!(built > 0, "a 6-pack pool supports some colour pair");
     }
 }

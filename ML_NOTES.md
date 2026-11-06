@@ -7915,3 +7915,27 @@ builder to within ~0.5 of the rated builder on FRA and to parity on SOS.
 More generations would continue at ~+0.4 each at ~40 min of racing each.
 Racing more candidates per pool would find more improvements, and those
 improvements could be the training target directly.
+
+**Step 3c, pre-registered (2026-11-06, the user's pick of "race more
+candidates per pool"): colour-pair candidates.** Part 2's loop replaced
+7 % of FRA pools a generation, and the candidates explore little: the
+policy's samples share its colours (case study item 4), while the rated
+builder's own seeds on the user's pool differ mostly by colour pair. So
+each race adds the policy's greedy build held to each of the ten colour
+pairs (`DeckPolicy::build_in`; no splash; skipped when the pair cannot
+reach 20 spells) to the eight builds part 2 raced, and the top **three**
+screen leaders (was two) go to the 16-pair stage; the 96-pair ≥ 56 final
+is unchanged. Everything else is part 2's run: the same start (part 2's
+`ei_gen0.safetensors`, `--init-vars`), pools, seeds and 3 generations, so
+the comparison is the candidates alone. Logged: replacement rate, the
+finalists' mean final share, and how many replacements were pair builds.
+Reads: the replacement rate should rise well above 7 % (the lever this
+step pulls); the gates and bar are step 3's (G3a FRA pooled ≥ 50.5, both
+seeds > 50; policy + value alongside; SOS as a regression check), on the
+generation with the best held-out FRA read, compared with part 2's
+49.53 / 49.45.
+Smoke (250 pools, 1 generation): generation 0 reads match part 2 exactly
+(48.73 / 48.90, so the start reproduces), and pair builds were 4 of 23
+replacements. A generation costs ~2.8x part 2's (~110 min). Not the same
+run in every bit: the optimizer state starts fresh, and the race pools are
+drawn after a different number of draws.
