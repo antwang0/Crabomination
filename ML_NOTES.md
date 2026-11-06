@@ -7845,3 +7845,23 @@ What it shows about the deck net:
    curve (17 on the original pool).
 6. The user's own ordering holds: W/G ≫ W/R (+6.6 here; +9.9 against
    October's field).
+
+**Step 3b, pre-registered (2026-11-06): the two fixes the user pool
+pointed at.**
+1. *Splash rule* (`DeckPolicy::build`, ML_NOTES case study item 1): the two
+   colours with the most pips are main; off-colour cards stay only as one
+   splash colour, ≤ 3 cards of one off pip each (the rated builder's
+   `splash_cards` rule), and then get ≥ 3 sources
+   (`recommend::ensure_sources`); otherwise they are dropped and the policy
+   keeps choosing among main-colour and colourless cards. Gate on the step-2b
+   policy, `fra_card_eval --trial policy-castable` (rule vs no rule, 2,000
+   pools x 8, seeds 43 / 97), both sets: kept if FRA pools > 50 and neither
+   set's pooled interval sits below 50; G2a re-read with it.
+2. *A final confirmation* (`--final-pairs 96 --final-accept 56`): a race
+   leader that clears the 16-pair stage must also win ≥ 56 % over 96 fresh
+   pairs (SD ≈ 3.6, so a tie passes ≈ 5 % of the time there and ≈ 2 %
+   overall). The finalists' mean final share is logged: the measure of what
+   the old two stages passed. A smoke (22 finalists) averaged 48.5.
+Then step 3 again from the step-2b recipe (raw weights saved this time,
+`*_gen0.safetensors`), 3 generations of 8,000 FRA / 2,000 SOS pools, the
+splash rule in every candidate build; gates and bar as step 3.

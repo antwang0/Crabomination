@@ -1093,6 +1093,21 @@ fn assemble_lands(
     (duals, basics)
 }
 
+/// Swap main-colour basics for basics of `c` until `lands` hold at least
+/// `n` sources of it (a land counts when it can make `c`): a splash the
+/// deck-building policy takes gets the sources the rated builder's
+/// pip-share split would deny it — one basic for two one-pip cards.
+/// Each swap takes from the main colour with the most basics left.
+pub fn ensure_sources(lands: &mut [CardFactory], c: Color, n: usize, main: &[Color]) {
+    let makes = |f: &CardFactory| land_produced_colors(crate::cube::card_def(*f)).contains(c);
+    while lands.iter().filter(|f| makes(f)).count() < n {
+        let basics = |m: Color| lands.iter().filter(|f| **f as usize == basic_for(m) as usize).count();
+        let Some(h) = main.iter().copied().filter(|&m| basics(m) > 0).max_by_key(|&m| basics(m)) else { break };
+        let i = lands.iter().position(|f| *f as usize == basic_for(h) as usize).expect("counted above");
+        lands[i] = basic_for(c);
+    }
+}
+
 /// The land half of a rated build for spells chosen some other way (the
 /// deck-building policy, `crate::deck_policy`): the spells' colours (hybrid
 /// pips read as the builder reads them), on-colour duals from what the pool

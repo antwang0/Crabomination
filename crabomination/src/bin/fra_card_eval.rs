@@ -198,6 +198,9 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
             eprintln!("deck policy ({} cards) from {path}", p.cards.len());
             (p, t == "policy-value")
         });
+    // `--trial policy-castable`: the splash rule's own gate — the policy's
+    // greedy build under it against the same policy's build without it.
+    let castable_ab = arg("--trial").as_deref() == Some("policy-castable");
     let policy_value: Option<crabomination::deck_value::DeckValue> = policy.as_ref().filter(|p| p.1).map(|_| {
         let path = std::env::var("CRAB_DECK_VALUE").expect("--trial policy-value needs CRAB_DECK_VALUE");
         crabomination::deck_value::DeckValue::load(std::path::Path::new(&path)).unwrap_or_else(|e| panic!("{e}"))
@@ -241,7 +244,11 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                         crabomination::selfplay::heuristic_sealed_build_rated(pool, salt ^ 1)
                     }
                 };
-                let (old, new) = if let Some((p, _)) = &policy {
+                let (old, new) = if let Some((p, _)) = &policy
+                    && castable_ab
+                {
+                    (p.build_unchecked(&pool, None), p.build(&pool, None))
+                } else if let Some((p, _)) = &policy {
                     let built = match &policy_value {
                         Some(v) => p.build_valued(&pool, v, 16, &mut StdRng::seed_from_u64(salt ^ 3)),
                         None => p.build(&pool, None),
@@ -311,7 +318,9 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     let (wa, wb): (u32, u32) = rows.iter().fold((0, 0), |a, r| (a.0 + r.0, a.1 + r.1));
     println!(
         "{}: {mean:.2}% [{:.2}, {:.2}] pool-level 95% (n={} pools, {identical} identical decks); games {wa}-{wb} ({:.2}%)",
-        if policy_value.is_some() {
+        if castable_ab {
+            "castable vs unchecked"
+        } else if policy_value.is_some() {
             "policy+value vs rated"
         } else if policy.is_some() {
             "policy vs rated"

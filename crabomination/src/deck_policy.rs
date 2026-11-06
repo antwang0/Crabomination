@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::cube::CardFactory;
 use crate::deck_value::Layer;
+use crate::mana::{Color, ColorSet};
 
 /// The fewest spells a build may stop at; the rated builder plays 22–24.
 pub const MIN_SPELLS: usize = 20;
@@ -25,6 +26,13 @@ pub const MIN_SPELLS: usize = 20;
 pub const MAX_SPELLS: usize = 25;
 /// A deck is 40 cards.
 pub const DECK_SIZE: usize = 40;
+/// The fewest lands that make a splash colour.
+pub const SPLASH_SOURCES: usize = 3;
+
+/// Can a deck in `want` cast `f` ({G/U} needs G or U, not both)?
+fn fits(f: CardFactory, want: ColorSet) -> bool {
+    crate::cube::card_brief(f).fits(want)
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeckPolicy {
@@ -138,10 +146,20 @@ impl DeckPolicy {
 
     /// The spells of one build: greedy with `sample = None`, else each step
     /// drawn from the softmax at the given temperature.
-    pub fn spells(&self, pool: &[CardFactory], mut sample: Option<(&mut StdRng, f32)>) -> Vec<CardFactory> {
-        let mut deck: Vec<CardFactory> = Vec::new();
+    pub fn spells(&self, pool: &[CardFactory], sample: Option<(&mut StdRng, f32)>) -> Vec<CardFactory> {
+        let mut deck = Vec::new();
+        self.extend(pool, &mut deck, sample, None);
+        deck
+    }
+
+    /// Continue `deck` until the policy stops (or [`MAX_SPELLS`]), offered
+    /// only cards whose coloured pips sit inside `allowed` when given.
+    fn extend(&self, pool: &[CardFactory], deck: &mut Vec<CardFactory>, mut sample: Option<(&mut StdRng, f32)>, allowed: Option<ColorSet>) {
         while deck.len() < MAX_SPELLS {
-            let s = self.step(pool, &deck);
+            let mut s = self.step(pool, deck);
+            if let Some(a) = allowed {
+                s.cards.retain(|c| fits(c.0, a));
+            }
             if s.cards.is_empty() {
                 break;
             }
@@ -170,12 +188,62 @@ impl DeckPolicy {
             }
             deck.push(s.cards[pick].0);
         }
+    }
+
+    /// The spells of one build under the splash rule the rated builder's
+    /// `splash_cards` keeps: the two colours with the most pips are the
+    /// main colours; cards outside them stay only as **one** splash colour,
+    /// at most three cards, each with a single pip of it. Otherwise the
+    /// off-colour cards go and the policy keeps choosing among main-colour
+    /// and colourless cards. Returns the spells, the main colours and the
+    /// splash colour.
+    pub fn castable_spells(&self, pool: &[CardFactory], mut sample: Option<(&mut StdRng, f32)>) -> (Vec<CardFactory>, Vec<Color>, Option<Color>) {
+        let mut deck = self.spells(pool, sample.as_mut().map(|(r, t)| (&mut **r, *t)));
+        let mut weight: Vec<(Color, u32)> =
+            Color::ALL.into_iter().map(|c| (c, deck.iter().map(|f| crate::cube::card_brief(*f).pips.get(c)).sum())).filter(|w| w.1 > 0).collect();
+        weight.sort_by(|a, b| b.1.cmp(&a.1));
+        let main: Vec<Color> = weight.iter().take(2).map(|w| w.0).collect();
+        let main_set = main.iter().fold(ColorSet::empty(), |mut s, &c| {
+            s.insert(c);
+            s
+        });
+        let off: Vec<CardFactory> = deck.iter().copied().filter(|f| !fits(*f, main_set)).collect();
+        if off.is_empty() {
+            return (deck, main, None);
+        }
+        // The splash colour: the one off colour every off card fits with.
+        let splash = Color::ALL.into_iter().filter(|c| !main_set.contains(c)).find(|&c| {
+            let mut with = main_set;
+            with.insert(c);
+            off.iter().all(|f| fits(*f, with))
+        });
+        if let Some(c) = splash
+            && off.len() <= 3
+            && off.iter().all(|f| crate::cube::card_brief(*f).off_pips(main_set) == 1)
+        {
+            return (deck, main, Some(c));
+        }
+        deck.retain(|f| fits(*f, main_set));
+        self.extend(pool, &mut deck, sample, Some(main_set));
+        (deck, main, None)
+    }
+
+    /// A 40-card deck: [`castable_spells`](Self::castable_spells), the rated
+    /// builder's lands for them, and a splash's three sources
+    /// ([`crate::recommend::ensure_sources`]).
+    pub fn build(&self, pool: &[CardFactory], sample: Option<(&mut StdRng, f32)>) -> Vec<CardFactory> {
+        let (mut deck, main, splash) = self.castable_spells(pool, sample);
+        let mut lands = crate::recommend::lands_for_spells(pool, &deck, DECK_SIZE.saturating_sub(deck.len()) as u32);
+        if let Some(c) = splash {
+            crate::recommend::ensure_sources(&mut lands, c, SPLASH_SOURCES, &main);
+        }
+        deck.extend(lands);
         deck
     }
 
-    /// A 40-card deck: [`spells`](Self::spells), then the rated builder's
-    /// lands for them.
-    pub fn build(&self, pool: &[CardFactory], sample: Option<(&mut StdRng, f32)>) -> Vec<CardFactory> {
+    /// The step-2 build, before the splash rule: [`spells`](Self::spells)
+    /// and the land step alone — the control the rule was gated against.
+    pub fn build_unchecked(&self, pool: &[CardFactory], sample: Option<(&mut StdRng, f32)>) -> Vec<CardFactory> {
         let mut deck = self.spells(pool, sample);
         let lands = crate::recommend::lands_for_spells(pool, &deck, DECK_SIZE.saturating_sub(deck.len()) as u32);
         deck.extend(lands);
@@ -205,6 +273,18 @@ mod tests {
 
     fn zeros(o: usize, i: usize) -> Layer {
         Layer { w: vec![vec![0.0; i]; o], b: vec![0.0; o] }
+    }
+
+    /// The user's pool built a W/G deck splashing two {B} spells off one
+    /// Swamp (ML_NOTES step 3, the user-pool case study): a splash's basics
+    /// come out of the heaviest main colour until it has three sources.
+    #[test]
+    fn a_splash_gets_three_sources_from_the_heaviest_main_colour() {
+        use crate::catalog::{forest, plains, swamp};
+        let mut lands: Vec<CardFactory> = [vec![plains as CardFactory; 9], vec![forest; 6], vec![swamp]].concat();
+        crate::recommend::ensure_sources(&mut lands, Color::Black, SPLASH_SOURCES, &[Color::White, Color::Green]);
+        let n = |b: CardFactory| lands.iter().filter(|f| **f as usize == b as usize).count();
+        assert_eq!((n(plains), n(forest), n(swamp)), (7, 6, 3));
     }
 
     /// The stop window and the land step, on a policy with no opinion:

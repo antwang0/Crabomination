@@ -61,6 +61,12 @@ struct Args {
     race_fra: usize,
     race_sos: usize,
     gen_steps: usize,
+    /// Step 3b: the final confirmation a replacement must also pass.
+    final_pairs: usize,
+    final_accept: f64,
+    /// Start step 3 from these raw weights (`*_gen0.safetensors`), skipping
+    /// the step-2b recipe.
+    init_vars: Option<std::path::PathBuf>,
 }
 
 fn parse_args() -> Args {
@@ -84,6 +90,9 @@ fn parse_args() -> Args {
         race_fra: num("--race-fra", 8_000),
         race_sos: num("--race-sos", 3_000),
         gen_steps: num("--gen-steps", 10_000),
+        final_pairs: num("--final-pairs", 0),
+        final_accept: get("--final-accept").map_or(56.0, |v| v.parse().expect("--final-accept")),
+        init_vars: get("--init-vars").map(Into::into),
     }
 }
 
@@ -254,9 +263,21 @@ fn deck_key(d: &[CardFactory]) -> Vec<usize> {
 /// for the top two — and the confirmed leader replaces it at ≥ `accept` %.
 /// Returns, per set, (rows raced, rows replaced, mean confirmed share of
 /// the replacements).
-fn race_generation(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards, seed: u64, threads: usize, accept: f64) -> Vec<(SealedSet, usize, usize, f64)> {
+/// With `final_pairs > 0` (step 3b) the leader must also clear
+/// `final_accept` % over that many fresh pairs; the last tuple element is
+/// then the mean final share of every leader that reached it — near 50 if
+/// the first two stages pass ties.
+fn race_generation(
+    policy: &DeckPolicy,
+    rows: &[&PoolRow],
+    cards: &Cards,
+    seed: u64,
+    threads: usize,
+    accept: f64,
+    final_stage: (usize, f64),
+) -> Vec<(SealedSet, usize, usize, f64, usize, f64)> {
     let next = AtomicUsize::new(0);
-    let out: Mutex<Vec<(SealedSet, Option<f64>)>> = Mutex::new(Vec::new());
+    let out: Mutex<Vec<(SealedSet, Option<f64>, Option<f64>)>> = Mutex::new(Vec::new());
     let t0 = std::time::Instant::now();
     std::thread::scope(|s| {
         for _ in 0..threads {
@@ -302,13 +323,23 @@ fn race_generation(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards, seed: 
                         won = Some((x, i));
                     }
                 }
+                let mut finalist: Option<f64> = None;
+                if let Some((_, i)) = won
+                    && final_stage.0 > 0
+                {
+                    let t = crabomination::recommend::simulate_match_pairs_piloted(&cands[i], &reference, final_stage.0, [pilot, pilot], 50_000, salt ^ 0xF1A1);
+                    finalist = share(&t);
+                    if finalist.is_none_or(|x| x < final_stage.1) {
+                        won = None;
+                    }
+                }
                 if let Some((_, i)) = won {
                     let spells: Vec<CardFactory> = cands[i].iter().copied().filter(|f| !crabomination::cube::card_def(*f).is_land()).collect();
                     *row.target.write().unwrap() = indices(&spells, cards);
                     *row.best.write().unwrap() = cands[i].clone();
                 }
                 let mut o = out.lock().unwrap();
-                o.push((row.set, won.map(|w| w.0)));
+                o.push((row.set, won.map(|w| w.0), finalist));
                 if o.len().is_multiple_of(1000) {
                     eprintln!("  raced {}/{} pools, {:.0}s", o.len(), rows.len(), t0.elapsed().as_secs_f64());
                 }
@@ -319,9 +350,10 @@ fn race_generation(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards, seed: 
     [SealedSet::Fra, SealedSet::Sos]
         .into_iter()
         .map(|set| {
-            let mine: Vec<&(SealedSet, Option<f64>)> = out.iter().filter(|r| r.0 == set).collect();
+            let mine: Vec<&(SealedSet, Option<f64>, Option<f64>)> = out.iter().filter(|r| r.0 == set).collect();
             let won: Vec<f64> = mine.iter().filter_map(|r| r.1).collect();
-            (set, mine.len(), won.len(), won.iter().sum::<f64>() / won.len().max(1) as f64)
+            let fin: Vec<f64> = mine.iter().filter_map(|r| r.2).collect();
+            (set, mine.len(), won.len(), won.iter().sum::<f64>() / won.len().max(1) as f64, fin.len(), fin.iter().sum::<f64>() / fin.len().max(1) as f64)
         })
         .collect()
 }
@@ -701,9 +733,18 @@ fn main() -> CResult<()> {
     let mut dagger_states: Vec<State> = Vec::new();
     let mut best_vars: Vec<Tensor> = Vec::new();
     let t1 = std::time::Instant::now();
-    let steps = if args.load.is_some() { 0 } else { args.steps };
+    if let Some(path) = &args.init_vars {
+        let saved = candle_core::safetensors::load(path, &dev)?;
+        for (k, v) in model.vars().iter().enumerate() {
+            v.set(saved.get(&format!("v{k}")).unwrap_or_else(|| panic!("{}: no v{k}", path.display())))?;
+        }
+        best = Some(export(&model, &cards)?);
+        best_vars = model.vars().iter().map(|v| v.as_tensor().copy()).collect::<CResult<_>>()?;
+        eprintln!("initialised from {}", path.display());
+    }
+    let steps = if args.load.is_some() || args.init_vars.is_some() { 0 } else { args.steps };
     for step in 0..=steps {
-        if args.load.is_some() {
+        if args.load.is_some() || args.init_vars.is_some() {
             break;
         }
         if step % 500 == 0 || step == steps {
@@ -770,6 +811,8 @@ fn main() -> CResult<()> {
         let p0 = best.clone().expect("evaluated at step 0");
         report(0, &p0);
         let stem = args.export.with_extension("");
+        let named: HashMap<String, Tensor> = best_vars.iter().enumerate().map(|(k, t)| (format!("v{k}"), t.clone())).collect();
+        candle_core::safetensors::save(&named, format!("{}_gen0.safetensors", stem.display()))?;
         p0.save(&std::path::PathBuf::from(format!("{}_gen0.json", stem.display()))).unwrap_or_else(|e| panic!("{e}"));
         for g in 1..=args.expert_iter {
             let p = export(&model, &cards)?;
@@ -780,8 +823,13 @@ fn main() -> CResult<()> {
                 mine.shuffle(&mut rng);
                 race.extend(mine.into_iter().take(n));
             }
-            for (set, raced, won, mean) in race_generation(&p, &race, &cards, args.seed ^ (g as u64) << 32, args.threads, 55.0) {
+            for (set, raced, won, mean, fin, fin_mean) in
+                race_generation(&p, &race, &cards, args.seed ^ (g as u64) << 32, args.threads, 55.0, (args.final_pairs, args.final_accept))
+            {
                 println!("gen {g}: {set:?} raced {raced} pools, replaced {won} ({:.1} %), replacements' confirmed share {mean:.2} ({:.0}s)", 100.0 * won as f64 / raced.max(1) as f64, tg.elapsed().as_secs_f64());
+                if args.final_pairs > 0 {
+                    println!("gen {g}: {set:?} {fin} leaders reached the {}-pair final; their mean final share {fin_mean:.2}", args.final_pairs);
+                }
             }
             let improved: Vec<&PoolRow> = train.iter().copied().filter(|r| *r.best.read().unwrap() != r.teacher).collect();
             dagger_states.clear();
