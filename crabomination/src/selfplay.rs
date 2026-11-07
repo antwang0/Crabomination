@@ -576,8 +576,12 @@ pub fn best_build_v3_in_colors(
 /// **60.88 % [60.18, 61.58] / 60.58 % [59.89, 61.26]** of SOS pools
 /// (`--set sos --pilot dflt`).
 ///
-/// **An SOS pool then gets the learned polish** ([`SOS_VALUE_POLISH`]): at
-/// most three swaps under the step-1 deck value on top of the rated build.
+/// **A pool the learned builder covers is built by it instead**
+/// ([`LEARNED_SEALED_BUILDER`]): the add-one-card policy proposes its greedy
+/// build, `n` temperature-1 samples and a build per colour pair, and the
+/// same-pool deck value picks one ([`DeckPolicy::build_valued`]). A request
+/// with a colour restriction keeps the rated build in those colours — the
+/// policy's candidates choose their own.
 pub fn sealed_opponent_build(
     pool: &[CardFactory],
     n: usize,
@@ -585,27 +589,52 @@ pub fn sealed_opponent_build(
     colors: ColorSet,
 ) -> Vec<CardFactory> {
     if crate::card_ratings::rates_pool(pool) {
-        if SOS_VALUE_POLISH && crate::card_ratings::sos_pool(pool) {
-            return deck_value_build_in_colors(pool, n, seed, colors, sos_deck_value(), 3, true);
+        if LEARNED_SEALED_BUILDER && colors.is_empty() && sealed_deck_policy().covers(pool) {
+            let value = if crate::card_ratings::sos_pool(pool) { sos_deck_value() } else { fra_deck_value() };
+            return sealed_deck_policy().build_valued(pool, value, n, &mut StdRng::seed_from_u64(seed ^ 3));
         }
         return rated_sealed_build_in_colors(pool, n, seed, colors);
     }
     v3_opponent_build(pool, n, seed, colors)
 }
 
-/// Does the SOS sealed opponent's rated build get the learned deck value's
-/// polish (≤ 3 swaps after its own)? **On**, adopted 2026-11-05 at the
-/// user's call (ML_NOTES "A deck net that builds decks", step 1b): against
-/// the rated builder as it stood (`fra_card_eval --set sos --ab --best 16
-/// --trial deckvalue-after`, 2,000 pools x 8 pairs, `--pilot dflt`, seeds
-/// 43 / 97, pool-level) **51.78 % [51.45, 52.12] / 52.04 % [51.72, 52.37]**.
-/// FRA's value failed the same gate (49.79 / 49.57), so FRA pools keep the
-/// rated build.
-pub const SOS_VALUE_POLISH: bool = true;
+/// Do FRA and SOS sealed opponents build with the learned policy and the
+/// same-pool deck value? **On**, adopted 2026-11-07 at the user's call
+/// (ML_NOTES "A deck net that builds decks", step 5). Against the rated
+/// best-of-16 builder on the same pool (`fra_card_eval --ab --best 16
+/// --trial policy-value`, 2,000 pools x 8 pairs, pool-level, seeds 43 / 97):
+/// FRA (`--pilot fra-fixes`) **51.41 % [50.86, 51.96] / 51.84 % [51.30,
+/// 52.39]**, SOS (`--set sos --pilot dflt`) **52.78 % [52.22, 53.34] /
+/// 52.75 % [52.21, 53.29]**. The step-1 value as the selector over the
+/// same candidates read 50.37 / 50.67 and 51.68 / 51.98; the policy's
+/// greedy build alone 49.50 / 49.84 and 49.93 / 50.37. It replaces the
+/// step-1b SOS polish adopted 2026-11-05 (51.78 / 52.04 by the same gate).
+pub const LEARNED_SEALED_BUILDER: bool = true;
 
-/// The SOS deck value (arm A3, λ 100, seed 1 — the gated export), compiled
-/// in like the rating tables it refines.
-fn sos_deck_value() -> &'static crate::deck_value::DeckValue {
+/// The add-one-card deck policy (width 256, DAgger imitation then one
+/// generation on race labels — step 4's `cap256_gen1`), compiled in like
+/// the rating tables it replaces. It knows both sheets.
+pub fn sealed_deck_policy() -> &'static crate::deck_policy::DeckPolicy {
+    static P: std::sync::OnceLock<crate::deck_policy::DeckPolicy> = std::sync::OnceLock::new();
+    P.get_or_init(|| {
+        crate::deck_policy::DeckPolicy::from_json(include_str!("../../nets/deck-policy.json"))
+            .expect("the compiled deck policy parses")
+    })
+}
+
+/// The FRA same-pool deck value (step 5, arm A2, λ 100, seed 1 — the gated
+/// export): which of one pool's builds wins, learned from the race.
+pub fn fra_deck_value() -> &'static crate::deck_value::DeckValue {
+    static DV: std::sync::OnceLock<crate::deck_value::DeckValue> = std::sync::OnceLock::new();
+    DV.get_or_init(|| {
+        crate::deck_value::DeckValue::from_json(include_str!("../../nets/deck-value-fra.json"))
+            .expect("the compiled FRA deck value parses")
+    })
+}
+
+/// The SOS same-pool deck value (step 5, arm A3, λ 10, seed 1 — the gated
+/// export).
+pub fn sos_deck_value() -> &'static crate::deck_value::DeckValue {
     static DV: std::sync::OnceLock<crate::deck_value::DeckValue> = std::sync::OnceLock::new();
     DV.get_or_init(|| {
         crate::deck_value::DeckValue::from_json(include_str!("../../nets/deck-value-sos.json"))
@@ -1302,23 +1331,31 @@ mod tests {
     /// curve work the assembly filled strictly by score, and a pool whose
     /// best cards were expensive produced an opponent that did nothing
     /// before turn four.
-    /// The adoption is the gated arm and nothing else: an SOS opponent is
-    /// the rated build with the learned value's swaps on top, built exactly
-    /// as `fra_card_eval --trial deckvalue-after` built it; an FRA pool keeps
-    /// the plain rated build.
+    /// The adoption is the gated arm and nothing else: an FRA or SOS
+    /// opponent is the compiled policy's valued build under its set's
+    /// same-pool value, exactly as `fra_card_eval --trial policy-value`
+    /// built it (the policy knows every card of both sheets); a colour
+    /// restriction keeps the rated build in those colours.
     #[test]
-    fn the_sos_opponent_is_the_gated_value_polish_and_fra_is_untouched() {
+    fn the_sealed_opponent_is_the_gated_policy_and_value_build() {
+        use crate::fra_mode::SealedSet;
         let mut changed = 0;
-        for seed in 0..12u64 {
-            let pool = sealed_pool_of(crate::fra_mode::SealedSet::Sos, seed, SEALED_PACKS);
-            let deck = sealed_opponent_build(&pool, 16, seed, ColorSet::empty());
-            assert_eq!(deck, deck_value_build(&pool, 16, seed, sos_deck_value(), 3, true));
-            assert_eq!(deck.len(), 40);
-            changed += usize::from(deck != rated_sealed_build(&pool, 16, seed));
-            let fra = sealed_pool_of(crate::fra_mode::SealedSet::Fra, seed, SEALED_PACKS);
-            assert_eq!(sealed_opponent_build(&fra, 16, seed, ColorSet::empty()), rated_sealed_build(&fra, 16, seed));
+        for (set, value) in [(SealedSet::Fra, fra_deck_value()), (SealedSet::Sos, sos_deck_value())] {
+            for seed in 0..12u64 {
+                let pool = sealed_pool_of(set, seed, SEALED_PACKS);
+                assert!(sealed_deck_policy().covers(&pool), "{set:?} pool {seed}");
+                let deck = sealed_opponent_build(&pool, 16, seed, ColorSet::empty());
+                assert_eq!(deck, sealed_deck_policy().build_valued(&pool, value, 16, &mut StdRng::seed_from_u64(seed ^ 3)));
+                assert_eq!(deck.len(), 40);
+                changed += usize::from(deck != rated_sealed_build(&pool, 16, seed));
+            }
         }
-        assert!(changed > 0, "the value moves some SOS decks");
+        assert!(changed > 12, "the learned builder moves most decks, not {changed} of 24");
+        let pool = sealed_pool_of(SealedSet::Fra, 3, SEALED_PACKS);
+        let mut wg = ColorSet::empty();
+        wg.insert(crate::mana::Color::White);
+        wg.insert(crate::mana::Color::Green);
+        assert_eq!(sealed_opponent_build(&pool, 16, 3, wg), rated_sealed_build_in_colors(&pool, 16, 3, wg));
     }
 
     #[test]

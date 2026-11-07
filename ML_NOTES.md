@@ -8190,3 +8190,36 @@ the width-1024 policy under the same value (five minutes per eight cells);
 by its candidate set); (c) the loop at width 256 with the value screening
 the race, so the budget goes to the top candidates; (d) the features-only
 ablation of the value.
+
+**Step 5 confirmation and adoption (2026-11-07).** Fresh seeds 11 / 29,
+the same `--trial policy-value` cells, the new values under the width-256
+and the width-1024 policy (unit `crab-deck5c`, 13 min for eight cells):
+
+| set | policy | seed 11 | seed 29 | pooled |
+|---|---|---|---|---|
+| FRA | 256 | 51.61 [51.07, 52.15] | 51.03 [50.49, 51.57] | 51.32 |
+| FRA | 1024 | 51.50 [50.96, 52.05] | 51.25 [50.72, 51.79] | 51.38 |
+| SOS | 256 | 52.50 [51.95, 53.06] | 52.85 [52.30, 53.41] | 52.67 |
+| SOS | 1024 | 52.80 [52.23, 53.36] | 52.77 [52.23, 53.32] | 52.78 |
+
+Over four seeds the width-256 builder reads **FRA 51.47** (51.41 / 51.84 /
+51.61 / 51.03, every interval above 50) and **SOS 52.72**. The width-1024
+policy under the same value is equal (+0.06 / +0.11): the selector is the
+lever, not the policy's width, so 256 stays.
+
+**ADOPTED (the user's call, 2026-11-07).** `sealed_opponent_build` builds a
+rated pool the policy covers with `DeckPolicy::build_valued` — the greedy
+build, 16 temperature-1 samples and the ten colour-pair builds, the set's
+same-pool value choosing — compiled in from `nets/deck-policy.json`
+(step 4's `cap256_gen1`, 4.2 MB) and `nets/deck-value-fra.json` /
+`nets/deck-value-sos.json` (A2 λ 100 / A3 λ 10). It replaces the rated
+build on FRA and the step-1b polish on SOS (`SOS_VALUE_POLISH` retired;
+the SOS value file is now the step-5 one). A colour-restricted request
+(the client's opponent-colour handicap) keeps the rated build in those
+colours, and a pool with a card the policy never saw keeps the rated
+build; `LEARNED_SEALED_BUILDER` is the switch. The A/B harness's rated
+control is `rated_sealed_build` directly, so every gate "against rated"
+measures what it did. Test
+`the_sealed_opponent_is_the_gated_policy_and_value_build` pins the
+production deck to the gated arm. The ladder's `CRAB_SEALED_BUILDER=client`
+now gives this build; default fields are unchanged.

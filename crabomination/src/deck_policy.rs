@@ -85,9 +85,32 @@ impl DeckPolicy {
 
     pub fn load(path: &std::path::Path) -> Result<Self, String> {
         let text = std::fs::read_to_string(path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let mut p: Self = serde_json::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+        Self::from_json(&text).map_err(|e| format!("{}: {e}", path.display()))
+    }
+
+    /// A policy from its exported JSON (a compiled-in net, or a file's text).
+    pub fn from_json(text: &str) -> Result<Self, String> {
+        let mut p: Self = serde_json::from_str(text).map_err(|e| e.to_string())?;
         p.reindex();
         Ok(p)
+    }
+
+    /// Does the policy know every nonland card in `pool`? A card it never
+    /// trained on is not offered by [`step`](Self::step), so a pool outside
+    /// its sheets would be built from whatever it recognises; the sealed
+    /// opponent falls back to the rated build instead.
+    pub fn covers(&self, pool: &[CardFactory]) -> bool {
+        let mut spells = 0usize;
+        for &f in pool {
+            if crate::cube::card_def(f).is_land() {
+                continue;
+            }
+            spells += 1;
+            if self.known(f).is_none() {
+                return false;
+            }
+        }
+        spells > 0
     }
 
     pub fn save(&self, path: &std::path::Path) -> Result<(), String> {

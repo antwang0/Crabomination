@@ -589,9 +589,9 @@ pub fn rates_pool(pool: &[crate::cube::CardFactory]) -> bool {
 }
 
 /// Is this a Secrets of Strixhaven pool: are at least half its nonland
-/// cards on [`SOS_SIM_VALUE`]? The sealed opponent's learned polish
-/// ([`crate::selfplay::sealed_opponent_build`]) is SOS's alone — FRA's
-/// failed its gate.
+/// cards on [`SOS_SIM_VALUE`]? The sealed opponent's learned builder
+/// ([`crate::selfplay::sealed_opponent_build`]) picks its same-pool deck
+/// value by set: SOS's here, FRA's otherwise.
 pub fn sos_pool(pool: &[crate::cube::CardFactory]) -> bool {
     static NAMES: std::sync::OnceLock<crate::fxhash::HashSet<&'static str>> = std::sync::OnceLock::new();
     let names = NAMES.get_or_init(|| SOS_SIM_VALUE.iter().map(|&(n, _)| n).collect());
