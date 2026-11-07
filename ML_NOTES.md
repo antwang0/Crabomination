@@ -7969,3 +7969,37 @@ and two rounds of game-judged expert iteration give a learned builder
 generations (~+0.4 each, part 2) nor more candidates (step 3c) reaches the
 50.5 bar. The production builders stay as they are: rated on FRA, rated +
 the step-1b value polish on SOS.
+
+**Step 4, pre-registered (2026-11-07, the user's question "are you sure we
+don't just need a larger model?"): capacity was never tested.** The policy
+is small: a 32-wide learned embedding joined to 59 hand features, encoded
+to 64, and everything after (pool and deck means, state, scoring) 64 wide.
+The user's guess is that 32 is far too small; since the encoder squeezes
+any embedding to the hidden width, the sweep scales both together.
+1. *Fit read* (`fit_read`): one generation of step 3c's run (same start,
+   width 64), logging on up to 1,000 relabelled train pools the greedy
+   build's overlap with their new best deck and with the teacher's, before
+   and after the generation's training. If it stays near the teacher's,
+   the policy does not absorb its own labels (capacity or training budget);
+   if it moves to the new best, the labels are learned and the held-out
+   flatness is generalisation. The labels are saved (`--dump-best`,
+   `.ladder/deck4/best_gen1.tsv`) for reuse without racing.
+2. *Size sweep* on the step-2b recipe (imitation + DAgger, 30,000 steps,
+   lr 1e-3): embedding = hidden = **1024**, then **256** (the stop head
+   half the hidden width). Read: held-out greedy overlap and same-colour
+   rate against step 2b's 0.832 / 0.581 FRA, 0.888 / 0.762 SOS, and G2a
+   (greedy vs rated, 2,000 pools x 8, seeds 43 / 97) against step 2b's
+   with the splash rule, FRA 48.73 / 49.16, SOS 50.15 / 49.84. Bigger is
+   "better" on FRA if pooled G2a gains ≥ +0.5 (the size of step 3's whole
+   gain) with both seeds up.
+3. *Training budget for the relabelled pools* (longer generations, full
+   learning rate, heavier weight on relabelled pools), on the saved labels,
+   at the best size: run if 1 shows the labels are not absorbed or 2 finds
+   a size that helps.
+To make 1024 affordable, `cand1` is split by its input blocks in the
+trainer and the engine (`DeckPolicy::step` caches each card's block;
+exact, test `the_split_candidate_layer_matches_the_full_product`): the
+full product per candidate costs `K` (~80) times more. Probe: 0.21 s a
+step at 256, 0.87 s at 1024 (7+ hours for 30,000 steps); at step 500 the
+held-out loss is 0.337 (64), 0.191 (256), 0.133 (1024), greedy overlap
+0.628 / 0.633 / 0.601.

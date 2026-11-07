@@ -36,9 +36,10 @@ use rand::seq::SliceRandom;
 use rand::{RngExt, SeedableRng};
 
 const FEATS: usize = 59;
+/// The default widths (`--emb`, `--hidden`): a card's learned embedding,
+/// and everything after the encoder (card vectors, state, scoring).
 const EMB: usize = 32;
 const H: usize = 64;
-const STATE_IN: usize = 2 * H + 16 + 1;
 
 struct Args {
     pools: usize,
@@ -68,6 +69,13 @@ struct Args {
     /// confirm this many screen leaders.
     pair_cands: bool,
     confirm_top: usize,
+    /// Step 4 (ML_NOTES): model widths.
+    emb: usize,
+    hidden: usize,
+    /// Write each generation's replaced decks here / start from such a file
+    /// (the race's labels, reusable without racing again).
+    dump_best: Option<std::path::PathBuf>,
+    load_best: Option<std::path::PathBuf>,
     /// Start step 3 from these raw weights (`*_gen0.safetensors`), skipping
     /// the step-2b recipe.
     init_vars: Option<std::path::PathBuf>,
@@ -99,6 +107,10 @@ fn parse_args() -> Args {
         init_vars: get("--init-vars").map(Into::into),
         pair_cands: a.iter().any(|x| x == "--pair-cands"),
         confirm_top: num("--confirm-top", 2),
+        emb: num("--emb", EMB),
+        hidden: num("--hidden", H),
+        dump_best: get("--dump-best").map(Into::into),
+        load_best: get("--load-best").map(Into::into),
     }
 }
 
@@ -514,10 +526,16 @@ fn roll_states<'a>(policy: &DeckPolicy, rows: &[&'a PoolRow], cards: &Cards, see
 /// Mean greedy spell overlap with the teacher over `rows` — the step-2b
 /// checkpoint metric.
 fn greedy_overlap(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards) -> f64 {
+    overlap_to(policy, rows, cards, |r| r.teacher_target(cards))
+}
+
+/// The greedy build's spell overlap with a per-row target (card indices).
+fn overlap_to(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards, target: impl Fn(&PoolRow) -> Vec<usize>) -> f64 {
     let total: f64 = rows
         .iter()
         .map(|r| {
-            let mut left = r.teacher_target(cards);
+            let want = target(r);
+            let mut left = want.clone();
             let mut hit = 0usize;
             for i in indices(&policy.spells(&r.pool, None), cards) {
                 if let Some(p) = left.iter().position(|&x| x == i) {
@@ -525,10 +543,60 @@ fn greedy_overlap(policy: &DeckPolicy, rows: &[&PoolRow], cards: &Cards) -> f64 
                     hit += 1;
                 }
             }
-            hit as f64 / r.teacher_target(cards).len().max(1) as f64
+            hit as f64 / want.len().max(1) as f64
         })
         .sum();
     total / rows.len().max(1) as f64
+}
+
+/// Step 4's fit read: on (up to 1,000 of) the train pools whose best deck
+/// the races replaced, the greedy build's overlap with that deck and with
+/// the teacher's. A policy that absorbs its labels moves toward the first.
+fn fit_read(policy: &DeckPolicy, improved: &[&PoolRow], cards: &Cards) -> (f64, f64) {
+    let rows: Vec<&PoolRow> = improved.iter().copied().take(1000).collect();
+    (overlap_to(policy, &rows, cards, |r| r.target.read().unwrap().clone()), overlap_to(policy, &rows, cards, |r| r.teacher_target(cards)))
+}
+
+/// The replaced decks of the train pools, one per line: set, pool index,
+/// then the deck's 40 card names, tab-separated — the races' labels,
+/// reusable by `--load-best`.
+fn dump_best(path: &std::path::Path, train: &[&PoolRow]) {
+    let mut text = String::new();
+    for r in train.iter().filter(|r| *r.best.read().unwrap() != r.teacher) {
+        let names: Vec<&str> = r.best.read().unwrap().iter().map(|f| crabomination::cube::card_def(*f).name).collect();
+        text.push_str(&format!("{:?}\t{}\t{}\n", r.set, r.index, names.join("\t")));
+    }
+    std::fs::write(path, text).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+}
+
+/// Loads `dump_best`'s file into the rows; returns how many it replaced.
+fn load_best(path: &std::path::Path, train: &[&PoolRow], cards: &Cards) -> usize {
+    let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let rows = text.lines().map(|l| {
+        let mut f = l.split('\t');
+        let set = f.next().expect("set").to_string();
+        let index: usize = f.next().and_then(|x| x.parse().ok()).expect("pool index");
+        (set, index, f.map(str::to_string).collect::<Vec<String>>())
+    });
+    let by_key: HashMap<(String, usize), &PoolRow> = train.iter().map(|r| ((format!("{:?}", r.set), r.index), *r)).collect();
+    let mut n = 0;
+    for (set, index, names) in rows {
+        let Some(row) = by_key.get(&(set.clone(), index)) else { panic!("{set} pool {index} is not a train pool here") };
+        let name_of = |f: &CardFactory| crabomination::cube::card_def(*f).name;
+        let deck: Vec<CardFactory> = names
+            .iter()
+            .map(|nm| {
+                *row.pool.iter().chain(&row.teacher).find(|f| name_of(f) == nm).unwrap_or_else(|| {
+                    train.iter().flat_map(|r| r.teacher.iter()).find(|f| name_of(f) == nm).unwrap_or_else(|| panic!("{nm}: not in pool {index}"))
+                })
+            })
+            .collect();
+        let spells: Vec<CardFactory> = deck.iter().copied().filter(|f| !crabomination::cube::card_def(*f).is_land()).collect();
+        *row.target.write().unwrap() = indices(&spells, cards);
+        *row.best.write().unwrap() = deck;
+        n += 1;
+    }
+    n
 }
 
 /// A batch's tensors; candidates padded to the batch's widest pool.
@@ -617,6 +685,8 @@ impl Lin {
 }
 
 struct Model {
+    /// The hidden width.
+    h: usize,
     emb: Var,
     feats: Tensor,
     enc: Lin,
@@ -645,10 +715,16 @@ impl Model {
         let pool = bt.pool_counts.matmul(&x)?.broadcast_div(&bt.pool_counts.sum_keepdim(1)?.maximum(1f32)?)?;
         let deck = bt.deck_counts.matmul(&x)?.broadcast_div(&bt.deck_counts.sum_keepdim(1)?.maximum(1f32)?)?;
         let u = self.state.fwd(&Tensor::cat(&[&pool, &deck, &bt.dfeats], 1)?)?.relu()?;
-        let xc = x.index_select(&bt.cand_idx, 0)?.reshape((bt.b, bt.k, H))?;
-        let ub = u.unsqueeze(1)?.broadcast_as((bt.b, bt.k, H))?;
-        let cin = Tensor::cat(&[&xc, &ub, &bt.cand_extra], 2)?.reshape((bt.b * bt.k, 2 * H + 2))?;
-        let s = self.cand2.fwd(&self.cand1.fwd(&cin)?.relu()?)?.reshape((bt.b, bt.k))?;
+        // `cand1` over `[card, state, extra]`, split by its input blocks so
+        // the card part is one product per card and the state part one per
+        // state (exact; the full product per candidate costs `K` times more).
+        let h = self.h;
+        let w = self.cand1.w.as_tensor();
+        let xa = x.matmul(&w.narrow(1, 0, h)?.t()?)?.index_select(&bt.cand_idx, 0)?.reshape((bt.b, bt.k, h))?;
+        let ua = u.matmul(&w.narrow(1, h, h)?.t()?)?.unsqueeze(1)?;
+        let ea = bt.cand_extra.reshape((bt.b * bt.k, 2))?.matmul(&w.narrow(1, 2 * h, 2)?.t()?)?.reshape((bt.b, bt.k, h))?;
+        let hid = xa.broadcast_add(&ua)?.add(&ea)?.broadcast_add(self.cand1.b.as_tensor())?.relu()?;
+        let s = self.cand2.fwd(&hid.reshape((bt.b * bt.k, h))?)?.reshape((bt.b, bt.k))?;
         let stop = self.stop2.fwd(&self.stop1.fwd(&u)?.relu()?)?;
         let l = Tensor::cat(&[&s, &stop], 1)?;
         l + ((&bt.valid - 1.0)? * 1e9)?
@@ -732,15 +808,20 @@ fn main() -> CResult<()> {
     );
 
     let mut rng = StdRng::seed_from_u64(args.seed ^ 0xDEC_B01);
+    let (e, h) = (args.emb, args.hidden);
+    // The stop head's width: 32 at the step-2 size, half the hidden width above it.
+    let sh = (h / 2).max(32);
+    eprintln!("model: embedding {e}, hidden {h}, stop head {sh}");
     let model = Model {
-        emb: Var::from_tensor(&Tensor::from_vec((0..c * EMB).map(|_| rng.random_range(-0.17f32..0.17)).collect::<Vec<_>>(), (c, EMB), &dev)?)?,
+        h,
+        emb: Var::from_tensor(&Tensor::from_vec((0..c * e).map(|_| rng.random_range(-0.17f32..0.17)).collect::<Vec<_>>(), (c, e), &dev)?)?,
         feats: Tensor::from_vec(cards.feats.clone(), (c, FEATS), &dev)?,
-        enc: Lin::new(EMB + FEATS, H, &mut rng, &dev)?,
-        state: Lin::new(STATE_IN, H, &mut rng, &dev)?,
-        cand1: Lin::new(2 * H + 2, H, &mut rng, &dev)?,
-        cand2: Lin::new(H, 1, &mut rng, &dev)?,
-        stop1: Lin::new(H, 32, &mut rng, &dev)?,
-        stop2: Lin::new(32, 1, &mut rng, &dev)?,
+        enc: Lin::new(e + FEATS, h, &mut rng, &dev)?,
+        state: Lin::new(2 * h + 16 + 1, h, &mut rng, &dev)?,
+        cand1: Lin::new(2 * h + 2, h, &mut rng, &dev)?,
+        cand2: Lin::new(h, 1, &mut rng, &dev)?,
+        stop1: Lin::new(h, sh, &mut rng, &dev)?,
+        stop2: Lin::new(sh, 1, &mut rng, &dev)?,
     };
     let mut opt = AdamW::new(model.vars(), ParamsAdamW { lr: args.lr, weight_decay: 1e-4, ..Default::default() })?;
     let mut hrng = StdRng::seed_from_u64(0x401D);
@@ -847,6 +928,9 @@ fn main() -> CResult<()> {
         let named: HashMap<String, Tensor> = best_vars.iter().enumerate().map(|(k, t)| (format!("v{k}"), t.clone())).collect();
         candle_core::safetensors::save(&named, format!("{}_gen0.safetensors", stem.display()))?;
         p0.save(&std::path::PathBuf::from(format!("{}_gen0.json", stem.display()))).unwrap_or_else(|e| panic!("{e}"));
+        if let Some(path) = &args.load_best {
+            eprintln!("loaded {} replaced decks from {}", load_best(path, &train, &cards), path.display());
+        }
         for g in 1..=args.expert_iter {
             let p = export(&model, &cards)?;
             let tg = std::time::Instant::now();
@@ -875,7 +959,11 @@ fn main() -> CResult<()> {
                     println!("gen {g}: {set:?} {pair_won} of the {won} replacements were colour-pair builds");
                 }
             }
+            if let Some(path) = &args.dump_best {
+                dump_best(path, &train);
+            }
             let improved: Vec<&PoolRow> = train.iter().copied().filter(|r| *r.best.read().unwrap() != r.teacher).collect();
+            let fit_before = fit_read(&p, &improved, &cards);
             dagger_states.clear();
             for step in 0..args.gen_steps {
                 if step.is_multiple_of(args.gen_steps / 2) {
@@ -900,6 +988,11 @@ fn main() -> CResult<()> {
             }
             let p = export(&model, &cards)?;
             println!("gen {g}: {} train pools carry a replaced deck; held-out greedy overlap with the teacher {:.4}", improved.len(), greedy_overlap(&p, &overlap_rows, &cards));
+            let fit_after = fit_read(&p, &improved, &cards);
+            println!(
+                "gen {g}: fit on the replaced train pools: greedy overlap with their best deck {:.4} -> {:.4}, with the teacher's {:.4} -> {:.4}",
+                fit_before.0, fit_after.0, fit_before.1, fit_after.1
+            );
             report(g, &p);
             p.save(&std::path::PathBuf::from(format!("{}_gen{g}.json", stem.display()))).unwrap_or_else(|e| panic!("{e}"));
         }
@@ -1012,11 +1105,13 @@ fn parity(policy: &DeckPolicy, probe: &[State], cards: &Cards, dev: &Device) -> 
     // The exported `x` is the encoder's output: an identity encoder over it.
     let c = policy.cards.len();
     let x: Vec<f32> = policy.x.iter().flatten().copied().collect();
-    let ident: Vec<f32> = (0..H * H).map(|i| if i / H == i % H { 1.0 } else { 0.0 }).collect();
+    let h = policy.x[0].len();
+    let ident: Vec<f32> = (0..h * h).map(|i| if i / h == i % h { 1.0 } else { 0.0 }).collect();
     let m = Model {
-        emb: Var::from_tensor(&Tensor::from_vec(x, (c, H), dev)?)?,
+        h,
+        emb: Var::from_tensor(&Tensor::from_vec(x, (c, h), dev)?)?,
         feats: Tensor::zeros((c, 0), DType::F32, dev)?,
-        enc: Lin { w: Var::from_tensor(&Tensor::from_vec(ident, (H, H), dev)?)?, b: Var::zeros(H, DType::F32, dev)? },
+        enc: Lin { w: Var::from_tensor(&Tensor::from_vec(ident, (h, h), dev)?)?, b: Var::zeros(h, DType::F32, dev)? },
         state: lin(&policy.state)?,
         cand1: lin(&policy.cand1)?,
         cand2: lin(&policy.cand2)?,

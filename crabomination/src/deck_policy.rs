@@ -49,6 +49,12 @@ pub struct DeckPolicy {
     pub stop2: Layer,
     #[serde(skip)]
     index: HashMap<String, usize>,
+    /// `cand1`'s card block applied to each card's vector, plus its bias:
+    /// the part of a candidate's hidden layer that does not depend on the
+    /// state, computed once (a 1024-wide policy would otherwise multiply
+    /// `[H x 2H]` per candidate per step).
+    #[serde(skip)]
+    card_part: Vec<Vec<f32>>,
 }
 
 /// One step's choices: each available card's score, and stop's (`None`
@@ -62,13 +68,19 @@ pub struct StepScores {
 impl DeckPolicy {
     #[allow(clippy::too_many_arguments)]
     pub fn new(cards: Vec<String>, x: Vec<Vec<f32>>, state: Layer, cand1: Layer, cand2: Layer, stop1: Layer, stop2: Layer) -> Self {
-        let mut p = Self { cards, x, state, cand1, cand2, stop1, stop2, index: HashMap::new() };
+        let mut p = Self { cards, x, state, cand1, cand2, stop1, stop2, index: HashMap::new(), card_part: Vec::new() };
         p.reindex();
         p
     }
 
     fn reindex(&mut self) {
         self.index = self.cards.iter().enumerate().map(|(i, n)| (n.clone(), i)).collect();
+        let h = self.x.first().map_or(0, |v| v.len());
+        self.card_part = self
+            .x
+            .iter()
+            .map(|xi| self.cand1.w.iter().zip(&self.cand1.b).map(|(row, b)| row[..h].iter().zip(xi).map(|(w, x)| w * x).sum::<f32>() + b).collect())
+            .collect();
     }
 
     pub fn load(path: &std::path::Path) -> Result<Self, String> {
@@ -127,6 +139,8 @@ impl DeckPolicy {
         sin.extend_from_slice(&feats);
         sin.push(deck.len() as f32 / 23.0);
         let u = self.state.fwd(&sin, true);
+        // `cand1`'s state block, once per step; the card block is cached.
+        let state_part: Vec<f32> = self.cand1.w.iter().map(|row| row[h..2 * h].iter().zip(&u).map(|(w, x)| w * x).sum()).collect();
         let mut cards = Vec::new();
         for (f, i, copies) in avail {
             let used = in_deck.get(&i).copied().unwrap_or(0.0);
@@ -134,11 +148,15 @@ impl DeckPolicy {
             if left <= 0.0 {
                 continue;
             }
-            let mut cin = self.x[i].clone();
-            cin.extend_from_slice(&u);
-            cin.push(used / 2.0);
-            cin.push(left / 2.0);
-            cards.push((f, self.cand2.fwd(&self.cand1.fwd(&cin, true), false)[0]));
+            let hid: Vec<f32> = self
+                .cand1
+                .w
+                .iter()
+                .zip(&self.card_part[i])
+                .zip(&state_part)
+                .map(|((row, c), s)| (c + s + row[2 * h] * (used / 2.0) + row[2 * h + 1] * (left / 2.0)).max(0.0))
+                .collect();
+            cards.push((f, self.cand2.fwd(&hid, false)[0]));
         }
         let stop = (deck.len() >= MIN_SPELLS || cards.is_empty()).then(|| self.stop2.fwd(&self.stop1.fwd(&u, true), false)[0]);
         StepScores { cards, stop }
@@ -303,6 +321,57 @@ mod tests {
         crate::recommend::ensure_sources(&mut lands, Color::Black, SPLASH_SOURCES, &[Color::White, Color::Green]);
         let n = |b: CardFactory| lands.iter().filter(|f| **f as usize == b as usize).count();
         assert_eq!((n(plains), n(forest), n(swamp)), (7, 6, 3));
+    }
+
+    /// `step` splits `cand1` into a cached card block and a per-step state
+    /// block; on random weights it must score every candidate as the full
+    /// `[card, state, used, left]` product does.
+    #[test]
+    fn the_split_candidate_layer_matches_the_full_product() {
+        use rand::SeedableRng;
+        let pool = crate::selfplay::sealed_pool_of(crate::fra_mode::SealedSet::Sos, 3, crate::selfplay::SEALED_PACKS);
+        let mut names: Vec<String> = pool.iter().map(|f| crate::cube::card_def(*f).name.to_string()).collect();
+        names.sort();
+        names.dedup();
+        let h = 6;
+        let mut rng = StdRng::seed_from_u64(9);
+        let mut rand_layer = |o: usize, i: usize| Layer {
+            w: (0..o).map(|_| (0..i).map(|_| rng.random_range(-1.0f32..1.0)).collect()).collect(),
+            b: (0..o).map(|_| rng.random_range(-0.5f32..0.5)).collect(),
+        };
+        let (state, cand1, cand2, stop1, stop2) = (rand_layer(h, 2 * h + 17), rand_layer(h, 2 * h + 2), rand_layer(1, h), rand_layer(2, h), rand_layer(1, 2));
+        let x: Vec<Vec<f32>> = (0..names.len()).map(|_| (0..h).map(|_| rng.random_range(0.0f32..1.0)).collect()).collect();
+        let p = DeckPolicy::new(names, x, state, cand1, cand2, stop1, stop2);
+        let deck: Vec<CardFactory> = pool.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).take(5).collect();
+        let s = p.step(&pool, &deck);
+        assert!(!s.cards.is_empty());
+        // The full product, recomputed from the step's own state vector.
+        let mut sin = vec![0f32; 2 * h];
+        let known: Vec<CardFactory> = pool.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land() && p.known(*f).is_some()).collect();
+        for f in &known {
+            for (m, v) in sin[..h].iter_mut().zip(&p.x[p.known(*f).unwrap()]) {
+                *m += v / known.len() as f32;
+            }
+        }
+        for f in &deck {
+            for (m, v) in sin[h..].iter_mut().zip(&p.x[p.known(*f).unwrap()]) {
+                *m += v / deck.len() as f32;
+            }
+        }
+        sin.extend_from_slice(&crate::server::encode::encode_deck(&deck, crate::server::net_eval::vocab()).1);
+        sin.push(deck.len() as f32 / 23.0);
+        let u = p.state.fwd(&sin, true);
+        for (f, score) in &s.cards {
+            let i = p.known(*f).unwrap();
+            let copies = known.iter().filter(|g| p.known(**g) == Some(i)).count() as f32;
+            let used = deck.iter().filter(|g| p.known(**g) == Some(i)).count() as f32;
+            let mut cin = p.x[i].clone();
+            cin.extend_from_slice(&u);
+            cin.push(used / 2.0);
+            cin.push((copies - used) / 2.0);
+            let full = p.cand2.fwd(&p.cand1.fwd(&cin, true), false)[0];
+            assert!((full - score).abs() < 1e-4, "{}: split {score} vs full {full}", crate::cube::card_def(*f).name);
+        }
     }
 
     /// The stop window and the land step, on a policy with no opinion:
