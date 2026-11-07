@@ -8101,3 +8101,92 @@ generation and logs none of it.
    Adoption-relevant bar unchanged (G3a: pooled ≥ 50.5, both > 50). SOS
    alongside: the adopted polish reads 51.78 / 52.04, so a pooled read
    above ~52 would be a candidate to replace it (the user's call).
+
+**Step 5 result (2026-11-07): the same-pool value is the selector FRA
+needed — the first learned builder over the rated builder.** Unit
+`crab-deck5`, everything under `.ladder/deck5/`; 3.5 h end to end
+(collection 1.5 h, value grids 1.9 h, the eight gate cells 5 min).
+
+*Collection.* 8,000 FRA pools gave 132,655 decks and 152,973 same-pool
+comparisons (2.59 M games); 4,000 SOS pools 59,890 / 70,126 (1.26 M).
+Candidates per pool 10–19 (median 17 FRA, 15 SOS). By matches the log is
+81 % screens (8 games), 16 % confirmations (32), 3 % finals (192); by
+games roughly a third each. Replacements 10.2 % FRA / 14.5 % SOS (225 /
+188 of them colour-pair builds); the finalists' mean 96-pair share 51.42 /
+52.59.
+
+*What the labels contain.* At the screen the rated reference wins 59.2 %
+of games on FRA (60.5 % SOS) against the policy's samples — the
+temperature samples are mostly worse decks; at the confirmation 51.9 %,
+in the final 48.6 % (the finalists are the pool's best and the selection
+is real). Match accuracy is therefore the wrong offline metric: the
+constant "the reference wins" scores 0.678 on the FRA test split's
+decisive matches (0.694 SOS), above every model, because four matches in
+five are 8-game screens that are individually near coin flips. Per-game
+NLL weights the three stages about evenly and is the read.
+
+*Offline, test split* (one pool in ten, both decks from it; FRA 15,496
+matches / 267 k games, SOS 7,283 / 128 k; λ chosen on val):
+
+| predictor | FRA NLL | acc | SOS NLL | acc |
+|---|---|---|---|---|
+| best constant | 0.6909 | 0.678 | 0.6904 | 0.694 |
+| step-1 value (trained cross-pool) | 0.6801 | 0.609 | 0.6770 | 0.634 |
+| A0 card table | 0.6773 | 0.617 | 0.6716 | 0.653 |
+| A3 fresh encoder | 0.6759 | 0.624 | 0.6708 | 0.652 |
+| A2 play-net encoder | 0.6758 | 0.623 | 0.6707 | 0.666 |
+
+The step-1 value is *worse than a plain card table* at the same-pool
+question on both sets: trained on cross-pool matches, it learned which
+pool is stronger and never this. The new arms explain 0.015 nats/game of
+the constant's 0.6909 on FRA against the old value's 0.011 — small
+absolute numbers because the labels are mostly noise by construction.
+Exported by val NLL: FRA A2 λ 100 (val 0.67579; A3 λ 10 is 0.67583, a
+tie), SOS A3 λ 10 (0.67079; A2 λ 100 0.67081, a tie). The play-net
+encoder again buys nothing measurable over a fresh one.
+
+*Gates* (`--trial policy-value`, the `cap256_gen1` policy, candidates =
+greedy + 16 samples + 10 colour-pair builds, 2,000 pools × 8 pairs, seeds
+43 / 97, against the rated builder on the same pool; step 4's greedy read
+of the same policy alongside):
+
+| set | greedy (step 4) | step-1 value (control) | same-pool value |
+|---|---|---|---|
+| FRA | 49.50 / 49.84 (49.67) | 50.37 / 50.67 (50.52) | **51.41 / 51.84 (51.63)** |
+| SOS | 49.93 / 50.37 (50.15) | 51.68 / 51.98 (51.83) | **52.78 / 52.75 (52.77)** |
+
+FRA pool-level CIs: new [50.86, 51.96] / [51.30, 52.39]; control [49.82,
+50.93] / [50.12, 51.21]. Registered read: new − control pooled **+1.11**,
+both seeds up (+1.04, +1.17) — passes the +0.5 bar. Adoption bar G3a
+(pooled ≥ 50.5, both > 50): **51.63, both above 50 — passes**; every
+earlier learned FRA builder read 46.0–49.8. SOS: +0.94 over the control
+(+1.10, +0.77); pooled 52.77 clears the ~52 named for replacing the
+adopted polish (51.78 / 52.04). Each cell's half-width is 0.55, so the
+seed-pooled difference has SE ≈ 0.28 and +1.11 is about 4 SE; the two
+seeds agree to 0.13.
+
+*Decomposition.* Choosing among the 27 candidates with the OLD value is
+already worth +0.85 on FRA over greedy — step 3c's colour-pair candidates
+pay once something picks among them — and the new value adds +1.11 on
+top. It also copies the rated build's exact deck less often (28 / 56
+identical of 2,000 against the control's 51 / 60).
+
+*Caveats.* One value seed per arm (the A2/A3 tie says the arm does not
+matter). The value was trained on comparisons between the rated build and
+this policy's candidates — exactly the distribution the gate samples from —
+so it is a selector for these candidates, not an absolute strength. The
+FRA read sits inside the earlier headroom estimate (+1 to +1.5 over
+rated): one generation of candidates may be close to spent, and more gain
+needs better candidates (the loop) or more of them (cheap — the value is a
+forward pass).
+
+**Not adopted — the user's call.** Adoption means FRA sealed opponents
+build with `DeckPolicy::build_valued` (the `cap256_gen1` policy, 4.2 MB,
+plus `value_fra.json`, 0.26 MB) in place of the rated builder, and SOS
+the same in place of `SOS_VALUE_POLISH` (precedent: df0ef815d compiled the
+SOS value in). Proposed next, in order: (a) confirmation at fresh seeds and
+the width-1024 policy under the same value (five minutes per eight cells);
+(b) more samples per pool at the same value (the selector's gain is bounded
+by its candidate set); (c) the loop at width 256 with the value screening
+the race, so the budget goes to the top candidates; (d) the features-only
+ablation of the value.
