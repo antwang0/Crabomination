@@ -8003,3 +8003,16 @@ full product per candidate costs `K` (~80) times more. Probe: 0.21 s a
 step at 256, 0.87 s at 1024 (7+ hours for 30,000 steps); at step 500 the
 held-out loss is 0.337 (64), 0.191 (256), 0.133 (1024), greedy overlap
 0.628 / 0.633 / 0.601.
+
+**Step 4 part 1 result (2026-11-07): the policy does not absorb its own
+labels.** One generation of step 3c's run (race identical to 3c's gen 1:
+748 FRA / 285 SOS replacements, 1,033 relabelled train pools, saved to
+`.ladder/deck4/best_gen1.tsv`). On those pools the greedy build's overlap
+with the new best deck went **0.7852 → 0.7857** over the generation's
+training, and with the teacher's 0.7727 → 0.7667: no movement, although a
+quarter of each batch's prefixes came from them (~600 states per
+relabelled pool over 10,000 steps). The winners differ from the teacher's
+deck by a few cards, and the width-64 policy does not separate those pools
+from the many similar ones where the teacher's deck stands. Capacity or
+training budget is the bottleneck, so parts 2 and 3 run (part 2 started
+03:50).
