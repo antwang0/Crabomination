@@ -84,6 +84,9 @@ struct Args {
     /// prefixes; the second half: policy states).
     gen_lr: f64,
     relabel_share: f64,
+    /// Step 5: write every race comparison (same pool, candidate vs the
+    /// reference deck) under this directory, in `deck_value_train`'s format.
+    log_races: Option<std::path::PathBuf>,
     /// Start step 3 from these raw weights (`*_gen0.safetensors`), skipping
     /// the step-2b recipe.
     init_vars: Option<std::path::PathBuf>,
@@ -122,6 +125,7 @@ fn parse_args() -> Args {
         init_json: get("--init-json").map(Into::into),
         gen_lr: get("--gen-lr").map_or(0.3, |v| v.parse().expect("--gen-lr")),
         relabel_share: get("--relabel-share").map_or(0.25, |v| v.parse().expect("--relabel-share")),
+        log_races: get("--log-races").map(Into::into),
     }
 }
 
@@ -290,6 +294,54 @@ fn deck_key(d: &[CardFactory]) -> Vec<usize> {
 /// leader's final share, and whether the replacement was a pair build.
 type RaceRow = (SealedSet, Option<f64>, Option<f64>, bool);
 
+/// One raced pool's decks (the reference first) and every comparison
+/// played on it, for `--log-races` (step 5: the same-pool value).
+struct RaceLog {
+    set: SealedSet,
+    index: usize,
+    decks: Vec<Vec<CardFactory>>,
+    /// (candidate deck, games it won, games the reference won, undecided).
+    matches: Vec<(usize, u32, u32, u32)>,
+}
+
+/// `deck_value_train`'s inputs per set under `dir`: `decks.tsv` (id, 40
+/// names), `games.tsv` (a, b, a's wins, b's wins, undecided; `a` always
+/// the candidate, `b` its pool's reference) and `deck_pool.tsv` (id, pool
+/// index — the trainer splits by pool). `fra_card_eval --dump-cards`
+/// adds the feature files.
+fn write_race_logs(dir: &std::path::Path, logs: &[RaceLog]) {
+    for set in [SealedSet::Fra, SealedSet::Sos] {
+        let mine: Vec<&RaceLog> = logs.iter().filter(|l| l.set == set).collect();
+        if mine.is_empty() {
+            continue;
+        }
+        let sub = dir.join(format!("{set:?}").to_lowercase());
+        std::fs::create_dir_all(&sub).unwrap_or_else(|e| panic!("{}: {e}", sub.display()));
+        let (mut decks, mut games, mut pools) = (String::new(), String::new(), String::new());
+        let mut id = 0usize;
+        for l in &mine {
+            let base = id;
+            for d in &l.decks {
+                decks.push_str(&id.to_string());
+                for f in d {
+                    decks.push('\t');
+                    decks.push_str(crabomination::cube::card_def(*f).name);
+                }
+                decks.push('\n');
+                pools.push_str(&format!("{id}\t{}\n", l.index));
+                id += 1;
+            }
+            for &(c, wa, wb, u) in &l.matches {
+                games.push_str(&format!("{}\t{base}\t{wa}\t{wb}\t{u}\n", base + c));
+            }
+        }
+        for (name, text) in [("decks.tsv", &decks), ("games.tsv", &games), ("deck_pool.tsv", &pools)] {
+            std::fs::write(sub.join(name), text).unwrap_or_else(|e| panic!("{}: {e}", sub.join(name).display()));
+        }
+        eprintln!("{set:?}: {} pools, {id} decks, {} comparisons -> {}", mine.len(), mine.iter().map(|l| l.matches.len()).sum::<usize>(), sub.display());
+    }
+}
+
 /// Step 3's expert: on each row, the policy's greedy build and seven
 /// sampled ones (temperatures 1, 1, 1, 1.5, 1.5, 2, 2), deduplicated, race
 /// the row's current best deck — four pairs each, then sixteen fresh pairs
@@ -315,6 +367,7 @@ fn race_generation(
     final_stage: (usize, f64),
     pair_cands: bool,
     confirm_top: usize,
+    log: Option<&Mutex<Vec<RaceLog>>>,
 ) -> Vec<(SealedSet, usize, usize, f64, usize, f64, usize)> {
     let next = AtomicUsize::new(0);
     let out: Mutex<Vec<RaceRow>> = Mutex::new(Vec::new());
@@ -359,11 +412,14 @@ fn race_generation(
                         }
                     }
                 }
+                // Every comparison played, as (candidate, its wins, the reference's, undecided).
+                let mut played: Vec<(usize, u32, u32, u32)> = Vec::new();
                 let mut screened: Vec<(f64, usize)> = cands
                     .iter()
                     .enumerate()
                     .filter_map(|(i, d)| {
                         let t = crabomination::recommend::simulate_match_pairs_piloted(d, &reference, 4, [pilot, pilot], 50_000, salt ^ 0x5C);
+                        played.push((i + 1, t.wins_a, t.wins_b, t.undecided));
                         share(&t).map(|x| (x, i))
                     })
                     .collect();
@@ -371,6 +427,7 @@ fn race_generation(
                 let mut won: Option<(f64, usize)> = None;
                 for &(_, i) in screened.iter().take(confirm_top) {
                     let t = crabomination::recommend::simulate_match_pairs_piloted(&cands[i], &reference, 16, [pilot, pilot], 50_000, salt ^ 0xC0F);
+                    played.push((i + 1, t.wins_a, t.wins_b, t.undecided));
                     if let Some(x) = share(&t)
                         && x >= accept
                         && won.is_none_or(|w| x > w.0)
@@ -383,6 +440,7 @@ fn race_generation(
                     && final_stage.0 > 0
                 {
                     let t = crabomination::recommend::simulate_match_pairs_piloted(&cands[i], &reference, final_stage.0, [pilot, pilot], 50_000, salt ^ 0xF1A1);
+                    played.push((i + 1, t.wins_a, t.wins_b, t.undecided));
                     finalist = share(&t);
                     if finalist.is_none_or(|x| x < final_stage.1) {
                         won = None;
@@ -392,6 +450,11 @@ fn race_generation(
                     let spells: Vec<CardFactory> = cands[i].iter().copied().filter(|f| !crabomination::cube::card_def(*f).is_land()).collect();
                     *row.target.write().unwrap() = indices(&spells, cards);
                     *row.best.write().unwrap() = cands[i].clone();
+                }
+                if let Some(log) = log {
+                    let mut decks = vec![reference.clone()];
+                    decks.extend(cands.iter().cloned());
+                    log.lock().unwrap().push(RaceLog { set: row.set, index: row.index, decks, matches: played });
                 }
                 let mut o = out.lock().unwrap();
                 o.push((row.set, won.map(|w| w.0), finalist, won.is_some_and(|w| w.1 >= sampled)));
@@ -963,6 +1026,7 @@ fn main() -> CResult<()> {
                 mine.shuffle(&mut rng);
                 race.extend(mine.into_iter().take(n));
             }
+            let race_logs: Option<Mutex<Vec<RaceLog>>> = args.log_races.as_ref().map(|_| Mutex::new(Vec::new()));
             for (set, raced, won, mean, fin, fin_mean, pair_won) in race_generation(
                 &p,
                 &race,
@@ -973,6 +1037,7 @@ fn main() -> CResult<()> {
                 (args.final_pairs, args.final_accept),
                 args.pair_cands,
                 args.confirm_top,
+                race_logs.as_ref(),
             ) {
                 println!("gen {g}: {set:?} raced {raced} pools, replaced {won} ({:.1} %), replacements' confirmed share {mean:.2} ({:.0}s)", 100.0 * won as f64 / raced.max(1) as f64, tg.elapsed().as_secs_f64());
                 if args.final_pairs > 0 {
@@ -981,6 +1046,9 @@ fn main() -> CResult<()> {
                 if args.pair_cands {
                     println!("gen {g}: {set:?} {pair_won} of the {won} replacements were colour-pair builds");
                 }
+            }
+            if let (Some(dir), Some(logs)) = (&args.log_races, &race_logs) {
+                write_race_logs(&dir.join(format!("gen{g}")), &logs.lock().unwrap());
             }
             if let Some(path) = &args.dump_best {
                 dump_best(path, &train);

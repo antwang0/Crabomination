@@ -54,12 +54,16 @@ struct Args {
     out: PathBuf,
     /// Write the best-val model here (`crabomination::deck_value::DeckValue`).
     export: Option<PathBuf>,
+    /// Score an exported value on this data's val / test matches instead of
+    /// training (step 5: the step-1 value on same-pool pairs).
+    eval_json: Option<PathBuf>,
 }
 
 fn parse_args() -> Args {
     let a: Vec<String> = std::env::args().collect();
     let get = |k: &str| a.iter().position(|x| x == k).and_then(|i| a.get(i + 1).cloned());
-    let arm = get("--arm").expect("--arm A0|A0f|A1|A2|A3|A4");
+    let eval_json = get("--eval-json").map(PathBuf::from);
+    let arm = get("--arm").unwrap_or_else(|| if eval_json.is_some() { "A0".to_string() } else { panic!("--arm A0|A0f|A1|A2|A3|A4") });
     let convex = arm.starts_with("A0");
     Args {
         data: PathBuf::from(get("--data").expect("--data DIR")),
@@ -70,6 +74,7 @@ fn parse_args() -> Args {
         steps: get("--steps").map_or(4000, |v| v.parse().expect("--steps")),
         out: PathBuf::from(get("--out").expect("--out FILE.jsonl")),
         export: get("--export").map(PathBuf::from),
+        eval_json,
         arm,
     }
 }
@@ -285,8 +290,8 @@ impl Head {
 
 /// The exported value read back by the engine must score the first decks as
 /// the trainer did — the gate runs on the engine's reading, not this one.
-fn parity(path: &std::path::Path, dir: &std::path::Path, want: &[f32]) {
-    let dv = crabomination::deck_value::DeckValue::load(path).unwrap_or_else(|e| panic!("{e}"));
+/// Each deck of `decks.tsv`, in id order, as card factories.
+fn deck_factories(dir: &std::path::Path) -> Vec<Vec<crabomination::cube::CardFactory>> {
     let mut by_name: HashMap<&'static str, crabomination::cube::CardFactory> = HashMap::new();
     for f in crabomination::catalog::sets::all_factories::all_catalog_card_factories() {
         let d = f();
@@ -294,10 +299,14 @@ fn parity(path: &std::path::Path, dir: &std::path::Path, want: &[f32]) {
         by_name.entry(d.name.split(" // ").next().unwrap_or(d.name)).or_insert(f);
     }
     let text = std::fs::read_to_string(dir.join("decks.tsv")).expect("decks.tsv");
+    text.lines().map(|line| line.split('\t').skip(1).map(|n| by_name[n]).collect()).collect()
+}
+
+fn parity(path: &std::path::Path, dir: &std::path::Path, want: &[f32]) {
+    let dv = crabomination::deck_value::DeckValue::load(path).unwrap_or_else(|e| panic!("{e}"));
     let mut worst = 0f64;
-    for (line, &w) in text.lines().zip(want) {
-        let deck: Vec<crabomination::cube::CardFactory> = line.split('\t').skip(1).map(|n| by_name[n]).collect();
-        worst = worst.max((dv.value(&deck) - w as f64).abs());
+    for (deck, &w) in deck_factories(dir).iter().zip(want) {
+        worst = worst.max((dv.value(deck) - w as f64).abs());
     }
     assert!(worst < 1e-3, "engine and trainer disagree on a deck's value by {worst}");
 }
@@ -309,9 +318,37 @@ fn main() -> CResult<()> {
     let c = data.cards.len();
     let counts = Tensor::from_vec(data.counts.clone(), (data.decks, c), &dev)?;
     let feats = Tensor::from_vec(data.feats.clone(), (data.decks, DECK_FEATS), &dev)?;
-    let train = split(&data.matches, |a, b| !held_out(a) && !held_out(b), &dev)?;
-    let val = split(&data.matches, |a, b| held_out(a) != held_out(b), &dev)?;
-    let test = split(&data.matches, |a, b| held_out(a) && held_out(b), &dev)?;
+    // With `deck_pool.tsv` (same-pool race pairs, step 5) the split is by
+    // pool — one pool in ten test, one in ten val — and each split's
+    // matches lie within its pools; otherwise step 1's deck split.
+    let pool_class: Option<Vec<u8>> = std::fs::read_to_string(args.data.join("deck_pool.tsv")).ok().map(|text| {
+        let mut class = vec![0u8; data.decks];
+        for line in text.lines() {
+            let mut col = line.split('\t');
+            let d: usize = col.next().and_then(|x| x.parse().ok()).expect("deck id");
+            let pool: u64 = col.next().and_then(|x| x.parse().ok()).expect("pool index");
+            class[d] = match splitmix(pool ^ 0x5A17_D00B_0000) % 10 {
+                0 => 2,
+                1 => 1,
+                _ => 0,
+            };
+        }
+        class
+    });
+    let keep = |want: u8| {
+        let pc = &pool_class;
+        move |a: usize, b: usize| match pc {
+            Some(c) => c[a] == want && c[b] == want,
+            None => match want {
+                0 => !held_out(a) && !held_out(b),
+                1 => held_out(a) != held_out(b),
+                _ => held_out(a) && held_out(b),
+            },
+        }
+    };
+    let train = split(&data.matches, keep(0), &dev)?;
+    let val = split(&data.matches, keep(1), &dev)?;
+    let test = split(&data.matches, keep(2), &dev)?;
     eprintln!(
         "{} cards, {} decks; matches train {} / val {} / test {} ({} / {} / {} games)",
         c,
@@ -323,6 +360,24 @@ fn main() -> CResult<()> {
         val.games,
         test.games
     );
+    if let Some(path) = &args.eval_json {
+        let dv = crabomination::deck_value::DeckValue::load(path).unwrap_or_else(|e| panic!("{e}"));
+        let f: Vec<f32> = deck_factories(&args.data).iter().map(|d| dv.value(d) as f32).collect();
+        let f = Tensor::new(f, &dev)?;
+        let line = format!(
+            "{{\"data\":\"{}\",\"eval\":\"{}\",\"arm\":\"{}\",\"val_nll\":{:.6},\"test_nll\":{:.6},\"test_acc\":{:.4}}}",
+            args.data.display(),
+            path.display(),
+            dv.arm,
+            nll(&f, &val)?.to_scalar::<f32>()?,
+            nll(&f, &test)?.to_scalar::<f32>()?,
+            accuracy(&f, &test)?
+        );
+        println!("{line}");
+        let mut out = std::fs::OpenOptions::new().create(true).append(true).open(&args.out).expect("--out");
+        writeln!(out, "{line}").expect("write --out");
+        return Ok(());
+    }
     let mut rng = StdRng::seed_from_u64(args.seed ^ 0xDEC0_DE5E);
 
     let card_feats = Tensor::from_vec(data.cards.iter().flat_map(|x| x.1).collect::<Vec<f32>>(), (c, FEATS), &dev)?;

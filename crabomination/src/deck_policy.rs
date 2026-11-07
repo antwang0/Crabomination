@@ -286,17 +286,27 @@ impl DeckPolicy {
         deck
     }
 
-    /// G2b: the greedy build and `samples` sampled ones (temperature 1),
-    /// the one `value` rates highest.
+    /// G2b: the greedy build, `samples` sampled ones (temperature 1) and,
+    /// since step 5, the greedy build held to each colour pair
+    /// ([`build_in`](Self::build_in)) — the one `value` rates highest.
     pub fn build_valued(&self, pool: &[CardFactory], value: &crate::deck_value::DeckValue, samples: usize, rng: &mut StdRng) -> Vec<CardFactory> {
         let mut best = self.build(pool, None);
         let mut best_v = value.value(&best);
-        for _ in 0..samples {
-            let d = self.build(pool, Some((&mut *rng, 1.0)));
+        let mut consider = |d: Vec<CardFactory>| {
             let v = value.value(&d);
             if v > best_v {
                 best = d;
                 best_v = v;
+            }
+        };
+        for _ in 0..samples {
+            consider(self.build(pool, Some((&mut *rng, 1.0))));
+        }
+        for (a, &c1) in Color::ALL.iter().enumerate() {
+            for &c2 in &Color::ALL[a + 1..] {
+                if let Some(d) = self.build_in(pool, [c1, c2]) {
+                    consider(d);
+                }
             }
         }
         best

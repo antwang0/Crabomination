@@ -8072,3 +8072,32 @@ saved labels (1,033 relabelled train pools), no new races:
   candidate. G3a's bar (50.5) needs about +0.7 more.
 Next if continued: expert iteration at width 256 or 1024 with part 3's
 budget (gen-lr 1.0, relabel share 0.5), new races each generation.
+
+**Step 5, pre-registered (2026-11-07): a same-pool value from race
+outcomes, as the selector.** The user asked which experiment is highest
+value; the case: the rated builder's edge on FRA is its judge (its polish
+is worth +2.65 there, +0.78 on SOS); the step-1 value was trained on
+matches between decks of *different* pools (absolute strength) and
+failed on FRA (−0.45); the builder's question is which build of *this*
+pool is better; and the race plays that comparison a million times a
+generation and logs none of it.
+1. *Collect* (`deck_policy_train --log-races`): one race generation with
+   the width-256 label-trained policy (`cap256_gen1`), 8,000 FRA and 4,000
+   SOS train pools, references the rated builds, 3c's candidates (8
+   samples + colour pairs), every comparison at every stage written in
+   `deck_value_train`'s format (`a` the candidate, `b` the reference).
+2. *Train* (`deck_value_train`, split **by pool** via `deck_pool.tsv`:
+   one pool in ten val, one in ten test): arms A0 (table), A3 (fresh
+   encoder) and A2 (play-net encoder, tuned), λ grids as step 1, seed 1;
+   export the best non-table arm by val NLL. The step-1 value is scored on
+   the same test pairs (`--eval-json`) — the offline read of whether it
+   ever answered the same-pool question.
+3. *Gate* (`fra_card_eval --trial policy-value`, 2,000 pools × 8, seeds
+   43 / 97): the width-256 policy plus the new value against the same
+   policy plus the step-1 value. `DeckPolicy::build_valued` now also
+   offers the ten colour-pair builds (step 3c's candidates), so the control
+   is re-run rather than taken from step 4. Registered read: FRA, new
+   value better if pooled ≥ +0.5 over the control with both seeds up.
+   Adoption-relevant bar unchanged (G3a: pooled ≥ 50.5, both > 50). SOS
+   alongside: the adopted polish reads 51.78 / 52.04, so a pooled read
+   above ~52 would be a candidate to replace it (the user's call).
