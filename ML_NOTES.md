@@ -8223,3 +8223,36 @@ measures what it did. Test
 `the_sealed_opponent_is_the_gated_policy_and_value_build` pins the
 production deck to the gated arm. The ladder's `CRAB_SEALED_BUILDER=client`
 now gives this build; default fields are unchanged.
+
+**Step 6, pre-registered (2026-11-07): the loop with the value as the
+screen.** The race's cheapest and noisiest stage — four pairs per
+candidate, 81 % of step 5's comparisons and 38 % of its games, the
+reference winning 59 % of those games — is replaced by the adopted
+same-pool value: every candidate is scored, the top 3 by value go to the
+16-pair confirmation (≥ 55), the winner to the 96-pair final (≥ 56), as
+before. The games saved buy candidates, which the value scores for free:
+24 samples (12 at temperature 1, 6 at 1.5, 6 at 2) plus the greedy build
+and the ten colour-pair builds, up to 35 a pool (was 18).
+*Hypothesis:* the value picks a better top 3 than eight games do — read:
+the confirmed candidates' mean 16-pair share, **48.1 %** for the 4-pair
+screen in step 5's logs — so more replacements are real, and a policy
+trained on them proposes better candidates for the same selector: the
+adopted builder's gain compounds through the loop.
+*Run* (unit `crab-deck6`, `.ladder/deck6/`): `deck_policy_train
+--init-json cap256_gen1 --load-best .ladder/deck4/best_gen1.tsv
+--expert-iter 3 --race-fra 8000 --race-sos 4000 --race-samples 24
+--race-value-fra nets/deck-value-fra.json --race-value-sos
+nets/deck-value-sos.json --value-top 3 --pair-cands --confirm-top 3
+--final-pairs 96 --final-accept 56 --gen-steps 10000 --gen-lr 1.0
+--relabel-share 0.5 --log-races --dump-best`; width 256 from the export;
+each generation saved as `loop_gen{g}.json`.
+*Gate:* `--trial policy-value` under the adopted values, seeds 43 / 97,
+against the rated builder — the adopted builder's own cells (FRA 51.41 /
+51.84, SOS 52.78 / 52.75). Primary read: **gen 3's policy, FRA pooled
+≥ +0.5 over the adopted builder (≥ 52.13) with both seeds above its
+same-seed read.** Gens 1 and 2 are gated too, as secondary reads (reported,
+not the bar). Replacing `nets/deck-policy.json` would be the user's call.
+Recorded per generation: replacement rate, finalists' mean final share,
+the confirmed candidates' mean share (the value screen against 48.1), the
+fit read, and the race logs with `values.tsv` — step 6b would retrain the
+value on them if the policy's candidate distribution moves.

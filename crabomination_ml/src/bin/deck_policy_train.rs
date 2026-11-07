@@ -87,6 +87,14 @@ struct Args {
     /// Step 5: write every race comparison (same pool, candidate vs the
     /// reference deck) under this directory, in `deck_value_train`'s format.
     log_races: Option<std::path::PathBuf>,
+    /// Step 6: a set's same-pool deck value screens its race — the top
+    /// `value_top` candidates by value go straight to the confirmation, no
+    /// screen games — and the policy samples `race_samples` decks per pool
+    /// (temperatures 1, 1.5, 2 by halves and quarters).
+    race_value_fra: Option<std::path::PathBuf>,
+    race_value_sos: Option<std::path::PathBuf>,
+    race_samples: usize,
+    value_top: usize,
     /// Start step 3 from these raw weights (`*_gen0.safetensors`), skipping
     /// the step-2b recipe.
     init_vars: Option<std::path::PathBuf>,
@@ -126,6 +134,10 @@ fn parse_args() -> Args {
         gen_lr: get("--gen-lr").map_or(0.3, |v| v.parse().expect("--gen-lr")),
         relabel_share: get("--relabel-share").map_or(0.25, |v| v.parse().expect("--relabel-share")),
         log_races: get("--log-races").map(Into::into),
+        race_value_fra: get("--race-value-fra").map(Into::into),
+        race_value_sos: get("--race-value-sos").map(Into::into),
+        race_samples: num("--race-samples", 7),
+        value_top: num("--value-top", 3),
     }
 }
 
@@ -290,9 +302,37 @@ fn deck_key(d: &[CardFactory]) -> Vec<usize> {
     v
 }
 
-/// One raced pool: its set, the replacement's confirmed share, the
-/// leader's final share, and whether the replacement was a pair build.
-type RaceRow = (SealedSet, Option<f64>, Option<f64>, bool);
+/// One raced pool: its set, the replacement's confirmed share, its final
+/// share, whether it was a colour-pair build, and every confirmed
+/// candidate's share.
+type RaceRow = (SealedSet, Option<f64>, Option<f64>, bool, Vec<f64>);
+
+/// The race's settings (ML_NOTES steps 3–6).
+#[derive(Clone, Copy)]
+struct Race {
+    /// A confirmed leader replaces the reference at this share (%).
+    accept: f64,
+    /// Step 3b: the final's pairs and its share to pass (0 pairs: none).
+    final_pairs: usize,
+    final_accept: f64,
+    /// Step 3c: the greedy build per colour pair as candidates too.
+    pair_cands: bool,
+    /// How many screen leaders are confirmed.
+    confirm_top: usize,
+    /// Step 6: the policy's samples per pool, and how many candidates a
+    /// value sends to the confirmation when one screens the set.
+    samples: usize,
+    value_top: usize,
+}
+
+/// Step 6: a set's same-pool deck value as its race's screen (`[FRA, SOS]`).
+type RaceValues<'a> = [Option<&'a crabomination::deck_value::DeckValue>; 2];
+
+/// A set's race, summed: (set, pools raced, replaced, the replacements'
+/// mean confirmed share, leaders that reached the final, their mean final
+/// share, replacements that were colour-pair builds, candidates confirmed,
+/// their mean confirmed share).
+type RaceStats = (SealedSet, usize, usize, f64, usize, f64, usize, usize, f64);
 
 /// One raced pool's decks (the reference first) and every comparison
 /// played on it, for `--log-races` (step 5: the same-pool value).
@@ -302,6 +342,9 @@ struct RaceLog {
     decks: Vec<Vec<CardFactory>>,
     /// (candidate deck, games it won, games the reference won, undecided).
     matches: Vec<(usize, u32, u32, u32)>,
+    /// Step 6: each deck's value under the screening value (the reference
+    /// first); empty when games screened.
+    values: Vec<f64>,
 }
 
 /// `deck_value_train`'s inputs per set under `dir`: `decks.tsv` (id, 40
@@ -317,11 +360,11 @@ fn write_race_logs(dir: &std::path::Path, logs: &[RaceLog]) {
         }
         let sub = dir.join(format!("{set:?}").to_lowercase());
         std::fs::create_dir_all(&sub).unwrap_or_else(|e| panic!("{}: {e}", sub.display()));
-        let (mut decks, mut games, mut pools) = (String::new(), String::new(), String::new());
+        let (mut decks, mut games, mut pools, mut values) = (String::new(), String::new(), String::new(), String::new());
         let mut id = 0usize;
         for l in &mine {
             let base = id;
-            for d in &l.decks {
+            for (k, d) in l.decks.iter().enumerate() {
                 decks.push_str(&id.to_string());
                 for f in d {
                     decks.push('\t');
@@ -329,13 +372,20 @@ fn write_race_logs(dir: &std::path::Path, logs: &[RaceLog]) {
                 }
                 decks.push('\n');
                 pools.push_str(&format!("{id}\t{}\n", l.index));
+                if let Some(v) = l.values.get(k) {
+                    values.push_str(&format!("{id}\t{v:.5}\n"));
+                }
                 id += 1;
             }
             for &(c, wa, wb, u) in &l.matches {
                 games.push_str(&format!("{}\t{base}\t{wa}\t{wb}\t{u}\n", base + c));
             }
         }
-        for (name, text) in [("decks.tsv", &decks), ("games.tsv", &games), ("deck_pool.tsv", &pools)] {
+        let mut files = vec![("decks.tsv", &decks), ("games.tsv", &games), ("deck_pool.tsv", &pools)];
+        if !values.is_empty() {
+            files.push(("values.tsv", &values));
+        }
+        for (name, text) in files {
             std::fs::write(sub.join(name), text).unwrap_or_else(|e| panic!("{}: {e}", sub.join(name).display()));
         }
         eprintln!("{set:?}: {} pools, {id} decks, {} comparisons -> {}", mine.len(), mine.iter().map(|l| l.matches.len()).sum::<usize>(), sub.display());
@@ -356,6 +406,11 @@ fn write_race_logs(dir: &std::path::Path, logs: &[RaceLog]) {
 /// held to each colour pair ([`DeckPolicy::build_in`]), and the top
 /// `confirm_top` screen leaders are confirmed; the last element counts the
 /// replacements that were pair builds.
+/// With a value for the set (step 6, `values`) there are no screen games:
+/// every candidate is scored by the same-pool deck value and the top
+/// `value_top` go to the confirmation. The two elements after count the
+/// confirmed candidates and give their mean 16-pair share — the screen's
+/// quality, whichever screened.
 #[allow(clippy::too_many_arguments)]
 fn race_generation(
     policy: &DeckPolicy,
@@ -363,12 +418,10 @@ fn race_generation(
     cards: &Cards,
     seed: u64,
     threads: usize,
-    accept: f64,
-    final_stage: (usize, f64),
-    pair_cands: bool,
-    confirm_top: usize,
+    race: Race,
+    values: RaceValues,
     log: Option<&Mutex<Vec<RaceLog>>>,
-) -> Vec<(SealedSet, usize, usize, f64, usize, f64, usize)> {
+) -> Vec<RaceStats> {
     let next = AtomicUsize::new(0);
     let out: Mutex<Vec<RaceRow>> = Mutex::new(Vec::new());
     let t0 = std::time::Instant::now();
@@ -386,7 +439,13 @@ fn race_generation(
                 let reference = row.best.read().unwrap().clone();
                 let mut seen = vec![deck_key(&reference)];
                 let mut cands: Vec<Vec<CardFactory>> = Vec::new();
-                for t in [None, Some(1.0), Some(1.0), Some(1.0), Some(1.5), Some(1.5), Some(2.0), Some(2.0)] {
+                for i in 0..=race.samples {
+                    let t = match i {
+                        0 => None,
+                        i if i <= race.samples / 2 => Some(1.0),
+                        i if i <= race.samples * 3 / 4 => Some(1.5),
+                        _ => Some(2.0),
+                    };
                     let d = match t {
                         None => policy.build(&row.pool, None),
                         Some(t) => policy.build(&row.pool, Some((&mut rng, t))),
@@ -398,7 +457,7 @@ fn race_generation(
                     }
                 }
                 let sampled = cands.len();
-                if pair_cands {
+                if race.pair_cands {
                     use crabomination::mana::Color;
                     for (a, &c1) in Color::ALL.iter().enumerate() {
                         for &c2 in &Color::ALL[a + 1..] {
@@ -414,35 +473,55 @@ fn race_generation(
                 }
                 // Every comparison played, as (candidate, its wins, the reference's, undecided).
                 let mut played: Vec<(usize, u32, u32, u32)> = Vec::new();
-                let mut screened: Vec<(f64, usize)> = cands
-                    .iter()
-                    .enumerate()
-                    .filter_map(|(i, d)| {
-                        let t = crabomination::recommend::simulate_match_pairs_piloted(d, &reference, 4, [pilot, pilot], 50_000, salt ^ 0x5C);
-                        played.push((i + 1, t.wins_a, t.wins_b, t.undecided));
-                        share(&t).map(|x| (x, i))
-                    })
-                    .collect();
+                // The screen: the set's deck value when it has one (step 6),
+                // else four pairs per candidate.
+                let value = values[usize::from(row.set == SealedSet::Sos)];
+                let mut vals: Vec<f64> = Vec::new();
+                let mut screened: Vec<(f64, usize)> = match value {
+                    Some(v) => {
+                        vals.push(v.value(&reference));
+                        cands
+                            .iter()
+                            .enumerate()
+                            .map(|(i, d)| {
+                                let x = v.value(d);
+                                vals.push(x);
+                                (x, i)
+                            })
+                            .collect()
+                    }
+                    None => cands
+                        .iter()
+                        .enumerate()
+                        .filter_map(|(i, d)| {
+                            let t = crabomination::recommend::simulate_match_pairs_piloted(d, &reference, 4, [pilot, pilot], 50_000, salt ^ 0x5C);
+                            played.push((i + 1, t.wins_a, t.wins_b, t.undecided));
+                            share(&t).map(|x| (x, i))
+                        })
+                        .collect(),
+                };
                 screened.sort_by(|a, b| b.0.total_cmp(&a.0));
+                let top = if value.is_some() { race.value_top } else { race.confirm_top };
+                let mut confirmed: Vec<f64> = Vec::new();
                 let mut won: Option<(f64, usize)> = None;
-                for &(_, i) in screened.iter().take(confirm_top) {
+                for &(_, i) in screened.iter().take(top) {
                     let t = crabomination::recommend::simulate_match_pairs_piloted(&cands[i], &reference, 16, [pilot, pilot], 50_000, salt ^ 0xC0F);
                     played.push((i + 1, t.wins_a, t.wins_b, t.undecided));
-                    if let Some(x) = share(&t)
-                        && x >= accept
-                        && won.is_none_or(|w| x > w.0)
-                    {
-                        won = Some((x, i));
+                    if let Some(x) = share(&t) {
+                        confirmed.push(x);
+                        if x >= race.accept && won.is_none_or(|w| x > w.0) {
+                            won = Some((x, i));
+                        }
                     }
                 }
                 let mut finalist: Option<f64> = None;
                 if let Some((_, i)) = won
-                    && final_stage.0 > 0
+                    && race.final_pairs > 0
                 {
-                    let t = crabomination::recommend::simulate_match_pairs_piloted(&cands[i], &reference, final_stage.0, [pilot, pilot], 50_000, salt ^ 0xF1A1);
+                    let t = crabomination::recommend::simulate_match_pairs_piloted(&cands[i], &reference, race.final_pairs, [pilot, pilot], 50_000, salt ^ 0xF1A1);
                     played.push((i + 1, t.wins_a, t.wins_b, t.undecided));
                     finalist = share(&t);
-                    if finalist.is_none_or(|x| x < final_stage.1) {
+                    if finalist.is_none_or(|x| x < race.final_accept) {
                         won = None;
                     }
                 }
@@ -454,10 +533,10 @@ fn race_generation(
                 if let Some(log) = log {
                     let mut decks = vec![reference.clone()];
                     decks.extend(cands.iter().cloned());
-                    log.lock().unwrap().push(RaceLog { set: row.set, index: row.index, decks, matches: played });
+                    log.lock().unwrap().push(RaceLog { set: row.set, index: row.index, decks, matches: played, values: vals });
                 }
                 let mut o = out.lock().unwrap();
-                o.push((row.set, won.map(|w| w.0), finalist, won.is_some_and(|w| w.1 >= sampled)));
+                o.push((row.set, won.map(|w| w.0), finalist, won.is_some_and(|w| w.1 >= sampled), confirmed));
                 if o.len().is_multiple_of(1000) {
                     eprintln!("  raced {}/{} pools, {:.0}s", o.len(), rows.len(), t0.elapsed().as_secs_f64());
                 }
@@ -472,7 +551,18 @@ fn race_generation(
             let won: Vec<f64> = mine.iter().filter_map(|r| r.1).collect();
             let fin: Vec<f64> = mine.iter().filter_map(|r| r.2).collect();
             let pair_won = mine.iter().filter(|r| r.3).count();
-            (set, mine.len(), won.len(), won.iter().sum::<f64>() / won.len().max(1) as f64, fin.len(), fin.iter().sum::<f64>() / fin.len().max(1) as f64, pair_won)
+            let conf: Vec<f64> = mine.iter().flat_map(|r| r.4.iter().copied()).collect();
+            (
+                set,
+                mine.len(),
+                won.len(),
+                won.iter().sum::<f64>() / won.len().max(1) as f64,
+                fin.len(),
+                fin.iter().sum::<f64>() / fin.len().max(1) as f64,
+                pair_won,
+                conf.len(),
+                conf.iter().sum::<f64>() / conf.len().max(1) as f64,
+            )
         })
         .collect()
 }
@@ -1017,6 +1107,22 @@ fn main() -> CResult<()> {
         if let Some(path) = &args.load_best {
             eprintln!("loaded {} replaced decks from {}", load_best(path, &train, &cards), path.display());
         }
+        let race_cfg = Race {
+            accept: 55.0,
+            final_pairs: args.final_pairs,
+            final_accept: args.final_accept,
+            pair_cands: args.pair_cands,
+            confirm_top: args.confirm_top,
+            samples: args.race_samples,
+            value_top: args.value_top,
+        };
+        let race_values: [Option<crabomination::deck_value::DeckValue>; 2] = [&args.race_value_fra, &args.race_value_sos].map(|p| {
+            p.as_ref().map(|p| {
+                let v = crabomination::deck_value::DeckValue::load(p).unwrap_or_else(|e| panic!("{e}"));
+                eprintln!("race screened by the {} deck value ({} cards) from {}", v.arm, v.cards.len(), p.display());
+                v
+            })
+        });
         for g in 1..=args.expert_iter {
             let p = export(&model, &cards)?;
             let tg = std::time::Instant::now();
@@ -1027,19 +1133,18 @@ fn main() -> CResult<()> {
                 race.extend(mine.into_iter().take(n));
             }
             let race_logs: Option<Mutex<Vec<RaceLog>>> = args.log_races.as_ref().map(|_| Mutex::new(Vec::new()));
-            for (set, raced, won, mean, fin, fin_mean, pair_won) in race_generation(
+            for (set, raced, won, mean, fin, fin_mean, pair_won, confirmed, conf_mean) in race_generation(
                 &p,
                 &race,
                 &cards,
                 args.seed ^ (g as u64) << 32,
                 args.threads,
-                55.0,
-                (args.final_pairs, args.final_accept),
-                args.pair_cands,
-                args.confirm_top,
+                race_cfg,
+                [race_values[0].as_ref(), race_values[1].as_ref()],
                 race_logs.as_ref(),
             ) {
                 println!("gen {g}: {set:?} raced {raced} pools, replaced {won} ({:.1} %), replacements' confirmed share {mean:.2} ({:.0}s)", 100.0 * won as f64 / raced.max(1) as f64, tg.elapsed().as_secs_f64());
+                println!("gen {g}: {set:?} {confirmed} candidates confirmed at 16 pairs, mean share {conf_mean:.2} (screen: {})", if race_values[usize::from(set == SealedSet::Sos)].is_some() { "value" } else { "4 pairs" });
                 if args.final_pairs > 0 {
                     println!("gen {g}: {set:?} {fin} leaders reached the {}-pair final; their mean final share {fin_mean:.2}", args.final_pairs);
                 }
