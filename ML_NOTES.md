@@ -8016,3 +8016,25 @@ deck by a few cards, and the width-64 policy does not separate those pools
 from the many similar ones where the teacher's deck stands. Capacity or
 training budget is the bottleneck, so parts 2 and 3 run (part 2 started
 03:50).
+
+**Step 4 part 2, width 1024 (2026-11-07): no better at imitation.**
+Embedding = hidden = 1024, the step-2b recipe (0.76 s a step, 6.3 h);
+checkpoint at step 28,000 (held-out overlap 0.8648, width 64's best
+0.8594).
+
+| read | width 64 (step 2b) | width 1024 |
+|---|---|---|
+| FRA held-out overlap / same colours | 0.832 / 0.581 | 0.843 / 0.613 |
+| SOS held-out overlap / same colours | 0.888 / 0.762 | 0.892 / 0.784 |
+| **G2a** FRA (43 / 97), with the splash rule | 48.73 / 49.16 (48.95) | 49.06 / 49.12 (**49.09**, +0.14) |
+| **G2a** SOS | 50.15 / 49.84 (50.00) | 49.07 / 49.58 (49.33, −0.67) |
+
+FRA +0.14 is under the +0.5 bar; SOS loses 0.7. Imitation is already at
+99 % a step at width 64, so 16x the width has little left to fit there.
+Width 256 is running. Part 3 (queued, `.ladder/deck4b/`) asks the
+question part 1 raised: on the saved labels, one generation from the
+width-1024 export at part 1's budget (capacity alone), and one at width
+64 with 3x the steps, full learning rate and half of each batch from the
+relabelled pools (budget alone); fit read and G2a for each. New trainer
+options: `--init-json` (start from an export, exactly), `--gen-lr`,
+`--relabel-share`; non-iteration runs now save their weights.

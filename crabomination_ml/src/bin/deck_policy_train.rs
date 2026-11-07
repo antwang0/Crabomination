@@ -76,6 +76,14 @@ struct Args {
     /// (the race's labels, reusable without racing again).
     dump_best: Option<std::path::PathBuf>,
     load_best: Option<std::path::PathBuf>,
+    /// Start from an exported policy instead (exact: its card vectors as
+    /// free embeddings under an identity encoder), skipping the recipe.
+    init_json: Option<std::path::PathBuf>,
+    /// A generation's learning rate (x `--lr`) and the share of each batch
+    /// drawn from relabelled pools (the rest of the first half: all train
+    /// prefixes; the second half: policy states).
+    gen_lr: f64,
+    relabel_share: f64,
     /// Start step 3 from these raw weights (`*_gen0.safetensors`), skipping
     /// the step-2b recipe.
     init_vars: Option<std::path::PathBuf>,
@@ -111,6 +119,9 @@ fn parse_args() -> Args {
         hidden: num("--hidden", H),
         dump_best: get("--dump-best").map(Into::into),
         load_best: get("--load-best").map(Into::into),
+        init_json: get("--init-json").map(Into::into),
+        gen_lr: get("--gen-lr").map_or(0.3, |v| v.parse().expect("--gen-lr")),
+        relabel_share: get("--relabel-share").map_or(0.25, |v| v.parse().expect("--relabel-share")),
     }
 }
 
@@ -812,7 +823,12 @@ fn main() -> CResult<()> {
     // The stop head's width: 32 at the step-2 size, half the hidden width above it.
     let sh = (h / 2).max(32);
     eprintln!("model: embedding {e}, hidden {h}, stop head {sh}");
-    let model = Model {
+    let model = if let Some(path) = &args.init_json {
+        let p = DeckPolicy::load(path).unwrap_or_else(|e| panic!("{e}"));
+        assert_eq!(p.cards, cards.names, "{}: another card list", path.display());
+        model_of(&p, &dev)?
+    } else {
+        Model {
         h,
         emb: Var::from_tensor(&Tensor::from_vec((0..c * e).map(|_| rng.random_range(-0.17f32..0.17)).collect::<Vec<_>>(), (c, e), &dev)?)?,
         feats: Tensor::from_vec(cards.feats.clone(), (c, FEATS), &dev)?,
@@ -822,6 +838,7 @@ fn main() -> CResult<()> {
         cand2: Lin::new(h, 1, &mut rng, &dev)?,
         stop1: Lin::new(h, sh, &mut rng, &dev)?,
         stop2: Lin::new(sh, 1, &mut rng, &dev)?,
+    }
     };
     let mut opt = AdamW::new(model.vars(), ParamsAdamW { lr: args.lr, weight_decay: 1e-4, ..Default::default() })?;
     let mut hrng = StdRng::seed_from_u64(0x401D);
@@ -856,9 +873,15 @@ fn main() -> CResult<()> {
         best_vars = model.vars().iter().map(|v| v.as_tensor().copy()).collect::<CResult<_>>()?;
         eprintln!("initialised from {}", path.display());
     }
-    let steps = if args.load.is_some() || args.init_vars.is_some() { 0 } else { args.steps };
+    if let Some(path) = &args.init_json {
+        best = Some(export(&model, &cards)?);
+        best_vars = model.vars().iter().map(|v| v.as_tensor().copy()).collect::<CResult<_>>()?;
+        eprintln!("initialised from {} (width {})", path.display(), model.h);
+    }
+    let skip = args.load.is_some() || args.init_vars.is_some() || args.init_json.is_some();
+    let steps = if skip { 0 } else { args.steps };
     for step in 0..=steps {
-        if args.load.is_some() || args.init_vars.is_some() {
+        if skip {
             break;
         }
         if step % 500 == 0 || step == steps {
@@ -912,7 +935,7 @@ fn main() -> CResult<()> {
         for (v, t) in model.vars().iter().zip(&best_vars) {
             v.set(t)?;
         }
-        opt.set_learning_rate(args.lr * 0.3);
+        opt.set_learning_rate(args.lr * args.gen_lr);
         let play_rows: Vec<&PoolRow> = [SealedSet::Fra, SealedSet::Sos]
             .into_iter()
             .flat_map(|set| hold.iter().copied().filter(move |r| r.set == set).take(1000))
@@ -973,13 +996,19 @@ fn main() -> CResult<()> {
                     eprintln!("gen {g} step {step}: rolled {} policy states", rolled.len());
                     dagger_states.extend(rolled);
                 }
-                // Half the batch prefixes (half of those from relabelled
-                // pools), half policy states labelled by the current expert.
+                // Half the batch prefixes (`relabel_share` of the batch from
+                // relabelled pools, the rest from any train pool), half
+                // policy states labelled by the current expert.
+                let n_relabel = (args.relabel_share.min(0.5) * args.batch as f64).round() as usize;
                 let states: Vec<State> = (0..args.batch)
-                    .map(|j| match j % 4 {
-                        0 if !improved.is_empty() => sample_state(improved[rng.random_range(0..improved.len())], &mut rng),
-                        0 | 1 => sample_state(train[rng.random_range(0..train.len())], &mut rng),
-                        _ => dagger_states[rng.random_range(0..dagger_states.len())].clone(),
+                    .map(|j| {
+                        if j < n_relabel && !improved.is_empty() {
+                            sample_state(improved[rng.random_range(0..improved.len())], &mut rng)
+                        } else if j < args.batch / 2 {
+                            sample_state(train[rng.random_range(0..train.len())], &mut rng)
+                        } else {
+                            dagger_states[rng.random_range(0..dagger_states.len())].clone()
+                        }
                     })
                     .collect();
                 let bt = batch(&states, c, &cards.stats, &dev)?;
@@ -1002,6 +1031,10 @@ fn main() -> CResult<()> {
         Some(path) => DeckPolicy::load(path).unwrap_or_else(|e| panic!("{e}")),
         None => {
             best.expect("evaluated at step 0").save(&args.export).unwrap_or_else(|e| panic!("{e}"));
+            if !best_vars.is_empty() {
+                let named: HashMap<String, Tensor> = best_vars.iter().enumerate().map(|(k, t)| (format!("v{k}"), t.clone())).collect();
+                candle_core::safetensors::save(&named, args.export.with_extension("safetensors"))?;
+            }
             DeckPolicy::load(&args.export).unwrap_or_else(|e| panic!("{e}"))
         }
     };
@@ -1091,10 +1124,10 @@ fn main() -> CResult<()> {
     Ok(())
 }
 
-/// The engine's scores against a model rebuilt from the export: the export
-/// is what the gate plays, so the trainer's tensors and the engine's
-/// arithmetic must agree on it.
-fn parity(policy: &DeckPolicy, probe: &[State], cards: &Cards, dev: &Device) -> CResult<()> {
+/// A trainable model that computes exactly what `policy` does: its card
+/// vectors as embeddings (no features) under an identity encoder — the
+/// vectors are already the encoder's ReLU output, so the ReLU keeps them.
+fn model_of(policy: &DeckPolicy, dev: &Device) -> CResult<Model> {
     let lin = |l: &Layer| -> CResult<Lin> {
         let w: Vec<f32> = l.w.iter().flatten().copied().collect();
         Ok(Lin {
@@ -1102,12 +1135,11 @@ fn parity(policy: &DeckPolicy, probe: &[State], cards: &Cards, dev: &Device) -> 
             b: Var::from_tensor(&Tensor::new(l.b.clone(), dev)?)?,
         })
     };
-    // The exported `x` is the encoder's output: an identity encoder over it.
     let c = policy.cards.len();
     let x: Vec<f32> = policy.x.iter().flatten().copied().collect();
     let h = policy.x[0].len();
     let ident: Vec<f32> = (0..h * h).map(|i| if i / h == i % h { 1.0 } else { 0.0 }).collect();
-    let m = Model {
+    Ok(Model {
         h,
         emb: Var::from_tensor(&Tensor::from_vec(x, (c, h), dev)?)?,
         feats: Tensor::zeros((c, 0), DType::F32, dev)?,
@@ -1117,7 +1149,15 @@ fn parity(policy: &DeckPolicy, probe: &[State], cards: &Cards, dev: &Device) -> 
         cand2: lin(&policy.cand2)?,
         stop1: lin(&policy.stop1)?,
         stop2: lin(&policy.stop2)?,
-    };
+    })
+}
+
+/// The engine's scores against a model rebuilt from the export: the export
+/// is what the gate plays, so the trainer's tensors and the engine's
+/// arithmetic must agree on it.
+fn parity(policy: &DeckPolicy, probe: &[State], cards: &Cards, dev: &Device) -> CResult<()> {
+    let m = model_of(policy, dev)?;
+    let c = policy.cards.len();
     let bt = batch(probe, c, &cards.stats, dev)?;
     let l: Vec<Vec<f32>> = m.logits(&bt)?.to_vec2()?;
     let mut worst = 0f32;
