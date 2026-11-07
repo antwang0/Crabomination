@@ -8048,3 +8048,27 @@ exactly); SOS 49.96 / 50.66 (50.31, +0.31). Width 256 beats both 64 and
 learning rate and 30,000 steps for 16x the parameters. Still under the
 rated builder (49.45 < 50), so not a candidate. Part 3 adds width 256 at
 part 1's budget (`run256.sh`, queued after the other two).
+
+**Step 4 part 3 result (2026-11-07): the labels can be learned. Width and
+budget both do it, and one generation on them gives the best learned
+builder so far, still under the rated builder.** One generation on the
+saved labels (1,033 relabelled train pools), no new races:
+
+| run | fit: overlap with the winner / with the teacher | G2a FRA (43 / 97, pooled) | G2a SOS (pooled) |
+|---|---|---|---|
+| width 64, part 1's budget (part 1) | 0.785 → 0.786 / 0.773 → 0.767 | (48.87 play read) | — |
+| width 64, 3x steps, lr 1.0, half the batch relabelled | 0.785 → 0.801 / 0.773 → 0.735 | 49.21 / 49.21 (49.21; start 48.95) | 50.02 / 50.46 (50.24; start 50.00) |
+| width 256, part 1's budget | 0.771 → 0.786 / 0.787 → 0.765 | 49.50 / 49.84 (49.67; start 49.45) | 49.93 / 50.37 (50.15; start 50.31) |
+| width 1024, part 1's budget | 0.757 → 0.790 / 0.778 → 0.748 | 49.61 / 49.96 (**49.79**; start 49.09) | 49.90 / 50.24 (50.07; start 49.33) |
+
+* Part 1's null was the budget as much as the width: width 64 moves to
+  its labels when trained harder, and the wider models move at the old
+  budget. The fit moves are 1.5–3.3 points of overlap.
+* The gate gain per generation is +0.2 to +0.7 on FRA. The largest is
+  width 1024's, but its imitation start was undertrained, so part of that
+  is training it more, not the labels.
+* Best FRA so far: 49.79 (width 1024, one generation); step 3b's three
+  generations at width 64 reached 49.49. All are under 50, so none is a
+  candidate. G3a's bar (50.5) needs about +0.7 more.
+Next if continued: expert iteration at width 256 or 1024 with part 3's
+budget (gen-lr 1.0, relabel share 0.5), new races each generation.
