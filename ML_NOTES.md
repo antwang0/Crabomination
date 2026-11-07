@@ -7939,3 +7939,33 @@ Smoke (250 pools, 1 generation): generation 0 reads match part 2 exactly
 replacements. A generation costs ~2.8x part 2's (~110 min). Not the same
 run in every bit: the optimizer state starts fresh, and the race pools are
 drawn after a different number of draws.
+
+**Step 3c result (2026-11-07): more replacements, no better builder; FRA
+G3a fails; not adopted.** The colour-pair candidates did what they were
+for, by less than hoped: FRA replacements 9.3 / 8.5 / 9.7 % a generation
+(part 2: 6.8–7.0), SOS 14.2 / 15.2 / 15.2 % (9–11); pair builds were 24–30 %
+of FRA replacements and a third of SOS's; finalists' mean final share as
+part 2 (FRA 51.0–51.3, SOS 52.5–52.7). Held-out read FRA 48.73 → 49.19 →
+49.18 → 50.42, SOS 48.90 → 49.73 → 49.90 → 49.49.
+
+| cell (43 / 97), generation 3 | FRA | SOS |
+|---|---|---|
+| **G3a** greedy vs rated | 49.30 / 49.59 (pooled 49.45; bar 50.5: **fails**) | 49.88 / 50.17 (50.02) |
+| part 2's generation 3, same read | 49.53 / 49.45 (49.49) | 49.10 / 49.53 (49.32) |
+| policy + value vs rated | 49.84 / 49.87 (49.85, fails) | 51.61 / 51.51 (+1.56) |
+
+* FRA is unchanged from part 2 (−0.04). SOS greedy is +0.7, back to
+  step 2b's parity. SOS policy + value (51.56) is still below the adopted
+  SOS polish (51.78 / 52.04), so there is no new candidate.
+* 35 % more relabelled pools moved nothing on FRA: the held-out overlap with
+  the teacher stays 0.85–0.86, so the policy still mostly copies the rated
+  build. The limit is no longer how many winners the race finds.
+* Both runs' generation 3 read 50.4 on the held-out pools and 49.5 at the
+  gates. Picking the best of four noisy reads (±1.0) overstates by ~0.9.
+
+**Where the deck-building line stops.** Imitation, DAgger, the splash rule
+and two rounds of game-judged expert iteration give a learned builder
+~0.5 below the rated builder on FRA and level with it on SOS. Neither more
+generations (~+0.4 each, part 2) nor more candidates (step 3c) reaches the
+50.5 bar. The production builders stay as they are: rated on FRA, rated +
+the step-1b value polish on SOS.
