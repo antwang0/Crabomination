@@ -8038,3 +8038,13 @@ width-1024 export at part 1's budget (capacity alone), and one at width
 relabelled pools (budget alone); fit read and G2a for each. New trainer
 options: `--init-json` (start from an export, exactly), `--gen-lr`,
 `--relabel-share`; non-iteration runs now save their weights.
+
+**Step 4 part 2, width 256: meets the bar, just.** Same recipe (0.13 s a
+step); checkpoint at step 28,000 (overlap 0.8643). Held-out overlap /
+same colours FRA 0.849 / 0.622, SOS 0.890 / 0.788. **G2a** FRA 49.29 /
+49.61 (pooled **49.45**, +0.50 over width 64, both seeds up: the bar,
+exactly); SOS 49.96 / 50.66 (50.31, +0.31). Width 256 beats both 64 and
+1024. The likely reason 1024 falls short is the recipe: the same
+learning rate and 30,000 steps for 16x the parameters. Still under the
+rated builder (49.45 < 50), so not a candidate. Part 3 adds width 256 at
+part 1's budget (`run256.sh`, queued after the other two).
