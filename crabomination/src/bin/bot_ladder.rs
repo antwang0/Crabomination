@@ -1789,6 +1789,44 @@ struct Row {
     undecided: u32,
     /// Per-pair scores under `--paired`; empty when unpaired.
     pairs: Vec<i8>,
+    /// A's luck per entry of `pairs` under `CRAB_AIVAT` (`server::aivat`).
+    pair_luck: Vec<f64>,
+}
+
+/// `CRAB_AIVAT=1`'s estimate (`server::aivat`): each pair's A score
+/// (`(signum + 1) / 2`, the pair's mean game result) minus half its summed
+/// luck — the pair's mean luck-corrected result — beside the raw pair mean,
+/// with the variance ratio the correction bought. The two means estimate
+/// the same thing; a gap beyond their intervals is the uniform-top
+/// assumption failing, and says to trust the raw one.
+fn report_aivat(pairs: &[i8], luck: &[f64]) {
+    const Z: f64 = 1.96;
+    let n = pairs.len() as f64;
+    let raw: Vec<f64> = pairs.iter().map(|&s| (f64::from(s) + 1.0) / 2.0).collect();
+    let cor: Vec<f64> = raw.iter().zip(luck).map(|(r, l)| r - l / 2.0).collect();
+    let stats = |v: &[f64]| {
+        let m = v.iter().sum::<f64>() / n;
+        let var = v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (n - 1.0).max(1.0);
+        (m, (var / n).sqrt(), var)
+    };
+    let (rm, rse, rv) = stats(&raw);
+    let (cm, cse, cv) = stats(&cor);
+    let diff: Vec<f64> = raw.iter().zip(&cor).map(|(r, c)| r - c).collect();
+    let (dm, dse, _) = stats(&diff);
+    println!(
+        "aivat:  A win% {:>5.1}%  [{:.1}%, {:.1}%]  (±{:.2} pts) luck-corrected, raw pair mean {:.1}% (±{:.2}); \
+         variance x{:.2} — these pairs carry the precision of {:.0}; mean luck correction {:+.2} pts (±{:.2})",
+        100.0 * cm,
+        100.0 * (cm - Z * cse),
+        100.0 * (cm + Z * cse),
+        100.0 * Z * cse,
+        100.0 * rm,
+        100.0 * Z * rse,
+        cv / rv.max(1e-12),
+        n * rv / cv.max(1e-12),
+        100.0 * dm,
+        100.0 * Z * dse,
+    );
 }
 
 /// Build the chunked job queue for `field` and run it on `threads` workers,
@@ -1878,6 +1916,7 @@ fn run_jobs(
                 wins_b: 0,
                 undecided: 0,
                 pairs: Vec::new(),
+                pair_luck: Vec::new(),
             })
             .collect(),
     );
@@ -1930,7 +1969,7 @@ fn run_jobs(
                         // `CRAB_DUMP_TRACES` that is its trace.
                         let max_actions: usize =
                             std::env::var("CRAB_MAX_ACTIONS").ok().and_then(|v| v.parse().ok()).unwrap_or(50_000);
-                        let (wins_a, wins_b, undecided, pairs, job_cost) = if args.paired {
+                        let (wins_a, wins_b, undecided, pairs, pair_luck, job_cost) = if args.paired {
                             let t = simulate_match_pairs_cross(
                                 d,
                                 d,
@@ -1968,7 +2007,7 @@ fn run_jobs(
                                     }
                                 }
                             }
-                            (t.wins_a, t.wins_b, t.undecided, t.pairs, t.cost)
+                            (t.wins_a, t.wins_b, t.undecided, t.pairs, t.pair_luck, t.cost)
                         } else {
                             let t = simulate_match_games_cross(
                                 d,
@@ -1980,7 +2019,7 @@ fn run_jobs(
                                 cx,
                                 true,
                             );
-                            (t.wins_a, t.wins_b, t.undecided, Vec::new(), t.cost)
+                            (t.wins_a, t.wins_b, t.undecided, Vec::new(), Vec::new(), t.cost)
                         };
                         // A faulted chunk is not a partial result: its tally
                         // stops mid-game, so it is dropped whole.
@@ -1995,6 +2034,7 @@ fn run_jobs(
                         row.wins_b += wins_b;
                         row.undecided += undecided;
                         row.pairs.extend(pairs);
+                        row.pair_luck.extend(pair_luck);
                     }
                     // Let the peer exit on a message rather than on EOF, so
                     // a clean end is distinguishable from a crash.
@@ -2592,6 +2632,10 @@ fn main() {
             );
         } else {
             println!("        within-pair rho {:+.3}", p.rho);
+        }
+        let luck: Vec<f64> = rows.iter().flat_map(|r| r.pair_luck.iter().copied()).collect();
+        if luck.len() == all_pairs.len() && !luck.is_empty() {
+            report_aivat(&all_pairs, &luck);
         }
     }
 

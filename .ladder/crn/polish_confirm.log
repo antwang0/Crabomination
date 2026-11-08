@@ -1,0 +1,6 @@
+polish3 sos s11: variant vs adopted builder: 51.76% [51.41, 52.12] pool-level 95% (n=2000 pools, 191 identical decks); games 16564-15436 (51.76%) [67s]
+polish3 sos s29: variant vs adopted builder: 51.58% [51.21, 51.94] pool-level 95% (n=2000 pools, 195 identical decks); games 16504-15496 (51.58%) [71s]
+polish6 sos s43: variant vs adopted builder: 51.79% [51.44, 52.15] pool-level 95% (n=2000 pools, 204 identical decks); games 16574-15426 (51.79%) [71s]
+polish6 sos s97: variant vs adopted builder: 51.52% [51.16, 51.89] pool-level 95% (n=2000 pools, 206 identical decks); games 16488-15512 (51.52%) [57s]
+polish6 fra s43: variant vs adopted builder: 50.12% [49.67, 50.57] pool-level 95% (n=2000 pools, 32 identical decks); games 16033-15956 (50.12%) [100s]
+polish done

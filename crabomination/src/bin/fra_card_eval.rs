@@ -196,8 +196,19 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
             let path = std::env::var("CRAB_DECK_POLICY").expect("--trial policy needs CRAB_DECK_POLICY=<deck_policy_train --export>");
             let p = crabomination::deck_policy::DeckPolicy::load(std::path::Path::new(&path)).unwrap_or_else(|e| panic!("{e}"));
             eprintln!("deck policy ({} cards) from {path}", p.cards.len());
-            (p, t == "policy-value")
+            (p, t.starts_with("policy-value"))
         });
+    // `--trial policy-value+rated|lands|polishN` (2026-11-08 research
+    // sweep): the adopted learned builder (`build_valued`, 16 samples)
+    // against itself with one build-time lever on
+    // (`DeckPolicy::build_valued_with`): the rated best-of-`--best` build as
+    // a 28th candidate; more-land variants (to 18) of the value's top 3; at
+    // most N value-guided swaps after the pick.
+    let variant: Option<String> = arg("--trial").and_then(|t| t.strip_prefix("policy-value+").map(str::to_string));
+    if let Some(v) = &variant {
+        let polish_n = v.strip_prefix("polish").and_then(|n| n.parse::<usize>().ok());
+        assert!(matches!(v.as_str(), "rated" | "lands") || polish_n.is_some_and(|n| n > 0), "--trial policy-value+{v}: rated, lands or polishN");
+    }
     // `--trial policy-castable`: the splash rule's own gate — the policy's
     // greedy build under it against the same policy's build without it.
     let castable_ab = arg("--trial").as_deref() == Some("policy-castable");
@@ -224,6 +235,19 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
             .collect();
         std::sync::Arc::new(map)
     });
+    // `CRAB_AIVAT=1` (`server::aivat`): every game's draws scored by the
+    // set's value net (`CRAB_AIVAT_NET`, default the FRA / SOS champion) and
+    // a luck-corrected pool share printed beside the raw one.
+    let aivat = crabomination::recommend::aivat_on();
+    if aivat {
+        let path = std::env::var("CRAB_AIVAT_NET").unwrap_or_else(|_| {
+            if arg("--set").as_deref() == Some("sos") { "nets/champion.safetensors" } else { "nets/fra-champion.safetensors" }.into()
+        });
+        crabomination::server::net_eval::load_slot(crabomination::server::net_eval::SLOT_BEST, std::path::Path::new(&path))
+            .expect("CRAB_AIVAT: load the value net");
+        eprintln!("aivat: draws scored by {path}");
+    }
+    let luck_rows = std::sync::Mutex::new(Vec::<(f64, f64)>::new());
     let next = AtomicUsize::new(0);
     let rows = std::sync::Mutex::new(Vec::with_capacity(pools));
     let start = std::time::Instant::now();
@@ -245,6 +269,21 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                     }
                 };
                 let (old, new) = if let Some((p, _)) = &policy
+                    && let Some(v) = &variant
+                {
+                    let value = policy_value.as_ref().expect("policy-value+ loads CRAB_DECK_VALUE");
+                    let adopted = p.build_valued(&pool, value, 16, &mut StdRng::seed_from_u64(salt ^ 3));
+                    let mut opts = crabomination::deck_policy::ValuedOpts::default();
+                    match v.as_str() {
+                        "rated" => opts.extra.push(rated(&pool)),
+                        "lands" => {
+                            opts.land_variants = 3;
+                            opts.max_lands = 18;
+                        }
+                        _ => opts.polish = v["polish".len()..].parse().expect("checked above"),
+                    }
+                    (adopted, p.build_valued_with(&pool, value, 16, &mut StdRng::seed_from_u64(salt ^ 3), &opts))
+                } else if let Some((p, _)) = &policy
                     && castable_ab
                 {
                     (p.build_unchecked(&pool, None), p.build(&pool, None))
@@ -297,6 +336,12 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                     key(&old) == key(&new)
                 };
                 let t = simulate_match_pairs_piloted(&new, &old, pairs, [pilot, pilot], 50_000, salt ^ 2);
+                if aivat && !t.pairs.is_empty() {
+                    let k = t.pairs.len() as f64;
+                    let raw: f64 = t.pairs.iter().map(|&s| (f64::from(s) + 1.0) / 2.0).sum::<f64>() / k;
+                    let luck: f64 = t.pair_luck.iter().sum::<f64>() / (2.0 * k);
+                    luck_rows.lock().unwrap().push((100.0 * raw, 100.0 * (raw - luck)));
+                }
                 let n = done_count(&rows, (t.wins_a, t.wins_b, same));
                 if n % 250 == 0 {
                     eprintln!("{n}/{pools} pools, {:.0}s", start.elapsed().as_secs_f64());
@@ -305,6 +350,29 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
         }
     });
     let rows = rows.into_inner().unwrap();
+    let luck_rows = luck_rows.into_inner().unwrap();
+    if aivat && luck_rows.len() > 1 {
+        let n = luck_rows.len() as f64;
+        let stats = |f: &dyn Fn(&(f64, f64)) -> f64| {
+            let m = luck_rows.iter().map(f).sum::<f64>() / n;
+            let v = luck_rows.iter().map(|r| (f(r) - m).powi(2)).sum::<f64>() / (n - 1.0);
+            (m, v)
+        };
+        let (rm, rv) = stats(&|r| r.0);
+        let (cm, cv) = stats(&|r| r.1);
+        let (dm, dv) = stats(&|r| r.0 - r.1);
+        println!(
+            "aivat: {cm:.2}% [{:.2}, {:.2}] luck-corrected over decided pairs, raw {rm:.2}% [{:.2}, {:.2}] (n={} pools); \
+             variance x{:.2}; mean correction {dm:+.2} (±{:.2})",
+            cm - 1.96 * (cv / n).sqrt(),
+            cm + 1.96 * (cv / n).sqrt(),
+            rm - 1.96 * (rv / n).sqrt(),
+            rm + 1.96 * (rv / n).sqrt(),
+            luck_rows.len(),
+            cv / rv.max(1e-12),
+            1.96 * (dv / n).sqrt(),
+        );
+    }
     let identical = rows.iter().filter(|r| r.2).count();
     let shares: Vec<f64> = rows
         .iter()
@@ -320,6 +388,8 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
         "{}: {mean:.2}% [{:.2}, {:.2}] pool-level 95% (n={} pools, {identical} identical decks); games {wa}-{wb} ({:.2}%)",
         if castable_ab {
             "castable vs unchecked"
+        } else if variant.is_some() {
+            "variant vs adopted builder"
         } else if policy_value.is_some() {
             "policy+value vs rated"
         } else if policy.is_some() {

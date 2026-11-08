@@ -313,27 +313,183 @@ impl DeckPolicy {
     /// since step 5, the greedy build held to each colour pair
     /// ([`build_in`](Self::build_in)) — the one `value` rates highest.
     pub fn build_valued(&self, pool: &[CardFactory], value: &crate::deck_value::DeckValue, samples: usize, rng: &mut StdRng) -> Vec<CardFactory> {
-        let mut best = self.build(pool, None);
-        let mut best_v = value.value(&best);
-        let mut consider = |d: Vec<CardFactory>| {
+        self.build_valued_with(pool, value, samples, rng, &ValuedOpts::default())
+    }
+
+    /// [`build_valued`](Self::build_valued) with the 2026-11-08 research
+    /// sweep's build-time levers (ML_NOTES "Research sweep"), each off in
+    /// [`ValuedOpts::default`], where the pick is exactly `build_valued`'s:
+    /// the caller's extra candidates (the rated builds) in the race, more
+    /// lands for the value's top picks, and value-guided swaps after the
+    /// pick.
+    pub fn build_valued_with(
+        &self,
+        pool: &[CardFactory],
+        value: &crate::deck_value::DeckValue,
+        samples: usize,
+        rng: &mut StdRng,
+        opts: &ValuedOpts,
+    ) -> Vec<CardFactory> {
+        let mut cands: Vec<(Vec<CardFactory>, f64)> = Vec::new();
+        let mut push = |d: Vec<CardFactory>| {
             let v = value.value(&d);
-            if v > best_v {
-                best = d;
-                best_v = v;
-            }
+            cands.push((d, v));
         };
+        push(self.build(pool, None));
         for _ in 0..samples {
-            consider(self.build(pool, Some((&mut *rng, 1.0))));
+            push(self.build(pool, Some((&mut *rng, 1.0))));
         }
         for (a, &c1) in Color::ALL.iter().enumerate() {
             for &c2 in &Color::ALL[a + 1..] {
                 if let Some(d) = self.build_in(pool, [c1, c2]) {
-                    consider(d);
+                    push(d);
                 }
             }
         }
-        best
+        for d in &opts.extra {
+            push(d.clone());
+        }
+        if opts.land_variants > 0 {
+            // The value's top picks (first-seen order on ties, as the race
+            // breaks them), each with one more land per cut up to
+            // `max_lands`: the cut is the spell whose removal the value
+            // minds least, the lands re-derived by the rated land step.
+            let mut order: Vec<usize> = (0..cands.len()).collect();
+            order.sort_by(|&a, &b| cands[b].1.total_cmp(&cands[a].1).then(a.cmp(&b)));
+            let tops: Vec<Vec<CardFactory>> = order.iter().take(opts.land_variants).map(|&i| cands[i].0.clone()).collect();
+            for d in tops {
+                let mut spells = nonland(&d);
+                while DECK_SIZE - spells.len() < opts.max_lands && spells.len() > MIN_SPELLS {
+                    let Some((cut, deck, v)) = (0..spells.len())
+                        .map(|i| {
+                            let mut s = spells.clone();
+                            s.remove(i);
+                            let deck = reland(pool, &s);
+                            let v = value.value(&deck);
+                            (i, deck, v)
+                        })
+                        .max_by(|a, b| a.2.total_cmp(&b.2).then(b.0.cmp(&a.0)))
+                    else {
+                        break;
+                    };
+                    spells.remove(cut);
+                    cands.push((deck, v));
+                }
+            }
+        }
+        // The race's own pick: the highest value, the first on a tie.
+        let mut best = 0;
+        for (i, c) in cands.iter().enumerate() {
+            if c.1 > cands[best].1 {
+                best = i;
+            }
+        }
+        let (deck, v) = cands.swap_remove(best);
+        if opts.polish == 0 { deck } else { polish(pool, deck, v, value, opts.polish) }
     }
+}
+
+/// The opt-in build-time levers of [`DeckPolicy::build_valued_with`].
+#[derive(Debug, Clone, Default)]
+pub struct ValuedOpts {
+    /// Extra candidates the value also rates (e.g. the rated builder's).
+    pub extra: Vec<Vec<CardFactory>>,
+    /// How many of the value's top candidates get more-land variants.
+    pub land_variants: usize,
+    /// The most lands a variant reaches.
+    pub max_lands: usize,
+    /// The most value-guided swaps after the pick (0 = none).
+    pub polish: usize,
+}
+
+fn nonland(deck: &[CardFactory]) -> Vec<CardFactory> {
+    deck.iter().copied().filter(|f| !crate::cube::card_def(*f).is_land()).collect()
+}
+
+/// `spells` with the build's land step: the rated builder's lands for them,
+/// and three sources for a splash colour — the two colours with the most
+/// pips are the main colours and the one colour every other card fits
+/// with is the splash, as [`DeckPolicy::castable_spells`] decides.
+pub fn reland(pool: &[CardFactory], spells: &[CardFactory]) -> Vec<CardFactory> {
+    let mut lands = crate::recommend::lands_for_spells(pool, spells, DECK_SIZE.saturating_sub(spells.len()) as u32);
+    let (main, main_set) = main_colors(spells);
+    let off: Vec<CardFactory> = spells.iter().copied().filter(|f| !fits(*f, main_set)).collect();
+    if !off.is_empty()
+        && let Some(c) = Color::ALL.into_iter().filter(|c| !main_set.contains(c)).find(|&c| {
+            let mut with = main_set;
+            with.insert(c);
+            off.iter().all(|f| fits(*f, with))
+        })
+    {
+        crate::recommend::ensure_sources(&mut lands, c, SPLASH_SOURCES, &main);
+    }
+    let mut deck = spells.to_vec();
+    deck.extend(lands);
+    deck
+}
+
+/// The two colours with the most pips in `spells`, as a list and a set.
+fn main_colors(spells: &[CardFactory]) -> (Vec<Color>, ColorSet) {
+    let mut weight: Vec<(Color, u32)> =
+        Color::ALL.into_iter().map(|c| (c, spells.iter().map(|f| crate::cube::card_brief(*f).pips.get(c)).sum())).filter(|w| w.1 > 0).collect();
+    weight.sort_by_key(|w| std::cmp::Reverse(w.1));
+    let main: Vec<Color> = weight.iter().take(2).map(|w| w.0).collect();
+    let set = main.iter().fold(ColorSet::empty(), |mut s, &c| {
+        s.insert(c);
+        s
+    });
+    (main, set)
+}
+
+/// At most `swaps` value-guided swaps on `deck` (valued `v`): each the best
+/// (spell out, pool card in) by the value with the lands held, the pool card
+/// inside the deck's two main colours (no new splash — the value cannot see
+/// sources), then the lands re-derived; a swap stays only if the re-landed
+/// deck still beats the one before it.
+fn polish(pool: &[CardFactory], mut deck: Vec<CardFactory>, mut v: f64, value: &crate::deck_value::DeckValue, swaps: usize) -> Vec<CardFactory> {
+    let key = |f: &CardFactory| *f as usize;
+    for _ in 0..swaps {
+        let spells = nonland(&deck);
+        let lands: Vec<CardFactory> = deck.iter().copied().filter(|f| crate::cube::card_def(*f).is_land()).collect();
+        let (_, main_set) = main_colors(&spells);
+        let mut ins: Vec<CardFactory> = Vec::new();
+        for &f in pool {
+            if crate::cube::card_def(f).is_land() || !fits(f, main_set) || ins.iter().any(|g| key(g) == key(&f)) {
+                continue;
+            }
+            let have = pool.iter().filter(|g| key(g) == key(&f)).count();
+            let used = spells.iter().filter(|g| key(g) == key(&f)).count();
+            if used < have {
+                ins.push(f);
+            }
+        }
+        let mut best: Option<(f64, usize, CardFactory)> = None;
+        for (i, out) in spells.iter().enumerate() {
+            for &inn in &ins {
+                if key(out) == key(&inn) {
+                    continue;
+                }
+                let mut d = spells.clone();
+                d[i] = inn;
+                d.extend_from_slice(&lands);
+                let dv = value.value(&d);
+                if dv > v && best.as_ref().is_none_or(|b| dv > b.0) {
+                    best = Some((dv, i, inn));
+                }
+            }
+        }
+        let Some((_, i, inn)) = best else { break };
+        let mut s = spells;
+        s[i] = inn;
+        let relanded = reland(pool, &s);
+        let rv = value.value(&relanded);
+        if rv <= v {
+            break;
+        }
+        deck = relanded;
+        v = rv;
+    }
+    deck
 }
 
 #[cfg(test)]
@@ -342,6 +498,44 @@ mod tests {
 
     fn zeros(o: usize, i: usize) -> Layer {
         Layer { w: vec![vec![0.0; i]; o], b: vec![0.0; o] }
+    }
+
+    /// The research-sweep levers (`build_valued_with`): with every option
+    /// off the pick is `build_valued`'s, card for card; each lever returns a
+    /// 40-card deck that only plays pool cards, valued no lower than the
+    /// adopted pick (the levers only add candidates or keep improving swaps).
+    #[test]
+    fn build_valued_with_defaults_is_build_valued_and_levers_never_value_lower() {
+        use rand::SeedableRng;
+        let policy = crate::selfplay::sealed_deck_policy();
+        for (set, value) in [
+            (crate::fra_mode::SealedSet::Fra, crate::selfplay::fra_deck_value()),
+            (crate::fra_mode::SealedSet::Sos, crate::selfplay::sos_deck_value()),
+        ] {
+            for seed in 0..3u64 {
+                let pool = crate::selfplay::sealed_pool_of(set, seed, crate::selfplay::SEALED_PACKS);
+                let rng = || StdRng::seed_from_u64(seed ^ 3);
+                let adopted = policy.build_valued(&pool, value, 4, &mut rng());
+                let same = policy.build_valued_with(&pool, value, 4, &mut rng(), &ValuedOpts::default());
+                let key = |d: &[CardFactory]| d.iter().map(|f| *f as usize).collect::<Vec<_>>();
+                assert_eq!(key(&adopted), key(&same), "{set:?} pool {seed}: defaults change the pick");
+                let base = value.value(&adopted);
+                let rated = crate::selfplay::rated_sealed_build(&pool, 4, seed);
+                for opts in [
+                    ValuedOpts { extra: vec![rated], ..ValuedOpts::default() },
+                    ValuedOpts { land_variants: 3, max_lands: 18, ..ValuedOpts::default() },
+                    ValuedOpts { polish: 3, ..ValuedOpts::default() },
+                ] {
+                    let d = policy.build_valued_with(&pool, value, 4, &mut rng(), &opts);
+                    assert_eq!(d.len(), DECK_SIZE, "{opts:?}");
+                    assert!(value.value(&d) >= base, "{set:?} pool {seed} {opts:?}: {} < {base}", value.value(&d));
+                    for f in nonland(&d) {
+                        let n = |x: &[CardFactory]| x.iter().filter(|g| **g as usize == f as usize).count();
+                        assert!(n(&d) <= n(&pool), "{} played more often than the pool holds it", crate::cube::card_def(f).name);
+                    }
+                }
+            }
+        }
     }
 
     /// The user's pool built a W/G deck splashing two {B} spells off one

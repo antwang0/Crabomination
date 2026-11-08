@@ -24099,6 +24099,7 @@ impl GameState {
         {
             self.players[p].library.insert(0, bottom);
         }
+        self.log_draw(p);
         let drew = match self.players[p].draw_top() {
             Some(id) => {
                 self.cards_drawn_this_resolution += 1;
@@ -30510,8 +30511,19 @@ impl GameState {
             if self.players[seat].library.is_empty() {
                 break;
             }
+            self.log_draw(seat);
             let card = self.players[seat].library.remove(0);
             self.players[seat].hand.push(card);
+        }
+    }
+
+    /// Record the state just before `seat` takes its library's top card,
+    /// when this thread's draw log is on ([`draw_log_start`]) — the chance
+    /// events of the ladder's AIVAT estimator (`server::aivat`). Off (every
+    /// other caller) it is one thread-local flag read.
+    fn log_draw(&self, seat: usize) {
+        if DRAW_LOG_ON.with(|f| f.get()) {
+            DRAW_LOG.with(|l| l.borrow_mut().push((self.clone(), seat)));
         }
     }
 
@@ -38675,4 +38687,24 @@ impl Drop for CounterPlacerGuard {
     fn drop(&mut self) {
         COUNTER_PLACER.with(|c| c.set(self.0));
     }
+}
+
+thread_local! {
+    static DRAW_LOG_ON: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    static DRAW_LOG: std::cell::RefCell<Vec<(GameState, usize)>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Start logging this thread's draws: every card a player takes off the top
+/// of their library (a draw, or a card of an opening hand) records the
+/// state just before it and the seat. For the real game's own moves only —
+/// the caller turns it off around anything that plays a game forward on a
+/// clone (a bot's search), or the log fills with imagined draws.
+pub fn draw_log_start() {
+    DRAW_LOG_ON.with(|f| f.set(true));
+}
+
+/// Stop logging and hand back what was logged since the last take.
+pub fn draw_log_take() -> Vec<(GameState, usize)> {
+    DRAW_LOG_ON.with(|f| f.set(false));
+    DRAW_LOG.with(|l| std::mem::take(&mut *l.borrow_mut()))
 }

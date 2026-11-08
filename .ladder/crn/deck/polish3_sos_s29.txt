@@ -1,0 +1,1 @@
+variant vs adopted builder: 51.58% [51.21, 51.94] pool-level 95% (n=2000 pools, 195 identical decks); games 16504-15496 (51.58%)

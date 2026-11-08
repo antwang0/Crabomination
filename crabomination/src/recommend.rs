@@ -1792,6 +1792,9 @@ pub struct PairedTally {
     /// evidence, and scoring it 0 would dilute the mean toward "even" with
     /// games that never finished.
     pub pairs: Vec<i8>,
+    /// Under `CRAB_AIVAT`, A's summed luck over each entry of `pairs`'s two
+    /// games (`server::aivat`); empty otherwise.
+    pub pair_luck: Vec<f64>,
 }
 
 /// Wilson score interval at `z` standard normal deviates.
@@ -1917,11 +1920,13 @@ pub fn simulate_match_pairs_cross(
         undecided: 0,
         cost: SimCost::default(),
         pairs: Vec::with_capacity(pairs),
+        pair_luck: Vec::new(),
     };
     for k in 0..pairs {
         let seed = seed_base.wrapping_add((k as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
         let mut score = 0i8;
         let mut decided_both = true;
+        let mut luck_a = 0.0f64;
         for a_seat0 in [true, false] {
             // Re-seeded per game, *not* carried across the pair: the second
             // game has to draw the same shuffle as the first, which a shared
@@ -1980,6 +1985,7 @@ pub fn simulate_match_pairs_cross(
                 return tally;
             }
             tally.cost.record(&outcome);
+            luck_a += if a_seat0 { outcome.luck } else { -outcome.luck };
             match outcome.winner {
                 Some(seat) => {
                     if (seat == 0) == a_seat0 {
@@ -1998,6 +2004,9 @@ pub fn simulate_match_pairs_cross(
         }
         if decided_both {
             tally.pairs.push(score.signum());
+            if aivat_on() {
+                tally.pair_luck.push(luck_a);
+            }
         }
     }
     tally
@@ -2141,6 +2150,20 @@ pub(crate) struct GameOutcome {
     pub turns: u32,
     /// Which of the loop's three exits ended this game.
     pub stop: StopReason,
+    /// Seat 0's summed luck of the draw under `CRAB_AIVAT` (`server::aivat`),
+    /// 0 otherwise.
+    pub luck: f64,
+}
+
+/// `CRAB_AIVAT=1`: score every real draw's luck with the champion slot's
+/// value net (`server::aivat`), and play each accepted move with
+/// `perform_action` rather than adopting the bot's settled state — the two
+/// are the same state by `GameState::accept_on`'s contract, and only the
+/// driver's own `perform_action` is outside every bot's search, so only it
+/// may log draws. Read once.
+pub fn aivat_on() -> bool {
+    static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *ON.get_or_init(|| std::env::var_os("CRAB_AIVAT").is_some_and(|v| v != "0"))
 }
 
 /// Play one full bot game from a prebuilt template. Mirrors the server
@@ -2541,7 +2564,21 @@ fn play_one_game_traced(
     if let Some(r) = &mut seeded {
         g.rng.reseed(r.random());
     }
+    let aivat = aivat_on();
+    let mut luck = 0.0f64;
+    let score_draws = |luck: &mut f64| {
+        let events = crate::game::draw_log_take();
+        if !events.is_empty() {
+            *luck += crate::server::aivat::seat0_luck(&events, crate::server::net_eval::SLOT_BEST);
+        }
+    };
+    if aivat {
+        crate::game::draw_log_start();
+    }
     g.start_mulligan_phase();
+    if aivat {
+        score_draws(&mut luck);
+    }
     let mut bots: Vec<Box<dyn Bot>> = pilots.into_iter().map(Pilot::build).collect();
     if let Some(rate) = crate::pod::fuzz::ladder_fuzz_rate() {
         let seed = jitter_seed.unwrap_or(0) ^ g.rng.position();
@@ -2593,6 +2630,7 @@ fn play_one_game_traced(
             };
             let Some(step) = step else { continue };
             let crate::server::bot::BotStep { action, settled } = step;
+            let settled = if aivat { None } else { settled };
             // Formatted before the move, because `perform_action` takes it
             // by value; only kept when the move is accepted.
             let pending = trace.as_ref().map(|_| format!("p{s} {action:?}"));
@@ -2629,7 +2667,14 @@ fn play_one_game_traced(
                 let before = settle_check().then(|| (settle_fingerprint(&g), format!("p{s} {action:?}")));
                 // The pre-action board, for the rejected-answer report.
                 let snap = settle_check().then(|| g.clone());
-                match g.perform_action(action) {
+                if aivat {
+                    crate::game::draw_log_start();
+                }
+                let res = g.perform_action(action);
+                if aivat {
+                    score_draws(&mut luck);
+                }
+                match res {
                     Ok(events) => {
                         if let Some((b, label)) = before
                             && (b == settle_fingerprint(&g)
@@ -2715,7 +2760,7 @@ fn play_one_game_traced(
     if let Some(out) = end_zones {
         *out = final_zones.unwrap_or_else(|| zone_lines(&g));
     }
-    GameOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop }
+    GameOutcome { winner: g.game_over.flatten(), actions, turns: g.turn_number, stop, luck }
 }
 
 /// `# snap T{turn} {step} active pN || pK life L lands N/U hand […] crt […]`:

@@ -1,0 +1,27 @@
+loaded value net from nets/champion.safetensors
+ladder: net67 (A) vs dflt (B) — 400 games x 12 sealed decks on 4 threads, seed 97 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0             200    200      0     50.0%  [45.1%, 54.9%]
+sealed #1             212    188      0     53.0%  [48.1%, 57.8%]
+sealed #2             222    178      0     55.5%  [50.6%, 60.3%]
+sealed #3             208    192      0     52.0%  [47.1%, 56.9%]
+sealed #4             209    191      0     52.2%  [47.4%, 57.1%]
+sealed #5             198    202      0     49.5%  [44.6%, 54.4%]
+sealed #6             198    202      0     49.5%  [44.6%, 54.4%]
+sealed #7             223    177      0     55.8%  [50.9%, 60.5%]
+sealed #8             209    191      0     52.2%  [47.4%, 57.1%]
+sealed #9             202    198      0     50.5%  [45.6%, 55.4%]
+sealed #10            222    178      0     55.5%  [50.6%, 60.3%]
+sealed #11            195    205      0     48.8%  [43.9%, 53.6%]
+----------------------------------------------------------------
+TOTAL                2498   2302      0     52.0%  [50.6%, 53.5%]
+
+4800 decided, 0 undecided, in 133.4s
+
+paired: 2400 pairs — 328 A-sweeps, 230 B-sweeps, 1842 splits
+        A win%  52.0%  [51.1%, 53.0%]  (±0.96 pts)
+        within-pair rho -0.538 — variance x0.46 vs independent games, i.e. these 4800 games carry the precision of 10380
+aivat:  A win%  51.8%  [50.9%, 52.8%]  (±0.96 pts) luck-corrected, raw pair mean 52.0% (±0.96); variance x0.99 — these pairs carry the precision of 2431; mean luck correction +0.20 pts (±0.30)
+verdict: A (net67) is stronger — the interval clears 50%

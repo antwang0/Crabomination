@@ -1,0 +1,28 @@
+loaded value net from nets/champion.safetensors
+loaded policy net (menu priors) from nets/policy-champion.safetensors
+ladder: mcts-net67-menu-mc-crn (A) vs mcts-net67-menu-mc (B) — 60 games x 12 sealed decks on 20 threads, seed 11 (paired)
+
+archetype               A      B    n/d    A win%  95% CI
+----------------------------------------------------------------
+sealed #0              28     32      0     46.7%  [34.6%, 59.1%]
+sealed #1              31     29      0     51.7%  [39.3%, 63.8%]
+sealed #2              28     32      0     46.7%  [34.6%, 59.1%]
+sealed #3              27     33      0     45.0%  [33.1%, 57.5%]
+sealed #4              30     30      0     50.0%  [37.7%, 62.3%]
+sealed #5              31     29      0     51.7%  [39.3%, 63.8%]
+sealed #6              31     29      0     51.7%  [39.3%, 63.8%]
+sealed #7              29     31      0     48.3%  [36.2%, 60.7%]
+sealed #8              33     27      0     55.0%  [42.5%, 66.9%]
+sealed #9              29     31      0     48.3%  [36.2%, 60.7%]
+sealed #10             30     30      0     50.0%  [37.7%, 62.3%]
+sealed #11             24     36      0     40.0%  [28.6%, 52.6%]
+----------------------------------------------------------------
+TOTAL                 351    369      0     48.8%  [45.1%, 52.4%]
+
+720 decided, 0 undecided, in 2709.3s
+
+paired: 360 pairs — 32 A-sweeps, 41 B-sweeps, 287 splits
+        A win%  48.8%  [46.4%, 51.1%]  (±2.32 pts)
+        within-pair rho -0.595 — variance x0.40 vs independent games, i.e. these 720 games carry the precision of 1780
+aivat:  A win%  50.1%  [47.7%, 52.6%]  (±2.45 pts) luck-corrected, raw pair mean 48.8% (±2.33); variance x1.11 — these pairs carry the precision of 326; mean luck correction -1.36 pts (±0.86)
+verdict: inconclusive at 60 games/archetype — the interval straddles 50%

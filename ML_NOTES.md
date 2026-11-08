@@ -8378,7 +8378,15 @@ untouched.
 *Gate (pre-registered, `.ladder/crn/gate.sh`):* `mcts-net67-menu-mc-crn` vs
 `mcts-net67-menu-mc`, gen-3 priors, champion leaf, SOS sealed, paired
 120 × 12, seeds 43 / 97. Moved = pooled ≥ +1.0 with both seeds above 50.
-Result: PENDING.
+**Result: did not move — not adopted.** Seed 43 **50.5 %** [48.7, 52.3],
+seed 97 **50.6 %** [48.8, 52.4] (720 pairs each, ρ −0.51; `gate_s{43,97}.txt`);
+a third seed from the AIVAT read below (60 × 12, seed 11) **48.8 %**
+[46.4, 51.1]. Pooled over 1,800 pairs ≈ 50.2. The sharper comparison is
+real (census) and buys no strength at 256 rollouts — the same answer as r79's
+depth 512 vs 256: the menu search is judgement-limited, not noise-limited, so
+the "re-spend the variance as arms 12" follow-up is not worth a cell either.
+What CRN could still buy is wall clock (paired 128 ≈ unpaired 256?), owed
+only if search latency ever matters; the code stays, default off.
 
 ### Found: the "value net is data-bound" reading of phase 5 is confounded
 
@@ -8489,3 +8497,69 @@ Build:
    > 95 % of decks.
 5. 6b / 6c as recorded above; dedupe candidates, drop pair builds under 22
    spells (18 % FRA / 34 % SOS of candidates play 19–20 lands).
+
+### Results (2026-11-08, same day): the three cheap levers, read
+
+**Build levers** (`DeckPolicy::build_valued_with` + `ValuedOpts`,
+`fra_card_eval --ab --trial policy-value+rated|lands|polishN`,
+`.ladder/crn/deck_gate.sh` / `polish_confirm.sh`, results
+`.ladder/crn/deck/*.txt`). Each against the adopted builder (`build_valued`,
+16 samples) on the same pool and seed, 2,000 pools × 8 pairs, pool-level 95 %;
+FRA under the fra-fixes pilot, SOS under dflt. Bar (pre-registered, per set):
+pooled ≥ 50.5 with both seeds above 50.
+
+| lever | FRA s43 / s97 | SOS s43 / s97 | identical decks FRA / SOS | verdict |
+|---|---|---|---|---|
+| rated build as an extra candidate | 50.23 / 50.21 | 50.07 / 49.94 | 87 / 93 % | under the bar both sets (FRA a real +0.2) |
+| more-land variants to 18, top 3 | 50.07 / 49.78 | 50.28 / 50.50 | 18 / 21 % | no |
+| polish, ≤ 1 swap | 50.07 / 50.31 | **51.23 / 50.99** | 2 / 10 % | SOS passes |
+| polish, ≤ 3 swaps | 50.06 / 49.65 | **51.84 / 51.47** | 2 / 10 % | **SOS passes; FRA no** |
+| polish, ≤ 6 swaps | 50.12 / — | 51.79 / 51.52 | 2 / 10 % | saturated at 3 |
+
+Polish-3 on SOS **confirmed at fresh seeds 11 / 29: 51.76 % [51.41, 52.12] /
+51.58 % [51.21, 51.94]** — four seeds, mean +1.66, every one with its
+interval above 51. That is the largest single build gain since the value was
+adopted as the selector (+2.78 over rated), from one function that runs after
+the pick and needs no training. FRA's polish is null at every swap count
+though it changes 98 % of decks: the FRA value's swap preferences don't
+survive play (the SOS value's do). Why the two values differ is open; it is not simply
+"SOS is mana-blind and the post-swap reland repairs it", since the FRA value
+is the one with the stronger second-colour penalty (−0.060 vs −0.011 above).
+**Adoption is the user's call:** SOS opponents (`sealed_opponent_build`)
+would call `build_valued_with(.., &ValuedOpts { polish: 3, .. })` for SOS
+pools only; cell wall time is unchanged (57–71 s per 2,000-pool cell).
+
+**AIVAT** (`server::aivat`, `CRAB_AIVAT=1` on `bot_ladder` /
+`fra_card_eval`; the game logs `(state, seat)` before every library draw
+only while `game::draw_log_start` is on; the driver then plays every move
+through `perform_action` so no draw hides inside a bot's settled probe; luck
+by the champion value in `SLOT_BEST`, `CRAB_AIVAT_NET` to override). Per
+pair, corrected = raw − (seat-0 luck summed over both games) / 2.
+
+| read | raw | corrected | variance × | mean correction |
+|---|---|---|---|---|
+| heuristic net67 vs dflt, SOS sealed 400 × 12, s43 | 51.5 ±1.00 | 51.4 ±0.99 | 0.97 | +0.14 ±0.34 |
+| same, s97 | 52.0 ±0.96 | 51.8 ±0.96 | 0.99 | +0.20 ±0.30 |
+| deck A/B smoke (rated, FRA, 300 pools) | | | 0.90 | −0.15 ±0.16 |
+| search, menu-mc-crn vs menu-mc, 60 × 12, s11 | 48.8 ±2.33 | 50.1 ±2.45 | **1.11** | −1.36 ±0.86 |
+
+**Not adopted; closed.** The literature's −68..−85 % sd is for poker, where
+the cards are the whole of the luck and nothing pairs the deals. Here seat
+swapping already gives both pilots the same libraries, so the draw luck a
+value can see cancels inside the pair before AIVAT reaches it; what remains
+is play divergence, which no chance-node correction touches. Under search
+the correction *adds* variance (the value's noise on 300+ draws a pair) and
+costs 2.3× the wall clock (2,709 s for 360 pairs vs 2,384 s for 720). The
+search read's −1.36 correction is 1.6 σ — chance or the scry / surveil bias
+the module documents; not chased. The instrument stays (off by default, one
+thread-local check per draw) so the next "would a control variate help"
+question is one env var, not a rebuild.
+
+**Net of the sweep:** of five levers acted on today, one moved — SOS polish-3,
++1.66 over four seeds, waiting on adoption. CRN and AIVAT are measured nulls
+on strength and on ladder cost respectively; the rated-candidate and
+land-variant levers sit under their bar. Still unacted and unapproved: the
+value re-read (needs training) and the holdout fix; the mana-base value
+features (lead build-4) now have one more reason — FRA polish says the FRA
+value's fine preferences are noise.
+
