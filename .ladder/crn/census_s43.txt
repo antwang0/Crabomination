@@ -1,0 +1,7 @@
+crn census: 48 games, mcts-net67-256-fixes, 8 arms x 80 rollouts, sample 0.12, 10 threads, seed 43
+
+window      points  arms    pairs   pooled ratio   median ratio   top ind   top crn
+own main       182   4.4     1708           2.68           2.88       63%       91%
+attack         152   3.8     1232           1.50           1.05       71%       74%
+block           41   4.9      494           2.92           2.99       76%       95%
+all            375   4.2     3434           2.01           1.55       67%       85%

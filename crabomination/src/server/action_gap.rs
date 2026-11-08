@@ -305,6 +305,137 @@ fn probe_point(
     })
 }
 
+/// One sampled decision of the common-random-numbers census
+/// (`bot_puzzles --crn-census`): for every pair of its probed arms, the
+/// variance an arm-difference estimate would carry from independent
+/// rollouts (`var_i + var_j`, per rollout) and from paired ones
+/// (`var(x_i,k − x_j,k)`). Their ratio is how many independent rollouts one
+/// paired rollout is worth when the search compares those two arms.
+#[derive(Debug, Clone)]
+pub struct CrnPoint {
+    pub context: Context,
+    pub arms: usize,
+    /// `(var_i + var_j, var of the paired difference)` per arm pair.
+    pub pairs: Vec<(f64, f64)>,
+    /// Whether the top arm by mean over the first `early` rollouts matches
+    /// the top by all of them, independent draws (arm i's rollouts read in
+    /// a per-arm rotated order so no two arms share a seed) vs paired.
+    pub top_match_ind: bool,
+    pub top_match_crn: bool,
+}
+
+/// Play `template` with `pilot` on both seats; at sampled own-main and
+/// combat decisions (the windows the client's search covers) probe up to
+/// `arms` distinct legal moves — the pilot's always among them — with
+/// `probe` rollouts each under common random numbers.
+pub fn crn_game(template: &GameState, pilot: MctsConfig, probe: u32, arms: usize, sample: f64, seed: u64) -> Vec<CrnPoint> {
+    use rand::RngExt;
+    let w = pilot.weights;
+    let mut g = start_game(template, &w, seed);
+    let mut rng = StdRng::seed_from_u64(seed ^ 0xC12E);
+    let mut bots = [MctsBot::new(pilot), MctsBot::new(pilot)];
+    let prober = MctsBot::new(MctsConfig { search_threads: 1, ..pilot });
+    let mut out = Vec::new();
+    let mut fuel = 6000u32;
+    while fuel > 0 && !g.is_game_over() && g.turn_number <= 30 {
+        fuel -= 1;
+        let mut acted = false;
+        for (seat, bot) in bots.iter_mut().enumerate() {
+            let sample = g.pending_decision.is_none()
+                && matches!(Context::of(&g, seat), Context::OwnMain | Context::Attack | Context::Block)
+                && rng.random::<f64>() < sample;
+            let Some(a) = bot.next_action(&g, seat) else { continue };
+            if sample && let Some(p) = crn_point(&g, seat, &a, &prober, probe, arms, &mut rng) {
+                out.push(p);
+            }
+            if g.perform_action(a).is_ok() {
+                acted = true;
+                break;
+            }
+        }
+        if !acted && g.perform_action(GameAction::PassPriority).is_err() {
+            break;
+        }
+    }
+    out
+}
+
+fn crn_point(
+    g: &GameState,
+    seat: usize,
+    chosen: &GameAction,
+    prober: &MctsBot,
+    probe: u32,
+    arms: usize,
+    rng: &mut StdRng,
+) -> Option<CrnPoint> {
+    use rand::RngExt;
+    let chosen_key = super::decision_menu::key(g, seat, chosen);
+    let mut keys: Vec<String> = vec![chosen_key];
+    let mut actions: Vec<GameAction> = vec![chosen.clone()];
+    let mut rest: Vec<(String, GameAction)> = Vec::new();
+    for a in puzzle::legal_actions(g, seat).actions {
+        let k = super::decision_menu::key(g, seat, &a);
+        if !keys.contains(&k) && !rest.iter().any(|(r, _)| *r == k) {
+            rest.push((k, a));
+        }
+    }
+    rest.shuffle(rng);
+    for (k, a) in rest.into_iter().take(arms.saturating_sub(1)) {
+        keys.push(k);
+        actions.push(a);
+    }
+    if actions.len() < 2 {
+        return None;
+    }
+    let seeds: Vec<u64> = (0..probe.max(4)).map(|_| rng.random()).collect();
+    let rewards = prober.probe_actions_crn(g, seat, &actions, &seeds);
+    // Arms the engine refused anywhere are dropped whole (a pair needs both
+    // sides of every k).
+    let rows: Vec<Vec<f64>> = rewards
+        .into_iter()
+        .flatten()
+        .collect();
+    if rows.len() < 2 {
+        return None;
+    }
+    let n = seeds.len();
+    let mean = |v: &[f64]| v.iter().sum::<f64>() / v.len() as f64;
+    let var = |v: &[f64]| {
+        let m = mean(v);
+        v.iter().map(|x| (x - m).powi(2)).sum::<f64>() / (v.len() - 1) as f64
+    };
+    let mut pairs = Vec::new();
+    for i in 0..rows.len() {
+        for j in i + 1..rows.len() {
+            let d: Vec<f64> = (0..n).map(|k| rows[i][k] - rows[j][k]).collect();
+            pairs.push((var(&rows[i]) + var(&rows[j]), var(&d)));
+        }
+    }
+    // The first cut of the client's search is 8 arms at ~10 rollouts each;
+    // `early` is the per-arm count that leaves every arm a disjoint block
+    // of seeds for the independent read (probe >= arms x early).
+    let early = (n / rows.len()).max(2);
+    let argmax = |m: &[f64]| (0..m.len()).max_by(|&a, &b| m[a].partial_cmp(&m[b]).unwrap_or(std::cmp::Ordering::Equal)).unwrap_or(0);
+    let full: Vec<f64> = rows.iter().map(|r| mean(r)).collect();
+    let crn: Vec<f64> = rows.iter().map(|r| mean(&r[..early])).collect();
+    // Independent: arm a reads the block of `early` rollouts starting at
+    // `a * early` — disjoint seeds from every other arm's block.
+    let ind: Vec<f64> = rows
+        .iter()
+        .enumerate()
+        .map(|(a, r)| (0..early).map(|t| r[(a * early + t) % n]).sum::<f64>() / early as f64)
+        .collect();
+    let top = argmax(&full);
+    Some(CrnPoint {
+        context: Context::of(g, seat),
+        arms: rows.len(),
+        pairs,
+        top_match_ind: argmax(&ind) == top,
+        top_match_crn: argmax(&crn) == top,
+    })
+}
+
 /// An action with card names in place of ids.
 pub fn describe(g: &GameState, a: &GameAction) -> String {
     let name = |id: crate::card::CardId| {

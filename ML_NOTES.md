@@ -8329,3 +8329,163 @@ against step 5's 8-game-dominated 153k / 70k — and gate it as the selector
 over the adopted policy (the drift in r above is the case for it); (6c) more
 candidates at build time for the same value (`build_valued` samples 16 →
 48), a four-cell gate with no training; or stop the policy loop here.
+
+## Research sweep: where the playing and building models can still improve (2026-11-08)
+
+Asked: "find ways to improve the playing and deck construction models". Four
+read-only audits (this file end to end; the value-net pipeline; the sealed
+builder; the literature) plus one measured lead. Everything below is
+**default off or unbuilt**; nothing adopted.
+
+### Measured: the menu search compares arms on independent deals — common random numbers are worth ~2.7x the rollouts in main phases
+
+`prior_search` (the client's main + combat search) gives every rollout its
+own `draw_rng()` redeal, library order and rollout jitter, so two arms in a
+halving round are compared on *different* deals. The first cut (8 arms → 4)
+is made on 10 rollouts an arm. The heuristic sims already pair candidates on
+one redeal per `k` (`sim_start_state`); the search never did, and this file
+has no CRN entry before today.
+
+*Census* (`bot_puzzles --crn-census`, `action_gap::crn_game`,
+`MctsBot::probe_actions_crn`): sealed SOS games with the client's limited
+pilot; at 12 % of own-main / attack / block decisions, up to 8 distinct legal
+moves × 80 rollouts, rollout k of every move under one `PinnedStreams` seed.
+Per arm pair, `(var_i + var_j) / var(x_i,k − x_j,k)` = how many independent
+rollouts one paired rollout is worth. "top" = how often the leader on
+80/arms rollouts an arm (disjoint seeds per arm vs shared) is the leader on
+all 80. `.ladder/crn/census_s{43,97}.txt`, 48 games a seed:
+
+| window | points (43 / 97) | pooled ratio | median ratio | top, independent | top, paired |
+|---|---|---|---|---|---|
+| own main | 182 / 206 | **2.68 / 2.74** | 2.88 / 2.95 | 63 / 64 % | **91 / 89 %** |
+| attack | 152 / 152 | 1.50 / 1.42 | 1.05 / 1.08 | 71 / 74 % | 74 / 74 % |
+| block | 41 / 47 | 2.92 / 2.77 | 2.99 / 3.43 | 76 / 70 % | 95 / 94 % |
+| all | 375 / 405 | 2.01 / 2.01 | 1.55 / 1.72 | 67 / 68 % | 85 / 84 % |
+
+The literature's number for the same trick in a shuffle-driven game
+(Veness, Lanctot & Bowling, NeurIPS 2011, Dominion: CRN + control variates ≈
+25–40 % more simulations) is smaller than this; MTG's 3-turn rollouts are
+dominated by the draw, which is what pairing cancels. Attacks gain least:
+the declared combat diverges the boards at once.
+
+*Built for the gate:* `MctsConfig::menu_crn` (ladder suffix `-crn`): one base
+seed per decision off `draw_rng()` (so a pinned decision still replays), the
+arm's k-th rollout over the whole search under `crn_seed(base, k)`; every
+live arm of a round reads the same deals. Test
+`crn_probes_pair_every_arm_on_the_same_deals`. Off by default — golden traces
+untouched.
+
+*Gate (pre-registered, `.ladder/crn/gate.sh`):* `mcts-net67-menu-mc-crn` vs
+`mcts-net67-menu-mc`, gen-3 priors, champion leaf, SOS sealed, paired
+120 × 12, seeds 43 / 97. Moved = pooled ≥ +1.0 with both seeds above 50.
+Result: PENDING.
+
+### Found: the "value net is data-bound" reading of phase 5 is confounded
+
+Phase 5's "every generation's value head lost ~11 to the champion" was read
+as data-bound (6,000 games too few). The generation script
+(`.ladder/p5/gen.sh`) passes no `--lambda`, `--lr`, `--window`, cosine or
+stale-stop flag, so the in-loop heads trained on the trainer's defaults —
+λ = 1.0 (pure Monte Carlo), lr 1e-3 (10× the champion's 1e-4), window 250 k,
+no schedule, `latest` exported — warm-started from the champion through runs
+C, D and four generations, with `--policy-every 1` putting a cross-entropy
+step on the shared trunk after every value step. That is the recipe this
+file showed overfits in Tier 13 (λ = 1: train 0.036 vs held-out 0.273 — the
+same signature as phase 5's 0.03 / 0.27). So the −11 may be recipe drift,
+not data. **Owed before the "data-bound" conclusion is used:** one
+generation's games re-trained (i) on the champion recipe (`--lambda 0.7
+--lr 1e-4 --lr-cosine --stop-after-stale 12`, `best`), (ii) the same with the
+policy step every 4 or the trunk detached for it; `--calibrate` against the
+champion, then the leaf ladder.
+
+**Holdout split leaks across seats.** `is_holdout(r.traj)` hashes
+`traj = (seed << 1) | seat` (`selfplay.rs:1165`, `selfplay_train.rs:1146`),
+so a game's two seats land on either side of the split independently: about
+95 % of holdout trajectories have their mirror (the same positions, the
+opposite label) in training. It inflates `val_*` and biases `best` /
+stale-stop toward memorising checkpoints, most in small-window loops; the
+comment at `:1143` claims game-level consistency. Fix = hash `traj >> 1`
+(changes every future split, so AUCs across the fix aren't comparable).
+Also: `--calibrate` / `--calibrate-leaves` / `--pairwise` build the model
+from CLI flags, and `Trainer::load` ignores tensors the model lacks, so
+omitting `--attn` on the champion silently scores a net without its
+attention layer — `file_net_config` exists for this.
+
+### Found: the same-pool deck value cannot see the mana base
+
+`DeckValue` is an additive card table + rank-16 card × deck interaction +
+a deck-shape MLP over the 16 `encode_deck` features (curve, land *count*,
+creatures, spell pips by colour, colours, average MV). Nothing counts
+sources per colour, and every training deck's lands came from the same
+deterministic `lands_for_spells`, so source variation never reached the
+data. Re-implemented in numpy from the exported JSON (matches `values.tsv`
+to 5e-6 on 300 decks), on deck5's decks:
+
+- moving all but one of the second colour's basics to the main colour
+  changes the value by −0.060 on FRA (*higher* in 28 % of decks) and −0.011
+  on SOS (higher in **51 %**); no second-colour sources at all: −0.065 /
+  −0.014. Within a pool the top-1 / top-2 gap is 0.028.
+- a 17th basic of a colour the deck does not play gains +0.029 (positive in
+  71 %): the value prices land count, not land colour.
+- hybrid pips are read three ways (`encode_deck` first colour,
+  `card_brief.pips` both, `hybrid_aware_colors` for lands); 27.5 % of FRA
+  race decks carry an off-read hybrid. `PhyrexianHybrid` is absent from
+  `add_pip_counts`.
+- in 1,030 / 8,000 deck6 FRA pools (12.9 %) the value rated the reference
+  (mostly the rated build) at least as high as all 35 candidates — the rated
+  deck is not among `build_valued`'s candidates.
+- nothing runs after selection; ≤ 3 value-guided swaps improve 96 % of top
+  picks by +0.135 predicted (discount heavily: winner's curse, round 15's
+  climb).
+
+### Ranked leads
+
+Play:
+1. **CRN in the menu search** — the gate above. Cheap follow-ups if it
+   moves: give the bought variance back as fewer rollouts (wall clock) or a
+   wider first round (more arms at equal budget — arms 12 lost −1.0 to
+   thinning, which CRN directly offsets); a control variate (value-net change
+   across each rollout's draws, expectation ~0) on top.
+2. **The value re-read** above, then the cheap value levers: persist rows to
+   shards (`write_shard` exists, unused) so arms train on identical data;
+   keep raw per-arm Q / root value in `record_search_target` and train a
+   z / Q mix on searched positions (KataGo, Lc0 practice; r39's SV null was a
+   UCB1 1-ply read); `AUX_WEIGHT` (0.25, never varied; the MC life / length
+   terms are ~73 % of the r81 loss) over {0, 0.05, 0.25}; λ per turn rather
+   than per snapshot (0.7 per snapshot ≈ 0.12 per round).
+3. **Information-set holes in the redeal**: `determinize_hidden` returns the
+   opponent's whole hand to the pool, so a bounced / regrown / revealed card
+   (public) is forgotten; every rollout reshuffles libraries, erasing the
+   owner's known top (scry, surveil, put-on-top) — which may be part of why
+   the prompt window read null; the engine tracks no known-card state and
+   the encoder sees none. Needs a per-card "known to seat" record.
+4. **Policy-likelihood redeal weights** (Rebstock et al. CoG 2019: +0.6..+2.3
+   TP/G in Skat over table inference): weight each redeal by
+   ∏ π(observed opponent action | world) with the policy net already in the
+   slot; relevant once redeals are honest (`honest_redeal`, unmeasured).
+5. **AIVAT for the ladder** (Burch et al. AAAI 2018: −68..−85 % sd): the
+   champion value before/after each chance event as a control variate on
+   ladder outcomes; stacks with seat pairing and would cut every search
+   gate's cost.
+6. **The ExIt plateau is the evaluator's**: root search over heuristic
+   rollouts + a heuristic-trained value is one policy-improvement step over
+   the heuristic (Tesauro & Galperin 1996); distilling it into the policy
+   leaves Q unchanged, so generation 2 cannot compound. The rollouts and the
+   value's games must come from the improved policy for the loop to move —
+   which waits on a policy that rolls out better than the heuristic (phase 4
+   option 2) or a value trained on search games (lead 2).
+
+Build:
+1. **Add the rated build(s) to `build_valued`'s candidates** (12.9 % of pools
+   switch; the value is best calibrated on them; no training). Four-cell gate.
+2. **Land-count variants** (16 / 17 / 18, on-plan basics only) per top-k
+   candidate; separately rated at 17 vs 16 (`rated_sealed_build_lands`).
+3. **Value-guided ≤ 1–3-swap polish after selection**, lands re-derived after
+   each swap; log predicted vs realised gain.
+4. **Mana-base features in the value** (sources per colour vs pip demand, a
+   hypergeometric on-curve castability summary; hybrid read by the deck's
+   colours) — needs perturbed-mana candidates in the race first, since the
+   logs carry no source variation; offline bar = starvation test negative in
+   > 95 % of decks.
+5. 6b / 6c as recorded above; dedupe candidates, drop pair builds under 22
+   spells (18 % FRA / 34 % SOS of candidates play 19–20 lands).

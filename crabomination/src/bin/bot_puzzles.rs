@@ -559,6 +559,97 @@ fn run_blunders(profiles: &[String]) {
     }
 }
 
+/// `--crn-census GAMES [--probe N] [--arms A] [--sample P] [--threads T]
+/// [--seed S] [PROFILE]`: how much common random numbers would sharpen the
+/// search's arm comparisons (`server::action_gap::crn_game`). Prints, per
+/// window, the pooled variance ratio independent / paired for an arm
+/// difference (paired rollouts are worth that many independent ones) and
+/// how often the first-cut leader (probe / arms rollouts per arm) is the
+/// full-probe leader, independent vs paired.
+fn run_crn_census(games: usize) {
+    use crabomination::server::action_gap::{Context, CrnPoint, crn_game};
+    let a: Vec<String> = std::env::args().collect();
+    let flag = |k: &str| a.iter().position(|x| x == k).and_then(|i| a.get(i + 1)).cloned();
+    let probe: u32 = flag("--probe").map_or(80, |v| v.parse().expect("--probe N"));
+    let arms: usize = flag("--arms").map_or(8, |v| v.parse().expect("--arms A"));
+    let sample: f64 = flag("--sample").map_or(0.15, |v| v.parse().expect("--sample P"));
+    let threads: usize = flag("--threads").map_or(8, |v| v.parse().expect("--threads T"));
+    let seed: u64 = flag("--seed").map_or(43, |v| v.parse().expect("--seed S"));
+    let profile = a
+        .iter()
+        .skip(1)
+        .find(|x| mcts_cfg(x).is_some())
+        .cloned()
+        .unwrap_or_else(|| "mcts-net67-256-fixes".to_string());
+    let pilot = mcts_cfg(&profile).expect("checked");
+    println!("crn census: {games} games, {profile}, {arms} arms x {probe} rollouts, sample {sample}, {threads} threads, seed {seed}\n");
+    let next = std::sync::atomic::AtomicUsize::new(0);
+    let points: Vec<CrnPoint> = std::thread::scope(|sc| {
+        let hs: Vec<_> = (0..threads)
+            .map(|_| {
+                sc.spawn(|| {
+                    let mut mine = Vec::new();
+                    loop {
+                        let i = next.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        if i >= games {
+                            break;
+                        }
+                        let s = seed ^ (i as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+                        let build = |k: u64| {
+                            let pool = crabomination::selfplay::sealed_pool(s ^ k);
+                            crabomination::selfplay::sealed_opponent_build(&pool, 16, s ^ (k << 8), Default::default())
+                        };
+                        let template = crabomination::selfplay::sealed_game_template(&build(1), &build(2));
+                        mine.extend(crn_game(&template, pilot, probe, arms, sample, s));
+                        eprint!(".");
+                    }
+                    mine
+                })
+            })
+            .collect();
+        hs.into_iter().flat_map(|h| h.join().expect("worker")).collect()
+    });
+    eprintln!();
+    println!(
+        "{:<11} {:>6} {:>5} {:>8} {:>14} {:>14} {:>9} {:>9}",
+        "window", "points", "arms", "pairs", "pooled ratio", "median ratio", "top ind", "top crn"
+    );
+    let row = |name: &str, ps: &[&CrnPoint]| {
+        if ps.is_empty() {
+            return;
+        }
+        let pairs: Vec<(f64, f64)> = ps.iter().flat_map(|p| p.pairs.iter().copied()).collect();
+        let (ind, crn) = pairs.iter().fold((0.0, 0.0), |(a, b), &(i, c)| (a + i, b + c));
+        let mut ratios: Vec<f64> = ps
+            .iter()
+            .filter_map(|p| {
+                let (i, c) = p.pairs.iter().fold((0.0, 0.0), |(a, b), &(i, c)| (a + i, b + c));
+                (c > 0.0).then(|| i / c)
+            })
+            .collect();
+        ratios.sort_by(|x, y| x.partial_cmp(y).unwrap_or(std::cmp::Ordering::Equal));
+        let med = ratios.get(ratios.len() / 2).copied().unwrap_or(f64::NAN);
+        let n = ps.len() as f64;
+        println!(
+            "{:<11} {:>6} {:>5.1} {:>8} {:>14.2} {:>14.2} {:>8.0}% {:>8.0}%",
+            name,
+            ps.len(),
+            ps.iter().map(|p| p.arms).sum::<usize>() as f64 / n,
+            pairs.len(),
+            if crn > 0.0 { ind / crn } else { f64::NAN },
+            med,
+            100.0 * ps.iter().filter(|p| p.top_match_ind).count() as f64 / n,
+            100.0 * ps.iter().filter(|p| p.top_match_crn).count() as f64 / n,
+        );
+    };
+    for ctx in Context::ALL {
+        let ps: Vec<&CrnPoint> = points.iter().filter(|p| p.context == ctx).collect();
+        row(ctx.name(), &ps);
+    }
+    let all: Vec<&CrnPoint> = points.iter().collect();
+    row("all", &all);
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|a| a == "-h" || a == "--help") {
@@ -566,6 +657,7 @@ fn main() {
             "bot_puzzles [--set core|fra] [--depth N] [--certify] [PROFILE ...]\n\
              bot_puzzles --blunders [--reps N] [--show-lines] [PROFILE ...]\n\
              bot_puzzles --action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S] [--scored-rollouts] [MCTS PROFILE]\n\
+             bot_puzzles --crn-census GAMES [--probe N] [--arms A] [--sample P] [--threads T] [--seed S] [MCTS PROFILE]\n\
              bot_puzzles --menu-census GAMES [--threads T] [--seed S] [MCTS PROFILE]\n\
              bot_puzzles --policy-agree GAMES [--threads T] [--seed S] [TEACHER]  (CRAB_NET's policy head)\n\n\
              PROFILE: pass (null control) | policy (CRAB_NET's policy head) | dflt | fixes | net67 | net67-fixes | mcts-dflt-256 | mcts-net67-256 |\n\
@@ -593,6 +685,11 @@ fn main() {
     if let Some(i) = args.iter().position(|a| a == "--menu-census") {
         let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(40);
         run_menu_census(games);
+        return;
+    }
+    if let Some(i) = args.iter().position(|a| a == "--crn-census") {
+        let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(40);
+        run_crn_census(games);
         return;
     }
     if let Some(i) = args.iter().position(|a| a == "--action-gap") {

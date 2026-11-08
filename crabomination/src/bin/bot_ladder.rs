@@ -325,8 +325,11 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         let mut policy_slot = crabomination::server::net_eval::SLOT_CANDIDATE;
         let mut weights = EvalWeights::net_on_default().with_fra_fixes();
         let mut arms = MctsConfig::default().menu_arms;
+        let mut crn = false;
         for p in parts {
-            if let Some(n) = p.strip_prefix('a')
+            if p == "crn" {
+                crn = true;
+            } else if let Some(n) = p.strip_prefix('a')
                 && let Ok(n) = n.parse::<usize>()
             {
                 arms = n;
@@ -362,6 +365,7 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             policy_slot,
             menu_arms: arms,
             menu_confident: conf,
+            menu_crn: crn,
             policy_rollouts: pol.is_some(),
             ..MctsConfig::default()
         }));

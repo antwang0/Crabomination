@@ -252,6 +252,15 @@ fn search_draw() -> Option<u64> {
     SEARCH.with(|s| s.borrow_mut().as_mut().map(|r| r.random()))
 }
 
+/// The `k`-th common-random-numbers seed of a decision whose base is `base`
+/// (a splitmix64 step, so neighbouring k are unrelated streams).
+fn crn_seed(base: u64, k: u32) -> u64 {
+    let mut z = base.wrapping_add((k as u64 + 1).wrapping_mul(0x9E37_79B9_7F4A_7C15));
+    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+    z ^ (z >> 31)
+}
+
 /// A generator for one draw site: off the pinned search stream when the
 /// decision is pinned (so a position always gets the same reply), else
 /// seeded from the thread's entropy.
@@ -429,6 +438,12 @@ pub struct MctsConfig {
     /// Skip the search when the policy's favourite holds at least this
     /// share of the softmax over the arms; > 1 (default) never skips.
     pub menu_confident: f64,
+    /// Common random numbers in the menu search's halving: rollout `k` of
+    /// every arm runs under one seed (the same redeal, library order and
+    /// rollout jitter), so arms are compared on paired deals rather than
+    /// independent ones (`bot_puzzles --crn-census` measures the variance
+    /// this removes). Off by default; ladder suffix `-crn`.
+    pub menu_crn: bool,
     /// Play the rollouts with the policy pilot (`policy_pilot::PolicyBot`
     /// on [`Self::policy_slot`], sampling at [`Self::rollout_temp`]) for
     /// both seats, prompts included, instead of the unscored heuristic —
@@ -476,6 +491,7 @@ impl Default for MctsConfig {
             policy_slot: 0,
             menu_arms: 8,
             menu_confident: 2.0,
+            menu_crn: false,
             policy_rollouts: false,
             rollout_temp: 1.0,
             menu_sample: false,
@@ -1488,6 +1504,29 @@ impl MctsBot {
             .collect()
     }
 
+    /// Every rollout's reward after each of `actions`, rollout `k` of every
+    /// action run under [`PinnedStreams`] seeded `seeds[k]` — common random
+    /// numbers: the same redeal, library order and rollout jitter behind the
+    /// k-th sample of each arm, so a difference between two arms' k-th
+    /// rewards carries the arms' difference and not the deal's. Each rollout
+    /// is [`Self::arm_rollout`], the menu search's own (redeal *before* the
+    /// arm). `None` for an action the engine rejects. Diagnostic
+    /// (`bot_puzzles --crn-census`): the search itself does not pair yet.
+    pub fn probe_actions_crn(&self, state: &GameState, seat: usize, actions: &[GameAction], seeds: &[u64]) -> Vec<Option<Vec<f64>>> {
+        actions
+            .iter()
+            .map(|a| {
+                seeds
+                    .iter()
+                    .map(|&s| {
+                        let _pin = PinnedStreams::install(s);
+                        self.arm_rollout(state, seat, a)
+                    })
+                    .collect()
+            })
+            .collect()
+    }
+
     /// Phase 4: a decision in one of [`MctsConfig::menu_windows`], searched
     /// over its complete move list. `None` hands the decision on (window
     /// off, nothing to decide, a forced move).
@@ -1608,6 +1647,10 @@ impl MctsBot {
         let mut visits = vec![0u32; n];
         let mut total = vec![0.0f64; n];
         let mut dead = vec![false; n];
+        let crn_base: Option<u64> = self.cfg.menu_crn.then(|| {
+            use rand::RngExt;
+            draw_rng().random::<u64>()
+        });
         for (m, per_arm) in sequential_halving_plan(n, self.cfg.iterations) {
             let sig = completed_sigma(&visits, &total, self.cfg.gumbel_c_visit, self.cfg.gumbel_c_scale);
             live.retain(|&i| !dead[i]);
@@ -1622,7 +1665,18 @@ impl MctsBot {
             // `search_threads` splits them across workers with nothing about
             // the schedule changed — the same arms, the same counts.
             let jobs: Vec<usize> = live.iter().flat_map(|&i| std::iter::repeat_n(i, per_arm as usize)).collect();
-            for (i, r) in self.arm_rollouts(state, seat, arms, &jobs) {
+            // Under `menu_crn` an arm's k-th rollout (k counted over the
+            // whole search) gets the decision's k-th seed, so every live
+            // arm of a round reads the same deals.
+            let seeds: Option<Vec<u64>> = crn_base.map(|base| {
+                live.iter()
+                    .flat_map(|&i| {
+                        let v = visits[i];
+                        (0..per_arm).map(move |t| crn_seed(base, v + t))
+                    })
+                    .collect()
+            });
+            for (i, r) in self.arm_rollouts_seeded(state, seat, arms, &jobs, seeds.as_deref()) {
                 match r {
                     Some(r) => {
                         total[i] += r;
@@ -1646,20 +1700,35 @@ impl MctsBot {
     /// engine refused the arm; serial at `search_threads` 1, else split in
     /// contiguous chunks across scoped workers, each on its own pinned
     /// stream when the decision is pinned (as `parallel_iterations` does).
-    fn arm_rollouts(&self, state: &GameState, seat: usize, arms: &[GameAction], jobs: &[usize]) -> Vec<(usize, Option<f64>)> {
+    /// Each job additionally under its own pinned seed when `seeds` (one
+    /// per job) is given — the common-random-numbers path.
+    fn arm_rollouts_seeded(
+        &self,
+        state: &GameState,
+        seat: usize,
+        arms: &[GameAction],
+        jobs: &[usize],
+        seeds: Option<&[u64]>,
+    ) -> Vec<(usize, Option<f64>)> {
+        let one = |j: usize, i: usize| {
+            let _pin = seeds.map(|s| PinnedStreams::install(s[j]));
+            (i, self.arm_rollout(state, seat, &arms[i]))
+        };
         let workers = self.cfg.search_threads.min(jobs.len()).max(1);
         if workers == 1 {
-            return jobs.iter().map(|&i| (i, self.arm_rollout(state, seat, &arms[i]))).collect();
+            return jobs.iter().enumerate().map(|(j, &i)| one(j, i)).collect();
         }
         let chunk = jobs.len().div_ceil(workers);
+        let indexed: Vec<(usize, usize)> = jobs.iter().copied().enumerate().collect();
         std::thread::scope(|scope| {
             let mut handles = Vec::with_capacity(workers);
             let mut inline = Vec::new();
-            for part in jobs.chunks(chunk) {
+            for part in indexed.chunks(chunk) {
                 let pin = search_draw();
+                let one = &one;
                 let run = move || {
                     let _pin = pin.map(PinnedStreams::install);
-                    part.iter().map(|&i| (i, self.arm_rollout(state, seat, &arms[i]))).collect::<Vec<_>>()
+                    part.iter().map(|&(j, i)| one(j, i)).collect::<Vec<_>>()
                 };
                 match std::thread::Builder::new().stack_size(WORKER_STACK_BYTES).spawn_scoped(scope, run) {
                     Ok(h) => handles.push(h),
@@ -2016,6 +2085,32 @@ mod tests {
         assert_eq!(visits.iter().sum::<u32>(), 12, "the budget is spent");
         assert_eq!((visits, total.clone()), spend(3), "and spent the same way");
         assert_ne!(total, spend(4).1, "another seed, other rollouts");
+    }
+
+    /// Common random numbers: rollout k of every arm reads the same deal, so
+    /// one arm probed twice under the same seeds returns the same reward
+    /// sequence, k by k — and different seeds give a different sequence (the
+    /// deals are real, not a constant).
+    #[test]
+    fn crn_probes_pair_every_arm_on_the_same_deals() {
+        let mut g = crate::game::two_player_game();
+        for i in 0..24 {
+            for seat in 0..2 {
+                g.add_card_to_library(seat, creature(["Bear", "Elf", "Ox", "Yak"][i % 4], 1 + (i % 4) as i32, 2));
+            }
+        }
+        let forest = g.add_card_to_hand(0, crate::catalog::forest());
+        let bot = MctsBot::new(MctsConfig { horizon_turns: 2, ..MctsConfig::default() });
+        let arms = [GameAction::PlayLand(forest), GameAction::PassPriority, GameAction::PlayLand(forest)];
+        let seeds: Vec<u64> = (0..6).collect();
+        let r = bot.probe_actions_crn(&g, 0, &arms, &seeds);
+        let (land, pass, land2) = (r[0].clone().expect("legal"), r[1].clone().expect("legal"), r[2].clone().expect("legal"));
+        assert_eq!(land, land2, "the same arm on the same deals scores the same, rollout by rollout");
+        assert_eq!(land.len(), 6);
+        assert_eq!(pass.len(), 6);
+        let other = bot.probe_actions_crn(&g, 0, &arms[..1], &(100..106).collect::<Vec<u64>>());
+        assert_ne!(Some(land), other[0], "other seeds, other deals");
+        assert_ne!(crn_seed(1, 0), crn_seed(1, 1));
     }
 
     /// The round-31 block arm: a searched declaration comes back from the
