@@ -8256,3 +8256,76 @@ Recorded per generation: replacement rate, finalists' mean final share,
 the confirmed candidates' mean share (the value screen against 48.1), the
 fit read, and the race logs with `values.tsv` — step 6b would retrain the
 value on them if the policy's candidate distribution moves.
+
+**Step 6 result (2026-11-08): the loop is flat under the value screen too.
+Not adopted.** Unit `crab-deck6`, outputs in `.ladder/deck6/` (`loop.txt`,
+`loop_gen{1,2,3}.json`, `races/gen{1,2,3}/{fra,sos}/` with `values.tsv`,
+twelve gate cells `g{1,2,3}_{fra,sos}_{43,97}.txt`, and
+`race_read.py` / `race_read_gen{1,2,3}.txt`, the race-log reads below).
+*Gate* (`--trial policy-value` under the adopted values, 2000 pools × 8
+pairs, cell half-width ≈ 0.55, seed-pooled difference SE ≈ 0.28):
+
+| policy | FRA 43 | FRA 97 | pooled | SOS 43 | SOS 97 | pooled |
+|---|---|---|---|---|---|---|
+| adopted (step 5, gen 0) | 51.41 | 51.84 | 51.63 | 52.78 | 52.75 | 52.77 |
+| gen 1 | 51.68 | 51.58 | 51.63 | 52.64 | 52.82 | 52.73 |
+| gen 2 | 51.65 | 51.89 | 51.77 | 52.45 | 52.45 | 52.45 |
+| gen 3 (primary) | 51.53 | 51.33 | **51.43** | 52.91 | 53.06 | 52.99 |
+
+The bar was FRA gen 3 pooled ≥ 52.13 with both seeds above the adopted
+same-seed read: gen 3 is −0.20 ± 0.28 against the adopted builder, seed 97
+below its read. Gens 1 and 2 are 0.00 and +0.14. SOS spans 52.45..52.99
+around the adopted 52.77. Every cell is inside one SE of the step-5
+builder: three generations of value-screened expert iteration did not move
+what the selector hands back.
+*The screen half of the hypothesis held.* The value's top 3 averaged
+**51.05 / 50.66 / 50.73** at 16 pairs on FRA across gens 1–3 (SOS 52.00 /
+51.88 / 51.72) against 48.1 for the 8-game screen's survivors in step 5's
+logs; replacement rates **14.9 / 13.8 / 13.2 %** FRA and **21.6 / 21.1 /
+19.2 %** SOS (9 % / 15 % in 3c under the same 96-pair ≥ 56 final), the
+replacements' final share 64.2–64.5 FRA, 65.2–65.8 SOS. The race logs
+(`race_read.py`) show the value is informative inside its own top 3 and
+honest about it: rank 1 / 2 / 3 by value averaged 51.65 / 51.00 / 50.50 at
+16 pairs in gen 1 (51.18 / 50.68 / 50.33 in gen 3) and reached the 96-pair
+final 2124 / 1677 / 1318 times (2040 / 1607 / 1380); the Bradley-Terry
+prediction from the candidate−reference margin is within 1 point of the
+actual 16-pair share at margin 0 (50.7 vs 49.9) and 2–4 points high at
++0.5 (61.1 vs 58.9 / 58.6 / 57.5) — the winner's curse of picking the top 3
+by a noisy score, not miscalibration. Only 24 % of FRA candidates (28 % SOS)
+score above their pool's reference; 26.7 distinct candidates a pool on FRA,
+21.5 on SOS, out of 35 built. Finalists' 61.9 at 16 pairs regresses to 52.5
+at 96: the 32-game confirmation (binomial SD 8.8) is the noisy stage now,
+and the 96-pair final is doing the filtering (1184 / 1092 / 1052 of ~5050
+FRA finalists accepted; 863 / 842 / 769 of ~2700 SOS).
+*The compounding half did not.* The policy barely absorbs its labels: on
+the replaced train pools, greedy overlap with the best deck moved
+0.808→0.815, 0.819→0.826, 0.831→0.824 per generation, with the teacher
+0.772→0.754, 0.771→0.756, 0.768→0.750; held-out greedy overlap with the
+teacher 0.855 / 0.858 / 0.846; 3069 → 4969 → 6741 train pools carry a
+replaced deck. Held-out greedy play reads (±1.0): FRA 50.98 → 49.37 →
+50.45 → 50.39, SOS 50.23 → 50.51 → 50.38 → 51.36 — flat. The value's
+correlation with the 16-pair outcome among its top 3 drifts down slowly
+(Pearson r FRA 0.294 / 0.268 / 0.236, SOS 0.393 / 0.384 / 0.351): the
+policy's samples move a little off the distribution the value was trained
+on, while the policy itself stays near the teacher (final FRA greedy spell
+overlap 0.852, same colours 0.645).
+*Timing:* race 4852 s (gen 1, box shared with a workspace test run),
+11226 s (gen 2, includes a 2 h 9 min user-requested freeze of the unit —
+`systemctl --user freeze/thaw`; ~5300 s of work), 2885 s (gen 3, quiet
+box); training plus held-out reads ~30 min a generation; the twelve gate
+cells 9 min in all.
+*Reading.* This is the fourth configuration in which expert iteration on
+the policy is flat (3, 3b, 3c, 6), now with labels that are demonstrably
+real (64 % final share, 13–15 % of pools) and a 256-wide policy at lr 1.0
+that step 4 showed does move to its labels. The selector is where the
+gain is (step 5: +0.85 for selection with the old value, +1.11 more for
+the same-pool value) and the policy is a candidate generator whose
+distribution the loop does not improve at this budget. `nets/deck-policy.json`
+stays the step-5 export.
+*Open, for the user's call:* (6b) retrain the same-pool value on the three
+generations' logs — 87k FRA / 44k SOS comparisons, every one a 16- or
+96-pair match between candidates the production policy actually proposes,
+against step 5's 8-game-dominated 153k / 70k — and gate it as the selector
+over the adopted policy (the drift in r above is the case for it); (6c) more
+candidates at build time for the same value (`build_valued` samples 16 →
+48), a four-cell gate with no training; or stop the policy loop here.
