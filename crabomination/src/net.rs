@@ -1524,9 +1524,10 @@ pub struct KnownCard {
     #[serde(default)]
     pub station_charges: Option<u32>,
     /// CR 902.5 — abilities this card can be activated for *from the zone it
-    /// is in*: a Vanguard avatar's command-zone abilities. Empty for every
-    /// other card, so a client that sees entries here knows to submit
-    /// `ActivateAbility` rather than a cast.
+    /// is in*: a Vanguard avatar's command-zone abilities, and a hand card's
+    /// `from_hand` abilities (Spirit Guides, channel, Sureshot Sower). Empty
+    /// for every other card; an entry here is submitted as `ActivateAbility`
+    /// rather than a cast.
     #[serde(default)]
     pub zone_abilities: Vec<AbilityView>,
     /// CR 702.106 — the name(s) a hidden-agenda conspiracy secretly chose.

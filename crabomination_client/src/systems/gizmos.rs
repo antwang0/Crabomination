@@ -219,6 +219,8 @@ pub fn draw_target_arrow(
         .pending_card_id
         .and_then(hand_pos)
         .or_else(|| targeting.pending_ability_source.and_then(bf_pos))
+        // A from-hand ability (Sureshot Sower) aims from the hand card.
+        .or_else(|| targeting.pending_ability_source.and_then(hand_pos))
         .or_else(|| targeting.pending_equip_source.and_then(bf_pos))
         .unwrap_or_else(|| player_hand_anchor(viewer, viewer, n_seats));
     source.y = ARROW_Y;

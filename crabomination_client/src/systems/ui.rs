@@ -209,6 +209,7 @@ pub fn update_castable_highlights(
             .chain(cv.blitzable_hand.iter())
             .chain(cv.warpable_hand.iter())
             .chain(cv.pitchable_hand.iter())
+            .chain(cv.hand_activatable.iter())
             .chain(cv.kickable_hand.iter())
             .chain(cv.kicker_option_sets.iter().map(|(id, _)| id))
             .chain(cv.suspendable_hand.iter())

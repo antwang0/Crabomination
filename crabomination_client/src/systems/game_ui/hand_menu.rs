@@ -62,6 +62,10 @@ pub enum HandPlayOption {
     Reinforce,
     /// A from-hand activated ability whose cost is discarding the card.
     DiscardAbility,
+    /// A printed `from_hand` activated ability, by its ability index
+    /// (`KnownCard.zone_abilities`): Sureshot Sower's "{3}{G}, discard it:
+    /// destroy target creature with flying", channel, forecast.
+    HandAbility(usize),
     /// CR 709.5 — cast a Room, choosing which door to unlock.
     RoomDoor { right: bool },
 }
@@ -81,6 +85,11 @@ fn option_label(option: HandPlayOption, k: &KnownCard) -> String {
         HandPlayOption::Morph => "Cast face down (morph)".to_string(),
         HandPlayOption::Reinforce => "Reinforce".to_string(),
         HandPlayOption::DiscardAbility => "Activate (discard this)".to_string(),
+        HandPlayOption::HandAbility(i) => match k.zone_abilities.iter().find(|a| a.index == i) {
+            Some(a) if a.effect_label.is_empty() => format!("Activate: {}", a.cost_label),
+            Some(a) => format!("{}: {}", a.cost_label, a.effect_label),
+            None => "Activate".to_string(),
+        },
         HandPlayOption::RoomDoor { right } => {
             format!("Unlock the {} door", if right { "right" } else { "left" })
         }
@@ -96,6 +105,9 @@ fn option_needs_target(option: HandPlayOption, k: &KnownCard) -> bool {
         // Reinforce always takes a creature.
         HandPlayOption::Variant(HandCastVariant::Bestow) | HandPlayOption::Reinforce => true,
         HandPlayOption::Variant(_) => k.needs_target,
+        HandPlayOption::HandAbility(i) => {
+            k.zone_abilities.iter().any(|a| a.index == i && a.needs_target)
+        }
         HandPlayOption::Foretell
         | HandPlayOption::Plot
         | HandPlayOption::Suspend
@@ -150,6 +162,17 @@ pub fn hand_play_options(cv: &ClientView, card_id: CardId) -> Vec<HandPlayOption
     }
     if has(&cv.discard_activatable_hand) {
         out.push(HandPlayOption::DiscardAbility);
+    }
+    // `hand_activatable` is the engine's "usable now" gate (timing, once per
+    // turn); the per-ability flags drop a row the view already knows is dead.
+    if has(&cv.hand_activatable)
+        && let Some(k) = known_card(cv, card_id)
+    {
+        for a in &k.zone_abilities {
+            if !(a.gate_blocked || a.once_per_turn_used || a.spent) {
+                out.push(HandPlayOption::HandAbility(a.index));
+            }
+        }
     }
     // CR 709.5 — `room_castable_hand` carries a per-card door bitmask
     // (bit 0 = left, bit 1 = right); offer only the doors it names.
@@ -364,7 +387,20 @@ pub fn handle_hand_menu(
         }
         let Some(cv) = view.0.as_ref() else { continue };
         let Some(k) = known_card(cv, item.card_id) else { continue };
-        if option_needs_target(item.option, &k) {
+        if let HandPlayOption::HandAbility(index) = item.option
+            && option_needs_target(item.option, &k)
+        {
+            // The ability cursor, not the cast one: the pick submits
+            // `ActivateAbility` with this index (as a battlefield ability's
+            // targeted row does).
+            targeting.active = true;
+            targeting.pending_card_id = None;
+            targeting.pending_ability_source = Some(item.card_id);
+            targeting.pending_ability_index = Some(index);
+            targeting.pending_ability_mode = None;
+            targeting.pending_ability_is_loyalty = false;
+            targeting.back_face_pending = false;
+        } else if option_needs_target(item.option, &k) {
             targeting.active = true;
             targeting.pending_card_id = Some(item.card_id);
             targeting.back_face_pending = item.option == HandPlayOption::CastBack;
@@ -388,6 +424,14 @@ fn untargeted_action(card_id: CardId, option: HandPlayOption) -> GameAction {
         HandPlayOption::Suspend => GameAction::Suspend { card_id },
         HandPlayOption::Morph => GameAction::CastFaceDown { card_id },
         HandPlayOption::DiscardAbility => GameAction::ActivateDiscardAbility { card_id },
+        HandPlayOption::HandAbility(ability_index) => GameAction::ActivateAbility {
+            card_id,
+            ability_index,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        },
         HandPlayOption::RoomDoor { right } => GameAction::CastRoomDoor { card_id, right },
         HandPlayOption::CastBack => GameAction::CastSpellBack {
             card_id,
@@ -447,6 +491,28 @@ mod tests {
         assert!(opts.contains(&HandPlayOption::RoomDoor { right: true }));
         // A card the engine offers nothing for gets no menu.
         assert!(hand_play_options(&cv, CardId(99)).is_empty());
+    }
+
+    /// Bug fix: Sureshot Sower's "{3}{G}, discard it: destroy target creature
+    /// with flying" had no client path. Right-click "pitched" it (ability 0,
+    /// no target — always rejected) and the menu had no row for it. It is now
+    /// a targeted menu row, and right-click no longer pitches it.
+    #[test]
+    fn a_targeted_from_hand_ability_is_a_targeted_menu_row() {
+        let mut g = crabomination::game::two_player_game();
+        let ss = g.add_card_to_hand(0, crabomination::catalog::sureshot_sower());
+        let cv = crabomination::server::view::project(&g, 0);
+        let k = known_card(&cv, ss).expect("own hand card");
+        assert_ne!(right_click(&cv, &k), RightClick::Pitch, "not a mana pitch");
+        let opts = hand_play_options(&cv, ss);
+        assert!(opts.contains(&HandPlayOption::HandAbility(0)), "{opts:?}");
+        assert!(option_needs_target(HandPlayOption::HandAbility(0), &k));
+        assert!(option_label(HandPlayOption::HandAbility(0), &k).contains("Discard this"));
+        // A Spirit Guide keeps its one-click pitch.
+        let guide = g.add_card_to_hand(0, crabomination::catalog::simian_spirit_guide());
+        let cv = crabomination::server::view::project(&g, 0);
+        let k = known_card(&cv, guide).expect("own hand card");
+        assert_eq!(right_click(&cv, &k), RightClick::Pitch);
     }
 
     #[test]

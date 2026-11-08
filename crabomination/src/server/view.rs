@@ -1142,7 +1142,14 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         .or_else(|| card.definition.alternative_cost.clone());
     // CR 902.5 / 315.5 — command-zone abilities travel with the card view so
     // the client can activate them where they live: a Vanguard avatar's, and a
-    // face-up conspiracy's (Sovereign's Realm's exile-a-card line).
+    // face-up conspiracy's (Sovereign's Realm's exile-a-card line). A hand
+    // card's `from_hand` abilities ride along the same way (Sureshot Sower's
+    // "{3}{G}, discard it: destroy target creature with flying", channel,
+    // forecast): without them the client had no ability index or target flag
+    // to submit, so a targeted one could not be activated at all.
+    let in_hand = state.is_some_and(|st| {
+        st.players.get(card.owner).is_some_and(|p| p.hand.iter().any(|c| c.id == card.id))
+    });
     let zone_abilities: Vec<AbilityView> = if card.face_down {
         Vec::new()
     } else {
@@ -1152,7 +1159,7 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
                 card.definition
                     .activated_abilities
                     .get(a.index)
-                    .is_some_and(|ab| ab.from_command_zone)
+                    .is_some_and(|ab| ab.from_command_zone || (in_hand && ab.from_hand))
             })
             .collect()
     };
@@ -5449,6 +5456,29 @@ mod tests {
             .expect("Damping Engine has an ability");
         assert!(ability.any_player);
         assert!(ability.cost_label.contains("any player"));
+    }
+
+    /// Bug fix: a hand card's targeted `from_hand` ability (Sureshot Sower's
+    /// "{3}{G}, discard it: destroy target creature with flying") reached the
+    /// client with no ability index or target flag, so it could not be
+    /// activated. It now rides in `zone_abilities`, flagged as targeted.
+    #[test]
+    fn hand_card_view_carries_its_from_hand_abilities() {
+        let mut g = two_player_game();
+        let ss = g.add_card_to_hand(0, catalog::sureshot_sower());
+        let view = project(&g, 0);
+        let k = view.players[0]
+            .hand
+            .iter()
+            .find_map(|h| match h {
+                HandCardView::Known(k) if k.id == ss => Some(k.clone()),
+                _ => None,
+            })
+            .expect("own hand is visible");
+        assert_eq!(k.zone_abilities.len(), 1);
+        assert_eq!(k.zone_abilities[0].index, 0);
+        assert!(k.zone_abilities[0].needs_target);
+        assert!(!k.zone_abilities[0].is_mana);
     }
 
     #[test]

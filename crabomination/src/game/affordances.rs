@@ -1526,6 +1526,12 @@ impl GameState {
     /// (Spirit-Guide-style "Exile this from your hand: Add mana"). Lets the
     /// client surface a pitch affordance distinct from the castable-for-value
     /// highlight. Empty when it isn't the player's priority.
+    ///
+    /// Mana abilities only: the client's one-click pitch submits the ability
+    /// with no target, so a targeted from-hand ability listed here (Sureshot
+    /// Sower's discard-to-destroy-a-flier) was a right-click the engine always
+    /// rejected. Those reach the client through `KnownCard.zone_abilities` and
+    /// `hand_activatable` instead.
     pub fn pitchable_hand_cards(&self, player: usize) -> Vec<CardId> {
         if self.player_with_priority() != player {
             return Vec::new();
@@ -1537,7 +1543,7 @@ impl GameState {
                 c.definition
                     .activated_abilities
                     .iter()
-                    .any(|a| a.from_hand)
+                    .any(|a| a.from_hand && is_mana_ability_effect(&a.effect))
             })
             .map(|c| c.id)
             .collect()

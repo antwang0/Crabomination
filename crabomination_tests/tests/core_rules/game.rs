@@ -764,14 +764,18 @@ fn concede_eliminates_player_and_awards_win_to_opponent() {
     assert!(g.concede(0).is_empty(), "conceding after game over is a no-op");
 }
 
-/// `pitchable_hand_cards` lists hand cards with a `from_hand` ability
-/// (Spirit Guides) and respects priority.
+/// `pitchable_hand_cards` lists hand cards with a `from_hand` *mana* ability
+/// (Spirit Guides) and respects priority. Bug fix: Sureshot Sower's targeted
+/// "{3}{G}, discard it: destroy target creature with flying" was listed too,
+/// so the client's right-click pitched it with no target and the engine
+/// rejected every attempt — the ability could not be used from the client.
 #[test]
 fn pitchable_hand_cards_lists_spirit_guides() {
     let mut g = two_player_game();
     g.priority.player_with_priority = 0;
     let guide = g.add_card_to_hand(0, catalog::simian_spirit_guide());
     g.add_card_to_hand(0, catalog::grizzly_bears()); // no from-hand ability
+    g.add_card_to_hand(0, catalog::sureshot_sower()); // targeted, not a pitch
     assert_eq!(g.pitchable_hand_cards(0), vec![guide], "only the Spirit Guide is pitchable");
     g.priority.player_with_priority = 1;
     assert!(g.pitchable_hand_cards(0).is_empty(), "off-priority → empty");
