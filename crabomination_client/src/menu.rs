@@ -1985,6 +1985,12 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn cra
         search_threads: bot_search_threads(),
         menu_windows,
         policy_slot,
+        // The combat-window fix, gated 2026-11-10 (ML_NOTES "The combat
+        // window of the menu search"): `-df-anm10` 51.3 / 50.0 over the menu
+        // search without it, 35/35 on the blunder set (was 23.6).
+        menu_declare_fix: menu,
+        menu_anchor: if menu { 0.10 } else { -1.0 },
+        menu_anchor_material: menu,
         ..crabomination::server::MctsConfig::default()
     }))
 }

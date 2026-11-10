@@ -8574,7 +8574,7 @@ the unpolished pick. Gate above (51.84 / 51.47 / 51.76 / 51.58 at seeds
 after are on different decks; both sides of a cell always share them.
 Test `the_sealed_opponent_is_the_gated_policy_and_value_build` pins it.
 
-### Holdout fix + the value re-read (2026-11-09, user-approved; RUNNING)
+### Holdout fix + the value re-read (2026-11-09, user-approved; read 2026-11-10: the −11 was the recipe)
 
 *Holdout fix:* `selfplay_train::is_holdout` hashes `traj >> 1` and
 `table_train::is_holdout` `traj >> 3` (their seat bits), so a game's seats
@@ -8616,6 +8616,28 @@ games it has not seen) and with the policy step on the shared trunk costing
 the value ~0.06 AUC at this data size; R0 is no better than where it
 started. To re-run: the arms in turn (18 actors each) with
 `--decision-cap 100000`, not side by side.
+
+**Result (re-run 2026-11-10, arms in turn, 16 actors, decision cap 100 k;
+`.ladder/vr/summary.txt`): the −11 was the recipe; a value trained on
+search games does not beat the champion.** Leaf cells, each export as the
+menu search's leaf against the champion's:
+
+| arm | final held-out AUC / log-loss | leaf s43 | leaf s97 | pooled |
+|---|---|---|---|---|
+| C (phase 5's recipe) | **0.500 / 0.693** (collapsed) | 34.9 [33.0, 36.8] | 35.7 [33.8, 37.6] | 35.3 (−14.7) |
+| R1 (champion recipe + policy step) | 0.730 / 0.597 | 48.7 [46.9, 50.5] | 47.2 [45.4, 49.0] | 47.95 (−2.05) |
+| R0 (champion recipe, value alone) | 0.786 / 0.543 | 49.2 [47.5, 51.0] | 50.6 [48.9, 52.4] | 49.9 (−0.1) |
+
+C's learner collapsed to a constant between steps 5,500 and 6,000 (train
+win loss 0.2500 = a 0.5 prediction, held-out AUC exactly 0.5000 from
+step 6,000 on; best 0.710 at step 2,500); its `latest` export is that
+constant, which is phase 5's 37–41 % read reproduced. R0 holds the
+champion and does not move it (0.786 vs the champion's 0.797 on its own
+calibration); R1 sits at the edge of the "within ~2" band, the policy step
+on the shared trunk costing the value both AUC and ~2 leaf points. By the
+pre-registered reads: the recipe, not the data, made phase 5's value nets
+lose; lead 2 (a value trained on search games) does not open at 6,000
+games. Nothing adopted.
 
 ## Shortcomings review (2026-11-10): the adopted client bot on the blunder set, and the champion's calibration
 
@@ -8776,7 +8798,7 @@ reads no loss (it meets the blunder bar); if it loses and `-df` does not,
 `-df` alone, the margin left to the user; if both lose, nothing.
 **From here on a change to the client's pilot is read on the blunder set
 before it is adopted** (≥ the adopted pilot's items and pairs, 20 reps).
-Result: PENDING.
+Result: see "Gate amended" below — `-df-anm10` ADOPTED.
 
 Not done, recorded: the Gumbel draw at play time (mctx evaluates with
 `gumbel_scale = 0`; here it still breaks near-ties among non-anchor arms and
@@ -8790,7 +8812,7 @@ make the deathtouch block.
 The user's "do 1 and 2" after the combat diagnosis: find why the rollouts
 price the attack into an untapped deathtoucher above staying home (0.369
 against 0.270), and widen the blunder set with the shapes that diagnosis
-found and with real cards. Nothing adopted; the gate above still PENDING.
+found and with real cards. (The gate was read later the same day: `-df-anm10` adopted, see "Gate amended".)
 
 **It is the leaf, not the rollout.** The guess recorded above — "the
 rollouts' opponent does not make the deathtouch block" — is wrong. Replayed
@@ -8887,5 +8909,28 @@ skips. The adoption rule becomes: decided once `-an10` and `-anm10` are
 both in; the one adopted is the higher blunder score that reads NO LOSS
 (pooled ≥ 49.5 %) — `-anm10`, else `-an10`, else `-df` alone (margin the
 user's call), else nothing; if `-anm10` holds but reads more than 1.0
-under `-an10` pooled, both numbers go to the user instead. Result: PENDING.
+under `-an10` pooled, both numbers go to the user instead.
+
+**Result (`.ladder/cf/summary.txt`, all against `mcts-net67-menu-mc`, SOS
+sealed, paired 120 × 12):**
+
+| arm | s43 | s97 | pooled | blunders / 35 (pairs / 9) |
+|---|---|---|---|---|
+| `-df-an10` | 50.1 [48.2, 52.0] | 50.7 [48.9, 52.5] | 50.40 — no loss | 33.0 (7) |
+| `-df-anm10` | 50.0 [48.2, 51.8] | 51.3 [49.4, 53.1] | **50.65 — no loss** | **35 (9)** |
+| `-df` alone | 50.1 [48.4, 51.8] | 52.8 [51.0, 54.5] | 51.45 — a gain by the bar | 26.6 (2.8) |
+
+By the rule: `-df-anm10` holds and has the higher blunder score, and it is
+above `-an10`, not under → **ADOPTED** in the client's `local_bot` and the
+lobby's Cube `default_bot` (`menu_declare_fix`, `menu_anchor` 0.10,
+`menu_anchor_material`). The adopted client bot now reads 35/35 and 9/9 on
+the blunder set (was 23.6 / 2.1; the pre-11-02 client 32 / 7).
+
+Recorded, not acted on: `-df` alone reads 0.8 pooled above `-df-anm10`
+and meets the gain bar (+1.45, both seeds above 50), so the anchor may cost
+some ladder strength for its blunder repairs; the two were never paired
+against each other and 0.8 is inside either cell's interval. Owed:
+`-df-anm10` vs `-df` head to head; FRA sealed (FRA leaf) and cube cells
+for the fix (the client's FRA games and the lobby's cube now play it on
+the SOS gate alone).
 

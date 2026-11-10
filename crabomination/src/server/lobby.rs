@@ -82,6 +82,11 @@ fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::
         if super::net_eval::slot_has_policy(slot) {
             cfg.menu_windows = super::mcts::MENU_MAIN | super::mcts::MENU_COMBAT;
             cfg.policy_slot = slot;
+            // The combat-window fix (`-df-anm10`, gated 2026-11-10: 51.3 /
+            // 50.0 over the menu search without it, 35/35 on the blunder set).
+            cfg.menu_declare_fix = true;
+            cfg.menu_anchor = 0.10;
+            cfg.menu_anchor_material = true;
         }
     }
     Box::new(MctsBot::new(MctsConfig { weights, ..cfg }))
