@@ -318,57 +318,10 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     // `-h<N>` the horizon, `-a<N>` the arms searched (default 8). Phase 5:
     // `-pb` reads its priors from `CRAB_POLICY_NET_B` and `-vb` its leaf
     // from `CRAB_NET_B`, so two generations of the loop can meet in one cell.
-    if let Some(rest) = name.strip_prefix("mcts-net67-menu-") {
-        let mut parts = rest.split('-');
-        let w = parts.next()?;
-        let (mut conf, mut pol, mut horizon, mut iters) = (2.0, None, 3u32, 256u32);
-        let mut policy_slot = crabomination::server::net_eval::SLOT_CANDIDATE;
-        let mut weights = EvalWeights::net_on_default().with_fra_fixes();
-        let mut arms = MctsConfig::default().menu_arms;
-        let mut crn = false;
-        for p in parts {
-            if p == "crn" {
-                crn = true;
-            } else if let Some(n) = p.strip_prefix('a')
-                && let Ok(n) = n.parse::<usize>()
-            {
-                arms = n;
-            } else if p == "pb" {
-                policy_slot = crabomination::server::net_eval::SLOT_POLICY_B;
-            } else if p == "vb" {
-                weights.net_slot = crabomination::server::net_eval::SLOT_VALUE_B;
-            } else if let Some(c) = p.strip_prefix("conf") {
-                conf = c.parse::<f64>().ok()? / 100.0;
-            } else if let Some(n) = p.strip_prefix("np") {
-                pol = Some(n.parse::<u32>().ok()?);
-            } else if let Some(n) = p.strip_prefix("it") {
-                iters = n.parse().ok()?;
-            } else {
-                horizon = p.strip_prefix('h')?.parse().ok()?;
-            }
-        }
-        let mut mask = 0u8;
-        for ch in w.chars() {
-            mask |= match ch {
-                'm' => crabomination::server::mcts::MENU_MAIN,
-                'i' => crabomination::server::mcts::MENU_INSTANT,
-                'c' => crabomination::server::mcts::MENU_COMBAT,
-                'p' => crabomination::server::mcts::MENU_PROMPT,
-                _ => return None,
-            };
-        }
-        return Some(Pilot::Mcts(MctsConfig {
-            iterations: pol.unwrap_or(iters),
-            horizon_turns: horizon,
-            weights,
-            menu_windows: mask,
-            policy_slot,
-            menu_arms: arms,
-            menu_confident: conf,
-            menu_crn: crn,
-            policy_rollouts: pol.is_some(),
-            ..MctsConfig::default()
-        }));
+    // (`server::mcts::menu_profile` has the suffixes, `-df` and `-an<N>`
+    // among them.)
+    if name.starts_with("mcts-net67-menu-") {
+        return crabomination::server::mcts::menu_profile(name).map(Pilot::Mcts);
     }
     if let Some(m) = name.strip_prefix("fra-fixes+")
         && let Some(w) = spot(EvalWeights::fra_fixes_on(), m)

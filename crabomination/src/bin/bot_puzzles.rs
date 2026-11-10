@@ -71,7 +71,7 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
         // Cube games; `mcts-net67-256-fixes` is the client's limited pilot.
         "fixes" => EvalWeights::default().with_fra_fixes(),
         "net67-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
-        "mcts-dflt-256" | "mcts-net67-256" | "mcts-net67-256-fixes" | "mcts-net67-menu-mc-fixes" => {
+        p if mcts_cfg(p).is_some() => {
             return Some(Box::new(MctsBot::new(mcts_cfg(profile).expect("an MCTS profile"))));
         }
         "mcts-net-deep" => {
@@ -87,28 +87,27 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
     Some(Box::new(HeuristicBot::with_weights(w)))
 }
 
-/// The 256-iteration search profiles' configurations.
+/// The 256-iteration search profiles' configurations. A
+/// `mcts-net67-menu-<windows>[-suffix..]` name is the ladder's menu search
+/// (`server::mcts::menu_profile`; priors from `CRAB_POLICY_NET`), and
+/// `mcts-net67-menu-mc-fixes` this tool's first name for
+/// `mcts-net67-menu-mc`, the client's limited pilot since 2026-11-02.
 fn mcts_cfg(profile: &str) -> Option<MctsConfig> {
+    if profile.starts_with("mcts-net67-menu-") {
+        assert!(
+            std::env::var_os("CRAB_POLICY_NET").is_some(),
+            "a `-menu-` profile needs CRAB_POLICY_NET=<policy-headed weights>"
+        );
+        let name = if profile == "mcts-net67-menu-mc-fixes" { "mcts-net67-menu-mc" } else { profile };
+        return crabomination::server::mcts::menu_profile(name);
+    }
     let weights = match profile {
         "mcts-dflt-256" => EvalWeights::default(),
         "mcts-net67-256" => EvalWeights::net_on_default(),
-        "mcts-net67-256-fixes" | "mcts-net67-menu-mc-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
+        "mcts-net67-256-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
         _ => return None,
     };
-    // The adopted client bot since 2026-11-02 (`crabomination_client`
-    // `local_bot`): the same search, main phases and combat taken over the
-    // whole move list on the priors of `CRAB_POLICY_NET` (candidate slot).
-    let (menu_windows, policy_slot) = if profile == "mcts-net67-menu-mc-fixes" {
-        use crabomination::server::mcts::{MENU_COMBAT, MENU_MAIN};
-        assert!(
-            std::env::var_os("CRAB_POLICY_NET").is_some(),
-            "mcts-net67-menu-mc-fixes needs CRAB_POLICY_NET=<policy-headed weights>"
-        );
-        (MENU_MAIN | MENU_COMBAT, crabomination::server::net_eval::SLOT_CANDIDATE)
-    } else {
-        (0, 0)
-    };
-    Some(MctsConfig { iterations: 256, horizon_turns: 3, weights, menu_windows, policy_slot, ..MctsConfig::default() })
+    Some(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() })
 }
 
 /// `--action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S]
@@ -516,7 +515,13 @@ fn run_blunders(profiles: &[String]) {
     let a: Vec<String> = std::env::args().collect();
     let reps: usize = a.iter().position(|x| x == "--reps").and_then(|i| a.get(i + 1)).map_or(1, |v| v.parse().expect("--reps N"));
     let verbose = a.iter().any(|x| x == "--show-lines");
-    let all = items();
+    // `--only ID[,ID..]`: just these items (for reading one failure's trace).
+    let only: Option<Vec<String>> =
+        a.iter().position(|x| x == "--only").and_then(|i| a.get(i + 1)).map(|v| v.split(',').map(str::to_string).collect());
+    let mut all = items();
+    if let Some(only) = &only {
+        all.retain(|i| only.iter().any(|o| o == i.id));
+    }
     let pairs = all.iter().filter(|i| i.twin.is_some_and(|t| i.id < t)).count();
     println!("blunder set: {} items ({pairs} twin pairs), {reps} rep(s) each\n", all.len());
     for profile in profiles {
@@ -563,6 +568,12 @@ fn run_blunders(profiles: &[String]) {
             if !idx.is_empty() {
                 let s: f64 = idx.iter().map(|&i| rate(i)).sum();
                 println!("    {:<9} {s:.1}/{}", area.name(), idx.len());
+            }
+        }
+        // Items a stochastic pilot passes only some of the time.
+        for (i, it) in all.iter().enumerate() {
+            if score[i] != 0 && score[i] != reps {
+                println!("    {}: {}/{reps}", it.id, score[i]);
             }
         }
         for n in &notes {
@@ -668,14 +679,15 @@ fn main() {
     if args.iter().any(|a| a == "-h" || a == "--help") {
         println!(
             "bot_puzzles [--set core|fra] [--depth N] [--certify] [PROFILE ...]\n\
-             bot_puzzles --blunders [--reps N] [--show-lines] [PROFILE ...]\n\
+             bot_puzzles --blunders [--reps N] [--show-lines] [--only ID,ID] [PROFILE ...]\n\
              bot_puzzles --action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S] [--scored-rollouts] [MCTS PROFILE]\n\
              bot_puzzles --crn-census GAMES [--probe N] [--arms A] [--sample P] [--threads T] [--seed S] [MCTS PROFILE]\n\
              bot_puzzles --menu-census GAMES [--threads T] [--seed S] [MCTS PROFILE]\n\
              bot_puzzles --policy-agree GAMES [--threads T] [--seed S] [TEACHER]  (CRAB_NET's policy head)\n\n\
              PROFILE: pass (null control) | policy (CRAB_NET's policy head) | dflt | fixes | net67 | net67-fixes | mcts-dflt-256 | mcts-net67-256 |\n\
              \x20        mcts-net67-256-fixes (the client's limited pilot before 2026-11-02) |\n\
-             \x20        mcts-net67-menu-mc-fixes (the client's limited pilot; needs CRAB_POLICY_NET) | gang | atk-sim | net | mcts-net-deep\n\
+             \x20        mcts-net67-menu-mc[-df][-an<N>].. (the client's limited pilot and the ladder's suffixes; needs CRAB_POLICY_NET) |\n\
+             \x20        gang | atk-sim | net | mcts-net-deep\n\
              --certify reports which candidates are real puzzles. CRAB_NET overrides the champion."
         );
         return;
@@ -720,7 +732,13 @@ fn main() {
         return;
     }
     if args.iter().any(|a| a == "--blunders") {
-        let profiles: Vec<String> = args.iter().filter(|a| !a.starts_with("--") && a.parse::<usize>().is_err()).cloned().collect();
+        let only = args.iter().position(|a| a == "--only").map(|i| i + 1);
+        let profiles: Vec<String> = args
+            .iter()
+            .enumerate()
+            .filter(|(i, a)| Some(*i) != only && !a.starts_with("--") && a.parse::<usize>().is_err())
+            .map(|(_, a)| a.clone())
+            .collect();
         let profiles = if profiles.is_empty() { vec!["pass".to_string(), "dflt".to_string()] } else { profiles };
         run_blunders(&profiles);
         return;

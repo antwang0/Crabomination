@@ -112,6 +112,11 @@ pub fn prompt_name(d: &Decision) -> &'static str {
 /// The moves `seat` has right now, or `None` when it has nothing to decide
 /// (not its priority, no prompt of its own, no declaration due).
 pub fn menu(g: &GameState, seat: usize, w: &EvalWeights) -> Option<Menu> {
+    menu_with(g, seat, w, false)
+}
+
+/// [`menu`], its moves deduplicated by [`key_with`] at `structural`.
+pub fn menu_with(g: &GameState, seat: usize, w: &EvalWeights, structural: bool) -> Option<Menu> {
     if g.is_game_over() {
         return None;
     }
@@ -136,7 +141,7 @@ pub fn menu(g: &GameState, seat: usize, w: &EvalWeights) -> Option<Menu> {
     let mut moves: Vec<GameAction> = Vec::new();
     let mut keys: Vec<String> = Vec::new();
     let push = |a: GameAction, moves: &mut Vec<GameAction>, keys: &mut Vec<String>| {
-        let k = key(g, seat, &a);
+        let k = key_with(g, seat, &a, structural);
         if !keys.contains(&k) {
             keys.push(k);
             moves.push(a);
@@ -440,6 +445,35 @@ fn block_declarations(g: &GameState, seat: usize) -> (Vec<GameAction>, bool) {
 /// target dropped where the spell or ability takes none, and a prompt's
 /// "engine default" answers spelled out.
 pub fn key(g: &GameState, seat: usize, a: &GameAction) -> String {
+    key_with(g, seat, a, false)
+}
+
+/// [`key`]; at `structural` a block declaration keeps which blockers share
+/// an attacker. By names alone "the 1/4 and the 2/2 each block a different
+/// Raider" and "both block one Raider" are one move, so against same-named
+/// attackers (tokens) a list carried only the first the generator made —
+/// the double block (the blunder set's `control_keeps_its_blockers_home`,
+/// 2026-11-10). Same-named attackers stay interchangeable.
+pub fn key_with(g: &GameState, seat: usize, a: &GameAction, structural: bool) -> String {
+    if structural && let GameAction::DeclareBlockers(v) = a {
+        let name = |id: CardId| g.find_card_anywhere(id).map_or("?", |c| c.definition.name);
+        let mut groups: Vec<(CardId, Vec<&str>)> = Vec::new();
+        for &(blocker, attacker) in v {
+            match groups.iter_mut().find(|(x, _)| *x == attacker) {
+                Some((_, bl)) => bl.push(name(blocker)),
+                None => groups.push((attacker, vec![name(blocker)])),
+            }
+        }
+        let mut out: Vec<(&str, Vec<&str>)> = groups
+            .into_iter()
+            .map(|(attacker, mut bl)| {
+                bl.sort_unstable();
+                (name(attacker), bl)
+            })
+            .collect();
+        out.sort();
+        return format!("DeclareBlockers({out:?})");
+    }
     let mut a = a.clone();
     // Unordered answers compare as sets.
     match &mut a {
@@ -1035,6 +1069,61 @@ mod tests {
         let at_player = GameAction::DeclareAttackers(vec![Attack { attacker: bear, target: AttackTarget::Player(1) }]);
         assert!(m.moves.contains(&at_walker) && m.moves.contains(&at_player), "{:#?}", m.moves);
         assert!(m.moves.contains(&GameAction::DeclareAttackers(Vec::new())));
+    }
+
+    /// Two same-named attackers: "each blocker takes one" and "both block
+    /// the first" read the same by names, so the list kept only one of
+    /// them. The structural key tells them apart and still merges the two
+    /// ways of pairing interchangeable attackers.
+    #[test]
+    fn structural_block_keys_keep_which_blockers_share_an_attacker() {
+        use crate::card::{CardDefinition, CardType};
+        use crate::game::{Attack, AttackTarget};
+        let mut g = crate::game::two_player_game();
+        for seat in 0..2 {
+            for _ in 0..5 {
+                g.add_card_to_library(seat, crate::catalog::island());
+            }
+        }
+        let body = |name: &'static str, p: i32, t: i32| CardDefinition {
+            name,
+            card_types: vec![CardType::Creature],
+            power: p,
+            toughness: t,
+            ..Default::default()
+        };
+        let warden = g.add_card_to_battlefield(0, body("Warden", 1, 4));
+        let guard = g.add_card_to_battlefield(0, body("Guard", 2, 2));
+        let r1 = g.add_card_to_battlefield(1, body("Raider", 2, 2));
+        let r2 = g.add_card_to_battlefield(1, body("Raider", 2, 2));
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.clear_sickness(r1);
+        g.clear_sickness(r2);
+        while g.step != TurnStep::DeclareAttackers {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        g.perform_action(GameAction::DeclareAttackers(vec![
+            Attack { attacker: r1, target: AttackTarget::Player(0) },
+            Attack { attacker: r2, target: AttackTarget::Player(0) },
+        ]))
+        .expect("attack");
+        while g.step != TurnStep::DeclareBlockers {
+            g.perform_action(GameAction::PassPriority).expect("pass");
+        }
+        let split = GameAction::DeclareBlockers(vec![(warden, r1), (guard, r2)]);
+        let crossed = GameAction::DeclareBlockers(vec![(warden, r2), (guard, r1)]);
+        let double = GameAction::DeclareBlockers(vec![(warden, r1), (guard, r1)]);
+        assert_eq!(key(&g, 0, &split), key(&g, 0, &double), "by names the two are one move");
+        assert_ne!(key_with(&g, 0, &split, true), key_with(&g, 0, &double, true));
+        assert_eq!(key_with(&g, 0, &split, true), key_with(&g, 0, &crossed, true), "same-named attackers stay interchangeable");
+        let w = EvalWeights::default();
+        let has = |m: &Menu, a: &GameAction| m.moves.iter().any(|x| key_with(&g, 0, x, true) == key_with(&g, 0, a, true));
+        let flat = menu(&g, 0, &w).expect("block");
+        let full = menu_with(&g, 0, &w, true).expect("block");
+        assert!(has(&full, &split) && has(&full, &double), "{:#?}", full.moves);
+        assert!(!(has(&flat, &split) && has(&flat, &double)), "the name key drops one of them");
+        assert!(full.moves.len() > flat.moves.len());
     }
 
     /// A menace attacker can be blocked by two: the brute force tried each

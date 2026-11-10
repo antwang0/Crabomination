@@ -777,6 +777,31 @@ mod tests {
         }
     }
 
+    /// The combat window's anchor (`MctsConfig::menu_anchor`): at 4 life
+    /// with a 1/1 against a 5/5 every block loses inside the horizon, so
+    /// the search's arms tie at zero — and a tie goes to the heuristic's
+    /// declaration, the chump, where the bare search took whichever arm its
+    /// noise favoured (the adopted client pilot passed this item 2 times in
+    /// 20, 2026-11-10). No net: uniform priors, the material leaf.
+    #[test]
+    fn the_anchored_combat_search_chumps_when_every_line_loses() {
+        use crate::server::mcts::{MENU_COMBAT, MctsBot, MctsConfig};
+        let all = items();
+        let it = all.iter().find(|i| i.id == "chump_at_low_life").expect("the item");
+        for _ in 0..4 {
+            let mut bot = MctsBot::new(MctsConfig {
+                iterations: 32,
+                horizon_turns: 3,
+                menu_windows: MENU_COMBAT,
+                menu_declare_fix: true,
+                menu_anchor: 0.0,
+                ..MctsConfig::default()
+            });
+            let v = judge(it, &mut bot);
+            assert!(v.ok(), "failed to {:?}: {:?}", v.failed, v.actions);
+        }
+    }
+
     /// The benchmark's honesty condition: a pilot that does nothing scores
     /// nothing. A "never do X" item it passes must have a twin it fails,
     /// and every item without a twin must fail outright — otherwise that

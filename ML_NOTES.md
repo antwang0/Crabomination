@@ -8652,3 +8652,136 @@ hand size; unexplained (the calibration's decks and pilot are the plain
 heuristic's, the champion's actors were round 81's). No Bayes ceiling for
 this target has ever been measured, so "capacity is null" (r4 / r24 / r45)
 cannot tell a net at its ceiling from one that cannot use its inputs.
+
+### The combat window of the menu search: what the regression is, a fix, and its gate (2026-11-10)
+
+The user's "do 1": diagnose the blunder-set regression above, fix it, and
+make blunder parity a condition of adoption. `CRAB_MCTS_ROOT=1` now prints a
+menu search's arms (prior logit, Gumbel draw, rollouts, mean reward, the
+anchor and the pick); `bot_puzzles --blunders --only ID,ID` reads one item;
+the puzzle tool takes the ladder's `mcts-net67-menu-*` names
+(`server::mcts::menu_profile`, shared with `bot_ladder`).
+
+**What the traces showed — four defects and one limit.** The right
+declaration was among the arms in all but one item; the search priced or
+picked it wrongly.
+
+1. **A `PassPriority` arm beside the declarations, whose rollout is not the
+   move the game makes.** `decision_menu::menu` opens a block window on
+   `may_declare_blocks`, not on priority, and adds a pass whenever the
+   engine would take one — but the engine applies an action to whoever holds
+   priority, and the defender is asked before priority reaches it. So the
+   arm's rollout passed the *attacker's* priority and then let the rollout's
+   heuristic block: its mean is the heuristic's block's, to the digit (0.594
+   / 0.594 on `take_the_free_trade`, 0.167 / 0.167 on
+   `deathtouch_blocks_the_biggest`). Picked in the game, the same pass
+   latched the window shut (`menu_declared`) and nothing was declared. It
+   also took a third of the budget at every two-declaration decision.
+2. **The latch closed the window on any pick**, so a spell cast before
+   blocks (a flash blocker, removal on an attacker) could never be followed
+   by a block — `flash_in_the_blocker`, which no pilot had ever passed.
+3. **Block declarations were deduplicated by card names.** "The 1/4 and the
+   2/2 each block a different Raider" and "both block one Raider" are the
+   same string once ids become names, and the list kept the first the
+   generator made — the double block. `control_keeps_its_blockers_home`
+   (three same-named 2/2s attack a seat at 4) had no surviving block on its
+   list. Token swarms are this shape. Phase 1's 99.99 % coverage census
+   compared by the same key, so it could not see it.
+4. **Ties, and picks no better than the heuristic's.** The final pick is
+   `argmax(g + logit + σ(q))` with the Gumbel draw `g` on at play time. A
+   puzzle's rollouts are deterministic, so arms tie exactly and the draw
+   decides; where every line loses inside the horizon (4 life, a 1/1
+   against a 5/5: all arms 0.000) the prior decides, and it says don't
+   block. In real games (census below) the search's pick had a mean reward
+   *no higher than the heuristic's own declaration* in 7 % of attack and
+   10 % of block decisions, and within 0.05 of it — under one standard
+   error of the difference at ~100 rollouts an arm — in another 20 %.
+5. *The limit, not fixed:* three items are the rollouts' judgement. Chump
+   at 20 life: block 0.153 against no block 0.075 (three turns of taking 5
+   read worse than the 1/1's later chump, which the horizon never reaches).
+   The 0/4 with an attack trigger: attack 0.329 against 0.348. The 4/4 into
+   untapped Typhoid Rats: attack 0.369 against 0.270 — and the heuristic on
+   the net leaf attacks there too (the old client pilot fails this item).
+
+**The fix** (`MctsConfig`, both off by default; nothing adopted moved):
+
+- `menu_declare_fix` (ladder `-df`): in a combat window that still waits
+  for its declaration the pass is dropped wherever a declaration is on the
+  list (kept only as "let my spell resolve": the seat's priority, a
+  non-empty stack); only a declaration closes the window, with a cap of six
+  other picks before the list narrows to declarations; an arm that casts or
+  activates in the window is resolved before its rollout hands over to the
+  heuristic (which declares at once, the spell still on the stack); and the
+  move list is built with `decision_menu::key_with(.., structural = true)`,
+  where a block declaration is keyed by which blockers share an attacker
+  (same-named attackers stay interchangeable). `menu()` / `key()` are
+  unchanged for the policy pilot, the recorder and the training actors.
+- `menu_anchor` (ladder `-an<hundredths>`): the heuristic's own move in the
+  window (a fresh `HeuristicBot` on the pilot's weights; for a defender
+  asked before its priority, `bot::heuristic_block_declaration`) is always
+  an arm — it takes the eighth slot when the policy ranks it out — stays
+  live through every halving round (99–101 rollouts on it in the census),
+  and the search's pick replaces it only when its mean reward is more than
+  the margin above the anchor's. At 0 a tie goes to the heuristic.
+
+Tests: `structural_block_keys_keep_which_blockers_share_an_attacker`,
+`menu_profile_reads_the_declaration_fix_and_the_anchor`,
+`the_anchored_combat_search_chumps_when_every_line_loses`,
+`the_search_with_the_combat_fix_plays_a_legal_game`.
+
+**Blunder set**, 20 reps, gen 3's priors, champion leaf:
+
+| profile | items / 22 | pairs / 6 | fails |
+|---|---|---|---|
+| `mcts-net67-256-fixes` (client before 2026-11-02) | 20.0 | 5 | deathtouch attack, flash blocker |
+| `mcts-net67-menu-mc` (client since) | 15.8 | 2.0 | the eight above |
+| `-df` | 17.9 | 2.9 | zero-power trigger, deathtouch attack, blockers home (17 / 20), both chump twins |
+| `-df-an0` | 19.0 | 3.0 | zero-power trigger, deathtouch attack, chump at high life |
+| `-df-an5` | 20.0 | 4.0 | deathtouch attack, chump at high life |
+| **`-df-an10`** | **21.0** | **5.0** | deathtouch attack |
+
+`-df` alone is the first pilot to pass `flash_in_the_blocker`. `-df-an10`
+is over the bar the menu search's adoption skipped (20 items, 5 pairs).
+
+**Census: how often the search overrules the heuristic's declaration**
+(`bot_ladder --a mcts-net67-menu-mc-df-an10 --b` the same, 24 SOS sealed
+games, seed 43, `CRAB_MCTS_ROOT=1`, `.ladder/cf/census.py`). Of 1,833
+searched decisions 366 are attacks and 173 blocks; the anchor was found in
+all of them.
+
+| | attacks (366) | blocks (173) |
+|---|---|---|
+| search's pick is the heuristic's declaration | 52 % | 51 % |
+| differs, q(search) − q(heuristic) ≤ 0 | 6.6 % | 9.8 % |
+| differs, in (0, 0.02] | 11.5 % | 9.8 % |
+| differs, in (0.02, 0.05] | 8.7 % | 9.8 % |
+| differs, in (0.05, 0.10] | 7.9 % | 12.1 % |
+| differs, in (0.10, 0.20] | 7.7 % | 3.5 % |
+| differs, > 0.20 | 6.0 % | 4.0 % |
+| anchor ranked out of the policy's top eight (or eighth) | 29 | 9 |
+
+So half the menu search's combat is already the heuristic's, a quarter to
+a third is a difference its rollouts cannot resolve, and 14 % of attacks /
+7.5 % of blocks are a deviation of more than 0.10. A margin of 0.10 is
+about two standard errors of the difference; it returns 35 % of attack and
+42 % of block decisions to the heuristic and keeps the large ones.
+
+**Gate, pre-registered** (`.ladder/cf/gate.sh`, header written before the
+first cell; unit `crab-cf`, started 00:57 beside the value re-read):
+`mcts-net67-menu-mc-df-an10` and `mcts-net67-menu-mc-df`, each against the
+adopted `mcts-net67-menu-mc`, SOS sealed, paired 120 × 12, seeds 43 / 97.
+NO LOSS = pooled ≥ 49.5 %; a gain = pooled ≥ +1.0 with both seeds above 50.
+`-df-an10` is adopted in the client's and the lobby's menu search if it
+reads no loss (it meets the blunder bar); if it loses and `-df` does not,
+`-df` alone, the margin left to the user; if both lose, nothing.
+**From here on a change to the client's pilot is read on the blunder set
+before it is adopted** (≥ the adopted pilot's items and pairs, 20 reps).
+Result: PENDING.
+
+Not done, recorded: the Gumbel draw at play time (mctx evaluates with
+`gumbel_scale = 0`; here it still breaks near-ties among non-anchor arms and
+in the main-phase window, which has no anchor); `key()` still merges
+same-named permanents in different states (a token with a counter, a
+target among two same-named creatures); the rollouts' opponent does not
+make the deathtouch block.
+

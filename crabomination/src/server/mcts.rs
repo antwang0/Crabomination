@@ -457,7 +457,29 @@ pub struct MctsConfig {
     /// policy underrates still gets searched now and then. Off (default)
     /// is phase 4's deterministic top-k.
     pub menu_sample: bool,
+    /// The combat window's declaration fix (ML_NOTES "Shortcomings review",
+    /// 2026-11-10). Off, a menu search in an attack / block window (a)
+    /// carries `PassPriority` as an arm beside the empty declaration — the
+    /// rollout behind it lets the heuristic declare, the game played after
+    /// it declares nothing, so a third of the budget prices a move that is
+    /// not the one made — and (b) latches "declared" on *any* pick, so a
+    /// spell cast before blocks (a flash blocker, removal) can never be
+    /// followed by a block. On, the pass is dropped wherever a declaration
+    /// is on the list and only a declaration closes the window. Ladder
+    /// suffix `-df`.
+    pub menu_declare_fix: bool,
+    /// The heuristic's own declaration as the combat window's anchor: it is
+    /// always one of the arms (replacing the policy's last pick when the
+    /// policy ranks it out), it stays live through every halving round, and
+    /// the search's pick replaces it only when its mean reward is more than
+    /// this far above the anchor's — at 0.0 a tie goes to the heuristic.
+    /// Negative (default) is off. Ladder suffix `-an<hundredths>`.
+    pub menu_anchor: f64,
 }
+
+/// Most picks that are not a declaration a combat window takes before it
+/// is narrowed to declarations ([`MctsConfig::menu_declare_fix`]).
+const MENU_PREDECLARE_CAP: u8 = 6;
 
 /// [`MctsConfig::menu_windows`]: own main phase, empty stack.
 pub const MENU_MAIN: u8 = 1;
@@ -495,8 +517,100 @@ impl Default for MctsConfig {
             policy_rollouts: false,
             rollout_temp: 1.0,
             menu_sample: false,
+            menu_declare_fix: false,
+            menu_anchor: -1.0,
         }
     }
+}
+
+/// The ladder's and the puzzle tool's name for a menu-search pilot:
+/// `mcts-net67-menu-<windows>[-suffix..]`, the client's limited pilot (the
+/// net leaf on the default, the FRA fixes bundle, 256 rollouts over three
+/// turns) with the listed windows — any of m(ain) i(nstant) c(ombat)
+/// p(rompt) — searched over the complete move list on the policy priors in
+/// the candidate slot. Suffixes: `-conf<pct>` plays the policy's pick
+/// unsearched when it holds that share of the arms' softmax; `-np<N>`
+/// plays the rollouts with the policy pilot at N iterations; `-it<N>` sets
+/// the iterations of heuristic rollouts; `-h<N>` the horizon; `-a<N>` the
+/// arms (default 8); `-crn` pairs the arms' deals; `-pb` reads the priors
+/// from the policy-B slot and `-vb` the leaf from the value-B slot; `-df`
+/// is [`MctsConfig::menu_declare_fix`] and `-an<N>` an anchor margin of
+/// N hundredths ([`MctsConfig::menu_anchor`]).
+pub fn menu_profile(name: &str) -> Option<MctsConfig> {
+    let rest = name.strip_prefix("mcts-net67-menu-")?;
+    let mut parts = rest.split('-');
+    let w = parts.next()?;
+    let (mut conf, mut pol, mut horizon, mut iters) = (2.0, None, 3u32, 256u32);
+    let mut policy_slot = super::net_eval::SLOT_CANDIDATE;
+    let mut weights = EvalWeights::net_on_default().with_fra_fixes();
+    let mut arms = MctsConfig::default().menu_arms;
+    let (mut crn, mut declare_fix, mut anchor) = (false, false, -1.0f64);
+    for p in parts {
+        if p == "crn" {
+            crn = true;
+        } else if p == "df" {
+            declare_fix = true;
+        } else if let Some(n) = p.strip_prefix("an")
+            && let Ok(n) = n.parse::<u32>()
+        {
+            anchor = n as f64 / 100.0;
+        } else if let Some(n) = p.strip_prefix('a')
+            && let Ok(n) = n.parse::<usize>()
+        {
+            arms = n;
+        } else if p == "pb" {
+            policy_slot = super::net_eval::SLOT_POLICY_B;
+        } else if p == "vb" {
+            weights.net_slot = super::net_eval::SLOT_VALUE_B;
+        } else if let Some(c) = p.strip_prefix("conf") {
+            conf = c.parse::<f64>().ok()? / 100.0;
+        } else if let Some(n) = p.strip_prefix("np") {
+            pol = Some(n.parse::<u32>().ok()?);
+        } else if let Some(n) = p.strip_prefix("it") {
+            iters = n.parse().ok()?;
+        } else {
+            horizon = p.strip_prefix('h')?.parse().ok()?;
+        }
+    }
+    let mut mask = 0u8;
+    for ch in w.chars() {
+        mask |= match ch {
+            'm' => MENU_MAIN,
+            'i' => MENU_INSTANT,
+            'c' => MENU_COMBAT,
+            'p' => MENU_PROMPT,
+            _ => return None,
+        };
+    }
+    Some(MctsConfig {
+        iterations: pol.unwrap_or(iters),
+        horizon_turns: horizon,
+        weights,
+        menu_windows: mask,
+        policy_slot,
+        menu_arms: arms,
+        menu_confident: conf,
+        menu_crn: crn,
+        policy_rollouts: pol.is_some(),
+        menu_declare_fix: declare_fix,
+        menu_anchor: anchor,
+        ..MctsConfig::default()
+    })
+}
+
+/// `seat` still owes this step's attack or block declaration (the
+/// condition `decision_menu::menu` opens a combat window on).
+fn declaration_due(g: &GameState, seat: usize) -> bool {
+    match g.step {
+        TurnStep::DeclareAttackers => g.attack_declarer() == seat && g.attacking().is_empty(),
+        TurnStep::DeclareBlockers => g.may_declare_blocks(seat) && !g.attacking().is_empty() && !g.blockers_declared(),
+        _ => false,
+    }
+}
+
+/// An attack or block declaration.
+fn is_declaration(a: &GameAction) -> bool {
+    matches!(a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_))
 }
 
 /// Sequential Halving's phase plan: `(surviving arms, rollouts per arm)`
@@ -608,6 +722,9 @@ struct PriorStats {
     visits: Vec<u32>,
     total: Vec<f64>,
     dead: Vec<bool>,
+    /// The arms' Gumbel draw the halving and the final pick added to the
+    /// prior logits (read by the `CRAB_MCTS_ROOT` trace only).
+    noise: Vec<f64>,
 }
 
 /// Phase 5's policy target for a searched menu decision: the Gumbel
@@ -767,6 +884,9 @@ pub struct MctsBot {
     /// The (turn, step) a menu window last declared in — an empty
     /// declaration leaves the step where it was (see `policy_pilot`).
     menu_declared: Option<(u32, TurnStep)>,
+    /// Picks that were not a declaration in the (turn, step) combat window
+    /// still open ([`MctsConfig::menu_declare_fix`]).
+    menu_predeclared: Option<((u32, TurnStep), u8)>,
 }
 
 /// Stack for a root-parallel search worker. The engine's other worker
@@ -778,7 +898,7 @@ use crate::server::ENGINE_STACK_BYTES as WORKER_STACK_BYTES;
 
 impl MctsBot {
     pub fn new(cfg: MctsConfig) -> Self {
-        Self { cfg, fallback: HeuristicBot::with_weights(cfg.weights), menu_declared: None }
+        Self { cfg, fallback: HeuristicBot::with_weights(cfg.weights), menu_declared: None, menu_predeclared: None }
     }
 
     /// Score a finished rollout on a 0..=1 scale.
@@ -1532,11 +1652,29 @@ impl MctsBot {
     /// off, nothing to decide, a forced move).
     fn menu_window(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         use super::decision_menu::Kind;
-        let mut m = super::decision_menu::menu(state, seat, &self.cfg.weights)?;
+        let df = self.cfg.menu_declare_fix;
+        let key = |a: &GameAction| super::decision_menu::key_with(state, seat, a, df);
+        let mut m = super::decision_menu::menu_with(state, seat, &self.cfg.weights, df)?;
+        let here = (state.turn_number, state.step);
         let declaring = matches!(m.kind, Kind::Attack | Kind::Block);
-        if declaring && self.menu_declared == Some((state.turn_number, state.step)) {
-            m.moves.retain(|a| !matches!(a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)));
+        let attacking = m.kind == Kind::Attack;
+        if declaring && self.menu_declared == Some(here) {
+            m.moves.retain(|a| !is_declaration(a));
             m.kind = Kind::Priority;
+        }
+        // The window still waits for its declaration.
+        let open = matches!(m.kind, Kind::Attack | Kind::Block);
+        if self.cfg.menu_declare_fix && open && m.moves.iter().any(is_declaration) {
+            // The empty declaration is on the list; a pass beside it is the
+            // same move priced differently (see `menu_declare_fix`) — and
+            // without priority it is the opponent's pass. It stays only as
+            // "let my spell resolve first".
+            if state.player_with_priority() != seat || state.stack.is_empty() {
+                m.moves.retain(|a| !matches!(a, GameAction::PassPriority));
+            }
+            if self.menu_predeclared.is_some_and(|(k, n)| k == here && n >= MENU_PREDECLARE_CAP) {
+                m.moves.retain(is_declaration);
+            }
         }
         let window = match m.kind {
             Kind::Attack | Kind::Block => MENU_COMBAT,
@@ -1553,24 +1691,82 @@ impl MctsBot {
         if self.cfg.menu_windows & window == 0 || m.moves.len() < 2 {
             return None;
         }
-        let (arms, logits, states, noise) = self.menu_arms(state, seat, &m);
+        // The anchor: what the heuristic would declare here, asked of a
+        // fresh bot so the fallback's own step latches are untouched.
+        // A defender asked before priority reaches it gets its block
+        // straight from the picker; a pass is not an anchor.
+        let anchor_key: Option<String> = (self.cfg.menu_anchor >= 0.0 && open)
+            .then(|| match HeuristicBot::with_weights(self.cfg.weights).next_action(state, seat) {
+                None if m.kind == Kind::Block && state.active_player_idx != seat => {
+                    Some(super::bot::heuristic_block_declaration(state, seat, &self.cfg.weights))
+                }
+                a => a,
+            })
+            .flatten()
+            .filter(|a| !matches!(a, GameAction::PassPriority))
+            .and_then(|a| {
+                let k = key(&a);
+                if !m.moves.iter().any(|x| key(x) == k) {
+                    if !state.would_accept(a.clone()) {
+                        return None;
+                    }
+                    m.moves.push(a);
+                }
+                Some(k)
+            });
+        let (arms, logits, states, noise) = self.menu_arms(state, seat, &m, anchor_key.as_deref());
         if arms.is_empty() {
             return None;
         }
+        let anchor = anchor_key.as_ref().and_then(|k| arms.iter().position(|a| &key(a) == k));
         let pick = if arms.len() == 1 || self.confident(&logits) {
             arms[0].clone()
         } else {
-            let st = self.prior_search(state, seat, &arms, &logits, noise);
+            let st = self.prior_search(state, seat, &arms, &logits, noise, anchor);
+            let q = |i: usize| if st.visits[i] > 0 { st.total[i] / st.visits[i] as f64 } else { f64::NAN };
+            // The anchor stands unless the search's pick clears the margin.
+            let best = match anchor {
+                Some(a) if a != st.best && st.visits[a] > 0 => {
+                    let gap = q(st.best) - q(a);
+                    if gap.is_nan() || gap <= self.cfg.menu_anchor { a } else { st.best }
+                }
+                _ => st.best,
+            };
+            // `CRAB_MCTS_ROOT=1`: the menu search's arms on stderr — prior
+            // logit, Gumbel draw, rollouts, mean reward — and its pick.
+            if root_log() {
+                let mut line = format!(
+                    "menu-root T{} {:?} p{seat} {:?} ({} moves) anchor {} search {} pick {best}:",
+                    state.turn_number,
+                    state.step,
+                    m.kind,
+                    m.moves.len(),
+                    anchor.map_or("-".to_string(), |a| a.to_string()),
+                    st.best
+                );
+                for (i, a) in arms.iter().enumerate() {
+                    line += &format!("\n    [{i}] logit {:+.2} g {:+.2} n {:>3} q {:.3}  {a:?}", logits[i], st.noise[i], st.visits[i], q(i));
+                }
+                eprintln!("{line}");
+            }
             if let Some(states) = states
                 && super::decision_capture::enabled()
             {
                 record_search_target(state, seat, m.kind.index(), &arms, states, &logits, &st, &self.cfg);
             }
-            arms[st.best].clone()
+            arms[best].clone()
         };
         if declaring {
-            self.menu_declared = Some((state.turn_number, state.step));
-            self.fallback.note_external_declaration(state, m.kind == Kind::Attack);
+            if !self.cfg.menu_declare_fix {
+                self.menu_declared = Some(here);
+                self.fallback.note_external_declaration(state, m.kind == Kind::Attack);
+            } else if is_declaration(&pick) {
+                self.menu_declared = Some(here);
+                self.fallback.note_external_declaration(state, attacking);
+            } else if open {
+                let n = self.menu_predeclared.filter(|(k, _)| *k == here).map_or(0, |(_, n)| n);
+                self.menu_predeclared = Some((here, n.saturating_add(1)));
+            }
         }
         Some(pick)
     }
@@ -1585,11 +1781,20 @@ impl MctsBot {
         state: &GameState,
         seat: usize,
         m: &super::decision_menu::Menu,
+        keep: Option<&str>,
     ) -> (Vec<GameAction>, Vec<f64>, Option<Vec<GameState>>, Option<Vec<f64>>) {
         let k = self.cfg.menu_arms.max(1);
         let mut scored = super::policy_pilot::scored_moves(state, seat, m, self.cfg.policy_slot);
         if scored.is_empty() {
-            let (arms, logits) = super::policy_pilot::ranked_arms(state, seat, m, self.cfg.policy_slot, k);
+            let (mut arms, logits) = super::policy_pilot::ranked_arms(state, seat, m, self.cfg.policy_slot, k);
+            let key = |a: &GameAction| super::decision_menu::key_with(state, seat, a, self.cfg.menu_declare_fix);
+            if let Some(keep) = keep
+                && !arms.iter().any(|a| key(a) == keep)
+                && let Some(a) = m.moves.iter().find(|a| key(a) == keep)
+                && let Some(last) = arms.last_mut()
+            {
+                *last = a.clone();
+            }
             return (arms, logits, None, None);
         }
         let noise: Option<Vec<f64>> = self.cfg.menu_sample.then(|| {
@@ -1600,6 +1805,16 @@ impl MctsBot {
         let key = |i: usize| scored[i].1 + noise.as_ref().map_or(0.0, |g| g[i]);
         order.sort_by(|&a, &b| key(b).partial_cmp(&key(a)).unwrap_or(std::cmp::Ordering::Equal));
         order.truncate(k);
+        // The anchor (`MctsConfig::menu_anchor`) takes the last slot when
+        // the policy ranked it out.
+        if let Some(keep) = keep
+            && let Some(i) = (0..scored.len())
+                .find(|&i| super::decision_menu::key_with(state, seat, &scored[i].0, self.cfg.menu_declare_fix) == keep)
+            && !order.contains(&i)
+            && let Some(last) = order.last_mut()
+        {
+            *last = i;
+        }
         let noise = noise.map(|g| order.iter().map(|&i| g[i]).collect());
         let mut slots: Vec<Option<(GameAction, f64, GameState)>> = scored.drain(..).map(Some).collect();
         let (mut arms, mut logits, mut states) = (Vec::new(), Vec::new(), Vec::new());
@@ -1636,6 +1851,7 @@ impl MctsBot {
         arms: &[GameAction],
         logits: &[f64],
         noise: Option<Vec<f64>>,
+        keep: Option<usize>,
     ) -> PriorStats {
         let n = arms.len();
         timing::count(&timing::DECISIONS, 1);
@@ -1661,6 +1877,15 @@ impl MctsBot {
                 (noise[b] + logits[b] + sig[b]).partial_cmp(&(noise[a] + logits[a] + sig[a])).unwrap_or(std::cmp::Ordering::Equal)
             });
             live.truncate(m);
+            // The anchor arm is priced through every round: the margin it
+            // is held to is read against its final mean.
+            if let Some(a) = keep
+                && !dead[a]
+                && !live.contains(&a)
+                && let Some(last) = live.last_mut()
+            {
+                *last = a;
+            }
             // A halving round's rollouts are independent of one another, so
             // `search_threads` splits them across workers with nothing about
             // the schedule changed — the same arms, the same counts.
@@ -1693,7 +1918,7 @@ impl MctsBot {
                 (noise[a] + logits[a] + sig[a]).partial_cmp(&(noise[b] + logits[b] + sig[b])).unwrap_or(std::cmp::Ordering::Equal)
             })
             .unwrap_or(0);
-        PriorStats { best, visits, total, dead }
+        PriorStats { best, visits, total, dead, noise }
     }
 
     /// One rollout per entry of `jobs` (an arm index), `None` where the
@@ -1748,11 +1973,29 @@ impl MctsBot {
     fn arm_rollout(&self, state: &GameState, seat: usize, arm: &GameAction) -> Option<f64> {
         let mut g = state.clone();
         self.determinise(&mut g, seat, &mut draw_rng());
+        // A spell or ability played while `seat`'s declaration is still due
+        // (`menu_declare_fix` lets one be followed by the declaration): the
+        // rollout's heuristic declares at once, with the spell still on the
+        // stack, so a flash blocker or a kill on an attacker would be priced
+        // as if it had not happened. Resolve it first.
+        let settle = self.cfg.menu_declare_fix
+            && !matches!(arm, GameAction::PassPriority)
+            && !is_declaration(arm)
+            && declaration_due(&g, seat);
         g.perform_action(arm.clone()).ok()?;
-        if matches!(arm, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)) {
+        if is_declaration(arm) {
             let step = g.step;
             let mut fuel = 32;
             while fuel > 0 && g.step == step && !g.is_game_over() {
+                fuel -= 1;
+                if g.perform_action(GameAction::PassPriority).is_err() {
+                    break;
+                }
+            }
+        } else if settle {
+            let step = g.step;
+            let mut fuel = 32;
+            while fuel > 0 && !g.stack.is_empty() && g.step == step && g.pending_decision.is_none() && !g.is_game_over() {
                 fuel -= 1;
                 if g.perform_action(GameAction::PassPriority).is_err() {
                     break;
@@ -2300,6 +2543,23 @@ mod tests {
             matches!(d, Some(GameAction::DeclareAttackers(_))),
             "fallback declares when search_combat is off, got {d:?}"
         );
+    }
+
+    /// The ladder's menu-search names: the combat fix and the anchor margin
+    /// are suffixes, and `-an<N>` is not read as `-a<N>` (arms).
+    #[test]
+    fn menu_profile_reads_the_declaration_fix_and_the_anchor() {
+        let base = menu_profile("mcts-net67-menu-mc").expect("the client's pilot");
+        assert_eq!(base.menu_windows, MENU_MAIN | MENU_COMBAT);
+        assert!(!base.menu_declare_fix && base.menu_anchor < 0.0, "both off by default");
+        assert_eq!((base.iterations, base.horizon_turns, base.menu_arms), (256, 3, 8));
+        let fixed = menu_profile("mcts-net67-menu-mc-df-an10").expect("the fix");
+        assert!(fixed.menu_declare_fix);
+        assert!((fixed.menu_anchor - 0.10).abs() < 1e-9);
+        assert_eq!(fixed.menu_arms, 8, "an10 is a margin, not ten arms");
+        assert_eq!(menu_profile("mcts-net67-menu-mc-a4-an0").map(|c| (c.menu_arms, c.menu_anchor)), Some((4, 0.0)));
+        assert!(menu_profile("mcts-net67-menu-mc-bogus").is_none());
+        assert!(menu_profile("mcts-net67-256").is_none());
     }
 
     /// The halving plan is the budget policy, so its arithmetic is the

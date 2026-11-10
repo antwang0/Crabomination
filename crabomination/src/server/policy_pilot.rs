@@ -1072,6 +1072,15 @@ mod tests {
         search_plays_a_legal_game(false);
     }
 
+    /// ...and with the combat window's fix on: a spell before a declaration,
+    /// the pass kept only to resolve it, the heuristic's declaration as an
+    /// arm — every move still one the engine takes, and no window that
+    /// never closes.
+    #[test]
+    fn the_search_with_the_combat_fix_plays_a_legal_game() {
+        search_game_with(false, false, 10, true);
+    }
+
     /// ...and with the policy pilot playing its rollouts.
     #[test]
     fn the_search_with_policy_rollouts_plays_a_legal_game() {
@@ -1222,6 +1231,12 @@ mod tests {
     }
 
     fn search_game(policy_rollouts: bool, menu_sample: bool, last_turn: u32) {
+        search_game_with(policy_rollouts, menu_sample, last_turn, false);
+    }
+
+    /// `combat_fix`: `MctsConfig::menu_declare_fix` with the heuristic's
+    /// declaration anchored at 0.10.
+    fn search_game_with(policy_rollouts: bool, menu_sample: bool, last_turn: u32, combat_fix: bool) {
         use crate::server::mcts::{MENU_COMBAT, MENU_INSTANT, MENU_MAIN, MENU_PROMPT, MctsBot, MctsConfig};
         let _g = SLOT.lock().unwrap_or_else(|e| e.into_inner());
         let slot = super::super::net_eval::SLOT_FRA;
@@ -1235,6 +1250,8 @@ mod tests {
             menu_arms: 4,
             policy_rollouts,
             menu_sample,
+            menu_declare_fix: combat_fix,
+            menu_anchor: if combat_fix { 0.10 } else { -1.0 },
             ..MctsConfig::default()
         };
         let seed = 7u64;

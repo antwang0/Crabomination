@@ -17413,6 +17413,14 @@ fn block_chain_candidate(
     Some((current, current_score, sims))
 }
 
+/// The block declaration the heuristic makes for `seat` in a duel — its
+/// declare-blockers arm without the priority check (a defender may declare
+/// before priority reaches it), for a search that anchors on it
+/// (`MctsConfig::menu_anchor`).
+pub(crate) fn heuristic_block_declaration(state: &GameState, seat: usize, w: &EvalWeights) -> GameAction {
+    GameAction::DeclareBlockers(pick_blocks_scored(state, seat, w))
+}
+
 fn pick_blocks_scored(state: &GameState, seat: usize, w: &EvalWeights) -> Vec<(CardId, CardId)> {
     // The attack search's board cap, for the same reason: the game that
     // measured it spent 7.1 s on one block plan at 612 permanents.
