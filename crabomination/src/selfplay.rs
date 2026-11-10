@@ -590,8 +590,12 @@ pub fn sealed_opponent_build(
 ) -> Vec<CardFactory> {
     if crate::card_ratings::rates_pool(pool) {
         if LEARNED_SEALED_BUILDER && colors.is_empty() && sealed_deck_policy().covers(pool) {
-            let value = if crate::card_ratings::sos_pool(pool) { sos_deck_value() } else { fra_deck_value() };
-            return sealed_deck_policy().build_valued(pool, value, n, &mut StdRng::seed_from_u64(seed ^ 3));
+            let mut rng = StdRng::seed_from_u64(seed ^ 3);
+            if crate::card_ratings::sos_pool(pool) {
+                let opts = crate::deck_policy::ValuedOpts { polish: SOS_SEALED_POLISH, ..Default::default() };
+                return sealed_deck_policy().build_valued_with(pool, sos_deck_value(), n, &mut rng, &opts);
+            }
+            return sealed_deck_policy().build_valued(pool, fra_deck_value(), n, &mut rng);
         }
         return rated_sealed_build_in_colors(pool, n, seed, colors);
     }
@@ -610,6 +614,19 @@ pub fn sealed_opponent_build(
 /// greedy build alone 49.50 / 49.84 and 49.93 / 50.37. It replaces the
 /// step-1b SOS polish adopted 2026-11-05 (51.78 / 52.04 by the same gate).
 pub const LEARNED_SEALED_BUILDER: bool = true;
+
+/// At most how many value-guided one-for-one swaps an SOS sealed opponent
+/// makes after the learned builder's pick (`deck_policy::polish`: the best
+/// swap by the same-pool value, lands re-derived, kept only if the relanded
+/// deck still rates higher). **3**, adopted 2026-11-09 at the user's call
+/// (ML_NOTES "Research sweep", results): against the unpolished pick on the
+/// same pool (`fra_card_eval --set sos --ab --best 16 --trial
+/// policy-value+polish3 --pilot dflt`, 2,000 pools x 8 pairs, pool-level)
+/// **51.84 / 51.47 / 51.76 / 51.58 %** at seeds 43 / 97 / 11 / 29; 1 swap
+/// read 51.23 / 50.99, 6 swaps 51.79 / 51.52. FRA stays unpolished: 50.06 /
+/// 49.65 at 3 swaps, 50.12 at 6 — the FRA value's swap preferences don't
+/// survive play.
+pub const SOS_SEALED_POLISH: usize = 3;
 
 /// The add-one-card deck policy (width 256, DAgger imitation then one
 /// generation on race labels — step 4's `cap256_gen1`), compiled in like
@@ -1345,7 +1362,9 @@ mod tests {
                 let pool = sealed_pool_of(set, seed, SEALED_PACKS);
                 assert!(sealed_deck_policy().covers(&pool), "{set:?} pool {seed}");
                 let deck = sealed_opponent_build(&pool, 16, seed, ColorSet::empty());
-                assert_eq!(deck, sealed_deck_policy().build_valued(&pool, value, 16, &mut StdRng::seed_from_u64(seed ^ 3)));
+                let polish = if set == SealedSet::Sos { SOS_SEALED_POLISH } else { 0 };
+                let opts = crate::deck_policy::ValuedOpts { polish, ..Default::default() };
+                assert_eq!(deck, sealed_deck_policy().build_valued_with(&pool, value, 16, &mut StdRng::seed_from_u64(seed ^ 3), &opts));
                 assert_eq!(deck.len(), 40);
                 changed += usize::from(deck != rated_sealed_build(&pool, 16, seed));
             }

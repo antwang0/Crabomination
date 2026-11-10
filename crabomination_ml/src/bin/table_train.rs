@@ -132,8 +132,11 @@ fn family(m: Mode) -> &'static str {
     }
 }
 
+/// By game: `traj = (seed << 3) | seat` (`table_selfplay`), so the seat
+/// bits are dropped and a game's seats share a side of the split (the
+/// seat-level hash leaked mirrors across it; fixed 2026-11-09).
 fn is_holdout(traj: u32, frac: f64) -> bool {
-    let mut h = traj as u64 ^ 0x9E37_79B9_7F4A_7C15;
+    let mut h = (traj >> 3) as u64 ^ 0x9E37_79B9_7F4A_7C15;
     h ^= h >> 33;
     h = h.wrapping_mul(0xff51_afd7_ed55_8ccd);
     h ^= h >> 33;

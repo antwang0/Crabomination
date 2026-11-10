@@ -71,7 +71,7 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
         // Cube games; `mcts-net67-256-fixes` is the client's limited pilot.
         "fixes" => EvalWeights::default().with_fra_fixes(),
         "net67-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
-        "mcts-dflt-256" | "mcts-net67-256" | "mcts-net67-256-fixes" => {
+        "mcts-dflt-256" | "mcts-net67-256" | "mcts-net67-256-fixes" | "mcts-net67-menu-mc-fixes" => {
             return Some(Box::new(MctsBot::new(mcts_cfg(profile).expect("an MCTS profile"))));
         }
         "mcts-net-deep" => {
@@ -92,10 +92,23 @@ fn mcts_cfg(profile: &str) -> Option<MctsConfig> {
     let weights = match profile {
         "mcts-dflt-256" => EvalWeights::default(),
         "mcts-net67-256" => EvalWeights::net_on_default(),
-        "mcts-net67-256-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
+        "mcts-net67-256-fixes" | "mcts-net67-menu-mc-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
         _ => return None,
     };
-    Some(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() })
+    // The adopted client bot since 2026-11-02 (`crabomination_client`
+    // `local_bot`): the same search, main phases and combat taken over the
+    // whole move list on the priors of `CRAB_POLICY_NET` (candidate slot).
+    let (menu_windows, policy_slot) = if profile == "mcts-net67-menu-mc-fixes" {
+        use crabomination::server::mcts::{MENU_COMBAT, MENU_MAIN};
+        assert!(
+            std::env::var_os("CRAB_POLICY_NET").is_some(),
+            "mcts-net67-menu-mc-fixes needs CRAB_POLICY_NET=<policy-headed weights>"
+        );
+        (MENU_MAIN | MENU_COMBAT, crabomination::server::net_eval::SLOT_CANDIDATE)
+    } else {
+        (0, 0)
+    };
+    Some(MctsConfig { iterations: 256, horizon_turns: 3, weights, menu_windows, policy_slot, ..MctsConfig::default() })
 }
 
 /// `--action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S]
@@ -661,7 +674,8 @@ fn main() {
              bot_puzzles --menu-census GAMES [--threads T] [--seed S] [MCTS PROFILE]\n\
              bot_puzzles --policy-agree GAMES [--threads T] [--seed S] [TEACHER]  (CRAB_NET's policy head)\n\n\
              PROFILE: pass (null control) | policy (CRAB_NET's policy head) | dflt | fixes | net67 | net67-fixes | mcts-dflt-256 | mcts-net67-256 |\n\
-             \x20        mcts-net67-256-fixes (the client's limited pilot) | gang | atk-sim | net | mcts-net-deep\n\
+             \x20        mcts-net67-256-fixes (the client's limited pilot before 2026-11-02) |\n\
+             \x20        mcts-net67-menu-mc-fixes (the client's limited pilot; needs CRAB_POLICY_NET) | gang | atk-sim | net | mcts-net-deep\n\
              --certify reports which candidates are real puzzles. CRAB_NET overrides the champion."
         );
         return;
@@ -676,6 +690,14 @@ fn main() {
             std::path::Path::new(&net),
         )
         .expect("load the value net");
+    }
+    // The menu search's priors (`mcts-net67-menu-mc-fixes`).
+    if let Ok(pp) = std::env::var("CRAB_POLICY_NET") {
+        crabomination::server::net_eval::load_slot(
+            crabomination::server::net_eval::SLOT_CANDIDATE,
+            std::path::Path::new(&pp),
+        )
+        .expect("load the policy net");
     }
     if let Some(i) = args.iter().position(|a| a == "--policy-agree") {
         let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(20);

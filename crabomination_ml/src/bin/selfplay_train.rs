@@ -821,11 +821,18 @@ fn file_net_config(
 /// True when this trajectory belongs to the held-out set. A hash of the
 /// id rather than a counter, so actors decide independently and the same
 /// game always lands on the same side of the split.
+///
+/// **By game, not by seat** (fixed 2026-11-09, ML_NOTES "Research sweep"):
+/// `traj = (seed << 1) | seat`, and hashing the whole id split a game's two
+/// seats independently, so ~95 % of held-out trajectories had their mirror
+/// (the same positions, the opposite label) in training — inflating `val_*`
+/// and steering `best.safetensors` / `--stop-after-stale` toward memorising.
+/// Holdout numbers on either side of the fix are not comparable.
 fn is_holdout(traj: u32, frac: f64) -> bool {
     if frac <= 0.0 {
         return false;
     }
-    let mut h = (traj as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
+    let mut h = ((traj >> 1) as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15);
     h ^= h >> 29;
     h = h.wrapping_mul(0xBF58_476D_1CE4_E5B9);
     h ^= h >> 32;
@@ -1140,8 +1147,8 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
             }
             continue;
         }
-        // A whole game's rows share a trajectory pair, so the split is
-        // decided per row by trajectory id and stays consistent.
+        // A whole game's rows share a trajectory pair and `is_holdout`
+        // hashes the game half of the id, so both seats land on one side.
         let (val_rows, train_rows): (Vec<TrainRow>, Vec<TrainRow>) =
             rec.rows.into_iter().partition(|r| is_holdout(r.traj, args.holdout));
         if !val_rows.is_empty() {

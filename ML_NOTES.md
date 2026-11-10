@@ -8563,3 +8563,92 @@ value re-read (needs training) and the holdout fix; the mana-base value
 features (lead build-4) now have one more reason — FRA polish says the FRA
 value's fine preferences are noise.
 
+
+### Adopted (2026-11-09, the user's call): SOS sealed opponents polish 3 swaps
+
+`selfplay::SOS_SEALED_POLISH = 3`: `sealed_opponent_build` on an SOS pool
+calls `build_valued_with(.., ValuedOpts { polish: 3, .. })`; FRA pools keep
+the unpolished pick. Gate above (51.84 / 51.47 / 51.76 / 51.58 at seeds
+43 / 97 / 11 / 29). This moves every SOS `--decks sealed` ladder deck (and
+`bot_puzzles`' sealed games), so SOS sealed ladder numbers from before and
+after are on different decks; both sides of a cell always share them.
+Test `the_sealed_opponent_is_the_gated_policy_and_value_build` pins it.
+
+### Holdout fix + the value re-read (2026-11-09, user-approved; RUNNING)
+
+*Holdout fix:* `selfplay_train::is_holdout` hashes `traj >> 1` and
+`table_train::is_holdout` `traj >> 3` (their seat bits), so a game's seats
+share a side of the split. Every `val_*` from here on is on a different,
+leak-free split — not comparable with earlier runs.
+
+*The re-read* (`.ladder/vr/run.sh`, pre-registered in its header): three
+`selfplay_train` runs with phase 5's actors (menu search 256 on gen 3's
+priors, champion leaf, 6,000 games, one `--seed` for all three so the
+actors start from the same deals), the learner warm-started from the **champion** in
+each:
+
+| arm | learner |
+|---|---|
+| C | phase 5's as run: λ 1.0, lr 1e-3, window 250 k, no schedule, policy step every value step, `latest` |
+| R1 | champion recipe: λ 0.7, lr 1e-4, cosine over 7,000 steps, window 500 k, relabel new, policy every step, `best` |
+| R0 | R1 with `--policy-every 0` (the value alone) |
+
+Read: each export as the menu search's leaf (`mcts-net67-menu-mc-vb`)
+against the champion's, gen-3 priors, SOS sealed, paired 120 × 12, seeds
+43 / 97 (phase 5's read 3: gens 1–4 scored 37–41 %). C ≈ −11 with R0 / R1
+within ~2 of 50 → the −11 was the recipe; R0 or R1 moved (pooled ≥ +1.0,
+both seeds above 50) → a value trained on search games beats the champion
+(lead 2 opens; adoption the user's); all ~−11 → data-bound stands.
+Result: **NOT READ — the unit was OOM-killed at 04:32 on 2026-11-09**
+(`crab-vr.service`: 34.5 GB peak with the three trainers side by side,
+2 h 45 min in, ~1,270 of 6,000 games an arm; no export, no leaf cell). What
+the partial logs hold is the holdout only (the same games in every arm,
+by-game split, n ≈ 6,000 rows at step 1,500), not the pre-registered read:
+
+| arm | held-out AUC at steps 500 / 1,000 / 1,500 | held-out log-loss |
+|---|---|---|
+| C (phase 5's recipe) | 0.643 / 0.610 / 0.686 | 0.729 / 0.812 / 0.745 (a constant scores 0.693) |
+| R1 (champion recipe + policy step) | 0.714 / 0.758 / 0.753 | 0.653 / 0.585 / 0.585 |
+| R0 (champion recipe, value alone) | 0.822 / 0.798 / 0.811 | 0.520 / 0.544 / 0.535 |
+
+Consistent with "the −11 was the recipe" (C is worse than a constant on
+games it has not seen) and with the policy step on the shared trunk costing
+the value ~0.06 AUC at this data size; R0 is no better than where it
+started. To re-run: the arms in turn (18 actors each) with
+`--decision-cap 100000`, not side by side.
+
+## Shortcomings review (2026-11-10): the adopted client bot on the blunder set, and the champion's calibration
+
+Asked: "analyze the shortcomings of the model and come up with what to do
+next". Two fresh reads, nothing adopted.
+
+**The adopted client bot had never been on the blunder set** — `bot_puzzles`
+had no profile for the menu search. Added `mcts-net67-menu-mc-fixes`
+(`local_bot`'s configuration: main + combat windows on `CRAB_POLICY_NET`'s
+priors, 256 / 3, the fixes bundle). `--blunders --reps 20`, gen 3's priors:
+
+| profile | items / 22 | pairs / 6 |
+|---|---|---|
+| `mcts-net67-256-fixes` (the client before 2026-11-02) | 20.0 | 5 |
+| `mcts-net67-menu-mc-fixes` (the client since) | **15.9** | **2** |
+
+New failures, all in the windows the menu search took over from the
+heuristic's sims: `zero_power_with_an_attack_trigger`,
+`control_keeps_its_blockers_home`, `no_chump_at_high_life` /
+`chump_at_low_life` (both twins), `take_the_free_trade`,
+`deathtouch_blocks_the_biggest` (part of the reps); `no_attack_into_deathtouch`
+and `flash_in_the_blocker` fail as before. The ladder reads the same change
++6.9 SOS / +7.55 FRA / +4.05 cube, so the two instruments disagree. Not
+diagnosed: whether the right declaration is among the policy's eight arms,
+and how much is the positions' plain `body(..)` cards (the policy trained on
+SOS games only). Owed before anything else on the play side.
+
+**The champion on fresh heuristic games** (`--calibrate 1500 --attn`, seed 7,
+159,290 positions): AUC **0.797** against `eval_material`'s 0.730 (log-loss
+0.549 / 0.602); by ply 0.64 (0–3), 0.66, 0.69, 0.72, 0.80, 0.87 (32+), the
+edge over material +0.06 to +0.10 throughout. **Mean prediction 0.442 on a
+0.500 base rate** — both seats read low, residual +0.045 to +0.063 at every
+hand size; unexplained (the calibration's decks and pilot are the plain
+heuristic's, the champion's actors were round 81's). No Bayes ceiling for
+this target has ever been measured, so "capacity is null" (r4 / r24 / r45)
+cannot tell a net at its ceiling from one that cannot use its inputs.
