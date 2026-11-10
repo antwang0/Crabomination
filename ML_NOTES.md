@@ -8879,3 +8879,13 @@ permanents in different states (the two "grown twin" items pass under the
 anchor because the heuristic names the right one, not because the list
 does).
 
+**Gate amended (02:1x, before any cell had landed; `.ladder/cf/gate2.sh`,
+unit `crab-cf2`, waits for `crab-cf`).** `-df-anm10` is gated on the same
+cells (against `mcts-net67-menu-mc`, SOS sealed, paired 120 × 12, seeds
+43 / 97) and runs before the `-df` attribution cells, which `gate.sh` now
+skips. The adoption rule becomes: decided once `-an10` and `-anm10` are
+both in; the one adopted is the higher blunder score that reads NO LOSS
+(pooled ≥ 49.5 %) — `-anm10`, else `-an10`, else `-df` alone (margin the
+user's call), else nothing; if `-anm10` holds but reads more than 1.0
+under `-an10` pooled, both numbers go to the user instead. Result: PENDING.
+
