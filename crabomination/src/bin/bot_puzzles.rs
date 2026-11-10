@@ -110,6 +110,37 @@ fn mcts_cfg(profile: &str) -> Option<MctsConfig> {
     Some(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() })
 }
 
+/// `--leaf-pairs`: the value net (`CRAB_NET`, default the champion) and the
+/// material heuristic on `blunder::leaf_pairs` — two boards that differ in
+/// one thing, the first better for seat 0. A pair the net orders the wrong
+/// way is a leaf the search is misled at.
+fn run_leaf_pairs() {
+    use crabomination::server::blunder::{leaf_pairs, material};
+    use crabomination::server::net_eval::{SLOT_BEST, win_prob};
+    let pairs = leaf_pairs();
+    println!("leaf pairs: {} (net = win probability for seat 0; material = the heuristic's score)\n", pairs.len());
+    println!("{:<38} {:>7} {:>7} {:>7}   {:>6} {:>6}", "pair", "better", "worse", "net Δ", "mat b", "mat w");
+    let (mut net_ok, mut mat_ok) = (0, 0);
+    for p in &pairs {
+        let (b, w) = (p.build)();
+        let (nb, nw) = (win_prob(&b, 0, SLOT_BEST).unwrap_or(f32::NAN), win_prob(&w, 0, SLOT_BEST).unwrap_or(f32::NAN));
+        let (mb, mw) = (material(&b, 0), material(&w, 0));
+        net_ok += usize::from(nb > nw);
+        mat_ok += usize::from(mb > mw);
+        println!(
+            "{:<38} {nb:>7.3} {nw:>7.3} {:>+7.3} {} {mb:>6} {mw:>6} {}",
+            p.id,
+            nb - nw,
+            if nb > nw { " " } else { "✗" },
+            if mb > mw { " " } else { "✗" }
+        );
+    }
+    println!("\nordered the right way: net {net_ok}/{}, material {mat_ok}/{}", pairs.len(), pairs.len());
+    for p in &pairs {
+        println!("  {}: {}", p.id, p.prompt);
+    }
+}
+
 /// `--action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S]
 /// [PROFILE]`: the legal-action gap (`server::action_gap`) over sealed
 /// games between client-built decks (`CRAB_SEALED_SET=fra` for FRA pools;
@@ -511,16 +542,21 @@ fn run_scoring(profiles: &[String]) {
 /// `--reps N` times an item (the search draws its own random stream, so a
 /// searched pilot's verdict is a rate; the heuristic's repeats).
 fn run_blunders(profiles: &[String]) {
-    use crabomination::server::blunder::{Area, items, judge};
+    use crabomination::server::blunder::{Area, Cards, items, judge};
     let a: Vec<String> = std::env::args().collect();
     let reps: usize = a.iter().position(|x| x == "--reps").and_then(|i| a.get(i + 1)).map_or(1, |v| v.parse().expect("--reps N"));
     let verbose = a.iter().any(|x| x == "--show-lines");
     // `--only ID[,ID..]`: just these items (for reading one failure's trace).
     let only: Option<Vec<String>> =
         a.iter().position(|x| x == "--only").and_then(|i| a.get(i + 1)).map(|v| v.split(',').map(str::to_string).collect());
+    // `--cards plain|sos|fra`: the items built from that pool's cards.
+    let cards_only: Option<String> = a.iter().position(|x| x == "--cards").and_then(|i| a.get(i + 1)).cloned();
     let mut all = items();
     if let Some(only) = &only {
         all.retain(|i| only.iter().any(|o| o == i.id));
+    }
+    if let Some(c) = &cards_only {
+        all.retain(|i| i.cards.name() == c);
     }
     let pairs = all.iter().filter(|i| i.twin.is_some_and(|t| i.id < t)).count();
     println!("blunder set: {} items ({pairs} twin pairs), {reps} rep(s) each\n", all.len());
@@ -562,6 +598,30 @@ fn run_blunders(profiles: &[String]) {
             }
         }
         println!("{profile}: items {items_ok:.1}/{}, pairs {pair_ok:.1}/{pairs}", all.len());
+        // The first set's totals (the numbers notes before 2026-11-10
+        // quote), and the real-card items by pool.
+        let v1: Vec<usize> = (0..all.len()).filter(|&i| all[i].since == 1).collect();
+        if !v1.is_empty() && v1.len() != all.len() {
+            let s: f64 = v1.iter().map(|&i| rate(i)).sum();
+            let mut p1 = 0.0;
+            let mut n1 = 0;
+            for &i in &v1 {
+                if let Some(t) = all[i].twin.filter(|t| all[i].id < *t)
+                    && let Some(j) = all.iter().position(|o| o.id == t)
+                {
+                    p1 += rate(i) * rate(j);
+                    n1 += 1;
+                }
+            }
+            println!("    the original set: items {s:.1}/{}, pairs {p1:.1}/{n1}", v1.len());
+        }
+        for c in [Cards::Plain, Cards::Sos, Cards::Fra] {
+            let idx: Vec<usize> = (0..all.len()).filter(|&i| all[i].cards == c).collect();
+            if !idx.is_empty() && idx.len() != all.len() {
+                let s: f64 = idx.iter().map(|&i| rate(i)).sum();
+                println!("    cards {:<5} {s:.1}/{}", c.name(), idx.len());
+            }
+        }
         let areas = [Area::Attack, Area::HoldBack, Area::Block, Area::Removal, Area::Instant, Area::Mana, Area::Polarity];
         for area in areas {
             let idx: Vec<usize> = (0..all.len()).filter(|&i| all[i].area == area).collect();
@@ -679,7 +739,8 @@ fn main() {
     if args.iter().any(|a| a == "-h" || a == "--help") {
         println!(
             "bot_puzzles [--set core|fra] [--depth N] [--certify] [PROFILE ...]\n\
-             bot_puzzles --blunders [--reps N] [--show-lines] [--only ID,ID] [PROFILE ...]\n\
+             bot_puzzles --blunders [--reps N] [--show-lines] [--only ID,ID] [--cards plain|sos|fra] [PROFILE ...]\n\
+             bot_puzzles --leaf-pairs   (CRAB_NET's value head and the material heuristic on pairs of boards)\n\
              bot_puzzles --action-gap GAMES [--probe N] [--sample P] [--threads T] [--seed S] [--scored-rollouts] [MCTS PROFILE]\n\
              bot_puzzles --crn-census GAMES [--probe N] [--arms A] [--sample P] [--threads T] [--seed S] [MCTS PROFILE]\n\
              bot_puzzles --menu-census GAMES [--threads T] [--seed S] [MCTS PROFILE]\n\
@@ -711,6 +772,10 @@ fn main() {
         )
         .expect("load the policy net");
     }
+    if args.iter().any(|a| a == "--leaf-pairs") {
+        run_leaf_pairs();
+        return;
+    }
     if let Some(i) = args.iter().position(|a| a == "--policy-agree") {
         let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(20);
         run_policy_agree(games);
@@ -733,10 +798,11 @@ fn main() {
     }
     if args.iter().any(|a| a == "--blunders") {
         let only = args.iter().position(|a| a == "--only").map(|i| i + 1);
+        let cards = args.iter().position(|a| a == "--cards").map(|i| i + 1);
         let profiles: Vec<String> = args
             .iter()
             .enumerate()
-            .filter(|(i, a)| Some(*i) != only && !a.starts_with("--") && a.parse::<usize>().is_err())
+            .filter(|(i, a)| Some(*i) != only && Some(*i) != cards && !a.starts_with("--") && a.parse::<usize>().is_err())
             .map(|(_, a)| a.clone())
             .collect();
         let profiles = if profiles.is_empty() { vec!["pass".to_string(), "dflt".to_string()] } else { profiles };

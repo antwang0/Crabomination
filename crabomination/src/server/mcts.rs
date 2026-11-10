@@ -475,6 +475,13 @@ pub struct MctsConfig {
     /// this far above the anchor's — at 0.0 a tie goes to the heuristic.
     /// Negative (default) is off. Ladder suffix `-an<hundredths>`.
     pub menu_anchor: f64,
+    /// Take the anchor from the heuristic on the *material* leaf (the
+    /// pilot's weights with the net slot cleared) instead of the pilot's
+    /// own. The net-leaf heuristic attacks a 4/4 into an untapped
+    /// deathtoucher — the value net prices the trade as free
+    /// (`bot_puzzles --leaf-pairs`) — and an anchor that makes the mistake
+    /// cannot guard against it. Ladder suffix `-anm<hundredths>`.
+    pub menu_anchor_material: bool,
 }
 
 /// Most picks that are not a declaration a combat window takes before it
@@ -519,6 +526,7 @@ impl Default for MctsConfig {
             menu_sample: false,
             menu_declare_fix: false,
             menu_anchor: -1.0,
+            menu_anchor_material: false,
         }
     }
 }
@@ -534,8 +542,9 @@ impl Default for MctsConfig {
 /// the iterations of heuristic rollouts; `-h<N>` the horizon; `-a<N>` the
 /// arms (default 8); `-crn` pairs the arms' deals; `-pb` reads the priors
 /// from the policy-B slot and `-vb` the leaf from the value-B slot; `-df`
-/// is [`MctsConfig::menu_declare_fix`] and `-an<N>` an anchor margin of
-/// N hundredths ([`MctsConfig::menu_anchor`]).
+/// is [`MctsConfig::menu_declare_fix`], `-an<N>` an anchor margin of N
+/// hundredths ([`MctsConfig::menu_anchor`]) and `-anm<N>` the same with the
+/// anchor read on the material leaf ([`MctsConfig::menu_anchor_material`]).
 pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let rest = name.strip_prefix("mcts-net67-menu-")?;
     let mut parts = rest.split('-');
@@ -544,12 +553,17 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let mut policy_slot = super::net_eval::SLOT_CANDIDATE;
     let mut weights = EvalWeights::net_on_default().with_fra_fixes();
     let mut arms = MctsConfig::default().menu_arms;
-    let (mut crn, mut declare_fix, mut anchor) = (false, false, -1.0f64);
+    let (mut crn, mut declare_fix, mut anchor, mut anchor_material) = (false, false, -1.0f64, false);
     for p in parts {
         if p == "crn" {
             crn = true;
         } else if p == "df" {
             declare_fix = true;
+        } else if let Some(n) = p.strip_prefix("anm")
+            && let Ok(n) = n.parse::<u32>()
+        {
+            anchor = n as f64 / 100.0;
+            anchor_material = true;
         } else if let Some(n) = p.strip_prefix("an")
             && let Ok(n) = n.parse::<u32>()
         {
@@ -594,6 +608,7 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
         policy_rollouts: pol.is_some(),
         menu_declare_fix: declare_fix,
         menu_anchor: anchor,
+        menu_anchor_material: anchor_material,
         ..MctsConfig::default()
     })
 }
@@ -1695,10 +1710,12 @@ impl MctsBot {
         // fresh bot so the fallback's own step latches are untouched.
         // A defender asked before priority reaches it gets its block
         // straight from the picker; a pass is not an anchor.
+        let anchor_weights =
+            if self.cfg.menu_anchor_material { EvalWeights { net_slot: 0, ..self.cfg.weights } } else { self.cfg.weights };
         let anchor_key: Option<String> = (self.cfg.menu_anchor >= 0.0 && open)
-            .then(|| match HeuristicBot::with_weights(self.cfg.weights).next_action(state, seat) {
+            .then(|| match HeuristicBot::with_weights(anchor_weights).next_action(state, seat) {
                 None if m.kind == Kind::Block && state.active_player_idx != seat => {
-                    Some(super::bot::heuristic_block_declaration(state, seat, &self.cfg.weights))
+                    Some(super::bot::heuristic_block_declaration(state, seat, &anchor_weights))
                 }
                 a => a,
             })
@@ -2558,6 +2575,9 @@ mod tests {
         assert!((fixed.menu_anchor - 0.10).abs() < 1e-9);
         assert_eq!(fixed.menu_arms, 8, "an10 is a margin, not ten arms");
         assert_eq!(menu_profile("mcts-net67-menu-mc-a4-an0").map(|c| (c.menu_arms, c.menu_anchor)), Some((4, 0.0)));
+        let material = menu_profile("mcts-net67-menu-mc-df-anm10").expect("the material anchor");
+        assert!(material.menu_anchor_material && (material.menu_anchor - 0.10).abs() < 1e-9 && material.menu_arms == 8);
+        assert!(!fixed.menu_anchor_material);
         assert!(menu_profile("mcts-net67-menu-mc-bogus").is_none());
         assert!(menu_profile("mcts-net67-256").is_none());
     }

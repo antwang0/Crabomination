@@ -26,7 +26,7 @@
 //! position already contains, exactly as in [`super::puzzle::play_with`].
 
 use crate::card::{
-    CardDefinition, CardId, CardType, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility,
+    CardDefinition, CardId, CardType, CounterType, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility,
 };
 use crate::catalog;
 use crate::effect::{Effect, Selector, Value};
@@ -65,6 +65,30 @@ impl Area {
             Area::Instant => "instant",
             Area::Mana => "mana",
             Area::Polarity => "polarity",
+        }
+    }
+}
+
+/// What an item's cards are. The first set is built from made-up bodies
+/// and a handful of classics, which no net here trained on; the real-card
+/// items say whether a failure is the mechanic or the unfamiliar cards.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Cards {
+    /// Made-up bodies (`body("Ogre", 4, 4)`) and classics.
+    Plain,
+    /// Secrets of Strixhaven cards — the champion's and the policy's pool.
+    Sos,
+    /// Reality Fracture cards. Read these on the FRA leaf
+    /// (`CRAB_NET=nets/fra-champion.safetensors`), as the client plays them.
+    Fra,
+}
+
+impl Cards {
+    pub fn name(self) -> &'static str {
+        match self {
+            Cards::Plain => "plain",
+            Cards::Sos => "sos",
+            Cards::Fra => "fra",
         }
     }
 }
@@ -157,6 +181,11 @@ pub struct Blunder {
     /// The twin's id when this is half of a pair (both name each other).
     pub twin: Option<&'static str>,
     pub area: Area,
+    pub cards: Cards,
+    /// The set's version the item joined in: 1 is the original 22
+    /// (2026-10-30), whose totals earlier notes quote; 2 the 2026-11-10
+    /// additions.
+    pub since: u8,
     /// Turns past the current one the window runs: 0 closes it when this
     /// turn ends, 1 runs through the next.
     pub horizon: u32,
@@ -215,6 +244,182 @@ fn play_recording(state: &GameState, seat: usize, bot: &mut dyn Bot, horizon: u3
         }
     }
     (g, acts)
+}
+
+// ── Leaf pairs: does an evaluator order two boards the right way? ──────
+
+/// Two positions that differ in one thing, seat 0 in its precombat main in
+/// both. A sound evaluator rates `better` above `worse` for seat 0 — the
+/// value net's counterpart of a blunder item: the search's rollouts end in
+/// a position like one of these and the leaf's reading is all it keeps.
+pub struct LeafPair {
+    pub id: &'static str,
+    pub prompt: &'static str,
+    /// `(better, worse)`.
+    pub build: fn() -> (GameState, GameState),
+}
+
+/// The material heuristic's reading of a leaf, for the table beside the
+/// net's (`bot_puzzles --leaf-pairs`).
+pub fn material(g: &GameState, seat: usize) -> i32 {
+    super::bot::eval_material(g, seat, &super::bot::EvalWeights::default())
+}
+
+/// A turn-six shell: five lands a side, empty hands, 20 life.
+fn mid() -> GameState {
+    let mut g = base();
+    g.turn_number = 6;
+    for seat in 0..2 {
+        lands(&mut g, seat, catalog::island, 5);
+    }
+    g
+}
+
+fn pair(build: impl Fn(&mut GameState, bool)) -> (GameState, GameState) {
+    let (mut better, mut worse) = (mid(), mid());
+    build(&mut better, true);
+    build(&mut worse, false);
+    (better, worse)
+}
+
+pub fn leaf_pairs() -> Vec<LeafPair> {
+    vec![
+        LeafPair {
+            id: "a_44_beats_nothing",
+            prompt: "my 4/4 on an empty table, against an empty table",
+            build: || {
+                pair(|g, better| {
+                    if better {
+                        ready(g, 0, body("Ogre", 4, 4));
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "their_44_is_bad",
+            prompt: "an empty table, against their 4/4 alone",
+            build: || {
+                pair(|g, better| {
+                    if !better {
+                        ready(g, 1, body("Ogre", 4, 4));
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "keep_the_44_facing_a_11",
+            prompt: "my 4/4 against their vanilla 1/1, or both gone",
+            build: || {
+                pair(|g, better| {
+                    if better {
+                        ready(g, 0, body("Ogre", 4, 4));
+                        ready(g, 1, body("Squire", 1, 1));
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "keep_the_44_facing_deathtouch",
+            prompt: "my 4/4 against their Typhoid Rats, or both gone (the trade the attack buys)",
+            build: || {
+                pair(|g, better| {
+                    if better {
+                        ready(g, 0, body("Ogre", 4, 4));
+                        ready(g, 1, catalog::typhoid_rats());
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "sos_44_beats_nothing",
+            prompt: "my Pestbrood Sloth on an empty table, against an empty table",
+            build: || {
+                pair(|g, better| {
+                    if better {
+                        ready(g, 0, catalog::pestbrood_sloth());
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "sos_keep_the_44_facing_deathtouch",
+            prompt: "my Pestbrood Sloth against their Burrog Banemaker, or both gone",
+            build: || {
+                pair(|g, better| {
+                    if better {
+                        ready(g, 0, catalog::pestbrood_sloth());
+                        ready(g, 1, catalog::burrog_banemaker());
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "two_bodies_beat_one",
+            prompt: "two 2/2s against their 2/2, or one",
+            build: || {
+                pair(|g, better| {
+                    ready(g, 0, body("Guard", 2, 2));
+                    ready(g, 1, body("Scout", 2, 2));
+                    if better {
+                        ready(g, 0, body("Guard", 2, 2));
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "life_matters",
+            prompt: "a 2/2 each at 20 life, or at 6",
+            build: || {
+                pair(|g, better| {
+                    ready(g, 0, body("Guard", 2, 2));
+                    ready(g, 1, body("Scout", 2, 2));
+                    if !better {
+                        g.players[0].life = 6;
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "their_flier_is_worse_than_their_bear",
+            prompt: "my 0/4 wall against their 2/2, or against their 2/2 flier",
+            build: || {
+                pair(|g, better| {
+                    ready(g, 0, body("Wall", 0, 4));
+                    if better {
+                        ready(g, 1, body("Scout", 2, 2));
+                    } else {
+                        ready(g, 1, keyworded("Drake", 2, 2, Keyword::Flying));
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "the_chump_blocker_kept",
+            prompt: "15 life and my 1/1 against their 5/5, or 20 life and no 1/1 (the chump made at 20)",
+            build: || {
+                pair(|g, better| {
+                    ready(g, 1, body("Giant", 5, 5));
+                    if better {
+                        ready(g, 0, body("Squire", 1, 1));
+                        g.players[0].life = 15;
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "a_card_in_hand",
+            prompt: "a 2/2 each and Stand Up for Yourself in hand, or the empty hand",
+            build: || {
+                pair(|g, better| {
+                    ready(g, 0, body("Guard", 2, 2));
+                    ready(g, 1, body("Scout", 2, 2));
+                    if better {
+                        g.add_card_to_hand(0, catalog::stand_up_for_yourself());
+                    }
+                })
+            },
+        },
+    ]
 }
 
 // ── Position-building helpers ──────────────────────────────────────────
@@ -561,6 +766,148 @@ fn aura_on_your_own_creature() -> Position {
     Position { state: g, checks: vec![Check::CastOn(rancor, bear)] }
 }
 
+// ── Added 2026-11-10: same-named permanents, removal before blocks ─────
+
+/// Three 2/2s of one name attack a seat at 4 holding a 1/4 and a 2/2. One
+/// blocker on each of two attackers lets 2 through; both on one attacker
+/// lets 4. A move list that tells declarations apart by card name carries
+/// only the second.
+fn split_blocks_across_same_named_attackers() -> Position {
+    let mut g = their_turn();
+    g.players[0].life = 4;
+    ready(&mut g, 0, body("Warden", 1, 4));
+    ready(&mut g, 0, body("Guard", 2, 2));
+    let raiders: Vec<CardId> = (0..3).map(|_| ready(&mut g, 1, body("Raider", 2, 2))).collect();
+    they_attack(&mut g, &raiders);
+    Position { state: g, checks: vec![Check::Alive] }
+}
+
+fn grow(g: &mut GameState, id: CardId, n: u32) {
+    g.battlefield_find_mut(id).expect("on the battlefield").add_counters(CounterType::PlusOnePlusOne, n);
+}
+
+/// Two 2/2s of one name, one carrying two +1/+1 counters; a 3/3 attacks.
+/// The grown one blocks and kills it; the plain one would die for nothing.
+fn the_grown_twin_blocks() -> Position {
+    let mut g = their_turn();
+    let small = ready(&mut g, 0, body("Guard", 2, 2));
+    let big = ready(&mut g, 0, body("Guard", 2, 2));
+    grow(&mut g, big, 2);
+    let brute = ready(&mut g, 1, body("Brute", 3, 3));
+    they_attack(&mut g, &[brute]);
+    Position { state: g, checks: vec![Check::Dies(brute), Check::Survives(small), Check::Survives(big)] }
+}
+
+/// Murder against two 2/2s of one name, one grown to 5/5, at 5 life with
+/// no blockers: only the grown one's death survives the swing back.
+fn murder_the_grown_twin() -> Position {
+    let mut g = base();
+    g.players[0].life = 5;
+    lands(&mut g, 0, catalog::swamp, 3);
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    ready(&mut g, 1, body("Raider", 2, 2));
+    let big = ready(&mut g, 1, body("Raider", 2, 2));
+    grow(&mut g, big, 3);
+    Position { state: g, checks: vec![Check::CastOn(murder, big), Check::Alive] }
+}
+
+/// A 5/5 and a 2/2 attack a seat at 2 holding a 2/3 and Murder: the kill
+/// has to come before the block — one dies, the 2/3 takes the other.
+fn kill_one_attacker_then_block_the_other() -> Position {
+    let mut g = their_turn();
+    g.players[0].life = 2;
+    lands(&mut g, 0, catalog::swamp, 3);
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    let guard = ready(&mut g, 0, body("Guard", 2, 3));
+    let giant = ready(&mut g, 1, body("Giant", 5, 5));
+    let scout = ready(&mut g, 1, body("Scout", 2, 2));
+    they_attack(&mut g, &[giant, scout]);
+    Position { state: g, checks: vec![Check::Casts(murder), Check::Blocks(guard), Check::Alive] }
+}
+
+// ── Added 2026-11-10: the first set's shapes on real cards ─────────────
+// Every body here is on the battlefield already, so its enters trigger
+// never fires: Zealous Lorecaster is a 4/4, Eager Glyphmage a 3/3,
+// Studious First-Year a 1/1; Burrog Banemaker's pump needs mana its side
+// does not have.
+
+fn sos_no_attack_into_deathtouch() -> Position {
+    let mut g = base();
+    let big = ready(&mut g, 0, catalog::zealous_lorecaster());
+    ready(&mut g, 1, catalog::burrog_banemaker());
+    Position { state: g, checks: vec![Check::NeverAttacks(big)] }
+}
+
+fn sos_attack_past_a_tapped_deathtoucher() -> Position {
+    let mut g = base();
+    let big = ready(&mut g, 0, catalog::zealous_lorecaster());
+    let frog = ready(&mut g, 1, catalog::burrog_banemaker());
+    tap(&mut g, frog);
+    Position { state: g, checks: vec![Check::Attacks(big)] }
+}
+
+fn sos_no_chump_at_high_life() -> Position {
+    let mut g = their_turn();
+    let small = ready(&mut g, 0, catalog::studious_first_year());
+    let big = ready(&mut g, 1, catalog::zealous_lorecaster());
+    they_attack(&mut g, &[big]);
+    Position { state: g, checks: vec![Check::NeverBlocks(small), Check::Alive] }
+}
+
+fn sos_chump_at_low_life() -> Position {
+    let mut g = their_turn();
+    g.players[0].life = 4;
+    let small = ready(&mut g, 0, catalog::studious_first_year());
+    let big = ready(&mut g, 1, catalog::zealous_lorecaster());
+    they_attack(&mut g, &[big]);
+    Position { state: g, checks: vec![Check::Blocks(small), Check::Alive] }
+}
+
+fn sos_take_the_free_trade() -> Position {
+    let mut g = their_turn();
+    let mine = ready(&mut g, 0, catalog::zealous_lorecaster());
+    let theirs = ready(&mut g, 1, catalog::eager_glyphmage());
+    they_attack(&mut g, &[theirs]);
+    Position { state: g, checks: vec![Check::Dies(theirs), Check::Survives(mine)] }
+}
+
+/// Stand Up for Yourself only destroys power 3 or more, so the order is
+/// forced: it takes the 4/4 and the 3/3 blocks the 1/1.
+fn sos_kill_one_attacker_then_block_the_other() -> Position {
+    let mut g = their_turn();
+    g.players[0].life = 1;
+    lands(&mut g, 0, catalog::plains, 3);
+    let answer = g.add_card_to_hand(0, catalog::stand_up_for_yourself());
+    let mine = ready(&mut g, 0, catalog::eager_glyphmage());
+    let big = ready(&mut g, 1, catalog::zealous_lorecaster());
+    let small = ready(&mut g, 1, catalog::studious_first_year());
+    they_attack(&mut g, &[big, small]);
+    Position { state: g, checks: vec![Check::Casts(answer), Check::Blocks(mine), Check::Alive] }
+}
+
+fn fra_no_attack_into_deathtouch() -> Position {
+    let mut g = base();
+    let big = ready(&mut g, 0, catalog::wrecking_gecko());
+    ready(&mut g, 1, catalog::arcane_amphisbaena());
+    Position { state: g, checks: vec![Check::NeverAttacks(big)] }
+}
+
+fn fra_attack_past_a_tapped_deathtoucher() -> Position {
+    let mut g = base();
+    let big = ready(&mut g, 0, catalog::wrecking_gecko());
+    let snake = ready(&mut g, 1, catalog::arcane_amphisbaena());
+    tap(&mut g, snake);
+    Position { state: g, checks: vec![Check::Attacks(big)] }
+}
+
+fn fra_take_the_free_trade() -> Position {
+    let mut g = their_turn();
+    let mine = ready(&mut g, 0, catalog::wrecking_gecko());
+    let theirs = ready(&mut g, 1, catalog::keeper_of_the_quiet_hour());
+    they_attack(&mut g, &[theirs]);
+    Position { state: g, checks: vec![Check::Dies(theirs), Check::Survives(mine)] }
+}
+
 /// Every item, in a stable order.
 pub fn items() -> Vec<Blunder> {
     vec![
@@ -568,6 +915,8 @@ pub fn items() -> Vec<Blunder> {
             id: "zero_power_stays_home",
             twin: Some("zero_power_with_an_attack_trigger"),
             area: Area::Attack,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: zero_power_stays_home,
             prompt: "vanilla 0/4 vs a 2/2 — don't attack",
@@ -576,6 +925,8 @@ pub fn items() -> Vec<Blunder> {
             id: "zero_power_with_an_attack_trigger",
             twin: Some("zero_power_stays_home"),
             area: Area::Attack,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: zero_power_with_an_attack_trigger,
             prompt: "0/4 that draws on attack vs a 2/2 — attack",
@@ -584,6 +935,8 @@ pub fn items() -> Vec<Blunder> {
             id: "no_attack_into_deathtouch",
             twin: Some("attack_past_a_tapped_deathtoucher"),
             area: Area::Attack,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: no_attack_into_deathtouch,
             prompt: "4/4 vs untapped Typhoid Rats — don't attack",
@@ -592,6 +945,8 @@ pub fn items() -> Vec<Blunder> {
             id: "attack_past_a_tapped_deathtoucher",
             twin: Some("no_attack_into_deathtouch"),
             area: Area::Attack,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: attack_past_a_tapped_deathtoucher,
             prompt: "4/4 vs tapped Typhoid Rats — attack",
@@ -600,6 +955,8 @@ pub fn items() -> Vec<Blunder> {
             id: "no_attack_into_first_strike",
             twin: Some("attack_past_a_tapped_first_striker"),
             area: Area::Attack,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: no_attack_into_first_strike,
             prompt: "2/2 vs an untapped 2/2 first striker — don't attack",
@@ -608,6 +965,8 @@ pub fn items() -> Vec<Blunder> {
             id: "attack_past_a_tapped_first_striker",
             twin: Some("no_attack_into_first_strike"),
             area: Area::Attack,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: attack_past_a_tapped_first_striker,
             prompt: "2/2 vs a tapped first striker — attack",
@@ -616,6 +975,8 @@ pub fn items() -> Vec<Blunder> {
             id: "haste_goes_in_before_combat",
             twin: None,
             area: Area::Attack,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: haste_goes_in_before_combat,
             prompt: "haste 3/1 in hand, empty board — cast it and attack",
@@ -624,6 +985,8 @@ pub fn items() -> Vec<Blunder> {
             id: "control_keeps_its_blockers_home",
             twin: Some("attack_into_an_empty_board"),
             area: Area::HoldBack,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 1,
             build: control_keeps_its_blockers_home,
             prompt: "4 life, 1/4 + 2/2 vs three 2/2s — hold both",
@@ -632,6 +995,8 @@ pub fn items() -> Vec<Blunder> {
             id: "attack_into_an_empty_board",
             twin: Some("control_keeps_its_blockers_home"),
             area: Area::HoldBack,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 1,
             build: attack_into_an_empty_board,
             prompt: "same two vs an empty board — attack",
@@ -640,6 +1005,8 @@ pub fn items() -> Vec<Blunder> {
             id: "kill_the_lord",
             twin: Some("kill_the_beater_not_the_lord"),
             area: Area::Removal,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 1,
             build: kill_the_lord,
             prompt: "Murder: Benalish Marshal + two 2/2s, 5 life",
@@ -648,6 +1015,8 @@ pub fn items() -> Vec<Blunder> {
             id: "kill_the_beater_not_the_lord",
             twin: Some("kill_the_lord"),
             area: Area::Removal,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 1,
             build: kill_the_beater_not_the_lord,
             prompt: "Murder: Benalish Marshal + a 4/4, 4 life",
@@ -656,6 +1025,8 @@ pub fn items() -> Vec<Blunder> {
             id: "kill_the_flier",
             twin: None,
             area: Area::Removal,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 1,
             build: kill_the_flier,
             prompt: "Murder: 2/2 flier + 3/3 vs two 0/4 walls, 2 life",
@@ -664,6 +1035,8 @@ pub fn items() -> Vec<Blunder> {
             id: "bolt_the_one_you_cannot_block",
             twin: None,
             area: Area::Removal,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: bolt_the_one_you_cannot_block,
             prompt: "2/2 + 3/1 attack, 3/4 + Bolt, 3 life",
@@ -672,6 +1045,8 @@ pub fn items() -> Vec<Blunder> {
             id: "no_chump_at_high_life",
             twin: Some("chump_at_low_life"),
             area: Area::Block,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: no_chump_at_high_life,
             prompt: "5/5 attacks, 1/1, 20 life — don't chump",
@@ -680,6 +1055,8 @@ pub fn items() -> Vec<Blunder> {
             id: "chump_at_low_life",
             twin: Some("no_chump_at_high_life"),
             area: Area::Block,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: chump_at_low_life,
             prompt: "5/5 attacks, 1/1, 4 life — chump",
@@ -688,6 +1065,8 @@ pub fn items() -> Vec<Blunder> {
             id: "take_the_free_trade",
             twin: None,
             area: Area::Block,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: take_the_free_trade,
             prompt: "2/2 attacks into an untapped 3/3 — block",
@@ -696,6 +1075,8 @@ pub fn items() -> Vec<Blunder> {
             id: "deathtouch_blocks_the_biggest",
             twin: None,
             area: Area::Block,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: deathtouch_blocks_the_biggest,
             prompt: "5/5 + 2/2 attack, Typhoid Rats — block the 5/5",
@@ -704,6 +1085,8 @@ pub fn items() -> Vec<Blunder> {
             id: "flash_in_the_blocker",
             twin: None,
             area: Area::Instant,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: flash_in_the_blocker,
             prompt: "4/4 attacks, Ambush Viper in hand — flash and block",
@@ -712,6 +1095,8 @@ pub fn items() -> Vec<Blunder> {
             id: "spend_the_spare_mana",
             twin: None,
             area: Area::Mana,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 1,
             build: spend_the_spare_mana,
             prompt: "four lands, Jayemdae Tome, empty hand — draw",
@@ -720,6 +1105,8 @@ pub fn items() -> Vec<Blunder> {
             id: "land_then_the_three_drop",
             twin: None,
             area: Area::Mana,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: land_then_the_three_drop,
             prompt: "two lands, a land and a three-drop in hand",
@@ -728,6 +1115,8 @@ pub fn items() -> Vec<Blunder> {
             id: "grow_your_own_attacker",
             twin: None,
             area: Area::Polarity,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: grow_your_own_attacker,
             prompt: "2/2 blocked by a 3/3, Giant Growth — grow yours",
@@ -736,9 +1125,143 @@ pub fn items() -> Vec<Blunder> {
             id: "aura_on_your_own_creature",
             twin: None,
             area: Area::Polarity,
+            cards: Cards::Plain,
+            since: 1,
             horizon: 0,
             build: aura_on_your_own_creature,
             prompt: "Rancor, our 2/2 and their 3/3 — enchant ours",
+        },
+        // ── Added 2026-11-10 (ML_NOTES "The combat window of the menu
+        // search"): the shapes that diagnosis found, and real cards. ──
+        Blunder {
+            id: "split_blocks_across_same_named_attackers",
+            twin: None,
+            area: Area::Block,
+            cards: Cards::Plain,
+            since: 2,
+            horizon: 0,
+            build: split_blocks_across_same_named_attackers,
+            prompt: "three 2/2s of one name attack, 1/4 + 2/2, 4 life — one blocker each",
+        },
+        Blunder {
+            id: "the_grown_twin_blocks",
+            twin: None,
+            area: Area::Block,
+            cards: Cards::Plain,
+            since: 2,
+            horizon: 0,
+            build: the_grown_twin_blocks,
+            prompt: "3/3 attacks, two 2/2s of one name, one with two +1/+1 counters — that one blocks",
+        },
+        Blunder {
+            id: "murder_the_grown_twin",
+            twin: None,
+            area: Area::Removal,
+            cards: Cards::Plain,
+            since: 2,
+            horizon: 1,
+            build: murder_the_grown_twin,
+            prompt: "Murder: two 2/2s of one name, one grown to 5/5, 5 life, no blockers",
+        },
+        Blunder {
+            id: "kill_one_attacker_then_block_the_other",
+            twin: None,
+            area: Area::Instant,
+            cards: Cards::Plain,
+            since: 2,
+            horizon: 0,
+            build: kill_one_attacker_then_block_the_other,
+            prompt: "5/5 + 2/2 attack, 2/3 + Murder, 2 life — kill one, block the other",
+        },
+        Blunder {
+            id: "sos_no_attack_into_deathtouch",
+            twin: Some("sos_attack_past_a_tapped_deathtoucher"),
+            area: Area::Attack,
+            cards: Cards::Sos,
+            since: 2,
+            horizon: 0,
+            build: sos_no_attack_into_deathtouch,
+            prompt: "Zealous Lorecaster (4/4) vs untapped Burrog Banemaker — don't attack",
+        },
+        Blunder {
+            id: "sos_attack_past_a_tapped_deathtoucher",
+            twin: Some("sos_no_attack_into_deathtouch"),
+            area: Area::Attack,
+            cards: Cards::Sos,
+            since: 2,
+            horizon: 0,
+            build: sos_attack_past_a_tapped_deathtoucher,
+            prompt: "Zealous Lorecaster vs tapped Burrog Banemaker — attack",
+        },
+        Blunder {
+            id: "sos_no_chump_at_high_life",
+            twin: Some("sos_chump_at_low_life"),
+            area: Area::Block,
+            cards: Cards::Sos,
+            since: 2,
+            horizon: 0,
+            build: sos_no_chump_at_high_life,
+            prompt: "Zealous Lorecaster attacks, Studious First-Year, 20 life — don't chump",
+        },
+        Blunder {
+            id: "sos_chump_at_low_life",
+            twin: Some("sos_no_chump_at_high_life"),
+            area: Area::Block,
+            cards: Cards::Sos,
+            since: 2,
+            horizon: 0,
+            build: sos_chump_at_low_life,
+            prompt: "Zealous Lorecaster attacks, Studious First-Year, 4 life — chump",
+        },
+        Blunder {
+            id: "sos_take_the_free_trade",
+            twin: None,
+            area: Area::Block,
+            cards: Cards::Sos,
+            since: 2,
+            horizon: 0,
+            build: sos_take_the_free_trade,
+            prompt: "Eager Glyphmage (3/3) attacks into an untapped Zealous Lorecaster — block",
+        },
+        Blunder {
+            id: "sos_kill_one_attacker_then_block_the_other",
+            twin: None,
+            area: Area::Instant,
+            cards: Cards::Sos,
+            since: 2,
+            horizon: 0,
+            build: sos_kill_one_attacker_then_block_the_other,
+            prompt: "Zealous Lorecaster + Studious First-Year attack, Eager Glyphmage + Stand Up for Yourself, 1 life",
+        },
+        Blunder {
+            id: "fra_no_attack_into_deathtouch",
+            twin: Some("fra_attack_past_a_tapped_deathtoucher"),
+            area: Area::Attack,
+            cards: Cards::Fra,
+            since: 2,
+            horizon: 0,
+            build: fra_no_attack_into_deathtouch,
+            prompt: "Wrecking Gecko (5/5) vs untapped Arcane Amphisbaena — don't attack",
+        },
+        Blunder {
+            id: "fra_attack_past_a_tapped_deathtoucher",
+            twin: Some("fra_no_attack_into_deathtouch"),
+            area: Area::Attack,
+            cards: Cards::Fra,
+            since: 2,
+            horizon: 0,
+            build: fra_attack_past_a_tapped_deathtoucher,
+            prompt: "Wrecking Gecko vs tapped Arcane Amphisbaena — attack",
+        },
+        Blunder {
+            id: "fra_take_the_free_trade",
+            twin: None,
+            area: Area::Block,
+            cards: Cards::Fra,
+            since: 2,
+            horizon: 0,
+            build: fra_take_the_free_trade,
+            prompt: "Keeper of the Quiet Hour (3/2) attacks into an untapped Wrecking Gecko — block",
         },
     ]
 }
@@ -774,6 +1297,30 @@ mod tests {
                 let other = all.iter().find(|o| o.id == t).unwrap_or_else(|| panic!("{}: twin {t} missing", it.id));
                 assert_eq!(other.twin, Some(it.id), "{}: twin {t} doesn't point back", it.id);
             }
+        }
+    }
+
+    /// Every leaf pair builds two live positions that differ, with seat 0
+    /// to act in both.
+    #[test]
+    fn every_leaf_pair_builds_two_different_boards() {
+        let pairs = leaf_pairs();
+        let mut ids: Vec<&str> = pairs.iter().map(|p| p.id).collect();
+        ids.sort_unstable();
+        ids.dedup();
+        assert_eq!(ids.len(), pairs.len(), "ids are unique");
+        for p in &pairs {
+            let (better, worse) = (p.build)();
+            for g in [&better, &worse] {
+                assert!(!g.is_game_over(), "{}", p.id);
+                assert_eq!(g.player_with_priority(), 0, "{}", p.id);
+            }
+            let sig = |g: &GameState| {
+                let mut v: Vec<(usize, &str)> = g.battlefield.iter().map(|c| (c.controller, c.definition.name)).collect();
+                v.sort_unstable();
+                (v, g.players[0].life, g.players[1].life, g.players[0].hand.len())
+            };
+            assert_ne!(sig(&better), sig(&worse), "{}: the two boards are the same", p.id);
         }
     }
 

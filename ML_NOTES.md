@@ -8785,3 +8785,97 @@ same-named permanents in different states (a token with a counter, a
 target among two same-named creatures); the rollouts' opponent does not
 make the deathtouch block.
 
+### Why the search attacks a 4/4 into deathtouch, and a wider blunder set (2026-11-10, later)
+
+The user's "do 1 and 2" after the combat diagnosis: find why the rollouts
+price the attack into an untapped deathtoucher above staying home (0.369
+against 0.270), and widen the blunder set with the shapes that diagnosis
+found and with real cards. Nothing adopted; the gate above still PENDING.
+
+**It is the leaf, not the rollout.** The guess recorded above — "the
+rollouts' opponent does not make the deathtouch block" — is wrong. Replayed
+by hand, the rollout's defender (the uniform baseline, as `dflt` and the
+fixes pilot) blocks the 4/4 with the Rats every time; both die and the
+rollout ends on an empty table. The value net then rates that empty table
+above the board the attack gave up. `bot_puzzles --leaf-pairs`
+(`blunder::leaf_pairs`): two turn-six boards that differ in one thing, the
+first better for seat 0, read by the value net and by `eval_material`:
+
+| pair (better / worse) | champion | Δ | FRA net | Δ | material |
+|---|---|---|---|---|---|
+| my 4/4 / an empty table | 0.495 / 0.299 | +0.196 | 0.675 / 0.431 | +0.244 | 24 / 0 |
+| an empty table / their 4/4 | 0.299 / 0.194 | +0.105 | 0.431 / 0.134 | +0.297 | 0 / −24 |
+| my 4/4 vs their vanilla 1/1 / both gone | 0.434 / 0.299 | +0.135 | 0.367 / 0.431 | **−0.063** | 18 / 0 |
+| **my 4/4 vs their Typhoid Rats / both gone** | 0.282 / 0.299 | **−0.018** | 0.438 / 0.431 | +0.008 | 15 / 0 |
+| my Pestbrood Sloth / an empty table | 0.536 / 0.299 | +0.237 | 0.714 / 0.431 | +0.283 | 36 / 0 |
+| my Pestbrood Sloth vs their Burrog Banemaker / both gone | 0.358 / 0.299 | +0.059 | 0.446 / 0.431 | +0.016 | 27 / 0 |
+| two 2/2s vs their 2/2 / one | 0.432 / 0.313 | +0.119 | 0.398 / 0.301 | +0.097 | 12 / 0 |
+| a 2/2 each at 20 life / at 6 | 0.313 / 0.137 | +0.176 | 0.301 / 0.148 | +0.153 | 0 / −14 |
+| my 0/4 vs their 2/2 / vs their 2/2 flier | 0.261 / 0.232 | +0.029 | 0.277 / 0.228 | +0.048 | 0 / 0 (tie) |
+| 15 life and my 1/1 vs their 5/5 / 20 life, no 1/1 | 0.144 / 0.175 | **−0.031** | 0.177 / 0.119 | +0.058 | −29 / −30 |
+| a 2/2 each + Stand Up for Yourself in hand / empty hand | 0.642 / 0.313 | +0.329 | 0.359 / 0.301 | +0.058 | 4 / 0 |
+
+Readings. (1) The champion prices a 1/1 deathtoucher across from a 4/4 at
+the whole 4/4 (0.495 → 0.282, below the empty table), so the trade the
+attack buys reads as free and the search has no reason to refuse it; on
+real SOS cards the order is right by 0.06. The same inversion behind the
+other judgement item: the champion prefers the chump already made at 20
+life (−0.031). (2) A symmetric empty table with seat 0 to move reads 0.299
+on the champion and 0.431 on the FRA net — the pessimism the calibration
+found (mean 0.442), larger on a sparse board. (3) On made-up bodies the
+FRA net charges −0.30 for *any* opposing creature, a 1/1 as much as a 4/4,
+and rates my 4/4 against their vanilla 1/1 below an empty table: with the
+card's identity unknown its size is nearly unread. That bears on cube and
+on the one-model line. Material orders 10 of 11 (it ties the flier pair);
+the champion 9, the FRA net 10.
+
+**The blunder set, 22 → 35 items and 6 → 9 pairs** (`Blunder::{cards,
+since}`; `--cards plain|sos|fra`; the report keeps a line for the original
+22, the numbers every earlier note quotes). Added, all failed by the null
+pilot (`the_null_pilot_fails_every_pair_and_every_solo_item`):
+
+- *same-named permanents:* `split_blocks_across_same_named_attackers`
+  (three 2/2s of one name attack; one blocker each), `the_grown_twin_blocks`
+  and `murder_the_grown_twin` (two creatures of one name, one carrying
+  +1/+1 counters);
+- *removal before blocks:* `kill_one_attacker_then_block_the_other`;
+- *real SOS cards* (Zealous Lorecaster, Burrog Banemaker, Studious
+  First-Year, Eager Glyphmage, Stand Up for Yourself): the deathtouch pair,
+  the chump pair, the free trade, kill-then-block;
+- *real FRA cards* (Wrecking Gecko, Arcane Amphisbaena, Keeper of the Quiet
+  Hour): the deathtouch pair and the free trade — read on the FRA leaf.
+
+20 reps for the search pilots, gen 3's priors, champion leaf:
+
+| profile | items / 35 | pairs / 9 | original 22 | SOS / 6 | FRA / 3 (FRA leaf) |
+|---|---|---|---|---|---|
+| `fixes` (the heuristic, material leaf) | 33.0 | 9.0 | 20, 6 | 6.0 | 3.0 |
+| `net67-fixes` (the heuristic, net leaf) | 31.0 | 7.0 | 19, 5 | 5.0 | 2.0 |
+| `mcts-net67-256-fixes` (client before 11-02) | 32.0 | 7.0 | 20, 5 | 5.0 | 2.0 |
+| `mcts-net67-menu-mc` (client since) | 23.6 | 2.1 | 16.0, 2.1 | 2.9 | 2.9 |
+| `-df` | 26.6 | 2.8 | 17.9, 2.8 | 3.0 | — |
+| `-df-an10` (in the gate) | 33.0 | 7.0 | 21, 5 | 5.0 | 3.0 |
+| `-df-anm5` | 31.0 | 5.0 | 20, 4 | 5.0 | — |
+| **`-df-anm10`** | **35.0** | **9.0** | **22, 6** | 6.0 | 3.0 |
+| `-df-anm15` | 35.0 | 9.0 | 22, 6 | 6.0 | — |
+
+(1) The regression is not the made-up cards: the adopted pilot fails the
+same shapes on real SOS cards (2.9 of 6). (2) The deathtouch attack fails
+on real SOS cards for every pilot that reads the net at a leaf, and passes
+for the one that does not — `fixes` on material is the cleanest plain pilot
+on the set. (3) `-an10`'s anchor is the heuristic *on the net leaf*, which
+makes the deathtouch attack itself. **`menu_anchor_material`** (`-anm<N>`:
+the anchor read with the net slot cleared) is the first pilot with every
+item, original 22 included — though the deathtouch items clear the 0.10
+margin by 0.001 in a deterministic puzzle (0.099), and fail at 0.05. On the
+ladder the net-leaf heuristic is the stronger plain pilot (r81: +1.4 to
++2.3 scored), so which anchor plays better under the search is a gate, not
+a reading: `-df-anm10` against `-df-an10`, owed once the box is free.
+
+Open, from this: the value nets' deathtouch and chump pricing is a training
+question (the leaf pairs are the instrument for it — a retrained value
+should be read on them); `decision_menu::key` still merges same-named
+permanents in different states (the two "grown twin" items pass under the
+anchor because the heuristic names the right one, not because the list
+does).
+
