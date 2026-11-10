@@ -8934,3 +8934,48 @@ against each other and 0.8 is inside either cell's interval. Owed:
 for the fix (the client's FRA games and the lobby's cube now play it on
 the SOS gate alone).
 
+
+### Why the champion reads 0.442 on a 0.500 base rate (2026-11-10, late)
+
+The user's "do 1 and 2" (2 = this). **Not a label bug.** The raw labels
+average exactly 0.5: draws and stalls write no rows (`play_recorded_game`
+returns none without a winner), every snapshot is recorded for both seats,
+and `lambda_targets` bootstraps each (game, seat) trajectory from its own
+next row. The actors' 4,000-action cap (`--calibrate` played to 50,000) is
+not it either: new `--calibrate-cap 4000` gives identical numbers — none of
+the 1,500 games came near it.
+
+**The level is not pinned by training; it is a property of the seed.**
+`--calibrate 1500 --attn`, seed 7, the same 159,290 positions for every net:
+
+| net | mean prediction | p + p′ (one position, two seats) | AUC as read | AUC, (p + 1 − p′)/2 | log-loss as read → two-seat |
+|---|---|---|---|---|---|
+| champion (r81 s43) | **0.442** | 0.884 | 0.7973 | **0.8103** | 0.5486 → 0.5299 |
+| r81 s97 | 0.521 | 1.042 | 0.7903 | 0.8025 | 0.5476 → 0.5349 |
+| r81 s151 | 0.499 | 0.998 | 0.7923 | 0.8042 | 0.5445 → 0.5343 |
+| r81 s199 | 0.478 | 0.956 | 0.7919 | 0.8040 | 0.5460 → 0.5345 |
+| R0 (champion + 6,000 search games) | 0.481 | 0.963 | 0.7898 | 0.8034 | 0.5475 → 0.5334 |
+
+Same recipe, same data, offsets from −0.058 to +0.021: at λ 0.7 almost
+every target is the net's own next reading (round 81 s43 fits its λ-targets
+to 0.0098 MSE against 0.172 on the raw results), so only the last rows of
+a trajectory anchor the level, and each seed settles somewhere different;
+the champion is the seed that settled low. One part is systematic — every
+net reads ~0.05 lower in long games (champion 0.470 at < 10 turns → 0.419
+at 32+, s97 0.547 → 0.488), the same slope on both. A constant offset
+cannot change which arm a search prefers; it moves only comparisons of a
+leaf with a real result (a rollout that ends the game), where the
+champion's −0.06 makes a terminal loss look 0.06 less bad than it is.
+
+**The lead it opens: read a position from both seats.** Each seat is read
+independently and the two readings do not sum to 1 (0.88–1.04). Averaging
+p with 1 − p′ improves every net by the same +0.012..+0.013 AUC and
+−0.010..−0.019 log-loss, paired on identical positions — as large as the
+spread between training seeds, for free. ⚠ Confounded here: the opponent's
+reading is encoded from its own view, which holds its real hand, so part
+of the gain may be seeing both hands. In the search a leaf's hidden cards
+are the determinization's, so whether a two-seat leaf
+(`(win_prob(seat) + 1 − win_prob(opp))/2`, 2× the leaf's encode + forward)
+pays is a ladder question; not built. A training-side fix (an
+antisymmetric head, or a p + p′ = 1 penalty on the paired rows) would also
+pin the level.

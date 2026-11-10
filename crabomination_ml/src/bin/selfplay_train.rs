@@ -439,6 +439,10 @@ struct Args {
     /// and the heuristic evaluation as *predictors of the winner* on the
     /// same positions. Requires `--use-best`.
     calibrate: Option<usize>,
+    /// `--calibrate`'s action cap (default 50,000). The actors cap a game at
+    /// 4,000 actions and drop longer ones as stalls, so `--calibrate-cap
+    /// 4000` scores the net on the distribution it was trained on.
+    calibrate_cap: usize,
     /// Diagnostic mode: like `--calibrate`, but scored on the *simulated
     /// leaves* the searches actually evaluate (captured via
     /// `server::leaf_capture`) alongside the snapshot positions from the
@@ -505,6 +509,7 @@ fn parse_args() -> Args {
         gate_builder_v3: None,
         calibrate: None,
         calibrate_leaves: None,
+        calibrate_cap: 50_000,
         feature_census: None,
         record_combat: false,
         pairwise: None,
@@ -639,6 +644,7 @@ fn parse_args() -> Args {
             "--eval-batch" => a.eval_batch = val().parse().expect("--eval-batch"),
             "--eval-flush-us" => a.eval_flush_us = val().parse().expect("--eval-flush-us"),
             "--calibrate" => a.calibrate = Some(val().parse().expect("--calibrate")),
+            "--calibrate-cap" => a.calibrate_cap = val().parse().expect("--calibrate-cap"),
             "--calibrate-leaves" => {
                 a.calibrate_leaves = Some(val().parse().expect("--calibrate-leaves"))
             }
@@ -3189,6 +3195,13 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     let mut by_card = CardResiduals::default();
     // Own hand size (8 = 8+) → (positions, Σ residual, Σ prediction).
     let mut by_hand = [(0u64, 0f64, 0f64); 9];
+    // Game length in turns (bucketed) → (positions, Σ prediction, Σ result,
+    // games): whether the bias lives in the long games the actors drop.
+    const LEN_EDGES: [u32; 5] = [10, 14, 18, 24, 32];
+    let mut by_len = [(0u64, 0f64, 0f64, 0u64); 6];
+    // Rows come in seat pairs (one snapshot, seat 0 then seat 1), so each
+    // position can also be scored from both sides: (p0, p1, y0).
+    let mut pairs: Vec<(f32, f32, f32)> = Vec::new();
     let mut rng = StdRng::seed_from_u64(args.seed ^ 0xCA11B);
     for n in 0..games as u64 {
         let salt =
@@ -3202,7 +3215,7 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
             &template,
             [EvalWeights::default(), EvalWeights::default()],
             rng.random_range(0..u64::MAX),
-            50_000,
+            args.calibrate_cap,
             vocab,
         );
         if rec.rows.is_empty() {
@@ -3211,6 +3224,19 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
         let refs: Vec<&TrainRow> = rec.rows.iter().collect();
         let preds = trainer.predict_win_batch(&refs, 512).expect("forward");
         by_card.add_game(&rec.rows, &preds);
+        {
+            let b = LEN_EDGES.iter().position(|&e| rec.turns < e).unwrap_or(LEN_EDGES.len());
+            let e = &mut by_len[b];
+            e.0 += preds.len() as u64;
+            e.1 += preds.iter().map(|&p| p as f64).sum::<f64>();
+            e.2 += rec.rows.iter().map(|r| r.win as f64).sum::<f64>();
+            e.3 += 1;
+        }
+        for (r, p) in rec.rows.chunks_exact(2).zip(preds.chunks_exact(2)) {
+            debug_assert_eq!(r[0].traj & 1, 0);
+            debug_assert_eq!(r[1].traj & 1, 1);
+            pairs.push((p[0], p[1], r[0].win));
+        }
         for (row, &p) in rec.rows.iter().zip(&preds) {
             let h = row.state.group_len(crabomination_nn::G_HAND_SELF).min(8);
             let e = &mut by_hand[h];
@@ -3280,6 +3306,32 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     println!("  by own hand size: positions, mean prediction, mean residual (result − net)");
     for (h, &(n, r, p)) in by_hand.iter().enumerate().filter(|(_, e)| e.0 > 0) {
         println!("    {h}{}  {n:>7}  {:.3}  {:+.3}", if h == 8 { "+" } else { " " }, p / n as f64, r / n as f64);
+    }
+    // The two seats' readings of one position, combined: the mean of p and
+    // 1 − p' (what a symmetric head would say), and the ratio p / (p + p').
+    // Each scored on both seats' rows, so the numbers compare with the net's.
+    {
+        let both = |f: &dyn Fn(f32, f32) -> f32| -> Vec<(f32, f32)> {
+            pairs.iter().flat_map(|&(a, b, y)| [(f(a, b), y), (f(b, a), 1.0 - y)]).collect()
+        };
+        let sum = pairs.iter().map(|&(a, b, _)| (a + b) as f64).sum::<f64>() / pairs.len() as f64;
+        println!("  the two seats' readings of one position: mean p + p' = {sum:.4} ({} positions)", pairs.len());
+        for (name, v) in [
+            ("as read     ", both(&|a, _| a)),
+            ("(p + 1 - p')/2", both(&|a, b| (a + 1.0 - b) / 2.0)),
+            ("p / (p + p')", both(&|a, b| if a + b > 0.0 { a / (a + b) } else { 0.5 })),
+        ] {
+            let ll = log_loss(v.iter().copied());
+            let br = brier(v.iter().copied());
+            let au = auc(v.iter().copied());
+            println!("    {name}  log-loss {ll:.4}  Brier {br:.4}  AUC {au:.4}");
+        }
+    }
+    println!("  by game length (turns): games, positions, mean prediction, mean result");
+    for (b, &(n, p, y, g)) in by_len.iter().enumerate().filter(|(_, e)| e.0 > 0) {
+        let lo = if b == 0 { 0 } else { LEN_EDGES[b - 1] };
+        let hi = LEN_EDGES.get(b).map_or("+".to_string(), |e| format!("-{}", e - 1));
+        println!("    {lo:>2}{hi:<4}  {g:>5}  {n:>7}  {:.3}  {:.3}", p / n as f64, y / n as f64);
     }
     by_card.report(vocab, base as f64 - mean_p);
 }
