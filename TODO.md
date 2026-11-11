@@ -655,6 +655,28 @@ to `ENGINE_BACKLOG.md`'s last section, "Rollback / Undo — Phases 2–5".
 
 ## Bot / AI
 
+### Playing stack — next steps after the combat fix (2026-11-11)
+Numbers and reasoning: ML_NOTES "Why the champion reads 0.442 on a 0.500
+base rate" and "The combat window of the menu search" (the combat fix
+`-df-anm10` is adopted and confirmed on SOS / FRA / cube). In order:
+1. **Two-seat leaf.** A search-side flag averaging the leaf's
+   `win_prob(seat)` with `1 − win_prob(opp)`. Calibration: +0.013 AUC on
+   every net, but confounded by the opponent's view holding its real hand.
+   Read it on the blunder set and leaf pairs, then one paired SOS gate,
+   and record the cost per move (2× leaf encode + forward).
+2. **Two search fixes**, sharing item 1's gate run: (a) no Gumbel noise at
+   play time (it still breaks near-ties, worst in main phases, which have
+   no anchor); (b) `decision_menu::key` stops merging same-named permanents
+   in different states (counters, which of two twins is the target).
+3. **Value training, decided by 1.** If the two-seat read pays, build it
+   into the net (an antisymmetric output or a p + p' = 1 penalty on the
+   paired rows): the gain at 1× cost, and it pins the level that now
+   drifts with the training seed (r81 seeds read 0.442–0.521). Retrain on
+   the champion recipe, value only, with a policy trunk separate from the
+   value's (the shared trunk cost the value ~2 leaf points in the re-read).
+   Read the result on leaf pairs, calibration, then the ladder.
+No training run without the user's go-ahead.
+
 ### One net for every mode, Commander included (2026-09-28)
 The plan, its gates and the per-step code locations are ML_NOTES "One net
 for every mode". Step 1 (the table net, `server::encode_table`,
