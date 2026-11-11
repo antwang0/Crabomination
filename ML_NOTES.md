@@ -8934,6 +8934,20 @@ against each other and 0.8 is inside either cell's interval. Owed:
 for the fix (the client's FRA games and the lobby's cube now play it on
 the SOS gate alone).
 
+**Confirmed (2026-11-11, `.ladder/cfx`, rules in `run.sh`'s header before
+any cell; paired 120 × 12, A = `-df-anm10`):**
+
+| cell | s43 | s97 | pooled |
+|---|---|---|---|
+| vs `mcts-net67-menu-mc`, FRA sealed on the FRA leaf | 53.7 [51.6, 55.8] | 51.2 [49.1, 53.4] | **52.45 — a gain** |
+| vs `mcts-net67-menu-mc`, cube | 55.4 [53.3, 57.6] | 54.7 [52.6, 56.8] | **55.05 — a gain** |
+| vs `-df` alone, SOS sealed | 48.3 [46.4, 50.2] | 51.0 [49.2, 52.8] | 49.65 — no difference |
+
+The fix pays more off SOS than on it (the policy's priors are SOS-trained,
+so the anchor has more to repair elsewhere); no format reverts. The anchor's
+suspected ladder cost does not resolve (−0.35, the seeds split), so
+`-df-anm10` stays on its blunder score (35 vs 26.6).
+
 
 ### Why the champion reads 0.442 on a 0.500 base rate (2026-11-10, late)
 
