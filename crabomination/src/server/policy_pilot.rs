@@ -1234,8 +1234,7 @@ mod tests {
         search_game_with(policy_rollouts, menu_sample, last_turn, false);
     }
 
-    /// `combat_fix`: `MctsConfig::menu_declare_fix` with the heuristic's
-    /// declaration anchored at 0.10.
+    /// `combat_fix`: the search as adopted (`MctsConfig::with_combat_fix`).
     fn search_game_with(policy_rollouts: bool, menu_sample: bool, last_turn: u32, combat_fix: bool) {
         use crate::server::mcts::{MENU_COMBAT, MENU_INSTANT, MENU_MAIN, MENU_PROMPT, MctsBot, MctsConfig};
         let _g = SLOT.lock().unwrap_or_else(|e| e.into_inner());
@@ -1250,10 +1249,9 @@ mod tests {
             menu_arms: 4,
             policy_rollouts,
             menu_sample,
-            menu_declare_fix: combat_fix,
-            menu_anchor: if combat_fix { 0.10 } else { -1.0 },
             ..MctsConfig::default()
         };
+        let cfg = if combat_fix { cfg.with_combat_fix() } else { cfg };
         let seed = 7u64;
         let mut g = super::super::action_gap::start_game(&sealed_template(seed), &cfg.weights, seed);
         let mut bots = [MctsBot::new(cfg), MctsBot::new(cfg)];

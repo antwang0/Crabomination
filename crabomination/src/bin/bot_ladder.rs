@@ -306,20 +306,11 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     {
         return Some(Pilot::Mcts(MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() }));
     }
-    // Phase 4: the client's pilot with the listed windows searched over
-    // the complete move list — `mcts-net67-menu-<windows>[-conf<pct>][-np<N>][-h<N>]`,
-    // windows any of m(ain) i(nstant) c(ombat) p(rompt) — on the policy
-    // priors of `CRAB_POLICY_NET` (the candidate slot; the value net stays
-    // the champion). `-conf90` plays the policy's pick unsearched when it
-    // holds 90 % of the arms' softmax.
-    // Suffixes: `-np<N>` plays the rollouts with the policy pilot at N
-    // iterations (`MctsConfig::policy_rollouts`), `-it<N>` sets the
-    // iterations of heuristic rollouts (the budget-matched control),
-    // `-h<N>` the horizon, `-a<N>` the arms searched (default 8). Phase 5:
-    // `-pb` reads its priors from `CRAB_POLICY_NET_B` and `-vb` its leaf
-    // from `CRAB_NET_B`, so two generations of the loop can meet in one cell.
-    // (`server::mcts::menu_profile` has the suffixes, `-df` and `-an<N>`
-    // among them.)
+    // Phase 4/5: `mcts-net67-menu-<windows>[-suffix..]`, the search over
+    // the complete move list on `CRAB_POLICY_NET`'s priors (`-pb`:
+    // `CRAB_POLICY_NET_B`; `-vb`: the leaf from `CRAB_NET_B`). The suffixes
+    // are `server::mcts::menu_profile`'s; the client's and the lobby's pilot
+    // is `mcts-net67-menu-mc-df-anm10`.
     if name.starts_with("mcts-net67-menu-") {
         return crabomination::server::mcts::menu_profile(name).map(Pilot::Mcts);
     }

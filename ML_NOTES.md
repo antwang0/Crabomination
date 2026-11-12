@@ -7241,7 +7241,7 @@ training step's path (`Trainer::policy_logits`). Measured that way, on a
 phase-3-style imitation run from gen 3, held-out and training top-1
 agree within ~0.01 (0.80 / 0.82): the policy is not over-fitting.
 
-### Step 2 — the action head: score a move by the objects it involves (2026-11-02, in progress)
+### Step 2 — the action head: score a move by the objects it involves (2026-11-02/03: built, adds nothing, default off)
 
 Phase 3 and phase 5 both ended at the policy's representation: each move
 scored as its successor's pooled summary through one linear head, so
@@ -7322,6 +7322,10 @@ untouched lever. It is data-bound: a generation's 6,000 search games are
 too few for the value net, and the trainer keeps no rows between runs
 (a game's labelled rows are ~1 MB unencoded, so pooling 25 k search
 games wants compressed shards on a disk with ~50 GB free).
+*(Superseded 2026-11-10: "data-bound" was confounded by the recipe — the
+re-read, "Holdout fix + the value re-read" below, shows phase 5's learner
+collapsing to a constant and the champion recipe holding level on the same
+games.)*
 
 ## One model for every mode — the user's 2026-11-02 additions, and step 2 begins (2026-11-03)
 
@@ -7454,7 +7458,7 @@ Next for this line, the user's call: a training run at the scale the
 champion had (millions of games), the blocks on, and the pod overconfidence
 addressed (weight decay / label smoothing), before G1 / G3 again.
 
-### The phase-5 loop on FRA (2026-11-03, in progress)
+### The phase-5 loop on FRA (2026-11-03: stopped on two flat generations)
 
 The user's "3": the loop on FRA sealed (rated decks, the FRA net as the
 leaf), priors from gen 3, same reads and stop rule (`.ladder/fra5/`).
@@ -8642,7 +8646,9 @@ games. Nothing adopted.
 ## Shortcomings review (2026-11-10): the adopted client bot on the blunder set, and the champion's calibration
 
 Asked: "analyze the shortcomings of the model and come up with what to do
-next". Two fresh reads, nothing adopted.
+next". Two fresh reads, nothing adopted here. *(What followed: the combat
+fix adopted 2026-11-10, the value re-read read, the 0.442 explained — the
+sections below.)*
 
 **The adopted client bot had never been on the blunder set** — `bot_puzzles`
 had no profile for the menu search. Added `mcts-net67-menu-mc-fixes`
@@ -8675,7 +8681,7 @@ heuristic's, the champion's actors were round 81's). No Bayes ceiling for
 this target has ever been measured, so "capacity is null" (r4 / r24 / r45)
 cannot tell a net at its ceiling from one that cannot use its inputs.
 
-### The combat window of the menu search: what the regression is, a fix, and its gate (2026-11-10)
+### The combat window of the menu search: what the regression is, a fix, and its gate (2026-11-10; `-df-anm10` ADOPTED, see "Gate amended" below)
 
 The user's "do 1": diagnose the blunder-set regression above, fix it, and
 make blunder parity a condition of adoption. `CRAB_MCTS_ROOT=1` now prints a
@@ -8893,6 +8899,8 @@ margin by 0.001 in a deterministic puzzle (0.099), and fail at 0.05. On the
 ladder the net-leaf heuristic is the stronger plain pilot (r81: +1.4 to
 +2.3 scored), so which anchor plays better under the search is a gate, not
 a reading: `-df-anm10` against `-df-an10`, owed once the box is free.
+*(Not run: both were gated against the old search instead, and `-df-anm10`
+against `-df` alone — the result tables below.)*
 
 Open, from this: the value nets' deathtouch and chump pricing is a training
 question (the leaf pairs are the instrument for it — a retrained value
@@ -8993,3 +9001,46 @@ are the determinization's, so whether a two-seat leaf
 pays is a ladder question; not built. A training-side fix (an
 antisymmetric head, or a p + p′ = 1 penalty on the paired rows) would also
 pin the level.
+
+### The blunder set, 35 → 48 items (2026-11-12)
+
+The client's pilot read 35/35, so the set no longer separated anything at the
+top. Thirteen items (`since: 3`, all plain cards), aimed at the leads this
+file leaves open, with two new checks (`Check::Wins`, `Check::NeverCasts`)
+and a new area, `lethal`:
+
+- **lethal** — Bolt the player at 3 (`bolt_to_the_face_for_lethal`), three
+  2/2s into one blocker at 4 (`alpha_strike_for_lethal`), Prodigal Sorcerer at
+  1 behind a wall (`ping_for_lethal`, an activated ability — the menu search
+  has no ability arm).
+- **removal** — the pair `hold_the_murder_at_high_life` (a 1/1 flier at 20:
+  hold) / `murder_the_flier_at_one_life` (at 1: kill it), the `save_the_removal`
+  lead.
+- **instant** — `grow_the_blocker` (block a 3/3 with a 2/2 and Giant Growth),
+  `counter_the_wurm` (Counterspell on the opponent's main).
+- **attack** — the pairs flier over a ground 4/4 / not into reach, and
+  menace past one 4/4 / not into two.
+- **block** — `first_striker_blocks_for_free`; **mana** —
+  `the_four_drop_over_the_one_drop`.
+
+The null pilot fails every new pair and solo item (the honesty test); `dflt`
+passes 12 / 13, so each item is solvable (the one it fails is the hold, which
+passing solves). `bot_puzzles` now prints the totals through each earlier
+version, so 22- and 35-item numbers stay comparable.
+
+`--blunders --reps 10`, gen 3's priors (`.ladder/bl3/client.txt`):
+
+| profile | items / 48 | pairs / 12 | through v2 (/ 35) | new 13 |
+|---|---|---|---|---|
+| `dflt` | — | — | — | 12 / 13 |
+| `mcts-net67-menu-mc-df-anm10` (the client) | **46.6** | **11** | 35.0 (9) | 11.6 |
+| `mcts-net67-menu-mc` (before the fix) | 34.8 | 4 | 23.8 (2) | 11.0 |
+
+The client fails two new items: **`hold_the_murder_at_high_life` 0 / 10**
+(it Murders a 1/1 at 20 life — so does `dflt`; the pair counts 0) and
+**`ping_for_lethal` 6 / 10** (it misses a win that needs a tap ability;
+`dflt` takes it every time). Both are the leads that predicted them. The
+other eleven it passes 10 / 10, so the set's top end has headroom of two
+items: harder positions (multi-step lethal, a trick held across a turn,
+real-card versions of the new shapes) are still owed if it is to rank
+pilots above this one.

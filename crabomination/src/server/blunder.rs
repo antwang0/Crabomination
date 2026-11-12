@@ -53,6 +53,8 @@ pub enum Area {
     Mana,
     /// Aiming a spell at the right side of the table.
     Polarity,
+    /// Finding the win that is on the board.
+    Lethal,
 }
 
 impl Area {
@@ -65,6 +67,7 @@ impl Area {
             Area::Instant => "instant",
             Area::Mana => "mana",
             Area::Polarity => "polarity",
+            Area::Lethal => "lethal",
         }
     }
 }
@@ -114,6 +117,10 @@ pub enum Check {
     Casts(CardId),
     /// The seat cast this card aimed at that permanent.
     CastOn(CardId, CardId),
+    /// The seat did not cast this card.
+    NeverCasts(CardId),
+    /// The opponent has lost when the window closes.
+    Wins,
     /// The seat has not lost when the window closes.
     Alive,
 }
@@ -140,6 +147,8 @@ impl Check {
             Check::CastOn(id, at) => acts.iter().any(|a| {
                 matches!(a, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. } if *card_id == id && *t == at)
             }),
+            Check::NeverCasts(id) => !Check::Casts(id).holds(seat, acts, end),
+            Check::Wins => end.game_over == Some(Some(seat)) || !end.players[1 - seat].is_alive(),
             Check::Alive => end.game_over != Some(Some(1 - seat)) && end.players[seat].is_alive(),
         }
     }
@@ -164,6 +173,8 @@ impl Check {
             Check::Activates(id) => format!("activate {}", name(id)),
             Check::Casts(id) => format!("cast {}", name(id)),
             Check::CastOn(id, at) => format!("cast {} on {}", name(id), name(at)),
+            Check::NeverCasts(id) => format!("hold {}", name(id)),
+            Check::Wins => "win".into(),
             Check::Alive => "survive".into(),
         }
     }
@@ -184,7 +195,9 @@ pub struct Blunder {
     pub cards: Cards,
     /// The set's version the item joined in: 1 is the original 22
     /// (2026-10-30), whose totals earlier notes quote; 2 the 2026-11-10
-    /// additions.
+    /// additions (35 with the first, what the combat fix was gated on); 3
+    /// the 2026-11-12 harder items, written after the client's pilot
+    /// reached 35/35.
     pub since: u8,
     /// Turns past the current one the window runs: 0 closes it when this
     /// turn ends, 1 runs through the next.
@@ -908,6 +921,152 @@ fn fra_take_the_free_trade() -> Position {
     Position { state: g, checks: vec![Check::Dies(theirs), Check::Survives(mine)] }
 }
 
+// ── Added 2026-11-12: harder items, once the client's pilot read 35/35 ──
+// Aimed at the leads ML_NOTES leaves open: lethal the search must see,
+// tricks and counters it must hold mana for, removal it must not spend,
+// activated abilities (the menu search has no ability arm of its own),
+// and evasion keywords on attack.
+
+fn costed(def: CardDefinition, generic: u32, green: bool) -> CardDefinition {
+    let mut pips = Vec::new();
+    if generic > 0 {
+        pips.push(crate::mana::generic(generic));
+    }
+    if green {
+        pips.push(crate::mana::g());
+    }
+    CardDefinition { cost: crate::mana::cost(&pips), ..def }
+}
+
+/// The opponent is at 3 with a 2/2; the seat has no creatures and a
+/// Lightning Bolt. Bolt the player.
+fn bolt_to_the_face_for_lethal() -> Position {
+    let mut g = base();
+    g.players[1].life = 3;
+    lands(&mut g, 0, catalog::mountain, 1);
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    ready(&mut g, 1, catalog::grizzly_bears());
+    Position { state: g, checks: vec![Check::Wins] }
+}
+
+/// Three 2/2s against one untapped 2/2, the opponent at 4: all three in
+/// puts at least 4 through whatever it blocks.
+fn alpha_strike_for_lethal() -> Position {
+    let mut g = base();
+    g.players[1].life = 4;
+    for _ in 0..3 {
+        ready(&mut g, 0, body("Bear", 2, 2));
+    }
+    ready(&mut g, 1, body("Guard", 2, 2));
+    Position { state: g, checks: vec![Check::Wins] }
+}
+
+/// Prodigal Sorcerer, the opponent at 1 behind a 0/4 wall: the attack is
+/// blocked, the ping is the win.
+fn ping_for_lethal() -> Position {
+    let mut g = base();
+    g.players[1].life = 1;
+    ready(&mut g, 0, catalog::prodigal_sorcerer());
+    ready(&mut g, 1, keyworded("Wall", 0, 4, Keyword::Defender));
+    Position { state: g, checks: vec![Check::Wins] }
+}
+
+/// Murder in hand at 20 life; the opponent's only creature is a 1/1
+/// flier. Murder is for a threat, not this.
+fn hold_the_murder_at_high_life() -> Position {
+    let mut g = base();
+    lands(&mut g, 0, catalog::swamp, 3);
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    ready(&mut g, 1, keyworded("Sprite", 1, 1, Keyword::Flying));
+    Position { state: g, checks: vec![Check::NeverCasts(murder), Check::Alive] }
+}
+
+/// Twin: at 1 life the same 1/1 flier is lethal, and Murder is the answer.
+fn murder_the_flier_at_one_life() -> Position {
+    let mut g = base();
+    g.players[0].life = 1;
+    lands(&mut g, 0, catalog::swamp, 3);
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    let sprite = ready(&mut g, 1, keyworded("Sprite", 1, 1, Keyword::Flying));
+    Position { state: g, checks: vec![Check::CastOn(murder, sprite), Check::Alive] }
+}
+
+/// A 3/3 attacks into the seat's 2/2 with Giant Growth and a Forest up:
+/// block and grow, the attacker dies and the 2/2 lives.
+fn grow_the_blocker() -> Position {
+    let mut g = their_turn();
+    lands(&mut g, 0, catalog::forest, 1);
+    g.add_card_to_hand(0, catalog::giant_growth());
+    let bear = ready(&mut g, 0, body("Bear", 2, 2));
+    let ogre = ready(&mut g, 1, body("Ogre", 3, 3));
+    they_attack(&mut g, &[ogre]);
+    Position { state: g, checks: vec![Check::Dies(ogre), Check::Survives(bear)] }
+}
+
+/// The opponent's main phase, six Forests and a Craw Wurm in its hand;
+/// the seat has two Islands and Counterspell. The Wurm never lands.
+fn counter_the_wurm() -> Position {
+    let mut g = their_turn();
+    lands(&mut g, 0, catalog::island, 2);
+    let counter = g.add_card_to_hand(0, catalog::counterspell());
+    lands(&mut g, 1, catalog::forest, 6);
+    let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
+    Position { state: g, checks: vec![Check::Casts(counter), Check::Dies(wurm)] }
+}
+
+/// A 3/3 flier against a ground 4/4: nothing can block it.
+fn flier_attacks_over_the_ground() -> Position {
+    let mut g = base();
+    let drake = ready(&mut g, 0, keyworded("Drake", 3, 3, Keyword::Flying));
+    ready(&mut g, 1, body("Ogre", 4, 4));
+    Position { state: g, checks: vec![Check::Attacks(drake)] }
+}
+
+/// Twin: the 4/4 has reach and kills the flier on the block.
+fn no_flier_attack_into_reach() -> Position {
+    let mut g = base();
+    let drake = ready(&mut g, 0, keyworded("Drake", 3, 3, Keyword::Flying));
+    ready(&mut g, 1, keyworded("Archer", 4, 4, Keyword::Reach));
+    Position { state: g, checks: vec![Check::NeverAttacks(drake)] }
+}
+
+/// A 3/3 menace against one untapped 4/4: one creature cannot block it.
+fn menace_past_a_lone_blocker() -> Position {
+    let mut g = base();
+    let brute = ready(&mut g, 0, keyworded("Brute", 3, 3, Keyword::Menace));
+    ready(&mut g, 1, body("Ogre", 4, 4));
+    Position { state: g, checks: vec![Check::Attacks(brute)] }
+}
+
+/// Twin: two untapped 4/4s double-block it, and it dies taking neither.
+fn no_menace_attack_into_two_blockers() -> Position {
+    let mut g = base();
+    let brute = ready(&mut g, 0, keyworded("Brute", 3, 3, Keyword::Menace));
+    for _ in 0..2 {
+        ready(&mut g, 1, body("Ogre", 4, 4));
+    }
+    Position { state: g, checks: vec![Check::NeverAttacks(brute)] }
+}
+
+/// A 2/2 attacks into the seat's 2/2 first striker: the block is free.
+fn first_striker_blocks_for_free() -> Position {
+    let mut g = their_turn();
+    let duelist = ready(&mut g, 0, keyworded("Duelist", 2, 2, Keyword::FirstStrike));
+    let scout = ready(&mut g, 1, body("Scout", 2, 2));
+    they_attack(&mut g, &[scout]);
+    Position { state: g, checks: vec![Check::Dies(scout), Check::Survives(duelist)] }
+}
+
+/// Four Forests, a four-mana 4/4 and a one-mana 1/1 in hand: the mana
+/// buys one of them, and the 4/4 is the one.
+fn the_four_drop_over_the_one_drop() -> Position {
+    let mut g = base();
+    lands(&mut g, 0, catalog::forest, 4);
+    let ogre = g.add_card_to_hand(0, costed(body("Ogre", 4, 4), 3, true));
+    g.add_card_to_hand(0, costed(body("Elf", 1, 1), 0, true));
+    Position { state: g, checks: vec![Check::Casts(ogre)] }
+}
+
 /// Every item, in a stable order.
 pub fn items() -> Vec<Blunder> {
     vec![
@@ -1263,6 +1422,137 @@ pub fn items() -> Vec<Blunder> {
             build: fra_take_the_free_trade,
             prompt: "Keeper of the Quiet Hour (3/2) attacks into an untapped Wrecking Gecko — block",
         },
+        // ── Added 2026-11-12: harder items (see the positions' header). ──
+        Blunder {
+            id: "bolt_to_the_face_for_lethal",
+            twin: None,
+            area: Area::Lethal,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: bolt_to_the_face_for_lethal,
+            prompt: "opponent at 3 with a 2/2, Lightning Bolt — bolt the player",
+        },
+        Blunder {
+            id: "alpha_strike_for_lethal",
+            twin: None,
+            area: Area::Lethal,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: alpha_strike_for_lethal,
+            prompt: "three 2/2s vs one 2/2, opponent at 4 — attack with all three",
+        },
+        Blunder {
+            id: "ping_for_lethal",
+            twin: None,
+            area: Area::Lethal,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: ping_for_lethal,
+            prompt: "Prodigal Sorcerer, opponent at 1 behind a 0/4 wall — ping",
+        },
+        Blunder {
+            id: "hold_the_murder_at_high_life",
+            twin: Some("murder_the_flier_at_one_life"),
+            area: Area::Removal,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 1,
+            build: hold_the_murder_at_high_life,
+            prompt: "Murder, their 1/1 flier, 20 life — hold it",
+        },
+        Blunder {
+            id: "murder_the_flier_at_one_life",
+            twin: Some("hold_the_murder_at_high_life"),
+            area: Area::Removal,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 1,
+            build: murder_the_flier_at_one_life,
+            prompt: "Murder, their 1/1 flier, 1 life — kill it",
+        },
+        Blunder {
+            id: "grow_the_blocker",
+            twin: None,
+            area: Area::Instant,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: grow_the_blocker,
+            prompt: "3/3 attacks, our 2/2 + Giant Growth — block and grow",
+        },
+        Blunder {
+            id: "counter_the_wurm",
+            twin: None,
+            area: Area::Instant,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: counter_the_wurm,
+            prompt: "their main, Craw Wurm in their hand, Counterspell — counter it",
+        },
+        Blunder {
+            id: "flier_attacks_over_the_ground",
+            twin: Some("no_flier_attack_into_reach"),
+            area: Area::Attack,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: flier_attacks_over_the_ground,
+            prompt: "3/3 flier vs a ground 4/4 — attack",
+        },
+        Blunder {
+            id: "no_flier_attack_into_reach",
+            twin: Some("flier_attacks_over_the_ground"),
+            area: Area::Attack,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: no_flier_attack_into_reach,
+            prompt: "3/3 flier vs a 4/4 with reach — don't attack",
+        },
+        Blunder {
+            id: "menace_past_a_lone_blocker",
+            twin: Some("no_menace_attack_into_two_blockers"),
+            area: Area::Attack,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: menace_past_a_lone_blocker,
+            prompt: "3/3 menace vs one 4/4 — attack",
+        },
+        Blunder {
+            id: "no_menace_attack_into_two_blockers",
+            twin: Some("menace_past_a_lone_blocker"),
+            area: Area::Attack,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: no_menace_attack_into_two_blockers,
+            prompt: "3/3 menace vs two 4/4s — don't attack",
+        },
+        Blunder {
+            id: "first_striker_blocks_for_free",
+            twin: None,
+            area: Area::Block,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: first_striker_blocks_for_free,
+            prompt: "2/2 attacks into our 2/2 first striker — block",
+        },
+        Blunder {
+            id: "the_four_drop_over_the_one_drop",
+            twin: None,
+            area: Area::Mana,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: the_four_drop_over_the_one_drop,
+            prompt: "four lands, a 4-drop and a 1-drop in hand — cast the 4-drop",
+        },
     ]
 }
 
@@ -1328,8 +1618,8 @@ mod tests {
     /// with a 1/1 against a 5/5 every block loses inside the horizon, so
     /// the search's arms tie at zero — and a tie goes to the heuristic's
     /// declaration, the chump, where the bare search took whichever arm its
-    /// noise favoured (the adopted client pilot passed this item 2 times in
-    /// 20, 2026-11-10). No net: uniform priors, the material leaf.
+    /// noise favoured (`mcts-net67-menu-mc`, the client's pilot before the
+    /// fix, passed this item 2 times in 20). No net: uniform priors, the material leaf.
     #[test]
     fn the_anchored_combat_search_chumps_when_every_line_loses() {
         use crate::server::mcts::{MENU_COMBAT, MctsBot, MctsConfig};

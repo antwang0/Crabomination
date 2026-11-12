@@ -1946,7 +1946,9 @@ pub(crate) fn menu_player_name(world: &World) -> String {
 /// SOS sealed 58.0 [56.0, 59.9] / 55.8 [53.9, 57.8], FRA sealed (FRA leaf)
 /// 57.5 [55.3, 59.7] / 57.6 [55.5, 59.7], cube 54.0 [51.7, 56.2] / 54.1 [51.7, 56.5]
 /// (seeds 43 / 97, `.ladder/p5`, `.ladder/adopt`). The rollout budget is
-/// the same 256, split across the same worker threads.
+/// the same 256, split across the same worker threads. Since 2026-11-10 that
+/// search plays combat with its fix (`MctsConfig::with_combat_fix`: FRA
+/// sealed +2.45, the blunder set 35 / 35 from 23.6).
 pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn crabomination::server::Bot> {
     if n_seats > 2 {
         return Box::new(HeuristicBot::new());
@@ -1978,21 +1980,16 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn cra
     } else {
         (0, 0)
     };
-    Box::new(crabomination::server::MctsBot::new(crabomination::server::MctsConfig {
+    let cfg = crabomination::server::MctsConfig {
         iterations: 256,
         horizon_turns: 3,
         weights,
         search_threads: bot_search_threads(),
         menu_windows,
         policy_slot,
-        // The combat-window fix, gated 2026-11-10 (ML_NOTES "The combat
-        // window of the menu search"): `-df-anm10` 51.3 / 50.0 over the menu
-        // search without it, 35/35 on the blunder set (was 23.6).
-        menu_declare_fix: menu,
-        menu_anchor: if menu { 0.10 } else { -1.0 },
-        menu_anchor_material: menu,
         ..crabomination::server::MctsConfig::default()
-    }))
+    };
+    Box::new(crabomination::server::MctsBot::new(if menu { cfg.with_combat_fix() } else { cfg }))
 }
 
 /// Whether this match's local bots redeal honestly; set by [`honest_for`].

@@ -809,7 +809,7 @@ fn analyze_pool(path: &str, out: &std::path::Path) {
             None => by.push((c, 1, v)),
         }
     }
-    by.sort_by(|a, b| b.1.cmp(&a.1));
+    by.sort_by_key(|e| std::cmp::Reverse(e.1));
     for (c, n, v) in by {
         println!("  {c:<6} {:>5.1} %  {:.3}", n as f64 / 2.0, v / n as f64);
     }

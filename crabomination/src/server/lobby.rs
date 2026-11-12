@@ -69,7 +69,9 @@ use super::{
 /// policy-headed net into the candidate slot (`nets/policy-champion.
 /// safetensors` / `CRAB_POLICY_NET`): **54.0 [51.7, 56.2] / 54.1 [51.7,
 /// 56.5]** over this pilot without it on cube (seeds 43 / 97, 120 x 12,
-/// `.ladder/adopt`).
+/// `.ladder/adopt`) — and since 2026-11-10 with the combat window's fix
+/// (`MctsConfig::with_combat_fix`): **55.4 / 54.7** on cube over the same
+/// search without it (`.ladder/cfx`).
 fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::Bot> {
     if seats > 2 {
         return Box::new(super::HeuristicBot::new());
@@ -82,11 +84,7 @@ fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::
         if super::net_eval::slot_has_policy(slot) {
             cfg.menu_windows = super::mcts::MENU_MAIN | super::mcts::MENU_COMBAT;
             cfg.policy_slot = slot;
-            // The combat-window fix (`-df-anm10`, gated 2026-11-10: 51.3 /
-            // 50.0 over the menu search without it, 35/35 on the blunder set).
-            cfg.menu_declare_fix = true;
-            cfg.menu_anchor = 0.10;
-            cfg.menu_anchor_material = true;
+            cfg = cfg.with_combat_fix();
         }
     }
     Box::new(MctsBot::new(MctsConfig { weights, ..cfg }))

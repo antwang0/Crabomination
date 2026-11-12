@@ -466,21 +466,24 @@ pub struct MctsConfig {
     /// spell cast before blocks (a flash blocker, removal) can never be
     /// followed by a block. On, the pass is dropped wherever a declaration
     /// is on the list and only a declaration closes the window. Ladder
-    /// suffix `-df`.
+    /// suffix `-df`; on wherever the menu search plays
+    /// ([`MctsConfig::with_combat_fix`]).
     pub menu_declare_fix: bool,
     /// The heuristic's own declaration as the combat window's anchor: it is
     /// always one of the arms (replacing the policy's last pick when the
     /// policy ranks it out), it stays live through every halving round, and
     /// the search's pick replaces it only when its mean reward is more than
     /// this far above the anchor's — at 0.0 a tie goes to the heuristic.
-    /// Negative (default) is off. Ladder suffix `-an<hundredths>`.
+    /// Negative (the default) is off. Ladder suffix `-an<hundredths>`;
+    /// 0.10 wherever the menu search plays ([`MctsConfig::with_combat_fix`]).
     pub menu_anchor: f64,
     /// Take the anchor from the heuristic on the *material* leaf (the
     /// pilot's weights with the net slot cleared) instead of the pilot's
     /// own. The net-leaf heuristic attacks a 4/4 into an untapped
     /// deathtoucher — the value net prices the trade as free
     /// (`bot_puzzles --leaf-pairs`) — and an anchor that makes the mistake
-    /// cannot guard against it. Ladder suffix `-anm<hundredths>`.
+    /// cannot guard against it. Ladder suffix `-anm<hundredths>`; on
+    /// wherever the menu search plays ([`MctsConfig::with_combat_fix`]).
     pub menu_anchor_material: bool,
 }
 
@@ -528,6 +531,19 @@ impl Default for MctsConfig {
             menu_anchor: -1.0,
             menu_anchor_material: false,
         }
+    }
+}
+
+impl MctsConfig {
+    /// The combat-window fix as the client and the lobby play it
+    /// (`mcts-net67-menu-mc-df-anm10`, adopted 2026-11-10): the declaration
+    /// fix, and the material-leaf heuristic's declaration as an anchor the
+    /// search must beat by 0.10. Over the menu search without it, paired
+    /// 120 x 12, seeds 43 / 97: SOS sealed 50.0 / 51.3, FRA sealed (FRA
+    /// leaf) 53.7 / 51.2, cube 55.4 / 54.7; the blunder set 35 / 35 (was
+    /// 23.6). ML_NOTES "The combat window of the menu search".
+    pub fn with_combat_fix(self) -> Self {
+        Self { menu_declare_fix: true, menu_anchor: 0.10, menu_anchor_material: true, ..self }
     }
 }
 

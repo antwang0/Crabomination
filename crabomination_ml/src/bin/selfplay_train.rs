@@ -3232,10 +3232,10 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
             e.2 += rec.rows.iter().map(|r| r.win as f64).sum::<f64>();
             e.3 += 1;
         }
-        for (r, p) in rec.rows.chunks_exact(2).zip(preds.chunks_exact(2)) {
-            debug_assert_eq!(r[0].traj & 1, 0);
-            debug_assert_eq!(r[1].traj & 1, 1);
-            pairs.push((p[0], p[1], r[0].win));
+        for ([r0, r1], [p0, p1]) in rec.rows.as_chunks::<2>().0.iter().zip(preds.as_chunks::<2>().0) {
+            debug_assert_eq!(r0.traj & 1, 0);
+            debug_assert_eq!(r1.traj & 1, 1);
+            pairs.push((*p0, *p1, r0.win));
         }
         for (row, &p) in rec.rows.iter().zip(&preds) {
             let h = row.state.group_len(crabomination_nn::G_HAND_SELF).min(8);

@@ -68,7 +68,7 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
         "dflt" => EvalWeights::default(),
         "net67" => EvalWeights::net_on_default(),
         // The FRA fixes bundle, which the client plays in FRA, Sealed and
-        // Cube games; `mcts-net67-256-fixes` is the client's limited pilot.
+        // Cube games, under the menu search (`mcts_cfg`).
         "fixes" => EvalWeights::default().with_fra_fixes(),
         "net67-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
         p if mcts_cfg(p).is_some() => {
@@ -89,9 +89,10 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
 
 /// The 256-iteration search profiles' configurations. A
 /// `mcts-net67-menu-<windows>[-suffix..]` name is the ladder's menu search
-/// (`server::mcts::menu_profile`; priors from `CRAB_POLICY_NET`), and
-/// `mcts-net67-menu-mc-fixes` this tool's first name for
-/// `mcts-net67-menu-mc`, the client's limited pilot since 2026-11-02.
+/// (`server::mcts::menu_profile`; priors from `CRAB_POLICY_NET`):
+/// `mcts-net67-menu-mc-df-anm10` is the client's limited pilot since
+/// 2026-11-10, `mcts-net67-menu-mc` the one before it (2026-11-02), and
+/// `mcts-net67-menu-mc-fixes` this tool's first name for that one.
 fn mcts_cfg(profile: &str) -> Option<MctsConfig> {
     if profile.starts_with("mcts-net67-menu-") {
         assert!(
@@ -598,22 +599,26 @@ fn run_blunders(profiles: &[String]) {
             }
         }
         println!("{profile}: items {items_ok:.1}/{}, pairs {pair_ok:.1}/{pairs}", all.len());
-        // The first set's totals (the numbers notes before 2026-11-10
-        // quote), and the real-card items by pool.
-        let v1: Vec<usize> = (0..all.len()).filter(|&i| all[i].since == 1).collect();
-        if !v1.is_empty() && v1.len() != all.len() {
-            let s: f64 = v1.iter().map(|&i| rate(i)).sum();
-            let mut p1 = 0.0;
-            let mut n1 = 0;
-            for &i in &v1 {
+        // Each earlier version's totals, the numbers notes written then
+        // quote (22 items before 2026-11-10, 35 before 2026-11-12), and
+        // the real-card items by pool.
+        let newest = all.iter().map(|i| i.since).max().unwrap_or(1);
+        for v in 1..newest {
+            let vi: Vec<usize> = (0..all.len()).filter(|&i| all[i].since <= v).collect();
+            if vi.is_empty() {
+                continue;
+            }
+            let s: f64 = vi.iter().map(|&i| rate(i)).sum();
+            let (mut pv, mut nv) = (0.0, 0);
+            for &i in &vi {
                 if let Some(t) = all[i].twin.filter(|t| all[i].id < *t)
                     && let Some(j) = all.iter().position(|o| o.id == t)
                 {
-                    p1 += rate(i) * rate(j);
-                    n1 += 1;
+                    pv += rate(i) * rate(j);
+                    nv += 1;
                 }
             }
-            println!("    the original set: items {s:.1}/{}, pairs {p1:.1}/{n1}", v1.len());
+            println!("    through version {v}: items {s:.1}/{}, pairs {pv:.1}/{nv}", vi.len());
         }
         for c in [Cards::Plain, Cards::Sos, Cards::Fra] {
             let idx: Vec<usize> = (0..all.len()).filter(|&i| all[i].cards == c).collect();
@@ -622,7 +627,7 @@ fn run_blunders(profiles: &[String]) {
                 println!("    cards {:<5} {s:.1}/{}", c.name(), idx.len());
             }
         }
-        let areas = [Area::Attack, Area::HoldBack, Area::Block, Area::Removal, Area::Instant, Area::Mana, Area::Polarity];
+        let areas = [Area::Attack, Area::HoldBack, Area::Block, Area::Removal, Area::Instant, Area::Mana, Area::Polarity, Area::Lethal];
         for area in areas {
             let idx: Vec<usize> = (0..all.len()).filter(|&i| all[i].area == area).collect();
             if !idx.is_empty() {
@@ -747,7 +752,8 @@ fn main() {
              bot_puzzles --policy-agree GAMES [--threads T] [--seed S] [TEACHER]  (CRAB_NET's policy head)\n\n\
              PROFILE: pass (null control) | policy (CRAB_NET's policy head) | dflt | fixes | net67 | net67-fixes | mcts-dflt-256 | mcts-net67-256 |\n\
              \x20        mcts-net67-256-fixes (the client's limited pilot before 2026-11-02) |\n\
-             \x20        mcts-net67-menu-mc[-df][-an<N>].. (the client's limited pilot and the ladder's suffixes; needs CRAB_POLICY_NET) |\n\
+             \x20        mcts-net67-menu-mc[-df][-an<N>|-anm<N>].. (the menu search and the ladder's suffixes; needs CRAB_POLICY_NET;\n\
+             \x20        the client's limited pilot is mcts-net67-menu-mc-df-anm10, before 2026-11-10 mcts-net67-menu-mc) |\n\
              \x20        gang | atk-sim | net | mcts-net-deep\n\
              --certify reports which candidates are real puzzles. CRAB_NET overrides the champion."
         );
