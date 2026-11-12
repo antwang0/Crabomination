@@ -485,6 +485,34 @@ pub struct MctsConfig {
     /// cannot guard against it. Ladder suffix `-anm<hundredths>`; on
     /// wherever the menu search plays ([`MctsConfig::with_combat_fix`]).
     pub menu_anchor_material: bool,
+    /// A decided rollout's reward moves this far toward 0.5 per turn the
+    /// rollout ran before the game ended, so a win now outranks the same
+    /// win two turns later and a later loss a sooner one. Undecided leaves
+    /// are untouched. Without it every arm of a won position reads 1.000
+    /// and the tie goes to the prior — the blunder set's `ping_for_lethal`,
+    /// where the pass and the attack (which taps Prodigal Sorcerer) tied
+    /// the ping that wins at once (2026-11-12). 0.0 (the default) is off;
+    /// ladder suffix `-wd<hundredths>`.
+    pub win_discount: f64,
+    /// Read a net leaf from both seats and average `p(seat)` with
+    /// `1 − p(opponent)` (two-player only; twice the leaf's cost). The
+    /// champion's level drifts with the training seed (0.442 mean on a
+    /// 0.500 base rate) and the two readings' errors partly cancel: +0.013
+    /// AUC on every net offline (ML_NOTES "Why the champion reads 0.442").
+    /// Ladder suffix `-ts`.
+    pub two_seat_leaf: bool,
+    /// The menu search plays without Gumbel noise: the halving and the
+    /// final pick rank arms by prior plus σ(q̂) alone. The noise is a
+    /// training-time exploration device; at play time it breaks near-ties
+    /// at random, worst in the main phase, which has no anchor. Ladder
+    /// suffix `-nn`.
+    pub menu_no_noise: bool,
+    /// The menu's move keys tell same-named permanents apart by state —
+    /// power / toughness, damage, tapped — where by name alone "Murder the
+    /// grown Raider" and "Murder the plain one" are one move and the list
+    /// carries whichever the generator made first. Identical twins still
+    /// merge. Ladder suffix `-ks`.
+    pub menu_state_keys: bool,
 }
 
 /// Most picks that are not a declaration a combat window takes before it
@@ -530,6 +558,10 @@ impl Default for MctsConfig {
             menu_declare_fix: false,
             menu_anchor: -1.0,
             menu_anchor_material: false,
+            win_discount: 0.0,
+            two_seat_leaf: false,
+            menu_no_noise: false,
+            menu_state_keys: false,
         }
     }
 }
@@ -544,6 +576,21 @@ impl MctsConfig {
     /// 23.6). ML_NOTES "The combat window of the menu search".
     pub fn with_combat_fix(self) -> Self {
         Self { menu_declare_fix: true, menu_anchor: 0.10, menu_anchor_material: true, ..self }
+    }
+
+    /// The 2026-11-12 search fixes, on top of [`Self::with_combat_fix`]
+    /// (ML_NOTES "Five search flags, gated"): a decided rollout's reward
+    /// moves 0.02 per turn toward 0.5 ([`Self::win_discount`]), no Gumbel
+    /// noise at play time ([`Self::menu_no_noise`]), keys that tell
+    /// same-named permanents apart ([`Self::menu_state_keys`]) and no hard
+    /// kill on a trivial body at 10+ life ([`EvalWeights::hold_removal`]).
+    /// Each read NO LOSS against the combat-fixed search on SOS sealed
+    /// (pooled 50.0 / 49.9 / 49.8 / 50.25, paired 120 x 12, seeds 43 / 97,
+    /// `.ladder/s12`); together the blunder set reads 60 / 60 from 57.0.
+    pub fn with_search_fixes(self) -> Self {
+        let mut weights = self.weights;
+        weights.hold_removal = true;
+        Self { win_discount: 0.02, menu_no_noise: true, menu_state_keys: true, weights, ..self }
     }
 }
 
@@ -560,7 +607,11 @@ impl MctsConfig {
 /// from the policy-B slot and `-vb` the leaf from the value-B slot; `-df`
 /// is [`MctsConfig::menu_declare_fix`], `-an<N>` an anchor margin of N
 /// hundredths ([`MctsConfig::menu_anchor`]) and `-anm<N>` the same with the
-/// anchor read on the material leaf ([`MctsConfig::menu_anchor_material`]).
+/// anchor read on the material leaf ([`MctsConfig::menu_anchor_material`]);
+/// `-wd<N>` is [`MctsConfig::win_discount`] in hundredths, `-ts`
+/// [`MctsConfig::two_seat_leaf`], `-nn` [`MctsConfig::menu_no_noise`] and
+/// `-ks` [`MctsConfig::menu_state_keys`]; `-hr` is
+/// [`EvalWeights::hold_removal`] on the pilot's weights.
 pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let rest = name.strip_prefix("mcts-net67-menu-")?;
     let mut parts = rest.split('-');
@@ -570,9 +621,22 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let mut weights = EvalWeights::net_on_default().with_fra_fixes();
     let mut arms = MctsConfig::default().menu_arms;
     let (mut crn, mut declare_fix, mut anchor, mut anchor_material) = (false, false, -1.0f64, false);
+    let (mut win_discount, mut two_seat, mut no_noise, mut state_keys) = (0.0f64, false, false, false);
     for p in parts {
         if p == "crn" {
             crn = true;
+        } else if p == "hr" {
+            weights.hold_removal = true;
+        } else if p == "ts" {
+            two_seat = true;
+        } else if p == "nn" {
+            no_noise = true;
+        } else if p == "ks" {
+            state_keys = true;
+        } else if let Some(n) = p.strip_prefix("wd")
+            && let Ok(n) = n.parse::<u32>()
+        {
+            win_discount = n as f64 / 100.0;
         } else if p == "df" {
             declare_fix = true;
         } else if let Some(n) = p.strip_prefix("anm")
@@ -625,6 +689,10 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
         menu_declare_fix: declare_fix,
         menu_anchor: anchor,
         menu_anchor_material: anchor_material,
+        win_discount,
+        two_seat_leaf: two_seat,
+        menu_no_noise: no_noise,
+        menu_state_keys: state_keys,
         ..MctsConfig::default()
     })
 }
@@ -932,6 +1000,11 @@ impl MctsBot {
         Self { cfg, fallback: HeuristicBot::with_weights(cfg.weights), menu_declared: None, menu_predeclared: None }
     }
 
+    /// How the menu search keys its moves.
+    fn keying(&self) -> super::decision_menu::Keying {
+        super::decision_menu::Keying { structural: self.cfg.menu_declare_fix, state: self.cfg.menu_state_keys }
+    }
+
     /// Score a finished rollout on a 0..=1 scale.
     ///
     /// A decided game pins to the extremes; anything else is squashed from
@@ -964,6 +1037,12 @@ impl MctsBot {
         if self.cfg.weights.net_slot != 0
             && let Some(p) = super::net_eval::win_prob(g, seat, self.cfg.weights.net_slot)
         {
+            if self.cfg.two_seat_leaf
+                && g.players.len() == 2
+                && let Some(q) = super::net_eval::win_prob(g, 1 - seat, self.cfg.weights.net_slot)
+            {
+                return (p as f64 + 1.0 - q as f64) / 2.0;
+            }
             return p as f64;
         }
         // A pod leaf as `seat`'s share of the table (see
@@ -1024,6 +1103,7 @@ impl MctsBot {
         } else {
             self.cfg.horizon_turns
         };
+        let start_turn = g.turn_number;
         let stop_turn = g.turn_number + horizon;
         let net_rollouts = self.cfg.policy_rollouts && super::net_eval::slot_has_policy(self.cfg.policy_slot);
         let mut policy: Vec<Box<dyn Bot>> = (0..g.players.len())
@@ -1120,7 +1200,12 @@ impl MctsBot {
             3
         });
         drop(_t);
-        self.reward(&g, seat)
+        let r = self.reward(&g, seat);
+        if self.cfg.win_discount > 0.0 && g.is_game_over() {
+            let k = (self.cfg.win_discount * g.turn_number.saturating_sub(start_turn) as f64).min(0.5);
+            return if r > 0.5 { (r - k).max(0.5) } else if r < 0.5 { (r + k).min(0.5) } else { r };
+        }
+        r
     }
 
     /// The Gumbel root search (round 37): Sequential Halving over arms
@@ -1683,9 +1768,9 @@ impl MctsBot {
     /// off, nothing to decide, a forced move).
     fn menu_window(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         use super::decision_menu::Kind;
-        let df = self.cfg.menu_declare_fix;
-        let key = |a: &GameAction| super::decision_menu::key_with(state, seat, a, df);
-        let mut m = super::decision_menu::menu_with(state, seat, &self.cfg.weights, df)?;
+        let keying = self.keying();
+        let key = |a: &GameAction| super::decision_menu::key_with(state, seat, a, keying);
+        let mut m = super::decision_menu::menu_with(state, seat, &self.cfg.weights, keying)?;
         let here = (state.turn_number, state.step);
         let declaring = matches!(m.kind, Kind::Attack | Kind::Block);
         let attacking = m.kind == Kind::Attack;
@@ -1706,6 +1791,9 @@ impl MctsBot {
             if self.menu_predeclared.is_some_and(|(k, n)| k == here && n >= MENU_PREDECLARE_CAP) {
                 m.moves.retain(is_declaration);
             }
+        }
+        if self.cfg.weights.hold_removal && m.moves.iter().any(|a| !super::bot::wasted_removal(state, seat, a)) {
+            m.moves.retain(|a| !super::bot::wasted_removal(state, seat, a));
         }
         let window = match m.kind {
             Kind::Attack | Kind::Block => MENU_COMBAT,
@@ -1820,7 +1908,7 @@ impl MctsBot {
         let mut scored = super::policy_pilot::scored_moves(state, seat, m, self.cfg.policy_slot);
         if scored.is_empty() {
             let (mut arms, logits) = super::policy_pilot::ranked_arms(state, seat, m, self.cfg.policy_slot, k);
-            let key = |a: &GameAction| super::decision_menu::key_with(state, seat, a, self.cfg.menu_declare_fix);
+            let key = |a: &GameAction| super::decision_menu::key_with(state, seat, a, self.keying());
             if let Some(keep) = keep
                 && !arms.iter().any(|a| key(a) == keep)
                 && let Some(a) = m.moves.iter().find(|a| key(a) == keep)
@@ -1842,7 +1930,7 @@ impl MctsBot {
         // the policy ranked it out.
         if let Some(keep) = keep
             && let Some(i) = (0..scored.len())
-                .find(|&i| super::decision_menu::key_with(state, seat, &scored[i].0, self.cfg.menu_declare_fix) == keep)
+                .find(|&i| super::decision_menu::key_with(state, seat, &scored[i].0, self.keying()) == keep)
             && !order.contains(&i)
             && let Some(last) = order.last_mut()
         {
@@ -1888,10 +1976,14 @@ impl MctsBot {
     ) -> PriorStats {
         let n = arms.len();
         timing::count(&timing::DECISIONS, 1);
-        let noise: Vec<f64> = noise.unwrap_or_else(|| {
-            let mut r = draw_rng();
-            (0..n).map(|_| gumbel_noise(&mut r)).collect()
-        });
+        let noise: Vec<f64> = if self.cfg.menu_no_noise {
+            vec![0.0; n]
+        } else {
+            noise.unwrap_or_else(|| {
+                let mut r = draw_rng();
+                (0..n).map(|_| gumbel_noise(&mut r)).collect()
+            })
+        };
         let mut live: Vec<usize> = (0..n).collect();
         let mut visits = vec![0u32; n];
         let mut total = vec![0.0f64; n];
@@ -2594,6 +2686,15 @@ mod tests {
         let material = menu_profile("mcts-net67-menu-mc-df-anm10").expect("the material anchor");
         assert!(material.menu_anchor_material && (material.menu_anchor - 0.10).abs() < 1e-9 && material.menu_arms == 8);
         assert!(!fixed.menu_anchor_material);
+        let all = menu_profile("mcts-net67-menu-mc-df-anm10-wd2-ts-nn-ks").expect("the 2026-11-12 flags");
+        assert!((all.win_discount - 0.02).abs() < 1e-9 && all.two_seat_leaf && all.menu_no_noise && all.menu_state_keys);
+        assert!(all.menu_declare_fix && all.menu_anchor_material && (all.menu_anchor - 0.10).abs() < 1e-9);
+        assert!(fixed.win_discount == 0.0 && !fixed.two_seat_leaf && !fixed.menu_no_noise && !fixed.menu_state_keys);
+        // The builder the client and the lobby play is the profile gated.
+        let gated = menu_profile("mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr").expect("the adopted bundle");
+        let built = material.with_search_fixes();
+        assert_eq!(format!("{gated:?}"), format!("{built:?}"));
+        assert!(built.weights.hold_removal && !built.two_seat_leaf);
         assert!(menu_profile("mcts-net67-menu-mc-bogus").is_none());
         assert!(menu_profile("mcts-net67-256").is_none());
     }

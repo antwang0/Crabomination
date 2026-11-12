@@ -656,6 +656,17 @@ to `ENGINE_BACKLOG.md`'s last section, "Rollback / Undo — Phases 2–5".
 ## Bot / AI
 
 ### Playing stack — next steps after the combat fix (2026-11-11)
+**Done 2026-11-12** (ML_NOTES "Five search flags, gated"). Items 1, 2, 4 and
+5 were built as flags and gated. 1 (`-ts`) was flat, so it is not adopted and
+item 3 does not run. 2a, 2b, 4 (it was a missing sooner-win preference, not a
+missing arm: `-wd2`) and 5 (`-hr`) were adopted as a bundle,
+`MctsConfig::with_search_fixes`: 50.85 pooled vs the combat-fixed search, the
+blunder set 60 / 60 from 57.0. Item 6: the set has 60 items (the crack-back
+item was not built; no position isolates it). Item 7: the FRA leaf reads
+55 / 60 and the lobby's non-Cube pilot 51 / 60. Open: whether the lobby's
+non-Cube duels get the menu search (the user's call), and new blunder
+headroom now that the client scores 60 / 60.
+
 Numbers and reasoning: ML_NOTES "Why the champion reads 0.442 on a 0.500
 base rate", "The combat window of the menu search" (the combat fix
 `-df-anm10` is adopted and confirmed on SOS / FRA / cube) and "The

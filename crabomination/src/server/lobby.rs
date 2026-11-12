@@ -71,23 +71,25 @@ use super::{
 /// 56.5]** over this pilot without it on cube (seeds 43 / 97, 120 x 12,
 /// `.ladder/adopt`) — and since 2026-11-10 with the combat window's fix
 /// (`MctsConfig::with_combat_fix`): **55.4 / 54.7** on cube over the same
-/// search without it (`.ladder/cfx`).
+/// search without it (`.ladder/cfx`) — and since 2026-11-12 with the search
+/// fixes (`MctsConfig::with_search_fixes`, `.ladder/s12`).
 fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::Bot> {
     if seats > 2 {
         return Box::new(super::HeuristicBot::new());
     }
-    let mut weights = super::EvalWeights::net_on_default();
-    let mut cfg = MctsConfig { iterations: 256, horizon_turns: 3, ..MctsConfig::default() };
+    let weights = super::EvalWeights::net_on_default();
+    let mut cfg = MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() };
     if format == crate::net::LobbyFormat::Cube {
-        weights = weights.with_fra_fixes();
+        cfg.weights = cfg.weights.with_fra_fixes();
         let slot = super::net_eval::SLOT_CANDIDATE;
         if super::net_eval::slot_has_policy(slot) {
             cfg.menu_windows = super::mcts::MENU_MAIN | super::mcts::MENU_COMBAT;
             cfg.policy_slot = slot;
-            cfg = cfg.with_combat_fix();
+            // After the weights are final: the search fixes set one of them.
+            cfg = cfg.with_combat_fix().with_search_fixes();
         }
     }
-    Box::new(MctsBot::new(MctsConfig { weights, ..cfg }))
+    Box::new(MctsBot::new(cfg))
 }
 
 /// Callback invoked when a lobby-started match finishes, with its gamemode,

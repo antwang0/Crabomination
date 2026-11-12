@@ -968,6 +968,15 @@ pub struct EvalWeights {
     /// development the plain reserve cost us is already down). **49.9 /
     /// 49.8**, the same setup. NOT adopted.
     pub counter_read_board: bool,
+    /// Hold a hard kill (a targeted destroy or exile) rather than spend it
+    /// on a trivial body — an opposing creature of power 1 or less with no
+    /// activated, triggered or static ability — while the seat is at 10
+    /// life or more in a duel. The blunder set's
+    /// `hold_the_murder_at_high_life` (Murder on a 1/1 flier at 20) is
+    /// failed by `dflt` and the client alike (2026-11-12). Filters the
+    /// heuristic's cast candidates and, under the menu search, its arms.
+    /// Ladder suffix `-hr`.
+    pub hold_removal: bool,
     /// Attacks: an attacker whose worst block is a trade is sent when the
     /// defender is within two turns of our attackers' lethal, though the
     /// trade costs material. The sims price the trade as a loss even with the
@@ -1625,6 +1634,7 @@ impl EvalWeights {
             counter_reserve: false,
             counter_read: false,
             counter_read_board: false,
+            hold_removal: false,
             trade_pressure: false,
             clock_eval: 0,
             clock_net: 0,
@@ -1768,6 +1778,7 @@ impl EvalWeights {
             counter_reserve: false,
             counter_read: false,
             counter_read_board: false,
+            hold_removal: false,
             trade_pressure: false,
             clock_eval: 0,
             clock_net: 0,
@@ -1894,6 +1905,7 @@ impl EvalWeights {
             counter_reserve: false,
             counter_read: false,
             counter_read_board: false,
+            hold_removal: false,
             trade_pressure: false,
             clock_eval: 0,
             clock_net: 0,
@@ -3057,6 +3069,7 @@ impl EvalWeights {
             counter_reserve: false,
             counter_read: false,
             counter_read_board: false,
+            hold_removal: false,
             trade_pressure: false,
             clock_eval: 0,
             clock_net: 0,
@@ -3208,6 +3221,7 @@ impl EvalWeights {
             counter_reserve: false,
             counter_read: false,
             counter_read_board: false,
+            hold_removal: false,
             trade_pressure: false,
             clock_eval: 0,
             clock_net: 0,
@@ -3468,6 +3482,7 @@ impl EvalWeights {
             counter_reserve: false,
             counter_read: false,
             counter_read_board: false,
+            hold_removal: false,
             trade_pressure: false,
             clock_eval: 0,
             clock_net: 0,
@@ -3727,6 +3742,9 @@ impl Bot for HeuristicBot {
                 || super::activation_cap::over_activation_cap(state, seat, &step.action)
                 || super::activation_cap::over_cast_cap(state, seat, &step.action)
                 || super::loop_hazard::action_starts_loop(state, seat, &step, &self.weights)
+                // Every picker, not only the main phase's cast candidates
+                // (the defensive and end-step removal paths cast it too).
+                || (self.weights.hold_removal && wasted_removal(state, seat, &step.action))
             {
                 BotStep::plain(GameAction::PassPriority)
             } else {
@@ -8568,7 +8586,43 @@ pub(super) fn cast_candidates<'a>(
     if w.counter_reserve || ((w.counter_read || w.counter_read_board) && counter_read_holds(state, seat, w)) {
         counter_reserve_filter(state, seat, w, &mut out);
     }
+    if w.hold_removal {
+        out.retain(|(a, _)| !wasted_removal(state, seat, a));
+    }
     out
+}
+
+/// [`EvalWeights::hold_removal`]'s test: `a` casts a hard kill (its first
+/// leaf a targeted destroy or exile) at a trivial opposing creature — power
+/// 1 or less, no activated, triggered or static ability — while `seat` is
+/// in a duel at 10 life or more.
+pub(super) fn wasted_removal(state: &GameState, seat: usize, a: &GameAction) -> bool {
+    use crate::effect::Selector;
+    let GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. } = a else { return false };
+    if state.players.len() != 2 || state.players[seat].life < 10 {
+        return false;
+    }
+    let Some(spell) = state.players[seat].hand.iter().find(|c| c.id == *card_id) else { return false };
+    let mut e = &spell.definition.effect;
+    while let Effect::Seq(v) = e {
+        let Some(first) = v.first() else { return false };
+        e = first;
+    }
+    let targeted = |what: &Selector| matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. });
+    let hard = match e {
+        Effect::Destroy { what } | Effect::DestroyNoRegen { what } | Effect::Exile { what } => targeted(what),
+        _ => false,
+    };
+    if !hard {
+        return false;
+    }
+    let Some(c) = state.battlefield_find(*t) else { return false };
+    if c.controller == seat || !state.computed_is_creature(c) {
+        return false;
+    }
+    let power = state.computed_permanent(*t).map_or(c.power(), |cp| cp.power);
+    let d = &c.definition;
+    power <= 1 && d.activated_abilities.is_empty() && d.triggered_abilities.is_empty() && d.static_abilities.is_empty()
 }
 
 /// `EvalWeights::counter_read` / `counter_read_board`: is holding a

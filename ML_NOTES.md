@@ -9044,3 +9044,126 @@ other eleven it passes 10 / 10, so the set's top end has headroom of two
 items: harder positions (multi-step lethal, a trick held across a turn,
 real-card versions of the new shapes) are still owed if it is to rank
 pilots above this one.
+
+### Five search flags, gated (2026-11-12; TODO "Playing stack" items 1, 2, 4, 5)
+
+**`ping_for_lethal` is not a missing ability arm.** `decision_menu::base_moves`
+offers every non-mana activation, and `CRAB_MCTS_ROOT=1` shows the ping at the
+opponent among the main window's arms. Every arm reads q 1.000: each line wins
+by the horizon, so the pass (prior +5.92 against the ping's +5.27) takes the
+tie; in the attack window the anchor (the heuristic's attack, which taps the
+Sorcerer) stands, since nothing clears its 0.10 margin. The search has no
+preference for a sooner win.
+
+The flags, all off by default and each a ladder suffix on `menu_profile`:
+
+- **`-wd<N>`, `MctsConfig::win_discount`** (TODO 4): a decided rollout's
+  reward moves N/100 per turn toward 0.5, so a win now outranks the same win
+  later, and a later loss outranks a sooner one; undecided leaves are
+  unchanged. σ(q̂) is min-max normalized over the arms, so 0.02 is enough to
+  order them. Unit test `the_discounted_search_takes_the_win_now`: it passes
+  on uniform priors with the discount and fails without.
+- **`-ts`, `two_seat_leaf`** (TODO 1): leaf = (p(seat) + 1 − p(opp)) / 2, at
+  twice the leaf's cost.
+- **`-nn`, `menu_no_noise`** (TODO 2a): no Gumbel noise at play time.
+- **`-ks`, `menu_state_keys`** (TODO 2b): `decision_menu::Keying` replaces
+  the `structural` bool. At `state`, a permanent named in a key carries
+  `[p/t dN T]` when a same-named one differs from it; identical twins still
+  merge. Test `state_keys_tell_a_grown_twin_from_a_plain_one`.
+- **`-hr`, `EvalWeights::hold_removal`** (TODO 5): no targeted destroy or
+  exile on an opposing creature of power ≤ 1 with no activated, triggered or
+  static ability, while the seat is at 10+ life in a duel. It filters the
+  cast candidates, the bot's final action (the defensive and end-step paths
+  cast it too) and, under the menu search, its arms. Test
+  `the_hold_removal_heuristic_passes_the_pair`. Profile `fixes-hr` in
+  `bot_puzzles`.
+
+**Pre-registered before any cell** (`.ladder/s12/gate.sh`, the binary frozen
+in `.ladder/s12/`):
+- B = `mcts-net67-menu-mc-df-anm10`; A = B plus one flag. SOS sealed, paired
+  120 × 12, seeds 43 / 97.
+- NO LOSS = pooled ≥ 49.5. GAIN = pooled ≥ 51.0 with both seeds above 50.
+- Blunder bar: the arm's 60-item score (10 reps) is no more than 1.0 below
+  B's.
+- **`wd2` / `nn` / `ks` / `hr` are adopted on NO LOSS plus the blunder bar.
+  `ts` only on GAIN plus the blunder bar** (it doubles the leaf).
+- If two or more are adopted, one confirmation pair runs, the bundle vs B.
+  NO LOSS keeps the bundle; a LOSS keeps only the adopted arm with the
+  highest pooled.
+- **TODO item 3 (value training toward a two-seat target) runs only if `ts`
+  reads GAIN.**
+
+The same run reads TODO 7: B on the FRA leaf, and the lobby's two-seat
+non-Cube pilot `mcts-net67-256`, on the 60 items. The Cube pilot is B's
+configuration on the champion leaf, so B's own read stands for it.
+
+**The blunder set, 48 → 60 (same day, before the reads below).** Twelve more
+items (`since: 3`): lethal in two steps, `pump_then_attack_for_lethal` and
+`remove_the_blocker_then_attack` (plain, plus an SOS version with Unsubtle
+Mockery); `hold_the_trick_for_combat` (Giant Growth kept off the main phase,
+horizon 1); and SOS / FRA versions of the 48-item shapes — flier over the
+ground / not into reach, menace past one / not into two, a first striker's
+free block, block-and-pump (Lumaret's Favor, Academic Ascent). The null pilot
+fails each pair and solo item, and `dflt` passes 11 of the 12; the one it
+misses, `pump_then_attack_for_lethal`, the client passes. Not built: "an
+attack that loses to the crack-back two turns out", for which no position
+both isolates the shape and keeps the null pilot failing. An `--only` that
+keeps one half of a pair no longer panics in `bot_puzzles`.
+
+**Blunder reads, 60 items, 10 reps** (`.ladder/s12/bl_*.txt`, frozen binary):
+
+| profile | items / 60 | pairs / 14 | through v2 (/ 35) | fails (rate) |
+|---|---|---|---|---|
+| B = `-df-anm10` (client, Cube) | 57.0 | 13 | 35.0 | ping 1/10, hold 0, remove-blocker 8/10, SOS remove-blocker 1/10 |
+| B`-wd2` | **58.7** | 13 | 35.0 | ping 7/10, hold 0 |
+| B`-ts` | 56.8 | 13 | 34.8 | ping 2/10, hold 0, Rancor 8/10, remove-blocker 8/10, SOS 0 |
+| B`-nn` | 57.0 | 13 | 35.0 | ping 0, hold 0, SOS remove-blocker 0 |
+| B`-ks` | 56.9 | 13 | 35.0 | ping 1/10, hold 0, remove-blocker 6/10, SOS 2/10 |
+| B`-hr` | 58.1 | **14** | 35.0 | ping 3/10, remove-blocker 8/10, SOS 0 |
+| B`-wd2-ts-nn-ks-hr` | **60.0** | **14** | 35.0 | — |
+| B on the FRA leaf (client, FRA) | 55.0 | 13 | 32.0 | deathtouch-blocks-biggest, flash blocker, Rancor, Bolt-face 9/10, ping 4/10, hold, SOS remove-blocker 7/10 |
+| `mcts-net67-256` (lobby, non-Cube duels) | 51.0 | 10 | 31.0 | nine items, incl. both deathtouch-attack items and the flash blocker |
+| `dflt` / `fixes` / `fixes-hr` | 55 / 56 / 57 | 12 / 13 / 14 | 32 / 33 / 33 | — |
+
+Every arm clears the blunder bar (B − 1.0 = 56.0). The discount repairs the
+"win now" family: the ping, and both remove-the-blocker items, which share
+the shape (all lines win, the fastest is the right one). `-hr` repairs the
+hold and nothing else. Item 7's two readings: **the FRA leaf's client fails
+three items of the original 22 that the champion leaf passes** (it attacks
+into nothing new, but misses the deathtouch block on the 5/5, the flash
+blocker and Rancor on its own creature). **The lobby's non-Cube pilot scores
+51 / 60**, the old 256-iteration search without the menu windows or the fix.
+Both are recorded and not acted on here: the FRA leaf is a different net, and
+the lobby pilot is a separate adoption question for the user.
+
+**The gate** (`.ladder/s12/gate_*.txt`, `confirm_*.txt`; paired 120 × 12, SOS
+sealed, A vs B):
+
+| arm | s43 | s97 | pooled | read | adopted |
+|---|---|---|---|---|---|
+| `-wd2` | 50.6 [48.7, 52.4] | 49.4 [47.7, 51.1] | 50.0 | NO LOSS | yes |
+| `-ts` | 49.3 [47.6, 51.0] | 50.8 [49.1, 52.6] | 50.05 | no GAIN | **no** |
+| `-nn` | 50.1 [48.5, 51.8] | 49.7 [48.1, 51.4] | 49.9 | NO LOSS | yes |
+| `-ks` | 50.2 [48.4, 52.0] | 49.4 [47.7, 51.0] | 49.8 | NO LOSS | yes |
+| `-hr` | 50.1 [48.4, 51.8] | 50.4 [48.8, 52.1] | 50.25 | NO LOSS | yes |
+| bundle `-wd2-nn-ks-hr` | 51.8 [50.2, 53.5] | 49.9 [48.1, 51.6] | **50.85** | NO LOSS | **yes** |
+
+**Adopted: the bundle**, as `MctsConfig::with_search_fixes()` (after
+`with_combat_fix()`) in the client's `local_bot` and the lobby's Cube
+`default_bot`. A test pins the builder to the gated profile string. None of
+the four flags moves the ladder alone; together they read 50.85, under GAIN
+(seed 97 is 49.9). What they buy is the blunder set (60 / 60 with `-ts`;
+`-ts` added nothing to the items there). The case for them is correctness,
+at no measured cost.
+
+**The two-seat leaf is closed.** It is flat on the ladder, and its blunder
+read is 0.2 under B, at twice the leaf's cost. So TODO 3 (value training
+toward a two-seat target) does not run under its pre-registered rule. The
++0.013 AUC calibration read does not reach play, which fits the confound
+noted then: the opponent's view holds its real hand.
+
+**What is left:** the lobby's non-Cube duel pilot `mcts-net67-256` scores
+51 / 60, and the FRA-leaf client 55 / 60. The first is an adoption question
+for the user (the menu search needs the policy net in the candidate slot).
+The second is a property of the FRA net: the same search on the champion
+leaf passes the three items.

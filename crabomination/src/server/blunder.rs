@@ -1067,6 +1067,132 @@ fn the_four_drop_over_the_one_drop() -> Position {
     Position { state: g, checks: vec![Check::Casts(ogre)] }
 }
 
+// ── Added 2026-11-12, later: lethal in two steps, a trick held for the
+// opponent's attack, and the new shapes on real cards. Every body is on the
+// battlefield already (no enters trigger fires); Tackle Artist's and
+// Hungry Graffalon's counters need spells cast, which nobody does here. ──
+
+/// A 2/2, Giant Growth and a Forest, the opponent at 5 with no creatures:
+/// attack and grow for exactly 5.
+fn pump_then_attack_for_lethal() -> Position {
+    let mut g = base();
+    g.players[1].life = 5;
+    lands(&mut g, 0, catalog::forest, 1);
+    g.add_card_to_hand(0, catalog::giant_growth());
+    ready(&mut g, 0, body("Bear", 2, 2));
+    Position { state: g, checks: vec![Check::Wins] }
+}
+
+/// A 3/3 against one 2/2, the opponent at 3, Murder in hand: kill the
+/// blocker, then attack.
+fn remove_the_blocker_then_attack() -> Position {
+    let mut g = base();
+    g.players[1].life = 3;
+    lands(&mut g, 0, catalog::swamp, 3);
+    g.add_card_to_hand(0, catalog::murder());
+    ready(&mut g, 0, body("Ogre", 3, 3));
+    ready(&mut g, 1, body("Guard", 2, 2));
+    Position { state: g, checks: vec![Check::Wins] }
+}
+
+/// Seat 0's main with a 2/2, Giant Growth and a Forest against an
+/// untapped 3/3. Cast in the main phase the Growth does nothing; held, it
+/// wins whichever combat comes (the 3/3 blocks our attack, or attacks
+/// into our block), so the 3/3 dies and the 2/2 lives.
+fn hold_the_trick_for_combat() -> Position {
+    let mut g = base();
+    lands(&mut g, 0, catalog::forest, 1);
+    g.add_card_to_hand(0, catalog::giant_growth());
+    let bear = ready(&mut g, 0, body("Bear", 2, 2));
+    let ogre = ready(&mut g, 1, body("Ogre", 3, 3));
+    Position { state: g, checks: vec![Check::Dies(ogre), Check::Survives(bear)] }
+}
+
+fn sos_flier_attacks_over_the_ground() -> Position {
+    let mut g = base();
+    let flier = ready(&mut g, 0, catalog::soaring_stoneglider());
+    ready(&mut g, 1, catalog::tackle_artist());
+    Position { state: g, checks: vec![Check::Attacks(flier)] }
+}
+
+/// Rearing Embermare (4/5, reach) blocks the 4/3 flier and survives it.
+fn sos_no_flier_attack_into_reach() -> Position {
+    let mut g = base();
+    let flier = ready(&mut g, 0, catalog::soaring_stoneglider());
+    ready(&mut g, 1, catalog::rearing_embermare());
+    Position { state: g, checks: vec![Check::NeverAttacks(flier)] }
+}
+
+fn sos_menace_past_a_lone_blocker() -> Position {
+    let mut g = base();
+    let brute = ready(&mut g, 0, catalog::ulna_alley_shopkeep());
+    ready(&mut g, 1, catalog::hungry_graffalon());
+    Position { state: g, checks: vec![Check::Attacks(brute)] }
+}
+
+/// Two Hungry Graffalons (3/4) double-block the 2/3 and lose nothing.
+fn sos_no_menace_attack_into_two_blockers() -> Position {
+    let mut g = base();
+    let brute = ready(&mut g, 0, catalog::ulna_alley_shopkeep());
+    for _ in 0..2 {
+        ready(&mut g, 1, catalog::hungry_graffalon());
+    }
+    Position { state: g, checks: vec![Check::NeverAttacks(brute)] }
+}
+
+/// Practiced Scrollsmith (3/2 first strike) blocks Tackle Artist (4/3):
+/// its 3 lands first and the Artist never strikes back.
+fn sos_first_striker_blocks_for_free() -> Position {
+    let mut g = their_turn();
+    let mine = ready(&mut g, 0, catalog::practiced_scrollsmith());
+    let theirs = ready(&mut g, 1, catalog::tackle_artist());
+    they_attack(&mut g, &[theirs]);
+    Position { state: g, checks: vec![Check::Dies(theirs), Check::Survives(mine)] }
+}
+
+/// Zealous Lorecaster (4/4) attacks into Eager Glyphmage (3/3) with
+/// Lumaret's Favor (+2/+4) up: block and pump.
+fn sos_grow_the_blocker() -> Position {
+    let mut g = their_turn();
+    lands(&mut g, 0, catalog::forest, 2);
+    g.add_card_to_hand(0, catalog::lumarets_favor());
+    let mine = ready(&mut g, 0, catalog::eager_glyphmage());
+    let theirs = ready(&mut g, 1, catalog::zealous_lorecaster());
+    they_attack(&mut g, &[theirs]);
+    Position { state: g, checks: vec![Check::Dies(theirs), Check::Survives(mine)] }
+}
+
+/// Zealous Lorecaster against Eager Glyphmage, the opponent at 4,
+/// Unsubtle Mockery (4 to a creature) in hand: kill it, then attack.
+fn sos_remove_the_blocker_then_attack() -> Position {
+    let mut g = base();
+    g.players[1].life = 4;
+    lands(&mut g, 0, catalog::mountain, 3);
+    g.add_card_to_hand(0, catalog::unsubtle_mockery());
+    ready(&mut g, 0, catalog::zealous_lorecaster());
+    ready(&mut g, 1, catalog::eager_glyphmage());
+    Position { state: g, checks: vec![Check::Wins] }
+}
+
+fn fra_flier_attacks_over_the_ground() -> Position {
+    let mut g = base();
+    let flier = ready(&mut g, 0, catalog::shatterwing_pegasus());
+    ready(&mut g, 1, catalog::wrecking_gecko());
+    Position { state: g, checks: vec![Check::Attacks(flier)] }
+}
+
+/// Keeper of the Quiet Hour (3/2) attacks into Grim Repriser (2/2) with
+/// Academic Ascent (+2/+2) up: block and pump.
+fn fra_grow_the_blocker() -> Position {
+    let mut g = their_turn();
+    lands(&mut g, 0, catalog::plains, 2);
+    g.add_card_to_hand(0, catalog::academic_ascent());
+    let mine = ready(&mut g, 0, catalog::grim_repriser());
+    let theirs = ready(&mut g, 1, catalog::keeper_of_the_quiet_hour());
+    they_attack(&mut g, &[theirs]);
+    Position { state: g, checks: vec![Check::Dies(theirs), Check::Survives(mine)] }
+}
+
 /// Every item, in a stable order.
 pub fn items() -> Vec<Blunder> {
     vec![
@@ -1553,6 +1679,126 @@ pub fn items() -> Vec<Blunder> {
             build: the_four_drop_over_the_one_drop,
             prompt: "four lands, a 4-drop and a 1-drop in hand — cast the 4-drop",
         },
+        Blunder {
+            id: "pump_then_attack_for_lethal",
+            twin: None,
+            area: Area::Lethal,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: pump_then_attack_for_lethal,
+            prompt: "2/2 + Giant Growth, opponent at 5, empty board — attack and grow",
+        },
+        Blunder {
+            id: "remove_the_blocker_then_attack",
+            twin: None,
+            area: Area::Lethal,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 0,
+            build: remove_the_blocker_then_attack,
+            prompt: "3/3 vs one 2/2, opponent at 3, Murder — kill the blocker, attack",
+        },
+        Blunder {
+            id: "hold_the_trick_for_combat",
+            twin: None,
+            area: Area::Instant,
+            cards: Cards::Plain,
+            since: 3,
+            horizon: 1,
+            build: hold_the_trick_for_combat,
+            prompt: "2/2 + Giant Growth vs an untapped 3/3 — keep the Growth for combat",
+        },
+        Blunder {
+            id: "sos_flier_attacks_over_the_ground",
+            twin: Some("sos_no_flier_attack_into_reach"),
+            area: Area::Attack,
+            cards: Cards::Sos,
+            since: 3,
+            horizon: 0,
+            build: sos_flier_attacks_over_the_ground,
+            prompt: "Soaring Stoneglider (4/3 flier) vs Tackle Artist — attack",
+        },
+        Blunder {
+            id: "sos_no_flier_attack_into_reach",
+            twin: Some("sos_flier_attacks_over_the_ground"),
+            area: Area::Attack,
+            cards: Cards::Sos,
+            since: 3,
+            horizon: 0,
+            build: sos_no_flier_attack_into_reach,
+            prompt: "Soaring Stoneglider vs Rearing Embermare (4/5 reach) — don't attack",
+        },
+        Blunder {
+            id: "sos_menace_past_a_lone_blocker",
+            twin: Some("sos_no_menace_attack_into_two_blockers"),
+            area: Area::Attack,
+            cards: Cards::Sos,
+            since: 3,
+            horizon: 0,
+            build: sos_menace_past_a_lone_blocker,
+            prompt: "Ulna Alley Shopkeep (2/3 menace) vs one Hungry Graffalon — attack",
+        },
+        Blunder {
+            id: "sos_no_menace_attack_into_two_blockers",
+            twin: Some("sos_menace_past_a_lone_blocker"),
+            area: Area::Attack,
+            cards: Cards::Sos,
+            since: 3,
+            horizon: 0,
+            build: sos_no_menace_attack_into_two_blockers,
+            prompt: "Ulna Alley Shopkeep vs two Hungry Graffalons — don't attack",
+        },
+        Blunder {
+            id: "sos_first_striker_blocks_for_free",
+            twin: None,
+            area: Area::Block,
+            cards: Cards::Sos,
+            since: 3,
+            horizon: 0,
+            build: sos_first_striker_blocks_for_free,
+            prompt: "Tackle Artist attacks into Practiced Scrollsmith (3/2 first strike) — block",
+        },
+        Blunder {
+            id: "sos_grow_the_blocker",
+            twin: None,
+            area: Area::Instant,
+            cards: Cards::Sos,
+            since: 3,
+            horizon: 0,
+            build: sos_grow_the_blocker,
+            prompt: "Zealous Lorecaster attacks, Eager Glyphmage + Lumaret's Favor — block and pump",
+        },
+        Blunder {
+            id: "sos_remove_the_blocker_then_attack",
+            twin: None,
+            area: Area::Lethal,
+            cards: Cards::Sos,
+            since: 3,
+            horizon: 0,
+            build: sos_remove_the_blocker_then_attack,
+            prompt: "Zealous Lorecaster vs Eager Glyphmage, opponent at 4, Unsubtle Mockery — kill it, attack",
+        },
+        Blunder {
+            id: "fra_flier_attacks_over_the_ground",
+            twin: None,
+            area: Area::Attack,
+            cards: Cards::Fra,
+            since: 3,
+            horizon: 0,
+            build: fra_flier_attacks_over_the_ground,
+            prompt: "Shatterwing Pegasus (2/3 flier) vs Wrecking Gecko — attack",
+        },
+        Blunder {
+            id: "fra_grow_the_blocker",
+            twin: None,
+            area: Area::Instant,
+            cards: Cards::Fra,
+            since: 3,
+            horizon: 0,
+            build: fra_grow_the_blocker,
+            prompt: "Keeper of the Quiet Hour attacks, Grim Repriser + Academic Ascent — block and pump",
+        },
     ]
 }
 
@@ -1637,6 +1883,57 @@ mod tests {
             let v = judge(it, &mut bot);
             assert!(v.ok(), "failed to {:?}: {:?}", v.failed, v.actions);
         }
+    }
+
+    /// `MctsConfig::win_discount`: with Prodigal Sorcerer and the opponent
+    /// at 1, every arm of the bare search reads 1.000 (each line wins by
+    /// the horizon) and the tie went to the pass or to the attack that taps
+    /// the Sorcerer (the client's pilot 6 / 10, 2026-11-12). Discounted,
+    /// the ping that wins now is the best arm. No net: uniform priors, the
+    /// material leaf, and no Gumbel noise (`menu_no_noise`) — at 32
+    /// iterations on flat priors the noise knocks the 1.000 arm out of the
+    /// halving early. Without the discount the same search fails it.
+    #[test]
+    fn the_discounted_search_takes_the_win_now() {
+        use crate::server::mcts::{MENU_COMBAT, MENU_MAIN, MctsBot, MctsConfig};
+        let all = items();
+        let it = all.iter().find(|i| i.id == "ping_for_lethal").expect("the item");
+        for _ in 0..4 {
+            let mut bot = MctsBot::new(
+                MctsConfig {
+                    iterations: 32,
+                    horizon_turns: 3,
+                    menu_windows: MENU_MAIN | MENU_COMBAT,
+                    win_discount: 0.02,
+                    menu_no_noise: true,
+                    ..MctsConfig::default()
+                }
+                .with_combat_fix(),
+            );
+            let v = judge(it, &mut bot);
+            assert!(v.ok(), "failed to {:?}: {:?}", v.failed, v.actions);
+        }
+    }
+
+    /// `EvalWeights::hold_removal`: the heuristic holds Murder for a 1/1
+    /// flier at 20 life and still spends it at 1, where the flier is
+    /// lethal; without the flag it Murders the flier at 20.
+    #[test]
+    fn the_hold_removal_heuristic_passes_the_pair() {
+        use crate::server::bot::{EvalWeights, HeuristicBot};
+        let all = items();
+        let run = |id: &str, w: EvalWeights| {
+            let it = all.iter().find(|i| i.id == id).expect("the item");
+            let v = judge(it, &mut HeuristicBot::with_weights(w));
+            if !v.ok() {
+                eprintln!("{id}: {:?} {:?}", v.failed, v.actions);
+            }
+            v.ok()
+        };
+        let hold = EvalWeights { hold_removal: true, ..EvalWeights::default() };
+        assert!(run("hold_the_murder_at_high_life", hold));
+        assert!(run("murder_the_flier_at_one_life", hold));
+        assert!(!run("hold_the_murder_at_high_life", EvalWeights::default()), "the control spends it");
     }
 
     /// The benchmark's honesty condition: a pilot that does nothing scores

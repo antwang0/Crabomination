@@ -112,11 +112,27 @@ pub fn prompt_name(d: &Decision) -> &'static str {
 /// The moves `seat` has right now, or `None` when it has nothing to decide
 /// (not its priority, no prompt of its own, no declaration due).
 pub fn menu(g: &GameState, seat: usize, w: &EvalWeights) -> Option<Menu> {
-    menu_with(g, seat, w, false)
+    menu_with(g, seat, w, Keying::PLAIN)
 }
 
-/// [`menu`], its moves deduplicated by [`key_with`] at `structural`.
-pub fn menu_with(g: &GameState, seat: usize, w: &EvalWeights, structural: bool) -> Option<Menu> {
+/// How [`key_with`] tells two moves apart beyond their names.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct Keying {
+    /// A block declaration keeps which blockers share an attacker.
+    pub structural: bool,
+    /// A permanent named in a move carries its state (power / toughness,
+    /// damage, tapped) when another permanent of the same name differs
+    /// from it in one of them.
+    pub state: bool,
+}
+
+impl Keying {
+    /// Names alone.
+    pub const PLAIN: Keying = Keying { structural: false, state: false };
+}
+
+/// [`menu`], its moves deduplicated by [`key_with`] at `keying`.
+pub fn menu_with(g: &GameState, seat: usize, w: &EvalWeights, keying: Keying) -> Option<Menu> {
     if g.is_game_over() {
         return None;
     }
@@ -141,7 +157,7 @@ pub fn menu_with(g: &GameState, seat: usize, w: &EvalWeights, structural: bool) 
     let mut moves: Vec<GameAction> = Vec::new();
     let mut keys: Vec<String> = Vec::new();
     let push = |a: GameAction, moves: &mut Vec<GameAction>, keys: &mut Vec<String>| {
-        let k = key_with(g, seat, &a, structural);
+        let k = key_with(g, seat, &a, keying);
         if !keys.contains(&k) {
             keys.push(k);
             moves.push(a);
@@ -445,26 +461,30 @@ fn block_declarations(g: &GameState, seat: usize) -> (Vec<GameAction>, bool) {
 /// target dropped where the spell or ability takes none, and a prompt's
 /// "engine default" answers spelled out.
 pub fn key(g: &GameState, seat: usize, a: &GameAction) -> String {
-    key_with(g, seat, a, false)
+    key_with(g, seat, a, Keying::PLAIN)
 }
 
-/// [`key`]; at `structural` a block declaration keeps which blockers share
-/// an attacker. By names alone "the 1/4 and the 2/2 each block a different
+/// [`key`]; at `keying.structural` a block declaration keeps which blockers
+/// share an attacker, and at `keying.state` a named permanent carries its
+/// state where a same-named one differs from it. By names alone "the 1/4 and the 2/2 each block a different
 /// Raider" and "both block one Raider" are one move, so against same-named
 /// attackers (tokens) a list carried only the first the generator made —
 /// the double block (the blunder set's `control_keeps_its_blockers_home`,
 /// 2026-11-10). Same-named attackers stay interchangeable.
-pub fn key_with(g: &GameState, seat: usize, a: &GameAction, structural: bool) -> String {
-    if structural && let GameAction::DeclareBlockers(v) = a {
-        let name = |id: CardId| g.find_card_anywhere(id).map_or("?", |c| c.definition.name);
-        let mut groups: Vec<(CardId, Vec<&str>)> = Vec::new();
+pub fn key_with(g: &GameState, seat: usize, a: &GameAction, keying: Keying) -> String {
+    if keying.structural && let GameAction::DeclareBlockers(v) = a {
+        let name = |id: CardId| -> String {
+            let n = g.find_card_anywhere(id).map_or("?", |c| c.definition.name);
+            if keying.state { format!("{n}{}", state_tag(g, id)) } else { n.to_string() }
+        };
+        let mut groups: Vec<(CardId, Vec<String>)> = Vec::new();
         for &(blocker, attacker) in v {
             match groups.iter_mut().find(|(x, _)| *x == attacker) {
                 Some((_, bl)) => bl.push(name(blocker)),
                 None => groups.push((attacker, vec![name(blocker)])),
             }
         }
-        let mut out: Vec<(&str, Vec<&str>)> = groups
+        let mut out: Vec<(String, Vec<String>)> = groups
             .into_iter()
             .map(|(attacker, mut bl)| {
                 bl.sort_unstable();
@@ -488,11 +508,27 @@ pub fn key_with(g: &GameState, seat: usize, a: &GameAction, structural: bool) ->
     {
         clear_targets(&mut a);
     }
-    name_ids(g, &format!("{a:?}"))
+    name_ids(g, &format!("{a:?}"), keying.state)
 }
 
-/// `CardId(n)` → the card's name wherever it is.
-fn name_ids(g: &GameState, text: &str) -> String {
+/// A battlefield permanent's state, `[p/t dmg T]`, when another permanent
+/// of its name differs from it in power, toughness, damage or tapped;
+/// empty otherwise, so identical twins (and every unique name) key as
+/// before.
+fn state_tag(g: &GameState, id: CardId) -> String {
+    let Some(c) = g.battlefield_find(id) else { return String::new() };
+    let sig = |x: &crate::card::CardInstance| (x.power(), x.toughness(), x.damage, x.tapped);
+    let mine = sig(c);
+    let differs = g.battlefield.iter().any(|o| o.id != id && o.definition.name == c.definition.name && sig(o) != mine);
+    if !differs {
+        return String::new();
+    }
+    format!("[{}/{} d{}{}]", mine.0, mine.1, mine.2, if mine.3 { " T" } else { "" })
+}
+
+/// `CardId(n)` → the card's name wherever it is (with its [`state_tag`] at
+/// `state`).
+fn name_ids(g: &GameState, text: &str, state: bool) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(i) = rest.find("CardId(") {
@@ -503,7 +539,12 @@ fn name_ids(g: &GameState, text: &str) -> String {
             return out;
         };
         match tail[..j].parse::<u32>() {
-            Ok(n) => out.push_str(card_name(g, CardId(n))),
+            Ok(n) => {
+                out.push_str(card_name(g, CardId(n)));
+                if state {
+                    out.push_str(&state_tag(g, CardId(n)));
+                }
+            }
             Err(_) => out.push_str(&rest[i..i + 7 + j + 1]),
         }
         rest = &tail[j + 1..];
@@ -1075,6 +1116,8 @@ mod tests {
     /// the first" read the same by names, so the list kept only one of
     /// them. The structural key tells them apart and still merges the two
     /// ways of pairing interchangeable attackers.
+    const STRUCT: Keying = Keying { structural: true, state: false };
+
     #[test]
     fn structural_block_keys_keep_which_blockers_share_an_attacker() {
         use crate::card::{CardDefinition, CardType};
@@ -1115,12 +1158,12 @@ mod tests {
         let crossed = GameAction::DeclareBlockers(vec![(warden, r2), (guard, r1)]);
         let double = GameAction::DeclareBlockers(vec![(warden, r1), (guard, r1)]);
         assert_eq!(key(&g, 0, &split), key(&g, 0, &double), "by names the two are one move");
-        assert_ne!(key_with(&g, 0, &split, true), key_with(&g, 0, &double, true));
-        assert_eq!(key_with(&g, 0, &split, true), key_with(&g, 0, &crossed, true), "same-named attackers stay interchangeable");
+        assert_ne!(key_with(&g, 0, &split, STRUCT), key_with(&g, 0, &double, STRUCT));
+        assert_eq!(key_with(&g, 0, &split, STRUCT), key_with(&g, 0, &crossed, STRUCT), "same-named attackers stay interchangeable");
         let w = EvalWeights::default();
-        let has = |m: &Menu, a: &GameAction| m.moves.iter().any(|x| key_with(&g, 0, x, true) == key_with(&g, 0, a, true));
+        let has = |m: &Menu, a: &GameAction| m.moves.iter().any(|x| key_with(&g, 0, x, STRUCT) == key_with(&g, 0, a, STRUCT));
         let flat = menu(&g, 0, &w).expect("block");
-        let full = menu_with(&g, 0, &w, true).expect("block");
+        let full = menu_with(&g, 0, &w, STRUCT).expect("block");
         assert!(has(&full, &split) && has(&full, &double), "{:#?}", full.moves);
         assert!(!(has(&flat, &split) && has(&flat, &double)), "the name key drops one of them");
         assert!(full.moves.len() > flat.moves.len());
@@ -1165,5 +1208,39 @@ mod tests {
         let double = key(&g, 0, &GameAction::DeclareBlockers(vec![(b1, brute), (b2, brute)]));
         assert!(m.moves.iter().any(|a| key(&g, 0, a) == double), "{:#?}", m.moves);
         assert!(!m.moves.contains(&GameAction::DeclareBlockers(vec![(b1, brute)])), "a lone block on menace is illegal");
+    }
+
+    /// At `Keying::state` a Murder on the grown one of two same-named
+    /// Raiders is a different move from one on the plain Raider; identical
+    /// twins still merge, and without the flag the key is as before.
+    #[test]
+    fn state_keys_tell_a_grown_twin_from_a_plain_one() {
+        use crate::card::{CardDefinition, CardType, CounterType};
+        let mut g = crate::game::two_player_game();
+        let body = || CardDefinition {
+            name: "Raider",
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        };
+        let plain = g.add_card_to_battlefield(1, body());
+        let twin = g.add_card_to_battlefield(1, body());
+        let grown = g.add_card_to_battlefield(1, body());
+        g.battlefield_find_mut(grown).unwrap().add_counters(CounterType::PlusOnePlusOne, 3);
+        let murder = g.add_card_to_hand(0, crate::catalog::murder());
+        let on = |t| GameAction::CastSpell {
+            card_id: murder,
+            target: Some(Target::Permanent(t)),
+            additional_targets: Vec::new(),
+            mode: None,
+            x_value: None,
+        };
+        let st = Keying { structural: true, state: true };
+        assert_eq!(key(&g, 0, &on(plain)), key(&g, 0, &on(grown)), "by names the two are one move");
+        assert_eq!(key_with(&g, 0, &on(plain), STRUCT), key(&g, 0, &on(plain)));
+        assert_ne!(key_with(&g, 0, &on(plain), st), key_with(&g, 0, &on(grown), st));
+        assert_eq!(key_with(&g, 0, &on(plain), st), key_with(&g, 0, &on(twin), st), "identical twins merge");
+        assert!(key_with(&g, 0, &on(grown), st).contains("Raider[5/5 d0]"), "{}", key_with(&g, 0, &on(grown), st));
     }
 }

@@ -71,6 +71,8 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
         // Cube games, under the menu search (`mcts_cfg`).
         "fixes" => EvalWeights::default().with_fra_fixes(),
         "net67-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
+        // `EvalWeights::hold_removal` on the bundle (2026-11-12).
+        "fixes-hr" => EvalWeights { hold_removal: true, ..EvalWeights::default().with_fra_fixes() },
         p if mcts_cfg(p).is_some() => {
             return Some(Box::new(MctsBot::new(mcts_cfg(profile).expect("an MCTS profile"))));
         }
@@ -559,7 +561,8 @@ fn run_blunders(profiles: &[String]) {
     if let Some(c) = &cards_only {
         all.retain(|i| i.cards.name() == c);
     }
-    let pairs = all.iter().filter(|i| i.twin.is_some_and(|t| i.id < t)).count();
+    // A pair counts only when `--only` / `--cards` kept both halves.
+    let pairs = all.iter().filter(|i| i.twin.is_some_and(|t| i.id < t && all.iter().any(|o| o.id == t))).count();
     println!("blunder set: {} items ({pairs} twin pairs), {reps} rep(s) each\n", all.len());
     for profile in profiles {
         if bot_for(profile).is_none() {
@@ -593,8 +596,9 @@ fn run_blunders(profiles: &[String]) {
         // two rates, which is 0/1 for a deterministic pilot.
         let mut pair_ok = 0.0;
         for (i, it) in all.iter().enumerate() {
-            if let Some(t) = it.twin.filter(|t| it.id < *t) {
-                let j = all.iter().position(|o| o.id == t).expect("twin");
+            if let Some(t) = it.twin.filter(|t| it.id < *t)
+                && let Some(j) = all.iter().position(|o| o.id == t)
+            {
                 pair_ok += rate(i) * rate(j);
             }
         }
