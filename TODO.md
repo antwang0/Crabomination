@@ -657,8 +657,10 @@ to `ENGINE_BACKLOG.md`'s last section, "Rollback / Undo — Phases 2–5".
 
 ### Playing stack — next steps after the combat fix (2026-11-11)
 Numbers and reasoning: ML_NOTES "Why the champion reads 0.442 on a 0.500
-base rate" and "The combat window of the menu search" (the combat fix
-`-df-anm10` is adopted and confirmed on SOS / FRA / cube). In order:
+base rate", "The combat window of the menu search" (the combat fix
+`-df-anm10` is adopted and confirmed on SOS / FRA / cube) and "The
+blunder set, 35 → 48 items". Item 4 comes first; then 1-3 in order;
+5-7 as they fit:
 1. **Two-seat leaf.** A search-side flag averaging the leaf's
    `win_prob(seat)` with `1 − win_prob(opp)`. Calibration: +0.013 AUC on
    every net, but confounded by the opponent's view holding its real hand.
@@ -675,6 +677,27 @@ base rate" and "The combat window of the menu search" (the combat fix
    the champion recipe, value only, with a policy trunk separate from the
    value's (the shared trunk cost the value ~2 leaf points in the re-read).
    Read the result on leaf pairs, calibration, then the ladder.
+4. **An ability arm in the menu search's main window** (added 2026-11-12;
+   do first). The 48-item blunder set's `ping_for_lethal`: the client
+   misses a Prodigal Sorcerer ping for the win 4 times in 10, `dflt` never.
+   The main window offers no activated abilities; the old `sink_arm` read
+   51.6 / 49.2 / 50.6. Offer hostile-targeted and lethal-relevant
+   activations as arms; read the blunder set, then a paired SOS gate
+   against `-df-anm10`.
+5. **Held removal.** `hold_the_murder_at_high_life`: the client and `dflt`
+   both Murder a 1/1 flier at 20 life (0 / 10; the pair scores 0). Needs a
+   later-value read of the removal against the target's threat (the
+   `save_the_removal` lead). Expect a ladder cost from a crude rule; gate it.
+6. **Harder blunder items.** The client reads 46.6 / 48, two items of
+   headroom. Owed: lethal in several steps (pump then attack, remove the
+   blocker then attack), a trick held through the opponent's turn instead
+   of cast main-phase, an attack that loses to the crack-back two turns
+   out, and SOS / FRA versions of the 2026-11-12 shapes (the policy
+   trained on SOS cards, so plain bodies confound a failure).
+7. **The FRA and cube pilots on the 48 items.** The FRA champion leaf
+   (`CRAB_NET=nets/fra-champion.safetensors`) and the cube pilot have not
+   been on the new items; read them before item 4's gate so its baseline
+   covers every format the menu search plays.
 No training run without the user's go-ahead.
 
 ### One net for every mode, Commander included (2026-09-28)
