@@ -9241,3 +9241,78 @@ were measured there only with the search. The policy net trained on SOS
 sealed, and its gain on the Modern decklists, whose cards it has barely
 seen, says the search and its fixes carry most of it, not the priors. That
 split is unread.
+
+### Why the search spends the answer early (2026-11-13)
+
+The question was which half misses the three "save the answer" items, the
+rollout pilot or the leaf. Instrument: the ignored test
+`mcts::tests::save_the_answer_diagnostic`, run with `--run-ignored only
+--no-capture`. For each item it branches at the end of the seat's turn:
+- hold: the answer kept;
+- spend: the wrong play made, i.e. the 2/2 cast or the Murder spent on it.
+
+From each branch it runs the search's own three-turn rollouts under both
+rollout pilots. It records how often the threat was answered, the champion
+leaf split by that outcome, and the end board. Then it plays the branch out
+with the heuristic for the true result. Four leaf pairs from the end boards
+join `bot_puzzles --leaf-pairs`.
+
+**The counter items: the rollouts are right, the leaf is wrong.** Both
+rollout pilots counter the threat 100 / 100 on the hold branch, and the
+hold wins 40 / 40 played out against 0 / 40 for the spend. The leaf on the
+end boards (opponent's upkeep, turn 4):
+
+| end board | leaf | material | leaf, hand card removed | leaf, graveyards emptied |
+|---|---|---|---|---|
+| plain hold: 6 life, 2/2, nothing against | 0.110 | −4 | — | 0.134 |
+| plain spend: the same + Counterspell in hand, their Craw Wurm out | 0.112 | −48 | 0.051 | — |
+| SOS hold: 6 life, Tabulator, nothing against | 0.051 | 0 | — | 0.182 |
+| SOS spend: 2 life, Mana Sculpt in hand, their Embermare out | **0.100** | −42 | 0.064 | — |
+
+Two misreads, each enough to tie or invert the pair. The material
+evaluator orders every row correctly.
+1. **A dead card in hand counts as live.** A Counterspell with nothing left
+   to counter adds +0.061, and Mana Sculpt +0.036. Leaf pair
+   `the_countered_wurm`: on the neutral shell the Counterspell offsets
+   almost all of the Wurm (+0.010, against +0.142 for
+   `their_wurm_at_six_life`). Compare `a_card_in_hand` at +0.329.
+2. **A countered threat in the opponent's graveyard counts against the
+   seat**: −0.131 on SOS cards (the champion learned graveyards matter in
+   SOS), −0.024 on plain. On the neutral shell the SOS pair is ordered
+   right (+0.135); only the real end board, with the graveyards, inverts.
+
+Changing the step to the seat's main, equalizing the lands or setting the
+turn number changes neither pair's order. The FRA leaf orders all four
+pairs right.
+
+**The Murder item: the heuristic's instant-speed removal, and the item as
+first written was unsound.** Without a creature for the seat, holding the
+Murder also lost (0 / 40): the 2/2 wins slowly once the Wurm is dead. The
+item now gives the seat a 3/3 Guard that walls the 2/2; hold then wins
+40 / 40 and spend 0 / 40, and the leaf orders the branches (heuristic
+rollouts 0.635 against 0.237). The client still fails:
+- It attacks with the Guard, as the combat anchor's line does.
+- With the Guard tapped through the opponent's turn, the heuristic Murders
+  the 2/2 in the opponent's upkeep. In the rollouts (heuristic: Wurm
+  answered 0 / 20, hold = spend 0.288) and in play (0 / 20 played out), the
+  opponent-turn window is the heuristic's, not searched.
+- On the seat's turn, the post-combat arms then tie (0.585 / 0.579) and the
+  policy prior, 1.9 logits toward the Murder, decides.
+
+Cheap fixes tried on the four items (5 reps):
+- `-h5` (five-turn rollouts): the SOS counter item 2 / 5, the rest 0.
+- `-rh` (new: heuristic rollouts, `MctsConfig::heuristic_rollouts`): 0.
+
+**Leads, in order:**
+1. **The leaf's dead-card and graveyard reads.** Both are about what the
+   value net was trained on, so the fix is data: positions where a card in
+   hand has no use, and countered or killed threats in the opponent's
+   graveyard. That is a training run, so it is the user's call. A cheaper
+   check first: a leaf mixed with material, which orders every row here;
+   gate it on the ladder, since material lost to the leaf by +4 there.
+2. **The heuristic's removal timing on the opponent's turn**
+   (`save_the_removal`): it fires on the first threat in view with the
+   bigger one in the opponent's hand. A rule that reads the opponent's
+   hand under the default non-honest play would be a cheat outside
+   benchmarks. Under honest play the question is what the bot can infer,
+   which needs the belief head.

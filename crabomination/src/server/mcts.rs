@@ -609,8 +609,10 @@ impl MctsConfig {
 /// hundredths ([`MctsConfig::menu_anchor`]) and `-anm<N>` the same with the
 /// anchor read on the material leaf ([`MctsConfig::menu_anchor_material`]);
 /// `-wd<N>` is [`MctsConfig::win_discount`] in hundredths, `-ts`
-/// [`MctsConfig::two_seat_leaf`], `-nn` [`MctsConfig::menu_no_noise`] and
-/// `-ks` [`MctsConfig::menu_state_keys`]; `-hr` is
+/// [`MctsConfig::two_seat_leaf`], `-nn` [`MctsConfig::menu_no_noise`],
+/// `-ks` [`MctsConfig::menu_state_keys`] and `-rh`
+/// [`MctsConfig::heuristic_rollouts`] (the scored pilot on the profile's
+/// weights plays the rollouts, not the uniform baseline); `-hr` is
 /// [`EvalWeights::hold_removal`] on the pilot's weights.
 pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let rest = name.strip_prefix("mcts-net67-menu-")?;
@@ -622,9 +624,12 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let mut arms = MctsConfig::default().menu_arms;
     let (mut crn, mut declare_fix, mut anchor, mut anchor_material) = (false, false, -1.0f64, false);
     let (mut win_discount, mut two_seat, mut no_noise, mut state_keys) = (0.0f64, false, false, false);
+    let mut heuristic_rollouts = false;
     for p in parts {
         if p == "crn" {
             crn = true;
+        } else if p == "rh" {
+            heuristic_rollouts = true;
         } else if p == "hr" {
             weights.hold_removal = true;
         } else if p == "ts" {
@@ -686,6 +691,7 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
         menu_confident: conf,
         menu_crn: crn,
         policy_rollouts: pol.is_some(),
+        heuristic_rollouts,
         menu_declare_fix: declare_fix,
         menu_anchor: anchor,
         menu_anchor_material: anchor_material,
@@ -2694,9 +2700,221 @@ mod tests {
         let gated = menu_profile("mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr").expect("the adopted bundle");
         let built = material.with_search_fixes();
         assert_eq!(format!("{gated:?}"), format!("{built:?}"));
-        assert!(built.weights.hold_removal && !built.two_seat_leaf);
+        assert!(built.weights.hold_removal && !built.two_seat_leaf && !built.heuristic_rollouts);
+        assert!(menu_profile("mcts-net67-menu-mc-df-anm10-rh").is_some_and(|c| c.heuristic_rollouts && c.horizon_turns == 3));
         assert!(menu_profile("mcts-net67-menu-mc-bogus").is_none());
         assert!(menu_profile("mcts-net67-256").is_none());
+    }
+
+    /// Diagnostic for the blunder set's "save the answer" items (ML_NOTES
+    /// "Why the search spends the answer early"): from the end of the
+    /// seat's turn, holding the answer vs spending it, what the search's
+    /// own three-turn rollouts do with it and what the leaf reads, beside
+    /// the result when the game is played out. Needs the champion leaf:
+    /// `cargo nextest run -p crabomination --lib --run-ignored only
+    /// -E 'test(save_the_answer_diagnostic)' --no-capture`.
+    #[test]
+    #[ignore = "diagnostic; needs nets/champion.safetensors"]
+    fn save_the_answer_diagnostic() {
+        use super::super::blunder;
+        use super::super::net_eval::{self, SLOT_BEST};
+        use crate::game::{Target, drain_stack};
+        net_eval::load_slot(SLOT_BEST, std::path::Path::new("../nets/champion.safetensors")).expect("the champion");
+        let n: usize = std::env::var("CRAB_DIAG_N").ok().and_then(|v| v.parse().ok()).unwrap_or(100);
+        let pass_turn = |g: &mut GameState| {
+            let mut f = 300;
+            while f > 0 && g.active_player_idx == 0 && !g.is_game_over() {
+                f -= 1;
+                if g.perform_action(GameAction::PassPriority).is_err() {
+                    break;
+                }
+            }
+        };
+        let cast = |g: &mut GameState, name: &str, target: Option<Target>| {
+            let id = g.players[0].hand.iter().find(|c| c.definition.name == name).expect(name).id;
+            g.perform_action(GameAction::CastSpell { card_id: id, target, additional_targets: vec![], mode: None, x_value: None })
+                .unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            drain_stack(g);
+        };
+        // (pilot, prompt answers by the pilot's policy)
+        let play = |g0: &GameState, heuristic: bool, stop_turn: u32| -> GameState {
+            let mut g = g0.clone();
+            let w = EvalWeights::net_on_default().with_fra_fixes();
+            let mut bots: Vec<HeuristicBot> = (0..2)
+                .map(|_| if heuristic { HeuristicBot::with_weights(w) } else { HeuristicBot::uniform_baseline() })
+                .collect();
+            let mut fuel = 4000;
+            while !g.is_game_over() && g.turn_number < stop_turn && fuel > 0 {
+                fuel -= 1;
+                if let Some(p) = g.pending_decision.as_ref() {
+                    let ans = if heuristic {
+                        super::super::bot::decide_pending_policy(&g, p.acting_player(), &w, &p.decision, false)
+                    } else {
+                        AutoDecider.decide(&p.decision)
+                    };
+                    if g.perform_action(GameAction::SubmitDecision(ans)).is_err() {
+                        break;
+                    }
+                    continue;
+                }
+                let mut acted = false;
+                for (s, b) in bots.iter_mut().enumerate() {
+                    if let Some(a) = b.next_action(&g, s)
+                        && g.perform_action(a).is_ok()
+                    {
+                        acted = true;
+                        break;
+                    }
+                }
+                if !acted && g.perform_action(GameAction::PassPriority).is_err() {
+                    break;
+                }
+            }
+            g
+        };
+        let leaf = |g: &GameState| match g.game_over {
+            Some(Some(0)) => 1.0,
+            Some(_) => 0.0,
+            None => net_eval::win_prob(g, 0, SLOT_BEST).expect("the leaf") as f64,
+        };
+        let items = blunder::items();
+        let build = |id: &str| (items.iter().find(|i| i.id == id).expect(id).build)().state;
+        // (item, the threat's name, the spend)
+        let attack_with_the_guard = |g: &mut GameState| {
+            let mut f = 50;
+            while g.step != crate::game::types::TurnStep::DeclareAttackers && f > 0 {
+                f -= 1;
+                if g.perform_action(GameAction::PassPriority).is_err() {
+                    break;
+                }
+            }
+            let guard = g.battlefield.iter().find(|c| c.definition.name == "Guard").expect("Guard").id;
+            g.perform_action(GameAction::DeclareAttackers(vec![crate::game::Attack {
+                attacker: guard,
+                target: crate::game::AttackTarget::Player(1),
+            }]))
+            .expect("the attack");
+            drain_stack(g);
+        };
+        type Case = (&'static str, &'static str, Box<dyn Fn(&mut GameState)>);
+        let cases: Vec<Case> = vec![
+            ("hold_up_the_counter_over_the_two_drop", "Craw Wurm", Box::new(move |g: &mut GameState| cast(g, "Drake", None))),
+            (
+                "save_the_murder_for_the_wurm+attack",
+                "Craw Wurm",
+                Box::new(move |g: &mut GameState| {
+                    let scout = g.battlefield.iter().find(|c| c.definition.name == "Scout").expect("Scout").id;
+                    cast(g, "Murder", Some(Target::Permanent(scout)))
+                }),
+            ),
+            (
+                "save_the_murder_for_the_wurm",
+                "Craw Wurm",
+                Box::new(move |g: &mut GameState| {
+                    let scout = g.battlefield.iter().find(|c| c.definition.name == "Scout").expect("Scout").id;
+                    cast(g, "Murder", Some(Target::Permanent(scout)))
+                }),
+            ),
+            (
+                "sos_hold_up_the_counter_over_the_three_drop",
+                "Rearing Embermare",
+                Box::new(move |g: &mut GameState| cast(g, "Textbook Tabulator", None)),
+            ),
+        ];
+        for (id, threat, spend) in &cases {
+            let mut start = build(id.trim_end_matches("+attack"));
+            if id.ends_with("+attack") {
+                attack_with_the_guard(&mut start);
+            }
+            let stop = start.turn_number + 3;
+            let threat_id = start.players[1].hand.iter().find(|c| c.definition.name == *threat).expect("threat").id;
+            let mut hold = start.clone();
+            pass_turn(&mut hold);
+            let mut tap = start.clone();
+            spend(&mut tap);
+            pass_turn(&mut tap);
+            for (branch, g0) in [("hold", &hold), ("spend", &tap)] {
+                for heuristic in [false, true] {
+                    let (mut answered, mut sum, mut sum_a, mut sum_l) = (0usize, 0.0, 0.0, 0.0);
+                    for _ in 0..n {
+                        let g = play(g0, heuristic, stop);
+                        let v = leaf(&g);
+                        sum += v;
+                        let landed = g.battlefield_find(threat_id).is_some();
+                        if landed { sum_l += v } else { answered += 1; sum_a += v }
+                    }
+                    let mean = |s: f64, k: usize| if k == 0 { f64::NAN } else { s / k as f64 };
+                    eprintln!(
+                        "{id} {branch:5} rollout {:9}: q {:.3}  threat answered {answered:3}/{n}  leaf | answered {:.3}  | landed {:.3}",
+                        if heuristic { "heuristic" } else { "uniform" },
+                        sum / n as f64,
+                        mean(sum_a, answered),
+                        mean(sum_l, n - answered),
+                    );
+                }
+                {
+                    let g = play(g0, true, stop);
+                    let side = |s: usize| {
+                        let bf: Vec<String> = g
+                            .battlefield
+                            .iter()
+                            .filter(|c| c.controller == s && !c.definition.is_land())
+                            .map(|c| format!("{} {}/{}", c.definition.name, c.power(), c.toughness()))
+                            .collect();
+                        let hand: Vec<&str> = g.players[s].hand.iter().map(|c| c.definition.name).collect();
+                        format!("life {} board {bf:?} hand {hand:?}", g.players[s].life)
+                    };
+                    eprintln!(
+                        "    end board T{} {:?}: seat [{}]  opp [{}]  leaf {:.3}  material {}",
+                        g.turn_number,
+                        g.step,
+                        side(0),
+                        side(1),
+                        leaf(&g),
+                        super::super::bot::eval_material(&g, 0, &EvalWeights::default())
+                    );
+                    // The same board with one thing changed: the seat's main
+                    // instead of the opponent's upkeep; equal lands; turn 6.
+                    let mut mine = g.clone();
+                    mine.active_player_idx = 0;
+                    mine.priority.player_with_priority = 0;
+                    mine.step = crate::game::types::TurnStep::PreCombatMain;
+                    let mut lands = g.clone();
+                    let (l0, l1) = (0..2usize)
+                        .map(|s| lands.battlefield.iter().filter(|c| c.controller == s && c.definition.is_land()).count())
+                        .fold((0, 0), |(a, b), n| if a == 0 && b == 0 { (n, usize::MAX) } else { (a, n) });
+                    for _ in l0..l1.min(l0 + 10) {
+                        let id = lands.add_card_to_battlefield(0, crate::catalog::island());
+                        lands.clear_sickness(id);
+                    }
+                    let mut later = g.clone();
+                    later.turn_number = 6;
+                    let mut no_hand = g.clone();
+                    no_hand.players[0].hand.clear();
+                    let mut no_gy = g.clone();
+                    for p in &mut no_gy.players {
+                        p.graveyard.clear();
+                    }
+                    let gy: Vec<Vec<&str>> =
+                        g.players.iter().map(|p| p.graveyard.iter().map(|c| c.definition.name).collect()).collect();
+                    eprintln!(
+                        "      leaf if: seat's hand emptied {:.3}  graveyards emptied {:.3}  (graveyards {gy:?})",
+                        leaf(&no_hand),
+                        leaf(&no_gy)
+                    );
+                    eprintln!(
+                        "      leaf if: seat's main {:.3}  lands {}->{} {:.3}  turn 6 {:.3}",
+                        leaf(&mine),
+                        l0,
+                        l1,
+                        leaf(&lands),
+                        leaf(&later)
+                    );
+                }
+                let wins = (0..n.min(40)).filter(|_| play(g0, true, u32::MAX).game_over == Some(Some(0))).count();
+                eprintln!("{id} {branch:5} played out (heuristic): {wins}/{} wins", n.min(40));
+            }
+        }
     }
 
     /// The halving plan is the budget policy, so its arithmetic is the

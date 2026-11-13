@@ -433,6 +433,64 @@ pub fn leaf_pairs() -> Vec<LeafPair> {
                 })
             },
         },
+        // ── Added 2026-11-13: the end boards of the "save the answer" items
+        // (`save_the_answer_diagnostic`), where the leaf missed the threat. ──
+        LeafPair {
+            id: "their_wurm_at_six_life",
+            prompt: "6 life and my 2/2, against the same with their Craw Wurm",
+            build: || {
+                pair(|g, better| {
+                    g.players[0].life = 6;
+                    ready(g, 0, body("Drake", 2, 2));
+                    if !better {
+                        ready(g, 1, catalog::craw_wurm());
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "the_countered_wurm",
+            prompt: "6 life and my 2/2, against the same plus Counterspell in hand and their Craw Wurm out",
+            build: || {
+                pair(|g, better| {
+                    g.players[0].life = 6;
+                    ready(g, 0, body("Drake", 2, 2));
+                    if !better {
+                        g.add_card_to_hand(0, catalog::counterspell());
+                        ready(g, 1, catalog::craw_wurm());
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "sos_their_embermare_at_six_life",
+            prompt: "6 life and my Textbook Tabulator, against the same with their Rearing Embermare",
+            build: || {
+                pair(|g, better| {
+                    g.players[0].life = 6;
+                    ready(g, 0, catalog::textbook_tabulator());
+                    if !better {
+                        ready(g, 1, catalog::rearing_embermare());
+                    }
+                })
+            },
+        },
+        LeafPair {
+            id: "sos_the_countered_embermare",
+            prompt: "6 life and my Tabulator, against 2 life, Mana Sculpt in hand and their Rearing Embermare out",
+            build: || {
+                pair(|g, better| {
+                    ready(g, 0, catalog::textbook_tabulator());
+                    if better {
+                        g.players[0].life = 6;
+                    } else {
+                        g.players[0].life = 2;
+                        g.add_card_to_hand(0, catalog::mana_sculpt());
+                        ready(g, 1, catalog::rearing_embermare());
+                    }
+                })
+            },
+        },
     ]
 }
 
@@ -1226,12 +1284,16 @@ fn hold_up_the_counter_over_the_two_drop() -> Position {
     Position { state: g, checks: vec![Check::Dies(wurm)] }
 }
 
-/// The seat's main at 20 with Murder and three Swamps; the opponent has a
-/// 2/2 out and six Forests behind a Craw Wurm. Murder the 2/2 now and the
-/// Wurm is unanswered; held, it kills the Wurm on their turn.
+/// The seat's main at 20 with Murder, three Swamps and a 3/3 that walls
+/// the opponent's 2/2; the opponent has six Forests behind a Craw Wurm.
+/// Murder the 2/2 now and the Wurm runs over the 3/3; held, it kills the
+/// Wurm on their turn. (Without the 3/3 both lines lose: the 2/2 wins
+/// slowly once the Wurm is dead — `save_the_answer_diagnostic` plays the
+/// lines out.)
 fn save_the_murder_for_the_wurm() -> Position {
     let mut g = base();
     lands(&mut g, 0, catalog::swamp, 3);
+    ready(&mut g, 0, body("Guard", 3, 3));
     let murder = g.add_card_to_hand(0, catalog::murder());
     ready(&mut g, 1, body("Scout", 2, 2));
     lands(&mut g, 1, catalog::forest, 6);
@@ -1901,7 +1963,7 @@ pub fn items() -> Vec<Blunder> {
             since: 4,
             horizon: 1,
             build: save_the_murder_for_the_wurm,
-            prompt: "Murder, their 2/2 out and Craw Wurm in hand — Murder the Wurm",
+            prompt: "Murder and a 3/3, their 2/2 out and Craw Wurm in hand — Murder the Wurm",
         },
         Blunder {
             id: "attack_then_bolt_for_lethal",

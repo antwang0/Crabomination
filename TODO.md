@@ -668,8 +668,14 @@ lobby's Modern / SOS duels now play the client's pilot (61.75 / 61.9 pooled
 over the old one; ML_NOTES "The lobby's non-Cube duels"). The blunder set has
 65 items; the client reads 62 / 65, failing the three "save the answer for
 the bigger threat" items (ML_NOTES "The blunder set, 60 → 65").
-**Next:** read which half misses them, the rollout pilot or the leaf
-(`save_the_removal`), then fix that half and gate the fix.
+Read 2026-11-13 (ML_NOTES "Why the search spends the answer early"): the
+counter items are the leaf: a dead card in hand counts as live, and a
+countered threat in the opponent's graveyard counts against the seat. The
+rollouts counter correctly. The Murder item is the heuristic's
+opponent-turn removal timing, plus a policy prior that decides a tie.
+**Next:** a material-mixed leaf (orders every end board right) gated on the
+ladder; then, with the user's go-ahead, value data that covers dead cards
+and graveyards.
 
 Numbers and reasoning: ML_NOTES "Why the champion reads 0.442 on a 0.500
 base rate", "The combat window of the menu search" (the combat fix
