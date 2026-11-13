@@ -9167,3 +9167,77 @@ noted then: the opponent's view holds its real hand.
 for the user (the menu search needs the policy net in the candidate slot).
 The second is a property of the FRA net: the same search on the champion
 leaf passes the three items.
+
+### The blunder set, 60 → 65: saving a resource for the bigger threat (2026-11-12)
+
+The client scored 60 / 60 once the search fixes landed, which left no
+headroom. Version 4 adds five items, all outcome-checked (no twin needed;
+the null pilot fails each):
+
+- `save_the_counter_for_the_wurm` (instant, the opponent's turn): Grizzly
+  Bears on the stack, Craw Wurm to follow, one Counterspell.
+- `hold_up_the_counter_over_the_two_drop` (mana, horizon 1): at 6 life, two
+  Islands, Counterspell and a two-mana 2/2; the opponent holds Craw Wurm.
+  `sos_hold_up_the_counter_over_the_three_drop` is the same item on SOS
+  cards (Mana Sculpt, Textbook Tabulator, Rearing Embermare).
+- `save_the_murder_for_the_wurm` (removal, horizon 1): Murder, the
+  opponent's 2/2 out and Craw Wurm in hand.
+- `attack_then_bolt_for_lethal` (lethal): a 3/3 flier and Bolt against 6
+  life behind a ground 2/2.
+
+The test `the_saved_resource_items_are_passable` shows the right line exists
+and the default heuristic fails the two whose wrong play it makes:
+- For the counter items, the default heuristic that casts nothing on its
+  own turn passes.
+- For the Murder item, a scripted pilot passes. The heuristic that casts
+  nothing on its own turn still spends the Murder on the 2/2 in the
+  opponent's upkeep.
+
+Reads (`.ladder/lob/bl_*.txt`, 10 reps; the SOS item read separately, 5
+reps):
+
+| pilot | 64 items | SOS hold-up | fails |
+|---|---|---|---|
+| client (`-df-anm10-wd2-nn-ks-hr`) | 62.0 | 0 / 5 | hold-up, save-the-Murder |
+| lobby non-Cube `mcts-net67-256` | 52.1 | 0 / 5 | 12, incl. all four new plain items but the counter save |
+| `dflt` / `fixes-hr` (1 rep) | 57 / 59 | 0 / 5 | hold-up, save-the-Murder (dflt) |
+
+Every pilot gets the counter right when the choice is on the stack. None
+holds mana for it a turn ahead, and none keeps Murder past a small body
+when the big one is in the opponent's hand. The search is not blind to the
+threat: honest redeal is off by default, so its rollouts deal the opponent's
+real hand, Wurm included. The miss is judgement, either the rollout pilot
+not countering in the rollout or the leaf valuing a 2/2 on board over a
+counter in hand. Which one is unread. This is the open lead
+`save_the_removal`, now with an instrument: the client is at 62 / 65.
+
+### The lobby's non-Cube duels get the menu search (2026-11-12)
+
+Before this, Modern and SOS lobby duels played `mcts-net67-256`: the plain
+256-rollout search on the net leaf, on the default weights. That pilot read
+51 / 60 on the blunder set (52.1 / 64 with version 4). Pre-registered in
+`.ladder/lob/gate.sh`:
+- A = the Cube lobby's and the client's pilot
+  (`mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr`), B = `mcts-net67-256`.
+- Per format, adopt on NO LOSS. The FRA fixes ride along, so a read is of
+  the bundle.
+- New ladder pool `--decks modern`: the Modern lobby's two decklists
+  (`demo::brg_combo_deck`, `goryos_vengeance_deck`), each as a mirror.
+
+| format | s43 | s97 | pooled |
+|---|---|---|---|
+| Modern (BRG / Goryo's mirrors, 720 each) | 60.0 [57.9, 62.1] | 63.5 [61.4, 65.7] | **61.75** |
+| SOS colleges (5 mirrors, 288 each) | 62.7 [60.8, 64.7] | 61.1 [59.2, 63.0] | **61.9** |
+
+**GAIN on both, and every deck row is above 50 on both seeds** (lowest:
+BRG s97 55.7, Witherbloom s97 56.2). This is the largest pilot gain since
+the net leaf (+4.25), and it says the lobby's non-Cube duels were the
+weakest bot anyone could meet.
+
+Adopted: `lobby::default_bot` plays the pilot in every two-seat Cube,
+Modern and SOS lobby when the policy net is loaded. Without the policy net,
+Modern and SOS keep the plain search on the default weights; the FRA fixes
+were measured there only with the search. The policy net trained on SOS
+sealed, and its gain on the Modern decklists, whose cards it has barely
+seen, says the search and its fixes carry most of it, not the priors. That
+split is unread.

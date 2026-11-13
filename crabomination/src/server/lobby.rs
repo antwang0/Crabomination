@@ -60,8 +60,7 @@ use super::{
 /// A Cube duel plays with the FRA bot fixes bundle
 /// ([`super::EvalWeights::with_fra_fixes`]): this pilot with them beat it
 /// without them **53.3 % [51.7, 54.9] / 54.1 % [52.6, 55.7]** on cube
-/// (seeds 97 / 43, 200 x 8, round 85, `.ladder/r85`). Modern and the SOS
-/// college decks are unmeasured and stay on the default.
+/// (seeds 97 / 43, 200 x 8, round 85, `.ladder/r85`).
 ///
 /// A Cube duel also searches its main phases and combat over the complete
 /// move list on the phase-5 policy's priors (`MctsConfig::menu_windows`,
@@ -73,21 +72,36 @@ use super::{
 /// (`MctsConfig::with_combat_fix`): **55.4 / 54.7** on cube over the same
 /// search without it (`.ladder/cfx`) — and since 2026-11-12 with the search
 /// fixes (`MctsConfig::with_search_fixes`, `.ladder/s12`).
+///
+/// Since 2026-11-12 a Modern or SOS duel plays the same pilot (the fixes
+/// bundle, the menu search, its combat and search fixes) when the policy
+/// net is loaded. Over the plain 256-rollout search it read **Modern 60.0
+/// [57.9, 62.1] / 63.5 [61.4, 65.7]** (the lobby's two decklists as
+/// mirrors) and **SOS colleges 62.7 [60.8, 64.7] / 61.1 [59.2, 63.0]**
+/// (seeds 43 / 97, paired 1440 games a cell, `.ladder/lob`). Without the
+/// policy net those duels keep the plain search on the default weights,
+/// a combination measured as the pre-2026-11-12 lobby pilot.
 fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::Bot> {
     if seats > 2 {
         return Box::new(super::HeuristicBot::new());
     }
+    use crate::net::LobbyFormat;
     let weights = super::EvalWeights::net_on_default();
     let mut cfg = MctsConfig { iterations: 256, horizon_turns: 3, weights, ..MctsConfig::default() };
-    if format == crate::net::LobbyFormat::Cube {
+    let cube = format == LobbyFormat::Cube;
+    if cube {
         cfg.weights = cfg.weights.with_fra_fixes();
-        let slot = super::net_eval::SLOT_CANDIDATE;
-        if super::net_eval::slot_has_policy(slot) {
-            cfg.menu_windows = super::mcts::MENU_MAIN | super::mcts::MENU_COMBAT;
-            cfg.policy_slot = slot;
-            // After the weights are final: the search fixes set one of them.
-            cfg = cfg.with_combat_fix().with_search_fixes();
+    }
+    let slot = super::net_eval::SLOT_CANDIDATE;
+    if matches!(format, LobbyFormat::Cube | LobbyFormat::Modern | LobbyFormat::Sos) && super::net_eval::slot_has_policy(slot) {
+        if !cube {
+            // Modern and SOS measured the fixes bundle only with the search.
+            cfg.weights = cfg.weights.with_fra_fixes();
         }
+        cfg.menu_windows = super::mcts::MENU_MAIN | super::mcts::MENU_COMBAT;
+        cfg.policy_slot = slot;
+        // After the weights are final: the search fixes set one of them.
+        cfg = cfg.with_combat_fix().with_search_fixes();
     }
     Box::new(MctsBot::new(cfg))
 }

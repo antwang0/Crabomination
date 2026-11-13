@@ -197,7 +197,8 @@ pub struct Blunder {
     /// (2026-10-30), whose totals earlier notes quote; 2 the 2026-11-10
     /// additions (35 with the first, what the combat fix was gated on); 3
     /// the 2026-11-12 harder items, written after the client's pilot
-    /// reached 35/35.
+    /// reached 35/35; 4 the same day's resource items (a counter or a
+    /// removal saved for the bigger threat), after it reached 60/60.
     pub since: u8,
     /// Turns past the current one the window runs: 0 closes it when this
     /// turn ends, 1 runs through the next.
@@ -1193,6 +1194,78 @@ fn fra_grow_the_blocker() -> Position {
     Position { state: g, checks: vec![Check::Dies(theirs), Check::Survives(mine)] }
 }
 
+// ── Added 2026-11-12, version 4, after the client reached 60 / 60: a
+// resource saved for the bigger threat, and two resources in one turn. ──
+
+/// The opponent's main: Grizzly Bears on the stack, six more Forests up
+/// and a Craw Wurm in hand; the seat has Counterspell and two Islands.
+/// Countering the Bears lets the Wurm land.
+fn save_the_counter_for_the_wurm() -> Position {
+    let mut g = their_turn();
+    lands(&mut g, 0, catalog::island, 2);
+    g.add_card_to_hand(0, catalog::counterspell());
+    lands(&mut g, 1, catalog::forest, 8);
+    let bears = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
+    g.perform_action(GameAction::CastSpell { card_id: bears, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("the scripted Bears");
+    Position { state: g, checks: vec![Check::Dies(wurm)] }
+}
+
+/// The seat's main at 6 life: two Islands, Counterspell and a two-mana
+/// 2/2 in hand; the opponent has six Forests and a Craw Wurm. Tapping out
+/// for the 2/2 leaves the Wurm uncountered next turn.
+fn hold_up_the_counter_over_the_two_drop() -> Position {
+    let mut g = base();
+    g.players[0].life = 6;
+    lands(&mut g, 0, catalog::island, 2);
+    g.add_card_to_hand(0, catalog::counterspell());
+    g.add_card_to_hand(0, costed(body("Drake", 2, 2), 2, false));
+    lands(&mut g, 1, catalog::forest, 6);
+    let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
+    Position { state: g, checks: vec![Check::Dies(wurm)] }
+}
+
+/// The seat's main at 20 with Murder and three Swamps; the opponent has a
+/// 2/2 out and six Forests behind a Craw Wurm. Murder the 2/2 now and the
+/// Wurm is unanswered; held, it kills the Wurm on their turn.
+fn save_the_murder_for_the_wurm() -> Position {
+    let mut g = base();
+    lands(&mut g, 0, catalog::swamp, 3);
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    ready(&mut g, 1, body("Scout", 2, 2));
+    lands(&mut g, 1, catalog::forest, 6);
+    let wurm = g.add_card_to_hand(1, catalog::craw_wurm());
+    Position { state: g, checks: vec![Check::CastOn(murder, wurm)] }
+}
+
+/// A 3/3 flier and Lightning Bolt against the opponent at 6 behind a
+/// ground 2/2: attack for 3 and Bolt the face for 3. Bolting the 2/2 wins
+/// nothing this turn.
+fn attack_then_bolt_for_lethal() -> Position {
+    let mut g = base();
+    g.players[1].life = 6;
+    lands(&mut g, 0, catalog::mountain, 1);
+    g.add_card_to_hand(0, catalog::lightning_bolt());
+    ready(&mut g, 0, keyworded("Drake", 3, 3, Keyword::Flying));
+    ready(&mut g, 1, body("Scout", 2, 2));
+    Position { state: g, checks: vec![Check::Wins] }
+}
+
+/// The SOS version of [`hold_up_the_counter_over_the_two_drop`]: three
+/// Islands, Mana Sculpt and Textbook Tabulator in hand, the opponent with
+/// five Mountains and Rearing Embermare (4/5 haste).
+fn sos_hold_up_the_counter_over_the_three_drop() -> Position {
+    let mut g = base();
+    g.players[0].life = 6;
+    lands(&mut g, 0, catalog::island, 3);
+    g.add_card_to_hand(0, catalog::mana_sculpt());
+    g.add_card_to_hand(0, catalog::textbook_tabulator());
+    lands(&mut g, 1, catalog::mountain, 5);
+    let mare = g.add_card_to_hand(1, catalog::rearing_embermare());
+    Position { state: g, checks: vec![Check::Dies(mare)] }
+}
+
 /// Every item, in a stable order.
 pub fn items() -> Vec<Blunder> {
     vec![
@@ -1799,6 +1872,57 @@ pub fn items() -> Vec<Blunder> {
             build: fra_grow_the_blocker,
             prompt: "Keeper of the Quiet Hour attacks, Grim Repriser + Academic Ascent — block and pump",
         },
+        // ── Added 2026-11-12, version 4. ──
+        Blunder {
+            id: "save_the_counter_for_the_wurm",
+            twin: None,
+            area: Area::Instant,
+            cards: Cards::Plain,
+            since: 4,
+            horizon: 0,
+            build: save_the_counter_for_the_wurm,
+            prompt: "their turn: Bears on the stack, Craw Wurm to follow, one Counterspell — save it",
+        },
+        Blunder {
+            id: "hold_up_the_counter_over_the_two_drop",
+            twin: None,
+            area: Area::Mana,
+            cards: Cards::Plain,
+            since: 4,
+            horizon: 1,
+            build: hold_up_the_counter_over_the_two_drop,
+            prompt: "6 life, two Islands, Counterspell + a 2/2; they hold Craw Wurm — hold up the counter",
+        },
+        Blunder {
+            id: "save_the_murder_for_the_wurm",
+            twin: None,
+            area: Area::Removal,
+            cards: Cards::Plain,
+            since: 4,
+            horizon: 1,
+            build: save_the_murder_for_the_wurm,
+            prompt: "Murder, their 2/2 out and Craw Wurm in hand — Murder the Wurm",
+        },
+        Blunder {
+            id: "attack_then_bolt_for_lethal",
+            twin: None,
+            area: Area::Lethal,
+            cards: Cards::Plain,
+            since: 4,
+            horizon: 0,
+            build: attack_then_bolt_for_lethal,
+            prompt: "3/3 flier + Bolt, they are at 6 behind a ground 2/2 — attack and Bolt the face",
+        },
+        Blunder {
+            id: "sos_hold_up_the_counter_over_the_three_drop",
+            twin: None,
+            area: Area::Mana,
+            cards: Cards::Sos,
+            since: 4,
+            horizon: 1,
+            build: sos_hold_up_the_counter_over_the_three_drop,
+            prompt: "6 life, three Islands, Mana Sculpt + Textbook Tabulator; they hold Rearing Embermare — hold up the counter",
+        },
     ]
 }
 
@@ -1934,6 +2058,57 @@ mod tests {
         assert!(run("hold_the_murder_at_high_life", hold));
         assert!(run("murder_the_flier_at_one_life", hold));
         assert!(!run("hold_the_murder_at_high_life", EvalWeights::default()), "the control spends it");
+    }
+
+    /// The version-4 resource items are passable, and the default heuristic
+    /// fails the two whose wrong play it makes. The heuristic that casts
+    /// nothing on its own turn keeps the counter for the Wurm. The Murder it
+    /// spends on the 2/2 in the opponent's upkeep anyway, so that item's
+    /// line is a script: Murder the Wurm once it is on the battlefield.
+    #[test]
+    fn the_saved_resource_items_are_passable() {
+        struct Held(HeuristicBot);
+        impl Bot for Held {
+            fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+                let a = self.0.next_action(state, seat)?;
+                let mine = state.active_player_idx == seat && state.pending_decision.is_none();
+                (!(mine && matches!(a, GameAction::CastSpell { .. }))).then_some(a)
+            }
+        }
+        let all = items();
+        let run = |id: &str, bot: &mut dyn Bot| {
+            let v = judge(all.iter().find(|i| i.id == id).expect("the item"), bot);
+            if !v.ok() {
+                eprintln!("{id}: {:?} {:?}", v.failed, v.actions);
+            }
+            v.ok()
+        };
+        struct MurderTheWurm;
+        impl Bot for MurderTheWurm {
+            fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+                if state.priority.player_with_priority != seat || state.pending_decision.is_some() {
+                    return None;
+                }
+                let wurm = state.battlefield.iter().find(|c| c.definition.name == "Craw Wurm")?.id;
+                let murder = state.players[seat].hand.iter().find(|c| c.definition.name == "Murder")?.id;
+                Some(GameAction::CastSpell {
+                    card_id: murder,
+                    target: Some(Target::Permanent(wurm)),
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                })
+            }
+        }
+        for id in
+            ["save_the_counter_for_the_wurm", "hold_up_the_counter_over_the_two_drop", "sos_hold_up_the_counter_over_the_three_drop"]
+        {
+            assert!(run(id, &mut Held(HeuristicBot::new())), "{id}: the held line passes");
+        }
+        assert!(run("save_the_murder_for_the_wurm", &mut MurderTheWurm), "the scripted line passes");
+        for id in ["hold_up_the_counter_over_the_two_drop", "save_the_murder_for_the_wurm"] {
+            assert!(!run(id, &mut HeuristicBot::new()), "{id}: the control spends it");
+        }
     }
 
     /// The benchmark's honesty condition: a pilot that does nothing scores

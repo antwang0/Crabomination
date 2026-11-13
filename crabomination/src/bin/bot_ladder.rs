@@ -206,6 +206,17 @@ fn sos_archetypes(seed: u64) -> Vec<Archetype> {
         .collect()
 }
 
+/// The Modern lobby's two decklists (`demo::build_demo_state`: BRG combo
+/// vs Goryo's Vengeance), each played as a mirror like every other row, so
+/// the two rows read how a pilot plays each deck. The lobby's own match is
+/// the cross pairing, which a mirror field cannot seat-balance.
+fn modern_archetypes() -> Vec<Archetype> {
+    vec![
+        Archetype { name: "modern brg combo", deck: crabomination::demo::brg_combo_deck().to_vec() },
+        Archetype { name: "modern goryo's", deck: crabomination::demo::goryos_vengeance_deck().to_vec() },
+    ]
+}
+
 /// Seeded sealed mirror decks — the learned-eval gate. Each row is one
 /// 6-pack SOS sealed pool built by the heuristic builder, played as a
 /// mirror: both pilots get the *same 40 cards*, so deck strength and build
@@ -1283,7 +1294,7 @@ fn parse_args() -> Result<Args, String> {
                      \n\
                      PROFILE is one of: {PROFILES}\n\
                      --decks fixed (4 hand-built archetypes) | cube (8 random cube pairs)\n\
-                     | sos (5 seeded college mirrors) | sealed (12 seeded sealed mirrors)\n\
+                     | sos (5 seeded college mirrors) | modern (the 2 lobby decklists) | sealed (12 sealed mirrors)\n\
                      | both (fixed+cube) | all (fixed+cube+sos)\n\
                      --games is per archetype, split evenly across seats.\n\
                      --paired (default) plays each shuffle twice with the seats swapped\n\
@@ -2320,6 +2331,7 @@ fn main() {
         "fixed" => archetypes(),
         "cube" => cube_archetypes(args.seed, CUBE_PAIRS),
         "sos" => sos_archetypes(args.seed),
+        "modern" => modern_archetypes(),
         "both" => {
             let mut f = archetypes();
             f.extend(cube_archetypes(args.seed, CUBE_PAIRS));
@@ -2338,7 +2350,7 @@ fn main() {
             std::env::var("CRAB_SEALED_DECKS").ok().and_then(|v| v.parse().ok()).unwrap_or(12),
         ),
         other => {
-            eprintln!("unknown --decks {other}; expected fixed, cube, sos, sealed, both or all");
+            eprintln!("unknown --decks {other}; expected fixed, cube, sos, modern, sealed, both or all");
             std::process::exit(2);
         }
     };

@@ -663,9 +663,13 @@ missing arm: `-wd2`) and 5 (`-hr`) were adopted as a bundle,
 `MctsConfig::with_search_fixes`: 50.85 pooled vs the combat-fixed search, the
 blunder set 60 / 60 from 57.0. Item 6: the set has 60 items (the crack-back
 item was not built; no position isolates it). Item 7: the FRA leaf reads
-55 / 60 and the lobby's non-Cube pilot 51 / 60. Open: whether the lobby's
-non-Cube duels get the menu search (the user's call), and new blunder
-headroom now that the client scores 60 / 60.
+55 / 60 and the lobby's non-Cube pilot 51 / 60. Follow-ups, same day: the
+lobby's Modern / SOS duels now play the client's pilot (61.75 / 61.9 pooled
+over the old one; ML_NOTES "The lobby's non-Cube duels"). The blunder set has
+65 items; the client reads 62 / 65, failing the three "save the answer for
+the bigger threat" items (ML_NOTES "The blunder set, 60 → 65").
+**Next:** read which half misses them, the rollout pilot or the leaf
+(`save_the_removal`), then fix that half and gate the fix.
 
 Numbers and reasoning: ML_NOTES "Why the champion reads 0.442 on a 0.500
 base rate", "The combat window of the menu search" (the combat fix
