@@ -541,6 +541,76 @@ fn run_scoring(profiles: &[String]) {
     }
 }
 
+/// `--real-counter N [--reps R] [--truth T] PROFILE..`: the SOS counter
+/// item (`blunder::transplant_counter`) on real positions from N games of
+/// SOS sealed self-play. Per position: the heuristic play-out of holding
+/// and of spending on the Tabulator (T games each), then each profile's
+/// outcome per rep (`blunder::CounterOutcome`), tallied by which line wins.
+fn run_real_counter(games: u64) {
+    use crabomination::server::blunder::{CounterOutcome, hold_or_spend_truth, judge_counter, real_positions, transplant_counter};
+    let a: Vec<String> = std::env::args().collect();
+    let flag = |f: &str, d: u64| a.iter().position(|x| x == f).and_then(|i| a.get(i + 1)).map_or(d, |v| v.parse().expect("a number"));
+    let (reps, truth) = (flag("--reps", 3), flag("--truth", 20));
+    let skip: Vec<usize> = ["--real-counter", "--reps", "--truth"]
+        .iter()
+        .filter_map(|f| a.iter().position(|x| x == f).map(|i| i + 1))
+        .collect();
+    let profiles: Vec<String> =
+        a.iter().enumerate().skip(1).filter(|(i, x)| !skip.contains(i) && !x.starts_with("--")).map(|(_, x)| x.clone()).collect();
+    let positions = real_positions(games, 1000);
+    println!("{} real positions from {games} games; truth {truth} play-outs a line, {reps} rep(s) a profile", positions.len());
+    println!("outcomes: S spent on the Tabulator, X cast another spell on its turn, C countered the Embermare, E Sculpt elsewhere, N Embermare not cast, M missed, O other\n");
+    let n_out = CounterOutcome::ALL.len();
+    // class (hold right, spend right, even) x profile x outcome
+    let mut tally = vec![vec![vec![0u64; n_out]; profiles.len()]; 3];
+    for (k, real) in positions.iter().enumerate() {
+        let (pos, cards) = transplant_counter(real);
+        let Some((h, s)) = hold_or_spend_truth(&pos, cards, truth) else {
+            println!("#{k:<3} skipped: the Tabulator can't be cast here");
+            continue;
+        };
+        let margin = 0.2 * truth as f64;
+        let class = if h as f64 - s as f64 >= margin {
+            0
+        } else if s as f64 - h as f64 >= margin {
+            1
+        } else {
+            2
+        };
+        let mut line = format!(
+            "#{k:<3} turn {:<2} life {:>2}-{:<2} hold {h:>2}/{truth} spend {s:>2}/{truth} {}",
+            real.turn_number,
+            real.players[0].life,
+            real.players[1].life,
+            ["HOLD ", "SPEND", "even "][class]
+        );
+        for (pi, prof) in profiles.iter().enumerate() {
+            let mut letters = String::new();
+            for _ in 0..reps {
+                let mut bot = bot_for(prof).expect("a known profile");
+                let o = judge_counter(&pos, cards, bot.as_mut());
+                let oi = CounterOutcome::ALL.iter().position(|x| *x == o).expect("listed");
+                tally[class][pi][oi] += 1;
+                letters.push(b"SXCENMO"[oi] as char);
+            }
+            line.push_str(&format!("  {}: {letters}", if pi == 0 { "A" } else { "B" }));
+        }
+        println!("{line}");
+    }
+    println!();
+    for (pi, prof) in profiles.iter().enumerate() {
+        println!("{} = {prof}", if pi == 0 { "A" } else { "B" });
+        for (c, name) in ["hold right", "spend right", "even"].iter().enumerate() {
+            let t = &tally[c][pi];
+            let n: u64 = t.iter().sum();
+            if n > 0 {
+                let parts: Vec<String> = CounterOutcome::ALL.iter().zip(t).map(|(o, x)| format!("{o:?} {x}")).collect();
+                println!("    {name:<12} n {n:<4} {}", parts.join(", "));
+            }
+        }
+    }
+}
+
 /// `--blunders`: score each profile on the blunder set (`server::blunder`),
 /// `--reps N` times an item (the search draws its own random stream, so a
 /// searched pilot's verdict is a rate; the heuristic's repeats).
@@ -804,6 +874,11 @@ fn main() {
     if let Some(i) = args.iter().position(|a| a == "--action-gap") {
         let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(40);
         run_action_gap(games);
+        return;
+    }
+    if let Some(i) = args.iter().position(|a| a == "--real-counter") {
+        let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(40);
+        run_real_counter(games);
         return;
     }
     if args.iter().any(|a| a == "--blunders") {

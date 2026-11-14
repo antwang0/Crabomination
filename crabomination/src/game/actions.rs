@@ -1318,8 +1318,11 @@ mod mana_summary {
 fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
     // A mana ability gated on the board ("activate only if", ferocious) is
     // state, not definition: no memo, the table's live walk decides.
+    // So is a graveyard-exile cost: whether it can be paid is the graveyard's
+    // business (`exile_other_cost_unpayable`).
     if def.activated_abilities.iter().any(|a| {
-        (a.condition.is_some() || crate::game::mana_shape::is_x_sized_mana_ability(a)) && is_mana_ability(&a.effect)
+        (a.condition.is_some() || a.exile_other_filter.is_some() || crate::game::mana_shape::is_x_sized_mana_ability(a))
+            && is_mana_ability(&a.effect)
     }) {
         return None;
     }
@@ -19781,6 +19784,26 @@ impl GameState {
         events
     }
 
+    /// True when `a` carries a fixed "exile N cards from your graveyard"
+    /// cost and `player`'s graveyard holds fewer than N cards it accepts.
+    /// The forms sized at activation (an X, a computed count, an X-naming
+    /// filter, any graveyard) are left to the activation to judge.
+    fn exile_other_cost_unpayable(&self, source: CardId, a: &crate::effect::ActivatedAbility, player: usize) -> bool {
+        let Some((filter, count)) = &a.exile_other_filter else {
+            return false;
+        };
+        if a.exile_other_x || a.exile_other_count.is_some() || a.exile_other_any_graveyard || filter.names_x_or_converge() {
+            return false;
+        }
+        let n = self.players[player]
+            .graveyard
+            .iter()
+            .filter(|c| c.id != source && self.evaluate_requirement_on_card(filter, c, player))
+            .take(*count as usize)
+            .count();
+        n < *count as usize
+    }
+
     /// Preference rank for an auto-tap mana source: lower is tapped first.
     /// Plain "{T}: add mana" sources cost nothing but the tap; life and
     /// self-consuming sources (painlands, Lotus Petal, Chromatic Star) are
@@ -19915,6 +19938,11 @@ impl GameState {
             if sick {
                 abilities.retain(|(_, a)| !(a.tap_cost || a.untap_self_cost));
             }
+            // A graveyard-exile cost the graveyard can't pay right now
+            // (Rubble Rouser with an empty graveyard): listed, the pip loop
+            // picked it, its activation failed and the payment gave up with
+            // Islands untapped (2026-11-14).
+            abilities.retain(|(_, a)| !self.exile_other_cost_unpayable(c.id, a, player));
             // An X-sized ability claims no colour: the pip loops would
             // activate it with X = 0 (see `auto_tap_x_sized_sources`).
             let x_idx = abilities

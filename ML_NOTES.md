@@ -9385,3 +9385,73 @@ threat resolved) is +0.05 against −0.24, so the leaf would get it right.
   and check whether the client still spends the answer early. If it holds
   on real boards, rebuild the blunder set on real shells. If it still
   spends, the cause is the search, not the leaf's training.
+
+### The counter item on real positions: the search's hold arm is a spend line (2026-11-14)
+
+`bot_puzzles --real-counter N` puts the SOS counter item on real positions
+(`blunder::real_positions` / `transplant_counter`). It takes seat 0's
+precombat main from heuristic SOS sealed self-play, at a turn drawn from
+4-8, and makes these changes:
+- seat 0's lands tapped and three untapped Islands added;
+- Mana Sculpt (1UU) and Textbook Tabulator (2U) to seat 0's hand, so it can
+  cast one;
+- five Mountains and Rearing Embermare for the opponent.
+
+The ground truth is `hold_or_spend_truth`: 40 heuristic play-outs to the
+end for each line.
+- Hold: seat 0 casts nothing on its turn and counters the Embermare
+  (scripted, because the default heuristic never casts the Sculpt on these
+  boards).
+- Spend: the Tabulator cast now.
+
+A board is "hold right" when holding wins by at least 8 of 40. Each pilot's
+outcome is classified per rep (`CounterOutcome`). Run 3, 120 games, 3 reps,
+`.ladder/rc/rc_client3.txt`:
+
+| on the 29 hold-right boards (87 reps) | client pilot | `dflt` |
+|---|---|---|
+| spent on the Tabulator | 41 | 59 |
+| spent on another spell, own turn | 30 | 28 |
+| countered the Embermare | **10** | 0 |
+| other (not cast, Sculpt elsewhere, missed) | 6 | 0 |
+
+So the failure is real on real boards: the client spends the answer 82 % of
+the time where holding wins. The shell's 0 / 10 was not only the leaf.
+
+**Where the search goes wrong: the hold arm's rollouts don't hold.** On
+these 60 boards (`blunder::tests`, ignored):
+- `real_counter_rollout_pilot_counters`: with seat 0 forced to cast nothing
+  on its own turn, every rollout pilot counters the Embermare whenever it is
+  cast. Uniform baseline 38, net-leaf heuristic with the fixes 35, default
+  35; the Embermare was not cast on 14.
+- `real_counter_pass_arm_rollouts`: the root arm the menu search has for
+  "hold" is a priority pass, after which the rollout pilot plays the rest of
+  the turn. It then spends the mana itself, 59 / 60 for the uniform
+  baseline (39 on the Tabulator, 20 on another spell) and 60 / 60 for the
+  default.
+
+The menu search picks one action at a time. Its "don't cast the Tabulator"
+arm is scored by rollouts that cast it (or something else) a step later. So
+holding is never what gets valued, and the leaf can't fix that because it
+never sees a held board. The earlier `-rh` and `-h5` results fit this:
+neither changes who plays the rest of the turn.
+
+**Next (a search change, gated before adoption):** a "hold" root arm. It
+ends the seat's turn casting nothing more (attacks and land drops still
+played by the pilot), and its rollouts start from the held board. In the
+blunder set, the same arm is what `save_the_murder_for_the_wurm` needs on
+the seat's turn. Read it on `--real-counter` and the blunder set, then the
+paired ladder gates.
+
+**An engine bug found on the way, fixed:** an untapped Rubble Rouser with
+an empty graveyard stalled the auto-tapper. Its "{T}, exile a card from
+your graveyard: add {R}" was listed as a source, its activation failed, and
+the payment gave up with Islands untapped. This hit 3 of 120 real boards,
+and any real game with a Rouser and an empty graveyard. The source table
+now drops a fixed graveyard-exile cost the graveyard can't pay
+(`exile_other_cost_unpayable`), and `mana_summary_of` leaves such sources to
+the live walk. Regression test:
+`rubble_rouser_with_an_empty_graveyard_does_not_stall_the_auto_tapper`. The
+suite is 29,534 / 29,534 and golden traces are unchanged. The net encoder's
+castability bits read the same table (`untapped_mana_colors`), so they were
+over-optimistic on those boards too.

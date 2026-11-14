@@ -415,6 +415,26 @@ fn rubble_rouser_mana_ability_damage_rides_the_stack() {
     assert_eq!(g.players[1].life, 19, "the reflexive trigger resolves for 1 to each opponent");
 }
 
+/// Found 2026-11-14 (`bot_puzzles --real-counter`): an untapped Rubble
+/// Rouser with nothing in its controller's graveyard can't pay its own
+/// exile cost, so the auto-tapper must pass over it and pay a {2}{U} spell
+/// from three untapped Islands. It failed `InsufficientGeneric` instead.
+#[test]
+fn rubble_rouser_with_an_empty_graveyard_does_not_stall_the_auto_tapper() {
+    let mut g = two_player_game();
+    let rouser = g.add_card_to_battlefield(0, catalog::rubble_rouser());
+    g.clear_sickness(rouser);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let tab = g.add_card_to_hand(0, catalog::textbook_tabulator());
+    g.step = TurnStep::PreCombatMain;
+    g.perform_action(GameAction::CastSpell {
+        card_id: tab, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("three Islands pay {2}{U} with the Rouser unable to activate");
+}
+
 /// Pool audit 2026-07: Scolding Administrator's dies-trigger passes on
 /// "those counters" — counters of EVERY kind. With ONLY a stun counter
 /// the old +1/+1-gated version didn't even fire; now the trigger fires

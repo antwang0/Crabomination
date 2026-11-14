@@ -236,6 +236,12 @@ pub fn judge(item: &Blunder, bot: &mut dyn Bot) -> Verdict {
 /// [`super::puzzle::play_with`], recording every action the seat made that
 /// the engine accepted.
 fn play_recording(state: &GameState, seat: usize, bot: &mut dyn Bot, horizon: u32) -> (GameState, Vec<GameAction>) {
+    let (end, acts) = play_recording_turns(state, seat, bot, horizon);
+    (end, acts.into_iter().map(|(_, a)| a).collect())
+}
+
+/// [`play_recording`] with the turn each action was made on.
+fn play_recording_turns(state: &GameState, seat: usize, bot: &mut dyn Bot, horizon: u32) -> (GameState, Vec<(u32, GameAction)>) {
     let mut g = state.clone();
     let opp = 1 - seat;
     let mut opp_bot = synced_bot(&g);
@@ -244,10 +250,11 @@ fn play_recording(state: &GameState, seat: usize, bot: &mut dyn Bot, horizon: u3
     let mut acts = Vec::new();
     while fuel > 0 && !g.is_game_over() && g.turn_number <= last_turn {
         fuel -= 1;
+        let turn = g.turn_number;
         if let Some(a) = bot.next_action(&g, seat)
             && g.perform_action(a.clone()).is_ok()
         {
-            acts.push(a);
+            acts.push((turn, a));
             continue;
         }
         if opp_bot.next_action(&g, opp).is_some_and(|a| g.perform_action(a).is_ok()) {
@@ -258,6 +265,247 @@ fn play_recording(state: &GameState, seat: usize, bot: &mut dyn Bot, horizon: u3
         }
     }
     (g, acts)
+}
+
+// ── Items on real positions ────────────────────────────────────────────
+//
+// Every item above is built on a sparse shell (empty hands and graveyards,
+// an all-Island library), which the value net never meets in play: one card
+// moves its reading by up to ±0.3 there against 0.02-0.06 on a real board
+// (ML_NOTES "What the leaf misreads, and why"). These put an item's cards on
+// positions from SOS sealed self-play instead (`bot_puzzles --real-counter`).
+
+/// Seat 0's precombat main with priority, from heuristic SOS sealed
+/// self-play: game `i` of `games` (pools and builds keyed on `seed0 + i`)
+/// contributes the first such position at or after a turn drawn from 4..=8,
+/// if the game reaches it.
+pub fn real_positions(games: u64, seed0: u64) -> Vec<GameState> {
+    use crate::selfplay::{heuristic_sealed_build, sealed_game_template, sealed_pool};
+    use rand::seq::SliceRandom;
+    use rand::{RngExt, SeedableRng};
+    let mut out = Vec::new();
+    for i in 0..games {
+        let seed = seed0 + i;
+        let (a, b) = (sealed_pool(seed * 2 + 1), sealed_pool(seed * 2 + 2));
+        let mut g = sealed_game_template(&heuristic_sealed_build(&a, seed), &heuristic_sealed_build(&b, seed ^ 0x9E37));
+        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+        for p in 0..2 {
+            g.players[p].library.shuffle(&mut rng);
+            g.players[p].hostile_player_targets = true;
+        }
+        let from_turn = rng.random_range(4..=8u32);
+        g.rng.reseed(seed ^ 0x5EED_600D);
+        g.start_mulligan_phase();
+        let mut bots = [super::bot::HeuristicBot::default(), super::bot::HeuristicBot::default()];
+        let mut fuel = 8000;
+        while !g.is_game_over() && g.turn_number <= 12 && fuel > 0 {
+            fuel -= 1;
+            if g.turn_number >= from_turn
+                && g.active_player_idx == 0
+                && g.step == TurnStep::PreCombatMain
+                && g.priority.player_with_priority == 0
+                && g.stack.is_empty()
+                && g.pending_decision.is_none()
+            {
+                out.push(g);
+                break;
+            }
+            let mut acted = false;
+            for (seat, bot) in bots.iter_mut().enumerate() {
+                if let Some(a) = bot.next_action(&g, seat)
+                    && g.perform_action(a).is_ok()
+                {
+                    acted = true;
+                    break;
+                }
+            }
+            if !acted && g.perform_action(GameAction::PassPriority).is_err() {
+                break;
+            }
+        }
+    }
+    out
+}
+
+/// The cards [`transplant_counter`] added.
+#[derive(Clone, Copy)]
+pub struct CounterCards {
+    pub sculpt: CardId,
+    pub bait: CardId,
+    pub mare: CardId,
+}
+
+/// [`sos_hold_up_the_counter_over_the_three_drop`] on a real position: seat
+/// 0's lands tapped and three untapped Islands added, Mana Sculpt (1UU) and
+/// Textbook Tabulator (2U) to its hand, so it can cast one; five Mountains
+/// and Rearing Embermare (4/5 haste) for the opponent.
+pub fn transplant_counter(real: &GameState) -> (Position, CounterCards) {
+    let mut g = real.clone();
+    let mine: Vec<CardId> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).map(|c| c.id).collect();
+    for id in mine {
+        tap(&mut g, id);
+    }
+    lands(&mut g, 0, catalog::island, 3);
+    let sculpt = g.add_card_to_hand(0, catalog::mana_sculpt());
+    let bait = g.add_card_to_hand(0, catalog::textbook_tabulator());
+    lands(&mut g, 1, catalog::mountain, 5);
+    let mare = g.add_card_to_hand(1, catalog::rearing_embermare());
+    (Position { state: g, checks: vec![Check::Dies(mare)] }, CounterCards { sculpt, bait, mare })
+}
+
+/// What the seat did with the counter item, through the opponent's turn.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum CounterOutcome {
+    /// Cast the Tabulator on its own turn.
+    Spent,
+    /// Cast some other spell on its own turn (the mana gone all the same).
+    SpentOther,
+    /// Countered the Embermare (Mana Sculpt cast, the Embermare in a
+    /// graveyard).
+    Countered,
+    /// Cast Mana Sculpt, and the Embermare resolved anyway.
+    SculptElsewhere,
+    /// Held; the opponent never cast the Embermare.
+    NotCast,
+    /// Held, the Embermare resolved, and Mana Sculpt was not cast.
+    Missed,
+    /// Anything else (the Embermare died or left some other way).
+    Other,
+}
+
+impl CounterOutcome {
+    pub const ALL: [CounterOutcome; 7] = [
+        CounterOutcome::Spent,
+        CounterOutcome::SpentOther,
+        CounterOutcome::Countered,
+        CounterOutcome::SculptElsewhere,
+        CounterOutcome::NotCast,
+        CounterOutcome::Missed,
+        CounterOutcome::Other,
+    ];
+}
+
+/// Play the counter item with `bot` on seat 0 and classify what it did.
+pub fn judge_counter(pos: &Position, cards: CounterCards, bot: &mut dyn Bot) -> CounterOutcome {
+    let (end, timed) = play_recording_turns(&pos.state, 0, bot, 1);
+    let turn = pos.state.turn_number;
+    let own_turn_cast = timed.iter().any(|(t, a)| *t == turn && matches!(a, GameAction::CastSpell { .. }));
+    let actions: Vec<GameAction> = timed.into_iter().map(|(_, a)| a).collect();
+    let cast = |id: CardId| Check::Casts(id).holds(0, &actions, &end);
+    let in_hand = end.players[1].hand.iter().any(|c| c.id == cards.mare);
+    let on_bf = end.battlefield_find(cards.mare).is_some();
+    let in_gy = end.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cards.mare));
+    if cast(cards.bait) {
+        CounterOutcome::Spent
+    } else if own_turn_cast {
+        CounterOutcome::SpentOther
+    } else if cast(cards.sculpt) && in_gy {
+        CounterOutcome::Countered
+    } else if cast(cards.sculpt) && on_bf {
+        CounterOutcome::SculptElsewhere
+    } else if in_hand {
+        CounterOutcome::NotCast
+    } else if on_bf {
+        CounterOutcome::Missed
+    } else {
+        CounterOutcome::Other
+    }
+}
+
+/// Seat 0 casts nothing for the rest of the current turn, and counters the
+/// Embermare with Mana Sculpt when it is on the stack; the heuristic
+/// otherwise (the "hold" branch of [`hold_or_spend_truth`]). Scripted,
+/// because the heuristic itself never casts the Sculpt on these boards.
+struct HoldAndCounter {
+    inner: super::bot::HeuristicBot,
+    turn: u32,
+    cards: CounterCards,
+}
+
+impl Bot for HoldAndCounter {
+    fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        let mare_on_stack = state.stack.iter().any(|it| matches!(it, crate::game::StackItem::Spell { card, .. } if card.id == self.cards.mare));
+        let have_sculpt = state.players[seat].hand.iter().any(|c| c.id == self.cards.sculpt);
+        if mare_on_stack && have_sculpt && state.priority.player_with_priority == seat && state.pending_decision.is_none() {
+            return Some(GameAction::CastSpell {
+                card_id: self.cards.sculpt,
+                target: Some(Target::Permanent(self.cards.mare)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            });
+        }
+        let a = self.inner.next_action(state, seat)?;
+        if state.turn_number == self.turn && matches!(a, GameAction::CastSpell { .. }) {
+            return None;
+        }
+        Some(a)
+    }
+}
+
+/// The two lines played to the end by the default heuristic, `n` times each
+/// with the libraries reshuffled: holding (seat 0 casts nothing this turn
+/// and counters the Embermare) and spending (the Tabulator cast now). Seat
+/// 0's wins in each; `None` when the bait cannot be cast (before
+/// 2026-11-14 an untapped Rubble Rouser with an empty graveyard stalled the
+/// auto-tapper, 3 boards of 120).
+pub fn hold_or_spend_truth(pos: &Position, cards: CounterCards, n: u64) -> Option<(u64, u64)> {
+    let bait = cards.bait;
+    {
+        let mut g = pos.state.clone();
+        let cast = GameAction::CastSpell { card_id: bait, target: None, additional_targets: vec![], mode: None, x_value: None };
+        g.perform_action(cast).ok()?;
+    }
+    use rand::SeedableRng;
+    use rand::seq::SliceRandom;
+    let turn = pos.state.turn_number;
+    let mut wins = [0u64; 2];
+    for (line, w) in wins.iter_mut().enumerate() {
+        for k in 0..n {
+            let mut g = pos.state.clone();
+            let mut rng = rand::rngs::StdRng::seed_from_u64(k * 7919 + 17);
+            for p in 0..2 {
+                g.players[p].library.shuffle(&mut rng);
+            }
+            g.rng.reseed(k ^ 0xC0FF_EE00);
+            if line == 1 {
+                let cast = g.perform_action(GameAction::CastSpell {
+                    card_id: bait,
+                    target: None,
+                    additional_targets: vec![],
+                    mode: None,
+                    x_value: None,
+                });
+                if cast.is_err() {
+                    continue;
+                }
+                drain_stack(&mut g);
+            }
+            let mut seat0: Box<dyn Bot> = if line == 0 {
+                Box::new(HoldAndCounter { inner: super::bot::HeuristicBot::default(), turn, cards })
+            } else {
+                Box::new(super::bot::HeuristicBot::default())
+            };
+            let mut seat1 = super::bot::HeuristicBot::default();
+            let mut fuel = 20_000;
+            while !g.is_game_over() && fuel > 0 {
+                fuel -= 1;
+                if seat0.next_action(&g, 0).is_some_and(|a| g.perform_action(a).is_ok()) {
+                    continue;
+                }
+                if seat1.next_action(&g, 1).is_some_and(|a| g.perform_action(a).is_ok()) {
+                    continue;
+                }
+                if g.perform_action(GameAction::PassPriority).is_err() {
+                    break;
+                }
+            }
+            if g.game_over == Some(Some(0)) {
+                *w += 1;
+            }
+        }
+    }
+    Some((wins[0], wins[1]))
 }
 
 // ── Leaf pairs: does an evaluator order two boards the right way? ──────
@@ -2403,6 +2651,86 @@ mod tests {
             let abs = d.iter().map(|x| x.abs()).sum::<f64>() / n;
             let sd = (d.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n).sqrt();
             println!("{name:<40} mean {mean:+.3}  |d| {abs:.3}  sd {sd:.3}");
+        }
+    }
+
+    /// The scripted hold line counters the Embermare on real positions.
+    #[test]
+    #[ignore = "diagnostic"]
+    fn real_counter_hold_line_counters() {
+        let reals = real_positions(30, 1000);
+        let mut tally = std::collections::BTreeMap::new();
+        for real in &reals {
+            let (pos, cards) = transplant_counter(real);
+            let mut bot = HoldAndCounter { inner: HeuristicBot::default(), turn: pos.state.turn_number, cards };
+            *tally.entry(format!("{:?}", judge_counter(&pos, cards, &mut bot))).or_insert(0) += 1;
+        }
+        println!("{tally:?}");
+    }
+
+    /// Does the search's rollout pilot counter the Embermare once the seat
+    /// has held its mana? Seat 0 casts nothing on its own turn, then the
+    /// pilot plays the opponent's: the uniform baseline (the menu search's
+    /// rollouts) and the net-leaf heuristic with the FRA fixes (`-rh`).
+    #[test]
+    #[ignore = "diagnostic"]
+    fn real_counter_rollout_pilot_counters() {
+        struct HoldOwnTurn(HeuristicBot, u32);
+        impl Bot for HoldOwnTurn {
+            fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+                let a = self.0.next_action(state, seat)?;
+                if state.turn_number == self.1 && matches!(a, GameAction::CastSpell { .. }) {
+                    return None;
+                }
+                Some(a)
+            }
+        }
+        let games: u64 = std::env::var("CRAB_DIAG_N").ok().and_then(|v| v.parse().ok()).unwrap_or(60);
+        let reals = real_positions(games, 1000);
+        for (name, mk) in [
+            ("uniform baseline", (|| HeuristicBot::uniform_baseline()) as fn() -> HeuristicBot),
+            ("net-leaf heuristic + fixes", || HeuristicBot::with_weights(crate::server::bot::EvalWeights::net_on_default().with_fra_fixes())),
+            ("default heuristic", HeuristicBot::default),
+        ] {
+            let mut tally = std::collections::BTreeMap::new();
+            for real in &reals {
+                let (pos, cards) = transplant_counter(real);
+                let mut bot = HoldOwnTurn(mk(), pos.state.turn_number);
+                *tally.entry(format!("{:?}", judge_counter(&pos, cards, &mut bot))).or_insert(0) += 1;
+            }
+            println!("{name:<28} {tally:?}");
+        }
+    }
+
+    /// The menu search's "hold" arm as its rollouts play it: seat 0 passes
+    /// priority once at the root (the arm), then the rollout pilot plays the
+    /// rest of the turn and the opponent's.
+    #[test]
+    #[ignore = "diagnostic"]
+    fn real_counter_pass_arm_rollouts() {
+        struct PassFirst(HeuristicBot, bool);
+        impl Bot for PassFirst {
+            fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+                if !self.1 {
+                    self.1 = true;
+                    return Some(GameAction::PassPriority);
+                }
+                self.0.next_action(state, seat)
+            }
+        }
+        let games: u64 = std::env::var("CRAB_DIAG_N").ok().and_then(|v| v.parse().ok()).unwrap_or(60);
+        let reals = real_positions(games, 1000);
+        for (name, mk) in [
+            ("uniform baseline", (|| HeuristicBot::uniform_baseline()) as fn() -> HeuristicBot),
+            ("default heuristic", HeuristicBot::default),
+        ] {
+            let mut tally = std::collections::BTreeMap::new();
+            for real in &reals {
+                let (pos, cards) = transplant_counter(real);
+                let mut bot = PassFirst(mk(), false);
+                *tally.entry(format!("{:?}", judge_counter(&pos, cards, &mut bot))).or_insert(0) += 1;
+            }
+            println!("{name:<28} {tally:?}");
         }
     }
 }
