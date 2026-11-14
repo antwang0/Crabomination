@@ -2192,4 +2192,217 @@ mod tests {
             }
         }
     }
+
+    /// The champion leaf on the "save the answer" end boards, one feature
+    /// moved at a time: which card is in hand, the opponent's hand size,
+    /// castability, and which card is in either graveyard. A renamed copy
+    /// (an unknown vocabulary index) separates what the net learned about
+    /// the name from what it reads off the printed features. Read
+    /// 2026-11-14 for ML_NOTES "What the leaf misreads, and why".
+    #[test]
+    #[ignore = "diagnostic; needs nets/champion.safetensors"]
+    fn leaf_misread_probe() {
+        use crate::server::net_eval::{self, SLOT_BEST};
+        net_eval::load_slot(SLOT_BEST, std::path::Path::new("../nets/champion.safetensors")).expect("the champion");
+        let leaf = |g: &GameState| net_eval::win_prob(g, 0, SLOT_BEST).expect("the leaf");
+        let renamed = |mut d: CardDefinition| {
+            d.name = "Zzz Unknown";
+            d
+        };
+        let sos = |threat: bool| {
+            let mut g = mid();
+            g.players[0].life = 6;
+            ready(&mut g, 0, catalog::textbook_tabulator());
+            if threat {
+                ready(&mut g, 1, catalog::rearing_embermare());
+            }
+            g
+        };
+        let plain = |threat: bool| {
+            let mut g = mid();
+            g.players[0].life = 6;
+            ready(&mut g, 0, body("Drake", 2, 2));
+            if threat {
+                ready(&mut g, 1, catalog::craw_wurm());
+            }
+            g
+        };
+        type Mk = fn() -> CardDefinition;
+        let row = |label: &str, f: &dyn Fn(bool) -> GameState| {
+            let (a, b) = (leaf(&f(false)), leaf(&f(true)));
+            println!("{label:<44} no threat {a:.3}  threat out {b:.3}");
+        };
+        for (shell, mk, hand) in [
+            ("sos", &sos as &dyn Fn(bool) -> GameState, vec![
+                ("—", None),
+                ("Mana Sculpt", Some(catalog::mana_sculpt as Mk)),
+                ("Tome Blast", Some(catalog::tome_blast as Mk)),
+                ("Run Behind", Some(catalog::run_behind as Mk)),
+                ("Pestbrood Sloth", Some(catalog::pestbrood_sloth as Mk)),
+                ("Island", Some(catalog::island as Mk)),
+            ]),
+            ("plain", &plain as &dyn Fn(bool) -> GameState, vec![
+                ("—", None),
+                ("Counterspell", Some(catalog::counterspell as Mk)),
+                ("Island", Some(catalog::island as Mk)),
+            ]),
+        ] {
+            println!("== {shell}: card in my hand");
+            for (name, card) in &hand {
+                row(name, &|t| {
+                    let mut g = mk(t);
+                    if let Some(c) = card {
+                        g.add_card_to_hand(0, c());
+                    }
+                    g
+                });
+                if let Some(c) = card {
+                    row(&format!("{name} (renamed)"), &|t| {
+                        let mut g = mk(t);
+                        g.add_card_to_hand(0, renamed(c()));
+                        g
+                    });
+                }
+            }
+        }
+        println!("== sos: Mana Sculpt in hand, opponent's hand size");
+        for n in [0usize, 1, 3, 6] {
+            row(&format!("opp hand {n}"), &|t| {
+                let mut g = sos(t);
+                g.add_card_to_hand(0, catalog::mana_sculpt());
+                for _ in 0..n {
+                    g.add_card_to_hand(1, catalog::island());
+                }
+                g
+            });
+        }
+        println!("== sos: Mana Sculpt in hand, my lands tapped (not castable)");
+        row("tapped out", &|t| {
+            let mut g = sos(t);
+            g.add_card_to_hand(0, catalog::mana_sculpt());
+            let ids: Vec<CardId> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).map(|c| c.id).collect();
+            for id in ids {
+                tap(&mut g, id);
+            }
+            g
+        });
+        for (shell, mk, gy) in [
+            ("sos", &sos as &dyn Fn(bool) -> GameState, vec![
+                ("Rearing Embermare", catalog::rearing_embermare as Mk),
+                ("Pestbrood Sloth", catalog::pestbrood_sloth as Mk),
+                ("Tome Blast", catalog::tome_blast as Mk),
+                ("Island", catalog::island as Mk),
+            ]),
+            ("plain", &plain as &dyn Fn(bool) -> GameState, vec![
+                ("Craw Wurm", catalog::craw_wurm as Mk),
+                ("Island", catalog::island as Mk),
+            ]),
+        ] {
+            for seat in [1usize, 0] {
+                println!("== {shell}: card in {} graveyard", if seat == 1 { "the opponent's" } else { "my" });
+                row("—", mk);
+                for (name, c) in &gy {
+                    row(name, &|t| {
+                        let mut g = mk(t);
+                        g.add_card_to_graveyard(seat, c());
+                        g
+                    });
+                    row(&format!("{name} (renamed)"), &|t| {
+                        let mut g = mk(t);
+                        g.add_card_to_graveyard(seat, renamed(c()));
+                        g
+                    });
+                }
+            }
+        }
+    }
+
+    /// The same single-card moves as `leaf_misread_probe`, on real SOS
+    /// sealed positions: heuristic self-play, a snapshot at each turn
+    /// change from turn 4 to 10. Mean and mean-absolute change in the
+    /// champion's reading for seat 0, against the sparse shell's.
+    #[test]
+    #[ignore = "diagnostic; needs nets/champion.safetensors"]
+    fn leaf_sensitivity_on_real_positions() {
+        use crate::selfplay::{heuristic_sealed_build, sealed_game_template, sealed_pool};
+        use crate::server::net_eval::{self, SLOT_BEST};
+        use rand::SeedableRng;
+        use rand::seq::SliceRandom;
+        net_eval::load_slot(SLOT_BEST, std::path::Path::new("../nets/champion.safetensors")).expect("the champion");
+        let games: u64 = std::env::var("CRAB_DIAG_N").ok().and_then(|v| v.parse().ok()).unwrap_or(40);
+        let mut states = Vec::new();
+        for seed in 0..games {
+            let (a, b) = (sealed_pool(seed * 2 + 1), sealed_pool(seed * 2 + 2));
+            let t = sealed_game_template(&heuristic_sealed_build(&a, seed), &heuristic_sealed_build(&b, seed + 7));
+            let mut g = t.clone();
+            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+            for p in 0..2 {
+                g.players[p].library.shuffle(&mut rng);
+                g.players[p].hostile_player_targets = true;
+            }
+            g.rng.reseed(seed ^ 0x5EED);
+            g.start_mulligan_phase();
+            let mut bots = [HeuristicBot::default(), HeuristicBot::default()];
+            let (mut fuel, mut last_turn) = (6000, 0);
+            while !g.is_game_over() && g.turn_number <= 10 && fuel > 0 {
+                fuel -= 1;
+                if g.turn_number != last_turn {
+                    last_turn = g.turn_number;
+                    if g.turn_number >= 4 && g.pending_decision.is_none() && g.stack.is_empty() {
+                        states.push(g.clone());
+                    }
+                }
+                let mut acted = false;
+                for (seat, bot) in bots.iter_mut().enumerate() {
+                    if let Some(a) = bot.next_action(&g, seat)
+                        && g.perform_action(a).is_ok()
+                    {
+                        acted = true;
+                        break;
+                    }
+                }
+                if !acted && g.perform_action(GameAction::PassPriority).is_err() {
+                    break;
+                }
+            }
+        }
+        println!("{} positions from {games} games", states.len());
+        let leaf = |g: &GameState| net_eval::win_prob(g, 0, SLOT_BEST).expect("the leaf") as f64;
+        let renamed = |mut d: CardDefinition| {
+            d.name = "Zzz Unknown";
+            d
+        };
+        type Move = Box<dyn Fn(&mut GameState)>;
+        let moves: Vec<(&str, Move)> = vec![
+            ("Island to my graveyard", Box::new(|g| { g.add_card_to_graveyard(0, catalog::island()); })),
+            ("Island (renamed) to my graveyard", Box::new(move |g| { g.add_card_to_graveyard(0, renamed(catalog::island())); })),
+            ("Island to their graveyard", Box::new(|g| { g.add_card_to_graveyard(1, catalog::island()); })),
+            ("Rearing Embermare to their graveyard", Box::new(|g| { g.add_card_to_graveyard(1, catalog::rearing_embermare()); })),
+            ("Pestbrood Sloth to their graveyard", Box::new(|g| { g.add_card_to_graveyard(1, catalog::pestbrood_sloth()); })),
+            ("Island to my hand", Box::new(|g| { g.add_card_to_hand(0, catalog::island()); })),
+            ("Mana Sculpt to my hand", Box::new(|g| { g.add_card_to_hand(0, catalog::mana_sculpt()); })),
+            ("Mana Sculpt (renamed) to my hand", Box::new(move |g| { g.add_card_to_hand(0, renamed(catalog::mana_sculpt())); })),
+            ("Run Behind to my hand", Box::new(|g| { g.add_card_to_hand(0, catalog::run_behind()); })),
+            ("an Island to their hand", Box::new(|g| { g.add_card_to_hand(1, catalog::island()); })),
+            ("Rearing Embermare to their battlefield", Box::new(|g| { ready(g, 1, catalog::rearing_embermare()); })),
+        ];
+        let base: Vec<f64> = states.iter().map(leaf).collect();
+        println!("mean leaf {:.3}", base.iter().sum::<f64>() / base.len() as f64);
+        for (name, m) in &moves {
+            let d: Vec<f64> = states
+                .iter()
+                .zip(&base)
+                .map(|(g, b)| {
+                    let mut g = g.clone();
+                    m(&mut g);
+                    leaf(&g) - b
+                })
+                .collect();
+            let n = d.len() as f64;
+            let mean = d.iter().sum::<f64>() / n;
+            let abs = d.iter().map(|x| x.abs()).sum::<f64>() / n;
+            let sd = (d.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n).sqrt();
+            println!("{name:<40} mean {mean:+.3}  |d| {abs:.3}  sd {sd:.3}");
+        }
+    }
 }

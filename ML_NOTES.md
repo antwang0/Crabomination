@@ -9316,3 +9316,72 @@ Cheap fixes tried on the four items (5 reps):
    hand under the default non-honest play would be a cheat outside
    benchmarks. Under honest play the question is what the bot can infer,
    which needs the belief head.
+
+### What the leaf misreads, and why: the test boards, not the net (2026-11-14)
+
+This corrects the section above. Its two "misreads" (a dead card in hand
+read as live, a countered threat in the opponent's graveyard read against
+the seat) are not concepts the champion got wrong. They are what any single
+card does to the leaf on a board that never occurs in its training data.
+Instruments: two ignored tests in `blunder::tests`, run with `--run-ignored
+only --no-capture`:
+- `leaf_misread_probe`: the end-board shells, one card moved at a time,
+  each also renamed to an unknown vocabulary index;
+- `leaf_sensitivity_on_real_positions`: the same moves on 277 real SOS
+  sealed positions, from heuristic self-play with a snapshot at each turn
+  change, turns 4-10, 40 games.
+
+**The encoder carries what the reads need.** A hand card has its
+castable-now and next-turn bits, the opponent's hand size is a global, and
+graveyard cards are encoded by name and printed features. Nothing here is a
+missing feature.
+
+**The plain items' cards were never trained.** The champion is SOS sealed
+self-play only (`selfplay_train`). Counterspell and Craw Wurm have
+vocabulary rows (the cube append), but nothing trained them. The plain
+counter item's leaf readings are an untrained embedding, which is noise.
+
+**On the sparse shells, any card moves the leaf by up to ±0.3.** The shell
+is turn 6, five Islands a side, empty hands and graveyards, an all-Island
+library, 6 life, and seat 0's Tabulator. Its reading is 0.215, and 0.072
+with their Embermare out.
+
+| one card added | shell | real positions, mean (\|d\|) |
+|---|---|---|
+| Island to my graveyard | **+0.265** | −0.033 (0.050) |
+| Island, renamed, to my graveyard | +0.222 | −0.013 (0.044) |
+| Island to their graveyard | +0.111 | +0.019 (0.033) |
+| Rearing Embermare to their graveyard | **−0.074** | **+0.051** (0.052) |
+| Pestbrood Sloth to their graveyard | +0.019 | +0.030 (0.033) |
+| Island to my hand | +0.042 | +0.057 (0.061) |
+| Mana Sculpt to my hand | **+0.261** | −0.005 (0.018) |
+| Mana Sculpt, renamed, to my hand | +0.204 | +0.021 (0.025) |
+| Run Behind to my hand | +0.469 | +0.016 (0.025) |
+| an Island to their hand (shell: with Mana Sculpt in mine) | −0.039 | −0.025 (0.025) |
+| Rearing Embermare to their battlefield | −0.143 | **−0.237** (0.237) |
+
+On real positions the reads are the right ones: a threat on their
+battlefield costs 0.24, the same threat in their graveyard is +0.05, and a
+counter in hand is about neutral. The shell's numbers are an order of
+magnitude larger and often the wrong sign, and a renamed card moves the
+shell about as much as the real one does: the net is extrapolating on
+emptiness, not reading the card. The other shell rows (opponent's hand size,
+tapped lands) move it by 0.1-0.2 as well. On a real board the ordering the
+counter items need (threat countered, so it sits in their graveyard, over
+threat resolved) is +0.05 against −0.24, so the leaf would get it right.
+
+**Consequences:**
+- No value training for "dead cards and graveyards"; the data is not the
+  problem. Lead 1 of the section above is closed.
+- The blunder set measures the leaf off its distribution. Every item is
+  built on a `mid()`/`base()`-style shell, so a leaf-decided item can fail
+  for reasons the client never meets. The plain-card items also read
+  untrained embeddings. The pass counts so far (62 / 65) are still a
+  measurement of the pilot on those shells; they are not evidence about
+  play on real boards.
+- **Next:** build the save-the-answer items on real positions. Take SOS
+  sealed mid-game states from self-play, transplant the item's cards in
+  (the counter and its mana, the threat in the opponent's hand, the bait),
+  and check whether the client still spends the answer early. If it holds
+  on real boards, rebuild the blunder set on real shells. If it still
+  spends, the cause is the search, not the leaf's training.

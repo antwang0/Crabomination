@@ -668,14 +668,17 @@ lobby's Modern / SOS duels now play the client's pilot (61.75 / 61.9 pooled
 over the old one; ML_NOTES "The lobby's non-Cube duels"). The blunder set has
 65 items; the client reads 62 / 65, failing the three "save the answer for
 the bigger threat" items (ML_NOTES "The blunder set, 60 → 65").
-Read 2026-11-13 (ML_NOTES "Why the search spends the answer early"): the
-counter items are the leaf: a dead card in hand counts as live, and a
-countered threat in the opponent's graveyard counts against the seat. The
-rollouts counter correctly. The Murder item is the heuristic's
+Read 2026-11-13, corrected 2026-11-14 (ML_NOTES "What the leaf misreads,
+and why"): the counter items' "misreads" are an artifact of the sparse test
+boards. On 277 real SOS positions the champion reads a threat on the
+battlefield at −0.24 and the same threat in the graveyard at +0.05, and a
+single card moves it by 0.02-0.06, against up to ±0.3 on the shells. The
+plain items' cards were never trained (SOS-only self-play). No value
+retraining is needed for this. The Murder item is the heuristic's
 opponent-turn removal timing, plus a policy prior that decides a tie.
-**Next:** a material-mixed leaf (orders every end board right) gated on the
-ladder; then, with the user's go-ahead, value data that covers dead cards
-and graveyards.
+**Next:** the save-the-answer items transplanted onto real SOS mid-game
+positions; if the client holds there, rebuild the blunder set on real
+shells.
 
 Numbers and reasoning: ML_NOTES "Why the champion reads 0.442 on a 0.500
 base rate", "The combat window of the menu search" (the combat fix
