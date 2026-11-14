@@ -9455,3 +9455,52 @@ the live walk. Regression test:
 suite is 29,534 / 29,534 and golden traces are unchanged. The net encoder's
 castability bits read the same table (`untapped_mana_colors`), so they were
 over-optimistic on those boards too.
+
+### The hold arm (`-ho`): holds more where holding wins, NO LOSS on the ladder, not adopted (2026-11-14)
+
+`MctsConfig::menu_hold_arm`, ladder suffix `-ho`, opt-in. In the own-main
+window, when some arm casts a spell, the search gets an extra arm: a
+priority pass whose rollouts cast no spell for the seat for the rest of
+that turn (`HoldCasts`; a refused cast becomes a pass, so the rollout isn't
+cut short as stale). Lands, attacks and the opponent's turn play as before.
+Its prior is the pass arm's logit. The plain pass arm stays, as "go to
+combat, then cast". Binaries are in `.ladder/ho/`.
+
+**Real-position counter item** (`--real-counter 120 --reps 3 --truth 40`),
+where B is the client pilot `mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr`:
+
+| pilot | hold-right reps | spent (own turn) | countered | not cast | spend-right: spent |
+|---|---|---|---|---|---|
+| B | 84 | 66 | 11 | 5 | 15 / 15 |
+| B-ho | 84 | 39 | 28 | 12 | 12 / 15 |
+| B-rh | 81 | 55 | 12 | 8 | 15 / 15 |
+| B-ho-rh | 81 | 20 | 36 | 17 | 12 / 15 |
+
+"Not cast" means the opponent never cast the Embermare while the mana was
+held, which is a hold too.
+
+**Blunder set**, 10 reps: B 62.0, B-ho 61.1, B-ho-rh 60.0 / 65.
+- `-ho` newly fails `the_four_drop_over_the_one_drop` (1 / 10): it holds
+  instead of casting the Ogre. That is a shell item, where the leaf
+  overrates a card left in hand.
+- `-ho-rh` also fails `remove_the_blocker_then_attack`.
+
+**Gate** (pre-registered in `.ladder/ho/gate.sh`): B-ho vs B, SOS sealed,
+120 x 12 paired.
+- Seed 43: 49.0 [47.4, 50.7].
+- Seed 97: 50.4 [48.8, 52.0].
+- Pooled 49.7: **NO LOSS, no GAIN.**
+
+The pre-registration needed a GAIN, or NO LOSS with the blunder set back at
+62, because the arm costs a blunder item. Neither holds, so it is **not
+adopted**. The code stays as an opt-in profile flag.
+
+Why it is only half the fix: the root log on a hold-right board
+(`--real-counter --pos 17`, `CRAB_MCTS_ROOT=1`) shows the arms within 0.01
+of each other. Spend reads 0.264, pass 0.270 and hold 0.255, against
+full-game play-outs of 15 / 40 for holding and 5 / 40 for spending. Inside
+the 3-turn horizon the rollouts barely tell the lines apart, so noise
+decides. Heuristic rollouts sharpen it (`-ho-rh` holds 53 of 81), but they
+cost two blunder items and lost on the ladder before. What is left is the
+rollouts' fidelity on the opponent's turn and the horizon, not the arm
+structure.

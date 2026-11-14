@@ -675,9 +675,13 @@ correctly; the shells were the problem. On real boards (`bot_puzzles
 holding wins, because the menu search's hold arm is a priority pass whose
 rollouts spend the mana later in the turn (59 / 60). The Murder item is the
 heuristic's opponent-turn removal timing, plus a policy prior that decides a
-tie. **Next:** a "hold" root arm (end the turn casting nothing more,
-rollouts from the held board), read on `--real-counter` and the blunder set,
-then gated. Then rebuild the blunder set on real shells.
+tie. The hold arm (`-ho`, ML_NOTES "The hold arm") halves the spends where
+holding wins (66 to 39 of 84) and reads NO LOSS on the ladder (49.7
+pooled), but costs a shell blunder item, so it is not adopted. `-ho-rh`
+holds best (20 spends of 81) but costs two items. **Next:** rebuild the
+blunder set on real shells (the shell items now mislead in both
+directions), then re-read `-ho` there. Its remaining gap is the rollouts'
+fidelity inside a 3-turn horizon.
 
 Numbers and reasoning: ML_NOTES "Why the champion reads 0.442 on a 0.500
 base rate", "The combat window of the menu search" (the combat fix

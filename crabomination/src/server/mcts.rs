@@ -513,6 +513,14 @@ pub struct MctsConfig {
     /// carries whichever the generator made first. Identical twins still
     /// merge. Ladder suffix `-ks`.
     pub menu_state_keys: bool,
+    /// A "hold" arm in the own-main window: a priority pass whose rollouts
+    /// cast no spell for `seat` for the rest of the turn (lands, attacks and
+    /// the opponent's turn as before). The plain pass arm's rollouts spend
+    /// the mana a step later, so without it holding up an answer is never
+    /// what the search prices (ML_NOTES "The counter item on real
+    /// positions": 59 / 60 of the pass arm's rollouts spend it). Its prior
+    /// is the pass arm's. Ladder suffix `-ho`.
+    pub menu_hold_arm: bool,
 }
 
 /// Most picks that are not a declaration a combat window takes before it
@@ -558,6 +566,7 @@ impl Default for MctsConfig {
             menu_declare_fix: false,
             menu_anchor: -1.0,
             menu_anchor_material: false,
+            menu_hold_arm: false,
             win_discount: 0.0,
             two_seat_leaf: false,
             menu_no_noise: false,
@@ -613,7 +622,8 @@ impl MctsConfig {
 /// `-ks` [`MctsConfig::menu_state_keys`] and `-rh`
 /// [`MctsConfig::heuristic_rollouts`] (the scored pilot on the profile's
 /// weights plays the rollouts, not the uniform baseline); `-hr` is
-/// [`EvalWeights::hold_removal`] on the pilot's weights.
+/// [`EvalWeights::hold_removal`] on the pilot's weights and `-ho`
+/// [`MctsConfig::menu_hold_arm`].
 pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let rest = name.strip_prefix("mcts-net67-menu-")?;
     let mut parts = rest.split('-');
@@ -624,10 +634,12 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let mut arms = MctsConfig::default().menu_arms;
     let (mut crn, mut declare_fix, mut anchor, mut anchor_material) = (false, false, -1.0f64, false);
     let (mut win_discount, mut two_seat, mut no_noise, mut state_keys) = (0.0f64, false, false, false);
-    let mut heuristic_rollouts = false;
+    let (mut heuristic_rollouts, mut hold_arm) = (false, false);
     for p in parts {
         if p == "crn" {
             crn = true;
+        } else if p == "ho" {
+            hold_arm = true;
         } else if p == "rh" {
             heuristic_rollouts = true;
         } else if p == "hr" {
@@ -699,12 +711,32 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
         two_seat_leaf: two_seat,
         menu_no_noise: no_noise,
         menu_state_keys: state_keys,
+        menu_hold_arm: hold_arm,
         ..MctsConfig::default()
     })
 }
 
 /// `seat` still owes this step's attack or block declaration (the
 /// condition `decision_menu::menu` opens a combat window on).
+/// A rollout pilot that casts no spell while the turn number is `turn` —
+/// the hold arm's seat ([`MctsConfig::menu_hold_arm`]).
+struct HoldCasts {
+    inner: Box<dyn Bot>,
+    turn: u32,
+}
+
+impl Bot for HoldCasts {
+    fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        let a = self.inner.next_action(state, seat)?;
+        // A refused cast is a pass, not silence: the rollout counts a round
+        // nobody acts in as stale and stops early.
+        if state.turn_number == self.turn && matches!(a, GameAction::CastSpell { .. }) {
+            return Some(GameAction::PassPriority);
+        }
+        Some(a)
+    }
+}
+
 fn declaration_due(g: &GameState, seat: usize) -> bool {
     match g.step {
         TurnStep::DeclareAttackers => g.attack_declarer() == seat && g.attacking().is_empty(),
@@ -1092,7 +1124,13 @@ impl MctsBot {
     }
 
     /// Play `g` forward to the horizon and score it.
-    fn rollout(&self, mut g: GameState, seat: usize) -> f64 {
+    fn rollout(&self, g: GameState, seat: usize) -> f64 {
+        self.rollout_holding(g, seat, None)
+    }
+
+    /// [`rollout`](Self::rollout), with `seat` casting no spell while the
+    /// turn number is `hold` (the hold arm, [`MctsConfig::menu_hold_arm`]).
+    fn rollout_holding(&self, mut g: GameState, seat: usize, hold: Option<u32>) -> f64 {
         timing::count(&timing::ROLLOUTS, 1);
         {
             let _t = timing::lap(&timing::DET_NS);
@@ -1127,6 +1165,10 @@ impl MctsBot {
                 }
             })
             .collect();
+        if let Some(turn) = hold {
+            let inner = std::mem::replace(&mut policy[seat], Box::new(HeuristicBot::uniform_baseline()));
+            policy[seat] = Box::new(HoldCasts { inner, turn });
+        }
         // 400 at the profile's own horizon; a lap horizon buys fuel in
         // proportion, so the longer rollout is not cut short by it.
         let mut fuel = if horizon > self.cfg.horizon_turns {
@@ -1762,7 +1804,7 @@ impl MctsBot {
                     .iter()
                     .map(|&s| {
                         let _pin = PinnedStreams::install(s);
-                        self.arm_rollout(state, seat, a)
+                        self.arm_rollout(state, seat, a, false)
                     })
                     .collect()
             })
@@ -1841,15 +1883,39 @@ impl MctsBot {
                 }
                 Some(k)
             });
-        let (arms, logits, states, noise) = self.menu_arms(state, seat, &m, anchor_key.as_deref());
+        let (mut arms, mut logits, mut states, mut noise) = self.menu_arms(state, seat, &m, anchor_key.as_deref());
         if arms.is_empty() {
             return None;
+        }
+        // The hold arm (`menu_hold_arm`): a pass priced by rollouts that
+        // cast nothing more this turn, beside the plain pass, when some arm
+        // casts a spell.
+        let mut hold: Option<usize> = None;
+        if self.cfg.menu_hold_arm
+            && window == MENU_MAIN
+            && arms.iter().any(|a| matches!(a, GameAction::CastSpell { .. }))
+            && m.moves.iter().any(|a| matches!(a, GameAction::PassPriority))
+        {
+            let prior = arms
+                .iter()
+                .position(|a| matches!(a, GameAction::PassPriority))
+                .map(|i| logits[i])
+                .unwrap_or_else(|| logits.iter().copied().fold(f64::INFINITY, f64::min));
+            hold = Some(arms.len());
+            arms.push(GameAction::PassPriority);
+            logits.push(prior);
+            // The capture rows and the halving's noise are per arm; the
+            // hold arm is a second reading of the pass, so neither carries it.
+            states = None;
+            if let Some(g) = noise.as_mut() {
+                g.push(0.0);
+            }
         }
         let anchor = anchor_key.as_ref().and_then(|k| arms.iter().position(|a| &key(a) == k));
         let pick = if arms.len() == 1 || self.confident(&logits) {
             arms[0].clone()
         } else {
-            let st = self.prior_search(state, seat, &arms, &logits, noise, anchor);
+            let st = self.prior_search(state, seat, &arms, hold, &logits, noise, anchor);
             let q = |i: usize| if st.visits[i] > 0 { st.total[i] / st.visits[i] as f64 } else { f64::NAN };
             // The anchor stands unless the search's pick clears the margin.
             let best = match anchor {
@@ -1872,7 +1938,8 @@ impl MctsBot {
                     st.best
                 );
                 for (i, a) in arms.iter().enumerate() {
-                    line += &format!("\n    [{i}] logit {:+.2} g {:+.2} n {:>3} q {:.3}  {a:?}", logits[i], st.noise[i], st.visits[i], q(i));
+                    let tag = if hold == Some(i) { " (hold)" } else { "" };
+                    line += &format!("\n    [{i}] logit {:+.2} g {:+.2} n {:>3} q {:.3}  {a:?}{tag}", logits[i], st.noise[i], st.visits[i], q(i));
                 }
                 eprintln!("{line}");
             }
@@ -1971,11 +2038,13 @@ impl MctsBot {
     /// stepped past its declaration window first, as in `probe_actions`.
     /// `noise` is the arms' Gumbel draw when the caller sampled them with it
     /// ([`MctsConfig::menu_sample`]); `None` draws it here.
+    #[allow(clippy::too_many_arguments)]
     fn prior_search(
         &self,
         state: &GameState,
         seat: usize,
         arms: &[GameAction],
+        hold: Option<usize>,
         logits: &[f64],
         noise: Option<Vec<f64>>,
         keep: Option<usize>,
@@ -2032,7 +2101,7 @@ impl MctsBot {
                     })
                     .collect()
             });
-            for (i, r) in self.arm_rollouts_seeded(state, seat, arms, &jobs, seeds.as_deref()) {
+            for (i, r) in self.arm_rollouts_seeded(state, seat, arms, hold, &jobs, seeds.as_deref()) {
                 match r {
                     Some(r) => {
                         total[i] += r;
@@ -2058,17 +2127,19 @@ impl MctsBot {
     /// stream when the decision is pinned (as `parallel_iterations` does).
     /// Each job additionally under its own pinned seed when `seeds` (one
     /// per job) is given — the common-random-numbers path.
+    #[allow(clippy::too_many_arguments)]
     fn arm_rollouts_seeded(
         &self,
         state: &GameState,
         seat: usize,
         arms: &[GameAction],
+        hold: Option<usize>,
         jobs: &[usize],
         seeds: Option<&[u64]>,
     ) -> Vec<(usize, Option<f64>)> {
         let one = |j: usize, i: usize| {
             let _pin = seeds.map(|s| PinnedStreams::install(s[j]));
-            (i, self.arm_rollout(state, seat, &arms[i]))
+            (i, self.arm_rollout(state, seat, &arms[i], hold == Some(i)))
         };
         let workers = self.cfg.search_threads.min(jobs.len()).max(1);
         if workers == 1 {
@@ -2101,7 +2172,7 @@ impl MctsBot {
 
     /// One rollout of `arm`: the hidden zones redealt *before* the arm is
     /// applied, a declaration stepped past its window, then played out.
-    fn arm_rollout(&self, state: &GameState, seat: usize, arm: &GameAction) -> Option<f64> {
+    fn arm_rollout(&self, state: &GameState, seat: usize, arm: &GameAction, hold: bool) -> Option<f64> {
         let mut g = state.clone();
         self.determinise(&mut g, seat, &mut draw_rng());
         // A spell or ability played while `seat`'s declaration is still due
@@ -2133,7 +2204,7 @@ impl MctsBot {
                 }
             }
         }
-        Some(self.rollout(g, seat))
+        Some(self.rollout_holding(g, seat, hold.then_some(state.turn_number)))
     }
 
     /// The round-51 fetch arms: search a pending `SearchLibrary` instead of
@@ -2702,6 +2773,8 @@ mod tests {
         assert_eq!(format!("{gated:?}"), format!("{built:?}"));
         assert!(built.weights.hold_removal && !built.two_seat_leaf && !built.heuristic_rollouts);
         assert!(menu_profile("mcts-net67-menu-mc-df-anm10-rh").is_some_and(|c| c.heuristic_rollouts && c.horizon_turns == 3));
+        assert!(menu_profile("mcts-net67-menu-mc-df-anm10-ho").is_some_and(|c| c.menu_hold_arm && c.horizon_turns == 3));
+        assert!(!MctsConfig::default().menu_hold_arm, "the hold arm is opt-in");
         assert!(menu_profile("mcts-net67-menu-mc-bogus").is_none());
         assert!(menu_profile("mcts-net67-256").is_none());
     }

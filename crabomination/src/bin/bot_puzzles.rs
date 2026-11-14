@@ -541,7 +541,7 @@ fn run_scoring(profiles: &[String]) {
     }
 }
 
-/// `--real-counter N [--reps R] [--truth T] PROFILE..`: the SOS counter
+/// `--real-counter N [--reps R] [--truth T] [--pos K] PROFILE..`: the SOS counter
 /// item (`blunder::transplant_counter`) on real positions from N games of
 /// SOS sealed self-play. Per position: the heuristic play-out of holding
 /// and of spending on the Tabulator (T games each), then each profile's
@@ -551,7 +551,9 @@ fn run_real_counter(games: u64) {
     let a: Vec<String> = std::env::args().collect();
     let flag = |f: &str, d: u64| a.iter().position(|x| x == f).and_then(|i| a.get(i + 1)).map_or(d, |v| v.parse().expect("a number"));
     let (reps, truth) = (flag("--reps", 3), flag("--truth", 20));
-    let skip: Vec<usize> = ["--real-counter", "--reps", "--truth"]
+    // `--pos K`: only board K (for reading one board's search, CRAB_MCTS_ROOT=1).
+    let only_pos = a.iter().position(|x| x == "--pos").and_then(|i| a.get(i + 1)).map(|v| v.parse::<usize>().expect("--pos K"));
+    let skip: Vec<usize> = ["--real-counter", "--reps", "--truth", "--pos"]
         .iter()
         .filter_map(|f| a.iter().position(|x| x == f).map(|i| i + 1))
         .collect();
@@ -564,6 +566,9 @@ fn run_real_counter(games: u64) {
     // class (hold right, spend right, even) x profile x outcome
     let mut tally = vec![vec![vec![0u64; n_out]; profiles.len()]; 3];
     for (k, real) in positions.iter().enumerate() {
+        if only_pos.is_some_and(|p| p != k) {
+            continue;
+        }
         let (pos, cards) = transplant_counter(real);
         let Some((h, s)) = hold_or_spend_truth(&pos, cards, truth) else {
             println!("#{k:<3} skipped: the Tabulator can't be cast here");
