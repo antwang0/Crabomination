@@ -9504,3 +9504,53 @@ decides. Heuristic rollouts sharpen it (`-ho-rh` holds 53 of 81), but they
 cost two blunder items and lost on the ladder before. What is left is the
 rollouts' fidelity on the opponent's turn and the horizon, not the arm
 structure.
+
+## The client's draft decks: 40 cards again, and the sealed builder on SOS piles (+9.6) (2026-11-15)
+
+Asked after the deck-builder leads ("are there more improvements to the
+sealed deck builder?"): the learned builder only ever reached the sealed
+*opponents*. The client's draft deckbuilding screen — the player's starting
+suggestion and the bot opponent's deck (`DraftSession::build_opponent_deck`)
+— still ran `draft::suggest_main_deck` (two colours by raw pips, the static
+score, no splash) + `suggest_basic_split` 17.
+
+**Bug found on the way: the drafted decks were ~31 cards.** Both seats'
+decks go through `draft::enforce_copy_cap` *after* their basics are added,
+and the cap capped basics too: 23 spells + 17 basics reached the table with
+4 of each basic, 8 lands in all — whatever the deckbuilding screen counted.
+Fixed (basics exempt, CR 100.2a); tests
+`enforce_copy_cap_keeps_every_basic_land` (engine) and
+`a_finished_sos_draft_deals_forty_card_decks` (client, a full SOS draft).
+
+**Measured** (`fra_card_eval --draft-ab --arms A,B --set sos|cube`, new):
+seeded 8-seat pods of `draft::bot_pick` drafters (three
+`DraftPool::generate_pack` packs, passing as `DraftPod`), every seat's pile
+built by both arms, 250 pods = 2,000 piles x 8 seat-swapped pairs,
+pile-level 95 %, `--pilot dflt`, every arm with basics exempt from the cap.
+`.ladder/draftab/{sos,cube}.txt`. Share is the second arm's:
+
+| piles | A, B | seed 43 | seed 97 | lands/deck A / B |
+|---|---|---|---|---|
+| SOS | suggest, opponent | **59.59 [58.96, 60.21]** | **59.54 [58.90, 60.18]** | 17.2 / 18.4 |
+| SOS | rated, opponent | 52.08 [51.52, 52.64] | 52.08 [51.52, 52.63] | 16.3 / 18.4 |
+| Cube | suggest, v3 | 49.88 [49.26, 50.50] | 49.70 [49.08, 50.33] | 17.2 / 16.0 |
+
+`opponent` = `selfplay::sealed_opponent_build` (the learned policy + SOS
+value, polish 3). The same-pool value was trained on 6-pack sealed pools;
+on 45-card draft piles it still beats the rated best-of-16 by +2.1, so the
+off-distribution worry did not bite. On Cube the v3 builder ties the
+suggestion, so Cube is unchanged. 32-38 SOS / 76-86 Cube piles had a deck
+under 40 — the suggestion's (the rated / opponent SOS cell had none), when
+the pile has fewer than 23 on-colour cards.
+
+**Adopted** (the user's "start with 1"): `selfplay::draft_deck_build` — an
+SOS pile is the sealed opponent's build split back into main / sideboard /
+basics (more than four copies of a nonbasic go to the sideboard, a basic in
+each one's place, so the client's cap never shortens the deck); any other
+pile keeps the suggestion. The client calls it for the player's starting
+deck and the bot opponent's. Cost: ~2.3 s a build in a debug engine (a
+fraction of a second optimized), once at the end of the draft and once at
+Play Match — the Sealed menu's opponent already pays the same. Open: the
+pod's bot *drafters* still pick by the static `score_card_for_seat`; the
+Cube suggestion's short decks; the opponent-select tiles show the pile's
+pip colours, not the built deck's.

@@ -55,6 +55,16 @@
 //! `--set sos` rates Secrets of Strixhaven instead (`draft::SosPacks` pools,
 //! no `--ratings` file); `--ab` takes it too.
 //!
+//! `fra_card_eval --draft-ab --arms A,B [--set sos|cube] [--pods 250]
+//! [--pairs 8] [--seed 43] [--pilot P]` races two builders on DRAFT piles:
+//! a seeded 8-seat pod of `draft::bot_pick` drafters (three packs of
+//! `DraftPool::generate_pack`), every seat's pile built by both arms and the
+//! two decks played in seat-swapped pairs. Arms: `suggest` (the client's
+//! deckbuilding screen: `suggest_main_deck` 23 + `suggest_basic_split` 17),
+//! `opponent` (`selfplay::sealed_opponent_build`, 16), `rated`
+//! (`rated_sealed_build`, 16), `v3` (`v3_opponent_build`, 16). The unit is
+//! the pile; the share printed is B's.
+//!
 //! `fra_card_eval --ab [--pools 2000] [--pairs 8] [--seed 43] [--pilot P] [--best N]`
 //! is the builder race instead: per FRA pool (`fra_mode::FraPacks`, no
 //! ratings file), the v3 build against the rated build
@@ -405,6 +415,134 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
         mean + half,
         shares.len(),
         100.0 * wa as f64 / (wa + wb) as f64
+    );
+}
+
+/// One seeded 8-seat booster draft of `draft::bot_pick` drafters: every
+/// seat's 3 x pack pile. Passing follows `DraftPod` (left, right, left);
+/// the CR 905 draft-matters cards are taken as plain picks.
+fn draft_piles(kind: crabomination::draft::DraftPool, pool: &[Factory], rng: &mut StdRng) -> Vec<Vec<Factory>> {
+    use crabomination::draft::{POD_SIZE, PACKS_PER_SEAT, bot_pick};
+    let mut picks: Vec<Vec<Factory>> = vec![Vec::new(); POD_SIZE];
+    for round in 0..PACKS_PER_SEAT {
+        let mut packs: Vec<Vec<Factory>> = (0..POD_SIZE).map(|_| kind.generate_pack(pool, rng)).collect();
+        while packs.iter().any(|p| !p.is_empty()) {
+            for (seat, pack) in packs.iter_mut().enumerate() {
+                if let Some(i) = bot_pick(pack, &picks[seat]) {
+                    picks[seat].push(pack.remove(i));
+                }
+            }
+            // Seat i's pack goes to seat i - 1 in rounds 1 and 3.
+            if round == 1 {
+                packs.rotate_right(1);
+            } else {
+                packs.rotate_left(1);
+            }
+        }
+    }
+    picks
+}
+
+/// A draft pile built by the named arm (see `--draft-ab` in the header).
+fn draft_arm(name: &str, pile: &[Factory], seed: u64) -> Vec<Factory> {
+    use crabomination::draft;
+    match name {
+        "suggest" => {
+            let (mut deck, _) = draft::suggest_main_deck(pile, 23);
+            let colors = draft::top_two_colors(pile);
+            let basics = draft::suggest_basic_split(&deck, colors, 17);
+            for c in Color::ALL {
+                for _ in 0..basics.get(&c).copied().unwrap_or(0) {
+                    deck.push(draft::basic_land_factory(c));
+                }
+            }
+            draft::enforce_copy_cap(deck)
+        }
+        "opponent" => crabomination::selfplay::sealed_opponent_build(pile, 16, seed, ColorSet::empty()),
+        "rated" => crabomination::selfplay::rated_sealed_build(pile, 16, seed),
+        "v3" => crabomination::selfplay::v3_opponent_build(pile, 16, seed, ColorSet::empty()),
+        other => panic!("--arms: {other} is not suggest, opponent, rated or v3"),
+    }
+}
+
+fn race_draft_builders(pilot: Pilot, pods: usize, pairs: usize, seed: u64, threads: usize) {
+    use crabomination::draft::{DraftPool, POD_SIZE};
+    let arms = arg("--arms").unwrap_or_else(|| "suggest,opponent".into());
+    let (a, b) = arms.split_once(',').expect("--arms A,B");
+    let kind = match arg("--set").as_deref() {
+        Some("cube") => DraftPool::Cube,
+        Some("sos") | None => DraftPool::Sos,
+        Some(other) => panic!("--draft-ab --set {other}: sos or cube"),
+    };
+    let pool = kind.factories();
+    let piles = pods * POD_SIZE;
+    let next = AtomicUsize::new(0);
+    let rows = std::sync::Mutex::new(Vec::with_capacity(piles));
+    let sizes = std::sync::Mutex::new((0usize, 0usize, 0usize));
+    let start = std::time::Instant::now();
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            s.spawn(|| loop {
+                let i = next.fetch_add(1, Ordering::Relaxed);
+                if i >= piles {
+                    break;
+                }
+                let pod = (i / POD_SIZE) as u64;
+                let pod_salt = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ pod.wrapping_mul(0xD6E8_FEB8_6659_FD93);
+                let pile = draft_piles(kind, &pool, &mut StdRng::seed_from_u64(pod_salt)).swap_remove(i % POD_SIZE);
+                let salt = pod_salt ^ ((i % POD_SIZE) as u64 + 1).wrapping_mul(0xA24B_AED4_963E_E407);
+                let old = draft_arm(a, &pile, salt ^ 1);
+                let new = draft_arm(b, &pile, salt ^ 1);
+                if std::env::var_os("CRAB_DRAFT_DEBUG").is_some() && i < 2 {
+                    let show = |d: &[Factory]| {
+                        let mut v: Vec<String> = d.iter().map(|f| crabomination::cube::card_def(*f).name.to_string()).collect();
+                        v.sort();
+                        v.join(" | ")
+                    };
+                    eprintln!("pile {i} ({} cards): {}\n  {a} ({}): {}\n  {b} ({}): {}", pile.len(), show(&pile), old.len(), show(&old), new.len(), show(&new));
+                }
+                {
+                    let lands = |d: &[Factory]| d.iter().filter(|f| crabomination::cube::card_def(**f).is_land()).count();
+                    let mut z = sizes.lock().unwrap();
+                    z.0 += lands(&old);
+                    z.1 += lands(&new);
+                    z.2 += usize::from(old.len() < 40 || new.len() < 40);
+                }
+                let key = |d: &[Factory]| {
+                    let mut v: Vec<usize> = d.iter().map(|f| *f as usize).collect();
+                    v.sort_unstable();
+                    v
+                };
+                let same = key(&old) == key(&new);
+                let t = simulate_match_pairs_piloted(&new, &old, pairs, [pilot, pilot], 50_000, salt ^ 2);
+                let n = done_count(&rows, (t.wins_a, t.wins_b, same));
+                if n % 250 == 0 {
+                    eprintln!("{n}/{piles} piles, {:.0}s", start.elapsed().as_secs_f64());
+                }
+            });
+        }
+    });
+    let rows = rows.into_inner().unwrap();
+    let (la, lb, short) = sizes.into_inner().unwrap();
+    let identical = rows.iter().filter(|r| r.2).count();
+    let shares: Vec<f64> =
+        rows.iter().filter(|r| r.0 + r.1 > 0).map(|r| 100.0 * r.0 as f64 / (r.0 + r.1) as f64).collect();
+    let n = shares.len() as f64;
+    let mean = shares.iter().sum::<f64>() / n;
+    let sd = (shares.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / (n - 1.0)).sqrt();
+    let half = 1.96 * sd / n.sqrt();
+    let (wa, wb): (u32, u32) = rows.iter().fold((0, 0), |acc, r| (acc.0 + r.0, acc.1 + r.1));
+    println!(
+        "{b} vs {a} on {} draft piles: {mean:.2}% [{:.2}, {:.2}] pile-level 95% (n={}, {identical} identical decks, \
+         {short} under 40 cards); games {wa}-{wb} ({:.2}%); lands/deck {a} {:.2}, {b} {:.2}; {:.0}s",
+        kind.label(),
+        mean - half,
+        mean + half,
+        shares.len(),
+        100.0 * wa as f64 / (wa + wb) as f64,
+        la as f64 / rows.len() as f64,
+        lb as f64 / rows.len() as f64,
+        start.elapsed().as_secs_f64(),
     );
 }
 
@@ -1164,6 +1302,11 @@ fn main() {
     }
     if let Some(dir) = arg("--dump-cards") {
         dump_cards(std::path::Path::new(&dir));
+        return;
+    }
+    if std::env::args().any(|a| a == "--draft-ab") {
+        let pilot = pilot_named(arg("--pilot").as_deref().unwrap_or("dflt"));
+        race_draft_builders(pilot, num("--pods", 250), num("--pairs", 8), num("--seed", 43) as u64, threads);
         return;
     }
     if std::env::args().any(|a| a == "--ab") {

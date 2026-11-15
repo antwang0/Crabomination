@@ -602,6 +602,104 @@ pub fn sealed_opponent_build(
     v3_opponent_build(pool, n, seed, colors)
 }
 
+/// A drafted pile as the client's deckbuilding screen shows it: the main
+/// deck's nonbasic cards, the rest of the pile, and the basics to add.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DraftDeck {
+    pub main: Vec<CardFactory>,
+    pub sideboard: Vec<CardFactory>,
+    /// Basic lands by colour, WUBRG order, counts above zero.
+    pub basics: Vec<(crate::mana::Color, u32)>,
+    /// The deck's two main colours (most basics first).
+    pub colors: [crate::mana::Color; 2],
+}
+
+impl DraftDeck {
+    /// The playable list: main plus basics.
+    pub fn deck(&self) -> Vec<CardFactory> {
+        let mut deck = self.main.clone();
+        for &(c, n) in &self.basics {
+            deck.extend(std::iter::repeat_n(crate::draft::basic_land_factory(c), n as usize));
+        }
+        deck
+    }
+}
+
+/// Build a drafted pile for play: the client's starting suggestion for the
+/// player and the bot opponent's deck.
+///
+/// A pile the measured ratings cover (SOS) goes through
+/// [`sealed_opponent_build`] — the learned builder, polish 3 — and is split
+/// back into main / sideboard / basics; any other pile (Cube) keeps
+/// `draft::suggest_main_deck` + `suggest_basic_split`. Measured 2026-11-15
+/// on seeded 8-seat pods of `draft::bot_pick` drafters (`fra_card_eval
+/// --draft-ab`, 250 pods = 2,000 piles x 8 seat-swapped pairs, pile-level,
+/// `--pilot dflt`, seeds 43 / 97): on SOS piles the learned build won
+/// **59.59 % [58.96, 60.21] / 59.54 % [58.90, 60.18]** against the
+/// suggestion and **52.08 % / 52.08 %** against the rated best-of-16, so the
+/// sealed-pool value holds on 45-card draft piles; on Cube piles `v3`
+/// against the suggestion read **49.88 / 49.70 %**, a tie, so Cube is left
+/// alone. Every arm was read with basics exempt from the copy cap
+/// ([`crate::draft::enforce_copy_cap`]).
+///
+/// The builder plays any number of a common it has; more than four copies
+/// of a nonbasic go to the sideboard, a basic of the main colour in each
+/// one's place, so the client's copy cap never shortens the deck.
+pub fn draft_deck_build(picks: &[CardFactory], seed: u64) -> DraftDeck {
+    use crate::draft::{COPY_CAP, basic_land_factory, suggest_basic_split, suggest_main_deck, top_two_colors};
+    use crate::mana::Color;
+    if !crate::card_ratings::rates_pool(picks) {
+        let (main, sideboard) = suggest_main_deck(picks, 23);
+        let colors = top_two_colors(picks);
+        let split = suggest_basic_split(&main, colors, 17);
+        let basics = Color::ALL
+            .into_iter()
+            .filter_map(|c| split.get(&c).copied().filter(|&n| n > 0).map(|n| (c, n)))
+            .collect();
+        return DraftDeck { main, sideboard, basics, colors };
+    }
+    let deck = sealed_opponent_build(picks, 16, seed, ColorSet::empty());
+    let basic_color = |f: CardFactory| {
+        let def = crate::cube::card_def(f);
+        if !def.is_land() || !def.supertypes.contains(&crate::card::Supertype::Basic) {
+            return None;
+        }
+        Color::ALL.into_iter().find(|&c| crate::cube::card_def(basic_land_factory(c)).name == def.name)
+    };
+    let mut counts = [0u32; 5];
+    let mut main = Vec::new();
+    let mut over_cap = 0u32;
+    let mut copies: crate::fxhash::HashMap<&str, u32> = Default::default();
+    let mut sideboard = picks.to_vec();
+    for f in deck {
+        if let Some(c) = basic_color(f) {
+            counts[c as usize] += 1;
+            continue;
+        }
+        let n = copies.entry(crate::cube::card_def(f).name).or_insert(0);
+        if *n >= COPY_CAP {
+            over_cap += 1;
+            continue;
+        }
+        *n += 1;
+        if let Some(i) = sideboard.iter().position(|&g| crate::cube::card_def(g).name == crate::cube::card_def(f).name) {
+            sideboard.remove(i);
+        }
+        main.push(f);
+    }
+    let mut by_count: Vec<Color> = Color::ALL.into_iter().filter(|&c| counts[c as usize] > 0).collect();
+    by_count.sort_by_key(|&c| std::cmp::Reverse(counts[c as usize]));
+    for c in top_two_colors(&main) {
+        if !by_count.contains(&c) {
+            by_count.push(c);
+        }
+    }
+    let colors = [by_count[0], by_count[1]];
+    counts[colors[0] as usize] += over_cap;
+    let basics = Color::ALL.into_iter().filter(|&c| counts[c as usize] > 0).map(|c| (c, counts[c as usize])).collect();
+    DraftDeck { main, sideboard, basics, colors }
+}
+
 /// Do FRA and SOS sealed opponents build with the learned policy and the
 /// same-pool deck value? **On**, adopted 2026-11-07 at the user's call
 /// (ML_NOTES "A deck net that builds decks", step 5). Against the rated
@@ -1375,6 +1473,34 @@ mod tests {
         wg.insert(crate::mana::Color::White);
         wg.insert(crate::mana::Color::Green);
         assert_eq!(sealed_opponent_build(&pool, 16, 3, wg), rated_sealed_build_in_colors(&pool, 16, 3, wg));
+    }
+
+    /// The client's draft deck: an SOS pile is the sealed opponent's build
+    /// split back into main + sideboard + basics (the pile, card for card),
+    /// and a Cube pile keeps the old suggestion.
+    #[test]
+    fn a_drafted_sos_pile_is_the_sealed_opponents_build() {
+        use crate::fra_mode::SealedSet;
+        let name = |f: &CardFactory| crate::cube::card_def(*f).name;
+        let sorted = |d: &[CardFactory]| {
+            let mut v: Vec<&str> = d.iter().map(name).collect();
+            v.sort_unstable();
+            v
+        };
+        for seed in 0..2u64 {
+            let pile = sealed_pool_of(SealedSet::Sos, seed, 3);
+            let built = draft_deck_build(&pile, seed);
+            assert_eq!(sorted(&built.deck()), sorted(&sealed_opponent_build(&pile, 16, seed, ColorSet::empty())));
+            assert_eq!(built.deck().len(), 40);
+            assert!(built.basics.iter().map(|b| b.1).sum::<u32>() >= 14, "{:?}", built.basics);
+            let mut both = built.main.clone();
+            both.extend(&built.sideboard);
+            assert_eq!(sorted(&both), sorted(&pile), "main + sideboard is the pile");
+            assert!(built.basics.iter().any(|b| b.0 == built.colors[0]));
+        }
+        let cube: Vec<CardFactory> = crate::draft::draft_pool().into_iter().take(45).collect();
+        let built = draft_deck_build(&cube, 1);
+        assert_eq!(built.main, crate::draft::suggest_main_deck(&cube, 23).0);
     }
 
     #[test]

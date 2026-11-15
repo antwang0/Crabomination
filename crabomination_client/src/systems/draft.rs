@@ -35,8 +35,9 @@ use crate::ui_button::{Button, Interaction};
 use crabomination::cube::CardFactory;
 use crabomination::draft::{
     DraftPod, DraftPool, PACKS_PER_SEAT, PACK_SIZE, POD_SIZE, PickAction, basic_land_factory,
-    enforce_copy_cap, suggest_basic_split, suggest_main_deck, top_two_colors,
+    enforce_copy_cap, suggest_basic_split, top_two_colors,
 };
+use crabomination::selfplay::draft_deck_build;
 // Bevy's `Color` lives in the prelude (`use bevy::prelude::*` above).
 // Import the engine's mana color under an alias to keep the two
 // distinct everywhere in this file.
@@ -340,13 +341,15 @@ impl DraftSession {
     }
 
     fn transition_to_deckbuilding(&mut self) {
-        // Auto-suggest main + sideboard split from the user's picks.
-        let user_picks = self.pod.picks[self.user_seat].clone();
-        let (suggested_main, suggested_sb) = suggest_main_deck(&user_picks, 23);
-        self.main = suggested_main;
-        self.sideboard = suggested_sb;
-        self.player_colors = top_two_colors(&self.pod.picks[self.user_seat]);
-        self.basics = suggest_basic_split(&self.main, self.player_colors, 17);
+        // Auto-suggest main + sideboard split from the user's picks: the
+        // sealed opponents' builder on an SOS pile (+9.6 over the old
+        // suggestion, `selfplay::draft_deck_build`), the suggestion on Cube.
+        let user_picks = &self.pod.picks[self.user_seat];
+        let built = draft_deck_build(user_picks, pile_seed(user_picks));
+        self.main = built.main;
+        self.sideboard = built.sideboard;
+        self.player_colors = built.colors;
+        self.basics = built.basics.into_iter().collect();
         self.phase = DraftPhase::Deckbuilding;
     }
 
@@ -413,18 +416,16 @@ impl DraftSession {
     /// to the bot's own picks.
     pub fn build_opponent_deck(&self, seat: usize) -> (Vec<CardFactory>, [ManaColor; 2]) {
         let picks = &self.pod.picks[seat];
-        let (main, _sb) = suggest_main_deck(picks, 23);
-        let colors = top_two_colors(picks);
-        let basics = suggest_basic_split(&main, colors, 17);
-        let mut deck = main;
-        for (color, count) in basics {
-            let basic = basic_land_factory(color);
-            for _ in 0..count {
-                deck.push(basic);
-            }
-        }
-        (enforce_copy_cap(deck), colors)
+        let built = draft_deck_build(picks, pile_seed(picks));
+        (enforce_copy_cap(built.deck()), built.colors)
     }
+}
+
+/// A pile's builder seed: the same picks always get the same suggestion.
+fn pile_seed(picks: &[CardFactory]) -> u64 {
+    picks.iter().fold(0xcbf2_9ce4_8422_2325, |h, f| {
+        crabomination::cube::card_def(*f).name.bytes().fold(h, |h, b| (h ^ u64::from(b)).wrapping_mul(0x100_0000_01b3))
+    })
 }
 
 // ── Marker components ────────────────────────────────────────────────────────
@@ -1957,6 +1958,27 @@ fn color_short(c: ManaColor) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A finished draft hands both seats a 40-card deck. Until 2026-11-15
+    /// the copy cap also capped basics, so 23 spells + 17 basics reached the
+    /// table as ~31 cards with 8 lands; and an SOS pile is now built by the
+    /// sealed opponents' builder (`selfplay::draft_deck_build`).
+    #[test]
+    fn a_finished_sos_draft_deals_forty_card_decks() {
+        let mut session = DraftSession::new(MatchFormat::Sos);
+        while matches!(session.phase, DraftPhase::Drafting) {
+            let pick = crabomination::draft::bot_pick(session.user_pack(), session.user_picks()).unwrap_or(0);
+            session.advance(PickAction::Take(pick));
+        }
+        assert!(matches!(session.phase, DraftPhase::Deckbuilding));
+        let deck = session.build_player_deck();
+        assert_eq!(deck.len(), 40, "the player's starting deck");
+        assert!(deck.iter().filter(|f| f().is_land()).count() >= 14);
+        let built = draft_deck_build(session.user_picks(), pile_seed(session.user_picks()));
+        assert_eq!(session.main, built.main);
+        let (opp, _) = session.build_opponent_deck((session.user_seat + 1) % POD_SIZE);
+        assert_eq!(opp.len(), 40, "the bot opponent's deck");
+    }
 
     /// Pick help ranks every card once, and its first is the bots' pick.
     #[test]

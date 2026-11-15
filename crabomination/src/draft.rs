@@ -868,10 +868,20 @@ pub fn basic_land_factory(color: Color) -> CardFactory {
 /// auto-suggestion pass so a seat that accidentally drafted six
 /// Lightning Bolts ends up with four in their main deck and two on
 /// the sideboard.
+///
+/// Basic lands are exempt (CR 100.2a). They were not until 2026-11-15, and
+/// the client's draft runs every finished deck — the player's and the bot
+/// opponent's — through here after adding its basics: a 23 + 17 list went
+/// to the table as ~31 cards with 4 of each basic, 8 lands in all.
 pub fn enforce_copy_cap(cards: Vec<CardFactory>) -> Vec<CardFactory> {
     let mut counts: HashMap<usize, u32> = HashMap::default();
     let mut out = Vec::with_capacity(cards.len());
     for f in cards {
+        let def = crate::cube::card_def(f);
+        if def.is_land() && def.supertypes.contains(&crate::card::Supertype::Basic) {
+            out.push(f);
+            continue;
+        }
         let key = f as usize;
         let entry = counts.entry(key).or_insert(0);
         if *entry < COPY_CAP {
@@ -1675,6 +1685,19 @@ mod tests {
             .count();
         assert_eq!(bolts, 4);
         assert_eq!(capped.len(), 5); // 4 bolts + 1 counterspell
+    }
+
+    /// CR 100.2a — the four-copy cap does not apply to basic lands. The
+    /// client's drafted decks (23 spells + 17 basics) went through the cap
+    /// after their basics were added and reached the table at ~31 cards.
+    #[test]
+    fn enforce_copy_cap_keeps_every_basic_land() {
+        let mut cards: Vec<CardFactory> = vec![crate::catalog::lightning_bolt; 5];
+        cards.extend(std::iter::repeat_n(basic_land_factory(Color::Red), 9));
+        cards.extend(std::iter::repeat_n(basic_land_factory(Color::Blue), 8));
+        let capped = enforce_copy_cap(cards);
+        assert_eq!(capped.len(), 4 + 17);
+        assert_eq!(capped.iter().filter(|f| crate::cube::card_def(**f).is_land()).count(), 17);
     }
 
     #[test]
