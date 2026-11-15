@@ -1444,6 +1444,18 @@ These don't change the player-visible UI but unblock parallel work and
 reduce ongoing churn. Sequence them when scope or merge conflicts on the
 Client UI layer become a recurring problem.
 
+### Split the largest files (2026-11-15) — partly done
+`menu.rs` 2,890 → 2,651 (the local bots' pilot and net loading →
+`menu/bots.rs`), `systems/ui.rs` 2,536 → 1,691 (the zone browsers →
+`systems/ui/browsers.rs`), `systems/draft.rs` 2,563 → 2,004 (deckbuilding and
+opponent select → `systems/draft/screens.rs`). Each submodule is `use
+super::*` with the parent re-exporting it, so no caller changed. ⏳
+`counter_tooltip.rs` (1,830 lines of code + tests) and
+`decision_ui/mod.rs` (2,200; already has `choice` / `order` / `card_pick`).
+`format_event` already lives in the engine (`GameEventWire::fmt_for_log`;
+the client's is a three-line wrapper) — the "Move `format_event`" entry
+below is done.
+
 ### Split `game_ui.rs`
 ✅ Shipped 2026-10-01 — `systems/game_ui/mod.rs` (5,287 lines) is now a
 100-line module root over `hud`, `phase`, `hint`, `log`, `stack_panel`,
