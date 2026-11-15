@@ -965,6 +965,7 @@ fn main() {
         .init_resource::<systems::log_links::BoardPing>()
         .init_resource::<systems::log_links::LogFocus>()
         .init_resource::<systems::hint_button::SuggestedMove>()
+        .init_resource::<systems::win_swings::WinSwings>()
         .add_systems(
             Update,
             (
@@ -992,6 +993,7 @@ fn main() {
             (
                 systems::match_stats::track_match_stats,
                 systems::match_history::record_finished_match,
+                systems::win_swings::record_win_swings,
                 game::clear_attack_plan_on_step_change,
                 systems::game_over::sync_game_over_modal,
                 systems::game_over::handle_auto_rematch_focus,

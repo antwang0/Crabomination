@@ -52,6 +52,7 @@ pub mod takeback;
 pub mod thinking;
 pub mod ui;
 pub mod ui_card_hover;
+pub mod win_swings;
 
 /// The sound cues (`sound`) where the client is built with audio; nothing
 /// without it, so the call site needs no `cfg`.

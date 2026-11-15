@@ -25,6 +25,13 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Post-game turning points (2026-11-15) — shipped
+
+`systems::win_swings` keeps each duel's win-chance readings with the log
+line before each; the game-over screen lists the three biggest falls
+("Turn 5: 62 % → 35 % after Bot 1 cast Wrath of God"; drops under 8 points
+are noise). Needs the meter's estimate (a duel, a net loaded).
+
 ## Win-chance meter (2026-11-15) — shipped
 
 `ClientView::win_estimate` (`net_eval::viewer_win_prob`: the FRA net in an

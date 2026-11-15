@@ -95,6 +95,7 @@ pub fn sync_game_over_modal(
     auto: Res<AutoRematchState>,
     kind: Res<ActiveMatchKind>,
     stats: Res<crate::systems::match_stats::MatchStats>,
+    swings: Res<crate::systems::win_swings::WinSwings>,
     mut commands: Commands,
 ) {
     let game_over = view.0.as_ref().and_then(|cv| cv.game_over);
@@ -254,6 +255,21 @@ pub fn sync_game_over_modal(
                         tf(13.0),
                         TextColor(theme::TEXT_MUTED),
                     ));
+                }
+
+                // Post-game review: where the win chance fell furthest
+                // (`win_swings`; a duel with the value net loaded).
+                let review = swings.review_lines();
+                if !review.is_empty() {
+                    p.spawn((
+                        Text::new("Turning points"),
+                        tf(14.0),
+                        TextColor(theme::ACCENT_BLUE),
+                        Node { margin: UiRect::top(Val::Px(6.0)), ..default() },
+                    ));
+                    for line in review {
+                        p.spawn((Text::new(line), tf(13.0), TextColor(theme::TEXT_BODY)));
+                    }
                 }
 
                 // Action buttons row: Rematch + New Game.
