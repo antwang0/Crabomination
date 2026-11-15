@@ -458,7 +458,7 @@ fn ring(
             let angle = TAU * i as f32 / RING_SEGMENTS as f32;
             let out = u * angle.cos() + v * angle.sin();
             // A dashed ring is a solid one with every other twelfth clear.
-            let on = style != RingStyle::Dashed || (angle / TAU * RING_DASHES * 2.0) as usize % 2 == 0;
+            let on = style != RingStyle::Dashed || ((angle / TAU * RING_DASHES * 2.0) as usize).is_multiple_of(2);
             // Four bright arcs, circling.
             let tone = tones(colour, if on { alpha } else { 0.0 }, band(angle * 4.0 / TAU - phase));
             for (offset, which) in COLUMNS {

@@ -179,7 +179,7 @@ pub fn update_pass_button(
             (theme::BUTTON_DISABLED_BG, format!("Pass ({key})"), false)
         };
     *bg = BackgroundColor(new_bg);
-    label.0 = new_label.into();
+    label.0 = new_label;
     let mut entity = commands.entity(btn_entity);
     // Skip `HoverTint` for the urgent state — `pulse_urgent_pass_button`
     // is animating the BG alpha and HoverTint would clobber it on every
@@ -292,7 +292,7 @@ pub fn handle_auto_pass_toggle(
     if let Ok(mut t) = label_q.single_mut()
         && t.0 != want
     {
-        t.0 = want.to_string();
+        t.0 = want;
     }
 }
 

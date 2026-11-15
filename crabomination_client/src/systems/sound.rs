@@ -216,7 +216,8 @@ pub fn build_sound_bank(mut commands: Commands, mut synths: ResMut<Assets<Synth>
     let bank = Cue::ALL
         .iter()
         .map(|&cue| {
-            let samples: Arc<[Sample]> = synth(cue).into_iter().map(Sample::from).collect();
+            // rodio's `Sample` is `f32` (its `64bit` feature is off).
+            let samples: Arc<[Sample]> = synth(cue).into();
             (cue, synths.add(Synth { samples }))
         })
         .collect();

@@ -235,7 +235,7 @@ pub fn sync_history_panel(
                 }
                 for (format, w, l, d) in history.record_by_format() {
                     let games = w + l + d;
-                    let rate = if games > 0 { 100 * w / games } else { 0 };
+                    let rate = (100 * w).checked_div(games).unwrap_or(0);
                     let draws = if d > 0 { format!(" – {d} drawn") } else { String::new() };
                     p.spawn((
                         Text::new(format!("{format}: {w} won – {l} lost{draws}  ({rate} %)")),
