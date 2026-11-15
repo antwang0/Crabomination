@@ -589,6 +589,9 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>, binds: Res
                     ));
                 });
 
+                // What the bot would do for you (`systems::hint_button`).
+                crate::systems::hint_button::spawn_hint_button(p, &tf, &key(A::Hint));
+
                 // Take back the latest action (`systems::takeback`); the
                 // caption names it, and both grey out with nothing to.
                 p.spawn((

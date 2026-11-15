@@ -25,6 +25,17 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Hint: what the bot would do (2026-11-15) — shipped
+
+`Q` or the **Hint** button (`systems::hint_button`) sends
+`ClientMsg::RequestHint`; the match answers `ServerMsg::Hint` with the move
+the registered hint bot would make for that seat (`server::hint`), phrased
+as an instruction ("play Forest", "cast Lightning Bolt") and naming its
+card, which the board pings. The client registers its own local pilot
+(`menu::hint_bot`), so a hint is the bots' own search; the network server
+registers none and answers that hints are off. ⏳ Next: the search's
+per-move win rates beside the pick (the menu search has them).
+
 ## Match history (2026-11-15) — shipped
 
 `systems::match_history`: each game you finish (not a spectated bot game)

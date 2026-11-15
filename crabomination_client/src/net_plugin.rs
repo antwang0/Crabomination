@@ -421,7 +421,11 @@ pub fn poll_net(
     mut rope: ResMut<RopeClock>,
     mut chess: ResMut<ChessClock>,
     // Paired: a system takes at most sixteen parameters.
-    (mut chat, mut takeback): (ResMut<ChatInbox>, ResMut<crate::systems::takeback::Takeback>),
+    (mut chat, mut takeback, mut hint): (
+        ResMut<ChatInbox>,
+        ResMut<crate::systems::takeback::Takeback>,
+        ResMut<crate::systems::hint_button::SuggestedMove>,
+    ),
     active_format: Option<Res<crate::systems::game_over::ActiveMatchFormat>>,
     time: Res<Time>,
     mut blocking: ResMut<crate::game::BlockingState>,
@@ -510,6 +514,7 @@ pub fn poll_net(
             ServerMsg::UndoDeclined { by, reason } => takeback.declined(by, &reason, &view, &mut log),
             ServerMsg::UndoMark { id } => takeback.heard.push(crate::systems::takeback::Heard::Mark(id)),
             ServerMsg::UndoPoints(points) => takeback.points = points,
+            ServerMsg::Hint { label, card, note } => hint.receive(label, card, note, time.elapsed_secs()),
             ServerMsg::Chat { seat, name, text } => {
                 chat.0.push((seat, name, text));
                 // The drainers only run in Lobby/InGame; don't let the inbox

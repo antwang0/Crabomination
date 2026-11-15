@@ -211,6 +211,8 @@ fn main() {
         keybinds: cfg.keybinds.clone(),
     });
     let keybinds = keybinds::Keybinds::from_overrides(&cfg.keybinds);
+    // A local match answers a Hint with the local pilot's own pick.
+    crabomination::server::hint::set_hint_bot(menu::hint_bot);
     let initial_stops = systems::phase_bar::StopConfig {
         my: gameplay.stops_my.clone(),
         opp: gameplay.stops_opp.clone(),
@@ -962,6 +964,7 @@ fn main() {
         .init_resource::<systems::game_ui::GameLogCollapsed>()
         .init_resource::<systems::log_links::BoardPing>()
         .init_resource::<systems::log_links::LogFocus>()
+        .init_resource::<systems::hint_button::SuggestedMove>()
         .add_systems(
             Update,
             (
@@ -970,6 +973,8 @@ fn main() {
                 systems::log_links::scroll_log_to_focus,
                 systems::log_links::fade_log_row_flash,
                 systems::thinking::sync_thinking_chip,
+                systems::hint_button::request_hint,
+                systems::hint_button::sync_hint_banner,
             )
                 .chain()
                 .run_if(in_state(AppState::InGame)),

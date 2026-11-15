@@ -178,6 +178,7 @@ pub mod lobby;
 mod decision_log;
 mod replay;
 pub mod undo;
+pub mod hint;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod tcp;
 pub mod view;
@@ -1239,6 +1240,11 @@ fn run_match_inner(
                     publish_snapshot(&state, &snapshot_sink);
                 }
             }
+            ClientMsg::RequestHint => {
+                if let Some(tx) = seat_tx.get(seat).and_then(Option::as_ref) {
+                    let _ = tx.send(hint::hint_for(&state, seat));
+                }
+            }
             ClientMsg::Chat { text } => {
                 if let Some(text) = sanitize_chat(&text) {
                     let name = state
@@ -2032,6 +2038,30 @@ mod tests {
             ServerMsg::View(v) => (label, *v),
             _ => unreachable!(),
         }
+    }
+
+    /// End to end: a Hint on the asker's move names what the registered hint
+    /// bot would do (here, play the one land in hand), and the card.
+    #[test]
+    fn a_hint_names_the_bots_move_for_the_asker() {
+        hint::set_hint_bot(|_| Box::new(HeuristicBot::new()));
+        let mut state = two_player_game();
+        let forest = state.add_card_to_hand(0, catalog::forest());
+        let (s0, c0) = seat_pair();
+        let handle = thread::spawn(move || {
+            run_match(state, vec![SeatOccupant::Human(s0), SeatOccupant::Bot(Box::new(HeuristicBot::new()))])
+        });
+        drain_initial(&c0);
+        c0.tx.send(ClientMsg::RequestHint).unwrap();
+        match next_where(&c0, |m| matches!(m, ServerMsg::Hint { .. })) {
+            ServerMsg::Hint { label, card, .. } => {
+                assert_eq!(label.as_deref(), Some("play Forest"));
+                assert_eq!(card, Some(forest));
+            }
+            _ => unreachable!(),
+        }
+        drop(c0);
+        handle.join().unwrap();
     }
 
     /// End to end against a bot: a deliberate action keeps an undo point, a

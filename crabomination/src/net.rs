@@ -82,6 +82,9 @@ pub enum ClientMsg {
     /// Answer the pending take-back request: allow it or decline it. From
     /// the seat that asked, a decline withdraws it.
     RespondUndo { accept: bool },
+    /// "What would the bot do?" — answered with [`ServerMsg::Hint`] while
+    /// the sender is the one to act (`server::hint`).
+    RequestHint,
     /// In-match chat: relayed to every seat and spectator as
     /// [`ServerMsg::Chat`] stamped with the sender's seat + display name.
     /// The server sanitizes (trims, strips control characters, clamps
@@ -304,6 +307,10 @@ pub enum ServerMsg {
     /// [`ClientMsg::RequestUndo`] can go back to. Sent whenever the list
     /// changes.
     UndoPoints(Vec<UndoPointView>),
+    /// The answer to [`ClientMsg::RequestHint`]: the action the hint bot
+    /// would take, named ("cast Lightning Bolt"), and the card it is about;
+    /// or `label: None` and why not in `note` (not your move, hints off).
+    Hint { label: Option<String>, card: Option<CardId>, note: String },
 }
 
 /// One place a seat can take back to: just before its action `label`.

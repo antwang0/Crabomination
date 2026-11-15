@@ -36,6 +36,7 @@ pub enum Action {
     Attack,
     HoldPriority,
     TakeBack,
+    Hint,
     Flip,
     AltCost,
     AbilityMenu,
@@ -115,6 +116,7 @@ pub const BINDINGS: &[Binding] = {
         b(Attack, YourTurn, KeyCode::KeyA, "Attack all · confirm attackers"),
         b(HoldPriority, YourTurn, KeyCode::KeyH, "Hold priority (auto-pass on/off)"),
         b(TakeBack, YourTurn, KeyCode::KeyZ, "Take back your last action (Shift: pick several)"),
+        b(Hint, YourTurn, KeyCode::KeyQ, "Hint: what the bot would do for you"),
         b(Flip, Cards, KeyCode::KeyF, "Flip double-faced card"),
         b(AltCost, Cards, KeyCode::KeyL, "Cast for alternative cost"),
         b(AbilityMenu, Cards, KeyCode::KeyM, "Open ability menu"),
@@ -315,7 +317,7 @@ mod tests {
         use Action::*;
         let all = [
             ToggleHelp, ToggleLog, DebugConsole, ExportState, Graveyard, Exile, LifeGraph, Chat, AnimSlower,
-            AnimFaster, AnimReset, Pass, EndTurn, NextTurn, Attack, HoldPriority, TakeBack, Flip,
+            AnimFaster, AnimReset, Pass, EndTurn, NextTurn, Attack, HoldPriority, TakeBack, Hint, Flip,
             AltCost, AbilityMenu, Cycle, Equip, Keep, Mulligan, SerumPowder, PlanarDie,
             RevealAgenda,
         ];
@@ -323,7 +325,7 @@ mod tests {
             match a {
                 ToggleHelp | ToggleLog | DebugConsole | ExportState | Graveyard | Exile | LifeGraph | Chat
                 | AnimSlower | AnimFaster | AnimReset | Pass | EndTurn | NextTurn | Attack
-                | HoldPriority | TakeBack | Flip | AltCost | AbilityMenu | Cycle | Equip | Keep
+                | HoldPriority | TakeBack | Hint | Flip | AltCost | AbilityMenu | Cycle | Equip | Keep
                 | Mulligan | SerumPowder | PlanarDie | RevealAgenda => {}
             }
         }

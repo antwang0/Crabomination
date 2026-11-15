@@ -23,6 +23,7 @@ pub mod match_stats;
 pub mod game_ui;
 pub mod gizmos;
 pub mod glow;
+pub mod hint_button;
 pub mod frame_pacing;
 pub mod perf_hud;
 pub mod shadows;

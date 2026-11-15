@@ -27,6 +27,13 @@ pub const PING_SECS: f32 = 1.4;
 #[derive(Resource, Default)]
 pub struct BoardPing(Option<(CardId, f32)>);
 
+impl BoardPing {
+    /// Ring `card` on the board from `now` (a log click, a hint).
+    pub fn ping(&mut self, card: CardId, now: f32) {
+        self.0 = Some((card, now));
+    }
+}
+
 /// The log line a stack-tile click is bringing into view, and when.
 #[derive(Resource, Default)]
 pub struct LogFocus {

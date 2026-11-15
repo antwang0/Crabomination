@@ -1995,6 +1995,13 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn cra
     Box::new(crabomination::server::MctsBot::new(if menu { cfg.with_combat_fix().with_search_fixes() } else { cfg }))
 }
 
+/// The bot a Hint asks (`server::hint`): the local pilot for the state's
+/// table — so a hint is as strong as the bots you are playing.
+pub(crate) fn hint_bot(state: &GameState) -> Box<dyn crabomination::server::Bot> {
+    let fra = crabomination::fra_mode::is_fra_game(state);
+    local_bot(state.players.len(), fra, fra)
+}
+
 /// Whether this match's local bots redeal honestly; set by [`honest_for`].
 static HONEST: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
