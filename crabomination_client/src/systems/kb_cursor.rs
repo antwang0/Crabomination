@@ -191,12 +191,14 @@ pub fn handle_keyboard_cursor_input(
     settings: Res<crate::systems::quality::SettingsOpen>,
     esc: Res<crate::systems::esc::EscFocus>,
     text_input: crate::systems::input_guard::TextInputGuard,
+    modals: Query<(), crate::systems::modal_keys::ModalRoots>,
 ) {
     // Yield input to focused text fields / modals so typing doesn't
     // move the gameplay cursor. Settings modal also captures all
     // cursor input — keyboard cursor is meaningless while the
-    // pause-style settings panel is open.
-    if text_input.typing() || auto_rematch.focused || settings.0 {
+    // pause-style settings panel is open. A decision modal's buttons
+    // take the arrows and Tab (`modal_keys`).
+    if text_input.typing() || auto_rematch.focused || settings.0 || crate::systems::modal_keys::modal_open(&modals) {
         return;
     }
     let Some(cv) = view.0.as_ref() else { return };

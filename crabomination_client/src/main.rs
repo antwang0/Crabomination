@@ -968,6 +968,13 @@ fn main() {
         .init_resource::<systems::log_links::LogFocus>()
         .init_resource::<systems::hint_button::SuggestedMove>()
         .init_resource::<systems::win_swings::WinSwings>()
+        .init_resource::<systems::modal_keys::ModalFocus>()
+        .add_systems(
+            PreUpdate,
+            systems::modal_keys::modal_keyboard_nav
+                .after(ui_button::update_interaction)
+                .run_if(in_state(AppState::InGame)),
+        )
         .init_resource::<systems::puzzles::PuzzleRun>()
         .init_resource::<systems::puzzles::PuzzlesOpen>()
         .init_resource::<systems::puzzles::PickedPuzzle>()

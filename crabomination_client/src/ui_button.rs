@@ -48,7 +48,7 @@ impl Plugin for UiButtonPlugin {
     }
 }
 
-fn update_interaction(
+pub(crate) fn update_interaction(
     mouse: Res<ButtonInput<MouseButton>>,
     touches: Res<Touches>,
     hover_map: Option<Res<HoverMap>>,

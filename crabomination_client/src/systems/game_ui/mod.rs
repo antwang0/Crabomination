@@ -58,6 +58,7 @@ pub use player_stats::{
 pub use table_awareness::TableAwarenessPlugin;
 pub(crate) use popups::close_pickers;
 pub use popups::{
+    AltCastModal,
     cancel_pickers_on_escape,
     handle_ability_menu, handle_alt_cast_buttons, handle_helper_tap_buttons,
     handle_pay_times_buttons, handle_split_cast_buttons, handle_spree_cast_buttons,

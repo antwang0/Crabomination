@@ -1288,7 +1288,13 @@ Cross-references the detailed entries below where one exists.
   ✅ Settings → "Reduced motion" (`GameplayConfig::reduced_motion`,
   `animate::ReducedMotion`): no impact bursts, hit flash, card jolt or mana
   motes, and rings / arrow light / the active-seat glow hold still — card
-  moves and damage numerals stay (2026-11-15). ⏳ Finish keyboard-only play;
+  moves and damage numerals stay (2026-11-15). ✅ Keyboard in prompts
+  (`systems::modal_keys`): while a decision prompt, the alt-cost picker or
+  the game-over screen is up, Tab / arrows move a focus ring across its
+  buttons and Enter / Space presses the focused one (its own
+  `Interaction::Pressed` for one frame, right after `ui_button`'s pass, so
+  every click handler answers it); the 3-D cursor yields meanwhile. ⏳ The
+  other overlays (ability menu, browsers, Esc menu) aren't walkable yet;
   see "Theme variants". (Text scaling ✅ — the UI size setting.)
 
 ### Conspire cast UI (follow-up)

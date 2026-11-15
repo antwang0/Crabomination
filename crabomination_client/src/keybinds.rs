@@ -141,6 +141,8 @@ pub const FIXED: &[(Section, &str, &str)] = &[
     (Section::Cards, "Click · Enter", "Play / cast / select target"),
     (Section::Cards, "Tab · arrows · WASD", "Move selection (Shift+Tab back)"),
     (Section::Cards, "Right-click", "Cancel · quick-play the card's hint"),
+    (Section::Choices, "Tab · arrows", "Move between a prompt's buttons"),
+    (Section::Choices, "Enter · Space", "Press the highlighted button"),
     (Section::Choices, "W U B R G", "Choose that colour"),
 ];
 

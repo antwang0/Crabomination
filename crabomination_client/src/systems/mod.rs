@@ -20,6 +20,7 @@ pub mod export_prompt;
 pub mod game_over;
 pub mod match_history;
 pub mod match_stats;
+pub mod modal_keys;
 pub mod game_ui;
 pub mod gizmos;
 pub mod glow;
