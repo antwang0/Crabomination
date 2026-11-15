@@ -167,6 +167,8 @@ pub struct GameplayConfig {
     /// Show the value net's read of your win chance in a duel
     /// (`ClientView::win_estimate`). Default: true.
     pub win_meter: bool,
+    /// The first-game welcome (`systems::intro`) has been dismissed.
+    pub seen_intro: bool,
 }
 
 impl Default for GameplayConfig {
@@ -183,6 +185,7 @@ impl Default for GameplayConfig {
             reduced_motion: false,
             sound_volume: 0.6,
             win_meter: true,
+            seen_intro: false,
         }
     }
 }

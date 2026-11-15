@@ -25,6 +25,7 @@ pub type ModalRoots = Or<(
     With<crate::systems::decision_ui::DecisionModal>,
     With<crate::systems::game_ui::AltCastModal>,
     With<crate::systems::game_over::GameOverModalRoot>,
+    With<crate::systems::intro::IntroPanel>,
 )>;
 
 /// Whether a keyboard-walkable modal is up — `kb_cursor` yields then.

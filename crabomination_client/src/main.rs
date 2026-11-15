@@ -993,6 +993,10 @@ fn main() {
         )
         .add_systems(
             Update,
+            (systems::intro::show_intro_once, systems::intro::close_intro).run_if(in_state(AppState::InGame)),
+        )
+        .add_systems(
+            Update,
             (
                 systems::log_links::ping_from_log_click,
                 systems::log_links::focus_log_from_stack_click,

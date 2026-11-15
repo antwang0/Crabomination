@@ -33,6 +33,7 @@ pub mod shadows;
 pub mod sound;
 pub mod impact;
 pub mod inspector;
+pub mod intro;
 pub mod input_guard;
 pub mod kb_cursor;
 pub mod keymap_panel;

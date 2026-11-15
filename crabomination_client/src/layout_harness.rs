@@ -83,6 +83,8 @@ pub struct HarnessArgs {
     pub puzzle: Option<usize>,
     /// `--draft`: go straight into a Cube draft's first pack.
     pub draft: bool,
+    /// `--intro`: show the first-game welcome even in a screenshot run.
+    pub intro: bool,
     pub menu_format: Option<crate::menu::MatchFormat>,
     /// `--ui-size PERCENT` (0 = Auto): the UI size for this run.
     pub ui_size: Option<u16>,
@@ -180,6 +182,7 @@ impl HarnessArgs {
             keymap: args.iter().any(|a| a == "--keymap"),
             puzzle: value("--puzzle").and_then(|v| v.parse().ok()),
             draft: args.iter().any(|a| a == "--draft"),
+            intro: args.iter().any(|a| a == "--intro"),
             menu_format: value("--menu-format").and_then(|f| crate::menu::MatchFormat::from_cli(&f)),
             ui_size: value("--ui-size").and_then(|v| v.parse().ok()),
             zoom_card: value("--zoom-card"),

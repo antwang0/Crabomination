@@ -25,6 +25,15 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## First-game welcome (2026-11-15) — shipped
+
+`systems::intro`: the first played game opens a panel with six tips (play
+a card, read one, pass, attack, get unstuck, find the rest), keys named as
+bound now; "Got it" (or Enter / a pad's A — it is keyboard-walkable)
+dismisses it for good (`GameplayConfig::seen_intro`). Skipped in harness
+screenshots unless `--intro`. ⏳ A guided first game (scripted board,
+step-by-step prompts) is the bigger onboarding project.
+
 ## Draft pick help (2026-11-15) — shipped
 
 The draft's pack view ranks each card as the draft bots would take it
