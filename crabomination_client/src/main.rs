@@ -397,6 +397,7 @@ fn main() {
                 layout_harness::open_deck_picker_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::open_keymap_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::start_puzzle_for_screenshot.run_if(in_state(AppState::Menu)),
+                layout_harness::start_draft_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::import_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::capture_screenshot,
                 layout_harness::spawn_mana_gallery.run_if(in_state(AppState::InGame)),

@@ -167,6 +167,9 @@ pub struct DraftSession {
     pub current_tab: DraftTab,
     /// Display-only sort applied to the current user pack. Stored on
     /// the session so it persists across picks within the same draft.
+    /// Pick help: each pack card's rank as the draft bots would take it,
+    /// the first marked "Bot pick" (`pick_ranks`). On by default.
+    pub pick_help: bool,
     pub pack_sort: PackSort,
 
     // Deckbuilding state (only populated once draft completes)
@@ -211,6 +214,7 @@ impl DraftSession {
             user_seat: 0,
             current_tab: DraftTab::Pack,
             pack_sort: PackSort::default(),
+            pick_help: true,
             main: Vec::new(),
             sideboard: Vec::new(),
             basics: Default::default(),
@@ -518,6 +522,7 @@ impl Plugin for DraftPlugin {
                     handle_pack_clicks,
                     handle_tab_clicks,
                     handle_sort_clicks,
+                    handle_pick_help_clicks,
                     handle_draft_matters_clicks,
                     handle_deckbuild_clicks,
                     handle_basic_buttons,
@@ -780,6 +785,17 @@ fn spawn_drafting_screen(
                         for sort in PackSort::ALL {
                             spawn_sort_button(sorts, ui_fonts, sort, session.pack_sort);
                         }
+                        sorts
+                            .spawn((
+                                Button,
+                                Node { padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)), margin: UiRect::left(Val::Px(10.0)), ..default() },
+                                BackgroundColor(if session.pick_help { theme::BUTTON_WARN_BG } else { theme::FIELD_BG }),
+                                PickHelpButton,
+                            ))
+                            .with_children(|b| {
+                                let label = if session.pick_help { "Pick help: On" } else { "Pick help: Off" };
+                                b.spawn((Text::new(label), ui_fonts.tf(12.0), TextColor(theme::TEXT_PRIMARY), Pickable::IGNORE));
+                            });
                     });
 
                     // Tab toggle: Pack | Picks
@@ -872,6 +888,7 @@ fn spawn_pack_grid(
     // the right slot in the user's pod pack. Sorting is a view
     // transform, not a data transform.
     let order = sorted_pack_indices(pack, session.pack_sort);
+    let ranks = if session.pick_help { pick_ranks(pack, session.user_picks()) } else { Vec::new() };
     body.spawn((
         Node {
             flex_direction: FlexDirection::Row,
@@ -891,7 +908,8 @@ fn spawn_pack_grid(
         for &i in &order {
             let factory = pack[i];
             let name = factory().name.to_string();
-            spawn_pack_card_tile(grid, asset_server, &name, i, card_w, session.pending_pick == Some(i));
+            let rank = ranks.get(i).copied();
+            spawn_pack_card_tile(grid, asset_server, ui_fonts, &name, i, card_w, session.pending_pick == Some(i), rank);
         }
     });
 }
@@ -1231,13 +1249,16 @@ fn spawn_draft_matters_bar(
     });
 }
 
+#[allow(clippy::too_many_arguments)]
 fn spawn_pack_card_tile(
     parent: &mut ChildSpawnerCommands,
     asset_server: &AssetServer,
+    ui_fonts: &UiFonts,
     card_name: &str,
     pack_index: usize,
     card_w: f32,
     selected: bool,
+    rank: Option<usize>,
 ) {
     let path = scryfall::card_asset_path(card_name);
     let texture: Handle<Image> = asset_server.load(&path);
@@ -1273,7 +1294,71 @@ fn spawn_pack_card_tile(
                 },
                 Pickable::IGNORE,
             ));
+            // Pick help: the draft bots' order over this pack.
+            if let Some(rank) = rank {
+                let (label, bg) = if rank == 0 {
+                    ("Bot pick".to_string(), theme::CHIP_STATUS)
+                } else {
+                    (format!("#{}", rank + 1), theme::HUD_BG)
+                };
+                // Bottom centre, over the collector line: the corners hold
+                // the mana cost and the P/T.
+                tile.spawn((
+                    Node {
+                        position_type: PositionType::Absolute,
+                        bottom: Val::Px(3.0),
+                        width: Val::Percent(100.0),
+                        justify_content: JustifyContent::Center,
+                        ..default()
+                    },
+                    Pickable::IGNORE,
+                ))
+                .with_children(|row| {
+                    row.spawn((
+                        Node {
+                            padding: UiRect::axes(Val::Px(6.0), Val::Px(1.0)),
+                            border_radius: BorderRadius::all(Val::Px(4.0)),
+                            ..default()
+                        },
+                        BackgroundColor(bg),
+                        Pickable::IGNORE,
+                    ))
+                    .with_children(|b| {
+                        b.spawn((Text::new(label), ui_fonts.tf(12.0), TextColor(theme::TEXT_PRIMARY), Pickable::IGNORE));
+                    });
+                });
+            }
         });
+}
+
+/// Each pack card's place in the draft bots' order (0 = the card
+/// `draft::bot_pick` takes), by taking the bot's pick out and asking again.
+/// Indexed like `pack`.
+fn pick_ranks(pack: &[CardFactory], picks: &[CardFactory]) -> Vec<usize> {
+    let mut left: Vec<usize> = (0..pack.len()).collect();
+    let mut ranks = vec![0; pack.len()];
+    let mut rank = 0;
+    while !left.is_empty() {
+        let remaining: Vec<CardFactory> = left.iter().map(|&i| pack[i]).collect();
+        let at = crabomination::draft::bot_pick(&remaining, picks).unwrap_or(0).min(left.len() - 1);
+        ranks[left.remove(at)] = rank;
+        rank += 1;
+    }
+    ranks
+}
+
+/// The "Pick help" toggle in the pack toolbar.
+#[derive(Component)]
+struct PickHelpButton;
+
+fn handle_pick_help_clicks(
+    mut session: Option<ResMut<DraftSession>>,
+    buttons: Query<&Interaction, (Changed<Interaction>, With<PickHelpButton>)>,
+) {
+    let Some(session) = session.as_mut() else { return };
+    if buttons.iter().any(|i| *i == Interaction::Pressed) {
+        session.pick_help = !session.pick_help;
+    }
 }
 
 // ── Stats footer ────────────────────────────────────────────────────────────
@@ -2423,6 +2508,19 @@ fn color_short(c: ManaColor) -> &'static str {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Pick help ranks every card once, and its first is the bots' pick.
+    #[test]
+    fn pick_ranks_follow_the_bot() {
+        let pool = crabomination::draft::draft_pool();
+        let mut rng = <rand::rngs::StdRng as rand::SeedableRng>::seed_from_u64(3);
+        let pack = crabomination::draft::generate_pack(&pool, &mut rng);
+        let ranks = pick_ranks(&pack, &[]);
+        let mut sorted = ranks.clone();
+        sorted.sort();
+        assert_eq!(sorted, (0..pack.len()).collect::<Vec<_>>());
+        assert_eq!(ranks[crabomination::draft::bot_pick(&pack, &[]).unwrap()], 0);
+    }
 
     #[test]
     fn pack_card_width_grows_as_pack_drains() {

@@ -25,6 +25,17 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Draft pick help (2026-11-15) — shipped
+
+The draft's pack view ranks each card as the draft bots would take it
+(`draft::pick_ranks`: `draft::bot_pick`, the pick removed, asked again):
+"Bot pick" on the first, "#2".."#15" on the rest, at the bottom of the tile
+(the corners hold the cost and the P/T). "Pick help: On/Off" in the pack
+toolbar. Deckbuilding already starts from `suggest_main_deck`. ⏳ The
+client's Sealed plays a hand-built list (`decks/sealed.txt`); a sealed
+pool-building screen with the rated builder's 40 is not built. Harness:
+`--draft`.
+
 ## Puzzles (2026-11-15) — shipped
 
 Main menu → **Puzzles** (`systems::puzzles`) lists the blunder benchmark's

@@ -81,6 +81,8 @@ pub struct HarnessArgs {
     pub keymap: bool,
     /// `--puzzle N`: start puzzle N (0-based, `server::blunder::items`).
     pub puzzle: Option<usize>,
+    /// `--draft`: go straight into a Cube draft's first pack.
+    pub draft: bool,
     pub menu_format: Option<crate::menu::MatchFormat>,
     /// `--ui-size PERCENT` (0 = Auto): the UI size for this run.
     pub ui_size: Option<u16>,
@@ -177,6 +179,7 @@ impl HarnessArgs {
             menu: args.iter().any(|a| a == "--menu"),
             keymap: args.iter().any(|a| a == "--keymap"),
             puzzle: value("--puzzle").and_then(|v| v.parse().ok()),
+            draft: args.iter().any(|a| a == "--draft"),
             menu_format: value("--menu-format").and_then(|f| crate::menu::MatchFormat::from_cli(&f)),
             ui_size: value("--ui-size").and_then(|v| v.parse().ok()),
             zoom_card: value("--zoom-card"),
@@ -211,6 +214,7 @@ impl HarnessArgs {
             || self.import_report.is_some()
             || self.menu
             || self.keymap
+            || self.draft
             || self.menu_format.is_some()
     }
 }
@@ -480,6 +484,20 @@ pub fn open_shortcut_help_for_screenshot(
 ) {
     if args.shortcut_help && !*done && view.0.is_some() {
         crate::systems::ui::spawn_shortcut_help(&mut commands, &ui_fonts, &binds);
+        *done = true;
+    }
+}
+
+/// `--draft`: start a Cube draft from the menu.
+pub fn start_draft_for_screenshot(
+    args: Res<HarnessArgs>,
+    mut format: ResMut<crate::menu::PendingDraftFormat>,
+    mut next_state: ResMut<NextState<crate::menu::AppState>>,
+    mut done: Local<bool>,
+) {
+    if args.draft && !*done {
+        format.0 = crate::menu::MatchFormat::Cube;
+        next_state.set(crate::menu::AppState::Drafting);
         *done = true;
     }
 }
