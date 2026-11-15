@@ -293,6 +293,7 @@ mod tests {
             truce_active: false,
             combat_preview: None,
             castable_hand: vec![],
+            auto_tap_preview: vec![],
             back_castable_hand: vec![],
             prepare_castable: vec![],
             spliceable_hand: vec![],

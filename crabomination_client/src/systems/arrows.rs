@@ -62,6 +62,12 @@ pub enum Cue {
     /// The cord from an Aura, Equipment or Fortification to what it's
     /// attached to.
     Tether,
+    /// The ring a clicked log line puts on the card it names
+    /// (`log_links`).
+    Ping,
+    /// The ring on each source the auto-tapper would spend on the hovered
+    /// hand card.
+    AutoTap,
 }
 
 /// One end of a mark, for its key.

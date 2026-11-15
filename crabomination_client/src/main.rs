@@ -879,6 +879,8 @@ fn main() {
                 crate::systems::gizmos::draw_drag_arrow,
                 draw_attachment_tethers,
                 draw_active_seat_glow,
+                crate::systems::log_links::draw_board_ping,
+                crate::systems::gizmos::draw_auto_tap_preview,
             )
                 .after(animate_combat_lurch)
                 .run_if(in_state(AppState::InGame)),
@@ -929,6 +931,19 @@ fn main() {
         .init_resource::<systems::eliminated::OutPanelState>()
         .init_resource::<systems::match_stats::MatchStats>()
         .init_resource::<keybinds::Keybinds>()
+        .init_resource::<systems::log_links::BoardPing>()
+        .init_resource::<systems::log_links::LogFocus>()
+        .add_systems(
+            Update,
+            (
+                systems::log_links::ping_from_log_click,
+                systems::log_links::focus_log_from_stack_click,
+                systems::log_links::scroll_log_to_focus,
+                systems::log_links::fade_log_row_flash,
+            )
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
         .init_resource::<systems::game_over::ActiveMatchKind>()
         // Defensive: the game-over systems read this as a required resource
         // every InGame frame. `start_net_session_from_menu` (re)sets it, but

@@ -1087,7 +1087,9 @@ Cross-references the detailed entries below where one exists.
   controller-colored edge strip (green = yours / orange = opponent's);
   the footer offers a "Let resolve ▶" button while the viewer holds
   priority (else "Waiting for <name>…"). Hidden items show the cardback.
-  Remaining ⏳: hover a tile → large preview, click → scroll the log.
+  ✅ Hover a tile → large preview (`ui_card_hover`); ✅ click → the log
+  scrolls to the newest line about that object and flashes it
+  (`systems::log_links`, 2026-11-15).
 - ✅ **Undo / mana-tap rollback** — take-backs against bots, a half-paid
   cast included (2026-10-01, see the top).
 - 🟡 **Battlefield organization at scale** — ✅ identical tokens cascade
@@ -1099,17 +1101,20 @@ Cross-references the detailed entries below where one exists.
   three opponents shared the far edge, and a wrapped creature row gets a
   whole card of depth instead of a shingle. ✅ Each aura/equipment is
   joined to its host by a cord (`gizmos::draw_attachment_tethers`).
-- 🟡 **Cost-payment feedback** — ✅ the manual-tap banner live-updates
-  with the remaining cost ("{1}{U} to go") as sources tap. Remaining ⏳:
-  pre-highlighting which sources auto-tap would take.
+- ✅ **Cost-payment feedback** — the manual-tap banner live-updates
+  with the remaining cost ("{1}{U} to go") as sources tap; hovering a
+  castable hand card rings the sources the auto-tapper would spend
+  (`ClientView::auto_tap_preview`, read off the castability probe's own
+  state, so no extra dry-run; `gizmos::draw_auto_tap_preview`, 2026-11-15).
 
 **Quick wins**
 - 🟡 **Clickable game log** — ✅ hovering a log line that names a card
   previews it (`ui_card_hover`, also wired onto stack-panel tiles).
-  Remaining ⏳: click → flash the permanent on the board.
-- ⏳ **Finish the hover oracle panel** — `ui::hover_info_lines` shows type
-  line + keyword reminders; add triggered/activated-ability short text
-  (see "X-ray card inspector").
+  ✅ Click → a gold ring pings the permanent on the board
+  (`log_links::draw_board_ping`, 2026-11-15).
+- ✅ **Finish the hover oracle panel** — done before 2026-11-15: the panel
+  prints the full Oracle text, keyword reminders, and for an unlisted token
+  the engine's ability labels (`ui::hover_info_lines`).
 
 **Bigger projects**
 - 🟡 **Settings screen** — ✅ main-menu Settings panel
@@ -1190,8 +1195,9 @@ indicator + click target. Slims the 2-D chip strip.
   the clickable phase chart (`systems/phase_bar.rs::StopConfig`), wired
   into `auto_advance_p0`; right-click = pass-until-step. Persisted in
   `config.rs` (`persist_stops`).
-- Stack widget polish ⏳ — promote `update_stack_panel` to a permanent
-  floating panel; hover for source-card preview; click to scroll log.
+- Stack widget polish 🟡 — ✅ hover for source-card preview, ✅ click to
+  scroll the log (2026-11-15). ⏳ promote `update_stack_panel` to a
+  permanent floating panel.
 
 **Tier 2**
 - Unify decision modals ✅ — one card picker, one answering button, one

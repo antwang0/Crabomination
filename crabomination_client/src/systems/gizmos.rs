@@ -634,3 +634,29 @@ pub fn draw_decision_source_ring(
     let key = ArrowKey::new(Cue::DecisionSource, End::Card(source), End::Card(source));
     arrows.ring(key, at, 1.35 * scale, normal, Color::srgba(0.0, 0.9, 1.0, pulse));
 }
+
+/// Hovering a castable hand card rings the lands and mana sources the
+/// auto-tapper would spend on it (`ClientView::auto_tap_preview`), so the
+/// click that commits them isn't the first time you see which ones. Quiet
+/// while a decision is up or a spell is being aimed, where the rings would
+/// compete with the target rings.
+pub fn draw_auto_tap_preview(
+    view: Res<CurrentView>,
+    targeting: Res<crate::game::TargetingState>,
+    hovered: Query<&GameCardId, (With<CardHovered>, With<crate::card::HandCard>)>,
+    board: BoardSpots,
+    mut arrows: ResMut<Arrows>,
+) {
+    let Some(cv) = &view.0 else { return };
+    if targeting.active || cv.pending_decision.is_some() {
+        return;
+    }
+    let Some(card) = hovered.iter().next() else { return };
+    let Some((_, sources)) = cv.auto_tap_preview.iter().find(|(id, _)| *id == card.0) else { return };
+    let spots = board.spots();
+    for source in sources {
+        let Some((at, normal, scale)) = spots.face(*source, 0.15) else { continue };
+        let key = ArrowKey::new(Cue::AutoTap, End::Card(card.0), End::Card(*source));
+        arrows.ring(key, at, 1.15 * scale, normal, Color::srgba(0.75, 0.9, 1.0, 0.7));
+    }
+}

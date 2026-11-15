@@ -230,9 +230,12 @@ pub fn update_stack_panel(
             // Known items show the full card on hover (hidden ones have
             // nothing to reveal).
             if let StackItemView::Known(k) = item {
+                // A click scrolls the log to where this object last
+                // appeared (`log_links`).
                 row_ec.insert((
                     Button,
                     crate::systems::ui_card_hover::UiCardHover { path: art_path.clone(), name: k.name.clone(), id: Some(k.source) },
+                    crate::systems::log_links::StackTile,
                 ));
             }
             row_ec.with_children(|row| {

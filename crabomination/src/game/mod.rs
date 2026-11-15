@@ -1339,6 +1339,9 @@ impl Clone for LayerFreeze {
 #[derive(Debug, Clone, Default)]
 pub struct HandAffordances {
     pub castable: Vec<CardId>,
+    /// Each `castable` card with the permanents paying for it would tap or
+    /// sacrifice (the auto-tapper's choice), for the client's hover preview.
+    pub auto_tap_sources: Vec<(CardId, Vec<CardId>)>,
     pub pitchable: Vec<CardId>,
     pub kickable: Vec<CardId>,
     /// CR 702.33b — payable "and/or" kicker subsets per hand card.

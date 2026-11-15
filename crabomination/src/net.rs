@@ -462,6 +462,11 @@ pub struct ClientView {
     /// doesn't hold priority. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub castable_hand: Vec<CardId>,
+    /// Each `castable_hand` card with the permanents the auto-tapper would
+    /// tap or sacrifice to pay for it, so hovering the card can light them
+    /// up before the click commits them.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub auto_tap_preview: Vec<(CardId, Vec<CardId>)>,
     /// MDFCs whose **back face** is castable right now via `CastSpellBack` —
     /// from hand, plus permitted graveyard backs (those carrying the one-shot
     /// `may_cast_back_from_graveyard`). `castable_hand` only probes front

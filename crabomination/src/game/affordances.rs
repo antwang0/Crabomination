@@ -426,6 +426,19 @@ impl GameState {
     ///
     /// [`castable_hand_cards`]: Self::castable_hand_cards
     fn castable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
+        self.castable_hand_cards_with_taps_on(template, caster).into_iter().map(|(id, _)| id).collect()
+    }
+
+    /// [`castable_hand_cards_on`](Self::castable_hand_cards_on), each card
+    /// paired with the permanents the probe cast tapped or sacrificed to pay
+    /// for it: what the auto-tapper would spend, which the client highlights
+    /// on hover. The probe already ran the cast to completion; reading its
+    /// state costs one pass over the caster's permanents per castable card.
+    pub(crate) fn castable_hand_cards_with_taps_on(
+        &self,
+        template: &GameState,
+        caster: usize,
+    ) -> Vec<(CardId, Vec<CardId>)> {
         // Snapshot what each probe needs up front so the immutable borrow
         // of `self.players[caster].hand` is released before the cloning
         // probes run. The effect is cloned only for targeted non-lands.
@@ -446,7 +459,7 @@ impl GameState {
         let mut out = Vec::new();
         for (id, is_land, targeted_effect, mode_count) in &hand {
             let accepted = if *is_land {
-                Self::would_accept_on(template, GameAction::PlayLand(*id))
+                Self::would_accept_on(template, GameAction::PlayLand(*id)).then(Vec::new)
             } else {
                 // A modal spell is castable if ANY mode is (each mode has
                 // its own target pool); everything else probes the single
@@ -455,7 +468,7 @@ impl GameState {
                     0 => vec![None],
                     n => (0..*n).map(Some).collect(),
                 };
-                modes.into_iter().any(|mode| {
+                modes.into_iter().find_map(|mode| {
                     // Auto-pick targets the way the bot does so a targeted
                     // removal spell isn't reported uncastable merely for lack
                     // of a target argument. A spell that needs a target but has
@@ -465,20 +478,33 @@ impl GameState {
                         Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, mode),
                         None => (None, Vec::new()),
                     };
-                    Self::would_accept_on(template, GameAction::CastSpell {
+                    let after = Self::accept_on(template, GameAction::CastSpell {
                         card_id: *id,
                         target,
                         additional_targets,
                         mode,
                         x_value: None,
-                    })
+                    })?;
+                    Some(Self::sources_spent(template, &after, caster))
                 })
             };
-            if accepted {
-                out.push(*id);
+            if let Some(taps) = accepted {
+                out.push((*id, taps));
             }
         }
         out
+    }
+
+    /// The permanents `caster` controlled untapped in `before` that `after`
+    /// has tapped or no longer has (a Treasure sacrificed for its mana).
+    fn sources_spent(before: &GameState, after: &GameState, caster: usize) -> Vec<CardId> {
+        before
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == caster && !c.tapped)
+            .filter(|c| after.battlefield.iter().find(|a| a.id == c.id).is_none_or(|a| a.tapped))
+            .map(|c| c.id)
+            .collect()
     }
 
     /// CardIds of permanents `seat` controls with at least one **non-mana**
@@ -1914,8 +1940,10 @@ impl GameState {
         let activatable_abilities = self.activatable_abilities_on(&template, seat, true);
         let mut activatable_permanents: Vec<CardId> = activatable_abilities.iter().map(|(id, _)| *id).collect();
         activatable_permanents.dedup();
+        let castable_with_taps = self.castable_hand_cards_with_taps_on(&template, seat);
         HandAffordances {
-            castable: self.castable_hand_cards_on(&template, seat),
+            castable: castable_with_taps.iter().map(|(id, _)| *id).collect(),
+            auto_tap_sources: castable_with_taps,
             // Pitchable is a pure structural filter (no dry-run), so it
             // needs no template and never touches the probe clone.
             pitchable: self.pitchable_hand_cards(seat),

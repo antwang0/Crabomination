@@ -163,6 +163,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         // Runs on every accepted action for the priority-holding seat, so
         // it's the projection's hot path.
         castable_hand: affordances.castable,
+        auto_tap_preview: affordances.auto_tap_sources,
         back_castable_hand: affordances.back_castable,
         prepare_castable: affordances.prepare_castable,
         spliceable_hand: affordances.spliceable,

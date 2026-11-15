@@ -636,6 +636,29 @@ fn castable_hand_cards_ignores_library_contents() {
     }));
 }
 
+/// The view's auto-tap preview names the lands paying for each castable card
+/// (the client rings them on hover) and leaves the real board untapped: the
+/// payment is the castability probe's, read off its throwaway state.
+#[test]
+fn auto_tap_preview_names_the_sources_a_cast_would_spend() {
+    let mut g = two_player_game();
+    g.priority.player_with_priority = 0;
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let forests = [g.add_card_to_battlefield(0, catalog::forest()), g.add_card_to_battlefield(0, catalog::forest())];
+    let a = g.compute_hand_affordances(0);
+    let (_, spent) = a.auto_tap_sources.iter().find(|(id, _)| *id == bears).expect("bears are castable");
+    let mut spent = spent.clone();
+    spent.sort();
+    let mut want = forests.to_vec();
+    want.sort();
+    assert_eq!(spent, want, "{{1}}{{G}} taps both Forests");
+    assert!(g.battlefield.iter().all(|c| !c.tapped), "the preview tapped nothing for real");
+    let view = crabomination::server::view::project(&g, 0);
+    assert!(view.auto_tap_preview.iter().any(|(id, s)| *id == bears && s.len() == 2));
+}
+
 /// `compute_hand_affordances` (the consolidated single-template sweep used by
 /// the per-seat view projection) must return exactly what the individual
 /// `*_hand_cards` / `activatable_permanents` methods return — it's just those
