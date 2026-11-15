@@ -1600,8 +1600,8 @@ fn summarize_prevention(
 /// continuous effect and no pump.
 fn counted_pt(card: &CardInstance) -> (i32, i32) {
     (
-        card.power() - card.power_bonus - card.perm_power_bonus,
-        card.toughness() - card.toughness_bonus - card.perm_toughness_bonus,
+        card.power().saturating_sub(card.power_bonus).saturating_sub(card.perm_power_bonus),
+        card.toughness().saturating_sub(card.toughness_bonus).saturating_sub(card.perm_toughness_bonus),
     )
 }
 

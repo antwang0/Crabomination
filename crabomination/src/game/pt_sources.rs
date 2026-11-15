@@ -51,7 +51,8 @@ impl GameState {
         for source in sources {
             let without: Vec<ContinuousEffect> = effects.iter().filter(|e| e.source != source).cloned().collect();
             let rest = apply_layers_one(card, &without);
-            let (power, toughness) = (full.power - rest.power, full.toughness - rest.toughness);
+            let (power, toughness) =
+                (full.power.saturating_sub(rest.power), full.toughness.saturating_sub(rest.toughness));
             if (power, toughness) == (0, 0) {
                 continue;
             }
