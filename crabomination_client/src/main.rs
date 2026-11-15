@@ -386,6 +386,7 @@ fn main() {
             systems::perf_hud::PerfHudPlugin,
             systems::shadows::ShadowsPlugin,
             systems::AudioCuesPlugin,
+            systems::gamepad::GamepadKeysPlugin,
         ))
         .init_resource::<layout_harness::ScreenshotClock>()
         .add_systems(

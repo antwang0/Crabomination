@@ -22,6 +22,7 @@ pub mod match_history;
 pub mod match_stats;
 pub mod modal_keys;
 pub mod game_ui;
+pub mod gamepad;
 pub mod gizmos;
 pub mod glow;
 pub mod hint_button;

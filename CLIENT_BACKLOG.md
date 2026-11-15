@@ -1345,8 +1345,14 @@ indicator + click target. Slims the 2-D chip strip.
 
 **Tier 3**
 - Replay scrubber ⏳ — `GameSnapshot` recorder + Menu→Replay scrub UI.
-- Touch / controller input ⏳ — Bevy supports touch; `kb_cursor.rs` and
-  input paths are mouse-centric.
+- Controller ✅ (2026-11-15) — `systems::gamepad`: each pad button
+  presses the key it stands for (D-pad arrows, A Enter, B Esc, X pass,
+  Y hint, RB attack, LB end turn, Select ability menu, Start help — the
+  bound keys, so a remap moves the pad too), injected into
+  `ButtonInput<KeyCode>` after Bevy's input pass: the pad drives the
+  cursor, prompts and every shortcut through the keyboard's own path.
+  Untested on a real pad. Touch ⏳ — `ui_button` already takes a tap as a
+  click; the 3-D table has no touch path.
 - Split `game_ui.rs` further ✅ — `visual_sync.rs`, `input.rs` and seven
   more (2026-10-01; see "Split `game_ui.rs`" below).
 
