@@ -103,7 +103,12 @@ impl Spots<'_, '_, '_> {
 /// outline glows gold. Skipped when it's the viewer's own turn in 1v1 (the
 /// phase bar already carries that signal); in a pod it always shows, since
 /// the seat → board mapping is exactly what the eye has to find.
-pub fn draw_active_seat_glow(view: Res<CurrentView>, time: Res<Time>, mut glow: ResMut<Glow>) {
+pub fn draw_active_seat_glow(
+    view: Res<CurrentView>,
+    time: Res<Time>,
+    motion: Res<crate::systems::animate::ReducedMotion>,
+    mut glow: ResMut<Glow>,
+) {
     let Some(cv) = &view.0 else { return };
     if cv.game_over.is_some() {
         return;
@@ -116,7 +121,7 @@ pub fn draw_active_seat_glow(view: Res<CurrentView>, time: Res<Time>, mut glow: 
     let (min, max) = crate::card::layout::seat_board_outline(cv.active_player, cv.your_seat, n, &spread);
     // Gentle breathing so the outline reads as "live" without pulsing
     // hard enough to pull the eye during someone else's long turn.
-    let breathe = 0.75 + 0.25 * (time.elapsed_secs() * 1.6).sin();
+    let breathe = motion.pulse(0.75 + 0.25 * (time.elapsed_secs() * 1.6).sin());
     glow.push(Light::Frame {
         min: Vec2::new(min.x, min.z),
         max: Vec2::new(max.x, max.z),
@@ -262,6 +267,7 @@ pub fn draw_legal_target_rings(
     targeting: Res<crate::game::TargetingState>,
     legal: Res<crate::game::LegalTargets>,
     time: Res<Time>,
+    motion: Res<crate::systems::animate::ReducedMotion>,
     board: BoardSpots,
     // A counterspell's legal targets are spells on the stack, which carry
     // `StackCard` rather than `BattlefieldCard` — ringing only the
@@ -283,7 +289,7 @@ pub fn draw_legal_target_rings(
         return;
     }
     // The ring breathes in and out.
-    let pulse = 0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs();
+    let pulse = motion.pulse(0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs());
     let colour = Color::srgba(1.0, 0.84, 0.1, pulse);
     let spots = board.spots();
     for &id in &legal.permanents {
@@ -602,6 +608,7 @@ pub fn draw_declared_attack_arrows(
 pub fn draw_decision_source_ring(
     view: Res<CurrentView>,
     time: Res<Time>,
+    motion: Res<crate::systems::animate::ReducedMotion>,
     board: BoardSpots,
     mut arrows: ResMut<Arrows>,
 ) {
@@ -630,7 +637,7 @@ pub fn draw_decision_source_ring(
         _ => return,
     };
     let Some((at, normal, scale)) = board.spots().face(source, 0.2) else { return };
-    let pulse = 0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs();
+    let pulse = motion.pulse(0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs());
     let key = ArrowKey::new(Cue::DecisionSource, End::Card(source), End::Card(source));
     arrows.ring(key, at, 1.35 * scale, normal, Color::srgba(0.0, 0.9, 1.0, pulse));
 }

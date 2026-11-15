@@ -1201,9 +1201,14 @@ Cross-references the detailed entries below where one exists.
 - ⏳ **Bo3 + sideboarding UI** — Learn/Lessons sideboard plumbing exists
   engine-side.
 - ⏳ **Replay viewer** — see "Replay scrubber" (Tier 3 below).
-- ⏳ **Accessibility pass** — colorblind-safe target rings (shape, not
-  only color), reduced-motion toggle, finish keyboard-only play; see
-  "Theme variants". (Text scaling ✅ — the UI size setting.)
+- 🟡 **Accessibility pass** — ✅ rings differ in shape, not only colour
+  (`arrows::RingStyle`: solid = a legal target / ping / defender, dashed =
+  the auto-tap preview, double = the permanent a decision waits on);
+  ✅ Settings → "Reduced motion" (`GameplayConfig::reduced_motion`,
+  `animate::ReducedMotion`): no impact bursts, hit flash, card jolt or mana
+  motes, and rings / arrow light / the active-seat glow hold still — card
+  moves and damage numerals stay (2026-11-15). ⏳ Finish keyboard-only play;
+  see "Theme variants". (Text scaling ✅ — the UI size setting.)
 
 ### Conspire cast UI (follow-up)
 ✅ Shipped 2026-09-30 — right-click opens the two-creature picker and

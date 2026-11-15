@@ -406,24 +406,69 @@ fn ribbon(rows: &[Row], eye: Vec3, colour: LinearRgba, alpha: f32, phase: f32) -
 
 /// A ring around `centre`, square to `normal`, grown `grow` of the way out,
 /// with its bright arcs turned `phase` turns.
-fn ring(centre: Vec3, radius: f32, normal: Vec3, colour: LinearRgba, alpha: f32, grow: f32, phase: f32) -> Geometry {
+/// A ring's shape, by what it says — so a ring reads without its colour
+/// (a red/green or blue/cyan pair is one ring to a colour-blind player).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RingStyle {
+    /// One solid ring: a legal target, a ping, a defender.
+    Solid,
+    /// Twelve dashes: something that *would* happen (the sources the
+    /// auto-tapper would spend).
+    Dashed,
+    /// Two rings, one inside the other: the permanent a decision is waiting
+    /// on.
+    Double,
+}
+
+impl RingStyle {
+    pub fn of(cue: Cue) -> Self {
+        match cue {
+            Cue::AutoTap => RingStyle::Dashed,
+            Cue::DecisionSource => RingStyle::Double,
+            _ => RingStyle::Solid,
+        }
+    }
+}
+
+/// Dashes on a [`RingStyle::Dashed`] ring.
+const RING_DASHES: f32 = 12.0;
+
+#[allow(clippy::too_many_arguments)]
+fn ring(
+    centre: Vec3,
+    radius: f32,
+    normal: Vec3,
+    colour: LinearRgba,
+    alpha: f32,
+    grow: f32,
+    phase: f32,
+    style: RingStyle,
+) -> Geometry {
     let mut g = Geometry::default();
     let radius = radius * (0.7 + 0.3 * grow);
     let alpha = alpha * grow;
     let normal = normal.normalize_or(Vec3::Y);
     let (u, v) = normal.any_orthonormal_pair();
-    for i in 0..RING_SEGMENTS {
-        let angle = TAU * i as f32 / RING_SEGMENTS as f32;
-        let out = u * angle.cos() + v * angle.sin();
-        // Four bright arcs, circling.
-        let tone = tones(colour, alpha, band(angle * 4.0 / TAU - phase));
-        for (offset, which) in COLUMNS {
-            g.positions.push((centre + out * (radius + RING_HALF * offset)).to_array());
-            g.normals.push(normal.to_array());
-            g.colours.push(tone[which]);
+    let radii: &[f32] = match style {
+        RingStyle::Double => &[radius, radius * 0.86],
+        _ => &[radius],
+    };
+    for (k, &r) in radii.iter().enumerate() {
+        for i in 0..RING_SEGMENTS {
+            let angle = TAU * i as f32 / RING_SEGMENTS as f32;
+            let out = u * angle.cos() + v * angle.sin();
+            // A dashed ring is a solid one with every other twelfth clear.
+            let on = style != RingStyle::Dashed || (angle / TAU * RING_DASHES * 2.0) as usize % 2 == 0;
+            // Four bright arcs, circling.
+            let tone = tones(colour, if on { alpha } else { 0.0 }, band(angle * 4.0 / TAU - phase));
+            for (offset, which) in COLUMNS {
+                g.positions.push((centre + out * (r + RING_HALF * offset)).to_array());
+                g.normals.push(normal.to_array());
+                g.colours.push(tone[which]);
+            }
         }
+        g.stitch((k * RING_SEGMENTS * COLUMNS.len()) as u32, RING_SEGMENTS, COLUMNS.len(), true);
     }
-    g.stitch(0, RING_SEGMENTS, COLUMNS.len(), true);
     g
 }
 
@@ -464,6 +509,7 @@ pub fn render_arrows(
     mut material: Local<Option<Handle<StandardMaterial>>>,
     mut live: Local<HashMap<ArrowKey, Live>>,
     mut motion: ResMut<crate::systems::frame_pacing::LightMotion>,
+    reduced: Res<crate::systems::animate::ReducedMotion>,
 ) {
     // Out of a game, nothing is drawn and nothing lingers into the next.
     if *state.get() != AppState::InGame {
@@ -504,8 +550,9 @@ pub fn render_arrows(
         live.insert(key, Live { entity, mesh, mark, age: -dt, gone: 0.0, seen: true });
     }
 
-    let phase = time.elapsed_secs() * FLOW_SPEED;
-    live.retain(|_, l| {
+    // Reduced motion: the light bands hold still.
+    let phase = if reduced.0 { 0.0 } else { time.elapsed_secs() * FLOW_SPEED };
+    live.retain(|key, l| {
         if l.seen {
             l.age += dt;
             l.gone = 0.0;
@@ -519,7 +566,7 @@ pub fn render_arrows(
         }
         // The bands flow for as long as the mark shows (slow: ambient); it
         // grows in and fades out quickly (full frame rate).
-        motion.ambient = true;
+        motion.ambient |= !reduced.0;
         motion.transient |= l.age < GROW_SECS || l.gone > 0.0;
         let grow = ease_out(l.age / GROW_SECS);
         let colour = l.mark.colour.to_linear();
@@ -530,7 +577,7 @@ pub fn render_arrows(
                 ribbon(&arrow_rows(from, to, weight, grow, trim), eye, colour, alpha, phase)
             }
             Shape::Ring { centre, radius, normal } => {
-                ring(centre, radius, normal, colour, alpha, grow, phase * 0.25)
+                ring(centre, radius, normal, colour, alpha, grow, phase * 0.25, RingStyle::of(key.cue))
             }
             // Its light drifts from the attachment into its host, slowly.
             Shape::Cord { from, to, weight } => {
@@ -548,6 +595,20 @@ mod tests {
 
     const FROM: Vec3 = Vec3::new(-4.0, 0.2, 3.0);
     const TO: Vec3 = Vec3::new(5.0, 0.2, -6.0);
+
+    /// Rings differ in shape by what they say, not only in colour.
+    #[test]
+    fn rings_differ_in_shape_by_cue() {
+        let ring_of = |style| ring(Vec3::ZERO, 1.0, Vec3::Y, LinearRgba::WHITE, 1.0, 1.0, 0.0, style);
+        let solid = ring_of(RingStyle::Solid);
+        let double = ring_of(RingStyle::Double);
+        assert_eq!(double.positions.len(), 2 * solid.positions.len(), "a double ring is two");
+        let clear = |g: &Geometry| g.colours.iter().filter(|c| c[3] == 0.0).count();
+        assert!(clear(&ring_of(RingStyle::Dashed)) > clear(&solid), "a dashed ring has gaps");
+        assert_eq!(RingStyle::of(Cue::LegalTarget), RingStyle::Solid);
+        assert_eq!(RingStyle::of(Cue::AutoTap), RingStyle::Dashed);
+        assert_eq!(RingStyle::of(Cue::DecisionSource), RingStyle::Double);
+    }
 
     #[test]
     fn an_arrow_runs_from_its_source_to_a_point_at_its_target() {
@@ -645,7 +706,7 @@ mod tests {
 
     #[test]
     fn a_ring_closes_on_itself() {
-        let g = ring(Vec3::ZERO, 1.0, Vec3::Y, LinearRgba::RED, 1.0, 1.0, 0.0);
+        let g = ring(Vec3::ZERO, 1.0, Vec3::Y, LinearRgba::RED, 1.0, 1.0, 0.0, RingStyle::Solid);
         assert_eq!(g.indices.len(), RING_SEGMENTS * (COLUMNS.len() - 1) * 6);
         assert!(g.indices.iter().all(|&i| (i as usize) < g.positions.len()));
         for p in &g.positions {
@@ -656,7 +717,7 @@ mod tests {
         // Square to a card standing up to face the camera, it lies in the
         // card's face.
         let facing = Vec3::new(0.0, 0.5, 1.0).normalize();
-        let g = ring(Vec3::ZERO, 1.0, facing, LinearRgba::RED, 1.0, 1.0, 0.0);
+        let g = ring(Vec3::ZERO, 1.0, facing, LinearRgba::RED, 1.0, 1.0, 0.0, RingStyle::Solid);
         assert!(g.positions.iter().all(|p| Vec3::from(*p).dot(facing).abs() < 1e-5));
     }
 }

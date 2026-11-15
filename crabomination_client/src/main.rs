@@ -941,6 +941,8 @@ fn main() {
         .init_resource::<systems::eliminated::OutPanelState>()
         .init_resource::<systems::match_stats::MatchStats>()
         .init_resource::<keybinds::Keybinds>()
+        .init_resource::<systems::animate::ReducedMotion>()
+        .add_systems(PreUpdate, systems::animate::sync_reduced_motion)
         .init_resource::<systems::game_ui::GameLogCollapsed>()
         .init_resource::<systems::log_links::BoardPing>()
         .init_resource::<systems::log_links::LogFocus>()

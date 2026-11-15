@@ -198,6 +198,7 @@ pub fn spawn_impact_effects(
     camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
     ui_scale: Res<UiScale>,
     existing_vignettes: Query<Entity, With<HitVignette>>,
+    reduced: Res<crate::systems::animate::ReducedMotion>,
     mut seed: Local<u32>,
 ) {
     if events.0.is_empty() {
@@ -207,7 +208,13 @@ pub fn spawn_impact_effects(
 
     let card = |id: CardId| cards.iter().find(|(_, _, g, _)| g.0 == id);
     let pos_of = |id: CardId| card(id).map(|(_, t, _, _)| t.translation());
+    // Reduced motion keeps the damage numerals (they say how much) and
+    // drops the bursts, the hit flash and the jolt.
+    let reduced = reduced.0;
     let mut burst = |commands: &mut Commands, at: Vec3, kind: Burst| {
+        if reduced {
+            return;
+        }
         *seed = seed.wrapping_add(1);
         commands.spawn((Impact { at: at + Vec3::Y * BURST_Y, age: 0.0, kind, seed: *seed }, InGameRoot));
     };
@@ -266,7 +273,7 @@ pub fn spawn_impact_effects(
                 let at = player_hand_anchor(*player, cv.your_seat, cv.players.len());
                 burst(&mut commands, at, Burst::Dig);
             }
-            GameEventWire::LifeLost { player, amount } if *player == cv.your_seat => {
+            GameEventWire::LifeLost { player, amount } if *player == cv.your_seat && !reduced => {
                 // Replace any in-flight vignette so rapid hits don't stack into
                 // an opaque red frame; scale the flash with the hit size.
                 for e in &existing_vignettes {
@@ -280,7 +287,7 @@ pub fn spawn_impact_effects(
     }
 
     // A struck creature still on the table shudders with the hit.
-    for &(id, amount) in &struck {
+    for &(id, amount) in struck.iter().filter(|_| !reduced) {
         if let Some((entity, _, _, true)) = card(id) {
             commands.entity(entity).try_insert(Jolt::new(amount));
         }
@@ -318,6 +325,7 @@ pub fn spawn_mana_motes(
     view: Res<CurrentView>,
     bf_cards: Query<(&Transform, &GameCardId), With<BattlefieldCard>>,
     stack_cards: Query<(&Transform, &GameCardId), With<StackCard>>,
+    reduced: Res<crate::systems::animate::ReducedMotion>,
     // Lands that were tapped as of the previous frame, so we can tell which
     // ones *newly* tapped in the current batch — `ManaAdded` carries no source
     // permanent, but the lands that just tapped this batch are what produced
@@ -405,7 +413,9 @@ pub fn spawn_mana_motes(
                     }
                 };
                 start.y += 0.3;
-                commands.spawn((ManaMote { start, end: dest, age: 0.0, colour: mana_colour(color) }, InGameRoot));
+                if !reduced.0 {
+                    commands.spawn((ManaMote { start, end: dest, age: 0.0, colour: mana_colour(color) }, InGameRoot));
+                }
             }
         }
     }

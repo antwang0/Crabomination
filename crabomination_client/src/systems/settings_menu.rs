@@ -39,6 +39,7 @@ pub enum SettingRow {
     AnimSpeed,
     SortHand,
     Takebacks,
+    ReducedMotion,
 }
 
 #[derive(Component)]
@@ -132,6 +133,7 @@ fn spawn_panel(commands: &mut Commands, ui_fonts: &UiFonts) {
             SettingRow::AnimSpeed,
             SettingRow::SortHand,
             SettingRow::Takebacks,
+            SettingRow::ReducedMotion,
         ] {
             p.spawn((
                 Button,
@@ -216,6 +218,10 @@ pub fn update_setting_labels(
                 if store.0.gameplay.sort_hand { "On" } else { "Off" }
             ),
             SettingRow::Takebacks => format!("Take-backs:  {}", store.0.gameplay.takebacks.label()),
+            SettingRow::ReducedMotion => format!(
+                "Reduced motion:  {}",
+                if store.0.gameplay.reduced_motion { "On" } else { "Off" }
+            ),
         };
         for child in children.iter() {
             if let Ok(mut t) = texts.get_mut(child)
@@ -326,6 +332,11 @@ pub fn handle_setting_rows(
             }
             SettingRow::Takebacks => {
                 store.0.gameplay.takebacks = store.0.gameplay.takebacks.next();
+                dirty = true;
+            }
+            SettingRow::ReducedMotion => {
+                gameplay.reduced_motion = !gameplay.reduced_motion;
+                store.0.gameplay.reduced_motion = gameplay.reduced_motion;
                 dirty = true;
             }
         }

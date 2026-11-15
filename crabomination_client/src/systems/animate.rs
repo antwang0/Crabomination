@@ -611,6 +611,26 @@ fn jolt_offset(age: f32, reach: f32) -> f32 {
     reach * (1.0 - k) * (1.0 - k) * (std::f32::consts::TAU * JOLT_HZ * age).sin()
 }
 
+/// Whether decorative motion is off (`GameplayConfig::reduced_motion`), as a
+/// resource every effect system can read cheaply.
+#[derive(Resource, Default, Clone, Copy)]
+pub struct ReducedMotion(pub bool);
+
+impl ReducedMotion {
+    /// A pulse's brightness: `live` normally, held at full while motion is
+    /// reduced (a ring that holds still still reads as a ring).
+    pub fn pulse(self, live: f32) -> f32 {
+        if self.0 { 1.0 } else { live }
+    }
+}
+
+/// Mirror the setting into [`ReducedMotion`].
+pub fn sync_reduced_motion(gameplay: Res<crate::config::GameplayConfig>, mut reduced: ResMut<ReducedMotion>) {
+    if gameplay.is_changed() && reduced.0 != gameplay.reduced_motion {
+        reduced.0 = gameplay.reduced_motion;
+    }
+}
+
 /// Bevy system: shake each jolted battlefield card, on top of the place
 /// `animate_hover_lift` put it this frame (so the shake never accumulates).
 #[allow(clippy::type_complexity)]

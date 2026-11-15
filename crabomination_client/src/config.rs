@@ -154,6 +154,11 @@ pub struct GameplayConfig {
     /// for you), your last action, or any recent one from a list. Default:
     /// recent.
     pub takebacks: crate::systems::takeback::TakebackMode,
+    /// Accessibility: no decorative motion — impact bursts, the hit flash,
+    /// card jolts, mana motes, pulsing rings and flowing arrow light. Moves
+    /// that carry game state (a card to its zone) and damage numerals stay.
+    /// Default: false.
+    pub reduced_motion: bool,
 }
 
 impl Default for GameplayConfig {
@@ -167,6 +172,7 @@ impl Default for GameplayConfig {
             stops_my: Default::default(),
             stops_opp: Default::default(),
             takebacks: Default::default(),
+            reduced_motion: false,
         }
     }
 }

@@ -800,6 +800,7 @@ pub fn update_player_chip_target_outline(
     cursor: Res<KeyboardCursor>,
     view: Res<CurrentView>,
     time: Res<Time>,
+    motion: Res<crate::systems::animate::ReducedMotion>,
     mut q: Query<(&PlayerHudPanel, &mut BorderColor)>,
 ) {
     let Some(cv) = &view.0 else {
@@ -812,7 +813,7 @@ pub fn update_player_chip_target_outline(
 
     // Pulsing yellow — same period as the existing target-highlight
     // material on permanents.
-    let pulse = 0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs();
+    let pulse = motion.pulse(0.55 + 0.45 * (time.elapsed_secs() * 4.0).sin().abs());
     let pulsed = Color::srgb(pulse, pulse * 0.88, 0.0);
 
     let targeting_active = targeting.active;
