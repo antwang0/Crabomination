@@ -1482,6 +1482,7 @@ mod tests {
         world.init_resource::<ChessClock>();
         world.init_resource::<ChatInbox>();
         world.init_resource::<crate::systems::takeback::Takeback>();
+        world.init_resource::<crate::systems::hint_button::SuggestedMove>();
         world.init_resource::<Time>();
         world.init_resource::<crate::game::BlockingState>();
         world.init_resource::<crate::game::GameLog>();
