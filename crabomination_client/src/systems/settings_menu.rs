@@ -40,6 +40,8 @@ pub enum SettingRow {
     SortHand,
     Takebacks,
     ReducedMotion,
+    /// Sound-cue volume (`systems::sound`).
+    Sound,
     /// Opens Settings → Keyboard shortcuts (`keymap_panel`).
     Keys,
 }
@@ -140,6 +142,7 @@ fn spawn_panel(commands: &mut Commands, ui_fonts: &UiFonts) {
             SettingRow::SortHand,
             SettingRow::Takebacks,
             SettingRow::ReducedMotion,
+            SettingRow::Sound,
             SettingRow::Keys,
         ] {
             p.spawn((
@@ -229,6 +232,10 @@ pub fn update_setting_labels(
                 "Reduced motion:  {}",
                 if store.0.gameplay.reduced_motion { "On" } else { "Off" }
             ),
+            SettingRow::Sound => match store.0.gameplay.sound_volume {
+                v if v <= 0.0 => "Sound:  Off".to_string(),
+                v => format!("Sound:  {:.0} %", v * 100.0),
+            },
             SettingRow::Keys => "Keyboard shortcuts…".to_string(),
         };
         for child in children.iter() {
@@ -346,6 +353,14 @@ pub fn handle_setting_rows(
             SettingRow::ReducedMotion => {
                 gameplay.reduced_motion = !gameplay.reduced_motion;
                 store.0.gameplay.reduced_motion = gameplay.reduced_motion;
+                dirty = true;
+            }
+            SettingRow::Sound => {
+                const VOLUMES: [f32; 5] = [0.0, 0.25, 0.5, 0.75, 1.0];
+                let now = gameplay.sound_volume;
+                let next = VOLUMES.iter().copied().find(|v| *v > now + 0.01).unwrap_or(0.0);
+                gameplay.sound_volume = next;
+                store.0.gameplay.sound_volume = next;
                 dirty = true;
             }
             SettingRow::Keys => keymap.open = true,

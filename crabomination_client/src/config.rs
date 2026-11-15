@@ -162,6 +162,8 @@ pub struct GameplayConfig {
     /// that carry game state (a card to its zone) and damage numerals stay.
     /// Default: false.
     pub reduced_motion: bool,
+    /// Sound-cue volume, 0 (off) to 1 (`systems::sound`). Default: 0.6.
+    pub sound_volume: f32,
 }
 
 impl Default for GameplayConfig {
@@ -176,6 +178,7 @@ impl Default for GameplayConfig {
             stops_opp: Default::default(),
             takebacks: Default::default(),
             reduced_motion: false,
+            sound_volume: 0.6,
         }
     }
 }

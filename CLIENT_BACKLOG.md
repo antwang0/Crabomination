@@ -25,6 +25,19 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Sound (2026-11-15) — shipped, not yet heard
+
+`systems::sound`: ten cues — cast, land, damage, death, countered, life
+gain, your draw, your turn, win, lose — synthesized at startup (tones with
+pitch sweeps and a noise burst, 0.05-1.2 s; no asset files, nothing to
+license) and played through a custom `Decodable` source (the client's Bevy
+carries only the Vorbis decoder). A batch plays each cue once and at most
+three, most important first, so a board wipe is one crash. Settings → Sound
+cycles Off / 25 / 50 / 75 / 100 % (`GameplayConfig::sound_volume`, default
+60 %). Behind the `audio` feature (`systems::AudioCuesPlugin` is a no-op
+without it). ⚠ Verified by unit tests and a clean start only — nobody has
+listened to the cues yet; tune `sound::voices` by ear.
+
 ## The game log folds; screenshots are a script (2026-11-15) — shipped
 
 - `O` (`keybinds::Action::ToggleLog`) or a click on its stub folds the game
@@ -1163,7 +1176,7 @@ Cross-references the detailed entries below where one exists.
   binding that now fires with another says so; Reset all; saved to
   `config.toml` `[keybinds]` (overrides only). Button labels ("Pass
   (Space)") and the hint line follow the live binding. Harness `--keymap`.
-  Remaining ⏳: audio (once there is audio).
+  ✅ Sound volume (Settings → Sound, 2026-11-15).
 - 🟡 **Deck library** — Commander's deck picker (2026-09-26,
   `deck_picker.rs`) picks your stock deck and each bot's from the 183 stock
   lists, with search. Paste-from-clipboard import ✅ (menu decklist "From

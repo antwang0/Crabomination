@@ -383,6 +383,7 @@ fn main() {
             systems::frame_pacing::FramePacingPlugin { continuous: harness.screenshot.is_some() },
             systems::perf_hud::PerfHudPlugin,
             systems::shadows::ShadowsPlugin,
+            systems::AudioCuesPlugin,
         ))
         .init_resource::<layout_harness::ScreenshotClock>()
         .add_systems(

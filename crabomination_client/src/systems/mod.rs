@@ -25,6 +25,8 @@ pub mod glow;
 pub mod frame_pacing;
 pub mod perf_hud;
 pub mod shadows;
+#[cfg(feature = "audio")]
+pub mod sound;
 pub mod impact;
 pub mod inspector;
 pub mod input_guard;
@@ -48,3 +50,14 @@ pub mod takeback;
 pub mod thinking;
 pub mod ui;
 pub mod ui_card_hover;
+
+/// The sound cues (`sound`) where the client is built with audio; nothing
+/// without it, so the call site needs no `cfg`.
+pub struct AudioCuesPlugin;
+
+impl bevy::prelude::Plugin for AudioCuesPlugin {
+    fn build(&self, _app: &mut bevy::prelude::App) {
+        #[cfg(feature = "audio")]
+        _app.add_plugins(sound::SoundPlugin);
+    }
+}
