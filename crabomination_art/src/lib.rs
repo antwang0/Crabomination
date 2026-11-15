@@ -392,8 +392,13 @@ pub fn ensure_card_images_with_progress(
                 };
                 let path = cards_dir.join(spec.filename());
                 match download_card_image(spec, bulk.as_ref()) {
-                    Ok(bytes) => match write_whole(&path, &bytes) {
+                    Ok((bytes, face)) => match write_whole(&path, &bytes) {
                         Ok(()) => {
+                            if let (Some(face), CardImage::Token { name }) = (&face, spec) {
+                                // Not `write_whole`: its `.part` staging name for
+                                // `X.jpg.face` is the image's own `X.jpg.part`.
+                                let _ = fs::write(token_face_path(&cards_dir, name), face.to_text());
+                            }
                             println!("Saved {} to {}", spec.label(), path.display());
                             fetched.fetch_add(1, Ordering::Relaxed);
                             if let Ok(mut completed) = progress.completed.lock() {
@@ -749,12 +754,14 @@ impl BulkIndex {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn download_card_image(spec: &CardImage, bulk: Option<&BulkIndex>) -> Result<Vec<u8>, LookupError> {
+/// The image's bytes, and for a token the [`TokenArtFace`] of the printing
+/// they show (saved beside it, [`token_face_path`]).
+fn download_card_image(spec: &CardImage, bulk: Option<&BulkIndex>) -> Result<(Vec<u8>, Option<TokenArtFace>), LookupError> {
     if let Some(url) = bulk.and_then(|b| b.image_url(spec)) {
-        return as_jpeg(scryfall_get_bytes(url)?).map_err(LookupError::Other);
+        return Ok((as_jpeg(scryfall_get_bytes(url)?).map_err(LookupError::Other)?, None));
     }
     match spec {
-        CardImage::Token { name } => download_token_image(name),
+        CardImage::Token { name } => download_token_image(name).map(|(bytes, face)| (bytes, Some(face))),
         spec => {
             // Query parameters: which name to look up, and whether to ask
             // Scryfall for the back face.
@@ -770,7 +777,7 @@ fn download_card_image(spec: &CardImage, bulk: Option<&BulkIndex>) -> Result<Vec
                 Err(LookupError::NotFound) => try_lookup("fuzzy", lookup_name, face_param),
                 other => other,
             }?;
-            as_jpeg(bytes).map_err(LookupError::Other)
+            Ok((as_jpeg(bytes).map_err(LookupError::Other)?, None))
         }
     }
 }
@@ -791,7 +798,7 @@ fn download_card_image(spec: &CardImage, bulk: Option<&BulkIndex>) -> Result<Vec
 /// Scryfall returns the token regardless of which set it came from,
 /// so `unique=art` is plenty -- we don't care about printing variants.
 #[cfg(not(target_arch = "wasm32"))]
-fn download_token_image(token_name: &str) -> Result<Vec<u8>, LookupError> {
+fn download_token_image(token_name: &str) -> Result<(Vec<u8>, TokenArtFace), LookupError> {
     let search_url = format!(
         "https://api.scryfall.com/cards/search?unique=art&q=is%3Atoken+{}",
         urlenccode(&format!("!\"{token_name}\"")),
@@ -814,7 +821,87 @@ fn download_token_image(token_name: &str) -> Result<Vec<u8>, LookupError> {
         .iter()
         .find_map(|v| first["image_uris"][v].as_str())
         .ok_or(LookupError::Unavailable)?;
-    as_jpeg(scryfall_get_bytes(img_url)?).map_err(LookupError::Other)
+    let face = TokenArtFace {
+        colors: first["colors"]
+            .as_array()
+            .map(|cs| cs.iter().filter_map(|c| c.as_str()).collect::<String>())
+            .unwrap_or_default(),
+        power: first["power"].as_str().unwrap_or_default().to_string(),
+        toughness: first["toughness"].as_str().unwrap_or_default().to_string(),
+    };
+    Ok((as_jpeg(scryfall_get_bytes(img_url)?).map_err(LookupError::Other)?, face))
+}
+
+/// What the downloaded art of a token shows: the printing's colours
+/// (WUBRG letters, empty = colourless) and printed power / toughness
+/// (empty for a noncreature token). Token art is fetched by name, and the
+/// first printing named "Soldier" can be a red 1/1 where the game's Soldier
+/// is a white 1/1; the client reads this to draw a face instead of showing
+/// the wrong token.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TokenArtFace {
+    pub colors: String,
+    pub power: String,
+    pub toughness: String,
+}
+
+impl TokenArtFace {
+    fn to_text(&self) -> String {
+        format!("colors={}\npower={}\ntoughness={}\n", self.colors, self.power, self.toughness)
+    }
+
+    fn parse(text: &str) -> Option<Self> {
+        let field = |key: &str| {
+            text.lines().find_map(|l| l.strip_prefix(key).and_then(|r| r.strip_prefix('='))).map(str::to_string)
+        };
+        Some(TokenArtFace { colors: field("colors")?, power: field("power")?, toughness: field("toughness")? })
+    }
+
+    /// Whether this art fits a token of `colors` (WUBRG letters, any order)
+    /// and base `pt` (`None` = not a creature).
+    pub fn fits(&self, colors: &str, pt: Option<(i32, i32)>) -> bool {
+        let mut a: Vec<char> = self.colors.chars().collect();
+        let mut b: Vec<char> = colors.chars().collect();
+        a.sort_unstable();
+        b.sort_unstable();
+        let pt_fits = match pt {
+            // A `*` on the printing (a token whose P/T a number sets) fits
+            // whatever the game computed.
+            Some((p, t)) => {
+                let ok = |printed: &str, n: i32| printed.contains('*') || printed == n.to_string();
+                ok(&self.power, p) && ok(&self.toughness, t)
+            }
+            None => self.power.is_empty() && self.toughness.is_empty(),
+        };
+        a == b && pt_fits
+    }
+}
+
+/// Where a token's [`TokenArtFace`] is saved: beside its image, `.face`.
+pub fn token_face_path(cards_dir: &Path, name: &str) -> std::path::PathBuf {
+    cards_dir.join(format!("{}.face", card_filename(name)))
+}
+
+/// The [`TokenArtFace`] saved beside `name`'s token art, if any.
+pub fn read_token_face(cards_dir: &Path, name: &str) -> Option<TokenArtFace> {
+    TokenArtFace::parse(&fs::read_to_string(token_face_path(cards_dir, name)).ok()?)
+}
+
+/// Delete token art saved before [`TokenArtFace`] was recorded, once, so the
+/// prefetch fetches it again with its face. A marker records that it ran.
+#[cfg(not(target_arch = "wasm32"))]
+pub fn purge_token_art_without_face(asset_dir: &Path, token_names: &[&str]) {
+    let cards = asset_dir.join("cards");
+    let marker = cards.join(".token_art_with_face");
+    if marker.exists() || !cards.is_dir() {
+        return;
+    }
+    for name in token_names {
+        if !token_face_path(&cards, name).is_file() {
+            let _ = fs::remove_file(cards.join(card_filename(name)));
+        }
+    }
+    let _ = fs::write(&marker, b"token art carries its printing's colours and P/T (<name>.jpg.face)\n");
 }
 
 /// Delete token art fetched by the old type-matched search (see
@@ -1125,6 +1212,21 @@ mod tests {
     fn token_label_is_disambiguated_in_logs() {
         let spec = CardImage::Token { name: "Clue" };
         assert_eq!(spec.label(), "Clue token");
+    }
+
+    /// A token's saved face round-trips, and fits only a token of its
+    /// colours and P/T — the white 1/1 Soldier art is not a red 1/1's.
+    #[test]
+    fn token_art_face_fits_only_its_own_token() {
+        let soldier = TokenArtFace { colors: "W".into(), power: "1".into(), toughness: "1".into() };
+        assert_eq!(TokenArtFace::parse(&soldier.to_text()), Some(soldier.clone()));
+        assert!(soldier.fits("W", Some((1, 1))));
+        assert!(!soldier.fits("R", Some((1, 1))), "wrong colour");
+        assert!(!soldier.fits("W", Some((2, 2))), "wrong P/T");
+        let treasure = TokenArtFace { colors: String::new(), power: String::new(), toughness: String::new() };
+        assert!(treasure.fits("", None));
+        let star = TokenArtFace { colors: "GW".into(), power: "*".into(), toughness: "*".into() };
+        assert!(star.fits("WG", Some((4, 4))), "a */* printing fits any count, colours in any order");
     }
 
     #[test]

@@ -23,6 +23,7 @@ fn main() {
     let dir = PathBuf::from(dir);
     crabomination_art::materialize_core_assets(&dir);
     crabomination_art::purge_type_matched_token_art(&dir, crabomination_art::TOKEN_NAMES);
+    crabomination_art::purge_token_art_without_face(&dir, crabomination_art::TOKEN_NAMES);
     // The client's walk (`crabomination_art::SpecSet` says why all of it).
     let mut spec_set = crabomination_art::SpecSet::default();
     let demo = crabomination::demo::build_demo_state();

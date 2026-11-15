@@ -42,7 +42,8 @@ pub struct InFlightAnims<'w, 's> {
 /// fetched only for a short list of common tokens, so without this most
 /// tokens were a white card with their name in faint grey.
 fn battlefield_face_path(c: &crabomination::net::PermanentView, art: Option<&crate::scryfall::CardArtDir>) -> String {
-    if !c.is_token || art.is_none_or(|a| a.has_art(&c.name)) {
+    let pt = c.is_creature().then_some((c.base_power, c.base_toughness));
+    if !c.is_token || art.is_none_or(|a| a.has_fitting_token_art(&c.name, &c.colors, pt)) {
         return crate::scryfall::card_asset_path(&c.name);
     }
     let types: Vec<String> = c.card_types.iter().map(|t| format!("{t:?}")).collect();
@@ -56,7 +57,7 @@ fn battlefield_face_path(c: &crabomination::net::PermanentView, art: Option<&cra
         colors: c.colors.clone(),
         type_line,
         keywords: c.keywords.iter().map(crate::systems::counter_tooltip::keyword_label).collect(),
-        pt: c.is_creature().then_some((c.base_power, c.base_toughness)),
+        pt,
     };
     crate::card::proxy::proxy_asset_path(&face)
 }

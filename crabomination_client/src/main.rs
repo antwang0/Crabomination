@@ -172,6 +172,10 @@ fn main() {
     // entirely; clear it once so the prefetch below fetches it by name.
     #[cfg(not(target_arch = "wasm32"))]
     crabomination_art::purge_type_matched_token_art(&asset_dir, crabomination_art::TOKEN_NAMES);
+    // Token art saved before its printing's colours and P/T were recorded
+    // beside it: fetch it again with them (`TokenArtFace`).
+    #[cfg(not(target_arch = "wasm32"))]
+    crabomination_art::purge_token_art_without_face(&asset_dir, crabomination_art::TOKEN_NAMES);
     // Card-art prefetch runs on a background thread — launch never blocks
     // on the network. Missing images render as name placeholders (see
     // `CardPlaceholderReader`) and hot-swap to real art as downloads land

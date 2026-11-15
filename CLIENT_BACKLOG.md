@@ -773,9 +773,8 @@ pod, 1920x1080 and 1280x720).
   and stacks up from there. The chip is cream with dark print like the
   counter chips, on the top card's upper-right corner as seen, sized to
   the card, and swells when the count changes.
-  - ⏳ Residual: a token with no art on disk (the harness's "Goblin",
-    "Treasure") draws as a blank white card with its name in faint grey,
-    and a pile of them reads poorly. See Token Labeling below.
+  - ✅ Residual closed: a token with no art on disk draws a face
+    (`card::proxy`, 2026-09-29). See Token Labeling below.
 - ✅ **The phase chart shows the turn's progress.** A rail down its left
   edge fills through the steps passed, in the colour of the seat whose turn
   it is (the viewer's own on their turn, an opponent's on theirs), with the
@@ -1077,9 +1076,14 @@ per-card "went there on turn N" timestamps; the view doesn't carry them.
 
 ### Token Labeling
 ✅ Shipped 2026-09-29 — art-less tokens get a drawn face (`card::proxy`),
-and token art is fetched by exact name. Residual ⏳: downloaded token art is
-the first printing *named* like the token, which can still differ from the
-game's token in colour or P/T (the P/T badge corrects the numbers).
+and token art is fetched by exact name. ✅ (2026-11-15) Downloaded token art
+is the first printing *named* like the token, which can differ from the
+game's token in colour or P/T; the printing's colours and P/T are now saved
+beside it (`crabomination_art::TokenArtFace`, `cards/<name>.jpg.face`) and a
+token they don't fit draws its own face instead (`CardArtDir::has_fitting_token_art`).
+Art saved before is purged once and fetched again with its face
+(`purge_token_art_without_face`). ⏳ Residual: fetch the *fitting* printing
+(`c:` / `pow:` / `tou:` in the search) rather than fall back to the drawn face.
 
 ---
 

@@ -195,6 +195,34 @@ impl CardArtDir {
     pub fn has_art(&self, name: &str) -> bool {
         self.0.join("cards").join(card_filename(name)).is_file()
     }
+
+    /// Whether `name`'s downloaded token art shows a token of these colours
+    /// and base P/T. Token art is fetched by name, so the "Soldier" on disk
+    /// can be a red 1/1 where this one is white; art saved with no face
+    /// record (before it was kept) is taken as fitting.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn has_fitting_token_art(&self, name: &str, colors: &[crabomination::mana::Color], pt: Option<(i32, i32)>) -> bool {
+        use crabomination::mana::Color as C;
+        if !self.has_art(name) {
+            return false;
+        }
+        let letters: String = colors
+            .iter()
+            .map(|c| match c {
+                C::White => 'W',
+                C::Blue => 'U',
+                C::Black => 'B',
+                C::Red => 'R',
+                C::Green => 'G',
+            })
+            .collect();
+        crabomination_art::read_token_face(&self.0.join("cards"), name).is_none_or(|f| f.fits(&letters, pt))
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub fn has_fitting_token_art(&self, name: &str, _: &[crabomination::mana::Color], _: Option<(i32, i32)>) -> bool {
+        self.has_art(name)
+    }
 }
 
 /// Asset path relative to the assets/ root, for use with Bevy's AssetServer.
