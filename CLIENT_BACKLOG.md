@@ -25,6 +25,14 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Match history (2026-11-15) — shipped
+
+`systems::match_history`: each game you finish (not a spectated bot game)
+is kept — format, opponents, result, turns, finishing place in a pod — in
+client storage (`match_history`, the newest 200). Main menu → **History**
+shows your record per format (won / lost / drawn, win %) and the latest 15
+games.
+
 ## Sound (2026-11-15) — shipped, not yet heard
 
 `systems::sound`: ten cues — cast, land, damage, death, countered, life

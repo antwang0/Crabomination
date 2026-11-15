@@ -1184,6 +1184,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 p.spawn(Node { flex_direction: FlexDirection::Row, column_gap: Val::Px(8.0), ..default() })
                     .with_children(|row| {
                         small_button(row, &tf, "Settings", crate::systems::settings_menu::OpenSettingsButton);
+                        small_button(row, &tf, "History", crate::systems::match_history::OpenHistoryButton);
                         if native {
                             // Audit Cards — the card picker for verifying
                             // individual card implementations one by one.

@@ -468,6 +468,14 @@ fn main() {
         // Main-menu Settings panel.
         .init_resource::<systems::settings_menu::MenuSettingsOpen>()
         .init_resource::<systems::keymap_panel::KeymapPanel>()
+        .insert_resource(systems::match_history::MatchHistory::load())
+        .init_resource::<systems::match_history::HistoryOpen>()
+        .add_systems(
+            Update,
+            (systems::match_history::handle_history_open, systems::match_history::sync_history_panel)
+                .chain()
+                .run_if(in_state(AppState::Menu)),
+        )
         .add_systems(
             Update,
             (
@@ -978,6 +986,7 @@ fn main() {
             Update,
             (
                 systems::match_stats::track_match_stats,
+                systems::match_history::record_finished_match,
                 game::clear_attack_plan_on_step_change,
                 systems::game_over::sync_game_over_modal,
                 systems::game_over::handle_auto_rematch_focus,
