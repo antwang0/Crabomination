@@ -79,6 +79,8 @@ pub struct HarnessArgs {
     pub menu: bool,
     /// `--keymap`: stay on the menu with Settings → Keyboard shortcuts open.
     pub keymap: bool,
+    /// `--puzzle N`: start puzzle N (0-based, `server::blunder::items`).
+    pub puzzle: Option<usize>,
     pub menu_format: Option<crate::menu::MatchFormat>,
     /// `--ui-size PERCENT` (0 = Auto): the UI size for this run.
     pub ui_size: Option<u16>,
@@ -174,6 +176,7 @@ impl HarnessArgs {
             import_report: value("--import-report").map(std::path::PathBuf::from),
             menu: args.iter().any(|a| a == "--menu"),
             keymap: args.iter().any(|a| a == "--keymap"),
+            puzzle: value("--puzzle").and_then(|v| v.parse().ok()),
             menu_format: value("--menu-format").and_then(|f| crate::menu::MatchFormat::from_cli(&f)),
             ui_size: value("--ui-size").and_then(|v| v.parse().ok()),
             zoom_card: value("--zoom-card"),
@@ -477,6 +480,20 @@ pub fn open_shortcut_help_for_screenshot(
 ) {
     if args.shortcut_help && !*done && view.0.is_some() {
         crate::systems::ui::spawn_shortcut_help(&mut commands, &ui_fonts, &binds);
+        *done = true;
+    }
+}
+
+/// `--puzzle N`: start that puzzle from the menu.
+pub fn start_puzzle_for_screenshot(
+    args: Res<HarnessArgs>,
+    mut picked: ResMut<crate::systems::puzzles::PickedPuzzle>,
+    mut done: Local<bool>,
+) {
+    if let Some(n) = args.puzzle
+        && !*done
+    {
+        picked.0 = Some(n);
         *done = true;
     }
 }

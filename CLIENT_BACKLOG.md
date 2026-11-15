@@ -25,6 +25,18 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Puzzles (2026-11-15) — shipped
+
+Main menu → **Puzzles** (`systems::puzzles`) lists the blunder benchmark's
+items (`server::blunder::items`) as challenges; picking one starts a local
+match from its position with you in seat 0. The banner asks the question
+(the prompt's "situation" half — the "— answer" half is the benchmark
+report's, and shows only once judged); when the item's turn window closes
+it says solved, or which checks the right play needed. Judged from the
+match's events (casts and their targets, attackers, blockers, activations)
+and the final board, so a rejected submission never counts. Harness:
+`--puzzle N`.
+
 ## Post-game turning points (2026-11-15) — shipped
 
 `systems::win_swings` keeps each duel's win-chance readings with the log

@@ -396,6 +396,7 @@ fn main() {
                 layout_harness::collapse_log_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::open_deck_picker_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::open_keymap_for_screenshot.run_if(in_state(AppState::Menu)),
+                layout_harness::start_puzzle_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::import_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::capture_screenshot,
                 layout_harness::spawn_mana_gallery.run_if(in_state(AppState::InGame)),
@@ -966,6 +967,21 @@ fn main() {
         .init_resource::<systems::log_links::LogFocus>()
         .init_resource::<systems::hint_button::SuggestedMove>()
         .init_resource::<systems::win_swings::WinSwings>()
+        .init_resource::<systems::puzzles::PuzzleRun>()
+        .init_resource::<systems::puzzles::PuzzlesOpen>()
+        .init_resource::<systems::puzzles::PickedPuzzle>()
+        .add_systems(
+            Update,
+            (systems::puzzles::handle_puzzles_panel, systems::puzzles::sync_puzzles_panel)
+                .chain()
+                .run_if(in_state(AppState::Menu)),
+        )
+        .add_systems(
+            Update,
+            (systems::puzzles::track_puzzle, systems::puzzles::sync_puzzle_banner)
+                .chain()
+                .run_if(in_state(AppState::InGame)),
+        )
         .add_systems(
             Update,
             (

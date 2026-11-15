@@ -45,6 +45,7 @@ pub mod hand_chips;
 pub mod lock_badge;
 pub mod regen_badge;
 pub mod token_badge;
+pub mod puzzles;
 pub mod quality;
 pub mod scroll;
 pub mod settings_menu;

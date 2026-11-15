@@ -139,6 +139,9 @@ pub enum NetMode {
     /// `--layout-fixture <seats>`: a local match from the layout harness's
     /// fixed busy board (`layout_harness::fixture_state`).
     LayoutFixture { seats: usize },
+    /// Menu → Puzzles: a local match from benchmark item `index`'s position
+    /// (`server::blunder::items`), judged by `systems::puzzles`.
+    Puzzle { index: usize },
     /// Re-claim a seat in a still-running match after a crash/restart,
     /// using the resume token persisted under
     /// `net_plugin::RESUME_STORAGE_KEY`. No session is spawned here —
@@ -952,6 +955,7 @@ impl Plugin for MenuPlugin {
                     refresh_menu_status,
                     update_download_progress,
                     apply_cli_boot_hint,
+                    start_picked_puzzle,
                 )
                     .run_if(in_state(AppState::Menu)),
             )
@@ -986,6 +990,18 @@ impl Plugin for MenuPlugin {
 /// One-shot system: when the client was launched with `--load-state <path>`,
 /// fire the load mode immediately and transition into InGame on the next
 /// frame, bypassing the menu UI entirely.
+/// A puzzle picked in Menu → Puzzles starts its match.
+fn start_picked_puzzle(
+    mut picked: ResMut<crate::systems::puzzles::PickedPuzzle>,
+    mut pending: ResMut<PendingNetMode>,
+    mut next_state: ResMut<NextState<AppState>>,
+) {
+    if let Some(index) = picked.0.take() {
+        pending.0 = Some((NetMode::Puzzle { index }, MatchFormat::Modern));
+        next_state.set(AppState::InGame);
+    }
+}
+
 fn apply_cli_boot_hint(
     mut hint: ResMut<CliBootHint>,
     mut boot_format: ResMut<CliBootFormat>,
@@ -1185,6 +1201,7 @@ fn spawn_menu(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     .with_children(|row| {
                         small_button(row, &tf, "Settings", crate::systems::settings_menu::OpenSettingsButton);
                         small_button(row, &tf, "History", crate::systems::match_history::OpenHistoryButton);
+                        small_button(row, &tf, "Puzzles", crate::systems::puzzles::OpenPuzzlesButton);
                         if native {
                             // Audit Cards — the card picker for verifying
                             // individual card implementations one by one.
@@ -1819,6 +1836,8 @@ pub fn start_net_session_from_menu(world: &mut World) {
     // resource every frame, so skipping them used to crash the moment a lobby
     // match started.
     world.insert_resource(crate::systems::game_over::ActiveMatchFormat(format));
+    // Only a puzzle match carries a puzzle.
+    world.insert_resource(crate::systems::puzzles::PuzzleRun::default());
     let kind = match &mode {
         NetMode::SpectateBots => crate::systems::game_over::ActiveMatchKind::SpectateBotVsBot,
         _ => crate::systems::game_over::ActiveMatchKind::HumanVsBot,
@@ -1836,6 +1855,13 @@ pub fn start_net_session_from_menu(world: &mut World) {
         NetMode::LocalBot => spawn_inprocess_bot(world, format),
         NetMode::SpectateBots => spawn_spectate_bots(world, format),
         NetMode::LayoutFixture { seats } => spawn_layout_fixture(world, seats),
+        NetMode::Puzzle { index } => {
+            let items = crabomination::server::blunder::items();
+            let Some(item) = items.get(index) else { return spawn_inprocess_bot(world, format) };
+            let (run, state) = crate::systems::puzzles::ActivePuzzle::new(item);
+            world.insert_resource(crate::systems::puzzles::PuzzleRun { active: Some(run) });
+            spawn_restored_state(world, state, 0);
+        }
         NetMode::LoadDebugState { path } => match spawn_loaded_debug_state(world, &path) {
             Ok(()) => eprintln!("net: loaded debug state from {}", path.display()),
             Err(e) => {

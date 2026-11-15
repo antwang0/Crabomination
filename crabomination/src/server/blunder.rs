@@ -155,7 +155,7 @@ impl Check {
 
     /// Names are read off the starting position: a game that ended has
     /// cleared its zones.
-    fn describe(self, start: &GameState) -> String {
+    pub fn describe(self, start: &GameState) -> String {
         let name = |id: CardId| {
             start
                 .battlefield_find(id)
