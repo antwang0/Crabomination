@@ -617,7 +617,8 @@ pub struct BlockingState {
 /// Tracks the viewer's in-progress attack plan during the DeclareAttackers
 /// step. Each entry is a chosen attacker + the defender (player or
 /// planeswalker) it's been pointed at. Cleared on submit, on Esc/right-
-/// click, and whenever the step or active player changes.
+/// click, and whenever the step, turn or active player changes
+/// (`clear_attack_plan_on_step_change`).
 ///
 /// The plan is *optional*: an empty plan + `A`/button falls back to
 /// "attack all eligible at the next opponent" so the existing one-key
@@ -665,6 +666,51 @@ impl AttackingState {
             return true;
         }
         false
+    }
+}
+
+/// The combat an attack plan belongs to: the turn, its active player, and
+/// the step. A plan outlives none of them.
+type PlanKey = (u32, usize, crabomination::game::TurnStep);
+
+/// Whether a plan made under `prev` is stale under `now` (it was made in an
+/// earlier step, turn, or someone else's turn). `None` = no view seen yet.
+fn plan_is_stale(prev: Option<PlanKey>, now: PlanKey) -> bool {
+    prev.is_some_and(|p| p != now)
+}
+
+/// Clear the viewer's attack plan when the step, turn, or active player moves
+/// on: a plan half-made in declare attackers and abandoned (a pass, an
+/// opponent's response that skips the step) would otherwise come back
+/// highlighted in the next combat.
+pub fn clear_attack_plan_on_step_change(
+    view: Res<crate::net_plugin::CurrentView>,
+    mut attacking: ResMut<AttackingState>,
+    mut last: Local<Option<PlanKey>>,
+) {
+    if !view.is_changed() {
+        return;
+    }
+    let Some(cv) = &view.0 else { return };
+    let now = (cv.turn, cv.active_player, cv.step);
+    if plan_is_stale(*last, now) && (!attacking.plan.is_empty() || attacking.last_added.is_some()) {
+        attacking.clear();
+    }
+    *last = Some(now);
+}
+
+#[cfg(test)]
+mod attack_plan_tests {
+    use super::plan_is_stale;
+    use crabomination::game::TurnStep;
+
+    #[test]
+    fn a_plan_lives_only_in_its_own_step() {
+        let declare = (3, 0, TurnStep::DeclareAttackers);
+        assert!(!plan_is_stale(None, declare), "the first view clears nothing");
+        assert!(!plan_is_stale(Some(declare), declare), "same step: keep it");
+        assert!(plan_is_stale(Some(declare), (3, 0, TurnStep::DeclareBlockers)));
+        assert!(plan_is_stale(Some(declare), (4, 1, TurnStep::DeclareAttackers)), "next turn's combat");
     }
 }
 

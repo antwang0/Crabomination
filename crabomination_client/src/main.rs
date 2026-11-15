@@ -939,6 +939,7 @@ fn main() {
             Update,
             (
                 systems::match_stats::track_match_stats,
+                game::clear_attack_plan_on_step_change,
                 systems::game_over::sync_game_over_modal,
                 systems::game_over::handle_auto_rematch_focus,
                 systems::game_over::handle_auto_rematch_keys,
