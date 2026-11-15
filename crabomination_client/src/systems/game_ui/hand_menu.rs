@@ -272,8 +272,12 @@ impl RightClick {
     pub fn hint(self, cv: &ClientView, k: &KnownCard, flipped: bool) -> Option<String> {
         Some(match self {
             RightClick::Pitch => "Pitch it for mana".into(),
-            RightClick::AltCost if k.alt_cost_label.is_empty() => "Alternative cost".into(),
-            RightClick::AltCost => format!("Alt. cost: {}", k.alt_cost_label),
+            RightClick::AltCost => match &k.alt_cost_choice {
+                // CR 118.9a — a printed and a granted cost: name both.
+                Some([printed, granted]) => format!("{printed} or {granted}"),
+                None if k.alt_cost_label.is_empty() => "Alternative cost".into(),
+                None => format!("Alt. cost: {}", k.alt_cost_label),
+            },
             RightClick::PayTimes(m) => m.label().into(),
             RightClick::Spree => "Choose its modes".into(),
             RightClick::SplitRight => "Cast the right half".into(),

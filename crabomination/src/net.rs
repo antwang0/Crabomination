@@ -1376,6 +1376,14 @@ pub struct KnownCard {
     /// alt-cast modal header. Defaults to "".
     #[serde(default)]
     pub alt_cost_label: String,
+    /// CR 118.9a — this hand card has two alternative costs to choose from:
+    /// its printed one and one a permanent grants it (Henzie's blitz on a
+    /// dash creature, Kentaro's {X} on an evoke one). `[printed, granted]`,
+    /// each named by its mechanic where it has one ("Dash {2}{R}"); the
+    /// printed one is cast with `CastSpellAlternative`, the granted one with
+    /// `CastSpellGrantedAlternative`. `None` when there is at most one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alt_cost_choice: Option<[String; 2]>,
     /// False when the alternative cost is condition-gated and the gate
     /// currently fails (Prowl with no tribal connect, Archive Trap with no
     /// opponent search this turn, not-your-turn pitch costs on your turn).

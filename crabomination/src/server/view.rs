@@ -1181,6 +1181,22 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         has_alternative_cost: alt_cost.is_some(),
         alt_cost_needs_pitch: alt_cost.as_ref().is_some_and(|a| a.exile_filter.is_some()),
         alt_cost_label: alt_cost.as_ref().map(format_alt_cost_label).unwrap_or_default(),
+        alt_cost_choice: state.filter(|_| in_hand).and_then(|st| {
+            // Only a card with a printed alternative cost has a choice to
+            // make (CR 118.9a); without one the granted cost *is* the
+            // effective one above. A granted cost the effective one already
+            // took (a cheaper Henzie blitz over a printed blitz) is no second
+            // choice either.
+            let effective = alt_cost.as_ref()?;
+            card.definition.alternative_cost.as_ref()?;
+            let granted = st.granted_alternative_cost_in(
+                card.owner,
+                crate::game::actions::AltCastZone::Hand,
+                card.id,
+            )?;
+            let (printed, granted) = (named_alt_cost_label(effective), named_alt_cost_label(&granted));
+            (printed != granted).then_some([printed, granted])
+        }),
         alt_cost_available: alt_cost.as_ref().is_none_or(|a| {
             // Condition-gated alt costs (Prowl, Archive Trap) and
             // not-your-turn pitches grey out when unavailable; without a
@@ -1384,6 +1400,41 @@ fn format_mana_cost_for_label(c: &crate::mana::ManaCost) -> String {
 /// non-mana riders (return-to-hand / sacrifice / pitch / life), so a {0}-mana
 /// alt cost like Escape Detection's "return a blue creature" still reads
 /// sensibly in the cast prompt instead of showing nothing.
+/// `format_alt_cost_label` led by the mechanic the cost belongs to, where
+/// the cost says ("Dash {2}{R}", "Blitz {3}{R}"): what tells two alternative
+/// costs of one card apart (`KnownCard::alt_cost_choice`).
+fn named_alt_cost_label(a: &crate::card::AlternativeCost) -> String {
+    let mechanic = if a.dash {
+        "Dash"
+    } else if a.blitz {
+        "Blitz"
+    } else if a.evoke_sacrifice {
+        "Evoke"
+    } else if a.sneak {
+        "Sneak"
+    } else if a.warp {
+        "Warp"
+    } else if a.freerunning {
+        "Freerunning"
+    } else if a.awaken {
+        "Awaken"
+    } else if a.emerge.is_some() {
+        "Emerge"
+    } else if a.offering.is_some() {
+        "Offering"
+    } else if a.impending > 0 {
+        "Impending"
+    } else {
+        ""
+    };
+    let cost = format_alt_cost_label(a);
+    match (mechanic, cost.is_empty()) {
+        ("", _) => cost,
+        (m, true) => m.to_string(),
+        (m, false) => format!("{m} {cost}"),
+    }
+}
+
 fn format_alt_cost_label(a: &crate::card::AlternativeCost) -> String {
     let mut parts: Vec<String> = Vec::new();
     let mana = format_mana_cost_for_label(&a.mana_cost);

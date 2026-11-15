@@ -156,6 +156,32 @@ fn henzie_blitz_or_a_printed_dash() {
     assert!(g.battlefield_find(blitz).is_some_and(|c| c.blitzed && !c.dashed));
 }
 
+/// CR 118.9a — the view offers the client both costs, named, so the
+/// alt-cast picker can submit either; without Henzie there is one cost and no
+/// choice.
+#[test]
+fn the_view_names_both_alternative_costs() {
+    use crabomination::net::HandCardView;
+    let choice = |g: &GameState, id: CardId| {
+        crabomination::server::view::project(g, 0).players[0]
+            .hand
+            .iter()
+            .find_map(|h| match h {
+                HandCardView::Known(k) if k.id == id => Some(k.alt_cost_choice.clone()),
+                _ => None,
+            })
+            .expect("the card is in the viewer's hand")
+    };
+    let mut g = pod(2);
+    let id = g.add_card_to_hand(0, catalog::goblin_heelcutter());
+    assert_eq!(choice(&g, id), None, "a printed dash alone is no choice");
+    g.add_card_to_battlefield(0, catalog::henzie_toolbox_torre());
+    assert_eq!(
+        choice(&g, id),
+        Some(["Dash {2}{R}".to_string(), "Blitz {3}{R}".to_string()]),
+    );
+}
+
 /// Without a grant there is no granted alternative cost to take.
 #[test]
 fn a_printed_dash_alone_has_no_granted_alternative() {

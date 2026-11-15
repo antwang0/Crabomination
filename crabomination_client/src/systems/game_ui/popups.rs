@@ -561,6 +561,9 @@ pub struct AltCastPitchButton {
     /// `Some(card)` for pitch alt costs (exile a hand card); `None` for plain
     /// alternative costs (Surge/Awaken/Emerge/Spectacle/Overload).
     pub pitch: Option<CardId>,
+    /// CR 118.9a — cast for the alternative cost a permanent grants the
+    /// card (`CastSpellGrantedAlternative`) rather than its printed one.
+    pub granted: bool,
 }
 
 #[derive(Component)]
@@ -587,19 +590,22 @@ pub fn spawn_alt_cast_modal(
 
     // Look up the pending spell's alt-cost shape: pitch (exile a hand card)
     // vs. plain alternative (Surge/Awaken/Emerge/Spectacle/Overload).
-    let (needs_pitch, alt_label) = cv
+    let (needs_pitch, alt_label, choice) = cv
         .players
         .get(cv.your_seat)
         .and_then(|p| {
             // A commander's alt cost opens this modal from the command zone.
             p.hand.iter().chain(&p.command).find_map(|h| match h {
-                crabomination::net::HandCardView::Known(k) if k.id == spell_id => {
-                    Some((k.alt_cost_needs_pitch, k.alt_cost_label.clone()))
-                }
+                crabomination::net::HandCardView::Known(k) if k.id == spell_id => Some((
+                    k.alt_cost_needs_pitch,
+                    k.alt_cost_label.clone(),
+                    // Granted costs are cast from hand only.
+                    k.alt_cost_choice.clone().filter(|_| !state.from_command_zone),
+                )),
                 _ => None,
             })
         })
-        .unwrap_or((true, String::new()));
+        .unwrap_or((true, String::new(), None));
 
     // Collect candidate pitch cards: every other Known card in the viewer's
     // hand. The engine validates the filter and returns InvalidPitchCard if
@@ -649,7 +655,9 @@ pub fn spawn_alt_cast_modal(
                 BackgroundColor(theme::PANEL_BG),
             ))
             .with_children(|panel| {
-                let header = if needs_pitch {
+                let header = if choice.is_some() && !needs_pitch {
+                    "Cast for which alternative cost?".to_string()
+                } else if needs_pitch {
                     "Cast for alternative cost — pick a card to exile:".to_string()
                 } else if alt_label.is_empty() {
                     "Cast for alternative cost?".to_string()
@@ -663,25 +671,35 @@ pub fn spawn_alt_cast_modal(
                 ));
                 if !needs_pitch {
                     // Plain alternative cost (Surge/Awaken/Emerge/Spectacle/
-                    // Overload): no hand card to exile — one confirm button.
-                    panel
-                        .spawn((
-                            Button,
-                            Node {
-                                padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
-                                ..default()
-                            },
-                            BackgroundColor(theme::BUTTON_INFO_BG),
-                            AltCastPitchButton { spell: spell_id, pitch: None },
-                        ))
-                        .with_children(|b| {
-                            b.spawn((
-                                Text::new("Cast"),
-                                ui_fonts.tf(13.0),
-                                TextColor(theme::TEXT_PRIMARY),
-                                bevy::picking::Pickable::IGNORE,
-                            ));
-                        });
+                    // Overload): no hand card to exile — one confirm button,
+                    // or one per cost when a permanent grants a second
+                    // (CR 118.9a: the caster picks which applies).
+                    let buttons: Vec<(String, bool)> = match &choice {
+                        Some([printed, granted]) => {
+                            vec![(printed.clone(), false), (granted.clone(), true)]
+                        }
+                        None => vec![("Cast".to_string(), false)],
+                    };
+                    for (label, granted) in buttons {
+                        panel
+                            .spawn((
+                                Button,
+                                Node {
+                                    padding: UiRect::axes(Val::Px(14.0), Val::Px(8.0)),
+                                    ..default()
+                                },
+                                BackgroundColor(theme::BUTTON_INFO_BG),
+                                AltCastPitchButton { spell: spell_id, pitch: None, granted },
+                            ))
+                            .with_children(|b| {
+                                b.spawn((
+                                    Text::new(label),
+                                    ui_fonts.tf(13.0),
+                                    TextColor(theme::TEXT_PRIMARY),
+                                    bevy::picking::Pickable::IGNORE,
+                                ));
+                            });
+                    }
                 }
                 if needs_pitch && candidates.is_empty() {
                     panel.spawn((
@@ -700,7 +718,7 @@ pub fn spawn_alt_cast_modal(
                                     ..default()
                                 },
                                 BackgroundColor(theme::BUTTON_INFO_BG),
-                                AltCastPitchButton { spell: spell_id, pitch: Some(pid) },
+                                AltCastPitchButton { spell: spell_id, pitch: Some(pid), granted: false },
                             ))
                             .with_children(|b| {
                                 b.spawn((
@@ -737,14 +755,24 @@ pub fn spawn_alt_cast_modal(
 
 /// The alt-cost cast a confirmed modal submits: `CastSpellAlternative` for a
 /// hand card, `CastFromCommandZone { alternative: true }` for a commander
-/// (CR 903.8 — the tax is still added on top of the alternative cost).
+/// (CR 903.8 — the tax is still added on top of the alternative cost), and
+/// `CastSpellGrantedAlternative` for a hand card's granted cost (CR 118.9a).
 /// Pure helper.
 pub(crate) fn alt_cast_action(
     spell: CardId,
     pitch: Option<CardId>,
     from_command_zone: bool,
+    granted: bool,
 ) -> GameAction {
-    if from_command_zone {
+    if granted && !from_command_zone {
+        GameAction::CastSpellGrantedAlternative {
+            card_id: spell,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        }
+    } else if from_command_zone {
         GameAction::CastFromCommandZone {
             card_id: spell,
             target: None,
@@ -783,7 +811,7 @@ pub fn handle_alt_cast_buttons(
         if *interaction == Interaction::Pressed
             && let Some(outbox) = &outbox
         {
-            outbox.submit(alt_cast_action(btn.spell, btn.pitch, state.from_command_zone));
+            outbox.submit(alt_cast_action(btn.spell, btn.pitch, state.from_command_zone, btn.granted));
             state.pending = None;
             state.from_command_zone = false;
             return;
@@ -1845,14 +1873,25 @@ mod alt_cast_tests {
     fn command_zone_alt_cast_submits_the_command_zone_action() {
         let spell = CardId(7);
         assert!(matches!(
-            alt_cast_action(spell, None, true),
+            alt_cast_action(spell, None, true, false),
             GameAction::CastFromCommandZone { card_id, alternative: true, pitch_card: None, .. }
                 if card_id == spell
         ));
         assert!(matches!(
-            alt_cast_action(spell, Some(CardId(9)), false),
+            alt_cast_action(spell, Some(CardId(9)), false, false),
             GameAction::CastSpellAlternative { card_id, pitch_card: Some(CardId(9)), .. }
                 if card_id == spell
+        ));
+    }
+
+    /// CR 118.9a — the granted button of a two-cost hand card submits the
+    /// granted cast (Henzie's blitz), not the printed one (dash).
+    #[test]
+    fn granted_alt_cast_submits_the_granted_action() {
+        let spell = CardId(7);
+        assert!(matches!(
+            alt_cast_action(spell, None, false, true),
+            GameAction::CastSpellGrantedAlternative { card_id, .. } if card_id == spell
         ));
     }
 }

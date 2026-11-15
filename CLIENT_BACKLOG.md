@@ -25,14 +25,14 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
-## Open: a granted alternative cost beside a printed one (2026-10-07)
+## A granted alternative cost beside a printed one (2026-11-15) — shipped
 
-`GameAction::CastSpellGrantedAlternative` (CR 118.9a — Henzie's blitz on a
-dash / evoke creature, Kentaro's {X} on an evoke card) has no client entry:
-the right-click `AltCost` path submits `CastSpellAlternative`, which takes the
-printed one. Needs an affordance list of hand cards whose
-`granted_alternative_cost_in` differs from the printed alt, and a two-entry
-menu. Engine and bot take both today.
+`KnownCard::alt_cost_choice` carries `[printed, granted]` (each named by its
+mechanic, "Dash {2}{R}" / "Blitz {3}{R}") when a permanent grants a hand card
+a second alternative cost (CR 118.9a — Henzie's blitz on a dash creature,
+Kentaro's {X} on an evoke one). The right-click hint names both and the
+alt-cast modal offers one button per cost; the granted button submits
+`CastSpellGrantedAlternative`. Test `cmdr_henzie::the_view_names_both_alternative_costs`.
 
 ## Bevy 0.20: inline mana pips, `ScrollArea` (2026-10-12) — shipped
 
