@@ -55,6 +55,8 @@ pub struct HarnessArgs {
     /// `--settings-open`: open the Esc menu once the view is up, so a
     /// screenshot can show it.
     pub settings_open: bool,
+    /// `--shortcut-help`: open the F1 shortcut overlay once the view is up.
+    pub shortcut_help: bool,
     /// `--viewer-out`: the viewer starts the fixture already knocked out
     /// (21 commander damage), for the "You're out" panel and the standings.
     pub viewer_out: bool,
@@ -159,6 +161,7 @@ impl HarnessArgs {
                 Some((w.parse().ok()?, h.parse().ok()?))
             }),
             settings_open: args.iter().any(|a| a == "--settings-open"),
+            shortcut_help: args.iter().any(|a| a == "--shortcut-help"),
             viewer_out: args.iter().any(|a| a == "--viewer-out"),
             hold_seat: value("--hold-seat").and_then(|v| v.parse().ok()),
             deck_picker: args.iter().any(|a| a == "--deck-picker"),
@@ -448,6 +451,21 @@ pub fn open_settings_for_screenshot(
 ) {
     if args.settings_open && !*done && view.0.is_some() {
         settings.0 = true;
+        *done = true;
+    }
+}
+
+/// `--shortcut-help`: open the F1 overlay the first frame a view is up.
+pub fn open_shortcut_help_for_screenshot(
+    mut commands: Commands,
+    args: Res<HarnessArgs>,
+    view: Res<crate::net_plugin::CurrentView>,
+    ui_fonts: Res<crate::theme::UiFonts>,
+    binds: Res<crate::keybinds::Keybinds>,
+    mut done: Local<bool>,
+) {
+    if args.shortcut_help && !*done && view.0.is_some() {
+        crate::systems::ui::spawn_shortcut_help(&mut commands, &ui_fonts, &binds);
         *done = true;
     }
 }

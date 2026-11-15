@@ -8,9 +8,17 @@ pub fn update_hint(
     legal_targets: Res<crate::game::LegalTargets>,
     blocking: Res<BlockingState>,
     time: Res<Time>,
+    binds: Res<crate::keybinds::Keybinds>,
     mut q: Query<&mut crate::mana_text::ManaText, With<HintText>>,
 ) {
     let Ok(mut t) = q.single_mut() else { return };
+    // The keys the hints name, as bound now. The hints said "P" to pass,
+    // skip and proceed; nothing binds P to any of them (it rolls the
+    // planar die), and Pass is Space.
+    use crate::keybinds::Action as A;
+    let pass = binds.label(A::Pass);
+    let attack = binds.label(A::Attack);
+    let (flip, alt, menu) = (binds.label(A::Flip), binds.label(A::AltCost), binds.label(A::AbilityMenu));
     let Some(cv) = &view.0 else { return };
     if cv.game_over.is_some() {
         apply_hint(&mut t, String::new(), theme::ACCENT_GOLD, 13.0);
@@ -104,7 +112,7 @@ pub fn update_hint(
                     }
                 }
                 _ => (
-                    format!("{} item(s) on stack. Space = let it resolve.", cv.stack.len()),
+                    format!("{} item(s) on stack. {pass} = let it resolve.", cv.stack.len()),
                     theme::ACCENT_GOLD,
                     13.0_f32,
                 ),
@@ -128,7 +136,7 @@ pub fn update_hint(
         let msg = if blocking.selected_blocker.is_some() {
             "Click / Enter on an attacker to assign the block. Esc cancels.".to_string()
         } else {
-            "Click / Enter on a creature to block with it. Tab,← → select. P skip.".to_string()
+            format!("Click / Enter on a creature to block with it. Tab,← → select. {pass} skip.")
         };
         apply_hint(&mut t, msg, theme::ACCENT_GOLD, 13.0);
         return;
@@ -147,10 +155,10 @@ pub fn update_hint(
                 default_attack_target_seat(cv)
             };
             if whose == your_seat {
-                format!("You choose this turn's {what}. P = declare none.")
+                format!("You choose this turn's {what}. {pass} = declare none.")
             } else {
                 format!(
-                    "You choose this turn's {what} — from {}'s creatures. P = declare none.",
+                    "You choose this turn's {what} — from {}'s creatures. {pass} = declare none.",
                     player_name(cv, whose)
                 )
             }
@@ -167,19 +175,19 @@ pub fn update_hint(
     let you_have_priority = cv.priority == your_seat;
     let body = match (you_have_priority, cv.active_player == your_seat, cv.step) {
         (true, true, TurnStep::PreCombatMain) | (true, true, TurnStep::PostCombatMain) => {
-            "Click / Enter to play. Tab,← →: select. F flip · L alt · M ability. P pass.".to_string()
+            format!("Click / Enter to play. Tab,← →: select. {flip} flip · {alt} alt · {menu} ability. {pass} pass.")
         }
         (true, true, TurnStep::DeclareAttackers) => {
-            "A = Attack with all eligible creatures. P = Pass (no attack).".to_string()
+            format!("{attack} = Attack with all eligible creatures. {pass} = Pass (no attack).")
         }
         (true, true, TurnStep::DeclareBlockers) => {
-            "Opponent is assigning blocks. P = Proceed to combat.".to_string()
+            format!("Opponent is assigning blocks. {pass} = Proceed to combat.")
         }
-        (true, true, _) => "You have priority. P to pass.".to_string(),
+        (true, true, _) => format!("You have priority. {pass} to pass."),
         // The opponent's turn, but the viewer holds priority: this is the
         // response window, and it is waiting on them.
         (true, false, _) => {
-            "Your priority — respond, or P to pass.".to_string()
+            format!("Your priority — respond, or {pass} to pass.")
         }
         (false, ..) => {
             // Cycle 1→2→3 dots every ~0.4s so the player can tell the

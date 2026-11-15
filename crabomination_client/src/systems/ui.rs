@@ -515,7 +515,7 @@ pub fn toggle_shortcut_help(
 /// Build the centered shortcut panel: a dimmed scrim over a two-column
 /// reference grid. Tagged `InGameRoot` so it's cleaned up on exit even if
 /// left open.
-fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts, binds: &crate::keybinds::Keybinds) {
+pub(crate) fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts, binds: &crate::keybinds::Keybinds) {
     let tf = |s: f32| ui_fonts.tf(s);
     let columns = help_columns(binds);
 
@@ -565,7 +565,7 @@ fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts, binds: &crat
                             cols.spawn(Node {
                                 flex_direction: FlexDirection::Column,
                                 row_gap: Val::Px(12.0),
-                                min_width: Val::Px(330.0),
+                                min_width: Val::Px(360.0),
                                 ..default()
                             })
                             .with_children(|col| {
@@ -584,7 +584,8 @@ fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts, binds: &crat
                                         })
                                         .with_children(|row| {
                                             row.spawn(Node {
-                                                min_width: Val::Px(126.0),
+                                                // "Tab · arrows · WASD" is the widest key.
+                                                min_width: Val::Px(156.0),
                                                 ..default()
                                             })
                                             .with_children(|kc| {

@@ -657,6 +657,6 @@ pub fn draw_auto_tap_preview(
     for source in sources {
         let Some((at, normal, scale)) = spots.face(*source, 0.15) else { continue };
         let key = ArrowKey::new(Cue::AutoTap, End::Card(card.0), End::Card(*source));
-        arrows.ring(key, at, 1.15 * scale, normal, Color::srgba(0.75, 0.9, 1.0, 0.7));
+        arrows.ring(key, at, 1.2 * scale, normal, Color::srgba(0.55, 0.95, 1.0, 0.95));
     }
 }
