@@ -1868,6 +1868,7 @@ pub(crate) mod tests {
             toughness,
             base_power: 2,
             base_toughness: 2,
+            pt_shares: Vec::new(),
             keywords: vec![],
             counters: vec![],
             attached_to: None,

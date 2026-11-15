@@ -258,6 +258,8 @@ mod token_shield;
 // CR 118.9 — an alternative cost for a spell cast off the library top.
 mod library_top_alt;
 mod live_pt;
+mod pt_sources;
+pub use pt_sources::PtShare;
 mod offspring;
 // "As this becomes attached, choose …" (Sanctuary Blade).
 mod as_attached;

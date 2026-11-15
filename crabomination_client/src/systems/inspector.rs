@@ -128,8 +128,24 @@ fn body(out: &mut Vec<NowLine>, pv: &PermanentView) {
         if from_counters != (0, 0) {
             why.push(format!("{} from counters", signed(from_counters)));
         }
-        if from_effects != (0, 0) {
-            why.push(format!("{} from effects", signed(from_effects)));
+        // Each source the engine could name (`PermanentView::pt_shares`),
+        // then whatever they don't account for — interacting effects (a set
+        // under a pump) need not add up source by source.
+        let mut named = (0, 0);
+        for share in &pv.pt_shares {
+            let pt = (share.power, share.toughness);
+            named = (named.0 + pt.0, named.1 + pt.1);
+            let from = if share.label.starts_with("until") || share.label.starts_with("its own") {
+                share.label.clone()
+            } else {
+                format!("from {}", share.label)
+            };
+            why.push(format!("{} {from}", signed(pt)));
+        }
+        let rest = (from_effects.0 - named.0, from_effects.1 - named.1);
+        if rest != (0, 0) {
+            let what = if pv.pt_shares.is_empty() { "from effects" } else { "from other effects" };
+            why.push(format!("{} {what}", signed(rest)));
         }
         let tone = match delta {
             (p, t) if p >= 0 && t >= 0 => Tone::Up,
@@ -371,8 +387,18 @@ mod tests {
     }
 
     /// A pumped body says how far from printed it is and why: its counters,
-    /// and the rest from effects (an anthem, an Aura). The Aura's keyword
+    /// then each effect by its source (the anthem, the Aura). The Aura's keyword
     /// shows as gained, the Aura itself as what enchants it.
+    /// An until-end-of-turn pump has no permanent behind it; it says so.
+    #[test]
+    fn a_pump_says_until_end_of_turn() {
+        let mut g = crabomination::game::two_player_game();
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        g.clear_sickness(bear);
+        g.battlefield_find_mut(bear).unwrap().pump(3, 3);
+        assert_eq!(lines_for(&g, bear)[0], line("5/5 (printed 2/2): +3/+3 until end of turn", Tone::Up));
+    }
+
     #[test]
     fn a_pumped_creature_says_why() {
         let mut g = crabomination::game::two_player_game();
@@ -385,7 +411,7 @@ mod tests {
         g.battlefield_find_mut(bear).unwrap().damage = 1;
 
         let lines = lines_for(&g, bear);
-        assert_eq!(lines[0], line("6/4 (printed 2/2): +1/+1 from counters, +3/+1 from effects", Tone::Up));
+        assert_eq!(lines[0], line("6/4 (printed 2/2): +1/+1 from counters, +1/+1 from Glorious Anthem, +2/+0 from Rancor", Tone::Up));
         let said = texts(&lines);
         assert!(said.contains(&"Has Trample"), "{said:?}");
         assert!(said.contains(&"Counters: +1/+1 ×1"), "{said:?}");

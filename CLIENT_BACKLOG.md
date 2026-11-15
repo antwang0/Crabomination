@@ -184,8 +184,12 @@ picker (`--decision scry|search|discard|bottom|choose|color|triggers`).
   planeswalker with a live loyalty ability gets the activatable outline
   (it never had one), and auto-pass reads the new list with the rest. The
   Alt peek shows the inspector under the printed text (harness: `--alt`).
-- Residual ⏳: "from effects" isn't split by source (anthem, Aura, pump);
-  hand and stack cards get nothing new; with Alt held, the corner list
+- ✅ (2026-11-15) "from effects" is split by source: `PermanentView::pt_shares`
+  (`game::pt_sources` — each source's share is what the layer pass loses
+  without it; one gather per view, only for creatures an effect changes)
+  reads "+1/+1 from Glorious Anthem, +2/+0 from Rancor, +3/+3 until end of
+  turn", any interaction remainder as "other effects".
+- Residual ⏳: hand and stack cards get nothing new; with Alt held, the corner list
   (`counter_tooltip`) repeats some of what the peek now says — trim it to
   the long tail (shields, regeneration, sagas).
 

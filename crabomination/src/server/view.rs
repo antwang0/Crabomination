@@ -103,18 +103,25 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         battlefield: {
             let attacker_ids = state.attacking_ids();
             let block_map = state.block_map_snapshot();
+            // One gather for every creature's P/T breakdown, and only if
+            // some creature has one to give.
+            let pt_effects = std::cell::OnceCell::new();
             state
                 .battlefield
                 .iter()
                 .map(|c| {
-                    project_permanent(
+                    let mut pv = project_permanent(
                         c,
                         &computed,
                         &attacker_ids,
                         &block_map,
                         viewer_seat,
                         state,
-                    )
+                    );
+                    if pv.is_creature() && (pv.power, pv.toughness) != counted_pt(c) {
+                        pv.pt_shares = state.pt_shares_with(c, pt_effects.get_or_init(|| state.pt_share_effects()));
+                    }
+                    pv
                 })
                 .collect()
         },
@@ -1589,6 +1596,15 @@ fn summarize_prevention(
     out
 }
 
+/// A permanent's printed P/T plus its counters: what it would be with no
+/// continuous effect and no pump.
+fn counted_pt(card: &CardInstance) -> (i32, i32) {
+    (
+        card.power() - card.power_bonus - card.perm_power_bonus,
+        card.toughness() - card.toughness_bonus - card.perm_toughness_bonus,
+    )
+}
+
 fn project_permanent(
     card: &CardInstance,
     computed: &[crate::game::layers::ComputedPermanent],
@@ -1628,6 +1644,7 @@ fn project_permanent(
         toughness: cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness()),
         base_power: card.definition.base_power(),
         base_toughness: card.definition.base_toughness(),
+        pt_shares: Vec::new(),
         keywords: cp
             .map(|c| c.keywords().to_vec())
             .unwrap_or_else(|| card.definition.keywords.clone()),

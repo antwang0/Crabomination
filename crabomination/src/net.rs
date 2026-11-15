@@ -1788,6 +1788,11 @@ pub struct PermanentView {
     pub base_power: i32,
     /// Base (printed) toughness from the card definition.
     pub base_toughness: i32,
+    /// What moves its P/T off the printed numbers besides counters, by
+    /// source ("Glorious Anthem +1/+1", "until end of turn +3/+3") — the
+    /// card inspector's breakdown. Empty when only counters (or nothing) do.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub pt_shares: Vec<crate::game::PtShare>,
     /// Effective keywords (after layer effects).
     pub keywords: Vec<Keyword>,
     pub counters: Vec<(CounterType, u32)>,
