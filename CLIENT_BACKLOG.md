@@ -25,6 +25,13 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## "Ana is thinking..." (2026-11-15) — shipped
+
+`systems::thinking`: once the view has sat still for 0.6 s on another
+seat's priority or decision, a chip at the top of the table names the seat
+the game is waiting on (dots cycling). A bot's search paused the table for a
+second or more with nothing moving, which read as a frozen client.
+
 ## A granted alternative cost beside a printed one (2026-11-15) — shipped
 
 `KnownCard::alt_cost_choice` carries `[printed, granted]` (each named by its

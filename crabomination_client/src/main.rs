@@ -940,6 +940,7 @@ fn main() {
                 systems::log_links::focus_log_from_stack_click,
                 systems::log_links::scroll_log_to_focus,
                 systems::log_links::fade_log_row_flash,
+                systems::thinking::sync_thinking_chip,
             )
                 .chain()
                 .run_if(in_state(AppState::InGame)),

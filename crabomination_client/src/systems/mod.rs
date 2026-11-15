@@ -44,5 +44,6 @@ pub mod quality;
 pub mod scroll;
 pub mod settings_menu;
 pub mod takeback;
+pub mod thinking;
 pub mod ui;
 pub mod ui_card_hover;
