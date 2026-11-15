@@ -294,6 +294,7 @@ mod tests {
             combat_preview: None,
             castable_hand: vec![],
             auto_tap_preview: vec![],
+            win_estimate: None,
             back_castable_hand: vec![],
             prepare_castable: vec![],
             spliceable_hand: vec![],

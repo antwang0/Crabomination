@@ -111,7 +111,7 @@ impl StatChipKind {
         use ChipFamily as F;
         use StatChipKind as K;
         match self {
-            K::Name | K::Team | K::Hand | K::Deck | K::Grave | K::Devotion | K::TopCard | K::RevealedHand
+            K::Name | K::Team | K::WinChance | K::Hand | K::Deck | K::Grave | K::Devotion | K::TopCard | K::RevealedHand
             | K::PhasedOut | K::Ante | K::Planar | K::Dungeon | K::AbilityWord => F::Info,
             K::Energy | K::Experience | K::Storm | K::Speed | K::Coven | K::Void | K::Descend
             | K::MazesEnd | K::LandDrop | K::Loyalty | K::AnyColorMana | K::Summon | K::Ring => F::Resource,
@@ -143,6 +143,8 @@ pub(super) enum StatChipKind {
     Name,
     /// The seat's team in a team format (`table_awareness::team_label`).
     Team,
+    /// The value net's read of the viewer's win chance (a duel).
+    WinChance,
     Hand,
     Deck,
     DeckLow,
@@ -273,6 +275,13 @@ pub(super) fn summon_chip_body(bonus_counters: u32, gains_haste: bool) -> Option
 /// Compact per-color devotion readout (CR 700.5), e.g. `"{B}3 {G}1"`. Returns
 /// `None` when the player has no devotion (the common non-Theros case), so
 /// callers can skip the chip entirely. Shared by the viewer and opponent rows.
+/// The win-chance chip's text: the net's estimate to the nearest 5 %, since
+/// a finer number would claim more than the net knows.
+pub(super) fn win_chance_label(estimate: Option<f32>) -> Option<String> {
+    let p = estimate?.clamp(0.0, 1.0);
+    Some(format!("Win ~{} %", ((p * 20.0).round() * 5.0) as u32))
+}
+
 /// Whether devotion matters in this game right now: a permanent on the table
 /// or a card in the viewer's hand mentions it. Every coloured permanent adds
 /// devotion, so gated on "nonzero" the chip showed in nearly every game —
@@ -911,6 +920,7 @@ pub fn update_player_stats_chips(
     ui_fonts: Res<UiFonts>,
     row_q: Query<Entity, With<PlayerStatsRow>>,
     ticker: Res<super::life_ticker::LifeTicker>,
+    gameplay: Res<crate::config::GameplayConfig>,
     mut checked: Local<CheckedConditions>,
 ) {
     if !view.is_changed() {
@@ -932,6 +942,9 @@ pub fn update_player_stats_chips(
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
         if let Some(team) = super::table_awareness::team_label(cv, p.seat) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Team, team);
+        }
+        if let Some(label) = win_chance_label(cv.win_estimate.filter(|_| gameplay.win_meter)) {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::WinChance, label);
         }
         spawn_life_badge(row, &ui_fonts, &ticker, p.seat, p.life, p.starting_life);
         // CR 903.10a commander damage taken — surfaced right next to life
@@ -1970,5 +1983,17 @@ mod tests {
         assert_ne!(low_bg, mid_bg);
         assert_ne!(mid_bg, high_bg);
         assert_ne!(low_bg, high_bg);
+    }
+}
+
+#[cfg(test)]
+mod win_chip_tests {
+    use super::win_chance_label;
+
+    #[test]
+    fn the_win_chip_rounds_to_five() {
+        assert_eq!(win_chance_label(Some(0.634)).as_deref(), Some("Win ~65 %"));
+        assert_eq!(win_chance_label(Some(1.2)).as_deref(), Some("Win ~100 %"));
+        assert_eq!(win_chance_label(None), None);
     }
 }

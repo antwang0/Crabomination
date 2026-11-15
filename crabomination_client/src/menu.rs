@@ -2409,6 +2409,11 @@ fn spawn_host_lan(world: &mut World, port: u16, format: MatchFormat) -> std::io:
 /// `--hold-seat` variations applied.
 fn spawn_layout_fixture(world: &mut World, seats: usize) {
     let args = world.get_resource::<crate::layout_harness::HarnessArgs>().cloned().unwrap_or_default();
+    // A duel's view carries the value net's win chance; load it as a real
+    // match's bot would, so the fixture shows the meter.
+    if seats == 2 {
+        load_champion_once();
+    }
     let mut state = crate::layout_harness::fixture_state(seats, args.partners, args.hand);
     if let Some(depth) = args.stack {
         crate::layout_harness::put_spells_on_stack(&mut state, depth);

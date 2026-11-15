@@ -258,6 +258,16 @@ pub fn opp_hand_probs(state: &GameState, seat: usize, slot: u8) -> Option<Vec<f3
     net.eval_opp_hand(encode_state(state, seat, vocab()))
 }
 
+/// The viewer's win chance for the client's meter: the FRA net in an FRA
+/// game when one is loaded, else the champion ([`SLOT_BEST`]); `None` with
+/// no net loaded (a network server) or at more than two seats. The encoder
+/// reads the viewer's own cards and only the opponent's *counts*, so the
+/// number tells the viewer nothing their seat can't see.
+pub fn viewer_win_prob(state: &GameState, seat: usize) -> Option<f32> {
+    let fra = crate::fra_mode::is_fra_game(state) && net_for(SLOT_FRA).is_some();
+    win_prob(state, seat, if fra { SLOT_FRA } else { SLOT_BEST })
+}
+
 /// Whether the slot's net can answer [`opp_hand_probs`] at all.
 pub fn slot_has_opp(slot: u8) -> bool {
     net_for(slot).is_some_and(|n| n.has_opp())

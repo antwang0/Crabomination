@@ -164,6 +164,9 @@ pub struct GameplayConfig {
     pub reduced_motion: bool,
     /// Sound-cue volume, 0 (off) to 1 (`systems::sound`). Default: 0.6.
     pub sound_volume: f32,
+    /// Show the value net's read of your win chance in a duel
+    /// (`ClientView::win_estimate`). Default: true.
+    pub win_meter: bool,
 }
 
 impl Default for GameplayConfig {
@@ -179,6 +182,7 @@ impl Default for GameplayConfig {
             takebacks: Default::default(),
             reduced_motion: false,
             sound_volume: 0.6,
+            win_meter: true,
         }
     }
 }

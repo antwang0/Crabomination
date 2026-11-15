@@ -474,6 +474,10 @@ pub struct ClientView {
     /// up before the click commits them.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub auto_tap_preview: Vec<(CardId, Vec<CardId>)>,
+    /// The viewer's win chance by the value net (`net_eval::viewer_win_prob`),
+    /// for the client's meter: a duel, with a net loaded. `None` otherwise.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub win_estimate: Option<f32>,
     /// MDFCs whose **back face** is castable right now via `CastSpellBack` —
     /// from hand, plus permitted graveyard backs (those carrying the one-shot
     /// `may_cast_back_from_graveyard`). `castable_hand` only probes front

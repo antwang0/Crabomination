@@ -42,6 +42,8 @@ pub enum SettingRow {
     ReducedMotion,
     /// Sound-cue volume (`systems::sound`).
     Sound,
+    /// The win-chance chip (`ClientView::win_estimate`).
+    WinMeter,
     /// Opens Settings → Keyboard shortcuts (`keymap_panel`).
     Keys,
 }
@@ -143,6 +145,7 @@ fn spawn_panel(commands: &mut Commands, ui_fonts: &UiFonts) {
             SettingRow::Takebacks,
             SettingRow::ReducedMotion,
             SettingRow::Sound,
+            SettingRow::WinMeter,
             SettingRow::Keys,
         ] {
             p.spawn((
@@ -236,6 +239,10 @@ pub fn update_setting_labels(
                 v if v <= 0.0 => "Sound:  Off".to_string(),
                 v => format!("Sound:  {:.0} %", v * 100.0),
             },
+            SettingRow::WinMeter => format!(
+                "Win-chance meter (duels):  {}",
+                if store.0.gameplay.win_meter { "On" } else { "Off" }
+            ),
             SettingRow::Keys => "Keyboard shortcuts…".to_string(),
         };
         for child in children.iter() {
@@ -361,6 +368,11 @@ pub fn handle_setting_rows(
                 let next = VOLUMES.iter().copied().find(|v| *v > now + 0.01).unwrap_or(0.0);
                 gameplay.sound_volume = next;
                 store.0.gameplay.sound_volume = next;
+                dirty = true;
+            }
+            SettingRow::WinMeter => {
+                gameplay.win_meter = !gameplay.win_meter;
+                store.0.gameplay.win_meter = gameplay.win_meter;
                 dirty = true;
             }
             SettingRow::Keys => keymap.open = true,

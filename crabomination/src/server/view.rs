@@ -171,6 +171,7 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         // it's the projection's hot path.
         castable_hand: affordances.castable,
         auto_tap_preview: affordances.auto_tap_sources,
+        win_estimate: viewer.and_then(|v| crate::server::net_eval::viewer_win_prob(state, v)),
         back_castable_hand: affordances.back_castable,
         prepare_castable: affordances.prepare_castable,
         spliceable_hand: affordances.spliceable,

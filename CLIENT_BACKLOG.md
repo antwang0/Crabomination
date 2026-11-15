@@ -25,6 +25,18 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Win-chance meter (2026-11-15) — shipped
+
+`ClientView::win_estimate` (`net_eval::viewer_win_prob`: the FRA net in an
+FRA game, else the champion) feeds a "Win ~65 %" chip on the viewer's row
+in a duel, rounded to 5 %. The encoder reads the viewer's own cards and
+only the opponent's counts, so the number reveals nothing hidden. `None`
+with no net loaded (a network server) or at 3+ seats. Settings →
+Win-chance meter turns it off (`GameplayConfig::win_meter`, default on).
+The 2-seat layout fixture loads the champion so a screenshot shows it
+(`CRAB_NET=<abs path>` — the relative default doesn't resolve from
+`crabomination_client/`).
+
 ## Hint: what the bot would do (2026-11-15) — shipped
 
 `Q` or the **Hint** button (`systems::hint_button`) sends
