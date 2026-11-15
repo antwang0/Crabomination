@@ -52,7 +52,7 @@ pub use buttons::{
 pub use hand_menu::{handle_hand_menu, spawn_hand_menu, HandMenuState};
 pub use life_graph::{record_life_history, sync_life_graph, toggle_life_graph, LifeHistory};
 pub use player_stats::{
-    sync_player_hud_seat, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
+    ChipFamily, sync_player_hud_seat, update_mana_pips, update_opponent_panel_tint, update_opponent_stats_rows,
     update_player_chip_target_outline, update_player_stats_chips,
 };
 pub use table_awareness::TableAwarenessPlugin;

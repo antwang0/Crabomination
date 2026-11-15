@@ -1016,11 +1016,12 @@ cut, and the first two would make the third and fourth reviewable:
     still reads `Escape` directly. It is in a different `AppState` with no
     rival surfaces, so it has nothing to arbitrate against — left alone
     deliberately.
-- ⏳ **48 hand-tuned chip colours.** `player_stats.rs:64-160` gives each
-  game concept its own dark tint (Monarch, Initiative, Storm, Ring, Crime,
-  Void, Descend, …) — 48 backgrounds a player cannot learn, and most of
-  the 230 raw `Color::srgb` literals in the client. Collapse into ~6
-  semantic families (resource / threat / timing / lock / flag / neutral).
+- ✅ **48 hand-tuned chip colours** (2026-11-15) collapsed into six
+  `player_stats::ChipFamily` colours (`theme::CHIP_*`): zones & info,
+  resource, danger, restriction, protection, designation / turn effect — with
+  a legend in the F1 overlay. The devotion chip, which showed whenever
+  devotion was nonzero (nearly every game, and read as floating mana), now
+  shows only while a card in play or in hand mentions devotion.
 - ✅ **The help overlay had drifted** (2026-11-15). `crate::keybinds` is now
   the one table: `BINDINGS` (remappable, `Keybinds` resource holds the live
   key), `FIXED` (cursor, Esc, held modifiers, seat digits, colour letters).
@@ -1196,10 +1197,13 @@ entries instead of duplicating; tiers ordered by start-here leverage.
 indicator + click target. Slims the 2-D chip strip.
 - Phase 3 ✅ — damage/heal floaters: counting readouts and a numeral by
   each seat (`game_ui::life_ticker`, 2026-09-28).
-- Phase 4 ⏳ — slim corner chip strips to `name · ♥ · ✋`, move mana pips
-  to a bottom detail bar.
-- Phase 5 ⏳ — team-coloured tint from `GameState.teams`; commander emblem
-  when `PlayerView.commanders` non-empty.
+- Phase 4 🟡 — the strips are slimmer (six chip colours, the devotion chip
+  only where devotion matters, 2026-11-15). ⏳ Moving mana pips to a bottom
+  bar: not done — the pip row reads well where it is.
+- Phase 5 🟡 — ✅ a "Team A / Team B" chip beside each name in a team
+  format (`table_awareness::team_label`; none in free-for-all). The
+  commander emblem is dropped: every Commander seat has one, and the command
+  zone already shows the commanders.
 
 **Tier 1**
 - X-ray card inspector ✅ — the hover preview's "on the battlefield"
@@ -1237,8 +1241,8 @@ indicator + click target. Slims the 2-D chip strip.
 - Step-change → clear attack plan ✅ (2026-11-15) —
   `game::clear_attack_plan_on_step_change` drops the plan when the turn,
   active player or step moves on.
-- Crest pip cluster ⏳ — disc-rim pips for poison / commander damage /
-  first-spell tax / energy. Reuse `counter_coins.rs` palette.
+- Crest pip cluster — obsolete: the 3-D disc is gone (the HUD panel is the
+  player now) and its chips already show poison, commander damage and energy.
 
 ### Undo / Take-Back
 ✅ Against bots, with no fishing and the log following the branch

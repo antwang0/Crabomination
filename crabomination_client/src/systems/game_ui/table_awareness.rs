@@ -276,6 +276,22 @@ fn spawn_text_chip(
         });
 }
 
+/// "Team A", "Team B", … for `seat` in a team format (Two-Headed Giant,
+/// Star): teammates share the label. `None` in free-for-all, where every
+/// team is one seat and a label would only repeat the seat.
+pub(crate) fn team_label(cv: &ClientView, seat: usize) -> Option<String> {
+    let mut teams: Vec<usize> = cv.players.iter().map(|p| p.team).collect();
+    teams.sort_unstable();
+    let shared = teams.windows(2).any(|w| w[0] == w[1]);
+    teams.dedup();
+    if !shared {
+        return None;
+    }
+    let team = cv.players.iter().find(|p| p.seat == seat)?.team;
+    let index = teams.iter().position(|&t| t == team)?;
+    Some(format!("Team {}", (b'A' + (index % 26) as u8) as char))
+}
+
 fn spawn_seat_avatar(
     parent: &mut ChildSpawnerCommands,
     ui_fonts: &UiFonts,
@@ -388,6 +404,9 @@ pub(super) fn spawn_opponent_summary(
     };
     let name = if active { format!("▶ {}", p.name) } else { p.name.clone() };
     spawn_text_chip(row, ui_fonts, name, 13.0, name_bg, name_fg);
+    if let Some(team) = team_label(cv, p.seat) {
+        spawn_text_chip(row, ui_fonts, team, 12.0, theme::CHIP_INFO, theme::TEXT_BODY);
+    }
     let (life_bg, life_fg) = life_badge_style(p.life);
     let readout = super::life_ticker::LifeReadout {
         seat: p.seat,
@@ -736,6 +755,21 @@ pub fn sync_attack_target_labels(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// Free-for-all seats get no team label; in a team format teammates
+    /// share one, lettered in team order.
+    #[test]
+    fn team_labels_only_in_team_formats() {
+        let state = crabomination::demo::build_commander_state_seeded(7);
+        let mut cv = crabomination::server::view::project(&state, 0);
+        assert!(cv.players.iter().all(|p| team_label(&cv, p.seat).is_none()), "every seat its own team");
+        for p in &mut cv.players {
+            p.team = p.seat / 2; // 2HG: seats 0+1, 2+3
+        }
+        assert_eq!(team_label(&cv, 0).as_deref(), Some("Team A"));
+        assert_eq!(team_label(&cv, 1).as_deref(), Some("Team A"));
+        assert_eq!(team_label(&cv, 3).as_deref(), Some("Team B"));
+    }
 
     #[test]
     fn big_life_label_shows_delta_from_start() {

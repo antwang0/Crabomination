@@ -57,137 +57,92 @@ fn revealed_hand_label(
     revealed_hand_body(&names, always)
 }
 
-/// Per-stat visual style for a player stat chip: (background, text colour).
-/// Picked to mirror the mana-pip palette — saturated enough to register
-/// as distinct chips, dim enough not to compete with the action buttons.
-fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
-    match kind {
-        StatChipKind::Name => (Color::srgba(0.18, 0.22, 0.34, 1.0), theme::TEXT_INFO),
-        StatChipKind::Hand => (Color::srgba(0.18, 0.24, 0.20, 1.0), theme::TEXT_PRIMARY),
-        StatChipKind::Deck => (Color::srgba(0.20, 0.20, 0.24, 1.0), theme::TEXT_BODY),
-        // Deck-out warning: a dangerously low library (≤ `LOW_LIBRARY_WARN`
-        // cards) glows amber so the viewer sees the CR 104.3a / 704.5c
-        // draw-from-empty loss closing in — especially relevant in the new
-        // dredge/mill shells, where self-mill can race the clock.
-        StatChipKind::DeckLow => (Color::srgba(0.40, 0.26, 0.10, 1.0), theme::TEXT_PRIMARY),
-        StatChipKind::Grave => (Color::srgba(0.16, 0.16, 0.16, 1.0), theme::TEXT_SECONDARY),
-        // Emblems (CR 114) are permanent command-zone effects — a regal
-        // gold tint distinguishes them from the other counters.
-        StatChipKind::Emblem => (Color::srgba(0.34, 0.28, 0.10, 1.0), theme::TEXT_PRIMARY),
-        // Devotion (CR 700.5) — a Theros-nyx indigo to set it apart.
-        StatChipKind::Devotion => (Color::srgba(0.22, 0.16, 0.34, 1.0), theme::TEXT_PRIMARY),
-        // Energy (CR 122) — a Kaladesh aether teal.
-        StatChipKind::Energy => (Color::srgba(0.10, 0.30, 0.32, 1.0), theme::TEXT_PRIMARY),
-        StatChipKind::Experience => (Color::srgba(0.30, 0.22, 0.10, 1.0), theme::TEXT_PRIMARY),
-        // Rad counters (CR 122) — a Phyrexian hazard green; a slow mill/poison
-        // clock the player wants to keep an eye on.
-        StatChipKind::Rad => (Color::srgba(0.14, 0.32, 0.12, 1.0), theme::TEXT_PRIMARY),
-        // Noncombat damage bonus — a hot ember: burn is bigger this turn.
-        StatChipKind::DamageBonus => (Color::srgba(0.45, 0.16, 0.06, 1.0), theme::TEXT_PRIMARY),
-        // Draw cap (CR 121.2b) — a muted warning amber: drawing is locked.
-        StatChipKind::DrawCap => (Color::srgba(0.36, 0.24, 0.10, 1.0), theme::TEXT_PRIMARY),
-        // Storm/magecraft count (spells cast this turn) — an Izzet ember
-        // orange so prowess / Storm / magecraft players can read the count
-        // building before they cast the payoff.
-        StatChipKind::Storm => (Color::srgba(0.36, 0.18, 0.10, 1.0), theme::TEXT_PRIMARY),
-        // Monarch (CR 724) — a regal gold crown badge.
-        StatChipKind::Monarch => (Color::srgba(0.42, 0.34, 0.10, 1.0), theme::TEXT_PRIMARY),
-        // The initiative (CR 726) — a dungeon-torch amber, distinct from gold.
-        StatChipKind::Initiative => (Color::srgba(0.34, 0.20, 0.06, 1.0), theme::TEXT_PRIMARY),
-        // City's blessing (CR 702.131 / 700.6) — an ascendant violet.
-        StatChipKind::Blessing => (Color::srgba(0.28, 0.18, 0.40, 1.0), theme::TEXT_PRIMARY),
-        // Day (CR 731) — a warm daylight amber.
-        StatChipKind::Day => (Color::srgba(0.42, 0.34, 0.14, 1.0), theme::TEXT_PRIMARY),
-        // Night (CR 731) — a cool dusk indigo.
-        StatChipKind::Night => (Color::srgba(0.14, 0.16, 0.30, 1.0), theme::TEXT_PRIMARY),
-        // No-lifegain lock (CR 119.7) — a muted blood red.
-        StatChipKind::NoLifegain => (Color::srgba(0.34, 0.12, 0.12, 1.0), theme::TEXT_PRIMARY),
-        // Combat-damage fog (CR 615.1) — a hazy slate grey.
-        StatChipKind::Fog => (Color::srgba(0.30, 0.32, 0.34, 1.0), theme::TEXT_PRIMARY),
-        // Combat participation cap (CR 506.2 / 509.1b — Silent Arbiter) — the
-        // same steel as the other combat-restriction chips.
-        StatChipKind::CombatCap => (Color::srgba(0.24, 0.26, 0.34, 1.0), theme::TEXT_PRIMARY),
-        StatChipKind::Planar => (Color::srgba(0.30, 0.20, 0.38, 1.0), theme::TEXT_PRIMARY),
-        // Revealed library top (CR 401.5 — Courser of Kruphix) — a library
-        // parchment green so the public information reads at a glance.
-        StatChipKind::TopCard => (Color::srgba(0.16, 0.30, 0.18, 1.0), theme::TEXT_PRIMARY),
-        // A hand the viewer has looked at (CR 701.19) — the same green as the
-        // hand chip it sits beside, dimmed so the count still reads first.
-        StatChipKind::RevealedHand => (Color::srgba(0.14, 0.20, 0.26, 1.0), theme::TEXT_BODY),
-        // CR 723 — this seat is being played by someone else (Mindslaver).
-        // An alarming crimson: it changes who is making the decisions.
-        StatChipKind::Controlled => (Color::srgba(0.42, 0.14, 0.16, 1.0), theme::TEXT_PRIMARY),
-        // Speed (CR 702.179 — "Start your engines!") — an Aetherdrift racing
-        // crimson; the chip label reads "🏁 MAX" once the player hits speed 4.
-        StatChipKind::Speed => (Color::srgba(0.40, 0.14, 0.10, 1.0), theme::TEXT_PRIMARY),
-        // Coven (Innistrad) — a witchy moonlit green: 3+ creatures, distinct powers.
-        StatChipKind::Coven => (Color::srgba(0.14, 0.30, 0.20, 1.0), theme::TEXT_PRIMARY),
-        // Dungeon venture progress (CR 309) — a torchlit dungeon-stone umber.
-        StatChipKind::Dungeon => (Color::srgba(0.28, 0.20, 0.12, 1.0), theme::TEXT_PRIMARY),
-        // Spell-cast lock (Rule of Law / Deafening Silence / Ethersworn
-        // Canonist) — a stern slate so a barred extra cast reads as "stop".
-        StatChipKind::SpellLock => (Color::srgba(0.30, 0.14, 0.18, 1.0), theme::TEXT_PRIMARY),
-        // "Your next [kind] spell can't be countered" — a protective teal, the
-        // inverse of the SpellLock slate.
-        StatChipKind::Uncounterable => {
-            (Color::srgba(0.10, 0.28, 0.30, 1.0), theme::TEXT_PRIMARY)
+/// The six families every stat chip belongs to. Each kind had its own
+/// hand-picked tint (48 of them — Monarch gold, Initiative amber, Ring gold,
+/// Day amber, …) that no player could learn; a family is one colour with
+/// one meaning, listed in the F1 overlay's legend.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ChipFamily {
+    /// Zones and public information: hand, library, graveyard, devotion.
+    Info,
+    /// Something this seat builds up and spends: energy, storm, speed.
+    Resource,
+    /// Danger to this seat: a low library, rad, a curse, being controlled.
+    Threat,
+    /// A rule stopping something: a draw cap, a spell lock, a fog.
+    Lock,
+    /// A ward on this seat: hexproof, damage shields, can't be countered.
+    Ward,
+    /// A designation or a turn-wide effect: monarch, initiative, day/night,
+    /// emblems.
+    Status,
+}
+
+impl ChipFamily {
+    pub const ALL: [ChipFamily; 6] =
+        [ChipFamily::Info, ChipFamily::Resource, ChipFamily::Threat, ChipFamily::Lock, ChipFamily::Ward, ChipFamily::Status];
+
+    pub fn background(self) -> Color {
+        match self {
+            ChipFamily::Info => theme::CHIP_INFO,
+            ChipFamily::Resource => theme::CHIP_RESOURCE,
+            ChipFamily::Threat => theme::CHIP_THREAT,
+            ChipFamily::Lock => theme::CHIP_LOCK,
+            ChipFamily::Ward => theme::CHIP_WARD,
+            ChipFamily::Status => theme::CHIP_STATUS,
         }
-        // The Ring tempts you (CR 701.54) — a One-Ring gold that deepens with
-        // each temptation level.
-        StatChipKind::Ring => (Color::srgba(0.36, 0.28, 0.06, 1.0), theme::TEXT_PRIMARY),
-        // Committed a crime this turn (CR 700.13, OTJ) — an outlaw red.
-        StatChipKind::Crime => (Color::srgba(0.34, 0.12, 0.10, 1.0), theme::TEXT_PRIMARY),
-        // EOE Void — a deep starless violet for the Edge-of-Eternities payoffs.
-        StatChipKind::Void => (Color::srgba(0.18, 0.10, 0.30, 1.0), theme::TEXT_PRIMARY),
-        // LCI Descend — a cavern earth-brown that deepens as the graveyard fills.
-        StatChipKind::Descend => (Color::srgba(0.26, 0.18, 0.10, 1.0), theme::TEXT_PRIMARY),
-        // Maze's End (DGM) — a Ravnican guildgate teal-gold for the ten-Gate
-        // win-race progress.
-        StatChipKind::MazesEnd => (Color::srgba(0.16, 0.26, 0.24, 1.0), theme::TEXT_PRIMARY),
-        // Skipped combat (CR 506 — Stonehorn Dignitary) — a muted stone grey
-        // so a player knows their next swing is off the table.
-        StatChipKind::SkipCombat => (Color::srgba(0.24, 0.24, 0.26, 1.0), theme::TEXT_PRIMARY),
-        // Land drop (CR 305.2) — an earthy green that reads as "resource".
-        StatChipKind::LandDrop => (Color::srgba(0.16, 0.24, 0.14, 1.0), theme::TEXT_PRIMARY),
-        // Banked loyalty activations (CR 606.3 — The Chain Veil) — the same
-        // violet family the loyalty counters use.
-        StatChipKind::Loyalty => (Color::srgba(0.26, 0.18, 0.34, 1.0), theme::TEXT_PRIMARY),
-        // Blanket damage immunity (CR 615 — Glacial Chasm) — a cool warding
-        // blue so total prevention reads as a hard shield, not a partial one.
-        StatChipKind::Shield => (Color::srgba(0.12, 0.22, 0.36, 1.0), theme::TEXT_PRIMARY),
-        // Damage redirection (CR 614.9) — an amber diversion, distinct from the
-        // blue prevention family: the damage still happens, elsewhere.
-        StatChipKind::Redirect => (Color::srgba(0.36, 0.26, 0.10, 1.0), theme::TEXT_PRIMARY),
-        // Spend-as-any-colour (CR 609.4b) — a neutral pewter, matching the
-        // colorless mana pip: colour requirements have stopped mattering.
-        StatChipKind::AnyColorMana => (Color::srgba(0.30, 0.30, 0.33, 1.0), theme::TEXT_PRIMARY),
-        // The ante zone is a wager — a warm, high-stakes tint.
-        StatChipKind::Ante => (Color::srgba(0.38, 0.22, 0.22, 1.0), theme::TEXT_PRIMARY),
-        // Turn-scoped rules changes nobody can read off the board — a warm
-        // amber so they stand out from the per-permanent chips.
-        StatChipKind::TurnEffect => (Color::srgba(0.42, 0.30, 0.06, 1.0), theme::TEXT_PRIMARY),
-        // Player-level hexproof (CR 702.11 — Aegis, Leyline of Sanctity) — a
-        // teal ward, distinct from the damage-immunity shield.
-        StatChipKind::PlayerHexproof => (Color::srgba(0.10, 0.28, 0.28, 1.0), theme::TEXT_PRIMARY),
-        // Ability-word conditions (Threshold / Metalcraft / Ferocious /
-        // Hellbent / Formidable) — a shared slate-teal so these "condition
-        // online" badges read consistently.
-        StatChipKind::AbilityWord => (Color::srgba(0.16, 0.26, 0.28, 1.0), theme::TEXT_PRIMARY),
-        // Summon-saga growth — a woodland green matching the Fenrir/Brynhildr
-        // "your next creature" riders.
-        StatChipKind::Summon => (Color::srgba(0.16, 0.30, 0.16, 1.0), theme::TEXT_PRIMARY),
-        // Phased out (CR 702.26) — a ghostly translucent grey; the permanents
-        // are treated as nonexistent until they phase in.
-        StatChipKind::PhasedOut => (Color::srgba(0.20, 0.20, 0.28, 0.9), theme::TEXT_SECONDARY),
-        // Enchanted player (CR 303.4a) — a bruised purple; Curses are a
-        // lasting drag on the seat they're stuck to.
-        StatChipKind::Cursed => (Color::srgba(0.26, 0.14, 0.28, 1.0), theme::TEXT_PRIMARY),
     }
+
+    /// The legend's word for it.
+    pub fn label(self) -> &'static str {
+        match self {
+            ChipFamily::Info => "Zones & info",
+            ChipFamily::Resource => "Resource",
+            ChipFamily::Threat => "Danger",
+            ChipFamily::Lock => "Restriction",
+            ChipFamily::Ward => "Protection",
+            ChipFamily::Status => "Designation / turn effect",
+        }
+    }
+}
+
+impl StatChipKind {
+    pub(super) fn family(self) -> ChipFamily {
+        use ChipFamily as F;
+        use StatChipKind as K;
+        match self {
+            K::Name | K::Team | K::Hand | K::Deck | K::Grave | K::Devotion | K::TopCard | K::RevealedHand
+            | K::PhasedOut | K::Ante | K::Planar | K::Dungeon | K::AbilityWord => F::Info,
+            K::Energy | K::Experience | K::Storm | K::Speed | K::Coven | K::Void | K::Descend
+            | K::MazesEnd | K::LandDrop | K::Loyalty | K::AnyColorMana | K::Summon | K::Ring => F::Resource,
+            K::DeckLow | K::Rad | K::Controlled | K::Cursed | K::Crime => F::Threat,
+            K::DrawCap | K::CombatCap | K::SpellLock | K::SkipCombat | K::Fog | K::NoLifegain => F::Lock,
+            K::Shield | K::PlayerHexproof | K::Uncounterable | K::Redirect => F::Ward,
+            K::Emblem | K::Monarch | K::Initiative | K::Blessing | K::Day | K::Night | K::TurnEffect
+            | K::DamageBonus => F::Status,
+        }
+    }
+}
+
+/// Per-stat visual style for a player stat chip: (background, text colour) —
+/// its [`ChipFamily`]'s colour. The player's own name keeps the info-blue
+/// text that marks it as a name; a phased-out count reads dimmer, since the
+/// permanents it counts are treated as though they don't exist.
+fn stat_chip_style(kind: StatChipKind) -> (Color, Color) {
+    let text = match kind {
+        StatChipKind::Name => theme::TEXT_INFO,
+        StatChipKind::Deck | StatChipKind::RevealedHand | StatChipKind::Team => theme::TEXT_BODY,
+        StatChipKind::Grave | StatChipKind::PhasedOut => theme::TEXT_SECONDARY,
+        _ => theme::TEXT_PRIMARY,
+    };
+    (kind.family().background(), text)
 }
 
 #[derive(Clone, Copy)]
 pub(super) enum StatChipKind {
     Name,
+    /// The seat's team in a team format (`table_awareness::team_label`).
+    Team,
     Hand,
     Deck,
     DeckLow,
@@ -318,6 +273,22 @@ pub(super) fn summon_chip_body(bonus_counters: u32, gains_haste: bool) -> Option
 /// Compact per-color devotion readout (CR 700.5), e.g. `"{B}3 {G}1"`. Returns
 /// `None` when the player has no devotion (the common non-Theros case), so
 /// callers can skip the chip entirely. Shared by the viewer and opponent rows.
+/// Whether devotion matters in this game right now: a permanent on the table
+/// or a card in the viewer's hand mentions it. Every coloured permanent adds
+/// devotion, so gated on "nonzero" the chip showed in nearly every game —
+/// a row of pips that read as floating mana.
+pub(super) fn devotion_matters(cv: &crabomination::net::ClientView) -> bool {
+    let mentions = |name: &str| {
+        crate::card::oracle::printed(name)
+            .is_some_and(|faces| faces.iter().flat_map(|f| f.paragraphs()).any(|p| p.contains("devotion")))
+    };
+    let hand = cv.players.get(cv.your_seat).into_iter().flat_map(|p| &p.hand).filter_map(|h| match h {
+        crabomination::net::HandCardView::Known(k) => Some(k.name.as_str()),
+        _ => None,
+    });
+    cv.battlefield.iter().map(|c| c.name.as_str()).chain(hand).any(mentions)
+}
+
 pub(super) fn devotion_chip_body(devotion: &[u32; 5]) -> Option<String> {
     if !devotion.iter().any(|&d| d > 0) {
         return None;
@@ -958,6 +929,9 @@ pub fn update_player_stats_chips(
         }
         spawn_avatar(row, &ui_fonts, p.seat, &p.name);
         spawn_stat_chip(row, &ui_fonts, StatChipKind::Name, p.name.clone());
+        if let Some(team) = super::table_awareness::team_label(cv, p.seat) {
+            spawn_stat_chip(row, &ui_fonts, StatChipKind::Team, team);
+        }
         spawn_life_badge(row, &ui_fonts, &ticker, p.seat, p.life, p.starting_life);
         // CR 903.10a commander damage taken — surfaced right next to life
         // since 21 from a single commander is its own loss condition. Only
@@ -1162,9 +1136,9 @@ pub fn update_player_stats_chips(
                 format!("✦ {}", p.emblems.len()),
             );
         }
-        // CR 700.5 devotion — only surface in Theros-flavored games (any
-        // nonzero color). Compact per-color readout, e.g. "◆ {B}3 {G}1".
-        if let Some(body) = devotion_chip_body(&p.devotion) {
+        // CR 700.5 devotion — only while a card in play or in hand cares
+        // (`devotion_matters`). Compact per-color readout, e.g. "◆ {B}3 {G}1".
+        if let Some(body) = devotion_chip_body(&p.devotion).filter(|_| devotion_matters(cv)) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
         }
         // CR 724 monarch — a plain crown when the viewer holds it, otherwise a
@@ -1762,7 +1736,7 @@ pub fn update_opponent_stats_rows(
                 // CR 700.5 devotion — surface an opponent's devotion the same
                 // way the viewer's row does, so devotion-matters board states
                 // (an opponent's Nyx god turning on) are legible.
-                if let Some(body) = devotion_chip_body(&p.devotion) {
+                if let Some(body) = devotion_chip_body(&p.devotion).filter(|_| devotion_matters(cv)) {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
                 }
                 // CR 724 monarch crown — show which opponent holds the crown.

@@ -152,6 +152,17 @@ pub const PANEL_BG_SUNKEN: Color = Color::srgba(0.08, 0.08, 0.14, 1.0);
 
 /// HUD strip background (semi-transparent, no panel border).
 pub const HUD_BG: Color = Color::srgba(0.0, 0.0, 0.0, 0.78);
+
+// Player stat-chip families (`player_stats::ChipFamily`). Six hues a player
+// can learn, each with one meaning; dim enough not to compete with the
+// action buttons. Danger (red) and Resource (green) differ in lightness as
+// well as hue; the F1 overlay's legend names all six.
+pub const CHIP_INFO: Color = Color::srgb(0.19, 0.20, 0.24);
+pub const CHIP_RESOURCE: Color = Color::srgb(0.12, 0.27, 0.17);
+pub const CHIP_THREAT: Color = Color::srgb(0.42, 0.13, 0.12);
+pub const CHIP_LOCK: Color = Color::srgb(0.28, 0.29, 0.36);
+pub const CHIP_WARD: Color = Color::srgb(0.09, 0.25, 0.38);
+pub const CHIP_STATUS: Color = Color::srgb(0.40, 0.29, 0.07);
 /// HUD background tinted red — error or danger banner.
 pub const HUD_BG_DANGER: Color = Color::srgba(0.25, 0.0, 0.0, 0.82);
 

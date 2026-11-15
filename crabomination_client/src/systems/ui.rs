@@ -651,6 +651,41 @@ pub(crate) fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts, b
                         }
                     });
 
+                // Player stat-chip colours: six families, one meaning each
+                // (`ChipFamily`). Filled swatches, as the chips are.
+                panel.spawn((Text::new("Player chips"), tf(14.0), TextColor(theme::ACCENT_BLUE)));
+                panel
+                    .spawn(Node {
+                        flex_direction: FlexDirection::Row,
+                        flex_wrap: FlexWrap::Wrap,
+                        column_gap: Val::Px(20.0),
+                        row_gap: Val::Px(6.0),
+                        ..default()
+                    })
+                    .with_children(|legend| {
+                        for family in crate::systems::game_ui::ChipFamily::ALL {
+                            legend
+                                .spawn(Node {
+                                    flex_direction: FlexDirection::Row,
+                                    align_items: AlignItems::Center,
+                                    column_gap: Val::Px(7.0),
+                                    ..default()
+                                })
+                                .with_children(|row| {
+                                    row.spawn((
+                                        Node {
+                                            width: Val::Px(16.0),
+                                            height: Val::Px(16.0),
+                                            border_radius: BorderRadius::all(Val::Px(3.0)),
+                                            ..default()
+                                        },
+                                        BackgroundColor(family.background()),
+                                    ));
+                                    row.spawn((Text::new(family.label()), tf(13.0), TextColor(theme::TEXT_BODY)));
+                                });
+                        }
+                    });
+
                 panel.spawn((
                     Text::new("Press F1, ?, or Esc to close"),
                     tf(12.0),
