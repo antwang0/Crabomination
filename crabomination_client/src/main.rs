@@ -208,7 +208,9 @@ fn main() {
         paths: cfg.paths.clone(),
         graphics: gfx.clone(),
         gameplay: gameplay.clone(),
+        keybinds: cfg.keybinds.clone(),
     });
+    let keybinds = keybinds::Keybinds::from_overrides(&cfg.keybinds);
     let initial_stops = systems::phase_bar::StopConfig {
         my: gameplay.stops_my.clone(),
         opp: gameplay.stops_opp.clone(),
@@ -390,6 +392,7 @@ fn main() {
                 layout_harness::open_shortcut_help_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::collapse_log_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::open_deck_picker_for_screenshot.run_if(in_state(AppState::Menu)),
+                layout_harness::open_keymap_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::import_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::capture_screenshot,
                 layout_harness::spawn_mana_gallery.run_if(in_state(AppState::InGame)),
@@ -463,6 +466,7 @@ fn main() {
         )
         // Main-menu Settings panel.
         .init_resource::<systems::settings_menu::MenuSettingsOpen>()
+        .init_resource::<systems::keymap_panel::KeymapPanel>()
         .add_systems(
             Update,
             (
@@ -470,6 +474,9 @@ fn main() {
                 systems::settings_menu::handle_setting_rows,
                 systems::settings_menu::sync_settings_panel,
                 systems::settings_menu::update_setting_labels,
+                // After the Settings panel's Esc, which defers to this one.
+                systems::keymap_panel::handle_keymap_input,
+                systems::keymap_panel::sync_keymap_panel,
             )
                 .chain()
                 .run_if(in_state(AppState::Menu)),
@@ -940,7 +947,7 @@ fn main() {
         .init_resource::<systems::game_over::AutoRematchState>()
         .init_resource::<systems::eliminated::OutPanelState>()
         .init_resource::<systems::match_stats::MatchStats>()
-        .init_resource::<keybinds::Keybinds>()
+        .insert_resource(keybinds)
         .init_resource::<systems::animate::ReducedMotion>()
         .add_systems(PreUpdate, systems::animate::sync_reduced_motion)
         .init_resource::<systems::game_ui::GameLogCollapsed>()

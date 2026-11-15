@@ -235,8 +235,11 @@ pub struct ButtonState {
 
 // ── HUD setup ─────────────────────────────────────────────────────────────────
 
-pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
+pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>, binds: Res<crate::keybinds::Keybinds>) {
     let tf = |size: f32| ui_fonts.tf(size);
+    // Button labels name the key each action is on now (`crate::keybinds`).
+    let key = |a: crate::keybinds::Action| binds.label(a);
+    use crate::keybinds::Action as A;
 
     // Top-left: turn / step info + player status (stacked).
     // Player status used to live in a bottom-left panel that covered
@@ -520,7 +523,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ))
                 .with_children(|p| {
                     p.spawn((
-                        Text::new("Pass (Space)"),
+                        Text::new(format!("Pass ({})", key(A::Pass))),
                         tf(13.0),
                         TextColor(theme::TEXT_PRIMARY),
                         PassButtonLabel,
@@ -544,7 +547,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     EndTurnButton,
                 ))
                 .with_children(|p| {
-                    p.spawn((Text::new("End Turn (E)"), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
+                    p.spawn((Text::new(format!("End Turn ({})", key(A::EndTurn))), tf(13.0), TextColor(theme::TEXT_PRIMARY)));
                 });
 
                 p.spawn((
@@ -560,7 +563,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ))
                 .with_children(|p| {
                     p.spawn((
-                        Text::new("Next Turn (N)"),
+                        Text::new(format!("Next Turn ({})", key(A::NextTurn))),
                         tf(13.0),
                         TextColor(theme::TEXT_PRIMARY),
                     ));
@@ -579,7 +582,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ))
                 .with_children(|p| {
                     p.spawn((
-                        Text::new("Auto-pass: On (H)"),
+                        Text::new(format!("Auto-pass: On ({})", key(A::HoldPriority))),
                         tf(13.0),
                         TextColor(theme::TEXT_PRIMARY),
                         AutoPassButtonLabel,
@@ -602,7 +605,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                 ))
                 .with_children(|p| {
                     p.spawn((
-                        Text::new("Undo (Z)"),
+                        Text::new(format!("Undo ({})", key(A::TakeBack))),
                         tf(13.0),
                         TextColor(theme::TEXT_MUTED),
                         crate::systems::takeback::UndoButtonLabel,
@@ -710,7 +713,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
             ))
             .with_children(|p| {
                 p.spawn((
-                    Text::new("Attack All (A)"),
+                    Text::new(format!("Attack All ({})", key(A::Attack))),
                     tf(15.0),
                     TextColor(theme::TEXT_PRIMARY),
                     AttackButtonLabel,

@@ -117,16 +117,18 @@ pub fn update_attack_all_visibility(
 /// hand-picked attackers (a non-empty [`crate::game::AttackingState::plan`]).
 pub fn update_attack_button_label(
     attacking: Res<crate::game::AttackingState>,
+    binds: Res<crate::keybinds::Keybinds>,
     mut q: Query<&mut Text, With<AttackButtonLabel>>,
 ) {
     let Ok(mut text) = q.single_mut() else { return };
+    let key = binds.label(crate::keybinds::Action::Attack);
     let want = if attacking.plan.is_empty() {
-        "Attack All (A)"
+        format!("Attack All ({key})")
     } else {
-        "Confirm Attack (A)"
+        format!("Confirm Attack ({key})")
     };
     if text.0 != want {
-        text.0 = want.to_string();
+        text.0 = want;
     }
 }
 
@@ -135,6 +137,7 @@ pub fn update_attack_button_label(
 /// Update the Pass Priority button's background color and label to reflect
 /// whether the viewer has priority and what the stack looks like.
 pub fn update_pass_button(
+    binds: Res<crate::keybinds::Keybinds>,
     mut commands: Commands,
     view: Res<CurrentView>,
     mut btn_q: Query<(Entity, &mut BackgroundColor), With<PassPriorityButton>>,
@@ -164,15 +167,16 @@ pub fn update_pass_button(
     // new idle colour — the button's BG is state-driven, so we maintain
     // hover affordance manually instead of attaching a static `HoverTint`
     // at spawn time (which would fight the swaps).
-    let (new_bg, new_label, urgent): (Color, &str, bool) =
+    let key = binds.label(crate::keybinds::Action::Pass);
+    let (new_bg, new_label, urgent): (Color, String, bool) =
         if your_priority && top_is_opp_spell {
-            (theme::BUTTON_URGENT_BG, "Pass / Respond (Space)", true)
+            (theme::BUTTON_URGENT_BG, format!("Pass / Respond ({key})"), true)
         } else if your_priority && !cv.stack.is_empty() {
-            (theme::BUTTON_PRIMARY_BG, "Pass (Space)", false)
+            (theme::BUTTON_PRIMARY_BG, format!("Pass ({key})"), false)
         } else if your_priority {
-            (theme::BUTTON_INFO_BG, "Pass (Space)", false)
+            (theme::BUTTON_INFO_BG, format!("Pass ({key})"), false)
         } else {
-            (theme::BUTTON_DISABLED_BG, "Pass (Space)", false)
+            (theme::BUTTON_DISABLED_BG, format!("Pass ({key})"), false)
         };
     *bg = BackgroundColor(new_bg);
     label.0 = new_label.into();
@@ -283,7 +287,8 @@ pub fn handle_auto_pass_toggle(
     if key || pressed {
         ff.manual_priority = !ff.manual_priority;
     }
-    let want = if ff.manual_priority { "Auto-pass: Off (H)" } else { "Auto-pass: On (H)" };
+    let key = binds.label(crate::keybinds::Action::HoldPriority);
+    let want = if ff.manual_priority { format!("Auto-pass: Off ({key})") } else { format!("Auto-pass: On ({key})") };
     if let Ok(mut t) = label_q.single_mut()
         && t.0 != want
     {

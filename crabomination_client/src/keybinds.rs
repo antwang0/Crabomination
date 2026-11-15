@@ -142,6 +142,16 @@ pub const FIXED: &[(Section, &str, &str)] = &[
     (Section::Choices, "W U B R G", "Choose that colour"),
 ];
 
+/// Pairs that share a default key on purpose: they never both fire, because
+/// one only reads its key in a state where the other can't act.
+/// `tests::default_keys_only_share_where_allowed` holds the rest apart, and
+/// [`Keybinds::clashes`] doesn't report them.
+pub const SHARED_DEFAULTS: &[(Action, Action, &str)] = &[
+    (Action::Equip, Action::EndTurn, "E ends the turn unless it is equipping a hovered Equipment"),
+    (Action::Mulligan, Action::AbilityMenu, "the mulligan prompt owns the keyboard"),
+    (Action::SerumPowder, Action::PlanarDie, "the mulligan prompt owns the keyboard"),
+];
+
 /// The key each remappable action is on now.
 #[derive(Resource, Clone, Debug)]
 pub struct Keybinds {
@@ -169,10 +179,74 @@ impl Keybinds {
         key_label(self.key(action))
     }
 
-    #[cfg_attr(not(test), allow(dead_code))] // the remap screen is next
     pub fn set(&mut self, action: Action, key: KeyCode) {
         self.keys.insert(action, key);
     }
+
+    /// Every binding back on its default key.
+    pub fn reset(&mut self) {
+        *self = Self::default();
+    }
+
+    /// The bindings `config.toml` keeps: action name → key name for each one
+    /// moved off its default.
+    pub fn overrides(&self) -> std::collections::BTreeMap<String, String> {
+        BINDINGS
+            .iter()
+            .filter(|b| self.key(b.action) != b.default)
+            .map(|b| (format!("{:?}", b.action), key_name(self.key(b.action))))
+            .collect()
+    }
+
+    /// The defaults with `overrides` applied; a name it doesn't know (a key
+    /// or action from another version) is skipped, not an error.
+    pub fn from_overrides(overrides: &std::collections::BTreeMap<String, String>) -> Self {
+        let mut binds = Self::default();
+        for (action, key) in overrides {
+            let action = BINDINGS.iter().map(|b| b.action).find(|a| format!("{a:?}") == *action);
+            if let (Some(action), Some(key)) = (action, key_from_name(key)) {
+                binds.set(action, key);
+            }
+        }
+        binds
+    }
+
+    /// The other actions on `action`'s key that would fire with it — the
+    /// [`SHARED_DEFAULTS`] pairs, which a state keeps apart, aside.
+    pub fn clashes(&self, action: Action) -> Vec<Action> {
+        let key = self.key(action);
+        BINDINGS
+            .iter()
+            .map(|b| b.action)
+            .filter(|&other| other != action && self.key(other) == key)
+            .filter(|&other| {
+                !SHARED_DEFAULTS.iter().any(|(a, b, _)| (*a, *b) == (action, other) || (*b, *a) == (action, other))
+            })
+            .collect()
+    }
+}
+
+/// The keys a shortcut may be moved to: letters, digits, function keys and
+/// the plain punctuation and editing keys. Not Esc (it cancels and closes
+/// everything), not a modifier, not the arrows (the selection cursor's).
+pub const REMAPPABLE_KEYS: &[KeyCode] = {
+    use KeyCode::*;
+    &[
+        KeyA, KeyB, KeyC, KeyD, KeyE, KeyF, KeyG, KeyH, KeyI, KeyJ, KeyK, KeyL, KeyM, KeyN, KeyO, KeyP,
+        KeyQ, KeyR, KeyS, KeyT, KeyU, KeyV, KeyW, KeyX, KeyY, KeyZ, Digit0, Digit1, Digit2, Digit3,
+        Digit4, Digit5, Digit6, Digit7, Digit8, Digit9, F1, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11,
+        F12, Space, Enter, Tab, Backspace, Backquote, BracketLeft, BracketRight, Backslash, Slash,
+        Semicolon, Quote, Comma, Period, Minus, Equal, Insert, Delete, Home, End, PageUp, PageDown,
+    ]
+};
+
+/// A key's name in `config.toml` (`KeyCode`'s own: "KeyG", "Space").
+pub fn key_name(key: KeyCode) -> String {
+    format!("{key:?}")
+}
+
+pub fn key_from_name(name: &str) -> Option<KeyCode> {
+    REMAPPABLE_KEYS.iter().copied().find(|k| key_name(*k) == name)
 }
 
 pub fn binding(action: Action) -> &'static Binding {
@@ -234,14 +308,6 @@ pub fn help_rows(binds: &Keybinds, section: Section) -> Vec<(String, String)> {
 mod tests {
     use super::*;
 
-    /// Pairs that share a default key on purpose: they never both fire, because
-    /// one only reads its key in a state where the other can't act.
-    /// `default_keys_only_share_where_allowed` holds the rest apart.
-    const SHARED_DEFAULTS: &[(Action, Action, &str)] = &[
-        (Action::Equip, Action::EndTurn, "E ends the turn unless it is equipping a hovered Equipment"),
-        (Action::Mulligan, Action::AbilityMenu, "the mulligan prompt owns the keyboard"),
-        (Action::SerumPowder, Action::PlanarDie, "the mulligan prompt owns the keyboard"),
-    ];
 
     /// Exhaustive over `Action`, so a new variant fails to compile until it is
     /// listed here — and then fails the test until it is in `BINDINGS`.
@@ -299,6 +365,23 @@ mod tests {
         assert!(help_rows(&binds, Section::General).contains(&("T".into(), "Chat".into())));
         binds.set(Action::Chat, KeyCode::Enter);
         assert!(help_rows(&binds, Section::General).contains(&("Enter".into(), "Chat".into())));
+    }
+
+    /// A remap round-trips through the config's names, keeps only what
+    /// moved, and reports the action it now collides with.
+    #[test]
+    fn remaps_persist_and_report_clashes() {
+        let mut binds = Keybinds::default();
+        assert!(binds.overrides().is_empty(), "defaults write nothing");
+        binds.set(Action::Chat, KeyCode::KeyG);
+        let saved = binds.overrides();
+        assert_eq!(saved.get("Chat").map(String::as_str), Some("KeyG"));
+        assert_eq!(saved.len(), 1);
+        assert_eq!(Keybinds::from_overrides(&saved).key(Action::Chat), KeyCode::KeyG);
+        assert_eq!(binds.clashes(Action::Chat), vec![Action::Graveyard]);
+        assert!(binds.clashes(Action::EndTurn).is_empty(), "Equip shares E on purpose");
+        let junk = [("Chat".to_string(), "NoSuchKey".to_string()), ("NoSuchAction".into(), "KeyQ".into())];
+        assert_eq!(Keybinds::from_overrides(&junk.into_iter().collect()).key(Action::Chat), KeyCode::KeyT);
     }
 
     #[test]

@@ -87,6 +87,9 @@ pub struct Config {
     pub paths: PathsConfig,
     pub graphics: GraphicsConfig,
     pub gameplay: GameplayConfig,
+    /// Remapped keyboard shortcuts: action name → key name, only the ones
+    /// moved off their default (`crate::keybinds::Keybinds::overrides`).
+    pub keybinds: std::collections::BTreeMap<String, String>,
 }
 
 /// The live, whole config kept as a resource so settings systems can
@@ -385,6 +388,7 @@ mod tests {
         cfg.gameplay.join_addr = "10.0.0.2:7777".into();
         cfg.gameplay.deck_path = "decks/mono-red.txt".into();
         cfg.gameplay.animation_speed = 2.0;
+        cfg.keybinds.insert("Chat".into(), "Enter".into());
 
         let back = parse_or_default(
             &toml::to_string_pretty(&cfg).expect("serialize"),
@@ -399,6 +403,7 @@ mod tests {
         assert_eq!(back.gameplay.join_addr, "10.0.0.2:7777");
         assert_eq!(back.gameplay.deck_path, "decks/mono-red.txt");
         assert_eq!(back.gameplay.animation_speed, 2.0);
+        assert_eq!(back.keybinds.get("Chat").map(String::as_str), Some("Enter"));
     }
 
     #[test]

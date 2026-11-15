@@ -1053,8 +1053,8 @@ cut, and the first two would make the third and fourth reviewable:
   the graveyard (the reveal is `R` now, and skips while a decision is up),
   and `E` on a hovered Equipment started equipping *and* ended the turn.
   `keybinds::tests::default_keys_only_share_where_allowed` keeps defaults
-  apart. ⏳ Residual: button labels ("Pass (Space)", "Undo (Z)") still
-  print their default key — they follow the table with the remap screen.
+  apart. ✅ Button labels follow the live binding (the remap screen,
+  2026-11-15).
 - ✅ **`UiScale` was a stub, so text scaling was impossible** — shipped
   2026-09-27 as the UI size setting ("UI size and the menu", above).
 
@@ -1158,8 +1158,12 @@ Cross-references the detailed entries below where one exists.
   (`systems/settings_menu.rs`): window mode (windowed / borderless),
   resolution presets, maximize-on-launch, render quality, UI size (also in
   the in-game Esc menu), animation speed, hand sorting — applied live and
-  persisted. Remaining ⏳:
-  keybind remapping, audio (once there is audio).
+  persisted. ✅ Keybind remapping (2026-11-15): Settings → Keyboard
+  shortcuts (`systems::keymap_panel`) — click a row, press its key; a
+  binding that now fires with another says so; Reset all; saved to
+  `config.toml` `[keybinds]` (overrides only). Button labels ("Pass
+  (Space)") and the hint line follow the live binding. Harness `--keymap`.
+  Remaining ⏳: audio (once there is audio).
 - 🟡 **Deck library** — Commander's deck picker (2026-09-26,
   `deck_picker.rs`) picks your stock deck and each bot's from the 183 stock
   lists, with search. Paste-from-clipboard import ✅ (menu decklist "From

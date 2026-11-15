@@ -40,6 +40,8 @@ pub enum SettingRow {
     SortHand,
     Takebacks,
     ReducedMotion,
+    /// Opens Settings → Keyboard shortcuts (`keymap_panel`).
+    Keys,
 }
 
 #[derive(Component)]
@@ -54,6 +56,7 @@ const SPEEDS: [f32; 4] = [0.5, 1.0, 1.5, 2.0];
 /// Toggle the panel from the menu button (Esc also closes).
 pub fn handle_settings_open(
     mut open: ResMut<MenuSettingsOpen>,
+    keymap: Res<crate::systems::keymap_panel::KeymapPanel>,
     keyboard: Res<ButtonInput<KeyCode>>,
     buttons: Query<&Interaction, (Changed<Interaction>, With<OpenSettingsButton>)>,
     closes: Query<&Interaction, (Changed<Interaction>, With<SettingsCloseButton>)>,
@@ -61,7 +64,10 @@ pub fn handle_settings_open(
     if buttons.iter().any(|i| *i == Interaction::Pressed) {
         open.0 = !open.0;
     }
+    // Esc is the shortcut panel's while it is up (it cancels a capture or
+    // closes that panel first).
     if open.0
+        && !keymap.open
         && (keyboard.just_pressed(KeyCode::Escape)
             || closes.iter().any(|i| *i == Interaction::Pressed))
     {
@@ -134,6 +140,7 @@ fn spawn_panel(commands: &mut Commands, ui_fonts: &UiFonts) {
             SettingRow::SortHand,
             SettingRow::Takebacks,
             SettingRow::ReducedMotion,
+            SettingRow::Keys,
         ] {
             p.spawn((
                 Button,
@@ -222,6 +229,7 @@ pub fn update_setting_labels(
                 "Reduced motion:  {}",
                 if store.0.gameplay.reduced_motion { "On" } else { "Off" }
             ),
+            SettingRow::Keys => "Keyboard shortcuts…".to_string(),
         };
         for child in children.iter() {
             if let Ok(mut t) = texts.get_mut(child)
@@ -254,6 +262,7 @@ pub fn handle_setting_rows(
     quality: Res<RenderQuality>,
     mut speed: ResMut<AnimationSpeed>,
     mut gameplay: ResMut<crate::config::GameplayConfig>,
+    mut keymap: ResMut<crate::systems::keymap_panel::KeymapPanel>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
     clicked: Query<(&Interaction, &SettingRow), Changed<Interaction>>,
 ) {
@@ -339,6 +348,7 @@ pub fn handle_setting_rows(
                 store.0.gameplay.reduced_motion = gameplay.reduced_motion;
                 dirty = true;
             }
+            SettingRow::Keys => keymap.open = true,
         }
     }
     if dirty {

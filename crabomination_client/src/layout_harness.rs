@@ -77,6 +77,8 @@ pub struct HarnessArgs {
     /// `--menu-format FORMAT` does too, with that format selected
     /// (`commander` shows the pod options).
     pub menu: bool,
+    /// `--keymap`: stay on the menu with Settings → Keyboard shortcuts open.
+    pub keymap: bool,
     pub menu_format: Option<crate::menu::MatchFormat>,
     /// `--ui-size PERCENT` (0 = Auto): the UI size for this run.
     pub ui_size: Option<u16>,
@@ -171,6 +173,7 @@ impl HarnessArgs {
             saved_decks: args.iter().any(|a| a == "--saved-decks"),
             import_report: value("--import-report").map(std::path::PathBuf::from),
             menu: args.iter().any(|a| a == "--menu"),
+            keymap: args.iter().any(|a| a == "--keymap"),
             menu_format: value("--menu-format").and_then(|f| crate::menu::MatchFormat::from_cli(&f)),
             ui_size: value("--ui-size").and_then(|v| v.parse().ok()),
             zoom_card: value("--zoom-card"),
@@ -200,7 +203,12 @@ impl HarnessArgs {
 
     /// The screenshot is of the menu, not a match.
     fn menu_shot(&self) -> bool {
-        self.deck_picker || self.saved_decks || self.import_report.is_some() || self.menu || self.menu_format.is_some()
+        self.deck_picker
+            || self.saved_decks
+            || self.import_report.is_some()
+            || self.menu
+            || self.keymap
+            || self.menu_format.is_some()
     }
 }
 
@@ -469,6 +477,20 @@ pub fn open_shortcut_help_for_screenshot(
 ) {
     if args.shortcut_help && !*done && view.0.is_some() {
         crate::systems::ui::spawn_shortcut_help(&mut commands, &ui_fonts, &binds);
+        *done = true;
+    }
+}
+
+/// `--keymap`: open Settings and its Keyboard shortcuts panel on the menu.
+pub fn open_keymap_for_screenshot(
+    args: Res<HarnessArgs>,
+    mut settings: ResMut<crate::systems::settings_menu::MenuSettingsOpen>,
+    mut keymap: ResMut<crate::systems::keymap_panel::KeymapPanel>,
+    mut done: Local<bool>,
+) {
+    if args.keymap && !*done {
+        settings.0 = true;
+        keymap.open = true;
         *done = true;
     }
 }

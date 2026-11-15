@@ -29,6 +29,7 @@ pub mod impact;
 pub mod inspector;
 pub mod input_guard;
 pub mod kb_cursor;
+pub mod keymap_panel;
 pub mod keyword_label;
 pub mod legal_target_filter;
 pub mod log_links;

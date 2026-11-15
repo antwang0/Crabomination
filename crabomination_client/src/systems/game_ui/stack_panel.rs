@@ -92,6 +92,7 @@ pub fn update_stack_panel(
     mut commands: Commands,
     mut panel_q: Query<(Entity, &mut Node), With<StackPanel>>,
     ui_fonts: Res<UiFonts>,
+    binds: Res<crate::keybinds::Keybinds>,
 ) {
     if !view.is_changed() {
         return;
@@ -335,7 +336,7 @@ pub fn update_stack_panel(
             ))
             .with_children(|b| {
                 b.spawn((
-                    Text::new("Let resolve ▶   (Space)"),
+                    Text::new(format!("Let resolve ▶   ({})", binds.label(crate::keybinds::Action::Pass))),
                     tf(12.0),
                     TextColor(theme::TEXT_PRIMARY),
                     Pickable::IGNORE,
