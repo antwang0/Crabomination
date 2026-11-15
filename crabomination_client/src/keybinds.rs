@@ -20,6 +20,7 @@ use std::collections::HashMap;
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug)]
 pub enum Action {
     ToggleHelp,
+    ToggleLog,
     DebugConsole,
     ExportState,
     Graveyard,
@@ -102,6 +103,7 @@ pub const BINDINGS: &[Binding] = {
         b(Graveyard, General, KeyCode::KeyG, "Browse your graveyard (click a pile for others')"),
         b(Exile, General, KeyCode::KeyV, "Browse the exile zone"),
         b(LifeGraph, General, KeyCode::KeyI, "Per-turn life history graph"),
+        b(ToggleLog, General, KeyCode::KeyO, "Collapse / expand the game log"),
         b(ExportState, General, KeyCode::KeyX, "Export game state"),
         b(DebugConsole, General, KeyCode::Backquote, "Debug console"),
         b(AnimSlower, General, KeyCode::BracketLeft, "Animations slower"),
@@ -246,14 +248,14 @@ mod tests {
     fn all_actions() -> Vec<Action> {
         use Action::*;
         let all = [
-            ToggleHelp, DebugConsole, ExportState, Graveyard, Exile, LifeGraph, Chat, AnimSlower,
+            ToggleHelp, ToggleLog, DebugConsole, ExportState, Graveyard, Exile, LifeGraph, Chat, AnimSlower,
             AnimFaster, AnimReset, Pass, EndTurn, NextTurn, Attack, HoldPriority, TakeBack, Flip,
             AltCost, AbilityMenu, Cycle, Equip, Keep, Mulligan, SerumPowder, PlanarDie,
             RevealAgenda,
         ];
         for a in all {
             match a {
-                ToggleHelp | DebugConsole | ExportState | Graveyard | Exile | LifeGraph | Chat
+                ToggleHelp | ToggleLog | DebugConsole | ExportState | Graveyard | Exile | LifeGraph | Chat
                 | AnimSlower | AnimFaster | AnimReset | Pass | EndTurn | NextTurn | Attack
                 | HoldPriority | TakeBack | Flip | AltCost | AbilityMenu | Cycle | Equip | Keep
                 | Mulligan | SerumPowder | PlanarDie | RevealAgenda => {}

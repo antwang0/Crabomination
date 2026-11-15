@@ -57,6 +57,8 @@ pub struct HarnessArgs {
     pub settings_open: bool,
     /// `--shortcut-help`: open the F1 shortcut overlay once the view is up.
     pub shortcut_help: bool,
+    /// `--log-collapsed`: start with the game log folded to its stub.
+    pub log_collapsed: bool,
     /// `--viewer-out`: the viewer starts the fixture already knocked out
     /// (21 commander damage), for the "You're out" panel and the standings.
     pub viewer_out: bool,
@@ -162,6 +164,7 @@ impl HarnessArgs {
             }),
             settings_open: args.iter().any(|a| a == "--settings-open"),
             shortcut_help: args.iter().any(|a| a == "--shortcut-help"),
+            log_collapsed: args.iter().any(|a| a == "--log-collapsed"),
             viewer_out: args.iter().any(|a| a == "--viewer-out"),
             hold_seat: value("--hold-seat").and_then(|v| v.parse().ok()),
             deck_picker: args.iter().any(|a| a == "--deck-picker"),
@@ -466,6 +469,19 @@ pub fn open_shortcut_help_for_screenshot(
 ) {
     if args.shortcut_help && !*done && view.0.is_some() {
         crate::systems::ui::spawn_shortcut_help(&mut commands, &ui_fonts, &binds);
+        *done = true;
+    }
+}
+
+/// `--log-collapsed`: fold the game log the first frame a view is up.
+pub fn collapse_log_for_screenshot(
+    args: Res<HarnessArgs>,
+    view: Res<crate::net_plugin::CurrentView>,
+    mut collapsed: ResMut<crate::systems::game_ui::GameLogCollapsed>,
+    mut done: Local<bool>,
+) {
+    if args.log_collapsed && !*done && view.0.is_some() {
+        collapsed.0 = true;
         *done = true;
     }
 }

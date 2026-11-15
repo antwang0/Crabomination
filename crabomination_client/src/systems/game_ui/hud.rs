@@ -47,6 +47,14 @@ pub struct GameLogPanel;
 #[derive(Component)]
 pub struct GameLogOuterPanel;
 
+/// The one-line stand-in for a collapsed game log (`log::toggle_game_log`).
+#[derive(Component)]
+pub struct GameLogStub;
+
+/// Whether the viewer has folded the game log away.
+#[derive(Resource, Default)]
+pub struct GameLogCollapsed(pub bool);
+
 #[derive(Component)]
 pub struct HintText;
 
@@ -450,6 +458,33 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>) {
                     ..default()
                 },
                 GameLogPanel,
+            ));
+        });
+
+    // The collapsed log's stub (`toggle_game_log`): hidden while the log is
+    // open, and what the log shrinks to — one line, clickable to reopen.
+    commands
+        .spawn((
+            Node {
+                position_type: PositionType::Absolute,
+                top: Val::Px(120.0),
+                right: Val::Px(10.0),
+                padding: UiRect::axes(Val::Px(10.0), Val::Px(4.0)),
+                border_radius: BorderRadius::all(Val::Px(4.0)),
+                display: Display::None,
+                ..default()
+            },
+            BackgroundColor(theme::HUD_BG),
+            Button,
+            GameLogStub,
+            InGameRoot,
+        ))
+        .with_children(|b| {
+            b.spawn((
+                Text::new("▶ Game log"),
+                ui_fonts.tf(12.0),
+                TextColor(theme::TEXT_SECONDARY),
+                Pickable::IGNORE,
             ));
         });
 

@@ -25,6 +25,27 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## The game log folds; screenshots are a script (2026-11-15) — shipped
+
+- `O` (`keybinds::Action::ToggleLog`) or a click on its stub folds the game
+  log to one "▶ Game log" line; a pod's log hangs 420 px down the right of
+  the table (`log::toggle_game_log`, harness `--log-collapsed`). The camera
+  fit still reserves the log's nominal rect (`framing::hud_rects`), so a
+  folded log frees the view but not yet the fit.
+- `scripts/client_shot.sh OUT.png [args]` — the offscreen nested-KWin
+  capture, committed (it lived in `/tmp` and was lost on every reboot);
+  `scripts/ui_snapshots.sh DIR` — six standard screens (duel, stack, tokens,
+  help, pod, pod + stack) at 1280x720 / 1920x1080 / 2560x1440, for a
+  before/after look at a HUD change. Not golden images: a GPU or driver
+  change moves pixels.
+- ⏳ Deferred, with the reason: a readable second creature row past ten
+  groups (the residual under "A crowded duel row grows") and the 720p stack
+  panel over the opponent's land row both trade card size for space, which
+  the camera-fit budgets (`framing::tests`) measure; the fix is
+  `hud_rects` reporting real panel rects (a folded or empty log, a short chip
+  row), so the fit can use that room. That is the Responsive HUD Layout
+  entry below.
+
 ## "Ana is thinking..." (2026-11-15) — shipped
 
 `systems::thinking`: once the view has sat still for 0.6 s on another

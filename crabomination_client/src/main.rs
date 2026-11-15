@@ -388,6 +388,7 @@ fn main() {
             (
                 layout_harness::open_settings_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::open_shortcut_help_for_screenshot.run_if(in_state(AppState::InGame)),
+                layout_harness::collapse_log_for_screenshot.run_if(in_state(AppState::InGame)),
                 layout_harness::open_deck_picker_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::import_for_screenshot.run_if(in_state(AppState::Menu)),
                 layout_harness::capture_screenshot,
@@ -655,7 +656,11 @@ fn main() {
                 update_mana_pips,
                 update_opponent_stats_rows,
                 update_opponent_panel_tint,
-                (position_log_below_opponents, position_left_column_below_hud),
+                (
+                    position_log_below_opponents,
+                    position_left_column_below_hud,
+                    crate::systems::game_ui::toggle_game_log,
+                ),
                 fit_player_hud_width,
                 update_hint,
                 update_phase_chart,
@@ -936,6 +941,7 @@ fn main() {
         .init_resource::<systems::eliminated::OutPanelState>()
         .init_resource::<systems::match_stats::MatchStats>()
         .init_resource::<keybinds::Keybinds>()
+        .init_resource::<systems::game_ui::GameLogCollapsed>()
         .init_resource::<systems::log_links::BoardPing>()
         .init_resource::<systems::log_links::LogFocus>()
         .add_systems(

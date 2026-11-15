@@ -217,17 +217,48 @@ pub struct LogRow(pub u64);
 /// log sat 45 % of the panel's height too low on a 1.45x display.
 pub fn position_log_below_opponents(
     panel_q: Query<&bevy::ui::ComputedNode, With<OpponentStatusPanel>>,
-    mut log_q: Query<&mut Node, With<GameLogOuterPanel>>,
+    mut log_q: Query<&mut Node, Or<(With<GameLogOuterPanel>, With<GameLogStub>)>>,
 ) {
     let Ok(panel) = panel_q.single() else { return };
-    let Ok(mut log) = log_q.single_mut() else { return };
     let panel_h = panel.size().y * panel.inverse_scale_factor();
     if panel_h <= 0.0 {
         return;
     }
-    // Panel sits at top:10; place the log 8px below its bottom edge.
+    // Panel sits at top:10; place the log (or its stub) 8px below its
+    // bottom edge.
     let target = Val::Px(10.0 + panel_h + 8.0);
-    if log.top != target {
-        log.top = target;
+    for mut log in &mut log_q {
+        if log.top != target {
+            log.top = target;
+        }
+    }
+}
+
+/// Fold the game log away (or back) on its key or a click on its stub. A
+/// pod's log hangs 420 px down the right side of the table; folded, it is
+/// one line.
+pub fn toggle_game_log(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
+    text_input: crate::systems::input_guard::TextInputGuard,
+    stub: Query<&crate::ui_button::Interaction, (Changed<crate::ui_button::Interaction>, With<GameLogStub>)>,
+    mut collapsed: ResMut<GameLogCollapsed>,
+    mut log_q: Query<&mut Node, (With<GameLogOuterPanel>, Without<GameLogStub>)>,
+    mut stub_q: Query<&mut Node, (With<GameLogStub>, Without<GameLogOuterPanel>)>,
+) {
+    let key = !text_input.typing() && binds.just_pressed(&keyboard, crate::keybinds::Action::ToggleLog);
+    let clicked = stub.iter().any(|i| *i == crate::ui_button::Interaction::Pressed);
+    if key || clicked {
+        collapsed.0 = !collapsed.0;
+    }
+    if !collapsed.is_changed() {
+        return;
+    }
+    let (log, stub) = if collapsed.0 { (Display::None, Display::Flex) } else { (Display::Flex, Display::None) };
+    for mut n in &mut log_q {
+        n.display = log;
+    }
+    for mut n in &mut stub_q {
+        n.display = stub;
     }
 }
