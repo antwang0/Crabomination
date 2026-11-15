@@ -33,6 +33,8 @@ pub struct GameInputResources<'w> {
     /// A drag let go over what it acts on: taken as a click there
     /// (`systems::drag_act`).
     pub drag: Res<'w, crate::systems::drag_act::DragAct>,
+    /// Which key each shortcut is on (`crate::keybinds`).
+    pub binds: Res<'w, crate::keybinds::Keybinds>,
 }
 
 /// Default seat for a freshly added attacker (and for "Attack All"): the
@@ -93,6 +95,7 @@ pub fn handle_game_input(
     let legal_targets = &mut *r.legal_targets;
     let modal_cast = &mut *r.modal_cast;
     let esc = &*r.esc;
+    let binds = &*r.binds;
 
     // Refresh the card-name lookup from the current view so the event
     // formatter can resolve any CardId it sees. Hand / battlefield /
@@ -245,7 +248,7 @@ pub fn handle_game_input(
             && cv.priority == your_seat
             && !blocking.declared
         {
-            let pass = keyboard.just_pressed(KeyCode::Space) || btns.pass;
+            let pass = binds.just_pressed(&keyboard, crate::keybinds::Action::Pass) || btns.pass;
             if mouse.just_pressed(MouseButton::Right)
                 || esc.owns(crate::systems::esc::EscSurface::BlockerPlan)
             {
@@ -719,9 +722,9 @@ pub fn handle_game_input(
         //   F = flip MDFC face         (was: right-click hand)
         //   L = open alt-cost modal    (was: right-click hand)
         //   M = open ability menu      (was: right-click bf)
-        let kb_flip = keyboard.just_pressed(KeyCode::KeyF);
-        let kb_alt = keyboard.just_pressed(KeyCode::KeyL);
-        let kb_menu = keyboard.just_pressed(KeyCode::KeyM);
+        let kb_flip = binds.just_pressed(&keyboard, crate::keybinds::Action::Flip);
+        let kb_alt = binds.just_pressed(&keyboard, crate::keybinds::Action::AltCost);
+        let kb_menu = binds.just_pressed(&keyboard, crate::keybinds::Action::AbilityMenu);
         let any_right = mouse.just_pressed(MouseButton::Right);
         // Right-click is "do whatever's most useful for this card": the
         // first quick-play shape `hand_menu::right_click` finds for a hand
@@ -951,7 +954,7 @@ pub fn handle_game_input(
         // card (CR 702.29). Submits `GameAction::Cycle` directly — the
         // server pays the cycling cost from the floated mana pool,
         // discards the card to graveyard, and draws.
-        if keyboard.just_pressed(KeyCode::KeyC)
+        if binds.just_pressed(&keyboard, crate::keybinds::Action::Cycle)
             && let Some(game_id) = hovered_hand.iter().next()
         {
             let card_id = game_id.0;
@@ -1018,8 +1021,11 @@ pub fn handle_game_input(
         // Keyboard-specific: E begins equip targeting on the hovered
         // viewer-controlled Equipment (CR 702.6). Sets
         // `pending_equip_source`; the next battlefield-creature click
-        // submits `GameAction::Equip { equipment, target }`.
-        if keyboard.just_pressed(KeyCode::KeyE)
+        // submits `GameAction::Equip { equipment, target }`. Equip shares
+        // End Turn's default key, and a press that starts equipping must not
+        // also end the turn (`equip_took_key` below).
+        let mut equip_took_key = false;
+        if binds.just_pressed(&keyboard, crate::keybinds::Action::Equip)
             && let Some((game_id, owner)) = hovered_bf.iter().next()
             && owner.0 == your_seat
         {
@@ -1032,6 +1038,8 @@ pub fn handle_game_input(
             if is_equippable {
                 targeting.active = true;
                 targeting.pending_equip_source = Some(card_id);
+                equip_took_key = binds.key(crate::keybinds::Action::Equip)
+                    == binds.key(crate::keybinds::Action::EndTurn);
             }
         }
 
@@ -1243,7 +1251,7 @@ pub fn handle_game_input(
         // attackers via the per-creature click flow, submit *that* plan;
         // otherwise fall back to "attack all eligible at the next opponent"
         // so the one-key shortcut still works for single-opponent games.
-        let attack = keyboard.just_pressed(KeyCode::KeyA) || btns.attack;
+        let attack = binds.just_pressed(&keyboard, crate::keybinds::Action::Attack) || btns.attack;
         if attack && cv.step == TurnStep::DeclareAttackers {
             use crabomination::game::{Attack, AttackTarget};
             let mut attacks: Vec<Attack> = if !attacking.plan.is_empty() {
@@ -1286,20 +1294,21 @@ pub fn handle_game_input(
         }
 
         // Pass Priority (Space)
-        let pass = keyboard.just_pressed(KeyCode::Space) || btns.pass;
+        let pass = binds.just_pressed(&keyboard, crate::keybinds::Action::Pass) || btns.pass;
         if pass {
             outbox.submit(GameAction::PassPriority);
         }
 
         // End Turn (E) — set fast-forward to skip to opponent's turn
-        let end_turn = keyboard.just_pressed(KeyCode::KeyE) || btns.end_turn;
+        let end_turn = (binds.just_pressed(&keyboard, crate::keybinds::Action::EndTurn) && !equip_took_key)
+            || btns.end_turn;
         if end_turn {
             ff.end_turn = true;
             outbox.submit(GameAction::PassPriority);
         }
 
         // Next Turn (N) — fast-forward through opponent's turn to our next main
-        let next_turn = keyboard.just_pressed(KeyCode::KeyN) || btns.next_turn;
+        let next_turn = binds.just_pressed(&keyboard, crate::keybinds::Action::NextTurn) || btns.next_turn;
         if next_turn {
             ff.next_turn = true;
             outbox.submit(GameAction::PassPriority);

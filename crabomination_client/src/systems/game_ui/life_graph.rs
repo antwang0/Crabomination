@@ -78,9 +78,13 @@ pub fn record_life_history(view: Res<CurrentView>, mut history: ResMut<LifeHisto
     }
 }
 
-/// `I` toggles the panel.
-pub fn toggle_life_graph(keys: Res<ButtonInput<KeyCode>>, mut history: ResMut<LifeHistory>) {
-    if keys.just_pressed(KeyCode::KeyI) {
+/// `I` (`Action::LifeGraph`) toggles the panel.
+pub fn toggle_life_graph(
+    keys: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
+    mut history: ResMut<LifeHistory>,
+) {
+    if binds.just_pressed(&keys, crate::keybinds::Action::LifeGraph) {
         history.shown = !history.shown;
         history.revision = history.revision.wrapping_add(1);
     }

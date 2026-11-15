@@ -80,9 +80,10 @@ const INPUT_BG_FOCUSED: Color = Color::srgb(0.20, 0.20, 0.34);
 /// `ButtonInput<KeyCode>` so the toggle works regardless of input focus.
 pub fn toggle_debug_console(
     keys: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     mut state: ResMut<DebugConsoleState>,
 ) {
-    if keys.just_pressed(KeyCode::Backquote) {
+    if binds.just_pressed(&keys, crate::keybinds::Action::DebugConsole) {
         state.open = !state.open;
         if !state.open {
             state.card_input_focused = false;

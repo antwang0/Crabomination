@@ -28,6 +28,7 @@ mod debug_export;
 mod deck_import;
 mod deck_picker;
 mod game;
+mod keybinds;
 mod layout_harness;
 mod mana_text;
 mod menu;
@@ -927,6 +928,7 @@ fn main() {
         .init_resource::<systems::game_over::AutoRematchState>()
         .init_resource::<systems::eliminated::OutPanelState>()
         .init_resource::<systems::match_stats::MatchStats>()
+        .init_resource::<keybinds::Keybinds>()
         .init_resource::<systems::game_over::ActiveMatchKind>()
         // Defensive: the game-over systems read this as a required resource
         // every InGame frame. `start_net_session_from_menu` (re)sets it, but

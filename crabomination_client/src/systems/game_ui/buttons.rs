@@ -272,12 +272,13 @@ pub fn handle_audit_buttons(
 /// player and every priority window is manual.
 pub fn handle_auto_pass_toggle(
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     text_input: crate::systems::input_guard::TextInputGuard,
     mut ff: ResMut<FastForward>,
     btn: Query<&Interaction, (Changed<Interaction>, With<AutoPassButton>)>,
     mut label_q: Query<&mut Text, With<AutoPassButtonLabel>>,
 ) {
-    let key = !text_input.typing() && keyboard.just_pressed(KeyCode::KeyH);
+    let key = !text_input.typing() && binds.just_pressed(&keyboard, crate::keybinds::Action::HoldPriority);
     let pressed = btn.iter().any(|i| *i == Interaction::Pressed);
     if key || pressed {
         ff.manual_priority = !ff.manual_priority;
@@ -302,6 +303,7 @@ pub fn handle_auto_pass_toggle(
 /// likely to want to file a bug report.
 pub fn handle_export_keypress(
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     btns: Res<ButtonState>,
     mut state: ResMut<crate::systems::export_prompt::ExportPromptState>,
     // NOT `TextInputGuard` — it reads `ExportPromptState`, and a system
@@ -315,7 +317,7 @@ pub fn handle_export_keypress(
     if state.active || debug_console.card_input_focused || chat.open {
         return;
     }
-    if keyboard.just_pressed(KeyCode::KeyX) || btns.export {
+    if binds.just_pressed(&keyboard, crate::keybinds::Action::ExportState) || btns.export {
         // The button is in the Esc menu, which draws over the prompt.
         settings.0 = false;
         crate::systems::export_prompt::open_export_prompt(&mut state);
@@ -324,17 +326,18 @@ pub fn handle_export_keypress(
 
 // ── Planar die ───────────────────────────────────────────────────────────────
 
-/// CR 901.9 — pressing `P` rolls the planar die in a Planechase game. The
+/// CR 901.9 — pressing `P` (`Action::PlanarDie`) rolls the planar die in a Planechase game. The
 /// action is a special action, so it needs no target UI; the HUD's planar chip
 /// shows the roll's current {N} cost, and the key is inert when the engine
 /// wouldn't accept the roll.
 pub fn handle_planar_die_keypress(
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
     text_input: crate::systems::input_guard::TextInputGuard,
 ) {
-    if text_input.typing() || !keyboard.just_pressed(KeyCode::KeyP) {
+    if text_input.typing() || !binds.just_pressed(&keyboard, crate::keybinds::Action::PlanarDie) {
         return;
     }
     let Some(outbox) = &outbox else { return };
@@ -345,20 +348,26 @@ pub fn handle_planar_die_keypress(
 
 // ── Hidden agenda ────────────────────────────────────────────────────────────
 
-/// CR 116.2j — pressing `G` turns a face-down hidden-agenda conspiracy in your
+/// CR 116.2j — pressing `R` (`Action::RevealAgenda`; it was `G`, which also
+/// opened the graveyard) turns a face-down hidden-agenda conspiracy in your
 /// command zone face up. A special action, so it needs no target UI; the key is
 /// inert when nothing of yours is still face down.
 pub fn handle_reveal_conspiracy_keypress(
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     view: Res<CurrentView>,
     outbox: Option<Res<NetOutbox>>,
     text_input: crate::systems::input_guard::TextInputGuard,
 ) {
-    if text_input.typing() || !keyboard.just_pressed(KeyCode::KeyG) {
+    if text_input.typing() || !binds.just_pressed(&keyboard, crate::keybinds::Action::RevealAgenda) {
         return;
     }
     let Some(outbox) = &outbox else { return };
     let Some(cv) = view.0.as_ref() else { return };
+    // A decision prompt owns the letter keys (ChooseColor reads R for red).
+    if cv.pending_decision.is_some() {
+        return;
+    }
     if let Some(card_id) = cv
         .players
         .iter()

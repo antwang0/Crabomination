@@ -40,13 +40,14 @@ pub fn drain_chat_inbox(mut inbox: ResMut<ChatInbox>, mut log: ResMut<GameLog>) 
 pub fn handle_chat_input(
     mut state: ResMut<ChatInputState>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     mut events: MessageReader<KeyboardInput>,
     outbox: Option<Res<NetOutbox>>,
     console: Res<crate::systems::debug_console::DebugConsoleState>,
     export_prompt: Res<crate::systems::export_prompt::ExportPromptState>,
 ) {
     if !state.open {
-        if keyboard.just_pressed(KeyCode::KeyT)
+        if binds.just_pressed(&keyboard, crate::keybinds::Action::Chat)
             && !console.card_input_focused
             && !export_prompt.active
         {

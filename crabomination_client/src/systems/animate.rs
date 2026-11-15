@@ -778,15 +778,16 @@ pub fn animate_reveal_peek(
 /// [ = half speed, ] = double speed, Backslash = reset to 1×.
 pub fn adjust_animation_speed(
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     mut speed: ResMut<AnimationSpeed>,
 ) {
-    if keyboard.just_pressed(KeyCode::BracketLeft) {
+    if binds.just_pressed(&keyboard, crate::keybinds::Action::AnimSlower) {
         speed.0 = (speed.0 * 0.5).max(ANIM_SPEED_MIN);
     }
-    if keyboard.just_pressed(KeyCode::BracketRight) {
+    if binds.just_pressed(&keyboard, crate::keybinds::Action::AnimFaster) {
         speed.0 = (speed.0 * 2.0).min(ANIM_SPEED_MAX);
     }
-    if keyboard.just_pressed(KeyCode::Backslash) {
+    if binds.just_pressed(&keyboard, crate::keybinds::Action::AnimReset) {
         speed.0 = 1.0;
     }
 }

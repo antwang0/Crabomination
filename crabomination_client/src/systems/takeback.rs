@@ -204,6 +204,7 @@ pub struct UndoButtonCaption;
 #[allow(clippy::too_many_arguments)]
 pub fn request_undo(
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     mouse: Res<ButtonInput<MouseButton>>,
     text_input: crate::systems::input_guard::TextInputGuard,
     view: Res<CurrentView>,
@@ -213,7 +214,7 @@ pub fn request_undo(
     button: Query<Ref<Interaction>, With<UndoButton>>,
     mut list: ResMut<UndoHistoryOpen>,
 ) {
-    let key = !text_input.typing() && keyboard.just_pressed(KeyCode::KeyZ);
+    let key = !text_input.typing() && binds.just_pressed(&keyboard, crate::keybinds::Action::TakeBack);
     let shift = keyboard.any_pressed([KeyCode::ShiftLeft, KeyCode::ShiftRight]);
     let clicked = button.iter().any(|i| i.is_changed() && *i == Interaction::Pressed);
     let right_clicked = mouse.just_pressed(MouseButton::Right) && button.iter().any(|i| *i != Interaction::None);

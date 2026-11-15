@@ -1237,6 +1237,7 @@ pub fn handle_mulligan_buttons(
     outbox: Option<Res<NetOutbox>>,
     mut state: ResMut<DecisionUiState>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     text_input: crate::systems::input_guard::TextInputGuard,
     keep_q: Query<&Interaction, (Changed<Interaction>, With<MulliganKeepButton>)>,
     mull_q: Query<&Interaction, (Changed<Interaction>, With<MulliganTakeButton>)>,
@@ -1256,15 +1257,15 @@ pub fn handle_mulligan_buttons(
     // clicking Keep with the chat bar open should still work. Only the
     // K / M / P shortcuts are suppressed, so typing "keep my black bird"
     // into chat can't mulligan the hand out from under the player.
-    let key = |k: KeyCode| !text_input.typing() && keyboard.just_pressed(k);
-    let keep = keep_q.iter().any(|i| *i == Interaction::Pressed) || key(KeyCode::KeyK);
-    let mull = mull_q.iter().any(|i| *i == Interaction::Pressed) || key(KeyCode::KeyM);
+    let key = |a: crate::keybinds::Action| !text_input.typing() && binds.just_pressed(&keyboard, a);
+    let keep = keep_q.iter().any(|i| *i == Interaction::Pressed) || key(crate::keybinds::Action::Keep);
+    let mull = mull_q.iter().any(|i| *i == Interaction::Pressed) || key(crate::keybinds::Action::Mulligan);
     let pressed_powder = powder_q
         .iter()
         .find_map(|(int, btn)| (*int == Interaction::Pressed).then_some(btn.0))
         .or_else(|| {
             // P shortcut → consume the first listed powder.
-            key(KeyCode::KeyP).then(|| serum_powders.first().copied()).flatten()
+            key(crate::keybinds::Action::SerumPowder).then(|| serum_powders.first().copied()).flatten()
         });
 
     if keep {

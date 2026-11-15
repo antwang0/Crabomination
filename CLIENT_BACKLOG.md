@@ -1011,12 +1011,18 @@ cut, and the first two would make the third and fourth reviewable:
   Void, Descend, …) — 48 backgrounds a player cannot learn, and most of
   the 230 raw `Color::srgb` literals in the client. Collapse into ~6
   semantic families (resource / threat / timing / lock / flag / neutral).
-- ⏳ **The help overlay has already drifted.** `HELP_SECTIONS`
-  (`ui.rs:459`) is a hand-maintained const — "keep in sync when a binding
-  changes" — and is missing `T` (chat) and the ChooseColor `W`/`U`/`B`/`R`/
-  `G`. It also can't express that `G` means graveyard *and* green. Derive
-  the overlay and the handlers from one binding table; that is also the
-  foundation for keybind remapping.
+- ✅ **The help overlay had drifted** (2026-11-15). `crate::keybinds` is now
+  the one table: `BINDINGS` (remappable, `Keybinds` resource holds the live
+  key), `FIXED` (cursor, Esc, held modifiers, seat digits, colour letters).
+  Every handler asks `Keybinds::just_pressed(Action)`, and the F1 overlay is
+  drawn from the table — it had listed `P` as pass (it rolls the planar die)
+  and missed chat, equip, the seat digits and the colour keys. Two real
+  double-fires found on the way: `G` revealed a hidden agenda *and* opened
+  the graveyard (the reveal is `R` now, and skips while a decision is up),
+  and `E` on a hovered Equipment started equipping *and* ended the turn.
+  `keybinds::tests::default_keys_only_share_where_allowed` keeps defaults
+  apart. ⏳ Residual: button labels ("Pass (Space)", "Undo (Z)") still
+  print their default key — they follow the table with the remap screen.
 - ✅ **`UiScale` was a stub, so text scaling was impossible** — shipped
   2026-09-27 as the UI size setting ("UI size and the menu", above).
 
@@ -1207,8 +1213,9 @@ indicator + click target. Slims the 2-D chip strip.
   more (2026-10-01; see "Split `game_ui.rs`" below).
 
 **Session follow-ups**
-- Step-change → clear attack plan ⏳ — tiny watcher on `View.is_changed()`
-  calling `attacking.clear()` when leaving `DeclareAttackers`.
+- Step-change → clear attack plan ✅ (2026-11-15) —
+  `game::clear_attack_plan_on_step_change` drops the plan when the turn,
+  active player or step moves on.
 - Crest pip cluster ⏳ — disc-rim pips for poison / commander damage /
   first-spell tax / energy. Reuse `counter_coins.rs` palette.
 

@@ -463,62 +463,27 @@ pub fn update_activatable_highlights(
 #[derive(Component)]
 pub struct ShortcutHelpPanel;
 
-/// Key → action reference, grouped into sections. Sourced from the actual
-/// input handlers (`game_ui`, `kb_cursor`, `decision_ui`, `animate`,
-/// `camera_zoom`, `debug_console`, `buttons`) — keep in sync when a
-/// binding changes.
-const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
-    (
-        "General",
-        &[
-            ("F1  ·  ?", "Toggle this help"),
-            ("Esc", "Cancel / close / back"),
-            ("Hover", "Preview card beside cursor"),
-            ("Ctrl (hold)", "Zoom camera to hovered card"),
-            ("Alt (hold)", "Centered card · counters & P/T"),
-            ("[  ]  \\", "Animation: slower · faster · reset"),
-            ("`", "Debug console"),
-            ("X", "Export game state"),
-            ("G", "Browse your graveyard (click a pile for others')"),
-            ("V", "Browse the exile zone"),
-            ("I", "Per-turn life history graph"),
-            ("Click phase chart", "Cycle stop / skip for that step"),
-        ],
-    ),
-    (
-        "Your turn",
-        &[
-            ("Space", "Pass priority"),
-            ("E", "End turn"),
-            ("N", "Next turn (skip to your main)"),
-            ("A", "Attack all · confirm attackers"),
-            ("P", "Pass · skip · proceed"),
-            ("H", "Hold priority (auto-pass on/off)"),
-            ("Z", "Take back your last action (others at the table must allow it)"),
-            ("Shift+Z", "Take back several: pick from your recent actions"),
-        ],
-    ),
-    (
-        "Hand & cards",
-        &[
-            ("Click · Enter", "Play / cast / select target"),
-            ("Tab · arrows · WASD", "Move selection (Shift+Tab back)"),
-            ("F", "Flip double-faced card"),
-            ("L", "Cast for alternative cost"),
-            ("M", "Open ability menu"),
-            ("C", "Cycle the selected card"),
-            ("Right-click", "Cancel · flip card"),
-        ],
-    ),
-    (
-        "Mulligan",
-        &[
-            ("K", "Keep hand"),
-            ("M", "Mulligan"),
-            ("P", "Serum Powder"),
-        ],
-    ),
-];
+/// The overlay's sections, drawn from `crate::keybinds` at the keys the
+/// shortcuts are on now (it was a hand-kept list that had drifted from the
+/// handlers), split into two columns of about equal height.
+fn help_columns(binds: &crate::keybinds::Keybinds) -> [Vec<(&'static str, Vec<(String, String)>)>; 2] {
+    use crate::keybinds::{help_rows, Section};
+    let sections: Vec<_> = Section::ALL.iter().map(|s| (s.title(), help_rows(binds, *s))).collect();
+    // A section costs its rows plus a header line.
+    let total: usize = sections.iter().map(|(_, r)| r.len() + 1).sum();
+    let mut left = Vec::new();
+    let mut right = Vec::new();
+    let mut height = 0;
+    for section in sections {
+        if height * 2 < total {
+            height += section.1.len() + 1;
+            left.push(section);
+        } else {
+            right.push(section);
+        }
+    }
+    [left, right]
+}
 
 /// Toggle the keyboard-shortcut overlay on F1 or `?` (Shift+/); Esc (or
 /// the same keys) closes it. Stateless — the panel entity *is* the open
@@ -527,13 +492,14 @@ const HELP_SECTIONS: &[(&str, &[(&str, &str)])] = &[
 pub fn toggle_shortcut_help(
     mut commands: Commands,
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     ui_fonts: Res<UiFonts>,
     esc: Res<crate::systems::esc::EscFocus>,
     existing: Query<Entity, With<ShortcutHelpPanel>>,
 ) {
     let shift = keyboard.pressed(KeyCode::ShiftLeft) || keyboard.pressed(KeyCode::ShiftRight);
-    let open_key =
-        keyboard.just_pressed(KeyCode::F1) || (shift && keyboard.just_pressed(KeyCode::Slash));
+    let open_key = binds.just_pressed(&keyboard, crate::keybinds::Action::ToggleHelp)
+        || (shift && keyboard.just_pressed(KeyCode::Slash));
 
     if let Ok(panel) = existing.single() {
         // F1 / `?` close it without consulting `EscFocus`, so the toggle
@@ -542,16 +508,16 @@ pub fn toggle_shortcut_help(
             commands.entity(panel).despawn();
         }
     } else if open_key {
-        spawn_shortcut_help(&mut commands, &ui_fonts);
+        spawn_shortcut_help(&mut commands, &ui_fonts, &binds);
     }
 }
 
 /// Build the centered shortcut panel: a dimmed scrim over a two-column
 /// reference grid. Tagged `InGameRoot` so it's cleaned up on exit even if
 /// left open.
-fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts) {
+fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts, binds: &crate::keybinds::Keybinds) {
     let tf = |s: f32| ui_fonts.tf(s);
-    let mid = HELP_SECTIONS.len().div_ceil(2);
+    let columns = help_columns(binds);
 
     commands
         .spawn((
@@ -595,7 +561,7 @@ fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts) {
                         ..default()
                     })
                     .with_children(|cols| {
-                        for chunk in [&HELP_SECTIONS[..mid], &HELP_SECTIONS[mid..]] {
+                        for chunk in &columns {
                             cols.spawn(Node {
                                 flex_direction: FlexDirection::Column,
                                 row_gap: Val::Px(12.0),
@@ -609,7 +575,7 @@ fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts) {
                                         tf(14.0),
                                         TextColor(theme::ACCENT_BLUE),
                                     ));
-                                    for (key, desc) in *rows {
+                                    for (key, desc) in rows {
                                         col.spawn(Node {
                                             flex_direction: FlexDirection::Row,
                                             column_gap: Val::Px(10.0),
@@ -623,13 +589,13 @@ fn spawn_shortcut_help(commands: &mut Commands, ui_fonts: &UiFonts) {
                                             })
                                             .with_children(|kc| {
                                                 kc.spawn((
-                                                    Text::new(*key),
+                                                    Text::new(key.clone()),
                                                     tf(13.0),
                                                     TextColor(theme::ACCENT_YELLOW),
                                                 ));
                                             });
                                             row.spawn((
-                                                Text::new(*desc),
+                                                Text::new(desc.clone()),
                                                 tf(13.0),
                                                 TextColor(theme::TEXT_BODY),
                                             ));
@@ -1462,6 +1428,7 @@ pub fn graveyard_browser(
     ui_fonts: Res<UiFonts>,
     existing: Query<Entity, With<GraveyardBrowser>>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     overlay_interaction: Query<&Interaction, (With<GraveyardBrowser>, With<Button>)>,
     text_input: crate::systems::input_guard::TextInputGuard,
     esc: Res<crate::systems::esc::EscFocus>,
@@ -1472,7 +1439,7 @@ pub fn graveyard_browser(
     // `G` toggles the viewer's own graveyard (clicking a pile still browses
     // any player's). Suppressed while any text surface has the keyboard and
     // while a decision modal is up — ChooseColor binds G to green mana.
-    if keyboard.just_pressed(KeyCode::KeyG)
+    if binds.just_pressed(&keyboard, crate::keybinds::Action::Graveyard)
         && !text_input.typing()
         && view
             .0
@@ -1715,6 +1682,7 @@ pub fn exile_browser(
     ui_fonts: Res<UiFonts>,
     existing: Query<Entity, With<ExileBrowser>>,
     keyboard: Res<ButtonInput<KeyCode>>,
+    binds: Res<crate::keybinds::Keybinds>,
     overlay_interaction: Query<&Interaction, (With<ExileBrowser>, With<Button>)>,
     text_input: crate::systems::input_guard::TextInputGuard,
     esc: Res<crate::systems::esc::EscFocus>,
@@ -1724,7 +1692,7 @@ pub fn exile_browser(
     // Two ways in: the `V` key, and clicking the shared exile pile (which
     // flips `state.open`). The pile is the discoverable one — a browser
     // reachable only by knowing a keybind may as well not exist.
-    let key_v = !text_input.typing() && keyboard.just_pressed(KeyCode::KeyV);
+    let key_v = !text_input.typing() && binds.just_pressed(&keyboard, crate::keybinds::Action::Exile);
     if key_v {
         state.open = !state.open;
         state.owner = None;
