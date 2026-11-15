@@ -1187,8 +1187,11 @@ Cross-references the detailed entries below where one exists.
   decks ran 0-67 %, so a random pod could seat a two-in-three winner against
   decks that almost never win. Your default deck is a random middle-tier one
   each launch (it was Sigarda, tier 1, every time). ✅ Imported decks are
-  saved and listed ("Your Decks", 2026-09-30). Remaining ⏳: the lobby's
-  bot seats still take stock decks unbalanced.
+  saved and listed ("Your Decks", 2026-09-30). ✅ The hosted lobby's
+  Commander bots (2026-11-15): a lobby used to seat the field's first four
+  decks in order, the same four every game; it now deals a power-balanced
+  random field when it opens (`pod::power::balanced_field`, middle tier
+  first, widening a tier at a time — the local pod's rule).
 - ✅ **Deck import says what's wrong, all of it** (2026-09-26,
   `deck_import.rs`) — a list that can't play opens a report of every
   problem (each unknown card with the names it probably meant, or each

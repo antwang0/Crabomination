@@ -44,9 +44,41 @@ pub fn tier_of_share(per_mille: u16) -> u8 {
     }
 }
 
+/// `seats` distinct target decks for a pod nobody chose decks for (a hosted
+/// lobby's bots), dealt off `seed`: at random from within one tier of
+/// `anchor` while the band holds enough, widening a tier at a time — the
+/// rule the client's local pod deals Random seats by. A hosted lobby used to
+/// seat the field's first decks in order, the same four every game, whatever
+/// their power.
+pub fn balanced_field(seats: usize, anchor: u8, seed: u64) -> Vec<super::PodDeck> {
+    use rand::SeedableRng;
+    use rand::seq::SliceRandom;
+    let field = super::target_decks();
+    let mut order: Vec<usize> = (0..field.len()).collect();
+    order.shuffle(&mut rand::rngs::StdRng::seed_from_u64(seed));
+    // A stable sort keeps the shuffle inside each band.
+    order.sort_by_key(|&i| tier(field[i].name).unwrap_or(UNRATED).abs_diff(anchor).saturating_sub(1));
+    order.into_iter().cycle().take(seats).map(|i| field[i]).collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A balanced field deals distinct decks within a tier of the anchor,
+    /// and a different field off a different seed.
+    #[test]
+    fn a_balanced_field_stays_near_its_anchor() {
+        let a = balanced_field(4, MIDDLE, 1);
+        let names: std::collections::HashSet<&str> = a.iter().map(|d| d.name).collect();
+        assert_eq!(names.len(), 4, "four distinct decks");
+        for d in &a {
+            let t = tier(d.name).unwrap_or(UNRATED);
+            assert!(t.abs_diff(MIDDLE) <= 1, "{} is tier {t}", d.name);
+        }
+        let b = balanced_field(4, MIDDLE, 2);
+        assert_ne!(a.iter().map(|d| d.name).collect::<Vec<_>>(), b.iter().map(|d| d.name).collect::<Vec<_>>());
+    }
 
     /// The table names only decks that exist, once each: a renamed or
     /// dropped deck would silently lose its tier. (A deck ADDED since the

@@ -167,6 +167,21 @@ pub fn build_state(format: LobbyFormat) -> GameState {
     }
 }
 
+/// A lobby's opening state and, for Commander, the field it was dealt from:
+/// four power-balanced stock decks rather than the field's first four.
+fn build_lobby_state(format: LobbyFormat) -> (GameState, Vec<crate::pod::PodDeck>) {
+    use rand::RngExt;
+    match format {
+        LobbyFormat::Commander => {
+            let mut rng = rand::rng();
+            let field = crate::pod::power::balanced_field(4, crate::pod::power::MIDDLE, rng.random());
+            let seats: Vec<crate::pod::SeatDeck<'_>> = field.iter().map(crate::pod::SeatDeck::from).collect();
+            (crate::demo::build_commander_pod_seeded(&seats, rng.random()), field)
+        }
+        other => (build_state(other), Vec::new()),
+    }
+}
+
 /// One seat in a lobby: a human connection (with its display name, captured
 /// when seated) or a bot.
 #[derive(Clone)]
@@ -201,6 +216,11 @@ struct Lobby {
     /// Pre-built game state; `capacity == state.players.len()`. Moved into
     /// the match when the lobby fills.
     state: GameState,
+    /// A Commander lobby's stock decks, one per seat — what a bot (or a
+    /// human who submitted no list) plays: a power-balanced field
+    /// (`pod::power::balanced_field`), dealt when the lobby opens. Empty in
+    /// the other formats.
+    field: Vec<crate::pod::PodDeck>,
 }
 
 impl Lobby {
@@ -263,11 +283,11 @@ impl Lobby {
         if !self.seats.iter().any(|s| matches!(s, Slot::Human { deck: Some(_), .. })) {
             return self.state;
         }
-        let stock = crate::pod::pod_field(self.capacity());
+        let stock = &self.field;
         let seats: Vec<crate::pod::SeatDeck<'_>> = self
             .seats
             .iter()
-            .zip(&stock)
+            .zip(stock)
             .map(|(slot, stock)| match slot {
                 Slot::Human { deck: Some(d), .. } => {
                     crate::pod::SeatDeck { commanders: &d.commanders, main: &d.main }
@@ -282,10 +302,10 @@ impl Lobby {
 
 /// Each seat's in-game name: a human's display name, and "Bot N" for a
 /// bot — with its deck in a Commander pod ("Bot 1: Sigarda (GW)", the local
-/// pod's labels), where a bot seat always plays the stock field's deck for
-/// that seat (`Lobby::take_state`, `demo::build_commander_state`).
+/// pod's labels), where a bot seat always plays the lobby's field deck for
+/// that seat (`Lobby::take_state`, `Lobby::field`).
 fn seat_names(lobby: &Lobby) -> Vec<String> {
-    let stock = (lobby.format == LobbyFormat::Commander).then(|| crate::pod::pod_field(lobby.capacity()));
+    let stock = (lobby.format == LobbyFormat::Commander).then_some(&lobby.field);
     let mut bots = 0;
     lobby
         .seats
@@ -459,12 +479,14 @@ impl LobbyManager {
             .unwrap_or_else(|| format!("Lobby {}", self.next_id));
         let id = self.next_id;
         self.next_id += 1;
+        let (state, field) = build_lobby_state(format);
         let lobby = Lobby {
             id,
             name,
             format,
             seats: vec![Slot::Human { conn, name: self.name_of(conn), deck: None }],
-            state: build_state(format),
+            state,
+            field,
         };
         self.lobbies.push(lobby);
         self.conn_lobby.insert(conn, id);
@@ -1318,14 +1340,18 @@ mod tests {
         m.handle(ConnId(1), ClientMsg::CreateLobby { name: "edh".into(), format: LobbyFormat::Commander });
         let start = m.handle(ConnId(1), ClientMsg::StartLobby).start.expect("host start");
         let names: Vec<&str> = start.state.players.iter().map(|p| p.name.as_str()).collect();
-        let stock = crate::pod::pod_field(4);
         assert_eq!(names[0], "Alice");
-        assert_eq!(names[1], format!("Bot 1: {}", stock[1].name));
-        assert_eq!(names[3], format!("Bot 3: {}", stock[3].name));
-        // The dealt deck is the one the name claims.
-        let dealt: Vec<&str> = start.state.players[2].command.iter().map(|c| c.definition.name).collect();
-        let named: Vec<&str> = stock[2].commanders.iter().map(|f| f().name).collect();
-        assert_eq!(dealt, named);
+        // Each bot is named for its deck ("Bot N: <deck>"), and the dealt
+        // commanders are that deck's — the field is power-balanced and
+        // random now, so the name is checked against what was dealt.
+        for (seat, bot) in [(1, 1), (2, 2), (3, 3)] {
+            let prefix = format!("Bot {bot}: ");
+            let deck_name = names[seat].strip_prefix(prefix.as_str()).expect("a bot names its deck");
+            let deck = crate::pod::target_decks().into_iter().find(|d| d.name == deck_name).expect("a stock deck");
+            let dealt: Vec<&str> = start.state.players[seat].command.iter().map(|c| c.definition.name).collect();
+            let named: Vec<&str> = deck.commanders.iter().map(|f| f().name).collect();
+            assert_eq!(dealt, named, "seat {seat}");
+        }
         assert_eq!(start.seat_labels, names);
     }
 
