@@ -9608,3 +9608,10 @@ the starvation blind spot outright. **SOS with mana passes the registered
 bar on four seeds (+0.81)**; FRA's best is +0.46, under it. Adoption (SOS
 `nets/deck-value-sos.json` ← `.ladder/deck7/v_sos_A3_l10_m1.json`; FRA
 optionally ← `v_fra_A3_l10_m1.json` at +0.46) is the user's call.
+
+**Adopted 2026-11-16 (the user's call: "swap both"):** `nets/deck-value-sos.json`
+← `v_sos_A3_l10_m1.json` (passed, +0.81) and `nets/deck-value-fra.json` ←
+`v_fra_A3_l10_m1.json` (+0.46, under the confirm bar, taken for the mana
+base). Every FRA / SOS sealed opponent and every SOS draft pile in the
+client builds under them; sealed ladder numbers before and after are on
+different decks.

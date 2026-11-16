@@ -737,8 +737,15 @@ pub fn sealed_deck_policy() -> &'static crate::deck_policy::DeckPolicy {
     })
 }
 
-/// The FRA same-pool deck value (step 5, arm A2, λ 100, seed 1 — the gated
-/// export): which of one pool's builds wins, learned from the race.
+/// The FRA same-pool deck value: which of one pool's builds wins, learned
+/// from the race. Since 2026-11-16 step 7's export (arm A3, λ 10, seed 1,
+/// `--mana`: trained on step 5 + 6's races with `deck_value::mana_feats`),
+/// swapped in at the user's call: against step 5's A2 λ 100 inside the
+/// production builder (`fra_card_eval --ab --trial value-vs-adopted`, 2,000
+/// pools x 8 pairs, `--pilot fra-fixes`) **50.81 / 50.37 / 50.25 / 50.42 %**
+/// at seeds 43 / 97 / 11 / 29 — under the registered confirm bar, taken for
+/// the mana base: a deck starved of its second colour now rates lower in
+/// 99.9 % of decks (step 5's value: 87 %).
 pub fn fra_deck_value() -> &'static crate::deck_value::DeckValue {
     static DV: std::sync::OnceLock<crate::deck_value::DeckValue> = std::sync::OnceLock::new();
     DV.get_or_init(|| {
@@ -747,8 +754,13 @@ pub fn fra_deck_value() -> &'static crate::deck_value::DeckValue {
     })
 }
 
-/// The SOS same-pool deck value (step 5, arm A3, λ 10, seed 1 — the gated
-/// export).
+/// The SOS same-pool deck value. Since 2026-11-16 step 7's export (A3, λ 10,
+/// seed 1, `--mana`; see [`fra_deck_value`]): against step 5's A3 λ 10 in the
+/// production builder (polish 3, `--pilot dflt`) **50.40 / 51.13 / 51.06 /
+/// 50.66 %** at seeds 43 / 97 / 11 / 29, passing the registered bar; the
+/// starved-second-colour deck rates lower in 99.9 % of decks (step 5's: 53 %).
+/// [`SOS_SEALED_POLISH`] and [`draft_deck_build`]'s reads were taken under
+/// step 5's value.
 pub fn sos_deck_value() -> &'static crate::deck_value::DeckValue {
     static DV: std::sync::OnceLock<crate::deck_value::DeckValue> = std::sync::OnceLock::new();
     DV.get_or_init(|| {
