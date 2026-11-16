@@ -9554,3 +9554,57 @@ Play Match — the Sealed menu's opponent already pays the same. Open: the
 pod's bot *drafters* still pick by the static `score_card_for_seat`; the
 Cube suggestion's short decks; the opponent-select tiles show the pile's
 pip colours, not the built deck's.
+
+## Step 7: the same-pool value retrained on step 5 + 6's races, with mana-base features (2026-11-16)
+
+Leads build-4 (mana-base features) and 6b (retrain on step 6's logs) as one
+run (`.ladder/deck7/`: `merge.py`, `train.sh`, `gate.sh`, pre-registered
+before any result was read).
+
+*Data:* step 5 gen 1 + step 6 gens 1-3 merged per set (only decks some
+match references; the same 8,000 FRA / 4,000 SOS pools in every run, so the
+pool split is consistent): FRA 240,140 matches / 228,655 decks, SOS 114,214 /
+107,890; step 6's matches are ~60 games each against step 5's ~17.
+
+*Features:* `deck_value::mana_feats` (5 numbers: mean and worst on-curve
+castability by hypergeometric sources per colour, starved share < 0.5,
+castability at 15 cards seen, dead coloured lands); `deck_value_train
+--mana` appends them to the 16 deck features; `DeckValue::mana` (serde
+default off, so every older export reads as before). Marginally the
+better-castability deck of a match *loses* (r −0.23 FRA / −0.33 SOS:
+low curves read low on curve and win) — the model separates it from the
+curve features.
+
+*Offline* (merged data's pool-level test split; the adopted values scored on
+it with `--eval-json`):
+
+| | FRA val / test NLL | SOS val / test NLL |
+|---|---|---|
+| adopted | 0.68656 / 0.68628 | 0.68292 / 0.68271 |
+| A3 λ10, no mana | 0.68607 / 0.68586 | 0.68218 / 0.68181 |
+| A3 λ10, mana | **0.68598 / 0.68561** | **0.68204 / 0.68169** |
+| A2 λ100, no mana / mana | 0.68621 / 0.68610 | 0.68220 / 0.68215 |
+
+*Starvation test* (the production deck with all but one second-colour basic
+moved to the main colour, rated ≥ the deck): adopted FRA 13 %, SOS 47 %;
+retrained without mana FRA 25-26 %, SOS 34-35 %; **with mana 0.0-0.1 %** in
+both sets (the offline bar was > 95 % negative — met).
+
+*Play gate* (`fra_card_eval --ab --trial value-vs-adopted`: production
+builder, same policy and candidates, SOS polish 3; 2,000 pools × 8 pairs,
+FRA fra-fixes / SOS dflt; bar pooled ≥ 50.5 with both seeds > 50, a pass
+confirmed at 11 / 29):
+
+| value | s43 | s97 | s11 | s29 | 4-seed mean |
+|---|---|---|---|---|---|
+| FRA, no mana | 50.45 | 50.35 | 50.40 | 50.34 | 50.39 (fails) |
+| FRA, mana | 50.81 | 50.37 | 50.25 | 50.42 | 50.46 (passed 43/97, **fails the confirm**: 50.34) |
+| SOS, no mana | 50.46 | 50.91 | 50.62 | 50.54 | 50.63 |
+| SOS, mana | 50.40 | 51.13 | 51.06 | 50.66 | **50.81 (passes and confirms)** |
+
+Every one of the 16 cells is above 50: retraining on step 6's clean labels is
+a small real gain everywhere; the mana features add ~+0.1-0.2 in play and fix
+the starvation blind spot outright. **SOS with mana passes the registered
+bar on four seeds (+0.81)**; FRA's best is +0.46, under it. Adoption (SOS
+`nets/deck-value-sos.json` ← `.ladder/deck7/v_sos_A3_l10_m1.json`; FRA
+optionally ← `v_fra_A3_l10_m1.json` at +0.46) is the user's call.

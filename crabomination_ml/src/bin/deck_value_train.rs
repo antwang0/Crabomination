@@ -39,7 +39,9 @@ use rand::rngs::StdRng;
 use rand::{RngExt, SeedableRng};
 
 const FEATS: usize = 59;
-const DECK_FEATS: usize = 16;
+/// `encode_deck`'s features; `--mana` appends `deck_value::MANA_FEATS`
+/// from `mana_feats.tsv` (`fra_card_eval --dump-cards` writes both).
+const BASE_DECK_FEATS: usize = 16;
 const RANK: usize = 16;
 const HID: usize = 32;
 
@@ -57,6 +59,8 @@ struct Args {
     /// Score an exported value on this data's val / test matches instead of
     /// training (step 5: the step-1 value on same-pool pairs).
     eval_json: Option<PathBuf>,
+    /// Read `mana_feats.tsv` into the deck features.
+    mana: bool,
 }
 
 fn parse_args() -> Args {
@@ -76,6 +80,7 @@ fn parse_args() -> Args {
         export: get("--export").map(PathBuf::from),
         eval_json,
         arm,
+        mana: a.iter().any(|x| x == "--mana"),
     }
 }
 
@@ -103,7 +108,8 @@ struct Data {
     matches: Vec<(u32, u32, f32, f32)>,
 }
 
-fn load(dir: &std::path::Path) -> Data {
+fn load(dir: &std::path::Path, mana: bool) -> Data {
+    let df = deck_feats(mana);
     let read = |f: &str| std::fs::read_to_string(dir.join(f)).unwrap_or_else(|e| panic!("{}: {e}", dir.join(f).display()));
     let mut index: HashMap<String, usize> = HashMap::new();
     let mut cards = Vec::new();
@@ -129,12 +135,15 @@ fn load(dir: &std::path::Path) -> Data {
             counts[d * cards.len() + index[name]] += 1.0;
         }
     }
-    let mut feats = vec![0f32; decks * DECK_FEATS];
-    for line in read("deck_feats.tsv").lines() {
-        let col: Vec<&str> = line.split('\t').collect();
-        let d: usize = col[0].parse().expect("deck id");
-        for (k, c) in col[1..].iter().enumerate() {
-            feats[d * DECK_FEATS + k] = c.parse().expect("deck feature");
+    let mut feats = vec![0f32; decks * df];
+    let files: &[(&str, usize)] = if mana { &[("deck_feats.tsv", 0), ("mana_feats.tsv", BASE_DECK_FEATS)] } else { &[("deck_feats.tsv", 0)] };
+    for &(file, at) in files {
+        for line in read(file).lines() {
+            let col: Vec<&str> = line.split('\t').collect();
+            let d: usize = col[0].parse().expect("deck id");
+            for (k, c) in col[1..].iter().enumerate() {
+                feats[d * df + at + k] = c.parse().expect("deck feature");
+            }
         }
     }
     let matches = read("games.tsv")
@@ -145,6 +154,10 @@ fn load(dir: &std::path::Path) -> Data {
         })
         .collect();
     Data { names, cards, counts, feats, decks, matches }
+}
+
+fn deck_feats(mana: bool) -> usize {
+    BASE_DECK_FEATS + if mana { crabomination::deck_value::MANA_FEATS } else { 0 }
 }
 
 /// One split's matches as tensors.
@@ -238,8 +251,8 @@ struct Head {
 }
 
 impl Head {
-    fn new(h: usize, rng: &mut StdRng, dev: &Device) -> CResult<Self> {
-        let ctx = h + DECK_FEATS;
+    fn new(h: usize, df: usize, rng: &mut StdRng, dev: &Device) -> CResult<Self> {
+        let ctx = h + df;
         Ok(Self {
             a1: Lin::new(h, HID, rng, dev)?,
             a2: Lin::new(HID, 1, rng, dev)?,
@@ -314,10 +327,11 @@ fn parity(path: &std::path::Path, dir: &std::path::Path, want: &[f32]) {
 fn main() -> CResult<()> {
     let args = parse_args();
     let dev = Device::Cpu;
-    let data = load(&args.data);
+    let data = load(&args.data, args.mana);
+    let df = deck_feats(args.mana);
     let c = data.cards.len();
     let counts = Tensor::from_vec(data.counts.clone(), (data.decks, c), &dev)?;
-    let feats = Tensor::from_vec(data.feats.clone(), (data.decks, DECK_FEATS), &dev)?;
+    let feats = Tensor::from_vec(data.feats.clone(), (data.decks, df), &dev)?;
     // With `deck_pool.tsv` (same-pool race pairs, step 5) the split is by
     // pool — one pool in ten test, one in ten val — and each split's
     // matches lie within its pools; otherwise step 1's deck split.
@@ -416,10 +430,10 @@ fn main() -> CResult<()> {
         }
     };
     let enc_trained = matches!(arm, "A2" | "A3");
-    let head = (head_dim > 0).then(|| Head::new(head_dim, &mut rng, &dev)).transpose()?;
+    let head = (head_dim > 0).then(|| Head::new(head_dim, df, &mut rng, &dev)).transpose()?;
     let scalar = Var::zeros((c, 1), DType::F32, &dev)?;
     let deck_mlp = (arm == "A0f")
-        .then(|| -> CResult<(Lin, Lin)> { Ok((Lin::new(DECK_FEATS, HID, &mut rng, &dev)?, Lin::new(HID, 1, &mut rng, &dev)?)) })
+        .then(|| -> CResult<(Lin, Lin)> { Ok((Lin::new(df, HID, &mut rng, &dev)?, Lin::new(HID, 1, &mut rng, &dev)?)) })
         .transpose()?;
 
     let value = |x: Option<&Tensor>| -> CResult<Tensor> {
@@ -516,9 +530,10 @@ fn main() -> CResult<()> {
         }
     }
     let line = format!(
-        "{{\"data\":\"{}\",\"arm\":\"{}\",\"lambda\":{},\"seed\":{},\"lr\":{},\"best_step\":{},\"train_nll\":{:.6},\"val_nll\":{:.6},\"test_nll\":{:.6},\"test_acc\":{:.4},\"secs\":{:.0}}}",
+        "{{\"data\":\"{}\",\"arm\":\"{}\",\"mana\":{},\"lambda\":{},\"seed\":{},\"lr\":{},\"best_step\":{},\"train_nll\":{:.6},\"val_nll\":{:.6},\"test_nll\":{:.6},\"test_acc\":{:.4},\"secs\":{:.0}}}",
         args.data.display(),
         arm,
+        args.mana,
         args.lambda,
         args.seed,
         args.lr,
@@ -530,7 +545,8 @@ fn main() -> CResult<()> {
         t0.elapsed().as_secs_f64()
     );
     println!("{line}");
-    if let (Some(path), Some((dv, want))) = (&args.export, &best_export) {
+    if let (Some(path), Some((dv, want))) = (&args.export, best_export.as_mut()) {
+        dv.mana = args.mana;
         dv.save(path).unwrap_or_else(|e| panic!("{e}"));
         parity(path, &args.data, want);
         eprintln!("exported {} to {} (engine parity checked on {} decks)", dv.arm, path.display(), want.len());

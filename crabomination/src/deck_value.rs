@@ -53,13 +53,17 @@ pub struct DeckValue {
     pub ctx: Option<[Layer; 4]>,
     /// `A0f`'s MLP over the deck features.
     pub deck_mlp: Option<[Layer; 2]>,
+    /// Whether the deck features carry the [`MANA_FEATS`] mana-base summary
+    /// ([`mana_feats`]) after `encode_deck`'s 16 (`deck_value_train --mana`).
+    #[serde(default)]
+    pub mana: bool,
     #[serde(skip)]
     index: HashMap<String, usize>,
 }
 
 impl DeckValue {
     pub fn new(arm: &str, cards: Vec<String>, a: Vec<f32>) -> Self {
-        let mut d = Self { arm: arm.to_string(), cards, a, x: Vec::new(), b: Vec::new(), ctx: None, deck_mlp: None, index: HashMap::new() };
+        let mut d = Self { arm: arm.to_string(), cards, a, x: Vec::new(), b: Vec::new(), ctx: None, deck_mlp: None, mana: false, index: HashMap::new() };
         d.reindex();
         d
     }
@@ -104,7 +108,11 @@ impl DeckValue {
         let mut f: f32 = counts.iter().map(|(&i, &n)| n * self.a[i]).sum();
         let need_feats = self.ctx.is_some() || self.deck_mlp.is_some();
         let feats = if need_feats {
-            crate::server::encode::encode_deck(deck, crate::server::net_eval::vocab()).1.to_vec()
+            let mut v = crate::server::encode::encode_deck(deck, crate::server::net_eval::vocab()).1.to_vec();
+            if self.mana {
+                v.extend_from_slice(&mana_feats(deck));
+            }
+            v
         } else {
             Vec::new()
         };
@@ -133,6 +141,116 @@ impl DeckValue {
     }
 }
 
+/// How many numbers [`mana_feats`] adds to a deck's features.
+pub const MANA_FEATS: usize = 5;
+
+/// `P(X >= k)` for `X ~ Hypergeometric(n_total, succ, draws)`.
+fn hyper_at_least(n_total: usize, succ: usize, draws: usize, k: usize) -> f64 {
+    if k == 0 {
+        return 1.0;
+    }
+    let draws = draws.min(n_total);
+    if succ < k || draws < k {
+        return 0.0;
+    }
+    let ln_choose = |n: usize, r: usize| -> f64 {
+        if r > n {
+            return f64::NEG_INFINITY;
+        }
+        (1..=r).map(|i| ((n - r + i) as f64).ln() - (i as f64).ln()).sum()
+    };
+    let total = ln_choose(n_total, draws);
+    let below: f64 = (0..k)
+        .filter(|&x| x <= draws && draws - x <= n_total - succ)
+        .map(|x| (ln_choose(succ, x) + ln_choose(n_total - succ, draws - x) - total).exp())
+        .sum();
+    (1.0 - below).clamp(0.0, 1.0)
+}
+
+/// The deck's mana base against its spells' colour demands — what the
+/// 16 `encode_deck` features cannot see (they count lands and pips, never
+/// which colours the lands make; ML_NOTES "the same-pool deck value cannot
+/// see the mana base"):
+///
+/// 0. mean on-curve castability: per spell, the hypergeometric chance that
+///    the `6 + max(mv, 1)` cards seen by its turn hold enough sources of
+///    each colour it needs, colours taken as independent;
+/// 1. the worst spell's on-curve castability;
+/// 2. the share of spells under 0.5 on curve (starved);
+/// 3. mean castability with 15 cards seen (late game);
+/// 4. the share of coloured lands that make no colour the spells need.
+///
+/// A land is a source of every colour it taps for
+/// (`recommend::land_produced_colors`). A coloured or Phyrexian pip needs
+/// its colour (Phyrexian life payment ignored); a two-colour hybrid pip is
+/// read as whichever colour the deck has more sources of; mono- and
+/// colourless-hybrid pips can be paid without the colour and need nothing.
+pub fn mana_feats(deck: &[CardFactory]) -> [f32; MANA_FEATS] {
+    use crate::mana::{Color, ManaSymbol as S};
+    let mut sources = [0usize; 5];
+    let mut land_colors = Vec::new();
+    for f in deck {
+        let def = crate::cube::card_def(*f);
+        if def.is_land() {
+            let made = crate::recommend::land_produced_colors(def);
+            for c in Color::ALL {
+                if made.contains(c) {
+                    sources[c as usize] += 1;
+                }
+            }
+            land_colors.push(made);
+        }
+    }
+    let n = deck.len().max(1);
+    let mut needed = crate::mana::ColorSet::empty();
+    let (mut on_curve, mut late, mut worst, mut starved, mut spells) = (0f64, 0f64, 1f64, 0usize, 0usize);
+    for f in deck {
+        let def = crate::cube::card_def(*f);
+        if def.is_land() {
+            continue;
+        }
+        let mut need = [0usize; 5];
+        for sym in &def.cost.symbols {
+            match sym {
+                S::Colored(c) | S::Phyrexian(c) => need[*c as usize] += 1,
+                S::Hybrid(a, b) | S::PhyrexianHybrid(a, b) => {
+                    let c = if sources[*b as usize] > sources[*a as usize] { *b } else { *a };
+                    need[c as usize] += 1;
+                }
+                _ => {}
+            }
+        }
+        let p = |draws: usize| -> f64 {
+            Color::ALL
+                .into_iter()
+                .filter(|&c| need[c as usize] > 0)
+                .map(|c| hyper_at_least(n, sources[c as usize], draws, need[c as usize]))
+                .product()
+        };
+        for c in Color::ALL {
+            if need[c as usize] > 0 {
+                needed.insert(c);
+            }
+        }
+        let now = p(6 + def.cost.cmc().max(1) as usize);
+        on_curve += now;
+        late += p(15);
+        worst = worst.min(now);
+        starved += usize::from(now < 0.5);
+        spells += 1;
+    }
+    let colored: Vec<_> = land_colors.iter().filter(|m| !m.is_empty()).collect();
+    let dead = colored.iter().filter(|m| !Color::ALL.into_iter().any(|c| m.contains(c) && needed.contains(c))).count();
+    let k = spells.max(1) as f64;
+    [
+        (on_curve / k) as f32,
+        if spells == 0 { 1.0 } else { worst as f32 },
+        (starved as f64 / k) as f32,
+        (late / k) as f32,
+        dead as f32 / colored.len().max(1) as f32,
+    ]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -153,5 +271,25 @@ mod tests {
         let back = DeckValue::load(&path).expect("load");
         std::fs::remove_file(&path).ok();
         assert!((back.value(&[bolt, shock]) - 0.25).abs() < 1e-6);
+    }
+
+    /// The mana summary sees sources: a red deck on Islands is starved and
+    /// its lands dead; on Mountains it casts. And the hypergeometric is
+    /// the textbook one (17 of 40, 7 seen, at least one: 1 - C(23,7)/C(40,7)).
+    #[test]
+    fn mana_feats_see_which_colours_the_lands_make() {
+        let bolt: CardFactory = crate::catalog::lightning_bolt;
+        let island: CardFactory = crate::catalog::island;
+        let mountain: CardFactory = crate::catalog::mountain;
+        let mut good = vec![bolt; 23];
+        good.extend(std::iter::repeat_n(mountain, 17));
+        let mut bad = vec![bolt; 23];
+        bad.extend(std::iter::repeat_n(island, 17));
+        let (g, b) = (mana_feats(&good), mana_feats(&bad));
+        assert!(g[0] > 0.95 && b[0] == 0.0, "{g:?} {b:?}");
+        assert_eq!((g[2], b[2]), (0.0, 1.0));
+        assert_eq!((g[4], b[4]), (0.0, 1.0));
+        let want = 1.0 - (0..7).map(|i| (23 - i) as f64 / (40 - i) as f64).product::<f64>();
+        assert!((hyper_at_least(40, 17, 7, 1) - want).abs() < 1e-9);
     }
 }

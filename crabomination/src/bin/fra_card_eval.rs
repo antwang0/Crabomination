@@ -222,12 +222,26 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     // `--trial policy-castable`: the splash rule's own gate — the policy's
     // greedy build under it against the same policy's build without it.
     let castable_ab = arg("--trial").as_deref() == Some("policy-castable");
+    // `--trial value-vs-adopted` (`CRAB_DECK_VALUE=NEW.json`): the production
+    // sealed builder (`sealed_opponent_build`: compiled policy and value, SOS
+    // polish `SOS_SEALED_POLISH`) against the same builder with the new
+    // value in the compiled one's place. Also prints the starvation test
+    // for both values on the production decks: all but one of the second
+    // colour's basics moved to the main colour — a value that sees the mana
+    // base rates that lower.
+    let value_ab: Option<crabomination::deck_value::DeckValue> = (arg("--trial").as_deref() == Some("value-vs-adopted")).then(|| {
+        let path = std::env::var("CRAB_DECK_VALUE").expect("--trial value-vs-adopted needs CRAB_DECK_VALUE");
+        let dv = crabomination::deck_value::DeckValue::load(std::path::Path::new(&path)).unwrap_or_else(|e| panic!("{e}"));
+        eprintln!("new deck value {} (mana {}) from {path}", dv.arm, dv.mana);
+        dv
+    });
+    let starve = std::sync::Mutex::new([0usize; 3]);
     let policy_value: Option<crabomination::deck_value::DeckValue> = policy.as_ref().filter(|p| p.1).map(|_| {
         let path = std::env::var("CRAB_DECK_VALUE").expect("--trial policy-value needs CRAB_DECK_VALUE");
         crabomination::deck_value::DeckValue::load(std::path::Path::new(&path)).unwrap_or_else(|e| panic!("{e}"))
     });
     let trial: Option<(bool, bool)> =
-        arg("--trial").filter(|t| !t.starts_with("deckvalue") && !t.starts_with("policy")).map(|t| match t.as_str() {
+        arg("--trial").filter(|t| !t.starts_with("deckvalue") && !t.starts_with("policy") && t != "value-vs-adopted").map(|t| match t.as_str() {
         "polish" => (true, false),
         "floor" => (false, true),
         "both" => (true, true),
@@ -278,7 +292,25 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                         crabomination::selfplay::heuristic_sealed_build_rated(pool, salt ^ 1)
                     }
                 };
-                let (old, new) = if let Some((p, _)) = &policy
+                let (old, new) = if let Some(nv) = &value_ab {
+                    use crabomination::selfplay as sp;
+                    let sos_pool = crabomination::card_ratings::sos_pool(&pool);
+                    let (adopted_v, polish) = if sos_pool { (sp::sos_deck_value(), sp::SOS_SEALED_POLISH) } else { (sp::fra_deck_value(), 0) };
+                    let opts = crabomination::deck_policy::ValuedOpts { polish, ..Default::default() };
+                    let build = |v: &crabomination::deck_value::DeckValue| {
+                        sp::sealed_deck_policy().build_valued_with(&pool, v, 16, &mut StdRng::seed_from_u64(salt ^ 3), &opts)
+                    };
+                    let old = build(adopted_v);
+                    debug_assert_eq!(old, sp::sealed_opponent_build(&pool, 16, salt, ColorSet::empty()));
+                    let new = build(nv);
+                    if let Some(starved) = starve_second_colour(&new) {
+                        let mut z = starve.lock().unwrap();
+                        z[0] += 1;
+                        z[1] += usize::from(adopted_v.value(&starved) >= adopted_v.value(&new));
+                        z[2] += usize::from(nv.value(&starved) >= nv.value(&new));
+                    }
+                    (old, new)
+                } else if let Some((p, _)) = &policy
                     && let Some(v) = &variant
                 {
                     let value = policy_value.as_ref().expect("policy-value+ loads CRAB_DECK_VALUE");
@@ -383,6 +415,15 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
             1.96 * (dv / n).sqrt(),
         );
     }
+    let z = starve.into_inner().unwrap();
+    if value_ab.is_some() {
+        println!(
+            "starvation test on {} decks: starved rated >= built by the adopted value {:.1}%, by the new value {:.1}%",
+            z[0],
+            100.0 * z[1] as f64 / z[0].max(1) as f64,
+            100.0 * z[2] as f64 / z[0].max(1) as f64
+        );
+    }
     let identical = rows.iter().filter(|r| r.2).count();
     let shares: Vec<f64> = rows
         .iter()
@@ -396,7 +437,9 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     let (wa, wb): (u32, u32) = rows.iter().fold((0, 0), |a, r| (a.0 + r.0, a.1 + r.1));
     println!(
         "{}: {mean:.2}% [{:.2}, {:.2}] pool-level 95% (n={} pools, {identical} identical decks); games {wa}-{wb} ({:.2}%)",
-        if castable_ab {
+        if value_ab.is_some() {
+            "new value vs adopted value"
+        } else if castable_ab {
             "castable vs unchecked"
         } else if variant.is_some() {
             "variant vs adopted builder"
@@ -416,6 +459,36 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
         shares.len(),
         100.0 * wa as f64 / (wa + wb) as f64
     );
+}
+
+/// `deck` with all but one of its second colour's basics turned into basics
+/// of its main colour (most basics), or `None` with fewer than two of the
+/// second colour.
+fn starve_second_colour(deck: &[Factory]) -> Option<Vec<Factory>> {
+    use crabomination::draft::basic_land_factory;
+    let name = |f: Factory| crabomination::cube::card_def(f).name;
+    let count = |c: Color| deck.iter().filter(|f| name(**f) == name(basic_land_factory(c))).count();
+    let mut by: Vec<Color> = Color::ALL.into_iter().filter(|&c| count(c) > 0).collect();
+    by.sort_by_key(|&c| std::cmp::Reverse(count(c)));
+    let (&main, &second) = (by.first()?, by.get(1)?);
+    if count(second) < 2 {
+        return None;
+    }
+    let mut keep = 1;
+    Some(
+        deck.iter()
+            .map(|&f| {
+                if name(f) == name(basic_land_factory(second)) {
+                    if keep > 0 {
+                        keep -= 1;
+                        return f;
+                    }
+                    return basic_land_factory(main);
+                }
+                f
+            })
+            .collect(),
+    )
 }
 
 /// One seeded 8-seat booster draft of `draft::bot_pick` drafters: every
@@ -1235,6 +1308,7 @@ fn dump_cards(dir: &std::path::Path) {
     let mut names: Vec<String> = Vec::new();
     let mut seen = std::collections::HashSet::new();
     let mut decks = String::new();
+    let mut mana = String::new();
     for line in text.lines() {
         let mut col = line.split('\t');
         let id = col.next().expect("deck id");
@@ -1252,6 +1326,11 @@ fn dump_cards(dir: &std::path::Path) {
             decks.push_str(&format!("\t{v}"));
         }
         decks.push('\n');
+        mana.push_str(id);
+        for v in crabomination::deck_value::mana_feats(&deck) {
+            mana.push_str(&format!("\t{v}"));
+        }
+        mana.push('\n');
     }
     let mut cards = String::new();
     for name in &names {
@@ -1264,6 +1343,7 @@ fn dump_cards(dir: &std::path::Path) {
     }
     std::fs::write(dir.join("card_feats.tsv"), cards).expect("write card_feats.tsv");
     std::fs::write(dir.join("deck_feats.tsv"), decks).expect("write deck_feats.tsv");
+    std::fs::write(dir.join("mana_feats.tsv"), mana).expect("write mana_feats.tsv");
     eprintln!("{} cards, {} decks -> {}", names.len(), text.lines().count(), dir.display());
 }
 
