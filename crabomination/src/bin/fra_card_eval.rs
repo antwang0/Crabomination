@@ -689,6 +689,13 @@ fn build_by_play(pool: &[Factory], candidates: usize, bp: &ByPlay) -> Vec<Factor
             cands.push((name, rated_sealed_build_in_colors(pool, candidates, 0x5EA1, set)));
         }
     }
+    // The sealed opponents' builder (learned policy + same-pool value), and
+    // any `--lists A.txt,B.txt` the player built, race beside the rated ones.
+    cands.push(("learned builder".to_string(), crabomination::selfplay::sealed_opponent_build(pool, 16, 0x5EA1, ColorSet::empty())));
+    for l in arg("--lists").map(|s| s.split(',').map(str::to_string).collect::<Vec<_>>()).unwrap_or_default() {
+        let stem = std::path::Path::new(&l).file_stem().unwrap().to_string_lossy().to_string();
+        cands.push((format!("list {stem}"), read_list(&l).0));
+    }
     let key = |d: &[Factory]| {
         let mut k: Vec<&'static str> = d.iter().map(|f| crabomination::cube::card_brief(*f).def.name).collect();
         k.sort_unstable();
