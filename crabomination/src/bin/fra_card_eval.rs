@@ -711,7 +711,8 @@ fn build_by_play(pool: &[Factory], candidates: usize, bp: &ByPlay) -> Vec<Factor
         fresh
     });
     let lists: Vec<Vec<Factory>> = cands.iter().map(|(_, d)| d.clone()).collect();
-    let rows = field_rows(&lists, bp.pilot, bp.pilot, bp.field, bp.pairs, bp.seed, bp.threads);
+    let labelled = field_rows_labelled(&lists, bp.pilot, bp.pilot, bp.field, bp.pairs, bp.seed, bp.threads);
+    let rows: Vec<Vec<(u32, u32)>> = labelled.iter().map(|r| r.1.clone()).collect();
     let mut scored: Vec<(f64, f64, usize)> =
         (0..cands.len()).map(|d| { let (m, h) = field_share(&rows, d); (m, h, d) }).collect();
     scored.sort_by(|a, b| b.0.total_cmp(&a.0));
@@ -721,6 +722,27 @@ fn build_by_play(pool: &[Factory], candidates: usize, bp: &ByPlay) -> Vec<Factor
     );
     for &(m, h, d) in &scored {
         println!("  {m:6.2} ±{h:4.2}  {}", cands[d].0);
+    }
+    // Each build against each opponent colour pair: a build whose edge lives
+    // in one corner of the field shows it here.
+    let mut labels: Vec<String> = labelled.iter().map(|r| r.0.clone()).collect();
+    labels.sort();
+    labels.dedup();
+    labels.sort_by_key(|l| std::cmp::Reverse(labelled.iter().filter(|r| &r.0 == l).count()));
+    println!("\n  by opponent pair (share of the field):");
+    print!("  {:24}", "");
+    for l in &labels {
+        let n = labelled.iter().filter(|r| &r.0 == l).count();
+        print!(" {:>5} {:>2.0}%", l, 100.0 * n as f64 / labelled.len() as f64);
+    }
+    println!();
+    for &(_, _, d) in scored.iter().take(6) {
+        print!("  {:24}", cands[d].0);
+        for l in &labels {
+            let (w, n) = labelled.iter().filter(|r| &r.0 == l).fold((0u32, 0u32), |a, r| (a.0 + r.1[d].0, a.1 + r.1[d].0 + r.1[d].1));
+            print!(" {:>9.1}", 100.0 * w as f64 / n.max(1) as f64);
+        }
+        println!();
     }
     println!();
     cands.swap_remove(scored[0].2).1
@@ -1092,9 +1114,118 @@ fn field_rows(
     seed: u64,
     threads: usize,
 ) -> Vec<Vec<(u32, u32)>> {
+    field_rows_labelled(lists, pilot, field_pilot, field, pairs, seed, threads).into_iter().map(|r| r.1).collect()
+}
+
+/// The ten two-colour pairs, WUBRG order (`"WU"`, `"WB"`, ...).
+fn color_pairs() -> Vec<(String, ColorSet)> {
+    let wubrg = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
+    let mut out = Vec::new();
+    for i in 0..5 {
+        for j in i + 1..5 {
+            let mut set = ColorSet::empty();
+            set.insert(wubrg[i]);
+            set.insert(wubrg[j]);
+            out.push((format!("{}{}", wubrg[i].short_name(), wubrg[j].short_name()), set));
+        }
+    }
+    out
+}
+
+/// `--field-mix`: how the field's opponents choose colours. Unset: every
+/// opponent builds its pool's best deck (`rated_sealed_build`) — which on
+/// FRA puts white in 76 % of decks against 38 % in real Sealed (17lands,
+/// ML_NOTES "the recommender's field is white-heavy"). `uniform`: each
+/// opponent draws one of the ten pairs evenly and builds its best deck in
+/// it. A path to a 17lands `color_ratings/data` JSON (`.ladder/l17/
+/// color_Sealed.json`): pairs drawn by their share of real two-colour decks.
+/// Weights per pair, in `color_pairs` order.
+fn field_mix() -> Option<&'static [f64]> {
+    static MIX: std::sync::OnceLock<Option<Vec<f64>>> = std::sync::OnceLock::new();
+    MIX.get_or_init(|| {
+        let spec = arg("--field-mix")?;
+        let pairs = color_pairs();
+        if spec == "uniform" {
+            return Some(vec![1.0; pairs.len()]);
+        }
+        let text = std::fs::read_to_string(&spec).unwrap_or_else(|e| panic!("--field-mix {spec}: {e}"));
+        let rows: Vec<serde_json::Value> = serde_json::from_str(&text).expect("--field-mix: a 17lands color_ratings JSON");
+        let w: Vec<f64> = pairs
+            .iter()
+            .map(|(name, _)| {
+                rows.iter()
+                    .filter(|r| r["is_summary"] == false)
+                    .find(|r| {
+                        let mut a: Vec<char> = r["short_name"].as_str().unwrap_or("").chars().collect();
+                        let mut b: Vec<char> = name.chars().collect();
+                        a.sort_unstable();
+                        b.sort_unstable();
+                        a == b
+                    })
+                    .and_then(|r| r["games"].as_f64())
+                    .unwrap_or_else(|| panic!("--field-mix {spec}: no {name} row"))
+            })
+            .collect();
+        let total: f64 = w.iter().sum();
+        eprintln!(
+            "field mix from {spec}: {}",
+            pairs.iter().zip(&w).map(|((n, _), x)| format!("{n} {:.1}%", 100.0 * x / total)).collect::<Vec<_>>().join(", ")
+        );
+        Some(w)
+    })
+    .as_deref()
+}
+
+/// Field opponent `j` of `seed`: its main colour pair (the two colours with
+/// the most pips) and its deck, under `--field-mix`.
+fn field_opponent(packs: &crabomination::fra_mode::FraPacks, seed: u64, j: usize) -> (String, Vec<Factory>) {
+    let salt = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (j as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93);
+    let mut rng = StdRng::seed_from_u64(salt);
+    let pool: Vec<Factory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
+    let mut opp = Vec::new();
+    if let Some(w) = field_mix() {
+        let mut pick = StdRng::seed_from_u64(salt ^ 0xC010_0B5E).random_range(0.0..w.iter().sum::<f64>());
+        let pairs = color_pairs();
+        let k = w.iter().position(|&x| {
+            pick -= x;
+            pick < 0.0
+        });
+        let set = pairs[k.unwrap_or(pairs.len() - 1)].1;
+        opp = crabomination::selfplay::rated_sealed_build_in_colors(&pool, 16, salt ^ 1, set);
+    }
+    if opp.len() < 40 {
+        opp = crabomination::selfplay::rated_sealed_build(&pool, 16, salt ^ 1);
+    }
+    (main_pair(&opp), opp)
+}
+
+/// A deck's two colours with the most pips, WUBRG order (`"W"` for a mono deck).
+fn main_pair(deck: &[Factory]) -> String {
+    let mut pips = [0usize; 5];
+    for f in deck {
+        for c in crabomination::cube::card_def(*f).cost.colored_symbols() {
+            pips[c as usize] += 1;
+        }
+    }
+    let mut order: Vec<usize> = (0..5).filter(|&i| pips[i] > 0).collect();
+    order.sort_by_key(|&i| std::cmp::Reverse(pips[i]));
+    order.truncate(2);
+    order.sort_unstable();
+    order.iter().map(|&i| "WUBRG".as_bytes()[i] as char).collect()
+}
+
+/// [`field_rows`] with each opponent's main pair beside its row.
+fn field_rows_labelled(
+    lists: &[Vec<Factory>],
+    pilot: Pilot,
+    field_pilot: Pilot,
+    field: usize,
+    pairs: usize,
+    seed: u64,
+    threads: usize,
+) -> Vec<(String, Vec<(u32, u32)>)> {
     let packs = crabomination::fra_mode::FraPacks::get();
     let next = AtomicUsize::new(0);
-    // Per opponent: (wins, losses) for every list, in `paths` order.
     let rows = std::sync::Mutex::new(Vec::with_capacity(field));
     let start = std::time::Instant::now();
     std::thread::scope(|s| {
@@ -1105,9 +1236,7 @@ fn field_rows(
                     break;
                 }
                 let salt = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (j as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93);
-                let mut rng = StdRng::seed_from_u64(salt);
-                let pool: Vec<Factory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
-                let opp = crabomination::selfplay::rated_sealed_build(&pool, 16, salt ^ 1);
+                let (label, opp) = field_opponent(packs, seed, j);
                 let row: Vec<(u32, u32)> = lists
                     .iter()
                     .map(|deck| {
@@ -1115,14 +1244,78 @@ fn field_rows(
                         (t.wins_a, t.wins_b)
                     })
                     .collect();
-                let n = done_count(&rows, row);
+                let n = done_count(&rows, (j, label, row));
                 if n % 50 == 0 {
                     eprintln!("{n}/{field} opponents, {:.0}s", start.elapsed().as_secs_f64());
                 }
             });
         }
     });
-    rows.into_inner().unwrap()
+    let mut rows = rows.into_inner().unwrap();
+    rows.sort_by_key(|r| r.0);
+    rows.into_iter().map(|(_, l, r)| (l, r)).collect()
+}
+
+/// `--pair-strength`: how strong each colour pair is in the sim. Per seeded
+/// FRA pool, the best rated deck in each of the ten pairs; all ten play the
+/// same opponent (field opponent `i` of `--field-mix`, default the
+/// builder's own pick), `pairs` seat-swapped pairs each. Prints each pair's
+/// win rate beside 17lands' real Sealed one (`.ladder/l17/color_Sealed.json`,
+/// when present), for the colour-bias question (ML_NOTES "the recommender's
+/// field is white-heavy").
+fn pair_strength(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: usize) {
+    let packs = crabomination::fra_mode::FraPacks::get();
+    let cps = color_pairs();
+    let next = AtomicUsize::new(0);
+    let rows = std::sync::Mutex::new(Vec::with_capacity(pools));
+    let start = std::time::Instant::now();
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            s.spawn(|| loop {
+                let i = next.fetch_add(1, Ordering::Relaxed);
+                if i >= pools {
+                    break;
+                }
+                let salt = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (i as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93) ^ 0x9A1E;
+                let mut rng = StdRng::seed_from_u64(salt);
+                let pool: Vec<Factory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
+                let (_, opp) = field_opponent(packs, seed ^ 0x0FF0, i);
+                let row: Vec<Option<(u32, u32)>> = cps
+                    .iter()
+                    .map(|(_, set)| {
+                        let deck = crabomination::selfplay::rated_sealed_build_in_colors(&pool, 16, salt ^ 1, *set);
+                        (deck.len() == 40).then(|| {
+                            let t = simulate_match_pairs_piloted(&deck, &opp, pairs, [pilot, pilot], 50_000, salt ^ 2);
+                            (t.wins_a, t.wins_b)
+                        })
+                    })
+                    .collect();
+                let n = done_count(&rows, row);
+                if n % 50 == 0 {
+                    eprintln!("{n}/{pools} pools, {:.0}s", start.elapsed().as_secs_f64());
+                }
+            });
+        }
+    });
+    let rows = rows.into_inner().unwrap();
+    let real: Option<Vec<serde_json::Value>> =
+        std::fs::read_to_string(".ladder/l17/color_Sealed.json").ok().and_then(|t| serde_json::from_str(&t).ok());
+    println!("{:4} {:>7} {:>7} {:>9} {:>9}", "pair", "sim WR", "±", "17l WR", "17l share");
+    for (k, (name, _)) in cps.iter().enumerate() {
+        let shares: Vec<f64> = rows.iter().filter_map(|r| r[k].and_then(win_share)).collect();
+        let (m, h) = mean_ci(&shares);
+        let l17 = real.as_ref().and_then(|rs| {
+            rs.iter().find(|r| {
+                let mut a: Vec<char> = r["short_name"].as_str().unwrap_or("").chars().collect();
+                let mut b: Vec<char> = name.chars().collect();
+                a.sort_unstable();
+                b.sort_unstable();
+                r["is_summary"] == false && a == b
+            })
+        });
+        let (wr, games) = l17.map_or((f64::NAN, 0.0), |r| (100.0 * r["wins"].as_f64().unwrap_or(0.0) / r["games"].as_f64().unwrap_or(1.0), r["games"].as_f64().unwrap_or(0.0)));
+        println!("{name:4} {m:7.2} {h:7.2} {wr:9.1} {games:9.0}");
+    }
 }
 
 /// `--audit-builder`: per random FRA pool, the builder's pick against its
@@ -1365,6 +1558,10 @@ fn main() {
             threads,
         });
         build_pool(&path, num("--candidates", 64), arg("--colors").map_or(ColorSet::empty(), |c| parse_colors(&c)), by_play);
+        return;
+    }
+    if std::env::args().any(|a| a == "--pair-strength") {
+        pair_strength(pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes")), num("--pools", 500), num("--pairs", 4), num("--seed", 43) as u64, threads);
         return;
     }
     if std::env::args().any(|a| a == "--gauntlet") {

@@ -5518,6 +5518,9 @@ impl GameState {
             if !pl.milled_ids_this_turn.is_empty() {
                 pl.milled_ids_this_turn.clear();
             }
+            if pl.surveiled_this_turn != 0 {
+                pl.surveiled_this_turn = 0;
+            }
             pl.descended_this_turn = false;
             pl.descend_count_this_turn = 0;
             if !pl.discarded_this_turn.is_empty() {

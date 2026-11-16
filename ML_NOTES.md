@@ -9615,3 +9615,60 @@ optionally ← `v_fra_A3_l10_m1.json` at +0.46) is the user's call.
 base). Every FRA / SOS sealed opponent and every SOS draft pile in the
 client builds under them; sealed ladder numbers before and after are on
 different decks.
+
+## The recommender's field is white-heavy, and the sim under-rates blue (2026-11-16)
+
+Found by the user's doubt ("it seems wrong that we are main decking
+Flourishing Grapple", a {G} fight that targets only red or white).
+
+*The field.* `fra_card_eval --build` raced every list against 1,000
+opponents, each its pool's best rated build: white in **76 %** of decks
+(W/G 33 %, W/B 18 %), red or white creatures in 95.5 % of opponents. The
+learned builder is the same (white 76 %). 17lands' FRA Sealed colour table
+(`.ladder/l17/color_Sealed.json`, 148,690 games; Premier Draft agrees on
+1.8 M): white in **38 %** of two-colour decks at an average 57.1 % win rate,
+blue the most played (45 %) and best (58.0 %), U/B 15.0 % / W/U 14.2 % / R/G
+13.3 % the top pairs, three-colour decks 37 % of all.
+
+*`--field-mix uniform|PATH`* (new; `field_opponent`): each opponent draws a
+pair (evenly, or by a 17lands colour table's two-colour games) and builds its
+best rated deck in it; `--build` also prints each build against each opponent
+pair. On the user's pool under the 17lands Sealed mix the Grapple build (the
+learned builder's pick) and the user's own W/G list tie, 64.09 vs 64.00: the
+Grapple build gains on W/G (+3.2) and W/B (+3.4) and gives it back on U/G
+(−2.8), U/R (−1.9). (A pool forced into a pair builds weaker than a player who
+chose that pair for their pool, so absolute shares on a stratified field read
+high; compare builds within it.)
+
+*Pair strength in the sim* (`--pair-strength`, new: per pool the best deck in
+each pair, all ten against one uniform-mix opponent, 1,000 pools x 4 pairs,
+fra-fixes pilot, `.ladder/l17/pair_strength.txt`):
+
+| pair | WU | WG | WB | WR | BG | UG | RG | BR | UB | UR |
+|---|---|---|---|---|---|---|---|---|---|---|
+| sim | 55.6 | 55.6 | 54.2 | 52.9 | 50.4 | 47.2 | 46.7 | 46.2 | **45.3** | **43.8** |
+| 17lands Sealed | 58.9 | 55.5 | 55.8 | 57.2 | 57.9 | 56.4 | 55.4 | 55.6 | **58.3** | 57.0 |
+
+A 12-point spread in the sim against 3.5 in play, blue's pairs at the bottom.
+Per card, against Draftsim (17lands publishes a card's win rate only above 500
+games — one FRA card qualifies), the colour *means* barely differ (white
++0.53 ±0.89, blue −0.24 ±0.59 beyond the Draftsim fit); the skew is a handful
+of white cards rated far above humans (Ghalta the Immovable +7.1 at Draftsim
+2.0, Blossom-Blessed Angel, Generous Revival, Thalia the Survivor) and blue's
+reactive cards far below (Countersculpt, Precise Redaction, Unsummon, Icy
+Reception, Cruel Calculations, Arni).
+
+*Implementation audit of those 16 against Scryfall oracle text*
+(`.ladder/l17/outlier_oracle.md`): 15 faithful. **Cruel Calculations was
+weaker than printed** — its X counted milled cards only, never surveiled
+ones (CR 701.42a puts those into the graveyard from the library too), and on
+FRA surveil is how cards leave a library. Fixed with a per-turn
+`Player::surveiled_this_turn` (the strict-mill record is untouched; other
+readers mean CR 701.13 mill); test `cruel_calculations_counts_surveiled_cards`.
+The rest of blue's deficit is bot policy, not cards: counters fire only at a
+threat score of 10 (5 with six cards in hand), nothing holds mana up on the
+opponent's turn (counter_reserve was measured and rejected in round 84), and
+bounce / until-end-of-turn effects score at the baseline outside the policy
+path, so Unsummon, Icy Reception's −5/−0 and Yuriko's first mode are rarely
+chosen. A search-pilot pair-strength read (does search close the blue gap?)
+is running.

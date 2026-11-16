@@ -632,6 +632,34 @@ fn cruel_calculations_draws_per_milled_card() {
     assert_eq!(g.players[0].hand.len(), hand - 1 + 3);
 }
 
+/// CR 701.42a — a surveiled card is put into the graveyard from the library,
+/// so Cruel Calculations counts it. Bug fix (2026-11-16): only milled cards
+/// counted, and on FRA, where surveil is how cards leave a library, the card
+/// drew nothing.
+#[test]
+fn cruel_calculations_counts_surveiled_cards() {
+    use crabomination::effect::{Effect, PlayerRef, Value};
+    use crabomination::game::effects::EffectContext;
+    let mut g = main_phase(2);
+    let src = g.add_card_to_battlefield(0, catalog::grim_bauble());
+    g.players[0].library.clear();
+    let a = g.add_card_to_library(0, catalog::forest());
+    let b = g.add_card_to_library(0, catalog::forest());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::ScryOrder { kept_top: vec![], bottom: vec![a, b] }]));
+    let ctx = EffectContext::for_ability(src, 0, None);
+    g.resolve_effect(&Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) }, &ctx).unwrap();
+    let cc = g.add_card_to_hand(0, catalog::cruel_calculations());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    assert_eq!(g.players[0].graveyard.len(), 2, "both surveiled away");
+    cast_at(&mut g, cc, Target::Player(0));
+    assert_eq!(g.players[0].hand.len(), hand - 1 + 2);
+}
+
 /// Entish Restoration fetches three with a big creature, two without.
 #[test]
 fn entish_restoration_scales_with_a_four_power_creature() {

@@ -31690,6 +31690,7 @@ impl GameState {
                     // these; it is not a mill (CR 701.13).
                     out.push(GameEvent::CardPutIntoGraveyard { player, card_id: cid, is_land });
                     out.push(GameEvent::CardSurveiledIntoGraveyard { player, card_id: cid });
+                    self.players[player].surveiled_this_turn += 1;
                     if eye && let Some(card) = self.players[player].graveyard.iter_mut().find(|c| c.id == cid) {
                         card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player,

@@ -576,6 +576,13 @@ pub struct PlayerData {
     /// Backs `PutIntoGraveyardFromLibraryThisTurn`.
     #[serde(default)]
     pub milled_ids_this_turn: crate::game::types::IdSet<CardId>,
+    /// Cards surveiled into this graveyard this turn (CR 701.42a: put there
+    /// from the library, not milled). With `milled_ids_this_turn` it backs
+    /// `Value::CardsPutIntoGraveyardFromLibraryThisTurn` (Cruel Calculations),
+    /// which until 2026-11-16 counted the milled ones only — on FRA, where
+    /// surveil is how cards leave the library, the card drew nothing.
+    #[serde(default)]
+    pub surveiled_this_turn: u32,
     /// One-shot "next instant/sorcery you cast this turn costs {N} less"
     /// discounts (Thundertrap Trainer). Each entry is `(amount, granted_at)`
     /// where `granted_at` is `instants_or_sorceries_cast_this_turn` at grant
@@ -2086,6 +2093,7 @@ impl Player {
             kicked_spells_cast_this_turn: 0,
             graveyard_ids_this_turn: Default::default(),
             milled_ids_this_turn: Default::default(),
+            surveiled_this_turn: 0,
             instants_or_sorceries_cast_this_turn: 0,
             greatest_is_mana_value_this_turn: 0,
             spells_cast_from_hand_this_turn: 0,

@@ -2058,7 +2058,7 @@ impl GameState {
             Value::CardsPutIntoGraveyardFromLibraryThisTurn(who) => self
                 .resolve_players(who, ctx)
                 .into_iter()
-                .map(|p| self.players[p].milled_ids_this_turn.len() as i32)
+                .map(|p| (self.players[p].milled_ids_this_turn.len() + self.players[p].surveiled_this_turn as usize) as i32)
                 .max()
                 .unwrap_or(0),
             Value::DistinctManaCostsInGraveyard(who) => self
