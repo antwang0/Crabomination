@@ -29,7 +29,11 @@
 //! 2.9 / 3.5 points worse than choosing by play (`--audit-builder`, 200 / 150
 //! pools, chosen on one field and judged on another), and 12 points off on
 //! one real pool. Then it polishes the winner by play ([`polish`], up to
-//! `--polish-rounds 4` swaps, `--no-polish` skips it; about four minutes):
+//! `--polish-rounds 4` swaps, `--no-polish` skips it; every swap by
+//! successive halving, `--polish-narrow` for the old 6 x 6 screen). The
+//! field draws its colour pairs by real FRA Sealed shares (`--field-mix`,
+//! `best` for the old white-heavy field). `--start LIST` polishes a given
+//! list instead of racing builds first. Earlier, with the narrow polish:
 //! on the user's pool the polished build gained +3.62 ±1.47 on a field no
 //! choice saw and tied the user's hand-tuned list (+0.56 ±1.77). `--static`
 //! is the old rated build (best of N by static score, under a second);
@@ -781,7 +785,8 @@ fn polish(pool: &[Factory], start: Vec<Factory>, bp: &ByPlay, rounds: usize) -> 
     // lowest-rated out x six highest-rated in on one noisy screen — the
     // ratings that pick those twelve are the measured values, and they are
     // what is in doubt (ML_NOTES "the sim under-rates blue").
-    let wide = std::env::args().any(|a| a == "--polish-wide");
+    // The default since 2026-11-17; `--polish-narrow` is the old search.
+    let wide = std::env::args().all(|a| a != "--polish-narrow");
     let mut deck = start.clone();
     println!("Polishing by play ({} screening opponents x 2 pairs, re-raced on fresh fields of {} x {}):", (bp.field / 2).max(50), bp.field, bp.pairs);
     for round in 0..rounds {
@@ -1166,6 +1171,21 @@ fn color_pairs() -> Vec<(String, ColorSet)> {
     out
 }
 
+/// Two-colour decks per pair in FRA Sealed on 17lands (`color_ratings/data`,
+/// `.ladder/l17/color_Sealed.json`, fetched 2026-11-16).
+const FRA_SEALED_PAIR_GAMES: [(&str, f64); 10] = [
+    ("WU", 6476.0),
+    ("WB", 2728.0),
+    ("WR", 2652.0),
+    ("WG", 5323.0),
+    ("UB", 6815.0),
+    ("UR", 4329.0),
+    ("UG", 2753.0),
+    ("BR", 4295.0),
+    ("BG", 4127.0),
+    ("RG", 6042.0),
+];
+
 /// `--field-mix`: how the field's opponents choose colours. Unset: every
 /// opponent builds its pool's best deck (`rated_sealed_build`) — which on
 /// FRA puts white in 76 % of decks against 38 % in real Sealed (17lands,
@@ -1174,13 +1194,31 @@ fn color_pairs() -> Vec<(String, ColorSet)> {
 /// it. A path to a 17lands `color_ratings/data` JSON (`.ladder/l17/
 /// color_Sealed.json`): pairs drawn by their share of real two-colour decks.
 /// Weights per pair, in `color_pairs` order.
+///
+/// `--build` defaults to [`FRA_SEALED_PAIR_GAMES`] (the white-heavy field
+/// main-decked Flourishing Grapple on the user's pool, ML_NOTES); `--field-mix
+/// best` there is the old every-pool's-best field. Every other mode keeps
+/// the old default, so the card ratings stay comparable until a re-rate.
 fn field_mix() -> Option<&'static [f64]> {
     static MIX: std::sync::OnceLock<Option<Vec<f64>>> = std::sync::OnceLock::new();
     MIX.get_or_init(|| {
-        let spec = arg("--field-mix")?;
+        let building = arg("--build").is_some();
+        let spec = arg("--field-mix").or_else(|| building.then(|| "sealed17".to_string()))?;
         let pairs = color_pairs();
+        if spec == "best" {
+            return None;
+        }
         if spec == "uniform" {
             return Some(vec![1.0; pairs.len()]);
+        }
+        if spec == "sealed17" {
+            let w: Vec<f64> = pairs
+                .iter()
+                .map(|(name, _)| {
+                    FRA_SEALED_PAIR_GAMES.iter().find(|(n, _)| n == name).map(|(_, g)| *g).unwrap_or_else(|| panic!("no {name} share"))
+                })
+                .collect();
+            return Some(w);
         }
         let text = std::fs::read_to_string(&spec).unwrap_or_else(|e| panic!("--field-mix {spec}: {e}"));
         let rows: Vec<serde_json::Value> = serde_json::from_str(&text).expect("--field-mix: a 17lands color_ratings JSON");
