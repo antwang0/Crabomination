@@ -956,6 +956,13 @@ pub struct EvalWeights {
     /// 48 decks x 125) — the development it costs outweighs the counters it
     /// saves. NOT adopted.
     pub counter_reserve: bool,
+    /// The counter bar ([`pick_stack_response`]'s threat floor) at 6
+    /// units, 3 with six or more cards in hand, instead of 10 / 5: a 2-drop
+    /// creature clears it. 2026-11-17 forced-card census (FRA, 150 pools):
+    /// Countersculpt and Precise Redaction were stranded in hand at game end
+    /// in 55 % / 60 % of the games that drew them, sitting castable on the
+    /// opponent's turn ~10 / ~16 snapshots a game. Off.
+    pub counter_bar_low: bool,
     /// [`Self::counter_reserve`] keyed to a read of the opponent: hold the
     /// counter's mana only when a spell worth countering is likely (they
     /// hold two or more cards and have four or more lands) and we can afford
@@ -1632,6 +1639,7 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_bar_low: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -1776,6 +1784,7 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_bar_low: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -1903,6 +1912,7 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_bar_low: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -3067,6 +3077,7 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_bar_low: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -3219,6 +3230,7 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_bar_low: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -3480,6 +3492,7 @@ impl EvalWeights {
             hand_abilities: false,
             mcts_cast_ties: false,
             counter_reserve: false,
+            counter_bar_low: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -4877,7 +4890,12 @@ fn pick_stack_response(state: &GameState, seat: usize, w: &EvalWeights) -> Optio
     // rotting to cleanup (42 discards in 60 games) while a full-height
     // bar held them for a threat that never came — a counter pitched at
     // end of turn answered nothing at all.
-    let bar = if state.players[seat].hand.len() >= 6 { 5 } else { 10 };
+    let bar = match (w.counter_bar_low, state.players[seat].hand.len() >= 6) {
+        (false, true) => 5,
+        (false, false) => 10,
+        (true, true) => 3,
+        (true, false) => 6,
+    };
     // Pods: an untargeted spell on top scored only its mana value, so a
     // Wrath of God into three of our creatures sat under the bar and no
     // counter ever answered a sweeper. Resolve it in a clone (only when a
@@ -31685,6 +31703,28 @@ mod stack_response_tests {
         let action = bot.next_action(&g, 1).expect("bot acts");
         assert!(matches!(action, GameAction::PassPriority),
             "a 2-drop bear isn't worth the counter: {action:?}");
+    }
+
+    /// [`EvalWeights::counter_bar_low`]: the same bear the default holds
+    /// against clears the lowered bar (2 mana + 2/2 = 6 units).
+    #[test]
+    fn counter_bar_low_counters_the_bear() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        g.players[0].mana_pool.add(crate::mana::Color::Green, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+        }).unwrap();
+        let counter = g.add_card_to_hand(1, catalog::counterspell());
+        for _ in 0..2 { g.add_card_to_battlefield(1, catalog::island()); }
+        g.priority.player_with_priority = 1;
+        let mut bot = HeuristicBot::with_weights(EvalWeights { counter_bar_low: true, ..EvalWeights::fra_fixes_on() });
+        let action = bot.next_action(&g, 1).expect("bot acts");
+        assert!(matches!(action, GameAction::CastSpell { card_id, .. } if card_id == counter),
+            "the lowered bar counters a 2-drop: {action:?}");
     }
 
     /// The prepared-cast pipeline end to end: with a Prepared counter,

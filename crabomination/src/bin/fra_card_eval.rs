@@ -1328,14 +1328,54 @@ fn field_rows_labelled(
     rows.into_iter().map(|(_, l, r)| (l, r)).collect()
 }
 
+/// `CRAB_FORCE_CARDS=A;B;..` (pair-strength census runs only): each named
+/// FRA card whose colours fit `set` replaces the deck's lowest-sim-value
+/// spell, pool or not — so a trace census sees cards the rated builder
+/// leaves out. Not a measurement of the decks.
+fn force_cards(deck: &mut Vec<Factory>, set: ColorSet) {
+    static FORCED: std::sync::OnceLock<Vec<Factory>> = std::sync::OnceLock::new();
+    let forced = FORCED.get_or_init(|| {
+        let Ok(spec) = std::env::var("CRAB_FORCE_CARDS") else { return Vec::new() };
+        spec.split(';')
+            .filter(|n| !n.is_empty())
+            .map(|n| {
+                crabomination::fra_mode::FraPacks::get()
+                    .all()
+                    .find(|f| crabomination::cube::card_def(*f).name == n)
+                    .unwrap_or_else(|| panic!("CRAB_FORCE_CARDS: no FRA card {n}"))
+            })
+            .collect()
+    });
+    if deck.len() != 40 {
+        return;
+    }
+    for &f in forced {
+        let d = crabomination::cube::card_def(f);
+        if !d.cost.colored_symbols().all(|c| set.contains(c)) || deck.iter().any(|g| *g as usize == f as usize) {
+            continue;
+        }
+        let worst = (0..deck.len())
+            .filter(|&i| !crabomination::cube::card_def(deck[i]).is_land() && !forced.iter().any(|g| *g as usize == deck[i] as usize))
+            .min_by(|&a, &b| sim_value(deck[a]).unwrap_or(0.0).total_cmp(&sim_value(deck[b]).unwrap_or(0.0)));
+        if let Some(i) = worst {
+            deck[i] = f;
+        }
+    }
+}
+
 /// `--pair-strength`: how strong each colour pair is in the sim. Per seeded
 /// FRA pool, the best rated deck in each of the ten pairs; all ten play the
 /// same opponent (field opponent `i` of `--field-mix`, default the
 /// builder's own pick), `pairs` seat-swapped pairs each. Prints each pair's
-/// win rate beside 17lands' real Sealed one (`.ladder/l17/color_Sealed.json`,
+/// win rate beside 17lands' real Sealed one. `--deck-pilot P` pilots the ten
+/// decks with P against the field's `--pilot` (same pools and seeds, so two
+/// runs differing only in P pair up per pool and pair:
+/// `.ladder/react/scripts/paired_ps.py`); `--rows FILE` writes the per-pool
+/// shares for that.
+/// (`.ladder/l17/color_Sealed.json`,
 /// when present), for the colour-bias question (ML_NOTES "the recommender's
 /// field is white-heavy").
-fn pair_strength(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: usize) {
+fn pair_strength(pilot: Pilot, field_pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: usize) {
     let packs = crabomination::fra_mode::FraPacks::get();
     let cps = color_pairs();
     let next = AtomicUsize::new(0);
@@ -1355,21 +1395,34 @@ fn pair_strength(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                 let row: Vec<Option<(u32, u32)>> = cps
                     .iter()
                     .map(|(_, set)| {
-                        let deck = crabomination::selfplay::rated_sealed_build_in_colors(&pool, 16, salt ^ 1, *set);
+                        let mut deck = crabomination::selfplay::rated_sealed_build_in_colors(&pool, 16, salt ^ 1, *set);
+                        force_cards(&mut deck, *set);
                         (deck.len() == 40).then(|| {
-                            let t = simulate_match_pairs_piloted(&deck, &opp, pairs, [pilot, pilot], 50_000, salt ^ 2);
+                            let t = simulate_match_pairs_piloted(&deck, &opp, pairs, [pilot, field_pilot], 50_000, salt ^ 2);
                             (t.wins_a, t.wins_b)
                         })
                     })
                     .collect();
-                let n = done_count(&rows, row);
+                let n = done_count(&rows, (i, row));
                 if n % 50 == 0 {
                     eprintln!("{n}/{pools} pools, {:.0}s", start.elapsed().as_secs_f64());
                 }
             });
         }
     });
-    let rows = rows.into_inner().unwrap();
+    let mut rows = rows.into_inner().unwrap();
+    rows.sort_by_key(|r| r.0);
+    if let Some(path) = arg("--rows") {
+        let text: String = rows
+            .iter()
+            .map(|(i, r)| {
+                let cells: Vec<String> = r.iter().map(|c| c.and_then(win_share).map_or("NA".to_string(), |x| format!("{x}"))).collect();
+                format!("{i}\t{}\n", cells.join("\t"))
+            })
+            .collect();
+        std::fs::write(&path, text).unwrap_or_else(|e| panic!("--rows {path}: {e}"));
+    }
+    let rows: Vec<Vec<Option<(u32, u32)>>> = rows.into_iter().map(|(_, r)| r).collect();
     let real: Option<Vec<serde_json::Value>> =
         std::fs::read_to_string(".ladder/l17/color_Sealed.json").ok().and_then(|t| serde_json::from_str(&t).ok());
     println!("{:4} {:>7} {:>7} {:>9} {:>9}", "pair", "sim WR", "±", "17l WR", "17l share");
@@ -1547,6 +1600,15 @@ fn pilot_named(name: &str) -> Pilot {
         "free-attacks" => Pilot::Scored(EvalWeights { free_attacks: true, ..EvalWeights::fra_fixes_on() }),
         "trick-riders" => Pilot::Scored(EvalWeights { free_attacks: true, trick_riders: true, ..EvalWeights::fra_fixes_on() }),
         "fra-fixes-noburn" => Pilot::Scored(EvalWeights { burn_for_lethal: false, ..EvalWeights::fra_fixes_on() }),
+        // 2026-11-17 reactive-play leads (bot_ladder has the same names).
+        "fixes+bar" => Pilot::Scored(EvalWeights { counter_bar_low: true, ..EvalWeights::fra_fixes_on() }),
+        "fixes+holdinst" => Pilot::Scored(EvalWeights { hold_instants: true, combat_aware: true, ..EvalWeights::fra_fixes_on() }),
+        "fixes+bar+holdinst" => Pilot::Scored(EvalWeights {
+            counter_bar_low: true,
+            hold_instants: true,
+            combat_aware: true,
+            ..EvalWeights::fra_fixes_on()
+        }),
         "mcts-dflt-256" | "mcts-burn-256" | "mcts-fixes-256" => Pilot::Mcts(crabomination::server::MctsConfig {
             iterations: 256,
             horizon_turns: 3,
@@ -1621,6 +1683,17 @@ fn dump_cards(dir: &std::path::Path) {
 
 fn main() {
     let threads = num("--threads", std::thread::available_parallelism().map_or(8, |n| n.get()));
+    // `--card-types`: one TSV line per FRA card (name, types, flash, pip
+    // colours, mana value, sim value), for trace censuses.
+    if std::env::args().any(|a| a == "--card-types") {
+        for f in crabomination::fra_mode::FraPacks::get().all() {
+            let d = crabomination::cube::card_def(f);
+            let flash = d.keywords.iter().any(|k| matches!(k, crabomination::card::Keyword::Flash));
+            let colors: String = d.cost.colored_symbols().map(|c| c.short_name()).collect();
+            println!("{}\t{:?}\t{flash}\t{colors}\t{}\t{:?}", d.name, d.card_types, d.cost.cmc(), sim_value(f));
+        }
+        return;
+    }
     if let Some(path) = arg("--build") {
         let by_play = std::env::args().all(|a| a != "--static").then(|| ByPlay {
             pilot: pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes")),
@@ -1633,7 +1706,8 @@ fn main() {
         return;
     }
     if std::env::args().any(|a| a == "--pair-strength") {
-        pair_strength(pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes")), num("--pools", 500), num("--pairs", 4), num("--seed", 43) as u64, threads);
+        let field_pilot = pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes"));
+        pair_strength(arg("--deck-pilot").map_or(field_pilot, |n| pilot_named(&n)), field_pilot, num("--pools", 500), num("--pairs", 4), num("--seed", 43) as u64, threads);
         return;
     }
     if std::env::args().any(|a| a == "--gauntlet") {

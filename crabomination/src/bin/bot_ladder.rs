@@ -738,6 +738,15 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         "fixes+reserve" => Some(Pilot::Scored(EvalWeights { counter_reserve: true, ..EvalWeights::fra_fixes_on() })),
         "fixes+read" => Some(Pilot::Scored(EvalWeights { counter_read: true, ..EvalWeights::fra_fixes_on() })),
         "fixes+read-board" => Some(Pilot::Scored(EvalWeights { counter_read_board: true, ..EvalWeights::fra_fixes_on() })),
+        // 2026-11-17 reactive-play census leads, each on top of `fra-fixes`.
+        "fixes+bar" => Some(Pilot::Scored(EvalWeights { counter_bar_low: true, ..EvalWeights::fra_fixes_on() })),
+        "fixes+holdinst" => Some(Pilot::Scored(EvalWeights { hold_instants: true, combat_aware: true, ..EvalWeights::fra_fixes_on() })),
+        "fixes+bar+holdinst" => Some(Pilot::Scored(EvalWeights {
+            counter_bar_low: true,
+            hold_instants: true,
+            combat_aware: true,
+            ..EvalWeights::fra_fixes_on()
+        })),
         "fixes+pressure" => Some(Pilot::Scored(EvalWeights { trade_pressure: true, ..EvalWeights::fra_fixes_on() })),
         "mcts-net67-fixes-casts" => Some(Pilot::Mcts(MctsConfig {
             iterations: 256,

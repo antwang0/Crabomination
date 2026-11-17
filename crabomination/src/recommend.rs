@@ -1958,7 +1958,11 @@ pub fn simulate_match_pairs_cross(
                             GameHooks { trace: Some(&mut lines), end_zones: Some(&mut end), ..Default::default() },
                         );
                         let t = GameTrace { lines, winner: o.winner, turns: o.turns };
-                        let path = dir.join(format!("{seed_base:016x}_{k}_{}.txt", u8::from(a_seat0)));
+                        // A run-wide counter in the name: one seed base can serve
+                        // several matches (`--pair-strength` plays ten decks on one).
+                        static DUMPED: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+                        let n = DUMPED.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                        let path = dir.join(format!("{seed_base:016x}_{k}_{}_{n}.txt", u8::from(a_seat0)));
                         let mut text: String = zone_lines(template).into_iter().map(|l| l.replace("# p", "# start p") + "\n").collect();
                         text += &t.text();
                         text.extend(end.into_iter().map(|l| l.replace("# p", "# end p") + "\n"));
