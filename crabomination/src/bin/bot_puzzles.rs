@@ -657,9 +657,35 @@ fn run_blunders(profiles: &[String]) {
                 } else if notes.last().is_none_or(|n| !n.starts_with(it.id)) {
                     notes.push(format!("{}: failed to {}", it.id, v.failed.join(", ")));
                     if verbose {
-                        for act in &v.actions {
-                            notes.push(format!("{}      {act:?}", it.id));
+                        let mut names = crabomination::server::blunder::card_names(&(it.build)().state);
+                        names.extend(crabomination::server::blunder::card_names(&v.end));
+                        // `CardId(81)` -> `Apex Witchstalker#81`.
+                        let label = |text: String| {
+                            let mut out = String::new();
+                            let mut rest = text.as_str();
+                            while let Some(at) = rest.find("CardId(") {
+                                out.push_str(&rest[..at]);
+                                let tail = &rest[at + 7..];
+                                let n: String = tail.chars().take_while(|c| c.is_ascii_digit()).collect();
+                                let name = n.parse::<u32>().ok().and_then(|id| names.get(&crabomination::card::CardId(id))).copied().unwrap_or("?");
+                                out.push_str(&format!("{name}#{n}"));
+                                rest = &tail[n.len() + 1..];
+                            }
+                            out.push_str(rest);
+                            out
+                        };
+                        for act in v.actions.iter().filter(|a| !matches!(a, crabomination::game::GameAction::PassPriority)) {
+                            notes.push(format!("{}      {}", it.id, label(format!("{act:?}"))));
                         }
+                        let e = &v.end;
+                        let zone = |cs: Vec<&'static str>| cs.join(", ");
+                        notes.push(format!(
+                            "{}      end: lands [{}] | hand [{}] | graveyard [{}]",
+                            it.id,
+                            zone(e.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).map(|c| c.definition.name).collect()),
+                            zone(e.players[0].hand.iter().map(|c| c.definition.name).collect()),
+                            zone(e.players[0].graveyard.iter().map(|c| c.definition.name).collect()),
+                        ));
                     }
                 }
             }

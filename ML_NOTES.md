@@ -9751,3 +9751,69 @@ with SCALE 1.448 and OFFSET 6.034. The user's pool under the new pilot
 - The automatic build ends one card from their v2 list (−Marwyn, +Vigorbloom
   Annex).
 - Polishing v2 finds nothing (best of 258 swaps re-races −0.17).
+
+## Colour fixing: seven blunder items and a 1,200-game census of a W/G deck splashing black (2026-11-17)
+
+The user's question: does the bot use the pool's fixers when it splashes
+black? The fixers are Apex Witchstalker and Undulating Witness (basic
+landcycling {2}), Something Worth Saving (mill four, take a permanent),
+Marwyn, the Preserver ({2}: a land from the graveyard to hand), Carnivorous
+Cultivator's Enroot, Murmuring Volume (any colour), and surveil.
+
+**Items** (`blunder.rs`, `Area::Fixing`, since 5). Seat 0 is on three
+Plains and two Forest with Extended Absence in hand; the opponent has a
+6/6. The library is uncastable filler over one of each basic. The check is
+`Dies(6/6)`, so only finding black passes. `fixing_control` has a Swamp out
+already. The shell sets `wants_ui` as every sim game does
+(`build_match_template`): without it the engine answers the fetch, the
+surveil and Something Worth Saving's pick itself, and the first read
+measured that, not the bot. `bot_puzzles --show-lines` now names cards and
+prints the seat's end zones. 5 reps:
+
+| item | `fixes` (heuristic) | client pilot (`mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr`) |
+|---|---|---|
+| fixing_control | pass | pass |
+| landcycle Witchstalker (Plains in hand) | **never landcycles** | pass |
+| landcycle Witness (no land in hand) | **never landcycles** | pass |
+| surveil, Swamp on top | **bins the Swamp** | **bins the Swamp** |
+| Something Worth Saving over Swamp/Plains/Forest/2-2 | **takes the Plains** | **takes the Plains** |
+| Marwyn, Swamp + Forest in the graveyard | **never activates** | pass |
+| Murmuring Volume on four lands | pass | 2 / 5 (1 / 10 without `-hr`) |
+
+Causes:
+- **Landcycling** (`cycling::pick_landcycle`) fires only with no land in
+  hand, fewer than six lands, and the card's mana value above lands + 1. A
+  missing colour never triggers it. The search reaches the landcycle as an
+  arm. The fetch itself (`rank_library_search`) is colour-aware.
+- **Surveil and scry** (`decide_scry`): a land is kept while lands in play
+  plus hand are below five, whatever its colour.
+- **Something Worth Saving** (`Effect::MillThenToHandN`) is answered by the
+  engine for every bot seat: the costliest permanent. A land costs 0, so the
+  needed Swamp loses to any creature, and between lands the first in
+  library order wins.
+- **Marwyn**: the heuristic doesn't take the activation; the search does.
+- **Murmuring Volume under the menu search**: it casts the Volume and then
+  leaves Absence uncast with five lands and the Volume up. Plain search
+  (`mcts-net67-256-fixes`, 5 / 6) and the heuristic pass, so it is the menu
+  or its priors. Cause not found.
+
+**Census** (`.ladder/splash/`, `scripts/fixing_census.py`). The deck is the
+user's v2 −Budding Insurgent −Unflinching Hortimancer −Predictive
+Preparations −Campus Crier +Extended Absence +Break Under Pressure +Apex
+Witchstalker +Murmuring Volume, on 7 Plains 6 Forest 2 Swamp + Stingerquill
+Annex. 300 field opponents x 2 pairs, `fra-fixes`, 1,200 games:
+- A black spell reached hand in 849 games. In 561 of them the seat had at
+  least one own main phase holding it with no black land played: 1,962 such
+  turns, about 3.5 a starved game.
+- Absence was stranded at game end in 82 games, Break Under Pressure in 72.
+- Witchstalker was landcycled 140 times.
+- Something Worth Saving: 480 casts. The pick goes to the costliest
+  permanent (Witchstalker 46, Way of the Wildspeaker 40, Wrecking Gecko 40,
+  ...); a Swamp was taken about 4 times.
+- Surveil binned a black source 61 times, 5 of them while starved with a
+  black spell in hand.
+- The deck reads −5.92 ±3.31 against v2 on this field.
+
+The hand-diff attribution (what a landcycle, the Something Worth Saving
+pick or Marwyn returned) also counts the next draw, so those splits are
+indicative.

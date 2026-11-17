@@ -29,6 +29,7 @@ use crate::card::{
     CardDefinition, CardId, CardType, CounterType, EventKind, EventScope, EventSpec, Keyword, TriggeredAbility,
 };
 use crate::catalog;
+use crate::mana::{cost, generic};
 use crate::effect::{Effect, Selector, Value};
 use crate::game::types::TurnStep;
 use crate::game::{Attack, AttackTarget, GameAction, GameState, Target, drain_stack, two_player_game};
@@ -55,6 +56,8 @@ pub enum Area {
     Polarity,
     /// Finding the win that is on the board.
     Lethal,
+    /// Finding a colour the hand needs and the lands don't make.
+    Fixing,
 }
 
 impl Area {
@@ -68,6 +71,7 @@ impl Area {
             Area::Mana => "mana",
             Area::Polarity => "polarity",
             Area::Lethal => "lethal",
+            Area::Fixing => "fixing",
         }
     }
 }
@@ -198,7 +202,8 @@ pub struct Blunder {
     /// additions (35 with the first, what the combat fix was gated on); 3
     /// the 2026-11-12 harder items, written after the client's pilot
     /// reached 35/35; 4 the same day's resource items (a counter or a
-    /// removal saved for the bigger threat), after it reached 60/60.
+    /// removal saved for the bigger threat), after it reached 60/60; 5 the
+    /// 2026-11-17 colour-fixing items.
     pub since: u8,
     /// Turns past the current one the window runs: 0 closes it when this
     /// turn ends, 1 runs through the next.
@@ -212,6 +217,26 @@ pub struct Blunder {
 pub struct Verdict {
     pub failed: Vec<String>,
     pub actions: Vec<GameAction>,
+    /// Where the window ended, for `--show-lines`.
+    pub end: Box<GameState>,
+}
+
+/// Every card the seat can name in `g`, by id: battlefield, hands,
+/// libraries, graveyards and exile (a `--show-lines` legend).
+pub fn card_names(g: &GameState) -> std::collections::HashMap<CardId, &'static str> {
+    let mut out = std::collections::HashMap::new();
+    for c in g.battlefield.iter() {
+        out.insert(c.id, c.definition.name);
+    }
+    for p in &g.players {
+        for c in p.hand.iter().chain(p.library.iter()).chain(p.graveyard.iter()) {
+            out.insert(c.id, c.definition.name);
+        }
+    }
+    for c in g.exile.iter() {
+        out.insert(c.id, c.definition.name);
+    }
+    out
 }
 
 impl Verdict {
@@ -230,7 +255,7 @@ pub fn judge(item: &Blunder, bot: &mut dyn Bot) -> Verdict {
         .filter(|c| !c.holds(0, &actions, &end))
         .map(|c| c.describe(&pos.state))
         .collect();
-    Verdict { failed, actions }
+    Verdict { failed, actions, end: Box::new(end) }
 }
 
 /// [`super::puzzle::play_with`], recording every action the seat made that
@@ -1577,6 +1602,142 @@ fn sos_hold_up_the_counter_over_the_three_drop() -> Position {
 }
 
 /// Every item, in a stable order.
+// ── Added 2026-11-17: colour fixing (the user's W/G pool splashing black) ──
+// Seat 0 is W/G on five lands (three Plains, two Forest) with Extended
+// Absence ({3}{B}) in hand and no black source; the opponent has a 6/6. The
+// only way the 6/6 dies inside the window is the item's tool finding black.
+// Each is an outcome item (`Dies`), which a do-nothing pilot fails, and
+// `fixing_control` (a Swamp already out) separates "never found black" from
+// "never cast the removal". The library is uncastable filler over one of
+// each basic, so no draw supplies the colour by luck.
+
+fn filler() -> CardDefinition {
+    CardDefinition { name: "Filler Colossus", cost: cost(&[generic(9)]), card_types: vec![CardType::Creature], power: 9, toughness: 9, ..Default::default() }
+}
+
+/// The shared shell; returns the Absence and the 6/6.
+fn splash_shell_with(g: &mut GameState, forests: usize) -> (CardId, CardId) {
+    for seat in 0..2 {
+        // As in every sim game (`build_match_template`): without it the
+        // engine answers the fetch, the surveil and Something Worth Saving's
+        // pick itself (first match in library order) and the bot never sees
+        // the choice these items are about.
+        g.players[seat].wants_ui = true;
+        g.players[seat].library.clear();
+        for _ in 0..12 {
+            g.add_card_to_library(seat, filler());
+        }
+    }
+    for f in [catalog::plains, catalog::forest, catalog::swamp] {
+        g.add_card_to_library(0, f());
+    }
+    lands(g, 0, catalog::plains, 3);
+    lands(g, 0, catalog::forest, forests);
+    lands(g, 1, catalog::forest, 6);
+    let absence = g.add_card_to_hand(0, catalog::extended_absence());
+    let wurm = ready(g, 1, body("Dread Wurm", 6, 6));
+    (absence, wurm)
+}
+
+fn splash_shell(g: &mut GameState) -> (CardId, CardId) {
+    splash_shell_with(g, 2)
+}
+
+/// A Swamp out already: the removal is cast at all.
+fn fixing_control() -> Position {
+    let mut g = base();
+    let (_, wurm) = splash_shell(&mut g);
+    ready(&mut g, 0, catalog::swamp());
+    Position { state: g, checks: vec![Check::Dies(wurm)] }
+}
+
+/// Apex Witchstalker ({4}{B}{B}, basic landcycling {2}) with a Plains in
+/// hand: play the Plains, landcycle for the Swamp, play it next turn and
+/// exile the 6/6. The bot's landcycle rule fires only with no land in hand.
+fn landcycle_for_the_splash() -> Position {
+    let mut g = base();
+    let (_, wurm) = splash_shell(&mut g);
+    g.add_card_to_hand(0, catalog::apex_witchstalker());
+    g.add_card_to_hand(0, catalog::plains());
+    Position { state: g, checks: vec![Check::Dies(wurm)] }
+}
+
+/// The same with no land in hand, so only the colour is missing: the rule
+/// also wants the card uncastable next turn (mana value above lands + 1),
+/// and Undulating Witness costs five on five lands.
+fn landcycle_the_witness_for_the_splash() -> Position {
+    let mut g = base();
+    let (_, wurm) = splash_shell(&mut g);
+    g.add_card_to_hand(0, catalog::undulating_witness());
+    Position { state: g, checks: vec![Check::Dies(wurm)] }
+}
+
+/// Surveil 1 each upkeep with the Swamp on top: keep it. The scry rule
+/// bins a land once lands in play + hand reach five, whatever its colour.
+fn surveil_keeps_the_swamp() -> Position {
+    let mut g = base();
+    let (_, wurm) = splash_shell(&mut g);
+    // Swamp to the top: the shell put it at the bottom.
+    let lib = &mut g.players[0].library;
+    let at = lib.iter().position(|c| c.definition.name == "Swamp").expect("the shell's Swamp");
+    let swamp = lib.remove(at);
+    lib.insert(0, swamp);
+    let mut lens = CardDefinition { name: "Seer's Lens", card_types: vec![CardType::Enchantment], ..Default::default() };
+    lens.triggered_abilities.push(TriggeredAbility {
+        event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+        effect: Effect::Surveil { who: crate::effect::PlayerRef::You, amount: Value::ONE },
+    });
+    ready(&mut g, 0, lens);
+    Position { state: g, checks: vec![Check::Dies(wurm)] }
+}
+
+/// Something Worth Saving ({1}{G} instant: mill four, take a permanent card
+/// from them) over Swamp, Plains, Forest and a vanilla 2/2: take the Swamp.
+fn something_worth_saving_takes_the_swamp() -> Position {
+    let mut g = base();
+    let (_, wurm) = splash_shell(&mut g);
+    let lib = &mut g.players[0].library;
+    let mut top = Vec::new();
+    for name in ["Plains", "Forest", "Swamp"] {
+        let at = lib.iter().position(|c| c.definition.name == name).expect("the shell's basics");
+        top.push(lib.remove(at));
+    }
+    for c in top.into_iter().rev() {
+        lib.insert(0, c);
+    }
+    g.add_card_to_library(0, body("Grizzly Cub", 2, 2));
+    let cub = g.players[0].library.pop().expect("just added");
+    g.players[0].library.insert(3, cub);
+    g.add_card_to_hand(0, catalog::something_worth_saving());
+    Position { state: g, checks: vec![Check::Dies(wurm)] }
+}
+
+/// Marwyn, the Preserver ({2}: return a land card from your graveyard) with
+/// a Swamp and a Forest in the graveyard and the land drop unused: return
+/// the Swamp, play it, exile the 6/6 this turn.
+fn marwyn_returns_the_swamp() -> Position {
+    let mut g = base();
+    let (_, wurm) = splash_shell(&mut g);
+    ready(&mut g, 0, catalog::marwyn_the_preserver());
+    g.add_card_to_graveyard(0, catalog::forest());
+    g.add_card_to_graveyard(0, catalog::swamp());
+    Position { state: g, checks: vec![Check::Dies(wurm)] }
+}
+
+/// Murmuring Volume ({3} artifact, {T}: any colour) on four lands with a
+/// Plains on top: cast it now, exile the 6/6 next turn off five lands and
+/// the Volume.
+fn murmuring_volume_makes_the_black() -> Position {
+    let mut g = base();
+    let (_, wurm) = splash_shell_with(&mut g, 1);
+    g.add_card_to_hand(0, catalog::murmuring_volume());
+    let lib = &mut g.players[0].library;
+    let at = lib.iter().position(|c| c.definition.name == "Plains").expect("the shell's Plains");
+    let plains = lib.remove(at);
+    lib.insert(0, plains);
+    Position { state: g, checks: vec![Check::Dies(wurm)] }
+}
+
 pub fn items() -> Vec<Blunder> {
     vec![
         Blunder {
@@ -2232,6 +2393,76 @@ pub fn items() -> Vec<Blunder> {
             horizon: 1,
             build: sos_hold_up_the_counter_over_the_three_drop,
             prompt: "6 life, three Islands, Mana Sculpt + Textbook Tabulator; they hold Rearing Embermare — hold up the counter",
+        },
+        Blunder {
+            id: "fixing_control",
+            twin: None,
+            area: Area::Fixing,
+            cards: Cards::Fra,
+            since: 5,
+            horizon: 1,
+            build: fixing_control,
+            prompt: "W/G + a Swamp out, Extended Absence vs a 6/6 — exile it",
+        },
+        Blunder {
+            id: "landcycle_for_the_splash",
+            twin: None,
+            area: Area::Fixing,
+            cards: Cards::Fra,
+            since: 5,
+            horizon: 2,
+            build: landcycle_for_the_splash,
+            prompt: "no black source, Absence + Apex Witchstalker + a Plains — landcycle for the Swamp",
+        },
+        Blunder {
+            id: "landcycle_the_witness_for_the_splash",
+            twin: None,
+            area: Area::Fixing,
+            cards: Cards::Fra,
+            since: 5,
+            horizon: 2,
+            build: landcycle_the_witness_for_the_splash,
+            prompt: "no black source, Absence + Undulating Witness on five lands — landcycle for the Swamp",
+        },
+        Blunder {
+            id: "surveil_keeps_the_swamp",
+            twin: None,
+            area: Area::Fixing,
+            cards: Cards::Fra,
+            since: 5,
+            horizon: 2,
+            build: surveil_keeps_the_swamp,
+            prompt: "no black source, Absence, an upkeep surveil with the Swamp on top — keep it",
+        },
+        Blunder {
+            id: "something_worth_saving_takes_the_swamp",
+            twin: None,
+            area: Area::Fixing,
+            cards: Cards::Fra,
+            since: 5,
+            horizon: 2,
+            build: something_worth_saving_takes_the_swamp,
+            prompt: "no black source, Absence + Something Worth Saving over Swamp/Plains/Forest/2-2 — take the Swamp",
+        },
+        Blunder {
+            id: "marwyn_returns_the_swamp",
+            twin: None,
+            area: Area::Fixing,
+            cards: Cards::Fra,
+            since: 5,
+            horizon: 0,
+            build: marwyn_returns_the_swamp,
+            prompt: "no black source, Absence, Marwyn with a Swamp and a Forest in the graveyard — return the Swamp",
+        },
+        Blunder {
+            id: "murmuring_volume_makes_the_black",
+            twin: None,
+            area: Area::Fixing,
+            cards: Cards::Fra,
+            since: 5,
+            horizon: 2,
+            build: murmuring_volume_makes_the_black,
+            prompt: "no black source, Absence + Murmuring Volume on four lands — cast the Volume",
         },
     ]
 }
