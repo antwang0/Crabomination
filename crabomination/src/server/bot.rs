@@ -961,7 +961,12 @@ pub struct EvalWeights {
     /// creature clears it. 2026-11-17 forced-card census (FRA, 150 pools):
     /// Countersculpt and Precise Redaction were stranded in hand at game end
     /// in 55 % / 60 % of the games that drew them, sitting castable on the
-    /// opponent's turn ~10 / ~16 snapshots a game. Off.
+    /// opponent's turn ~10 / ~16 snapshots a game. In `fra-fixes` since
+    /// 2026-11-17: blue decks with counters forced in +2.47 / +2.48 ±0.35
+    /// against a `fra-fixes` field (`--pair-strength --deck-pilot`, 1,000
+    /// pools x 2, seeds 43 / 97; the other pairs exactly unchanged), FRA
+    /// head-to-head 50.0 / 50.2 / 50.3 / 50.1 (48 decks x 125, seeds 43 / 97
+    /// / 11 / 29; rated decks seldom hold a counter), SOS 50.1 / 50.2.
     pub counter_bar_low: bool,
     /// [`Self::counter_reserve`] keyed to a read of the opponent: hold the
     /// counter's mana only when a spell worth countering is likely (they
@@ -3421,6 +3426,7 @@ impl EvalWeights {
     /// the client's `CRAB_FRA_FIXES=1` puts them on its net-leaf pilot.
     pub const fn with_fra_fixes(self) -> Self {
         Self {
+            counter_bar_low: true,
             burn_creature_arms: true,
             x0_death_hold: true,
             counter_shed_guard: true,
