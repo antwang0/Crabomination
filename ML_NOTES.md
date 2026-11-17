@@ -9732,3 +9732,22 @@ alone, head-to-head 49.1 / 50.4.
 
 Step 3, the FRA card re-rate under the new `fra-fixes`, runs as
 `.ladder/react/run_rerate.sh` with round 87's gate.
+
+**Step 3: FRA card values re-rated under the new `fra-fixes`. ADOPTED.**
+Round 87's method and gate (`.ladder/react/run_rerate.sh`, pre-registered:
+best-of-16 > 50 on both seeds with the mean > +0.3). Rated builder on the
+new table vs the compiled one, 2,000 pools x 8, pilot `fra-fixes`:
+best-of-16 **51.51 / 51.32**, single samples 51.19 / 51.86. Round 87's
+re-rate on the old pilot read 50.16 / 50.04. Draftsim ρ 0.295.
+- The counters gain about a point: Countersculpt −1.89 → −0.97, Precise
+  Redaction −2.38 → −1.14 (both still below zero).
+- Fateshaper Aspirant −0.41 → +1.42.
+- The colour means barely move (blue +0.00, white −0.04).
+
+So the lower bar fixes the counters' own values. Most of blue's pair gap
+stays; the other reactive cards are flat. `FRA_SIM_VALUE` is regenerated,
+with SCALE 1.448 and OFFSET 6.034. The user's pool under the new pilot
+(the build still reads the compiled table):
+- The automatic build ends one card from their v2 list (−Marwyn, +Vigorbloom
+  Annex).
+- Polishing v2 finds nothing (best of 258 swaps re-races −0.17).
