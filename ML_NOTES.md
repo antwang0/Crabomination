@@ -9672,3 +9672,63 @@ bounce / until-end-of-turn effects score at the baseline outside the policy
 path, so Unsummon, Icy Reception's −5/−0 and Yuriko's first mode are rarely
 chosen. A search-pilot pair-strength read (does search close the blue gap?)
 is running.
+
+## The bot's blue cards: counters stranded in hand, a lower counter bar ADOPTED into `fra-fixes`; `--build` defaults (2026-11-17)
+
+Follow-up to "the sim under-rates blue". The search-pilot pair-strength
+read (`mcts-fixes-256`, 80 pools x 2, `.ladder/l17/pair_strength_mcts.txt`)
+leaves the gap where it was: blue pairs 48.4 against 51.7 for the rest
+(-3.3), the heuristic -2.9. Search does not close it, so the bias is in
+what the bot does, not how far it looks.
+
+**`--build` defaults.** `fra_card_eval --build` now draws its field by real
+FRA Sealed pair shares (`FRA_SEALED_PAIR_GAMES`, from 17lands; `--field-mix
+best` for the old white-heavy field) and polishes with the wide search
+(`--polish-narrow` for the old 6 x 6 screen). Other modes keep the old
+default.
+
+**Census** (`.ladder/react/`; `CRAB_DUMP_TRACES` + `scripts/census.py`,
+`fra_card_eval --card-types`). `CRAB_FORCE_CARDS` (new) puts named cards
+into the pair-strength decks, which the rated builder otherwise leaves out.
+150 pools, `fra-fixes`:
+
+| card | cast in % of games drawn | stranded at game end | cast on own turn |
+|---|---|---|---|
+| Countersculpt | 29.5 | 55 % | 0 / 182 |
+| Precise Redaction | 24.8 | 60 % | 1 / 157 |
+| Icy Reception | 67.1 | 23 % | 0 / 448 |
+| Divining Duelist (flash) | 91.4 | 5.5 % | 703 / 704 |
+| Theorist's Proxy (flash) | 92.8 | 4.9 % | 571 / 573 |
+| Sphinx's Approach (instant) | 79.1 | 16 % | 662 / 665 |
+
+The counters sat castable on the opponent's turn about ten snapshots a game
+and still went unused: the counter bar (`pick_stack_response`, 10 units, 5
+with six cards in hand) needs a 4-drop 3/3. No 2- or 3-drop clears it.
+
+**`counter_bar_low` (bar 6 / 3): ADOPTED into `fra-fixes`.** Deck seat
+piloted by the flag against a `fra-fixes` field (`--pair-strength
+--deck-pilot`, `--rows` + `scripts/paired_ps.py`, uniform mix, paired per
+pool and pair):
+
+| | blue pairs | other pairs |
+|---|---|---|
+| natural rated decks, 2,000 x 2 | +0.05 | -0.00 |
+| counters + flash forced in, seed 43, 1,000 x 2 | **+2.47 ±0.35** | 0.00 (identical) |
+| the same, seed 97 | **+2.48 ±0.35** | 0.00 |
+
+FRA head-to-head on rated decks (48 x 125): 50.0 / 50.2 / 50.3 / 50.1 (seeds
+43 / 97 / 11 / 29). SOS: 50.1 / 50.2. The rated decks seldom hold a
+counter, so the head-to-head reads only that the flag costs nothing.
+Pre-registered (`run_confirm.sh`): the forced gain repeats on a fresh seed,
+every head-to-head cell is at least 49.8, and the pooled mean is at least
+50.0. All three hold. With both flags on, Countersculpt is cast in 50 % of
+the games it is drawn and stranded in 39 %.
+
+**`hold_instants` on `fra-fixes`: rejected.** Flash creatures move to the
+opponent's turn (Theorist's Proxy 438 of 513 casts), but blue loses: forced
+decks -0.88 ±0.56, natural decks -0.29, other pairs +0.15. Head-to-head
+48.9 / 50.2. With the bar flag as well: forced +1.32, worse than the bar
+alone, head-to-head 49.1 / 50.4.
+
+Step 3, the FRA card re-rate under the new `fra-fixes`, runs as
+`.ladder/react/run_rerate.sh` with round 87's gate.
