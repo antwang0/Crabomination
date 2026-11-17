@@ -776,6 +776,12 @@ fn polish(pool: &[Factory], start: Vec<Factory>, bp: &ByPlay, rounds: usize) -> 
         let diffs: Vec<f64> = rows.iter().filter_map(|r| Some(win_share(r[d])? - win_share(r[0])?)).collect();
         mean_ci(&diffs)
     };
+    // `--polish-wide`: every spell out x every unplayed on-colour spell in
+    // (plus the land swaps), cut by successive halving, instead of the six
+    // lowest-rated out x six highest-rated in on one noisy screen — the
+    // ratings that pick those twelve are the measured values, and they are
+    // what is in doubt (ML_NOTES "the sim under-rates blue").
+    let wide = std::env::args().any(|a| a == "--polish-wide");
     let mut deck = start.clone();
     println!("Polishing by play ({} screening opponents x 2 pairs, re-raced on fresh fields of {} x {}):", (bp.field / 2).max(50), bp.field, bp.pairs);
     for round in 0..rounds {
@@ -798,12 +804,14 @@ fn polish(pool: &[Factory], start: Vec<Factory>, bp: &ByPlay, rounds: usize) -> 
             }
         }
         ins.sort_by(|a, b| value(*b).total_cmp(&value(*a)));
-        ins.truncate(6);
+        if !wide {
+            ins.truncate(6);
+        }
         let mut outs: Vec<usize> = Vec::new();
         let mut spells: Vec<usize> = (0..deck.len()).filter(|&i| !brief(deck[i]).is_land).collect();
         spells.sort_by(|&a, &b| value(deck[a]).total_cmp(&value(deck[b])));
         for i in spells {
-            if outs.len() < 6 && !outs.iter().any(|&j| name(deck[j]) == name(deck[i])) {
+            if (wide || outs.len() < 6) && !outs.iter().any(|&j| name(deck[j]) == name(deck[i])) {
                 outs.push(i);
             }
         }
@@ -841,7 +849,7 @@ fn polish(pool: &[Factory], start: Vec<Factory>, bp: &ByPlay, rounds: usize) -> 
                     continue;
                 }
                 seen.push(name(deck[b]));
-                for &i in ins.iter().take(3) {
+                for &i in ins.iter().take(if wide { ins.len() } else { 3 }) {
                     let mut d = deck.clone();
                     d[b] = i;
                     cands.push((format!("-{} +{}", name(deck[b]), name(i)), d));
@@ -853,12 +861,35 @@ fn polish(pool: &[Factory], start: Vec<Factory>, bp: &ByPlay, rounds: usize) -> 
         }
         let mut lists: Vec<Vec<Factory>> = vec![deck.clone()];
         lists.extend(cands.iter().map(|(_, d)| d.clone()));
-        let scores = screen(&lists, bp.seed ^ 0x9011_0000 ^ round as u64);
-        let mut order: Vec<usize> = (1..lists.len()).filter(|&d| scores[d] > scores[0]).collect();
-        order.sort_by(|&a, &b| scores[b].total_cmp(&scores[a]));
-        order.truncate(3);
+        let order: Vec<usize> = if wide {
+            // Successive halving: every swap on a small field, the best
+            // quarter on a fresh field twice the size, until three remain —
+            // each stage ranked by the paired gain over the current deck.
+            let mut alive: Vec<usize> = (1..lists.len()).collect();
+            let mut field = 100usize;
+            let mut stage = 0u64;
+            while alive.len() > 3 {
+                let mut sub: Vec<Vec<Factory>> = vec![deck.clone()];
+                sub.extend(alive.iter().map(|&d| lists[d].clone()));
+                let rows = field_rows(&sub, bp.pilot, bp.pilot, field, 2, bp.seed ^ 0x9044_0000 ^ (round as u64) << 8 ^ stage, bp.threads);
+                let mut ranked: Vec<(f64, usize)> = (1..sub.len()).map(|k| (paired(&rows, k).0, alive[k - 1])).collect();
+                ranked.sort_by(|a, b| b.0.total_cmp(&a.0));
+                let keep = (alive.len() / 4).max(3);
+                eprintln!("  wide polish round {} stage {stage}: {} swaps on {field} x 2, best {:+.2}", round + 1, alive.len(), ranked[0].0);
+                alive = ranked.into_iter().take(keep).map(|r| r.1).collect();
+                field *= 2;
+                stage += 1;
+            }
+            alive
+        } else {
+            let scores = screen(&lists, bp.seed ^ 0x9011_0000 ^ round as u64);
+            let mut order: Vec<usize> = (1..lists.len()).filter(|&d| scores[d] > scores[0]).collect();
+            order.sort_by(|&a, &b| scores[b].total_cmp(&scores[a]));
+            order.truncate(3);
+            order
+        };
         if order.is_empty() {
-            println!("  round {}: no swap of {} screens above the deck ({:.2})", round + 1, cands.len(), scores[0]);
+            println!("  round {}: no swap of {} screens above the deck", round + 1, cands.len());
             break;
         }
         let mut finals: Vec<Vec<Factory>> = vec![deck.clone()];
@@ -890,8 +921,11 @@ fn polish(pool: &[Factory], start: Vec<Factory>, bp: &ByPlay, rounds: usize) -> 
 fn build_pool(path: &str, candidates: usize, colors: ColorSet, by_play: Option<ByPlay>) {
     let (main, side) = read_list(path);
     let pool: Vec<Factory> = main.iter().chain(&side).copied().collect();
-    let mut deck = match &by_play {
-        Some(bp) if colors.is_empty() => build_by_play(&pool, candidates, bp),
+    // `--start LIST`: polish this list (cards from the pool) instead of
+    // racing builds for one.
+    let mut deck = match (&by_play, arg("--start")) {
+        (Some(_), Some(start)) => read_list(&start).0,
+        (Some(bp), None) if colors.is_empty() => build_by_play(&pool, candidates, bp),
         _ => crabomination::selfplay::rated_sealed_build_in_colors(&pool, candidates, 0x5EA1, colors),
     };
     if let Some(bp) = &by_play
