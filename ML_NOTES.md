@@ -7458,6 +7458,41 @@ Next for this line, the user's call: a training run at the scale the
 champion had (millions of games), the blocks on, and the pod overconfidence
 addressed (weight decay / label smoothing), before G1 / G3 again.
 
+**Run 3 (2026-11-18): 13x the games, the gap more than halved, still
+under G1.** `table_train --actors 12 --steps 200000 --window 400000
+--lr 3e-4 --row-keep 0.25 --blocks 0 --seed 43` (`.ladder/table2/`):
+2.35 M heuristic games, 9.1 h. `--blocks 2` is OOM at batch 256 on the
+24 GB card beside the user's jobs; `--window 1000000` reached 52 GB RSS,
+400 k sits at ~26 GB. Held-out value CE (sealed / cube / pod2 / pods):
+
+| step | games | CE | B1 hand top-5 |
+|---|---|---|---|
+| 5 k | 78 k | 0.570 / 0.543 / 0.560 / 1.063 | 0.267 / 0.189 / 0.119 / 0.151 |
+| 40 k | 552 k | 0.523 / 0.508 / 0.495 / 1.057 | 0.308 / 0.190 / 0.151 / 0.160 |
+| 130 k (best) | 1.65 M | 0.500 / 0.491 / 0.479 / 1.004 | 0.303 / 0.189 / 0.156 / 0.163 |
+| 200 k | 2.35 M | 0.507 / 0.493 / 0.471 / 1.449 | 0.310 / 0.196 / 0.153 / 0.164 |
+
+The pod overconfidence comes back late (pods CE 1.00 → 1.45 in the last
+70 k steps, other pools flat), so step 130 k is the gated one. B1 has
+been flat since ~40 k: the belief head learnt popularity-plus-sealed-colours
+early and more games add nothing.
+
+- **G1 screen** (same cells as run 2): **47.9 [46.1, 49.7] / 46.0 [44.1,
+  47.9], pooled −3.05** (run 2: −7.1). Still under the −0.5 floor; full
+  G1 not run.
+- **G3**: **1.00x at 4 seats [0.94, 1.07] (2,000), 1.02x at 6 [0.97,
+  1.08] (3,000)** (run 2: 0.95x / 0.94x) — level with `dflt`, i.e. still
+  under round 80's adopted heuristic share (1.070x / 1.035x).
+
+**Reading.** Data scale was most of run 2's gap (−7.1 → −3.05 on 13x
+the games), and the curve says the plain net is now near its ceiling:
+held-out CE moved < 0.01 over the last 90 k steps. The remaining −3 is
+the duel specialist's architecture/target advantage, not games. Next
+for this line: the blocks (needs the GPU to itself, or batch 128), pod
+regularisation (weight decay / label smoothing), or the champion's
+recipe as an initialisation for the duel pools. Run 3's 130 k checkpoint
+is the belief net the honest-redeal read uses.
+
 ### The phase-5 loop on FRA (2026-11-03: stopped on two flat generations)
 
 The user's "3": the loop on FRA sealed (rated decks, the FRA net as the
