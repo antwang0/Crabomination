@@ -193,6 +193,7 @@ pub fn start_game(template: &GameState, w: &super::bot::EvalWeights, seed: u64) 
         p.hostile_player_targets = w.hostile_player_targets;
         p.duel_sinks = w.duel_sinks;
         p.tap_timing = w.tap_timing;
+        p.color_fixing = w.color_fixing;
     }
     let mut rng = StdRng::seed_from_u64(seed);
     for seat in 0..2 {

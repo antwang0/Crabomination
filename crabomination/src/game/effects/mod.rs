@@ -11885,6 +11885,22 @@ impl GameState {
                             })
                             .collect();
                         ranked.sort_by_key(|r| std::cmp::Reverse(r.1));
+                        // `Player::color_fixing`: a milled land that makes
+                        // the colour a spell in hand is stranded on goes
+                        // first — Something Worth Saving finding the Swamp
+                        // for the splash, which "priciest" (a land is 0)
+                        // never took.
+                        let missing = crate::server::bot::missing_colors(self, p, None);
+                        if !missing.is_empty()
+                            && let Some(i) = ranked.iter().position(|(id, _)| {
+                                self.players[p].graveyard.iter().any(|c| {
+                                    c.id == *id && crate::server::bot::land_covers(&c.definition, missing)
+                                })
+                            })
+                        {
+                            let land = ranked.remove(i);
+                            ranked.insert(0, land);
+                        }
                         DecisionAnswer::Cards(
                             ranked.into_iter().map(|(id, _)| id).take(take as usize).collect(),
                         )

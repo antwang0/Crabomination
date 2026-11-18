@@ -9817,3 +9817,78 @@ Annex. 300 field opponents x 2 pairs, `fra-fixes`, 1,200 games:
 The hand-diff attribution (what a landcycle, the Something Worth Saving
 pick or Marwyn returned) also counts the next draw, so those splits are
 indicative.
+
+### `color_fixing`: the four fixes, gated and ADOPTED into `fra-fixes` (2026-11-18)
+
+One flag, `EvalWeights::color_fixing`, pushed to the seat as
+`Player::color_fixing` because one part is an engine rule. "Missing colour"
+(`bot::missing_colors`) means a coloured pip on a nonland card in hand that no
+permanent the seat controls, and no land in its hand, can make. The parts:
+- **Landcycling** (`cycling::pick_landcycle`): cycle with lands enough, or a
+  land in hand, when all of these hold: the fetch makes the missing colour;
+  the colour is a splash (at most 4 sources left in library and graveyard); a
+  spell stranded on it costs at most lands + 1; and the cycler itself can't
+  be cast next turn (too dear, or a colour we can't make).
+- **Scry / surveil** (`decide_scry`): a land of the missing colour scores 600
+  and stays on top, however many lands are out.
+- **Something Worth Saving** (`Effect::MillThenToHandN`, engine Auto rule): a
+  milled land of the missing colour goes first, ahead of the costliest
+  permanent.
+- **Land recursion** (`cycling::pick_land_recursion`): a "return target land
+  card from your graveyard to your hand" ability (Marwyn's {2}) aimed at such a
+  land, in the precombat main with the land drop unused.
+
+**Harness fix found on the way.** The blunder harness (`play_recording_turns`)
+never pushed the pilot's seat flags, so every `fra-fixes` item ran without
+`duel_sinks` (no landcycling at all) or the other engine-read flags. It now
+pushes them, as real games do. Re-reading the client pilot's older items
+without any push moved nothing. The five older items it failed in this run
+(lethal, aura, deathtouch block, flash block) fail because the run used the
+FRA leaf on plain/SOS-card items: on the champion leaf they pass, and only the
+two known counter-hold items fail.
+
+**Horizons.** Three fixing items ended on seat 0's own last turn, so holding
+the instant Absence for the opponent's turn — a line the menu search takes —
+read as a failure. Surveil 2 -> 3, Murmuring Volume 2 -> 3, Marwyn 0 -> 1. With
+the longer horizon the client pilot passes the Volume item: the earlier "menu
+search misses Absence" was this.
+
+**Puzzles** (seven fixing items, 10 reps; null pilot 0/7):
+
+| Pilot | without | with `color_fixing` |
+|---|---|---|
+| `fixes` (heuristic) | 2.0 | 7.0 |
+| client pilot (FRA leaf) | 4.8 | 6.8 (landcycle 8/10) |
+
+Full set, 72 items, 20 reps (FRA leaf for every item): `fixes` 59 -> 64,
+client 61.0 -> 62.9, pairs 13/14 and 14/14 unchanged.
+
+**Ladder** (FRA/SOS sealed head-to-head vs `fra-fixes`, 125 x 48, paired;
+`.ladder/cfix/`). Pre-registered: every cell >= 49.8 and the pooled FRA mean
+>= 50.0.
+- First rule (landcycle for any missing colour): FRA 49.9 / 49.7 / 49.9 / 49.7
+  (43/97/11/29), SOS 50.1 / 50.1. **Failed.**
+- Per-part ablation on those four seeds: landcycling alone 49.8 / 49.8 / 49.8
+  / 49.7; recursion 50.0 x4 (never fires in random pools); scry 50.0 / 49.9 /
+  50.0 / 50.1; Something Worth Saving 50.1 / 50.0 / 50.1 / 50.0. Narrowing
+  landcycling to "stranded spell castable next turn" or "cycler stuck" alone
+  didn't help (49.6-49.9). Adding "splash colour only" did: all three
+  conditions together read 50.0 / 50.0 / 50.0 / 49.9. A main colour's land
+  arrives anyway; cycling a spell for it lost card quality.
+- Narrowed bundle, re-gated with fresh seeds 5 / 61 added: FRA 50.13 / 49.90 /
+  50.07 / 49.93 / 49.92 / 50.07 (11/29/43/5/61/97), **pooled 50.003**; SOS
+  50.13 / 50.06. **Passed, just**: neutral on ordinary decks (the fresh seeds
+  alone read 49.93 / 49.92), as it should be for a splash fix. Adopted.
+
+**The splash race** (gauntlet, sealed17 field, 1,000 x 4, `--pilot` on both
+sides; same seeds, both arms on the final binary). Win share with vs without:
+
+| Deck | s43 | s97 | s5 |
+|---|---|---|---|
+| v2 (W/G, no splash) | +0.12 | +0.16 | +0.13 |
+| sfix (splash, every fixer) | +0.50 | +0.12 | +0.49 |
+| s2 (two-card splash) | +0.78 | +0.58 | +0.60 |
+
+Positive in all six splash cells, about half a point. The splashes still
+trail v2: s2 by 2.78 / 1.49 / 3.44, sfix by 6.87 / 5.17 / 5.84. The bot's
+fumbling was a small part of the splash's cost; the mana base is the rest.

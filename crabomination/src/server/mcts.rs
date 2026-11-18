@@ -2322,6 +2322,7 @@ impl Bot for MctsBot {
         player.hostile_player_targets = self.cfg.weights.hostile_player_targets;
         player.duel_sinks = self.cfg.weights.duel_sinks;
         player.tap_timing = self.cfg.weights.tap_timing;
+        player.color_fixing = self.cfg.weights.color_fixing;
     }
 
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {

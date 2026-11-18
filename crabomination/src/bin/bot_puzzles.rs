@@ -52,6 +52,15 @@ impl Bot for PassBot {
 }
 
 fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
+    // `<profile>+cfix`: the profile with `EvalWeights::color_fixing` on.
+    if let Some(base) = profile.strip_suffix("+cfix") {
+        if let Some(cfg) = mcts_cfg(base) {
+            let weights = EvalWeights { color_fixing: true, ..cfg.weights };
+            return Some(Box::new(MctsBot::new(MctsConfig { weights, ..cfg })));
+        }
+        let w = heuristic_weights(base)?;
+        return Some(Box::new(HeuristicBot::with_weights(EvalWeights { color_fixing: true, ..w })));
+    }
     if profile == "pass" {
         return Some(Box::new(PassBot(HeuristicBot::new())));
     }
@@ -60,19 +69,7 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
         return Some(Box::new(crabomination::server::policy_pilot::PolicyBot::new(EvalWeights::net_on_default(), 0.0, 0)));
     }
     let w = match profile {
-        "gang" => EvalWeights::default(),
-        "atk-sim" => EvalWeights::attack_search_sim(),
-        "net" => EvalWeights::net_eval_det1(),
-        // Today's pilots (the ladder's names): the adopted default, the
-        // default on the net leaf, and both under 256-iteration search.
-        "dflt" => EvalWeights::default(),
-        "net67" => EvalWeights::net_on_default(),
-        // The FRA fixes bundle, which the client plays in FRA, Sealed and
-        // Cube games, under the menu search (`mcts_cfg`).
-        "fixes" => EvalWeights::default().with_fra_fixes(),
-        "net67-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
-        // `EvalWeights::hold_removal` on the bundle (2026-11-12).
-        "fixes-hr" => EvalWeights { hold_removal: true, ..EvalWeights::default().with_fra_fixes() },
+        p if heuristic_weights(p).is_some() => heuristic_weights(p).expect("listed"),
         p if mcts_cfg(p).is_some() => {
             return Some(Box::new(MctsBot::new(mcts_cfg(profile).expect("an MCTS profile"))));
         }
@@ -87,6 +84,26 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
         _ => return None,
     };
     Some(Box::new(HeuristicBot::with_weights(w)))
+}
+
+/// The scored heuristic profiles' weights.
+fn heuristic_weights(profile: &str) -> Option<EvalWeights> {
+    Some(match profile {
+        "gang" => EvalWeights::default(),
+        "atk-sim" => EvalWeights::attack_search_sim(),
+        "net" => EvalWeights::net_eval_det1(),
+        // Today's pilots (the ladder's names): the adopted default and the
+        // default on the net leaf.
+        "dflt" => EvalWeights::default(),
+        "net67" => EvalWeights::net_on_default(),
+        // The FRA fixes bundle, which the client plays in FRA, Sealed and
+        // Cube games, under the menu search (`mcts_cfg`).
+        "fixes" => EvalWeights::default().with_fra_fixes(),
+        "net67-fixes" => EvalWeights::net_on_default().with_fra_fixes(),
+        // `EvalWeights::hold_removal` on the bundle (2026-11-12).
+        "fixes-hr" => EvalWeights { hold_removal: true, ..EvalWeights::default().with_fra_fixes() },
+        _ => return None,
+    })
 }
 
 /// The 256-iteration search profiles' configurations. A

@@ -1589,6 +1589,14 @@ fn audit_builder(pilot: Pilot, pools: usize, field: usize, pairs: usize, seed: u
 }
 
 fn pilot_named(name: &str) -> Pilot {
+    // `<pilot>+cfix`: the pilot with `EvalWeights::color_fixing` on.
+    if let Some(base) = name.strip_suffix("+cfix") {
+        return match pilot_named(base) {
+            Pilot::Scored(w) => Pilot::Scored(EvalWeights { color_fixing: true, ..w }),
+            Pilot::Mcts(c) => Pilot::Mcts(crabomination::server::MctsConfig { weights: EvalWeights { color_fixing: true, ..c.weights }, ..c }),
+            other => other,
+        };
+    }
     match name {
         "dflt" => Pilot::Scored(EvalWeights::default()),
         "net67" => {

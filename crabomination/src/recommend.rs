@@ -2551,6 +2551,11 @@ fn play_one_game_traced(
             Pilot::Mcts(cfg) => cfg.weights.tap_timing,
             _ => false,
         };
+        g.players[seat].color_fixing = match pilot {
+            Pilot::Scored(w) | Pilot::Policy(w) => w.color_fixing,
+            Pilot::Mcts(cfg) => cfg.weights.color_fixing,
+            _ => false,
+        };
     }
     let mut seeded = shuffle_rng;
     for seat in 0..2 {

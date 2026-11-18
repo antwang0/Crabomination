@@ -1078,6 +1078,7 @@ fn play_recorded_game_mcts_inner(
         // actor on `--actor-fra-fixes` plays what the ladder's pilot plays.
         g.players[seat].duel_sinks = w.duel_sinks;
         g.players[seat].tap_timing = w.tap_timing;
+        g.players[seat].color_fixing = w.color_fixing;
     }
     let mut rng = StdRng::seed_from_u64(seed);
     for seat in 0..2 {

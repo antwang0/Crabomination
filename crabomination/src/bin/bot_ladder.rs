@@ -267,6 +267,15 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     // `<profile>+honest`: any profile with its hidden cards redealt from the
     // pool by the table net's belief (`server::honest`) instead of from the
     // opponent's real deck. Needs `CRAB_TABLE_NET` with the belief head.
+    // `<profile>+cfix`: any profile with `EvalWeights::color_fixing` on.
+    if let Some(base) = name.strip_suffix("+cfix") {
+        return Some(match parse_profile(base)? {
+            Pilot::Scored(w) => Pilot::Scored(EvalWeights { color_fixing: true, ..w }),
+            Pilot::Policy(w) => Pilot::Policy(EvalWeights { color_fixing: true, ..w }),
+            Pilot::Mcts(c) => Pilot::Mcts(MctsConfig { weights: EvalWeights { color_fixing: true, ..c.weights }, ..c }),
+            Pilot::Uniform => return None,
+        });
+    }
     if let Some(base) = name.strip_suffix("+honest") {
         return Some(match parse_profile(base)? {
             Pilot::Scored(w) => Pilot::Scored(w.honest()),

@@ -268,6 +268,11 @@ fn play_recording(state: &GameState, seat: usize, bot: &mut dyn Bot, horizon: u3
 /// [`play_recording`] with the turn each action was made on.
 fn play_recording_turns(state: &GameState, seat: usize, bot: &mut dyn Bot, horizon: u32) -> (GameState, Vec<(u32, GameAction)>) {
     let mut g = state.clone();
+    // The pilot's engine-read seat flags, as every real game pushes them
+    // (`recommend::play_one_game_traced`, the server's seat setup). Without
+    // this a `fra-fixes` pilot played every item without `duel_sinks` — so
+    // with no landcycling at all — until 2026-11-18.
+    bot.push_seat_flags(&mut g.players[seat]);
     let opp = 1 - seat;
     let mut opp_bot = synced_bot(&g);
     let last_turn = g.turn_number + horizon;
@@ -2430,7 +2435,10 @@ pub fn items() -> Vec<Blunder> {
             area: Area::Fixing,
             cards: Cards::Fra,
             since: 5,
-            horizon: 2,
+            // The opponent's turn after the black source arrives too:
+            // Absence is an instant, and holding it for their turn is a
+            // line the search takes (2026-11-18).
+            horizon: 3,
             build: surveil_keeps_the_swamp,
             prompt: "no black source, Absence, an upkeep surveil with the Swamp on top — keep it",
         },
@@ -2450,7 +2458,10 @@ pub fn items() -> Vec<Blunder> {
             area: Area::Fixing,
             cards: Cards::Fra,
             since: 5,
-            horizon: 0,
+            // The opponent's turn after the black source arrives too:
+            // Absence is an instant, and holding it for their turn is a
+            // line the search takes (2026-11-18).
+            horizon: 1,
             build: marwyn_returns_the_swamp,
             prompt: "no black source, Absence, Marwyn with a Swamp and a Forest in the graveyard — return the Swamp",
         },
@@ -2460,7 +2471,10 @@ pub fn items() -> Vec<Blunder> {
             area: Area::Fixing,
             cards: Cards::Fra,
             since: 5,
-            horizon: 2,
+            // The opponent's turn after the black source arrives too:
+            // Absence is an instant, and holding it for their turn is a
+            // line the search takes (2026-11-18).
+            horizon: 3,
             build: murmuring_volume_makes_the_black,
             prompt: "no black source, Absence + Murmuring Volume on four lands — cast the Volume",
         },

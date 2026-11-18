@@ -58,6 +58,10 @@ pub(super) fn pick_cycle(state: &GameState, seat: usize, w: &EvalWeights) -> Opt
 /// 3,000 FRA sealed duels (2026-10-24) held Hexhaven Battalion in 22 % of the
 /// games that drew it and never landcycled anything. Behind the
 /// `duel_sinks` seat flag (or a commander, as the cycling above).
+/// Under `color_fixing` it also cycles, short of lands or not, a card whose
+/// land makes a splash colour (four or fewer sources in the deck) that a
+/// spell in hand, castable with one more land, is stranded on — if the
+/// cycler itself could not be cast next turn.
 pub(super) fn pick_landcycle(state: &GameState, seat: usize) -> Option<GameAction> {
     use crate::card::Keyword;
     use crate::game::types::TurnStep;
@@ -70,25 +74,67 @@ pub(super) fn pick_landcycle(state: &GameState, seat: usize) -> Option<GameActio
     } else {
         state.step == TurnStep::End
     };
-    if !window || p.hand.iter().any(|c| c.definition.is_land()) || !p.library.iter().any(|c| c.definition.is_land()) {
+    if !window || !p.library.iter().any(|c| c.definition.is_land()) {
         return None;
     }
     let lands = state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();
-    if lands >= ENOUGH_LANDS {
-        return None;
-    }
+    let short = !p.hand.iter().any(|c| c.definition.is_land()) && lands < ENOUGH_LANDS;
     // The costliest card first: it is the one furthest from being cast.
     let mut cards: Vec<(u32, crate::card::CardId, crate::mana::ManaCost)> = p
         .hand
         .iter()
-        .filter(|c| c.definition.cost.cmc() as usize > lands + 1)
         .filter_map(|c| {
-            let cost = c.definition.keywords.iter().find_map(|k| match k {
-                Keyword::Landcycling(mc, _) => Some(mc.clone()),
-                Keyword::Typecycling(spec) => Some(spec.0.clone()),
+            let (cost, fixes) = match c.definition.keywords.iter().find_map(|k| match k {
+                Keyword::Landcycling(mc, lt) => Some((mc.clone(), Some(*lt))),
+                Keyword::Typecycling(spec) => Some((spec.0.clone(), None)),
                 _ => None,
-            })?;
-            Some((c.definition.cost.cmc(), c.id, cost))
+            })? {
+                // `color_fixing`: the land this finds makes a colour another
+                // spell in hand is stranded on — cycle for it with lands
+                // enough, or a land of the wrong colour, in hand.
+                (mc, lt) => {
+                    let missing = super::bot::missing_colors(state, seat, Some(c.id));
+                    let supply = super::bot::seat_color_supply(state, seat);
+                    // The cycler itself cannot be cast next turn: too dear
+                    // for one more land, or a colour we cannot make.
+                    let cycler_stuck = c.definition.cost.cmc() as usize > lands + 1
+                        || c.definition.cost.symbols.iter().any(|s| {
+                            matches!(s, crate::mana::ManaSymbol::Colored(col) if !supply.contains(*col))
+                        });
+                    // A spell stranded on the colour that one more land casts.
+                    let stranded_soon = p.hand.iter().any(|h| {
+                        h.id != c.id
+                            && !h.definition.is_land()
+                            && h.definition.cost.cmc() as usize <= lands + 1
+                            && h.definition.cost.symbols.iter().any(|s| {
+                                matches!(s, crate::mana::ManaSymbol::Colored(col) if missing.contains(*col))
+                            })
+                    });
+                    // A splash colour: four or fewer lands that make it in
+                    // the whole deck. A main colour turns up on its own.
+                    let splash = || {
+                        let covers = |d: &crate::card::CardDefinition| super::bot::land_covers(d, missing);
+                        let n = p.library.iter().filter(|l| covers(&l.definition)).count()
+                            + p.graveyard.iter().filter(|l| covers(&l.definition)).count();
+                        n <= 4
+                    };
+                    // Each of the three conditions was needed: without them
+                    // the colour path cost FRA head-to-heads 0.2 (49.7-49.9
+                    // over four seeds, 2026-11-18) — a main colour's land
+                    // arrives anyway, and the cycled card was a spell.
+                    let fixes = !missing.is_empty() && stranded_soon && cycler_stuck && splash()
+                        && match lt {
+                            Some(lt) => super::bot::land_type_color(lt).is_some_and(|col| missing.contains(col)),
+                            None => p
+                                .library
+                                .iter()
+                                .any(|l| l.definition.is_basic() && super::bot::land_covers(&l.definition, missing)),
+                        };
+                    (mc, fixes)
+                }
+            };
+            let wanted = fixes || (short && c.definition.cost.cmc() as usize > lands + 1);
+            wanted.then(|| (c.definition.cost.cmc(), c.id, cost))
         })
         .collect();
     cards.sort_by_key(|(cmc, id, _)| (std::cmp::Reverse(*cmc), *id));
@@ -97,6 +143,62 @@ pub(super) fn pick_landcycle(state: &GameState, seat: usize) -> Option<GameActio
         .map(|(_, id, cost)| (GameAction::Landcycle { card_id: id }, cost))
         .find(|(a, cost)| landcycle_accepted(state, seat, a, cost))
         .map(|(a, _)| a)
+}
+
+/// `color_fixing`: a "return target land card from your graveyard to your
+/// hand" ability (Marwyn, the Preserver's {2}) aimed at a land that makes a
+/// colour a spell in hand is stranded on, in `seat`'s precombat main phase
+/// with the land drop unused and no such land in hand. No heuristic path
+/// activated Marwyn's ability: the generic sink is Commander-only in a duel
+/// and prices a land in hand at nothing.
+pub(super) fn pick_land_recursion(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::{Effect, PlayerRef, ZoneDest};
+    use crate::game::types::{Target, TurnStep};
+    let p = &state.players[seat];
+    if state.active_player_idx != seat
+        || state.step != TurnStep::PreCombatMain
+        || !state.stack.is_empty()
+        || !p.can_play_land()
+    {
+        return None;
+    }
+    let missing = super::bot::missing_colors(state, seat, None);
+    if missing.is_empty() {
+        return None;
+    }
+    let lands: Vec<crate::card::CardId> = p
+        .graveyard
+        .iter()
+        .filter(|c| super::bot::land_covers(&c.definition, missing))
+        .map(|c| c.id)
+        .collect();
+    if lands.is_empty() {
+        return None;
+    }
+    for card in state.battlefield.iter().filter(|c| c.controller == seat) {
+        for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {
+            if ab.from_hand || ab.from_graveyard || ab.from_exile || ab.from_command_zone || (ab.tap_cost && card.tapped) {
+                continue;
+            }
+            if !matches!(&ab.effect, Effect::Move { to: ZoneDest::Hand(PlayerRef::You), .. }) || !ab.effect.requires_target() {
+                continue;
+            }
+            for &land in &lands {
+                let action = GameAction::ActivateAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: Some(Target::Permanent(land)),
+                    additional_targets: Vec::new(),
+                    x_value: None,
+                    mode: None,
+                };
+                if state.would_accept(action.clone()) {
+                    return Some(action);
+                }
+            }
+        }
+    }
+    None
 }
 
 /// A landcycle the engine takes. `would_accept` refuses every one a promptable
@@ -203,6 +305,38 @@ mod tests {
         assert_eq!(pick_landcycle(&g, 0), Some(GameAction::Landcycle { card_id: battalion }), "a pick first");
         g.add_card_to_hand(0, crate::catalog::plains());
         assert_eq!(pick_landcycle(&g, 0), None, "a land in hand already");
+    }
+
+    /// `color_fixing`: three Plains and two Forests, a Plains in hand,
+    /// Extended Absence stranded on black and Apex Witchstalker ({4}{B}{B},
+    /// basic landcycling) — cycle the Witchstalker for the Swamp, which the
+    /// short-of-lands rule never does with a land in hand. Not for a main
+    /// colour: with five Swamps left in the library the black arrives anyway.
+    #[test]
+    fn color_fixing_landcycles_for_the_splash() {
+        let mut g = crate::game::two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, crate::catalog::plains());
+        }
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, crate::catalog::forest());
+        }
+        g.add_card_to_hand(0, crate::catalog::plains());
+        g.add_card_to_hand(0, crate::catalog::extended_absence());
+        let stalker = g.add_card_to_hand(0, crate::catalog::apex_witchstalker());
+        g.add_card_to_library(0, crate::catalog::swamp());
+        g.add_card_to_library(0, crate::catalog::plains());
+        g.players[0].duel_sinks = true;
+        assert_eq!(pick_landcycle(&g, 0), None, "flag off: a land in hand");
+        g.players[0].color_fixing = true;
+        assert_eq!(pick_landcycle(&g, 0), Some(GameAction::Landcycle { card_id: stalker }));
+        for _ in 0..4 {
+            g.add_card_to_library(0, crate::catalog::swamp());
+        }
+        assert_eq!(pick_landcycle(&g, 0), None, "five Swamps in the deck: a main colour");
     }
 
     /// CR 702.29c — Decree of Pain is cycled at an opponent's end step for

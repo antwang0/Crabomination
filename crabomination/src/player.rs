@@ -1787,6 +1787,13 @@ pub struct PlayerData {
     /// mode with nothing of ours tapped. Pushed from
     /// `EvalWeights::tap_timing`; off is the ladder control.
     pub tap_timing: bool,
+    /// Colour fixing for a splash (bot seats): landcycling, scry / surveil,
+    /// land recursion and a mill-then-take pick (Something Worth Saving's
+    /// `Effect::MillThenToHandN`, answered by the engine's Auto rule) go
+    /// for a land that makes a colour a spell in hand is stranded on. Pushed
+    /// from `EvalWeights::color_fixing`; off is the ladder control.
+    #[serde(default)]
+    pub color_fixing: bool,
     /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
     /// every coin flip this player makes is replayed `coin_flip_advantage`
     /// extra times and they get to keep the result they prefer. Practically
@@ -2194,6 +2201,7 @@ impl Player {
             hostile_player_targets: false,
             duel_sinks: false,
             tap_timing: false,
+            color_fixing: false,
             manual_mana: false,
             coin_flip_advantage: 0,
             flipped_coin_this_turn: false,

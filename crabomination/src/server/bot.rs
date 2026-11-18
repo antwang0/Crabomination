@@ -841,6 +841,24 @@ pub struct EvalWeights {
     /// for the opponent's turn and the mana was the combat trick's. Profile
     /// `fra-fixes`.
     pub duel_sinks: bool,
+    /// The seat flag `Player::color_fixing`: fetch, keep and recur the land
+    /// that makes the colour a spell in hand is stranded on — landcycling
+    /// (`cycling::pick_landcycle`) and land recursion (Marwyn,
+    /// `cycling::pick_land_recursion`) fire for it even with lands enough,
+    /// scry / surveil keep it on top, and the engine's mill-then-take pick
+    /// (Something Worth Saving) takes it. The blunder set's colour-fixing
+    /// items (2026-11-17) had the heuristic fail five of six: it landcycled
+    /// only when short of lands, binned the Swamp to surveil, took the Plains
+    /// from Something Worth Saving and never activated Marwyn. Measured
+    /// 2026-11-18: items `fixes` 2/7 -> 7/7, client pilot 4.8 -> 6.8 (10
+    /// reps); full set at 20 reps 59 -> 64 / 61.0 -> 62.9 of 72, pairs equal.
+    /// FRA sealed head-to-head vs `fra-fixes` 50.13 / 49.90 / 50.07 / 49.93 /
+    /// 49.92 / 50.07 (seeds 11/29/43/5/61/97, pooled 50.003), SOS 50.13 /
+    /// 50.06; a W/G deck splashing black +0.12..+0.78 over six race cells.
+    /// The first landcycling rule (any missing colour) read 49.7-49.9 on
+    /// every seed and was narrowed (`cycling::pick_landcycle`). Profile
+    /// `fra-fixes`.
+    pub color_fixing: bool,
     /// The greedy attack never redirects attackers at a planeswalker when the
     /// same attackers going face are lethal through every untapped potential
     /// blocker. The redirect only asked whether the walker could be finished:
@@ -1645,6 +1663,7 @@ impl EvalWeights {
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
+            color_fixing: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -1790,6 +1809,7 @@ impl EvalWeights {
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
+            color_fixing: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -1918,6 +1938,7 @@ impl EvalWeights {
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
+            color_fixing: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -3083,6 +3104,7 @@ impl EvalWeights {
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
+            color_fixing: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -3236,6 +3258,7 @@ impl EvalWeights {
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
+            color_fixing: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -3426,6 +3449,7 @@ impl EvalWeights {
     /// the client's `CRAB_FRA_FIXES=1` puts them on its net-leaf pilot.
     pub const fn with_fra_fixes(self) -> Self {
         Self {
+            color_fixing: true,
             counter_bar_low: true,
             burn_creature_arms: true,
             x0_death_hold: true,
@@ -3499,6 +3523,7 @@ impl EvalWeights {
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
+            color_fixing: false,
             counter_read: false,
             counter_read_board: false,
             hold_removal: false,
@@ -3737,6 +3762,7 @@ impl Bot for HeuristicBot {
             player.hostile_player_targets = self.weights.hostile_player_targets;
             player.duel_sinks = self.weights.duel_sinks;
             player.tap_timing = self.weights.tap_timing;
+            player.color_fixing = self.weights.color_fixing;
         }
     }
 
@@ -4057,6 +4083,7 @@ impl HeuristicBot {
                 if state.step == TurnStep::PreCombatMain
                     && state.stack.is_empty()
                     && let Some(a) = super::cycling::pick_landcycle(state, seat)
+                        .or_else(|| super::cycling::pick_land_recursion(state, seat))
                 {
                     return Some(BotStep::plain(a));
                 }
@@ -5829,6 +5856,68 @@ fn land_color_output(card: &CardDefinition) -> crate::mana::ColorSet {
     set
 }
 
+/// The colour a basic land type taps for.
+pub(crate) fn land_type_color(lt: crate::card::LandType) -> Option<crate::mana::Color> {
+    use crate::card::LandType;
+    use crate::mana::Color;
+    match lt {
+        LandType::Plains => Some(Color::White),
+        LandType::Island => Some(Color::Blue),
+        LandType::Swamp => Some(Color::Black),
+        LandType::Mountain => Some(Color::Red),
+        LandType::Forest => Some(Color::Green),
+        _ => None,
+    }
+}
+
+/// The colours `seat`'s mana can make: every permanent it controls (lands,
+/// mana rocks, dorks) plus the lands in its hand.
+pub(crate) fn seat_color_supply(state: &GameState, seat: usize) -> crate::mana::ColorSet {
+    let mut have = crate::mana::ColorSet::empty();
+    for c in state.battlefield.iter().filter(|c| c.controller == seat) {
+        have = crate::mana::ColorSet(have.0 | land_color_output(&c.definition).0);
+    }
+    for c in state.players[seat].hand.iter().filter(|c| c.definition.is_land()) {
+        have = crate::mana::ColorSet(have.0 | land_color_output(&c.definition).0);
+    }
+    have
+}
+
+/// `Player::color_fixing`: the colours a nonland card in `seat`'s hand (other
+/// than `except`) has a pip of that nothing the seat controls, and no land in
+/// its hand, can make — the splash colour a fixer should go and get. Empty
+/// with the flag off, so every caller is a no-op for the ladder control.
+pub(crate) fn missing_colors(
+    state: &GameState,
+    seat: usize,
+    except: Option<crate::card::CardId>,
+) -> crate::mana::ColorSet {
+    use crate::mana::{ColorSet, ManaSymbol};
+    if !state.players[seat].color_fixing {
+        return ColorSet::empty();
+    }
+    let mut want = ColorSet::empty();
+    for c in state.players[seat].hand.iter() {
+        if c.definition.is_land() || Some(c.id) == except {
+            continue;
+        }
+        for sym in c.definition.cost.symbols.iter() {
+            if let ManaSymbol::Colored(col) = sym {
+                want.insert(*col);
+            }
+        }
+    }
+    if want.is_empty() {
+        return want;
+    }
+    ColorSet(want.0 & !seat_color_supply(state, seat).0)
+}
+
+/// Does this card, as a land, make a colour in `missing`?
+pub(crate) fn land_covers(card: &CardDefinition, missing: crate::mana::ColorSet) -> bool {
+    card.is_land() && land_color_output(card).intersects(missing)
+}
+
 /// Choose which land to play this turn. Among the lands the engine would
 /// accept, prefer the one that covers the most colors the bot's hand wants
 /// but can't yet produce from the lands it already controls — basic
@@ -7557,6 +7646,7 @@ fn decide_scry(
     let lands_in_hand =
         state.players[seat].hand.iter().filter(|c| c.definition.is_land()).count();
     let sources = lands_in_play + lands_in_hand;
+    let missing = missing_colors(state, seat, None);
     // Higher draws sooner; below zero means "don't draw this at all".
     let mut scored: Vec<(i64, crate::card::CardId)> = cards
         .iter()
@@ -7568,6 +7658,10 @@ fn decide_scry(
                 .map(|c| &c.definition);
             let score = match def {
                 None => 0,
+                // `color_fixing`: the land that makes the colour a spell in
+                // hand is stranded on stays on top, however many lands we
+                // have — it is the card that casts the spell.
+                Some(d) if land_covers(d, missing) => 600,
                 Some(d) if d.is_land() => {
                     if sources < 5 {
                         500
@@ -34750,6 +34844,26 @@ mod stack_response_tests {
             matches!(at_healthy, GameAction::SubmitDecision(DecisionAnswer::Bool(true))),
             "at 20 life the free copy is taken, got {at_healthy:?}"
         );
+    }
+
+    /// `color_fixing`: six sources, none black, Extended Absence in hand —
+    /// a scried Swamp stays on top; without the flag it is flood.
+    #[test]
+    fn color_fixing_scry_keeps_the_missing_colour() {
+        use crate::decision::{DecisionAnswer, ScryMode};
+        let mut g = two_player_game();
+        for _ in 0..6 {
+            g.add_card_to_battlefield(0, catalog::plains());
+        }
+        g.add_card_to_hand(0, catalog::extended_absence());
+        let swamp = g.add_card_to_library(0, catalog::swamp());
+        let kept = |g: &GameState| match decide_scry(g, 0, &[(swamp, "Swamp".into())], ScryMode::Surveil) {
+            DecisionAnswer::ScryOrder { kept_top, .. } => kept_top == vec![swamp],
+            other => panic!("expected ScryOrder, got {other:?}"),
+        };
+        assert!(!kept(&g), "flag off: a seventh land is flood");
+        g.players[0].color_fixing = true;
+        assert!(kept(&g), "the Swamp casts the Absence");
     }
 
     /// Scry under bot play is no longer a no-op: with plenty of land
