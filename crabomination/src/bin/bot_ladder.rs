@@ -1374,7 +1374,11 @@ fn parse_args() -> Result<Args, String> {
             if !crabomination::server::net_eval::table_has_belief() {
                 return Err(format!("`+honest` needs a table net with the belief head; {path} has none"));
             }
-            eprintln!("honest redeal: hidden cards dealt from the pool by {path}'s belief head");
+            if crabomination::server::honest::popularity_control() {
+                eprintln!("honest redeal: hidden cards dealt from the pool by CRAB_HONEST_POP's popularity (control), not {path}'s belief");
+            } else {
+                eprintln!("honest redeal: hidden cards dealt from the pool by {path}'s belief head");
+            }
         }
     }
     if a_name.contains("net") || b_name.contains("net") {
@@ -2372,6 +2376,20 @@ fn main() {
             std::process::exit(2);
         }
     };
+    // `CRAB_DUMP_FIELD=1`: print the field's card counts (`count<TAB>name`,
+    // the `CRAB_HONEST_POP` format) and exit without playing.
+    if std::env::var_os("CRAB_DUMP_FIELD").is_some() {
+        let mut counts: std::collections::BTreeMap<String, usize> = Default::default();
+        for a in &field {
+            for f in &a.deck {
+                *counts.entry(f().name.to_string()).or_insert(0) += 1;
+            }
+        }
+        for (name, n) in counts {
+            println!("{n}\t{name}");
+        }
+        std::process::exit(0);
+    }
     if args.peer {
         let code = run_peer(&field, &args);
         report_honest();

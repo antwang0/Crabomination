@@ -203,7 +203,8 @@ pub struct Blunder {
     /// the 2026-11-12 harder items, written after the client's pilot
     /// reached 35/35; 4 the same day's resource items (a counter or a
     /// removal saved for the bigger threat), after it reached 60/60; 5 the
-    /// 2026-11-17 colour-fixing items.
+    /// 2026-11-17 colour-fixing items; 6 the 2026-11-19 hold items on real
+    /// SOS boards (`real_*`).
     pub since: u8,
     /// Turns past the current one the window runs: 0 closes it when this
     /// turn ends, 1 runs through the next.
@@ -357,12 +358,44 @@ pub fn real_positions(games: u64, seed0: u64) -> Vec<GameState> {
     out
 }
 
-/// The cards [`transplant_counter`] added.
+/// Which hold-the-answer item a transplant built.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum HoldKind {
+    /// [`transplant_counter`]: Mana Sculpt held for the Embermare, the
+    /// Tabulator the spend.
+    Counter,
+    /// [`transplant_removal`]: Foolish Fate held for the Embermare, Fate on
+    /// the Strifeknight the spend.
+    Removal,
+}
+
+/// The cards [`transplant_counter`] / [`transplant_removal`] added: the
+/// answer (Mana Sculpt / Foolish Fate), the bait (the Tabulator in hand /
+/// the opponent's Strifeknight) and the threat (Rearing Embermare).
 #[derive(Clone, Copy)]
 pub struct CounterCards {
-    pub sculpt: CardId,
+    pub answer: CardId,
     pub bait: CardId,
-    pub mare: CardId,
+    pub threat: CardId,
+    pub kind: HoldKind,
+}
+
+impl CounterCards {
+    /// The spend line's action: cast the Tabulator, or Fate the Strifeknight.
+    fn spend(&self) -> GameAction {
+        match self.kind {
+            HoldKind::Counter => {
+                GameAction::CastSpell { card_id: self.bait, target: None, additional_targets: vec![], mode: None, x_value: None }
+            }
+            HoldKind::Removal => GameAction::CastSpell {
+                card_id: self.answer,
+                target: Some(Target::Permanent(self.bait)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            },
+        }
+    }
 }
 
 /// [`sos_hold_up_the_counter_over_the_three_drop`] on a real position: seat
@@ -376,14 +409,61 @@ pub fn transplant_counter(real: &GameState) -> (Position, CounterCards) {
         tap(&mut g, id);
     }
     lands(&mut g, 0, catalog::island, 3);
-    let sculpt = g.add_card_to_hand(0, catalog::mana_sculpt());
+    let answer = g.add_card_to_hand(0, catalog::mana_sculpt());
     let bait = g.add_card_to_hand(0, catalog::textbook_tabulator());
     lands(&mut g, 1, catalog::mountain, 5);
-    let mare = g.add_card_to_hand(1, catalog::rearing_embermare());
-    (Position { state: g, checks: vec![Check::Dies(mare)] }, CounterCards { sculpt, bait, mare })
+    let threat = g.add_card_to_hand(1, catalog::rearing_embermare());
+    (Position { state: g, checks: vec![Check::Dies(threat)] }, CounterCards { answer, bait, threat, kind: HoldKind::Counter })
 }
 
-/// What the seat did with the counter item, through the opponent's turn.
+/// `save_the_murder_for_the_wurm` on a real position, in SOS cards: seat
+/// 0's lands tapped and three untapped Swamps added, Foolish Fate (2B
+/// instant, destroy target creature) to its hand; a ready Charging
+/// Strifeknight (3/3, the bait), five Mountains and Rearing Embermare (4/5
+/// haste, the threat) for the opponent. Fate the Strifeknight now, or hold
+/// it for the Embermare on their turn.
+pub fn transplant_removal(real: &GameState) -> (Position, CounterCards) {
+    let mut g = real.clone();
+    let mine: Vec<CardId> = g.battlefield.iter().filter(|c| c.controller == 0 && c.definition.is_land()).map(|c| c.id).collect();
+    for id in mine {
+        tap(&mut g, id);
+    }
+    lands(&mut g, 0, catalog::swamp, 3);
+    let answer = g.add_card_to_hand(0, catalog::foolish_fate());
+    let bait = ready(&mut g, 1, catalog::charging_strifeknight());
+    lands(&mut g, 1, catalog::mountain, 5);
+    let threat = g.add_card_to_hand(1, catalog::rearing_embermare());
+    (Position { state: g, checks: vec![Check::CastOn(answer, threat)] }, CounterCards { answer, bait, threat, kind: HoldKind::Removal })
+}
+
+/// Board `k` of `bot_puzzles --real-counter 120` / `--real-removal 120`
+/// (game `1000 + k` of [`real_positions`]).
+fn real_board(k: u64) -> GameState {
+    real_positions(1, 1000 + k).pop().expect("the game reaches seat 0's main")
+}
+
+// Real-board hold items, picked 2026-11-19 from `--truth 40` play-outs
+// (hold / spend on the bait / free = cast anything but the answer): boards
+// where holding beats both other lines by 15+ of 40.
+
+/// Counter board 112 (turn 7): hold 37, spend 8, free 12 of 40.
+fn real_counter_112() -> Position {
+    transplant_counter(&real_board(112)).0
+}
+
+/// Counter board 4 (turn 9): hold 22, spend 5, free 5 of 40.
+fn real_counter_4() -> Position {
+    transplant_counter(&real_board(4)).0
+}
+
+/// Removal board 23 (turn 5): hold 33, spend 15, free 16 of 40.
+fn real_removal_23() -> Position {
+    transplant_removal(&real_board(23)).0
+}
+
+/// What the seat did with a hold item, through the opponent's turn. The
+/// names are the counter item's; for the removal item "the Tabulator" is
+/// Fate on the Strifeknight and "countered" is the Embermare destroyed.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum CounterOutcome {
     /// Cast the Tabulator on its own turn.
@@ -422,16 +502,20 @@ pub fn judge_counter(pos: &Position, cards: CounterCards, bot: &mut dyn Bot) -> 
     let own_turn_cast = timed.iter().any(|(t, a)| *t == turn && matches!(a, GameAction::CastSpell { .. }));
     let actions: Vec<GameAction> = timed.into_iter().map(|(_, a)| a).collect();
     let cast = |id: CardId| Check::Casts(id).holds(0, &actions, &end);
-    let in_hand = end.players[1].hand.iter().any(|c| c.id == cards.mare);
-    let on_bf = end.battlefield_find(cards.mare).is_some();
-    let in_gy = end.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cards.mare));
-    if cast(cards.bait) {
+    let in_hand = end.players[1].hand.iter().any(|c| c.id == cards.threat);
+    let on_bf = end.battlefield_find(cards.threat).is_some();
+    let in_gy = end.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cards.threat));
+    let spent = match cards.kind {
+        HoldKind::Counter => cast(cards.bait),
+        HoldKind::Removal => Check::CastOn(cards.answer, cards.bait).holds(0, &actions, &end),
+    };
+    if spent {
         CounterOutcome::Spent
     } else if own_turn_cast {
         CounterOutcome::SpentOther
-    } else if cast(cards.sculpt) && in_gy {
+    } else if cast(cards.answer) && in_gy {
         CounterOutcome::Countered
-    } else if cast(cards.sculpt) && on_bf {
+    } else if cast(cards.answer) && on_bf {
         CounterOutcome::SculptElsewhere
     } else if in_hand {
         CounterOutcome::NotCast
@@ -443,30 +527,39 @@ pub fn judge_counter(pos: &Position, cards: CounterCards, bot: &mut dyn Bot) -> 
 }
 
 /// Seat 0 casts nothing for the rest of the current turn, and counters the
-/// Embermare with Mana Sculpt when it is on the stack; the heuristic
+/// Embermare with Mana Sculpt when it is on the stack (the removal item:
+/// Fates it once it is on the battlefield); the heuristic
 /// otherwise (the "hold" branch of [`hold_or_spend_truth`]). Scripted,
 /// because the heuristic itself never casts the Sculpt on these boards.
 struct HoldAndCounter {
     inner: super::bot::HeuristicBot,
     turn: u32,
     cards: CounterCards,
+    /// The "free" line: on its own turn the seat casts whatever the
+    /// heuristic would except the answer, so only the answer is held.
+    free: bool,
 }
 
 impl Bot for HoldAndCounter {
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
-        let mare_on_stack = state.stack.iter().any(|it| matches!(it, crate::game::StackItem::Spell { card, .. } if card.id == self.cards.mare));
-        let have_sculpt = state.players[seat].hand.iter().any(|c| c.id == self.cards.sculpt);
-        if mare_on_stack && have_sculpt && state.priority.player_with_priority == seat && state.pending_decision.is_none() {
+        let threat_up = match self.cards.kind {
+            HoldKind::Counter => state.stack.iter().any(|it| matches!(it, crate::game::StackItem::Spell { card, .. } if card.id == self.cards.threat)),
+            HoldKind::Removal => state.battlefield_find(self.cards.threat).is_some(),
+        };
+        let have_answer = state.players[seat].hand.iter().any(|c| c.id == self.cards.answer);
+        if threat_up && have_answer && state.priority.player_with_priority == seat && state.pending_decision.is_none() {
             return Some(GameAction::CastSpell {
-                card_id: self.cards.sculpt,
-                target: Some(Target::Permanent(self.cards.mare)),
+                card_id: self.cards.answer,
+                target: Some(Target::Permanent(self.cards.threat)),
                 additional_targets: vec![],
                 mode: None,
                 x_value: None,
             });
         }
         let a = self.inner.next_action(state, seat)?;
-        if state.turn_number == self.turn && matches!(a, GameAction::CastSpell { .. }) {
+        if state.turn_number == self.turn
+            && matches!(a, GameAction::CastSpell { card_id, .. } if !self.free || card_id == self.cards.answer)
+        {
             return None;
         }
         Some(a)
@@ -475,21 +568,25 @@ impl Bot for HoldAndCounter {
 
 /// The two lines played to the end by the default heuristic, `n` times each
 /// with the libraries reshuffled: holding (seat 0 casts nothing this turn
-/// and counters the Embermare) and spending (the Tabulator cast now). Seat
-/// 0's wins in each; `None` when the bait cannot be cast (before
+/// and counters the Embermare) and spending (the Tabulator cast now; for
+/// the removal item, Fate on the Strifeknight now and Fate the Embermare
+/// when it lands). Seat 0's wins in each; `None` when the spend cannot be
+/// cast (before
 /// 2026-11-14 an untapped Rubble Rouser with an empty graveyard stalled the
 /// auto-tapper, 3 boards of 120).
-pub fn hold_or_spend_truth(pos: &Position, cards: CounterCards, n: u64) -> Option<(u64, u64)> {
-    let bait = cards.bait;
+///
+/// The third count is the "free" line: the heuristic plays its own turn as
+/// it likes except for the answer, then answers the Embermare if it still
+/// can — what a pilot that casts some other spell now is choosing.
+pub fn hold_or_spend_truth(pos: &Position, cards: CounterCards, n: u64) -> Option<(u64, u64, u64)> {
     {
         let mut g = pos.state.clone();
-        let cast = GameAction::CastSpell { card_id: bait, target: None, additional_targets: vec![], mode: None, x_value: None };
-        g.perform_action(cast).ok()?;
+        g.perform_action(cards.spend()).ok()?;
     }
     use rand::SeedableRng;
     use rand::seq::SliceRandom;
     let turn = pos.state.turn_number;
-    let mut wins = [0u64; 2];
+    let mut wins = [0u64; 3];
     for (line, w) in wins.iter_mut().enumerate() {
         for k in 0..n {
             let mut g = pos.state.clone();
@@ -499,20 +596,20 @@ pub fn hold_or_spend_truth(pos: &Position, cards: CounterCards, n: u64) -> Optio
             }
             g.rng.reseed(k ^ 0xC0FF_EE00);
             if line == 1 {
-                let cast = g.perform_action(GameAction::CastSpell {
-                    card_id: bait,
-                    target: None,
-                    additional_targets: vec![],
-                    mode: None,
-                    x_value: None,
-                });
-                if cast.is_err() {
+                if g.perform_action(cards.spend()).is_err() {
                     continue;
                 }
-                drain_stack(&mut g);
+                // Resolve the spend, stopping at a decision (the removal
+                // item's Strifeknight dying can leave one): the play-out
+                // below answers it. `drain_stack` panics there.
+                while !g.stack.is_empty() && g.pending_decision.is_none() {
+                    if g.perform_action(GameAction::PassPriority).is_err() {
+                        break;
+                    }
+                }
             }
-            let mut seat0: Box<dyn Bot> = if line == 0 {
-                Box::new(HoldAndCounter { inner: super::bot::HeuristicBot::default(), turn, cards })
+            let mut seat0: Box<dyn Bot> = if line != 1 {
+                Box::new(HoldAndCounter { inner: super::bot::HeuristicBot::default(), turn, cards, free: line == 2 })
             } else {
                 Box::new(super::bot::HeuristicBot::default())
             };
@@ -535,7 +632,7 @@ pub fn hold_or_spend_truth(pos: &Position, cards: CounterCards, n: u64) -> Optio
             }
         }
     }
-    Some((wins[0], wins[1]))
+    Some((wins[0], wins[1], wins[2]))
 }
 
 // ── Leaf pairs: does an evaluator order two boards the right way? ──────
@@ -2400,6 +2497,36 @@ pub fn items() -> Vec<Blunder> {
             prompt: "6 life, three Islands, Mana Sculpt + Textbook Tabulator; they hold Rearing Embermare — hold up the counter",
         },
         Blunder {
+            id: "real_counter_112",
+            twin: None,
+            area: Area::Mana,
+            cards: Cards::Sos,
+            since: 6,
+            horizon: 1,
+            build: real_counter_112,
+            prompt: "real SOS board 112, three Islands, Mana Sculpt + Tabulator; they hold Rearing Embermare — hold up the counter",
+        },
+        Blunder {
+            id: "real_counter_4",
+            twin: None,
+            area: Area::Mana,
+            cards: Cards::Sos,
+            since: 6,
+            horizon: 1,
+            build: real_counter_4,
+            prompt: "real SOS board 4, three Islands, Mana Sculpt + Tabulator; they hold Rearing Embermare — hold up the counter",
+        },
+        Blunder {
+            id: "real_removal_23",
+            twin: None,
+            area: Area::Removal,
+            cards: Cards::Sos,
+            since: 6,
+            horizon: 1,
+            build: real_removal_23,
+            prompt: "real SOS board 23, three Swamps + Foolish Fate; their Strifeknight out, Rearing Embermare in hand — Fate the Embermare",
+        },
+        Blunder {
             id: "fixing_control",
             twin: None,
             area: Area::Fixing,
@@ -2899,6 +3026,42 @@ mod tests {
         }
     }
 
+    /// The removal item on real boards: the spend (Fate on the Strifeknight)
+    /// is castable, and the scripted hold line Fates the Embermare whenever
+    /// the opponent casts it.
+    #[test]
+    fn real_removal_hold_line_kills_the_embermare() {
+        let reals = real_positions(6, 1000);
+        assert!(reals.len() >= 3, "real positions: {}", reals.len());
+        let mut tally = std::collections::BTreeMap::new();
+        for real in &reals {
+            let (pos, cards) = transplant_removal(real);
+            let mut g = pos.state.clone();
+            g.perform_action(cards.spend()).expect("Fate on the Strifeknight");
+            let mut bot = HoldAndCounter { inner: HeuristicBot::default(), turn: pos.state.turn_number, cards, free: false };
+            let o = judge_counter(&pos, cards, &mut bot);
+            assert!(matches!(o, CounterOutcome::Countered | CounterOutcome::NotCast), "{o:?}");
+            *tally.entry(format!("{o:?}")).or_insert(0) += 1;
+        }
+        assert!(tally.contains_key("Countered"), "{tally:?}");
+    }
+
+    /// The real-board hold items pass for the scripted hold line, as the
+    /// play-outs that picked them say they should.
+    #[test]
+    fn real_hold_items_pass_the_scripted_hold() {
+        for (id, k, removal) in [("real_counter_112", 112, false), ("real_counter_4", 4, false), ("real_removal_23", 23, true)] {
+            let real = real_board(k);
+            let (pos, cards) = if removal { transplant_removal(&real) } else { transplant_counter(&real) };
+            let mut bot = HoldAndCounter { inner: HeuristicBot::default(), turn: pos.state.turn_number, cards, free: false };
+            let o = judge_counter(&pos, cards, &mut bot);
+            assert_eq!(o, CounterOutcome::Countered, "{id}");
+            let item = items().into_iter().find(|i| i.id == id).expect("listed");
+            let mut bot = HoldAndCounter { inner: HeuristicBot::default(), turn: pos.state.turn_number, cards, free: false };
+            assert!(judge(&item, &mut bot).ok(), "{id}: the scripted hold passes the item");
+        }
+    }
+
     /// The scripted hold line counters the Embermare on real positions.
     #[test]
     #[ignore = "diagnostic"]
@@ -2907,7 +3070,7 @@ mod tests {
         let mut tally = std::collections::BTreeMap::new();
         for real in &reals {
             let (pos, cards) = transplant_counter(real);
-            let mut bot = HoldAndCounter { inner: HeuristicBot::default(), turn: pos.state.turn_number, cards };
+            let mut bot = HoldAndCounter { inner: HeuristicBot::default(), turn: pos.state.turn_number, cards, free: false };
             *tally.entry(format!("{:?}", judge_counter(&pos, cards, &mut bot))).or_insert(0) += 1;
         }
         println!("{tally:?}");

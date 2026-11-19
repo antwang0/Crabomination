@@ -563,14 +563,19 @@ fn run_scoring(profiles: &[String]) {
 /// SOS sealed self-play. Per position: the heuristic play-out of holding
 /// and of spending on the Tabulator (T games each), then each profile's
 /// outcome per rep (`blunder::CounterOutcome`), tallied by which line wins.
-fn run_real_counter(games: u64) {
-    use crabomination::server::blunder::{CounterOutcome, hold_or_spend_truth, judge_counter, real_positions, transplant_counter};
+/// `--real-removal N ..`: the same for the removal item
+/// (`blunder::transplant_removal`: Foolish Fate, the opponent's Strifeknight
+/// the bait, the Embermare the threat).
+fn run_real_counter(games: u64, removal: bool) {
+    use crabomination::server::blunder::{
+        CounterOutcome, hold_or_spend_truth, judge_counter, real_positions, transplant_counter, transplant_removal,
+    };
     let a: Vec<String> = std::env::args().collect();
     let flag = |f: &str, d: u64| a.iter().position(|x| x == f).and_then(|i| a.get(i + 1)).map_or(d, |v| v.parse().expect("a number"));
     let (reps, truth) = (flag("--reps", 3), flag("--truth", 20));
     // `--pos K`: only board K (for reading one board's search, CRAB_MCTS_ROOT=1).
     let only_pos = a.iter().position(|x| x == "--pos").and_then(|i| a.get(i + 1)).map(|v| v.parse::<usize>().expect("--pos K"));
-    let skip: Vec<usize> = ["--real-counter", "--reps", "--truth", "--pos"]
+    let skip: Vec<usize> = ["--real-counter", "--real-removal", "--reps", "--truth", "--pos"]
         .iter()
         .filter_map(|f| a.iter().position(|x| x == f).map(|i| i + 1))
         .collect();
@@ -578,7 +583,11 @@ fn run_real_counter(games: u64) {
         a.iter().enumerate().skip(1).filter(|(i, x)| !skip.contains(i) && !x.starts_with("--")).map(|(_, x)| x.clone()).collect();
     let positions = real_positions(games, 1000);
     println!("{} real positions from {games} games; truth {truth} play-outs a line, {reps} rep(s) a profile", positions.len());
-    println!("outcomes: S spent on the Tabulator, X cast another spell on its turn, C countered the Embermare, E Sculpt elsewhere, N Embermare not cast, M missed, O other\n");
+    if removal {
+        println!("outcomes: S Fate on the Strifeknight, X cast another spell on its turn, C Fated the Embermare, E Fate elsewhere, N Embermare not cast, M missed, O other\n");
+    } else {
+        println!("outcomes: S spent on the Tabulator, X cast another spell on its turn, C countered the Embermare, E Sculpt elsewhere, N Embermare not cast, M missed, O other\n");
+    }
     let n_out = CounterOutcome::ALL.len();
     // class (hold right, spend right, even) x profile x outcome
     let mut tally = vec![vec![vec![0u64; n_out]; profiles.len()]; 3];
@@ -586,9 +595,9 @@ fn run_real_counter(games: u64) {
         if only_pos.is_some_and(|p| p != k) {
             continue;
         }
-        let (pos, cards) = transplant_counter(real);
-        let Some((h, s)) = hold_or_spend_truth(&pos, cards, truth) else {
-            println!("#{k:<3} skipped: the Tabulator can't be cast here");
+        let (pos, cards) = if removal { transplant_removal(real) } else { transplant_counter(real) };
+        let Some((h, s, f)) = hold_or_spend_truth(&pos, cards, truth) else {
+            println!("#{k:<3} skipped: the spend can't be cast here");
             continue;
         };
         let margin = 0.2 * truth as f64;
@@ -600,7 +609,7 @@ fn run_real_counter(games: u64) {
             2
         };
         let mut line = format!(
-            "#{k:<3} turn {:<2} life {:>2}-{:<2} hold {h:>2}/{truth} spend {s:>2}/{truth} {}",
+            "#{k:<3} turn {:<2} life {:>2}-{:<2} hold {h:>2}/{truth} spend {s:>2}/{truth} free {f:>2}/{truth} {}",
             real.turn_number,
             real.players[0].life,
             real.players[1].life,
@@ -924,9 +933,9 @@ fn main() {
         run_action_gap(games);
         return;
     }
-    if let Some(i) = args.iter().position(|a| a == "--real-counter") {
+    if let Some(i) = args.iter().position(|a| a == "--real-counter" || a == "--real-removal") {
         let games = args.get(i + 1).and_then(|v| v.parse().ok()).unwrap_or(40);
-        run_real_counter(games);
+        run_real_counter(games, args[i] == "--real-removal");
         return;
     }
     if args.iter().any(|a| a == "--blunders") {

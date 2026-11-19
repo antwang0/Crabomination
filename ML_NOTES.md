@@ -9540,6 +9540,75 @@ cost two blunder items and lost on the ladder before. What is left is the
 rollouts' fidelity on the opponent's turn and the horizon, not the arm
 structure.
 
+### The price of the honest redeal, and the removal item on real boards (2026-11-19)
+
+**Honest redeal** (`.ladder/honest/`): `mcts-net67-256+honest` vs
+`mcts-net67-256`, belief from TableNet run 3's step 130 k, paired, 250
+games a cell, nice 19 / 6 threads beside the user's jobs:
+
+| cell | belief | popularity control |
+|---|---|---|
+| cube s43 | 49.6 [48.2, 51.1] | 49.5 [48.2, 50.9] |
+| SOS s43 | 49.5 [48.3, 50.7] | pending |
+| cube s97 | 49.9 [48.4, 51.3] | pending |
+| SOS s97 | 49.2 [48.0, 50.5] | pending |
+
+Not knowing the decklist costs about half a point (cube −0.25, SOS
+−0.65 pooled) against a bot that does know it — cheap. The control
+(`CRAB_HONEST_POP=<count<TAB>name>`, new in `server::honest`) deals every
+hidden card from one fixed distribution, the card counts of 100 fields
+the ladder built on seeds 1000-1099 (`CRAB_DUMP_FIELD=1 bot_ladder ..`,
+new; `pop_cube.tsv` / `pop_sos.tsv`), reading nothing of the game.
+
+**The removal item on real boards** (`bot_puzzles --real-removal`, new;
+`blunder::transplant_removal`): `save_the_murder_for_the_wurm` in SOS
+cards on the `--real-counter` boards. Seat 0 gets three untapped Swamps
+(own lands tapped) and Foolish Fate; the opponent a ready Charging
+Strifeknight (the bait), five Mountains and Rearing Embermare. The truth
+now has a third line, **free**: the heuristic plays its own turn as it
+likes except the answer, which a pilot casting some other spell is
+choosing (`hold_or_spend_truth` returns `(hold, spend, free)`).
+
+| 120 boards, 40 play-outs a line | removal hold / spend / free | counter hold / spend / free |
+|---|---|---|
+| hold-right boards | 9: 21.3 / 6.3 / 18.4 | 27: 24.9 / 12.0 / 12.6 |
+| spend-right | 5: 9.0 / 20.0 / 11.2 | 5: 17.2 / 27.8 / 27.0 |
+| even | 106: 10.2 / 9.3 / 10.6 | 88: 21.0 / 19.4 / 18.8 |
+
+- **Removal rarely matters on real boards**: 9 of 120 hold-right (counter
+  27), and there casting something else costs little (18.4 vs 21.3). The
+  shell item's failure — Murder the small creature — is mostly not the
+  client's: on hold-right reps it Fates the bait 5 of 33 (`dflt` 12 of
+  27); its common move is another spell (20 of 33). `-ho` Fates the
+  Embermare 6 vs 4 and the bait 2 vs 5.
+- **On the counter item casting something else is as bad as spending on
+  the bait** (12.6 vs 12.0, hold 24.9), so the 2026-11-14 "spent on another
+  spell" counts are real misses.
+
+**Three real-board items in the blunder set** (`since: 6`), the boards
+where holding beats both other lines by 15+ of 40: `real_counter_112`
+(37 / 8 / 12), `real_counter_4` (22 / 5 / 5), `real_removal_23` (33 / 15 /
+16). Test `real_hold_items_pass_the_scripted_hold`. 10 reps
+(`.ladder/rr/bl_real.txt`):
+
+| pilot | real_counter_112 | real_counter_4 | real_removal_23 |
+|---|---|---|---|
+| `dflt` | 0 | 0 | 0 |
+| client `mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr` | 2 | 4 | 0 |
+| client `-ho` | **10** | **10** | 1 |
+
+On board 23 the pilot plays its land and casts Tragedy Feaster with all
+four (free line 16 of 40 vs hold 33). The hold arm `-ho` (2026-11-14,
+not adopted: ladder 49.0 / 50.4, and it cost the shell item
+`the_four_drop_over_the_one_drop`) now passes both real counter boards it
+was built for. Re-adopting it would change the bar after the fact, so it
+stays the user's call: on the set as it stands -ho is +2 real items, −1
+shell item, ladder NO LOSS.
+
+**Fixed on the way:** the spend line's `drain_stack` panicked when the
+bait's death left a decision pending (it now stops at a decision and the
+play-out answers it).
+
 ## The client's draft decks: 40 cards again, and the sealed builder on SOS piles (+9.6) (2026-11-15)
 
 Asked after the deck-builder leads ("are there more improvements to the

@@ -145,7 +145,59 @@ thread_local! {
 
 const CACHE_LEN: usize = 8;
 
+/// `CRAB_HONEST_POP=<file>`: the popularity control. Every opponent's hand
+/// and library are dealt from one fixed distribution, each card's weight
+/// its count in the file (`count<TAB>name` lines, e.g. the card counts of
+/// many fields the ladder built on other seeds) plus a half, in place of
+/// the belief head. Same deck rules, same deal; it reads nothing of the
+/// game, so `X+honest` (belief) vs `X+honest` (popularity) says what the
+/// head's read of the table is worth. Diagnostic only.
+static POP: std::sync::LazyLock<Option<HashMap<String, f32>>> = std::sync::LazyLock::new(|| {
+    let path = std::env::var("CRAB_HONEST_POP").ok()?;
+    let text = std::fs::read_to_string(&path).unwrap_or_else(|e| panic!("CRAB_HONEST_POP {path}: {e}"));
+    let mut out = HashMap::default();
+    for line in text.lines().filter(|l| !l.trim().is_empty()) {
+        let (n, name) = line.split_once('\t').unwrap_or_else(|| panic!("CRAB_HONEST_POP {path}: bad line {line:?}"));
+        *out.entry(name.to_string()).or_insert(0.0) += n.trim().parse::<f32>().expect("a count");
+    }
+    Some(out)
+});
+
+/// Whether the popularity control (`CRAB_HONEST_POP`) replaces the belief.
+pub fn popularity_control() -> bool {
+    POP.is_some()
+}
+
+fn pop_belief(g: &GameState, seat: usize, pool: &'static PoolIx, pop: &HashMap<String, f32>) -> Option<Rc<Belief>> {
+    let slots = table_slots(g, seat);
+    let ids = slots.iter().fold(0u64, |h, &p| h.rotate_left(5) ^ g.players[p].commander_identity.0 as u64);
+    let key = 0x504F_5055_4C41_5200
+        ^ (pool as *const PoolIx as u64).rotate_left(41)
+        ^ (seat as u64).rotate_left(7)
+        ^ ((slots.len() as u64) << 3)
+        ^ ids.rotate_left(23);
+    if let Some(b) = CACHE.with(|c| c.borrow().iter().find(|(k, _)| *k == key).map(|(_, b)| b.clone())) {
+        return Some(b);
+    }
+    let logits: Vec<f32> = (0..pool.len())
+        .map(|i| (pop.get(pool.def(i).name.as_ref() as &str).copied().unwrap_or(0.0) + 0.5).ln())
+        .collect();
+    let per_slot = vec![(logits.clone(), logits); slots.len().saturating_sub(1)];
+    let b = Rc::new(build_belief(g, seat, pool, &per_slot)?);
+    CACHE.with(|c| {
+        let mut c = c.borrow_mut();
+        if c.len() >= CACHE_LEN {
+            c.remove(0);
+        }
+        c.push((key, b.clone()));
+    });
+    Some(b)
+}
+
 fn belief(g: &GameState, seat: usize, pool: &'static PoolIx) -> Option<Rc<Belief>> {
+    if let Some(pop) = POP.as_ref() {
+        return pop_belief(g, seat, pool, pop);
+    }
     let (t, net) = net_eval::table_belief(g, seat, pool)?;
     let key = t.fingerprint()
         ^ (net as u64).rotate_left(17)
