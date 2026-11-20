@@ -9614,6 +9614,15 @@ was built for. Re-adopting it would change the bar after the fact, so it
 stays the user's call: on the set as it stands -ho is +2 real items, −1
 shell item, ladder NO LOSS.
 
+**`-ho` re-gate, PRE-REGISTERED 2026-11-20 before any cell**
+(`.ladder/ho2/gate.sh`, the user's "do 1"). A new bar, since the old one
+was set before the set had real-board items:
+- cells: paired 120 x 12 on fresh seeds 5 / 61, SOS sealed (champion
+  leaf) and FRA sealed (`fra-champion` leaf).
+- blunder set: full, 20 reps, A and B.
+- ADOPT iff SOS pooled >= 49.5, FRA pooled >= 49.5, no cell < 48.5, and
+  blunder items(A) >= items(B). Otherwise the line is closed.
+
 **Fixed on the way:** the spend line's `drain_stack` panicked when the
 bait's death left a decision pending (it now stops at a decision and the
 play-out answers it).
