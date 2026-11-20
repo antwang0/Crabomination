@@ -9549,9 +9549,9 @@ games a cell, nice 19 / 6 threads beside the user's jobs:
 | cell | belief | popularity control |
 |---|---|---|
 | cube s43 | 49.6 [48.2, 51.1] | 49.5 [48.2, 50.9] |
-| SOS s43 | 49.5 [48.3, 50.7] | pending |
-| cube s97 | 49.9 [48.4, 51.3] | pending |
-| SOS s97 | 49.2 [48.0, 50.5] | pending |
+| SOS s43 | 49.5 [48.3, 50.7] | 49.5 [48.2, 50.7] |
+| cube s97 | 49.9 [48.4, 51.3] | 49.5 [48.1, 51.0] |
+| SOS s97 | 49.2 [48.0, 50.5] | 50.4 [49.2, 51.6] |
 
 Not knowing the decklist costs about half a point (cube −0.25, SOS
 −0.65 pooled) against a bot that does know it — cheap. The control
@@ -9559,6 +9559,15 @@ Not knowing the decklist costs about half a point (cube −0.25, SOS
 hidden card from one fixed distribution, the card counts of 100 fields
 the ladder built on seeds 1000-1099 (`CRAB_DUMP_FIELD=1 bot_ladder ..`,
 new; `pop_cube.tsv` / `pop_sos.tsv`), reading nothing of the game.
+
+**Result: the belief earns nothing over popularity.** Pooled, belief
+cube 49.75 / SOS 49.35, popularity 49.5 / 49.95, every cell inside the
+other's interval. B1 (hand recall 0.30 vs 0.17 base rate on sealed) does
+not turn into play: given the pool, what the opponent probably holds is
+mostly "the commonly played cards", and the redeal's worlds are only as
+good as that. The honest redeal stays off; if it is ever wanted against
+humans, the popularity sampler is the cheaper equal (no table net
+forward per decision).
 
 **The removal item on real boards** (`bot_puzzles --real-removal`, new;
 `blunder::transplant_removal`): `save_the_murder_for_the_wurm` in SOS
