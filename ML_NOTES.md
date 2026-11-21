@@ -7493,7 +7493,7 @@ regularisation (weight decay / label smoothing), or the champion's
 recipe as an initialisation for the duel pools. Run 3's 130 k checkpoint
 is the belief net the honest-redeal read uses.
 
-**Run 4 (2026-11-21, in progress): the blocks, and a collapse on the way.**
+**Run 4 (2026-11-21): the blocks collapse; not adopted.**
 `.ladder/table4/run4.sh`: run 3's recipe plus `--blocks 2`, weight decay
 0.1 (candle's default 0.01), win-target label smoothing 0.05 (new
 `--weight-decay` / `--smooth`; held-out CE still reads the true targets).
@@ -7519,6 +7519,16 @@ is the belief net the honest-redeal read uses.
   relaunched at lr 1e-4 with a guard (`guard.sh`: stop if sealed CE > 0.66
   at >= 30 k steps). At 10 k the blocks still trail the plain net (0.595
   vs 0.573), so the long run is the test of whether they ever pass it.
+- **RESULT: the blocks line fails as built.** At lr 1e-4 the run learnt
+  to a best at 40 k steps (sealed / cube / pod2 / pods held-out CE 0.568 /
+  0.554 / 0.536 / 1.081; run 3 was 0.523 / 0.508 / 0.495 / 1.057 at 40 k),
+  then slid (0.606 at 70 k) and collapsed again (0.664 / 0.658 / 0.679 /
+  1.264 at 80 k, the guard stopped it). The training win loss rose with it,
+  so this is optimisation instability in the attention trunk, not
+  overfitting. Lowering the lr only delayed it. Not gated (worse than run 3
+  at every checkpoint). Untried fixes: gradient clipping, lr warmup, QK
+  normalisation, a larger effective batch (accumulation); each is a GPU
+  night and none is pre-justified by a measurement here.
 
 ### The phase-5 loop on FRA (2026-11-03: stopped on two flat generations)
 
