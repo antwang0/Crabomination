@@ -276,6 +276,16 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             Pilot::Uniform => return None,
         });
     }
+    // `<profile>+dl<N>`: a search profile with an N ms wall-clock cap a
+    // decision (`MctsConfig::deadline_ms`).
+    if let Some((base, ms)) = name.rsplit_once("+dl")
+        && let Ok(ms) = ms.parse::<u32>()
+    {
+        return match parse_profile(base)? {
+            Pilot::Mcts(c) => Some(Pilot::Mcts(MctsConfig { deadline_ms: ms, ..c })),
+            _ => None,
+        };
+    }
     if let Some(base) = name.strip_suffix("+honest") {
         return Some(match parse_profile(base)? {
             Pilot::Scored(w) => Pilot::Scored(w.honest()),

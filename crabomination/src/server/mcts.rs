@@ -556,6 +556,38 @@ pub struct MctsConfig {
     /// positions": 59 / 60 of the pass arm's rollouts spend it). Its prior
     /// is the pass arm's. Ladder suffix `-ho`.
     pub menu_hold_arm: bool,
+    /// A wall-clock cap on one search, in milliseconds (0 = none, the
+    /// default: the budget alone stops it, and a search replays). Past it
+    /// every rollout loop stops after its current rollout; the seeding pass
+    /// still rolls each arm once. For a human's table, where the budget's
+    /// tail is the wait (pods: p99 5-7 s at 256, 2026-11-21). Ladder suffix
+    /// `+dlN`. Not read by the Gumbel search.
+    pub deadline_ms: u32,
+}
+
+thread_local! {
+    /// The running search's deadline on this thread (the caller's, and each
+    /// root-parallel worker's copy): see [`MctsConfig::deadline_ms`].
+    static DEADLINE: std::cell::Cell<Option<std::time::Instant>> = const { std::cell::Cell::new(None) };
+}
+
+fn past_deadline() -> bool {
+    DEADLINE.with(|d| d.get().is_some_and(|t| std::time::Instant::now() >= t))
+}
+
+/// Sets this thread's deadline for a scope and restores the old one.
+struct DeadlineGuard(Option<std::time::Instant>);
+
+impl DeadlineGuard {
+    fn install(at: Option<std::time::Instant>) -> DeadlineGuard {
+        DeadlineGuard(DEADLINE.with(|d| d.replace(at)))
+    }
+}
+
+impl Drop for DeadlineGuard {
+    fn drop(&mut self) {
+        DEADLINE.with(|d| d.set(self.0));
+    }
 }
 
 /// Most picks that are not a declaration a combat window takes before it
@@ -602,6 +634,7 @@ impl Default for MctsConfig {
             menu_anchor: -1.0,
             menu_anchor_material: false,
             menu_hold_arm: false,
+            deadline_ms: 0,
             win_discount: 0.0,
             two_seat_leaf: false,
             menu_no_noise: false,
@@ -1460,6 +1493,10 @@ impl MctsBot {
         if self.cfg.gumbel {
             return self.gumbel_search(state, seat, candidates);
         }
+        let _deadline = DeadlineGuard::install(
+            (self.cfg.deadline_ms > 0)
+                .then(|| std::time::Instant::now() + std::time::Duration::from_millis(self.cfg.deadline_ms as u64)),
+        );
         let n = candidates.len();
         let unit = self.cfg.weights.unit.max(1) as f64;
         let priors = softmax_priors(
@@ -1627,6 +1664,9 @@ impl MctsBot {
     ) -> u32 {
         let n = visits.len();
         while done < hard_max {
+            if past_deadline() {
+                break;
+            }
             let parent = done.max(1) as f64;
             if done >= base {
                 // Extension phase: only a still-close call earns more
@@ -1754,12 +1794,14 @@ impl MctsBot {
                 // A pinned search hands each worker a stream of its own,
                 // drawn in worker order, so the split budget replays too.
                 let pin = search_draw();
+                let deadline = DEADLINE.with(|d| d.get());
                 // Every capture is `Copy` (shared references and a few
                 // numbers), so the closure is too and the fallback below
                 // can still call it after `spawn_scoped` took it — on this
                 // thread, which is why the pin restores what it replaced.
                 let run = move || {
                     let _pin = pin.map(PinnedStreams::install);
+                    let _deadline = DeadlineGuard::install(deadline);
                     self.worker_chunk(
                         state, seat, candidates, priors, seeded_v, seeded_t, done, chunk,
                     )
@@ -2699,6 +2741,38 @@ mod tests {
             "four workers spent 32 rollouts between them, not 4 x 32: {visits:?}",
         );
         assert!(visits.iter().all(|&v| v > 1), "every arm was visited past its seed: {visits:?}");
+    }
+
+    /// `deadline_ms` stops both the serial loop and every root-parallel
+    /// worker once it has passed: a deadline already passed spends nothing
+    /// past the seeds, on either path.
+    #[test]
+    fn a_passed_deadline_stops_serial_and_parallel_spending() {
+        use crate::player::Player;
+
+        let players = vec![Player::new(0, "A"), Player::new(1, "B")];
+        let mut g = GameState::new(players);
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let candidates = vec![GameAction::PassPriority, GameAction::PassPriority];
+        let priors = vec![0.5, 0.5];
+        for threads in [1, 4] {
+            let bot = MctsBot::new(MctsConfig {
+                iterations: 10_000,
+                horizon_turns: 1,
+                search_threads: threads,
+                ..MctsConfig::default()
+            });
+            let (mut visits, mut total) = (vec![1u32, 1], vec![0.5f64, 0.5]);
+            let _past = DeadlineGuard::install(Some(std::time::Instant::now()));
+            if threads > 1 {
+                bot.parallel_spend(&g, 0, &candidates, &priors, &mut visits, &mut total, 2, 10_000);
+            }
+            bot.ucb1_spend(&g, 0, &candidates, &priors, &mut visits, &mut total, 2, 10_000, 10_000);
+            assert_eq!(visits, vec![1, 1], "{threads} thread(s): nothing past the seeds");
+        }
+        assert!(DEADLINE.with(|d| d.get()).is_none(), "the guard restored no deadline");
     }
 
     /// CR 508.1d — the declaration this bot *returns* has to be legal, and
