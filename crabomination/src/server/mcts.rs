@@ -137,6 +137,41 @@ pub mod timing {
         }
     }
 
+    /// Per `next_action` call, its wall time in microseconds, split by
+    /// whether it ran a search (the rest are the fallback's own picks).
+    static LATENCY: std::sync::Mutex<(Vec<u32>, Vec<u32>)> = std::sync::Mutex::new((Vec::new(), Vec::new()));
+
+    pub fn latency(d: std::time::Duration, searched: bool) {
+        let us = d.as_micros().min(u32::MAX as u128) as u32;
+        let mut l = LATENCY.lock().unwrap();
+        if searched { l.0.push(us) } else { l.1.push(us) }
+    }
+
+    /// `p50 / p90 / p99 / max` of the searched calls' wall time, and the
+    /// share of all bot time they took — the latency a human waits on.
+    pub fn latency_report() -> Option<String> {
+        let l = LATENCY.lock().unwrap();
+        if l.0.is_empty() {
+            return None;
+        }
+        let mut v = l.0.clone();
+        v.sort_unstable();
+        let q = |p: f64| v[((v.len() - 1) as f64 * p).round() as usize] as f64 / 1e6;
+        let sum = |x: &[u32]| x.iter().map(|&u| u as f64).sum::<f64>() / 1e6;
+        Some(format!(
+            "mcts latency: {} searched calls, p50 {:.3} s, p90 {:.3} s, p99 {:.3} s, max {:.3} s; mean {:.3} s; \
+             {} unsearched calls; searched share of bot time {:.1} %",
+            v.len(),
+            q(0.5),
+            q(0.9),
+            q(0.99),
+            q(1.0),
+            sum(&v) / v.len() as f64,
+            l.1.len(),
+            100.0 * sum(&v) / (sum(&v) + sum(&l.1)).max(1e-9),
+        ))
+    }
+
     pub fn rollout_end(kind: usize) {
         if enabled() {
             ENDS[kind].fetch_add(1, Relaxed);
@@ -2338,6 +2373,23 @@ impl Bot for MctsBot {
     }
 
     fn next_action(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
+        if !timing::enabled() {
+            return self.next_action_untimed(state, seat);
+        }
+        let before = timing::DECISIONS.load(std::sync::atomic::Ordering::Relaxed);
+        let t0 = std::time::Instant::now();
+        let a = self.next_action_untimed(state, seat);
+        // A call that ran a search bumped the decision counter (any thread's
+        // search can too, so under a multi-game ladder this over-counts;
+        // read latency with `--threads 1`).
+        let searched = timing::DECISIONS.load(std::sync::atomic::Ordering::Relaxed) != before;
+        timing::latency(t0.elapsed(), searched);
+        a
+    }
+}
+
+impl MctsBot {
+    fn next_action_untimed(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         if self.cfg.menu_windows != 0
             && let Some(a) = self.menu_window(state, seat)
         {

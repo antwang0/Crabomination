@@ -1752,6 +1752,9 @@ fn run_pod_ab(
             println!("  group {g} {w}/{n}");
         }
     }
+    if let Some(t) = crabomination::server::mcts::timing::latency_report() {
+        println!("{t}");
+    }
     if let Some(t) = crabomination::server::mcts::timing::report() {
         println!("{t}");
     }
@@ -2680,6 +2683,9 @@ fn main() {
         )
     };
     println!("verdict: {verdict}");
+    if let Some(t) = crabomination::server::mcts::timing::latency_report() {
+        println!("{t}");
+    }
     if let Some(t) = crabomination::server::mcts::timing::report() {
         println!("{t}");
     }
