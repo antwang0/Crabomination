@@ -7493,6 +7493,33 @@ regularisation (weight decay / label smoothing), or the champion's
 recipe as an initialisation for the duel pools. Run 3's 130 k checkpoint
 is the belief net the honest-redeal read uses.
 
+**Run 4 (2026-11-21, in progress): the blocks, and a collapse on the way.**
+`.ladder/table4/run4.sh`: run 3's recipe plus `--blocks 2`, weight decay
+0.1 (candle's default 0.01), win-target label smoothing 0.05 (new
+`--weight-decay` / `--smooth`; held-out CE still reads the true targets).
+- **Memory.** The blocks attend over every object at the table, libraries
+  included, so a step costs `b * n^2` (n = padded objects, ~1,300 in a big
+  pod batch): OOM at batch 256 and 128 on the free card, and at batch 64
+  after ~7 k steps on a rare batch. New `--attn-budget` splits a batch over
+  the budget in half, each half its own step; 40 M keeps a step well inside
+  the card (155 splits in 95 k steps, ~0.2 %).
+- **Collapse.** The first full launch (lr 3e-4) learnt for ~5 k steps and
+  then drove the value head to uniform (held-out CE 0.693 = ln 2 on every
+  duel pool by 30 k, pods 1.31) while the belief losses kept falling.
+  Ablations, held-out sealed CE at 5 k / 10 k / 20 k (`abl_*`):
+
+| arm | 5 k | 10 k | 20 k |
+|---|---|---|---|
+| A: blocks, lr 3e-4, no reg | 0.629 | 0.669 | 0.691 (collapsed) |
+| B: no blocks, lr 3e-4, reg | 0.575 | 0.573 | 0.553 |
+| C: blocks, lr 3e-4, no belief head | 0.586 | 0.602 | |
+| D: blocks, lr 1e-4, belief on | 0.640 | 0.595 | |
+
+  The blocks at 3e-4 are unstable; the regularisation is harmless. Run 4
+  relaunched at lr 1e-4 with a guard (`guard.sh`: stop if sealed CE > 0.66
+  at >= 30 k steps). At 10 k the blocks still trail the plain net (0.595
+  vs 0.573), so the long run is the test of whether they ever pass it.
+
 ### The phase-5 loop on FRA (2026-11-03: stopped on two flat generations)
 
 The user's "3": the loop on FRA sealed (rated decks, the FRA net as the
