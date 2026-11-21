@@ -49,6 +49,7 @@ struct Args {
     blocks: usize,
     weight_decay: f64,
     smooth: f32,
+    attn_budget: Option<u64>,
     pool: bool,
     belief: bool,
     modes: Option<Vec<Mode>>,
@@ -76,6 +77,7 @@ fn parse() -> Args {
         blocks: 0,
         weight_decay: 0.01,
         smooth: 0.0,
+        attn_budget: None,
         pool: true,
         belief: true,
         modes: None,
@@ -100,6 +102,7 @@ fn parse() -> Args {
             "--blocks" => a.blocks = val().parse().expect("--blocks"),
             "--weight-decay" => a.weight_decay = val().parse().expect("--weight-decay"),
             "--smooth" => a.smooth = val().parse().expect("--smooth"),
+            "--attn-budget" => a.attn_budget = Some(val().parse().expect("--attn-budget")),
             "--no-pool" => {
                 a.pool = false;
                 a.belief = false;
@@ -234,7 +237,8 @@ fn main() {
     let cfg = TableConfig { blocks: a.blocks, pool: a.pool, belief: a.belief, ..TableConfig::standard(vocab.size()) };
     let mut trainer = TableTrainer::new(&cfg, a.lr)
         .and_then(|t| t.with_regularisation(a.weight_decay, a.smooth))
-        .expect("trainer");
+        .expect("trainer")
+        .with_attn_budget(a.attn_budget);
     eprintln!("table_train: weight decay {}, win label smoothing {}", a.weight_decay, a.smooth);
     let latest = a.out.join("latest.safetensors");
     if latest.exists() {
@@ -300,6 +304,10 @@ fn main() {
                 let line = checkpoint(&trainer, &sh, step, ema, start.elapsed().as_secs_f64());
                 eprintln!("{line}");
                 writeln!(stats, "{line}").ok();
+                if a.blocks > 0 {
+                    let (splits, max) = trainer.attn_stats();
+                    eprintln!("attn: {splits} batch splits so far, largest step b*n^2 {max}");
+                }
             }
         }
         sh.stop.store(true, Ordering::Relaxed);
@@ -331,7 +339,7 @@ fn checkpoint(t: &TableTrainer, sh: &Shared, step: u64, ema: [f32; 6], secs: f64
         let states: Vec<&crabomination_nn::table::TableState> = rows.iter().map(|r| &r.state).collect();
         let mut ce = 0f64;
         let mut brier = 0f64;
-        for (chunk_s, chunk_r) in states.chunks(128).zip(rows.chunks(128)) {
+        for (chunk_s, chunk_r) in states.chunks(32).zip(rows.chunks(32)) {
             let p = t.predict(chunk_s).expect("predict");
             for (pr, r) in p.iter().zip(chunk_r) {
                 for (q, w) in pr.iter().zip(&r.win) {

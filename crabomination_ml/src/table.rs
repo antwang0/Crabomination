@@ -618,6 +618,14 @@ pub struct TableTrainer {
     /// `(1 - smooth) * share + smooth / seats` (run 4, against run 3's
     /// late pod overconfidence). 0 = off.
     smooth: f32,
+    /// With the blocks on, the largest `b * n^2` (rows x padded objects
+    /// squared, the attention maps' size) one step may take; a batch over it
+    /// is split in half, each half its own step (run 4: a rare batch of big
+    /// pods ran the 24 GB card out of memory at batch 64). `None` = no cap.
+    attn_budget: Option<u64>,
+    blocks: usize,
+    splits: u64,
+    max_attn: u64,
 }
 
 impl TableTrainer {
@@ -627,7 +635,7 @@ impl TableTrainer {
         let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
         let model = build_table_model(cfg, vb)?;
         let opt = AdamW::new(varmap.all_vars(), ParamsAdamW { lr, ..Default::default() })?;
-        Ok(TableTrainer { varmap, model, opt, dev, smooth: 0.0 })
+        Ok(TableTrainer { varmap, model, opt, dev, smooth: 0.0, attn_budget: None, blocks: cfg.blocks, splits: 0, max_attn: 0 })
     }
 
     /// Regularisation (run 4): AdamW weight decay in place of candle's
@@ -637,6 +645,18 @@ impl TableTrainer {
         self.opt = AdamW::new(self.varmap.all_vars(), ParamsAdamW { lr, weight_decay, ..Default::default() })?;
         self.smooth = smooth;
         Ok(self)
+    }
+
+    /// See [`Self::attn_budget`].
+    pub fn with_attn_budget(mut self, budget: Option<u64>) -> TableTrainer {
+        self.attn_budget = budget;
+        self
+    }
+
+    /// Steps taken by batch splits under the attention budget, and the
+    /// largest `b * n^2` seen (for calibrating the budget).
+    pub fn attn_stats(&self) -> (u64, u64) {
+        (self.splits, self.max_attn)
     }
 
     pub fn device(&self) -> &Device {
@@ -655,6 +675,29 @@ impl TableTrainer {
         let batch = make_table_batch(&states, &self.dev)?;
         let t_batch = t0.elapsed();
         let (b, slots) = (batch.b, batch.slots);
+        if self.blocks > 0 {
+            let n: u64 = batch.widths.iter().sum::<usize>() as u64;
+            let cost = b as u64 * n * n;
+            if let Some(budget) = self.attn_budget
+                && cost > budget
+                && b >= 2
+            {
+                drop(batch);
+                self.splits += 1;
+                let (l, r) = rows.split_at(b / 2);
+                let (x, y) = (self.train_step(l)?, self.train_step(r)?);
+                let avg = |p: f32, q: f32| (p + q) / 2.0;
+                return Ok(TableLoss {
+                    total: avg(x.total, y.total),
+                    win: avg(x.win, y.win),
+                    life: avg(x.life, y.life),
+                    len: avg(x.len, y.len),
+                    hand: avg(x.hand, y.hand),
+                    lib: avg(x.lib, y.lib),
+                });
+            }
+            self.max_attn = self.max_attn.max(cost);
+        }
         let mut win = vec![0f32; b * slots];
         let mut life = vec![0f32; b * slots];
         let mut len = vec![0f32; b];
