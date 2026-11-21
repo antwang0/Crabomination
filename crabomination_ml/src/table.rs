@@ -614,6 +614,10 @@ pub struct TableTrainer {
     model: TableModel,
     opt: AdamW,
     dev: Device,
+    /// Label smoothing on the win target: each row's result shares become
+    /// `(1 - smooth) * share + smooth / seats` (run 4, against run 3's
+    /// late pod overconfidence). 0 = off.
+    smooth: f32,
 }
 
 impl TableTrainer {
@@ -623,7 +627,16 @@ impl TableTrainer {
         let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
         let model = build_table_model(cfg, vb)?;
         let opt = AdamW::new(varmap.all_vars(), ParamsAdamW { lr, ..Default::default() })?;
-        Ok(TableTrainer { varmap, model, opt, dev })
+        Ok(TableTrainer { varmap, model, opt, dev, smooth: 0.0 })
+    }
+
+    /// Regularisation (run 4): AdamW weight decay in place of candle's
+    /// default 0.01, and label smoothing on the win target.
+    pub fn with_regularisation(mut self, weight_decay: f64, smooth: f32) -> CResult<TableTrainer> {
+        let lr = self.opt.learning_rate();
+        self.opt = AdamW::new(self.varmap.all_vars(), ParamsAdamW { lr, weight_decay, ..Default::default() })?;
+        self.smooth = smooth;
+        Ok(self)
     }
 
     pub fn device(&self) -> &Device {
@@ -647,7 +660,10 @@ impl TableTrainer {
         let mut len = vec![0f32; b];
         for (ri, r) in rows.iter().enumerate() {
             debug_assert_eq!(r.win.len(), r.state.seat_count(), "one result share per slot");
-            win[ri * slots..][..r.win.len()].copy_from_slice(&r.win);
+            let n = r.win.len() as f32;
+            for (w, &x) in win[ri * slots..][..r.win.len()].iter_mut().zip(&r.win) {
+                *w = (1.0 - self.smooth) * x + self.smooth / n;
+            }
             life[ri * slots..][..r.life.len()].copy_from_slice(&r.life);
             len[ri] = r.game_len;
         }

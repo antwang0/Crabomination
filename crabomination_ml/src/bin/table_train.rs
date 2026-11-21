@@ -47,6 +47,8 @@ struct Args {
     checkpoint_every: u64,
     holdout: f64,
     blocks: usize,
+    weight_decay: f64,
+    smooth: f32,
     pool: bool,
     belief: bool,
     modes: Option<Vec<Mode>>,
@@ -72,6 +74,8 @@ fn parse() -> Args {
         checkpoint_every: 1_000,
         holdout: 0.05,
         blocks: 0,
+        weight_decay: 0.01,
+        smooth: 0.0,
         pool: true,
         belief: true,
         modes: None,
@@ -94,6 +98,8 @@ fn parse() -> Args {
             "--checkpoint-every" => a.checkpoint_every = val().parse().expect("--checkpoint-every"),
             "--holdout" => a.holdout = val().parse().expect("--holdout"),
             "--blocks" => a.blocks = val().parse().expect("--blocks"),
+            "--weight-decay" => a.weight_decay = val().parse().expect("--weight-decay"),
+            "--smooth" => a.smooth = val().parse().expect("--smooth"),
             "--no-pool" => {
                 a.pool = false;
                 a.belief = false;
@@ -226,7 +232,10 @@ fn main() {
     std::fs::create_dir_all(&a.out).expect("create --out");
     let vocab = crabomination::server::net_eval::vocab();
     let cfg = TableConfig { blocks: a.blocks, pool: a.pool, belief: a.belief, ..TableConfig::standard(vocab.size()) };
-    let mut trainer = TableTrainer::new(&cfg, a.lr).expect("trainer");
+    let mut trainer = TableTrainer::new(&cfg, a.lr)
+        .and_then(|t| t.with_regularisation(a.weight_decay, a.smooth))
+        .expect("trainer");
+    eprintln!("table_train: weight decay {}, win label smoothing {}", a.weight_decay, a.smooth);
     let latest = a.out.join("latest.safetensors");
     if latest.exists() {
         trainer.load(&latest).expect("resume latest.safetensors");
