@@ -81,6 +81,11 @@ use super::{
 /// (seeds 43 / 97, paired 1440 games a cell, `.ladder/lob`). Without the
 /// policy net those duels keep the plain search on the default weights,
 /// a combination measured as the pre-2026-11-12 lobby pilot.
+///
+/// Since 2026-11-21 that pilot also holds a counter / removal for the threat
+/// (`MctsConfig::with_hold_arm`): NO LOSS on cube 52.0 / 50.5 and Modern
+/// 49.6 / 50.8 (seeds 5 / 61, 120 x 12, `.ladder/ho2`); SOS colleges was not
+/// read on its own — it rides on SOS sealed 50.4 / 50.1, the same cards.
 fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::Bot> {
     if seats > 2 {
         return Box::new(super::HeuristicBot::new());
@@ -101,7 +106,7 @@ fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::
         cfg.menu_windows = super::mcts::MENU_MAIN | super::mcts::MENU_COMBAT;
         cfg.policy_slot = slot;
         // After the weights are final: the search fixes set one of them.
-        cfg = cfg.with_combat_fix().with_search_fixes();
+        cfg = cfg.with_combat_fix().with_search_fixes().with_hold_arm();
     }
     Box::new(MctsBot::new(cfg))
 }

@@ -55,7 +55,10 @@ use super::*;
 /// search plays combat with its fix (`MctsConfig::with_combat_fix`: FRA
 /// sealed +2.45, the blunder set 35 / 35 from 23.6), and since 2026-11-12
 /// with the search fixes (`MctsConfig::with_search_fixes`: NO LOSS on SOS
-/// sealed, the 60-item blunder set 60 / 60 from 57.0).
+/// sealed, the 60-item blunder set 60 / 60 from 57.0), and since 2026-11-21
+/// with the hold arm (`MctsConfig::with_hold_arm`: NO LOSS on SOS sealed
+/// 50.4 / 50.1, FRA sealed 49.7 / 50.8 and cube 52.0 / 50.5, fresh seeds
+/// 5 / 61; the real-board counter items 10 / 10, `.ladder/ho2`).
 pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn crabomination::server::Bot> {
     if n_seats > 2 {
         return Box::new(HeuristicBot::new());
@@ -96,7 +99,7 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn cra
         policy_slot,
         ..crabomination::server::MctsConfig::default()
     };
-    Box::new(crabomination::server::MctsBot::new(if menu { cfg.with_combat_fix().with_search_fixes() } else { cfg }))
+    Box::new(crabomination::server::MctsBot::new(if menu { cfg.with_combat_fix().with_search_fixes().with_hold_arm() } else { cfg }))
 }
 
 /// The bot a Hint asks (`server::hint`): the local pilot for the state's

@@ -9623,6 +9623,25 @@ was set before the set had real-board items:
 - ADOPT iff SOS pooled >= 49.5, FRA pooled >= 49.5, no cell < 48.5, and
   blunder items(A) >= items(B). Otherwise the line is closed.
 
+**RESULT: ADOPTED** (2026-11-20 / 21, `.ladder/ho2/summary.txt`):
+
+| cell | seed 5 | seed 61 | pooled |
+|---|---|---|---|
+| SOS sealed | 50.4 [48.6, 52.2] | 50.1 [48.4, 51.7] | 50.25 |
+| FRA sealed (FRA leaf) | 49.7 [47.9, 51.6] | 50.8 [48.9, 52.8] | 50.25 |
+| blunder set (75 items, 20 reps) | A 69.0 | B 68.4 | |
+
+Every clause holds. **Scope check** before turning it on outside sealed
+(`.ladder/ho2/scope.sh`, the same NO LOSS rule stated before its cells:
+pooled >= 49.5, no cell < 48.5): cube **52.0 [50.0, 54.0] / 50.5 [48.6,
+52.5]** (pooled 51.25), Modern **49.6 [45.3, 53.8] / 50.8 [46.8, 54.8]**
+(pooled 50.2; the lobby's two decklists, so the interval is ±4). Both pass.
+`MctsConfig::with_hold_arm` is now on the client's menu pilot (sealed,
+cube, draft) and the lobby's Cube / Modern / SOS duels. SOS colleges was
+not read on its own; it rides on SOS sealed (same cards). The hold arm's
+size is small (+0.25 sealed, +1.25 cube): it is a blunder fix that does
+not cost, not a strength gain.
+
 **Fixed on the way:** the spend line's `drain_stack` panicked when the
 bait's death left a decision pending (it now stops at a decision and the
 play-out answers it).

@@ -601,6 +601,18 @@ impl MctsConfig {
         weights.hold_removal = true;
         Self { win_discount: 0.02, menu_no_noise: true, menu_state_keys: true, weights, ..self }
     }
+
+    /// The hold arm ([`Self::menu_hold_arm`], ladder `-ho`), ADOPTED
+    /// 2026-11-20 on top of [`Self::with_search_fixes`] (ML_NOTES "The price
+    /// of the honest redeal, and the removal item on real boards"): paired
+    /// 120 x 12 on fresh seeds 5 / 61, SOS sealed 50.4 / 50.1, FRA sealed
+    /// (FRA leaf) 49.7 / 50.8; the 75-item blunder set 69.0 from 68.4, the
+    /// two real-board counter items 10 / 10 from 2 and 4 (`.ladder/ho2`).
+    /// The scope check after it read cube 52.0 / 50.5 and Modern 49.6 / 50.8,
+    /// so the client's menu pilot and the lobby's duels carry it.
+    pub fn with_hold_arm(self) -> Self {
+        Self { menu_hold_arm: true, ..self }
+    }
 }
 
 /// The ladder's and the puzzle tool's name for a menu-search pilot:
@@ -2776,6 +2788,8 @@ mod tests {
         assert!(menu_profile("mcts-net67-menu-mc-df-anm10-rh").is_some_and(|c| c.heuristic_rollouts && c.horizon_turns == 3));
         assert!(menu_profile("mcts-net67-menu-mc-df-anm10-ho").is_some_and(|c| c.menu_hold_arm && c.horizon_turns == 3));
         assert!(!MctsConfig::default().menu_hold_arm, "the hold arm is opt-in");
+        let held = menu_profile("mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr-ho").expect("the 2026-11-20 gate's A");
+        assert_eq!(format!("{held:?}"), format!("{:?}", built.with_hold_arm()), "the builder is the profile gated");
         assert!(menu_profile("mcts-net67-menu-mc-bogus").is_none());
         assert!(menu_profile("mcts-net67-256").is_none());
     }
