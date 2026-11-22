@@ -593,6 +593,20 @@ fn vindictive_triumph_borrows_the_cheap_ones() {
     assert_eq!((borrowed.controller, borrowed.tapped), (0, true));
     to_step(&mut g, TurnStep::End);
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Grizzly Bears"), "exiled at the end step");
+
+    // CR 109.2 — "target creature or planeswalker" names a permanent. The
+    // zone-less filter took creature *cards* in graveyards, and the picker
+    // sweeps graveyards first for a Move-to-exile: 29 of 51 bot casts
+    // exiled a graveyard card instead of a creature (2026-11-22).
+    let mut g = pod(2);
+    to_step(&mut g, TurnStep::PreCombatMain);
+    let knight = ready(&mut g, 1, catalog::grizzly_bears());
+    let dead = g.add_card_to_graveyard(1, catalog::serra_angel());
+    let vt = g.add_card_to_hand(0, catalog::vindictive_triumph());
+    flood(&mut g, 0);
+    assert!(cast(&mut g.clone(), vt, Some(Target::Permanent(dead))).is_err(), "a graveyard card is no creature");
+    let spell = g.players[0].hand.iter().find(|c| c.id == vt).unwrap().definition.effect.clone();
+    assert_eq!(g.auto_target_for_effect(&spell, 0), Some(Target::Permanent(knight)), "aims at the battlefield creature");
 }
 
 /// Kiora of Salt and Sand: the granted −8 is a loyalty activation, so the

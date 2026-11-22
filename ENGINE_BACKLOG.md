@@ -19,6 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
+| Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 69 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc4Bu`) — 26 Star Trek seats, four primitives](#fixedopen-2026-11-01-commander-run-01wruxc4bu--26-star-trek-seats-four-primitives) | 25 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4Bu` found them (moved verbatim, 2026-11-01)](#the-commander-nexts-lines-as-01wruxc4bu-found-them-moved-verbatim-2026-11-01) | 4 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc3G1`) — 22 Star Trek seats, four primitives](#fixedopen-2026-11-01-commander-run-01wruxc3g1--22-star-trek-seats-four-primitives) | 19 |
@@ -163,6 +164,75 @@ the handoff.
 
 
 # Bugs & robustness
+
+## FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers
+
+Found by rating every FRA card in play (`fra_card_eval --set-played`: each
+card swapped into up to 400 learned-builder decks, paired games) and
+reading the cards that rated far below their text against Scryfall (30
+suspects, three code audits) and in game traces (`CRAB_FORCE_CARDS` +
+`CRAB_DUMP_TRACES`). Data and gate in `.ladder/fix1` and
+`.ladder/fra_pool_adds`.
+
+FIXED:
+- **Equip paid only from the floated pool** (`game/mod.rs`, `equip`): every
+  seat that doesn't pre-float — every bot since they stopped pre-tapping —
+  cast Equipment and never equipped it (1-2 Equip actions per ~700
+  Equipment casts in 1,200 FRA games, dflt and fra-fixes alike). Now
+  `pay_action_mana` (auto-tap, CR 602.2b), as reconfigure and cycling. Moved
+  the pod digests 0x903_0001/2 and the Rofellos outcome table (reverting it
+  alone restores them). Kitesail −4.8 → +0.5, Hunter's Axe −4.5 → −0.1,
+  Lich's Relic +0.5 → +4.5, Warrior's Blades −0.6 → +2.4 points.
+- **Vindictive Triumph's "target creature or planeswalker" took graveyard
+  cards** (29 of 51 casts): the zone-less Move filter plus
+  `prefers_graveyard_target`. Filter now `.and(R::Permanent)`, and the
+  picker skips the graveyard sweep for a filter that names a permanent (the
+  same test `target_out_of_zone` uses). −3.2 → +1.4.
+- **Optional own-side blink never declined** (`targeting.rs`
+  `own_blink_pick`): Flickering Hound blinked the biggest creature on every
+  cast. Tokens, counters, attachments and would-be attackers are skipped;
+  enters-trigger creatures first, then tapped ones.
+- **Animate-Auras read as hostile** (`bot.rs` `animates_host`): Puppet
+  Crafting went on the opponent's permanent in 143 of 251 casts. −3.9 → −0.2.
+- **`GainActivatedAbility` read as hostile** (`query.rs`): Emrakul's land
+  grant went to an opponent's land.
+- **"Fights up to one" chosen slot by slot** (`targeting.rs`
+  `fight_pair_pick`): Yoshimaru's 2/2 fought a 6/4. The pair is chosen
+  together by outcome. −2.9 → −1.6.
+- **A prompting seat — every bot seat in a simulated game
+  (`build_match_template`) — answers trigger targets in the bot's own table
+  and never reaches the engine's pick**, so the blink fix first moved
+  Flickering Hound's rating by exactly 0.0. `GameState::trigger_slot_pick` +
+  `engine_trigger_answer` route blink and fight slots to the engine's pick.
+- **Bot policy, adopted into `fra-fixes`** (gate: every FRA/SOS cell
+  50.0-50.4 vs the old bundle, blunders 68.5 → 68.8 / 75):
+  `skip_noop_casts` (Germinate Recruits cast with no life gained, 133/211),
+  `loyalty_fixes` (−X at every X; unspendable mana +1 dropped beside a +1 —
+  Chandra, Chill of Compliance +2.1), `hand_abilities_wide` (Gideon's
+  Memorial's discard-for-4-damage in combat). An exile-from-hand setup arm
+  (Emrakul's ramp) measured −1.8 and was removed.
+- Preston, the Vanisher's precon seat re-seeded 0x0B94 → 0x7EFE44 (see OPEN).
+
+OPEN:
+- **158 catalog cards outside FRA have Vindictive Triumph's shape**
+  (targeted, graveyard-preferring, zone-less filter not naming a permanent):
+  `.ladder/fix1/zone_audit_catalog.tsv`. Many are fine (player targets,
+  "attacking creature"); the rest need an oracle check ("target creature"
+  vs "target creature card"), e.g. Cast into the Fire, Ruinous Intrusion.
+- **Gideon's Memorial plays at about −9**, worse than a blank card, and its
+  hand ability being used moved it only +0.3. A two-Plains probe casts the
+  same as without it; the planeswalker-only mana ability is the suspect.
+- **Preston, the Vanisher never uses "sacrifice five Illusions: exile"**: the
+  material eval keeps five 0/1s over one exile, and past 150 permanents
+  `board_is_cluttered` stops `pick_sacrifice_value` entirely. At 0x0B94 the
+  seat stalled at 126 life behind a token wall into the board cap.
+- **Madness and the "pay {N} to keep this trigger" tax still pay from the
+  floated pool only** (`offer_madness_cast`, `actions.rs` trigger tax) — the
+  same blind spot as equip; Madness's is a documented policy inside a
+  synchronous discard path.
+- Fatehold Charm's bounce/pump modes are combat-window only; Chandra, Chill
+  of Compliance's surveil rider is not known to `decide_scry`; Emrakul's ramp
+  is unused (using it measured harmful in sealed).
 
 ## Commander NEXT gate lines, 2026-10-22 (moved verbatim from TODO.md, 2026-10-23)
 

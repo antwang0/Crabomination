@@ -52,6 +52,15 @@ impl Bot for PassBot {
 }
 
 fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
+    // `<profile>+p3`: the profile with the 2026-11-22 policy flags on
+    // (`hand_abilities_wide`, `skip_noop_casts`, `loyalty_fixes`).
+    if let Some(base) = profile.strip_suffix("+p3") {
+        let p3 = |w: EvalWeights| EvalWeights { hand_abilities_wide: true, skip_noop_casts: true, loyalty_fixes: true, ..w };
+        if let Some(cfg) = mcts_cfg(base) {
+            return Some(Box::new(MctsBot::new(MctsConfig { weights: p3(cfg.weights), ..cfg })));
+        }
+        return Some(Box::new(HeuristicBot::with_weights(p3(heuristic_weights(base)?))));
+    }
     // `<profile>+cfix`: the profile with `EvalWeights::color_fixing` on.
     if let Some(base) = profile.strip_suffix("+cfix") {
         if let Some(cfg) = mcts_cfg(base) {

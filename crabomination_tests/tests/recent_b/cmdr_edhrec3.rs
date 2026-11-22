@@ -1,7 +1,7 @@
 //! Commander: EDHREC average-deck gaps, third batch (`decks::cmdr_edhrec3`):
 //! Ketramose, the New Dawn's and Niko, Light of Hope's lists.
 
-use crabomination::card::CardId;
+use crabomination::card::{CardId, CounterType};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::effect::{Effect, Selector};
@@ -85,12 +85,52 @@ fn flickering_hound_blinks_on_creature_casts() {
     for _ in 0..3 {
         g.add_card_to_library(0, catalog::island());
     }
+    // A bigger creature with no enters trigger and a counter to lose sits
+    // beside it. Regression: the own-side pick blinked the biggest creature
+    // on every creature cast (its counters, auras and attack gone, a token
+    // gone for good); Flickering Hound played −3.0 points (2026-11-22).
+    let angel = ready(&mut g, 0, catalog::serra_angel());
+    g.battlefield_find_mut(angel).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
     let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
     flood(&mut g);
     let hand = g.players[0].hand.len();
     cast_x(&mut g, bear, None);
     assert!(g.battlefield_find(visionary).is_some(), "it came back");
     assert_eq!(g.players[0].hand.len(), hand - 1 + 1, "as a new object its ETB drew again");
+    assert_eq!(g.battlefield_find(angel).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "the Angel was left alone");
+    // Nothing worth blinking: the "up to one" slot stays empty.
+    g.remove_from_battlefield_to_hand(visionary);
+    let hand = g.players[0].hand.len();
+    let bear2 = g.add_card_to_hand(0, catalog::grizzly_bears());
+    flood(&mut g);
+    cast_x(&mut g, bear2, None);
+    assert_eq!(g.battlefield_find(angel).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "no blink");
+    assert_eq!(g.players[0].hand.len(), hand, "no draw");
+
+    // A prompting seat (every bot seat in a simulated game) is asked for the
+    // target and the bot answers it: the same picks. Regression: the bot's
+    // own polarity guess answered the ask, and the engine fix moved
+    // Flickering Hound's play rating by exactly 0.0 (2026-11-22).
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    for (with_visionary, want) in [(true, true), (false, false)] {
+        let mut g = pod(2);
+        g.players[0].wants_ui = true;
+        ready(&mut g, 0, catalog::flickering_hound());
+        let visionary = with_visionary.then(|| ready(&mut g, 0, catalog::elvish_visionary()));
+        let angel = ready(&mut g, 0, catalog::serra_angel());
+        g.battlefield_find_mut(angel).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+        let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+        flood(&mut g);
+        g.perform_action(GameAction::CastSpell { card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        assert!(g.pending_decision.is_some(), "the Hound's trigger asks");
+        let answer = HeuristicBot::new().next_action(&g, 0);
+        let expect = match (want, visionary) {
+            (true, Some(v)) => GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(v))),
+            _ => GameAction::SubmitDecision(DecisionAnswer::DeclineTarget),
+        };
+        assert_eq!(answer, Some(expect), "with the Visionary: {with_visionary}");
+    }
 }
 
 /// Unlicensed Hearse: two cards from one graveyard, linked to it; its

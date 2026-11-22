@@ -767,6 +767,17 @@ fn parse_profile(name: &str) -> Option<Pilot> {
             ..EvalWeights::fra_fixes_on()
         })),
         "fixes+pressure" => Some(Pilot::Scored(EvalWeights { trade_pressure: true, ..EvalWeights::fra_fixes_on() })),
+        // 2026-11-22 FRA card-rating bug batch, Phase 3 policy flags, each on
+        // top of `fra-fixes`, and all three together.
+        "fixes+wide" => Some(Pilot::Scored(EvalWeights { hand_abilities_wide: true, ..EvalWeights::fra_fixes_on() })),
+        "fixes+noop" => Some(Pilot::Scored(EvalWeights { skip_noop_casts: true, ..EvalWeights::fra_fixes_on() })),
+        "fixes+loy" => Some(Pilot::Scored(EvalWeights { loyalty_fixes: true, ..EvalWeights::fra_fixes_on() })),
+        "fixes+p3" => Some(Pilot::Scored(EvalWeights {
+            hand_abilities_wide: true,
+            skip_noop_casts: true,
+            loyalty_fixes: true,
+            ..EvalWeights::fra_fixes_on()
+        })),
         "mcts-net67-fixes-casts" => Some(Pilot::Mcts(MctsConfig {
             iterations: 256,
             horizon_turns: 3,

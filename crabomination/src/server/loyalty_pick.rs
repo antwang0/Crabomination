@@ -24,3 +24,16 @@ pub(super) fn drop_mana_for_impulse(effective: &[LoyaltyAbility], candidates: &[
     effective.get(idx).is_some_and(adds_mana_only)
         && candidates.iter().any(|&i| effective.get(i).is_some_and(impulse))
 }
+
+/// `loyalty_fixes`: whether a mana-only loyalty ability (index `idx`) should
+/// be dropped because the same walker has a non-mana candidate costing no
+/// more loyalty. The mana empties at the end of the phase unless a spell
+/// spends it, and the outcome eval scored the floating mana above a surveil:
+/// Chandra, Chill of Compliance took "+1: Add {U}" 374 times against 19
+/// "+1: Surveil 1" (2026-11-22).
+pub(super) fn drop_mana_for_plus(effective: &[LoyaltyAbility], candidates: &[usize], idx: usize) -> bool {
+    let Some(mana) = effective.get(idx).filter(|a| adds_mana_only(a)) else { return false };
+    candidates.iter().any(|&i| {
+        i != idx && effective.get(i).is_some_and(|a| !adds_mana_only(a) && a.loyalty_cost >= mana.loyalty_cost)
+    })
+}

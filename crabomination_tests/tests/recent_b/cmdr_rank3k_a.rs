@@ -92,6 +92,24 @@ fn germinate_recruits_counts_life_gained() {
     let spell = g.add_card_to_hand(0, catalog::germinate_recruits());
     cast(&mut g, spell, None);
     assert_eq!(named(&g, 0, "Cadet"), 3);
+
+    // With no life gained it does nothing, and the bot holds it under
+    // `skip_noop_casts`. Regression: 133 of 211 bot casts made no Cadets
+    // (2026-11-22).
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    use crabomination::server::EvalWeights;
+    let mut g = pod(2);
+    g.step = TurnStep::PostCombatMain;
+    let spell = g.add_card_to_hand(0, catalog::germinate_recruits());
+    g.players[0].mana_pool.add(Color::White, 3);
+    let casts = |g: &GameState, skip| {
+        let mut bot = HeuristicBot::with_weights(EvalWeights { skip_noop_casts: skip, ..EvalWeights::fra_fixes_on() });
+        matches!(bot.next_action(g, 0), Some(GameAction::CastSpell { card_id, .. }) if card_id == spell)
+    };
+    assert!(casts(&g, false), "the old bot cast it for nothing");
+    assert!(!casts(&g, true), "nothing gained: held");
+    g.players[0].life_gained_this_turn = 2;
+    assert!(casts(&g, true), "two Cadets: cast");
 }
 
 /// Feral Hydra's {3} ability is open to an opponent.

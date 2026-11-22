@@ -264,6 +264,25 @@ fn chandra_chill_of_compliance_stuns_for_x() {
     let b = g.battlefield_find(bear).unwrap();
     assert!(b.tapped);
     assert_eq!(b.counter_count(CounterType::Stun), 2);
+
+    // The bot's pick under `loyalty_fixes`: the "+1: Add {U}" it can't spend
+    // loses to the +1 surveil (374 mana activations against 19 surveils
+    // before, 2026-11-22), and −X is no longer forced to all loyalty.
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    use crabomination::server::EvalWeights;
+    let mut g = pod(2);
+    let chandra = ready(&mut g, 0, catalog::chandra_chill_of_compliance());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let mut bot = HeuristicBot::with_weights(EvalWeights { loyalty_fixes: true, ..EvalWeights::fra_fixes_on() });
+    match bot.next_action(&g, 0) {
+        Some(GameAction::ActivateLoyaltyAbility { card_id, ability_index, .. }) => {
+            assert_eq!(card_id, chandra);
+            assert_ne!(ability_index, 1, "not the unspendable mana");
+        }
+        other => panic!("expected a loyalty activation, got {other:?}"),
+    }
 }
 
 /// Shameless Charlatan: only a commander creature you own gets the copy

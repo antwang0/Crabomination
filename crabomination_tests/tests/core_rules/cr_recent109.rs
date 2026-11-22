@@ -249,6 +249,35 @@ fn equip_once_each_turn() {
     assert!(g.perform_action(GameAction::Equip { equipment: sword, target: a }).is_err());
 }
 
+/// CR 602.2b — mana abilities may be activated while paying an equip cost, so
+/// equip auto-taps lands like every other activated cost. Regression: equip
+/// paid only from the floated pool, so a seat that doesn't pre-float (every
+/// bot, since they stopped pre-tapping lands) could never equip — 1-2 Equip
+/// actions per ~700 Equipment casts in 1,200 FRA games (2026-11-22).
+#[test]
+fn cr_602_2b_equip_auto_taps_lands_and_the_bot_equips() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = two_player_game();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.clear_sickness(bear);
+    let axe = g.add_card_to_battlefield(0, catalog::hunters_axe());
+    assert!(g.players[0].mana_pool.is_empty());
+    let action = HeuristicBot::new().next_action(&g, 0);
+    assert_eq!(action, Some(GameAction::Equip { equipment: axe, target: bear }), "the bot equips its only creature");
+    g.perform_action(GameAction::Equip { equipment: axe, target: bear }).expect("equip {2} from two untapped lands");
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(bear));
+    assert!(g.battlefield_find(f1).unwrap().tapped && g.battlefield_find(f2).unwrap().tapped);
+    // Nothing left to pay with: a second equip is refused and changes nothing.
+    let other = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(g.perform_action(GameAction::Equip { equipment: axe, target: other }).is_err());
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(bear));
+}
+
 /// CR 602.5b — Luxurious Locomotive's "Crew 1. Activate only once each
 /// turn." caps the printed crew only: a second crew is refused, but Kotori's
 /// granted crew 2 still animates it.

@@ -119,12 +119,197 @@ impl GameState {
         x: u32,
         converge: u32,
     ) -> Option<Target> {
+        if let Some(pick) = self.own_blink_pick(eff, controller, avoid) {
+            return pick;
+        }
+        if let Some((fighter, _)) = self.fight_pair_pick(eff, controller, avoid.first().copied(), None) {
+            return fighter;
+        }
         // One freeze over the whole candidate walk — see
         // `legal_targets_for_filter`, which the picker mirrors.
         self.with_frozen_layers(|s| {
             s.auto_target_for_effect_avoiding_set_xc_inner(eff, controller, avoid, x, converge)
         })
         .filter(|t| !self.declines_own_side_pick(eff, controller, t) && !self.declines_gift_pick(eff, controller, t))
+    }
+
+    /// CR 601.2c — an optional blink of your own permanent ("exile up to one
+    /// other target creature you control, then return that card" —
+    /// Flickering Hound; the end-step blinkers): `Some(pick)` for such a
+    /// slot, `None` for any other. The returned card is a new object (CR
+    /// 400.7): a token never comes back (CR 111.7), and counters and
+    /// attachments are lost, so those are never blinked. One with its own
+    /// enters trigger is preferred (worth the attack it may cost), then a
+    /// tapped one (it returns untapped), then any other — except a creature
+    /// that would lose its attack (untapped and able to attack, before combat
+    /// on its controller's turn). With none, the slot stays empty. The general own-side pick
+    /// took the biggest creature on every creature cast: Flickering Hound
+    /// played −3.0 points in a sealed deck (2026-11-22).
+    fn own_blink_pick(&self, eff: &Effect, controller: usize, avoid: &[CardId]) -> Option<Option<Target>> {
+        use crate::effect::{EventKind, EventScope};
+        use crate::game::types::TurnStep;
+        let body = match eff {
+            Effect::OptionalTargets { body, .. } => &**body,
+            other => other,
+        };
+        if !matches!(body, Effect::ExileAndReturnToOwner { .. }) || !eff.target_slot_optional(0, None) {
+            return None;
+        }
+        let filter = eff.target_filter_for_slot(0)?;
+        if !filter.excludes_opponents_side() {
+            return None;
+        }
+        let source = avoid.first().copied();
+        let precombat = self.active_player_idx == controller
+            && matches!(
+                self.step,
+                TurnStep::Untap | TurnStep::Upkeep | TurnStep::Draw | TurnStep::PreCombatMain | TurnStep::BeginCombat
+            );
+        // `None`: never blink it; else its preference (higher first).
+        let rank = |c: &CardInstance| -> Option<u8> {
+            let attached = self.battlefield.iter().any(|a| a.attached_to == Some(c.id));
+            if c.is_token || c.total_counters() > 0 || attached {
+                return None;
+            }
+            let etb = c
+                .definition
+                .triggered_abilities
+                .iter()
+                .any(|t| t.event.kind == EventKind::EntersBattlefield && t.event.scope == EventScope::SelfSource);
+            // An enters trigger is worth the attack it costs; nothing else is.
+            if etb {
+                return Some(2);
+            }
+            let loses_attack = precombat && self.computed_is_creature(c) && !c.tapped && !c.summoning_sick;
+            (!loses_attack).then_some(u8::from(c.tapped))
+        };
+        let pick = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == controller && !avoid.contains(&c.id))
+            .filter_map(|c| Some((rank(c)?, c)))
+            .filter(|(_, c)| {
+                let t = Target::Permanent(c.id);
+                self.evaluate_requirement_static(filter, &t, controller, source)
+                    && self.check_target_legality(&t, controller).is_ok()
+            })
+            .max_by_key(|(r, c)| (*r, c.definition.cost.cmc(), std::cmp::Reverse(c.id)))
+            .map(|(_, c)| Target::Permanent(c.id));
+        Some(pick)
+    }
+
+    /// The open trigger-target ask (`ResumeContext::TriggerTargetPick`) as
+    /// [`own_blink_pick`](Self::own_blink_pick) and
+    /// [`fight_pair_pick`](Self::fight_pair_pick) would fill it: `Some(pick)`
+    /// (`Some(None)` = leave the slot empty) for an own-side blink slot or
+    /// either slot of an optional fight, `None` for any other ask. A prompting
+    /// seat — every bot seat in a simulated game (`build_match_template`) —
+    /// answers trigger targets itself and never reaches the engine's fill, so
+    /// the bot asks this first: the blink fix moved Flickering Hound's play
+    /// rating by exactly 0.0 until it did (2026-11-22).
+    pub fn trigger_slot_pick(&self) -> Option<Option<Target>> {
+        let pd = self.pending_decision.as_ref()?;
+        let crate::game::types::ResumeContext::TriggerTargetPick { pending, picked, .. } = &pd.resume else {
+            return None;
+        };
+        let (eff, source, controller) = (&pending.effect, pending.source, pending.controller);
+        match picked.first() {
+            None => self
+                .own_blink_pick(eff, controller, &[source])
+                .or_else(|| self.fight_pair_pick(eff, controller, Some(source), None).map(|(f, _)| f)),
+            Some(Target::Permanent(f)) if picked.len() == 1 => self
+                .fight_pair_pick(eff, controller, Some(source), Some(*f))
+                .map(|(_, rest)| rest.first().cloned()),
+            _ => None,
+        }
+    }
+
+    /// CR 701.14 — "target creature you control fights up to one target
+    /// creature an opponent controls" (Yoshimaru, Scrappy Stray): the pair is
+    /// chosen together, by the fight's outcome. A kill your fighter survives
+    /// beats a trade, a trade is taken only for a creature worth at least as
+    /// much as yours, and with neither the optional slot stays empty. `None`
+    /// for any other effect. The slot-by-slot walk put the biggest creature on
+    /// each side and fought regardless: a 2/2 fought a 6/4 and died for
+    /// nothing (2026-11-22).
+    pub(crate) fn fight_pair_pick(
+        &self,
+        eff: &Effect,
+        controller: usize,
+        source: Option<CardId>,
+        fighter: Option<CardId>,
+    ) -> Option<(Option<Target>, Vec<Target>)> {
+        use crate::card::{Keyword, KeywordSlice};
+        use crate::effect::Selector;
+        let body = match eff {
+            Effect::OptionalTargets { body, .. } => &**body,
+            other => other,
+        };
+        let Effect::Fight {
+            attacker: Selector::TargetFiltered { slot: 0, filter: mine },
+            defender: Selector::TargetFiltered { slot: 1, filter: theirs },
+        } = body
+        else {
+            return None;
+        };
+        if eff.target_slot_optional(0, None) || !eff.target_slot_optional(1, None) {
+            return None;
+        }
+        let legal = |f: &crate::card::SelectionRequirement, c: &CardInstance| {
+            let t = Target::Permanent(c.id);
+            self.evaluate_requirement_static(f, &t, controller, source) && self.check_target_legality(&t, controller).is_ok()
+        };
+        // (power, toughness left, deathtouch, indestructible, worth).
+        let stats = |c: &CardInstance| {
+            let cp = self.computed_permanent(c.id)?;
+            let kws = cp.keywords();
+            Some((
+                cp.power.max(0),
+                cp.toughness - c.damage as i32,
+                kws.has_kw(&Keyword::Deathtouch),
+                kws.has_kw(&Keyword::Indestructible),
+                c.definition.cost.cmc() as i32 + cp.power + cp.toughness,
+            ))
+        };
+        let kills = |(p, _, dt, _, _): (i32, i32, bool, bool, i32), (_, t, _, ind, _): (i32, i32, bool, bool, i32)| {
+            !ind && p > 0 && (p >= t || dt)
+        };
+        let fighters: Vec<(&CardInstance, _)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == controller && fighter.is_none_or(|f| f == c.id) && legal(mine, c))
+            .filter_map(|c| Some((c, stats(c)?)))
+            .collect();
+        let defenders: Vec<(&CardInstance, _)> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller != controller && legal(theirs, c) && !self.has_hostile_ward(c.id, controller))
+            .filter_map(|c| Some((c, stats(c)?)))
+            .collect();
+        let mut best: Option<((i32, i32), CardId, CardId)> = None;
+        for &(f, fs) in &fighters {
+            for &(d, ds) in &defenders {
+                if !kills(fs, ds) {
+                    continue;
+                }
+                let score = if !kills(ds, fs) {
+                    (2, ds.4 - fs.4 / 4)
+                } else if ds.4 >= fs.4 {
+                    (1, ds.4 - fs.4)
+                } else {
+                    continue;
+                };
+                if best.as_ref().is_none_or(|b| score > b.0) {
+                    best = Some((score, f.id, d.id));
+                }
+            }
+        }
+        Some(match best {
+            Some((_, f, d)) => (Some(Target::Permanent(f)), vec![Target::Permanent(d)]),
+            // No fight worth having: slot 0 is still required, so name the
+            // least valuable fighter and leave the defender out.
+            None => (fighters.iter().min_by_key(|(c, s)| (s.4, c.id)).map(|(c, _)| Target::Permanent(c.id)), Vec::new()),
+        })
     }
 
     /// CR 601.2c — the mirror of [`declines_own_side_pick`]: the leading
@@ -250,7 +435,10 @@ impl GameState {
         // Vacuum exiling target card from a graveyard). We walk graveyards
         // BEFORE the battlefield when this is set, so an `Any`-filtered
         // Move-to-Exile doesn't grab a battlefield permanent.
-        let prefer_graveyard = eff.prefers_graveyard_target();
+        // A filter that names a permanent ("target creature or planeswalker"
+        // spelled `.and(R::Permanent)`, CR 109.2) never takes a graveyard
+        // card — `target_out_of_zone` refuses it — so it skips the sweep.
+        let prefer_graveyard = eff.prefers_graveyard_target() && !req.names_permanent();
         // Skip Player candidates entirely when the effect operates on
         // permanents/stack — without this, an `Any`-filtered Move (Regrowth)
         // auto-targets the caster as a player and silently fizzles since
@@ -1013,6 +1201,9 @@ impl GameState {
         // The slot-0 lookup answers two questions — "is there a filter" and
         // "which one" — and the loop below asked it a second time for the
         // value. It is a walk of the whole effect tree, so keep the answer.
+        if let Some(pick) = self.fight_pair_pick(eff, controller, source, None) {
+            return pick;
+        }
         let slot0_filter = eff.target_filter_for_slot_in_mode_kicked(0, mode, kicked);
         let mut slot_0 = if slot0_filter.is_some() {
             None
@@ -1186,7 +1377,7 @@ impl GameState {
                 // Necromancer's reflexive return) must not grab a battlefield
                 // permanent that happens to match the filter; sweep
                 // graveyards first for those.
-                if found.is_none() && eff.prefers_graveyard_target() {
+                if found.is_none() && eff.prefers_graveyard_target() && !req.names_permanent() {
                     found = best_graveyard_card(
                         self,
                         controller,

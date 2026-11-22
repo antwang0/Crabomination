@@ -117,6 +117,53 @@ pub(super) fn pick_hand_ability(state: &GameState, seat: usize, w: &EvalWeights)
             }
         }
     }
+    if w.hand_abilities_wide {
+        return pick_combat_hand_damage(state, seat);
+    }
+    None
+}
+
+/// `hand_abilities_wide`: "{cost}, discard this card: N damage to target
+/// attacking or blocking creature" (Gideon's Memorial) aimed at the opposing
+/// combatant it kills with the most power + toughness. The filter names
+/// combat, so it is only ever offered once attackers are declared; the bot
+/// cast the Memorial as a 2-mana artifact 252 times and used this 0
+/// (2026-11-22).
+fn pick_combat_hand_damage(state: &GameState, seat: usize) -> Option<GameAction> {
+    use crate::effect::{Effect, Selector, Value};
+    use crate::game::types::Target;
+    for c in state.players[seat].hand.iter().filter(|c| !c.definition.is_land()) {
+        for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
+            if !(ab.from_hand && ab.discard_self_cost) {
+                continue;
+            }
+            let Effect::DealDamage { to: Selector::TargetFiltered { filter, .. }, amount: Value::Const(n) } = &ab.effect else {
+                continue;
+            };
+            let victim = state
+                .battlefield
+                .iter()
+                .filter(|p| p.controller != seat && state.computed_is_creature(p))
+                .filter(|p| state.evaluate_requirement_static(filter, &Target::Permanent(p.id), seat, Some(c.id)))
+                .filter_map(|p| {
+                    let cp = state.computed_permanent(p.id)?;
+                    (cp.toughness - p.damage as i32 <= *n).then_some((p.id, cp.power + cp.toughness))
+                })
+                .max_by_key(|&(id, size)| (size, std::cmp::Reverse(id)));
+            let Some((victim, _)) = victim else { continue };
+            let action = GameAction::ActivateAbility {
+                card_id: c.id,
+                ability_index: idx,
+                target: Some(Target::Permanent(victim)),
+                additional_targets: Vec::new(),
+                x_value: None,
+                mode: None,
+            };
+            if state.would_accept(action.clone()) {
+                return Some(action);
+            }
+        }
+    }
     None
 }
 

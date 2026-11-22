@@ -25177,11 +25177,13 @@ impl GameState {
             }
             None => None,
         };
-        // Pay the equip cost from the floated mana pool.
-        self.players[p]
-            .mana_pool
-            .pay(&equip_cost)
-            .map_err(GameError::Mana)?;
+        // CR 602.2b — mana abilities may be activated while paying, so the
+        // equip cost auto-taps like reconfigure's and cycling's. Paying out of
+        // the floated pool alone made equip unreachable for every seat that
+        // doesn't pre-float: the bots (which stopped pre-tapping lands) cast
+        // Equipment and never equipped it — 1-2 Equip actions per ~700
+        // Equipment casts in 1,200 FRA games (2026-11-22).
+        let mut events = self.pay_action_mana(p, &equip_cost)?;
         if hojo_first {
             self.players[p].own_creature_ability_this_turn = true;
         }
@@ -25206,10 +25208,10 @@ impl GameState {
             let (def, ctrl) = (std::sync::Arc::clone(&c.definition), c.controller);
             self.note_unattached(equipment, &def, ctrl, host);
         }
-        let events = vec![GameEvent::AttachmentMoved {
+        events.push(GameEvent::AttachmentMoved {
             attachment: equipment,
             attached_to: Some(target),
-        }];
+        });
         // CR 117.5 — the attach resolves inline; `perform_action_inner`
         // sweeps before the player acts again (a Skullclamped 1/1 dies).
         Ok(events)
@@ -29588,6 +29590,13 @@ impl GameState {
         controller: usize,
         primary: Option<Target>,
     ) -> Vec<Target> {
+        // A fight's defender is chosen against the fighter slot 0 named
+        // (`fight_pair_pick`), not by the hostile walk.
+        if let Some(Target::Permanent(f)) = primary
+            && let Some((_, rest)) = self.fight_pair_pick(eff, controller, Some(source), Some(f))
+        {
+            return rest;
+        }
         // Peel the transparent wrappers a multi-target body sits under — a
         // trigger's "you may" (`MayDo`) and the resolution-time slot caps
         // (`CapTargetsAt` / `TargetsExactlyX` / `OptionalTargets`) — so

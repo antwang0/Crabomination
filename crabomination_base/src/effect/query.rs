@@ -3926,6 +3926,11 @@ impl Effect {
             // Doubling a life total is a gift — point Beacon of Immortality at
             // the caster, not the opponent.
             Effect::DoubleLife { .. } => true,
+            // A granted activated ability is its host controller's to use:
+            // Emrakul, the Exigent Doom's "target land gains '{T}: Add
+            // {C}{C}'" went to an opponent's land. A card that means the
+            // opponent's permanent says so in its filter.
+            Effect::GainActivatedAbility { .. } => true,
             // "Target player becomes the monarch" is a gift (Éomer, Denethor).
             Effect::BecomeMonarch { who: PlayerRef::Target(_) } => true,
             Effect::GainProtectionFromPlayer { .. } | Effect::CantBeBlockedByPlayer { .. } => true,

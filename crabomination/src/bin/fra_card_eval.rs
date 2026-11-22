@@ -1094,6 +1094,368 @@ fn analyze_pool(path: &str, out: &std::path::Path) {
     }
 }
 
+/// `job(0..n)` on `threads` threads, results in index order.
+fn par_map<T: Send>(n: usize, threads: usize, job: &(dyn Fn(usize) -> T + Sync)) -> Vec<T> {
+    let next = AtomicUsize::new(0);
+    let rows = std::sync::Mutex::new(Vec::with_capacity(n));
+    std::thread::scope(|s| {
+        for _ in 0..threads {
+            s.spawn(|| loop {
+                let j = next.fetch_add(1, Ordering::Relaxed);
+                if j >= n {
+                    break;
+                }
+                let row = job(j);
+                rows.lock().unwrap().push((j, row));
+            });
+        }
+    });
+    let mut rows = rows.into_inner().unwrap();
+    rows.sort_by_key(|r| r.0);
+    rows.into_iter().map(|r| r.1).collect()
+}
+
+/// A cost as `{2}{W}{G/U}` text.
+fn cost_text(def: &CardDefinition) -> String {
+    use crabomination::mana::ManaSymbol as S;
+    def.cost
+        .symbols
+        .iter()
+        .map(|s| match s {
+            S::Colored(c) => format!("{{{}}}", c.short_name()),
+            S::Generic(n) => format!("{{{n}}}"),
+            S::Colorless(n) => "{C}".repeat(*n as usize),
+            S::Hybrid(a, b) => format!("{{{}/{}}}", a.short_name(), b.short_name()),
+            S::Phyrexian(c) => format!("{{{}/P}}", c.short_name()),
+            S::PhyrexianHybrid(a, b) => format!("{{{}/{}/P}}", a.short_name(), b.short_name()),
+            S::MonoHybrid(n, c) => format!("{{{n}/{}}}", c.short_name()),
+            S::ColorlessHybrid(c) => format!("{{C/{}}}", c.short_name()),
+            S::Snow => "{S}".into(),
+            S::X => "{X}".into(),
+        })
+        .collect()
+}
+
+/// Whether a deck making `colors` can pay every coloured pip of `def`
+/// (a hybrid pip needs either half; mono/colourless hybrid and Phyrexian
+/// pips need nothing). A land fits a deck it makes a colour for, or any
+/// deck when it makes none.
+fn castable_in(f: Factory, colors: ColorSet) -> bool {
+    use crabomination::mana::ManaSymbol as S;
+    let def = crabomination::cube::card_def(f);
+    if def.is_land() {
+        let made = crabomination::cube::card_brief(f).produces;
+        return made.is_empty() || made.iter().any(|c| colors.contains(c));
+    }
+    def.cost.symbols.iter().all(|s| match s {
+        S::Colored(c) => colors.contains(*c),
+        S::Hybrid(a, b) => colors.contains(*a) || colors.contains(*b),
+        _ => true,
+    })
+}
+
+/// The colours a deck's lands make.
+fn land_colors(deck: &[Factory]) -> ColorSet {
+    let mut set = ColorSet::empty();
+    for f in deck {
+        let b = crabomination::cube::card_brief(*f);
+        if b.is_land {
+            for c in b.produces.iter() {
+                set.insert(c);
+            }
+        }
+    }
+    set
+}
+
+/// `deck` with `card` in place of whichever slot the value likes losing
+/// most — a spell for a spell, a basic for a land: (new value, the card it
+/// replaced, the deck).
+fn best_swap(dv: &crabomination::deck_value::DeckValue, deck: &[Factory], card: Factory) -> (f64, &'static str, Vec<Factory>) {
+    let def = |f: Factory| crabomination::cube::card_def(f);
+    let land = def(card).is_land();
+    let mut best: Option<(f64, usize)> = None;
+    let mut tried: Vec<usize> = Vec::new();
+    for (i, f) in deck.iter().enumerate() {
+        let d = def(*f);
+        let fits = if land { matches!(d.name, "Plains" | "Island" | "Swamp" | "Mountain" | "Forest") } else { !d.is_land() };
+        if !fits || tried.contains(&(*f as usize)) {
+            continue;
+        }
+        tried.push(*f as usize);
+        let mut t = deck.to_vec();
+        t[i] = card;
+        let v = dv.value(&t);
+        if best.is_none_or(|b| v > b.0) {
+            best = Some((v, i));
+        }
+    }
+    let (v, i) = best.expect("a slot to swap");
+    let mut t = deck.to_vec();
+    let out = def(t[i]).name;
+    t[i] = card;
+    (v, out, t)
+}
+
+/// `--pool-adds POOL --deck LIST --out DIR [--sample-decks 400]
+/// [--confirm 40] [--only "A|B"] [--field 600] [--pairs 4] [--seed 43] [--pilot fra-fixes]`:
+/// the learned same-pool deck value (`selfplay::fra_deck_value`, the
+/// production sealed selector) asked two questions.
+///
+/// * **The set** (`DIR/set.tsv`): every FRA card's value-net gain over the
+///   slot it would replace, averaged over `--sample-decks` learned-builder
+///   decks of random FRA pools whose colours can cast it — "how much better
+///   is a typical deck that can play this card for playing it" — beside its
+///   standalone weight `a_c` and its `FRA_SIM_VALUE`.
+/// * **Your pool** (`DIR/adds.tsv`): per FRA card, the deck you play
+///   (`--deck`) with the card swapped in at its best slot, and the learned
+///   builder's deck of the pool plus the card; the value gain of the better
+///   of the two over your deck. The `--confirm` best are then played against
+///   one fixed field (`DIR/confirm.tsv`), each read as a paired difference
+///   against your deck.
+fn pool_adds(pool_path: &str, deck_path: &str, out: &std::path::Path, sample_decks: usize, confirm: usize, bp: &ByPlay) {
+    use crabomination::selfplay::{fra_deck_value, sealed_opponent_build};
+    let def = |f: Factory| crabomination::cube::card_def(f);
+    let name = |f: Factory| def(f).name;
+    let dv = fra_deck_value();
+    let (main, side) = read_list(pool_path);
+    let pool: Vec<Factory> = main.iter().chain(&side).copied().collect();
+    let (mine, _) = read_list(deck_path);
+    assert_eq!(mine.len(), 40, "{deck_path}: {} cards, not 40", mine.len());
+    std::fs::create_dir_all(out).unwrap();
+    let packs = crabomination::fra_mode::FraPacks::get();
+    let rarity: Vec<(Factory, char)> = [(&packs.common, 'C'), (&packs.uncommon, 'U'), (&packs.rare, 'R'), (&packs.mythic, 'M')]
+        .into_iter()
+        .flat_map(|(s, r)| s.iter().map(move |f| (*f, r)))
+        .collect();
+    let set: Vec<Factory> = rarity.iter().map(|r| r.0).collect();
+    let t0 = std::time::Instant::now();
+
+    // 1. The set, in context.
+    let sample: Vec<Vec<Factory>> = par_map(sample_decks, bp.threads, &|j| {
+        let mut rng = StdRng::seed_from_u64(0xADD5 ^ (j as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
+        let p: Vec<Factory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
+        sealed_opponent_build(&p, 16, j as u64, ColorSet::empty())
+    });
+    eprintln!("{} sample decks built, {:.0}s", sample.len(), t0.elapsed().as_secs_f64());
+    let sample_colors: Vec<ColorSet> = sample.iter().map(|d| land_colors(d)).collect();
+    let sample_value: Vec<f64> = sample.iter().map(|d| dv.value(d)).collect();
+    let a_of = |n: &str| dv.cards.iter().position(|c| c == n).map(|i| dv.a[i]);
+    let set_rows = par_map(set.len(), bp.threads, &|k| {
+        let c = set[k];
+        let mut gains = Vec::new();
+        let mut played = 0usize;
+        for (d, deck) in sample.iter().enumerate() {
+            if !castable_in(c, sample_colors[d]) {
+                continue;
+            }
+            played += usize::from(deck.iter().any(|f| *f as usize == c as usize));
+            gains.push(best_swap(dv, deck, c).0 - sample_value[d]);
+        }
+        let (m, h) = if gains.len() > 1 { mean_ci(&gains) } else { (f64::NAN, f64::NAN) };
+        let b = crabomination::cube::card_brief(c);
+        let colors: String = b.pip_colors.iter().map(|c| c.short_name()).collect();
+        format!(
+            "{}\t{}\t{}\t{}\t{}\t{:?}\t{}\t{}\t{:.5}\t{:.5}\t{}\t{}\t{}\t{}",
+            name(c),
+            rarity[k].1,
+            cost_text(def(c)),
+            colors,
+            b.cmc,
+            def(c).card_types,
+            sim_value(c).map_or("".into(), |v| format!("{v:.4}")),
+            a_of(name(c)).map_or("".into(), |v| format!("{v:.5}")),
+            m,
+            h,
+            gains.len(),
+            played,
+            pool.iter().filter(|f| **f as usize == c as usize).count(),
+            u8::from(dv.knows(name(c))),
+        )
+    });
+    let mut text = "name\trarity\tcost\tcolors\tcmc\ttypes\tsim_value\tdv_a\tdv_gain\tdv_gain_ci\tfit_decks\tplayed_in\tin_pool\tdv_knows\n".to_string();
+    for r in &set_rows {
+        text += r;
+        text.push('\n');
+    }
+    std::fs::write(out.join("set.tsv"), text).unwrap();
+    eprintln!("set ranked, {:.0}s", t0.elapsed().as_secs_f64());
+
+    // 2. Your pool, plus one card.
+    let v_mine = dv.value(&mine);
+    let base_build = sealed_opponent_build(&pool, 16, 0x5EA1, ColorSet::empty());
+    let v_base = dv.value(&base_build);
+    let list_text = |d: &[Factory]| d.iter().map(|f| name(*f)).collect::<Vec<_>>().join(";");
+    let colors_of = |d: &[Factory]| -> String { land_colors(d).iter().map(|c| c.short_name()).collect() };
+    std::fs::write(
+        out.join("base.tsv"),
+        format!(
+            "kind\tvalue\tcolors\tdeck\nyour_deck\t{v_mine:.5}\t{}\t{}\nbuilder_on_pool\t{v_base:.5}\t{}\t{}\n",
+            colors_of(&mine),
+            list_text(&mine),
+            colors_of(&base_build),
+            list_text(&base_build)
+        ),
+    )
+    .unwrap();
+    let mut adds: Vec<(f64, String, Vec<Factory>)> = Vec::new();
+    let rows = par_map(set.len(), bp.threads, &|k| {
+        let c = set[k];
+        let (v_swap, out_card, swap_deck) = best_swap(dv, &mine, c);
+        let mut p = pool.clone();
+        p.push(c);
+        let rebuild = sealed_opponent_build(&p, 16, 0x5EA1, ColorSet::empty());
+        let v_re = dv.value(&rebuild);
+        let rebuild_plays = rebuild.iter().any(|f| *f as usize == c as usize);
+        let (kind, best, deck) = if v_re > v_swap && rebuild_plays { ("rebuild", v_re, rebuild.clone()) } else { ("swap", v_swap, swap_deck) };
+        let row = format!(
+            "{}\t{}\t{:.5}\t{}\t{:.5}\t{}\t{}\t{kind}\t{:.5}\t{}\t{}",
+            name(c),
+            pool.iter().filter(|f| **f as usize == c as usize).count(),
+            v_swap - v_mine,
+            out_card,
+            v_re - v_mine,
+            colors_of(&rebuild),
+            u8::from(rebuild_plays),
+            best - v_mine,
+            list_text(&deck),
+            list_text(&rebuild),
+        );
+        (row, best - v_mine, deck)
+    });
+    let mut text = "name\tin_pool\tswap_gain\tswap_out\trebuild_gain\trebuild_colors\trebuild_plays\tbest_kind\tbest_gain\tbest_deck\trebuild_deck\n".to_string();
+    for (k, (r, gain, deck)) in rows.into_iter().enumerate() {
+        text += &r;
+        text.push('\n');
+        adds.push((gain, name(set[k]).to_string(), deck));
+    }
+    std::fs::write(out.join("adds.tsv"), text).unwrap();
+    eprintln!("pool additions screened, {:.0}s", t0.elapsed().as_secs_f64());
+
+    // 3. The best by value, played.
+    adds.sort_by(|a, b| b.0.total_cmp(&a.0));
+    // `--only "A|B"`: confirm just these cards (a re-read on a fresh seed).
+    if let Some(only) = arg("--only") {
+        let names: Vec<&str> = only.split('|').collect();
+        adds.retain(|a| names.contains(&a.1.as_str()));
+    }
+    adds.truncate(confirm);
+    // The control a new card has to beat: the best one-card swap from the
+    // pool's own sideboard (what re-tuning buys without opening anything).
+    let spare: Vec<Factory> = {
+        let mut left = pool.clone();
+        for f in &mine {
+            if let Some(i) = left.iter().position(|g| *g as usize == *f as usize) {
+                left.swap_remove(i);
+            }
+        }
+        left.sort_by_key(|f| name(*f));
+        left.dedup_by_key(|f| *f as usize);
+        left
+    };
+    let (v_free, free_in, free_out, free_deck) = spare
+        .iter()
+        .map(|&c| {
+            let (v, out_card, d) = best_swap(dv, &mine, c);
+            (v, name(c), out_card, d)
+        })
+        .max_by(|a, b| a.0.total_cmp(&b.0))
+        .expect("a sideboard card");
+    std::fs::write(
+        out.join("free_swap.tsv"),
+        format!("in\tout\tgain\tdeck\n{free_in}\t{free_out}\t{:.5}\t{}\n", v_free - v_mine, list_text(&free_deck)),
+    )
+    .unwrap();
+    eprintln!("best sideboard swap: {free_in} for {free_out}, value {:+.3}", v_free - v_mine);
+    let mut lists: Vec<Vec<Factory>> = vec![mine.clone(), base_build.clone(), free_deck];
+    lists.extend(adds.iter().map(|a| a.2.clone()));
+    let mut labels: Vec<String> = vec!["(your deck)".into(), "(builder on your pool)".into(), "(best sideboard swap)".into()];
+    labels.extend(adds.iter().map(|a| a.1.clone()));
+    let rows = field_rows(&lists, bp.pilot, bp.pilot, bp.field, bp.pairs, bp.seed, bp.threads);
+    let mut text = format!("# {} opponents x {} seat-swapped pairs, seed {}\nname\tshare\tshare_ci\tgain\tgain_ci\twins\tlosses\n", bp.field, bp.pairs, bp.seed);
+    for (d, l) in labels.iter().enumerate() {
+        let (m, h) = field_share(&rows, d);
+        let diffs: Vec<f64> = rows.iter().filter_map(|r| Some(win_share(r[d])? - win_share(r[0])?)).collect();
+        let (dm, dh) = if d == 0 { (0.0, 0.0) } else { mean_ci(&diffs) };
+        let (w, lo) = rows.iter().fold((0, 0), |a, r| (a.0 + r[d].0, a.1 + r[d].1));
+        text += &format!("{l}\t{m:.3}\t{h:.3}\t{dm:.3}\t{dh:.3}\t{w}\t{lo}\n");
+        println!("{m:6.2} ±{h:4.2}  vs your deck {dm:+6.2} ±{dh:4.2}  {l}");
+    }
+    std::fs::write(out.join("confirm.tsv"), text).unwrap();
+    eprintln!("done, {:.0}s", t0.elapsed().as_secs_f64());
+}
+
+/// `--set-played --out DIR [--sample-decks 1000] [--per-card 400]
+/// [--pairs 4] [--seed 43] [--pilot fra-fixes]`: the `--pool-adds` set
+/// rating measured in play instead of read off the deck value. The same
+/// sample decks (learned builder on seeded FRA pools); per card, up to
+/// `--per-card` of them whose lands can cast it, each with the card swapped
+/// into the slot the value would give it ([`best_swap`]). Swapped and
+/// unswapped deck play the same field opponent with the same seeds, so a
+/// card's rating is the mean paired difference in win-rate points, with
+/// the value's prediction for the very same swaps beside it
+/// (`DIR/set_played.tsv`).
+fn set_played(out: &std::path::Path, sample_decks: usize, per_card: usize, bp: &ByPlay) {
+    use crabomination::selfplay::{fra_deck_value, sealed_opponent_build};
+    let dv = fra_deck_value();
+    let packs = crabomination::fra_mode::FraPacks::get();
+    std::fs::create_dir_all(out).unwrap();
+    let t0 = std::time::Instant::now();
+    // The same sample `--pool-adds` rates the set on.
+    let sample: Vec<Vec<Factory>> = par_map(sample_decks, bp.threads, &|j| {
+        let mut rng = StdRng::seed_from_u64(0xADD5 ^ (j as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15));
+        let p: Vec<Factory> = (0..6).flat_map(|_| packs.roll(&mut rng)).collect();
+        sealed_opponent_build(&p, 16, j as u64, ColorSet::empty())
+    });
+    let colors: Vec<ColorSet> = sample.iter().map(|d| land_colors(d)).collect();
+    let opps: Vec<Vec<Factory>> = par_map(sample.len(), bp.threads, &|j| field_opponent(packs, bp.seed, j).1);
+    let salt = |j: usize| bp.seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) ^ (j as u64).wrapping_mul(0xD6E8_FEB8_6659_FD93) ^ 2;
+    let share = |deck: &[Factory], j: usize| -> Option<f64> {
+        let t = simulate_match_pairs_piloted(deck, &opps[j], bp.pairs, [bp.pilot, bp.pilot], 50_000, salt(j));
+        win_share((t.wins_a, t.wins_b))
+    };
+    let base: Vec<Option<f64>> = par_map(sample.len(), bp.threads, &|j| share(&sample[j], j));
+    eprintln!("{} sample decks built and played, {:.0}s", sample.len(), t0.elapsed().as_secs_f64());
+    let set: Vec<Factory> = packs.all().filter(|f| !crabomination::cube::card_def(*f).is_land()).collect();
+    // One job per (card, deck) so every thread stays busy.
+    let jobs: Vec<(usize, usize)> = set
+        .iter()
+        .enumerate()
+        .flat_map(|(k, &c)| {
+            let colors = &colors;
+            (0..sample.len()).filter(move |&j| castable_in(c, colors[j])).take(per_card).map(move |j| (k, j))
+        })
+        .collect();
+    eprintln!("{} swaps to play", jobs.len());
+    let done = AtomicUsize::new(0);
+    let res: Vec<Option<(f64, f64)>> = par_map(jobs.len(), bp.threads, &|i| {
+        let (k, j) = jobs[i];
+        let (v, _, deck) = best_swap(dv, &sample[j], set[k]);
+        let n = done.fetch_add(1, Ordering::Relaxed) + 1;
+        if n.is_multiple_of(10_000) {
+            eprintln!("{n}/{} swaps, {:.0}s", jobs.len(), t0.elapsed().as_secs_f64());
+        }
+        Some((share(&deck, j)? - base[j]?, 25.0 * (v - dv.value(&sample[j]))))
+    });
+    let mut text = "name\tn\tplayed_gain\tplayed_ci\tpred_gain\tsim_value\n".to_string();
+    for (k, &c) in set.iter().enumerate() {
+        let (d, p): (Vec<f64>, Vec<f64>) = jobs.iter().zip(&res).filter(|(jb, _)| jb.0 == k).filter_map(|(_, r)| *r).unzip();
+        if d.len() < 2 {
+            continue;
+        }
+        let (m, h) = mean_ci(&d);
+        let pm = p.iter().sum::<f64>() / p.len() as f64;
+        text += &format!(
+            "{}\t{}\t{m:.3}\t{h:.3}\t{pm:.3}\t{}\n",
+            crabomination::cube::card_def(c).name,
+            d.len(),
+            sim_value(c).map_or(String::new(), |v| format!("{v:.3}"))
+        );
+    }
+    std::fs::write(out.join("set_played.tsv"), text).unwrap();
+    eprintln!("done, {:.0}s", t0.elapsed().as_secs_f64());
+}
+
 /// `--gauntlet`: each list against one fixed field of rated FRA builds.
 fn gauntlet(paths: &[String], pilot: Pilot, field_pilot: Pilot, field: usize, pairs: usize, seed: u64, threads: usize) {
     let lists: Vec<Vec<Factory>> = paths
@@ -1605,6 +1967,13 @@ fn pilot_named(name: &str) -> Pilot {
         }
         "burn-arms" => Pilot::Scored(EvalWeights::burn_creature_arms_on()),
         "fra-fixes" => Pilot::Scored(EvalWeights::fra_fixes_on()),
+        // The 2026-11-22 Phase 3 policy flags together (bot_ladder `fixes+p3`).
+        "fixes+p3" => Pilot::Scored(EvalWeights {
+            hand_abilities_wide: true,
+            skip_noop_casts: true,
+            loyalty_fixes: true,
+            ..EvalWeights::fra_fixes_on()
+        }),
         "free-attacks" => Pilot::Scored(EvalWeights { free_attacks: true, ..EvalWeights::fra_fixes_on() }),
         "trick-riders" => Pilot::Scored(EvalWeights { free_attacks: true, trick_riders: true, ..EvalWeights::fra_fixes_on() }),
         "fra-fixes-noburn" => Pilot::Scored(EvalWeights { burn_for_lethal: false, ..EvalWeights::fra_fixes_on() }),
@@ -1740,6 +2109,31 @@ fn main() {
     }
     if let Some(dir) = arg("--dump-cards") {
         dump_cards(std::path::Path::new(&dir));
+        return;
+    }
+    if std::env::args().any(|a| a == "--set-played") {
+        let out = std::path::PathBuf::from(arg("--out").expect("--set-played needs --out DIR"));
+        let bp = ByPlay {
+            pilot: pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes")),
+            field: 0,
+            pairs: num("--pairs", 4),
+            seed: num("--seed", 43) as u64,
+            threads,
+        };
+        set_played(&out, num("--sample-decks", 1000), num("--per-card", 400), &bp);
+        return;
+    }
+    if let Some(path) = arg("--pool-adds") {
+        let deck = arg("--deck").expect("--pool-adds needs --deck LIST (the deck you play)");
+        let out = std::path::PathBuf::from(arg("--out").expect("--pool-adds needs --out DIR"));
+        let bp = ByPlay {
+            pilot: pilot_named(arg("--pilot").as_deref().unwrap_or("fra-fixes")),
+            field: num("--field", 600),
+            pairs: num("--pairs", 4),
+            seed: num("--seed", 43) as u64,
+            threads,
+        };
+        pool_adds(&path, &deck, &out, num("--sample-decks", 400), num("--confirm", 40), &bp);
         return;
     }
     if std::env::args().any(|a| a == "--draft-ab") {

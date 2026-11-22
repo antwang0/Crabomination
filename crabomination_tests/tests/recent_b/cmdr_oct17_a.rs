@@ -541,6 +541,43 @@ fn gideons_memorial_pumps_tokens() {
     let cp = g.computed_permanent(token).unwrap();
     assert_eq!(cp.power, 3);
     assert!(cp.keywords().contains(&Keyword::Vigilance));
+
+    // Its hand ability: "{1}{W}, discard this card: 4 damage to target
+    // attacking or blocking creature". Regression: no bot ever used it — 252
+    // casts as a 2-mana artifact, 0 activations (2026-11-22); under
+    // `hand_abilities_wide` the defending bot kills the attacker with it.
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    use crabomination::server::EvalWeights;
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    let attacker = ready(&mut g, 1, catalog::centaur_courser());
+    let memorial = g.add_card_to_hand(0, catalog::gideons_memorial());
+    for _ in 0..2 {
+        ready(&mut g, 0, catalog::plains());
+    }
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    g.priority.player_with_priority = 0;
+    let bot = |wide| HeuristicBot::with_weights(EvalWeights { hand_abilities_wide: wide, ..EvalWeights::fra_fixes_on() });
+    assert!(!matches!(bot(false).next_action(&g, 0), Some(GameAction::ActivateAbility { card_id, .. }) if card_id == memorial));
+    let action = bot(true).next_action(&g, 0);
+    assert_eq!(
+        action,
+        Some(GameAction::ActivateAbility {
+            card_id: memorial,
+            ability_index: 1,
+            target: Some(Target::Permanent(attacker)),
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+    );
+    g.perform_action(action.unwrap()).expect("channel it");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(attacker).is_none(), "4 damage killed the 3/3 attacker");
 }
 
 /// Dragon's Disciple enters with a counter when a Dragon card is in hand.
@@ -603,6 +640,23 @@ fn puppet_crafting_animates_an_artifact() {
     let cp = g.computed_permanent(ring).unwrap();
     assert!(cp.card_types().contains(&crabomination::card::CardType::Creature));
     assert_eq!((cp.power, cp.toughness), (5, 5));
+
+    // The bot animates its own artifact, never the opponent's. Regression:
+    // with no P/T bonus or keyword the Aura read as a debuff, and the hostile
+    // walk put it on the opponent's permanent in 143 of 251 casts
+    // (2026-11-22).
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    let mut g = pod(2);
+    let theirs = ready(&mut g, 1, catalog::sol_ring());
+    let p = g.add_card_to_hand(0, catalog::puppet_crafting());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let cast_target = |g: &GameState| match HeuristicBot::new().next_action(g, 0) {
+        Some(GameAction::CastSpell { card_id, target, .. }) if card_id == p => target,
+        _ => None,
+    };
+    assert_eq!(cast_target(&g), None, "no host of its own: not cast on {theirs:?}");
+    let mine = ready(&mut g, 0, catalog::sol_ring());
+    assert_eq!(cast_target(&g), Some(Target::Permanent(mine)));
 }
 
 /// Novel Nunchaku attaches on entry and its bearer fights.

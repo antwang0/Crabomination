@@ -152,8 +152,14 @@ fn cr_119_8_phyrexian_pips_take_mana_when_life_cant_be_paid() {
 #[test]
 fn emrakul_grants_a_land_two_colorless_until_cast_from_exile() {
     let mut g = pod(4);
+    ready(&mut g, 1, catalog::wastes());
     let land = ready(&mut g, 0, catalog::wastes());
     let emrakul = g.add_card_to_hand(0, catalog::emrakul_the_exigent_doom());
+    // The grant is a gift: the picker hands "{T}: Add {C}{C}" to its own
+    // land. Regression: `GainActivatedAbility` read as hostile and went to
+    // an opponent's land (2026-11-22).
+    let grant = g.players[0].hand.iter().find(|c| c.id == emrakul).unwrap().definition.activated_abilities[0].effect.clone();
+    assert_eq!(g.auto_target_for_effect(&grant, 0), Some(Target::Permanent(land)));
     g.players[0].mana_pool.add_colorless(3);
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {

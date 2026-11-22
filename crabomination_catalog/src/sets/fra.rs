@@ -761,7 +761,12 @@ pub fn vindictive_triumph() -> CardDefinition {
         cost(&[w(), b(), b()]),
         CardType::Instant,
         Effect::Seq(vec![
-            Effect::Move { what: target_filtered(creature_or_walker()), to: ZoneDest::Exile },
+            // "Target creature or planeswalker" is a permanent (CR 109.2): a
+            // zone-less Move filter also matched creature *cards* in
+            // graveyards, and the picker sweeps graveyards first for a
+            // Move-to-exile — 29 of 51 bot casts exiled a graveyard card
+            // instead of removing a creature (2026-11-22).
+            Effect::Move { what: target_filtered(creature_or_walker().and(R::Permanent)), to: ZoneDest::Exile },
             Effect::If {
                 cond: Predicate::EntityMatches { what: Selector::LastMoved, filter: R::ManaValueAtMost(3) },
                 then: Box::new(Effect::Seq(vec![

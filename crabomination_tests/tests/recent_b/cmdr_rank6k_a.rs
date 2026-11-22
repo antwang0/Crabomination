@@ -341,3 +341,28 @@ fn rasaad_hits_with_toughness() {
     finish_combat(&mut g);
     assert_eq!(g.players[1].life, 17);
 }
+
+/// Yoshimaru, Scrappy Stray: its enters trigger fights only a fight worth
+/// having. Regression: the slot-by-slot pick put the biggest creature on
+/// each side and fought regardless — a 2/2 fought a 6/4 and died for nothing
+/// (2026-11-22). The "up to one" defender stays empty instead; with a 6/4
+/// fighter it picks the 2/2 it kills and survives, not the 6/6 that kills it.
+#[test]
+fn yoshimaru_fights_only_a_winning_fight() {
+    let mut g = pod(2);
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    let wurm = ready(&mut g, 1, catalog::craw_wurm());
+    let y = g.add_card_to_hand(0, catalog::yoshimaru_scrappy_stray());
+    cast(&mut g, y, None);
+    assert!(g.battlefield_find(bear).is_some(), "the bear didn't fight");
+    assert_eq!(g.battlefield_find(wurm).unwrap().damage, 0);
+
+    let mut g = pod(2);
+    let wurm = ready(&mut g, 0, catalog::craw_wurm());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let maw = ready(&mut g, 1, catalog::colossal_dreadmaw());
+    let y = g.add_card_to_hand(0, catalog::yoshimaru_scrappy_stray());
+    cast(&mut g, y, None);
+    assert!(g.battlefield_find(bear).is_none(), "the 6/4 killed the 2/2");
+    assert!(g.battlefield_find(wurm).is_some() && g.battlefield_find(maw).unwrap().damage == 0);
+}

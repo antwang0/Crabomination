@@ -805,17 +805,20 @@ fn evil_twin_kills_its_original() {
 }
 
 /// The Mind Stone: harnessed, it blinks another nonland permanent at your end
-/// step (the blinked creature is a new object, CR 400.7).
+/// step (the blinked creature is a new object, CR 400.7: it returns
+/// untapped). The auto-pick no longer blinks away a +1/+1 counter for
+/// nothing (`own_blink_pick`, 2026-11-22), so the new object shows as the
+/// untap rather than the lost counter this test used to read.
 #[test]
 fn the_mind_stone_blinks_once_harnessed() {
     let mut g = pod(2);
     let stone = ready(&mut g, 0, catalog::the_mind_stone());
     let bears = ready(&mut g, 0, catalog::grizzly_bears());
-    g.battlefield_find_mut(bears).unwrap().counters.insert(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(bears).unwrap().tapped = true;
     g.step = TurnStep::End;
     g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
-    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 1, "not harnessed");
+    assert!(g.battlefield_find(bears).unwrap().tapped, "not harnessed");
     g.step = TurnStep::PreCombatMain;
     activate(&mut g, stone, 1, None).expect("harness");
     assert!(g.battlefield_find(stone).unwrap().harnessed);
@@ -823,7 +826,7 @@ fn the_mind_stone_blinks_once_harnessed() {
     g.fire_step_triggers(TurnStep::End);
     drain_stack(&mut g);
     let back = g.battlefield.iter().find(|c| c.definition.name == "Grizzly Bears").expect("returned");
-    assert_eq!(back.counter_count(CounterType::PlusOnePlusOne), 0, "a new object");
+    assert!(!back.tapped, "a new object");
 }
 
 /// Claim the Kingdom: four landfalls grow a creature four times, then the

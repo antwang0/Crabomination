@@ -959,6 +959,32 @@ pub struct EvalWeights {
     /// channel picker took lands only, in pods only. On top of `fra-fixes`:
     /// 49.9 / 50.0 (rare; fixes a visible misplay). In `fra-fixes`.
     pub hand_abilities: bool,
+    /// With `hand_abilities`: a "{cost}, discard this card: N damage to
+    /// target attacking or blocking creature" that kills an opposing
+    /// combatant (`channel.rs`; Gideon's Memorial: 0 of 252 casts used it).
+    /// An "exile this card from your hand" setup arm (Emrakul, the Exigent
+    /// Doom's ramp) was built and measured harmful — Emrakul −1.8 ±1.5 on
+    /// the play rating, 316 setups and 32 casts in 1,200 games: a sealed deck
+    /// rarely reaches the {10} from exile — and removed. In `fra-fixes`
+    /// (2026-11-22 gate, `.ladder/fix1`: FRA 50.0 x4, SOS 50.0 x2; Gideon's
+    /// Memorial +0.3 on the play rating).
+    pub hand_abilities_wide: bool,
+    /// A lone instant or sorcery whose resolution changes nothing but the
+    /// card's own zone and the mana paid is not cast (Germinate Recruits with
+    /// no life gained: 133 of 211 casts made no tokens; Loyal Tutor with no
+    /// planeswalker in the library). `pick_by_outcome_with_cut` returns a
+    /// lone finalist unscored, so nothing else asks. In `fra-fixes`
+    /// (2026-11-22 gate, `.ladder/fix1`: FRA 50.0/50.1/50.0/50.1, SOS
+    /// 50.1/50.4; Germinate Recruits and Loyal Tutor +0.3 each).
+    pub skip_noop_casts: bool,
+    /// Planeswalker loyalty picks: a `−X` ability is offered at every X up to
+    /// current loyalty for the outcome eval to choose (it committed all of
+    /// it, killing the walker), and a mana-only ability is dropped when the
+    /// same walker has a non-mana ability at least as cheap (Chandra, Chill
+    /// of Compliance took "+1: Add {U}" 374 times against 19 surveils).
+    /// In `fra-fixes` (2026-11-22 gate, `.ladder/fix1`: FRA 50.0 x4, SOS
+    /// 50.0 x2; Chandra, Chill of Compliance +2.1 ±1.8 on the play rating).
+    pub loyalty_fixes: bool,
     /// MCTS, own post-combat main: a creature cast whose searched mean is
     /// within 0.02 of "pass" is cast. The rollout after a pass casts it next
     /// turn, so the arms tie and noise picked pass: the client pilot idled
@@ -1660,6 +1686,9 @@ impl EvalWeights {
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
+            hand_abilities_wide: false,
+            skip_noop_casts: false,
+            loyalty_fixes: false,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -1806,6 +1835,9 @@ impl EvalWeights {
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
+            hand_abilities_wide: false,
+            skip_noop_casts: false,
+            loyalty_fixes: false,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -1935,6 +1967,9 @@ impl EvalWeights {
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
+            hand_abilities_wide: false,
+            skip_noop_casts: false,
+            loyalty_fixes: false,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -3101,6 +3136,9 @@ impl EvalWeights {
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
+            hand_abilities_wide: false,
+            skip_noop_casts: false,
+            loyalty_fixes: false,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -3255,6 +3293,9 @@ impl EvalWeights {
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
+            hand_abilities_wide: false,
+            skip_noop_casts: false,
+            loyalty_fixes: false,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -3468,6 +3509,9 @@ impl EvalWeights {
             modal_counters: true,
             duel_pumps: true,
             hand_abilities: true,
+            hand_abilities_wide: true,
+            skip_noop_casts: true,
+            loyalty_fixes: true,
             trade_pressure: true,
             clock_eval: 4,
             target_eval: true,
@@ -3520,6 +3564,9 @@ impl EvalWeights {
             modal_counters: false,
             duel_pumps: false,
             hand_abilities: false,
+            hand_abilities_wide: false,
+            skip_noop_casts: false,
+            loyalty_fixes: false,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -4371,6 +4418,15 @@ fn decide_pending_policy_inner(
         // that survives it, not the least valuable one: a 1/1 token dying to
         // it re-fires Blowfly Infestation, whose next counter mints Hapatra
         // another Snake to die — 1,857 turns of it in one pod game.
+        // An own-side blink slot and an optional fight's two slots take the
+        // engine's outcome-aware pick (`GameState::trigger_slot_pick`): the
+        // polarity guess below blinked the biggest creature on every cast and
+        // fought losing fights (2026-11-22).
+        crate::decision::Decision::ChooseTarget { legal, optional, .. }
+            if engine_trigger_answer(state, legal, *optional).is_some() =>
+        {
+            engine_trigger_answer(state, legal, *optional).expect("guarded")
+        }
         // A trigger's further "up to N" slot (`game/trigger_slots.rs`) leads
         // with the engine's own fill and is only asked while that fill runs:
         // taking the lead names what the trigger was given before the asks.
@@ -13729,20 +13785,29 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
             } else {
                 None
             };
-            // Variable-X (`-X`) ability: commit all current loyalty.
-            let x_value = ability.x_cost.then_some(current_loyalty.max(0) as u32);
-            let action = GameAction::ActivateLoyaltyAbility {
-                card_id: card.id,
-                ability_index: idx,
-                target,
-                x_value,
+            // Variable-X (`-X`) ability: commit all current loyalty — or,
+            // under `loyalty_fixes`, offer every X from 1 up and let the
+            // outcome eval choose (all of it killed the walker every time).
+            let all = current_loyalty.max(0) as u32;
+            let xs: Vec<Option<u32>> = match ability.x_cost {
+                false => vec![None],
+                true if w.loyalty_fixes && all > 1 => (1..=all).map(Some).collect(),
+                true => vec![Some(all)],
             };
-            if let Some(g) = state.accept(action.clone()) {
-                finalists.push(Finalist {
-                    score: score_candidate(state, seat, &action, w),
-                    action,
-                    settled: Some(Box::new(g)),
-                });
+            for x_value in xs {
+                let action = GameAction::ActivateLoyaltyAbility {
+                    card_id: card.id,
+                    ability_index: idx,
+                    target: target.clone(),
+                    x_value,
+                };
+                if let Some(g) = state.accept(action.clone()) {
+                    finalists.push(Finalist {
+                        score: score_candidate(state, seat, &action, w),
+                        action,
+                        settled: Some(Box::new(g)),
+                    });
+                }
             }
         }
         // A walker the board kills before its next activation banks
@@ -13813,6 +13878,9 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
         };
         let candidates: Vec<usize> = finalists.iter().map(index_of).collect();
         finalists.retain(|f| !super::loyalty_pick::drop_mana_for_impulse(&effective, &candidates, index_of(f)));
+        if w.loyalty_fixes {
+            finalists.retain(|f| !super::loyalty_pick::drop_mana_for_plus(&effective, &candidates, index_of(f)));
+        }
         // Pods: an affordable emblem ultimate is taken — its payoff is the
         // rest of the game, which no material eval prices (Ob Nixilis
         // Reignited's −8 and Sorin's −8 were never activated in 183 decks).
@@ -21076,6 +21144,9 @@ fn is_beneficial_aura(def: &CardDefinition) -> bool {
     if def.effect.primary_target_filter().is_some_and(|f| f.mentions_controlled_by_opponent()) {
         return false;
     }
+    if animates_host(def) {
+        return true;
+    }
     def.equipped_bonus.as_ref().is_some_and(|bonus| {
         !bonus.remove_abilities
             && (bonus.power + bonus.toughness > 0
@@ -21106,6 +21177,20 @@ fn is_boon_player_aura(def: &CardDefinition) -> bool {
         })
 }
 
+/// An Aura that makes its host a creature with a set base P/T (Puppet
+/// Crafting's "enchanted artifact or enchantment is a 5/5 Construct
+/// creature"). It carries no P/T *bonus* and no keyword, so the generic test
+/// read it as a debuff and the auto-targeter's hostile walk put it on the
+/// opponent's permanent — 143 of 251 bot casts animated the opponent's
+/// artifact into a 5/5 (2026-11-22).
+fn animates_host(def: &CardDefinition) -> bool {
+    def.equipped_bonus.as_ref().is_some_and(|b| {
+        !b.remove_abilities
+            && b.add_card_types.contains(&crate::card::CardType::Creature)
+            && b.set_base_pt.is_some_and(|(p, t)| p + t > 0)
+    })
+}
+
 fn beneficial_aura_host(
     state: &GameState,
     seat: usize,
@@ -21117,6 +21202,31 @@ fn beneficial_aura_host(
         return None;
     }
     let filter = def.effect.primary_target_filter();
+    // An animating Aura's hosts are the bot's own permanents its enchant
+    // filter takes — mostly noncreature artifacts and enchantments. The one
+    // gaining the most stats wins (a noncreature host gains the whole base
+    // P/T; a creature only the difference), the least valuable on a tie.
+    if animates_host(def) {
+        let (bp, bt) = def.equipped_bonus.as_ref().and_then(|b| b.set_base_pt).unwrap_or((0, 0));
+        return state
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.id != aura.id)
+            .filter(|c| {
+                let t = crate::game::Target::Permanent(c.id);
+                filter.as_ref().is_none_or(|f| state.evaluate_requirement_static(f, &t, seat, Some(aura.id)))
+            })
+            .map(|c| {
+                let gain = match state.computed_permanent(c.id) {
+                    Some(cp) if state.computed_is_creature(c) => bp + bt - cp.power - cp.toughness,
+                    _ => bp + bt,
+                };
+                (gain, -permanent_value(state, c.id, w), c.id)
+            })
+            .filter(|&(gain, _, _)| gain > 0)
+            .max_by_key(|&(gain, value, id)| (gain, value, std::cmp::Reverse(id)))
+            .map(|(_, _, id)| crate::game::Target::Permanent(id));
+    }
     let mut hosts: Vec<&crate::card::CardInstance> = state
         .battlefield
         .iter()
@@ -22172,6 +22282,67 @@ fn split_winner(
 
 /// [`pick_by_outcome`] with the candidates the shortlist cut (round 77
 /// census only; empty otherwise), priced against the winner after the pick.
+/// The engine's own answer to the open trigger-target ask, when it has one
+/// for this slot and it is one the ask allows (a pick in `legal`, or a
+/// decline of an optional slot).
+fn engine_trigger_answer(state: &GameState, legal: &[crate::game::Target], optional: bool) -> Option<crate::decision::DecisionAnswer> {
+    match state.trigger_slot_pick()? {
+        Some(t) if legal.contains(&t) => Some(crate::decision::DecisionAnswer::Target(t)),
+        None if optional => Some(crate::decision::DecisionAnswer::DeclineTarget),
+        _ => None,
+    }
+}
+
+/// `skip_noop_casts`: an instant or sorcery cast whose resolution leaves
+/// the game exactly as it was apart from the card itself (hand to
+/// graveyard or exile), the mana paid and the library's order — Germinate
+/// Recruits with no life gained this turn, Loyal Tutor with no planeswalker
+/// to find. Compared on what any effect would move: life, poison, energy and
+/// zone sizes per player, each permanent's controller, counters, damage,
+/// attachment and computed P/T, the exile zone, the stack, and the counts of
+/// continuous effects and delayed triggers (so an "until end of turn" pump
+/// or a delayed draw is not a no-op).
+fn is_noop_cast(state: &GameState, seat: usize, f: &Finalist, w: &EvalWeights) -> bool {
+    let GameAction::CastSpell { card_id, .. } = f.action else { return false };
+    let Some(card) = state.players[seat].hand.iter().find(|c| c.id == card_id) else { return false };
+    let types = &card.definition.card_types;
+    if !types.contains(&crate::card::CardType::Instant) && !types.contains(&crate::card::CardType::Sorcery) {
+        return false;
+    }
+    let Some(after) = settle_to_quiescence(state, &f.action, f.settled.as_deref(), w) else { return false };
+    let sig = |g: &GameState| {
+        let players: Vec<_> = g
+            .players
+            .iter()
+            .map(|p| {
+                let mine = |pile: usize, has: bool| pile - usize::from(has);
+                (
+                    p.life,
+                    p.poison_counters,
+                    p.energy,
+                    p.library.len(),
+                    mine(p.hand.len(), p.hand.iter().any(|c| c.id == card_id)),
+                    mine(p.graveyard.len(), p.graveyard.iter().any(|c| c.id == card_id)),
+                    p.emblems.len(),
+                )
+            })
+            .collect();
+        let mut board: Vec<_> = g
+            .battlefield
+            .iter()
+            .map(|c| {
+                let pt = g.computed_permanent(c.id).map(|cp| (cp.power, cp.toughness));
+                (c.id, c.controller, c.total_counters(), c.damage, c.attached_to, pt)
+            })
+            .collect();
+        board.sort_unstable_by_key(|b| b.0);
+        let mut exile: Vec<_> = g.exile.iter().map(|c| c.id).filter(|&id| id != card_id).collect();
+        exile.sort_unstable();
+        (players, board, exile, g.stack.len(), g.continuous_effects.len(), g.delayed_triggers.len())
+    };
+    sig(state) == sig(&after)
+}
+
 fn pick_by_outcome_with_cut(
     state: &GameState,
     seat: usize,
@@ -22183,6 +22354,9 @@ fn pick_by_outcome_with_cut(
     // Under the census a lone finalist is still a pick (an X spell alone on
     // the menu is exactly the X decision it counts), so it is scored too;
     // under X by outcome a lone X finalist has its X to decide.
+    if w.skip_noop_casts && finalists.len() == 1 && is_noop_cast(state, seat, &finalists[0], w) {
+        return None;
+    }
     if finalists.is_empty()
         || (finalists.len() == 1
             && !menu_census::on()

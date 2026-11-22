@@ -40198,7 +40198,15 @@ mod tests {
             ("Sharuum the Hegemon", &[0x0B91]),
             ("Cloud, Planet's Champion", &[0x0B92]),
             ("Lara Croft, Tomb Raider", &[0x0B93]),
-            ("Preston, the Vanisher", &[0x0B94]),
+            // Re-seeded 2026-11-22: at 0x0B94 the own-side blink fix
+            // (`own_blink_pick`, which now blinks enters-trigger creatures
+            // rather than the biggest) fed Preston an Illusion per blink and
+            // the seat stalled at 126 life behind a token wall into the board
+            // cap (turn 45) — never using its "sacrifice five Illusions:
+            // exile" outlet (open in ENGINE_BACKLOG). Not a loop; with the
+            // fix disabled the same seed decides at turn 44. 0x7EFE44, the
+            // table's next free seed, decides at turn 51.
+            ("Preston, the Vanisher", &[0x7EFE44]),
             ("Jenson Carthalion, Druid Exile", &[0x0B95]),
             ("Lazav, Dimir Mastermind", &[0x0B96]),
             ("Elenda and Azor", &[0x0B97]),
@@ -46426,10 +46434,14 @@ mod tests {
         // opponent's end step — `server/cantrip_rock.rs`): 0xC0FFEE unmoved;
         // 43 74→48 turns, 3801→2205 actions; 4242 seat 0 → seat 1, 82→75
         // turns, 3966→3458 actions.
+        // Re-blessed 2026-11-22 (equip auto-taps its cost, CR 602.2b, so the
+        // bots equip at all; reverting that change alone restores the old
+        // rows): 0xC0FFEE unmoved; 43 48→91 turns, 2205→4825 actions; 4242
+        // seat 1 → seat 3, 75→64 turns, 3458→3014 actions.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 54, 2487),
-            (43, Some(0), 48, 2205),
-            (4242, Some(1), 75, 3458),
+            (43, Some(0), 91, 4825),
+            (4242, Some(3), 64, 3014),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);
