@@ -1071,6 +1071,16 @@ pub struct EvalWeights {
     /// Advantage) was invisible after blocks: cast in 2 of 784 combats a
     /// payable one would have won (2026-10-24 aggro census).
     pub trick_riders: bool,
+    /// Read a trick into an attack that needs one: at the defender's block
+    /// decision, an attacker one of our untapped blockers would kill and
+    /// survive is evidence the attacking seat holds a pump, so each redeal
+    /// (`sim_start_state`) that dealt that seat no affordable trick swaps one
+    /// in from its unseen cards, when they hold one ([`condition_on_trick_attack`]).
+    /// The uniform redeal ignored the attack itself: with one redeal the
+    /// defender blocked a lone Bears into its Hill Giant even with 13 Giant
+    /// Growths among the attacker's 33 unseen cards (2026-11-23). Needs
+    /// `determinize > 0`; a cheating sim already sees the real hand.
+    pub trick_read: bool,
     /// Burn finishes the game: a pending damage trigger that kills the
     /// opponent takes their face (`damage_pick::lethal_face`), a cast never
     /// grows creature arms when its face damage is lethal, and
@@ -1701,6 +1711,7 @@ impl EvalWeights {
             clock_net: 0,
             free_attacks: false,
             trick_riders: false,
+            trick_read: false,
             burn_for_lethal: false,
             attack_race_horizon: false,
             sac_sinks_priced: false,
@@ -1850,6 +1861,7 @@ impl EvalWeights {
             clock_net: 0,
             free_attacks: false,
             trick_riders: false,
+            trick_read: false,
             burn_for_lethal: false,
             attack_race_horizon: false,
             sac_sinks_priced: false,
@@ -1982,6 +1994,7 @@ impl EvalWeights {
             clock_net: 0,
             free_attacks: false,
             trick_riders: false,
+            trick_read: false,
             burn_for_lethal: false,
             attack_race_horizon: false,
             sac_sinks_priced: false,
@@ -3151,6 +3164,7 @@ impl EvalWeights {
             clock_net: 0,
             free_attacks: false,
             trick_riders: false,
+            trick_read: false,
             burn_for_lethal: false,
             // Round 72 (2026-09-13): the five mana-sink generators defer a
             // sacrifice-cost ability to `pick_sacrifice_value`. Adopted as the
@@ -3308,6 +3322,7 @@ impl EvalWeights {
             clock_net: 0,
             free_attacks: false,
             trick_riders: false,
+            trick_read: false,
             burn_for_lethal: false,
             ..Self::default_const()
         }
@@ -3501,6 +3516,7 @@ impl EvalWeights {
             lethal_over_walkers: true,
             free_attacks: true,
             trick_riders: true,
+            trick_read: false,
             burn_for_lethal: true,
             attack_trades: true,
             tap_timing: true,
@@ -3579,6 +3595,7 @@ impl EvalWeights {
             clock_net: 0,
             free_attacks: false,
             trick_riders: false,
+            trick_read: false,
             burn_for_lethal: false,
             ..Self::default_const()
         }
@@ -18179,8 +18196,127 @@ fn sim_start_state(state: &GameState, seat: usize, w: &EvalWeights, k: u8) -> Ga
     let mut g = state.clone();
     if w.determinize > 0 {
         redeal_hidden(&mut g, seat, 0x5EED_0000 ^ k as u64, w);
+        if w.trick_read {
+            condition_on_trick_attack(state, &mut g, seat, 0x7121_C000 ^ k as u64, w);
+        }
     }
     g
+}
+
+/// `CRAB_TRICK_READ_CENSUS=1`: at each suspicious attack the conditioning
+/// reads, whether the redeal dealt a trick and whether the attacker really
+/// held one — the inference's precision on the pool. Printed every 2,000.
+mod trick_read_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+    static N: [AtomicU64; 4] = [AtomicU64::new(0), AtomicU64::new(0), AtomicU64::new(0), AtomicU64::new(0)];
+    pub(super) fn on() -> bool {
+        static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *ON.get_or_init(|| std::env::var_os("CRAB_TRICK_READ_CENSUS").is_some())
+    }
+    pub(super) fn tick(dealt: bool, held: bool) {
+        N[usize::from(dealt) * 2 + usize::from(held)].fetch_add(1, Relaxed);
+        let t: u64 = N.iter().map(|n| n.load(Relaxed)).sum();
+        if t.is_multiple_of(2000) {
+            let n: Vec<u64> = N.iter().map(|n| n.load(Relaxed)).collect();
+            eprintln!(
+                "trick_read census: {t} suspicious attacks; real trick held {} ({:.1} %); redeal dealt one {} ; dealt&held {}",
+                n[1] + n[3],
+                100.0 * (n[1] + n[3]) as f64 / t as f64,
+                n[2] + n[3],
+                n[3],
+            );
+        }
+    }
+}
+
+/// A held card the combat sims would cast as a pump trick: the rule picker's
+/// shape ([`is_combat_trick_with`]), or under `trick_modes_combat_only` a
+/// modal instant with a pump / base-P/T mode.
+fn is_trick_card(def: &CardDefinition, w: &EvalWeights) -> bool {
+    use crate::card::CardType;
+    if is_combat_trick_with(def, w.trick_riders) {
+        return true;
+    }
+    w.trick_modes_combat_only
+        && def.card_types.contains(&CardType::Instant)
+        && modal_mode_count(&def.effect).is_some_and(|n| {
+            (0..n).any(|i| {
+                mode_branch(&def.effect, Some(i))
+                    .any_nested(&|e| matches!(e, Effect::PumpPT { .. } | Effect::SetBasePT { .. }))
+            })
+        })
+}
+
+/// [`EvalWeights::trick_read`]: condition a redeal on the attack it is
+/// answering. Before blocks, an opposing attacker that one of `seat`'s
+/// untapped blockers kills without dying (`block_outcomes`) only makes sense
+/// with a trick behind it; when the redeal dealt its controller none they can
+/// pay for, one of their unseen tricks is swapped into the redealt hand for a
+/// random card. Nothing changes when the unseen cards hold no trick, the hand
+/// is empty, or no trick is affordable — the redeal stays a function of the
+/// information set and the salt.
+fn condition_on_trick_attack(real: &GameState, g: &mut GameState, seat: usize, salt: u64, w: &EvalWeights) {
+    use rand::seq::SliceRandom;
+    if g.step != TurnStep::DeclareBlockers || g.blockers_declared() || g.attacking().is_empty() {
+        return;
+    }
+    let mut suspects: Vec<usize> = Vec::new();
+    {
+        let blockers: Vec<&crate::card::CardInstance> =
+            legal_blockers(g, seat).into_iter().map(|(c, _)| c).collect();
+        if blockers.is_empty() {
+            return;
+        }
+        for a in g.attacking() {
+            if g.defender_for(a.target) != Some(seat) {
+                continue;
+            }
+            let Some(c) = g.battlefield_find(a.attacker) else { continue };
+            if suspects.contains(&c.controller) || g.same_team(c.controller, seat) {
+                continue;
+            }
+            if blockers.iter().any(|b| block_outcomes(g, c, &[*b]) == (true, false)) {
+                suspects.push(c.controller);
+            }
+        }
+    }
+    let mut rng = StdRng::seed_from_u64(salt ^ ((g.turn_number as u64) << 32) ^ ((seat as u64) << 16));
+    for p in suspects {
+        if g.players[p].hand.is_empty() {
+            continue;
+        }
+        let affordable = |g: &GameState, i: usize| {
+            let have = SweepMana::new(g, p);
+            let c = &g.players[p].hand[i];
+            is_trick_card(&c.definition, w) && can_afford_in_state_with(g, p, c, w, &have)
+        };
+        let dealt = (0..g.players[p].hand.len()).any(|i| affordable(g, i));
+        if trick_read_census::on() {
+            let held = (0..real.players[p].hand.len()).any(|i| affordable(real, i));
+            trick_read_census::tick(dealt, held);
+        }
+        if dealt {
+            continue;
+        }
+        let mut pool: Vec<usize> = (0..g.players[p].library.len())
+            .filter(|&i| is_trick_card(&g.players[p].library[i].definition, w))
+            .collect();
+        pool.shuffle(&mut rng);
+        let slot = rng.random_range(0..g.players[p].hand.len());
+        let swap = |g: &mut GameState, li: usize| {
+            let pl = &mut g.players[p];
+            let from_lib = pl.library[li].clone();
+            let from_hand = std::mem::replace(&mut pl.hand[slot], from_lib);
+            pl.library[li] = from_hand;
+        };
+        for li in pool.into_iter().take(8) {
+            swap(g, li);
+            if affordable(g, slot) {
+                break;
+            }
+            swap(g, li);
+        }
+    }
 }
 
 /// The start states of one decision's simulations, one per redeal index
@@ -36249,5 +36385,48 @@ mod fra_audit_tests {
         assert!(!optional_trigger_beneficial(&g, pia, ask), "nothing to find");
         g.add_card_to_library(0, catalog::pacifism());
         assert!(optional_trigger_beneficial(&g, pia, ask), "an enchantment to find");
+    }
+    /// `trick_read`: a lone Bears into an untapped Hill Giant, the attacker
+    /// on a Forest with Giant Growth in hand. One uniform redeal blocks (it
+    /// dealt no Growth: the attack itself was never read); the sim with the
+    /// real hand declines, and so does one redeal conditioned on the attack.
+    /// With no trick among the attacker's unseen cards there is nothing to
+    /// condition on and the block stands.
+    #[test]
+    fn trick_read_respects_the_trick_a_bad_attack_implies() {
+        fn board(growth: bool) -> GameState {
+            let mut g = two_player_game();
+            let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+            g.clear_sickness(bear);
+            g.add_card_to_battlefield(0, catalog::forest());
+            g.add_card_to_battlefield(1, catalog::hill_giant());
+            g.add_card_to_hand(0, if growth { catalog::giant_growth() } else { catalog::island() });
+            for _ in 0..2 {
+                g.add_card_to_hand(0, catalog::island());
+            }
+            for _ in 0..30 {
+                g.add_card_to_library(0, catalog::island());
+            }
+            for _ in 0..20 {
+                g.add_card_to_library(1, catalog::island());
+            }
+            g.step = TurnStep::DeclareAttackers;
+            g.active_player_idx = 0;
+            g.priority.player_with_priority = 0;
+            g.declare_attackers(vec![crate::game::Attack { attacker: bear, target: crate::game::AttackTarget::Player(1) }])
+                .unwrap();
+            g.step = TurnStep::DeclareBlockers;
+            g.priority.player_with_priority = 1;
+            g
+        }
+        let blocks = |g: &GameState, det: u8, read: bool| {
+            let w = EvalWeights { determinize: det, trick_read: read, ..EvalWeights::fra_fixes_on() };
+            pick_blocks_scored(g, 1, &w).len()
+        };
+        let g = board(true);
+        assert_eq!(blocks(&g, 0, false), 0, "the real hand's Growth is seen");
+        assert_eq!(blocks(&g, 1, false), 1, "one uniform redeal walks into it");
+        assert_eq!(blocks(&g, 1, true), 0, "the attack is read as a trick");
+        assert_eq!(blocks(&board(false), 1, true), 1, "no unseen trick, nothing to read");
     }
 }

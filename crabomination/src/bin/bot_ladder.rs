@@ -268,6 +268,26 @@ fn parse_profile(name: &str) -> Option<Pilot> {
     // pool by the table net's belief (`server::honest`) instead of from the
     // opponent's real deck. Needs `CRAB_TABLE_NET` with the belief head.
     // `<profile>+cfix`: any profile with `EvalWeights::color_fixing` on.
+    // `<profile>+tread`: `EvalWeights::trick_read` on; `<profile>+det<N>`:
+    // N redeals averaged per combat sim.
+    if let Some(base) = name.strip_suffix("+tread") {
+        return Some(match parse_profile(base)? {
+            Pilot::Scored(w) => Pilot::Scored(EvalWeights { trick_read: true, ..w }),
+            Pilot::Policy(w) => Pilot::Policy(EvalWeights { trick_read: true, ..w }),
+            Pilot::Mcts(c) => Pilot::Mcts(MctsConfig { weights: EvalWeights { trick_read: true, ..c.weights }, ..c }),
+            Pilot::Uniform => return None,
+        });
+    }
+    if let Some((base, n)) = name.rsplit_once("+det")
+        && let Ok(n) = n.parse::<u8>()
+    {
+        return Some(match parse_profile(base)? {
+            Pilot::Scored(w) => Pilot::Scored(EvalWeights { determinize: n, ..w }),
+            Pilot::Policy(w) => Pilot::Policy(EvalWeights { determinize: n, ..w }),
+            Pilot::Mcts(c) => Pilot::Mcts(MctsConfig { weights: EvalWeights { determinize: n, ..c.weights }, ..c }),
+            Pilot::Uniform => return None,
+        });
+    }
     if let Some(base) = name.strip_suffix("+cfix") {
         return Some(match parse_profile(base)? {
             Pilot::Scored(w) => Pilot::Scored(EvalWeights { color_fixing: true, ..w }),

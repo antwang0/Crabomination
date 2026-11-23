@@ -285,9 +285,10 @@ OPEN:
   (`decide_choose_target` has no effect polarity; 72 of 87 untaps); a mass
   −N/−N (Rise of the Deathbringer) scores at baseline and wipes its own board;
   Marwyn, the Clearcutter sacrifices lands while short of mana (33 of 215
-  activations at ≤ 5 lands); the opposing bot doesn't play around combat
-  tricks (Tethermage's Advantage killed a blocker or attacker in ~75 % of
-  casts); Room of Refuge / Theorist's Sanctum are never deck-built
+  activations at ≤ 5 lands); ~~the opposing bot doesn't play around combat
+  tricks~~ (2026-11-23: one uniform redeal per sim; `trick_read` and `det3`
+  gated, neither adopted, and a perfect-information pilot leaves the trick
+  ratings where they were — ML_NOTES "The trick blind spot"); Room of Refuge / Theorist's Sanctum are never deck-built
   (`land_produced_colors` reads chosen-colour as nothing, `assemble_lands`
   wants two on-colour pips), and land values are measured against a basic
   that isn't in the regression. Way of the Wildspeaker's "empower Jace 7" and

@@ -1957,6 +1957,21 @@ fn audit_builder(pilot: Pilot, pools: usize, field: usize, pairs: usize, seed: u
 
 fn pilot_named(name: &str) -> Pilot {
     // `<pilot>+cfix`: the pilot with `EvalWeights::color_fixing` on.
+    // `<pilot>+tread` (`trick_read`) and `<pilot>+det<N>` (N redeals).
+    if let Some(base) = name.strip_suffix("+tread") {
+        return match pilot_named(base) {
+            Pilot::Scored(w) => Pilot::Scored(EvalWeights { trick_read: true, ..w }),
+            other => other,
+        };
+    }
+    if let Some((base, n)) = name.rsplit_once("+det")
+        && let Ok(n) = n.parse::<u8>()
+    {
+        return match pilot_named(base) {
+            Pilot::Scored(w) => Pilot::Scored(EvalWeights { determinize: n, ..w }),
+            other => other,
+        };
+    }
     if let Some(base) = name.strip_suffix("+cfix") {
         return match pilot_named(base) {
             Pilot::Scored(w) => Pilot::Scored(EvalWeights { color_fixing: true, ..w }),

@@ -10132,3 +10132,70 @@ found that is not fixed is in ENGINE_BACKLOG's OPEN list for the section;
 the largest is the known one — the opposing bot doesn't play around combat
 tricks, which inflates every cheap pump (Tethermage's Advantage cost the
 opponent a creature in ~75 % of its casts).
+
+## The trick blind spot: real at the decision, worth ~0.15 in games, and not what inflates trick ratings (2026-11-23)
+
+The open lead: "the opposing bot doesn't play around combat tricks". **The
+rating pilot does not ignore tricks; it averages over one redealt hand.**
+`fra-fixes` runs its combat sims with spells live for both seats
+(`attack_sim_spells`) on `determinize: 1`. The attacking seat's trick is only
+in the sim if the uniform redeal happens to deal it. A lone Bears into an
+untapped Hill Giant, the attacker holding Giant Growth with a Forest open:
+
+| defender's sim | blocks? |
+|---|---|
+| real hand (`det0`) | no |
+| one redeal (`det1`, the pilot) | yes, even with 13 Growths among 33 unseen cards |
+| 3 or 8 redeals averaged | no once a trick is likely (~50 %); yes at ~33 % |
+| one redeal + `trick_read` | no, whenever an affordable trick is unseen |
+
+The audit's "Tethermage's Advantage killed something in ~75 % of casts" is
+mostly selection: the picker casts only when the pump flips a fight.
+
+**Two arms** (`bot_ladder` suffixes `+tread`, `+det<N>`; `fra_card_eval`
+too):
+- **`trick_read`** (new, off): the attack itself is the evidence. At the
+  defender's block decision, an attacker one of our untapped blockers kills
+  without dying makes each redeal that dealt its controller no affordable
+  trick swap one in from their unseen cards.
+- **`det3`**: three redeals averaged per sim (existing knob).
+
+**Gate** (FRA rated sealed, 48 x 125 paired vs `fra-fixes`; pre-registered:
+every FRA and SOS cell >= 49.8, pooled FRA >= 50.0; `.ladder/trick/`):
+
+| arm | FRA 43 / 97 / 11 / 29 | pooled | SOS 43 / 97 |
+|---|---|---|---|
+| `+tread` | 49.6 / 49.9 / 49.7 / 50.1 | 49.8 | 49.9 / 49.8 — **fails** |
+| `+det3` | 50.4 / 50.0 / 49.9 / 50.2 | 50.1 | 50.1 / 50.5 — passes |
+| `+det3+tread` | 49.9 / 50.1 / 50.0 / 50.4 | 50.1 | — |
+
+`det3` on fresh seeds 5 / 61 / 7 / 13: 50.1 / 50.4 / **49.6** / 50.6. Eight
+seeds pool to **+0.15 ±0.16**, and seed 7 fails the cell floor, so the
+replication fails the rule the first read passed. **Not adopted**; `det3`
+also costs +57 % wall clock per seat that carries it (7.2 → 11.3 s a cell
+with one seat).
+
+**Why `trick_read` loses:** `CRAB_TRICK_READ_CENSUS=1` (FRA seed 43, 4,000
+suspicious attacks): the attacker really held an affordable trick in **15.4
+%** of them, against 5.3 % for the uniform redeal. The attack is evidence (3x
+lift), but the bot attacks into a killing blocker for other reasons too (wide
+swings, races, its own sim expecting no block). Forcing a trick in every time
+is wrong 85 % of the time. A calibrated version would add a trick in ~11 % of
+the no-trick redeals, which is roughly what `det3` already buys.
+
+**And it isn't what inflates the tricks' ratings.** `--set-played`, seed 43,
+400 decks x 400 per card, both seats on the pilot:
+
+| card | `det1` | `det3` | `det0` (sees every hand) |
+|---|---|---|---|
+| Tethermage's Advantage | +2.12 | +2.72 | +2.17 |
+| Academic Ascent | +1.68 | +1.47 | +0.45 |
+| Perfected Theory | −0.51 | +1.02 | −0.92 |
+| Blazing Crescendo | −0.62 | +0.41 | −0.41 |
+| Hexhaven Invigorator (control) | +1.66 | +0.95 | +1.29 |
+
+Perfect information doesn't move Tethermage's Advantage (sim rank 59 / 260,
+Draftsim 260 / 280). Only Academic Ascent falls, and inside its interval. The
+non-trick control diverges further (26 vs 253). So the gap between cheap cards'
+sim values and Draftsim is not a play-around problem. **Closed as a ratings
+lead**; `trick_read` and the census stay in the code, off.
