@@ -1,13 +1,12 @@
 //! The add-one-card deck builder — step 2 of the deck-building net (ML_NOTES
 //! "A deck net that builds decks"), as `deck_policy_train` exports it.
 //!
-//! A sealed deck's spells are chosen one pool card at a time. The state is
-//! the pool's mean card vector, the partial deck's, the partial deck's 16
-//! [`encode_deck`](crate::server::encode::encode_deck) features and its size;
-//! each available pool card is scored from its own vector, the state, its
-//! copies already in the deck and its copies left; a separate score stops.
-//! Stopping is masked below [`MIN_SPELLS`] and forced at [`MAX_SPELLS`]. The
-//! spells then get the rated builder's own land step
+//! Spells are chosen one pool card at a time. State: the pool's mean card
+//! vector, the partial deck's, its 16
+//! [`encode_deck`](crate::server::encode::encode_deck) features and its size.
+//! Each available card is scored from its vector, the state and its copies
+//! in deck / left; a separate score stops (masked below [`MIN_SPELLS`],
+//! forced at [`MAX_SPELLS`]). Lands come from the rated builder's step
 //! ([`crate::recommend::lands_for_spells`]).
 
 use std::collections::HashMap;
@@ -231,13 +230,11 @@ impl DeckPolicy {
         }
     }
 
-    /// The spells of one build under the splash rule the rated builder's
-    /// `splash_cards` keeps: the two colours with the most pips are the
-    /// main colours; cards outside them stay only as **one** splash colour,
-    /// at most three cards, each with a single pip of it. Otherwise the
-    /// off-colour cards go and the policy keeps choosing among main-colour
-    /// and colourless cards. Returns the spells, the main colours and the
-    /// splash colour.
+    /// One build's spells under the rated builder's `splash_cards` rule: the
+    /// two most-pipped colours are main; others stay only as **one** splash
+    /// colour, at most three cards with a single pip each, else they go and
+    /// the policy keeps choosing among main-colour and colourless cards.
+    /// Returns spells, main colours and splash colour.
     pub fn castable_spells(&self, pool: &[CardFactory], mut sample: Option<(&mut StdRng, f32)>) -> (Vec<CardFactory>, Vec<Color>, Option<Color>) {
         let mut deck = self.spells(pool, sample.as_mut().map(|(r, t)| (&mut **r, *t)));
         let mut weight: Vec<(Color, u32)> =
@@ -317,11 +314,10 @@ impl DeckPolicy {
     }
 
     /// [`build_valued`](Self::build_valued) with the 2026-11-08 research
-    /// sweep's build-time levers (ML_NOTES "Research sweep"), each off in
-    /// [`ValuedOpts::default`], where the pick is exactly `build_valued`'s:
-    /// the caller's extra candidates (the rated builds) in the race, more
-    /// lands for the value's top picks, and value-guided swaps after the
-    /// pick.
+    /// sweep's levers (ML_NOTES "Research sweep"): extra caller candidates
+    /// (the rated builds), more lands for the value's top picks, value-guided
+    /// swaps after the pick. All off in [`ValuedOpts::default`], which is
+    /// exactly `build_valued`.
     pub fn build_valued_with(
         &self,
         pool: &[CardFactory],
@@ -442,10 +438,9 @@ fn main_colors(spells: &[CardFactory]) -> (Vec<Color>, ColorSet) {
 }
 
 /// At most `swaps` value-guided swaps on `deck` (valued `v`): each the best
-/// (spell out, pool card in) by the value with the lands held, the pool card
-/// inside the deck's two main colours (no new splash — the value cannot see
-/// sources), then the lands re-derived; a swap stays only if the re-landed
-/// deck still beats the one before it.
+/// (spell out, pool card in) with lands held, the card inside the two main
+/// colours (the value can't see sources), then lands re-derived; kept only
+/// if the re-landed deck still beats the one before.
 fn polish(pool: &[CardFactory], mut deck: Vec<CardFactory>, mut v: f64, value: &crate::deck_value::DeckValue, swaps: usize) -> Vec<CardFactory> {
     let key = |f: &CardFactory| *f as usize;
     for _ in 0..swaps {

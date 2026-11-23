@@ -1,20 +1,20 @@
 //! Protective keyword grants as responses — "{1}{G}{U}: creatures you control
 //! gain shroud" (Aerie Mystics), "discard a card: hexproof" (Prognostic
 //! Sphinx), "{5}: permanents you control gain indestructible" (Soul of New
-//! Phyrexia). A 183-deck `--card-census` never activated them: the grant
-//! scores as nothing until a removal spell is on the stack, and no response
-//! path offered them. A pod bot now answers an opponent's removal on top of
-//! the stack with a grant that stops it — hexproof/shroud against a targeted
-//! spell or ability (CR 702.11b / 702.18a: the target becomes illegal),
-//! indestructible against destroy or damage (CR 702.12b), a sweep included.
-//! A coloured one is also answered with "protection from the colour of your
-//! choice" (Mother of Runes — never activated in two decks, census seed
-//! 9460001), which names the removal's colour.
-//! Failing a grant, lethal removal is answered with a "when that creature dies
-//! this turn, return it to its owner's hand" ability (Together Forever — never
-//! activated in eight decks, census seed 3100001), and any targeted removal
-//! with an exile its controller may take (Livio's aegis exile — the may was
-//! always declined, so the ability never did anything for a bot).
+//! Phyrexia). The grant scores as nothing until removal is on the stack and
+//! no response path offered it, so a census never saw one activated.
+//!
+//! A pod bot answers an opponent's removal on top of the stack with:
+//! - a grant that stops it: hexproof/shroud against a targeted spell or
+//!   ability (CR 702.11b / 702.18a), indestructible against destroy or
+//!   damage (CR 702.12b), a sweep included;
+//! - against a coloured one, "protection from the colour of your choice"
+//!   (Mother of Runes), naming the removal's colour;
+//! - failing a grant, for lethal removal a "when that creature dies this
+//!   turn, return it to its owner's hand" ability (Together Forever), and
+//!   for any targeted removal an exile its controller may take (Livio's
+//!   aegis, whose may was always declined).
+//!
 //! Commander games only, so two-player play is unchanged.
 
 use crate::card::{CardId, Keyword};

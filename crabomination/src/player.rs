@@ -11,29 +11,21 @@ pub struct PlayerId(pub usize);
 /// `max_hand_size` starts here; effects can raise/lower it or remove it.
 pub const DEFAULT_MAX_HAND_SIZE: usize = 7;
 
-/// The magnitude past which a **board number a consumer scales** — a life
-/// total, a power, a toughness, a sum of them — stops being a number that
-/// consumer should read literally.
+/// Magnitude past which a board number a consumer *scales* (life, power,
+/// toughness, sums of them) is no longer read literally.
 ///
-/// **None of them is bounded by anything.** Beacon of Immortality doubles a
-/// life total every other turn and saturates it at `i32::MAX` in about thirty
-/// casts (the board behind the only `cap` in ~1.3 M swept games,
-/// `ENGINE_BACKLOG`'s OPEN section, `cube` seed 1018); Exponential Growth is
-/// "double target creature's power {X} times" and gets there in one
-/// resolution. Both are correct cards doing what they print. Every consumer
-/// that *scales* such a number either wraps (the bot's evaluator scored the
-/// seat with unbounded life as the one that is losing, caught by the
-/// `debug-assertions` sweep) or hands the net a feature of 10^8
-/// (`life / 20.0`).
+/// Nothing bounds them: Beacon of Immortality saturates life at `i32::MAX`
+/// in ~30 casts (`ENGINE_BACKLOG` OPEN, `cube` seed 1018), Exponential
+/// Growth does it to power in one resolution. Unclamped, consumers wrap (the
+/// evaluator scored unbounded life as losing) or feed the net 10^8 features.
 ///
-/// Ten thousand is far past anything a consumer has to tell apart, and it
-/// keeps the evaluator's products inside `i32` for the profiles that ship
-/// (`unit` 1 and 10). **No state inside `±10_000` reads differently**, which is
-/// every non-degenerate game — the clamp is a guard, not a rescale.
+/// Ten thousand keeps the evaluator's products inside `i32` for the shipped
+/// profiles (`unit` 1 and 10), and no state inside `±10_000` reads
+/// differently — the clamp is a guard, not a rescale.
 ///
-/// It is for the *consumers*. The rules-facing values stay exact and merely
-/// **saturate** ([`CardInstance::pump`](crate::card::CardInstance::pump),
-/// `compute_permanent`), because clamping a power would change combat damage.
+/// Consumers only. Rules-facing values stay exact and merely saturate
+/// ([`CardInstance::pump`](crate::card::CardInstance::pump),
+/// `compute_permanent`), since clamping power would change combat damage.
 pub const SCALE_CEILING: i32 = 10_000;
 
 /// Serde default for `Player.max_hand_size` — the normal seven-card cap.
@@ -45,11 +37,10 @@ fn default_starting_life() -> i32 {
     20
 }
 
-/// CR 114 — an emblem owned by a player. Has no characteristics other
-/// than the triggered abilities it grants its owner, and sits in the
-/// command zone for the rest of the game (emblems never leave). Created
-/// by planeswalker ultimates via `Effect::CreateEmblem`; a `this_turn` one
-/// carries an effect's "until end of turn, whenever …" triggers instead.
+/// CR 114 — an emblem owned by a player: only the triggered abilities it
+/// grants, in the command zone for the rest of the game. Created by
+/// `Effect::CreateEmblem`; a `this_turn` one carries an effect's "until end
+/// of turn, whenever …" triggers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Emblem {
     /// Source name, for display (e.g. "Professor Dellian Fel").
@@ -157,25 +148,21 @@ pub struct LoyaltyCopyGrant {
     pub min_mana: u32,
 }
 
-/// The rarely-written, heap-owning tail of a seat: registries only a handful
-/// of cards touch, plus the seat's name. Held behind one CoW handle so a
-/// `PlayerData` unshare — 24,852 of them per six bench games — bumps a
-/// refcount instead of cloning fifteen collections and a `String`.
-/// `Deref`/`DerefMut` keep every `player.field` access working unchanged.
+/// The rarely-written, heap-owning tail of a seat (rare registries plus the
+/// name), behind one CoW handle so a `PlayerData` unshare bumps a refcount
+/// instead of cloning every collection. `Deref`/`DerefMut` keep
+/// `player.field` access unchanged.
 ///
-/// Membership rule, same as [`crate::game::ColdState`]: a field belongs here
-/// only if it owns heap *and* is written rarely. A per-turn `clear()` counts
-/// as a write, so the reset loops guard theirs on `is_empty()`.
+/// Membership rule, as for [`crate::game::ColdState`]: heap-owning *and*
+/// rarely written. A per-turn `clear()` is a write, so reset loops guard
+/// theirs on `is_empty()`.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct PlayerCold {
     // ── Rare-format card zones ────────────────────────────────────────────
-    // Ante, Archenemy, Planechase and Attractions. Every one of them is
-    // empty in every format the simulator plays, and each cost `PlayerData`
-    // eight bytes it pays on every unshare. Reads and writes reach them
-    // through `PlayerData`'s `Deref`/`DerefMut` unchanged (PERF `(-152)`).
-    /// CR 407 — cards this player owns in the ante zone. Only ever non-empty
-    /// while `GameState.playing_for_ante`; the winner takes all of it
-    /// (CR 407.2). `#[serde(default)]` for snapshot back-compat.
+    // Ante, Archenemy, Planechase, Attractions: empty in every simulated
+    // format, so kept off `PlayerData`'s unshare (PERF `(-152)`).
+    /// CR 407 — cards this player owns in the ante zone. Non-empty only while
+    /// `GameState.playing_for_ante`; the winner takes all of it (CR 407.2).
     #[serde(default)]
     pub ante: CowBox<Vec<CardInstance>>,
     /// CR 904.3 — the archenemy's face-down scheme deck. Like the command
@@ -204,20 +191,16 @@ pub struct PlayerCold {
     /// CR 309.7 — the dungeons this player has completed, by name, in order.
     #[serde(default)]
     pub completed_dungeons: Vec<String>,
-    /// CardIds of cards this player has designated as Commanders
-    /// (Phase J). Populated by `GameState::seat_commanders`. Read by
-    /// the Phase M 21-commander-damage SBA via
-    /// `GameState::is_commander`. Note this is *which cards are
-    /// commanders for this player*, independent of the command zone
-    /// — a commander on the battlefield (or any other zone) is
-    /// still a commander, so the entry survives zone changes.
+    /// CardIds this player designated as commanders (set by
+    /// `GameState::seat_commanders`, read by the 21-commander-damage SBA via
+    /// `GameState::is_commander`). Independent of the command zone: a
+    /// commander stays one in any zone.
     #[serde(default)]
     pub commanders: Vec<CardId>,
-    /// Transient: how much Treasure mana this seat's cast in flight spent (the
-    /// pool's `treasure` provenance fell by this much during payment). Consumed by
-    /// `finalize_cast`, which stamps `CardData::cast_with_treasure_mana`. On
-    /// the seat rather than `GameState`, which is size-capped; read before it
-    /// is written so an ordinary cast never unshares the seat.
+    /// Transient: Treasure mana the cast in flight spent, consumed by
+    /// `finalize_cast` into `CardData::cast_with_treasure_mana`. Lives on the
+    /// seat because `GameState` is size-capped; read before written so an
+    /// ordinary cast never unshares the seat.
     #[serde(skip)]
     pub cast_paid_with_treasure: u32,
     /// Transient: the `MarksCast` marks whose mana funded the cast in flight
@@ -246,14 +229,12 @@ pub struct PlayerCold {
     /// into `CardData::cast_snow_colors`.
     #[serde(skip)]
     pub cast_paid_snow_colors: u8,
-    /// CR 903.4a — this seat's combined commander colour identity, computed
-    /// once as the commanders are seated because identity is established
-    /// before the game and never changes. Cached because the walk behind it
-    /// serializes a whole `CardDefinition`, and
-    /// `ManaPayload::AnyColorInCommanderIdentity` asks for it on every Command
-    /// Tower / Arcane Signet / Commander's Sphere tap. Empty means "not
-    /// computed or genuinely colourless"; `commander_identity_colors` falls
-    /// back to the walk in that case, so an old snapshot still answers right.
+    /// CR 903.4a — this seat's combined commander colour identity, cached
+    /// when commanders are seated (identity never changes) because the walk
+    /// serializes a whole `CardDefinition` and every Command Tower / Arcane
+    /// Signet tap asks. Empty means "not computed or colourless";
+    /// `commander_identity_colors` then falls back to the walk, so old
+    /// snapshots still answer right.
     #[serde(default)]
     pub commander_identity: crate::mana::ColorSet,
     /// When this seat left the game (CR 800.4a), stamped by the one leave
@@ -316,11 +297,10 @@ pub struct PlayerCold {
     /// turn; cleared in `finish_cleanup` (CR 514.2).
     #[serde(default)]
     pub turn_spell_discounts: Vec<(crate::card::SelectionRequirement, u32)>,
-    /// CR 614 — queued one-shot draw replacements: "the next time you would
-    /// draw a card this turn, [effect] instead" (the Onslaught Words cycle).
-    /// Each entry is `(source, effect, x)`; `draw_one` pops the front instead
-    /// of drawing, replaying the activation's X (Aladdin's Lamp). Cleared at
-    /// the turn boundary.
+    /// CR 614 — queued "the next time you would draw a card this turn,
+    /// [effect] instead" replacements (Onslaught Words), as `(source, effect,
+    /// x)`. `draw_one` pops the front instead of drawing, replaying X
+    /// (Aladdin's Lamp). Cleared at the turn boundary.
     #[serde(default)]
     pub next_draw_replacements: Vec<(crate::card::CardId, crate::effect::Effect, u32)>,
     /// CR 702.50 — resolved Epic spells this player controls. Each entry is
@@ -328,14 +308,9 @@ pub struct PlayerCold {
     /// the rest of the game; while non-empty the player can't cast spells.
     #[serde(default)]
     pub epic_spells: Vec<EpicSpell>,
-    /// CR 114 — emblems this player owns. Each carries a name (for
-    /// display) and a set of triggered abilities that fire from the
-    /// command zone; emblems never leave once created. The trigger
-    /// dispatcher walks every player's emblems alongside battlefield
-    /// permanents (event-keyed kinds in `dispatch_triggers_for_events`,
-    /// step-keyed kinds in `fire_step_triggers`). Created by
-    /// `Effect::CreateEmblem` (planeswalker ultimates). `#[serde(default)]`
-    /// for snapshot back-compat.
+    /// CR 114 — emblems this player owns; they never leave. The dispatcher
+    /// walks them alongside permanents (`dispatch_triggers_for_events`,
+    /// `fire_step_triggers`).
     #[serde(default)]
     pub emblems: Vec<Emblem>,
     /// Jace's Machinations: the turn number its "Jace loyalty abilities at
@@ -348,12 +323,9 @@ pub struct PlayerCold {
     /// Valid only while it equals the turn number (`game/loyalty_twice_turn.rs`).
     #[serde(default)]
     pub loyalty_twice_turn: Option<u32>,
-    /// Colors this player (and their permanents) have hexproof from for the
-    /// rest of the turn (Veil of Summer's "you and permanents you control
-    /// gain hexproof from blue and from black until end of turn"). Set by
-    /// `Effect::GrantHexproofFromColorThisTurn`; reset for every player at
-    /// the active player's `do_untap`. Consulted by the targeting-legality
-    /// checks. `#[serde(default)]` for snapshot back-compat.
+    /// Colours this player and their permanents have hexproof from this turn
+    /// (Veil of Summer). Set by `Effect::GrantHexproofFromColorThisTurn`,
+    /// reset for every player at `do_untap`; read by targeting legality.
     #[serde(default)]
     pub hexproof_from_colors_this_turn: Vec<crate::mana::Color>,
     /// Card names this player's opponents can't cast until this player's next
@@ -490,17 +462,13 @@ pub struct PlayerCold {
 /// behind an `Arc` — see that type for why.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlayerData {
-    // Fields whose clone calls something come first; the plain ones follow
-    // as one run. **Declaration order is the derived `Clone`'s statement
-    // order** and `&self` is not `noalias` (PERF `(-139)`), so a scalar
-    // between two collections is its own fenced load/store pair. PERF
-    // `(-142)`; the microbenchmark that ranks the orders is in `(-141)`.
+    // Fields whose clone calls something come first, plain ones after as one
+    // run: declaration order is the derived `Clone`'s statement order and
+    // `&self` is not `noalias`, so a scalar between collections costs its own
+    // load/store pair. PERF `(-139)`, `(-141)`, `(-142)`.
     pub mana_pool: ManaPool,
-    /// Top of library is `library[0]`.
-    ///
-    /// The card zones are [`CowBox`]-wrapped so a `GameState` clone
-    /// (affordance probes, the `perform_action` checkpoint) shares them
-    /// until written — see `crate::cow`.
+    /// Top of library is `library[0]`. Card zones are [`CowBox`]-wrapped so a
+    /// `GameState` clone shares them until written (see `crate::cow`).
     #[serde(deserialize_with = "crate::zone::deserialize_library")]
     pub library: crate::zone::CardPile,
     pub hand: crate::zone::CardPile,
@@ -508,22 +476,14 @@ pub struct PlayerData {
     /// carries the answer two hot walkers ask of it. Reads and writes go
     /// through `Deref`/`DerefMut` unchanged — see [`crate::zone::Graveyard`].
     pub graveyard: crate::zone::Graveyard,
-    /// The command zone — Commander commanders, Conspiracies, etc.
-    /// (Phase I.) Cards arrive here either at game start (initial
-    /// commander seating via `seat_commanders`) or via a zone-change
-    /// replacement effect when they would go to hand or library
-    /// (CR 903.9b), or via the SBA after reaching a graveyard or exile
-    /// (CR 903.9a).
-    ///
-    /// `#[serde(default)]` so snapshots written before the field
-    /// existed deserialize cleanly as empty.
+    /// The command zone (commanders, Conspiracies). Cards arrive at game
+    /// start (`seat_commanders`), by replacement instead of hand/library
+    /// (CR 903.9b), or by SBA from graveyard/exile (CR 903.9a).
     #[serde(default)]
     pub command: CowBox<Vec<CardInstance>>,
-    /// CR 406 / 701.45 — the Lessons "sideboard" (cards owned from outside
-    /// the game). A Learn ability may reveal a Lesson card here and put it
-    /// into hand. Populated by deck construction; empty by default (in
-    /// which case Learn falls back to the legacy `Draw 1` approximation).
-    /// `#[serde(default)]` for snapshot back-compat.
+    /// CR 406 / 701.45 — the Lessons sideboard (cards from outside the game)
+    /// a Learn ability can fetch. Filled by deck construction; when empty,
+    /// Learn falls back to the legacy `Draw 1` approximation.
     #[serde(default)]
     pub sideboard: CowBox<Vec<CardInstance>>,
     /// Creatures that entered the battlefield under this player's control
@@ -540,19 +500,14 @@ pub struct PlayerData {
     #[serde(default)]
     pub dungeon: Option<(String, u8)>,
     /// CR 603.7e — pending "your next creature spell this turn enters with N
-    /// extra counters of this kind" riders (the FIN "Summon" saga chapters —
-    /// Fenrir II "Heavenward Howl", Brynhildr). Each entry is drained onto the
-    /// *next* creature spell this player casts (all pending riders stack onto
-    /// the same creature); the list clears at cleanup so an unused rider
-    /// expires with the turn. `#[serde(default)]`.
+    /// extra counters" riders (FIN Summon sagas: Fenrir II, Brynhildr). All
+    /// drain onto the next creature spell cast; cleared at cleanup.
     #[serde(default)]
     pub pending_creature_etb_counters: crate::oftenempty::OftenEmpty<(crate::card::CounterType, u32)>,
-    /// Card ids of creatures that have dealt damage to this player so far
-    /// this turn (combat or non-combat). Reset for all players at the
-    /// active player's `do_untap`. Powers "destroy target creature that
-    /// dealt damage to you this turn" (Spear of Heliod, CR uses
-    /// `SelectionRequirement::DealtDamageToControllerThisTurn`). Defaults
-    /// empty for snapshot back-compat.
+    /// Creatures that dealt damage to this player this turn (any damage),
+    /// reset at `do_untap`. Backs
+    /// `SelectionRequirement::DealtDamageToControllerThisTurn` (Spear of
+    /// Heliod).
     #[serde(default)]
     pub creatures_that_damaged_me_this_turn: crate::oftenempty::OftenEmpty<crate::card::CardId>,
     /// The COMBAT half of `creatures_that_damaged_me_this_turn`: attackers
@@ -576,18 +531,15 @@ pub struct PlayerData {
     /// Backs `PutIntoGraveyardFromLibraryThisTurn`.
     #[serde(default)]
     pub milled_ids_this_turn: crate::game::types::IdSet<CardId>,
-    /// Cards surveiled into this graveyard this turn (CR 701.42a: put there
-    /// from the library, not milled). With `milled_ids_this_turn` it backs
-    /// `Value::CardsPutIntoGraveyardFromLibraryThisTurn` (Cruel Calculations),
-    /// which until 2026-11-16 counted the milled ones only — on FRA, where
-    /// surveil is how cards leave the library, the card drew nothing.
+    /// Cards surveiled into this graveyard this turn (CR 701.42a). With
+    /// `milled_ids_this_turn` it backs
+    /// `Value::CardsPutIntoGraveyardFromLibraryThisTurn` (Cruel Calculations,
+    /// which drew nothing on FRA before 2026-11-16 counted surveil).
     #[serde(default)]
     pub surveiled_this_turn: u32,
     /// One-shot "next instant/sorcery you cast this turn costs {N} less"
-    /// discounts (Thundertrap Trainer). Each entry is `(amount, granted_at)`
-    /// where `granted_at` is `instants_or_sorceries_cast_this_turn` at grant
-    /// time; the discount applies only while the tally still equals it.
-    /// Cleared each turn alongside the tally.
+    /// discounts (Thundertrap Trainer) as `(amount, granted_at)`, live only
+    /// while `instants_or_sorceries_cast_this_turn` still equals `granted_at`.
     #[serde(default)]
     pub pending_is_discounts: crate::oftenempty::OftenEmpty<(u32, u32)>,
     /// Like `pending_is_discounts` but for *any* next spell this turn
@@ -613,18 +565,14 @@ pub struct PlayerData {
     /// & Raph, Hard Science): `noncreature_spells_cast_this_game_turn` at grant.
     #[serde(default)]
     pub pending_affinity_next_noncreature: crate::oftenempty::OftenEmpty<u32>,
-    /// CR 500.4 exception — mana added by an effect that says "you don't lose
-    /// this mana as steps and phases end" (Savage Ventmaw's attack trigger).
-    /// Re-seeded into the pool by `empty_mana_pools` on every step/phase empty
-    /// and cleared at cleanup, so the mana survives the turn but not past it.
-    /// `#[serde(default)]`.
+    /// CR 500.4 exception — "you don't lose this mana as steps and phases
+    /// end" mana (Savage Ventmaw). `empty_mana_pools` re-seeds it each empty;
+    /// cleared at cleanup.
     #[serde(default)]
     pub kept_mana_this_turn: ManaPool,
-    /// Colors + card types of each spell this player cast this turn, in cast
-    /// order. Stamped in `finalize_cast` and cleared alongside
-    /// `cast_blue_or_black_this_turn`; read by
-    /// `Predicate::CastSpellThisTurnWith` — the Trap alternative costs
-    /// ("if an opponent cast a blue spell this turn", Ricochet Trap).
+    /// Colours + card types of each spell cast this turn, in order. Stamped
+    /// in `finalize_cast`; read by `Predicate::CastSpellThisTurnWith` (Trap
+    /// alternative costs, Ricochet Trap).
     #[serde(default)]
     pub spell_casts_this_turn:
         crate::copyvec::CopyVec<[crate::game::types::CastProfile; 4]>,
@@ -669,42 +617,32 @@ pub struct PlayerData {
     #[serde(default)]
     pub extra_loyalty_activations: u32,
     /// "Copy the next loyalty ability you activate this turn" (Jaya's
-    /// Phoenix, Repeated Reverberation) and Leori, Sparktouched Hunter's
-    /// type-scoped "whenever you activate an ability of a planeswalker of
-    /// that type, copy that ability". Read as each loyalty ability goes on
-    /// the stack; cleared at cleanup.
+    /// Phoenix, Repeated Reverberation) and Leori's type-scoped copy. Read as
+    /// each loyalty ability goes on the stack; cleared at cleanup.
     #[serde(default)]
     pub loyalty_copy_grants: Vec<LoyaltyCopyGrant>,
     /// Whether this player has activated a loyalty ability this turn (The
     /// Chain Veil's end-step "if you didn't …" check). Cleared each turn.
     #[serde(default)]
     pub activated_loyalty_this_turn: bool,
-    /// How many spells this player has cast since **their own** turn began —
-    /// reset only as it begins, so it outlives the other seats' turns. Rules
-    /// text's "this turn" is `spells_cast_this_game_turn`; this one is kept
-    /// for the observation encoder (`encode.rs`), day / night (the previous
-    /// active player's count) and the next-spell discount tallies.
+    /// Spells cast since this player's **own** turn began (outlives other
+    /// seats' turns). Rules text's "this turn" is
+    /// `spells_cast_this_game_turn`; this one feeds `encode.rs`, day/night
+    /// and the next-spell discount tallies.
     pub spells_cast_this_turn: u32,
     /// Sorcery spells cast this turn — Backdraft's "a player who cast one or
     /// more sorcery spells this turn". Reset at Cleanup.
     #[serde(default)]
     pub sorceries_cast_this_turn: u32,
-    /// Per-name lifetime cast counter — "you've cast another spell named X
-    /// this game" (Approach of the Second Sun). Bumped in `finalize_cast`
-    /// with the cast card's printed name; never reset. Defaults empty for
-    /// snapshot back-compat.
-    /// Keyed by the printed `&'static str` name, not an owned `String`: this
-    /// map is deep-cloned with every `GameState` clone (millions per bot
-    /// self-play game) and an owned key allocates per entry per clone.
+    /// Per-name lifetime cast counter (Approach of the Second Sun), bumped in
+    /// `finalize_cast`, never reset. Keyed by `&'static str` so the clone
+    /// doesn't allocate per entry.
     ///
-    /// ⚠ **Only names that ask are recorded** — `finalize_cast` gates the
-    /// bump on `CardDefinition::counts_own_name_casts`. Counting every cast
-    /// grew a `hashbrown` table inside the *hot* group, and its clone was
-    /// 176 Ir and an allocation on each of the 22,060 `PlayerData` unshares
-    /// a six-game `cube` run makes. An empty map takes hashbrown's
-    /// empty-singleton clone path instead. PERF `(-149)`. If a second card
-    /// ever needs a per-name tally by some *other* route than
-    /// `Predicate::CastOwnNameThisGameAtLeast`, widen the gate with it.
+    /// ⚠ Only names that ask are recorded (`finalize_cast` gates on
+    /// `CardDefinition::counts_own_name_casts`): a non-empty map in the hot
+    /// group costs an allocation per `PlayerData` unshare, PERF `(-149)`. A
+    /// second per-name tally by another route than
+    /// `Predicate::CastOwnNameThisGameAtLeast` must widen the gate.
     #[serde(with = "crate::static_str_serde::map_u32", default)]
     pub spells_cast_by_name_this_game:
         crate::fxhash::HashMap<crate::static_str_serde::StaticStr, u32>,
@@ -741,23 +679,14 @@ pub struct PlayerData {
     /// Cleanup.
     #[serde(default)]
     pub spell_cap_this_turn: Option<u32>,
-    /// Total life gained by this player this turn (sum of every
-    /// `Effect::GainLife` and `Effect::Drain`-to-this-player resolution).
-    /// Reset to 0 in `do_untap`. Powers Strixhaven's **Infusion** rider —
-    /// "If you gained life this turn, …" — and any future "you've gained
-    /// life this turn" payoffs without needing a custom event log scan.
-    /// Default-deserializes to 0 for snapshots predating the field.
+    /// Life gained this turn (`GainLife` and `Drain` to this player), reset
+    /// in `do_untap`. Powers Infusion ("if you gained life this turn").
     #[serde(default)]
     pub life_gained_this_turn: u32,
-    /// True once a life-gain trigger batch for this player has finished
-    /// dispatching on the current turn. Powers "whenever you gain life for
-    /// the first time each turn" (Leech Collector): the trigger's filter
-    /// reads the flag *before* it flips (set at the end of the dispatch
-    /// batch), so only the turn's first gain batch qualifies — a gain that
-    /// happened before the listener arrived still disqualifies later gains.
-    /// Reset for every player at each untap (the printed "each turn" keys
-    /// on the turn boundary, not the owner's turn). Defaults to false for
-    /// snapshot back-compat.
+    /// Set once this player's life-gain trigger batch finishes dispatching
+    /// this turn: "first time each turn" filters (Leech Collector) read it
+    /// before it flips, so only the first batch qualifies. Reset for every
+    /// player at each untap ("each turn" keys on the turn, not the owner's).
     #[serde(default)]
     pub gained_life_earlier_this_turn: bool,
     /// Event batches this turn in which this player created tokens / surveiled
@@ -775,12 +704,8 @@ pub struct PlayerData {
     /// (`FirstBatchKind::LifeLost`).
     #[serde(default)]
     pub life_loss_batches_this_turn: u8,
-    /// Number of cards this player has drawn on the current turn. Reset
-    /// to 0 in `do_untap`. Powers Strixhaven's Quandrix scaling — e.g.
-    /// Fractal Anomaly creates a 0/0 with X +1/+1 counters where X is
-    /// "cards drawn this turn." Surfaced through `PlayerView` so client
-    /// UIs can preview the scaling. Defaults to 0 for snapshot
-    /// backwards-compatibility.
+    /// Cards drawn this turn, reset in `do_untap`. Powers Quandrix scaling
+    /// (Fractal Anomaly); surfaced in `PlayerView` for UI previews.
     #[serde(default)]
     pub cards_drawn_this_turn: u32,
     /// Cards drawn during the current step — reset for every player on each
@@ -788,12 +713,9 @@ pub struct PlayerData {
     /// step" trigger gates (Orcish Bowmasters, CR 603.3).
     #[serde(default)]
     pub cards_drawn_this_step: u32,
-    /// Number of times a card has left this player's graveyard on the
-    /// current turn. Reset to 0 in `do_untap`. Powers Strixhaven Lorehold
-    /// "if a card left your graveyard this turn" payoffs (Living History,
-    /// Primary Research's end-step draw rider, Wilt in the Heat's cost
-    /// reduction). Backed by the `CardLeftGraveyard` event emission in
-    /// `move_card_to`. Defaults to 0 for snapshot back-compat.
+    /// Times a card left this graveyard this turn, reset in `do_untap`
+    /// (Lorehold payoffs: Living History, Primary Research, Wilt in the
+    /// Heat). Bumped by `move_card_to`'s `CardLeftGraveyard` emission.
     #[serde(default)]
     pub cards_left_graveyard_this_turn: u32,
     /// The creature cards among `cards_left_graveyard_this_turn` ("if a
@@ -801,12 +723,9 @@ pub struct PlayerData {
     /// Flame). Bumped beside it, reset with it.
     #[serde(default)]
     pub creature_cards_left_graveyard_this_turn: u32,
-    /// Number of creatures controlled by this player that died this turn.
-    /// Reset to 0 in `do_untap`. Powers Witherbloom "if a creature died
-    /// under your control this turn, …" end-step payoffs (Essenceknit
-    /// Scholar). Bumped from `apply_state_based_actions`'s SBA dies
-    /// handler keyed off the dying creature's controller. Defaults to 0
-    /// for snapshot back-compat.
+    /// Creatures this player controlled that died this turn, reset in
+    /// `do_untap` and bumped by the SBA dies handler (Witherbloom end-step
+    /// payoffs, Essenceknit Scholar).
     #[serde(default)]
     pub creatures_died_this_turn: u32,
     /// Zubera that died under this player's control this turn. Reset in
@@ -876,12 +795,9 @@ pub struct PlayerData {
     /// [`crate::effect::BendKind::bit`] each (Avatar Aang). Reset per turn.
     #[serde(default)]
     pub bends_this_turn: u8,
-    /// True if this player has been dealt damage so far this turn. Set in
-    /// `deal_damage_to_from`'s player branch (combat or non-combat, incl.
-    /// infect/poison), reset for *all* players at the active player's
-    /// `do_untap` so it reflects "damaged since this turn began" — the
-    /// Bloodthirst (CR 702.54) window. Defaults to false for snapshot
-    /// back-compat.
+    /// Dealt any damage this turn (set in `deal_damage_to_from`, incl.
+    /// infect); reset for all players at `do_untap`. The Bloodthirst window
+    /// (CR 702.54).
     #[serde(default)]
     pub was_dealt_damage_this_turn: bool,
     /// How much damage this player has been dealt this turn, for
@@ -1186,12 +1102,10 @@ pub struct PlayerData {
     /// Weatherlight Duelist's attack trigger). Cleared as combat ends.
     #[serde(default)]
     pub block_cap_this_combat: Option<u8>,
-    /// CR 401.6 — turn-scoped "you may look at the top card of your library
-    /// any time, and you may play lands and cast spells from the top of your
-    /// library" grant (The Belligerent, Bonehoard's Dracosaur-style player
-    /// permissions). Unlike `StaticEffect::PlayFromLibraryTop` this is a
-    /// player flag set at resolution and cleared at end of turn. Read by
-    /// `library_top_playable` and the top-revealed view.
+    /// CR 401.6 — turn-scoped "look at the top card of your library any time;
+    /// play lands and cast spells from it" (The Belligerent). A player flag
+    /// set at resolution and cleared at end of turn, unlike
+    /// `StaticEffect::PlayFromLibraryTop`. Read by `library_top_playable`.
     #[serde(default)]
     pub play_from_top_this_turn: bool,
     /// `play_from_top_this_turn`'s spells cost life, not mana (Gwenom).
@@ -1212,19 +1126,15 @@ pub struct PlayerData {
     /// `library_top_playable` to enforce the once-per-turn cap.
     #[serde(default)]
     pub cast_from_library_top_this_turn: bool,
-    /// Number of cards this player has caused to be put into exile on
-    /// the current turn. Reset to 0 in `do_untap`. Powers Strixhaven
-    /// "if one or more cards were put into exile this turn" payoffs
-    /// (Ennis the Debate Moderator). Bumped from `place_card_in_dest`'s
-    /// exile branch and the battlefield-to-exile path in
-    /// `Effect::Exile`. Defaults to 0 for snapshot back-compat.
+    /// Cards this player put into exile this turn, reset in `do_untap`
+    /// (Ennis the Debate Moderator). Bumped by `place_card_in_dest`'s exile
+    /// branch and `Effect::Exile`'s battlefield path.
     #[serde(default)]
     pub cards_exiled_this_turn: u32,
-    /// Cards put into THIS player's graveyard from anywhere this turn
-    /// (CR 700.4-adjacent tally). Bumped at the shared graveyard-placement
-    /// funnels, reset for every player at the turn boundary. Powers
-    /// `Predicate::OpponentCardsToGraveyardThisTurnAtLeast` (Ravenous
-    /// Trap's free alt cost).
+    /// Cards put into this player's graveyard from anywhere this turn,
+    /// bumped at the graveyard-placement funnels and reset at the turn
+    /// boundary (`Predicate::OpponentCardsToGraveyardThisTurnAtLeast`,
+    /// Ravenous Trap).
     #[serde(default)]
     pub cards_to_graveyard_this_turn: u32,
     /// Creature cards put into this player's graveyard from anywhere this
@@ -1252,14 +1162,9 @@ pub struct PlayerData {
     /// times you descended this turn" (The Mycotyrant).
     #[serde(default)]
     pub descend_count_this_turn: u32,
-    /// Number of instant or sorcery spells this player has cast on the
-    /// current turn. Reset to 0 in `do_untap`. Refines
-    /// `spells_cast_this_turn` (which counts every spell type) so cards
-    /// like Potioner's Trove can gate "activate only if you've cast an
-    /// instant or sorcery spell this turn" precisely. Bumped in
-    /// `finalize_cast` whenever the resolving spell card carries the
-    /// Instant or Sorcery card type. Defaults to 0 for snapshot
-    /// back-compat.
+    /// Instant/sorcery spells cast this turn (bumped in `finalize_cast`,
+    /// reset in `do_untap`): the precise gate for "if you've cast an instant
+    /// or sorcery spell this turn" (Potioner's Trove).
     #[serde(default)]
     pub instants_or_sorceries_cast_this_turn: u32,
     /// The greatest mana value (X included, CR 202.3e) among the instant and
@@ -1267,11 +1172,9 @@ pub struct PlayerData {
     /// cleared with `instants_or_sorceries_cast_this_turn`. Rootha.
     #[serde(default)]
     pub greatest_is_mana_value_this_turn: u32,
-    /// Count of spells this player cast **from their hand** this turn (CR
-    /// 601). Unlike `spells_cast_this_turn`, casts from exile (Plot, impulse),
-    /// graveyard (flashback/escape/disturb/retrace/aftermath), or the command
-    /// zone don't bump it. Gates "if you haven't cast a spell from your hand
-    /// this turn" payoffs (Prairie Dog, Emergent Haunting). Reset each turn.
+    /// Spells cast **from hand** this turn (CR 601); casts from exile,
+    /// graveyard or command zone don't count. Gates "if you haven't cast a
+    /// spell from your hand this turn" (Prairie Dog). Reset each turn.
     #[serde(default)]
     pub spells_cast_from_hand_this_turn: u32,
     /// Spells this player cast from exile this turn (Wild-Magic Sorcerer's
@@ -1319,12 +1222,10 @@ pub struct PlayerData {
     /// this turn" payoffs (Sawblade Skinripper).
     #[serde(default)]
     pub permanents_sacrificed_this_turn: u32,
-    /// Number of *artifacts* this player has sacrificed so far this turn (a
-    /// subset of `permanents_sacrificed_this_turn`). Bumped in
-    /// `dispatch_triggers_for_events` per `PermanentSacrificed` event whose
-    /// subject snapshot is an artifact; reset in `do_untap`. Powers "if you've
-    /// sacrificed an artifact this turn" riders (Suspicious Detonation,
-    /// Furtive Courier).
+    /// Artifacts sacrificed this turn (subset of
+    /// `permanents_sacrificed_this_turn`), bumped per artifact
+    /// `PermanentSacrificed` event, reset in `do_untap` (Suspicious
+    /// Detonation, Furtive Courier).
     #[serde(default)]
     pub artifacts_sacrificed_this_turn: u32,
     /// Nontoken permanents this player has sacrificed this turn (a subset of
@@ -1364,11 +1265,8 @@ pub struct PlayerData {
     /// `finish_cleanup` with the face-down discounts.
     #[serde(default)]
     pub face_down_spells_cast_this_turn: u32,
-    /// Number of creature spells this player has cast on the current
-    /// turn. Reset to 0 in `do_untap`. Powers creature-cast magecraft
-    /// payoffs ("if you've cast a creature spell this turn, …") and
-    /// future creature-spell-matters cards. Defaults to 0 for snapshot
-    /// back-compat.
+    /// Creature spells cast this turn, reset in `do_untap` (creature-cast
+    /// magecraft payoffs).
     #[serde(default)]
     pub creatures_cast_this_turn: u32,
     /// CR 700.6 — historic spells (artifact, legendary or Saga) cast this
@@ -1404,11 +1302,9 @@ pub struct PlayerData {
     /// control). Default `None`.
     #[serde(default)]
     pub ring_bearer: Option<crate::card::CardId>,
-    /// CR 702.179 — this player's speed (0–4). Starts at 0; a "Start your
-    /// engines!" object sets it to 1, and it increases by 1 (once per the
-    /// player's own turn, capped at 4) the first time an opponent loses life
-    /// during their turn. "Max speed —" abilities are active at 4. Default 0
-    /// for snapshot back-compat.
+    /// CR 702.179 — speed (0–4). "Start your engines!" sets it to 1; it rises
+    /// by 1, at most once per own turn, the first time an opponent loses
+    /// life that turn. "Max speed —" abilities are active at 4.
     #[serde(default)]
     pub speed: u32,
     /// CR 702.179 — set once this player's speed has already increased on the
@@ -1447,43 +1343,30 @@ pub struct PlayerData {
     /// false for snapshot back-compat.
     #[serde(default)]
     pub city_blessing: bool,
-    /// CR 402.2 — this player's maximum hand size. `Some(n)` caps the hand at
-    /// `n` cards (normally `Some(7)`); `None` means no maximum (Wisdom of
-    /// Ages, Reliquary Tower-style effects). The cleanup-step CR 514.1
-    /// enforcement in `do_cleanup` reads this: `None` skips the discard-down
-    /// step, `Some(n)` discards down to `n`. Set by
-    /// `Effect::SetNoMaxHandSize` (→ `None`) and `Effect::SetMaxHandSize`
-    /// (→ `Some(n)`, e.g. Null Profusion's "maximum hand size is zero").
-    /// `#[serde(default)]` yields the normal `Some(7)` for snapshot
-    /// back-compat.
+    /// CR 402.2 — maximum hand size: `Some(n)` (normally 7) or `None` for no
+    /// maximum (Reliquary Tower). Read by `do_cleanup`'s CR 514.1 discard;
+    /// set by `Effect::SetNoMaxHandSize` / `Effect::SetMaxHandSize` (Null
+    /// Profusion). Old snapshots default to `Some(7)`.
     #[serde(default = "default_max_hand_size")]
     pub max_hand_size: Option<usize>,
     /// True once this player has lost the game (life ≤ 0, poison ≥ 10, or
     /// drew from an empty library). Eliminated players are skipped by turn
     /// and priority rotation; the game ends when ≤ 1 player remains.
     pub eliminated: bool,
-    /// True once CR 800.4a has been applied for this seat — their objects
-    /// have left the game, their stack items have ceased to exist and the
-    /// control effects they granted have ended.
+    /// True once CR 800.4a has been applied for this seat (objects gone,
+    /// stack items ceased, granted control effects ended).
     ///
-    /// Separate from [`eliminated`](Self::eliminated) because the two are set
-    /// in different places: the loss SBA does both at once, but an *effect*
-    /// that ends a player's game (an unpaid Pact, `Effect::LoseGame`, a
-    /// win-the-game effect eliminating everyone else) only ever set the first
-    /// — and the SBA sweep skips a seat that is already `eliminated`, so the
-    /// leave pass never ran for one. Their permanents stayed on the
-    /// battlefield and their asks stayed pending. The sweep now drives the
-    /// pass off this flag instead, so there is one place CR 800.4a happens
-    /// however a seat came to be out.
+    /// Separate from [`eliminated`](Self::eliminated): an effect that ends a
+    /// game (unpaid Pact, `Effect::LoseGame`, win-the-game) sets only that,
+    /// and the SBA sweep skips eliminated seats, so the leave pass never ran
+    /// for them. The sweep drives the pass off this flag, so CR 800.4a
+    /// happens in one place however a seat went out.
     #[serde(default)]
     pub left_game: bool,
-    /// CR 104.3c — this player has attempted to draw from an empty library
-    /// and loses the game *the next time a player would receive priority*,
-    /// i.e. at the next state-based-action check — not inside the draw.
-    /// Until then they are still in the game, so a spell that decks an
-    /// opponent and then says "each opponent" in the same resolution still
-    /// sees them. `check_state_based_actions` promotes this to `eliminated`,
-    /// which is also what routes them through CR 800.4a.
+    /// CR 104.3c — drew from an empty library; loses at the next SBA check,
+    /// not inside the draw, so an "each opponent" later in the same
+    /// resolution still sees them. `check_state_based_actions` promotes this
+    /// to `eliminated` (and so through CR 800.4a).
     #[serde(default)]
     pub pending_deck_loss: bool,
     /// CR 801.2a — this seat's own range of influence, overriding the table
@@ -1499,12 +1382,9 @@ pub struct PlayerData {
     /// they lose (CR 809.5b).
     #[serde(default)]
     pub is_emperor: bool,
-    /// The authoritative reason this player was eliminated, recorded at the
-    /// moment `eliminated` flips to `true`. Lets consumers (the server's
-    /// win-kind stats) read the true cause instead of guessing from the
-    /// final board state — a "you lose the game" effect on an empty-library
-    /// seat is `Concession`/`Other`, not a deck-out. `None` while still in
-    /// the game. Defaults to `None` via `#[serde(default)]`.
+    /// Why this player was eliminated, recorded when `eliminated` flips, so
+    /// consumers (server win-kind stats) read the real cause instead of
+    /// guessing from the board. `None` while still in the game.
     #[serde(default)]
     pub loss_cause: Option<LossCause>,
     /// CR 104.3d — Angel's Grace: this player can't lose the game this turn
@@ -1516,23 +1396,17 @@ pub struct PlayerData {
     /// boundary.
     #[serde(default)]
     pub damage_floor_this_turn: bool,
-    /// Forbidding Spirit — a temporary Propaganda tax: creatures can't attack
-    /// this player or their planeswalkers unless the attacker's controller
-    /// pays {N} for each. Set on ETB, cleared at this player's own untap step
-    /// ("until your next turn"). Summed alongside `AttackTaxToController`
-    /// statics in `declare_attackers`.
+    /// Forbidding Spirit's temporary Propaganda tax ({N} per attacker at this
+    /// player or their planeswalkers), set on ETB, cleared at this player's
+    /// untap. Summed with `AttackTaxToController` in `declare_attackers`.
     #[serde(default)]
     pub attack_tax_until_your_turn: u32,
     /// Sivitri, Dragon Master's +1 — the same window, paid in **life** per
     /// attacker (CR 119.4 gates it on the attacker's life total).
     #[serde(default)]
     pub attack_life_tax_until_your_turn: u32,
-    /// Number of upcoming turns this player must skip. Read by the
-    /// turn-advance logic in `do_cleanup` — when the engine would hand
-    /// the next turn to this player, the counter is decremented and the
-    /// turn is bypassed (advancing to the player after). Set by
-    /// `Effect::SkipTurns` (Ral Zarek, Guest Lecturer's -7 ult). Defaults
-    /// to 0 for snapshot back-compat.
+    /// Upcoming turns this player must skip (`Effect::SkipTurns`, Ral
+    /// Zarek): `do_cleanup` decrements it and passes the turn on.
     #[serde(default)]
     pub skip_turns: u32,
     /// Names of the spells this player has cast this turn (Grim Reminder).
@@ -1635,21 +1509,14 @@ pub struct PlayerData {
     /// `#[serde(default)]`.
     #[serde(default)]
     pub turns_begun: u32,
-    /// True while a continuous effect on the battlefield prevents this
-    /// player from gaining life (CR 119.7). Set by
-    /// `StaticEffect::CannotGainLife` in `compute_battlefield`'s player-
-    /// static pass, reset there each recompute. Honored by
-    /// `GameState::adjust_life` — a positive delta is dropped while the
-    /// flag is set. Powers Tainted Remedy / Erebos / Sulfuric Vortex
-    /// style effects.
+    /// CR 119.7 — a battlefield effect stops this player gaining life.
+    /// Recomputed by `compute_battlefield` from `StaticEffect::CannotGainLife`;
+    /// `GameState::adjust_life` drops positive deltas while set.
     #[serde(default)]
     pub cannot_gain_life: bool,
-    /// Sticky one-turn "you can't gain life" lock — separate from the
-    /// recomputed `cannot_gain_life` static. Set by `Effect::LifeGainLockThisTurn`
-    /// (Skullcrack, Rampaging Ferocidon's one-shot version), reset in
-    /// `do_untap`. Honored by `GameState::adjust_life` (treated identically
-    /// to `cannot_gain_life`, but persists across `compute_battlefield`
-    /// recomputes since no permanent backs it).
+    /// Sticky one-turn "can't gain life" lock (`Effect::LifeGainLockThisTurn`,
+    /// Skullcrack), reset in `do_untap`. Same effect as `cannot_gain_life`
+    /// but survives recomputes since no permanent backs it.
     #[serde(default)]
     pub cannot_gain_life_this_turn: bool,
     /// True while this player's life total can't change for the rest of the
@@ -1663,24 +1530,17 @@ pub struct PlayerData {
     /// that player's turn begins.
     #[serde(default)]
     pub life_locked_until_next_turn: bool,
-    /// True while spells this player controls can't be countered for the
-    /// rest of the turn (Veil of Summer's "spells your opponents control
-    /// can't counter spells you control this turn"). Set by
-    /// `Effect::GrantSpellsUncounterableThisTurn`; reset for every player at
-    /// the active player's `do_untap`. Consulted by
-    /// `caster_grants_uncounterable_with_x`. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// Spells this player controls can't be countered this turn (Veil of
+    /// Summer). Set by `Effect::GrantSpellsUncounterableThisTurn`, reset at
+    /// `do_untap`, read by `caster_grants_uncounterable_with_x`.
     #[serde(default)]
     pub spells_uncounterable_this_turn: bool,
     /// Like `spells_uncounterable_this_turn` but only for *creature* spells
     /// (Domri, Anarch of Bolas's +1). Reset alongside it at untap.
     #[serde(default)]
     pub creature_spells_uncounterable_this_turn: bool,
-    /// True once this player has cast a blue or black spell this turn. Set
-    /// in `finalize_cast`; reset for every player at the active player's
-    /// `do_untap`. Powers Veil of Summer's "draw a card if an opponent has
-    /// cast a blue or black spell this turn" gate. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// Cast a blue or black spell this turn (set in `finalize_cast`, reset at
+    /// `do_untap`) — Veil of Summer's draw gate.
     #[serde(default)]
     pub cast_blue_or_black_this_turn: bool,
     /// True while this player has hexproof until the start of their next
@@ -1721,64 +1581,41 @@ pub struct PlayerData {
     /// `pending_decision` so a UI can respond; when false, the engine calls
     /// the installed `Decider` synchronously (bot / tests).
     pub wants_ui: bool,
-    /// CR 601.2g "proper tapping": when true this player chooses their own
-    /// mana sources, so the engine auto-taps only when the payment is
-    /// forced and otherwise rejects the cast with `ManualTapRequired` for
-    /// them to tap manually.
+    /// CR 601.2g "proper tapping": this player picks their own mana sources,
+    /// so auto-tap runs only when the payment is forced and otherwise the
+    /// cast fails with `ManualTapRequired`.
     ///
-    /// Split out from [`wants_ui`](Self::wants_ui), which used to stand in
-    /// for it. The two are different questions — a bot wants its decisions
-    /// surfaced as `pending_decision` (that is how its policies run) but
-    /// emphatically does *not* want to hand-pick lands — and conflating
-    /// them silently broke every bot cast that needed a tap, because bot
-    /// seats set `wants_ui`. It went unnoticed only because the bot used to
-    /// pre-tap its whole board, so its pool always covered the cost and the
-    /// auto-tap path was never reached.
+    /// Separate from [`wants_ui`](Self::wants_ui), which once stood in for
+    /// it: bots set `wants_ui` (their policies run off `pending_decision`)
+    /// but must not hand-pick lands, and conflating the two broke every bot
+    /// cast that needed a tap.
     #[serde(default)]
     pub manual_mana: bool,
-    /// When true, auto-tap spends the most *replaceable* mana source that
-    /// can cover each pip rather than the first one in battlefield order
-    /// — see `ManaSourceInfo::redundancy`.
+    /// Auto-tap spends the most *replaceable* source for each pip instead of
+    /// the first in battlefield order (see `ManaSourceInfo::redundancy`).
     ///
-    /// **Off by default.** It is the obviously-correct-looking change that
-    /// measured null: 50.9 % on one seed, 49.7 % on the next, pooling to
-    /// 50.3 % [49.95, 50.68] over 28 800 paired games — and the field
-    /// does contain the case it targets (3/12 and 4/12 sealed decks run a
-    /// colour on ≤4 sources), so that is a real null rather than an
-    /// unmeasurable one. It also carried a quadratic regression that took
-    /// the Commander bot test past its 600 s timeout. Kept, off, ready to
-    /// re-measure.
-    ///
-    /// A per-player flag rather than a constant so the ladder can measure
-    /// it at all: the tapping happens inside the engine, so applied to
-    /// both seats of a mirror the comparison is structurally incapable of
-    /// showing anything.
+    /// Off: measured null (50.3 % [49.95, 50.68] over 28,800 paired games)
+    /// on a field that does contain the target case, and it once carried a
+    /// quadratic regression past the Commander bot test's timeout. Kept for
+    /// re-measuring. Per-player, not a constant, because tapping happens in
+    /// the engine — applied to both seats a mirror can't show anything.
     #[serde(default)]
     pub smart_tap: bool,
-    /// Converge auto-tap (bot seats): when a cast counts distinct colours,
-    /// a dual takes the fresh colour with the FEWEST other untapped
-    /// sources, not the first in W-U-B-R-G order — the order that paid
-    /// Paradox Gardens for blue beside an Island and lost the green only it
-    /// could make (18 % of converge casts short by a colour, 2026-09-06 deck
-    /// work). Pushed from `EvalWeights::converge_rarest` like `smart_tap`;
-    /// off is the ladder control.
-    pub converge_rarest: bool,
-    /// Auto-target polarity for player slots (bot seats): a "target
-    /// player" / "any target" slot whose effect is hostile (discard,
-    /// damage, life loss, mill, sacrifice, hand exile — see
-    /// `Effect::player_slot_is_hostile`) is aimed at the opponent first.
-    /// Off, every player slot tries the caster first, which had Arcane
-    /// Omens discarding the caster's hand and Traumatic Critique / Together
-    /// as One dealing X to the caster's face in every recorded cast
-    /// (2026-09-06 deck work). Pushed from
-    /// `EvalWeights::hostile_player_targets` like `smart_tap`; off is the
+    /// Converge auto-tap (bot seats): a dual takes the fresh colour with the
+    /// FEWEST other untapped sources, not the first in WUBRG order (which
+    /// paid Paradox Gardens blue beside an Island and lost the green; 2026-09-06
+    /// deck work). Pushed from `EvalWeights::converge_rarest`; off is the
     /// ladder control.
+    pub converge_rarest: bool,
+    /// Auto-target polarity for player slots (bot seats): a hostile "target
+    /// player" / "any target" slot (`Effect::player_slot_is_hostile`) tries
+    /// the opponent first. Off, the caster comes first (Arcane Omens
+    /// discarded its own caster's hand; 2026-09-06 deck work). Pushed from
+    /// `EvalWeights::hostile_player_targets`; off is the ladder control.
     pub hostile_player_targets: bool,
-    /// The Commander-era ability sinks in a duel too (bot seats): +1/+1-counter
-    /// and level sinks, scry / surveil / loot sinks, the dry-run generic sink
-    /// and basic landcycling, which otherwise return early for a seat with no
-    /// commander (or, the generic one, in any two-player game). Evasion grants
-    /// stay Commander-only (they lose duels). Pushed from
+    /// Commander-era ability sinks in a duel too (bot seats): counter/level,
+    /// scry/surveil/loot, the dry-run generic sink and basic landcycling.
+    /// Evasion grants stay Commander-only (they lose duels). Pushed from
     /// `EvalWeights::duel_sinks`; off is the ladder control.
     pub duel_sinks: bool,
     /// A modal trigger's automatic mode pick skips a plain "tap target
@@ -1794,21 +1631,10 @@ pub struct PlayerData {
     /// from `EvalWeights::color_fixing`; off is the ladder control.
     #[serde(default)]
     pub color_fixing: bool,
-    /// CR 705.3 — Krark's Thumb-style coin-flip advantage. When non-zero,
-    /// every coin flip this player makes is replayed `coin_flip_advantage`
-    /// extra times and they get to keep the result they prefer. Practically
-    /// modelled in `Effect::FlipCoin` as "do `1 + N` flips and treat the
-    /// flipper as winning if any of them came up heads" — the standard
-    /// rules interpretation of stacking Krark's Thumbs (each Thumb lets
-    /// you "ignore one and choose the other," so two Thumbs = three flips,
-    /// pick the best).
-    ///
-    /// `#[serde(default)]` keeps snapshots from before this field forward-
-    /// compatible. Stacks additively when multiple Krark's Thumbs are on
-    /// the battlefield (compute_battlefield sums the contributing
-    /// static-ability counts when this primitive is eventually wired to
-    /// a permanent — for now only one Krark's Thumb is needed and we set
-    /// the value directly via the Thumb card body).
+    /// CR 705.3 — Krark's Thumb coin-flip advantage: `Effect::FlipCoin` does
+    /// `1 + N` flips and the flipper wins if any is heads (each Thumb lets
+    /// you ignore one flip). Meant to stack additively across Thumbs once
+    /// wired to a static; for now the Thumb's card body sets it directly.
     #[serde(default)]
     pub coin_flip_advantage: u32,
     /// This player flipped a coin this turn (Edgar, King of Figaro's
@@ -1823,30 +1649,22 @@ pub struct PlayerData {
 
 /// A seat: a copy-on-write handle around [`PlayerData`].
 ///
-/// `PlayerData` is ~165 fields — a `String`, ~30 per-turn `Vec`/`HashSet`
-/// tallies, two `HashMap`s — and `GameState::clone` copies every one of them
-/// per checkpoint (the `perform_action` checkpoint, every bot dry-run probe).
-/// Behind the `Arc` that clone is a refcount bump and only a seat actually
-/// *written* pays a deep copy. `Deref`/`DerefMut` make it read and write like
-/// the plain struct, so `player.life -= 2` still works — it just unshares that
-/// one seat first. Same shape as [`crate::card::CardInstance`] one level down.
+/// `PlayerData` is ~165 fields, and `GameState::clone` (every checkpoint and
+/// bot probe) would copy them all; behind the `Arc` a clone is a refcount
+/// bump and only a written seat deep-copies. `Deref`/`DerefMut` keep
+/// `player.life -= 2` working (it unshares that seat first). Same shape as
+/// [`crate::card::CardInstance`].
 #[derive(Clone)]
 pub struct Player {
     data: std::sync::Arc<PlayerData>,
-    /// How many times anything took `&mut` at this seat — the per-object twin
-    /// of [`crate::zone::Battlefield`]'s `writes` (PERF `(-306)`), and the
-    /// *players* half of the key a state-level gather memo needs (PERF
-    /// `(-303)`: 45 of the gather's reads are `self.players`).
+    /// Count of `&mut` reaches into this seat — the per-object twin of
+    /// [`crate::zone::Battlefield`]'s `writes` (PERF `(-306)`) and the
+    /// players half of a state-level gather memo's key (PERF `(-303)`).
     ///
-    /// The counter costs nothing to place because the chokepoint already
-    /// exists: `Player` is a CoW handle, so every `&mut` reach into a seat
-    /// goes through [`DerefMut`](std::ops::DerefMut) below. **That is why
-    /// `pub players: Vec<Player>` needs no `players_mut()` refactor** — the
-    /// ~2,400 mutation-shaped sites NEXT priced all funnel through one line.
-    ///
-    /// Clones carry it, so a bot probe's seat starts stamped like its parent's
-    /// and diverges only once the probe writes. The starting value is
-    /// arbitrary — only a *change* is read.
+    /// Free to maintain: every `&mut` reach already goes through
+    /// [`DerefMut`](std::ops::DerefMut) below, which is why `pub players`
+    /// needs no `players_mut()` refactor. Clones carry it, so a probe
+    /// diverges from its parent only once it writes; only a *change* is read.
     writes: u32,
 }
 
@@ -2235,13 +2053,9 @@ impl PlayerData {
         !self.eliminated
     }
 
-    /// Baseline per-turn land-play check — `true` iff this player has
-    /// not yet played any land this turn. NOTE: this is a vanilla CR
-    /// 305.2 default and **does not** consult
-    /// `StaticEffect::ExtraLandPerTurn` (Exploration, Azusa). For the
-    /// CR-correct check that honors continuous-effect grants, use
-    /// `GameState::can_player_play_land(seat)` which sums
-    /// `extra_land_plays_per_turn(seat)` into the cap.
+    /// Vanilla CR 305.2 check: no land played this turn. Does **not** consult
+    /// `StaticEffect::ExtraLandPerTurn`; the CR-correct check is
+    /// `GameState::can_player_play_land(seat)`.
     pub fn can_play_land(&self) -> bool {
         self.lands_played_this_turn < 1 + self.extra_land_plays
     }
@@ -2276,11 +2090,9 @@ impl PlayerData {
     }
 
     pub fn send_to_graveyard(&mut self, mut card: CardInstance) {
-        // CR 122.2 — counters cease to exist on zone change; the graveyard
-        // object carries none (dies-with-counters triggers read LKI caches).
-        // A `clear()` is a write, and `CardInstance`'s `DerefMut` is
-        // `Arc::make_mut` — so clearing an already-empty map deep-copies a
-        // shared card, and most permanents die with no counters at all.
+        // CR 122.2 — counters cease to exist on zone change (dies-with-counters
+        // triggers read LKI). Guarded: a `clear()` of an empty map still
+        // deep-copies a shared card through `Arc::make_mut`.
         card.drop_counters_for_zone_change(crate::card::Zone::Graveyard);
         // CR 400.7 — nor a resolved spell's kicker (Into the Roil).
         card.forget_spell_choices();
@@ -2318,13 +2130,10 @@ impl PlayerData {
         self.library.insert(0, Self::placed_in_library(id, definition.into(), self.id.0));
     }
 
-    /// Push a card definition to the bottom of the library.
-    ///
-    /// Takes `impl Into<Arc<_>>` so a caller with a memoized definition
-    /// ([`crate::cube::card_arc`]) hands over a refcount instead of a
-    /// **8,232-byte** memcpy into a fresh `Arc`. Deck construction fills a
-    /// library one card at a time and was the largest single `__memcpy`
-    /// caller on `--decks sos`.
+    /// Push a card definition to the bottom of the library. Takes
+    /// `impl Into<Arc<_>>` so a memoized definition
+    /// ([`crate::cube::card_arc`]) is a refcount, not a fresh 8 KB `Arc`
+    /// copy (deck construction's largest `__memcpy`).
     pub fn add_to_library_bottom(
         &mut self,
         id: CardId,

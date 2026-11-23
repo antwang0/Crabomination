@@ -95,12 +95,11 @@ impl GameState {
         Ok(())
     }
 
-    /// Benthic Anomaly: one creature per opponent (their greatest power), a
-    /// token copy of the one with the greatest mana value carrying the
-    /// chosen creatures' summed power and toughness, colorless and Eldrazi.
     /// Benthic Anomaly: the controller chooses one creature per opponent,
-    /// then which of them to copy (headless: each opponent's greatest power,
-    /// the copy of the greatest mana value). All asks come first.
+    /// then which to copy (headless: each opponent's greatest power, the copy
+    /// of the greatest mana value). The token copy carries the chosen
+    /// creatures' summed power and toughness, colorless and Eldrazi. All asks
+    /// come first.
     pub(crate) fn copy_one_per_opponent_with_total_stats(
         &mut self,
         ctx: &EffectContext,

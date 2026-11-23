@@ -374,12 +374,9 @@ impl ManaCost {
         seen.iter().filter(|b| **b).count() as u32
     }
 
-    /// Render this cost as a printed-Oracle-style string like
-    /// `{2}{W}{B}` or `{X}{R}{R}`. Used by client tooltips
-    /// (Cycling / Flashback / activated-ability cost labels) and the
-    /// server view's `format_mana_cost_for_label`. Free-cost {0} costs
-    /// render as `{0}` rather than the empty string so the renderer
-    /// always has something to display.
+    /// Render this cost Oracle-style (`{2}{W}{B}`, `{X}{R}{R}`) for client cost
+    /// labels and the server's `format_mana_cost_for_label`. A free cost
+    /// renders as `{0}`, never the empty string.
     pub fn summary(&self) -> String {
         if self.symbols.is_empty() {
             return "{0}".into();
@@ -427,14 +424,11 @@ impl ManaCost {
     }
 
     /// One entry per coloured mana symbol, in printed order — `{3}{U}{U}{B}`
-    /// yields `[U, U, B]` (Charmed Pendant). Hybrids count once, as their
-    /// first colour; Phyrexian pips count as their colour.
-    ///
-    /// An **iterator**, not a `Vec`: three of the four callers only count or
-    /// accumulate, and the allocation was 70,048 of them over twenty
-    /// `selfplay_train` games — 7.4 M Ir, 0.58 % of an actor — inside
-    /// `encode_card_object` alone. Same device as [`color_set`](Self::color_set)
-    /// against the older `colors()`, and for the same reason.
+    /// yields `[U, U, B]` (Charmed Pendant). Hybrids count once, as their first
+    /// colour; Phyrexian pips as their colour. An iterator, not a `Vec`,
+    /// because most callers only count or accumulate and the allocation showed
+    /// up in `encode_card_object` (0.58 % of an actor when changed) — the same
+    /// device as [`color_set`](Self::color_set) over `colors()`.
     pub fn colored_symbols(&self) -> impl Iterator<Item = Color> + '_ {
         self.symbols.iter().filter_map(|s| match s {
             ManaSymbol::Colored(c) | ManaSymbol::Phyrexian(c) => Some(*c),
@@ -586,14 +580,8 @@ impl ManaCost {
         }
     }
 
-    /// Subtract `amount` from this cost's total Generic pips, clamping at
-    /// zero. Colored / colorless / hybrid / Phyrexian / snow / X pips are
-    /// untouched — CR 601.2f and CR 118.7a forbid cost reductions from
-    /// reducing a colored or X pip. Returns the actually-applied
-    /// reduction (so callers can short-circuit when the cost is already
-    /// floored). If multiple Generic pips exist, drain them in order.
-    /// Total generic mana ({1}, {2}, …) in this cost — the portion that
-    /// Convoke/Improvise/Waterbend helpers may pay (CR 702.52/701.67).
+    /// Total generic mana ({1}, {2}, …) in this cost — the portion Convoke /
+    /// Improvise / Waterbend helpers may pay (CR 702.52 / 701.67).
     pub fn generic_total(&self) -> u32 {
         self.symbols
             .iter()
@@ -612,6 +600,10 @@ impl ManaCost {
         }
     }
 
+    /// Subtract `amount` from this cost's Generic pips, in order, clamping at
+    /// zero; other pips are untouched (CR 601.2f / 118.7a: a reduction can't
+    /// reduce a coloured or X pip). Returns the reduction actually applied, so
+    /// callers can stop once the cost is floored.
     pub fn reduce_generic(&mut self, amount: u32) -> u32 {
         let mut remaining = amount;
         let mut applied = 0u32;
@@ -668,12 +660,10 @@ impl ManaCost {
     }
 }
 
-/// A "spend this mana only to …" restriction carried by certain mana
-/// sources (the Strixhaven school mana dorks/artifacts/lands: Abstract
-/// Paintmage, Tablet of Discovery, Hydro-Channeler, Great Hall of the
-/// Biblioplex, Resonating Lute). Mana tagged with a restriction lives in
-/// a separate pool bucket and can only pay for things the restriction
-/// permits — see [`ManaPool::pay_for_spell`].
+/// A "spend this mana only to …" restriction on certain mana sources (the
+/// Strixhaven school dorks and lands: Hydro-Channeler, Great Hall of the
+/// Biblioplex). Such mana lives in a separate pool bucket and pays only for
+/// what the restriction permits — see [`ManaPool::pay_for_spell`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SpendRestriction {
     /// "Spend this mana only to cast instant and sorcery spells."
@@ -1097,24 +1087,20 @@ impl SpendRestriction {
         })
     }
 
-    /// True for a *rider* — a "restriction" that permits every payment and
-    /// only observes what it funded (Boseiju's uncounterable, Generator
-    /// Servant's haste, Path of Ancestry's scry, Opal Palace's counters).
-    /// Rider mana is freely spendable, so the auto-tapper may reach for its
-    /// source like any other; a real restriction is left for the controller
-    /// to tap deliberately. One source of truth with [`Self::label`], which
-    /// has nothing to show a player for exactly these.
+    /// True for a rider — a "restriction" that permits every payment and only
+    /// observes what it funded (Boseiju's uncounterable, Path of Ancestry's
+    /// scry). Rider mana is freely spendable, so the auto-tapper may tap its
+    /// source like any other; a real restriction is left for the controller to
+    /// tap deliberately. Shares its source of truth with [`Self::label`], which
+    /// shows nothing for exactly these.
     pub fn is_rider(self) -> bool {
         self.label().is_none()
     }
 
     /// True iff mana under this restriction may fund a payment of `kind`.
-    ///
-    /// A rider permits every payment by definition ([`Self::is_rider`]), so
-    /// that half is answered once here rather than by one `=> true` arm per
-    /// rider variant. Four arms said it separately and a fifth rider would
-    /// have had to remember to; the estimate side (`server::bot`'s
-    /// `available_mana`) reads the same predicate, so the two cannot drift.
+    /// Riders ([`Self::is_rider`]) permit everything, answered once here
+    /// instead of one `=> true` arm per rider; `server::bot`'s `available_mana`
+    /// reads the same predicate, so the estimate can't drift.
     pub fn allows(self, kind: &SpellKind) -> bool {
         if self.is_rider() {
             return true;
@@ -1273,12 +1259,10 @@ impl SpendRestriction {
             SpendRestriction::MonocoloredSpellOf(c) => {
                 !kind.activating_ability && kind.colors == ColorSet::single(c)
             }
-            // CR 106.6 names three shapes for a mana source's rider — an
-            // additional effect, a delayed triggered ability, and a
-            // restriction. Only the third narrows what the mana may pay for,
-            // and the first two are what `is_rider` answers above: Boseiju's
-            // uncounterable, Generator Servant's haste, Path of Ancestry's
-            // scry, Opal Palace's counters.
+            // CR 106.6 names three shapes of mana-source rider: an additional
+            // effect, a delayed triggered ability, and a restriction. Only the
+            // last narrows what the mana may pay for; the first two are
+            // `is_rider`'s.
             SpendRestriction::InstantSorceryUncounterable
             | SpendRestriction::CreatureHaste
             | SpendRestriction::DragonCreatureHaste
@@ -1336,14 +1320,11 @@ pub struct SpellKind {
     /// Casting an artifact spell, or activating an ability of an artifact.
     pub artifact: bool,
     /// The creature types of a creature spell being cast (empty otherwise).
-    ///
-    /// **Inline, not heap.** `spell_kind` fills this on every creature cast
-    /// and two `contains` calls in `SpendRestriction::allows` are its only
-    /// readers, so the `Vec` was a malloc a cast for a question spend-restricted
-    /// mana almost never asks — 4,342 allocations a six-game `cube` run, PERF
-    /// `(-355)`. The widest type line in the catalog is 4, and `(-165)`'s rule
-    /// on inline buffers is satisfied because this value's owner is a stack
-    /// frame: nothing stores a `SpellKind`.
+    /// Inline rather than heap: `spell_kind` fills it on every creature cast
+    /// and only `SpendRestriction::allows` reads it, so the `Vec` was a malloc
+    /// per cast (PERF `(-355)`). The widest catalog type line is 4, and
+    /// `(-165)`'s inline-buffer rule holds because nothing stores a `SpellKind`
+    /// beyond a stack frame.
     pub creature_types: smallvec::SmallVec<[crate::card::CreatureType; 4]>,
     /// The spell is a Changeling (every creature type, CR 702.73).
     pub changeling: bool,
@@ -1482,12 +1463,11 @@ pub struct ManaPool {
     colorless: u32,
     /// How many mana in the pool came from snow sources.
     snow: u32,
-    /// Colored mana carrying a "spend only on …" restriction. Kept out of
-    /// the flat color buckets so the unrestricted [`pay`]/[`total`] paths
-    /// never see it; [`pay_for_spell`] folds in the entries whose
-    /// restriction permits the spell being cast (draining them ahead of
-    /// unrestricted mana of the same color). Empty for all but a handful
-    /// of Strixhaven sources, so the common path is unaffected.
+    /// Coloured mana with a "spend only on …" restriction, kept out of the flat
+    /// buckets so the unrestricted [`pay`] / [`total`] paths never see it.
+    /// [`pay_for_spell`] folds in the entries that permit the spell being cast,
+    /// draining them before unrestricted mana of the same colour. Empty but for
+    /// a handful of sources.
     #[serde(default)]
     restricted: Vec<(Color, u32, SpendRestriction)>,
     /// Spend-restricted **colorless** mana (Powerstone tokens). Held apart
@@ -1501,13 +1481,12 @@ pub struct ManaPool {
     /// the same conservative spirit as `snow`.
     #[serde(default)]
     creature: [u32; 6],
-    /// Provenance counter: how much of the pool (any bucket) came from a
-    /// Treasure's mana ability. Freely spendable; read only to tell whether
-    /// "mana from a Treasure was spent to cast" a spell (Alchemist's Talent,
-    /// Rain of Riches). Clamped to the pool's total after every spend like
-    /// `snow`, so a pool that still holds as much mana as it had Treasure
-    /// mana is read as not having spent it. Skipped when zero on the wire,
-    /// so snapshots without a Treasure are byte-identical.
+    /// Provenance counter: how much of the pool came from a Treasure's mana
+    /// ability, read only for "mana from a Treasure was spent to cast" (Rain of
+    /// Riches). Clamped to the pool's total after every spend like `snow`, so a
+    /// pool still holding as much mana as it had Treasure mana reads as
+    /// unspent. Skipped on the wire when zero, so Treasure-less snapshots are
+    /// unchanged.
     #[serde(default, skip_serializing_if = "is_zero_u32")]
     treasure: u32,
     /// Provenance counter, WUBRG then colorless like `creature`: how much of
@@ -1552,16 +1531,12 @@ const fn prov_index(c: Option<Color>) -> usize {
 pub struct PaymentSideEffects {
     pub life_lost: u32,
     /// Restrictions of the spend-restricted mana that actually funded the
-    /// payment, **with how many pips of each** — lets the cast path apply
-    /// spend-triggered riders (Cavern of Souls' "and that spell can't be
-    /// countered").
-    ///
-    /// CR 106.6a makes the count load-bearing: a source whose mana was
-    /// doubled creates "a separate delayed triggered ability … for each mana
-    /// produced", so two Path of Ancestry pips spent on one creature spell
-    /// scry twice. Riders that are idempotent (uncounterable, haste) just
-    /// ignore it. Read through [`Self::spent`] / [`Self::spent_count`] rather
-    /// than by indexing.
+    /// payment, with pip counts, so the cast path can apply spend riders
+    /// (Cavern of Souls' uncounterable). The count matters: CR 106.6a gives
+    /// doubled mana "a separate delayed triggered ability … for each mana
+    /// produced", so two Path of Ancestry pips on one spell scry twice;
+    /// idempotent riders ignore it. Read via [`Self::spent`] /
+    /// [`Self::spent_count`], not by indexing.
     pub spent_restrictions: Vec<(SpendRestriction, u32)>,
 }
 
@@ -1869,12 +1844,9 @@ impl ManaPool {
         }
     }
 
-    /// Total spend-restricted mana floating in the pool (any color/
-    /// restriction). Exposed for UI/debug surfaces that show floated mana;
-    /// `total()` deliberately excludes it since it isn't freely spendable.
     /// Per-bucket breakdown of the restricted pool: `(pip label, amount,
-    /// restriction)`. Powers the client's floated-mana HUD, which otherwise
-    /// shows a bare count the player can't spend and can't explain.
+    /// restriction)`, for the client's floated-mana HUD, which otherwise shows
+    /// a bare count the player can neither spend nor explain.
     pub fn restricted_breakdown(&self) -> Vec<(String, u32, SpendRestriction)> {
         self.restricted
             .iter()
@@ -1883,6 +1855,8 @@ impl ManaPool {
             .collect()
     }
 
+    /// Total spend-restricted mana floating in the pool, for UI / debug.
+    /// `total()` deliberately excludes it, since it isn't freely spendable.
     pub fn restricted_total(&self) -> u32 {
         self.restricted.iter().map(|(_, n, _)| *n).sum::<u32>()
             + self.restricted_colorless.iter().map(|(n, _)| *n).sum::<u32>()
@@ -1892,17 +1866,12 @@ impl ManaPool {
         *self.slot(color)
     }
 
-    /// Floating *rider* mana of `color` — parked in the restricted bucket
-    /// but spendable on anything ([`SpendRestriction::is_rider`]), so it is
-    /// as good as `amount(color)` for any payment.
-    ///
-    /// `total`/`amount` deliberately exclude the whole restricted bucket
-    /// because most of it isn't freely spendable; a rider is, and an
-    /// estimate that ignores it is wrong in the *upward* direction —
-    /// it hides a play the seat can actually make. One four-seat pod board
-    /// had a green Path of Ancestry rider floating and read `by_color
-    /// [0,0,0,0,0]`, which cleared the bot's `sink::AB_SAC` gate on an
-    /// activation the engine then accepted and paid for.
+    /// Floating rider mana of `color` — in the restricted bucket but spendable
+    /// on anything ([`SpendRestriction::is_rider`]), so as good as
+    /// `amount(color)`. `total` / `amount` exclude the whole restricted bucket,
+    /// and an estimate that ignores riders errs low and hides a playable line
+    /// (a floating green Path of Ancestry rider once read as no mana at all to
+    /// the bot's gate).
     pub fn rider_amount(&self, color: Color) -> u32 {
         self.restricted
             .iter()
@@ -1956,19 +1925,18 @@ impl ManaPool {
         }
     }
 
-    /// Pay a ManaCost atomically. On failure the pool is left unchanged.
+    /// Pay a ManaCost atomically; on failure the pool is unchanged. Returns
+    /// side effects (e.g. Phyrexian life loss) on success.
     ///
-    /// Returns side effects (e.g. life loss from Phyrexian mana) on success.
+    /// Order:
+    /// 1. `Colored` pips from the matching bucket.
+    /// 2. `Colorless` pips from the colorless bucket only.
+    /// 3. `Hybrid` pips from whichever half is available.
+    /// 4. `Phyrexian` pips from colour if available, else 2 life.
+    /// 5. `Snow` pips from the snow counter (any colour).
+    /// 6. `Generic` pips from whatever remains.
     ///
-    /// Algorithm:
-    /// 1. Pay each `Colored` pip from the matching bucket.
-    /// 2. Pay `Colorless` pips from the colorless bucket only.
-    /// 3. Pay `Hybrid` pips from whichever color is available (tries A first).
-    /// 4. Pay `Phyrexian` pips from color if available, else 2 life.
-    /// 5. Pay `Snow` pips from the snow counter (any color).
-    /// 6. Pay all `Generic` pips from whatever remains (any color or colorless).
-    ///
-    /// X symbols should be replaced before calling this (via `ManaCost::with_x_value`).
+    /// Replace X first (`ManaCost::with_x_value`).
     pub fn pay(&mut self, cost: &ManaCost) -> Result<PaymentSideEffects, ManaError> {
         self.pay_generic_order(cost, false)
     }
@@ -2017,13 +1985,11 @@ impl ManaPool {
             tmp.colorless -= colorless_needed;
         }
 
-        // Pass 3: hybrid ({a/b}) and mono-hybrid ({n/C}) pips, assigned
-        // jointly by backtracking so a tight pool routes each pip to the
-        // half that keeps the rest payable (CR 601.2g) — `{W/U}{W/G}{W/G}`
-        // from {W,U,G} and `{W/U}{2/W}` from {W,U} both resolve. The pip
-        // count is tiny, so the worst case is a handful of branches. The
-        // search also leaves enough total mana behind for the cost's
-        // later generic / snow drains.
+        // Pass 3: hybrid ({a/b}) and mono-hybrid ({n/C}) pips, assigned jointly
+        // by backtracking so a tight pool routes each to the half that keeps
+        // the rest payable (CR 601.2g): `{W/U}{W/G}{W/G}` from {W,U,G},
+        // `{W/U}{2/W}` from {W,U}. Few pips, so few branches. It also leaves
+        // enough mana for the later generic / snow drains.
         enum HyPip {
             Hybrid(Color, Color),
             Mono(u32, Color),
@@ -2144,12 +2110,12 @@ impl ManaPool {
             }
         }
 
-        // Pass 4: phyrexian pips (pay color if available, else 2 life). A pip
-        // takes its colour only while the pool keeps enough mana for the
-        // generic and snow pips still to be paid: the auto-tapper taps for
-        // those and counts on Phyrexian pips going to life, so a greedy {B}
-        // for a {B/P} left Dismember's {1} unpaid off a Swamp and an Island.
-        // Summed on the first Phyrexian pip only: most payments have none.
+        // Pass 4: Phyrexian pips — colour if available, else 2 life. A pip
+        // takes its colour only while enough mana remains for the generic and
+        // snow pips still owed: the auto-tapper counts on Phyrexian pips going
+        // to life, and a greedy {B} for {B/P} left Dismember's {1} unpaid off a
+        // Swamp and an Island. Summed on the first Phyrexian pip only; most
+        // payments have none.
         let later_mana_pips = || -> u32 {
             cost.symbols
                 .iter()
@@ -2288,12 +2254,9 @@ impl ManaPool {
             }
         }
 
-        // The snow counter tracks "of the mana in the pool, how many
-        // came from snow sources." Passes 1/2/3/4/6 drain colored or
-        // colorless buckets without knowing which underlying mana was
-        // snow, so the counter can drift above the remaining total.
-        // Clamp it down — we can't distinguish which mana was snow, so
-        // conservatively cap snow at the actual remaining pool size.
+        // The snow counter counts how much of the pool came from snow sources,
+        // but passes 1-4 and 6 drain buckets without knowing which mana was
+        // snow, so it can exceed the remaining total. Cap it there.
         tmp.snow = tmp.snow.min(tmp.total());
         tmp.clamp_creature();
 
@@ -2328,15 +2291,12 @@ impl ManaPool {
         Ok(side_effects)
     }
 
-    /// Pay `cost` to cast a spell of `kind`, allowing spend-restricted
-    /// mana whose restriction permits `kind` to contribute. Restricted
-    /// mana of a color is drained ahead of unrestricted mana of that color
-    /// so it isn't wasted when the pool empties (CR 605 lets restricted
-    /// mana be applied freely; spending it first is always legal once the
-    /// full cost is covered). When the pool holds no usable restricted
-    /// mana — the overwhelmingly common case — this is exactly [`pay`].
-    ///
-    /// On failure the pool is left unchanged.
+    /// Pay `cost` for a spell of `kind`, letting restricted mana that permits
+    /// `kind` contribute. Restricted mana of a colour drains before
+    /// unrestricted mana of that colour so it isn't wasted (CR 605 lets it be
+    /// applied freely once the cost is covered). With no usable restricted mana
+    /// — the usual case — this is exactly [`pay`]. On failure the pool is
+    /// unchanged.
     pub fn pay_for_spell(
         &mut self,
         cost: &ManaCost,
@@ -2513,14 +2473,10 @@ impl ManaPool {
             && self.desert == 0
     }
 
-    /// Fold every bucket of `other` into this pool (colors, colorless, snow,
-    /// and spend-restricted entries). Used to restore protected floating mana
-    /// after paying a cost from freshly-tapped sources (the "keep my floating
-    /// mana" branch of the float-spend confirmation).
     /// The part of `self` — mana an effect keeps across steps (CR 500.4's
-    /// exception) — still floating in `pool`: each color and each restricted
-    /// entry capped by what `pool` holds, less `reserved_red` already claimed
-    /// by firebending. What was spent is gone and must not be re-seeded.
+    /// exception) — still floating in `pool`: each colour and restricted entry
+    /// capped by what `pool` holds, less `reserved_red` already claimed by
+    /// firebending. What was spent is gone and must not be re-seeded.
     pub fn unspent_within(&self, pool: &ManaPool, reserved_red: u32) -> ManaPool {
         let mut out = ManaPool::default();
         for c in Color::ALL {
@@ -2580,6 +2536,10 @@ impl ManaPool {
         self.restricted_colorless.retain(|(n, _)| *n > 0);
     }
 
+    /// Fold every bucket of `other` (colours, colorless, snow, restricted) into
+    /// this pool — restores protected floating mana after paying from freshly
+    /// tapped sources (the "keep my floating mana" branch of the float-spend
+    /// confirmation).
     pub fn absorb(&mut self, other: &ManaPool) {
         self.white += other.white;
         self.blue += other.blue;

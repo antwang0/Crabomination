@@ -1,23 +1,18 @@
-//! The per-hit memo audits, and the one thing they need to know: whether a
-//! board-wide audit is already running on this thread.
+//! The per-hit memo audits, and whether a board-wide audit is already running
+//! on this thread.
 //!
-//! Every `CardData` memo re-derives its value on a hit under
-//! `debug_assertions` ("memo is stale"), and every battlefield lane in the
-//! engine's `zone.rs` re-walks the board on a read the same way. A lane's walk
-//! goes through those same per-card memo reads, so each audited lane read also
-//! re-derived every permanent's memos — nested audits, one full re-derivation
-//! per permanent per lane read. On a debug pod game that was ~30 % of all
-//! samples, nearly all of it the mana-summary memo re-derived under the
-//! mana-static lane's walk (100 `gdb` samples of
-//! `cr_903_a_pod_run_is_independent_of_how_it_is_chunked`, 2026-10-02).
+//! Under `debug_assertions` every `CardData` memo re-derives its value on a
+//! hit, and every battlefield lane in the engine's `zone.rs` re-walks the board
+//! on a read. A lane's walk reads those per-card memos, so audits nested — on a
+//! debug pod game that was ~30 % of all samples (2026-10-02, mostly the
+//! mana-summary memo under the mana-static lane).
 //!
 //! Inside a board-wide audit the per-card audits trust their memo: the board
-//! audit is checking the *board* memo against the cards, and each card memo is
-//! checked on its own top-level reads. Outside one nothing changes — every
-//! top-level read is still re-derived on every hit, which is the property the
-//! sampled gather-memo audit (`GameState::gather_memo_agrees`) gave up and these
-//! keep. Release builds read nothing here: [`memo_audit_eq!`](crate::memo_audit_eq)
-//! tests `cfg!(debug_assertions)` first, and the board audits sit inside
+//! audit checks the board memo against the cards, and each card memo is checked
+//! on its own top-level reads, which are still re-derived on every hit (the
+//! property the sampled gather-memo audit gave up). Release builds read nothing
+//! here: [`memo_audit_eq!`](crate::memo_audit_eq) tests
+//! `cfg!(debug_assertions)` first, and the board audits sit inside
 //! `debug_assert!`s.
 
 thread_local! {

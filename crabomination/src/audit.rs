@@ -1,40 +1,28 @@
 //! Structural card audit: the one walker that decides whether a card's
 //! effect tree does nothing.
 //!
-//! Two hand-written copies of this used to live in `bin/audit_incomplete.rs`
-//! (over the serialized JSON) and the since-retired `bin/audit_stubs.rs`
-//! (over the typed `Effect`), and they had already drifted — the typed one
-//! didn't know about `Escalate`. One walker, over the JSON form, so a new combinator can't
-//! silently make one of them wrong: externally-tagged enums serialize a unit
-//! variant as the bare string `"Noop"` and everything else as
-//! `{"Variant": payload}`, so an unrecognized tag reads as "does something",
-//! which is the safe answer.
+//! It replaced two drifted hand-written copies (one missed `Escalate`). It
+//! walks the JSON form: externally-tagged enums serialize a unit variant as
+//! `"Noop"` and everything else as `{"Variant": payload}`, so an unknown tag
+//! reads as "does something" — the safe answer.
 //!
-//! [`dead_capabilities`] is also asserted over the whole catalog by
-//! `crabomination_tests` (`core_rules::structural_audit`), so a card shipped
-//! with a dead mode or a dead ability fails the suite instead of waiting for
-//! someone to re-run the auditor. Dead abilities are gated outright; dead
-//! modes are gated against [`REVIEWED_DEAD_MODES`], because a `Noop` arm is
-//! also how a printed "you may … (or decline)" is spelled. [`stub_kind`]
-//! (blank spells and blank permanents) is gated outright by the same file.
+//! `crabomination_tests` (`core_rules::structural_audit`) asserts
+//! [`dead_capabilities`] over the whole catalog: dead abilities fail
+//! outright, dead modes against [`REVIEWED_DEAD_MODES`] (a `Noop` arm is
+//! also how "you may … (or decline)" is spelled). [`stub_kind`] (blank
+//! spells and permanents) is gated outright by the same file.
 
 use crabomination_base::card::{CardDefinition, CardType};
 use serde_json::Value;
 
-/// The dead *modes* that are correct, and why each one is.
+/// The dead *modes* that are correct, and why.
 ///
-/// A `Noop` arm is genuinely ambiguous: it is both how a missing primitive
-/// looks and how a printed "you may … (or decline)" is spelled. That is why
-/// the suite gated dead *abilities* and left modes to whoever next ran the
-/// auditor by hand — and it meant the auditor reported one card every run,
-/// forever, so the only signal a new one gave was a count going from 1 to 2.
-/// Nobody diffs a count they have learned to expect.
-///
-/// An allowlist converts the triage into a gate. A new dead mode fails the
-/// suite with the card's name; a reviewer either implements the arm or adds
-/// it here with the printed text that makes it correct. The list is asserted
-/// in **both** directions, so an entry whose card stopped having a dead mode
-/// fails too rather than quietly licensing a future one.
+/// A `Noop` arm is both a missing primitive and a printed "you may … (or
+/// decline)", so modes used to be left to manual audits, whose standing
+/// count of one hid new ones. This allowlist makes it a gate: a new dead mode
+/// fails with the card's name until implemented or listed here with the
+/// printed text that justifies it. Asserted in **both** directions, so a
+/// stale entry fails too.
 pub const REVIEWED_DEAD_MODES: &[(&str, &str)] = &[(
     "Satsuki, the Living Lore",
     "\"When Satsuki dies, choose up to one\" — choosing neither mode is the \
@@ -108,11 +96,9 @@ fn arr_all_empty(v: &Value) -> bool {
     v.as_array().map(|a| a.iter().all(effect_is_empty)).unwrap_or(false)
 }
 
-/// The activation costs that *are* the ability: "{cost}: Sacrifice this."
-/// (Hopeful Vigil), "You may discard this any time you could cast an instant."
-/// (Circling Vultures), and the bounce/exile/return equivalents. An empty
-/// resolution effect is correct for these — paying the cost is the whole
-/// printed text — so they are not dead abilities.
+/// Activation costs that *are* the ability ("{cost}: Sacrifice this.",
+/// Hopeful Vigil; Circling Vultures' discard; bounce/exile equivalents): the
+/// cost is the whole printed text, so an empty effect isn't dead.
 fn ability_is_cost_only(ab: &Value) -> bool {
     /// Every one of these moves the source itself, so paying it is an
     /// observable game action on its own. A cost that merely *pays*
@@ -196,18 +182,13 @@ pub fn resolve_effect_is_empty(def: &CardDefinition) -> bool {
 
 /// Does this definition give a permanent *any* text?
 ///
-/// The four ability vectors plus keywords are the obvious carriers, but a
-/// permanent's rules text can live in a dedicated field instead, and every
-/// one of those is a card that reads as blank if it is not listed here. As
-/// of 2026-08-14 that was **59 of the 59 cards the stub audit flagged** —
-/// every Saga, Room, Siege, Case, enters-as-copy and state-triggered
-/// enchantment in the catalog — which is a broken audit, not a catalog of
-/// stubs.
+/// Besides the four ability vectors and keywords, rules text can live in a
+/// dedicated field (Sagas, Rooms, Sieges, Cases, enters-as-copy,
+/// state triggers); missing ones once made all 59 stub-audit hits false.
 ///
 /// **When a new mechanic adds a carrier field to `CardDefinition`, add it
-/// here.** `core_rules::structural_audit` pins one representative per family
-/// (`blank_permanent_check_knows_every_carrier_field`), and a new family with
-/// no entry fails `no_shipped_card_is_a_blank_stub` by name.
+/// here.** `blank_permanent_check_knows_every_carrier_field` pins one per
+/// family, and a new family fails `no_shipped_card_is_a_blank_stub` by name.
 pub fn def_has_any_ability(def: &CardDefinition) -> bool {
     !def.triggered_abilities.is_empty()
         || !def.activated_abilities.is_empty()
@@ -249,13 +230,10 @@ pub fn def_has_any_ability(def: &CardDefinition) -> bool {
         || def.flip_face.is_some()
 }
 
-/// Why a card "does nothing", or `None` for a card with real text: an
-/// instant / sorcery that resolves to nothing and has no cast trigger, a
-/// non-creature permanent with no text at all, or a planeswalker with no
-/// loyalty abilities. Vanilla creatures are fine — the body is the card.
-///
-/// This was the `audit_stubs` binary, which read 0 flagged from 2026-08-14
-/// on; `core_rules::structural_audit` now asserts that zero instead.
+/// Why a card "does nothing", or `None` for real text: an instant / sorcery
+/// resolving to nothing with no cast trigger, a non-creature permanent with
+/// no text, or a planeswalker with no loyalty abilities. Vanilla creatures
+/// are fine. `core_rules::structural_audit` asserts none ships.
 pub fn stub_kind(def: &CardDefinition) -> Option<&'static str> {
     if def.is_instant() || def.is_sorcery() {
         if resolve_effect_is_empty(def) && def.triggered_abilities.is_empty() {

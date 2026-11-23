@@ -141,12 +141,10 @@ impl GameState {
         keep_name: bool,
     ) {
         // "Except it has this ability" keeps the copier's
-        // *printed* abilities — the definition before its
-        // first copy — not whatever it last copied. Reading
-        // the current definition re-appended the kept
-        // abilities on every re-copy, so an Aurora Shifter
-        // copying an Aurora Shifter doubled its trigger list
-        // each turn until the process ran out of memory.
+        // *printed* abilities (the definition before its first
+        // copy), not whatever it last copied — else Aurora
+        // Shifter copying Aurora Shifter re-appended the kept
+        // abilities every turn without bound.
         let printed = self
             .temporary_copies
             .iter()

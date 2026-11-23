@@ -12,11 +12,10 @@
 //!   architecture below are the contract between the two; a parity test in
 //!   `crabomination_ml` holds both sides to it.
 //!
-//! This crate lives outside the engine so the workspace can give it
-//! `opt-level = 3` in debug builds (see the root `Cargo.toml`): the forward
-//! pass runs inside the bot's simulation loops, where the workspace's
-//! opt-level-0 engine code would make a ~130k-parameter net cost more than
-//! the game logic around it.
+//! It lives outside the engine so the workspace can build it at
+//! `opt-level = 3` in debug (root `Cargo.toml`): the forward pass runs
+//! inside the bot's simulation loops, where opt-level 0 would make it cost
+//! more than the game logic around it.
 //!
 //! ## Architecture (v1)
 //!
@@ -39,10 +38,9 @@
 //!   `tblocks.{i}.attn.{q,k,v,o}.*`, `tblocks.{i}.{ffn1,ffn2}.*`). A file
 //!   carrying both, or a partial set of either, is rejected.
 //!
-//! Hidden sizes are read from the tensor shapes, not hardcoded — the
-//! constants below describe the *standard* configuration the trainer uses
-//! and the parts the encoder bakes into the data (feature counts, group
-//! count), which genuinely are fixed per format version.
+//! Hidden sizes are read from the tensor shapes. The constants below are
+//! the trainer's standard configuration plus what the encoder bakes into
+//! the data (feature and group counts), which is fixed per format version.
 
 use std::collections::BTreeMap;
 
@@ -57,165 +55,108 @@ pub const G_BF_OPP: usize = 1;
 pub const G_HAND_SELF: usize = 2;
 pub const G_GY_SELF: usize = 3;
 pub const G_GY_OPP: usize = 4;
-/// The encoded seat's own library, as an unordered multiset of the cards
-/// still in it — one object per distinct name, carrying its remaining
-/// count in feature 27.
-///
-/// This is information the seat genuinely has (it is their own decklist)
-/// and the net was previously denied: before this group the library was a
-/// single scalar, `library.len() / 40`, so "22 cards left, three of them
-/// removal and one a bomb" and "22 lands" encoded identically. It is also
-/// the one zone where the bag-of-cards prior is unambiguously right — a
-/// library really is an unordered set, which is exactly the argument that
-/// makes the *deck* net work where the pooled play net did not.
+/// The encoded seat's own library as an unordered multiset: one object per
+/// distinct name, remaining count in feature 27. Information the seat
+/// genuinely has (its own decklist); previously only `library.len() / 40`.
+/// A library really is an unordered set, so the bag-of-cards prior fits.
 ///
 /// Order never reaches the net: entries are emitted sorted by vocabulary
-/// index, and both pooling and attention are permutation-invariant over a
-/// group. The encoder must not leak the shuffle.
+/// index and pooling/attention are permutation-invariant. The encoder must
+/// not leak the shuffle.
 pub const G_LIB_SELF: usize = 5;
-/// The stack, split by controller like the battlefield. One object per
-/// stack item — the spell's card, or a trigger's source card — with its
-/// depth from the top of the stack in feature 36. Before these groups the
-/// stack was a single count (`global[18]`): "there is a spell on the
-/// stack" was representable, "it is their removal spell aimed at my best
-/// creature" was not, and the latter is the shape of every
-/// instant-speed decision. Shallow stacks make the pooled bag mostly a
-/// one-object group, which is exactly when pooling is lossless.
+/// The stack, split by controller. One object per stack item (the spell's
+/// card, or a trigger's source card), depth from the top in feature 36.
+/// Replaces a bare count (`global[18]`) that could not say *what* is on the
+/// stack or what it aims at. Stacks are shallow, so pooling is near-lossless.
 pub const G_STACK_SELF: usize = 6;
 pub const G_STACK_OPP: usize = 7;
 
 /// Per-object feature count. Baked into encoded rows — bump
-/// [`SHARD_VERSION`] if it changes. Feats 12..=19 are the evasion/combat
-/// keyword flags added in round 4 (flying, reach, menace, deathtouch,
-/// lifelink, trample, first-or-double strike, vigilance): the pooled
-/// encoder previously saw a Serra Angel and a Hill Giant as the same
-/// 4-mana 4/4-ish body. Feats 20..=26 are the castability block (colour
-/// pips, castable now, castable next turn) and 27 is library
-/// multiplicity.
+/// [`SHARD_VERSION`] if it changes.
 ///
-/// Feats 28..=36 are the round-12 relation block. Pooling can never
-/// represent an *edge* between two objects, but a flag summarising the
-/// edge from one endpoint's side survives it — and the attention layer
-/// can match flagged endpoints across groups:
+/// * 12..=19 (round 4) keyword flags: flying, reach, menace, deathtouch,
+///   lifelink, trample, first-or-double strike, vigilance.
+/// * 20..=26 castability: colour pips, castable now, castable next turn.
+/// * 27 library multiplicity.
+///
+/// 28..=36 (round 12) relation block: pooling cannot represent an edge
+/// between objects, but a flag on each endpoint survives it, and attention
+/// can match flagged endpoints across groups.
 ///
 /// * 28 `is_blocking` / 29 `is_blocked` — combat edges from `block_map`.
 /// * 30 `is_attached` — this object is an aura/equipment on a host.
-/// * 31 `has_own_attachment` / 32 `has_opp_attachment` — the host's
-///   side, split by who controls the attachment: an own aura is a buff,
-///   an opposing aura is a Pacifism, and before this the two encoded as
-///   the same creature.
+/// * 31 `has_own_attachment` / 32 `has_opp_attachment` — the host's side,
+///   split by the attachment's controller (own aura = buff, opposing one =
+///   Pacifism).
 /// * 33 `targeted_by_stack` — something on the stack aims at this.
 /// * 34 counters other than loyalty/prepared, count / 4 (P/T counters
-///   already reach the net through effective P/T; this carries the rest
-///   — Glyph, Currency, and whatever lands later).
+///   already arrive through effective P/T).
 /// * 35 `is_attachment_type` — aura or equipment by printed type.
 /// * 36 stack depth from the top, / 4 (stack groups only).
 ///
-/// Feats 37..=44 are the round-28 (v6) block pair. 37..=39 is combat
-/// structure: the round-12 flags said a creature *is* blocked, not by
-/// what, so a 2/2 chump and a 5/5 trade encoded identically:
+/// 37..=44 (round 28, v6):
 ///
 /// * 37/38 counterpart power / effective-toughness sums, / 8 — on a
-///   blocked attacker, its blockers summed; on a blocker, the attackers
-///   it blocks summed. An object is never both in one combat.
+///   blocked attacker its blockers, on a blocker the attackers it blocks
+///   (so a chump and a trade differ). An object is never both in one combat.
 /// * 39 `attacking_non_player` — the attack targets a planeswalker or
 ///   battle, not a life total.
-/// * 40..=44 keyword classes invisible to feats 12..=19: haste,
-///   hard-to-target (ward/hexproof/shroud/protection), indestructible,
-///   hard-to-block (unblockable/shadow/fear/intimidate/skulk/
-///   horsemanship/landwalk), defender. Mostly redundant with the card
-///   embedding for in-vocab cards; load-bearing for tokens and grants.
+/// * 40..=44 keyword classes not in 12..=19: haste, hard-to-target
+///   (ward/hexproof/shroud/protection), indestructible, hard-to-block
+///   (unblockable/shadow/fear/intimidate/skulk/horsemanship/landwalk),
+///   defender. Load-bearing for tokens and grants.
 ///
-/// Feats 45..=52 are the round-40 (v7) pair of blocks. Both carry
-/// information the earlier features could not express at all, as
-/// opposed to re-describing the visible board:
+/// 45..=52 (round 40, v7):
 ///
-/// * 45..=47 the *expiry* block. 45 damage marked, / 8 — feature 5 is
-///   `toughness − damage`, so a 4/4 with three damage and a 4/1 encoded
-///   identically, though the first is whole again at cleanup. 46/47 the
-///   power / toughness delta that expires at cleanup
-///   (`CardInstance::power_bonus`, from until-end-of-turn pumps), / 4
-///   and signed: a 5/5 off a combat trick encoded as a printed 5/5.
-/// * 48..=52 the *counter* block. Feature 34 sums every counter that
-///   isn't loyalty or prepared into one scalar, so three +1/+1, three
-///   stun and three Page counters all read 0.75. These split out the
-///   kinds a value function trades on differently: 48 +1/+1 / 4,
-///   49 −1/−1 / 4, 50 stun / 2 (the bearer's next untap is skipped),
-///   51 Page / 3, 52 Growth / 3. +1/+1 and −1/−1 reach the net through
-///   effective P/T as well; the rest had no path to it at all.
+/// * 45..=47 expiry: 45 damage marked, / 8 (feature 5 is `toughness −
+///   damage`, which can't tell a damaged 4/4 from a 4/1); 46/47 the P/T
+///   delta that expires at cleanup (`CardInstance::power_bonus`), / 4,
+///   signed.
+/// * 48..=52 counter kinds split out of feature 34: 48 +1/+1 / 4,
+///   49 −1/−1 / 4, 50 stun / 2, 51 Page / 3, 52 Growth / 3.
 ///
-/// Feats 53..=58 are the v8 block (2026-08-30, modern precondition 3),
-/// gated by the `v8` ablation bit:
+/// 53..=58 (v8, 2026-08-30, modern precondition 3), gated by the `v8`
+/// ablation bit:
 ///
-/// * 53 artifact / 54 enchantment type bits — printed off the
-///   battlefield, layer-computed on it. The embedding carries the type
-///   for in-vocab cards, but tokens and every off-vocab card fell back
-///   to three type flags that could not tell a Chalice from a Signet
-///   from a Saga: "not a creature, not a land, not a planeswalker" was
-///   one class holding most of a modern board's non-creature permanents.
-/// * 55..=58 the modern counter kinds the v7 split has no slot for:
-///   55 Lore / 3 (a saga's chapter IS its state), 56 Charge / 4
-///   (Chalice on 1 vs 3 are different cards), 57 Shield / 2,
-///   58 Finality / 2. All previously folded into feature 34's
-///   undifferentiated sum.
+/// * 53 artifact / 54 enchantment type bits — printed off the battlefield,
+///   layer-computed on it; tokens and off-vocab cards had no other way to
+///   tell a Chalice from a Signet from a Saga.
+/// * 55..=58 modern counter kinds: 55 Lore / 3, 56 Charge / 4,
+///   57 Shield / 2, 58 Finality / 2 (previously folded into feature 34).
 pub const OBJ_FEATS: usize = 59;
 /// Global scalar feature count. Baked into encoded rows likewise.
 ///
-/// Globals 36..=42 are round 28: fine combat phase one-hots (36
-/// declare-attackers, 37 declare-blockers, 38 damage/end-combat — the
-/// original coarse slot 11 collapsed "blocks pending" and "damage
-/// dealt", which are the states the combat sims evaluate most), 39/40
-/// unblocked attacker power aimed at self/opp, / 12, and 41/42 exile
-/// sizes self/opp, / 10.
-///
-/// Globals 43..=54 are the round-40 (v7) *history* block: six
-/// turn-scoped counters, self then opponent, reset at each turn
-/// boundary. Every other global is a static snapshot, which made the
-/// encoding a pure function of the current position — and a card whose
-/// text reads what happened this turn was not merely under-described,
-/// the net could not tell whether its ability was live. The six are the
-/// ones SoS actually reads: 43/44 life gained (infusion, Foolish Fate),
-/// / 5; 45/46 instants and sorceries cast (Burrog Barrage), / 3; 47/48
-/// spells cast (storm), / 4; 49/50 creatures died, / 3; 51/52 cards
-/// that left the graveyard, / 3; 53/54 cards exiled, / 3.
-///
-/// Globals 55/56 are the v8 block: land drops remaining this turn, self
-/// then opponent, / 2 (Azusa-class effects are the headroom). "Can I
-/// still land-and-spell this turn" is the most common main-phase
-/// sequencing read, and until now feature 26's next-turn castability
-/// simply assumed the drop was available.
+/// * 36..=42 (round 28): combat step one-hots (36 declare-attackers,
+///   37 declare-blockers, 38 damage/end-combat — slot 11 alone conflated
+///   them); 39/40 unblocked attacker power aimed at self/opp, / 12;
+///   41/42 exile sizes self/opp, / 10.
+/// * 43..=54 (round 40, v7) history: turn-scoped counters, self then
+///   opponent, reset each turn, so "this turn" card text can tell whether
+///   it is live. 43/44 life gained / 5; 45/46 instants+sorceries cast / 3;
+///   47/48 spells cast / 4; 49/50 creatures died / 3; 51/52 cards that
+///   left the graveyard / 3; 53/54 cards exiled / 3.
+/// * 55/56 (v8): land drops remaining this turn, self then opponent, / 2.
 pub const GLOBAL_FEATS: usize = 57;
 
-/// Feature counts of earlier encoder generations, oldest first: v5
-/// (pre-round-28), v6 (round 28 through 39), and v7 (round 40 through
-/// the 2026-08-30 v8 block). Checkpoints trained
-/// against one of these have weight matrices sized to it, and
-/// [`PlayNet::load`] widens them with zero columns rather than
-/// rejecting them, which computes exactly what the old binary computed
-/// — the new features multiply into zeros. The champion (and every
-/// historical net) stays loadable, and golden traces do not move.
+/// `(OBJ_FEATS, GLOBAL_FEATS)` of earlier encoder generations, oldest
+/// first: v5 (pre-round-28), v6 (rounds 28-39), v7 (round 40 to v8).
+/// [`PlayNet::load`] widens such checkpoints with zero columns, which
+/// computes exactly what the old binary did, so every historical net stays
+/// loadable and golden traces do not move.
 ///
-/// A file must match one generation on *both* counts. Matching one and
-/// not the other is a corrupt file, not a version, and falls through to
-/// the shape check below to fail loudly.
+/// A file must match one generation on *both* counts; matching only one is
+/// corruption and falls through to the shape check to fail loudly.
 ///
-/// Public because the trainer has to apply the same rule: `--use-best`
-/// hands a checkpoint from an earlier generation to the candle model,
-/// whose `VarMap::load` is exact-shape, so it pads by this table before
-/// setting. The two loaders disagreeing is the failure mode — a pilot
-/// that loads in the engine and not in the trainer, mid-run.
+/// Public because the trainer must apply the same rule (`--use-best` pads
+/// an old checkpoint before candle's exact-shape `VarMap::load`). The two
+/// loaders must never disagree.
 pub const LEGACY_FEATS: [(usize, usize); 3] = [(37, 36), (45, 43), (53, 55)];
 
 /// Standard trainer configuration (the file's shapes win at load time).
-/// Sizes quadrupled in round 4: four gate rounds measured the small net
-/// flat at 42–45 % as a replacement judge across data-volume and
-/// distribution fixes, leaving capacity the first untested lever. (It was
-/// not the answer — see [`ATTN_HEADS`].)
-///
-/// Parameter count is a function of these constants *and* the vocabulary,
-/// so it is deliberately not quoted here; a stale figure was carried in
-/// this doc for several rounds. The trunk dominates: its input is
-/// `NUM_GROUPS · 2 · OBJ_HIDDEN + GLOBAL_FEATS`.
+/// Quadrupled in round 4; capacity turned out not to be the limit (see
+/// [`ATTN_HEADS`]). Parameter count depends on the vocabulary too, so it is
+/// not quoted; the trunk dominates, input `NUM_GROUPS · 2 · OBJ_HIDDEN +
+/// GLOBAL_FEATS`.
 pub const EMB_DIM: usize = 32;
 pub const OBJ_HIDDEN: usize = 64;
 pub const TRUNK_H1: usize = 512;
@@ -224,21 +165,10 @@ pub const TRUNK_H2: usize = 256;
 /// Attention heads in the optional interaction layer. Must divide
 /// [`OBJ_HIDDEN`].
 ///
-/// Why the layer exists: mean/max pooling is permutation invariant *per
-/// group*, so the trunk only ever sees "how much is in this zone" and
-/// "what is the biggest thing in it". It cannot represent a relation
-/// between two objects in different zones — "my flier gets through
-/// because their board has no flier and no reach" needs my battlefield
-/// compared element-wise against theirs, and pooling has already
-/// discarded that by the time the trunk runs.
-///
-/// The calibration diagnostic made this concrete rather than theoretical:
-/// the pooled net scores AUC 0.746 at predicting the winner against
-/// `eval_material`'s 0.755 on identical positions. It learned the
-/// material heuristic and stopped, which is the ceiling of what the
-/// representation can express — and why quadrupling the trunk in round 4
-/// could not have helped. Widening a layer cannot recover information
-/// discarded before it.
+/// The layer exists because per-group pooling cannot relate objects in
+/// different zones ("my flier gets through because they have no flier or
+/// reach"). The pooled net plateaued at `eval_material`'s AUC (0.746 vs
+/// 0.755), which is why widening the trunk in round 4 could not help.
 pub const ATTN_HEADS: usize = 4;
 
 /// One card object as the net sees it: a vocabulary index plus a small
@@ -252,13 +182,9 @@ pub struct EncodedObject {
 
 /// A full observable position from one seat's perspective.
 ///
-/// The objects of all [`NUM_GROUPS`] groups live in **one** buffer, laid
-/// out group by group in index order, with each group's length in
-/// `counts`. Eight separate `Vec`s cost 5.25 allocations per encoded
-/// state (66,485 `reserve` growths over 12,660 states, the actor's
-/// second-largest growth row — PERF `(-107)`); one buffer with one
-/// up-front reserve costs one. The emitted *values* are unchanged, so
-/// shards and trained nets are unaffected.
+/// The objects of all [`NUM_GROUPS`] groups live in one buffer, group by
+/// group in index order, with each group's length in `counts` — one
+/// allocation instead of eight `Vec`s' worth (PERF `(-107)`).
 ///
 /// Objects must be appended in group order — [`EncodedState::push`] and
 /// [`EncodedState::push_default`] debug-assert it.
@@ -363,19 +289,10 @@ impl Default for EncodedObject {
     }
 }
 
-/// A labelled training example. Labels are stamped after the game ends:
-/// `win` is 1.0 if the encoded seat won (0.0 otherwise, 0.5 for a draw),
-/// `life_diff` is the final (self − opp) life clamped to ±20 and scaled by
-/// 1/20, `game_len` is the number of turns the game still had to run from
-/// this snapshot, scaled by 1/15 — both auxiliary targets exist for credit
-/// assignment (the KataGo lesson: a bare win bit can't say *why*), not for
-/// play.
-/// Auxiliary short-horizon targets, labelled from the recorded
-/// trajectory: `[Δlife-diff, Δpower-diff, Δcreature-diff, opp hand
-/// next]`, each measured to the seat's *next snapshot* and scaled. Dense
-/// and near-term where `win` is sparse and twenty turns away — the same
-/// credit-assignment argument as the life/length heads, one hop out
-/// instead of at the horizon. Terminal rows carry zero deltas.
+/// Auxiliary short-horizon targets: `[Δlife-diff, Δpower-diff,
+/// Δcreature-diff, opp hand next]`, each measured to the seat's next
+/// snapshot and scaled — dense where `win` is sparse. Terminal rows carry
+/// zero deltas.
 pub const AUX_FEATS: usize = 4;
 
 /// Rows of the policy head's decision-kind table (`head_policy_kind.*`):
@@ -403,6 +320,10 @@ pub const NO_OBJECT: u16 = u16::MAX;
 /// [`NO_OBJECT`].
 pub type ActionRef = (u8, u16);
 
+/// `TrainRow` labels are stamped after the game ends: `win` 1.0 / 0.0 /
+/// 0.5 (draw) for the encoded seat, `life_diff` final (self − opp) life
+/// clamped to ±20 and scaled by 1/20, `game_len` turns remaining from this
+/// snapshot / 15. The two auxiliary targets aid credit assignment, not play.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TrainRow {
     pub state: EncodedState,
@@ -412,24 +333,18 @@ pub struct TrainRow {
     pub win: f32,
     pub life_diff: f32,
     pub game_len: f32,
-    /// Trajectory this row belongs to — one per (game, seat), since the
-    /// two seats see different information and are separate episodes.
-    /// Rows can only be bootstrapped against their own successors, so the
-    /// trainer needs to be able to reassemble trajectories from a shuffled
-    /// window.
+    /// Trajectory id, one per (game, seat). Rows bootstrap only against
+    /// their own successors, so the trainer reassembles trajectories from a
+    /// shuffled window by this.
     pub traj: u32,
     /// Position within the trajectory, ascending. Recorded rather than
     /// inferred from row order because the window samples and evicts.
     pub ply: u16,
     /// See [`AUX_FEATS`]. All-zero when the recorder predates them.
     pub aux: [f32; AUX_FEATS],
-    /// The *opponent's* held card names at this snapshot, as vocab
-    /// indices (round 39). Ground truth the encoder deliberately never
-    /// sees — the recorder can look, the input cannot — so a belief
-    /// head can be trained to predict it from observable state alone.
-    /// Unknown-name cards (index 0) are skipped: a name the vocabulary
-    /// cannot express is not a learnable prediction target. Duplicates
-    /// appear once per copy held.
+    /// The opponent's held cards at this snapshot as vocab indices
+    /// (round 39): belief-head ground truth the encoder never sees.
+    /// Index-0 (unknown) cards are skipped; duplicates appear once per copy.
     pub opp_hand: Vec<u16>,
 }
 
@@ -568,11 +483,9 @@ pub struct DeckRow {
     pub win: f32,
 }
 
-/// Deck-label shard: the distillation training set — decklists labelled
-/// with a *gauntlet win rate* rather than a single game's outcome. One
-/// 300-game win rate carries the information of hundreds of Bernoulli
-/// labels, and the file accumulates across generation passes (read,
-/// extend, rewrite — it is tiny).
+/// Deck-label shard: decklists labelled with a gauntlet win rate rather
+/// than one game's outcome (distillation set). Accumulates across
+/// generation passes by read, extend, rewrite — it is tiny.
 pub const DECK_SHARD_MAGIC: [u8; 4] = *b"CRDL";
 pub const DECK_SHARD_VERSION: u32 = 1;
 
@@ -619,18 +532,12 @@ pub fn read_deck_shard(bytes: &[u8]) -> Option<Vec<DeckRow>> {
 }
 
 /// The build-evaluation net `D(decklist) → win probability`. Deep-sets
-/// over the card multiset: embedding rows summed, meaned and maxed, then
-/// a two-layer trunk over `[pools ⊕ deck features]`. Lives in its own
-/// safetensors file (same tensor names as the play net's trunk — the
-/// files are separate, so there is no collision).
+/// over the card multiset: embedding rows summed, meaned and maxed, then a
+/// two-layer trunk over `[pools ⊕ deck features]`. Its own safetensors
+/// file, reusing the play net's trunk tensor names.
 ///
-/// **First ML component to pass a house gate**: judging best-of-32
-/// sealed builds against the heuristic `static_build_score` over the
-/// same candidate sets (identical pilots and seeds — only the judge
-/// differs), net-judged builds won 61.7 % [58.9, 64.4] and, on a fresh
-/// seed, 60.7 % [57.9, 63.4] over 1 200 games each
-/// (`selfplay_train --gate-builder`). Trained from ~100 k self-play
-/// games' decklist labels riding along with a play-net run.
+/// Passed `selfplay_train --gate-builder`: net-judged best-of-32 sealed
+/// builds beat `static_build_score`'s ~61 % over 1 200 games, two seeds.
 #[derive(Debug, Clone)]
 pub struct DeckNet {
     emb: Tensor2,      // [vocab, emb_dim]
@@ -648,15 +555,10 @@ impl DeckNet {
     }
 
     /// Grow the embedding table to `new_vocab` rows, zero-filling the ones
-    /// this net never saw.
-    ///
-    /// Sound because card names own a frozen embedding index
-    /// (`server::vocab_snapshot`): a vocabulary only ever grows at the end,
-    /// so every row this net has still means the card it was trained on.
-    /// Before that guarantee existed, indices were the sorted pool's order
-    /// and one added card shifted them all — which is why the seven
-    /// committed deck nets are unloadable rather than merely short.
-    /// Narrowing is not possible and is rejected.
+    /// this net never saw. Sound because card names own a frozen index
+    /// (`server::vocab_snapshot`) and a vocabulary only grows at the end.
+    /// (Nets from before that freeze are unloadable, not merely short.)
+    /// Narrowing is rejected.
     pub fn pad_vocab(&mut self, new_vocab: usize) -> Result<(), NnError> {
         if new_vocab < self.emb.rows {
             return Err(NnError::BadTensor(
@@ -761,11 +663,9 @@ const MV_BLOCK: usize = 64;
 const MM_ROWS: usize = 4;
 const MM_COLS: usize = 16;
 
-/// `e^x` for `x ≤ 0` (softmax scores after the max is subtracted), as a
-/// branch-free polynomial that vectorises across a row of scores —
-/// `f32::exp` is a libm call per element. Cephes' single-precision
-/// reduction and polynomial: relative error ~1e-7, the same order as
-/// f32 rounding.
+/// `e^x` for `x ≤ 0` (max-subtracted softmax scores) as a branch-free,
+/// vectorisable polynomial instead of a libm call per element. Cephes'
+/// single-precision reduction: relative error ~1e-7, f32 rounding order.
 #[inline(always)]
 fn exp_neg(x: f32) -> f32 {
     // Below −87 the result underflows f32's normal range; clamp so the
@@ -779,11 +679,9 @@ fn exp_neg(x: f32) -> f32 {
         * r
         + 0.5; // Cephes' 5.0000001201e-1, which rounds to exactly 0.5 in f32
     let e = p * z + r + 1.0;
-    // 2^n by building the exponent field directly. `n as i32` would be a
-    // saturating conversion, which keeps LLVM from vectorising the loop;
-    // adding 1.5·2^23 instead leaves the integer n in the low mantissa
-    // bits (exact for |n| < 2^22; here −126 ≤ n ≤ 0), and the rest is
-    // integer arithmetic on the bits.
+    // 2^n by building the exponent field directly. `n as i32` saturates,
+    // which blocks vectorisation; adding 1.5·2^23 leaves integer n in the
+    // low mantissa bits (exact for |n| < 2^22; here −126 ≤ n ≤ 0).
     const MAGIC: f32 = 12_582_912.0; // 1.5 · 2^23
     let n_bits = (n + MAGIC).to_bits().wrapping_sub(MAGIC.to_bits());
     e * f32::from_bits(n_bits.wrapping_add(127) << 23)
@@ -833,12 +731,9 @@ fn sum_lanes(xs: &[f32]) -> f32 {
 /// `v` packed `n × h`, the context written into `ctx` (`n × h`). Shared by
 /// the single attention layer and the transformer blocks.
 ///
-/// Each head is two small matrix products on the blocked kernel: scores
-/// `S = Q·Kᵀ` (the keys laid out transposed and padded to the block
-/// width, so every query's scores come out of broadcast-multiply-adds
-/// across the keys) and context `C = P·V`. The softmax runs over the real
-/// keys only; padded score columns are never read and padded weights are
-/// zero, so the padding is invisible in the result.
+/// Each head is two blocked matmuls: `S = Q·Kᵀ` (keys transposed and
+/// padded to the block width) and `C = P·V`. Softmax runs over the real
+/// keys only and padded weights are zero, so padding never shows.
 #[inline(always)]
 fn attention_core(q: &[f32], k: &[f32], v: &[f32], n: usize, h: usize, ctx: &mut [f32]) {
     let hd = h / ATTN_HEADS;
@@ -864,10 +759,8 @@ fn attention_core(q: &[f32], k: &[f32], v: &[f32], n: usize, h: usize, ctx: &mut
             for sc in real.iter_mut() {
                 *sc *= scale;
             }
-            // Softmax, max-subtracted so a wide score range can't overflow
-            // on a big board. Max, exp and sum run as separate passes: a
-            // loop that also carries a sequential float sum cannot be
-            // vectorised at all.
+            // Max-subtracted softmax. Max, exp and sum are separate passes
+            // because a loop carrying a sequential float sum won't vectorise.
             let max = max_lanes(real);
             for sc in real.iter_mut() {
                 *sc = exp_neg(*sc - max);
@@ -886,12 +779,10 @@ fn attention_core(q: &[f32], k: &[f32], v: &[f32], n: usize, h: usize, ctx: &mut
 }
 
 /// `out = W · x` given `wt` = Wᵀ (`k × m`, `k = x.len()`, `m = out.len()`):
-/// each input `x[c]` is broadcast against a block of [`MV_BLOCK`] outputs
-/// held in accumulators, so no output pays a horizontal reduction and each
-/// weight is loaded once. (Row-wise [`dot`]s reload `x` for every output
-/// and end each one in a lane reduction.) Every output sums its inputs in
-/// order `c = 0..k`, as [`matmul_raw`] does, so a row computes the same
-/// bits whichever kernel ran it.
+/// each `x[c]` is broadcast against a block of [`MV_BLOCK`] accumulated
+/// outputs, so each weight loads once and no output needs a horizontal
+/// reduction (unlike row-wise [`dot`]s). Every output sums inputs in order
+/// `c = 0..k`, as [`matmul_raw`] does, so both kernels give the same bits.
 #[inline(always)]
 fn matvec_raw(x: &[f32], wt: &[f32], m: usize, out: &mut [f32]) {
     debug_assert_eq!(wt.len(), x.len() * m);
@@ -900,11 +791,9 @@ fn matvec_raw(x: &[f32], wt: &[f32], m: usize, out: &mut [f32]) {
     while j0 + MV_BLOCK <= m {
         let mut acc = [0.0f32; MV_BLOCK];
         for (c, &xc) in x.iter().enumerate() {
-            // A zero input adds exactly nothing, so skipping it is
-            // bit-exact — and it skips loading that input's whole weight
-            // row. The trunk's inputs are full of zeros: empty zones pool
-            // to zero blocks (the two stack groups almost always), and
-            // relu zeroes about half of the hidden layer.
+            // Skipping a zero input is bit-exact and skips its weight row.
+            // Trunk inputs are zero-heavy: empty zones pool to zero (stack
+            // groups almost always) and relu zeroes ~half the hidden layer.
             if xc == 0.0 {
                 continue;
             }
@@ -966,11 +855,10 @@ fn matmul_raw(x: &[f32], n: usize, k: usize, wt: &[f32], m: usize, out: &mut [f3
 
 /// The two kernels as separately compiled functions, picked per call.
 ///
-/// Inlined into the forward pass's one big AVX2 function, the same kernel
-/// ran at about a third of its speed in isolation (register allocation
-/// over a function that size); called out of line it keeps its own tight
-/// loop. A handful of calls per forward, so the feature check and the
-/// call cost nothing.
+/// Inlined into the forward pass's one big AVX2 function, a kernel ran at
+/// about a third of its isolated speed (register allocation); out of line
+/// it keeps its tight loop. A handful of calls per forward, so the dispatch
+/// is free.
 mod kernel {
     #[inline]
     pub(super) fn matmul(x: &[f32], n: usize, k: usize, wt: &[f32], m: usize, out: &mut [f32]) {
@@ -1029,19 +917,13 @@ pub struct Tensor2 {
     t: Vec<f32>,
 }
 
-/// Eight-accumulator dot product. The single-accumulator loop chains
-/// every add through one register, and strict f32 semantics stop LLVM
-/// from reassociating that into SIMD lanes — so the naive form runs
-/// scalar however wide the machine is. Splitting the accumulation states
-/// the reassociation explicitly, which is what lets the autovectorizer
-/// use it. `matvec` is essentially the whole forward pass, so this
-/// function is the net's throughput.
+/// Eight-accumulator dot product. Strict f32 semantics stop LLVM from
+/// reassociating a single-accumulator loop into SIMD lanes; splitting the
+/// accumulation makes the reassociation explicit so it vectorises.
 ///
-/// `inline(always)` is load-bearing: the AVX2 wrapper below relies on
-/// this body inlining into its `#[target_feature]` scope, where LLVM
-/// recompiles it with 256-bit lanes. (Not fused multiply-adds: Rust never
-/// contracts `a * b + c` into an FMA, so every kernel in this file is a
-/// multiply and an add per lane.)
+/// `inline(always)` is load-bearing: the AVX2 wrapper relies on this body
+/// inlining into its `#[target_feature]` scope. (Rust never contracts
+/// `a * b + c` into an FMA, so every kernel here is a multiply and an add.)
 #[inline(always)]
 fn dot(a: &[f32], b: &[f32]) -> f32 {
     const LANES: usize = 8;
@@ -1066,10 +948,8 @@ fn dot(a: &[f32], b: &[f32]) -> f32 {
     sum
 }
 
-/// The same body compiled with AVX2, picked at runtime. The baseline
-/// x86-64 target this workspace builds for is SSE2-only; the boxes it
-/// runs on are not, and the difference is 4-wide lanes against 8-wide.
-/// Safety: the caller checks the CPU features.
+/// [`dot`] compiled with AVX2 (8-wide lanes vs the SSE2 baseline's 4),
+/// picked at runtime. Safety: the caller checks the CPU features.
 #[cfg(target_arch = "x86_64")]
 #[target_feature(enable = "avx2", enable = "fma")]
 unsafe fn dot_avx2(a: &[f32], b: &[f32]) -> f32 {
@@ -1140,9 +1020,8 @@ impl Tensor2 {
 
     /// Widen to `new_cols` by appending zero columns on the right. Input
     /// layouts put the newest features last (objects: `emb ++ feats`;
-    /// trunk: pooled groups then globals), so right-padding a legacy
-    /// weight matrix makes the new inputs multiply into zeros — the
-    /// padded net computes exactly what it did before the feature bump.
+    /// trunk: pooled groups then globals), so a padded legacy matrix
+    /// computes exactly what it did before the feature bump.
     fn pad_cols(&mut self, new_cols: usize) {
         debug_assert!(new_cols >= self.cols);
         let mut data = vec![0.0f32; self.rows * new_cols];
@@ -1155,13 +1034,10 @@ impl Tensor2 {
         self.retranspose();
     }
 
-    /// Extend to `new_rows` by appending zero rows at the bottom.
-    ///
-    /// The one caller is the vocabulary: card names own a frozen index
-    /// (`server::vocab_snapshot`), so a vocabulary only ever grows at the
-    /// end and a net trained against a shorter one is correct on every row
-    /// it has. A card it never saw embeds as zeros, which is what index 0 —
-    /// the reserved unknown slot — does for an off-set card anyway.
+    /// Extend to `new_rows` by appending zero rows at the bottom. Used for
+    /// vocabulary growth: frozen card indices (`server::vocab_snapshot`)
+    /// only grow at the end, and an unseen card embedding as zeros matches
+    /// what an off-set card gets anyway.
     pub fn pad_rows(&mut self, new_rows: usize) {
         debug_assert!(new_rows >= self.rows);
         self.data.resize(new_rows * self.cols, 0.0);
@@ -1244,13 +1120,10 @@ pub struct PlayNet {
     trunk2_b: Vec<f32>,
     head_win_w: Tensor2, // [1, h2]
     head_win_b: Vec<f32>,
-    /// The policy head (`head_policy.*`, [1, h2] + [1]), present only in
-    /// weights trained with `--policy-head`. Unlike the life/length heads
-    /// this one is *consumed at inference*: its logit over a candidate's
-    /// successor state is the search's prior, so it loads all-or-nothing
-    /// like the attention tensors rather than being ignored as
-    /// training-only. Absent means the net ranks with the win head alone,
-    /// which is every checkpoint before round 37.
+    /// The policy head (`head_policy.*`, [1, h2] + [1]), only in weights
+    /// trained with `--policy-head`. Consumed at inference (its logit over
+    /// a successor state is the search prior), so it loads all-or-nothing.
+    /// Absent (every checkpoint before round 37): rank by the win head.
     policy_w: Option<Tensor2>, // [1, h2]
     policy_b: f32,
     /// The decision-kind table (`head_policy_kind.*`, [POLICY_KINDS, h2] +
@@ -1259,23 +1132,19 @@ pub struct PlayNet {
     /// head, all-or-nothing; absent means every kind reads the shared head.
     policy_kind_w: Option<Tensor2>,
     policy_kind_b: Vec<f32>,
-    /// The action head (`head_action.*`, phase 5's next step): a term added
-    /// to the policy logit that scores a move by the objects it involves,
-    /// read from the *decision* state's per-object embeddings rather than a
-    /// successor's pooled summary — see [`PlayNet::forward_action_terms`].
-    /// Present only beside the policy head, all-or-nothing.
+    /// The action head (`head_action.*`): a policy-logit term scoring a
+    /// move by the objects it involves, read from the decision state's
+    /// object embeddings — see [`PlayNet::forward_action_terms`]. Only
+    /// beside the policy head, all-or-nothing.
     action: Option<ActionHead>,
     /// The opponent-hand belief head (`head_opp.*`, [vocab, h2] + [vocab]),
-    /// round 39. Consumed at inference by belief-weighted determinization
-    /// (`determinize_hidden_belief`), so it loads all-or-nothing like the
-    /// policy head. Absent means uniform redeals — every checkpoint
-    /// before round 39.
+    /// round 39. Consumed by `determinize_hidden_belief`, so all-or-nothing.
+    /// Absent (pre-round-39): uniform redeals.
     opp_w: Option<Tensor2>, // [vocab, h2]
     opp_b: Vec<f32>,        // [vocab] (empty when absent)
-    /// Present only in weights trained with the interaction layer. Absent
-    /// means the pure deep-sets net, which stays loadable unchanged — the
-    /// two architectures are distinguished by which tensors the file
-    /// carries, not by a flag the caller has to remember.
+    /// Present only in weights trained with the interaction layer; absent
+    /// means pure deep-sets. The file's tensors pick the architecture, not
+    /// a caller flag.
     attn: Option<Attn>,
     /// Present only in weights trained with the transformer stack
     /// (`tblocks.*`). Mutually exclusive with [`Self::attn`] — a file
@@ -1301,11 +1170,9 @@ struct Attn {
 
 /// Pre-pool transformer stack: the "proper blocks" successor to [`Attn`].
 ///
-/// The group tag is added *into* the residual stream once at stack entry
-/// (like a positional embedding) rather than per-layer outside the
-/// residual — with normed residual blocks there is no clean "scores only"
-/// place for it, and zone identity in the pooled representation is
-/// harmless because pooling is per-group anyway.
+/// The group tag is added into the residual stream once at stack entry
+/// (like a positional embedding): normed residual blocks have no clean
+/// "scores only" place for it, and pooling is per-group anyway.
 #[derive(Debug, Clone)]
 struct TStack {
     /// Learned per-group tag, `[NUM_GROUPS, obj_hidden]`.
@@ -1549,10 +1416,8 @@ impl PlayNet {
             tstack: None,
         };
 
-        // The policy head is all-or-nothing for the same reason the
-        // attention tensors are: it is consumed at inference (search
-        // priors), so a file carrying half of it is a trainer/inference
-        // mismatch, not an ignorable extra.
+        // The policy head is consumed at inference (search priors), so half
+        // of it is a trainer/inference mismatch: all-or-nothing.
         let policy_present = ["head_policy.weight", "head_policy.bias"]
             .iter()
             .filter(|n| st.tensor(n).is_ok())
@@ -1658,11 +1523,8 @@ impl PlayNet {
             }
         };
 
-        // The interaction layer is all-or-nothing. A file carrying some of
-        // its tensors is a trainer/inference mismatch, and silently
-        // ignoring the partial set would run the wrong architecture on
-        // weights trained for another — the exact class of bug the tensor
-        // naming contract exists to prevent.
+        // The interaction layer is all-or-nothing: ignoring a partial set
+        // would run the wrong architecture on the weights.
         const ATTN_NAMES: [&str; 9] = [
             "attn.group.weight",
             "attn.q.weight",
@@ -1699,10 +1561,9 @@ impl PlayNet {
             ));
         };
 
-        // Transformer stack, likewise all-or-nothing per block and across
-        // the stack: blocks are counted while `tblocks.{i}.ln1.weight`
-        // exists, and each counted block must then carry its full tensor
-        // set — a gap means a trainer/inference mismatch.
+        // Transformer stack, all-or-nothing per block and across the stack:
+        // blocks are counted while `tblocks.{i}.ln1.weight` exists and each
+        // must carry its full tensor set.
         let getd = |name: &str| get_tensor_dyn(&st, "tblocks.*", name);
         let n_blocks = count_tblocks(&st);
         let has_group = st.tensor("tblocks.group.weight").is_ok();
@@ -1728,10 +1589,8 @@ impl PlayNet {
             net
         };
 
-        // Older-generation checkpoints are widened with zero columns
-        // rather than rejected — see [`LEGACY_FEATS`]. Both pads or
-        // neither: a file matching one legacy count but not the other
-        // falls through to the shape check and fails loudly.
+        // Widen older-generation checkpoints (see [`LEGACY_FEATS`]). Both
+        // pads or neither: matching only one count fails the shape check.
         let mut net = net;
         for (obj, global) in LEGACY_FEATS {
             if net.obj_w.cols == net.emb.cols + obj
@@ -1894,17 +1753,12 @@ impl PlayNet {
     /// Multi-head self-attention over all objects, in place, with a
     /// residual and a relu.
     ///
-    /// Every object attends to every other regardless of zone, which is
-    /// the entire point: this is the first place in the network where a
-    /// creature on my battlefield can be compared against a creature on
-    /// theirs. A learned per-group tag is added to the input so a query
-    /// can tell whose object it is looking at.
+    /// Every object attends to every other regardless of zone; a learned
+    /// per-group tag on the input tells a query whose object it sees.
     ///
-    /// No layer norm and a single layer, deliberately. This is an
-    /// experiment testing whether interaction modelling buys anything at
-    /// all; the full pre-norm stack that pays that parity cost is
-    /// [`Self::transform`] (`tblocks.*`), and old `attn.*` checkpoints
-    /// keep loading through this path unchanged.
+    /// Deliberately one layer, no layer norm. The full pre-norm stack is
+    /// [`Self::transform`] (`tblocks.*`); old `attn.*` checkpoints keep
+    /// loading through this path unchanged.
     #[inline(always)]
     fn attend(&self, hs: &mut [f32], owner: &[usize], h_obj: usize) {
         let Some(a) = &self.attn else { return };
@@ -1985,9 +1839,8 @@ impl PlayNet {
     /// `None` when the net carries no policy head (every pre-round-37
     /// checkpoint), so callers fall back rather than reading garbage.
     ///
-    /// A logit, not a probability: one state's policy score means nothing
-    /// alone — the policy is the softmax over a decision's candidate set,
-    /// and that normalisation belongs to the caller who has the set.
+    /// A logit, not a probability: the softmax over a decision's
+    /// candidates belongs to the caller who has the set.
     pub fn forward_policy(&self, s: &EncodedState) -> Option<f32> {
         let w = self.policy_w.as_ref()?;
         let t2 = self.trunk_out(s);
@@ -2079,13 +1932,11 @@ impl PlayNet {
         Some(out)
     }
 
-    /// The architecture the file actually carries — `(emb_dim,
-    /// obj_hidden, h1, h2, attn, transformer blocks)` — for callers
-    /// that must rebuild this net in another framework (the batched
-    /// eval server). The shape follows the *file*, never the caller's
-    /// run flags: a wide-learner run piloted by a standard-width
-    /// champion is the normal case, and building the server at the
-    /// run's width fails the load (round 45's first abort).
+    /// The architecture the file carries — `(emb_dim, obj_hidden, h1, h2,
+    /// attn, transformer blocks)` — for callers rebuilding this net in
+    /// another framework (the batched eval server). Follow the file, never
+    /// the run's flags: a wide-learner run piloted by a standard-width
+    /// champion is normal (round 45's first abort).
     pub fn arch(&self) -> (usize, usize, usize, usize, bool, usize) {
         (
             self.emb.cols,
@@ -2136,9 +1987,8 @@ impl PlayNet {
         let mut trunk_in = vec![0.0f32; self.trunk1_w.cols];
 
         // Encode every object, let them interact (no-op without the
-        // attention tensors), then pool per group exactly as before —
-        // pooling still supplies the fixed-width trunk input, it just
-        // pools representations that have already seen the whole board.
+        // attention tensors), then pool per group into the fixed-width
+        // trunk input.
         let (mut hs, owner) = self.encode_objects(s, h_obj);
         self.attend(&mut hs, &owner, h_obj);
         self.transform(&mut hs, &owner, h_obj);
@@ -2190,20 +2040,16 @@ impl PlayNet {
 
 /// Anything that can turn an encoded state into a win probability.
 ///
-/// The engine's evaluation registry (`net_eval`) stores these rather than
-/// [`PlayNet`] directly so the *training harness* can substitute a batched
-/// GPU evaluator (encode on the game thread, ship the state to a collator,
-/// block on the reply) without the engine growing an ML dependency. Takes
-/// the state by value because a remote implementation has to move it into
-/// a queue; the local one just forwards.
+/// The engine's registry (`net_eval`) stores these rather than [`PlayNet`]
+/// so the training harness can substitute a batched GPU evaluator without
+/// the engine growing an ML dependency. Takes the state by value because a
+/// remote implementation moves it into a queue.
 pub trait NetEvaluator: Send + Sync {
     /// Win probability for the seat the state was encoded for, in [0, 1].
     fn eval(&self, s: EncodedState) -> f32;
 
-    /// The policy head's logit for the state, or `None` when the
-    /// evaluator's net carries no policy head. Default `None` so
-    /// evaluators that only serve win probabilities stay valid
-    /// implementations — the search falls back to its heuristic priors.
+    /// The policy head's logit for the state, or `None` without a policy
+    /// head (the default; the search falls back to heuristic priors).
     fn eval_policy(&self, s: EncodedState) -> Option<f32> {
         let _ = s;
         None
@@ -2230,9 +2076,8 @@ pub trait NetEvaluator: Send + Sync {
         false
     }
 
-    /// Whether [`eval_policy`](Self::eval_policy) can answer at all, so a
-    /// profile can report which prior it will actually run with instead
-    /// of discovering mid-game.
+    /// Whether [`eval_policy`](Self::eval_policy) can answer, so a profile
+    /// can report its prior up front.
     fn has_policy(&self) -> bool {
         false
     }
@@ -2304,9 +2149,8 @@ pub fn to_safetensors(tensors: &[(&str, Vec<usize>, Vec<f32>)]) -> Vec<u8> {
 }
 
 /// f32 slice → little-endian bytes without a bytemuck dependency. Only
-/// correct on little-endian targets, which is everything this project runs
-/// on (x86-64, aarch64, wasm32); a big-endian build fails to compile rather
-/// than silently writing byte-swapped weights.
+/// correct on little-endian targets (all of ours); a big-endian build fails
+/// to compile rather than writing byte-swapped weights.
 #[cfg(not(target_endian = "little"))]
 compile_error!("crabomination_nn's weight serialisation assumes a little-endian target");
 
@@ -2408,9 +2252,8 @@ mod tests {
     /// already make, and a card the net never saw embeds as the unknown
     /// slot does — zeros.
     ///
-    /// This is the loadability half of the defect that killed the committed
-    /// deck nets. The soundness half lives in `server::vocab_snapshot`: a
-    /// row only keeps its meaning because a card name owns a frozen index.
+    /// Loadability half of the defect that killed the old deck nets; the
+    /// soundness half is `server::vocab_snapshot`'s frozen indices.
     #[test]
     fn padding_the_vocabulary_leaves_the_old_rows_alone() {
         let h_obj = 1usize;
@@ -2526,10 +2369,8 @@ mod tests {
     }
 
     /// The policy head reads the same trunk as the win head and answers
-    /// only when its tensors are present. A file carrying half the head
-    /// is rejected: unlike the training-only aux heads, this one is
-    /// consumed at inference, so a partial set is a mismatch and not an
-    /// ignorable extra.
+    /// only when its tensors are present; half a head is rejected (it is
+    /// consumed at inference, unlike the aux heads).
     #[test]
     fn policy_head_loads_all_or_nothing_and_shares_the_trunk() {
         let h_obj = 1usize;
@@ -2585,13 +2426,10 @@ mod tests {
         assert!(PlayNet::load(&to_safetensors(&wrong)).is_err(), "mis-sized head must not load");
     }
 
-    /// A checkpoint from *any* earlier encoder generation — weight
-    /// matrices sized to that generation's feature counts — loads by
-    /// zero-padding, and the padded net cannot see the features added
-    /// since: a state with every newer slot lit scores exactly what the
-    /// legacy arithmetic says. This is what keeps the champion and the
-    /// golden traces fixed across an encoder bump, and it has to hold
-    /// for every generation in the table, not just the newest one.
+    /// A checkpoint from every earlier encoder generation loads by
+    /// zero-padding and cannot see newer features: a state with every
+    /// newer slot lit scores exactly the legacy arithmetic. Keeps the
+    /// champion and golden traces fixed across encoder bumps.
     #[test]
     fn legacy_checkpoints_load_zero_padded() {
         for (legacy_obj, legacy_global) in LEGACY_FEATS {

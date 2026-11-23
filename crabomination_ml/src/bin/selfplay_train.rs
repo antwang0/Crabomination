@@ -1,18 +1,14 @@
-//! selfplay_train — the concurrent train-and-play loop for the SOS sealed
-//! value net.
+//! selfplay_train — the concurrent train-and-play loop for the sealed value
+//! net.
 //!
-//! KataGo-shaped, single process (see FEATURE_ROADMAP Tier 13): actor
-//! threads play sealed self-play games and push encoded rows into a shared
-//! sliding window while the learner thread trains from it, throttled by a
-//! sample-reuse cap so it can never grind the recent window into overfit.
-//! Checkpoints land in `--out` as `latest.safetensors` (atomic rename), and
-//! a `stats.jsonl` line per checkpoint records the loss curve.
+//! KataGo-shaped, single process (FEATURE_ROADMAP Tier 13): actor threads
+//! play sealed self-play games and push encoded rows into a shared sliding
+//! window; the learner trains from it, throttled by a sample-reuse cap so it
+//! can't overfit the recent window. Checkpoints land in `--out` as
+//! `latest.safetensors` (atomic rename), one `stats.jsonl` line each.
 //!
-//! Bootstrap phase: actors play with the heuristic default bot and the
-//! heuristic sealed builder — the net is a passenger until it can pass a
-//! gate (the gatekeeper and the net-eval bot profile are the next step;
-//! nothing here reads the net back yet).
-//!
+//! Without `--use-best` actors play the heuristic default bot and sealed
+//! builder (the bootstrap phase); with it they play the gate-passed net.
 //! ```text
 //! selfplay_train [--actors N] [--games N] [--steps N] [--batch N]
 //!                [--lr F] [--reuse F] [--steps-per-game F]
@@ -45,19 +41,15 @@
 //! with the same `--out` resumes from `latest.safetensors` if the shapes
 //! still match.
 //!
-//! Measured on the first smoke run (22 actors, debug build, defaults):
-//! ~10 SOS sealed games/s (~36 rows each) with the learner sharing the
-//! box, loss EMA 0.371 → 0.216 over 600 steps of batch 256, and the
-//! reuse throttle engaging within 3 % of the 6× cap. Generation is the
-//! bottleneck by design — the learner spends most wall clock waiting,
-//! which is the sample-reuse cap doing its job.
+//! First smoke run (22 actors, debug build, defaults): ~10 SOS sealed
+//! games/s (~36 rows each), and the reuse throttle engaged within 3 % of the
+//! 6× cap. Generation is the bottleneck by design.
 
-// Allocator swap, on by default. The simulator spends ~16 % of its
-// instructions in malloc/free/memcpy and each actor is one thread playing one
-// game, so system-malloc contention grows with the actor count: measured
-// +18-31 % throughput across 4-24 actors for a flat ~1.5-1.7x RSS (PERF.md).
-// `--no-default-features` restores the system allocator. A
-// `#[global_allocator]` is a whole-program choice, so it lives in the binary.
+// Allocator swap, on by default: the simulator spends ~16 % of its
+// instructions in malloc/free/memcpy, and system-malloc contention grows with
+// the actor count (measured +18-31 % throughput at 4-24 actors for ~1.5-1.7x
+// RSS, PERF.md). `--no-default-features` restores the system allocator; a
+// `#[global_allocator]` is whole-program, so it lives in the binary.
 #[cfg(feature = "mimalloc")]
 #[global_allocator]
 static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
@@ -86,61 +78,41 @@ struct Args {
     batch: usize,
     lr: f64,
     reuse: f64,
-    /// Learner steps per generated game, held exactly: the learner waits
-    /// when it runs ahead of the actors and the actors wait when they run
-    /// ahead of it (within a few games either way). 0 (default) leaves the
-    /// ratio to whichever side is faster, as every run before round 86 did.
-    ///
-    /// Round 84 measured why that matters. The learner is the bottleneck
-    /// (it never slept, and reuse stayed under a tenth of the 6x cap), so
-    /// the ratio was set by how fast the *actors* happened to run: r82's
-    /// four FRA seeds read 0.274 / 0.274 / 0.176 / 0.173 steps a game
-    /// because two of them shared the box with another job, and strength
-    /// tracked the ratio in both r82 and r84 — about as large an effect as
-    /// any recipe change measured. A pinned ratio makes the recipe, not
-    /// the box, decide it.
+    /// Learner steps per generated game, held exactly (whichever side runs
+    /// ahead waits, within a few games). 0 (default) leaves the ratio to the
+    /// faster side, as before round 86. Round 84: unpinned, the ratio follows
+    /// actor speed (r82's FRA seeds read 0.17-0.27 on a shared box) and
+    /// strength tracked it as strongly as any recipe change.
     steps_per_game: f64,
-    /// TD(lambda) mixing for the win target. 1.0 (default) is the
-    /// historical pure Monte Carlo label — the row's own game result —
-    /// so every prior gate round is reproducible. Below 1.0 the target
-    /// bootstraps through the net's estimate of the next snapshot, which
-    /// trades the variance of a twenty-turn outcome for the bias of the
     /// Fit the win head with cross-entropy instead of MSE
-    /// (`crabomination_ml::binary_cross_entropy`). MSE through a sigmoid
-    /// vanishes the gradient exactly where the net is confidently wrong;
-    /// BCE does not. Off by default so the control arm is the historical
-    /// behaviour. NOTE: with this on, `loss_win` in stats.jsonl is a
-    /// log-loss and is not comparable to an MSE run's number -- the
-    /// checkpoint's `train_raw` / `val_win` stay MSE either way and are
-    /// what to compare across arms.
+    /// (`crabomination_ml::binary_cross_entropy`): MSE through a sigmoid
+    /// vanishes the gradient where the net is confidently wrong. Off by
+    /// default (the control). NOTE: with it on, `loss_win` in stats.jsonl is
+    /// a log-loss, not comparable to an MSE run's; compare arms on the
+    /// checkpoint's `train_raw` / `val_win`, which stay MSE.
     bce: bool,
-    /// Record the pilot's decisions (candidate successor states + the
-    /// pick) and train the win head to rank them. See
-    /// `crabomination::server::decision_capture` and
-    /// `Trainer::train_policy_step`. Off by default; recording encodes
-    /// once per candidate rather than once per position, so it is not
-    /// free.
+    /// Record the pilot's decisions (candidate successor states + the pick)
+    /// and train the win head to rank them
+    /// (`crabomination::server::decision_capture`,
+    /// `Trainer::train_policy_step`). Off by default: it encodes once per
+    /// candidate, not once per position.
     record_decisions: bool,
-    /// Record EVERY decision through the move list instead of the pickers'
-    /// shortlists (`decision_capture::set_menu_only`): one row over the move
-    /// list per decision, one per step for a combat declaration, each with
-    /// its decision kind — the imitation stream for the policy pilot
-    /// (`server::policy_pilot`). Implies `--record-decisions`.
+    /// Record EVERY decision over the move list instead of the pickers'
+    /// shortlists (`decision_capture::set_menu_only`): one row per decision
+    /// (per step for a combat declaration), tagged with its kind — the
+    /// imitation stream for `server::policy_pilot`. Implies `--record-decisions`.
     menu_decisions: bool,
-    /// `--menu-search mc`: phase 5's actors — the MCTS actors search these
-    /// windows over the complete move list (`MctsConfig::menu_windows`;
-    /// letters m(ain) i(nstant) c(ombat) p(rompt)) on the priors of
-    /// `--use-policy`, drawing arms by Gumbel-top-k (`menu_sample`), and
-    /// every searched decision records the search's improved policy as its
-    /// policy target; the decisions the search leaves to the heuristic are
-    /// recorded as imitation rows, as under `--menu-decisions` (implied).
-    /// Needs `--mcts-actors`.
+    /// `--menu-search mc`: phase-5 actors. MCTS searches these windows over the
+    /// full move list (`MctsConfig::menu_windows`; letters m(ain) i(nstant)
+    /// c(ombat) p(rompt)) on `--use-policy`'s priors, drawing arms by
+    /// Gumbel-top-k (`menu_sample`). Searched decisions record the improved
+    /// policy as target; the rest record imitation rows as under
+    /// `--menu-decisions` (implied). Needs `--mcts-actors`.
     menu_search: u8,
     /// Most decision rows the learner keeps (`--decision-cap`, default
-    /// 200 000). Each holds every candidate's encoded state (and the root),
-    /// so this is most of the trainer's memory: a 6,000-game FRA search run
-    /// peaked at 20.6 GB at the default and was OOM-killed beside the user's
-    /// own jobs (2026-11-03).
+    /// 200 000). Each holds every candidate's encoded state, so this is most of
+    /// the trainer's memory (a 6,000-game FRA search run peaked at 20.6 GB at
+    /// the default and was OOM-killed, 2026-11-03).
     decision_cap: usize,
     /// The policy-headed net giving `--menu-search` its priors, loaded into
     /// the candidate slot (CPU forwards; the value net stays `--use-best`).
@@ -153,64 +125,51 @@ struct Args {
     /// move involves. Implies `--policy-kinds`. On `--init-from` a file
     /// without the head loads whole and the head starts at zero.
     policy_action: bool,
-    /// `--init-from W.safetensors`: a fresh run's learner takes W's shape
-    /// (widths, attention, belief head) plus the policy head (and the kind
-    /// table under `--policy-kinds`), every tensor W carries, and the policy
-    /// head seeded from the win head — the warm start `--pg` uses, for an
-    /// imitation run that should not relearn the trunk from noise. Ignored
-    /// on resume.
+    /// `--init-from W.safetensors`: a fresh run's learner takes W's shape and
+    /// every tensor W carries, plus the policy head (and kind table under
+    /// `--policy-kinds`) seeded from the win head — `--pg`'s warm start, so an
+    /// imitation run needn't relearn the trunk. Ignored on resume.
     init_from: Option<PathBuf>,
-    /// Learner steps between policy steps when `--record-decisions` is
-    /// on. 1 = a policy step every value step.
-    ///
-    /// **0 means record and measure but do not train** — the control arm
-    /// this experiment needs. `val_policy` (held-out top-1 agreement) is
-    /// meaningless without a baseline from a net that never saw a policy
-    /// gradient, and an arm that simply omits `--record-decisions`
-    /// cannot supply one: it reports no `val_policy` at all. So the
-    /// honest control records the same decisions, scores the same
-    /// holdout, and trains on none of it.
+    /// Learner steps between policy steps under `--record-decisions`; 1 = a
+    /// policy step every value step. 0 = record and score `val_policy` but
+    /// never train: the control arm (a run without `--record-decisions`
+    /// reports no `val_policy` baseline at all).
     policy_every: u64,
     /// Softmax temperature for the distilled policy target. Arm values
     /// are win probabilities, so their spread is small and this is what
     /// decides sharp-pick vs soft-ranking. Ignored for Gumbel captures,
     /// whose improved-policy logits carry their own scale.
     policy_temp: f32,
-    /// Build the separate policy head (`head_policy.*`, round 37) and
-    /// aim the ranking objective at it instead of at the win head. The
-    /// head is exported and the engine consumes it as the Gumbel
-    /// search's prior. Off is the control: the round-33 shared-win-head
-    /// path, bit-reachable. Only does anything under
-    /// `--record-decisions` with `--policy-every` > 0.
+    /// Build the separate policy head (`head_policy.*`, round 37) and aim the
+    /// ranking objective at it instead of the win head; it is exported as the
+    /// Gumbel search's prior. Off = the round-33 shared-win-head path. Only
+    /// acts under `--record-decisions` with `--policy-every` > 0.
     policy_head: bool,
-    /// Pilot the MCTS actors with the Gumbel root search (Sequential
-    /// Halving over policy-head priors) instead of UCB1 — the gen-1
-    /// loop, once a policy-headed `--use-best` exists to pilot with. On
-    /// a headless pilot the search falls back to heuristic-score priors
-    /// and says so at startup. Requires `--mcts-actors`.
+    /// Pilot the MCTS actors with the Gumbel root search (Sequential Halving
+    /// over policy-head priors) instead of UCB1. A headless pilot falls back
+    /// to heuristic-score priors and says so at startup. Needs `--mcts-actors`.
     mcts_gumbel: bool,
-    /// Which holdout metric publishes `best.safetensors`: false = AUC
-    /// (the historical rule), true (`--best-metric policy`) = held-out
-    /// top-1 policy agreement. Exists because round 34 measured AUC and
-    /// ranking moving in *opposite* directions on one seed — selecting a
-    /// distillation run's artifact on AUC can publish its worst ranking
-    /// checkpoint while the run reports success.
+    /// Which holdout metric publishes `best.safetensors`: false = AUC, true
+    /// (`--best-metric policy`) = held-out top-1 policy agreement. Round 34 saw
+    /// AUC and ranking move in opposite directions, so picking a distillation
+    /// run's artifact on AUC can publish its worst-ranking checkpoint.
     best_policy: bool,
-    /// Build and train the opponent-hand belief head (`head_opp.*`,
-    /// round 39): per-name hold probabilities fit against the recorded
-    /// truth with multi-label BCE at the auxiliary weight. Engine-
-    /// consumed (belief-weighted determinization), so exports carry it.
-    /// Off is the control.
+    /// Build and train the opponent-hand belief head (`head_opp.*`, round
+    /// 39): per-name hold probabilities, multi-label BCE at the auxiliary
+    /// weight. The engine consumes it (belief-weighted determinization), so
+    /// exports carry it. Off is the control.
     opp_head: bool,
-    /// Weight of the search-value regression inside the policy step
-    /// (round 39, Reanalyze-lite): the win head pulled toward the
-    /// search's per-arm mean rewards on successor states, MSE weighted
-    /// by rollout counts. 0 (default) = off, the historical control.
-    /// UCB1 captures only — Gumbel improved-policy logits are not win
-    /// probabilities. Needs `--record-decisions` and MCTS actors to
-    /// have anything to regress against.
+    /// Weight of the search-value regression in the policy step (round 39,
+    /// Reanalyze-lite): the win head pulled toward the search's per-arm mean
+    /// rewards on successors, weighted by rollout counts. 0 (default) = off.
+    /// UCB1 captures only (Gumbel logits aren't win probabilities); needs
+    /// `--record-decisions` and MCTS actors.
     search_value_weight: f32,
-    /// current net (see `SampleWindow::relabel_lambda`).
+    /// TD(lambda) mixing for the win target. 1.0 (default) is the pure Monte
+    /// Carlo label (the row's own game result), reproducing every prior gate
+    /// round; below 1.0 the target bootstraps through the net's estimate of
+    /// the next snapshot, trading outcome variance for the current net's bias
+    /// (see `SampleWindow::relabel_lambda`).
     lambda: f32,
     /// Learner steps between recomputing the lambda-returns. They are
     /// functions of the net, so they drift as it trains; recomputing
@@ -225,18 +184,14 @@ struct Args {
     /// this is what closes the self-improvement loop. Unset, actors play
     /// the heuristic default (the bootstrap phase).
     use_best: Option<PathBuf>,
-    /// Override the heuristic actors' `determinize` (round 28c). The
-    /// r25 adoption flipped the *default* pilot to honest sims, which
-    /// silently changed the training data distribution too; 0 restores
-    /// the pre-adoption generator for attribution.
+    /// Override the heuristic actors' `determinize` (round 28c): r25's switch
+    /// of the default pilot to honest sims also changed the training data; 0
+    /// restores the pre-adoption generator for attribution.
     actor_det: Option<u8>,
-    /// Window-passes of tail training after the actors finish (round
-    /// 28d). The old fixed allowance (reuse/2 passes) assumed the
-    /// learner streamed most of its budget during generation; a faster
-    /// container halved the streaming phase and the allowance silently
-    /// became the binding stop — runs died at ~8k steps mid-improvement
-    /// with stop-after-stale never firing. Raise it and let stale be
-    /// the stopper it was built to be.
+    /// Window-passes of tail training after the actors finish (round 28d). The
+    /// old fixed reuse/2 allowance became the binding stop on a faster box
+    /// (runs died at ~8k steps mid-improvement); keep it high and let
+    /// `--stop-after-stale` stop the run.
     tail_reuse: f64,
     /// Serve `--use-best` evals from a batched device-side collator
     /// instead of per-thread CPU forwards. Pair with a large `--actors`
@@ -277,18 +232,12 @@ struct Args {
     /// net involved.
     gate_builder_v3: Option<usize>,
     /// Fraction of trajectories held out of training and scored at every
-    /// checkpoint. 0 disables.
+    /// checkpoint; 0 disables. Training loss here measures memorisation (at
+    /// lambda=1: 0.017 window MSE against an out-of-sample log-loss of 1.12,
+    /// worse than predicting 0.5), and running without this cost six gate rounds.
     ///
-    /// This exists because its absence cost six gate rounds. `stats.jsonl`
-    /// reported training loss only, and training loss here is a
-    /// memorisation reading: at lambda=1 the net hit 0.017 MSE on the
-    /// window while its out-of-sample log-loss was 1.12 — *worse than
-    /// predicting 0.5 every time*. Nothing in the loop could see that, so
-    /// the overfit was diagnosed only after thousands of gate games.
-    ///
-    /// Split by trajectory, not by row: consecutive snapshots of one game
-    /// are near-duplicates, so a row-level split leaks the answer across
-    /// it and the validation number comes back reassuringly good.
+    /// Split by trajectory, not row: consecutive snapshots of a game are
+    /// near-duplicates, so a row split leaks the answer into validation.
     holdout: f64,
     /// Train the play net with the pre-pool attention layer — the
     /// interaction model. Off is the pooled control.
@@ -317,29 +266,21 @@ struct Args {
     sample_temp: i32,
     /// Sample through this turn, argmax after (AlphaZero-style cutoff).
     sample_turns: u32,
-    /// Pilot actors with net-evaluated MCTS at this many rollouts per
-    /// decision (0 = the plain scored bot). Requires `--use-best`; pair
-    /// with `--gpu-eval` — rollout rewards go through the same slot, so
-    /// they batch on the collator automatically. Generation is ~50–100×
-    /// slower per game than heuristic actors: size `--games` from a
-    /// measured probe, not hope.
+    /// Pilot actors with net-evaluated MCTS at this many rollouts per decision
+    /// (0 = the plain scored bot). Requires `--use-best`; pair with
+    /// `--gpu-eval` so rollout rewards batch on the collator. ~50–100× slower
+    /// per game than heuristic actors: size `--games` from a measured probe.
     mcts_actors: u32,
-    /// Mixed actor fleet (round 37 — the KataGo playout-cap-
-    /// randomization idea translated to this loop's shape): only the
-    /// first N actor threads pilot with MCTS; the rest play the plain
-    /// net pilot and record no decisions (thread-scoped capture
-    /// override). 0 (default) = every actor is MCTS when
-    /// `--mcts-actors` is set, the historical all-or-nothing.
+    /// Mixed actor fleet (round 37, KataGo playout-cap randomization): only
+    /// the first N actor threads pilot with MCTS; the rest play the plain net
+    /// pilot and record no decisions. 0 (default) = every actor is MCTS when
+    /// `--mcts-actors` is set.
     ///
-    /// The point is that the two data streams have different budgets:
-    /// policy targets need *searched* decisions (~1.5 games/s at
-    /// MCTS-64), while the value window needs volume (~50–100× that) —
-    /// and an all-MCTS fleet leaves the learner asleep ~85 % of wall
-    /// clock on the reuse throttle (r35/r37 measured). A mixed fleet
-    /// feeds both at once. Pair with a large `--actors` (hundreds):
-    /// every fleet member spends most of its time blocked in the
-    /// batched evaluator, so thread count, not core count, is what
-    /// fills batches and cores alike.
+    /// Policy targets need searched decisions (~1.5 games/s at MCTS-64) while
+    /// the value window needs volume (~50–100× that); an all-MCTS fleet left
+    /// the learner asleep ~85 % of wall clock (r35/r37). Pair with hundreds of
+    /// `--actors`: members mostly block in the batched evaluator, so thread
+    /// count is what fills batches and cores.
     mcts_fleet: usize,
     /// Width overrides — the engine reads sizes from the tensor shapes,
     /// so capacity is a flag, not a format change. `--seed-emb` requires
@@ -348,25 +289,17 @@ struct Args {
     obj_hidden: Option<usize>,
     h1: Option<usize>,
     h2: Option<usize>,
-    /// Stop the whole run — actors included — once the holdout AUC has
-    /// gone this many checkpoints without a new best. 0 (default) never
-    /// stops, the historical behaviour.
-    ///
-    /// This is the wall-clock lever: on the round-11 `full` run the
-    /// holdout AUC peaked at step 4 000, 112 s into a 1 538 s run, and
-    /// fell ~0.07 over the rest. `best.safetensors` rescues the artifact
-    /// but not the compute. Needs a holdout to see (`--holdout` > 0);
-    /// checkpoints without a scored holdout don't count either way. Note
-    /// stopping early also truncates *generation*, so the peak is being
-    /// compared against a run with more unique data — A/B against a
-    /// no-stop control before trusting a tuned value.
+    /// Stop the whole run, actors included, once the holdout AUC has gone
+    /// this many checkpoints without a new best; 0 (default) never stops.
+    /// Saves the compute `best.safetensors` can't (round 11: AUC peaked 112 s
+    /// into a 1 538 s run). Needs `--holdout` > 0. Stopping also truncates
+    /// generation, so A/B a tuned value against a no-stop control.
     stop_after_stale: u64,
-    /// `full` (default) recomputes every window row's λ-return each
-    /// relabel tick — bit-identical to all prior runs. `new` relabels
-    /// only rows pushed since the last tick
-    /// (`SampleWindow::relabel_lambda_new_rows`): on the round-11 runs
-    /// the full pass spent 66 M forward-rows against 13.5 M trained and
-    /// held the learner to 1.56× of its 6× reuse cap. Ignored at λ = 1.
+    /// `full` (default) recomputes every window row's λ-return each relabel
+    /// tick, bit-identical to prior runs; `new` relabels only rows pushed
+    /// since the last tick (`SampleWindow::relabel_lambda_new_rows`) — round
+    /// 11's full pass spent 66 M forward-rows against 13.5 M trained. Ignored
+    /// at λ = 1.
     relabel_new: bool,
     /// Round 72: off-policy, advantage-weighted policy-gradient steps on
     /// the decision stream (`Trainer::train_pg_step`). Implies
@@ -401,10 +334,8 @@ struct Args {
     /// leaf, the gate's pilot) instead of the historical `net_eval_det1`,
     /// which chains from a base four adoptions behind the default.
     pilot_net67: bool,
-    /// `--actor-fra-fixes`: actors play with `EvalWeights::with_fra_fixes`
-    /// (round 83: the FRA net retrained on the pilot the client plays FRA
-    /// with; round 82's actors played the default, which misplayed burn,
-    /// counters and 0-power attackers).
+    /// `--actor-fra-fixes`: actors play `EvalWeights::with_fra_fixes` (round
+    /// 83: train the FRA net on the pilot the client plays FRA with).
     actor_fra_fixes: bool,
     /// `--actor-rated-decks`: build training decks with the rated builder
     /// (`selfplay::heuristic_sealed_build_rated`, one noisy sample like the
@@ -412,15 +343,11 @@ struct Args {
     /// so the net learns from the decks the client's opponent now builds
     /// (round 84). Any other pool keeps `heuristic_sealed_build`.
     actor_rated_decks: bool,
-    /// Build training decks with the gate-passed deck net as the judge
-    /// (best-of-32 over the same noisy-greedy candidates the heuristic
-    /// picks from) instead of taking the heuristic builder's own pick.
-    ///
-    /// The deck net is the one learned component that has cleared the
-    /// house bar — twice, at 61.7 % and 60.7 % against the static judge —
-    /// so the decks the actors play should be its picks. Until this flag
-    /// the gate result had no consumer: every training game was still
-    /// played with heuristic builds.
+    /// Build training decks with the gate-passed deck net as judge
+    /// (best-of-32 over the heuristic's noisy-greedy candidates) instead of
+    /// the heuristic builder's own pick, so actors play the decks of the one
+    /// learned component that has cleared the house bar (61.7 % / 60.7 % vs
+    /// the static judge).
     use_deck_best: Option<PathBuf>,
     /// Initialize the play net's card embeddings from a trained deck net
     /// rather than from noise. See
@@ -443,13 +370,10 @@ struct Args {
     /// 4,000 actions and drop longer ones as stalls, so `--calibrate-cap
     /// 4000` scores the net on the distribution it was trained on.
     calibrate_cap: usize,
-    /// Diagnostic mode: like `--calibrate`, but scored on the *simulated
-    /// leaves* the searches actually evaluate (captured via
-    /// `server::leaf_capture`) alongside the snapshot positions from the
-    /// same games. This is the direct test of the last standing
-    /// explanation for "better predictor, worse pilot": a net that holds
-    /// its edge on snapshots and loses it on sim leaves would produce
-    /// exactly that pattern while every other instrument reads fine.
+    /// Diagnostic mode: `--calibrate`, also scored on the simulated leaves the
+    /// searches evaluate (`server::leaf_capture`). Tests "better predictor,
+    /// worse pilot": a net that keeps its edge on snapshots but loses it on
+    /// sim leaves would show exactly that.
     calibrate_leaves: Option<usize>,
     /// Diagnostic mode: play N games and report how often each encoder
     /// feature is non-zero in the resulting positions. See
@@ -654,10 +578,8 @@ fn parse_args() -> Args {
             "--pairwise" => a.pairwise = Some(val().parse().expect("--pairwise")),
             "--use-deck-best" => a.use_deck_best = Some(PathBuf::from(val())),
             "--seed-emb" => a.seed_emb = Some(PathBuf::from(val())),
-            // Names are validated once, by the encoder, when the mask is
-            // set in `main` — not here against a second copy of the list.
-            // The copy that used to live here went stale the moment the
-            // v7 blocks landed and would have rejected `hist`.
+            // Names are validated once, by the encoder, when `main` sets the
+            // mask; a second copy here went stale when the v7 blocks landed.
             "--ablate" => {
                 a.ablate = val().split(',').map(|s| s.trim().to_string()).collect();
             }
@@ -785,12 +707,11 @@ fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
     cfg
 }
 
-/// Whether a checkpoint carries the policy head. Drives the model shape
-/// used to reload other runs' artifacts (the frozen pilot, the batch
-/// eval server): candle's `VarMap::load` errors on a var the file lacks
-/// and silently ignores file tensors the model lacks, so the shape has
-/// to follow the *file*, not this run's flags — a `--policy-head` run
-/// piloted by a headless champion-class net is the normal gen-0 case.
+/// The config a checkpoint file was saved with (heads included), for
+/// reloading other runs' artifacts (frozen pilot, batch eval server). candle's
+/// `VarMap::load` errors on a var the file lacks and ignores extra file
+/// tensors, so the shape must follow the file, not this run's flags (a
+/// `--policy-head` run piloted by a headless net is the normal gen-0 case).
 fn file_net_config(
     path: &std::path::Path,
     vocab: usize,
@@ -824,16 +745,14 @@ fn file_net_config(
     })
 }
 
-/// True when this trajectory belongs to the held-out set. A hash of the
-/// id rather than a counter, so actors decide independently and the same
-/// game always lands on the same side of the split.
+/// True when this trajectory belongs to the held-out set. A hash rather than
+/// a counter, so actors decide independently and a game always lands on the
+/// same side.
 ///
-/// **By game, not by seat** (fixed 2026-11-09, ML_NOTES "Research sweep"):
-/// `traj = (seed << 1) | seat`, and hashing the whole id split a game's two
-/// seats independently, so ~95 % of held-out trajectories had their mirror
-/// (the same positions, the opposite label) in training — inflating `val_*`
-/// and steering `best.safetensors` / `--stop-after-stale` toward memorising.
-/// Holdout numbers on either side of the fix are not comparable.
+/// Hashes the game (`traj >> 1`), not the seat (fixed 2026-11-09, ML_NOTES
+/// "Research sweep"): `traj = (seed << 1) | seat`, and a per-seat split put
+/// ~95 % of held-out trajectories' mirrors in training, inflating `val_*`.
+/// Holdout numbers across the fix are not comparable.
 fn is_holdout(traj: u32, frac: f64) -> bool {
     if frac <= 0.0 {
         return false;
@@ -854,9 +773,9 @@ struct Shared {
     /// Small (2 rows/game), so a plain capped deque suffices.
     deck_window: Mutex<std::collections::VecDeque<DeckRow>>,
     /// Recorded decisions: candidate successor states plus the pick.
-    /// Capped deque; policy batches sample it uniformly. Separate from
-    /// `window` because a decision is a different shape and a different
-    /// cadence from a labelled position.
+    /// Recorded decisions (candidate successor states plus the pick); policy
+    /// batches sample this capped deque uniformly. Separate from `window`: a
+    /// decision has a different shape and cadence.
     decisions: Mutex<std::collections::VecDeque<crabomination_ml::DecisionRow>>,
     /// Held-out decisions, never trained on — the policy top-1 metric.
     decisions_val: Mutex<Vec<crabomination_ml::DecisionRow>>,
@@ -871,12 +790,10 @@ struct Shared {
     /// Next self-play game index to claim — also the per-game seed salt.
     next_game: AtomicU64,
     games_done: AtomicU64,
-    /// When the run began, and how far in the last game finished (ms). A
-    /// run bounded by `--steps` outlives its actors, so `games / elapsed`
-    /// divides game-playing by a denominator the *learner* owns: 3,000
-    /// games and 288 k rows read 242.6 games/s at `--steps 1` and 92.6 at
-    /// `--steps 200` for identical actor work. These two make the actor
-    /// window reportable on its own.
+    /// Run start, and how far in the last game finished (ms). A `--steps`-bound
+    /// run outlives its actors, so `games / elapsed` divides by the learner's
+    /// time (identical actor work read 242.6 vs 92.6 games/s at `--steps 1`
+    /// vs `200`); these report the actor window on its own.
     run_start: Instant,
     actor_ms: AtomicU64,
     /// Games played by the MCTS fleet specifically. Decisions are the
@@ -888,16 +805,11 @@ struct Shared {
     /// instead of only its size. `stalls - capped - board - stuck` is the
     /// remainder: a game that ended by the rules but produced no rows.
     stalls_capped: AtomicU64,
-    /// ⚠ **A BOARD CAP IS ITS OWN COUNTER BECAUSE IT COSTS ITS OWN AMOUNT.**
-    /// This used to be summed into `stalls_capped` on the grounds that "for
-    /// training throughput a runaway board and an action cap cost the same
-    /// thing", and the sweep measured that they do not: `cube` 1215 is 951
-    /// Scute Swarms on a 987-permanent board, and on `release-fast` its four
-    /// undecided games cost **~51 s each against ~3.3 ms for a normal one —
-    /// about 15,000 games apiece**. Four games in 3,200 is 0.125 % of the cell
-    /// and 95 % of its wall clock. A rate that small is invisible in
-    /// `games_per_s` and decides it, which is exactly what a counter is for
-    /// (PERF's candidates).
+    /// ⚠ A board cap is its own counter because it costs its own amount (it
+    /// was once summed into `stalls_capped`): on `cube` 1215 (951 Scute
+    /// Swarms, 987 permanents) four undecided games cost ~51 s each against
+    /// ~3.3 ms for a normal one on `release-fast` — 0.125 % of the cell's
+    /// games, 95 % of its wall clock. Invisible in `games_per_s`, yet decides it.
     stalls_board: AtomicU64,
     stalls_stuck: AtomicU64,
     live_actors: AtomicU64,
@@ -924,12 +836,9 @@ fn pin_slack(args: &Args) -> u64 {
 
 const DECK_WINDOW_CAP: usize = 200_000;
 
-/// The one place a stored deck net is read — the play net has `load_slot`,
-/// and this is its counterpart. Four call sites repeated read + load +
-/// check, which is how they came to disagree on the diagnosis.
-///
-/// `why` is what the caller wanted the net for; it goes in the message
-/// when the file is missing.
+/// The one place a stored deck net is read (the play net's `load_slot`
+/// counterpart), so call sites can't disagree on the diagnosis. `why` is what
+/// the caller wanted the net for; it goes in the missing-file message.
 fn load_deck_net(path: &std::path::Path, vocab: &Vocab, why: &str) -> DeckNet {
     let bytes = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e} ({why})", path.display()));
     let mut net = DeckNet::load(&bytes).unwrap_or_else(|e| panic!("{}: {e:?}", path.display()));
@@ -1010,28 +919,15 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         let deck_a = build(&pool_a, salt(3));
         let deck_b = build(&pool_b, salt(4));
         let template = sealed_game_template(&deck_a, &deck_b);
-        // Honest pilots by default, MCTS or not.
-        //
-        // Until now this branch handed plain `net_eval()` -- determinize
-        // 0 -- to every non-MCTS actor, which is the champion regime. So
-        // all 250k champion games were generated by a pilot whose sims
-        // and planner dry-runs read the opponent's real hand and the true
+        // Honest pilots by default, MCTS or not. Non-MCTS actors once got plain
+        // `net_eval()` (determinize 0), whose sims read the opponent's hand and
         // library order, to train a net deployed behind `net_eval_det1()`
-        // (see `lobby.rs`), which cannot. That is a train/deploy
-        // mismatch, and a worse shape than uniform cheating: the training
-        // distribution was composed of positions reached by a policy that
-        // cannot exist at inference time.
-        //
-        // Round 30 gated actor det0 vs det1 across two seeds and found a
-        // null, so this is not expected to move strength. It is not
-        // measured by that gate either -- a mirror ladder is close to
-        // blind here, because both seats cheat identically. `--actor-det`
-        // still forces either value as the control arm.
+        // (`lobby.rs`): a train/deploy mismatch. Round 30 gated det0 vs det1 as
+        // a null (a mirror ladder is nearly blind to it: both seats cheat
+        // alike). `--actor-det` forces either value as the control arm.
         let mut pilot = if args.use_best.is_some() {
-            // `--pilot net67`: the gate's own profile (round 72). The
-            // historical `net_eval_det1` chains from `block_gang_search`,
-            // four adoptions behind `dflt`, so a run that gates as `net67`
-            // would otherwise train on games its pilot never plays.
+            // `--pilot net67`: the gate's own profile (round 72);
+            // `net_eval_det1` chains from a base four adoptions behind `dflt`.
             if args.pilot_net67 { EvalWeights::net_on_default() } else { EvalWeights::net_eval_det1() }
         } else {
             EvalWeights::default()
@@ -1053,25 +949,19 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         if mcts && args.mcts_actors > 0 {
             shared.games_mcts.fetch_add(1, Ordering::Relaxed);
         }
-        // Decisions are captured into a thread-local buffer during the
-        // game, so each actor drains its own. Split by the same
-        // trajectory-hash rule the value rows use — `traj = (seed << 1) |
-        // seat`, hashed — so a seat's decisions land on the same side as
-        // that seat's positions. (Until round 37 this hashed the *game
-        // index* instead, a third key independent of both row hashes, so
-        // a game's positions could train while its decisions validated —
-        // exactly the leak the comment here claimed was impossible.)
+        // Decisions are captured into a thread-local buffer, so each actor
+        // drains its own. Split by the value rows' trajectory hash, so a
+        // seat's decisions land on the same side as its positions (before
+        // round 37 this hashed the game index, leaking one into the other).
         if args.record_decisions {
             let captured = crabomination::server::decision_capture::drain();
             if !captured.is_empty() {
                 let decision_cap = args.decision_cap;
                 const DECISION_VAL_CAP: usize = 4_000;
                 let traj_base = (salt(5) as u32) << 1;
-                // The return is stamped here, where the game's result is in
-                // hand (round 72): 1 for the deciding seat's win, 0 for its
-                // loss, NaN for a game with no winner — and under `--pg` an
-                // unlabelled game's decisions are dropped outright rather
-                // than parked in the deque taking no part.
+                // Stamp the return while the result is in hand (round 72): 1
+                // for the deciding seat's win, 0 for a loss, NaN for no
+                // winner; under `--pg` an unlabelled game's decisions are dropped.
                 let converted: Vec<(bool, crabomination_ml::DecisionRow)> = captured
                     .into_iter()
                     .filter(|_| !(args.pg && rec.winner.is_none()))
@@ -1138,9 +1028,8 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
                 StopReason::ActionCap => {
                     shared.stalls_capped.fetch_add(1, Ordering::Relaxed);
                 }
-                // Counted apart: see `stalls_board`. A runaway board is ~15,000
-                // normal games of wall clock, so its RATE is what decides the
-                // actor's throughput, not the stall total.
+                // Counted apart (see `stalls_board`): its rate, not the stall
+                // total, decides actor throughput.
                 StopReason::BoardCap => {
                     shared.stalls_board.fetch_add(1, Ordering::Relaxed);
                 }
@@ -1192,13 +1081,9 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
 }
 
 /// Wall-clock decomposition of the learner thread between checkpoints,
-/// drained into `stats.jsonl` at each one.
-///
-/// Exists because the imbalance it exposes had to be reverse-engineered:
-/// the round-11 runs reached only 1.56× of their 6× reuse cap, and only
-/// arithmetic on the flags (264 relabel passes × a 250 k window = 66 M
-/// forward-rows vs 13.5 M trained) said the λ-relabel pass was why. Now
-/// the split is a column, not a derivation.
+/// drained into `stats.jsonl` at each one. Added after round 11's runs
+/// reached only 1.56× of the 6× reuse cap and only arithmetic on the flags
+/// showed the λ-relabel pass was why.
 #[derive(Default)]
 struct LearnerTiming {
     sample: std::time::Duration,
@@ -1238,9 +1123,8 @@ fn wilson(wins: u32, n: u32) -> (f64, f64) {
     ((center - half).max(0.0), (center + half).min(1.0))
 }
 
-/// Two-sided 95% Student-t critical value. Exact table through 30
-/// degrees of freedom, then the standard coarse steps — the ±2·se habit
-/// at small n is exactly the overstatement round 41 had to walk back.
+/// Two-sided 95% Student-t critical value: exact through 30 degrees of
+/// freedom, then coarse steps (±2·se at small n overstated round 41).
 fn t95(df: usize) -> f64 {
     const TABLE: [f64; 30] = [
         12.706, 4.303, 3.182, 2.776, 2.571, 2.447, 2.365, 2.306, 2.262, 2.228, 2.201, 2.179,
@@ -1257,13 +1141,11 @@ fn t95(df: usize) -> f64 {
     }
 }
 
-/// Run `per_pool` for pool indices `0..n` across up to `threads` workers,
-/// returning results in pool order. Deck construction is seeded per pool
-/// and matches the sequential loop exactly; game tallies drift by a game
-/// or two per pool because the bots' candidate jitter draws from the
-/// thread RNG by design (measured 30.0% vs 29.9% on a 4,800-game gate) —
-/// statistically equivalent, not bit-identical.
-/// 32 MB worker stacks, same as every other thread that simulates games.
+/// Run `per_pool` for pool indices `0..n` on up to `threads` workers (32 MB
+/// stacks, like every game-simulating thread), results in pool order. Deck
+/// construction matches the sequential loop exactly; game tallies drift a
+/// game or two per pool because the bots' jitter draws from the thread RNG
+/// (30.0% vs 29.9% on a 4,800-game gate) — equivalent, not bit-identical.
 fn parallel_pools<T: Send>(
     n: u64,
     threads: usize,
@@ -1654,20 +1536,15 @@ fn gate_builder_v2(args: &Args, games_per_pool: usize) {
 }
 
 /// Two races against the single-sample v2 build (the training field's
-/// recipe) on the same pools: the v3 shape ranker as a single sample —
-/// the scoring change alone — and best-of-16 v3, the client's sealed
-/// opponent recipe. Same pools, same pilots, same seeds; only the build
-/// differs.
+/// recipe) on the same pools, pilots and seeds: single-sample v3 (the
+/// scoring change alone) and best-of-16 v3 (the client's sealed opponent).
 fn gate_builder_v3(args: &Args, games_per_pool: usize) {
     use crabomination::cube::CardFactory;
     use crabomination::recommend::{Pilot, simulate_match_games_piloted};
-    // Pool count is the axis that buys precision here, not games per
-    // pool: each side fields ONE draw from its builder distribution per
-    // pool, so pool-level spread (measured sd ~15 points at 800
-    // games/pool) dwarfs within-pool sampling noise. Twelve pools at
-    // 800 games each gave a ±6.5-point t-interval; the same 9,600 games
-    // as 192 pools × 50 give ~±2.3. Default matches the v2 gate;
-    // override with CRAB_GATE_POOLS for the wide-flat shape.
+    // Pools, not games per pool, buy precision: each side fields one draw
+    // from its builder per pool, so pool-level spread (sd ~15 points)
+    // dominates. 12 pools × 800 games gave ±6.5 points; 192 × 50 gave ~±2.3.
+    // Default matches the v2 gate; CRAB_GATE_POOLS overrides.
     let pools: u64 = std::env::var("CRAB_GATE_POOLS")
         .ok()
         .and_then(|v| v.parse().ok())
@@ -1720,11 +1597,9 @@ fn gate_builder_v3(args: &Args, games_per_pool: usize) {
             lo * 100.0,
             hi * 100.0
         );
-        // The Wilson interval treats games as independent; they are not —
-        // each pool is one deck-pair matchup and one DRAW from each
-        // builder distribution, and that pool-level spread (sd ~15 pts)
-        // is the dominant noise. Pools are the honest unit; the verdict
-        // reads this interval, not Wilson.
+        // Wilson treats games as independent, but each pool is one draw from
+        // each builder (sd ~15 pts between pools), so the verdict reads this
+        // pool-level t-interval instead.
         let n = pool_pcts.len() as f64;
         let mean = pool_pcts.iter().sum::<f64>() / n.max(1.0);
         let sd = (pool_pcts.iter().map(|p| (p - mean).powi(2)).sum::<f64>()
@@ -1770,9 +1645,8 @@ fn main() {
         }
         eprintln!("encoder ablation: {} switched off", args.ablate.join(", "));
     }
-    // Same rule as the ablation above: every path that encodes — the
-    // diagnostics included — must see the cadence the run being
-    // diagnosed recorded with.
+    // As with the ablation: every encoding path, diagnostics included, must
+    // use the snapshot cadence the diagnosed run recorded with.
     crabomination::selfplay::set_combat_snapshots(args.record_combat);
     eprintln!(
         "snapshot cadence: turn/postcombat/end{}",
@@ -1978,9 +1852,8 @@ fn main() {
             args.pg_batch
         );
     } else if let Some(src) = &args.seed_emb {
-        // Only on a fresh run: resuming already has embeddings that have
-        // been trained on real positions, and overwriting them with the
-        // deck net's would throw that away.
+        // Fresh runs only: on resume this would overwrite embeddings already
+        // trained on real positions.
         trainer.seed_embeddings_from_deck_net(src).expect("--seed-emb");
         eprintln!("card embeddings seeded from the deck net at {}", src.display());
     }
@@ -2061,10 +1934,9 @@ fn main() {
             args.mcts_actors > 0,
             "--mcts-gumbel shapes the MCTS actors' search; it needs --mcts-actors > 0"
         );
-        // Which prior the Gumbel actors will actually run with, said
-        // once at startup rather than discovered from a null result: a
-        // headless pilot silently falls back to heuristic-score priors,
-        // which is a legitimate control arm but a different experiment.
+        // Say once at startup which prior the Gumbel actors run with: a
+        // headless pilot silently falls back to heuristic-score priors (a
+        // valid control, but a different experiment).
         let learned = crabomination::server::net_eval::slot_has_policy(
             crabomination::server::net_eval::SLOT_BEST,
         );
@@ -2149,12 +2021,10 @@ fn main() {
                             args_r.sample_turns,
                         )));
                     }
-                    // In a mixed fleet only the search pilots feed the
-                    // decision stream: a value actor's picks are one-hot
-                    // imitation targets that would bury the distillation
-                    // targets at ~50-100x the games rate. Thread-local,
-                    // like the sampling config above, so nothing outside
-                    // this thread is affected.
+                    // In a mixed fleet only search pilots feed the decision
+                    // stream: value actors' one-hot imitation picks would bury
+                    // the distillation targets at ~50-100x the games rate.
+                    // Thread-local, like the sampling config above.
                     if fleet_split {
                         crabomination::server::decision_capture::set_thread_enabled(mcts_thread);
                     }
@@ -2176,10 +2046,10 @@ fn main() {
         // Scored checkpoints since the last new best — `--stop-after-stale`.
         let mut stale = 0u64;
         let mut timing = LearnerTiming::default();
-        // (samples consumed when the actors finished, tail allowance).
         let mut policy_ema = f32::NAN;
         let mut policy_loss_ema = f32::NAN;
         let mut policy_sv_ema = f32::NAN;
+        // (samples consumed when the actors finished, tail allowance).
         let mut tail_budget = None::<(u64, u64)>;
         let stats_path = args.out.join("stats.jsonl");
         let mut prev_interval = Interval::default();
@@ -2245,14 +2115,10 @@ fn main() {
             };
             let unit = if pg_only { args.pg_batch } else { args.batch } as u64;
             let actors_live = shared.live_actors.load(Ordering::Relaxed) > 0;
-            // Once generation ends, the global reuse budget stops meaning
-            // "≤ reuse visits per row": every further sample lands on the
-            // final window, concentrating budget/window_len visits there
-            // (measured ~14× on the first release run, where generation
-            // outpaced the single-threaded learner 5:1). Grant the tail
-            // half the nominal reuse on the window it has — the rows
-            // already absorbed roughly the other half while streaming —
-            // and stop.
+            // Once generation ends, the global reuse budget would pile every
+            // further sample onto the final window (~14× visits measured on
+            // the first release run). Grant the tail `--tail-reuse` passes
+            // over the window it has, then stop.
             if !actors_live && tail_budget.is_none() {
                 let wlen = if pg_only {
                     shared.decisions.lock().unwrap().len() as u64
@@ -2289,11 +2155,9 @@ fn main() {
                 shared.pin_origin.store(games_done, Ordering::Relaxed);
             }
             if !pg_only {
-                // Refresh the λ-returns periodically: they are computed
-                // through the net, so they go stale as it learns. Every
-                // `relabel_every` steps is a compromise between staleness and
-                // the cost of a forward pass over the whole window — with
-                // λ = 1 the targets never change, so this is skipped entirely.
+                // Refresh the λ-returns every `relabel_every` steps: computed
+                // through the net, they go stale as it learns, and each
+                // refresh is a forward pass over the window. Skipped at λ = 1.
                 if args.lambda < 1.0
                     && step.is_multiple_of(args.relabel_every)
                     && shared.window.lock().unwrap().len() as u64 >= args.min_window
@@ -2331,10 +2195,8 @@ fn main() {
                 }
 
                 // Policy steps ride alongside the value steps: the same net,
-                // taught to rank a decision's candidate successors the way
-                // the pilot ranked them. Sampled from a separate window
-                // because a decision is a different shape and cadence from a
-                // labelled position.
+                // taught to rank a decision's candidate successors as the
+                // pilot did, sampled from the separate decision window.
                 if args.record_decisions
                     && args.policy_every > 0
                     && step.is_multiple_of(args.policy_every)
@@ -2451,9 +2313,8 @@ fn main() {
                 }
             }
 
-            // The deck net rides along at a quarter cadence — its stream
-            // is 2 rows/game, so training it every step would just churn
-            // the same rows.
+            // The deck net trains at a quarter cadence: its stream is only
+            // 2 rows/game.
             if !pg_only && step.is_multiple_of(4) {
                 let t0 = Instant::now();
                 let rows: Vec<DeckRow> = {
@@ -2547,10 +2408,8 @@ fn main() {
 
     let secs = start.elapsed().as_secs_f64();
     let games = shared.games_done.load(Ordering::Relaxed);
-    // Two rates, because they answer different questions and only the
-    // second is the simulator's. `--steps` can outlast the actors: the run
-    // then keeps ticking with nothing playing, and games/elapsed reports a
-    // number three times under the actors' own. The gap is the learner.
+    // Two rates: `--steps` can outlast the actors, leaving games/elapsed
+    // ~3x under the actors' own rate. The gap is the learner.
     let actor_s = shared.actor_ms.load(Ordering::Relaxed) as f64 / 1000.0;
     eprintln!(
         "done: {games} games ({:.1}/s), {} rows, {} stalls, {:.0}s",
@@ -2578,11 +2437,9 @@ fn main() {
     }
 }
 
-/// Counters as of the previous checkpoint, so every stats line can report
-/// the rate over *that interval* and not just the run average. A run whose
-/// throughput decays — window growth, allocator churn, actors starving on
-/// the learner's lock — shows it here and nowhere else: the cumulative
-/// rate is dominated by however the run started.
+/// Counters as of the previous checkpoint, so each stats line reports the
+/// rate over that interval: a run whose throughput decays (window growth,
+/// allocator churn, lock starvation) shows it here, not in the cumulative rate.
 #[derive(Default)]
 struct Interval {
     secs: f64,
@@ -2591,17 +2448,12 @@ struct Interval {
     consumed: u64,
     step: u64,
 }
-/// Returns whether this checkpoint improved the holdout AUC — `None` when
-/// no holdout was scored, so `--stop-after-stale` counts only checkpoints
-/// that actually said something.
 #[allow(clippy::too_many_arguments)]
-/// Round 72's one-shot check on the sampling temperature, from the first
-/// PG batch: the mean probability the behaviour gave its own pick. Below
-/// 0.5 the actors are playing something other than the pilot (the result
-/// labels stop meaning "the pilot's game" — round 57's caveat); above 0.9
-/// the near-ties get so little mass that every ratio clips and the step
-/// learns from nothing. Either way the temperature is wrong for this
-/// net's scale, and the run stops before it spends its budget.
+/// Round 72's one-shot check on the sampling temperature, from the first PG
+/// batch: the mean probability the behaviour gave its own pick. Below 0.5 the
+/// actors aren't playing the pilot (round 57's caveat); above 0.9 every
+/// near-tie ratio clips and the step learns nothing. Either way the
+/// temperature is wrong for this net's scale, so the run aborts.
 fn pg_temperature_sanity(pb: &crabomination_ml::PgBatch, temp: i32) {
     if pb.is_empty() {
         return;
@@ -2621,10 +2473,13 @@ fn pg_temperature_sanity(pb: &crabomination_ml::PgBatch, temp: i32) {
     }
 }
 
-// Seventeen arguments because it is the one place that writes a checkpoint and
-// it needs every piece of the run's state to do it; grouping them into a struct
-// would be the same seventeen fields one indirection away. Same call as the
-// server's wide helpers (`server/mod.rs`, `recommend.rs`).
+// Seventeen arguments: the one place that writes a checkpoint needs all of the
+// run's state, and a struct would be the same fields one indirection away (as
+// with the server's wide helpers, `server/mod.rs`, `recommend.rs`).
+/// Publishes `latest` / `deck-latest`, appends a `stats.jsonl` line, and
+/// publishes `best` on a new holdout best. Returns whether the holdout metric
+/// improved — `None` when none was scored, so `--stop-after-stale` counts only
+/// checkpoints that actually said something.
 #[allow(clippy::too_many_arguments)]
 fn checkpoint(
     trainer: &Trainer,
@@ -2660,27 +2515,20 @@ fn checkpoint(
     let stalls_stuck = shared.stalls_stuck.load(Ordering::Relaxed);
     let secs = start.elapsed().as_secs_f64();
     let [total, win, life, len, opp] = loss_ema;
-    // Held-out scoring, against BOTH labels a row has.
+    // Held-out scoring against both labels a row has. `loss_win` is the
+    // training EMA against whatever target the learner fits (the λ-return at
+    // λ < 1), so at λ = 0.7 (every champion-class run since round 27)
+    // `val_win - loss_win` is not the overfit:
     //
-    // `loss_win` is the training EMA against whatever target the learner
-    // fit — the λ-return at λ < 1, the raw result at λ = 1. This comment
-    // used to claim `val_win` was "directly comparable to loss_win (same
-    // MSE, different rows)", which is true only at λ = 1; every
-    // champion-class run since round 27 is λ = 0.7, where the two numbers
-    // measure different things and their difference is not the overfit.
-    // So each side is now scored against both labels:
+    // * `*_raw` — MSE against the 0/1 game result; `val_raw` vs `train_raw`
+    //   is the honest generalisation gap.
+    // * `*_tgt` — MSE against the λ-return; `train_tgt` vs `train_raw` is the
+    //   bootstrap divergence (they coincide at λ = 1). `train_tgt` collapsing
+    //   while `val_raw` / `val_auc` stall means the net is fitting its own
+    //   bootstrap.
     //
-    // * `*_raw` — MSE against the actual 0/1 game result. `val_raw` vs
-    //   `train_raw` is the honest generalisation gap.
-    // * `*_tgt` — MSE against the λ-return. `train_tgt` vs `train_raw` is
-    //   the bootstrap divergence: how much better the net fits its own
-    //   propagated opinion than it fits reality. At λ = 1 the two
-    //   coincide by construction. A run where `train_tgt` collapses
-    //   toward zero while `val_raw` and `val_auc` stall is fitting its
-    //   own bootstrap, which is the failure mode a λ schedule risks.
-    //
-    // `val_auc` remains the one that says whether the net knows anything —
-    // MSE can improve while ranking does not.
+    // `val_auc` says whether the net knows anything; MSE can improve while
+    // ranking does not.
     let (val_n, val_win, val_tgt, val_ll, val_auc) = {
         let v = shared.val.lock().unwrap();
         if v.len() < 200 {
@@ -2775,18 +2623,10 @@ fn checkpoint(
     // separates simulator throughput from run throughput.
     let actor_s = shared.actor_ms.load(Ordering::Relaxed) as f64 / 1000.0;
     let actor_g = games as f64 / actor_s.max(1e-9);
-    // Held-out policy agreement: how often the net's top-scoring
-    // candidate is the one the pilot actually played, on decisions it was
-    // never trained on. This is the first metric in the program that
-    // measures *choosing* rather than predicting -- MSE and AUC both
-    // score isolated positions, and a search consumes rankings.
-    // The pilot's own agreement with the search, measured once and
-    // cached. Round 34 could not separate "the search disagrees with its
-    // evaluator" from "these are two different nets": MCTS rolls out on
-    // the *pilot* net while `val_policy` scores the *training* net. This
-    // is the missing reference — the same holdout decisions scored by the
-    // very net the search used, so any gap between it and 1.0 is
-    // search-vs-its-own-evaluator with no net-vs-net confound.
+    // Held-out policy agreement: how often the net's top candidate is the one
+    // the pilot played, on decisions never trained on — a measure of choosing
+    // rather than predicting (MSE and AUC score isolated positions; a search
+    // consumes rankings).
     let (val_policy, val_policy_chance, val_policy_n) = {
         let v = shared.decisions_val.lock().unwrap();
         if v.len() < 100 {
@@ -2801,13 +2641,10 @@ fn checkpoint(
         }
     };
     let [policy_top1, policy_loss, policy_sv] = policy_ema;
-    // The pilot's own agreement with the search, on the same holdout.
-    // Round 34 could not separate "the search disagrees with its
-    // evaluator" from "these are two different nets": MCTS rolls out on
-    // the *pilot* net while `val_policy` scores the *training* net. This
-    // is the missing reference — scored by the very net the search used,
-    // so its distance from 1.0 is search-vs-its-own-evaluator with no
-    // net-vs-net confound.
+    // The pilot's own agreement with the search on the same holdout. MCTS
+    // rolls out on the pilot net while `val_policy` scores the training net
+    // (round 34 couldn't separate the two), so this reference's distance from
+    // 1.0 is search-vs-its-own-evaluator with no net-vs-net confound.
     let pilot_policy = match pilot {
         Some(t) if val_policy_n > 0 => {
             let v = shared.decisions_val.lock().unwrap();
@@ -2847,21 +2684,11 @@ fn checkpoint(
         .open(stats_path)
         .expect("stats.jsonl");
     f.write_all(line.as_bytes()).expect("stats write");
-    // Keep the best net by held-out ranking, not just the last one.
-    //
-    // `latest.safetensors` is whatever the run happened to end on, and a
-    // run that overfits ends on its *worst* net: in the round-11 pair the
-    // holdout AUC peaked around step 4–6 k and then fell ~0.07 over the
-    // next 45 k steps while the training loss went to 0.001. Every gate
-    // and every calibration before this was therefore scored on a
-    // memorised checkpoint. Publishing `best.safetensors` costs one file
-    // and makes those comparisons mean what they claim to.
-    //
-    // Which holdout number "best" means is the run's stated objective:
-    // AUC by default, `val_policy` under `--best-metric policy`. Round
-    // 34 measured the two moving in opposite directions on one seed, so
-    // a distillation run selected on AUC can publish its worst *ranking*
-    // checkpoint while reporting success.
+    // Keep the best net by the holdout, not just the last: an overfitting run
+    // ends on its worst net (round 11: AUC peaked at ~4–6 k steps, then fell
+    // ~0.07 over 45 k more), and gates scored on `latest` were scoring a
+    // memorised checkpoint. "Best" is AUC by default, `val_policy` under
+    // `--best-metric policy` (round 34: the two can move in opposite ways).
     let (scored, metric) = if args.best_policy {
         (val_policy_n > 0 && val_policy.is_finite(), val_policy)
     } else {
@@ -2897,26 +2724,6 @@ fn checkpoint(
 
 // ────────────────────────────── calibration ──────────────────────────────
 
-/// Score the value net and the heuristic evaluation as *predictors of the
-/// winner* on identical self-play positions.
-///
-/// This exists because four gate rounds answered "is the net-piloted bot
-/// stronger" (42–45 % as a replacement, ~49 % blended) without ever
-/// answering "does the net know more than `eval_material` does". Those are
-/// different questions with different fixes:
-///
-/// * If the net's log-loss is no better than the heuristic's, the net has
-///   not learned and no amount of integration work will help.
-/// * If it *is* better and the bot still loses, the loss is in the
-///   integration — and the output histogram is the first place to look. A
-///   sigmoid that saturates near 0 and 1 hands the search a flat
-///   landscape in which every candidate line scores the same, which would
-///   make a better predictor into a worse player.
-///
-/// The heuristic is put on the same footing by fitting a one-parameter
-/// logistic to its score (`p = sigmoid(score / t)`, `t` chosen by scan),
-/// so it is scored as the best probability forecast that evaluation can
-/// support rather than penalised for not being calibrated.
 /// Per-feature occupancy over a set of encoded states.
 struct Occupancy {
     obj_hits: Vec<u64>,
@@ -3015,38 +2822,23 @@ fn gl_block(i: usize) -> &'static str {
     }
 }
 
-/// How often each encoder feature is actually non-zero — in the rows the
-/// trainer fits, and in the leaves the search evaluates.
+/// How often each encoder feature is non-zero — in the rows the trainer fits
+/// and in the leaves the search evaluates. A feature zero in 99.9 % of
+/// positions can't move a gate (round 28f gated a block that was zero in
+/// every training row). Cheap (no net, one self-play pass), and it reads the
+/// encoder as currently ablated, so it also confirms a control arm blanks
+/// what it claims to.
 ///
-/// The question a new feature block has to answer before it earns a GPU
-/// run: a feature that is zero in 99.9 % of positions cannot move a gate
-/// no matter how well-motivated it is. Round 28f gated a block that was
-/// identically zero in every training row, and round 12's additions were
-/// never occupancy-checked either. Cheap — no net, no GPU, one self-play
-/// pass — and it reads the encoder as it is currently ablated, so it can
-/// also confirm that a control arm really is blanking what it claims to.
+/// **train** is what the weights are fit to; **leaf** is what the attack and
+/// cast searches evaluate (`server::leaf_capture`, as `--calibrate-leaves`).
+/// `!` flags a feature common at the leaves and rare in training: live inputs
+/// to weights that never got a gradient, the state round 40 found the whole
+/// combat block in. Matching the columns isn't automatically good —
+/// `--record-combat` closed that gap and cost 3 points of search strength —
+/// so this measures the mismatch without prescribing a fix.
 ///
-/// The two columns are the point. **train** is the recorder's
-/// distribution, what the weights are fit to. **leaf** is the
-/// distribution of simulated positions the attack and cast searches
-/// actually evaluate (via `server::leaf_capture`, the same hooks
-/// `--calibrate-leaves` uses). A feature that is common in the leaf
-/// column and rare in the train column is being fed live values at
-/// inference by weights that never received a gradient for it — that is
-/// exactly the state round 40 found the whole combat block in, and the
-/// `!` marker flags it.
-///
-/// Round 40's other lesson applies to reading this: matching the two
-/// columns is *not* automatically good. `--record-combat` closed the
-/// combat gap and cost 3 points of search strength, because what the
-/// value head is fit to also determines its calibration. This measures
-/// the mismatch; it does not prescribe closing it.
-///
-/// Object rates are per encoded object over every group; global rates
-/// are per position. Both are the denominator the trainer sees, not the
-/// denominator of "positions where the feature could apply" — a rate of
-/// 2 % on a battlefield-only feature means 2 % of *all* objects, hand
-/// and library included.
+/// Object rates are per encoded object over every group (hand and library
+/// included); global rates are per position.
 fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
     use crabomination_nn::{GLOBAL_FEATS, OBJ_FEATS};
 
@@ -3062,15 +2854,11 @@ fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
         let deck_a = heuristic_sealed_build(&sealed_pool(salt(1)), salt(3));
         let deck_b = heuristic_sealed_build(&sealed_pool(salt(2)), salt(4));
         let template = sealed_game_template(&deck_a, &deck_b);
-        // Pin the tie-break jitter stream per game. Without this the census
-        // is not reproducible: two runs of the same `--seed` disagreed by
-        // 12 positions and 515 objects out of 820 / 29,143 (2026-08-29),
-        // because `play_recorded_game` leaves `bot::jitter_below` on the
-        // unseeded thread-local RNG. A census whose two runs disagree cannot
-        // be a before/after instrument, which is what a feature-coverage
-        // question needs it to be. Only the census is pinned — whether the
-        // *training* actors should be is TODO's open question, and this is
-        // the evidence for it, not the answer.
+        // Pin the tie-break jitter stream per game, or the census isn't
+        // reproducible (two same-`--seed` runs disagreed by 12 positions / 515
+        // objects, 2026-08-29: `play_recorded_game` leaves `bot::jitter_below`
+        // on the unseeded thread RNG). Only the census is pinned; whether the
+        // training actors should be is an open TODO.
         let game_seed = rng.random_range(0..u64::MAX);
         crabomination::server::bot::set_jitter_seed(Some(game_seed ^ 0xFEA7_5EED));
         let rec = play_recorded_game(
@@ -3153,12 +2941,10 @@ fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
         ),
     }
 
-    // The `!` marker only catches never-trained features. A block that is
-    // trained but two or three times denser at the leaves is the same
-    // phenomenon at lower contrast, and it is what tells you *which way*
-    // the two distributions differ — round 40's leaves turned out to be
-    // uniformly "later in the turn, after combat" than its training rows,
-    // which no single flagged feature would have shown.
+    // `!` only catches never-trained features. A trained block two or three
+    // times denser at the leaves is the same phenomenon at lower contrast,
+    // and shows which way the distributions differ (round 40's leaves were
+    // uniformly "later in the turn" than its training rows).
     let mut ratios: Vec<(f64, String, f64, f64)> = (0..GLOBAL_FEATS)
         .map(|i| (format!("g{i}"), train.gl_rate(i), leaf.gl_rate(i)))
         .chain((0..OBJ_FEATS).map(|i| (format!("f{i}"), train.obj_rate(i), leaf.obj_rate(i))))
@@ -3167,9 +2953,8 @@ fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
         .collect();
     ratios.sort_by(|a, b| b.0.total_cmp(&a.0));
     if !ratios.is_empty() {
-        // "top 10 of 47" and "top 10 of 10" are different diagnoses of the same
-        // printed table: one says the skew is concentrated, the other that it is
-        // everywhere. Name the denominator.
+        // Name the denominator: "top 10 of 47" (concentrated skew) and "top
+        // 10 of 10" (skew everywhere) are different diagnoses.
         println!(
             "\ntrained features the search meets most disproportionately \
              (leaf/train) — top {} of {}:",
@@ -3182,6 +2967,16 @@ fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
     }
 }
 
+/// Score the value net and the heuristic evaluation as *predictors of the
+/// winner* on identical self-play positions: "does the net know more than
+/// `eval_material`", which four gate rounds of "is the net bot stronger"
+/// (42–45 % as a replacement, ~49 % blended) never answered. No better
+/// log-loss means the net hasn't learned; better yet losing means the fault
+/// is in integration, and the output histogram is the first place to look (a
+/// saturated sigmoid hands the search a flat landscape).
+///
+/// The heuristic gets a fitted one-parameter logistic (`p = sigmoid(score /
+/// t)`, `t` by scan), so it is scored as the best forecast it can support.
 fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     let best = args.use_best.as_ref().expect("--calibrate needs --use-best WEIGHTS");
     let cfg = net_config(args, vocab.size());
@@ -3336,15 +3131,14 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     by_card.report(vocab, base as f64 - mean_p);
 }
 
-/// `--calibrate`'s per-card blind-spot table: for each card, the mean of
-/// (result − net prediction) over the positions where it sits in a zone
-/// group. A calibrated net leaves every card's mean near zero; a card the
-/// net undervalues has a positive mean where its controller holds it.
+/// `--calibrate`'s per-card blind-spot table: per card, the mean of (result −
+/// net prediction) over positions where it sits in a zone group. A
+/// calibrated net leaves every mean near zero; an undervalued card has a
+/// positive mean where its controller holds it.
 ///
-/// The unit is the game seat, not the position: every snapshot of one seat
-/// shares its result, so a per-position interval would be several times too
-/// narrow. Each (game, seat) contributes the mean residual of its positions
-/// holding the card, once.
+/// The unit is the (game, seat), contributing its mean residual once: a
+/// seat's snapshots share one result, so a per-position interval would be
+/// several times too narrow.
 #[derive(Default)]
 struct CardResiduals {
     /// (group, vocab index) → (game seats, Σ seat mean, Σ seat mean², positions).
@@ -3421,14 +3215,10 @@ impl CardResiduals {
     }
 }
 
-/// Score net and heuristic on the positions the search *consumes* —
-/// simulated leaves — against the snapshot positions from the same games.
-///
-/// Ground truth for a leaf is the real game's winner from the evaluating
-/// seat's perspective: the same label snapshots carry, applied to the
-/// hypothetical positions the search ranked while playing that game. The
-/// heuristic's temperature is fitted per distribution, so each evaluator
-/// is scored as the best forecast it can support on that set.
+/// Score net and heuristic on the simulated leaves the search consumes,
+/// against the snapshot positions of the same games. A leaf's label is the
+/// real game's winner from the evaluating seat's side; the heuristic's
+/// temperature is fitted per distribution.
 fn calibrate_leaves(args: &Args, vocab: &Vocab, games: usize) {
     let best = args.use_best.as_ref().expect("--calibrate-leaves needs --use-best WEIGHTS");
     let cfg = net_config(args, vocab.size());
@@ -3550,27 +3340,16 @@ fn calibrate_leaves(args: &Args, vocab: &Vocab, games: usize) {
 /// Lower edge of each ply stratum; the last bucket is open-ended.
 const PLY_EDGES: [u16; 6] = [0, 4, 8, 12, 20, 32];
 
-/// Break the calibration observations down by position-in-game.
+/// Break the calibration observations down by position-in-game. Late
+/// positions are mostly decided, and any evaluation that counts power and
+/// life gets them right; early ones are contested, and the only ones the
+/// search can still change. A net better late and worse early posts a better
+/// aggregate AUC and plays worse — a candidate explanation for "better
+/// predictor, keeps losing gates" that no aggregate metric shows.
 ///
-/// The aggregate numbers above pool every snapshot in every game, and the
-/// two ends of a game are not the same problem. Late positions are mostly
-/// *already decided* — one player is at 3 life facing a board they cannot
-/// beat — and any evaluation that can count power and life gets them
-/// right. Early positions are the contested ones, and they are the only
-/// ones where the search's choices can still change the result.
-///
-/// So a net that is better than the heuristic late and worse early posts a
-/// better aggregate AUC **and plays worse**, because it is winning the
-/// pooled comparison on exactly the positions where being right is free.
-/// That is a candidate explanation for the play net's standing result (a
-/// strictly better predictor that keeps losing gates) and it is invisible
-/// in any aggregate metric, which is why this breakdown exists.
-///
-/// Buckets are directly comparable: both seats are snapshotted at the same
-/// instants and carry the same `ply`, so every stratum holds exactly one
-/// win per loss and the base rate is 0.5 throughout. The heuristic's
-/// temperature is the one fitted globally — refitting per bucket would
-/// hand it a free parameter per stratum that it would not have in play.
+/// Both seats are snapshotted at the same `ply`, so every stratum's base
+/// rate is 0.5. The heuristic keeps its global temperature: refitting per
+/// bucket would give it a free parameter it doesn't have in play.
 fn ply_strata(obs: &[(f32, f32, f32, u16)], heur_t: f32) {
     println!("  by ply (snapshots are ~3/turn/seat, so ply 12 is about turn 4):");
     println!("    {:<8} {:>7}  {:>8} {:>8} {:>7}   {:>8} {:>8}", "ply", "n", "net AUC", "heur", "delta", "net LL", "heur LL");
@@ -3676,33 +3455,18 @@ fn auc(it: impl Iterator<Item = (f32, f32)>) -> f32 {
 
 /// Can the evaluator order two *adjacent* positions from the same game?
 ///
-/// This exists because `--calibrate` measured the wrong thing for the
-/// question that matters. AUC is a *global* ranking statistic: it asks
-/// whether a winning board outscores a losing one across a diverse pool of
-/// positions. The attention net wins that comparison against
-/// `eval_material` (0.798 vs 0.760 on seed 43, replicated 0.761 vs 0.747
-/// on seed 97) — and then loses the gate outright, 44.8 % as a
-/// replacement and 48.8 % blended.
+/// AUC is a global ranking statistic, and the attention net wins it against
+/// `eval_material` (0.798 vs 0.760 seed 43; 0.761 vs 0.747 seed 97) while
+/// losing the gate (44.8 % as a replacement, 48.8 % blended). The search
+/// never asks the global question: it compares near-identical boards (one
+/// attack or block apart) and takes the argmax.
 ///
-/// The reconciliation is that the search never asks the global question.
-/// It compares *near-identical* boards — the same position differing by
-/// one attack or one block — dozens of times per decision, and picks the
-/// argmax. An evaluator can be excellent at "who is winning" and useless
-/// at "which of these two almost-identical lines is better", and only the
-/// second is consumed inside a resolved simulation.
-///
-/// Adjacent snapshots of one trajectory are the cheapest available proxy
-/// for that: one turn apart, same deck, same seat, overwhelmingly similar
-/// boards. Ground truth is the trajectory's direction — a winner's
-/// position tends toward 1 and a loser's toward 0. That is imperfect per
-/// pair (a winner's board does not improve monotonically) but it is
-/// exactly the assumption the value target already makes, and it is
-/// applied identically to both evaluators, so the *comparison* is fair
-/// even where the label is noisy.
-///
-/// Also reported: mean separation. An evaluator that orders pairs
-/// correctly but by a hair is still useless to a search whose candidates
-/// differ by less than its own noise.
+/// Adjacent snapshots of one trajectory are the cheapest proxy: one turn
+/// apart, same seat, similar boards. Ground truth is the trajectory's
+/// direction (a winner's positions tend toward 1) — noisy per pair, but it
+/// is the value target's own assumption, applied identically to both
+/// evaluators. Mean separation is reported too: ordering pairs right by a
+/// hair is useless to a search whose candidates differ by less than its noise.
 fn pairwise(args: &Args, vocab: &Vocab, games: usize) {
     let best = args.use_best.as_ref().expect("--pairwise needs --use-best WEIGHTS");
     let cfg = net_config(args, vocab.size());
@@ -3745,9 +3509,8 @@ fn pairwise(args: &Args, vocab: &Vocab, games: usize) {
                 // higher. -1 when it lost.
                 let dir = if rec.rows[a].win > 0.5 { 1.0f64 } else { -1.0 };
                 let dn = (preds[b] - preds[a]) as f64;
-                // Heuristic scores are unbounded ints; normalise by the
-                // pair's own scale so "separation" is comparable to the
-                // net's [0,1] output rather than a raw material delta.
+                // Heuristic scores are unbounded ints; the 1/1000 is undone
+                // when printed (eval units), never compared to the net's.
                 let dh = (rec.heur[b] - rec.heur[a]) as f64 / 1000.0;
                 n += 1;
                 if dn == 0.0 { net_tie += 1 } else if dn * dir > 0.0 { net_ok += 1 }
@@ -3761,17 +3524,11 @@ fn pairwise(args: &Args, vocab: &Vocab, games: usize) {
         eprintln!("pairwise: no usable adjacent pairs");
         return;
     }
-    // Report the correct-rate among pairs the evaluator actually
-    // *separates*, alongside the tie rate. Scoring ties as wrong would
-    // punish an evaluator for honestly declining to distinguish two
-    // equal positions, which is the opposite of what we want to measure —
-    // and mixing the two into one percentage hides the tie rate, which is
-    // the interesting number here.
-    //
-    // Separations are NOT compared across evaluators: the heuristic is an
-    // unbounded integer score and the net is a probability, so any shared
-    // normalisation would be arbitrary. Each is reported against its own
-    // scale only.
+    // Correct-rate among pairs the evaluator separates, with the tie rate
+    // beside it: scoring ties as wrong would punish honestly declining to
+    // distinguish equal positions, and folding them in hides the tie rate.
+    // Separations are reported on each evaluator's own scale, never compared
+    // (integer score vs probability).
     let rate = |ok: usize, ties: usize| {
         let decided = n - ties;
         if decided == 0 { f64::NAN } else { 100.0 * ok as f64 / decided as f64 }

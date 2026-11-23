@@ -4,9 +4,9 @@ How self-play data is generated, what the net sees, what the net is, and
 how it trains. Snapshot of the system as of round 12 (2026-08-08).
 
 This describes the *machinery*. The measurement history — what was tried,
-what passed a gate, what was refuted — lives in `FEATURE_ROADMAP.md`, and
-that is the file to read before proposing a change. Numbers quoted here
-are the ones that justify a design decision, not a full results log.
+what passed a gate, what was refuted — lives in `ML_NOTES.md`; read it before
+proposing a change. Numbers here justify a design decision; they are not a
+results log.
 
 Scope throughout is **SOS sealed**: one set's worth of card names (~164
 including basics) keeps the embedding table small and well-fed.
@@ -15,11 +15,10 @@ including basics) keeps the embedding table small and well-fed.
 
 ## 0. How to build the thing that generates the data
 
-The simulator is the actor's whole cost, and **the build is a bigger lever on
-it than any source change in `PERF.md`'s Log.** Nothing turns these on by
-default — a committed Ir or throughput reading has to stay a plain
-`release-fast` one, which is why `scripts/pgo_build.sh` is opt-in — so a real
-run has to ask for them. The ladder, measured in PERF's Baseline (lower is
+The simulator is the actor's whole cost, and the build is a bigger lever on
+it than any source change in `PERF.md`'s Log. None of these is on by default
+(committed readings stay plain `release-fast`, so `scripts/pgo_build.sh` is
+opt-in); a real run has to ask. The ladder, from PERF's Baseline (lower is
 faster, `release-fast` = 1.0):
 
 ```text
@@ -29,25 +28,21 @@ faster, `release-fast` = 1.0):
   release      + PGO        0.724    -27.6 % against release-fast
 ```
 
-**Which one to build is a build-time question, not a throughput one**:
-`release-fast + PGO` is ~18 min for -23.8 %, `release + PGO` ~44 min (two LTO
-builds) for -27.6 %. The last five points cost 26 minutes a build, so they
-belong to a long run, not to an iteration loop.
+Which one to build is a build-time question: `release-fast + PGO` is ~18 min,
+`release + PGO` ~44 min (two LTO builds) — the last few points belong to a long
+run, not an iteration loop.
 
 ```sh
 PGO_PROFILE=release scripts/pgo_build.sh selfplay_train   # long run / gate
 scripts/pgo_build.sh selfplay_train                       # release-fast + PGO
 ```
 
-⚠ **A profile must be raised under the profile it is consumed under.** One
-raised under `release-fast` and consumed by a `release` build is not rejected,
-it is *partially* applied and most of the win vanishes silently; the binary
-size is the check. ⚠ **And a PGO number may only be quoted against another PGO
-number** — never file one in `PERF.md`'s Baseline.
-
-⚠ **Print `t_step_ms` against `elapsed_s` before quoting any `selfplay_train`
-throughput figure.** The same two binaries measured -23.1 % or -4.9 % purely
-on where the learner/actor balance sat; PERF's Baseline has the working.
+⚠ A profile must be raised under the profile it is consumed under — a
+mismatched one is partially applied with no warning; the binary size is the
+check. ⚠ Quote a PGO number only against another PGO number, never in
+`PERF.md`'s Baseline. ⚠ Print `t_step_ms` against `elapsed_s` before quoting
+any `selfplay_train` throughput: the learner/actor balance alone can swing the
+same binaries' reading several-fold (PERF's Baseline has the working).
 
 ---
 
@@ -75,11 +70,9 @@ makes ply strata directly comparable: every stratum holds exactly one win
 per loss, so the base rate is 0.5 throughout.
 
 **Opening exploration.** The first `0..=EXPLORE_PLIES` (12) decisions of
-each game are played by a uniform-random bot. Both seats otherwise run the
-same deterministic policy, so without this the net only ever sees the
-narrow band of positions that policy reaches — the classic self-play
-distribution collapse. It is confined to the opening so the *outcome*
-still reflects competent play and the win labels stay meaningful.
+each game are played by a uniform-random bot, against the self-play
+distribution collapse of two seats running one deterministic policy. It is
+confined to the opening so the outcome still reflects competent play.
 
 **Labels**, stamped once the game decides:
 
@@ -113,20 +106,15 @@ cannot learn to peek.
 `G_BF_SELF`, `G_BF_OPP`, `G_HAND_SELF`, `G_GY_SELF`, `G_GY_OPP`,
 `G_LIB_SELF`, `G_STACK_SELF`, `G_STACK_OPP`.
 
-The stack groups are round 12's addition: one object per stack item (a
-spell's own card, or a trigger's battlefield source), split by controller,
-with depth-from-top in feat 36. Before them the stack was a single count —
-"there is a spell on the stack" was representable, "it is their removal
-aimed at my best creature" was not.
+The stack groups (round 12): one object per stack item (a spell's own card,
+or a trigger's battlefield source), split by controller, with depth-from-top
+in feat 36 — so "their removal aimed at my best creature" is representable,
+not just "a spell is on the stack".
 
-The library group is round 11's addition. It is deduplicated by card name
-— one object per distinct name with its remaining count in feat 27 — and
-emitted in **vocabulary-index order**, so the actual shuffle can never
-reach the net whatever the architecture does downstream. Before it, the
-library was a single scalar (`len / 40`), so "22 cards left, three of them
-removal and one a bomb" and "22 lands" encoded identically. It is also the
-one zone where the bag-of-cards prior is unambiguously correct: a library
-really is an unordered set.
+The library group (round 11) is deduplicated by card name — one object per
+distinct name, remaining count in feat 27 — and emitted in vocabulary-index
+order, so the shuffle can never reach the net. A library really is an
+unordered set, so the bag-of-cards prior is exact there.
 
 ### Per object — 37 features
 
@@ -138,19 +126,16 @@ tokens and off-set cards are represented by their features alone), plus:
   prepared, attacking, is-token — and feats 4/5 are overwritten with
   *effective* P/T minus marked damage
 - 12–19: evasion/combat keywords — flying, reach, menace, deathtouch,
-  lifelink, trample, first-or-double strike, vigilance. Without these the
-  pooled encoder saw a Serra Angel and a Hill Giant as the same 4-mana
-  4/4-ish body.
+  lifelink, trample, first-or-double strike, vigilance
 - 20–26: the castability block — printed colour pips, castable now,
   castable next turn
 - 27: library multiplicity
 - 28–36: the round-12 relation block — is_blocking / is_blocked (from
   `block_map`), is_attached, has_own_attachment / has_opp_attachment (an
-  own aura is a buff, an opposing one is a Pacifism — previously those
-  two creatures encoded identically), targeted_by_stack, non-loyalty
-  counter count, printed aura/equipment flag, and stack depth. Pooling
-  cannot carry an *edge* between objects, but a flag summarising the edge
-  from each endpoint survives it, and attention can match flagged
+  own aura is a buff, an opposing one a Pacifism), targeted_by_stack,
+  non-loyalty counter count, printed aura/equipment flag, and stack depth.
+  Pooling cannot carry an edge between objects, but a flag summarising the
+  edge from each endpoint survives it, and attention can match flagged
   endpoints across groups.
 
 ### 36 globals
@@ -158,10 +143,8 @@ tokens and off-set cards are represented by their features alone), plus:
 Life and hand/library/graveyard sizes for both seats, turn number,
 active-player flag, a one-hot phase bucket, untapped lands, creature
 counts and total power for both seats, stack and attacker counts, and
-(24–35) untapped mana **sources by colour** for both seats. The
-opponent's half of that last block is public information and is what makes
-"they have two untapped blue" — the shape of every instant-speed decision
-— representable at all.
+(24–35) untapped mana sources by colour for both seats — the opponent's half
+is public and is what makes "they have two untapped blue" representable.
 
 ### Castability
 
@@ -182,16 +165,12 @@ drop the seat has not taken yet. Optimistic about colour on purpose.
 
 ### Ablation control
 
-`set_encode_ablation(library, castability, relations)` **zeroes** any of
-the three blocks rather than removing it, so feature counts and
-`SHARD_VERSION` are unchanged and an ablated run produces shards
-interchangeable with a full run. It is
-process-global (the encoder is called from deep inside the search) and
-therefore the tests that encode take a mutex.
-
-This exists because the library group, the castability block, and a
-vocabulary change all landed together, and "the new encoder scores worse"
-had three candidate causes with no way to separate them.
+`set_encode_ablation(library, castability, relations)` zeroes any of the
+three blocks rather than removing it, so feature counts and `SHARD_VERSION`
+are unchanged and ablated shards are interchangeable with full ones. It is
+process-global (the encoder is called from deep inside the search), so the
+tests that encode take a mutex. It exists to separate causes when several
+encoder changes land together.
 
 ---
 
@@ -235,17 +214,13 @@ hop out where `win` is sparse and twenty turns away; training-only, the
 engine ignores the tensors.
 
 **The attention layer** is off by default (`--attn` opts in); the pooled
-net is the control. Its reason to exist: mean/max pooling is permutation
-invariant *per group*, so the trunk only ever learns "how much is in this
-zone" and "what is the biggest thing in it". It cannot represent "my flier
-gets through because their board has no flier and no reach" — that needs
-my battlefield compared element-wise against theirs, and pooling has
-discarded it before the trunk runs. Attention is the only place in the
-network where an object on my battlefield and one on the opponent's are in
-the same tensor. A learned per-group tag is added to the input so a query
-can tell whose object it is looking at; the residual is against the
-*pre-attention* state, so the tag never leaks into the pooled
-representation.
+net is the control. Mean/max pooling is permutation invariant per group, so
+the trunk cannot represent "my flier gets through because their board has no
+flier and no reach" — that needs my battlefield compared element-wise against
+theirs. Attention is the only place an object on my battlefield and one on the
+opponent's share a tensor. A learned per-group tag on the input tells a query
+whose object it sees; the residual is against the pre-attention state, so the
+tag never leaks into the pooled representation.
 
 The two attention implementations are structurally different — candle
 attends over a padded `[B,N,N]` batch with a mask, the engine attends over
@@ -284,23 +259,20 @@ loss = MSE(win) + 0.25 · (MSE(life_diff) + MSE(game_len))
 ```
 
 The auxiliary heads exist for credit assignment, not for play: a bare win
-bit cannot say *which part* of a position lost the game (the KataGo
-ownership-target lesson at MTG scale). Loss is tracked decomposed, because
-a single number hid a real regime change once already.
+bit cannot say which part of a position lost the game (KataGo's ownership
+target). Loss is tracked decomposed — a single number once hid a regime
+change.
 
 ### Reuse throttle
 
 The learner may consume at most `reuse × rows_pushed` samples (default
-6×); otherwise it sleeps 200 ms. Generation is the bottleneck by design,
-and the learner spends most of its wall clock waiting — that is the cap
-doing its job.
+6×); otherwise it sleeps 200 ms. Generation is the bottleneck by design.
 
-Once the actors finish, the global budget stops meaning "≤6 visits per
-row": every further sample lands on the final window, concentrating
-`budget / window_len` visits there (measured ~14× on one run). So the tail
-gets an explicit budget — half the nominal reuse on the window it has —
-and then the loop stops. Tail over-reuse was priced once: loss EMA fell
-0.30 → 0.14 during it with **no strength change**. Pure memorisation.
+Once the actors finish, every further sample would land on the final window
+(~14× visits measured on one run), so the tail gets an explicit budget — half
+the nominal reuse on the window it has — and then the loop stops. Tail
+over-reuse was measured as pure memorisation (loss fell, strength didn't
+move).
 
 ### TD(λ)
 
@@ -332,10 +304,8 @@ lands on the same side. Capped at 20k rows.
 Scored at every checkpoint for MSE (directly comparable to the training
 win loss — the gap between them *is* the overfit), log-loss, and AUC.
 
-This exists because its absence cost six gate rounds: `stats.jsonl`
-reported training loss only, and at λ=1 the net hit 0.017 MSE on the
-window while its out-of-sample log-loss was 1.12 — *worse than predicting
-0.5 every time*. Nothing in the loop could see it.
+Its absence once cost six gate rounds: training loss looked excellent while
+out-of-sample log-loss was worse than predicting 0.5 every time.
 
 ### Checkpointing
 
@@ -345,13 +315,9 @@ Every `--checkpoint-every` steps (default 2,000), by atomic rename:
 - `best.safetensors` — republished on any holdout-AUC improvement
 - one JSON line to `stats.jsonl`
 
-`best` matters more than it sounds. `latest` is whatever the run happened
-to end on, and a run that overfits ends on its *worst* net: in the round-11
-pair, holdout AUC peaked around step 4–6k and then fell ~0.07 over the next
-45k steps while training loss went to 0.001. Every gate and every
-calibration before this was scored on a memorised checkpoint. Selecting
-`best` instead of `latest` was worth **+0.073 AUC** (0.7071 → 0.7798) at
-identical config, seed, and games.
+`best` matters: a run that overfits ends on its worst net. In round 11,
+holdout AUC peaked around step 4–6k and then fell; selecting `best` over
+`latest` was worth +0.073 AUC at identical config, seed and games.
 
 The deck net rides along at a quarter cadence (its stream is 2 rows/game,
 so training it every step would just churn the same rows), from a 200k-row
@@ -373,13 +339,12 @@ values.
 ## 5. Consumption at play time
 
 `crabomination/src/server/net_eval.rs` holds a global registry of loaded
-nets keyed by a one-byte slot id carried on `EvalWeights`. `EvalWeights`
-is `Copy` and threads through ~30 free evaluation functions, so handing
-each an `Arc<PlayNet>` would mean rewriting every signature in the bot's
-hot path. Slots also let two nets coexist in one process, which the
-gatekeeper needs (candidate vs best). Threads cache the slot table and
-refresh only when a generation counter moves, so evaluation inside
-simulation loops never touches the `RwLock`.
+nets keyed by a one-byte slot id carried on `EvalWeights` (which is `Copy`
+and threads through ~30 free evaluation functions — an `Arc<PlayNet>` would
+rewrite every hot-path signature). Slots let two nets coexist (the
+gatekeeper's candidate vs best). Threads cache the slot table and refresh
+only when a generation counter moves, so simulation loops never touch the
+`RwLock`.
 
 `SLOT_BEST` is the promoted net; `SLOT_CANDIDATE` is the training loop's
 un-promoted checkpoint. Loading checks the net's vocabulary against the
@@ -403,26 +368,18 @@ the best probability forecast that evaluation can support rather than
 penalised for not being calibrated. Also prints the ply-stratified
 breakdown and the output histogram.
 
-The histogram is the saturation check: a sigmoid that piles up near 0 and
-1 hands the search a flat landscape in which every candidate line scores
-the same, which turns a better predictor into a worse player.
-
-Ply strata exist because the two ends of a game are not the same problem.
-Late positions are mostly already decided, and anything that can count
-power and life gets them right; early positions are the contested ones and
-the only ones the search can still change. A net that is better late and
-worse early posts a better aggregate AUC *and plays worse*.
+The histogram is the saturation check: a sigmoid piled up near 0 and 1
+hands the search a flat landscape, turning a better predictor into a worse
+player. Ply strata matter because late positions are mostly decided and easy;
+early ones are contested and the only ones the search can change — a net
+better late and worse early posts a better aggregate AUC and plays worse.
 
 **`--pairwise N`** — local discrimination: can the evaluator order two
-*adjacent* snapshots of the same game? AUC is a global ranking statistic,
-and the search never asks the global question — it compares near-identical
-boards differing by one attack or one block, dozens of times per decision,
-and takes the argmax. An evaluator can be excellent at "who is winning"
-and useless at "which of these two almost-identical lines is better", and
-only the second is consumed inside a resolved simulation. Reports the
-correct-rate among *separated* pairs, the tie rate, and mean separation on
-each evaluator's own scale (never compared across the two — one is an
-unbounded integer, the other a probability).
+adjacent snapshots of the same game? The search never asks AUC's global
+question; it compares near-identical boards differing by one attack or block
+and takes the argmax. Reports the correct-rate among separated pairs, the tie
+rate, and mean separation on each evaluator's own scale (never compared
+across the two — one is an unbounded integer, the other a probability).
 
 **`--gate-builder N`** — paired-pool race where net-judged and
 static-judged best-of-32 builds come from the *same* candidate set and
@@ -432,7 +389,10 @@ involved.
 
 ---
 
-## 7. Where it stands
+## 7. Where it stood (round 12)
+
+The current state (net-leaf MCTS pilots, the r81 champion, TableNet) is in
+`ML_NOTES.md`; this section is the round-12 snapshot.
 
 Round-11 ablation on `best.safetensors`, 500 fresh games each:
 

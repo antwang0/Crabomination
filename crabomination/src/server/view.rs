@@ -1,9 +1,9 @@
 //! Per-seat projection of [`GameState`] into a [`ClientView`].
 //!
-//! Hides information the viewer isn't entitled to see: opponent hand contents
-//! are `Hidden`; libraries surface only their size (no reveal tracking yet);
-//! stack items are fully visible (no face-down spells yet). When the engine
-//! gains reveal-to-seat metadata, this file is where it plugs in.
+//! Hides what the viewer isn't entitled to see: opponent hands are `Hidden`,
+//! libraries show only their size (no reveal tracking yet), stack items are
+//! fully visible (no face-down spells yet). Reveal-to-seat metadata, when the
+//! engine gains it, plugs in here.
 
 use crate::card::{CardId, CardInstance};
 use crate::effect::Effect;
@@ -21,11 +21,10 @@ pub fn project(state: &GameState, seat: usize) -> ClientView {
     project_for(state, Some(seat))
 }
 
-/// Project the authoritative `state` for a read-only spectator: a viewer who
-/// occupies no seat. Every player's hand and library is hidden, no
-/// pending-decision contents are revealed, and no cast/attack/block
-/// affordances are computed (a spectator can't act). `your_seat` is set to
-/// [`crate::net::SPECTATOR_SEAT`] so the client renders read-only.
+/// Project `state` for a read-only spectator (no seat): every hand and
+/// library hidden, no pending-decision contents, no affordances.
+/// `your_seat` is [`crate::net::SPECTATOR_SEAT`] so the client renders
+/// read-only.
 pub fn project_spectator(state: &GameState) -> ClientView {
     project_for(state, None)
 }
@@ -68,11 +67,10 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
                 use crate::mana::Color;
                 let devotion = [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green]
                     .map(|c| state.devotion_to(i, &[c]).max(0) as u32);
-                // Hexproof is surfaced from the viewer's perspective: if the
-                // viewer controls a broad "ignore opponents' hexproof" static
-                // (Kaya, Bane of the Dead), an opponent's hexproof no longer
-                // shields them from the viewer, so the flag reads false and the
-                // client won't grey the player out as a target.
+                // Hexproof from the viewer's perspective: under a broad
+                // "ignore opponents' hexproof" static (Kaya, Bane of the Dead)
+                // an opponent's hexproof reads false, so the client doesn't
+                // grey them out as a target.
                 let hexproof = state.player_has_static_shroud(i)
                     || (state.player_has_static_hexproof(i)
                         && !(i != viewer_seat
@@ -164,11 +162,10 @@ fn project_for_inner(state: &GameState, viewer: Option<usize>) -> ClientView {
         day_night: state.day_night.map(|dn| dn == crate::game::types::DayNight::Day),
         truce_active: state.truce_active(),
         combat_preview: combat_preview(state),
-        // One pass over the hand builds a single probe template and reuses
-        // it across every affordance category, rather than each
-        // `*_hand_cards` call cloning the whole `GameState` per candidate.
-        // Runs on every accepted action for the priority-holding seat, so
-        // it's the projection's hot path.
+        // One probe template built in a single pass over the hand and reused
+        // for every affordance category, instead of a `GameState` clone per
+        // candidate per category. Runs on every accepted action for the
+        // priority seat: the projection's hot path.
         castable_hand: affordances.castable,
         auto_tap_preview: affordances.auto_tap_sources,
         win_estimate: viewer.and_then(|v| crate::server::net_eval::viewer_win_prob(state, v)),
@@ -879,12 +876,10 @@ fn project_player(
         // Reliquary Tower statics — the raw `Player.max_hand_size` ignores them
         // and made the client's cleanup-discard hint wrong.
         max_hand_size: state.effective_max_hand_size(player_seat),
-        // The command zone is public — every viewer sees every card as
-        // `Known`. We reuse `HandCardView` for the card shape since
-        // it already carries name / cost / types / target hints,
-        // which is what the UI needs to render and previs casting.
-        // CR 315.7 is the one exception: a face-down hidden-agenda
-        // conspiracy is visible only to its own controller.
+        // The command zone is public: every viewer sees `Known` cards
+        // (reusing `HandCardView` for name / cost / types / target hints).
+        // CR 315.7 exception: a face-down hidden-agenda conspiracy is
+        // visible only to its controller.
         command: player
             .command
             .iter()
@@ -1149,13 +1144,11 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
     let alt_cost = state
         .and_then(|st| st.effective_alternative_cost(card.owner, card.id))
         .or_else(|| card.definition.alternative_cost.clone());
-    // CR 902.5 / 315.5 — command-zone abilities travel with the card view so
-    // the client can activate them where they live: a Vanguard avatar's, and a
-    // face-up conspiracy's (Sovereign's Realm's exile-a-card line). A hand
-    // card's `from_hand` abilities ride along the same way (Sureshot Sower's
-    // "{3}{G}, discard it: destroy target creature with flying", channel,
-    // forecast): without them the client had no ability index or target flag
-    // to submit, so a targeted one could not be activated at all.
+    // CR 902.5 / 315.5 — command-zone abilities (a Vanguard avatar's, a
+    // face-up conspiracy's such as Sovereign's Realm) travel with the card
+    // view so the client can activate them where they live. A hand card's
+    // `from_hand` abilities (Sureshot Sower, channel, forecast) ride along
+    // too; without them the client has no ability index or target flag.
     let in_hand = state.is_some_and(|st| {
         st.players.get(card.owner).is_some_and(|p| p.hand.iter().any(|c| c.id == card.id))
     });
@@ -1191,11 +1184,10 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
         alt_cost_needs_pitch: alt_cost.as_ref().is_some_and(|a| a.exile_filter.is_some()),
         alt_cost_label: alt_cost.as_ref().map(format_alt_cost_label).unwrap_or_default(),
         alt_cost_choice: state.filter(|_| in_hand).and_then(|st| {
-            // Only a card with a printed alternative cost has a choice to
-            // make (CR 118.9a); without one the granted cost *is* the
-            // effective one above. A granted cost the effective one already
-            // took (a cheaper Henzie blitz over a printed blitz) is no second
-            // choice either.
+            // Only a card with a printed alternative cost has a choice (CR
+            // 118.9a); otherwise the granted cost *is* the effective one. A
+            // granted cost the effective one already took (a cheaper Henzie
+            // blitz over a printed blitz) is no second choice either.
             let effective = alt_cost.as_ref()?;
             card.definition.alternative_cost.as_ref()?;
             let granted = st.granted_alternative_cost_in(
@@ -1389,15 +1381,9 @@ fn known_card_in(card: &CardInstance, state: Option<&crate::game::GameState>) ->
     }
 }
 
-/// Render a ManaCost as `{1}{U}` / `{R}{R}` / `{X}{X}` for client
-/// labels. Mirrors how cost pips are rendered on Scryfall but with
-/// the curly-brace symbology preserved (the client font handles the
-/// rest). Pure helper — no game-state side effects.
-/// Render a ManaCost as its `{2}{W}{B}` printed-Oracle representation.
-/// Thin wrapper around `ManaCost::summary` — but special-cases the
-/// empty-cost case to the empty string rather than `{0}` since the
-/// server's existing callers (cycling cost label, etc.) prefer a
-/// blank slot to a literal `{0}` when the cost is structurally absent.
+/// Render a ManaCost as its `{2}{W}{B}` Oracle form for client labels, via
+/// `ManaCost::summary`, except that an empty cost renders as "" rather than
+/// `{0}` (callers such as the cycling label want a blank slot).
 fn format_mana_cost_for_label(c: &crate::mana::ManaCost) -> String {
     if c.symbols.is_empty() {
         return String::new();
@@ -1405,10 +1391,6 @@ fn format_mana_cost_for_label(c: &crate::mana::ManaCost) -> String {
     c.summary()
 }
 
-/// A player-facing label for an alternative cost: the mana portion plus any
-/// non-mana riders (return-to-hand / sacrifice / pitch / life), so a {0}-mana
-/// alt cost like Escape Detection's "return a blue creature" still reads
-/// sensibly in the cast prompt instead of showing nothing.
 /// `format_alt_cost_label` led by the mechanic the cost belongs to, where
 /// the cost says ("Dash {2}{R}", "Blitz {3}{R}"): what tells two alternative
 /// costs of one card apart (`KnownCard::alt_cost_choice`).
@@ -1444,6 +1426,9 @@ fn named_alt_cost_label(a: &crate::card::AlternativeCost) -> String {
     }
 }
 
+/// A player-facing label for an alternative cost: the mana plus any non-mana
+/// riders (return-to-hand / sacrifice / pitch / life), so a {0}-mana cost like
+/// Escape Detection's "return a blue creature" still reads in the cast prompt.
 fn format_alt_cost_label(a: &crate::card::AlternativeCost) -> String {
     let mut parts: Vec<String> = Vec::new();
     let mana = format_mana_cost_for_label(&a.mana_cost);
@@ -1486,11 +1471,10 @@ fn graveyard_entry(
         mana_cost: card.definition.cost.clone(),
         power: card.definition.base_power(),
         toughness: card.definition.base_toughness(),
-        // Jump-start (CR 702.103) rides the flashback cast path at the
-        // card's own cost (+ discard, paid at cast time). Lier grants
-        // flashback (= mana cost) to I/S in the graveyard.
-        // Catalyst Stone shifts what the seat actually pays, so surface the
-        // adjusted cost rather than the printed one.
+        // Jump-start (CR 702.103) rides the flashback cast path at the card's
+        // own cost (+ discard at cast time); Lier grants flashback (= mana
+        // cost) to instants/sorceries in the graveyard. Catalyst Stone shifts
+        // what is paid, so surface the adjusted cost.
         flashback_cost: card
             .definition
             .has_flashback()
@@ -1758,12 +1742,10 @@ fn project_permanent(
         pt_modified: {
             let cp_power = cp.map(|c| c.power).unwrap_or_else(|| card.power());
             let cp_toughness = cp.map(|c| c.toughness).unwrap_or_else(|| card.toughness());
-            // Creatures and Vehicles (CR 208.3 noncreature P/T — a `*`-power
-            // Vehicle like Lumbering Worldwagon shifts with the board) both
-            // carry a P/T box; flag it when the live value differs from base.
-            // Use the *computed* type so a permanent animated into a creature
-            // (Gideon Blackblade during your turn, Awakening of Vitu-Ghazi's
-            // land, manlands) shows its P/T box too.
+            // Creatures and Vehicles (CR 208.3; a `*`-power Vehicle like
+            // Lumbering Worldwagon shifts with the board) carry a P/T box,
+            // flagged when live differs from base. Uses the *computed* type so
+            // an animated permanent (Gideon Blackblade, manlands) shows one.
             let live_creature = cp
                 .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
                 .unwrap_or_else(|| card.definition.is_creature());
@@ -1782,10 +1764,8 @@ fn project_permanent(
             .iter()
             .map(|ct| format!("{ct:?}"))
             .collect(),
-        // Generic-mana Ward cost surfaced for client UI. Non-mana Ward
-        // variants (Life / Discard / Sacrifice) fall through as 0 — a
-        // future field can carry the richer WardCost shape if a client
-        // needs it.
+        // Generic-mana Ward cost for the client UI; non-mana Ward variants
+        // (life / discard / sacrifice) read 0.
         ward_cost: card.definition.keywords.iter().find_map(|kw| {
             match kw {
                 crate::card::Keyword::Ward(crate::card::WardCost::Mana(c))
@@ -1986,10 +1966,8 @@ fn project_permanent(
     }
 }
 
-/// Project the printed `StaticAbility.description` strings as a flat
-/// `Vec<String>` for the client tooltip. Cards without static
-/// abilities yield an empty vector. The descriptions are 'static and
-/// stable across recomputes — they're the printed Oracle wording.
+/// The printed `StaticAbility.description` strings (Oracle wording) for the
+/// client tooltip; empty for cards without statics.
 fn project_static_ability_labels(card: &CardInstance) -> Vec<String> {
     let mut out: Vec<String> = card
         .definition
@@ -2042,12 +2020,9 @@ fn project_activated_ability_labels(card: &CardInstance) -> Vec<String> {
         .collect()
 }
 
-/// Generate one-line summaries per triggered ability for the client
-/// tooltip. Format: "Event: Effect" e.g. "ETB: Draw a card",
-/// "Magecraft: Drain 1", "Dies: Mill 2". The trigger-event prefix is
-/// inferred from the `EventSpec.kind` + `EventScope` pair via
-/// `trigger_event_label`; the effect body uses the existing
-/// `ability_effect_label`.
+/// One-line summary per triggered ability for the client tooltip, "Event:
+/// Effect" ("ETB: Draw a card", "Magecraft: Drain 1"): the prefix from
+/// `trigger_event_label`, the body from `ability_effect_label`.
 fn project_triggered_ability_labels(card: &CardInstance) -> Vec<String> {
     // Printed triggers plus any an Equipment grants to the creature it's
     // attached to (CR 702.6e — `EquipBonus.triggered_abilities`, the Sword
@@ -2074,10 +2049,9 @@ fn project_triggered_ability_labels(card: &CardInstance) -> Vec<String> {
         .collect()
 }
 
-/// Short human label for a trigger event-spec. Used as the prefix in
-/// `project_triggered_ability_labels`. Returns an empty string for
-/// unrecognized event kinds so the caller can fall back to the bare
-/// effect label.
+/// Short label for a trigger event-spec, the prefix in
+/// `project_triggered_ability_labels`. "" for unrecognized kinds, so the
+/// caller falls back to the bare effect label.
 enum SpellCastKind {
     InstantOrSorcery,
     Creature,
@@ -2234,11 +2208,8 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::CreatureDied, EventScope::OpponentControl) => "Opp creature dies",
         (EventKind::EntersBattlefield, EventScope::YourControl) => "Your ETB",
         (EventKind::EntersBattlefield, EventScope::OpponentControl) => "Opp ETB",
-        // Trigger labels added in batch 167 — fills remaining coverage
-        // gaps in the dispatcher matrix. Each one corresponds to an
-        // EventKind × EventScope pair that previously fell into the
-        // `""` catch-all and would render as an empty tooltip on the
-        // client trigger panel.
+        // Batch 167: EventKind × EventScope pairs that used to hit the `""`
+        // catch-all and render as an empty tooltip.
         (EventKind::Blocks, EventScope::AnyPlayer) => "Any blocks",
         (EventKind::Blocks, EventScope::YourControl) => "You block",
         (EventKind::Blocks, EventScope::OpponentControl) => "Opp blocks",
@@ -2283,42 +2254,28 @@ fn trigger_event_label(event: &crate::card::EventSpec) -> &'static str {
         (EventKind::Tapped, EventScope::SelfSource) => "When tapped",
         (EventKind::Tapped, EventScope::YourControl) => "Yours tapped",
         (EventKind::Tapped, EventScope::OpponentControl) => "Enemy tapped",
-        // Scope-aware fallback for any EventKind x EventScope pair not
-        // enumerated above. Previously these fell through to "" and
-        // rendered as a blank trigger chip on the client; a scope-tagged
-        // generic ("Triggered" / "Your trigger" / "Opp trigger") is
-        // always non-empty so the tooltip is never blank.
+        // Scope-aware fallback for every other pair, so a trigger chip is
+        // never blank.
         (_, EventScope::OpponentControl) => "Opp trigger",
         (_, EventScope::YourControl | EventScope::AnotherOfYours) => "Your trigger",
         (_, _) => "Triggered",
     }
 }
 
-/// Whether the client should arm the in-scene targeting cursor before
-/// submitting this effect: it takes a target AND that target lives on the
-/// board. Slot-0 targets in an off-board zone (graveyard / exile — "return
-/// target card from your graveyard") are gathered by an engine-side
-/// `ChooseCards` suspend instead, so the client must submit with no target.
-/// A mode's row text in the "choose one" picker.
-///
-/// `effect_short_text` deliberately returns "" for shapes it doesn't
-/// phrase, and the client renders a blank description as its 1-indexed
-/// position — so 42 kinds of mode across the catalog read as "Mode 1",
-/// "Mode 2", telling the player nothing about what they were picking.
-/// Fall back to the ability label, which is never contentless.
+/// A mode's row text in the "choose one" picker. `effect_short_text`
+/// returns "" for shapes it doesn't phrase, which the client renders as
+/// "Mode 1", "Mode 2"; fall back to the ability label, which is never
+/// contentless.
 fn mode_description(effect: &Effect) -> String {
     let short = effect.effect_short_text();
     if short.is_empty() { ability_effect_text(effect) } else { short }
 }
 
-/// The "Choose one —" modes of a spell, if it has any.
-///
-/// A modal spell is usually a bare `Effect::ChooseMode`, but the mode block
-/// is often just the *head* of a `Seq` with an unconditional rider after it
-/// — Rejoinder is `Seq([ChooseMode([tap, untap, neither]), Draw 1])`.
-/// Matching only the bare shape left those spells with no modes on the
-/// wire, so the client never offered the choice and the engine silently
-/// resolved mode 0.
+/// The "Choose one —" modes of a spell, if it has any. The mode block is
+/// often the head of a `Seq` with an unconditional rider (Rejoinder is
+/// `Seq([ChooseMode([tap, untap, neither]), Draw 1])`), not a bare
+/// `Effect::ChooseMode`; missing that left the client no choice to offer
+/// and the engine resolved mode 0.
 fn modal_modes_of(effect: &crate::effect::Effect) -> Option<&[crate::effect::Effect]> {
     match effect {
         crate::effect::Effect::ChooseMode(modes) => Some(modes),
@@ -2363,10 +2320,9 @@ fn project_abilities(card: &CardInstance) -> Vec<AbilityView> {
 }
 
 /// The full clickable list: printed abilities, then everything
-/// `GameState::granted_abilities_for` reports (instance grants like Urza's
-/// Saga chapters, and battlefield statics like Cryptolith Rite / Magma
-/// Sliver). `activate_ability` resolves index `printed_count + n` to
-/// `granted[n]`, so the two lists must be concatenated in exactly this order.
+/// `GameState::granted_abilities_for` reports (Urza's Saga chapters,
+/// Cryptolith Rite / Magma Sliver statics). `activate_ability` resolves
+/// index `printed_count + n` to `granted[n]`, so the order must match.
 fn project_abilities_with_granted(
     card: &CardInstance,
     granted: &[crate::effect::ActivatedAbility],
@@ -2407,11 +2363,9 @@ fn project_abilities_with_granted(
                     gate_label = "abilities locked".to_string();
                 }
             }
-            // An ability whose slot-0 target lives off-board ("target card in
-            // a graveyard" — Sundering Archaic's `{2}`) is unusable when no
-            // card matches: `activate_ability` rejects it before posing the
-            // picker, so the row opened nothing and explained nothing. Grey it
-            // out on the same enumeration the picker uses.
+            // An ability whose slot-0 target is off-board (Sundering Archaic's
+            // "target card in a graveyard") is rejected by `activate_ability`
+            // when no card matches; grey it out on the picker's enumeration.
             if let Some(st) = state
                 && let Some(filter) = a
                     .effect
@@ -2466,10 +2420,8 @@ fn ability_mode_labels(effect: &crate::effect::Effect) -> Vec<String> {
         .unwrap_or_default()
 }
 
-/// Render an `ActivatedAbility.condition` predicate as a short
-/// user-facing hint string. Used to populate `AbilityView.gate_label`.
-/// The format mirrors the printed Oracle text — "≥7 in hand" for hand
-/// size, "spell cast this turn" for spells_cast tally, etc.
+/// An `ActivatedAbility.condition` as a short Oracle-style hint for
+/// `AbilityView.gate_label` ("≥7 in hand", "spell cast this turn").
 fn predicate_short_label(p: &crate::card::Predicate) -> String {
     use crate::card::Predicate;
     use crate::effect::Value;
@@ -2567,17 +2519,13 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.energy_cost > 0 {
         parts.push("{E}".repeat(ability.energy_cost as usize));
     }
-    // Sacrifice-cost activations (Lotus Petal, Wasteland, Mind Stone's draw
-    // ability, Tormod's Crypt, …) carry a `sac_cost: true` flag — render it
-    // explicitly so the UI shows the sacrifice rider rather than a label
-    // that looks like the ability is free for tap+mana alone.
+    // Sacrifice-cost activations (Lotus Petal, Wasteland, Tormod's Crypt)
+    // show the rider, or the ability looks free for tap+mana alone.
     if ability.sac_cost {
         parts.push("Sac".into());
     }
-    // Life-cost activations (Great Hall of the Biblioplex, future
-    // Phyrexian-mana flavoured activations, City of Brass-style
-    // tap-for-damage hybrids). `life_cost` is the new field added
-    // alongside `Effect::MayDo` in push XV.
+    // Life-cost activations (Great Hall of the Biblioplex, City of
+    // Brass-style tap-for-damage).
     if ability.half_life_cost {
         parts.push("Pay half your life, rounded up".to_string());
     }
@@ -2590,19 +2538,14 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     if ability.life_cost > 0 {
         parts.push(format!("Pay {} life", ability.life_cost));
     }
-    // Graveyard-source activations (push XVII): "Exile this from gy"
-    // covers the exile-self-as-cost variant (Stone Docent, Eternal
-    // Student). Plain `from_graveyard: true` without exile_self_cost
-    // (Summoned Dromedary, Teacher's Pest) is rendered through the
-    // effect label — the source's return-to-hand or return-to-bf
-    // effect already signals "from gy".
+    // Graveyard-source activations: "Exile this from gy" for the
+    // exile-self-as-cost variant (Stone Docent). Plain `from_graveyard`
+    // without it (Summoned Dromedary) is said by the effect label.
     if ability.exile_self_cost {
         parts.push("Exile this from gy".into());
     }
-    // Lorehold Pledgemage / Postmortem Professor — "Exile a card from
-    // your graveyard" as an additional cost (count 1). Grim Lavamancer —
-    // "Exile two cards from your graveyard" (count 2). The bare label
-    // pluralises off the exile count.
+    // "Exile N cards from your graveyard" as an additional cost (Lorehold
+    // Pledgemage: 1, Grim Lavamancer: 2); the label pluralises off N.
     if let Some(total) = ability.exile_other_total_mv {
         parts.push(format!("Exile cards with total mana value {total}+ from gy"));
     } else if let Some((color, total)) = ability.exile_other_total_pips {
@@ -2800,9 +2743,6 @@ fn ability_cost_label(ability: &crate::effect::ActivatedAbility) -> String {
     label
 }
 
-/// Short noun for the common `SelectionRequirement` shapes used in cost
-/// riders ("Sacrifice a [noun]"). Falls back to "permanent" for filters
-/// without a crisp single-word label.
 /// `requirement_noun` for the engine side (`GameState::turn_effect_notes`).
 pub(crate) fn requirement_noun_public(req: &crate::card::SelectionRequirement) -> &'static str {
     requirement_noun(req)
@@ -2813,6 +2753,8 @@ pub(crate) fn trigger_label_public(t: &crate::card::TriggeredAbility) -> String 
     format!("{} → {}", trigger_event_label(&t.event), ability_effect_label(&t.effect))
 }
 
+/// Short noun for the common `SelectionRequirement` shapes in cost riders
+/// ("Sacrifice a [noun]"); "permanent" for filters without a crisp one.
 fn requirement_noun(req: &crate::card::SelectionRequirement) -> &'static str {
     use crate::card::SelectionRequirement as R;
     match req {
@@ -2865,15 +2807,11 @@ fn counter_kind_label(kind: &crate::card::CounterType) -> &'static str {
     }
 }
 
-/// The mana an `AddMana` ability produces, in MTG symbol notation
-/// ("Add {W}", "Add {B} or {G}", "Add {C}{C}").
-///
-/// [`ability_effect_label`] flattens every mana ability to the bare "Add
-/// mana", which makes the two rows a dual land offers in the right-click
-/// menu indistinguishable — and picking *which* colour to tap for is the
-/// only reason to open that menu on a land. Returns `None` for payloads
-/// whose colour isn't known until activation (the player is asked then),
-/// so the caller keeps the generic wording.
+/// The mana an `AddMana` ability produces, in symbol notation ("Add {W}",
+/// "Add {B} or {G}", "Add {C}{C}"). [`ability_effect_label`]'s bare "Add
+/// mana" makes a dual land's two right-click rows indistinguishable, and
+/// picking the colour is the only reason to open that menu. `None` when the
+/// colour is chosen on activation, so the caller keeps the generic wording.
 fn mana_payload_label(pool: &crate::effect::ManaPayload) -> Option<String> {
     use crate::effect::{ManaPayload as P, Value};
     // A constant count renders as repeated pips ("{C}{C}"); a computed one
@@ -2899,16 +2837,6 @@ fn mana_payload_label(pool: &crate::effect::ManaPayload) -> Option<String> {
     (!label.is_empty()).then(|| format!("Add {label}"))
 }
 
-/// The `Effect` variant name, as a sentence: `PreventNextDamageFromChosenSource`
-/// → "Prevent next damage from chosen source".
-///
-/// The last-resort label. `ability_effect_label` has a curated arm for the
-/// shapes worth phrasing by hand, but the effect vocabulary is long-tailed
-/// — hundreds of variants appear on one or two cards each — and its
-/// `_ => "Activate"` catch-all told the player nothing at all about 11.6 %
-/// of the catalog's activated abilities. A mechanically de-camel-cased
-/// variant name is not editorial prose, but it always says what the
-/// ability *is*, and it can never fall behind a newly added variant.
 /// True for a label that describes nothing — the catch-all, and the
 /// explicit "this activation's payoff is its cost" marker. Structural
 /// combinators skip past these when picking a representative child.
@@ -2916,6 +2844,12 @@ fn label_is_contentless(label: &str) -> bool {
     label == "Activate" || label == "No effect"
 }
 
+/// The `Effect` variant name as a sentence (`PreventNextDamageFromChosenSource`
+/// → "Prevent next damage from chosen source"): the last-resort label. The
+/// effect vocabulary is long-tailed, and `ability_effect_label`'s
+/// `_ => "Activate"` once said nothing about 11.6 % of activated abilities;
+/// a de-camel-cased name always says what the ability is and never falls
+/// behind a new variant.
 fn humanised_variant_name(effect: &Effect) -> String {
     let debug = format!("{effect:?}");
     let name = debug
@@ -2972,11 +2906,10 @@ fn specialise_target_noun(label: &'static str, effect: &Effect) -> Option<String
     (noun != "permanent").then(|| format!("{stem}{noun}"))
 }
 
-/// [`ability_effect_label`], but with the mana an `AddMana` ability makes
-/// spelled out, a generic target noun narrowed to what the effect actually
-/// targets, structural wrappers seen through, and — rather than the bare
-/// "Activate" catch-all — a de-camel-cased variant name.
-/// Used for the client-facing `effect_label`.
+/// [`ability_effect_label`], plus: an `AddMana`'s mana spelled out, a
+/// generic target noun narrowed, structural wrappers seen through, and a
+/// de-camel-cased variant name instead of "Activate". Used for the
+/// client-facing `effect_label`.
 fn ability_effect_text(effect: &Effect) -> String {
     if let Effect::AddMana { pool, .. } = effect
         && let Some(label) = mana_payload_label(pool)
@@ -3008,11 +2941,10 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         // Walk into structural combinators: pick the most representative
         // child for the label rather than degenerating to "Activate".
         Effect::Seq(steps) => {
-            // Pick the most representative child: skip the contentless
-            // placeholders, and skip a leading "Sacrifice" when there's a
-            // meaningful follow-up (Goblin Bombardment, Thud, Greater Good
-            // — sac is the cost; the payoff is the user-facing action). If
-            // the only non-trivial step is Sacrifice, fall through to that.
+            // Most representative child: skip contentless placeholders, and
+            // a leading "Sacrifice" with a meaningful follow-up (Goblin
+            // Bombardment, Thud: sac is the cost, the payoff is the action);
+            // a lone Sacrifice falls through to itself.
             let labels: Vec<&'static str> =
                 steps.iter().map(ability_effect_label).collect();
             labels
@@ -3348,18 +3280,14 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
     }
 }
 
-/// "Auto-handled" mana abilities — ones that produce a fixed payload with no
-/// player choice. The client filters these out of the right-click ability
-/// menu (auto-tap activates them on the user's behalf). Choice-bearing mana
-/// abilities like Black Lotus (`AnyOneColor`) ARE shown in the menu so the
-/// player can pick a specific color before casting an off-color spell.
+/// "Auto-handled" mana abilities: a fixed payload, no player choice. The
+/// client hides these from the right-click menu (auto-tap activates them);
+/// choice-bearing ones like Black Lotus (`AnyOneColor`) are shown so the
+/// player can pick a colour.
 ///
-/// **Not the engine's `is_mana_ability`, and no longer named as if it were.**
-/// This is a narrower, view-only question: CR 605.1a's rule (could add mana,
-/// doesn't target) says Black Lotus IS a mana ability, and this says it is
-/// not *auto-handled*. While the two shared a name the ability-lock gate
-/// below read the wrong one and greyed out a Black Lotus under a Pithing
-/// Needle the engine would have let through.
+/// Not the engine's `is_mana_ability` (CR 605.1a says Black Lotus IS a mana
+/// ability). While the two shared a name, the ability-lock gate below read
+/// the wrong one and greyed out a Black Lotus under Pithing Needle.
 fn is_auto_handled_mana_ability(effect: &Effect) -> bool {
     use crate::effect::ManaPayload;
     fn no_choice_payload(pool: &ManaPayload) -> bool {
@@ -3439,14 +3367,10 @@ fn project_stack(item: &StackItem, state: &GameState, viewer_seat: usize) -> Sta
 }
 
 fn format_mana_cost(cost: &crate::mana::ManaCost) -> String {
-    // Delegate to the canonical `ManaCost::summary()` renderer so every
-    // pip kind (colored, generic, {C} colorless, {S} snow, {X}, hybrid,
-    // Phyrexian, mono-hybrid) is rendered with the proper Oracle-style
-    // letters. The previous hand-rolled match used Debug formatting for
-    // hybrid / Phyrexian colors (`{White/Black}` instead of `{W/B}`) and
-    // mis-rendered {C} pips as generic. An empty cost stays the empty
-    // string here (summary() renders "{0}" for free spells; the card
-    // view wants nothing displayed for a 0-symbol cost).
+    // `ManaCost::summary()` renders every pip kind (hybrid, Phyrexian, {C},
+    // {S}, ...) in Oracle letters; the old hand-rolled match printed
+    // `{White/Black}` and {C} as generic. An empty cost stays "" (the card
+    // view shows nothing for a 0-symbol cost, where summary() says "{0}").
     if cost.symbols.is_empty() {
         return String::new();
     }
@@ -4249,11 +4173,8 @@ mod tests {
     #[test]
     fn trigger_event_label_is_never_blank() {
         use crate::card::{EventKind, EventScope, EventSpec};
-        // Every EventKind x EventScope pair must produce a non-empty
-        // label so the client never renders a blank trigger chip. This
-        // covers pairs (e.g. LifeGained/OpponentControl,
-        // DealtDamage/OpponentControl) that previously fell through to
-        // the "" catch-all.
+        // Every EventKind x EventScope pair must produce a non-empty label
+        // (e.g. LifeGained/OpponentControl used to fall through to "").
         let kinds = [
             EventKind::EntersBattlefield,
             EventKind::CreatureDied,
@@ -4332,10 +4253,8 @@ mod tests {
     }
 
     /// CR 702.34 — a graveyard tile says whether its flashback needs a
-    /// target, so the client arms the targeting cursor for Predictive
-    /// Preparations (one or two target creatures) and casts Bestial Incursion
-    /// (a token, no target) straight away (2026-10-24 client report: the
-    /// flashback tile cast with auto-chosen targets, or not at all).
+    /// target: the cursor arms for Predictive Preparations, Bestial
+    /// Incursion (a token) casts straight away (2026-10-24 client report).
     #[test]
     fn cr_702_34_graveyard_view_says_whether_flashback_needs_a_target() {
         let mut state = two_player_game();
@@ -4412,11 +4331,8 @@ mod tests {
 
     #[test]
     fn permanent_view_includes_static_ability_labels() {
-        // Top of the Class has printed statics ("Prepared creatures you
-        // control get +1/+1 / have flying") — the view should surface the
-        // description strings in `static_ability_labels`. (The old fixture,
-        // Tenured Inkcaster, lost its synthesized anthem when its body was
-        // rewritten to the real oracle.)
+        // Top of the Class's printed statics ("Prepared creatures you control
+        // get +1/+1 / have flying") surface in `static_ability_labels`.
         let mut state = two_player_game();
         let id = state.add_card_to_battlefield(0, catalog::top_of_the_class());
         let view = project(&state, 0);
@@ -4514,10 +4430,9 @@ mod tests {
         assert_eq!(perm.toughness, 2);
     }
 
-    /// Sac+payoff abilities (Goblin Bombardment, Greater Good, Thud)
-    /// are `Seq([Sacrifice…, Payoff…])`. The view label should surface
-    /// the **payoff** so the player sees "Deal damage" / "Draw cards"
-    /// rather than the cost-step "Sacrifice".
+    /// Sac+payoff abilities (Goblin Bombardment, Greater Good, Thud) are
+    /// `Seq([Sacrifice…, Payoff…])`; the label surfaces the payoff, not the
+    /// cost step.
     #[test]
     fn ability_label_skips_sacrifice_cost_for_payoff() {
         let bomb = catalog::goblin_bombardment();
@@ -4601,11 +4516,10 @@ mod tests {
 
     #[test]
     fn no_activated_ability_renders_as_the_bare_catch_all() {
-        // Regression: `ability_effect_label`'s `_ => "Activate"` left 696 of
-        // the catalog's 6022 activated abilities (11.6 %) with a right-click
-        // menu row that said nothing about what the ability does. Curated
-        // arms cover the busiest shapes; the de-camel-cased variant name
-        // catches the long tail, including variants added after this test.
+        // Regression: `_ => "Activate"` once left 11.6 % of the catalog's
+        // activated abilities with a menu row that said nothing. Curated arms
+        // cover the busy shapes; the de-camel-cased variant name catches the
+        // long tail, including variants added after this test.
         let mut unlabelled: Vec<&str> = Vec::new();
         for f in crate::catalog::sets::all_factories::all_catalog_card_factories() {
             let def = f();
@@ -4737,10 +4651,8 @@ mod tests {
         );
     }
 
-    /// Sacrifice-cost activated abilities (Lotus Petal, Wasteland,
-    /// Tormod's Crypt, Mind Stone's draw ability) should render the
-    /// "Sac" cost rider explicitly so the UI tooltip doesn't make the
-    /// ability look free.
+    /// Sacrifice-cost abilities (Lotus Petal, Wasteland, Tormod's Crypt)
+    /// render the "Sac" rider so the tooltip doesn't make them look free.
     #[test]
     fn ability_cost_label_includes_sacrifice_marker() {
         use crate::effect::{ActivatedAbility, Effect};
@@ -4904,11 +4816,9 @@ mod tests {
         assert!(label.contains("Return this to hand"), "bounce rider shown: {label}");
     }
 
-    /// `AbilityView.once_per_turn_used` must reflect the engine's
-    /// per-turn budget so the client can grey out the button. We set up
-    /// the flag manually on the battlefield instance (rather than
-    /// driving a full activation) to keep the test focused on the
-    /// projection step.
+    /// `AbilityView.once_per_turn_used` reflects the engine's per-turn
+    /// budget so the client can grey out the button (flag set by hand to
+    /// test the projection alone).
     #[test]
     fn ability_view_surfaces_once_per_turn_used_state() {
         let mut state = two_player_game();
@@ -4951,11 +4861,8 @@ mod tests {
         assert_eq!(row(&after), (true, true));
     }
 
-    /// Resonating Lute's gated draw ability should surface its
-    /// printed `Activate only if you have seven or more cards in your
-    /// hand` clause through `AbilityView.gate_label` — push VIII
-    /// added the field. The client can show "≥7 in hand" next to the
-    /// activator button.
+    /// Resonating Lute's "Activate only if you have seven or more cards in
+    /// your hand" surfaces as `AbilityView.gate_label`.
     #[test]
     fn resonating_lute_gate_label_in_view() {
         let mut state = two_player_game();
@@ -5024,10 +4931,8 @@ mod tests {
             "gate_label should describe the predicate (got {:?})", lab);
     }
 
-    /// Planeswalkers' loyalty abilities should surface in the wire view so
-    /// the client can render the "+1 / -3 / -8" buttons. Pre-fix the
-    /// PermanentView only carried activated abilities, leaving the UI
-    /// blind to walker abilities.
+    /// Planeswalker loyalty abilities surface in the wire view so the
+    /// client can render the "+1 / -3 / -8" buttons.
     #[test]
     fn planeswalker_loyalty_abilities_appear_in_view() {
         let mut state = two_player_game();
@@ -5096,12 +5001,9 @@ mod tests {
     /// arm the cursor; Tibalt's token-making −2 does not.
     #[test]
     fn modal_prepare_spell_publishes_its_modes() {
-        // Regression: Elite Interceptor's inset Rejoinder is
-        // `Seq([ChooseMode([tap, untap, neither]), Draw 1])`. The modal
-        // projection only matched a *bare* `ChooseMode`, so the wire
-        // carried no modes, the client never offered the choice, and the
-        // engine silently resolved mode 0 — the untap and decline modes
-        // were unreachable from the UI.
+        // Regression: Elite Interceptor's Rejoinder is `Seq([ChooseMode([tap,
+        // untap, neither]), Draw 1])`; matching only a bare `ChooseMode` left
+        // the untap and decline modes unreachable from the UI.
         let mut state = two_player_game();
         let id = state.add_card_to_battlefield(0, catalog::elite_interceptor());
         if let Some(c) = state.battlefield.iter_mut().find(|c| c.id == id) {
@@ -5264,13 +5166,8 @@ mod tests {
 
     #[test]
     fn trigger_event_label_covers_another_attacks() {
-        // Slaughter Singer's "whenever another creature you control
-        // attacks" trigger is scoped `AnotherOfYours` on
-        // `EventKind::Attacks`. The view should surface this as
-        // "Another attacks: …" so the client tooltip renders nicely.
-        // (The old fixture, Sparring Regimen, lost its synthesized
-        // Attacks trigger when rewritten to the real "whenever you
-        // attack" oracle.)
+        // Slaughter Singer's `AnotherOfYours` `Attacks` trigger surfaces as
+        // "Another attacks: …".
         let mut state = two_player_game();
         let id = state.add_card_to_battlefield(0, catalog::slaughter_singer());
         let view = project(&state, 0);

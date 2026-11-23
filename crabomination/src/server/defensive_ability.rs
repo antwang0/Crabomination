@@ -1,11 +1,10 @@
 //! A defender's removal *ability* aimed at an attacker (Soul Snare's "{W},
-//! sacrifice: exile target creature that's attacking you") — the defensive
-//! removal picker reads instants in hand only, so a 183-deck `--card-census
-//! --a dflt` never activated Soul Snare in any of its seven decks. Stalking
-//! Leonin's once-only exile hides behind a resolution-time `If` (the attacker's
-//! controller is the chosen player) — the `If` is read first, so the
-//! activation isn't spent on a fizzle (census seed 3100001, four decks).
-//! Commander games only, so two-player play is unchanged.
+//! sacrifice: exile target creature that's attacking you"), which the
+//! defensive removal picker (instants in hand only) never reached. Stalking
+//! Leonin's once-only exile hides behind a resolution-time `If` (the
+//! attacker's controller is the chosen player), read first so the
+//! activation isn't spent on a fizzle. Commander games only, so two-player
+//! play is unchanged.
 
 use crate::effect::{Effect, Selector, ZoneDest};
 use crate::game::GameState;

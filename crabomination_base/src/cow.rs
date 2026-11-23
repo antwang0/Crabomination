@@ -6,13 +6,13 @@ use std::sync::atomic::{Ordering, fence};
 
 /// `&mut T` when `arc` is its allocation's only handle, without the
 /// `lock cmpxchg` that `Arc::get_mut` / `Arc::make_mut` spend ruling out a
-/// `Weak`. **The `Weak` case cannot arise for the two `Arc`s this serves**:
-/// `CowBox`'s and `CardInstance::data` are private fields, nothing in the
+/// `Weak`. PERF `(-177)`.
+///
+/// ⚠ Sound only because the `Weak` case can't arise for the two `Arc`s this
+/// serves: `CowBox`'s and `CardInstance::data` are private and nothing in the
 /// workspace calls `Arc::downgrade`, so uniqueness is `strong == 1`. The
-/// `Relaxed` count read plus the `Acquire` fence synchronizes with the last
-/// other handle's release-decrement in `Arc::drop`, exactly as `make_mut`'s
-/// own acquire does. PERF `(-177)`: 387,452 `make_mut` calls a six-game
-/// `fixed` run, 85 % of them answering "unique".
+/// `Relaxed` read plus the `Acquire` fence synchronizes with the last other
+/// handle's release-decrement in `Arc::drop`, as `make_mut`'s acquire does.
 #[inline(always)]
 pub fn unique_mut<T>(arc: &mut Arc<T>) -> Option<&mut T> {
     if Arc::strong_count(arc) != 1 {
@@ -27,10 +27,9 @@ pub fn unique_mut<T>(arc: &mut Arc<T>) -> Option<&mut T> {
     Some(unsafe { &mut *(Arc::as_ptr(arc) as *mut T) })
 }
 
-/// `Arc::make_mut` with [`unique_mut`]'s check on the common path. The check
-/// is forced inline — a load, a compare and a branch at the site — and the
-/// copy path is out of line, so the 85 % of calls that answer "unique" pay
-/// no call at all.
+/// `Arc::make_mut` with [`unique_mut`]'s check on the common path: the check is
+/// forced inline (a load, compare and branch) and the copy path is out of line,
+/// so the common "unique" answer pays no call.
 #[inline(always)]
 pub fn make_mut<T: Clone>(arc: &mut Arc<T>) -> &mut T {
     if Arc::strong_count(arc) == 1 {
@@ -48,23 +47,18 @@ fn make_mut_slow<T: Clone>(arc: &mut Arc<T>) -> &mut T {
     Arc::make_mut(arc)
 }
 
-/// Copy-on-write box: `Clone` is an `Arc` bump; the first `&mut` access
-/// after a clone copies the inner value (`Arc::make_mut`). `Deref`/
-/// `DerefMut` make it read like the plain type at call sites.
+/// Copy-on-write box: `Clone` is an `Arc` bump, and the first `&mut` access
+/// after a clone copies the inner value (`Arc::make_mut`); `Deref` / `DerefMut`
+/// make it read like the plain type. Wraps the card zones in `GameState` and
+/// `Player` and the rarely written groups (`PlayerCold`, `ColdState`), so a
+/// state clone (bot probes, the `perform_action` checkpoint, undo snapshots)
+/// costs reference bumps and a probe pays only for what its action mutates.
 ///
-/// Wraps the card-zone collections in `GameState` and `Player`, and the
-/// rarely-written field groups (`PlayerCold`, `ColdState`), so a state clone
-/// — dry-run probes, the `perform_action` transaction checkpoint, undo
-/// snapshots — costs reference bumps instead of deep copies. A probe then
-/// pays only for the zones its action actually mutates.
-///
-/// Sharp edge: any `&mut` access (including `iter_mut` used read-only)
-/// copies the whole inner value while a snapshot shares it. That is never
-/// *worse* than the eager clone this replaces, but prefer `&self` access
-/// on hot read paths. For the card zones the edge is blunt:
-/// [`CardInstance`](crate::card::CardInstance) is itself a CoW handle, so
-/// unsharing a zone copies a vector of pointers and only the cards actually
-/// written pay a deep clone.
+/// ⚠ Any `&mut` access, including a read-only `iter_mut`, copies the whole
+/// inner value while a snapshot shares it — never worse than the eager clone
+/// this replaced, but prefer `&self` on hot read paths. For card zones the cost
+/// is small: [`CardInstance`](crate::card::CardInstance) is itself a CoW
+/// handle, so unsharing a zone copies a vector of pointers.
 #[derive(Debug)]
 pub struct CowBox<T: Clone>(Arc<T>);
 
@@ -87,16 +81,12 @@ impl<T: Clone> CowBox<T> {
     }
 }
 
-/// The one write shape that is not a general `DerefMut`: appending.
-///
-/// `Arc::make_mut` materializes with `Vec::clone`, which hands back
-/// `capacity == len` — so the push that follows the first write after a state
-/// clone **always** reallocates, two allocations for one appended element.
-/// Materializing with room for it removes the second. Inherent, so it shadows
-/// the `Deref`'d `Vec::push` at every existing call site without touching one.
-///
-/// Same device as `layers::Printed<Vec<_>>::push` one level out: there the
-/// copy is the layer override, here it is the CoW unshare.
+/// Appending, the one write shape that isn't a general `DerefMut`.
+/// `Arc::make_mut` materializes with `Vec::clone`, which returns `capacity ==
+/// len`, so the push after the first write following a state clone always
+/// reallocated. Materializing with room removes that. Inherent, so it shadows
+/// the `Deref`'d `Vec::push` at every call site — the same device as
+/// `layers::Printed<Vec<_>>::push`.
 impl<T: Clone> CowBox<Vec<T>> {
     #[inline]
     pub fn push(&mut self, value: T) {
@@ -104,11 +94,9 @@ impl<T: Clone> CowBox<Vec<T>> {
             v.push(value);
             return;
         }
-        // `next_power_of_two`, not `len + 1`: materializing at exactly the
-        // new length means the *next* push on the now-unique box reallocates,
-        // and the growth census reads 6,910 such reallocations a six-game
-        // `cube` run against 18,362 unshares. The headroom is at most 2x of
-        // a buffer this code is already copying in full. PERF `(-370)`.
+        // `next_power_of_two`, not `len + 1`: at exactly the new length the
+        // next push on the now-unique box reallocates again. The headroom is at
+        // most 2x of a buffer already being copied. PERF `(-370)`.
         let mut v = Vec::with_capacity((self.0.len() + 1).next_power_of_two());
         v.extend_from_slice(&self.0);
         v.push(value);

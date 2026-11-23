@@ -1,7 +1,6 @@
 //! `deck_value_train` — step 1 of the deck-building net (ML_NOTES "A deck net
-//! that builds decks — the plan, and step 1 pre-registered"): does a
-//! context-aware deck value on the play net's card encoder predict sealed
-//! matches better than the additive rating table?
+//! that builds decks"): a context-aware deck value on the play net's card
+//! encoder, fit to sealed matches, against the additive rating table.
 //!
 //! Reads a rating run's directory (`fra_card_eval` writes `decks.tsv` and
 //! `games.tsv`; `fra_card_eval --dump-cards DIR` adds `card_feats.tsv` and
@@ -17,12 +16,11 @@
 //! | `A4`  | A1 without the context: `Σ copies · a(x_card)` |
 //!
 //! The context model is `f = Σ_c n_c (a(x_c) + B(x_c) · c(ctx)) + h(ctx)`,
-//! `ctx` the deck's mean card vector ⊕ its deck features — a rank-16
-//! interaction between each card and the deck around it. Each game of a match
-//! is won by A with `σ(f(A) − f(B))`. Decks are split 80 / 20 by a fixed hash:
-//! train on matches between training decks, early-stop and pick λ on mixed
-//! matches, report on matches between held-out decks. Full batch on the CPU.
-//! One JSON line per run is appended to `--out`.
+//! `ctx` the deck's mean card vector ⊕ its deck features (a rank-16
+//! card-deck interaction); A wins each game with `σ(f(A) − f(B))`. Decks split
+//! 80 / 20 by a fixed hash: train on training-deck matches, early-stop and
+//! pick λ on mixed ones, report on held-out ones. Full batch on the CPU; one
+//! JSON line per run is appended to `--out`.
 //!
 //! ```text
 //! deck_value_train --data .ladder/deckval/fra --net nets/fra-champion.safetensors \
@@ -301,8 +299,6 @@ impl Head {
     }
 }
 
-/// The exported value read back by the engine must score the first decks as
-/// the trainer did — the gate runs on the engine's reading, not this one.
 /// Each deck of `decks.tsv`, in id order, as card factories.
 fn deck_factories(dir: &std::path::Path) -> Vec<Vec<crabomination::cube::CardFactory>> {
     let mut by_name: HashMap<&'static str, crabomination::cube::CardFactory> = HashMap::new();
@@ -315,6 +311,8 @@ fn deck_factories(dir: &std::path::Path) -> Vec<Vec<crabomination::cube::CardFac
     text.lines().map(|line| line.split('\t').skip(1).map(|n| by_name[n]).collect()).collect()
 }
 
+/// The exported value read back by the engine must score the first decks as
+/// the trainer did: the gate runs on the engine's reading, not this one.
 fn parity(path: &std::path::Path, dir: &std::path::Path, want: &[f32]) {
     let dv = crabomination::deck_value::DeckValue::load(path).unwrap_or_else(|e| panic!("{e}"));
     let mut worst = 0f64;
@@ -468,9 +466,8 @@ fn main() -> CResult<()> {
     let mut opt_enc = (!enc_vars.is_empty())
         .then(|| AdamW::new(enc_vars.clone(), ParamsAdamW { lr: enc_lr, weight_decay: 0.0, ..Default::default() }))
         .transpose()?;
-    // L2 on every trained weight matrix and scalar, per training game; the
-    // pretrained encoder's is pulled toward its init, not zero, so A2 stays
-    // a fine-tune.
+    // L2 per training game on every trained weight; the pretrained encoder
+    // is pulled toward its init, not zero, so A2 stays a fine-tune.
     let enc_init: Vec<Tensor> = enc_vars.iter().map(|v| v.as_tensor().copy()).collect::<CResult<_>>()?;
     let penalty = |vars: &[Var], init: Option<&[Tensor]>| -> CResult<Tensor> {
         let mut p = Tensor::zeros((), DType::F32, &dev)?;

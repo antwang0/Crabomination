@@ -1,21 +1,14 @@
 //! `CopyVec` — a [`SmallVec`] of `Copy` items whose `Clone` is a `memcpy`.
 //!
-//! `smallvec`'s own `Clone` is `SmallVec::from(self.as_slice())`, which lands
-//! in `extend_from_slice` → `Extend::extend`: a `reserve` plus an *external*
-//! `next()` loop, even for a `Copy` item and even when the vector is empty.
-//! `SmallVec::from_slice` is a `ptr::copy_nonoverlapping` and is on stable for
-//! exactly this case; the crate reaches it only through an inherent method,
-//! never through the `Clone` impl.
+//! `smallvec`'s `Clone` goes through `Extend::extend` (a `reserve` plus an
+//! external `next()` loop, even for `Copy` items and empty vectors), while
+//! `SmallVec::from_slice` is a `ptr::copy_nonoverlapping` the crate reaches
+//! only through an inherent method. These vectors live in the CoW'd state
+//! groups and are cloned on every deep copy, where `Extend::extend` was 0.81 %
+//! of `cube` at the ninety-eighth pass.
 //!
-//! That matters because these vectors live in the CoW'd state groups, so they
-//! are cloned once per *deep copy* rather than once per game event:
-//! `SmallVec as Extend::extend` is **337,280 calls / 22.7 M Ir / 0.81 % of
-//! `cube`**, and 251,044 of those calls are under
-//! `Arc::clone_from_ref_in` or `GameState::clone` (ninety-eighth pass).
-//!
-//! The wrapper is `Deref`/`DerefMut` to `SmallVec`, so every read and write
-//! site keeps compiling unchanged; only the field's declared type and its
-//! construction move.
+//! `Deref` / `DerefMut` to `SmallVec`, so read and write sites are unchanged;
+//! only the field's declared type and construction move.
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use smallvec::{Array, SmallVec};

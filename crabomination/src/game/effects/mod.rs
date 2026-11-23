@@ -292,14 +292,11 @@ fn is_resume_wrapper(effect: &Effect) -> bool {
     )
 }
 
-/// Re-wrap whatever a body just parked, when it suspended, so a wrapper that
-/// rebinds the context keeps its binding across the suspend.
-///
-/// A parked continuation is resumed under the **stack item's**
-/// `EffectContext`. A wrapper that narrows `targets` or moves `controller`
-/// therefore loses its binding the moment anything inside it suspends — the
-/// rest of that body runs as the caster, on the caster's targets. Returns
-/// true when the body suspended.
+/// Re-wrap whatever a body just parked, so a wrapper that rebinds the context
+/// keeps its binding across the suspend: a parked continuation resumes under
+/// the stack item's `EffectContext`, so a wrapper that narrows `targets` or
+/// moves `controller` would otherwise lose it. Returns true when the body
+/// suspended.
 pub(crate) fn rewrap_parked(
     signal: &mut Option<Box<(crate::decision::Decision, PendingEffectState, Effect)>>,
     wrap: impl FnOnce(Effect) -> Effect,
@@ -312,19 +309,15 @@ pub(crate) fn rewrap_parked(
     true
 }
 
-/// Append `tail` behind the continuation a body just parked, when that body
-/// suspended. Returns true when it did, i.e. when the caller's loop must
-/// return and let the tail resume it.
+/// Append `tail` behind the continuation a body just parked. Returns true when
+/// it suspended, i.e. the caller's loop must return and let the tail resume it.
 ///
-/// A suspending body carries only its *own* remaining effect, so a loop that
-/// merely ran on abandoned every iteration after the one that suspended
-/// (CR 101.4 — "each opponent" / "each player" is every one of them, not the
-/// first). The tail must name its seats inside the `Effect`: the parked
-/// continuation is resumed under a rebuilt context, so a seat pinned only in
-/// an `EffectContext` field does not survive the suspension.
-///
-/// `tail` is a closure: the un-suspended pass is the common one and must not
-/// pay for a continuation nobody will run.
+/// A suspending body carries only its own remaining effect, so a loop would
+/// drop every iteration after the one that suspended (CR 101.4 — "each
+/// player" is every one of them). The tail must name its seats inside the
+/// `Effect`: a seat pinned only in an `EffectContext` field does not survive
+/// the rebuilt resume context. `tail` is a closure so the common un-suspended
+/// pass doesn't build it.
 pub(crate) fn splice_after_suspend(
     signal: &mut Option<Box<(crate::decision::Decision, PendingEffectState, Effect)>>,
     tail: impl FnOnce() -> Effect,
@@ -455,34 +448,25 @@ pub struct EffectContext {
     /// cost (CR 702.137 Adamant — `Predicate::ManaSpentOfColorAtLeast`).
     /// Stamped from `CardInstance.cast_mana_spent_by_color` at resolution.
     pub mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
-    /// The resolving spell's printed name. Stamped by
-    /// `for_spell_with_source` so predicates that need to introspect the
-    /// spell's name (e.g. `Predicate::SameNamedInZoneAtLeast` for
-    /// Dragon's Approach's "same name in your graveyard" rider) can
-    /// read it directly — the card itself is in transient ownership
-    /// during spell resolution and isn't present in any visible zone,
-    /// so a zone-walking lookup wouldn't find it.
+    /// The resolving spell's printed name, stamped by `for_spell_with_source`.
+    /// The card is in no zone during its own resolution, so predicates that
+    /// read the name (`Predicate::SameNamedInZoneAtLeast`, Dragon's Approach)
+    /// read it here.
     pub source_name: Option<&'static str>,
-    /// True if the resolving spell was cast from its caster's hand.
-    /// False for flashback / cast-from-graveyard / cast-from-exile
-    /// paths. Stamped by `for_spell_with_source` from the resolving
-    /// `CardInstance.cast_from_hand` flag, read by
-    /// `Predicate::CastFromGraveyard` (Increasing Vengeance "if cast
-    /// from graveyard, copy twice instead"). Defaults to `true` for
-    /// non-spell contexts (triggers, activated abilities) since those
-    /// don't have a "cast zone" concept.
+    /// True if the resolving spell was cast from its caster's hand (false for
+    /// flashback / graveyard / exile casts). Stamped by `for_spell_with_source`
+    /// from `CardInstance.cast_from_hand`; read by `Predicate::CastFromGraveyard`
+    /// (Increasing Vengeance). Defaults to `true` for triggers and activated
+    /// abilities, which have no cast zone.
     pub cast_from_hand: bool,
     /// True if the resolving spell was cast from a graveyard
     /// (`CardInstance.cast_from_graveyard`); read by
     /// `Predicate::CastFromGraveyard`. False outside a spell resolution.
     pub cast_from_graveyard: bool,
-    /// Per-event amount of the firing event (life gained, life lost,
-    /// damage dealt, cards drawn, …). Set on trigger resolutions from
-    /// the event payload (`StackItem::Trigger.event_amount`) so trigger
-    /// bodies can read it via `Value::TriggerEventAmount`. Used by
-    /// Light of Promise's "Whenever you gain life, put that many
-    /// +1/+1 counters on target creature you control." Defaults to 0
-    /// for non-trigger contexts (spells, activated abilities).
+    /// Amount of the firing event (life gained, damage dealt, cards drawn, …),
+    /// set on trigger resolutions from `StackItem::Trigger.event_amount` and
+    /// read via `Value::TriggerEventAmount` (Light of Promise). 0 for spells
+    /// and activated abilities.
     pub event_amount: u32,
     /// True if the resolving spell was kicked (CR 702.32). Stamped from
     /// the resolving `CardInstance.kicked` flag; read by
@@ -567,16 +551,12 @@ impl EffectContext {
             spree_modes: Vec::new(),
         }
     }
-    /// Spell-resolution context with the resolving spell's
-    /// `CardId` + printed name stamped onto `ctx.source` /
-    /// `ctx.source_name` and all cast-time scalars (X, Converge, total
-    /// mana spent) threaded in. Lets predicates that introspect the
-    /// resolving spell (e.g. `Predicate::SameNamedInZoneAtLeast` for
-    /// Dragon's Approach's "same name in your graveyard" rider) read
-    /// the spell's identity without needing to find the card in any
-    /// game zone — during spell resolution the card is in transient
-    /// ownership (popped from the stack, not yet placed in graveyard),
-    /// so a zone-walking lookup would fail.
+    /// Spell-resolution context with the spell's `CardId` and name stamped onto
+    /// `ctx.source` / `ctx.source_name` and the cast-time scalars (X, Converge,
+    /// mana spent) threaded in. During resolution the card is popped from the
+    /// stack and not yet in the graveyard, so predicates that introspect the
+    /// spell (`Predicate::SameNamedInZoneAtLeast`, Dragon's Approach) must read
+    /// it from here rather than a zone walk.
     #[allow(clippy::too_many_arguments)]
     pub fn for_spell_with_source(
         spell_card: CardId,
@@ -603,12 +583,9 @@ impl EffectContext {
         )
     }
 
-    /// Variant of `for_spell_with_source` that also stamps the
-    /// `cast_from_hand` flag so the resolution-time predicate
-    /// `Predicate::CastFromGraveyard` (Increasing Vengeance) can read
-    /// whether the spell came from hand vs graveyard / flashback. The
-    /// no-origin sibling defaults to `cast_from_hand = true` since the
-    /// vast majority of spell resolutions are hand casts.
+    /// `for_spell_with_source` plus the `cast_from_hand` flag, for
+    /// `Predicate::CastFromGraveyard` (Increasing Vengeance). The no-origin
+    /// sibling defaults it to `true`.
     #[allow(clippy::too_many_arguments)]
     pub fn for_spell_with_source_and_origin(
         spell_card: CardId,
@@ -784,15 +761,10 @@ fn grist_insect_token() -> std::sync::Arc<crate::card::TokenDefinition> {
 impl EffectContext {
     /// The context an intervening filter (CR 603.4) is evaluated in.
     ///
-    /// ⚠ **THE THREE TRIGGER WALKS BUILT THIS BY HAND, IDENTICALLY, AND A NEW
-    /// `EffectContext` FIELD HAD TO BE ADDED TO ALL THREE OR THE WALKS WOULD
-    /// DISAGREE.** The battlefield walk, the graveyard walk and the
-    /// command-zone walk differ only in `controller`, `source` and how they
-    /// get `event_amount`; the other nineteen fields were copied. Drift
-    /// between those walks has cost two shipped bugs already (`CardDiscarded`
-    /// admitted by one list and not the other; the graveyard walk missing the
-    /// subject dedupe), so the rules they share live in one place now — see
-    /// also `events::subject_already_fired`.
+    /// ⚠ The battlefield, graveyard and command-zone trigger walks all build it
+    /// here: they differ only in `controller`, `source` and `event_amount`, and
+    /// hand-copied versions drifted into two shipped bugs. See also
+    /// `events::subject_already_fired`.
     ///
     /// The seat an event names, bound for a trigger condition read before the
     /// push (CR 603.4): a player subject, else the event's actor.
@@ -1056,17 +1028,13 @@ impl GameState {
             seat_order.iter().position(|s| s == seat).unwrap_or(usize::MAX)
         });
         let mut cursor = 0;
-        // TWO PASSES, and the split is the fix rather than a style: a suspend
-        // re-runs this arm from the top, so a payment made inside the ask loop is
-        // made AGAIN on every later seat's suspend. With two `wants_ui` seats —
-        // i.e. every self-play game — the seat that answered first paid twice for
-        // one permanent and then could not cover the second charge, so its
-        // permanent left anyway (`exo::fade_away_charges_each_controller_once_
+        // TWO PASSES, and the split is the fix: a suspend re-runs this arm from the
+        // top, so a payment made inside the ask loop would be made again on every
+        // later seat's suspend (`exo::fade_away_charges_each_controller_once_
         // when_both_asks_suspend`). Pass 1 asks and mutates nothing; pass 2 pays.
-        // One prompt changes shape: a seat with two affected permanents is now
-        // asked about both before either is paid for, so the second ask is posed
-        // and then fails to pay instead of being suppressed by `could_pay_cost` —
-        // the board outcome is the same permanent leaving either way.
+        // A seat with two affected permanents is asked about both before paying, so
+        // the second may then fail to pay rather than be suppressed by
+        // `could_pay_cost` — same board outcome.
         let mut answers: Vec<(CardId, usize, bool)> = Vec::with_capacity(targets.len());
         for (id, owner_seat) in targets {
             // Ask only when the seat could actually cover it — pool plus
@@ -1130,25 +1098,19 @@ impl GameState {
 
     /// Ask `seat` a yes/no question inside a (possibly multi-question)
     /// resolution effect, replaying `resolution_answer_log` first. Returns
-    /// `None` when the effect must suspend for a `wants_ui` seat (the
-    /// originating `effect` is re-queued; the resume re-runs it with the
-    /// log one answer longer). `cursor` is the caller's per-run ask index —
-    /// start it at 0 and pass the same variable to every ask in the arm.
-    /// The caller must keep all side effects *after* its final ask (the
-    /// re-run repeats everything before the suspension point) and call
+    /// `None` when the effect must suspend for a `wants_ui` seat (the effect is
+    /// re-queued and the re-run sees the log one answer longer). `cursor` is the
+    /// arm's per-run ask index: start at 0 and pass the same variable to every
+    /// ask. The caller must keep all side effects *after* its final ask and call
     /// `clear_answer_log()` on every completing path.
     ///
     /// `kind` states the question for a headless policy — see
-    /// [`OptionalKind`](crate::decision::OptionalKind). It is a required
-    /// argument, not a defaulted field, because the blanket-yes it replaces
-    /// was invisible at the call site.
+    /// [`OptionalKind`](crate::decision::OptionalKind); it is required so the
+    /// default is visible at the call site.
     ///
-    /// **The queued continuation is `effect.with_asked_seat(seat)`, not
-    /// `effect`** — every `ask_seat_*` helper does this, so no arm has to
-    /// remember. An arm that derives its seat from a selector would otherwise
-    /// re-derive it on the re-run against a board its own earlier clause has
-    /// changed (`ENGINE_BACKLOG`'s seventeenth find). The rewrite is on the
-    /// suspend path only, where the effect is cloned anyway.
+    /// The queued continuation is `effect.with_asked_seat(seat)` (every
+    /// `ask_seat_*` helper does this), so a selector-derived seat isn't
+    /// re-derived on the re-run against a board the arm has already changed.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn ask_seat_bool(
         &mut self,
@@ -1197,38 +1159,29 @@ impl GameState {
         Some(b)
     }
 
-    /// True when the answer at `cursor` was already **acted on** by an earlier
-    /// pass, for the two arms whose side effects cannot be moved after their
-    /// final ask (`MayPayRepeatedly`, `CoinFlipDestroyLoop` — each ask exists
-    /// only because the previous payment succeeded).
+    /// True when the answer at `cursor` was already acted on by an earlier pass,
+    /// for the two arms whose side effects cannot follow their final ask
+    /// (`MayPayRepeatedly`, `CoinFlipDestroyLoop` — each ask exists only because
+    /// the previous payment succeeded).
     ///
-    /// The test is "something was logged after it", and only the arm continuing
-    /// past an answer can log anything after it. The **last** entry is the
-    /// answer this pass was resumed with: it is replayed for the first time
-    /// here, so its side effects are still owed. Getting that off by one skips
-    /// the payment the seat just agreed to.
-    ///
-    /// Only sound for an arm whose every ask is unconditional — a gate before an
-    /// ask would re-evaluate against the already-mutated state and shift which
-    /// slot holds which question. Arms with a gate take the two-pass split
-    /// instead (`run_each_unless_pays`).
+    /// The test is "something was logged after it". The last entry is the answer
+    /// this pass resumed with and its side effects are still owed — off by one
+    /// skips the payment the seat just agreed to. Only sound when every ask is
+    /// unconditional; a gated ask would shift slots, so those arms use the
+    /// two-pass split (`run_each_unless_pays`).
     fn answer_already_acted_on(&self, cursor: usize) -> bool {
         cursor + 1 < self.scratch.resolution_answer_log.len()
     }
 
     /// Ask `seat` to pick one of `legal`, replaying `resolution_answer_log`
     /// first — the `Target` sibling of [`ask_seat_bool`](Self::ask_seat_bool),
-    /// and the one that lets a LOOP route a pick per seat.
+    /// which lets a loop route a pick per seat. The single-slot channel can't
+    /// (see `scripts/audit_stash_in_loop.py`), and a bare `decider.decide` would
+    /// hand the resolving seat's policy a choice the card gives someone else (a
+    /// council ballot, Cuombajj Witches' opponent-aimed point).
     ///
-    /// The single-slot channel cannot do that (see
-    /// `scripts/audit_stash_in_loop.py`), and a bare `decider.decide` is worse
-    /// than either: it hands the resolving seat's policy a choice the card gives
-    /// to someone else — a council ballot, or the opponent aiming Cuombajj
-    /// Witches' second point at whatever the CONTROLLER's decider likes.
-    ///
-    /// Returns `None` on a suspend, and the caller must keep its side effects
-    /// after its final ask and `clear_answer_log()` on every completing path,
-    /// exactly as for the other logged asks.
+    /// Returns `None` on a suspend; same side-effect and `clear_answer_log()`
+    /// rules as the other logged asks.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn ask_seat_target_logged(
         &mut self,
@@ -1316,24 +1269,17 @@ impl GameState {
         Some(picked)
     }
 
-    /// CR 705.1 — a coin flip that happens **once**, even when the arm that
-    /// flipped it later suspends.
+    /// CR 705.1 — a coin flip that happens once, even when the arm later suspends.
     ///
-    /// An arm that flips before an ask has no way to keep that side effect
-    /// "after its final ask": the flip is what the ask is *about*. So the flip's
-    /// result takes a slot in the replay log, exactly like an answer. The first
-    /// pass flips and logs; the re-run reads the logged result back instead of
-    /// drawing a second one. Without this, a suspending seat re-rolled every
-    /// flip it had already been told about on every resume (Crooked Scales), so
-    /// one flip became `k + 1` of them and a re-run that won destroyed a
-    /// creature nobody had been asked about.
+    /// An arm that flips before an ask can't move the flip after it, so the
+    /// result takes a slot in the replay log like an answer: the first pass
+    /// flips and logs, the re-run reads it back. Without this a suspending seat
+    /// re-rolled on every resume (Crooked Scales). Slots interleave with the
+    /// arm's asks (`[flip, answer, flip, ...]`), so pass the arm's one `cursor`
+    /// and call it only where the re-run reaches it in the same order.
     ///
-    /// Slots interleave with the arm's own asks (`[flip, answer, flip, ...]`),
-    /// so pass the arm's single `cursor` here too, and only ever call it in a
-    /// position the re-run reaches in the same order.
-    ///
-    /// The event is the caller's: it fires only on a real flip, because a
-    /// replayed one was already reported on the pass that drew it.
+    /// The caller fires the event only on a real flip; a replayed one was
+    /// already reported.
     pub(crate) fn flip_one_coin_logged(&mut self, cursor: &mut usize, player: usize) -> (bool, bool) {
         use crate::decision::DecisionAnswer;
         self.drop_stale_answer_log(*cursor, |a| matches!(a, DecisionAnswer::Bool(_)));
@@ -1374,14 +1320,10 @@ impl GameState {
             .map(|c| (c.id, c.controller))
             .collect();
         let mut cursor = 0;
-        // TWO PASSES, for `run_each_unless_pays`'s reason: a suspend re-runs this
-        // arm from the top, so life paid inside the ask loop is paid AGAIN on
-        // every later victim's suspend. Pass 1 asks and mutates nothing; pass 2
-        // pays. Unlike the mana sibling the gate loses nothing to the split —
-        // `budget` carries the life each seat has already committed, so CR 118.6
-        // is applied to exactly the total the single-pass loop would have seen.
-        // (It prices the *intended* payment; a replacement effect that alters an
-        // earlier payment is not reflected, which the live read would have been.)
+        // TWO PASSES, for `run_each_unless_pays`'s reason (a suspend would re-pay
+        // life). `budget` carries the life each seat has already committed, so CR
+        // 118.6 sees the same total the single-pass loop would. It prices the
+        // intended payment; a replacement altering an earlier payment isn't seen.
         let mut budget: Vec<i32> = self.players.iter().map(|p| p.life).collect();
         let mut answers: Vec<(CardId, usize, bool)> = Vec::with_capacity(victims.len());
         for (id, seat) in victims {
@@ -1433,12 +1375,10 @@ impl GameState {
         effect: &Effect,
     ) {
         let Some(&first) = candidates.first() else { return };
-        // CR 701.38a — "starting with you, **in turn order**".
-        // `controller + opponents_of(controller)` is seat-INDEX order, which
-        // is the same list only when the controller is seat 0: at four seats
-        // a controller on seat 2 votes 2, 0, 1, 3 where turn order is
-        // 2, 3, 0, 1. `Effect::Vote`, the other half of the same rule,
-        // already used this helper — the sibling did not.
+        // CR 701.38a — "starting with you, in turn order". `controller +
+        // opponents_of(controller)` is seat-index order, which differs from
+        // turn order whenever the controller isn't seat 0 (seat 2 of four:
+        // 2, 0, 1, 3 vs 2, 3, 0, 1). `Effect::Vote` uses the same helper.
         let seats = self.seats_in_turn_order_from(ctx.controller);
         let legal: Vec<Target> = candidates.iter().map(|id| Target::Permanent(*id)).collect();
         let mut tally: crate::fxhash::HashMap<CardId, u32> = crate::fxhash::HashMap::default();
@@ -1600,14 +1540,11 @@ impl GameState {
         Some(n)
     }
 
-    /// Ask `seat` for a card pick inside a resolving effect, suspending
-    /// for a `wants_ui` seat via the `CardsAnswerPending` stash-and-rerun.
-    /// Returns `None` when suspended (the originating `effect` is
-    /// re-queued; its re-run consumes the stashed answer instead of
-    /// asking again — so this must be the arm's FIRST ask and all
-    /// mutations must come after it). The returned ids are filtered to
-    /// `candidates` and truncated to `max`; callers enforce their own
-    /// `min` semantics.
+    /// Ask `seat` for a card pick inside a resolving effect, suspending for a
+    /// `wants_ui` seat via the `CardsAnswerPending` stash-and-rerun. Returns
+    /// `None` when suspended; the re-run consumes the stash, so this must be the
+    /// arm's FIRST ask and all mutations must follow it. Ids are filtered to
+    /// `candidates` and truncated to `max`; callers enforce `min`.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn ask_seat_cards(
         &mut self,
@@ -1850,15 +1787,10 @@ impl GameState {
         self.pile_or_guess_effects_this_turn = self.pile_or_guess_effects_this_turn.saturating_add(1);
     }
 
-    /// Run a pile split's two halves, then drop the piles.
-    ///
-    /// A loop is only the commonest shape of "a second `run_effect` after one
-    /// that can suspend" — this is the pair form. `chosen` asks (a cast, a
-    /// sacrifice) and parks only itself, so `other` was dropped *and* the
-    /// piles it reads were cleared out from under the continuation. The
-    /// splice carries `other`, and the clear waits: `separated_piles` is
-    /// written by whichever arm set it and read by nobody else, so leaving it
-    /// set across the suspension costs nothing.
+    /// Run a pile split's two halves, then drop the piles. `chosen` can suspend
+    /// and parks only itself, so the splice carries `other` and the clear waits
+    /// until both have run (`separated_piles` is read by nobody else, so leaving
+    /// it set across the suspension is free).
     fn run_piles_then_clear(
         &mut self,
         chosen: &Effect,
@@ -2084,28 +2016,16 @@ impl GameState {
         clear_scratch!(self.resolution_answer_seats);
     }
 
-    /// Drop an earlier arm's leftover answers before this arm's first ask
-    /// replays slot 0. A *previous resolution's* leftovers no longer reach here
-    /// — `resolve_effect_into` drops the channel when the resolution ends — so
-    /// what this catches is the leftover of a `Seq` sibling, or of the arm that
-    /// ran the nested resolution this one is inside.
+    /// Drop an earlier arm's leftover answers (a `Seq` sibling's, or the
+    /// enclosing arm's) before this arm's first ask replays slot 0.
+    /// `resolve_effect_into` already drops a previous resolution's.
     ///
-    /// The log is a per-resolution channel and every arm that uses it is
-    /// supposed to [`clear_answer_log`](Self::clear_answer_log) on each
-    /// completing path. One that returns without doing so leaves its answers
-    /// behind, and the next arm's first ask then finds the wrong *kind* of
-    /// answer in slot 0. The kind-matched replays (`ask_seat_amount`,
-    /// `ask_seat_option`, `ask_seat_cards_logged`) MISS on that, so the ask
-    /// re-suspends, the seat answers, the answer is appended *behind* the
-    /// stale one, and the arm re-asks for ever — a game that runs to the
-    /// action cap (`--decks cube --seed 835`, dflt mirror: Karn, Scion of
-    /// Urza's +1 re-asked "Choose a revealed card for its owner" ~5,600 times
-    /// in 12 of 1,600 games). `ask_seat_bool` reads any kind, so it silently
-    /// answered "no" to a "may" instead.
-    ///
-    /// A mismatch on slot 0 is always the leftover, never this arm's own
-    /// answer: drop it and let the ask suspend normally. It costs one round
-    /// trip where it fires, instead of the cap.
+    /// An arm that skips [`clear_answer_log`](Self::clear_answer_log) leaves a
+    /// wrong-kind answer in slot 0. The kind-matched replays (`ask_seat_amount`,
+    /// `ask_seat_option`, `ask_seat_cards_logged`) miss on it, re-suspend and
+    /// append behind it — an infinite re-ask (Karn, Scion of Urza, `--decks cube
+    /// --seed 835`) — and `ask_seat_bool` silently reads it as "no". A slot-0
+    /// mismatch is always the leftover, so drop it and let the ask suspend.
     fn drop_stale_answer_log(
         &mut self,
         cursor: usize,
@@ -2451,10 +2371,6 @@ impl GameState {
         });
     }
 
-    /// Helper for `copy_stack_spell`: enumerate legal targets for the
-    /// copied spell's primary effect and ask `caster`'s decider to pick
-    /// one (original offered first). Returns the chosen target, or the
-    /// original when no choice is made / no legal alternative exists.
     /// A single-target removal effect whose self-copies each want a different
     /// opposing permanent: a second destroy, exile or bounce at the object
     /// the first one moves finds it gone (CR 608.2b).
@@ -2467,6 +2383,10 @@ impl GameState {
         )
     }
 
+    /// Helper for `copy_stack_spell`: enumerate legal targets for the
+    /// copied spell's primary effect and ask `caster`'s decider to pick
+    /// one (original offered first). Returns the chosen target, or the
+    /// original when no choice is made / no legal alternative exists.
     pub(crate) fn repoint_copy_target(
         &mut self,
         def: &crate::card::CardDefinition,
@@ -2515,11 +2435,9 @@ impl GameState {
         {
             legal.retain(|t| t != orig);
             // On a crowded board a copy aimed back at the caster's own
-            // permanent defaults to the next legal object instead: every
-            // Replication Technique copy kept its Dualcaster Mage target, each
-            // new Mage's ETB copied the spell again, and 991 Mages reached
-            // the 8-seat pod's board cap (seed 9405, game 379). The default is
-            // a pick the chooser may override, not a rule.
+            // permanent defaults to the next legal object instead (Replication
+            // Technique on Dualcaster Mage looped until the pod's board cap).
+            // The default is a pick the chooser may override, not a rule.
             let own = matches!(orig, crate::game::types::Target::Permanent(id)
                 if self.battlefield_find(*id).is_some_and(|c| c.controller == caster));
             // A hostile copy (Flametongue Kavu's 4 damage copied by Aboleth
@@ -2978,16 +2896,10 @@ impl GameState {
         true
     }
 
-    /// CR 614 — apply a permanent's `enters_as_choice` replacement as it
-    /// enters. The controller picks a mode via a `ChooseMode` decision; the
-    /// chosen mode's P/T overwrite the printed base and its keywords are
-    /// granted, all before the first SBA sweep (so a printed `*/*` body never
-    /// dies as a 0/0). No-op when the card has no such spec. Corrupted
-    /// Shapeshifter.
     /// CR 614 — resolve a permanent's `as_enters_effect` replacement during the
-    /// battlefield hop. Runs before the first SBA sweep, so an effect the
-    /// permanent's own CDA reads (Ixidron's mass turn-face-down) has already
-    /// happened by the time its 0/0 body would be checked.
+    /// battlefield hop, before the first SBA sweep, so an effect its own CDA
+    /// reads (Ixidron's mass turn-face-down) has happened before its 0/0 body is
+    /// checked.
     pub(crate) fn apply_as_enters_effect(&mut self, card_id: CardId) {
         self.apply_as_enters_effect_inner(card_id, true);
     }
@@ -3011,13 +2923,11 @@ impl GameState {
         // The replacement reads the cast's own `{X}` (Frankenstein's Monster).
         let mut ctx = EffectContext::for_ability(card_id, controller, None);
         ctx.x_value = x;
-        // `_driven`: this runs inside the battlefield hop, with no stack item to
-        // park a continuation on, and `as_enters_effect` is routinely an ASK
-        // (`NameCreatureType`, `ChooseColorForSelf`, `ChooseBasicLandTypeForSource`,
-        // `SacrificeAnyNumber`, Devour — 40 shipped cards). Dropping the
-        // suspension meant the choice never happened: Cavern of Souls entered
-        // with NO creature type named for every `wants_ui` seat. `!driven` is
-        // the land drop, which parks the signal itself.
+        // `_driven`: this runs inside the battlefield hop with no stack item
+        // to park on, and `as_enters_effect` is often an ask (named type,
+        // chosen colour, Devour, …); a dropped suspension meant the choice
+        // never happened (Cavern of Souls named nothing). `!driven` is the
+        // land drop, which parks the signal itself.
         let _ = if driven {
             self.resolve_as_enters_driven(&effect, &ctx)
         } else {
@@ -3044,6 +2954,11 @@ impl GameState {
         let _ = self.run_effect(&effect, &ctx, events);
     }
 
+    /// CR 614 — apply a permanent's `enters_as_choice` replacement as it enters:
+    /// the controller picks a mode (`ChooseMode`) whose P/T overwrite the
+    /// printed base and whose keywords are granted, before the first SBA sweep
+    /// so a printed `*/*` never dies as 0/0. No-op without a spec. Corrupted
+    /// Shapeshifter.
     pub(crate) fn apply_enters_as_choice(&mut self, card_id: CardId) -> bool {
         let modes = self
             .battlefield
@@ -3292,12 +3207,11 @@ impl GameState {
         self.resolve_effect_into_kind(effect, ctx, out, false)
     }
 
-    /// [`resolve_effect_into`] for a **continuation**: the effect is the tail of
-    /// a resolution that suspended, so the per-resolution scratch the first pass
-    /// built is kept rather than reset. Only `submit_decision`'s three resolution
-    /// resumes pass `true` — see the reset block below for the bug that wanted
-    /// it. A `bool` argument rather than a `GameState` flag because the state is
-    /// `memcpy`ed on every probe clone and one more inline byte costs it eight
+    /// [`resolve_effect_into`] for a **continuation**: the tail of a suspended
+    /// resolution, so the first pass's per-resolution scratch is kept, not
+    /// reset (see the reset block below). Only `submit_decision`'s three
+    /// resolution resumes pass `true`. A `bool` argument rather than a
+    /// `GameState` flag keeps the probe-cloned state small
     /// (`cow::tests::game_state_stays_small`).
     pub(crate) fn resolve_effect_resumed_into(
         &mut self,
@@ -3319,22 +3233,15 @@ impl GameState {
         Ok(events)
     }
 
-    /// [`resolve_effect`](Self::resolve_effect) for an effect that runs OFF the
-    /// stack, answering any suspension it raises through the installed decider
-    /// rather than dropping it.
+    /// [`resolve_effect`](Self::resolve_effect) for an effect that runs off the
+    /// stack, answering any suspension through the installed decider rather
+    /// than dropping it.
     ///
-    /// A suspend only means anything where something can hold the continuation
-    /// and hand the answer back — a stack item, through `pending_decision`. Off
-    /// that path (a draw replacement, a cost rider, a state-based rebuild) the
-    /// signal is set into a field nobody reads, and the rest of the effect
-    /// never runs: the body is a silent NO-OP for a `wants_ui` seat, which is
-    /// every seat the training actors run. Words of Wind's symmetric bounce
-    /// returned nothing at all that way.
-    ///
-    /// Driving it here gives those seats the headless answer — the same answer
-    /// the same decider gives a seat without `wants_ui` — instead of nothing.
-    /// A UI prompt would be better still, and needs the call site to be able to
-    /// park a continuation; this is the floor, not the ceiling.
+    /// Off the stack (a draw replacement, a cost rider, a state-based rebuild)
+    /// nothing holds a continuation, so a suspend would make the rest of the
+    /// effect a silent no-op for every `wants_ui` seat (Words of Wind returned
+    /// nothing). This gives those seats the headless answer instead. A UI prompt
+    /// would need the call site to park a continuation; this is the floor.
     pub(crate) fn resolve_effect_driven(
         &mut self,
         effect: &Effect,
@@ -3353,22 +3260,19 @@ impl GameState {
 
     /// An as-enters replacement's ask (CR 614.12 — Devour, a named type, a
     /// chosen color), answered where the permanent enters, at any depth. The
-    /// enclosing resolution cannot be trusted to replay: a mass reanimation
-    /// (Living Death) parked Feasting Hobbit's devour, never reached it again
-    /// and leaked the answer, so the Hobbit entered with nothing devoured. A
-    /// prompting controller's ask goes to the bot's policy.
+    /// enclosing resolution can't be trusted to replay it (Living Death parked
+    /// Feasting Hobbit's devour and never came back). A prompting controller's
+    /// ask goes to the bot's policy.
     pub(crate) fn resolve_as_enters_driven(
         &mut self,
         effect: &Effect,
         ctx: &EffectContext,
     ) -> Result<Vec<GameEvent>, GameError> {
-        // Off the stack, this can run while another resolution is parked on a
-        // decision — a vote waiting on its next voter, whose earlier ballots
-        // sit in the answer log, when a state-based action moves a card with
-        // an as-enters replacement (pod seed 1304015, Trial of a Time Lord).
-        // The nested resolution read the vote's ballot as its own answer, and
-        // on completing dropped the channel as a leak. The two channels are
-        // per resolution: set the parked one's aside and give it back.
+        // Off the stack this can run while another resolution is parked on a
+        // decision (a vote awaiting its next voter, when an SBA moves a card
+        // with an as-enters replacement). The two channels are per
+        // resolution: set the parked one's aside and give it back, or the
+        // nested ask reads its ballots and then drops them as a leak.
         let (outer_log, outer_seats) = if self.scratch.resolution_answer_log.is_empty() {
             (Vec::new(), Vec::new())
         } else {
@@ -3460,13 +3364,11 @@ impl GameState {
         out: &mut Vec<GameEvent>,
         resuming: bool,
     ) -> Result<(), GameError> {
-        // CR 605.3a — a resolution begun while another is parked on a decision
-        // (a mana ability tapped mid-ask, a bot's affordability probe) is a side
-        // resolution: the resume channel is the parked arm's, so it is set
-        // aside and restored. The exit net below dropped it, and the side
-        // resolution's own asks would have replayed it (three-seat audit pod,
-        // seed 2813391: a bot's attack-tax probe tapped a mana ability under a
-        // parked ask).
+        // CR 605.3a — a resolution begun while another is parked on a
+        // decision (a mana ability tapped mid-ask, a bot's affordability
+        // probe) is a side resolution: the resume channel is the parked
+        // arm's, so set it aside and restore it, rather than letting the
+        // side resolution replay it or the exit net drop it.
         if self.resolution_depth == 0
             && !resuming
             && self.pending_decision.is_some()
@@ -3483,18 +3385,12 @@ impl GameState {
         }
         let mark = out.len();
         let mut events = std::mem::take(out);
-        // A RESUMED resolution is the same resolution: the arm that suspended is
-        // being re-run and everything before it already happened, so the resets
-        // below must not hide it. `Selector::LastMoved` read an *empty* set after
-        // a suspend, which is why Bind to Life ("mill seven, then put a creature
-        // card from among them onto the battlefield") milled seven and put
-        // nothing onto the battlefield for every seat that suspends — i.e. every
-        // bot and UI seat, the whole training path. The resume-channel census
-        // found it: the arm returned on its empty candidate list before reaching
-        // its ask, leaving the stashed answer behind (`CRAB_ANSWER_LOG=strict`,
-        // `--decks cube --seed 890`). Only the outermost call of the
-        // continuation is flagged, so the nested resolutions it runs still
-        // reset normally.
+        // A RESUMED resolution is the same resolution: the suspended arm is being
+        // re-run and everything before it already happened, so the resets below
+        // must not wipe it (`Selector::LastMoved` read empty after a suspend, so
+        // Bind to Life milled seven and returned nothing for every suspending seat).
+        // Only the outermost call of the continuation is flagged; nested
+        // resolutions still reset.
         // Reset sacrificed-power / sacrificed-toughness / sacrificed-mana-value
         // scratch for this independent resolution.
         if !resuming {
@@ -3548,12 +3444,10 @@ impl GameState {
             }
             self.creature_cards_discarded_this_resolution = 0;
             self.greatest_discarded_mv_this_resolution = 0;
-            // Dropped, not cleared: a cleared map keeps its buffer, and
-            // `GameState::clone` then allocates and memcpys it on every
-            // checkpoint and probe for the rest of the game. Assigning an empty
-            // map costs two stores when it is already empty (neither hashbrown's
-            // nor `Vec`'s `new` allocates) and the next discard rebuilds it.
-            // Both are `IdMap`s now (PERF `(-148)`), so the buffer is a `Vec`.
+            // Dropped, not cleared: a cleared map keeps its buffer, which every
+            // later checkpoint and probe clone would copy. Assigning an empty
+            // map is two stores (neither `new` allocates). `IdMap`, PERF
+            // `(-148)`.
             if self.scratch.cards_discarded_per_player_this_resolution.capacity() > 0 {
                 self.scratch.cards_discarded_per_player_this_resolution = Default::default();
             }
@@ -3622,12 +3516,10 @@ impl GameState {
         } else {
             Vec::new()
         };
-        // CR 614.13 — the token riders below apply once to the tokens *this*
-        // call mints. A resumed resolution keeps `last_created_tokens` (it is
-        // the same resolution), so reading the whole list re-applied Chatterfang
-        // to every earlier segment's tokens — its own riders included — on each
-        // resume, doubling the board per answer: a bot's lookahead through
-        // Insatiable Frugivore's repeat never came back (pod seed 9531).
+        // CR 614.13 — the token riders below apply once, to the tokens *this*
+        // call mints. A resumed resolution keeps `last_created_tokens`, so
+        // reading the whole list re-applied riders (Chatterfang) to earlier
+        // segments' tokens on every resume and doubled the board per answer.
         let tokens_mark = self.scratch.last_created_tokens.len();
         let ran = self.run_effect(effect, ctx, &mut events);
         if swap_targets {
@@ -3639,18 +3531,13 @@ impl GameState {
         if self.resolution_depth == 0 {
             self.resolution_causer = None;
         }
-        // Both resume channels are per-resolution, so an outermost resolution
-        // that did NOT suspend must leave them empty; whatever is still there
-        // leaked from an arm that skipped `clear_answer_log()` on a completing
-        // path, or from an arm that never re-ran to take its stash — an error
-        // unwind included, which no arm clears (a `?` past an ask). The next
-        // resolution's first ask would then replay it, and
-        // `drop_stale_answer_log` only catches a *kind* mismatch: a same-kind
-        // leftover is consumed as that arm's own answer, and the single-slot
-        // `stashed_resolution_answer` has no such guard at all. Dropping both
-        // here leaves nothing to mismatch. Inside one resolution the per-arm
-        // clears stay load-bearing — a `Seq` of two asking arms, or an arm and
-        // the nested resolution it runs, share the channel.
+        // Both resume channels are per-resolution, so an outermost resolution that
+        // did NOT suspend must leave them empty. Anything left leaked from an arm
+        // that skipped `clear_answer_log()` or never re-ran to take its stash
+        // (including an error unwind). `drop_stale_answer_log` only catches a kind
+        // mismatch, and the single-slot stash has no guard, so drop both here.
+        // Inside a resolution the per-arm clears stay load-bearing (a `Seq` of two
+        // asking arms shares the channel).
         // `CRAB_ANSWER_LOG=warn|strict` names the leaker (debug builds only).
         if self.resolution_depth == 0
             && self.suspend_signal.is_none()
@@ -3669,13 +3556,10 @@ impl GameState {
             *out = events;
             return Err(e);
         }
-        // Quina — a resolution that minted one or more tokens under a
-        // player's control mints one extra rider token per
-        // `TokenCreationAddsToken` static that player controls (single
-        // application per resolution, CR 614.13-flavor).
-        // Nothing minted, nothing to ride along — and the walk below opens
-        // with a `collect()` that is empty on every resolution that created
-        // no token, which is nearly all of them.
+        // Quina — a resolution that minted tokens under a player's control
+        // mints one extra rider token per `TokenCreationAddsToken` static
+        // that player controls (once per resolution, CR 614.13-flavor).
+        // Skipped when nothing was minted, i.e. nearly every resolution.
         let minted_now = self.scratch.last_created_tokens.get(tokens_mark..).unwrap_or(&[]);
         let minted_for: Vec<usize> = if minted_now.is_empty() {
             Vec::new()
@@ -3786,11 +3670,6 @@ impl GameState {
         Ok(())
     }
 
-    /// Sacrifice one permanent `id` controlled by `who` (CR 701.16): emit the
-    /// sacrifice/death events (creature-specific ones first, then the generic
-    /// `PermanentSacrificed`) and route it to the graveyard, firing dies/LTB
-    /// triggers. Shared by the auto-pick path and the interactive
-    /// `SacrificePending` resume so both behave identically.
     /// CR 701.16 — false for a permanent with `Keyword::CantBeSacrificed`
     /// (Assault Suit), read off the layer view so a granted one counts.
     pub(crate) fn can_be_sacrificed(&self, id: CardId) -> bool {
@@ -3800,6 +3679,11 @@ impl GameState {
             && !self.trigger_shields_token(id)
     }
 
+    /// Sacrifice one permanent `id` controlled by `who` (CR 701.16): emit the
+    /// sacrifice/death events (creature-specific ones first, then the generic
+    /// `PermanentSacrificed`) and route it to the graveyard, firing dies/LTB
+    /// triggers. Shared by the auto-pick path and the interactive
+    /// `SacrificePending` resume so both behave identically.
     pub fn sacrifice_one(&mut self, id: CardId, who: usize, events: &mut Vec<GameEvent>) {
         // CR 701.21a — a player can sacrifice only a permanent they control:
         // an opponent's copy of a "sacrifice this" trigger does nothing.
@@ -4554,13 +4438,11 @@ impl GameState {
             Effect::AnteTopOfLibrary { who, optional, then, else_ } => {
                 let seats = self.resolve_players(who, ctx);
                 let mut cursor = 0usize;
-                // TWO PASSES, for `run_each_unless_pays`'s reason: a suspend
-                // re-runs this arm from the top, so an ante taken inside the ask
-                // loop — and the `then` branch it ran — happen again for every
-                // seat asked after it. Nothing gates the ask, so the split is
-                // exact: the same seats are asked the same question in the same
-                // order. (A `then` that suspends still drops the seats behind it;
-                // that is the nested-continuation gap, not this one.)
+                // TWO PASSES, for `run_each_unless_pays`'s reason: an ante taken in
+                // the ask loop (and its `then`) would repeat for every later seat's
+                // suspend. Nothing gates the ask, so the split is exact. (A `then`
+                // that suspends still drops the seats behind it — the
+                // nested-continuation gap.)
                 let mut answers: Vec<(usize, bool)> = Vec::with_capacity(seats.len());
                 for seat in seats {
                     let anted = if *optional {
@@ -4974,12 +4856,10 @@ impl GameState {
             }
 
             Effect::GrantActivatedAbilityToMatching { filter, ability, duration } => {
-                // The same two carriers as `GainActivatedAbility`: the EOT list
-                // or the permanent one. A `Permanent` grant used to return
-                // early and grant nothing (Life Matrix's regeneration shield
-                // was a bare matrix counter). The permanent list is deduped —
-                // the filter re-matches every earlier recipient on each
-                // resolution, and a second copy of the same ability is noise.
+                // Same two carriers as `GainActivatedAbility`: the EOT list or the
+                // permanent one (a `Permanent` grant used to grant nothing — Life
+                // Matrix). The permanent list is deduped, since the filter
+                // re-matches earlier recipients on each resolution.
                 let eot = matches!(duration, Duration::EndOfTurn | Duration::EndOfCombat);
                 let ids: Vec<CardId> = self
                     .resolve_selector(&Selector::EachPermanent(filter.clone()), ctx)
@@ -5655,13 +5535,10 @@ impl GameState {
                 };
                 for i in 0..n {
                     if i > 0 {
-                        // The repeat question is the controller's. It went
-                        // straight to the decider before, so a `wants_ui`
-                        // controller — every training seat — was never asked and
-                        // the `AutoDecider` answered for them. `MayDo`'s ask is
-                        // inlined rather than delegated so the loop stays a loop:
-                        // `run_effect`'s frame is fat enough that `max` nested
-                        // ones are a stack risk (see `SearchUpToN`).
+                        // The repeat question is the controller's, seat-routed so a
+                        // `wants_ui` controller is actually asked. `MayDo`'s ask is inlined
+                        // so the loop stays a loop: `max` nested `run_effect` frames are a
+                        // stack risk (see `SearchUpToN`).
                         let decision = Decision::OptionalTrigger {
                             source: ctx.source.unwrap_or(CardId(0)),
                             description: description.clone(),
@@ -5684,13 +5561,9 @@ impl GameState {
                         }
                     }
                     self.run_effect(body, ctx, events)?;
-                    // A body that suspends carries only its OWN effect, so this
-                    // loop was simply abandoned: Forbidden Ritual — the one card
-                    // that builds this arm — sacrificed exactly one permanent of
-                    // its eight for any seat whose sacrifice pick suspends, which
-                    // is every seat the training actors run. Splice the
-                    // outstanding repetitions in behind the body's own
-                    // continuation, the way `SearchUpToN` does.
+                    // A suspending body carries only its own effect, so splice the
+                    // outstanding repetitions behind its continuation, as `SearchUpToN`
+                    // does (Forbidden Ritual sacrificed one of eight otherwise).
                     if let Some((d, p, tail)) = self.suspend_signal.take().map(|b| *b) {
                         let left = n - i - 1;
                         let after = if left == 0 {
@@ -6251,12 +6124,10 @@ impl GameState {
                             body: Box::new(carried),
                         }
                     });
-                    // A `wants_ui` seat's body suspends, and the loop used to
-                    // run on and let the NEXT seat's suspend overwrite the
-                    // signal — the first seat's pending decision was dropped
-                    // and its half of the effect never happened. `Seq` carries
-                    // its tail the same way; here the tail is the seats not yet
-                    // reached, each re-seated by a `Seat(q)` fan-out of one.
+                    // A `wants_ui` seat's body suspends; without the splice the next
+                    // seat's suspend overwrote the signal and the first seat's half
+                    // never happened. The tail is the seats not yet reached, each
+                    // re-seated by a `Seat(q)` fan-out of one (`Seq`'s shape).
                     if splice_after_suspend(&mut self.suspend_signal, || {
                         per_seat_continuation(&seats[i + 1..], |q| Effect::EachPlayerDoes {
                             who: PlayerRef::Seat(q),
@@ -7652,13 +7523,10 @@ impl GameState {
                 Ok(())
             }
 
-            // CR 706 — Roll `count` N-sided dice. For each die, ask the
-            // controller's decider for `Decision::DieRoll { sides }`
-            // (which returns `DecisionAnswer::DieRoll(rolled)`), then
-            // walk `results` and run the FIRST arm whose [low, high]
-            // range covers `rolled`. AutoDecider takes the face rolled off
-            // the game's stream; ScriptedDecider can script any face.
-            // Mirrors FlipCoin's resolver shape.
+            // CR 706 — roll `count` N-sided dice: ask the decider for
+            // `Decision::DieRoll { sides }` and run the FIRST arm of `results`
+            // whose [low, high] covers the face. AutoDecider takes the game's
+            // RNG stream; ScriptedDecider can script any face. FlipCoin's shape.
             Effect::RollDie {
                 sides,
                 count,
@@ -7724,12 +7592,10 @@ impl GameState {
                     self.offer_die_shift(ctx.controller, &mut rolls, results);
                     self.offer_counter_die_shift(ctx.controller, &mut rolls, results, events);
                 }
-                // CR 706.2 / 706.3a — the roll is over, and its result fixed,
-                // *before* the results table is consulted, so "whenever a
-                // player rolls one or more dice" has already triggered by the
-                // time an arm runs. One event for the whole roll, carrying the
-                // greatest result so a result-gated trigger ("roll a 5 or
-                // higher") can filter on it via `event_amount`.
+                // CR 706.2 / 706.3a — the result is fixed before the results table is
+                // consulted, so "whenever a player rolls dice" has triggered by the
+                // time an arm runs. One event per roll, carrying the greatest result
+                // for result-gated triggers (`event_amount`).
                 if n > 0 {
                     events.push(GameEvent::DiceRolled {
                         player: ctx.controller,
@@ -7764,16 +7630,11 @@ impl GameState {
                     // via `Value::LastDieRoll`.
                     self.last_die_roll = rolled;
                     self.run_effect(effect, ctx, events)?;
-                    // CR 101.4 — every die's arm happens, including the ones
-                    // after an arm that asks. Each *remaining* arm names its
-                    // own face inside the effect, because by the time the
-                    // continuation reaches it the field has moved on.
-                    //
-                    // This arm's own remainder needs no such wrapper, unlike
-                    // the ballot below: `self.last_die_roll` is never restored
-                    // here, the loop returns as soon as it splices, and nothing
-                    // else resolves while a decision is pending — so the field
-                    // still reads `rolled` when it resumes.
+                    // CR 101.4 — every die's arm happens, including those after an arm that
+                    // asks; each remaining arm names its own face inside the effect. This
+                    // arm's own remainder needs no wrapper: `self.last_die_roll` isn't
+                    // restored here and nothing else resolves while a decision is pending,
+                    // so it still reads `rolled` on resume.
                     if splice_after_suspend(&mut self.suspend_signal, || {
                         let mut tail: Vec<Effect> = rolls[k + 1..]
                             .iter()
@@ -7870,25 +7731,13 @@ impl GameState {
                     // state. Nothing to run.
                     return Ok(());
                 } else {
-                    // ⚠ **AN OUT-OF-RANGE MODE USED TO RAISE FROM INSIDE THE
-                    // RESOLUTION, WHICH IS THE ONE PLACE AN `Err` CANNOT BE
-                    // RECOVERED.** `GameAction::CastSpell { mode }` is not
-                    // range-checked anywhere — only the ACTIVATED path clamps
-                    // (`clamp_activated_mode`) — so a client casting a modal
-                    // spell with `mode: Some(99)` got `Ok` from the action,
-                    // and then `resolve_top_of_stack` returned
-                    // `ModeOutOfBounds` with the stack item ALREADY POPPED:
-                    // spell consumed, nothing done, and on the round-closing
-                    // pass `perform_action_uncheckpointed`'s guard aborts the
-                    // process in any debug-assertions build.
-                    //
-                    // Clamped now, which is what the three deferred paths
-                    // above have always done with a decider's answer — the
-                    // odd one out was this branch, not them. Deliberately NOT
-                    // a `debug_assert!`: the realistic source of a bad index
-                    // is a UI client, and a hostile or buggy client must not
-                    // be able to abort the engine. The bot never produces one
-                    // (it enumerates modes off the card).
+                    // ⚠ Clamp, never raise: `GameAction::CastSpell { mode }` is not
+                    // range-checked (only the activated path clamps), and an `Err`
+                    // here comes with the stack item already popped — spell consumed,
+                    // and a debug build aborts on the round-closing pass. Not a
+                    // `debug_assert!` either: a bad index comes from a UI client, which
+                    // must not be able to abort the engine. Matches the deferred paths
+                    // above.
                     ctx.mode.min(modes.len() - 1)
                 };
                 match modes.get(idx) {
@@ -7898,12 +7747,9 @@ impl GameState {
             }
 
             Effect::ChooseN { picks, modes, up_to } => {
-                // CR 700.2d — let the controller's decider choose `picks.len()`
-                // distinct modes. `AutoDecider` returns the card's `picks`
-                // default unchanged; a UI/scripted decider can pick any
-                // distinct set. The answer is sanitised: out-of-range and
-                // duplicate indices are dropped, and it falls back to `picks`
-                // if the result is empty.
+                // CR 700.2d — the decider chooses `picks.len()` distinct modes
+                // (AutoDecider returns the card's `picks`). The answer is sanitised:
+                // out-of-range and duplicate indices dropped, `picks` if empty.
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
                 // CR 700.2 — "choose up to N": the default is the first N of
@@ -7972,18 +7818,12 @@ impl GameState {
                 // them last-first). A repeated mode stays in sequence (700.2d).
                 let mut run = run;
                 run.sort_unstable();
-                // Each target-bearing mode owns one cast-time target slot,
-                // assigned by its position among the target-bearing modes in
-                // the card's *default* `picks` (not the run order). Keying off
-                // the default picks keeps the slot stable so the targets the
-                // caster supplied (validated against the same default-picks
-                // ordering in `target_filter_for_slot_in_mode`) line up at
-                // resolution even when the decider runs only a subset. This
-                // lets "choose one or both" spells whose modes target
-                // different things — Steal the Show's mode 0 (target player) +
-                // mode 1 (target creature) — run each with the right target.
-                // Single-target-mode cards (the Strixhaven Commands) are
-                // unaffected since only one picked mode consumes slot 0.
+                // Each target-bearing mode owns one cast-time target slot, by its
+                // position among the target-bearing modes in the card's *default*
+                // `picks` (the ordering `target_filter_for_slot_in_mode` validated
+                // against), so slots line up even when the decider runs a subset.
+                // Lets "choose one or both" spells with differently targeted modes
+                // (Steal the Show) work; single-target-mode cards use slot 0.
                 let mut slot_of_mode: crate::fxhash::HashMap<u8, usize> =
                     crate::fxhash::HashMap::default();
                 let mut next_slot = 0usize;
@@ -8259,14 +8099,11 @@ impl GameState {
             }
 
             Effect::ChooseModesCast { modes, .. } | Effect::ChooseModesByPoints { modes, .. } => {
-                // Cast-time multi-mode selection (Choreographed Sparks'
-                // "one or both", Moment of Reckoning's "up to four,
-                // repeats allowed") — the chosen instances were validated
-                // by `cast_spell_spree` and stamped onto `ctx.spree_modes`.
-                // Run them in printed order; each target-bearing INSTANCE
-                // (repeats included) consumes the next target slot. A plain
-                // `CastSpell { mode }` arrives with no stamped modes and
-                // falls back to that single mode (bot / back-compat path).
+                // Cast-time multi-mode selection (Choreographed Sparks, Moment of
+                // Reckoning's repeats), validated by `cast_spell_spree` and stamped
+                // onto `ctx.spree_modes`. Run in printed order; each target-bearing
+                // instance (repeats included) takes the next target slot. A plain
+                // `CastSpell { mode }` falls back to that single mode.
                 // CR 702.41a — an entwined cast chooses every mode (Kaya's Guile).
                 let chosen: Vec<u8> = if ctx.entwined {
                     (0..modes.len() as u8).collect()
@@ -8376,15 +8213,11 @@ impl GameState {
                         }
                     })
                     .unwrap_or_default();
-                // The mode is picked here, so its targets are picked here too —
-                // `requires_target` is deliberately false for this variant, so
-                // nothing upstream bound a slot and a targeting mode would
-                // otherwise resolve against an empty list (Silent
-                // Hallcreeper's "becomes a copy of another target creature").
-                // Same shape as `Effect::Reflexive` below. CR 601.2b — a mode
-                // whose targets cannot be satisfied can't be chosen at all, so
-                // it is dropped from the menu rather than picked and wasted:
-                // the pick is recorded on the source and never comes back.
+                // The mode is picked here, so its targets are too: `requires_target`
+                // is false for this variant, so nothing upstream bound a slot
+                // (Silent Hallcreeper). Same shape as `Effect::Reflexive`. CR
+                // 601.2b — a mode whose targets can't be satisfied is dropped from
+                // the menu, since the pick is recorded and never comes back.
                 let mut available: Vec<(usize, Vec<Target>)> = Vec::new();
                 for i in (0..modes.len()).filter(|i| !used.contains(&(*i as u8))) {
                     if !modes[i].requires_target() {
@@ -8443,17 +8276,10 @@ impl GameState {
                         events,
                     );
                 }
-                // The continuation carries the SEAT, not the selector that found
-                // it — `Effect::with_asked_seat`, applied by the ask helper on
-                // the suspend path. `who` can be a selector over an object this
-                // resolution has already destroyed (Ghost Quarter and Field of
-                // Ruin are `Seq[Destroy target land,
-                // MayDoBy{ControllerOf(Target(0)), …}]`), and on the re-run
-                // that selector resolved to nothing: the arm returned at the
-                // `let Some(seat)` above with the replayed answer still in the
-                // channel, so the compensation search NEVER HAPPENED for a
-                // `wants_ui` land controller (and the leak was what
-                // `CRAB_ANSWER_LOG=strict` caught in a sweep).
+                // The continuation carries the SEAT, not the selector
+                // (`Effect::with_asked_seat`): `who` can name an object this
+                // resolution already destroyed (Ghost Quarter / Field of Ruin), so
+                // re-deriving it on the re-run found nobody and skipped the search.
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
                     &mut cursor,
@@ -8492,13 +8318,10 @@ impl GameState {
                 if self.may_do_cost_unpayable(body, ctx) {
                     return Ok(());
                 }
-                // Yes/no decision via `Decision::OptionalTrigger`, asked of
-                // the *controller* of the effect (`ctx.controller`). A
-                // `wants_ui` controller gets the client's yes/no modal via
-                // the stash-and-rerun suspend; bots / tests answer through
-                // the installed `Decider` (`AutoDecider` declines,
-                // `ScriptedDecider` injects `Bool(true)` to exercise the
-                // body).
+                // Yes/no `Decision::OptionalTrigger` asked of `ctx.controller`. A
+                // `wants_ui` controller gets the modal via stash-and-rerun; bots /
+                // tests answer through the installed `Decider` (AutoDecider
+                // declines; ScriptedDecider can inject `Bool(true)`).
                 use crate::decision::{Decision, DecisionAnswer};
                 let source = ctx.source.unwrap_or(CardId(0));
                 let decision = Decision::OptionalTrigger {
@@ -8566,15 +8389,11 @@ impl GameState {
             }
 
             Effect::IfRevealFromHand { filter, then, else_ } => {
-                // Peek at the controller's hand for a card matching `filter`.
-                // If any match exists, run `then` (the implicit "yes, I
-                // reveal" branch — AutoDecider always accepts since the
-                // alternative is the printed downside, e.g. enters-tapped
-                // for STX Snarl lands). If no match, run `else_`. The
-                // reveal itself is information-only and isn't modeled as
-                // a separate game event today; a future enhancement could
-                // emit `GameEvent::CardRevealed { player, card_id }` for
-                // replay/log purposes.
+                // If the controller's hand has a card matching `filter`, run `then`
+                // (the implicit "I reveal"; always taken since the alternative is the
+                // printed downside, e.g. STX Snarl lands entering tapped), else
+                // `else_`. The reveal itself emits no event (a `CardRevealed` event
+                // could be added for replays).
                 let has_match = self.players[ctx.controller]
                     .hand
                     .iter()
@@ -8605,25 +8424,14 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
                 let mut paid = 0u32;
-                // Bounded so a decider that always says yes can't spin; the
-                // pool runs out long before this in practice.
+                // Bounded so an always-yes decider can't spin.
                 //
-                // The ask / pay / body interleaving is the one shape the
-                // two-pass recipe (see `run_each_unless_pays`) cannot take: the
-                // next ask exists only because the previous payment succeeded.
-                // So skip instead. A suspend re-runs this arm from the top and
-                // `ask_seat_bool` replays the earlier answers — but the
-                // iterations those answers belong to ALREADY paid and ALREADY
-                // ran the body, and the state they left is the state we are
-                // re-running in. Repeating them charged the seat again for every
-                // "yes" it had already given: with `k` suspends the first
-                // iteration's cost was paid `k` times (Magnetic Mountain, Dream
-                // Tides — "Pay {2} to untap a tapped creature?" in an upkeep
-                // loop, so only ever wrong for a seat that suspends, which is
-                // every training seat). `answer_already_acted_on` is what
-                // separates the answers this pass owes from the ones it has
-                // already spent, and nothing gates the ask itself, so skipping a
-                // spent one cannot shift which question slot 1, 2, 3 ... holds.
+                // The next ask exists only because the previous payment succeeded,
+                // so the two-pass recipe (`run_each_unless_pays`) can't apply. On a
+                // re-run, iterations whose answers are replayed already paid and ran
+                // the body; repeating them re-charged the seat (Magnetic Mountain,
+                // Dream Tides). `answer_already_acted_on` skips those, and since no
+                // ask is gated, skipping can't shift slots.
                 for _ in 0..32 {
                     let replayed = self.answer_already_acted_on(cursor);
                     let Some(yes) =
@@ -8712,16 +8520,11 @@ impl GameState {
                     }
                     return Ok(());
                 }
-                // Sibling to `MayDo`: ask yes/no, then *attempt* to pay
-                // mana — the floating pool first, then the controller's
-                // untapped sources (`pay_mana_cost_with_picks`, the echo /
-                // "unless pays" path; CR 605.3a lets mana abilities be
-                // activated while paying a cost mid-resolution). The
-                // pool-only form left every "you may pay" dead for a bot
-                // seat, whose pool is empty at resolution. If the controller
-                // declines or can't afford the cost the body is skipped and
-                // `else_` (if any) runs. A `wants_ui` controller gets the
-                // yes/no modal via the seat-routed suspend.
+                // Sibling to `MayDo`: ask yes/no, then attempt to pay mana from the
+                // pool and then untapped sources (`pay_mana_cost_with_picks`; CR
+                // 605.3a allows mana abilities mid-resolution — pool-only left every
+                // bot "you may pay" dead). Declined or unaffordable skips the body
+                // and runs `else_`. A `wants_ui` controller gets a seat-routed modal.
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
                 let Some(yes) = self.ask_seat_bool(
@@ -8861,13 +8664,11 @@ impl GameState {
             }
 
             Effect::MayPayGenericUpTo { max, body } => {
-                // "You may pay {X}, X ≤ max" — prompt for a number bounded by
-                // both the printed cap and the mana the controller can make
-                // (`MayPayX`'s bound: the pool plus one per untapped source),
-                // pay that many generic, then run `body` with `event_amount` =
-                // paid (read back via `Value::TriggerEventAmount`). Well of
-                // Lost Dreams. It read the floating pool only, so a seat that
-                // floats nothing (every Commander bot) never paid (Hawkeye).
+                // "You may pay {X}, X ≤ max" — prompt for a number bounded by the
+                // cap and the mana the controller can make (`MayPayX`'s bound: pool
+                // plus one per untapped source; pool-only never paid for a bot),
+                // pay that much generic, then run `body` with `event_amount` = paid
+                // (`Value::TriggerEventAmount`). Well of Lost Dreams, Hawkeye.
                 use crate::decision::{Decision, DecisionAnswer};
                 let cap = self.evaluate_value(max, ctx).max(0) as u32;
                 let pool = self.players[ctx.controller].mana_pool.total();
@@ -9774,13 +9575,10 @@ impl GameState {
             }
 
             Effect::Fight { attacker, defender } => {
-                // Two creatures simultaneously deal damage equal to
-                // their power to each other. Snapshot powers up-front
-                // so post-damage stats don't affect the back-swing.
-                // Either side resolving to no permanent (target left
-                // the battlefield, defender selector matches nothing)
-                // no-ops the whole fight, matching MTG's "if either
-                // is no longer a creature, no damage is dealt".
+                // Two creatures deal damage equal to their power to each other.
+                // Powers are snapshotted up front so the first hit doesn't change
+                // the back-swing. If either side resolves to no permanent, nothing
+                // happens (no damage is dealt).
                 let atk_id = self
                     .resolve_selector(attacker, ctx)
                     .into_iter()
@@ -11477,12 +11275,10 @@ impl GameState {
                         continue;
                     }
                     if *random {
-                        // Random-discard semantics: deterministic-pick-first
-                        // for the in-process tests; a real client would seed
-                        // an RNG, but the bot harness doesn't care which
-                        // card gets dumped. The discard itself (zone move +
-                        // CardDiscarded + counters + Madness, CR 702.35) is
-                        // centralized in `discard_card`.
+                        // Random discard is deterministic-first here (the bot harness
+                        // doesn't care which card). The discard itself (zone move,
+                        // CardDiscarded, counters, Madness CR 702.35) lives in
+                        // `discard_card`.
                         for _ in 0..n {
                             let Some(cid) = self.players[p].hand.first().map(|c| c.id) else {
                                 break;
@@ -11862,16 +11658,12 @@ impl GameState {
                 let mut taken = 0usize;
                 if take > 0 && !cands.is_empty() {
                     let source = ctx.source.unwrap_or(CardId(0));
-                    // The mill already happened, so this ask cannot suspend —
-                    // a re-run would mill again — and the installed decider
-                    // answers even for a `wants_ui` seat (a dedicated pending
-                    // state is a TODO.md follow-up). What it must not do is
-                    // inherit `AutoDecider`'s blanket empty answer: the mill is
-                    // the cost and taking nothing made nine cards (Gather the
-                    // Pack, Grisly Salvage, Commune with the Gods, …) pure
-                    // self-mill for every bot seat. Auto default: the priciest
-                    // eligible card, `decide_choose_cards`' own rule for a
-                    // beneficial pick.
+                    // The mill already happened, so this ask can't suspend (a re-run
+                    // would mill again); the decider answers even for a `wants_ui` seat
+                    // (dedicated pending state: TODO.md). It must not take AutoDecider's
+                    // empty answer, which made nine cards (Gather the Pack, Grisly
+                    // Salvage, …) pure self-mill. Auto default: the priciest eligible
+                    // card, `decide_choose_cards`' beneficial-pick rule.
                     let answer = if matches!(
                         self.decider.kind(),
                         crate::decision::DeciderKind::Auto
@@ -11997,13 +11789,9 @@ impl GameState {
                         .find(|c| c.id == cid)
                         .map(|c| c.definition.name.to_string())
                         .unwrap_or_default();
-                    // Buy the card whenever the life is affordable — which is
-                    // what this comment claimed before and what the code did
-                    // not do: `AutoDecider` answers `Bool(false)` to every
-                    // `OptionalTrigger`, so a headless Moonlight Bargain binned
-                    // all five cards and paid five mana for nothing. The
-                    // affordability test is the whole decision headless; a real
-                    // decider is still asked.
+                    // Headless, buy the card whenever the life is affordable
+                    // (AutoDecider's `Bool(false)` made Moonlight Bargain bin all
+                    // five cards); a real decider is still asked.
                     let can_pay = self.players[p].life > *life as i32;
                     let pay = can_pay
                         && (matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
@@ -13098,16 +12886,11 @@ impl GameState {
                 };
                 let (theirs, mine) = (pick(self, win), pick(self, lose));
                 let mut cursor = 0;
-                // Every side effect here sits BEFORE an ask — the flip is what
-                // the ask is about, and the repeat cost is what buys the next
-                // flip — so the two-pass recipe (`run_each_unless_pays`) does not
-                // apply and both are carried across the suspend instead.
-                // `flip_one_coin_logged` gives the flip its own replay slot (CR
-                // 705.1: one flip, one event), and a replayed answer marks an
-                // iteration that already paid, so its payment is skipped rather
-                // than made again. Before this, a `wants_ui` controller re-rolled
-                // every earlier flip and re-paid every earlier repeat cost on
-                // each resume.
+                // Every side effect here precedes an ask (the flip is what the ask
+                // is about; the repeat cost buys the next flip), so the two-pass
+                // recipe can't apply. `flip_one_coin_logged` gives each flip a
+                // replay slot (CR 705.1: one flip, one event), and a replayed
+                // answer marks an iteration that already paid, so it isn't re-paid.
                 //
                 // Backstop against a rigged decider that always loses.
                 for _ in 0..64 {
@@ -13301,14 +13084,9 @@ impl GameState {
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
                     if candidates.is_empty() { continue; }
-                    // "Any number" — count = hand size; the decider's
-                    // `Discard(picked_ids)` answer can return 0..=hand.len()
-                    // entries. AutoDecider picks 0 by default (it returns
-                    // `iter().take(count).take(0)` semantics — but our
-                    // AutoDecider uses `count` directly so we tell it 0 by
-                    // surfacing `count: 0` with the full hand). For UI seats
-                    // the full hand is surfaced so the player can pick any
-                    // subset.
+                    // "Any number": the `Discard(picked_ids)` answer may hold
+                    // 0..=hand.len() cards. The full hand is surfaced so a UI seat can
+                    // pick any subset; AutoDecider discards nothing by default.
                     let cap = max
                         .as_ref()
                         .map(|v| self.evaluate_value(v, ctx).max(0) as u32);
@@ -13520,12 +13298,9 @@ impl GameState {
                     self.draw_n(p, n, events);
                     return Ok(());
                 }
-                // CR 701.22b: "If a player is instructed to scry 0, no
-                // scry event occurs. Abilities that trigger whenever a
-                // player scries won't trigger." (Same wording covers
-                // Surveil 0 via 701.42 by reference.) An instruction
-                // of `n == 0` short-circuits at the top so no decision
-                // / event flows downstream.
+                // CR 701.22b: scry 0 is no scry event, so scry triggers don't
+                // fire (Surveil 0 likewise, 701.42). Short-circuit before any
+                // decision or event.
                 if n == 0 {
                     return Ok(());
                 }
@@ -13536,17 +13311,10 @@ impl GameState {
                     .map(|c| (c.id, c.definition.name.to_string()))
                     .collect();
                 let actual = peek.len();
-                // Per CR 701.22a, if the library has fewer cards than
-                // requested, the player looks at and may rearrange the
-                // available cards — the scry instruction still
-                // executes. Only return early when there are literally
-                // no cards to peek at (e.g. empty library + Scry N>0
-                // is still a vacuous-but-real scry; we model that by
-                // proceeding to emit the bookkeeping path). For
-                // simplicity if `actual == 0` we still skip the
-                // decision (no cards to reorder) but acknowledge the
-                // event happened; future scry-counting payoffs would
-                // need an explicit event emission here.
+                // CR 701.22a: with fewer cards than requested the scry still
+                // happens over what's there. With none there's nothing to reorder,
+                // so the decision is skipped (a scry-counting payoff would need an
+                // event emitted here).
                 if actual == 0 {
                     return Ok(());
                 }
@@ -13810,19 +13578,15 @@ impl GameState {
             Effect::EachPlayerMayDiscardThenTutorBasic => {
                 use crate::card::Supertype;
                 let source = ctx.source.unwrap_or(CardId(0));
-                // The ask was a bare `decider.decide`, so it went to the
-                // RESOLVER's decider for every seat: a `wants_ui` player was
-                // never offered the rummage at all. Routed through the seat now
-                // (`ask_seat_cards_logged`, the cursor-indexed channel — the
-                // single-slot one cannot hold more than one seat's answer), with
-                // the headless default left as the empty pick the bare ask
-                // produced, so no headless outcome moves.
+                // Routed through the seat (`ask_seat_cards_logged`, the
+                // cursor-indexed channel — the single slot holds only one seat's
+                // answer) so a `wants_ui` player is actually offered the rummage;
+                // a bare `decider.decide` asked the resolver for every seat. The
+                // headless default stays the empty pick.
                 //
                 // TWO PASSES, for `run_each_unless_pays`'s reason: the discard,
-                // the tutor and the shuffle are mutations inside the ask loop,
-                // so a later seat's suspend would repeat them. The gate (an
-                // empty hand) is per-seat and pass 1 mutates nothing, so it
-                // reads the same either way.
+                // tutor and shuffle would repeat on a later seat's suspend. The
+                // per-seat gate (empty hand) reads the same either way.
                 let mut cursor = 0;
                 let mut answers: Vec<(usize, CardId)> = Vec::with_capacity(self.players.len());
                 for p in self.apnap_sort(self.living_seats().collect()) {
@@ -13880,13 +13644,10 @@ impl GameState {
             Effect::EachPlayerMayDiscardUpToThenDamage { max } => {
                 let source = ctx.source.unwrap_or(CardId(0));
                 // Same two fixes as `EachPlayerMayDiscardThenTutorBasic` above:
-                // the ask went to the resolver's decider for every seat, so a
-                // `wants_ui` player was never offered the trade and Mind Bomb
-                // always dealt its full three; and the discards and the damage
-                // are mutations inside the ask loop, so a later seat's suspend
-                // would repeat them. A seat's own hand is the only thing its
-                // cap reads, and no earlier seat's discard touches it, so the
-                // split does not move the cap.
+                // seat-routed asks (so a `wants_ui` player can make Mind Bomb's
+                // trade) and two passes (discards and damage mustn't repeat on a
+                // suspend). A seat's cap reads only its own hand, so the split
+                // doesn't move it.
                 let mut cursor = 0;
                 let mut answers: Vec<(usize, Vec<CardId>)> = Vec::with_capacity(self.players.len());
                 // CR 800.4a — a departed seat is not one of "each player". Its
@@ -14438,15 +14199,10 @@ impl GameState {
 
             Effect::RevealTopToHandLoseLifeRepeat => {
                 // Ad Nauseam. Asked per reveal through `ask_seat_bool` so a
-                // `wants_ui` seat (human modal, or a bot answering pending
-                // decisions) actually gets the choice — the old direct
-                // `self.decider` ask hit `AutoDecider`'s blanket "no" and
-                // made the card a do-nothing under every server-hosted seat.
-                // `ask_seat_bool`'s re-run repeats everything before the
-                // suspension point, so ALL mutations must wait until the
-                // asks are done: walk the library by index collecting
-                // yes/no answers (state untouched, each prompt names the
-                // right card), then apply every accepted reveal at once.
+                // `wants_ui` seat gets the choice (a direct `self.decider` ask hit
+                // AutoDecider's "no" and made the card do nothing). The re-run
+                // repeats everything before the suspension, so collect all yes/no
+                // answers walking the library by index first, then apply them.
                 let p = ctx.controller;
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
@@ -14758,15 +14514,10 @@ impl GameState {
                 // 26255) pushed millions and took the process past 6 GB.
                 const MANA_EVENT_CAP: u32 = crate::player::SCALE_CEILING as u32;
                 let unit_events = |n: u32| n.min(MANA_EVENT_CAP);
-                // The three land-tap replacements below each asked "is the
-                // source a land" with its own `battlefield_find`, and two of
-                // them then took a whole-board `static_abilities` walk for a
-                // static almost no board has: 8,810,292 Ir / 0.51 % over
-                // 37,140 walks, two per land tap. One lookup and one fused
-                // walk now, and the walk only happens for a land source on
-                // a board the mana-static lane says carries a replacer
-                // (`LAND_MANA_REPLACER` is folded into that lane's
-                // predicate; PERF `(-205)`).
+                // One "is the source a land" lookup and one fused static walk for
+                // the three land-tap replacements below, and the walk runs only
+                // for a land source on a board whose mana-static lane carries a
+                // replacer (`LAND_MANA_REPLACER`; PERF `(-205)`).
                 let (src_is_land, src_is_basic) =
                     match ctx.source.and_then(|s| self.battlefield_find(s)) {
                         Some(c) => (c.definition.is_land(), c.definition.is_basic()),
@@ -15059,12 +14810,9 @@ impl GameState {
                             events.push(GameEvent::ManaAdded { player: p, color, source: ctx.source });
                         }
                     }
-                    // Vivid (Bloom Tender, Faeburrow Elder) — one mana of
-                    // EACH colour among your permanents, no choice to make.
-                    // Shares `colors_among_your_permanents` with the arm
-                    // below so the two readings of "among permanents you
-                    // control" cannot drift; they differ only in what they do
-                    // with the set.
+                    // Vivid (Bloom Tender, Faeburrow Elder) — one mana of EACH colour
+                    // among your permanents. Shares `colors_among_your_permanents` with
+                    // the arm below so the two readings can't drift.
                     ManaPayload::OneOfEachColorAmongYourPermanents
                     | ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents => {
                         let mono = matches!(pool, ManaPayload::OneOfEachColorAmongYourMonocoloredPermanents);
@@ -16621,13 +16369,9 @@ impl GameState {
                 if options.is_empty() {
                     return Ok(());
                 }
-                // CR 701.38a — starting with the controller, in turn order,
-                // and CR 800.4a: a seat that has left the game is not a player
-                // and does not vote. The raw rotation this replaces counted a
-                // departed seat's ballot — re-seated onto a live opponent by
-                // CR 800.4g and then tallied as that dead seat's vote, so a
-                // four-seat pod down to two still decided a council's dilemma
-                // four votes to nothing.
+                // CR 701.38a — starting with the controller, in turn order; CR
+                // 800.4a — a seat that left the game doesn't vote (its ballot was
+                // re-seated onto a live opponent by CR 800.4g and still tallied).
                 let mut cursor = 0usize;
                 let mut votes = vec![0u32; options.len()];
                 let ballot: Vec<String> =
@@ -16796,12 +16540,10 @@ impl GameState {
 
             Effect::EachPlayerDestroysChosenFromLeftNeighbor { filters } => {
                 let source = ctx.source.unwrap_or(CardId(0));
-                // Each SEAT picks from its left neighbour's board, and every one
-                // of those picks went to `self.decider` — the resolving seat's.
-                // Routed per seat, on the cursor-indexed channel because this is
-                // a loop over seats; the destroys were already after the loop,
-                // and `doomed` rebuilds identically from the replayed answers, so
-                // no seat's legal set moves on a re-run.
+                // Each SEAT picks from its left neighbour's board, routed per seat
+                // on the cursor-indexed channel (a loop over seats). The destroys
+                // follow the loop and `doomed` rebuilds identically from replayed
+                // answers, so no legal set moves on a re-run.
                 let mut cursor = 0;
                 let mut doomed: Vec<CardId> = Vec::new();
                 for seat in self.seats_in_turn_order_from(ctx.controller) {
@@ -18550,13 +18292,11 @@ impl GameState {
                 use crate::effect::{LibraryPosition, ZoneDest};
                 let n = self.evaluate_value(max, ctx).max(0) as u32;
                 if n == 0 { return Ok(()); }
-                // The cursor-indexed channel, not the single slot: this loop is
-                // over SEATS, and `who` is `You` or `Target(0)` in every shipped
-                // caller only by accident of the catalog. A single-slot ask here
-                // would hand seat 0's replay whatever seat 1 answered
-                // (`scripts/audit_stash_in_loop.py`, and Words of Wind is what
-                // that looks like). Mutations stay after the loop for the same
-                // reason.
+                // The cursor-indexed channel, not the single slot: this loops over
+                // SEATS (every shipped `who` being one seat is a catalog accident),
+                // and a single-slot ask would replay one seat's answer for another
+                // (`scripts/audit_stash_in_loop.py`). Mutations stay after the loop
+                // for the same reason.
                 let mut cursor = 0;
                 let mut answers: Vec<(usize, Vec<CardId>)> = Vec::new();
                 for p in self.resolve_players(who, ctx) {
@@ -18774,12 +18514,9 @@ impl GameState {
 
             Effect::ChooseSector { body } => {
                 use crate::card::Sector;
-                // CR 702.158d — pick a sector, then run the body over it.
-                // The auto-picker takes the sector holding the most creatures
-                // the body would care about (opponents' for a wipe, yours for
-                // a pump is left to the body's own filter).
-                // Default pick: the sector holding the most creatures, so an
-                // auto-decided wipe or pump lands where it matters most.
+                // CR 702.158d — pick a sector, then run the body over it. Default
+                // pick: the sector holding the most creatures, so an auto-decided
+                // wipe or pump lands where it matters most.
                 let mut tally = [0u32; 3];
                 for c in self.battlefield.iter().filter(|c| self.computed_is_creature(c)) {
                     if let Some(i) = c.sector.and_then(|s| Sector::ALL.iter().position(|a| *a == s))
@@ -19003,12 +18740,9 @@ impl GameState {
                 // so the live power ends at power * 2^times.
                 let n = self.evaluate_value(times, ctx).max(0);
                 if n > 0 {
-                    // `checked_shl` checks the SHIFT AMOUNT, not the value it
-                    // produces: `1i32.checked_shl(31)` is `Some(i32::MIN)`, and
-                    // `factor - 1` then overflows — a panic under
-                    // `overflow-checks` and a huge negative pump in release.
-                    // `times` is `Value::XFromCost` on the shipped card, so an
-                    // {X} of 31 is all it takes.
+                    // `checked_shl` checks the shift amount, not the result:
+                    // `1i32.checked_shl(31)` is `Some(i32::MIN)` and `factor - 1` then
+                    // overflows. `times` is `Value::XFromCost`, so X = 31 reaches it.
                     let factor = if n >= 31 { i32::MAX } else { 1i32 << n }; // 2^n
                     for ent in self.resolve_selector(what, ctx) {
                         if let Some(cid) = ent.as_permanent_id()
@@ -19028,13 +18762,10 @@ impl GameState {
             }
 
             Effect::LoseAllAbilities { what, duration } => {
-                // Layer-6 strip-abilities continuous effect (CR 113.10b).
-                // Installs `Modification::RemoveAllAbilities` against each
-                // resolved permanent so the trigger dispatcher and
-                // activated-ability resolver skip the target's printed
-                // abilities while the effect is in scope. Used by Mercurial
-                // Transformation / Turn to Frog / Lignify "becomes 1/1
-                // creature and loses all abilities" patterns.
+                // Layer-6 strip-abilities (CR 113.10b): installs
+                // `Modification::RemoveAllAbilities` on each permanent so its
+                // printed triggers and activations are skipped while in scope
+                // (Mercurial Transformation, Turn to Frog, Lignify).
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, Layer, Modification,
                 };
@@ -19117,14 +18848,10 @@ impl GameState {
             }
 
             Effect::SetBasePT { what, power, toughness, duration } => {
-                // Layer-7b SetPT continuous effect — installs a real
-                // `Modification::SetPowerToughness(p, t)` against the
-                // resolved target permanent, with the given duration
-                // mapped onto `EffectDuration`. The layer system
-                // applies the set *before* counters / +N/+M bonuses
-                // (CR 613.7b vs c/f), so a +1/+1 counter on top of
-                // Square Up's 0/4 yields 1/5 — matching the printed
-                // rules exactly.
+                // Layer-7b SetPT: installs a real `Modification::SetPowerToughness`
+                // on the target for `duration`. Layers apply it before counters and
+                // +N/+M (CR 613.7b vs c/f), so a +1/+1 counter on Square Up's 0/4
+                // yields 1/5.
                 use crate::game::layers::{
                     AffectedPermanents, ContinuousEffect, Layer, Modification,
                     PtSublayer,
@@ -19458,14 +19185,11 @@ impl GameState {
             }
 
             Effect::GrantTriggeredAbility { what, trigger, duration } => {
-                // A permanent grant is baked onto the card's own trigger list
-                // (`bake_grant`), reverted as the card leaves the battlefield
-                // (CR 400.7; mirrors `GrantKeyword`'s permanent path;
-                // Emissary of Soulfire models each exalted counter as a
-                // permanently-granted `exalted()` instance). Every other
-                // duration rides `granted_triggers_timed` under the layer
-                // system's expiry, so "until your next turn" (Vraska the
-                // Unseen's +1) outlives the cleanup that used to drop it.
+                // A permanent grant is baked onto the card's trigger list
+                // (`bake_grant`) and reverted when it leaves (CR 400.7; mirrors
+                // `GrantKeyword`; Emissary of Soulfire's exalted counters). Other
+                // durations ride `granted_triggers_timed` under layer expiry, so
+                // "until your next turn" (Vraska the Unseen) survives cleanup.
                 let expiry = match duration {
                     crate::effect::Duration::Permanent => None,
                     d => Some(self.effect_duration_for(*d, ctx.controller)),
@@ -19514,13 +19238,11 @@ impl GameState {
             }
 
             Effect::GrantKeyword { what, keyword, duration } => {
-                // Three carriers by duration (`grant_keyword_for`): the
-                // per-instance `granted_keywords_eot` bag (cleared at Cleanup
-                // along with `power_bonus`), the printed keyword list for a
-                // permanent grant, and a layer-6 effect under
-                // `effect_duration_for` for everything else — "until your
-                // next turn", "while this is tapped" — which used to be baked
-                // onto the definition as permanent.
+                // Three carriers by duration (`grant_keyword_for`): the per-instance
+                // `granted_keywords_eot` bag (cleared at Cleanup), the printed keyword
+                // list for a permanent grant, and a layer-6 effect under
+                // `effect_duration_for` for everything else ("until your next turn",
+                // "while this is tapped").
                 let ids: Vec<_> = self
                     .resolve_selector(what, ctx)
                     .into_iter()
@@ -19840,16 +19562,11 @@ impl GameState {
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
                 for id in ids {
-                    // CR 701.27f — "if an activated or triggered ability of a
-                    // permanent … tries to transform it, the permanent does so
-                    // only if it hasn't transformed or converted since the
-                    // ability was put onto the stack." Two copies of one
-                    // ability on the stack (a batch of simultaneous events —
-                    // Voldaren Bloodcaster off a doubled Blood mint, Vincent
-                    // Valentine off a board wipe) otherwise flipped the face
-                    // back and forth. Only the ability's OWN permanent: an
-                    // ability transforming something else (Tovolar's
-                    // "transform the Werewolf that entered") is unrestricted.
+                    // CR 701.27f — an ability of a permanent that tries to transform it
+                    // does so only if it hasn't transformed since the ability was put
+                    // on the stack; otherwise two copies (Voldaren Bloodcaster, Vincent
+                    // Valentine) flip it back and forth. Only the ability's own
+                    // permanent: transforming something else (Tovolar) is unrestricted.
                     if self.scratch.resolving_source_transformed && Some(id) == ctx.source {
                         continue;
                     }
@@ -20147,13 +19864,10 @@ impl GameState {
                 let source = ctx.source.unwrap_or(CardId(0));
                 for ent in self.resolve_selector(what, ctx) {
                     let Some(cid) = ent.as_permanent_id() else { continue };
-                    // The bare ask read White (`legal[0]`), and the unreachable
-                    // fallback beside it said Green. The effect exists to
-                    // *change* a colour, so the legal set drops what the target
-                    // already is and the seat's own investment picks from the
-                    // rest — a repaint to the colour it already had is the one
-                    // answer that cannot be right. Picking to dodge a specific
-                    // hoser on the board is a follow-up (ENGINE_BACKLOG).
+                    // The effect exists to *change* a colour, so the legal set drops
+                    // what the target already is and the seat's own investment picks
+                    // from the rest. Picking to dodge a specific hoser is a follow-up
+                    // (ENGINE_BACKLOG).
                     let already = self
                         .computed_permanent(cid)
                         .map(|cp| cp.colors.to_vec())
@@ -20616,20 +20330,13 @@ impl GameState {
 
             Effect::GrantProtectionFromChosenColor { what, duration }
             | Effect::GrantProtectionFromChosenColorOrColorless { what, duration } => {
-                // The controller picks a color; each target gains
-                // protection from it for `duration` (EOT today). Mother of
-                // Runes / Gods Willing.
+                // The controller picks a color; each target gains protection from
+                // it for `duration` (EOT today). Mother of Runes / Gods Willing.
                 //
-                // Protection exists to dodge their threats, so the pick is
-                // always the hostile one — first-legal chose White, and Mother
-                // of Runes died to every red/black removal spell she was meant
-                // to blank. The census used to be a fourth hand-written copy
-                // here, battlefield-only; it is `densest_color_among_opponents`
-                // now, which counts hands too.
-                //
-                // A removal spell aimed at a creature this covers names the
-                // colour outright: that is the one Mother of Runes is
-                // activated in answer to.
+                // The pick is always the hostile one: a removal spell aimed at a
+                // covered creature names its colour outright, else
+                // `densest_color_among_opponents` (counts hands too). First-legal
+                // chose White and blanked nothing.
                 let source = ctx.source.unwrap_or(CardId(0));
                 let ids: Vec<_> = self
                     .resolve_selector(what, ctx)
@@ -21054,13 +20761,9 @@ impl GameState {
                 for ent in self.resolve_selector(what, ctx) {
                     match ent {
                         EntityRef::Permanent(cid) => {
-                            // CR 614.16 counter-doubling replacement: each
-                            // `StaticEffect::DoubleCounters` permanent the
-                            // affected permanent's *controller* has on the
-                            // battlefield doubles the count. Stacking
-                            // doublers multiply (2^k where k is the number
-                            // of active doublers). Looked up per-target
-                            // since a fan-out (`ForEach`) could span
+                            // CR 614.16: each `StaticEffect::DoubleCounters` permanent the
+                            // affected permanent's controller has doubles the count (2^k for
+                            // k doublers). Looked up per target since a `ForEach` can span
                             // controllers.
                             let n = if self.battlefield_find(cid).is_some() {
                                 self.scaled_counter_count_on(cid, *kind, base)
@@ -21733,13 +21436,10 @@ impl GameState {
                 Ok(())
             }
 
-            // CR 122.1b — Remove keyword counters from `what`. Clamped at
-            // the source's actual count; the host loses the keyword
-            // (assuming no other source) when the last counter is
-            // removed. Counterpart to AddKeywordCounter. Doubling-
-            // counter replacements (CR 614.16) do NOT apply to removes
-            // — they only scale puts (the rule is about "if an effect
-            // would put one or more counters…").
+            // CR 122.1b — remove keyword counters from `what`, clamped at the
+            // actual count; the keyword goes with the last counter (absent other
+            // sources). Counter doublers (CR 614.16) scale puts only, not
+            // removes.
             Effect::RemoveKeywordCounter { what, keyword, amount } => {
                 let request = self.evaluate_value(amount, ctx).max(0) as u32;
                 if request == 0 { return Ok(()); }
@@ -22565,13 +22265,11 @@ impl GameState {
                 // Cloudstone Curio. "Permanent type" = the entering permanent's
                 // card types intersected with the candidate's.
                 //
-                // The ask stays synchronous and the headless answer — decline —
-                // is the deliberate one: every candidate is a permanent *we*
-                // control, so the pick is a cost paid for a re-entry payoff the
-                // engine cannot see, and `decide_choose_cards`' battlefield
-                // branch declines an all-own board at `min: 0` too. Plumbing it
-                // would buy a suspend round-trip per nonland ETB and the same
-                // answer.
+                // Synchronous, and the headless answer (decline) is deliberate:
+                // every candidate is our own permanent, so it's a cost for a payoff
+                // the engine can't see, and `decide_choose_cards` declines an
+                // all-own board at `min: 0` too. Plumbing would add a suspend per
+                // nonland ETB for the same answer.
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(entered) = self
                     .resolve_selector(with, ctx)
@@ -22737,13 +22435,10 @@ impl GameState {
                 if legal.is_empty() {
                     return Ok(());
                 }
-                // TWO PASSES, and the split is what lets the asks be routed at
-                // all. Both `legal` sets are computed against the stack item as
-                // it stands: the primary's excludes the CURRENT target, and each
-                // extra slot's excludes that slot's current one. Writing a pick
-                // before the next ask would move the next ask's legal set, so a
-                // re-run after a suspend would pose a different question in the
-                // same cursor slot. Ask everything, then write.
+                // TWO PASSES, which is what lets the asks be routed: each `legal`
+                // set excludes the slot's CURRENT target, so writing a pick before
+                // the next ask would change the question a re-run poses in the same
+                // cursor slot. Ask everything, then write.
                 let mut cursor = 0;
                 let Some(chosen) = self.ask_seat_target_logged(
                     &mut cursor,
@@ -23570,14 +23265,13 @@ impl GameState {
 
             Effect::ExileHandThenReclaimLinked => {
                 // Moonring Mirror's upkeep. "If you do" — declining leaves the
-                // stash alone; an empty hand still counts as doing it (CR
-                // 701.x: exiling zero cards succeeds).
+                // stash alone; an empty hand still counts as doing it (exiling zero
+                // cards succeeds).
                 //
                 // Nothing has moved when the offer is made, so it plumbs: a
-                // `wants_ui` seat (every bot seat) gets a real pending decision
-                // and the bot's `OptionalTrigger` policy, which prices this one
-                // by outcome. It used to inherit `AutoDecider`'s blanket no, so
-                // the Mirror's second ability never ran in self-play at all.
+                // `wants_ui` seat gets a real pending decision and the bot's
+                // `OptionalTrigger` policy (AutoDecider's blanket no meant it never
+                // ran in self-play).
                 let Some(src) = ctx.source else { return Ok(()) };
                 let p = ctx.controller;
                 let mut cursor = 0usize;
@@ -25412,14 +25106,12 @@ impl GameState {
                 Ok(())
             }
 
-            // Counter target spell and route the lifted card to a
-            // non-graveyard zone. Overrides CR 701.6a's default (countered
-            // spell -> owner's graveyard) via the spell's printed "instead"
-            // clause (CR 608.2c). Memory Lapse routes to top of owner's
-            // library; Spell Crumple to exile; Remand to owner's hand. Spells
-            // flagged `uncounterable` (Cavern of Souls) are skipped — the
-            // counter does nothing. `MoveSpellToZone` is the same lift without
-            // the counter, so it moves an uncounterable spell too.
+            // Counter target spell and route the card to a non-graveyard zone
+            // via its printed "instead" (CR 608.2c over 701.6a): Memory Lapse
+            // to library top, Spell Crumple to exile, Remand to hand.
+            // `uncounterable` spells (Cavern of Souls) are skipped.
+            // `MoveSpellToZone` is the same lift without the counter, so it
+            // moves an uncounterable spell too.
             Effect::CounterSpellToZone { what, zone } | Effect::MoveSpellToZone { what, zone } => {
                 use crate::effect::CounteredSpellZone;
                 let is_counter = matches!(effect, Effect::CounterSpellToZone { .. });
@@ -25489,13 +25181,9 @@ impl GameState {
                                 self.players[owner].library.push(*card);
                             }
                             CounteredSpellZone::OwnerLibraryTopOrBottom => {
-                                // CR 701.6a — the spell's OWNER chooses top or
-                                // bottom (Subtlety). The owner essentially
-                                // always wants their spell back on top, so
-                                // Auto seats pick top (the old blanket "no"
-                                // always bottomed it — a strict misplay
-                                // against that seat, never consulted).
-                                // Scripted deciders steer.
+                                // CR 701.6a — the spell's OWNER chooses top or bottom
+                                // (Subtlety). Auto seats pick top, which the owner
+                                // essentially always wants; scripted deciders steer.
                                 let cid = card.id;
                                 let on_top = match self.decider.kind() {
                                     crate::decision::DeciderKind::Auto => true,
@@ -25720,12 +25408,10 @@ impl GameState {
             }
 
             Effect::CounterUnless { what, cost } => {
-                // CR 702.21 — Ward body. Resolve `what` to a card-id, walk
-                // the stack for the topmost matching `Spell` (by `card.id`)
-                // or `Trigger` (by `source`), and try to auto-pay `cost`
-                // on the affected controller's behalf. If they can't pay,
-                // the stack item is removed (spells fall into their
-                // owner's graveyard; abilities just vanish).
+                // CR 702.21 — Ward body. Find the topmost `Spell` (by
+                // `card.id`) or `Trigger` (by `source`) matching `what` and
+                // try to pay `cost` for its controller; if they can't, the
+                // item is removed (spells to the graveyard).
 
                 let targets = self.resolve_selector(what, ctx);
                 let target_id = targets.into_iter().find_map(|t| match t {
@@ -25778,12 +25464,10 @@ impl GameState {
                     (None, None) => return Ok(()),
                 };
 
-                // CR 702.21b — paying the ward cost is the affected
-                // player's choice, and so is *which* permanents pay it. A
-                // seat that hand-pays its mana picks the sources here
-                // instead of having its board auto-tapped; `is_spell` is
-                // rederived on resume from the stack, so nothing but the
-                // lookup key needs carrying across the suspend.
+                // CR 702.21b — the affected player chooses whether to pay
+                // and which permanents pay it. A hand-paying seat picks the
+                // sources here; `is_spell` is rederived from the stack on
+                // resume, so only the lookup key crosses the suspend.
                 let mut cursor = 0;
                 let src = ctx.source.unwrap_or(cid);
                 let picks = match Self::ward_mana_choice(cost) {
@@ -25812,21 +25496,14 @@ impl GameState {
                     Some(d) => d,
                     None => return Ok(()),
                 };
-                // Both pickers above are themselves declinable — the mana
-                // source picker takes `min: 0`, the discard picker "choose
-                // fewer" — so a payer offered one has already answered CR
-                // 702.21b. A payer offered *neither* had no say at all: the
-                // cost was auto-paid on their behalf whenever it was
-                // affordable. For Ward—Pay N life that isn't a convenience
-                // but a loss — a player at exactly N life who targeted the
-                // warded permanent had N life taken with no prompt and lost
-                // the game on state-based actions. Ask them.
+                // Both pickers above are declinable (`min: 0` / "choose fewer"), so
+                // a payer offered one has answered CR 702.21b. A payer offered
+                // neither had the cost auto-paid with no say — for Ward—Pay N life,
+                // a player at exactly N lost the game. Ask them.
                 //
-                // Only a `wants_ui` seat is asked. Bots and scripted tests
-                // keep the auto-pay-if-affordable path: `AutoDecider` answers
-                // `false` to an `OptionalTrigger`, so routing them through
-                // this question would silently decline every ward and let all
-                // their targeted removal be countered.
+                // Only a `wants_ui` seat is asked: AutoDecider answers `false` to
+                // `OptionalTrigger`, so routing bots and scripted tests here would
+                // decline every ward and get all their removal countered.
                 if picks.is_none()
                     && discards.is_none()
                     && self.seat_prompts(affected_controller)
@@ -25894,20 +25571,15 @@ impl GameState {
             }
 
             Effect::UnlessPlayerPays { who, cost, then, if_paid } => {
-                // Rhystic-tax rider: resolve the taxed player(s), ask each
-                // yes/no whether to pay `cost`, and resolve `then` if nobody
-                // does (or can). `then` runs in this same context, so its
-                // `PlayerRef::You` is the rider's controller. The question is
-                // seat-routed: a `wants_ui` payer (who may be an opponent of
-                // the resolving controller) gets the yes/no modal.
+                // Rhystic-tax rider: ask each taxed player whether to pay `cost`;
+                // run `then` (in this context, so `You` is the rider's controller)
+                // if nobody does or can. Seat-routed, so a `wants_ui` payer —
+                // possibly an opponent — gets the modal.
                 //
-                // `resolve_players` rather than `resolve_player`: "unless ANY
-                // player pays" (Aether Rift) is `who: EachPlayer`, and the
-                // singular resolver answers that with the first living seat,
-                // so half the time the only seat with a reason to pay was
-                // never asked. Every other site's `who` is single-valued, for
-                // which this is the same one seat — one shared `cursor`
-                // across the asks, `PlayersMayAccept`'s shape.
+                // `resolve_players`, not `resolve_player`: "unless ANY player pays"
+                // (Aether Rift) is `who: EachPlayer`, which the singular resolver
+                // collapses to the first living seat. One shared `cursor` across
+                // the asks, `PlayersMayAccept`'s shape.
                 let payers = self.resolve_players(who, ctx);
                 if payers.is_empty() {
                     return self.run_effect(then, ctx, events);
@@ -26349,15 +26021,12 @@ impl GameState {
                 // picking the source when other legal candidates exist, so the
                 // printed "another" intent is honored.
                 let source_id = ctx.source;
-                // CR 701.21 — the player doing the sacrificing chooses which
-                // permanent(s). For a `wants_ui` player with a genuine choice
-                // (more legal candidates than required) we suspend: a *single*
-                // sacrifice uses the in-scene `ChooseTarget` cursor, a
-                // multi-sacrifice uses the `ChooseCards` modal. Bots and the
-                // "no real choice" case keep the auto-pick (cheapest/weakest
-                // non-source). The suspend's continuation re-runs the
-                // sacrifice for every seat not yet processed, so a symmetric
-                // edict completes for all players in APNAP order.
+                // CR 701.21 — the sacrificing player chooses. A `wants_ui` player
+                // with a real choice suspends (single sacrifice: `ChooseTarget`
+                // cursor; multi: `ChooseCards` modal); bots and no-choice cases
+                // auto-pick the cheapest/weakest non-source. The continuation
+                // re-runs for every unprocessed seat, so a symmetric edict
+                // completes for all players in APNAP order.
                 let seats: Vec<usize> = self
                     .resolve_selector(who, ctx)
                     .into_iter()
@@ -26463,16 +26132,11 @@ impl GameState {
 
             Effect::MoveChosen { from, filter, count, up_to, to } => {
                 // Player-chosen sibling of `Move { what: Take {..} }`: the
-                // controller picks WHICH of the resolved cards move. The
-                // decision min equals the pick count so the auto decider
-                // keeps maximizing; a UI/scripted decider may under-pick on
-                // "up to" cards.
-                // Which way the pick cuts is the destination: a card landing
-                // in the chooser's hand or on their battlefield is upside
-                // (Divergent Equation's return-to-hand, Bind to Life), a card
-                // leaving for a graveyard, exile or a library is a cost
-                // (Emeritus of Ideation's "exile eight cards from your
-                // graveyard").
+                // controller picks WHICH resolved cards move. min = pick count so
+                // the auto decider maximizes; a UI/scripted decider may under-pick
+                // on "up to" cards. The destination says whether the pick is
+                // upside (hand / battlefield: Divergent Equation, Bind to Life) or
+                // a cost (graveyard / exile / library: Emeritus of Ideation).
                 let value = match to {
                     crate::effect::ZoneDest::Hand(who)
                     | crate::effect::ZoneDest::Battlefield { controller: who, .. }
@@ -26545,14 +26209,10 @@ impl GameState {
                     };
                     v.into_iter().filter(|id| ids.contains(id)).take(cap).collect()
                 } else {
-                    // Exactly-N picks went straight to `decider.decide`, which
-                    // for a live UI seat is the AutoDecider — so a human never
-                    // saw the prompt and the first N cards in list order were
-                    // taken for them (Emeritus of Ideation's "exile eight cards
-                    // from your graveyard"). Route it through the same
-                    // suspending ask the `up_to` branch uses; a headless Auto
-                    // seat still takes the first N, which is what the
-                    // maximizing default has always done.
+                    // Exactly-N picks use the same suspending ask as `up_to`, so a UI
+                    // seat sees the prompt (a bare `decider.decide` took the first N
+                    // for them — Emeritus of Ideation). Headless Auto still takes the
+                    // first N.
                     let auto_default: Vec<CardId> = ids.iter().copied().take(cap).collect();
                     if self.seat_prompts(ctx.controller)
                         || !matches!(self.decider.kind(), crate::decision::DeciderKind::Auto)
@@ -26599,30 +26259,22 @@ impl GameState {
             }
 
             Effect::PlayerReturnsPermanentsToHand { who, count, filter, up_to } => {
-                // Bounce analogue of `PlayerExilesPermanents`: the affected
-                // player picks which of their matching permanents go back to
-                // hand. A wants_ui chooser picks via `ChooseCards`; the auto
-                // path returns the weakest N ("up to" choosers may take 0 —
-                // approximated by still auto-picking, since declining is
-                // rarely right for the affected player's own choice).
+                // Bounce analogue of `PlayerExilesPermanents`: the affected player
+                // picks which matching permanents return to hand (`ChooseCards` for
+                // wants_ui; auto returns the weakest N — an "up to" chooser could
+                // take 0, but declining is rarely right).
                 
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
                     return Ok(());
                 }
                 let players: Vec<usize> = self.resolve_players(who, ctx);
-                // A loop over SEATS needs the cursor-indexed resume channel, not
-                // the single slot: `ask_seat_cards` has one, so on every resume
-                // this loop re-ran from the top, seat 0's ask swallowed the
-                // answer seat 1 had just given (none of whose cards are seat
-                // 0's), and the forced-pick shortfall auto-filled it — seat 0
-                // bounced another of its own permanents per round trip while
-                // seat 1 was still being asked. `Words of Wind` is the shipped
-                // `EachPlayer` case, and it emptied the controller's board.
-                // Two passes for the usual reason: the moves are mutations
-                // inside the ask loop. Each seat's candidates are its own
-                // permanents and no other seat's move touches them, so the
-                // split does not change any gate.
+                // A loop over SEATS needs the cursor-indexed channel: with the
+                // single slot every resume re-ran the loop and seat 0's ask took
+                // the answer seat 1 just gave, auto-filling seat 0's shortfall
+                // (Words of Wind emptied the controller's board). Two passes since
+                // the moves are mutations inside the loop; each seat's candidates
+                // are its own permanents, so the split changes no gate.
                 let mut cursor = 0;
                 let mut answers: Vec<Vec<CardId>> = Vec::with_capacity(players.len());
                 for &p in &players {
@@ -27004,14 +26656,11 @@ impl GameState {
                     let picked = picks[i].map(|k| &options[k]);
                     match picked {
                         Some(opt) => self.run_effect(opt, &opt_ctx, events)?,
-                        // No affordable option — the ability's controller gets
-                        // the payoff. Bind `trigger_source` to this defaulting
-                        // chooser so an `otherwise` can single them out via
-                        // `PlayerRef::Triggerer` (Zoyowa Lava-Tongue's "deals 3
-                        // damage to each opponent who didn't") — correct even in
-                        // multiplayer, where `EachOpponent` would hit the players
-                        // who *did* dodge. `You` / `EachOpponent` refs are
-                        // unaffected (controller is unchanged).
+                        // No affordable option — the controller gets the payoff. Bind
+                        // `trigger_source` to this defaulting chooser so `otherwise` can
+                        // name them via `PlayerRef::Triggerer` (Zoyowa Lava-Tongue's "each
+                        // opponent who didn't"; `EachOpponent` would also hit those who
+                        // did). `You` / `EachOpponent` are unaffected.
                         None => {
                             let pay_ctx = EffectContext {
                                 trigger_source: Some(EntityRef::Player(p)),
@@ -29418,15 +29067,12 @@ impl GameState {
             }
 
             Effect::JoinForces { description, body } => {
-                // CR 207.2c — "starting with you, each player may pay any
-                // amount of mana", so the order is turn order from the
-                // CONTROLLER, not APNAP from the active player.
+                // CR 207.2c — "starting with you, each player may pay any amount
+                // of mana": turn order from the CONTROLLER, not APNAP.
                 //
-                // Every ask precedes every payment, the contract
-                // `TemptingOffer` keeps for the same reason: `ask_seat_amount`
-                // suspends a `wants_ui` seat and the effect is replayed from
-                // the answer log, so a payment taken mid-ask would be taken
-                // twice.
+                // Every ask precedes every payment (`TemptingOffer`'s contract):
+                // `ask_seat_amount` suspends and replays from the log, so a
+                // mid-ask payment would be taken twice.
                 let source = ctx.source.unwrap_or(crate::card::CardId(0));
                 // Every seat with each gate logged: a seat leaving between
                 // asks (CR 800.4a — its lands go home too) can't shift the
@@ -29503,14 +29149,10 @@ impl GameState {
                         selector: Selector::Player(PlayerRef::Seat(opp)),
                         body: Box::new(carried),
                     });
-                    // A suspended body parks only its OWN effect, so without
-                    // this the opponents after `opp` were dropped. Each
-                    // remaining iteration pins a *different* opponent, and
-                    // `trigger_source` is a context field the parked
-                    // continuation cannot carry — so the tail names its seat
-                    // inside the effect, as `Effect::ForEach` over a
-                    // `PlayerRef::Seat` selector, which is the same
-                    // trigger-source binding this loop uses.
+                    // A suspended body parks only its own effect, so splice in the
+                    // remaining opponents. `trigger_source` can't ride the parked
+                    // continuation, so each iteration names its seat inside the effect
+                    // as `Effect::ForEach` over a `PlayerRef::Seat` selector.
                     if splice_after_suspend(&mut self.suspend_signal, || {
                         per_seat_continuation(&seats[i + 1..], |q| Effect::ForEach {
                             selector: Selector::Player(PlayerRef::Seat(q)),
@@ -29560,13 +29202,12 @@ impl GameState {
                 self.clear_answer_log();
                 // "Each opponent who doesn't …" — before any body run, so a
                 // suspend inside one never replays it.
-                // "Tempting offer" is an ABILITY WORD (CR 207.2c) with no
-                // rules entry of its own, so the shape is the printed text:
-                // the controller runs the body once, then once per acceptor
-                // for that acceptor, then once more per acceptor. Every run is "the body, under some
-                // controller", so the whole tail is one seat list and a
-                // suspend in run k splices the runs after it back in the same
-                // way `ForEachOpponent` above does.
+                // "Tempting offer" is an ability word (CR 207.2c) with no rules
+                // entry, so the shape is the printed text: the body once for the
+                // controller, then once per acceptor for that acceptor, then once
+                // more per acceptor. Every run is "the body under some controller",
+                // so the tail is one seat list and a suspend in run k splices the
+                // rest back like `ForEachOpponent` above.
                 let mut runs = Vec::with_capacity(2 * acceptors.len() + 1);
                 runs.push(ctx.controller);
                 runs.extend(acceptors.iter().copied());
@@ -30158,13 +29799,11 @@ impl GameState {
                     .collect();
                 let source = ctx.source.unwrap_or(CardId(0));
                 let mut cursor = 0;
-                // TWO PASSES, for `run_each_unless_pays`'s reason: a suspend
-                // re-runs this arm from the top, so life paid — and cards
-                // discarded — inside the ask loop happen again for every hit
-                // asked about after them. `budget` carries what the seat has
-                // already committed, so the payability gate sees the running
-                // total the single-pass loop saw, and pass 2 does one thing per
-                // hit in the same order, so the event stream is unchanged.
+                // TWO PASSES, for `run_each_unless_pays`'s reason (life paid and
+                // cards discarded would repeat on a later suspend). `budget` carries
+                // what the seat has committed so the gate sees the single-pass
+                // running total, and pass 2 keeps the per-hit order, so the event
+                // stream is unchanged.
                 let mut budget = self.players[seat].life;
                 let mut answers: Vec<(crate::card::CardId, bool)> = Vec::with_capacity(hits.len());
                 for id in hits {
@@ -30983,14 +30622,11 @@ impl GameState {
             Effect::KindleTheCarnage => {
                 let p = ctx.controller;
                 let src = ctx.source.unwrap_or(CardId(0));
-                // The repeat is the controller's and went straight to
-                // `self.decider`, so a `wants_ui` seat was never asked. Routed
-                // through the seat, with `TradeSecrets`' accounting: the round's
-                // random discard and its damage happen BEFORE the ask, so they
-                // cannot be moved after it — instead, one logged answer is one
-                // round already performed, and the re-run skips those rounds
-                // rather than repeating them (which would also re-draw the RNG
-                // that picked the discard).
+                // The repeat is the controller's, routed through the seat so a
+                // `wants_ui` seat is asked. `TradeSecrets`' accounting: the round's
+                // random discard and damage precede the ask, so one logged answer
+                // is one round already performed and the re-run skips those rounds
+                // (repeating them would also re-draw the discard RNG).
                 let spent = self.scratch.resolution_answer_log.len();
                 let mut cursor = 0;
                 for round in 0..1000 {
@@ -32523,14 +32159,11 @@ impl GameState {
                 Ok(())
             }
             Effect::ShuffleSelfIntoLibrary => {
-                // A triggered ability's source is a card on the battlefield
-                // (Fblthp, the Lost) or in a graveyard (Serra Avatar, Vigor):
-                // move it. Only a resolving spell — popped off the stack, so
-                // in neither zone — flags the post-resolution routing
-                // (resolve_spell) instead. Flagging from a trigger moved
-                // nothing and shuffled away the NEXT spell to resolve (a
-                // kicked Rite of Replication after a Serra Avatar died,
-                // audit pod seed 172001).
+                // A trigger's source is on the battlefield (Fblthp, the Lost) or in
+                // a graveyard (Serra Avatar, Vigor): move it. Only a resolving
+                // spell — in neither zone — flags the post-resolution routing
+                // (`resolve_spell`); flagging from a trigger shuffled away the NEXT
+                // spell to resolve instead.
                 let Some(src) = ctx.source else { return Ok(()) };
                 let in_zone = self.battlefield.find_by_id(src).is_some()
                     || self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == src));
@@ -32567,14 +32200,11 @@ impl GameState {
                 Ok(())
             }
             Effect::DistributeCountersAmongLastCreated { total, kind } => {
-                // Resolution-time distribution among the tokens minted
-                // earlier in this resolution: as even as possible for every
-                // seat. (The old UI branch asked per token through the bare
-                // decider, which answered 0 for every token but the last —
-                // a maximally lopsided split. A real per-token picker needs
-                // amount-log machinery like `resolution_answer_log`; until
-                // then the even split is both fair and the strongest
-                // default. Follow-up tracked in TODO.md.)
+                // Resolution-time distribution among the tokens minted earlier in
+                // this resolution: as even as possible, for every seat. A real
+                // per-token picker needs amount-log machinery like
+                // `resolution_answer_log` (TODO.md); the bare-decider UI branch it
+                // replaced answered a maximally lopsided split.
                 let tokens: Vec<CardId> = self
                     .scratch.last_created_tokens
                     .iter()
@@ -33915,17 +33545,13 @@ impl GameState {
                     };
                     if yes {
                         self.clear_answer_log();
-                        // `accepting_player` is ambient resolution state, and
-                        // restoring it here would hand a body that SUSPENDED a
-                        // re-run with `AcceptingPlayer = None`. It is safe only
-                        // because every `accepted` body that can suspend
-                        // concretizes the seat into its own continuation first
-                        // (`Effect::Sacrifice`'s `per_seat_continuation` writes
-                        // `PlayerRef::Seat(q)`), which
-                        // `worms_of_the_earth_still_costs_two_lands_when_the_
-                        // sacrifice_suspends` is the guard for. A future body
-                        // that suspends WITHOUT concretizing needs the seat
-                        // carried, not this restore.
+                        // `accepting_player` is ambient, and restoring it hands a body that
+                        // SUSPENDED a re-run with `AcceptingPlayer = None`. Safe only because
+                        // every suspendable `accepted` body concretizes the seat into its own
+                        // continuation first (`Effect::Sacrifice`'s `per_seat_continuation`;
+                        // guarded by `worms_of_the_earth_still_costs_two_lands_when_the_
+                        // sacrifice_suspends`). A body that suspends without concretizing
+                        // needs the seat carried instead.
                         let prev = self.accepting_player.replace(seat);
                         let out = self.run_effect(accepted, ctx, events);
                         self.accepting_player = prev;
@@ -34491,22 +34117,13 @@ impl GameState {
             }
 
             Effect::RevealTopAndDrawIf { who, reveal_filter, may_graveyard_miss } => {
-                // Each resolved player reveals the top card of their library;
-                // if it matches `reveal_filter`, that player puts it into
-                // their hand (otherwise it stays on top).
+                // Each resolved player reveals their top card and puts it into
+                // their hand if it matches `reveal_filter` (else it stays on top).
                 //
-                // CR 121.5 compliance — "If an effect moves cards from a
-                // player's library to that player's hand without using
-                // the word 'draw,' the player has not drawn those cards.
-                // This makes a difference for abilities that trigger on
-                // drawing and effects that count cards drawn." Goblin
-                // Guide and its kin say "puts it into their hand", not
-                // "draws"; so we do NOT emit a `CardDrawn` event here
-                // and do NOT increment `cards_drawn_this_turn`. A
-                // dedicated `CardPutIntoHand` event would let cards
-                // listen to *all* library→hand moves, but no current
-                // card needs that; if/when one lands, add the event
-                // here in front of the silent move.
+                // CR 121.5 — "puts it into their hand" (Goblin Guide) is not a
+                // draw: no `CardDrawn` event, no `cards_drawn_this_turn` bump. A
+                // `CardPutIntoHand` event would go here if a card ever needs to
+                // watch all library→hand moves.
                 let mut cursor = 0;
                 for p in self.resolve_players(who, ctx) {
                     let Some(top) = self.players[p].library.first() else {
@@ -34842,12 +34459,10 @@ impl GameState {
             }
 
             Effect::DiscardChosen { from, count, filter } => {
-                // Resolve target player(s) — usually one opponent. For each,
-                // the **caster** picks `count` cards matching `filter`
-                // from that player's hand. When the caster has `wants_ui`,
-                // the engine suspends with a `Decision::Discard` so the
-                // human picks; otherwise the decider is invoked
-                // synchronously (AutoDecider takes the first matching).
+                // For each target player (usually one opponent), the **caster**
+                // picks `count` matching cards from that player's hand: a
+                // `wants_ui` caster via a suspended `Decision::Discard`, otherwise
+                // the decider synchronously (AutoDecider takes the first match).
                 use crate::decision::Decision;
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
@@ -35816,21 +35431,16 @@ impl GameState {
             // "they draw 2, you draw up to 4" loop.
             Effect::TradeSecrets { who } => {
                 let Some(v) = self.resolve_player(who, ctx) else { return Ok(()); };
-                // "Then THAT PLAYER may repeat this process" — the repeat is the
-                // opponent's call, and it went to `self.decider`, the resolving
-                // seat's. So the wrong player decided, and a `wants_ui` opponent
-                // was never asked at all.
+                // "Then THAT PLAYER may repeat this process" — the opponent's call,
+                // routed through their seat (it went to the resolving seat's
+                // decider, so the wrong player decided).
                 //
-                // Routing it means the arm can suspend, and its draws happen
-                // BEFORE the ask — the shape no two-pass split can fix, because
-                // the ask is about whether to do it all again. The `for` bound
-                // is only the headless chain's backstop; a suspending chain ends
-                // on an empty library, which is where the printed (unbounded)
-                // loop ends too.
-                // One logged answer is one round already performed: the arm
-                // suspends before the answer exists, so at entry the channel
-                // holds exactly as many answers as there are rounds behind us.
-                // Replay them in place and skip their draws.
+                // The draws precede the ask (the ask is whether to do it all
+                // again), so no two-pass split applies. One logged answer is one
+                // round already performed — the arm suspends before the answer
+                // exists — so replay them in place and skip their draws. The `for`
+                // bound is only the headless backstop; a suspending chain ends on
+                // an empty library, as the printed loop does.
                 let spent = self.scratch.resolution_answer_log.len();
                 let mut cursor = 0;
                 for round in 0..32 {
@@ -35867,18 +35477,14 @@ impl GameState {
             // Strongarm Tactics — the discard is symmetric; the punishment
             // only skips a player who pitched a creature.
             Effect::EachPlayerDiscardsElseLosesLife { life } => {
-                // The per-seat unit is one `Seq`, not a discard plus a Rust
-                // `if`: the discard suspends for a `wants_ui` seat, and the
-                // life check ran *before* the card had moved — so that seat
-                // was punished whatever it pitched, and every seat after it
-                // was dropped. `Seq` carries its own tail through a suspend,
-                // and the check reads the resolution's discard record, which
-                // a resumed resolution keeps.
-                // Both halves name their seat inside the effect: a resumed
-                // continuation comes back under the stack item's context, so
-                // a `You` here would read the caster, not the discarder.
-                // The threshold is that seat's own graveyard before its own
-                // discard, which nothing between here and its run can move.
+                // The per-seat unit is one `Seq`, not a discard plus a Rust `if`:
+                // the discard can suspend, and the check used to run before the
+                // card moved (and drop every later seat). `Seq` carries its tail
+                // through a suspend, and the check reads the resolution's discard
+                // record, which a resume keeps. Both halves name their seat inside
+                // the effect, since a resume comes back under the stack item's
+                // context (`You` = caster). The threshold is that seat's graveyard
+                // before its own discard, which nothing in between can move.
                 let creatures_in_graveyard = |g: &Self, p: usize| {
                     g.players[p].graveyard.iter().filter(|c| self.computed_is_creature(c)).count()
                 };
@@ -36289,17 +35895,11 @@ impl GameState {
             }
 
             Effect::DelayUntil { kind, body } => {
-                // Capture the current target slot so the delayed body can
-                // reference it via `Selector::Target(0)` later (e.g. Goryo's
-                // wants to exile the same creature it reanimated).
-                //
-                // Fall back to the cast spell's slot-0 target when our own
-                // resolution context has no target — that's the Repartee /
-                // triggered-ability shape used by Conciliator's Duelist
-                // ("Repartee → exile the cast spell's target, return at
-                // next end step"). The trigger resolves with empty
-                // `ctx.targets` but the cast-spell `StackItem::Spell` is
-                // still below us on the stack, so we can pull its target.
+                // Capture the current target so the delayed body can read it as
+                // `Selector::Target(0)` (Goryo's exiles what it reanimated). With
+                // no target of our own, fall back to the cast spell's slot 0: a
+                // Repartee trigger (Conciliator's Duelist) resolves with empty
+                // `ctx.targets` while the `StackItem::Spell` is still below it.
                 let target = ctx.targets.first().cloned().or_else(|| {
                     let cid = match ctx.trigger_source {
                         Some(EntityRef::Card(c)) | Some(EntityRef::Permanent(c)) => c,
@@ -37410,14 +37010,13 @@ impl GameState {
             }
 
             Effect::RepeatWhileMay { body, again, description } => {
-                // A loop, not a re-entry: a headless seat's long chain would
-                // otherwise nest a `run_effect` frame per repeat. A prompting
-                // seat's "again?" goes through `MayDo` re-entering this
-                // effect, so its suspend resumes at the right repeat.
+                // A loop, not a re-entry, so a long headless chain doesn't nest a
+                // `run_effect` frame per repeat. A prompting seat's "again?" goes
+                // through `MayDo` re-entering this effect, so its suspend resumes
+                // at the right repeat.
                 // CR 732.2 — a headless seat names how many times it repeats an
-                // optional loop: at most `HEADLESS_REPEAT_CAP`. Delina copying
-                // Wyll adds a die per copy, so "roll again" nears certainty and
-                // an always-yes answer never stopped (pod seed 2947889).
+                // optional loop: at most `HEADLESS_REPEAT_CAP`. Delina copying Wyll
+                // makes "roll again" near-certain, so always-yes never stopped.
                 const HEADLESS_REPEAT_CAP: u32 = 30;
                 let mut repeats = 0u32;
                 loop {
@@ -38423,19 +38022,13 @@ impl GameState {
             Effect::ExileUntilDuplicateName { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };
                 let source = ctx.source.unwrap_or(CardId(0));
-                // "Exiled this way" is stamped, not remembered: the dig's ask is
-                // the controller's and went straight to `self.decider`, so a
-                // `wants_ui` seat was never asked; routing it means the arm can
-                // suspend, and the re-run has to know which cards THIS
-                // resolution exiled. A local `Vec` cannot survive that, so the
-                // exiles carry `exiled_with = source` — which is exactly what
-                // the printed "exiled this way" means — and both the seen-names
-                // list and the round's own card are read back off the zone.
-                //
-                // The rest is `TradeSecrets`' accounting: one logged answer is
-                // one round already performed (the exile happens BEFORE the ask
-                // it is about), so replay the answers in place and re-derive
-                // those rounds instead of repeating them.
+                // "Exiled this way" is stamped, not remembered: the seat-routed ask
+                // can suspend, and a local `Vec` can't survive the re-run. The
+                // exiles carry `exiled_with = source` (which is what "exiled this
+                // way" means), and the seen-names list and the round's card are
+                // read back off the zone. Otherwise `TradeSecrets`' accounting: the
+                // exile precedes its ask, so one logged answer is one round already
+                // performed — replay in place and re-derive those rounds.
                 let mut done: Vec<(CardId, String)> = self
                     .exile
                     .iter()
@@ -38579,14 +38172,11 @@ impl GameState {
                 keep_own_activated,
                 keep_name,
             } => {
-                // CR 707.2 — `what` becomes a copy of `source`'s copiable
-                // characteristics. One-shot definition rewrite: clone the
-                // source's current definition Arc and stamp it onto each
-                // resolved `what`, preserving instance state. Locked in at
-                // resolution; later changes to the source don't propagate.
-                // The source is usually a permanent, but "a copy of a card you
-                // exiled" (Volatile Chimera) copies a card in another zone.
-                // CR 123.1 — the source's stickers aren't copiable values.
+                // CR 707.2 — `what` becomes a copy of `source`'s copiable values: a
+                // one-shot rewrite stamping the source's current definition Arc onto
+                // each `what`, keeping instance state; later source changes don't
+                // propagate. The source can be a card in another zone (Volatile
+                // Chimera). CR 123.1 — stickers aren't copiable values.
                 let src_def = self
                     .resolve_selector(source, ctx)
                     .into_iter()
@@ -38890,23 +38480,13 @@ impl GameState {
             }
 
             Effect::CopySpell { what, count } => {
-                // Resolve which spell to copy. We support two main patterns:
-                // 1. `Selector::TriggerSource` — the spell that fired this
-                //    trigger (Magecraft / Storm / Aziza-style "whenever you
-                //    cast X, copy that spell"). The trigger_source carries
-                //    the cast spell's CardId.
-                // 2. `Selector::Target(n)` / `CastSpellTarget(n)` — a
-                //    specifically-targeted spell on the stack
-                //    (Reverberate / Twincast / Choreographed Sparks).
-                //
-                // For each, we locate the matching `StackItem::Spell` and
-                // clone it `count` times with a fresh CardId per copy. The
-                // copies inherit the original's target / mode / x_value /
-                // converged_value. Auto-retargeting for friendly-fire
-                // (choose new targets for the copy) is left to the
-                // existing auto_target_for_effect picker, which runs at
-                // resolution time. The original spell still resolves
-                // afterward — copies always end up above it on the stack.
+                // The spell to copy is either `Selector::TriggerSource` (Magecraft /
+                // Storm "whenever you cast X, copy that spell") or `Target(n)` /
+                // `CastSpellTarget(n)` (Reverberate, Twincast). Find its
+                // `StackItem::Spell` and clone it `count` times with fresh CardIds,
+                // inheriting target / mode / x_value / converged_value; new targets
+                // come from `auto_target_for_effect` at resolution. Copies always
+                // land above the original.
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 {
                     return Ok(());
@@ -39142,18 +38722,12 @@ impl GameState {
                 if !payable {
                     return Ok(());
                 }
-                // CR 706 — the chain. `AutoDecider`'s blanket `Bool(false)` for
-                // `OptionalTrigger` looks like an unexamined default here and
-                // is not: **it is what makes the chain terminate.** A copy of
-                // this spell carries its own `MayCopyThisSpell`, so an
-                // always-accept policy hands the copy back and forth forever —
-                // nothing here shrinks a resource that bounds it, and a
-                // `ChainCopyCost::Free` link (Chain of Acid, Chain of Smog)
-                // stays payable even when the copy finds no legal target.
-                // Built and reverted at the eighty-ninth pass: it spun
-                // `classic_sets::ons::chain_of_acid_offers_the_copy_onward`
-                // at 100 % CPU. A real decider ends it; the headless one has
-                // to, and does.
+                // CR 706 — the chain. AutoDecider's blanket `Bool(false)` here is
+                // what makes the chain terminate: each copy carries its own
+                // `MayCopyThisSpell`, nothing shrinks a bounding resource, and a
+                // `ChainCopyCost::Free` link (Chain of Acid, Chain of Smog) stays
+                // payable without a legal target. Always-accept was tried and spun
+                // `classic_sets::ons::chain_of_acid_offers_the_copy_onward` forever.
                 let yes = matches!(
                     self.decider.decide(&Decision::OptionalTrigger {
                         source,
@@ -39429,12 +39003,10 @@ impl GameState {
                         })
                         .collect(),
                 };
-                // TWO PASSES, and a seat-routed ask. The question belongs to the
-                // spell's CASTER, and it went to `self.decider` — the resolving
-                // seat's — so the affected player was never asked and a
-                // `wants_ui` caster could not answer at all. `ask_seat_bool`
-                // routes it; the split is `run_each_unless_pays`'s, because the
-                // payment and the copy are mutations inside the ask loop.
+                // TWO PASSES, and a seat-routed ask: the question is the spell's
+                // CASTER's (it went to the resolving seat's decider), and the
+                // payment and copy are mutations inside the ask loop
+                // (`run_each_unless_pays`'s split).
                 let mut cursor = 0;
                 let mut answers: Vec<(CardId, usize, bool)> = Vec::with_capacity(candidate_ids.len());
                 for cid in candidate_ids {
@@ -39613,17 +39185,14 @@ impl GameState {
                     };
                 let suggestions = rank_names_by_frequency(pool.iter().map(|c| c.definition.name));
                 // CR 201.4a — narrow the namespace when the card restricts it
-                // ("choose a land card name"); an off-namespace answer is
-                // dropped when the pending state is applied.
+                // ("choose a land card name"); an off-namespace answer is dropped
+                // when the pending state is applied.
                 //
-                // Tested against the definition the suggestion *came from*.
-                // It used to go back out through `card_registry::lookup_by_name`
-                // — a global name index whose first use built a
-                // `CardDefinition` for all 22,568 catalog factories just to
-                // read their names (104,536,834 Ir, 6.75 % of a six-game
-                // `--decks sos` run at b370d69e) — and then deep-clone what it
-                // handed back. Every one of these names belongs to a card this
-                // function is already holding.
+                // Tested against the definition each suggestion came from, which
+                // this function already holds. Going through
+                // `card_registry::lookup_by_name` built a definition for every
+                // catalog factory on first use (6.75 % of a `--decks sos` run at
+                // b370d69e) and then deep-cloned the result.
                 let suggestions: Vec<String> = match restrict_to {
                     Some(f) => suggestions
                         .into_iter()
@@ -40462,14 +40031,11 @@ impl GameState {
                     return Ok(());
                 }
                 let max = candidates.len() as u32;
-                // Auto default: the cards this seat cannot cast (mana value
-                // above its land count), so a rummage that fires trades the
-                // uncastable half of the hand. `AutoDecider`'s empty answer
-                // shuffled nothing and drew nothing — the activation, its {2}
-                // and the artifact for a no-op. The ask deliberately does NOT
-                // go through `choose_up_to_cards`: the bot's generic hand
-                // policy reads an "any number" prompt as a beneficial pick and
-                // takes the *biggest* cards up to the cap, i.e. the whole hand.
+                // Auto default: the cards this seat can't cast (mana value above
+                // its land count), so the rummage trades the uncastable half
+                // (AutoDecider's empty answer made it a no-op). Deliberately not
+                // `choose_up_to_cards`: the bot's hand policy reads "any number" as
+                // a beneficial pick and would take the whole hand.
                 let picks: Vec<CardId> = if matches!(
                     self.decider.kind(),
                     crate::decision::DeciderKind::Auto
@@ -42689,14 +42255,11 @@ impl GameState {
             }
 
             Effect::DiminishCreaturesExceptChosenType { power, toughness } => {
-                // Crippling Fear-style "Choose a creature type. Creatures
-                // other than creatures of the chosen type get -P/-T EOT."
-                // A `wants_ui` controller picks through the client modal
-                // (stash-and-rerun suspend); bots / tests answer via
-                // `self.decider` (AutoDecider picks Demon, ScriptedDecider
-                // can override). The pump is applied per-creature via the
-                // standard `power_bonus` / `toughness_bonus` mutation path
-                // (same code shape as Effect::PumpPT).
+                // Crippling Fear-style "creatures other than the chosen type get
+                // -P/-T EOT". A `wants_ui` controller picks via the client modal
+                // (stash-and-rerun); bots/tests answer via `self.decider`
+                // (AutoDecider picks Demon). The pump uses the `power_bonus` /
+                // `toughness_bonus` path, like `Effect::PumpPT`.
                 use crate::decision::{Decision, DecisionAnswer};
                 let p = self.evaluate_value(power, ctx);
                 let t = self.evaluate_value(toughness, ctx);
@@ -42847,13 +42410,11 @@ impl GameState {
                 if options.is_empty() {
                     return Ok(());
                 }
-                // "No player casts spells of the chosen type" (Archon of
-                // Valor's Reach): offered most-damaging first, so a seat that
-                // takes the first offer — a headless one, or a bot whose
-                // outcome read ties — names the type its opponents show most
-                // (graveyards and battlefield, public) less what its own hand
-                // holds. Stable on ties, and a pure read of the board, so a
-                // suspended ask re-offers the same order.
+                // "No player casts spells of the chosen type" (Archon of Valor's
+                // Reach): offered most-damaging first — the type its opponents
+                // show most publicly, less what its own hand holds — so a seat
+                // taking the first offer names that. Stable on ties and a pure
+                // board read, so a suspended ask re-offers the same order.
                 let me = ctx.controller;
                 let shown = |t: &crate::card::CardType| -> i64 {
                     let mut n = 0i64;
@@ -43471,16 +43032,12 @@ impl GameState {
             }
 
             Effect::AtEndOfCombat { body } => {
-                // A body that reads `PlayerRef::DefendingPlayer` can't resolve
-                // it at fire time — `resolve_combat` has already cleared the
-                // attack record — so it falls through to the stamped
-                // `Target::Player` (see `resolve_player`). Capture the
-                // defender *now*, while combat is live, instead of relying on
-                // one arriving by accident: Basalt Golem's "sacrifice the
-                // creature blocking it, its controller creates a Wall" used to
-                // work only because every trigger was handed a stray
-                // auto-target. Gated on the body taking no target of its own,
-                // so nothing that reads `Selector::Target(0)` can pick this up.
+                // `PlayerRef::DefendingPlayer` can't resolve at fire time
+                // (`resolve_combat` has cleared the attack record), so it falls
+                // through to the stamped `Target::Player` (`resolve_player`).
+                // Capture the defender now, while combat is live (Basalt Golem).
+                // Gated on the body taking no target, so nothing reading
+                // `Selector::Target(0)` picks this up.
                 let defender = ctx.targets.first().cloned().or_else(|| {
                     (!body.requires_target())
                         .then(|| self.resolve_player(&PlayerRef::DefendingPlayer, ctx))
@@ -44986,16 +44543,12 @@ impl GameState {
                         .map(|c| (c.id, c.definition.name.to_string()))
                         .collect();
                     let n_cands = candidates.len() as u32;
-                    // The ask's floor is the cheapest qualifying SET SIZE, not
-                    // zero. A `min: 0` ask is answered empty by every headless
-                    // policy — the threshold is not a thing `decide_choose_cards`
-                    // can size — so `picked < need` and collect evidence was
-                    // dead for every bot seat, the one branch of this arm that
-                    // reaches them. With the floor the `Cost` policy gives up
-                    // its cheapest `min` cards, which is exactly the set the
-                    // `else` branch below auto-picks. (The Auto branch already
-                    // collects whenever it can, so a floor here makes the two
-                    // sides agree rather than making a "may" mandatory.)
+                    // The floor is the cheapest qualifying SET SIZE, not zero: every
+                    // headless policy answers a `min: 0` ask empty (the threshold isn't
+                    // something `decide_choose_cards` can size), which made collect
+                    // evidence dead for bots. With the floor the `Cost` policy gives up
+                    // its cheapest `min` cards — the set the `else` branch auto-picks —
+                    // so both sides agree without making the "may" mandatory.
                     let floor = {
                         let (mut acc, mut n) = (0u32, 0usize);
                         for &(_, mv) in &gy {
@@ -45556,13 +45109,10 @@ impl GameState {
             }
 
             Effect::RegisterParadigm => {
-                // Register a recurring `YourNextMainPhase` delayed
-                // trigger whose body is `Effect::CastFreeParadigmCopy`.
-                // The trigger's `source` is the resolving Paradigm
-                // card's id; combined with `CardDefinition.exile_on_resolve
-                // = true`, the card lands in exile and stays reachable
-                // for the recurrence. `fires_once: false` so the trigger
-                // survives each firing and fans out again next turn.
+                // Register a recurring `YourNextMainPhase` delayed trigger whose
+                // body is `Effect::CastFreeParadigmCopy`, sourced on the Paradigm
+                // card (which `exile_on_resolve` keeps reachable in exile).
+                // `fires_once: false` so it recurs every turn.
                 use crate::game::types::{DelayedKind, DelayedTrigger};
                 let Some(source) = ctx.source else { return Ok(()); };
                 self.delayed_triggers.push(DelayedTrigger {
@@ -45592,14 +45142,11 @@ impl GameState {
                     .find(|c| c.id == source)
                     .map(|c| c.definition.arc());
                 let Some(def) = original_def else { return Ok(()); };
-                // "You *may* cast a copy" — a real prompt, same
-                // stash-and-rerun shape as `Effect::MayDo`. A wants_ui
-                // controller (human modal, bot policy) gets the choice;
-                // this is what lets the bot decline a Decorum
-                // Dissertation copy at low life instead of draining
-                // itself dead one main phase at a time. Headless Auto
-                // seats keep accepting (the blanket "no" made the
-                // trigger dead); scripted deciders steer.
+                // "You *may* cast a copy" — a real prompt, `Effect::MayDo`'s
+                // stash-and-rerun shape, so a `wants_ui` controller can decline
+                // (a bot declining a Decorum Dissertation copy at low life).
+                // Headless Auto seats accept (a blanket "no" made the trigger
+                // dead); scripted deciders steer.
                 use crate::decision::{Decision, DecisionAnswer};
                 let decision = Decision::OptionalTrigger {
                     source,
@@ -45930,14 +45477,9 @@ impl GameState {
             }
 
             Effect::WinGame { who } => {
-                // CR 104.2a — "you win the game". Resolve `who` to a single
-                // player and eliminate every other (non-eliminated) player.
-                // The SBA pass after this resolution will pick up the
-                // 1-alive-player state and promote it to
-                // `game_over = Some(winner)`. We don't directly set
-                // `game_over` here so that anything resolving after this
-                // step (in the same Seq) can still observe normal state;
-                // the SBA loop is the canonical "the game ends" gate.
+                // CR 104.2a — "you win the game": eliminate every other player.
+                // `game_over` is left to the SBA pass (the canonical end gate), so
+                // anything later in the same `Seq` still sees normal state.
                 let winner = self
                     .resolve_selector(&Selector::Player(who.clone()), ctx)
                     .into_iter()
@@ -46157,8 +45699,6 @@ impl GameState {
         }
     }
 
-    /// Map a selector to the `PreventionTarget`s it designates (players and
-    /// permanents only). Used by the prevention-shield effects.
     /// CR 122.1c-aware untap: a Stun counter is removed instead of untapping.
     /// Returns whether the permanent was tapped (i.e. the untap "counted").
     fn untap_permanent(
@@ -46186,6 +45726,8 @@ impl GameState {
         true
     }
 
+    /// Map a selector to the `PreventionTarget`s it designates (players and
+    /// permanents only). Used by the prevention-shield effects.
     fn prevention_targets(
         &self,
         sel: &Selector,
@@ -46327,19 +45869,13 @@ impl GameState {
                 .map(EntityRef::Permanent)
                 .into_iter()
                 .collect(),
-            // CR 509.1 — the attackers the *blocker this trigger is about* is
-            // blocking. For a self-trigger ("whenever this blocks a creature",
-            // Wall of Frost) that is `ctx.source`; for a **watcher** — a
-            // third-party `EventKind::Blocks` trigger, whose ctx carries the
-            // ability's host as `source` and the blocking creature as
-            // `trigger_source` — it is `trigger_source`, and reading only
-            // `source` left the watcher's clause dead. Righteous Indignation's
-            // event filter is `EntityMatches { BlockedAttacker, Black|Red }`
-            // and it fired for a blocker of anything, because an empty
-            // selector makes `EntityMatches` vacuously true.
-            //
-            // `source` first so no working self-trigger moves; the fallback
-            // only fires where the answer was empty.
+            // CR 509.1 — the attackers the blocker this trigger is about is
+            // blocking: `ctx.source` for a self-trigger (Wall of Frost), else
+            // `trigger_source` for a watcher, whose source is the host and
+            // trigger source the blocker. Reading only `source` left watchers
+            // dead — and Righteous Indignation's `EntityMatches` filter
+            // vacuously true on an empty selector. `source` first so no
+            // self-trigger moves.
             Selector::AttackedBySource | Selector::AttackedByTriggerSource => match sel {
                 Selector::AttackedBySource => ctx.source,
                 _ => ctx.trigger_source.and_then(|e| e.as_permanent_id()),
@@ -47118,16 +46654,11 @@ impl GameState {
                 .into_iter()
                 .filter_map(|e| {
                     let EntityRef::Permanent(cid) = e else { return None; };
-                    // Last-known-info fallback (CR 603.10): an Aura's
-                    // "when this leaves, do X to enchanted creature" trigger
-                    // resolves after the Aura is already in the graveyard, so
-                    // read `attached_to` from the die-time snapshot when the
-                    // source is no longer on the battlefield (Parallax Dementia).
-                    // `leaves_bf_lki` is the resolution-scoped snapshot that
-                    // survives event dispatch — needed for a `sac_cost`
-                    // activated ability whose body reads the enchanted creature
-                    // (Carapace's "Sacrifice this Aura: Regenerate enchanted
-                    // creature").
+                    // Last-known info (CR 603.10): an Aura's leaves-trigger resolves
+                    // with the Aura already in the graveyard, so read `attached_to`
+                    // from the die-time snapshot (Parallax Dementia).
+                    // `leaves_bf_lki` survives event dispatch, which a `sac_cost`
+                    // ability reading the enchanted creature needs (Carapace).
                     self.battlefield_find(cid)
                         .or_else(|| self.died_card_snapshots.get(&cid))
                         .or_else(|| self.leaves_bf_lki.get(&cid))
@@ -47214,17 +46745,12 @@ impl GameState {
                 out
             }
             Selector::CardsInZone { who, zone, filter } => {
-                // Use the multi-player resolver so EachPlayer / EachOpponent
-                // aggregate cards from every matching seat (Soul-Guide
-                // Lantern's mass-graveyard exile, Bojuka Bog–style effects,
-                // future Windfall-shape primitives all need this).
-                // Substitute the resolving ability's X into the filter so
-                // `ManaValueExactlyXFromCost`-style atoms concretize (Sorin's
-                // −X "creature card with mana value X").
-                // Also concretize the source's stamped creature-type choice —
-                // the hidden-zone evaluator below carries no source context
-                // ("creature cards of the creature type of your choice from
-                // your graveyard" — Aphetto Dredging).
+                // Multi-player resolver, so EachPlayer / EachOpponent aggregate
+                // every matching seat (Soul-Guide Lantern, Bojuka Bog).
+                // Substitute X into the filter so `ManaValueExactlyXFromCost`
+                // concretizes (Sorin's −X), and the source's stamped creature-type
+                // choice, since the hidden-zone evaluator has no source context
+                // (Aphetto Dredging).
                 let chosen = ctx
                     .source
                     .and_then(|s| self.find_card_anywhere(s))
@@ -47262,16 +46788,11 @@ impl GameState {
                         Zone::Command => self.players[p].command.iter().collect(),
                         Zone::Stack => vec![],
                     };
-                    // For battlefield-resident cards we use the
-                    // permanent-state-aware `evaluate_requirement_static`
-                    // (Tapped, IsAttacking, etc. resolve correctly). For
-                    // hand/library/graveyard/exile we use the card-level
-                    // evaluator since those zones don't have permanent
-                    // state — `evaluate_requirement_static` only walks
-                    // battlefield-then-graveyard-then-exile-then-stack
-                    // and would silently miss hand-resident cards
-                    // (push XVI fix — was breaking Embrace the Paradox's
-                    // MayDo land sub).
+                    // Battlefield cards use the permanent-aware
+                    // `evaluate_requirement_static` (Tapped, IsAttacking, ...). Other
+                    // zones use the card-level evaluator: the static one walks
+                    // battlefield / graveyard / exile / stack only and would miss hand
+                    // cards (Embrace the Paradox's MayDo land sub).
                     let on_bf = matches!(zone, Zone::Battlefield);
                     // CR — honor `OtherThanSource` in hidden-zone searches too
                     // (the on-card evaluator has no source context, so it
@@ -47732,20 +47253,13 @@ impl GameState {
     }
 
     pub(crate) fn resolve_player(&self, pref: &PlayerRef, ctx: &EffectContext) -> Option<usize> {
-        // ⚠ A fan-out ref resolved singularly answers with the FIRST seat of
-        // its set and drops the rest — silently. That is exact while the set
-        // holds one player, which is what `EachOpponent` is at two seats, and
-        // it is a defect the moment it holds two: `Search { who: EachPlayer }`
-        // searched seat 0's library and nobody else's, so New Frontiers ramped
-        // one seat, Jace's -8 exiled from one library, and Case the Joint read
-        // one top card. Field of Ruin had already been fixed by hand
-        // (`EachPlayerDoes`) and its comment says exactly this; the three
-        // others were never swept.
-        //
-        // So the gate is not "never resolve a fan-out singularly" — it is
-        // "never resolve one that actually holds more than one seat". It costs
-        // nothing in release (`debug_assert!`'s body is dead there) and one
-        // `resolve_players_unranged` per fan-out ask under debug assertions.
+        // ⚠ A fan-out ref resolved singularly silently answers its FIRST
+        // seat. That's exact while the set holds one player (`EachOpponent`
+        // in a duel) and a defect once it holds two (`Search { who:
+        // EachPlayer }` searched only seat 0: New Frontiers, Jace's -8,
+        // Case the Joint). So the gate is "never resolve one that holds
+        // more than one seat"; free in release, one
+        // `resolve_players_unranged` per fan-out ask under debug asserts.
         debug_assert!(
             !pref.is_fan_out() || self.resolve_players_unranged(pref, ctx).len() <= 1,
             "resolve_player({pref:?}) drops seats {:?} — this arm must fan out \
@@ -47790,13 +47304,10 @@ impl GameState {
                 .map(|c| c.owner),
             PlayerRef::CounteredSpellController => self.countered_spell_controller,
             PlayerRef::AcceptingPlayer => self.accepting_player,
-            // ⚠ CR 800.4a — a player who leaves the game is no longer a
-            // player, so every extremum below walks `living_seats` rather than
-            // `0..players.len()`. The seat stays in the vector with
-            // `eliminated` set, and a departed one is at or below zero life,
-            // which made it *always* the lowest. Unreachable in a duel, where
-            // the game ends with the elimination; live from the first one in a
-            // pod. `PlayerWithMostLife` already had the filter.
+            // ⚠ CR 800.4a — a player who left the game is no longer a player,
+            // so every extremum walks `living_seats`, not `0..players.len()`:
+            // an eliminated seat stays in the vector at ≤ 0 life and was always
+            // the lowest (live from a pod's first elimination).
             //
             // Ties go to the earliest seat (stands in for "you choose one").
             PlayerRef::LowestLife => {
@@ -48000,13 +47511,10 @@ impl GameState {
                     })
                 })
                 // CR 506.2 — the last two shapes, shared with the
-                // `ControlledByDefendingPlayer` filter so the two never
-                // disagree: an **Aura or Equipment** source, whose host is
-                // the attacker (Kusari-Gama, Pretender's Claim), and an
-                // **instant** cast during combat, which has no attacker of
-                // its own and reads the combat's single defender (Yare,
-                // Mercadia's Downfall). Both previously answered `None`,
-                // so the clause did nothing at all.
+                // `ControlledByDefendingPlayer` filter so they never disagree: an
+                // Aura/Equipment source whose host is the attacker (Kusari-Gama,
+                // Pretender's Claim), and an instant cast during combat, which
+                // reads the combat's single defender (Yare, Mercadia's Downfall).
                 .or_else(|| self.defending_player_in_combat(ctx.source)),
             PlayerRef::OwnerOf(sel) => self
                 .resolve_selector(sel, ctx)
@@ -48099,14 +47607,9 @@ impl GameState {
                 })
                 .collect(),
             ZoneRef::Library(who) | ZoneRef::Hand(who) | ZoneRef::Graveyard(who) => {
-                // Multi-player aware: an `EachPlayer` / `EachOpponent` ref
-                // expands to every matching player's zone, not just the
-                // first. Previously this resolved to a single player only,
-                // silently dropping the remaining graveyards / hands.
-                // Powers Devious Cover-Up's "exile any number of target
-                // cards from graveyards" (across all gys), Necrogenesis's
-                // total-creature-count payoff, and any other cross-player
-                // zone iteration.
+                // Multi-player aware: an `EachPlayer` / `EachOpponent` ref expands
+                // to every matching player's zone, not just the first (Devious
+                // Cover-Up across all graveyards, Necrogenesis).
                 let players = self.resolve_players(who, ctx);
                 let mut out = Vec::new();
                 for p in players {
@@ -48187,16 +47690,14 @@ impl GameState {
     /// One proliferate instance (CR 701.34a): "choose any number of permanents
     /// and/or players that have a counter, then give each one additional
     /// counter of each kind that permanent or player already has." The
-    /// engine's auto-decider implements a strategic baseline:
-    ///  - each friendly permanent proliferates every counter kind that
-    ///    benefits the controller (+1/+1, Charge, Loyalty, Page); skips
-    ///    MinusOneMinusOne / Stun on friendlies;
-    ///  - each enemy permanent proliferates only its bad-for-them kinds;
-    ///  - each opponent with poison gets +1 poison; the proliferating player
-    ///    declines their own poison and proliferates their experience/energy.
-    /// Emits `GameEvent::Proliferated` even when Solemnity locks counter
-    /// placement — proliferating still happened (CR 701.34), it just adds
-    /// nothing.
+    /// auto-decider's baseline:
+    ///  - friendly permanents: every kind that benefits the controller (+1/+1,
+    ///    Charge, Loyalty, Page), never MinusOneMinusOne / Stun;
+    ///  - enemy permanents: only their bad-for-them kinds;
+    ///  - opponents with poison get +1; the proliferator skips their own
+    ///    poison and takes their experience/energy.
+    /// Emits `GameEvent::Proliferated` even under Solemnity — proliferating
+    /// still happened (CR 701.34), it just adds nothing.
     pub(crate) fn do_proliferate(&mut self, proliferating: usize, events: &mut Vec<GameEvent>) {
         events.push(GameEvent::Proliferated { player: proliferating });
         // CR 122.1 — Solemnity locks out all counter placement.
@@ -48585,15 +48086,12 @@ impl GameState {
     /// Exile up to `count` cards from any graveyards, chosen by the
     /// controller's decider (Faerie Macabre).
     ///
-    /// Every shipped user is graveyard hate aimed at somebody else (Rag Dealer,
-    /// Shred Memory, Carrion Beetles, Erebos's Intervention, …), so the pick
-    /// goes through [`choose_up_to_cards`](Self::choose_up_to_cards): a
-    /// `wants_ui` seat — which every bot seat is — gets a real pending decision
-    /// and `decide_choose_cards`' hostile-graveyard-first policy, and a headless
-    /// one takes the auto default below. It used to ask the installed decider
-    /// directly, so `AutoDecider`'s blanket empty answer exiled **nothing** for
-    /// every bot seat: eighteen cards resolved as a no-op and Soul-Shackled
-    /// Zombie's "if a creature card was exiled this way" rider never fired.
+    /// Every user is graveyard hate aimed at somebody else (Rag Dealer, Shred
+    /// Memory, Carrion Beetles, …), so the pick goes through
+    /// [`choose_up_to_cards`](Self::choose_up_to_cards): a `wants_ui` seat gets
+    /// a pending decision and `decide_choose_cards`' hostile-graveyard-first
+    /// policy, a headless one the auto default below. Asking the installed
+    /// decider directly exiled nothing for bots (AutoDecider's empty answer).
     #[allow(clippy::too_many_arguments)]
     fn resolve_exile_up_to_n_from_graveyards(
         &mut self,
@@ -48987,16 +48485,14 @@ impl GameState {
         Ok(())
     }
 
-    /// Ask `payer` which permanents to tap for a mana cost they are being
-    /// offered the chance to pay — the ward / "unless you pay" family.
+    /// Ask `payer` which permanents to tap for a mana cost they're offered the
+    /// chance to pay (ward / "unless you pay").
     ///
     /// Replay-safe: shares [`ask_seat_bool`](Self::ask_seat_bool)'s cursor
-    /// contract, so an arm that first asks *whether* to pay can then ask
-    /// *how* without either question being re-posed. Returns `None` when
-    /// the resolution suspended for the answer, `Some(None)` when there is
-    /// nothing worth asking (the caller auto-taps as before), and
-    /// `Some(Some(picks))` for a hand-picked source set — which may be
-    /// empty, the player's way of declining to pay after all.
+    /// contract, so an arm can ask whether and then how to pay. Returns `None`
+    /// on a suspend, `Some(None)` when nothing is worth asking (caller
+    /// auto-taps), and `Some(Some(picks))` for a hand-picked set — possibly
+    /// empty, which declines payment.
     ///
     /// [`ask_seat_bool`]: Self::ask_seat_bool
     pub(crate) fn ask_mana_sources(
@@ -49146,10 +48642,6 @@ impl GameState {
         probe.try_pay_ward_cost_from(payer, cost, ctx, &mut sink, None, None)
     }
 
-    /// [`try_pay_ward_cost`](Self::try_pay_ward_cost) paying the mana half
-    /// from a hand-picked source set (see [`ask_mana_sources`]).
-    ///
-    /// [`ask_mana_sources`]: Self::ask_mana_sources
     /// Where the spell (`is_spell`) or ability from `cid` an "unless [they]
     /// pay" counter looked up at `pos` sits now: `pos` if it is still there,
     /// else the topmost match, else `None` — paying can take the payer out of
@@ -49165,6 +48657,10 @@ impl GameState {
         self.stack.iter().rposition(matches)
     }
 
+    /// [`try_pay_ward_cost`](Self::try_pay_ward_cost) paying the mana half
+    /// from a hand-picked source set (see [`ask_mana_sources`]).
+    ///
+    /// [`ask_mana_sources`]: Self::ask_mana_sources
     pub(crate) fn try_pay_ward_cost_from(
         &mut self,
         payer: usize,
@@ -49778,8 +49274,6 @@ impl GameState {
 }
 
 impl GameState {
-    /// A source's colors: computed on the battlefield, printed elsewhere
-    /// (a spell on the stack, a card in a zone).
     /// [`Self::source_colors`] contains `color`, without the `Vec`.
     pub(crate) fn source_has_color(&self, src: CardId, color: Color) -> bool {
         if let Some(cp) = self.battlefield_find(src).and_then(|_| self.computed_permanent(src)) {
@@ -49791,6 +49285,8 @@ impl GameState {
             .is_some_and(|set| set.contains(color))
     }
 
+    /// A source's colors: computed on the battlefield, printed elsewhere
+    /// (a spell on the stack, a card in a zone).
     pub(crate) fn source_colors(&self, src: CardId) -> Vec<Color> {
         if let Some(cp) = self.battlefield_find(src).and_then(|_| self.computed_permanent(src)) {
             return cp.colors.iter().collect();

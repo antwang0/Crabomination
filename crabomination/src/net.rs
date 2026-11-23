@@ -8,6 +8,10 @@
 //! [`DecisionWire`] and [`GameEventWire`] mirror the engine's `Decision` and
 //! `GameEvent` types with owned strings in place of the engine's
 //! `&'static str` card names, so the wire format round-trips through serde.
+//!
+//! Fields added after a type first shipped carry `#[serde(default)]` (or a
+//! named default fn) so older peers and snapshots still deserialize; a field
+//! doc only mentions its default when it isn't the type's `Default`.
 
 use serde::{Deserialize, Serialize};
 
@@ -16,12 +20,10 @@ use crate::decision::Decision;
 use crate::game::{GameAction, GameEvent, Target, TurnStep};
 use crate::mana::{Color, ManaCost, ManaPool};
 
-/// Sentinel `your_seat` value the server assigns to a read-only spectator
-/// (one who is watching a match without occupying a seat). Real seats are
-/// `0..players.len()`, so this never collides with a player; the client
-/// keys "am I spectating?" off `OurSeat == SPECTATOR_SEAT`, and the
-/// spectator projection ([`crate::server::view::project_spectator`]) hides
-/// every player's hand since no owner seat can equal it.
+/// Sentinel `your_seat` for a read-only spectator. Real seats are
+/// `0..players.len()`, so it never collides; the client keys "am I
+/// spectating?" off it, and [`crate::server::view::project_spectator`] hides
+/// every hand since no owner seat can equal it.
 pub const SPECTATOR_SEAT: usize = usize::MAX;
 
 // ── Client → server ──────────────────────────────────────────────────────────
@@ -206,19 +208,14 @@ pub enum ServerMsg {
     MatchStarted,
     /// Authoritative snapshot of state, projected for this seat.
     View(Box<ClientView>),
-    /// Events produced by the most recent action, in order. Clients animate
-    /// off these; the accompanying `View` is the post-event state.
-    ///
-    /// No longer emitted on its own by the match actor — accepted actions now
-    /// ship events and the post-action view together in a single [`Self::Update`]
-    /// frame. Retained for wire/back-compat (older peers, and clients that
-    /// still match it).
+    /// Events produced by the most recent action, in order; the accompanying
+    /// `View` is the post-event state. No longer sent by the match actor
+    /// (accepted actions ship as one [`Self::Update`]); kept for wire
+    /// back-compat with older peers.
     Events(Vec<GameEventWire>),
-    /// The events produced by the most recent accepted action plus the
-    /// resulting post-action [`ClientView`], bundled into one frame. Replaces
-    /// the old back-to-back `Events` + `View` pair so each accepted action
-    /// costs a single length-prefixed write/flush instead of two. Clients
-    /// animate off `events`, then snap to `view`.
+    /// The events of the most recent accepted action plus the post-action
+    /// [`ClientView`] in one frame (one write/flush instead of `Events` +
+    /// `View`). Clients animate off `events`, then snap to `view`.
     Update {
         events: Vec<GameEventWire>,
         view: Box<ClientView>,
@@ -352,8 +349,7 @@ pub struct ClientView {
     /// CR 500.7 — true when the current step is a *repeated* phase this turn:
     /// an additional combat phase (Aggravated Assault, Genji Glove) or an
     /// additional end step (Y'shtola Rhul). Lets the phase bar flag "you're in
-    /// an extra combat/end step" rather than silently looping. `#[serde(default)]`
-    /// for snapshot back-compat.
+    /// an extra combat/end step" rather than silently looping.
     #[serde(default)]
     pub extra_phase: bool,
     /// CR 802 / 803 — the seats the viewer may legally declare attacks
@@ -375,7 +371,6 @@ pub struct ClientView {
     pub game_over: Option<Option<usize>>,
     /// CR 615.12 — true while "damage can't be prevented this turn" is in
     /// effect. Surfaced so UIs can warn that prevention shields are off.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub damage_cant_be_prevented_this_turn: bool,
     /// CR 615 — "if any source would deal N or more damage this turn, it deals
@@ -395,7 +390,7 @@ pub struct ClientView {
     pub spend_mana_as_any_color: bool,
     /// CR 615.1 — true while a "prevent all combat damage this turn" fog is
     /// active (Fog, Holy Day, Inspire Awe). Surfaced so UIs can warn that
-    /// combat won't deal damage this turn. `#[serde(default)]` for back-compat.
+    /// combat won't deal damage this turn.
     #[serde(default)]
     pub combat_damage_prevented_this_turn: bool,
     /// CR 614 — "permanents enter tapped this turn" (Due Respect) is in force.
@@ -406,10 +401,6 @@ pub struct ClientView {
     /// active player's teammates act and draw on this turn too.
     #[serde(default)]
     pub shared_team_turns: bool,
-    /// CR 506.2 / 509.1b — the tightest "no more than N creatures can
-    /// attack/block each combat" cap in play (Silent Arbiter), or `None` when
-    /// combat participation is uncapped. Surfaced so the attack/block UI can
-    /// stop the viewer from assembling a declaration the engine would reject.
     /// Master Warcraft — the seat that declares attackers *and* blockers this
     /// turn instead of the active/defending player. `None` in normal combat.
     #[serde(default)]
@@ -419,20 +410,24 @@ pub struct ClientView {
     /// while an `AttackingPlayerChoosesBlocks` static is out (Invasion Plans).
     #[serde(default)]
     pub block_chooser: Option<usize>,
+    /// CR 506.2 / 509.1b — the tightest "no more than N creatures can
+    /// attack/block each combat" caps in play (Silent Arbiter), or `None` when
+    /// uncapped, so the attack/block UI can refuse a declaration the engine
+    /// would reject.
     #[serde(default)]
     pub max_attackers_per_combat: Option<u32>,
     #[serde(default)]
     pub max_blockers_per_combat: Option<u32>,
-    /// CR 508.1 / 509.1d — the turn-scoped symmetric combat tolls (War Tax,
-    /// War Cadence): {N} per attacker / per blocker the acting player
-    /// declares. `0` when no toll is up. Surfaced so the attack/block UI can
-    /// warn before the engine rejects an unpayable declaration.
     /// CR 901 — the Planechase variant is on: the number of cards left in the
     /// viewer's planar deck, the {N} the next roll of the planar die would
     /// cost them, and whether that special action is legal right now. `None`
     /// outside a Planechase game.
     #[serde(default)]
     pub planar: Option<PlanarView>,
+    /// CR 508.1 / 509.1d — the turn-scoped symmetric combat tolls (War Tax,
+    /// War Cadence): {N} per attacker / per blocker the acting player
+    /// declares. `0` when no toll is up. Surfaced so the attack/block UI can
+    /// warn before the engine rejects an unpayable declaration.
     #[serde(default)]
     pub attack_tax_this_turn: u32,
     #[serde(default)]
@@ -445,28 +440,25 @@ pub struct ClientView {
     pub turn_effects: Vec<String>,
     /// CR 731 — the game's day/night designation: `None` = neither (the
     /// starting state), `Some(true)` = day, `Some(false)` = night. Surfaced
-    /// so UIs can show a day/night indicator. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// so UIs can show a day/night indicator.
     #[serde(default)]
     pub day_night: Option<bool>,
     /// Peace Talks' truce is live: no creature may attack and nothing may be
     /// targeted by a spell or activated ability. Surfaced so the UI can say
-    /// why an attack or a target is being refused. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// why an attack or a target is being refused.
     #[serde(default)]
     pub truce_active: bool,
-    /// Projected combat outcome for the current attacker/blocker
-    /// assignment (Tier-7 #3 "combat math preview"). `None` outside of
-    /// combat or when no attackers are declared. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// Projected combat outcome for the current attacker/blocker assignment
+    /// (Tier-7 #3 "combat math preview"). `None` outside of combat or when no
+    /// attackers are declared.
     #[serde(default)]
     pub combat_preview: Option<CombatPreview>,
     /// CardIds in the viewer's own hand they could begin casting (or play,
     /// for lands) right now — computed server-side via the engine's
     /// `would_accept` dry-run so it already accounts for timing,
     /// auto-tappable mana, cost taxes, and target availability. Drives the
-    /// client's "castable" hand-card highlight. Empty when the viewer
-    /// doesn't hold priority. `#[serde(default)]` for snapshot back-compat.
+    /// client's "castable" hand-card highlight. Empty when the viewer doesn't
+    /// hold priority.
     #[serde(default)]
     pub castable_hand: Vec<CardId>,
     /// Each `castable_hand` card with the permanents the auto-tapper would
@@ -482,59 +474,51 @@ pub struct ClientView {
     /// from hand, plus permitted graveyard backs (those carrying the one-shot
     /// `may_cast_back_from_graveyard`). `castable_hand` only probes front
     /// faces. Feeds the castable highlight and the auto-pass hold logic.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub back_castable_hand: Vec<CardId>,
-    /// SOS Prepare — prepared creatures the viewer controls whose
-    /// prepare spell is castable right now (`CastPrepareSpell` would be
-    /// accepted). Drives the battlefield right-click "Cast <spell>"
-    /// menu entry. Empty off-priority. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// SOS Prepare — prepared creatures the viewer controls whose prepare
+    /// spell is castable right now (`CastPrepareSpell` would be accepted).
+    /// Drives the battlefield right-click "Cast <spell>" menu entry. Empty
+    /// off-priority.
     #[serde(default)]
     pub prepare_castable: Vec<CardId>,
     /// CR 702.47 — `(host, splicers)`: Arcane spells in the viewer's hand
     /// castable right now, each paired with the Splice cards in hand that
     /// could ride along (quality matches, splice cost affordable on top).
     /// Drives the client's "splice onto this?" picker. Empty off-priority.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub spliceable_hand: Vec<(CardId, Vec<CardId>)>,
     /// CardIds in the viewer's hand with an activatable "from hand" ability
     /// right now (Spirit-Guide pitch: "Exile this from your hand: Add mana").
     /// Lets the client show a pitch affordance separate from the castable
-    /// highlight. Empty off-priority. `#[serde(default)]` for back-compat.
+    /// highlight. Empty off-priority.
     #[serde(default)]
     pub pitchable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could cast with their Kicker paid
     /// right now (CR 702.32). Lets the client offer a "pay kicker?" toggle
     /// distinct from the plain castable highlight. Empty off-priority.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub kickable_hand: Vec<CardId>,
     /// CR 702.33b — for each "Kicker {A} and/or {B}" hand card, the option
     /// subsets the viewer could pay for right now. One client menu entry each.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub kicker_option_sets: Vec<(CardId, Vec<Vec<u8>>)>,
-    /// CardIds in the viewer's hand they could cast paying their Buyback
-    /// cost right now (CR 702.27). Lets the client offer a "pay buyback?"
-    /// toggle distinct from the plain castable highlight. Empty
-    /// off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// CardIds in the viewer's hand they could cast paying their Buyback cost
+    /// right now (CR 702.27). Lets the client offer a "pay buyback?" toggle
+    /// distinct from the plain castable highlight. Empty off-priority.
     #[serde(default)]
     pub buyback_hand: Vec<CardId>,
-    /// CardIds in the viewer's hand with Bestow they could cast as an Aura
-    /// on a creature right now (CR 702.103). `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// CardIds in the viewer's hand with Bestow they could cast as an Aura on
+    /// a creature right now (CR 702.103).
     #[serde(default)]
     pub bestowable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with a live Miracle window (CR 702.94),
-    /// castable for the miracle cost this turn. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// castable for the miracle cost this turn.
     #[serde(default)]
     pub miracle_hand: Vec<CardId>,
     /// CardIds in the viewer's hand a standing static (Omniscience, Aluren,
     /// Conspiracy Unraveler) lets them cast without paying the mana cost
-    /// right now. `#[serde(default)]` for snapshot back-compat.
+    /// right now.
     #[serde(default)]
     pub free_castable_hand: Vec<CardId>,
     /// CardIds in exile or a graveyard carrying a live "you may play this"
@@ -542,82 +526,75 @@ pub struct ClientView {
     /// `GameAction::CastFromZoneWithoutPaying` (Suspend Aggression's two
     /// exiled cards, Practiced Scrollsmith's exiled graveyard card). The
     /// permission itself is reported per-card by `may_play_recipient`; this
-    /// is the subset the engine would accept *now*. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// is the subset the engine would accept *now*.
     #[serde(default)]
     pub may_play_castable: Vec<CardId>,
     /// The land half: `may_play_until` cards that are lands and so are
     /// *played* (`GameAction::PlayLand`), not cast. Kept separate from
-    /// `may_play_castable` because the client has to send a different
-    /// action. `#[serde(default)]` for snapshot back-compat.
+    /// `may_play_castable` because the client has to send a different action.
     #[serde(default)]
     pub may_play_lands: Vec<CardId>,
     /// CardIds in the viewer's hand with Bargain they could cast right now
     /// (CR 702.176), so the client can offer a "sacrifice for Bargain?"
-    /// toggle. `#[serde(default)]` for snapshot back-compat.
+    /// toggle.
     #[serde(default)]
     pub bargainable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with Squad they could cast paying the
     /// squad cost at least once (CR 702.157), so the client can offer a "pay
-    /// Squad N times?" stepper. `#[serde(default)]` for snapshot back-compat.
+    /// Squad N times?" stepper.
     #[serde(default)]
     pub squadable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand that are Spree spells castable choosing at
     /// least the cheapest mode (CR 702.172), so the client can offer the
-    /// per-mode cost picker. `#[serde(default)]` for snapshot back-compat.
+    /// per-mode cost picker.
     #[serde(default)]
     pub spreeable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with Replicate they could cast paying the
-    /// replicate cost at least once (CR 702.107). `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// replicate cost at least once (CR 702.107).
     #[serde(default)]
     pub replicatable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with Conspire they could cast right now
     /// while controlling two untapped creatures sharing a color (CR 702.79).
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub conspirable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with Multikicker they could cast paying
-    /// the kicker cost at least once (CR 702.33c). `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// the kicker cost at least once (CR 702.33c).
     #[serde(default)]
     pub multikickable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand castable by tapping helpers for Convoke
     /// (printed or granted) or Improvise (CR 702.51 / 702.126). Drives the
-    /// client's helper-tap picker. `#[serde(default)]` for snapshot back-compat.
+    /// client's helper-tap picker.
     #[serde(default)]
     pub convokable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could cast via their Dash
     /// alternative cost right now (CR 702.110). Lets the client offer a
-    /// "dash?" affordance distinct from the plain castable highlight.
-    /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// "dash?" affordance distinct from the plain castable highlight. Empty
+    /// off-priority.
     #[serde(default)]
     pub dashable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could cast via their Blitz
     /// alternative cost right now (CR 702.152). Lets the client offer a
-    /// "blitz?" affordance distinct from the plain castable highlight.
-    /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// "blitz?" affordance distinct from the plain castable highlight. Empty
+    /// off-priority.
     #[serde(default)]
     pub blitzable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could cast for their Warp cost right
     /// now (EOE). Lets the client offer a "Warp" affordance. Empty off-priority.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub warpable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could Suspend right now (CR 702.62):
     /// the card has `Keyword::Suspend` and the suspend cost is affordable at
     /// legal timing. Lets the client offer a "Suspend" affordance. Empty
-    /// off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// off-priority.
     #[serde(default)]
     pub suspendable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could Foretell right now (CR
     /// 702.143): the card has a `foretell_cost` and paying {2} at sorcery
-    /// speed is legal. `#[serde(default)]` for snapshot back-compat.
+    /// speed is legal.
     #[serde(default)]
     pub foretellable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand they could Plot right now (CR 702.170):
     /// the card has a `plot_cost` and paying it at sorcery speed is legal.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub plottable_hand: Vec<CardId>,
     /// CR 702.170d — plotted cards in exile the viewer can cast for free right
@@ -627,7 +604,6 @@ pub struct ClientView {
     /// CardIds in the viewer's hand with an Adventure half they could cast
     /// right now (CR 715). Lets the client offer the "cast the Adventure"
     /// affordance distinct from the plain creature cast. Empty off-priority.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub adventurable_hand: Vec<CardId>,
     /// CR 715.3d — cards in the viewer's adventure exile playable right now. A
@@ -638,19 +614,16 @@ pub struct ClientView {
     /// CardIds in the viewer's hand with an Omen half they could cast right now
     /// (CR 702.183). Lets the client offer the "cast the Omen" affordance
     /// distinct from the plain creature cast. Empty off-priority.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub omenable_hand: Vec<CardId>,
-    /// CardIds in the viewer's hand with a Prototype face they could cast
-    /// for the prototype cost right now (CR 702.160). Lets the client offer
-    /// "cast for prototype" distinct from the full-cost cast. Empty
-    /// off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// CardIds in the viewer's hand with a Prototype face they could cast for
+    /// the prototype cost right now (CR 702.160). Lets the client offer "cast
+    /// for prototype" distinct from the full-cost cast. Empty off-priority.
     #[serde(default)]
     pub prototypable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand that are split cards whose **right** half
     /// they could cast right now (CR 709). Lets the client offer the right
     /// half distinct from the default (left) cast. Empty off-priority.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub splittable_right_hand: Vec<CardId>,
     /// CR 709.5 — Room hand cards with a castable door (`(card, door)`,
@@ -663,29 +636,27 @@ pub struct ClientView {
     /// CardIds of permanents the viewer controls with an activated ability
     /// they could use right now (timing/mana/tap/target all checked). Lets
     /// the client highlight "this permanent can do something." Empty
-    /// off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// off-priority.
     #[serde(default)]
     pub activatable_permanents: Vec<CardId>,
     /// `(permanent, its `AbilityView.index`)` for each non-mana activated
-    /// ability behind `activatable_permanents`, so
-    /// the client can say which of a permanent's abilities are live. Empty
-    /// off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// ability behind `activatable_permanents`, so the client can say which
+    /// of a permanent's abilities are live. Empty off-priority.
     #[serde(default)]
     pub activatable_abilities: Vec<(CardId, usize)>,
     /// `(planeswalker, its `LoyaltyAbilityView.index`)` for each loyalty
     /// ability the viewer could activate right now. Empty off-priority.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub activatable_loyalty: Vec<(CardId, usize)>,
     /// CardIds in the viewer's hand carrying a `from_hand` activated ability
     /// (Talon Gates of Madara's `{4}` put-into-play, Spirit Guides' pitch
     /// mana). Lets the client offer the from-hand activation directly from the
-    /// hand. Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// hand. Empty off-priority.
     #[serde(default)]
     pub hand_activatable: Vec<CardId>,
     /// CR 702.36 — CardIds in the viewer's hand with Morph/Megamorph that can
     /// be cast face down right now. Lets the client offer "cast face down".
-    /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// Empty off-priority.
     #[serde(default)]
     pub morphable_hand: Vec<CardId>,
     /// Generic mana a face-down cast currently costs the viewer — {3} by
@@ -695,12 +666,12 @@ pub struct ClientView {
     pub face_down_cast_cost: u32,
     /// CR 708.5 — face-down permanents the viewer controls that can be turned
     /// face up right now (turn-up cost payable). Lets the client offer "turn
-    /// face up". Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// face up". Empty off-priority.
     #[serde(default)]
     pub turn_up_able: Vec<CardId>,
     /// CR 702.77 — CardIds in the viewer's hand with a Reinforce ability that
     /// can be activated right now (cost payable, a creature target exists).
-    /// Empty off-priority. `#[serde(default)]` for snapshot back-compat.
+    /// Empty off-priority.
     #[serde(default)]
     pub reinforceable_hand: Vec<CardId>,
     /// CardIds in the viewer's hand with a `discard_activated` ability that
@@ -709,27 +680,24 @@ pub struct ClientView {
     pub discard_activatable_hand: Vec<CardId>,
     /// Creatures the viewer controls that may be declared as attackers right
     /// now (only during the viewer's Declare Attackers step). Drives the
-    /// client's legal-attacker highlight. Empty otherwise. `#[serde(default)]`
-    /// for snapshot back-compat.
+    /// client's legal-attacker highlight. Empty otherwise.
     #[serde(default)]
     pub legal_attackers: Vec<CardId>,
     /// Creatures the viewer controls that could legally block one of the
     /// declared attackers right now (only during Declare Blockers). Drives
     /// the client's legal-blocker highlight. Empty otherwise.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub legal_blockers: Vec<CardId>,
     /// `(blocker, attackers it may legally block)` for each of the viewer's
     /// legal blockers — the per-attacker refinement of `legal_blockers`, so
     /// the client can grey out an illegal drop instead of round-tripping a
     /// rejection. Empty outside the Declare Blockers step.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub legal_block_targets: Vec<(CardId, Vec<CardId>)>,
     /// CR 702.69 — permanents put into a graveyard from the battlefield this
     /// turn (any controller). Drives the client's Gravestorm-count badge, the
     /// graveyard-storm analog of the per-player `spells_cast_this_turn` Storm
-    /// hint. `#[serde(default)]` for snapshot back-compat.
+    /// hint.
     #[serde(default)]
     pub permanents_to_graveyard_this_turn: u32,
     /// CR 702.22 — the attacking bands declared this combat, each a list of
@@ -741,8 +709,7 @@ pub struct ClientView {
     /// CR 903.8 — the viewer's commanders castable from the command zone
     /// right now (tax included). Drives the command-zone card's "castable"
     /// border and keeps auto-pass from skipping a flash commander's window.
-    /// Empty outside Commander and off-priority. `#[serde(default)]` for
-    /// back-compat.
+    /// Empty outside Commander and off-priority.
     #[serde(default)]
     pub castable_command: Vec<CardId>,
 }
@@ -895,7 +862,7 @@ pub struct PlayerView {
     pub mana_pool: ManaPool,
     /// CR 500.4 exception — how much of `mana_pool` is "kept this turn" mana
     /// that won't empty as steps and phases end (Savage Ventmaw). Surfaced so
-    /// the HUD can flag persistent mana. `#[serde(default)]`.
+    /// the HUD can flag persistent mana.
     #[serde(default)]
     pub kept_mana: u32,
     /// CR 106.6 — floated mana that can only pay for particular things
@@ -930,11 +897,11 @@ pub struct PlayerView {
     /// CR 305.2 — land plays this player has left this turn, after extra-land
     /// statics (Exploration, Azusa) and absolute locks (Aggressive Mining's
     /// "you can't play lands"). Pre-derived so the HUD can show the land drop
-    /// without re-deriving the cap. `#[serde(default)]`.
+    /// without re-deriving the cap.
     #[serde(default)]
     pub land_plays_remaining: u32,
     /// CR 606.3 — loyalty activations banked past the one-per-planeswalker
-    /// limit this turn (The Chain Veil). `#[serde(default)]`.
+    /// limit this turn (The Chain Veil).
     #[serde(default)]
     pub extra_loyalty_activations: u32,
     /// Pending Chancellor-of-the-Annex-style tax charges. Each charge taxes
@@ -1021,18 +988,18 @@ pub struct PlayerView {
     pub draws_stolen_by: Option<usize>,
     /// CR 601.3e — an opponent's Void Winnower is locking this player's
     /// even-mana-value spells (zero is even). UIs grey out even-MV cards in
-    /// hand. Defaults to false.
+    /// hand.
     #[serde(default)]
     pub even_mv_cast_locked: bool,
     /// Damping Engine (CR 611) — true while this player controls more
     /// permanents than each other player and hasn't bought their way out for
     /// the turn, so they can't play lands or cast artifact/creature/enchantment
-    /// spells. `#[serde(default)]` for snapshot back-compat.
+    /// spells.
     #[serde(default)]
     pub development_locked: bool,
     /// CR 506 — number of this player's upcoming combat phases that will be
     /// skipped (Stonehorn Dignitary). Surfaced so the UI can warn "next
-    /// combat skipped." Defaults to 0.
+    /// combat skipped."
     #[serde(default)]
     pub skip_next_combat: u32,
     /// CR 702.18 / 702.11 — this player can't be targeted at all right now
@@ -1042,7 +1009,7 @@ pub struct PlayerView {
     #[serde(default)]
     pub untargetable: bool,
     /// CR 500 — number of this player's upcoming turns that will be skipped
-    /// (Lethal Vapors, Chronatog). Defaults to 0.
+    /// (Lethal Vapors, Chronatog).
     #[serde(default)]
     pub skip_turns: u32,
     /// CR 723.1 — the seat currently making this player's decisions
@@ -1056,22 +1023,19 @@ pub struct PlayerView {
     #[serde(default = "default_max_hand_size_view")]
     pub max_hand_size: Option<usize>,
     /// Cards in this player's command zone (Commander commanders,
-    /// Conspiracies, etc.). Always face-up — the command zone is a
-    /// public zone, so every entry is `Known` regardless of viewer.
-    /// `#[serde(default)]` for snapshot back-compat.
+    /// Conspiracies, etc.). Always face-up — the command zone is a public
+    /// zone, so every entry is `Known` regardless of viewer.
     #[serde(default)]
     pub command: Vec<HandCardView>,
-    /// CardIds the engine has flagged as this player's commanders
-    /// (Phase J's `Player.commanders`). Surfaced so the UI can
-    /// distinguish "your commander, currently on the battlefield"
-    /// from a regular permanent (cast-tax preview, frame highlight).
-    /// `#[serde(default)]` for snapshot back-compat.
+    /// CardIds the engine has flagged as this player's commanders (Phase J's
+    /// `Player.commanders`). Surfaced so the UI can distinguish "your
+    /// commander, currently on the battlefield" from a regular permanent
+    /// (cast-tax preview, frame highlight).
     #[serde(default)]
     pub commanders: Vec<CardId>,
     /// `(commander name, times cast from the command zone)` per commander —
-    /// drives the HUD commander-tax chip (CR 903.8: each next cast costs
-    /// {2} more per prior command-zone cast). `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// drives the HUD commander-tax chip (CR 903.8: each next cast costs {2}
+    /// more per prior command-zone cast).
     #[serde(default)]
     pub commander_casts: Vec<(String, u32)>,
     /// CR 717.2 — how many Attraction cards remain in this seat's Attraction
@@ -1112,14 +1076,13 @@ pub struct PlayerView {
     /// The turn this player left the game on (CR 800.4a), if they have.
     #[serde(default)]
     pub out_on_turn: Option<u32>,
-    /// Names of CR 114 emblems this player owns (command-zone, never
-    /// leave). Surfaced so the UI can show active planeswalker-ultimate
-    /// emblems. `#[serde(default)]` for snapshot back-compat.
+    /// Names of CR 114 emblems this player owns (command-zone, never leave).
+    /// Surfaced so the UI can show active planeswalker-ultimate emblems.
     #[serde(default)]
     pub emblems: Vec<String>,
     /// True when an active prevention shield (CR 615) protects this player
     /// from some/all damage this turn. Surfaced so UIs can flag a shielded
-    /// player. `#[serde(default)]` for snapshot back-compat.
+    /// player.
     #[serde(default)]
     pub has_prevention_shield: bool,
     /// The player-side sibling of `PermanentView::prevention_remaining`.
@@ -1137,7 +1100,7 @@ pub struct PlayerView {
     /// CR 615 — true when a blanket "prevent all damage that would be dealt to
     /// you" static (Glacial Chasm) shields this player from *all* damage this
     /// turn. Distinct from `has_prevention_shield` (a partial / next-N shield).
-    /// Surfaced so UIs can show a full-immunity badge. `#[serde(default)]`.
+    /// Surfaced so UIs can show a full-immunity badge.
     #[serde(default)]
     pub damage_fully_prevented: bool,
     /// CR 614.9 — the permanent this player's incoming damage is redirected to
@@ -1148,48 +1111,45 @@ pub struct PlayerView {
     /// CR 700.5 — this player's devotion to each color, ordered W, U, B, R,
     /// G (the count of mana symbols of that color among the mana costs of
     /// permanents they control). Surfaced so UIs can show a devotion readout
-    /// for Theros decks (Nyx gods, Nykthos, Gray Merchant). `#[serde(default)]`
-    /// for snapshot back-compat (defaults to all-zero).
+    /// for Theros decks (Nyx gods, Nykthos, Gray Merchant).
     #[serde(default)]
     pub devotion: [u32; 5],
     /// CR 701.19 — true when the viewer may see this player's whole hand,
     /// either because they looked at it (Thought Prison) or because a static
     /// reveals it (Telepathy). Lets a UI badge the hand rather than leaving
-    /// the player to guess why the cards are face up. `#[serde(default)]`.
+    /// the player to guess why the cards are face up.
     #[serde(default)]
     pub hand_revealed_to_viewer: bool,
     /// CR 725 — true when this player is the monarch. Surfaced so UIs can
-    /// show a crown on the monarch's portrait. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// show a crown on the monarch's portrait.
     #[serde(default)]
     pub is_monarch: bool,
     /// CR 726 — true when this player has the initiative. Surfaced so UIs can
-    /// badge whoever is running the Undercity. `#[serde(default)]`.
+    /// badge whoever is running the Undercity.
     #[serde(default)]
     pub has_initiative: bool,
     /// CR 700.6 — true when this player has the city's blessing (Ascend).
-    /// Surfaced so UIs can show a "blessed" badge. `#[serde(default)]`.
+    /// Surfaced so UIs can show a "blessed" badge.
     #[serde(default)]
     pub has_city_blessing: bool,
     /// CR 303.4a — names of the Auras enchanting this PLAYER (the Curse cycle,
     /// Psychic Possession). Player-anchored Auras don't sit on any permanent,
-    /// so the HUD needs its own listing. `#[serde(default)]`.
+    /// so the HUD needs its own listing.
     #[serde(default)]
     pub enchanted_by: Vec<String>,
     /// CR 119.7 — true when this player can't gain life right now (Sunspine
     /// Lynx, Erebos, Sulfuric Vortex). Surfaced so UIs can warn the player.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub cannot_gain_life: bool,
     /// True when this player can't cast noncreature spells for the rest of the
     /// turn (Aurelia's Fury, Ranger-Captain of Eos). Surfaced so UIs can grey
-    /// out noncreature cards in hand. `#[serde(default)]` for back-compat.
+    /// out noncreature cards in hand.
     #[serde(default)]
     pub cant_cast_noncreature: bool,
     /// Angelic Arbiter's pair, resolved per viewer: this player has already
     /// attacked this turn and so can't cast, or has already cast and so can't
     /// attack. Surfaced so a UI can explain the lock instead of just rejecting
-    /// the action. `#[serde(default)]` for back-compat.
+    /// the action.
     #[serde(default)]
     pub arbiter_cant_cast: bool,
     #[serde(default)]
@@ -1197,7 +1157,7 @@ pub struct PlayerView {
     /// Mana Maze — colours no player may cast this turn (the last cast
     /// spell's colours) while such a lock is on the battlefield. Empty when
     /// nothing locks casting. Surfaced so a UI can grey out the hand instead
-    /// of just rejecting the cast. `#[serde(default)]` for back-compat.
+    /// of just rejecting the cast.
     #[serde(default)]
     pub locked_cast_colors: Vec<crate::mana::Color>,
     /// Cease-Fire — short labels for the turn-scoped filtered cast locks on
@@ -1206,8 +1166,7 @@ pub struct PlayerView {
     #[serde(default)]
     pub locked_cast_kinds: Vec<String>,
     /// Abeyance — true while this seat can't activate abilities that aren't
-    /// mana abilities. Turn-scoped; `#[serde(default)]` for snapshot
-    /// back-compat.
+    /// mana abilities. Turn-scoped;
     #[serde(default)]
     pub nonmana_abilities_locked: bool,
     /// Winding Canyons — true while this seat may cast creature spells as
@@ -1220,13 +1179,12 @@ pub struct PlayerView {
     pub graveyard_top_castable: bool,
     /// True when this player's life total can't change this turn (Flare of
     /// Fortitude) — both gain and loss are dropped. Surfaced so UIs can show
-    /// the life total is frozen. `#[serde(default)]` for snapshot back-compat.
+    /// the life total is frozen.
     #[serde(default)]
     pub life_locked: bool,
     /// CR 702.11 — true when this player has hexproof from a static effect
     /// (Aegis of the Gods, Leyline of Sanctity, Solitary Confinement's shroud).
     /// Surfaced so UIs can flag that opponents can't target the player.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub has_hexproof: bool,
     /// CR 801.2 — false when a limited range of influence puts this seat
@@ -1236,17 +1194,16 @@ pub struct PlayerView {
     pub in_your_range: bool,
     /// CR 903.10a — combat damage this player has been dealt by each
     /// individual commander, one entry per source commander that has hit
-    /// them. 21 from a *single* commander is a loss, so each entry is
-    /// tracked (and shown) separately rather than summed. Empty outside
-    /// Commander games. `#[serde(default)]` for snapshot back-compat.
+    /// them. 21 from a *single* commander is a loss, so each entry is tracked
+    /// (and shown) separately rather than summed. Empty outside Commander
+    /// games.
     #[serde(default)]
     pub commander_damage_taken: Vec<CommanderDamageEntry>,
     /// Team id this seat belongs to (`GameState::team_of`). In free-for-all
     /// formats each team is a singleton equal to the seat number; in team
     /// formats (Two-Headed Giant, Star) seats sharing a team share this id.
-    /// Lets the client seat teammates together at the table. `#[serde(default)]`
-    /// for snapshot back-compat (defaults to 0; the client falls back to
-    /// seat-order seating when every team reads as the same default).
+    /// Lets the client seat teammates together. An old snapshot reads 0
+    /// everywhere, and the client then falls back to seat-order seating.
     #[serde(default)]
     pub team: usize,
     /// CR 309 — the dungeon this player is currently in, as
@@ -1260,45 +1217,41 @@ pub struct PlayerView {
     /// Innistrad "Coven" — true when this player controls three or more
     /// creatures with different powers, so coven-gated abilities are online.
     /// Surfaced so UIs can show a "Coven" badge and light up coven payoffs.
-    /// `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub coven_active: bool,
     /// CR 700.13 — true if this player has committed a crime this turn, so the
-    /// client can light up crime-matters payoffs. `#[serde(default)]` for
-    /// snapshot back-compat.
+    /// client can light up crime-matters payoffs.
     #[serde(default)]
     pub committed_crime_this_turn: bool,
     /// LCI Descend — the number of permanent cards in this player's graveyard.
     /// Surfaced so the client can show a "Descend N" chip and light up the
-    /// descend-N / fathomless-descent payoffs. `#[serde(default)]` for snapshot
-    /// back-compat.
+    /// descend-N / fathomless-descent payoffs.
     #[serde(default)]
     pub descend_count: u32,
     /// CR 700.11 — how many times this player descended *this turn* (permanent
     /// cards entering their graveyard). Distinct from `descend_count` (a
     /// graveyard total); lets the client show a "descended N×" pulse for
-    /// per-turn payoffs (The Mycotyrant). `#[serde(default)]` for back-compat.
+    /// per-turn payoffs (The Mycotyrant).
     #[serde(default)]
     pub descended_this_turn_count: u32,
-    /// CR 701.54 — how many times the Ring has tempted this player (0–4).
-    /// `0` means The Ring is dormant; the client shows a "The Ring ×N" chip
-    /// otherwise. `#[serde(default)]` for snapshot back-compat.
+    /// CR 701.54 — how many times the Ring has tempted this player (0–4). `0`
+    /// means The Ring is dormant; the client shows a "The Ring ×N" chip
+    /// otherwise.
     #[serde(default)]
     pub ring_temptations: u32,
     /// CR 701.54a — this seat's current Ring-bearer (validated; `None` when
     /// the designated creature has left or changed control). Lets the client
-    /// flag the bearer. `#[serde(default)]` for snapshot back-compat.
+    /// flag the bearer.
     #[serde(default)]
     pub ring_bearer: Option<CardId>,
     /// EOE Void — true when this seat's Void condition is met (a nonland
     /// permanent left the battlefield this turn, or this seat warped a spell
     /// this turn). Lets the client light up Void-matters payoffs with a "✦
-    /// Void" chip. `#[serde(default)]` for snapshot back-compat.
+    /// Void" chip.
     #[serde(default)]
     pub void_active: bool,
-    /// Ability-word conditions this seat currently meets, surfaced so the client
-    /// can show badges and light up the matching payoffs. All `#[serde(default)]`
-    /// for snapshot back-compat.
+    // Ability-word conditions this seat currently meets, so the client can
+    // show badges and light up the matching payoffs.
     /// Threshold (7+ cards in graveyard).
     #[serde(default)]
     pub threshold_active: bool,
@@ -1317,7 +1270,7 @@ pub struct PlayerView {
     /// Maze's End — when this seat controls a Maze's End, the number of Gates
     /// they control with different names (win at 10). `None` when they control
     /// no Maze's End, so the client shows a "Gates N/10" win-progress chip only
-    /// for players actually pursuing it. `#[serde(default)]` for back-compat.
+    /// for players actually pursuing it.
     #[serde(default)]
     pub mazes_end_gate_progress: Option<u32>,
 }
@@ -1380,16 +1333,16 @@ pub struct KnownCard {
     /// "Cast for alt cost" menu entry.
     #[serde(default)]
     pub has_alternative_cost: bool,
-    /// True when the alternative cost requires exiling a card from hand
-    /// (a pitch cost — Force of Will/Negation). When `false`, the alt cost
-    /// is a plain alternative (Surge/Awaken/Emerge/Spectacle/Overload) and
-    /// the client can offer a single "Cast for alt cost" button submitting
-    /// `pitch_card: None`. Defaults to `false`.
+    /// True when the alternative cost requires exiling a card from hand (a
+    /// pitch cost — Force of Will/Negation). When `false`, the alt cost is a
+    /// plain alternative (Surge/Awaken/Emerge/Spectacle/Overload) and the
+    /// client can offer a single "Cast for alt cost" button submitting
+    /// `pitch_card: None`.
     #[serde(default)]
     pub alt_cost_needs_pitch: bool,
-    /// Pre-rendered alternative-cost mana label (e.g. "{1}{R}"). Empty
-    /// string when `has_alternative_cost == false`. Used by the client's
-    /// alt-cast modal header. Defaults to "".
+    /// Pre-rendered alternative-cost mana label (e.g. "{1}{R}"). Empty string
+    /// when `has_alternative_cost == false`. Used by the client's alt-cast
+    /// modal header.
     #[serde(default)]
     pub alt_cost_label: String,
     /// CR 118.9a — this hand card has two alternative costs to choose from:
@@ -1416,28 +1369,26 @@ pub struct KnownCard {
     #[serde(default)]
     pub back_face_name: Option<String>,
     /// Whether the back face's effect takes a target. `needs_target`
-    /// describes the *front* face only, so a flipped-MDFC cast must
-    /// consult this flag to know whether to arm the targeting cursor
-    /// before submitting `CastSpellBack`. `false` when there is no
-    /// back face. Defaults to `false` for older snapshots.
+    /// describes the *front* face only, so a flipped-MDFC cast must consult
+    /// this flag to know whether to arm the targeting cursor before
+    /// submitting `CastSpellBack`. `false` when there is no back face.
     #[serde(default)]
     pub back_needs_target: bool,
-    /// True if this card has `Keyword::Cycling(cost)`. Drives the
-    /// client's "Cycle" hand action — when true, the client can submit
-    /// `GameAction::Cycle` to discard-and-draw at the cycling cost
-    /// (rendered as `cycling_cost_label` for the UI).
-    /// Defaults to `false` for older clients.
+    /// True if this card has `Keyword::Cycling(cost)`. Drives the client's
+    /// "Cycle" hand action — when true, the client can submit
+    /// `GameAction::Cycle` to discard-and-draw at the cycling cost (rendered
+    /// as `cycling_cost_label` for the UI).
     #[serde(default)]
     pub has_cycling: bool,
-    /// Pre-rendered cycling cost label (e.g. "{1}{U}"). Empty string
-    /// when `has_cycling == false`. Used by the client to render the
-    /// cycle activation hint. Defaults to "" for older clients.
+    /// Pre-rendered cycling cost label (e.g. "{1}{U}"). Empty string when
+    /// `has_cycling == false`. Used by the client to render the cycle
+    /// activation hint.
     #[serde(default)]
     pub cycling_cost_label: String,
     /// True if this card has `Keyword::Landcycling(cost, type)` or the
     /// general `Keyword::Typecycling(cost, filter)` (CR 702.29e). Drives the
     /// client's "Landcycle" hand action (`GameAction::Landcycle`): discard +
-    /// fetch a matching card. Defaults to `false`.
+    /// fetch a matching card.
     #[serde(default)]
     pub has_landcycling: bool,
     /// Pre-rendered landcycling cost label (e.g. "{1}"). Empty when
@@ -1569,23 +1520,21 @@ pub struct AbilityView {
     pub effect_label: String,
     pub needs_target: bool,
     pub is_mana: bool,
-    /// True if this ability is flagged "Activate only once each turn" and
-    /// has already been used on the current turn — the client can grey
-    /// out the button. Defaults to `false` for older clients.
+    /// True if this ability is flagged "Activate only once each turn" and has
+    /// already been used on the current turn — the client can grey out the
+    /// button.
     #[serde(default)]
     pub once_per_turn_used: bool,
     /// CR 702.177a — this is an exhaust ability and it has already been
     /// activated on this object, so it can never be activated again. Also set
     /// once a `max_activations_per_turn` ability has hit its cap this turn.
-    /// Defaults to `false` for older clients.
     #[serde(default)]
     pub spent: bool,
     /// True if this ability carries an `ActivatedAbility.condition` gate
-    /// (printed "Activate only if …" rider). Clients can show a hint
-    /// icon next to the activator. The string is a short human-readable
+    /// (printed "Activate only if …" rider). Clients can show a hint icon
+    /// next to the activator. The string is a short human-readable
     /// description of the gate ("≥7 in hand", "after IS-cast this turn",
-    /// etc.); empty when no gate is set. Defaults to `("", false)` for
-    /// older clients without this field.
+    /// etc.); empty when no gate is set.
     #[serde(default)]
     pub gate_label: String,
     /// True if the ability has a printed gate AND the gate currently
@@ -1600,13 +1549,12 @@ pub struct AbilityView {
     /// True if this ability is flagged `opponents_only` (CR 602.5 — "Only
     /// your opponents may activate this ability"). The controller's own
     /// client greys it out; an opponent's client surfaces it as activatable.
-    /// Defaults to `false` for older clients. Detention Vortex.
+    /// Detention Vortex.
     #[serde(default)]
     pub opponents_only: bool,
     /// True if this ability is flagged `any_player` (CR 113.3d — "Any player
     /// may activate this ability"). Every seat's client surfaces it, whoever
-    /// controls the permanent. Defaults to `false` for older clients.
-    /// Damping Engine.
+    /// controls the permanent. Damping Engine.
     #[serde(default)]
     pub any_player: bool,
     /// CR 601.2b — the short text of each mode when the ability's body is
@@ -1769,6 +1717,8 @@ pub struct ExileCardView {
     pub on_adventure: bool,
 }
 
+/// One battlefield permanent as the viewer sees it, built by
+/// `server::view::project_permanent`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PermanentView {
     pub id: CardId,
@@ -1785,8 +1735,7 @@ pub struct PermanentView {
     /// True if this permanent was dealt damage this turn (distinct from
     /// currently-*marked* `damage`, which clears on heal/regen). Lets the
     /// client precisely highlight "target that was dealt damage this turn"
-    /// filters (Needle Drop) instead of every creature. Defaults to false
-    /// for snapshot back-compat.
+    /// filters (Needle Drop) instead of every creature.
     #[serde(default)]
     pub dealt_damage_this_turn: bool,
     pub summoning_sick: bool,
@@ -1842,34 +1791,29 @@ pub struct PermanentView {
     #[serde(default)]
     pub loyalty_uses_remaining: Option<u8>,
     /// Compact one-line summary per triggered ability ("ETB: Draw a
-    /// card", "Magecraft: Drain 1", "Dies: Mill 2"). Lets the client
-    /// surface the printed trigger text in tooltips without round-
-    /// tripping the full `Effect` tree. Defaults to empty for older
-    /// clients. Populated by `project_permanent` via
-    /// `triggered_ability_label`.
+    /// card", "Magecraft: Drain 1", "Dies: Mill 2"), via
+    /// `triggered_ability_label`, so the client tooltip shows the printed
+    /// trigger text without the full `Effect` tree.
     #[serde(default)]
     pub triggered_ability_labels: Vec<String>,
-    /// Compact descriptions of the printed static abilities ("Other
-    /// Inkling creatures you control get +2/+2.", "Each opponent
-    /// can't gain life.", "Spells you cast that target a creature
-    /// cost {2} less to cast."). Pulled straight from
-    /// `StaticAbility.description` so the client tooltip can render
-    /// the printed Oracle wording without the engine threading
-    /// `Effect`/`StaticEffect` trees over the wire. Defaults to
-    /// empty for older clients without this field.
+    /// Compact descriptions of the printed static abilities ("Other Inkling
+    /// creatures you control get +2/+2.", "Each opponent can't gain life.",
+    /// "Spells you cast that target a creature cost {2} less to cast.").
+    /// Pulled straight from `StaticAbility.description` so the client tooltip
+    /// can render the printed Oracle wording without the engine threading
+    /// `Effect`/`StaticEffect` trees over the wire.
     #[serde(default)]
     pub static_ability_labels: Vec<String>,
     /// Compact "cost: effect" summaries of the permanent's activated
     /// abilities ("{2}{T}: Draw a card", "Sacrifice: Deal 1 damage"). Pulled
     /// from `ActivatedAbility` so the client tooltip can show what a creature
     /// or artifact can *do* without opening the detail panel — the activated
-    /// analogue of `triggered_ability_labels`. Defaults to empty for older
-    /// clients without this field.
+    /// analogue of `triggered_ability_labels`.
     #[serde(default)]
     pub activated_ability_labels: Vec<String>,
-    /// True when the permanent has one or more stun counters — a UI
-    /// hint so the client can badge stunned permanents without scanning
-    /// the full `counters` vec. Populated by `project_permanent`.
+    /// True when the permanent has one or more stun counters — a UI hint so
+    /// the client can badge stunned permanents without scanning the full
+    /// `counters` vec.
     #[serde(default)]
     pub has_stun_counters: bool,
     /// True when a continuous prevention is stopping this permanent from
@@ -1891,10 +1835,9 @@ pub struct PermanentView {
     /// declaration rather than after the rejection.
     #[serde(default)]
     pub attack_toll: u32,
-    /// True when the permanent has one or more finality counters
-    /// (CR 122.1h). Clients can badge with a "→ exile on death" icon
-    /// so the player knows the permanent will exile instead of going
-    /// to the graveyard. Populated by `project_permanent`.
+    /// True when the permanent has one or more finality counters (CR 122.1h).
+    /// Clients can badge with a "→ exile on death" icon so the player knows
+    /// the permanent will exile instead of going to the graveyard.
     #[serde(default)]
     pub has_finality_counters: bool,
     /// True when this permanent carries a printed "if it would die, exile it
@@ -1904,16 +1847,16 @@ pub struct PermanentView {
     /// from `CardDefinition.dies_to_exile`.
     #[serde(default)]
     pub dies_to_exile: bool,
-    /// True when the permanent has one or more shield counters
-    /// (CR 122.1c). Clients can badge with a "🛡" icon — the shield
-    /// counter creates a damage-prevention + destroy-replacement that
-    /// pops a counter on each trigger. Populated by `project_permanent`.
+    /// True when the permanent has one or more shield counters (CR 122.1c).
+    /// Clients can badge with a "🛡" icon — the shield counter creates a
+    /// damage-prevention + destroy-replacement that pops a counter on each
+    /// trigger.
     #[serde(default)]
     pub has_shield_counters: bool,
     /// True when an active *protective* prevention shield (CR 615, distinct
     /// from a shield *counter*) shields this permanent from some/all damage
-    /// this turn. Populated by `project_permanent`. Excludes the Kill-Suit
-    /// Cultist "destroy on next damage" shield — see `doomed_next_damage`.
+    /// this turn. Excludes the Kill-Suit Cultist "destroy on next damage"
+    /// shield — see `doomed_next_damage`.
     #[serde(default)]
     pub has_prevention_shield: bool,
     /// How much damage the protective shields still soak (CR 615.7): the sum
@@ -1946,8 +1889,7 @@ pub struct PermanentView {
     #[serde(default)]
     pub doomed_next_damage: bool,
     /// True when this creature is goaded (CR 701.38) — a UI hint so the
-    /// client can badge it as "must attack." Populated by
-    /// `project_permanent`.
+    /// client can badge it as "must attack."
     #[serde(default)]
     pub goaded: bool,
     /// CR 510.1a — this creature assigns no combat damage for the rest of the
@@ -1975,51 +1917,45 @@ pub struct PermanentView {
     /// the declare-blockers step shows *why* a block is being forced.
     #[serde(default)]
     pub must_block: bool,
-    /// True when this permanent is monstrous (CR 701.37). Populated by
-    /// `project_permanent`.
+    /// True when this permanent is monstrous (CR 701.37).
     #[serde(default)]
     pub monstrous: bool,
     /// True when this creature is suspected (CR 701.60) — a UI hint so the
-    /// client can badge it as "menace + can't block." Populated by
-    /// `project_permanent`.
+    /// client can badge it as "menace + can't block."
     #[serde(default)]
     pub suspected: bool,
     /// True when this creature is renowned (CR 702.112) — a UI hint so the client
-    /// can badge it (its Renown trigger has already fired). Populated by
-    /// `project_permanent`.
+    /// can badge it (its Renown trigger has already fired).
     #[serde(default)]
     pub renowned: bool,
     /// MKM — true when this permanent is a Case that has been solved. `None` for
     /// non-Cases; `Some(false)` for an unsolved Case. A UI hint so the client can
-    /// badge Cases with their solve state. Populated by `project_permanent`.
+    /// badge Cases with their solve state.
     #[serde(default)]
     pub case_solved: Option<bool>,
     /// CR 716.2 — a Class enchantment's current level. `None` for non-Classes.
-    /// A UI hint so the client can badge a Class with its level. Populated by
-    /// `project_permanent`.
+    /// A UI hint so the client can badge a Class with its level.
     #[serde(default)]
     pub class_level: Option<u8>,
     /// CR 709.5c — a Room's doors as `(name, unlocked)`, left then right.
     /// Empty for non-Rooms. Lets the client badge which doors are open (and
     /// name the locked one it can still pay for) without decoding the
-    /// definition. Populated by `project_permanent`.
+    /// definition.
     #[serde(default)]
     pub room_doors: Vec<(String, bool)>,
     /// True when this permanent is detained (CR 701.35) — a UI hint so the
-    /// client can badge it as "can't attack/block/activate." Populated by
-    /// `project_permanent`.
+    /// client can badge it as "can't attack/block/activate."
     #[serde(default)]
     pub detained: bool,
     /// True when this permanent is locked from untapping by another permanent
     /// (Entrancing Lyre) — a UI hint so the client can badge "won't untap."
-    /// Populated by `project_permanent`.
     #[serde(default)]
     pub untap_locked: bool,
     /// `Some(n)` when this is an Impending permanent (CR 702.183) that still
     /// has `n` time counters — i.e. it isn't a creature yet and becomes one in
     /// `n` of its controller's end steps. Lets the client badge the countdown
     /// instead of just showing a generic non-creature. `None` once it's a
-    /// creature (or never had impending). Populated by `project_permanent`.
+    /// creature (or never had impending).
     #[serde(default)]
     pub impending_counters: Option<u32>,
     /// `Some(n)` when this permanent was cast paying its Squad cost `n` times
@@ -2059,51 +1995,44 @@ pub struct PermanentView {
     /// (crown icon, gold name border).
     #[serde(default)]
     pub is_legendary: bool,
-    /// True when the permanent has one or more +1/+1 counters. Surfaced
-    /// so clients can badge boosted creatures with a "+1/+1" overlay
-    /// without scanning the full `counters` vec. Populated by
-    /// `project_permanent`. Push (modern_decks): added in batch 174.
+    /// True when the permanent has one or more +1/+1 counters. Surfaced so
+    /// clients can badge boosted creatures with a "+1/+1" overlay without
+    /// scanning the full `counters` vec.
     #[serde(default)]
     pub has_plus_one_counters: bool,
-    /// True when the permanent has one or more -1/-1 counters. Surfaced
-    /// so clients can badge damaged creatures with a "-1/-1" overlay
-    /// without scanning the full `counters` vec. Populated by
-    /// `project_permanent`. Push (modern_decks): added in batch 174.
+    /// True when the permanent has one or more -1/-1 counters. Surfaced so
+    /// clients can badge damaged creatures with a "-1/-1" overlay without
+    /// scanning the full `counters` vec.
     #[serde(default)]
     pub has_minus_one_counters: bool,
-    /// Total number of counters on this permanent (sum across all
-    /// counter types). Surfaced for client UIs that want a single
-    /// counter-count badge (e.g. on planeswalkers and Sagas). Populated
-    /// by `project_permanent`. Push (modern_decks): added in batch 174.
+    /// Total number of counters on this permanent (sum across all counter
+    /// types). Surfaced for client UIs that want a single counter-count badge
+    /// (e.g. on planeswalkers and Sagas).
     #[serde(default)]
     pub total_counter_count: u32,
-    /// Per-keyword counter map for CR 122.1b keyword counters
-    /// (flying, first strike, deathtouch, trample, lifelink, haste,
-    /// vigilance, reach, …). Surfaced so a client tooltip can render
-    /// "+1 flying counter", "+2 first strike counters" etc. alongside
-    /// the existing +1/+1 / shield / finality / stun highlights.
-    /// Populated by `project_permanent`. Push (modern_decks, batch 187).
+    /// Per-keyword counter map for CR 122.1b keyword counters (flying, first
+    /// strike, deathtouch, trample, lifelink, haste, vigilance, reach, …).
+    /// Surfaced so a client tooltip can render "+1 flying counter", "+2 first
+    /// strike counters" etc. alongside the existing +1/+1 / shield / finality
+    /// / stun highlights.
     #[serde(default)]
     pub keyword_counters: Vec<(Keyword, u32)>,
     /// Number of shield counters on this permanent. Each shield counter
-    /// absorbs one damage event or one destroy event (CR 122.1c) and is
-    /// then consumed. Surfaced so the client tooltip can render
-    /// "🛡 ×N (absorbs N events)" instead of the binary "shielded". 0
-    /// when no shields. Push (claude/modern_decks, batches 192-193).
+    /// absorbs one damage event or one destroy event (CR 122.1c) and is then
+    /// consumed. Surfaced so the client tooltip can render "🛡 ×N (absorbs N
+    /// events)" instead of the binary "shielded". 0 when no shields.
     #[serde(default)]
     pub shield_counter_count: u32,
-    /// Number of stun counters on this permanent. Each stun counter
-    /// causes the next untap to be skipped (CR 122.1d) and is then
-    /// consumed. Surfaced so the client tooltip can render "stunned ×N"
-    /// (skips N untap steps). 0 when not stunned. Push
-    /// (claude/modern_decks, batches 192-193).
+    /// Number of stun counters on this permanent. Each stun counter causes
+    /// the next untap to be skipped (CR 122.1d) and is then consumed.
+    /// Surfaced so the client tooltip can render "stunned ×N" (skips N untap
+    /// steps). 0 when not stunned.
     #[serde(default)]
     pub stun_counter_count: u32,
-    /// Number of finality counters on this permanent. One or more
-    /// finality counters redirect graveyard moves to exile (CR 122.1h);
-    /// the redirect is single-event-per-counter so multiple finality
-    /// counters chain. Surfaced for symmetry with shield/stun counts.
-    /// Push (claude/modern_decks, batches 192-193).
+    /// Number of finality counters on this permanent. One or more finality
+    /// counters redirect graveyard moves to exile (CR 122.1h); the redirect
+    /// is single-event-per-counter so multiple finality counters chain.
+    /// Surfaced for symmetry with shield/stun counts.
     #[serde(default)]
     pub finality_counter_count: u32,
     /// Number of regeneration shields on this permanent (CR 701.15). Each
@@ -2130,8 +2059,7 @@ pub struct PermanentView {
     pub is_flagbearer: bool,
     /// True when this permanent is an Equipment that carries an equip ability
     /// (`Keyword::Equip`). Lets the client offer the "equip" action (CR
-    /// 702.6) on the permanent without decoding its keyword list. Populated
-    /// by `project_permanent`.
+    /// 702.6) on the permanent without decoding its keyword list.
     #[serde(default)]
     pub equippable: bool,
     /// Cheaper alternate equip cost usable when the target is a creature
@@ -2142,7 +2070,7 @@ pub struct PermanentView {
     pub equip_token_cost: Option<crate::mana::ManaCost>,
     /// Crew cost (required total power, CR 702.122) when this permanent is a
     /// Vehicle with `Keyword::Crew(N)`. 0 means not crewable. Lets the client
-    /// offer the "crew" action. Populated by `project_permanent`.
+    /// offer the "crew" action.
     #[serde(default)]
     pub crew_value: u32,
     /// CR 702.171 — total power needed to saddle this Mount; 0 when it
@@ -2162,63 +2090,57 @@ pub struct PermanentView {
     pub crew_power_bonus: i32,
     /// True while this Mount is saddled (CR 702.171 — "saddled until end of
     /// turn"). Lets the client badge the Mount so the player can see that its
-    /// "attacks while saddled" riders are armed this combat. Populated by
-    /// `project_permanent`; defaults false.
+    /// "attacks while saddled" riders are armed this combat.
     #[serde(default)]
     pub saddled: bool,
     /// Number of creatures that have crewed this Vehicle this turn (CR 702.9).
     /// Lets the client badge crew-count payoffs (Luxurious Locomotive's "a
-    /// Treasure for each creature that crewed it this turn"). Populated by
-    /// `project_permanent`; defaults 0.
+    /// Treasure for each creature that crewed it this turn").
     #[serde(default)]
     pub crewed_count: u32,
     /// True when this creature's marked damage is already lethal (≥ its
-    /// current toughness) and it isn't indestructible — i.e. it will die
-    /// at the next state-based-action check. Lets the client grey out /
-    /// flag doomed creatures during combat-damage preview without
-    /// recomputing toughness. Populated by `project_permanent`.
+    /// current toughness) and it isn't indestructible — i.e. it will die at
+    /// the next state-based-action check. Lets the client grey out / flag
+    /// doomed creatures during combat-damage preview without recomputing
+    /// toughness.
     #[serde(default)]
     pub marked_lethal: bool,
     /// The card name this permanent has chosen (CR 201.3 — Pithing Needle,
     /// Phyrexian Revoker). Lets the client badge "naming: <X>" and grey out
     /// the suppressed source's activated abilities. `None` for the common
-    /// case. Populated by `project_permanent`.
+    /// case.
     #[serde(default)]
     pub named_card: Option<String>,
     /// The color chosen as this permanent entered (Coldsteel Heart-style mana
     /// rocks). Lets the client badge "{T}: Add <color>". `None` for the common
-    /// case. Populated by `project_permanent`.
+    /// case.
     #[serde(default)]
     pub chosen_color: Option<crate::mana::Color>,
     /// The creature type chosen as this permanent entered (Cavern of Souls,
     /// Metallic Mimic, Adaptive Automaton, Patchwork Banner). Lets the client
     /// badge "naming: <Type>" so the chosen-type anthem / uncounterable /
     /// enters-with-counter rider is legible. `None` for the common case.
-    /// Populated by `project_permanent`.
     #[serde(default)]
     pub chosen_creature_type: Option<String>,
     /// CR 614 — the persistent mode chosen as this permanent entered (the
-    /// Tarkir Siege cycle's Abzan/Mardu/… pick). Lets the client badge
-    /// "mode: <label>" so which arm of a two-mode enchantment is active is
-    /// legible. `None` for cards without a mode choice. Populated by
-    /// `project_permanent`.
+    /// Tarkir Siege cycle's Abzan/Mardu/… pick). Lets the client badge "mode:
+    /// <label>" so which arm of a two-mode enchantment is active is legible.
+    /// `None` for cards without a mode choice.
     #[serde(default)]
     pub chosen_mode_label: Option<String>,
     /// Names of the Auras / Equipment / Fortifications attached to this
     /// permanent (CR 303 / 301). Lets the client list "Enchanted/Equipped by:
-    /// …" in the tooltip without scanning the whole battlefield. Populated by
-    /// `project_permanent`.
+    /// …" in the tooltip without scanning the whole battlefield.
     #[serde(default)]
     pub attachments: Vec<String>,
     /// CR 301.5 / 303 — for an Aura/Equipment permanent, the name of the
     /// creature it's attached to (its host), so the client can show
     /// "Equipping: …" / "Enchanting: …" without a battlefield scan. `None`
-    /// for unattached permanents and non-attachments. Populated by
-    /// `project_permanent`.
+    /// for unattached permanents and non-attachments.
     #[serde(default)]
     pub attached_to_name: Option<String>,
     /// CR 303.4a — the seat this Aura enchants, when it enchants a player
-    /// rather than a permanent. `#[serde(default)]`.
+    /// rather than a permanent.
     #[serde(default)]
     pub attached_to_player: Option<usize>,
     /// For a token, the name of the permanent whose ability created it
@@ -2230,27 +2152,25 @@ pub struct PermanentView {
     /// CR 702.95 — the `CardId` of this creature's Soulbond partner, if it's
     /// paired. Lets the client draw a pairing link / badge "Soulbonded with …"
     /// in the tooltip without scanning the battlefield. `None` for the common
-    /// (unpaired) case. Populated by `project_permanent`.
+    /// (unpaired) case.
     #[serde(default)]
     pub soulbond_partner: Option<CardId>,
     /// CR 714 — for a Saga, its final (highest) chapter number. With the Lore
     /// counter count (in `counters`) the client renders "Chapter N / final".
-    /// `None` for non-Sagas. Populated by `project_permanent`.
+    /// `None` for non-Sagas.
     #[serde(default)]
     pub saga_final_chapter: Option<u32>,
     /// True when this permanent is a double-faced card (it has an other
-    /// face). Lets the client badge it with a flip icon. Populated by
-    /// `project_permanent`.
+    /// face). Lets the client badge it with a flip icon.
     #[serde(default)]
     pub has_other_face: bool,
     /// CR 712 — true when this DFC permanent is currently showing its back
-    /// face (transformed). With `has_other_face`, the client can render a
-    /// "⭯ transformed" indicator. Populated by `project_permanent`.
+    /// face (transformed). With `has_other_face`, the client can render a "⭯
+    /// transformed" indicator.
     #[serde(default)]
     pub transformed: bool,
     /// CR 708 — true when this permanent is on the battlefield face down
     /// (morph / manifest). The client renders a generic 2/2 card back.
-    /// Populated by `project_permanent`.
     #[serde(default)]
     pub face_down: bool,
     /// CR 708.2 — for a face-down permanent the viewer is allowed to look at
@@ -2291,8 +2211,7 @@ pub struct PermanentView {
     pub turn_up_cost_label: Option<String>,
     /// Computed creature subtypes after layer effects (so a creature turned
     /// into a 0/1 Fish by Ichthyomorphosis shows as a Fish, and a granted
-    /// Changeling shows every type). Empty for noncreatures. `#[serde(default)]`
-    /// for older clients.
+    /// Changeling shows every type). Empty for noncreatures.
     #[serde(default)]
     pub creature_subtypes: Vec<CreatureType>,
     /// True when a continuous effect has stripped all of this permanent's
@@ -2303,7 +2222,7 @@ pub struct PermanentView {
     /// Computed colors after layer-5 effects (so a creature turned blue by
     /// Turn to Frog / Snakeform shows as blue). Empty = colorless. Lets the
     /// client surface a "now [color]" line when it differs from the printed
-    /// card. `#[serde(default)]` for older clients.
+    /// card.
     #[serde(default)]
     pub colors: Vec<crate::mana::Color>,
     /// CR 700.9 — "modified": this permanent has one or more counters, is
@@ -2311,15 +2230,14 @@ pub struct PermanentView {
     /// from `pt_modified` (which only tracks a P/T change). Surfaced so the
     /// client can badge modified creatures — the "modified-matters" payoffs
     /// (Guardian of the Forgotten, Envoy of the Ancestors, Obstinate Gargoyle,
-    /// Expanding Ooze) read this. Populated by `project_permanent`.
+    /// Expanding Ooze) read this.
     #[serde(default)]
     pub modified: bool,
     /// CR 508.1a — true when this creature may attack even though it has
     /// Defender, because its controller has a permission-granting effect
     /// (High Alert / Assault Formation's team static, or a per-card grant).
     /// Surfaced so the client's attacker-eligibility checks and Attack-All
-    /// panel offer Walls that can legally swing. Populated by
-    /// `project_permanent`.
+    /// panel offer Walls that can legally swing.
     #[serde(default)]
     pub can_attack_despite_defender: bool,
     /// CR 701.15 — the seats that goaded this creature, in goad order. A
@@ -2388,14 +2306,12 @@ pub struct KnownStackItem {
     pub target: Option<Target>,
     /// Additional targets (slots 1+) for multi-target spells/abilities —
     /// divided-damage burn (Forked Bolt, Crackle with Power), Snow Day,
-    /// "choose one or both" modes. Lets the client draw a targeting arrow
-    /// to *every* target, not just slot 0. Empty for single-target items;
-    /// `#[serde(default)]` for view back-compat.
+    /// "choose one or both" modes. Lets the client draw a targeting arrow to
+    /// *every* target, not just slot 0. Empty for single-target items;
     #[serde(default)]
     pub additional_targets: Vec<Target>,
     /// Whether this stack item is a `Spell` (caster cast a card) or a
-    /// `Trigger` (an ability fired). Defaulted to `Trigger` for
-    /// backwards compat with older serialized views.
+    /// `Trigger` (an ability fired). Defaults to `Trigger` for older views.
     #[serde(default = "default_stack_item_kind")]
     pub kind: StackItemKind,
 }
@@ -2425,10 +2341,9 @@ pub struct PendingDecisionView {
     /// (typically: the viewer is the acting player). `None` when the viewer
     /// is a spectator who should only know that some other seat is deciding.
     pub decision: Option<DecisionWire>,
-    /// True when the decision is gathering input for a *replay* of a cast
-    /// or activation that hasn't paid anything yet, so the acting player
-    /// may back out with `DecisionAnswer::CancelAction`. `#[serde(default)]`
-    /// for snapshot back-compat.
+    /// True when the decision is gathering input for a *replay* of a cast or
+    /// activation that hasn't paid anything yet, so the acting player may
+    /// back out with `DecisionAnswer::CancelAction`.
     #[serde(default)]
     pub cancellable: bool,
 }
@@ -2442,12 +2357,10 @@ pub enum DecisionWire {
     ChooseTarget {
         source: CardId,
         legal: Vec<Target>,
-        /// Printed name of the source card (e.g. "Ascendant Dustspeaker").
-        /// Copied from the engine's `Decision::ChooseTarget.source_name`
-        /// at projection time so the client can show "<name> — <desc>"
-        /// in its trigger prompt without re-looking up the card. Empty
-        /// when the source can't be resolved (rare; pre-#TriggerTargetPick
-        /// snapshots).
+        /// Printed name of the source card (e.g. "Ascendant Dustspeaker"),
+        /// from `Decision::ChooseTarget.source_name`, so the client's trigger
+        /// prompt shows "<name> — <desc>". Empty when the source can't be
+        /// resolved.
         #[serde(default)]
         source_name: String,
         /// Short human-readable rendering of the trigger's effect
@@ -2935,22 +2848,18 @@ pub enum GameEventWire {
     RolledNaturalMax { player: usize },
     CreatureDied { card_id: CardId },
     /// Wire mirror of `GameEvent::PermanentDied` (CR 700.4). An internal
-    /// trigger event (the concrete death/sacrifice lines already log it), so
-    /// its description renders blank. `is_creature` lets the client spawn a
-    /// death burst for *non-creature* deaths (artifacts / enchantments /
-    /// planeswalkers) without double-bursting creatures, which already fire
-    /// `CreatureDied`.
+    /// trigger event (the concrete death/sacrifice lines log it), so its
+    /// description renders blank. `is_creature` lets the client burst
+    /// non-creature deaths without double-bursting creatures, which already
+    /// fire `CreatureDied`.
     PermanentDied { card_id: CardId, #[serde(default)] is_creature: bool },
     /// Wire mirror of `GameEvent::CreatureSacrificed`. Surfaced so client
     /// UIs can highlight a sacrifice (CR 701.16) distinctly from a
     /// natural death — useful for replay rewinds and aristocrats payoffs.
     CreatureSacrificed { card_id: CardId, who: usize },
-    /// Wire mirror of `GameEvent::PermanentSacrificed`. Broader-scope
-    /// sibling of `CreatureSacrificed` — fires for non-creature
-    /// sacrifices too (Treasure / Clue / Food / land / planeswalker).
-    /// Surfaced so client UIs can highlight every sacrifice
-    /// regardless of type for replay rewinds and Korvold/Mayhem-Devil
-    /// payoffs.
+    /// Wire mirror of `GameEvent::PermanentSacrificed`: the broader sibling
+    /// of `CreatureSacrificed`, firing for non-creature sacrifices too
+    /// (Treasure / Clue / Food / land / planeswalker).
     PermanentSacrificed { card_id: CardId, who: usize },
     /// Wire mirror of `GameEvent::CreatureLeftWithoutDying` (CR 603.6).
     CreatureLeftWithoutDying { card_id: CardId, controller: usize },

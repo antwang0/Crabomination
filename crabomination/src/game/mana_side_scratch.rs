@@ -1,10 +1,9 @@
 //! CR 605.3a — a mana ability doesn't use the stack: activated while another
 //! spell or ability is resolving (auto-tap paying a "you may pay {1}" in the
 //! middle of an effect) or while one is parked on a decision, it is not a new
-//! resolution of that object. Its activation resets the cost scratch and its
-//! resolution resets the per-resolution scratch, so Ripples of Undeath paid
-//! from a Mind Stone lost "milled this way" and returned nothing. The outer
-//! resolution's values are saved around it and put back.
+//! resolution of that object, yet it resets the cost and per-resolution
+//! scratch (Ripples of Undeath paid from a Mind Stone lost "milled this
+//! way"). The outer resolution's values are saved around it and restored.
 
 use crate::card::CardId;
 use crate::game::GameState;

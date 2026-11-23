@@ -1,22 +1,17 @@
 //! WebSocket transport for the match server.
 //!
-//! Browsers can't open raw TCP sockets, so the web client speaks WebSocket
-//! instead. Wire format: each WebSocket **binary message** carries exactly
-//! one JSON-serialized [`ClientMsg`] / [`ServerMsg`] payload — the WebSocket
-//! frame layer replaces the 4-byte length prefix of the TCP transport
-//! (`tcp.rs`), the JSON body is identical. Text messages are accepted too
-//! (some JS clients send text for JSON) and parsed the same way.
+//! Browsers can't open raw TCP sockets. Wire format: each WebSocket
+//! **binary message** carries exactly one JSON [`ClientMsg`] / [`ServerMsg`]
+//! — the frame layer replaces the TCP transport's 4-byte length prefix and
+//! the JSON body is identical. Text messages are accepted and parsed the same
+//! way (some JS clients send text).
 //!
-//! [`ws_seat`] mirrors [`super::tcp::tcp_seat`]: it wraps an
-//! already-accepted TCP stream into a [`SeatChannel`] the lobby/match code
-//! consumes without knowing the transport. Internally it differs from the
-//! TCP transport in one way: tungstenite's `WebSocket` owns the whole
-//! connection (reads and writes share framing state), so instead of a
-//! reader thread + writer thread pair there is a single socket thread that
-//! multiplexes both, using a short read timeout as its tick. The coalescing
-//! [`Outbox`](super::tcp::Outbox) between actor and socket is reused
-//! unchanged, so slow/wedged browser peers get the same bounded-memory,
-//! latest-View-wins behavior as TCP peers.
+//! [`ws_seat`] mirrors [`super::tcp::tcp_seat`]. tungstenite's `WebSocket`
+//! owns the whole connection (reads and writes share framing state), so one
+//! socket thread multiplexes both on a short read-timeout tick instead of a
+//! reader + writer pair. The coalescing [`Outbox`](super::tcp::Outbox) is
+//! reused unchanged, so slow browser peers get TCP's bounded-memory,
+//! latest-View-wins behaviour.
 
 use std::io::{self, Read, Write};
 use std::net::TcpStream;

@@ -1,16 +1,15 @@
 //! `table_train` — the one-model-for-every-mode trainer (ML_NOTES "One model
-//! for every mode", step 2 (c)). Actors play games drawn from the mode mixer
+//! for every mode", step 2 (c)). Actors play games from the mode mixer
 //! (`table_selfplay::draw_mode`: SOS / FRA sealed, cube, Commander pods of
-//! 2–6) with the heuristic default on every seat, record every living seat's
-//! view with the game's card pool and the hidden truth, and a learner trains
-//! the table net (`crabomination_ml::table`) — value, life, length, and with
-//! the pool the belief head — on the GPU when built with `--features cuda`.
+//! 2–6) with the heuristic default on every seat and record every living
+//! seat's view with the card pool and hidden truth; a learner trains the
+//! table net (`crabomination_ml::table`: value, life, length, and the belief
+//! head with the pool), on the GPU when built with `--features cuda`.
 //!
 //! Each checkpoint writes `latest.safetensors` (and `step<N>.safetensors`)
 //! and a `stats.jsonl` line: training losses, held-out value cross-entropy
-//! and slot-0 Brier score per mode family, and the belief read **B1** —
-//! hand top-5 recall over the pool against the uniform pool and a base-rate
-//! ranking (how often each pool card sits in a training hand).
+//! and slot-0 Brier per mode family, and belief read B1 (hand top-5 recall
+//! against the uniform pool and a base-rate ranking).
 //!
 //! ```text
 //! table_train --actors 8 --steps 20000 --out .ladder/table/run1
@@ -53,10 +52,9 @@ struct Args {
     pool: bool,
     belief: bool,
     modes: Option<Vec<Mode>>,
-    /// Training rows kept per recorded row: a game's positions share one
-    /// outcome, and a pod makes hundreds, so the learner fit recent games
-    /// from near-duplicates (run 1: train win CE 0.34, held-out above
-    /// chance on pods). Subsampling decorrelates the window.
+    /// Training rows kept per recorded row. A game's positions share one
+    /// outcome and a pod makes hundreds, so without subsampling the learner
+    /// memorised near-duplicates (run 1: held-out above chance on pods).
     row_keep: f64,
     out: PathBuf,
     seed: u64,
@@ -142,8 +140,8 @@ fn family(m: Mode) -> &'static str {
 }
 
 /// By game: `traj = (seed << 3) | seat` (`table_selfplay`), so the seat
-/// bits are dropped and a game's seats share a side of the split (the
-/// seat-level hash leaked mirrors across it; fixed 2026-11-09).
+/// bits are dropped and a game's seats share a side of the split (a
+/// seat-level hash leaked mirrors across it).
 fn is_holdout(traj: u32, frac: f64) -> bool {
     let mut h = (traj >> 3) as u64 ^ 0x9E37_79B9_7F4A_7C15;
     h ^= h >> 33;

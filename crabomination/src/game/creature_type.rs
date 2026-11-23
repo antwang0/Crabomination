@@ -43,11 +43,10 @@ impl GameState {
                 && self.computed_permanent_on(c).is_some_and(|cp| cp.keywords().has_kw(&Keyword::Changeling)))
     }
 
-    /// "Creature of type `ct`" — a creature now, with that type now.
     /// The largest group of `ids` sharing one creature type — the first type
-    /// (in `ids` order, so deterministic) that reaches `need` — a tap cost "that share a creature
-    /// type" (Weight of Conscience). Changelings join every group; with no
-    /// typed member at all, the changelings alone are one group.
+    /// (in `ids` order, so deterministic) that reaches `need` — for a tap
+    /// cost "that share a creature type" (Weight of Conscience). Changelings
+    /// join every group; with no typed member, the changelings alone are one.
     pub(crate) fn creatures_sharing_a_type(&self, ids: &[CardId], need: usize) -> Vec<CardId> {
         let mut types: Vec<CreatureType> = Vec::new();
         for cp in ids.iter().filter_map(|&id| self.computed_permanent(id)) {
@@ -75,6 +74,7 @@ impl GameState {
         if changelings.len() > best.len() { changelings } else { best }
     }
 
+    /// "Creature of type `ct`" — a creature now, with that type now.
     pub(crate) fn permanent_is_creature_of_type(&self, cid: CardId, ct: CreatureType) -> bool {
         self.permanent_is_creature(cid) && self.permanent_has_creature_type(cid, ct)
     }

@@ -1,9 +1,8 @@
 //! The bot's sink for "{X}, Remove X [kind] counters from this / from among
-//! your permanents" and "pay X {E}" activations
-//! (Marath, Will of the Wild; Arcbound Javelineer). No generator chose an X
-//! for one, so Marath's counters sat unspent and its seat won 6 % of four-seat
-//! pods. Every mode at every payable X is dry-run and scored against passing;
-//! the best improvement is taken.
+//! your permanents" and "pay X {E}" activations (Marath, Will of the Wild;
+//! Arcbound Javelineer), for which no generator chose an X. Every mode at
+//! every payable X is dry-run and scored against passing; the best
+//! improvement is taken.
 
 use crate::game::GameState;
 use crate::game::types::GameAction;

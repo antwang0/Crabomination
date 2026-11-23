@@ -1,9 +1,8 @@
 //! "As this becomes attached to a creature, choose a color" (Sanctuary
-//! Blade). Every attach path reports `AttachmentMoved` (a cast Aura's own
-//! attach reports `AuraAttached`), and the dispatch
-//! funnel makes the choice before any trigger from the batch goes on the
-//! stack — so no player has priority between the attach and the choice, as
-//! a replacement-style "as" requires, where the old trigger left a window.
+//! Blade). Every attach path reports `AttachmentMoved` (a cast Aura's
+//! `AuraAttached`), and the dispatch funnel makes the choice before any
+//! trigger from the batch goes on the stack, so no priority window opens
+//! between attach and choice, as an "as" replacement requires.
 
 use super::{GameState, TempCopy};
 use crate::card::CardId;

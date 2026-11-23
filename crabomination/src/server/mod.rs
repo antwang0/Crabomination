@@ -19,15 +19,13 @@ use crate::game::{GameAction, GameState, TurnStep};
 use crate::net::{ClientMsg, DebugAction, GameEventWire, ServerMsg};
 use crate::snapshot::GameSnapshot;
 
-/// Shared snapshot sink. The match actor stores the latest authoritative
-/// engine state here after every accepted action, so an in-process client
-/// can grab it for debug exports without fighting the borrow checker over
-/// `&mut GameState`.
+/// Shared snapshot sink: the actor stores the latest authoritative state
+/// here after every accepted action, so an in-process client can grab it
+/// for debug exports without borrowing `&mut GameState`.
 ///
-/// The state is held behind an `Arc` so a publish is a single
-/// `GameState::clone` (refcounted, cheap to hand to readers) rather than a
-/// per-action `serde_json::to_string` — the export consumer is rare, so the
-/// two derived fidelity levels are produced lazily, on demand:
+/// Held behind an `Arc` so a publish is one refcounted clone, not a
+/// per-action `serde_json::to_string`; the rare export derives its form on
+/// demand:
 ///
 /// - [`snapshot`](Self::snapshot) — structured, schema-stable `GameSnapshot`
 ///   (lossy on triggers) suitable for human inspection of saved files.
@@ -66,23 +64,17 @@ impl SnapshotSinkState {
 
 pub type SnapshotSink = Arc<Mutex<SnapshotSinkState>>;
 
-/// The stack every thread that **resolves effects** is built with.
+/// The stack every thread that resolves effects is built with.
 ///
-/// A resolution runs recursive trigger / copy / replacement chains, and the
-/// default 8 MB main (2 MB spawned) stack is not enough for them in an
-/// unoptimized build — `.cargo/config.toml` carries `RUST_MIN_STACK` for the
-/// processes cargo launches, and PERF's standing "effect-resolution recursion
-/// depth" constraint is the same number. **`RUST_MIN_STACK` only reaches a
-/// process cargo started**, so a thread the tree spawns itself has to state
-/// the size, and every binary's game threads already do.
+/// Recursive trigger / copy / replacement chains overflow the default 8 MB
+/// main (2 MB spawned) stack in an unoptimized build. `.cargo/config.toml`'s
+/// `RUST_MIN_STACK` only reaches processes cargo started, so a thread the
+/// tree spawns must state the size itself.
 ///
-/// ⚠ **The three the server ran a whole match on were the exception, and a
-/// stack overflow is a `SIGSEGV` with no message — strictly worse than the
-/// panic class the robustness filters chase.** Named here so there is one
-/// number and one place to find every thread that needs it: `mcts`'s rollout
-/// workers, the lobby's match driver, and `crabomination_server`'s bot-match
-/// and pair-match threads. Lazily committed on Linux, so an idle thread's
-/// resident cost is a page, not 32 MB.
+/// ⚠ A stack overflow is a `SIGSEGV` with no message. Every such thread
+/// uses this one constant: `mcts`'s rollout workers, the lobby's match
+/// driver, and `crabomination_server`'s bot-match and pair-match threads.
+/// Lazily committed on Linux, so an idle thread costs a page, not 32 MB.
 pub const ENGINE_STACK_BYTES: usize = 32 * 1024 * 1024;
 
 pub mod mcts;
@@ -194,20 +186,17 @@ pub use tcp::{tcp_client, tcp_seat};
 pub use ws::ws_seat;
 pub use view::{project, project_spectator};
 
-/// A safety limit on how many rounds of bot actions can pass within one turn
-/// with no human input. The loop polls bots to a fixed point; if that fixed
-/// point never arrives, something is wrong and we'd rather panic than spin.
-/// Per turn, not per call: once every human is out of a pod (or in a
-/// bot-only spectated game) one call plays the rest of the game, which is
-/// progress however many actions it takes (`drive_bots`).
+/// Safety limit on bot actions within one turn with no human input: the
+/// loop polls bots to a fixed point, and if none arrives we'd rather panic
+/// than spin. Per turn, not per call, since once every human is out one
+/// call plays the rest of the game (`drive_bots`).
 const BOT_TICK_BUDGET: usize = 10_000;
 
-/// Wall-clock deadline for "no accepted action since the last progress tick."
-/// In Spectate Bot vs Bot mode the only sender on `merged_rx` is the local
-/// UI's spectator channel, which doesn't volunteer actions; if every bot
-/// rejects on the next tick (sorcery-speed cast with non-empty stack, etc.)
-/// the actor would otherwise block forever on `recv()`. We poll with this
-/// timeout instead so the watchdog can fire with a state dump + panic.
+/// Wall-clock deadline for "no accepted action since the last progress
+/// tick". In Spectate Bot vs Bot the only sender on `merged_rx` is the
+/// spectator channel, so if every bot rejects on the next tick the actor
+/// would block on `recv()` forever; polling with this timeout lets the
+/// watchdog fire with a state dump + panic.
 const BOT_DEADLOCK_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Where the deadlock watchdog dumps the live `GameSnapshot` JSON. Resolved
@@ -215,16 +204,12 @@ const BOT_DEADLOCK_TIMEOUT: Duration = Duration::from_secs(15);
 /// matching the `<repo>/debug/` convention used by the in-game export.
 const DEADLOCK_DUMP_DIR: &str = "debug";
 
-/// How long a reconnectable match stays alive with *every* human seat
-/// disconnected, waiting for at least one to reattach, before giving up and
-/// ending the match. Only applies when reconnection is enabled (the standalone
-/// server passes a reattach channel); in-process and non-reconnectable matches
-/// end the instant their last human drops, exactly as before.
-///
-/// It is also how long *one* dropped seat has to come back while the rest of
-/// the table plays on: when it runs out the seat concedes (CR 104.3a), so a
-/// pod isn't left waiting forever the next time that seat must act. A
-/// non-reconnectable match concedes a dropped seat at once — it can't return.
+/// How long a reconnectable match survives with every human seat
+/// disconnected before ending; also how long one dropped seat has to return
+/// while the table plays on before it concedes (CR 104.3a). Only with
+/// reconnection enabled (the standalone server passes a reattach channel);
+/// otherwise the match ends when its last human drops and a dropped seat
+/// concedes at once.
 const RECONNECT_GRACE: Duration = Duration::from_secs(60);
 
 /// Optional per-action timeout (the "rope"): when the seat expected to act
@@ -361,14 +346,9 @@ pub enum SeatOccupant {
     Bot(Box<dyn Bot>),
 }
 
-/// Run a match to completion on the current thread. Returns when the game
-/// ends, all human seat channels have been dropped, or — if every seat is a
-/// bot — when the game ends.
-/// Summary of a completed match returned by `run_match_full` (and its
-/// siblings). Captures end-of-game metrics that callers — typically
-/// the binary's match-stats recorder — fold into rolling aggregates.
-/// Each field is zero / `None` if the match aborted before reaching the
-/// relevant data point.
+/// Summary of a completed match returned by `run_match_full` and siblings,
+/// for the binary's match-stats recorder. Each field is zero / `None` if the
+/// match aborted before reaching that data point.
 #[derive(Debug, Clone, Default)]
 pub struct MatchOutcome {
     /// Final `turn_number` value observed at match end. Useful for
@@ -385,20 +365,15 @@ pub struct MatchOutcome {
     /// (life ≤ 0) victories. Empty if the match aborted before the
     /// game state was inspected.
     pub final_life_totals: Vec<i32>,
-    /// Per-seat manner-of-loss classification, parallel to
-    /// `final_life_totals`. `None` for seats that weren't eliminated
-    /// (the winner, or everyone in a draw/abort); `Some(reason)` for
-    /// each eliminated seat. Lets operator metrics split a ladder's
-    /// losses into life-damage vs poison vs deck-out — the deck-out
-    /// bucket is the one the new dredge/mill shells push on. Empty if
-    /// the match aborted before the game state was inspected.
+    /// Per-seat manner-of-loss, parallel to `final_life_totals`: `None` for
+    /// seats not eliminated, so operator metrics can split losses into
+    /// life-damage / poison / deck-out. Empty if the match aborted before
+    /// the state was inspected.
     pub loss_reasons: Vec<Option<LossReason>>,
-    /// Per-seat library size observed at match end, parallel to
-    /// `final_life_totals`. Lets operator metrics see "how close to
-    /// decking out" each seat was — the natural companion to the
-    /// `LossReason::Decked` bucket and the dredge / mill ladders, where
-    /// the winner often ends a hair above an empty library. Empty if the
-    /// match aborted before the game state was inspected.
+    /// Per-seat library size at match end, parallel to `final_life_totals`:
+    /// how close each seat was to decking (the companion to
+    /// `LossReason::Decked`). Empty if the match aborted before the state was
+    /// inspected.
     pub final_library_sizes: Vec<usize>,
     pub final_graveyard_sizes: Vec<usize>,
     /// Per-seat count of permanents the seat controls on the battlefield
@@ -494,17 +469,16 @@ fn capture_outcome(state: &GameState) -> MatchOutcome {
     }
 }
 
+/// Run a match to completion on the current thread. Returns when the game
+/// ends or all human seat channels have been dropped.
 pub fn run_match(state: GameState, occupants: Vec<SeatOccupant>) -> MatchOutcome {
     run_match_full(state, occupants, vec![], None)
 }
 
-/// Variant of [`run_match`] that also broadcasts every event/view to a list
-/// of read-only spectator channels. Spectators see a spectator-safe view
-/// ([`view::project_spectator`], which hides every player's hand and library)
-/// and may submit `ClientMsg::SubmitAction`s, but the server silently drops
-/// those — they are not seated. Used by the "Spectate Bot Match" mode in the
-/// menu. For attaching spectators *after* a match has started, see
-/// [`run_match_reconnectable_spectatable`].
+/// [`run_match`] that also broadcasts to read-only spectator channels
+/// ([`view::project_spectator`] views; their `SubmitAction`s are dropped).
+/// Used by the menu's "Spectate Bot Match". To attach spectators after the
+/// start, see [`run_match_reconnectable_spectatable`].
 pub fn run_match_spectated(
     state: GameState,
     occupants: Vec<SeatOccupant>,
@@ -528,16 +502,11 @@ pub fn run_match_full(
 
 /// Variant of [`run_match_full`] that supports mid-match reconnection.
 ///
-/// When a human seat's client disconnects, the match is *not* torn down
-/// immediately: the actor drains `reattach_rx` for an [`Inbox::Attach`]
-/// carrying a fresh `SeatChannel` for that seat, replaying
-/// `YourSeat`/`MatchStarted`/`View` to the new connection. Only once *every*
-/// human seat has been gone for longer than [`RECONNECT_GRACE`] with no
-/// reattach does the match end.
-///
-/// Passing `reattach_rx == None` (as [`run_match_full`] does) disables this
-/// entirely — the match ends the instant its last human drops, identical to
-/// the pre-reconnect behavior — so non-reconnectable callers are unaffected.
+/// A disconnected human seat doesn't tear the match down: the actor drains
+/// `reattach_rx` for an [`Inbox::Attach`] carrying a fresh `SeatChannel`,
+/// replaying `YourSeat`/`MatchStarted`/`View` to it. The match ends only once
+/// every human seat has been gone longer than [`RECONNECT_GRACE`].
+/// `reattach_rx == None` (as [`run_match_full`] passes) disables this.
 pub fn run_match_reconnectable(
     state: GameState,
     occupants: Vec<SeatOccupant>,
@@ -558,11 +527,9 @@ pub fn run_match_reconnectable(
     )
 }
 
-/// Variant of [`run_match_reconnectable`] that also accepts spectators *after*
-/// the match has started: each `SeatChannel` arriving on `spectate_rx` is
-/// registered as a read-only spectator (opening handshake + a spectator-safe
-/// view, then every subsequent broadcast). Used by the lobby driver so a
-/// connection can watch a running match. Passing `spectate_rx == None` is
+/// [`run_match_reconnectable`] that also accepts spectators after the start:
+/// each `SeatChannel` on `spectate_rx` gets the handshake, a spectator-safe
+/// view and every later broadcast. Used by the lobby driver; `None` is
 /// identical to [`run_match_reconnectable`].
 pub fn run_match_reconnectable_spectatable(
     state: GameState,
@@ -647,13 +614,10 @@ fn run_match_inner(
     let mut seat_gone_until: Vec<Option<Instant>> = vec![None; n];
     let mut human_seats = 0usize;
 
-    // Spectator channels: passive observers that get the same broadcast
-    // stream as a Human seat (a spectator-safe view that hides every hand)
-    // but whose incoming messages are discarded by the actor. For an all-bot
-    // match they keep it alive so a pure bot-vs-bot run streamed to a UI
-    // spectator doesn't return early; for a match with humans, the spectator
-    // count never keeps the match alive past its humans (see the disconnect
-    // handler).
+    // Spectator channels get the Human broadcast stream (with a
+    // spectator-safe view) and their messages are discarded. They keep an
+    // all-bot match alive so a streamed bot run doesn't return early, but
+    // never keep a human match alive past its humans.
     let mut spectator_tx: Vec<mpsc::Sender<ServerMsg>> = Vec::with_capacity(spectators.len());
     let mut live_spectators = spectators.len();
     for spec in spectators {
@@ -1020,13 +984,10 @@ fn run_match_inner(
                         }
                         publish_snapshot(&state, &snapshot_sink);
                     }
-                    // Humans-gone shutdown keys on *humans only* — a lurking
-                    // spectator must never keep an abandoned match alive. A
-                    // reconnectable match opens its grace window (a player may
-                    // reattach); a non-reconnectable one ends immediately. In
-                    // neither case does an attached spectator hold it open: a
-                    // human match with no humans left has nobody to drive its
-                    // turns, so there is nothing left for a spectator to watch.
+                    // Humans-gone shutdown keys on humans only: a lurking
+                    // spectator must never keep an abandoned match alive (it
+                    // has nobody to drive its turns). Reconnectable matches
+                    // open the grace window; others end immediately.
                     if connected_humans == 0 {
                         if reconnect_enabled {
                             disconnect_deadline = Some(Instant::now() + reconnect_grace);
@@ -1278,14 +1239,11 @@ fn run_match_inner(
     }
 }
 
-/// Sanitize an inbound chat line: strip control characters, trim, and
-/// clamp to 200 chars (on a char boundary). `None` for an empty result.
-/// Clamp a player-supplied *display* name (seat name, lobby name) to
-/// something safe to broadcast: control characters dropped, whitespace runs
-/// collapsed to single spaces, truncated to `max` characters, trimmed.
-/// `None` once nothing printable is left, so callers can fall back to a
-/// generated name. Lobby names and seat names both ride the lobby list to
-/// every browsing connection, so they get the same treatment as chat.
+/// Clamp a player-supplied display name (seat or lobby name) to something
+/// safe to broadcast: control characters dropped, whitespace collapsed,
+/// truncated to `max` characters, trimmed. `None` once nothing printable is
+/// left, so callers can fall back to a generated name. Both ride the lobby
+/// list to every browsing connection, so they get chat's treatment.
 pub(crate) fn sanitize_name(raw: &str, max: usize) -> Option<String> {
     let mut out = String::new();
     let mut pending_space = false;
@@ -1310,6 +1268,8 @@ pub(crate) fn sanitize_name(raw: &str, max: usize) -> Option<String> {
     if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
 }
 
+/// Sanitize an inbound chat line: strip control characters, trim, and
+/// clamp to 200 chars (on a char boundary). `None` for an empty result.
 pub(crate) fn sanitize_chat(raw: &str) -> Option<String> {
     let cleaned: String = raw
         .chars()
@@ -1333,12 +1293,10 @@ fn publish_snapshot(state: &GameState, sink: &Option<SnapshotSink>) {
     }
 }
 
-/// Poll every bot seat to a fixed point: each pass asks every bot whether it
-/// wants to act, and we repeat until a full pass produces no actions.
-/// Returns `true` if the game ended during bot play. Updates
-/// `last_progress_at` whenever a bot's action is accepted, so the
-/// outer-loop watchdog can distinguish "bots are thinking forever" from
-/// "bots successfully ended the game."
+/// Poll every bot seat to a fixed point (repeat until a full pass produces
+/// no actions). Returns `true` if the game ended. Updates
+/// `last_progress_at` on each accepted bot action so the watchdog can tell
+/// "thinking forever" from "ended the game".
 fn drive_bots(
     state: &mut GameState,
     bots: &mut [Option<Box<dyn Bot>>],
@@ -1377,12 +1335,9 @@ fn drive_bots(
         if !any_acted {
             return false;
         }
-        // Bot loop is making progress on every tick but never ending
-        // the game (priority ping-pong, infinite trigger chain, etc.).
-        // Dump the live state for debugging before panicking — silent
-        // panics with no state are a nightmare to triage from a bug
-        // report.
-        // A new turn is progress: the budget catches a loop inside one.
+        // Progress every tick but no game end (priority ping-pong, infinite
+        // trigger chain): dump the state before panicking. A new turn is
+        // progress; the budget catches a loop inside one.
         if state.turn_number != budget_turn {
             budget_turn = state.turn_number;
             budget = BOT_TICK_BUDGET;
@@ -1420,13 +1375,10 @@ pub fn dump_deadlock_state(state: &GameState, elapsed: Duration) -> Option<std::
     ));
 
     let snapshot = GameSnapshot::capture(state);
-    // Best-effort full-state serialization: a bit-exact `GameState`
-    // dump is the most useful artifact for triaging a deadlock since
-    // it includes pending_decision, suspend_signal, delayed_triggers,
-    // and continuous_effects which the schema-stable snapshot omits.
-    // If `serde_json::to_value` somehow fails (it shouldn't — every
-    // engine type is `Serialize` now), we fall through with a `null`
-    // and ship just the snapshot.
+    // Best-effort full-state dump: the bit-exact `GameState` includes
+    // pending_decision, suspend_signal, delayed_triggers and
+    // continuous_effects, which the snapshot omits. A serialization failure
+    // falls through to `null` and ships just the snapshot.
     let full_state = serde_json::to_value(state).unwrap_or(serde_json::Value::Null);
     let json = serde_json::to_string_pretty(&serde_json::json!({
         "kind": "bot_deadlock",
@@ -1753,12 +1705,9 @@ fn lookup_debug_card(name: &str) -> Option<crate::card::CardDefinition> {
 }
 
 /// Apply a debug-console cheat directly to the authoritative state and
-/// broadcast a fresh view to every seat. Returns `true` on success.
-/// No event stream is emitted — these mutations bypass the engine's
-/// rules and don't have corresponding `GameEvent`s — but every observer
-/// receives the updated `View` so their UI rerenders. Out-of-range
-/// seats and unknown card names are silently dropped (we keep this
-/// best-effort because it's a developer tool, not a player-facing API).
+/// broadcast a fresh view to every seat (no events: these bypass the rules).
+/// Returns `true` on success. Out-of-range seats and unknown card names are
+/// silently dropped; it's a developer tool.
 fn apply_debug(
     state: &mut GameState,
     seat: usize,
@@ -1828,18 +1777,12 @@ fn report_error(seat: usize, err: &str, seat_tx: &[Option<mpsc::Sender<ServerMsg
     }
 }
 
-/// Illegal actions submitted by *bot* seats since the process started.
-///
-/// The live-match twin of `CRAB_SIM_REJECTS` (which counts what the bot's own
-/// simulations propose and its engine rejects — PERF's "How to measure"). A
-/// bot rejection is always a bug: `drive_bots` counts only accepted actions as
-/// progress, so a seat that can only propose illegal actions ends the match
-/// where it stands. It went uncounted because `bot_ladder` and the training
-/// actors do not run `run_match` at all — this path is the client's
-/// bot-vs-bot mode and this crate's own smoke test, and nothing read the
-/// `eprintln!` above.
-///
-/// One relaxed increment on an error path; no cost when nothing is rejected.
+/// Illegal actions submitted by bot seats since the process started: the
+/// live-match twin of `CRAB_SIM_REJECTS` (PERF's "How to measure"). A bot
+/// rejection is always a bug, since `drive_bots` counts only accepted actions
+/// as progress. `bot_ladder` and the training actors don't run `run_match`,
+/// so this path (the client's bot-vs-bot mode and the smoke test) needed its
+/// own counter. One relaxed increment on an error path.
 static BOT_REJECTIONS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 /// Read [`BOT_REJECTIONS`]. Process-wide and monotonic — take a difference
@@ -2156,12 +2099,10 @@ mod tests {
         }
     }
 
-    /// No fishing, end to end (TODO's step 2): take an action back, play the
-    /// same moves again, and the bot answers the same way, event for event.
-    /// Against the uniform-random bot, whose every pick is a draw (unpinned,
-    /// it plays a different turn each time), and against a search bot on two
-    /// worker threads. The point is marked in the stream ahead of its action,
-    /// and the take-back names it.
+    /// No fishing, end to end (TODO's step 2): take an action back, replay
+    /// the same moves, and the bot answers the same way, event for event —
+    /// against the uniform-random bot and a two-thread search bot. The point
+    /// is marked in the stream ahead of its action and the take-back names it.
     #[test]
     fn a_redo_meets_the_same_bot_reply() {
         use crate::server::mcts::{MctsBot, MctsConfig};
@@ -2565,13 +2506,11 @@ mod tests {
         out
     }
 
-    /// Two human seats fire `PlayLand` from independent sender threads. The
-    /// actor processes them serially — seat 0 holds priority so its play is
-    /// accepted (broadcast lands on both seats), and seat 1's attempt is
-    /// rejected with an `ActionError`. The point of this test is to confirm
-    /// concurrent submissions don't deadlock or interleave the broadcast with
-    /// itself: each accepted action emits a single combined `Update` (events
-    /// + view) to every seat, in order.
+    /// Two human seats fire `PlayLand` from independent threads. The actor
+    /// processes them serially: seat 0 holds priority and is accepted, seat 1
+    /// gets an `ActionError`. Confirms concurrent submissions don't deadlock
+    /// or interleave: each accepted action emits one combined `Update`
+    /// (events + view) to every seat, in order.
     #[test]
     fn concurrent_submissions_processed_serially() {
         let mut state = two_player_game();
@@ -2617,13 +2556,10 @@ mod tests {
         handle.join().unwrap();
     }
 
-    /// One human dropping their channel mid-match must not crash the actor or
-    /// stop it from servicing the remaining humans. The forwarder thread for
-    /// the dropped seat exits when its `recv` returns Err; the seat's `tx`
-    /// is still in `seat_tx` but `let _ = tx.send(...)` swallows the error
-    /// so broadcasts don't propagate the panic. A match that can't take the
-    /// seat back concedes it at once (CR 104.3a) — the table would otherwise
-    /// wait on it forever the next time it had to act.
+    /// One human dropping their channel mid-match must not crash the actor
+    /// or stop it servicing the rest (`let _ = tx.send(...)` swallows the
+    /// dead seat's error). A match that can't take the seat back concedes it
+    /// at once (CR 104.3a), or the table would wait on it forever.
     #[test]
     fn human_disconnect_mid_match_does_not_crash_actor() {
         let mut state = crate::game::multi_player_game(3);
@@ -3278,23 +3214,15 @@ mod tests {
     }
 
     /// Bot-vs-bot smoke test on the Cube format: five fixed two-colour
-    /// pairings, each of which must reach game over within the timeout. It
-    /// exists to catch target-selection freezes (Vandalblast → lone artifact,
-    /// Counterspell → lone creature, …) that only show up under specific
-    /// runtime card combinations.
+    /// pairings must reach game over within the timeout, catching
+    /// target-selection freezes (Vandalblast → lone artifact, Counterspell →
+    /// lone creature) that only show up under specific card combinations.
     ///
-    /// **Seeded, and that is the point.** It drew its decks, its shuffles,
-    /// its game stream and its bot tie-breaks from entropy until the
-    /// eighty-fifth pass, when it timed out once inside a full-suite run and
-    /// then passed forty consecutive solo runs — 200 more random pairings —
-    /// with the pairing that hung unrecoverable. A gate whose failure cannot
-    /// be reproduced cannot be acted on. Random exploration of the card space
-    /// belongs to the `overflow` ladder sweep (tens of thousands of games,
-    /// five pools), not to a unit test that has five draws to spend.
-    ///
-    /// The budget guards against a *freeze*, which never finishes at any
-    /// deadline, so it is deliberately far above a healthy trial (~1s for all
-    /// five solo) — the full suite runs the other test binaries alongside it.
+    /// Seeded on purpose: an entropy-seeded version once timed out with the
+    /// hanging pairing unrecoverable, and a gate whose failure can't be
+    /// reproduced can't be acted on. Random exploration belongs to the
+    /// `overflow` ladder sweep. The budget guards a *freeze*, so it sits far
+    /// above a healthy trial (~1 s for all five solo).
     #[test]
     fn bot_vs_bot_random_cube_decks_terminate() {
         let rejections_before = bot_rejection_count();
@@ -3309,27 +3237,10 @@ mod tests {
         // `prefers_graveyard_target` poses that modal over every card in every
         // graveyard and in exile, which the bot answers with none.
         //
-        // The whole seed range is a sweep, not just these ten: set the loop to
-        // `0..4000u64`, add an `eprintln!` of the seed and run it
-        // `--no-capture`.
-        //
-        // **Re-armed and clean at the ninety-seventh pass** (`527f872f`,
-        // 981.7 s under nextest in a debug build, 4,000 pairings): every match
-        // terminated inside its 180 s budget and `bot_rejection_count()` did
-        // not move. It had not been re-armed since the eighty-seventh pass,
-        // and the twelve passes in between carry the `CardMemo` redesign and
-        // its `Definition` handle, the SBA death sweep's narrowed scope, the
-        // target-walker unification and the encoder's in-place write — all
-        // behaviour claims the suite audits by construction and this sweep
-        // audits on 4,000 real cube boards.
-        //
-        // Clean at the eighty-seventh pass too (931.8 s, 4,000
-        // pairings). That tip carries the picker's
-        // off-board gate, `EntityMatches`' empty-selector answer, the two
-        // block selectors' watcher fallback, the ward gate's cost read, and
-        // the pass's whole memo device (`CardMemo`'s five slots) — the last
-        // of which is a *behaviour* claim the suite audits and this sweep
-        // audits on real boards.
+        // The whole seed range is a sweep: set the loop to `0..4000u64`, add
+        // an `eprintln!` of the seed and run it `--no-capture`. Last run clean
+        // at the ninety-seventh pass (`527f872f`, 4,000 pairings, ~980 s
+        // debug, `bot_rejection_count()` unmoved).
         for seed in [0u64, 1, 2, 3, 4, 62, 2113, 2719, 3637, 3789] {
             let state = crate::cube::build_cube_state_seeded(seed);
             let (done_tx, done_rx) = mpsc::channel();
@@ -3436,14 +3347,10 @@ mod tests {
     }
 
     /// 4-player bot FFA on the Commander demo deck (Rofellos mono-green
-    /// mirror). Verifies the Phase I/J/L/M pipeline end-to-end:
-    /// command zone populated at setup for all 4 seats, replacement
-    /// effect bounces commanders back if killed, cast-from-CZ + tax
-    /// accounting runs through `HeuristicBot` action picks across all
-    /// 4 players, 21-commander-damage SBA still terminates the game.
-    /// Phase A/B/C/D/E machinery is also exercised: 4-seat turn
-    /// rotation, APNAP trigger ordering, team-aware attack/block
-    /// validation collapsing to FFA semantics.
+    /// mirror), end to end: command zone set up for all seats, commanders
+    /// bounced back by the replacement, cast-from-CZ + tax through
+    /// `HeuristicBot`, 21-commander-damage SBA ending the game, plus 4-seat
+    /// rotation, APNAP ordering and team-aware combat validation as FFA.
     #[test]
     fn bot_vs_bot_commander_demo_terminates() {
         use crate::demo::build_commander_state_seeded;

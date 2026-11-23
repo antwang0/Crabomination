@@ -1,21 +1,17 @@
 //! Capture of the positions the search actually evaluates.
 //!
-//! Every calibration diagnostic so far samples the *snapshot* cadence
-//! (turn start / postcombat main / end step), but the searches consume
-//! evaluations of **simulated leaves** — post-combat and post-line
-//! hypotheticals inside `simulate_attack_outcome` and the cast planner's
-//! `score_settled_state`. Those are a distribution the net is neither
-//! trained on nor measured at, and "better on snapshots, worse on sim
-//! leaves" is the one remaining explanation for a net that outpredicts
-//! the heuristic and still loses gates as its replacement. This module
-//! makes the leaf distribution observable so `selfplay_train
-//! --calibrate-leaves` can score both evaluators on it.
+//! Calibration diagnostics sample the *snapshot* cadence (turn start /
+//! postcombat main / end step), but searches evaluate **simulated leaves**
+//! (inside `simulate_attack_outcome` and the cast planner's
+//! `score_settled_state`), a distribution the net is neither trained nor
+//! measured on — the remaining explanation for a net that outpredicts the
+//! heuristic yet loses gates as its replacement. This makes those leaves
+//! observable for `selfplay_train --calibrate-leaves`.
 //!
-//! Off by default; the two hook sites pay one relaxed atomic load per
-//! leaf when disabled. The buffer is thread-local because the diagnostic
-//! plays its games single-threaded and drains between games — enabling
-//! this under a multi-threaded ladder would capture into per-thread
-//! buffers that nothing drains, so don't.
+//! Off by default; the two hook sites pay one relaxed atomic load per leaf
+//! when disabled. The buffer is thread-local (the diagnostic plays
+//! single-threaded and drains between games), so don't enable this under a
+//! multi-threaded ladder: per-thread buffers would go undrained.
 
 use std::cell::RefCell;
 use std::sync::atomic::{AtomicBool, Ordering};

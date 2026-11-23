@@ -8,9 +8,8 @@
 //! asked slot by slot under each slot's own filter.
 //!
 //! Each ask leads with the engine's own fill (`auto_extra_targets_for`) and
-//! stops where that fill does, so a seat answering with the first candidate —
-//! the bot policy here, and `AutoDecider` — names exactly the targets it was
-//! given before the asks existed.
+//! stops where it does, so a seat answering with the first candidate (bots,
+//! `AutoDecider`) names exactly the engine's fill.
 
 use super::GameState;
 use crate::decision::Decision;
@@ -28,10 +27,8 @@ fn same_filter_fan_out(eff: &Effect) -> bool {
         | Effect::OneSearch { body }
         | Effect::CapTargetsAt { body, .. }
         // A reflexive trigger's body arrives wrapped in its carried scratch
-        // (`carry_into_reflexive`) for a prompting seat: Seasoned
-        // Cryomancer's "tap up to that many target creatures" after a
-        // two-card discard named one target in 81 of 81 bot resolutions
-        // (2026-11-23 FRA audit). `auto_extra_targets_for` peels it too.
+        // (`carry_into_reflexive`); unpeeled, Seasoned Cryomancer named one
+        // target (2026-11-23 FRA audit). `auto_extra_targets_for` peels too.
         | Effect::BindScratch { body, .. } => same_filter_fan_out(body),
         Effect::Seq(parts) => {
             let mut targeting = parts.iter().filter(|e| e.requires_target());

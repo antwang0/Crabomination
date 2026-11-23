@@ -1,12 +1,10 @@
 #![allow(clippy::doc_lazy_continuation)]
 #![allow(clippy::large_enum_variant)]
 
-// The foundational data model (card / mana / effect / static_str_serde /
-// TurnStep / token factories) now lives in `crabomination_base`, and the card
-// catalog in `crabomination_catalog`. Both are split out so that editing a
-// card or a card type doesn't recompile the game engine and the test suite.
-// Re-exported here under their original paths so the rest of the workspace
-// (and external consumers) keep using `crabomination::card`, `::mana`, etc.
+// The data model (card / mana / effect / static_str_serde / TurnStep / token
+// factories) lives in `crabomination_base` and the catalog in
+// `crabomination_catalog`, so card edits don't recompile the engine; both are
+// re-exported under their original paths (`crabomination::card`, ...).
 pub use crabomination_base::TurnStep;
 pub use crabomination_base::{card, effect, mana, static_str_serde, sticker};
 

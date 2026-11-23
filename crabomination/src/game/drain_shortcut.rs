@@ -5,14 +5,12 @@
 //! 22,562-life seat the cycles alone ran an eight-seat pod to the action cap
 //! (`--pod-decks 3901,5276,901,1843,4744,4931,1048,1498 --seed 1071172`).
 //!
-//! A trigger chain that outlives the exact watch's period arms this watch: it
-//! digests the state *without* life totals and records the life totals each
-//! time that digest comes back (a "return"). When the last `m` returns repeat
-//! the `m` before them — same resolutions apart, same life moved — the chain
-//! is a loop that only moves life, and the controller's proposal (CR 732.2a)
-//! is "repeat it until one cycle before a seat would reach 0". The last
-//! cycles play out for real, so the death, its SBA and every "when a player
-//! loses" trigger happen through the ordinary path.
+//! A trigger chain outliving the exact watch's period arms this one: it
+//! digests the state without life totals and records the totals at each
+//! digest repeat (a "return"). When the last `m` returns repeat the `m`
+//! before them, the chain only moves life, and the proposal (CR 732.2a) is
+//! "repeat until one cycle before a seat would reach 0". The final cycles
+//! play out for real, so the death and its triggers take the ordinary path.
 
 use super::GameState;
 

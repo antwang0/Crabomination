@@ -13,45 +13,27 @@ type AbilityProbe = (bool, Option<Effect>);
 /// A loyalty ability to probe: its effect when it targets, and whether it costs −X.
 type LoyaltyProbe = (Option<Effect>, bool);
 
-/// PERF `(-138)`: how many affordance probes ever write the resolution-scratch
-/// half of `GameState`.
+/// PERF `(-138)`: how many affordance probes write the resolution-scratch
+/// fields of `GameState` — the census behind the `CowBox<ResolutionScratch>`
+/// group (a probe that never writes the group clones it as one `Arc` bump).
 ///
-/// **The question the `CowBox<ResolutionScratch>` device turns on, and the
-/// build it needs before the refactor.** `GameState::clone` spends 1,175
-/// instructions on every one of its 22,558 `cube` calls, 91.5 % of its own
-/// self cost, and **101 of the struct's 194 fields** are `*_this_resolution` /
-/// `*_scratch` / `pending_*` / `resolving_*` / `sacrificed_*` — meaningful
-/// only inside a resolution, while a probe clones at priority. Grouping them
-/// behind a `CowBox` makes the clone one `Arc` bump *for a probe that never
-/// writes the group* and no cheaper than today for one that does. Nobody had
-/// counted which.
-///
-/// `SAME_ALL` is the population the whole group would serve; `SAME_COLL` is
-/// the population a narrower group of just the 29 collection fields would,
-/// which is the variant that costs the fewest `_mut` call sites.
+/// `SAME_ALL` counts probes the whole group would serve; `SAME_COLL` those a
+/// narrower group of only the collection fields would.
 ///
 /// ```text
 /// CRAB_SCRATCH_CENSUS=1 bot_ladder --a gang --b gang --games 6 --threads 1 \
 ///   --seed 1 --decks cube
 /// ```
 ///
-/// ⚠ **A census, not a gate.** The fingerprint is `{:?}` over the group, so it
-/// sees value changes a length check would miss — but the two `fxhash` maps
-/// and the `IdSet` are read by `len()` (their `Debug` order is not stable), so
-/// a probe that replaces a key without changing the count reads as unchanged.
-/// That biases the answer *towards* the device, which is the direction to
-/// distrust.
+/// ⚠ A census, not a gate. The hash maps and `IdSet` are fingerprinted by
+/// `len()` (unstable `Debug` order), so a same-count key swap reads as
+/// unchanged — a bias towards the device.
 ///
-/// ⚠⚠ **AND IT MEASURES THE WRONG QUANTITY — `(-143)` built the device and
-/// found out.** A `CowBox` group is priced by mutable *reaches*, not by value
-/// changes: `clear()` on an empty `Vec`, `mem::take` of one, `.take()` on a
-/// `None`, an assignment of an equal value all read as "never wrote the group"
-/// here and are all a deep copy through `Arc::make_mut`. The unguarded build
-/// read **437 k reaches on `fixed` against 10.7 k clones** and cost +2.15 %;
-/// the guards (`clear_scratch!` and friends) took that to 22.8 k and the pass
-/// to -1.37 %. The reach count for a *proposed* group is free off the existing
-/// binary — `cg_edges.py --callers make_mut` — and that is the number to take
-/// next time, not this one.
+/// ⚠ It also measures the wrong quantity (PERF `(-143)`): a `CowBox` group is
+/// priced by mutable reaches, not value changes. A `clear()` of an empty
+/// `Vec`, a `mem::take`, an equal store all read as "unchanged" here yet
+/// deep-copy through `Arc::make_mut`. Count reaches for a proposed group with
+/// `cg_edges.py --callers make_mut` instead.
 pub mod scratch_census {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
 
@@ -96,9 +78,7 @@ impl GameState {
             hasher.finish()
         }
         let mut s = String::with_capacity(4096);
-        // The three hash-ordered containers are read by length: their `Debug`
-        // order is not stable across runs, so hashing it would report change
-        // that is not there.
+        // Hash-ordered containers are read by length (unstable `Debug` order).
         let _ = write!(
             s,
             "{}|{}|{}|",
@@ -211,39 +191,19 @@ impl GameState {
         let _ = write!(s, "{:?}|", self.exile_resolving_spell_with_countdown);
         (h(&s), coll)
     }
-    /// Dry-run an action: clone the state, apply the action on the
-    /// clone, return whether the engine would accept it. The caller's
-    /// state is **not** modified. Used by the random bot to filter
-    /// out actions the engine would reject — it's the most robust
-    /// way to bottom out edge cases (Teferi sorcery-locking instants,
-    /// Damping Sphere mana tax, hexproof targets, stolen permanents,
-    /// summoning sickness, …) without re-implementing every engine
-    /// rule on the bot side.
-    ///
-    /// Cost: one full `GameState::clone` + one `perform_action`. The
-    /// random bot does this only on actions it's about to submit, so
-    /// the overhead is bounded by the number of bot ticks, not by
-    /// the size of the search space.
+    /// Dry-run an action on a clone and return whether the engine would
+    /// accept it; `self` is not modified. Lets bots filter illegal actions
+    /// without re-implementing every rule (Teferi, Damping Sphere, hexproof,
+    /// summoning sickness, …). Cost: one clone plus one `perform_action`.
     pub fn would_accept(&self, action: GameAction) -> bool {
-        // pending_decision routes through `submit_decision`, which
-        // both reads AND writes `self.pending_decision`. Cloning is
-        // safe but the dry-run can spuriously reject a legal answer
-        // because the cloned decider drops scripted state. For the
-        // bot's purposes — filtering out illegal `CastSpell` / land
-        // taps / attacks — the no-pending-decision path is what
-        // matters; if a decision is pending the bot uses
-        // `SubmitDecision` directly which doesn't go through here.
-        //
-        // `perform_action_inner`: the probe is discarded either way, so
-        // the transactional checkpoint would be pure waste here.
+        // Not for pending decisions: the cloned decider drops scripted state,
+        // so a legal answer can be spuriously rejected; bots submit those
+        // directly. No transactional checkpoint — the probe is discarded.
         self.accept(action).is_some()
     }
 
-    /// [`would_accept`](Self::would_accept) that hands back the state the
-    /// accepted action produced — the `&self` form of
-    /// [`accept_on`](Self::accept_on), and the same bargain: the probe *is*
-    /// the action, so a caller that owns its state can adopt this rather than
-    /// run the same action a second time.
+    /// [`would_accept`](Self::would_accept) returning the resulting state —
+    /// the `&self` form of [`accept_on`](Self::accept_on).
     pub(crate) fn accept(&self, action: GameAction) -> Option<GameState> {
         Self::accept_on(self, action)
     }
@@ -252,18 +212,11 @@ impl GameState {
     /// into a replay modal — cost pick, {X} pick, float-spend confirm —
     /// rather than completing.
     ///
-    /// Only applied to seats that can't be prompted (`!manual_mana`, i.e.
-    /// bots). For a hand-paying seat a suspend genuinely means "you can
-    /// begin casting this", which is what the client's castable-hand
-    /// highlight wants, so their answer is left exactly as it was.
-    ///
-    /// For a bot it is a lie with teeth: the bot reads `Ok`, commits a cast
-    /// it cannot pay for, answers the modal, and the failed replay is rolled
-    /// back with the decision restored — the deadlock that silently dropped
-    /// 14 % of cube games. Moving the individual cost modals to
-    /// `manual_mana` fixed the cases the evidence named; this closes the
-    /// class, so a modal that is added later (or one of the targeting
-    /// suspends still keyed on `wants_ui`) can't reopen it.
+    /// Applies only to bots (`!manual_mana`); for a hand-paying seat a
+    /// suspend really means "you can begin casting this". A bot that read
+    /// such an `Ok` committed an unpayable cast whose replay rolled back
+    /// forever — a deadlock that dropped 14 % of cube games. This closes the
+    /// whole class, including modals added later.
     fn suspended_without_completing(&self, probe: &GameState, acting: usize) -> bool {
         if self.players.get(acting).is_some_and(|p| p.manual_mana) {
             return false;
@@ -289,28 +242,21 @@ impl GameState {
             })
     }
 
-    /// A clone of `self` for use as a reusable dry-run *template* by the
-    /// from-hand affordance probes ([`would_accept_on`](Self::would_accept_on)).
+    /// A clone of `self` used as a reusable dry-run template by the
+    /// affordance probes ([`would_accept_on`](Self::would_accept_on)) and the
+    /// bot's candidate sweep (`server::bot`).
     ///
-    /// It used to empty every player's library first, back when a zone was a
-    /// plain `Vec` and the libraries were most of the clone's cost. They are
-    /// [`CowBox`](crate::cow::CowBox)es now: cloning one is a reference bump
-    /// whatever its length, so the strip bought nothing and *cost* a
-    /// `PlayerData` unshare per player per template (1.37 % of the profile).
-    /// A probe that never reaches resolution never touches a library either,
-    /// so the template now carries the real ones.
-    ///
-    /// `pub(crate)` so the bot's per-tick candidate sweep (`server::bot`)
-    /// shares the same one-template-many-light-probes pattern.
+    /// Libraries are kept: they are [`CowBox`](crate::cow::CowBox)es, so
+    /// stripping them (as an older version did) only cost a `PlayerData`
+    /// unshare per player.
     pub(crate) fn affordance_probe_template(&self) -> GameState {
         self.clone()
     }
 
     /// Dry-run `action` against a prebuilt [`affordance_probe_template`].
     /// Equivalent to [`would_accept`](Self::would_accept) for cast / activate
-    /// / play-land actions, and it is the form a sweep uses: the template is
-    /// built once and every probe clones *it* rather than re-deriving one per
-    /// candidate.
+    /// / play-land actions; a sweep builds the template once and clones it
+    /// per candidate.
     ///
     /// [`affordance_probe_template`]: Self::affordance_probe_template
     pub(crate) fn would_accept_on(template: &GameState, action: GameAction) -> bool {
@@ -320,21 +266,14 @@ impl GameState {
     /// [`would_accept_on`](Self::would_accept_on) that hands back the state the
     /// accepted action produced, instead of dropping it.
     ///
-    /// **The probe *is* the action.** It clones the template and runs the
-    /// action to completion, and the callers then ran the identical action a
-    /// second time on an identical state — which at the fiftieth pass's base
-    /// (`e7b3b3d4`) was 46,192 Ir a call and 15.9 % of the profile across all
-    /// of them. That is why this exists: a caller that owns its state adopts
-    /// the probe and pays for one execution rather than two, as the attack and
-    /// block simulations do on their own throwaway clone.
+    /// The probe runs the action to completion, so a caller that owns its
+    /// state adopts the result instead of running the action twice (the
+    /// second run was 15.9 % of the profile at the fiftieth pass).
     ///
-    /// The state returned is what [`perform_action`](Self::perform_action)
-    /// would have left behind: same `Clone` (so the same fresh-by-kind decider
-    /// and unfrozen `LayerFreeze` a checkpointed action's caller already sees),
-    /// same `perform_action_inner`, and the same trailing
-    /// `clear_stale_target_suppression`. What it does *not* carry is the
-    /// checkpoint, so only adopt it where a rejected action would have been
-    /// abandoned rather than restored.
+    /// The result is what [`perform_action`](Self::perform_action) would
+    /// leave (same clone, `perform_action_inner`, trailing
+    /// `clear_stale_target_suppression`) minus the checkpoint: adopt it only
+    /// where a rejected action would be abandoned, not restored.
     pub(crate) fn accept_on(template: &GameState, action: GameAction) -> Option<GameState> {
         crate::game::pay_census::in_probe(|| {
             let mut probe = template.clone();
@@ -344,14 +283,11 @@ impl GameState {
             let manual = template.players.get(acting).is_some_and(|p| p.manual_mana);
             let retry = manual.then(|| action.clone());
             let mut result = probe.perform_action_inner(action);
-            // CR 601.2g — a hand-paying seat's cast bounces with
-            // `ManualTapRequired` whenever more than one set of sources could
-            // pay: a suspension dressed as an `Err`, and one they can begin.
-            // Whether the sources can pay at all is the auto-tapper's call, so
-            // it runs again with the engine tapping. Reading the bounce as a
-            // refusal took the castable border (and every alt-cast set) off
-            // any card with two ways to pay — Grizzly Bears over two Forests
-            // and a Mountain.
+            // CR 601.2g — a hand-paying seat's cast returns `ManualTapRequired`
+            // when several source sets could pay: a suspension, not a refusal.
+            // Re-run with the engine tapping to learn whether it can pay at
+            // all (else Grizzly Bears over two Forests and a Mountain read
+            // uncastable).
             if let (Err(crate::game::GameError::ManualTapRequired { .. }), Some(action)) = (&result, retry) {
                 probe = template.clone();
                 probe.players[acting].manual_mana = false;
@@ -359,11 +295,9 @@ impl GameState {
                 probe.players[acting].manual_mana = true;
             }
             let mut ok = result.is_ok();
-            // An "up to N targets" cast suspends to ask for its next optional
-            // slot. A bot answers that prompt itself, and declining is always
-            // one of its answers, so the probe declines and reads the cast
-            // that results: Fireball, whose every extra target costs {1}
-            // more, was never accepted from a prompting seat.
+            // An "up to N targets" cast suspends for its next optional slot;
+            // declining is always legal, so the probe declines and reads the
+            // result (Fireball was otherwise never accepted for a bot).
             if ok
                 && !template.players.get(acting).is_some_and(|p| p.manual_mana)
                 && probe.pending_decision.as_ref().is_some_and(|pd| {
@@ -395,21 +329,13 @@ impl GameState {
     /// lands) **right now**. Drives the client's "castable" hand-card
     /// highlight.
     ///
-    /// Authoritative: every candidate is dry-run through [`would_accept`],
-    /// so the result already reflects timing (sorcery vs. instant speed,
-    /// remaining land drops), auto-tappable mana, cost taxes, and target
-    /// availability — exactly the gates the real cast would hit. Mirrors
-    /// the bot's candidate construction in `server::bot`. Modal spells
-    /// (`ChooseMode`) probe every mode until one accepts — probing only
-    /// the default mode hid Quandrix Charm from a player whose blocker
-    /// needed its third mode while modes 0/1 happened to lack targets
-    /// (recorded 2026-08-19, a lost game). X is still probed at 0 only,
-    /// so a card castable only at higher X may be omitted — acceptable
-    /// for a visual hint.
+    /// Authoritative: every candidate is dry-run through [`would_accept`]
+    /// (timing, land drops, mana, taxes, targets), mirroring the bot's
+    /// candidates in `server::bot`. Modal spells probe every mode until one
+    /// accepts (default-mode-only hid Quandrix Charm). X is probed at 0 only,
+    /// so an X-only-castable card may be omitted — fine for a hint.
     ///
-    /// Returns empty unless `caster` currently holds priority: you can't
-    /// cast without it, and short-circuiting skips the per-card state
-    /// clones on everyone else's priority, keeping view projection cheap.
+    /// Empty unless `caster` holds priority, which also skips the clones.
     ///
     /// [`would_accept`]: Self::would_accept
     pub fn castable_hand_cards(&self, caster: usize) -> Vec<CardId> {
@@ -419,10 +345,8 @@ impl GameState {
         self.castable_hand_cards_on(&self.affordance_probe_template(), caster)
     }
 
-    /// [`castable_hand_cards`] against a prebuilt probe template. The caller
-    /// is responsible for the priority short-circuit; this runs the per-card
-    /// dry-runs against `template` so a consolidated affordance sweep can
-    /// share one template across every category.
+    /// [`castable_hand_cards`] against a prebuilt probe template, so a sweep
+    /// shares one template; the caller owns the priority short-circuit.
     ///
     /// [`castable_hand_cards`]: Self::castable_hand_cards
     fn castable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
@@ -431,9 +355,7 @@ impl GameState {
 
     /// [`castable_hand_cards_on`](Self::castable_hand_cards_on), each card
     /// paired with the permanents the probe cast tapped or sacrificed to pay
-    /// for it: what the auto-tapper would spend, which the client highlights
-    /// on hover. The probe already ran the cast to completion; reading its
-    /// state costs one pass over the caster's permanents per castable card.
+    /// (the client highlights them on hover).
     pub(crate) fn castable_hand_cards_with_taps_on(
         &self,
         template: &GameState,
@@ -469,11 +391,8 @@ impl GameState {
                     n => (0..*n).map(Some).collect(),
                 };
                 modes.into_iter().find_map(|mode| {
-                    // Auto-pick targets the way the bot does so a targeted
-                    // removal spell isn't reported uncastable merely for lack
-                    // of a target argument. A spell that needs a target but has
-                    // no legal one stays `target: None`, which `would_accept`
-                    // correctly rejects (CR 601.2c).
+                    // Auto-pick targets as the bot does; with no legal target
+                    // `target: None` is correctly rejected (CR 601.2c).
                     let (target, additional_targets) = match targeted_effect {
                         Some(eff) => self.auto_targets_for_effect_all_slots(eff, caster, mode),
                         None => (None, Vec::new()),
@@ -509,15 +428,11 @@ impl GameState {
 
     /// CardIds of permanents `seat` controls with at least one **non-mana**
     /// activated ability they could activate **right now** — dry-run through
-    /// [`would_accept`] so timing, mana, tap state, and target availability
-    /// are all honored. Drives a client "this permanent can do something"
-    /// highlight (legal-plays hint, roadmap Tier 7/8) and the client's
-    /// priority-stop heuristic (don't auto-pass when the viewer has a real
-    /// instant-speed play). Empty off-priority.
+    /// [`would_accept`]. Drives the client's activatable highlight and its
+    /// priority-stop heuristic. Empty off-priority.
     ///
-    /// Pure mana abilities are intentionally excluded: they never use the
-    /// stack and are auto-tapped on demand during payment, so a lone mana
-    /// dork is not a reason to hold priority or stop step advancement.
+    /// Mana abilities are excluded: they don't use the stack and are
+    /// auto-tapped on demand, so a mana dork is no reason to hold priority.
     ///
     /// [`would_accept`]: Self::would_accept
     pub fn activatable_permanents(&self, seat: usize) -> Vec<CardId> {
@@ -537,13 +452,10 @@ impl GameState {
 
     /// `(permanent, ability index)` for each non-mana activated ability
     /// `seat` could activate right now, by the same dry run as
-    /// [`activatable_permanents`] — every ability with `every`, else only
-    /// the first of each permanent (all that one needs, and the probes are
-    /// the cost). The client's card inspector names which of a permanent's
-    /// abilities are live. Printed abilities first, then the ones statics
-    /// grant (Debtor's Pulpit, Urza's Saga's chapters) at the indices
-    /// `activate_ability` resolves them from — the printed ones alone left a
-    /// granted ability unhighlighted.
+    /// [`activatable_permanents`] — every ability with `every`, else only the
+    /// first per permanent (probes are the cost). Printed abilities first,
+    /// then static-granted ones (Debtor's Pulpit, Urza's Saga) at the indices
+    /// `activate_ability` resolves them from.
     ///
     /// [`activatable_permanents`]: Self::activatable_permanents
     fn activatable_abilities_on(&self, template: &GameState, seat: usize, every: bool) -> Vec<(CardId, usize)> {
@@ -610,10 +522,10 @@ impl GameState {
     /// `(planeswalker, loyalty ability index)` for each loyalty ability
     /// `seat` could activate right now — its main phase on an empty stack,
     /// an activation left this turn, the loyalty to pay (CR 606.3) — by the
-    /// same dry run: printed abilities and those statics grant
-    /// (`effective_loyalty_abilities`), a −X one probed at X = 0. Drives the
-    /// client's activatable outline and card inspector, which loyalty
-    /// abilities never reached (they aren't `activated_abilities`).
+    /// same dry run, over printed and granted abilities
+    /// (`effective_loyalty_abilities`); −X probed at X = 0. Feeds the
+    /// client's outline and inspector (loyalty abilities aren't
+    /// `activated_abilities`).
     fn activatable_loyalty_on(&self, template: &GameState, seat: usize) -> Vec<(CardId, usize)> {
         let walkers: Vec<(CardId, Vec<LoyaltyProbe>)> = self
             .battlefield
@@ -647,9 +559,7 @@ impl GameState {
 
     /// Creatures `seat` controls that could be declared as attackers right
     /// now — only meaningful during `seat`'s Declare Attackers step while it
-    /// holds priority. Drives the client's legal-attacker highlight
-    /// (roadmap Tier 8). Honors tapped / summoning-sickness / Defender /
-    /// CantAttack via `CardInstance::can_attack`.
+    /// holds priority. Drives the client's legal-attacker highlight.
     pub fn legal_attackers(&self, seat: usize) -> Vec<CardId> {
         if self.step != crate::TurnStep::DeclareAttackers
             || self.attack_declarer() != seat
@@ -697,9 +607,7 @@ impl GameState {
                     return false;
                 }
                 // CR 302.6 / 702.10 — haste by the computed keywords, as
-                // `declare_attackers` reads it: a layer-granted haste (Samut's
-                // "other creatures you control have haste") isn't on the
-                // instance, and the client greyed every such creature out.
+                // `declare_attackers` reads it (Samut's layer-granted haste).
                 if c.summoning_sick && !kws.contains(&Keyword::Haste) && !self.attack_as_though_haste(seat, None) {
                     return false;
                 }
@@ -819,8 +727,7 @@ impl GameState {
     /// Creatures `seat` controls that could legally block at least one of the
     /// currently-declared attackers — only meaningful during the Declare
     /// Blockers step with attackers on the board. Drives the client's
-    /// legal-blocker highlight (roadmap Tier 8). Uses
-    /// `can_block_any_computed_attacker` so flying / menace-style restrictions apply.
+    /// legal-blocker highlight.
     pub fn legal_blockers(&self, seat: usize) -> Vec<CardId> {
         if self.step != crate::TurnStep::DeclareBlockers
             || self.attacking().is_empty()
@@ -845,11 +752,9 @@ impl GameState {
     }
 
     /// Which of the declared attackers each of `seat`'s legal blockers may
-    /// actually block. `legal_blockers` only answers "can this creature block
-    /// *anything*", which reads as a lie on a board mixing flying, menace and
-    /// filtered restrictions; this pairs each blocker with its real set so the
-    /// client can grey out the illegal drops instead of letting the server
-    /// reject them. Empty outside the Declare Blockers step.
+    /// actually block (`legal_blockers` only answers "can block anything"),
+    /// so the client can grey out illegal drops. Empty outside Declare
+    /// Blockers.
     pub fn legal_block_targets(&self, seat: usize) -> Vec<(CardId, Vec<CardId>)> {
         let blockers = self.legal_blockers(seat);
         if blockers.is_empty() {
@@ -872,10 +777,8 @@ impl GameState {
     }
 
     /// Hand cards the viewer could cast *with their Kicker paid* right now
-    /// (CR 702.32) — computed via a `CastSpellKicked` dry-run so it accounts
-    /// for the full base+kicker cost, timing, and the kicked target set.
-    /// Lets the client surface a "pay kicker?" affordance on those cards.
-    /// Empty when the viewer doesn't hold priority.
+    /// (CR 702.32), by a `CastSpellKicked` dry-run. Feeds the client's "pay
+    /// kicker?" affordance. Empty off-priority.
     pub fn kickable_hand_cards(&self, caster: usize) -> Vec<CardId> {
         if self.player_with_priority() != caster {
             return Vec::new();
@@ -990,10 +893,9 @@ impl GameState {
     }
 
     /// CardIds in the caster's hand with a live Miracle window (CR 702.94) —
-    /// revealed as the turn's first draw, castable for the cheaper miracle
-    /// cost. A pure structural filter (no dry-run): the stamped
-    /// `granted_alt_cast_cost_eot` + `may_play_until` for this seat is the
-    /// signal `maybe_grant_miracle` leaves behind.
+    /// revealed as the turn's first draw. A structural filter, no dry-run:
+    /// reads the `granted_alt_cast_cost_eot` + `may_play_until` stamp
+    /// `maybe_grant_miracle` leaves.
     pub fn miracle_hand_cards(&self, caster: usize) -> Vec<CardId> {
         self.players[caster]
             .hand
@@ -1010,9 +912,8 @@ impl GameState {
 
     /// Hand cards a standing static lets `caster` cast without paying their
     /// mana cost right now — Omniscience, Aluren, Conspiracy Unraveler's
-    /// collect-evidence swap. Miracle and other per-card `may_play_until`
-    /// grants are reported by `miracle_hand_cards` instead, so this stays a
-    /// pure "the board makes this free" list.
+    /// collect-evidence swap. Per-card `may_play_until` grants (miracle) are
+    /// reported by `miracle_hand_cards` instead.
     fn free_castable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         let hand: Vec<(CardId, Option<Effect>)> = self.players[caster]
             .hand
@@ -1051,17 +952,10 @@ impl GameState {
     /// permission that they could play right now, via
     /// `GameAction::CastFromZoneWithoutPaying`.
     ///
-    /// `Effect::GrantMayPlay` stamps the permission on the card wherever it
-    /// sits — exile for Suspend Aggression's two exiled cards, a graveyard for
-    /// Practiced Scrollsmith's target — and the cast action honours it. But
-    /// nothing published the set, so no UI could offer the play: the exile
-    /// browser showed a "May play (you)" badge over a card with no way to
-    /// cast it. The hand-resident permissions (miracle, Omniscience) already
-    /// have their own lists; this one covers the rest.
-    ///
-    /// Same `would_accept` dry-run as every other affordance, so it is
-    /// priority-, timing- and cost-gated: a sorcery here is absent outside
-    /// your main phase, and a card you can't pay for is absent entirely.
+    /// `Effect::GrantMayPlay` stamps the permission wherever the card sits
+    /// (exile for Suspend Aggression, a graveyard for Practiced Scrollsmith);
+    /// this publishes that set so the UI can offer the play. Hand-resident
+    /// permissions have their own lists. Dry-run gated like every affordance.
     pub fn may_play_castable(&self, caster: usize) -> Vec<CardId> {
         if self.player_with_priority() != caster {
             return Vec::new();
@@ -1209,9 +1103,7 @@ impl GameState {
                 crate::effect::Effect::Spree { modes } | crate::effect::Effect::Tiered { modes }
                     if !modes.is_empty() =>
                 {
-                    // Probe the cheapest single mode (by total mana value) so a
-                    // castable-with-some-mode card is offered even when the
-                    // priciest mode is unaffordable.
+                    // Probe the cheapest single mode (by mana value).
                     let cheapest = modes
                         .iter()
                         .enumerate()
@@ -1548,16 +1440,12 @@ impl GameState {
         out
     }
 
-    /// Hand cards the player can activate a `from_hand` ability of right now
-    /// (Spirit-Guide-style "Exile this from your hand: Add mana"). Lets the
-    /// client surface a pitch affordance distinct from the castable-for-value
-    /// highlight. Empty when it isn't the player's priority.
+    /// Hand cards with a `from_hand` mana ability (Spirit Guides), for the
+    /// client's pitch affordance. Empty off-priority.
     ///
-    /// Mana abilities only: the client's one-click pitch submits the ability
-    /// with no target, so a targeted from-hand ability listed here (Sureshot
-    /// Sower's discard-to-destroy-a-flier) was a right-click the engine always
-    /// rejected. Those reach the client through `KnownCard.zone_abilities` and
-    /// `hand_activatable` instead.
+    /// Mana abilities only: the one-click pitch submits no target, so a
+    /// targeted from-hand ability would always be rejected; those go through
+    /// `KnownCard.zone_abilities` and `hand_activatable`.
     pub fn pitchable_hand_cards(&self, player: usize) -> Vec<CardId> {
         if self.player_with_priority() != player {
             return Vec::new();
@@ -1576,9 +1464,7 @@ impl GameState {
     }
 
     /// Hand cards the player could cast right now via their **Dash**
-    /// alternative cost (CR 702.110). Lets the client surface a dash
-    /// affordance distinct from the normal castable highlight. Empty when
-    /// it isn't the player's priority.
+    /// alternative cost (CR 702.110). Empty off-priority.
     pub fn dashable_hand_cards(&self, caster: usize) -> Vec<CardId> {
         if self.player_with_priority() != caster {
             return Vec::new();
@@ -1654,10 +1540,8 @@ impl GameState {
     }
 
     /// Cards in `caster`'s hand they could suspend right now (CR 702.62):
-    /// the card has `Keyword::Suspend` and the suspend action would be
-    /// accepted (cost affordable + timing legal). Surfaced in
-    /// `PlayerView.suspendable_hand` so the client can offer a "Suspend"
-    /// affordance.
+    /// `Keyword::Suspend` and the action would be accepted. Surfaced in
+    /// `PlayerView.suspendable_hand`.
     pub fn suspendable_hand_cards(&self, caster: usize) -> Vec<CardId> {
         if self.player_with_priority() != caster {
             return Vec::new();
@@ -1917,17 +1801,10 @@ impl GameState {
 
     /// Compute every from-hand affordance hint for `seat` in one pass.
     ///
-    /// The individual `*_hand_cards` / `activatable_permanents` methods each
-    /// build their own [`affordance_probe_template`] — fine when called in
-    /// isolation (tests, debug export), but the per-seat view projection
-    /// needs all of them on every accepted action. Building the template
-    /// once here and threading it through the `_on` variants collapses what
-    /// was eight independent full-`GameState` clones (plus the per-card
-    /// clones) into a single template clone reused across every category.
-    ///
-    /// Returns all-empty when `seat` doesn't hold priority — the same
-    /// short-circuit each individual method applies, hoisted so the template
-    /// (and the whole sweep) is skipped entirely off-priority.
+    /// The standalone `*_hand_cards` methods each build their own
+    /// [`affordance_probe_template`]; the per-seat view needs all of them on
+    /// every action, so this builds one template and threads it through the
+    /// `_on` variants. All-empty off-priority.
     ///
     /// [`affordance_probe_template`]: Self::affordance_probe_template
     pub fn compute_hand_affordances(&self, seat: usize) -> HandAffordances {
@@ -1993,10 +1870,9 @@ impl GameState {
 
     /// CR 903.8 — `seat`'s commanders that `CastFromCommandZone` (regular
     /// cost plus the {2}-per-prior-cast tax) would accept right now, with
-    /// targets auto-picked the way [`castable_hand_cards_on`] does. Only
-    /// the seat's own `commanders` are probed, so a conspiracy or Vanguard
-    /// sharing the command zone never reads as castable, and the sweep is
-    /// free outside Commander (the list is empty there).
+    /// targets auto-picked as in [`castable_hand_cards_on`]. Only the seat's
+    /// own `commanders` are probed (not a conspiracy or Vanguard), so it is
+    /// free outside Commander.
     ///
     /// [`castable_hand_cards_on`]: Self::castable_hand_cards_on
     fn castable_command_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
@@ -2036,12 +1912,9 @@ impl GameState {
 
     /// CR 702.47 — for each castable Arcane spell in hand, the Splice cards in
     /// hand whose quality matches and whose splice cost (mana plus any
-    /// `splice_extra_cost`) is payable on top. Dry-run-gated per candidate so
-    /// a splicer the seat can't afford alongside the host never shows up.
-    /// Hosts with no affordable splicer are omitted.
-    ///
-    /// `pub(crate)` so the bot can ask for *this* category alone against the
-    /// probe template it already built, instead of paying for the whole
+    /// `splice_extra_cost`) is payable on top, dry-run per candidate. Hosts
+    /// with no affordable splicer are omitted. `pub(crate)` so the bot can
+    /// ask for this category alone rather than the whole
     /// [`compute_hand_affordances`](Self::compute_hand_affordances) sweep.
     pub(crate) fn spliceable_hand_cards_on(
         &self,
@@ -2099,9 +1972,8 @@ impl GameState {
     }
 
     /// CR 702.160 — hand cards with a Prototype face castable for the
-    /// prototype cost right now. Auto-targets the body's effect (ETB
-    /// triggers, not a cast target — prototype creatures don't target on
-    /// cast), so cost payability and timing are what gate the report.
+    /// prototype cost right now (prototype creatures don't target on cast,
+    /// so cost and timing gate it).
     fn prototypable_hand_cards_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
         self.players[seat]
             .hand
@@ -2121,11 +1993,9 @@ impl GameState {
     }
 
     /// SOS Prepare — prepared creatures `seat` controls whose prepare spell
-    /// is castable right now. Dry-run-gated through `would_accept` so cost
-    /// payability and the spell's own timing (instant vs sorcery speed)
-    /// are both enforced. `cast_prepare_spell` auto-targets a `None`
-    /// target the way the bot does, so a targeted prepare spell with no
-    /// legal target is correctly reported uncastable.
+    /// is castable right now (dry-run gated). `cast_prepare_spell`
+    /// auto-targets a `None` target, so one with no legal target is
+    /// reported uncastable.
     fn prepare_castable_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
         use crate::card::CounterType;
         self.battlefield
@@ -2148,13 +2018,10 @@ impl GameState {
             .collect()
     }
 
-    /// MDFC cards whose back face is castable right now — from hand, plus any
-    /// in the graveyard carrying the one-shot `may_cast_back_from_graveyard`
-    /// permission (which no shipped card grants). The front-face
-    /// sweep (`castable_hand_cards_on`) never probes the back, so a
-    /// pathway-style card whose only affordable half is the back would
-    /// otherwise read as a dead card — no highlight, and `auto_advance`
-    /// would pass priority windows where it's a legal play.
+    /// MDFC cards whose back face is castable right now — from hand, plus
+    /// graveyard cards with `may_cast_back_from_graveyard` (no shipped card
+    /// grants it). The front-face sweep never probes the back, so without
+    /// this a back-only-affordable card reads dead and `auto_advance` passes.
     fn back_castable_hand_cards_on(&self, template: &GameState, seat: usize) -> Vec<CardId> {
         let from_hand = self.players[seat]
             .hand
@@ -2256,16 +2123,10 @@ impl GameState {
             .collect()
     }
 
-    /// Hand cards the seat owns that carry at least one `from_hand` activated
-    /// ability (Talon Gates' `{4}` put-into-play, Spirit Guides' pitch mana).
-    /// A pure structural filter — `activate_ability` re-checks cost/zone — so
-    /// it needs no probe clone.
-    /// Hand cards with a `from_hand` activated ability that is *currently*
-    /// usable — its once-per-turn slot is unspent (Forecast, CR 702.56) and its
-    /// printed "activate only …" `condition` (e.g. the upkeep timing gate)
-    /// holds now. Timing/budget-aware so the client doesn't highlight a Forecast
-    /// card outside its upkeep window or after it's been used; unconditional
-    /// pitch abilities (Spirit Guides) stay always-listed.
+    /// Hand cards with a `from_hand` activated ability usable now (Talon
+    /// Gates, Spirit Guides): its once-per-turn slot is unspent (Forecast,
+    /// CR 702.56) and its "activate only …" `condition` holds. A structural
+    /// filter, no probe clone — `activate_ability` re-checks cost and zone.
     fn hand_activatable_cards(&self, seat: usize) -> Vec<CardId> {
         self.players[seat]
             .hand
@@ -2304,12 +2165,9 @@ impl GameState {
     }
 
     /// Extra generic mana the caster owes on top of `card`'s printed
-    /// cost — Damping Sphere's "+1 after the first spell each turn,"
-    /// Chancellor of the Annex's first-spell tax, etc. Public so the
-    /// bot's affordability check can match the engine's payment path:
-    /// `can_afford` ignoring this tax causes the bot to repeatedly
-    /// submit a `CastSpell` that the engine then rejects with a mana
-    /// shortfall, which (in spectate mode) deadlocks the match.
+    /// cost (Damping Sphere, Chancellor of the Annex). Public so the bot's
+    /// affordability check matches the engine; ignoring it made the bot
+    /// resubmit a rejected cast forever (a spectate-mode deadlock).
     pub fn extra_cost_for_card_in_hand(&self, caster: usize, card_id: CardId) -> u32 {
         let Some(card) = self.players[caster]
             .hand
@@ -2323,10 +2181,7 @@ impl GameState {
 }
 
 /// True if `effect` is a pure mana ability (CR 605.1a) — it only adds mana
-/// and has no other rider. Such abilities don't use the stack and are
-/// auto-tapped on demand during cost payment, so the affordance probe
-/// excludes them from `activatable_permanents` (a mana dork is not an
-/// instant-speed "play" that should hold priority).
+/// and has no other rider. Excluded from `activatable_permanents`.
 fn is_mana_ability_effect(effect: &Effect) -> bool {
     match effect {
         Effect::AddMana { .. } => true,

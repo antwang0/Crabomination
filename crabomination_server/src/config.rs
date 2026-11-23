@@ -9,8 +9,7 @@ use crabomination::demo::{build_commander_state, build_demo_state};
 use crabomination::game::GameState;
 use crabomination::net::LobbyFormat;
 
-/// Format-builder enum that captures the environment configuration once at
-/// boot, so each match thread doesn't re-read env vars.
+/// Match format, read from the environment once at boot.
 #[derive(Debug, Clone, Copy)]
 pub(crate) enum Format {
     Demo,
@@ -24,9 +23,8 @@ impl Format {
         Self::parse(env::var("CRAB_FORMAT").ok().as_deref())
     }
 
-    /// Pure parser for `CRAB_FORMAT` (case-insensitive, whitespace-trimmed) so
-    /// `"Cube"`, `" commander "`, etc. all resolve. Unknown values warn and
-    /// fall back to demo. Split out from `from_env` for unit testing.
+    /// Pure parser for `CRAB_FORMAT` (case-insensitive, trimmed); unknown values
+    /// warn and fall back to demo.
     pub(crate) fn parse(raw: Option<&str>) -> Self {
         let value = raw.map(|s| s.trim().to_ascii_lowercase());
         match value.as_deref() {
@@ -44,10 +42,9 @@ impl Format {
             }
         }
     }
-    /// Decklist-override env keys that this format will silently ignore.
-    /// Only the demo format honors `CRAB_DECK` / `CRAB_BOT_DECK`; the cube /
-    /// SOS / commander formats build their own decks. Pure (takes the set of
-    /// present keys) so it's unit-testable without touching the environment.
+    /// Decklist-override env keys this format ignores: only demo honors
+    /// `CRAB_DECK` / `CRAB_BOT_DECK`. Takes the present keys, so it is testable
+    /// without the environment.
     pub(crate) fn ignored_override_keys<'a>(&self, set_keys: &[&'a str]) -> Vec<&'a str> {
         if matches!(self, Self::Demo) {
             return Vec::new();
@@ -59,8 +56,7 @@ impl Format {
     }
 
     pub(crate) fn build(&self) -> GameState {
-        // Warn (don't silently misconfigure) when deck overrides are set for a
-        // format that won't use them — mirrors `load_deck_env`'s philosophy.
+        // Warn when deck overrides are set for a format that won't use them.
         let present: Vec<&str> = ["CRAB_DECK", "CRAB_BOT_DECK"]
             .into_iter()
             .filter(|k| env::var(k).is_ok())
@@ -135,16 +131,14 @@ pub(crate) fn deck_overrides() -> &'static DeckOverrides {
     })
 }
 
-/// The deck-construction format `CRAB_DECK` / `CRAB_BOT_DECK` are validated
-/// against, from `CRAB_DECK_FORMAT`. Distinct from `CRAB_FORMAT`, which picks
-/// what kind of *match* the server runs.
+/// Construction format `CRAB_DECK` / `CRAB_BOT_DECK` are validated against
+/// (`CRAB_DECK_FORMAT`); `CRAB_FORMAT` instead picks the kind of match.
 pub(crate) fn deck_format_from_env() -> crabomination::format::Format {
     parse_deck_format(env::var("CRAB_DECK_FORMAT").ok().as_deref())
 }
 
-/// Pure parser for `CRAB_DECK_FORMAT` (case-insensitive, whitespace-trimmed).
-/// Unknown values warn and fall back to Modern, matching the historical
-/// hard-coded behaviour.
+/// Pure parser for `CRAB_DECK_FORMAT` (case-insensitive, trimmed); unknown
+/// values warn and fall back to Modern.
 pub(crate) fn parse_deck_format(raw: Option<&str>) -> crabomination::format::Format {
     use crabomination::format::Format as F;
     let value = raw.map(|s| s.trim().to_ascii_lowercase());
@@ -169,9 +163,9 @@ pub(crate) fn parse_deck_format(raw: Option<&str>) -> crabomination::format::For
     }
 }
 
-/// Read, parse, and validate the decklist at `$key` against
-/// `CRAB_DECK_FORMAT`. Exits the process on a bad list — a misconfigured
-/// server shouldn't serve the wrong deck silently.
+/// Read, parse and validate the decklist at `$key` against
+/// `CRAB_DECK_FORMAT`. Exits on a bad list rather than silently serve the
+/// wrong deck.
 pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFactory>> {
     let path = env::var(key).ok()?;
     let text = std::fs::read_to_string(&path).unwrap_or_else(|e| {
@@ -186,9 +180,9 @@ pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFa
         }
         std::process::exit(1);
     }
-    // CR 100.2a / 100.4a / 702.139c — main-deck legality, the sideboard size
-    // limit, the combined four-of count and the companion restriction all in
-    // one pass, so a bad list is rejected with every reason at once.
+    // CR 100.2a / 100.4a / 702.139c: main-deck legality, sideboard size,
+    // combined four-of count and companion restriction in one pass, so every
+    // reason is reported at once.
     let deck = crabomination::format::Deck {
         main: parsed.main.iter().map(|f| f()).collect(),
         commanders: Vec::new(),
@@ -210,13 +204,11 @@ pub(crate) fn load_deck_env(key: &str) -> Option<Vec<crabomination::cube::CardFa
     Some(parsed.main)
 }
 
-/// Default time the first client of a pair waits for an opponent before
-/// being dropped. Configurable via `CRAB_PAIRING_TIMEOUT_SECS`.
+/// Default wait for a pair's second client (`CRAB_PAIRING_TIMEOUT_SECS`).
 pub(crate) const DEFAULT_PAIRING_TIMEOUT: Duration = Duration::from_secs(300);
 
-/// Upper bound on `CRAB_PAIRING_TIMEOUT_SECS` (24h). A larger configured
-/// value is clamped to this — an effectively-unbounded wait would pin a
-/// connection slot indefinitely on a seat-0 client that never gets paired.
+/// Cap on `CRAB_PAIRING_TIMEOUT_SECS` (24 h); larger values clamp, since an
+/// unbounded wait would pin a slot for a seat 0 that never pairs.
 pub(crate) const MAX_PAIRING_TIMEOUT: Duration = Duration::from_secs(24 * 60 * 60);
 
 /// Default total concurrent connection slots. A pair match consumes 2.
@@ -225,20 +217,12 @@ pub(crate) const DEFAULT_MAX_CONNS: usize = 100;
 /// Default concurrent connection slots from any one remote IP.
 pub(crate) const DEFAULT_MAX_CONNS_PER_IP: usize = 5;
 
-/// Sane upper bound on connection-slot counts. A larger configured
-/// `CRAB_MAX_CONNS` / `CRAB_MAX_CONNS_PER_IP` is clamped down to this
-/// (mirroring [`MAX_PAIRING_TIMEOUT`]) so a typo like an extra zero can't try to
-/// reserve an absurd slot budget / file-descriptor count. 100k is far above any
-/// real deployment yet keeps the `Semaphore` permit count well-bounded.
+/// Cap on `CRAB_MAX_CONNS` / `CRAB_MAX_CONNS_PER_IP`; larger values clamp,
+/// so a typo can't reserve an absurd slot / file-descriptor budget.
 pub(crate) const MAX_CONNS_CAP: usize = 100_000;
 
-/// Parse a non-negative integer env var (e.g. connection caps). Falls back
-/// to `default` for missing, empty, or non-numeric values. `0` is preserved
-/// (callers treat 0 as "unlimited"). Surrounding whitespace is trimmed, matching
-/// `Format::parse` — so `CRAB_MAX_CONNS=" 50 "` reads as `50`, not the default.
-/// Pure core of [`usize_from_env_min`] — trims, then parses `raw`, falling back
-/// to `default` for `None`/empty/non-numeric input. Split out so the parsing and
-/// trimming behavior is unit-testable without touching the process environment.
+/// Trim and parse `raw` as a `usize`, falling back to `default` when it is
+/// missing, empty or non-numeric. `0` is kept (callers read it as unlimited).
 pub(crate) fn parse_usize_or(raw: Option<&str>, key: &str, default: usize) -> usize {
     match raw.map(str::trim) {
         None | Some("") => default,
@@ -254,12 +238,9 @@ pub(crate) fn parse_usize_or(raw: Option<&str>, key: &str, default: usize) -> us
     }
 }
 
-/// Read `key` as a `usize`, enforcing a minimum: values below `min` (most
-/// importantly `0`) are treated as a misconfig and fall back to `default`.
-/// Pass `min == 0` for "any non-negative value is fine". The floor-only reader
-/// behind the clamped connection-cap path — retained for the env-round-trip
-/// tests that exercise the floor without the ceiling (`usize_from_env_clamped`
-/// is the production entry point).
+/// Read `key` as a `usize` with a floor: values below `min` (notably 0) are
+/// a misconfig and fall back to `default`. Test-only; production uses
+/// `usize_from_env_clamped`.
 #[cfg(test)]
 pub(crate) fn usize_from_env_min(key: &str, default: usize, min: usize) -> usize {
     parse_usize_min(env::var(key).ok().as_deref(), key, default, min)
@@ -276,11 +257,8 @@ pub(crate) fn parse_usize_min(raw: Option<&str>, key: &str, default: usize, min:
     }
 }
 
-/// Read `key` as a `usize`, enforcing both a floor (`min`) and a ceiling
-/// (`max`). Below-floor values fall back to `default`; above-ceiling values are
-/// clamped down to `max` (with a warning) rather than reset — a too-large cap is
-/// still a usable cap, unlike a zero one. Pure core of
-/// [`usize_from_env_clamped`].
+/// `parse_usize_min` plus a ceiling: values above `max` are clamped (with
+/// a warning) rather than reset, since a too-large cap is still usable.
 pub(crate) fn parse_usize_clamped(
     raw: Option<&str>,
     key: &str,
@@ -302,17 +280,14 @@ pub(crate) fn usize_from_env_clamped(key: &str, default: usize, min: usize, max:
     parse_usize_clamped(env::var(key).ok().as_deref(), key, default, min, max)
 }
 
-/// Read `CRAB_PAIRING_TIMEOUT_SECS` from the environment. Falls back to
-/// `DEFAULT_PAIRING_TIMEOUT` for missing, empty, non-numeric, or zero values
-/// (zero would mean "drop seat 0 instantly", almost certainly a misconfig).
+/// Read `CRAB_PAIRING_TIMEOUT_SECS`; missing, empty, non-numeric or zero
+/// (which would drop seat 0 instantly) fall back to the default.
 pub(crate) fn pairing_timeout_from_env() -> Duration {
     parse_pairing_timeout(env::var("CRAB_PAIRING_TIMEOUT_SECS").ok().as_deref())
 }
 
-/// Pure core of [`pairing_timeout_from_env`]: trims, parses, zero-guards, and
-/// clamps to [`MAX_PAIRING_TIMEOUT`]. Split out (like `parse_usize_or` /
-/// `Format::parse`) so the whole ladder — default / zero / clamp / garbage — is
-/// unit-testable without touching the process environment.
+/// Pure core of [`pairing_timeout_from_env`]: trim, parse, zero-guard, and
+/// clamp to [`MAX_PAIRING_TIMEOUT`].
 pub(crate) fn parse_pairing_timeout(raw: Option<&str>) -> Duration {
     match raw.map(str::trim) {
         None | Some("") => DEFAULT_PAIRING_TIMEOUT,

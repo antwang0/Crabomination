@@ -1,16 +1,12 @@
-//! CR 104.4b — an optional activation loop the bot isn't winning ends with
-//! the bot. Peregrin Took + Nuka-Cola Vending Machine: "sacrifice three Foods:
-//! draw a card" pays for itself (each sacrificed Food mints a Treasure, and
-//! Peregrin adds a Food to every token batch), so a pod seat activated it
-//! until the board cap left the game undecided (seats 2006-2009 seed 41,
-//! seats 2138-2143 seed 37). Past `MAX_VOLUNTARY_ACTIVATIONS_PER_TURN`
-//! non-mana activations in one turn a Commander bot stops activating — the
-//! activation twin of the twelve-combat attack brake. Mana abilities stay
+//! CR 104.4b — an optional loop the bot isn't winning ends with the bot.
+//! Past `MAX_VOLUNTARY_ACTIVATIONS_PER_TURN` non-mana activations in one
+//! turn a Commander bot stops activating (the activation twin of the
+//! twelve-combat attack brake): Peregrin Took + Nuka-Cola Vending Machine's
+//! self-paying "sacrifice three Foods: draw a card" ran to the board cap
+//! (seats 2006-2009 seed 41). The same brake for casts: Inspired
+//! Skypainter's prepared copies doubled by Twinning Staff cast until each
+//! action took seconds (six-seat pod seed 1073858). Mana abilities stay
 //! free; two-player play is unchanged.
-//! The same brake for casts: Inspired Skypainter's prepared Maestro's Gift
-//! copying a Skypainter that enters prepared again, doubled by Twinning
-//! Staff, cast copies until each action took seconds (six-seat pod seed
-//! 1073858, decks 6054,2881,4375,3323,4191,834).
 
 use crate::game::GameState;
 use crate::game::types::GameAction;

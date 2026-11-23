@@ -1,12 +1,9 @@
 //! CR 601.2c / 700.2 — the target slots of a multi-mode cast
 //! (`GameAction::CastSpellSpree` on a `ChooseModesCast` /
 //! `ChooseModesByPoints` spell). Each chosen target-bearing mode takes the
-//! next slot, in printed order, which is how resolution binds them; the
-//! mode-agnostic slot lookup instead read slot N as "the first mode that
-//! surfaces a slot N", so every mode's own slot 0 collapsed onto mode 0's
-//! filter. Dromoka's Command's "target player sacrifices an enchantment" +
-//! "+1/+1 counter on target creature" was refused because the player was
-//! checked against mode 0's "instant or sorcery spell".
+//! next slot in printed order, as resolution binds them. A mode-agnostic
+//! lookup collapsed every mode's slot 0 onto mode 0's filter (Dromoka's
+//! Command's player target was checked as "instant or sorcery spell").
 
 use crate::card::SelectionRequirement;
 use crate::effect::Effect;

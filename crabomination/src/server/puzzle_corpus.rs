@@ -1,19 +1,14 @@
 //! The puzzle corpus: candidate positions, and the criterion that decides
 //! which of them are worth keeping.
 //!
-//! A candidate earns a place only if it is **solvable and not trivial** —
-//! [`puzzle::solve`] finds a line, and [`puzzle::solved_by_default`] says
-//! the heuristic does not already stumble into it. Both halves are
-//! machine-checked (`certify`), so authoring a puzzle is proposing a
-//! position rather than asserting an answer, and a position that turns
-//! out to be easy is demoted by the certifier instead of by argument.
-//!
-//! This matters more than it sounds. Hand-authored benchmark items drift
-//! toward what the author already believes the bot is bad at. Certifying
-//! against the live heuristic means the corpus tracks the *current*
-//! weaknesses, and a puzzle silently becoming trivial (because the bot
-//! improved) shows up as a tier change rather than as a test that still
-//! passes for the wrong reason.
+//! A candidate is kept only if it is **solvable and not trivial**:
+//! [`puzzle::solve`] finds a line and [`puzzle::solved_by_default`] says the
+//! heuristic doesn't already stumble into it. Both are machine-checked
+//! (`certify`), so authoring is proposing a position, not asserting an
+//! answer. Certifying against the live heuristic keeps the corpus on the
+//! *current* weaknesses (hand-authored items drift toward the author's
+//! beliefs), and a puzzle that becomes trivial as the bot improves shows up
+//! as a tier change rather than a test passing for the wrong reason.
 
 use crate::card::{CardDefinition, CardType};
 use crate::effect::{Effect, Selector, Value};
@@ -315,36 +310,26 @@ fn two_spells_one_budget() -> GameState {
 
 // ── Batch two: outside the sims' horizon ───────────────────────────────
 //
-// Batch one certified 0/7, and the reason is structural rather than bad
-// authoring: every one of those goals was scoped to the current turn,
-// which is exactly the window the heuristic's combat sims already search
-// with exact damage math. To pose a question the sims cannot answer, the
-// punishment has to land on a *later* turn. These use the multi-turn
-// goals for that.
+// Batch one certified 0/7 for a structural reason: every goal was scoped to
+// the current turn, the window the combat sims already search with exact
+// damage math. These use the multi-turn goals so the punishment lands on a
+// *later* turn.
 
-/// The documented weakness, posed as a puzzle. `bot_probe` measured the
-/// bot declaring every eligible creature as an attacker in 73 % of its
-/// combats, and 41 % of its creatures tapped when blocks are declared as
-/// a direct result. Here that is fatal: two 2/2s against an opponent at
-/// 12 (unkillable this turn) who unlocks a 6-power crack-back, with the
-/// seat at 3 life. Attacking with either creature leaves at most one
-/// blocker, so 3 damage gets through and kills; holding both back blocks
-/// the swing out entirely. No single-turn goal can express this --
-/// attacking is strictly better *this* turn.
-///
-/// The life total is load-bearing and was wrong first time round: at 4
-/// life the seat attacked, took 3, and survived at 1, so the position
-/// certified trivial while looking like it posed the question.
+/// The documented weakness as a puzzle: `bot_probe` measured the bot
+/// attacking with every eligible creature in 73 % of combats. Two 2/2s, the
+/// seat at 3, against an opponent at 12 (unkillable this turn) with a
+/// 6-power crack-back: attacking with either leaves at most one blocker and
+/// 3 damage kills; holding both back blocks the swing out. Attacking is
+/// strictly better *this* turn, so no single-turn goal can express it. The
+/// life total is load-bearing (at 4 the seat survived at 1 and it
+/// certified trivial).
 ///
 /// **Open: this certifies UNSOLVABLE and it should not.** Declining the
-/// attack and blocking both 3/3s with the two 2/2s takes zero damage, so
-/// a survival line plainly exists, and the root enumeration is verified
-/// correct (all four attack subsets plus the pass). The solver does not
-/// find it, which means something between declining the attack and the
-/// block window is swallowing the seat's decision. Kept in the candidate
-/// list deliberately: it is the only position currently exercising the
-/// multi-turn path, and demoting it to make the report tidy would hide
-/// a solver bug behind an authoring decision.
+/// attack and blocking both 3/3s takes zero damage, and the root
+/// enumeration is verified correct (four attack subsets plus the pass), so
+/// something between declining the attack and the block window swallows
+/// the seat's decision. Kept deliberately: it is the only position
+/// exercising the multi-turn path, and demoting it would hide a solver bug.
 fn hold_back_the_blockers() -> GameState {
     let mut g = two_player_game();
     stock_libraries(&mut g);
@@ -377,18 +362,10 @@ fn attack_freely_control() -> GameState {
 }
 
 /// Which threat the removal answers. The seat is at 3 with no blockers;
-/// the opponent has a 2/2 and a 3/3, both able to swing next turn for a
-/// lethal five. One burn spell for 3.
-///
-/// Killing the 2/2 -- available right now, and the play the
-/// material-positive instinct reaches for -- leaves 3 power and is
-/// exactly lethal. Killing the 3/3 leaves 2 and survives at 1. The whole
-/// puzzle is which body the burn is spent on, and the punishment lands
-/// on the opponent's turn, outside the one-turn sims.
-///
-/// First version of this position described a lethal 6/6 in its comment
-/// and never put one on the battlefield, so nothing threatened the seat
-/// at all and it certified trivial for the most boring possible reason.
+/// the opponent has a 2/2 and a 3/3, a lethal five next turn. One burn
+/// spell for 3: killing the 2/2 (the material instinct) leaves exactly
+/// lethal, killing the 3/3 survives at 1. The punishment lands on the
+/// opponent's turn, outside the one-turn sims.
 fn save_the_removal() -> GameState {
     let mut g = two_player_game();
     stock_libraries(&mut g);
@@ -508,17 +485,12 @@ mod tests {
         }
     }
 
-    /// The certifier has to actually discriminate, and right now its
-    /// verdict on this batch is that **none** of them is a puzzle: the
-    /// heuristic solves six unaided and the seventh is solved by a bare
-    /// priority pass. That is the honest state of the corpus and it is
-    /// asserted rather than papered over — a benchmark whose items the
-    /// bot already passes measures nothing, and the failure mode to
-    /// guard against is quietly keeping them anyway.
-    ///
-    /// What must hold regardless of how the corpus grows: every
-    /// candidate is a *solvable* position (an unsolvable one is a broken
-    /// item, not a hard one), and the trivial verdict is exactly depth 0.
+    /// The certifier has to actually discriminate, and its verdict on this
+    /// batch is that **none** is a puzzle (six solved unaided, the seventh
+    /// by a bare priority pass). Asserted rather than papered over: a
+    /// benchmark whose items the bot already passes measures nothing. What
+    /// must hold however the corpus grows: every candidate is *solvable*
+    /// (an unsolvable one is broken, not hard) and trivial is exactly depth 0.
     #[test]
     fn certification_is_consistent_and_reports_broken_positions() {
         // Candidates known to certify unsolvable, with the reason. This
@@ -561,12 +533,9 @@ mod tests {
 mod diagnose {
     use super::*;
 
-    /// Not a test of behaviour — a probe that prints what the autopilot
-    /// actually does with a candidate, so a "trivial" verdict can be
-    /// attributed to the bot playing well rather than to the position
-    /// failing to pose the question.
-    /// Force the intended solution line for the hold-back puzzle and
-    /// report what the engine actually does with it.
+    /// Not a behaviour test: forces the intended solution line for the
+    /// hold-back puzzle and prints what the engine does with it, so a verdict
+    /// can be attributed to the bot or to the position.
     #[test]
     #[ignore = "diagnostic"]
     fn probe_hold_back() {

@@ -1,16 +1,13 @@
-//! A card-selection mana sink — "scry N", "surveil N", "draw a card, then
-//! discard a card" on the bot's own permanent (Castle Vantress, the Strixhaven
-//! Campuses, Desolate Lighthouse, Nivix Guildmage, Sensei's Divining Top's
-//! rearrange, Mazemind Tome's page-counter scry) — never beat passing in
-//! the outcome score, which can't see library order, so a 6-seat
-//! `--card-census` (seed 206001) never activated one. The bot now spends
-//! leftover mana on one at an opponent's end step, after cycling. Commander
-//! games only, so two-player play is unchanged.
+//! Card-selection and cash-in sinks the outcome score never preferred to
+//! passing (it can't see library order). Commander games only, so two-player
+//! play is unchanged.
 //!
-//! A mana rock's "sacrifice this: draw N" (the Cluestones, Lockets,
-//! Dreamstone Hedron, Mnemonic Sphere) scored below keeping the rock, so a
-//! 6-seat census (seed 1270001) never cashed one in. Once the seat has six
-//! lands, an opponent's end step with the mana spare now cashes it in.
+//! - "Scry N", "surveil N", "draw, then discard" on the bot's own permanent
+//!   (Castle Vantress, the Strixhaven Campuses, Sensei's Divining Top,
+//!   Mazemind Tome): leftover mana at an opponent's end step, after cycling.
+//! - A mana rock's "sacrifice this: draw N" (Cluestones, Lockets, Mnemonic
+//!   Sphere), which scored below keeping the rock: cashed in at an
+//!   opponent's end step with mana spare, once the seat has six lands.
 
 use crate::effect::{Effect, PlayerRef, Selector};
 use crate::game::GameState;

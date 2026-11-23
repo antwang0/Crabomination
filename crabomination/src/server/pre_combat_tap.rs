@@ -1,15 +1,13 @@
 //! Tapping a would-be attacker before it attacks — Azorius Guildmage's
-//! "{2}{W}: tap target creature", Air Servant's flyer tap, Shacklegeist,
-//! Dawnglare Invoker's "tap all creatures target player controls". A 6-seat
-//! census (seed 1270001) never activated one: the main-phase enumeration
-//! scores a tapped creature at nothing, and no path looked at an opponent's
-//! beginning of combat (CR 507), the last window before attackers are
-//! declared. A pod bot now taps the active player's biggest untapped
-//! creature there (or all of them, for a player-targeted tap) when its power
-//! is at least `MIN_POWER`; a lock-down tap (Ice Floe, Sand Squid —
-//! `TapAndUntapLock`) also takes the biggest creature attacking it once
-//! attackers are declared. Commander games only, so two-player play is
-//! unchanged.
+//! "{2}{W}: tap target creature", Air Servant, Dawnglare Invoker's "tap all
+//! creatures target player controls". The main-phase enumeration scores a
+//! tapped creature at nothing and no path looked at an opponent's beginning
+//! of combat (CR 507), the last window before attackers. A pod bot taps the
+//! active player's biggest untapped creature there (or all of them, for a
+//! player-targeted tap) when its power is at least `MIN_POWER`; a lock-down
+//! tap (Ice Floe — `TapAndUntapLock`) also takes the biggest creature
+//! attacking it once attackers are declared. Commander games only, so
+//! two-player play is unchanged.
 
 use crate::card::CardId;
 use crate::effect::{Effect, PlayerRef, Selector};

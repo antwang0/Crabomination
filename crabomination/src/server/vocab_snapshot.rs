@@ -1,57 +1,42 @@
 //! Frozen embedding-index assignment for [`super::encode::Vocab`].
 //!
-//! **Why this file exists.** `Vocab::sos_sealed()` used to derive its
-//! indices from `draft::sos_draft_pool()` directly, in sorted-name order —
-//! so adding one card to the SOS set shifted the index of every card that
-//! sorts after it, and *every net trained before that addition became
-//! wrong*. It failed loudly (the embedding row count no longer matched) for
-//! the play net and silently for nothing, which is the only mercy in it:
-//! all seven committed `deck-latest.safetensors` are 153 rows against a
-//! live vocabulary of 164 and none of them can be loaded.
+//! Indices used to be `draft::sos_draft_pool()`'s sorted-name order, so one
+//! added card shifted every later index and made every earlier net wrong
+//! (all seven committed `deck-latest.safetensors` died of it: 153 rows
+//! against 164).
 //!
-//! **The contract now.** A name in [`VOCAB_SNAPSHOT`] owns index
-//! `position + 1`, forever, whether or not it is still in the pool. A pool
-//! name that is not in the snapshot is appended after it, in sorted order.
-//! So a card addition — or a removal — grows the table at the end and never
-//! moves an index a trained net depends on, and a net trained against a
-//! smaller vocabulary can be zero-padded up to the current one instead of
-//! being retired.
+//! **The contract.** A name in [`VOCAB_SNAPSHOT`] owns index `position + 1`
+//! forever, whether or not it is still in the pool; a pool name outside the
+//! snapshot is appended after it in sorted order. The table only grows at
+//! the end, so a net trained on a smaller vocabulary is zero-padded instead
+//! of retired.
 //!
-//! **Do not reorder, remove, or edit an entry. Appending is the only safe
-//! edit, and it is required, not tidying.** A pool card outside the
-//! snapshot assigns itself an index so the build keeps working, but that
-//! index is provisional: it comes from sorted order over the *unsnapshotted*
-//! names, so a second card addition reshuffles it and reintroduces exactly
-//! the defect this file closes, one generation later. Two additions is all
-//! it takes. `encode`'s `vocab_covers_the_sos_pool` fails while any pool
-//! name is unsnapshotted and prints the names to append — at the end of the
-//! array, in the order `Vocab::sos_sealed()` gives them.
+//! ⚠ **Do not reorder, remove, or edit an entry. Appending is the only safe
+//! edit, and it is required, not tidying.** An unsnapshotted pool card's
+//! self-assigned index comes from sorted order over the *unsnapshotted*
+//! names, so a second addition reshuffles it and reintroduces the defect.
+//! `encode`'s `vocab_covers_the_sos_pool` fails while any pool name is
+//! unsnapshotted and prints the names to append, at the end, in the order
+//! `Vocab::sos_sealed()` gives them.
 //!
-//! Seeded 2026-08-24 from the then-current `Vocab::sos_sealed()`, which was
-//! the sorted pool plus the five basics — so the seed *is* the mapping that
-//! existed before this file, and `nets/champion.safetensors` (164 rows) is
-//! unaffected by its introduction.
-//!
-//! **Appended 2026-08-30: the modern cube pool** (`cube::cube_pool_all`,
-//! ~2,100 names) — the modern-pool track's first precondition, so a net
-//! can tell Lightning Bolt from Emrakul before those decks ever enter a
-//! training pool. Everything after "Zimone's Experiment" is that append;
-//! [`FROZEN_VOCAB_SIZE`] stays pinned at the 2026-08-24 boundary so every
-//! net trained since the freeze still pads. Two coverage tests now hold
-//! the pools to this file (`vocab_covers_the_sos_pool`,
-//! `vocab_covers_the_cube_pool`), and `the_freeze_boundary_is_pinned`
-//! holds the boundary itself.
-//!
-//! **Appended 2026-10-23: the Reality Fracture sheet** (`fra_mode::FRA_SHEET`,
-//! the FRA names not already frozen, sorted) — so a net trained on FRA
-//! sealed (`CRAB_SEALED_SET=fra`) gets its own rows; `vocab_covers_the_fra_pool`
-//! holds the sheet to this file.
+//! History of the array:
+//! - Seeded 2026-08-24 from the then-current `Vocab::sos_sealed()` (sorted
+//!   pool plus the five basics), so `nets/champion.safetensors` (164 rows)
+//!   was unaffected.
+//! - Appended 2026-08-30: the modern cube pool (`cube::cube_pool_all`, every
+//!   name after "Zimone's Experiment"). [`FROZEN_VOCAB_SIZE`] stays pinned at
+//!   the 2026-08-24 boundary so every net trained since still pads.
+//!   `vocab_covers_the_cube_pool` and `the_freeze_boundary_is_pinned` hold
+//!   the pool and the boundary.
+//! - Appended 2026-10-23: the Reality Fracture sheet (`fra_mode::FRA_SHEET`,
+//!   the FRA names not already frozen, sorted), for nets trained on FRA
+//!   sealed (`CRAB_SEALED_SET=fra`); held by `vocab_covers_the_fra_pool`.
 
 /// The names whose embedding indices are frozen. Index 0 is the reserved
 /// unknown slot, so this list starts at index 1.
 ///
-/// `static`, not `const`: every use is a runtime `iter()`, and a `const` of
-/// 2,272 fat pointers is materialized at each of them (`clippy::
+/// `static`, not `const`: every use is a runtime `iter()`, and a `const` array
+/// of fat pointers is materialized at each of them (`clippy::
 /// large_const_arrays`).
 pub static VOCAB_SNAPSHOT: [&str; 2549] = [
     "Additive Evolution",
@@ -2608,26 +2593,20 @@ pub static VOCAB_SNAPSHOT: [&str; 2549] = [
     "Yuriko, Hope from the Shadows",
 ];
 
-/// The vocabulary size at which indices were frozen — the 163 seed names
+/// The vocabulary size at which indices were frozen: the 163 seed names
 /// (2026-08-24, through "Zimone's Experiment") plus the reserved unknown
 /// slot at 0.
 ///
-/// **A literal, deliberately not `VOCAB_SNAPSHOT.len() + 1`.** The
-/// snapshot grows by appending — the modern cube pool landed 2026-08-30 —
-/// and a floor derived from the array's length would jump with every
-/// append and refuse every net trained since the freeze as "pre-freeze",
-/// `nets/champion.safetensors` (164 rows) first among them. The floor
-/// marks the freeze *date*, not the current size: everything after
-/// position 162 only ever grew the table's tail, which is exactly the
-/// part padding recovers.
+/// ⚠ A literal, deliberately not `VOCAB_SNAPSHOT.len() + 1`: the snapshot
+/// grows by appending, and a floor derived from its length would refuse
+/// every net trained since the freeze as "pre-freeze". The floor marks the
+/// freeze *date*; everything after position 162 only grew the tail, which
+/// padding recovers.
 ///
-/// **A net trained at any size *below* this floor predates the freeze and
-/// cannot be padded**, only retrained. Its indices came from the sorted
-/// pool of its own day, and eleven cards were inserted mid-order before
-/// this snapshot was taken, so nothing can say which card each of its
-/// rows meant. Padding one would load cleanly and mean the wrong cards,
-/// which is strictly worse than the loud failure it replaced. See
-/// [`vocab_fit`].
+/// A net trained *below* this floor predates the freeze and cannot be
+/// padded, only retrained: its indices came from its own day's sorted pool
+/// (eleven cards were inserted mid-order before the snapshot), so padding
+/// would load cleanly and mean the wrong cards. See [`vocab_fit`].
 pub const FROZEN_VOCAB_SIZE: usize = 164;
 
 // The floor can never exceed the table it is a boundary into.

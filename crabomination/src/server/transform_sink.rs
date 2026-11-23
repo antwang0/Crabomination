@@ -87,10 +87,9 @@ pub(super) fn pick_creature_upgrade_transform(state: &GameState, seat: usize) ->
 
 /// Pods: a noncreature's craft — "with one of each" (CR 702.167a — Throne of
 /// the Grim Captain) or "with N [filter]" — into a creature back face, when
-/// the board pieces the
-/// craft would exile are worth less than that creature (graveyard cards are
-/// free). A 40-game census of the three Throne seats never saw it crafted:
-/// no sink asked for a noncreature's exile-and-return. Commander games
+/// the board pieces it would exile are worth less than that creature
+/// (graveyard cards are free). No sink asked for a noncreature's
+/// exile-and-return, so a census never saw one crafted. Commander games
 /// only, so two-player play is unchanged.
 pub(super) fn pick_craft_into_creature(state: &GameState, seat: usize) -> Option<GameAction> {
     if state.players[seat].commanders.is_empty() {

@@ -27,19 +27,17 @@
 //! 1x Atraxa, Praetors' Voice (C16) 28 [Commander{top}]   Archidekt category
 //! ```
 //!
-//! A blank line ends a Commander section and returns to the maindeck (Arena's
-//! `Commander` / card / blank / `Deck` export shape). Other trailing export
-//! markers — Moxfield's `*F*`, Archidekt's `[Category]` and `^Tag^` — are
-//! stripped, and a Maybeboard / Considering / Tokens section is skipped.
-//! MTGO's convention (the commander is the sideboard) is recognised by
-//! [`DecklistParse::commander_list`], which is also where a Commander import
-//! is validated. Unresolvable names are reported rather than dropped
-//! silently, so an import UI can show exactly what's missing from the catalog.
+//! A blank line ends a Commander section (Arena's `Commander` / card / blank /
+//! `Deck` shape). Other export markers — Moxfield's `*F*`, Archidekt's
+//! `[Category]` and `^Tag^` — are stripped; Maybeboard / Considering / Tokens
+//! sections are skipped. MTGO's commander-is-the-sideboard convention is
+//! handled (and a Commander import validated) by
+//! [`DecklistParse::commander_list`]. Unresolvable names are reported, not
+//! dropped, so an import UI can show what's missing.
 //!
-//! Names match without regard to case, accents and ligatures, or typographic
-//! quotes and dashes ([`fold_name`]: "Lim-Dul", "Juzam Djinn", a curly
-//! apostrophe pasted from a web page), and an unknown name carries the
-//! catalog names it most likely meant ([`UnknownCard::suggestions`]).
+//! Names match ignoring case, accents, ligatures and typographic quotes and
+//! dashes ([`fold_name`]: "Lim-Dul", a pasted curly apostrophe); an unknown
+//! name carries likely matches ([`UnknownCard::suggestions`]).
 
 use std::fmt;
 use std::sync::OnceLock;
@@ -105,16 +103,15 @@ pub struct CommanderList {
 
 impl DecklistParse {
     /// Read this list as a Commander deck and validate it with
-    /// [`crate::format::validate_commander_deck`]: legal commander(s), a valid
-    /// pair (CR 702.124), 100 cards singleton counting the commanders
-    /// (CR 903.5a/b), and every card inside the combined colour identity
-    /// (CR 903.5c). `Err` carries readable messages, commander errors first.
+    /// [`crate::format::validate_commander_deck`] (legal commander(s), valid
+    /// pair CR 702.124, 100-card singleton incl. commanders CR 903.5a/b,
+    /// colour identity CR 903.5c). `Err` carries readable messages, commander
+    /// errors first.
     ///
-    /// With no Commander section, MTGO's export convention is honoured: a
-    /// sideboard of one or two legendary cards *is* the command zone. Anything
-    /// else without one is refused — guessing which legend leads a 100-card
-    /// pile is not the importer's call. Unknown names are the caller's to
-    /// report; this reads only the cards that resolved.
+    /// Without a Commander section, a sideboard of one or two legendary cards
+    /// is the command zone (MTGO); anything else is refused rather than
+    /// guessing the leader. Only resolved cards are read; unknown names are
+    /// the caller's to report.
     pub fn commander_list(&self) -> Result<CommanderList, Vec<String>> {
         let mut commanders = self.commanders.clone();
         let mut main = self.main.clone();
@@ -455,12 +452,10 @@ pub fn parse_decklist(text: &str) -> DecklistParse {
             continue;
         }
         seen_cards = true;
-        // `Front // Back` is how Arena and MTGO export split, modal
-        // double-faced, and (here) prepare cards, and it is what a
-        // human copying a card's printed name writes. The catalog keys
-        // those cards by their front face alone, so try the full string
-        // first — a card genuinely *named* with a slash still wins —
-        // then fall back to the part before the separator.
+        // `Front // Back` is how exports and humans write split, MDFC and
+        // prepare cards; the catalog keys them by front face. Try the full
+        // string first (a card truly named with a slash wins), then the part
+        // before the separator.
         let name: &str = match by_key.contains_key(&fold_name(name)) {
             true => name,
             false => match name.split_once("//") {
@@ -613,12 +608,10 @@ SB: 1 Grizzly Bears
         assert_eq!(fold_name("\u{c6}ther Vial"), "aether vial");
     }
 
-    /// `Front // Back` — how Arena/MTGO export split, MDFC and prepare
-    /// cards, and what a human writes when copying the printed name.
-    /// The catalog keys prepare cards by their front face, so a
-    /// hand-built sealed list full of `Studious First-Year // Rampant
-    /// Growth` lines used to resolve to *nothing*, drop under 40 cards,
-    /// and silently hand the seat a generated deck.
+    /// `Front // Back` lines (Arena/MTGO split, MDFC and prepare cards)
+    /// resolve by front face. A sealed list of `Studious First-Year //
+    /// Rampant Growth` lines once resolved to nothing and silently got a
+    /// generated deck.
     #[test]
     fn split_and_prepare_names_resolve_to_their_front_face() {
         let parsed = parse_decklist(

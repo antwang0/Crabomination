@@ -45,19 +45,15 @@ pub enum CardType {
     Phenomenon,
 }
 
-/// A set of [`CardType`]s as a bitmask — fourteen variants, one `u16`.
+/// A set of [`CardType`]s as a bitmask (one `u16`), so a struct carrying a
+/// card's types can be `Copy`: `CastProfile` used to keep a `Vec<CardType>` in
+/// the hot player group, allocating per cast and cloning on every unshare. PERF
+/// `(-150)`.
 ///
-/// It exists so a struct that carries a card's types can be `Copy`.
-/// [`crate::…`-side `CastProfile`] kept its types as a `Vec<CardType>` inside
-/// the **hot** player group, so every cast allocated one and every
-/// `PlayerData` unshare cloned every profile's buffer. A mask makes the
-/// profile four bytes and the whole per-turn list a `memcpy`. PERF `(-150)`.
-///
-/// ⚠ **The wire shape is a sequence of `CardType`**, not a number: this type
-/// replaced a `Vec<CardType>` in a serialized struct, and the hand-written
-/// `Serialize`/`Deserialize` below keep old snapshots readable. Iteration is
-/// in declaration order, which is the order a `Vec` built from a definition's
-/// `card_types` already had.
+/// ⚠ The wire shape is a sequence of `CardType`, not a number: the hand-written
+/// `Serialize`/`Deserialize` keep snapshots from the old `Vec` readable.
+/// Iteration is in declaration order (the order a definition's `card_types`
+/// already had).
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct CardTypeSet(u16);
 
@@ -778,12 +774,12 @@ pub enum CounterType {
     /// Petal counter — Lotus Blossom's upkeep tally; cash them in for that
     /// many mana of one colour.
     Petal,
-    /// Page counter — Strixhaven Book artifacts (Diary of Dreams). Builds
-    /// up on instant/sorcery cast and discounts the host's activated
-    /// ability one for one. The counter-scaled cost reduction itself is
-    /// not yet wired (see TODO.md), but counters tick up correctly.
     /// CN2 Deadly Designs — the shared "plot" counter anyone can add.
     Plot,
+    /// Page counter — Strixhaven Book artifacts (Diary of Dreams). Builds up on
+    /// instant/sorcery cast and discounts the host's activated ability one for
+    /// one. The counter-scaled cost reduction itself is not yet wired (see
+    /// TODO.md), but counters tick up correctly.
     Page,
     /// Winch counter — Mercadian Lift's crank; remove X to deploy a creature
     /// with mana value X from hand.
@@ -803,14 +799,12 @@ pub enum CounterType {
     /// growth counters …"). Distinct from `Charge` so the static-toggle
     /// variants don't collide.
     Growth,
-    /// Prepared counter — the SOS "prepared" designation (count-1 flag).
-    /// While a creature with a `prepare_spell` carries this counter, its
-    /// controller may cast a copy of that spell from exile via
-    /// `GameAction::CastPrepareSpell`; casting it removes the counter
-    /// ("unprepares it"). The printed "Only creatures with prepare spells
-    /// can become prepared" reminder is enforced at the *target* via
-    /// `SelectionRequirement::HasPrepareSpell` on the AddCounter /
-    /// RemoveCounter selectors. See `.claude/prepared.md`.
+    /// Prepared counter — the SOS "prepared" designation (count-1 flag). While
+    /// a creature with a `prepare_spell` carries it, its controller may cast a
+    /// copy of that spell from exile via `GameAction::CastPrepareSpell`, which
+    /// removes the counter. "Only creatures with prepare spells can become
+    /// prepared" is enforced at the target via
+    /// `SelectionRequirement::HasPrepareSpell`. See `.claude/prepared.md`.
     Prepared,
     /// Finality counter — CR 122.1h. One or more finality counters on a
     /// permanent create a replacement effect: "If this permanent would
@@ -819,10 +813,9 @@ pub enum CounterType {
     /// → Graveyard to Battlefield → Exile when the moving card has at
     /// least one finality counter.
     Finality,
-    /// Indestructible counter — CR 122.1 / 702.12. A permanent with one or
-    /// more indestructible counters can't be destroyed (lethal damage and
-    /// "destroy" effects don't kill it), exactly like the Indestructible
-    /// keyword. Used by Zopandrel, Hunger Dominus's activated ability.
+    /// Indestructible counter (CR 122.1 / 702.12): with one or more on it, a
+    /// permanent can't be destroyed, exactly like the keyword (Zopandrel,
+    /// Hunger Dominus).
     Indestructible,
     /// Silver counter — a pure bookkeeping marker placed on cards in exile
     /// (Karn, Scion of Urza). His +1 exiles a card with a silver counter;
@@ -1212,13 +1205,10 @@ pub enum Zone {
     Ante,
 }
 
-/// The "unless [...]" payment menu for `Keyword::Ward`. Each printed
-/// variant maps to a cost the spell/ability controller may pay to
-/// dodge the Ward trigger.
-///
-/// `Mana` carries a full `ManaCost` so colored Ward (e.g. "Ward—{U}")
-/// works alongside the common generic `{N}` shape. The convenience
-/// constructor `WardCost::generic(n)` covers the generic case.
+/// The "unless [...]" payment menu for `Keyword::Ward`: what the controller of
+/// the targeting spell/ability may pay to avoid the counter. `Mana` carries a
+/// full `ManaCost` so coloured Ward ("Ward—{U}") works; `WardCost::generic(n)`
+/// builds the common `{N}`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum WardCost {
     Mana(crate::mana::ManaCost),
@@ -1466,18 +1456,15 @@ pub enum MayPlayDuration {
     /// (Superior Foes of Spider-Man, Furious Rise, Unstable Amulet). Never
     /// swept; the next card the source exiles this way revokes it.
     UntilSourceExilesAnother,
-    /// "You may play lands and cast spells from among cards exiled with
-    /// this" — a static grant that lasts while `source` is on the
-    /// battlefield (Hedonist's Trove). Printed with `CardId(0)`; the grant
-    /// binds the real source ([`MayPlayDuration::bound_to_source`]). The
-    /// grants end as the source leaves (`on_left_battlefield`). With
-    /// `one_spell_a_turn` ("You can't cast more than one spell this way each
-    /// turn"), a cast parks the source's other spell grants at
-    /// [`MAY_PLAY_DORMANT`] until the next turn; land grants stay live.
-    /// Usable only while the holder controls `source` ("you" of the static).
-    /// With `follows_control` the grant moves to a new controller (Nightveil
-    /// Specter); without, it waits for its holder ("cards you own" —
-    /// Intrepid Paleontologist, Grolnok).
+    /// "You may play lands and cast spells from among cards exiled with this"
+    /// (Hedonist's Trove): lasts while `source` is on the battlefield and is
+    /// usable only while the holder controls it. Printed with `CardId(0)`; the
+    /// grant binds the real source ([`MayPlayDuration::bound_to_source`]) and
+    /// ends in `on_left_battlefield`. With `one_spell_a_turn`, a cast parks the
+    /// source's other spell grants at [`MAY_PLAY_DORMANT`] until next turn
+    /// (land grants stay live). With `follows_control` the grant moves to a new
+    /// controller (Nightveil Specter); without, it waits for its holder
+    /// (Intrepid Paleontologist).
     WhileSourceOnBattlefield {
         source: CardId,
         one_spell_a_turn: bool,
@@ -1620,13 +1607,10 @@ pub const GRANTED_OFFSPRING_OPTION: u8 = u8::MAX;
 /// a paid kicker or offspring, so it is never read as a granted offspring.
 pub const ALT_COST_KICK_OPTION: u8 = u8::MAX - 1;
 
-/// Per-instance permission for "you may cast that card without paying its
-/// mana cost" — granted by Practiced Scrollsmith, Suspend Aggression,
-/// Elemental Mascot, Tablet of Discovery, Ark of Hunger, Archaic's Agony,
-/// Nita (Forum Conciliator), and similar. Lives on the *card* (not the
-/// player) so it survives zone changes and so the engine can drop it
-/// cleanly when the card moves to a zone where casting it would no longer
-/// make sense (e.g. battlefield, hand).
+/// Per-instance "you may cast that card without paying its mana cost"
+/// permission (Practiced Scrollsmith, Suspend Aggression). Lives on the card,
+/// not the player, so it survives zone changes and is dropped when the card
+/// reaches a zone where casting it makes no sense (battlefield, hand).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MayPlayPermission {
     /// Who has permission to cast. Most cards grant to the granter's
@@ -1697,14 +1681,11 @@ pub struct MayPlayPermission {
 /// loyalty: 2^30 keeps those reads and their sums in range.
 pub const COUNTER_CAP: u32 = 1 << 30;
 
-/// CR 122 — the counters on a permanent, in the order they were first added.
-///
-/// A `Vec` for the same two reasons [`KeywordCounters`] is: `HashMap`'s
-/// iteration order is reseeded per process by `RandomState`, and a permanent
-/// carries one or two kinds when it carries any at all. The clone cost is the
-/// measured half — `CardData` is deep-copied ~1.09 M times per six bench games
-/// by the CoW unshare, and an empty `Vec` clone allocates nothing where an
-/// empty `hashbrown` table clone still walks its control bytes.
+/// CR 122 — the counters on a permanent, in first-added order. A `Vec` for the
+/// same reasons as [`KeywordCounters`] (per-process `HashMap` order; one or two
+/// kinds at most), and because `CardData` is deep-copied by the CoW unshare: an
+/// empty `Vec` clone allocates nothing, an empty `hashbrown` clone still walks
+/// its control bytes.
 #[derive(Debug, Default, PartialEq, Eq)]
 pub struct CounterBag(Vec<(CounterType, u32)>);
 
@@ -1795,24 +1776,15 @@ impl FromIterator<(CounterType, u32)> for CounterBag {
     }
 }
 
-// No `Index<&CounterType>`. It existed, it panicked on a kind the bag does
-// not hold, and `scripts/audit_panics.py` found it had **no engine or server
-// call site at all** — its only two users were assertions in one test file,
-// which now ask `get(..).copied()` and compare against `Some(n)`. That is the
-// same question without the landmine: the next caller to write
-// `c.counters[&CounterType::PlusOnePlusOne]` for a kind the bag does not hold
-// would have got a panic where `get` returns `None`.
+// No `Index<&CounterType>`: it panicked on a kind the bag doesn't hold and had
+// no engine call site (`scripts/audit_panics.py`). Use `get(..)`, which returns
+// `None` instead.
 
-/// CR 122.1b — the keyword counters on a permanent, in the order they were
-/// first added.
-///
-/// Deliberately a `Vec`, not a `HashMap`. `layers.rs` walks this to push one
-/// granted keyword per counter kind into the computed keyword list, so a
-/// `HashMap`'s iteration order — reseeded per process by `RandomState` —
-/// reached game state, and two processes on the same seed could disagree.
-/// A permanent carries one or two kinds when it carries any at all, so the
-/// linear scans are also cheaper than hashing a `Keyword` (which owns a
-/// boxed `SelectionRequirement` in several variants).
+/// CR 122.1b — the keyword counters on a permanent, in first-added order.
+/// Deliberately a `Vec`, not a `HashMap`: `layers.rs` walks it to grant one
+/// keyword per counter kind, so per-process `HashMap` order reached game state
+/// and two processes on one seed could disagree. With one or two kinds, linear
+/// scans also beat hashing a `Keyword`.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct KeywordCounters(Vec<(Keyword, u32)>);
 
@@ -2131,21 +2103,18 @@ pub enum Keyword {
     /// colour change tracks.
     ProtectionFromOwnColors,
     /// CR 702.16 / CR 903.4 — "protection from each color that's not in your
-    /// commander's color identity" (Commander's Plate). The protected set is
-    /// the *complement* of a colour set the game state owns, so it is resolved
-    /// at check time (`GameState::outside_commander_identity`). A source gets
-    /// through only when every colour it has is inside the identity; a
-    /// colourless source always gets through. A seat with no commander has
-    /// no protection at all (CR 903.4f, the 2020-11-10 ruling).
+    /// commander's color identity" (Commander's Plate). The complement of a
+    /// game-state colour set, so resolved at check time
+    /// (`GameState::outside_commander_identity`): a source gets through only if
+    /// all its colours are in the identity (colourless always does). No
+    /// commander, no protection (CR 903.4f, 2020-11-10 ruling).
     ///
-    /// ⚠ **"Your" is read as the bearer's controller, not the granting
-    /// Equipment's.** They differ only after control of the equipped creature
-    /// changes while the Equipment stays attached (Act of Treason on a creature
-    /// wearing the Plate), where the printed card keeps reading the Plate
-    /// controller's commander. Every other protection keyword that consults
-    /// game state does the same (`ProtectionFromMatching` evaluates its filter
-    /// under `tgt.controller`), so this follows the family rather than
-    /// threading a granting source through three check sites.
+    /// ⚠ "Your" is read as the bearer's controller, not the Equipment's. They
+    /// differ only when the equipped creature changes control (Act of Treason),
+    /// where the printed card keeps the Plate controller's commander. This
+    /// follows the family (`ProtectionFromMatching` evaluates under
+    /// `tgt.controller`) rather than threading the granting source through
+    /// three check sites.
     ProtectionFromColorsOutsideCommanderIdentity,
     Indestructible,
     Regenerate(u32),
@@ -2194,14 +2163,12 @@ pub enum Keyword {
     /// the spell is "bargained" (`Predicate::SpellWasBargained` gates the
     /// bonus). Cast via `GameAction::CastSpellBargain`.
     Bargain,
-    /// CR 702.62 — Suspend N—[cost]. You may pay the suspend cost to exile
-    /// the card from your hand with N time counters on it. At each of the
-    /// owner's upkeeps a time counter is removed; when the last is removed
-    /// the owner casts it without paying its mana cost (and a creature so
-    /// cast has haste). First field = N, second = the suspend cost. Cast
-    /// via `GameAction::Suspend`. **Suspend X** (Aeon Chronicler) is N = 0
-    /// with an {X} in the cost: `GameAction::SuspendX` names X ≥ 1, paid in
-    /// the cost and put on as X time counters (CR 702.62a / 107.3).
+    /// CR 702.62 — Suspend N—[cost] (fields: N, cost). Exile from hand with N
+    /// time counters; one comes off at each of the owner's upkeeps, and when
+    /// the last does the owner casts it free (a creature gains haste). Cast via
+    /// `GameAction::Suspend`. Suspend X (Aeon Chronicler) is N = 0 with {X} in
+    /// the cost: `GameAction::SuspendX` names X ≥ 1, paid and put on as time
+    /// counters (CR 702.62a / 107.3).
     Suspend(u32, crate::mana::ManaCost),
     /// Suspend accelerant (Deep-Sea Kraken): while this card is suspended,
     /// remove a time counter from it whenever an opponent casts a spell.
@@ -2249,13 +2216,11 @@ pub enum Keyword {
     /// the given land type, reveal it, and put it into your hand (then
     /// shuffle). "When you cycle" triggers still fire (it is a cycling ability).
     Landcycling(crate::mana::ManaCost, LandType),
-    /// CR 702.29e — general Typecycling: pay the cost + discard this card,
-    /// then search your library for a card matching the requirement and put
-    /// it into your hand (then shuffle). Covers "Basic landcycling"
-    /// (`IsBasicLand`), Wizardcycling, Slivercycling… Plain landcycling
-    /// keeps the dedicated `Landcycling` variant. The payload is boxed
-    /// whole so the variant doesn't grow `Keyword` (it feeds back into
-    /// `SelectionRequirement`/`Effect` sizes and deep debug-build recursion).
+    /// CR 702.29e — Typecycling: pay and discard, then search for a card
+    /// matching the requirement and put it into hand (basic landcycling =
+    /// `IsBasicLand`, Wizardcycling…). Plain landcycling keeps `Landcycling`.
+    /// Boxed whole so `Keyword` doesn't grow (its size feeds
+    /// `SelectionRequirement`/`Effect` and debug-build recursion depth).
     Typecycling(Box<(crate::mana::ManaCost, SelectionRequirement)>),
     Echo(crate::mana::ManaCost),
     /// CR 702.30b — Echo with a non-mana cost: "Echo—Discard a card"
@@ -2474,15 +2439,13 @@ pub enum Keyword {
     /// (Choreographed Sparks); `Effect::CopySpell` skips a stack spell whose
     /// definition lists this keyword.
     CantBeCopied,
-    /// "This creature can't block." A static restriction on the creature
-    /// that holds the keyword (Postmortem Professor, Goblin Goon, etc.)
-    /// or a transient grant from a pump spell (Duel Tactics, Volley
-    /// Veteran). Enforced inside `declare_blockers` — any blocker
-    /// declaration involving a creature with this keyword is rejected.
     /// CR 701.21 — "can't be sacrificed" (Assault Suit's equipped creature).
     /// Read by the sacrifice funnels: effect candidates, `sacrifice_one`, and
     /// the activation-cost sacrifice walkers.
     CantBeSacrificed,
+    /// "This creature can't block" — printed (Goblin Goon) or granted by a pump
+    /// spell (Duel Tactics). `declare_blockers` rejects any declaration that
+    /// uses it.
     CantBlock,
     /// CR 509.1b — "This creature can't block creatures with power N or
     /// greater" (Ironclaw Orcs, Ironclaw Buzzardiers). Enforced against the
@@ -2644,14 +2607,14 @@ pub enum Keyword {
     /// [filter]" (Leviathan). Paid as attackers are declared; the declaration
     /// is rejected when the pool is short.
     AttackCostSacrifice(Box<SelectionRequirement>, u32),
-    /// CR 508.1a / 509.1a restriction — "This creature can't attack or block
-    /// unless you have N or fewer cards in hand" (Hazoret the Fervent, the
-    /// Amonkhet Gods). Enforced in `declare_attackers` / blocker legality
-    /// against the controller's hand size.
     /// CR 508.1a / 509.1b — "This creature can't attack or block unless there
     /// are N or more cards in exile" (Ketramose, the New Dawn). Every owner's
     /// exiled cards count.
     CantAttackOrBlockUnlessCardsInExile(u32),
+    /// CR 508.1a / 509.1a — "This creature can't attack or block unless you
+    /// have N or fewer cards in hand" (Hazoret the Fervent). Enforced in
+    /// `declare_attackers` / blocker legality against the controller's hand
+    /// size.
     CantAttackOrBlockUnlessHandSizeAtMost(u32),
     /// CR 508.1a / 509.1a — "can't attack or block unless a player has no
     /// cards in hand" (Lupine Prototype): any seat still in the game.
@@ -2721,13 +2684,10 @@ pub enum Keyword {
     /// damage as though its power were positive" (Loot, the Anomaly): read off
     /// the computed keyword set in `combat.rs`, the bearer assigns |power|.
     AssignsCombatDamageAsThoughPowerPositive,
-    /// CR 509.1c — "This creature must be blocked if able" (Lure-style
-    /// block requirement, also Academic Dispute's rider). Enforced in
-    /// `declare_blockers`: if an attacker carrying this keyword is left
-    /// unblocked while the defending player controls an idle creature
-    /// that could legally block it, the declaration is rejected. The
-    /// engine models the single-requirement case; multi-Lure
-    /// maximization (CR 509.1c's "as many as possible") is approximated.
+    /// CR 509.1c — "must be blocked if able" (Lure; Academic Dispute's rider).
+    /// `declare_blockers` rejects leaving it unblocked while the defender has
+    /// an idle creature that could block it. CR 509.1c maximization across
+    /// several requirements is approximated.
     MustBeBlocked,
     /// CR 509.1c — "must be blocked by N or more creatures if able" (Gorm the
     /// Great, beside its `MustBeBlocked`): with N able blockers, fewer than N
@@ -2752,13 +2712,10 @@ pub enum Keyword {
     /// though they weren't blocked" (Outmaneuver; Predatory Focus once its
     /// controller chose to use it).
     MustAssignDamageAsThoughUnblocked,
-    /// CR 508.1d — "This creature attacks each combat if able." Enforced in
-    /// `declare_attackers`: an untapped, non-sick creature carrying this
-    /// keyword whose controller declares attackers must be among them when
-    /// it has a legal attack (any opponent in range). Models the
-    /// single-creature case; the "if able" maximization across multiple
-    /// requirements (Goad targeting rules, can't-attack overrides) is
-    /// approximated by the per-creature gate. Juggernaut, goaded creatures.
+    /// CR 508.1d — "attacks each combat if able" (Juggernaut, goaded
+    /// creatures). `declare_attackers` requires an untapped, non-sick bearer
+    /// with a legal attack to be among the attackers. Maximization across
+    /// several requirements is approximated by this per-creature gate.
     MustAttack,
     /// "If a creature you control attacks, this creature also attacks if
     /// able" (Ekundu Cyclops) — a one-directional `MustAttack` that only
@@ -2773,31 +2730,23 @@ pub enum Keyword {
     /// enforced as `MustAttack` on the bearer's controller's turn and as
     /// `MustBlock` otherwise.
     MustAttackOrBlock,
-    /// "This creature can't attack unless the defending player controls a
-    /// [filter]." Enforced in `declare_attackers` against the attack's
-    /// defending player (the `SelectionRequirement` is matched among that
-    /// player's controlled permanents). Dandân ("can't attack unless
-    /// defending player controls an Island").
     /// CR 725 — "can't attack unless defending player is the monarch"
     /// (Crown-Hunter Hireling).
     CantAttackUnlessDefenderIsMonarch,
+    /// "This creature can't attack unless defending player controls a [filter]"
+    /// (Dandân: an Island), matched among that player's permanents in
+    /// `declare_attackers`.
     CanAttackOnlyIfDefenderControls(Box<SelectionRequirement>),
     /// "This creature can't attack unless you control a [filter]." Mirror of
     /// `CanAttackOnlyIfDefenderControls`, enforced against the attacking
     /// creature's own controller. Lovestruck Beast ("can't attack unless you
     /// control a 1/1 creature").
     CanAttackOnlyIfYouControl(Box<SelectionRequirement>),
-    /// "This creature can't attack or block unless you control [N] or more
-    /// [filter]." Count-based variant of `CanAttackOnlyIfYouControl`, enforced
-    /// on both the attack and block side against the bearer's controller.
-    /// Topiary Stomper ("…unless you control seven or more lands"). When
-    /// `attack_only` is set the gate applies to attacking only, not blocking
-    /// (Lambholt Pacifist — "can't attack unless you control a creature with
-    /// power 4 or greater"); `block_only` is the mirror — the gate applies to
-    /// blocking only (Olog-hai Crusher — "can't block unless you control a
-    /// Goblin or Orc"). `exclude_self` drops the gated creature from the count
-    /// so "another [filter]" reads correctly (Tiger-Dillo — "…another creature
-    /// with power 4 or greater").
+    /// "This creature can't attack or block unless you control N or more
+    /// [filter]" (Topiary Stomper), checked against the bearer's controller.
+    /// `attack_only` gates attacking only (Lambholt Pacifist), `block_only`
+    /// blocking only (Olog-hai Crusher); `exclude_self` leaves the bearer out
+    /// of the count for "another [filter]" (Tiger-Dillo).
     CantAttackOrBlockUnlessYouControlCount {
         filter: Box<SelectionRequirement>,
         min: u32,
@@ -2848,13 +2797,11 @@ pub enum Keyword {
     /// battlefield tapped and attacking the same defender. Handled by
     /// `GameState::ninjutsu`. Fallen Shinobi.
     Ninjutsu(crate::mana::ManaCost),
-    /// "When you cast this spell from your hand, exile it as it resolves.
-    /// At the beginning of your next upkeep, you may cast this card from
-    /// exile without paying its mana cost." Wired in
-    /// `continue_spell_resolution`: cast-from-hand spells with Rebound go
-    /// to exile (instead of graveyard) and schedule a `YourNextUpkeep`
-    /// delayed trigger that re-runs the spell's effect with a fresh
-    /// auto-target.
+    /// "When you cast this spell from your hand, exile it as it resolves. At
+    /// the beginning of your next upkeep, you may cast this card from exile
+    /// without paying its mana cost." In `continue_spell_resolution`, a
+    /// hand-cast Rebound spell goes to exile and schedules a `YourNextUpkeep`
+    /// delayed trigger that reruns its effect with a fresh auto-target.
     Rebound,
     /// CR 702.122 — Crew N. "Tap any number of other untapped creatures you
     /// control with total power N or greater: This Vehicle becomes an
@@ -2871,18 +2818,13 @@ pub enum Keyword {
     /// spell, if a casualty cost was paid, copy it." Opt-in via
     /// `GameAction::CastSpellCasualty`; the value is the minimum power.
     Casualty(u32),
-    /// CR 702.35 — Madness `cost`. Two linked abilities: (1) a static
-    /// ability in the hand — "If a player would discard this card, they
-    /// discard it, but exile it instead of putting it into their
-    /// graveyard"; (2) a triggered ability in exile — "its owner may cast
-    /// it by paying its madness cost rather than putting it into their
-    /// graveyard." Wired centrally in `GameState::discard_card`: a
-    /// discarded madness card is exiled (still a discard — `CardDiscarded`
-    /// fires and discard-matters counters bump), then its owner is offered
-    /// a yes/no cast for the madness cost from their floated pool. Declining
-    /// or being unable to pay sends it on to the graveyard. The
-    /// `AutoDecider` declines by default (so ordinary bot games are
-    /// unaffected); tests pre-float the cost and feed `Bool(true)`.
+    /// CR 702.35 — Madness `cost`: a discarded madness card is exiled instead,
+    /// and its owner may cast it for the madness cost. Wired in
+    /// `GameState::discard_card`: the card is exiled (still a discard —
+    /// `CardDiscarded` fires, discard counters bump), then the owner is offered
+    /// a yes/no cast paid from the floated pool; declining or failing to pay
+    /// sends it to the graveyard. `AutoDecider` declines, so tests pre-float
+    /// the cost and answer `Bool(true)`.
     Madness(crate::mana::ManaCost),
     /// CR 702.187 — Mayhem `cost`. A static ability that works while the card
     /// is in a graveyard: "As long as you discarded this card this turn, you
@@ -3487,13 +3429,11 @@ pub enum SelectionRequirement {
     /// ability (Satyr Firedancer). Reads
     /// `GameState.trigger_event_player_scratch`; false outside a trigger.
     ControlledByTriggerPlayer,
-    /// CR 506.2 / 508.1a — **controlled** by the player (or planeswalker's
-    /// controller) the effect's source is attacking, or, for an Aura or
-    /// Equipment source, the player its host is attacking. "Target creature
-    /// defending player controls" — provoke, Cyclops Gladiator, Blaze of
-    /// Glory. In a duel this is the same set as `ControlledByOpponent`; at
-    /// three seats or more it is one seat of several. False outside combat or
-    /// when the source is not attacking.
+    /// CR 506.2 / 508.1a — controlled by the player the source is attacking (or
+    /// that planeswalker's controller); for an Aura/Equipment, the player its
+    /// host is attacking. "Target creature defending player controls" (provoke,
+    /// Cyclops Gladiator). Same as `ControlledByOpponent` in a duel. False
+    /// outside combat or when the source isn't attacking.
     ControlledByDefendingPlayer,
     /// Controlled by one fixed seat (a spell by its caster) — the filter of a
     /// resolved "protection from that player" grant.
@@ -3551,12 +3491,10 @@ pub enum SelectionRequirement {
     /// by Cut Down ("destroy target creature with total power and toughness
     /// 5 or less"). Battlefield-only; false for non-creatures.
     PowerPlusToughnessAtMost(i32),
-    /// True when the candidate's power is strictly less than the source
-    /// permanent's power (both read at evaluation time). Powers Mentor
-    /// (CR 702.114 — "target attacking creature with lesser power") so the
-    /// "lesser power" check re-evaluates against the source's current power
-    /// instead of a hard-coded threshold. Battlefield-only; false when the
-    /// source is missing or either side isn't a creature.
+    /// The candidate's power is strictly less than the source's, both read at
+    /// evaluation time — Mentor's "target attacking creature with lesser
+    /// power". Battlefield-only; false when the source is missing or either
+    /// side isn't a creature.
     PowerLessThanSource,
     /// Toughness less than the source's — read off the card in any zone
     /// (printed plus counters) against the source permanent's live toughness
@@ -3568,11 +3506,9 @@ pub enum SelectionRequirement {
     /// `PowerLessThanSource`; powers Training (CR 702.149 — "if it's
     /// attacking with another creature with greater power"). Battlefield-only.
     PowerGreaterThanSource,
-    /// True when the candidate creature has greater power *or* greater
-    /// toughness than the source permanent (both read at evaluation
-    /// time). Powers Evolve (CR 702.100 — "if that creature has greater
-    /// power or toughness than this creature"). Battlefield-only; false
-    /// when the source is missing or either side isn't a creature.
+    /// The candidate has greater power or greater toughness than the source,
+    /// both read at evaluation time — Evolve (CR 702.100). Battlefield-only;
+    /// false when the source is missing or either side isn't a creature.
     GreaterPowerOrToughnessThanSource,
     IsToken,
     NotToken,
@@ -3649,11 +3585,9 @@ pub enum SelectionRequirement {
     /// names (Resplendent Marshal's "the exiled card"); changelings share
     /// every type (CR 702.73a). Matches nothing when nothing moved.
     SharesCreatureTypeWithLastMoved,
-    /// Shares a creature type with the ability's *source*, read from its
-    /// last-known information when it has left the battlefield (Heirloom
-    /// Blade's "a creature card that shares a creature type with it", on the
-    /// dying creature's own trigger). Changelings match everything. A library
-    /// walk concretizes it via
+    /// Shares a creature type with the ability's source, read from last-known
+    /// information if it has left (Heirloom Blade). Changelings match
+    /// everything. A library walk concretizes it via
     /// [`resolve_source_creature_types`](Self::resolve_source_creature_types);
     /// the source-less card walker reads it as false.
     SharesCreatureTypeWithSource,
@@ -3675,13 +3609,11 @@ pub enum SelectionRequirement {
     /// resolution-time read without the cast's slots never filters it out
     /// (a `Not(SameControllerAsTargetSlot)` there read false).
     DifferentControllerFromTargetSlot(u8),
-    /// CR 601.2c — the printed word "**another**" between two target slots:
-    /// not the object already chosen for slot `.0` ("target creature fights
-    /// **another** target creature"). Two separate instances of "target" may
-    /// otherwise name one object, so without this the same creature fought
-    /// itself and Cone of Flame dealt 1+2+3 to one permanent. Vacuously true
-    /// while that slot is unchosen, so it never blocks the first pick — the
-    /// sibling of `SameControllerAsTargetSlot` and read the same way, out of
+    /// CR 601.2c — the printed "another" between two target slots: not the
+    /// object chosen for slot `.0` ("target creature fights another target
+    /// creature"). Without it a creature fought itself and Cone of Flame dealt
+    /// 1+2+3 to one permanent. Vacuously true while that slot is unchosen; read
+    /// like `SameControllerAsTargetSlot`, from
     /// `GameState::target_slots_scratch`.
     OtherThanTargetSlot(u8),
     /// CR 601.2c — cross-slot filter: the same toughness as the creature
@@ -3749,10 +3681,8 @@ pub enum SelectionRequirement {
     HasChosenLandTypeOfSource,
     /// CR 702.113 — the card has an Awaken alternative cost (Halimar Tidecaller).
     HasAwaken,
-    /// True for a land that is **not** basic (CR 305.6) — i.e. a land card
-    /// lacking the Basic supertype. Powers Thalia, Heretic Cathar's
-    /// "nonbasic lands … enter the battlefield tapped" clause and any
-    /// nonbasic-land targeting filter.
+    /// A land without the Basic supertype (CR 305.6) — Thalia, Heretic Cathar's
+    /// "nonbasic lands … enter tapped" and nonbasic-land targeting.
     IsNonbasicLand,
     /// A permanent with a mana ability that could produce {C} (an
     /// `Effect::AddMana` whose payload adds colorless). "Land that … could
@@ -3883,10 +3813,10 @@ pub enum SelectionRequirement {
     /// `GameState.entered_from_hand_this_turn` (The Lost and the Damned's
     /// "enters from anywhere other than your hand").
     EnteredFromHandThisTurn,
-    /// True when the candidate permanent has an Aura attached to it (CR 303
-    /// "enchanted permanent"). Battlefield-only: scans for any enchantment
-    /// whose `attached_to` points at the candidate. Powers Kestia's
-    /// "whenever an enchanted creature … you control attacks" trigger.
+    /// The candidate has an Aura attached (CR 303, "enchanted permanent"):
+    /// battlefield-only, scans for an enchantment whose `attached_to` is the
+    /// candidate (Kestia's "whenever an enchanted creature you control
+    /// attacks").
     IsEnchanted,
     /// An Aura the source's controller controls is attached to the candidate
     /// (Killian, Decisive Mentor; Eriette of the Charmed Apple). Battlefield
@@ -4010,14 +3940,9 @@ pub enum SelectionRequirement {
     /// every player's `creatures_that_damaged_me_this_turn` and every
     /// permanent's `damaged_by_this_turn`. Battlefield-only.
     DealtDamageThisTurnAsSource,
-    /// CR 506.5: "A creature attacks alone if it's the only creature
-    /// declared as an attacker during the declare attackers step. A
-    /// creature is attacking alone if it's attacking but no other
-    /// creatures are." Used by cards like Marauding Raptor's "whenever
-    /// a Dinosaur enters …" rider, Battlemastery / "Whenever this
-    /// creature attacks alone" payoffs, and any future single-attacker
-    /// combat trick. Reads the `GameState.attacking` Vec: returns true
-    /// when the card is in `attacking` AND `attacking.len() == 1`.
+    /// CR 506.5 — attacking alone: the only creature declared as an attacker
+    /// ("whenever this creature attacks alone" payoffs). True when the card is
+    /// in `GameState.attacking` and `attacking.len() == 1`.
     IsAttackingAlone,
     /// CR 506.5: "A creature blocks alone if it's the only creature
     /// declared as a blocker during the declare blockers step. A
@@ -4236,36 +4161,28 @@ pub enum SelectionRequirement {
     /// MV *equal to* the card discarded earlier in this resolution (Disciple
     /// of Deceit's tutor).
     ManaValueEqualsDiscardedThisEffect,
-    /// True when the card's mana value equals the most-recently-sacrificed
-    /// creature's mana value plus `offset`, read from the resolution scratch
-    /// (`GameState.sacrificed_mana_value`). Powers Birthing Pod's "search for a
-    /// creature card with mana value equal to 1 plus the sacrificed creature's
-    /// mana value." Evaluates to `mv == 0 + offset` when nothing was recorded.
+    /// The card's mana value equals the most recently sacrificed creature's
+    /// plus `offset`, read from `GameState.sacrificed_mana_value` (Birthing
+    /// Pod). With nothing recorded it compares against `0 + offset`.
     ManaValueEqualsSacrificedPlus(u32),
-    /// True when the card's mana value is at most the most-recently-sacrificed
-    /// creature's mana value plus `offset` (`GameState.sacrificed_mana_value`).
-    /// Powers Eldritch Evolution's "creature card with mana value X or less,
-    /// where X is 2 plus the sacrificed creature's mana value."
+    /// The card's mana value is at most the most recently sacrificed creature's
+    /// plus `offset` (`GameState.sacrificed_mana_value`; Eldritch Evolution).
     ManaValueAtMostSacrificedPlus(u32),
     /// True when the card's mana value is strictly less than the cost-
     /// sacrificed permanent's (`GameState.sacrificed_mana_value`, 0 when none
     /// was recorded). Scrap Welder's "artifact card with mana value less than
     /// X", X being the sacrificed artifact's.
     ManaValueLessThanSacrificed,
-    /// True when the card's mana value is strictly less than the firing
-    /// trigger event's amount — for died events, the dying card's mana value
-    /// (`GameState.trigger_event_amount_scratch`). Powers Scrap Trawler's
-    /// "return target artifact card with lesser mana value than that
-    /// artifact". False outside a trigger context (scratch = 0).
+    /// The card's mana value is strictly less than the firing event's amount —
+    /// for a died event, the dying card's mana value
+    /// (`GameState.trigger_event_amount_scratch`; Scrap Trawler). False outside
+    /// a trigger context (scratch = 0).
     ManaValueLessThanEventAmount,
     HasCardType(CardType),
-    /// True when the card's printed mana cost contains at least one
-    /// `{X}` symbol. Used by SOS Paradox Surveyor's reveal filter
-    /// ("you may reveal a land card *or a card with {X} in its mana
-    /// cost*"). Library / hand / graveyard searches consult this on
-    /// the candidate cards' definitions; for `evaluate_requirement_*`
-    /// targeting, the on-battlefield permanent's printed cost is read
-    /// the same way.
+    /// The printed mana cost has at least one `{X}` (Paradox Surveyor's "a land
+    /// card or a card with {X} in its mana cost"). Read off the candidate's
+    /// definition in zone searches, and off a permanent's printed cost when
+    /// targeting.
     HasXInCost,
     /// CR 202.1a — the card has no mana cost at all (`no_mana_cost`: Lotus
     /// Bloom), which is not a mana cost of {0} (Urza's Saga's chapter III).
@@ -4273,11 +4190,9 @@ pub enum SelectionRequirement {
     /// The card's mana cost has at least N colored mana symbols (Omnath,
     /// Locus of All's reveal).
     ColoredManaSymbolsAtLeast(u32),
-    /// True when the card's mana cost contains two or more *distinct*
-    /// colored pips. Hybrid pips (`{W/B}`) count both halves; Phyrexian
-    /// pips count their colored half only. Used by Mage Tower Referee
-    /// ("Whenever you cast a multicolored spell, …") and similar
-    /// "multicolored spell"/permanent payoffs.
+    /// Two or more distinct coloured pips in the mana cost (Mage Tower
+    /// Referee's "multicolored spell"). Hybrid pips count both halves,
+    /// Phyrexian pips their coloured half.
     Multicolored,
     /// Mana value equals the number chosen earlier in this resolution
     /// (`Effect::PlayerChoosesNumber` — Void's hand half).
@@ -4330,29 +4245,19 @@ pub enum SelectionRequirement {
     /// colour tied for most common (Barrin's Unmaking, Tsabo's Assassin).
     /// Never matches a colourless object.
     SharesMostCommonColor,
-    /// True when the card's mana cost contains *no* colored pips
-    /// (generic + colorless + Snow only). Used by colorless-spell
-    /// payoffs and the "colorless permanent" variant of various
-    /// Eldrazi/devoid hooks.
+    /// No coloured pips in the mana cost (generic, colorless and snow only),
+    /// for colorless-spell and colorless-permanent payoffs.
     Colorless,
-    /// True when the card has **exactly one** distinct color in its
-    /// mana cost (multiple pips of the same color still count as
-    /// monocolored). Used by Strixhaven's Vanishing Verse "target
-    /// nonland, monocolored permanent" — the printed exact-shape
-    /// targeting filter. Hybrid pips (`{W/B}`) count as both halves;
-    /// Phyrexian pips count their colored half. Colorless cards fail
-    /// this check (use `Colorless` instead).
+    /// Exactly one distinct colour in the mana cost (Vanishing Verse's
+    /// "nonland, monocolored permanent"). Hybrid pips count both halves,
+    /// Phyrexian pips their coloured half; colourless fails (use `Colorless`).
     Monocolored,
-    /// True when the candidate is **not** the source permanent that owns
-    /// the surrounding ability. Used by printed "Other [type]" wording
-    /// — Hofri Ghostforge's "Other creatures you control get +1/+0",
-    /// "another creature" targeting filters for triggers, and any
-    /// future "another permanent" filter. When this predicate is part
-    /// of a static `applies_to` selector, `affected_from_requirement`
-    /// detects it and sets `exclude_source: true` on the resulting
-    /// `AffectedPermanents` variant; for selection-requirement-style
-    /// targeting filters it routes through `evaluate_requirement_*`
-    /// which read the source id from the resolution context.
+    /// Not the source permanent of the surrounding ability — printed "other" /
+    /// "another" (Hofri Ghostforge's "Other creatures you control…"). In a
+    /// static's `applies_to`, `affected_from_requirement` turns it into
+    /// `exclude_source: true` on the `AffectedPermanents` variant; as a
+    /// targeting filter, `evaluate_requirement_*` reads the source id from the
+    /// resolution context.
     OtherThanSource,
     /// "**another** target …" relative to the object a trigger fired on
     /// rather than the ability's source (Puca's Covenant: "another target
@@ -4417,13 +4322,10 @@ pub enum SelectionRequirement {
     /// (`chosen_permanent`, `Effect::RememberPermanentOnSource`) — Havengul
     /// Mystery's "when the creature put onto the battlefield with it leaves".
     ChosenPermanentOfSource,
-    /// True when the candidate card is currently in some player's graveyard
-    /// zone. Used to restrict zone-spanning trigger targets — e.g.
-    /// Ascendant Dustspeaker / Lorehold Acolyte's "exile up to one target
-    /// card from a graveyard", which must NOT be matchable by a
-    /// battlefield permanent. The companion `evaluate_requirement_static`
-    /// arm looks the candidate up in `players[*].graveyard`. Returns
-    /// false for non-Permanent targets and for cards in any other zone.
+    /// The candidate card is in some player's graveyard, so a battlefield
+    /// permanent can't match "exile up to one target card from a graveyard"
+    /// (Lorehold Acolyte). `evaluate_requirement_static` looks it up in
+    /// `players[*].graveyard`; false for non-permanent targets and other zones.
     InGraveyard,
     /// True when the candidate card is in the evaluating player's own
     /// graveyard (CR 702.47a "your graveyard" — Soulshift). Stricter than
@@ -4470,39 +4372,24 @@ pub enum SelectionRequirement {
     /// True when the candidate is the top card of its owner's library —
     /// Elsha of the Infinite's "if you cast a spell this way" flash grant.
     OnTopOfLibrary,
-    /// True when the candidate is a permanent **on the battlefield**. The
-    /// on-board half of a mixed clause — "target creatures from the
-    /// battlefield **and/or** creature cards from graveyards" (Angel of
-    /// Serenity), "target artifact card in a graveyard **or** artifact on the
-    /// battlefield" (Daretti's ultimate). Without it the on-board half has to
-    /// be written zone-free, and a zone-free half is satisfied by a card in
-    /// hand, in exile and in a library too.
+    /// A permanent on the battlefield: the on-board half of a mixed clause
+    /// ("target creatures from the battlefield and/or creature cards from
+    /// graveyards", Angel of Serenity). Written zone-free instead, that half
+    /// would also match cards in hand, exile and libraries.
     OnBattlefield,
     /// True when the candidate is an exile-zone card stamped
     /// `exiled_with == source` — "target creature card exiled with [this]"
     /// (The Darkness Crystal's recursion).
     ExiledWithSource,
-    /// True when the candidate has the greatest mana value among all
-    /// permanents that match `inner` and are controlled by the same
-    /// player as the candidate. Used by SOS End of the Hunt's
-    /// "Target opponent exiles a creature or planeswalker they control
-    /// with the greatest mana value among creatures and planeswalkers
-    /// they control" — `inner` is `Creature ∨ Planeswalker` and the
-    /// candidate must (a) match `inner` and (b) have an MV ≥ every
-    /// other permanent matching `inner` under the same controller.
-    ///
-    /// Ties are broken permissively: every candidate with the maximum
-    /// MV satisfies the predicate (the engine picks among them via the
-    /// auto-target heuristic). Battlefield-only — the predicate
-    /// returns false for entities outside the battlefield.
+    /// The candidate matches `inner` and has MV ≥ every other permanent
+    /// matching `inner` under the same controller (End of the Hunt: "…with the
+    /// greatest mana value among creatures and planeswalkers they control").
+    /// Ties pass permissively (the auto-target heuristic picks among them).
+    /// Battlefield-only.
     HasGreatestManaValueAmongControlled(Box<SelectionRequirement>),
-    /// The power sibling of `HasGreatestManaValueAmongControlled`:
-    /// "a creature with the greatest power among [filter] that player
-    /// controls" — the candidate must (a) match `inner` and (b) have
-    /// power ≥ every other matching permanent under the same
-    /// controller. Ties pass permissively; battlefield-only. Professor
-    /// Onyx's −3 ("each opponent sacrifices a creature with the
-    /// greatest power among creatures that player controls").
+    /// The power sibling of `HasGreatestManaValueAmongControlled` (Professor
+    /// Onyx's −3: "each opponent sacrifices a creature with the greatest power
+    /// among creatures that player controls"). Ties pass; battlefield-only.
     HasGreatestPowerAmongControlled(Box<SelectionRequirement>),
     /// "A creature with the least power among [filter] that player controls"
     /// (Witch-king, Bringer of Ruin). Ties pass; battlefield-only.
@@ -4512,25 +4399,20 @@ pub enum SelectionRequirement {
     /// other creature's (any controller). Ties pass. Gates Getaway Glamer's
     /// "destroy target creature if no other creature has greater power."
     HasGreatestPowerAmongAllCreatures,
-    /// True when the candidate's `definition.name` exactly matches.
-    /// Used by Grandeur-style activations that require discarding
-    /// another card with the source's printed name (Page, Loose Leaf).
-    /// Evaluated against the candidate's printed name only. Stored as
-    /// `String` so the predicate round-trips through serde without a
-    /// `static_str_serde` adapter — the catalog passes a one-time
-    /// `.to_string()` at definition time, negligible overhead.
+    /// The candidate's printed `definition.name` matches exactly
+    /// (Grandeur-style "discard another card with this name": Page, Loose
+    /// Leaf). A `String` so it round-trips through serde without a
+    /// `static_str_serde` adapter.
     HasName(String),
     /// True when the candidate's printed name was originally printed in the
     /// named expansion (CR 201.3 — Golgothian Sylex's "a name originally
     /// printed in the Antiquities expansion"). Matched against a static name
     /// table, so reprints under the same name still count.
     OriginallyPrintedIn(OriginalSet),
-    /// True when the candidate's name matches the name the resolving
-    /// source stamped via `Effect::NameCard` (its `named_card` field).
-    /// Used by reveal-until-the-named-card effects (Spoils of the Vault):
-    /// pair `NameCard { This }` with a `RevealUntilFind { find:
-    /// NamedBySource, .. }`. Falls back to "no match" when the source has
-    /// not named a card.
+    /// The candidate's name matches the one the resolving source stamped via
+    /// `Effect::NameCard` (its `named_card`) — pair `NameCard { This }` with
+    /// `RevealUntilFind { find: NamedBySource, .. }` (Spoils of the Vault). No
+    /// match when the source has named nothing.
     NamedBySource,
     /// CR 702.106b — the candidate's name is either of the source's two
     /// secretly chosen names (Summoner's Bond's double agenda).
@@ -4548,22 +4430,17 @@ pub enum SelectionRequirement {
     /// chose via `Effect::NameCreatureType` (Belbe's Portal). Changeling
     /// satisfies any type; no match when nothing was chosen.
     IsSourceChosenCreatureType,
-    /// True when the candidate's mana value is ≤ the number of permanents
-    /// the evaluating player controls that match the inner filter. Powers
-    /// "with mana value less than or equal to the number of [X] you
-    /// control" gates — Lay Down Arms ("…number of Plains you control").
-    /// Battlefield/zone candidate; the count walks the battlefield for
-    /// permanents matching `inner` under the evaluating controller.
+    /// The candidate's mana value is ≤ the number of permanents matching
+    /// `inner` that the evaluating player controls (Lay Down Arms: "…number of
+    /// Plains you control").
     ManaValueAtMostControlledCount(Box<SelectionRequirement>),
     /// "with mana value less than or equal to the number of cards in your
     /// hand" (Rending Vines). Counts the *evaluating controller's* hand, not
     /// the candidate's owner's.
     ManaValueAtMostControllerHand,
-    /// True when the candidate's mana value is ≤ the number of cards in its
-    /// own controller's graveyard. Powers Drown in the Loch's "counter/
-    /// destroy target with mana value ≤ cards in its controller's graveyard"
-    /// gate. Works on stack spells and battlefield permanents alike (both
-    /// carry a `controller`).
+    /// The candidate's mana value is ≤ the number of cards in its controller's
+    /// graveyard (Drown in the Loch). Works on stack spells and permanents
+    /// alike, since both carry a `controller`.
     ManaValueAtMostControllerGraveyard,
     /// A double-faced card (CR 712.1): one carrying a back-face
     /// `CardDefinition`, or a permanent showing its back face (transformed —
@@ -4615,14 +4492,11 @@ impl SelectionRequirement {
         Self::Not(Box::new(self))
     }
 
-    /// This filter, restricted to a card in **your** graveyard.
-    ///
-    /// The filter language has no implicit zone: a reanimation filter that
-    /// names none is satisfied by a permanent on the battlefield, by a card
-    /// in exile, and by one in an opponent's graveyard, because
-    /// `legal_targets_for_filter` applies the same requirement to every zone
-    /// the effect can reach. A card that prints "from your graveyard" says so
-    /// with this. See `core_rules::target_walkers::offboard_gate`.
+    /// This filter, restricted to a card in your graveyard. The filter language
+    /// has no implicit zone: `legal_targets_for_filter` applies a requirement
+    /// to every zone the effect reaches, so a zone-free reanimation filter also
+    /// matches permanents, exiled cards and opponents' graveyards. See
+    /// `core_rules::target_walkers::offboard_gate`.
     pub fn from_your_graveyard(self) -> Self {
         Self::InYourGraveyard.and(self)
     }
@@ -4889,26 +4763,6 @@ impl SelectionRequirement {
         }
     }
 
-    /// Replace X-dependent atoms with concrete values
-    /// (`ManaValueAtMostXFromCost` → `ManaValueAtMost(x)`), recursing
-    /// through And/Or/Not. Called by `Effect::Search` with the resolving
-    /// spell's paid X (Chord of Calling, CR 601.2b).
-    /// Does this tree carry any leaf that [`resolve_x`](Self::resolve_x) or
-    /// [`resolve_converge`](Self::resolve_converge) would rewrite?
-    ///
-    /// Both rewriters return `Self`, so on a tree that names neither they
-    /// deep-clone the whole thing to produce an identical one — 2,474
-    /// allocations each at `targeting.rs`'s two call sites on a six-game
-    /// `cube` run, at 222 Ir apiece (PERF `(-358)`). A caller that only needs
-    /// `&SelectionRequirement` asks this first and borrows.
-    ///
-    /// ⚠ **The leaf list must match the two rewriters' own arms**, and the
-    /// callers carry a `debug_assert_eq!` recomputing the rewrite on the
-    /// borrowed path so a leaf added to one and not here fails loudly under
-    /// `-C debug-assertions=yes` rather than leaving a filter unresolved.
-    /// The cap of a `SlotsTotalManaValueAtMost` / `…AtMostX` atom in this
-    /// tree (through `And`), with `x` for the X form — `None` when the
-    /// filter has no total-mana-value budget.
     /// Does a `DamagedBySourceThisTurn` leaf sit under the And/Or/Not spine?
     pub fn mentions_damaged_by_source(&self) -> bool {
         match self {
@@ -4932,6 +4786,9 @@ impl SelectionRequirement {
         }
     }
 
+    /// The cap of a `SlotsTotalManaValueAtMost` / `…AtMostX` atom in this tree
+    /// (through `And`), with `x` for the X form — `None` when the filter has no
+    /// total-mana-value budget.
     pub fn slots_total_mana_value_cap(&self, x: u32) -> Option<u32> {
         match self {
             Self::SlotsTotalManaValueAtMost(n) => Some(*n),
@@ -4941,6 +4798,15 @@ impl SelectionRequirement {
         }
     }
 
+    /// Does this tree carry any leaf that [`resolve_x`](Self::resolve_x) or
+    /// [`resolve_converge`](Self::resolve_converge) would rewrite? Both return
+    /// `Self`, so on a tree naming neither they deep-clone it for nothing (PERF
+    /// `(-358)`); a caller that only needs `&SelectionRequirement` asks this
+    /// first and borrows.
+    ///
+    /// ⚠ The leaf list must match the two rewriters' arms. The callers
+    /// `debug_assert_eq!` the rewrite on the borrowed path, so a leaf missing
+    /// here fails loudly instead of leaving a filter unresolved.
     pub fn names_x_or_converge(&self) -> bool {
         match self {
             Self::ManaValueAtMostXFromCost
@@ -4959,6 +4825,10 @@ impl SelectionRequirement {
         }
     }
 
+    /// Replace X-dependent atoms with concrete values
+    /// (`ManaValueAtMostXFromCost` → `ManaValueAtMost(x)`), recursing through
+    /// And/Or/Not. Called by `Effect::Search` with the resolving spell's paid X
+    /// (Chord of Calling, CR 601.2b).
     pub fn resolve_x(&self, x: u32) -> Self {
         match self {
             Self::ManaValueAtMostXFromCost => Self::ManaValueAtMost(x),
@@ -4980,10 +4850,6 @@ impl SelectionRequirement {
         }
     }
 
-    /// Concretize `ManaValueAtMostSourcePower` against the source's power
-    /// (Velomachus Lorehold's "with mana value less than or equal to this
-    /// creature's power"), so source-less card matchers (library walks)
-    /// evaluate a plain `ManaValueAtMost`. Same shape as `resolve_x`.
     /// True when the filter reads [`Self::SameNameAsExiledWithSource`] — a
     /// source-blind matcher (a library search) concretizes it first with
     /// [`Self::resolve_exiled_names`].
@@ -5016,6 +4882,10 @@ impl SelectionRequirement {
         }
     }
 
+    /// Concretize `ManaValueAtMostSourcePower` against the source's power
+    /// (Velomachus Lorehold's "with mana value less than or equal to this
+    /// creature's power"), so source-less card matchers (library walks)
+    /// evaluate a plain `ManaValueAtMost`. Same shape as `resolve_x`.
     pub fn resolve_source_power(&self, power: i32) -> Self {
         match self {
             Self::ManaValueAtMostSourcePower => Self::ManaValueAtMost(power.max(0) as u32),
@@ -5036,13 +4906,10 @@ impl SelectionRequirement {
         }
     }
 
-    /// True when the filter requires the candidate to be a *card in an
-    /// off-board zone* (graveyard / exile) rather than a battlefield
-    /// permanent or player. Such targets have no clickable board entity,
-    /// so UIs must gather the pick through a card-list modal instead of
-    /// the in-scene targeting cursor. Recurses through And/Or (a `Not`
-    /// of a zone requirement doesn't *demand* the zone, so it doesn't
-    /// count).
+    /// True when the filter requires a card in an off-board zone (graveyard /
+    /// exile). Such targets have no board entity, so UIs gather the pick
+    /// through a card-list modal instead of the targeting cursor. Recurses
+    /// through And/Or; a `Not` of a zone requirement doesn't demand the zone.
     pub fn mentions_offboard_zone(&self) -> bool {
         match self {
             Self::InGraveyard
@@ -5205,14 +5072,10 @@ impl SelectionRequirement {
         }
     }
 
-    /// True when the filter contains a **cross-slot** atom — one answered
-    /// against the other chosen targets (`SameControllerAsTargetSlot`,
-    /// `OtherThanTargetSlot`) rather than against the candidate alone.
-    ///
-    /// Asked once per slot so the per-candidate walk can skip
-    /// `cross_slot_targets_ok` entirely: that walk runs once per battlefield
-    /// permanent per slot, and all but a handful of filters carry no such
-    /// atom.
+    /// True when the filter has a cross-slot atom
+    /// (`SameControllerAsTargetSlot`, `OtherThanTargetSlot`), answered against
+    /// the other chosen targets. Asked once per slot so the per-candidate walk
+    /// can skip `cross_slot_targets_ok`; almost no filter carries one.
     pub fn mentions_cross_slot(&self) -> bool {
         match self {
             Self::SameControllerAsTargetSlot(_)
@@ -5329,13 +5192,12 @@ impl SelectionRequirement {
         }
     }
 
-    /// A short noun for a *target* matching this filter — "creature",
-    /// "artifact", "creature you control" — for prompt / label text
-    /// (`Effect::effect_short_text`, the modal-mode picker, trigger prompts).
-    /// Returns `None` for filters we can't cleanly name (complex `Or`/`Not`
-    /// trees, stat gates), so callers fall back to a plain "target". Kept
-    /// deliberately small: it only needs to name the common targeting filters
-    /// well enough that a modal like Abrade reads "destroy target artifact".
+    /// A short noun for a target matching this filter ("creature", "creature
+    /// you control") for prompt and label text (`Effect::effect_short_text`,
+    /// the mode picker, trigger prompts). `None` for filters it can't cleanly
+    /// name, so callers fall back to "target". Deliberately small: it only
+    /// needs the common filters (a modal Abrade reads "destroy target
+    /// artifact").
     pub fn target_noun(&self) -> Option<String> {
         use SelectionRequirement as S;
         let base = match self {
@@ -5367,11 +5229,10 @@ impl SelectionRequirement {
         Some(base.to_string())
     }
 
-    /// Whether a *player* entity could satisfy this requirement — used by
-    /// targeting heuristics that decide whether to consider player targets
-    /// (e.g. "deal N damage divided among any target" allows players, but
-    /// "among target creatures" does not). Conservative: an `And` requires
-    /// both halves to admit a player; `Or`/`Not` are permissive.
+    /// Whether a player could satisfy this requirement, for targeting
+    /// heuristics deciding whether to consider players ("divided among any
+    /// number of targets" vs "among target creatures"). Conservative: `And`
+    /// needs both halves to admit a player; `Or` / `Not` are permissive.
     pub fn can_match_player(&self) -> bool {
         match self {
             Self::Any | Self::Player => true,
@@ -5382,17 +5243,13 @@ impl SelectionRequirement {
         }
     }
 
-    /// True when **only** a player can satisfy this requirement — the three
-    /// player faces and their combinations.
-    ///
-    /// The narrower half of [`can_match_player`](Self::can_match_player),
-    /// which answers "could a player match" and says yes to `Any`. A slot
-    /// whose filter is player-only is a player slot whatever the effect does
-    /// with the player it names, which is what the target enumerator needs:
-    /// `Effect::Move { what: CardsInZone { who: Target(0) } }` is classified
-    /// permanent-targeting by `accepts_player_target`, and Mudhole, Hurkyl's
-    /// Recall, the seven "enchant player" Curses and twenty more enumerated
-    /// **zero** legal targets because of it — uncastable, with nothing logged.
+    /// True when only a player can satisfy this requirement. Narrower than
+    /// [`can_match_player`](Self::can_match_player), which says yes to `Any`. A
+    /// player-only slot is a player slot whatever the effect does with the
+    /// player, which the target enumerator needs: `accepts_player_target`
+    /// classifies `Effect::Move { what: CardsInZone { who: Target(0) } }` as
+    /// permanent-targeting, and that left Mudhole, Hurkyl's Recall and the
+    /// "enchant player" Curses with zero legal targets.
     pub fn is_player_only(&self) -> bool {
         match self {
             Self::Player | Self::OpponentPlayer | Self::YouPlayer => true,
@@ -5444,26 +5301,19 @@ pub struct TokenDefinition {
     /// Gain 3 life`), Clues (`{2}, Sac: Draw a card`), etc. Copied into
     /// the resulting `CardDefinition` by `token_to_card_definition`.
     pub activated_abilities: Vec<ActivatedAbility>,
-    /// Triggered abilities the token enters with. Used for SOS Pest
-    /// tokens (`Whenever this token attacks, you gain 1 life`),
-    /// Strixhaven Spirit tokens (combat triggers), Inkling tokens, and
-    /// any future "the token has X" rider on a `CreateToken` effect.
-    /// Copied into the resulting `CardDefinition` by
-    /// `token_to_card_definition`.
+    /// Triggered abilities the token enters with (SOS Pest tokens' "whenever
+    /// this token attacks, you gain 1 life"). Copied into the token's
+    /// `CardDefinition` by `token_to_card_definition`.
     #[serde(default)]
     pub triggered_abilities: Vec<TriggeredAbility>,
-    /// Static abilities the token enters with. Used for self-scaling token
-    /// bodies — Karn's Construct ("+1/+1 for each artifact you control") via
-    /// `StaticEffect::PumpSelfByControlledPermanents`, and any future "the
-    /// token has [static]" rider. Copied into the resulting `CardDefinition`
-    /// by `token_to_card_definition`.
+    /// Static abilities the token enters with (Karn's Construct: "+1/+1 for
+    /// each artifact you control"). Copied into the token's `CardDefinition` by
+    /// `token_to_card_definition`.
     #[serde(default)]
     pub static_abilities: Vec<StaticAbility>,
-    /// Equip bonus for Equipment tokens (CR 301 — Mabel's Cragflame,
-    /// Kellan's Boots, etc.). When `Some`, the resulting token carries
-    /// this `equipped_bonus`; pair it with a `Keyword::Equip(cost)` in
-    /// `keywords` so the token can be equipped. `None` for non-Equipment
-    /// tokens. Defaults to `None` via `#[serde(default)]`.
+    /// Equip bonus for Equipment tokens (CR 301; Mabel's Cragflame): the token
+    /// carries this `equipped_bonus`. Pair it with `Keyword::Equip(cost)` in
+    /// `keywords` so the token can be equipped.
     #[serde(default)]
     pub equipped_bonus: Option<EquipBonus>,
     /// Mint-time dynamic P/T: evaluated against the minting effect's
@@ -5486,15 +5336,13 @@ pub struct TokenDefinition {
     /// on it, not a printed value.
     #[serde(default)]
     pub loyalty_abilities: Vec<LoyaltyAbility>,
-    /// "Create a [token] with N [kind] counters on it." The counters are part
-    /// of the entry (CR 614.1c — placed as it is created): the mint sets them before the
-    /// token's `PermanentEntered` is published or its ETB triggers fire, so a
-    /// printed 0/0 Fractal is never on the battlefield as a 0/0. The value is
-    /// evaluated against the *creating* effect's context (X, hand size) once
-    /// the token is on the battlefield — "for each creature you control"
-    /// counts it, as the cast path's spec does — which is why it does not
-    /// lift onto the `CardDefinition`'s `enters_with_counters` (that one
-    /// evaluates from the permanent's own context and would read X as 0).
+    /// "Create a [token] with N [kind] counters on it." Placed as part of the
+    /// entry (CR 614.1c), before `PermanentEntered` or ETB triggers, so a
+    /// printed 0/0 Fractal is never a 0/0 on the battlefield. Evaluated in the
+    /// creating effect's context (X, hand size) once the token is there, so
+    /// "for each creature you control" counts it — which is why it doesn't lift
+    /// onto `CardDefinition::enters_with_counters` (that reads the permanent's
+    /// own context and would see X as 0).
     #[serde(default)]
     pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
     /// CR 111.3 — a mana cost the creating effect defines ("She's a
@@ -5548,15 +5396,10 @@ pub struct GraveyardExileCost {
 /// ability index.
 pub const KEYWORD_ACTIVATION_SLOT: usize = usize::MAX;
 
-/// Static blueprint for a card; cloned into `CardInstance` at game-time.
-///
-/// `Default` is derived so card constructors can use
-/// `..Default::default()` to skip boilerplate fields. Default values:
-/// `name = ""`, `cost = ManaCost::default()` (free), all `Vec`s empty,
-/// `effect = Effect::Noop`, and all `Option`s = `None`. Numeric fields
-/// (`power`, `toughness`, `base_loyalty`) default to 0. New cards
-/// usually only need to set `name`, `cost`, `card_types`, P/T (for
-/// creatures), and the relevant ability/effect fields.
+/// Static blueprint for a card; cloned into `CardInstance` at game time.
+/// `Default` (empty name, free cost, empty `Vec`s, `Effect::Noop`, `None`s, 0
+/// P/T and loyalty) lets a constructor write `..Default::default()` and set
+/// only `name`, `cost`, `card_types`, P/T and the relevant abilities.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(bound = "")]
 pub struct CardDefinition {
@@ -5638,19 +5481,17 @@ pub struct CardDefinition {
     /// downstream abilities, types, and costs are the back face's. Only the
     /// front face stores `back_face` — the back's `back_face` is `None`.
     pub back_face: Option<Box<CardDefinition>>,
-    /// SOS preparation card — the inset "prepare spell" (Adventure/Omen-
-    /// style frame, *not* an MDFC back face). A preparation card is a
-    /// creature card in every zone; this spell is never castable from
-    /// the hand. While the permanent is prepared (carries a
-    /// `CounterType::Prepared` counter), its current controller may cast
-    /// a copy of this spell from exile via `GameAction::CastPrepareSpell`,
-    /// which unprepares the creature. Cards that printed "This creature
-    /// enters prepared." model it with `enters_with_counters:
+    /// SOS preparation card — the inset "prepare spell" (an
+    /// Adventure/Omen-style frame, not an MDFC back face). The card is a
+    /// creature in every zone and this spell is never castable from hand. While
+    /// the permanent is prepared (`CounterType::Prepared`), its controller may
+    /// cast a copy from exile via `GameAction::CastPrepareSpell`, which
+    /// unprepares it. "Enters prepared" is `enters_with_counters:
     /// Some((CounterType::Prepared, Value::Const(1)))`.
-    /// An `Arc`, not a `Box`: `cast_prepare_spell` materializes one
-    /// `CardInstance` per cast around this definition, and an owned copy was
-    /// a deep clone of the whole definition each time — 3,597 casts / 14 M
-    /// Ir on a 60-game actor run of the SOS pool (PERF `(-265)`).
+    ///
+    /// An `Arc`, not a `Box`: `cast_prepare_spell` builds a `CardInstance` per
+    /// cast around it, and an owned copy deep-cloned the definition each time
+    /// (PERF `(-265)`).
     #[serde(default)]
     pub prepare_spell: Option<Arc<CardDefinition>>,
     /// CR 710 — flip card. When `Some`, this is the *unflipped* (top) face and
@@ -5677,27 +5518,18 @@ pub struct CardDefinition {
     /// as a mulligan helper (Serum Powder). Resolved post-mulligan by
     /// `GameState::apply_opening_hand_effects`.
     pub opening_hand: Option<OpeningHandEffect>,
-    /// CR 614.12 "enters with N counters" replacement. When `Some((kind,
-    /// value))`, the engine drops that many counters of `kind` onto the
-    /// permanent **before** the first state-based-action sweep on the new
-    /// permanent. That timing lets cards with printed lines like
-    /// "Pterafractyl enters with X +1/+1 counters on it" and "Symmathematics
-    /// enters with two +1/+1 counters on it" survive ETB even when their
-    /// base toughness is 0 — the printed Oracle was previously approximated
-    /// by an `EntersBattlefield` trigger which fires *after* SBA, forcing
-    /// a base-toughness bump. Resolved at ETB time in `place_card_in_dest`
-    /// with the controller's `EffectContext`; the value is evaluated against
-    /// the source's just-known `x_value` (so `Value::XFromCost` reads the
-    /// X paid at cast time correctly).
-    ///
-    /// Defaults to `None` via `#[serde(default)]` so all existing literal
-    /// CardDefinition initialisations pick up the new field automatically.
     /// CR 702.37 / 708 — "As this creature is turned face up, put N `kind`
-    /// counters on it" (Hooded Hydra). Applied inside
-    /// `CardInstance::turn_face_up`, so every turn-up path (morph cost,
-    /// `TurnFaceUpFree`) puts them on before state-based actions look.
+    /// counters on it" (Hooded Hydra). Applied in `CardInstance::turn_face_up`,
+    /// so every turn-up path (morph cost, `TurnFaceUpFree`) puts them on before
+    /// state-based actions look.
     #[serde(default)]
     pub turned_face_up_counters: Option<(CounterType, u32)>,
+    /// CR 614.12 "enters with N counters" replacement: `Some((kind, value))`
+    /// puts the counters on before the first state-based-action sweep, so a
+    /// base-0 toughness body that enters with counters (Pterafractyl) survives.
+    /// Resolved in `place_card_in_dest` with the controller's `EffectContext`
+    /// and the source's `x_value`, so `Value::XFromCost` reads the X paid at
+    /// cast.
     #[serde(default)]
     pub enters_with_counters: Option<(CounterType, crate::effect::Value)>,
     /// "If this card is in a graveyard, effects from spells named X count it
@@ -5706,16 +5538,12 @@ pub struct CardDefinition {
     #[serde(with = "crate::static_str_serde::opt", default)]
     pub counts_as_named_in_graveyard: Option<crate::static_str_serde::StaticStr>,
     /// CR 707 — "You may have this enter as a copy of [filter] permanent."
-    /// Applied during ETB placement (in `continue_spell_resolution`), before
-    /// the first state-based-action sweep, so a printed 0/0 body (Clone,
-    /// Phantasmal Image) never dies as a 0/0 before the copy locks in. The
-    /// engine auto-picks the highest-power matching permanent (best for the
-    /// controller); if none matches, the permanent stays itself and a 0/0
-    /// dies to SBA — matching the printed "you may" decline. The copy reuses
-    /// `Effect::BecomeCopyOf`, so the copied card's own ETB triggers do not
-    /// re-fire (printed/static characteristics only).
-    ///
-    /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
+    /// Applied during ETB placement (`continue_spell_resolution`) before the
+    /// first SBA sweep, so a printed 0/0 (Clone) never dies before the copy
+    /// locks in. The engine picks the highest-power match; with none the
+    /// permanent stays itself (a 0/0 dies, as on the "you may" decline). Reuses
+    /// `Effect::BecomeCopyOf`, so the copied card's own ETB triggers don't
+    /// re-fire.
     #[serde(default)]
     pub enters_as_copy: Option<EntersAsCopy>,
     /// CR 708.8 — "As this is turned face up, …" (Gift of Doom's "you may
@@ -5731,13 +5559,11 @@ pub struct CardDefinition {
     /// decision at ETB. Corrupted Shapeshifter.
     #[serde(default)]
     pub enters_as_choice: Option<Vec<EntersChoiceMode>>,
-    /// CR 614 — "As this permanent enters, [effect]." A one-shot replacement
-    /// resolved during the battlefield hop, *before* the first state-based
-    /// action sweep and before any enters-the-battlefield trigger, so a
-    /// printed `*/*` body whose CDA depends on the effect never dies as a 0/0
-    /// (Ixidron's "as this creature enters, turn all other nontoken creatures
-    /// face down"). Distinct from an `EntersBattlefield` trigger, which uses
-    /// the stack and can be responded to.
+    /// CR 614 — "As this permanent enters, [effect]": a one-shot replacement
+    /// during the battlefield hop, before the first SBA sweep and any ETB
+    /// trigger, so a `*/*` CDA that depends on it never dies as a 0/0
+    /// (Ixidron). Unlike an `EntersBattlefield` trigger, it doesn't use the
+    /// stack.
     #[serde(default)]
     pub as_enters_effect: Option<crate::effect::Effect>,
     /// CR 701.27 — "As this permanent transforms into [this face], [effect]."
@@ -5771,26 +5597,16 @@ pub struct CardDefinition {
     /// into its owner's graveyard and resolves `effect`. All Hallow's Eve.
     #[serde(default)]
     pub exile_countdown: Option<ExileCountdown>,
-    /// CR 614 — "As this enters, choose [mode A] or [mode B]." A *persistent*
-    /// mode choice (unlike `enters_as_choice`, which only sets P/T): the
-    /// controller picks one mode as the permanent enters and that mode's
-    /// triggered/static abilities and keywords are baked onto this permanent
-    /// for as long as it stays on the battlefield. The Tarkir: Dragonstorm
-    /// Siege cycle (Barrensteppe / Frostcliff / Glacierwood / Hollowmurk
-    /// Siege). `CardInstance.chosen_mode` records the pick so a snapshot
-    /// round-trip re-bakes the same mode.
+    /// CR 614 — "As this enters, choose [mode A] or [mode B]": a persistent
+    /// mode choice (unlike `enters_as_choice`, which only sets P/T). The chosen
+    /// mode's abilities and keywords stay baked onto the permanent while it
+    /// remains (the Tarkir: Dragonstorm Sieges). `CardInstance.chosen_mode`
+    /// records the pick so a snapshot round-trip re-bakes it.
     #[serde(default)]
     pub enter_modes: Option<Vec<EnterMode>>,
-    /// CR 122.4 — "This permanent can't have more than N counters of
-    /// `kind` on it." When this card has more than `max` counters of
-    /// `kind` on it, the state-based-action sweep removes the excess
-    /// (down to exactly `max`). Used by cards that bake a counter cap
-    /// into their printed text (e.g. Helix Pinnacle's "can't have more
-    /// than 100 storage counters" check, custom storage permanents).
-    ///
-    /// Defaults to `None` via `#[serde(default)]` for snapshot back-
-    /// compat. Cards without an explicit cap aren't subject to the
-    /// SBA pruning step.
+    /// CR 122.4 — "This permanent can't have more than N `kind` counters on it"
+    /// (Helix Pinnacle): the SBA sweep removes the excess down to `max`. `None`
+    /// means no cap.
     #[serde(default)]
     pub max_counters_of_kind: Option<(CounterType, u32)>,
     /// CR 603.8 state trigger — "When a player other than this permanent's
@@ -5865,13 +5681,11 @@ pub struct CardDefinition {
     /// Read by `format::validate_commander_deck`; false everywhere else.
     #[serde(default)]
     pub can_be_commander: bool,
-    /// CR 113.6b — this card's *static* abilities also function while it is in
-    /// its owner's command zone (The Ur-Dragon's eminence cost reduction).
-    /// Card-level rather than per-ability, which the trigger axis is
-    /// (`EventSpec.zone`): a `StaticAbility` is `{description, effect}` in
-    /// 2,275 catalog literals, and no printed card has one static that
-    /// functions there beside one that doesn't. Set it only on a card where
-    /// *every* static functions in the command zone.
+    /// CR 113.6b — this card's static abilities also function in its owner's
+    /// command zone (The Ur-Dragon's eminence). Card-level, unlike the trigger
+    /// axis (`EventSpec.zone`), because no printed card has one static that
+    /// functions there beside one that doesn't. Set it only when every static
+    /// does.
     #[serde(default)]
     pub statics_in_command_zone: bool,
     /// CR 604.3 CDA — "As long as [this] isn't on the battlefield, it's a
@@ -5879,14 +5693,12 @@ pub struct CardDefinition {
     /// filters treat the card as a creature everywhere but the battlefield.
     #[serde(default)]
     pub creature_off_battlefield: bool,
-    /// CR 714 — Saga chapter abilities, as `(chapter_number, effect)` pairs.
-    /// A combined chapter ("I, II — …") is listed once per number with the
-    /// same effect. Non-empty marks the card a Saga: it enters with one lore
-    /// counter (firing chapter 1), gains one more at the start of each of its
+    /// CR 714 — Saga chapter abilities as `(chapter_number, effect)`; a
+    /// combined chapter ("I, II — …") is listed once per number. Non-empty
+    /// marks a Saga: it enters with one lore counter, gains one at each of its
     /// controller's precombat main phases (firing that chapter), and is
-    /// sacrificed by SBA once its lore counters reach the final (highest)
-    /// chapter number and no chapter ability of its is still on the stack.
-    /// Defaults to empty via `#[serde(default)]`.
+    /// sacrificed by SBA once its lore counters reach the final chapter and
+    /// none of its chapter abilities is still on the stack.
     #[serde(default)]
     pub saga_chapters: Vec<(u32, crate::effect::Effect)>,
     /// CR 702.155 — Read Ahead. A Saga with this flag enters with a chosen
@@ -5894,16 +5706,9 @@ pub struct CardDefinition {
     /// the chosen chapter. Defaults to `false`.
     #[serde(default)]
     pub read_ahead: bool,
-    /// CR 701.x — "Exile this spell" rider for instants and sorceries that
-    /// route to exile instead of their owner's graveyard after resolution.
-    /// Used by Strixhaven's "Then exile this spell" wording (Awaken the
-    /// Ages MDFC back-face, Divergent Equation, Settle the Score's
-    /// printed rider) and various Mystical Archive cards. When `true`,
-    /// `continue_spell_resolution` places the resolved spell card into
-    /// exile rather than its owner's graveyard. Has no effect on
-    /// permanent spells (those go to the battlefield, not graveyard).
-    ///
-    /// Defaults to `false` via `#[serde(default)]` for snapshot back-compat.
+    /// "Then exile this spell" for instants and sorceries (Divergent Equation):
+    /// when `true`, `continue_spell_resolution` puts the resolved card into
+    /// exile instead of its owner's graveyard. No effect on permanent spells.
     #[serde(default)]
     pub exile_on_resolve: bool,
     /// Cards exiled to pay this spell's delve are linked to it
@@ -5938,22 +5743,13 @@ pub struct CardDefinition {
     /// flying"). Owed, like `flash_surcharge`, only outside sorcery timing.
     #[serde(default)]
     pub flash_additional_cost: Option<AdditionalCastCost>,
-    /// "This spell costs {1} less to cast for each [filter] (on the
-    /// battlefield)" — Affinity-class generic cost reduction whose discount
-    /// scales off the caster's permanent count matching `filter`.
-    ///
-    /// Affects only the generic-pip side of the cost (CR 601.2f / 118.7a),
-    /// clamped at the spell's printed generic total. Read by
-    /// `cost_reduction_for_spell` at cast time. Powers:
-    /// - **Vanquish the Horde** (`SelectionRequirement::Creature`)
-    /// - **Witherbloom, the Balancer** (`SelectionRequirement::Creature
-    ///   .and(ControlledByYou)`) — its second Affinity-for-creatures static
-    ///   the engine's separate per-cast static still won't model, only the
-    ///   self-cast discount.
-    /// - Future Affinity-for-X (Artifacts, Lands, Pests) cards plug in
-    ///   against this same primitive without any new engine code.
-    ///
-    /// Defaults to `None` via `#[serde(default)]` for snapshot back-compat.
+    /// "This spell costs {1} less to cast for each [filter]" — an
+    /// Affinity-style generic reduction scaling with the caster's matching
+    /// permanents (Vanquish the Horde: `Creature`). Generic pips only, clamped
+    /// at the printed generic (CR 601.2f / 118.7a); read by
+    /// `cost_reduction_for_spell` at cast time. Witherbloom, the Balancer uses
+    /// it for its own discount only; its static granting affinity to other
+    /// spells is not modelled.
     #[serde(default)]
     pub affinity_filter: Option<SelectionRequirement>,
     /// CR 614 — "This permanent enters under the control of an opponent of your
@@ -5969,46 +5765,33 @@ pub struct CardDefinition {
     #[serde(default)]
     pub spend_only_creature_mana: bool,
     /// "This spell costs {1} less to cast for each [filter] card in your
-    /// graveyard" — the graveyard-counting sibling of `affinity_filter`.
-    /// Generic-only, clamped by the caller. Powers Tolarian Terror /
-    /// The Dawning Archaic (instant-or-sorcery), Murktide-class delve-flavor
-    /// reductions, etc. Defaults to `None` for snapshot back-compat.
+    /// graveyard" — the graveyard-counting sibling of `affinity_filter`
+    /// (Tolarian Terror). Generic only, clamped by the caller.
     #[serde(default)]
     pub affinity_graveyard_filter: Option<SelectionRequirement>,
-    /// "This spell costs `{amount}` less to cast if it targets a permanent
-    /// matching `filter`." A card-intrinsic, target-conditional generic
-    /// reduction (Ride's End — "{3} less if it targets a tapped permanent").
-    /// Generic-only, clamped by the caller; evaluated against the chosen
-    /// target at cast time. Defaults to `None` for snapshot back-compat.
+    /// "This spell costs `{amount}` less to cast if it targets a [filter]"
+    /// (Ride's End: a tapped permanent). Generic only, clamped by the caller;
+    /// evaluated against the chosen target at cast time.
     #[serde(default)]
     pub self_cost_reduction_if_target: Option<(SelectionRequirement, u32)>,
-    /// The colored-aware sibling of `self_cost_reduction_if_target`:
-    /// "This spell costs [cost] less to cast if it targets [filter]."
-    /// The reduction is a full `ManaCost` removed pip-by-pip via
-    /// `ManaCost::reduce_by_cost` (CR 601.2f — a MANDATORY reduction,
-    /// not an opt-in alternative cost). Powers Brush Off's "{1}{U} less
-    /// if it targets an instant or sorcery spell". Defaults to `None`
-    /// for snapshot back-compat.
+    /// The coloured sibling of `self_cost_reduction_if_target`: "costs [cost]
+    /// less to cast if it targets [filter]" (Brush Off). Removed pip by pip via
+    /// `ManaCost::reduce_by_cost`; a mandatory reduction (CR 601.2f), not an
+    /// alternative cost.
     #[serde(default)]
     pub self_cost_reduction_cost_if_target: Option<(SelectionRequirement, ManaCost)>,
-    /// "As an additional cost to cast this spell, pay X life." X is chosen
-    /// at cast time (the X prompt fires for this flag even when the mana
-    /// cost carries no {X} pip, capped at the caster's life total),
-    /// pre-flighted against the caster's life (CR 119.4 — paying down to
-    /// exactly 0 is legal), and paid as a COST on cast (CR 601.2h) — the
-    /// life stays paid if the spell is countered. Resolution reads the
-    /// chosen X through the normal `Value::XFromCost` plumbing. Vicious
-    /// Rivalry, Fix What's Broken.
+    /// "As an additional cost to cast this spell, pay X life" (Vicious
+    /// Rivalry). X is chosen at cast (the X prompt fires even without an {X}
+    /// pip, capped at the caster's life), checked against life (CR 119.4 —
+    /// paying down to exactly 0 is legal) and paid as a cost (CR 601.2h), so it
+    /// stays paid if the spell is countered. Resolution reads X via
+    /// `Value::XFromCost`.
     #[serde(default)]
     pub additional_cost_pay_x_life: bool,
-    /// "This spell costs `{amount}` less to cast if you control a permanent
-    /// matching `filter`." Flat (non-scaling) board-state-gated generic
-    /// reductions — Pearl of Wisdom ("{1} less if you control an Otter").
-    /// Multiple clauses each apply independently (Geistlight Snare — "{1} less
-    /// if you control a Spirit; and {1} less if you control an enchantment").
-    /// Distinct from `affinity_filter`, which scales per matching permanent.
-    /// Generic-only, clamped by the caller; empty by default for snapshot
-    /// back-compat.
+    /// "This spell costs {amount} less to cast if you control a [filter]" —
+    /// flat, board-gated generic reductions (Pearl of Wisdom). Clauses apply
+    /// independently (Geistlight Snare has two). Unlike `affinity_filter`, it
+    /// doesn't scale. Generic only, clamped by the caller.
     #[serde(default)]
     pub self_cost_reduction_if_control: Vec<(SelectionRequirement, u32)>,
     /// "This spell costs `{amount}` less to cast if it's night" (Moonrager's
@@ -6097,13 +5880,10 @@ pub struct CardDefinition {
     /// clamped by the caller.
     #[serde(default)]
     pub disguise_cost_reduction_per: Option<crate::effect::Value>,
-    /// "Equipped creature gets +P/+T and has [keywords]." Read by
-    /// `compute_battlefield` for any Equipment whose `attached_to` points at
-    /// a creature on the battlefield — the bonus is emitted as layer-7 (P/T)
-    /// and layer-6 (keyword) continuous effects on the equipped creature.
-    /// `None` for non-Equipment cards (and for Equipment whose only relevant
-    /// effect is an activated ability, e.g. Lightning Greaves' grant-on-
-    /// activate approximation). Defaults to `None` for snapshot back-compat.
+    /// "Equipped creature gets +P/+T and has [keywords]." `compute_battlefield`
+    /// emits it as layer-7 and layer-6 effects on the creature an Equipment's
+    /// `attached_to` points at. `None` for non-Equipment and for Equipment
+    /// whose only relevant text is an activated ability (Lightning Greaves).
     #[serde(default)]
     pub equipped_bonus: Option<EquipBonus>,
     /// Additional {E} (energy) cost paid to equip, on top of `Keyword::Equip`'s
@@ -6148,12 +5928,10 @@ pub struct CardDefinition {
     /// host that stops matching sheds the Equipment.
     #[serde(default)]
     pub attach_only_filter: Option<SelectionRequirement>,
-    /// "When you cast this spell, copy it X times" where X is the cast's
-    /// `x_value` — the Storm-family cast-time copy rider driven by a
-    /// caster-chosen count (Plumb the Forbidden's "when you sacrifice a
-    /// creature this way, copy this spell", where the sacrifice count IS
-    /// the X). Copies are real, uncounterable stack objects above the
-    /// original, like Storm's. Defaults to false.
+    /// "When you cast this spell, copy it X times", X being the cast's
+    /// `x_value` — the Storm-style copy rider with a caster-chosen count (Plumb
+    /// the Forbidden, where the sacrifice count is X). Copies are uncounterable
+    /// stack objects above the original, like Storm's.
     #[serde(default)]
     pub copies_on_cast_x: bool,
     /// "Choose one. If …, choose any number / both instead." (CR 700.2): a
@@ -6180,19 +5958,14 @@ pub struct CardDefinition {
     #[serde(default)]
     pub soulbond_bonus: Option<SoulbondBonus>,
     /// "If a creature dealt damage by this would die this turn, exile it
-    /// instead" — a source-bound death replacement (Kumano Master Yamabushi,
-    /// Frostwielder). When true, every creature this permanent damages is
-    /// added to `GameState.dies_to_exile_eot` for the rest of the turn.
-    /// Defaults to `false` via `#[serde(default)]` for snapshot back-compat.
+    /// instead" (Kumano Master Yamabushi): every creature this permanent
+    /// damages joins `GameState.dies_to_exile_eot` for the rest of the turn.
     #[serde(default)]
     pub damage_exiles_if_dies: bool,
-    /// CR 601.2b/601.2f — additional cost(s) paid as the spell is cast
-    /// ("As an additional cost to cast this spell, …"). Paid during
-    /// casting, not folded into resolution: the spell can't be cast unless
-    /// every cost is payable, and a sacrifice/discard/life payment happens
-    /// immediately (death/discard triggers fire before the spell resolves).
-    /// Powers Necrotic Fumes, Tend the Pests, Witherbloom Sacrosanct.
-    /// Defaults to empty via `#[serde(default)]` for snapshot back-compat.
+    /// CR 601.2b / 601.2f — additional costs ("As an additional cost to cast
+    /// this spell, …"), paid during casting: the spell can't be cast unless
+    /// every cost is payable, and sacrifice / discard / life payments happen
+    /// immediately, so their triggers fire before it resolves (Tend the Pests).
     #[serde(default)]
     pub additional_cast_cost: Vec<AdditionalCastCost>,
     /// CR 702.34a — additional cost(s) that apply only on the **flashback**
@@ -6380,14 +6153,12 @@ pub struct CardDefinition {
     /// Defaults to `None` for snapshot back-compat.
     #[serde(default)]
     pub split: Option<Box<SplitCard>>,
-    /// CR 702.94 — Miracle. `Some(cost)` lets the owner reveal this card as
-    /// the first card they draw in a turn and cast it for the miracle `cost`
-    /// (cheaper than its mana cost). Wired via a draw-time grant of the
-    /// miracle alt-cost (`granted_alt_cast_cost_eot` + `may_play_until`);
-    /// the window is STEP-BOUNDED (`MayPlayDuration::EndOfThisStep`) and
-    /// bypasses the sorcery-speed gate (`MayPlayPermission.miracle`),
-    /// matching the printed cast-it-when-revealed shape.
-    /// Defaults to `None` for snapshot back-compat.
+    /// CR 702.94 — Miracle: `Some(cost)` lets the owner reveal this as the
+    /// first card they draw in a turn and cast it for `cost`. Wired as a
+    /// draw-time grant of the alt cost (`granted_alt_cast_cost_eot` +
+    /// `may_play_until`), bounded to the step
+    /// (`MayPlayDuration::EndOfThisStep`) and exempt from sorcery timing
+    /// (`MayPlayPermission.miracle`).
     #[serde(default)]
     pub miracle: Option<crate::mana::ManaCost>,
     /// CR 709.5 — Room enchantment doors. When `Some`, this card is a split
@@ -6981,27 +6752,21 @@ pub enum AdditionalCastCost {
         count_x: bool,
     },
     /// "As an additional cost to cast this spell, exile [count] [filter]
-    /// card(s) from your graveyard." The first (lowest-MV) exiled card's mana
-    /// value becomes the spell's X (read at resolution via `Value::XFromCost`)
-    /// — Draconic Intervention ("X is the exiled card's mana value"). Auto-picker
-    /// exiles the lowest-MV matches. Cast is rejected if fewer than `count`
-    /// matching cards are in the graveyard. `count` defaults to 1 for cards /
-    /// snapshots predating the field (Abhorrent Oculus exiles six).
+    /// card(s) from your graveyard." The auto-picker exiles the lowest-MV
+    /// matches and the first one's mana value becomes X (`Value::XFromCost`;
+    /// Draconic Intervention). Rejected if fewer than `count` match. `count`
+    /// defaults to 1 for older snapshots (Abhorrent Oculus exiles six).
     ExileFromGraveyard {
         filter: SelectionRequirement,
         #[serde(default = "one_u32")]
         count: u32,
     },
-    /// "As an additional cost to cast this spell, exile [count] [filter]
-    /// card(s) from your graveyard or pay [pay]." SOS Soaring Stoneglider
-    /// ("exile two cards from your graveyard or pay {1}{W}"). The
-    /// registered cost — and therefore the card's mana value — stays at
-    /// the printed base. With enough matching graveyard cards the exile
-    /// half is paid (lowest-MV picks, reusing the `ExileFromGraveyard`
-    /// machinery); otherwise `pay` joins the spell's cost
-    /// symbol-for-symbol (colored pips included — see
-    /// `or_pay_cost_symbols`). A "which half?" chooser for `wants_ui`
-    /// seats is a follow-up, same as `SacrificeOrPay`.
+    /// "…exile [count] [filter] card(s) from your graveyard or pay [pay]"
+    /// (Soaring Stoneglider). The registered cost, and so the mana value, stays
+    /// printed. With enough matches the exile half is paid (lowest MV, as
+    /// `ExileFromGraveyard`); otherwise `pay` joins the cost symbol for symbol
+    /// (`or_pay_cost_symbols`). No "which half?" chooser for `wants_ui` seats
+    /// yet, as with `SacrificeOrPay`.
     ExileFromGraveyardOrPay {
         filter: SelectionRequirement,
         #[serde(default = "one_u32")]
@@ -7115,11 +6880,10 @@ pub enum AdditionalCastCost {
     PayLifeOrPay { life: u32, pay: u32 },
     /// "As an additional cost, (you may) collect evidence N" (CR 701.59 — exile
     /// cards with total mana value ≥ `amount` from your graveyard). When
-    /// `optional` the cost may be skipped; whether it was paid is read at
-    /// resolution via `Predicate::SpellCollectedEvidence` (Behind the Mask's
-    /// 1/1-instead branch) and can grant a `self_cost_reduction_if_collect_evidence`
-    /// discount (Bite Down on Crime). The auto-decider collects whenever the
-    /// graveyard can afford it.
+    /// `optional`, whether it was paid is read via
+    /// `Predicate::SpellCollectedEvidence` (Behind the Mask) and can unlock a
+    /// `self_cost_reduction_if_collect_evidence` discount (Bite Down on Crime).
+    /// The auto-decider collects whenever it can.
     CollectEvidence {
         amount: u32,
         #[serde(default)]
@@ -7488,14 +7252,10 @@ pub struct EquipScale {
     pub count_named_like_exiled_with_source: bool,
 }
 
-/// Characteristic-defining dynamic P/T formula. Read by
-/// `compute_battlefield` to inject a layer-7 `SetPowerToughness` for
-/// the named card. Each variant encodes both the power and toughness
-/// expression so the engine doesn't have to know the printed Oracle's
-/// wording — just the two scalars to set.
-///
-/// Stored on `CardDefinition.dynamic_pt`; adding a new dynamic-P/T card
-/// sets that field (no engine-side table).
+/// Characteristic-defining P/T formula, stored on `CardDefinition.dynamic_pt`;
+/// `compute_battlefield` injects it as a layer-7 `SetPowerToughness`. Each
+/// variant encodes both scalars, so a new dynamic-P/T card needs no engine-side
+/// table.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DynamicPt {
     /// The general CR 604.3 CDA: power = `base_p` + the number of permanents
@@ -7891,60 +7651,42 @@ pub struct AlternativeCost {
     /// "if it's your turn, you may sacrifice a Mountain rather than pay").
     #[serde(default)]
     pub your_turn_only: bool,
-    /// Optional extra target filter applied **only** on the alt-cast path.
-    /// Lets a spell expose a cheaper alt cost that's restricted to a
-    /// narrower set of targets (e.g. Mystical Dispute's "{U} less if blue":
-    /// regular target is any spell, alt-cost target must be a blue spell).
-    /// When `Some`, `cast_spell_alternative` validates the chosen target
-    /// against this filter on top of the spell's normal target filter.
+    /// An extra target filter applied only on the alt-cast path, so a cheaper
+    /// alt cost can be restricted to narrower targets (Mystical Dispute: any
+    /// spell normally, a blue spell for {U}). `cast_spell_alternative` checks
+    /// it on top of the spell's normal filter.
     pub target_filter: Option<SelectionRequirement>,
-    /// Optional cast-time game-state predicate. When `Some`, the alt cast
-    /// is rejected unless `condition` evaluates to true against the
-    /// caster's resolution context (no source, no target, no mode). Used
-    /// by SOS Wilt in the Heat's "{2} less if one or more cards left your
-    /// graveyard this turn" rider — the alt cost is gated on
-    /// `Predicate::CardsLeftGraveyardThisTurnAtLeast(You, 1)`. The
-    /// existing `target_filter` slot covers per-target gating; this slot
-    /// covers per-game-state gating that's independent of any chosen
-    /// target.
+    /// Optional cast-time predicate on the caster's context (no source, target
+    /// or mode): the alt cast is rejected unless it holds (Wilt in the Heat:
+    /// `CardsLeftGraveyardThisTurnAtLeast(You, 1)`). `target_filter` gates on
+    /// the target; this gates on game state.
     #[serde(default)]
     pub condition: Option<crate::effect::Predicate>,
-    /// Optional additional cost: exile N cards from the caster's
-    /// graveyard. Mirrors `exile_filter` (which exiles **one** card from
-    /// **hand**) but for "exile N cards from your graveyard" additional
-    /// costs. The auto-picker takes the lowest-CMC matching cards so the
-    /// caster keeps higher-value cards in their graveyard. Activation is
-    /// rejected with `GameError::SelectionRequirementViolated` if fewer
-    /// than N cards are in the graveyard. Currently powers SOS Soaring
-    /// Stoneglider's "exile two cards from your graveyard or pay {1}{W}"
-    /// alt cost.
+    /// Optional additional cost: exile N cards from the caster's graveyard (as
+    /// `exile_filter` exiles one from hand). The auto-picker takes the
+    /// lowest-CMC matches; rejected with
+    /// `GameError::SelectionRequirementViolated` when fewer than N are there
+    /// (Soaring Stoneglider).
     #[serde(default)]
     pub exile_from_graveyard_count: u32,
-    /// Optional additional cost: return N permanents the caster controls
-    /// matching the filter to their owner's hand. Powers "free" spells
-    /// whose alt cost is a bounce-your-own-lands tempo hit — Gush
-    /// ("return two Islands"), Daze ("return an Island"), Foil, etc. The
-    /// auto-picker returns the lowest-impact matching permanents (untapped
-    /// basics first). Rejected with `SelectionRequirementViolated` if the
-    /// caster controls fewer than N matches.
+    /// Optional additional cost: return N matching permanents the caster
+    /// controls to their owner's hand (Gush, Daze). The auto-picker returns the
+    /// lowest-impact ones (untapped basics first); rejected with
+    /// `SelectionRequirementViolated` when fewer than N match.
     #[serde(default)]
     pub return_to_hand: Option<(SelectionRequirement, u32)>,
     /// CR 702.190 — this is a sneak cost: the permanent spell enters tapped
     /// and attacking what the returned creature was attacking (702.190b).
     #[serde(default)]
     pub sneak: bool,
-    /// Optional additional cost: sacrifice N permanents the caster controls
-    /// matching the filter. Powers free spells whose alt cost is a sacrifice
-    /// (Fireblast "sacrifice two Mountains", Snuff Out, Disappear). Rejected
-    /// with `SelectionRequirementViolated` if the caster controls fewer than
-    /// N matches; the auto-picker sacrifices the lowest-impact matches.
+    /// Optional additional cost: sacrifice N matching permanents the caster
+    /// controls (Fireblast, Snuff Out). Rejected with
+    /// `SelectionRequirementViolated` when fewer than N match; the auto-picker
+    /// sacrifices the lowest-impact ones.
     #[serde(default)]
     pub sacrifice_permanents: Option<(SelectionRequirement, u32)>,
-    /// Optional effect override when casting via the alternative cost.
-    /// When `Some`, the spell uses this effect instead of its normal
-    /// `definition.effect` on resolution. Powers Overload ("change each
-    /// instance of 'target' to 'each'") and similar alt-cost modes that
-    /// change the spell's resolution behavior.
+    /// Effect used instead of `definition.effect` when cast via this
+    /// alternative cost (Overload's "each" instead of "target").
     #[serde(default)]
     pub effect_override: Option<crate::effect::Effect>,
     /// True for Dash (CR 702.109) alternative costs — the resulting
@@ -7996,13 +7738,12 @@ pub struct AlternativeCost {
     /// highest-MV match for maximum reduction. The five Kamigawa Patrons.
     #[serde(default)]
     pub offering: Option<SelectionRequirement>,
-    /// Optional additional cost: tap N untapped creatures the caster controls
-    /// matching the filter ("you may tap an untapped creature you control
-    /// rather than pay this spell's mana cost" — the MMQ Mercadian cycle:
-    /// Orim's Cure, Ramosian Rally). Rejected with
-    /// `SelectionRequirementViolated` if fewer than N untapped matches exist;
-    /// the auto-picker taps the lowest-power ones. Tapping as a cost doesn't
-    /// trigger "becomes tapped" abilities the way `Effect::Tap` does.
+    /// Optional additional cost: tap N untapped matching creatures the caster
+    /// controls (the Mercadian "tap an untapped creature you control rather
+    /// than pay" cycle: Orim's Cure). Rejected with
+    /// `SelectionRequirementViolated` when short; the auto-picker taps the
+    /// lowest-power ones. Tapping as a cost doesn't trigger "becomes tapped"
+    /// abilities the way `Effect::Tap` does.
     #[serde(default)]
     pub tap_creatures: Option<(SelectionRequirement, u32)>,
     /// Optional additional cost: an opponent gains N life ("rather than pay
@@ -8075,13 +7816,11 @@ pub(crate) mod debug_flag {
 }
 
 impl CardDefinition {
-    /// CR 712.1 — a *transforming* double-faced card, told apart from a
-    /// modal one (CR 712.1, 712.11b) by the face that turns it over: some ability
-    /// on either face transforms or returns it transformed (Search for
-    /// Azcanta's upkeep trigger, the Ojer gods' death trigger, the
-    /// Temple's "transform this land"). Only a modal DFC's back face may be
-    /// played or cast from hand (CR 712.2); a transforming card is put onto
-    /// the battlefield front face up.
+    /// CR 712.1 — a transforming double-faced card, told apart from a modal one
+    /// (CR 712.11b) by an ability on either face that transforms it or returns
+    /// it transformed (Search for Azcanta, the Ojer gods). Only a modal DFC's
+    /// back face may be played or cast from hand (CR 712.2); a transforming
+    /// card enters front face up.
     pub fn is_transforming_dfc(&self) -> bool {
         use crate::effect::Effect;
         let Some(back) = self.back_face.as_deref() else { return false };
@@ -8134,13 +7873,10 @@ impl CardDefinition {
     }
 
     // `#[inline]` on the card-type predicates, measured at `c58f8407`:
-    // `release-fast` (cgu 16, no LTO) `fixed` -0.907 % / `cube` -0.741 % /
-    // `sealed` -0.831 %, and `profiling-lto` (the same with thin LTO)
-    // -0.175 / -0.124 / -0.162 %. `is_creature` alone is 392,826 calls a
-    // six-game run, `is_land` 152,706; the body is one heap load and a scan
-    // of one or two elements, so nearly all of the no-LTO figure is the call.
-    // Thin LTO recovers ~80 % of it and not the rest — see PERF's Baseline,
-    // ninety-third pass (3), and the standing rule it corrects.
+    // `release-fast` (no LTO) -0.91 / -0.74 / -0.83 % on fixed / cube / sealed,
+    // thin LTO -0.18 / -0.12 / -0.16 %. The body is one load and a short scan,
+    // so nearly all of the no-LTO figure was the call. See PERF's Baseline,
+    // ninety-third pass (3).
     #[inline] pub fn is_land(&self) -> bool { self.card_types.contains(&CardType::Land) }
     #[inline] pub fn is_creature(&self) -> bool { self.card_types.contains(&CardType::Creature) }
     #[inline] pub fn is_instant(&self) -> bool { self.card_types.contains(&CardType::Instant) }
@@ -8219,14 +7955,10 @@ impl CardDefinition {
         self.activated_abilities.iter().any(|a| effect_colorless(&a.effect))
     }
 
-    /// Printed colors from the mana cost's colored pips (CR 105.2), with
-    /// the Devoid CDA (CR 702.114) yielding colorless.
-    ///
-    /// Allocation-free; the `Vec` form is [`Self::printed_colors`]. Read at
-    /// the forty-seventh tip: **114,562 calls per six bench games**, 99,840
-    /// of them one per layer pass, at 81 Ir each — so it stays on the
-    /// bitmask. (The "~1.2 M" this comment used to claim was an order out;
-    /// the function's own 4.6 M self cost rules it out.)
+    /// Printed colors from the mana cost's coloured pips (CR 105.2); Devoid (CR
+    /// 702.114) yields colourless. Allocation-free (one call per layer pass
+    /// when measured at the forty-seventh tip); the `Vec` form is
+    /// [`Self::printed_colors`].
     pub fn printed_color_set(&self) -> crate::mana::ColorSet {
         use crate::mana::{ColorSet, ManaSymbol};
         if let Some(forced) = &self.color_override {
@@ -8393,17 +8125,13 @@ impl CardDefinition {
     }
 
     /// True when this printing can contribute a layer-6 `AddKeyword` matching
-    /// `pred` out of one of its five grant containers — the printed-shape half
-    /// of `GameState::keyword_grant_in_scope`, minus the two instance-level
-    /// self-grants the gather synthesizes (those are `grant_bits::
-    /// SYNTH_KEYWORD` and the `suspected` flag, which are not definition
-    /// facts).
+    /// `pred` from one of its five grant containers — the printed half of
+    /// `GameState::keyword_grant_in_scope`, minus the two instance-level
+    /// self-grants (`grant_bits::SYNTH_KEYWORD`, `suspected`).
     ///
-    /// Monotone in `pred`: every leg is an `any` / `||` / a recursion, with no
-    /// negation anywhere, so `pred` implying `q` implies this implying its `q`
-    /// form. That is what makes `grant_scan_bits`' `ANY_GRANT` — this function
-    /// at `|_| true` — a sound gate on it, and it is why the two share one
-    /// body rather than being kept in step by hand.
+    /// Monotone in `pred` (no negation anywhere), which is what makes
+    /// `grant_scan_bits`' `ANY_GRANT` — this at `|_| true` — a sound gate, and
+    /// why the two share one body.
     pub fn can_grant_keyword(&self, pred: &impl Fn(&Keyword) -> bool) -> bool {
         use crate::effect::static_effect_grants_keyword as grants;
         let any = |kws: &[Keyword]| kws.iter().any(pred);
@@ -8506,30 +8234,23 @@ impl CardDefinition {
         m
     }
 
-    /// The trigger dispatcher's board-scan bits for this printing — see
-    /// [`dispatch_bits`]. Pure function of the definition; `CardData`
-    /// memoizes it (`CardData::dispatch_scan_bits`), which is what keeps the
-    /// per-permanent `static_abilities` walk off the dispatch path.
-    /// The [`EventKind::fold`] of every printed triggered ability's kind — a
-    /// card whose fold misses a batch's carries no printed trigger any event
-    /// in it can reach. Memoized per object by [`CardData::trigger_kind_fold`].
+    /// The [`EventKind::fold`] of every printed trigger's kind: a card whose
+    /// fold misses a batch's has no printed trigger any event in it can reach.
+    /// Memoized per object by [`CardData::trigger_kind_fold`].
     pub fn trigger_kind_fold(&self) -> u64 {
         self.triggered_abilities.iter().fold(0u64, |m, t| m | t.event.kind.fold())
     }
 
-    /// Can any *card-intrinsic* cost reduction fire for this printing? The
-    /// gate on `actions::cost_reduction_for_spell_full_over`'s tail, which is
-    /// otherwise ~22 field loads and a `static_abilities` walk on every one of
-    /// the affordability checks a decision's candidate list makes. Memoized
-    /// per object by [`CardData::has_self_cost_reduction`].
+    /// Can any card-intrinsic cost reduction fire for this printing? Gates the
+    /// tail of `actions::cost_reduction_for_spell_full_over` (a couple dozen
+    /// field loads and a `static_abilities` walk per affordability check).
+    /// Memoized per object by [`CardData::has_self_cost_reduction`].
     ///
-    /// ⚠ **Every read of the card being cast in that tail has to be
-    /// represented here** — a field added there and not here is silently
-    /// skipped. The two `self_cost_reduction_*` fields the tail does *not*
-    /// read (`_cost_if_target`, `_per_sacrificed`, both consumed elsewhere)
-    /// are in anyway: a card kept that the tail ignores costs one pass of a
-    /// tail that finds nothing, a card dropped that it would have matched
-    /// costs a wrong mana cost.
+    /// ⚠ Every read of the cast card in that tail must be represented here — a
+    /// field added there and not here is silently skipped. The two
+    /// `self_cost_reduction_*` fields the tail doesn't read (`_cost_if_target`,
+    /// `_per_sacrificed`) are included anyway: a false positive costs one empty
+    /// pass, a false negative a wrong mana cost.
     pub fn has_self_cost_reduction(&self) -> bool {
         self.affinity_filter.is_some()
             || self.affinity_graveyard_filter.is_some()
@@ -8552,6 +8273,9 @@ impl CardDefinition {
                 .any(|sa| crate::effect::static_effect_is_self_cost_reduction(&sa.effect))
     }
 
+    /// The trigger dispatcher's board-scan bits for this printing — see
+    /// [`dispatch_bits`]. Memoized by `CardData::dispatch_scan_bits`, which
+    /// keeps the per-permanent `static_abilities` walk off the dispatch path.
     pub fn dispatch_scan_bits(&self) -> u64 {
         use crate::effect::{
             StaticEffect, static_effect_strips_abilities, static_grants_triggered_ability,
@@ -8626,63 +8350,34 @@ impl CardDefinition {
         self.subtypes.land_types.contains(&lt)
     }
 
-    /// Whether casting this card cares which *colors* pay for it — its
-    /// rules text reads the converge count somewhere. Two spellings, and
-    /// both are converge: `Value::ConvergedValue` (the amount riders) and
-    /// `SelectionRequirement::ManaValueAtMostConverged` (the target-filter
-    /// side, Sundering Archaic's "artifact with mana value X or less, where
-    /// X is the number of colors of mana spent"). Read by the payment path:
-    /// a converge cast taps and drains toward distinct colors instead of the
-    /// mana-conserving default, which was measurably incapable of
-    /// playing converge (it drained colorless-then-WUBRG-greedy, so a
-    /// converge spell routinely counted one color on a five-color board).
+    /// Whether casting this card cares which colours pay for it: its text reads
+    /// converge as `Value::ConvergedValue` or
+    /// `SelectionRequirement::ManaValueAtMostConverged` (Sundering Archaic).
+    /// The payment path then taps toward distinct colours instead of the
+    /// mana-conserving default, which drained colourless-then-WUBRG greedily
+    /// and routinely counted one colour on a five-colour board.
     ///
-    /// Detection scans the definition's Debug rendering for the variant
-    /// name, once per card name, cached — the effect tree is a deep
-    /// recursive enum with no generic walker, and a hand-written match
-    /// over every variant would silently rot as variants are added. The
-    /// variant name is unambiguous in the rendering, and a catalog name
-    /// maps to one definition, so the cache is sound. **This is the one
-    /// oracle**: the bot had a second, hand-written walker for the same
-    /// question and it had already rotted in both directions — it enumerated
-    /// fifteen `Effect` arms (so it missed converge in any other one, and in
-    /// every activated or triggered ability) while being the only side that
-    /// knew about `ManaValueAtMostConverged`.
-    /// Two levels, because this is asked once per cast payment on every
-    /// actor thread. L1 is a thread-local direct-mapped table keyed on the
-    /// name's *pointer* — catalog names are `&'static str`, so pointer
-    /// identity is finer than the string identity this cache has always
-    /// assumed, and it costs one multiply instead of a SipHash of the name.
-    /// L2 is the process-wide map, so the `format!` still runs at most once
-    /// per name per process; steady state never touches the lock, which used
-    /// to be an `RwLock` round-trip per cast on every thread at once.
+    /// This is the one oracle: a second, hand-written bot walker for the same
+    /// question had rotted in both directions.
     pub fn wants_converge(&self) -> bool {
         self.debug_flags() & debug_flag::CONVERGE != 0
     }
 
-    /// Whether this card's own text asks how many spells with **its name**
-    /// have been cast this game (`Predicate::CastOwnNameThisGameAtLeast`,
-    /// which is Approach of the Second Sun and nothing else in the tree).
-    ///
-    /// `finalize_cast` keeps the per-name lifetime tally
-    /// (`PlayerData::spells_cast_by_name_this_game`) and gates the bump on
-    /// this. The predicate reads the **source's own** name, and the source
-    /// is the card that carries the predicate, so a name nobody asks about
-    /// can never be read back — and the map then stays hashbrown's empty
-    /// singleton, whose clone is a fast path. See PERF `(-149)`.
+    /// Whether this card's text asks how many spells with its name were cast
+    /// this game (`Predicate::CastOwnNameThisGameAtLeast` — Approach of the
+    /// Second Sun). `finalize_cast` bumps
+    /// `PlayerData::spells_cast_by_name_this_game` only for such cards: the
+    /// predicate reads the source's own name, so no other name is ever read
+    /// back, and the map stays hashbrown's empty singleton (a cheap clone).
+    /// PERF `(-149)`.
     pub fn counts_own_name_casts(&self) -> bool {
         self.debug_flags() & debug_flag::OWN_NAME_CASTS != 0
     }
 
-    /// Whether this card remembers **who it has damaged this game**
-    /// (`Selector::DamagedBySourceThisGame`, which is The Fallen and nothing
-    /// else in the tree).
-    ///
-    /// The damage paths gate their two "this game" tallies on this. Recording
-    /// for every source cost a `battlefield_find_mut` — an unshare of the
-    /// whole battlefield — on every damage event, and in the non-combat path
-    /// that unshare happened *before* the `contains` check that decides
-    /// whether anything is pushed at all. See PERF `(-154)`.
+    /// Whether this card remembers who it has damaged this game
+    /// (`Selector::DamagedBySourceThisGame` — The Fallen). The damage paths
+    /// gate their "this game" tallies on it; recording for every source
+    /// unshared the whole battlefield per damage event. PERF `(-154)`.
     pub fn remembers_damage_victims(&self) -> bool {
         self.debug_flags() & debug_flag::DAMAGE_VICTIMS != 0
     }
@@ -8712,31 +8407,32 @@ impl CardDefinition {
         self.debug_flags() & debug_flag::DAMAGE_BY_NAME != 0
     }
 
-    /// Whether this card's "choose a color" is aimed at the **opponents** —
-    /// protection from it (Voice of All, Ward Sliver), a cast lock on it
-    /// (Iona), a prevention or redirect gated on it (Story Circle, Teferi's
-    /// Moat, Harsh Judgment), a P/T counting their permanents of it (Chameleon
-    /// Spirit) — rather than at its controller's own board (Heraldic Banner's
-    /// anthem, Caged Sun, every "name a colour" mana source, Diamond Mare's
-    /// "whenever **you** cast a spell of the chosen colour").
+    /// Whether this card's "choose a color" is aimed at the opponents —
+    /// protection (Voice of All), a cast lock (Iona), a prevention gated on it
+    /// (Story Circle) — rather than its controller's own board (Heraldic
+    /// Banner, a "name a colour" mana source). A headless seat's pick keys on
+    /// it.
     ///
-    /// The split is what a headless seat's pick keys on, and it has to be a
-    /// text question: the choice is one `Effect::ChooseColorForSelf` shared by
-    /// 42 cards, so the consumer is on the card and nowhere else. Both halves
-    /// are ~21 cards, which is why picking one side for all of them — first
-    /// legal, i.e. White — was wrong for about half the catalog.
+    /// It has to be a text question: the choice is one
+    /// `Effect::ChooseColorForSelf` shared by both kinds, so the consumer is
+    /// only on the card. The halves are about even, which is why one answer for
+    /// all (first legal, White) was wrong for half the catalog.
     pub fn chosen_color_aimed_at_opponents(&self) -> bool {
         self.debug_flags() & debug_flag::CHOSEN_COLOR_HOSTILE != 0
     }
 
-    /// The `{:?}`-derived per-definition flags, all answered by **one** scan
-    /// behind **one** cache.
+    /// The `{:?}`-derived per-definition flags, all answered by one scan behind
+    /// one cache. Rendering a `CardDefinition` is the expensive part, so a new
+    /// text question belongs in this word, not in its own `format!` and cache.
     ///
-    /// Splitting them into a function each would `format!` the definition
-    /// once per question and hold a cache per question; the rendering of a
-    /// `CardDefinition` is the expensive part (PERF: `wants_converge` alone
-    /// is 0.32 % of a six-game dump, all of it first-touch), so every new
-    /// text question belongs in this word.
+    /// The scan looks for variant names in the Debug rendering, once per card
+    /// name: the effect tree has no generic walker and a hand-written match
+    /// would rot as variants are added; a catalog name maps to one definition,
+    /// so the cache is sound. Two levels, since this is asked per cast payment
+    /// on every actor thread: L1 is a thread-local direct-mapped table keyed on
+    /// the name's pointer (catalog names are `&'static str`; a multiply instead
+    /// of a SipHash), L2 the process-wide map, so `format!` runs at most once
+    /// per name per process and the steady state never takes the lock.
     fn debug_flags(&self) -> u8 {
         use std::cell::RefCell;
         use std::collections::HashMap;
@@ -8964,19 +8660,12 @@ impl CardDefinition {
         self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Aura)
     }
 
-    /// True if this definition ever attaches **itself** to something — the
-    /// cast effect (`Pacifism`) or one of its triggered abilities
-    /// (`Animate Dead`).
-    ///
-    /// Read by the CR 704.5m orphan-Aura sweep: an Aura the engine has no
-    /// way to attach is an *approximation* (Ossification's "enchant basic
-    /// land you control" is not modelled), and sweeping it to the graveyard
-    /// the moment it enters is strictly worse than leaving it on the
-    /// battlefield doing its job.
-    ///
-    /// Walks one level into `Seq`, which is where every current case lives.
-    /// A deeper nesting reads as `false`, and false is the safe answer: it
-    /// spares the Aura rather than killing it.
+    /// True if this definition ever attaches itself — via its cast effect
+    /// (Pacifism) or a triggered ability (Animate Dead). Read by the CR 704.5m
+    /// orphan-Aura sweep: an Aura the engine can't attach is an approximation
+    /// (Ossification's "enchant basic land you control"), and binning it on
+    /// entry is worse than leaving it in play. Walks one level into `Seq`;
+    /// deeper nesting reads `false`, the safe answer (it spares the Aura).
     pub fn attaches_itself(&self) -> bool {
         fn is_self_attach(e: &crate::effect::Effect) -> bool {
             use crate::effect::{Effect, Selector};
@@ -9012,13 +8701,9 @@ impl CardDefinition {
         from_effect(&self.effect)
     }
 
-    /// CR 702.36 / 702.109 / 702.166 — does this card print a *cast face
-    /// down* ability? Morph, Morph-with-cost, Megamorph and Disguise are one
-    /// question to every caller that asks it, and there were **six**
-    /// hand-written copies of this four-variant `matches!` (two requirement
-    /// walkers, `cast_face_down`'s legality check, the affordance
-    /// enumerator and two bot sinks) that all had to agree for a seventh
-    /// keyword to be safe to add. One place now.
+    /// CR 702.36 / 702.109 / 702.166 — does this card print a cast-face-down
+    /// ability (Morph, Megamorph, Disguise)? The one copy of a `matches!` that
+    /// six call sites used to keep in step by hand.
     pub fn has_morph_ability(&self) -> bool {
         self.keywords.iter().any(|k| {
             matches!(
@@ -9415,28 +9100,21 @@ pub enum AttackBan {
 }
 
 /// CR 514.2 — the fields Cleanup wears off a permanent, written once.
+/// `CardData::clear_end_of_turn_effects` and its guard
+/// `CardData::end_of_turn_effects_are_clear` both expand from this list, so a
+/// field can't reach one without the other (a field only in the clear would
+/// make the guard skip the sweep while the effect still mattered).
 ///
-/// `CardData::clear_end_of_turn_effects` writes them and
-/// `CardData::end_of_turn_effects_are_clear` guards that write; both expand
-/// from this list, so a field cannot reach one without the other. Before
-/// that they were two hand-kept enumerations of the same set, and a field
-/// added only to the clear would have made the guard skip the sweep while
-/// the effect still mattered — silently, and only on turns where nothing
-/// else on the permanent needed clearing.
+/// A new until-end-of-turn field goes here in one of three shapes: `scalar`
+/// (`!=` / assign), `empty` (`is_empty` / `clear`), `none` (`is_some` / `=
+/// None`).
 ///
-/// A new until-end-of-turn field goes here, in one of the three shapes:
-/// `scalar` (compared with `!=`, assigned), `empty` (`is_empty` / `clear`),
-/// `none` (`is_some` / `= None`).
-///
-/// **Split in two by the field's home group, and the split is load-bearing**
-/// — see [`CardData::cold_written`]. The `cold` half is exactly the members
-/// that live in [`CardCold`], so a card whose cold group has never been
-/// written is *provably* clear on all eleven of them and the guards skip
-/// those probes (PERF candidate (B)). `cold_membership_check` below fails to
-/// compile if a field in the cold list is not a `CardCold` member, which is
-/// what makes the skip sound; a field in the hot list is always probed, so
-/// mis-filing one costs nothing. The union is still one list, so the
-/// "a field cannot reach the clear without the guard" property is unchanged.
+/// The split by home group is load-bearing (see [`CardData::cold_written`]):
+/// the `cold` half is exactly the [`CardCold`] members, so a card whose cold
+/// group was never written is provably clear on them and the guards skip those
+/// probes (PERF candidate (B)). `cold_membership_check` below fails to compile
+/// if a cold-list field isn't a `CardCold` member; a field mis-filed in the hot
+/// list is merely always probed.
 macro_rules! eot_wear_off_hot {
     ($m:ident) => {
         $m!(scalar power_bonus, 0);
@@ -9508,30 +9186,6 @@ fn cold_membership_check(c: &CardCold) {
     eot_wear_off_cold!(touch);
 }
 
-/// The rarely-written tail of a card object: registries, cast-time riders
-/// and the until-end-of-turn grants only a handful of cards touch. Held
-/// behind one CoW handle so a `CardData` unshare — the deep copy every zone
-/// write pays — bumps a refcount instead of cloning thirty-odd fields that
-/// are empty on essentially every card. `Deref`/`DerefMut` keep every
-/// `card.field` access working unchanged.
-///
-/// **The group is a `CardData` *width* lever and that is what prices it.**
-/// `CardData` is deep-copied 68,610 times on a six-game `cube` run — 48 % of
-/// every CoW copy in the program — and the copy is essentially the
-/// field-by-field move of its bytes, so a byte taken out of `CardData` is
-/// worth ~0.44 Ir a copy plus whatever clone logic the field carries.
-///
-/// Membership rule: a field belongs here if it is written rarely **and**
-/// either owns heap or is wide enough for its bytes to pay (16 +). A
-/// per-turn or per-zone-change `clear()` counts as a write, so the sweeps
-/// that clear these guard theirs on `is_empty()`.
-///
-/// **"Written rarely" is a measurement, not a reading of the field name.**
-/// The four damage-bookkeeping vectors (`damaged_by_this_turn` and
-/// siblings) look exactly like members and are not: moving them put 12.97 M
-/// Ir on `resolve_combat`'s `make_mut` edge for a 5 M saving, because a
-/// combat step writes them on every creature that deals or takes damage.
-/// They stay in `CardData`.
 /// CR 611.2b — what a [`CardCold::goad_holds`] entry lasts for.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum GoadHold {
@@ -9549,6 +9203,23 @@ pub enum GoadHold {
     ForTheGame,
 }
 
+/// The rarely-written tail of a card object: registries, cast-time riders and
+/// the until-end-of-turn grants only a few cards touch. Behind one CoW handle
+/// so a `CardData` unshare (the deep copy every zone write pays) bumps a
+/// refcount instead of cloning thirty-odd fields that are empty on nearly every
+/// card; `Deref`/`DerefMut` keep `card.field` access unchanged.
+///
+/// The group is a `CardData` width lever: the unshare is essentially a byte
+/// move, so every byte taken out of `CardData` pays on every copy. A field
+/// belongs here if it is written rarely and either owns heap or is wide (16+
+/// bytes). A per-turn or per-zone-change `clear()` counts as a write, so the
+/// sweeps that clear these guard on `is_empty()`.
+///
+/// ⚠ "Written rarely" is a measurement, not a reading of the name: the four
+/// damage-bookkeeping vectors (`damaged_by_this_turn` and siblings) look like
+/// members, but combat writes them on every creature it damages, and moving
+/// them cost far more on `resolve_combat`'s `make_mut` than it saved. They stay
+/// in `CardData`.
 #[derive(Debug, Clone, Default)]
 pub struct CardCold {
     /// Activated abilities granted to this specific permanent by resolved
@@ -9685,11 +9356,10 @@ pub struct CardCold {
     /// abilities). When the pile leaves the battlefield each component goes
     /// to that zone as its own card.
     pub mutate_stack: Vec<CardInstance>,
-    /// Keywords granted with `Duration::EndOfTurn` via `Effect::GrantKeyword`.
-    /// Cleared at the Cleanup step alongside `power_bonus`/`toughness_bonus`.
-    /// Stored separately from `definition.keywords` so the printed-Oracle
-    /// keywords aren't permanently mutated by an EOT pump (engine fix —
-    /// push modern_decks batch 24). `has_keyword` checks both vectors.
+    /// Keywords granted until end of turn by `Effect::GrantKeyword`, cleared at
+    /// Cleanup with `power_bonus` / `toughness_bonus`. Kept apart from
+    /// `definition.keywords` so an EOT grant never mutates the printed
+    /// keywords; `has_keyword` checks both.
     pub granted_keywords_eot: Vec<Keyword>,
     /// Per-grant layer timestamps for `granted_keywords_eot` (same indices;
     /// CR 613.7). Lets the layer walk order an EOT grant against
@@ -9698,13 +9368,11 @@ pub struct CardCold {
     /// snapshots) default to 0 — ordered before every tracked effect,
     /// matching the old pre-merge behavior.
     pub granted_keywords_eot_ts: Vec<u64>,
-    /// Until-end-of-turn flashback granted to this card while it sits in a
-    /// graveyard — "target instant/sorcery card in your graveyard gains
-    /// flashback until end of turn; the flashback cost equals its mana
-    /// cost" (the SOS "Flashback" instant). Read by `cast_flashback` via
-    /// [`effective_flashback`]; cleared at cleanup (including graveyard
-    /// cards). Transient grant, so it shares `granted_keywords_eot`'s
-    /// lifetime; serialized for mid-turn snapshot consistency.
+    /// Until-end-of-turn flashback granted to this card in a graveyard ("…gains
+    /// flashback until end of turn; the flashback cost equals its mana cost").
+    /// Read by `cast_flashback` via [`effective_flashback`]; cleared at
+    /// cleanup, graveyard cards included. Serialized for mid-turn snapshot
+    /// consistency.
     pub granted_flashback_eot: Option<crate::mana::ManaCost>,
     /// Until-end-of-turn Harmonize (CR 702.180) granted to this card while it
     /// sits in a graveyard — "target instant/sorcery card in your graveyard
@@ -9753,27 +9421,22 @@ pub struct CardCold {
     /// here. In-memory only: the wire carries `licid_attached` and
     /// `make_licid_aura` re-derives from the freshly-resolved printed card.
     pub licid_creature_def: Option<Arc<CardDefinition>>,
-    /// CR 122.1b — Keyword counters. Each entry maps a keyword to its
-    /// count; the host gets the keyword while one or more such counters
-    /// are on it. Applied as a layer-6 keyword addition during
-    /// `compute_battlefield`. Distinct from `definition.keywords`
-    /// (printed) and `granted_keywords_eot` (transient EOT grants) so
-    /// the printed/granted/counter sources can be inspected separately
-    /// (e.g., for "remove all abilities" effects). Defaults to empty.
-    /// Push (modern_decks batch 183): added per CR 122.1b.
+    /// CR 122.1b — keyword counters: the host has each keyword while it has one
+    /// or more of its counters, applied as a layer-6 addition in
+    /// `compute_battlefield`. Kept apart from `definition.keywords` and
+    /// `granted_keywords_eot` so the three sources can be inspected separately
+    /// ("remove all abilities").
     pub keyword_counters: KeywordCounters,
     /// CR 613.7 — the layer timestamp of the latest keyword counter put on
     /// this permanent by `Effect::AddKeywordCounter`; a "loses all abilities"
     /// effect older than it doesn't strip the counters' keywords (Abigale).
     /// 0 orders before every tracked effect.
     pub keyword_counters_ts: u64,
-    /// "You may cast/play this card without paying its mana cost" permission
-    /// granted by Practiced Scrollsmith, Suspend Aggression, Nita, …
-    /// Set by `Effect::GrantMayPlay`; consumed by
-    /// `GameAction::CastFromZoneWithoutPaying`; cleared on expiry by
-    /// `clean_per_turn_state` / next-turn cleanup, and also cleared
-    /// whenever the card changes zones (the grantor's "that card" stops
-    /// referring to it once it moves).
+    /// "You may cast/play this card without paying its mana cost" (Practiced
+    /// Scrollsmith). Set by `Effect::GrantMayPlay`, consumed by
+    /// `GameAction::CastFromZoneWithoutPaying`, cleared on expiry by
+    /// `clean_per_turn_state` and on any zone change (the grantor's "that card"
+    /// stops referring to it).
     pub may_play_until: Option<MayPlayPermission>,
     /// CR 603.6e — set on a card in exile that a permanent's "exile until
     /// ~ leaves" ability put there. When that source leaves the
@@ -9807,15 +9470,11 @@ pub struct CardCold {
 }
 
 /// `slice.has_kw(&Keyword::X)` without the out-of-line `Keyword::eq` call.
-///
-/// `Keyword` is a payload-carrying enum with ~200 variants, so its derived
-/// `PartialEq` is a real call — ~11 Ir an element — and it is not inlined at
-/// `-C lto=off`. Comparing discriminants first answers the *miss*, which is
-/// nearly every element of every keyword scan, in three instructions; the
-/// full `==` runs only when the tags already match, so payload variants
-/// (`Ward(n)`, `Protection(c)`) are compared exactly as `contains` did.
-/// Callgrind read `Keyword::eq` at 11,532,358 Ir / 0.68 % over ~1.09 M calls
-/// at the forty-seventh tip.
+/// `Keyword`'s derived `PartialEq` is a real call, not inlined at `-C lto=off`.
+/// Comparing discriminants first answers the miss — nearly every element — in
+/// three instructions; the full `==` runs only on a tag match, so payload
+/// variants (`Ward(n)`) compare exactly as `contains` did. (`Keyword::eq` was
+/// 0.68 % of Ir at the forty-seventh tip.)
 pub trait KeywordSlice {
     fn has_kw(&self, k: &Keyword) -> bool;
     /// `has_kw`'s tag half on its own — an over-approximation with no
@@ -9837,13 +9496,10 @@ impl KeywordSlice for [Keyword] {
     }
 }
 
-/// The value-less keywords the combat heuristics ask a permanent about, as
-/// bits of [`CardInstance::combat_keywords`]' one-pass answer.
-///
-/// Every variant here is a unit one, so the discriminant test `has_kw` makes
-/// is the whole comparison and a `match` arm answers it with no `Keyword::eq`.
-/// A valued keyword (Rampage N, Toxic N) does not belong here — its callers
-/// want the value, not presence.
+/// The value-less keywords the combat heuristics ask about, as bits of
+/// [`CardInstance::combat_keywords`]' one-pass answer. All unit variants, so
+/// `has_kw`'s discriminant test is the whole comparison. A valued keyword
+/// (Rampage N) doesn't belong here: its callers want the value.
 pub mod combat_kw {
     use super::Keyword;
 
@@ -9896,15 +9552,8 @@ pub mod combat_kw {
     }
 }
 
-/// Presence bits the state-based-action sweep's board scan reads off a
-/// definition, at their storage offsets inside [`CardMemo`] so the scan ORs
-/// the memo word straight into its accumulator.
-///
-/// Every bit here is a pure function of the definition. The four that need
-/// an instance condition as well ([`UNFLIPPED`]'s two, [`STEAL_PENALTY`],
-/// [`EQUIPMENT`]) carry only the definition half; the scan ANDs them.
 /// Set once any definition carrying a `StaticEffect::GrantStaticAbility` has
-/// had its [`sba_bits`] computed in this process — the SBA walk asks it before
+/// had its [`sba_bits`] computed in this process. The SBA walk asks it before
 /// looking for one on the board, so a process that never builds such a card
 /// pays one load a walk. The `sba_bits` memo word has no free bit for it.
 static STATIC_GRANT_SEEN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -9915,6 +9564,12 @@ pub fn static_grant_seen() -> bool {
     STATIC_GRANT_SEEN.load(std::sync::atomic::Ordering::Relaxed)
 }
 
+/// Presence bits the state-based-action sweep's board scan reads off a
+/// definition, at their storage offsets in [`CardMemo`] so the scan ORs the
+/// memo word straight in. All are pure functions of the definition; the four
+/// that also need an instance condition ([`UNFLIPPED`]'s two,
+/// [`STEAL_PENALTY`], [`EQUIPMENT`]) carry only the definition half, and the
+/// scan ANDs them.
 pub mod sba_bits {
     pub const FLIP_KEYWORD: u64 = 1 << 8;
     pub const FLIP_PREDICATE: u64 = 1 << 9;
@@ -9965,20 +9620,16 @@ pub mod sba_bits {
 }
 
 /// Which of `gather_continuous_effects_inner`'s per-static passes can fire.
+/// Thirty-eight passes each walk `sa_cards` for one `StaticEffect` variant, and
+/// a typical board carries none of them. One pre-scan walk sets these bits per
+/// card (OR'd board-wide), and a pass skips a card whose bit is clear
+/// ([`sa_open`]). Bits over-approximate — every pass still runs its own
+/// `match`.
 ///
-/// Thirty-eight of that function's passes walk `sa_cards` looking for one
-/// `StaticEffect` variant each, and a typical board carries none of them —
-/// thirty-eight walks of the same short list, each re-reading every card's
-/// static abilities to find nothing, inside the simulator's hottest function.
-/// One walk in the pre-scan sets the bits here, per card and OR'd board-wide;
-/// a pass skips a card whose bit is clear ([`sa_open`]) instead of walking its
-/// statics. Bits over-approximate — every pass still runs its own `match` — so
-/// a set bit costs only the walk it always paid.
-///
-/// The gate is *per card*, not a slice swap on the whole list: an empty
-/// `sa_cards` must cost what it cost before. A `mask & bit` per pass over a
-/// shared list measured **+1.03 % on `--decks fixed`**, where `sa_cards` is
-/// empty and all thirty-eight passes were already free.
+/// The gate is per card, not a slice swap on the whole list, because an empty
+/// `sa_cards` must cost what it did before: a `mask & bit` per pass over a
+/// shared list measured +1.03 % on `--decks fixed`, where all thirty-eight
+/// passes were already free.
 pub mod gather_spec {
     pub const GRANT_KEYWORD: u64 = 1 << 0;
     pub const GRANT_KEYWORD_TO_ATTACKERS: u64 = 1 << 1;
@@ -10161,16 +9812,12 @@ pub mod grant_bits {
     /// gather *synthesizes* a grant from rather than reading out of a field
     /// (`HexproofUnlessAttackingOrBlocking`, `Unleash`).
     pub const SYNTH_KEYWORD: u64 = 1 << 32;
-    /// One of the five containers a keyword grant can come out of
-    /// (`equipped_bonus`, `soulbond_bonus`, `level_bands`, `station`,
-    /// `static_abilities`) actually holds one —
-    /// [`CardDefinition::can_grant_keyword`] at `|_| true`. Clear means the
-    /// card cannot grant any keyword to anything, whatever the predicate asks.
-    ///
-    /// The bit was "one of the five is non-empty" until the ninetieth pass;
-    /// the tighter question costs the same load and the same test, and the
-    /// cards it now excludes are the ones with a printed static that grants no
-    /// keyword — a large population.
+    /// One of the five grant containers (`equipped_bonus`, `soulbond_bonus`,
+    /// `level_bands`, `station`, `static_abilities`) actually holds a keyword
+    /// grant — [`CardDefinition::can_grant_keyword`] at `|_| true`. Clear means
+    /// the card can't grant any keyword to anything. (Before the ninetieth pass
+    /// this was "one of the five is non-empty"; the tighter test costs the same
+    /// and excludes the many cards whose printed static grants no keyword.)
     ///
     /// [`CardDefinition::can_grant_keyword`]: super::CardDefinition::can_grant_keyword
     pub const ANY_GRANT: u64 = 1 << 33;
@@ -10194,15 +9841,11 @@ pub mod type_bits {
 
 /// `card_can_change_land_types` and `card_can_change_creature_types` — the
 /// [`type_bits`] device for the other two layer-4 type families. One bit each
-/// rather than [`type_bits`]' attached/always pair, because both predicates
-/// read no instance field: the attachment route is folded in and widened, so
-/// the zone's memo can key on a definition epoch.
-///
-/// The two predicates are the per-card body of the battlefield walk behind
-/// the engine's `zone::Battlefield` type-gate memo, so they run once per
-/// permanent on every miss: PERF `(-87)` prices the walk at ~430 Ir over ~23
-/// permanents on `cube`, and the body was a `static_abilities` walk plus a
-/// `station` walk off a large `CardDefinition`.
+/// rather than an attached/always pair: neither predicate reads an instance
+/// field (the attachment route is folded in and widened), so the zone's memo
+/// can key on a definition epoch. They are the per-card body of the walk behind
+/// `zone::Battlefield`'s type-gate memo, run per permanent on every miss (PERF
+/// `(-87)`).
 pub mod layer4_bits {
     /// The definition can contribute a layer-4 land-type modification: an
     /// `equipped_bonus` that sets land types, a land-type-changing printed
@@ -10215,26 +9858,22 @@ pub mod layer4_bits {
 }
 
 /// The four presence questions the trigger dispatcher's board scan asks of a
-/// definition — see [`sba_bits`] for the device.
-///
-/// Three of the four *are* the answer (the scan ORs them straight in); only
-/// [`GRANT_TRIGGER`] still needs the walk, because it builds a list. The two
-/// attachment-gated bits carry the definition half and the caller ANDs
-/// `attached_to`.
+/// definition (see [`sba_bits`] for the device). Three are the answer, ORed
+/// straight in; only [`GRANT_TRIGGER`] still needs the walk, because it builds
+/// a list. The two attachment-gated bits carry the definition half; the caller
+/// ANDs `attached_to`.
 ///
 /// [`GRANT_TRIGGER`]: self::GRANT_TRIGGER
 pub mod dispatch_bits {
-    /// `equipped_bonus` exists and carries at least one triggered ability —
-    /// host-sourced or the Jitte-style `triggers_on_equipment` shape alike;
-    /// the grant carries its own source. Attachment-gated.
+    /// `equipped_bonus` exists and carries at least one triggered ability
+    /// (host-sourced or Jitte-style `triggers_on_equipment`; the grant carries
+    /// its own source). Attachment-gated.
     ///
-    /// **The non-empty check is load-bearing, not tidiness.** Without it every
-    /// plain buff Aura and Equipment set this bit, so
-    /// `dispatch_board_scan` pushed a `(host, &[])` into `equip_grants` and
-    /// `dispatch_triggers_for_events` read a non-empty grant list — losing its
-    /// member lane, its fast-path gate and a freeze scope for the rest of the
-    /// game. That was 100 % of the grant-live dispatches on `--decks fixed`
-    /// and `--decks cube` (PERF `(-120)`).
+    /// ⚠ The non-empty check is load-bearing: without it every plain buff Aura
+    /// and Equipment set this bit, `dispatch_board_scan` pushed `(host, &[])`
+    /// into `equip_grants`, and `dispatch_triggers_for_events` lost its member
+    /// lane, fast-path gate and a freeze scope for the rest of the game (PERF
+    /// `(-120)`).
     pub const EQUIP_TRIGGER_GRANT: u64 = 1 << 36;
     /// `equipped_bonus.remove_abilities`. Attachment-gated; the other half of
     /// `card_can_strip_abilities`.
@@ -10274,50 +9913,11 @@ pub mod dispatch_bits {
     pub const ALL: u64 = BOARD_SCAN | LISTENER | MANA_STATIC;
 }
 
-/// Two answers about a card's *definition*, memoized on the object: its
-/// printed colour set and the SBA sweep's board-scan bits.
-///
-/// [`CardDefinition::printed_color_set`] is a pure function of the
-/// (immutable, `Arc`-shared) definition and `compute_permanent_pass` asks it
-/// **once per permanent per layer pass** — 301,838 times on a six-game `cube`
-/// run at ~56 Ir apiece, 0.52 % of the program, 0.59 % of `fixed`. Nothing
-/// about the answer changes between two passes over an untouched board.
-/// [`CardDefinition::sba_scan_bits`] is the same shape one caller over: five
-/// inner loops over the definition's keyword / supertype / card-type /
-/// enchantment-subtype / static-ability lists, once per permanent per
-/// state-based-action sweep.
-///
-/// Layout: bits 0-4 the [`ColorSet`], bit 5 its valid flag, bit 6 the SBA
-/// valid flag, bit 7 the keyword-grant one, bits 8-29 the [`sba_bits`] mask,
-/// bit 30 the card-type valid flag, bit 31 the dispatch one, bits 32-33
-/// [`grant_bits`], 34-35 [`type_bits`], 36-40 [`dispatch_bits`]. Zero is
-/// "nothing known".
-///
-/// A second word holds the layer gather's [`gather_spec`] mask (bits 0-52)
-/// with its valid flag at bit 63 — 53 bits do not fit beside the first
-/// word's tenants, and a second atom is 8 bytes on a `CardData` that is
-/// already hundreds — plus, at bits 53-54,
-/// [`CardDefinition::has_self_cost_reduction`]'s flag and answer, and at
-/// bits 55-62 [`CardData::printed_cmc`]'s flag and seven-bit value, which is
-/// why [`Self::set_gather`] is a load-modify-store. **That word is now full**
-/// and a `const` assertion over this file says so. A third holds [`CardDefinition::trigger_kind_fold`]
-/// — the [`EventKind::fold`] of every printed trigger's kind, valid flag
-/// at bit 63 (a kind whose fold lands on bit 63 always passes the gate,
-/// which is the sound direction). All words are cleared together in
-/// [`Self::clear`], so a slot added to any cannot outlive a definition
-/// rewrite.
-/// Atomic rather than a `Cell` because `CardData` sits behind an `Arc` that
-/// has to stay `Send`; the halves are written with a plain load-modify-store
-/// because [`Self::clear`] only ever runs on a *uniquely owned* `CardData`
-/// (`Arc::make_mut` clones a shared one first), so the only concurrent
-/// writers are two setters storing pure functions of the same definition and
-/// a lost update costs a recompute.
-/// ⚠ **The second memo word has four tenants and they must not overlap.** A
-/// `1 << 53` added to [`gather_spec`] would be a silently wrong cost
-/// reduction rather than a compile error — [`CardMemo::set_gather`] is a
-/// load-modify-store, so it would clear `COSTRED_VALID` and refill it from a
-/// gather bit. This is the guard; it is a module-level `const`, so a
-/// collision is a build failure.
+/// ⚠ The second memo word has four tenants and they must not overlap. A `1 <<
+/// 53` added to [`gather_spec`] would be a silently wrong cost reduction, not a
+/// compile error ([`CardMemo::set_gather`] is a load-modify-store and would
+/// clear `COSTRED_VALID` and refill it from a gather bit). This module-level
+/// `const` makes a collision a build failure.
 const _: () = assert!(
     gather_spec::ALL
         & (CardMemo::COSTRED_VALID
@@ -10332,6 +9932,32 @@ const _: () = assert!(
     "the memo's second word has overlapping tenants",
 );
 
+/// Answers about a card's definition, memoized on the object (printed colour
+/// set, board-scan bits, …). Each is a pure function of the immutable,
+/// `Arc`-shared definition, asked per permanent per layer pass or SBA sweep,
+/// and nothing changes it between passes over an untouched board.
+///
+/// First word: bits 0-4 the [`ColorSet`], bit 5 its valid flag, bit 6 the SBA
+/// valid flag, bit 7 the keyword-grant one, bits 8-29 the [`sba_bits`] mask,
+/// bit 30 the card-type valid flag, bit 31 the dispatch one, bits 32-33
+/// [`grant_bits`], 34-35 [`type_bits`], 36-40 [`dispatch_bits`]. Zero is
+/// "nothing known".
+///
+/// Second word: the layer gather's [`gather_spec`] mask (bits 0-52, too wide
+/// for the first word) with its valid flag at bit 63,
+/// [`CardDefinition::has_self_cost_reduction`]'s flag and answer at bits 53-54,
+/// and [`CardData::printed_cmc`]'s flag and seven-bit value at 55-62 — hence
+/// [`Self::set_gather`] is a load-modify-store. ⚠ That word is full; a `const`
+/// assertion says so. Third word: [`CardDefinition::trigger_kind_fold`], valid
+/// flag at bit 63 (a kind folding onto bit 63 always passes the gate, the sound
+/// direction). All words are cleared together in [`Self::clear`], so no slot
+/// can outlive a definition rewrite.
+///
+/// Atomic rather than `Cell` because `CardData` sits behind an `Arc` that must
+/// stay `Send`. A plain load-modify-store is enough: [`Self::clear`] only runs
+/// on a uniquely owned `CardData` (`Arc::make_mut` clones a shared one first),
+/// so the only concurrent writers are setters storing pure functions of the
+/// same definition, and a lost update costs a recompute.
 #[derive(Debug, Default)]
 pub struct CardMemo(
     std::sync::atomic::AtomicU64,
@@ -10608,39 +10234,26 @@ impl Clone for CardMemo {
     }
 }
 
-/// The definition handle on a [`CardData`], and the reason [`CardMemo`] does
-/// not have to be thrown away by every write that reaches a card.
+/// The definition handle on a [`CardData`], and why [`CardMemo`] survives most
+/// writes to a card. `Deref`s to the `Arc`, so every read site is unchanged; it
+/// has no `DerefMut` and no public field, so a definition rewrite must go
+/// through [`CardData::definition_mut`] or [`CardData::set_definition`], which
+/// clear the memo.
 ///
-/// `Deref`s to the `Arc`, so **every read site is unchanged** —
-/// `c.definition.name`, `&c.definition`, `c.definition.is_creature()` all
-/// still compile through two derefs. What it does *not* have is `DerefMut`
-/// and a public field, so an assignment to the field and a `make_mut` on it
-/// stop compiling: a definition rewrite has to go through
-/// [`CardData::definition_mut`] or [`CardData::set_definition`], which clear
-/// the memo.
-///
-/// That is the whole device. `CardInstance`'s `DerefMut` used to clear the
-/// memo because it is the one chokepoint every `&mut` reach goes through —
-/// which is provable and enormously conservative: **89.5 % of every memo
-/// recompute in the program was caused by a tap, a damage point or a
-/// counter**, none of which is an input to any memoized value (each is a
-/// pure function of `definition`). PERF's `(-91)` has the measurement.
-/// Keying the memo on the `Arc` pointer instead would be *unsound* — a
-/// uniquely-owned definition is rewritten in place by `Arc::make_mut` and
-/// the pointer does not move — so the clear has to move to the write sites,
-/// and this type is what makes "every write site" a compiler-checked claim
-/// rather than a grep.
+/// Clearing at `CardInstance`'s `DerefMut` chokepoint was provable but far too
+/// conservative: most memo recomputes came from taps, damage and counters, none
+/// an input to any memoized value (PERF `(-91)`). Keying the memo on the `Arc`
+/// pointer would be unsound (`Arc::make_mut` rewrites a uniquely owned
+/// definition in place), so the clear lives at the write sites, and this type
+/// makes "every write site" a compiler-checked claim.
 #[derive(Debug, Clone)]
 pub struct Definition {
     def: Arc<CardDefinition>,
-    /// **The memo lives here, not on [`CardData`], and that is what makes
-    /// the invariant structural rather than enforced.** Both fields are
-    /// private, so the only way to change `def` is through an accessor that
-    /// clears — and the only *other* way to change what a `CardData`'s
-    /// definition is, `c.definition = other.definition.clone()`, carries
-    /// this memo along with the definition it describes, which is correct.
-    /// There is no expression that leaves a memo beside a definition it is
-    /// not a function of.
+    /// The memo lives here, not on [`CardData`], which makes the invariant
+    /// structural: both fields are private, so `def` changes only through a
+    /// clearing accessor, and `c.definition = other.definition.clone()` carries
+    /// the memo along with the definition it describes. No expression leaves a
+    /// memo beside a definition it isn't a function of.
     memo: CardMemo,
 }
 
@@ -10669,23 +10282,17 @@ impl std::ops::Deref for Definition {
 }
 
 
-/// Monotone counter of *definition rewrites* anywhere in the process, bumped
-/// by the two accessors that can perform one ([`CardData::definition_mut`] and
-/// [`CardData::set_definition`] — `Definition` has no `DerefMut`, so there is
-/// no third).
+/// Monotone count of definition rewrites anywhere in the process, bumped by the
+/// only two accessors that can do one ([`CardData::definition_mut`],
+/// [`CardData::set_definition`]). A collection-level memo over definitions
+/// can't see a rewrite through an element handle (`iter_mut` hands out `&mut
+/// CardInstance`), so it reads this counter beside its memo —
+/// `crate::zone::Battlefield`'s type-gate lanes do.
 ///
-/// A collection-level memo whose answer is a function of the definitions it
-/// holds cannot see a rewrite through an element handle: `iter_mut` hands out
-/// `&mut CardInstance` and the rewrite happens two derefs down. Reading this
-/// counter beside the memo turns that into one relaxed load —
-/// `crate::zone::Battlefield`'s type-gate lanes are the consumer.
-///
-/// Process-wide rather than thread-local **on purpose**: a `GameState` can be
-/// built on one thread and played on another, and a per-thread counter would
-/// then compare against a sequence the memo was never stamped from. A rewrite
-/// on another thread only ever costs an extra recompute, never a wrong answer,
-/// and a rewrite is rare — a census at PERF `(-213)` counted 0-6 per whole
-/// bot game — so the over-invalidation is noise.
+/// Process-wide on purpose: a `GameState` can be built on one thread and played
+/// on another, so a per-thread counter could be compared against a sequence the
+/// memo was never stamped from. A rewrite on another thread costs only an extra
+/// recompute, and rewrites are rare (PERF `(-213)`).
 static DEFINITION_EPOCH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
 
 /// The current value of [`DEFINITION_EPOCH`]. A memo stamped with this value
@@ -10703,41 +10310,36 @@ fn bump_definition_epoch() {
 /// [`CardInstance`], which owns it behind an `Arc` — see that type for why.
 #[derive(Debug, Clone)]
 pub struct CardData {
-    // Fields whose clone calls something come first; the plain ones follow
-    // as one run. **Declaration order is the derived `Clone`'s statement
-    // order** and `&self` is not `noalias` (PERF `(-139)`), so a scalar
-    // between two collections is its own fenced load/store pair. PERF
-    // `(-142)`; the microbenchmark that ranks the orders is in `(-141)`.
-    /// Static blueprint, shared behind an `Arc` so materializing a
-    /// `CardData` (which the CoW handle does only for a card actually being
-    /// written) doesn't deep-copy the definition's ~two dozen `Vec` fields.
-    /// The definition is immutable for the common case; the handful of
-    /// effects that rewrite it
-    /// (MDFC face-swap, "loses all abilities", overload effect override,
-    /// keyword grants) go through `Arc::make_mut`, which clones lazily only
-    /// when the `Arc` is actually shared.
+    // Fields whose clone calls something come first; the plain ones follow as
+    // one run. Declaration order is the derived `Clone`'s statement order and
+    // `&self` is not `noalias` (PERF `(-139)`), so a scalar between two
+    // collections is its own fenced load/store pair. PERF `(-142)`; the orders
+    // are ranked in `(-141)`.
+    /// Static blueprint, shared behind an `Arc` so materializing a `CardData`
+    /// doesn't deep-copy the definition's two dozen `Vec`s. The few effects
+    /// that rewrite it (MDFC face-swap, "loses all abilities", overload,
+    /// keyword grants) go through `Arc::make_mut`, which clones only when
+    /// shared.
     pub definition: Definition,
     pub counters: CounterBag,
-    /// Sources that have dealt damage to this creature this turn. Powers
-    /// "When a creature dealt damage by this creature this turn dies"
-    /// (Bushi Tenderfoot). Read off the LKI snapshot at death-trigger time.
-    /// Reset at cleanup; in-memory only.
+    /// Sources that have dealt damage to this creature this turn ("When a
+    /// creature dealt damage by this creature this turn dies", Bushi
+    /// Tenderfoot), read off the LKI snapshot at death-trigger time. Reset at
+    /// cleanup; in-memory only.
     ///
-    /// Inline, the same 24 bytes as the `Vec` it was: every creature a
-    /// combat damages took one push onto an empty list, and that first
-    /// push was the combat damage step's 2.04 allocator growths a call —
-    /// 28,339 over 13,924 steps on a 60-game actor run (PERF `(-271)`).
-    /// The three lists below stay [`OftenEmpty`](crate::oftenempty::OftenEmpty):
-    /// empty on nearly every permanent and cloned on every CoW unshare, so
-    /// their `Clone` tests the length first (PERF `(-200)`).
+    /// Inline (the same 24 bytes as the `Vec` it was), because the first push
+    /// onto an empty list was the combat damage step's allocator growth (PERF
+    /// `(-271)`). The three lists below stay
+    /// [`OftenEmpty`](crate::oftenempty::OftenEmpty): empty on nearly every
+    /// permanent and cloned on every CoW unshare, so their `Clone` tests the
+    /// length first (PERF `(-200)`).
     pub damaged_by_this_turn: crate::copyvec::CopyVec<[CardId; 4]>,
-    /// CR 601 — per-color breakdown of the mana spent paying this spell's
-    /// cost, stamped at cast time. Read by `Predicate::ManaSpentOfColorAtLeast`
-    /// (Adamant, CR 702.137) and `Predicate::CastSpellNoColoredManaSpent`
-    /// (Void Mirror). Empty for free/uncast objects. Inline and here, not in
-    /// [`CardCold`]: it is written on every paid cast, and as a cold `Vec` the
-    /// stamp was the card's cold-group copy on every cast probe that paid
-    /// (PERF `(-287)`). Five colors, so it never spills.
+    /// CR 601 — per-colour mana spent on this spell's cost, stamped at cast.
+    /// Read by `Predicate::ManaSpentOfColorAtLeast` (Adamant, CR 702.137) and
+    /// `Predicate::CastSpellNoColoredManaSpent` (Void Mirror); empty for free
+    /// or uncast objects. Inline and here, not in [`CardCold`]: every paid cast
+    /// writes it, and as a cold `Vec` it deep-copied the cold group on every
+    /// paying cast probe (PERF `(-287)`). Five colours, so it never spills.
     pub cast_mana_spent_by_color: crate::copyvec::CopyVec<[(crate::mana::Color, u32); 5]>,
     /// Seats this permanent has dealt damage to this *game*, and the
     /// planeswalkers likewise (The Fallen). Never reset per turn.
@@ -10749,21 +10351,13 @@ pub struct CardData {
     pub damage_by_source_name_this_turn: crate::oftenempty::OftenEmpty<(&'static str, u32)>,
     /// The rarely-written tail — see [`CardCold`].
     pub cold: crate::cow::CowBox<CardCold>,
-    /// Has anything ever taken `&mut` at [`cold`](Self::cold) on this object
-    /// or on the card it was cloned from? `false` is authoritative and means
-    /// every `CardCold` field still holds its `Default` value, so a question
-    /// about one is answered without the pointer chase into the group — the
-    /// cleanup guard skips eleven of its twenty-six probes on it.
-    ///
-    /// Set at the group's one `&mut` route, [`DerefMut for CardData`], and
-    /// never cleared: a card that writes a cold field once stays "written"
-    /// for the rest of the game even if the field is cleared back. That is
-    /// the conservative direction, and it is why the gate *degrades* over a
-    /// game rather than over the board.
-    ///
-    /// A byte, and `CardData` is deep-copied 68,610 times a six-game `cube`
-    /// run — ~0.44 Ir a copy by the width rule in [`CardCold`]'s doc, i.e.
-    /// ~30 k Ir, against the row it gates.
+    /// Has anything ever taken `&mut` at [`cold`](Self::cold) on this object or
+    /// the card it was cloned from? `false` is authoritative: every `CardCold`
+    /// field still holds its `Default`, so the cleanup guard answers its cold
+    /// probes without the pointer chase. Set at the group's one `&mut` route,
+    /// [`DerefMut for CardData`], and never cleared — the conservative
+    /// direction, so the gate degrades over a game but is never wrong. Costs
+    /// one byte of `CardData` width (see [`CardCold`]'s width rule).
     ///
     /// [`DerefMut for CardData`]: CardData#impl-DerefMut-for-CardData
     cold_written: bool,
@@ -11022,14 +10616,11 @@ pub struct CardData {
     /// Kept on the permanent it becomes, like `cast_from_hand`. River
     /// Kelpie's "whenever a player casts a spell from a graveyard".
     pub cast_from_graveyard: bool,
-    /// One-shot permission to cast this MDFC's **back face from the
-    /// graveyard**. Set by `Effect::GrantCastBackFromGraveyard` once the card
-    /// is in the graveyard; consumed (cleared) by `cast_spell_back_face` when
-    /// it hops the card to hand to cast the back. ⚠ No card grants it — the
-    /// printed shape is Disturb, a keyword, and the Pestilent Cauldron
-    /// sacrifice this used to name is not an ability that card has. See
-    /// `Effect::GrantCastBackFromGraveyard`.
-    /// (serde handled via the wire-mirror struct, like `cast_via_flashback`.)
+    /// One-shot permission to cast this MDFC's back face from the graveyard:
+    /// set by `Effect::GrantCastBackFromGraveyard` while the card is there,
+    /// cleared by `cast_spell_back_face` when it hops the card to hand to cast
+    /// it. ⚠ No card grants it — the printed shape is Disturb, a keyword. Serde
+    /// goes through the wire-mirror struct, like `cast_via_flashback`.
     pub may_cast_back_from_graveyard: bool,
     /// "As [this] enters, choose a creature type." Cavern of Souls. The
     /// chosen type narrows which creature spells the controller can cast as
@@ -11271,13 +10862,12 @@ pub struct CardData {
     /// the battle (CR 508.4) and its creatures block them. `None` for
     /// non-battles. Round-trips via `CardInstanceWire` with `#[serde(default)]`.
     pub protected_by: Option<usize>,
-    /// Riders stamped on a permanent-spell copy by
-    /// `Effect::CopySpellWithRiders` (Choreographed Sparks — "the copy
-    /// gains haste and 'At the beginning of the end step, sacrifice this
-    /// token.'"). Applied when the spell resolves onto the battlefield:
-    /// `.0` grants haste until end of turn, `.1` schedules a
-    /// next-end-step sacrifice. `None` for ordinary cards/copies.
-    /// Round-trips via `CardInstanceWire` with `#[serde(default)]`.
+    /// Riders `Effect::CopySpellWithRiders` stamps on a permanent-spell copy
+    /// (Choreographed Sparks: "the copy gains haste and 'At the beginning of
+    /// the end step, sacrifice this token.'"). Applied as it resolves onto the
+    /// battlefield: `.0` grants haste until end of turn, `.1` schedules a
+    /// next-end-step sacrifice. Round-trips via `CardInstanceWire` with
+    /// `#[serde(default)]`.
     pub resolve_riders: Option<(bool, bool)>,
 }
 
@@ -11444,16 +11034,13 @@ impl CardData {
     }
 
     /// The encoder's vocabulary index for this object, memoized on the same
-    /// word — the one slot on it whose *meaning* lives outside this crate.
-    ///
-    /// `server::encode::Vocab::index_of` is a hash lookup on the definition's
-    /// name and the ML actor asks it 438,318 times a sixty-game run at ~49 Ir
-    /// apiece (0.57 % of the actor), once per encoded object and once per
-    /// library card. The answer is a pure function of the definition's name,
-    /// and the vocabulary is frozen (`VOCAB_SNAPSHOT`, one constructor), so
-    /// it memoizes exactly like the bit families above. `compute` is the
-    /// caller's lookup; the `debug_assert!` re-runs it on every hit, so the
-    /// suite audits both the invalidation and the "one vocabulary" claim.
+    /// word — the one slot whose meaning lives outside this crate.
+    /// `server::encode::Vocab::index_of` is a hash lookup on the name, asked
+    /// per encoded object and per library card. The vocabulary is frozen
+    /// (`VOCAB_SNAPSHOT`, one constructor), so it memoizes like the bit
+    /// families above. `compute` is the caller's lookup; the `debug_assert!`
+    /// re-runs it on every hit, so the suite audits both the invalidation and
+    /// the one-vocabulary claim.
     #[inline]
     pub fn vocab_index(&self, compute: impl Fn(&CardDefinition) -> u16) -> u16 {
         if let Some(i) = self.definition.memo.get_vocab() {
@@ -11471,19 +11058,13 @@ impl CardData {
     }
 
     /// The printed mana value of this object's definition, memoized on the
-    /// second word (PERF `(-348)`).
+    /// second word (PERF `(-348)`): `ManaCost::cmc` walks the symbol `Vec`, and
+    /// the affordability, valuation and scoring paths ask it constantly. A pure
+    /// function of the definition, so it memoizes like the bit families above.
     ///
-    /// `ManaCost::cmc` is a 25-instruction walk of the symbol `Vec` — one
-    /// `match` per pip — and the profile counts **147,862 calls a six-game
-    /// `cube` run**, five sites holding 89 % of them: `can_afford_in_state_with`'s
-    /// mana-value gate, `permanent_value_with`, `blocker_self_block`'s CR 702.xx
-    /// even-mana-value test, `event_amount_for` and `score_candidate`. The
-    /// answer is a pure function of the (immutable, `Arc`-shared) definition,
-    /// so it memoizes exactly like the bit families above.
-    ///
-    /// ⚠ **Seven bits, and a cost over 127 is not memoized** — it recomputes
-    /// every time, as `mana_summary`'s unpackable case does. No printed cost
-    /// in the catalog comes near it; a synthesized one could.
+    /// ⚠ Seven bits: a cost over 127 isn't memoized and recomputes every time,
+    /// as `mana_summary`'s unpackable case does. No printed cost comes near; a
+    /// synthesized one could.
     #[inline]
     pub fn printed_cmc(&self) -> u32 {
         if let Some(mv) = self.definition.memo.get_cmc() {
@@ -11597,37 +11178,30 @@ impl CardData {
 }
 
 impl CardData {
-    /// Has this object's [`CardCold`] group never been written — i.e. does
-    /// every field in it still hold its `Default`? See
-    /// [`cold_written`](Self::cold_written); `true` is authoritative and is
-    /// the answer for most permanents for most of a game, so a hot reader of
-    /// a cold field opens on this instead of chasing the group's pointer.
+    /// Has this object's [`CardCold`] group never been written, i.e. does every
+    /// field still hold its `Default`? See
+    /// [`cold_written`](Self::cold_written). `true` is authoritative and is the
+    /// answer for most permanents most of a game, so a hot reader of a cold
+    /// field opens on this instead of chasing the group's pointer.
     ///
-    /// ⚠ **Every caller carries a recompute-and-compare `debug_assert!` on
-    /// the path this opens**, as `(-349)`/`(-350)` do — the bit is exact by
-    /// construction, and the assertion is what keeps it exact when a later
-    /// pass adds a route to the group.
+    /// ⚠ Every caller carries a recompute-and-compare `debug_assert!` on the
+    /// path this opens, as `(-349)`/`(-350)` do — that is what keeps the bit
+    /// exact when a later pass adds a route to the group.
     #[inline]
     pub fn cold_pristine(&self) -> bool {
         !self.cold_written
     }
 
-    /// Ask a yes/no question of the [`CardCold`] group. A pristine group
-    /// answers `false` without chasing the group's pointer or loading a
-    /// length.
+    /// Ask a yes/no question of the [`CardCold`] group; a pristine group
+    /// answers `false` without chasing its pointer. The gate every whole-zone
+    /// walk over a cold field opens on (PERF `(-354)`): one device instead of a
+    /// hand-written gate per site, so the whole class has one audit.
     ///
-    /// **The gate every whole-zone walk over a cold field opens on** — PERF
-    /// `(-354)`. `cold_pristine` alone is a byte on `CardData`; the field
-    /// behind it is a second `Arc` deref plus a `Vec`/`Option` probe, and a
-    /// walk pays both on ~23 permanents (or ~120 cards across the zones) to
-    /// find nothing. One device rather than a hand-written gate per site, so
-    /// the whole class carries one audit instead of thirty.
-    ///
-    /// ⚠ **`f` must answer `false` on a `CardCold::default()`** — every
-    /// `is_empty` / `is_some` / `contains` / `any` form does. The
-    /// `debug_assert!` recomputes `f` on the skipped path, so a predicate
-    /// that does not, and any later pass that adds a route to the group, fails
-    /// under `-C debug-assertions=yes` rather than answering stale.
+    /// ⚠ `f` must answer `false` on a `CardCold::default()` (every `is_empty` /
+    /// `is_some` / `contains` / `any` form does). The `debug_assert!`
+    /// recomputes `f` on the skipped path, so a predicate that doesn't, or a
+    /// later route into the group, fails under `-C debug-assertions=yes`
+    /// instead of answering stale.
     #[inline]
     pub fn cold_any(&self, f: impl FnOnce(&CardCold) -> bool) -> bool {
         if self.cold_pristine() {
@@ -11664,33 +11238,24 @@ impl std::ops::DerefMut for CardData {
     }
 }
 
-/// A card object: a copy-on-write handle around [`CardData`].
+/// A card object: a copy-on-write handle around [`CardData`]. The engine clones
+/// whole zones constantly (the `perform_action` checkpoint, every bot probe);
+/// behind the `Arc` a clone is a refcount bump and only a card actually written
+/// pays a deep copy. `Deref`/`DerefMut` make it read and write like the plain
+/// struct — `card.tapped = true` works, unsharing that one card first.
 ///
-/// `CardData` is ~110 fields with a dozen `Vec`s and no `HashMap`, and the
-/// engine clones whole zones constantly — the `perform_action` checkpoint,
-/// every bot dry-run probe. Behind the `Arc` a clone is a refcount bump and
-/// only a card that is actually *written* pays a deep copy, so unsharing a
-/// 20-permanent battlefield costs one card clone instead of twenty.
-/// `Deref`/`DerefMut` make it read and write like the plain struct, so
-/// `card.tapped = true` still works — it just unshares that one card first.
+/// `Serialize`/`Deserialize` are manual: `definition` round-trips by card name
+/// (`catalog::lookup_by_name`), since serializing the `CardDefinition` with its
+/// `&'static str` name would bound `'de: 'static`, and containers like
+/// `Box<CardInstance>` in `StackItem` need `Deserialize<'de>` for any `'de`.
 ///
-/// `Serialize`/`Deserialize` are implemented manually below — `definition`
-/// is round-tripped by *card name* (via `catalog::lookup_by_name`) rather
-/// than by serializing the full `CardDefinition` tree, which would force
-/// the parent's `Deserialize<'de>` impl to bound `'de: 'static` because
-/// of the `&'static str` name field. Manual impls let `CardInstance` be
-/// `Deserialize<'de>` for any `'de`, which is a hard requirement for
-/// containers like `Box<CardInstance>` inside `StackItem`.
-/// **The six combat/untap flags live on the handle, outside the `Arc`.**
-/// They are the ones a write reaches on a card the writer did *not* otherwise
-/// change: a `{T}` activation writes `tapped` and nothing else, and 100 % of
-/// `activate_ability_inner`'s `make_mut` calls were deep copies because of it
-/// (PERF `(-51)(a)`'s land tap). Inside the group each of those writes cloned
-/// the whole `CardData`; on the handle they are a byte in the zone's own
-/// vector, which the write had already unshared to reach the card at all.
-/// Field lookup finds them before `Deref` does, so `card.tapped = true` reads
-/// and writes exactly as it did — but `&mut CardData` cannot see them, which
-/// is what the compiler checks.
+/// The six combat/untap flags live on the handle, outside the `Arc`: they are
+/// what a write reaches on a card it otherwise leaves alone (a `{T}` activation
+/// writes only `tapped`), and inside the group each such write deep-copied the
+/// whole `CardData` (PERF `(-51)(a)`). On the handle they are bytes in the
+/// zone's own vector, already unshared to reach the card. Field lookup finds
+/// them before `Deref`, so `card.tapped` reads and writes as before, but `&mut
+/// CardData` can't see them — which the compiler checks.
 #[derive(Clone)]
 pub struct CardInstance {
     data: Arc<CardData>,
@@ -12126,20 +11691,14 @@ impl CardInstance {
         }
     }
 
-    /// Add to the until-end-of-turn P/T bonus, **saturating**.
-    ///
-    /// A power is bounded by nothing, the way a life total is not: Exponential
-    /// Growth is "double target creature's power {X} times", so one resolution
-    /// can reach `i32::MAX`, and the next `+=` on the field wraps — a panic
-    /// under `overflow-checks` (which is what the sweep binary runs) and, in
-    /// release, a creature whose power is suddenly large and negative. Every
-    /// pump in the engine goes through here or [`pump_permanent`], so the
-    /// field cannot be reached by a bare `+=` and the class cannot come back
-    /// one arm at a time.
-    ///
-    /// Saturating, not clamped: the total stays exact for every value the
-    /// rules can tell apart, and the consumers that *scale* it (the encoder's
-    /// `/ 8.0`, the evaluator's `* w.power`) do their own clamping.
+    /// Add to the until-end-of-turn P/T bonus, saturating. Power is unbounded
+    /// (Exponential Growth doubles it X times), so a bare `+=` could wrap — a
+    /// panic under `overflow-checks` (which the sweep binary runs), a huge
+    /// negative power in release. Every pump goes through here or
+    /// [`pump_permanent`], so the class can't come back one arm at a time.
+    /// Saturating, not clamped: the total stays exact for every value the rules
+    /// distinguish, and consumers that scale it (the encoder, the evaluator)
+    /// clamp for themselves.
     ///
     /// [`pump_permanent`]: Self::pump_permanent
     pub fn pump(&mut self, power: i32, toughness: i32) {
@@ -12154,14 +11713,10 @@ impl CardInstance {
         self.perm_toughness_bonus = self.perm_toughness_bonus.saturating_add(toughness);
     }
 
-    /// One pass over the counter bag, not one `counter_count` scan per
-    /// P/T counter kind: the bag holds one entry per kind (`add` / `insert`
-    /// find-or-push), so summing each entry's contribution reads the same
-    /// answer, and the six or seven scans were ~100 Ir a call on a bag that
-    /// is empty or one entry long (PERF `(-259)`).
-    ///
-    /// Saturating for [`pump`](Self::pump)'s reason: a bonus at `i32::MAX`
-    /// plus a printed power is an overflow on the read, not just on the write.
+    /// One pass over the counter bag rather than a `counter_count` scan per P/T
+    /// counter kind; the bag holds one entry per kind, so the sum is the same
+    /// (PERF `(-259)`). Saturating for [`pump`](Self::pump)'s reason: a bonus
+    /// at `i32::MAX` plus printed power overflows on the read too.
     pub fn power(&self) -> i32 {
         let mut p = self
             .definition
@@ -12240,32 +11795,25 @@ impl CardInstance {
         self.damage as i32 >= self.toughness()
     }
 
-    /// Printed keyword, EOT-granted, or keyword counter (CR 122.1b) all
-    /// qualify, and a removal (EOT or permanent) beats all three.
+    /// Printed keyword, EOT grant or keyword counter (CR 122.1b) qualify; a
+    /// removal (EOT or permanent) beats all three.
     ///
-    /// Split so the common answer costs no stack frame. None of the three
-    /// *positive* sources holding the asked tag settles the whole question as
-    /// `false` whatever the removal lists say, and a tag test needs no
-    /// `Keyword::eq` — so the fast half here holds no live value across a
-    /// call, LLVM gives it no callee-saved registers, and the prologue and
-    /// epilogue the 410 k-call-a-`cube`-run function used to pay on every ask
-    /// move onto the ~4 % that reach [`Self::has_keyword_exact`]. Left out of
-    /// line deliberately: the row is how the change is attributed.
+    /// Split so the common answer costs no stack frame: if none of the three
+    /// positive sources holds the asked tag the answer is `false` whatever the
+    /// removals say, and a tag test needs no `Keyword::eq`, so this fast half
+    /// gets no callee-saved registers and the prologue moves onto the few calls
+    /// that reach [`Self::has_keyword_exact`]. Out of line deliberately, so the
+    /// profile row attributes the change.
     ///
-    /// **Do not put `#[inline]` on this** without measuring. It was tried on
-    /// the pre-split body and cost `cube` **+0.35 %**: LLVM still declined to
-    /// inline at all sixteen call sites (410,736 calls, unmoved), and the
-    /// attribute instead flipped the inlining of its *callee* —
-    /// `KeywordCounters::get` came out of line and grew **+9,809,688 Ir**
-    /// against the 1,057,680 the row saved. The split above is what reached
-    /// the frame; the attribute did not.
+    /// ⚠ Don't put `#[inline]` on this without measuring: on the pre-split body
+    /// it cost `cube` +0.35 % — LLVM still inlined it nowhere, and the
+    /// attribute pushed its callee `KeywordCounters::get` out of line instead.
     pub fn has_keyword(&self, kw: &Keyword) -> bool {
-        // ⚠ **All four instance sources live in [`CardCold`]** — the EOT
-        // grant, the keyword counters and both removal lists — so a card that
-        // has never written the group is answered by its printed list alone,
-        // with no pointer chase into the group and no walk over three empty
-        // slices (PERF `(-350)`). `cold_written` false is authoritative; the
-        // recompute-and-compare below is the ratchet.
+        // ⚠ All four instance sources (the EOT grant, the keyword counters,
+        // both removal lists) live in [`CardCold`], so a card that never wrote
+        // the group is answered by its printed list alone (PERF `(-350)`).
+        // `cold_written` false is authoritative; the recompute-and-compare
+        // below is the ratchet.
         if !self.cold_written {
             let printed = self.definition.keywords.has_kw(kw);
             debug_assert_eq!(
@@ -12302,12 +11850,11 @@ impl CardInstance {
             || self.keyword_counters.get(kw).copied().unwrap_or(0) > 0
     }
 
-    /// **One pass over the four keyword sources for [`combat_kw`]'s family.**
-    /// [`Self::has_keyword`] walks up to three slices per ask and the bot's
-    /// attack and block pickers ask eight or nine of these per candidate —
-    /// 87 % of every `has_keyword` call in the program came from those two
-    /// (PERF `(-330)`). Same answer as `has_keyword` for every bit, asserted
-    /// over all four sources by `combat_keywords_agrees_with_has_keyword`.
+    /// One pass over the four keyword sources for [`combat_kw`]'s family. The
+    /// bot's attack and block pickers ask eight or nine of these per candidate,
+    /// and [`Self::has_keyword`] walks up to three slices per ask (PERF
+    /// `(-330)`). Same answer as `has_keyword` for every bit, asserted by
+    /// `combat_keywords_agrees_with_has_keyword`.
     pub fn combat_keywords(&self) -> u32 {
         // Four of this body's five passes are over [`CardCold`] members, so a
         // pristine card is the printed pass alone — [`Self::has_keyword`]'s
@@ -12357,15 +11904,12 @@ impl CardInstance {
         m
     }
 
-    /// [`Self::has_keyword`]'s **value-agnostic** sibling: true when any of
-    /// the same four sources carries a keyword of `sample`'s variant that no
-    /// removal list strips. `has_keyword(&Toxic(1))` asks about one exact
-    /// value; a `Toxic N` / `Modular N` caller wants the variant, and every
-    /// such caller used to hand-roll the scan over a *subset* of the sources
-    /// (`granted_keywords_eot` at best, printed only at worst) — so a granted
-    /// or countered valued keyword read as absent. Same three-source tag
-    /// prefilter and same removal precedence as `has_keyword`, so the two
-    /// cannot drift.
+    /// [`Self::has_keyword`]'s value-agnostic sibling: true when any of the
+    /// same sources carries a keyword of `sample`'s variant that no removal
+    /// strips. `Toxic N` / `Modular N` callers want the variant, and each used
+    /// to hand-roll the scan over a subset of the sources, so a granted or
+    /// countered valued keyword read as absent. Same prefilter and removal
+    /// precedence as `has_keyword`, so the two can't drift.
     pub fn has_keyword_tag(&self, sample: &Keyword) -> bool {
         // [`Self::has_keyword`]'s cold gate, same premise and same ratchet.
         if !self.cold_written {
@@ -12411,16 +11955,11 @@ impl CardInstance {
             || self.keyword_counters.iter().any(|(k, _)| kept(k))
     }
 
-    /// CR 122.1 — does this object have **any** counter on it? Both maps:
-    /// `counters` (a [`CounterType`]) and `keyword_counters` (CR 122.1b — a
-    /// keyword counter is a counter).
-    ///
-    /// The two requirement leaves that ask — `WithAnyCounter` and
-    /// `HasNoCounters` — are exact complements and must stay that way. Three
-    /// hand-written copies disagreed about the second map: the
-    /// off-battlefield walker's `HasNoCounters` read both and its
-    /// `WithAnyCounter` ten lines below read only `counters`, so a creature
-    /// carrying nothing but a keyword counter answered **false to both**.
+    /// CR 122.1 — does this object have any counter, in `counters` or
+    /// `keyword_counters` (CR 122.1b — a keyword counter is a counter)?
+    /// `WithAnyCounter` and `HasNoCounters` are exact complements and must stay
+    /// so: three hand-written copies disagreed about the second map, and a
+    /// creature with only a keyword counter answered false to both.
     pub fn has_any_counter(&self) -> bool {
         self.counters.values().any(|&n| n > 0)
             || self.keyword_counters.values().any(|&n| n > 0)
@@ -12703,16 +12242,14 @@ impl CardInstance {
         }
     }
 
-    /// Each of the five `…_def.take()` resets below asks through `Deref`
-    /// before it takes. `take()` needs `&mut`, and `CardInstance`'s
-    /// `DerefMut` is `Arc::make_mut`, so an ungated take deep-copies a shared
-    /// card in order to write back the `None` that was already there — and
-    /// the zone-change path calls all five in a row on every permanent that
-    /// leaves the battlefield, where the answer is `None` for almost all of
-    /// them.
-    /// CR 404.2 / 406.3 / 708.9 — a face-down card moving to a zone where
-    /// cards are face up (a graveyard, the command zone) is turned face up.
-    /// Guarded: a write unshares the CoW card.
+    /// The `…_def.take()` resets here and below ask through `Deref` before
+    /// taking: `take()` needs `&mut`, `CardInstance`'s `DerefMut` is
+    /// `Arc::make_mut`, and the zone-change path calls all five on every
+    /// leaving permanent, where nearly all are `None` — an ungated take
+    /// deep-copies a shared card to write that `None` back.
+    ///
+    /// CR 404.2 / 406.3 / 708.9 — a face-down card moving to a zone where cards
+    /// are face up (a graveyard, the command zone) is turned face up.
     pub fn reveal(&mut self) {
         if self.face_down {
             self.turn_face_up();
@@ -12973,15 +12510,11 @@ impl CardInstance {
         self.damage_by_source_this_turn.iter().map(|(_, n)| *n).max().unwrap_or(0)
     }
 
-    /// True when every field [`clear_end_of_turn_effects`] resets already
-    /// holds its cleared value.
-    ///
-    /// Read through `Deref`, so the cleanup sweep never takes a `&mut` — and
-    /// never unshares the CoW `Arc` — for a permanent with nothing to clear,
-    /// which is most of them on most turns. The guard and the clear are both
-    /// expanded from [`eot_wear_off`], so a field can't reach one without the
-    /// other; adding one to the clear alone would skip the sweep while it
-    /// still mattered.
+    /// True when every field [`clear_end_of_turn_effects`] resets already holds
+    /// its cleared value. Read through `Deref`, so the cleanup sweep never
+    /// unshares the CoW `Arc` for a permanent with nothing to clear (most of
+    /// them, most turns). Both are expanded from [`eot_wear_off`], so a field
+    /// can't reach one without the other.
     pub fn end_of_turn_effects_are_clear(&self) -> bool {
         macro_rules! probe {
             (scalar $f:ident, $v:expr) => {
@@ -13041,12 +12574,11 @@ impl CardInstance {
         true
     }
 
-    /// CR 302.1 / 506.4 — drop summoning sickness at the turn boundary.
-    ///
-    /// Guarded for the same reason [`clear_end_of_turn_effects`] is: the untap
-    /// step writes this for every permanent its controller untaps, and the flag
-    /// is already `false` for all but the ones that arrived last turn. The read
-    /// goes through `Deref`, so an unchanged permanent never unshares.
+    /// CR 302.1 / 506.4 — drop summoning sickness at the turn boundary. Guarded
+    /// like [`clear_end_of_turn_effects`]: the untap step calls it on every
+    /// permanent it untaps, and the flag is already `false` for all but last
+    /// turn's arrivals; the `Deref` read means an unchanged permanent never
+    /// unshares.
     ///
     /// [`clear_end_of_turn_effects`]: Self::clear_end_of_turn_effects
     pub fn clear_summoning_sickness(&mut self) {
@@ -13055,29 +12587,16 @@ impl CardInstance {
         }
     }
 
-    /// CR 400.7 — the "until end of turn" *effects* on this card end as it
-    /// leaves the battlefield, not at the next cleanup: a bounced creature
-    /// recast this turn is not still pumped, hasted or unable to block. Same
-    /// list as [`eot_wear_off`], minus the per-turn **history** fields —
-    /// `damaged_by_this_turn` and its siblings are last-known information
-    /// that the death and leave triggers read off the graveyard card when no
-    /// snapshot was taken (Scythe of the Wretched), so they wear off at
-    /// cleanup only. Guarded like the cleanup clear, so a clean card pays no
-    /// CoW unshare. (Found by the `(-190)` audit: a Coral Eel bounced with
-    /// "can't block" and recast still could not block.)
-    /// CR 400.7 — the object entering the battlefield is new: nothing its
-    /// last life marked on it (damage, pumps of either duration, an
-    /// attachment, a saddle or crew, a paid echo) comes along. One list for
-    /// every entry route — the resolving spell, `move_card_to`, `play_land`
-    /// — so the routes cannot drift apart again (a Golgari Thug recast after
-    /// dying entered with its damage and died; a permanent pump survived
-    /// the same trip). NOT for the resolving spell's own entry: CR 400.7d
-    /// keeps a change applied to the permanent spell on the permanent, so
-    /// that route resets damage alone and relies on
-    /// [`Self::leave_battlefield_state`] for the rest. Loyalty / defense
-    /// seeding and `entered_by_cast` stay with the caller, which knows how
-    /// the card arrived. Every field is a `DerefMut` write, so call it where
-    /// the data is already being written or behind
+    /// CR 400.7 — the object entering the battlefield is new: nothing its last
+    /// life marked on it (damage, pumps of either duration, an attachment, a
+    /// saddle or crew, a paid echo) comes along. One list for every entry route
+    /// (the resolving spell, `move_card_to`, `play_land`) so they can't drift
+    /// apart again (a Golgari Thug recast after dying entered with its damage).
+    /// Not for the resolving spell's own entry: CR 400.7d keeps a change
+    /// applied to the permanent spell, so that route resets damage alone and
+    /// relies on [`Self::leave_battlefield_state`]. Loyalty / defense seeding
+    /// and `entered_by_cast` stay with the caller. Every field is a `DerefMut`
+    /// write, so call it where the data is already being written or behind
     /// [`Self::carries_old_object_state`].
     pub fn enter_as_new_object(&mut self) {
         self.damage = 0;
@@ -13103,17 +12622,9 @@ impl CardInstance {
         }
     }
 
-    /// CR 400.7 — the leave-side half: what an object's next zone must not
-    /// inherit and no later entry can tell apart from a change made to the
-    /// spell it becomes (CR 400.7d keeps a pump applied on the stack): the
-    /// permanent-duration pump, both attachments, a paid echo. Every write
-    /// is guarded — each is a CoW copy of a card a bot clone may still
-    /// share, and nearly every leaving card holds none of them. The
-    /// end-of-turn effects, saddle and crew are `clear_effects_on_zone_
-    /// change`'s; the damage is the entry's (`stack.rs`).
-    /// CR 702.175 — see `SelectionRequirement::PaidGrantedOffspring`. A
-    /// card with no optional cost of its own pays it through `kicked`; one
-    /// with its own (Agate Instigator) through [`GRANTED_OFFSPRING_OPTION`].
+    /// CR 702.175 — see `SelectionRequirement::PaidGrantedOffspring`. A card
+    /// with no optional cost of its own pays it through `kicked`; one with its
+    /// own (Agate Instigator) through [`GRANTED_OFFSPRING_OPTION`].
     pub fn paid_granted_offspring(&self) -> bool {
         self.kicked
             && !self.kicked_options.contains(&ALT_COST_KICK_OPTION)
@@ -13147,6 +12658,13 @@ impl CardInstance {
         self.counters.values().chain(self.keyword_counters.values()).fold(0u32, |a, &n| a.saturating_add(n))
     }
 
+    /// CR 400.7 — the leave-side half: what an object's next zone must not
+    /// inherit and no later entry can tell apart from a change made to the
+    /// spell it becomes (CR 400.7d): the permanent-duration pump, both
+    /// attachments, a paid echo. Every write is guarded — each is a CoW copy of
+    /// a card a bot clone may share, and nearly no leaving card holds any.
+    /// End-of-turn effects, saddle and crew are
+    /// `clear_effects_on_zone_change`'s; damage is the entry's (`stack.rs`).
     pub fn leave_battlefield_state(&mut self) {
         self.forget_spell_choices();
         if self.perm_power_bonus != 0 || self.perm_toughness_bonus != 0 {
@@ -13248,6 +12766,14 @@ impl CardInstance {
             || self.kicked
     }
 
+    /// CR 400.7 — "until end of turn" effects on this card end as it leaves the
+    /// battlefield, not at the next cleanup: a bounced creature recast this
+    /// turn isn't still pumped, hasted or unable to block (the `(-190)` audit's
+    /// Coral Eel). Same list as [`eot_wear_off`] minus the per-turn history
+    /// fields: `damaged_by_this_turn` and its siblings are last-known
+    /// information that death and leave triggers read off the graveyard card
+    /// (Scythe of the Wretched), so they wear off at cleanup only. Guarded like
+    /// the cleanup clear, so a clean card pays no CoW unshare.
     pub fn clear_effects_on_zone_change(&mut self) {
         macro_rules! probe {
             (empty damaged_by_this_turn) => {};
@@ -13355,13 +12881,11 @@ impl CardInstance {
 
 // ── CardInstance serde: round-trip the definition by name ────────────────────
 //
-// Manual impls so `CardInstance: Deserialize<'de>` for *any* `'de` —
-// derived `Deserialize` would inherit `'de: 'static` from the
-// `CardDefinition`'s `&'static str name`. We side-step by serializing
-// the card's name and re-resolving through `catalog::lookup_by_name`
-// at deserialize time. Tokens whose definitions aren't in the standard
-// catalog (Clue/Treasure/Food/Blood are; ad-hoc tokens are not) will
-// fail to round-trip with `unknown card name: ...`.
+// Manual impls so `CardInstance: Deserialize<'de>` for any `'de` (a derive
+// would inherit `'de: 'static` from the definition's `&'static str` name): the
+// name is serialized and re-resolved through `catalog::lookup_by_name`. Tokens
+// missing from the catalog (ad-hoc ones; Clue/Treasure/Food/Blood are in it)
+// fail with `unknown card name: ...`.
 
 #[derive(Serialize, Deserialize)]
 struct CardInstanceWire {

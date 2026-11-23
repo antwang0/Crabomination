@@ -1,13 +1,11 @@
 //! Grant-then-cast abilities — "{T}, pay 2 life: until end of turn, you may
 //! cast a creature spell from among cards exiled with this" (Serpent's
-//! Soul-Jar), "{T}: choose target artifact card in your graveyard; you may cast
-//! it this turn" (Emry), and impulse abilities — "{T}: exile the top card of
-//! your library; until your next end step you may play it" (Yasmin Khan,
-//! Oracle's Vault). The grant alone changes no board, so the one-ply scorer
-//! never activated one (a 183-deck `--card-census`). A pod bot now activates it
-//! when a granted card is castable afterwards and that cast beats passing. The
-//! dry run reads the real library top, as every scored pod candidate's does.
-//! Commander games only, so two-player play is unchanged.
+//! Soul-Jar), Emry's "you may cast it this turn", and impulse abilities
+//! (Yasmin Khan, Oracle's Vault). The grant alone changes no board, so the
+//! one-ply scorer never took one. A pod bot activates it when a granted card
+//! is castable afterwards and that cast beats passing; the dry run reads the
+//! real library top, as every scored pod candidate's does. Commander games
+//! only, so two-player play is unchanged.
 
 use crate::effect::Effect;
 use crate::game::GameState;

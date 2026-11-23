@@ -1,12 +1,10 @@
 //! Global registry of loaded value nets, keyed by the small slot id that
 //! [`EvalWeights::net_slot`](super::bot::EvalWeights::net_slot) carries.
 //!
-//! Why a registry and not a field: `EvalWeights` is `Copy` and threads
-//! through ~30 free evaluation functions (`eval_material`, the combat
-//! sims, `settle_answer`, ...). Handing each of them an `Arc<PlayNet>`
-//! would mean rewriting every signature in the bot's hot path; a one-byte
-//! slot id keeps the profile system intact and lets two nets coexist in
-//! one process — which the training gatekeeper needs (candidate vs best).
+//! A registry, not a field: `EvalWeights` is `Copy` and threads through ~30
+//! free evaluation functions, so a one-byte slot id keeps every hot-path
+//! signature and the profile system intact and lets two nets coexist in one
+//! process (the training gatekeeper's candidate vs best).
 //!
 //! The hot path pays one atomic load per lookup: each thread caches the
 //! slot table and refreshes only when the write generation moves, so
@@ -226,9 +224,6 @@ pub fn policy_logit_kind(state: &GameState, seat: usize, slot: u8, kind: u8) -> 
     net.eval_policy_kind(encode_state(state, seat, vocab()), kind)
 }
 
-/// Whether the slot's net can answer [`policy_logit`] at all — the check
-/// a profile makes at startup so "learned priors" vs "heuristic fallback"
-/// is reported once rather than discovered mid-game.
 /// The action head's term for each move of a decision (`refs[c]` move
 /// `c`'s objects in `root`'s encoding), from the net in `slot` — `None`
 /// when the slot is empty or its net has no action head.
@@ -241,6 +236,9 @@ pub fn policy_action_terms(
     net_for(slot)?.eval_action_terms(root.clone(), kind, refs)
 }
 
+/// Whether the slot's net can answer [`policy_logit`] at all — checked at
+/// startup so "learned priors" vs "heuristic fallback" is reported once, not
+/// discovered mid-game.
 pub fn slot_has_policy(slot: u8) -> bool {
     net_for(slot).is_some_and(|n| n.has_policy())
 }

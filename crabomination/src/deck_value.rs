@@ -10,8 +10,8 @@
 //! `σ(f(A) − f(B))`.
 //!
 //! [`crate::selfplay::deck_value_build`] polishes the rated builder's pick
-//! under it, a few swaps from the builder's own deck — the trust region
-//! round 15 measured the need for.
+//! under it, a few swaps from the builder's deck — the trust region round 15
+//! showed is needed.
 
 use std::collections::HashMap;
 
@@ -167,10 +167,10 @@ fn hyper_at_least(n_total: usize, succ: usize, draws: usize, k: usize) -> f64 {
     (1.0 - below).clamp(0.0, 1.0)
 }
 
-/// The deck's mana base against its spells' colour demands — what the
-/// 16 `encode_deck` features cannot see (they count lands and pips, never
-/// which colours the lands make; ML_NOTES "the same-pool deck value cannot
-/// see the mana base"):
+/// The deck's mana base against its spells' colour demands — what the 16
+/// `encode_deck` features can't see (they count lands and pips, not which
+/// colours lands make; ML_NOTES "the same-pool deck value cannot see the
+/// mana base"):
 ///
 /// 0. mean on-curve castability: per spell, the hypergeometric chance that
 ///    the `6 + max(mv, 1)` cards seen by its turn hold enough sources of
@@ -180,11 +180,10 @@ fn hyper_at_least(n_total: usize, succ: usize, draws: usize, k: usize) -> f64 {
 /// 3. mean castability with 15 cards seen (late game);
 /// 4. the share of coloured lands that make no colour the spells need.
 ///
-/// A land is a source of every colour it taps for
-/// (`recommend::land_produced_colors`). A coloured or Phyrexian pip needs
-/// its colour (Phyrexian life payment ignored); a two-colour hybrid pip is
-/// read as whichever colour the deck has more sources of; mono- and
-/// colourless-hybrid pips can be paid without the colour and need nothing.
+/// A land sources every colour it taps for
+/// (`recommend::land_produced_colors`). Coloured and Phyrexian pips need
+/// their colour (life payment ignored); a two-colour hybrid pip takes the
+/// colour with more sources; mono- and colourless-hybrid pips need nothing.
 pub fn mana_feats(deck: &[CardFactory]) -> [f32; MANA_FEATS] {
     use crate::mana::{Color, ManaSymbol as S};
     let mut sources = [0usize; 5];

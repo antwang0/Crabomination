@@ -159,18 +159,14 @@ impl GameState {
     /// CR 903.8 / Command Beacon — move one of `seat`'s commanders from the
     /// command zone to their hand.
     ///
-    /// The CR 903.9b replacement ("if a commander would be put into its
-    /// owner's hand … that player may put it into the command zone instead")
-    /// is optional, and a player using this ability always declines it —
-    /// applying it would make the ability do nothing — so the move is direct.
+    /// The optional CR 903.9b replacement ("may put it into the command zone
+    /// instead") is always declined here — applying it would make the ability
+    /// do nothing — so the move is direct. With two commanders (Partner) the
+    /// controller chooses; a headless seat takes the first (`ChooseCards`'s
+    /// forced `min == 1` default).
     ///
-    /// With two commanders (Partner) the controller chooses which one; a
-    /// headless seat takes the first, which is what `ChooseCards`'s forced
-    /// `min == 1` default does.
-    ///
-    /// No event: the engine has no generic zone-change event, and the two it
-    /// does have for reaching a hand (`PermanentReturnedToHand`) describe a
-    /// permanent leaving the battlefield, which this is not.
+    /// No event: there's no generic zone-change event, and
+    /// `PermanentReturnedToHand` describes a permanent leaving the battlefield.
     pub(crate) fn commander_to_hand_from_command_zone(
         &mut self,
         seat: usize,
@@ -327,18 +323,16 @@ impl GameState {
 
 // ---------------------------------------------------------------------------
 // Mana provenance — CR 106.6's "when that mana is spent to …" (Path of
-// Ancestry's delayed trigger, Opal Palace's additional effect). The pool
-// doesn't remember which permanent produced a pip; what it does remember is
-// the pip's `SpendRestriction`, and a *rider* is a restriction that permits
-// everything and only cares what it funded. The payment already reports the
-// riders it spent through `PaymentSideEffects::spent_restrictions`, so
-// provenance is that report read by the cast path, exactly like Cavern of
-// Souls' uncounterable rider.
+// Ancestry, Opal Palace). The pool doesn't remember which permanent made a
+// pip, but it does remember the pip's `SpendRestriction`; a *rider* is a
+// restriction that permits everything and only cares what it funded. The
+// payment reports spent riders via `PaymentSideEffects::spent_restrictions`,
+// which the cast path reads, like Cavern of Souls' uncounterable rider.
 //
 // ⚠ Approximation, CR 106.6a: `spent_restrictions` is a set, so two rider
-// pips spent on one cast (Mana Reflection doubling the source) fire one
-// trigger where the rule makes one per mana produced. Counting them would
-// widen `PaymentSideEffects` for an interaction no target deck has.
+// pips on one cast (Mana Reflection) fire one trigger where the rule makes
+// one per mana. Counting them would widen `PaymentSideEffects` for an
+// interaction no target deck has.
 // ---------------------------------------------------------------------------
 
 /// The scry triggers a cast's commander-mana riders owe, put on the stack

@@ -1,11 +1,8 @@
 //! Player-choice system for effect resolution.
 //!
-//! Many MTG cards require choices that can't be predetermined at cast time:
-//! Scry needs to see the top N cards before ordering, `{T}: Add one mana of any
-//! color` needs a color choice at resolution, tutors show legal candidates, etc.
-//!
-//! The engine pauses resolution by calling `Decider::decide`; the decider
-//! (human UI, bot, scripted test) returns a `DecisionAnswer`.
+//! Choices that can't be fixed at cast time (Scry's ordering, "add one mana
+//! of any color", a tutor's pick) pause resolution in `Decider::decide`; the
+//! decider (human UI, bot, scripted test) returns a `DecisionAnswer`.
 
 use serde::{Deserialize, Serialize};
 
@@ -13,19 +10,9 @@ use crate::card::CardId;
 use crate::game::Target;
 use crate::mana::Color;
 
-/// A choice the engine must resolve to continue. Carries enough context for
-/// the decider to render / reason about the options.
-///
-/// Card-name and description fields are owned `String`s rather than the
-/// `&'static str`s used elsewhere — `Decision` is part of the
-/// authoritative `GameState`, which we serialize via serde, and a static
-/// lifetime would force the parent `Deserialize<'de>` impl to require
-/// `'de: 'static`. The catalog's name slices are copied in at decision-
-/// construction time; the runtime overhead is negligible (decisions
-/// surface a few times per turn at most).
 /// What the "second bucket" of a `Decision::Scry` means to the UI. The engine
-/// resolves all three through the same `ScryOrder` answer; this only changes
-/// the modal's labels.
+/// resolves all variants through the same `ScryOrder` answer; this only
+/// changes the modal's labels.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ScryMode {
     /// Scry — unkept cards go to the bottom of the library.
@@ -43,22 +30,17 @@ pub enum ScryMode {
 }
 
 /// `Decision::ChooseTarget.description` for a cast-time *extra* target slot
-/// (slot 1+ of a multi-target spell — Knockout Maneuver's "then it deals
-/// damage to target creature an opponent controls"). The client matches on
-/// it to fold the answered target back into the cast action it is holding
-/// for manual mana payment, so a `ManualTapRequired` retry doesn't re-pose
-/// the same slot on every land tap. Shared so the two sides can't drift.
+/// (slot 1+, Knockout Maneuver's second target). The client folds that answer
+/// into the cast it holds for manual mana payment so a `ManualTapRequired`
+/// retry doesn't re-pose the slot on every land tap. Shared so the two sides
+/// can't drift.
 pub const EXTRA_CAST_TARGET_PROMPT: &str = "choose an additional target";
 
-/// Tail of the `Decision::ChooseCards.prompt` posed for a slot-0 target that
-/// lives in an off-board zone ("target card in a graveyard" — Sundering
-/// Archaic's `{2}`), which the in-scene cursor can't click. The full prompt
-/// is `"<source name><this>"`. The client matches on it to fold the pick
-/// back into the action it is holding for manual mana payment: the engine
-/// replays the cast/activation server-side, so without the patch a
-/// `ManualTapRequired` retry re-poses this picker on every land tap — the
-/// UI ping-pongs between "choose a target" and "tap mana". Shared so the
-/// two sides can't drift.
+/// Tail of the `Decision::ChooseCards.prompt` for a slot-0 target in an
+/// off-board zone (Sundering Archaic's graveyard target), which the in-scene
+/// cursor can't click; full prompt `"<source name><this>"`. The client folds
+/// the pick into its held action, or the server-side replay re-poses the
+/// picker on every land tap. Shared so the two sides can't drift.
 pub const OFFBOARD_TARGET_PROMPT_SUFFIX: &str = ": choose a card to target";
 
 /// The same for a cast's further slot that lives off the board (Dance of the
@@ -66,15 +48,12 @@ pub const OFFBOARD_TARGET_PROMPT_SUFFIX: &str = ": choose a card to target";
 /// the pick to the held cast's extra targets.
 pub const OFFBOARD_EXTRA_TARGET_PROMPT_SUFFIX: &str = ": choose another card to target";
 
-/// Which way a [`Decision::ChooseCards`] pick cuts for the seat being asked —
-/// does picking *more* help the chooser or cost it something?
+/// Which way a [`Decision::ChooseCards`] pick cuts for the seat asked — does
+/// picking *more* help the chooser or cost it?
 ///
-/// The engine writes the prompt and every headless policy used to recover
-/// this from it (`prompt.contains("sacrifice") || prompt.contains("discard")`
-/// in `decide_choose_cards`), so a reworded prompt silently flipped a policy
-/// and the eight cost-shaped prompts that say "exile" instead read as upside:
-/// the bot handed over its best cards. The ask states it now; the field has
-/// no default in a struct literal, so a new site cannot skip it.
+/// Policies once guessed this from the prompt ("sacrifice"/"discard"), so a
+/// reworded prompt flipped them and "exile"-worded costs read as upside. The
+/// ask states it; no struct-literal default, so a new site can't skip it.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PickValue {
     /// The picked cards are lost or harmed — sacrificed, discarded, exiled,
@@ -90,16 +69,10 @@ pub enum PickValue {
     Gain,
 }
 
-/// What a [`Decision::ChooseAmount`]'s number buys — the half a headless policy
-/// cannot read off the prompt prose.
-///
-/// `decide_pending_policy` used to recover it with
-/// `prompt.contains("destroy all creatures with power")`,
-/// `prompt.to_lowercase().contains("life")` and
-/// `prompt.starts_with("Pay {X}")`, and everything those three missed
-/// answered `max` — which is right for "how many extra counters?" and is
-/// **your whole board** for Devour's "sacrifice any number". Same failure as
-/// [`PickValue`]'s, one family over; the ask states it now.
+/// What a [`Decision::ChooseAmount`]'s number buys — what a headless policy
+/// can't read off the prompt. Prompt matching once answered `max` to
+/// everything it missed, which for Devour is the whole board. Same fix as
+/// [`PickValue`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum AmountKind {
     /// More is better for the chooser — extra counters, extra cards, a bigger
@@ -107,17 +80,12 @@ pub enum AmountKind {
     /// did not recognise, and still the right one for most asks.
     #[default]
     Upside,
-    /// The number is a count of the chooser's OWN permanents given up
-    /// (Devour, God-Eternal Bontu): `max` is the whole board and the payoff
-    /// is linear in what is lost.
+    /// A count of the chooser's OWN permanents given up (Devour, God-Eternal
+    /// Bontu): `max` is the whole board, payoff linear in the loss.
     ///
-    /// `free` is how many of the ask's candidates, in the order the effect
-    /// will take them, cost the chooser next to nothing — the tokens, which
-    /// a sacrifice payoff turns into counters or cards for no card loss. It
-    /// is the ask's own count because only the effect knows the order it
-    /// sacrifices in; a headless policy answers it, and answered `0` before,
-    /// so Devour was a no-op for a bot seat once `max` stopped being the
-    /// answer.
+    /// `free` is how many candidates, in the order the effect takes them,
+    /// cost next to nothing (tokens). Only the effect knows that order, so
+    /// the ask carries it; without it a bot answered 0 and Devour was a no-op.
     Cost { free: u32 },
     /// A life payment — pay only out of a healthy buffer.
     Life,
@@ -162,20 +130,15 @@ pub enum PayFor {
     DenyEffect,
 }
 
-/// What a yes/no [`Decision::OptionalTrigger`] actually asks, in machine terms.
+/// What a yes/no [`Decision::OptionalTrigger`] asks, in machine terms. A
+/// headless policy answers off this, never off `description` (prose matching
+/// once blanket-accepted ninety asks such as ante your library or pay any
+/// life; same fix as [`PickValue`] and [`AmountKind`]).
 ///
-/// A headless policy answers off this, never off `description`. The prose is
-/// for humans: before this field the bot keyed five `starts_with` branches off
-/// it and answered **yes to everything else**, so ninety engine-authored asks
-/// — ante your library, exile your graveyard, sacrifice a permanent, pay any
-/// amount of life — were a blanket accept, and a reworded prompt silently
-/// dropped one of the five branches back into it. Same failure as
-/// [`PickValue`]'s and [`AmountKind`]'s, one family over; the ask states it now.
-///
-/// [`MayBody`](OptionalKind::MayBody) is the historical default and still the
-/// answer for every catalog-authored `May*` node: the policy finds the node on
-/// the source's definition by its own `description` and screens the body.
-/// Every other variant names a trade the body cannot show.
+/// [`MayBody`](OptionalKind::MayBody) is the default and the answer for every
+/// catalog-authored `May*` node: the policy finds the node on the source's
+/// definition by `description` and screens the body. Every other variant
+/// names a trade the body can't show.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub enum OptionalKind {
     /// A catalog `May*` node. The policy screens the body the node names.
@@ -200,10 +163,9 @@ pub enum OptionalKind {
     /// phase and a blanket yes played it into the state-based loss).
     CastFree,
     /// Yes exiles `count` cards from the seat's OWN graveyard (Forage,
-    /// collect evidence, Carrion Rats). Accepted out of a graveyard with
-    /// spare depth — the rule the `AutoDecider` arms of those effects use.
-    /// `count: 0` means the engine can pay without spending graveyard cards
-    /// (a spare Food) or picks a minimal set itself: always accepted.
+    /// collect evidence, Carrion Rats); accepted with spare graveyard depth,
+    /// as the `AutoDecider` arms do. `count: 0` (paid another way, or the
+    /// engine picks a minimal set): always accepted.
     ExileGraveyard { count: u32 },
     /// Yes costs the seat cards it cannot price here — ante the top of the
     /// library, exile its hand. Decline.
@@ -217,11 +179,10 @@ pub enum OptionalKind {
     /// A tempting offer (CR 701.x): every accepter pays the caster more than
     /// it gains. Decline.
     TemptingOffer,
-    /// Orzhov Advokist's peace offer: yes puts +1/+1 counters on one of the
-    /// seat's creatures, and then none of its creatures can attack `offerer`
-    /// until the offerer's next turn (CR 508.1a). Free while another opponent
-    /// is left to attack; with `offerer` the last one, yes forfeits every
-    /// attack (an 8-seat pod held 617 Pegasi at home for twenty turns).
+    /// Orzhov Advokist's offer: yes puts +1/+1 counters on one of the seat's
+    /// creatures, then none of its creatures can attack `offerer` until the
+    /// offerer's next turn (CR 508.1a). Free while another opponent remains;
+    /// with `offerer` the last one, yes forfeits every attack.
     PeaceOffer { offerer: usize },
     /// Ad Nauseam's per-reveal ask — the one stateful policy, answered on the
     /// bot struct across the series.
@@ -239,16 +200,13 @@ pub enum OptionalKind {
 }
 
 impl OptionalKind {
-    /// CR 800.4f's test: is "yes" paying a cost, or choosing whether to pay
-    /// one? A departed seat's cost is simply not paid, where any other choice
-    /// of theirs is re-seated on another player under CR 800.4g
-    /// (`GameState::route_ask`).
+    /// CR 800.4f's test: is "yes" paying a cost, or a plain choice? A departed
+    /// seat's cost is simply not paid; its other choices are re-seated under
+    /// CR 800.4g (`GameState::route_ask`).
     ///
-    /// Anything that spends a resource of the asked seat's counts, whatever
-    /// the payoff on the other side: mana, life, a permanent, a card, the
-    /// graveyard. `CastFree` and `FreeUpside` cost nothing by construction,
-    /// `TemptingOffer` is CR 701's offer rather than a cost the object
-    /// demands, and the rest are plain choices.
+    /// Spending any resource of the asked seat (mana, life, a permanent, a
+    /// card, the graveyard) counts. `CastFree`/`FreeUpside` cost nothing,
+    /// `TemptingOffer` is CR 701's offer, the rest are plain choices.
     pub fn is_cost(&self) -> bool {
         match self {
             OptionalKind::PayMana { .. }
@@ -272,16 +230,19 @@ impl OptionalKind {
     }
 }
 
+/// A choice the engine must resolve to continue, with enough context for the
+/// decider to render or reason about the options.
+///
+/// Names and descriptions are owned `String`s, not `&'static str`:
+/// `Decision` is serialized inside `GameState`, and a static lifetime would
+/// force `'de: 'static` on the parent `Deserialize`. Decisions are rare, so
+/// the copy is negligible.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Decision {
-    /// Pick a target satisfying the ability's selector.
-    ///
-    /// `source_name` is the printed name of the source card; `description`
-    /// is a short human-readable rendering of the effect ("exile target
-    /// card from a graveyard"). Both are populated at decision-construction
-    /// time so the UI can render a "<name> — <description>" prompt without
-    /// re-deriving them from the effect tree. Empty `description` is fine
-    /// for effects whose `effect_short_text` doesn't recognise the shape.
+    /// Pick a target satisfying the ability's selector. `source_name` and
+    /// `description` ("exile target card from a graveyard") are filled at
+    /// construction so the UI renders "<name> — <description>" without the
+    /// effect tree; an empty `description` is fine.
     ChooseTarget {
         source: CardId,
         legal: Vec<Target>,
@@ -295,15 +256,11 @@ pub enum Decision {
         /// for the effect (targets fill left-to-right).
         #[serde(default)]
         optional: bool,
-        /// True for the cast-time extra-slot suspend (`CastExtraTargetPick`)
-        /// of a multi-target spell. The client folds the answer into the cast
-        /// action it is holding for manual mana payment, or a
-        /// `ManualTapRequired` bounce re-poses this prompt on every tap.
-        ///
-        /// A structural flag, not a prose match: this used to be identified by
-        /// comparing `description` against `EXTRA_CAST_TARGET_PROMPT`, which
-        /// silently stopped matching the moment the prompt learned to name the
-        /// slot it was asking about.
+        /// The cast-time extra-slot suspend (`CastExtraTargetPick`) of a
+        /// multi-target spell; the client folds the answer into its held cast
+        /// or a `ManualTapRequired` bounce re-poses it on every tap. A flag,
+        /// not a match on `description`, which broke once the prompt named
+        /// its slot.
         #[serde(default)]
         extra_cast_slot: bool,
     },
@@ -371,11 +328,8 @@ pub enum Decision {
         hand: Vec<(CardId, String)>,
     },
 
-    /// Opening-hand keep-or-mulligan decision. The player sees their current
-    /// hand and decides whether to keep, shuffle back and draw again, or use
-    /// a Serum Powder to exile the hand and draw a fresh seven (the
-    /// `serum_powders` field lists the mulligan-helper card IDs in hand —
-    /// empty when none are present).
+    /// Opening-hand keep or mulligan, or exile the hand with a Serum Powder
+    /// (`serum_powders`: those card ids in hand) and draw a fresh seven.
     Mulligan {
         player: usize,
         hand: Vec<(CardId, String)>,
@@ -398,11 +352,10 @@ pub enum Decision {
         excluded: Vec<crate::card::CreatureType>,
     },
 
-    /// CR 612.1 — "replace all instances of one creature type with another"
-    /// (Artificial Evolution). Answered with `CreatureTypePair(from, to)`;
-    /// `excluded` applies to the *replacement* type only (CR 205.3m — the new
-    /// type can't be Wall). `AutoDecider` swaps the target's first printed
-    /// type for the first legal suggestion.
+    /// CR 612.1 — replace one creature type with another (Artificial
+    /// Evolution), answered `CreatureTypePair(from, to)`. `excluded` applies
+    /// to the replacement only (CR 205.3m: not Wall). `AutoDecider` swaps the
+    /// target's first printed type for the first legal suggestion.
     ChooseCreatureTypePair {
         source: CardId,
         #[serde(default)]
@@ -411,11 +364,9 @@ pub enum Decision {
         excluded: Vec<crate::card::CreatureType>,
     },
 
-    /// CR 201.3 — "As this enters, choose a card name." Pithing Needle,
-    /// Phyrexian Revoker. Answered with `DecisionAnswer::NamedCard(name)`
-    /// (free text over the catalog; an empty string names nothing).
-    /// `AutoDecider` picks the first suggestion (the engine ranks the
-    /// relevant zone's names by frequency); `ScriptedDecider` overrides.
+    /// CR 201.3 — "As this enters, choose a card name" (Pithing Needle).
+    /// Answered `NamedCard(name)` (empty names nothing). `AutoDecider` takes
+    /// the first suggestion (names ranked by frequency in the relevant zone).
     NameCard {
         /// Source permanent that's asking for the name.
         source: CardId,
@@ -431,19 +382,16 @@ pub enum Decision {
         restriction: Option<String>,
     },
 
-    /// CR 705 — flip a coin. The decider answers with `Bool(true)` for
-    /// heads or `Bool(false)` for tails. `AutoDecider` returns the roll the
-    /// engine already made; `ScriptedDecider` can override it.
-    /// Used by `Effect::FlipCoin` (Karplusan Minotaur, Mana Clash, Ral
-    /// Zarek's -7 ultimate).
+    /// CR 705 — flip a coin (`Effect::FlipCoin`), answered `Bool` (true =
+    /// heads). `AutoDecider` returns the engine's roll; `ScriptedDecider` can
+    /// override.
     CoinFlip {
         /// Player flipping (typically `EffectContext.controller`).
         player: usize,
-        /// The engine's roll, drawn from the `GameState`'s own `GameRng`
-        /// so a seeded game reflips identically in the next process. The
-        /// flip is not a *choice* — it is surfaced as a decision only so a
-        /// test can script it — so the randomness belongs here, upstream
-        /// of the decider, not in `AutoDecider`.
+        /// The engine's roll, from the `GameState`'s `GameRng` so a seeded game
+        /// reflips identically. A flip isn't a choice (it's a decision only so
+        /// tests can script it), so the randomness lives here, not in
+        /// `AutoDecider`.
         #[serde(default)]
         heads: bool,
     },
@@ -464,27 +412,19 @@ pub enum Decision {
         rolled: u8,
     },
 
-    /// CR 903.9a / 903.9b — the commander would land in (903.9b: hand,
-    /// library) or has just landed in (903.9a: graveyard, exile, asked
-    /// by the SBA) `would_be`; its owner *may* put it into the command
-    /// zone instead. Answered with `DecisionAnswer::Bool` (true = redirect,
-    /// false = let it go to `would_be`). `AutoDecider` defaults to
-    /// `true` since the safest play is almost always to save the
-    /// commander; scripted scenarios (countering an opponent's
-    /// graveyard recursion, "draw a card off Yargle's death", etc.)
-    /// can answer `false`.
+    /// CR 903.9a / 903.9b — the commander would go to (hand, library) or has
+    /// gone to (graveyard, exile; asked by the SBA) `would_be`; its owner may
+    /// move it to the command zone instead. `Bool(true)` redirects;
+    /// `AutoDecider` answers true.
     CommanderRedirect {
         commander: CardId,
         would_be: crate::card::Zone,
     },
 
-    /// CR 509.2 / 510.1c — the attacking player orders the creatures
-    /// blocking one attacker; combat damage is then assigned in that order
-    /// (each blocker must be dealt lethal before the next gets any). The
-    /// decider answers `DamageOrder(ordered_blocker_ids)`; `AutoDecider`
-    /// keeps the engine's default (declaration / CardId order). Any ids the
-    /// answer omits are appended in their original order, so a partial or
-    /// empty answer is always legal.
+    /// CR 509.2 / 510.1c — the attacker orders one attacker's blockers for
+    /// damage assignment. Answered `DamageOrder(ids)`; omitted ids are
+    /// appended in original order, so any answer is legal. `AutoDecider`
+    /// keeps the default (declaration / CardId order).
     CombatDamageOrder {
         attacker: CardId,
         blockers: Vec<(CardId, String)>,
@@ -505,34 +445,27 @@ pub enum Decision {
         mode_texts: Vec<String>,
     },
 
-    /// CR 701.48 — Learn. The player may reveal a Lesson from their
-    /// sideboard (`lessons`) and put it into hand, discard a card from
-    /// `hand` to draw a card, or decline. Only surfaced when `lessons` is
-    /// non-empty (with no Lessons, the engine takes the legacy `Draw 1`
-    /// path without a decision).
+    /// CR 701.48 — Learn: reveal a Lesson from `lessons` into hand, discard
+    /// from `hand` to draw, or decline. Only posed when `lessons` is
+    /// non-empty (otherwise the legacy `Draw 1` path).
     Learn {
         player: usize,
         lessons: Vec<(CardId, String)>,
         hand: Vec<(CardId, String)>,
     },
 
-    /// CR 603.3b — when several of one player's abilities trigger off the
-    /// same event batch, that player puts them on the stack in any order
-    /// they choose. `triggers` lists the simultaneous same-controller
-    /// triggers (source id + label) in the engine's default order. The
-    /// decider answers `TriggerOrder(ids)` giving the desired *stack-push*
-    /// order (since the stack is LIFO, the last id listed resolves first).
-    /// `AutoDecider` returns an empty answer = keep the default order.
+    /// CR 603.3b — order one player's simultaneous triggers. `triggers` is in
+    /// the default order; the answer `TriggerOrder(ids)` is the *push* order
+    /// (LIFO: the last listed resolves first). `AutoDecider`'s empty answer
+    /// keeps the default.
     OrderTriggers {
         player: usize,
         triggers: Vec<(CardId, String)>,
     },
 
-    /// CR 601.2d — divide `total` damage among the chosen `targets` (Forked
-    /// Bolt, Pyrokinesis, Crackle with Power). The decider answers
-    /// `DamageDivision(amounts)` parallel to `targets`, each ≥1 and summing
-    /// to `total`. `AutoDecider` spreads as evenly as possible (front-loaded
-    /// remainder).
+    /// CR 601.2d — divide `total` damage among `targets` (Forked Bolt).
+    /// Answer `DamageDivision(amounts)`, parallel, each ≥1, summing to
+    /// `total`. `AutoDecider` spreads evenly, remainder front-loaded.
     DivideDamage {
         source: CardId,
         total: u32,
@@ -543,37 +476,29 @@ pub enum Decision {
         noun: String,
     },
 
-    /// CR 510.1c-d — divide an attacker's combat damage among its multiple
-    /// blockers. `blockers` lists `(id, name, lethal)` in the assignment
-    /// order chosen earlier (see `CombatDamageOrder`); the attacker may
-    /// assign more than `lethal` to any blocker (e.g. to deny trample) but
-    /// must assign at least `lethal` to a blocker before any later blocker
-    /// (or trample-over) receives damage. The decider answers
-    /// `CombatDamageAssignment(amounts)`; `AutoDecider` returns an empty
-    /// answer = the engine's default lethal-to-each-then-trample split.
+    /// CR 510.1c-d — divide an attacker's combat damage among its blockers,
+    /// `(id, name, lethal)` in the `CombatDamageOrder` order. Each blocker
+    /// must get `lethal` before a later one (or trample) gets any; more is
+    /// allowed. Answer `CombatDamageAssignment(amounts)`; empty = the default
+    /// lethal-then-trample split.
     AssignCombatDamage {
         attacker: CardId,
         attacker_power: u32,
         blockers: Vec<(CardId, String, u32)>,
     },
 
-    /// CR 704.5j — when a player controls two or more legendary permanents
-    /// with the same name, that player chooses one to keep; the rest are put
-    /// into their owners' graveyards. `duplicates` lists the tied permanents
-    /// (id + name) sharing `name`. The decider answers `KeptLegend(id)` with
-    /// the permanent to keep; an id not in `duplicates` (or `AutoDecider`'s
-    /// default) keeps the newest (highest id).
+    /// CR 704.5j — the legend rule: keep one of `duplicates` sharing `name`,
+    /// the rest go to the graveyard. Answer `KeptLegend(id)`; an id outside
+    /// `duplicates` (or the `AutoDecider` default) keeps the newest.
     ChooseLegendToKeep {
         player: usize,
         name: String,
         duplicates: Vec<(CardId, String)>,
     },
 
-    /// "Choose a number" — sacrifice *any number* of permanents, pay *any
-    /// amount* of life, etc. The decider answers `Amount(n)` with `n` in
-    /// `0..=max`. `AutoDecider` returns 0 (the conservative default — never
-    /// pay life / sacrifice unprompted). Used by Plunge into Darkness
-    /// (sacrifice any number of creatures; pay any amount of life).
+    /// "Choose a number" — sacrifice any number, pay any amount of life
+    /// (Plunge into Darkness). Answer `Amount(n)`, `n` in `0..=max`;
+    /// `AutoDecider` returns 0 (never pay unprompted).
     ChooseAmount {
         source: CardId,
         /// A short human-readable prompt ("Sacrifice how many creatures?").
@@ -595,12 +520,9 @@ pub enum Decision {
         options: Vec<String>,
     },
 
-    /// "Choose any number of cards" — pick a subset of `candidates` (e.g.
-    /// "exile any number of target cards from graveyards", Devious Cover-Up).
-    /// The decider answers `Cards(ids)` with any subset (≤ `max`) of the
-    /// offered ids; ids outside `candidates` are dropped and the list is
-    /// truncated to `max`. `AutoDecider` returns an empty set (the
-    /// conservative "up to" default — choose nothing unprompted).
+    /// "Choose any number of cards" from `candidates` (Devious Cover-Up).
+    /// Answer `Cards(ids)`; outside ids are dropped and the list truncated to
+    /// `max`. `AutoDecider` chooses nothing.
     ChooseCards {
         source: CardId,
         /// A short human-readable prompt ("Exile which cards?").
@@ -649,13 +571,11 @@ pub enum LearnChoice {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum DecisionAnswer {
     Target(Target),
-    /// Abandon the action whose *replay* this decision is gathering input
-    /// for — a cast or activation suspended before anything was paid (see
-    /// `ResumeContext::is_action_replay`). Answered by the client's Cancel
-    /// control so a player who opened, say, Divergent Equation's {X} picker
-    /// with no mana can back out instead of being stuck in a modal they
-    /// can't satisfy. Rejected for any other decision: a resolution that is
-    /// already on the stack has to finish.
+    /// Abandon the action whose *replay* this decision gathers input for — a
+    /// cast or activation suspended before anything was paid (see
+    /// `ResumeContext::is_action_replay`), e.g. backing out of an {X} picker
+    /// with no mana. The client's Cancel. Rejected for any other decision: a
+    /// resolution already on the stack must finish.
     CancelAction,
     /// Decline an optional target pick (`ChooseTarget { optional: true }` —
     /// "up to N targets"). Ends target selection for the effect.
@@ -709,9 +629,8 @@ pub enum DecisionAnswer {
     /// length / wrong sum) is renormalized to an even split by the engine.
     DamageDivision(Vec<u32>),
     /// CR 510.1c-d — `(blocker_id, amount)` pairs answering
-    /// `Decision::AssignCombatDamage`. An empty or invalid answer (one that
-    /// violates the assign-lethal-before-next-blocker ordering rule, or
-    /// over-assigns past the attacker's power) falls back to the engine's
+    /// `Decision::AssignCombatDamage`. An invalid answer (breaks the
+    /// lethal-first order or exceeds power) or empty one falls back to the
     /// default lethal-to-each split.
     CombatDamageAssignment(Vec<(CardId, u32)>),
     /// CR 704.5j — the legendary permanent the controller keeps. An id not
@@ -748,11 +667,9 @@ pub trait Decider {
     fn kind(&self) -> DeciderKind {
         DeciderKind::Auto
     }
-    /// Re-point a scripted decider at a single answer, keeping its buffers.
-    /// Default: a no-op, because a decider with no script has nothing to
-    /// re-arm. It exists so a hot caller can hold **one** boxed
-    /// `ScriptedDecider` across a loop instead of boxing a fresh one per
-    /// iteration (`auto_tap_for_cost_inner`, PERF `(-159)`).
+    /// Re-point a scripted decider at a single answer, keeping its buffers
+    /// (no-op by default), so a hot caller holds one boxed decider across a
+    /// loop (`auto_tap_for_cost_inner`, PERF `(-159)`).
     fn rearm_script(&mut self, _answer: DecisionAnswer) {}
 }
 
@@ -863,11 +780,9 @@ impl Decider for AutoDecider {
             Decision::NameCard { suggestions, .. } => {
                 DecisionAnswer::NamedCard(suggestions.first().cloned().unwrap_or_default())
             }
-            // CR 705 — the engine already rolled off the game's seeded
-            // stream; take it. Drawing here instead (`rand::random()`) put
-            // the thread RNG into game logic, so a fixed seed replayed
-            // differently in the next process — Mana Crypt's upkeep flip
-            // made every cube measurement unreproducible.
+            // CR 705 — take the roll the engine made off the game's seeded
+            // stream. Drawing from the thread RNG here once made every fixed
+            // seed (Mana Crypt's upkeep flip) unreproducible across processes.
             Decision::CoinFlip { heads, .. } => DecisionAnswer::Bool(*heads),
             // CR 706.1 — the engine rolled off the game's seeded stream, as
             // for a coin. Answering the midpoint here made every d20 a 10 and
@@ -909,11 +824,9 @@ impl Decider for AutoDecider {
             Decision::ChooseAmount { .. } => DecisionAnswer::Amount(0),
             // A ballot has no "safe" abstention — take the first option.
             Decision::ChooseOption { .. } => DecisionAnswer::Amount(0),
-            // Conservative "up to" default — choose nothing unprompted.
-            // ScriptedDecider / the bot supply a positive subset.
-            // Forced "choose exactly N" (min > 0) auto-picks the first N
-            // candidates so a non-interactive decider still pays the cost;
-            // the "up to" case (min == 0, Devious Cover-Up) chooses nothing.
+            // Forced "choose exactly N" (min > 0) takes the first N so a
+            // non-interactive decider still pays; "up to" (min == 0, Devious
+            // Cover-Up) chooses nothing.
             Decision::ChooseCards { candidates, min, .. } => DecisionAnswer::Cards(
                 candidates.iter().take(*min as usize).map(|(id, _)| *id).collect(),
             ),
@@ -921,14 +834,12 @@ impl Decider for AutoDecider {
     }
 }
 
-/// Pre-scripted decider for tests. Pops answers in FIFO order; falls back to
-/// `AutoDecider` when exhausted. Records every decision it saw for assertions.
+/// Pre-scripted decider for tests: pops answers FIFO, falls back to
+/// `AutoDecider` when exhausted, records every decision it saw.
 ///
-/// `answers` is inline rather than a `VecDeque`: a script is one or two
-/// answers, and a queue allocation for that is pure loss. `remove(0)` on two
-/// slots is cheaper than the ring buffer it replaces. **Test-only again as of
-/// `(-164)`** — the engine's one scripted path recycles an
-/// [`OneColorDecider`] instead, so `asked` is always read by somebody.
+/// `answers` is inline (a script is one or two answers). Test-only since
+/// PERF `(-164)` — the engine's scripted path recycles an
+/// [`OneColorDecider`].
 #[derive(Debug)]
 pub struct ScriptedDecider {
     answers: smallvec::SmallVec<[DecisionAnswer; 2]>,
@@ -947,27 +858,18 @@ impl ScriptedDecider {
     }
 }
 
-/// Answers one `Color` decision, then defers to [`AutoDecider`] — the whole of
-/// what `auto_tap_for_cost_inner` ever used [`ScriptedDecider`] for, and the
-/// decider its `scripted_slot` recycles.
+/// Answers one `Color` decision, then defers to [`AutoDecider`] — all
+/// `auto_tap_for_cost_inner` ever used [`ScriptedDecider`] for, and the
+/// decider its `scripted_slot` recycles. An `Option<Color>`, so re-arming is
+/// a two-byte store and the type is `Copy`. PERF `(-159)`, `(-164)`.
 ///
-/// `(-159)` made the slot hold **one** boxed decider for the whole payment
-/// instead of one per pip; this is what that box costs per pip once the
-/// allocation is gone. `ScriptedDecider::rearm_script` clears and re-pushes a
-/// `DecisionAnswer` — a 40-byte enum with drop glue — into a `SmallVec` and
-/// clears the `asked` log beside it; `decide` then `remove(0)`s it back out.
-/// This one is an `Option<Color>`: the re-arm is a two-byte store and the whole
-/// type is `Copy`. PERF `(-164)`.
+/// `kind()` reports `Scripted` like `ScriptedDecider`; engine sites branch on
+/// `matches!(decider.kind(), Auto)` without reading the payload, so the two
+/// are interchangeable there (`one_color_decider_matches_the_scripted_one`).
 ///
-/// `kind()` reports the same `Scripted` discriminant `ScriptedDecider` does.
-/// Thirty-eight engine sites branch on `matches!(decider.kind(), Auto)` and
-/// none of them reads the payload, so the two are interchangeable there —
-/// `one_color_decider_matches_the_scripted_one` is the check.
-///
-/// ⚠ Unlike a one-answer script, a *colour* ask after the first gets the same
-/// colour: a filter land ("{B/R}, {T}: Add {B}{B}, {B}{R}, or {R}{R}") asks
-/// once per pip, and the second pip fell through to the first legal colour, so
-/// the auto-tapper could not make {R}{R} from Graven Cairns.
+/// ⚠ Unlike a one-answer script, every colour ask gets the same colour: a
+/// filter land asks once per pip, and a fall-through second pip meant Graven
+/// Cairns couldn't make {R}{R}.
 #[derive(Debug, Default, Clone, Copy)]
 pub struct OneColorDecider {
     answer: Option<Color>,
@@ -1040,13 +942,11 @@ mod one_color_decider_tests {
     use crate::card::CardId;
     use crate::mana::Color;
 
-    /// `OneColorDecider` replaced `ScriptedDecider::new([Color(c)])` on the
-    /// auto-tap path for the allocations, not for a behaviour change — so run
-    /// the same decision sequence through both and compare. The `kind()` leg is
-    /// the load-bearing half: thirty-eight engine sites branch on
-    /// `matches!(decider.kind(), DeciderKind::Auto)`, and a `OneColorDecider`
-    /// that reported `Auto` would silently take the other arm at every one.
-    /// PERF `(-164)`.
+    /// `OneColorDecider` replaced `ScriptedDecider::new([Color(c)])` for
+    /// allocations only, so both run the same sequence and must agree. The
+    /// `kind()` leg is load-bearing: a `OneColorDecider` reporting `Auto` would
+    /// silently take the other arm at every `DeciderKind::Auto` branch. PERF
+    /// `(-164)`.
     #[test]
     fn one_color_decider_matches_the_scripted_one() {
         let ask = Decision::ChooseColor {

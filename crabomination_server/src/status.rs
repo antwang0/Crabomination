@@ -1,11 +1,9 @@
-//! Optional HTTP status endpoint: set `CRAB_STATUS_BIND` (e.g. `0.0.0.0:7779`;
-//! 7778 is the WebSocket listener's default)
-//! to serve `GET /healthz` → `ok` (liveness probe), `/readyz` → `ready`/503
-//! saturated (readiness probe), `/status.json` → a
-//! machine-readable metric object (for scrapers), `/metrics` → Prometheus text,
-//! `/dashboard` → a self-contained HTML stat page for a browser, and any other
-//! path → a plaintext operator snapshot (uptime, rolling match stats, slot
-//! accounting). Unset = disabled. One thread, HTTP/1.0, connection-per-request.
+//! Optional HTTP status endpoint, enabled by `CRAB_STATUS_BIND` (e.g.
+//! `0.0.0.0:7779`; 7778 is the WebSocket default). Serves `GET /healthz` → `ok`
+//! (liveness), `/readyz` → `ready` or 503 when saturated (readiness),
+//! `/status.json` (flat metrics object), `/metrics` (Prometheus text),
+//! `/dashboard` (self-contained HTML), and any other path → a plaintext snapshot
+//! (uptime, rolling match stats, slots). HTTP/1.0, connection-per-request.
 
 use std::io::{Read, Write};
 use std::net::TcpListener;
@@ -14,13 +12,10 @@ use std::time::Instant;
 use crate::slots::SlotManager;
 use crate::stats::{format_duration, format_match_stats, match_stats};
 
-/// Distinct card count of the deployed catalog, computed once. Lets operators
-/// confirm which content build is live (`crab_catalog_cards`) without shelling
-/// into the container. Building the registry is non-trivial, so it's memoized.
-///
-/// Counts distinct card *names*, not factory pointers: the registry can hold
-/// several factories that mint the same-named card (fabricated real-name
-/// collisions), so a pointer count overstates how many distinct cards ship.
+/// Distinct card names in the deployed catalog (`crab_catalog_cards`), so
+/// operators can confirm which content build is live; memoized because building
+/// the registry is costly. Counts names, not factories: several factories can
+/// mint the same-named card.
 fn catalog_card_count() -> usize {
     use std::sync::OnceLock;
     static COUNT: OnceLock<usize> = OnceLock::new();
@@ -58,13 +53,8 @@ fn render_status(started: Instant, slots: &SlotManager) -> String {
     )
 }
 
-/// Render a machine-readable JSON snapshot for metric scrapers. Flat object of
-/// the same numbers the plaintext page carries, so Prometheus/textfile or a
-/// simple `jq` probe can read them without parsing the human summary. Split
-/// from the serving loop for testing.
-/// One `/status.json` field. Built as an explicit `(key, rendered value)`
-/// list rather than a single 60-placeholder `format!`, whose positional
-/// arguments silently mis-align the moment a field is inserted in the middle.
+/// One `/status.json` field. An explicit `(key, value)` list, because a
+/// 60-placeholder `format!` silently misaligns when a field is inserted.
 struct JsonField {
     key: &'static str,
     /// Already-rendered JSON value (number, quoted string, or array).
@@ -83,15 +73,14 @@ fn text(key: &'static str, v: &str) -> JsonField {
     JsonField { key, value: format!("\"{}\"", html_escape_json(v)) }
 }
 
-/// Minimal JSON string escaping for the small, server-controlled strings that
-/// reach `/status.json` (bucket labels). Quotes and backslashes only — the
-/// values never carry control characters.
+/// JSON string escaping for the server-controlled labels in `/status.json`:
+/// quotes and backslashes only (no control characters occur).
 fn html_escape_json(s: &str) -> String {
     s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
-/// Every scalar `/status.json` field, in output order. Shared by the renderer
-/// and by the drift test that pins JSON keys against `/metrics` sample names.
+/// Every scalar `/status.json` field, in output order; also used by the test
+/// that pins JSON keys against `/metrics` names.
 fn status_fields(started: Instant, slots: &SlotManager) -> Vec<JsonField> {
     let st = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
     let sl = slots.snapshot();
@@ -185,6 +174,7 @@ fn render_u64_array(xs: &[impl std::fmt::Display]) -> String {
     format!("[{}]", inner.join(","))
 }
 
+/// Flat JSON object of the plaintext page's numbers, for scrapers and `jq`.
 fn render_status_json(started: Instant, slots: &SlotManager) -> String {
     let body: Vec<String> = status_fields(started, slots)
         .into_iter()
@@ -193,10 +183,8 @@ fn render_status_json(started: Instant, slots: &SlotManager) -> String {
     format!("{{{}}}\n", body.join(","))
 }
 
-/// Render a Prometheus text-exposition (`/metrics`) snapshot — the same numbers
-/// as `/status.json`, one `# HELP`/`# TYPE`/sample triple per metric, so a
-/// Prometheus scraper ingests the server directly (the conventional `/metrics`
-/// path expects this text format, not JSON).
+/// Prometheus text exposition (`/metrics`): the `/status.json` numbers, one
+/// `# HELP`/`# TYPE`/sample triple per metric.
 fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     let st = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
     let sl = slots.snapshot();
@@ -236,9 +224,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("avg_duration_seconds", "gauge", "Average match duration in seconds.", st.avg_duration().as_secs().to_string());
     m("min_duration_seconds", "gauge", "Shortest match duration in seconds.", st.min_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
     m("max_duration_seconds", "gauge", "Longest match duration in seconds.", st.max_duration.map(|d| d.as_secs()).unwrap_or(0).to_string());
-    // Median/p90 match duration from the duration histogram — the average is
-    // pulled up by a few grindy games, so operators watching "does a typical
-    // match feel snappy?" want the p50, and the p90 flags the slow tail.
+    // Median/p90 match duration: the mean is pulled up by a few grinds.
     m("median_duration_seconds", "gauge", "Median (p50) match duration in seconds (histogram upper bound).", st.percentile(0.5).as_secs().to_string());
     m("duration_p90_seconds", "gauge", "90th-percentile match duration in seconds (slow-tail bound).", st.percentile(0.9).as_secs().to_string());
     m("duration_p95_seconds", "gauge", "95th-percentile match duration in seconds (slow-tail bound for alerting).", st.percentile(0.95).as_secs().to_string());
@@ -250,28 +236,21 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("connections_peak", "gauge", "Peak concurrent connections.", sl.peak.to_string());
     m("connections_accepted_total", "counter", "Connections accepted.", sl.accepted.to_string());
     m("connections_refused_total", "counter", "Connections refused.", refused.to_string());
-    // Refusal rate — the share of connection attempts turned away. A rising
-    // value is the "we're at capacity / under abuse" signal operators alert on;
-    // derived here so it needn't be recomputed from two counters downstream.
+    // Share of connection attempts refused: the capacity/abuse alert signal.
     let attempts = sl.accepted + refused;
     let refused_pct = (refused * 100).checked_div(attempts).unwrap_or(0);
     m("connections_refused_pct", "gauge", "Percent of connection attempts refused.", refused_pct.to_string());
     m("distinct_ips", "gauge", "Distinct client IPs seen.", sl.distinct_ips.to_string());
     m("peak_per_ip", "gauge", "Highest simultaneous connection count from a single IP.", sl.peak_per_ip.to_string());
-    // Saturation: unlike refusal rate (which only moves once we're already
-    // turning connections away), occupancy rises smoothly toward 100 as load
-    // approaches the cap — the earlier "provision more headroom" signal.
+    // Occupancy rises smoothly toward 100 before any refusal happens: the
+    // earlier headroom signal.
     m("connections_global_cap", "gauge", "Configured global connection cap (0 = unlimited).", sl.global_cap.to_string());
     m("connections_occupancy_pct", "gauge", "Live global-cap occupancy (current/cap %) — the early saturation signal.", sl.occupancy_pct().to_string());
     m("connections_max_per_ip", "gauge", "Largest live slot count held by a single IP (single-source-abuse signal).", sl.max_per_ip.to_string());
     m("catalog_cards", "gauge", "Distinct cards in the deployed catalog.", catalog_card_count().to_string());
-    // Win-kind breakdown (CR 104.3) — how decided games ended, as a labelled
-    // `crab_wins_total{kind="…"}` series so operators can watch the
-    // damage/poison/deck-out/commander mix shift without parsing the page.
+    // Win-kind mix (CR 104.3) as a labelled `crab_wins_total{kind=...}` series.
     m("draws_total", "counter", "Matches ending in a draw.", st.draws.to_string());
-    // Play/draw balance: the share of decided matches the first seat won. A
-    // persistent skew above ~55% is the classic "first-player advantage" signal
-    // operators watch when tuning bot mulligans or seat assignment.
+    // Seat 0's share of decided wins; a persistent skew above ~55% is first-player advantage.
     m("first_seat_win_pct", "gauge", "Percent of decided matches won by the first seat.", st.first_seat_win_pct().to_string());
     m("avg_win_life_delta", "gauge", "Average life margin of victory across wins.", st.avg_win_life_delta().to_string());
     m("median_win_life_delta", "gauge", "Median (p50) life margin of victory.", st.win_life_delta_median().to_string());
@@ -281,18 +260,17 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     m("win_life_delta_cv_pct", "gauge", "Coefficient of variation (σ/μ %) of the win-by-life margin — pace-independent blowout consistency, mirroring turn_cv_pct and winner_board_cv_pct.", st.win_life_delta_cv_pct().to_string());
     m("close_win_pct", "gauge", "Percent of wins decided by a final life margin of 3 or less (nail-biters).", st.close_win_pct().to_string());
     m("blowout_win_pct", "gauge", "Percent of wins decided by a final life margin above 15 (blowouts).", st.blowout_win_pct().to_string());
-    // Split the refusals by cause so operators can tell "server at capacity"
-    // (global cap) apart from "one IP hammering us" (per-IP cap) without diffing
-    // two scrapes — the two alert on different runbooks.
+    // Refusals by cause: global cap (at capacity) vs per-IP cap (one IP
+    // hammering); they alert on different runbooks.
     out.push_str("# HELP crab_connections_refused_by_reason_total Connections refused, split by which cap tripped.\n");
     out.push_str("# TYPE crab_connections_refused_by_reason_total counter\n");
     out.push_str(&format!("crab_connections_refused_by_reason_total{{reason=\"global\"}} {}\n", sl.refused_global));
     out.push_str(&format!("crab_connections_refused_by_reason_total{{reason=\"per_ip\"}} {}\n", sl.refused_per_ip));
     out.push_str("# HELP crab_wins_total Decided matches by win kind (CR 104.3).\n");
     out.push_str("# TYPE crab_wins_total counter\n");
-    // `damage` + `alternate` reconciles to total decided wins; `poison`,
-    // `decked`, `commander_damage`, and `other` are sub-splits of `alternate`
-    // (a single win can flag more than one), so they are not additive with it.
+    // `damage` + `alternate` = decided wins; `poison`, `decked`,
+    // `commander_damage` and `other` are sub-splits of `alternate` (one win can flag
+    // several), not additive with it.
     for (kind, value) in [
         ("damage", st.damage_wins),
         ("alternate", st.deckout_wins),
@@ -304,10 +282,7 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     ] {
         out.push_str(&format!("crab_wins_total{{kind=\"{kind}\"}} {value}\n"));
     }
-    // The same split normalized to a share of decided wins. The pct helpers
-    // already exist for the JSON/HTML readouts; surfacing them as a gauge saves
-    // operators the count-over-total division and keeps the ratio stable across
-    // scrapes even as the counters climb. Same non-additive caveat as the counts.
+    // The same split as shares of decided wins (same non-additive caveat).
     out.push_str("# HELP crab_wins_share_pct Decided matches by win kind, as a percent of wins.\n");
     out.push_str("# TYPE crab_wins_share_pct gauge\n");
     for (kind, pct) in [
@@ -321,17 +296,14 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     ] {
         out.push_str(&format!("crab_wins_share_pct{{kind=\"{kind}\"}} {pct}\n"));
     }
-    // Average turn a conceded game was thrown in — a low value next to a high
-    // concede share flags a bot that rage-quits winnable positions.
+    // Average concede turn; low next to a high concede share means bots quit winnable games.
     out.push_str("# HELP crab_avg_concede_turn Average final turn of wins via concession.\n");
     out.push_str("# TYPE crab_avg_concede_turn gauge\n");
     out.push_str(&format!("crab_avg_concede_turn {}\n", st.avg_concede_turn()));
     out.push_str("# HELP crab_concede_earliness_pct Avg concede turn as pct of a decisive game's length.\n");
     out.push_str("# TYPE crab_concede_earliness_pct gauge\n");
     out.push_str(&format!("crab_concede_earliness_pct {}\n", st.concede_earliness_pct()));
-    // Match-duration histogram (see `MatchStats.duration_buckets`) as a labelled
-    // series so operators can watch the distribution shift (e.g. a spike in the
-    // "<30s" bucket flags bots conceding turn 1).
+    // Duration histogram (`MatchStats.duration_buckets`) as a labelled series.
     out.push_str("# HELP crab_match_duration_bucket Completed matches by duration band.\n");
     out.push_str("# TYPE crab_match_duration_bucket gauge\n");
     for (band, count) in [
@@ -344,34 +316,27 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     ] {
         out.push_str(&format!("crab_match_duration_bucket{{band=\"{band}\"}} {count}\n"));
     }
-    // Turn-count histogram (see `MatchStats.turn_buckets`) as a labelled series,
-    // mirroring the duration histogram so scrapers get the distribution shape —
-    // a fat low-turn band flags a concession regression the average can hide.
+    // Turn-count histogram (`MatchStats.turn_buckets`) as a labelled series.
     out.push_str("# HELP crab_match_turn_bucket Completed matches by final-turn band.\n");
     out.push_str("# TYPE crab_match_turn_bucket gauge\n");
     for (i, count) in st.turn_buckets.iter().enumerate() {
         let band = crate::stats::MatchStats::turn_bucket_label(i);
         out.push_str(&format!("crab_match_turn_bucket{{band=\"{band}\"}} {count}\n"));
     }
-    // Per-seat wins — turn-order bias in bot ladders (a persistent seat-0 skew
-    // is the classic first-player-advantage signal).
+    // Per-seat wins (turn-order bias).
     out.push_str("# HELP crab_seat_wins_total Decided wins by seat index.\n");
     out.push_str("# TYPE crab_seat_wins_total counter\n");
     for (seat, wins) in st.seat_wins.iter().enumerate() {
         out.push_str(&format!("crab_seat_wins_total{{seat=\"{seat}\"}} {wins}\n"));
     }
-    // Per-seat win share — the turn-order fairness signal. `first_seat_win_pct`
-    // only covers seat 0; this exposes every seat so an N-player skew is
-    // visible directly (a healthy 2-player bot mirror sits near 50/50).
+    // Per-seat win share, for every seat (a 2-player bot mirror sits near 50/50).
     out.push_str("# HELP crab_seat_win_share_pct Decided wins by seat index, as a percent of all decided wins.\n");
     out.push_str("# TYPE crab_seat_win_share_pct gauge\n");
     for seat in 0..st.seat_wins.len() {
         out.push_str(&format!("crab_seat_win_share_pct{{seat=\"{seat}\"}} {}\n", st.seat_win_share_pct(seat)));
     }
-    // Per-format completed matches + their average game length. Already in the
-    // plaintext summary and dashboard; exposing them here lets a scraper alert
-    // on a format-specific stall (e.g. cube averaging 3× demo's turns) or a
-    // traffic shift between formats without parsing the human summary.
+    // Per-format match counts and average game length, so a scraper can alert
+    // on a format-specific stall or a traffic shift.
     out.push_str("# HELP crab_matches_by_format_total Completed matches by format.\n");
     out.push_str("# TYPE crab_matches_by_format_total counter\n");
     for (i, count) in st.format_buckets.iter().enumerate() {
@@ -398,10 +363,9 @@ fn render_metrics(started: Instant, slots: &SlotManager) -> String {
     out
 }
 
-/// Render a self-contained HTML operator dashboard: the same numbers as
-/// `/status` and `/metrics`, laid out as stat tiles for a browser instead of a
-/// scraper. Inline CSS only (no external fetches), a `<meta refresh>` for a
-/// hands-off wall display, and theme-aware colors. Split for testing.
+/// Self-contained HTML dashboard of the same numbers as stat tiles: inline
+/// CSS only (no external fetches), `<meta refresh>` for a wall display,
+/// theme-aware colors.
 fn render_dashboard(started: Instant, slots: &SlotManager) -> String {
     let st = *match_stats().lock().unwrap_or_else(|p| p.into_inner());
     let sl = slots.snapshot();
@@ -428,7 +392,7 @@ fn render_dashboard(started: Instant, slots: &SlotManager) -> String {
     tiles.push_str(&tile("median duration", format_duration(st.percentile(0.5))));
     tiles.push_str(&tile("winner board", format!("{} ±{:.1} ({}% cv)", st.avg_winner_board(), st.winner_board_stddev(), st.winner_board_cv_pct())));
     tiles.push_str(&tile("catalog cards", catalog_card_count().to_string()));
-    // Win-kind mix, only the nonzero kinds so the row stays readable.
+    // Win-kind mix, nonzero kinds only.
     let wins = [
         ("damage", st.damage_wins),
         ("poison", st.poison_wins),
@@ -468,21 +432,17 @@ td{{padding:4px 12px 4px 0}}.n{{text-align:right;font-variant-numeric:tabular-nu
     )
 }
 
-/// Minimal HTML-escaping for the few dynamic strings the dashboard emits
-/// (durations, labels). Everything interpolated is server-controlled today, but
-/// escaping keeps the page injection-proof if a label ever grows dynamic.
+/// HTML escaping for the dashboard's interpolated strings. All are
+/// server-controlled today; this keeps the page safe if one becomes dynamic.
 fn html_escape(s: &str) -> String {
     s.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
 }
 
-/// Route one request to `(status_line, content_type, body)`. Only GET/HEAD are
-/// served; unknown paths 404 and other methods 405 so scrapers and probes read
-/// correct semantics instead of a 200 status page for everything.
-/// Returns `(status_line, content_type, body, extra_headers)`. `extra_headers`
-/// is a `\r\n`-terminated block folded into the response after the standard
-/// headers — telemetry is always live, so every reply carries
-/// `Cache-Control: no-store`, and a 405 additionally advertises the allowed
-/// methods per RFC 9110 §15.5.6.
+/// Route one request to `(status_line, content_type, body, extra_headers)`.
+/// Only GET/HEAD are served: unknown paths 404, other methods 405.
+/// `extra_headers` is a `\r\n`-terminated block appended after the standard
+/// headers: always `Cache-Control: no-store` (telemetry is live), plus `Allow`
+/// on a 405 (RFC 9110 §15.5.6).
 fn route(
     method: &str,
     path: &str,
@@ -497,18 +457,15 @@ fn route(
             "Allow: GET, HEAD\r\nCache-Control: no-store\r\n",
         );
     }
-    // Strip any query string (`/metrics?collect=now`) and a single trailing
-    // slash (`/status/`) so scrapers and probes that decorate the path still
-    // reach the intended handler instead of a 404.
+    // Strip a query string and one trailing slash so decorated paths still route.
     let path = path.split('?').next().unwrap_or(path);
     let path = if path.len() > 1 { path.trim_end_matches('/') } else { path };
     const NO_STORE: &str = "Cache-Control: no-store\r\n";
     let (status, content_type, body) = match path {
         "/healthz" => ("200 OK", "text/plain", "ok\n".to_string()),
-        // Readiness (distinct from `/healthz` liveness): 503 while the global
-        // cap is full so an orchestrator stops routing *new* traffic to a
-        // saturated instance without killing it (existing matches drain).
-        // Unlimited cap (0) is always ready.
+        // Readiness, unlike `/healthz` liveness: 503 while the global cap is full,
+        // so an orchestrator stops routing new traffic while existing matches drain.
+        // An unlimited cap (0) is always ready.
         "/readyz" => {
             let sl = slots.snapshot();
             if sl.global_cap != 0 && sl.current >= sl.global_cap {
@@ -526,18 +483,13 @@ fn route(
     (status, content_type, body, NO_STORE)
 }
 
-/// Per-connection read/write budget for the status listener. The loop serves
-/// one connection at a time, so an unbounded read would let a single stalled
-/// peer take the endpoint down.
+/// Per-connection read/write budget, so a stalled peer can't hold a handler
+/// thread (and its in-flight slot) indefinitely.
 const IO_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
 
-/// Split the first line of a request into `(method, path)`. Returns `None` for
-/// an empty read (a stalled or timed-out peer) and for a line that doesn't
-/// carry both tokens, so those get a 400 instead of being routed as `("", "")`.
-///
-/// Only the bytes up to the first newline are decoded, so a non-UTF-8 byte
-/// later in the request (a binary header from a confused client) can't turn a
-/// perfectly good request line into a 400.
+/// Split a request's first line into `(method, path)`. `None` for an empty
+/// read (stalled peer) or a line missing either token, so those 400. Only bytes
+/// up to the first newline are decoded, so later non-UTF-8 bytes don't matter.
 fn parse_request_line(buf: &[u8]) -> Option<(&str, &str)> {
     let end = buf.iter().position(|b| *b == b'\n').unwrap_or(buf.len());
     let line = std::str::from_utf8(&buf[..end]).ok()?;
@@ -545,14 +497,12 @@ fn parse_request_line(buf: &[u8]) -> Option<(&str, &str)> {
     Some((parts.next()?, parts.next()?))
 }
 
-/// Longest request line we'll buffer. Anything past this is a client bug or an
-/// attack; the read stops and the request 400s rather than growing unbounded.
+/// Longest request line buffered; past it the request 400s.
 const MAX_REQUEST_LINE: usize = 2048;
 
-/// Read until the request line is complete (CRLF), the peer closes, or
-/// `MAX_REQUEST_LINE` bytes have arrived. A single `read` can return a partial
-/// line when the request straddles TCP segments — the old one-shot read 400'd
-/// those, which showed up as flaky health probes.
+/// Read until the request line ends (CRLF), the peer closes, or
+/// `MAX_REQUEST_LINE` bytes arrive. A request split across TCP segments needs
+/// several reads; a one-shot read made health probes flaky.
 fn read_request_line(stream: &mut impl Read) -> Vec<u8> {
     let mut buf = Vec::with_capacity(256);
     let mut chunk = [0u8; 256];
@@ -570,18 +520,12 @@ fn read_request_line(stream: &mut impl Read) -> Vec<u8> {
     buf
 }
 
-/// Spawn the status listener thread if `CRAB_STATUS_BIND` is set. Bind
-/// failures are non-fatal (the match server keeps running without telemetry).
-/// How many status connections may be in flight at once. The endpoint used to
-/// serve them strictly one at a time, so a peer that connected and then went
-/// quiet held telemetry hostage for the whole `IO_TIMEOUT`. Each connection now
-/// gets its own short-lived thread, capped here so a connection flood can't
-/// spawn threads without bound; over the cap a peer is turned away immediately
-/// rather than queued behind the stalled ones.
+/// Status connections in flight at once, each on its own short-lived thread
+/// (serving one at a time let a quiet peer hold telemetry for a whole
+/// `IO_TIMEOUT`). Over the cap a peer is refused immediately, not queued.
 const MAX_CONCURRENT_STATUS_CONNS: usize = 16;
 
-/// Decrements the in-flight counter on drop, so a panicking handler thread
-/// still frees its slot.
+/// Decrements the in-flight counter on drop, so a panicking handler still frees its slot.
 struct InFlightGuard(&'static std::sync::atomic::AtomicUsize);
 
 impl Drop for InFlightGuard {
@@ -590,8 +534,7 @@ impl Drop for InFlightGuard {
     }
 }
 
-/// Read one request line off `stream`, route it, and write the response.
-/// Split out of the accept loop so it can run on a per-connection thread.
+/// Read one request line, route it, write the response; runs on a per-connection thread.
 fn serve_connection(mut stream: impl Read + Write, started: Instant, slots: &SlotManager) {
     let buf = read_request_line(&mut stream);
     // HEAD gets headers only (an HTTP nicety for probes).
@@ -639,13 +582,10 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
     std::thread::spawn(move || {
         for stream in listener.incoming() {
             let Ok(mut stream) = stream else { continue };
-            // The endpoint serves one connection at a time, so a peer that
-            // connects and then stalls would wedge telemetry for everyone.
-            // Bound both directions; a stalled peer just gets dropped.
+            // Bound both directions so a stalled peer is dropped.
             let _ = stream.set_read_timeout(Some(IO_TIMEOUT));
             let _ = stream.set_write_timeout(Some(IO_TIMEOUT));
-            // Over the concurrency cap: answer immediately on the accept
-            // thread instead of queueing behind whatever is stalled.
+            // Over the cap: answer on the accept thread instead of queueing.
             if IN_FLIGHT.load(Ordering::Acquire) >= MAX_CONCURRENT_STATUS_CONNS {
                 let body = "too many status connections\n";
                 let _ = write!(
@@ -664,8 +604,7 @@ pub(crate) fn spawn_from_env(started: Instant, slots: SlotManager) {
                     serve_connection(stream, started, &slots);
                 });
             if spawned.is_err() {
-                // Thread creation failed (fd/memory pressure) — the guard was
-                // never constructed, so release the slot here.
+                // Thread spawn failed before the guard existed, so release the slot here.
                 IN_FLIGHT.fetch_sub(1, Ordering::AcqRel);
             }
         }
@@ -749,10 +688,9 @@ mod tests {
         }
     }
 
-    /// `/status.json` and `/metrics` are two views of the same numbers. Every
-    /// scalar JSON field must have a `crab_*` sample on the metrics page (under
-    /// its metric-side name), so a field added to one endpoint can't silently
-    /// go missing from the other.
+    /// `/status.json` and `/metrics` are two views of the same numbers: every
+    /// scalar JSON field needs a `crab_*` sample, so neither endpoint can drop one
+    /// silently.
     #[test]
     fn status_json_and_metrics_expose_the_same_scalars() {
         let now = Instant::now();
@@ -980,8 +918,7 @@ mod tests {
 
     #[test]
     fn catalog_card_count_is_distinct_names() {
-        // Deduping by name must never exceed the raw factory count, and a
-        // populated catalog reports a positive count.
+        // Name dedupe never exceeds the factory count, and the catalog is non-empty.
         let names = catalog_card_count();
         let factories = crabomination::catalog::all_known_factories().len();
         assert!(names > 0, "catalog is non-empty");
@@ -1009,8 +946,8 @@ mod tests {
         // Refusals split by which cap tripped (global vs per-IP).
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"global\"} 0"));
         assert!(body.contains("crab_connections_refused_by_reason_total{reason=\"per_ip\"} 0"));
-        // Each metric name must carry exactly one HELP/TYPE block — Prometheus
-        // rejects a whole scrape on a duplicated HELP line (regression guard).
+        // Each metric carries exactly one HELP/TYPE block: Prometheus rejects the
+        // whole scrape on a duplicate HELP line (regression guard).
         assert_eq!(
             body.matches("# TYPE crab_connections_refused_by_reason_total").count(),
             1,

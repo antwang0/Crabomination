@@ -1,15 +1,12 @@
 //! CR 104.4b / 732.4 — a mandatory loop that never repeats a board because
 //! every cycle adds an object (Gremlin Tamer under Secret Arcade: each Gremlin
 //! token is an enchantment, so its arrival re-triggers Eerie) or a counter
-//! (Heliod, Sun-Crowned and a lifelinking Shalai and Hallar). The exact-state
-//! watch in `stack.rs` cannot see it; this one counts the consecutive
-//! triggered-ability resolutions that put a permanent onto the battlefield
-//! (a non-growing rider between them is carried, not counted) and never leave
-//! the stack shallower than the last growing resolution found it. Each
-//! resolution pops one item, so holding the depth for
-//! [`GROWTH_LOOP_DRAW_RESOLUTIONS`] resolutions means every one pushed a
-//! successor — a loop, not a finite cascade (a cascade from one event pushes
-//! its triggers at once and then drains).
+//! (Heliod, Sun-Crowned with a lifelinking Shalai and Hallar), invisible to
+//! `stack.rs`'s exact-state watch. This counts consecutive trigger
+//! resolutions that put a permanent onto the battlefield (non-growing riders
+//! carried, not counted) without the stack dropping below the last growing
+//! resolution's depth. Holding depth for [`GROWTH_LOOP_DRAW_RESOLUTIONS`]
+//! means each pushed a successor — a loop, not a draining cascade.
 
 use super::{GameEvent, GameState};
 
@@ -18,13 +15,10 @@ use super::{GameEvent, GameState};
 pub const GROWTH_LOOP_DRAW_RESOLUTIONS: u32 = 400;
 
 /// A trigger resolving this deep counts as growth on its own: the stack is
-/// what the loop grows. Syr Konrad under The Mindskinner (each ping becomes
-/// three mills, each milled creature card another ping) beside Vigor,
-/// Worldspine Wurm and Kozilek, Butcher of Truth (each shuffles itself or its
-/// graveyard back) never repeats a board and never adds a permanent; its
-/// stack climbed past 3,000 to the action cap (sweep seed 113, block 11352).
-/// The board bound: a finite fan-out this deep pushes its triggers at once
-/// and drains below the chain's floor on the next resolution.
+/// what grows. Syr Konrad under The Mindskinner beside Worldspine Wurm and
+/// Kozilek (shuffle-backs) adds no permanent and repeats no board, yet its
+/// stack hit the action cap (sweep seed 113, block 11352). A finite fan-out
+/// this deep drains below the chain's floor on the next resolution.
 pub const STACK_LOOP_DEPTH: usize = crate::recommend::MAX_BATTLEFIELD;
 
 impl GameState {

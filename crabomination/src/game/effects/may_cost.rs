@@ -1,10 +1,8 @@
 //! CR 118.3 / 603.12 / 608.2c — "you may [pay a cost]. If you do, [payoff]."
 //! A player can't choose to pay a cost they can't pay, and the payoff hangs
-//! on the payment. An `Effect::MayDo` whose body opens with the cost (a
-//! `Seq` of discard-then-draw, sacrifice-then-…) ran the rest of the body
-//! after a discard from an empty hand: every "you may discard a card. If you
-//! do, draw a card" was a free card with nothing to discard, and the bots
-//! took it.
+//! on the payment: an `Effect::MayDo` whose body opens with the cost (a
+//! `Seq` of discard-then-draw, sacrifice-then-…) must not run the rest after
+//! a discard from an empty hand.
 
 use super::{EffectContext, GameState};
 use crate::card::Zone;

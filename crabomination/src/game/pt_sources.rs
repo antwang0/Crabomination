@@ -1,16 +1,11 @@
-//! Which effects move a creature's power and toughness, by source — for the
-//! client's card inspector, which until now could only say "+3/+1 from
-//! effects".
+//! Which effects move a creature's power and toughness, by source, for the
+//! client's card inspector.
 //!
-//! Each source's share is what the layer pass loses without it: the
-//! permanent is laid out once with every continuous effect and once per
-//! source with that source's effects left out. That reads every kind of
-//! layer-7 effect (a set, a per-type count, a switch) the way the layer pass
-//! itself does, rather than re-deriving each modification's arithmetic, and
-//! it needs nothing of the engine's hot paths: only the view projection
-//! calls it, and only for a creature a continuous effect actually changes.
-//! Shares need not sum to the total where effects interact (a 7b set under a
-//! 7c pump); the inspector prints any remainder as "other effects".
+//! A source's share is what the layer pass loses without it (one pass with
+//! every effect, one per source left out), so every layer-7 kind is read as
+//! the layer pass reads it. Off the hot path: only view projection calls it,
+//! for creatures an effect changes. Shares needn't sum where effects interact
+//! (a 7b set under a 7c pump); the remainder prints as "other effects".
 //!
 //! Until-end-of-turn pumps (`CardInstance::power_bonus`) and lasting ones
 //! (`perm_power_bonus`) carry no source; they get a line of their own.

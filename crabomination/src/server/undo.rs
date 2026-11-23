@@ -3,39 +3,30 @@
 //! human seat, and what each is called.
 //!
 //! The history lives on the match thread beside the `GameState`
-//! (`run_match_inner`), never inside it, so a snapshot can't hold the
-//! history. A point is a whole-state clone — about a 1.6 KB copy plus
-//! refcount bumps (cards are `Arc`-shared and the big groups copy-on-write,
-//! PERF `(-143)`), so the ring costs roughly what the game has changed since
-//! its oldest point. Automatic actions (`ClientMsg::SubmitAuto`: auto-pass,
-//! auto-answered prompts) keep none; bots keep none.
+//! (`run_match_inner`), never inside it. A point is a whole-state clone
+//! (cards are `Arc`-shared and the big groups copy-on-write, PERF `(-143)`),
+//! so the ring costs roughly what the game has changed since its oldest
+//! point. Automatic actions (`ClientMsg::SubmitAuto`) and bots keep none.
 //!
-//! Rewinding to a point discards it and every later point, every seat's: the
-//! branch played after it is gone, and the next take-back goes one further.
+//! Rewinding to a point discards it and every later point, every seat's.
+//! A cast paid over later messages (`ManualTapRequired`: the taps, then the
+//! re-submit) keeps one point, so one take-back undoes the whole cast.
 //!
-//! A cast that stops for its player to tap mana (`ManualTapRequired`) is paid
-//! over the messages after it: the taps, then the client's re-submit. Those
-//! taps are part of the cast and keep no points of their own, so one
-//! take-back undoes the whole cast, mid-payment or after it, lands and all.
-//!
-//! **No fishing** (step 2). A take-back mustn't be a way to try again for a
-//! better roll of the dice:
-//! - the game's own randomness comes back with the state (its stream
-//!   position is part of the clone), so a shuffle, a draw or a coin flip
-//!   replays the same;
+//! **No fishing** (step 2). A take-back mustn't be a way to re-roll:
+//! - the game's randomness comes back with the state (its stream position
+//!   is part of the clone), so a shuffle, draw or coin flip replays the same;
 //! - each bot decision is pinned to a seed from the state it is made in
-//!   ([`decision_seed`], [`pin_bot`]), so the same position always gets the
-//!   same reply — its blocks, its counterspell;
+//!   ([`decision_seed`], [`pin_bot`]), so the same position gets the same
+//!   reply;
 //! - what the undone stretch *showed* can't be taken back, so the rewind
 //!   says what it was ([`seen_since`]): "1 draw", "a coin flip", "Bot's
 //!   hand".
 //!
 //! **Consent** (step 4). With other people at the table a take-back is a
-//! request ([`Asked`]): the match pauses — no actions, no bot moves, the
-//! rope and the chess clock stopped — while each other human still at the
-//! table allows or declines it, for [`ASK_FOR`] at most. Bots allow. Every
-//! allow applies it; a decline, the deadline, a player leaving or a
-//! concession ends it, and play goes on.
+//! request ([`Asked`]): the match pauses (no actions, no bot moves, rope and
+//! chess clock stopped) while each other human allows or declines, for
+//! [`ASK_FOR`] at most. Bots allow. Every allow applies it; a decline, the
+//! deadline, a player leaving or a concession ends it.
 
 use std::cell::RefCell;
 use std::collections::VecDeque;

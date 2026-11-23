@@ -4,13 +4,11 @@
 
 use super::*;
 
-/// Implicit creature restriction for a bare, unfiltered target on a
-/// creature-only pump effect. A `Selector::Target(n)` carries no
-/// `SelectionRequirement`, but you can't give +3/+3 to (or set the base P/T
-/// of) a land — the target must be a creature. Surfacing this filter makes
-/// cast-time legality and the auto-targeter reject non-creatures.
-/// (`TargetFiltered` selectors already carry their own, stricter, filter;
-/// `BecomeCreature` deliberately targets *non*-creatures and is excluded.)
+/// Implicit creature restriction for a bare `Selector::Target(n)` on a
+/// creature-only pump: you can't give +3/+3 to (or set the base P/T of) a land,
+/// so cast-time legality and the auto-targeter reject non-creatures.
+/// (`TargetFiltered` selectors carry their own stricter filter;
+/// `BecomeCreature` deliberately targets non-creatures and is excluded.)
 static IMPLICIT_CREATURE_TARGET: SelectionRequirement = SelectionRequirement::Creature;
 
 /// Earthbend (CR 701.66a) targets "a land you control" — surfaced for the
@@ -122,15 +120,12 @@ static IMPLICIT_PLAYER_OR_PLANESWALKER: std::sync::LazyLock<SelectionRequirement
         SelectionRequirement::Player.or(SelectionRequirement::Planeswalker)
     });
 
-/// `Some(&Player)` for a field the effect reads as a **player** whose selector
-/// is a bare numbered target — `Discard { who: Target(0) }` ("target player
-/// discards a card"). The caller supplies the "this field is a player" half by
-/// choosing the arm; this supplies the "it is a target" half.
-///
-/// Without it `primary_target_filter` answers `None`, both target walkers fall
-/// back to `SelectionRequirement::Any`, and Disrupting Scepter offers every
-/// battlefield permanent alongside the two players — a pick the `PlayerRef`
-/// then cannot resolve, so the ability silently does nothing.
+/// `Some(&Player)` for a field the effect reads as a player whose selector is a
+/// bare numbered target (`Discard { who: Target(0) }`, "target player discards
+/// a card"); the caller's arm supplies the "it's a player" half. Without it
+/// both target walkers fall back to `SelectionRequirement::Any`, and Disrupting
+/// Scepter offered every permanent — a pick the `PlayerRef` can't resolve, so
+/// the ability did nothing.
 fn implicit_player_if_bare_player_field(who: &Selector) -> Option<&'static SelectionRequirement> {
     matches!(who, Selector::Target(_) | Selector::Player(PlayerRef::Target(_)))
         .then_some(&IMPLICIT_PLAYER_TARGET)
@@ -145,17 +140,11 @@ fn implicit_player_for_bare_player_slot(
         .then_some(&IMPLICIT_PLAYER_TARGET)
 }
 
-/// The `PlayerRef` a selector reads a player out of, if any.
-///
-/// **One list, two readers.** `requires_target`'s census and
-/// `target_filter_for_slot`'s filter walk both have to know which selectors
-/// can name a player slot, and they drifted: the census walked
-/// `CardsInZone`/`TopOfLibrary`/`BottomOfLibrary` and the filter walk did
-/// not, so `Effect::Move { what: CardsInZone { who: Target(0), .. } }`
-/// reported no slot-0 filter, `primary_target_filter` fell through to the
-/// *card* filter beside it, and Mudhole aimed "target player's graveyard" at
-/// a **land permanent** (Drafna's Restoration at an artifact). A pick the
-/// `PlayerRef` cannot resolve, so the spell did nothing.
+/// The `PlayerRef` a selector reads a player out of, if any. One list for two
+/// readers, `requires_target`'s census and `target_filter_for_slot`'s filter
+/// walk, which drifted: the filter walk missed `CardsInZone` / `TopOfLibrary` /
+/// `BottomOfLibrary`, so Mudhole aimed "target player's graveyard" at a land
+/// permanent and did nothing.
 fn selector_player_ref(s: &Selector) -> Option<&PlayerRef> {
     match s {
         Selector::TopOfLibrary { who, .. }
@@ -167,21 +156,14 @@ fn selector_player_ref(s: &Selector) -> Option<&PlayerRef> {
     }
 }
 
-/// The `Selector` a [`PlayerRef`] reads a player *out of*, if any — the
-/// inverse of [`selector_player_ref`], and the same "one list, three readers"
-/// device for the other direction.
-///
-/// "The owner of X", "each player other than X's controller", "the controller
-/// of what last damaged X": the target is X's, so `requires_target`'s census
-/// and both filter walks have to peel the same set. They did not —
+/// The `Selector` a [`PlayerRef`] reads a player out of, if any — the inverse
+/// of [`selector_player_ref`], one list for `requires_target`'s census and both
+/// filter walks. For "the owner of X" and the like the target is X's;
 /// `EachPlayerExceptControllerOf`, `CombatDamagerController` and
-/// `LastDamagerControllerOf` were in none of the three, so a `Selector::Target`
-/// under any of them read as *untargeted* and the spell would go on the stack
-/// with no target chosen. Only Fractured Identity ships one today and its body
-/// targets as well, so the class was latent; `audit_target_fields` names it.
-///
-/// Exhaustive on purpose — a new `PlayerRef` carrying a `Selector` stops
-/// compiling here rather than joining the class.
+/// `LastDamagerControllerOf` were once in none of the three, so a
+/// `Selector::Target` under them read as untargeted (latent; see
+/// `audit_target_fields`). Exhaustive on purpose: a new `PlayerRef` carrying a
+/// `Selector` stops compiling here.
 fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
     match p {
         PlayerRef::OwnerOf(s)
@@ -261,14 +243,11 @@ fn implicit_creature_for_slot(what: &Selector, slot: u8) -> Option<&'static Sele
     matches!(what, Selector::Target(n) if *n == slot).then_some(&IMPLICIT_CREATURE_TARGET)
 }
 
-/// CR 115.4 "any target" — a creature, a planeswalker, a battle, or a player.
-///
-/// The catalog writes Lightning Bolt as `DealDamage { to: Selector::Target(0) }`
-/// with no filter at all, and the fallback both target walkers take for a
-/// filterless slot is `SelectionRequirement::Any` — which matches a **land**.
-/// `enumerate_legal_targets(&banefire.effect, 0)` listed the opponent's Forest
-/// until this existed. Nothing in Magic can be dealt damage but those four
-/// object kinds, so the fallback for a damage slot is this, not `Any`.
+/// CR 115.4 "any target" — a creature, a planeswalker, a battle or a player.
+/// The catalog writes Lightning Bolt as `DealDamage { to: Selector::Target(0)
+/// }` with no filter, and the walkers' filterless fallback `Any` matches a land
+/// (Banefire listed the opponent's Forest). Only those four kinds can be dealt
+/// damage, so this is a damage slot's fallback.
 static IMPLICIT_ANY_TARGET: std::sync::LazyLock<SelectionRequirement> =
     std::sync::LazyLock::new(|| {
         SelectionRequirement::Creature
@@ -351,35 +330,6 @@ impl Effect {
         }
     }
 
-    /// Every `Effect` nested directly inside this one, in declaration order.
-    ///
-    /// **The one recursion the five target walkers were each hand-writing.**
-    /// `requires_target` is exhaustive over all ~1000 variants, so the
-    /// compiler makes it name every wrapper; `primary_target_filter`,
-    /// `prefers_graveyard_target`, `may_target_offboard_card` and
-    /// `accepts_player_target` end in `_ => …` and name 26-61 of the 130, so
-    /// a wrapper none of them names answers the fallback silently for its
-    /// whole subtree. That is the drift `ENGINE_BACKLOG`'s "the gate's own
-    /// wrappers" is about, and it has shipped as card bugs three times.
-    ///
-    /// This is the shared half: **one arm per wrapper, in one place**, so a
-    /// new wrapper is a single edit rather than five, and forgetting it
-    /// breaks every walker together instead of one silently.
-    /// `core_rules::target_walkers::the_shared_recursion_names_every_effect_
-    /// wrapper` holds it to every wrapper (132 at the eighteenth pass) by
-    /// reading `effect.rs` — the same
-    /// extraction `scripts/audit_target_walkers.py` does, so the test and the
-    /// audit cannot disagree about what a wrapper is.
-    ///
-    /// The lifetime is explicit so a caller may keep what it is handed:
-    /// `primary_target_filter` returns a reference borrowed from the tree,
-    /// and a higher-ranked `FnMut(&Effect)` would not let one escape.
-    ///
-    /// It yields bodies *unconditionally*. A caller that must not descend
-    /// into a resolution-time body (`Reflexive`, `ReflexiveTrigger` — CR
-    /// 603.7 payoffs whose targets are picked fresh when they resolve) has to
-    /// say so itself; that is a property of the question being asked, not of
-    /// the tree.
     /// True if `pred` holds for this effect or any effect nested in it
     /// (depth-first over `for_each_inner`).
     pub fn any_nested(&self, pred: &impl Fn(&Effect) -> bool) -> bool {
@@ -395,6 +345,23 @@ impl Effect {
         hit
     }
 
+    /// Every `Effect` nested directly inside this one, in declaration order:
+    /// the one recursion the target walkers used to hand-write.
+    /// `requires_target` is exhaustive, but the others end in `_ => …` and
+    /// named only some wrappers, so an unnamed wrapper silently answered the
+    /// fallback for its whole subtree (shipped as card bugs three times;
+    /// ENGINE_BACKLOG's "the gate's own wrappers"). One arm per wrapper here,
+    /// so a new wrapper is one edit and forgetting it breaks every walker
+    /// together.
+    /// `core_rules::target_walkers::the_shared_recursion_names_every_effect_wrapper`
+    /// checks it against `effect.rs` with the same extraction as
+    /// `scripts/audit_target_walkers.py`.
+    ///
+    /// The lifetime is explicit so `primary_target_filter` can return a
+    /// reference borrowed from the tree. Bodies are yielded unconditionally: a
+    /// caller that must not descend into a resolution-time body (`Reflexive`,
+    /// `ReflexiveTrigger` — CR 603.7, targets chosen when they resolve) says so
+    /// itself.
     pub fn for_each_inner<'a>(&'a self, f: &mut impl FnMut(&'a Effect)) {
         match self {
             Effect::Seq(v)
@@ -1637,13 +1604,11 @@ impl Effect {
             Effect::CastFromHandWithoutPaying { .. }
             | Effect::MayCastFromHandOrGraveyardForLife { .. }
             | Effect::GraveyardCardsGainUnearthThisTurn { .. } => false,
-            // The *chosen source* is a choice, not a target (CR 615.7) — but
-            // `to` is where the shield lands and `redirect_to` is where the
-            // damage goes, and both are printed "target" on the cards that
-            // use them (Charm Peddler's target creature). Reporting `false`
-            // here left `resolve_selector` with an empty `ctx.targets`, so the
-            // arm built no `PreventionShield` at all and six Circle-shaped
-            // cards did nothing.
+            // The chosen source is a choice, not a target (CR 615.7), but `to`
+            // (where the shield lands) and `redirect_to` (where the damage
+            // goes) are printed "target" (Charm Peddler). Answering `false`
+            // left `ctx.targets` empty, so no `PreventionShield` was built and
+            // the Circle-shaped cards did nothing.
             Effect::PreventAllButOneFromChosenSource { .. } => false,
             Effect::PreventNextDamageFromChosenSource { to, redirect_to, .. } => {
                 to.as_ref().is_some_and(sel_has_target)
@@ -2342,15 +2307,12 @@ impl Effect {
             Effect::LiarsPendulum => true,
             // Targets slot 0 (a creature) but reads it straight off ctx.
             Effect::PreventNextDamageByTargetMintMites => true,
-            // `to` is a target too — "**target opponent** gains control of
-            // this creature" (Witch Engine, Wishclaw Talisman, Risky Move) is
-            // spelled `to: Some(PlayerRef::Target(n))`, and `to: None` is
-            // "you". Reading only `what` said Witch Engine's `{T}: Add
-            // {B}{B}{B}{B}. Target opponent gains control of this creature`
-            // targets nothing, which under CR 605.1a made it a mana ability
-            // resolving with no target chosen. `IMPLICIT_OPPONENT_TARGET`
-            // above is the filter this same slot gets from the enumerator, so
-            // the two halves now agree.
+            // `to` is a target too: "target opponent gains control of this
+            // creature" (Witch Engine) is `to: Some(PlayerRef::Target(n))`;
+            // `to: None` is "you". Reading only `what` made Witch Engine a mana
+            // ability (CR 605.1a) resolving with no target.
+            // `IMPLICIT_OPPONENT_TARGET` above is the filter the enumerator
+            // gives this slot, so the two agree.
             Effect::GainControl { what, to, .. } => {
                 sel_has_target(what) || to.as_ref().is_some_and(player_has_target)
             }
@@ -2828,43 +2790,31 @@ impl Effect {
         }
     }
 
-    /// Extract the target's filter if this effect's top-level "what"/"to" is
-    /// `Selector::Target(0)`. Used by UI/bot for target selection.
+    /// Extract the target's filter if this effect's top-level "what" / "to" is
+    /// `Selector::Target(0)`, for UI and bot target selection.
     ///
-    /// **Slot 0's own filter wins when the effect has one.** This walk and
-    /// [`target_filter_for_slot`](Self::target_filter_for_slot) are two
-    /// hand-written passes over the same enum sitting at opposite ends of one
-    /// target's life — this one aims, that one re-checks at CR 608.2b — and a
-    /// census over the catalog at the seventy-fifth pass found 65 definitions
-    /// where they disagreed. 63 were honest (a slot-1 filter for the fight
-    /// family, a per-mode or per-kicker branch); **two were bugs with one
-    /// cause**: `sel_filter` has no arm for a *player* target
-    /// (`Selector::Player(Target(n))`, `ControlledBy { who: Target(n) }`), so
-    /// `Feedback Bolt` reported its artifact-count subject filter and
-    /// `Reins of Power` reported the `Untap` clause that happens to be
-    /// `Seq`'s first element. Deferring makes the aim and the check the same
-    /// function wherever the effect declares slot 0, and leaves the walk below
-    /// for what it is actually good at — the 466 mass effects with no target
-    /// at all, whose *subject* filter is what the UI noun and the random
-    /// retarget want. See ENGINE_BACKLOG's P3.
+    /// Slot 0's own filter wins when the effect has one: this walk aims and
+    /// [`target_filter_for_slot`](Self::target_filter_for_slot) re-checks at CR
+    /// 608.2b, and a census at the seventy-fifth pass found them disagreeing on
+    /// 65 definitions — two of them bugs (`sel_filter` had no arm for a player
+    /// target, so Feedback Bolt reported its subject filter and Reins of Power
+    /// its `Untap` clause). Deferring makes aim and check the same function
+    /// wherever slot 0 is declared, leaving the walk below for mass effects
+    /// with no target, whose subject filter the UI noun and random retarget
+    /// want. See ENGINE_BACKLOG's P3.
     pub fn primary_target_filter(&self) -> Option<&SelectionRequirement> {
         if let Some(f) = self.target_filter_for_slot(0) {
             return Some(f);
         }
         fn sel_filter(s: &Selector) -> Option<&SelectionRequirement> {
             match s {
-                // A selector that *is* a player names a player slot — the
-                // arm the seventy-fifth pass's census predicted ("`sel_filter`
-                // has no arm for a player target") and left for later.
-                // Without it `LoseLife { who: Player(Target(0)) }` reports no
-                // filter, the enumerator falls back to `Any`, and Geth's
-                // Verdict offers every permanent alongside the two players.
-                //
-                // "The controller/owner **of** X" is X's filter, not a player
-                // one: Parallectric Feedback damages "target *spell*'s
-                // controller", so slot 0 is the spell. Off
-                // `player_ref_selector`, so this walk and `requires_target`'s
-                // census cannot disagree about which refs hide one.
+                // A selector that is a player names a player slot (the arm the
+                // seventy-fifth-pass census predicted). Without it `LoseLife {
+                // who: Player(Target(0)) }` reports no filter and Geth's
+                // Verdict offered every permanent. "The controller/owner of X"
+                // is X's filter, not a player one (Parallectric Feedback:
+                // target spell's controller, so slot 0 is the spell); read off
+                // `player_ref_selector` so this and `requires_target` agree.
                 Selector::Player(who) if player_ref_selector(who).is_some() => {
                     sel_filter(player_ref_selector(who).expect("checked"))
                 }
@@ -3397,14 +3347,12 @@ impl Effect {
             | Effect::PutCardsFromHandOnBottom { who, .. } => {
                 sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
-            // Edict-class effects: "target player sacrifices a permanent."
-            // The `who` selector usually carries a `target_filtered(Player)`
-            // filter (Sudden Edict, Cruel Edict-style spells); the bare
-            // `Selector::Target(0)` the pre-primitive edicts use (Diabolic
-            // Edict, Geth's Verdict) gets the same `Player` answer from the
-            // fallback now. It does not change what needs a target —
-            // `requires_target` is a different walker — only what the
-            // enumerator offers, which used to include every permanent.
+            // Edicts: "target player sacrifices a permanent." `who` usually
+            // carries a `target_filtered(Player)`; a bare `Selector::Target(0)`
+            // (Diabolic Edict) gets the same `Player` answer from the fallback.
+            // This changes only what the enumerator offers (it used to include
+            // every permanent), not what needs a target — that is
+            // `requires_target`.
             Effect::Sacrifice { who, .. } | Effect::SacrificeGreatestMV { who, .. } => {
                 sel_filter(who).or_else(|| implicit_player_if_bare_player_field(who))
             }
@@ -3630,13 +3578,11 @@ impl Effect {
             // resolves, with its own slot numbering, so the enclosing effect's
             // slot-0 filter is not its. Named because the fallthrough recurses.
             Effect::Reflexive { .. } | Effect::ReflexiveTrigger { .. } => None,
-            // The first inner effect that has one, which is the convention every
-            // explicit arm above already follows — `If` takes `then` before
-            // `else_`, `FlipCoin` heads before tails, `RollDie` the first arm.
-            // `for_each_inner` yields in declaration order, so this is that rule
-            // applied to the 69 wrappers no arm named, which answered `None` for
-            // their whole subtree and left the auto-picker choosing slot 0
-            // against `Any`.
+            // The first inner effect that has one — the convention the explicit
+            // arms above follow (`If`'s `then` before `else_`, heads before
+            // tails). `for_each_inner` yields in declaration order, so this
+            // applies it to the wrappers no arm named, which used to answer
+            // `None` and leave the auto-picker choosing slot 0 against `Any`.
             other => {
                 let mut found = None;
                 other.for_each_inner(&mut |e| {
@@ -3649,24 +3595,15 @@ impl Effect {
         }
     }
 
-    /// Heuristic: does this effect's primary target want to be a *friendly*
-    /// permanent (one the caster controls) rather than an opponent's? Drives
-    /// `auto_target_for_effect` so the random bot doesn't waste Vines of
-    /// Vastwood on the opp's bear or Reckless Charge on its own.
-    ///
-    /// Returns true for unconditional self-buffs (positive `PumpPT`,
-    /// `GrantKeyword`, `+1/+1` `AddCounter`). Returns false for hostile
-    /// effects (Destroy, Exile, DealDamage, …) and ambiguous ones.
     /// Friendliness of the children that actually declare a target slot,
     /// falling back to every child when none of them target.
     fn friendliness_of_targeting_children(children: &[Effect]) -> bool {
-        // **The FIRST targeting child decides, not `any`.** A rider aimed at
-        // the same seat as the clause before it is not a second opinion:
-        // Oildeep Gearhulk is `Seq[DiscardChosen(target player), Draw(that
-        // player)]` and `any` read the draw as a gift, so the picker aimed
-        // the whole trigger at its own controller and the Gearhulk made its
-        // caster discard. Reading the first one keeps Shadrix Silverquill's
-        // `Seq[Draw, LoseLife]` mode friendly, which is what `any` gave it.
+        // The first targeting child decides, not `any`: a rider aimed at the
+        // same seat as the clause before it isn't a second opinion. Oildeep
+        // Gearhulk is `Seq[DiscardChosen(target player), Draw(that player)]`,
+        // and `any` read the draw as a gift and made its caster discard.
+        // Shadrix Silverquill's `Seq[Draw, LoseLife]` mode stays friendly
+        // either way.
         let mut targeting = children.iter().filter(|e| e.requires_target());
         match targeting.next() {
             Some(first) => first.prefers_friendly_target(),
@@ -3675,22 +3612,13 @@ impl Effect {
     }
 
     /// Whose side slot `slot` wants — the per-slot answer to
-    /// [`prefers_friendly_target`](Self::prefers_friendly_target).
-    ///
-    /// A single boolean per *effect* cannot describe a spell whose slots
-    /// disagree. Homesickness is `Seq[ "target player draws two",
-    /// "tap target creature", "put a stun counter on it" ]`: slot 0 is a
-    /// gift and slots 1-2 are removal-adjacent. The whole-effect
-    /// classifier combines children with `any`, so the friendly Draw made
-    /// the entire spell read as friendly and the auto-target walk stunned
-    /// the caster's own board (observed 2026-08-22, `replay-1787357896-1`
-    /// turn 16: both stun counters on the bot's own creatures).
-    ///
-    /// The child that actually *declares* the slot decides its polarity;
-    /// `target_filter_for_slot_in_mode_kicked` already knows how to find
-    /// that child, so this reuses it rather than duplicating the walk.
-    /// When no single child owns the slot — a bare `Target(0)` payload
-    /// with no surfaced filter — the whole-effect answer stands.
+    /// [`prefers_friendly_target`](Self::prefers_friendly_target). One boolean
+    /// per effect can't describe Homesickness (`Seq["target player draws two",
+    /// "tap target creature", "put a stun counter on it"]`): the friendly Draw
+    /// made the whole spell read friendly and the bot stunned its own board.
+    /// The child that declares the slot decides (found by
+    /// `target_filter_for_slot_in_mode_kicked`); with no single owner, the
+    /// whole-effect answer stands.
     pub fn prefers_friendly_target_for_slot(&self, slot: u8, mode: Option<usize>) -> bool {
         self.slot_owner(slot, mode)
             .map(|e| e.prefers_friendly_target())
@@ -3743,20 +3671,9 @@ impl Effect {
         }
     }
 
-    /// Slot `slot` is a *player* target the effect wants to hurt: a
-    /// discard, damage, life loss, mill, sacrifice or hand/graveyard exile
-    /// whose target slot admits a player. The auto-target pickers used to
-    /// try the caster first for every player slot (right for "target player
-    /// draws", the SOS loot shapes), so Arcane Omens discarded the caster's
-    /// hand in 98 of 113 recorded casts and Traumatic Critique / Together as
-    /// One dealt their X to the caster's face every time (2026-09-06 deck
-    /// work). Only shapes whose polarity is not in doubt are listed; a
-    /// loot ("target player discards any number, then draws that many") or
-    /// a gift stays caster-first, so the answer is "hostile", not "friendly
-    /// or not".
-    /// Is player slot `slot` a GIFT — the named player may take a free copy
-    /// of a spell (Parnesse)? An optional gift slot is one the auto-picker
-    /// leaves empty rather than hand an opponent the upside.
+    /// Is player slot `slot` a gift — the named player may take a free copy of
+    /// a spell (Parnesse)? An optional gift slot is one the auto-picker leaves
+    /// empty rather than hand an opponent the upside.
     pub fn player_slot_is_gift(&self, slot: u8) -> bool {
         fn walk(e: &Effect, slot: u8, found: &mut bool) {
             if let Effect::CopySpellForPlayer { who: PlayerRef::Target(n), .. } = e
@@ -3771,6 +3688,12 @@ impl Effect {
         found
     }
 
+    /// Slot `slot` is a player target the effect wants to hurt: a discard,
+    /// damage, life loss, mill, sacrifice or hand / graveyard exile whose slot
+    /// admits a player. The pickers used to try the caster first for every
+    /// player slot, so Arcane Omens discarded its caster's hand. Only shapes of
+    /// certain polarity are listed; a loot or a gift stays caster-first, so the
+    /// answer is "hostile", not "friendly or not".
     pub fn player_slot_is_hostile(&self, slot: u8, mode: Option<usize>) -> bool {
         fn hostile(e: &Effect) -> bool {
             match e {
@@ -3903,6 +3826,12 @@ impl Effect {
         self.slot_owner(slot, mode).is_some_and(exiles)
     }
 
+    /// Heuristic: does this effect's primary target want to be a friendly
+    /// permanent? Drives `auto_target_for_effect` so the bot doesn't put Vines
+    /// of Vastwood on the opponent's bear or Reckless Charge on its own. True
+    /// for unconditional self-buffs (positive `PumpPT`, `GrantKeyword`, +1/+1
+    /// `AddCounter`); false for hostile (Destroy, Exile, DealDamage, …) and
+    /// ambiguous effects.
     pub fn prefers_friendly_target(&self) -> bool {
         match self {
             Effect::PumpPT {
@@ -4006,13 +3935,11 @@ impl Effect {
                     | Selector::Target(_)
                     | Selector::TargetFiltered { .. }
             ),
-            // CR 702.124c — "target player may put [name] into their hand
-            // from their library": a targeted tutor *into the target's own
-            // hand* is a gift, so the picker should aim it at the caster, not
-            // at whichever opponent the hostile default reaches for. Without
-            // this, a Partner-with fetch legally handed the partner to an
-            // opponent every time. The `MayDoBy` wrapper already recurses
-            // into its body a few arms up, so this one arm is the whole fix.
+            // CR 702.124c — "target player may put [name] into their hand from
+            // their library" is a gift, so aim it at the caster; otherwise a
+            // Partner-with fetch handed the partner to an opponent. `MayDoBy`
+            // already recurses into its body above, so this arm is the whole
+            // fix.
             Effect::SearchUpToN { who: crate::effect::PlayerRef::Target(_), to, .. } => matches!(
                 to,
                 crate::effect::ZoneDest::Hand(crate::effect::PlayerRef::Target(_))
@@ -4044,21 +3971,12 @@ impl Effect {
         }
     }
 
-    /// This effect's primary target is meant to be a card in *some*
-    /// graveyard. Covers two cases:
-    /// - Reanimate-class (Disentomb, Raise Dead, Reanimate, Goryo's
-    ///   Vengeance) — `Move target → Hand(You)` / `Battlefield(You)`.
-    /// - Graveyard hate (Ghost Vacuum's "exile target card from a
-    ///   graveyard") — `Move target → Exile`.
-    ///
-    /// The auto-target heuristic walks graveyards (in friendly/hostile
-    /// order) before the battlefield when this is set, so an `Any`-filtered
-    /// Move-to-Exile picks a graveyard resident rather than a battlefield
-    /// permanent that happens to be at the top of the scan.
-    ///
-    /// Battlefield Move-to-Exile is rare in the catalog (the canonical
-    /// permanent-exile effect is `Effect::Exile`), so collapsing both
-    /// graveyard-walk cases under one classifier is safe.
+    /// This effect's primary target is meant to be a card in some graveyard:
+    /// reanimation (Disentomb: `Move target → Hand(You)` / `Battlefield(You)`)
+    /// or graveyard hate (Ghost Vacuum: `Move target → Exile`). The auto-target
+    /// heuristic then walks graveyards before the battlefield, so an
+    /// `Any`-filtered Move-to-Exile picks a graveyard card. Safe to merge both
+    /// cases because battlefield exile is `Effect::Exile`, not `Move`.
     pub fn prefers_graveyard_target(&self) -> bool {
         match self {
             Effect::Move { to, .. } => matches!(
@@ -4164,34 +4082,26 @@ impl Effect {
         }
     }
 
-    /// May this effect's target legitimately be a *card* in a graveyard or in
-    /// exile rather than a battlefield permanent?
-    ///
-    /// The gate on the auto-picker's last-resort off-board walk, and
-    /// deliberately **not** [`prefers_graveyard_target`], which decides walk
-    /// *order* and must stay narrow: making Condemn ("put target attacking
-    /// creature on the bottom of its owner's library") prefer a graveyard
-    /// would aim it at one. This is the superset — every destination of a
-    /// zone change, not just the reanimation ones — because the filter
-    /// language has no zone predicate, so a `Move`'s destination is all the
-    /// engine has to tell Mortuary Mire's "return target creature card from
-    /// your graveyard to the top of your library" from Condemn.
-    ///
-    /// Everything that is *not* a zone change — destroy, damage, pump, tap,
-    /// counters, control — can only ever apply to a permanent, and answering
-    /// one of those with an exiled card is a silent fizzle. That is the
-    /// defect this closes; see ENGINE_BACKLOG, "the target enumerator is
-    /// zone-blind".
-    ///
-    /// [`prefers_graveyard_target`]: Self::prefers_graveyard_target
-    /// CR 109.2 — whether a target slot filtered by `req` reaches cards off
-    /// the battlefield: its filter names the zone, or the effect moves its
-    /// target and the slot doesn't say "permanent". The one scope the
-    /// auto-picker, the enumerator and the cast-time check share.
+    /// CR 109.2 — whether a target slot filtered by `req` reaches cards off the
+    /// battlefield: its filter names the zone, or the effect moves its target
+    /// and the slot doesn't say "permanent". The one scope the auto-picker, the
+    /// enumerator and the cast-time check share.
     pub fn offboard_target_scope(&self, req: &SelectionRequirement) -> bool {
         req.mentions_offboard_zone() || (self.may_target_offboard_card() && !req.names_permanent())
     }
 
+    /// May this effect's target be a card in a graveyard or exile rather than a
+    /// permanent? Gates the auto-picker's last-resort off-board walk.
+    /// Deliberately not [`prefers_graveyard_target`], which decides walk order
+    /// and must stay narrow (Condemn must not prefer a graveyard). This is the
+    /// superset — every zone-change destination — because the filter language
+    /// has no implicit zone, so the `Move` destination is all that tells
+    /// Mortuary Mire's "target creature card from your graveyard" from Condemn.
+    /// A non-zone-change effect (destroy, damage, pump, …) only applies to
+    /// permanents, and aiming it at an exiled card fizzles silently
+    /// (ENGINE_BACKLOG, "the target enumerator is zone-blind").
+    ///
+    /// [`prefers_graveyard_target`]: Self::prefers_graveyard_target
     pub fn may_target_offboard_card(&self) -> bool {
         if self.prefers_graveyard_target() {
             return true;
@@ -4282,18 +4192,12 @@ impl Effect {
         if phrase == "target" { "target spell".to_string() } else { phrase }
     }
 
-    /// Human-readable text for the *one slot* `slot`, for a multi-target
-    /// spell's per-slot prompt.
-    ///
-    /// [`effect_short_text`](Self::effect_short_text) describes the whole
-    /// effect and, walking into a `Seq`, always reports the first informative
-    /// child — so both halves of Together as One's "target player draws X,
-    /// [this] deals X damage to any target" read as the draw. This finds the
-    /// child that actually declares `slot` and describes that child instead,
-    /// so the prompt can say which part of the spell it is asking about.
-    ///
-    /// `None` when no child declares the slot, or when the child it finds has
-    /// no phrasing worth showing; callers fall back to their generic prompt.
+    /// Human-readable text for one slot, for a multi-target spell's per-slot
+    /// prompt. [`effect_short_text`](Self::effect_short_text) describes the
+    /// whole effect and reports a `Seq`'s first informative child, so both
+    /// halves of Together as One read as the draw; this describes the child
+    /// that declares `slot`. `None` when no child does or it has no useful
+    /// phrasing; callers fall back to a generic prompt.
     pub fn target_slot_text(&self, slot: u8, mode: Option<usize>) -> Option<String> {
         // A child that declares the slot is a better answer than `self`, so
         // recurse first and only describe `self` as the leaf case.
@@ -4805,22 +4709,14 @@ impl Effect {
         }
     }
 
-    /// True if a `Target::Player(_)` is a meaningful primary target for this
-    /// effect — **body classification OR a player-only slot-0 filter**.
-    ///
-    /// The fold is the whole point. [`accepts_player_target_by_body`] asks what
-    /// the effect DOES with its target, so `Move` / `Attach` / `PumpPT` are
-    /// "permanent-targeting" — right for Regrowth, and wrong for "return all
-    /// artifacts target player owns", whose slot 0 is a player and whose body
-    /// moves cards. Twenty-six shipped bodies enumerated ZERO legal targets
-    /// because of it (Mudhole, Hurkyl's Recall, River's Rebuke, Jace's -1, the
-    /// seven "enchant player" Curses and fifteen more — uncastable, nothing
-    /// logged). Both call sites were patched by hand at the time; a third would
-    /// have brought it back, so the slot read lives here instead.
-    ///
-    /// Order matters: the body match answers `true` for damage / draw / mill in
-    /// one arm, so the slot walk only runs for effects that operate on
-    /// permanents.
+    /// True if a `Target::Player(_)` is a meaningful primary target: body
+    /// classification or a player-only slot-0 filter. The fold is the point:
+    /// [`accepts_player_target_by_body`] calls `Move` / `Attach` / `PumpPT`
+    /// permanent-targeting — right for Regrowth, wrong for "return all
+    /// artifacts target player owns", and that left Mudhole, Hurkyl's Recall
+    /// and the "enchant player" Curses with zero legal targets. The slot read
+    /// lives here so no call site can miss it. The body match runs first, so
+    /// the slot walk only runs for permanent-operating effects.
     ///
     /// [`accepts_player_target_by_body`]: Self::accepts_player_target_by_body
     pub fn accepts_player_target(&self) -> bool {
@@ -4828,20 +4724,13 @@ impl Effect {
             || self.target_filter_for_slot(0).is_some_and(|f| f.is_player_only())
     }
 
-    /// What the effect DOES with a target, ignoring the slot's own filter —
-    /// the inner half of [`accepts_player_target`](Self::accepts_player_target)
-    /// and private so no caller can take it alone.
-    ///
-    /// The auto-target heuristic uses this to skip player candidates
-    /// when the effect actually operates on permanents — without it, an
-    /// `Any`-filtered Move (Regrowth) auto-targets the caster as a player and
-    /// silently fizzles, since `Effect::Move` only consumes
-    /// `EntityRef::{Permanent,Card}` and ignores Player entries.
-    ///
-    /// Returns true for effects that legitimately point at a player face:
-    /// damage, life-gain/loss, drain, mill/draw/discard against a player ref,
-    /// surveil/scry/look (no-op for non-player anyway). False for effects that
-    /// move/tap/destroy/exile cards.
+    /// What the effect does with a target, ignoring the slot's own filter — the
+    /// inner half of [`accepts_player_target`](Self::accepts_player_target),
+    /// private so no caller takes it alone. True for player-facing effects
+    /// (damage, life gain / loss, drain, mill / draw / discard, surveil / scry
+    /// / look); false for those that move, tap, destroy or exile cards —
+    /// otherwise an `Any`-filtered Move (Regrowth) auto-targets the caster and
+    /// fizzles.
     fn accepts_player_target_by_body(&self) -> bool {
         match self {
             Effect::DealDamage { .. }
@@ -5023,27 +4912,15 @@ impl Effect {
             | Effect::TapMatchingDealPowerAndTakeDivided { .. }
             | Effect::DealDamageToEachOther { .. }
             | Effect::Fight { .. } => false,
-            // Compound effects: defer to whichever child first surfaces a
-            // primary-target filter — the auto-target heuristic's slot 0
-            // is shared across the Seq, so a leading `Move(target → exile)`
-            // dictates the target type for the whole spell, even if a
-            // trailing `If(... GainLife)` would also accept Player. The
-            // real-card example is Cling to Dust:
-            //   `Seq([Move(target → Exile), If(EntityMatches Creature, GainLife)])`
-            // Without this rule the bot picked Player(opp) first, which
-            // matched the `Any` filter but silently fizzled at Move
-            // resolution (Move only consumes Permanent/Card refs).
-            // The child that *owns slot 0* comes first, and only then the
-            // one with a `primary_target_filter`: the latter answers about
-            // non-target subject selectors too, so a leading clause that
-            // merely names a group wins the `find` and decides the whole
-            // spell's target type. `Reins of Power` is
-            // `Seq([Untap(each creature), GainControl(creatures target
-            // player controls), …])` — the `Untap` has no slot and no target,
-            // and it was classifying the spell as permanent-targeting, so the
-            // clickable-target list came back empty once
-            // `primary_target_filter` started answering with slot 0's own
-            // filter. Same class as that deferral, one level up.
+            // Compound effects: the child that owns slot 0 decides the whole
+            // spell's target type, since the heuristic's slot 0 is shared
+            // across the `Seq` (Cling to Dust: a leading `Move(target → Exile)`
+            // wins over a trailing `If(… GainLife)`, else the bot picked a
+            // player and the Move fizzled). Slot ownership is checked before
+            // `primary_target_filter`, which also answers for untargeted
+            // subject selectors: Reins of Power's leading `Untap(each
+            // creature)` made the spell permanent-targeting and its target list
+            // empty.
             Effect::SlotGroups(v) => {
                 Self::slot_group_owner(v, 0).is_some_and(|(m, _)| m.accepts_player_target_by_body())
             }
@@ -5162,13 +5039,9 @@ impl Effect {
         }
     }
 
-    /// Walk the effect tree and return the first `SelectionRequirement` bound
-    /// to the target slot `slot`, if any. Used for cast-time target validation.
-    ///
-    /// `mode` lets modal cards (`ChooseMode`) constrain the search to the
-    /// chosen branch rather than picking up the first matching filter from
-    /// any mode. Pass `None` for non-modal effects or to fall through to
-    /// the legacy behaviour (first match across all modes).
+    /// The first `SelectionRequirement` bound to target slot `slot`, for
+    /// cast-time target validation. `mode` restricts a `ChooseMode` search to
+    /// the chosen branch; `None` searches every mode (first match).
     pub fn target_filter_for_slot_in_mode(
         &self,
         slot: u8,
@@ -6224,17 +6097,13 @@ impl Effect {
                     eff_find(per_each, slot, mode, kicked)
                 }
                 // ── The wrappers `requires_target` descends into. ──────────
-                // Every arm below mirrors one in `requires_target`, and the
-                // pairing is what `audit_target_walkers.py` now gates: a
-                // wrapper that census says carries a cast-time target, and
-                // that this walk does not name, declares a slot whose filter
-                // the cast path cannot find. `None` here is not "unfiltered"
-                // — `check_target_legality` falls back to the restrictive
-                // default, so the spell rejects targets it should accept.
-                // Latent rather than shipped (no catalog card nests a target
-                // under one of these yet, which is why 19,547 tests are
-                // green), and the same shape as the `player_ref_selector`
-                // class: ENGINE_BACKLOG rule 5c.
+                // Each arm mirrors one in `requires_target`, a pairing
+                // `audit_target_walkers.py` gates: a wrapper the census says
+                // carries a target but this walk doesn't name declares a slot
+                // whose filter the cast path can't find, and
+                // `check_target_legality` then falls back to the restrictive
+                // default. Latent (no catalog card nests a target under these
+                // yet); ENGINE_BACKLOG rule 5c.
                 Effect::FlipCoinBy { on_heads, on_tails, .. }
                 | Effect::EachPlayerFlipsCoin { on_heads, on_tails, .. } => {
                     eff_find(on_heads, slot, mode, kicked)
@@ -6357,14 +6226,12 @@ impl Effect {
         None
     }
 
-    /// The number of targets the effect's multi-target instance *requires*
-    /// (`ApplyToTargets.min_targets`), or `None` when the slot-bearing
-    /// effect is not an `ApplyToTargets` (conventional effects keep their
-    /// mandatory slot 0). Slot `n` is an optional pick iff
-    /// `n >= min_targets_in_mode(mode).unwrap_or(u8::MAX)` — i.e. every
-    /// slot of an "up to N" (`min_targets: 0`) shape may be declined,
-    /// while "one or two targets" (`min_targets: 1`) requires slot 0.
-    /// Walks `Seq`/modal/may wrappers like `distinct_target_count`.
+    /// The number of targets the effect's multi-target instance requires
+    /// (`ApplyToTargets.min_targets`), or `None` when the slot-bearing effect
+    /// isn't an `ApplyToTargets` (slot 0 stays mandatory). Slot `n` is optional
+    /// iff `n >= min_targets_in_mode(mode).unwrap_or(u8::MAX)`: "up to N"
+    /// (`min_targets: 0`) may decline all, "one or two" (`1`) requires slot 0.
+    /// Walks the same wrappers as `distinct_target_count`.
     pub fn min_targets_in_mode(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::ApplyToTargets { min_targets, .. } => Some(*min_targets),
@@ -6586,17 +6453,10 @@ impl Effect {
         )
     }
 
-    /// CR 115.3 — the count of mutually-distinct targets a *single* multi-target
-    /// instance consumes (the "up to / any number of / N target …" effects:
-    /// `DealDamageDivided`, `SupportCounters`). Those N targets occupy slots
-    /// `0..N` and must all differ. Returns `None` for effects whose `target`
-    /// clauses are separate instances (a `Seq` of single-target effects), where
-    /// the same object may legally fill each clause. Walks modal wrappers so a
-    /// chosen mode's multi-target effect is found.
     /// CR 601.2c — true when this effect's targets are "one per opponent"
-    /// (`Effect::ForEachOpponentTarget`), so no two of them may share a
-    /// controller. The stricter sibling of [`Self::distinct_target_count`],
-    /// walking the same modal and transparent wrappers.
+    /// (`Effect::ForEachOpponentTarget`), so no two may share a controller. The
+    /// stricter sibling of [`Self::distinct_target_count`], walking the same
+    /// wrappers.
     pub fn per_opponent_targets(&self, mode: Option<usize>) -> bool {
         match self {
             Effect::ForEachOpponentTarget { .. } | Effect::ForEachPlayerTarget { .. } => true,
@@ -6680,6 +6540,11 @@ impl Effect {
         None
     }
 
+    /// CR 115.3 — how many mutually distinct targets a single multi-target
+    /// instance consumes (`DealDamageDivided`, `SupportCounters`): slots
+    /// `0..N`, all different. `None` when the `target` clauses are separate
+    /// instances (a `Seq` of single-target effects), where one object may fill
+    /// each. Walks modal wrappers to find a chosen mode's effect.
     pub fn distinct_target_count(&self, mode: Option<usize>) -> Option<u8> {
         match self {
             Effect::DealDamageDivided { max_targets, .. }
@@ -6733,35 +6598,24 @@ impl Effect {
         }
     }
 
-    /// This effect with the seat an ask was routed to written into the `who`
-    /// field the arm re-derives that seat from.
+    /// This effect with the asked seat written into the `who` field the arm
+    /// re-derives it from. A suspending ask's continuation is the arm's own
+    /// effect, and re-running it resolves `who` against a board the first pass
+    /// already changed: in Ghost Quarter's `Seq[Destroy target land,
+    /// MayDoBy{ControllerOf(Target(0)), …}]` the land is gone by then, so a
+    /// `wants_ui` seat never got its search (ENGINE_BACKLOG's seventeenth
+    /// find). A walker rather than per-arm patches, since thirteen arms share
+    /// the shape.
     ///
-    /// **The continuation an arm hands a suspending ask is its own effect, and
-    /// re-running it resolves `who` against a board the first pass has already
-    /// changed.** Ghost Quarter is
-    /// `Seq[Destroy target land, MayDoBy{ControllerOf(Target(0)), …}]`: by the
-    /// time the land controller answers, the land is in a graveyard, so the
-    /// re-run's `resolve_player` found nothing, the arm returned at its own
-    /// `let Some(seat)` with the replayed answer still in the channel, and the
-    /// compensation search never happened for a `wants_ui` seat
-    /// (`ENGINE_BACKLOG`'s seventeenth find, caught as an answer-log leak by a
-    /// sweep). `MayDoBy` was fixed by hand; the other thirteen arms of the
-    /// shape were one new card away from the same bug, which is why this is a
-    /// walker and not a per-arm patch.
+    /// Called only from the `ask_seat_*` helpers' suspend branch, which clones
+    /// the continuation anyway, so non-suspending asks pay nothing.
     ///
-    /// Called from the `ask_seat_*` helpers' **suspend branch only** — they
-    /// clone the continuation there anyway, so the non-suspending path (every
-    /// bot self-play ask) pays nothing.
-    ///
-    /// Listed, not defaulted: an arm whose `who` is the seat its asks are
-    /// routed to belongs here, and an arm that asks `ctx.controller` about
-    /// *another* seat's stuff (`Fateseal`, `ChooseFromHandToTopOfLibrary`,
-    /// `GuessColorCountInHand`, `MoveChosen`) must NOT — pinning `who` there
-    /// would rewrite the victim, not the asked seat. A loop over
-    /// `resolve_players` must not be here either: one seat pinned into the
-    /// list drops every other seat's question. `scripts/audit_seat_from_
-    /// selector.py` reads this arm list and reports which asking arms are
-    /// still outside it.
+    /// Listed, not defaulted: an arm whose `who` is the asked seat belongs
+    /// here; one that asks `ctx.controller` about another seat's stuff
+    /// (`Fateseal`, `MoveChosen`, …) must not — pinning `who` would rewrite the
+    /// victim. Nor a loop over `resolve_players`: one pinned seat would drop
+    /// the others. `scripts/audit_seat_from_selector.py` reports asking arms
+    /// still outside the list.
     pub fn with_asked_seat(&self, seat: usize) -> Effect {
         let mut out = self.clone();
         match &mut out {

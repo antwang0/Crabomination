@@ -8,15 +8,12 @@
 //! - 17 cards drawn from the first color's pool
 //! - 17 cards drawn from the second color's pool
 //!
-//! Each color pool includes mono-color cube staples plus any two-color
-//! cards whose other color is also part of the chosen pair (so a UR pair
-//! gets `stormchaser_mage`, an RB pair gets `terminate`, etc.). Sampling
-//! is with replacement but capped at four copies per card, matching
-//! Modern's deck-construction rule.
+//! Each color pool holds mono-color staples plus two-color cards whose other
+//! color is also in the pair (UR gets `stormchaser_mage`, RB `terminate`).
+//! Sampling is with replacement, capped at four copies per card.
 //!
-//! Card pools are hand-curated below — no attempt at "balance" beyond
-//! making sure each color has enough cards to fill 17 picks. The point
-//! is variety, not tournament-grade decks.
+//! Pools are hand-curated for variety, not balance: each color just needs
+//! enough cards to fill 17 picks.
 
 use crate::fxhash::HashMap;
 
@@ -32,10 +29,8 @@ use crate::player::Player;
 pub type CardFactory = fn() -> CardDefinition;
 
 thread_local! {
-    // `const`-initialized so the access is a bare TLS read rather than a
-    // lazy-init check. Since `DefFront` went in front of it (fifty-fourth
-    // pass) this is reached once per distinct factory rather than on every
-    // lookup, so the initialisation is now the larger half of its cost.
+    // `const`-initialized: a bare TLS read, no lazy-init check. Behind
+    // `DefFront` (fifty-fourth pass) it is reached once per distinct factory.
     static DEF_CACHE: std::cell::RefCell<HashMap<usize, &'static CardBrief>> =
         const {
             std::cell::RefCell::new(std::collections::HashMap::with_hasher(
@@ -46,34 +41,21 @@ thread_local! {
 
 /// The definition a [`CardFactory`] builds, constructed once per thread.
 ///
-/// A factory is `fn() -> CardDefinition` and every call materialises the
-/// whole thing — several `Vec`s, an effect tree, a mana cost — so a caller
-/// that only wants the card's name or mana value would pay a full
-/// construction and a full drop for it. The deck builders ask one per
-/// (pick x candidate x colour shape), which is why the memo exists at all:
-/// `bot_ladder --decks sealed --games 1` plays **no games** and, before it,
-/// ran 2,910,408,580 Ir building its twelve decks, 43.3 % of that
-/// `__memcpy`. That workload is 34.9 M at the fifty-fourth tip, against
-/// ~48 M for an actual sealed game — and `selfplay_train`'s actors build two
-/// pools and two decks *per game*, so the ratio is the actor loop's, not the
-/// ladder's.
+/// Every factory call materialises the whole definition (`Vec`s, effect
+/// tree, mana cost), and the deck builders ask once per (pick x candidate x
+/// colour shape) just for a name or mana value. Before the memo,
+/// `--decks sealed --games 1` (deck building only) spent 43.3 % of its Ir
+/// in `__memcpy`; `selfplay_train` actors build two decks per game.
 ///
-/// Keyed by the function pointer. Two factories the linker folds to one
-/// address have identical machine code and therefore build identical
-/// definitions, so a fold is not observable here.
+/// Keyed by function pointer; two factories the linker folds to one address
+/// build identical definitions, so a fold is not observable.
 ///
-/// **The cached definition is leaked**, so this hands back a plain
-/// `&'static CardDefinition` — no refcount traffic, no borrow escaping the
-/// cell — and a hit answers out of [`DefFront`] without touching the map at
-/// all. The bound is one definition per distinct factory *actually asked
-/// for*, which is the size of the pool in play (a sealed pool is ~90 cards,
-/// the cube 309), not the 22.5 k-factory catalog; the deck builders are the
-/// only callers. An `Arc` here cost ~10 Ir of atomic per lookup, over the
-/// 487,071 lookups a twelve-deck build took at the fifty-third tip.
-///
-/// Every consumer is read-only, which is what makes a shared `&'static`
-/// sound: a caller that needs an owned, mutable definition still calls the
-/// factory.
+/// The definition is leaked, so this returns a plain `&'static` (no refcount,
+/// no borrow escaping the cell) and a hit is answered from [`DefFront`]. The
+/// leak is bounded by the factories actually asked for (the pool in play),
+/// not the catalog. An `Arc` cost ~10 Ir of atomics per lookup. Sound
+/// because every consumer is read-only; a caller that needs an owned,
+/// mutable definition calls the factory.
 pub fn card_def(f: CardFactory) -> &'static CardDefinition {
     card_brief(f).def
 }
@@ -81,24 +63,16 @@ pub fn card_def(f: CardFactory) -> &'static CardDefinition {
 /// The memoized definition, refcounted, for a caller that needs to *own* one —
 /// `CardInstance::new` takes `impl Into<Arc<CardDefinition>>`.
 ///
-/// `CardDefinition` is **8,232 bytes**, so handing `CardInstance::new` a fresh
-/// `f()` memcpys all of it into the `Arc`'s allocation, once per card in a
-/// library. On `--decks sos`, six games: `add_to_library_bottom` was 1,200
-/// `CardInstance::new` calls for **21,734,216 Ir, 1.36 % of the run**, nearly
-/// all of it that one copy. A clone of this is a refcount bump.
+/// `CardDefinition` is ~8 KB, so a fresh `f()` per library card was a
+/// memcpy into each `Arc` (1.36 % of a six-game `--decks sos` run when
+/// measured); a clone of this is a refcount bump. Sound because
+/// `Arc<CardDefinition>` is already the engine's CoW handle: every site that
+/// rewrites a definition (transform, become-a-copy, keyword grant) goes
+/// through `Arc::make_mut`.
 ///
-/// Sound because `Arc<CardDefinition>` is already the engine's CoW handle for
-/// a definition: the ~twenty sites that rewrite one (transform, become-a-copy,
-/// a permanent keyword grant) all go through `Arc::make_mut`, so the first
-/// writer unshares and every reader keeps the shared original.
-///
-/// **Its own memo, not [`card_brief`]'s.** A miss here must cost `f()` and
-/// nothing else; routing it through the brief made a miss pay
-/// `CardBrief::of` as well — the pip counts, the keyword walk, the whole
-/// effect-tree walk of `is_fixing_card` — and that measured **+6.6 % on
-/// `--decks sealed --games 1`**, the deck-build-only workload, whose eighty
-/// template cards turn out not to be in the brief memo when the template is
-/// filled.
+/// Its own memo, not [`card_brief`]'s: a miss must cost `f()` only. Routing
+/// it through the brief made a miss pay `CardBrief::of` too, which measured
+/// +6.6 % on `--decks sealed --games 1`.
 pub fn card_arc(f: CardFactory) -> std::sync::Arc<CardDefinition> {
     let key = f as usize;
     ARC_CACHE.with(|c| {
@@ -114,9 +88,8 @@ pub fn card_arc(f: CardFactory) -> std::sync::Arc<CardDefinition> {
 }
 
 thread_local! {
-    /// [`card_arc`]'s memo. Thread-local for the same reason [`card_brief`]'s
-    /// is: a worker thread's definitions are its own, so the `Arc`s never
-    /// cross a thread and their refcounts are uncontended.
+    /// [`card_arc`]'s memo. Thread-local like [`card_brief`]'s, so the `Arc`s
+    /// never cross a thread and their refcounts are uncontended.
     static ARC_CACHE: std::cell::RefCell<
         crate::fxhash::HashMap<usize, std::sync::Arc<CardDefinition>>,
     > = std::cell::RefCell::new(crate::fxhash::HashMap::default());
@@ -125,33 +98,24 @@ thread_local! {
 /// The per-definition facts the deck builders read, derived once per factory
 /// alongside the definition itself.
 ///
-/// Every field is a pure function of the `CardDefinition`, and a definition
-/// here is leaked and never mutated, so this is a memo and not a cache with
-/// a staleness problem. What it removes is the re-derivation, which the
-/// builders pay per (pick x candidate x colour shape): `card_types` is a
-/// `Vec<CardType>` that four `contains` calls scan per scored card, `cmc`
-/// and the pip counts each walk the mana cost, `card_quality` walks the
-/// keyword list and `is_fixing_card` walks the whole effect tree.
+/// Every field is a pure function of a leaked, never-mutated definition, so
+/// this cannot go stale. It saves the builders re-deriving types, pips, cmc,
+/// quality and fixing (an effect-tree walk) per (pick x candidate x shape).
 pub struct CardBrief {
     pub def: &'static CardDefinition,
     /// Colored pips per colour — [`crate::draft::pip_counts`].
     pub pips: crate::draft::ColorCounts,
-    /// The colours in `pips`, as a bitmask. The sealed builder asks "does this
-    /// card fit these colours" once per (pool card x shape) — 56 shapes a
-    /// build — and the `pips.colors().all(|c| colors.contains(&c))` form was
-    /// the largest single line in `build_shape`'s line profile (PERF (-63)).
-    /// A subset test on a five-bit field is two instructions.
+    /// The colours in `pips`, as a bitmask, so the sealed builder's per
+    /// (card x shape) fit test is a subset check rather than a pip walk
+    /// (PERF (-63)).
     pub pip_colors: crate::mana::ColorSet,
-    /// `pips` summed. [`crate::draft::score_brief_in_colors`] wants the
-    /// on-colour half and the total; the off-colour half is the difference,
-    /// so the five-slot walk it did per (card x shape) is one masked sum.
+    /// `pips` summed; [`crate::draft::score_brief_in_colors`] gets the
+    /// off-colour half as the difference from the on-colour sum.
     pub pips_total: u32,
     /// The colour-independent half of
-    /// [`crate::draft::score_brief_with_colors`]: the card-type weight, the
-    /// mana-value weight, and the colourless-nonland bonus — which is a
-    /// property of the card, not of the shape it is being scored for. The
-    /// sealed builder asks for the whole score once per main-deck card per
-    /// shape, 23 x 56 a build (PERF (-63)).
+    /// [`crate::draft::score_brief_with_colors`] (type, mana-value and
+    /// colourless-nonland weights), precomputed because the sealed builder
+    /// scores every card per shape (PERF (-63)).
     pub base_score: i32,
     pub cmc: u32,
     pub is_land: bool,
@@ -165,8 +129,7 @@ pub struct CardBrief {
     /// [`crate::recommend::is_fixing_card`].
     pub is_fixing: bool,
     /// The colors this card's activated abilities can tap for —
-    /// [`crate::recommend::land_produced_colors`], which used to hand back
-    /// a freshly allocated `Vec<Color>` per land examined.
+    /// [`crate::recommend::land_produced_colors`], as a bitmask.
     pub produces: crate::mana::ColorSet,
     /// Colours of the cost's single-colour pips (plain and Phyrexian), plus
     /// every colour of any hybrid symbol past the second: what a deck must
@@ -286,19 +249,12 @@ pub fn card_brief(f: CardFactory) -> &'static CardBrief {
 
 /// Direct-mapped front cache for [`card_def`], one per thread.
 ///
-/// The `HashMap` behind it is the authority and stays; what this removes is
-/// the probe. At the fifty-fourth pass's base the `LocalKey::with` family —
-/// the TLS access, the `RefCell` borrow and hashbrown's SIMD probe — was
-/// **20.8 % of a twelve-deck sealed build** over 487,071 lookups, ~40 Ir
-/// apiece, and two earlier attempts (a `const`-initialised TLS, dropping the
-/// `Arc` for a leaked `&'static`) had already taken everything around it.
-///
-/// A hit is a multiply, a shift, an array load and a compare. A slot holds
-/// one factory, so two factories that land on the same slot evict each other
-/// — with 4,096 slots against the ~90 (sealed) to ~309 (cube) distinct
-/// factories a pool asks for, that is a few keys, and they fall through to
-/// the map rather than rebuilding a definition. Key 0 means empty: a `fn`
-/// pointer is never null.
+/// The `HashMap` behind it stays the authority; this skips its probe (TLS,
+/// `RefCell` borrow, SIMD probe — 20.8 % of a twelve-deck sealed build at
+/// the fifty-fourth pass's base). A hit is a multiply, shift, load and
+/// compare. Colliding factories evict each other and fall through to the
+/// map, which is rare with 4,096 slots against a pool's ~90-309 factories.
+/// Key 0 means empty: a `fn` pointer is never null.
 struct DefFront {
     keys: [std::cell::Cell<usize>; FRONT_SLOTS],
     defs: [std::cell::Cell<Option<&'static CardBrief>>; FRONT_SLOTS],
@@ -307,9 +263,8 @@ struct DefFront {
 const FRONT_BITS: u32 = 12;
 const FRONT_SLOTS: usize = 1 << FRONT_BITS;
 
-/// Fibonacci multiply-shift over the function pointer. The low bits of a
-/// `fn` address carry the alignment and nothing else, so they cannot index
-/// the table on their own.
+/// Fibonacci multiply-shift over the function pointer; the low bits of a
+/// `fn` address are alignment only, so they cannot index the table alone.
 fn front_slot(key: usize) -> usize {
     ((key as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) >> (64 - FRONT_BITS)) as usize
         & (FRONT_SLOTS - 1)
@@ -332,10 +287,9 @@ fn card_brief_uncached(f: CardFactory) -> &'static CardBrief {
         if let Some(d) = c.borrow().get(&(f as usize)) {
             return *d;
         }
-        // Built outside the borrow: a factory is pure, but re-entering the
-        // cache while it is borrowed would panic rather than deadlock, and
-        // that is not a failure mode worth leaving open. `CardBrief::of`
-        // calls back into `draft` / `recommend`, which is the same hazard.
+        // Built outside the borrow: re-entering the cache while borrowed
+        // would panic, and `CardBrief::of` calls back into `draft` /
+        // `recommend`, which could.
         let built: &'static CardDefinition = Box::leak(Box::new(f()));
         let brief: &'static CardBrief = Box::leak(Box::new(CardBrief::of(built)));
         c.borrow_mut().insert(f as usize, brief);
@@ -356,13 +310,9 @@ pub fn build_cube_state() -> GameState {
     build_cube_state_with(&mut rand::rng())
 }
 
-/// [`build_cube_state`] from a fixed seed — the same two decks and the same
-/// shuffle every time, and the game's own stream (`GameState::rng`) pinned to
-/// match, so a match played on it replays exactly.
-///
-/// A bot-vs-bot smoke test that draws its decks from entropy is a coin flip:
-/// when it hangs, the pairing that hung is gone. The one caller left that
-/// wants entropy is a real server match, which is [`build_cube_state`].
+/// [`build_cube_state`] from a fixed seed: same decks, same shuffle, and
+/// `GameState::rng` pinned to match, so a match replays exactly. Tests use
+/// this so a hang is reproducible; only a real server match wants entropy.
 pub fn build_cube_state_seeded(seed: u64) -> GameState {
     use rand::SeedableRng;
     let state = build_cube_state_with(&mut rand::rngs::StdRng::seed_from_u64(seed));
@@ -419,15 +369,11 @@ pub fn lessons_sideboard() -> Vec<CardFactory> {
     ]
 }
 
-/// Every card the cube generator can ever deal, deduplicated by name and
-/// sorted by it — the enumeration the vocabulary freeze reads
-/// (`server::vocab_snapshot` / `Vocab::sos_sealed`). The per-pair pools
-/// gate entries on the pair (fetches, pair-matched picks), so the union
-/// has to walk all ten pairs through `color_pool`; `colorless_pool` is
-/// pair-free and the basics ride the deck builder directly (already
-/// frozen with the SOS seed). Not on any hot path — it calls every
-/// factory once — so it is for vocabulary construction and tests, not
-/// for dealing decks.
+/// Every card the cube generator can deal, deduplicated and sorted by name —
+/// the enumeration the vocabulary freeze reads (`server::vocab_snapshot` /
+/// `Vocab::sos_sealed`). Walks all ten pairs through `color_pool` because the
+/// per-pair pools gate entries on the pair; basics are already frozen with
+/// the SOS seed. Calls every factory once: for vocab and tests, not dealing.
 pub fn cube_pool_all() -> Vec<CardFactory> {
     const COLORS: [Color; 5] =
         [Color::White, Color::Blue, Color::Black, Color::Red, Color::Green];
@@ -435,9 +381,8 @@ pub fn cube_pool_all() -> Vec<CardFactory> {
         std::collections::BTreeMap::new();
     let mut add = |fs: Vec<CardFactory>| {
         for f in fs {
-            // `card_arc`, not `f()`: ~2,100 distinct factories at 8 KB a
-            // definition, and the memo table means repeat calls (every
-            // `Vocab` construction, every coverage test) build nothing.
+            // `card_arc`, not `f()`: memoized, so repeat calls (every
+            // `Vocab` construction, coverage test) build nothing.
             seen.entry(card_arc(f).name).or_insert(f);
         }
     };
@@ -507,11 +452,9 @@ fn basic_factory(c: Color) -> CardFactory {
     }
 }
 
-/// Sample `count` cards from `pool` (with replacement, capped at
-/// `COPY_CAP` per card globally) and append them to `deck`. The shared
-/// `counts` map is keyed by factory function-pointer address so the same
-/// card sampled out of two different color pools still counts once
-/// toward the cap.
+/// Sample `count` cards from `pool` into `deck`, with replacement, capped at
+/// `COPY_CAP` per card. `counts` is keyed by factory address and shared
+/// across pools, so a card in two color pools counts once toward the cap.
 fn sample_with_cap<R: Rng>(
     deck: &mut Vec<CardFactory>,
     counts: &mut HashMap<usize, u32>,
@@ -541,11 +484,9 @@ fn sample_with_cap<R: Rng>(
     }
 }
 
-/// Every card factory that can appear in any cube deck across any color
-/// pair. Used by the client at startup to prefetch Scryfall art for the
-/// full cube card universe (since the per-match deck is randomly rolled
-/// after assets are loaded). The union covers basics + colorless +
-/// each color's pool with every other color paired in.
+/// Every card factory any cube deck can contain (basics, colorless, every
+/// color pool under every pairing). The client prefetches Scryfall art for
+/// it at startup, since decks are rolled after assets load.
 pub fn all_cube_cards() -> Vec<CardFactory> {
     use crate::fxhash::HashSet;
     let mut all: Vec<CardFactory> = vec![plains, island, swamp, mountain, forest, wastes];
@@ -561,19 +502,16 @@ pub fn all_cube_cards() -> Vec<CardFactory> {
             all.extend(color_pool(a, [a, b]));
         }
     }
-    // Dedupe by function-pointer address — same card may appear in
-    // multiple pools (two-color cards) and the loop above hits each
-    // mono-color list once per partner.
+    // Dedupe by function-pointer address: two-color cards sit in several
+    // pools, and each mono-color list is visited once per partner.
     let mut seen: HashSet<usize> = HashSet::default();
     all.retain(|f| seen.insert(*f as usize));
     all
 }
 
-/// Cards usable in any color combination — colorless utility artifacts
-/// that don't care about the deck's color identity. Wasteland and Strip
-/// Mine are colorless utility *lands* but slot here since they're
-/// universally useful and the deck-builder treats `colorless_pool` as the
-/// "always-available" bucket.
+/// Cards usable in any color pair: colorless utility artifacts, plus
+/// colorless utility lands (Wasteland, Strip Mine), since the builder treats
+/// this as the always-available bucket.
 fn colorless_pool() -> Vec<CardFactory> {
     vec![
         // ── modern_decks staples expansion ──
@@ -1149,18 +1087,15 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         descendant_of_storms,
         intervention_pact,
         thalia_guardian_of_thraben,
-        // ranger_captain_of_eos 🟡 — sac-for-no-noncreature-spells static
-        // omitted, but ETB tutor-for-MV≤1 is the marquee effect and
-        // works end-to-end. Activated for cube pool.
+        // ranger_captain_of_eos 🟡 — sac-to-stop-noncreature-spells omitted;
+        // the ETB tutor for MV≤1 works.
         ranger_captain_of_eos,
         wrath_of_god,
         // heliod_sun_crowned ✅ — devotion gate (CR 700.5) + lifegain trigger.
         heliod_sun_crowned,
-        // containment_priest 🟡 — ETB-replacement effect for non-cast
-        // creatures omitted (the trigger doesn't fire today against
-        // Reanimate/Sneak Attack-style cheats). The 2/2 Flash body
-        // still functions; activate the card for the cube pool with a
-        // best-effort body.
+        // containment_priest 🟡 — the replacement exiling non-cast creatures
+        // is omitted (doesn't stop Reanimate/Sneak Attack); the 2/2 Flash
+        // body works.
         containment_priest,
         // Clone / Phantasmal Image — CR-707 enter-as-a-copy via the
         // `enters_as_copy` hook (Clone is fully faithful; Phantasmal
@@ -1173,8 +1108,7 @@ fn white_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         phyrexian_metamorph,
         cackling_counterpart,
         sunhome_stalwart,
-        // This-branch additions: hatebears, tutors, aggro staples + the
-        // engine primitives they exercise (trigger suppression, discard-cost
+        // Hatebears, tutors, aggro staples (trigger suppression, discard-cost
         // activation, delirium/monstrous statics, extra_card_types copy).
         torpor_orb,
         tocatli_honor_guard,
@@ -1780,11 +1714,9 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         negate,
         dispel,
         daze,
-        // swan_song 🟡 — Bird token currently goes to caster instead of
-        // the countered spell's controller in multiplayer; gameplay-
-        // equivalent in 2-player (the only matters-case is who owns the
-        // bird, which the existing wiring resolves correctly via
-        // PlayerRef::ControllerOf the targeted spell). Activate.
+        // swan_song 🟡 — the Bird token's controller may be wrong in
+        // multiplayer; correct in 2-player via PlayerRef::ControllerOf the
+        // targeted spell.
         swan_song,
         spell_snare,
         mystical_dispute,
@@ -1806,9 +1738,8 @@ fn blue_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         // ── Cube expansion ──
         consecrated_sphinx,
         ancestral_recall,
-        // frantic_search — ✅ "up to three" untap honored via
-        // `Effect::Untap.up_to`. Disabled in cube pending color-balance
-        // pass on the new 3-cap version.
+        // frantic_search ✅ ("up to three" via `Effect::Untap.up_to") —
+        // disabled in cube pending a color-balance pass.
         paradoxical_outcome,
         upheaval,
         aetherize,
@@ -2698,28 +2629,23 @@ fn red_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         reckless_abandon,
         fiery_temper,
         big_game_hunter,
-        // tarfire — Kindred Goblin instant; now faithful (CardType::Kindred +
-        // Goblin subtype). The 2-damage-to-any-target body works end-to-end.
+        // tarfire — Kindred Goblin instant (CardType::Kindred + Goblin); faithful.
         tarfire,
         shivan_dragon,
         goblin_guide,
         pact_of_the_titan,
-        // vandalblast 🟡 — Overload mode omitted, but the base
-        // "destroy target opponent's artifact" is the gameplay-relevant
-        // payoff in most casts. Activated.
+        // vandalblast 🟡 — Overload omitted; the single-target mode works.
         vandalblast,
         big_score,
         callous_sell_sword,
         blasphemous_act,
         anger_of_the_gods,
-        // goldspan_dragon 🟡 — "becomes target" trigger and Treasure-
-        // double static omitted; body + attack-trigger Treasure still
-        // works.
+        // goldspan_dragon 🟡 — "becomes target" trigger and Treasure-double
+        // static omitted; the attack-trigger Treasure works.
         goldspan_dragon,
         sundering_eruption,
         // grim_lavamancer 🟡 — the "exile two cards from your gy" cost
-        // is approximated by `exile_other_filter: Any` (exiles one card).
-        // The 2-damage-to-any-target body fires. Activated.
+        // exiles one (`exile_other_filter: Any`).
         grim_lavamancer,
         // divide-damage via Effect::DealDamageDivided (now faithful)
         pyrokinesis,
@@ -3180,10 +3106,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         natures_claim,
         natures_lore,
         blossoming_defense,
-        // tireless_tracker 🟡 — "sac Clue: +1/+1 counter" activated
-        // ability omitted, but the landfall → investigate trigger is
-        // the marquee value engine in green ramp shells and fires.
-        // Activate.
+        // tireless_tracker 🟡 — "sac a Clue: +1/+1 counter" omitted; the
+        // landfall investigate trigger works.
         tireless_tracker,
         // ── claude/modern_decks: Explore (CR 701.44) ──
         merfolk_branchwalker,
@@ -3204,9 +3128,8 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         pounce,
         atzocan_archer,
         ranging_raptors,
-        // sentinel_of_the_nameless_city 🟡 — Ward 2 not enforced;
-        // Plant subtype dropped (Merfolk Warrior Scout is preserved).
-        // The ETB/attack-trigger Map token still works.
+        // sentinel_of_the_nameless_city 🟡 — Ward 2 not enforced, Plant
+        // subtype dropped; the ETB/attack Map token works.
         sentinel_of_the_nameless_city,
         haywire_mite,
         up_the_beanstalk,
@@ -3240,8 +3163,7 @@ fn green_pool(pair: [Color; 2]) -> Vec<CardFactory> {
         wild_mongrel,
         carnage_tyrant,
         elvish_reclaimer,
-        // rofellos_llanowar_emissary ✅ (was 🟡) — push (claude/modern_decks):
-        // Forest-count multiplier now wired via
+        // rofellos_llanowar_emissary ✅ — Forest-count mana via
         // `ManaPayload::OfColor(Green, Value::Times(2, CountOf(Forest)))`.
         rofellos_llanowar_emissary,
         // each player's life = creatures they control (now faithful)
@@ -3551,23 +3473,15 @@ mod tests {
         for basic in ["Plains", "Island", "Swamp", "Mountain", "Forest"] {
             assert!(names.contains(&basic), "missing basic: {basic}");
         }
-        // A few representative cube cards across colors. If any of these
-        // disappears from the pool, the asset-prefetch will silently skip
-        // its art.
+        // Representative cube cards; one missing from the pool would have
+        // its art silently skipped by the prefetch.
         let mut missing: Vec<&'static str> = Vec::new();
         for name in [
             "Disentomb",
-            // (Tireless Tracker / Goldspan Dragon are intentionally not in
-            // the cube pool — their respective sac-Clue / Treasure-double
-            // statics aren't supported yet, so they ship as 🟡 stubs in
-            // the catalog but stay out of the pool. Restore as those
-            // engine features land.)
             "Cathar Commando",
             "Mind Stone",
             "Up the Beanstalk",
-            // modern_decks-11: surveil land cycle + multi-color removal +
-            // sweepers + body + mana engine. Checked here so the Scryfall
-            // prefetch picks them up automatically.
+            // modern_decks-11: surveil lands, removal, sweepers.
             "Underground Mortuary",
             "Lush Portico",
             "Hedge Maze",
@@ -3582,9 +3496,7 @@ mod tests {
             "Plague Wind",
             "Carnage Tyrant",
             "Krark-Clan Ironworks",
-            // modern_decks-12: 12 new cards across all five colors —
-            // listed here so the prefetch test fails fast if any of
-            // them slips out of the pool.
+            // modern_decks-12
             "Stone Rain",
             "Bone Splinters",
             "Hieroglyphic Illumination",
@@ -3597,27 +3509,18 @@ mod tests {
             "Earthquake",
             "Glimpse the Unthinkable",
             "Cling to Dust",
-            // modern_decks-13: 12 new cards across all five colors —
-            // listed here so the prefetch test fails fast if any of
-            // them slips out of the pool.
+            // modern_decks-13
             "Lumra, Bellow of the Woods",
             "Crabomination",
-            // Cards present in catalog but intentionally not in the cube
-            // pool (each ships as a 🟡 stub due to a missing engine
-            // primitive — see modern.rs comments). Restore as the matching
-            // primitive lands.
-            //   Chaos Warp                 — top-card reveal-and-cast
-            //   Elvish Reclaimer           — graveyard-count threshold pump
-            //   Rofellos, Llanowar Emissary — forest-count mana scaling
-            //   Biorhythm                  — set-life-total mechanic
-            //   Karn, Scion of Urza        — artifact-count construct token
-            //   Tezzeret, Cruel Captain    — artifact-creature pump static
-            //   Balefire Dragon            — variable-damage replication
-            //   Goldspan Dragon            — Treasure-double static
-            //   Pentad Prism               — Sunburst counter-on-cast
+            // Kept out of the pool until their engine primitive lands (🟡
+            // stubs; see modern.rs): Chaos Warp (reveal-and-cast), Elvish
+            // Reclaimer (graveyard threshold), Rofellos (forest-count mana),
+            // Biorhythm (set life), Karn, Scion of Urza (artifact-count
+            // construct), Tezzeret, Cruel Captain (artifact-creature pump),
+            // Balefire Dragon (damage replication), Goldspan Dragon (Treasure
+            // double), Pentad Prism (sunburst), Tireless Tracker (sac-Clue).
             "Cruel Somnophage",
-            // modern_decks-14: 13 new cards. Listed here so prefetch
-            // catches any that slip out of the pool.
+            // modern_decks-14
             "Vindicate",
             "Anguished Unmaking",
             "Despark",
@@ -3631,8 +3534,7 @@ mod tests {
             "Cremate",
             "Mortuary Mire",
             "Geier Reach Sanitarium",
-            // modern_decks-15: 12 new cards. Listed here so prefetch
-            // catches any that slip out of the pool.
+            // modern_decks-15
             "Strangle",
             "Dreadbore",
             "Bedevil",
@@ -3645,8 +3547,7 @@ mod tests {
             "Brain Maggot",
             "Bond of Discipline",
             "Sudden Edict",
-            // modern_decks batch 103: cube expansion. Listed so the
-            // prefetch test catches any that slip out of the pool.
+            // modern_decks batch 103
             "Glaring Fleshraker",
             "Brightglass Gearhulk",
             "Death-Greeter's Champion",

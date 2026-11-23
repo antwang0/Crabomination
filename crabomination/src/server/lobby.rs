@@ -1,16 +1,14 @@
 //! Pre-match lobby system.
 //!
-//! Without lobbies, a connecting client is paired into a match immediately and
-//! the gamemode is whatever the server was configured with. The lobby layer
-//! sits between "connected" and "in a match": a connection browses the open
-//! lobbies, then either creates one (choosing a [`LobbyFormat`]) or joins an
-//! existing one. When a lobby reaches the seat count its gamemode requires, the
-//! server starts the match for everyone in it.
+//! The lobby layer sits between "connected" and "in a match": a connection
+//! browses the open lobbies, then creates one (choosing a [`LobbyFormat`]) or
+//! joins one; a lobby with the seat count its gamemode requires starts the
+//! match for everyone in it.
 //!
 //! Two pieces:
 //! - [`LobbyManager`] — a pure state machine over connection ids. It owns the
 //!   open lobbies (each with a pre-built [`GameState`], so its capacity is
-//!   exactly `state.players.len()`) and turns one client command into a set of
+//!   exactly `state.players.len()`) and turns one client command into
 //!   messages to send plus an optional "start this match now" directive. No
 //!   threads, no I/O — directly unit-testable.
 //! - [`serve_lobbies`] — the threaded driver. It owns the socket-backed
@@ -31,61 +29,29 @@ use super::{
     SeatChannel, SeatOccupant,
 };
 
-/// The bot a lobby seat gets: the strongest adopted pilot — since round
-/// 74 (2026-09-15) the 256-iteration search on the adopted default with
-/// the champion value net as its **leaf** (`EvalWeights::net_on_default`,
-/// ladder `mcts-net67-256`). Round 69 read that leaf at +4 to +5 over the
-/// material leaf inside the search (53.0 / 55.5 vs `mcts-dflt-256`, the
-/// committed champion), and round 74 re-read it on the current default at
-/// **53.3 / 55.2** (seeds 43/97, 500 games × 12 decks, ±0.95 each; the
-/// pre-registered adopt line was pooled > +2.0). Round 62's "+0.25" was
-/// the leaf at 64 iterations on a profile four adoptions behind the
-/// default; a deeper search leans harder on its leaf, and the material
-/// eval is what the sims already price, so the net only separates the
-/// lines the sims tie — which at 256 is worth four points.
+/// The bot a lobby seat gets: the strongest adopted pilot. History and
+/// ladder cells are in ML_NOTES (rounds 69, 74, 85 and the 2026-11 entries).
 ///
-/// The slot is a runtime input, not a build requirement: the server boots
-/// `nets/champion.safetensors` (or `CRAB_NET`) into `SLOT_BEST`, and on a
-/// checkout without the file `net_on_default` falls through to the
-/// material leaf — exactly the round-64 pilot (`mcts-dflt-256`, 64 / 128 /
-/// 256 iterations at 52.35 / 54.75 / 55.25 over the heuristic default).
-/// The forward pass is vectorized, so the leaf costs no measurable wall
-/// clock at this depth (~half a second a searched decision, single-threaded).
-///
-/// A pod (more than two seats) gets the heuristic default instead: the net's
-/// encoder is two-seat (`net_eval::net_for_state`), and the search over the
-/// material leaf has never been measured in a pod, where the scored bot is
-/// what every pod census and test plays.
-///
-/// A Cube duel plays with the FRA bot fixes bundle
-/// ([`super::EvalWeights::with_fra_fixes`]): this pilot with them beat it
-/// without them **53.3 % [51.7, 54.9] / 54.1 % [52.6, 55.7]** on cube
-/// (seeds 97 / 43, 200 x 8, round 85, `.ladder/r85`).
-///
-/// A Cube duel also searches its main phases and combat over the complete
-/// move list on the phase-5 policy's priors (`MctsConfig::menu_windows`,
-/// the client's pilot since 2026-11-02), when the server booted a
-/// policy-headed net into the candidate slot (`nets/policy-champion.
-/// safetensors` / `CRAB_POLICY_NET`): **54.0 [51.7, 56.2] / 54.1 [51.7,
-/// 56.5]** over this pilot without it on cube (seeds 43 / 97, 120 x 12,
-/// `.ladder/adopt`) — and since 2026-11-10 with the combat window's fix
-/// (`MctsConfig::with_combat_fix`): **55.4 / 54.7** on cube over the same
-/// search without it (`.ladder/cfx`) — and since 2026-11-12 with the search
-/// fixes (`MctsConfig::with_search_fixes`, `.ladder/s12`).
-///
-/// Since 2026-11-12 a Modern or SOS duel plays the same pilot (the fixes
-/// bundle, the menu search, its combat and search fixes) when the policy
-/// net is loaded. Over the plain 256-rollout search it read **Modern 60.0
-/// [57.9, 62.1] / 63.5 [61.4, 65.7]** (the lobby's two decklists as
-/// mirrors) and **SOS colleges 62.7 [60.8, 64.7] / 61.1 [59.2, 63.0]**
-/// (seeds 43 / 97, paired 1440 games a cell, `.ladder/lob`). Without the
-/// policy net those duels keep the plain search on the default weights,
-/// a combination measured as the pre-2026-11-12 lobby pilot.
-///
-/// Since 2026-11-21 that pilot also holds a counter / removal for the threat
-/// (`MctsConfig::with_hold_arm`): NO LOSS on cube 52.0 / 50.5 and Modern
-/// 49.6 / 50.8 (seeds 5 / 61, 120 x 12, `.ladder/ho2`); SOS colleges was not
-/// read on its own — it rides on SOS sealed 50.4 / 50.1, the same cards.
+/// - Duels: the 256-iteration search with the champion value net as its
+///   leaf (`EvalWeights::net_on_default`, ladder `mcts-net67-256`; adopted
+///   round 74, 53.3 / 55.2). The net is a runtime input: the server boots
+///   `nets/champion.safetensors` (or `CRAB_NET`) into `SLOT_BEST`, and
+///   without the file `net_on_default` falls through to the material leaf
+///   (the round-64 pilot `mcts-dflt-256`).
+/// - Pods (more than two seats): the heuristic default. The net's encoder
+///   is two-seat (`net_eval::net_for_state`), and the material-leaf search
+///   has never been measured in a pod.
+/// - Cube duels add the FRA fixes bundle
+///   ([`super::EvalWeights::with_fra_fixes`], round 85, +3.3 / +4.1).
+/// - Cube, Modern and SOS duels, when a policy-headed net is loaded into the
+///   candidate slot (`nets/policy-champion.safetensors` /
+///   `CRAB_POLICY_NET`), search main phases and combat over the complete
+///   move list on its priors (`MctsConfig::menu_windows`, the client's pilot)
+///   with the fixes bundle and the combat, search and hold-arm fixes
+///   (`MctsConfig::with_combat_fix` / `with_search_fixes` / `with_hold_arm`;
+///   Modern / SOS adopted 2026-11-12, +10 to +13 over the plain search).
+///   Without the policy net Modern and SOS keep the plain search on the
+///   default weights.
 fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::Bot> {
     if seats > 2 {
         return Box::new(super::HeuristicBot::new());
@@ -125,12 +91,11 @@ struct ResumeTarget {
     seat: usize,
 }
 
-/// A live match registered for spectating. `spectate_tx` injects a fresh
-/// `SeatChannel` into the running match as a read-only spectator;
-/// `spectator_guards` holds each spectator's connection-slot guard for the
-/// match's lifetime (so the connection cap stays held while watching), dropped
-/// when the match ends and its registry entry is removed. `info` is the
-/// listing advertised to browsers.
+/// A live match registered for spectating. `spectate_tx` injects a
+/// `SeatChannel` into the match as a read-only spectator;
+/// `spectator_guards` hold each spectator's connection-slot guard for the
+/// match's lifetime (so the connection cap stays held while watching).
+/// `info` is the listing advertised to browsers.
 struct RunningMatch<G> {
     spectate_tx: mpsc::Sender<SeatChannel>,
     spectator_guards: Vec<G>,
@@ -594,10 +559,6 @@ impl LobbyManager {
         out
     }
 
-    /// Send every human member of `lobby_id` a `LobbyJoined` carrying their
-    /// *current* seat index, so each client's view of who's in the lobby — and
-    /// whether it is the host (slot 0) — stays accurate across joins, leaves,
-    /// and bot add/remove (any of which can shift seat indices).
     /// `SetLobbyDeck`: validate `text` as a Commander list and seat it in
     /// `conn`'s slot (an empty text clears it back to the stock deck).
     fn set_deck(&mut self, conn: ConnId, text: &str) -> LobbyOutcome {
@@ -663,6 +624,9 @@ impl LobbyManager {
         out
     }
 
+    /// Send every human member of `lobby_id` a `LobbyJoined` with their
+    /// *current* seat index, so each client's view of the lobby (and whether it
+    /// is the host, slot 0) survives joins, leaves and bot add/remove.
     fn notify_members(&self, lobby_id: u64, out: &mut LobbyOutcome) {
         let Some(lobby) = self.lobbies.iter().find(|l| l.id == lobby_id) else { return };
         let info = lobby.info();
@@ -789,22 +753,19 @@ impl LobbyManager {
 /// messages, and spawns a match thread when a lobby fills.
 ///
 /// Each connection carries an opaque guard `G` (e.g. a connection-slot RAII
-/// token from the server binary). The guard lives exactly as long as the
-/// connection: it is dropped when the connection disconnects, and it travels
-/// *with* the channel into the match thread when a lobby fills, so a cap held
-/// at accept time stays held for the match's duration. Tests pass `()`.
+/// token) that lives exactly as long as the connection and travels with the
+/// channel into the match thread, so a cap held at accept time stays held
+/// for the match. Tests pass `()`.
 ///
-/// `new_conns` is the stream of freshly-accepted connections (the accept loop
-/// assigns each a [`ConnId`]). The loop polls non-blockingly and sleeps briefly
-/// between passes; it returns when `new_conns` closes and no connections remain.
-/// `on_match_end` is invoked when a lobby-started match finishes (for stats /
-/// logging) — pass `Arc::new(|_, _, _| {})` to ignore it.
+/// `new_conns` streams freshly-accepted connections. The loop polls
+/// non-blockingly and returns when `new_conns` closes and no connections
+/// remain. `on_match_end` is invoked when a lobby-started match finishes —
+/// pass `Arc::new(|_, _, _| {})` to ignore it.
 ///
-/// Once a lobby fills, the driver also registers the match for spectating: a
-/// browsing connection can `ListSpectatable` to see the running matches and
-/// `SpectateMatch { match_id }` to attach to one as a read-only spectator (it
-/// is moved into the match's spectator slot, holding its connection guard for
-/// the watch). The registry entry is dropped when the match ends.
+/// A filled lobby's match is registered for spectating: a browsing
+/// connection can `ListSpectatable` and `SpectateMatch { match_id }` to
+/// attach read-only (holding its connection guard for the watch). The entry
+/// is dropped when the match ends.
 pub fn serve_lobbies<G: Send + 'static>(
     new_conns: mpsc::Receiver<(ConnId, SeatChannel, G)>,
     on_match_end: MatchEndHook,

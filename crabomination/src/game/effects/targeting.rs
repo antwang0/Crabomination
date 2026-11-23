@@ -20,18 +20,14 @@ impl GameState {
         }
     }
 
-    /// Pick a legal target for an effect that requires one, used when the
-    /// engine fires a trigger without explicit user input (ETB, attack trigger,
-    /// etc.). Returns `None` if the effect requires no target or no legal
-    /// target exists.
+    /// Pick a legal target for an effect that requires one, when the engine
+    /// fires a trigger without user input (ETB, attack trigger, ...). `None` if
+    /// the effect takes no target or none is legal.
     ///
-    /// Targets must satisfy *both* the effect's selector requirement AND
-    /// targeting legality (Hexproof / Shroud / Protection / player-side
-    /// Leyline of Sanctity). Without the legality gate the random bot
-    /// happily picks an opponent's Hexproof creature, the cast is
-    /// rejected by `cast_spell`, and (in spectate mode) the match
-    /// deadlocks — see `debug/deadlock-t10-1777412787-934831200.json`,
-    /// where the bot kept aiming Bone Shards at Sylvan Caryatid.
+    /// Targets must satisfy both the selector requirement AND targeting
+    /// legality (Hexproof / Shroud / Protection / Leyline of Sanctity);
+    /// otherwise the bot aims at an illegal target, `cast_spell` rejects it,
+    /// and a spectated match deadlocks.
     pub fn auto_target_for_effect(&self, eff: &Effect, controller: usize) -> Option<Target> {
         self.auto_target_for_effect_avoiding(eff, controller, None)
     }
@@ -59,12 +55,10 @@ impl GameState {
         }
     }
 
-    /// Source-aware auto-target picker. When `avoid_source` is set, the
-    /// returned target prefers any *other* legal candidate to the avoided
-    /// permanent — falling back to the source only if no other legal pick
-    /// exists. Powers Strixhaven's Magecraft/Repartee triggers where the
-    /// trigger source is rarely the right pick (a 1/1 utility creature
-    /// shouldn't pump itself when a 5/5 attacker is on the board).
+    /// Source-aware auto-target picker: with `avoid_source` set, any *other*
+    /// legal candidate beats the avoided permanent, which is the fallback only.
+    /// For Magecraft/Repartee triggers, where the source (a 1/1 utility
+    /// creature) is rarely the right pump target.
     pub fn auto_target_for_effect_avoiding(
         &self,
         eff: &Effect,
@@ -105,12 +99,9 @@ impl GameState {
     }
 
     /// Like [`auto_target_for_effect_avoiding_set_x`] but also concretizes
-    /// `ManaValueAtMostConverged` against the cast's converge count before
-    /// picking (Sundering Archaic's "exile target nonland permanent … with
-    /// mana value ≤ the number of colors of mana spent"). Without this the
-    /// converge atom evaluates false-for-everything at selection time, and
-    /// a resolve-time-only gate lets the picker aim at over-cap permanents
-    /// whose exile then fizzles.
+    /// `ManaValueAtMostConverged` against the cast's converge count (Sundering
+    /// Archaic). Unconcretized, the atom is false for everything at selection
+    /// and the picker can aim at over-cap permanents that then fizzle.
     pub fn auto_target_for_effect_avoiding_set_xc(
         &self,
         eff: &Effect,
@@ -134,17 +125,15 @@ impl GameState {
     }
 
     /// CR 601.2c — an optional blink of your own permanent ("exile up to one
-    /// other target creature you control, then return that card" —
-    /// Flickering Hound; the end-step blinkers): `Some(pick)` for such a
-    /// slot, `None` for any other. The returned card is a new object (CR
-    /// 400.7): a token never comes back (CR 111.7), and counters and
-    /// attachments are lost, so those are never blinked. One with its own
-    /// enters trigger is preferred (worth the attack it may cost), then a
-    /// tapped one (it returns untapped), then any other — except a creature
-    /// that would lose its attack (untapped and able to attack, before combat
-    /// on its controller's turn). With none, the slot stays empty. The general own-side pick
-    /// took the biggest creature on every creature cast: Flickering Hound
-    /// played −3.0 points in a sealed deck (2026-11-22).
+    /// other target creature you control, then return that card" — Flickering
+    /// Hound; the end-step blinkers): `Some(pick)` for such a slot, `None` for
+    /// any other. The returned card is a new object (CR 400.7): tokens never
+    /// come back (CR 111.7) and counters and attachments are lost, so those
+    /// are never blinked. Preference: one with its own enters trigger, then a
+    /// tapped one (returns untapped), then any other — except a creature that
+    /// would lose its attack (untapped, able to attack, precombat on its
+    /// controller's turn). With none, the slot stays empty. The general
+    /// own-side pick blinked the biggest creature instead.
     fn own_blink_pick(&self, eff: &Effect, controller: usize, avoid: &[CardId]) -> Option<Option<Target>> {
         use crate::effect::{EventKind, EventScope};
         use crate::game::types::TurnStep;
@@ -205,8 +194,7 @@ impl GameState {
     /// either slot of an optional fight, `None` for any other ask. A prompting
     /// seat — every bot seat in a simulated game (`build_match_template`) —
     /// answers trigger targets itself and never reaches the engine's fill, so
-    /// the bot asks this first: the blink fix moved Flickering Hound's play
-    /// rating by exactly 0.0 until it did (2026-11-22).
+    /// the bot must ask this first.
     pub fn trigger_slot_pick(&self) -> Option<Option<Target>> {
         let pd = self.pending_decision.as_ref()?;
         let crate::game::types::ResumeContext::TriggerTargetPick { pending, picked, .. } = &pd.resume else {
@@ -229,9 +217,7 @@ impl GameState {
     /// chosen together, by the fight's outcome. A kill your fighter survives
     /// beats a trade, a trade is taken only for a creature worth at least as
     /// much as yours, and with neither the optional slot stays empty. `None`
-    /// for any other effect. The slot-by-slot walk put the biggest creature on
-    /// each side and fought regardless: a 2/2 fought a 6/4 and died for
-    /// nothing (2026-11-22).
+    /// for any other effect. (Slot by slot, a 2/2 fought a 6/4 for nothing.)
     pub(crate) fn fight_pair_pick(
         &self,
         eff: &Effect,
@@ -328,14 +314,12 @@ impl GameState {
         leads_friendly && self.battlefield_find(*tid).is_some_and(|c| !self.same_team(c.controller, controller))
     }
 
-    /// CR 601.2c — "up to one target": a removal-shaped slot that could name
-    /// an opponent's permanent is declined when the only legal pick is its
-    /// own side's. The walk's last resort takes one (a mandatory slot must),
-    /// so Aerial Extortionist exiled its controller's own Mind Stone and Star
-    /// Athlete made its controller sacrifice or take 5. A slot that only
-    /// names your own ("target land you control") keeps its pick. A card in
-    /// your own graveyard counts as your side: Raven Eagle's "exile up to one
-    /// target card from a graveyard" took the last resort's own card.
+    /// CR 601.2c — "up to one target": a removal-shaped slot that could name an
+    /// opponent's permanent is declined when the only legal pick is its own
+    /// side's (the walk's last resort, which a mandatory slot must take, had
+    /// Aerial Extortionist exile its controller's Mind Stone). A slot that only
+    /// names your own ("target land you control") keeps its pick. Your own
+    /// graveyard counts as your side (Raven Eagle).
     fn declines_own_side_pick(&self, eff: &Effect, controller: usize, t: &Target) -> bool {
         let Target::Permanent(tid) = t else { return false };
         if !eff.target_slot_optional(0, None)
@@ -377,32 +361,21 @@ impl GameState {
         // they accept any legal entity. Fall back to `Any` so the picker
         // walks players + permanents instead of short-circuiting to None.
         let any_filter = crate::card::SelectionRequirement::Any;
-        // `primary_target_filter` and `target_filter_for_slot` are two
-        // independent hand-written walks over ~1000 variants, and they sit at
-        // opposite ends of one target's life: this picker aims with the first,
-        // CR 608.2b re-checks with the second at resolution
-        // (`continue_trigger_resolution_with_source`). A variant with an arm in
-        // the slot walker and none here aimed at `Any` and was then thrown away
-        // by its own filter — a silent, total fizzle with nothing logged. That
-        // is how creature Haunt died: `HauntCreature` checks `Enchantment`,
-        // picked a *player*, and Absolver Thrull's and Orzhov Euthanist's
-        // "destroy target enchantment" halves did nothing.
+        // `primary_target_filter` (this picker) and `target_filter_for_slot`
+        // (the CR 608.2b re-check at resolution) are two independent walks
+        // over ~1000 variants. A variant with an arm only in the slot walker
+        // aimed at `Any` here and was then thrown away by its own filter — a
+        // silent fizzle (creature Haunt: Absolver Thrull, Orzhov Euthanist).
+        // So fall back to the checker's own filter before `Any`, which makes
+        // the two agree by construction; `Any` stays the last resort for a
+        // bare `Selector::Target(0)` ("any target").
         //
-        // So fall back to the checker's own filter before falling back to
-        // `Any`, which makes the two agree by construction wherever the
-        // primary walker is silent. `Any` stays the last resort for a bare
-        // `Selector::Target(0)` ("any target"), which genuinely accepts
-        // anything and has no slot filter either.
-        //
-        // Both calls are the *mode-blind* ones, deliberately.
-        // `auto_targets_for_effect_all_slots_kicked` reaches this picker only
-        // when the **chosen mode's** slot 0 has no filter, and CR 608.2b's
-        // re-check is mode-blind too — so aiming with the same call the
-        // checker uses is the whole point. Mode-aware picking already happens
-        // one level up, through `target_filter_for_slot_in_mode_kicked`.
-        // The filter is only ever read through `req` below, so a tree that
-        // names neither X nor converge is BORROWED rather than rewritten into
-        // an identical copy — PERF `(-358)`.
+        // Both calls are deliberately mode-blind: this picker is reached only
+        // when the chosen mode's slot 0 has no filter, and the CR 608.2b
+        // re-check is mode-blind too. Mode-aware picking happens one level up
+        // (`target_filter_for_slot_in_mode_kicked`).
+        // A tree naming neither X nor converge is BORROWED rather than
+        // rewritten into an identical copy — PERF `(-358)`.
         let req_src = eff.primary_target_filter().or_else(|| eff.target_filter_for_slot(0));
         let req_owned = req_src
             .filter(|f| f.names_x_or_converge())
@@ -413,44 +386,31 @@ impl GameState {
             "names_x_or_converge said no but the rewrite moved the filter: {req_src:?}",
         );
         let req = req_owned.as_ref().or(req_src).unwrap_or(&any_filter);
-        // The opponent to aim at when the rules leave the choice open and
-        // nobody is there to make it, ranked (commander-damage race, then
-        // lowest life, then fewest untapped blockers) rather than positional.
-        // `first_opponent_of` alone does not filter the eliminated, so after
-        // the first elimination in a pod every auto-filled "target opponent"
-        // slot named a player who had left and then failed its own legality
-        // check; the positional answer that replaced it made every pod a ring
-        // of one-way spells, seat 0 only ever hit by the last seat.
-        // `default_hostile_opponent` short-circuits to the single candidate
-        // before it ranks anything, so a duel — every turn of one — is the
-        // same seat and the same walk it always was. Falls back to the next
-        // seat in singleton-team / unknown-team cases, as before.
+        // The opponent to aim at when the choice is open and nobody makes it,
+        // ranked (commander-damage race, lowest life, fewest untapped
+        // blockers) rather than positional: `first_opponent_of` doesn't skip
+        // the eliminated, and a positional answer made every pod a ring of
+        // one-way spells. `default_hostile_opponent` short-circuits to a lone
+        // candidate, so a duel is unchanged. Falls back to the next seat in
+        // singleton / unknown-team cases.
         let opp = self
             .default_hostile_opponent(controller)
             .or_else(|| self.first_opponent_of(controller))
             .unwrap_or((controller + 1) % self.players.len());
         let prefer_friendly = eff.prefers_friendly_target();
-        // `prefers_graveyard_target` is the broader classifier — it covers
-        // both reanimate (friendly graveyard) and graveyard hate (Ghost
-        // Vacuum exiling target card from a graveyard). We walk graveyards
-        // BEFORE the battlefield when this is set, so an `Any`-filtered
-        // Move-to-Exile doesn't grab a battlefield permanent.
-        // A filter that names a permanent ("target creature or planeswalker"
-        // spelled `.and(R::Permanent)`, CR 109.2) never takes a graveyard
-        // card — `target_out_of_zone` refuses it — so it skips the sweep.
+        // `prefers_graveyard_target` covers reanimation and graveyard hate
+        // (Ghost Vacuum): walk graveyards BEFORE the battlefield so an
+        // `Any`-filtered Move-to-Exile doesn't grab a permanent. A filter
+        // naming a permanent (`.and(R::Permanent)`, CR 109.2) never takes a
+        // graveyard card (`target_out_of_zone`), so it skips the sweep.
         let prefer_graveyard = eff.prefers_graveyard_target() && !req.names_permanent();
-        // Skip Player candidates entirely when the effect operates on
-        // permanents/stack — without this, an `Any`-filtered Move (Regrowth)
-        // auto-targets the caster as a player and silently fizzles since
-        // `Effect::Move` only consumes Permanent / Card entity refs.
-        // Slot 0's own filter wins when it is player-only: the *slot* is a
-        // player even when the effect body operates on permanents (Mudhole's
-        // `Move { what: CardsInZone { who: Target(0) } }`, the "enchant
-        // player" Curses). The body classifier said "permanent-targeting" for
-        // twenty-six shipped bodies, which then enumerated zero legal targets;
-        // `accepts_player_target` folds the slot read in itself now, so this
-        // call site and the enumerator's cannot drift apart and a third one
-        // cannot reintroduce it.
+        // Skip players when the effect operates on permanents/stack, or an
+        // `Any`-filtered Move (Regrowth) targets the caster and fizzles. A
+        // player-only slot-0 filter wins, though: the slot can be a player
+        // while the body works on permanents (Mudhole's `CardsInZone { who:
+        // Target(0) }`, the "enchant player" Curses). `accepts_player_target`
+        // folds that slot read in itself, so this site and the enumerator's
+        // can't drift.
         let accepts_player = eff.accepts_player_target();
         let primary_player = if prefer_friendly { controller } else { opp };
         let secondary_player = if prefer_friendly { opp } else { controller };
@@ -510,23 +470,14 @@ impl GameState {
             }
         }
 
-        // Stack walk for counter-class effects (Spell Queller, Mystic
-        // Snake, Venser-style ETB / triggered counters whose target is a
-        // spell on the stack). The battlefield/graveyard walks below
-        // never consider stack objects, so without this pass an
-        // auto-targeted "counter target spell" trigger fizzles for lack
-        // of a legal target. We prefer the topmost spell *not* cast by
-        // the controller (you counter the opponent's spell), falling
-        // back to any legal stack spell. Gated on the requirement being
-        // exactly `IsSpellOnStack` so it only fires for genuine
-        // counter-class targets — effects with a looser filter (e.g. a
-        // magecraft "exile a card from your graveyard" with an `Any` /
-        // `Nonland` filter) must not grab the just-cast spell sitting on
-        // the stack.
-        // The gate fires for a bare `IsSpellOnStack` *and* for compound
-        // filters that narrow it (`And(IsSpellOnStack, Creature)` — "counter
-        // target creature spell"); `is_legal` still applies the full filter,
-        // so widening the gate only decides whether to walk the stack.
+        // Stack walk for counter-class effects (Spell Queller, Mystic Snake):
+        // the battlefield/graveyard walks below never see stack objects.
+        // Prefers the topmost spell not cast by the controller, then any
+        // legal stack spell. Gated on the filter naming `IsSpellOnStack`
+        // (bare, or narrowed: `And(IsSpellOnStack, Creature)`), so a looser
+        // filter (a magecraft "exile a card from your graveyard" with
+        // `Any`) can't grab the just-cast spell; `is_legal` still applies
+        // the full filter.
         fn mentions_spell_on_stack(r: &crate::card::SelectionRequirement) -> bool {
             use crate::card::SelectionRequirement as R;
             match r {
@@ -618,19 +569,14 @@ impl GameState {
             }
         }
 
-        // Battlefield: walk preferred-controller permanents first, then
-        // any matching permanent. Without the preference, the bot would
-        // happily Vines its opponent's bear instead of its own.
+        // Battlefield: preferred-controller permanents first, then any
+        // match (else the bot Vines its opponent's bear instead of its own).
         //
-        // Source-avoidance pass (see `auto_target_for_effect_avoiding`'s
-        // doc comment): when caller asked us to avoid the trigger source,
-        // skip the source on the first pass and only fall back to it if
-        // no other legal candidate exists.
-        // The avoidance keeps a trigger off *its controller's own* source. A
-        // trigger controlled by an opponent of its source's controller — a
-        // Probing Telepathy copy of an entering creature's ETB (Aboleth
-        // Spawn) — has no reason to spare that source, and sparing it sent a
-        // copied Flametongue Kavu's damage into the copier's own creatures.
+        // Source avoidance (see `auto_target_for_effect_avoiding`): skip the
+        // source on the first pass, fall back to it only if nothing else is
+        // legal. It keeps a trigger off its *controller's own* source; an
+        // opponent-controlled trigger (a Probing Telepathy copy of Aboleth
+        // Spawn's ETB copying Flametongue Kavu) has no reason to spare it.
         let hostile_source = avoid_source.is_some_and(|s| {
             self.battlefield
                 .find_by_id(s)
@@ -644,12 +590,9 @@ impl GameState {
             avoid.contains(&cid)
                 && !((hostile_source || own_doubling) && Some(cid) == avoid_source)
         };
-        // For friendly pumps (Magecraft / Repartee +1/+1 fan-out, transient
-        // PumpPT spells), prefer the highest-power friendly creature so the
-        // buff lands on the bot's biggest threat — improves expected value
-        // versus the prior "first-in-Vec" pick (which was deterministic but
-        // typically picked a 1-drop utility creature). For hostile picks the
-        // current first-match heuristic still applies.
+        // Friendly pumps (Magecraft / Repartee fan-outs, PumpPT spells) take
+        // the highest-power friendly creature so the buff lands on the
+        // biggest threat. Hostile picks keep the first-match heuristic.
         let collect_legal_on_player = |p: usize| -> Vec<(CardId, i32)> {
             self.battlefield
                 .iter()
@@ -665,15 +608,11 @@ impl GameState {
                 })
                 .collect()
         };
-        // A token copy of a legend you control dies to the legend rule
-        // (CR 704.5j) and nets its ETB at most, so a token-copy effect
-        // takes a nonlegendary permanent first. Aimed at a Venser,
-        // Fervent Forger, a demonstrated Replication Technique looped:
-        // each Venser token's ETB copied the Technique again (seed
-        // 1054026, a stack of 512). Every walk below ranks it so: a copy of
-        // "target permanent an opponent controls" took the other seat's
-        // Venser, and two Vensers at a table copied each other to the action
-        // cap (seed 34040, 1,538 triggers on the stack).
+        // A token copy of a legend you control dies to the legend rule (CR
+        // 704.5j), so a token-copy effect takes a nonlegendary permanent
+        // first. Copying Venser, Fervent Forger looped (each token's ETB
+        // copied the Technique again; two Vensers at a table copied each
+        // other to the action cap), so every walk below ranks it so.
         let copies_to_token = eff.any_nested(&|e| {
             matches!(e, Effect::CreateTokenCopyOf { .. } | Effect::CreateTokenCopiesHasteSac { .. })
         });
@@ -716,13 +655,9 @@ impl GameState {
                 )
             });
         } else {
-            // Hostile pick: un-warded first, then the biggest threat.
-            // The power term was missing until 2026-08-22, so removal took
-            // whichever legal enemy body happened to sit earliest on the
-            // board — a recorded game spent Grapple with Death on a 2/2
-            // utility creature with a 3/3 and a five-drop beside it. The
-            // friendly branch above has always picked its best target;
-            // only the hostile side was arbitrary.
+            // Hostile pick: un-warded first, then the biggest threat (without
+            // the power term removal took whichever enemy sat earliest on the
+            // board).
             // A counter strip wants a permanent that carries counters.
             let strips = primary_candidates.len() > 1 && counter_aim(eff) == CounterAim::Strip;
             let bare = |cid: CardId| strips && self.battlefield.find_by_id(cid).is_some_and(|c| c.counter_sum() == 0);
@@ -789,30 +724,22 @@ impl GameState {
         {
             return Some(t);
         }
-        // Final fallback: any graveyard, then exile. Reanimate-style spells
-        // (Goryo's Vengeance, Animate Dead) hit this path when their target
-        // was just lifted off the prefer-graveyard branch (e.g. their
-        // controller's graveyard is empty). Hexproof and friends don't
-        // apply to graveyard/exile targets, but we still funnel through
-        // `is_legal` so any future zone-aware legality rules pick up
-        // these zones too.
+        // Final fallback: any graveyard, then exile (reanimation whose
+        // prefer-graveyard branch found nothing). Hexproof doesn't apply
+        // there, but `is_legal` still runs so zone-aware legality applies.
         //
         // **Gated on the effect being able to reach off the board.** The
         // filter language has no zone predicate, so a board-shaped
         // requirement ("target creature", a bare `Not(Player)`) is satisfied
-        // by a creature *card* in a graveyard or in exile. Ungated, a
-        // "destroy target creature" trigger with no legal battlefield
-        // creature aimed at an exiled card and then silently fizzled at
-        // resolution — in the training path only, where `wants_ui` is false
-        // and no modal is ever posed, so no instrument watched it. Resolving
-        // targetless is the right answer there.
+        // by a creature *card* in a graveyard or exile; ungated, "destroy
+        // target creature" aimed at an exiled card and silently fizzled in
+        // the training path. Resolving targetless is right there.
         //
-        // `may_target_offboard_card` is the effect-shape half (every zone
-        // change, not just the reanimation-shaped ones — walk *order* stays
-        // `prefers_graveyard_target`'s narrower question) and
-        // `mentions_offboard_zone` the filter half, which is the gate the
-        // `ChooseCards` modal path already takes. See ENGINE_BACKLOG's "the
-        // target enumerator is zone-blind".
+        // `may_target_offboard_card` is the effect-shape half (walk *order*
+        // stays `prefers_graveyard_target`'s narrower question) and
+        // `mentions_offboard_zone` the filter half, the same gate the
+        // `ChooseCards` modal path takes. See ENGINE_BACKLOG's "the target
+        // enumerator is zone-blind".
         if !eff.offboard_target_scope(req) {
             return None;
         }
@@ -849,17 +776,13 @@ impl GameState {
         None
     }
 
-    /// Enumerate every legal slot-0 target for `eff` from the
-    /// perspective of `controller`. Used by the UI trigger-target
-    /// picker — when a wants_ui controller is about to push a
-    /// targeted trigger, the engine surfaces a `Decision::ChooseTarget`
-    /// listing all of these so the player can pick.
+    /// Enumerate every legal slot-0 target for `eff` from `controller`'s
+    /// perspective, for the UI trigger-target picker (`Decision::ChooseTarget`
+    /// for a wants_ui controller).
     ///
-    /// Order: players (controller first, then opponents), then
-    /// battlefield permanents (in battlefield iteration order), then
-    /// each graveyard (controller first), then exile. This matches
-    /// the auto-picker's traversal order but accumulates instead of
-    /// returning on first hit.
+    /// Order: players (controller first), battlefield permanents, each
+    /// graveyard (controller first), then exile — the auto-picker's traversal,
+    /// accumulated instead of returning on first hit.
     pub fn enumerate_legal_targets(
         &self,
         eff: &crate::effect::Effect,
@@ -886,13 +809,10 @@ impl GameState {
     /// and converge count, exactly as
     /// [`auto_target_for_effect_avoiding_set_xc`] does.
     ///
-    /// The two must agree: this list is what a `wants_ui` controller is
-    /// offered, and the picker is what everyone else gets. Left unresolved,
-    /// `ManaValueAtMostXFromCost` / `ManaValueAtMostConverged` match nothing
-    /// at enumeration time, so a UI player was told a targeted ETB had no
-    /// legal targets and it resolved as a no-op — Sundering Archaic's
-    /// converge exile silently did nothing for the human and worked for the
-    /// bot.
+    /// The two must agree: this is what a `wants_ui` controller is offered, the
+    /// picker what everyone else gets. Unresolved, `ManaValueAtMostXFromCost` /
+    /// `ManaValueAtMostConverged` match nothing and a UI player's targeted ETB
+    /// resolved as a no-op (Sundering Archaic).
     ///
     /// [`enumerate_legal_targets_with_source`]: Self::enumerate_legal_targets_with_source
     /// [`auto_target_for_effect_avoiding_set_xc`]: Self::auto_target_for_effect_avoiding_set_xc
@@ -906,12 +826,11 @@ impl GameState {
     ) -> Vec<Target> {
         use crate::card::SelectionRequirement;
         let any_filter = SelectionRequirement::Any;
-        // No `.or_else(target_filter_for_slot(0))` here, unlike the picker, and
-        // it is not a gap: `core_rules::target_walkers::the_primary_target_
-        // filter_agrees_with_the_slot_walker_on_slot_zero` holds the two walkers
-        // to the SAME filter over 7,816 bodies and to "primary answers whenever
-        // the slot walker does", so the picker's `or` arm is unreachable on the
-        // shipped catalog. The gate is what keeps this line honest.
+        // No `.or_else(target_filter_for_slot(0))` here, unlike the picker,
+        // and not a gap: `core_rules::target_walkers::the_primary_target_
+        // filter_agrees_with_the_slot_walker_on_slot_zero` holds the two
+        // walkers to the same filter over the catalog, so the picker's `or`
+        // arm is unreachable on shipped cards.
         // Borrowed unless the tree names X or converge — see the picker.
         let req_src = eff.primary_target_filter();
         let req_owned = req_src
@@ -942,10 +861,9 @@ impl GameState {
     /// off-board slot-0 target ("target card in a graveyard" — Sundering
     /// Archaic's `{2}`), as `(id, name)` pairs for the `ChooseCards` modal.
     ///
-    /// The activation path poses that modal and the view layer greys the
-    /// ability row out when this comes back empty, so both must agree on what
-    /// counts as a candidate — a row that looks live but is rejected on click
-    /// reads as a dead button.
+    /// The view layer greys the ability out when this is empty, so it must
+    /// agree with the activation path's modal (else a live-looking row is a
+    /// dead button).
     pub fn offboard_target_candidates(
         &self,
         filter: &crate::card::SelectionRequirement,
@@ -972,14 +890,11 @@ impl GameState {
     /// Every object/player in any zone that satisfies `req` and passes the
     /// CR 115.4 legality check. The filter-level core of
     /// `enumerate_legal_targets_with_source`; a caller that already knows the
-    /// slot's own filter (CR 115.7c retargeting) uses it directly.
+    /// slot's filter (CR 115.7c retargeting) uses it directly.
     ///
-    /// The scan is `&self` and asks every candidate the same layer-aware
-    /// questions — `evaluate_requirement_static`'s layer-4 reads and
-    /// `check_target_legality`'s Shroud/Hexproof reads — so one freeze covers
-    /// the whole walk. Without it `check_target_legality` opens its own scope
-    /// per candidate and each one re-gathers every continuous effect in the
-    /// game.
+    /// Runs under one freeze: every candidate asks the same layer-aware
+    /// questions, and without it `check_target_legality` would re-gather every
+    /// continuous effect per candidate.
     pub fn legal_targets_for_filter(
         &self,
         req: &crate::card::SelectionRequirement,
@@ -995,15 +910,12 @@ impl GameState {
     /// off-board walk decided by the caller.
     ///
     /// **The filter language has no zone predicate**, so a board-shaped
-    /// requirement ("target creature", a bare `Not(Player)`, `Any`) is
-    /// satisfied by a creature *card* in a graveyard or in exile. Walking
-    /// those zones unconditionally offered candidates the resolver then
-    /// rejects — Cuombajj Witches' "any target" listed every card in every
-    /// graveyard — and left every caller to separate the two by hand.
-    /// `offboard` is that question asked once, and the auto-picker asks it the
-    /// same way (`may_target_offboard_card || mentions_offboard_zone`): the
-    /// two walks must agree on scope or the UI path and the training path
-    /// target different sets.
+    /// requirement ("target creature", `Not(Player)`, `Any`) is satisfied by a
+    /// creature *card* in a graveyard or exile (Cuombajj Witches listed every
+    /// graveyard card). `offboard` is that question asked once, the same way
+    /// the auto-picker asks it (`may_target_offboard_card ||
+    /// mentions_offboard_zone`): the two must agree or the UI and training
+    /// paths target different sets.
     pub fn legal_targets_for_filter_scoped(
         &self,
         req: &crate::card::SelectionRequirement,
@@ -1090,26 +1002,6 @@ impl GameState {
         out
     }
 
-    /// Pick legal targets for every slot the effect uses, returning
-    /// `(slot 0, Vec<slot 1..>)`.
-    ///
-    /// Walks the effect tree (via `target_filter_for_slot_in_mode`) and
-    /// produces a `Vec<Target>` for `additional_targets`, plus an
-    /// `Option<Target>` for slot 0. Each slot is filled with the
-    /// best-pick legal target (per `auto_target_for_effect_avoiding`'s
-    /// preferences). Slots that fail to find any legal candidate are
-    /// skipped — matching the printed "up to N target" semantics where
-    /// the spell still resolves with fewer (or zero) targets when no
-    /// legal pick exists.
-    ///
-    /// The slot enumeration stops at the first slot index for which
-    /// the effect tree contains no `Selector::TargetFiltered { slot }`
-    /// reference. So for Snow Day (slots 0, 1), this returns up to
-    /// 2 targets. For Homesickness (slots 0, 1, 2), it returns up to
-    /// 3 targets. Vibrant Outburst (slots 0, 1) returns up to 2.
-    ///
-    /// Used by the bot harness to drive multi-target casts without
-    /// surfacing a UI prompt.
     /// CR 702.21 — does `cid` belong to someone other than `actor` and
     /// carry a non-trivial Ward? Targeting it gets the spell countered
     /// unless the tax is paid, so both auto-target walks rank warded
@@ -1137,6 +1029,14 @@ impl GameState {
             if !crate::game::actions::ward_cost_is_trivial(w)))
     }
 
+    /// Pick legal targets for every slot the effect uses, returning
+    /// `(slot 0, Vec<slot 1..>)`, each the best legal pick per
+    /// `auto_target_for_effect_avoiding`'s preferences (slots via
+    /// `target_filter_for_slot_in_mode`). A slot with no legal candidate is
+    /// skipped, matching "up to N target" resolving with fewer. Enumeration
+    /// stops at the first slot index with no `Selector::TargetFiltered { slot }`
+    /// in the tree (Snow Day: 2, Homesickness: 3). Drives bot multi-target
+    /// casts without a UI prompt.
     #[cfg_attr(feature = "trig-census", track_caller)]
     pub fn auto_targets_for_effect_all_slots(
         &self,
@@ -1193,14 +1093,11 @@ impl GameState {
         source: Option<CardId>,
         x: Option<u32>,
     ) -> (Option<Target>, Vec<Target>) {
-        // Slot 0 — if it carries its own numbered `TargetFiltered` filter
-        // (Rabid Bite's friendly-creature power source lives in slot 0,
-        // inside `Value::PowerOf`), pick it by that filter in the loop
-        // below. Otherwise (bare `Target(0)` effects like Lightning Bolt)
-        // use the source-aware heuristic picker.
-        // The slot-0 lookup answers two questions — "is there a filter" and
-        // "which one" — and the loop below asked it a second time for the
-        // value. It is a walk of the whole effect tree, so keep the answer.
+        // Slot 0 with its own numbered `TargetFiltered` filter (Rabid Bite's
+        // friendly power source inside `Value::PowerOf`) is picked by that
+        // filter in the loop below; a bare `Target(0)` (Lightning Bolt) uses
+        // the source-aware picker. The lookup walks the whole tree, so its
+        // answer is kept for the loop.
         if let Some(pick) = self.fight_pair_pick(eff, controller, source, None) {
             return pick;
         }
@@ -1213,11 +1110,8 @@ impl GameState {
         let mut additional = Vec::new();
         let mut already_picked: Vec<CardId> = Vec::new();
         // CR 601.2c — "for each opponent, … target … that player controls"
-        // (`ForEachOpponentTarget`): no two picks may share a controller, the
-        // rule the cast validator enforces. Without it the walk offered a
-        // second permanent of the same opponent and the whole cast was
-        // rejected, so the bot never cast Desecrate Reality into a board
-        // where only one opponent had targets.
+        // (`ForEachOpponentTarget`): no two picks may share a controller, as
+        // the cast validator enforces (else Desecrate Reality was rejected).
         let per_opponent = eff.per_opponent_targets(mode);
         let mut picked_controllers: Vec<usize> = Vec::new();
         let mut slot: u8 = if slot0_filter.is_some() { 0 } else { 1 };
@@ -1247,16 +1141,12 @@ impl GameState {
             };
             let req_at_x = x.filter(|_| req.names_x_or_converge()).map(|x| req.resolve_x(x));
             let req = req_at_x.as_ref().unwrap_or(req);
-            // CR 601.2c — a cross-slot filter ("**another** target", "with
-            // the same controller") reads the slots already chosen. The cast
-            // validator stamps `target_slots_scratch` for that; this walk has
-            // its picks in hand instead, so it passes them explicitly.
-            // Without it the "another" half was answered vacuously here and
-            // then rejected by the validator, which is a bot action that
-            // fails rather than a target it avoids.
-            // Asked once per slot, not once per candidate: the walk below
-            // runs per battlefield permanent and all but a handful of filters
-            // carry no cross-slot atom at all.
+            // CR 601.2c — a cross-slot filter ("another target", "with the same
+            // controller") reads the slots already chosen. The cast validator
+            // stamps `target_slots_scratch`; this walk passes its picks
+            // explicitly, or "another" was answered vacuously and the action
+            // then failed validation. Asked once per slot, since almost no
+            // filter carries a cross-slot atom.
             let cross = req.mentions_cross_slot();
             let filled: Vec<Option<Target>> = if cross {
                 std::iter::once(slot_0.clone()).chain(additional.iter().cloned().map(Some)).collect()
@@ -1271,12 +1161,10 @@ impl GameState {
             // The battlefield candidate walk below already holds each
             // permanent; hand it over instead of re-finding it by id.
             let gates = crate::game::effects::eval::PrintedGates::default();
-            // **26.6 requirement evaluations a call** is what this walk cost
-            // at the `(-300)` tip (PERF's candidates head), one per board
-            // permanent per slot — and a target filter that names a card type
-            // rejects much of the board on that one test. One requirement walk
-            // per *slot* answers it for every candidate instead; the walker
-            // still decides everything the pre-test keeps.
+            // This walk evaluated the requirement once per board permanent per
+            // slot (PERF `(-300)`), and a filter naming a card type rejects much
+            // of the board on that one test: one walk per *slot* answers it for
+            // every candidate; the walker still decides what the pre-test keeps.
             let type_gate = self.printed_type_prefilter(req, &gates);
             let is_legal_bf = |c: &CardInstance| -> bool {
                 if let Some(t) = &type_gate
@@ -1311,16 +1199,13 @@ impl GameState {
                     && self.check_target_legality(&Target::Permanent(c.id), controller).is_ok()
             };
             let pick = {
-                // Player slots: try controller first (caster-friendly),
-                // then opponent — unless the seat's `hostile_player_targets`
-                // flag is set and the slot's effect is hostile (a discard,
-                // damage, life loss, mill, …: `player_slot_is_hostile`), in
-                // which case the opponent comes first. Under the unconditional
-                // caster-first rule Arcane Omens discarded the caster's own
-                // hand in 98 of 113 recorded casts and Traumatic Critique /
-                // Together as One dealt their X to the caster's face every
-                // time (2026-09-06 deck work): a bot's search never sees the
-                // other player because the candidate list bakes one target.
+                // Player slots: controller first (caster-friendly), then opponent —
+                // unless the seat's `hostile_player_targets` flag is set and the
+                // slot is hostile (discard, damage, life loss, mill, …:
+                // `player_slot_is_hostile`), when the opponent comes first.
+                // Caster-first had Arcane Omens discard the caster's own hand, and a
+                // bot's search never sees the other player since the candidate list
+                // bakes one target.
                 let mut found: Option<Target> = None;
                 let hostile = self.hostile_player_slot(controller, eff, slot, mode);
                 // An optional gift slot (Parnesse's opponent copy) is never
@@ -1399,22 +1284,14 @@ impl GameState {
                         .max_by_key(|c| (c.printed_cmc(), std::cmp::Reverse(c.id.0)))
                         .map(|c| Target::Permanent(c.id));
                 }
-                // Battlefield: prefer one not already picked by slot 0 or
-                // earlier slots to avoid double-targeting when the filter is
-                // permissive.
+                // Battlefield: prefer one not already picked by an earlier slot, to
+                // avoid double-targeting when the filter is permissive.
                 //
-                // Candidates are ranked by *side* first, which this filtered
-                // path did not do until 2026-08-22: it took the first legal
-                // permanent in battlefield order, so a bare "destroy target
-                // creature" aimed at the caster's own creature whenever that
-                // creature happened to sit earlier on the board, and
-                // Proctor's Gaze bounced the bot's own body in four recorded
-                // games. The unfiltered picker
-                // (`auto_target_for_effect_avoiding_set_xc`) already ranked
-                // by side and ward; only this branch was blind. Friendly
-                // effects overwhelmingly carry a "you control" clause in the
-                // filter itself, so `is_legal` — not this ordering — is what
-                // keeps a gift on the caster's side.
+                // Ranked by *side* first (as the unfiltered picker
+                // `auto_target_for_effect_avoiding_set_xc` is): battlefield order
+                // had "destroy target creature" hit the caster's own creature.
+                // Friendly effects nearly always say "you control" in the filter, so
+                // `is_legal`, not this ordering, keeps a gift on the caster's side.
                 if found.is_none() {
                     // Refilled per slot rather than collected per slot: the
                     // buffer outlives the loop, so the common empty case
@@ -1439,14 +1316,11 @@ impl GameState {
                     // gift and calls the whole spell friendly, which had the
                     // bot stunning its own board.
                     let prefer_friendly = eff.prefers_friendly_target_for_slot(slot, mode);
-                    // A filter that already rules out the caster's side ("you
-                    // don't control") settles the side: every candidate is
-                    // the wanted one. Hate Mirage's token copies read as a
-                    // gift, so its optional slots were never spent on the
-                    // opponents' creatures it can only name — never cast.
-                    // "You control" settles it the other way: an Attach reads
-                    // as hostile, so Raubahn's "up to one target Equipment you
-                    // control" was never filled.
+                    // A filter that rules out a side settles it: "you don't control"
+                    // makes every candidate the wanted one (Hate Mirage's token copies
+                    // read as a gift and were never cast), and "you control" the other
+                    // way (Raubahn's "up to one target Equipment you control" read as a
+                    // hostile Attach and was never filled).
                     let side_fixed = req.excludes_your_side() || req.excludes_opponents_side();
                     // 0 = wanted side, un-warded; 1 = wanted side, warded;
                     // 2 = the other side (a last resort, see `optional`).
@@ -1465,15 +1339,10 @@ impl GameState {
                     // nothing when the opponent has no nonland permanent.
                     let optional =
                         slot >= eff.min_targets_in_mode(mode).unwrap_or(u8::MAX);
-                    // Within a rank, the biggest body wins: ranking by
-                    // side alone left removal taking whichever legal
-                    // candidate sat earliest on the board.
-                    // A plain loop, not `filter().filter().map().min()`: the
-                    // chain is walked per battlefield permanent per slot and
-                    // every element pays the adapters' `&mut F` forwarding
-                    // (PERF (-78)'s test 1). `min()` keeps the first of equal
-                    // keys and the key ends in the id, so ties cannot happen;
-                    // `<` reproduces it either way.
+                    // Within a rank, the biggest body wins.
+                    // A plain loop, not a `filter().filter().map().min()` chain, which
+                    // pays adapter forwarding per permanent per slot (PERF (-78)'s test
+                    // 1). The key ends in the id, so ties can't happen.
                     let mut best: Option<(u8, bool, bool, i32, CardId)> = None;
                     for c in self.battlefield.iter() {
                         if already_picked.contains(&c.id)
@@ -1517,13 +1386,10 @@ impl GameState {
                         }
                     }
                 }
-                // Graveyard cards (e.g. an `InGraveyard` reflexive return —
-                // Curious Forager's "return target permanent card from your
-                // graveyard"). The battlefield walk above can't see them, so
-                // sweep every graveyard as a last resort — gated as the
-                // single-slot picker is (CR 109.2): a board slot ("destroy
-                // target creature") has no graveyard fallback, or Doom Blade
-                // was aimed at a creature card that had already died.
+                // Graveyard cards (an `InGraveyard` reflexive return — Curious
+                // Forager) as a last resort, gated as the single-slot picker is (CR
+                // 109.2): a board slot has no graveyard fallback, or Doom Blade
+                // aims at a creature card that already died.
                 if found.is_none() && eff.offboard_target_scope(req) {
                     found = best_graveyard_card(
                         self,
@@ -1598,22 +1464,17 @@ fn best_graveyard_card(
 }
 
 
-/// Which call site each `auto_targets_for_effect_all_slots` enumeration comes
-/// from.
-///
-/// The enumerator is **3.63 % of `sealed` inclusive** and callgrind cannot
-/// split it: all ~26 sites are inlined into `bot::cast_candidates`, so the
-/// dump shows one edge with 11,178 calls and no way to say which block owns
-/// them. `#[track_caller]` on the wrapper gives the line for free.
+/// Which call site each `auto_targets_for_effect_all_slots` enumeration
+/// comes from. Callgrind can't split it — all ~26 sites inline into
+/// `bot::cast_candidates` — so `#[track_caller]` on the wrapper gives the
+/// line.
 ///
 /// Compile-time gated on `trig-census` so the shipped binary carries none of
-/// it — `#[track_caller]` included — then `CRAB_TARGET_SITE_CENSUS=1` at run
-/// time. `bot_ladder` prints the table, heaviest first. ⚠ Measured, not
-/// asserted: a `profiling-fast` build with the feature off reads **-2,450 Ir
-/// on `fixed` and +911 on `cube`** against the pre-census tip, 0.0001-0.0004 %
-/// — code layout moving under a changed source-file hash, not a semantic
-/// change. The debuginfo differs, so `md5sum` is not the check here; the
-/// counter is.
+/// it (`#[track_caller]` included); then `CRAB_TARGET_SITE_CENSUS=1` at run
+/// time, and `bot_ladder` prints the table heaviest first. ⚠ Feature-off
+/// builds moved Ir by a few parts per million against the pre-census tip
+/// (code layout, not semantics); the debuginfo differs, so compare the
+/// counter, not `md5sum`.
 #[cfg(feature = "trig-census")]
 pub mod call_site_census {
     use std::sync::Mutex;
@@ -1671,14 +1532,12 @@ fn doubles_target_counters(eff: &Effect) -> bool {
 }
 
 impl GameState {
-    /// Whether the slot walkers aim player slot `slot` of `eff` at an
-    /// opponent first: a hostile slot (damage, discard, life loss, …) for a
-    /// seat with `hostile_player_targets`, and in every pod — the frozen
-    /// two-player control's caster-first pick burned its own face with
-    /// Crackle with Power at a four-seat table (audit sweep 43001) — and in a
-    /// two-seat Commander game, whose caster-first Jaya's Immolating Inferno
-    /// named its own face for X = 25 (sweep seed 924898). Non-Commander duels
-    /// keep the control's pick.
+    /// Whether the slot walkers aim player slot `slot` of `eff` at an opponent
+    /// first: a hostile slot (damage, discard, life loss, …) for a seat with
+    /// `hostile_player_targets`, in every pod, and in a two-seat Commander game
+    /// (caster-first burned its own face: Crackle with Power at four seats,
+    /// Jaya's Immolating Inferno for X = 25). Non-Commander duels keep the
+    /// control's caster-first pick.
     pub(crate) fn hostile_player_slot(
         &self,
         controller: usize,

@@ -1,12 +1,10 @@
 //! Pods only: a hideaway land's "{color}, {T}: you may play the exiled card
-//! without paying its mana cost if [condition]" (Mosswort Bridge, Spinerock
-//! Knoll, Windbrisk Heights, Shelldock Isle). A 183-deck census (6 seats,
-//! seed 290000, 30 games a group) never saw one activated — Mosswort Bridge
-//! in eleven decks: the sink chain asked only once nothing was castable, by
-//! when the land had been tapped for mana. A free spell is taken in the
-//! seat's own main phase, ahead of its casts, as soon as the condition holds
-//! (Windbrisk's and Spinerock's hold after combat). A hidden land is left:
-//! its play needs the turn's land drop.
+//! without paying its mana cost if [condition]" (Mosswort Bridge, Windbrisk
+//! Heights). The sink chain only asked once nothing was castable, by when
+//! the land had been tapped for mana, so a census never saw one activated.
+//! A free spell is taken in the seat's own main phase, ahead of its casts,
+//! as soon as the condition holds (Windbrisk's and Spinerock's hold after
+//! combat). A hidden land is left: its play needs the turn's land drop.
 //!
 //! Two seats never reach it, so the two-player bench pool is untouched.
 

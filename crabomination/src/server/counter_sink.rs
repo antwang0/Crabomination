@@ -1,22 +1,20 @@
-//! "Put a +1/+1 (or loyalty) counter on target [permanent]" as an activated
-//! ability (Forge of Heroes, a Commander staple) was activated by no bot path
-//! — a 6-seat `--card-census` over every deck (seed 206001) never used Forge
-//! of Heroes in four decks. The bot now spends idle main-phase mana on one,
-//! aimed at its own biggest creature or planeswalker the filter allows.
-//! Level up (CR 702.87 — Kazandu Tuskcaller, Hada Spy Patrol, Coralhelm
-//! Commander) had the same gap: a level counter shows on no board until a
-//! tier, so idle mana now levels up to the card's top tier.
-//! A self-growing tap sink — Hangarback Walker's "{1}, {T}: put a +1/+1
-//! counter on this", a storage land's "{1}, {T}: put a storage counter on
-//! this" (Mage-Ring Network), a charge accumulator's (Titan Forge, Coalition
-//! Relic, Lux Cannon, Midnight Clock) — was never activated either (6-seat
-//! census, seed 1270001); it now takes an opponent's end step's spare mana,
-//! when the tap costs nothing before the controller's untap.
-//! Oblivion Stone's "put a fate counter on another target permanent" had the
-//! same gap in four decks (census seed 3100001), so its sweep took its
-//! controller's board too: the same end step now marks the controller's most
-//! valuable unmarked nonland permanent.
-//! Commander games only, so two-player play is unchanged.
+//! Counter-placing activations no bot path used to take (each found by a
+//! pod `--card-census`). Commander games only, so two-player play is
+//! unchanged.
+//!
+//! - "Put a +1/+1 (or loyalty) counter on target [permanent]" (Forge of
+//!   Heroes): idle main-phase mana, aimed at the bot's biggest creature or
+//!   planeswalker the filter allows.
+//! - Level up (CR 702.87 — Kazandu Tuskcaller, Hada Spy Patrol): a level
+//!   counter shows on no board until a tier, so idle mana levels up to the
+//!   top tier.
+//! - Self-growing tap sinks (Hangarback Walker, storage lands like Mage-Ring
+//!   Network, charge accumulators like Titan Forge, Lux Cannon): an
+//!   opponent's end step's spare mana, when the tap costs nothing before the
+//!   controller's untap.
+//! - Oblivion Stone's fate counter, whose sweep otherwise took its
+//!   controller's board too: the same end step marks the controller's most
+//!   valuable unmarked nonland permanent.
 
 use crate::card::CounterType;
 use crate::effect::{Effect, Selector};

@@ -1,9 +1,8 @@
-//! CR 702.140 — no bot built `GameAction::CastMutate`, so the Otrimi seat's
-//! mutate creatures only ever entered on their own. The bot now offers one
-//! mutate cast per mutate card in hand (and a mutate commander in the command
-//! zone, CR 903.8; a Brokkos in the graveyard) onto its best host;
-//! `score_candidate` prices it against
-//! the plain cast. Commander games only, so two-player play is unchanged.
+//! CR 702.140 — no bot built `GameAction::CastMutate`, so mutate creatures
+//! only ever entered on their own. The bot offers one mutate cast per
+//! mutate card in hand (and a mutate commander in the command zone, CR
+//! 903.8; a Brokkos in the graveyard) onto its best host, priced by
+//! `score_candidate` against the plain cast. Commander games only.
 
 use crate::card::{CardInstance, CreatureType};
 use crate::game::GameState;

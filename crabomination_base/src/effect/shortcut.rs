@@ -8,11 +8,8 @@ pub fn target_n(n: u8) -> Selector { Selector::Target(n) }
 pub fn target_filtered(filter: SelectionRequirement) -> Selector {
     Selector::TargetFiltered { slot: 0, filter }
 }
-/// "Any target" — creature, player, or planeswalker. The canonical
-/// burn-spell target filter (Lightning Bolt, Shock, Lightning
-/// Strike), pulled out into a helper so cards don't have to spell
-/// out the 3-way `or` inline. Push (claude/modern_decks, batches
-/// 192-197).
+/// "Any target" — creature, player or planeswalker; the burn-spell filter
+/// (Lightning Bolt).
 pub fn target_any() -> Selector {
     target_filtered(
         SelectionRequirement::any_target(),
@@ -533,12 +530,9 @@ pub fn on_cast(effect: Effect) -> TriggeredAbility {
     }
 }
 
-/// On-other-dies shortcut: "Whenever another creature you control
-/// dies, `effect`." Wraps the `CreatureDied / AnotherOfYours` event
-/// scope, which excludes the source's own death. Used by Pest
-/// Hivewatcher (batch 119), Inkling Confessor's lifegain rider,
-/// Felisa Fang of Silverquill, and any future "another creature
-/// dies" payoff that doesn't need a creature-type filter.
+/// "Whenever another creature you control dies, `effect`" — the `CreatureDied /
+/// AnotherOfYours` scope, which excludes the source's own death (Felisa, Fang
+/// of Silverquill).
 pub fn on_other_dies(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::CreatureDied, EventScope::AnotherOfYours),
@@ -731,15 +725,12 @@ pub fn evolve() -> TriggeredAbility {
     }
 }
 
-/// Evolve with a "whenever this creature evolves, [rider]" payoff. CR
-/// 702.100b: it evolves when its evolve ability *resolves* and puts the
-/// counter, so the rider runs after the counter, in the same resolution — a
-/// parallel trigger on the entering creature fired before the counter landed,
-/// and a Watchful Radstag smaller than its own 2/2 copies copied itself
-/// without end.
-/// A counter that can't be put (Blightbeetle) is no evolution, so the rider
-/// is gated on it landing: a 1/1 Radstag under Blightbeetle copied itself for
-/// every 2/2 copy that entered (8-seat sweep seed 931184, 403 Radstags).
+/// Evolve with a "whenever this creature evolves, [rider]" payoff. CR 702.100b:
+/// it evolves when the evolve ability resolves and puts the counter, so the
+/// rider runs after the counter in the same resolution (a parallel trigger
+/// fired before the counter landed, and a Watchful Radstag copied itself
+/// without end). A counter that can't be put (Blightbeetle) is no evolution, so
+/// the rider is gated on it landing.
 pub fn evolve_then(rider: Effect) -> TriggeredAbility {
     let mut t = evolve();
     let landed = Predicate::CounterWouldLand { what: Selector::This, kind: crate::card::CounterType::PlusOnePlusOne };
@@ -811,12 +802,8 @@ pub fn eerie(body: Effect) -> Vec<TriggeredAbility> {
     ]
 }
 
-/// ETB-Drain shortcut: "When this creature enters, each opponent loses
-/// `amount` life and you gain `amount` life." Wraps [`etb`] with the
-/// canonical drain-each-opp body. Used by ~40 STX/SOS Silverquill /
-/// Witherbloom drain creatures (Inkling Stormcaller, Silverquill
-/// Drainmaster, Inkling Magister, etc.) to collapse the recurring
-/// 7-line trigger pattern into one helper call.
+/// "When this creature enters, each opponent loses `amount` life and you gain
+/// `amount` life."
 pub fn etb_drain(amount: i32) -> TriggeredAbility {
     etb(Effect::Drain {
         from: Selector::Player(PlayerRef::EachOpponent),
@@ -825,11 +812,7 @@ pub fn etb_drain(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// ETB-Gain-Life shortcut: "When this creature enters, you gain
-/// `amount` life." Wraps [`etb`] with the canonical gain-life body.
-/// Used by ~25 STX/SOS Silverquill / Lorehold lifegain creatures
-/// (Silverquill Marshal, Silverquill Loremender, Lorehold
-/// Skydefender, etc.).
+/// "When this creature enters, you gain `amount` life."
 pub fn etb_gain_life(amount: i32) -> TriggeredAbility {
     etb(Effect::GainLife {
         who: Selector::You,
@@ -837,11 +820,7 @@ pub fn etb_gain_life(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// Dies-Gain-Life shortcut: "When this creature dies, you gain
-/// `amount` life." Wraps [`on_dies`] with the canonical gain-life
-/// body. Used by the Pest token cycle (1/1 with on-die gain 1) and
-/// any future "when this creature dies, you gain N life" cards
-/// (Selfless Spirit's death rider, Resilient Khenra-class).
+/// "When this creature dies, you gain `amount` life" (the Pest token).
 pub fn dies_gain_life(amount: i32) -> TriggeredAbility {
     on_dies(Effect::GainLife {
         who: Selector::You,
@@ -874,12 +853,8 @@ pub fn etb_mill_each_opp(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// ETB-Drain-Each-Opp shortcut: "When this creature enters, each
-/// opponent loses `amount` life." This is the asymmetric variant of
-/// [`etb_drain`] — opponents lose life but you do *not* gain any.
-/// Used by point-drain bodies like Witherbloom Toxinspeaker and
-/// Silverquill Drainscholar where the printed text omits the
-/// you-gain rider.
+/// "When this creature enters, each opponent loses `amount` life" — the
+/// asymmetric [`etb_drain`], with no life gain.
 pub fn etb_drain_each_opp(amount: i32) -> TriggeredAbility {
     etb(Effect::LoseLife {
         who: Selector::Player(PlayerRef::EachOpponent),
@@ -887,11 +862,7 @@ pub fn etb_drain_each_opp(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// ETB-Loot shortcut: "When this creature enters, draw a card,
-/// then discard a card." Wraps [`etb`] with the canonical loot
-/// body. Used by ~10 STX/SOS Prismari / Witherbloom loot creatures
-/// (Prismari Cinderpoet, Prismari Stormbearer) to collapse the
-/// recurring 6-line Seq into one helper call.
+/// "When this creature enters, draw a card, then discard a card."
 pub fn etb_loot() -> TriggeredAbility {
     etb(Effect::Seq(vec![
         Effect::Draw {
@@ -920,10 +891,8 @@ pub fn cast_is_instant_or_sorcery() -> Predicate {
     }
 }
 
-/// Strixhaven Magecraft trigger: "Whenever you cast or copy an instant
-/// or sorcery spell, `effect`." Bundles the spell-cast trigger with
-/// the [`cast_is_instant_or_sorcery`] predicate. Used by Eager
-/// First-Year, Witherbloom Apprentice, etc.
+/// Strixhaven Magecraft: "Whenever you cast or copy an instant or sorcery
+/// spell, `effect`" — the cast trigger plus [`cast_is_instant_or_sorcery`].
 pub fn magecraft(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
@@ -1118,13 +1087,8 @@ pub fn repartee(effect: Effect) -> TriggeredAbility {
     }
 }
 
-/// Convenience: a Magecraft trigger that pumps the source itself.
-/// Wraps [`magecraft`] with a `PumpPT` body whose `what:` is the
-/// triggering permanent (`Selector::This`). Used by self-pump
-/// magecraft creatures (Symmetry Sage's +1/+0; future Witherbloom /
-/// Lorehold apprentices) so the call site stays one line. Duration
-/// defaults to end-of-turn since every printed magecraft self-pump
-/// uses that duration.
+/// A Magecraft trigger that pumps the source itself until end of turn (Symmetry
+/// Sage's +1/+0): [`magecraft`] with a `PumpPT` on `Selector::This`.
 pub fn magecraft_self_pump(power: i32, toughness: i32) -> TriggeredAbility {
     magecraft(Effect::PumpPT {
         what: Selector::This,
@@ -1134,11 +1098,8 @@ pub fn magecraft_self_pump(power: i32, toughness: i32) -> TriggeredAbility {
     })
 }
 
-/// Convenience: a Repartee trigger that pumps the source itself.
-/// Same shape as [`magecraft_self_pump`] but gated on the additional
-/// "spell targets a creature" Repartee predicate. Used by Rehearsed
-/// Debater (current SOS catalog), and any future Repartee creature
-/// that scales with cast events targeting a creature.
+/// A Repartee trigger that pumps the source itself: [`magecraft_self_pump`]
+/// gated on the "spell targets a creature" predicate (Rehearsed Debater).
 pub fn repartee_self_pump(power: i32, toughness: i32) -> TriggeredAbility {
     repartee(Effect::PumpPT {
         what: Selector::This,
@@ -1270,11 +1231,9 @@ pub fn prowess_trigger() -> TriggeredAbility {
     }
 }
 
-/// Strixhaven Quandrix "spell with `{X}` in its mana cost" trigger:
-/// fires on any spell cast by the controller whose printed cost
-/// contains an `{X}` symbol. Powered by `Predicate::CastSpellHasX`.
-/// Used by Geometer's Arthropod, Matterbending Mage, and any future
-/// Quandrix card that pays off X-cost spells.
+/// Quandrix "spell with {X} in its mana cost" trigger: fires on any spell the
+/// controller casts whose printed cost has an `{X}`
+/// (`Predicate::CastSpellHasX`; Geometer's Arthropod).
 pub fn cast_has_x_trigger(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
@@ -1283,18 +1242,10 @@ pub fn cast_has_x_trigger(effect: Effect) -> TriggeredAbility {
     }
 }
 
-/// Prowess trigger: "Whenever you cast a noncreature spell, this
-/// creature gets +1/+1 until end of turn." Fires on every cast you
-/// control whose card type is **not** Creature (the printed Prowess
-/// keyword's reminder text). The pumped target is the source itself
-/// via `Selector::This`, so a single Prowess creature can drop the
-/// helper in one line and the trigger source is correctly threaded.
-///
-/// Wired into card factories declaring `Keyword::Prowess` —
-/// Spectacle Mage, Eccentric Apprentice, etc. — to convert the
-/// keyword tag into a functional trigger. (The keyword itself
-/// remains in `card.keywords` for display + future "Prowess matters"
-/// payoffs to filter on.)
+/// Prowess: "Whenever you cast a noncreature spell, this creature gets +1/+1
+/// until end of turn," pumping `Selector::This`. Card factories declaring
+/// `Keyword::Prowess` add it to make the keyword functional; the keyword stays
+/// in `card.keywords` for display and "prowess matters" filters.
 pub fn prowess() -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(
@@ -1313,24 +1264,16 @@ pub fn prowess() -> TriggeredAbility {
     }
 }
 
-/// "... you may discard a card. **If you do**, [body]." — the contingent
-/// half of a loot.
+/// "… you may discard a card. If you do, [body]" — the contingent half of a
+/// loot. `Effect::Discard` no-ops on an empty hand, so a bare `Seq([Discard,
+/// Draw])` hands the reward out anyway (an opponent with an empty hand took
+/// Lorehold, the Historian's upkeep loot as a free draw). Gates `body` on
+/// `Value::CardsDiscardedThisEffect`, which `discard_card` bumps and which
+/// resets between resolutions.
 ///
-/// `Effect::Discard` silently no-ops on an empty hand (it `continue`s past
-/// a player with no cards), so a bare `Seq([Discard, Draw])` hands the
-/// reward out anyway: a player holding nothing accepts the `MayDo`, discards
-/// nothing and draws. Observed on Lorehold, the Historian — an opponent
-/// with an empty hand took the upkeep loot every turn as a free draw.
-///
-/// Gates `body` on `Value::CardsDiscardedThisEffect`, which `discard_card`
-/// bumps and which resets between resolutions, so the reward runs only if a
-/// card actually changed zones.
-///
-/// **Not for every discard-then-draw.** A printed "discard a card, then
-/// draw a card" (Tormenting Voice's additional cost, Cathartic Reunion,
-/// Wild Guess) really does draw on an empty hand — the draw is sequenced
-/// after the discard, not conditioned on it. Use this only where the card
-/// says "if you do" / "to draw".
+/// ⚠ Not for every discard-then-draw: a printed "discard a card, then draw a
+/// card" (Cathartic Reunion) does draw on an empty hand. Use this only where
+/// the card says "if you do" / "to draw".
 pub fn if_discarded(body: Effect) -> Effect {
     Effect::If {
         cond: Predicate::ValueAtLeast(Value::CardsDiscardedThisEffect, Value::Const(1)),
@@ -1339,23 +1282,13 @@ pub fn if_discarded(body: Effect) -> Effect {
     }
 }
 
-/// SOS Increment trigger: "Whenever you cast a spell, if the amount
-/// of mana you spent is greater than this creature's power or
-/// toughness, [body]." Powered by `Predicate::IncrementSatisfied`,
-/// which compares the just-cast spell's stashed `mana_spent` to the
-/// listening permanent's effective P/T. The canonical Increment
-/// payoff drops a +1/+1 counter on `Selector::This`, but the helper
-/// is body-agnostic so cards like Pensive Professor (gain a +1/+1
-/// counter and scry 1) can plug arbitrary effects in.
-///
-/// Implements MTG comp rules 603.4 ("intervening 'if' clause"): the
-/// `IncrementSatisfied` predicate is checked both at trigger-event
-/// time (the `EventSpec.filter` gate, controlling whether the
-/// trigger goes on the stack) AND at resolution time (the wrapping
-/// `Effect::If`, controlling whether the body actually runs). If
-/// the source gains counters after this trigger goes on the stack
-/// but before it resolves, the resolution-time check can suppress
-/// the body even though the trigger fired.
+/// SOS Increment: "Whenever you cast a spell, if the amount of mana you spent
+/// is greater than this creature's power or toughness, [body]," via
+/// `Predicate::IncrementSatisfied` (the cast spell's stashed `mana_spent` vs
+/// the listener's effective P/T). Body-agnostic (Pensive Professor: a counter
+/// and scry 1). The predicate is an intervening "if" (CR 603.4), checked both
+/// as the trigger event filter and again at resolution, so P/T gained in
+/// between can suppress the body.
 pub fn increment_trigger(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
@@ -1368,10 +1301,9 @@ pub fn increment_trigger(effect: Effect) -> TriggeredAbility {
     }
 }
 
-/// SOS Increment payoff that drops one +1/+1 counter on the source.
-/// Wraps [`increment_trigger`] with the standard `AddCounter` body
-/// targeting `Selector::This`. Used by Cuboid Colony / Fractal
-/// Tender / Berta and every other vanilla-Increment creature.
+/// SOS Increment payoff putting one +1/+1 counter on the source
+/// ([`increment_trigger`] with `AddCounter` on `Selector::This`; Cuboid
+/// Colony).
 pub fn increment_self_plus_one() -> TriggeredAbility {
     use crate::card::CounterType;
     increment_trigger(Effect::AddCounter {
@@ -1381,12 +1313,9 @@ pub fn increment_self_plus_one() -> TriggeredAbility {
     })
 }
 
-/// Strixhaven Opus payoff trigger: "Whenever you cast an instant or
-/// sorcery spell, [body]. If five or more mana was spent to cast
-/// that spell, [bigger body] instead." Emits an `If`-gated effect
-/// whose `Predicate::CastSpellManaSpentAtLeast(5)` arm fires the
-/// bigger payoff. Used by Deluge Virtuoso, Expressive Firedancer,
-/// Magmablood Archaic and other Opus creatures.
+/// Strixhaven Opus: "Whenever you cast an instant or sorcery spell, [body]. If
+/// five or more mana was spent to cast that spell, [bigger body] instead" — an
+/// `If` on `Predicate::CastSpellManaSpentAtLeast(5)` (Deluge Virtuoso).
 pub fn opus_trigger(small_body: Effect, big_body: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
@@ -1399,12 +1328,8 @@ pub fn opus_trigger(small_body: Effect, big_body: Effect) -> TriggeredAbility {
     }
 }
 
-/// Convenience: "Create a [token] with [keyword] until [duration]."
-/// Mints `count` copies of `token`, then grants `keyword` to the
-/// last-created token batch for `duration`. Used by Lorehold Skirmish
-/// (mint Spirit + grant Haste EOT) and similar mint-then-pump shapes.
-/// Wraps the explicit `Seq([CreateToken, GrantKeyword(LastCreatedToken, …)])`
-/// pattern at a single call site for clarity.
+/// "Create a [token] with [keyword] until [duration]": `Seq([CreateToken,
+/// GrantKeyword(LastCreatedToken, …)])` (Lorehold Skirmish).
 pub fn create_token_with_keyword(
     who: PlayerRef,
     count: i32,
@@ -1426,12 +1351,9 @@ pub fn create_token_with_keyword(
     ])
 }
 
-/// Convenience: "Create a [token] with N [counter] counters on it."
-/// Mints `count` copies of `token`, each entering with `counter_n`
-/// `counter` counters (`TokenDefinition::enters_with_counters`, so the
-/// counters are part of the entry and a 0/0 body never sees a state-based
-/// sweep bare). Used by Quandrix Summoner, Fractal Harvest, and any
-/// "create a Fractal / Phyrexian / generic token with N counters" pattern.
+/// "Create a [token] with N [counter] counters on it." The counters are part of
+/// the entry (`TokenDefinition::enters_with_counters`), so a 0/0 body never
+/// meets a state-based sweep bare.
 pub fn create_token_with_counter(
     who: PlayerRef,
     count: i32,
@@ -1446,13 +1368,9 @@ pub fn create_token_with_counter(
     }
 }
 
-/// Convenience: Magecraft trigger pumping any chosen target.
-/// Wraps [`magecraft`] with a `PumpPT` body whose `what:` is
-/// caller-supplied. Used for patterns like Withergrowth Apprentice
-/// (magecraft → +1/+1 EOT to target friendly creature) or Quandrix
-/// Scholar-style "magecraft → pump target friendly creature". The
-/// caller passes a `target_filtered(...)` selector so the auto-target
-/// picker still gets a chance to choose at trigger-resolve time.
+/// A Magecraft trigger pumping a caller-supplied target (Withergrowth
+/// Apprentice: target friendly creature). Pass a `target_filtered(...)`
+/// selector so the auto-target picker chooses at resolution.
 pub fn magecraft_target_pump(
     what: Selector,
     power: i32,
@@ -1489,13 +1407,8 @@ pub fn magecraft_pump_each_creature_type(
     })
 }
 
-/// Convenience: Magecraft trigger dealing `amount` damage to any
-/// chosen target (Creature ∨ Player ∨ Planeswalker). Wraps
-/// [`magecraft`] with a `DealDamage` body whose target is a
-/// generic "any target" selector. Used by ~20 STX cards
-/// (Lorehold Apprentice, Bombastic Strixhaven Mage's magecraft half,
-/// Prismari Pyrowriter, Reverberator, Strikevanguard, Sparkmage,
-/// etc.) to collapse the recurring 6-line pattern into one line.
+/// A Magecraft trigger dealing `amount` damage to any target (Creature ∨ Player
+/// ∨ Planeswalker) — Lorehold Apprentice and many other STX cards.
 pub fn magecraft_ping_any(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     magecraft(Effect::DealDamage {
@@ -1517,9 +1430,7 @@ pub fn magecraft_ping_each_opp(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// Convenience: Magecraft trigger gaining `amount` life. Used by
-/// Silverquill Lifeglyph / Spectrescribe / Witness / Vinetender style
-/// "gain N life on each IS cast" payoffs.
+/// A Magecraft trigger gaining `amount` life.
 pub fn magecraft_gain_life(amount: i32) -> TriggeredAbility {
     magecraft(Effect::GainLife {
         who: Selector::You,
@@ -1544,11 +1455,7 @@ pub fn etb_mint_token(
     })
 }
 
-/// ETB-Scry shortcut: "When this creature enters, scry `amount`."
-/// Wraps [`etb`] with the canonical scry body. Used by Witherbloom
-/// Cauldronkeeper / Quandrix Symmetrist / Silverquill Bookbearer
-/// / Silverquill Archivist / Inkling Treasurer-style "scry on ETB"
-/// bodies.
+/// "When this creature enters, scry `amount`."
 pub fn etb_scry(amount: i32) -> TriggeredAbility {
     etb(Effect::Scry {
         who: PlayerRef::You,
@@ -1596,12 +1503,10 @@ pub fn boast(cost: crate::mana::ManaCost, effect: Effect) -> ActivatedAbility {
 
 /// CR 701.37 — "`cost`: Monstrosity `n`." Grows the source to monstrous once.
 ///
-/// ⚠ **It is NOT sorcery-speed.** CR 701.37a defines monstrosity as a plain
-/// activated ability with no timing rider, and playing Polukranos at instant
-/// speed in combat is the card's whole point. Both this helper and `cn2.rs`'s
-/// copy carried `sorcery_speed: true` and a doc comment asserting it, which
-/// took the ability away from every monstrosity card for most of the turn
-/// (twenty-odd of them, found by
+/// ⚠ Not sorcery-speed: CR 701.37a gives monstrosity no timing rider, and
+/// instant-speed Polukranos in combat is the card's point. This helper and
+/// `cn2.rs`'s copy once carried `sorcery_speed: true`, taking the ability away
+/// from every monstrosity card for most of the turn (found by
 /// `every_card_has_the_activation_timing_it_prints`).
 pub fn monstrosity(cost: crate::mana::ManaCost, n: i32) -> ActivatedAbility {
     ActivatedAbility {
@@ -1627,9 +1532,7 @@ pub fn etb_explore() -> TriggeredAbility {
     etb(explore())
 }
 
-/// ETB-Draw shortcut: "When this creature enters, draw `amount`
-/// cards." Wraps [`etb`] with the canonical draw body. Used by
-/// Spirited Companion / Elvish Visionary style cantrip ETB bodies.
+/// "When this creature enters, draw `amount` cards" (Elvish Visionary).
 pub fn etb_draw(amount: i32) -> TriggeredAbility {
     etb(Effect::Draw {
         who: Selector::You,
@@ -1637,10 +1540,7 @@ pub fn etb_draw(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// Magecraft-Loot shortcut: "Whenever you cast or copy an instant or
-/// sorcery spell, draw a card, then discard a card." Wraps
-/// [`magecraft`] with the canonical loot body (Seq[Draw 1, Discard 1]).
-/// Used by Prismari Looter / Storm-Caller / Stormcaster / Aquamancer.
+/// Magecraft — "draw a card, then discard a card."
 pub fn magecraft_loot() -> TriggeredAbility {
     magecraft(Effect::Seq(vec![
         Effect::Draw {
@@ -1655,10 +1555,7 @@ pub fn magecraft_loot() -> TriggeredAbility {
     ]))
 }
 
-/// Magecraft-Scry shortcut: "Whenever you cast or copy an instant or
-/// sorcery spell, scry `amount`." Wraps [`magecraft`] with the
-/// canonical scry body. Used by Silverquill Pen-Pusher,
-/// Quandrix Mistshaper, etc. — the "smooth on cast" pattern.
+/// Magecraft — "scry `amount`."
 pub fn magecraft_scry(amount: i32) -> TriggeredAbility {
     magecraft(Effect::Scry {
         who: PlayerRef::You,
@@ -1666,11 +1563,7 @@ pub fn magecraft_scry(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// Magecraft-Mint-Token shortcut: "Whenever you cast or copy an
-/// instant or sorcery spell, create `count` copies of `definition`."
-/// Wraps [`magecraft`] with a `CreateToken` body. Used by Inkling
-/// Penmaster / Witherbloom Pestmancer / Prismari Alchemist /
-/// Sedgemoor Witch-style "magecraft → mint a token" payoffs.
+/// Magecraft — "create `count` copies of `definition`."
 pub fn magecraft_mint_token(
     definition: crate::card::TokenDefinition,
     count: i32,
@@ -1682,14 +1575,11 @@ pub fn magecraft_mint_token(
     })
 }
 
-/// Magecraft-mint-and-drain shortcut: "Whenever you cast or copy an
-/// instant or sorcery spell, create `count` of `definition`, then each
-/// opponent loses `amount` life and you gain `amount` life." A composite
-/// of [`magecraft_mint_token`] and [`magecraft_drain`] for the spells-
-/// matter Pest-aristocrats shape (mint a body, drain the table per
-/// spell). The `Seq` mints before draining so the freshly-created token
-/// is on the battlefield by the time any "if you gained life" / sacrifice
-/// payoff sees the drain.
+/// "Whenever you cast or copy an instant or sorcery spell, create `count` of
+/// `definition`, then each opponent loses `amount` life and you gain `amount`
+/// life" — [`magecraft_mint_token`] plus [`magecraft_drain`]. Mints first, so
+/// the token is on the battlefield when a gained-life or sacrifice payoff sees
+/// the drain.
 pub fn magecraft_mint_and_drain(
     definition: crate::card::TokenDefinition,
     count: i32,
@@ -1709,14 +1599,9 @@ pub fn magecraft_mint_and_drain(
     ]))
 }
 
-/// Magecraft-add-+1/+1-counter-to-friendly shortcut: "Whenever you
-/// cast or copy an instant or sorcery spell, put a +1/+1 counter on
-/// target creature you control." Wraps [`magecraft`] with an
-/// `AddCounter` body targeting a friendly creature via
-/// `target_filtered(Creature ∧ ControlledByYou)`. The auto-target
-/// picker picks any controlled creature at trigger-resolve time.
-/// Used by Quandrix Coursemage (b122) and any other "magecraft fans
-/// counters" payoff. Refactor target for ~5 quandrix.rs callsites.
+/// "Whenever you cast or copy an instant or sorcery spell, put a +1/+1 counter
+/// on target creature you control" (Quandrix Coursemage), targeting `Creature ∧
+/// ControlledByYou`.
 pub fn magecraft_add_counter_to_friendly() -> TriggeredAbility {
     use crate::card::{CounterType, SelectionRequirement};
     magecraft(Effect::AddCounter {
@@ -1729,10 +1614,7 @@ pub fn magecraft_add_counter_to_friendly() -> TriggeredAbility {
     })
 }
 
-/// ETB-Surveil shortcut: "When this creature enters, surveil
-/// `amount`." Wraps [`etb`] with the canonical surveil body. Used
-/// by ~5 STX/SOS Witherbloom / Silverquill surveil creatures
-/// (Silverquill Scrivener, Witherbloom Toxicpath, etc.).
+/// "When this creature enters, surveil `amount`."
 pub fn etb_surveil(amount: i32) -> TriggeredAbility {
     etb(Effect::Surveil {
         who: PlayerRef::You,
@@ -1752,12 +1634,8 @@ pub fn magecraft_surveil(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// ETB-Ping-Any shortcut: "When this creature enters, deal
-/// `amount` damage to any target." Wraps [`etb`] with the
-/// canonical "any target" damage body (creature OR player OR
-/// planeswalker filter). Mirrors `magecraft_ping_any` for the
-/// ETB trigger flavor. Used by Lorehold Emberspeaker / Prismari
-/// Smiteforge-style "ETB shock-on-entry" creatures.
+/// "When this creature enters, it deals `amount` damage to any target" —
+/// `magecraft_ping_any` for ETB.
 pub fn etb_ping_any(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     etb(Effect::DealDamage {
@@ -1768,11 +1646,8 @@ pub fn etb_ping_any(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// ETB-Ping-Creature shortcut: "When this creature enters, deal
-/// `amount` damage to target creature." Wraps [`etb`] with a
-/// creature-only damage body. Used by Lorehold Sparkscholar /
-/// Lorehold Ironhand-style "ETB ping creature" creatures (no
-/// player/planeswalker target option).
+/// "When this creature enters, it deals `amount` damage to target creature" (no
+/// player or planeswalker option).
 pub fn etb_ping_creature(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     etb(Effect::DealDamage {
@@ -1781,11 +1656,7 @@ pub fn etb_ping_creature(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// Magecraft-Ping-Creature shortcut: "Whenever you cast or copy
-/// an instant or sorcery spell, deal `amount` damage to target
-/// creature." Wraps [`magecraft`] with a creature-only damage
-/// body. Used by Lorehold Sparkscholar II and other "creature-
-/// removal-only magecraft" cards.
+/// Magecraft — "deal `amount` damage to target creature."
 pub fn magecraft_ping_creature(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     magecraft(Effect::DealDamage {
@@ -1794,12 +1665,8 @@ pub fn magecraft_ping_creature(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// ETB-Drain-and-Surveil shortcut: "When this creature enters, each
-/// opponent loses `drain` life and you gain `drain` life. Surveil
-/// `surveil`." Wraps [`etb`] with a `Seq([Drain, Surveil])` body.
-/// Used by Silverquill Quillthane, Witherbloom Toxicpath, Silverquill
-/// Conviction-style "ETB drain + select" creatures to collapse the
-/// recurring 10-line pattern.
+/// "When this creature enters, each opponent loses `drain` life and you gain
+/// `drain` life. Surveil `surveil`."
 pub fn etb_drain_and_surveil(drain: i32, surveil: i32) -> TriggeredAbility {
     etb(Effect::Seq(vec![
         Effect::Drain {
@@ -1833,13 +1700,8 @@ pub fn etb_drain_and_scry(drain: i32, scry: i32) -> TriggeredAbility {
     ]))
 }
 
-/// ETB-Drain-and-Draw shortcut: "When this creature enters, each
-/// opponent loses `drain` life and you gain `drain` life. Draw a
-/// card." Wraps [`etb`] with a `Seq([Drain, Draw])` body. Used by
-/// Silverquill drain-and-cantrip creatures.
-///
-/// Push claude/modern_decks batch 137: shipped to collapse the
-/// recurring drain+draw ETB pattern.
+/// "When this creature enters, each opponent loses `drain` life and you gain
+/// `drain` life. Draw a card." [`etb`] with `Seq([Drain, Draw])`.
 pub fn etb_drain_and_draw(drain: i32) -> TriggeredAbility {
     etb(Effect::Seq(vec![
         Effect::Drain {
@@ -1854,12 +1716,7 @@ pub fn etb_drain_and_draw(drain: i32) -> TriggeredAbility {
     ]))
 }
 
-/// On-Attack-Create-Token shortcut: "Whenever this creature attacks,
-/// create a `token`." Wraps [`on_attack`] with a `CreateToken` body.
-/// Used by Spirit/Pest/Inkling tribal attack-token creators.
-///
-/// Push claude/modern_decks batch 137: shipped to collapse the
-/// recurring "attack → mint token" pattern.
+/// "Whenever this creature attacks, create a `token`."
 pub fn on_attack_create_token(token: crate::card::TokenDefinition) -> TriggeredAbility {
     on_attack(Effect::CreateToken {
         who: PlayerRef::You,
@@ -1868,15 +1725,8 @@ pub fn on_attack_create_token(token: crate::card::TokenDefinition) -> TriggeredA
     })
 }
 
-/// Mint N copies of `token` as a standalone Effect (not wrapped in
-/// an ETB trigger). Useful as the body of a sorcery / instant or
-/// inside a `Seq([…])` step. Wraps `Effect::CreateToken` with
-/// `who: PlayerRef::You`.
-///
-/// Push claude/modern_decks batch 105: shipped as part of the
-/// `mint_pests` / `mint_inklings` / `mint_fractals` /
-/// `mint_treasures` family that centralises the canonical token
-/// mints for STX/SOS catalog cards.
+/// Create N `token`s as a standalone effect (a spell body or a `Seq` step, not
+/// an ETB trigger): `Effect::CreateToken` with `who: PlayerRef::You`.
 pub fn mint_token(token: crate::card::TokenDefinition, count: i32) -> Effect {
     Effect::CreateToken {
         who: PlayerRef::You,
@@ -1919,19 +1769,14 @@ pub fn mint_treasures(count: i32) -> Effect {
     mint_token(token, count)
 }
 
-/// Mint N Lorehold Spirit tokens (2/2 R/W creature). Used by
-/// `stx::lorehold::lorehold_excavation`-template cards and the
-/// `stx::extras::lorehold_*` mint bodies.
+/// Create N Lorehold Spirit tokens (2/2 R/W).
 pub fn mint_lorehold_spirits(count: i32) -> Effect {
     let token = crate::tokens::lorehold_spirit_token();
     mint_token(token, count)
 }
 
-/// Drain-and-Draw composite: `Seq([Drain(amount), Draw(1)])` as a
-/// raw `Effect` (not wrapped in a trigger). Used by Silverquill
-/// drain+cantrip sorceries (Silverquill Quillsweep, Silverquill
-/// Chronicle, Defend the Inkwell-style spells) to collapse the
-/// recurring 7-line `Seq` body to a one-liner.
+/// `Seq([Drain(amount), Draw(1)])` as a raw `Effect`, for drain-and-cantrip
+/// spells.
 pub fn drain_and_draw(amount: i32) -> Effect {
     Effect::Seq(vec![drain(amount), draw(1)])
 }
@@ -1950,10 +1795,7 @@ pub fn drain_and_scry(amount: i32, scry: i32) -> Effect {
     ])
 }
 
-/// Drain-and-Surveil composite: `Seq([Drain(amount), Surveil(N)])`
-/// as a raw `Effect`. Used by Witherbloom / Silverquill drain +
-/// graveyard-select sorceries (Silverquill Conviction, Silverquill
-/// Inkletter, Witherspell Witness-template cards).
+/// `Seq([Drain(amount), Surveil(N)])` as a raw `Effect`.
 pub fn drain_and_surveil(amount: i32, surveil: i32) -> Effect {
     Effect::Seq(vec![
         drain(amount),
@@ -1964,10 +1806,7 @@ pub fn drain_and_surveil(amount: i32, surveil: i32) -> Effect {
     ])
 }
 
-/// ETB-Tap-Opp-Creature shortcut: "When this creature enters, tap
-/// target creature an opponent controls." Wraps [`etb`] with the
-/// canonical "tempo tap" body. Used by Silverquill Lawkeeper-style
-/// "ETB tap a creature" Soldiers / Wizards.
+/// "When this creature enters, tap target creature an opponent controls."
 pub fn etb_tap_opp_creature() -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     etb(Effect::Tap {
@@ -1978,15 +1817,8 @@ pub fn etb_tap_opp_creature() -> TriggeredAbility {
     })
 }
 
-/// Dies-Lose-Life-Each-Opp shortcut: "When this creature dies, each
-/// opponent loses `amount` life." This is the asymmetric variant of
-/// [`dies_drain`] — opponents lose life on death but you do NOT gain
-/// any. Used by Pest Mawcrawler (batch 119), Witherbloom Reaper-Hand
-/// templates, and any future on-death drain body where the printed
-/// text omits the symmetric you-gain rider.
-///
-/// Push claude/modern_decks batch 123: shipped as part of the
-/// asymmetric-drain helper family.
+/// "When this creature dies, each opponent loses `amount` life" — the
+/// asymmetric [`dies_drain`] with no life gain (Pest Mawcrawler).
 pub fn dies_lose_life_each_opp(amount: i32) -> TriggeredAbility {
     on_dies(Effect::LoseLife {
         who: Selector::Player(PlayerRef::EachOpponent),
@@ -1994,16 +1826,9 @@ pub fn dies_lose_life_each_opp(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// Magecraft-Drain shortcut: "Magecraft — Whenever you cast or copy
-/// an instant or sorcery spell, each opponent loses `amount` life
-/// and you gain `amount` life." Wraps [`magecraft`] with the
-/// canonical symmetric drain body. Distinct from
-/// [`magecraft_drain_each_opp`] (asymmetric, opp-only) and
-/// [`magecraft_drain_target`] (target a single opp).
-///
-/// Push claude/modern_decks batch 123: shipped as part of the
-/// magecraft-drain helper family. Used by Witherbloom Apprentice-
-/// template magecraft drains across batches 119–123.
+/// Magecraft — "each opponent loses `amount` life and you gain `amount` life."
+/// Unlike [`magecraft_drain_each_opp`] (opponents only) and
+/// [`magecraft_drain_target`] (one target opponent).
 pub fn magecraft_drain(amount: i32) -> TriggeredAbility {
     magecraft(Effect::Drain {
         from: Selector::Player(PlayerRef::EachOpponent),
@@ -2012,16 +1837,8 @@ pub fn magecraft_drain(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// On-Attack-Drain shortcut: "Whenever this creature attacks, each
-/// opponent loses `amount` life and you gain `amount` life." Wraps
-/// [`on_attack`] with the canonical symmetric drain body. Used by
-/// Witherbloom Vinekeeper II-template attack-drain creatures, and
-/// any Vampire / Inkling whose printed text is "whenever attacks,
-/// drain N".
-///
-/// Push claude/modern_decks batch 125: shipped as part of the
-/// attack-trigger drain helper family. Mirrors `etb_drain` /
-/// `dies_drain` for the attack event.
+/// "Whenever this creature attacks, each opponent loses `amount` life and you
+/// gain `amount` life" — `etb_drain` / `dies_drain` for the attack event.
 pub fn on_attack_drain(amount: i32) -> TriggeredAbility {
     on_attack(Effect::Drain {
         from: Selector::Player(PlayerRef::EachOpponent),
@@ -2030,15 +1847,8 @@ pub fn on_attack_drain(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// On-Attack-Gain-Life shortcut: "Whenever this creature attacks,
-/// you gain `amount` life." Wraps [`on_attack`] with the
-/// canonical gain-life body. Used by lifelink-adjacent attack
-/// triggers (Lorehold Warrior-Priest template, Spirit Mentor's
-/// scaling lifegain) where the printed text omits the opp-loses
-/// half of a drain.
-///
-/// Push claude/modern_decks batch 125: shipped alongside
-/// [`on_attack_drain`] for asymmetric attack-trigger payoffs.
+/// "Whenever this creature attacks, you gain `amount` life" — the gain-only
+/// sibling of [`on_attack_drain`].
 pub fn on_attack_gain_life(amount: i32) -> TriggeredAbility {
     on_attack(Effect::GainLife {
         who: Selector::You,
@@ -2046,14 +1856,7 @@ pub fn on_attack_gain_life(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// On-Attack-Ping shortcut: "Whenever this creature attacks, it
-/// deals `amount` damage to any target." Wraps [`on_attack`] with
-/// a `DealDamage` body whose target is `target_filtered(Creature ∨
-/// Player ∨ Planeswalker)`. Used by Lorehold Pyrostriker-style
-/// "attack triggers a ping" creatures.
-///
-/// Push claude/modern_decks batch 125: shipped to collapse the
-/// recurring attack-trigger ping pattern.
+/// "Whenever this creature attacks, it deals `amount` damage to any target."
 pub fn on_attack_ping_any(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     on_attack(Effect::DealDamage {
@@ -2064,17 +1867,8 @@ pub fn on_attack_ping_any(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// Dies-Ping-Any shortcut: "When this creature dies, it deals
-/// `amount` damage to any target." Wraps [`on_dies`] with a
-/// `DealDamage` body whose target is `target_filtered(Creature ∨
-/// Player ∨ Planeswalker)`. Mirrors `on_attack_ping_any` /
-/// `etb_ping_any` for the on-death event. Used by parting-shot
-/// creatures (Mogg Fanatic / Goblin Cratermaker template) and
-/// Lorehold's death-pyromancer cycle.
-///
-/// Push claude/modern_decks batch 126: shipped to collapse the
-/// recurring on-death ping pattern across STX Lorehold / Prismari
-/// catalog cards.
+/// "When this creature dies, it deals `amount` damage to any target" (Mogg
+/// Fanatic-style) — `on_attack_ping_any` / `etb_ping_any` for the death event.
 pub fn dies_ping_any(amount: i32) -> TriggeredAbility {
     use crate::card::SelectionRequirement;
     on_dies(Effect::DealDamage {
@@ -2085,15 +1879,8 @@ pub fn dies_ping_any(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// Dies-Mint-Token shortcut: "When this creature dies, create
-/// `count` copies of `definition`." Wraps [`on_dies`] with the
-/// canonical mint-on-death body. Used by Pest Swarmer-style
-/// self-replacing bodies (a Pest mints a Pest on death) and the
-/// Lorehold death-spirit cycle.
-///
-/// Push claude/modern_decks batch 126: shipped to collapse the
-/// recurring death-mint pattern (Witherbloom Mossgrower, Lorehold
-/// Spiritbinder, etc.).
+/// "When this creature dies, create `count` copies of `definition`" (a Pest
+/// that mints a Pest on death).
 pub fn dies_mint_token(
     definition: crate::card::TokenDefinition,
     count: i32,
@@ -2105,14 +1892,9 @@ pub fn dies_mint_token(
     })
 }
 
-/// On-other-dies-Mint-Token shortcut: "Whenever another creature
-/// you control dies, create one copy of `definition`." Witherbloom
-/// aristocrats payoff that scales with sacrifice fodder. Mirror of
-/// `dies_mint_token` for the another-dies event scope.
-///
-/// Push claude/modern_decks batch 141: shipped to collapse the
-/// recurring "another dies → mint" pattern (Witherbloom Pestcaller
-/// II b141 + future aristocrats-style payoffs).
+/// "Whenever another creature you control dies, create one copy of
+/// `definition`" — `dies_mint_token` for the another-dies scope (Witherbloom
+/// aristocrats).
 pub fn on_other_dies_mint_token(
     definition: crate::card::TokenDefinition,
     count: i32,
@@ -2124,16 +1906,9 @@ pub fn on_other_dies_mint_token(
     })
 }
 
-/// Magecraft-Mint-Spirit shortcut: "Whenever you cast or copy an
-/// instant or sorcery spell, create one 2/2 R/W Spirit token."
-/// Lorehold-specific sibling of `magecraft_mint_token` that uses
-/// the shared `lorehold_spirit_token()` definition. Pulled into a
-/// helper so future Lorehold mint-on-cast creatures collapse to
-/// one line.
-///
-/// Push claude/modern_decks batch 141: shipped per the TODO
-/// suggestion under "Suggested next-up tasks (additions from batch
-/// 129)" to collapse Lorehold Sparkscholar II's spell-mint pattern.
+/// "Whenever you cast or copy an instant or sorcery spell, create a 2/2 R/W
+/// Spirit token" — `magecraft_mint_token` with the shared
+/// `lorehold_spirit_token()`.
 pub fn magecraft_mint_spirit() -> TriggeredAbility {
     magecraft(Effect::CreateToken {
         who: PlayerRef::You,
@@ -2142,14 +1917,8 @@ pub fn magecraft_mint_spirit() -> TriggeredAbility {
     })
 }
 
-/// Magecraft-Draw shortcut: "Whenever you cast or copy an instant
-/// or sorcery spell, draw a card." Wraps [`magecraft`] with the
-/// canonical Draw 1 body. Distinct from [`magecraft_loot`] which
-/// also discards. Used by Archmage Emeritus' draw-on-cast payoff
-/// and any future "magecraft → draw" engine creature.
-///
-/// Push claude/modern_decks batch 126: shipped to collapse the
-/// recurring magecraft-draw pattern.
+/// "Whenever you cast or copy an instant or sorcery spell, draw a card"
+/// (Archmage Emeritus). Unlike [`magecraft_loot`], no discard.
 pub fn magecraft_draw(amount: i32) -> TriggeredAbility {
     magecraft(Effect::Draw {
         who: Selector::You,
@@ -2157,14 +1926,8 @@ pub fn magecraft_draw(amount: i32) -> TriggeredAbility {
     })
 }
 
-/// Magecraft-Treasure shortcut: "Whenever you cast or copy an
-/// instant or sorcery spell, create a Treasure token." Wraps
-/// [`magecraft`] with a Treasure-mint body. Used by Prismari
-/// Inventor / Prismari Treasure Smith / Symphony of the Wilds-
-/// style treasure-on-cast bodies.
-///
-/// Push claude/modern_decks batch 126: shipped to collapse the
-/// recurring magecraft-treasure pattern.
+/// "Whenever you cast or copy an instant or sorcery spell, create a Treasure
+/// token."
 pub fn magecraft_treasure() -> TriggeredAbility {
     magecraft(Effect::CreateToken {
         who: PlayerRef::You,
@@ -2173,14 +1936,7 @@ pub fn magecraft_treasure() -> TriggeredAbility {
     })
 }
 
-/// On-Attack-Loot shortcut: "Whenever this creature attacks, draw
-/// a card, then discard a card." Wraps [`on_attack`] with the
-/// canonical Seq[Draw 1, Discard 1] body. Used by attack-trigger
-/// looters (Stormchaser-class fliers, Prismari attack-tempo
-/// bodies).
-///
-/// Push claude/modern_decks batch 126: shipped to collapse the
-/// recurring attack-loot pattern (Prismari Stormbearer template).
+/// "Whenever this creature attacks, draw a card, then discard a card."
 pub fn on_attack_loot() -> TriggeredAbility {
     on_attack(Effect::Seq(vec![
         Effect::Draw {
@@ -2195,12 +1951,9 @@ pub fn on_attack_loot() -> TriggeredAbility {
     ]))
 }
 
-/// "Whenever this creature attacks and isn't blocked, …" trigger
-/// (CR 509.3g). Wraps the new `EventKind::AttacksAndIsntBlocked`
-/// event added in batch 127. Fired once per attacker that
-/// finishes the declare-blockers step with zero blockers
-/// assigned. Used by ninja-style "combat-damage-only" payoffs and
-/// any "swing in for free" attack riders.
+/// "Whenever this creature attacks and isn't blocked, …" (CR 509.3g), on
+/// `EventKind::AttacksAndIsntBlocked`: fires once per attacker left with no
+/// blockers after the declare-blockers step.
 pub fn on_unblocked(effect: Effect) -> TriggeredAbility {
     TriggeredAbility {
         event: EventSpec::new(EventKind::AttacksAndIsntBlocked, EventScope::SelfSource),
@@ -2380,12 +2133,9 @@ pub fn afterlife(n: i32) -> TriggeredAbility {
 /// CR 702.124c — "Partner with [name]"'s printed trigger: "When this creature
 /// enters, target player may put [name] into their hand from their library,
 /// then shuffle." The keyword itself is deck construction (CR 702.124a); this
-/// is the half that does something in a game, and it is a *trigger*, so a card
-/// carries it explicitly the way [`extort`] is carried.
-///
-/// The target is a player (slot 0) and the search is theirs, which is why both
-/// `who`s are `Target(0)` rather than `You` — a Partner-with pair is usually
-/// pointed at its own controller, but the card says "target player".
+/// trigger is carried explicitly, as [`extort`] is. Both `who`s are
+/// `Target(0)`: the card says "target player", even though the pair usually
+/// points it at its own controller.
 pub fn partner_with_search(name: &str) -> TriggeredAbility {
     etb(Effect::MayDoBy {
         who: PlayerRef::Target(0),
@@ -2680,11 +2430,10 @@ pub fn bolster(n: i32) -> Effect {
     }
 }
 
-/// Fabricate N (CR 702.122) — an ETB triggered ability: "put N +1/+1
-/// counters on this creature, or create N 1/1 colorless Servo artifact
-/// creature tokens." Modeled as `etb(ChooseMode([AddCounter, CreateToken]))`;
-/// AutoDecider takes mode 0 (counters), a scripted decider can pick the
-/// Servos. Used by Cultivator of Blades, Angel of Invention-style cards.
+/// Fabricate N (CR 702.122) — ETB: "put N +1/+1 counters on this creature, or
+/// create N 1/1 colorless Servo artifact creature tokens," as
+/// `etb(ChooseMode([AddCounter, CreateToken]))`. AutoDecider takes the
+/// counters; a scripted decider can pick the Servos.
 pub fn fabricate(n: i32) -> TriggeredAbility {
     use crate::card::CounterType;
     let servo = crate::card::TokenDefinition {
@@ -2717,17 +2466,9 @@ pub fn fabricate(n: i32) -> TriggeredAbility {
     ]))
 }
 
-/// ETB-Mint-Token-With-Counters shortcut: "When this creature
-/// enters, create `count` copies of `definition`, then put
-/// `counter_amount` +1/+1 counters on each." Wraps [`etb`] with
-/// `Seq([CreateToken, AddCounter(LastCreatedToken, +1/+1, N)])`.
-/// Used by Quandrix Bloomforge (b128, 4-counter Fractal token) and
-/// Quandrix Geometer (b128, 2-counter Fractal). Mirrors the
-/// Body of Research and Fractal Summoning patterns.
-///
-/// Push claude/modern_decks batch 128: shipped to collapse the
-/// recurring "ETB mint a counter-scaled token" pattern across
-/// Quandrix Fractal-engine cards.
+/// "When this creature enters, create `count` copies of `definition`, then put
+/// `counter_amount` +1/+1 counters on each" — `Seq([CreateToken,
+/// AddCounter(LastCreatedToken, …)])` for Fractal-style tokens.
 pub fn etb_mint_token_with_counters(
     definition: crate::card::TokenDefinition,
     count: i32,
@@ -2748,15 +2489,8 @@ pub fn etb_mint_token_with_counters(
     ]))
 }
 
-/// ETB-Mint-And-Drain shortcut: "When this creature enters, create
-/// one copy of `definition` and each opponent loses `amount` life
-/// and you gain `amount` life." Wraps [`etb`] with
-/// `Seq([CreateToken, Drain(amount)])`. Used by Witherbloom
-/// Cauldronherder (b129, Pest mint + drain 2) and any future
-/// "mint a body, drain the table" Witherbloom Pest cards.
-///
-/// Push claude/modern_decks batch 129: collapses the 12-line
-/// `Seq[CreateToken, Drain]` pattern at the call site.
+/// "When this creature enters, create one copy of `definition` and each
+/// opponent loses `amount` life and you gain `amount` life."
 pub fn etb_mint_token_and_drain(
     definition: crate::card::TokenDefinition,
     amount: i32,
@@ -2775,15 +2509,8 @@ pub fn etb_mint_token_and_drain(
     ]))
 }
 
-/// ETB-Mint-Token-And-Gain-Life shortcut: "When this creature
-/// enters, create one copy of `definition` and gain `amount`
-/// life." Wraps [`etb`] with `Seq([CreateToken, GainLife])`.
-/// Asymmetric variant of [`etb_mint_token_and_drain`] (Witherbloom
-/// uses drain; Lorehold/Selesnya-style cards just gain).
-///
-/// Push claude/modern_decks batch 132: shipped to collapse the
-/// recurring "mint + gain" pattern (Lorehold Bell-Ringer template
-/// — mints a Spirit + gains 2 life, etc.).
+/// "When this creature enters, create one copy of `definition` and gain
+/// `amount` life" — the gain-only [`etb_mint_token_and_drain`].
 pub fn etb_mint_token_and_gain_life(
     definition: crate::card::TokenDefinition,
     amount: i32,
@@ -2801,14 +2528,7 @@ pub fn etb_mint_token_and_gain_life(
     ]))
 }
 
-/// ETB-Scry-and-Draw shortcut: "When this creature enters,
-/// scry `scry_amount`, then draw a card." Wraps [`etb`] with
-/// `Seq([Scry, Draw])`. Used by smoothing creatures that combine
-/// library-quality and card draw (Silverquill Scrivener-Apprentice
-/// template). The scry resolves first per the printed sequence.
-///
-/// Push claude/modern_decks batch 132: shipped to collapse the
-/// recurring "scry + draw" ETB pattern.
+/// "When this creature enters, scry `scry_amount`, then draw a card."
 pub fn etb_scry_and_draw(scry_amount: i32) -> TriggeredAbility {
     etb(Effect::Seq(vec![
         Effect::Scry {
@@ -2822,14 +2542,8 @@ pub fn etb_scry_and_draw(scry_amount: i32) -> TriggeredAbility {
     ]))
 }
 
-/// ETB-Pump-And-Grant-Keyword shortcut: target friendly creature
-/// gets +`power`/+`toughness` and gains `keyword` until end of
-/// turn. Returns a raw `Effect` (not wrapped in a trigger). Used
-/// by combat-trick instants like Lorehold Final Lesson (b132)
-/// that combine stat-pump with a keyword grant.
-///
-/// Push claude/modern_decks batch 132: shipped to collapse the
-/// recurring "+P/+T + keyword EOT" combat-trick pattern.
+/// Target friendly creature gets +`power`/+`toughness` and gains `keyword`
+/// until end of turn — a raw `Effect` for combat tricks, not a trigger.
 pub fn pump_and_grant_keyword(
     power: i32,
     toughness: i32,
@@ -2851,15 +2565,8 @@ pub fn pump_and_grant_keyword(
     ])
 }
 
-/// Magecraft-Scry-And-Draw shortcut: "Whenever you cast or copy an
-/// instant or sorcery spell, scry `scry_amount`, then draw a card."
-/// Wraps [`magecraft`] with `Seq([Scry, Draw])`. Mirror of
-/// `etb_scry_and_draw` for the magecraft event. Used by Sphinx's
-/// Insight-template magecraft engines that combine smoothing with
-/// card draw.
-///
-/// Push claude/modern_decks batch 133: shipped to collapse the
-/// recurring "magecraft → scry + draw" pattern.
+/// Magecraft — "scry `scry_amount`, then draw a card"; `etb_scry_and_draw` for
+/// the magecraft event.
 pub fn magecraft_scry_and_draw(scry_amount: i32) -> TriggeredAbility {
     magecraft(Effect::Seq(vec![
         Effect::Scry {
@@ -2873,15 +2580,9 @@ pub fn magecraft_scry_and_draw(scry_amount: i32) -> TriggeredAbility {
     ]))
 }
 
-/// Dies-Mint-Token-And-Drain shortcut: "When this creature dies,
-/// create a token and each opponent loses `amount` life and you
-/// gain `amount` life." Mirror of `etb_mint_token_and_drain` for
-/// the on-death event. Used by Witherbloom Pest-aristocrats
-/// templates that replace the dying body with a fresh Pest while
-/// also draining the table.
-///
-/// Push claude/modern_decks batch 133: shipped to collapse the
-/// recurring "die → mint + drain" pattern.
+/// "When this creature dies, create a token and each opponent loses `amount`
+/// life and you gain `amount` life" — `etb_mint_token_and_drain` for the death
+/// event.
 pub fn dies_mint_token_and_drain(
     definition: crate::card::TokenDefinition,
     amount: i32,
@@ -2900,14 +2601,10 @@ pub fn dies_mint_token_and_drain(
     ]))
 }
 
-/// Magecraft trigger that grows the source AND drains each opponent:
-/// "Whenever you cast or copy an instant or sorcery spell, put a
-/// +1/+1 counter on this creature and each opponent loses `amount`
-/// life and you gain `amount` life." A common Witherbloom "build-
-/// your-own-Apprentice" shape — see Witherbloom Reapcaster (b146)
-/// for the original card. The Seq order matters: counter ride before
-/// the drain so SBA-evaluated counter pump is visible to "if you
-/// gained life" payoffs that fire on the drain.
+/// Magecraft — "put a +1/+1 counter on this creature and each opponent loses
+/// `amount` life and you gain `amount` life" (Witherbloom Reapcaster). The
+/// counter goes on before the drain, so "if you gained life" payoffs see the
+/// grown creature.
 pub fn magecraft_self_pump_and_drain(amount: i32) -> TriggeredAbility {
     use crate::card::CounterType;
     magecraft(Effect::Seq(vec![
@@ -2924,12 +2621,8 @@ pub fn magecraft_self_pump_and_drain(amount: i32) -> TriggeredAbility {
     ]))
 }
 
-/// ETB trigger that drains each opponent AND draws you a card:
-/// "When this creature enters, each opponent loses `amount` life,
-/// you gain `amount` life, and you draw a card." A Silverquill /
-/// Witherbloom mid-curve value body shape. Closes a recurring
-/// pattern observed in batch 146 (`Inkling Decree`, `Inkling
-/// Bloodscribe` future revisions).
+/// "When this creature enters, each opponent loses `amount` life, you gain
+/// `amount` life, and you draw a card."
 pub fn etb_drain_and_draw_one(amount: i32) -> TriggeredAbility {
     etb(Effect::Seq(vec![
         Effect::Drain {
@@ -2944,13 +2637,8 @@ pub fn etb_drain_and_draw_one(amount: i32) -> TriggeredAbility {
     ]))
 }
 
-/// Magecraft-Mint-Pest shortcut: "Whenever you cast or copy an
-/// instant or sorcery spell, create a 1/1 B/G Pest token with
-/// 'When this token attacks, you gain 1 life.'" Wraps
-/// [`magecraft`] with the shared `stx_pest_token()` mint body.
-/// Pulled out per the TODO suggestion under "Suggested next-up
-/// tasks" — collapses the Witherbloom Pestmancer / Sedgemoor
-/// Witch-template mint pattern to one line.
+/// Magecraft — "create a 1/1 B/G Pest token with 'When this token attacks, you
+/// gain 1 life'" (the shared `stx_pest_token()`).
 pub fn magecraft_mint_pest() -> TriggeredAbility {
     magecraft(Effect::CreateToken {
         who: PlayerRef::You,
@@ -2972,13 +2660,9 @@ pub fn magecraft_mint_inkling() -> TriggeredAbility {
     })
 }
 
-/// Magecraft-Mint-Fractal shortcut: "Whenever you cast or copy an
-/// instant or sorcery spell, create a 0/0 G/U Fractal token with
-/// X +1/+1 counters on it" — `count` controls the number of
-/// counters stamped via [`crate::card::CounterType::PlusOnePlusOne`]
-/// against [`Selector::LastCreatedToken`]. Pairs with the printed
-/// "Quandrix mage casts a spell → 1/1 Fractal" cycle. Wraps
-/// [`magecraft`] with `Seq[CreateToken(0/0 Fractal), AddCounter]`.
+/// Magecraft — "create a 0/0 G/U Fractal token with X +1/+1 counters on it", X
+/// = `counters`, put on [`Selector::LastCreatedToken`] as
+/// [`crate::card::CounterType::PlusOnePlusOne`].
 pub fn magecraft_mint_fractal(counters: i32) -> TriggeredAbility {
     use crate::card::CounterType;
     magecraft(Effect::Seq(vec![
@@ -2995,12 +2679,8 @@ pub fn magecraft_mint_fractal(counters: i32) -> TriggeredAbility {
     ]))
 }
 
-/// Dies-Mint-Pest shortcut: "When this creature dies, create a
-/// 1/1 B/G Pest token." Wraps [`on_dies`] with the shared
-/// `stx_pest_token()` mint body. Pulled out per the TODO
-/// suggestion: collapses Witherbloom Pest-Spawner-template
-/// on-death replacement bodies (Pest Swarmer / future Pest cards
-/// that self-replace on death) to one line.
+/// "When this creature dies, create a 1/1 B/G Pest token" (the shared
+/// `stx_pest_token()`).
 pub fn dies_mint_pest() -> TriggeredAbility {
     on_dies(Effect::CreateToken {
         who: PlayerRef::You,
@@ -3022,15 +2702,7 @@ pub fn on_attack_mint_lorehold_spirit() -> TriggeredAbility {
     })
 }
 
-/// Magecraft-AddCounter-Self shortcut: "Whenever you cast or copy
-/// an instant or sorcery spell, put a +1/+1 counter on this
-/// creature." Wraps [`magecraft`] with an `AddCounter` body
-/// targeting `Selector::This`. Used by self-growing magecraft
-/// bodies (Pensive Professor secondary trigger, Inkling
-/// Bookbinder, Inkling Calligraphist, Silverquill Soulbinder,
-/// Witherbloom Sproutchant, etc.) — currently inlined ~15 times
-/// across `stx::*`; the helper collapses each call site to one
-/// line and locks in the Self selector against future renames.
+/// Magecraft — "put a +1/+1 counter on this creature" (Inkling Bookbinder).
 pub fn magecraft_add_counter_self() -> TriggeredAbility {
     use crate::card::CounterType;
     magecraft(Effect::AddCounter {
@@ -3040,10 +2712,8 @@ pub fn magecraft_add_counter_self() -> TriggeredAbility {
     })
 }
 
-/// Magecraft shortcut: "Whenever you cast or copy an instant or
-/// sorcery spell, put a shield counter on this creature." Combos
-/// with the CR 122.1c shield-counter wire (each shield blocks one
-/// damage or one destroy and pops). Push (modern_decks batch 173).
+/// Magecraft — "put a shield counter on this creature" (CR 122.1c: each shield
+/// stops one damage or destroy event).
 pub fn magecraft_add_shield_self() -> TriggeredAbility {
     use crate::card::CounterType;
     magecraft(Effect::AddCounter {
@@ -3053,10 +2723,8 @@ pub fn magecraft_add_shield_self() -> TriggeredAbility {
     })
 }
 
-/// Magecraft shortcut: "Whenever you cast or copy an instant or
-/// sorcery spell, put a finality counter on this creature." Combos
-/// with the CR 122.1h finality wire (the creature exiles instead of
-/// going to graveyard on next death). Push (modern_decks batch 173).
+/// Magecraft — "put a finality counter on this creature" (CR 122.1h: it is
+/// exiled instead the next time it would die).
 pub fn magecraft_add_finality_self() -> TriggeredAbility {
     use crate::card::CounterType;
     magecraft(Effect::AddCounter {
@@ -3066,12 +2734,8 @@ pub fn magecraft_add_finality_self() -> TriggeredAbility {
     })
 }
 
-/// Add a finality counter to a target creature you control. Used as
-/// the resolution body of cards that grant the finality "exile on
-/// death" rider to a target (Doom Whisperer-style enabler — though
-/// Doom Whisperer's printed line is "you may put a -1/-1 counter on
-/// it", this helper supports the "+finality counter" branch). Push
-/// (modern_decks batch 175).
+/// Put a finality counter on target creature you control, as a spell or ability
+/// body.
 pub fn add_finality_to_target_creature() -> Effect {
     use crate::card::CounterType;
     Effect::AddCounter {
@@ -3081,9 +2745,7 @@ pub fn add_finality_to_target_creature() -> Effect {
     }
 }
 
-/// Add a shield counter to a target creature. Used by cards that
-/// grant the CR 122.1c "shield" protection to a creature (Aegisblade,
-/// Wardward analogs). Push (modern_decks batch 175).
+/// Put a shield counter (CR 122.1c) on target creature.
 pub fn add_shield_to_target_creature() -> Effect {
     use crate::card::CounterType;
     Effect::AddCounter {
@@ -3093,16 +2755,10 @@ pub fn add_shield_to_target_creature() -> Effect {
     }
 }
 
-/// Predicate shortcut: "You have at least `n` cards matching
-/// `filter` in your graveyard." Wraps the canonical spell-mastery
-/// / delirium-threshold / Murderous-Cut-style gate pattern:
-/// `Predicate::SelectorCountAtLeast { sel: CardsInZone(You,
-/// Graveyard, filter), n: Const(n) }`. Per the TODO suggestion
-/// (batch 153 follow-ups), this collapses ~15 call sites in
-/// `decks::modern` / `stx::*` that all rebuild the same shape.
-/// Use for Fiery Impulse (IS x 2), Searing Blaze (any x 2),
-/// Murderous Cut (any x 7 for delve), Mishra's Bauble (any x N),
-/// any "spell mastery", "delirium", or "threshold" gate.
+/// "You have at least `n` cards matching `filter` in your graveyard" —
+/// `Predicate::SelectorCountAtLeast { sel: CardsInZone(You, Graveyard, filter),
+/// n: Const(n) }`, the spell mastery / delirium / threshold-style gate (Searing
+/// Blaze: any two).
 pub fn cards_in_graveyard_at_least(
     filter: crate::card::SelectionRequirement,
     n: i32,
@@ -3117,10 +2773,9 @@ pub fn cards_in_graveyard_at_least(
     }
 }
 
-/// Predicate shortcut for the printed "spell mastery" threshold —
-/// "if there are two or more instant and/or sorcery cards in your
-/// graveyard." Equivalent to `cards_in_graveyard_at_least(IS, 2)`.
-/// Used by Fiery Impulse, Magmatic Insight-promotion-style cards.
+/// The printed "spell mastery" gate — "if there are two or more instant and/or
+/// sorcery cards in your graveyard": `cards_in_graveyard_at_least(IS, 2)`
+/// (Fiery Impulse).
 pub fn spell_mastery_gate() -> Predicate {
     use crate::card::{CardType, SelectionRequirement};
     cards_in_graveyard_at_least(
@@ -3149,15 +2804,9 @@ pub fn etb_drain_and_counter_self(amount: i32) -> TriggeredAbility {
     ]))
 }
 
-/// On-Combat-Damage-To-Player + Drain shortcut: "Whenever this
-/// creature deals combat damage to a player, each opponent loses
-/// `amount` life and you gain `amount` life." Asymmetric drain-
-/// on-connect — same shape as `on_combat_damage_to_player_gain_life`
-/// but with a drain body instead of pure gain.
-///
-/// Push (claude/modern_decks batch 201): companion to
-/// `on_combat_damage_to_player_gain_life`. Used by Witherbloom
-/// connect-drain cards.
+/// "Whenever this creature deals combat damage to a player, each opponent loses
+/// `amount` life and you gain `amount` life" — the drain sibling of
+/// `on_combat_damage_to_player_gain_life`.
 pub fn on_combat_damage_to_player_drain(amount: i32) -> TriggeredAbility {
     use crate::card::{EventKind, EventScope, EventSpec};
     TriggeredAbility {
@@ -3170,14 +2819,11 @@ pub fn on_combat_damage_to_player_drain(amount: i32) -> TriggeredAbility {
     }
 }
 
-/// Modular N (CR 702.43) — the *dies* half: "When this creature dies,
-/// you may put its +1/+1 counters on target artifact creature." Pair it
-/// with `enters_with_counters: Some((PlusOnePlusOne, Const(n)))` on the
-/// card def (the "enters with N +1/+1 counters" half). The dying source
-/// is already in the graveyard, so this adds counters to the target
-/// equal to the source's *last-known* +1/+1 count (`Value::CountersOn
-/// { This }`, the same last-known path Hangarback Walker reads) rather
-/// than a literal move from a permanent that no longer exists.
+/// Modular N (CR 702.43), the dies half: "When this creature dies, you may put
+/// its +1/+1 counters on target artifact creature." Pair with
+/// `enters_with_counters: Some((PlusOnePlusOne, Const(n)))`. The source is
+/// already in the graveyard, so the target gets the source's last-known +1/+1
+/// count (`Value::CountersOn { This }`, as Hangarback Walker reads).
 pub fn modular_dies() -> TriggeredAbility {
     on_dies(Effect::MayDo {
         description: "Put +1/+1 counters on target artifact creature".into(),
@@ -3273,11 +2919,9 @@ pub fn scavenge(cost: crate::mana::ManaCost) -> ActivatedAbility {
 
 /// Craft (CR 702.167): "[cost], Exile this artifact, Exile `count` other
 /// [filter] from among permanents you control and/or [filter] cards from your
-/// graveyard: Return this card transformed. Activate only as a sorcery." The
-/// source's exile-and-return-transformed rides `ExileSelfReturnTransformed`;
-/// the additional "exile N other objects" cost rides `craft_exile_cost`; a
-/// `count` of 0 is "craft with one or more". The front face must carry a
-/// `back_face`. LCI cycle.
+/// graveyard: Return this card transformed. Activate only as a sorcery." Rides
+/// `ExileSelfReturnTransformed` plus `craft_exile_cost` (`count` 0 = "one or
+/// more"). The front face must carry a `back_face`.
 pub fn craft(cost: crate::mana::ManaCost, filter: SelectionRequirement, count: u32) -> ActivatedAbility {
     ActivatedAbility {
         mana_cost: cost,
@@ -3362,13 +3006,11 @@ pub fn offering(
     }
 }
 
-/// Graft N (CR 702.58) — the trigger half: "Whenever another creature
-/// enters, **if this permanent has a +1/+1 counter on it**, you may move a
-/// +1/+1 counter from this permanent onto that creature." Pair with
-/// `enters_with_counters: Some((PlusOnePlusOne, Const(n)))`. The intervening
-/// if (CR 603.4) matters at a big table: without it an empty grafter
-/// triggered on every creature entering — 47 dead Llanowar Reborn triggers
-/// on one stack in a 33-seat pod.
+/// Graft N (CR 702.58), the trigger half: "Whenever another creature enters, if
+/// this permanent has a +1/+1 counter on it, you may move a +1/+1 counter from
+/// this permanent onto that creature." Pair with `enters_with_counters`. The
+/// intervening if (CR 603.4) matters at a big table: without it an empty
+/// grafter triggered on every entering creature.
 pub fn graft() -> TriggeredAbility {
     use crate::card::{EventKind, EventScope, EventSpec};
     TriggeredAbility {

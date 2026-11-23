@@ -2,17 +2,14 @@
 //!
 //! Two modes:
 //!
-//! * `--certify` — score every *candidate* against the certifier: is
-//!   there a solution, and does the default heuristic already find it?
-//!   This is the corpus-authoring tool. A candidate that certifies
-//!   trivial is not a puzzle, and one with no solution is a broken
-//!   position; both are reported rather than quietly dropped.
-//! * default — run each profile against the kept corpus and report
-//!   pass rates overall, by mechanic, and by difficulty tier.
+//! * `--certify` — score every *candidate* against the certifier: is there a
+//!   solution, and does the default heuristic already find it? The
+//!   corpus-authoring tool; trivial candidates and positions with no solution
+//!   are reported, not dropped.
+//! * default — run each profile against the kept corpus and report pass
+//!   rates overall, by mechanic, and by difficulty tier.
 //!
-//! Unlike `bot_ladder`, this is deterministic: the same binary on the
-//! same corpus gives the same number every time, so a one-point move is
-//! a real change rather than a sampling artifact.
+//! Deterministic, unlike `bot_ladder`: a one-point move is a real change.
 
 use crabomination::server::puzzle::{self, Goal};
 use crabomination::server::puzzle_corpus::{Certified, Mechanic, Puzzle, certify};
@@ -119,8 +116,8 @@ fn heuristic_weights(profile: &str) -> Option<EvalWeights> {
 /// `mcts-net67-menu-<windows>[-suffix..]` name is the ladder's menu search
 /// (`server::mcts::menu_profile`; priors from `CRAB_POLICY_NET`):
 /// `mcts-net67-menu-mc-df-anm10` is the client's limited pilot since
-/// 2026-11-10, `mcts-net67-menu-mc` the one before it (2026-11-02), and
-/// `mcts-net67-menu-mc-fixes` this tool's first name for that one.
+/// 2026-11-10, `mcts-net67-menu-mc` the previous one (`-mc-fixes` its old
+/// name here).
 fn mcts_cfg(profile: &str) -> Option<MctsConfig> {
     if profile.starts_with("mcts-net67-menu-") {
         assert!(

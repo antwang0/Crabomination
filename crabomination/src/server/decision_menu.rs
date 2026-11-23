@@ -466,11 +466,11 @@ pub fn key(g: &GameState, seat: usize, a: &GameAction) -> String {
 
 /// [`key`]; at `keying.structural` a block declaration keeps which blockers
 /// share an attacker, and at `keying.state` a named permanent carries its
-/// state where a same-named one differs from it. By names alone "the 1/4 and the 2/2 each block a different
-/// Raider" and "both block one Raider" are one move, so against same-named
-/// attackers (tokens) a list carried only the first the generator made —
-/// the double block (the blunder set's `control_keeps_its_blockers_home`,
-/// 2026-11-10). Same-named attackers stay interchangeable.
+/// state where a same-named one differs. By names alone "the 1/4 and the
+/// 2/2 each block a different Raider" and "both block one Raider" are one
+/// move, so against same-named attackers (tokens) the double block could
+/// go missing (blunder item `control_keeps_its_blockers_home`). Same-named
+/// attackers stay interchangeable.
 pub fn key_with(g: &GameState, seat: usize, a: &GameAction, keying: Keying) -> String {
     if keying.structural && let GameAction::DeclareBlockers(v) = a {
         let name = |id: CardId| -> String {

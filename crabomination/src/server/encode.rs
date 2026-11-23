@@ -1,24 +1,18 @@
-//! GameState → net-input encoding for the SOS sealed value net.
+//! GameState → net-input encoding for the value net.
 //!
-//! The other half of the contract lives in `crabomination_nn` (the tensor
-//! types, the shard format, and the forward pass); this module owns the one
-//! thing only the engine can do — reading a [`GameState`] into those types.
-//! Everything encoded here is information the encoded seat could see across
-//! the table: its own hand, both boards and graveyards, and *counts* of the
-//! hidden zones. The opponent's hand and either library's contents never
-//! enter the feature vector, so a net trained on these rows can't learn to
-//! peek.
+//! The other half of the contract lives in `crabomination_nn` (tensor types,
+//! shard format, forward pass); this module reads a [`GameState`] into those
+//! types. Only what the encoded seat could see is encoded: its own hand, both
+//! boards and graveyards, and *counts* of hidden zones. The opponent's hand
+//! and either library's contents never enter the features, so a net can't
+//! learn to peek.
 //!
-//! Scope was deliberately SOS sealed through 2026-08-30 — one set's worth
-//! of names kept the embedding table small and well-fed. The vocabulary
-//! now also carries the modern cube pool ([`crate::cube::cube_pool_all`]),
-//! appended after the frozen SOS seed so no SOS index moved and every
-//! post-freeze net pads cleanly; a net *trained* before the append simply
-//! has zero rows for the cube names and reads them as unknown, exactly as
-//! it always did. Tokens and anything still off-vocabulary encode as
-//! index 0 (unknown) and are represented by their object features alone —
-//! a Pest token is "an unknown 1/1" to the net, which is most of what it
-//! needs to know.
+//! The vocabulary started as SOS sealed only and now also carries the modern
+//! cube pool ([`crate::cube::cube_pool_all`]), appended after the frozen SOS
+//! seed so no SOS index moved; a net trained before the append reads the cube
+//! names as unknown, as it always did. Tokens and other off-vocabulary cards
+//! encode as index 0 (unknown) and are represented by their object features
+//! alone (a Pest token is "an unknown 1/1").
 
 use crate::fxhash::HashMap;
 
@@ -35,46 +29,35 @@ use crate::mana::ManaCost;
 /// Card-name → embedding-index table. Index 0 is reserved for unknown
 /// names.
 ///
-/// **Indices come from [`crate::server::vocab_snapshot::VOCAB_SNAPSHOT`],
-/// not from the pool.** They used to be the pool's sorted-name order, which
-/// made every trained net a hostage to the card list: adding one SOS card
-/// shifted the index of every card sorting after it, and the seven
-/// committed deck nets are dead of exactly that. A snapshot name owns its
-/// index whether or not it is still in the pool; a pool name outside the
-/// snapshot is appended after it in sorted order. So the table only ever
-/// grows at the end, and a net trained against a shorter one can be
-/// zero-padded rather than retired.
+/// ⚠ Indices come from [`crate::server::vocab_snapshot::VOCAB_SNAPSHOT`],
+/// not from the pool. Pool sorted-name order made every net hostage to the
+/// card list (adding one card shifted every later index; seven committed
+/// deck nets died of it). A snapshot name owns its index whether or not it
+/// is still in the pool; a pool name outside the snapshot is appended in
+/// sorted order. The table only grows at the end, so a net trained against
+/// a shorter one is zero-padded rather than retired.
 pub struct Vocab {
     map: HashMap<&'static str, u16>,
-    /// The same table keyed on the name's **address**, holding its length
-    /// beside the index.
+    /// The same table keyed on the name's address, holding its length beside
+    /// the index. A card's name is a `&'static str` owned by its catalog
+    /// factory, so a pointer hash replaces a string hash plus `memcmp` on a
+    /// hot path (one call per encoded object and library card).
     ///
-    /// A card's name is a `&'static str` literal owned by its catalog
-    /// factory, so the same card always presents the same pointer and a
-    /// pointer hash replaces a string hash *plus* the `memcmp` that confirms
-    /// it. `index_of` is ~137,000 calls over twenty `selfplay_train` games —
-    /// one per encoded object plus one per library card.
+    /// The length is not redundant: the linker may lay a short literal at the
+    /// front of a longer one with the same pointer, so only (address, length)
+    /// identifies a string.
     ///
-    /// **The length is not redundant.** Two `&str` at the same address with
-    /// the same length are the same bytes, so that pair identifies a string;
-    /// the address *alone* does not, because the linker is free to lay a
-    /// short literal at the front of a longer one and hand both the same
-    /// pointer. One `usize` compare closes that, and a miss is free anyway.
-    ///
-    /// A **cache, not a second source of truth**: it is filled from `map`, so
-    /// a hit returns exactly what `map` would, and anything whose name did
-    /// not come from a pool factory (a token, an off-set card) simply misses
-    /// and falls through.
+    /// A cache, not a second source of truth: filled from `map`, so a hit
+    /// returns what `map` would, and a name not from a pool factory (a token,
+    /// an off-set card) misses and falls through.
     by_ptr: HashMap<usize, (usize, u16)>,
 }
 
 impl Vocab {
-    /// The frozen-snapshot universe: every card in the SOS draftable pool,
-    /// the five basic lands the sealed builder adds, and — since
-    /// 2026-08-30 — the modern cube pool, indexed against the frozen
-    /// snapshot. The name predates the cube append and is kept for
-    /// call-site stability; there is one growing vocabulary, not one per
-    /// format, which is what lets a single net play every pool.
+    /// The frozen-snapshot universe: the SOS draftable pool, the five basics
+    /// and (since 2026-08-30) the modern cube pool. The name predates the
+    /// cube append and is kept for call-site stability; there is one growing
+    /// vocabulary, which is what lets a single net play every pool.
     pub fn sos_sealed() -> Vocab {
         let mut map: HashMap<&'static str, u16> = HashMap::default();
         for (i, name) in crate::server::vocab_snapshot::VOCAB_SNAPSHOT.iter().enumerate() {
@@ -140,21 +123,17 @@ impl Vocab {
     }
 }
 
-/// Which round-11 feature blocks the encoder emits.
+/// Which round-11 feature blocks the encoder emits: a measurement control,
+/// so each block can be switched off while everything else stays fixed
+/// (the library group and castability block landed with a vocabulary change,
+/// leaving three confounded causes).
 ///
-/// A measurement control, in the house style of keeping the replaced
-/// behaviour available: the library group and the castability block landed
-/// together with a vocabulary change, so "the new encoder scores worse" has
-/// three candidate causes and no way to separate them without being able to
-/// switch each block off while everything else stays fixed.
-///
-/// Ablated blocks are *zeroed*, not removed — feature counts and
-/// [`crabomination_nn::SHARD_VERSION`] are unchanged, so an ablated run and
-/// a full run produce interchangeable shards and identically-shaped nets.
-/// Process-global for the same reason the net slot and the bot's jitter seed
-/// are: the encoder is called from deep inside the search and threading a
-/// config through every call site would be a worse trade than a flag set
-/// once at startup.
+/// Ablated blocks are *zeroed*, not removed: feature counts and
+/// [`crabomination_nn::SHARD_VERSION`] are unchanged, so ablated and full
+/// runs produce interchangeable shards and identically-shaped nets.
+/// Process-global (like the net slot and jitter seed) because the encoder is
+/// called deep inside the search; a flag set once at startup beats threading
+/// a config through every call site.
 static ABLATE: std::sync::atomic::AtomicU16 = std::sync::atomic::AtomicU16::new(0);
 const ABLATE_LIBRARY: u16 = 1;
 const ABLATE_CASTABILITY: u16 = 2;
@@ -166,10 +145,9 @@ const ABLATE_EXPIRY: u16 = 64;
 const ABLATE_COUNTERS: u16 = 128;
 const ABLATE_V8: u16 = 256;
 
-/// Every ablatable block by the name the trainer and the ladder accept.
-/// One table so the two binaries can't drift on which names are legal —
-/// a mistyped block that silently ablates nothing is the failure mode
-/// this exists to prevent.
+/// Every ablatable block by the name the trainer and the ladder accept: one
+/// table so the two binaries can't drift, since a mistyped block that
+/// silently ablates nothing is the failure this prevents.
 ///
 /// * `lib` / `cast` — the round-11 library group and castability block.
 /// * `rel` — the round-12 block: the relation flags (28..=33, 35),
@@ -198,12 +176,10 @@ pub const ABLATION_BLOCKS: [(&str, u16); 9] = [
     ("v8", ABLATE_V8),
 ];
 
-/// Turn the named feature blocks *off* for an ablation run; everything
-/// not named stays on, and an empty list is the full encoder. Replaces
-/// the whole mask, so it is idempotent and a later call can restore the
-/// default. Unknown names are an error rather than a no-op: silently
-/// ignoring a typo produces a "control" run that is really a second
-/// copy of the arm.
+/// Turn the named feature blocks *off*; everything else stays on and an
+/// empty list is the full encoder. Replaces the whole mask (idempotent).
+/// Unknown names are an error: a silently ignored typo makes a "control"
+/// run that is really a second copy of the arm.
 pub fn set_encode_ablation_off(off: &[&str]) -> Result<(), String> {
     let mut mask = 0u16;
     for name in off {
@@ -236,11 +212,9 @@ pub fn encodable(g: &GameState) -> bool {
 /// the rest of the bot stack — see [`encodable`].
 pub fn encode_state(g: &GameState, seat: usize, vocab: &Vocab) -> EncodedState {
     // One frozen-layer scope for the whole encode (modern precondition 2):
-    // the battlefield reads below take layer-resolved truth per permanent
-    // (`computed_permanent_on`, memoized per card inside the scope), and
-    // the castability block already opened a scope of its own — nested
-    // scopes reuse the outer gather, so this is one continuous-effect
-    // gather per encoded state, not one per read.
+    // battlefield reads take layer-resolved truth per permanent (memoized
+    // inside the scope), and the castability block's nested scope reuses
+    // the outer gather — one continuous-effect gather per encoded state.
     g.with_frozen_layers(|g| encode_state_inner(g, seat, vocab, &untapped_sources(g)))
 }
 
@@ -283,11 +257,9 @@ pub fn encode_state_with_ids(g: &GameState, seat: usize, vocab: &Vocab) -> (Enco
     (s, ids)
 }
 
-/// Both seats' encodings of one position, in one scope and off one pair
-/// of source tables. Each seat's castability block reads *both* seats'
-/// untapped sources, so two `encode_state` calls built the same two
-/// tables twice — four `mana_source_table` builds a recorder snapshot
-/// where two are the whole answer (PERF `(-270)`).
+/// Both seats' encodings of one position, in one scope and off one pair of
+/// source tables (each seat's castability block reads both seats' sources,
+/// so two `encode_state` calls built them twice; PERF `(-270)`).
 pub fn encode_state_pair(g: &GameState, vocab: &Vocab) -> [EncodedState; 2] {
     g.with_frozen_layers(|g| {
         let sources = untapped_sources(g);
@@ -310,18 +282,13 @@ fn untapped_sources(g: &GameState) -> [Vec<[bool; 5]>; 2] {
 
 /// A board number on its way into a feature, clamped first.
 ///
-/// **Every `as f32 / k` in this file assumes a bounded numerator and none of
-/// them had one.** A life total (Beacon of Immortality) and a power
-/// (Exponential Growth's "double target creature's power {X} times") both
-/// reach `i32::MAX` from correct cards, and `life / 20.0` then hands the net
-/// 1.07e8 — a feature seven orders of magnitude outside anything it was
-/// trained on. The rules-facing values stay exact and merely saturate
-/// (`CardInstance::pump`, `compute_permanent`); this is the guard at the point
-/// where a number stops being a rules quantity and becomes an input.
-///
-/// `player::SCALE_CEILING` is the evaluator's own ceiling, so the two
-/// consumers agree about where a board number stops being readable. No state
-/// inside `±10,000` encodes differently.
+/// Every `as f32 / k` in this file assumes a bounded numerator. Correct
+/// cards reach `i32::MAX` (Beacon of Immortality's life, Exponential
+/// Growth's power), and `life / 20.0` would hand the net 1.07e8. Rules
+/// values stay exact and merely saturate (`CardInstance::pump`,
+/// `compute_permanent`); this is the guard where a rules quantity becomes an
+/// input. `player::SCALE_CEILING` is the evaluator's own ceiling, so the two
+/// consumers agree. No state inside `±10,000` encodes differently.
 #[inline]
 pub(super) fn scaled(n: i32) -> f32 {
     n.clamp(-crate::player::SCALE_CEILING, crate::player::SCALE_CEILING) as f32
@@ -457,13 +424,11 @@ pub(super) fn encode_board_object_into(
         if g.block_map.contains_key(&c.id) {
             o.feats[28] = 1.0;
         }
-        // CR 509.1b: an attacker that became blocked stays blocked
-        // when its blockers leave combat (first-strike deaths,
-        // post-block removal) — `block_map` forgets that the moment
-        // `remove_permanent_from_combat` runs, `blocked_attackers`
-        // doesn't, and the damage step reads the latter. The union
-        // also keeps synthetically built states (tests, hand-rolled
-        // sims) that fill only the map reading as blocked.
+        // CR 509.1b: an attacker that became blocked stays blocked when
+        // its blockers leave combat. `block_map` forgets that the moment
+        // `remove_permanent_from_combat` runs, `blocked_attackers` doesn't
+        // (and the damage step reads it). The union keeps synthetic states
+        // that fill only the map reading as blocked.
         if g.blocked_attackers().contains(&c.id)
             || g.block_map.values().any(|attackers| attackers.contains(&c.id))
         {
@@ -501,13 +466,10 @@ fn encode_state_inner(
     let no_rel = ctx.no_rel;
     let no_combat = ctx.no_combat;
 
-    // All eight groups share one buffer (PERF `(-107)`), so the whole state
-    // is one reserve and one allocation. Every group's size is known before
-    // its loop except the library's, which is deduplicated by name and so is
-    // *bounded* by the library's length; that surplus is the one allocation's
-    // slack, not a second allocation. Eight separately reserved `Vec`s were
-    // 66,485 `do_reserve_and_handle` growths over 12,660 encoded states —
-    // 5.25 apiece, 28.4 M Ir, 0.48 % of an actor.
+    // All eight groups share one buffer (PERF `(-107)`): one reserve, one
+    // allocation. Every group's size is known up front except the library's,
+    // which is deduplicated by name and so only *bounded* by its length; the
+    // surplus is slack, not a second allocation.
     s.reserve(
         g.battlefield.len()
             + g.players[seat].hand.len()
@@ -516,14 +478,11 @@ fn encode_state_inner(
             + if ablated(ABLATE_LIBRARY) { 0 } else { g.players[seat].library.len() }
             + if no_rel { 0 } else { g.stack.len() },
     );
-    // The buffer is laid out group by group, so the battlefield's controller
-    // split is two filtered passes rather than one interleaved one: the same
-    // cards are encoded, in the same within-group order, by the same code.
-    // The board totals for the globals (lands, untapped lands, creatures,
-    // power by side) are summed here off the same computed view: a
-    // separate totals walk asked `computed_permanent_on` a second time per
-    // permanent — 75,948 memo hits at ~342 Ir on a 60-game actor run, half
-    // the encoder's layer asks (PERF `(-266)`).
+    // The buffer is laid out group by group, so the controller split is two
+    // filtered passes (same cards, same within-group order, same code). The
+    // globals' board totals (lands, untapped lands, creatures, power by side)
+    // are summed here off the same computed view rather than by a second
+    // `computed_permanent_on` walk (PERF `(-266)`).
     let (mut lands, mut untapped, mut creatures, mut power) = ([0i32; 2], [0i32; 2], [0i32; 2], [0i32; 2]);
     for (group, mine) in [(G_BF_SELF, true), (G_BF_OPP, false)] {
         let side = if mine { 0 } else { 1 };
@@ -618,11 +577,9 @@ fn encode_state_inner(
     gl[22] = scaled(power[0]) / 12.0;
     gl[23] = scaled(power[1]) / 12.0;
     // Mana actually available, by colour, for both seats. gl[14..=15]
-    // already counted untapped *lands*; these count untapped *sources*
-    // (mana creatures and rocks included) and say what colours they make.
-    // The opponent's half is public and is what makes "they have two
-    // untapped blue" — the shape of every instant-speed decision — even
-    // representable.
+    // counted untapped *lands*; these count untapped *sources* (creatures
+    // and rocks included) and their colours. The opponent's half is public
+    // and makes "they have two untapped blue" representable.
     if !no_cast {
         for (base, src) in [(24, sources), (30, opp_sources)] {
             for ci in 0..5 {
@@ -648,18 +605,15 @@ fn encode_state_inner(
         }
         // Power aimed at each life total: unblocked attackers in full,
         // blocked tramplers by the excess over their live blockers'
-        // effective toughness (the default lethal-to-each assignment,
-        // CR 702.19g — everything when every blocker is already gone).
-        // Before blocks it is the whole attack; after, what gets
-        // through — the phase one-hots above disambiguate which.
+        // effective toughness (CR 702.19g default assignment; everything
+        // when every blocker is gone). Before blocks it is the whole attack;
+        // after, what gets through — the phase one-hots disambiguate.
         for a in g.attacking.iter() {
             if let crate::game::types::AttackTarget::Player(p) = a.target {
                 // CR 509.1b again (see feat 29): `blocked_attackers`, not
-                // `block_map`, is what the damage step reads. Without it an
-                // attacker whose blocker died to first strike read its full
-                // power into this global while the engine deals zero — a
-                // wrong signal at exactly the settled combat states the
-                // search evaluates most.
+                // `block_map`, is what the damage step reads; otherwise an
+                // attacker whose blocker died to first strike reads full
+                // power while the engine deals zero.
                 let blocked = g.blocked_attackers().contains(&a.attacker)
                     || ctx.blocker_sums.contains_key(&a.attacker)
                     || g.block_map.values().any(|att| att.contains(&a.attacker));
@@ -698,18 +652,13 @@ fn encode_state_inner(
         gl[42] = g.exile.iter().filter(|c| c.owner == opp).count() as f32 / 10.0;
     }
     if !ablated(ABLATE_HISTORY) {
-        // Turn-scoped history (round 40). Everything above is a static
-        // snapshot, which made the whole encoding a pure function of the
-        // current position — so for a card that reads what has already
-        // happened this turn, the net could not tell whether its ability
-        // was live. `Player` tracks ~90 such counters; these six are the
-        // ones the SoS pool actually reads, self then opponent.
-        //
-        // Scales are "how many before this stops mattering", not
-        // normalizations of the observed range: the predicates are
-        // thresholds (gain 3 life, cast 2 instants) and what a value
-        // function wants is where the position sits against the
-        // threshold, so saturating a little past it is the right shape.
+        // Turn-scoped history (round 40): without it the encoding is a pure
+        // function of the position, and the net can't tell whether a card
+        // that reads this turn's events is live. These six of `Player`'s ~90
+        // counters are the ones the SoS pool reads, self then opponent.
+        // Scales are "how many before this stops mattering": the predicates
+        // are thresholds (gain 3 life, cast 2 instants), so saturating a
+        // little past them is the right shape.
         for (side, p) in [(0usize, seat), (1, opp)] {
             let pl = &g.players[p];
             // `scaled` here too: one Beacon resolution gains a seat 10^9 life
@@ -724,15 +673,11 @@ fn encode_state_inner(
         }
     }
     if !ablated(ABLATE_V8) {
-        // Land drops remaining this turn, self then opponent, / 2
-        // (Azusa-class grants are the headroom). "Can I still
-        // land-and-spell this turn" is the most common main-phase
-        // sequencing read; feature 26's next-turn castability assumed
-        // the drop was there, and now the net can see whether it is.
-        // `can_player_play_land` checks locks and the count, not the
-        // turn, so the off-turn opponent reads their standing drop —
-        // public, and the active-player flag (gl 9) says whose turn
-        // makes it spendable.
+        // Land drops remaining this turn, self then opponent, / 2 (Azusa
+        // grants are the headroom): "can I still land-and-spell" is the
+        // commonest sequencing read. `can_player_play_land` checks locks and
+        // the count, not the turn, so the off-turn opponent reads their
+        // standing drop; the active-player flag (gl 9) says whose it is.
         for (side, p) in [(0usize, seat), (1, opp)] {
             let remaining = if g.can_player_play_land(p) {
                 g.max_lands_per_turn(p)
@@ -774,28 +719,18 @@ pub(super) fn library_counts<'a>(
     counts
 }
 
-/// The seat's own library, deduplicated by card name.
-///
-/// One object per distinct name with its remaining count in feature 27,
-/// rather than one per physical card: a sealed deck's eight Plains are one
-/// fact, not eight, and collapsing them keeps the object count (and so the
-/// quadratic attention cost) down while *adding* information the
-/// enumerated form only carries implicitly — "two copies of that removal
-/// spell left" is directly readable.
-///
-/// Emitted in vocabulary-index order so the library's actual shuffle can
-/// never reach the net, whatever the architecture does downstream.
+/// The seat's own library, one object per distinct name with its remaining
+/// count in feature 27: eight Plains are one fact, which keeps the object
+/// count (and quadratic attention cost) down and makes "two copies of that
+/// removal left" directly readable. Emitted in vocabulary-index order so
+/// the shuffle can never reach the net.
 fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab) {
     if ablated(ABLATE_LIBRARY) {
         return;
     }
-    // A `BTreeMap<u16, _>` here was 179,404 `Entry::or_insert` calls and
-    // 119,224 `IntoIter::dying_next` a sixty-game actor run — 0.63 % of it —
-    // to group ~28 library cards into ~19 distinct names. A linear scan over
-    // an inline buffer plus one sort answers the same question: the keys are
-    // unique, so the sort is a total order and the emitted sequence is
-    // byte-identical to the map's. Only the actor pays this at all; `--bench`
-    // never encodes a state.
+    // Grouped by a linear scan over an inline buffer plus one sort, not a
+    // `BTreeMap` (which cost 0.63 % of an actor run): the keys are unique,
+    // so the emitted sequence is byte-identical to the map's.
     let counts = library_counts(g, seat, vocab);
     // By reference: this buffer is 32 x 24 bytes inline, so a by-value
     // `IntoIter` would move 768 bytes out of the frame on every encoded
@@ -808,14 +743,11 @@ fn encode_library(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Voca
 }
 
 /// The stack, one object per item, split by controller like the
-/// battlefield. Spells encode their own card; a trigger encodes its
-/// source — from the battlefield, or for a source that has left it (a
-/// dies / leaves-the-battlefield trigger, the most common trigger class
-/// on the stack) from the engine's LKI snapshot or the graveyard. Only a
-/// source in no readable zone encodes as an unknown object, and even that
-/// keeps the multiplicity baseline every real object carries. Depth from
-/// the top of the stack (the item that resolves first) lands in feature
-/// 36, because pooling would otherwise erase resolution order.
+/// battlefield. Spells encode their own card, a trigger its source (see
+/// [`stack_item_card`]); a source in no readable zone encodes as an unknown
+/// object that keeps the multiplicity baseline. Depth from the top (the
+/// item that resolves first) lands in feature 36, since pooling would
+/// otherwise erase resolution order.
 fn encode_stack(s: &mut EncodedState, g: &GameState, seat: usize, vocab: &Vocab) {
     let n = g.stack.len();
     // Two filtered passes, like the battlefield: the shared buffer is laid
@@ -844,13 +776,11 @@ pub(super) fn stack_item_controller(item: &crate::game::types::StackItem) -> usi
     }
 }
 
-/// The card a stack item shows: a spell's own card, or a trigger's source —
-/// from the battlefield (the common, previously-only case); then CR 603.10
-/// LKI, which carries the source as it last existed on the battlefield;
-/// then the graveyard, where a dies-trigger's source actually is. Exile is
-/// deliberately skipped: it mixes face-down (hidden) cards in, and a
-/// trigger source there is rare enough to take the unknown object instead
-/// of auditing the leak.
+/// The card a stack item shows: a spell's own card, or a trigger's source
+/// from the battlefield; then CR 603.10 LKI; then the graveyard (where a
+/// dies-trigger's source is). Exile is deliberately skipped: it holds
+/// face-down cards, and a trigger source there is rare enough to take the
+/// unknown object instead of auditing the leak.
 pub(super) fn stack_item_card<'a>(
     g: &'a GameState,
     item: &'a crate::game::types::StackItem,
@@ -890,32 +820,25 @@ pub(super) fn stack_item_object(
 
 /// Can `cost` be paid right now off `sources`, one mana per source?
 ///
-/// Exact for the model it assumes, by Hall's condition over the 32 colour
-/// subsets: a multiset of coloured pips has a saturating assignment iff
-/// for every subset of colours, the pips wanting those colours are no more
-/// numerous than the sources able to make one of them. A saturating
-/// assignment uses exactly one source per coloured pip, so the generic
-/// remainder is satisfied iff the total source count covers the whole
-/// mana value.
+/// Exact for its model, by Hall's condition over the 32 colour subsets: the
+/// coloured pips have a saturating assignment iff for every colour subset
+/// the pips wanting it are no more than the sources making one of it; the
+/// generic remainder is then satisfied iff the source count covers the mana
+/// value.
 ///
-/// It is an approximation of the rules, deliberately so: sources that tap
-/// for two mana, cost reduction, alternative costs, {X}, and hybrid pips
-/// (counted as their first half by `colored_symbols`) all fall outside it.
-/// This is a *feature* — "is this card roughly live" — not a legality
-/// check, and the real payment path is [`GameState::auto_tap_for_cost`].
+/// Deliberately approximate as rules: two-mana sources, cost reduction,
+/// alternative costs, {X} and hybrid pips (first half, per
+/// `colored_symbols`) fall outside it. A feature ("is this roughly live"),
+/// not a legality check; the real payment path is
+/// [`GameState::auto_tap_for_cost`].
 #[cfg(test)]
 fn affordable(cost: &ManaCost, sources: &[[bool; 5]]) -> bool {
     affordable_covered(cost, sources.len() as u32, &source_cover(sources))
 }
 
-/// `[mask] -> how many of `sources` make at least one colour in `mask``.
-///
-/// The half of [`affordable`] that depends only on the *sources*, lifted out
-/// so a hand sweep pays it once instead of once per card — and twice per
-/// card, because the next-turn sibling used to clone the whole slice and walk
-/// it again. `encode_state` called `affordable` 11,630 times over
-/// twenty `selfplay_train` games for 11.3 M Ir (0.86 % of an actor), 5.8 per
-/// state against one hand's worth of sources.
+/// `[mask] -> how many of `sources` make at least one colour in `mask``:
+/// the sources-only half of [`affordable`], lifted out so a hand sweep (and
+/// its next-turn sibling) pays it once instead of once per card.
 pub(super) fn source_cover(sources: &[[bool; 5]]) -> [u32; 32] {
     let mut have = [0u32; 32];
     for s in sources {
@@ -1054,23 +977,17 @@ fn okw_exact_bit(k: &crate::card::Keyword) -> u16 {
     }
 }
 
-/// Every keyword bit [`encode_card_object`] needs, in **one** pass over this
-/// card's own lists.
-///
-/// [`CardInstance::has_keyword`] re-walks `removed_keywords`,
-/// `removed_keywords_eot`, the printed list, `granted_keywords_eot` and the
-/// counter `Vec` on every keyword asked — and the encoder asks twelve, plus
-/// two `any_keyword` class walks. On a `selfplay_train` actor that was
-/// **831,492 `has_keyword` calls / 37.6 M Ir / 2.85 %**, 422 per encoded
-/// state, and `encode_state` is 11.7 % of the actor to begin with. Inverting
-/// it makes the cost the card's keyword *count* instead of the encoder's
-/// question count.
+/// Every keyword bit [`encode_card_object`] needs, in one pass over the
+/// card's own lists. [`CardInstance::has_keyword`] re-walks five lists per
+/// keyword asked, and the encoder asks twelve plus two class walks (2.85 %
+/// of an actor before this); inverting makes the cost the card's keyword
+/// count.
 ///
 /// Equivalent by construction and `debug_assert!`ed at the call site: a
-/// keyword contributes its bit exactly when it appears printed, EOT-granted
-/// or on a CR 122.1b counter and is not in either removal list — which is
-/// `has_keyword`'s own definition. The two class bits read printed and
-/// granted only, matching [`any_keyword`], which deliberately skips counters.
+/// keyword sets its bit exactly when it appears printed, EOT-granted or on
+/// a CR 122.1b counter and is in neither removal list — `has_keyword`'s own
+/// definition. The two class bits read printed and granted only, matching
+/// [`any_keyword`], which deliberately skips counters.
 fn object_keyword_bits(c: &CardInstance) -> u16 {
     use crate::card::KeywordSlice;
     let removed = |k: &crate::card::Keyword| {
@@ -1111,18 +1028,12 @@ pub fn encode_deck_card(def: crate::card::CardDefinition, vocab: &Vocab) -> Enco
     encode_card_object(&CardInstance::new(crate::card::CardId(0), def, 0), vocab)
 }
 
-/// [`encode_card_object`] writing through a handle the caller already owns.
+/// [`encode_card_object`] writing through a handle the caller already owns,
+/// so an `EncodedObject` (216 bytes) is filled in place instead of copied
+/// twice (stack, then group `Vec`).
 ///
-/// An `EncodedObject` is `{ u16, [f32; 53] }` = 216 bytes. Returned by value
-/// and then pushed, each one is copied **twice**: zeroed on the stack, filled,
-/// and memcpy'd into its group `Vec`. `encode_card_object` was 228,515 calls a
-/// sixty-game actor run with a 6.9 M-Ir `__memcpy` edge of its own, and
-/// `encode_state` another 7.8 M for the pushes (ninety-eighth pass's actor
-/// profile). A caller that pushes an empty object and fills it in place pays
-/// one of the two.
-///
-/// `out` is assumed **zeroed**: this writes only the features it sets, exactly
-/// as the by-value form did over a fresh `[0.0; OBJ_FEATS]`.
+/// `out` is assumed zeroed: this writes only the features it sets, as the
+/// by-value form did over a fresh `[0.0; OBJ_FEATS]`.
 fn encode_card_object_into(c: &CardInstance, vocab: &Vocab, out: &mut EncodedObject) {
     encode_printed_into(c, vocab, out, true);
     encode_instance_keywords_into(c, out);
@@ -1294,13 +1205,10 @@ fn encode_instance_keywords_into(c: &CardInstance, out: &mut EncodedObject) {
             feats[12 + i] = 1.0;
         }
     }
-    // Keyword classes (round 28) the round-4 evasion flags don't carry.
-    // Mostly redundant with the card embedding for in-vocab cards; this
-    // is for tokens (index 0) and granted keywords, which the embedding
-    // can never see. Coarse by design: every flavour of hexproof,
-    // protection and ward is one "hard to target" bit, every
-    // can't-be-blocked variant one "hard to block" bit — a value
-    // function trades on the class, not the fine print.
+    // Keyword classes (round 28) the round-4 evasion flags don't carry:
+    // for tokens (index 0) and granted keywords, which the embedding can't
+    // see. Coarse by design: every hexproof / protection / ward is one "hard
+    // to target" bit, every can't-be-blocked variant one "hard to block" bit.
     if !ablated(ABLATE_KW) {
         for (i, bit) in [okw::HASTE, okw::INDESTRUCTIBLE, okw::DEFENDER].iter().enumerate() {
             // 40 haste, 42 indestructible, 44 defender.
@@ -1388,14 +1296,11 @@ fn is_hard_to_block(k: &crate::card::Keyword) -> bool {
 }
 
 /// Battlefield objects add live state on top of the printed features:
-/// effective P/T net of damage, the damage itself and the part of the
-/// P/T that expires at cleanup, tapped, summoning sickness, loyalty,
-/// SOS prepared status, attacking, and counters.
-///
-/// Returns `(is_land, is_creature, power)` off the same computed view, for
-/// the caller's board totals — computed, so an animated manland counts as
-/// the creature it currently is and an anthem's pump reaches the power
-/// total.
+/// effective P/T net of damage, the damage and the P/T that expires at
+/// cleanup, tapped, summoning sickness, loyalty, SOS prepared, attacking,
+/// and counters. Returns `(is_land, is_creature, power)` off the same
+/// computed view for the caller's board totals (an animated manland counts
+/// as a creature, an anthem reaches the power total).
 fn encode_battlefield_object_into(
     g: &GameState,
     c: &CardInstance,
@@ -1404,9 +1309,8 @@ fn encode_battlefield_object_into(
 ) -> (bool, bool, i32) {
     // The computed view is the final word on types and keywords below, so
     // the printed pass skips its type flags and the instance keyword pass
-    // runs only for the raw fallback: both were written and then
-    // overwritten on every one of the 75,948 battlefield objects a
-    // 60-game actor run encodes (PERF `(-267)`).
+    // runs only for the raw fallback (both used to be written and then
+    // overwritten; PERF `(-267)`).
     let cp = g.computed_permanent_on(c);
     encode_printed_into(c, vocab, o, cp.is_none());
     if cp.is_none() {
@@ -1417,18 +1321,14 @@ fn encode_battlefield_object_into(
     f[7] = if c.summoning_sick { 1.0 } else { 0.0 };
     f[10] = if g.attacking.iter().any(|a| a.attacker == c.id) { 1.0 } else { 0.0 };
     f[11] = if c.is_token { 1.0 } else { 0.0 };
-    // Layer-resolved truth (modern precondition 2). The base pass above
-    // wrote the printed/instance view; a battlefield object overwrites it
-    // with the computed one, so anthems and equipment pumps reach P/T,
-    // type changes reach the type flags, and static keyword grants —
-    // which never touch the instance fields the base walk reads — reach
-    // every keyword-derived feature. `ComputedPermanent.keywords()` is
-    // the final word (printed + EOT + CR 122.1b counters, all folded by
-    // the gather, minus removals and lose-all), so overwriting rather
-    // than OR-ing is what makes removals stick. One memoized layer pass
-    // per permanent inside `encode_state`'s frozen scope; the raw
-    // fallback is unreachable for a real battlefield walk and exists so
-    // a malformed synthetic state degrades instead of panicking.
+    // Layer-resolved truth (modern precondition 2): the computed view
+    // overwrites the printed one, so anthems and equipment reach P/T, type
+    // changes the type flags, and static keyword grants every keyword
+    // feature. `ComputedPermanent.keywords()` is the final word (printed +
+    // EOT + CR 122.1b counters, minus removals and lose-all), so overwriting
+    // rather than OR-ing is what makes removals stick. The raw fallback is
+    // unreachable for a real battlefield walk; it lets a malformed synthetic
+    // state degrade instead of panicking.
     let totals = match cp {
         Some(cp) => {
             use crate::card::CardType;
@@ -1492,29 +1392,19 @@ fn encode_battlefield_object_into(
             (c.definition.is_land(), c.definition.is_creature(), c.power().max(0))
         }
     };
-    // ONE walk of the counter bag for all eight counter slots. `CounterBag`
-    // is a `Vec<(CounterType, u32)>` and `counter_count` is a linear scan of
-    // it, so the seven calls this replaces (loyalty, prepared, and the five
-    // kinds below) each re-walked the same list — 530,194 of the actor's
-    // 864,830 `counter_count` calls, 5.57 M Ir, and most permanents carry no
-    // counters at all so nearly all of it was call overhead on an empty
-    // `Vec`. The slots are written to zero first rather than relying on a
-    // freshly-defaulted object, so the function's output does not depend on
-    // what the caller handed it.
+    // One walk of the counter bag for all eight counter slots (each
+    // `counter_count` is a linear scan). The slots are zeroed first so the
+    // output doesn't depend on what the caller handed in.
     //
-    // Feature 34 sums every kind except loyalty/prepared — unconditionally:
-    // it is battlefield state like damage or tapped, not a relation. It
-    // shipped inside the round-12 block and rode `rel`'s ablation bit, so
-    // every `--ablate rel` arm ever run was measuring "relations plus
-    // counters", attributable to neither. P/T counters reach the net twice
-    // — through effective P/T and through 48/49 — which is deliberate: a
-    // 3/3 that is a 2/2 plus a counter dies differently to bounce and
-    // counter-hate than a printed 3/3 does.
+    // Feature 34 sums every kind except loyalty/prepared, unconditionally:
+    // it is battlefield state, not a relation. It used to ride `rel`'s
+    // ablation bit, so every old `--ablate rel` arm measured "relations plus
+    // counters". P/T counters reach the net twice (effective P/T and 48/49)
+    // on purpose: a 2/2 plus a counter dies differently to bounce and
+    // counter-hate than a printed 3/3.
     //
-    // 48..53 are the kinds the SoS pool puts on permanents (+1/+1 by a wide
-    // margin, then stun, Page and Growth) plus -1/-1, which the pool never
-    // uses but every other format does; stun, Page and Growth had no path to
-    // the net at all before them.
+    // 48..53 are the kinds the SoS pool uses (+1/+1, stun, Page, Growth)
+    // plus -1/-1, which every other format uses.
     let want_kinds = !ablated(ABLATE_COUNTERS);
     let want_kw = !ablated(ABLATE_KW);
     let want_v8 = !ablated(ABLATE_V8);
@@ -1572,13 +1462,10 @@ fn encode_battlefield_object_into(
     }
     f[34] = scaled_u(special) / 4.0;
     // Expiry (round 40). Features 4/5 encode the board as if nothing
-    // reverts: 5 is toughness *net of* damage, so a 4/4 with three
-    // damage read as a 4/1 though it is whole again at cleanup, and a
-    // 5/5 off a combat trick read as a printed 5/5. Both matter to
-    // exactly the decision a value function is asked for — whether a
-    // block or a burn spell kills. `power_bonus`/`toughness_bonus` are
-    // the until-end-of-turn deltas specifically; permanent pumps live
-    // in `perm_*` and are correctly invisible here.
+    // reverts (a 4/4 with three damage reads 4/1; a trick's 5/5 reads
+    // printed), which is exactly what decides whether a block or burn kills.
+    // `power_bonus`/`toughness_bonus` are the until-end-of-turn deltas;
+    // permanent pumps live in `perm_*` and are correctly invisible here.
     if !ablated(ABLATE_EXPIRY) {
         f[45] = scaled(damage_i32(c)) / 8.0;
         f[46] = scaled(c.power_bonus) / 4.0;
@@ -1594,12 +1481,9 @@ pub(super) mod tests {
     use crate::player::Player;
     use crabomination_nn::NUM_GROUPS;
 
-    /// The ablation flag has to be process-global — actor threads must see
-    /// what `main` set — and cargo runs the tests in this module as
-    /// parallel threads of one process. So every test that encodes takes
-    /// this lock: without it, `ablation_zeroes_exactly_the_block_it_names`
-    /// would blank the library group underneath whichever test happened to
-    /// be running beside it.
+    /// The ablation flag is process-global (actor threads must see what
+    /// `main` set) and the tests run as parallel threads of one process, so
+    /// every test that encodes takes this lock.
     static ENCODE_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     pub(in crate::server) fn encode_guard() -> std::sync::MutexGuard<'static, ()> {
@@ -1622,13 +1506,10 @@ pub(super) mod tests {
         g
     }
 
-    /// The frozen-index contract, which is what keeps a trained net loadable
-    /// across a card addition: a snapshot name owns `position + 1` and a
-    /// pool name outside the snapshot lands strictly after all of them.
-    ///
-    /// This is a regression test for the defect that killed all seven
-    /// committed deck nets — indices derived from the sorted pool, so one
-    /// inserted card shifted every later row.
+    /// The frozen-index contract that keeps a trained net loadable across a
+    /// card addition: a snapshot name owns `position + 1`, a pool name
+    /// outside the snapshot lands strictly after all of them. Regression for
+    /// the sorted-pool indices that killed seven committed deck nets.
     #[test]
     fn vocab_indices_come_from_the_frozen_snapshot() {
         use crate::server::vocab_snapshot::VOCAB_SNAPSHOT;
@@ -1655,14 +1536,10 @@ pub(super) mod tests {
         }
     }
 
-    /// A card added to the SOS set has to be written into the snapshot.
-    ///
-    /// The self-assigning fallback keeps the build working, but the index it
-    /// hands out is sorted order over the *unsnapshotted* names — so a
-    /// second addition reshuffles it and a net trained in between means the
-    /// wrong card. That is the original defect, one generation later, and
-    /// two card additions is the whole distance to it. Fail here instead,
-    /// where the fix is one line.
+    /// A card added to the SOS set has to be written into the snapshot. The
+    /// self-assigning fallback hands out sorted order over unsnapshotted
+    /// names, so a second addition reshuffles it — the original defect one
+    /// generation later. Fail here, where the fix is one line.
     #[test]
     fn vocab_covers_the_sos_pool() {
         use crate::server::vocab_snapshot::VOCAB_SNAPSHOT;
@@ -1764,16 +1641,10 @@ pub(super) mod tests {
         assert_eq!(uniq.len(), VOCAB_SNAPSHOT.len(), "duplicate name in VOCAB_SNAPSHOT");
     }
 
-    /// The pointer cache has to actually *hit* on the pointer a real card
-    /// definition carries.
-    ///
-    /// It is a pure optimization, so nothing else in the suite can tell the
-    /// difference between a cache that answers every lookup and one that
-    /// misses every lookup and quietly falls through to the string map. The
-    /// day a pool factory builds its name at run time — a `format!`, a
-    /// `String` field, a name assembled from a set code — the hit rate goes
-    /// to zero and the encoder gets slower with no other symptom. Assert the
-    /// hit here, where the message says what happened.
+    /// The pointer cache has to actually hit on a real card definition's
+    /// pointer. As a pure optimization nothing else would notice a cache
+    /// that always misses: the day a factory builds its name at run time,
+    /// the encoder just gets slower. Assert the hit here.
     #[test]
     fn the_vocab_pointer_cache_hits_on_the_pool_and_misses_off_it() {
         let v = Vocab::sos_sealed();
@@ -1816,19 +1687,11 @@ pub(super) mod tests {
         assert_eq!(v.index_of("Plains"), v2.index_of("Plains"));
     }
 
-    /// A saturated life total is a *feature*, and it used to be 10^8 of one.
-    ///
-    /// Beacon of Immortality doubles its caster's life and shuffles itself
-    /// back, so a WG mirror saturates both seats at `i32::MAX` — the board
-    /// behind the only `cap` in ~1.3 M swept games, and a correct card doing
-    /// what it prints (`ENGINE_BACKLOG`'s OPEN section asked what the encoder
-    /// does with it; this is the answer). `life / 20.0` handed that to the net
-    /// unmodified. The evaluator has clamped since the `debug-assertions`
-    /// sweep and the encoder now reads the same ceiling.
-    ///
-    /// Asserts the whole global vector, not just the two life slots: the point
-    /// is that no feature leaves the encoder unbounded on a board the
-    /// simulator can actually reach.
+    /// A saturated life total is a bounded feature (it used to be 10^8).
+    /// Beacon of Immortality saturates a WG mirror at `i32::MAX`, a correct
+    /// card doing what it prints (`ENGINE_BACKLOG`'s question about what the
+    /// encoder does with it). Asserts the whole global vector: no feature
+    /// leaves the encoder unbounded on a reachable board.
     #[test]
     fn a_saturated_life_total_encodes_as_a_bounded_feature() {
         let _guard = encode_guard();
@@ -1844,13 +1707,11 @@ pub(super) mod tests {
         assert_globals_bounded(&s);
     }
 
-    /// Every feature is a board number over its own scale, and every scale is
-    /// at least 1, so the ceiling itself is the bound. The gate is about
-    /// *boundedness* — the bug it replaces was 1.07e8 — and not about the
-    /// divisors, which are the encoder's own business: the widest clamped
-    /// global today is `life_gained_this_turn` at `SCALE_CEILING / 5.0`, four
-    /// times the life totals' own `/ 20.0`, and a tighter bound here would
-    /// fail the day someone adds a feature on a smaller scale.
+    /// Every feature is a board number over a scale of at least 1, so the
+    /// ceiling itself is the bound. The gate is boundedness, not the
+    /// divisors (the widest clamped global is `life_gained_this_turn` at
+    /// `SCALE_CEILING / 5.0`); a tighter bound would fail the day a feature
+    /// lands on a smaller scale.
     fn assert_globals_bounded(s: &crabomination_nn::EncodedState) {
         let bound = crate::player::SCALE_CEILING as f32;
         for (i, x) in s.global.iter().enumerate() {
@@ -1866,16 +1727,10 @@ pub(super) mod tests {
         }
     }
 
-    /// The same question one characteristic over: Exponential Growth is
-    /// "double target creature's power {X} times", so one resolution reaches
-    /// `i32::MAX` — and a pumped creature's power is scaled into `f[4]`, into
-    /// the per-side `power` totals, and into the blocker-sum features.
-    ///
-    /// Also asserts the arithmetic itself survives: summing two saturated
-    /// powers into `power[side]` is an `i32` overflow, which is a *panic*
-    /// under `overflow-checks` (the sweep binary) and a large negative total
-    /// in release. The test harness always unwinds, so this would fail rather
-    /// than abort either way.
+    /// The same for power: Exponential Growth reaches `i32::MAX` in one
+    /// resolution, and power feeds `f[4]`, the per-side totals and the
+    /// blocker sums. Also asserts summing two saturated powers doesn't
+    /// overflow `i32` (a panic under `overflow-checks`).
     #[test]
     fn a_saturated_power_encodes_as_a_bounded_feature() {
         let _guard = encode_guard();
@@ -2074,12 +1929,10 @@ pub(super) mod tests {
         assert!((s.global[35] - 2.0 / 6.0).abs() < 1e-6);
     }
 
-    /// The ablation control blanks each block and leaves the other
-    /// standing, so a run with `--ablate lib` differs from the full
-    /// encoder in the library group and nothing else.
-    ///
-    /// Serialized against the other tests by construction: it is the only
-    /// one that touches the process-global, and it restores it.
+    /// The ablation control blanks each block and leaves the others, so
+    /// `--ablate lib` differs from the full encoder in the library group
+    /// only. The only test that touches the process-global, and it restores
+    /// it.
     #[test]
     fn ablation_zeroes_exactly_the_block_it_names() {
         let _guard = encode_guard();
@@ -2329,11 +2182,9 @@ pub(super) mod tests {
     }
 
     /// CR 509.1b / 510.1c — an attacker that became blocked stays blocked
-    /// after every blocker leaves combat (first-strike deaths, post-block
-    /// removal): the damage step deals nothing to the player, so the
-    /// encoding must not read its power as incoming. Regression for the
-    /// `block_map`-only read, which fed the full power into global 39/40
-    /// at exactly the settled combat states the search evaluates most.
+    /// after every blocker leaves combat, so the encoding must not read its
+    /// power as incoming. Regression for the `block_map`-only read, which
+    /// fed full power into globals 39/40.
     #[test]
     fn a_blocked_attacker_stays_blocked_when_its_blockers_leave_combat() {
         let _guard = encode_guard();
@@ -2372,12 +2223,10 @@ pub(super) mod tests {
         assert!((s.global[39] - 1.0 / 12.0).abs() < 1e-6, "trample over a live blocker: excess only");
     }
 
-    /// A trigger whose source has left the battlefield — a dies trigger,
-    /// the most common trigger class on the stack — used to encode as an
-    /// all-zero object: unknown card, every feature blank, even the
-    /// feature-27 multiplicity baseline every other object carries. It now
-    /// reads the card from the LKI snapshots or the graveyard, and the
-    /// truly-unknown fallback stays on distribution.
+    /// A trigger whose source left the battlefield (a dies trigger) used to
+    /// encode as an all-zero object, missing even the feature-27
+    /// multiplicity baseline. It now reads the card from LKI or the
+    /// graveyard.
     #[test]
     fn a_dead_trigger_source_still_encodes_its_card() {
         let _guard = encode_guard();
@@ -2461,16 +2310,10 @@ pub(super) mod tests {
     }
 
     /// CR 122.1b — a keyword *counter* grants the ability, and on the
-    /// battlefield every keyword-derived feature reads it: the computed
-    /// list (layer-aware encoding, modern precondition 2) folds counters
-    /// into the layer pass, so a Hexproof counter reaches the
-    /// hard-to-target class flag that `any_keyword`'s printed+granted
-    /// walk could never see. That old exclusion was a resolution limit
-    /// ("a counter granting a parametrized keyword class is beyond this
-    /// resolution"), not a ruling — the class flags exist to say what the
-    /// permanent IS, and a hexproof-countered creature is hard to target.
-    /// Off-battlefield objects keep the old walk (no layers off the
-    /// battlefield).
+    /// battlefield every keyword feature reads it: the computed list folds
+    /// counters in, so a Hexproof counter reaches the hard-to-target class
+    /// flag `any_keyword`'s printed+granted walk never saw (a resolution
+    /// limit, not a ruling). Off-battlefield objects keep the old walk.
     #[test]
     fn keyword_counters_reach_the_exact_flags_and_the_class_flags() {
         use crate::card::Keyword;
@@ -2495,13 +2338,9 @@ pub(super) mod tests {
         assert_eq!(o.feats[12], 0.0, "removal beats the counter");
     }
 
-    /// The static-anthem hole, closed (modern precondition 2): a
-    /// continuous +1/+1 resolved through the layer system reaches
-    /// effective P/T and the power totals. This was the documented #1
-    /// encoder gap for a modern pool — 258 `PumpPT` statics in the
-    /// catalog against the 5 the SOS deferral was priced on — and until
-    /// this change the creature encoded at its unbuffed stats while the
-    /// engine fought with the buffed ones.
+    /// The static-anthem hole, closed (modern precondition 2): a continuous
+    /// +1/+1 through the layer system reaches effective P/T and the power
+    /// totals, where the creature used to encode at its unbuffed stats.
     #[test]
     fn a_static_anthem_reaches_the_encoding() {
         let _guard = encode_guard();

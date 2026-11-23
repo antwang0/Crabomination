@@ -1,24 +1,13 @@
 //! CR 614.12 — the "as this permanent enters" replacements, and the one
 //! funnel every battlefield entry runs them through.
 //!
-//! CR 614.12a puts the choice these replacements ask for *before* the
-//! permanent enters, so each applier has to run inside the battlefield hop
-//! rather than off an `EntersBattlefield` trigger. The engine has four such
-//! hops — the cast path (`stack.rs`), the universal move
-//! (`effects/movement.rs`), the land drop (`actions.rs::play_land`) and the
-//! token mint (`mod.rs::mint_token_with_counters`) — and until this funnel
-//! each applier was wired to a different subset of them:
-//!
-//! | applier | cast | move | land drop | token |
-//! |---|---|---|---|---|
-//! | `as_enters_effect` | ✓ | ✓ | — | — |
-//! | `enters_as_choice` | ✓ | — | — | — |
-//! | `enter_modes` | ✓ | — | — | — |
-//!
-//! So a reanimated Corrupted Shapeshifter chose no body, a Cavern of Souls
-//! *played* named no creature type, and CR 614.12's own worked example — a
-//! token copy of Voice of All choosing its colour as the token is created —
-//! had nothing to run at all.
+//! CR 614.12a makes the choice before the permanent enters, so appliers run
+//! inside the battlefield hop, not off an `EntersBattlefield` trigger. All
+//! four hops — cast (`stack.rs`), universal move (`effects/movement.rs`),
+//! land drop (`actions.rs::play_land`), token mint
+//! (`mod.rs::mint_token_with_counters`) — go through this funnel; before it,
+//! each applier was wired to a different subset (a reanimated Corrupted
+//! Shapeshifter chose no body, a played Cavern of Souls named no type).
 
 use crate::card::CardId;
 use crate::game::GameState;
@@ -28,17 +17,12 @@ impl GameState {
     /// rewrites the entering permanent's characteristics, in one order, from
     /// one place. Called by all four battlefield-entry paths.
     ///
-    /// Ordered as the cast path ordered them: the free-form one-shot
-    /// (`as_enters_effect`) first, then the two mode pickers, which only
-    /// rewrite the permanent's own printed line and so cannot be read by the
-    /// other two.
+    /// Order: the free-form `as_enters_effect` first, then the two mode
+    /// pickers (they only rewrite the permanent's own line).
     ///
-    /// Not in here: `enters_as_copy` (CR 707.2), which needs the entering
-    /// permanent's controller and an event sink, and whose two wirings differ
-    /// in *position* rather than presence — the token mint applies it before
-    /// this funnel, because a token copy's copiable values are what the mint
-    /// establishes, and so do the land drop (Vesuva) and the universal move
-    /// (a reanimated Clone, Lazotep Convert); the cast path applies it after.
+    /// Not here: `enters_as_copy` (CR 707.2), which needs the controller and
+    /// an event sink. The mint, land drop (Vesuva) and universal move (Clone)
+    /// apply it before this funnel; the cast path after.
     #[doc(hidden)] // reachable from the out-of-crate test suite, like `actions`/`stack`
     pub fn apply_as_enters_replacements(&mut self, card_id: CardId) {
         if self.has_as_enters_replacement(card_id) {
@@ -209,14 +193,9 @@ impl GameState {
     /// CR 614.12a on the land drop: as [`apply_as_enters_replacements`], but
     /// the free-form replacement's ask is left in `suspend_signal` rather than
     /// driven through the decider. Returns `true` when it suspended, in which
-    /// case the caller owns parking it — the mode pickers have **not** run and
-    /// the entry is unfinished.
-    ///
-    /// The land drop is the one entry path that needs this. The cast and the
-    /// mint run inside a resolution, which has a stack item to park the
-    /// continuation on; the land drop is an action, and unlike the other
-    /// suspending actions it cannot be replayed — the land is on the
-    /// battlefield and the drop is already spent.
+    /// case the caller owns parking it — the mode pickers have not run and
+    /// the entry is unfinished. Only the land drop needs this: it has no
+    /// stack item to park on and cannot be replayed (the drop is spent).
     pub(crate) fn apply_as_enters_replacements_suspending(&mut self, card_id: CardId) -> bool {
         if !self.has_as_enters_replacement(card_id) {
             return false;

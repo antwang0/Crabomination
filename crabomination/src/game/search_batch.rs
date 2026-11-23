@@ -1,14 +1,8 @@
-//! CR 701.23 — "search your library for up to N cards" is ONE search. The
-//! engine runs it as N single picks (`Effect::SearchUpToN`), and each pick
-//! used to search anew: Ob Nixilis Unshackled's "whenever an opponent
-//! searches their library" fired once per card, and Leonin Arbiter's {2}
-//! was charged once per card — an unpaid tax on the first pick was simply
-//! asked again on the next.
-//!
-//! The batch state makes the first pick the search: its prohibitions, tax
-//! and `PlayerSearchedLibrary` event stand for the batch, and every later
-//! pick either goes ahead silently or, when the first was refused, finds
-//! nothing too.
+//! CR 701.23 — "search your library for up to N cards" is one search, run as
+//! N picks (`Effect::SearchUpToN`). The first pick is the search: its
+//! prohibitions, tax (Leonin Arbiter) and `PlayerSearchedLibrary` event (Ob
+//! Nixilis Unshackled) stand for the batch; later picks proceed silently, or
+//! find nothing if the first was refused.
 
 /// Where the running `SearchUpToN` batch stands.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]

@@ -1,30 +1,24 @@
 //! Standalone TCP match server.
 //!
-//! Listens on `CRAB_BIND` (default `0.0.0.0:7777`). Each pair of incoming TCP
-//! connections is paired into a 2-seat match.
-//!
 //! Environment variables:
-//! - `CRAB_BIND` — address to listen on (default `0.0.0.0:7777`).
-//! - `CRAB_BOT=1` — instead of pairing two clients, seat each client
-//!   against a `HeuristicBot`.
-//! - `CRAB_FORMAT=cube` — build matches with random two-color cube decks
-//!   (via `crabomination::cube::build_cube_state`) instead of the default
-//!   BRG/Goryo's demo decks. Any other value (or unset) → demo decks.
-//! - `CRAB_PAIRING_TIMEOUT_SECS` — how long the first client of an unpaired
-//!   match waits for an opponent before being dropped (default 300 = 5 min).
-//!   Only applies in pair mode.
-//! - `CRAB_MAX_CONNS` — total concurrent connection slots (default 100). A
-//!   pair-mode match holds two slots (one per seat). `0` = unlimited.
-//! - `CRAB_MAX_CONNS_PER_IP` — concurrent connections from a single remote
-//!   IP (default 5). `0` = unlimited. Operates on the raw peer address, so
-//!   clients behind a NAT or load balancer share one counter.
-//! - `CRAB_ACTION_TIMEOUT_SECS` — per-action timeout (the "rope"). When set
-//!   (> 0) and a human seat holds the next action, the match actor waits at
-//!   most this long, then acts for them (AutoDecider answer for a pending
-//!   decision, else a priority pass). Unset / 0 = humans may think forever.
-//! - `CRAB_DECK` / `CRAB_BOT_DECK` — paths to Arena/MTGO-format decklists
-//!   for seat 0 / seat 1 of demo-format matches (Modern construction rules
-//!   enforced at boot). Unset seats keep the stock BRG / Goryo's decks.
+//! - `CRAB_BIND` — listen address (default `0.0.0.0:7777`).
+//! - `CRAB_BOT=1` — seat each client against a `HeuristicBot` instead of
+//!   pairing two clients.
+//! - `CRAB_FORMAT=cube` — random two-color cube decks
+//!   (`crabomination::cube::build_cube_state`); anything else → the BRG /
+//!   Goryo's demo decks.
+//! - `CRAB_PAIRING_TIMEOUT_SECS` — pair mode only: how long an unpaired first
+//!   client waits for an opponent before being dropped (default 300).
+//! - `CRAB_MAX_CONNS` — total connection slots (default 100); a pair-mode match
+//!   holds two. `0` = unlimited.
+//! - `CRAB_MAX_CONNS_PER_IP` — connections per remote IP (default 5), keyed on
+//!   the raw peer address, so clients behind one NAT share it. `0` = unlimited.
+//! - `CRAB_ACTION_TIMEOUT_SECS` — the "rope": when > 0 and a human holds the
+//!   next action, the actor waits this long, then acts for them (AutoDecider
+//!   answer for a pending decision, else a priority pass). Unset / 0 = no limit.
+//! - `CRAB_DECK` / `CRAB_BOT_DECK` — Arena/MTGO decklists for seat 0 / seat 1 of
+//!   demo-format matches (Modern construction checked at boot); unset seats keep
+//!   the stock decks.
 
 use std::env;
 use std::io;
@@ -56,21 +50,16 @@ use stats::{format_duration, format_match_stats, match_stats};
 fn main() {
     let bind = env::var("CRAB_BIND").unwrap_or_else(|_| "0.0.0.0:7777".to_string());
     let bot_mode = env::var("CRAB_BOT").ok().as_deref() == Some("1");
-    // Lobby mode is the default for the non-bot path: each client browses,
-    // then creates or joins a lobby and picks the gamemode there. Set
-    // `CRAB_LOBBY=0` for the legacy auto-pairing behavior (two clients paired
-    // into the server-fixed `CRAB_FORMAT`).
+    // Lobby mode is the default non-bot path (clients create/join lobbies and
+    // pick the gamemode there); `CRAB_LOBBY=0` restores auto-pairing into
+    // `CRAB_FORMAT`.
     let lobby_mode = !bot_mode && env::var("CRAB_LOBBY").ok().as_deref() != Some("0");
-    // Format is `Copy`, so each match thread captures a fresh copy via the
-    // `move` closure — no Arc needed.
     let format = Format::from_env();
     // Validate CRAB_DECK / CRAB_BOT_DECK at boot (exits on a bad list).
     let _ = deck_overrides();
-    // Load the committed champion value net, if this checkout carries it:
-    // lobby bots then play net-evaluated MCTS (the strongest adopted
-    // pilot) instead of the heuristic. CRAB_NET overrides the path; a
-    // missing file is fine (heuristic bots), a *bad* file is a boot error
-    // — silently degrading the advertised bot strength would be worse.
+    // Load the champion value net if present: lobby bots then play MCTS on the
+    // net leaf. `CRAB_NET` overrides the path. A missing file means heuristic
+    // bots; a *bad* file is a boot error rather than a silent strength drop.
     let net_path =
         env::var("CRAB_NET").unwrap_or_else(|_| "nets/champion.safetensors".to_string());
     if std::path::Path::new(&net_path).exists() {
@@ -81,9 +70,8 @@ fn main() {
         .unwrap_or_else(|e| panic!("value net {net_path}: {e}"));
         println!("value net loaded from {net_path}; lobby bots use MCTS-net");
     }
-    // The policy net, the same rule: Cube, Modern and SOS lobby duels search
-    // main phases and combat over every legal move on its priors
-    // (`lobby::default_bot`).
+    // The policy net, same rule: Cube, Modern and SOS lobby duels search every
+    // legal move on its priors (`lobby::default_bot`).
     let policy_path =
         env::var("CRAB_POLICY_NET").unwrap_or_else(|_| "nets/policy-champion.safetensors".to_string());
     if std::path::Path::new(&policy_path).exists() {
@@ -95,9 +83,8 @@ fn main() {
         println!("policy net loaded from {policy_path}; two-seat lobby bots search every legal move");
     }
     let pairing_timeout = pairing_timeout_from_env();
-    // Connection caps must be at least 1 — a `0` (typo or empty-string-ish
-    // misconfig) would otherwise silently refuse every client, so treat
-    // sub-1 values as a misconfig and fall back to the default.
+    // Caps below 1 would refuse every client, so treat them as a misconfig and
+    // use the default.
     let global_conns = usize_from_env_clamped("CRAB_MAX_CONNS", DEFAULT_MAX_CONNS, 1, MAX_CONNS_CAP);
     let per_ip_conns =
         usize_from_env_clamped("CRAB_MAX_CONNS_PER_IP", DEFAULT_MAX_CONNS_PER_IP, 1, MAX_CONNS_CAP);
@@ -131,9 +118,8 @@ fn main() {
     );
 
     if lobby_mode {
-        // WebSocket listener for browser clients. `CRAB_WS_BIND` picks the
-        // address (default port 7778 on the same interface); "0"/"off"
-        // disables it. Bind failure is non-fatal — native TCP still works.
+        // WebSocket listener for browser clients: `CRAB_WS_BIND` (default port
+        // 7778); "0"/"off" disables it. A bind failure is non-fatal.
         let ws_bind = env::var("CRAB_WS_BIND").unwrap_or_else(|_| "0.0.0.0:7778".to_string());
         let ws_listener = match ws_bind.as_str() {
             "0" | "off" | "" => None,
@@ -172,12 +158,9 @@ fn main() {
                 }
             };
             eprintln!("client {peer} → bot match");
-            // **The engine's stack**: this thread runs a whole match, and a
-            // resolution recurses through trigger / copy / replacement chains
-            // that the 2 MB spawned default does not hold. It ran on the
-            // default until 2026-09-15, and a stack overflow is a `SIGSEGV`
-            // with no message rather than a panic. See
-            // `crabomination::server::ENGINE_STACK_BYTES`.
+            // The engine's stack: resolution recurses through trigger / copy /
+            // replacement chains the 2 MB thread default can't hold, and an overflow is a
+            // silent `SIGSEGV`. See `crabomination::server::ENGINE_STACK_BYTES`.
             let spawned = thread::Builder::new()
                 .name("crab-bot-match".into())
                 .stack_size(crabomination::server::ENGINE_STACK_BYTES)
@@ -212,9 +195,7 @@ fn main() {
             let (b_stream, b_peer) = match accept_with_deadline(&listener, pairing_timeout) {
                 Ok(Some(p)) => p,
                 Ok(None) => {
-                    // No opponent arrived in time. Close seat 0 cleanly so the
-                    // client sees EOF and can retry. Dropping `a_guard`
-                    // releases the slot we reserved for them.
+                    // No opponent in time: close seat 0 so it sees EOF; dropping `a_guard` frees its slot.
                     eprintln!(
                         "dropping unpaired seat 0 ({a_peer}): no opponent within {}s",
                         pairing_timeout.as_secs(),
@@ -262,10 +243,8 @@ fn main() {
     }
 }
 
-/// Wrap `listener.accept` with logging + a small back-off when the OS reports
-/// a transient error (file-descriptor exhaustion, transient EAGAIN). Without
-/// the back-off, accept failures form a CPU-spin loop. Returns `None` on
-/// failure (caller should `continue`).
+/// `listener.accept` with logging and a 100 ms back-off on error (FD
+/// exhaustion, EAGAIN), so a failing accept can't spin. `None` on failure.
 fn accept_with_backoff(listener: &TcpListener) -> Option<(TcpStream, std::net::SocketAddr)> {
     match listener.accept() {
         Ok(pair) => Some(pair),
@@ -278,15 +257,10 @@ fn accept_with_backoff(listener: &TcpListener) -> Option<(TcpStream, std::net::S
     }
 }
 
-/// Wait for the next incoming connection up to `timeout`. Switches the
-/// listener to nonblocking mode for the duration of the wait, polls at a
-/// 100ms cadence, then restores blocking mode. Returns `Ok(None)` if the
-/// deadline elapses without a client arriving. Errors from `set_nonblocking`
-/// or fatal accept failures are surfaced via `Err`; transient accept errors
-/// (EAGAIN, FD exhaustion) are logged and retried until the deadline.
-///
-/// Used to bound the wait for seat 1 after seat 0 has connected, so that a
-/// no-show opponent does not leave seat 0 hanging forever.
+/// Wait up to `timeout` for the next connection (bounds seat 0's wait for
+/// seat 1). Polls nonblocking at 100 ms, then restores blocking mode.
+/// `Ok(None)` on timeout; `set_nonblocking` or fatal accept errors are `Err`;
+/// transient accept errors are retried until the deadline.
 fn accept_with_deadline(
     listener: &TcpListener,
     timeout: Duration,
@@ -311,34 +285,28 @@ fn accept_with_deadline(
             }
         }
     };
-    // Always restore blocking mode, even on error, so the next iteration of
-    // the outer accept loop behaves as expected.
+    // Restore blocking mode even on error.
     let _ = listener.set_nonblocking(false);
     result
 }
 
-/// Lobby-mode accept loop. Each accepted connection acquires a slot, is
-/// wrapped into a `SeatChannel`, and is handed (with its slot guard) to the
-/// [`serve_lobbies`] driver, which runs the browse/create/join protocol and
-/// starts a match when a lobby fills. The slot guard rides along with the
-/// connection, so the connection cap stays held for the lobby + match.
+/// Lobby-mode accept loop: each connection takes a slot, becomes a
+/// `SeatChannel`, and goes with its slot guard to [`serve_lobbies`], so the cap
+/// stays held through lobby and match.
 fn run_lobby_server(
     listener: &TcpListener,
     ws_listener: Option<TcpListener>,
     slots: &SlotManager,
 ) -> ! {
     let (conn_tx, conn_rx) = mpsc::channel::<(ConnId, _, SlotGuard)>();
-    // Fold each lobby-started match into the rolling stats + log a summary,
-    // so lobby mode (the default) is as observable as the legacy pair mode.
+    // Fold each lobby match into the rolling stats and log a summary.
     let on_match_end: crabomination::server::lobby::MatchEndHook =
         Arc::new(|format: LobbyFormat, duration, outcome: MatchOutcome| {
             let bin_format = Format::from_lobby(format);
             let snapshot = {
                 let mut s = match_stats().lock().unwrap_or_else(|p| p.into_inner());
-                // Route through the single `record_outcome` accumulator (same as
-                // the bot/pair paths) so lobby mode — the default — also folds in
-                // decisive/draw turn sums. Replicating the observe_* calls by hand
-                // here previously dropped those, leaving `turns(win/draw)` at 0/0.
+                // Through `record_outcome`, like the bot/pair paths: hand-rolled
+                // observe_* calls here once dropped the decisive/draw turn sums.
                 s.record_outcome(&outcome, bin_format, duration, true);
                 *s
             };
@@ -357,9 +325,8 @@ fn run_lobby_server(
     // never sees a collision.
     let next_id = Arc::new(std::sync::atomic::AtomicU64::new(0));
 
-    // WebSocket accept loop (browser clients) on its own thread; both
-    // transports feed the same lobby channel and slot manager, so browser
-    // and native clients share lobbies and connection caps.
+    // WebSocket accept loop on its own thread, feeding the same lobby channel
+    // and slot manager as TCP.
     if let Some(wsl) = ws_listener {
         let conn_tx = conn_tx.clone();
         let slots = slots.clone();
@@ -394,8 +361,7 @@ enum Transport {
     Ws,
 }
 
-/// The full HTTP 503 a WS connection refused before the upgrade receives.
-/// Split out from the write so the wire format is unit-testable.
+/// The full HTTP 503 sent to a WS connection refused before upgrade (split out for tests).
 fn ws_refusal_response(reason: &slots::SlotRefusal) -> String {
     let detail = match reason {
         slots::SlotRefusal::GlobalCapReached => "server at capacity",
@@ -412,9 +378,8 @@ fn ws_refusal_response(reason: &slots::SlotRefusal) -> String {
     )
 }
 
-/// Best-effort 503 for a refused WS peer, so a browser client can distinguish
-/// "server full" from "unreachable". Errors are ignored — the peer is being
-/// dropped either way.
+/// Best-effort 503 for a refused WS peer, so a browser can tell "full" from
+/// "unreachable". Errors are ignored.
 fn refuse_ws_handshake(stream: &TcpStream, reason: slots::SlotRefusal) {
     use std::io::Write;
     let mut s = stream;
@@ -423,11 +388,10 @@ fn refuse_ws_handshake(stream: &TcpStream, reason: slots::SlotRefusal) {
     let _ = s.flush();
 }
 
-/// Admit one accepted connection to the lobby: acquire a slot, wrap the
-/// stream into a `SeatChannel` via the transport's handshake, and hand it to
-/// the lobby driver. Returns `false` only if the lobby driver has exited
-/// (the caller's accept loop should stop); refusals and handshake failures
-/// return `true` and just drop the connection.
+/// Admit one connection: acquire a slot, run the transport handshake into a
+/// `SeatChannel`, hand it to the lobby driver. `false` only when the driver has
+/// exited; refusals and failed handshakes drop the connection and return
+/// `true`.
 fn admit_lobby_conn(
     stream: TcpStream,
     peer: std::net::SocketAddr,
@@ -449,12 +413,9 @@ fn admit_lobby_conn(
                 s.current, s.peak, s.refused_global, s.refused_per_ip,
                 occ = s.occupancy_pct(), rate = s.refusal_rate_pct(), ips = s.distinct_ips, max = s.max_per_ip, pmax = s.peak_per_ip,
             );
-            // A refused WS connection hasn't been upgraded yet, so it's still
-            // a plain HTTP exchange: answer 503 with `Retry-After` instead of
-            // a bare RST, which a browser reports as "connection failed" with
-            // no way to tell a full server from an unreachable one. A refused
-            // TCP peer gets the shutdown it always did (that transport has no
-            // pre-handshake framing to carry a reason).
+            // A refused WS connection is still plain HTTP, so answer 503 with
+            // `Retry-After` (a bare RST reads as "connection failed" in a browser). TCP
+            // has no pre-handshake framing for a reason, so it just gets shut down.
             if transport == Transport::Ws {
                 refuse_ws_handshake(&stream, reason);
             }
@@ -478,20 +439,16 @@ fn admit_lobby_conn(
     conn_tx.send((id, seat, guard)).is_ok()
 }
 
-/// Run a match body, catching any panic so a single buggy game logs with
-/// context and lets the thread unwind cleanly (dropping its seats/streams and
-/// releasing its slot) instead of dying with an opaque default backtrace.
-/// Returns `None` if the match panicked.
+/// Run a match, catching a panic so it logs with context and the thread
+/// unwinds cleanly (dropping seats and the slot). `None` if it panicked.
 fn run_match_caught(
     state: crabomination::game::GameState,
     seats: Vec<SeatOccupant>,
     ctx: &str,
 ) -> Option<MatchOutcome> {
-    // Serialized only when `CRAB_CRASH_DUMP_DIR` is set — the state is
-    // consumed by `run_match_full`, so the opening repro has to be taken
-    // before the call. The sink then keeps a live checkpoint: the actor
-    // republishes after every accepted action, so a panic on turn 15 dumps
-    // turn 15 rather than the opening hand.
+    // Only when `CRAB_CRASH_DUMP_DIR` is set. `run_match_full` consumes the
+    // state, so the opening snapshot is taken first; the sink then holds a live
+    // checkpoint republished after every action, so a turn-15 panic dumps turn 15.
     let pre_state = crash_dump::capture(&state);
     let sink: Option<SnapshotSink> = crash_dump::enabled().then(Default::default);
     let sink_for_match = sink.clone();
@@ -515,9 +472,8 @@ fn run_match_caught(
     }
 }
 
-/// Recover the human-readable message from a caught panic payload. `panic!`
-/// stores a `&'static str` or a `String`; anything else logs as a generic
-/// note so the abort line always carries *some* context.
+/// Message from a caught panic payload (`&'static str` or `String`; anything
+/// else gets a generic note).
 fn panic_message(payload: &(dyn std::any::Any + Send)) -> String {
     if let Some(s) = payload.downcast_ref::<&'static str>() {
         (*s).to_string()
@@ -568,8 +524,7 @@ fn run_pair_match(
     b_peer: std::net::SocketAddr,
     format: Format,
 ) {
-    // Wrap both streams before starting; if either fails, drop the other so
-    // the surviving client sees a clean EOF instead of hanging.
+    // If either wrap fails, drop the other so that client sees EOF, not a hang.
     let a_seat = match tcp_seat(a) {
         Ok(s) => s,
         Err(e) => {
@@ -668,19 +623,13 @@ mod tests {
         assert_eq!(panic_message(other.as_ref()), "non-string panic payload");
     }
 
-    /// Process-global env mutex for the test module. `cargo test` runs
-    /// tests in parallel by default, but env vars are process-wide — without
-    /// this lock two env-var tests can stomp on each other's `set_var`
-    /// before `Format::from_env` reads. Locking here is sufficient: every
-    /// env-touching test funnels through `with_env`.
+    /// Serializes the env-touching tests (all go through `with_env`); env vars
+    /// are process-wide and tests run in parallel.
     static ENV_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-    /// Hop in / out of an env var without leaking state across tests. The
-    /// env API is unsafe in newer Rust; we wrap it in this helper so the
-    /// scope is clearly bounded.
+    /// Set or clear an env var for the duration of `f`, then restore it.
     pub(crate) fn with_env<F: FnOnce() -> R, R>(key: &str, value: Option<&str>, f: F) -> R {
-        // Hold the lock for the entire setup → call → teardown window so a
-        // parallel test can't observe (or overwrite) our env mutation.
+        // Held across setup, call and teardown.
         let _g = ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let prev = env::var(key).ok();
         // SAFETY: ENV_LOCK serializes every env-touching test in this module;
@@ -781,9 +730,7 @@ mod tests {
         assert_eq!(exact, MAX_PAIRING_TIMEOUT);
     }
 
-    /// `accept_with_deadline` returns `None` after the deadline if no client
-    /// connects. This is the core mechanism that prevents seat 0 from
-    /// waiting forever for an opponent that never shows up.
+    /// `accept_with_deadline` returns `None` once the deadline passes with no client.
     #[test]
     pub(crate) fn accept_with_deadline_returns_none_on_timeout() {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
@@ -863,9 +810,7 @@ mod tests {
 
     #[test]
     pub(crate) fn slot_manager_releases_on_guard_drop() {
-        // global=2 so the per-IP limit is the one that triggers (otherwise
-        // global=1 would reject before we even checked per-IP, masking the
-        // behavior we want to test).
+        // global=2 so the per-IP cap is the one that fires.
         let s = SlotManager::new(2, 1);
         let g = s.try_acquire(ip("10.0.0.1")).expect("first");
         assert!(matches!(
@@ -944,9 +889,8 @@ mod tests {
         );
     }
 
-    /// `accept_with_deadline` returns the connection if a client arrives
-    /// before the deadline elapses. Also verifies the listener is restored
-    /// to blocking mode on success so subsequent accepts behave normally.
+    /// `accept_with_deadline` returns a client that arrives in time and leaves
+    /// the listener in blocking mode.
     #[test]
     pub(crate) fn accept_with_deadline_returns_connection_when_client_arrives() {
         let listener = TcpListener::bind("127.0.0.1:0").expect("bind");
@@ -1735,10 +1679,8 @@ mod tests {
 
     #[test]
     pub(crate) fn turn_percentile_ranks_against_its_own_histogram() {
-        // Turn samples outnumber recorded matches (the two counters drifted).
-        // The percentile must rank against the turn histogram's own sum, so
-        // p50 still lands in the populated short bucket rather than skewing to
-        // the tail because the denominator was too small.
+        // Turn samples outnumber recorded matches: the percentile must rank against
+        // the turn histogram's own sum.
         let mut s = MatchStats::default();
         s.record_bot(Duration::from_secs(1), Format::Demo); // total_matches == 1
         for _ in 0..9 {
@@ -1779,9 +1721,7 @@ mod tests {
 
     #[test]
     pub(crate) fn match_stats_tracks_per_format_counts() {
-        // Push (claude/modern_decks batch 162) — the new per-format
-        // histogram surfaces a `format=demo:N cube:M` breakdown in the
-        // rolling stats line so operators see cube-vs-demo split.
+        // Per-format breakdown renders as `format=demo:N cube:M`.
         let mut s = MatchStats::default();
         s.record_bot(Duration::from_secs(60), Format::Demo);
         s.record_bot(Duration::from_secs(120), Format::Cube);
@@ -1808,9 +1748,6 @@ mod tests {
 
     #[test]
     pub(crate) fn observe_turns_tracks_min_and_max_envelope() {
-        // Push (claude/modern_decks batch 205) — the new min_turns
-        // completes the turn-count envelope alongside the existing
-        // max_turns + running average.
         let mut s = MatchStats::default();
         assert_eq!(s.min_turns, None, "no samples yet");
         s.observe_turns(8);

@@ -19,15 +19,12 @@ type RedirectKey =
 thread_local! {
     /// CR 614.5 — the shields whose soaked damage is being re-dealt right now
     /// (redirects: Carom, Sivvi's Valor; reflections: Deflecting Palm,
-    /// Comeuppance). A replacement effect gets one opportunity at an event
-    /// and at the events that replace it, so a shield in this chain does not
-    /// apply again to the damage it sent on: two turn-long redirects pointing
-    /// at each other, or a Comeuppance on each side reflecting the other's
-    /// damage (a mandatory loop on paper, CR 104.4b), otherwise recursed
-    /// through `deal_damage_to_from` until the stack overflowed (cube ladder
-    /// games, 2026-10-26). Thread-local, not on the state: it lives only
-    /// inside one synchronous re-deal, and the common path reads one empty
-    /// `Vec`.
+    /// Comeuppance). A replacement gets one opportunity at an event and the
+    /// events replacing it, so a shield in this chain doesn't apply again to
+    /// the damage it sent on; otherwise two redirects aimed at each other (or a
+    /// Comeuppance each side, CR 104.4b) recursed until the stack overflowed.
+    /// Thread-local, not on the state: it lives only inside one synchronous
+    /// re-deal, and the common path reads one empty `Vec`.
     static REDIRECT_CHAIN: std::cell::RefCell<Vec<RedirectKey>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
@@ -43,27 +40,18 @@ fn re_deals(s: &crate::game::types::PreventionShield) -> bool {
 /// Which of the damage-prevention funnel's battlefield statics exist right
 /// now, as a bit per family, gathered in one walk.
 ///
-/// Same device as [`cast_static`](crate::game::actions::cast_static) one
-/// stage later in the game loop: `apply_prevention_shields` asked the
-/// battlefield **seven** separate times per damage event — the global
-/// can't-be-prevented static, Questing Beast, Excruciator, Sphere of Purity,
-/// Shield of the Avatar, Energy Field and the two blocked/matching shields —
-/// plus a `battlefield_find` in front of each single-card leg, for statics a
-/// normal board does not have. A bit is a pure over-approximation: the block
-/// it gates still runs its own controller / amount / filter tests unchanged,
-/// so a set bit can only cost a walk and a clear bit can only skip work that
-/// was a no-op.
+/// Same device as [`cast_static`](crate::game::actions::cast_static):
+/// `apply_prevention_shields` otherwise walks the battlefield once per
+/// static family (seven) per damage event. A bit is a pure
+/// over-approximation — the gated block still runs its own tests — so a set
+/// bit can only cost a walk and a clear bit only skips a no-op.
 ///
-/// **Why that is sound by construction, and where it is not.** Every gated
-/// block's own test is a `matches!` for one `StaticEffect` variant on a
-/// battlefield card's `static_abilities` — either the whole zone or one card
-/// found in it — and that is exactly what this walk reads, so the mask is a
-/// strict superset of what any gate can find. The two blocks that ask for
-/// something *more* than "does this variant exist on the battlefield" (the
-/// global can't-be-prevented gate, and the blocked/matching pair, which both
-/// go through helpers with their own extra conditions) carry a
-/// `debug_assert!` instead. **A leg that reads statics from anywhere else is
-/// not gateable here and is deliberately left ungated** — the Ajani emblem
+/// Sound because every gated block's own test is a `matches!` for one
+/// `StaticEffect` variant on a battlefield card's `static_abilities`, which
+/// is exactly what this walk reads. The two blocks asking something more
+/// (the global can't-be-prevented gate, and the blocked/matching pair) carry
+/// a `debug_assert!` instead. **A leg that reads statics from anywhere else
+/// is deliberately left ungated** — the Ajani emblem
 /// (`players[seat].emblems`), `damage_prevented_sources`,
 /// `prevention_shields`, and the two player flags.
 pub(crate) mod prevent_static {
@@ -576,12 +564,6 @@ impl GameState {
         }
     }
 
-    /// CR 615.1 / 615.7 / 615.12 — apply prevention shields to a pending
-    /// damage event aimed at `ent`. "Prevent all" shields zero the event;
-    /// "prevent next N" shields soak up to N and then expire. The whole
-    /// step is bypassed while `damage_cant_be_prevented_this_turn` is set.
-    /// Emits `GameEvent::DamagePrevented` for the prevented portion
-    /// (CR 615.13) and returns the unprevented remainder.
     /// CR 122.1c — a shield counter: "if damage would be dealt to this
     /// permanent, prevent that damage and remove a shield counter". True when
     /// one was there (and is now gone). Shared by the noncombat funnel and
@@ -600,6 +582,11 @@ impl GameState {
         true
     }
 
+    /// CR 615.1 / 615.7 / 615.12 — apply prevention shields to a pending damage
+    /// event aimed at `ent`: "prevent all" zeroes it, "prevent next N" soaks up
+    /// to N then expires; bypassed while `damage_cant_be_prevented_this_turn`.
+    /// Emits `GameEvent::DamagePrevented` (CR 615.13) and returns the
+    /// unprevented remainder.
     pub fn apply_prevention_shields(
         &mut self,
         ent: EntityRef,
@@ -1575,12 +1562,6 @@ impl GameState {
             .or_else(|| self.find_card_anywhere(src).map(|c| c.controller))
     }
 
-    /// Damage delivery with the source's identity threaded through, so
-    /// CR 702.90b (Infect) can convert player damage into poison
-    /// counters when the source has the Infect keyword. `source` is
-    /// the `CardId` of the damaging permanent (typically `ctx.source`).
-    /// Combat damage uses a separate path in `combat.rs` that already
-    /// honors infect for combat damage.
     /// Ojer Axonil — `amount` noncombat damage from `source` (controlled by
     /// `seat`) to opponent `victim`, raised to the greatest power among
     /// `seat`'s `RaiseRedNoncombatDamageToOpponentsToPower` permanents when
@@ -1606,6 +1587,10 @@ impl GameState {
         }
     }
 
+    /// Damage delivery with the source's identity threaded through, so CR
+    /// 702.90b (Infect) turns player damage into poison. `source` is the
+    /// damaging permanent (typically `ctx.source`); combat damage has its own
+    /// infect-aware path in `combat.rs`.
     pub fn deal_damage_to_from(
         &mut self,
         ent: EntityRef,
@@ -1613,17 +1598,10 @@ impl GameState {
         source: Option<crate::card::CardId>,
         events: &mut Vec<GameEvent>,
     ) {
-        // CR 120.8 — "If a source would deal 0 damage, it does not deal
-        // damage at all. That means abilities that trigger on damage
-        // being dealt won't trigger. It also means that replacement
-        // effects that would increase the damage dealt by that source,
-        // or would have that source deal that damage to a different
-        // object or player, have no event to replace, so they have no
-        // effect." We bail out of the entire damage-delivery sequence
-        // when `amount == 0`, so no `GameEvent::DamageDealt`,
-        // `LifeLost`, `PoisonAdded`, or `LoyaltyChanged` event is
-        // emitted. Damage-watching triggered abilities won't fire on
-        // 0-damage events.
+        // CR 120.8 — a source dealing 0 damage deals no damage at all:
+        // nothing triggers and replacements have no event to modify. So
+        // bail out entirely: no `DamageDealt`, `LifeLost`, `PoisonAdded`
+        // or `LoyaltyChanged` event.
         if amount == 0 {
             return;
         }
@@ -2135,11 +2113,9 @@ impl GameState {
                 }
                 // The Fallen — the source remembers who it has bled, forever.
                 //
-                // ⚠ The definition gate comes **first**, and it is the whole
-                // point: `battlefield_find_mut` unshares the battlefield, so
-                // asking it before the `contains` check paid a full zone deep
-                // copy on every damage event for a list only The Fallen can
-                // read. One immutable scan replaces it. PERF `(-154)`.
+                // ⚠ The definition gate comes FIRST: `battlefield_find_mut`
+                // unshares the battlefield, so calling it before the `contains`
+                // check deep-copied the zone on every damage event. PERF `(-154)`.
                 if let Some(src) = source
                     && self
                         .battlefield_find(src)
@@ -2216,16 +2192,9 @@ impl GameState {
                 if self.consume_shield_counter(cid) {
                     return;
                 }
-                // CR 120.3c — damage dealt to a planeswalker causes that
-                // many loyalty counters to be removed from that
-                // planeswalker. Before this branch, non-combat
-                // `Effect::DealDamage` was marking the damage on `c.damage`
-                // regardless of card type, so a Lightning Bolt at a 3-loyalty
-                // PW correctly removed 3 damage to be applied to toughness
-                // (toughness = 0 → die!) but skipped the printed
-                // loyalty-loss path. Combat damage already routes through
-                // `combat.rs::AttackTarget::Planeswalker` which decrements
-                // loyalty — this aligns spell damage with the same rule.
+                // CR 120.3c — damage to a planeswalker removes that many loyalty
+                // counters (rather than being marked as damage), as combat's
+                // `AttackTarget::Planeswalker` path already does.
                 let is_pw = self
                     .battlefield_find(cid)
                     .map(|c| self.computed_has_card_type(c, crate::card::CardType::Planeswalker))
@@ -2650,11 +2619,10 @@ impl GameState {
     }
 
     /// CR 701.40a / 708 — turn `cid` face down with `turn`, then move it to
-    /// `dest`. A card that did not reach the battlefield (a replacement,
-    /// Grafdigger's Cage, the board bound) is face up again where it stayed
-    /// — unless it was face down before (a foretold card). Ghastly
-    /// Conscription and Missy's Cyberman left cards face down in graveyards
-    /// (fuzzed audit pods, seeds 3141188 game 7 and 3184380 game 7).
+    /// `dest`. A card that didn't reach the battlefield (a replacement,
+    /// Grafdigger's Cage, the board bound) is face up again where it stayed —
+    /// unless it was face down before (a foretold card). Ghastly Conscription,
+    /// Missy's Cyberman.
     pub(crate) fn face_down_onto_battlefield(
         &mut self,
         cid: CardId,
@@ -3089,12 +3057,11 @@ impl GameState {
         }
     }
 
-    /// Pre-resolve any selector-based player refs in a `ZoneDest` against
-    /// the active ctx. `place_card_in_dest` constructs its own bare ctx and
-    /// can't see the caster's targets, so any `PlayerRef::OwnerOf(Selector)`
-    /// / `ControllerOf(Selector)` need to be flattened to a concrete
-    /// `PlayerRef::Seat(n)` while the source card is still in its origin
-    /// zone. Other ref kinds (You / ActivePlayer / etc.) pass through.
+    /// Pre-resolve selector-based player refs in a `ZoneDest` against the
+    /// active ctx: `place_card_in_dest` builds its own bare ctx without the
+    /// caster's targets, so `OwnerOf(Selector)` / `ControllerOf(Selector)` are
+    /// flattened to `PlayerRef::Seat(n)` while the card is still in its origin
+    /// zone. Other refs pass through.
     pub(super) fn resolve_zonedest_player(&self, dest: &ZoneDest, ctx: &EffectContext) -> ZoneDest {
         let flatten = |who: &PlayerRef| -> PlayerRef {
             match who {
@@ -3112,14 +3079,10 @@ impl GameState {
                         who.clone()
                     }
                 }
-                // Flatten `PlayerRef::You` to the caster's seat now —
-                // `place_card_in_dest` builds its own context anchored to
-                // the card's *origin owner* (which is the graveyard owner
-                // for gy-to-bf moves like Mind Roots, not the caster). If
-                // we don't flatten here, "controller: PlayerRef::You" on a
-                // ZoneDest::Battlefield would end up resolving to the
-                // graveyard's owner instead of the caster, putting the
-                // stolen land back under the opp's control.
+                // Flatten `You` to the caster now: `place_card_in_dest`'s context
+                // is anchored to the card's origin owner (the graveyard owner for
+                // Mind Roots), so `controller: You` would otherwise hand the
+                // stolen land back to the opponent.
                 PlayerRef::You => PlayerRef::Seat(ctx.controller),
                 _ => who.clone(),
             }
@@ -3171,16 +3134,11 @@ impl GameState {
             let plain = ZoneDest::Battlefield { controller: PlayerRef::Seat(default_player), tapped: false };
             return self.place_card_in_dest(card, default_player, &plain, events);
         }
-        // Phase H — consult the replacement-effect registry. The
-        // resolver only sees the *destination kind* (a `Zone`); the
-        // origin is left unconstrained here (passed as
-        // `Zone::Battlefield` for now, which covers the Commander
-        // case since its replacement effect uses `from: None`).
-        // If the resolver redirects to a different zone, we hand off
-        // to `place_card_at_resolved_zone` which handles the
-        // terminal-zone placement uniformly. Same-zone return falls
-        // through to the existing rich `ZoneDest` logic so player /
-        // tapped / library-position information is preserved.
+        // Phase H — consult the replacement registry. It sees only the
+        // destination kind; origin is passed as `Zone::Battlefield` (fine
+        // for the Commander replacement, `from: None`). A redirect goes to
+        // `place_card_at_resolved_zone`; same-zone falls through to the
+        // `ZoneDest` logic below, keeping player / tapped / position info.
         let intended = match dest {
             ZoneDest::Hand(_) => crate::card::Zone::Hand,
             ZoneDest::Library { .. } => crate::card::Zone::Library,
@@ -3267,13 +3225,10 @@ impl GameState {
         if intended != crate::card::Zone::Battlefield {
             card.revert_flip();
         }
-        // CR 712.4 / 702.160a — and a transformed DFC or a prototyped card
-        // bound anywhere but exile shows its front / printed face: Evacuation
-        // bounced a disturbed Generous Soul into a hand as its back face (pod
-        // seed 818288). In exile only a battle keeps its back face (a
-        // defeated Siege is cast transformed from there); Aerial
-        // Extortionist exiled a transformed Abolisher of Bloodlines as its
-        // back face (audit pod seed 3130108 game 5).
+        // CR 712.4 / 702.160a — a transformed DFC or prototyped card bound
+        // anywhere but exile shows its front / printed face (Evacuation on a
+        // disturbed Generous Soul). In exile only a battle keeps its back
+        // face, since a defeated Siege is cast transformed from there.
         let siege = intended == crate::card::Zone::Exile
             && card.front_face.as_ref().is_some_and(|f| f.card_types.contains(&crate::card::CardType::Battle));
         if intended != crate::card::Zone::Battlefield && !siege {
@@ -3310,19 +3265,12 @@ impl GameState {
                     }
                     LibraryPosition::Bottom => self.players[p].library.push(card),
                     LibraryPosition::OwnerChoice => {
-                        // CR 701: "owner's choice" library placement.
-                        // Ask the *owner* of the moved card (= the
-                        // library we're putting it in — `p` resolved
-                        // above) yes/no via `Decision::OptionalTrigger`.
-                        // True = top, false = bottom. AutoDecider
-                        // defaults to false (bottom). Run Behind is the
-                        // only printed user today.
-                        // Auto default: TOP — the choice belongs to the
-                        // card's owner, who nearly always wants their own
-                        // tucked card back next draw (blanket "no" buried
-                        // it every time). Scripted deciders steer;
-                        // suspension isn't reachable this deep in
-                        // `place_card_in_dest` (TODO.md).
+                        // CR 701: "owner's choice" placement — ask the owner (`p`, whose
+                        // library it is) yes/no via `OptionalTrigger`: true = top. Auto
+                        // default: TOP, since the owner nearly always wants their tucked
+                        // card back next draw (Run Behind). Scripted deciders steer; a
+                        // suspension isn't reachable this deep in `place_card_in_dest`
+                        // (TODO.md).
                         let put_on_top = match self.decider.kind() {
                             crate::decision::DeciderKind::Auto => true,
                             _ => matches!(
@@ -3363,24 +3311,14 @@ impl GameState {
                         }
                     }
                     LibraryPosition::Shuffled => {
-                        // Push the card in, then shuffle the entire library
-                        // so the card lands at a random position (Chaos Warp,
-                        // bottom-of-library reanimate-prevention effects, etc.).
-                        // Pre-fix this fell through to `push` (effectively
-                        // sending to bottom), which exposed deterministic
-                        // ordering across cards that semantically should
-                        // randomize.
+                        // Push, then shuffle the whole library so the card lands at a
+                        // random position (Chaos Warp and kin), not the bottom.
                         self.players[p].library.push(card);
                         self.shuffle_library(p, events);
                     }
                     LibraryPosition::FromTop(n) => {
-                        // CR 401.7: "If a player is instructed to put a
-                        // card 'Nth from the top' of a library, and there
-                        // are fewer than N cards in that library, the
-                        // card is put on the bottom of that library."
-                        // `FromTop(0)` = top; otherwise insert at index
-                        // `n` if the library has at least `n` cards,
-                        // else `push` (= bottom).
+                        // CR 401.7: "Nth from the top" of a library with fewer than N
+                        // cards goes to the bottom. `FromTop(0)` = top.
                         let lib_len = self.players[p].library.len();
                         if *n >= lib_len {
                             self.players[p].library.push(card);
@@ -3553,18 +3491,12 @@ impl GameState {
                     }
                 }
                 let cid = card.id;
-                // CR 614.12 — apply "enters with N counters" replacement
-                // BEFORE the new permanent is exposed to state-based-action
-                // sweeps and BEFORE ETB triggers fire. This lets a printed
-                // 0/0 or 1/0 body (Pterafractyl, Symmathematics) survive
-                // without the historic base-toughness bump workaround. The
-                // Value is evaluated against a self-ability ctx anchored
-                // to the new permanent's `CardId` so `Value::XFromCost`
-                // reads via a `for_ability` shim — for spells using
-                // `Value::Const(N)` (Symmathematics) this is exact; for
-                // X-on-cast bodies (Pterafractyl) the x_value would need
-                // additional plumbing through `move_card_to` from the
-                // cast-time ctx, tracked separately.
+                // CR 614.12 — apply "enters with N counters" BEFORE the permanent
+                // is exposed to SBAs or ETB triggers, so a printed 0/0 or 1/0
+                // (Pterafractyl, Symmathematics) survives. The Value is evaluated
+                // in a self-ability ctx on the new permanent: exact for
+                // `Value::Const(N)`; X-on-cast bodies would need the cast-time
+                // x_value plumbed through `move_card_to` (tracked separately).
                 let enters_spec = card.definition.enters_with_counters.clone();
                 // CR 614.12 — "enters with N counters if you cast it from your
                 // hand" (Patched Plaything) reads the resolving card's cast
@@ -3671,12 +3603,10 @@ impl GameState {
                         from_hand: false,
                     });
                 }
-                // Fire self-source ETB triggers so reanimate / flicker /
-                // search-to-battlefield paths trigger creature ETBs the same
-                // way casting does. CR 603.3d — the trigger's controller is
-                // the permanent's controller AFTER any ETB control
-                // replacement (Gather Specimens), not the pre-replacement
-                // destination seat.
+                // Fire self-source ETB triggers so reanimate / flicker / put-onto-
+                // battlefield paths trigger like casting. CR 603.3d — controlled
+                // by the permanent's controller after any ETB control replacement
+                // (Gather Specimens), not the pre-replacement seat.
                 let etb_ctrl = self
                     .battlefield
                     .find_by_id(cid)
@@ -3687,10 +3617,6 @@ impl GameState {
         }
     }
 
-    /// Shared leaves-battlefield bookkeeping, called from every
-    /// battlefield-removal path: CR 603.6e linked-exile returns plus
-    /// "when [that permanent] leaves the battlefield" delayed triggers
-    /// (`DelayedKind::WhenCardLeavesBattlefield` — Hofri Ghostforge).
     /// CR 603.10 — a permanent leaving for a zone other than a graveyard.
     /// Snapshots the leaver for the dispatcher's LKI walk (its own "when this
     /// leaves the battlefield" fires off the snapshot, the card being gone by
@@ -3737,6 +3663,10 @@ impl GameState {
         });
     }
 
+    /// Shared leaves-battlefield bookkeeping, called from every
+    /// battlefield-removal path: CR 603.6e linked-exile returns plus
+    /// "when [that permanent] leaves the battlefield" delayed triggers
+    /// (`DelayedKind::WhenCardLeavesBattlefield` — Hofri Ghostforge).
     pub(crate) fn on_left_battlefield(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         // CR 400.7 — a leaves-the-battlefield replacement bound to this
         // object (`exile_if_leaves_battlefield`) is spent with it.
@@ -3757,12 +3687,9 @@ impl GameState {
         self.phase_in_held_by(id, events);
         // Source-bound control steals end with their source (Sower of
         // Temptation — CR 800.4 hands the permanent back).
-        // `temporary_control` is a `ColdState` field, so the `take` is a
-        // write to the whole cold group: on a board with no steal bound to
-        // `id` — every leave-the-battlefield on a normal board — it deep-
-        // copied ~85 collections and put the same list back. Same guard
-        // `revert_temporary_control` already carries, narrowed to the source
-        // this call is about. Reads are free (`Deref`).
+        // `temporary_control` is a `ColdState` field: an unguarded `take`
+        // deep-copies the cold group on every leave, so gate it on a steal
+        // actually bound to `id` (as `revert_temporary_control` does).
         if self.temporary_control.iter().any(|tc| tc.source == Some(id)) {
             let all = std::mem::take(&mut self.temporary_control);
             let ended: Vec<bool> = all.iter().map(|tc| tc.source == Some(id)).collect();
@@ -3803,10 +3730,9 @@ impl GameState {
             // …and so does how it got here: a reanimated permanent wasn't cast
             // from anywhere, so "if you didn't cast it from your hand" riders
             // see the new object (Phage the Untouchable).
-            // Same shape as the four above: gate the run, then take one
-            // `CardInstance::deref_mut` for it. `CardInstance` is a CoW
-            // handle, so each of these six writes was its own
-            // `Arc::make_mut`, and the reads are free (`Deref`).
+            // Same shape as the four above: gate the run, then one
+            // `CardInstance::deref_mut` (each write is its own `Arc::make_mut`;
+            // reads are free).
             if c.cast_from_hand
                 || c.cast_from_exile
                 || c.cast_from_library
@@ -3842,13 +3768,12 @@ impl GameState {
             self.players[owner].greatest_hit_this_turn = hit;
         }
         self.drop_self_scoped_effects(id);
-        // CR 611.2c — continuous effects aimed at this specific permanent
-        // end with it (don't re-attach if the same card re-enters).
-        // `continuous_effects` is a `CowBox`, so `iter_mut` unshares and deep-
-        // copies the whole list even when no entry names `id`. The gate is the
-        // disjunction of what the two statements below can change — an entry
-        // holding `id`, or one already empty for the `retain` to drop — so a
-        // clear answer means both are no-ops.
+        // CR 611.2c — continuous effects aimed at this permanent end with
+        // it (no re-attach if the same card re-enters).
+        // `continuous_effects` is a `CowBox`, so `iter_mut` deep-copies the
+        // list; the gate is the disjunction of what the two statements
+        // below can change (an entry holding `id`, or an already-empty one
+        // for `retain`), so a clear answer means both are no-ops.
         if self.continuous_effects.iter().any(|e| {
             matches!(&e.affected,
                 crate::game::layers::AffectedPermanents::Specific(ids)
@@ -3889,14 +3814,12 @@ impl GameState {
         }
     }
 
-    /// CR 603.6e — when a permanent that exiled card(s) via
-    /// `Effect::ExileUntilSourceLeaves` leaves the battlefield, return the
-    /// linked card(s) to the zone the linking ability specified
-    /// (battlefield for Banisher Priest / Oblivion Ring, hand for Brain
-    /// Maggot / Tidehollow Sculler). Called from every battlefield-removal
-    /// path. The return is resolved directly rather than as a stack
-    /// trigger — a deliberate simplification; the observable result (the
-    /// card comes back) matches the printed linked ability.
+    /// CR 603.6e — when a permanent that exiled cards via
+    /// `Effect::ExileUntilSourceLeaves` leaves, return them to the zone the
+    /// linking ability names (battlefield: Banisher Priest, Oblivion Ring;
+    /// hand: Brain Maggot, Tidehollow Sculler). Called from every removal
+    /// path, resolved directly rather than as a stack trigger — a deliberate
+    /// simplification with the same observable result.
     pub(crate) fn return_linked_exiles(
         &mut self,
         source: CardId,

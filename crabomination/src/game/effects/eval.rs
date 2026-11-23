@@ -18,11 +18,8 @@ use crate::game::{GameState, PresenceGate, StackItem, Target};
 /// Built once per requirement by the caller and read per permanent; `false`
 /// from a gate is authoritative, `true` sends that leaf to the walker.
 ///
-/// Each read is the gate's *body*, not its `GameState` wrapper: the wrappers'
-/// one caller is the walker, which inlines them whole, and a second caller
-/// de-inlines them there (PERF `(-182)`, two builds). A closure of this
-/// module's own is a separate `presence_gate` monomorphization, so the
-/// walker's copies are untouched.
+/// Each read is the gate's *body*, not its `GameState` wrapper: a second
+/// caller of the wrapper de-inlines it in the walker (PERF `(-182)`).
 #[derive(Default)]
 pub(crate) struct PrintedGates {
     card: std::cell::Cell<Option<bool>>,
@@ -63,11 +60,9 @@ impl PrintedGates {
     }
     /// CR 613.5 layer 5 — `AddColor` / `SetColors` / `LoseAllColors`.
     ///
-    /// `card_color_change_unscoped` is deliberately unmemoized and its doc
-    /// asks a hot caller to carry its own valid flag rather than widen the
-    /// `CardMemo` word; this is that caller and this is that flag. One walk
-    /// per *filter*, in front of a walk that asks the filter of every
-    /// permanent on the board.
+    /// The hot caller `card_color_change_unscoped`'s doc asks to carry its own
+    /// valid flag (rather than widen `CardMemo`): one walk per *filter*, in
+    /// front of a walk that asks the filter of every permanent.
     #[inline]
     fn color(&self, g: &GameState) -> bool {
         if let Some(v) = self.color.get() {
@@ -81,26 +76,19 @@ impl PrintedGates {
 
 /// The printed card type **every** battlefield object satisfying `req` must
 /// have, when one of `req`'s top-level conjuncts names one. `.and()` nests to
-/// the LEFT, so this walks that spine and looks only at bare conjuncts — a
-/// type under an `Or` or a `Not` constrains nothing. Every conjunct of an
-/// `And` must hold, so a `false` from one of them is `false` for the whole
-/// filter whatever the rest says, which is what makes a partial pre-test
-/// sound where a partial *evaluation* would not be.
+/// the LEFT, so this walks that spine and reads only bare conjuncts — a type
+/// under an `Or` or `Not` constrains nothing. A `false` from any conjunct of
+/// an `And` is `false` for the whole filter, which is what makes a partial
+/// pre-test sound where a partial evaluation would not be.
 ///
-/// One requirement walk per *filter*, in front of a walk that asks the filter
-/// of every permanent on the board: a target filter that names a card type
-/// rejects much of the board on that one test, and
-/// [`GameState::requirement_on_permanent`] pays a call and the `And` frames
-/// above it to say so. Pair it with [`printed_type_rejects`], which answers
-/// exactly what the walker's `card_type` closure answers.
+/// One walk per *filter*, in front of a walk over every permanent: a filter
+/// naming a card type rejects much of the board on that one test. Pair it
+/// with [`printed_type_rejects`], which answers exactly what the walker's
+/// `card_type` closure answers.
 ///
-/// ⚠ **Widening it loses — measured, twice.** Carrying `Nonland`/`Noncreature`
-/// and `ControlledByYou`/`ControlledByOpponent` as well, in two different
-/// shapes (a three-field struct and a `Copy` one-byte-tag struct), read
-/// `fixed` **+0.369 %** / `sealed` **+0.259..0.271 %** against this one's
-/// -0.068 / -0.126, for 6,158 more candidates rejected. PERF `(-302)`: the
-/// pre-test is priced by what every KEPT candidate pays, not by what a
-/// rejected one saves.
+/// ⚠ Widening it (also carrying `Nonland`/`Noncreature`/controller) was
+/// measured twice and lost, PERF `(-302)`: the pre-test is priced by what
+/// every KEPT candidate pays, not by what a rejected one saves.
 pub(crate) fn required_printed_card_type(
     req: &SelectionRequirement,
 ) -> Option<crate::card::CardType> {
@@ -133,11 +121,10 @@ pub(crate) fn required_printed_card_type(
 
 /// `true` when the printed types alone say `c` cannot be a `t`, under exactly
 /// the conditions `printed_requirement_impl`'s `card_type` closure answers
-/// under: no layer-4 card-type source in scope (the caller's [`PrintedGates`]
-/// question, asked once per walk by
-/// [`GameState::printed_type_prefilter`]), not bestowed, and — for `Creature`
-/// — not one of CR 604.3's off-battlefield creatures (Grist), whose arm
-/// declines on the battlefield. `c` is a battlefield permanent.
+/// under: no layer-4 card-type source in scope (the [`PrintedGates`]
+/// question, asked once per walk by [`GameState::printed_type_prefilter`]),
+/// not bestowed, and — for `Creature` — not one of CR 604.3's
+/// off-battlefield creatures (Grist). `c` is a battlefield permanent.
 #[inline]
 pub(crate) fn printed_type_rejects(t: &crate::card::CardType, c: &CardInstance) -> bool {
     if c.bestowed {
@@ -432,12 +419,10 @@ impl GameState {
     }
 
     /// Tokens the spell `id` would mint if `caster` cast it now: its own
-    /// effect's, plus — once the board is already large — the token triggers
-    /// still on the stack and one resolution of each "whenever you cast a
-    /// spell" token trigger `caster` controls (a board of Leitmotif Composers
-    /// doubles on every big spell). The bot
-    /// uses it to skip a cast that would carry the battlefield past the
-    /// simulator's bound (Storm Herd at thousands of life).
+    /// effect's, plus — once the board is already large — the token triggers on
+    /// the stack and one resolution of each "whenever you cast a spell" token
+    /// trigger `caster` controls (Leitmotif Composer). The bot skips a cast that
+    /// would carry the battlefield past the simulator's bound.
     pub(crate) fn spell_token_estimate(&self, id: CardId, caster: usize) -> i64 {
         self.spell_token_estimate_cast(id, caster, &[], 0)
     }
@@ -731,14 +716,10 @@ impl GameState {
                     EntityRef::Player(_) => matches!(filter, SelectionRequirement::Player),
                 })
                 .count() as i32,
-            // CR-spec: "the power of X" returns the total across all
-            // entities X resolves to. Single-entity selectors (Target,
-            // This, TriggerSource) return that entity's power; fan-out
-            // selectors (`EachPermanent(filter)`) return the sum across
-            // every match — unblocking "total power among creatures you
-            // control" cards (Orysa Tide Choreographer's "total toughness
-            // ≥ 10" alt-cost gate, etc.). Same fan-out convention as
-            // `CountersOn`.
+            // "The power of X" totals over every entity X resolves to: a
+            // single-entity selector reads its one power, a fan-out
+            // (`EachPermanent(filter)`) sums (Orysa Tide Choreographer's
+            // "total toughness ≥ 10"). Same convention as `CountersOn`.
             Value::BlockersOf(s) => self
                 .resolve_selector(s, ctx)
                 .iter()
@@ -765,23 +746,15 @@ impl GameState {
                     if let Some(snap) = self.lki_snapshot(cid).or_else(|| self.trigger_subject_lki(cid, ctx)) {
                         return Some(snap.power());
                     }
-                    // CR 121 / Lorehold Excavation: read power from the
-                    // battlefield first (live `power()` includes
-                    // counters), then fall through to graveyard / exile /
-                    // hand for cards that have changed zones but whose
-                    // power is still being read (e.g. Lorehold
-                    // Excavation's "X = its power" rider where the
-                    // target is in graveyard at evaluation time, before
-                    // it gets exiled). Non-battlefield zones return the
-                    // printed power from `CardDefinition.power` since
-                    // counters don't apply off the battlefield.
-                    // CR 613 — on the battlefield the answer is the
-                    // *computed* power. `CardInstance::power()` is base +
-                    // counters + resolved pumps and is blind to every
-                    // layer-7 static, so a 2/2 under a Glorious Anthem used
-                    // to read 2 here. `effective_power` falls back to the
-                    // instance read inside a gather, where the computed view
-                    // does not exist yet.
+                    // Battlefield first, then graveyard / exile / hand for a card
+                    // that changed zones but whose power is still read (Lorehold
+                    // Excavation's "X = its power" with the target in the
+                    // graveyard). Off the battlefield the printed power (no
+                    // counters).
+                    // CR 613 — on the battlefield it's the *computed* power
+                    // (`CardInstance::power()` is blind to layer-7 statics like
+                    // Glorious Anthem). `effective_power` falls back to the
+                    // instance read inside a gather, where no computed view exists.
                     if let Some(c) = self.battlefield_find(cid) {
                         return Some(self.effective_power(c));
                     }
@@ -846,14 +819,11 @@ impl GameState {
                 .fold(0, i32::saturating_add),
             Value::LifeOf(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life).unwrap_or(0),
             Value::PlayerSpeed(p) => self.resolve_player(p, ctx).map(|p| self.players[p].speed as i32).unwrap_or(0),
-            // Max over the resolved set, `LifeLostThisTurn`'s convention: a
-            // single-valued ref reads the same one hand, and `EachPlayer` now
-            // reads "the biggest hand" instead of seat 0's. That is what
-            // **Ill-Gotten Gains** needs — "each player discards their hand"
-            // is `Discard { who: EachPlayer, amount: HandSizeOf(EachPlayer) }`,
-            // and the arm caps each seat's discard at its own hand, so the max
-            // empties every hand where seat 0's size emptied only the seats
-            // holding no more than seat 0 did.
+            // Max over the resolved set (`LifeLostThisTurn`'s convention): a
+            // single-valued ref reads its one hand, `EachPlayer` the biggest.
+            // Ill-Gotten Gains is `Discard { who: EachPlayer, amount:
+            // HandSizeOf(EachPlayer) }` and the arm caps each discard at that
+            // seat's hand, so the max empties every hand.
             Value::HandSizeOf(p) => self
                 .resolve_players(p, ctx)
                 .iter()
@@ -1515,15 +1485,11 @@ impl GameState {
                         .or_else(|| self.command_card(cid))
                         .map(|c| c.counter_count(*kind).min(i32::MAX as u32) as i32)
                 })
-                // CR-spec: "the number of [counter type] on X" returns the
-                // total across all entities X resolves to. Single-entity
-                // selectors (`Target(0)`, `This`) still return that entity's
-                // count; fan-out selectors (`EachPermanent(filter)`) now sum
-                // — unblocking "total +1/+1 counters across all creatures
-                // you control" cards (Reflective Anatomy). Lock-in test:
-                // `tests::stx::reflective_anatomy_pumps_target_by_total_counters`.
-                // Saturating: a doubling board's counters passed `i32::MAX`
-                // (`--a dflt` audit pod seed 16200250 game 3).
+                // "The number of [counter] on X" totals across X's entities:
+                // single selectors read their one count, fan-outs sum
+                // (Reflective Anatomy; locked in by
+                // `tests::stx::reflective_anatomy_pumps_target_by_total_counters`).
+                // Saturating: a doubling board's counters passed `i32::MAX`.
                 .fold(0i32, i32::saturating_add),
             Value::ForetoldCardsOwnedInExile(who) => {
                 let seats = self.resolve_players(who, ctx);
@@ -2164,13 +2130,10 @@ impl GameState {
                 })
                 .unwrap_or(0),
             Value::CastSpellManaSpent => {
-                // Prefer the spell stack item's stored `mana_spent` when
-                // the just-cast spell is still on the stack (trigger
-                // evaluation at cast-time). Falls back to the trigger
-                // context's `mana_spent` (set when
-                // `fire_spell_cast_triggers` pushes the trigger, or when
-                // the spell itself is resolving and reading from its own
-                // resolution context).
+                // Prefer the stack item's `mana_spent` while the just-cast spell
+                // is still on the stack (cast-time trigger evaluation); else the
+                // context's `mana_spent` (set by `fire_spell_cast_triggers`, or
+                // by the spell's own resolution context).
                 if let Some(EntityRef::Card(cid)) = ctx.trigger_source
                     && let Some(ms) = self.stack.iter().find_map(|si| match si {
                         StackItem::Spell { card, mana_spent, .. } if card.id == cid => {
@@ -2264,15 +2227,13 @@ impl GameState {
                 })
                 .max()
                 .unwrap_or(0),
-            // ⚠ NOT `commander_identity_colors`: that helper answers "any
-            // colour" for a seat with no commander, which is the deliberate
-            // pre-Commander approximation `ManaPayload::AnyColorInCommanderIdentity`
-            // wants so a fixing land stays a fixing land in a cube. As a COST
-            // that fallback reads as five, and War Room outside a Commander
-            // game would charge five life for a card. CR 903.4's count of an
-            // absent commander's identity is zero, which is what the raw
-            // `commander_identity_set` answers — shared with the protection
-            // reading (Commander's Plate) so the two cannot drift apart.
+            // ⚠ NOT `commander_identity_colors`: it answers "any colour" for a
+            // seat with no commander (so `AnyColorInCommanderIdentity` fixing
+            // stays fixing in a cube), and as a COST that reads as five — War
+            // Room outside Commander would charge five life. CR 903.4 counts an
+            // absent commander's identity as zero, which is what the raw
+            // `commander_identity_set` answers; shared with Commander's Plate so
+            // the two can't drift.
             Value::GreatestCommanderManaValue(who) => self
                 .resolve_players(who, ctx)
                 .first()
@@ -3066,14 +3027,12 @@ impl GameState {
                     self.battlefield_find(cid).map(|c| c.controller) == Some(self.active_player_idx)
                 }),
             Predicate::CurrentStepIs(step) => self.step == *step,
-            // An **unbound target slot** is "no entity", not "every entity".
-            // `all` over an empty selector is vacuously true, so
-            // `If { cond: EntityMatches { Target(0), … } }` on an ability
-            // whose target was never chosen ran its `then` branch — Eagle of
-            // Deliverance drew a card off a counter it had put on nothing.
-            // Scoped to the slot: this predicate is also written over
-            // `EachPermanent(…)` as a plain existence test, where the empty
-            // set is a *separate* open defect (see ENGINE_BACKLOG).
+            // An **unbound target slot** is "no entity", not "every entity":
+            // `all` over an empty selector is vacuously true, so an unchosen
+            // target ran the `then` branch (Eagle of Deliverance drew off a
+            // counter put on nothing). Scoped to the slot: over
+            // `EachPermanent(…)` the empty set is a separate open defect
+            // (ENGINE_BACKLOG).
             Predicate::EntityMatches { what, filter } => {
                 let ents = self.resolve_selector(what, ctx);
                 !ents.is_empty()
@@ -4116,13 +4075,9 @@ impl GameState {
                 c_spent.unwrap_or(false) == *spent
             }
             Predicate::CastSpellManaSpentAtLeast(min) => {
-                // First try the most precise read: the just-cast spell's
-                // `StackItem::Spell.mana_spent`. Falls back to
-                // `ctx.mana_spent` (set when this filter runs at
-                // cast-trigger-push time, when the spell hasn't been
-                // popped from the stack yet) so Opus filters at
-                // `fire_spell_cast_triggers` time also see the right
-                // value.
+                // Prefer the just-cast spell's `StackItem::Spell.mana_spent`; fall
+                // back to `ctx.mana_spent` (set at cast-trigger-push time) so Opus
+                // filters at `fire_spell_cast_triggers` see the right value.
                 if let Some(EntityRef::Card(cid)) = ctx.trigger_source
                     && let Some(ms) = self.stack.iter().find_map(|si| match si {
                         StackItem::Spell { card, mana_spent, .. } if card.id == cid => {
@@ -4239,13 +4194,10 @@ impl GameState {
                 })
             }
             Predicate::CastSpellNotOwnedByYou => {
-                // Owner ≠ controller test against the just-cast spell.
-                // Resolution: walk the stack for the trigger source's
-                // `StackItem::Spell.card.owner` and compare to
-                // `ctx.controller` (the triggered-ability controller =
-                // the spell's caster). Falls back to `false` when the
-                // spell can't be located (defensive — should not happen
-                // during normal CastSpell trigger dispatch).
+                // Owner ≠ controller of the just-cast spell: compare its
+                // `StackItem::Spell.card.owner` with `ctx.controller` (the
+                // caster). `false` if the spell can't be found (shouldn't happen
+                // during CastSpell trigger dispatch).
                 let Some(EntityRef::Card(cid)) = ctx.trigger_source else {
                     return false;
                 };
@@ -4272,16 +4224,11 @@ impl GameState {
                 })
             }
             Predicate::SameNamedInZoneAtLeast { who, zone, at_least } => {
-                // Read the resolving spell's printed name from
-                // `ctx.source_name` (stamped by `for_spell_with_source`).
-                // During spell resolution the card is in transient
-                // ownership and not present in any visible zone, so
-                // `source_name` is the reliable channel. Fall back to
-                // `ctx.source` (the source permanent's battlefield
-                // entry) for activated-ability resolution paths where
-                // `source_name` isn't stamped — Page, Loose Leaf's
-                // Grandeur cost gate ("Discard another card named
-                // Page, Loose Leaf") uses this fallback.
+                // The resolving spell's name from `ctx.source_name` (stamped by
+                // `for_spell_with_source`; the card is in no zone mid-resolution).
+                // Falls back to `ctx.source`'s battlefield entry for activated
+                // abilities, which don't stamp it (Page, Loose Leaf's Grandeur
+                // cost gate).
                 let target_name = ctx.source_name.or_else(|| {
                     ctx.source.and_then(|cid| {
                         self.battlefield
@@ -4876,13 +4823,11 @@ impl GameState {
                 .is_some_and(|p| self.players[p].graveyard_card_count() >= 7),
             Predicate::MetalcraftActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
-                // CR 613 — "three or more artifacts" counts the *computed*
-                // type line, so Mycosynth Lattice turns Metalcraft on. The
-                // layer read is second and gated: the printed answer is
-                // already `true` for a real artifact, and
-                // `card_type_change_unscoped` (memo-backed) is `false` on
-                // almost every board, where this is the printed scan it
-                // replaces plus one load. Counts up to three and stops.
+                // CR 613 — "three or more artifacts" counts the *computed* type
+                // line (Mycosynth Lattice turns Metalcraft on). The layer read is
+                // second and gated: a real artifact is already `true` printed, and
+                // the memo-backed `card_type_change_unscoped` is `false` on almost
+                // every board. Stops at three.
                 let typed = self.card_type_change_unscoped();
                 let mut n = 0;
                 for c in self.battlefield.iter().filter(|c| c.controller == p) {
@@ -4935,14 +4880,9 @@ impl GameState {
                 .resolve_player(who, ctx)
                 .is_some_and(|p| self.players[p].activated_loyalty_this_turn),
             Predicate::IncrementSatisfied => {
-                // SOS Increment: "Whenever you cast a spell, if the
-                // amount of mana you spent is greater than this
-                // creature's power or toughness, put a +1/+1 counter on
-                // this creature." Both clauses (P and T) are OR'd —
-                // pumps fire whenever mana_spent strictly exceeds
-                // *either* stat. We evaluate against the listening
-                // permanent (the source whose triggered ability we're
-                // gating).
+                // SOS Increment: "if the mana spent is greater than this
+                // creature's power or toughness, put a +1/+1 counter on it" — the
+                // clauses are OR'd. Evaluated against the listening permanent.
                 let Some(source_id) = ctx.source else {
                     return false;
                 };
@@ -5360,14 +5300,10 @@ impl GameState {
         self.evaluate_requirement_static_hinted(req, target, controller, source, None)
     }
 
-    /// Same question with the battlefield permanent already in hand.
-    ///
-    /// Every `Target::Permanent` arm below opens by locating the object, and
-    /// the located-on-the-battlefield case is a linear `battlefield_find`.
-    /// The callers that dominate the traffic are *walking the battlefield*
-    /// when they ask — `auto_targets_for_effect_all_slots`' candidate loop,
-    /// the counting filters — so they hand the permanent over instead of
-    /// making this re-find it by id.
+    /// Same question with the battlefield permanent already in hand: the
+    /// dominant callers (`auto_targets_for_effect_all_slots`' candidate loop,
+    /// the counting filters) are walking the battlefield anyway, so they skip
+    /// the linear `battlefield_find`.
     pub fn evaluate_requirement_static_on(
         &self,
         req: &SelectionRequirement,
@@ -5414,12 +5350,10 @@ impl GameState {
     /// shapes it declines. `gates` is the caller's per-walk memo of the three
     /// presence gates; build one per requirement, never per permanent.
     ///
-    /// The walker's frame is the cost — ~150-300 Ir a call for what a target
-    /// filter usually is (a card type, a controller, a subtype), and the
-    /// targeting enumerator and `resolve_selector`'s `EachPermanent` arm ask
-    /// it 170 k times a six-game `cube` run (PERF `(-183)`). Every fast
-    /// answer is checked against the walker under `debug_assertions`, so the
-    /// suite and `scripts/robustness_grid.sh` are the ratchet that keeps
+    /// The walker's frame is the cost for what a target filter usually is (a
+    /// card type, a controller, a subtype) — PERF `(-183)`. Every fast answer
+    /// is checked against the walker under `debug_assertions`, so the suite
+    /// and `scripts/robustness_grid.sh` keep
     /// [`printed_requirement`](Self::printed_requirement) in step with it.
     #[inline]
     /// CR 506.2 — the player `source` is attacking, or, for an Aura or
@@ -5436,15 +5370,12 @@ impl GameState {
     }
 
     /// [`defending_player_for_source`](Self::defending_player_for_source),
-    /// then the combat itself. A clause can print "defending player" on
-    /// something that is not the attacker — an **instant** cast during combat
-    /// (Yare, Blaze of Glory) or a trigger that fires off *another* creature's
-    /// attack (Nazahn, whose "whenever an equipped creature you control
-    /// attacks" leaves `source` sitting at home). CR 506.2 defines the
-    /// defending player relative to an attacking creature, so the clause is
-    /// answerable exactly when this combat has **one** defender; two makes it
-    /// ambiguous and the filter takes nothing, which is the safe direction —
-    /// a narrowing cannot make an illegal play.
+    /// then the combat itself. "Defending player" can be printed on something
+    /// that isn't the attacker — an instant cast during combat (Yare, Blaze of
+    /// Glory) or a trigger off another creature's attack (Nazahn). CR 506.2
+    /// defines it relative to an attacker, so it's answerable exactly when the
+    /// combat has one defender; with two the filter takes nothing, the safe
+    /// direction.
     ///
     /// Separate from the strict walk on purpose: `OwnedByDefendingPlayer`
     /// keeps the answers it already gave, so no shipped trace moves.
@@ -5537,18 +5468,15 @@ impl GameState {
 
     /// The printed-line twin of the walker's `Target::Permanent` block, for a
     /// permanent the caller holds: three-valued, `None` meaning "ask the
-    /// walker". A leaf is answered here only where the walker itself reads
-    /// the printed line — the card-type family behind the layer-4 presence
-    /// gate and `bestowed`, the subtype families behind theirs — or an
-    /// instance field / zone scan it would read the same way. `And`/`Or`
-    /// short-circuit on a known side, so `And(IsSpellOnStack, …)` is `false`
-    /// on the battlefield without touching the unknown half.
+    /// walker". A leaf is answered here only where the walker itself reads the
+    /// printed line (card types behind the layer-4 gate and `bestowed`,
+    /// subtypes behind theirs) or an instance field / zone scan it reads the
+    /// same way. `And`/`Or` short-circuit on a known side.
     ///
-    /// **Every arm here is a copy of a walker arm and must read what it
-    /// reads.** `requirement_on_permanent`'s `debug_assert_eq!` is the audit;
-    /// a leaf that is not a bit-for-bit restatement of its walker arm stays
-    /// out (`PowerAtMost` reads the computed view; `HasKeyword` the instance
-    /// grants — both walker-only).
+    /// **Every arm must read what its walker arm reads.**
+    /// `requirement_on_permanent`'s `debug_assert_eq!` is the audit; a leaf
+    /// that isn't a bit-for-bit restatement stays out (`PowerAtMost`,
+    /// `HasKeyword` — walker-only).
     pub(crate) fn printed_requirement(
         &self,
         req: &SelectionRequirement,
@@ -5561,15 +5489,11 @@ impl GameState {
     }
 
     /// The body of [`printed_requirement`](Self::printed_requirement). `OFF`
-    /// is which of the walker's two `Target::Permanent` paths it stands in
-    /// for: the battlefield permanent (layer gates, `bestowed`, the
-    /// controller off the object) or a card the walker finds off the
-    /// battlefield (printed types unconditionally, a controller only through
-    /// the stack or a death snapshot). A const parameter and not a value:
-    /// the evaluator recurses per node, and a seventh argument spilled on
-    /// every call (+5.1 M Ir on `cube`) while a runtime flag cost six
-    /// instructions a call across the 465 k calls the battlefield sites
-    /// already made (`(-185)`).
+    /// says which `Target::Permanent` path it stands in for: the battlefield
+    /// permanent (layer gates, `bestowed`, controller off the object) or an
+    /// off-battlefield card (printed types, a controller only via the stack or
+    /// a death snapshot). A const parameter, not a value: a runtime argument
+    /// spilled on every recursive call (PERF `(-185)`).
     fn printed_requirement_impl<const OFF: bool>(
         &self,
         req: &SelectionRequirement,
@@ -5626,13 +5550,10 @@ impl GameState {
             R::Not(inner) => self
                 .printed_requirement_impl::<OFF>(inner, card, controller, source, gates)
                 .map(|v| !v),
-            // Off the battlefield the walker knows a controller only through
-            // the stack (a spell's caster) or the CR 603.10 death snapshot.
             // Off the battlefield, the walker's last-known controller — a
-            // spell's caster, a death snapshot's controller, or the
-            // controller of an ability of it on the stack (a six-seat strict
-            // debug pod, seed 65019: Sporemound's own trigger from the
-            // graveyard read "controlled by you" on one side only).
+            // spell's caster, a death snapshot's controller, or the controller
+            // of an ability of it on the stack (Sporemound's own trigger from
+            // the graveyard).
             R::ControlledByYou => Some(if on_bf {
                 card.controller == controller
             } else {
@@ -5707,17 +5628,13 @@ impl GameState {
                         || (!on_bf && self.card_off_battlefield_gains_land_type(card, *lt)),
                 )
             }
-            // CR 613.5 layer 5 — the colour arm needs the same gate its
-            // creature-type and land-type neighbours have, and did not have
-            // it: `printed_color_set` is the whole answer off the
-            // battlefield, but on it `SetColors` (Painter's Servant, Sinister
-            // Strength), `AddColor` and `LoseAllColors` only reach the
-            // computed view. The walker already reads it through
-            // `color_set()`, so the fast path answered `false` where the
-            // walker answered `true` and the targeting enumerator dropped a
-            // legal target — the `debug_assert_eq!` below fired on a
-            // four-seat pod board asking `And(Permanent, HasColor(Red))` of a
-            // Sram, Senior Edificer something had turned red.
+            // CR 613.5 layer 5 — the colour arm needs the same gate as its
+            // creature-type and land-type neighbours: `printed_color_set` is
+            // the whole answer off the battlefield, but on it `SetColors`
+            // (Painter's Servant), `AddColor` and `LoseAllColors` reach only
+            // the computed view, which the walker reads via `color_set()`.
+            // Ungated, the fast path dropped legal targets (the
+            // `debug_assert_eq!` below caught it).
             R::HasColor(c) => {
                 if on_bf && gates.color(self) {
                     return None;
@@ -5772,13 +5689,11 @@ impl GameState {
             R::IsSpellOnStack => Some(self.stack.iter().any(
                 |si| matches!(si, StackItem::Spell { card: c, .. } if c.id == cid),
             )),
-            // An id names one object, so the battlefield permanent this arm
-            // holds is in no graveyard and no exile: the on-battlefield
-            // answer is a constant and the scans run only off it. Bare
-            // `InGraveyard` had no arm at all, and it is the filter on 54 %
-            // of the targeted triggers a `wants_ui` seat is offered on the
-            // sealed pool — the enumerator fell through to the walker on
-            // every permanent for it (PERF `(-264)`).
+            // An id names one object, so a battlefield permanent is in no
+            // graveyard or exile: the on-battlefield answer is a constant and
+            // the scans run only off it. Bare `InGraveyard` is the filter on
+            // most targeted triggers a `wants_ui` seat is offered (PERF
+            // `(-264)`).
             R::InGraveyard => Some(
                 !on_bf && self.players.iter().any(|p| p.graveyard.iter().any(|c| c.id == cid)),
             ),
@@ -5826,19 +5741,16 @@ impl GameState {
         }
     }
 
-    /// The off-battlefield half of the requirement walker's card lookup:
-    /// the two LKI caches, then graveyards, exile, the stack, libraries and
-    /// hands. Out of line and behind the battlefield answer — the walk stops
-    /// at the battlefield on almost every call, and the chain that looks past
-    /// it is eight `Option::or_else` calls, none of them inlined here.
+    /// The off-battlefield half of the requirement walker's card lookup: the
+    /// two LKI caches, then graveyards, exile, the stack, libraries and hands.
+    /// Out of line because the walk almost always stops at the battlefield.
     ///
     /// Dies-trigger filters (Felisa's "with a +1/+1 counter on it") read the
     /// dying object's last-known battlefield state, not the counter-stripped
-    /// graveyard copy (CR 603.10 LKI; CR 122.2 cleared the counters on the
-    /// zone change), so the LKI caches come before the terminal zones.
-    /// Library / hand are needed by "look at top of library" predicates
-    /// (Lurking Predators) and discard-from-hand pickers; hidden-zone reads
-    /// are permission-checked at the call site.
+    /// graveyard copy (CR 603.10; CR 122.2), so the LKI caches come first.
+    /// Library / hand serve "look at top of library" predicates (Lurking
+    /// Predators) and discard pickers; hidden-zone reads are
+    /// permission-checked at the call site.
     #[inline(never)]
     fn requirement_card_off_battlefield(&self, cid: CardId) -> Option<&CardInstance> {
         if let Some(c) = self.died_card_snapshots.get(&cid) {
@@ -5974,15 +5886,11 @@ impl GameState {
                 !self.evaluate_requirement_static_hinted(inner, target, controller, source, hint)
             }
             R::ControlledByYou => match target {
-                // A `Target::Permanent` can also address a spell on the stack
-                // (a "copy target spell you control" ability); its caster is
-                // its controller. When the object has left the battlefield
-                // (a die-trigger reading "a creature you control dies" off a
-                // graveyard source), fall back to the CR 603.10 last-known
-                // controller in `died_card_snapshots`.
-                // The battlefield answers first and the two fallbacks are
-                // out-of-line `or_else` calls in this build, so they sit
-                // behind a branch rather than in the chain.
+                // A `Target::Permanent` can address a spell on the stack (its
+                // caster controls it), and a departed object falls back to the
+                // CR 603.10 last-known controller in `died_card_snapshots`. The
+                // battlefield answers first; the fallbacks are out-of-line
+                // `or_else` calls, so they sit behind a branch.
                 Target::Permanent(cid) => self.last_known_controller(*cid, hint) == Some(controller),
                 Target::Player(p) => *p == controller,
             },
@@ -6291,14 +6199,10 @@ impl GameState {
             }
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
-                // Look on the battlefield first; fall through to graveyards,
-                // exile, and the stack so reanimate-style spells (Goryo's
-                // Vengeance, Reanimate, Animate Dead) can validate their
-                // targets, and so counter-style spells (Mystical Dispute,
-                // Force of Negation) can read the colors of a target stack
-                // spell. Every leg is lazy, the stack included: the walk stops
-                // at the battlefield on almost every call, and the stack scan
-                // used to run before it on all of them.
+                // Battlefield first, then graveyards, exile and the stack, so
+                // reanimation (Goryo's Vengeance, Animate Dead) can validate
+                // targets and counterspells (Mystical Dispute) can read a stack
+                // spell's colors. Every leg is lazy, the stack included.
                 let bf_card = self.bf_hint_or_find(*cid, hint);
                 // The seven other places a card can be are one branch away,
                 // not eight `Option::or_else` links: this build has no LTO, so
@@ -6330,14 +6234,11 @@ impl GameState {
                     },
                     _ => card,
                 };
-                // Layer-4-aware card types for battlefield permanents
-                // (CR 613.2): an artifact-ized creature (Phyrexian
-                // Scriptures I), an animated land, or a devotion-gated god
-                // must filter by its *computed* types, not the printed ones.
-                // Off-battlefield cards keep the printed definition.
-                // Taken lazily: most arms below never look at the layer view,
-                // and this one is 40 % of the program's `computed_permanent`
-                // calls when it is taken eagerly.
+                // Layer-4-aware card types for battlefield permanents (CR 613.2):
+                // an artifact-ized creature (Phyrexian Scriptures I), an animated
+                // land, a devotion-gated god filter by *computed* types; off the
+                // battlefield, printed. Taken lazily: most arms never need the
+                // layer view.
                 type Computed = Option<std::sync::Arc<crate::game::layers::ComputedPermanent>>;
                 // `computed()` is `None` exactly when the card isn't a live
                 // battlefield permanent — `computed_permanent` returns `None`
@@ -6345,41 +6246,31 @@ impl GameState {
                 // so the arms that only need to know *that* ask this instead
                 // and never force the cell.
                 let computed_absent = || bf_card.is_none() || self.layer_reads_are_printed();
-                // **No `OnceCell`, and none of the three this block used to
-                // build.** One call evaluates one `req`, the arms below are
-                // exclusive, and a composite requirement recurses into a fresh
-                // frame — so `computed()`, the card-type gate and the shallow
-                // creature-type read each run **at most once** per invocation
-                // and a cell is pure construction. That is the fifty-fifth
-                // pass's refutation (a cell around a once-per-call gate is
-                // +1.24 M on `fixed`), which this block recorded for one of
-                // the three and then kept for the other two.
+                // No `OnceCell`: one call evaluates one `req`, the arms are
+                // exclusive, and composites recurse into a fresh frame, so
+                // `computed()`, the card-type gate and the shallow creature-type
+                // read each run at most once per invocation. A cell around a
+                // once-per-call gate was measured as a loss.
                 let computed = || -> Computed {
                     if self.layer_reads_are_printed() {
-                        // Mid-recompute: printed types. A fast path, not
-                        // the guard — `computed_permanent` enforces the
-                        // reentrancy rule for every caller and answers the
-                        // same printed view a layer pass slower.
+                        // Mid-recompute: printed types. A fast path, not the guard —
+                        // `computed_permanent` enforces reentrancy for every caller.
                         //
-                        // CR 613.8: the gather's condition-gated tail installs
-                        // the effects built so far, and while it does this is
-                        // *not* a mid-recompute read — a layer-7 condition
-                        // asking about a layer-4 type change has to see it.
-                        // `layer_reads_are_printed` is where the two
-                        // conditions live.
+                        // CR 613.8: the gather's condition-gated tail is not a
+                        // mid-recompute read — a layer-7 condition asking about a
+                        // layer-4 type change must see it. `layer_reads_are_printed`
+                        // holds both conditions.
                         None
                     } else {
                         bf_card.and_then(|_| self.computed_permanent(*cid))
                     }
                 };
-                // The card-type family is most of the requirement traffic
-                // (`Creature` / `Land` / `Nonland` / `Noncreature` / `Artifact`)
-                // and the gather behind `computed()` is ~2.7k Ir. A board with
-                // no layer-4 card-type source in scope gives the same answer
-                // from the printed line, so ask the presence gate — one
-                // battlefield walk over printed shapes — before gathering.
-                // `bestowed` (CR 702.103d) rewrites the type line without a
-                // `Modification`, so it joins the gate off the card itself.
+                // The card-type family is most of the requirement traffic, and
+                // the gather behind `computed()` is expensive. With no layer-4
+                // card-type source in scope the printed line gives the same
+                // answer, so ask the presence gate first. `bestowed` (CR
+                // 702.103d) rewrites the type line without a `Modification`, so
+                // it joins the gate off the card itself.
                 let has_type = |t: crate::card::CardType| {
                     let gathered =
                         !computed_absent() && (card.bestowed || self.card_type_change_in_scope());
@@ -6394,27 +6285,20 @@ impl GameState {
                         None => card.definition.card_types.contains(&t),
                     }
                 };
-                // CR 613.2 layer-4 — a creature that gained a type from a
-                // continuous effect (Jenova's Mutant grant) matches by its
-                // *computed* subtypes on the battlefield; off-battlefield cards
-                // (incl. die-snapshots, whose grants were stamped in at death)
-                // fall back to the definition.
-                // Mid-gather the full computed view is off-limits, but stored
-                // layer-4 type changes are already in `continuous_effects` —
-                // read them shallowly so a "as long as it's a Wall" gate sees a
-                // retyped permanent (CR 613.8; Mistform Wall).
-                // Presence-gated like `has_type`, and this arm is where the
-                // traffic was: at the fifty-fifth pass's base the subtype
-                // arms forced 413,844 of a cube run's 680,960
-                // `computed_permanent` calls against the card-type gate's
-                // 13,052 walks. `AddCreatureType` / `SetCreatureTypes` are the
-                // only two modifications that write `subtypes.creature_types`,
-                // and `shallow_creature_types` reads those same two off the
-                // stored set, so with neither in scope all three paths give
-                // the printed line.
-                //
-                // The gate here has never had a cell, for the reason the
-                // block above now applies to all three.
+                // CR 613.2 layer 4 — a creature that gained a type (Jenova's
+                // Mutant grant) matches by its *computed* subtypes on the
+                // battlefield; off it (die-snapshots included, grants stamped at
+                // death) the definition.
+                // Mid-gather the computed view is off-limits, but stored layer-4
+                // type changes are in `continuous_effects`: read them shallowly so
+                // "as long as it's a Wall" sees a retyped permanent (CR 613.8;
+                // Mistform Wall).
+                // Presence-gated like `has_type` — this arm was where most
+                // `computed_permanent` calls came from. `AddCreatureType` /
+                // `SetCreatureTypes` are the only writers of
+                // `subtypes.creature_types` and `shallow_creature_types` reads the
+                // same two, so with neither in scope all three paths give the
+                // printed line. No cell, for the reason above.
                 let has_ctype = |ct: &crate::card::CreatureType| {
                     if !self.creature_type_change_in_scope() {
                         return card.definition.subtypes.creature_types.contains(ct);
@@ -6451,28 +6335,20 @@ impl GameState {
                     Some(cp) => cp.supertypes().contains(st),
                     None => card.definition.supertypes.contains(st),
                 };
-                // CR 613.6 layer 6 — **the keyword member of this family, and
-                // it was missing.** A keyword a STATIC grants (Levitation's
-                // flying, Akroma's Memorial's six) lives in
-                // `continuous_effects` and nowhere on the instance;
-                // `CardInstance::has_keyword` reads the printed list, the
-                // end-of-turn grant, the keyword counters and the two removal
-                // lists, all of them instance fields. A layer-6 strip
-                // (`RemoveAllAbilities`, `RemoveKeyword`) runs the other way
-                // and the instance cannot see that either. Ungated, like
-                // `has_atype` and `has_stype`: the closure forces `computed()`
-                // at most once per invocation and the freeze scope's `perms`
-                // memo serves the repeats.
+                // CR 613.6 layer 6 — a keyword a STATIC grants (Levitation,
+                // Akroma's Memorial) lives only in `continuous_effects`, and a
+                // layer-6 strip (`RemoveAllAbilities`, `RemoveKeyword`) is equally
+                // invisible to `CardInstance::has_keyword`, which reads instance
+                // fields only. Ungated like `has_atype` / `has_stype`: `computed()`
+                // runs at most once per invocation and the freeze scope's `perms`
+                // memo serves repeats.
                 let has_kw = |kw: &crate::card::Keyword| {
-                    // Gated in BOTH directions, which is what makes it cheap:
-                    // the instance's four sources are the answer unless a
-                    // continuous effect can move it. A permanent that does not
-                    // have the keyword can only GAIN it (`AddKeyword` is the
-                    // only additive modification — `board_keyword_matching`'s
-                    // doc), and `keyword_grant_in_scope` is lane-backed; one
-                    // that does have it can only LOSE it, and that branch is
-                    // the rare one, which is why `keyword_removal_in_scope`
-                    // walks the board without a lane.
+                    // Gated in both directions: the instance answer stands unless a
+                    // continuous effect can move it. Lacking the keyword it can only
+                    // GAIN it (`AddKeyword` is the only additive modification), and
+                    // `keyword_grant_in_scope` is lane-backed; having it, it can only
+                    // LOSE it — the rare branch, so `keyword_removal_in_scope` walks
+                    // the board without a lane.
                     let on_instance = card.has_keyword(kw);
                     let can_move = if on_instance {
                         self.keyword_removal_in_scope(|k| k == kw)
@@ -6530,13 +6406,11 @@ impl GameState {
                         None => on_instance,
                     }
                 };
-                // CR 613.5 layer 5 — **the colour member, missing the same
-                // way.** `printed_color_set` is the *printed* union (coloured
-                // pips, hybrid and Phyrexian included, plus the colour
-                // indicator, empty under Devoid) and is the whole answer off
-                // the battlefield; on it, `SetColors` (Sinister Strength's
-                // black, Painter's Servant), `AddColor` and `LoseAllColors`
-                // are layer 5 and only the computed view carries them.
+                // CR 613.5 layer 5 — `printed_color_set` (pips incl. hybrid and
+                // Phyrexian, plus colour indicator; empty under Devoid) is the
+                // whole answer off the battlefield; on it `SetColors` (Sinister
+                // Strength, Painter's Servant), `AddColor` and `LoseAllColors`
+                // are in the computed view only.
                 let color_set = || -> crate::mana::ColorSet {
                     let printed = card.definition.printed_color_set();
                     // `card_color_change_unscoped` is the sound gate for the
@@ -6683,14 +6557,10 @@ impl GameState {
                     R::IsPreparedSpell => self.is_prepared_spell(card),
                     R::SharesCardTypeWithExiledBySource => self
                         .shares_card_type_with_exiled_by(source, &card.definition),
-                    // CR 613 — **every** P/T leaf below reads the *computed*
-                    // view, so an anthem or a shrink (The Hippodrome's -5/-0)
-                    // counts. The threshold arms always did; the seven
-                    // comparison arms (against the source, against each other,
-                    // against the base line) read `CardInstance::power()` —
-                    // base + counters + pump, blind to every layer-7 static —
-                    // until 2026-09-16, so "power greater than [source]'s
-                    // power" compared two un-anthemed numbers.
+                    // CR 613 — every P/T leaf below reads the *computed* view, so an
+                    // anthem or a shrink (The Hippodrome's -5/-0) counts — the
+                    // comparison arms included (they read the anthem-blind
+                    // `CardInstance::power()` until 2026-09-16).
                     R::PowerAtMost(n) => {
                         self.computed_is_creature(card) && self.effective_power(card) <= *n
                     }
@@ -7146,13 +7016,11 @@ impl GameState {
                     R::ManaValueAtMostDevotion(color) => {
                         card.definition.cost.cmc() <= self.devotion_to(controller, &[*color]).max(0) as u32
                     }
-                    // Battlefield permanents, so the *battlefield-aware*
-                    // walker: `evaluate_requirement_on_card` answers `false`
-                    // for every battlefield-state predicate (`Tapped`, the
-                    // "greatest among" superlatives) by design — it is the
-                    // library/hand-search path — so counting through it made
-                    // a `Tapped` inner filter count zero. `_static_on` takes
-                    // the instance, so this costs no lookup.
+                    // Battlefield permanents, so the battlefield-aware walker:
+                    // `evaluate_requirement_on_card` (the library/hand path) answers
+                    // `false` to every battlefield-state predicate, so a `Tapped`
+                    // inner filter counted zero. `_static_on` takes the instance, so
+                    // no lookup.
                     R::ManaValueAtMostCountersAmongYours => {
                         card.definition.cost.cmc() <= self.counters_among_permanents_of(controller)
                     }
@@ -7307,13 +7175,10 @@ impl GameState {
                     R::HasXInCost => card.definition.cost.has_x(),
                     R::HasNoManaCost => card.definition.no_mana_cost,
                     R::ColoredManaSymbolsAtLeast(n) => card.definition.cost.colored_symbol_count() >= *n,
-                    // OtherThanSource: enforce "different from the source"
-                    // when a source CardId is threaded into this call (effect
-                    // resolvers pass `ctx.source`, cast-time validators pass
-                    // `None`). Without source context, falls through to
-                    // permissive (matches the old behavior, leaving the
-                    // static-ability `applies_to` pipeline to handle the
-                    // "Other …" half via `AffectedPermanents.exclude_source`).
+                    // Enforced when a source id is threaded in (resolvers pass
+                    // `ctx.source`, cast-time validators `None`); without one it's
+                    // permissive and statics' `applies_to` handles "other" via
+                    // `AffectedPermanents.exclude_source`.
                     R::OtherThanSource => match source {
                         Some(src_id) => *cid != src_id,
                         None => true,
@@ -7739,13 +7604,10 @@ impl GameState {
                                 }
                             })
                     }
-                    // Zone-agnostic atoms (spell/enchantment subtype, token
-                    // flags, …) the battlefield walker doesn't special-case
-                    // are evaluated against the located card. Keeps the two
-                    // requirement walkers from drifting apart (TODO P3).
-                    // The `_inner` form, not the public one: the public entry
-                    // routes a battlefield permanent back here, and this arm
-                    // is already inside that walk.
+                    // Zone-agnostic atoms (spell/enchantment subtype, token flags, …)
+                    // are evaluated against the located card, keeping the two
+                    // walkers from drifting (TODO P3). The `_inner` form: the public
+                    // entry would route a battlefield permanent back here.
                     _ => self.evaluate_requirement_on_card_walk(req, card, controller),
                 }
             }
@@ -7754,11 +7616,9 @@ impl GameState {
 
     /// CR 201.4a — evaluate a `SelectionRequirement` against a bare
     /// `CardDefinition` (a *name*, not an object in any zone), for the
-    /// namespace restriction on "choose a [kind] card name".
-    /// Takes `impl Into<Arc<_>>` so a caller holding a `CardInstance`'s
-    /// definition hands over a refcount. It used to take `&CardDefinition` and
-    /// `clone()` it into the scratch instance — a **deep** copy of an
-    /// 8,232-byte struct and every `Vec` in it, to answer a predicate.
+    /// namespace restriction on "choose a [kind] card name". Takes
+    /// `impl Into<Arc<_>>` so a caller holding a definition hands over a
+    /// refcount instead of a deep copy.
     pub fn definition_matches_requirement(
         &self,
         def: impl Into<std::sync::Arc<crate::card::CardDefinition>>,
@@ -7786,13 +7646,11 @@ impl GameState {
     /// Evaluate a `SelectionRequirement` against a `CardInstance` in any zone.
     ///
     /// **CR 613 / CR 302 — a live battlefield permanent is answered by the
-    /// battlefield walker**, which reads the computed (layer-applied) view and
-    /// the combat / tap / attachment state. Forty-odd effect arms filter
-    /// `self.battlefield` through this entry ("destroy each ~", "exile each ~",
-    /// "each player sacrifices all but N ~"); without the gate every one of
-    /// them read the *printed* types, subtypes and P/T and answered `false` for
-    /// every battlefield-only leaf — so "destroy each tapped creature" found
-    /// nothing and an animated land survived "destroy all creatures".
+    /// battlefield walker**, which reads the computed view and combat / tap /
+    /// attachment state. Dozens of effect arms ("destroy each ~", "each player
+    /// sacrifices all but N ~") filter the battlefield through this entry;
+    /// reading printed values, "destroy each tapped creature" found nothing and
+    /// an animated land survived "destroy all creatures".
     ///
     /// The off-battlefield half is [`Self::evaluate_requirement_on_card_inner`]:
     /// library / graveyard / hand searches, where battlefield-only predicates
@@ -7803,16 +7661,14 @@ impl GameState {
         card: &CardInstance,
         controller: usize,
     ) -> bool {
-        // The gate answers about the *live* permanent, not the caller's copy:
-        // several callers hold a `mem::take`n or snapshot instance, and a card
-        // that is on the battlefield is the object the rules ask about.
+        // Ask about the *live* permanent, not the caller's copy (some
+        // callers hold a `mem::take`n or snapshot instance).
         //
-        // Through `requirement_on_permanent`, not the walker directly: the
-        // printed-line evaluator answers the common shapes (a card type, a
-        // controller, a subtype) off the definition whenever no layer-4 type
-        // source is in scope, and the walker's ~150-300 Ir frame is only paid
-        // for the shapes it declines. The gates memo is per call here — these
-        // callers ask one requirement of one permanent, not of many.
+        // Through `requirement_on_permanent`, not the walker: the
+        // printed-line evaluator answers the common shapes when no
+        // layer-4 type source is in scope, so the walker frame is paid
+        // only for the rest. Gates memo per call — one requirement of
+        // one permanent here.
         if let Some(bf) = self.battlefield_find(card.id) {
             let gates = PrintedGates::default();
             return self.requirement_on_permanent(req, bf, controller, None, &gates);
@@ -8394,12 +8250,9 @@ impl GameState {
             R::Monocolored => card.definition.printed_color_set().is_monocolored(),
             R::HasXInCost => card.definition.cost.has_x(),
             R::HasNoManaCost => card.definition.no_mana_cost,
-            // OtherThanSource is `applies_to`-pipeline-only — see the
-            // companion arm in `evaluate_requirement_static`. For
-            // library/zone searches we don't filter on this; the
-            // candidate set already excludes the source's current zone
-            // (a card in a graveyard search can't be the source on the
-            // battlefield).
+            // `applies_to`-pipeline-only (see the companion arm in
+            // `evaluate_requirement_static`); a zone search's candidates
+            // can't be the battlefield source anyway.
             R::OtherThanSource => true,
             // Source-relative: no source on this walker.
             R::ChosenPermanentOfSource => false,

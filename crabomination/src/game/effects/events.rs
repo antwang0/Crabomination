@@ -10,28 +10,23 @@ use crate::game::{GameEvent, GameState};
 /// object optional.
 ///
 /// Three arms read the source (`YourSourceDealtNoncombatDamageEqualToToughness`
-/// and the two control-change halves); with `source: None` they answer `true`,
+/// and the two control-change halves) and answer `true` for `source: None`,
 /// so a `None` call is a sound **over-approximation** of whether `event` can
-/// reach `spec` at all. That is what the trigger dispatcher's batch pre-filter
-/// asks: it drops a grant whose ability no event in the batch could ever match,
-/// before evaluating that grant's filter against every permanent on the board.
-/// One match serves both callers, so the cheap question cannot drift from the
-/// exact one.
+/// reach `spec` at all — what the dispatcher's batch pre-filter asks before
+/// evaluating a grant's filter against the whole board. One match serves
+/// both callers, so the cheap question can't drift from the exact one.
 ///
-/// `#[inline]` is not a claimed win — it restores the inlining this match had
-/// when it was written out inside `event_matches_spec`, and it was measured:
-/// without it `--decks fixed` reads +0.51 M Ir. PERF's rule against taking an
-/// `#[inline]` on an Ir number is about *adding* one to a callee that the
-/// shipped LTO build would inline anyway; this one is putting back what
-/// lifting the function out took away.
+/// `#[inline]` restores the inlining this match had inside
+/// `event_matches_spec` (measured: +0.51 M Ir on `fixed` without it); PERF's
+/// rule against Ir-justified `#[inline]` is about adding one LTO would apply
+/// anyway, not putting one back.
 ///
-/// Two halves, one table. The *variant* half is [`event_kind_bits`] — which
-/// kinds an event variant can reach at all — and the *payload* half is the
-/// match below it, reached only when the variant half passed. The dispatcher
-/// ORs the variant half over a batch once and asks it per (permanent,
-/// trigger) pair, so the 93 % of pairs no event in the batch can reach
-/// (`ems_census`, PERF `(-129)`) never enter the event loop; because this
-/// exact check reads the same table, the gate and the match cannot drift.
+/// Two halves, one table: the *variant* half is [`event_kind_bits`] (which
+/// kinds a variant can reach at all), the *payload* half the match below,
+/// reached only when the variant half passed. The dispatcher ORs the variant
+/// half over a batch once, so the pairs no event can reach (PERF `(-129)`)
+/// never enter the event loop; sharing the table keeps gate and match in
+/// step.
 #[inline]
 pub(crate) fn event_kind_matches(
     state: &GameState,
@@ -376,12 +371,9 @@ fn reference_event_kind_matches(
         (EventKind::SpellCast, GameEvent::SpellCast { .. }) => true,
         (EventKind::SpellCopied, GameEvent::SpellsCopied { .. }) => true,
         (EventKind::Attacks, GameEvent::AttackerDeclared(_)) => true,
-        // `Blocks` fires from the blocker's side ("whenever this creature
-        // blocks"). `BecomesBlocked` fires from the attacker's side
-        // ("whenever this creature becomes blocked"). Both come off the
-        // same BlockerDeclared event but are filtered by `event_card`
-        // below — see `event_card` matching on `Blocks` vs
-        // `BecomesBlocked`.
+        // `Blocks` fires from the blocker's side, `BecomesBlocked` from the
+        // attacker's; both come off `BlockerDeclared` and are told apart by
+        // `event_card` below.
         (EventKind::Blocks, GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::BecomesBlocked, GameEvent::BlockerDeclared { .. }) => true,
         (EventKind::BlocksNOrMore(_), GameEvent::BlockerDeclared { .. }) => true,
@@ -402,14 +394,13 @@ fn reference_event_kind_matches(
             GameEvent::DamageDealt { to_player: Some(_), combat: false, .. },
         ) => true,
         // Taii Wakeen — a source the watcher controls dealt exactly lethal
-        // noncombat damage to a creature (CR 120: measured against the
-        // creature's computed toughness at damage time).
+        // noncombat damage to a creature (CR 120, computed toughness at
+        // damage time).
         //
-        // Out of line, and the pattern is widened to the bare variant on
-        // purpose: this is the only arm this `EventKind` has, so the narrow
-        // shapes fall through to `_ => false` either way, and keeping the
-        // `computed_permanent` call inside this match is what makes the whole
-        // function need a frame. See the helper's doc comment.
+        // Out of line, and widened to the bare variant on purpose: it's this
+        // kind's only arm (narrow shapes fall to `_ => false` anyway), and a
+        // `computed_permanent` call inside this match would give the whole
+        // function a frame. See the helper's doc.
         (
             EventKind::YourSourceDealtNoncombatDamageEqualToToughness,
             GameEvent::DamageDealt { .. },
@@ -567,11 +558,11 @@ fn reference_event_kind_matches(
 /// to a creature's toughness" (CR 120, measured against the *computed*
 /// toughness at damage time).
 ///
-/// Out of line and `#[cold]` because it is the only `call` in
-/// [`event_kind_matches`], and one call in a 0x70-way jump table is what put
-/// `push r15/r14/r12/rbx; sub $0x28` in the entry block of every one of
-/// `event_matches_spec`'s million calls — LLVM does not shrink-wrap past the
-/// indirect branch. PERF `(-129)`.
+/// Out of line and `#[cold]` because it's the only `call` in
+/// [`event_kind_matches`], and one call in the jump table put a
+/// callee-saved-register prologue in the entry block of every
+/// `event_matches_spec` call (LLVM doesn't shrink-wrap past the indirect
+/// branch). PERF `(-129)`.
 #[cold]
 #[inline(never)]
 fn lethal_noncombat_from_your_source(
@@ -597,28 +588,6 @@ fn lethal_noncombat_from_your_source(
     })
 }
 
-/// Returns true if `event` matches the `EventSpec` on `source` (a permanent
-/// on the battlefield). Used by `fire_triggers_for_event` to decide whether a
-/// triggered ability should be pushed onto the stack.
-///
-/// **The kind test is the whole function for 93 % of its calls and it is a
-/// leaf**, so it is separated from the riders below it rather than sharing
-/// their frame. The dispatcher's innermost loop asks this once per
-/// (permanent, trigger, event) triple and `ems_census` reads 92.5 % of
-/// `cube`'s 1,028,014 calls as pairs no event in the batch can match at all
-/// (PERF `(-129)`) — every one of those paid a four-callee-saved-register
-/// prologue to reach `event_kind_matches`' first arm and return. The riders
-/// are `#[inline(never)]` behind an identical signature so this is a tail
-/// call on the 7 % and a frameless test on the rest.
-/// The `EventScope::SelfSource` kinds that fire off a card sitting in a
-/// **graveyard** at dispatch time, rather than off a permanent on the
-/// battlefield.
-///
-/// Read by two walkers that must agree: the `SelfSource` scope arm below,
-/// which matches the event's card id against the trigger's source, and the
-/// dispatcher's graveyard walk in `game/mod.rs`, which decides whose printed
-/// abilities are even looked at. A kind admitted by one and rejected by the
-/// other is a trigger that can never fire and never errors.
 /// CR 603.6 — "whenever X happens" kinds fire ONCE PER MATCHING EVENT in a
 /// batch (a board wipe's deaths, a draw-three's draws, one effect tapping
 /// several). Other kinds (ETB, StepBegins, …) fire at most once per (source,
@@ -667,47 +636,36 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             // A Tekuthal-doubled proliferate emits two events in one batch;
             // payoffs fire once per proliferation.
             | EventKind::Proliferated
-            // A mill of three is three events, and the singular printed
-            // wording ("whenever **a** land card is put into your graveyard
-            // from your library" — Pedantic Learning; "**a** creature card"
-            // — Dreadhound) fires per card. The plural "one or more"
-            // wording (Devourer of Memory) pins itself with
-            // `once_per_batch`; before this kind fanned out, both wordings
-            // read as the plural one and the singular cards under-fired.
+            // A mill of three is three events, and the singular wording
+            // ("whenever **a** land card is put into your graveyard from your
+            // library" — Pedantic Learning, Dreadhound) fires per card. The
+            // plural "one or more" (Devourer of Memory) pins itself with
+            // `once_per_batch`.
             | EventKind::CardMilled
             | EventKind::Milled
-            // CR 603.6 — a `CreateToken { count: 3 }`, a mass reanimation and
-            // a two-sided ETB all push several `PermanentEntered` into ONE
-            // batch, and the singular printed wording ("whenever **another
-            // creature** you control enters" — Soul Warden, Court Street
-            // Denizen, Verdant Sun's Avatar; 341 catalog triggers) fires per
-            // permanent. Before this fanned out, Soul Warden gained 1 life off
-            // Spectral Procession's three tokens. The plural wording
-            // ("whenever **one or more** creatures enter") pins itself with
-            // `once_per_batch`. `SelfSource` ETBs never reach here —
-            // `is_event_hardcoded` routes them to `fire_self_etb_triggers`.
+            // CR 603.6 — a `CreateToken { count: 3 }`, a mass reanimation or a
+            // two-sided ETB pushes several `PermanentEntered` into ONE batch,
+            // and the singular wording ("whenever **another creature** you
+            // control enters" — Soul Warden) fires per permanent. The plural
+            // ("one or more") pins itself with `once_per_batch`. `SelfSource`
+            // ETBs never reach here — `is_event_hardcoded` routes them to
+            // `fire_self_etb_triggers`.
             | EventKind::EntersBattlefield
-            // CR 603.6, the rest of the census the `EntersBattlefield` pass
-            // opened. Each was probed against a real batch before being put
-            // here; each read 1 where the printed card wants N:
-            //   PutIntoGraveyard      The Haunt of Hightower, 1 counter for a
-            //                         five-card mill ("whenever **a** card is
-            //                         put into an opponent's graveyard")
-            //   LandPutIntoGraveyard  Slogurk, 1 for five milled lands
-            //   TokenCreated          Mirkwood Bats, 1 life for three tokens
-            //   Explored              Wildgrowth Walker, 1 for two explores
-            //   PlayerDamaged         Aurification, 1 gold counter for two
-            //                         attackers — and the batch really does
-            //                         carry two `DamageDealt{to_player}`
-            //   CardExiled            Soulherder, 1 for two exiles
-            // The plural "one or more" wordings on these kinds pin themselves
-            // (Moonshadow, The Gitrog Monster, Kambal's second half) or
-            // already carried `once_per_turn`, which excludes fan-out anyway.
+            // CR 603.6, the rest of the singular-wording kinds; each was
+            // probed against a real batch and fired once where the card wants N:
+            //   PutIntoGraveyard      The Haunt of Hightower (five-card mill)
+            //   LandPutIntoGraveyard  Slogurk (five milled lands)
+            //   TokenCreated          Mirkwood Bats (three tokens)
+            //   Explored              Wildgrowth Walker (two explores)
+            //   PlayerDamaged         Aurification (two attackers: two
+            //                         `DamageDealt{to_player}` in the batch)
+            //   CardExiled            Soulherder (two exiles)
             //   LandPlayed            landfall — Gandalf, Shadow's Foe blinking
-            //                         two lands drew 1 and grew by 1 ("whenever
-            //                         **a** land you control enters"); no catalog
-            //                         card prints the plural wording (census of
-            //                         the 88 `LandPlayed` triggers at the change)
+            //                         two lands; no catalog card prints the
+            //                         plural wording
+            // The plural "one or more" wordings pin themselves (Moonshadow, The
+            // Gitrog Monster, Kambal) or carry `once_per_turn`, which excludes
+            // fan-out anyway.
             | EventKind::LandPlayed
             | EventKind::PutIntoGraveyard
             | EventKind::LandPutIntoGraveyard
@@ -732,24 +690,20 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
 }
 
 /// CR 701.15b — ONE card reaching a graveyard can put TWO matching records in
-/// one batch: the mill sites that go through `route_to_graveyard` push a
-/// `CardPutIntoGraveyard` AND a `CardMilled`, and both match
-/// `EventKind::PutIntoGraveyard`. "Whenever a card is put into a graveyard" is
-/// once per CARD, so a fanned-out trigger on such a kind dedupes on the event
-/// subject. Not fixable at the emission sites: the dredge mill pushes only
-/// `CardMilled` and still has to fire this kind, so neither record can be
-/// dropped.
+/// one batch: mills through `route_to_graveyard` push `CardPutIntoGraveyard`
+/// AND `CardMilled`, both matching `EventKind::PutIntoGraveyard`. "Whenever a
+/// card is put into a graveyard" is once per CARD, so a fanned-out trigger
+/// on this kind dedupes on the subject. Not fixable at the emission sites:
+/// the dredge mill pushes only `CardMilled` and must still fire this kind.
 ///
-/// One list for the battlefield walk and the graveyard walk of
-/// `dispatch_triggers_for_events`, the way `event_kind_fans_out` is, so the two
-/// cannot drift — the graveyard walk is where the rule was missed, and Ichor
-/// Wellspring ("when this is put into a graveyard from anywhere, draw a card")
-/// drew two off a one-card mill because of it.
+/// One list for both walks of `dispatch_triggers_for_events`, like
+/// `event_kind_fans_out` (the graveyard walk once missed it: Ichor
+/// Wellspring drew two off a one-card mill).
 ///
-/// It is exactly this kind: a card reaches a graveyard once per batch, so the
-/// dedupe can never swallow a real second fire, while every other fanned-out
-/// kind CAN legitimately carry two events for one subject (two damage
-/// instances on one creature, two counter additions on one permanent).
+/// Exactly this kind: a card reaches a graveyard once per batch, so the
+/// dedupe can't swallow a real second fire, whereas other fanned-out kinds
+/// can legitimately carry two events for one subject (two damage instances
+/// on one creature).
 pub(crate) fn fanout_dedupes_on_subject(kind: &EventKind) -> bool {
     matches!(kind, EventKind::PutIntoGraveyard)
 }
@@ -757,13 +711,10 @@ pub(crate) fn fanout_dedupes_on_subject(kind: &EventKind) -> bool {
 /// CR 701.15b — one fired trigger per SUBJECT, for the kinds where a single
 /// batch can carry more than one record about the same object.
 ///
-/// ⚠ **A MILL PUTS BOTH `CardPutIntoGraveyard` AND `CardMilled` IN THE BATCH
-/// FOR ONE CARD**, so a `PutIntoGraveyard` trigger read every milled card
-/// twice — The Haunt of Hightower took 10 counters off a five-card mill. The
-/// dedupe was then added to the battlefield walk and NOT the graveyard one,
-/// and `PutIntoGraveyard` is a `is_graveyard_self_source_kind`, so Ichor
-/// Wellspring drew two cards for a one-card mill until the second copy
-/// landed. Both walks call this now; there is no second copy to forget.
+/// ⚠ A mill puts both `CardPutIntoGraveyard` and `CardMilled` in the batch
+/// for one card (The Haunt of Hightower took 10 counters off a five-card
+/// mill). Both trigger walks call this, so there's no second copy to forget
+/// (the graveyard walk once lacked it — Ichor Wellspring).
 ///
 /// Returns true when the caller should skip this event: the subject has
 /// already minted a trigger in this batch. Non-deduping kinds and
@@ -790,6 +741,14 @@ pub(crate) fn subject_already_fired(
     false
 }
 
+/// The `EventScope::SelfSource` kinds that fire off a card sitting in a
+/// **graveyard** at dispatch time, rather than off a permanent on the
+/// battlefield.
+///
+/// Read by two walkers that must agree: the `SelfSource` scope arm below
+/// (matching the event's card against the source) and the dispatcher's
+/// graveyard walk in `game/mod.rs` (deciding whose abilities are looked at).
+/// A kind admitted by only one is a trigger that silently never fires.
 pub(crate) fn is_graveyard_self_source_kind(kind: &EventKind) -> bool {
     matches!(
         kind,
@@ -807,6 +766,16 @@ pub(crate) fn is_graveyard_self_source_kind(kind: &EventKind) -> bool {
     )
 }
 
+/// Returns true if `event` matches the `EventSpec` on `source` (a permanent
+/// on the battlefield). Used by the trigger dispatcher to decide whether a
+/// triggered ability should be pushed onto the stack.
+///
+/// **The kind test is the whole function for most calls and is a leaf**, so
+/// it's kept apart from the riders' frame: the dispatcher asks this per
+/// (permanent, trigger, event), and most pairs can't match at all (PERF
+/// `(-129)`). The riders are `#[inline(never)]` behind an identical
+/// signature, so this is a tail call on the rest and a frameless test on
+/// the majority.
 pub(crate) fn event_matches_spec(
     state: &GameState,
     event: &GameEvent,
@@ -1009,13 +978,9 @@ fn event_matches_spec_rest(
             event,
             GameEvent::AttractionVisited { card_id } if *card_id == source.id
         ) || (
-            // `Blocks` vs `BecomesBlocked` look at different sides of
-            // the same BlockerDeclared event:
-            //   - `EventKind::Blocks` → the blocker side ("when this
-            //     creature blocks"). Source must equal `blocker`.
-            //   - `EventKind::BecomesBlocked` → the attacker side
-            //     ("when this becomes blocked"). Source must equal
-            //     `attacker`.
+            // `Blocks` is the blocker side (source must equal `blocker`),
+            // `BecomesBlocked` the attacker side (source must equal
+            // `attacker`) of the same `BlockerDeclared` event.
             matches!(event, GameEvent::BlockerDeclared { blocker, .. }
                 if matches!(spec.kind, EventKind::Blocks | EventKind::BlocksNOrMore(_))
                     && *blocker == source.id)
@@ -1045,17 +1010,14 @@ fn event_matches_spec_rest(
             GameEvent::DamageDealt { to_player: Some(_), from_card: Some(f), .. }
                 if matches!(spec.kind, EventKind::PlayerDamaged) && *f == source.id
         ) || (
-            // The graveyard-resident family (CR 702.29c and its siblings):
-            // the card is already in a graveyard when the trigger
-            // dispatches, so `SelfSource` identifies it by id and the
-            // dispatcher's graveyard walk finds its printed abilities.
-            // ⚠ **One list, two walkers.** `is_graveyard_self_source_kind`
-            // is read here *and* by that walk in `game/mod.rs`; a kind
-            // admitted by one and not the other is a silently dead trigger
-            // — which is exactly what `CardDiscarded` /
-            // `OpponentCausedYouToDiscard` were (Pure Intentions, Sand
-            // Golem, Mangara's Blessing all had a trigger that could not
-            // fire).
+            // The graveyard-resident family (CR 702.29c and siblings): the
+            // card is already in a graveyard at dispatch, so `SelfSource`
+            // identifies it by id and the dispatcher's graveyard walk finds
+            // its abilities.
+            // ⚠ One list, two walkers: `is_graveyard_self_source_kind` is
+            // read here and by that walk in `game/mod.rs`; a kind admitted by
+            // only one is a silently dead trigger (as `CardDiscarded` /
+            // `OpponentCausedYouToDiscard` were: Pure Intentions, Sand Golem).
             is_graveyard_self_source_kind(&spec.kind)
                 && matches!(
                     event,
@@ -1188,15 +1150,11 @@ fn event_matches_spec_rest(
             .is_some_and(|p| !state.same_team(p, source.controller)),
         EventScope::AnyPlayer | EventScope::ActivePlayer => true,
         EventScope::AnotherOfYours => {
-            // ETB / die / attack triggers for "another creature/permanent
-            // you control". Two checks:
-            // (1) the subject card isn't the trigger source itself; and
-            // (2) the subject card's controller (or graveyard-owner for
-            //     a CreatureDied subject) matches the trigger source's
-            //     controller. Without (2) the scope would silently fire
-            //     for opponent-side subjects too — Felisa would mint an
-            //     Inkling on an opp's counter-bearing creature dying,
-            //     Sparring Regimen would pump an opp attacker, etc.
+            // "Another creature/permanent you control" ETB / die / attack
+            // triggers check (1) the subject isn't the source itself, and (2)
+            // the subject's controller (graveyard owner for a CreatureDied
+            // subject) is the source's controller — else they fire for
+            // opponents' subjects too (Felisa, Sparring Regimen).
             let Some(target) = event_card(event) else { return false; };
             if target == source.id { return false; }
             let subject_controller = state
@@ -1206,14 +1164,11 @@ fn event_matches_spec_rest(
                     state.players.iter().position(|p|
                         p.graveyard.iter().any(|c| c.id == target))
                 })
-                // For token deaths the SBA "ceases to exist" rule
-                // (CR 111.7) removes the token from every zone
-                // in the same SBA sweep as the death event emission, so by
-                // the time the trigger dispatcher walks this lookup the
-                // token isn't anywhere. The `died_card_snapshots` cache
-                // is populated at die-time in `check_state_based_actions`
-                // so AnotherOfYours-scope triggers (Witherbloom Pestmaster,
-                // Felisa, Fang of Silverquill) still fire on token death.
+                // A dying token ceases to exist (CR 111.7) in the same SBA sweep
+                // that emits its death, so it's nowhere by dispatch;
+                // `died_card_snapshots` (filled at die-time in
+                // `check_state_based_actions`) lets AnotherOfYours triggers
+                // (Witherbloom Pestmaster, Felisa) still fire on token death.
                 .or_else(|| state.died_card_snapshots.get(&target).map(|c| c.controller))
                 // A creature that left without dying is gone from every zone;
                 // its last controller rides the event (Dour Port-Mage).
@@ -1227,15 +1182,12 @@ fn event_matches_spec_rest(
                 });
             subject_controller == Some(source.controller)
         }
-        // The card sits in a graveyard; the event still has to be "yours".
-        // Player-actor events carry the seat directly; object events (a
-        // permanent entering — Blood Speaker) fall back to the subject's
-        // controller.
-        // The graveyard walk already pins the source to its owner's graveyard;
-        // this half asks whose event it was. A spec that explicitly demands an
-        // opponent actor (Punishing Fire's "whenever an opponent gains life")
-        // wants the opposite side, so defer entirely to the `actor_is_opponent`
-        // rider below.
+        // The card sits in a graveyard (the walk already pins it to its
+        // owner's); the event must still be "yours". Player-actor events
+        // carry the seat; object events (Blood Speaker's entering
+        // permanent) fall back to the subject's controller. A spec that
+        // demands an opponent actor (Punishing Fire) wants the opposite
+        // side, so defer entirely to the `actor_is_opponent` rider below.
         EventScope::FromYourGraveyardAnyPlayer => true,
         EventScope::FromYourGraveyardSourceDamagedOpponent => matches!(
             event,
@@ -1486,14 +1438,6 @@ fn event_matches_spec_rest(
     true
 }
 
-/// The "actor" of an event for `EventScope::YourControl` /
-/// `OpponentControl` checks: the player whose action / permanent the
-/// event hangs off. For player-keyed events (CardDrawn, LifeGained, etc.)
-/// this is the event's `player` field; for permanent-keyed events
-/// (PermanentEntered, AttackerDeclared, CreatureDied) this is the
-/// permanent's controller, looked up on the battlefield. CreatureDied
-/// fires after the card has left the battlefield, so we fall back to the
-/// graveyard owner — close enough for "your creature died" triggers.
 /// The event's actor for `YourControl`/`OpponentControl` scope, disambiguating
 /// the two sides of a `BlockerDeclared` event by the trigger's kind: a
 /// `BecomesBlocked` observer watches the *attacker*'s controller ("a creature
@@ -1548,6 +1492,11 @@ pub(crate) fn counter_placer(state: &GameState, event: &GameEvent) -> Option<usi
     }
 }
 
+/// The "actor" of an event for `EventScope::YourControl` / `OpponentControl`
+/// checks: the event's `player` for player-keyed events (CardDrawn,
+/// LifeGained, …), else the permanent's controller on the battlefield
+/// (PermanentEntered, AttackerDeclared). CreatureDied fires after the card
+/// left, so it falls back to the graveyard owner.
 pub(crate) fn event_actor(state: &GameState, event: &GameEvent) -> Option<usize> {
     if let Some(p) = event_player(event) {
         return Some(p);
@@ -1577,12 +1526,10 @@ fn recipient_actor(state: &GameState, event: &GameEvent) -> Option<usize> {
     if let Some(c) = state.battlefield_find(cid) {
         return Some(c.controller);
     }
-    // CR 603.10 — for a death event the actor is the creature's *last
-    // controller*, not the graveyard owner: a stolen creature that dies fires
-    // the thief's "a creature you control dies" watcher. The die-snapshot
-    // cache captures that controller (and is also the sole source for token
-    // deaths, which leave no graveyard card), so prefer it over the owner
-    // zone-walk fallback (correct only when controller and owner coincide).
+    // CR 603.10 — a death event's actor is the creature's *last
+    // controller*, not its owner (a stolen creature that dies fires the
+    // thief's watcher). The die-snapshot cache holds that (and is the
+    // only source for token deaths), so prefer it over the owner walk.
     state
         .died_card_snapshots
         .get(&cid)
@@ -1681,12 +1628,9 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // CR 605 — the player who tapped the land (Price of Glory's off-turn
         // gate reads "that player's turn").
         GameEvent::TappedForMana { player, .. } => Some(*player),
-        // Sacrifice is performed by the controller of the sacrificed
-        // permanent ("a player sacrifices a creature"). This routes the
-        // YourControl / OpponentControl scope check correctly: a
-        // Mortician Beetle-style "Whenever a player sacrifices a creature"
-        // would use AnyPlayer scope; a "whenever an opponent sacrifices"
-        // would use OpponentControl.
+        // Sacrifice is performed by the sacrificed permanent's controller,
+        // so YourControl / OpponentControl scope ("whenever an opponent
+        // sacrifices") reads correctly.
         GameEvent::CreatureSacrificed { who, .. } => Some(*who),
         GameEvent::PermanentSacrificed { who, .. } => Some(*who),
         // The leaving creature is gone from every zone by dispatch time, so
@@ -1707,18 +1651,14 @@ fn event_player(event: &GameEvent) -> Option<usize> {
     }
 }
 
-/// Extract the "subject" of an event as an `EntityRef` — the entity the
-/// trigger's filter predicate should treat as `Selector::TriggerSource`.
-/// For card-subject events (cast spell, ETB permanent, attacker, etc.)
-/// this is the card; for player-subject events (life gain/loss, draw,
-/// discard) it's the player. Used by `dispatch_triggers_for_events` so
-/// filters like `Predicate::ValueAtLeast(ManaValueOf(TriggerSource), 5)`
-/// can pin-point the cast spell on the stack.
+/// The "subject" of an event as an `EntityRef` — what the trigger's filter
+/// treats as `Selector::TriggerSource`: the card for card events (cast, ETB,
+/// attacker, …), the player for player events (life, draw, discard). Lets
+/// `Predicate::ValueAtLeast(ManaValueOf(TriggerSource), 5)` find the cast
+/// spell on the stack.
 ///
-/// `kind` is the matching trigger's `EventKind`. For `BlockerDeclared`
-/// the underlying event is shared between two trigger kinds — `Blocks`
-/// fires on the blocker side (subject = blocker), while `BecomesBlocked`
-/// fires on the attacker side (subject = attacker). The kind disambiguates.
+/// `kind` disambiguates `BlockerDeclared`, shared by `Blocks` (subject =
+/// blocker) and `BecomesBlocked` (subject = attacker).
 pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<EntityRef> {
     match event {
         GameEvent::SpellCast { card_id, .. } => Some(EntityRef::Card(*card_id)),
@@ -1782,14 +1722,12 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         // referencing `Selector::TriggerSource` (and the implicit
         // SelfSource scope) bind to the creature that took the damage.
         GameEvent::DamageDealt { to_card: Some(card_id), .. } => Some(EntityRef::Permanent(*card_id)),
-        // Damage to a player binds `Selector::TriggerSource` / `PlayerRef::Triggerer`
-        // to the damaged player, so "that player discards / loses …" bodies on
-        // player-damage triggers resolve (Pain Magnification).
-        // CR — "whenever a creature deals damage to you" is the RECEIVER-side
-        // wording, so its subject is the dealer ("destroy it" — No Mercy;
-        // "that source's controller" — Michiko Konda). The dealer-side kinds
-        // (`DealsCombatDamageToPlayer`, …) keep binding the damaged player,
-        // which is what "that player" means there.
+        // Damage to a player binds `Selector::TriggerSource` /
+        // `PlayerRef::Triggerer` to the damaged player, so "that player …"
+        // bodies resolve (Pain Magnification). "Whenever a creature deals
+        // damage to you" is the receiver-side wording, so its subject is
+        // the dealer (No Mercy, Michiko Konda); dealer-side kinds
+        // (`DealsCombatDamageToPlayer`, …) keep the damaged player.
         GameEvent::DamageDealt { to_player: Some(p), from_card, .. } => {
             match (kind, from_card) {
                 (EventKind::PlayerDamaged, Some(dealer)) => Some(EntityRef::Permanent(*dealer)),
@@ -2047,13 +1985,10 @@ mod tests {
 
     /// **The two walkers of the graveyard-resident `SelfSource` family agree.**
     ///
-    /// The dispatcher's graveyard walk (`game/mod.rs`) decides *whose* printed
-    /// abilities are looked at, and the `SelfSource` scope arm above decides
-    /// whether the trigger fires. Both read
-    /// [`is_graveyard_self_source_kind`]; a kind admitted by one and not the
-    /// other is an ability that can never fire and never errors — which is
-    /// what `CardDiscarded` and `OpponentCausedYouToDiscard` were (Pure
-    /// Intentions, Sand Golem, Mangara's Blessing).
+    /// The dispatcher's graveyard walk (`game/mod.rs`) decides whose abilities
+    /// are looked at, the `SelfSource` scope arm whether the trigger fires;
+    /// both read [`is_graveyard_self_source_kind`]. A kind admitted by only one
+    /// silently never fires (`CardDiscarded`, `OpponentCausedYouToDiscard`).
     ///
     /// Add a row here when you add a kind to the predicate.
     #[test]
@@ -2101,12 +2036,10 @@ mod tests {
     }
 
     /// **The split matcher agrees with the one-table form it replaced.**
-    /// [`event_kind_bits`] (the variant half) and [`event_payload_matches`]
-    /// (the payload half) are checked against [`reference_event_kind_matches`]
-    /// over one sample per `GameEvent` variant — several for the variants a
-    /// payload arm reads — against one per `EventKind` variant, with and
-    /// without a source. A kind that reaches an event in one form and not the
-    /// other is a trigger that fires in one build and not the other.
+    /// [`event_kind_bits`] (variant half) and [`event_payload_matches`] (payload
+    /// half) are checked against [`reference_event_kind_matches`] over a sample
+    /// per `GameEvent` variant (several where a payload arm reads them) × every
+    /// `EventKind`, with and without a source.
     #[test]
     fn variant_and_payload_halves_agree_with_the_reference_table() {
         use crate::card::CounterType;

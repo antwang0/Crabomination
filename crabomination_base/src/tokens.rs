@@ -10,10 +10,9 @@ use crate::card::{
 use crate::effect::{ManaPayload, PlayerRef};
 use crate::mana::{Color, ManaCost, ManaSymbol};
 
-/// CR 111.4 — synthesize a token's display name from its subtypes when no
-/// explicit name was given. The result is the joined subtype names plus
-/// " Token" (e.g. `Subtypes { creature_types: [Spirit] }` → `"Spirit Token"`).
-/// Falls back to bare `"Token"` when the token has no subtypes at all.
+/// CR 111.4 — a token's display name from its subtypes when none was given: the
+/// joined subtype names plus " Token" (`[Spirit]` → `"Spirit Token"`), else
+/// bare `"Token"`.
 fn derive_name_from_subtypes(subtypes: &Subtypes) -> String {
     let mut parts: Vec<String> = Vec::new();
     parts.extend(subtypes.creature_types.iter().map(|s| format!("{:?}", s)));
@@ -29,21 +28,18 @@ fn derive_name_from_subtypes(subtypes: &Subtypes) -> String {
 }
 
 pub fn token_to_card_definition(token: &TokenDefinition) -> CardDefinition {
-    // CR 111.4: if the spell/ability that creates the token didn't specify
-    // a name, the name is its subtypes plus the word "Token". Every catalog
-    // factory ships a name today; this fallback covers future code paths
-    // (e.g. copy-token primitives) that might construct a `TokenDefinition`
-    // without filling in `name`.
+    // CR 111.4: an unnamed token is named for its subtypes plus "Token". Every
+    // catalog factory names its tokens; this covers code paths (copy-token
+    // primitives) that might not.
     let resolved_name = if token.name.is_empty() {
         derive_name_from_subtypes(&token.subtypes)
     } else {
         token.name.clone()
     };
     CardDefinition {
-        // CardDefinition.name is &'static str; tokens carry an owned
-        // String (so they round-trip through serde), so we leak a copy
-        // here to extend its lifetime. The leak is bounded by the
-        // number of unique token names produced over a session.
+        // `CardDefinition.name` is `&'static str` but a token's is an owned
+        // `String` (for serde), so it is interned — leaked once per unique
+        // name.
         name: crate::static_str_serde::intern(resolved_name),
         cost: token.cost.clone(),
         // CR 111.4 / 105.2c — a token's color comes from its creating effect,
@@ -81,17 +77,12 @@ thread_local! {
 }
 
 /// [`token_to_card_definition`] as a shared `Arc`, memoized per thread.
-///
-/// `CardDefinition` is 8,232 bytes, and `CardInstance::new` moves one twice —
-/// once as a by-value argument and once into the `Arc` — so a mint pays
-/// ~16,500 Ir before the token exists. Sharing one definition between mints of
-/// the same shape is invisible to the engine: every site that writes a
-/// permanent's definition goes through `Arc::make_mut`, which unshares first.
-///
-/// Thread-local because the memo is a pure function of its key: two threads
-/// cannot disagree about what it returns, so it adds no cross-thread order to
-/// the game. Callers that go on to *mutate* the definition want
-/// [`token_to_card_definition`] instead.
+/// `CardDefinition` is ~8 KB and `CardInstance::new` moves it twice, so a mint
+/// paid that copy before the token existed. Sharing one definition between
+/// mints of the same shape is invisible to the engine, since every definition
+/// write goes through `Arc::make_mut`. Thread-local is safe because the memo is
+/// a pure function of its key. Callers that will mutate the definition want
+/// [`token_to_card_definition`].
 pub fn token_card_arc(token: &TokenDefinition) -> std::sync::Arc<CardDefinition> {
     TOKEN_DEFS.with(|memo| {
         let mut memo = memo.borrow_mut();
@@ -123,12 +114,8 @@ pub fn token_arc_with_pt(
     }
 }
 
-/// CR 701.53b — the Incubator double-faced token. Front: a colorless Incubator
-/// artifact with "{2}: Transform this token." Back: a 0/0 colorless Phyrexian
-/// artifact creature ("Phyrexian Token"). `incubate N` mints this with N +1/+1
-/// counters, so transforming yields an N/N.
 /// A 1/1 colorless Phyrexian Mite artifact creature token with toxic 1 that
-/// can't block (ONE — Mirrex, Ria Ivor, White Sun's Twilight).
+/// can't block (ONE — Mirrex).
 pub fn phyrexian_mite_token() -> TokenDefinition {
     TokenDefinition {
         name: "Phyrexian Mite".into(),
@@ -144,6 +131,10 @@ pub fn phyrexian_mite_token() -> TokenDefinition {
     }
 }
 
+/// CR 701.53b — the Incubator double-faced token. Front: a colorless Incubator
+/// artifact with "{2}: Transform this token." Back: a 0/0 colorless Phyrexian
+/// artifact creature ("Phyrexian Token"). `incubate N` mints this with N +1/+1
+/// counters, so transforming yields an N/N.
 pub fn incubator_token() -> TokenDefinition {
     let back = TokenDefinition {
         name: "Phyrexian Token".into(),
@@ -331,9 +322,9 @@ pub fn blood_token() -> TokenDefinition {
 
 // ── College / set tokens ─────────────────────────────────────────────────────
 //
-// These engine-baked creature tokens are referenced both by the catalog
-// (cards that mint them) and by the `effect::shortcut::mint_*` builders, so
-// they live in the base crate to break the catalog↔effect cycle.
+// Engine-baked creature tokens used by both the catalog and the
+// `effect::shortcut::mint_*` builders, so they live here to break the
+// catalog↔effect cycle.
 
 /// Strixhaven Pest token: 1/1 black-and-green creature with
 /// "When this creature dies, you gain 1 life." Shared by Pest

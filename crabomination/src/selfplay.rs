@@ -1,18 +1,14 @@
 //! Self-play game generation for the ML training loop.
 //!
-//! The `selfplay_train` binary (in `crabomination_ml`) owns the threads,
-//! the sliding window, and the learner; this module owns everything that
-//! needs the engine — building a sealed match and playing it out while
-//! recording encoded snapshots. Keeping the game loop here means the bin
-//! never touches `GameState` internals, and the snapshot cadence is
-//! defined once, next to the encoder it feeds.
+//! `selfplay_train` (in `crabomination_ml`) owns threads, window and
+//! learner; this module owns everything that touches the engine — building a
+//! sealed match and playing it while recording encoded snapshots — so the bin
+//! never sees `GameState` internals and the snapshot cadence lives next to the
+//! encoder it feeds.
 //!
-//! Determinism: pools, builds, and shuffles are derived from the seeds
-//! the caller passes, matching the ladder/recommender convention — and so
-//! is [`HeuristicBot`]'s candidate jitter, which
-//! [`play_recorded_game_mcts`] pins per game. The exploration noise is
-//! still noise (a different stream per game), it is just *this* game's
-//! noise, so a recorded game can be re-run from its seed.
+//! Determinism: pools, builds, shuffles and [`HeuristicBot`]'s jitter (pinned
+//! per game by [`play_recorded_game_mcts`]) all derive from the caller's
+//! seeds, so a recorded game re-runs from its seed.
 
 use rand::RngExt;
 use rand::SeedableRng;
@@ -34,26 +30,16 @@ use crate::server::encode::{Vocab, encode_state_pair};
 
 /// Whether the snapshot cadence includes combat steps.
 ///
-/// Default off, which is what every run through round 39 recorded: a
-/// snapshot at each new turn, at post-combat main, and at end step. The
-/// feature census (`selfplay_train --feature-census`) showed what that
-/// costs — across 29 696 recorded positions the entire round-28 combat
-/// block (globals 36..=40, object feats 37..=39), the coarse combat
-/// one-hot (global 11), the attacking count (global 19) and the
-/// attacking/blocking flags (object feats 10, 28, 29) are non-zero in
-/// **exactly zero** rows. Combat is over by post-combat main and hasn't
-/// started at end step, so no training row has ever been a combat row.
+/// Default off (every run through round 39): snapshots at turn start,
+/// post-combat main and end step — none of which is mid-combat, so the
+/// feature census (`selfplay_train --feature-census`) found every combat
+/// feature zero in every row. The attack/block sims do evaluate mid-combat
+/// positions, so those columns never got a gradient. On adds snapshots at
+/// declare-blockers entry (the attack sim's leaf) and end-of-combat (the
+/// block sim's leaf).
 ///
-/// Those features are live at inference time — the attack and block
-/// sims evaluate mid-combat positions — so the columns the search feeds
-/// them into never received a gradient. Turning this on adds a snapshot
-/// on entry to declare-blockers (attacks declared, blocks pending: the
-/// attack sim's leaf) and to end-of-combat (blocks declared and damage
-/// marked: the block sim's leaf), which is the only way those features
-/// can ever be trained.
-///
-/// Process-global for the reason the encoder ablation is: the recorder
-/// runs on every actor thread and the flag is set once at startup.
+/// Process-global like the encoder ablation: set once at startup, read on
+/// every actor thread.
 static COMBAT_SNAPSHOTS: std::sync::atomic::AtomicBool =
     std::sync::atomic::AtomicBool::new(false);
 
@@ -166,15 +152,9 @@ pub fn rated_sealed_build_lands(pool: &[CardFactory], n: usize, seed: u64, color
     rated_sealed_build_cfg(pool, n, seed, cfg)
 }
 
-/// Does the rated judge add [`crate::card_ratings::shape_penalty`]? On.
-/// With the term against without it (FRA, `fra_card_eval --ab --best N
-/// --shape`, 2,000 pools x 8 pairs, seeds 43 / 97, pool-level): best of 16
-/// **50.12 % [49.83, 50.40] / 50.17 % [49.88, 50.46]** (three pools in four
-/// build the same deck either way), best of 64 — `fra_card_eval --build`'s
-/// `--candidates` — **50.43 % [50.10, 50.76] / 50.53 % [50.21, 50.85]**.
-/// The term can only pick among the shapes the candidates offer, so it pays
-/// with more of them. On SOS (`--set sos --pilot dflt`) best of 16 reads
-/// **50.83 % [50.56, 51.09] / 50.53 % [50.27, 50.80]**.
+/// Does the rated judge add [`crate::card_ratings::shape_penalty`]? On: it
+/// pays more the more candidates it chooses among (FRA best of 64, seeds
+/// 43 / 97: 50.43 / 50.53 %; best of 16 ~50.1; SOS best of 16 50.83 / 50.53).
 pub const RATED_SHAPE_JUDGE: bool = true;
 
 /// The best of `n` rated v3 builds under `cfg` (its builder flags forced on).
@@ -190,14 +170,9 @@ pub fn rated_sealed_build_shaped(pool: &[CardFactory], n: usize, seed: u64, shap
 
 /// Does the rated builder build half its candidates to the measured deck
 /// shape (`SimConfig::shape_slots`)? See [`build_candidates_shaped`]. Off:
-/// against unshaped candidates, both judged with the shape term
-/// (`fra_card_eval --ab --best N --slots`, seeds 43 / 97): FRA best of 16
-/// **50.27 / 49.93**, best of 64 **49.50 [49.12, 49.88] / 49.89**; SOS best
-/// of 16 50.26 / 50.18. Offered shaped decks, the judge takes them and they
-/// play no better (worse at 64): the residual curve
-/// [`crate::card_ratings::shape_penalty`] fits is partly the pool (a pool
-/// short of creatures is short of other things), so building to the shape
-/// does not buy what the judge's term prices.
+/// the judge takes shaped decks but they play no better (FRA best of 64
+/// 49.50 / 49.89 %) — the curve [`crate::card_ratings::shape_penalty`] fits
+/// is partly the pool, so building to it doesn't buy what the term prices.
 pub const RATED_SHAPE_SLOTS: bool = false;
 
 fn rated_sealed_build_judged(pool: &[CardFactory], n: usize, seed: u64, cfg: SimConfig, shape: bool) -> Vec<CardFactory> {
@@ -234,15 +209,10 @@ fn rated_sealed_build_slotted(
 }
 
 /// Does the rated builder hill-climb its best-of-`n` pick under the same
-/// judge? The candidates are noisy builds (each pick jittered by
-/// `build_temperature`), and the judge only chooses among them, so a pick
-/// kept 1-for-1 swaps its own judge prefers: Murmuring Volume, the
-/// lowest-rated card in any deck, made 5 of 20 client-built FRA decks
-/// (spot check, 2026-10-29). **On:** polished against unpolished, best of
-/// 16 (`fra_card_eval --ab --best 16 --trial polish`, 2,000 pools x 8
-/// pairs, `--pilot fra-fixes`, seeds 43 / 97, pool-level): FRA **52.64 %
-/// [52.23, 53.05] / 52.66 % [52.23, 53.09]** (19 decks in 20 change), SOS
-/// **50.84 % [50.56, 51.12] / 50.72 % [50.44, 51.00]**. About 0.3 ms a build.
+/// judge? The candidates are jittered builds, so a pick keeps swaps its own
+/// judge prefers (Murmuring Volume made 5 of 20 client FRA decks, 2026-10-29).
+/// On: polished vs unpolished, best of 16, seeds 43 / 97, FRA 52.64 / 52.66 %,
+/// SOS 50.84 / 50.72 %. About 0.3 ms a build.
 pub const RATED_JUDGE_POLISH: bool = true;
 
 thread_local! {
@@ -281,18 +251,16 @@ fn judge_polish(pool: &[CardFactory], deck: Vec<CardFactory>, judge: impl FnMut(
     hill_climb_build_by(&castable, deck, 3, judge)
 }
 
-/// The rated builder's best-of-`n` pick, *unpolished*, then polished under a
+/// The rated builder's best-of-`n` pick, unpolished, then polished under a
 /// learned deck value ([`crate::deck_value`]) by at most `swaps` single-spell
-/// swaps — each the best improving one over the pool cards the deck's lands
-/// cast and the value has priced. The step-1 play gate's arm (ML_NOTES "A
-/// deck net that builds decks"), raced by `fra_card_eval --ab --best 16
-/// --trial deckvalue` against the rated builder with its own polish. The
-/// swap cap is the trust region: the value was trained on builder decks with
-/// three spells swapped, and round 15 measured what an unbounded climb does
-/// to a learned judge.
+/// swaps over pool cards the lands cast and the value has priced. The step-1
+/// play gate's arm (ML_NOTES "A deck net that builds decks", `fra_card_eval
+/// --trial deckvalue`). The swap cap is a trust region: the value was trained
+/// on decks three swaps from a builder's, and round 15 showed what an
+/// unbounded climb does to a learned judge.
 ///
-/// `after_polish` keeps the rated builder's own polish and swaps on top of
-/// it (step 1b) instead of in its place.
+/// `after_polish` swaps on top of the rated builder's own polish (step 1b)
+/// instead of in its place.
 pub fn deck_value_build(
     pool: &[CardFactory],
     n: usize,
@@ -385,51 +353,34 @@ pub fn build_candidates_shaped(pool: &[CardFactory], n: usize, seed: u64, cfg: &
         .collect()
 }
 
-/// A random sealed opponent: a fresh 6-pack pool, built by the same
-/// builder family the training loop and recommender use — but as its
-/// best-of-16 pick, not a single noisy sample (see
-/// [`random_sealed_opponent_packs`] for why). Returns the 40-card deck
-/// and a label naming the seed, so a match can be reproduced
-/// ("Sealed #12345").
+/// A random sealed opponent: a fresh 6-pack pool built as the builder
+/// family's best-of-16 pick (see [`random_sealed_opponent_packs`]). Returns
+/// the 40 cards and a reproducible label ("Sealed #12345").
 pub fn random_sealed_opponent(seed: u64) -> (Vec<CardFactory>, String) {
     random_sealed_opponent_packs(seed, SEALED_PACKS)
 }
 
-/// [`random_sealed_opponent`] opening `packs` boosters instead of the
-/// standard six. The extra cards go through the same builder, so the
-/// opponent is simply choosing 40 from a deeper pool — a smooth
-/// difficulty dial rather than a different kind of deck. The label names
-/// the handicap so a match is still reproducible from what it says.
+/// [`random_sealed_opponent`] opening `packs` boosters: the same builder
+/// choosing 40 from a deeper pool, a smooth difficulty dial. The label names
+/// the handicap.
 ///
-/// The deck is [`best_build_v3`] — best-of-16 noisy builds under the
-/// quality/curve judge — not the single sample the training field uses.
-/// A field member is deliberately mediocre (a room of humans); a named
-/// opponent sitting across from *you* should be that room's best
-/// builder, and one sample handed the player a free handicap on top of
-/// whatever `packs` says. Still deterministic in `seed`.
+/// The deck is [`best_build_v3`]'s best-of-16, not the training field's
+/// single sample: a field member is deliberately mediocre, but a named
+/// opponent should be the room's best builder, not a free extra handicap.
+/// Deterministic in `seed`.
 pub fn random_sealed_opponent_packs(seed: u64, packs: usize) -> (Vec<CardFactory>, String) {
     random_sealed_opponent_in_colors(seed, packs, ColorSet::empty())
 }
 
-/// [`random_sealed_opponent_packs`] with the opponent's colours pinned:
-/// only shapes inside `colors` are enumerated, so `{Red, White}` is a
-/// Lorehold deck every game (the client's `--opponent-colors lorehold`).
-/// `ColorSet::empty()` is unrestricted — exactly the call above.
+/// [`random_sealed_opponent_packs`] with the opponent's colours pinned
+/// (`{Red, White}` = Lorehold every game, the client's `--opponent-colors`);
+/// `ColorSet::empty()` is unrestricted.
 ///
-/// The pool is still a plain `packs`-booster pool. The restriction picks
-/// which 40 cards come out of it; it does not deal a better one. A pool
-/// thin in the named colours therefore builds a weak deck rather than
-/// rerolling for a good one — rerolling until the colours ran deep would
-/// hand the opponent a stronger pool than `packs` says, which is the one
-/// dial this mode's difficulty is supposed to live on.
-///
-/// The filter is on mana identity — the builder's own notion of colour —
-/// so a card castable with generic mana alone (a mono-hybrid `{2/G}{2/G}`)
-/// is still fair game for a Lorehold deck: it casts off Mountains and
-/// Plains like everything else in it.
-///
-/// Needs at least two colours to build anything: the lattice enumerates
-/// pairs and wider (see [`SimConfig::color_restriction`]).
+/// The restriction chooses the 40 from a plain `packs` pool; it never rerolls
+/// for a pool deep in those colours, since that would make the opponent
+/// stronger than `packs` says. The filter is mana identity, so a card castable
+/// with generic mana (`{2/G}{2/G}`) is fair game. Needs at least two colours
+/// (see [`SimConfig::color_restriction`]).
 pub fn random_sealed_opponent_in_colors(
     seed: u64,
     packs: usize,
@@ -491,12 +442,9 @@ pub fn build_candidates_cfg(
     seed: u64,
     cfg: &SimConfig,
 ) -> Vec<Vec<CardFactory>> {
-    // The shape lattice is deterministic in `(pool, cfg)` — see
-    // `build_random_deck_from` — so enumerate it once for all `n`
-    // candidates instead of per candidate. At `best_build_by`'s n = 32
-    // (what `selfplay_train --use-deck-best` runs per side per game) that
-    // is 32 x ~26 `build_shape` calls replaced by ~26 + 32. The pool's
-    // `PoolScores` is invariant across both loops for the same reason.
+    // The shape lattice and `PoolScores` are deterministic in `(pool, cfg)`
+    // (see `build_random_deck_from`), so they are computed once for all `n`
+    // candidates rather than per candidate.
     let scores = crate::recommend::PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro, cfg.rated_cards);
     let shapes = crate::recommend::enumerate_shapes(&scores, cfg);
     let out: Vec<Vec<CardFactory>> = (0..n as u64)
@@ -506,12 +454,11 @@ pub fn build_candidates_cfg(
             crate::recommend::build_random_deck_from(&shapes, &scores, cfg, &mut rng).cards
         })
         .collect();
-    // The hoist is sound only while `enumerate_candidates` is a pure
-    // function of `(pool, cfg)`. Re-derived after the loop and compared, in
-    // debug builds only: a later change that gives it hidden state — or that
-    // lets a candidate build perturb it — then fails the suite
-    // (`best_build_v3_is_the_argmax_of_its_candidates` runs this at n = 16)
-    // instead of silently changing every judged build in training.
+    // The hoist is sound only while `enumerate_candidates` is pure in
+    // `(pool, cfg)`. Debug builds re-derive and compare, so hidden state or a
+    // candidate build perturbing it fails the suite
+    // (`best_build_v3_is_the_argmax_of_its_candidates`) instead of silently
+    // changing every judged build.
     debug_assert!(
         {
             let again = crate::recommend::enumerate_candidates(pool, cfg);
@@ -552,36 +499,21 @@ pub fn best_build_v3_in_colors(
 /// The **client's** sealed-opponent recipe: [`best_build_v3_in_colors`] with
 /// `SimConfig::curve_aggro`.
 ///
-/// A separate entry point rather than a flag flipped inside the shared one.
-/// `best_build_v3` delegates to that shared function, and it is the second
-/// arm of `selfplay_train --gate-builder-v3` ("best-of-16 v3 (client opponent
-/// recipe) vs single-sample v2") — so turning the curve on in place silently
-/// changed what that race measures, from `builder_v3` to `builder_v3` plus a
-/// curve. The gate keeps measuring the builder it names; the client gets the
-/// curve; neither reaches `SimConfig::default()`, so the training field and
-/// the ladder's sealed gate decks are untouched.
-///
-/// `builder_v3` already gives this build a curve at the *shape* level
-/// (`curve_penalty`). `curve_aggro` adds the two things still missing inside
-/// a chosen shape: a mana-value term in the pick scoring
-/// (`draft::aggro_curve_delta`) and reserved slots in the assembly
-/// (`recommend::CurveSlots`), so the early drops survive the cut.
+/// A separate entry point, not a flag in the shared function: `best_build_v3`
+/// is an arm of `selfplay_train --gate-builder-v3`, and flipping the curve
+/// there silently changed what that gate measures. Neither touches
+/// `SimConfig::default()`, so the training field and ladder gate decks are
+/// unaffected. `curve_aggro` adds what `builder_v3`'s shape-level
+/// `curve_penalty` lacks: a mana-value pick term (`draft::aggro_curve_delta`)
+/// and reserved early-drop slots (`recommend::CurveSlots`).
 ///
 /// A pool the measured ratings cover ([`crate::card_ratings::rates_pool`]:
-/// Reality Fracture and Secrets of Strixhaven) is built by
-/// [`rated_sealed_build_in_colors`] instead. Best-of-16 rated against this
-/// v3 recipe (`fra_card_eval --ab --best 16`, 2,000 pools x 8 pairs, seeds
-/// 43 / 97, pool-level, 2026-10-26), the rated deck won **69.73 % [69.12,
-/// 70.34] / 69.96 % [69.35, 70.57]** of FRA pools (`--pilot fra-fixes`) and
-/// **60.88 % [60.18, 61.58] / 60.58 % [59.89, 61.26]** of SOS pools
-/// (`--set sos --pilot dflt`).
-///
-/// **A pool the learned builder covers is built by it instead**
-/// ([`LEARNED_SEALED_BUILDER`]): the add-one-card policy proposes its greedy
-/// build, `n` temperature-1 samples and a build per colour pair, and the
-/// same-pool deck value picks one ([`DeckPolicy::build_valued`]). A request
-/// with a colour restriction keeps the rated build in those colours — the
-/// policy's candidates choose their own.
+/// FRA and SOS) goes to [`rated_sealed_build_in_colors`] instead (vs this
+/// recipe, 2026-10-26: FRA 69.7 / 70.0 %, SOS 60.9 / 60.6 %). A pool the
+/// learned builder covers ([`LEARNED_SEALED_BUILDER`]) is built by it: the
+/// policy proposes greedy, `n` temperature-1 and per-colour-pair builds and
+/// the same-pool value picks ([`DeckPolicy::build_valued`]). A colour
+/// restriction keeps the rated build in those colours.
 pub fn sealed_opponent_build(
     pool: &[CardFactory],
     n: usize,
@@ -625,26 +557,19 @@ impl DraftDeck {
     }
 }
 
-/// Build a drafted pile for play: the client's starting suggestion for the
-/// player and the bot opponent's deck.
+/// Build a drafted pile for play: the client's suggestion for the player and
+/// the bot opponent's deck.
 ///
 /// A pile the measured ratings cover (SOS) goes through
-/// [`sealed_opponent_build`] — the learned builder, polish 3 — and is split
-/// back into main / sideboard / basics; any other pile (Cube) keeps
-/// `draft::suggest_main_deck` + `suggest_basic_split`. Measured 2026-11-15
-/// on seeded 8-seat pods of `draft::bot_pick` drafters (`fra_card_eval
-/// --draft-ab`, 250 pods = 2,000 piles x 8 seat-swapped pairs, pile-level,
-/// `--pilot dflt`, seeds 43 / 97): on SOS piles the learned build won
-/// **59.59 % [58.96, 60.21] / 59.54 % [58.90, 60.18]** against the
-/// suggestion and **52.08 % / 52.08 %** against the rated best-of-16, so the
-/// sealed-pool value holds on 45-card draft piles; on Cube piles `v3`
-/// against the suggestion read **49.88 / 49.70 %**, a tie, so Cube is left
-/// alone. Every arm was read with basics exempt from the copy cap
-/// ([`crate::draft::enforce_copy_cap`]).
+/// [`sealed_opponent_build`] (learned builder, polish 3) and is split back
+/// into main / sideboard / basics; any other pile (Cube) keeps
+/// `draft::suggest_main_deck` + `suggest_basic_split`. 2026-11-15
+/// (`fra_card_eval --draft-ab`, seeds 43 / 97, basics exempt from
+/// [`crate::draft::enforce_copy_cap`]): SOS learned vs suggestion 59.6 / 59.5
+/// %, vs rated 52.1 / 52.1 %; Cube `v3` vs suggestion 49.9 / 49.7 %, a tie.
 ///
-/// The builder plays any number of a common it has; more than four copies
-/// of a nonbasic go to the sideboard, a basic of the main colour in each
-/// one's place, so the client's copy cap never shortens the deck.
+/// Copies of a nonbasic past four go to the sideboard, each replaced by a
+/// main-colour basic, so the client's copy cap never shortens the deck.
 pub fn draft_deck_build(picks: &[CardFactory], seed: u64) -> DraftDeck {
     use crate::draft::{COPY_CAP, basic_land_factory, suggest_basic_split, suggest_main_deck, top_two_colors};
     use crate::mana::Color;
@@ -700,30 +625,17 @@ pub fn draft_deck_build(picks: &[CardFactory], seed: u64) -> DraftDeck {
     DraftDeck { main, sideboard, basics, colors }
 }
 
-/// Do FRA and SOS sealed opponents build with the learned policy and the
-/// same-pool deck value? **On**, adopted 2026-11-07 at the user's call
-/// (ML_NOTES "A deck net that builds decks", step 5). Against the rated
-/// best-of-16 builder on the same pool (`fra_card_eval --ab --best 16
-/// --trial policy-value`, 2,000 pools x 8 pairs, pool-level, seeds 43 / 97):
-/// FRA (`--pilot fra-fixes`) **51.41 % [50.86, 51.96] / 51.84 % [51.30,
-/// 52.39]**, SOS (`--set sos --pilot dflt`) **52.78 % [52.22, 53.34] /
-/// 52.75 % [52.21, 53.29]**. The step-1 value as the selector over the
-/// same candidates read 50.37 / 50.67 and 51.68 / 51.98; the policy's
-/// greedy build alone 49.50 / 49.84 and 49.93 / 50.37. It replaces the
-/// step-1b SOS polish adopted 2026-11-05 (51.78 / 52.04 by the same gate).
+/// Do FRA and SOS sealed opponents build with the learned policy and
+/// same-pool deck value? On, adopted 2026-11-07 at the user's call (ML_NOTES
+/// "A deck net that builds decks", step 5; vs rated best-of-16, seeds 43 / 97:
+/// FRA 51.41 / 51.84 %, SOS 52.78 / 52.75 %). Replaced step 1b's SOS polish.
 pub const LEARNED_SEALED_BUILDER: bool = true;
 
-/// At most how many value-guided one-for-one swaps an SOS sealed opponent
-/// makes after the learned builder's pick (`deck_policy::polish`: the best
-/// swap by the same-pool value, lands re-derived, kept only if the relanded
-/// deck still rates higher). **3**, adopted 2026-11-09 at the user's call
-/// (ML_NOTES "Research sweep", results): against the unpolished pick on the
-/// same pool (`fra_card_eval --set sos --ab --best 16 --trial
-/// policy-value+polish3 --pilot dflt`, 2,000 pools x 8 pairs, pool-level)
-/// **51.84 / 51.47 / 51.76 / 51.58 %** at seeds 43 / 97 / 11 / 29; 1 swap
-/// read 51.23 / 50.99, 6 swaps 51.79 / 51.52. FRA stays unpolished: 50.06 /
-/// 49.65 at 3 swaps, 50.12 at 6 — the FRA value's swap preferences don't
-/// survive play.
+/// Max value-guided one-for-one swaps an SOS sealed opponent makes after the
+/// learned pick (`deck_policy::polish`, kept only if the relanded deck still
+/// rates higher). 3, adopted 2026-11-09 at the user's call (ML_NOTES
+/// "Research sweep": ~51.5-51.8 % over 4 seeds; 1 and 6 swaps no better). FRA
+/// stays unpolished — its value's swap preferences don't survive play (~50 %).
 pub const SOS_SEALED_POLISH: usize = 3;
 
 /// The add-one-card deck policy (width 256, DAgger imitation then one
@@ -737,15 +649,11 @@ pub fn sealed_deck_policy() -> &'static crate::deck_policy::DeckPolicy {
     })
 }
 
-/// The FRA same-pool deck value: which of one pool's builds wins, learned
-/// from the race. Since 2026-11-16 step 7's export (arm A3, λ 10, seed 1,
-/// `--mana`: trained on step 5 + 6's races with `deck_value::mana_feats`),
-/// swapped in at the user's call: against step 5's A2 λ 100 inside the
-/// production builder (`fra_card_eval --ab --trial value-vs-adopted`, 2,000
-/// pools x 8 pairs, `--pilot fra-fixes`) **50.81 / 50.37 / 50.25 / 50.42 %**
-/// at seeds 43 / 97 / 11 / 29 — under the registered confirm bar, taken for
-/// the mana base: a deck starved of its second colour now rates lower in
-/// 99.9 % of decks (step 5's value: 87 %).
+/// The FRA same-pool deck value (which of one pool's builds wins). Since
+/// 2026-11-16 step 7's export (A3, λ 10, seed 1, `--mana`), swapped in at the
+/// user's call: under the confirm bar in play (~50.25-50.81 % over 4 seeds)
+/// but taken for the mana base — a deck starved of its second colour rates
+/// lower in 99.9 % of decks (step 5's value: 87 %).
 pub fn fra_deck_value() -> &'static crate::deck_value::DeckValue {
     static DV: std::sync::OnceLock<crate::deck_value::DeckValue> = std::sync::OnceLock::new();
     DV.get_or_init(|| {
@@ -755,12 +663,9 @@ pub fn fra_deck_value() -> &'static crate::deck_value::DeckValue {
 }
 
 /// The SOS same-pool deck value. Since 2026-11-16 step 7's export (A3, λ 10,
-/// seed 1, `--mana`; see [`fra_deck_value`]): against step 5's A3 λ 10 in the
-/// production builder (polish 3, `--pilot dflt`) **50.40 / 51.13 / 51.06 /
-/// 50.66 %** at seeds 43 / 97 / 11 / 29, passing the registered bar; the
-/// starved-second-colour deck rates lower in 99.9 % of decks (step 5's: 53 %).
-/// [`SOS_SEALED_POLISH`] and [`draft_deck_build`]'s reads were taken under
-/// step 5's value.
+/// seed 1, `--mana`; see [`fra_deck_value`]), passing the registered bar
+/// (~50.4-51.1 % over 4 seeds). [`SOS_SEALED_POLISH`] and
+/// [`draft_deck_build`]'s reads were taken under step 5's value.
 pub fn sos_deck_value() -> &'static crate::deck_value::DeckValue {
     static DV: std::sync::OnceLock<crate::deck_value::DeckValue> = std::sync::OnceLock::new();
     DV.get_or_init(|| {
@@ -817,20 +722,14 @@ pub fn best_build_by<F: FnMut(&[CardFactory]) -> f64>(
         .unwrap_or_default()
 }
 
-/// Greedy hill-climb over single spell swaps, under an arbitrary judge.
+/// Greedy hill-climb over single spell swaps under an arbitrary judge
+/// ([`best_build_by`] only picks among random candidates). For each non-land
+/// slot try every unused non-land pool card, keep the first strict
+/// improvement, up to `max_passes` or a pass with none. Cheap for a deck-net
+/// judge.
 ///
-/// [`best_build_by`] picks the best of N *random* candidates — it never
-/// searches. This walks from a starting build: for each non-land slot,
-/// try every distinct non-land pool card not already used, keep the
-/// first strict improvement, repeat up to `max_passes` passes or until a
-/// full pass finds nothing. A deck-net judge scores a 40-card list in
-/// microseconds, so the few thousand evaluations a climb costs are free
-/// next to a single simulated game.
-///
-/// Lands are never touched: the mana base came from the builder's
-/// colour/count model and the judge has no way to know a swapped basic
-/// broke it. Deterministic — candidates are visited in name order — so
-/// the same pool and start always climb to the same deck.
+/// Lands are never touched — the judge can't see a broken mana base.
+/// Deterministic (candidates in name order).
 pub fn hill_climb_build_by<F: FnMut(&[CardFactory]) -> f64>(
     pool: &[CardFactory],
     mut deck: Vec<CardFactory>,
@@ -958,13 +857,10 @@ pub fn static_deck_score_v3(deck: &[CardFactory]) -> i32 {
 /// One finished self-play game's worth of labelled rows.
 pub struct RecordedGame {
     pub rows: Vec<TrainRow>,
-    /// The heuristic evaluation of each row's position, from that row's
-    /// seat — parallel to `rows` and in the same order.
-    ///
-    /// Not part of the shard format: this exists so the calibration
-    /// diagnostic can score the net and the heuristic as *predictors* on
-    /// identical positions, which is the cheap question the expensive
-    /// gate rounds were standing in for.
+    /// The heuristic evaluation of each row's position from that row's seat,
+    /// parallel to `rows`. Not in the shard format: it lets the calibration
+    /// diagnostic score net and heuristic as predictors on identical
+    /// positions.
     pub heur: Vec<i32>,
     /// Winning seat; `None` for a stall/draw (rows are empty then — an
     /// unlabelled position teaches nothing).
@@ -981,18 +877,14 @@ pub struct RecordedGame {
 /// pure policy play and the distribution is widened rather than shifted.
 const EXPLORE_PLIES: usize = 12;
 
-/// Play one bot game from `template`, snapshotting along the way from both
-/// seats' perspectives, and stamp the outcome labels at the end.
+/// Play one bot game from `template`, snapshotting from both seats'
+/// perspectives, and stamp the outcome labels at the end.
 ///
-/// Snapshot cadence: at the top of every turn, on entering the postcombat
-/// main, and on entering the end step (consecutive duplicates skipped).
-/// The mid-turn points exist because of a measured failure, not taste:
-/// nets trained on turn boundaries alone gated at 43.6 % / 42.3 % across a
-/// 4× data jump — `eval_material` consumes post-action and post-combat
-/// positions, which turn-boundary training never shows the net. Both
-/// seats' views are always pushed together (two rows per point, one
-/// eventual winner and one loser), keeping the win labels balanced by
-/// construction.
+/// Cadence: turn start, postcombat main entry, end step entry (consecutive
+/// duplicates skipped). The mid-turn points are there because nets trained on
+/// turn boundaries alone gated at ~43 % — `eval_material` reads post-action
+/// and post-combat positions. Both seats' views are pushed together, so win
+/// labels are balanced by construction.
 pub fn play_recorded_game(
     template: &GameState,
     weights: [EvalWeights; 2],
@@ -1014,12 +906,10 @@ pub fn actor_mcts(iterations: u32, gumbel: bool) -> Option<crate::server::MctsCo
     })
 }
 
-/// [`play_recorded_game`] with the seats piloted by net-evaluated MCTS
-/// (`mcts`: the search's config, each seat's `weights` written into it —
-/// `actor_mcts` builds the round-26 adopted shape) instead of the scored bot. This is the training side of search
-/// amplification: labels from games played ~3–5 points stronger than the
-/// plain net pilot. `weights` still parameterizes the reward and the
-/// exploration openings.
+/// [`play_recorded_game`] with net-evaluated MCTS pilots (`mcts` is the
+/// search config, each seat's `weights` written into it; `actor_mcts` builds
+/// the round-26 shape) — the training side of search amplification. `weights`
+/// still parameterizes the reward and exploration openings.
 pub fn play_recorded_game_mcts(
     template: &GameState,
     weights: [EvalWeights; 2],
@@ -1028,16 +918,11 @@ pub fn play_recorded_game_mcts(
     vocab: &Vocab,
     mcts: Option<crate::server::MctsConfig>,
 ) -> RecordedGame {
-    // Pin the bot's tie-break / sampling stream to this game's seed, so the
-    // game is a replay of itself: TODO item 7's open question, answered by the
-    // standing goal it sits under (cross-process determinism under a fixed
-    // seed) and by `sample_scored_index`'s own doc, which already promises
-    // "drawing from the jitter stream (seeded ⇒ reproducible)" — the actors
-    // were the one path that never installed one, so a panic at game 400 k
-    // could not be re-run even with its seed in hand. Per game, from the
-    // per-game seed, so nothing about the distribution narrows: every game
-    // still gets its own stream. A caller that pinned the stream itself (the
-    // antithetic pairs, `--feature-census`) keeps it.
+    // Pin the bot's tie-break / sampling stream to this game's seed so the
+    // game replays from its seed (cross-process determinism; the actors were
+    // the one path that never installed one). Per game, so every game still
+    // gets its own stream; a caller that pinned it already (antithetic pairs,
+    // `--feature-census`) keeps its own.
     let pinned = crate::server::bot::install_jitter_seed_if_unset(seed ^ 0x11_7737_5EED_0001);
     let out = play_recorded_game_mcts_inner(
         template,
@@ -1062,14 +947,10 @@ fn play_recorded_game_mcts_inner(
     mcts: Option<crate::server::MctsConfig>,
 ) -> RecordedGame {
     let mut g = template.clone();
-    // Profile settings the ENGINE reads off the seat, not the bot — the
-    // same push `recommend::play_one_game_traced` makes.
-    // Until round 68 (2026-09-07) no actor ever carried them, so the
-    // self-play stream was generated with the auto-target picker's
-    // caster-first player slots even after round 67 fixed them for every
-    // ladder pilot: the training data disagreed with the pilot it trained
-    // for. `smart_tap` and `converge_rarest` are off in the default, so
-    // only `hostile_player_targets` changes anything today.
+    // Profile settings the ENGINE reads off the seat — the same push
+    // `recommend::play_one_game_traced` makes. Missing until round 68, so the
+    // self-play stream kept caster-first player slots after round 67 fixed
+    // them for the ladder.
     for (seat, w) in weights.iter().enumerate() {
         g.players[seat].smart_tap = w.smart_tap;
         g.players[seat].converge_rarest = w.converge_rarest;
@@ -1084,26 +965,18 @@ fn play_recorded_game_mcts_inner(
     for seat in 0..2 {
         g.players[seat].library.shuffle(&mut rng);
     }
-    // The in-game rolls (mulligan reshuffles, random discards) key off the
-    // same seed. Derived rather than drawn, so the explore draw below keeps
-    // its old position in the stream.
-    //
-    // **A re-run of this `seed` now plays the same game**: the wrapper above
-    // pins `bot::jitter_below`'s tie-break stream per game, which used to be an
-    // unseeded thread-local — two runs of `--feature-census 8 --seed 5`
-    // disagreed by 12 positions and 515 encoded objects out of 820 / 29,143
-    // (2026-08-29). What is still *not* reproducible is a whole net-in-the-loop
-    // run: which actor thread plays game `n` varies, so the learner's weights at
-    // game `n` do too. `CRAB_NO_JITTER=1` pins the draws to 0 for a measurement.
+    // In-game rolls (mulligan reshuffles, random discards) key off the same
+    // seed, derived rather than drawn so the explore draw keeps its position.
+    // With the jitter pin above, a re-run of `seed` plays the same game. A
+    // whole net-in-the-loop run is still not reproducible (which actor plays
+    // game `n`, and so the learner's weights then, varies). `CRAB_NO_JITTER=1`
+    // pins the draws to 0 for a measurement.
     g.rng.reseed(seed ^ 0x5EED_600D_C0DE_1234);
     g.start_mulligan_phase();
-    // Opening-move exploration. Both seats otherwise play the same
-    // deterministic policy, so the net only ever sees the narrow band of
-    // positions that policy reaches and learns to evaluate *those* — the
-    // classic self-play distribution collapse. Randomising the first few
-    // decisions of each game widens the state distribution for free; it
-    // is confined to the opening so the *outcome* still reflects
-    // competent play and the win labels stay meaningful.
+    // Opening-move exploration: both seats otherwise play one deterministic
+    // policy and the net sees only the positions it reaches (self-play
+    // distribution collapse). Confined to the opening so outcomes still
+    // reflect competent play.
     let explore_plies = rng.random_range(0..=EXPLORE_PLIES);
     // The move-list recorder's candidate sampling (`policy_pilot::record`),
     // its own stream so the game's draws are untouched.
@@ -1123,14 +996,9 @@ fn play_recorded_game_mcts_inner(
 
     // (turn, seat, encoded state) — labelled after the game decides.
     //
-    // The four accumulators below are parallel and reach the same length, and
-    // a game emits ~99 snapshots (11,899 rows over 120 games), so each of them
-    // walked 0->4->8->...->128. That is **75 growths a game between them**, the
-    // highest growths-per-call ratio in the program by fifty times
-    // (`scripts/cg_growth.py`, PERF (-110)) — and `snaps`' element carries a
-    // whole `EncodedState`, so each re-growth memcpys the lot. One reserve
-    // apiece covers the mean game outright and leaves a long one a single
-    // growth.
+    // The four parallel accumulators reach ~99 entries a game; one reserve
+    // apiece covers the mean game and leaves a long one a single growth
+    // (PERF (-110); `snaps` growth memcpys whole `EncodedState`s).
     const SNAP_HINT: usize = 128;
     let mut snaps: Vec<(u32, usize, crabomination_nn::EncodedState)> =
         Vec::with_capacity(SNAP_HINT);
@@ -1145,13 +1013,10 @@ fn play_recorded_game_mcts_inner(
     let mut opp_hands: Vec<Vec<u16>> = Vec::with_capacity(SNAP_HINT);
     let mut last_turn = (0u32, usize::MAX);
     let mut last_step = crate::game::TurnStep::Untap;
-    // The de-duplication key is the last pair *pushed*, and `snaps` already
-    // holds it — so this is the index of that pair's seat-0 entry rather
-    // than a second copy of it. Holding the pair itself meant every accepted
-    // snapshot cloned two whole `EncodedState`s (each one a `Vec` per group,
-    // so ~5 allocations and a copy of every encoded object) purely to keep
-    // the comparison alive. Snapshots are pushed in seat pairs and nothing
-    // else pushes to `snaps`, so `i` and `i + 1` are the pair.
+    // Index of the last pushed pair's seat-0 entry in `snaps` (the de-dup
+    // key), rather than a clone of the pair — which cost two whole
+    // `EncodedState` copies per snapshot. Snapshots go in as seat pairs and
+    // nothing else pushes, so `i` and `i + 1` are the pair.
     let mut last_pair: Option<usize> = None;
     let (mut actions, mut stale) = (0usize, 0usize);
     // The decision recorder's join key (round 72): every captured decision
@@ -1162,15 +1027,11 @@ fn play_recorded_game_mcts_inner(
     crate::server::decision_capture::set_ply(0);
     while stop_reason(&g, actions, max_actions, stale).is_none() {
         let new_turn = (g.turn_number, g.active_player_idx) != last_turn;
-        // The four shapes a combat passes through, each the leaf of a
-        // decision the bot actually makes: declare-attackers (nothing
-        // declared — the attack decision's own position),
-        // declare-blockers (attacks declared, blocks pending — the
-        // attack sim's leaf), first-strike/combat damage (blocks
-        // declared, damage not yet dealt — the block sim's leaf), and
-        // end-of-combat (damage marked on the survivors). `block_map`
-        // and `attacking` are torn down when combat damage resolves, so
-        // the blocking flags are only reachable at the third of these.
+        // The four shapes a combat passes through, each a bot decision's
+        // leaf: declare-attackers (the attack decision), declare-blockers
+        // (the attack sim's leaf), first-strike/combat damage (the block
+        // sim's leaf — the only point the blocking flags exist, since
+        // `block_map`/`attacking` are torn down at damage), end-of-combat.
         // See [`COMBAT_SNAPSHOTS`].
         let step_point = g.step != last_step
             && match g.step {
@@ -1302,12 +1163,9 @@ fn play_recorded_game_mcts_inner(
 
 /// The row's life-difference label, in `[-1, 1]`.
 ///
-/// ⚠ `i64`, not `i32`. Both totals saturate at the rules layer — `(-291)`'s
-/// Beacon board leaves one seat at `i32::MAX`, and a seat that then loses to a
-/// saturated power is at the other end — so the difference of the two
-/// overflows before the clamp ever sees it: a panic under `overflow-checks`
-/// (the actor's own `overflow` profile) and, in release, a label with the
-/// wrong SIGN on the most lopsided board in the run.
+/// ⚠ `i64`, not `i32`: both totals saturate at the rules layer (`(-291)`'s
+/// Beacon board), so their `i32` difference overflows — a panic under the
+/// actor's `overflow` profile, a wrong-SIGN label in release.
 fn life_diff_label(mine: i32, theirs: i32) -> f32 {
     ((mine as i64 - theirs as i64) as f32 / 20.0).clamp(-1.0, 1.0)
 }
@@ -1339,13 +1197,10 @@ fn snapshot_stats(g: &GameState, seat: usize) -> [f32; 4] {
 #[cfg(test)]
 mod tests {
 
-    /// A saturated board goes through the ACTOR's own numbers without
-    /// overflowing — the twin of
-    /// `encode::tests::a_saturated_power_encodes_as_a_bounded_feature`, one
-    /// consumer over. `snapshot_stats` sums a power per side and differences
-    /// two life totals, and both quantities saturate at the rules layer
-    /// (Exponential Growth, Beacon of Immortality). The test harness always
-    /// unwinds, so an overflow fails here rather than aborting.
+    /// A saturated board (Exponential Growth, Beacon of Immortality) goes
+    /// through the actor's per-side power sums and life difference without
+    /// overflowing; twin of
+    /// `encode::tests::a_saturated_power_encodes_as_a_bounded_feature`.
     #[test]
     fn a_saturated_board_does_not_overflow_the_actor_stats() {
         use crate::card::{CardId, CardInstance};
@@ -1451,19 +1306,10 @@ mod tests {
         assert_eq!(best_build_v3(&pool, 4, 7).len(), 40);
     }
 
-    /// The client's sealed-opponent recipe: best-of-16 under the v3
-    /// judge is a legal 40, deterministic in the seed, and actually the
-    /// argmax of its own candidate set — not one more sample.
-    /// The client's sealed opponent opts into `curve_aggro`, so the deck a
-    /// local player is dealt against has early plays in it. Before the
-    /// curve work the assembly filled strictly by score, and a pool whose
-    /// best cards were expensive produced an opponent that did nothing
-    /// before turn four.
-    /// The adoption is the gated arm and nothing else: an FRA or SOS
-    /// opponent is the compiled policy's valued build under its set's
-    /// same-pool value, exactly as `fra_card_eval --trial policy-value`
-    /// built it (the policy knows every card of both sheets); a colour
-    /// restriction keeps the rated build in those colours.
+    /// The adopted arm and nothing else: an FRA or SOS opponent is the
+    /// policy's valued build under its set's same-pool value, as
+    /// `fra_card_eval --trial policy-value` built it; a colour restriction
+    /// keeps the rated build in those colours.
     #[test]
     fn the_sealed_opponent_is_the_gated_policy_and_value_build() {
         use crate::fra_mode::SealedSet;
@@ -1516,6 +1362,9 @@ mod tests {
         assert_eq!(built.main, crate::draft::suggest_main_deck(&cube, 23).0);
     }
 
+    /// The client's sealed opponent opts into `curve_aggro`, so it has early
+    /// plays: filling strictly by score, a pool of expensive bombs once
+    /// produced an opponent that did nothing before turn four.
     #[test]
     fn the_sealed_opponent_builds_to_a_curve() {
         for seed in [1u64, 7, 42, 1234] {
@@ -1566,6 +1415,9 @@ mod tests {
         assert_eq!(n(catalog::forest), 17, "lands untouched");
     }
 
+    /// The client's sealed-opponent recipe: best-of-16 under the v3 judge is
+    /// a legal 40, deterministic in the seed, and the argmax of its own
+    /// candidates — not one more sample.
     #[test]
     fn best_build_v3_is_the_argmax_of_its_candidates() {
         let pool = sealed_pool(0xB3);
@@ -1663,17 +1515,11 @@ mod tests {
         );
     }
 
-    /// A recorded game is a replay of itself. The bot's tie-break and
-    /// softmax-sampling draws used to come from an unseeded thread-local on this
-    /// path, so the same seed played a *different* game every time and a panic
-    /// at game 400 k of a training run could not be re-run with its seed in
-    /// hand. `play_recorded_game_mcts` pins the stream per game.
-    /// Recording the move list (`decision_capture::set_menu_only`, the
-    /// policy pilot's imitation rows) does not change the game it records:
-    /// the recorder runs between the bots' moves, on clones. (Written after
-    /// `the_same_seed_records_the_same_game` failed once in four full lib
-    /// runs on 2026-11-03 beside the capture tests, unreproduced since; this
-    /// holds with the recorder on, so that flake is not the recorder.)
+    /// Recording the move list (`decision_capture::set_menu_only`) doesn't
+    /// change the game: the recorder runs between moves, on clones. (Written
+    /// after a one-off 2026-11-03 failure of
+    /// `the_same_seed_records_the_same_game` beside the capture tests; this
+    /// rules the recorder out.)
     #[test]
     fn recording_the_move_list_does_not_change_the_game() {
         use crate::server::decision_capture;
@@ -1695,6 +1541,9 @@ mod tests {
         assert!(plain.rows == recorded.rows, "every position replays identically");
     }
 
+    /// A recorded game replays itself: the bot's tie-break and sampling draws
+    /// were once unseeded on this path, so a crash at game 400 k couldn't be
+    /// re-run. `play_recorded_game_mcts` pins the stream per game.
     #[test]
     fn the_same_seed_records_the_same_game() {
         let vocab = Vocab::sos_sealed();

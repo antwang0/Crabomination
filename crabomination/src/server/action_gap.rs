@@ -2,33 +2,29 @@
 //! move, by the search's own judgement, and which class the better move was
 //! (`bot_puzzles --action-gap`).
 //!
-//! The question it answers. The search weighs only its own main phase —
-//! up to six casts, the land drop and a pass
-//! (`bot::main_phase_candidates_for_mcts`) — and every other choice is the
-//! heuristic's: attacks, blocks, activated abilities, plays on the
-//! opponent's turn. Whether that menu misses the right move is an empirical
-//! question, and this is the measurement.
+//! The search weighs only its own main phase (up to six casts, the land
+//! drop and a pass, `bot::main_phase_candidates_for_mcts`); attacks, blocks,
+//! activations and off-turn plays are the heuristic's. Whether that menu
+//! misses the right move is the empirical question measured here.
 //!
 //! # The method
 //!
 //! A game is played with the same pilot on both seats. At a sampled
 //! decision point the pilot's action is recorded, then every action
-//! [`puzzle::legal_actions`] enumerates (the engine-validated list, mana
-//! abilities aside; pending prompts are not enumerated and not sampled)
-//! is scored by [`MctsBot::probe_actions`]: `n` rollouts each, the search's
-//! own rollout and leaf.
+//! [`puzzle::legal_actions`] enumerates (engine-validated, mana abilities
+//! aside; pending prompts are neither enumerated nor sampled) is scored by
+//! [`MctsBot::probe_actions`]: `n` rollouts each, the search's own rollout
+//! and leaf.
 //!
-//! Picking the best of many noisy means and reading its value off the same
-//! sample overstates it — the winner's curse, and here it would read as a
-//! gap that is not there. So the probe runs **twice, independently**: pass
-//! A picks the best action, pass B prices it and the pilot's. The regret
+//! Reading the best of many noisy means off the same sample overstates it
+//! (the winner's curse), so the probe runs **twice, independently**: pass A
+//! picks the best action, pass B prices it and the pilot's. The regret
 //! `B(best_A) − B(chosen)` has expectation ≤ the true regret and zero when
-//! every action is equal, so a positive mean is a real gap rather than noise.
+//! every action is equal, so a positive mean is a real gap.
 //!
-//! What "best" means: best under the search's rollout policy and leaf at a
-//! full menu and a fixed budget. It is the search's judgement made wider,
-//! not ground truth — a move it can't value (one whose payoff needs a turn
-//! past the horizon) is invisible here too.
+//! "Best" is best under the search's rollout policy and leaf at a full menu
+//! and fixed budget — the search's judgement made wider, not ground truth;
+//! a move whose payoff lies past the horizon is invisible here too.
 
 use rand::SeedableRng;
 use rand::rngs::StdRng;

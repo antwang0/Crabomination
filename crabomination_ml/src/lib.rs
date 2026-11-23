@@ -1,20 +1,16 @@
 //! Candle-based training for the SOS sealed value net.
 //!
-//! The inference half — the forward pass the bot actually runs, plus the
-//! encoded-row and shard formats — lives in `crabomination_nn`, which this
-//! crate mirrors architecture-for-architecture and tensor-name-for-name
-//! (`emb.weight`, `obj.{weight,bias}`, `trunk1.*`, `trunk2.*`,
-//! `head_win.*`, and the training-only auxiliary heads `head_life.*` /
-//! `head_len.*`). The `exported_weights_match_engine_inference` test holds
-//! the two implementations to the same numbers; break either side and it
-//! fails.
+//! The inference half (forward pass, encoded-row and shard formats) lives in
+//! `crabomination_nn`; this crate mirrors it architecture- and
+//! tensor-name-for-name (`emb.weight`, `obj.{weight,bias}`, `trunk1.*`,
+//! `trunk2.*`, `head_win.*`, plus training-only `head_life.*` /
+//! `head_len.*`). `exported_weights_match_engine_inference` holds the two to
+//! the same numbers.
 //!
-//! Training targets: `win` (MSE on the sigmoid output, the AlphaZero
-//! choice) plus two lightly-weighted auxiliary regressions — final life
-//! difference and remaining game length — which exist for credit
-//! assignment, not play: a bare win bit can't tell the net *which part* of
-//! a position lost the game (the KataGo ownership-target lesson at MTG
-//! scale).
+//! Targets: `win` (MSE on the sigmoid output) plus two lightly-weighted
+//! auxiliary regressions, final life difference and remaining game length,
+//! which exist for credit assignment (a bare win bit can't say which part of
+//! a position lost), not play.
 
 use std::collections::{HashMap, VecDeque};
 
@@ -57,22 +53,15 @@ pub struct NetConfig {
     /// Build the separate policy head (`head_policy.*`, h2 → 1). Off by
     /// default so every historical run stays the control.
     ///
-    /// Round 33 taught the *win* head to rank candidates and paid a
-    /// small, consistent value regression (−0.010/−0.020 AUC) — the two
-    /// objectives were fighting over one scalar. This head gives the
-    /// ranking objective its own parameters over the shared trunk, which
-    /// is also what breaks the round-36 coupling: the search consumes the
-    /// win head as its leaf reward and the policy head only as a prior,
-    /// so distilling into the policy head no longer feeds the search arm
-    /// of its own gate. Unlike the life/length heads the engine consumes
-    /// this one, so exports carry it and `PlayNet` loads it.
+    /// Ranking with the win head cost value AUC (round 33); a separate head
+    /// gives ranking its own parameters, and since search reads it only as a
+    /// prior, distilling into it no longer feeds its own gate's search arm
+    /// (round 36). Engine-consumed, so exports carry it.
     pub policy: bool,
     /// Build the policy head's decision-kind table (`head_policy_kind.*`,
-    /// [`POLICY_KINDS`] × h2 + [`POLICY_KINDS`], zero-initialised): a
-    /// decision of kind `k` scores its candidates by the shared head plus
-    /// row `k` — what lets one head serve a main-phase play and a discard.
-    /// Needs [`Self::policy`]. Off by default, so every run without it
-    /// stays bit-reachable.
+    /// [`POLICY_KINDS`] × h2 + [`POLICY_KINDS`], zero-initialised): kind `k`
+    /// scores candidates by the shared head plus row `k`, so one head serves
+    /// a main-phase play and a discard. Needs [`Self::policy`]; off by default.
     pub policy_kinds: bool,
     /// Build the action head (`head_action.*`): a term on the policy logit
     /// read from the decision state's per-object embeddings at the objects
@@ -81,11 +70,9 @@ pub struct NetConfig {
     /// start scores exactly as before. Needs [`Self::policy`].
     pub policy_action: bool,
     /// Build the opponent-hand belief head (`head_opp.*`, h2 → vocab,
-    /// round 39): per-name probabilities that the opponent currently
-    /// holds each card, trained with multi-label BCE against the
-    /// recorded truth (`TrainRow::opp_hand`). Engine-consumed — it
-    /// drives belief-weighted determinization — so exports carry it.
-    /// Off by default.
+    /// round 39): per-name probability the opponent holds each card,
+    /// multi-label BCE against `TrainRow::opp_hand`. Engine-consumed
+    /// (belief-weighted determinization), so exports carry it. Off by default.
     pub opp: bool,
 }
 
@@ -317,16 +304,11 @@ pub fn make_batch_with_targets(rows: &[(&TrainRow, f32)], dev: &Device) -> CResu
     })
 }
 
-/// The state half of batch packing — per-group padded ids/features/masks
-/// plus globals, shared by the labeled training path and the label-free
-/// inference paths (`Trainer::predict_win_states`, the batch eval server).
-/// The host-side buffers [`pack_states`] uploads, before the upload: one
-/// `(n, ids, feats, mask)` per group plus the globals. Built on any thread
-/// (the prefetch worker), uploaded on the learner's with one direct
-/// `Tensor::from_vec` per tensor — the same path the inline packer takes,
-/// so a prefetched batch costs the step nothing the inline one did not.
-/// (Packing into CPU *tensors* and moving them instead cost ~6 ms a step at
-/// batch 256 — more than the packing it hid; round 72's arm C.)
+/// The host-side buffers [`pack_states`] uploads: one `(n, ids, feats, mask)`
+/// per group plus the globals. Built on any thread (the prefetch worker) and
+/// uploaded on the learner's with one `Tensor::from_vec` per tensor, the
+/// same path as inline packing. (Packing into CPU tensors and moving them
+/// cost more than it hid, round 72 arm C.)
 pub struct PackedHost {
     b: usize,
     groups: Vec<PackedGroup>,
@@ -390,6 +372,9 @@ impl PackedHost {
     }
 }
 
+/// The state half of batch packing (padded per-group ids/features/masks
+/// plus globals), shared by the labeled training path and the label-free
+/// inference paths (`Trainer::predict_win_states`, the batch eval server).
 #[allow(clippy::type_complexity)]
 fn pack_states(
     states: &[&EncodedState],
@@ -419,12 +404,10 @@ impl AttnLayer {
     /// Self-attention over every object in every group at once, returned
     /// split back into the same per-group shapes.
     ///
-    /// Concatenating the groups is the whole point — it is the only place
-    /// in the network where an object on my battlefield and one on the
-    /// opponent's are in the same tensor and can be compared. A learned
-    /// per-group tag is added first so a query can tell whose object it
-    /// is attending to; without it, concatenation would throw away zone
-    /// identity that the pooled trunk input otherwise carries positionally.
+    /// Concatenating the groups is the point: it is the only place my
+    /// objects and the opponent's can be compared. A learned per-group tag
+    /// is added first so the zone identity the pooled trunk input carries
+    /// positionally survives the concatenation.
     fn apply(&self, hs: &[Tensor], mask: &[Tensor]) -> CResult<Vec<Tensor>> {
         let (b, _, d) = hs[0].dims3()?;
         let dev = hs[0].device();
@@ -454,11 +437,9 @@ impl AttnLayer {
         let v = split(self.v.forward(&x)?)?;
 
         let scores = (q.matmul(&k.transpose(2, 3)?)? * scale)?; // [B,H,N,N]
-        // Padding keys get a large negative bias rather than -inf: with
-        // -inf, a batch row that happened to be all padding would softmax
-        // to NaN and poison the whole batch. -1e9 underflows to exactly
-        // zero weight against any real score, so the engine's
-        // "attend over real objects only" is reproduced exactly.
+        // Padding keys get -1e9, not -inf: an all-padding row would softmax
+        // to NaN under -inf. -1e9 underflows to exactly zero weight, matching
+        // the engine's attend-over-real-objects-only.
         let keybias = ((m.reshape((b, 1, 1, n))? - 1.0)? * 1e9)?;
         let scores = scores.broadcast_add(&keybias)?;
         let attn = candle_nn::ops::softmax_last_dim(&scores)?;
@@ -468,10 +449,9 @@ impl AttnLayer {
             .contiguous()?
             .reshape((b, n, d))?;
 
-        // Residual against the *pre-attention* hidden state (not the
-        // group-tagged input), then relu — matching the engine forward,
-        // where the tag exists only to inform the attention scores and
-        // must not leak into the pooled representation.
+        // Residual against the untagged hidden state, then relu, as the
+        // engine does: the tag informs the scores and must not leak into
+        // the pooled representation.
         let residual = Tensor::cat(&hs.iter().collect::<Vec<_>>(), 1)?;
         let out = residual.add(&self.o.forward(&ctx)?)?.relu()?;
 
@@ -595,12 +575,9 @@ impl PlayModel {
     }
 
     /// [`forward_win_policy`](Self::forward_win_policy), optionally with
-    /// the trunk **detached** before the heads: the heads still read it,
-    /// but no gradient flows back past them, so a step on this output
-    /// trains the heads alone. The policy-gradient step's head-only arm
-    /// (round 72) is built on this — the trunk and the win head stay
-    /// bit-identical to the loaded pilot's, which is what makes its gate
-    /// control the same net.
+    /// the trunk detached so a step trains the heads alone. Round 72's
+    /// head-only policy gradient uses this: trunk and win head stay
+    /// bit-identical to the loaded pilot, so its gate controls the same net.
     pub fn forward_win_policy_opt(
         &self,
         batch: &Batch,
@@ -833,12 +810,10 @@ pub struct DecisionRow {
     /// Rollouts behind each value, aligned with `successors` — the
     /// evidence weight for the search-value regression.
     pub visits: Option<Vec<u32>>,
-    /// The behaviour policy's record (round 72): the picker's own i32
-    /// scores, aligned with `successors`, and the temperature the pick
-    /// was sampled at (0 = argmax). Together they make the probability
-    /// the pilot played `chosen` exactly recoverable —
-    /// `softmax(scores / temp)[chosen]` — which the off-policy policy
-    /// gradient's importance ratio needs. `None` for search roots.
+    /// The behaviour policy's record (round 72): the picker's i32 scores,
+    /// aligned with `successors`, and the sampling temperature (0 = argmax),
+    /// so `softmax(scores / temp)[chosen]` recovers the importance ratio's
+    /// denominator exactly. `None` for search roots.
     pub scores: Option<Vec<i32>>,
     pub temp: i32,
     /// Whether `scores` are net units (win probability × 10 000) rather
@@ -943,11 +918,9 @@ impl Opt {
     }
 }
 
-/// Cosine decay factor for step `t` over horizon `h`: 1.0 at t = 0,
-/// falling on a half-cosine to a 0.1 floor at t ≥ h. The floor is
-/// standard practice (a zero lr wastes the tail; 10 % keeps fitting) and
-/// the horizon is a flag, not the step cap — early stop means the cap is
-/// never the actual run length.
+/// Cosine decay factor for step `t` over horizon `h`: 1.0 at t = 0, a
+/// half-cosine down to a 0.1 floor at t ≥ h. The horizon is a flag rather
+/// than the step cap because early stop means the cap is never the run length.
 pub fn cosine_lr_factor(t: u64, horizon: u64) -> f64 {
     const FLOOR: f64 = 0.1;
     if horizon == 0 {
@@ -975,10 +948,9 @@ impl Default for MuonParams {
     }
 }
 
-/// Muon (momentum + Newton-Schulz orthogonalization of the update) over
-/// the 2-D hidden weight matrices, with AdamW handling the rest — the
-/// standard split: orthogonalizing an embedding table or a 1-row head
-/// is meaningless-to-harmful, so those stay on Adam.
+/// Muon (momentum + Newton-Schulz orthogonalized update) over the 2-D
+/// hidden weight matrices, AdamW for the rest (embeddings and 1-row heads
+/// gain nothing from orthogonalization).
 struct MuonOpt {
     /// (tensor name, parameter, momentum buffer). Names are kept for the
     /// routing test and debugability.
@@ -1052,10 +1024,9 @@ pub struct LossParts {
 
 /// Recover the pre-sigmoid logit from the model's probability output.
 ///
-/// The model applies the sigmoid inside `forward`, and the policy softmax
-/// wants logits: softmaxing probabilities compresses exactly the region
-/// where a decision between a winning and a losing line lives. The clamp
-/// keeps the inverse finite in saturation.
+/// The policy softmax wants logits: softmaxing probabilities compresses the
+/// region where winning and losing lines differ. The clamp keeps the inverse
+/// finite in saturation.
 fn logit_of(p: &Tensor) -> CResult<Tensor> {
     const EPS: f64 = 1e-6;
     let p = p.clamp(EPS, 1.0 - EPS)?;
@@ -1065,21 +1036,16 @@ fn logit_of(p: &Tensor) -> CResult<Tensor> {
 
 /// The soft target over one decision's `n` surviving candidates.
 ///
-/// Distillation when the decision carries search values, imitation when
-/// it does not. A one-hot target says only "the pilot played this", so
-/// the net can at best converge to a copy of the pilot — the exact shape
-/// of the twice-null stacking result. A search's per-arm values say *how
-/// much better* each option looked, and the search is stronger than the
-/// evaluator inside it. Round 34 measured how different they are: the
-/// value net's own ranking agrees with MCTS's pick below chance
-/// (0.67–0.79×).
+/// Distillation when the decision carries search values, imitation (one-hot
+/// on `chosen`) when it does not: a one-hot target can at best copy the
+/// pilot, while per-arm values say how much better each option looked
+/// (round 34: the value net's ranking agrees with MCTS's pick below chance).
 ///
 /// `values` must be aligned with the candidate window being trained (the
-/// caller slices both by the same offsets). Non-finite entries — arms
-/// the search parked — take no probability mass. `logits` selects the
-/// scale: improved-policy logits are softmaxed as-is (their σ transform
-/// already encodes the sharpness), win-probability means at `temp`.
-/// Falls back to one-hot on `chosen` when no finite value exists.
+/// caller slices both by the same offsets). Non-finite entries (arms the
+/// search parked) get no mass. `logits` = improved-policy logits, softmaxed
+/// as-is; otherwise win-probability means at `temp`. One-hot fallback when
+/// no value is finite.
 fn distill_weights(
     values: Option<&[f32]>,
     chosen: usize,
@@ -1286,11 +1252,10 @@ fn pad_decisions<'a>(rows: &[&'a DecisionRow]) -> Option<PaddedDecisions<'a>> {
     Some(PaddedDecisions { b, k, flat, mask, offset, chosen, n: n_live })
 }
 
-/// A policy-gradient batch packed and ready: the padded successor tensors
-/// plus everything the step needs per row. Built by [`prepare_pg_batch`] —
-/// possibly on another thread and another device, which is the point: the
-/// prefetch pipeline packs the next batch on the CPU while the GPU runs the
-/// current step — and consumed by `Trainer::train_pg_step_prepared`.
+/// A packed policy-gradient batch: padded successor tensors plus the
+/// per-row step inputs. Built by [`prepare_pg_batch`] (on another thread,
+/// so the next batch packs on the CPU while the GPU runs the current step)
+/// and consumed by `Trainer::train_pg_step_prepared`.
 pub struct PgBatch {
     host: PackedHost,
     b: usize,
@@ -1398,22 +1363,12 @@ pub fn prepare_pg_batch(rows: &[&DecisionRow]) -> PgBatch {
 
 /// Binary cross-entropy against a soft target in [0, 1].
 ///
-/// Why the win head does not want MSE. The head is a sigmoid, and MSE
-/// through a sigmoid has gradient proportional to `(p − y)·p·(1 − p)`.
-/// The `p(1 − p)` factor goes to zero exactly when the net is
-/// *confidently wrong* — p near 0 with y = 1 — so the rows with the most
-/// to teach produce the weakest updates. Cross-entropy's gradient at the
-/// logit is simply `(p − y)`, with no such term.
-///
-/// Computed from the probability rather than the logit because the model
-/// already applies the sigmoid, and the two are equivalent for the
-/// gradient: `d/dlogit [−y·ln σ − (1−y)·ln(1−σ)] = σ − y` however the
-/// expression is written. The clamp only bites in saturation, where it
-/// keeps `ln 0` out of the graph.
-///
-/// Soft targets are the point, not an afterthought: at λ < 1 the fit
-/// target is a λ-return in [0, 1] rather than a 0/1 label, and BCE
-/// remains a proper scoring rule for it.
+/// MSE through a sigmoid has gradient `(p − y)·p·(1 − p)`, which vanishes
+/// when the net is confidently wrong; BCE's logit gradient is plain `p − y`.
+/// Computed from the probability (the model already applies the sigmoid;
+/// the gradient is the same), with a clamp that keeps `ln 0` out in
+/// saturation. Soft targets matter: at λ < 1 the target is a λ-return in
+/// [0, 1], for which BCE is still a proper scoring rule.
 fn binary_cross_entropy(p: &Tensor, t: &Tensor) -> CResult<Tensor> {
     const EPS: f64 = 1e-7;
     let p = p.clamp(EPS, 1.0 - EPS)?;
@@ -1504,29 +1459,21 @@ impl Trainer {
 
     /// Which device the learner actually got.
     ///
-    /// `Device::cuda_if_available` falls back to CPU silently — without
-    /// the `cuda` feature, without a driver, without a card. A long run
-    /// that quietly trained on CPU would look exactly like a legitimate
-    /// GPU capacity result and would be compared against one, so the
+    /// `Device::cuda_if_available` falls back to CPU silently, so the
     /// device is reported at startup rather than assumed.
     pub fn device_label(&self) -> &'static str {
         if self.dev.is_cuda() { "cuda" } else { "cpu" }
     }
 
-    /// One SGD step over `rows`; returns the (pre-step) loss, decomposed.
-    /// The components exist because a single number hid a real regime
-    /// change once already: the round-1/round-2 EMAs (0.22 vs 0.30) were
-    /// incomparable — different effective sample reuse — and there was no
-    /// way to see whether the win head or the aux heads moved.
+    /// One SGD step over `rows`; returns the (pre-step) loss, decomposed by
+    /// head (a single number once hid which head moved, rounds 1-2).
     pub fn train_step(&mut self, rows: &[&TrainRow]) -> CResult<LossParts> {
         let with: Vec<(&TrainRow, f32)> = rows.iter().map(|r| (*r, r.win)).collect();
         self.train_step_with_targets(&with)
     }
 
-    /// Fit the win head with cross-entropy rather than MSE. See
-    /// [`binary_cross_entropy`] for why. Off by default: every gate on
-    /// record trained on MSE, so the old behaviour has to stay reachable
-    /// as the control arm.
+    /// Fit the win head with cross-entropy rather than MSE (see
+    /// [`binary_cross_entropy`]). Off by default: MSE stays the control.
     pub fn set_bce(&mut self, on: bool) {
         self.bce = on;
     }
@@ -1552,9 +1499,8 @@ impl Trainer {
             aux_mse = loss_aux.to_scalar::<f32>()?;
             loss = loss.add(&loss_aux.affine(AUX_WEIGHT, 0.0)?)?;
         }
-        // The belief head fits the recorded truth as presence, not
-        // count: "is at least one copy of this name in their hand".
-        // Multi-label BCE, weighted like the other auxiliaries.
+        // The belief head fits presence, not count (at least one copy in
+        // hand); multi-label BCE weighted like the other auxiliaries.
         let mut opp_bce = 0.0;
         if let Some(p) = opp_p {
             let (bsz, vocab) = p.dims2()?;
@@ -1583,38 +1529,20 @@ impl Trainer {
     }
 
 
-    /// One policy step: teach the win head to *rank* candidate successors
-    /// the way the pilot chose among them.
-    ///
-    /// There is no new head and no new parameters. The network already
-    /// scores states, so the policy over a decision's candidates is just
-    /// a softmax over the win head's logits for their successor states,
-    /// and the target is the index the pilot played. Training that is
-    /// learning-to-rank on the evaluator we already have — which is also
-    /// why it can help the *value* head rather than competing with it:
-    /// a value function that ranks successors correctly is exactly what a
-    /// search wants, and ranking is what the gates measure while MSE on
-    /// isolated states is not.
-    ///
-    /// The softmax runs over logits rather than probabilities. The model
-    /// applies a sigmoid, so the logit is recovered by inverting it;
-    /// softmaxing the probabilities instead would compress the
-    /// distinctions near 0 and 1, exactly where a decision between a
-    /// winning and losing line lives.
+    /// One policy step: teach the net to rank a decision's candidate
+    /// successors the way the pilot (or its search) did — a softmax over
+    /// the policy head's logits, or the win head's recovered logits when
+    /// the model has no policy head (see [`logit_of`]).
     ///
     /// Ragged candidate counts are padded to the batch's widest set and
-    /// masked out, so a 2-candidate decision and a 5-candidate decision
-    /// can share a batch without the short one's padding competing for
-    /// probability mass.
+    /// masked out of the softmax.
     pub fn train_policy_step(&mut self, rows: &[&DecisionRow]) -> CResult<PolicyStats> {
         self.train_policy_step_temp(rows, 1.0)
     }
 
     /// [`train_policy_step`](Self::train_policy_step) with an explicit
-    /// softmax temperature for the distilled target. Arm values are win
-    /// probabilities in [0, 1], so their spread is small and the
-    /// temperature is what decides whether the target is a sharp pick or
-    /// a soft ranking.
+    /// softmax temperature for the distilled target; arm values are win
+    /// probabilities with a small spread, so it sets how sharp the target is.
     pub fn train_policy_step_temp(
         &mut self,
         rows: &[&DecisionRow],
@@ -1624,21 +1552,11 @@ impl Trainer {
     }
 
     /// The full policy step: the ranking loss, plus (at `sv_weight` > 0)
-    /// the **search-value regression** — the win head pulled toward the
-    /// search's per-arm mean rewards on the same successor states, MSE
-    /// weighted by each arm's rollout count (round 39, the
-    /// Reanalyze-lite target).
-    ///
-    /// Why this target is different from everything already tried: the
-    /// λ-objective is ~91 % self-smoothness (the instrumentation round),
-    /// and round 27's null was MCTS-piloted *game outcomes* — label
-    /// provenance. A root arm's mean over its rollouts is a direct,
-    /// far-lower-variance estimate of the successor's value than a
-    /// twenty-turn outcome, on exactly the states a search ranks.
-    /// Restricted to UCB1 captures (`values_are_logits` false): a
-    /// Gumbel capture's values are improved-policy logits, not win
-    /// probabilities, and regressing a sigmoid onto logits would be a
-    /// category error.
+    /// the search-value regression (round 39, Reanalyze-lite): the win head
+    /// pulled toward the search's per-arm mean rewards on the same
+    /// successors, MSE weighted by rollout count. An arm's mean is a far
+    /// lower-variance value estimate than a game outcome. UCB1 captures
+    /// only: a Gumbel capture's values are logits, not win probabilities.
     pub fn train_policy_step_full(
         &mut self,
         rows: &[&DecisionRow],
@@ -1664,11 +1582,9 @@ impl Trainer {
         let mut sv_w = vec![0f32; b * k];
         for (i, r) in usable.iter().enumerate() {
             let (n, offset) = (pad.n[i], pad.offset[i]);
-            // The values are sliced by the SAME window as the states: an
-            // earlier version read `values[0..n]` against the tail window
-            // of successors, silently pairing each state with another
-            // arm's value — latent while every recorded menu fit
-            // `POLICY_MAX_CANDIDATES`, live the moment one didn't.
+            // Values must be sliced by the SAME window as the states, or a
+            // truncated menu pairs each state with another arm's value
+            // (the round-37 bug).
             let vals = r
                 .values
                 .as_ref()
@@ -1703,10 +1619,8 @@ impl Trainer {
         let logp = candle_nn::ops::log_softmax(&masked, 1)?;
         let picked = logp.mul(&onehot_t)?.sum(1)?;
         let ce = picked.neg()?.mean_all()?;
-        // The search-value term: weighted mean squared error of the win
-        // head against the arm rewards, weights ∝ rollout counts and
-        // normalized to sum 1, so `sv` is on MSE scale whatever the mix
-        // of well- and barely-visited arms in the batch.
+        // Search-value term: weighted MSE, weights ∝ rollout counts and
+        // normalized to sum 1 so `sv` stays on MSE scale.
         let mut sv_val = 0.0f32;
         let wsum: f32 = sv_w.iter().sum();
         let loss = if sv_weight > 0.0 && wsum > 0.0 {
@@ -1723,9 +1637,7 @@ impl Trainer {
         };
         self.opt.backward_step(&loss)?;
 
-        // Top-1 agreement: how often the net's favourite candidate is the
-        // one the pilot played. This is the metric the value head's MSE
-        // never reported, and the one a search actually consumes.
+        // Top-1 agreement: how often the net's favourite is the target's.
         let scores = masked.to_vec2::<f32>()?;
         let mut hit = 0usize;
         for (i, row) in scores.iter().enumerate() {
@@ -1759,16 +1671,13 @@ impl Trainer {
     /// One off-policy, advantage-weighted policy-gradient step on the
     /// decision stream (round 72).
     ///
-    /// The policy is the softmax over the candidates' policy-head logits
-    /// (the model must carry the head). Per row: the behaviour policy π_b
-    /// is rebuilt exactly from the recorded scores and temperature; the
-    /// ratio ρ = π_θ(chosen) / π_b(chosen) is truncated at `rho_max`
-    /// (unit weight when the behaviour was argmax); the baseline is the
-    /// **counterfactual** value of the menu, `b = Σ_j π_θ(j) · V(succ_j)`
-    /// from the detached win head — it costs no extra encode, does not
-    /// depend on the chosen index (so it is unbiased), and it removes the
-    /// menu-level variance the twenty-turn result cannot; the return is
-    /// `G = λ · ret + (1 − λ) · V(succ_chosen)`. Then
+    /// π_θ is the softmax over the candidates' policy-head logits (the
+    /// model must carry the head). Per row: π_b is rebuilt from the recorded
+    /// scores and temperature; ρ = π_θ(chosen) / π_b(chosen) is truncated
+    /// at `rho_max` (1 when the behaviour was argmax); the baseline is the
+    /// menu's counterfactual value `b = Σ_j π_θ(j) · V(succ_j)` from the
+    /// detached win head (unbiased: independent of the chosen index); the
+    /// return is `G = λ · ret + (1 − λ) · V(succ_chosen)`. Then
     /// `loss = −mean(ρ̄ · (G − b) · log π_θ(chosen)) − β · H(π_θ)`.
     ///
     /// Rows without a finite `ret`, without aligned scores, or wider than
@@ -1882,9 +1791,8 @@ impl Trainer {
     }
 
     /// Start the policy head as a copy of the win head (round 72's warm
-    /// start): same shape (`[1, h2] + [1]`), so the policy's initial
-    /// ranking is exactly the pilot's own, and the first gradient step
-    /// moves away from a known point rather than from noise.
+    /// start; same `[1, h2] + [1]` shape), so the initial ranking is the
+    /// pilot's own.
     pub fn init_policy_head_from_win(&mut self) -> CResult<()> {
         let data = self.varmap.data().lock().unwrap();
         for suffix in ["weight", "bias"] {
@@ -1924,13 +1832,9 @@ impl Trainer {
     /// The chance rate a `policy_top1` number has to be read against:
     /// mean 1/candidates over the same decisions.
     ///
-    /// Reported alongside the metric because top-1 agreement is
-    /// meaningless on its own — a 0.25 against seven-way choices is a
-    /// very different result from 0.25 against three-way, and comparing
-    /// two runs whose candidate widths differ compares nothing at all.
-    /// Computed here rather than assumed from `EVAL_TOP` or `MAX_ARMS`,
-    /// because which decisions actually get recorded depends on the
-    /// pilot and the position.
+    /// Top-1 is meaningless without it (0.25 of seven-way is not 0.25 of
+    /// three-way). Computed from the rows, not assumed from `EVAL_TOP` or
+    /// `MAX_ARMS`, since which decisions get recorded varies.
     pub fn policy_chance(rows: &[&DecisionRow]) -> f32 {
         let mut acc = 0.0f64;
         let mut n = 0usize;
@@ -1946,17 +1850,11 @@ impl Trainer {
 
     /// Top-1 agreement without training — the holdout counterpart.
     ///
-    /// Ranks with the policy head when the model has one, the win head
-    /// otherwise — the same scores a search consuming this net would
-    /// rank with, which is the whole point of the metric.
-    ///
-    /// Scored exactly as the training step scores (kind table and action
-    /// head included, the same candidate window) and judged the same way:
-    /// a hit is the net's favourite equalling the *target's* — the search's
-    /// top value where the row carries values, the played move otherwise.
-    /// (Until 2026-11-02 this read the shared head alone, without the kind
-    /// table, against the played move — so held-out and training top-1
-    /// measured different things.)
+    /// Scored exactly as the training step scores (policy head, else win
+    /// head; kind table and action head; same window) and judged the same
+    /// way: a hit is the net's favourite equalling the target's (the
+    /// search's top value where the row has values, else the played move).
+    /// Before 2026-11-02 held-out and training top-1 measured different things.
     pub fn policy_top1(&self, rows: &[&DecisionRow]) -> CResult<f32> {
         let usable: Vec<&DecisionRow> =
             rows.iter().copied().filter(|r| r.successors.len() >= 2 && r.chosen < r.successors.len()).collect();
@@ -2023,10 +1921,8 @@ impl Trainer {
         } else {
             None
         };
-        // One trunk pass serves both objectives. The ranking loss trains
-        // the policy head when the model has one; without it, the
-        // historical shared-win-head path (recover the logit from the
-        // sigmoid) stays bit-reachable as the control.
+        // One trunk pass serves both objectives. Without a policy head the
+        // win head's recovered logit ranks (the historical control path).
         let (win, pol) = self.model.forward_win_policy_kinds(&batch, kinds.as_ref(), false)?;
         let mut logits = match pol {
             Some(l) => l.reshape((b, k))?,
@@ -2053,13 +1949,9 @@ impl Trainer {
         Ok((win, logits))
     }
 
-    /// Win probability for one encoded state — the trainer-side twin of
-    /// `crabomination_nn::PlayNet::forward`, used by the parity test and
-    /// for quick evaluation during training.
     /// Win probability for a batch of rows in one forward pass — what
-    /// [`SampleWindow::relabel_lambda`] bootstraps through. Batched
-    /// because relabelling touches the whole window and one row at a time
-    /// would dominate the learner's step time.
+    /// [`SampleWindow::relabel_lambda`] bootstraps through (relabelling
+    /// touches the whole window, so per-row would dominate the step).
     pub fn predict_win_batch(&self, rows: &[&TrainRow], chunk: usize) -> CResult<Vec<f32>> {
         let mut out = Vec::with_capacity(rows.len());
         for part in rows.chunks(chunk.max(1)) {
@@ -2070,6 +1962,9 @@ impl Trainer {
         Ok(out)
     }
 
+    /// Win probability for one encoded state — the trainer-side twin of
+    /// `crabomination_nn::PlayNet::forward`, for the parity test and quick
+    /// evaluation.
     pub fn predict_win(&self, s: &EncodedState) -> CResult<f32> {
         self.predict_win_states(&[s], 1).map(|v| v[0])
     }
@@ -2146,28 +2041,21 @@ impl Trainer {
 
     /// Resume from a previous export.
     ///
-    /// Shapes must match the config with two exceptions, and both are ones
-    /// the engine's loader already makes:
+    /// Shapes must match the config with the same two exceptions the
+    /// engine's loader makes (the two loaders must never disagree):
     ///
-    /// - **Feature axis.** A checkpoint trained against an earlier encoder
-    ///   generation has narrower `obj.weight` and `trunk1.weight`, and is
-    ///   widened with zero *columns* (see
-    ///   [`crabomination_nn::LEGACY_FEATS`]). The padded weights compute
-    ///   exactly what the old binary computed, because the features they
-    ///   were never trained on multiply into zeros.
-    /// - **Vocabulary axis.** A checkpoint from before some cards were
-    ///   appended to the frozen vocabulary snapshot has a shorter
-    ///   `emb.weight` (and belief head), and is extended with zero *rows*
-    ///   — sound only because the snapshot freezes each index, so row *k*
-    ///   still names the card it was trained on. `PlayNet::pad_vocab` is
-    ///   the same operation on the inference side.
+    /// - **Feature axis.** An earlier encoder generation's narrower
+    ///   `obj.weight` / `trunk1.weight` is widened with zero columns (see
+    ///   [`crabomination_nn::LEGACY_FEATS`]), which computes exactly what
+    ///   the old net did.
+    /// - **Vocabulary axis.** A shorter `emb.weight` (and belief head) from
+    ///   before cards were appended to the frozen vocabulary snapshot gets
+    ///   zero rows; sound only because the snapshot freezes each index.
+    ///   `PlayNet::pad_vocab` is the inference-side twin.
     ///
-    /// Without these the two loaders disagree: `PlayNet::load` accepts the
-    /// old champion and `VarMap::load` refuses it, so `--use-best` with any
-    /// pre-bump pilot dies at startup while the same file plays fine on the
-    /// ladder. Rejecting a *pre-freeze* net is the caller's job
-    /// (`vocab_snapshot::vocab_fit`, which `file_net_config` runs) — here a
-    /// short table is padded on trust.
+    /// Rejecting a pre-freeze net is the caller's job
+    /// (`vocab_snapshot::vocab_fit`, run by `file_net_config`); here a short
+    /// table is padded on trust.
     pub fn load(&mut self, path: &std::path::Path) -> CResult<()> {
         let loaded = candle_core::safetensors::load(path, &self.dev)?;
         let data = self.varmap.data().lock().unwrap();
@@ -2216,20 +2104,12 @@ impl Trainer {
     /// Start the card-embedding table from a trained deck net's, instead
     /// of from noise.
     ///
-    /// The two nets index the same vocabulary at the same width, so the
-    /// tensors are drop-in compatible — but the reason to do it is that
-    /// the deck net is the *only* learned component that has ever cleared
-    /// the ladder bar (61.7 %, 60.7 %). Whatever its embedding rows encode
-    /// about a card, it is enough to rank sealed builds, and it was
-    /// learned from a signal the play net never sees: one label per
-    /// decklist, tens of thousands of decklists, no board state in the
-    /// way. The play net starts every run having to rediscover "what is
-    /// this card worth" from win/loss bits attached to whole positions.
-    ///
-    /// Nothing is frozen: these are ordinary initial values and training
-    /// moves them. The claim is only that they are a better place to start
-    /// than random, and the control that tests it is the same run without
-    /// this flag.
+    /// Both nets index the same vocabulary at the same width. The deck net
+    /// learned card value from a signal the play net never sees (one label
+    /// per decklist, no board state), and when this was written it was the
+    /// only learned component to have cleared the ladder bar (61.7 %,
+    /// 60.7 %). Nothing is frozen: these are initial values only, tested
+    /// against the same run without the flag.
     pub fn seed_embeddings_from_deck_net(&mut self, deck_weights: &std::path::Path) -> CResult<()> {
         let loaded = candle_core::safetensors::load(deck_weights, &self.dev)?;
         let src = loaded.get("emb.weight").ok_or_else(|| {
@@ -2241,12 +2121,10 @@ impl Trainer {
         let data = self.varmap.data().lock().unwrap();
         let dst = data.get("emb.weight").expect("play model always has emb.weight");
         let (want, have) = (dst.dims(), src.dims());
-        // A deck net from the frozen-snapshot era is right about every row
-        // it has, so a short table seeds the rows it knows and leaves the
-        // rest at their initial values — the seed is an initialisation, not
-        // a contract. Anything else (a pre-freeze table, whose indices name
-        // different cards, or a different embedding width) is refused:
-        // silently seeding a misaligned table scrambles card identity.
+        // A short frozen-snapshot-era table seeds the rows it has and leaves
+        // the rest at init. A pre-freeze table (indices name different
+        // cards) or a different width is refused: seeding a misaligned
+        // table would scramble card identity.
         let seedable = have[1..] == want[1..]
             && crabomination::server::vocab_snapshot::vocab_fit(have[0], want[0]).is_ok();
         if !seedable {
@@ -2466,31 +2344,20 @@ impl SampleWindow {
     /// Replace every row's fit target with its **λ-return**, bootstrapped
     /// through `value` (the current net's win probability).
     ///
-    /// The problem this solves: labelling a turn-2 state with the eventual
-    /// winner of a twenty-turn game is mostly labelling noise. The result
-    /// is real, but almost none of it was determined at turn 2, so the net
-    /// spends capacity fitting variance. That is the standard Monte Carlo
-    /// target and it is what every gate round so far has trained on.
-    ///
-    /// For an episodic task whose only reward is terminal, the forward
-    /// view collapses to a backward recursion along each trajectory:
+    /// Labelling a turn-2 state with a twenty-turn game's winner (the Monte
+    /// Carlo target) is mostly noise. With a terminal-only reward the
+    /// forward view collapses to a backward recursion per trajectory:
     ///
     /// ```text
     /// G_T = z                                  (the actual result)
     /// G_t = (1 − λ)·V(s_{t+1}) + λ·G_{t+1}
     /// ```
     ///
-    /// λ = 1 is exactly the current Monte Carlo behaviour, so this is a
-    /// strict generalisation and the old target stays reachable as a
-    /// control. λ = 0 is one-step TD. Between them the target trades the
-    /// variance of the result for the bias of the net's own estimate —
-    /// worth measuring, not assuming.
+    /// λ = 1 is exactly Monte Carlo (the control), λ = 0 one-step TD.
     ///
     /// Trajectories are reassembled by [`TrainRow::traj`] and ordered by
-    /// [`TrainRow::ply`]. A trajectory whose tail has already been evicted
-    /// from the window simply bootstraps from its last surviving row,
-    /// which is the correct thing to do: that row's own target is
-    /// whatever it was last assigned.
+    /// [`TrainRow::ply`]; one whose tail was evicted bootstraps from its last
+    /// surviving row.
     pub fn relabel_lambda(&mut self, lambda: f32, value: impl Fn(&[&TrainRow]) -> Vec<f32>) {
         if self.rows.is_empty() {
             return;
@@ -2513,28 +2380,16 @@ impl SampleWindow {
     /// [`relabel_lambda`](Self::relabel_lambda), restricted to rows pushed
     /// since the last relabel pass (full or incremental).
     ///
-    /// Why this exists: the full pass recomputes λ-returns for the entire
-    /// window, and at the default cadence that dominated the learner. On
-    /// the round-11 runs the learner reached only 1.56× of its 6× reuse
-    /// cap because 264 relabel passes × a 250 k window spent 66 M
-    /// forward-rows maintaining targets against 13.5 M spent training.
-    /// Each new game's rows only need their λ-return computed once —
-    /// recomputing every older row's target every pass buys target
-    /// freshness the window doesn't live long enough to use (it turns
-    /// over in well under a minute at production push rates).
+    /// The full pass dominated the learner at the default cadence (round 11:
+    /// 66 M relabel forward-rows against 13.5 M trained), and the window
+    /// turns over too fast to use the freshness. Each row's target is now
+    /// computed once and ages at most its lifetime in the window; λ = 1 is
+    /// unaffected, and the full pass stays the control.
     ///
-    /// The staleness trade is real but bounded: a row's target is
-    /// computed through the net as of the pass after its game arrived and
-    /// then never refreshed, so it ages by at most the row's lifetime in
-    /// the window. λ = 1 is unaffected (targets are the game result and
-    /// never change), and the full pass stays available as the control.
-    ///
-    /// Correctness leans on two invariants. Rows are pushed a whole game
-    /// at a time (the actor holds the window lock for the full game), so
-    /// the mark always lands on a game boundary and no trajectory ever
-    /// straddles it. And if eviction has overtaken the mark — the learner
-    /// fell far behind — the suffix is simply the whole window, which
-    /// degrades to the full pass rather than skipping anything.
+    /// Invariants: rows are pushed a whole game at a time (the actor holds
+    /// the window lock), so the mark lands on a game boundary and no
+    /// trajectory straddles it; if eviction overtakes the mark, the suffix
+    /// is the whole window (degrades to the full pass, skips nothing).
     pub fn relabel_lambda_new_rows(
         &mut self,
         lambda: f32,
@@ -2580,14 +2435,10 @@ impl SampleWindow {
 /// The λ-return backward recursion, shared by the window's two relabel
 /// paths and by the holdout diagnostic in `selfplay_train`.
 ///
-/// `preds[i]` is the current net's win probability for `rows[i]`.
-/// Trajectories are reassembled by [`TrainRow::traj`] and ordered by
-/// [`TrainRow::ply`]; each trajectory's last surviving row keeps the actual
-/// result (either it is genuinely terminal, or its successors have been
-/// evicted and there is nothing to bootstrap through), and earlier rows
-/// carry `G_t = (1 − λ)·V(s_{t+1}) + λ·G_{t+1}`.
-///
-/// Returns one target per input row, in input order.
+/// `preds[i]` is the current net's win probability for `rows[i]`. Per
+/// trajectory ([`TrainRow::traj`], ordered by [`TrainRow::ply`]) the last
+/// surviving row keeps the actual result and earlier rows carry
+/// `G_t = (1 − λ)·V(s_{t+1}) + λ·G_{t+1}`. One target per row, input order.
 pub fn lambda_targets(rows: &[&TrainRow], preds: &[f32], lambda: f32) -> Vec<f32> {
     let mut out: Vec<f32> = rows.iter().map(|r| r.win).collect();
     let mut by_traj: HashMap<u32, Vec<usize>> = HashMap::new();
@@ -2610,12 +2461,10 @@ pub fn lambda_targets(rows: &[&TrainRow], preds: &[f32], lambda: f32) -> Vec<f32
 /// One in-flight request to the batch eval server.
 struct EvalRequest {
     state: EncodedState,
-    /// Rendezvous channel the requester blocks on. Capacity 1 so the
-    /// server's send never blocks on a slow requester. Every reply
-    /// carries both heads — the policy logit is `None` when the served
-    /// net has no policy head — because computing both in the batched
-    /// forward costs one extra `[B, h2] × [h2, 1]` matmul, while routing
-    /// two request kinds would double the collator's surface.
+    /// Rendezvous channel the requester blocks on; capacity 1 so the
+    /// server's send never blocks. Every reply carries both heads (policy
+    /// `None` without the head): one extra matmul is cheaper than routing
+    /// two request kinds.
     reply: std::sync::mpsc::SyncSender<(f32, Option<f32>)>,
 }
 
@@ -2662,12 +2511,9 @@ impl crabomination_nn::NetEvaluator for BatchEvalClient {
 /// thin) and scores each batch in one forward pass on the trainer's
 /// device (the GPU in a `--features cuda` build).
 ///
-/// Why this beats per-thread CPU inference only *in aggregate*: a single
-/// eval's GPU round trip costs more than the hand-rolled CPU forward,
-/// but a batch of 256 amortizes the dispatch to well under the CPU cost
-/// per state — and, more importantly, batch throughput is nearly flat in
-/// model size, which is what makes wider/deeper nets affordable for the
-/// actors at all.
+/// It beats per-thread CPU inference only in aggregate: one GPU round trip
+/// costs more than the CPU forward, but a batch amortizes it, and batch
+/// throughput is nearly flat in model size.
 ///
 /// The server thread exits when every client clone has been dropped.
 pub struct BatchEvalServer;
@@ -2715,10 +2561,9 @@ impl BatchEvalServer {
                             }
                         }
                         Err(e) => {
-                            // Dropping the replies unblocks the requesters
-                            // into their expect(), which is the right
-                            // failure mode: a scoring error mid-run is a
-                            // bug, not a condition to play through.
+                            // Dropping the replies panics the requesters'
+                            // expect(): a mid-run scoring error is a bug,
+                            // not something to play through.
                             eprintln!("batch eval: forward failed: {e}");
                             pending.clear();
                         }
@@ -2737,38 +2582,23 @@ mod tests {
     use rand::SeedableRng;
     use rand::rngs::StdRng;
 
-    /// Training tests build CUDA trainers, and cargo runs them
-    /// concurrently. Sharing the device makes their numerics
-    /// irreproducible run to run — `policy_step_learns_to_rank_candidates`
-    /// passed alone and failed in the same suite. Serialising the tests
-    /// that actually train restores determinism; the fix is not a looser
-    /// threshold, which only hides the nondeterminism one run at a time.
-    ///
-    /// **It is not the whole cause, and under `nextest` it is not any of it**:
-    /// nextest runs every test in its own process, so this mutex is never
-    /// contended there. What is left is [`reseed_params`], below.
+    /// Serialises the tests that train: concurrent trainers sharing a CUDA
+    /// device made numerics irreproducible (don't loosen thresholds
+    /// instead). Under nextest (one process per test) it is never
+    /// contended; the remaining nondeterminism is fixed by [`reseed_params`].
     pub(crate) static TRAIN_SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
     /// Replace every trained parameter with a deterministic draw from `seed`.
     ///
-    /// candle's CPU backend draws initial parameters from `rand::rng()` —
-    /// entropy, per process — and its `Device::set_seed` *bails* on CPU, so a
-    /// trainer built here starts from weights no test chose. A threshold on
-    /// what it then learns is one coin flip per run:
-    /// `policy_head_learns_to_rank_candidates` failed once in a full-suite run
-    /// and passed alone, under load, and in every isolated repeat afterwards.
-    /// The whole `*_learns_*` family is exposed the same way, so this is the
-    /// class fix, not that one test's.
+    /// candle's CPU backend draws init from per-process entropy and
+    /// `Device::set_seed` bails on CPU, so every `*_learns_*` threshold was a
+    /// coin flip per run. This is the class fix.
     ///
-    /// Kaiming-normal weights (`sqrt(2 / fan_in)`, candle's own default for
-    /// `linear`) and zero biases. Deriving the scale from the *shape* rather
-    /// than from the entropy values it is replacing is the whole point: a
-    /// sample standard deviation is itself a random variable — ±18 % on a
-    /// 16-element head — so measuring it would have left most of the coin
-    /// flip in place. A parameter candle initialized to a constant
-    /// (layer-norm scale and shift) is already deterministic and is left
-    /// alone. Names are sorted so a `HashMap`'s walk order cannot reach the
-    /// draw.
+    /// Kaiming-normal weights (`sqrt(2 / fan_in)`, candle's `linear`
+    /// default) and zero biases, scaled from the shape, not from the values
+    /// replaced (a sample sd is itself random). Constant-initialized
+    /// parameters (layer-norm scale/shift) are left alone. Names are sorted
+    /// so `HashMap` order cannot reach the draw.
     pub(crate) fn reseed_params(varmap: &VarMap, dev: &Device, seed: u64) {
         let mut rng = StdRng::seed_from_u64(seed);
         let data = varmap.data().lock().unwrap();
@@ -2778,11 +2608,9 @@ mod tests {
             let var = &data[name];
             let dims = var.dims().to_vec();
             let n: usize = dims.iter().product();
-            // `Init::Const` is already deterministic — layer-norm scale
-            // (ones) and shift (zeros) — and a drawn value is exactly 0.0 or
-            // exactly 1.0 with probability zero, so this cannot mistake one
-            // for the other. A *spread* test cannot do this job: a
-            // single-element head bias has no spread and is still a draw.
+            // `Init::Const` (layer-norm ones/zeros) is already deterministic;
+            // a draw is all-0.0 or all-1.0 with probability zero. (A spread
+            // test would miss a single-element bias, which is still a draw.)
             let vals: Vec<f32> = var.as_tensor().flatten_all().unwrap().to_vec1().unwrap();
             if vals.iter().all(|v| *v == 0.0) || vals.iter().all(|v| *v == 1.0) {
                 continue;
@@ -2796,9 +2624,7 @@ mod tests {
                     if sd == 0.0 {
                         return 0.0;
                     }
-                    // Box-Muller off the seeded uniform stream; `rand_distr`
-                    // is not a dependency here and one normal draw does not
-                    // earn it.
+                    // Box-Muller off the seeded stream (no `rand_distr` dep).
                     let u1: f32 = rng.random_range(1e-7f32..1.0);
                     let u2: f32 = rng.random_range(0.0f32..1.0);
                     sd * (-2.0 * u1.ln()).sqrt() * (std::f32::consts::TAU * u2).cos()
@@ -2907,16 +2733,10 @@ mod tests {
         }
     }
 
-    /// The attention layer has to survive the same round trip as the rest
-    /// of the net: candle trains it, safetensors carries it, and the
-    /// hand-rolled engine forward has to reproduce the same numbers.
-    ///
-    /// This is the parity surface that matters most, because the two
-    /// implementations are structurally different — candle attends over a
-    /// padded `[B,N,N]` batch with a mask, the engine attends over exactly
-    /// the real objects with no padding at all. They agree only if the
-    /// masking underflows to precisely zero weight, which is the reason
-    /// the mask bias is -1e9 rather than -inf.
+    /// Attention parity across the safetensors round trip. Candle attends
+    /// over a padded, masked `[B,N,N]` batch and the engine over exactly the
+    /// real objects, so they agree only if the -1e9 mask underflows to
+    /// precisely zero weight.
     #[test]
     fn attention_weights_match_engine_inference() {
         let cfg = small_attn_cfg();
@@ -2940,11 +2760,9 @@ mod tests {
         }
     }
 
-    /// The policy head's parity surface: candle trains it, safetensors
-    /// carries it, and the engine's `forward_policy` must reproduce the
-    /// same logit — the number the Gumbel search consumes as its prior.
-    /// The win head must be unaffected by the extra tensors on both
-    /// sides.
+    /// Policy-head parity: the engine's `forward_policy` reproduces the
+    /// candle logit (the Gumbel search's prior), and the win head is
+    /// unaffected by the extra tensors.
     #[test]
     fn policy_head_matches_engine_inference() {
         let cfg = small_policy_cfg();
@@ -3012,9 +2830,6 @@ mod tests {
         assert!((net.forward_policy_kind(&states[3], 7).unwrap() - shared).abs() > 1e-3);
     }
 
-    /// Only the kind table can learn this: the same two successors, kind 3
-    /// always picks the first and kind 9 the second. A kind-free head is
-    /// stuck at a coin flip on one of them; with the table both are fit.
     /// The action head's parity surface: random weights in candle,
     /// exported, and the engine's `forward_action_terms` reproduces every
     /// candidate's term — references into every group, players (no object),
@@ -3109,6 +2924,9 @@ mod tests {
         assert!(without < 0.7, "identical successors can't be told apart: {without}");
     }
 
+    /// Only the kind table can learn this: the same two successors, kind 3
+    /// always picks the first and kind 9 the second. A kind-free head is
+    /// stuck at a coin flip on one of them; with the table both are fit.
     #[test]
     fn the_kind_table_separates_kinds_over_the_same_candidates() {
         let mut rng = StdRng::seed_from_u64(5);
@@ -3132,17 +2950,10 @@ mod tests {
         assert!(with.loss < 0.1 && without.loss > 0.6, "{with:?} vs {without:?}");
     }
 
-    /// A checkpoint from an earlier encoder generation loads into the
-    /// trainer, and the padded model scores identically to the engine's
-    /// padded model on states whose newer feature slots are lit. Both
-    /// loaders widen with zeros, so both must ignore those slots — and
-    /// they have to agree, because `--use-best` gives the *same file* to
-    /// the trainer (as the pilot baseline and the batch-eval server) and
-    /// to the engine (as the actors' net) in one run.
-    ///
-    /// Built by hand rather than by saving a trainer, since the point is
-    /// a file whose feature axis is narrower than anything this build
-    /// can export.
+    /// An earlier encoder generation's checkpoint loads zero-padded into
+    /// the trainer and scores identically to the engine's padded model with
+    /// the newer slots lit; `--use-best` hands the same file to both. Built
+    /// by hand, since this build cannot export a narrower feature axis.
     #[test]
     fn legacy_checkpoints_load_zero_padded_in_the_trainer() {
         use crabomination_nn::{LEGACY_FEATS, to_safetensors};
@@ -3204,12 +3015,8 @@ mod tests {
         }
     }
 
-    /// The vocabulary-axis twin of the test above. A checkpoint from
-    /// before some cards were appended to the frozen snapshot loads into
-    /// the trainer, and the trainer's padded model agrees with the
-    /// engine's `pad_vocab`ed one — the same file goes to both in a
-    /// `--use-best` run, so a disagreement here is the bug the freeze
-    /// exists to remove.
+    /// The vocabulary-axis twin of the test above: a short-vocab checkpoint
+    /// padded in the trainer agrees with the engine's `pad_vocab`ed one.
     #[test]
     fn short_vocab_checkpoints_load_zero_padded_in_the_trainer() {
         use crabomination_nn::to_safetensors;
@@ -3259,13 +3066,9 @@ mod tests {
         }
     }
 
-    /// With a separate policy head, the ranking objective must leave the
-    /// win head's parameters untouched: the policy loss reads only the
-    /// trunk and `head_policy`, so `head_win.*` receives no gradient.
-    /// This is the mechanism that breaks the round-33 trade — where the
-    /// shared-head version bought +0.38 ranking at −0.010/−0.020 value
-    /// AUC — and the round-36 coupling, where the search consumed the
-    /// same scalar distillation improved.
+    /// With a separate policy head, `head_win.*` gets no gradient from the
+    /// ranking loss — what breaks the round-33 trade (ranking bought at
+    /// value AUC) and the round-36 coupling.
     #[test]
     fn policy_steps_do_not_touch_the_win_head() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -3347,11 +3150,9 @@ mod tests {
         );
     }
 
-    /// Improved-policy logits are softmaxed as-is: a Gumbel row whose
-    /// logits overwhelmingly favour a non-played candidate must produce
-    /// (at any `--policy-temp`) the same target a one-hot on that
-    /// candidate would — the σ transform already fixed the sharpness, and
-    /// re-dividing by a 0.1 temperature would distort it 10×.
+    /// Improved-policy logits are softmaxed as-is: a Gumbel row that
+    /// overwhelmingly favours a non-played candidate yields, at any
+    /// `--policy-temp`, the same target as a one-hot on that candidate.
     #[test]
     fn gumbel_logit_values_ignore_the_probability_temperature() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -3384,12 +3185,10 @@ mod tests {
         );
     }
 
-    /// The truncation regression: a candidate set wider than
+    /// The truncation regression (round 37): a set wider than
     /// `POLICY_MAX_CANDIDATES` with a late `chosen` trains on the tail
-    /// window of successors, and the values must be sliced by that same
-    /// window. The pre-round-37 code read `values[0..n]` — the head of
-    /// the array — against the tail successors, pairing every state with
-    /// another arm's value.
+    /// window, and the values must be sliced by that same window, not
+    /// `values[0..n]`.
     #[test]
     fn truncated_candidate_sets_keep_values_aligned() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -3400,12 +3199,10 @@ mod tests {
         let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
         reseed_params(&t.varmap, &t.dev, 11);
 
-        // 12 candidates, chosen = 11 → the trained window is [4..=11].
-        // Values: junk in the head, a sharp favourite at index 10. If the
-        // slice is aligned, the target matches a one-hot on absolute
-        // index 10; if the old bug reads values[0..8], the sharp value at
-        // relative index 6 of the *head* window points at a state the
-        // batch does not even contain, and the losses diverge.
+        // 12 candidates, chosen = 11 → trained window [4..=11]; a sharp
+        // favourite at absolute index 10. Aligned, the target is a one-hot
+        // on it; the old bug (values[0..8]) points elsewhere and the losses
+        // diverge.
         let mut values = vec![0.01f32; 12];
         values[10] = 0.99;
         let truncated = DecisionRow {
@@ -3434,10 +3231,8 @@ mod tests {
         );
     }
 
-    /// The belief head's parity surface: candle trains it, safetensors
-    /// carries it, and the engine's `forward_opp_hand` must reproduce
-    /// the same per-name probabilities — the numbers the weighted redeal
-    /// consumes.
+    /// Belief-head parity: the engine's `forward_opp_hand` reproduces the
+    /// candle per-name probabilities the weighted redeal consumes.
     #[test]
     fn opp_head_matches_engine_inference() {
         let cfg = NetConfig { opp: true, ..small_cfg() };
@@ -3570,9 +3365,7 @@ mod tests {
     }
 
     /// Weight 0 is the exact historical policy step, and Gumbel rows
-    /// (improved-policy logits, not win probabilities) never feed the
-    /// regression — a sigmoid regressed onto logits would be a category
-    /// error the flag must not allow.
+    /// (logits, not win probabilities) never feed the regression.
     #[test]
     fn search_value_term_off_is_the_control_and_gumbel_rows_are_excluded() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -3605,12 +3398,9 @@ mod tests {
         assert_eq!(gm.sv, 0.0, "gumbel rows must never feed the regression");
     }
 
-    /// The transformer stack's parity surface is strictly larger than the
-    /// single attention layer's: two blocks each carrying layer norms
-    /// (whose eps must agree), an FFN, and un-relu'd residual streams that
-    /// go negative — plus the padded-vs-unpadded masking difference the
-    /// attention test already polices. Any drift between the candle
-    /// forward and the hand-rolled engine forward shows up here.
+    /// Transformer-stack parity: layer norms (eps must agree), FFNs,
+    /// residual streams that go negative, plus the padded-vs-unpadded
+    /// masking the attention test polices.
     #[test]
     fn transformer_blocks_match_engine_inference() {
         let cfg = NetConfig { blocks: 2, ..small_cfg() };
@@ -3634,10 +3424,9 @@ mod tests {
         }
     }
 
-    /// The schedule's shape contract: full lr at step 0, half-decayed at
-    /// the horizon midpoint, the 10 % floor at and past the horizon,
-    /// monotone in between — and the factor actually reaches the
-    /// optimizer.
+    /// The schedule's shape (1.0 at step 0, half-decayed at the midpoint,
+    /// the 10 % floor from the horizon on, monotone) and that the factor
+    /// reaches the optimizer.
     #[test]
     fn cosine_schedule_shape_and_application() {
         assert!((cosine_lr_factor(0, 1000) - 1.0).abs() < 1e-9);
@@ -3660,10 +3449,8 @@ mod tests {
         assert!((tm.current_lr() - 0.5e-4).abs() < 1e-12, "factor must reach the muon hybrid");
     }
 
-    /// Newton-Schulz on a diagonal matrix stays diagonal, so the diagonal
-    /// entries ARE the singular values — a closed-form view of the
-    /// orthogonalization. Inputs spanning two orders of magnitude must
-    /// come out near 1, or Muon is just momentum with extra matmuls.
+    /// Newton-Schulz keeps a diagonal matrix diagonal, so the diagonal is
+    /// the singular values: inputs spanning 100:1 must come out near 1.
     #[test]
     fn newton_schulz_flattens_singular_values() {
         let dev = Device::Cpu;
@@ -3721,11 +3508,9 @@ mod tests {
                 TrainRow { state: s, win, life_diff, game_len: 0.5, traj: 0, ply: 0, aux: [0.0; AUX_FEATS], opp_hand: Vec::new() }
             })
             .collect();
-        // Wider margins than the AdamW twin test: candle's CPU matmul
-        // reduces in nondeterministic order, and at 400 steps this
-        // config sat exactly on the 85/100 boundary — the float jitter
-        // flipped the verdict run to run. The claim under test is "the
-        // hybrid step descends and generalizes", not a benchmark number.
+        // Wider margins than the AdamW twin: candle's CPU matmul reduces in
+        // nondeterministic order, and at 400 steps this config sat on the
+        // pass/fail boundary. The claim is "descends and generalizes".
         let mut last = f32::MAX;
         for _ in 0..800 {
             let batch: Vec<&TrainRow> =
@@ -3736,14 +3521,10 @@ mod tests {
             }
         }
         assert!(last < 0.10, "muon failed to fit: last loss {last}");
-        // 400 fresh states, not 100, and the bar at 70 %: at n = 100 the
-        // matmul jitter above put this score anywhere in 76-91 over 24 runs
-        // and the old `>= 78` bar therefore failed **3 times in 24** — a
-        // flaky gate, and it duly failed a full-workspace run on 2026-08-11.
-        // Quadrupling the sample narrows the spread to 326-358 / 400 over 20
-        // runs (81.5-89.5 %), so a 70 % bar sits 46 correct answers below the
-        // worst observed run while still being 20 points above chance. Both
-        // numbers are measured, not guessed.
+        // 400 fresh states and a 70 % bar: at n = 100 the old `>= 78` bar
+        // failed 3 in 24 runs (and a full-workspace run on 2026-08-11). At
+        // n = 400 the measured spread was 81.5-89.5 % over 20 runs, so 70 %
+        // sits well below the worst run and 20 points above chance.
         let mut correct = 0;
         for _ in 0..400 {
             let s = random_state(&mut rng, cfg.vocab);
@@ -3755,11 +3536,9 @@ mod tests {
         assert!(correct >= 280, "only {correct}/400 fresh states classified");
     }
 
-    /// The batched evaluator must be transparent: threads hammering the
-    /// collator concurrently — small batches, flush-timeout batches, full
-    /// batches, all interleaved — get exactly the numbers the engine's
-    /// single-state forward produces from the same exported weights. This
-    /// is the correctness bar for swapping it into the actors.
+    /// The batched evaluator is transparent: concurrent threads (small,
+    /// flush-timeout and full batches interleaved) get exactly the engine's
+    /// single-state forward numbers from the same weights.
     #[test]
     fn batch_eval_server_matches_engine_forward() {
         let cfg = NetConfig { blocks: 2, ..small_cfg() };
@@ -3792,29 +3571,13 @@ mod tests {
         });
     }
 
-    /// A file carrying only some of the attention tensors is a
-    /// trainer/inference mismatch. Loading it as the pooled net would run
-    /// the wrong architecture on the right weights and silently produce
-    /// nonsense, so it must be an error rather than a quiet fallback.
-        /// The policy loss has to teach a *ranking*, which is a different
-    /// claim from "the loss goes down": a net can drive the softmax loss
-    /// down by sharpening a ranking it already had. So this measures
-    /// top-1 agreement against a synthetic rule the net cannot know at
-    /// the start, and requires it to rise well clear of chance.
-        /// Distillation must actually differ from imitation: a decision whose
-    /// search values rank a *non-played* candidate highly has to build a
-    /// target from the values, not from the recorded pick. Otherwise the
-    /// `values` field is decoration and the round is imitation under
-    /// another name.
+    /// Distillation must differ from imitation: search values that rank a
+    /// non-played candidate highly build the target, not the recorded pick.
     ///
-    /// Asserted on the target rather than on what the net converges to.
-    /// The first version trained a small net on one row and checked which
-    /// successor it ended up liking; that passed under a filter and
-    /// failed in the full suite, because it was testing an optimisation
-    /// outcome to make a point about a target. At a sharp temperature the
-    /// distilled target collapses onto the search's favourite, so
-    /// comparing losses against known one-hots pins it down exactly —
-    /// same net, same successors, lr 0, nothing stochastic left.
+    /// Asserted on the target, not on what a net converges to (that first
+    /// version was flaky in the full suite): at a sharp temperature the
+    /// target collapses onto the search's favourite, so comparing losses
+    /// against known one-hots at lr 0 pins it down exactly.
     #[test]
     fn search_values_build_the_target_not_the_pick() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -3857,10 +3620,8 @@ mod tests {
         );
     }
 
-    /// Temperature is the knob that decides sharp-pick vs soft-ranking,
-    /// and arm values are win probabilities whose spread is small — so a
-    /// temperature that is too high would flatten every target into
-    /// uniform and train nothing.
+    /// Temperature decides sharp pick vs soft ranking over small-spread
+    /// win-probability values; it must change the target.
     #[test]
     fn temperature_controls_how_sharp_the_distilled_target_is() {
         let cfg = small_cfg();
@@ -3883,6 +3644,9 @@ mod tests {
         );
     }
 
+    /// The policy loss must teach a ranking, not just go down (a net can
+    /// lower it by sharpening a ranking it already had): top-1 against a
+    /// synthetic rule must rise well clear of chance.
     #[test]
     fn policy_step_learns_to_rank_candidates() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -3919,23 +3683,17 @@ mod tests {
         }
         let after = trainer.policy_top1(&refs).expect("after");
 
-        // Thresholds are deliberately loose. The first version demanded
-        // > 0.75, which passed in isolation and failed under the full
-        // suite at 0.734 — a threshold fitted to one run's numerics
-        // rather than to the claim, which is the definition of a flaky
-        // test. What is actually being asserted is that the ranking is
-        // *learned*: comfortably clear of the 0.33 chance rate, and a
-        // large rise from where it started.
+        // Deliberately loose (a > 0.75 bar was flaky at 0.734): the claim
+        // is that the ranking is learned, clear of 0.33 chance and a large
+        // rise from the start.
         assert!(
             after > 0.60 && after > before + 0.20,
             "policy failed to learn the ranking: {before} -> {after} (chance is 0.33)"
         );
     }
 
-    /// Ragged candidate counts must share a batch without the padding
-    /// stealing probability mass — otherwise a 2-candidate decision
-    /// batched beside a 5-candidate one is trained toward a target that
-    /// includes slots that do not exist.
+    /// Ragged candidate counts share a batch without padding taking
+    /// probability mass.
     #[test]
     fn padding_does_not_compete_for_probability_mass() {
         let cfg = small_cfg();
@@ -3991,6 +3749,8 @@ mod tests {
         assert!(trainer.policy_top1(&[&single]).expect("top1").is_nan());
     }
 
+    /// A file with only some attention tensors is a trainer/inference
+    /// mismatch and must be an error, not a silent pooled-net fallback.
     #[test]
     fn partial_attention_tensors_are_rejected() {
         let (vocab, e, d, h1, h2) = (12usize, 4usize, 8usize, 32usize, 16usize);
@@ -4027,12 +3787,8 @@ mod tests {
         );
     }
 
-    /// End-to-end learning sanity: a synthetic signal (life lead wins,
-    /// with the answer also visible through an object feature) must be
-    /// learnable to well under coin-flip loss in a few hundred steps.
-        /// The closed form, checked against hand arithmetic — a loss that is
-    /// merely *plausible* is the easiest thing in a trainer to get
-    /// subtly wrong and never notice.
+    /// The closed form, checked against hand arithmetic (a plausible loss
+    /// is easy to get subtly wrong).
     #[test]
     fn bce_matches_the_closed_form() {
         let dev = Device::Cpu;
@@ -4043,10 +3799,8 @@ mod tests {
         assert!((got - want).abs() < 1e-5, "got {got}, want {want}");
     }
 
-    /// Soft targets are a supported case, not an accident: at λ < 1 the
-    /// fit target is a λ-return in [0, 1]. BCE against a soft target is
-    /// minimised when the prediction *equals* the target, which is the
-    /// property that makes it a proper scoring rule there.
+    /// At λ < 1 the target is a soft λ-return; BCE must be minimised at
+    /// the target (a proper scoring rule).
     #[test]
     fn bce_on_a_soft_target_is_minimised_at_the_target() {
         let dev = Device::Cpu;
@@ -4060,11 +3814,9 @@ mod tests {
         assert!(exact < at(0.8), "0.8 scored better than the target");
     }
 
-    /// The mechanism the switch is *for*, asserted directly: where the
-    /// net is confidently wrong, MSE through a sigmoid produces a far
-    /// smaller update than cross-entropy, because its gradient carries a
-    /// `p(1 − p)` factor that vanishes in saturation. Measured as the
-    /// movement of the prediction after one step from identical weights.
+    /// Where the net is confidently wrong, BCE moves the prediction further
+    /// than MSE in one step from identical weights (MSE's `p(1 − p)` factor
+    /// vanishes in saturation).
     #[test]
     fn bce_updates_harder_than_mse_when_confidently_wrong() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -4086,12 +3838,9 @@ mod tests {
         // fitting the opposite label hard, then measure one step back.
         let train_to_wrong = |bce: bool| -> (f32, f32) {
             let mut t = Trainer::new(&cfg, 5e-2).expect("trainer");
-            // "From identical weights" is the whole measurement, and
-            // `Trainer::new` draws from entropy — see `reseed_params`. Without
-            // this the two copies reach *different* confidently-wrong points
-            // (0.00077 and 0.000000087 on the run that caught it) and the
-            // absolute movements are not comparable, so the assertion below
-            // is a coin flip on the draw rather than a statement about BCE.
+            // Identical weights are the whole measurement; without the
+            // reseed the two copies reach different confidently-wrong points
+            // and the comparison is a coin flip (see `reseed_params`).
             reseed_params(&t.varmap, &t.dev, 11);
             let wrong = TrainRow { win: 0.0, ..row.clone() };
             for _ in 0..300 {
@@ -4111,10 +3860,8 @@ mod tests {
             mse_before < 0.1 && bce_before < 0.1,
             "the setup failed to reach a confident wrong opinion: {mse_before} / {bce_before}"
         );
-        // The reseed makes the two copies the same net, so the two 300-step
-        // MSE drives land in the same place. If this ever fires, the drive is
-        // no longer deterministic and the comparison below is meaningless
-        // rather than merely wrong.
+        // If this fires, the drive is no longer deterministic and the
+        // comparison below is meaningless.
         assert!(
             (mse_before - bce_before).abs() < 1e-6,
             "the two copies started from different weights: {mse_before} vs {bce_before}"
@@ -4126,8 +3873,7 @@ mod tests {
         );
     }
 
-    /// BCE has to actually train the head, not merely have a nicer
-    /// gradient on paper — the same synthetic signal the MSE path learns.
+    /// BCE learns the same synthetic signal the MSE path does.
     #[test]
     fn bce_learns_the_synthetic_signal() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -4167,6 +3913,8 @@ mod tests {
         assert!(correct * 10 >= rows.len() * 8, "only {correct}/{} correct", rows.len());
     }
 
+    /// End-to-end learning sanity: a synthetic signal (life lead wins)
+    /// must be learnable to well under coin-flip loss in a few hundred steps.
     #[test]
     fn learns_a_synthetic_signal() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -4186,10 +3934,8 @@ mod tests {
         let first = {
             let batch: Vec<&TrainRow> = rows[..64].iter().collect();
             let mut t2 = Trainer::new(&cfg, 0.0).expect("probe trainer");
-            // The same seed as `trainer` above: `first` is meant to be *this
-            // net's* untrained loss, and an unseeded probe measures a
-            // different net's, which is what put a drawn number on both sides
-            // of the `last < first * 0.5` assert.
+            // Same seed as `trainer`: `first` must be this net's untrained
+            // loss, not a different draw's.
             reseed_params(&t2.varmap, &t2.dev, 11);
             t2.train_step(&batch).expect("loss probe").total
         };
@@ -4207,17 +3953,10 @@ mod tests {
             "loss failed to fall: first {first}, last {last}"
         );
 
-        // The learned rule generalizes to fresh states. **1000 samples, not
-        // 100**: the trained accuracy on this synthetic signal is ~90.9 %
-        // (ten runs: 893-920 per 1000). At 100 samples the *measurement*'s
-        // own noise is ~3 points, which put the old `>= 85` assert inside one
-        // sigma of the mean and failed the suite roughly one run in eight
-        // (seen at 83 and 84). More training doesn't help — the loss assert
-        // above already passed on those runs. Ten times the sample puts the
-        // floor ~7 sigma out. (The spread the note used to blame on candle's
-        // process-global weight init is gone — `reseed_params` fixes the
-        // init — but the sampling noise it also measured is not, and that is
-        // what the 1000 is for.)
+        // Generalizes to fresh states. 1000 samples, not 100: trained
+        // accuracy was ~90.9 % (893-920 per 1000 over ten runs), and at 100
+        // samples measurement noise alone failed the old `>= 85` bar about
+        // one run in eight. At 1000 the floor is ~7 sigma out.
         let mut correct = 0;
         for _ in 0..1000 {
             let s = random_state(&mut rng, cfg.vocab);
@@ -4428,10 +4167,8 @@ mod tests {
         }
     }
 
-    /// lambda = 1 is pure Monte Carlo: every row in a trajectory keeps the
-    /// game result, whatever the net thinks. This is the pre-lambda
-    /// behaviour and has to stay bit-reachable, because every gate round
-    /// on record trained on it.
+    /// lambda = 1 is pure Monte Carlo: every row keeps the game result,
+    /// whatever the net thinks (the pre-λ control, must stay bit-reachable).
     #[test]
     fn lambda_one_is_the_monte_carlo_target() {
         let mut w = SampleWindow::new(16);
@@ -4460,10 +4197,8 @@ mod tests {
         assert!((got[3] - 1.00).abs() < 1e-6, "terminal keeps the result: {got:?}");
     }
 
-    /// The diagnostic in `selfplay_train`'s checkpoint scores the holdout
-    /// against λ-targets it computes itself, because holdout rows are never
-    /// relabelled. That only means anything if the free function it calls
-    /// produces exactly what the window's relabel pass would have written.
+    /// `selfplay_train`'s checkpoint scores the (never relabelled) holdout
+    /// with [`lambda_targets`], which must match the window's relabel pass.
     #[test]
     fn lambda_targets_matches_what_the_window_relabels_to() {
         for lambda in [0.0f32, 0.3, 0.7, 1.0] {
@@ -4628,13 +4363,9 @@ mod tests {
 
     // ────────────────────────── round 72: policy gradient ──────────────────────────
 
-    /// Three-candidate menus, uniform behaviour (flat scores at a positive
-    /// temperature), and a result that is 1 exactly when the played
-    /// candidate had the largest `global[0]`: the advantage is positive on
-    /// the "right" picks and negative on the others, so the policy must
-    /// come to prefer the largest `global[0]` — the policy-gradient twin
-    /// of `policy_head_learns_to_rank_candidates`, which learns the same
-    /// rule from a one-hot target.
+    /// Uniform behaviour over three candidates, result 1 exactly when the
+    /// played one had the largest `global[0]`: the policy must learn to
+    /// prefer it (the PG twin of `policy_head_learns_to_rank_candidates`).
     #[test]
     fn pg_step_moves_probability_toward_positive_advantage() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -4692,10 +4423,8 @@ mod tests {
         );
     }
 
-    /// The head-only arm's whole gate design rests on this: with
-    /// `trunk: false` nothing but `head_policy.*` moves, so the pilot's
-    /// win head and trunk are bit-identical to the control's. With
-    /// `trunk: true` the trunk moves too.
+    /// The head-only arm's gate design rests on this: with `trunk: false`
+    /// only `head_policy.*` moves; with `trunk: true` the trunk moves too.
     #[test]
     fn pg_head_only_leaves_trunk_and_win_head_untouched() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());
@@ -4825,9 +4554,8 @@ mod tests {
             })
             .collect();
         let refs: Vec<&DecisionRow> = rows.iter().collect();
-        // A fresh head is already near-uniform over random states, so
-        // sharpen it first: one-hot imitation of the recorded picks drives
-        // the entropy down, and the bonus has something to undo.
+        // A fresh head is near-uniform; sharpen it first by imitation so the
+        // bonus has something to undo.
         for _ in 0..150 {
             trainer.train_policy_step(&refs).expect("sharpen");
         }
@@ -4935,9 +4663,7 @@ mod tests {
         let _ = std::fs::remove_file(&path);
     }
 
-    /// The prefetch pipeline packs host buffers on another thread; the
-    /// step they feed must be the same step as packing inline — same
-    /// statistics, same loss — or the pipeline changes the run.
+    /// A prefetched (prepared) batch gives the same step as inline packing.
     #[test]
     fn a_prepared_batch_gives_the_same_step_as_the_direct_path() {
         let _guard = TRAIN_SERIAL.lock().unwrap_or_else(|e| e.into_inner());

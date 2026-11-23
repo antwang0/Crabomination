@@ -25,14 +25,12 @@ Decklists are Arena/MTGO text (`4 Lightning Bolt`, `4x Name`, bare names
 = 1 copy, `Deck` / `Sideboard` / `SB:` sections, `#` comments); unknown
 card names are reported rather than silently dropped.
 
-**From the menu:** pick a format (Modern, Cube, SoS, **Sealed**,
-Commander), type a path into the *Deck file* field, and press **Play
-Deck vs Bot**. Under Sealed the opponent is a freshly generated random
-sealed build (six SoS packs, built by the same generator the
-recommender's gauntlet uses) — a new one each match; under the other
-formats it is the stock Modern deck. Lists are validated against the
-selected format, so a Sealed/Cube/SoS list plays limited-legal 40-card
-rules and a Commander list is checked as 100-card singleton.
+**From the menu:** pick a format (Modern, Cube, SoS, Sealed, Commander),
+type a path into the *Deck file* field, and press **Play Deck vs Bot**. Under
+Sealed the opponent is a fresh random sealed build each match (six SoS packs);
+under the other formats it is the stock Modern deck. Lists are validated
+against the selected format: Sealed/Cube/SoS as limited-legal 40-card decks,
+Commander as 100-card singleton.
 
 **From the command line**, skipping the menu:
 
@@ -47,12 +45,9 @@ falls back to a generated build, with the reason on stderr.
 **The opponent** is the lobby's pilot: a determinized Monte Carlo search
 at 256 iterations over a 3-turn horizon, scoring rollouts with the
 champion value net (`nets/champion.safetensors`, or `CRAB_NET`) as the
-leaf. Round 64 (2026-09-05) read 64 / 128 / 256 iterations at 52.35 /
-54.75 / 55.25 % against the heuristic default on the material leaf, and
-round 74 (2026-09-15) read the net leaf at 53.3 / 55.2 % over that
-material-leaf search. A checkout without the net file plays the
-material leaf and says so on stderr. Expect about half a second per
-searched decision, a few seconds on a busy board.
+leaf (measurements in `ML_NOTES.md`, rounds 64 and 74). A checkout without
+the net file plays a material-count leaf and says so on stderr. Expect about
+half a second per searched decision, a few seconds on a busy board.
 
 ## Status & roadmap
 

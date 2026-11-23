@@ -9,32 +9,21 @@ use crate::game::types::{DelayedKind, DelayedTrigger};
 /// why this is an association list and not a `HashMap`.
 type LegendGroups<'a> = SmallVec<[(usize, &'a str, SmallVec<[CardId; 2]>); 4]>;
 
-/// A collected death/leaves trigger to fire from a dying permanent:
-/// `(source, effect, controller, intervening/subject filter)`.
 /// A collected self-death trigger: source, effect, controller, intervening
 /// filter, and whether it is a death ("dies" / "put into a graveyard") rather
 /// than a leaves-the-battlefield trigger — the half a replaced death drops.
 type DeathTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool);
 
-/// `CRAB_SBA_CENSUS` — the state-based-action re-sweep census.
+/// `CRAB_SBA_CENSUS` — the state-based-action re-sweep census: counts how
+/// many SBA sweeps see a state the previous sweep on this thread already saw
+/// (PERF `(-88)`'s open half). Off unless the variable is set; one
+/// `OnceLock`-backed atomic load when it is. See
+/// [`GameState::sba_census_tick`] for the fingerprint and why the count is a
+/// lower bound.
 ///
-/// PERF `(-88)`'s open half: the sweep is 2.4-3.1 % of every pool and runs at
-/// every priority pass; this counts how many of those runs see a state the
-/// previous run on this thread already saw. Off unless the variable is set,
-/// and one `OnceLock`-backed atomic load when it is. See
-/// [`GameState::sba_census_tick`] for the fingerprint and for why the count is
-/// a lower bound.
-///
-/// **It answered its question and the answer is no** (pass 97, at
-/// `ec5dc3a9`): **3,613 / 20,152 on `cube`, 1,736 / 9,146 on `fixed`,
-/// 5,594 / 31,452 on `sealed` — 17.8-19.0 %.** A repeat sweep is by
-/// construction one whose predecessor changed nothing, so what a skip would
-/// save is the *no-op* sweep, ~2.5-3.5 k Ir, on ~18 % of sweeps — and the
-/// fingerprint that proves the state is unchanged is a whole-board walk of
-/// the same shape as the `sba_board_scan` it would skip, paid on **100 %** of
-/// them. It loses by arithmetic before soundness is even reached (and a
-/// 64-bit hash is not a correctness gate over millions of games). Kept as the
-/// instrument, not as a lead.
+/// Answered no (pass 97, at `ec5dc3a9`): 17.8-19.0 % of sweeps repeat, but
+/// a skip would save only a cheap no-op sweep while proving "unchanged"
+/// needs a whole-board walk on every sweep. Kept as an instrument, not a lead.
 pub mod sba_census {
     use std::cell::Cell;
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
@@ -188,34 +177,19 @@ impl GameState {
     /// CR 700.2b — "The controller of a modal triggered ability chooses
     /// the mode(s) as part of putting that ability on the stack."
     ///
-    /// Inspect the trigger's top-level effect: if it's `Effect::ChooseMode`,
-    /// ask the controller (via the installed `Decider`) which mode to pick.
-    /// Returns `Some(idx)` for modal triggers and `None` for non-modal ones
-    /// (which keeps the existing `mode.unwrap_or(0)` resolution path
-    /// behaving correctly for the simple case). The `AutoDecider` picks
-    /// mode 0 (the leftmost printed mode), preserving prior behaviour;
-    /// `ScriptedDecider::new([DecisionAnswer::Mode(idx)])` lets tests
-    /// inject alternative picks for cards like Prismari Apprentice
-    /// (modal Magecraft: Scry 1 / +1/+0 EOT).
+    /// Finds the governing `Effect::ChooseMode` (descending `If` /
+    /// `HauntCreature`) and asks the controller via the `Decider`. Returns
+    /// `Some(idx)`, clamped to `modes.len() - 1`, for modal triggers and
+    /// `None` for non-modal ones. `AutoDecider` picks mode 0;
+    /// `ScriptedDecider::new([DecisionAnswer::Mode(idx)])` injects picks in
+    /// tests (Prismari Apprentice).
     ///
-    /// The picked index is clamped to `modes.len() - 1` to guard against
-    /// a misbehaving decider returning an out-of-range mode.
-    ///
-    /// ⚠ **THIS USED TO SAY THE NESTED CASE WAS OUT OF SCOPE BECAUSE "the
-    /// printed Magic cards in scope today all have a top-level `ChooseMode`",
-    /// AND NINE SHIPPED CARDS SAID OTHERWISE.** Returning `None` does not
-    /// mean "not modal" downstream — it means `mode.unwrap_or(0)`, so a
-    /// modal this function cannot see resolves at **mode 0, forever, without
-    /// ever asking anyone**. Orzhov Pontiff's haunt half could never pick its
-    /// -1/-1 mode; Merrow Reejerey and Stinging Lionfish printed "tap **or
-    /// untap**" and only ever tapped; Prophetic Titan, Depth Defiler, Tizerus
-    /// Charger and Wardens of the Cycle each hid their modal in one branch of
-    /// an `If`. Two holes, both closed here: `governing_modal` now descends
-    /// `If`/`HauntCreature`, and a nested modal whose mode **targets** asks
-    /// the decider synchronously instead of falling through to 0 — the
-    /// top-level path has always done exactly that, and it is the same
-    /// guarantee (the pick precedes target assignment because both happen at
-    /// push time). `tmp`-free gate: `nested_modals_are_all_reachable`.
+    /// ⚠ `None` means `mode.unwrap_or(0)` downstream, so a modal this can't
+    /// see resolves at mode 0 forever without asking. Nine cards shipped that
+    /// way (Orzhov Pontiff, Merrow Reejerey's "tap or untap", Prophetic
+    /// Titan's `If` branch...). A nested modal whose mode targets asks the
+    /// decider synchronously, like the top-level path (the pick precedes
+    /// target assignment). Gate: `nested_modals_are_all_reachable`.
     pub(crate) fn pick_trigger_mode(
         &mut self,
         effect: &Effect,
@@ -238,15 +212,11 @@ impl GameState {
         // deferred pick exists — so those fall through to the synchronous
         // decider below, which is what the top-level path has always done.
         if modes.iter().all(|m| !m.requires_target()) {
-            // Top level: only a `wants_ui` seat defers, so it picks through
-            // the client modal rather than the synchronous decider (which
-            // would silently take mode 0 — Riot creatures never hasty). A
-            // bot is asked here instead, keeping its answer in the push-time
-            // trace.
-            //
-            // Nested: every seat defers, because the wrapper it is buried in
-            // must run first — the payment only ever happens when accepted,
-            // and the mode is not read until the wrappers do.
+            // Top level: only a `wants_ui` seat defers, picking through the
+            // client modal (the synchronous decider would take mode 0 — Riot
+            // creatures never hasty). A bot is asked here, keeping its answer
+            // in the push-time trace. Nested: every seat defers, since the
+            // enclosing wrappers must run before the mode is read.
             if !top_level || self.seat_prompts(controller) {
                 return Some(crate::game::types::MODE_PICK_DEFERRED);
             }
@@ -441,12 +411,9 @@ impl GameState {
     // ── Pass priority ─────────────────────────────────────────────────────────
 
     /// True when the next [`pass_priority`](Self::pass_priority) will take its
-    /// early return: not every player has passed yet, so it bumps the pass
-    /// counter, hands priority to the next seat and stops. That branch is
-    /// infallible and writes two integers — nothing to roll back — which is
-    /// what lets `perform_action` skip its transaction checkpoint for it.
-    /// Every other branch resolves the stack or advances the step and can
-    /// fail, so it keeps the checkpoint.
+    /// early return (not everyone has passed: bump the counter, hand priority
+    /// on). That branch is infallible and writes two integers, so
+    /// `perform_action` skips its transaction checkpoint for it.
     pub(crate) fn pass_priority_is_trivial(&self) -> bool {
         self.priority.consecutive_passes + 1 < self.alive_count()
     }
@@ -504,15 +471,10 @@ impl GameState {
 
         // Auto-declare empty blockers if no one blocked.
         //
-        // Taken from the scratch slot rather than allocated: `advance_step`
-        // pushes `StepChanged` unconditionally, so this buffer's *first push*
-        // allocated once per step advance — **22,820 of the run's 575,795
-        // allocations on six `--decks fixed` games**, the second-biggest
-        // context in the program (PERF `(-80)`). Reserving capacity would
-        // only move that allocation earlier; what removes it is a caller that
-        // hands the buffer back (`recycle_events`). A caller that does not is
-        // unaffected: the slot is empty, `take` yields the thread pool's
-        // buffer or `Vec::new()`, and the first push allocates as before.
+        // Taken from the scratch slot rather than allocated (PERF `(-80)`):
+        // the buffer's first push allocated once per step advance. A caller
+        // that hands it back (`recycle_events`) removes that allocation; one
+        // that doesn't is unaffected.
         let mut events = self.event_scratch.take();
         debug_assert!(events.is_empty(), "the event scratch is stored cleared");
         if self.step == TurnStep::DeclareBlockers
@@ -576,14 +538,11 @@ impl GameState {
             })
             .collect();
         for (id, name, life) in offers {
-            // The step machinery has no `Effect` to stash, so this cannot
-            // suspend and a bot seat reaches `AutoDecider`, whose blanket no
-            // took the skip never — and Fasting's third line destroys it on the
-            // *next* draw, so declining once throws the enchantment away having
-            // gained nothing. Take the skip on an empty library, where drawing
-            // loses the game outright, and while the hand is already wide enough
-            // that the card may not be castable before cleanup discards it
-            // (5 of the 7-card limit); a thin hand wants the card over two life.
+            // The step machinery can't suspend, so a bot reaches
+            // `AutoDecider`, whose blanket "no" never took the skip (and
+            // Fasting destroys itself on the next draw anyway). Take it on an
+            // empty library (drawing loses) and when the hand is already at 5+
+            // of the 7-card limit; a thin hand wants the card over two life.
             let yes = if matches!(self.decider.kind(), crate::decision::DeciderKind::Auto) {
                 self.players[active].library.is_empty()
                     || self.players[active].hand.len() >= 5
@@ -622,13 +581,9 @@ impl GameState {
         if next == TurnStep::FirstStrikeDamage && !self.has_first_strikers() {
             next = next.next(); // skip directly to CombatDamage
         }
-        // CR 506.1 — "The declare blockers and combat damage steps are
-        // skipped if no creatures are declared as attackers or put onto
-        // the battlefield attacking." When the DeclareAttackers step
-        // ends with no attackers, advance straight past DeclareBlockers /
-        // FirstStrikeDamage / CombatDamage to EndCombat. Trigger windows
-        // for "at the beginning of combat" still fire at BeginCombat
-        // since that step is unaffected.
+        // CR 506.1 — with no attackers declared, skip DeclareBlockers and the
+        // damage steps straight to EndCombat ("at the beginning of combat"
+        // already fired at BeginCombat).
         if self.step == TurnStep::DeclareAttackers && self.attacking.is_empty() {
             next = TurnStep::EndCombat;
         }
@@ -1281,19 +1236,14 @@ impl GameState {
             }
         }
 
-        // CR 704.3 — the state-based actions are checked whenever a player
-        // would receive priority, a step's beginning included: the untap
-        // step's phasing can put a legend beside its namesake, and a commander
-        // that went home across End -> Upkeep left its Aura attached to
-        // nothing. Gated as the post-action sweep is (a step change and
-        // untapping are inert), and not after combat damage, which sweeps in
-        // its own resolution: ungated this re-ran after every combat-damage
-        // advance, -5.75 % median wall on `--bench` (PERF). Leaving the end
-        // of combat opens it too, and the flag below is also set by the untap
-        // / upkeep expiries: an "until end of combat" boost ending and an
-        // "until your next turn" pump or copy ending (a copy reverting to a
-        // 0/0) emit nothing. An unconditional upkeep sweep cost +0.91 % Ir
-        // on `fixed`.
+        // CR 704.3 — SBAs are checked whenever a player would receive
+        // priority, step beginnings included (untap-step phasing can create a
+        // legend pair; a commander gone home leaves its Aura on nothing).
+        // Gated like the post-action sweep, and skipped after combat damage,
+        // which sweeps itself (ungated: -5.75 % median wall on `--bench`).
+        // Leaving combat and the untap/upkeep expiries (which emit nothing,
+        // e.g. a copy reverting to a 0/0) also set the flag; an unconditional
+        // upkeep sweep cost +0.91 % Ir on `fixed`.
         if self.pending_decision.is_none()
             && self.suspend_signal.is_none()
             && !self.is_game_over()
@@ -1358,12 +1308,9 @@ impl GameState {
     pub fn fire_step_triggers(&mut self, step: TurnStep) {
         let active = self.active_player_idx;
         let kind = EventKind::StepBegins(step);
-        // Collect candidate (source, effect, controller, filter) tuples for
-        // each battlefield permanent's matching trigger. We snapshot the
-        // optional `event.filter` predicate alongside the effect so we can
-        // re-check it after gathering — predicate evaluation needs
-        // `&self.evaluate_predicate(...)` which can't run inside the inner
-        // closure due to the `iter` borrow.
+        // Collect (source, effect, controller, filter) candidates, keeping
+        // each `event.filter` so it can be re-checked after gathering
+        // (`evaluate_predicate` can't run inside the `iter` borrow).
         let scope_matches_kind = |scope: &EventScope, controller: usize| match scope {
             EventScope::AnyPlayer => true,
             EventScope::ActivePlayer | EventScope::YourControl | EventScope::SelfSource => {
@@ -1406,20 +1353,11 @@ impl GameState {
         let scope_matches = |ev: &crate::effect::EventSpec, controller: usize| {
             (!ev.actor_is_opponent || !self.same_team(controller, active)) && scope_matches_kind(&ev.scope, controller)
         };
-        // One board-level scan for the whole walk: the per-card shim rebuilds
-        // it, so asking it per battlefield permanent is O(cards²).
-        //
-        // Kept only for the grants that fire on *this* step. The per-permanent
-        // walk below evaluates every grant's filter against every permanent
-        // and then drops all but `kind` at the test on `t.event.kind` — so a
-        // board whose one lord grants "whenever this attacks" paid a
-        // requirement walk per (permanent x grant) on every step of every
-        // turn for candidates it never kept: 85,066 `statics_granted_triggers_inner`
-        // calls / 1.09 % of a six-game `cube` run from here. The dispatcher's
-        // batch pre-filter is the same device one call up (PERF `(-181)`).
-        // Both filters behind an emptiness test: `retain` is an out-of-line
-        // generic that cost `fixed` — a pool with no grant at all — +0.08 %
-        // when called on its empty list 16,004 times.
+        // One board-level scan for the whole walk (the per-card shim rebuilds
+        // it: O(cards²)). Kept only for grants firing on *this* step, the
+        // dispatcher's batch pre-filter one call up (PERF `(-181)`). Both
+        // filters sit behind an emptiness test: `retain` on an empty list
+        // still cost `fixed` +0.08 %.
         let mut trigger_grants = self.trigger_grant_sources();
         if !trigger_grants.is_empty() {
             trigger_grants.retain(|g| g.ability.event.kind == kind);
@@ -1435,34 +1373,21 @@ impl GameState {
         let any_own_grant = self.any_granted_trigger_of_kind(&kind);
         let mut candidates: Vec<(CardId, Effect, usize, Option<crate::card::Predicate>)> =
             Vec::new();
-        // CR 613 — `statics_granted_triggers_with` evaluates each grant's
-        // `SelectionRequirement` against this permanent, and the requirement
-        // reads the *computed* type line: outside a freeze scope that is a
-        // whole-game continuous-effect gather per (permanent, grant) pair.
-        // This walk is the second-largest consumer of that path on the
-        // sealed/cube pools — 21.7 % of the program on `--decks cube` at the
-        // dispatcher's own fix — and, like the dispatcher's, the loop holds a
-        // shared borrow of `self.battlefield` throughout, so no `&mut self`
-        // call can happen inside it. Gated on the same `any_static_grant`
-        // fact the per-card branch reads, so a board that grants nothing pays
-        // nothing. See `dispatch_triggers_for_events` for the measurements.
+        // CR 613 — grant requirements read the *computed* type line, a
+        // whole-game effect gather per (permanent, grant) pair outside a
+        // freeze scope, so freeze here. The loop only holds a shared borrow
+        // of `self.battlefield`, so no `&mut self` call happens inside. Gated
+        // on `any_static_grant`; measurements at `dispatch_triggers_for_events`.
         if any_static_grant {
             self.freeze_layers_push();
         }
-        // Not gated on `CardData::trigger_kind_fold`: the per-trigger kind
-        // compare inlines to a tag test, and a board's one or two printed
-        // triggers per card cost what the memo read does — PERF `(-196)`
-        // measured the gate here at +0.2 M on `cube`, a wash, and took it
-        // back out.
-        // Printed triggers plus statics-granted ones (Kataki's "All
-        // artifacts have '…upkeep…'"), both firing off `c`. Filter on the
-        // borrowed ability and clone only the survivors: this runs on every
-        // step of every turn and a `TriggeredAbility` clone is an `Effect`
-        // tree plus the event's filter predicate.
-        // CR 113.10b — a permanent that has lost all its abilities has no
-        // printed step trigger (Kimahri under a Darksteel Mutation kept
-        // re-copying every extra combat). Empty on every board without a strip
-        // source, which the lane word answers.
+        // Not gated on `CardData::trigger_kind_fold`: PERF `(-196)` measured
+        // that gate here as a wash and took it out.
+        // Printed triggers plus statics-granted ones (Kataki), both firing
+        // off `c`. Filter on the borrowed ability and clone only survivors.
+        // CR 113.10b — a permanent that lost all abilities has no printed
+        // step trigger (Kimahri under Darksteel Mutation); the lane word
+        // answers the strip set.
         let stripped = self.stripped_permanents();
         let visit = |c: &crate::card::CardInstance| {
             let printed: &[crate::card::TriggeredAbility] =
@@ -1503,19 +1428,13 @@ impl GameState {
         if any_static_grant {
             self.freeze_layers_pop();
         }
-        // CR 702.6e / 303.4 — step triggers granted to a permanent by an
-        // attached Aura/Equipment's `equipped_bonus` fire as though printed on
-        // the host ("Enchanted creature has 'At the beginning of your upkeep,
-        // you lose 1 life'" — Pillory of the Sleepless). Source is the host
-        // (unless `triggers_on_equipment`); "your" scope keys on the host's
-        // controller. Combat-damage/dies equip triggers use other kinds and so
-        // are untouched here.
-        //
-        // Through the dispatcher's member lane on `EQUIP_TRIGGER_GRANT`, not a
-        // walk of its own: the definition half of the question is exactly that
-        // bit, and this fires on every step of every turn, real or simulated
-        // (PERF `(-328)`). The `attached_to` half stays here — the bit is
-        // definition-only, as a lane predicate must be.
+        // CR 702.6e / 303.4 — step triggers granted by an attached
+        // Aura/Equipment's `equipped_bonus` fire as though printed on the
+        // host (Pillory of the Sleepless); source is the host unless
+        // `triggers_on_equipment`, and "your" keys on the host's controller.
+        // Through the dispatcher's `EQUIP_TRIGGER_GRANT` member lane (PERF
+        // `(-328)`); the `attached_to` half stays here, since a lane
+        // predicate must be definition-only.
         self.for_each_board_scan_source(
             crate::card::dispatch_bits::EQUIP_TRIGGER_GRANT,
             |eq| {
@@ -1535,14 +1454,10 @@ impl GameState {
                 }
             },
         );
-        // Walk the graveyards for graveyard-scoped step triggers:
-        // `FromYourGraveyard` on its owner's step (Ichorid's "at the
-        // beginning of your upkeep"), `FromYourGraveyardAnyPlayer` on every
-        // player's (Kami of Transience's "each end step").
-        // Behind the zone's lane (the `(-210)` one; its predicate is the
-        // scope, whatever the kind): a graveyard grows all game and this
-        // fires on every step, so the walk was a definition deref per
-        // graveyard card per step for a card 44 printings carry (PERF `(-218)`).
+        // Graveyard-scoped step triggers: `FromYourGraveyard` on its owner's
+        // step (Ichorid), `FromYourGraveyardAnyPlayer` on every player's
+        // (Kami of Transience). Behind the zone's `(-210)` lane, since a
+        // graveyard grows all game and this fires every step (PERF `(-218)`).
         for (seat, player) in self.players.iter().enumerate() {
             if !player.graveyard.has_graveyard_trigger() {
                 continue;
@@ -1585,12 +1500,9 @@ impl GameState {
             }
         }
         // CR 902.5 — a Vanguard avatar's step triggers fire from the command
-        // zone ("at the beginning of your upkeep" — Arcbound Overseer Avatar).
-        // Behind one emptiness test, the shape `sweep_finished_schemes` and
-        // `trigger_grant_sources` already use: this fires on every step of
-        // every turn and no format the simulator plays puts anything in a
-        // command zone, so the two `Filter` chains were pure iterator
-        // machinery (PERF `(-329)`).
+        // zone (Arcbound Overseer Avatar). Behind one emptiness test, as in
+        // `sweep_finished_schemes` / `trigger_grant_sources`: no format the
+        // simulator plays fills a command zone (PERF `(-329)`).
         if !self.command_zones_are_empty() {
             for (seat, player) in self.players.iter().enumerate() {
                 for c in player.command.iter().filter(|c| {
@@ -1652,26 +1564,11 @@ impl GameState {
                 }
             }
         }
-        // CR 603.4 — Intervening 'if' clause: "When the trigger event
-        // occurs, the ability checks whether the stated condition is
-        // true. The ability triggers only if it is; otherwise it does
-        // nothing." Evaluate each trigger's optional `event.filter`
-        // predicate now, before pushing to the stack. Triggers whose
-        // filter fails are dropped (Triskaidekaphile's "if you have
-        // exactly 13 cards in your hand", Felidar Sovereign's "if you
-        // have 40 or more life", Pact-style "if it's your turn", etc.).
-        // The second-half of CR 603.4 — re-check the condition as the
-        // ability resolves — is now also wired (see
-        // `triggers_with_filter` below + the resolver's `intervening_if`
-        // branch).
-        // Single filter pass that keeps both halves of CR 603.4 alive: drop
-        // triggers whose intervening-if predicate is false right now (the
-        // trigger-time check), and preserve the predicate on the survivors
-        // so the resolver can re-check at resolution time.
-        // In place, and only when there is something to filter: the
-        // `into_iter().filter().collect()` this was ran the in-place collect
-        // machinery on an empty list on most steps (PERF `(-218)`), and
-        // `retain` is an out-of-line generic that costs on an empty list too.
+        // CR 603.4 — intervening 'if': drop triggers whose `event.filter`
+        // is false now (Triskaidekaphile's 13 cards, Felidar Sovereign's 40
+        // life) and keep the predicate on the survivors so the resolver
+        // re-checks it (`intervening_if`). In place, and only when non-empty:
+        // `retain` costs even on an empty list (PERF `(-218)`).
         let mut triggers_with_filter = candidates;
         if !triggers_with_filter.is_empty() {
             triggers_with_filter.retain(|(src, _eff, ctrl, filter)| {
@@ -1831,13 +1728,9 @@ impl GameState {
             });
         }
         // CR 603.3b — APNAP order: the active player's triggers push first
-        // (resolving last). Battlefield-Vec order is otherwise preserved as
-        // each controller's chosen same-controller order (stable sort).
-        // Ranked off `apnap_sort` (turn order from the active player, so an
-        // Aeon Engine reversal and departed seats are honoured like every
-        // other APNAP path), not seat index.
-        // Only a queue of two or more has an order to settle (nearly every
-        // step has none).
+        // (resolving last); the stable sort keeps battlefield order within a
+        // controller. Ranked by `apnap_sort` (turn order, so Aeon Engine
+        // reversals and departed seats count), not seat index.
         if queue.len() > 1 {
             let order = self.apnap_sort((0..self.players.len()).collect());
             let apnap_rank = |seat: usize| order.iter().position(|&s| s == seat).unwrap_or(usize::MAX);
@@ -1846,9 +1739,6 @@ impl GameState {
         self.drain_trigger_queue(queue);
     }
 
-    /// CR 714 — put a lore counter on a Saga and fire the chapter ability/ies
-    /// for the new lore-counter total. Called on ETB (chapter I) and as a
-    /// turn-based action at the start of the controller's precombat main.
     /// CR 714.2b — a Saga entering the battlefield gets its first lore
     /// counter. CR 702.155 (Read Ahead): a read-ahead Saga instead enters with
     /// a chosen number of lore counters (1..final chapter), firing only the
@@ -1931,6 +1821,9 @@ impl GameState {
         self.drain_trigger_queue(queue);
     }
 
+    /// CR 714 — put a lore counter on a Saga and fire the chapter ability/ies
+    /// for the new lore-counter total. Called on ETB (chapter I) and as a
+    /// turn-based action at the start of the controller's precombat main.
     pub fn saga_advance(&mut self, card_id: CardId) {
         use crate::card::CounterType::Lore;
         let Some(card) = self.battlefield.find_by_id(card_id) else {
@@ -2337,56 +2230,33 @@ impl GameState {
     /// mills a card a turn, so its library size moves and it never anchors.
     pub const NO_PROGRESS_DRAW_REPEATS: u32 = 12;
 
-    /// Sample one turn in this many, rather than every turn — the second half
-    /// of the reason this is not a throughput regression (see
-    /// [`NO_PROGRESS_WATCH_FROM_TURN`](Self::NO_PROGRESS_WATCH_FROM_TURN) for
-    /// the first). A loop of period `p` sampled every `k` turns has period
-    /// `p / gcd(p, k)` in sample space, which for every `p` up to
-    /// [`NO_PROGRESS_MAX_PERIOD`](Self::NO_PROGRESS_MAX_PERIOD) and `k = 4` is
-    /// 1, 1, 3, 1, 5, 3, 7, 2 — all inside the period the watch can see. So
-    /// the only thing sampling costs is latency: 12 repeats four turns apart
-    /// is the same 48 turns of no progress that 48 consecutive samples were.
+    /// Sample one turn in this many. A loop of period `p` sampled every `k`
+    /// turns has period `p / gcd(p, k)` in sample space, which for `k = 4` and
+    /// every `p` up to [`NO_PROGRESS_MAX_PERIOD`](Self::NO_PROGRESS_MAX_PERIOD)
+    /// stays inside the visible period — so sampling costs only latency.
     pub const NO_PROGRESS_SAMPLE_EVERY: u32 = 4;
 
     /// The longest turn-loop this can see, in turns, before it re-anchors on
     /// the latest state — [`MANDATORY_LOOP_MAX_PERIOD`](Self::MANDATORY_LOOP_MAX_PERIOD)'s
     /// role one level up. Two seats alternating is period 2; four seats, 4.
     ///
-    /// ⚠ **PRICED AND NOT MOVED (2026-09-13), BY TWO SESSIONS THAT MET ON THE
-    /// SAME BOARD.** `all` 1159 — the one cap that ever survived the sweep's
-    /// 50,000-action re-run — was not bounded by this. Both of its dumps read
-    /// `since 0/8`, so the anchor was matching at the moment the cap fired;
-    /// the same cell at a 200,000-action budget ran to turn 9,099 and read
-    /// `repeats 6/12`, *lower* than the 10/12 it reached at 50,000, and at
-    /// 400,000 to turn 18,202 and `repeats 0/12`. More budget did not
-    /// converge. Raising this, or lowering
-    /// [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS), would
-    /// only have changed which board survived.
-    ///
-    /// **What moved that digest was the tapped set, and the answer was to stop
-    /// digesting it rather than to tolerate it.** `CRAB_PROGRESS_WATCH=2000`
-    /// printed the field list on the capped game: two states, differing in one
-    /// permanent's tap, in runs of 11 / 9 / 20 / 9 / 19 samples — and 9 misses
-    /// is one past this constant, so every run of returns died a sample short.
-    /// `fingerprint_as` drops `tapped` on the turn watch now, the stream on
-    /// that board is constant, and the cell is `cap 0 / draw 10`. The reading
-    /// that stands is the one about THIS constant: a periodicity detector
-    /// cannot be tuned into seeing an aperiodic stream, so when one shows up,
-    /// ask which field is making it aperiodic and whether that field is
-    /// progress. `fresh_seed_sweep.sh`'s header has the numbers.
+    /// ⚠ Priced and not moved (2026-09-13): `all` 1159 survived the cap
+    /// because its digest stream was aperiodic (one permanent's tap), not
+    /// because this was too small — more budget didn't converge, and raising
+    /// this (or lowering
+    /// [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS)) would
+    /// only change which board survives. The fix was to stop digesting
+    /// `tapped` on the turn watch. A periodicity detector
+    /// can't be tuned into seeing an aperiodic stream: when one shows up, ask
+    /// which field makes it aperiodic and whether that field is progress.
+    /// `fresh_seed_sweep.sh`'s header has the numbers.
     pub const NO_PROGRESS_MAX_PERIOD: u32 = 8;
 
-    /// The turn the watch starts sampling on, and **the only reason it is not
-    /// a throughput regression.** `end_turn` is not a per-game event: a bot
-    /// probe that simulates through combat ends turns on its clone too, 3,234
-    /// times over a six-game `cube` run against ~150 real ones, and one
-    /// 1,074-Ir digest apiece was +0.167 % of the pool (2,085,000,297 ->
-    /// 2,088,492,125). A draw needs
-    /// [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS) returns to
-    /// an anchor, so no game can be drawn before turn 48 whatever this is set
-    /// to; sampling from 30 costs one `u32` compare on every turn that could
-    /// not have been in a loop, and the sims — which live a turn or two ahead
-    /// of a game that mostly ends before turn 30 — stop paying for it.
+    /// The turn the watch starts sampling on. Bot probes end turns on clones
+    /// too, and a digest per turn cost +0.167 % of `cube`; a draw needs
+    /// [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS) returns,
+    /// so none can happen before turn 48 anyway, and sampling from 30 costs
+    /// one compare on turns that couldn't be in a loop.
     pub const NO_PROGRESS_WATCH_FROM_TURN: u32 = 30;
 
     /// CR 732.3 guard — reject an activation that repeats a loop. Called before
@@ -2397,43 +2267,21 @@ impl GameState {
     /// [`FREE_ACTIVATION_REPEAT_CAP`](Self::FREE_ACTIVATION_REPEAT_CAP) times
     /// with nothing but the stack moving.
     ///
-    /// ⚠ **Two things this got wrong for its whole life, and it caught nothing
-    /// because of them.** Both were found by the robustness grid's `--pilots`
-    /// leg — `abilarms` on `--decks cube`, the first run that ever put a pilot
-    /// other than `gang` under `debug-assertions`.
+    /// ⚠ Three past bugs (found by the robustness grid's `abilarms` pilot)
+    /// that made the cap unreachable — don't reintroduce them:
+    /// * hashing [`loop_fingerprint`](Self::loop_fingerprint), which counts
+    ///   the stack, so no announcement matched the last (Blinking Spirit
+    ///   stacked 49,905 copies);
+    /// * watching only `is_free()` abilities — a cost spelled in the effect is
+    ///   paid at resolution (Greater Good: 49,427 copies). The question is
+    ///   whether the state moved, not the printed cost;
+    /// * a mana ability resetting the watch (Basalt Monolith paying its own
+    ///   untap). The caller skips mana abilities (CR 602.2b: part of the cost).
     ///
-    /// * It hashed [`loop_fingerprint`](Self::loop_fingerprint), **which counts
-    ///   the stack** — and an announcement is exactly a `stack.len() + 1`. The
-    ///   watch therefore never matched its own previous call, the repeat counter
-    ///   reset to 1 every time, and the cap was unreachable. Blinking Spirit
-    ///   (`{0}`: return this to its owner's hand) reached **49,905 copies of one
-    ///   ability on one stack** before the action cap stopped the game.
-    /// * It only watched `is_free()` abilities, on the argument that paying a
-    ///   cost is itself a game choice that moves the state. **A cost spelled in
-    ///   the *effect* is paid at resolution, not at announcement** — Greater
-    ///   Good's "Sacrifice a creature: draw three" is written that way and its
-    ///   own card comment predicts this ("a bot could activate it with nothing
-    ///   to sacrifice, for ever"): 49,427 copies. The printed cost is not the
-    ///   question; whether the state moved is.
-    ///
-    /// * A third, found the same way (`abilarms`, `--decks all --seed 773`,
-    ///   2026-09-09): **a mana ability reset the watch.** The auto-tapper
-    ///   announces one inside the announcement it pays for, so Basalt Monolith
-    ///   tapping itself for `{C}{C}{C}` to pay its own `{3}` untap read as a
-    ///   period-2 key stream and never repeated. The caller now skips this
-    ///   for a mana ability (CR 602.2b: it is part of the cost, not a choice
-    ///   of its own), and the land-tap fast path no longer resets it.
-    ///
-    /// **The fingerprint is computed only when the key repeats** (PERF
-    /// `(-220)`). A different ability resets the watch, and a reset compares
-    /// its fingerprint against nothing, so it stores `n == 0` — "pending" —
-    /// instead of walking the board. Consecutive same-key announcements are
-    /// 0.9-2.5 % of all announcements over a six-game run of the three
-    /// pools, and the walk was 1.1 % of `cube`. The pending announcement
-    /// counts as unchanged when the key does repeat, so a loop is refused at
-    /// the same announcement as before; the one case that moves is a repeat
-    /// whose *first* two announcements saw different states, which the cap
-    /// now refuses one announcement earlier — still ~50 identical repeats.
+    /// The fingerprint is computed only when the key repeats (PERF `(-220)`):
+    /// a reset stores `n == 0` ("pending"), which counts as unchanged on the
+    /// next same-key announcement. A repeat whose first two announcements saw
+    /// different states is refused one announcement earlier than before.
     ///
     /// [`activation_fingerprint`]: Self::activation_fingerprint
     pub(crate) fn check_free_activation_loop(
@@ -2491,15 +2339,11 @@ impl GameState {
         let (w1, w2) = (self.mandatory_loop_watch.1, self.mandatory_loop_watch.2);
         self.mandatory_loop_watch.1 = w1 & 0xFFFF;
         self.mandatory_loop_watch.2 = w2 & 0xFFFF;
-        // Counters are growth too: Heliod and a lifelinking Shalai, with
-        // Pariah turning the damage aside, put one on Shalai every cycle
-        // and never repeat a board (four-seat audit pod seed 196001 ran to
-        // the action cap). Read only for a trigger — the watch ignores the
-        // rest.
-        // So is life lost by a seat that is still in at 0 or less: it cannot
-        // lose (Platinum Angel), so the drain is a number running away, not
-        // progress — Vito and Exquisite Blood against such a seat never
-        // repeat a life total (CR 104.4b; pod seed 924354).
+        // Counters are growth too (Heliod + lifelinking Shalai + Pariah add
+        // one every cycle; pod seed 196001) — read only for a trigger. So is
+        // life lost by a seat that can't lose at 0 or less (Platinum Angel;
+        // Vito + Exquisite Blood, CR 104.4b, pod seed 924354): a runaway
+        // number, not progress.
         let grew = self.battlefield.len() > board_before
             || (was_trigger
                 && events.iter().any(|e| match *e {
@@ -2512,22 +2356,17 @@ impl GameState {
         let grow = self.note_growth_loop(was_trigger, depth_before, grew, (w2 >> 16, w1 >> 16), &mut events);
         let mut long_chain = false;
         if was_trigger && self.game_over.is_none() {
-            // The watch holds an *anchor* fingerprint and counts the trigger
-            // resolutions that return the game to it. Comparing each
-            // resolution only with the one before it saw period-1 loops and
-            // nothing else: two Portable Holes and a mandatory Leonin
-            // Relic-Warder cycled three distinct boards for 6,000 actions
-            // (fresh-seed sweep, 2026-09-09) with the old watch resetting on
-            // every step. A chain that has not come back to the anchor within
-            // `MANDATORY_LOOP_MAX_PERIOD` resolutions is progress and
-            // re-anchors on its latest state.
+            // The watch holds an *anchor* and counts resolutions returning to
+            // it; comparing only with the previous resolution saw period-1
+            // loops only (two Portable Holes + Leonin Relic-Warder cycled
+            // three boards for 6,000 actions). A chain that hasn't returned
+            // within `MANDATORY_LOOP_MAX_PERIOD` is progress and re-anchors.
             let (anchor, repeats, since) = self.mandatory_loop_watch;
             // PERF `(-344)` — the digest's scalar head first, its O(board)
-            // tail only when the head cannot settle it. `fp_mix` is injective
-            // in its accumulator, so a moved head over an unmoved board is a
-            // moved digest; and the branch a moved digest takes here, with an
-            // anchor set and `since` inside the period, is `since + 1`, which
-            // never reads the digest. 54.4 % of `cube`'s samples take it.
+            // tail only when the head can't settle it. `fp_mix` is injective
+            // in its accumulator, so a moved head means a moved digest, and
+            // that branch (anchor set, `since` inside the period) is
+            // `since + 1`, which never reads the digest.
             let head = self.fingerprint_head(true, self.turn_number, false, true);
             let settled_by_head =
                 anchor != 0 && since < Self::MANDATORY_LOOP_MAX_PERIOD && head != self.mandatory_loop_head;
@@ -2568,89 +2407,49 @@ impl GameState {
         Ok(events)
     }
 
-    /// The digest behind both loop watchdogs.
-    ///
-    /// `with_stack` is the whole difference between them. The **resolution**
-    /// watch (CR 104.4b) wants it: a trigger chain that resolves and re-pushes
-    /// returns the stack to the same depth, so a moving depth is real progress.
-    /// The **announcement** watch (CR 732.3) must not have it: announcing is
-    /// precisely what grows the stack, so including it made that watch unable to
-    /// match its own previous call. The mana pools go in on the announcement
-    /// side only, where paying mana is the commonest way an activation moves the
-    /// state without touching a zone; the resolution side keeps its historical
-    /// field list so its committed behaviour is unchanged.
+    /// The digest behind both loop watchdogs; `with_stack` is the difference.
+    /// The resolution watch (CR 104.4b) includes the stack — a re-pushing
+    /// chain returns to the same depth, so a moving depth is progress. The
+    /// announcement watch (CR 732.3) must not, since announcing grows the
+    /// stack. Mana pools are mixed on the announcement side only.
     fn fingerprint(&self, with_stack: bool) -> u64 {
         self.fingerprint_as(with_stack, self.turn_number, false)
     }
 
     /// The game-state digest the three watchdogs compare: everything a
-    /// progressing chain would move (life, zone sizes, counters, the stack's
-    /// shape). Deliberately coarse — a false *negative* just means the draw
-    /// isn't detected, while a false positive would end a live game.
+    /// progressing chain would move (life, zone sizes, counters, stack
+    /// shape). Deliberately coarse — a false negative only misses a draw; a
+    /// false positive would end a live game.
     ///
-    /// Mixed with SplitMix64's finalizer ([`fp_mix`]) rather than through a
-    /// `Hasher`. `DefaultHasher` is SipHash-1-3 at ~52 Ir a `write`, and this
-    /// digest writes ten fields plus four per battlefield permanent: **2,424
-    /// calls cost 12,546,606 Ir, 0.78 % of a six-game `--decks sos` run** at
-    /// the fifty-ninth tip. The finalizer avalanches every input bit across
-    /// all 64 output bits in ten instructions, which is the property the
-    /// paragraph above asks for. The engine's own `fxhash` is the wrong tool
-    /// here — it is a *map* hasher and its own doc says it is not
-    /// collision-resistant.
+    /// Mixed with SplitMix64's finalizer ([`fp_mix`]): full avalanche in ten
+    /// instructions, where SipHash cost 0.78 % of `sos` (fifty-ninth tip);
+    /// `fxhash` is a map hasher, not collision-resistant. Split into
+    /// [`fingerprint_head`](Self::fingerprint_head) /
+    /// [`fingerprint_tail`](Self::fingerprint_tail) for PERF `(-344)`.
     ///
-    /// Split into [`fingerprint_head`](Self::fingerprint_head) and
-    /// [`fingerprint_tail`](Self::fingerprint_tail) for PERF `(-344)`: the
-    /// CR 104.4b watch settles 54.4 % of its `cube` samples off the head
-    /// alone and never walks the board for them.
-    ///
-    /// The two flags are the turn-granular watch's, and the other two must
-    /// not have them.
-    ///
-    /// `turn` is the turn number to mix (the turn watch passes `0`: a loop
-    /// whose period is a whole turn moves the real one every cycle, which is
-    /// exactly why the resolution watch cannot see it). `player_counters`
-    /// folds in the per-player counters the historical field list never
-    /// carried — energy, experience and the dungeon room. Those three are the
-    /// only player-visible progress a turn can make while every zone size,
-    /// life total and permanent stays put, so leaving them out would let the
-    /// turn watch draw a game that was getting somewhere. They stay off the
-    /// other two digests, whose committed behaviour is not this commit's.
-    ///
-    /// `player_counters` is the turn watch's flag in both directions: it also
-    /// **takes two things out** that are progress within a turn and are not
-    /// progress across one — a life total past the saturation band, and which
-    /// permanents are tapped. Both are commented at their field below.
+    /// `turn` is the turn to mix (the turn watch passes `0`: a whole-turn
+    /// loop moves the real number every cycle). `player_counters` is the turn
+    /// watch's flag: it adds energy, experience and dungeon room (progress a
+    /// turn can make with every zone still) and drops saturated life and
+    /// tapped-ness (progress within a turn but not across one). The other two
+    /// digests keep their historical field lists.
     fn fingerprint_as(&self, with_stack: bool, turn: u32, player_counters: bool) -> u64 {
         let h = self.fingerprint_head(with_stack, turn, player_counters, true);
         self.fingerprint_tail(h, player_counters)
     }
 
-    /// The scalar half of [`fingerprint_as`](Self::fingerprint_as): turn, stack
-    /// depth, the per-seat totals and the two zone lengths — everything the
-    /// digest reads that is **not** per-permanent, at ~10 mixes against the
-    /// tail's one a permanent.
-    ///
-    /// Its own value is usable as a *necessary condition* for the full digest,
-    /// because [`fp_mix`] is injective in its accumulator: two states with the
-    /// same permanent stream and different heads cannot digest equal. PERF
-    /// candidate (L) is the consumer.
-    ///
-    /// `with_life: false` leaves the life totals out — the CR 732.2 drain
-    /// watch's digest (`drain_shortcut.rs`), which reads them on the side.
+    /// The scalar half of [`fingerprint_as`](Self::fingerprint_as): turn,
+    /// stack depth, per-seat totals and the two zone lengths. Because
+    /// [`fp_mix`] is injective in its accumulator, an unequal head proves an
+    /// unequal digest. `with_life: false` leaves life totals out (the CR 732.2
+    /// drain watch, `drain_shortcut.rs`, reads them separately).
     pub(crate) fn fingerprint_head(&self, with_stack: bool, turn: u32, player_counters: bool, with_life: bool) -> u64 {
-        // ⚠ A LIFE TOTAL PAST THE SATURATION BAND IS NOT A NUMBER, IT IS A
-        // STATE: "this seat cannot be killed". Draining 1 a turn off `i32::MAX`
-        // moves the digest every sample and ends the game in two billion turns,
-        // which is what `all` 1159 does — a Beacon of Immortality board where
-        // Basilica Screecher's extort takes 1 from a saturated seat and the
-        // next Beacon doubles it back. The turn watch reached `repeats 2/12`
-        // there and re-anchored forever, so the one verdict an unwinnable game
-        // has was never reached and the game ran to the 50,000-action cap at
-        // turn 2,270. Clamping to the band `cap_diagnosis` already calls
-        // saturated (`SCALE_CEILING * 1_000`, ten million — a life no ordinary
-        // game reaches) makes that drift stop being progress. **Only on the
-        // turn watch**: the other two digests' committed behaviour is not this
-        // commit's, and they carry `player_counters: false`.
+        // ⚠ A life total past the saturation band is a state ("can't be
+        // killed"), not a number: `all` 1159 (Beacon of Immortality + an
+        // extort) drained 1 a turn off a saturated seat and the turn watch
+        // never settled, running to the action cap. Clamp to
+        // `SCALE_CEILING * 1_000` (what `cap_diagnosis` calls saturated) —
+        // on the turn watch only (`player_counters`).
         let life_of = |p: &crate::player::Player| -> i32 {
             let band = crate::player::SCALE_CEILING.saturating_mul(1_000);
             if player_counters && p.life > band { band } else { p.life }
@@ -2676,37 +2475,19 @@ impl GameState {
     /// The per-permanent half, chained onto [`fingerprint_head`]'s value.
     pub(crate) fn fingerprint_tail(&self, head: u64, player_counters: bool) -> u64 {
         let mut h = head;
-        // ⚠ WHICH PERMANENTS ARE TAPPED AT THE END OF A TURN IS BOOKKEEPING,
-        // NOT PROGRESS — and it is the whole of what kept `all` 1159 running
-        // to the action cap at turn 18,202. `CRAB_PROGRESS_WATCH=2000` printed
-        // every quantity this digest reads on that board: the turn-granular
-        // watch sees exactly TWO states, and after the life clamp above they
-        // differ in nothing but one permanent's tap. The bot taps a 33rd land
-        // in bursts, so the sampled stream runs 11 of one state, 9 of the
-        // other, 20, 9, 19 — and 9 misses is one past
-        // `NO_PROGRESS_MAX_PERIOD`, so every run of returns was thrown away
-        // one sample before it could reach `NO_PROGRESS_DRAW_REPEATS`
-        // (`repeats 10/12` at the 50,000-action budget, `0/12` at 400,000).
-        // Raising the patience would have bought this one board and lost the
-        // next; a tap the untap step takes back is not a game getting
-        // anywhere, and dropping it makes the stream constant.
+        // ⚠ Which permanents are tapped at end of turn is bookkeeping, not
+        // progress, and it alone kept `all` 1159 running to the action cap:
+        // after the life clamp its two states differed only in one tap, in
+        // runs just longer than `NO_PROGRESS_MAX_PERIOD`. Dropped on the turn
+        // watch only (`player_counters`); within a turn a tap is a real move.
         //
-        // **Only on the turn watch** — the resolution and announcement
-        // digests read tapped-ness WITHIN a turn, where a tap is a cost paid
-        // and a real move, and their committed behaviour is not this
-        // commit's. Same gate as the life clamp: `player_counters`.
-        //
-        // ⚠ **THE SAME SHAPE IS STILL IN `c.id` AND IT IS THE NEXT PLACE TO
-        // LOOK.** A permanent enters this stream by a monotonic id, so a board
-        // that REPLACES one with an identical one — a token made and
-        // sacrificed every turn, a blink that returns a new object (CR 400.7)
-        // — never returns to an anchor and can never be drawn, whatever the
-        // three constants are. Pinned in
-        // `cr_104_4_the_turn_digest_reads_progress_and_not_bookkeeping` and
-        // NOT fixed: no board has asked (one survived cap in ~3.1 M swept
-        // games), and `id` is what tells two boards apart, so keying a
-        // definition instead changes what the digest means. Do it with a
-        // board in hand and a negative control, the way this field was done.
+        // ⚠ The same shape remains in `c.id`: a board that replaces a
+        // permanent with an identical new object each turn (token made and
+        // sacrificed, a CR 400.7 blink) never returns to its anchor. Pinned
+        // in `cr_104_4_the_turn_digest_reads_progress_and_not_bookkeeping`
+        // and NOT fixed — no board has needed it, and keying definitions
+        // instead changes what the digest means. Fix only with a board in
+        // hand and a negative control.
         let tap_bit = u64::from(!player_counters);
         for c in &self.battlefield {
             // One word a permanent — id, tapped and a 30-bit damage — and a
@@ -2940,17 +2721,12 @@ impl GameState {
                     return Ok(events);
                 }
                 if card.definition.is_permanent() && !card.casting_alt_half() {
-                    // Collect ETB triggers before moving card into battlefield.
-                    // `mut` so the enters-as-copy path can swap in the
-                    // copied object's ETB triggers (CR 707.5).
-                    // Carry each self-ETB trigger's intervening-`if`
-                    // (`event.filter`) so it can be re-evaluated once the card
-                    // is on the battlefield (CR 603.4) — the inline resolution
-                    // path used to drop it, firing filtered self-ETB triggers
-                    // unconditionally (Corrupted / kicker-gated ETBs).
-                    // CR 701.28 / 712.14 — a spell cast converted enters back
-                    // face up: its ETB triggers and enters-with-counters are
-                    // the back face's (Blaster, Morale Booster's modular 3).
+                    // Collect ETB triggers before the card moves (`mut` so the
+                    // enters-as-copy path can swap in the copied object's,
+                    // CR 707.5). Each keeps its intervening-`if`
+                    // (`event.filter`) for CR 603.4 re-evaluation on the
+                    // battlefield. CR 701.28 / 712.14 — a converted cast enters
+                    // face up with the back face's ETBs and counters (Blaster).
                     let entering_def: &crate::card::CardDefinition = match &card.definition.back_face {
                         Some(back) if card.cast_converted => back,
                         _ => &card.definition,
@@ -2987,20 +2763,12 @@ impl GameState {
                     // Stamp the cast's X so ETB *triggered* abilities can read
                     // it (Dune Drifter's MV-≤-X graveyard return).
                     card.cast_x_value = x_value;
-                    // CR 306.5b — a planeswalker spell resolving enters with
-                    // its printed loyalty. Unconditional, not only the
-                    // Compleated case it used to be: a fresh card carries the
-                    // `CardInstance::new` seed, but a walker that had been on
-                    // the battlefield had its counters cleared when it left
-                    // (CR 122.2), and a *recast* — Suspend Aggression's
-                    // "its owner may play it", a bounce, any exile-and-return
-                    // that casts rather than moves — entered at 0 loyalty and
-                    // died to SBA on the spot (recorded replay, 2026-08-27:
-                    // SpellCast → PermanentEntered → PlaneswalkerDied in one
-                    // batch). The zone-*move* path already re-seeds for the
-                    // same reason; the cast path was the gap. CR 702.150c —
-                    // a Compleated walker cast with life still enters with
-                    // two fewer per {C/P} pip paid with life.
+                    // CR 306.5b — a resolving planeswalker spell enters with its
+                    // printed loyalty, always: a recast walker (bounce, Suspend
+                    // Aggression) had its counters cleared on leaving (CR 122.2)
+                    // and used to enter at 0 and die to SBA. CR 702.150c — a
+                    // Compleated walker enters with two fewer per {C/P} pip
+                    // paid with life.
                     if card.definition.is_planeswalker() && card.definition.base_loyalty > 0 {
                         let loyalty = card
                             .definition
@@ -3036,23 +2804,17 @@ impl GameState {
                     // A copy of a permanent spell wasn't cast (CR 707.10): it
                     // resolves into a token (707.10f) that never was.
                     card.entered_by_cast = !card.is_token;
-                    // CR 302.6 — and being a new object means it is summoning
-                    // sick again. `CardInstance::new` arms the flag, so a card
-                    // cast from a fresh draw was fine; a card that had already
-                    // been on the battlefield kept the *cleared* flag through
-                    // its bounce and came back able to attack the turn it was
-                    // recast. The zone-change path (`Effect::Move` into play)
-                    // already re-arms it the same way; the cast path did not.
+                    // CR 302.6 — a new object is summoning sick again. A card
+                    // that had been on the battlefield kept its cleared flag
+                    // through a bounce and could attack the turn it was
+                    // recast; `Effect::Move` into play already re-arms it.
                     card.summoning_sick = card.definition.is_creature();
-                    // CR 400.7 — a new object on the battlefield, but NOT
-                    // `enter_as_new_object`: CR 400.7d keeps a characteristic
-                    // change applied to the permanent spell on the permanent
-                    // it becomes (`cr_112_4_permanent_spell_pump_survives_
-                    // resolution`), so the pumps stay and an earlier life's
-                    // state is cleared where the card LEFT the battlefield.
-                    // Damage alone is reset here rather than there (see
-                    // `place_card_at_resolved_zone`); the `CardData` write
-                    // above already unshared the card, so it is free.
+                    // CR 400.7 — a new object, but NOT `enter_as_new_object`:
+                    // CR 400.7d keeps characteristic changes applied to the
+                    // permanent spell (`cr_112_4_permanent_spell_pump_survives_
+                    // resolution`); the old life's state was cleared where the
+                    // card left. Damage alone resets here (see
+                    // `place_card_at_resolved_zone`); the card is already unshared.
                     card.damage = 0;
                     // CR 613.7d — its timestamp is its entry time. The event
                     // dispatch stamps it again, but this resolution's own
@@ -3194,12 +2956,9 @@ impl GameState {
                     }
                     // CR 603.7e — one-shot "your next creature spell enters
                     // with N counters / these keywords" riders (FIN "Summon"
-                    // saga chapters — Fenrir II counters, Brynhildr Gestalt haste).
-                    // Both takes behind a read (the `PlayerCold` rule): the
-                    // keyword list is a cold-group field, and an unguarded
-                    // `take` on it deep-copied the caster's cold group on
-                    // every creature resolution in a simulation clone —
-                    // 4,978 a sealed six-game run (PERF `(-284)`).
+                    // sagas: Fenrir II, Brynhildr Gestalt). Both takes sit
+                    // behind a read: the keyword list is a `PlayerCold` field
+                    // and an unguarded `take` deep-copies the group (PERF `(-284)`).
                     if is_creature_resolve {
                         if !self.players[caster].pending_creature_etb_counters.is_empty() {
                             for (kind, n) in std::mem::take(
@@ -3395,15 +3154,9 @@ impl GameState {
                     }
 
                     // CR 303.4f / 303.4h — an Aura permanent spell enters
-                    // the battlefield attached to the permanent its single
-                    // target chose. Wiring the `attached_to` link makes the
-                    // Aura's `equipped_bonus` (P/T via layer 7c, keywords
-                    // via layer 6) flow onto the enchanted creature, and the
-                    // stale-link SBA in this file moves the Aura to the
-                    // graveyard if its host ever leaves.
-                    // Also attaches a bestowed enchantment-creature (CR
-                    // 702.103) cast as an Aura, even though its printed type
-                    // line isn't an Aura.
+                    // attached to its target, so its `equipped_bonus` flows
+                    // (layers 6/7c) and the stale-link SBA can bin it later.
+                    // Also a bestowed creature cast as an Aura (CR 702.103).
                     // CR 303.4a — "enchant player" Auras anchor to a seat.
                     if let Some(crate::game::types::Target::Player(seat)) = target
                         && let Some(aura) =
@@ -3558,13 +3311,10 @@ impl GameState {
                     // are idempotent.
                     self.apply_permanent_ascend(card_id);
 
-                    // Push ETB triggers onto the stack — Elesh Norn
-                    // replacement adjusts the trigger count (0 = suppressed
-                    // by opponent's Norn, 1+N = each of your Norns adds an
-                    // extra fire). The spell's `x_value` is threaded so
-                    // ETB-trigger expressions like `Effect::AddCounter
-                    // { amount: Value::XFromCost }` (Pterafractyl, Static
-                    // Prison) read the actual paid X.
+                    // Push ETB triggers; Elesh Norn adjusts the count (0 =
+                    // suppressed by an opponent's Norn, 1+N with N of yours).
+                    // `x_value` is threaded so `Value::XFromCost` ETBs
+                    // (Pterafractyl, Static Prison) read the paid X.
                     let base_mult = crate::game::actions::etb_trigger_multiplier(
                         self,
                         caster,
@@ -3580,14 +3330,9 @@ impl GameState {
                             + crate::game::actions::ally_trigger_extra_fires(self, caster, card_id)
                     };
                     // Queued rather than pushed inline: `drain_trigger_queue`
-                    // is where a `wants_ui` controller gets asked to pick the
-                    // trigger's target (CR 115.1 — targets are chosen as the
-                    // ability goes on the stack, by its controller, not by
-                    // the engine). Pushing here auto-targeted unconditionally,
-                    // so *every* targeted ETB on a creature a human cast
-                    // silently aimed itself — a "target player creates a
-                    // token" gift always minted for the caster, and a
-                    // Flametongue always shot whatever the auto-picker liked.
+                    // asks a `wants_ui` controller for the target (CR 115.1 —
+                    // the controller chooses as it goes on the stack). Pushing
+                    // here auto-targeted every human-cast creature's ETB.
                     let mut etb_queue: Vec<crate::game::types::PendingTriggerPush> = Vec::new();
                     for (effect, filter) in etb_triggers {
                         // CR 603.4 — honor the trigger's intervening-`if`
@@ -3694,17 +3439,11 @@ impl GameState {
                         c.class_level = 1;
                     }
 
-                    // AnotherOfYours creature-ETB triggers are dispatched
-                    // by the unified event pipeline (`dispatch_triggers_
-                    // for_events` reading the `PermanentEntered` event).
-                    // The synchronous push that used to live here was a
-                    // duplicate — it both bypassed the `EventSpec.filter`
-                    // (no CR 603.4 'if' check) and left `trigger_source`
-                    // unset, so cards like Silverquill Chastiser ("when
-                    // another Inkling ETBs, drain 1") double-fired with
-                    // their filter ignored. Removed in push (modern_decks
-                    // current revision) so the dispatcher handles it as
-                    // the sole source of truth.
+                    // AnotherOfYours creature-ETB triggers are dispatched only
+                    // by the event pipeline (`dispatch_triggers_for_events` on
+                    // `PermanentEntered`). A synchronous push here used to
+                    // double-fire them with the CR 603.4 filter ignored
+                    // (Silverquill Chastiser).
                 } else {
                     let chosen_mode = mode.unwrap_or(0);
                     // CR 702.15 — Radiant Scrollwielder: while this instant/
@@ -3799,13 +3538,10 @@ impl GameState {
                 bf_slots,
                 ts_in_gy,
             } => {
-                // `mana_spent_by_color` is empty for every *triggered*
-                // ability and for every activation that paid no coloured
-                // mana, and `take_scratch!` has already emptied the field at
-                // the end of the previous resolution — so this store is an
-                // empty `Vec` over an empty `Vec` on the great majority of
-                // resolutions, and an unguarded `&mut` reach unshares the
-                // whole `ResolutionScratch` group on a probe's clone. Same
+                // `mana_spent_by_color` is empty for every trigger and every
+                // activation that paid no coloured mana, and the field is
+                // already empty from `take_scratch!`; an unguarded `&mut`
+                // here unshares `ResolutionScratch` on a probe's clone. Same
                 // guard as `clear_scratch` / `take_scratch`; PERF `(-293)`.
                 if !mana_spent_by_color.is_empty()
                     || !self.scratch.activation_mana_colors_scratch.is_empty()
@@ -3818,12 +3554,9 @@ impl GameState {
                 if source_transformed_since_push {
                     self.scratch.resolving_source_transformed = true;
                 }
-                // CR 603.4 — re-check the intervening 'if' clause as the
-                // ability resolves. "If the condition isn't true at that
-                // time, the ability is removed from the stack and does
-                // nothing." We pop the trigger off the stack the same way
-                // (the resolver caller already drained the StackItem) but
-                // skip running its `effect`.
+                // CR 603.4 — re-check the intervening 'if' as the ability
+                // resolves: if false, it is removed from the stack and does
+                // nothing (already popped; skip its `effect`).
                 if let Some(pred) = &intervening_if {
                     let mut ctx = crate::game::effects::EffectContext::for_trigger(
                         source,
@@ -3892,14 +3625,11 @@ impl GameState {
                 }
                 resolved?;
                 // CR 603.10 — a suspended resolution is the SAME resolution, so
-                // its continuation still has to read the dying object. Tearing
-                // the LKI down here left Giant Albatross's "each creature that
-                // dealt damage to it" matching nothing on the resume: the arm
-                // asked its first victim, suspended, and came back to an empty
-                // victim list. The continuation removes it instead (see
-                // `submit_decision`'s Trigger arm) — only the scoping flags are
-                // dropped now, because nothing of this resolution runs until
-                // the answer arrives and the flags must not colour what does.
+                // its continuation still reads the dying object's LKI (Giant
+                // Albatross's "each creature that dealt damage to it" found no
+                // victims on resume when it was torn down here). The
+                // continuation removes it (`submit_decision`'s Trigger arm);
+                // only the scoping flags are dropped now.
                 let suspended = self.pending_decision.is_some();
                 if had_lki {
                     self.resolving_lki_source = None;
@@ -4052,10 +3782,6 @@ impl GameState {
         events
     }
 
-    /// CR 122.1i / 122.1i — rad-counter turn-based action. As the active
-    /// player begins their precombat main phase, if they have any rad
-    /// counters they mill that many cards; for each *nonland* card milled
-    /// this way they lose 1 life and remove one rad counter.
     /// CR 701.52a — roll a d6; every Attraction `p` controls with that number
     /// lit up is visited, firing its visit ability (CR 717.5). A turn-based
     /// action: it doesn't use the stack, but the visit triggers do.
@@ -4103,6 +3829,10 @@ impl GameState {
             .map_or(0, |(_, n)| n)
     }
 
+    /// CR 122.1i / 122.1i — rad-counter turn-based action. As the active
+    /// player begins their precombat main phase, if they have any rad
+    /// counters they mill that many cards; for each *nonland* card milled
+    /// this way they lose 1 life and remove one rad counter.
     pub(crate) fn do_rad_counters(&mut self) -> Vec<GameEvent> {
         use crate::card::CardType;
         let p = self.active_player_idx;
@@ -4144,33 +3874,23 @@ impl GameState {
     }
 
     /// CR 702.26 / 502.1 — phasing turn-based action at the start of the
-    /// untap step (before permanents untap). Permanents the active player
-    /// controls that are phased out phase in; permanents they control with
-    /// phasing (plus anything attached to them) phase out. Phasing in/out is
-    /// not a zone change: no ETB/LTB triggers fire and all state is retained,
-    /// modelled by moving the `CardInstance` between `battlefield` and
-    /// `phased_out` rather than re-creating it.
+    /// untap step: the active player's phased-out permanents phase in, and
+    /// their phasing permanents (plus attachments) phase out. Not a zone
+    /// change (no ETB/LTB, state kept): the `CardInstance` moves between
+    /// `battlefield` and `phased_out`.
     pub fn do_phasing(&mut self) {
         let p = self.active_player_idx;
-        // Direct phasers currently in play (computed *before* phase-in so a
-        // permanent that phases in this step doesn't immediately phase back
-        // out), plus any Aura/Equipment attached to one of them.
-        // Computed keywords so layer-granted Phasing (Teferi's Veil-style
-        // statics) phases out too, not just the printed/EOT-granted keyword.
-        // `CantPhaseOut` only ever shrinks the set, so the presence gate on
-        // Phasing alone is exact — and it is `false` on nearly every board,
-        // which is the whole-board layer pass this step used to take per turn.
+        // Direct phasers in play, computed before phase-in (so a permanent
+        // that phases in this step doesn't phase straight back out), plus
+        // Auras/Equipment attached to them. Computed keywords, so layer-
+        // granted Phasing (Teferi's Veil) counts; `CantPhaseOut` only shrinks
+        // the set, so a presence gate on Phasing is exact.
         //
-        // The gate runs *outside* the scope, for the reason `do_untap` and
-        // `process_cumulative_upkeep` write out at their own copies of this
-        // shape: inside one, `board_keyword_in_scope` reads
-        // `frozen_effects()`, which gathers on the scope's first computed
-        // read — so asking from in there paid the very gather the gate
-        // exists to avoid, and when the answer is no *nothing else in the
-        // scope reads the memo*. That last clause is what separates this
-        // site from `declare_attackers_banded` / `declare_blockers`, where
-        // the same hoist is a loss (forty-eighth pass, +0.30 %) because a
-        // `compute_permanents` runs afterwards either way.
+        // The gate runs *outside* the freeze scope, as in `do_untap`: inside,
+        // `board_keyword_in_scope` reads `frozen_effects()` and pays the
+        // gather it exists to avoid, and on "no" nothing else here reads the
+        // memo. In `declare_attackers_banded` / `declare_blockers` the same
+        // hoist lost (+0.30 %), because `compute_permanents` runs anyway.
         let phasing_possible = self.board_keyword_in_scope(&[crate::card::Keyword::Phasing]);
         let mut to_phase_out: crate::fxhash::HashSet<crate::card::CardId> = if !phasing_possible {
             crate::fxhash::HashSet::default()
@@ -4283,13 +4003,6 @@ impl GameState {
         }
     }
 
-    /// CR 502.3 / 122.1d — whether `card_id` is currently stopped from untapping
-    /// during its controller's next untap step by a continuous prevention (a
-    /// `PreventUntap` static in any of its selector forms, or a stun counter
-    /// waiting to be removed). A read-only sibling of the set `do_untap`
-    /// computes, surfaced through the server view so the UI can flag locked
-    /// permanents. Player-scoped skips (Yosei, Bontu's) aren't included — those
-    /// are one-shot flags, not a property of the permanent.
     /// Blind Fury — creature-to-creature combat damage is doubled once per
     /// active doubler this turn (CR 614.x). Player-facing and noncombat damage
     /// are untouched.
@@ -4348,15 +4061,15 @@ impl GameState {
             })
     }
 
-    /// Fear of Sleep Paralysis — "stun counters can't be removed from
-    /// permanents your opponents control": true when an opponent of `seat`
-    /// controls the static.
     /// A stun counter on `id` can't leave it — moved as well as removed
     /// (Fear of Sleep Paralysis guards its controller's opponents').
     pub(crate) fn stun_locked_on(&self, id: crate::card::CardId) -> bool {
         self.battlefield_find(id).is_some_and(|c| self.stun_counters_stay(c.controller))
     }
 
+    /// Fear of Sleep Paralysis — "stun counters can't be removed from
+    /// permanents your opponents control": true when an opponent of `seat`
+    /// controls the static.
     pub(crate) fn stun_counters_stay(&self, seat: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
@@ -4479,28 +4192,14 @@ impl GameState {
         // CR 502.1 — phasing happens first, as a turn-based action.
         self.do_phasing();
         let p = self.active_player_idx;
-        // Untap permanents YOU CONTROL on your untap step, not just
-        // those you originally owned. A creature you've stolen
-        // (Threaten / Mind Control) untaps on your turn; one of yours
-        // that's been stolen does not. Filtering by `owner` here would
-        // leave stolen permanents permanently tapped (or, conversely,
-        // un-tap a stolen permanent on the wrong player's turn).
+        // Untap permanents you CONTROL (a stolen creature untaps on its
+        // thief's turn), not ones you own.
         //
-        // CR 701.46a / 122.1d — Stun counters interpose on the untap
-        // event: "If a permanent with one or more stun counters on it
-        // would become untapped, instead remove one stun counter from
-        // it." Implemented here by replacing the per-permanent untap
-        // with "remove one stun counter if present, otherwise flip
-        // tapped → false". Summoning sickness still clears
-        // unconditionally since CR 302.1 / 506.4 attaches that to the
-        // turn boundary, not the untap event.
-        //
-        // CR 502.3 untap-prevention — pre-compute the set of permanent
-        // ids that are blocked from untapping this step by collecting
-        // `StaticEffect::PreventUntap` selectors and intersecting them
-        // with controlled permanents. Summoning sickness still clears
-        // independently per CR 506.4 — the prevention only blocks the
-        // tapped→untapped flip, not the sickness clearance.
+        // CR 701.46a / 122.1d — a stun counter replaces the untap: remove
+        // one counter instead of flipping `tapped`. CR 502.3 — `PreventUntap`
+        // statics block the flip too (pre-computed set below). Summoning
+        // sickness clears regardless (CR 302.1 / 506.4: it's the turn
+        // boundary, not the untap event).
         use crate::card::CounterType;
         use crate::card::SelectionRequirement;
         use crate::effect::StaticEffect;
@@ -4538,20 +4237,13 @@ impl GameState {
             } else {
                 false
             };
-        // Eight blocks below — Mist of Stagnation, the Seedborn untapper list,
-        // the filtered/Endbringer set, Storage Matrix, the prevention set's
-        // static walk, the untap caps, the off-turn self-untappers and the
-        // Urban Burgeoning hosts — are each driven by a battlefield or
-        // command-zone *static ability*, and each is its own walk of the same
-        // list. One question says whether any of them can produce anything:
-        // every producing path in all eight matches one of the eleven
-        // `StaticEffect`s `card_has_untap_static` names, so a board carrying
-        // none of them makes them all empty and the step is the flip plus the
-        // two player-scoped skips (which are `Player` counters, not statics,
-        // and stay outside the gate). The battlefield half is a lane — "any
-        // static at all" was `true` on most `cube` boards and walked all eight
-        // (PERF `(-249)`); the command-zone half is a walk of two usually-empty
-        // lists.
+        // The eight static-driven walks below (Mist of Stagnation, Seedborn
+        // untappers, filtered/Endbringer, Storage Matrix, prevention, untap
+        // caps, off-turn self-untappers, Urban Burgeoning) can only produce
+        // anything through one of the `StaticEffect`s `card_has_untap_static`
+        // names, so a board with none skips them all. The two player-scoped
+        // skips are counters, not statics, and stay outside. The battlefield
+        // half is a lane (PERF `(-249)`).
         let any_static = self.battlefield.has_untap_static()
             || self.command_zone_sources().any(crate::zone::card_has_untap_static);
         // Fear of Sleep Paralysis — seats whose stun counters stay put: an
@@ -4825,21 +4517,13 @@ impl GameState {
             }
             blocked
         };
-        // Entrancing Lyre tap-lock: gather the ids referenced as a lock source
-        // and the set of currently-tapped permanents. A lock source keeps
-        // itself tapped (the "you may choose not to untap this artifact"
-        // clause, modeled as: stay tapped while it still locks a creature); a
-        // locked permanent skips its untap while its source remains tapped.
-        // Vedalken Shackles joins the same set: while it holds a stolen
-        // creature it stays tapped ("you may choose not to untap this").
-        // Only a source that actually prints "you may choose not to untap
-        // this" holds itself down; one without the clause (Kill Switch)
-        // untaps normally and releases its lock.
-        // The three sets below are read only by the loop's lock arms, and each
-        // arm is itself behind an instance flag no bench board ever sets. Two
-        // of them are a `HashSet` over the *whole* battlefield built per untap
-        // step; one walk decides whether any of them can be consulted at all,
-        // and an empty set answers `contains` exactly as an unbuilt one would.
+        // Entrancing Lyre / Vedalken Shackles tap-lock: a lock source that
+        // prints "you may choose not to untap this" stays tapped while it
+        // still locks something (Kill Switch, without the clause, untaps and
+        // releases); a locked permanent skips its untap while its source is
+        // tapped. The sets are read only by the loop's lock arms, so one walk
+        // decides whether to build them; an empty set answers `contains` as
+        // an unbuilt one would.
         let (any_tap_lock, any_presence_lock) = self.battlefield.iter().fold(
             (false, false),
             |(t, pr), c| {
@@ -4929,14 +4613,9 @@ impl GameState {
         let mut capped_untaps: crate::fxhash::HashMap<(usize, usize), u32> =
             crate::fxhash::HashMap::default();
         // CR 502.1 — ask each `MayChooseNotToUntap` permanent's controller
-        // before the loop (which borrows the battlefield mutably).
-        //
-        // The headless answer here — untap it — is the deliberate one, not an
-        // inherited default: "you may choose not to untap" is printed for the
-        // combos that want a permanent held tapped (an Icy Manipulator locked on
-        // a blocker, a vigilance-less attacker kept out of the untap step), and
-        // the engine cannot see the plan. A bot untapping everything is the
-        // ordinary line, so this stays a bare ask on purpose.
+        // before the loop (which borrows the battlefield mutably). Headless
+        // answer is "untap" on purpose: the clause exists for combo holds the
+        // engine can't see, and untapping is the ordinary line.
         let may_decline: crate::fxhash::HashSet<crate::card::CardId> = {
             let mut asking: Vec<(crate::card::CardId, usize, &'static str)> = Vec::new();
             for c in &self.battlefield {
@@ -4961,22 +4640,12 @@ impl GameState {
             }
             set
         };
-        // CR 502.3 / 613 — both untap locks must be read off the *computed*
-        // keywords, so a granted one counts too (Temporal Distortion's
-        // hourglass counters, Steel Dromedary's own; Tangle Kelp's aura
-        // grant of "doesn't untap if it attacked"). One whole-board layer
-        // pass answers both: `computed_permanent` outside a freeze scope
-        // re-gathers every continuous effect in the game per call, and these
-        // were two such calls per battlefield permanent per untap step.
-        // Neither lock is on a bench board, so the pass rides a presence gate
-        // on the two keywords it looks for.
-        //
-        // The presence gate runs *outside* the scope on purpose: inside one,
-        // `board_keyword_matching` reads `frozen_effects()`, which gathers on
-        // the scope's first computed read — so asking the question from in
-        // here paid the very gather the gate exists to avoid. Outside, the
-        // gate answers off the printed/instance legs and
-        // `keyword_grant_in_scope`.
+        // CR 502.3 / 613 — both untap locks are read off *computed* keywords
+        // so grants count (Temporal Distortion's counters, Steel Dromedary,
+        // Tangle Kelp). One whole-board layer pass answers both, behind a
+        // presence gate on the two keywords. The gate runs *outside* the
+        // freeze scope on purpose: inside, `board_keyword_matching` reads
+        // `frozen_effects()` and pays the very gather it exists to avoid.
         let untap_lock_keyword_possible = self.board_keyword_matching(|k| {
             matches!(
                 k,
@@ -5143,15 +4812,10 @@ impl GameState {
             self.dispatch_triggers_for_events(&evs);
         }
         // CR 502.3 — "untap this during each other player's untap step"
-        // (Thousand Moons Infantry). On someone else's untap step, untap each
-        // such permanent its controller didn't already untap above (Stun
-        // counters still interpose). Summoning sickness is untouched — it only
-        // clears on the controller's own turn boundary.
-        // Behind `any_static`, like the six walks above it (PERF `(-226)`):
-        // both this loop and the aura walk below read `static_abilities`
-        // only, and a static-free board — most untap steps — walked the whole
-        // battlefield twice more for nothing. The `&mut` iteration is not a
-        // second unshare (the untap loop above already took it), just the walk.
+        // (Thousand Moons Infantry): on someone else's untap step, untap each
+        // such permanent not already untapped (Stun counters still apply).
+        // Summoning sickness is untouched. Behind `any_static` like the walks
+        // above (PERF `(-226)`); the `&mut` iteration is no second unshare.
         if any_static {
             for card in self.battlefield.iter_mut() {
                 if untappers.contains(&card.controller) {
@@ -5606,18 +5270,11 @@ impl GameState {
                 }
             }
         }
-        // "This turn" is the *current* turn, one shared turn — so Infusion and
-        // every other "if you gained life this turn" gate resets for EVERY
-        // player at each untap, not just the active one.
-        //
-        // The per-player-turn convention of `lands_played_this_turn` does not
-        // transfer: land drops happen only on their controller's own turn,
-        // whereas life-gain (like spells — see `spells_cast_this_game_turn`)
-        // happens and is read on every turn. Resetting only
-        // the active player left the *non*-active player's tally standing
-        // through the whole opposing turn: life gained on your turn kept
-        // Thornfist Striker's team pump and trample switched on for all of
-        // your opponent's turn too, a full extra turn of "this turn".
+        // "This turn" is the one shared current turn, so "if you gained life
+        // this turn" resets for EVERY player at each untap. Unlike land drops
+        // (`lands_played_this_turn`), life gain happens on any turn; resetting
+        // only the active player kept Thornfist Striker's pump on through the
+        // opponent's whole turn.
         for pl in &mut self.players {
             pl.life_gained_this_turn = 0;
             pl.life_at_turn_start = pl.life;
@@ -5723,10 +5380,8 @@ impl GameState {
                 pl.may_spend_any_color_this_turn = false;
             }
         }
-        // Reset per-spell-type tallies (instant/sorcery vs creature
-        // casts). These refine `spells_cast_this_turn` for cards that
-        // need exact-type filtering (Potioner's Trove "instant or
-        // sorcery only" gate, future Magecraft variants).
+        // Reset per-spell-type tallies (instant/sorcery vs creature casts),
+        // which refine `spells_cast_this_turn` (Potioner's Trove).
         // Clear Teferi, Time Raveler's "you may cast sorceries as though they
         // had flash" flag — it expires on the start of your next turn.
         if self.players[p].sorceries_as_flash {
@@ -5738,12 +5393,9 @@ impl GameState {
         if self.players.iter().any(|pl| pl.cant_lose_this_turn) {
             self.scratch.phased_since_sweep = true;
         }
-        // Clear "this turn" lifegain locks across **every player** — CR
-        // "this turn" means the current turn, so a Skullcrack-style
-        // lock set during the previous turn expires before priority
-        // hits the new active player. Scoped wider than the per-player
-        // counters above because the lock applies to whichever player
-        // was targeted, not to the active player.
+        // Clear "this turn" lifegain locks for every player: "this turn" is
+        // the current turn, and the lock sits on whichever player was
+        // targeted (Skullcrack), not the active one.
         for pl in &mut self.players {
             let pl = &mut **pl;
             pl.cannot_gain_life_this_turn = false;
@@ -5779,18 +5431,11 @@ impl GameState {
                 self.players[p].emblems.retain(|e| !e.this_turn);
             }
         }
-        // CR 514.1 — First, if the active player's hand contains more cards
-        // than their maximum hand size (normally seven), they discard
-        // enough cards to reduce their hand size to that number. This
-        // turn-based action doesn't use the stack.
-        //
-        // For a `wants_ui` player we surface an interactive
-        // `Decision::Discard` so the player picks which cards to pitch (and
-        // suspend). For non-UI seats (tests, the bot's AutoDecider fallback)
-        // we keep the deterministic first-card dump, routed through the
-        // centralized `discard_card` path so the discard fires
-        // `CardDiscarded` (CR 514.3 lets discard-matters triggers fire from
-        // cleanup) and honors Madness (CR 702.35).
+        // CR 514.1 — the active player discards down to maximum hand size
+        // (turn-based, no stack). A `wants_ui` seat gets an interactive
+        // `Decision::Discard`; other seats dump deterministically from the
+        // front. Both go through `discard_card`, so `CardDiscarded` fires
+        // (CR 514.3) and Madness (CR 702.35) is honored.
         let active = self.active_player_idx;
         // CR 402.2 — "Each player's maximum hand size is normally seven
         // cards. A player may have any number of cards in their hand, but as
@@ -5892,16 +5537,11 @@ impl GameState {
             self.battlefield.iter().any(|c| c.cold_any(|k| !k.keyword_counters.is_empty()));
         self.offboard_keyword_grants = self.offboard_keyword_grants_now();
         // Until-end-of-turn flashback grants (SOS "Flashback") live on
-        // graveyard cards, which `clear_end_of_turn_effects` above doesn't
-        // reach — expire them here so the window closes at end of turn.
-        //
-        // Every write below is a `DerefMut` on a CoW handle, and this runs
-        // once per player per turn over a graveyard that only grows: reaching
-        // a card through `Player` unshares the whole `PlayerData`, `&mut
-        // player.graveyard` unshares the zone vector, and the two `= None`s
-        // deep-copy a `CardData` that already held `None`. Decide from a
-        // shared borrow whether anything is actually set, and take the `&mut`
-        // only then — the same guard `clear_end_of_turn_effects` carries.
+        // graveyard cards, which `clear_end_of_turn_effects` doesn't reach;
+        // expire them here. Every write is a CoW `DerefMut` (`PlayerData`, the
+        // zone, the `CardData`), so decide from a shared borrow and take the
+        // `&mut` only when something is set — same guard as
+        // `clear_end_of_turn_effects`.
         for pi in 0..self.players.len() {
             let player = &self.players[pi];
             let stale_grants = player.graveyard.iter().any(|c| {
@@ -6292,11 +5932,9 @@ impl GameState {
         } else {
             self.current_turn_is_extra = false;
             // Advance to the next non-eliminated player's turn (TurnStarted
-            // fires on Untap entry). If the next player has pending skip
-            // turns (Ral Zarek's -7), decrement and skip past them — keep
-            // walking until we find a player with no skip-turn debt.
-            // Safety cap at `players.len()` iterations to avoid an
-            // infinite loop in pathological "everyone skips" scenarios.
+            // fires on Untap entry), decrementing and skipping any player
+            // with skip-turn debt (Ral Zarek's -7). Capped at `players.len()`
+            // iterations in case everyone skips.
             let n_players = self.players.len();
             for _ in 0..n_players.max(1) {
                 let from = self.active_player_idx;
@@ -6333,24 +5971,14 @@ impl GameState {
         // Value credits it to `starting_player`).
         let begun = &mut self.players[self.active_player_idx].turns_begun;
         *begun = begun.saturating_add(1);
-        // Sweep expired `may_play_until` permissions across every zone.
-        // Runs *after* the turn-number bump, so `EndOfThisTurn` reads
-        // `elapsed = turn_number - granted_turn >= 1`.
+        // Sweep expired `may_play_until` permissions across every zone. Runs
+        // after the turn-number bump, so `EndOfThisTurn` reads `elapsed >= 1`.
         //
-        // `EndOfControllersNextTurn` ("its owner may play it until the end
-        // of their next turn") is asked of the turn that just *ended*
-        // rather than counted in turns elapsed. The count was
-        // `elapsed >= player_count`, which is right only when the grant
-        // lands on someone else's turn: a Suspend Aggression cast on your
-        // OWN turn 5 was swept at the cleanup of turn 6, so the permission
-        // was already gone when your turn 7 — "their next turn" — began,
-        // and the exiled cards were unplayable for the whole window the
-        // card promises. Reported from a recorded game.
-        //
-        // The turn-based form needs no player count and survives extra
-        // turns and skipped turns, both of which break the arithmetic:
-        // expire at the cleanup of the holder's first turn strictly after
-        // the grant.
+        // `EndOfControllersNextTurn` expires at the cleanup of the holder's
+        // first turn strictly after the grant, asked of the turn that just
+        // ended. Counting `elapsed >= player_count` was wrong for a grant on
+        // your own turn (Suspend Aggression on turn 5 expired before your
+        // turn 7) and breaks under extra/skipped turns.
         let turn_number = self.turn_number;
         let next_active = self.active_player_idx;
         let sweep = |c: &mut crate::card::CardInstance| {
@@ -6444,31 +6072,19 @@ impl GameState {
         self.give_priority_to_active();
     }
 
-    /// CR 104.4 — one sample of the turn-granular no-progress watch, taken at
-    /// the end of every turn (after the turn-number bump and the permission
-    /// sweep, so the sample point is the same state in every cycle).
-    ///
-    /// Shape: [`resolve_top_of_stack`]'s watch one level up. Hold an anchor,
-    /// count the turns that bring the game back to it, re-anchor when a turn
-    /// stays away longer than [`NO_PROGRESS_MAX_PERIOD`](Self::NO_PROGRESS_MAX_PERIOD).
-    /// Past [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS) the
-    /// game is a draw — the one verdict a game nobody can win or lose has.
-    ///
-    /// Cost: one digest every `NO_PROGRESS_SAMPLE_EVERY` turns past
-    /// `NO_PROGRESS_WATCH_FROM_TURN`, and a `u32` compare on every other
-    /// `end_turn`. `end_turn` is NOT a per-game event — a bot probe that
-    /// simulates through combat ends turns on its clone too (3,234 calls over
-    /// a six-game `cube` run against ~150 real turns), which is why the two
-    /// gates are there.
-    /// The digest CR 104.4's turn watch compares, exposed so the field list
-    /// can be tested as a field list: what is *not* in it is the whole of what
-    /// decides whether an unwinnable board ever gets its draw, and two of the
-    /// three things that are out were put there by a board that ran to the
-    /// action cap. Not used by the engine itself.
+    /// The digest the turn watch compares, exposed so tests can pin the field
+    /// list: what is left out decides whether an unwinnable board ever gets
+    /// its draw (two of the exclusions came from boards that hit the action
+    /// cap). Not used by the engine itself.
     pub fn progress_fingerprint(&self) -> u64 {
         self.fingerprint_as(false, 0, true)
     }
 
+    /// CR 104.4 — the turn watch samples at the end of every turn (after the
+    /// turn bump and permission sweep), like [`resolve_top_of_stack`]'s watch
+    /// one level up; it is gated by `NO_PROGRESS_SAMPLE_EVERY` /
+    /// `NO_PROGRESS_WATCH_FROM_TURN` because bot probes end turns on clones
+    /// too.
     fn watch_turn_progress(&mut self) {
         if self.game_over.is_some()
             || self.turn_number < Self::NO_PROGRESS_WATCH_FROM_TURN
@@ -6486,24 +6102,17 @@ impl GameState {
 
     /// [`watch_turn_progress`](Self::watch_turn_progress)'s state machine over
     /// one digest sample: the new `(anchor, repeats, since)` and whether the
-    /// game is now a draw.
+    /// game is now a draw. Split out so tests can feed a digest stream
+    /// directly — the shapes that decide whether the watch fires are
+    /// properties of the stream (the board that defeated it, `all` 1159,
+    /// needed 2,270 turns to produce a four-line stream).
     ///
-    /// Split out of its caller because **the shapes that decide whether this
-    /// watch fires are properties of the digest STREAM, not of any board that
-    /// fits in a test.** The one board that defeated it (`all` 1159 — Beacon
-    /// of Immortality plus an extort, both seats unkillable) needed 2,270
-    /// turns and a whole deck pool to produce its stream; the stream itself is
-    /// four lines. A test that feeds one directly can pin what the three
-    /// constants buy in the only terms that matter — how long an excursion
-    /// from the anchor may be, and how much of the count it costs.
-    ///
-    /// Read it as: hold the first sample as an anchor; every return to it is a
-    /// repeat, and [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS)
-    /// of them is CR 104.4's draw. A sample that misses does *not* cost the
-    /// count — a loop longer than one sampling period has to be allowed to
-    /// come back — but a miss that goes on for more than
-    /// [`NO_PROGRESS_MAX_PERIOD`](Self::NO_PROGRESS_MAX_PERIOD) samples gives
-    /// up on the anchor and starts again on the current state, count and all.
+    /// Hold the first sample as anchor; each return is a repeat, and
+    /// [`NO_PROGRESS_DRAW_REPEATS`](Self::NO_PROGRESS_DRAW_REPEATS) of them is
+    /// CR 104.4's draw. A miss doesn't cost the count (a loop may be longer
+    /// than one sampling period), but more than
+    /// [`NO_PROGRESS_MAX_PERIOD`](Self::NO_PROGRESS_MAX_PERIOD) misses in a row
+    /// re-anchors on the current state with the count reset.
     pub fn no_progress_step(watch: (u64, u32, u32), fp: u64) -> ((u64, u32, u32), bool) {
         let (anchor, repeats, since) = watch;
         if fp == anchor {
@@ -6695,14 +6304,13 @@ impl GameState {
         for id in orphaned {
             self.remove_permanent_from_combat(id);
         }
-        // CR 610.3 — an "until this leaves the battlefield" exile or
-        // phase-out ends when its source leaves, and leaving with its owner
-        // is leaving (Cast Out's ruling). Read before the sources go; the
-        // returns run once the departed seat's own cards are gone, so only
-        // other players' cards come back.
-        // A return that is a leave TRIGGER (Leonin Relic-Warder's printed
-        // two-trigger text) is the departed seat's and never goes on the
-        // stack (CR 800.4d): its card stays exiled, the link spent.
+        // CR 610.3 — an "until this leaves the battlefield" exile/phase-out
+        // ends when its source leaves, including with its owner (Cast Out
+        // ruling). Read before the sources go; returns run after the
+        // departed seat's cards are gone, so only others' cards come back.
+        // A return that is a leave TRIGGER (Leonin Relic-Warder) is the
+        // departed seat's and never goes on the stack (CR 800.4d): the card
+        // stays exiled.
         let mut durations: Vec<CardId> = Vec::new();
         let mut leave_triggers: Vec<CardId> = Vec::new();
         // A phased-out permanent is still on the battlefield (CR 702.26a) and
@@ -6797,14 +6405,11 @@ impl GameState {
                 }
             }
         }
-        // CR 800.4a — "any effects which give that player control of any
-        // objects **or players** end"; the reverts above are the object half,
-        // this is the player half (CR 723, Mindslaver). CR 800.4b closes the
-        // other direction — "if a player would be controlled by a player who
-        // has left the game, they aren't" — so a pending grant naming the
-        // departed seat on either side never lands. A live seat left pointing
-        // at a departed controller routes its whole turn through
-        // `acting_seat_for` to a seat that cannot act.
+        // CR 800.4a — effects giving that player control of objects *or
+        // players* end; this is the player half (CR 723, Mindslaver). CR
+        // 800.4b — a player can't be controlled by one who left, so a grant
+        // naming the departed seat on either side never lands (otherwise a
+        // live seat's turn routes through `acting_seat_for` to a dead seat).
         if !self.controlled_by.is_empty() {
             for slot in self.controlled_by.iter_mut() {
                 if *slot == Some(p) {
@@ -6921,19 +6526,13 @@ impl GameState {
         // so it is dropped rather than left as a watcher that matches for ever.
         // 800.4a's retain above is the stack; this is the registry behind it.
         self.delayed_triggers.retain(|dt| dt.controller != p);
-        // A choice the departed player was being asked to make is not made:
-        // they are no longer in the game (CR 800.4). Leaving it pending
-        // wedges every other seat, because a pending decision suppresses
-        // every other player's actions until it is answered — which is how a
-        // four-player pod produced 15 % "no legal move" games.
-        // The dropped continuation's replay log goes with it, or the next
-        // resolution's first ask would replay the departed seat's answers.
-        // Likewise an ask another seat owes while the departed player's own
-        // spell or ability resolves (CR 800.4a — it ceases to exist with its
-        // controller): a fan-out paused on the next opponent's answer.
-        // Another seat's resolution paused on the departed seat's per-seat
-        // answer (its Mob Verdict vote) is not theirs to take with them: it
-        // stays, and `resume_past_departed_asker` runs it on past the seat.
+        // CR 800.4 — a choice the departed player was being asked is not
+        // made; left pending it would wedge every other seat (a four-player
+        // pod produced 15 % "no legal move" games). Its continuation's replay
+        // log goes too. So does an ask another seat owes while the departed
+        // player's own spell/ability resolves (CR 800.4a). Another seat's
+        // resolution paused on the departed seat's answer (a Mob Verdict
+        // vote) stays; `resume_past_departed_asker` runs it past the seat.
         let resumes = self
             .pending_decision
             .as_ref()
@@ -7031,17 +6630,11 @@ impl GameState {
 
 
     /// CR 704.5u / 702.158c — while a space-sculptor permanent is on the
-    /// battlefield, every creature without a sector designation gets one; its
-    /// controller chooses, opponents of the sculptor's controller first. When
-    /// the last sculptor leaves, the designations clear (CR 702.158b).
-    /// Auto-assignment spreads a player's creatures round-robin.
-    ///
-    /// `check_state_based_actions` gates the call on `sba_board_scan`'s
-    /// `sculptor`/`sector_set` bits, which are exactly this function's own
-    /// "no sculptor and nothing designated" bail read off a walk that already
-    /// happens — so on an ordinary board this never runs at all. The walk
-    /// below stays for the other callers and for the case the gate lets
-    /// through.
+    /// battlefield, every creature without a sector gets one (its controller
+    /// chooses; opponents of the sculptor's controller first; auto-assign is
+    /// round-robin). The last sculptor leaving clears them (CR 702.158b).
+    /// The SBA caller gates on `sba_board_scan`'s `sculptor`/`sector_set`
+    /// bits, so an ordinary board never gets here.
     pub(crate) fn assign_sectors(&mut self) {
         use crate::card::{Keyword, Sector};
         // Hot path: this runs on every SBA check, so bail before allocating
@@ -7096,14 +6689,11 @@ impl GameState {
         }
     }
 
-    /// CR 613 layer 1 — keep every `copies_top_graveyard_creature` permanent
-    /// (Volrath's Shapeshifter) matched to the top creature card of its
-    /// controller's graveyard, reverting to its printed self when the top card
-    /// isn't a creature. The printed definition lives on a `shapeshifter`
-    /// `TempCopy` entry, so a snapshot round-trip recovers it by name.
-    ///
-    /// Returns whether it rewrote any definition, so the caller knows whether
-    /// the board scan it was gated on is still valid.
+    /// CR 613 layer 1 — keep each `copies_top_graveyard_creature` permanent
+    /// (Volrath's Shapeshifter) matching the top creature card of its
+    /// controller's graveyard, reverting to its printed self (kept on a
+    /// `shapeshifter` `TempCopy` entry) otherwise. Returns whether any
+    /// definition was rewritten, i.e. whether the caller's board scan is stale.
     fn sync_graveyard_shapeshifters(&mut self) -> bool {
         let any_tmp = self.temporary_copies.iter().any(|tc| tc.shapeshifter);
         let ids: Vec<CardId> = self
@@ -7183,33 +6773,12 @@ impl GameState {
         rewrote
     }
 
-    /// One battlefield pass answering "is this SBA's shape present at all?"
-    /// for every rare state-based action, so the sweep pays one walk instead
-    /// of ~20 `filter(...).collect()` passes that come back empty. Every flag
-    /// is an over-approximation of its block's own filter: false means the
-    /// block provably does nothing, true re-runs the original code unchanged.
-    /// Every definition-derived flag comes off the per-object memo
-    /// (`CardData::sba_scan_bits`), so the five list walks this loop used to
-    /// do per permanent per sweep — keywords, supertypes, card types,
-    /// enchantment subtypes, static abilities — happen once per printing
-    /// instead. The four flags that also need an instance condition are
-    /// ANDed out of the same word; the four that are purely per-instance
-    /// stay as field reads.
-    /// `(-88)`'s open half, as a count rather than a guess: how many SBA
-    /// sweeps see a game state the previous sweep on this thread already saw?
-    ///
-    /// CR 704.3 runs the sweep at every priority pass, so `perform_action_inner`
-    /// drains one per action and more; the entry asks how many of those
-    /// re-sweep a board nothing has touched. The fingerprint below covers the
-    /// sweep's read set — the battlefield's per-card instance fields and
-    /// definition pointer, both seats' life/poison/Ring level, and the lengths
-    /// of every list a gated leg walks. It is a *census instrument*, not the
-    /// gate: a shipped skip would have to prove the read set is complete, and
-    /// this only has to be close enough to size the opportunity.
-    ///
-    /// Interleaving makes it a **lower** bound: the bot's simulation clones
-    /// sweep on this same thread, so every hop between two states counts as a
-    /// change even where both states are individually static.
+    /// `(-88)`'s open half as a count: how many SBA sweeps see a state the
+    /// previous sweep on this thread already saw? The fingerprint covers the
+    /// sweep's read set (battlefield instance fields and definition pointer,
+    /// both seats' life/poison/Ring level, lengths of every gated leg's
+    /// lists). A census instrument, not a gate; a lower bound, since bot
+    /// clones sweep on the same thread and each hop counts as a change.
     ///
     /// ```text
     /// CRAB_SBA_CENSUS=1 bot_ladder --a gang --b gang --games 6 --threads 1 \
@@ -7306,6 +6875,12 @@ impl GameState {
         m | flags | ((legendary_count as u64) << SBA_LEGENDARY_COUNT)
     }
 
+    /// One pass answering "is this SBA's shape present at all?" for every rare
+    /// state-based action, so the sweep pays one walk instead of ~20 empty
+    /// `filter(...).collect()` passes. Every flag over-approximates its
+    /// block's own filter: false means the block provably does nothing, true
+    /// re-runs the original code. Definition-derived flags come off the
+    /// per-object memo (`sba_scan_bits`), once per printing.
     fn sba_board_scan(&self) -> SbaBoardScan {
         use crate::card::sba_bits as b;
         let mut s = SbaBoardScan::default();
@@ -7367,16 +6942,11 @@ impl GameState {
         s
     }
 
-    /// What the CR 704.5f/g/h death sweep has to compute layers for.
-    ///
-    /// The old form of this was a `bool` and the sweep answered it by
-    /// computing the *whole* creature board. But when neither board-global bail
-    /// fires, the per-card leg is a **necessary** condition for death, not just
-    /// a board-level hint — which is what the sweep's own `debug_assert!` has
-    /// been auditing all along — so the cards it names are the only ones whose
-    /// computed view the filter can act on. Keeping them instead of throwing
-    /// the walk's result away turns a whole-board layer pass into one over a
-    /// board's damaged permanents.
+    /// What the CR 704.5f/g/h death sweep has to compute layers for. When
+    /// neither board-global bail fires, the per-card leg is a *necessary*
+    /// condition for death (audited by the sweep's `debug_assert!`), so the
+    /// cards it names are the only ones the layer pass needs — a pass over
+    /// the damaged permanents instead of the whole board.
     fn death_sweep_scope(&self, scan: &SbaBoardScan) -> DeathSweep {
         // Two board-global bails first. Zilortha (`lethal_by_power`) measures
         // lethal damage against *computed power*, about which the instance
@@ -7388,39 +6958,21 @@ impl GameState {
         if scan.lethal_by_power || self.pt_reduction_in_scope() {
             return DeathSweep::WholeBoard;
         }
-        // A permanent printed without the Creature type can only be killed
-        // once something animates it — the same condition
-        // `compute_battlefield_creatures` uses to decide whether to run the
-        // layer pass over the whole board. Asked before the walk, so a land
-        // never pays `card_death_possible`'s counter-map sum for an answer
-        // that is thrown away.
+        // A permanent printed without the Creature type can die only once
+        // something animates it (the same test
+        // `compute_battlefield_creatures` uses), asked first so a land never
+        // pays `card_death_possible`'s counter sum.
         //
-        // **Three short-circuiting `any` walks, not one fused pass**, and that
-        // is measured, not assumed: folding all three questions into a single
-        // `battlefield.iter()` — the (-6) shape — read **+0.55 %** against
-        // this, and a first version that also moved the death legs inside read
-        // **+1.24 %**. See the Log block; the fusion device does not
-        // generalise to a walk whose per-card body is already this cheap.
-        // `check_state_based_actions` is the only caller and it is
-        // `&mut self`, so this is provably outside every freeze scope.
+        // Three short-circuiting `any` walks, not one fused pass — measured:
+        // fusing read +0.55 % (+1.24 % with the death legs inside), and
+        // moving `card_type_change_unscoped` into `sba_board_scan` read
+        // +0.255 % sos / +0.295 % fixed and was reverted (a scan bit runs the
+        // static check on every permanent; `any` short-circuits). Only
+        // caller is `&mut self`, so this is outside every freeze scope.
         //
-        // A fourth walk here, `card_type_change_unscoped`'s battlefield leg,
-        // was **measured into `sba_board_scan` and reverted at +0.255 % on
-        // `sos` / +0.295 % on `fixed`** (fifty-ninth pass): the standalone
-        // `any` short-circuits per card, while a scan bit runs
-        // `static_effect_changes_card_types` for every static ability of every
-        // permanent. `card_type_change_unscoped` came off at -5,948,694 and
-        // `sba_board_scan` went up 9,249,352 for it. Third refutation of the
-        // fusion device in this one function.
-        //
-        // The walk no longer short-circuits, which costs the tail of the
-        // battlefield on a board where something *can* die — and buys the
-        // layer pass over everything the tail holds.
-        //
-        // A loop, not a `collect`: `SmallVec`'s `Extend` is external
-        // iteration, so the collect form read `SmallVec::extend` +8.0 M and
-        // `call_mut` +10.5 M on `sealed` and gave the whole win back (PERF's
-        // standing rule, arrived at from the other side).
+        // The candidate walk doesn't short-circuit — it buys the layer pass
+        // over the tail. A loop, not `collect`: `SmallVec`'s `Extend` is
+        // external iteration and gave the whole win back on `sealed`.
         let type_change = self.card_type_change_unscoped();
         let mut candidates: SmallVec<[CardId; 4]> = SmallVec::new();
         for c in &self.battlefield {
@@ -7536,10 +7088,6 @@ impl GameState {
         self.scratch.pending_cost_events.push(GameEvent::CommanderPutIntoCommandZone { card_id, owner });
     }
 
-    /// Owning wrapper for callers with no accumulator of their own (tests,
-    /// the server's read paths). Engine callers that already hold an events
-    /// buffer call [`Self::check_state_based_actions_into`] and skip the
-    /// per-sweep `Vec` — see PERF's `(-75)`.
     /// CR 603.10 — another trigger still on the stack reads `id`'s
     /// leaves-the-battlefield snapshot, as its source or its dead subject
     /// (Grakmaw's own death trigger beside Cleopatra's Betrayal over the
@@ -7602,12 +7150,10 @@ impl GameState {
     }
 
     /// CR 704.3 — "whenever a player would receive priority, the game checks
-    /// for any of the listed conditions … then the check is repeated". The
-    /// pass below is one check; it repeats while a pass did anything (an
-    /// event), so a death that a death caused — a creature left 0/0 when the
-    /// lords pumping it died to the same Biomass Mutation — happens before
-    /// anyone acts, not at the next priority pass. Bounded; one pass where
-    /// nothing happens, which is every pass on a quiet board.
+    /// for any of the listed conditions … then the check is repeated". Repeats
+    /// (bounded) while a pass emitted an event, so a death caused by a death
+    /// (a 0/0 left when its lords died to Biomass Mutation) happens before
+    /// anyone acts. A quiet board takes one pass.
     fn check_state_based_actions_inner(&mut self, events: &mut Vec<GameEvent>, mid_resolution: bool) {
         const REPEAT_CAP: usize = 16;
         for _ in 0..REPEAT_CAP {
@@ -8135,16 +7681,12 @@ impl GameState {
             }
         }
 
-        // CR 704.8 — a permanent that leaves the battlefield during this
-        // sweep reports last-known information from the state *before* any of
-        // the sweep's actions ran. Snapshot the ±1/±1 counts here, ahead of the
-        // 122.3 annihilation, so Persist/Undying read the pre-sweep pile
-        // (Young Wolf with a +1/+1 counter that takes three -1/-1 counters
-        // dies for good). Only the Persist/Undying return reads it, and only
-        // for a card whose *printed* keywords carry one, so the map holds
-        // exactly those cards; every other lookup misses and is unused. A
-        // *granted* persist/undying (`has_death_return_keyword`) reads the
-        // current pile instead — the pre-sweep nuance is printed-only.
+        // CR 704.8 — a permanent leaving during this sweep reports LKI from
+        // before the sweep. Snapshot ±1/±1 counts ahead of the 122.3
+        // annihilation so Persist/Undying read the pre-sweep pile (a Young
+        // Wolf with a +1/+1 counter that takes three -1/-1 counters dies for
+        // good). Holds only cards *printing* one of the keywords; a granted
+        // one (`has_death_return_keyword`) reads the current pile.
         let pre_sba_pm_counters: crate::fxhash::HashMap<CardId, (u32, u32)> =
             if scan.persist_undying {
                 self.battlefield
@@ -8215,18 +7757,10 @@ impl GameState {
         // their owners' graveyards. We group tied permanents, then consult the
         // controller's decider per group (AutoDecider keeps the newest).
         let legend_groups = {
-            // Insertion-ordered association list, not a `HashMap`: the map
-            // hashed a `&str` *card name* per legendary permanent per sweep,
-            // allocated a bucket table and a `Vec` for each group and then
-            // needed a parallel `order` list anyway to keep the iteration
-            // deterministic. A board carries one to four legendaries, so a
-            // linear scan over inline storage is cheaper than one hash of a
-            // name, and it is ordered by construction.
-            //
-            // The `String` clones move to the emission below with it: a group
-            // of one is discarded, and every group is one on nearly every
-            // sweep, so the old form allocated a name per legendary permanent
-            // to throw it away.
+            // Insertion-ordered association list, not a `HashMap`: a board
+            // has one to four legendaries, so a linear scan beats hashing a
+            // name, and it is deterministic by construction. Name clones
+            // happen at emission, since almost every group is a singleton.
             let mut groups: LegendGroups<'_> = SmallVec::new();
             // CR 704.5j reads *current* supertypes, so a continuous grant of
             // the Legendary supertype (Leyline of Singularity, the Ring's
@@ -8241,12 +7775,9 @@ impl GameState {
                             .is_some_and(|cp| cp.supertypes().contains(&Supertype::Legendary)))
             };
             // CR 704.5j — Mirror Gallery turns the legend rule off entirely;
-            // Mirror Box / Sakashima only for their controller's permanents.
-            // Only *this* SBA is switched off; the rest of the sweep (deaths,
-            // loss conditions, the Aura/Equipment sweeps) still runs. The bit
-            // says one of the two is on the board; which, and whose, is read
-            // here, only then.
-            // Sliver Gravemother scopes it further, to matching permanents.
+            // Mirror Box / Sakashima only for their controller's permanents,
+            // Sliver Gravemother for matching ones. Only this SBA is off. The
+            // bit says one is on the board; which and whose is read here.
             let (legend_rule_off, mut exempt_controllers, exempt_matching) = if scan.legend_rule_off {
                 use crate::effect::StaticEffect;
                 let mut global = false;
@@ -8279,12 +7810,10 @@ impl GameState {
                 }
             }
             let mut out = Vec::new();
-            // A group needs two members, so one printed legendary on the
-            // board cannot fire the rule — and one is the common sealed
-            // board: the walk-and-group below ran on two thirds of all
-            // sweeps to build groups of one (PERF `(-260)`). A live
-            // supertype grant can make any permanent legendary, so it keeps
-            // the full walk.
+            // A group needs two members, so a single printed legendary (the
+            // common sealed board) can't fire the rule (PERF `(-260)`). A live
+            // supertype grant can make anything legendary, so it keeps the
+            // full walk.
             if !legend_rule_off && (scan.legendary_count >= 2 || supertype_grant_active) {
                 // Walk descending by id so each group's vec is newest-first.
                 let mut by_id: SmallVec<[&CardInstance; 8]> = self
@@ -8444,23 +7973,13 @@ impl GameState {
             self.remove_from_battlefield_to_graveyard_raw(id);
         }
 
-        // Collect dead creatures using layer-computed toughness. Only
-        // creatures can be in `dead`, and the `find(id)` misses below already
-        // fall back to the printed type, so the layer pass skips the
-        // permanents no card-type-changing effect can animate.
-        //
-        // The whole block is behind `death_sweep_scope`, because SBA runs at
-        // every priority pass and a board where nothing can die is the common
-        // case (86.5 % of sweeps on the `fixed` bench). `computed` is read
-        // only by this filter and by the `for id in dead` loop below, so a
-        // gated-out sweep leaves both empty and does nothing — which is the
-        // answer the layer pass would have given.
-        //
-        // `Only` narrows both halves for the same reason: a permanent the
-        // scope did not name cannot die, so computing it produces a view the
-        // filter would only read to say "no". Under `debug_assertions` the
-        // whole-board answer is computed anyway and compared, which is the
-        // audit that claim needs and the one `robustness_grid.sh` fires.
+        // Collect dead creatures using layer-computed toughness. Behind
+        // `death_sweep_scope` because a board where nothing can die is the
+        // common case (86.5 % of `fixed` sweeps when measured); a gated-out
+        // sweep leaves `computed` and `dead` empty, which is what the layer
+        // pass would have answered. `Only` narrows the pass to the cards the
+        // scope named — no other card can die. Under `debug_assertions` the
+        // whole-board answer is computed and compared (`robustness_grid.sh`).
         let scope = self.death_sweep_scope(&scan);
         let (computed, dead): (Vec<ComputedPermanent>, Vec<CardId>) =
             if matches!(scope, DeathSweep::Skip) {
@@ -8568,15 +8087,11 @@ impl GameState {
 
             self.apply_death_toughness_drain(id);
             events.push(GameEvent::CreatureDied { card_id: id });
-            // Cache the dying card's snapshot so AnotherOfYours-scope
-            // triggers AND printed-type filter predicates fire reliably
-            // even for tokens. CR 111.7's
-            // "ceases to exist" SBA removes the token from every zone in
-            // the same sweep — by dispatch time the zone-walking lookup
-            // returns None. The cached `CardInstance` survives the sweep
-            // and is consulted by `event_matches_spec` (controller lookup)
-            // and `evaluate_requirement_static` (type/keyword/counter
-            // filter). Cleared after `dispatch_triggers_for_events`.
+            // Cache the dying card's snapshot: CR 111.7 removes a token from
+            // every zone in this same sweep, so by dispatch the zone lookup
+            // returns None. `event_matches_spec` and
+            // `evaluate_requirement_static` read it (AnotherOfYours scopes,
+            // printed-type filters). Cleared after `dispatch_triggers_for_events`.
             if let Some(c) = self.dying_snapshot(id) {
                 self.died_card_snapshots.insert(id, c);
             }
@@ -8593,20 +8108,13 @@ impl GameState {
                 .battlefield
                 .find_by_id(id)
                 .map(|c| {
-                    // CR 603.10a — "leaves-the-battlefield" triggers look
-                    // back in time at the dying card. Only fire the dying
-                    // card's own die-triggers whose scope says they can
-                    // fire from self — i.e. SelfSource or YourControl /
-                    // AnyPlayer. AnotherOfYours / OpponentControl /
-                    // FromYourGraveyard are NOT self-fire scopes; skipping
-                    // them here matches the printed Oracle semantics for
-                    // "Whenever another creature you control dies" (must
-                    // be another, not this dying card).
-                    // Walk printed Dies triggers + any granted transient
-                    // ones (Rabid Attack EOT "this creature gains 'die →
-                    // draw a card'" grants ride on `granted_triggers_timed`).
-                    // CR 113.10b — a creature that lost all abilities dies with
-                    // no printed triggers to look back at (Hellcat's return).
+                    // CR 603.10a — leaves-the-battlefield triggers look back
+                    // at the dying card. Only self-fire scopes (SelfSource,
+                    // YourControl, AnyPlayer) fire from the card itself;
+                    // AnotherOfYours etc. mean "another". Printed Dies
+                    // triggers plus timed grants (Rabid Attack, via
+                    // `granted_triggers_timed`). CR 113.10b — a creature that
+                    // lost all abilities has no printed triggers (Hellcat).
                     let stripped = self.lost_all_abilities(c.id);
                     let triggers: Vec<DeathTrigger> = c
                         .definition
@@ -8662,19 +8170,12 @@ impl GameState {
                     )
                 })
                 .unwrap_or_default();
-            // CR 702.6e — Equipment-granted "dies" triggers fire as though
-            // printed on the equipped creature (Skullclamp). Collect them
-            // while the creature is still attached (pre-removal). Source is
-            // the dying creature so `Selector::This` reads its last-known
-            // info — or the attachment under `triggers_on_equipment`; the
-            // creature stays the subject either way. Controller is the
-            // creature's controller.
-            // One whole-battlefield walk per dying creature, and the line
-            // profile charges it **1.4 M x 2 lines on `cube`** — 0.17 % of the
-            // pool for a leg that fires on the boards carrying an Equipment.
-            // `attachment_in_scope` is `(-318)`'s fold read: `false` is
-            // authoritative for the whole `attached_to == Some(..)` family, so
-            // this opens on it (PERF `(-319)`).
+            // CR 702.6e — Equipment-granted "dies" triggers (Skullclamp) fire
+            // as though printed on the equipped creature, so collect them
+            // while it is still attached. Source is the dying creature (or
+            // the attachment under `triggers_on_equipment`); the creature is
+            // the subject and its controller controls the trigger. Opens on
+            // `attachment_in_scope` (`(-318)`'s fold read; PERF `(-319)`).
             if self.attachment_in_scope() {
                 let mut riders: Vec<(CardId, usize)> = Vec::new();
                 for eq in &self.battlefield {
@@ -8930,15 +8431,11 @@ impl GameState {
             self.battlefield
             .iter()
             .filter(|c| c.definition.is_aura() && c.attached_to_player.is_none())
-            // CR 704.5m — an Aura that attaches itself from its own enters
-            // trigger (Animate Dead, Necromancy) is not orphaned while that
-            // trigger is still on the stack: SBAs run before it resolves, so
-            // it has not had the chance to attach yet. Once the trigger has
-            // resolved the ordinary sweep applies and a fizzled one is swept
-            // on the next check. Only an Aura that is not yet attached: one
-            // whose host left is orphaned whatever it has on the stack (Fool's
-            // Demise's "when enchanted creature dies" trigger kept it in play,
-            // and the returned host — same id — picked it back up).
+            // CR 704.5m — an unattached Aura whose own enters trigger will
+            // attach it (Animate Dead, Necromancy) isn't orphaned while that
+            // trigger is on the stack; a fizzled one is swept next check. An
+            // Aura whose host left is orphaned regardless (Fool's Demise's
+            // dies trigger used to keep it, and the returned host re-took it).
             .filter(|c| {
                 c.attached_to.is_some()
                     || !self.stack.iter().any(|item| {
@@ -8986,14 +8483,11 @@ impl GameState {
             events.append(&mut self.remove_to_graveyard_with_triggers(id));
         }
 
-        // CR 704.5n / 704.5m / 303.4f — an Aura attached to an object it can
-        // no longer legally enchant (host lost the required type, a "you
-        // control" Aura's host changed controllers, or the host gained
-        // protection from the Aura) is put into its owner's graveyard.
-        // The filter half is only checked when the Aura's "enchant ___"
-        // filter is recoverable — distinct from the missing-host sweep
-        // above. Bestowed Auras are exempt (their host loss reverts them
-        // to creatures, handled earlier).
+        // CR 704.5n / 704.5m / 303.4f — an Aura that can no longer legally
+        // enchant its host (lost the required type, a "you control" host
+        // changed controllers, host gained protection) goes to the graveyard.
+        // Checked only when the "enchant ___" filter is recoverable. Bestowed
+        // Auras are exempt (handled earlier, they revert to creatures).
         let illegally_attached: Vec<CardId> = if !scan.aura {
             Vec::new()
         } else {
@@ -9024,14 +8518,11 @@ impl GameState {
                 let host = c.attached_to?;
                 // A missing host is the sweep above's, not this pass's.
                 self.battlefield.find_by_id(host)?;
-                // CR 704.5m — protection covers "can't be Enchanted by": a
-                // host with protection from the Aura's qualities (its color,
-                // card type, "everything", …) sheds the Aura.
-                // CR 702.16k — Spectra Ward's "this effect doesn't remove
-                // Auras": a `protection_keeps_auras` Aura on the host makes
-                // the whole host immune to the protection shed.
-                // Benevolent Blessing's narrower form spares only Auras its
-                // own controller controls.
+                // CR 704.5m — protection ("can't be Enchanted by") sheds an
+                // Aura of a protected quality. CR 702.16k — a
+                // `protection_keeps_auras` Aura (Spectra Ward) makes the host
+                // immune to the shed; Benevolent Blessing's narrower form
+                // spares only its own controller's Auras.
                 let keeps_auras = self.battlefield.iter().any(|a| {
                     a.attached_to == Some(host)
                         && a.definition.equipped_bonus.as_ref().is_some_and(|b| {
@@ -9119,16 +8610,11 @@ impl GameState {
             }
         }
 
-        // CR 704.5n — "If an Equipment or Fortification is attached to an
-        // illegal permanent or to a player, it becomes unattached from
-        // that permanent or player. It remains on the battlefield."
-        // Illegal here means the attached card isn't on the battlefield
-        // anymore (e.g. equipped creature died) OR the target permanent
-        // is no longer a legal target (no creature subtype for Equipment).
-        // The Equipment itself stays in play — only the link is cleared.
-        // CR 704.5n/q — so does anything else attached that is not an Aura
-        // once its host is gone: a Treasure some static made an Equipment
-        // stayed attached to the creature Price of Fame destroyed (a pod).
+        // CR 704.5n — an Equipment or Fortification attached to an illegal
+        // permanent (gone, or no longer a legal target) or a player becomes
+        // unattached and stays on the battlefield. CR 704.5n/q — likewise any
+        // other non-Aura attachment whose host is gone (a Treasure a static
+        // made an Equipment, after Price of Fame destroyed its creature).
         let stale_equipment_links: Vec<CardId> = if !scan.equipment_attached && !scan.other_attached {
             Vec::new()
         } else {
@@ -9211,16 +8697,11 @@ impl GameState {
             }
         }
 
-        // CR 704.5d — a token that's not on the battlefield ceases to exist.
-        // Dies / leaves-battlefield triggers have already fired by this point
-        // (they queue into the events vec before this scan), so dropping the
-        // token from its post-bf zone now matches the timing real MTG would
-        // produce. Without this, dead tokens linger in graveyards (and would
-        // count toward graveyard-size effects, mill prompts, etc.).
-        // Each `retain` unshares its CoW zone and the seat's `PlayerData`, so
-        // ask the zone's own memo first: an off-battlefield token is the rare
-        // case, and the walk this replaces was a whole library per seat per
-        // sweep (PERF `(-152)`).
+        // CR 704.5d — a token off the battlefield ceases to exist. Dies /
+        // leaves triggers have already queued, so dropping it now matches
+        // real timing (otherwise dead tokens count toward graveyard size).
+        // `retain` unshares the CoW zone and `PlayerData`, so ask the zone's
+        // memo first (PERF `(-152)`).
         for seat in 0..self.players.len() {
             if self.players[seat].graveyard.has_token() {
                 self.players[seat].graveyard.retain(|c| !c.is_token);
@@ -9236,29 +8717,19 @@ impl GameState {
             self.exile.retain(|c| !c.is_token);
         }
 
-        // Player loss conditions (CR 704.5a/b/c). Eliminated players are
-        // removed from turn/priority rotation; the game ends when ≤ 1
-        // team alive (see surviving-teams check below).
-        //
-        // Phase F: `effective_life(i)` collapses the solo-life and
-        // shared-pool (2HG) cases. When `Team.shared_life` is `Some(n)`,
-        // both teammates' effective life is `n`, so dropping the pool
-        // to ≤ 0 eliminates both members simultaneously (CR 810.8 +
-        // 704.5a). CR 810.5/810.8d — poison is likewise a shared team
-        // resource in 2HG: the members' counters are summed and the
-        // threshold is fifteen (`effective_poison` /
-        // `poison_loss_threshold` collapse both modes).
+        // Player loss conditions (CR 704.5a/b/c). Eliminated players leave
+        // turn/priority rotation; the game ends when ≤ 1 team is alive.
+        // `effective_life` / `effective_poison` / `poison_loss_threshold`
+        // fold in 2HG's shared life and poison (CR 810.5/810.8d: one pool,
+        // threshold fifteen), so both teammates are eliminated together.
         let mut newly_eliminated: Vec<usize> = Vec::new();
         for i in 0..self.players.len() {
             if self.players[i].eliminated {
-                // CR 800.4a — an *effect* that ends a player's game (an unpaid
-                // Pact, `Effect::LoseGame`, a win-the-game effect eliminating
-                // everyone else) sets `eliminated` and nothing else, and this
-                // skip meant the leave pass never ran for one: their
-                // permanents stayed on the battlefield, their stack items
-                // stayed on the stack, and an ask addressed to them stayed
-                // pending. The flag, not the sweep's own `newly_eliminated`
-                // list, is what says the pass is owed.
+                // CR 800.4a — an effect that ends a player's game (unpaid
+                // Pact, `Effect::LoseGame`, win-the-game) only sets
+                // `eliminated`; the leave pass is owed on the flag, not on
+                // `newly_eliminated`, or their permanents, stack items and
+                // pending asks would linger.
                 if !self.players[i].left_game {
                     newly_eliminated.push(i);
                 }
@@ -9283,14 +8754,9 @@ impl GameState {
                 .iter()
                 .any(|((victim, _), amt)| *victim == i && *amt >= 21);
             // Phyrexian Unlife — the life half of the loss SBA is skipped
-            // (poison / commander losses still apply).
-            //
-            // `player_unlife_active` is a whole-board static-ability walk and
-            // both readers below are `effective_life(i) <= 0 && !unlife`, so
-            // it goes *behind* that test rather than in front of it: on a
-            // healthy board the walk never runs at all, instead of twice a
-            // sweep per seat. `&Self` rather than a capture, because the
-            // enclosing `self` is `&mut`.
+            // (poison / commander losses still apply). The check is a
+            // whole-board static walk, so it runs only behind the
+            // `effective_life(i) <= 0` test; `&Self` because `self` is `&mut`.
             let unlife = |g: &Self| g.player_zero_life_waived(i);
             // CR 104.3c — a player who tried to draw from an empty library
             // loses here, not inside the draw. `lose_to_empty_draw` arms the
@@ -9305,11 +8771,9 @@ impl GameState {
             // CR 104.3d — a player who can't lose (Angel's Grace, Platinum
             // Angel, an opponent's Abyssal Persecutor) skips the loss SBAs;
             // the qualifying state (life ≤ 0, poison ≥ 10) persists.
-            // CR 704.7 — a single loss replacement (Lich's Mirror) covers
-            // every SBA that would end the game for this player at once.
-            // CR 704.7 — a loss replacement (Lich's Mirror) refills the
-            // library, so the armed deck-out is spent with it (inside
-            // `apply_loss_reset`, before its own draws).
+            // CR 704.7 — one loss replacement (Lich's Mirror) covers every
+            // game-ending SBA at once, and refills the library, so the armed
+            // deck-out is spent with it (inside `apply_loss_reset`).
             if lost && !self.player_cant_lose_game(i) {
                 if self.apply_loss_reset(i, events) {
                     // ⚠ The armed deck-out is spent INSIDE the reset now,
@@ -9406,21 +8870,10 @@ impl GameState {
     #[inline]
     pub(crate) fn settle_game_over_if_decided(&mut self, events: &mut Vec<GameEvent>) {
         if self.game_over.is_none() {
-            // One seat walk, no allocation. This block built two `Vec`s and
-            // sorted one of them on **every** state-based-action sweep — the
-            // sweep runs on every priority pass, and it was two of the
-            // ~55,720 `Vec::from_iter` calls `check_state_based_actions`
-            // makes over six bench games. The question is only "does more
-            // than one team still have an uneliminated seat", which a walk
-            // answers and which is `true` for all but the last sweep of a
-            // game.
-            //
-            // The reported `winner` is unchanged: it is the first alive seat
-            // in seat order, which is what `alive` (seat order) filtered to
-            // the surviving team and re-sorted gave — when one team survives,
-            // every alive seat is on it. For solo-team formats that is the
-            // literal winner; for 2HG it identifies the team by a
-            // representative member.
+            // One seat walk, no allocation (this used to build and sort two
+            // `Vec`s every sweep): is more than one team still alive?
+            // `winner` is the first alive seat in seat order — the literal
+            // winner in solo-team formats, a representative member in 2HG.
             let mut winner: Option<usize> = None;
             let mut team: Option<crate::team::TeamId> = None;
             let mut multiple_teams = false;
@@ -9463,19 +8916,14 @@ impl GameState {
         }
     }
 
-    /// CR 506.4 — A permanent is removed from combat if it leaves the
-    /// battlefield. Called by every battlefield-removal path
-    /// (`move_card_to`, `remove_from_battlefield_to_graveyard_raw`,
-    /// `remove_from_battlefield_to_exile`, etc.) so the post-removal
-    /// combat state stays consistent. Prunes `self.attacking` (the
-    /// attacker slot) and `self.block_map` (both blocker keys and
-    /// attacker values).
     /// Attacking now, or (CR 603.10) an attacker that left the battlefield
     /// during this combat — "whenever an attacking creature dies" (Kardur).
     pub(crate) fn is_or_was_attacking(&self, id: CardId) -> bool {
         self.attacking.iter().any(|a| a.attacker == id) || self.left_while_attacking.contains(&id)
     }
 
+    /// CR 506.4 — `self.attacking`/`self.block_map` are pruned when a
+    /// permanent leaves the battlefield (every removal path does it).
     pub(crate) fn remove_from_combat(&mut self, id: CardId) {
         if self.attacking.iter().any(|a| a.attacker == id) {
             self.left_while_attacking.push(id);
@@ -9532,23 +8980,18 @@ impl GameState {
             if card.counter_count(crate::card::CounterType::Oil) > 0 {
                 self.players[card.controller].oil_activity_this_turn = true;
             }
-            // CR 122.1h — Finality counters redirect Battlefield →
-            // Graveyard to Battlefield → Exile. Wilt in the Heat's "if
-            // that creature would die this turn, exile it instead" rides
-            // the same redirect via `dies_to_exile_eot`. We must check
-            // both here because the card has been removed from the
-            // battlefield before `resolve_zone_change` walks for it.
-            // CR 614 — "If a nontoken creature an opponent controls would die,
-            // exile it instead" (Valentin, Dean of the Vein). Detect an active
-            // `ExileDyingOpponentCreatures` static controlled by an opponent of
-            // the dying creature, redirect to exile, and capture its reflexive
-            // "when you do" effect to fire after placement.
+            // CR 122.1h — Finality counters (and Wilt in the Heat's
+            // `dies_to_exile_eot`) redirect a death to exile; checked here
+            // because the card is already off the battlefield before
+            // `resolve_zone_change` looks for it.
+            // CR 614 — Valentin, Dean of the Vein: an opponent's
+            // `ExileDyingOpponentCreatures` static exiles a dying nontoken
+            // creature and captures its reflexive "when you do" effect.
             //
-            // The three board walks below (this one, the library-top and the
-            // hand redirect) run only when the death-redirect lane says a
-            // permanent carries one of the statics they look for — nearly
-            // never. The dying card's own statics are read regardless: it
-            // is already off the battlefield here (PERF `(-203)`).
+            // The three board walks below (this, library-top, hand redirect)
+            // run only when the death-redirect lane says some permanent
+            // carries such a static; the dying card's own statics are read
+            // regardless, since it is already off the battlefield (PERF `(-203)`).
             let redirects = self.board_redirects_deaths();
             let board_walk = if redirects { usize::MAX } else { 0 };
             let valentin_redirect: Option<(CardId, usize, Option<Effect>)> = if redirects
@@ -9842,9 +9285,6 @@ impl GameState {
         }
     }
 
-    /// Return a permanent to its owner's hand, unwinding combat/attachments and
-    /// emitting the leave-the-battlefield events. Used by cost lines that bounce
-    /// the source (`ActivatedAbility::bounce_self_cost` — Magosi).
     /// CR 702.139 — Revolt and its kin: a permanent (`was_creature`, read
     /// last-known) left the battlefield under `controller` this turn. Every
     /// battlefield-leave funnel calls this, so the flags can't drift apart.
@@ -9856,6 +9296,9 @@ impl GameState {
         }
     }
 
+    /// Return a permanent to its owner's hand, unwinding combat/attachments and
+    /// emitting the leave-the-battlefield events. Used by cost lines that bounce
+    /// the source (`ActivatedAbility::bounce_self_cost` — Magosi).
     pub fn remove_from_battlefield_to_hand(&mut self, id: CardId) -> Vec<GameEvent> {
         let stripped = self.lost_all_abilities(id);
         let mut events = Vec::new();
@@ -9939,15 +9382,11 @@ impl GameState {
                 (card.definition.is_creature()).then_some((card.id, card.controller));
             let mut events = Vec::new();
             self.note_left_without_dying(&card, stripped, &mut events);
-            // Record for `Selector::ExiledThisResolution` ("that many basic
-            // lands", "if you exiled a land card this way"). The library and
-            // graveyard exits record it in `place_card_in_dest` /
-            // `ExilePlayerGraveyard`; this is the *battlefield* exit, and all
-            // eighteen of its call sites — `Effect::Exile` among them — went
-            // through here without recording, so the selector could not see a
-            // permanent exiled from play at all. Gated on the resolved zone so
-            // a replaced exile (CR 614, Rest in Peace-style redirects) is not
-            // counted as one.
+            // Record for `Selector::ExiledThisResolution` ("if you exiled a
+            // land card this way"). Library/graveyard exits record in
+            // `place_card_in_dest` / `ExilePlayerGraveyard`; this is the
+            // battlefield exit. Gated on the resolved zone so a replaced exile
+            // (CR 614, Rest in Peace-style) isn't counted.
             if resolved == crate::card::Zone::Exile {
                 self.scratch.exiled_card_ids_this_resolution.push(id);
                 self.note_exiled_mana_value(card.printed_cmc());
@@ -10035,18 +9474,13 @@ impl GameState {
         // CR 400.7 — "until end of turn" effects end with the object; see
         // `move_card_to`'s twin.
         card.clear_effects_on_zone_change();
-        // CR 400.7 — the tap and the attachment go with the old object too,
-        // as `move_card_to` already did. `damage` is deliberately NOT reset
-        // here: it sits behind the CoW `CardData`, and on a death by damage
-        // the write deep-copies a card every bot clone still shares (+0.107 %
-        // sealed Ir, measured); no rule reads damage off a card outside the
-        // battlefield, so the reset lives at the ENTRY instead — the stack
-        // resolution's push (which already unshares the data), `move_card_to`
-        // and `play_land`. The death path came through here without any of
-        // it, so a 1/1 that traded in combat, put itself on top of the
-        // library with its own dies trigger and was recast next turn entered
-        // with its point of damage and died again — every turn to the action
-        // cap (Golgari Thug, cube seed 702; ENGINE_BACKLOG 2026-09-08).
+        // CR 400.7 — the tap and the attachment go with the old object, as in
+        // `move_card_to`. `damage` is deliberately NOT reset here: it sits in
+        // the CoW `CardData`, and writing it on a death deep-copies a card bot
+        // clones share (+0.107 % sealed Ir, measured). Damage is instead reset
+        // on battlefield ENTRY (stack push, `move_card_to`, `play_land`) — the
+        // death path skipped all three, so a recast Golgari Thug re-entered
+        // with its old damage and died every turn (ENGINE_BACKLOG 2026-09-08).
         if zone != Zone::Battlefield {
             card.tapped = false;
             if let Some(host) = card.attached_to {
@@ -10132,14 +9566,11 @@ impl GameState {
         }
     }
 
-    /// Remove a permanent from the battlefield to its graveyard and collect any
-    /// `Dies` triggered abilities, returning them as events after the fact.
-    /// (This is the version used by destroy/damage effects that want to fire triggers.)
     /// Shriveling Rot mode 2 — while
-    /// `creature_deaths_drain_toughness_this_turn` is set, a creature leaving
-    /// the battlefield for the graveyard drains its controller for its
-    /// *computed* toughness. Called from both death funnels (the SBA lethal
-    /// sweep and the destroy/sacrifice route) before the card is removed.
+    /// `creature_deaths_drain_toughness_this_turn` is set, a creature going
+    /// from the battlefield to the graveyard drains its controller for its
+    /// *computed* toughness. Called from both death funnels (SBA lethal sweep
+    /// and destroy/sacrifice) before the card is removed.
     pub(crate) fn apply_death_toughness_drain(&mut self, id: CardId) {
         if !self.creature_deaths_drain_toughness_this_turn {
             return;
@@ -10193,12 +9624,9 @@ impl GameState {
     }
 
     pub fn remove_to_graveyard_with_triggers(&mut self, id: CardId) -> Vec<GameEvent> {
-        // Collect both `CreatureDied` and `PermanentLeavesBattlefield`
-        // self-source triggers off the leaving permanent. CreatureDied
-        // only matters for creatures (Solitude evoke-sac etc.);
-        // PermanentLeavesBattlefield is the broader "when this leaves the
-        // battlefield" hook used by Chromatic Star, Roomba-style cards,
-        // and any future non-creature die-trigger.
+        // Collect `CreatureDied` (creatures only, e.g. Solitude evoke-sac)
+        // and `PermanentLeavesBattlefield` ("when this leaves the
+        // battlefield": Chromatic Star etc.) self-source triggers.
         // Hushbringer (CR 614): creature-death triggers are suppressed while
         // a `SuppressCreatureEtbTriggers { also_dies }` static is in play.
         let dies_suppressed = crate::game::actions::creature_dies_triggers_suppressed(self);
@@ -10462,17 +9890,11 @@ impl GameState {
         out // dies triggers, persist / undying among them, are on the stack.
     }
 
-    /// CR 702.79 / 702.92 — Persist / Undying return. Shared by every death
-    /// funnel (SBA lethal damage, `Effect::Destroy`, sacrifice) so a creature
-    /// with Persist/Undying returns regardless of how it died. `owner` and the
-    /// counter counts must be captured from the dying card *before* it left the
-    /// battlefield.
-    /// `info` bundles `(has_persist, has_undying, minus_counter_count,
-    /// plus_counter_count)` captured from the dying card before removal.
     /// CR 702.79 / 702.93 — does `c` have persist / undying right now: printed,
     /// or granted (Undying Evil, Dusk Legion Sergeant, Haunted One, Mikaeus).
-    /// The printed read answers first; the layered one is paid only by a dying
-    /// permanent that doesn't print it.
+    /// The printed read answers first; only a non-printing dying permanent
+    /// pays for the layered one. (The Persist/Undying return itself is shared
+    /// by every death funnel; its `info` is captured before removal.)
     pub(crate) fn has_death_return_keyword(&self, c: &CardInstance, kw: &Keyword) -> bool {
         c.definition.keywords.has_kw(kw)
             || self.computed_permanent(c.id).is_some_and(|cp| cp.keywords().contains(kw))
@@ -10545,25 +9967,13 @@ impl GameState {
 mod modal_reachability {
     use crate::effect::Effect;
 
-    /// ⚠ **A MODAL `pick_trigger_mode` CANNOT SEE RESOLVES AT MODE 0 FOREVER,
-    /// AND NINE SHIPPED CARDS DID.** `None` from that function does not mean
-    /// "not modal" downstream — it means `mode.unwrap_or(0)`, so the
-    /// `ChooseMode` arm reads 0 and runs the leftmost mode without ever
-    /// asking the decider. Two holes, both closed and both pinned here:
-    ///
-    ///  - `governing_modal` did not descend `If` or `HauntCreature`, so
-    ///    Prophetic Titan, Depth Defiler, Tizerus Charger, Wardens of the
-    ///    Cycle (modal in one `If` branch) and Orzhov Pontiff (modal as its
-    ///    haunt body) were invisible to it.
-    ///  - a NESTED modal with a targeting mode was refused by the deferral
-    ///    gate and then fell through to `None`, so Merrow Reejerey, Stinging
-    ///    Lionfish, Component Collector and Atraxa's Skitterfang printed
-    ///    "tap **or** untap" and only ever tapped.
-    ///
-    /// The gate is the catalog itself: every `ChooseMode` carried by a
-    /// triggered or activated ability must be reachable, so a card that
-    /// buries one in a new wrapper fails here instead of silently shipping
-    /// with its other modes dead.
+    /// ⚠ A modal trigger `pick_trigger_mode` can't see resolves at mode 0
+    /// forever: `None` becomes `mode.unwrap_or(0)` and the decider is never
+    /// asked. Nine cards shipped that way — modal under `If`/`HauntCreature`
+    /// (Prophetic Titan, Orzhov Pontiff, ...) and nested modals with a
+    /// targeting mode (Merrow Reejerey "tap or untap" only tapped). This gate
+    /// requires every `ChooseMode` in a triggered/activated ability to be
+    /// reachable, so a new wrapper fails here instead of shipping dead modes.
     #[test]
     fn nested_modals_are_all_reachable() {
         use crate::catalog::all_known_factories;
@@ -10656,19 +10066,11 @@ mod modal_reachability {
 
 #[cfg(test)]
 mod cast_mode_range {
-    /// ⚠ **`GameAction::CastSpell { mode }` IS NOT RANGE-CHECKED ANYWHERE, AND
-    /// AN OUT-OF-RANGE MODE USED TO RAISE FROM INSIDE THE RESOLUTION.** Only
-    /// the activated path clamps (`clamp_activated_mode`); the cast path hands
-    /// the index straight to the stack item. Casting a modal spell with
-    /// `mode: Some(99)` returned `Ok` from the action and then
-    /// `Err(ModeOutOfBounds(99))` from `resolve_top_of_stack` — with the stack
-    /// ALREADY EMPTY, so the spell was consumed, nothing happened, and on the
-    /// round-closing pass `perform_action_uncheckpointed`'s guard aborts the
-    /// process in any debug-assertions build. Same shape as the Grafdigger's
-    /// Cage abort of seed 1254, reachable by any client rather than by a board.
-    ///
-    /// The `ChooseMode` arm clamps now, as its three deferred paths always
-    /// have.
+    /// `GameAction::CastSpell { mode }` is not range-checked on the cast path
+    /// (only activations clamp, via `clamp_activated_mode`). `mode: Some(99)`
+    /// used to return `Ok`, then `Err(ModeOutOfBounds)` from the resolution
+    /// with the spell already consumed, aborting debug builds on the next
+    /// pass. The `ChooseMode` arm clamps now, like its deferred paths.
     #[test]
     fn an_out_of_range_cast_mode_clamps_instead_of_raising() {
         use crate::game::{two_player_game, GameAction};

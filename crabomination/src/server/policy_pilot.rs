@@ -10,15 +10,13 @@
 //!
 //! # Combat, one creature at a time
 //!
-//! An attack or block declaration is a set, and the sets are exponential
-//! in the board (the move list caps them at 256). So a declaration is built
-//! by steps: from the set so far, the candidates are "declare it as is"
-//! and "add one more" (one more attacker at one target; one more blocker on
-//! one attacker, or a pair where only a pair is legal — menace). Every
-//! candidate's successor is the real engine state of declaring that set, so
-//! the head compares "these three attack" against "these three and that
-//! one" — no hypothetical encoding, no new features. A step's kind is the
-//! declaration's.
+//! Declaration sets are exponential in the board (the move list caps them
+//! at 256), so a declaration is built by steps: from the set so far, the
+//! candidates are "declare it as is" and "add one more" (one attacker at one
+//! target; one blocker on one attacker, or a pair where only a pair is legal
+//! — menace). Each successor is the real engine state of declaring that set,
+//! so no hypothetical encoding or new features are needed. A step's kind is
+//! the declaration's.
 //!
 //! # Candidate states
 //!
@@ -30,15 +28,14 @@
 //!
 //! # Imitation rows
 //!
-//! [`record`] turns any pilot's move at a decision into the same rows the
-//! policy pilot scores: one row over the move list for a plain decision,
-//! and one row per step for a declaration — the pilot's set reached by
-//! adding its members one at a time, each step's target every member still
-//! to add (a uniform soft target: the order is ours, not the pilot's), the
-//! last step's target "stop". Rows go through `decision_capture`'s buffer
-//! with their kind, so `selfplay_train` takes them as it takes every other
-//! decision row. Candidate lists are sampled down to [`ROW_CANDIDATES`]
-//! with the target kept, which the trainer's window then never cuts.
+//! [`record`] turns any pilot's move into the rows the policy pilot scores:
+//! one over the move list for a plain decision, one per step for a
+//! declaration (the pilot's set built a member at a time, each step's target
+//! every member still to add — uniform, since the order is ours — and the
+//! last step's target "stop"). Rows go through `decision_capture`'s buffer
+//! with their kind, so `selfplay_train` takes them like any decision row.
+//! Candidate lists are sampled down to [`ROW_CANDIDATES`] with the target
+//! kept, which the trainer's window then never cuts.
 
 use rand::SeedableRng;
 use rand::rngs::StdRng;
@@ -120,10 +117,9 @@ fn declaration(kind: Kind, set: &[Member]) -> GameAction {
 /// The state a decision's candidates are scored from: `g` with every
 /// hidden zone redealt (both libraries, the opponent's hand — the search's
 /// `determinize_hidden`) and the engine's random stream reseeded. One base
-/// per decision, shared by its candidates, so they differ by the move and
-/// not by the sample. Without it a successor read the real next card: the
-/// state after "take a mulligan" showed the next seven, after "may draw"
-/// the card drawn.
+/// per decision, shared by its candidates, so they differ by the move, not
+/// the sample. Without it a successor read the real next card (after "take
+/// a mulligan", the next seven).
 fn hidden_safe(g: &GameState, seat: usize, salt: u64) -> GameState {
     let mut h = g.clone();
     super::bot::determinize_hidden(&mut h, seat, salt);
@@ -132,25 +128,22 @@ fn hidden_safe(g: &GameState, seat: usize, salt: u64) -> GameState {
 }
 
 /// A candidate's successor, from a [`hidden_safe`] base: the engine state
-/// after the move, with two exceptions.
+/// after the move, except:
 ///
 /// * **A mulligan** is the base with the hand put back in the library — a
 ///   fixed stand-in, so the head learns "is this hand worth keeping" rather
 ///   than scoring one random redraw.
-/// * **A block** is settled through combat damage with both players
-///   passing: the block's worth is who dies, and at declaration nothing
-///   has. No choice of the seat's is made in the settle (prompts it raises
-///   take the engine's default answer), so the net still decides.
-/// * **A cast or an activation** in a priority window is settled until the
-///   item it put on the stack resolves, the opponent passing: a spell's
-///   worth is what it does, and on the stack it has done nothing (a 25 %
-///   imitation pilot acted a quarter of the times its teacher passed). The
-///   settle stops at any prompt the resolution raises, so the seat's own
-///   choices stay the head's.
-/// * **An attack** is settled the same way after the defender's blocks,
-///   which come from the unscored heuristic — the opponent model the
-///   search's playouts use — because an attack's worth is how it is
-///   blocked, and at declaration nobody has.
+/// * **A block** is settled through combat damage with both players passing
+///   (its worth is who dies). Prompts in the settle take the engine's default
+///   answer, so the net still makes the seat's choices.
+/// * **A cast or an activation** in a priority window is settled until its
+///   stack item resolves, the opponent passing: on the stack it has done
+///   nothing (an imitation pilot otherwise acted where its teacher passed).
+///   The settle stops at any prompt the resolution raises, so the seat's
+///   own choices stay the head's.
+/// * **An attack** is settled the same way after the defender's blocks from
+///   the unscored heuristic (the search playouts' opponent model): an
+///   attack's worth is how it is blocked.
 fn candidate_state(base: &GameState, seat: usize, kind: Kind, a: &GameAction) -> Option<GameState> {
     use crate::decision::DecisionAnswer;
     if kind == Kind::Prompt("Mulligan")

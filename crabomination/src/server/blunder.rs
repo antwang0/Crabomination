@@ -2,25 +2,23 @@
 //! wrong, scored on the move the pilot makes rather than on a line a solver
 //! certifies (`bot_puzzles --blunders`).
 //!
-//! Why a second benchmark beside [`super::puzzle`]. The outcome puzzles ask
-//! "can you find the win?", and a pilot that plays every ordinary turn badly
-//! can still pass them. The user's report was the other thing: the bot does
-//! obviously bad things — attacks with a 0-power creature, leaves no blocker
-//! home against an aggro board, spends removal on the wrong body. Those are
-//! judged here, each on the position that isolates it.
+//! The outcome puzzles in [`super::puzzle`] ask "can you find the win?",
+//! which a pilot that plays ordinary turns badly can still pass. This judges
+//! the obviously bad plays the user reported (attacking with a 0-power
+//! creature, leaving no blocker home against aggro, removal on the wrong
+//! body), each on a position that isolates it.
 //!
 //! # Checks, and the twin that keeps them honest
 //!
-//! An item is a position plus a list of [`Check`]s over what seat 0 did in a
-//! window (the rest of this turn, or through the opponent's next one) and
-//! where the board ended up. A "never do X" check is passed by a bot that
-//! does nothing, so every such item has a **twin**: the same position with
-//! one fact changed so that X becomes right (the 0/4 gains an attack
-//! trigger; the deathtouch blocker is tapped). A pair scores only when both
-//! halves pass, which a pilot that never attacks, or always holds back,
-//! cannot do. Outcome checks ([`Check::Alive`], [`Check::Dies`]) fail under
-//! a do-nothing pilot by construction and need no twin; the test
-//! `the_null_pilot_fails_every_pair_and_every_solo_item` enforces both.
+//! An item is a position plus [`Check`]s over what seat 0 did in a window
+//! (the rest of this turn, or through the opponent's next one) and where the
+//! board ended up. A do-nothing bot passes a "never do X" check, so every
+//! such item has a **twin** with one fact changed so X becomes right (the
+//! 0/4 gains an attack trigger; the deathtouch blocker is tapped), and a
+//! pair scores only when both halves pass. Outcome checks ([`Check::Alive`],
+//! [`Check::Dies`]) fail under a do-nothing pilot by construction and need
+//! no twin; `the_null_pilot_fails_every_pair_and_every_solo_item` enforces
+//! both.
 //!
 //! The opponent is the default heuristic, latched to any declaration the
 //! position already contains, exactly as in [`super::puzzle::play_with`].
@@ -571,9 +569,7 @@ impl Bot for HoldAndCounter {
 /// and counters the Embermare) and spending (the Tabulator cast now; for
 /// the removal item, Fate on the Strifeknight now and Fate the Embermare
 /// when it lands). Seat 0's wins in each; `None` when the spend cannot be
-/// cast (before
-/// 2026-11-14 an untapped Rubble Rouser with an empty graveyard stalled the
-/// auto-tapper, 3 boards of 120).
+/// cast.
 ///
 /// The third count is the "free" line: the heuristic plays its own turn as
 /// it likes except for the answer, then answers the Embermare if it still
@@ -1703,15 +1699,13 @@ fn sos_hold_up_the_counter_over_the_three_drop() -> Position {
     Position { state: g, checks: vec![Check::Dies(mare)] }
 }
 
-/// Every item, in a stable order.
 // ── Added 2026-11-17: colour fixing (the user's W/G pool splashing black) ──
 // Seat 0 is W/G on five lands (three Plains, two Forest) with Extended
-// Absence ({3}{B}) in hand and no black source; the opponent has a 6/6. The
-// only way the 6/6 dies inside the window is the item's tool finding black.
-// Each is an outcome item (`Dies`), which a do-nothing pilot fails, and
-// `fixing_control` (a Swamp already out) separates "never found black" from
-// "never cast the removal". The library is uncastable filler over one of
-// each basic, so no draw supplies the colour by luck.
+// Absence ({3}{B}) and no black source; the opponent has a 6/6, which dies
+// inside the window only if the item's tool finds black. Outcome items
+// (`Dies`); `fixing_control` (a Swamp already out) separates "never found
+// black" from "never cast the removal". The library is uncastable filler
+// over one of each basic, so no draw supplies the colour by luck.
 
 fn filler() -> CardDefinition {
     CardDefinition { name: "Filler Colossus", cost: cost(&[generic(9)]), card_types: vec![CardType::Creature], power: 9, toughness: 9, ..Default::default() }
@@ -1840,6 +1834,7 @@ fn murmuring_volume_makes_the_black() -> Position {
     Position { state: g, checks: vec![Check::Dies(wurm)] }
 }
 
+/// Every item, in a stable order.
 pub fn items() -> Vec<Blunder> {
     vec![
         Blunder {
@@ -2692,13 +2687,12 @@ mod tests {
     }
 
     /// `MctsConfig::win_discount`: with Prodigal Sorcerer and the opponent
-    /// at 1, every arm of the bare search reads 1.000 (each line wins by
-    /// the horizon) and the tie went to the pass or to the attack that taps
-    /// the Sorcerer (the client's pilot 6 / 10, 2026-11-12). Discounted,
-    /// the ping that wins now is the best arm. No net: uniform priors, the
-    /// material leaf, and no Gumbel noise (`menu_no_noise`) — at 32
-    /// iterations on flat priors the noise knocks the 1.000 arm out of the
-    /// halving early. Without the discount the same search fails it.
+    /// at 1, every arm of the bare search reads 1.000 and the tie went to
+    /// the pass or the attack that taps the Sorcerer. Discounted, the ping
+    /// that wins now is the best arm. No net (uniform priors, material leaf)
+    /// and no Gumbel noise (`menu_no_noise`), which on flat priors at 32
+    /// iterations knocks the 1.000 arm out early. Without the discount the
+    /// same search fails it.
     #[test]
     fn the_discounted_search_takes_the_win_now() {
         use crate::server::mcts::{MENU_COMBAT, MENU_MAIN, MctsBot, MctsConfig};

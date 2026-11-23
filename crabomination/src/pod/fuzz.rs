@@ -1,15 +1,14 @@
-//! `CRAB_POD_FUZZ=<n>` (pods) / `CRAB_LADDER_FUZZ=<n>` (two-player ladder
-//! games): each seat's bot is wrapped so that `n` in 10,000 of its steps are
-//! swapped for a random alternative — another of its own cast / activation
-//! candidates at whatever priority window it holds, the other answer to a
-//! yes/no ask, a random answer to an ask that lists its options (targets,
-//! modes, cards, names, types, lessons, die faces, scry piles, divisions,
-//! trigger order, mulligans) or a cancel of a cast's own choice, a random
-//! subset of its attack or block declaration. A sweep tool: the tuned bots
-//! build the same boards over and over, and a panic or invariant that only an
-//! odd line of play reaches is still a panic self-play can hit. Seeded per
-//! game, so a fuzzed game replays. A swap the engine rejects is simply not
-//! taken.
+//! `CRAB_POD_FUZZ=<n>` (pods) / `CRAB_LADDER_FUZZ=<n>` (two-player ladder):
+//! each seat's bot is wrapped so `n` in 10,000 of its steps are swapped for a
+//! random alternative — another of its own cast / activation candidates in
+//! whatever priority window it holds, the other answer to a yes/no ask, a
+//! random answer to an ask that lists its options (targets, modes, cards,
+//! names, types, lessons, die faces, piles, divisions, trigger order,
+//! mulligans), a cancel of a cast's own choice, or a random subset of its
+//! attack or block declaration. A sweep tool: tuned bots rebuild the same
+//! boards, and a panic only an odd line of play reaches is still one self-play
+//! can hit. Seeded per game, so a fuzzed game replays; a swap the engine
+//! rejects is skipped.
 
 use rand::rngs::StdRng;
 use rand::seq::SliceRandom;

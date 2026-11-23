@@ -1,57 +1,39 @@
 //! Card ratings measured by play, for the sealed builder.
 //!
-//! The builder's own card score (`CardBrief::base_score + quality`) is
-//! a hand-written proxy: it sees a creature's body and keywords and gives
-//! every non-creature spell nothing, so removal ranks with vanilla filler
-//! and a colourless artifact creature (+5 for fitting any deck) outranks
-//! both. On Reality Fracture it rank-correlates with Draftsim's ratings at
-//! 0.06 overall and **−0.46 on commons** (`fra_card_eval`, 2026-10-23).
+//! The builder's own score (`CardBrief::base_score + quality`) is a
+//! hand-written proxy that sees bodies and keywords and gives non-creature
+//! spells nothing (removal ranks with filler); on FRA it rank-correlated with
+//! Draftsim at 0.06 overall, −0.46 on commons (2026-10-23).
 //!
-//! These are the measured alternative: each card's ridge value from
-//! `fra_card_eval` — 16,000 FRA sealed pools built by the v3 builder (three
-//! spells a deck swapped for left-out pool cards, `--explore 3`), 960k
-//! games, every match's margin regressed on (copies in deck A − copies in
-//! deck B) — in win-rate points per copy. Played by the `fra-fixes` pilot
-//! since 2026-10-25 (the `dflt` pilot misplayed some cards outright: Icy
-//! Reception never countered, Living Library attacked as a 0/4, burn missed
-//! lethal): Draftsim agreement 0.32 overall (0.67 on rares; `dflt` 0.28 /
-//! 0.57; this table 0.29 overall); 17lands GIH agreement 0.29,
-//! about Draftsim's own 0.30. Only nonland cards in at least 30 decks are
-//! listed; anything else scores its static `base_score + quality`.
+//! These are each card's ridge value from `fra_card_eval` (16,000 v3-built
+//! sealed pools with `--explore 3`, 960k games, margin regressed on copy
+//! differences), in win-rate points per copy, played by the `fra-fixes`
+//! pilot (`dflt` misplayed some cards outright). Draftsim agreement 0.32,
+//! 17lands GIH 0.29 (≈ Draftsim's own). Only nonland cards in ≥30 decks are
+//! listed; others keep `base_score + quality`.
 //!
-//! Used only under `SimConfig::rated_cards` (default off), whose scorer is
+//! Used under `SimConfig::rated_cards` (default off), scored by
 //! [`crate::draft::score_brief_rated`]. Regenerate with `fra_card_eval` +
-//! `scripts/fra_card_eval.py` (its `ratings.tsv`), then
-//! `scripts/fra_card_table.py ratings.tsv 30` for this table and the scale.
+//! `scripts/fra_card_eval.py` (`ratings.tsv`), then
+//! `scripts/fra_card_table.py ratings.tsv 30` for the table and scale.
 
-/// The value → builder-score scale: the mean and spread of the listed cards'
-/// static scores (7.32 ± 3.30) matched to their values' (0.89 ± 2.28), so a
-/// rated card and an unrated one (scored `base_score + quality`) share one
-/// scale, and an off-colour pip (−10, [`crate::draft::score_brief_rated`])
-/// costs about four rating points.
+/// Value → builder-score scale: the listed cards' static score mean/spread
+/// (7.32 ± 3.30) matched to their values' (0.89 ± 2.28), so rated and unrated
+/// cards share one scale; an off-colour pip (−10,
+/// [`crate::draft::score_brief_rated`]) costs about four rating points.
 const SCALE: f32 = 1.448;
 const OFFSET: f32 = 6.034;
 
-/// `(card name, win-rate points per copy)`, from the seed-7 method under the
-/// `fra-fixes` pilot on 16,000 pools with `--explore 3` (2026-10-25; 30
-/// rounds x 2 pairs, 960k games). The v3 builder seldom plays some cards,
-/// so the 4,000-pool run left them under the 30-deck cut on a static score
-/// that misses them: Guiding Hydra (25 decks there, static 4; 170 here,
-/// +6.49) and Way of the Wildspeaker (17 decks even on 16,000 pools without
-/// exploration; 241 here, +4.45). Exploration swaps three of each deck's
-/// spells for left-out on-colour pool cards. 260 cards listed, 12 under the
-/// cut. Against the v3 builder this table's builds win 66.55 / 65.58 %
-/// (`--ab`, 2,000 pools x 16, seeds 43 / 97), the unexplored 16,000-pool
-/// table's 66.19 / 66.02 %, the 4,000-pool table's (under the old scorer)
-/// 63.34 / 62.57 %.
+/// `(card name, win-rate points per copy)`: the seed-7 method under
+/// `fra-fixes`, 16,000 pools, `--explore 3` (2026-10-25, 960k games).
+/// Exploration (three spells a deck swapped for left-out on-colour cards)
+/// lifts cards the v3 builder seldom plays over the 30-deck cut (Guiding
+/// Hydra +6.49, Way of the Wildspeaker +4.45). 260 listed, 12 under the cut.
+/// vs the v3 builder: 66.55 / 65.58 % (`--ab`, seeds 43 / 97).
 ///
-/// **Re-rated 2026-11-17** by the same method under `fra-fixes` with
-/// `counter_bar_low` (the counter bar that left Countersculpt stranded in
-/// 55 % of its games; ML_NOTES "the bot's blue cards"): Countersculpt
-/// −1.89 → −0.97, Precise Redaction −2.38 → −1.14 against round 87's
-/// re-rate; Draftsim ρ 0.295. Gate (`--ab --table`, rated builder on this
-/// table vs the previous one, 2,000 pools x 8, pilot `fra-fixes`): best-of-16
-/// **51.51 / 51.32** (seeds 43 / 97), single samples 51.19 / 51.86.
+/// **Re-rated 2026-11-17** under `fra-fixes` + `counter_bar_low` (ML_NOTES
+/// "the bot's blue cards"; Countersculpt −1.89 → −0.97); gate vs the previous
+/// table (`--ab --table`) 51.51 / 51.32 best-of-16.
 // Measured values, not constants: 3.14 is a card's rating, not pi.
 #[allow(clippy::approx_constant)]
 pub const FRA_SIM_VALUE: &[(&str, f32)] = &[
@@ -322,13 +304,12 @@ pub const FRA_SIM_VALUE: &[(&str, f32)] = &[
 const SOS_SCALE: f32 = 1.975;
 const SOS_OFFSET: f32 = 7.524;
 
-/// `(card name, win-rate points per copy)` for Secrets of Strixhaven, by
-/// the same method as [`FRA_SIM_VALUE`] (2026-10-26): `fra_card_eval --set
-/// sos --pilot dflt --decks 16000 --rounds 30 --pairs 2 --seed 7 --explore 3`
-/// (960k games; `dflt` because the SOS client plays default weights), then
-/// `scripts/fra_card_eval.py RUN` and `scripts/fra_card_table.py ratings.tsv
-/// 30`. 151 of the sheet's 152 nonland cards (Sylvan Library made 26 decks).
-/// Ridge λ 300 by 5-fold CV (FRA's: 30) — the SOS values are flatter.
+/// `(card name, win-rate points per copy)` for Secrets of Strixhaven, by the
+/// [`FRA_SIM_VALUE`] method (2026-10-26): `fra_card_eval --set sos --pilot
+/// dflt --decks 16000 --rounds 30 --pairs 2 --seed 7 --explore 3` (`dflt`:
+/// the SOS client's weights), then `scripts/fra_card_eval.py RUN` and
+/// `scripts/fra_card_table.py ratings.tsv 30`. 151 of 152 nonland cards.
+/// Ridge λ 300 by 5-fold CV (FRA's 30) — SOS values are flatter.
 #[allow(clippy::approx_constant)]
 pub const SOS_SIM_VALUE: &[(&str, f32)] = &[
     ("Additive Evolution", 2.10),
@@ -493,12 +474,10 @@ thread_local! {
         const { std::cell::RefCell::new(None) };
 }
 
-/// Run `f` with `table` (name -> builder-score units, `None` for a card the
-/// re-rate measured but left under its deck cut) in place of the compiled
-/// tables on this thread: the paired race of a re-rated table against the
-/// shipped one (`fra_card_eval --ab --table`), both builders on the same
-/// pool in one process. A card the override does not name at all is read
-/// from the compiled tables as usual (the other set's cards).
+/// Run `f` with `table` (name -> builder-score units, `None` = measured but
+/// under the cut) replacing the compiled tables on this thread, for racing a
+/// re-rated table against the shipped one in one process (`fra_card_eval
+/// --ab --table`). Names it lacks read the compiled tables.
 pub type TableOverride = std::sync::Arc<crate::fxhash::HashMap<String, Option<i32>>>;
 pub fn with_table<R>(table: TableOverride, f: impl FnOnce() -> R) -> R {
     OVERRIDE_ON.store(true, std::sync::atomic::Ordering::Relaxed);
@@ -549,20 +528,15 @@ fn compiled_score(name: &str) -> Option<i32> {
     .copied()
 }
 
-/// The deck-shape term of the rated builder's best-of-N judge, in
-/// builder-score units (a penalty, ≤ 0), over a deck's spells.
+/// The deck-shape term of the rated builder's best-of-N judge, a builder-
+/// score penalty (≤ 0) over a deck's spells.
 ///
-/// Per-card values are additive, so they cannot see that a deck needs
-/// enough creatures and a curve: a deck's count of creature cards is the sum
-/// of its cards' creature indicators, which the card values already price
-/// linearly, but not its curvature. On the 16,000 FRA pools behind
-/// [`FRA_SIM_VALUE`] the per-deck residual of the card-value fit is an
-/// inverted U in all three counts (`scripts/deck_shape_fit.py`, 2026-10-26):
-/// flat at 16–19 creatures and −0.7 / −1.6 / −2.3 win points at 14 / 13 / 12
-/// (−1.0 / −2.4 at 22 / 23); flat at 8–11 spells of mana value ≤ 2 (−0.7 at
-/// 5–6, −0.6 at 13–15); flat at 2–5 of mana value ≥ 5 (−0.7 at 1, −0.9 at
-/// 0). Modelled as `k · d²` win points, `d` the distance outside the flat
-/// range (creatures k 0.2, cheap 0.12, top 0.15), times [`SCALE`].
+/// Additive card values price counts linearly but not curvature. On the
+/// [`FRA_SIM_VALUE`] pools the per-deck residual is an inverted U in three
+/// counts (`scripts/deck_shape_fit.py`, 2026-10-26): flat at 16–19
+/// creatures, 8–11 spells of MV ≤ 2, 2–5 of MV ≥ 5. Modelled as `k · d²` win
+/// points, `d` the distance outside the flat range (creatures k 0.2, cheap
+/// 0.12, top 0.15), times [`SCALE`].
 pub fn shape_penalty(spells: &[crate::cube::CardFactory]) -> i32 {
     let (mut creatures, mut cheap, mut top) = (0i32, 0i32, 0i32);
     for f in spells {
@@ -619,11 +593,9 @@ pub fn sos_pool(pool: &[crate::cube::CardFactory]) -> bool {
 mod tests {
     use crate::draft::{ColorCounts, colors_of_picks, score_brief_rated};
 
-    /// A listed card scores its rating, with no bonus for on-colour pips
-    /// and 10 a pip off the seat's colours; an unlisted card scores its
-    /// colour-independent static score the same way. Memory Trap is the case
-    /// the table exists for: removal the static score ranks as filler
-    /// (quality 0), measured at about +3 a copy.
+    /// A listed card scores its rating, unlisted its static score; both pay
+    /// 10 per off-colour pip. Memory Trap is why the table exists: removal
+    /// the static score ranks as filler, measured ~+3 a copy.
     #[test]
     fn rated_cards_score_their_rating_and_pay_only_for_off_colour_pips() {
         let trap = crate::cube::card_brief(crate::catalog::memory_trap);

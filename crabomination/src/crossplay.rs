@@ -1,41 +1,31 @@
 //! Cross-binary ladder: *this* build's bot against another build's, in
 //! lockstep over a pipe.
 //!
-//! `bot_ladder --a X --b Y` compares two evaluation *profiles* inside one
-//! binary, and `scripts/ab_wall.py` times two binaries without letting them
-//! meet. Neither answers the question a code change asks — "does the bot
-//! this build plays win against the bot the last build played" — so every
-//! change that moved play has been justified by argument and invariants
-//! instead. This module is that missing measurement.
+//! `bot_ladder --a X --b Y` compares profiles inside one binary and
+//! `scripts/ab_wall.py` times two binaries; neither asks "does this build's
+//! bot beat the last build's". This module does.
 //!
-//! **Both processes run the whole game.** The parent spawns the peer binary
-//! with its own argv plus `--peer`, so both build the same archetype field,
-//! the same templates and the same shuffles from the same seed. Each round
-//! each process polls only the seat it pilots and publishes the action it
-//! chose; the other side reads it off the pipe and runs it. Two mirror
-//! states, one action stream, and no `GameState` ever crosses the wire —
-//! the messages are one `Option<GameAction>` per seat poll.
+//! **Both processes run the whole game.** The parent spawns the peer with its
+//! own argv plus `--peer`, so both build the same field, templates and
+//! shuffles from the seed. Each process polls only its seat and publishes its
+//! action; the other reads and runs it. No `GameState` crosses the wire —
+//! one `Option<GameAction>` per seat poll.
 //!
-//! **The mirrors are checked, not assumed.** Every published action carries
-//! the sender's [`state_digest`] of the state it was chosen in; the receiver
-//! compares it to its own before running anything. A mismatch means the two
-//! builds' *engines* disagree about what an action does, which voids the
-//! comparison rather than one game of it — so a fault aborts the run and
-//! names the seat, the poll and both digests. That is also the limit of the
-//! tool, stated plainly: it gates a change to how the bot *chooses*, and
-//! reports a change to how the engine *resolves* as a fault.
+//! **Mirrors are checked.** Each action carries the sender's
+//! [`state_digest`]; the receiver compares before running it. A mismatch
+//! means the engines disagree about an action, voiding the whole comparison,
+//! so the run aborts naming seat, poll and both digests. The tool gates
+//! changes to how the bot *chooses*; engine *resolution* changes show as
+//! faults.
 //!
-//! **The null control is free.** Run a binary against a copy of itself and
-//! every pair must split, exactly as `--bench`'s self-mirror does: same
-//! shuffle, same jitter seed, roles swapped between the two games of a pair.
-//! A cross run that reads anything but 50.0 % against itself is a bug in
-//! this file.
+//! **Null control:** a binary against a copy of itself must split every pair
+//! (same shuffle and jitter seed, roles swapped). Anything but 50.0 % is a
+//! bug here.
 //!
-//! Numbers from here are **not** comparable to the in-process ladder's: one
-//! process interleaves both seats' tie-break draws on a single jitter
-//! stream, and two processes each draw their own (salted by seat, so the
-//! two seats stay independent and a pair's second game replays the first
-//! with the binaries swapped).
+//! Numbers are **not** comparable to the in-process ladder's: one process
+//! interleaves both seats' tie-break draws on one stream, two processes each
+//! draw their own (salted by seat, so a pair's second game replays the first
+//! with binaries swapped).
 
 use std::io::{BufRead, BufReader, Read, Write};
 
@@ -142,11 +132,9 @@ impl CrossLink {
     }
 }
 
-/// The peer half of a game in progress: which seat this process pilots and
-/// the link the other seat's actions arrive on.
-///
-/// Held for the whole run (one per worker) and re-seated per game, so the
-/// play loop takes a plain `&mut` and the link's buffers outlive the game.
+/// The peer half of a game in progress: the seat this process pilots and the
+/// link the other seat's actions arrive on. One per worker, re-seated per
+/// game, so the link's buffers outlive the game.
 pub struct CrossGame {
     link: CrossLink,
     /// The seat this process pilots. Set per game by the pairs loop.
@@ -235,15 +223,14 @@ impl CrossGame {
 const FNV_OFFSET: u64 = 0xcbf2_9ce4_8422_2325;
 const FNV_PRIME: u64 = 0x0000_0100_0000_01b3;
 
-/// FNV-1a over everything about a game two builds must agree on before
-/// either can be said to have out-played the other.
+/// FNV-1a over everything two builds must agree on before either can be said
+/// to out-play the other.
 ///
-/// Deliberately the *observable* state and not the whole struct: it is
-/// computed twice per round in both processes, so it reads the zones'
-/// lengths and each permanent's mutable fields rather than serializing
-/// anything. What it cannot see (per-resolution scratch, the ~78
-/// `#[serde(skip)]` fields) is reset by the next resolution and cannot
-/// separate two games without first moving something this does see.
+/// The *observable* state (zone lengths, permanents' mutable fields), not a
+/// serialization, since it runs twice per round in both processes. What it
+/// can't see (resolution scratch, `#[serde(skip)]` fields) is reset by the
+/// next resolution and can't separate two games without moving something it
+/// does see.
 pub fn state_digest(g: &GameState) -> u64 {
     let mut h = FNV_OFFSET;
     let mut mix = |v: u64| {

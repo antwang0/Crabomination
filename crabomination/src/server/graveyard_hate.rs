@@ -1,12 +1,11 @@
 //! A repeatable "exile target card from a graveyard" (Ghost Vacuum's {T},
-//! Scavenging Ooze's {G}) was never activated in a 6-seat census (seed
-//! 2750001, three decks):
-//! nothing asks for graveyard hate outside a removal read. At an opponent's
-//! end step the tap and mana are spare, so a pod bot exiles an opponent's
-//! best graveyard card: a creature card first (the reanimation target), then
-//! the greatest mana value. A sorcery-speed one (Dino DNA's imprint) goes in
-//! its controller's main phase with the mana otherwise idle. Commander games
-//! only, so two-player play is unchanged.
+//! Scavenging Ooze's {G}) was never activated: nothing asks for graveyard
+//! hate outside a removal read. At an opponent's end step, with tap and mana
+//! spare, a pod bot exiles an opponent's best graveyard card (a creature
+//! first, the reanimation target, then the greatest mana value). A
+//! sorcery-speed one (Dino DNA's imprint) goes in its controller's main
+//! phase with the mana otherwise idle. Commander games only, so two-player
+//! play is unchanged.
 
 use crate::effect::{Effect, Selector, ZoneDest};
 use crate::game::GameState;

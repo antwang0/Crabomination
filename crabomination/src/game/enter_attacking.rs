@@ -1,10 +1,8 @@
 //! CR 508.4 — a permanent put onto the battlefield attacking (Mobilize,
 //! Myriad, Ninjutsu, "create a token that's tapped and attacking") was never
-//! declared as an attacker: it is an attacking creature, but "whenever ~
-//! attacks" abilities don't trigger for it. Every such site funnels through
-//! here so none emits `GameEvent::AttackerDeclared` — the event the Attacks
-//! triggers read. A General Kreat with a Goblin army otherwise minted a
-//! token per token per attack, without bound.
+//! declared as an attacker, so "whenever ~ attacks" doesn't trigger. Every
+//! such site funnels here so none emits `GameEvent::AttackerDeclared`
+//! (otherwise General Kreat's tokens minted tokens without bound).
 //!
 //! Also the CR 506.3 read of an attack's defender ("creatures attacking you").
 

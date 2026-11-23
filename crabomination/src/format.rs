@@ -1,9 +1,7 @@
 //! Format rules and deck-construction validation.
 //!
-//! Each [`Format`] has a corresponding [`FormatRules`] that controls deck size,
-//! copy limits, starting life, and other per-format rules.  Use
-//! [`validate_deck`] to check that a list of card definitions is legal in a
-//! given format before starting a game.
+//! Each [`Format`] has [`FormatRules`] (deck size, copy limits, starting
+//! life, ...). [`validate_deck`] checks a card list against a format.
 
 use crate::fxhash::HashMap;
 
@@ -101,12 +99,10 @@ const VINTAGE_RESTRICTED: &[&str] = &[
     "Necropotence", "Sol Ring", "Time Vault", "Trinisphere",
     "Mystic Forge", "Karn, the Great Creator",
 ];
-/// CR 903.5 — the Commander ban list, fetched from Scryfall (`banned:commander`)
-/// on 2026-09-18 and stored by *front-face* name, which is what a
-/// `CardDefinition` carries. The list this replaced was described in its own
-/// comment as "representative": it banned Biorhythm and Timetwister, which are
-/// legal, and missed Rofellos, Llanowar Emissary — the commander the engine's
-/// own Commander demo was built around.
+/// CR 903.5 — the Commander ban list, from Scryfall (`banned:commander`) on
+/// 2026-09-18, by *front-face* name (what a `CardDefinition` carries). The
+/// earlier "representative" list banned legal cards and missed Rofellos, the
+/// Commander demo's own commander.
 const COMMANDER_BANNED: &[&str] = &[
     "Adriana's Valor", "Advantageous Proclamation", "Amulet of Quoz", "Ancestral Recall",
     "Assemble the Rank and Vile", "Backup Plan", "Balance", "Black Lotus", "Brago's Favor",
@@ -307,12 +303,9 @@ impl std::fmt::Display for DeckError {
 
 impl std::error::Error for DeckError {}
 
-/// A complete deck list. Used by the loader and by formats that
-/// distinguish main deck from sideboard / commander zone (Phase J).
-///
-/// `commanders` is plural to accommodate Partner / Background — the
-/// Commander format permits zero, one, or two commander cards. Other
-/// formats leave it empty.
+/// A complete deck list, for the loader and formats that separate main deck
+/// from sideboard / command zone. `commanders` is plural for Partner /
+/// Background (zero to two); other formats leave it empty.
 #[derive(Debug, Clone, Default)]
 pub struct Deck {
     pub main: Vec<CardDefinition>,
@@ -409,10 +402,6 @@ pub fn validate_deck_refs(deck: &[&CardDefinition], format: Format) -> Result<()
     if errors.is_empty() { Ok(()) } else { Err(errors) }
 }
 
-/// CR 100.2a / 100.4a — validate a whole decklist: the main deck against
-/// [`validate_deck`], the sideboard against the format's size limit, and the
-/// copy limit against **main + sideboard combined** (the printed rule counts
-/// both). Basic lands stay exempt.
 /// Total "your minimum deck size is reduced by N" across a deck's cards
 /// (Advantageous Proclamation lives in the sideboard / command zone).
 pub fn min_deck_size_reduction(deck: &Deck) -> u32 {
@@ -427,6 +416,10 @@ pub fn min_deck_size_reduction(deck: &Deck) -> u32 {
         .sum()
 }
 
+/// CR 100.2a / 100.4a — validate a whole decklist: the main deck against
+/// [`validate_deck`], the sideboard against the format's size limit, and the
+/// copy limit against **main + sideboard combined** (the printed rule counts
+/// both). Basic lands stay exempt.
 pub fn validate_full_deck(deck: &Deck, format: Format) -> Result<(), Vec<DeckError>> {
     let rules = format.rules();
     let mut errors = match validate_deck(&deck.main, format) {
@@ -731,11 +724,9 @@ pub fn commanders_may_pair(a: &CardDefinition, b: &CardDefinition) -> bool {
 }
 
 /// CR 702.124m — `companion` has Doctor's companion and `doctor` is "a
-/// legendary Time Lord Doctor creature card that has no other creature types".
-/// The "no other creature types" clause is the whole rule's teeth: Romana II
-/// is a Time Lord Scientist and is not a Doctor for this, and a Doctor that a
-/// type-adding effect has widened still isn't — this reads the printed card,
-/// which is what deck construction sees.
+/// legendary Time Lord Doctor creature card that has no other creature
+/// types". That clause is the rule's teeth (Romana II, a Time Lord Scientist,
+/// fails); the printed card is read, as deck construction sees it.
 fn is_doctor_pair(companion: &CardDefinition, doctor: &CardDefinition) -> bool {
     use crate::card::{CreatureType, Keyword, KeywordSlice};
     companion.is_legendary()
@@ -768,18 +759,12 @@ fn is_background(def: &CardDefinition) -> bool {
             .contains(&crate::card::EnchantmentSubtype::Background)
 }
 
-/// CR 903.3 — may `def` be designated a deck's commander on its own? The card
-/// must be legendary and either **(a)** a creature card (counting one that is
-/// a creature only off the battlefield, CR 604.3), **(b)** a Vehicle
-/// card, or **(c)** a Spacecraft card with one or more power/toughness boxes;
-/// CR 903.3a's printed "[this] can be your commander" (CR 113.6n) is the other
-/// way in. The Background half of a CR 702.124k pair is not covered here — it
-/// is legal only *with* its partner, which `validate_commander_deck` knows and
-/// a lone card does not.
-///
-/// (b) and (c) are not hypothetical: Shorikai, Genesis Engine and Parhelion II
-/// are legendary Vehicles, and The Seriema is a legendary Spacecraft. They used
-/// to be rejected as "not a legendary creature".
+/// CR 903.3 — may `def` be a commander on its own? Legendary and either a
+/// creature card (incl. creature only off the battlefield, CR 604.3), a
+/// Vehicle (Shorikai), or a Spacecraft with a power/toughness box (The
+/// Seriema); or it prints "can be your commander" (CR 903.3a, 113.6n). A
+/// CR 702.124k Background is legal only with its partner, which
+/// `validate_commander_deck` checks, not this.
 pub fn is_legal_commander(def: &CardDefinition) -> bool {
     def.is_legendary()
         && (def.is_creature()
@@ -802,10 +787,9 @@ fn is_spacecraft_with_pt(def: &CardDefinition) -> bool {
 }
 
 /// CR 903.4b — a commander that "chooses its color before the game begins"
-/// (Clara Oswald) takes that color at deck construction, and it joins the
-/// identity. The choice is the one color the 99 need beyond the other
-/// commanders' identity; `None` when no commander chooses, or the 99 need no
-/// color or more than one.
+/// (Clara Oswald) takes it at deck construction, joining the identity: the
+/// one colour the 99 need beyond the other commanders'. `None` when nobody
+/// chooses, or the 99 need zero or several colours.
 pub fn chosen_commander_color<'a>(
     commanders: &[&CardDefinition],
     main: impl IntoIterator<Item = &'a CardDefinition>,
@@ -849,15 +833,11 @@ fn rulebreaker_allows(cards: &crate::effect::RulebreakerCards, card: &CardDefini
     }
 }
 
-/// Validate a Commander-format deck. Runs the generic
-/// [`validate_deck`] checks first (100-card singleton main, etc.),
-/// then layers on Commander-specific rules: at least one commander,
-/// at most two (and a pair must be able to partner), each a card
-/// [`is_legal_commander`] accepts (CR 903.3), every main-deck
-/// card's color identity ⊆ commander's combined identity.
-///
-/// Errors from the two layers are returned as a single combined
-/// `Vec` (generic deck errors wrapped, commander errors plain).
+/// Validate a Commander deck: [`validate_deck`]'s generic checks, then one or
+/// two commanders (a pair must be able to partner), each accepted by
+/// [`is_legal_commander`] (CR 903.3), and every card's colour identity within
+/// the commanders' combined identity. Errors from both layers are returned
+/// together (generic ones wrapped).
 pub fn validate_commander_deck(
     deck: &Deck,
 ) -> Result<(), (Vec<DeckError>, Vec<CommanderDeckError>)> {

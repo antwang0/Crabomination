@@ -1,11 +1,8 @@
 //! CR 115.1 / 601.2c — an optional target slot left empty ahead of a filled
-//! one. The target list is positional (`Target(n)` reads slot `n`), so a
-//! trigger whose "up to one target …" slot 0 found nothing while slot 1 found
-//! something used to bind slot 1's pick as slot 0 — Betor's graveyard
-//! creature became the "+1/+1 counters on up to one other target creature".
-//! The hole holds slot 0's place: card ids start at 1 (`next_id`), so
-//! `CardId(0)` names no object, every selector reading it finds nothing, and
-//! the slot's effect does nothing.
+//! one. Targets are positional (`Target(n)` reads slot `n`), so without a
+//! hole slot 1's pick shifted into slot 0 (Betor). The hole is `CardId(0)`:
+//! ids start at 1 (`next_id`), so it names nothing and the slot's effect does
+//! nothing.
 
 use crate::card::CardId;
 use crate::effect::Effect;
@@ -38,9 +35,8 @@ pub fn pad_empty_slot_zero(effect: &Effect, mode: Option<usize>, target: &mut Op
 /// CR 608.2b — "a target that's no longer in the zone it was in when it was
 /// targeted is illegal": slot `slot` held a battlefield permanent as the
 /// ability went on the stack (`bf_slots`) and it has left, or names a player
-/// who left the game (CR 800.4a). A filter alone can't tell — a creature
-/// card in a graveyard is still a creature — so an effect that finds a card
-/// anywhere acted on its new object.
+/// who left the game (CR 800.4a). A filter alone can't tell (a creature card
+/// in a graveyard is still a creature).
 ///
 /// A declared target only — the slot has a filter: a bare `Target(n)` bound
 /// from the event ("that creature" of a combat-damage trigger) isn't targeted.

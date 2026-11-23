@@ -124,11 +124,10 @@ pub(super) fn pick_hand_ability(state: &GameState, seat: usize, w: &EvalWeights)
 }
 
 /// `hand_abilities_wide`: "{cost}, discard this card: N damage to target
-/// attacking or blocking creature" (Gideon's Memorial) aimed at the opposing
-/// combatant it kills with the most power + toughness. The filter names
-/// combat, so it is only ever offered once attackers are declared; the bot
-/// cast the Memorial as a 2-mana artifact 252 times and used this 0
-/// (2026-11-22).
+/// attacking or blocking creature" (Gideon's Memorial), aimed at the
+/// opposing combatant it kills with the most power + toughness. Only offered
+/// once attackers are declared (the filter names combat); the bot used to
+/// cast the Memorial as a plain artifact instead (2026-11-22).
 fn pick_combat_hand_damage(state: &GameState, seat: usize) -> Option<GameAction> {
     use crate::effect::{Effect, Selector, Value};
     use crate::game::types::Target;

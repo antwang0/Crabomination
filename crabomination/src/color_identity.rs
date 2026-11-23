@@ -1,37 +1,23 @@
 //! CR 903.4 — a card's *color identity*, the quantity Commander deck
-//! construction is built on.
+//! construction is built on: the colours of mana symbols in its cost or
+//! rules text plus CDA / colour indicator colours. 903.4c excludes reminder
+//! text, 903.4d includes a DFC's back face, 903.4e an adventurer's
+//! alternative characteristics.
 //!
-//! 903.4: "The Commander variant uses color identity to determine what cards
-//! can be in a deck with a certain commander. The color identity of a card is
-//! the color or colors of any mana symbols in that card's mana cost or rules
-//! text, plus any colors defined by its characteristic-defining ability or
-//! color indicator." 903.4c excludes reminder text; 903.4d includes the back
-//! face of a double-faced card; 903.4e includes an adventurer's alternative
-//! characteristics.
+//! A land's *basic land types* are folded in too. The CR keeps them in a
+//! separate restriction (903.5d), but its only consumer is the same subset
+//! check, and folding matches Scryfall's `color_identity`, which the
+//! whole-catalog audit ratchets against. See `basic_land_identity`.
 //!
-//! A land card's *basic land types* are folded in here too. The current CR does
-//! not put them in 903.4 at all — 903.5d is a separate deck-construction
-//! restriction ("a card with a basic land type may be included only if each
-//! color of mana it could produce is in the commander's color identity") — but
-//! the only consumer is that same subset check, and folding is what makes this
-//! agree with Scryfall's `color_identity`, which the whole-catalog audit
-//! ratchets against. See `basic_land_identity`.
+//! **Rules text, not just the cost** (duals, Moxen and Cabal Coffers carry
+//! identity in abilities). The module walks the *serialized* definition, so
+//! every mana symbol modelled anywhere — activation costs, produced mana,
+//! keyword costs, nested faces — counts, as CR 903.4 says. Same device as
+//! `audit::dead_capabilities`: a hand-written match over ~90 fields drifts.
 //!
-//! **Rules text, not just the mana cost.** Every nonbasic dual land, every Mox
-//! and Cabal Coffers carries its whole identity in an ability, so a walk of
-//! `def.cost` alone reports them colorless and a mono-green deck validates
-//! with Mox Pearl in it. This module walks the *serialized* definition
-//! instead, which is total by construction: a mana symbol the engine models
-//! anywhere — an ability's activation cost, the payload it adds, a keyword's
-//! cost, a nested face — is a symbol printed on the card, and CR 903.4 counts
-//! all of them. The serde walk is the same device `audit::dead_capabilities`
-//! uses, and for the same reason: a hand-written match over `CardDefinition`'s
-//! ~90 fields drifts the moment one is added.
-//!
-//! Reminder text mostly needs no exclusion: the engine models rules, not
-//! prose, so a reminder-text symbol rarely becomes a `ManaSymbol` at all. The
-//! exception is a keyword the engine expands inline whose whole cost is
-//! printed only in reminder text — see `is_reminder_only_cost`.
+//! Reminder text rarely becomes a `ManaSymbol` at all; the exception is an
+//! inline-expanded keyword whose cost is printed only in reminder text (see
+//! `is_reminder_only_cost`).
 
 use serde_json::Value;
 
@@ -42,28 +28,24 @@ use crate::mana::{Color, ColorSet};
 pub fn color_identity(def: &CardDefinition) -> ColorSet {
     let mut out = ColorSet::empty();
     basic_land_identity(def, &mut out);
-    // `to_value` fails only on a map with non-string keys or a non-finite
-    // float, neither of which a `CardDefinition` holds — but this runs on a
-    // mana-tap path in a Commander game (`AnyColorInCommanderIdentity`), and a
-    // definition-shape bug is not a reason to abort a self-play game. Fall
-    // back to the basic-land half; `debug_assert` keeps it loud in a test run.
+    // `to_value` fails only on non-string map keys or non-finite floats,
+    // neither in a `CardDefinition`; but this runs on a Commander mana-tap
+    // path, so fall back to the basic-land half rather than abort a game
+    // (`debug_assert` keeps it loud in tests).
     let v = serde_json::to_value(def).unwrap_or(Value::Null);
     debug_assert!(!v.is_null(), "CardDefinition serializes: {}", def.name);
     walk(&v, &mut out);
     out
 }
 
-/// CR 903.5d — "a card with a basic land type may be included in a Commander
-/// deck only if each color of mana it could produce is included in the
-/// commander's color identity". Folded into identity rather than checked
-/// separately (see the module header), so Gingerbread Cabin is green even
-/// though the engine gives a typed land its mana ability from the type rather
-/// than from a printed activated ability.
+/// CR 903.5d — "a card with a basic land type may be included only if each
+/// color of mana it could produce is in the commander's color identity",
+/// folded into identity (see the module header): Gingerbread Cabin is green
+/// though its mana ability comes from its type.
 ///
-/// Typed rather than part of the serde walk on purpose: only the *card's own*
-/// land types count. "Search your library for a Forest card" and a token that
-/// enters as a Forest both serialize a `land_types` list, and neither is a
-/// basic land type on this card.
+/// Typed, not part of the serde walk: only the card's *own* land types
+/// count, while "search for a Forest card" or a Forest token also serialize
+/// a `land_types` list.
 fn basic_land_identity(def: &CardDefinition, out: &mut ColorSet) {
     use crate::card::{CardType, LandType};
     if def.card_types.contains(&CardType::Land) {
@@ -93,12 +75,10 @@ fn basic_land_identity(def: &CardDefinition, out: &mut ColorSet) {
 fn walk(v: &Value, out: &mut ColorSet) {
     match v {
         Value::Object(m) => {
-            // CR 903.4c / 702.99 — Extort's `{W/B}` lives in reminder text, so
-            // a Crypt Ghast is mono-black. The engine expands the keyword into
-            // a real `MayPay` with a real hybrid cost; that cost is the one
-            // printed cost on a card that is not printed on the card.
-            // "This ability doesn't affect its color identity" (Fallaji
-            // Wayfarer's all-colors CDA) — the card says so itself.
+            // CR 903.4c / 702.99 — Extort's `{W/B}` is reminder text (Crypt
+            // Ghast is mono-black) though the engine expands it into a real
+            // hybrid `MayPay`. "This ability doesn't affect its color
+            // identity" (Fallaji Wayfarer's CDA) says so itself.
             if m.get("description")
                 .and_then(Value::as_str)
                 .is_some_and(|d| d.contains("doesn't affect its color identity"))
@@ -114,11 +94,10 @@ fn walk(v: &Value, out: &mut ColorSet) {
             if m.get("name").and_then(Value::as_str).is_some_and(is_reminder_text_token) && m.contains_key("card_types") {
                 return;
             }
-            // CR 305.6 — a land with a basic land type has that type's mana
-            // ability intrinsically; the engine prints it as an activated
-            // ability. On a card it's `basic_land_identity`'s; on a token the
-            // card makes (Staff of Titania's Forest Dryad) it's no symbol on
-            // the card at all.
+            // CR 305.6 — a basic land type's intrinsic mana ability, printed by
+            // the engine as an activated ability: on the card it's
+            // `basic_land_identity`'s; on a token the card makes (Staff of
+            // Titania) it's no symbol on the card at all.
             let intrinsic = basic_colors_of(m);
             // CR 111.3 / 903.4 — a token's defined mana cost is reminder text
             // ("It's a {3}{W}{W} … Baneslayer Angel" leaves Balefang mono-red).
@@ -184,11 +163,9 @@ fn walk(v: &Value, out: &mut ColorSet) {
                     // CR 903.4 — the color indicator, and a characteristic-
                     // defining color (the Kobolds' red, Transguild Courier).
                     "color_indicator" | "color_override" => each_color(p, out),
-                    // CR 903.4 / 604.3 — Transguild Courier: a characteristic-
-                    // defining ability that makes the card all colors puts
-                    // all five in its identity. Only when it points at
-                    // itself — a card that makes *other* permanents all
-                    // colors keeps its own identity.
+                    // CR 903.4 / 604.3 — Transguild Courier: a self-targeting
+                    // all-colours CDA puts all five in its identity; making
+                    // *other* permanents all colours doesn't.
                     "GrantAllColors"
                         if p.get("applies_to").and_then(Value::as_str) == Some("This") =>
                     {
@@ -328,10 +305,6 @@ mod tests {
         assert!(id.contains(Color::Black), "Cabal Coffers adds {{B}}");
     }
 
-    /// The tag table is only safe while each name belongs to one enum. A
-    /// `Protection(Color)` keyword serializes as `{"Protection":"White"}` and
-    /// must not read as identity; this pins that the tags we *do* match are
-    /// not reused. Regenerate by grepping the variant names if it fails.
     /// CR 903.4 — "You may pay {W}{U}{B}{R}{G} rather than pay the mana
     /// cost" is a rules-text cost: Jodah is five colors, not his {1}{U}{R}{W}.
     #[test]
@@ -349,6 +322,9 @@ mod tests {
         assert_eq!(id.len(), 1, "the Heartwood's red is reminder text");
     }
 
+    /// The tag table is safe only while each name belongs to one enum
+    /// (`{"Protection":"White"}` must not read as identity). Regenerate by
+    /// grepping the variant names if it fails.
     #[test]
     fn tag_names_are_unambiguous() {
         // Protection from a color is not color identity (CR 903.4 counts mana

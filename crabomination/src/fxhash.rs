@@ -1,25 +1,16 @@
 //! Deterministic-order hash containers for the engine.
 //!
-//! `std`'s default `RandomState` is seeded from OS entropy per process
-//! *and* bumped per map instance, so two `HashMap`s built from the same
-//! insertions iterate differently — in the next process and in the same
-//! one. Any map whose iteration reaches game logic (a `find` over
-//! `values()`, a `collect()` into an ordered structure, a tie broken by
-//! walk order) therefore makes a seeded game unreproducible, which is what
-//! the cube pool's determinism failure was.
+//! `std`'s `RandomState` is seeded per process *and* per map, so identical
+//! insertions iterate differently; any map whose walk order reaches game
+//! logic makes a seeded game unreproducible (the cube pool's determinism
+//! failure). A seedless hasher fixes the class: order is a function of keys
+//! and insertions, which the seed determines. Depending on that order for a
+//! rules outcome is still a bug, but two runs can't desync.
 //!
-//! Swapping the hasher fixes the class rather than the sites: order stays
-//! a function of the keys and the insertions, both of which the seed
-//! already determines. It is not a licence to depend on the order — a map
-//! whose walk order decides a rules outcome is still a rules bug — but it
-//! cannot silently desynchronize two runs any more.
-//!
-//! FxHash is the rustc hasher: no seed, one multiply-and-rotate per word.
-//! Vendored rather than pulled in as a dependency because it is 30 lines
-//! and the engine's determinism should not hinge on a version bump.
-//! Not collision-resistant against chosen keys — the engine's keys are
-//! `CardId`s, seat indices and `&'static str` card names, none of them
-//! attacker-chosen, and the maps are board-sized.
+//! FxHash is rustc's hasher (one multiply-and-rotate per word), vendored
+//! because it is 30 lines and determinism shouldn't hinge on a version bump.
+//! Not collision-resistant, which is fine: keys (`CardId`s, seats, card
+//! names) aren't attacker-chosen and maps are board-sized.
 
 use std::hash::{BuildHasherDefault, Hasher};
 

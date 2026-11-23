@@ -2,19 +2,16 @@
 //! [`TableRow`]s for the one-model-for-every-mode net (ML_NOTES "One model
 //! for every mode — the user's 2026-11-02 additions, and step 2 begins").
 //!
-//! A game comes from a [`Mode`] — SOS or FRA sealed, cube, or a Commander pod
-//! of 2..=6 seats — with the mode's **card pool**: every card that can appear
-//! in it (the set, the cube list, the training precons' union), shared by
-//! every row of the game. The game is driven by the pod driver
-//! (`pod::play_pod_game_observed`, one pilot per seat, any seat count), and at
-//! each snapshot point every living seat's view is encoded
-//! ([`encode_table`]) with the pool and the hidden truth the belief head
-//! learns from: each opponent's hand and library as pool indices.
+//! A game comes from a [`Mode`] (SOS/FRA sealed, cube, or a 2..=6-seat
+//! Commander pod) with the mode's **card pool** (every card that can appear),
+//! shared by every row. The pod driver (`pod::play_pod_game_observed`) plays
+//! it; at each snapshot every living seat's view is encoded
+//! ([`encode_table`]) with the pool and the belief head's hidden truth (each
+//! opponent's hand and library as pool indices).
 //!
-//! Labels (the 2026-09-29 note's): `win` one-hot on the winner in the row's
-//! slot order, a draw split across the seats still in; `life` final over
-//! starting life, clamped to [0, 1.5], 0 for a seat that lost; `game_len`
-//! the turns still to come over 15, as the duel recorder's. A seat's rows
+//! Labels (the 2026-09-29 note's): `win` one-hot on the winner in slot order,
+//! a draw split across surviving seats; `life` final/starting, clamped to
+//! [0, 1.5], 0 for a loser; `game_len` remaining turns / 15. A seat's rows
 //! stop when it leaves; its last row carries the final result.
 
 use std::collections::HashMap;

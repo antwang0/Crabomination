@@ -1,28 +1,19 @@
-//! The **shape** questions about a printed mana ability: can this estimate
-//! count it, how much and which colours could it make, and is its amount a
-//! runtime value rather than a constant.
+//! Shape questions about a printed mana ability: can an estimate count it,
+//! how much and which colours it makes, is its amount a runtime value.
 //!
-//! They lived in `server::bot`, where `available_mana` is their only caller
-//! that *plays*. `game::actions::mana_summary_of` needs the same four
-//! answers to pack them per definition (PERF `(-317)`), and `actions.rs` has
-//! no dependency on `server::bot` and must not grow one — so the predicates
-//! moved down here rather than being written twice. **Two hand-written
-//! copies of one predicate is the bug class this branch keeps closing**;
-//! there is one of each, and both callers read it.
+//! Shared by `server::bot::available_mana` and
+//! `game::actions::mana_summary_of` (PERF `(-317)`); here because `actions.rs`
+//! must not depend on `server::bot`, and one copy beats two hand-written ones.
 //!
-//! Every function here is a pure function of the ability or effect handed
-//! in: no board, no instance, no seat. That is what makes the pack in
-//! `mana_summary_of` sound.
+//! Every function is pure in the ability/effect (no board, instance or seat),
+//! which is what makes `mana_summary_of`'s per-definition pack sound.
 
 use crate::effect::{ActivatedAbility, Effect, ManaPayload};
 
-// ⚠ **`#[inline]` on each of these is load-bearing, and it is the whole cost
-// of the move.** `release-fast` is codegen-units 16 with no LTO, so a callee
-// in another module is a call rather than an inlined body: leaving them bare
-// took `accumulate_mana_colors` from **53,844 Ir to 2,320,396** on a six-game
-// `cube` run (+0.10 % of the pool, +0.18 % of `fixed`) purely by moving the
-// file. `accumulate_mana_colors_seq` keeps its `#[inline(never)]` — that one
-// is `(-136)`'s deliberate out-of-line recursion.
+// ⚠ `#[inline]` on each of these is load-bearing: `release-fast` has 16
+// codegen units and no LTO, so without it a cross-module callee is a call
+// (moving the file without it cost +0.10..0.18 %). `accumulate_mana_colors_seq`
+// keeps `#[inline(never)]` — PERF `(-136)`'s deliberate out-of-line recursion.
 
 #[inline]
 pub(crate) fn accumulate_mana_colors(eff: &Effect, set: &mut crate::mana::ColorSet) {
@@ -90,12 +81,9 @@ pub(crate) fn accumulate_payload_colors(pool: &ManaPayload, set: &mut crate::man
 /// A mana ability the bot is willing to count toward affordability: it
 /// costs a tap and nothing the bot would regret.
 ///
-/// We only need to know the mana *could* be paid, so color-choice sources
-/// (dual lands, Birds of Paradise) and painland-style life costs count --
-/// the engine's auto-tap will happily use them. Sources that consume a
-/// real resource to fire (sacrifice, discard, exile, energy) are excluded:
-/// counting them would have the bot commit to lines it can only pay for by
-/// spending something it would rather keep.
+/// Colour-choice sources and painland life costs count (auto-tap uses them);
+/// sources that consume a real resource (sacrifice, discard, exile, energy)
+/// don't, so the bot never commits to lines that spend what it would keep.
 #[inline]
 pub(crate) fn is_countable_mana_ability(a: &ActivatedAbility) -> bool {
     a.tap_cost
@@ -131,11 +119,10 @@ pub(crate) fn is_x_sized_mana_ability(a: &ActivatedAbility) -> bool {
 /// Cavern of Souls' chosen-type mana. A rider (`SpendRestriction::is_rider`)
 /// permits every payment, so it is not one.
 ///
-/// The auto-tapper's source table leaves these abilities out (the
-/// kind-aware `pay_with_restricted_sources` retry taps them when they may
-/// fund the payment): listed, one was tapped for a generic pip it could not
-/// pay. Gideon's Memorial played at −8.3 points in FRA sealed, −2.7 with the
-/// ability removed (2026-11-22).
+/// Kept out of the auto-tapper's source table (the kind-aware
+/// `pay_with_restricted_sources` retry taps them when they may fund the
+/// payment); listed, one was tapped for a pip it could not pay (Gideon's
+/// Memorial, 2026-11-22).
 pub(crate) fn mana_is_spend_restricted(eff: &Effect) -> bool {
     let Effect::AddMana { pool, .. } = eff else { return false };
     match pool {

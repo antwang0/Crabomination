@@ -4,29 +4,21 @@ use crate::effect::{Effect, EventKind, Selector, Value};
 use crate::game::layers::ComputedPermanent;
 use smallvec::SmallVec;
 
-/// `(blocker, lethal)` for one attacker's damage assignment. Four inline
-/// slots: the list is one entry per blocker in the damage order, it is built
-/// fresh per attacker per combat step, and every consumer reads it as a
-/// slice — 6,274 `cube` allocations a six-game run went to zero for 16 bytes
-/// of a stack frame nothing clones. PERF `(-365)`.
+/// `(blocker, lethal)` for one attacker's damage assignment, one entry per
+/// blocker in damage order. Built fresh per attacker per step and read as a
+/// slice, so four inline slots avoid the allocation. PERF `(-365)`.
 type Lethals = SmallVec<[(CardId, u32); 4]>;
 
-/// What a `battlefield.writes()`-keyed gate in front of
-/// `fire_combat_damage_triggers`' opening fold would actually buy, priced
-/// before anyone builds it — PERF's candidates head names the row (fourth
-/// biggest self on `cube`, 32.7 M / 2.02 %, and its whole callee tree is
-/// 2.1 M, so the self IS the work).
+/// Census pricing a `battlefield.writes()`-keyed gate in front of
+/// `fire_combat_damage_triggers`' opening fold (PERF's candidates head).
 ///
-/// The fold is a whole-battlefield walk that does not short-circuit, for two
-/// facts: `any_attached` (some permanent's `attached_to` names the dealer) and
-/// `soulbond_pair`. Both read **instance** fields, so `(-315)`'s
-/// definition-keyed lane cannot hold them; the sound key is `(-306)`'s write
-/// counter. The gate only pays on a board where **nothing is attached to
-/// anything and nothing is paired** — one Aura or Equipment defeats it, which
-/// is the shape `(-312)` refuted one lane over, so the rate is the whole
-/// question.
+/// The fold walks the whole battlefield for `any_attached` and
+/// `soulbond_pair`. Both read instance fields, so `(-315)`'s definition-keyed
+/// lane can't hold them; the sound key is `(-306)`'s write counter. The gate
+/// only pays on a board with nothing attached and nothing paired (one Aura
+/// defeats it, the shape `(-312)` refuted), so the hit rate is the question.
 ///
-/// Compile-time gated on `trig-census` so the shipped binary is unchanged;
+/// Gated on the `trig-census` feature (shipped binary unchanged);
 /// `CRAB_COMBAT_CENSUS=1` at run time, printed by `bot_ladder`.
 #[cfg(feature = "trig-census")]
 pub mod combat_census {
@@ -38,14 +30,11 @@ pub mod combat_census {
     /// calls a `battlefield.writes()`-keyed fold would have HIT, calls
     /// `(-318)`'s fold actually SKIPPED the walk on]`.
     ///
-    /// The last one is the one that decides the key, and it is the reason this
-    /// census exists rather than a build: `writes` bumps at every `&mut` reach
-    /// at the cards, and combat damage is a write, so a fold keyed on it is
-    /// re-taken between calls. A low number here says the sound-and-cheap key
-    /// has to be something else — a definition-only lane over "can this
-    /// definition be attached", which is an *inference* over the 26 sites that
-    /// assign `attached_to` rather than a match against one walk, and so needs
-    /// its own `debug_assert!` in the ABSENT arm.
+    /// The last slot decides the key: combat damage is itself a write, so a
+    /// `writes`-keyed fold is re-taken between calls. If it reads low, the key
+    /// must be a definition-only "can this be attached" lane — an inference
+    /// over the 26 sites that assign `attached_to`, needing its own
+    /// `debug_assert!` in the ABSENT arm.
     pub static N: [AtomicU64; 8] = [const { AtomicU64::new(0) }; 8];
 
     /// The `writes()` this census last saw, for the hit-rate column. Single
@@ -73,24 +62,20 @@ pub mod combat_census {
     }
 }
 
-/// One combat/noncombat damage trigger gathered by `fire_combat_damage_
-/// triggers`, before its intervening-'if' runs: `(source, effect,
-/// controller, intervening-if, bind_dealer, once)`. `bind_dealer` binds the
-/// damage dealer as the body's `TriggerSource` (the Phase-1.5 listener
-/// pattern — Kaito's "return one of them to hand"); `once` is the printed
-/// index of a `once_per_turn` trigger, the CR 603.3d key the dispatcher
-/// uses (`triggered_once_per_turn_used`), so a hook-fired trigger obeys the
-/// same gate — "one or more creatures you control deal combat damage" is
-/// one fire for the batch, not one per dealer.
+/// One damage trigger gathered by `fire_combat_damage_triggers` before its
+/// intervening-'if' runs: `(source, effect, controller, intervening-if,
+/// bind_dealer, once)`. `bind_dealer` binds the dealer as the body's
+/// `TriggerSource` (Kaito's "return one of them to hand"); `once` is a
+/// `once_per_turn` trigger's printed index, the CR 603.3d key
+/// (`triggered_once_per_turn_used`), so "one or more creatures you control
+/// deal combat damage" fires once for the batch, not once per dealer.
 type DamageTrigger = (CardId, Effect, usize, Option<crate::card::Predicate>, bool, Option<(usize, bool)>);
 
 /// CR 603.2c — what a "whenever one or more … deal combat damage to X"
-/// trigger batches *over*. All combat damage in a sub-step is dealt at once
-/// (CR 510.4), but each damaged object is its own event: an alpha strike
-/// spread across three seats of a pod is three "one or more creatures you
-/// control deal combat damage to a player" events, not one. The dedupe key
-/// carries it so the engine's per-attacker walk collapses to one fire **per
-/// damaged subject** rather than one for the whole step.
+/// trigger batches over. Combat damage is simultaneous (CR 510.4) but each
+/// damaged object is its own event: an alpha strike across three pod seats
+/// is three events. The dedupe key collapses the per-attacker walk to one
+/// fire per damaged subject.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum BatchSubject {
     Player(usize),
@@ -101,9 +86,8 @@ pub(crate) enum BatchSubject {
     /// ("whenever ~ deals combat damage"), which trigger once for a dealer's
     /// simultaneous damage however many objects it hits (Sword of Hours).
     Dealer(CardId),
-    /// The noncombat twin of `Dealer`: every recipient of one dealer within
-    /// one damage-dealing effect (a Pestilence sweep is one event for
-    /// "whenever ~ deals damage"). Lives only inside one
+    /// Noncombat twin of `Dealer`: every recipient of one dealer within one
+    /// damage effect is one event (a Pestilence sweep). Lives only inside one
     /// `effects::damage_batch` scope.
     NoncombatDealer(CardId),
     /// The open-batch marker those keys sit above.
@@ -147,22 +131,16 @@ type AttackerGrants = (
 );
 
 /// Static prohibitions `declare_attackers_banded` checks against the whole
-/// battlefield. Same device as [`crate::game::actions::cast_static`] and
-/// `prevent_static`: one walk up front, a bit per family, and each gated
-/// block still runs its own controller / filter / amount tests unchanged, so
-/// a set bit costs a walk and a clear bit skips work that was a no-op.
+/// battlefield: one walk up front, a bit per family (same device as
+/// [`crate::game::actions::cast_static`]). Each gated block still runs its
+/// own tests, so a clear bit only skips work that was a no-op.
 ///
-/// **Sound by construction, and only for these four.** Every block gated here
-/// tests `matches!` on one `StaticEffect` variant read straight off a
-/// battlefield card's `static_abilities`, which is exactly what the scan
-/// reads. The declaration's other two static walks — Magnetic Web's
-/// `AttackTogether` and Arboria's
-/// `PlayersCantBeAttackedUnlessTheyActedLastTurn` — go through
-/// `active_static`, which *peels* `WhileYourTurn`-style wrappers, so a raw
-/// variant scan would miss a wrapped one and skip work that was not a no-op.
-/// **They are deliberately left ungated**; widening the scan means peeling
-/// the same wrappers `active_static` does, and a second hand-written copy of
-/// that list is the walker-drift bug class this repo keeps closing.
+/// Sound only for these four, which `matches!` one raw `StaticEffect`
+/// variant. Magnetic Web's `AttackTogether` and Arboria's
+/// `PlayersCantBeAttackedUnlessTheyActedLastTurn` go through `active_static`,
+/// which peels `WhileYourTurn`-style wrappers, so they are deliberately left
+/// ungated: gating them would need a second copy of that peeling list
+/// (walker drift).
 pub(crate) mod attack_static {
     /// `AttackerCapAgainstController` (Silent Arbiter-style per-defender cap).
     pub const ATTACKER_CAP: u32 = 1 << 0;
@@ -177,14 +155,10 @@ pub(crate) mod attack_static {
 }
 
 /// Tag which of `declare_attackers_banded`'s rejections fired, under
-/// `CRAB_SIM_REJECTS=names`.
-///
-/// The function gates an attacker on thirteen prohibitions and returns the
-/// same three error kinds from twenty-eight places, so the census in PERF
-/// (-55) could name the *card* and never the *rule*. `line!()` at the return
-/// site is the cheapest unique tag there is and cannot drift from the code it
-/// names. Off by default: one atomic load and a branch, and the value is
-/// returned unchanged either way.
+/// `CRAB_SIM_REJECTS=names`. Twenty-eight returns share three error kinds,
+/// so PERF (-55)'s census could name the card but not the rule; `line!()` at
+/// the return site is a tag that can't drift. Off by default: one atomic load
+/// and a branch, value returned unchanged.
 #[inline]
 fn attack_reject(line: u32, e: GameError) -> GameError {
     if crate::game::reject_trace_level() >= 2 {
@@ -193,11 +167,9 @@ fn attack_reject(line: u32, e: GameError) -> GameError {
     e
 }
 
-/// [`attack_reject`] for `declare_blockers`, which has forty-four rejection
-/// returns and the same problem: `CannotBlock(id)` names the blocker and
-/// never which of the ~twenty prohibitions barred it, and the batch-level
-/// ones (`MustBeBlockedIfAble`, the block cost) name a card that is not the
-/// one at fault at all.
+/// [`attack_reject`] for `declare_blockers`: `CannotBlock(id)` names the
+/// blocker but not which of ~twenty prohibitions barred it, and batch-level
+/// rejections (`MustBeBlockedIfAble`, block cost) name a card not at fault.
 #[inline]
 fn block_reject(line: u32, e: GameError) -> GameError {
     if crate::game::reject_trace_level() >= 2 {
@@ -222,19 +194,13 @@ enum FirebendKind {
 }
 
 /// What [`GameState::declare_attackers_banded`]'s commit loop asks of one
-/// attacker's **computed** keyword set, in one pass.
+/// attacker's computed keyword set, in one pass (each field was its own
+/// `computed_kw(id)` lookup). PERF `(-338)`.
 ///
-/// `(-337)`'s device on the attack side, and the larger of the two rows: each
-/// field below was its own `computed_kw(id)` — a linear `find` over the gated
-/// subset, then `keywords()`' `OverlayList::get`, then a slice walk — six of
-/// them per declared attacker. PERF `(-338)`.
-///
-/// ⚠ The two payload fields keep `find_map`'s **first-match** rule rather than
-/// taking a max, because that is what the arms they replace did: with two
-/// Annihilator keywords on one body the first in the computed set is the one
-/// that fired, and this fold has to fire the same one. (`AttackerBlockReqs`
-/// takes a max for the opposite reason — there the *decision* is "any bound
-/// unmet", which the max decides.)
+/// ⚠ The payload fields keep `find_map`'s first-match rule, not a max: with
+/// two Annihilator keywords the first in the computed set is the one that
+/// fired. (`AttackerBlockReqs` takes a max because its question is "any
+/// bound unmet".)
 #[derive(Clone, Copy, Default, PartialEq, Eq, Debug)]
 struct AttackerDeclFacts {
     /// CR 702.147 — Decayed.
@@ -328,10 +294,8 @@ pub(crate) fn attack_static_scan(state: &GameState) -> u32 {
 /// The `AttackBlockCostTapAnother` filters carried by a computed keyword list
 /// (Hollow Warrior) — one helper must be tapped per entry.
 fn tap_another_filters(kws: &[Keyword]) -> Vec<crate::card::SelectionRequirement> {
-    // Asked once per declared attacker and once per declared blocker, and
-    // empty on every board that plays none of the handful of cards with the
-    // keyword — but an empty `collect()` still calls `Vec::from_iter`. The
-    // presence scan is over the same slice the `filter_map` would walk.
+    // Asked per declared attacker and blocker and almost always empty; an
+    // empty `collect()` still calls `Vec::from_iter`, so scan first.
     if !kws.iter().any(|k| matches!(k, Keyword::AttackBlockCostTapAnother(_))) {
         return Vec::new();
     }
@@ -360,18 +324,14 @@ fn max_blocks_for(kws: &[Keyword]) -> usize {
         .sum::<usize>()
 }
 
-/// CR 702.180 / 702.70 — the total poison a creature's combat damage adds on
-/// top of its damage: Toxic N and Poisonous N fold into one rider.
+/// CR 702.180 / 702.70 — the poison a creature's combat damage adds: Toxic N
+/// and Poisonous N fold into one rider.
 ///
-/// ⚠ **Cumulative, and that is why it is a sum rather than a `has_kw`.** Layer
-/// 6 pushes every granted `Toxic(_)` / `Poisonous(_)` instance instead of
-/// collapsing duplicates (CR 702.180b / 702.70b — Plague Nurse's granted
-/// toxic 1 stacks with a printed toxic 1), so the *computed* list is the only
-/// set that carries the right total.
-///
-/// One definition because two callers must agree: the damage step's
-/// `AttackerInfo` and the bot's block planner, whose own copy read
-/// `definition.keywords` and so scored a granted or stacked Toxic as zero.
+/// ⚠ A sum, not a `has_kw`: layer 6 keeps every granted instance (CR
+/// 702.180b / 702.70b — Plague Nurse's granted toxic 1 stacks with a printed
+/// one), so only the computed list carries the right total. Shared by the
+/// damage step and the bot's block planner, which used to read
+/// `definition.keywords` and miss granted Toxic.
 pub(crate) fn toxic_poison_value(kws: &[Keyword]) -> u32 {
     kws.iter()
         .filter_map(|k| match k {
@@ -410,11 +370,9 @@ impl GameState {
         })
     }
 
-    /// [`bands_with_other_qualities`](Self::bands_with_other_qualities) read
-    /// off a computed set the caller already holds. Every combat-damage caller
-    /// has one — the resolver's `combat_damage_computed` covers exactly the
-    /// attackers and declared blockers — so the band question costs a
-    /// battlefield walk instead of a gather.
+    /// [`bands_with_other_qualities`](Self::bands_with_other_qualities) off a
+    /// computed set the caller already holds (`combat_damage_computed` covers
+    /// attackers and blockers), so it costs a battlefield walk, not a gather.
     fn bands_with_other_qualities_of(
         &self,
         ids: &[CardId],
@@ -452,17 +410,12 @@ impl GameState {
         ids.iter().find_map(|id| self.battlefield_find(*id)).map(|c| c.controller)
     }
 
-    /// `max_blocks_for` plus the board-dependent riders keyed on the blocker
-    /// itself ("…for each Equipment attached to this creature").
     /// CR 506.2 / 509.1b — the tightest "no more than N creatures can
-    /// attack/block each combat" cap in play (Silent Arbiter), or `None` when
-    /// nothing caps participation.
+    /// attack/block each combat" cap in play (Silent Arbiter), or `None`.
     ///
-    /// Behind the battlefield's `has_combat_cap_static` lane: both flavours of
-    /// the static share one definition-only answer, so a board that plays
-    /// neither never makes the `flat_map` (PERF `(-324)`). A lane rather than a
-    /// presence slot because all four callers — the two declaration gates and
-    /// the bot's two attack plans — are outside a freeze scope.
+    /// Behind the battlefield's `has_combat_cap_static` lane (PERF `(-324)`);
+    /// a lane rather than a presence slot because all four callers are
+    /// outside a freeze scope.
     pub(crate) fn combat_participation_cap(&self, blocking: bool) -> Option<u32> {
         use crate::effect::StaticEffect;
         if !self.battlefield.has_combat_cap_static() {
@@ -479,6 +432,8 @@ impl GameState {
             .min()
     }
 
+    /// `max_blocks_for` plus the board-dependent riders keyed on the blocker
+    /// itself ("…for each Equipment attached to this creature").
     pub(crate) fn max_blocks_on(&self, blocker: CardId, kws: &[Keyword]) -> usize {
         use crate::effect::StaticEffect;
         let base = max_blocks_for(kws);
@@ -514,8 +469,7 @@ impl GameState {
 
     /// Weathered Sentinels — Defender is waived only against a player who
     /// attacked its controller during their last turn (that player's
-    /// `attacked_players_this_turn` lasts until their next turn begins), so
-    /// the declaration re-checks each such attack's target.
+    /// `attacked_players_this_turn` lasts until their next turn begins).
     pub(crate) fn defender_waived_only_vs_last_turn_attackers(&self, card: &CardInstance) -> bool {
         card.definition
             .static_abilities
@@ -576,11 +530,9 @@ impl GameState {
     /// the Humorless).
     pub(crate) fn tapped_creatures_can_block(&self, controller: usize) -> bool {
         use crate::effect::StaticEffect;
-        // `blocker_self_block` asks this once per TAPPED candidate blocker, and
-        // the exact answer is a whole-battlefield `static_abilities` scan. The
-        // seat-independent superset goes through the freeze scope's presence
-        // slot first, so a board with no such static answers from a word after
-        // the scope's first ask; `false` there is authoritative for every seat.
+        // Asked per tapped candidate blocker; the exact answer is a whole-board
+        // scan, so the freeze scope's seat-independent presence slot goes
+        // first. `false` there is authoritative for every seat.
         self.tapped_block_static_in_scope()
             && self.battlefield.iter().any(|c| {
                 c.controller == controller
@@ -626,13 +578,10 @@ impl GameState {
     pub fn may_declare_blocks(&self, seat: usize) -> bool {
         match self.block_chooser() {
             Some(chooser) => chooser == seat,
-            // CR 509.1a — blocks are declared by the *defending* players. In a
-            // duel that is exactly "not the active player", which is what this
-            // used to say; at three or more seats it is only the players being
-            // attacked (or their teammates), and every other seat was being
-            // offered a declaration the per-assignment check would reject.
-            // With nothing attacking there is nothing to declare either way,
-            // so the duel's answer is unchanged in both branches.
+            // CR 509.1a — blocks are declared by the defending players: in a
+            // duel "not the active player", at three or more seats only the
+            // players being attacked (or their teammates). With nothing
+            // attacking there is nothing to declare either way.
             None => {
                 seat != self.active_player_idx
                     && (self.attacking.is_empty()
@@ -647,21 +596,16 @@ impl GameState {
     // ── Declare attackers ─────────────────────────────────────────────────────
 
     /// CR 508.1a — the restrictions on one attacker that depend only on the
-    /// creature and the board: not on which defender it is aimed at (see
-    /// [`Self::attacker_target_block`]) and not on the rest of the batch
-    /// (Okk's bigger partner, the participation cap).
+    /// creature and the board, not on the defender
+    /// ([`Self::attacker_target_block`]) or the rest of the batch (Okk, the
+    /// participation cap).
     ///
-    /// One walker, so [`Self::declare_attackers_banded`]'s declaration gate
-    /// and its three CR 508.1d "attacks each combat if able" requirement
-    /// loops cannot disagree about which creatures are *able*. Those loops
-    /// used to spell out five of these families by hand, so a creature that
-    /// had to attack and carried any of the other twenty was **required to
-    /// attack and then rejected for attacking** — an unsatisfiable
-    /// declaration that costs the seat its whole combat, with no legal move
-    /// out of it.
+    /// One walker shared by [`Self::declare_attackers_banded`]'s gate and its
+    /// CR 508.1d "attacks each combat if able" loops, so they can't disagree
+    /// about who is able — a hand-written copy once made a creature required
+    /// to attack and then rejected for attacking.
     ///
-    /// Returns the rejecting site's line alongside the error so the per-site
-    /// census (`CRAB_SIM_REJECTS=names`) still names the rule, not the card.
+    /// Returns the rejecting line for `CRAB_SIM_REJECTS=names`.
     pub(crate) fn attacker_self_block(
         &self,
         p: usize,
@@ -681,10 +625,8 @@ impl GameState {
             .map(|c| c.card_types().contains(&crate::card::CardType::Creature))
             .unwrap_or_else(|| self.computed_is_creature(card));
         // CR 701.35 — detain; CR 508.1a — Wall of Dust's one-turn ban. Both
-        // report `CannotAttack`, as does a permanent that is not a creature
-        // right now: a bestowed Aura (Kestia) or a de-animated Vehicle, which
-        // used to fall through this cascade and come out labelled *summoning
-        // sick* on a card whose `summoning_sick` is false.
+        // report `CannotAttack`, as does a permanent that isn't a creature
+        // right now (bestowed Aura, de-animated Vehicle) — not "summoning sick".
         if !is_creature_now
             || card.detained_by.is_some()
             || card.attack_ban == crate::card::AttackBan::Active
@@ -701,15 +643,12 @@ impl GameState {
         {
             return Some((line!(), GameError::CannotAttack(id)));
         }
-        // **One walk over the computed keywords.** Twenty `has_kw` /
-        // `iter().any()` scans of the same short slice is twenty times the
-        // loop, and this runs once per attack candidate inside the bot's
-        // search — asking the families one at a time read `fixed` +0.17 %.
+        // One walk over the computed keywords: this runs per attack candidate
+        // in the bot's search, and asking each family separately read `fixed`
+        // +0.17 %.
         let mut hasted = false;
         // A granted "can attack as though it didn't have defender" (Assault
-        // Formation's {G}, Walking Bulwark, the magecraft Walls) waives it
-        // too; the declaration used to read only the statics and the
-        // turn-scoped set, so every such grant was dead.
+        // Formation's {G}, Walking Bulwark, the magecraft Walls) waives it too.
         let waives_defender = kws.iter().any(|k| matches!(k, Keyword::AttacksAsThoughNoDefender));
         for k in kws {
             match k {
@@ -845,10 +784,8 @@ impl GameState {
     }
 
     /// CR 302.6 — Frenzied Saddlebrute: may a summoning-sick creature `p`
-    /// controls attack `defender` as though it had haste? Each
-    /// `CreaturesAttackYourOpponentsAsThoughHaste` source covers its
-    /// controller's opponents (and their planeswalkers); `None` asks whether
-    /// any live defender is covered, the defender-agnostic gate.
+    /// controls attack `defender` as though it had haste? `None` asks whether
+    /// any live defender is covered.
     pub(crate) fn attack_as_though_haste(&self, p: usize, defender: Option<usize>) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|src| {
@@ -867,10 +804,9 @@ impl GameState {
         })
     }
 
-    /// CR 508.1a — the restrictions on one attacker that depend on *which*
-    /// defender it is aimed at. Split from [`Self::attacker_self_block`] so
-    /// [`Self::attacker_is_able`] can ask whether **any** defender would do
-    /// without re-deriving the six families by hand.
+    /// CR 508.1a — the restrictions on one attacker that depend on which
+    /// defender it is aimed at. Split out so [`Self::attacker_is_able`] can
+    /// ask whether any defender would do.
     pub(crate) fn attacker_target_block(
         &self,
         p: usize,
@@ -1020,10 +956,9 @@ impl GameState {
         })
     }
 
-    /// The Ensnaring Bridge-style caps in scope, one per static (CR 613 —
-    /// each reads its own controller's hand). `statics` is
-    /// [`attack_static_scan`]'s bitmask, so a board without the family pays
-    /// one bit test.
+    /// The Ensnaring Bridge-style caps in scope, one per static (CR 613 — each
+    /// reads its own controller's hand). `statics` is [`attack_static_scan`]'s
+    /// bitmask, so a board without the family pays one bit test.
     pub(crate) fn attack_power_caps(&self, statics: u32) -> Vec<usize> {
         if statics & attack_static::POWER_CAP == 0 {
             return Vec::new();
@@ -1042,15 +977,11 @@ impl GameState {
             .collect()
     }
 
-    /// The engine's own answer to "may `card` be declared as an attacker
-    /// against `defender`", batch-independent.
-    ///
-    /// The bot's attack picker calls this instead of re-deriving the gate, so
-    /// its candidate filter cannot drift from
-    /// [`Self::declare_attackers_banded`] — the picker/engine disagreement
-    /// class PERF (-55) is made of. Batch-level rules (Okk's bigger partner,
-    /// the participation cap, attacks-alone) are the caller's, because they
-    /// are not properties of one creature.
+    /// May `card` be declared as an attacker against `defender`,
+    /// batch-independent? The bot's attack picker calls this so its filter
+    /// can't drift from [`Self::declare_attackers_banded`] (the PERF (-55)
+    /// bug class). Batch-level rules (Okk, participation cap, attacks-alone)
+    /// are the caller's.
     pub(crate) fn may_declare_attacker(
         &self,
         p: usize,
@@ -1070,13 +1001,6 @@ impl GameState {
                 .is_none()
     }
 
-    /// CR 508.1d — is `card` *able* to attack at all? The predicate the three
-    /// "attacks each combat if able" requirement loops share: nothing about
-    /// the creature or the board blocks it, and at least one legal defending
-    /// player survives the defender-dependent restrictions.
-    ///
-    /// Deliberately the same walkers the declaration gate runs, because a
-    /// requirement the gate then rejects has no legal answer.
     /// CR 508.1 — the tightest "no more than N creatures can attack you"
     /// cap seat `d` controls (Crawlspace).
     pub(crate) fn attacker_cap_against(&self, d: usize) -> Option<usize> {
@@ -1109,11 +1033,10 @@ impl GameState {
             .min()
     }
 
-    /// CR 508.1d — a creature a requirement binds may stay home when a cap
-    /// leaves it no room: the global cap (Silent Arbiter) is full, or every
-    /// opponent it could attack is at its own cap (Crawlspace) and controls
-    /// nothing else to attack. Only maximal when every declared attacker is
-    /// itself bound — the caller's half.
+    /// CR 508.1d — a bound creature may stay home when a cap leaves no room:
+    /// the global cap (Silent Arbiter) is full, or every opponent it could
+    /// attack is at its own cap (Crawlspace). Only maximal when every declared
+    /// attacker is itself bound — the caller's half.
     fn attack_cap_leaves_no_room(&self, p: usize, card: &crate::card::CardInstance, kws: &[Keyword], attacks: &[Attack], statics: u32) -> bool {
         if let Some(cap) = self.combat_participation_cap(false)
             && self.attacking.len() + attacks.len() >= cap as usize
@@ -1140,6 +1063,11 @@ impl GameState {
             })
     }
 
+    /// CR 508.1d — is `card` able to attack at all? Shared by the three
+    /// "attacks each combat if able" loops: nothing about the creature or
+    /// board blocks it, and some legal defender survives the
+    /// defender-dependent restrictions. Same walkers as the declaration gate,
+    /// because a requirement the gate rejects has no legal answer.
     pub(crate) fn attacker_is_able(
         &self,
         p: usize,
@@ -1153,11 +1081,9 @@ impl GameState {
         }
         let kws: &[Keyword] = cp.map(|c| c.keywords()).unwrap_or(&[]);
         let taxed = self.attack_tax_possible(statics);
-        // The fast path: nothing about *which* defender can matter. A goad
-        // (either field), a "can't attack you" lock or an Island Sanctuary
-        // shield can bar every seat, so each takes the walk below — a goaded
-        // Arabella whose sole goader's lock barred her was required to attack
-        // (6-seat pod, seed 793022).
+        // Fast path: nothing about which defender matters. A goad, a "can't
+        // attack you" lock or an Island Sanctuary shield can bar every seat,
+        // so each takes the walk below (6-seat pod, seed 793022).
         if !Self::has_defender_dependent_restriction(kws)
             && !taxed
             && statics & attack_static::CANT_ATTACK_CONTROLLER == 0
@@ -1166,11 +1092,9 @@ impl GameState {
         {
             return true;
         }
-        // CR 508.1d — able means some defender takes the attack without a
-        // restriction: a seat barred to everyone (Blazing Archon, a Second
-        // Doctor ban) or to this creature (Island Sanctuary) is none. The same
-        // seats `attack_target_options` scores, so a requirement never binds
-        // an attack the scorer can't place.
+        // CR 508.1d — able means some defender takes the attack unrestricted
+        // (Blazing Archon, a Second Doctor ban, Island Sanctuary bar seats).
+        // Same seats `attack_target_options` scores.
         let restriction = self.attack_left_right_defender();
         (0..self.players.len()).any(|d| {
             self.player_open_to_attack(p, d, restriction)
@@ -1182,24 +1106,21 @@ impl GameState {
         })
     }
 
-    /// CR 508.1g — can attacking cost anything at all on this board? Three
-    /// sources, and `attack_static_scan`'s bitmask covers only the first: the
-    /// `AttackTaxToController` statics (Propaganda, Sphere of Safety), War
-    /// Tax's turn-scoped symmetric tax, and Forbidding Spirit's per-seat one.
+    /// CR 508.1g — can attacking cost anything on this board? Three sources:
+    /// `AttackTaxToController` statics (Propaganda; the only one the
+    /// `attack_static_scan` bitmask covers), War Tax, and Forbidding Spirit.
     pub(crate) fn attack_tax_possible(&self, statics: u32) -> bool {
         statics & attack_static::ATTACK_TAX != 0
             || self.attack_tax_this_turn > 0
             || self.players.iter().any(|pl| pl.attack_tax_until_your_turn > 0)
     }
 
-    /// CR 508.1d — does `id` attack `d` for free? "If a creature can't attack
-    /// unless a player pays a cost, that player is not required to pay that
-    /// cost", so a requirement binds only the attacks that cost nothing.
-    /// Asking "could the tax be paid" instead required a goaded creature to
-    /// attack through Ghostly Prison and rejected the empty declaration (5-seat
-    /// pod, seed 777042); with no mana it made a Juggernaut behind Propaganda
-    /// both required and rejected (`build_cube_state_seeded(3637)`). It prices
-    /// this attacker alone; the batch's total is the declaration gate's.
+    /// CR 508.1d — does `id` attack `d` for free? A player isn't required to
+    /// pay a cost to attack, so a requirement binds only free attacks. Asking
+    /// "could the tax be paid" instead forced a goaded creature through
+    /// Ghostly Prison (5-seat pod, seed 777042) and a Juggernaut behind
+    /// Propaganda (`build_cube_state_seeded(3637)`). Prices this attacker
+    /// alone; the batch total is the declaration gate's.
     fn attack_is_untaxed(
         &self,
         id: CardId,
@@ -1222,14 +1143,10 @@ impl GameState {
         self.declare_attackers_banded(attacks, vec![])
     }
 
-    /// CR 701.43d — is exerting `id` worth its cost to `controller`?
-    ///
-    /// The bonus is a *linked* `Exerted` trigger (CR 607.2h), so "worth it"
-    /// is answerable from the card: a bonus that needs a target and has none
-    /// is a skipped untap bought for nothing, which is exactly what the
-    /// blanket auto-exert did to Glory-bringer over an empty board. Anything
-    /// that needs no target is taken — these bonuses are pure upside, and the
-    /// untap is paid a turn later.
+    /// CR 701.43d — is exerting `id` worth its cost to `controller`? The bonus
+    /// is a linked `Exerted` trigger (CR 607.2h): one needing a target with
+    /// none available is a wasted untap (Glory-bringer on an empty board);
+    /// anything else is pure upside and taken.
     fn exert_pays_off(&self, id: CardId, controller: usize) -> bool {
         let Some(card) = self.battlefield_find(id) else { return false };
         let mut linked = card
@@ -1310,11 +1227,8 @@ impl GameState {
             return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
         }
         let p = self.active_player_idx;
-        // One battlefield walk for the four static prohibitions this
-        // declaration checks; see [`attack_static`]. Two of the four are
-        // asked *per attacker*, so on a board carrying none of them this
-        // replaces (attackers x battlefield x static abilities) with one
-        // pass.
+        // One battlefield walk for the four static prohibitions; see
+        // [`attack_static`]. Two are asked per attacker.
         let statics = attack_static_scan(self);
 
         // CR 803.1a/b — under the attack-left / attack-right option, the only
@@ -1323,12 +1237,9 @@ impl GameState {
         // all, which falls out of the same walk).
         let seat_restriction = self.attack_left_right_defender();
 
-        // Validate every attack target up-front. The defender must be an
-        // *opponent* — not self, not a teammate. `same_team` returns true
-        // for `a == b`, so this single check rules out both cases. In
-        // 1v1 / FFA it behaves identically to the old `target != active`
-        // check; in 2HG / team formats it correctly rejects targeting a
-        // teammate's life total or planeswalker.
+        // Validate every target up front: the defender must be an opponent.
+        // `same_team(a, a)` is true, so this one check rejects self and
+        // teammates (2HG).
         for atk in &attacks {
             match atk.target {
                 AttackTarget::Player(target_player) => {
@@ -1381,25 +1292,17 @@ impl GameState {
         }
 
         // CR 508.1d — "attacks each combat if able" (Juggernaut, goaded
-        // creatures). Any creature the active player controls that carries
-        // MustAttack and *can* legally attack (untapped, not sick / has
-        // Haste, not Defender / CantAttack) must be in the declared batch
-        // while at least one opponent is in range. Reject an incomplete
-        // declaration so the requirement is honored.
+        // creatures): every able MustAttack creature must be declared while
+        // an opponent is in range; reject an incomplete declaration.
         let has_legal_target = self
             .players
             .iter()
             .enumerate()
             .any(|(i, pl)| !self.same_team(p, i) && pl.is_alive());
-        // CR 508.1d — Magnetic Web: once one of the group attacks, every
-        // able member of the group has to join it. Built before the layer
-        // pass because an empty group list is what lets the pass stay small
-        // — it reads only the battlefield and the active statics, so the
-        // hoist is mechanical.
-        // Two `for` loops rather than `flat_map(..).filter_map(..).collect()`:
-        // this is a whole-board walk executed once per declaration, and
-        // `FlatMap::next` costs ~20 Ir a permanent whether or not any card's
-        // `static_abilities` list has anything in it (PERF (-78)).
+        // CR 508.1d — Magnetic Web: once one of the group attacks, every able
+        // member must join. Built before the layer pass so an empty list can
+        // keep that pass small. Two `for` loops, not `flat_map`, because
+        // `FlatMap::next` costs per permanent even when empty (PERF (-78)).
         let mut groups: Vec<crate::card::SelectionRequirement> = Vec::new();
         if has_legal_target {
             for c in self.battlefield.iter() {
@@ -1416,17 +1319,12 @@ impl GameState {
         // attack, and each of them that can attack must.
         let mandate = self.armed_attack_mandate_for(p);
 
-        // One layer pass for the whole declaration. Everything from here to
-        // the trigger collection is validation — nothing mutates a layer
-        // input — and the band, attacks-alone, can't-attack-alone and trigger
-        // passes were each taking their own, up to four per call.
-        //
-        // Only two consumers below read the *whole* board: the CR 508.1d
-        // requirement loop and the `AttackTogether` loop. Both are no-ops
-        // unless a permanent can carry an attack requirement, so when none
-        // can, the pass covers just the declared attackers, the band members
-        // and the creatures already attacking — a handful instead of ~23.
-        // One freeze scope so the gate and the pass share a single gather.
+        // One layer pass (one freeze scope) for the whole declaration;
+        // everything up to trigger collection is validation. Only the CR
+        // 508.1d requirement loop and the `AttackTogether` loop read the whole
+        // board, and both are no-ops unless some permanent can carry an attack
+        // requirement — otherwise the pass covers only the attackers, band
+        // members and creatures already attacking.
         let (computed, attack_requirement) = self.with_frozen_layers(|g| {
             let requirement = has_legal_target
                 && (g.any_goad_present()
@@ -1464,10 +1362,9 @@ impl GameState {
         #[cfg(debug_assertions)]
         let battlefield_ids: Vec<CardId> = self.battlefield.iter().map(|c| c.id).collect();
 
-        // CR 702.22c-d — band legality: every member must be attacking, at
-        // most one may lack banding, at least one must have it, and they must
-        // all attack the same defender. Read from the *computed* keyword set
-        // so a granted banding counts.
+        // CR 702.22c-d — band legality: all members attacking the same
+        // defender, at least one with banding, at most one without. Computed
+        // keywords, so granted banding counts.
         {
             let has_banding = |id: CardId| {
                 computed.iter().any(|c| c.id == id && c.keywords().has_kw(&Keyword::Banding))
@@ -1545,10 +1442,10 @@ impl GameState {
             }
         }
 
-        // CR 508.1d / 701.15b — the requirements naming a defender (a goad's
-        // "a player other than the goader", "attacks that player", a lure's
-        // planeswalker) are scored together: each attack obeys as many as any
-        // defender it could attack without a restriction or a cost would.
+        // CR 508.1d / 701.15b — defender-naming requirements (goad's "a player
+        // other than the goader", a lure's planeswalker) are scored together:
+        // each attack must obey as many as its best unrestricted, free
+        // defender would.
         for atk in &attacks {
             if !self.attack_target_obeys_most(p, atk.attacker, atk.target) {
                 let defender = match atk.target {
@@ -1567,10 +1464,8 @@ impl GameState {
             return Err(attack_reject(line!(), GameError::CannotAttack(attacks[0].attacker)));
         }
 
-        // CR 508.1c — "attacks only alone" (Master of Cruelties). If any
-        // declared attacker carries AttacksAlone, the batch must be a
-        // single attacker. Read from the computed keyword set so granted
-        // variants count.
+        // CR 508.1c — "attacks only alone" (Master of Cruelties), computed
+        // keywords so granted variants count.
         if attacks.len() > 1
             && attacks.iter().any(|atk| {
                 computed
@@ -1603,9 +1498,8 @@ impl GameState {
             return Err(attack_reject(line!(), GameError::CannotAttack(first.attacker)));
         }
 
-        // Two events an attacker (the tap and the declaration), sized once:
-        // the growth census read this buffer climbing the 4 -> 8 ladder on
-        // 5,166 of 14,266 declarations (PERF (-273)).
+        // Two events per attacker (the tap and the declaration), sized once
+        // (PERF (-273)).
         let mut events: Vec<GameEvent> = Vec::with_capacity(2 * attacks.len());
         // Per CR 506.5, the Attacks trigger filter must be evaluated
         // post-batch, so we carry the optional filter alongside each
@@ -1627,22 +1521,13 @@ impl GameState {
                 .unwrap_or(&[])
         };
 
-        // Hoisted above the CR 508.1d requirement loops: an Ensnaring Bridge
-        // cap is one of the restrictions that make a must-attack creature
-        // *unable*, so those loops need it too. Gated by the
-        // `attack_static_scan` bitmask, so a board without the family pays
-        // one bit test.
+        // Hoisted above the CR 508.1d loops: an Ensnaring Bridge cap makes a
+        // must-attack creature unable, so they need it too.
         let attack_power_caps = self.attack_power_caps(statics);
-        // CR 508.1d — one *able* predicate for all three requirement loops
-        // below and for the declaration gate under them. Asking a narrower
-        // question here than the gate asks is what leaves a seat with no
-        // legal declaration in either direction: see `attacker_is_able`.
-        // CR 508.1d — and no creature is able to attack when no defender is
-        // open: every opponent banned (The Second Doctor's "can't attack you
-        // or permanents you control during their next turn") and no
-        // planeswalker or battle to aim at. Asked once, only when a
-        // requirement loop asks at all (5-seat pod, seed 780004: a goaded
-        // Archangel was required to attack its goader's ban).
+        // CR 508.1d — one able predicate for the three requirement loops and
+        // the gate below (see `attacker_is_able`). No creature is able when no
+        // defender is open (every opponent banned by The Second Doctor, no
+        // walker or battle) — 5-seat pod, seed 780004. Asked lazily, once.
         let no_defender = std::cell::OnceCell::new();
         let no_defender = || {
             *no_defender.get_or_init(|| {
@@ -1746,19 +1631,13 @@ impl GameState {
         if attack_requirement {
             let mut missing: SmallVec<[&crate::card::CardInstance; 4]> = SmallVec::new();
             for c in &self.battlefield {
-                // The controller test first: it decides the whole iteration
-                // and costs a field compare, where `must` below costs three
-                // `computed_kw` subset finds and three slice walks — paid for
-                // every permanent on the board, most of them the opponent's.
-                // Pure predicate, so hoisting the cheap half is free
-                // (PERF `(-338)`).
+                // Controller test first: a field compare, where `must` costs
+                // three subset finds per permanent (PERF `(-338)`).
                 if c.controller != p {
                     continue;
                 }
-                // A creature must be declared if it carries MustAttack
-                // (Juggernaut) or is goaded (CR 701.38 — "attacks each
-                // combat if able"). One pass over the computed set for the
-                // three keywords, where each was its own ask.
+                // MustAttack (Juggernaut) or goaded (CR 701.38); one pass over
+                // the computed set for the three keywords.
                 let ckw = computed_kw(c.id);
                 let (mut must_attack, mut must_either, mut must_if_another) = (false, false, false);
                 for k in ckw {
@@ -1795,11 +1674,10 @@ impl GameState {
                     missing.push(c);
                 }
             }
-            // CR 508.1d — the most requirements obeyed without breaking a
-            // restriction: a bound creature a full cap shuts out is excused,
-            // provided no declared attacker is unbound (a swap obeys more).
-            // A bound creature that can't attack alone, with no other
-            // creature able to join it, is excused the same way.
+            // CR 508.1d — most requirements obeyed without breaking a
+            // restriction: a bound creature a full cap shuts out, or one that
+            // can't attack alone with no partner, is excused — provided no
+            // declared attacker is unbound (a swap would obey more).
             let all_bound = attacks.iter().all(|a| had_to.contains(&a.attacker));
             let alone_excused = |c: &crate::card::CardInstance| {
                 let kws = computed_kw(c.id);
@@ -1840,9 +1718,8 @@ impl GameState {
             return Err(attack_reject(line!(), GameError::CannotAttack(c.id)));
         }
         // CR 508.1d — Trove of Temptation: each demanding opponent must be
-        // attacked (them or a planeswalker they control) while some able
-        // creature is idle or aimed at a seat no Trove names — the most
-        // requirements obeyed without more attackers than there are.
+        // attacked while some able creature is idle or aimed at a seat no
+        // Trove names.
         if attack_requirement && statics & attack_static::MUST_ATTACK_WITH_ONE != 0 {
             let demanding = self.opponents_demanding_attack(p);
             if !demanding.is_empty() {
@@ -1919,11 +1796,8 @@ impl GameState {
                     .ok_or(GameError::CardNotOnBattlefield(id))?;
                 let cp = computed.iter().find(|c| c.id == id);
                 let kws = computed_kw(id);
-                // CR 508.1a — every restriction that reads only the creature
-                // and the board, in the one walker the CR 508.1d requirement
-                // loops above share. Two hand-written copies of this list is
-                // the drift that made a must-attack creature unable to attack
-                // and illegal not to.
+                // CR 508.1a — every creature-and-board restriction, in the
+                // walker the CR 508.1d loops share (two copies drifted).
                 if let Some((line, e)) = self.attacker_self_block(p, card, cp, &attack_power_caps)
                 {
                     return Err(attack_reject(line, e));
@@ -1935,10 +1809,9 @@ impl GameState {
                 {
                     return Err(attack_reject(line, e));
                 }
-                // CR 508.1a — Okk: needs a strictly bigger partner in the same
-                // declared batch (already-declared attackers count too). The
-                // one per-attacker restriction that depends on the rest of the
-                // batch, so it cannot move into the shared walker.
+                // CR 508.1a — Okk: needs a strictly bigger partner in the batch
+                // (already-declared attackers count). Batch-dependent, so it
+                // stays out of the shared walker.
                 if kws.has_kw(&Keyword::CantAttackUnlessGreaterPowerAttacks) {
                     let mine = cp.map(|c| c.power).unwrap_or(0);
                     if !attacks
@@ -1987,19 +1860,16 @@ impl GameState {
             self.pay_life_cost(p, life_tax);
         }
 
-        // CR 508.1g — Floodtide Serpent's attack cost: each such attacker
-        // returns one matching permanent its controller controls to hand. The
-        // pool is checked and consumed together so two Serpents need two
-        // enchantments.
+        // CR 508.1g — Floodtide Serpent: each such attacker returns one
+        // matching permanent to hand; checked and consumed together so two
+        // Serpents need two.
         {
             let mut spent: Vec<CardId> = Vec::new();
             for atk in &attacks {
-                // The `collect` exists only so the keyword borrow ends before
-                // the `&mut self` below; almost no attacker carries the
-                // keyword, and an empty `collect()` still calls
-                // `Vec::from_iter`. Ask the borrowed slice first — this and
-                // its `AttackCostSacrifice` twin are two `from_iter`s per
-                // declared attacker.
+                // The `collect` only ends the keyword borrow before `&mut
+                // self`; almost no attacker has the keyword and an empty
+                // `collect()` still calls `Vec::from_iter`, so ask the slice
+                // first (same for the `AttackCostSacrifice` twin).
                 let filters: Vec<crate::card::SelectionRequirement> = if !computed_kw(
                     atk.attacker,
                 )
@@ -2094,11 +1964,8 @@ impl GameState {
             self.dispatch_triggers_for_events(&events);
         }
 
-        // CR 508.1g — Hollow Warrior's attack cost: tap an untapped matching
-        // permanent that isn't itself attacking. One helper per such attacker.
-        // Same shape: `declared` is built for `find_tap_helper`, and no
-        // attacker carries a tap-another filter on any board the bench or the
-        // sealed pool plays.
+        // CR 508.1g — Hollow Warrior: tap an untapped matching non-attacking
+        // permanent, one per such attacker. Same presence-first shape.
         if attacks.iter().any(|atk| {
             computed_kw(atk.attacker)
                 .iter()
@@ -2127,10 +1994,8 @@ impl GameState {
         let mut attacks = attacks;
         attacks.retain(|a| self.battlefield.find_by_id(a.attacker).is_some_and(|c| c.controller == p));
         let any_attackers = !attacks.is_empty();
-        // CR 702.121a — Melee counts the distinct OPPONENTS this player
-        // attacked this combat; a planeswalker or battle attacked doesn't
-        // count its controller (Adriana's 2016-08-23 ruling: "counts only
-        // opponents (and not planeswalkers)"). Computed over the batch.
+        // CR 702.121a — Melee counts distinct opponents attacked; a walker or
+        // battle doesn't count its controller (Adriana ruling, 2016-08-23).
         let melee_opponents: i32 = {
             let mut seats: crate::game::types::IdSet<usize> = Default::default();
             for atk in &attacks {
@@ -2144,14 +2009,10 @@ impl GameState {
             }
             seats.len() as i32
         };
-        // Statics-granted triggers ("Slivers you control have '…attacks…'" —
-        // Thorncaster) and equipment-granted triggers (CR 702.6e — "whenever
-        // equipped creature attacks, …") both come off whole-board scans —
-        // `trigger_grant_sources` and `equip_granted_trigger_sources`. The
-        // scans' answer is the same for every attacker in this batch, so
-        // walk the board once here rather than per attacker inside the loop
-        // below. Consumed by value in the main loop so its `&mut self`
-        // borrow of `battlefield.iter_mut()` is unblocked.
+        // Statics-granted (Thorncaster) and equipment-granted (CR 702.6e)
+        // attack triggers come off whole-board scans whose answer is the same
+        // for every attacker, so walk once here. Consumed by value in the main
+        // loop to free its `battlefield.iter_mut()` borrow.
         // CR 113.10b — an attacker stripped of all abilities has no printed
         // attack trigger.
         let stripped = self.stripped_permanents();
@@ -2200,13 +2061,10 @@ impl GameState {
         // today, read so neither walk can drop one silently.
         let own_attacks_grant = self.any_granted_trigger_of_kind(&EventKind::Attacks);
         let own_you_attack_grant = self.any_granted_trigger_of_kind(&EventKind::YouAttack);
-        // CR 603.2c on the DEFENDER's side. The `ControllerAttackedByOpponent`
-        // listener walk below runs once per attacker, and it used to push with
-        // no once-key at all — so "whenever an opponent attacks you **and/or
-        // one or more** planeswalkers you control" fired once a *creature*
-        // rather than once a declaration (Cunning Rhetoric exiled a card per
-        // attacker). Declared out here, not inside the loop, because the batch
-        // is the whole declaration.
+        // CR 603.2c on the defender's side: "whenever an opponent attacks you
+        // and/or one or more planeswalkers you control" fires once per
+        // declaration, not per attacker (Cunning Rhetoric). Declared outside
+        // the per-attacker loop because the batch is the whole declaration.
         let mut defender_batch_fired: Vec<(CardId, usize)> = Vec::new();
         // CR 508.1m / 603.3d — a defender-side trigger that picks its own
         // target ("target creature attacking you", Lulu) waits for the whole
@@ -2226,16 +2084,11 @@ impl GameState {
         }
         for (atk, (static_granted, equip_granted)) in attacks.into_iter().zip(attacker_grants) {
             let id = atk.attacker;
-            // Validated above — commit only. Filter by *controller*, not
-            // *owner*: a stolen creature (Threaten / Mind Control) attacks
-            // for its current controller.
-            // Both of these read the cold group, whose `Deref` borrows the
-            // whole state — take them before the battlefield `&mut`.
-            //
+            // Validated above — commit only. Filter by controller, not owner:
+            // a stolen creature attacks for its current controller. Both reads
+            // borrow the cold group, so take them before the battlefield `&mut`.
             // One pass over the computed set for the six keywords this loop
-            // reads, where each was its own `computed_kw(id)` — and that is a
-            // linear find over the gated subset before it is an
-            // `OverlayList::get` (PERF `(-338)`).
+            // reads (PERF `(-338)`).
             let dfacts = attacker_decl_facts(computed_kw(id));
             debug_assert!(
                 dfacts.decayed == computed_kw(id).has_kw(&Keyword::Decayed)
@@ -2253,12 +2106,9 @@ impl GameState {
             );
             let decayed = dfacts.decayed;
             let granted: Vec<crate::card::TriggeredAbility> = self.granted_triggers(id).cloned().collect();
-            // CR 701.43 / 508.1g — Exert is an **optional cost to attack**,
-            // chosen as attackers are declared. `exert` carries the active
-            // player's announcement (`DeclareAttackersExerting`); with none,
-            // the engine takes it only when the linked CR 701.43d bonus can
-            // actually do something, which is what `exert_pays_off` states.
-            // Read before the `&mut` below, which the policy walk cannot share.
+            // CR 701.43 / 508.1g — Exert is an optional cost to attack. `exert`
+            // carries the active player's announcement; with none, the engine
+            // takes it only when `exert_pays_off`. Read before the `&mut` below.
             let exerted_now = dfacts.exert
                 && !(dfacts.exert_once && self.exerted_this_turn.contains(&id))
                 && match exert {
@@ -2352,12 +2202,10 @@ impl GameState {
                 self.players[p].attacked_players_this_turn.push(d);
             }
             events.push(GameEvent::AttackerDeclared(id));
-            // Walk printed Attacks triggers + any transient granted
-            // Attacks triggers (Root Manipulation's "gain 1 life when
-            // this attacks" grant lands in `granted_triggers_timed`).
-            // An attachment's grant fires off the attachment when it says
-            // so (`triggers_on_equipment`); every other trigger off the
-            // attacker.
+            // Printed plus transient granted Attacks triggers (Root
+            // Manipulation, via `granted_triggers_timed`). An attachment's
+            // grant fires off the attachment when `triggers_on_equipment`
+            // says so; everything else off the attacker.
             let printed: &[crate::card::TriggeredAbility] =
                 if stripped.contains(&id) { &[] } else { &card.definition.triggered_abilities };
             let own = printed
@@ -2367,12 +2215,10 @@ impl GameState {
                 .chain(granted.iter().chain(static_granted.iter()).map(|t| (id, None, t, p)));
             let equipped = equip_granted.iter().zip(&equip_ctrl).map(|((s, t), c)| (*s, None, t, *c));
             for (src, idx, t, ctrl) in own.chain(equipped) {
-                // Only SelfSource Attacks triggers are hardcoded here.
-                // YourControl-scoped Attacks triggers (Exalted via
-                // `Predicate::AttackingAlone`, Battle Banner, …) are
-                // routed through the unified `dispatch_triggers_for_events`
-                // path off the `AttackerDeclared` event — pushing them
-                // here too would double-fire the ability.
+                // Only SelfSource Attacks triggers are pushed here; YourControl
+                // ones (Exalted, Battle Banner) go through
+                // `dispatch_triggers_for_events` off `AttackerDeclared`, and
+                // pushing them here too would double-fire.
                 // CR 701.43d — the linked "when you do" rides `Exerted`, so it
                 // fires only for a creature that actually paid the cost.
                 if t.event.kind == EventKind::Exerted
@@ -2384,10 +2230,8 @@ impl GameState {
                 if t.event.kind == EventKind::Attacks
                     && t.event.scope == crate::effect::EventScope::SelfSource
                 {
-                    // Capture the trigger's optional filter so we can
-                    // re-evaluate it AFTER the entire attacker batch is
-                    // declared (CR 506.5 "attacking alone" semantics
-                    // require the post-batch view).
+                    // Keep the filter to re-evaluate after the whole batch is
+                    // declared (CR 506.5 "attacking alone" needs that view).
                     triggers.push((src, t.effect.clone(), ctrl, t.event.filter.clone(), once_key(idx, t)));
                 }
             }
@@ -2399,12 +2243,9 @@ impl GameState {
                     crate::effect::AttackingTokenCleanup::SacrificeAtEndOfCombat,
                 ));
             }
-            // Annihilator N — CR 702.85a: "Whenever this creature attacks,
-            // defending player sacrifices N permanents." Translate the
-            // keyword to an Attacks-trigger that fires
-            // `Effect::Sacrifice { who: defender, count: N, filter: Any }`.
-            // The defender comes from `atk.target`; for a planeswalker
-            // attack, that's the planeswalker's controller (CR 506.4a).
+            // CR 702.85a — Annihilator N as an Attacks trigger:
+            // `Effect::Sacrifice { who: defender, count: N, filter: Any }`. For
+            // a planeswalker attack the defender is its controller (CR 506.4a).
             let annihilator_n = dfacts.annihilator;
             if let Some(n) = annihilator_n
                 && let Some(defender) = self.defender_for(atk.target)
@@ -2416,11 +2257,10 @@ impl GameState {
                 };
                 triggers.push((id, sac_effect, p, None, None));
             }
-            // Firebending N — CR 702.189a: "whenever this creature attacks,
-            // add N {R}" — a triggered ability that uses the stack (CR 605.1b:
-            // it triggers on the attack, not on mana; the 2025 ruling). The
-            // amount is read as it resolves; the mana survives step/phase
-            // emptying until end of combat (`firebending_kept_red`).
+            // CR 702.189a — Firebending N: "whenever this creature attacks, add
+            // N {R}", a stack trigger (CR 605.1b, 2025 ruling). The amount is
+            // read on resolution; the mana lasts until end of combat
+            // (`firebending_kept_red`).
             if let Some(k) = dfacts.firebending {
                 let amount = match k {
                     FirebendKind::N(n) => Value::Const(n as i32),
@@ -2433,11 +2273,9 @@ impl GameState {
                 };
                 triggers.push((id, Effect::Firebend { amount }, p, None, None));
             }
-            // ControllerAttackedByOpponent (CR 508.1g listeners): permanents
-            // the defending player controls that fire "when a creature an
-            // opponent attacks me" — Coveted Jewel's control-flip. The
-            // attacking creature's controller is bound to the trigger's
-            // target slot ("that creature's controller").
+            // ControllerAttackedByOpponent (CR 508.1g listeners): the defender's
+            // "when a creature an opponent controls attacks me" permanents
+            // (Coveted Jewel). The attacker's controller binds the target slot.
             if let Some(defender) = self.defender_for(atk.target)
                 && defender != p
             {
@@ -2445,23 +2283,18 @@ impl GameState {
                 // attack is aimed at a planeswalker (Mila) — not the player.
                 let is_pw_attack =
                     matches!(atk.target, crate::game::types::AttackTarget::Planeswalker(_));
-                // Plain loops, same reason as `groups` above: a whole-board
-                // walk per attacker, and the `flat_map` was ~20 Ir a
-                // permanent before the filter saw a single trigger. Over the
-                // trigger member list, not the board (PERF `(-222)`), unless
-                // an instance grant of the kind is live — a grant can land
-                // on a permanent with no printed trigger.
+                // Plain loops over the trigger member list, not the board
+                // (PERF `(-222)`, and `flat_map` costs per permanent), unless
+                // an instance grant of the kind is live — a grant can land on
+                // a permanent with no printed trigger.
                 /// One defender-side listener: its source, its effect, its
                 /// `EventSpec` filter, and the CR 603.3d/603.2c key it fires
                 /// under (`None` when uncapped or granted).
                 ///
-                /// ⚠ **The filter was missing from this tuple and nothing
-                /// else was.** Every other walk in this file carries
-                /// `t.event.filter` to its fire site; this one built its
-                /// listeners without it, so a `.with_filter` on a
-                /// defender-side trigger was accepted by the catalog, type-
-                /// checked, and then silently never consulted — Reveille
-                /// Squad's printed "if this creature is untapped" among them.
+                /// ⚠ The filter must be carried here like every other walk in
+                /// this file: it was once dropped, so `.with_filter` on a
+                /// defender-side trigger was silently ignored (Reveille Squad's
+                /// "if this creature is untapped").
                 type Listener =
                     (CardId, Effect, Option<crate::card::Predicate>, Option<(usize, bool)>);
                 let mut listeners: Vec<Listener> = Vec::new();
@@ -2501,22 +2334,15 @@ impl GameState {
                 };
                 self.battlefield.for_each_triggerer_or_all(own_attacks_grant, visit);
                 for (src, effect, filter, once) in listeners {
-                    // CR 603.2 — the trigger's own condition, evaluated
-                    // before the once-key so a declaration the filter rejects
-                    // does not spend the slot (the order every other walk in
-                    // this file uses).
+                    // CR 603.2 — the trigger's own condition, before the
+                    // once-key, so a rejected declaration doesn't spend the slot.
                     //
-                    // ⚠ **This is evaluated PER ATTACKER, as declared, and
-                    // `self.attacking` is still being filled** — the push a
-                    // few lines above this loop's enclosing `for` is what
-                    // fills it. A predicate that counts the declaration
+                    // ⚠ Evaluated per attacker while `self.attacking` is still
+                    // being filled, so a predicate that counts the declaration
                     // (`AttackedWithCountAtLeast` and its defender-side
-                    // sibling) would read a partial batch here, so it belongs
-                    // inside the effect as an `Effect::If`, which resolves off
-                    // the stack after the whole step. The self-source walk
-                    // collects and fires after the batch and can filter on
-                    // counts; this one cannot without moving the pushes, which
-                    // would reorder the stack.
+                    // sibling) would see a partial batch; put it in the effect
+                    // as an `Effect::If` instead. Filtering after the batch
+                    // would mean moving the pushes, which reorders the stack.
                     if let Some(predicate) = filter {
                         let ctx = crate::game::effects::EffectContext {
                             controller: defender,
@@ -2590,12 +2416,10 @@ impl GameState {
                     .build(),
             );
         }
-        // CR 702.22e — a declared band lasts for the rest of combat regardless
-        // of later banding loss; drop members that never made it into combat.
-        // Guarded: `attack_bands` is a `ColdState` field, so writing it
-        // deep-copies the whole cold group — once per declare-attackers, and
-        // banding is empty on every board without a bander. Compare first;
-        // the comparison is a `&self` read and takes nothing.
+        // CR 702.22e — a declared band lasts for the rest of combat; drop
+        // members that never made it into combat. ⚠ `attack_bands` is a
+        // `ColdState` field: compare (a `&self` read) before writing, or every
+        // declare-attackers deep-copies the cold group.
         let declared: Vec<Vec<CardId>> = bands
             .into_iter()
             .map(|b| {
@@ -2607,14 +2431,11 @@ impl GameState {
             self.attack_bands = declared;
         }
 
-        // YourControl-scoped Attacks triggers (e.g. Battle Banner,
-        // Sparring Regimen) are NOT walked here — the unified
-        // `dispatch_triggers_for_events` path in `mod.rs` picks them up
-        // off the `AttackerDeclared` event(s) and routes them through the
-        // same trigger pipeline. Walking them here additionally would
-        // double-fire the trigger (one push from combat.rs + one from
-        // the dispatcher). The hardcoded `is_event_hardcoded` check only
-        // marks SelfSource Attacks as already handled.
+        // YourControl-scoped Attacks triggers (Battle Banner, Sparring
+        // Regimen) are not walked here: `dispatch_triggers_for_events` in
+        // `mod.rs` picks them up off `AttackerDeclared`, and walking them here
+        // too would double-fire. `is_event_hardcoded` marks only SelfSource
+        // Attacks as handled.
 
         // CR 508.1 — "whenever a player attacks one of your opponents" (Breena,
         // Combat Calligrapher): once per attacked player per listener, for
@@ -2906,13 +2727,11 @@ impl GameState {
             }
         }
 
-        // CR 508 — "Whenever you attack" fires once for the attacking player
-        // when one or more attackers are declared. Active-player permanents fire
-        // for the SelfSource/YourControl scopes (the event is player-wide), an
-        // `OpponentControl` one for each opponent of the attacker;
-        // `AnyPlayer`-scoped triggers are observers ("whenever [a player]
-        // attacks", Argent Dais) and fire from every controller, once per
-        // combat, with the ability's controller as the fired-for player.
+        // CR 508 — "Whenever you attack" fires once for the attacking player.
+        // Active-player permanents fire for SelfSource/YourControl, an
+        // `OpponentControl` one for each opponent of the attacker, and
+        // `AnyPlayer` observers (Argent Dais) from every controller, once per
+        // combat, fired for the ability's controller.
         if any_attackers {
             let ap = self.active_player_idx;
             #[allow(clippy::type_complexity)]
@@ -3061,12 +2880,10 @@ impl GameState {
             return Err(block_reject(line!(), GameError::NotYourPriority));
         }
 
-        // CR 509.1a / 509.1c — each defending player declares their own
-        // blocks (the batches merge), so a requirement is checked against the
-        // declaring player's creatures only: seat 5's idle Khârn rejected
-        // seat 1's declaration (6-seat pod, seed 780059). `None` (a block
-        // chooser, or a caller without the defender's priority) is every
-        // defending creature, as before.
+        // CR 509.1a / 509.1c — each defending player declares their own blocks
+        // (the batches merge), so requirements are checked against the
+        // declarer's creatures only (6-seat pod, seed 780059). `None` (a block
+        // chooser, or no defender priority) means every defending creature.
         let declarer: Option<SmallVec<[usize; 4]>> = match self.block_chooser() {
             Some(_) => None,
             None => {
@@ -3077,14 +2894,12 @@ impl GameState {
         };
         let for_declarer = |ctl: usize| declarer.as_ref().is_none_or(|team| team.contains(&ctl));
 
-        // One layer pass for the whole declaration. Every consumer below is a
-        // `find(id)` on the declared blockers and their attackers, the
-        // creatures already attacking, or the blockers already declared —
-        // except the five CR 509.1 requirement loops, which ask the whole
-        // board who *has* to block. Four of them are keyed on a keyword and
-        // the fifth on `must_block`, so when no permanent can carry one, the
-        // pass covers the participants instead of the ~23-permanent board.
-        // See `board_keyword_in_scope` for why `false` is authoritative.
+        // One layer pass for the whole declaration. Every consumer below looks
+        // up participants by id except the five CR 509.1 requirement loops,
+        // which ask the whole board; four are keyword-keyed and one reads
+        // `must_block`, so when no permanent can carry one the pass covers only
+        // the participants. See `board_keyword_in_scope` for why `false` is
+        // authoritative.
         let (computed, block_requirement) = self.with_frozen_layers(|g| {
             let requirement = g.battlefield.iter().any(|c| c.must_block.is_some())
                 || g.board_keyword_in_scope(&[
@@ -3139,13 +2954,9 @@ impl GameState {
         };
 
         // CR 509.1b/c — the six per-attacker block requirements, folded once
-        // per attacker instead of once per requirement (PERF `(-337)`).
-        //
-        // `self.attacking` is written only by `declare_attackers`, and
-        // `computed` is an owned snapshot taken above, so neither the set
-        // folded here nor the keywords folded from it can move under the two
-        // payment/tap mutations further down — which is already what the six
-        // loops relied on by reading `kws_of` after them.
+        // per attacker (PERF `(-337)`). Sound across the payment/tap mutations
+        // below: `self.attacking` is written only by `declare_attackers` and
+        // `computed` is an owned snapshot.
         let atk_reqs: SmallVec<[crate::game::AttackerBlockReqs; 8]> =
             self.attacking.iter().map(|a| crate::game::attacker_block_reqs(kws_of(a.attacker))).collect();
         debug_assert!(
@@ -3168,12 +2979,11 @@ impl GameState {
             "attacker_block_reqs disagrees with the per-keyword asks it replaced",
         );
 
-        // Validate ALL assignments before mutating any state. Each blocker's
-        // controller must equal the defender of the attacker it's blocking.
-        // CR 509.1b — a creature blocks one attacker unless an effect lets it
-        // block more (`CanBlockAdditional` / `CanBlockAnyNumber`); count the
-        // merged set (already-declared blocks plus this batch) against the
-        // allowance, and reject a repeat of the same pair.
+        // Validate all assignments before mutating anything; each blocker's
+        // controller must be the defender of its attacker. CR 509.1b — one
+        // attacker per blocker unless `CanBlockAdditional` / `CanBlockAnyNumber`;
+        // count the merged set (earlier blocks plus this batch) and reject a
+        // repeated pair.
         let mut batch_blocks: crate::game::types::SmallIdMap<CardId, SmallVec<[CardId; 4]>> =
             Default::default();
         // CR 509.1b — Silent Arbiter: "No more than N creatures can block each
@@ -3228,10 +3038,8 @@ impl GameState {
                 .find_by_id(blocker_id)
                 .ok_or(GameError::CardNotOnBattlefield(blocker_id))?;
 
-            // CR 509.1a: any creature controlled by the defending player
-            // (or, in team formats, a teammate of the defending player)
-            // may block. In 1v1 / FFA `same_team(a, b)` collapses to
-            // `a == b`, so this preserves the historical behavior.
+            // CR 509.1a: any creature the defending player (or, in team
+            // formats, a teammate) controls may block.
             if !self.same_team(blocker.controller, defender_idx) {
                 return Err(block_reject(line!(), GameError::BlockerWrongDefender { blocker: blocker_id }));
             }
@@ -3243,10 +3051,8 @@ impl GameState {
                 return Err(block_reject(line, e));
             }
 
-            // CR 509.1b — everything about *this* pair, in the same walker
-            // the planner and the requirement loops read. Four families used
-            // to live only here (`cant_block_pairs`, Burden of Proof,
-            // Ironclaw Curse, Monstrous Hound); see `blocker_pair_block`.
+            // CR 509.1b — everything about this pair, in the walker the
+            // planner and requirement loops share; see `blocker_pair_block`.
             let blocker_cp = cp_of(blocker_id).ok_or(GameError::CannotBlock(blocker_id))?;
             let attacker = self
                 .battlefield_find(attacker_id)
@@ -3291,16 +3097,13 @@ impl GameState {
             }
         }
 
-        // CR 509.1d — block tax (Archangel of Tithes). Sum every active
-        // `BlockTaxToController` amount (an `only_while_attacking` source counts
-        // only while it's attacking this combat) and pay {tax} per declared
-        // blocker from that blocker's controller's pool, auto-tapping for any
-        // shortfall. Reject the whole declaration if a player can't cover it.
-        // The tax is summed per blocker, since a source may narrow itself to
-        // some of them (Heat Wave taxes only nonblue blockers) and may charge
-        // life rather than mana.
-        // The spend is deferred to after every block-legality check so a
-        // rejected declaration never costs mana (CR 601.2h-style atomicity).
+        // CR 509.1d — block tax (Archangel of Tithes): sum every active
+        // `BlockTaxToController` per blocker (an `only_while_attacking` source
+        // counts only while attacking; Heat Wave taxes only nonblue blockers;
+        // some charge life) and pay from each controller's pool, auto-tapping
+        // for any shortfall. Reject the whole declaration if a player can't
+        // pay. The spend waits until every legality check passes, so a
+        // rejected declaration never costs mana.
         let mut block_tax_by_controller: crate::game::types::SmallIdMap<usize, (u32, u32)> =
             Default::default();
         for &(blocker_id, attacker_id) in &assignments {
@@ -3316,10 +3119,8 @@ impl GameState {
             }
         }
 
-        // Menace: attackers with Menace must be blocked by 2+ creatures or
-        // not at all (CR 702.110b). Counts the merged block set (existing
-        // blocks plus this batch) so incremental multi-defender submissions
-        // compose, same as the CantBeBlockedExceptByN check below.
+        // CR 702.110b — Menace: blocked by 2+ creatures or not at all. Counts
+        // the merged block set so multi-defender submissions compose.
         for (atk, reqs) in self.attacking.iter().zip(atk_reqs.iter()) {
             if reqs.menace {
                 let blocker_count = assignments
@@ -3346,11 +3147,8 @@ impl GameState {
                     self.attack_block_keyword_tax(blocker_id, kws_of(blocker_id), false);
             }
             for (seat, amount) in owed {
-                // Nothing owed is nothing to pay — the attack side's
-                // `total_tax > 0` gate. A `{0}` auto-tap payment is a
-                // payment snapshot of the seat's board and an auto-tap pass
-                // for nothing, once per blocking seat per declaration
-                // (PERF `(-223)`).
+                // Nothing owed, nothing to pay: a `{0}` auto-tap payment is a
+                // board snapshot for nothing (PERF `(-223)`).
                 if amount == 0 {
                     continue;
                 }
@@ -3361,12 +3159,9 @@ impl GameState {
             }
         }
 
-        // CR 509.1b — the blocking half of Hollow Warrior's tap cost. Helpers
-        // may be neither an attacker nor one of the declared blockers.
-        // The presence gate is the attack side's (`AttackBlockCostTapAnother`
-        // is one keyword on a handful of cards, and `tap_another_filters` is
-        // already gated on it) — without it the `declared` list below is built
-        // on every declaration for a keyword no board plays.
+        // CR 509.1b — the blocking half of Hollow Warrior's tap cost; helpers
+        // may be neither an attacker nor a declared blocker. Presence-gated
+        // like the attack side so `declared` isn't built on every declaration.
         if assignments.iter().any(|&(b, _)| {
             kws_of(b).iter().any(|k| matches!(k, Keyword::AttackBlockCostTapAnother(_)))
         }) {
@@ -3424,24 +3219,20 @@ impl GameState {
             }
         }
 
-        // CR 509.1c — the requirements are obeyed only as far as the
-        // restrictions allow: an attacker that can't be blocked by more than
-        // one creature and already has its one takes no further blocker,
-        // whatever a Lure or a "blocks each combat" asks. A granted
-        // no-more-than-one on Nessian Boar rejected every declaration that
-        // left a second able creature home (8-seat pod, seed 791012).
+        // CR 509.1c — requirements are obeyed only as far as restrictions
+        // allow: an attacker that can't be blocked by more than one creature
+        // and already has one takes no more, whatever a Lure asks (granted on
+        // Nessian Boar, 8-seat pod, seed 791012).
         let full = |a: CardId| {
             self.attacking.iter().zip(atk_reqs.iter()).any(|(x, r)| x.attacker == a && r.no_more_than_one)
                 && self.blocker_count_of(a) + assignments.iter().filter(|(_, x)| *x == a).count() >= 1
         };
 
-        // CR 509.1c — "must be blocked if able" (Lure / Academic Dispute).
-        // If such an attacker is left unblocked while the defender controls
-        // an idle creature that could legally block it, reject the
-        // declaration. Considers the merged block set (already-declared
-        // blocks plus this batch) so independent multiplayer submissions
-        // compose. Single-requirement model; full CR maximization across
-        // multiple simultaneous requirements is approximated.
+        // CR 509.1c — "must be blocked if able" (Lure / Academic Dispute):
+        // reject if such an attacker is unblocked while the defender has an
+        // idle creature that could block it. Uses the merged block set so
+        // multiplayer submissions compose. Full maximization across several
+        // simultaneous requirements is approximated.
         for (atk, reqs) in self.attacking.iter().zip(atk_reqs.iter()) {
             if !reqs.must_be_blocked || !self.block_requirement_binds(atk.attacker) {
                 continue;
@@ -3557,10 +3348,9 @@ impl GameState {
             }
         }
 
-        // CR 702.39 — Provoke: a creature provoked this combat (`must_block`
-        // set to an attacker still in this combat) must be assigned to block
-        // that attacker if it's able to. It was untapped by the provoke
-        // resolution, so "able" reduces to the normal can-block checks.
+        // CR 702.39 — Provoke: a creature provoked this combat must block
+        // that attacker if able. Provoke untapped it, so "able" is the normal
+        // can-block check.
         for b in &self.battlefield {
             let Some(required) = b.must_block else { continue };
             if !for_declarer(b.controller) {
@@ -3614,11 +3404,10 @@ impl GameState {
             }
         }
 
-        // CR 509.1c — "blocks each combat if able" (`MustBlock`). A creature
-        // carrying the keyword that can legally block at least one declared
-        // attacker must be assigned to block one of them. Unlike the four
-        // loops above, this one asks the computed view *before* the keyword
-        // that decides it, so it takes the gate directly.
+        // CR 509.1c — "blocks each combat if able" (`MustBlock`): a creature
+        // with it that can block a declared attacker must block one. Unlike the
+        // loops above it asks the computed view before the deciding keyword,
+        // so it takes the gate directly.
         let must_block_scan: &[crate::card::CardInstance] =
             if block_requirement { &self.battlefield } else { &[] };
         for b in must_block_scan {
@@ -3681,14 +3470,9 @@ impl GameState {
             }
         }
 
-        // Combat-keyword P/T adjustments applied on block declaration:
-        // Flanking (CR 702.25), Bushido (CR 702.45), Rampage (CR 702.23).
-        // Snapshot the +/-N deltas (same value on power and toughness)
-        // before mutating so the borrow of `assignments` stays clean.
-        // Only the assignments' own blockers and attackers are read below, so
-        // compute those instead of the whole board: the freeze scope pays one
-        // gather and one layer pass per participant, against ~23 passes for a
-        // bench board.
+        // Flanking (CR 702.25), Bushido (CR 702.45), Rampage (CR 702.23) P/T
+        // deltas on block declaration, snapshotted before mutating. Only the
+        // assignments' participants are read, so compute just those.
         let mut ids: SmallVec<[CardId; 8]> = SmallVec::new();
         for &(b, a) in &assignments {
             if !ids.contains(&b) {
@@ -3698,14 +3482,10 @@ impl GameState {
                 ids.push(a);
             }
         }
-        //
-        // And only when some permanent can carry one of the three at all:
-        // this scope was a fresh gather plus a layer-pass miss per
-        // participant on every declaration (14,554 asks / 21.3 M Ir, 1.10 %
-        // of a six-game `cube` run at the `(-245)` tip), read for three
-        // keywords no bench board prints. `false` is authoritative for
-        // every computed keyword set (see `board_keyword_in_scope`), so an
-        // empty list here reads exactly as the views would have.
+        // Only when some permanent can carry one of the three (PERF
+        // `(-245)` context); `false` is authoritative for every computed
+        // keyword set (see `board_keyword_in_scope`), so an empty list reads
+        // exactly as the views would have.
         let pt_keyword_in_scope = self
             .board_keyword_matching(|k| matches!(k, Keyword::Flanking | Keyword::Bushido(_) | Keyword::Rampage(_)));
         let computed: SmallVec<[(CardId, Vec<Keyword>); 8]> = if pt_keyword_in_scope {
@@ -3786,9 +3566,8 @@ impl GameState {
         for (blocker_id, attacker_id) in assignments {
             self.add_block(blocker_id, attacker_id);
             // The flag is a hot `CardInstance` bool; the pair goes to the
-            // game-level log below and nowhere on the card — a per-blocker
-            // list there was a `CardData` copy per blocker declared on a
-            // simulation clone, 12,382 a sealed six-game run (PERF `(-285)`).
+            // game-level log below, not on the card — a per-blocker list there
+            // cost a `CardData` copy per block on a simulation clone (PERF `(-285)`).
             if let Some(b) = self.battlefield_find_mut(blocker_id) {
                 b.blocked_this_turn = true;
             }
@@ -3891,18 +3670,13 @@ impl GameState {
         })
     }
 
-    /// Can any combat participant's *computed* keywords carry first or double
+    /// Can any combat participant's computed keywords carry first or double
     /// strike, answered without gathering? `false` is authoritative; `true`
-    /// only means [`has_first_strikers`](Self::has_first_strikers) has to
-    /// gather.
+    /// only means [`has_first_strikers`](Self::has_first_strikers) must gather.
     ///
-    /// [`card_keyword_possible`] per participant with its one expensive leg —
-    /// the board-wide grant scan — hoisted out of the loop, because the two
-    /// or six participants are asked about the same board. The whole step
-    /// transition rides on this: a board printing neither keyword and holding
-    /// no source that can grant one skips the first-strike damage step, and
-    /// under the old shape that skip cost a full gather plus one layer pass
-    /// per participant.
+    /// [`card_keyword_possible`] per participant, with the board-wide grant
+    /// scan hoisted out of the loop. Lets a board with no possible first
+    /// striker skip the first-strike step without a gather.
     ///
     /// [`card_keyword_possible`]: crate::game::GameState::card_keyword_possible
     fn first_strike_possible(&self) -> bool {
@@ -3944,16 +3718,12 @@ impl GameState {
     /// The computed views [`resolve_combat_damage_with_filter`] reads: every
     /// attacker and every declared blocker, from one gather.
     ///
-    /// Everything under that resolver looks its permanents up by id — the
-    /// attacker infos, the banding assigner, the lethal table, the blocker
-    /// scans. The one whole-board consumer is [`free_division_targets`]'
-    /// second half (Butcher Orgg divides among *any* of the defending
-    /// player's creatures), and it is gated on a keyword the attacker itself
-    /// carries, so the whole board is computed only when such an attacker is
-    /// actually in combat. **The gate is checked, not assumed**:
-    /// `butcher_orgg_divides_damage_among_defenders` assigns damage to a
-    /// creature that never blocked, so it fails if this falls back to the
-    /// subset.
+    /// Every reader under that resolver looks up by id. The one whole-board
+    /// consumer is [`free_division_targets`] (Butcher Orgg divides among any
+    /// of the defender's creatures), so the full board is computed only when
+    /// such an attacker is in combat. Tested:
+    /// `butcher_orgg_divides_damage_among_defenders` fails if this falls back
+    /// to the subset.
     ///
     /// [`free_division_targets`]: Self::free_division_targets
     /// [`resolve_combat_damage_with_filter`]: Self::resolve_combat_damage_with_filter
@@ -3964,10 +3734,9 @@ impl GameState {
                 ids.push(atk.attacker);
             }
         }
-        // `block_map` is an `IdMap`, so its key order is declaration order;
-        // it only decides which permanents get computed anyway, every reader
-        // looks up by id, and the one that collects (`free_division_targets`)
-        // sorts.
+        // `block_map` key order is declaration order; it only picks which
+        // permanents are computed, readers look up by id, and the one that
+        // collects (`free_division_targets`) sorts.
         for &bid in self.block_map.keys() {
             if !ids.contains(&bid) {
                 ids.push(bid);
@@ -4025,10 +3794,8 @@ impl GameState {
             return Ok(());
         }
         let computed = self.combat_damage_computed();
-        // CR 510.5: in the regular combat damage step, every attacking and
-        // blocking creature that didn't deal damage in the first-strike step
-        // deals damage now — i.e. anyone without first strike, plus double
-        // strikers (who strike in both steps).
+        // CR 510.5: in the regular step, everyone who didn't deal first-strike
+        // damage deals now — no first strike, plus double strikers.
         let regular_or_ds = |kws: &[Keyword]| {
             !kws.has_kw(&Keyword::FirstStrike) || kws.has_kw(&Keyword::DoubleStrike)
         };
@@ -4062,10 +3829,9 @@ impl GameState {
         if !self.sneak_defenders.is_empty() {
             self.sneak_defenders.clear();
         }
-        // CR 508.5 — the record outlives its attackers only to the end of
-        // combat: a combat whose attackers all died before it ended left it
-        // standing, and a later attack on the same planeswalker kept the old
-        // defender (a stolen Saheeli, 4-seat dflt pod seed 4400396).
+        // CR 508.5 — the record lasts only to end of combat, even if all its
+        // attackers died earlier (a stolen Saheeli kept the old defender,
+        // 4-seat dflt pod seed 4400396).
         if !self.attacked_permanent_defenders.is_empty() {
             self.attacked_permanent_defenders.clear();
         }
@@ -4075,9 +3841,8 @@ impl GameState {
         if !self.block_map.is_empty() {
             self.block_map = Default::default();
         }
-        // Both are `ColdState` fields; an unguarded `clear` on a combat
-        // boundary deep-copies the whole cold group (PERF, twenty-eighth
-        // pass's rule, restated in the thirty-third's Log block).
+        // ⚠ Both are `ColdState` fields: an unguarded `clear` on a combat
+        // boundary deep-copies the whole cold group (PERF, twenty-eighth pass).
         if !self.blocked_attackers.is_empty() {
             self.blocked_attackers.clear();
         }
@@ -4101,9 +3866,8 @@ impl GameState {
             }
         }
         // CR 702.39 — provoke's "block this combat" requirement ends here.
-        // Gated: the write is a `DerefMut` on a CoW `CardData`, so clearing
-        // the `None` almost every permanent already holds deep-copied the
-        // whole battlefield once per combat.
+        // ⚠ Guarded: the write is a `DerefMut` on CoW `CardData`, so clearing
+        // an already-`None` field deep-copies the battlefield.
         for c in self.battlefield.iter_mut() {
             if c.must_block.is_some() {
                 c.must_block = None;
@@ -4111,11 +3875,10 @@ impl GameState {
         }
     }
 
-    /// CR 508.1 — the prohibitions on `atk` that read the attacked player:
-    /// "creatures can't attack you" (Blazing Archon, the filtered Moat-style
-    /// locks), Island Sanctuary's shield, Arboria. `Some(line)` names the
-    /// first that bars it. One walker for `declare_attackers` and the bot's
-    /// picker, so a declaration the bot builds cannot trip one it never saw.
+    /// CR 508.1 — the prohibitions on `atk` that read the attacked player
+    /// ("creatures can't attack you" — Blazing Archon, filtered Moat-style
+    /// locks; Island Sanctuary; Arboria). `Some(line)` names the first that
+    /// bars it. Shared by `declare_attackers` and the bot's picker.
     pub(crate) fn attack_target_prohibited(&self, atk: &Attack, statics: u32) -> Option<u32> {
         let (defender, at_planeswalker) = match atk.target {
             crate::game::types::AttackTarget::Player(d) => (Some(d), false),
@@ -4160,10 +3923,8 @@ impl GameState {
                     ))),
             "attack_static_scan missed an attack prohibition",
         );
-        // Each live prohibition, asked in one pass: the old form collected
-        // `(source id, cloned filter)` into a `Vec` and then ran `any` over
-        // it, i.e. one allocation and one `SelectionRequirement` clone per
-        // lock per attacker for a question that short-circuits.
+        // Each live prohibition asked in one short-circuiting pass, with no
+        // collected `(id, filter)` list or filter clone.
         let barred = statics & attack_static::CANT_ATTACK_CONTROLLER != 0
             && self
             .battlefield
@@ -4193,9 +3954,6 @@ impl GameState {
         None
     }
 
-    /// CR 702.15 — does `defender` control a land with the given land type?
-    /// Reads printed land subtypes (Forest/Island/…), so dual lands and
-    /// nonbasics with the type count.
     /// CR 802 / 803 / 801.3 — the seats `seat` may legally declare attacks
     /// against right now. Empty when it isn't `seat`'s combat, and narrowed to
     /// one entry (or none) by the attack-left / attack-right option; under a
@@ -4268,11 +4026,10 @@ impl GameState {
         self.attack_left_right_defender()
     }
 
-    /// CR 508.1 — `defender` can't be attacked by `seat` no matter which
-    /// creature is declared: an unfiltered "creatures can't attack you"
-    /// (Blazing Archon), Arboria's did-nothing-last-turn lock, or a
-    /// turn-scoped Web of Inertia ban. Attacker-*filtered* prohibitions are
-    /// left to `declare_attackers`, which sees the actual batch.
+    /// CR 508.1 — `defender` can't be attacked by `seat` whatever creature is
+    /// declared: an unfiltered "creatures can't attack you" (Blazing Archon),
+    /// Arboria, or a turn-scoped Web of Inertia ban. Attacker-filtered
+    /// prohibitions are left to `declare_attackers`.
     pub(crate) fn player_cant_be_attacked_at_all(&self, seat: usize, defender: usize) -> bool {
         use crate::effect::StaticEffect;
         if self.cant_attack_player_this_turn.contains(&(seat, defender))
@@ -4339,6 +4096,8 @@ impl GameState {
             .or(Some(None))
     }
 
+    /// CR 702.15 — does `defender` control a land with the given land type?
+    /// Reads printed land subtypes, so dual lands and nonbasics count.
     pub(crate) fn defender_controls_land_type(
         &self,
         defender: usize,
@@ -4349,18 +4108,11 @@ impl GameState {
         })
     }
 
-    /// CR 509.1b — is this landwalk flavor blanked for everyone by a
-    /// `LandwalkIgnored` static in play (Great Wall, Deadfall, Quagmire,
-    /// Crevasse, Gosta Dirk, Lord Magnus)?
     /// CR 614 — is an extra turn `seat` would begin replaced with a skip?
-    ///
-    /// True when a permanent **another** seat controls carries
-    /// `StaticEffect::OpponentsSkipExtraTurns` (Trouble in Pairs): the clause
-    /// is "if an **opponent** would begin an extra turn", so its own
-    /// controller's extra turns are untouched. Printed statics only, like
-    /// [`Self::landwalk_ignored`] next to it.
-    /// `PlayersSkipExtraTurns` (Gerrard's Hourglass Pendant) binds every
-    /// seat, its controller included.
+    /// `OpponentsSkipExtraTurns` (Trouble in Pairs) on a permanent another
+    /// seat controls ("if an opponent would begin an extra turn"), or
+    /// `PlayersSkipExtraTurns` (Gerrard's Hourglass Pendant), which binds
+    /// every seat. Printed statics only.
     pub fn extra_turn_denied_for(&self, seat: usize) -> bool {
         use crate::effect::StaticEffect as SE;
         self.battlefield.iter().any(|c| {
@@ -4372,6 +4124,9 @@ impl GameState {
         })
     }
 
+    /// CR 509.1b — is this landwalk flavor blanked for everyone by a
+    /// `LandwalkIgnored` static in play (Great Wall, Deadfall, Quagmire,
+    /// Crevasse, Gosta Dirk, Lord Magnus)?
     pub(crate) fn landwalk_ignored(&self, lt: crate::card::LandType) -> bool {
         self.battlefield
             .iter()
@@ -4400,10 +4155,9 @@ impl GameState {
         crate::decision::Decision::CombatDamageOrder { attacker, blockers }
     }
 
-    /// Validate a `DamageOrder` answer into a concrete blocker order. Ids the
-    /// answer omits are appended in their default position, and unknown ids
-    /// are ignored — so a partial or empty answer is always legal and keeps
-    /// `default_order`.
+    /// Validate a `DamageOrder` answer into a blocker order. Omitted ids keep
+    /// their default position and unknown ids are ignored, so any answer is
+    /// legal.
     fn resolve_damage_order(
         &self,
         default_order: &[CardId],
@@ -4427,17 +4181,15 @@ impl GameState {
         ordered
     }
 
-    /// CR 510.1c-d — divide an attacker's `total_power` combat damage among
-    /// its blockers (given in assignment order with their `lethal` amounts).
-    /// Returns `(blocker_id, amount)` pairs in the same order; any power not
-    /// assigned to a blocker is the trample-over leftover.
+    /// CR 510.1c-d — divide an attacker's `total_power` among its blockers
+    /// (in assignment order, with their `lethal`). Returns `(blocker_id,
+    /// amount)` pairs; unassigned power is the trample-over leftover.
     ///
-    /// The default (and `AutoDecider`) split assigns lethal to each blocker
-    /// in order until the power runs out. A `wants_ui` / scripted decider may
-    /// answer `CombatDamageAssignment` to over-assign (e.g. deny trample),
-    /// subject to CR 510.1c: a blocker may receive damage only after every
-    /// earlier blocker has been assigned at least its lethal, and the total
-    /// can't exceed `total_power`. A malformed answer falls back to default.
+    /// The default (and `AutoDecider`) split assigns lethal in order. A
+    /// `wants_ui` / scripted decider may answer `CombatDamageAssignment` to
+    /// over-assign (e.g. deny trample) under CR 510.1c: a blocker gets damage
+    /// only once every earlier one has lethal, and the total can't exceed
+    /// `total_power`. A malformed answer falls back to the default.
     fn default_damage_split(
         &self,
         total_power: u32,
@@ -4453,10 +4205,9 @@ impl GameState {
                 (id, a)
             })
             .collect();
-        // CR 510.1d — ALL the attacker's damage must be assigned; without
-        // trample the excess goes to the blockers (default: the last one)
-        // rather than vanishing. With trample the remainder is left for the
-        // caller's trample-over-to-player path (CR 702.19g).
+        // CR 510.1d — all damage must be assigned: without trample the excess
+        // goes to the blockers (default: the last one); with trample it's left
+        // for the trample-over path (CR 702.19g).
         if !has_trample && remaining > 0 && let Some(last) = split.last_mut() {
             last.1 += remaining;
         }
@@ -4543,13 +4294,11 @@ impl GameState {
         lethals.iter().map(|&(id, _)| id).zip(amounts).collect()
     }
 
-    /// CR 510.1c-d — gather (and cache) the active player's combat-damage
-    /// ordering and assignment choices for every multi-blocker attacker,
-    /// before any damage is applied. Returns `true` if it suspended on a
-    /// `wants_ui` player's pending decision (the caller must return early and
-    /// re-enter the damage step after the answer); `false` once every choice
-    /// is settled. Pure w.r.t. the battlefield — only the decision caches and
-    /// `pending_decision` are written.
+    /// CR 510.1c-d — gather (and cache) the active player's damage ordering
+    /// and assignment for every multi-blocker attacker, before any damage.
+    /// Returns `true` if it suspended on a `wants_ui` decision (caller returns
+    /// and re-enters the step after the answer). Writes only the decision
+    /// caches and `pending_decision`.
     fn gather_combat_damage_decisions(
         &mut self,
         attacker_infos: &[AttackerInfo],
@@ -4622,10 +4371,9 @@ impl GameState {
             let assigner = banding_assigner.or(defender_assigner).unwrap_or(active);
             let assigner_ui = self.seat_prompts(assigner);
 
-            // Thorn Elemental's "may assign its combat damage as though it
-            // weren't blocked" (CR 510.1c) is chosen as damage is assigned, by
-            // whoever assigns it (the defending player against banding — the
-            // card's ruling); yes leaves no blockers to order or divide over.
+            // Thorn Elemental's "as though it weren't blocked" (CR 510.1c) is
+            // chosen at assignment by whoever assigns (the defender against
+            // banding, per the ruling); yes leaves nothing to order or divide.
             if asks_unblocked {
                 let answered =
                     self.combat_assigns_unblocked.iter().find(|(id, _)| *id == atk.id).map(|(_, b)| *b);
@@ -4723,11 +4471,10 @@ impl GameState {
             }
         }
 
-        // CR 509.2 / 510.1e — the mirror image for a creature blocking several
-        // attackers: its controller (the defending player) orders those
-        // attackers and divides the blocker's damage among them. Cached in the
-        // same maps, keyed by the blocker's id — a creature is never both an
-        // attacker and a blocker in one combat, so the keyspaces don't collide.
+        // CR 509.2 / 510.1e — the mirror for a creature blocking several
+        // attackers: the defending player orders and divides its damage.
+        // Cached in the same maps keyed by the blocker's id; a creature is
+        // never both attacker and blocker, so keys don't collide.
         let multi_blockers: Vec<CardId> = {
             let mut v: Vec<CardId> = self
                 .block_map
@@ -4812,10 +4559,9 @@ impl GameState {
         false
     }
 
-    /// CR 510.1e — the combat damage `blocker` assigns to `attacker` this
-    /// step. A creature blocking one attacker deals its whole power; a
-    /// multi-block divides it per the cached split (defaulting to lethal in
-    /// declaration order).
+    /// CR 510.1e — the combat damage `blocker` assigns to `attacker`: its
+    /// whole power for a single block, otherwise the cached split (default
+    /// lethal in declaration order).
     fn blocker_damage_to(&self, blocker: CardId, attacker: CardId, power: u32) -> u32 {
         if self.attackers_blocked_by(blocker).len() <= 1 {
             return power;
@@ -4826,9 +4572,6 @@ impl GameState {
             .unwrap_or(0)
     }
 
-    /// Lethal damage required for each blocker in `order` (its toughness, or 1
-    /// under deathtouch per CR 702.2e). Blockers no longer on the battlefield
-    /// resolve to 0.
     /// CR 702.22 — the attacking bands declared this combat, for the server
     /// view. Empty when nothing banded.
     pub fn attack_bands_view(&self) -> Vec<Vec<CardId>> {
@@ -4837,16 +4580,12 @@ impl GameState {
 
     /// Butcher Orgg — "you may assign this creature's combat damage divided as
     /// you choose among defending player and/or any number of creatures they
-    /// control". Returns the divisible creature set (every creature the
-    /// defending player controls, id-ordered) or empty when the attacker has
-    /// no such ability.
+    /// control". Returns every creature the defending player controls
+    /// (id-ordered), or empty when the attacker can't divide.
     ///
-    /// `free_divider` is the attacker's own
-    /// `DividesCombatDamageAmongDefenders`, read by the caller off the
-    /// `ComputedPermanent` it already holds. It used to be a whole-board
-    /// `any()` here — 32,210 calls a `--actors 1 --games 60` run, each a
-    /// linear find of the attacker, for a keyword no ordinary board carries
-    /// (PERF `(-113)`).
+    /// `free_divider` is the attacker's own `DividesCombatDamageAmongDefenders`,
+    /// read by the caller off its `ComputedPermanent` rather than a
+    /// whole-board `any()` here (PERF `(-113)`).
     fn free_division_targets(
         &self,
         attacker: CardId,
@@ -4897,6 +4636,9 @@ impl GameState {
         }
     }
 
+    /// Lethal damage required for each blocker in `order` (its toughness, or 1
+    /// under deathtouch per CR 702.2e). Blockers no longer on the battlefield
+    /// resolve to 0.
     fn combat_lethals(
         &self,
         attacker_deathtouch: bool,
@@ -4954,14 +4696,10 @@ impl GameState {
                     .get(&attacker)
                     .cloned()
                     .unwrap_or_default();
-                // The same computed view the resolver reads, not the whole
-                // board: every id this branch looks up is a combat
-                // participant, and `combat_damage_computed` already falls
-                // back to the full view for the one whole-board consumer
-                // (`free_division_targets`' Butcher Orgg half). Computing the
-                // board here instead cost 16,939 Ir a call against ~4,900 for
-                // the subset, and left the decision path reading a different
-                // view from the resolver that consumes its answer.
+                // The resolver's own computed view, not the whole board: every
+                // id here is a participant, and `combat_damage_computed`
+                // already widens for Butcher Orgg. Also keeps the decision
+                // reading the same view as the resolver that consumes it.
                 let computed = self.combat_damage_computed();
                 let atk_cp = computed.iter().find(|c| c.id == attacker);
                 let deathtouch = atk_cp
@@ -5001,12 +4739,8 @@ impl GameState {
     }
 
     /// Core combat damage resolver. Each attacker has its own defending
-    /// player or planeswalker (`Attack::target`); damage routing is
-    /// per-attacker.
-    /// Writes into `events`, the caller's buffer (PERF `(-225)`): the step
-    /// used to build its own `Vec`, `reserve(32)` it and hand it back for the
-    /// caller to `append` and free — one allocation and one copy per damage
-    /// step, when `advance_step` already holds the recycled scratch buffer.
+    /// player or planeswalker (`Attack::target`); routing is per-attacker.
+    /// Writes into `events`, the caller's recycled buffer (PERF `(-225)`).
     fn resolve_combat_damage_with_filter(
         &mut self,
         computed: &[ComputedPermanent],
@@ -5025,13 +4759,10 @@ impl GameState {
         let computed_of =
             |id: CardId| -> Option<&ComputedPermanent> { computed.iter().find(|c| c.id == id) };
 
-        // Inline storage, `(-71)`'s device: this never leaves the frame (it is
-        // read as a slice by `gather_combat_damage_decisions` and by the loop
-        // below), and a `collect` over a `filter_map` cannot size-hint past
-        // the filter, so it walked the 0->4->8 ladder on every damage step.
-        // Eight attackers covers an alpha strike; a wider one spills to the
-        // heap exactly as before. NOT a `reserve`: this removes the
-        // allocation rather than moving it, so `(-80)`'s floor doesn't apply.
+        // Inline storage (`(-71)`'s device): never leaves the frame, and a
+        // `filter_map` collect can't size-hint. Eight covers an alpha strike;
+        // wider spills to the heap. Not a `reserve`: it removes the
+        // allocation, so `(-80)`'s floor doesn't apply.
         let all_wither = self.all_damage_is_wither_now();
         let attacker_infos: SmallVec<[AttackerInfo; 8]> = self
             .attacking
@@ -5059,10 +4790,9 @@ impl GameState {
                         .has_kw(&Keyword::MustAssignDamageAsThoughUnblocked),
                     free_divider: kws
                         .has_kw(&Keyword::DividesCombatDamageAmongDefenders),
-                    // CR 510.1 — a creature with "deals no combat damage this
-                    // turn" (Master of Cruelties) is skipped in both damage
-                    // steps even though it's a legal attacker/blocker. CR 614.9
-                    // — a Maze-of-Ith'd attacker deals no combat damage either.
+                    // CR 510.1 — "deals no combat damage this turn" (Master of
+                    // Cruelties) skips both steps; CR 614.9 — so does a
+                    // Maze-of-Ith'd attacker.
                     should_deal: attacker_filter(kws)
                         && !kws.has_kw(&Keyword::DealsNoCombatDamage)
                         // CR 615.7 chosen-source prevention (Forge-Tender,
@@ -5077,38 +4807,29 @@ impl GameState {
             })
             .collect();
 
-        // PHASE 1 — gather the active player's combat-damage ordering and
-        // assignment choices for every multi-blocker attacker, before any
-        // damage is dealt. For a `wants_ui` player each choice surfaces as a
-        // `pending_decision` and this returns early; `submit_decision` then
-        // re-enters this damage step (which re-runs the now-cached gather and
-        // proceeds once every choice is settled). The choices are cached in
-        // `combat_damage_order` / `combat_damage_assignment` and read in the
-        // apply phase below.
+        // PHASE 1 — gather every multi-blocker attacker's ordering and
+        // assignment before any damage. For a `wants_ui` player a choice
+        // surfaces as `pending_decision` and this returns; `submit_decision`
+        // re-enters the step. Choices are cached in `combat_damage_order` /
+        // `combat_damage_assignment` for the apply phase.
         if self.gather_combat_damage_decisions(&attacker_infos, computed, &blocker_filter) {
             return Ok(());
         }
-        // Past the early returns, this batch always emits at least one event
-        // (`resolve_combat` appends `CombatResolved` unconditionally), and the
-        // accumulator is threaded through `deal_combat_damage_to_target` and
-        // `check_state_based_actions_into` after this. Those three share one
-        // `Vec` and grew it 34,438 times a six-game `cube` run — 11 % of every
-        // `grow_one` call in the program — climbing 0->4->8->16->32 per batch.
+        // Past the early returns this batch always emits an event, and the
+        // buffer is shared with `deal_combat_damage_to_target` and
+        // `check_state_based_actions_into`; reserving avoids the 0->4->...->32
+        // growth ladder per batch.
         events.reserve(32);
 
-        // CR 615.1 — "Prevent all combat damage this turn" (Owlin
-        // Shieldmage, Holy Day, Constant Mists). When the global flag is
-        // set, every combat damage assignment yields 0; lifelink scales
-        // off actual damage dealt (CR 702.15a), so prevention zeros
-        // lifelink life-gain as well. Triggers that would fire off
-        // "deals combat damage to a player" never see a damage event. With
-        // an exception filter (Inspire Awe) the prevention is per-dealer, so
-        // it's recomputed inside the per-attacker loop below.
+        // CR 615.1 — "Prevent all combat damage this turn" (Owlin Shieldmage,
+        // Holy Day): every assignment yields 0, which zeroes lifelink too (CR
+        // 702.15a) and fires no "deals combat damage to a player" triggers.
+        // With an exception filter (Inspire Awe) it's per-dealer, recomputed in
+        // the loop below.
 
-        // CR 614.2 / 614.5 — global combat-damage doubling (Furnace of Rath)
-        // and halving (Ghosts of the Innocent). Scaling applies to the amount
-        // dealt (after assignment, before prevention), so a creature is still
-        // assigned base lethal but takes the scaled total, and trample-over /
+        // CR 614.2 / 614.5 — global doubling (Furnace of Rath) and halving
+        // (Ghosts of the Innocent) scale the amount dealt, after assignment
+        // and before prevention: lethal is assigned at base, trample-over and
         // player damage scale too.
 
 
@@ -5118,43 +4839,29 @@ impl GameState {
         let mut creature_damage: SmallVec<[(CardId, CardId, u32); 8]> = SmallVec::new();
 
         for atk in &attacker_infos {
-            // Fog (per-dealer) OR "prevent all combat damage it would deal"
-            // (Azorius Ploy) both zero this attacker's outgoing damage while
-            // still letting its blockers strike it back.
+            // Fog (per-dealer) or "prevent all combat damage it would deal"
+            // (Azorius Ploy) zero this attacker's outgoing damage while its
+            // blockers still strike back.
             //
-            // `!should_deal` belongs in exactly the same bucket, and used to
-            // `continue` past the whole pairing instead. CR 510.4/510.5 gate
-            // each creature's damage on *its own* keywords: a first-striking
-            // attacker deals in the first step and its ordinary blockers deal
-            // in the regular one. Skipping the pairing whenever the attacker
-            // was idle threw the blockers' half away with it, so a 3/2 first
-            // striker walked through a 4/4 blocker untouched — and the mirror
-            // case, a first-striking *blocker*, never got to strike before an
-            // ordinary attacker hit back. The strike-back half below already
-            // filters on the blocker's own keywords; it just has to be
-            // reachable.
+            // `!should_deal` goes in the same bucket — it must not `continue`
+            // past the pairing. CR 510.4/510.5 gate each creature on its own
+            // keywords, so skipping the pairing for an idle attacker dropped
+            // its blockers' damage too (a first-striking attacker or blocker
+            // walked through untouched).
             let prevent_combat_damage = !atk.should_deal
                 || self.combat_damage_prevented_for_dealer(atk.id)
                 || self.combat_damage_prevented_from(atk.id);
 
-            // CR 510.1c: the attacking player chose the order in which an
-            // attacker assigns combat damage to its multiple blockers; that
-            // choice was gathered in PHASE 1 and cached. Start from the
-            // deterministic default (CardId = declaration-order proxy) and use
-            // the cached order when present.
+            // CR 510.1c: the attacking player's damage order for this attacker,
+            // cached in PHASE 1; default is CardId order (declaration proxy).
             let mut blocker_ids = self.blockers_of(atk.id);
             // CR 510.1a — "assigns its combat damage as though it weren't
-            // blocked" (Predatory Focus): drop the blocker list so the whole
-            // hit lands on the defending player. The blockers still deal
-            // theirs, which the blocker loop below handles.
-            // Read off `atk`, i.e. the one snapshot this step took, like
-            // every other attacker keyword in this loop: CR 510.1 assignment
-            // is a single turn-based action taken before any of the damage
-            // below is dealt, so a life total this loop moves must not change
-            // which attackers count as blocked. A fresh `computed_permanent`
-            // here was a whole gather per attacker (13,601,323 Ir / 0.60 %
-            // over 4,474 calls) *and* the only attacker keyword read at a
-            // different game state from its siblings.
+            // blocked" (Predatory Focus): drop the blockers so the whole hit
+            // lands on the player; the blockers still deal theirs below.
+            // Read off `atk`, this step's one snapshot: CR 510.1 assignment is
+            // a single action before any damage, so a life total this loop
+            // moves must not change which attackers count as blocked (and a
+            // fresh `computed_permanent` here was a gather per attacker).
             if atk.must_assign_as_unblocked
                 || (atk.may_assign_as_unblocked
                     && self.combat_assigns_unblocked.contains(&(atk.id, true)))
@@ -5171,11 +4878,9 @@ impl GameState {
             // instead of its blockers, blocked or not.
             let free_targets = self.free_division_targets(atk.id, atk.free_divider, computed);
 
-            // Goblin Psychopath — the charge armed by a lost coin flip sends
-            // this attacker's whole combat-damage assignment at its
-            // controller instead (CR 614.9).
-            // Soltari Guerrillas — the armed charge sends this attacker's
-            // damage at a chosen creature instead of the defending player.
+            // Goblin Psychopath — a lost coin flip sends this attacker's whole
+            // assignment at its controller (CR 614.9). Soltari Guerrillas — the
+            // armed charge sends it at a chosen creature instead.
             if blocker_ids.is_empty()
                 && free_targets.is_empty()
                 && matches!(atk.target, AttackTarget::Player(_))
@@ -5202,11 +4907,9 @@ impl GameState {
             }
 
             if blocker_ids.is_empty() && free_targets.is_empty() {
-                // CR 510.1c — an attacker that became blocked stays blocked
-                // even if all its blockers left combat (died to first-strike
-                // damage or removal). Without trample it assigns no combat
-                // damage; with trample everything goes to the defending
-                // player (CR 702.19g).
+                // CR 510.1c — a blocked attacker stays blocked even if all its
+                // blockers left combat: no damage without trample, all to the
+                // player with it (CR 702.19g).
                 if self.blocked_attackers.contains(&atk.id) && !atk.has_trample {
                     continue;
                 }
@@ -5240,16 +4943,11 @@ impl GameState {
                 } else {
                     atk.power.max(0) as u32
                 };
-                // CR 510.1c-d — the attacking player divides combat damage
-                // among the blockers in the chosen order; that choice was
-                // gathered in PHASE 1 and cached. Fall back to the default
-                // lethal-to-each split when there's no cached choice (single
-                // blocker, prevented, or a non-UI path that stored the
-                // default). The lethal for each is 1 under deathtouch (CR
-                // 702.2e).
-                // CR 510.1c — lethal accounts for marked damage; deathtouch
-                // needs only 1 (CR 702.2e). A free divider has no lethal
-                // requirement and always spills the remainder to the player.
+                // CR 510.1c-d — the PHASE 1 cached division among blockers, or
+                // the default lethal-to-each split (single blocker, prevented,
+                // or a non-UI path). Lethal accounts for marked damage and is 1
+                // under deathtouch (CR 702.2e). A free divider has no lethal
+                // requirement and always spills the rest to the player.
                 let (lethals, leftover_to_player) = if free_targets.is_empty() {
                     let lethals = blocker_ids
                         .iter()
@@ -5283,19 +4981,14 @@ impl GameState {
                     if assign == 0 {
                         continue;
                     }
-                    // One freeze scope over this pair's read-only prefix. Every
-                    // check here is `&self` and the first `&mut self` call is
-                    // `apply_prevention_shields` below, so no layer input can
-                    // move between them — the reads already happened at one
-                    // game state, this only stops each rebuilding the gather.
+                    // One freeze scope over this pair's read-only prefix: every
+                    // check is `&self` until `apply_prevention_shields`, so no
+                    // layer input moves. It merges the scopes
                     // `damage_prevented_by_protection` and `scale_damage_to`
-                    // both take one, and both already freeze internally, so
-                    // the scope is what merges them.
-                    // The two reads after `apply_prevention_shields` — the CR
-                    // 614.9 redirect and the CR 615 self-prevention pair — are
-                    // `&self` and gather on their own, so they ride this scope
-                    // too: three gathers per pair become one. Shields consume
-                    // charges and emit events; no layer input moves between.
+                    // each open, and the two `&self` reads after the shields
+                    // (CR 614.9 redirect, CR 615 self-prevention) ride it too —
+                    // shields consume charges and emit events but move no layer
+                    // input.
                     let (scaled, redirect_to, self_prevented) = self.with_frozen_layers(|g| {
                         let redirect_to = g.creature_redirects_damage_to_controller(blocker_id);
                         let self_prevented = g.combat_damage_prevented_to_self(blocker_id)
@@ -5306,10 +4999,8 @@ impl GameState {
                             || g.all_damage_to_creature_token_prevented(blocker_id)
                             || g.all_damage_to_your_creature_prevented(blocker_id)
                             // CR 702.16e — protection from the attacker's color
-                            // prevents its combat damage to the blocker. Over the
-                            // batch's views this frame already holds, not a
-                            // nested scope plus two memo lookups per pair (PERF
-                            // `(-202)`, the `(-194)` shape).
+                            // prevents its damage to the blocker. Over this
+                            // frame's views, not a nested scope (PERF `(-202)`).
                             || computed_of(blocker_id).is_some_and(|bc| {
                                 g.protection_prevents_views(atk.id, computed_of(atk.id), bc)
                             })
@@ -5340,10 +5031,9 @@ impl GameState {
                     let Some(scaled) = scaled else {
                         continue;
                     };
-                    // CR 615 — route attacker→blocker combat damage through
-                    // the blocker's prevention shields. Lifelink and the
-                    // wither/infect -1/-1 counters scale off the actual
-                    // (post-prevention) amount dealt (CR 702.15a).
+                    // CR 615 — attacker→blocker damage through the blocker's
+                    // shields. Lifelink and wither/infect counters scale off
+                    // the post-prevention amount (CR 702.15a).
                     let dealt = self.apply_combat_prevention_shields(
                         crate::game::effects::EntityRef::Permanent(blocker_id),
                         scaled,
@@ -5392,10 +5082,9 @@ impl GameState {
                                 count: n, placer: Some(atk.controller),
                             });
                         }
-                        // CR 120.3d / 702.90b — the damage was still DEALT (as
-                        // counters): "deals combat damage to a creature"
-                        // triggers, the per-source record and deathtouch
-                        // (CR 702.2b) all see it.
+                        // CR 120.3d / 702.90b — the damage was still dealt (as
+                        // counters): damage triggers, the per-source record and
+                        // deathtouch (CR 702.2b) see it.
                         if dealt > 0 {
                             if let Some(blocker) = self.battlefield_find_mut(blocker_id) {
                                 blocker.record_damage_from(atk.id, dealt as u32);
@@ -5454,30 +5143,18 @@ impl GameState {
                     self.adjust_life_emit(a, lifelink_dealt, events);
                 }
 
-                // Only blockers whose own keywords say they deal damage in
-                // this step strike back at the attacker. Per CR 510.4/510.5
-                // the attacker's keywords don't gate the blocker's strike
-                // step — a regular blocker must wait for the regular step
-                // even if the attacker has first strike.
-                // One freeze scope for the whole strike-back gate: every
-                // predicate below is `&self`, so the per-blocker
-                // `damage_prevented_by_protection` walks share one gather
-                // instead of taking one each.
+                // Only blockers whose own keywords deal in this step strike
+                // back (CR 510.4/510.5): a regular blocker waits for the
+                // regular step even against a first striker. One freeze scope
+                // so the per-blocker protection checks share a gather.
                 let (dealing_blocker_ids, attacker_takes_strike_back) =
                     self.with_frozen_layers(|g| {
-                        // A `for` loop, not seven stacked `.filter()`s: the
-                        // adapters are a per-element branch each *and* seven
-                        // nested `Filter` values to build per call, on a list
-                        // that is one or two blockers long — so the chain's
-                        // setup is most of what it costs (PERF, the
-                        // eighty-seventh pass's concurrent half). The
-                        // short-circuit order is the chain's, unchanged:
-                        // cheapest and most selective first.
-                        // Inline storage, like `blockers_of`'s answer that
-                        // feeds it: CR 509.1b multi-blocks of more than four
-                        // blockers do not happen, and this never leaves the
-                        // frame — the `Vec` allocated once per blocked
-                        // attacker per damage step to hold one or two ids.
+                        // A `for` loop, not seven stacked `.filter()`s: on a
+                        // one- or two-blocker list the adapter setup is most of
+                        // the cost (PERF, eighty-seventh pass). Short-circuit
+                        // order unchanged: cheapest and most selective first.
+                        // Inline storage: multi-blocks of more than four don't
+                        // happen and this never leaves the frame.
                         let mut ids: SmallVec<[CardId; 4]> = SmallVec::new();
                         for &bid in blocker_ids.iter() {
                             if !computed_of(bid)
@@ -5520,19 +5197,16 @@ impl GameState {
                     });
 
                 if attacker_takes_strike_back {
-                    // CR 702.90 / 615.6 — each blocker's strike-back is its
-                    // own damage event: scaling (CR 614.2), prevention
-                    // shields, infect/wither, deathtouch, and lifelink all
-                    // apply per source, not to the summed total.
+                    // CR 702.90 / 615.6 — each blocker's strike-back is its own
+                    // damage event: scaling, prevention, infect/wither,
+                    // deathtouch and lifelink apply per source.
                     let mut lifelink_by_controller: crate::fxhash::HashMap<usize, i32> =
                         crate::fxhash::HashMap::default();
                     for &bid in &dealing_blocker_ids {
                         let Some(bc) = computed_of(bid) else { continue };
-                        // CR 510.1e — a multi-block blocker only assigns this
-                        // attacker its share of the divided damage.
-                        // Same read-only prefix as the attacker side: both
-                        // calls are `&self` and `apply_prevention_shields` is
-                        // the first write, so one scope holds the pair.
+                        // CR 510.1e — a multi-blocker assigns this attacker only
+                        // its share. Same read-only prefix as the attacker side,
+                        // so one scope holds both calls.
                         let (scaled, redirect_to, self_prevented) = self.with_frozen_layers(|g| {
                             let power = g.blocker_damage_to(
                                 bid,
@@ -5662,10 +5336,9 @@ impl GameState {
             }
         }
 
-        // CR 614 — a source with the exile-on-death damage rider (Kumano's
-        // Pupils, Kumano) exiles instead of buries any creature it damaged
-        // this turn that would die. Mirrors the non-combat path in
-        // `deal_damage_to_from`.
+        // CR 614 — an exile-on-death damage rider (Kumano's Pupils) exiles
+        // any creature it damaged this turn that would die. Mirrors the
+        // non-combat path in `deal_damage_to_from`.
         for &(source, damaged, _) in &creature_damage {
             if self.damage_exiles_victim_eot.contains(&source)
                 || self
@@ -5704,17 +5377,13 @@ impl GameState {
                 c.combat_damager_controller = Some(ctrl);
             }
         }
-        // CR 510.2 — now that all combat damage in this step has been dealt,
-        // put `DealsCombatDamageToCreature` triggers on the stack.
+        // CR 510.2 — all combat damage in this step is dealt; put
+        // `DealsCombatDamageToCreature` triggers on the stack.
         //
-        // One `trigger_grant_sources` walk for the whole batch, not one per
-        // damaged creature. That walk is a whole-board pass over every static
-        // ability, it found 0.25 grants per call at the eighty-second tip, and
-        // the per-event rebuild made it 12,858 calls / 25,617,351 Ir / 0.72 %
-        // of `cube` between them. Reading the grants once, before any of this
-        // batch's triggers reach the stack, is also the CR 510.2 order: the
-        // per-event rebuild was re-evaluating each grant's gate against a
-        // stack that already held the earlier triggers.
+        // One `trigger_grant_sources` walk for the batch, not per damaged
+        // creature. Reading grants once, before any of this batch's triggers
+        // are on the stack, is also the CR 510.2 order — a per-event rebuild
+        // re-checked each grant's gate against a stack holding earlier ones.
         let granted: Vec<Vec<crate::card::TriggeredAbility>> = {
             let grants = self.trigger_grant_sources();
             creature_damage
@@ -5764,17 +5433,6 @@ impl GameState {
             .is_some_and(|cp| cp.keywords().has_kw(&Keyword::CantBeAttacked))
     }
 
-    /// Apply `amount` damage from `atk` to its declared attack target. For
-    /// player targets this is life loss (or poison if Infect); for
-    /// planeswalker targets this is loyalty loss. Also fires
-    /// `DealsCombatDamageToPlayer` triggers when a player is hit.
-    /// CR 615 — apply prevention shields to combat damage headed for an
-    /// attack target (player or planeswalker). Returns the unprevented
-    /// remainder. Creature-vs-creature combat damage is not yet routed
-    /// through shields (tracked in TODO.md).
-    /// Target-aware scaling for a combat-damage event aimed at a player or
-    /// planeswalker attack target (CR 614.2 / 614.5). `source` is the
-    /// attacking creature (Torbran's source-scoped bonus).
     /// CR 615.1 — is `dealer`'s combat damage prevented this turn? True when
     /// the global fog flag is set, unless an exception filter (Inspire Awe)
     /// is in play and `dealer` matches it (enchanted / enchantment creatures
@@ -5808,23 +5466,10 @@ impl GameState {
         }
     }
 
-    /// Apply the Ironscale replacement to `recipient` taking `dealt` combat
-    /// damage: if it has the static and `dealt > 0`, add one +1/+1 counter,
-    /// emit the event, and return 0 (the damage is prevented); otherwise
-    /// return `dealt` unchanged.
-    ///
-    /// `redirect_to` is [`creature_redirects_damage_to_controller`] answered by
-    /// the caller: the CR 614.9 check is the only layer read this function
-    /// needs, and outside a freeze scope it re-gathers every continuous effect
-    /// in the game. Both damage loops take it in the read-only prefix they
-    /// already freeze, so a pair pays one gather instead of two.
-    ///
-    /// [`creature_redirects_damage_to_controller`]: Self::creature_redirects_damage_to_controller
     /// Combat damage a replacement sends at a player instead of its first
     /// recipient (CR 614.9 Treacherous Link, Goblin Psychopath's diversion):
-    /// dealt by the attacker, through the player's prevention, and — what
-    /// actually lands — still combat damage from that commander (CR 903.10a).
-    /// The redirect used to pass no source, so it was nobody's damage.
+    /// dealt by the attacker, through the player's prevention, and still
+    /// combat damage from that commander (CR 903.10a).
     fn deal_redirected_combat_damage_to_player(
         &mut self,
         seat: usize,
@@ -5850,6 +5495,15 @@ impl GameState {
         }
     }
 
+    /// Ironscale: if `recipient` has the static and `dealt > 0`, add one
+    /// +1/+1 counter, emit the event and return 0 (damage prevented);
+    /// otherwise return `dealt`.
+    ///
+    /// `redirect_to` is [`creature_redirects_damage_to_controller`], answered
+    /// by the caller inside its freeze scope — the CR 614.9 check is this
+    /// function's only layer read, and it would gather on its own.
+    ///
+    /// [`creature_redirects_damage_to_controller`]: Self::creature_redirects_damage_to_controller
     fn ironscale_replace(
         &mut self,
         recipient: CardId,
@@ -5866,14 +5520,9 @@ impl GameState {
             self.deal_redirected_combat_damage_to_player(owner, dealt as u32, source, events);
             return 0;
         }
-        // The three questions below are one walk of one card's
-        // `static_abilities`, not three `battlefield_find`s and three walks:
-        // Sekki's trade, Ironscale's grow, and the replace-with-counters
-        // family all read the same list of the same permanent, and this runs
-        // once per combat-damage assignment to a creature.
-        // `creature_replaces_damage_with_counters` stays — `deal_damage_to_from`
-        // asks it too — and `creature_prevents_combat_damage_grows` is gone,
-        // this was its only caller.
+        // One walk of one card's `static_abilities` answers Sekki's trade,
+        // Ironscale's grow and the replace-with-counters family; this runs per
+        // damage assignment to a creature.
         let (sekki, grows, replace_kind, own) = match self.battlefield_find(recipient) {
             Some(c) => {
                 use crate::effect::StaticEffect as SE;
@@ -5962,14 +5611,11 @@ impl GameState {
     /// its controller? Returns that controller when it does.
     pub(crate) fn creature_redirects_damage_to_controller(&self, id: CardId) -> Option<usize> {
         let c = self.battlefield_find(id)?;
-        // This is the **first** read in `resolve_combat_damage_with_filter`'s
-        // per-pair freeze scope, so an ungated `computed_permanent` here is
-        // what makes that scope gather — 12,786 gathers a six-game `cube` run
-        // between this and its sibling below (PERF `(-81)`'s context census).
-        // Same shape as `damage_prevented_by_protection_inner`: the presence
-        // gate answers "no" authoritatively without gathering, and it is
-        // skipped once the gather has already happened, where the memo read is
-        // cheaper than the gate's own board walk.
+        // The first read in the resolver's per-pair freeze scope, so an
+        // ungated `computed_permanent` here makes that scope gather (PERF
+        // `(-81)` context). As in `damage_prevented_by_protection_inner`, the
+        // presence gate answers "no" without gathering, and is skipped once
+        // the gather has happened (the memo read is then cheaper).
         const KW: crate::card::Keyword = crate::card::Keyword::DamageToThisGoesToItsController;
         // `_on`, not the `CardId` form: `c` above is exactly the
         // `battlefield_find` that form opens with, and this is asked once per
@@ -6145,11 +5791,10 @@ impl GameState {
     /// Phytohydra (CR 614) — does `id` replace incoming damage with that many
     /// +1/+1 counters? Reads `StaticEffect::ReplaceDamageToSelfWithCounters`.
     ///
-    /// The third field is the seat that puts the counters: the controller of
-    /// the replacement's source (CR 109.5 / 614.1a — a static ability acts for
-    /// the controller of the object it's on). Anti-Venom's own controller, not
-    /// the damage source's, so an opponent's "whenever you put counters" never
-    /// sees them and All Will Be One can't loop on an opponent's Anti-Venom.
+    /// The third field is the seat that puts the counters: the replacement
+    /// source's controller (CR 109.5 / 614.1a), not the damage source's — so
+    /// an opponent's "whenever you put counters" never sees them and All Will
+    /// Be One can't loop on an opponent's Anti-Venom.
     pub(crate) fn creature_replaces_damage_with_counters(
         &self,
         id: CardId,
@@ -6203,6 +5848,9 @@ impl GameState {
         })
     }
 
+    /// Target-aware scaling for a combat-damage event aimed at a player or
+    /// planeswalker attack target (CR 614.2 / 614.5). `source` is the
+    /// attacking creature (Torbran's source-scoped bonus).
     fn scale_combat_damage(
         &self,
         source: Option<crate::card::CardId>,
@@ -6255,6 +5903,9 @@ impl GameState {
         }
     }
 
+    /// CR 615 — apply prevention shields to combat damage headed for an
+    /// attack target (player or planeswalker). Returns the unprevented
+    /// remainder.
     fn prevent_combat_to_target(
         &mut self,
         target: AttackTarget,
@@ -6377,6 +6028,9 @@ impl GameState {
         })
     }
 
+    /// Apply `amount` damage from `atk` to its declared attack target: life
+    /// loss (or poison under Infect) for a player, loyalty loss for a
+    /// planeswalker. Fires `DealsCombatDamageToPlayer` triggers on a player hit.
     fn deal_combat_damage_to_target(
         &mut self,
         atk: &AttackerInfo,
@@ -6440,10 +6094,9 @@ impl GameState {
                     self.mill_instead_of_combat_damage(p, amount, events);
                     return 0;
                 }
-                // CR 614.9 — Palisade-Giant-style redirect: combat damage
-                // aimed at the player lands on the redirector instead. Turn
-                // the Tables' combat-only redirect is checked first; both
-                // require the destination to still be on the battlefield.
+                // CR 614.9 — Palisade-Giant-style redirect to the redirector.
+                // Turn the Tables' combat-only redirect is checked first; both
+                // need the destination still on the battlefield.
                 if let Some(redirect) = self
                     .combat_damage_redirect_this_turn
                     .iter()
@@ -6506,10 +6159,8 @@ impl GameState {
                         amount,
                     });
                 }
-                // Mark the player damaged this turn (Bloodthirst window, CR
-                // 702.54) and record the attacker so "destroy target creature
-                // that dealt damage to you this turn" (Spear of Heliod) can
-                // filter targets.
+                // Mark the player damaged this turn (Bloodthirst, CR 702.54)
+                // and record the attacker (Spear of Heliod's targeting).
                 if amount > 0 {
                     // One `Player::deref_mut` for the run: `Player` is a CoW
                     // handle, so each write below was its own `Arc::make_mut`.
@@ -6527,19 +6178,14 @@ impl GameState {
                     if !pl.creatures_that_combat_damaged_me_this_turn.contains(&atk_id) {
                         pl.creatures_that_combat_damaged_me_this_turn.push(atk_id);
                     }
-                    // CR 702.76 — Prowl window: record the damaging creature's
-                    // types for its controller (Changeling counts as every
-                    // type, recorded via the controller-side any flag).
-                    // ⚠ `remembers` rides the scan that is already here.
-                    // Asking for it with a second `find_by_id` cost more than
-                    // the gate saved on `fixed` — see PERF `(-154)`.
-                    // ⚠ The type line is read through a borrow of
-                    // `self.battlefield` while `self.players` is written — the
-                    // two are disjoint FIELDS, so naming them separately is
-                    // what the borrow checker needs, and the `.clone()` that
-                    // used to end the borrow was the largest single allocation
-                    // site in the engine (PERF `(-355)`: 7,038 a six-game
-                    // `cube` run).
+                    // CR 702.76 — Prowl: record the damaging creature's types
+                    // for its controller (Changeling via the any flag).
+                    // ⚠ `remembers` rides this scan; a second `find_by_id`
+                    // cost more than the gate saved (PERF `(-154)`).
+                    // ⚠ `self.battlefield` is borrowed while `self.players` is
+                    // written — disjoint fields, named separately for the
+                    // borrow checker; the `.clone()` this replaced was a top
+                    // allocation site (PERF `(-355)`).
                     let mut remembers = false;
                     let mut by_name: Option<String> = None;
                     let battlefield = &self.battlefield;
@@ -6558,15 +6204,10 @@ impl GameState {
                         }
                     }
                     // The Fallen — "each player this creature has dealt damage
-                    // to this game". ⚠ Combat damage to a player has its own
-                    // path here and never reached the recorder in
-                    // `deal_damage_to_from`, so a 2/3 Zombie whose whole text
-                    // is its combat victims remembered none of them.
-                    //
-                    // Gated on the definition asking (PERF `(-154)`): the
-                    // mutable find is an unshare of the whole battlefield, and
-                    // every attacker in the game would pay it for a list only
-                    // The Fallen can read.
+                    // to this game". ⚠ Combat damage to a player takes this
+                    // path, not `deal_damage_to_from`'s recorder, so it must
+                    // record here. Gated on the definition asking (PERF
+                    // `(-154)`): the mutable find unshares the battlefield.
                     if remembers
                         && let Some(c) = self.battlefield_find_mut(atk_id)
                         && !c.damaged_players_this_game.contains(&p)
@@ -6587,12 +6228,9 @@ impl GameState {
                 if atk.toxic > 0 && amount > 0 {
                     self.add_poison(p, atk.toxic, events);
                 }
-                // Phase M: bump the 21-commander-damage tally when the
-                // attacker is a Commander. Both Infect and regular
-                // damage paths credit here — CR 704.6c doesn't restrict
-                // by damage type. The SBA in `check_state_based_actions`
-                // reads this table and eliminates the player when any
-                // single (victim, commander) entry crosses 21.
+                // Commander damage tally (CR 704.6c), credited for infect and
+                // regular damage alike; the SBA eliminates a player when any
+                // (victim, commander) entry reaches 21.
                 if let Some(cmdr) = self.commander_card_of(atk.id) {
                     self.record_commander_damage(p, cmdr, amount);
                 }
@@ -6617,10 +6255,9 @@ impl GameState {
                 amount
             }
             AttackTarget::Planeswalker(pw_id) => {
-                // CR 702.19c — "trample over planeswalkers" (Thrasta): the
-                // attacker assigns lethal (= remaining loyalty) to the
-                // planeswalker and the excess to its controller. Plain
-                // trample never spills past a planeswalker (CR 702.19f).
+                // CR 702.19c — "trample over planeswalkers" (Thrasta): lethal
+                // (remaining loyalty) to the walker, excess to its controller.
+                // Plain trample never spills past a walker (CR 702.19f).
                 let mut spill = 0u32;
                 let mut spill_to: Option<usize> = None;
                 if let Some(pw) = self.battlefield_find(pw_id) {
@@ -6745,10 +6382,9 @@ impl GameState {
         }
     }
 
-    /// CR 508.1g / 509.1b — pick the untapped permanent `who` taps to pay
-    /// `payer`'s `AttackBlockCostTapAnother` cost. Candidates exclude the payer
-    /// itself, everything declared in combat this step, and helpers already
-    /// spent on an earlier payer in the same declaration.
+    /// CR 508.1g / 509.1b — pick the untapped permanent `who` taps for
+    /// `payer`'s `AttackBlockCostTapAnother` cost, excluding the payer,
+    /// everything declared this step, and helpers already spent.
     fn find_tap_helper(
         &self,
         who: usize,
@@ -6779,12 +6415,10 @@ impl GameState {
     /// every active `BlockTaxToController` (Archangel of Tithes, Heat Wave,
     /// Norn's Annex) plus the turn-scoped `block_tax_this_turn`.
     ///
-    /// Per blocker and additive, because a source may narrow itself to some
-    /// of them and may charge life rather than mana — which is also what
-    /// lets the bot's block planner trim a batch down to what it can pay.
-    /// The engine pays it after every legality check has passed and rejects
-    /// the declaration whole when a player cannot cover theirs, so a planner
-    /// that does not price it loses the block step rather than a blocker.
+    /// Per blocker and additive (a source may narrow itself or charge life),
+    /// so the bot's planner can trim a batch to what it can pay. The engine
+    /// rejects the whole declaration when a player can't pay, so a planner
+    /// that ignores it loses the block step.
     pub(crate) fn block_tax_for(&self, blocker: CardId) -> (u32, u32) {
         let (mut mana, mut life) = (self.block_tax_this_turn, 0u32);
         // The walk matches one static, and the lane holds whether any
@@ -6865,26 +6499,18 @@ impl GameState {
         self.block_tax_this_turn > 0 || self.battlefield.has_block_tax_static()
     }
 
-    /// CR 509.1a/b — everything that bars `blocker` from blocking *at all*,
-    /// as `(site, error)`, or `None` when nothing does.
+    /// CR 509.1a/b — everything that bars `blocker` from blocking at all, as
+    /// `(site, error)`, or `None`.
     ///
-    /// One walker for the four callers that each kept their own list:
-    /// [`declare_blockers`](Self::declare_blockers)'s per-assignment gate,
-    /// `blocker_can_block_anything` (what the bot's planner and the client's
-    /// legal-block list read), CR 509.1b's "must block if able" loops, and CR
-    /// 702.39's Provoke. **They had drifted in both directions and each
-    /// direction is its own bug.** The gate did not enforce seven
-    /// "can't block unless …" families at all — hand size, delirium, a
-    /// creature died this turn, Descend N, the city's blessing, cards in
-    /// exile, Hollow Warrior's helper — so those cards' restrictions did
-    /// nothing on the real declaration path. And the mirror did not know
-    /// about detain, a blanket "can't block this turn", or Void Winnower, so
-    /// a requirement loop could oblige a block the gate then rejected and
-    /// leave the defending seat with **no legal declaration in either
-    /// direction** (`cr_recent100`).
+    /// One walker for [`declare_blockers`](Self::declare_blockers)'s gate,
+    /// `blocker_can_block_anything` (bot planner, client legal-block list),
+    /// the CR 509.1b "must block if able" loops and CR 702.39 Provoke. Their
+    /// separate copies had drifted both ways — the gate skipped seven "can't
+    /// block unless …" families, and the loops missed detain and Void
+    /// Winnower, obliging blocks the gate rejected (`cr_recent100`).
     ///
-    /// Keyword families are asked in one walk over the computed set rather
-    /// than a `has_kw` scan apiece, the same way `attacker_self_block` does.
+    /// Keyword families are asked in one walk over the computed set, as in
+    /// `attacker_self_block`.
     pub(crate) fn blocker_self_block(
         &self,
         blocker: &crate::card::CardInstance,
@@ -6910,12 +6536,10 @@ impl GameState {
             return no(line!());
         }
         let owner = blocker.controller;
-        // Void Winnower — an even mana value can't block while an opponent
-        // has the static (zero is even). Both cheap terms first: the board
-        // question is a presence gate (`block_even_mv_lock_in_scope`), so
-        // inside the planner's freeze scope it is one load rather than the
-        // whole-battlefield walk this used to take on every even blocker.
-        // Only a board that actually plays the card reaches the seat walk.
+        // Void Winnower — an even mana value (zero included) can't block while
+        // an opponent has the static. Cheap terms first; the board question is
+        // a presence gate (`block_even_mv_lock_in_scope`), so only a board
+        // playing the card reaches the seat walk.
         if blocker.printed_cmc().is_multiple_of(2)
             && self.block_even_mv_lock_in_scope()
             && self.battlefield.iter().any(|c| {
@@ -6942,11 +6566,10 @@ impl GameState {
         // keywords and the board, never the attacker.
         let mut control_count: Option<(crate::card::SelectionRequirement, u32, bool)> = None;
         let mut tap_another: Option<crate::card::SelectionRequirement> = None;
-        // CR 508.1g's block half, noted here and charged below: the four
-        // families `attack_block_keyword_tax(.., for_attack = false)` can
-        // price. Without the flag the tax question re-walks this same slice —
-        // and calls out of line to do it — once per candidate blocker on every
-        // board, and the answer is 0 on all of them but these.
+        // CR 508.1g's block half: note whether one of the four families
+        // `attack_block_keyword_tax(.., for_attack = false)` prices is
+        // present, so the tax isn't re-walked per candidate on boards where
+        // it's 0.
         let mut taxed = false;
         for k in cp.keywords().iter() {
             let barred = match k {
@@ -7033,14 +6656,11 @@ impl GameState {
         {
             return no(line!());
         }
-        // CR 508.1g's block half — the "unless its controller pays {N}"
-        // family is legal only if the seat can actually produce the tax. The
-        // declaration charges the *sum* over blockers later; one blocker's
-        // own tax being unpayable makes that sum unpayable too, so asking
-        // here is sound and names the blocker instead of `assignments[0]`.
-        // Behind `taxed`, which the walk above set: the exact tax is 0 unless
-        // one of those four families is present, so the gate is exact and not
-        // an approximation.
+        // CR 508.1g's block half — "unless its controller pays {N}" is legal
+        // only if the seat can produce the tax. The declaration charges the
+        // sum later; one unpayable share makes the sum unpayable, so asking
+        // here is sound and names the right blocker. `taxed` makes the gate
+        // exact.
         if taxed {
             let tax = self.attack_block_keyword_tax(blocker.id, cp.keywords(), false);
             if tax > 0 && !self.could_pay_generic(owner, tax) {
@@ -7054,26 +6674,15 @@ impl GameState {
         None
     }
 
-    /// Is `b` **able** to block `required`, for the purpose of a CR 509.1
-    /// requirement that says it must?
+    /// Is `b` able to block `required`, for a CR 509.1 requirement that says
+    /// it must?
     ///
-    /// [`declare_blockers`](Self::declare_blockers) rejects the **whole**
-    /// declaration when a creature a requirement obliges is able and not
-    /// assigned, so the bot's block planner has to answer this identically or
-    /// it loses its entire block step. One method, called from both.
-    ///
-    /// **Four requirements ask this question and each used to answer it
-    /// itself:** CR 702.39 Provoke (`must_block`), CR 509.1c "must be blocked
-    /// if able" (`MustBeBlocked`), CR 509.1c true Lure (`AllMustBlock`), and
-    /// CR 509.1c "blocks each combat if able" (`MustBlock`, asked of the
-    /// blocker against every attacker). Four hand-written copies of one
-    /// conjunction is the shape that generated most of ENGINE_BACKLOG P3, and
-    /// three of them had already drifted from this one on the tapped term —
-    /// they refused a tapped blocker outright where this respects
-    /// `tapped_creatures_can_block`. The escape is the correct reading (a
-    /// creature that *can* block is able to), so unifying takes this one's
-    /// version; it binds requirements slightly more often, on the one static
-    /// that grants it.
+    /// [`declare_blockers`](Self::declare_blockers) rejects the whole
+    /// declaration when an obliged, able creature isn't assigned, so the bot's
+    /// planner must answer identically; both call this. Shared by CR 702.39
+    /// Provoke (`must_block`), CR 509.1c `MustBeBlocked`, `AllMustBlock` (true
+    /// Lure) and `MustBlock`, whose separate copies had drifted on the tapped
+    /// term; this one respects `tapped_creatures_can_block`.
     ///
     /// Reads `computed_permanent` rather than the declaration's gated subset:
     /// every caller is behind a keyword or field test that is false on a
@@ -7114,28 +6723,19 @@ impl GameState {
             })
     }
 
-    /// CR 509.1c — is `b` already **spoken for** by a different block
-    /// requirement, and therefore not idle for this one?
+    /// CR 509.1c — is `b` already spoken for by a different block
+    /// requirement, and so not idle for this one?
     ///
-    /// The rule the five requirement loops implement one at a time is
-    /// "satisfy the *maximum number* of requirements without violating a
-    /// restriction". Checked independently they demand more than that:
-    /// a creature can block only one attacker, so two requirements that both
-    /// name it can never both be met, and asking each in isolation makes
-    /// **every** declaration illegal. A Lure attacker plus a provoker plus
-    /// one able defender had exactly that shape — block nobody, block the
-    /// Lure, block the provoker, all three rejected — and it is `cube` seed
-    /// 15's whole residual.
+    /// The rule is "satisfy the maximum number of requirements without
+    /// violating a restriction". Checked independently, two requirements
+    /// naming one creature can never both be met, making every declaration
+    /// illegal (a Lure attacker plus a provoker plus one able defender —
+    /// `cube` seed 15). A declaration where every obliged creature blocks
+    /// something that obliges it is already maximal; that is what this tests
+    /// (assigned to an attacker other than `except` whose requirement binds
+    /// this blocker).
     ///
-    /// A creature that satisfies one binding requirement is the most any
-    /// declaration can get out of it, so a declaration in which every obliged
-    /// creature blocks *something that obliges it* is already maximal. That
-    /// is what this tests, and it is the cheap half of the general rule: the
-    /// blocker is assigned to some attacker other than `except`, and that
-    /// attacker's own requirement binds this blocker.
-    ///
-    /// Full CR 509.1c maximization over arbitrary requirement sets is still
-    /// an approximation here — see the loops' own note.
+    /// Full CR 509.1c maximization is still approximated — see the loops' note.
     pub(crate) fn block_spoken_for_elsewhere(
         &self,
         b: &crate::card::CardInstance,
@@ -7158,21 +6758,6 @@ impl GameState {
             || self.block_map.get(&b.id).is_some_and(|v| v.iter().copied().any(claims))
     }
 
-    /// CR 509.1c — does a "must block" requirement on `attacker` **bind** at
-    /// all? A restriction outranks a requirement: the defending player picks
-    /// the legal declaration that satisfies the most requirements, and a
-    /// declaration that breaks CR 509.1b is not one of the candidates.
-    ///
-    /// **Without this the engine can demand a declaration it also forbids.**
-    /// An attacker with Lure *and* Menace facing one able blocker has no
-    /// legal block at all: declare nobody and CR 509.1c rejects it, declare
-    /// the one body and the Menace count rejects it. That contradiction is
-    /// reachable in the routine pools — an aura granting `AllMustBlock`
-    /// landing on a Menace creature, `cube` seed 15 — and no planner can
-    /// plan around it, because there is nothing to plan.
-    ///
-    /// The able set is counted, not the assigned one: the question is whether
-    /// a legal block *exists*, not whether this declaration made it.
     /// CR 509.1c — the creature an Equipment on `attacker` says must block
     /// it if able (`EquippedMustBeBlockedByIfAble`: Ace's Baseball Bat's
     /// Dalek), if any. Several such Equipment still want only one blocker.
@@ -7198,6 +6783,11 @@ impl GameState {
             .max()
     }
 
+    /// CR 509.1c — does a "must block" requirement on `attacker` bind at all?
+    /// A restriction outranks a requirement (CR 509.1b): an attacker with Lure
+    /// and Menace facing one able blocker has no legal block, so the
+    /// requirement must not bind (`cube` seed 15). Counts the able set, not
+    /// the assigned one: the question is whether a legal block exists.
     pub(crate) fn block_requirement_binds(&self, attacker: CardId) -> bool {
         let Some(acp) = self.computed_permanent(attacker) else { return true };
         let mut min_b = if acp.keywords().has_kw(&Keyword::Menace) { 2usize } else { 1 };
@@ -7209,10 +6799,9 @@ impl GameState {
         if min_b <= 1 {
             return true;
         }
-        // CR 506.2 / 509.1c — a combat-wide block cap (Silent Arbiter) with
-        // fewer free slots than the count needs leaves the requirement no
-        // legal form: a must-be-blocked menace Jon Irenicus under a cap of one
-        // rejected every declaration (7-seat pod, seed 806097).
+        // CR 506.2 / 509.1c — a block cap (Silent Arbiter) with fewer free
+        // slots than the count needs leaves the requirement no legal form
+        // (must-be-blocked menace Jon Irenicus, 7-seat pod, seed 806097).
         if let Some(cap) = self.combat_participation_cap(true)
             && (cap as usize).saturating_sub(self.block_map.len()) + self.blocker_count_of(attacker) < min_b
         {
@@ -7234,27 +6823,6 @@ impl GameState {
         able.max(self.blocker_count_of(attacker)) >= min_b
     }
 
-    /// CR 508.1g — the generic mana a declaration of `attacks` costs its
-    /// controller: the defenders' `AttackTaxToController` statics (Ghostly
-    /// Prison, Propaganda, Sphere of Safety, Elephant Grass), the two
-    /// turn-scoped taxes (War Tax, Forbidding Spirit), and each attacker's
-    /// own "can't attack unless you pay {N}" keyword through `keyword_tax`.
-    ///
-    /// **Additive per attacker, with no cross terms** — which is what makes
-    /// it usable by both callers. [`declare_attackers_banded`] pays it and
-    /// rejects the declaration *whole* when it can't; the bot's attack
-    /// picker calls the same function to trim the batch down to what it can
-    /// pay, and the monotonicity is why trimming terminates. Until the
-    /// eightieth pass the picker did not model the tax at all: against a
-    /// Propaganda it declared the board, could not pay, and lost its entire
-    /// combat to a batch rejection that blamed `attacks[0]`. PERF (-55).
-    ///
-    /// `keyword_tax` is injected rather than read here because the two
-    /// callers hold the computed keyword set differently — the engine has a
-    /// gated `Vec<ComputedPermanent>` in scope, the picker an `Arc` per
-    /// lookup — and re-deriving it inside would cost the engine its memo.
-    ///
-    /// [`declare_attackers_banded`]: Self::declare_attackers_banded
     /// CR 508.1g — the life `attacks` cost under a defender's "pays N life for
     /// each" window (Sivitri): per attacker at that player or a planeswalker
     /// they control.
@@ -7273,6 +6841,21 @@ impl GameState {
             .sum()
     }
 
+    /// CR 508.1g — the generic mana a declaration of `attacks` costs:
+    /// defenders' `AttackTaxToController` statics (Ghostly Prison, Propaganda,
+    /// Sphere of Safety, Elephant Grass), War Tax, Forbidding Spirit, and each
+    /// attacker's own "can't attack unless you pay {N}" via `keyword_tax`.
+    ///
+    /// Additive per attacker with no cross terms, so both callers can use it:
+    /// [`declare_attackers_banded`] pays it or rejects the whole declaration,
+    /// and the bot's picker trims its batch to what it can pay (monotonic, so
+    /// trimming terminates). PERF (-55).
+    ///
+    /// `keyword_tax` is injected because the callers hold computed keywords
+    /// differently (engine: gated `Vec<ComputedPermanent>`; picker: an `Arc`
+    /// per lookup), and deriving it here would cost the engine its memo.
+    ///
+    /// [`declare_attackers_banded`]: Self::declare_attackers_banded
     pub(crate) fn attack_tax_for(
         &self,
         attacks: &[Attack],
@@ -7313,10 +6896,9 @@ impl GameState {
             total_tax += self.players[d].attack_tax_until_your_turn;
             // War Tax — a symmetric per-attacker tax for the rest of the turn.
             total_tax += self.attack_tax_this_turn;
-            // Evaluate each tax `amount` with the defender as "you" (and the
-            // tax permanent as source) so dynamic taxes — Sphere of Safety's
-            // "number of enchantments you control" — count the defender's
-            // board. Fixed taxes are `Value::Const(n)`.
+            // Evaluate each `amount` with the defender as "you" and the tax
+            // permanent as source, so dynamic taxes (Sphere of Safety) count
+            // the defender's board.
             for c in &self.battlefield {
                 if statics & attack_static::ATTACK_TAX == 0 {
                     break; // no tax permanent anywhere — the loop body is a no-op
@@ -7415,22 +6997,15 @@ impl GameState {
             .sum()
     }
 
-    /// Push triggered abilities of `source` whose event spec is
-    /// `DealsCombatDamageToPlayer` onto the stack, with `damaged_player`
-    /// stored as the trigger's target so the effect can refer to "that
-    /// player" via `PlayerRef::Target(0)`.
+    /// Push `source`'s `DealsCombatDamageToPlayer` triggers, with
+    /// `damaged_player` as target so the effect can say "that player"
+    /// (`PlayerRef::Target(0)`).
     ///
-    /// Phase 1 walks the battlefield for the attacker's own
-    /// `SelfSource` / `AnyPlayer` triggers (the printed
-    /// "whenever this creature deals combat damage" pattern).
-    ///
-    /// Phase 2 walks every player's graveyard for `FromYourGraveyard`
-    /// triggers whose controller (the gy owner) matches the source's
-    /// controller — the "whenever your creatures deal combat damage,
-    /// return this card from your graveyard" pattern used by Killian's
-    /// Confidence and friends. The trigger source is bound to the
-    /// graveyard card itself so a `Move(SelfSource → Hand)` body
-    /// returns the right card.
+    /// Phase 1: the attacker's own `SelfSource` / `AnyPlayer` triggers.
+    /// Phase 2: `FromYourGraveyard` triggers in the graveyard of the
+    /// source's controller ("return this from your graveyard" — Killian's
+    /// Confidence), with the graveyard card bound as trigger source so
+    /// `Move(SelfSource → Hand)` moves the right card.
     pub fn fire_combat_damage_to_player_triggers(
         &mut self,
         source: CardId,
@@ -7527,21 +7102,16 @@ impl GameState {
             &granted,
             true,
         );
-        // CR 510 — "whenever combat damage is dealt to you" listeners fire off
-        // the *recipient's* own permanents (SelfSource on a permanent the
-        // damaged player controls). Risona sheds an indestructible counter.
-        // Plain loops: a whole-board walk per damage event, and `FlatMap::next`
-        // costs ~20 Ir a permanent before the filter sees a single ability
-        // (PERF (-78)). Over the trigger member list, not the board (PERF
-        // `(-224)`, the `(-222)` device), unless an instance grant of the
-        // kind is live — none in the catalog today, read so the walk cannot
-        // drop one silently.
+        // CR 510 — "whenever combat damage is dealt to you" listeners on the
+        // damaged player's own permanents (Risona). Plain loops over the
+        // trigger member list (PERF (-78), `(-224)`), unless an instance grant
+        // of the kind is live — none in the catalog today, but read so the
+        // walk can't drop one silently.
         let own_grant = self.any_granted_trigger_of_kind(&EventKind::ControllerDealtCombatDamage);
-        // `(listener, effect, controller, filter, batch index)`: the printed
-        // trigger's filter and "one or more" batch slot are honored here as
-        // the dispatcher would (Norn's Decree: one poison counter for a whole
-        // swing, and only for an opponent's creatures) — this hook used to
-        // fire once per dealer with both dropped.
+        // `(listener, effect, controller, filter, batch index)`: the filter
+        // and "one or more" batch slot are honoured as the dispatcher would
+        // (Norn's Decree: one poison for a whole swing, opponents' creatures
+        // only).
         type Listener = (CardId, Effect, usize, Option<crate::effect::Predicate>, Option<usize>);
         let mut listeners: Vec<Listener> = Vec::new();
         let listens = |ta: &crate::card::TriggeredAbility| {
@@ -7645,11 +7215,9 @@ impl GameState {
         }
     }
 
-    /// CR 603.4 — fire any `SourceDealsDamageThisTurn` delayed triggers
-    /// watching `source` (Paladin of Prahv's Forecast rider). Called from every
-    /// damage-delivery path — combat to a player/creature and noncombat — so the
-    /// watcher sees *any* damage the creature deals. The amount rides in via
-    /// `Value::TriggerEventAmount`.
+    /// CR 603.4 — fire `SourceDealsDamageThisTurn` delayed triggers watching
+    /// `source` (Paladin of Prahv's Forecast). Called from every damage path
+    /// so any damage counts; the amount rides `Value::TriggerEventAmount`.
     pub(crate) fn fire_source_dealt_damage_watchers(&mut self, source: CardId, amount: u32) {
         if amount == 0 {
             return;
@@ -7755,17 +7323,12 @@ impl GameState {
         }
     }
 
-    /// Push triggered abilities of `source` whose event spec is
-    /// `DealsCombatDamageToCreature` onto the stack, binding the damaged
-    /// creature to the trigger's target so "destroy / exile / -1/-1 that
-    /// creature" payoffs and equipment charge-triggers (Umezawa's Jitte)
-    /// resolve correctly. CR 510.2. Fires once per (source, damaged-creature)
-    /// pair; an equipped creature blocked by several creatures therefore
-    /// charges Jitte once per blocker (a minor over-count for the rare
-    /// multi-block case).
-    /// `granted` is `source`'s `GrantTriggeredAbility` set, built by the
-    /// caller: the CR 510.2 batch fires this once per damaged creature and
-    /// deriving it here rebuilt the whole-board grant list every time.
+    /// Push `source`'s `DealsCombatDamageToCreature` triggers (CR 510.2),
+    /// binding the damaged creature as target (removal payoffs, Umezawa's
+    /// Jitte charges). Fires once per (source, damaged creature), so Jitte
+    /// over-counts on a multi-block (minor, rare).
+    /// `granted` is `source`'s `GrantTriggeredAbility` set, built once by the
+    /// caller for the whole CR 510.2 batch.
     pub(crate) fn fire_combat_damage_to_creature_triggers(
         &mut self,
         source: CardId,
@@ -7858,11 +7421,6 @@ impl GameState {
         );
     }
 
-    /// Shared body for the combat-damage trigger dispatch (to a player or to a
-    /// creature). Walks the attacker's printed `SelfSource`/`AnyPlayer`
-    /// triggers, equipment- and soulbond-granted triggers (CR 702.6e / 702.95),
-    /// `YourControl`-scope listeners, and `FromYourGraveyard` triggers, pushing
-    /// each onto the stack with `default_target` bound to slot 0.
     /// The `GrantTriggeredAbility` set a battlefield permanent currently
     /// carries — empty when it has left. Rebuilds the whole-board grant list,
     /// so a caller firing a *batch* hoists `trigger_grant_sources` itself and
@@ -7874,18 +7432,16 @@ impl GameState {
             .unwrap_or_default()
     }
 
-    /// `static_granted` is the source's `GrantTriggeredAbility` set, which is
-    /// board-level and *kind-independent* — the callers below fire four event
-    /// kinds per damage event, so they build it once and pass it in rather
-    /// than making each call rebuild `trigger_grant_sources` (a whole-board
-    /// scan) for the same permanent.
+    /// Shared body for combat-damage trigger dispatch (to a player or a
+    /// creature): the attacker's printed `SelfSource`/`AnyPlayer` triggers,
+    /// equipment- and soulbond-granted ones (CR 702.6e / 702.95), `YourControl`
+    /// listeners and `FromYourGraveyard` triggers, each pushed with
+    /// `default_target` in slot 0.
     ///
-    /// `kinds` is the caller's whole kind list for one damage event, for the
-    /// same reason: every walk below except the graveyard one is
-    /// kind-independent, so a per-kind call re-walked the battlefield four
-    /// times for equipment, auras, soulbond and the `YourControl` /
-    /// `AnyPlayer` dealer listeners. The pushes stay grouped per kind, in
-    /// `kinds` order, so the stack sees exactly the per-kind batches it did.
+    /// `static_granted` (the source's board-level, kind-independent grant
+    /// set) and `kinds` (every kind for one damage event) are passed in so
+    /// the board walks run once per event, not once per kind. Pushes stay
+    /// grouped per kind, in `kinds` order.
     fn fire_combat_damage_triggers(
         &mut self,
         source: CardId,
@@ -7896,15 +7452,13 @@ impl GameState {
         combat_batch: bool,
     ) {
         // CR 603.2c / 510.4 — the batch a `once_per_batch` trigger collapses
-        // over. Combat damage in one sub-step is simultaneous, so the whole
-        // per-attacker walk shares a batch, keyed by the damaged subject; a
-        // noncombat delivery is a batch of its own (`None`), which is why it
-        // neither reads nor writes the step-scoped set.
+        // over: one per damaged subject in a combat sub-step. A noncombat
+        // delivery is its own batch (`None`) and doesn't touch the
+        // step-scoped set.
         let batch_subject = combat_batch.then(|| BatchSubject::of(&default_target));
-        // CR 603.2c / 120.3 — a noncombat effect that deals damage to several
-        // recipients at once is one damage event per source: a
-        // recipient-agnostic "whenever ~ deals damage" fires once, its amount
-        // the total. Only inside an effect that opened the batch.
+        // CR 603.2c / 120.3 — a noncombat effect damaging several recipients
+        // is one event per source: "whenever ~ deals damage" fires once for the
+        // total. Only inside an effect that opened the batch.
         let noncombat_batch = !combat_batch
             && kinds.contains(&EventKind::DealsDamage)
             && self.noncombat_damage_batch_open();
@@ -7920,24 +7474,18 @@ impl GameState {
                 .position(|want| *want == e.kind)
                 .filter(|_| !to_battle || e.or_battle || e.kind != EventKind::DealsCombatDamageToPlayer)
         };
-        // Inline, by (-71)'s device: `kinds` is one to three entries and the
-        // outer `Vec` allocated on **every** call whether or not a trigger
-        // fires — 6,480 / 20,022 / 22,134 allocations over six bench games.
-        // The inner buckets stay `Vec`, and `Vec::new()` does not allocate
-        // until something is pushed into it, which on most boards is never.
-        // A loop, not a `collect`: `SmallVec`'s `Extend` is external
-        // iteration (PERF's standing rule, `(-211)`).
+        // Inline (`(-71)`'s device): `kinds` is one to three entries; inner
+        // buckets stay `Vec`, which doesn't allocate until pushed. A loop,
+        // not a `collect`: `SmallVec`'s `Extend` is external iteration
+        // (`(-211)`).
         let mut by_kind: SmallVec<[Vec<DamageTrigger>; 4]> = SmallVec::new();
         for _ in kinds {
             by_kind.push(Vec::new());
         }
 
-        // The dealer off the hint-cached lookup, not out of the walk below.
-        // `(-68)` folded three whole-board walks into one and took the `find`
-        // along because it was "already half paid for" — but `find_by_id` was
-        // not hint-cached then, and now it is, so the fold is paying a compare
-        // and a conditional store per permanent for an answer that costs a
-        // load and a compare on its own (PERF `(-307)`; `(-304)`'s rule).
+        // The dealer via the hint-cached lookup, not folded into the walk
+        // below: the fold would pay a compare and store per permanent for a
+        // load-and-compare answer (PERF `(-307)`; `(-304)`'s rule).
         let dealer = self.battlefield.find_by_id(source);
         let mut attacker_controller = None;
         // The two attachment facts the three phases below would each walk for.
@@ -7946,40 +7494,20 @@ impl GameState {
         let mut soulbond_pair = false;
         #[cfg(feature = "trig-census")]
         let census = combat_census::on();
-        // **The walk below finds nothing on 62-100 % of boards, and the zone
-        // can say so for a word load** — PERF `(-318)`. Its two facts are
-        // *instance* fields (`attached_to`, `soulbond_partner`), so the
-        // definition-keyed lanes cannot hold them; `battlefield.writes()` is
-        // the key, folded source-independently ("is ANYTHING attached / paired
-        // here") so one answer serves every dealer on the board. With both
-        // clear, no permanent can satisfy either test below and the walk
-        // cannot fire — `combat_census` priced the hit at 50-68 % before this
-        // was built, well past the 10.6-18.9 % the `sba_fold` precedent
-        // predicted, because several calls land per damage step with no board
-        // write between them.
-        // **The walk below finds nothing on 62-100 % of boards, and the zone
-        // can say so for a word load** — PERF `(-318)`. Its two facts are
-        // *instance* fields (`attached_to`, `soulbond_partner`), so the
-        // definition-keyed lanes cannot hold them; `battlefield.writes()` is
-        // the key, folded source-independently ("is ANYTHING attached or
-        // paired here") so one answer serves every dealer on the board. With
-        // it clear, no permanent can satisfy either test below and the walk
-        // cannot fire. `combat_census` priced the key at 50-68 % and the skip
-        // at 28.8 / 52.9 / 50.9 % before this was built.
+        // The walk below usually finds nothing (PERF `(-318)`). Its two facts
+        // are instance fields (`attached_to`, `soulbond_partner`), so no
+        // definition lane can hold them; `battlefield.writes()` keys a
+        // source-independent "is anything attached or paired" fold that
+        // serves every dealer. With it clear the walk can't fire.
         //
-        // ⚠ **The presence walk is its own `any`, not two more `|=` folded
-        // into the loop below.** The fused form taxed every *miss* two
-        // instructions a permanent and read **+0.018 % on `fixed`**, whose
-        // skip rate is the lowest of the three; as a short-circuiting `any`
-        // the miss path pays a scan that stops at the first attachment, and
-        // the board that has none pays one cheap pass instead of the dear one.
+        // ⚠ The presence walk is its own short-circuiting `any`, not two more
+        // `|=` in the loop below: the fused form taxed every miss and read
+        // +0.018 % on `fixed`.
         let present = self.attachment_in_scope();
         if present {
             for c in self.battlefield.iter() {
                 any_attached |= c.attached_to == Some(source);
-                // Instance fields first, the definition deref last:
-                // `soulbond_partner` is `None` on nearly every permanent, and
-                // the bonus read is a pointer chase into the definition (PERF
+                // Instance fields first, the definition deref last (PERF
                 // `(-211)`).
                 soulbond_pair |= c.soulbond_partner.is_some()
                     && (c.id == source || c.soulbond_partner == Some(source))
@@ -8007,10 +7535,9 @@ impl GameState {
         }
         if let Some(c) = dealer {
             attacker_controller = Some(c.controller);
-            // Printed + statics-granted ("Slivers you control have
-            // '…combat damage…'" — Tempered/Virulent) + instance-granted
-            // (`GrantTriggeredAbility` on `granted_triggers_timed` — Summon:
-            // Primal Odin's Zantetsuken) fire alike.
+            // Printed, statics-granted (Tempered/Virulent Sliver) and
+            // instance-granted (`granted_triggers_timed` — Primal Odin's
+            // Zantetsuken) fire alike.
             let instance_granted = self.granted_triggers(c.id);
             // CR 113.10b — a dealer that has lost all its abilities (Darksteel
             // Mutation, Turn to Frog) has no printed trigger to fire, as the
@@ -8029,10 +7556,9 @@ impl GameState {
                 ) {
                     continue;
                 }
-                // The dealer's own `AnyPlayer` trigger is still "whenever a
-                // Goblin deals combat damage" — its `dealer_filter` reads the
-                // dealer here exactly as Phase 1.6 reads it for a bystander
-                // (Cabal Slaver is a Cleric; its own hit strips nothing).
+                // The dealer's own `AnyPlayer` trigger ("whenever a Goblin
+                // deals combat damage") still checks `dealer_filter` against
+                // itself, as Phase 1.6 does for a bystander (Cabal Slaver).
                 if let Some(i) = slot(&t.event)
                     && t.event.dealer_filter.as_ref().is_none_or(|f| {
                         self.evaluate_requirement_static(
@@ -8055,11 +7581,8 @@ impl GameState {
             }
         }
 
-        // Phase 1b: equipment-granted combat-damage triggers (CR 702.6e). Each
-        // Equipment attached to the attacker grants its `equipped_bonus.
-        // triggered_abilities` to the creature; a `DealsCombatDamageToPlayer`
-        // one fires here (the Sword cycle's "create a token / mill / draw"
-        // riders), bound to the attacker's controller.
+        // Phase 1b: equipment-granted combat-damage triggers (CR 702.6e) — the
+        // Sword cycle's riders — bound to the attacker's controller.
         if let Some(atk_ctrl) = attacker_controller.filter(|_| any_attached) {
             for eq in &self.battlefield {
                 if eq.attached_to != Some(source) {
@@ -8088,10 +7611,8 @@ impl GameState {
                     }
                 }
             }
-            // Attachments on the attacker with an `EnchantedBySource`
-            // combat-damage trigger ("whenever enchanted creature deals combat
-            // damage to a player" — Pollenbright Wings; one an Equipment gains
-            // for a turn — Vorpal Sword). The trigger fires off the
+            // Attachments with an `EnchantedBySource` combat-damage trigger
+            // (Pollenbright Wings; Vorpal Sword's temporary one) fire off the
             // attachment, so `Selector::AttachedTo(This)` reaches the host.
             for aura in &self.battlefield {
                 if aura.attached_to != Some(source) {
@@ -8115,12 +7636,9 @@ impl GameState {
             }
         }
 
-        // CR 702.95 — Soulbond-granted combat-damage triggers. A paired
-        // creature carrying `soulbond_bonus.triggered_abilities` grants them
-        // to BOTH members; a `DealsCombatDamageToPlayer` one fires off the
-        // attacker (Tandem Lookout's "deals combat damage → draw"). Gated on
-        // the dealer walk's `soulbond_pair`, which is the loop's own
-        // `src.id != source && partner != source` test hoisted.
+        // CR 702.95 — soulbond-granted combat-damage triggers fire off the
+        // attacker for both pair members (Tandem Lookout). Gated on the
+        // dealer walk's `soulbond_pair`.
         if let Some(atk_ctrl) = attacker_controller.filter(|_| soulbond_pair) {
             for src in &self.battlefield {
                 let Some(bonus) = &src.definition.soulbond_bonus else { continue };
@@ -8146,48 +7664,26 @@ impl GameState {
             }
         }
 
-        // Phases 1.5 and 1.6, in one walk of the battlefield and one walk of
-        // each permanent's printed trigger list.
+        // Phases 1.5 and 1.6, fused into one battlefield walk:
         //
-        // **1.5** — `YourControl`-scope listeners: "whenever a creature you
-        // control deals combat damage to a player" (Quandrix Echocrasher
-        // b171, Enduring Curiosity). The listener's controller must match the
-        // attacker's. The source itself counts ("a creature you control"
-        // includes the dealer) — its `YourControl` trigger isn't gathered in
-        // Phase 1, which is `SelfSource`-only, so it would otherwise never
-        // fire.
+        // 1.5 — `YourControl` listeners ("whenever a creature you control
+        // deals combat damage to a player" — Enduring Curiosity), controller
+        // must match the attacker's. Includes the dealer itself, whose
+        // `YourControl` trigger Phase 1 (`SelfSource`-only) skips.
         //
-        // **1.6** — `AnyPlayer`-scope listeners on *other* permanents:
-        // "whenever a Goblin deals combat damage to a player" (Cabal Slaver),
-        // which cares about the dealer's characteristics rather than its
-        // controller. `EventSpec.dealer_filter` gates on the dealing creature;
-        // the dealer's own `AnyPlayer` trigger already fired in Phase 1.
+        // 1.6 — `AnyPlayer` listeners on other permanents ("whenever a Goblin
+        // deals combat damage" — Cabal Slaver), gated by
+        // `EventSpec.dealer_filter`; the dealer's own fired in Phase 1.
         //
-        // The two used to be separate walks. Fusing them has to keep every
-        // 1.5 push ahead of every 1.6 push inside a `by_kind` bucket — the
-        // buckets reach the stack in order — so 1.6's hits go through
-        // `any_player`, which is `Vec::new()` and therefore allocation-free
-        // on every board without such a listener, and is drained after
-        // (PERF (-68)).
+        // ⚠ Every 1.5 push must precede every 1.6 push within a `by_kind`
+        // bucket (buckets reach the stack in order), so 1.6 hits buffer in
+        // `any_player` and drain after (PERF (-68)).
         //
-        // A plain nested loop, not the `filter`/`flat_map`/`filter`/`map`
-        // chain 1.6 used to `collect()` into a `Vec`: nothing in it borrows
-        // `self` mutably, so there was never anything to buffer, and the
-        // adapter stack was **3,671,940 Ir / 0.30 % of a six-game `--decks
-        // fixed` run** in `Map::try_fold` alone (fifty-ninth pass).
-        // The per-permanent trigger walk is a word load on every permanent
-        // that carries neither scope — `card::dispatch_bits::LISTENER`, the
-        // same device `dispatch_board_scan` uses for its four facts. Unlike
-        // the layer-4 gates, the list this replaces is *not* usually empty
-        // (a cube board's creatures carry printed triggers), which is what
-        // (-77)'s rule says a presence bit needs.
-        //
-        // And a board where *no* permanent carries either scope skips the walk
-        // outright: the zone's listener lane holds that answer across every
-        // combat-damage dispatch until membership or a definition moves. The
-        // lane is filled from this walk — which loads the same memo word per
-        // card and cannot short-circuit, so the fill is both free and exact
-        // (see `zone::Battlefield::listener_lane`).
+        // A plain nested loop (nothing borrows `self` mutably, so nothing to
+        // buffer). Each permanent's trigger walk is gated by the
+        // `dispatch_bits::LISTENER` memo bit, and a board with no listener
+        // skips the walk via the zone's listener lane, which this walk fills
+        // exactly (see `zone::Battlefield::listener_lane`).
         let mut any_player: Vec<(usize, DamageTrigger)> = Vec::new();
         let lane = self.battlefield.listener_lane();
         if lane != Ok(false) {
@@ -8262,11 +7758,8 @@ impl GameState {
                 self.battlefield.store_listener(epoch, any_listener);
             }
         }
-        // The same two scopes granted by a static ("Commander creatures you
-        // own have 'Whenever one or more nontoken creatures you control deal
-        // combat damage to a player, …'" — Feywild Visitor): the walk above
-        // reads printed triggers only. A board without such a grant pays the
-        // grant lane's one check.
+        // The same two scopes granted by a static (Feywild Visitor's
+        // commander grant); the walk above reads printed triggers only.
         let grants: Vec<_> = self
             .trigger_grant_sources()
             .into_iter()
@@ -8314,30 +7807,21 @@ impl GameState {
             by_kind[i].push(trig);
         }
 
-        // Phase 2: walk every player's graveyard for `FromYourGraveyard`
-        // triggers. Only fire if the attacker is controlled by the gy
-        // owner (the printed "creatures you control" filter on the
-        // attacker side). These cards read "whenever ONE OR MORE creatures
-        // you control deal combat damage to a player" — one fire per
-        // damage batch (CR 603.2), so each graveyard card fires at most
-        // once per sub-step even when several attackers connect
-        // (`combat_trigger_fired_this_step` dedupes the per-attacker
-        // walks; it's cleared at the top of each damage sub-step).
+        // Phase 2: `FromYourGraveyard` triggers in the attacker controller's
+        // graveyard ("whenever one or more creatures you control deal combat
+        // damage to a player"). One fire per damage batch (CR 603.2):
+        // `combat_trigger_fired_this_step` dedupes the per-attacker walks and
+        // is cleared at each damage sub-step.
         //
-        // This is the one walk that stays per-kind: the dedupe set is read and
-        // written between kinds, so a merged walk would let one graveyard card
-        // fire for two kinds of the same damage event.
-        // Behind the pile's own lane: a graveyard with no such card — nearly
-        // every graveyard, 44 cards in the catalog print the scope — answers
-        // for a word load instead of a definition deref per card per kind
-        // (PERF `(-210)`).
+        // The one walk that stays per kind: the dedupe set is read and written
+        // between kinds, so merging would fire one card for two kinds. Behind
+        // the pile's own lane, so a graveyard with no such card costs a word
+        // load (PERF `(-210)`).
         if let Some(atk_controller) = attacker_controller
             && self.players[atk_controller].graveyard.has_graveyard_trigger()
         {
-            // Cross-kind dedupe within this one dispatch. A noncombat delivery
-            // has no `batch_subject` and so writes nothing to the step-scoped
-            // set — it *is* its own batch — but it still fires a graveyard
-            // card once, not once per kind in `kinds`.
+            // Cross-kind dedupe within one dispatch: a noncombat delivery has
+            // no `batch_subject` but still fires a graveyard card once.
             let mut fired_here: Vec<CardId> = Vec::new();
             for (i, kind) in kinds.iter().enumerate() {
                 let mut fired: Vec<(CardId, usize, BatchSubject)> = Vec::new();
@@ -8381,10 +7865,9 @@ impl GameState {
             }
         }
 
-        // CR 702.99 — Cipher. A card exiled encoded on this creature offers its
-        // controller a free copy whenever the creature deals combat damage to a
-        // player. Reuses the Paradigm free-copy effect (mint a token copy of the
-        // exiled card and free-cast it; the encoded original stays in exile).
+        // CR 702.99 — Cipher: an encoded card offers a free copy whenever the
+        // creature deals combat damage to a player, via the Paradigm
+        // free-copy effect (the encoded original stays in exile).
         if let Some(i) = kinds.iter().position(|k| *k == EventKind::DealsCombatDamageToPlayer).filter(|_| !to_battle)
             && let Some(atk_ctrl) = attacker_controller
         {
@@ -8417,10 +7900,9 @@ impl GameState {
             }
         }
 
-        // "…deals combat damage to a player" bodies that act on something
-        // *that player* controls (Hammer of Ruin, Mordant Dragon) read the
-        // damaged seat through `ControlledByTriggerPlayer`, both here (target
-        // enumeration) and again at resolution.
+        // Bodies acting on something the damaged player controls (Hammer of
+        // Ruin, Mordant Dragon) read the seat via `ControlledByTriggerPlayer`,
+        // here and at resolution.
         if let Target::Player(p) = default_target {
             self.trigger_event_player_scratch = Some(p);
         }
@@ -8430,9 +7912,8 @@ impl GameState {
             .flat_map(|(i, bucket)| bucket.into_iter().map(move |e| (i, e)))
         {
             // CR 510.2 — "whenever ~ deals combat damage" names no recipient:
-            // one event per dealer per damage step, its amount the total. A
-            // later recipient of the same dealer adds to the fire already on
-            // the stack; the fire's subject is the dealer.
+            // one event per dealer per step, amount the total. A later
+            // recipient adds to the fire already on the stack.
             let agnostic = combat_batch
                 && matches!(kinds[kind_i], EventKind::DealsCombatDamage | EventKind::DealsDamage);
             // CR 603.4 — intervening-'if' on combat-damage triggers ("whenever
@@ -8454,13 +7935,11 @@ impl GameState {
                     continue;
                 }
             }
-            // CR 603.3d / 603.2c — one fire a turn, or one a damage batch
-            // ("one or more creatures you control deal combat damage"),
-            // checked after the filter. This hook runs once per dealer, so
-            // the batch slot lives on the per-sub-step set.
-            // "…the number of opponents dealt damage this way" (Hordewing
-            // Skaab): an across-players batch that counts its subjects reads
-            // the distinct players hit, not the first dealer's damage.
+            // CR 603.3d / 603.2c — one fire a turn or per damage batch,
+            // checked after the filter; the batch slot lives on the
+            // per-sub-step set since this hook runs per dealer. Hordewing
+            // Skaab's "number of opponents dealt damage this way" counts the
+            // distinct players hit.
             let mut counts_players = false;
             let noncombat_key = (noncombat_batch && matches!(kinds[kind_i], EventKind::DealsDamage))
                 .then_some((trig_source, usize::MAX - 1, BatchSubject::NoncombatDealer(source)));
@@ -8483,11 +7962,9 @@ impl GameState {
                         continue;
                     }
                 } else if let Some(mut subject) = batch_subject {
-                    // CR 603.2c — one fire per *damaged subject*, not per
-                    // step: two defending seats in one alpha strike are two
-                    // events. `batch_subject` is `None` for a noncombat
-                    // delivery, where each call already is its own batch.
-                    // "…to one or more players" batches over the seats too.
+                    // CR 603.2c — one fire per damaged subject: two defending
+                    // seats in one alpha strike are two events. "…to one or
+                    // more players" batches over the seats too.
                     if matches!(subject, BatchSubject::Player(_))
                         && self.battlefield_find(trig_source).is_some_and(|c| {
                             c.definition
@@ -8543,22 +8020,17 @@ impl GameState {
                 Effect::OverTriggerBatch { body, .. } => Effect::OverTriggerBatch { body, ids: vec![source] },
                 e => e,
             };
-            // Most combat-damage triggers implicitly target the damaged player
-            // (drain riders, "that player discards / loses life"). But some
-            // target a *graveyard* card (Efreet Flamepainter, Venerable
-            // Warsinger) or a battlefield permanent (Sword of Sinew and
-            // Steel's "destroy up to one artifact") — for those, auto-pick
-            // instead of mis-binding slot 0 to the damaged player. A slot-0
-            // filter that can't match a player is the precise tell.
+            // Most combat-damage triggers target the damaged player, but some
+            // target a graveyard card (Efreet Flamepainter) or a permanent
+            // (Sword of Sinew and Steel); a slot-0 filter that can't match a
+            // player is the tell, and those auto-pick instead.
             // CR 700.2a — a modal trigger's mode first; the slot is its mode's.
             let mode = self.pick_trigger_mode(&effect, trig_source, controller);
             let view = effect.targeting_view(mode);
             let slot0_filter = view.target_filter_for_slot_in_mode_kicked(0, None, false);
             let slot0_rejects_player = slot0_filter.is_some_and(|f| !f.can_match_player());
-            // A slot 0 that explicitly accepts a player is the damaged player
-            // ("exile the top seven of that player's library" — Lord of the
-            // Void), even when a later clause moves a card (which would
-            // otherwise trip `prefers_graveyard_target`).
+            // A slot 0 that accepts a player is the damaged player (Lord of
+            // the Void), even if a later clause moves a card.
             let slot0_accepts_player = slot0_filter.is_some_and(|f| f.can_match_player());
             // CR 115.1 / 608.2b — a default the slot can't take (a damaged
             // *creature* on a "target player mills" trigger — Towering-Wave
@@ -8591,20 +8063,12 @@ impl GameState {
             } else {
                 Some(default_target.clone())
             };
-            // The trigger's subject. `bind_dealer` is the Phase-1.5 listener
-            // pattern ("whenever a creature deals combat damage to you" —
-            // the *dealer* is what "it" means there); everything else is a
-            // dealer-side wording, where "that player" is the damaged one.
-            //
-            // That second half was `None`, and the event dispatcher's own
-            // rule for the same wording is not — `damage_event_subject` binds
-            // `EntityRef::Player(p)` for a `DamageDealt { to_player }`, with
-            // the comment "the dealer-side kinds keep binding the damaged
-            // player, which is what 'that player' means there". Two
-            // hand-written walkers over one question, disagreeing: a
-            // `PlayerRef::Triggerer` body on a combat-damage trigger resolved
-            // to nobody and did nothing at all, which is how Phage the
-            // Untouchable's "that player loses the game" was dead.
+            // The trigger's subject: the dealer under `bind_dealer` (Phase 1.5
+            // "whenever a creature deals combat damage to you" — "it" is the
+            // dealer), otherwise the damaged player ("that player"). This
+            // must match `damage_event_subject` in the event dispatcher; it
+            // once bound `None`, so `PlayerRef::Triggerer` bodies did nothing
+            // (Phage the Untouchable).
             let dealer = if bind_dealer || agnostic {
                 Some(crate::game::effects::EntityRef::Permanent(source))
             } else {
@@ -8715,9 +8179,6 @@ impl GameState {
         }
     }
 
-    /// `EventSpec::batch_sums_damage` — a later dealer in an already-fired
-    /// batch adds its damage to the fire on the stack, so the one trigger
-    /// reads the batch's total. A no-op for every other batched trigger.
     /// A later dealer of a damage batch whose trigger is already on the stack
     /// joins its `Effect::OverTriggerBatch` ("each of those creatures").
     fn add_dealer_to_trigger_batch(&mut self, src: CardId, to: &Target, dealer: CardId) {
@@ -8731,6 +8192,9 @@ impl GameState {
         }
     }
 
+    /// `EventSpec::batch_sums_damage` — a later dealer in an already-fired
+    /// batch adds its damage to the fire on the stack, so the one trigger
+    /// reads the batch's total. A no-op for every other batched trigger.
     fn add_to_batched_damage(&mut self, src: CardId, idx: usize, to: &Target, amount: u32) {
         let Some(event) = self
             .battlefield_find(src)
@@ -8771,11 +8235,10 @@ impl GameState {
     }
 }
 
-/// The combat-damage value a creature assigns: its toughness when it has
-/// `Keyword::AssignsCombatDamageByToughness` (Doran, the Siege Tower; Bill the
-/// Pony), |power| for a negative-power `AssignsCombatDamageAsThoughPowerPositive`
-/// bearer (Loot, the Anomaly), otherwise its power (CR 510.1c). The toughness
-/// substitution is unconditional — a 5/1 Doran-creature assigns 1.
+/// The combat-damage value a creature assigns (CR 510.1c): its toughness
+/// under `AssignsCombatDamageByToughness` (Doran; unconditional, so a 5/1
+/// assigns 1), |power| for a negative-power
+/// `AssignsCombatDamageAsThoughPowerPositive` bearer (Loot), else its power.
 fn combat_damage_value(cp: &ComputedPermanent) -> i32 {
     if cp.keywords().has_kw(&Keyword::AssignsCombatDamageByToughness) {
         cp.toughness
@@ -8818,8 +8281,6 @@ struct AttackerInfo {
 }
 
 impl GameState {
-    /// Re-arm every dormant exile permission of exactly `duration` for `p`
-    /// (Neyali's token attacks, Neriv's commander attacks).
     /// Wake `p`'s dormant `TurnsHolderAttacksWithType` grants whose type the
     /// declared attacker `id` has. One exile read when none is parked.
     fn wake_may_play_for_attacker_type(&mut self, id: CardId, p: usize) {
@@ -8841,6 +8302,8 @@ impl GameState {
         }
     }
 
+    /// Re-arm every dormant exile permission of exactly `duration` for `p`
+    /// (Neyali's token attacks, Neriv's commander attacks).
     fn wake_may_play(&mut self, duration: crate::card::MayPlayDuration, p: usize) {
         let wakes = |c: &crate::card::CardInstance| {
             c.cold_any(|k| {

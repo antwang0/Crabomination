@@ -20,13 +20,10 @@ impl GameState {
         }
         let ctx = EffectContext::for_ability(equipment, controller, None);
         // The two choices, stamped on the Equipment. A headless seat names
-        // nothing (the host keeps its own name, itself a creature card name)
-        // and takes its own deck's most common creature type — the Auto
-        // decider's blanket answer for "choose a creature type" would strip a
-        // Doctor of its tribe.
-        // Answered here, at any depth (`resolve_as_enters_driven`): a plain
-        // `resolve_effect` stranded a prompting seat's ask for the next
-        // resolution to surface.
+        // nothing (host keeps its name) and takes its deck's most common
+        // creature type (the blanket Auto answer would strip a Doctor's
+        // tribe). `resolve_as_enters_driven` so a prompting seat's ask isn't
+        // stranded until the next resolution.
         let _ = self.resolve_as_enters_driven(
             &Effect::NameCard { what: Selector::This, restrict_to: Some(SelectionRequirement::Creature) },
             &ctx,

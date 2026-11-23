@@ -1,11 +1,8 @@
-//! Pre-built demo decks shared between the singleplayer client setup and the
-//! TCP server binary. The server skips the mulligan phase, so this builder
-//! also deals the standard 7-card opening hands.
+//! Pre-built demo decks shared by the singleplayer client and the TCP server
+//! binary; the server skips mulligans, so this also deals 7-card hands.
 //!
-//! P0 plays the **BRG combo** deck (Cosmogoyf + Thud, Pact-style). P1 plays
-//! the **Goryo's Vengeance** reanimator deck. Many of the cards in these
-//! decks are stubs — see `DECK_FEATURES.md` at the repo root for the
-//! per-card and per-engine-feature progress tracker.
+//! P0 plays **BRG combo** (Cosmogoyf + Thud), P1 **Goryo's Vengeance**
+//! reanimator. Many cards are stubs — see `DECK_FEATURES.md`.
 
 use rand::seq::SliceRandom;
 
@@ -24,11 +21,10 @@ pub fn build_demo_state() -> GameState {
     build_demo_state_seeded(rand::rng().random())
 }
 
-/// [`build_demo_state`] with the deal pinned to `seed`, drawn from the
-/// state's own stream (`GameState.rng`) rather than the thread RNG — which is
-/// what `game::rng`'s doc has asked of every shuffle since it was written.
-/// Pair it with `server::bot::set_jitter_seed` on the thread that plays the
-/// match and a bot-vs-bot run replays exactly.
+/// [`build_demo_state`] with the deal pinned to `seed`, drawn from
+/// `GameState.rng` rather than the thread RNG. With
+/// `server::bot::set_jitter_seed` on the playing thread, a bot-vs-bot run
+/// replays exactly.
 pub fn build_demo_state_seeded(seed: u64) -> GameState {
     let mut state = GameState::new(vec![
         Player::new(0, "Player 0"),
@@ -82,11 +78,10 @@ pub fn brg_combo_deck() -> &'static [CardFactory] {
 
 // ── Commander demo ─────────────────────────────────────────────────────────
 
-/// Build a 4-player Commander free-for-all over the four
-/// [`crate::pod::target_decks`] — one deck per seat, so the demo is the same
-/// pod the smoke test plays. `apply_format` sets 40 life and the 100-card /
-/// singleton rules; `seat_commanders` puts each commander in its command zone
-/// with the CR 903.9b replacement registered.
+/// A 4-player Commander free-for-all over [`crate::pod::target_decks`], one
+/// per seat (the smoke test's pod). `apply_format` sets 40 life and the
+/// 100-card singleton rules; `seat_commanders` places each commander with
+/// the CR 903.9b replacement registered.
 pub fn build_commander_state() -> GameState {
     use rand::RngExt;
     build_commander_state_seeded(rand::rng().random())
@@ -100,11 +95,10 @@ pub fn build_commander_state_seeded(seed: u64) -> GameState {
     deal_pod(crate::pod::build_pod_template(&decks), seed)
 }
 
-/// A Commander pod with a player's own deck in seat 0 and `opponents` in
-/// seats 1.. — a 2-, 3- or 4-player game for any `opponents.len()` from 1.
-/// The deck is taken as given; validate it first
-/// ([`crate::decklist::DecklistParse::commander_list`]). Seeded and dealt
-/// exactly as [`build_commander_state_seeded`] is.
+/// A Commander pod with a player's deck in seat 0 and `opponents` in seats
+/// 1.. (2-4 players). The deck is taken as given; validate it first
+/// ([`crate::decklist::DecklistParse::commander_list`]). Seeded and dealt as
+/// [`build_commander_state_seeded`].
 pub fn build_custom_commander_state_seeded(
     commanders: &[CardFactory],
     main: &[CardFactory],

@@ -1,12 +1,11 @@
-//! Candle training for the table net — the mirror of
-//! [`crabomination_nn::table`], tensor name for tensor name.
+//! Candle training for the table net, mirroring
+//! [`crabomination_nn::table`] tensor name for tensor name.
 //!
 //! One model for every seat count: a batch mixes duels and pods, padded to
-//! its widest table with a seat mask, and the value head fits each row's
-//! winner with a cross-entropy over the living slots. The parity tests below
-//! hold this model and the engine's dependency-free forward to the same
-//! numbers across mixed seat counts in one batch — padding is where two
-//! implementations of the same net most easily disagree.
+//! its widest table with a seat mask; the value head is a cross-entropy over
+//! the living slots. The parity tests hold this model and the engine's
+//! forward to the same numbers across mixed seat counts, since padding is
+//! where two implementations most easily disagree.
 
 use std::collections::HashMap;
 
@@ -39,7 +38,7 @@ pub struct TableConfig {
     pub blocks: usize,
     /// Read the game's card pool: each pool card through the object layer
     /// (features zero), its mean and max beside the trunk's input. Off is
-    /// step 1's net, unchanged.
+    /// step 1's net.
     pub pool: bool,
     /// The belief head (`belief.*`, needs `pool`): per opponent slot, its
     /// hand's and library's distributions over the pool.
@@ -140,13 +139,11 @@ pub fn build_table_model(cfg: &TableConfig, vb: VarBuilder) -> CResult<TableMode
 
 /// `table[ids]` (`[N, E]`) through a gather whose backward parallelises.
 ///
-/// candle's `index_select` backward is an `index_add`, and its CUDA kernel
-/// runs one thread per embedding lane (E of them) looping serially over
-/// every id — at a pod batch's ~100 k object lookups, plus the descriptors'
-/// tokens, that serial loop was ~1.5 s of a step with the GPU "100 %" busy.
+/// candle's `index_select` backward is a CUDA `index_add` with one thread per
+/// embedding lane looping serially over every id (was ~1.5 s of a pod step).
 /// A gather along dim 1 of the table broadcast `K`-fold backpropagates
-/// through a `scatter_add` over `K · E` threads (each looping `N / K` ids)
-/// and a sum over the copies instead. Same values, same gradient.
+/// through a `scatter_add` over `K · E` threads plus a sum over the copies.
+/// Same values, same gradient.
 pub fn fast_embed(table: &Tensor, ids: &[u32]) -> CResult<Tensor> {
     let (v, e) = table.dims2()?;
     let n = ids.len();
@@ -385,11 +382,9 @@ impl TableModel {
         let demb = Tensor::cat(&[&demb, &Tensor::zeros((1, e_cols), DType::F32, dev0)?], 0)?.broadcast_mul(&batch.desc_inv)?;
 
         // Each distinct pool's cards through the object layer, features
-        // zero. Their name rows and descriptor means are read off the
-        // current weights on the host, without gradient: a Commander pool is
-        // 22,907 cards and ~700 k tokens a step. The tables still train
-        // through the board's objects; the object layer and the belief head
-        // through the pool.
+        // zero. Name rows and descriptor means are read off the current
+        // weights without gradient (a Commander pool is 22,907 cards, ~700 k
+        // tokens); the tables still train through the board's objects.
         let mut pool_h: Vec<Tensor> = Vec::with_capacity(batch.pools.len());
         if self.pool && !batch.pools.is_empty() {
             let names: Vec<Vec<f32>> = self.name_emb.embeddings().to_vec2()?;
@@ -552,10 +547,9 @@ pub struct TableLoss {
 /// One belief group's cross-entropy (hand, or `lib` the library) against
 /// the recorder's truth, read sparsely: per (row, slot ≥ 1) with a non-empty
 /// truth, `−Σ_c t_c · log softmax(logits)_c` over just the true cards (`t`
-/// the truth's normalised counts), averaged over those slots. The truth is
-/// a handful of cards out of a pool of up to 22,907, so the dense target
-/// tensors this replaced were most of a pod step. `None` when no slot
-/// carries a truth.
+/// the normalised counts), averaged over those slots. Sparse because dense
+/// targets over a 22,907-card pool were most of a pod step. `None` when no
+/// slot carries a truth.
 fn belief_ce(rows: &[&TableRow], g: &BeliefOut, logits: &Tensor, slots: usize, lib: bool, dev: &Device) -> CResult<Option<Tensor>> {
     let (n, p) = (g.rows.len(), logits.dim(2)?);
     let mut lists: Vec<Vec<(u32, f32)>> = vec![Vec::new(); n * slots];
@@ -614,14 +608,13 @@ pub struct TableTrainer {
     model: TableModel,
     opt: AdamW,
     dev: Device,
-    /// Label smoothing on the win target: each row's result shares become
-    /// `(1 - smooth) * share + smooth / seats` (run 4, against run 3's
-    /// late pod overconfidence). 0 = off.
+    /// Label smoothing on the win target: shares become
+    /// `(1 - smooth) * share + smooth / seats` (run 4, against run 3's pod
+    /// overconfidence). 0 = off.
     smooth: f32,
-    /// With the blocks on, the largest `b * n^2` (rows x padded objects
-    /// squared, the attention maps' size) one step may take; a batch over it
-    /// is split in half, each half its own step (run 4: a rare batch of big
-    /// pods ran the 24 GB card out of memory at batch 64). `None` = no cap.
+    /// With the blocks on, the largest `b * n^2` (the attention maps' size)
+    /// one step may take; a batch over it is split in half, each half its own
+    /// step (run 4: big pods OOM'd a 24 GB card at batch 64). `None` = no cap.
     attn_budget: Option<u64>,
     blocks: usize,
     splits: u64,
@@ -766,12 +759,11 @@ impl TableTrainer {
         })
     }
 
-    /// The belief read **B1** on held-out rows: per (row, opponent slot)
-    /// with a known hand, the share of the hand's cards among the head's top
-    /// `k` pool cards (`min(k, hand)` the denominator), against the uniform
-    /// pool's expectation (`k / P`, the pre-registered baseline) and a
-    /// base-rate baseline (`base`: pool cards ranked by how often they sit
-    /// in a training hand, per pool). `(head, uniform, base_rate, n)`.
+    /// The belief read B1 on held-out rows: per (row, opponent slot) with a
+    /// known hand, the share of its cards among the head's top `k` pool cards
+    /// (denominator `min(k, hand)`), against the uniform expectation `k / P`
+    /// and a base-rate ranking (`base`: how often each card sits in a
+    /// training hand, per pool). Returns `(head, uniform, base_rate, n)`.
     pub fn belief_recall(&self, rows: &[&TableRow], k: usize, base: &std::collections::HashMap<u64, Vec<u16>>) -> CResult<(f32, f32, f32, usize)> {
         let (mut head, mut uni, mut br, mut n) = (0f64, 0f64, 0f64, 0usize);
         for part in rows.chunks(64) {
@@ -992,9 +984,8 @@ mod tests {
     }
 
     /// Parity on what the engine actually emits: every seat's view of a
-    /// four-seat Commander pod a few turns in — real descriptors (dozens of
-    /// tokens a card), real board sizes, a command zone per slot — through
-    /// both forwards with an attention block, in one batch.
+    /// four-seat Commander pod a few turns in (real descriptors, boards and
+    /// command zones), through both forwards with an attention block.
     #[test]
     fn engine_encoded_pods_match_across_the_two_forwards() {
         use crabomination::server::bot::{Bot, HeuristicBot};
@@ -1077,15 +1068,12 @@ mod tests {
                 pick == label(s)
             })
             .count();
-        // Chance is ~29 % averaged over 2..=6 seats (116 / 400); this seed
-        // picks 373. 768 training tables instead of 3,072 reached only 272 —
-        // 37 noise features per seat overfit a small set, which is why the
-        // set is this size.
+        // Chance is ~29 % (116 / 400); this seed picked 373. 768 training
+        // tables reached only 272 (37 noise features per seat overfit), hence
+        // 3,072.
         assert!(correct >= 340, "only {correct}/400 fresh winners picked");
     }
 
-    /// The per-slot probabilities are a distribution over exactly the
-    /// row's own seats, whatever the batch is padded to.
     /// The belief head learns what an opponent shows: each opponent seat's
     /// first feature names its "archetype", and its hand is drawn from that
     /// archetype's half of a 20-card pool — so top-5 recall should leave the

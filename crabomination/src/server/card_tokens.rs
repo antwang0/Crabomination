@@ -1,16 +1,13 @@
 //! Descriptor tokens: what a card *does*, as a bag of hashed words the table
 //! net embeds (`crabomination_nn::table`, ML_NOTES "One net for every mode").
 //!
-//! The name embedding only knows cards the training data played — 23 of the
-//! ~6,750 cards in the Commander precons, for the v5 champion. Everything
-//! else reached the net as "unknown" plus a few dozen generic features. A
-//! descriptor gives every card in the catalog an identity built from its
-//! definition, so a card never seen in training still reads as "a flier
-//! with a damage trigger" rather than as nothing.
+//! The name embedding only knows cards the training data played (23 of the
+//! ~6,750 Commander precon cards for the v5 champion); a descriptor gives
+//! every catalog card an identity from its definition, so an unseen card
+//! reads as "a flier with a damage trigger" rather than "unknown".
 //!
-//! **The words come from the definition's `Debug` text**, which is the one
-//! description every one of the catalog's cards has without a hand-written
-//! extractor per effect kind. A lexer walks it and keeps:
+//! The words come from the definition's `Debug` text, the one description
+//! every card has without a per-effect extractor. A lexer keeps:
 //!
 //! * every capitalised identifier — variant and struct names (`DealDamage`,
 //!   `Flying`, `Creature`, `Opponent`) — bare, and qualified by the field it
@@ -19,20 +16,16 @@
 //! * small integers under their field, bucketed (`amount=3`, `power=11-20`);
 //! * `true` under its field (`loyalty_twice_each_turn=true`).
 //!
-//! String literals (the card's own name, reminder text) are skipped, and
-//! what every card carries is dropped: `None` (dozens of unset optional
-//! fields), a zero under any field (`hand_modifier=0`, `defense=0`), and the
-//! wrapper structs every definition prints (`CardDefinition`, `ManaCost`,
-//! `Subtypes`). Those were ~a quarter of a vanilla creature's words and said
-//! nothing about it.
-//! Tokens are FNV-1a hashed into `1..DESC_BUCKETS` and deduplicated, so a
-//! descriptor is a sorted set.
+//! Skipped: string literals (name, reminder text), and what every card
+//! carries — `None`, a zero under any field, and the wrapper structs every
+//! definition prints (`CardDefinition`, `ManaCost`, `Subtypes`). Tokens are
+//! FNV-1a hashed into `1..DESC_BUCKETS` and deduplicated, so a descriptor is
+//! a sorted set.
 //!
 //! ⚠ **The tokens follow the engine's type names.** Renaming an `Effect`
-//! variant moves its token to a different bucket — a trained net then reads
-//! that word as an untrained row, a quiet degradation rather than a wrong
-//! answer. Worth knowing before a sweeping rename lands between a training
-//! run and its gate.
+//! variant moves its token to another bucket, and a trained net reads it as
+//! an untrained row — a quiet degradation. Mind it before a sweeping rename
+//! lands between a training run and its gate.
 
 use std::cell::RefCell;
 use std::collections::BTreeSet;
@@ -168,15 +161,12 @@ pub fn definition_tokens(def: &CardDefinition) -> Vec<u16> {
 }
 
 /// What identifies a definition for the memo: the name (by address and
-/// length — the same card presents the same literal, and a shared address
-/// with a different length is a different string), printed P/T and the
-/// ability counts.
-///
-/// Two *different* definitions share a key only when they have the same
-/// name, stats and ability counts — in practice two tokens named alike
-/// ("Soldier") from different makers. The first one seen on a thread then
-/// describes both. That is the one way a descriptor can depend on history,
-/// and it is a token's description, not its name or its features.
+/// length — a shared address with a different length is a different
+/// string), printed P/T and the ability counts. Two different definitions
+/// share a key only with the same name, stats and ability counts (in
+/// practice like-named tokens from different makers), and the first seen
+/// on a thread then describes both — the one way a descriptor depends on
+/// history.
 #[derive(Hash, PartialEq, Eq)]
 struct Key {
     name_ptr: usize,

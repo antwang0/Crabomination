@@ -1,30 +1,17 @@
 //! Secrets of Strixhaven (SoS) format: each player rolls a Strixhaven
-//! college (Lorehold, Prismari, Quandrix, Silverquill, or Witherbloom)
-//! and gets a 60-card two-color deck built from that college's cards.
+//! college (Lorehold, Prismari, Quandrix, Silverquill, Witherbloom) and gets
+//! a 60-card two-colour deck from its cards.
 //!
-//! Deck recipe (mirrors `cube_deck`):
+//! Deck recipe (mirrors `cube_deck`): 22 basics (11 per colour); 4 picks
+//! from the school land + colourless SoS cards (Mage Tower Referee, the big
+//! Archaics, Petrified Hamlet); 17 cards from each colour's pool. A colour
+//! pool is that colour's mono SoS cards, the college's multicolour cards and
+//! its school land.
 //!
-//! - 22 basic lands (11 of each college color)
-//! - 4 "colorless" picks from the college's school land + the colorless
-//!   SoS cards (Mage Tower Referee, the big Archaics, Petrified Hamlet)
-//! - 17 cards drawn from college color A's pool
-//! - 17 cards drawn from college color B's pool
-//!
-//! Each color pool contains:
-//!
-//! - Mono-color SoS cards in that color
-//! - The college's multi-color SoS cards
-//! - The college's school land
-//!
-//! The pools are hand-maintained lists (they were originally generated
-//! from STRIXHAVEN2.md's status tables, which no longer exist, nor do the
-//! scripts that read them). The 2026-07 audit backfilled the implemented-
-//! but-unpooled cards, including the Quandrix and Silverquill elders.
-//!
-//! Pool sizes are smaller than the cube's, especially for Prismari
-//! (12 unique cards). `sample_with_cap` may run out of legal picks
-//! before hitting the requested count; the assembler tops up shortfalls
-//! with extra basic lands so every deck reaches 60 cards.
+//! The pools are hand-maintained (their generator and source tables are
+//! gone; the 2026-07 audit backfilled implemented-but-unpooled cards). Pools
+//! are small (Prismari: 12 unique cards), so `sample_with_cap` can run out
+//! of legal picks; the assembler tops up with basics so every deck hits 60.
 
 use crate::fxhash::HashMap;
 
@@ -310,11 +297,9 @@ fn basic_factory(c: Color) -> CardFactory {
     }
 }
 
-/// Sample `count` cards from `pool` (with replacement, capped at
-/// `COPY_CAP` per card globally) and append them to `deck`. The shared
-/// `counts` map is keyed by factory function-pointer address so a card
-/// sampled out of two different pools (multi-college cards) still counts
-/// once toward the cap.
+/// Sample `count` cards from `pool` (with replacement, at most `COPY_CAP`
+/// per card) into `deck`. `counts` is keyed by factory address, so a
+/// multi-college card sampled from two pools counts once toward the cap.
 fn sample_with_cap<R: Rng>(
     deck: &mut Vec<CardFactory>,
     counts: &mut HashMap<usize, u32>,
@@ -473,12 +458,8 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             // Ward-unlocked MDFCs:
             grave_researcher,
         ],
-        // Red — added Tablet of Discovery (mill+R mana), Garrison
-        // Excavator (Spirit-token graveyard payoff), Living History
-        // (Spirit-token + on-attack pump), Steal the Show (modal
-        // discard/draw or IS-graveyard damage), Tome Blast (2-to-any-
-        // target burn), Duel Tactics (1-to-creature + grants CantBlock
-        // until EOT via the new keyword), Rubble Rouser (rummage ETB).
+        // Red — includes Tablet of Discovery, Garrison Excavator, Living
+        // History, Steal the Show, Tome Blast, Duel Tactics, Rubble Rouser.
         Color::Red => vec![
             artistic_process,
             charging_strifeknight,
@@ -501,12 +482,9 @@ fn mono_color_pool(c: Color) -> Vec<CardFactory> {
             archaics_agony,
             choreographed_sparks,
         ],
-        // Green — added Burrog Barrage (conditional pump + power damage),
-        // Chelonian Tackle (+0/+10 + power damage), Snarl Song (Converge
-        // Fractal tokens + life), Wild Hypothesis (X+1/+1 Fractal +
-        // Surveil 2), Topiary Lecturer (now uses ManaPayload::OfColor),
-        // Additive Evolution (Fractal-with-counters ETB + combat pump),
-        // Zimone's Experiment (creature-or-land smoothing).
+        // Green — includes Burrog Barrage, Chelonian Tackle, Snarl Song, Wild
+        // Hypothesis, Topiary Lecturer, Additive Evolution, Zimone's
+        // Experiment.
         Color::Green => vec![
             additive_evolution,
             ambitious_augmenter,

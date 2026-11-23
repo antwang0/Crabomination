@@ -2,14 +2,12 @@
 //! same name, that player chooses one of them, and the rest are put into their
 //! owners' graveyards."
 //!
-//! The choice is the controller's. A seat that prompts (a client, a pod seat)
-//! has its group left in place by the sweep and queued
-//! (`GameState::deferred_legend_choices`); the oldest group still live is
-//! posed once the action settles ([`GameState::pose_legend_choice`]), and the
-//! answer's resume keeps the chosen one and finishes the sweep. Any other seat
-//! is answered inside the sweep as before. Unlike the commander return
-//! (`commander_return.rs`, which rescans), the group is queued because finding
-//! it takes the sweep's grouping and exemptions.
+//! A prompting controller's group is left in place and queued
+//! (`GameState::deferred_legend_choices`); the oldest live group is posed
+//! once the action settles ([`GameState::pose_legend_choice`]) and the resume
+//! finishes the sweep. Other seats are answered inside the sweep. Queued
+//! rather than rescanned (unlike `commander_return.rs`) because finding the
+//! group needs the sweep's grouping and exemptions.
 
 use super::GameState;
 use super::types::{GameError, GameEvent, PendingDecision, ResumeContext};

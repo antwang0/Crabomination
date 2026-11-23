@@ -46,15 +46,11 @@ impl GameState {
         if self.find_card_zone(card_id) != Some(*source_zone) {
             return Ok(());
         }
-        // A Cage / Magistrate / graveyard lock forbids this cast, and
-        // a forbidden cast is a no-op, not an `Err` — `cast_card_for_free`'s
-        // doc has the whole story (`cube` / `all` seed 1254) and covers
-        // the twelve call sites that go through it. This arm is NOT one
-        // of them: a `pay_own_cost` / discounted cast charges real mana,
-        // so it calls `cast_card_from_zone_spending` directly below and
-        // needs its own check. Asked here rather than at that call
-        // because it also keeps the controller from being OFFERED a
-        // cast that cannot happen — the prompt is a few lines down.
+        // A Cage / Magistrate / graveyard lock makes this cast a no-op, not
+        // an `Err` (see `cast_card_for_free`'s doc). This arm charges real
+        // mana via `cast_card_from_zone_spending`, so it needs its own
+        // check — asked here so the controller isn't even offered a cast
+        // that can't happen (the prompt is a few lines down).
         if matches!(
             source_zone,
             crate::card::Zone::Graveyard | crate::card::Zone::Library | crate::card::Zone::Exile
@@ -171,11 +167,9 @@ impl GameState {
         };
         // "That copy costs {N} less to cast" — pay the discounted
         // cost up front; an unaffordable discount declines the cast.
-        // Mana actually charged, threaded to `finalize_cast` — a
-        // `pay_own_cost` / discounted cast here spends real mana, and
-        // reporting 0 hides it from Increment, the Opus "five or more
-        // mana" shapes and expend. See
-        // `cast_card_from_zone_spending`.
+        // The mana actually charged goes to `finalize_cast` so
+        // Increment, the Opus "five or more mana" shapes and expend
+        // see it (see `cast_card_from_zone_spending`).
         let mut mana_spent = 0u32;
         if *reduce_generic > 0 || *pay_own_cost || cost_override.is_some() {
             let mut discounted = cost_override.cloned().unwrap_or_else(|| card_def.cost.clone());

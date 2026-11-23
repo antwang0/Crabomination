@@ -34,40 +34,19 @@ mod tests {
         assert_eq!(serde_json::to_string(&g).unwrap(), before, "rejected action left no trace");
     }
 
-    /// `GameState`'s size is the whole cost of a probe clone once the
-    /// containers are behind CoW handles — 544 Ir a clone is a `memcpy`, not
-    /// calls (PERF `(-143)`/`(-144)`). Two fields were 53 % of it and `None`
-    /// on essentially every clone; boxing them halved the struct. This guard
-    /// is what stops the next 800-byte field from landing inline unnoticed.
-    /// Raise it only with a `--bench`/callgrind reading that says the field
-    /// has to be inline. Raised 1,536 -> 1,600 at PERF `(-280)`: the two
-    /// hot-written scratch fields (64 bytes) left the CoW group, sealed
-    /// -0.59 % / cube -0.60 % / fixed -0.89 % Ir. Raised 1,600 -> 1,616 at
-    /// PERF `(-306)`: `Battlefield`'s write counter and the packed board fold
-    /// it stamps (16 bytes, inline because the memo has to travel with the
-    /// zone through a clone), fixed -0.208 / cube -0.240 / sealed -0.383 %
-    /// Ir *with* the growth already in the reading. Raised 1,616 -> 1,664 at
-    /// PERF `(-311)`: the state-level gather memo's key, its `Arc` and its
-    /// `SecondPass`, carried inline so the memo travels with the state through
-    /// a clone — fixed -0.911 / cube -1.490 / sealed -0.517 % Ir *with* the
-    /// growth already in the reading. ⚠ The key's five scalars are stored and
-    /// **compared**, not hashed, and that is 16 of the 48 bytes: a 64-bit fold
-    /// of small counters is a probabilistic witness and the first cut's fold
-    /// collided inside one sweep cell.
-    /// Raised 1,664 -> 1,672 at PERF `(-318)`: `Battlefield`'s attachment
-    /// fold, one `AtomicU32` (a 31-bit `writes` stamp and its one-bit answer)
-    /// that costs eight bytes because the zone is `u64`-aligned and carries no
-    /// hole — fixed -0.061 / cube -0.418 / sealed -0.195 % Ir **with the
-    /// growth already in the reading**, since the A/B clones the bigger state
-    /// on every probe. ⚠ The free alternative was stealing bits from
-    /// `sba_fold`'s word (its legendary count needs 11 of the 28 it has) under
-    /// a shared stamp with a per-half "computed" flag; it is sound and it is
-    /// written down here rather than taken, because it re-plumbs the SBA
-    /// memo's store path for eight bytes.
-    /// `(-344)` raised the cap by eight for `mandatory_loop_head`, and the
-    /// raise is paid for in the same A/B that asks for it: the bigger state is
-    /// cloned on every probe in the reading, and `cube` still reads -0.2 %.
-    /// Raise it again only with a measurement of that shape.
+    /// Behind CoW handles, `GameState`'s size is the whole cost of a probe
+    /// clone (a `memcpy`; PERF `(-143)`/`(-144)` boxed the two big
+    /// mostly-`None` fields). This guard stops the next large field landing
+    /// inline unnoticed; raise it only with a `--bench`/callgrind A/B that
+    /// clones the bigger state and still wins. Past raises, each so paid for:
+    /// `(-280)`, `(-306)`, `(-311)`, `(-318)`, `(-344)`.
+    ///
+    /// ⚠ `(-311)`'s gather-memo key stores and **compares** its five scalars
+    /// rather than hashing them: a 64-bit fold of small counters collided
+    /// inside one sweep cell.
+    /// ⚠ `(-318)`'s eight bytes could instead be stolen from `sba_fold`'s
+    /// word under a shared stamp — sound, but not taken, since it re-plumbs
+    /// the SBA memo's store path for eight bytes.
     #[test]
     fn game_state_stays_small() {
         let n = std::mem::size_of::<crate::game::GameState>();

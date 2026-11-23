@@ -1,33 +1,28 @@
 //! Audit: find cards that are implemented but **incomplete** — a printed
 //! capability is missing or approximated.
 //!
-//! Companion to `core_rules::structural_audit`'s `no_shipped_card_is_a_blank_stub`
-//! (which gates *blank* cards; it was the `audit_stubs` binary). This binary
-//! attacks the harder "looks done, isn't" class with two independent passes:
+//! Companion to `core_rules::structural_audit`'s
+//! `no_shipped_card_is_a_blank_stub` (which gates *blank* cards). Two
+//! independent passes at the "looks done, isn't" class:
 //!
-//!   1. STRUCTURAL (comment-free, authoritative). Walks every catalog card's
+//!   1. STRUCTURAL (comment-free, authoritative). Walks every card's
 //!      serialized effect tree and flags:
 //!        - **Dead modes**: a `ChooseMode` / `ChooseN` / `Escalate` arm that
-//!          resolves to nothing (`Noop`, empty `Seq`, …) — e.g. Sublime
-//!          Epiphany's unimplemented "counter target ability" mode. NOTE these
-//!          need human triage: a `Noop` mode is *also* the idiom for a
-//!          deliberate "you may … (or decline)" option (Elite Interceptor),
-//!          which is correct, not a gap.
+//!          resolves to nothing (Sublime Epiphany's missing "counter target
+//!          ability"). NOTE: needs human triage — a `Noop` mode is also the
+//!          idiom for a deliberate "you may … (or decline)" (Elite
+//!          Interceptor).
 //!        - **Dead abilities**: a triggered / activated / loyalty ability
-//!          whose `effect` is entirely empty. The ability exists but does
-//!          nothing when it fires.
+//!          whose `effect` is entirely empty.
 //!
-//!      These need no knowledge of the printed card — an empty arm/ability is
-//!      a bug by construction.
+//!      An empty arm/ability is a bug by construction; no printed text needed.
 //!
-//!   2. COMMENT SCAN (the automated version of the manual partial-impl audit).
-//!      Greps the catalog source for `pub fn … -> CardDefinition` factories
-//!      whose doc comment flags an approximation ("approximation", "modeled
-//!      as", "omitted", "stub", "body only", "collapsed", …). This regenerates
-//!      the incomplete-card inventory on every run, so it can be diffed over
-//!      time — and cross-referenced against pass 1 to surface **stale
-//!      comments** (a comment says "omitted" but the code now wires it, or
-//!      vice-versa).
+//!   2. COMMENT SCAN. Greps catalog `pub fn … -> CardDefinition` factories
+//!      whose doc flags an approximation ("approximation", "modeled as",
+//!      "omitted", "stub", "body only", "collapsed", …), regenerating a
+//!      diffable incomplete-card inventory, cross-referenced with pass 1 to
+//!      surface **stale comments** (says "omitted", but the code wires it, or
+//!      vice versa).
 //!
 //! Run: `cargo run -p crabomination --bin audit_incomplete`
 //!      `cargo run -p crabomination --bin audit_incomplete -- --comments-only`
@@ -41,9 +36,8 @@ use crabomination::catalog::all_known_factories;
 
 // ── Pass 1: structural (serde-walk the effect tree) ──────────────────────────
 //
-// The walker itself lives in `crabomination::audit` so this binary and the
-// `core_rules::structural_audit` regression tests share one definition of
-// "does nothing".
+// The walker lives in `crabomination::audit`, shared with the
+// `core_rules::structural_audit` tests.
 
 fn run_structural() {
     let mut seen: HashSet<String> = HashSet::default();
@@ -63,12 +57,9 @@ fn run_structural() {
     }
 
     flagged.sort_by(|a, b| a.0.cmp(&b.0));
-    // Separate the cards a reviewer has already signed off from the ones
-    // nobody has looked at. This report used to list the one reviewed card
-    // every run, so a *new* finding was a count going 1 -> 2 in a report
-    // nobody diffs; now the headline number is the one that needs work and
-    // the reviewed tail is a footnote. The suite gates both halves — see
-    // `core_rules::structural_audit`.
+    // Split reviewed cards from unreviewed so the headline number is the one
+    // that needs work (a standing reviewed entry used to hide new findings).
+    // The suite gates both halves — see `core_rules::structural_audit`.
     let reviewed: HashSet<&str> =
         crabomination::audit::REVIEWED_DEAD_MODES.iter().map(|(n, _)| *n).collect();
     let (known, fresh): (Vec<_>, Vec<_>) =

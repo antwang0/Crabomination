@@ -1,9 +1,9 @@
 //! Card name → factory registry used by snapshot deserialization.
 //!
-//! Moved out of `crabomination_catalog` because it aggregates the cube, demo
-//! and SoS card pools, which are defined in this (top-level) crate. Installed
-//! as the resolver for `crabomination_base`'s `CardInstance` `Deserialize` impl
-//! at startup (see the `ctor` registration in `lib.rs`).
+//! Lives here, not in `crabomination_catalog`, because it aggregates the
+//! cube, demo and SoS pools defined in this crate. Installed at startup as
+//! the resolver for `crabomination_base`'s `CardInstance` `Deserialize` (see
+//! the `ctor` registration in `lib.rs`).
 
 use crate::fxhash::HashMap;
 use std::sync::OnceLock;
@@ -26,12 +26,10 @@ pub fn all_known_factories() -> Vec<CardFactory> {
     for &f in crate::demo::goryos_vengeance_deck() {
         all.push(f);
     }
-    // The Commander pod's target decks (`build_commander_state` /
-    // `--play commander` / `bot_ladder --commander`). Their commanders and the
-    // format staples are outside the cube/SoS/STX pools, so without this they
-    // would render with the missing-art placeholder (the client image prefetch
-    // walks this list) and a mid-game Commander snapshot could not round-trip
-    // through the name→factory lookup.
+    // The Commander pod's target decks: their commanders and staples are
+    // outside the cube/SoS/STX pools, so without this the client prefetch
+    // (which walks this list) misses their art and a Commander snapshot can't
+    // round-trip.
     for deck in crate::pod::target_decks() {
         all.extend_from_slice(deck.commanders);
         all.extend_from_slice(deck.main);
@@ -165,9 +163,6 @@ pub(crate) fn factory_by_name(name: &str) -> Option<CardFactory> {
     name_index().get(name).copied()
 }
 
-/// Look up a `CardDefinition` by name. Returns `None` if no catalog
-/// factory produces a card with that name. Used by snapshot
-/// deserialization to rebuild `CardInstance`s from saved game state.
 /// [`lookup_by_name`] straight into an `Arc`, in this frame: the by-value
 /// form hands its 8 KB `CardDefinition` back into the caller's frame, and
 /// `run_effect` is a caller (PERF "run_effect's frame"). Never inline.
@@ -176,6 +171,8 @@ pub fn lookup_arc_by_name(name: &str) -> Option<std::sync::Arc<CardDefinition>> 
     lookup_by_name(name).map(std::sync::Arc::new)
 }
 
+/// Look up a `CardDefinition` by name (`None` if no catalog factory makes
+/// it). Used by snapshot deserialization to rebuild `CardInstance`s.
 pub fn lookup_by_name(name: &str) -> Option<CardDefinition> {
     // Token cards (Clue, Treasure, Food, Blood) come from the engine-baked
     // token factories — those don't go through `all_known_factories`
@@ -262,12 +259,9 @@ mod tests {
 
     #[test]
     fn lookup_resolves_real_stx_cards_through_known_factories() {
-        // Real STX cards from the 327-card set should be reachable via
-        // snapshot deserialization (lookup_by_name → name_index →
-        // all_known_factories). Without an `all_stx_factories()` slice
-        // in the index, mid-game snapshots involving STX cards can't be
-        // round-tripped through the saved-state JSON path. The known-
-        // factories slice is queried lazily — this test stays cheap.
+        // STX cards must resolve through `lookup_by_name` so mid-game
+        // snapshots with them round-trip; the factories slice is queried
+        // lazily, so this stays cheap.
         let def = lookup_by_name("Witherbloom Apprentice")
             .expect("Witherbloom Apprentice should resolve via the STX catalog");
         assert_eq!(def.name, "Witherbloom Apprentice");

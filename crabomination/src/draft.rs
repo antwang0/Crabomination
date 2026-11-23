@@ -1,26 +1,17 @@
 //! 8-player Crabomination booster draft against bots.
 //!
-//! Architecture: the entire draft runs *off-engine* — there's no
-//! `GameState`, no decisions on the stack, no server actor. Pack
-//! generation, bot picks, and the resulting per-seat 45-card pile are
-//! all plain Rust values produced by the helpers below. The client
-//! drives the loop (the user picks one card per pack interactively;
-//! `bot_pick` runs synchronously for the other 7 seats), and once
-//! the draft completes the chosen player+opponent decks are fed into
-//! `build_draft_match_state` to bootstrap a normal 2-player
-//! `GameState` for the post-draft match.
+//! The draft runs off-engine: no `GameState`, stack or server actor. Packs,
+//! bot picks and each seat's 45-card pile are plain values. The client drives
+//! the loop (the user picks interactively, `bot_pick` runs for the other 7
+//! seats), then `build_draft_match_state` builds a 2-player `GameState` from
+//! the chosen decks.
 //!
-//! Card pool: the existing cube pool (`cube::all_cube_cards()`) — 309
-//! unique cards, comfortably enough for 8 × 3 × 15 = 360 picks. We
-//! sample uniformly with replacement, with the same per-pack
-//! deduplication that real Magic boosters have (no two copies of the
-//! same card in one pack).
+//! Pool: the cube pool (`cube::all_cube_cards()`), sampled uniformly with
+//! replacement across packs and without duplicates inside one.
 //!
-//! Bot picks: a small color-fit + curve-aware heuristic
-//! (`score_card_for_seat`) that scores each card in the current pack
-//! against the seat's accumulated picks. No synergy / archetype
-//! detection — the bot greedily picks the highest-scored card,
-//! breaking ties on mana value.
+//! Bot picks: a color-fit + curve heuristic (`score_card_for_seat`) against
+//! the seat's picks so far, greedy, ties broken on mana value. No synergy or
+//! archetype detection.
 
 use crate::fxhash::HashMap;
 
@@ -42,16 +33,9 @@ pub const PACKS_PER_SEAT: u32 = 3;
 /// Max copies of any single card across a built deck. Matches `cube.rs`.
 pub const COPY_CAP: u32 = 4;
 
-/// Generate a single 15-card pack from `pool`. Sampled without
-/// replacement *within the pack* (a pack never contains duplicates)
-/// but with replacement across packs (the cube is large enough that
-/// the same card can show up in multiple packs across the pod —
-/// matching real Magic's boosters where rares aren't deduplicated
-/// across the table).
-///
-/// Returns fewer than `PACK_SIZE` cards only if `pool.len() <
-/// PACK_SIZE` (which the cube pool is far above, so this never
-/// happens in practice — guarded for completeness).
+/// Generate one 15-card pack from `pool`: no duplicates within the pack, but
+/// a card can recur across packs. Returns fewer than `PACK_SIZE` cards only
+/// when `pool.len() < PACK_SIZE`.
 pub fn generate_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardFactory> {
     if pool.is_empty() {
         return Vec::new();
@@ -68,12 +52,10 @@ pub fn generate_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardFacto
     pack
 }
 
-/// Color-identity bucket used by `generate_sos_pack` to stratify
-/// a Secrets of Strixhaven pack. Real-set rarity tags aren't on
-/// `CardDefinition` yet, so we approximate booster shape by spreading
-/// cards across the 5 mono-colors + multicolor (college pairs) +
-/// colorless/land. This guarantees a player never opens a pack of
-/// 15 mono-blue cards.
+/// Color-identity bucket `generate_sos_pack` stratifies a Secrets of
+/// Strixhaven pack by. `CardDefinition` has no rarity, so booster shape is
+/// approximated by spreading cards across mono-colors, multicolor and
+/// colorless/land.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum SosBucket {
     Mono(Color),
@@ -81,15 +63,13 @@ enum SosBucket {
     ColorlessOrLand,
 }
 
-/// Per-pack quota for each bucket. Sums to 15. Two mono of each color
-/// (10) + 3 multicolor (college pairs) + 2 colorless/land = 15. The
-/// recipe is symmetric — every pack looks roughly the same shape, so
-/// drafters see a consistent signal across the table.
 /// One booster in this many carries a card off the Special Guests sheet
-/// (`sos_mode::sos_special_guests`), matching the printed rate. An eight-seat
-/// pod opens 24 packs, so most pods see none — that is the real economics.
+/// (`sos_mode::sos_special_guests`), the printed rate; most 24-pack pods see
+/// none.
 pub const SOS_SPECIAL_GUEST_RATE: u32 = 64;
 
+/// Per-pack quota for each bucket, summing to 15: two mono of each color,
+/// three multicolor, two colorless/land.
 const SOS_PACK_RECIPE: &[(SosBucket, usize)] = &[
     (SosBucket::Mono(Color::White), 2),
     (SosBucket::Mono(Color::Blue), 2),
@@ -100,11 +80,9 @@ const SOS_PACK_RECIPE: &[(SosBucket, usize)] = &[
     (SosBucket::ColorlessOrLand, 2),
 ];
 
-/// Classify a card into its `SosBucket` based on color identity.
-/// Hybrid pips count both halves; Phyrexian pips count their colored
-/// half. Lands and cards with no colored pips fall into
-/// `ColorlessOrLand` regardless of whether they're typed Land — the
-/// engine has no land/colorless distinction at this stage.
+/// Classify a card into its `SosBucket` by color identity. Hybrid pips count
+/// both halves, Phyrexian pips their colored half; lands and pipless cards
+/// are `ColorlessOrLand`.
 fn sos_bucket_of(def: &crate::card::CardDefinition) -> SosBucket {
     use crate::card::CardType;
     use crate::mana::ManaSymbol;
@@ -142,30 +120,18 @@ fn sos_bucket_of(def: &crate::card::CardDefinition) -> SosBucket {
     }
 }
 
-/// Stratified pack generator for the SoS pool: each pack guarantees
-/// the bucket mix described by `SOS_PACK_RECIPE`. Within each bucket
-/// we sample without replacement (no duplicates inside one pack);
-/// the same card *can* appear in multiple packs across the pod,
-/// matching real-set draft economics.
-///
-/// Fallback behavior when a bucket is short:
-/// - If the requested bucket has fewer cards than the recipe asks for,
-///   we fill the shortfall from `SosBucket::Multi`, then from any
-///   remaining unused pool card. This keeps every pack at exactly
-///   `PACK_SIZE` even on small subset pools (e.g. the Prismari-only
-///   universe is far smaller than 15 cards but the wider SoS pool
-///   always satisfies the recipe).
+/// Stratified pack generator for the SoS pool, following `SOS_PACK_RECIPE`:
+/// no duplicates within a pack, recurrence allowed across packs. A short
+/// bucket is filled from `SosBucket::Multi`, then from any unused pool card,
+/// so a pack stays at `PACK_SIZE` on small subset pools.
 pub fn generate_sos_pack<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<CardFactory> {
     SosPacks::new(pool).roll(rng)
 }
 
-/// The part of [`generate_sos_pack`] that is a pure function of the pool:
-/// which indices are on the Special Guests sheet and which colour bucket
-/// every other one falls in. A draft opens `POD_SIZE * PACKS_PER_SEAT` packs
-/// from one pool and a sealed build six, and each of those used to re-derive
-/// this — a `card_def` lookup and a `sos_bucket_of` per pool card per pack.
-/// Build it once and roll from it; the rolls draw from `rng` in exactly the
-/// order they did before.
+/// The pool-only part of [`generate_sos_pack`] (Special Guests indices and
+/// each other card's colour bucket), built once and rolled from per pack
+/// instead of re-derived each time. Rolls draw from `rng` in the same order
+/// as the per-pack derivation did.
 pub struct SosPacks<'a> {
     pool: &'a [CardFactory],
     /// Pool indices on the Special Guests sheet, kept indexable because the
@@ -177,11 +143,8 @@ pub struct SosPacks<'a> {
 impl SosPacks<'static> {
     /// The pack roller for [`sos_draft_pool_ref`], built once per process.
     ///
-    /// `new` is a whole-pool walk that buckets by rarity and colour through
-    /// two hash containers, and it depends on nothing but the pool — which is
-    /// itself a constant. `sealed_pool_packs` built one per pool: 492,678 Ir
-    /// over the twelve of `--decks sealed --games 1` at `00fd1ad8`
-    /// (PERF (-66)).
+    /// `new` is a whole-pool walk and the pool is a constant, so one roller
+    /// serves every build (PERF (-66)).
     pub fn sos_default() -> &'static SosPacks<'static> {
         static PACKS: std::sync::OnceLock<SosPacks<'static>> = std::sync::OnceLock::new();
         PACKS.get_or_init(|| SosPacks::new(sos_draft_pool_ref()))
@@ -192,8 +155,6 @@ impl<'a> SosPacks<'a> {
     pub fn new(pool: &'a [CardFactory]) -> Self {
         // The Special Guests sheet is collated separately (see
         // `SOS_SPECIAL_GUEST_RATE`), so keep it out of the colour buckets.
-        // Membership is the sheet's `HashSet`, not a linear scan of `guests`:
-        // one walk of the pool fills both.
         let sheet: crate::fxhash::HashSet<usize> = crate::sos_mode::sos_special_guests()
             .into_iter()
             .map(|f| f as usize)
@@ -249,10 +210,8 @@ impl<'a> SosPacks<'a> {
             let got = pull_from(*bucket, *want, by_bucket, &mut used, &mut pack, rng);
             shortfall += want.saturating_sub(got);
         }
-        // Fill any shortfall first from Multi, then from any unused pool
-        // card. This is the rare-pool guard — real SoS draws always
-        // satisfy the recipe, but a custom subset (test fixtures, future
-        // college-only modes) might not.
+        // Shortfall from Multi, then any unused pool card: the full SoS pool
+        // always satisfies the recipe, a custom subset might not.
         if shortfall > 0 {
             pull_from(
                 SosBucket::Multi,
@@ -282,9 +241,8 @@ impl<'a> SosPacks<'a> {
 }
 
 impl DraftPool {
-    /// Roll a single 15-card pack from this pool. Cube uses uniform
-    /// random sampling (`generate_pack`); SoS uses the stratified
-    /// `generate_sos_pack` so every pack has a consistent color shape.
+    /// Roll one 15-card pack: uniform for Cube (`generate_pack`), stratified
+    /// by color for SoS (`generate_sos_pack`).
     pub fn generate_pack<R: Rng>(self, pool: &[CardFactory], rng: &mut R) -> Vec<CardFactory> {
         match self {
             DraftPool::Cube => generate_pack(pool, rng),
@@ -293,10 +251,8 @@ impl DraftPool {
     }
 }
 
-/// Build the full set of packs for a draft pod —
-/// `POD_SIZE * PACKS_PER_SEAT` packs, returned in deal order
-/// `[seat0_pack1, seat1_pack1, …, seat0_pack2, …]`. Callers typically
-/// reshape this into `packs[round][seat]` for the passing loop.
+/// All `POD_SIZE * PACKS_PER_SEAT` packs for a pod, in deal order
+/// `[seat0_pack1, seat1_pack1, …, seat0_pack2, …]`.
 pub fn open_all_packs<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<Vec<CardFactory>> {
     let mut all = Vec::with_capacity(POD_SIZE * PACKS_PER_SEAT as usize);
     for _ in 0..(POD_SIZE * PACKS_PER_SEAT as usize) {
@@ -305,52 +261,31 @@ pub fn open_all_packs<R: Rng>(pool: &[CardFactory], rng: &mut R) -> Vec<Vec<Card
     all
 }
 
-/// Score `factory` from `seat_picks_so_far`'s perspective. Higher is
-/// better. The heuristic combines:
-/// - **Color fit**: bonus for cards whose colored pips already match
-///   the seat's most-picked colors. Off-color spells are penalized.
-///   Colorless cards score neutral.
-/// - **Card-type weight**: creatures and removal-class noncreatures
-///   (instants/sorceries) get a small bonus over enchantments /
-///   non-utility artifacts, since most decks need a critical mass of
-///   creatures to pressure life totals.
-/// - **Mana-value weight**: a mild preference for 2-4 CMC cards
-///   (the curve sweet spot) over 1-CMC and 6+ CMC cards. Lands are
-///   cheap because the deck-builder will inject basics later — drafting
-///   non-basic lands is fine but not particularly preferred.
-///
-/// This is intentionally simple. It produces playable decks without
-/// needing a per-card synergy model.
+/// Score `factory` for a seat with `seat_picks_so_far` (higher is better).
+/// Deliberately simple, no synergy model:
+/// - color fit: on-color pips earn a bonus, off-color are penalized,
+///   colorless is neutral;
+/// - card type: creatures and instants/sorceries edge out other types;
+/// - mana value: a mild preference for 2-4; lands score low since the
+///   builder adds basics later.
 pub fn score_card_for_seat(factory: CardFactory, seat_picks_so_far: &[CardFactory]) -> i32 {
     score_card_with_colors(factory, &colors_of_picks(seat_picks_so_far))
 }
 
-/// [`score_card_for_seat`] with the seat's pip-color totals precomputed.
-/// Callers scoring many cards against the *same* pick pile (the sealed
-/// recommender builds whole decks at once) hoist `colors_of_picks` out of
-/// the loop — recomputing it per card invoked every factory in the pile
-/// per scored card, an O(n²) instantiation blow-up.
-/// What a card is worth *as a card*, ignoring which colors it costs:
-/// body size, evasion/combat keywords, and whether it brings a second
-/// spell along (SOS preparation).
+/// What a card is worth as a card, ignoring its colors: body size,
+/// evasion/combat keywords, and SOS preparation (a second spell).
 ///
-/// [`score_card_with_colors`] deliberately has none of this — it prices
-/// color fit, card type and curve slot only, which means it ranks a
-/// {3}{U}{U} 5/5 flier with ward 2 *below* a vanilla {U}{U} two-drop.
-/// That blindness is why the sealed builder would splash a bomb it
-/// couldn't cast and leave real bombs on the bench; see
-/// [`score_card_quality`].
-///
-/// Magnitudes are deliberately comparable to, not larger than, the color
-/// term (6 per on-color pip): card quality should be able to outrank a
-/// pip of fit, not to overrule color discipline outright.
+/// [`score_card_with_colors`] has none of this (it ranks a {3}{U}{U} 5/5
+/// ward flier below a vanilla two-drop), which left bombs on the bench; see
+/// [`score_card_quality`]. Magnitudes are kept comparable to the color term
+/// (6 per on-color pip): quality may outrank a pip of fit, not overrule
+/// color discipline.
 pub(crate) fn card_quality(def: &crate::card::CardDefinition) -> i32 {
     use crate::card::{CardType, Keyword};
     let mut q = 0i32;
     if def.card_types.contains(&CardType::Creature) {
         // Halved and capped: a 5/5 is worth about a pip of color fit, a
-        // 7/7 not much more — limited games are decided by having a
-        // relevant body, not by the last point of stats.
+        // 7/7 not much more.
         q += ((def.power.max(0) + def.toughness.max(0)) / 2).min(5);
         let p = def.power.max(0);
         let has = |k: &Keyword| def.keywords.contains(k);
@@ -376,8 +311,7 @@ pub(crate) fn card_quality(def: &crate::card::CardDefinition) -> i32 {
         }
     }
     // A preparation card is two cards in one slot (the creature plus the
-    // spell it casts off itself) — the single biggest thing the old
-    // scorer could not see about this set.
+    // spell it casts off itself).
     if def.prepare_spell.is_some() {
         q += 3;
     }
@@ -405,20 +339,11 @@ pub(crate) fn score_brief_quality(
 /// How much an aggressive build wants a card *for its cost*, on top of
 /// [`score_brief_quality`].
 ///
-/// `CardBrief::base_score`'s curve weight is `{0:0, 1:1, 2..=4:3, 5:2, _:1}` —
-/// a spread of three, against a `quality` term that reaches roughly fifteen
-/// for a big evasive body. So the builder is curve-blind in practice, and it
-/// ranks a **one-drop below a five-drop**. `card_quality` has no mana-value
-/// term at all, by design: it was added to stop the builder benching bombs,
-/// and it worked, which is why nothing now pulls the other way.
-///
-/// This is the other way. Magnitudes give the curve a spread of seven, so
-/// combined with the existing bucket it can outrank a pip of colour fit (6)
-/// and reorder cards of similar quality — but a genuine bomb still wins,
-/// which is the intent. A limited deck wants a curve *and* its bombs.
-///
-/// Lands score zero: `assemble_lands` assigns them and they never take a
-/// spell slot.
+/// `base_score`'s curve weight spans three points against a `quality` term
+/// reaching ~15, so the builder is curve-blind and ranks a one-drop below a
+/// five-drop. This adds a spread of seven: enough to outrank a pip of colour
+/// fit (6) and reorder cards of similar quality, not enough to beat a bomb.
+/// Lands score zero; `assemble_lands` places them.
 pub(crate) fn aggro_curve_delta(brief: &crate::cube::CardBrief) -> i32 {
     if brief.is_land {
         return 0;
@@ -438,20 +363,12 @@ pub(crate) fn aggro_curve_delta(brief: &crate::cube::CardBrief) -> i32 {
 /// loses 10 a pip it cannot pay in the seat's colours
 /// ([`crate::cube::CardBrief::off_pips`], which reads `{G/U}` as G or U).
 ///
-/// On-colour pips earn nothing here, unlike the static scorer's +6 a pip.
-/// The measured value already prices how castable a card is, and at about
-/// 4.6 rating points a pip the bonus outweighed most of the table's spread:
-/// a mediocre double-pip card outranked a better single-pip one, and the
-/// summed shape scores leaned toward pip-heavy colours. With the bonus, the
-/// pick's lowest-valued spell swapped for the best unplayed one won
-/// +2.0 ±0.35 (`fra_card_eval --audit-builder`, 150 pools); without it the
-/// build is +1.44 ±0.81 / +1.77 ±0.67 over the old one (seeds 199 / 211,
-/// 173 / 300 pools, two fields each), and changes colours in 58 % of pools.
-/// Unrated cards (51 FRA cards too seldom built to rate, Flourishing
-/// Grapple among them) kept the bonus at first, which ranked them over
-/// rated ones; dropping it and reading hybrids as either colour was
-/// +2.99 ±0.63 / +3.19 ±0.62 more (seeds 307 / 401, 300 pools; the two
-/// alone +0.49 / +0.96 for hybrids, +1.47 / +2.23 for unrated cards).
+/// On-colour pips earn nothing, unlike the static scorer's +6: the rating
+/// already prices castability, and the bonus (~4.6 rating points a pip)
+/// swamped the table's spread, favouring pip-heavy cards and colours.
+/// Dropping it measured +1.44 / +1.77 over the old build; also dropping it
+/// for unrated cards and reading hybrids as either colour, +2.99 / +3.19
+/// more (`fra_card_eval --audit-builder`, two seeds each).
 pub(crate) fn score_brief_rated(
     brief: &crate::cube::CardBrief,
     seat_colors: &ColorCounts,
@@ -470,6 +387,9 @@ pub(crate) fn score_brief_aggro(
     score_brief_quality(brief, seat_colors) + aggro_curve_delta(brief)
 }
 
+/// [`score_card_for_seat`] with the seat's pip-color totals precomputed, so a
+/// caller scoring many cards against one pile hoists `colors_of_picks` out of
+/// the loop instead of re-instantiating the pile per card.
 pub(crate) fn score_card_with_colors(
     factory: CardFactory,
     seat_colors: &ColorCounts,
@@ -477,10 +397,7 @@ pub(crate) fn score_card_with_colors(
     score_brief_with_colors(crate::cube::card_brief(factory), seat_colors)
 }
 
-/// [`score_card_with_colors`] for a caller that is already holding the brief.
-/// The sealed builder looks one up to decide whether a card is even allowed
-/// in the shape, and used to look the same one up again here and a third
-/// time for the fixing bonus.
+/// [`score_card_with_colors`] for a caller already holding the brief.
 pub(crate) fn score_brief_with_colors(
     brief: &crate::cube::CardBrief,
     seat_colors: &ColorCounts,
@@ -488,29 +405,19 @@ pub(crate) fn score_brief_with_colors(
     score_brief_in_colors(brief, seat_colors.support())
 }
 
-/// [`score_brief_with_colors`] against the seat's colours as a bitmask, and
-/// the form the sealed builder's shape ranker calls: it scores 23 main-deck
-/// cards against one colour set, 56 times a build.
-///
-/// The scorer reads `seat_colors` only through `is_empty` and `get(c) > 0`,
-/// so the colour term is a function of the *set*. On-colour pips are worth
-/// +6 and off-colour -4, and `off = total - on`, so the two accumulators
-/// collapse to `10 * on - 4 * total` over a single masked sum. Everything
-/// left — the card-type weight, the mana-value weight and the
-/// colourless-nonland bonus — is a property of the card and is precomputed
-/// as [`CardBrief::base_score`](crate::cube::CardBrief::base_score).
-///
-/// The arithmetic is the original's, term for term; see the commit for the
-/// identity.
+/// [`score_brief_with_colors`] against the seat's colours as a bitmask (the
+/// form the sealed builder's shape ranker calls). The colour term depends
+/// only on the set: on-colour pips +6, off-colour -4, and `off = total - on`
+/// gives `10 * on - 4 * total`. The rest is precomputed as
+/// [`CardBrief::base_score`](crate::cube::CardBrief::base_score).
 pub(crate) fn score_brief_in_colors(
     brief: &crate::cube::CardBrief,
     seat: crate::mana::ColorSet,
 ) -> i32 {
     let total = brief.pips_total as i32;
-    // Colorless / artifact / generic-only cards carry their whole colour
-    // term in `base_score` (+5 unless a land): they slot into any deck.
-    // Lands are excluded there because the bonus would sneak them into
-    // SPELL slots, which `assemble_lands` owns.
+    // Colorless cards carry their colour term in `base_score` (+5 unless a
+    // land; a land bonus would sneak lands into spell slots, which
+    // `assemble_lands` owns).
     let color_term = if total == 0 {
         0
     } else if seat.is_empty() {
@@ -523,14 +430,9 @@ pub(crate) fn score_brief_in_colors(
     brief.base_score + color_term
 }
 
-/// Auto-pick a card from `pack` for a seat with `seat_picks_so_far`.
-/// Returns the index of the picked card (caller removes it from the
-/// pack and appends it to the seat's pick pile). Returns `None` only
-/// when `pack` is empty.
-///
-/// Tie-break: highest score → highest CMC → lowest pack index. The
-/// CMC tie-break gives bots a small "bombs first" bias that real
-/// drafters tend to share.
+/// Auto-pick from `pack` for a seat with `seat_picks_so_far`; returns the
+/// picked index, `None` only for an empty pack. Tie-break: score, then
+/// highest CMC (a small bombs-first bias), then lowest index.
 pub fn bot_pick(pack: &[CardFactory], seat_picks_so_far: &[CardFactory]) -> Option<usize> {
     if pack.is_empty() {
         return None;
@@ -553,12 +455,9 @@ pub fn bot_pick(pack: &[CardFactory], seat_picks_so_far: &[CardFactory]) -> Opti
 
 /// Colored-pip totals per color, WUBRG-indexed.
 ///
-/// Was a `HashMap<Color, u32>`. The sealed builder computes one per scored
-/// pile and then reads it once per pip per scored card, so the map cost an
-/// allocation per pile plus a hash probe per read — 12.1 % of a twelve-deck
-/// build sat in `colors_of_picks` alone at the fifty-third tip. Five `u32`s
-/// answer both for free, and the WUBRG layout takes a `HashMap` iteration
-/// order out of [`top_two_colors`]' tie-break.
+/// An array rather than a `HashMap` (which was 12.1 % of a twelve-deck build
+/// at the fifty-third tip); the fixed WUBRG order also makes
+/// [`top_two_colors`]' tie-break deterministic.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct ColorCounts([u32; 5]);
 
@@ -581,15 +480,13 @@ impl ColorCounts {
         self.0[Self::idx(c)] += n;
     }
 
-    /// True when no pick contributed a colored pip. Matches the old
-    /// `HashMap::is_empty`: every entry it held was ≥ 1, because a color
-    /// only reached it via a symbol that referenced it.
+    /// True when no pick contributed a colored pip.
     pub fn is_empty(&self) -> bool {
         self.0.iter().all(|n| *n == 0)
     }
 
-    /// The colors with at least one pip, as a bitmask. WUBRG-indexed both
-    /// sides, so the bit for a color is its slot here.
+    /// The colors with at least one pip, as a bitmask (bit i = slot i, both
+    /// WUBRG).
     pub fn support(&self) -> crate::mana::ColorSet {
         let mut bits = 0u8;
         for (i, n) in self.0.iter().enumerate() {
@@ -629,10 +526,9 @@ impl ColorCounts {
     }
 }
 
-/// Distribution of colored pips across a seat's picks, used by
-/// `score_card_for_seat` to detect which colors the seat is committed
-/// to. Lands and colorless cards don't contribute (they don't signal
-/// color preference).
+/// Colored pips summed across a seat's picks: which colors
+/// `score_card_for_seat` treats the seat as committed to. Pipless cards
+/// contribute nothing.
 pub fn colors_of_picks(picks: &[CardFactory]) -> ColorCounts {
     let mut totals = ColorCounts::default();
     for factory in picks {
@@ -643,11 +539,8 @@ pub fn colors_of_picks(picks: &[CardFactory]) -> ColorCounts {
 
 /// This cost's colored pips per color, in one pass over the symbols.
 ///
-/// Same rule [`colored_pip_count`] applies — hybrid pips count for both
-/// halves, Phyrexian for their colored half — but that function is asked one
-/// color at a time, so the callers that want the whole distribution used to
-/// walk the cost once for the [`colors_of_cost`] set and then once more per
-/// color in it.
+/// Same rule as [`colored_pip_count`] (hybrid counts both halves, Phyrexian
+/// its colored half) for every color at once.
 pub(crate) fn pip_counts(cost: &crate::mana::ManaCost) -> ColorCounts {
     let mut totals = ColorCounts::default();
     add_pip_counts(cost, &mut totals);
@@ -670,12 +563,9 @@ fn add_pip_counts(cost: &crate::mana::ManaCost, totals: &mut ColorCounts) {
 /// Distinct colors referenced by a card's printed cost (colored,
 /// hybrid, or Phyrexian pips).
 ///
-/// A [`ColorSet`], not a `Vec<Color>`: the deck builders call this per pool
-/// card per colour shape and the vector was an allocation apiece —
-/// 253,333 of them, 22.6 M Ir / 12.8 % of what a sealed deck build costs
-/// after the definition memo (`67809f9f`). `ColorSet` reads the same at
-/// every call site (`contains`, `is_empty`, `for c in ..`) and walks in
-/// WUBRG order, which is the order the `Vec` had.
+/// A [`ColorSet`], not a `Vec<Color>`: the builders call this per pool card
+/// per shape, and the allocation was 12.8 % of a sealed build at `67809f9f`.
+/// It iterates in WUBRG order, as the `Vec` did.
 pub(crate) fn colors_of_cost(cost: &crate::mana::ManaCost) -> crate::mana::ColorSet {
     let mut seen = crate::mana::ColorSet::empty();
     for sym in &cost.symbols {
@@ -704,16 +594,10 @@ pub(crate) fn colored_pip_count(cost: &crate::mana::ManaCost, color: Color) -> u
         .count() as u32
 }
 
-/// Suggest a starting deck split for `picks`: pick the seat's two
-/// strongest colors, then take the highest-scoring spells in those
-/// colors up to `target_spells` (default 23). Cards whose cost
-/// references a third color are skipped. Returns `(chosen, leftovers)`
-/// — the deck-builder UI starts with `chosen` in the main deck and
-/// `leftovers` on the sideboard, then lets the user freely move cards
-/// between the two piles.
-///
-/// This is purely a starting suggestion; the user retains full
-/// control during deckbuilding.
+/// Suggest a starting deck for `picks`: the highest-scoring spells in the
+/// seat's two strongest colors, up to `target_spells` (default 23), skipping
+/// cards that need a third color. Returns `(main, leftovers)`; the deck
+/// builder UI starts from this and the user moves cards freely.
 pub fn suggest_main_deck(picks: &[CardFactory], target_spells: usize) -> (Vec<CardFactory>, Vec<CardFactory>) {
     let colors = top_two_colors(picks);
     let mut on_color: Vec<(CardFactory, i32)> = Vec::new();
@@ -730,14 +614,10 @@ pub fn suggest_main_deck(picks: &[CardFactory], target_spells: usize) -> (Vec<Ca
         }
     }
     on_color.sort_by_key(|(_, score)| std::cmp::Reverse(*score));
-    // Walk on-color picks in score order. A card joins the main deck if it
-    // fits both the target size and the 4-copy cap; over-cap or over-target
-    // copies fall through to leftovers (sideboard) so the player still sees
-    // them and the slot can go to the next-best on-color card. Previously
-    // the cap was applied with `enforce_copy_cap` after slicing, which
-    // silently dropped over-cap copies entirely (e.g. 6 Lightning Bolts →
-    // main capped to 4, leftovers built via `.skip(take)` which missed the
-    // 2 dropped copies).
+    // In score order, a card joins the main deck if it fits the target size
+    // and the 4-copy cap; otherwise it goes to leftovers, so over-cap copies
+    // stay visible and the slot passes to the next card. (Capping after
+    // slicing once dropped the extra copies entirely.)
     let mut counts: HashMap<usize, u32> = HashMap::default();
     let mut main: Vec<CardFactory> = Vec::new();
     let mut leftovers: Vec<CardFactory> = Vec::new();
@@ -755,13 +635,8 @@ pub fn suggest_main_deck(picks: &[CardFactory], target_spells: usize) -> (Vec<Ca
     (main, leftovers)
 }
 
-/// Two strongest colors in `picks`, by total colored-pip weight.
-/// Falls back to (W, U) if the seat has fewer than two colors
-/// represented (e.g. a pile of all-colorless cards).
-///
-/// Ties break in WUBRG order. They used to break in `HashMap` bucket
-/// order, which is deterministic for a fixed hasher but is not a fact
-/// about the picks.
+/// Two strongest colors in `picks` by colored-pip weight, ties in WUBRG
+/// order. Falls back to W / U when fewer than two colors are present.
 pub fn top_two_colors(picks: &[CardFactory]) -> [Color; 2] {
     let totals = colors_of_picks(picks);
     let mut v: Vec<(Color, u32)> = totals.iter().collect();
@@ -773,10 +648,8 @@ pub fn top_two_colors(picks: &[CardFactory]) -> [Color; 2] {
         .find(|(c, _)| *c != primary)
         .map(|(c, _)| *c)
         .unwrap_or_else(|| {
-            // Pick any color other than the primary as the fallback. `Color::
-            // ALL` has five distinct entries so the `find` always hits, but
-            // say that in the code rather than in a panic message — this runs
-            // in the training actor, which builds two decks a game.
+            // Any color but the primary. The `find` always hits; the
+            // fallback avoids a panic path in the training actor.
             Color::ALL
                 .into_iter()
                 .find(|c| *c != primary)
@@ -785,12 +658,9 @@ pub fn top_two_colors(picks: &[CardFactory]) -> [Color; 2] {
     [primary, secondary]
 }
 
-/// Suggested basic-land split for `main_deck` against the seat's
-/// chosen colors, summing to `total_lands`. The split is proportional
-/// to the colored-pip weight in the main deck — a deck with twice as
-/// many `{W}` pips as `{U}` gets ~⅔ Plains, ~⅓ Island. Always returns
-/// at least one of each chosen color when possible, to avoid color
-/// screw on draws.
+/// Basic-land split for `main_deck` in `colors`, summing to `total_lands`,
+/// proportional to each color's pip weight, with at least one land of each
+/// color that has a pip.
 pub fn suggest_basic_split(main_deck: &[CardFactory], colors: [Color; 2], total_lands: u32) -> HashMap<Color, u32> {
     let mut weights: HashMap<Color, u32> = HashMap::default();
     for &c in &colors {
@@ -850,9 +720,8 @@ pub fn basic_land_arc(color: Color) -> std::sync::Arc<crate::card::CardDefinitio
     std::sync::Arc::new(basic_land_factory(color)())
 }
 
-/// Look up the basic-land factory for a color. Mirrors the helper in
-/// `cube::basic_factory` (which is private), exposed here so the
-/// deck-builder can materialize basics alongside drafted spells.
+/// The basic-land factory for a color; a public mirror of the private
+/// `cube::basic_factory`.
 pub fn basic_land_factory(color: Color) -> CardFactory {
     match color {
         Color::White => crate::catalog::plains,
@@ -863,16 +732,12 @@ pub fn basic_land_factory(color: Color) -> CardFactory {
     }
 }
 
-/// Enforce the global 4-copy cap on a built deck. Walks the list in
-/// order and drops any copies past the cap. Used after the
-/// auto-suggestion pass so a seat that accidentally drafted six
-/// Lightning Bolts ends up with four in their main deck and two on
-/// the sideboard.
+/// Enforce the 4-copy cap on a built deck, dropping copies past it in list
+/// order.
 ///
-/// Basic lands are exempt (CR 100.2a). They were not until 2026-11-15, and
-/// the client's draft runs every finished deck — the player's and the bot
-/// opponent's — through here after adding its basics: a 23 + 17 list went
-/// to the table as ~31 cards with 4 of each basic, 8 lands in all.
+/// Basic lands are exempt (CR 100.2a). The client runs every finished draft
+/// deck through here after adding basics; before 2026-11-15 that cut a 23 +
+/// 17 list to ~31 cards with 8 lands.
 pub fn enforce_copy_cap(cards: Vec<CardFactory>) -> Vec<CardFactory> {
     let mut counts: HashMap<usize, u32> = HashMap::default();
     let mut out = Vec::with_capacity(cards.len());
@@ -892,12 +757,8 @@ pub fn enforce_copy_cap(cards: Vec<CardFactory>) -> Vec<CardFactory> {
     out
 }
 
-/// Build a 2-player `GameState` from a player + opponent deck.
-/// Both seats are flagged `wants_ui` so the post-draft match plays
-/// out via the standard human-vs-bot decision path.
-///
-/// `player_seat_name` / `opponent_seat_name` show up in player
-/// portraits and the game log so the UI can label "You vs P3 (UR)".
+/// Build a 2-player `GameState` from a player and opponent deck, both seats
+/// `wants_ui`. The seat names label portraits and the log ("You vs P3 (UR)").
 pub fn build_draft_match_state(
     player_deck: Vec<CardFactory>,
     opponent_deck: Vec<CardFactory>,
@@ -929,25 +790,17 @@ pub fn build_draft_match_state(
     state
 }
 
-/// Names of engine-invented cards whose Scryfall art is missing —
-/// the prefetcher (`crabomination_client::scryfall`) stamps these as
-/// cardback placeholders, which makes them ugly draft picks. The
-/// regular cube mode tolerates the placeholder because it's a
-/// gameplay-only mode (cards play correctly even without art); the
-/// draft mode renders cards face-up at 200px so the missing art is
-/// glaring. Filter them out at draft time.
+/// Engine-invented cards with no Scryfall art. Cube play tolerates their
+/// cardback placeholder, but draft shows cards face-up, so they are filtered
+/// out of draft pools.
 ///
-/// Keep in sync with `crabomination_client::scryfall::FICTIONAL_CARDS`
-/// — the lists serve different purposes (placeholder rendering vs.
-/// draft visibility) but share the same source-of-truth set of names.
+/// Keep in sync with `crabomination_client::scryfall::FICTIONAL_CARDS`.
 const FICTIONAL_CARD_NAMES: &[&str] = &[
     "Sundering Eruption",
     "Volcanic Fissure",
 ];
 
-/// Convenience: the cube pool used as the draft pool, filtered to
-/// cards with real Scryfall art. Re-exported here so client code
-/// doesn't have to know about `cube::all_cube_cards`.
+/// The cube pool as a draft pool, filtered to cards with real Scryfall art.
 pub fn draft_pool() -> Vec<CardFactory> {
     all_cube_cards()
         .into_iter()
@@ -958,24 +811,18 @@ pub fn draft_pool() -> Vec<CardFactory> {
         .collect()
 }
 
-/// Secrets of Strixhaven draft pool — every ✅ SoS factory across the
-/// five colleges (mono-color + multi-color + school lands). Pulls from
-/// `sos_mode::all_sos_cards()`. The same fictional-card filter applies
-/// — defensive only, since none of the SoS names overlap the cube's
-/// engine-invented entries.
+/// Secrets of Strixhaven draft pool: every ✅ SoS factory
+/// (`sos_mode::all_sos_cards()`), through the same fictional-card filter.
 pub fn sos_draft_pool() -> Vec<CardFactory> {
     sos_draft_pool_ref().to_vec()
 }
 
 /// [`sos_draft_pool`] without the copy, computed once per process.
 ///
-/// The pool is a constant — `all_sos_cards` walks five colleges' sub-pools,
-/// dedups them through a `HashSet` and hands back a fresh `Vec`, and this
-/// filter then looks a `CardDefinition` up per entry to compare its name
-/// against `FICTIONAL_CARD_NAMES` — and `sealed_pool_packs` rebuilt the whole
-/// thing per pool, which is **twice a game in a `selfplay_train` actor**.
-/// `all_sos_cards` alone was 517,390 Ir over the twelve pools of
-/// `--decks sealed --games 1` at `00fd1ad8` (PERF (-66)).
+/// The pool is a constant, but building it walks and dedups five colleges'
+/// sub-pools and looks up every definition; `sealed_pool_packs` used to
+/// rebuild it per pool, twice a game in a `selfplay_train` actor
+/// (PERF (-66)).
 pub fn sos_draft_pool_ref() -> &'static [CardFactory] {
     static POOL: std::sync::OnceLock<Vec<CardFactory>> = std::sync::OnceLock::new();
     POOL.get_or_init(|| {
@@ -989,9 +836,8 @@ pub fn sos_draft_pool_ref() -> &'static [CardFactory] {
     })
 }
 
-/// Which set of cards a draft draws from. Cube is the existing 309-card
-/// curated cube pool; Sos is the pooled Secrets of Strixhaven cards
-/// (`sos_mode::all_sos_cards`).
+/// Which cards a draft draws from: the curated cube pool, or the Secrets of
+/// Strixhaven cards (`sos_mode::all_sos_cards`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DraftPool {
     Cube,
@@ -1041,7 +887,7 @@ impl DraftNotes {
     pub fn note_colors(&mut self, source: &str, colors: &[Color]) {
         self.colors.entry(source.to_string()).or_default().extend_from_slice(colors);
     }
-    /// Animus of Predation notes only the ten keywords it lists.
+    /// Animus of Predation notes only the keywords it lists.
     pub fn note_keywords(&mut self, source: &str, keywords: &[Keyword]) {
         let noted = self.keywords.entry(source.to_string()).or_default();
         for kw in keywords.iter().filter(|k| ANIMUS_KEYWORDS.contains(k)) {
@@ -1549,10 +1395,8 @@ mod tests {
 
     #[test]
     fn bot_pick_picks_highest_scored_card() {
-        // With an empty seat history, the bot's color preference is
-        // wide-open — but the curve / type weight should still bias
-        // toward a creature over a non-creature artifact. Build a
-        // 2-card pack with a known winner.
+        // With no picks yet, color is open, but the type weight should
+        // still prefer a creature over a colorless artifact.
         let pack: Vec<CardFactory> = vec![
             crate::catalog::grizzly_bears, // {1}{G} 2/2 creature
             crate::catalog::sol_ring,      // {1} colorless artifact
@@ -1810,10 +1654,8 @@ mod tests {
 
     #[test]
     fn sos_pack_satisfies_color_recipe_on_average() {
-        // Each pack should land on ~2 cards per mono-color and ~3
-        // multicolor + ~2 colorless/land. Run 100 rolls and verify
-        // every bucket got at least one card on average — guards
-        // against a regression that breaks bucket assignment.
+        // Over 100 rolls every bucket should average at least one card;
+        // guards bucket assignment.
         let pool = sos_draft_pool();
         let mut rng = fixed_rng();
         let mut bucket_totals: crate::fxhash::HashMap<SosBucket, u32> =

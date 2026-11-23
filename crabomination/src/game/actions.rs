@@ -6,18 +6,11 @@ use crate::mana::{Color as ManaColor, ManaSymbol};
 use smallvec::SmallVec;
 
 /// `CRAB_CAST_CENSUS` — how much of a cast is paid before the cast can still
-/// be rejected.
-///
-/// [`GameState::cast_spell_with_convoke`] takes the card **out of hand** and
-/// then runs its rejection checks, forty-nine of which put it back — and the
-/// take has already unshared `PlayerData`, the hand zone's `Vec` and the card
-/// (PERF candidate (Q)). That body is the program's largest CoW unsharer,
-/// 21 % of every `make_mut_slow` call on a six-game `cube` run, so the
-/// question "how many of those casts were never going to happen" decides
-/// whether reordering the checks is worth a refactor of forty-nine branches.
-///
-/// Counted, not inferred: the rollback bump sits at each `hand.push(card)`
-/// itself. One `OnceLock` read per call when off.
+/// be rejected. [`GameState::cast_spell_with_convoke`] takes the card out of
+/// hand (unsharing `PlayerData`, the hand and the card) before forty-nine
+/// rejection checks that put it back (PERF candidate (Q)); this counts those
+/// rollbacks at each `hand.push(card)` to size a reorder. One `OnceLock` read
+/// per call when off.
 ///
 /// ```text
 /// CRAB_CAST_CENSUS=1 bot_ladder --a gang --b gang --games 6 --threads 1 --decks cube
@@ -95,13 +88,9 @@ pub mod cast_census {
     }
 }
 
-/// The heaviest colour in a `color_weights`-shaped table, restricted to `legal`.
-///
-/// Ties break toward the **first** colour in the table (WUBRG), which matters
-/// more than it looks: on a board with no coloured pips at all every weight is
-/// zero, and `max_by_key` would hand back the *last* tie — turning "no
-/// information" into Green. White is what every one of these picks answered
-/// before they were needs-aware, so a no-information board keeps answering it.
+/// The heaviest colour in a `color_weights`-shaped table, restricted to
+/// `legal`. Ties break toward the first colour (WUBRG), so a board with no
+/// information answers White as before (`max_by_key` would answer Green).
 fn pick_densest(table: &[(ManaColor, u32)], legal: &[ManaColor]) -> ManaColor {
     let mut best: Option<(ManaColor, u32)> = None;
     for &(c, n) in table {
@@ -175,15 +164,11 @@ pub(crate) struct GrantScan<'a> {
     /// Attached permanents carrying an `equipped_bonus`, matched per card by
     /// `attached_to`.
     equipment: Vec<&'a CardInstance>,
-    /// Does anything in the *gathered* set rewrite a land type — the CR 305.6
-    /// question [`GameState::effective_mana_abilities_of`] asks before it
-    /// takes a layer view? `Some` when the scan was built inside a freeze
-    /// scope, `None` outside one (the caller then asks per card, as before).
-    ///
-    /// One walk of the effect set per scan instead of one per card. Sound
-    /// because the scan borrows `&self`: no `&mut self` call can happen while
-    /// it lives, so the gather it was built against is the gather every
-    /// reader of it sees.
+    /// Does anything in the *gathered* set rewrite a land type (the CR 305.6
+    /// question [`GameState::effective_mana_abilities_of`] asks before a layer
+    /// view)? `Some` when built inside a freeze scope, `None` outside (callers
+    /// ask per card). Sound because the scan borrows `&self`, so the gather
+    /// can't change while it lives.
     land_types_rewritten: Option<bool>,
     /// Permanents whose activated abilities a live
     /// `ChosenPermanentAbilitiesCantBeActivated` locks (Scheming Fence's
@@ -252,14 +237,11 @@ pub(crate) fn card_has_attach_grant(c: &CardInstance) -> bool {
 }
 
 /// A `GrantActivatedAbility` filter reduced to the printed-line tests the
-/// requirement walker would make anyway, resolved once per [`GrantScan`]
-/// rather than once per (permanent x grant). `granted_abilities_of_inner`
-/// is reached by every mana sweep for every untapped permanent, and on
-/// `cube` each of its asks was three walker frames (~300 Ir, 105 k asks a
-/// six-game run — PERF `(-182)`) for what is a controller compare, a token
-/// flag and a card-type `contains`. Built by [`GameState::printed_grant_filter`], which
-/// asks the presence gates once per scan; `test` is the per-permanent half
-/// and answers `None` where the walker's answer leaves the printed line.
+/// requirement walker would make anyway (controller compare, token flag,
+/// card-type `contains`), resolved once per [`GrantScan`] instead of per
+/// (permanent x grant) (PERF `(-182)`). Built by
+/// [`GameState::printed_grant_filter`]; `test` is the per-permanent half and
+/// answers `None` where the walker's answer leaves the printed line.
 #[derive(Clone, Copy, Default)]
 pub(crate) struct PrintedGrantFilter {
     /// `ControlledByYou` — the asking permanent's controller is the source's.
@@ -446,14 +428,10 @@ impl GameState {
         }
     }
 
-    /// The alternative cost `p` may use to cast the hand card `card_id`: the
-    /// printed one, or the CR 118.9 WUBRG cost Fist of Suns grants to every
-    /// spell its controller casts.
     /// CR 118.9 — whether `p` may pay {0} for `card` cast from exile this
     /// turn: Warped Space (any spell) or Tlincalli Hunter (a matching one),
-    /// once per turn between them (`Player.free_exile_cast_used_this_turn`).
-    /// Dragon's Smile's "once during each of your turns" is the same grant
-    /// under `WhileYourTurn`.
+    /// once per turn between them (`Player.free_exile_cast_used_this_turn`);
+    /// Dragon's Smile is the same grant under `WhileYourTurn`.
     pub(crate) fn free_exile_cast_waiver(&self, p: usize, card: &CardInstance) -> bool {
         use crate::effect::StaticEffect as SE;
         fn grants(g: &GameState, e: &SE, p: usize, card: &CardInstance) -> bool {
@@ -470,6 +448,8 @@ impl GameState {
             })
     }
 
+    /// The alternative cost `p` may use to cast the hand card `card_id`: the
+    /// printed one, or the CR 118.9 WUBRG cost Fist of Suns grants.
     pub(crate) fn effective_alternative_cost(
         &self,
         p: usize,
@@ -936,14 +916,11 @@ fn drainable_counters(c: &CardInstance, kinds: Option<&[crate::card::CounterType
 }
 
 /// The three modifications that write `ComputedPermanent.subtypes.land_types`
-/// (Spreading Seas, Blood Moon, Urborg, Magical Hack). With none of them in
-/// scope a permanent's computed land types are its printed ones, which is
-/// what lets `effective_mana_abilities_with` skip the per-card layer pass.
-///
-/// Kept in step with `layers::compute_permanent_pass` by a `debug_assert!` at
-/// the gate, not by hand: a fourth land-type writer added there and not here
-/// fails the suite rather than silently keeping a Blood-Mooned land's mana
-/// ability.
+/// (Spreading Seas, Blood Moon, Urborg, Magical Hack). With none in scope,
+/// computed land types are printed ones, so `effective_mana_abilities_with`
+/// skips the per-card layer pass. Kept in step with
+/// `layers::compute_permanent_pass` by a `debug_assert!` at the gate: a
+/// fourth writer added there fails the suite.
 fn rewrites_land_types(e: &crate::game::layers::ContinuousEffect) -> bool {
     use crate::game::layers::Modification as M;
     matches!(
@@ -963,39 +940,19 @@ pub fn is_mana_ability_public(effect: &Effect) -> bool {
 /// A mana ability resolves immediately, without the stack and without a
 /// priority round.
 ///
-/// **The rule, not a list of riders.** This used to be
-/// `could_add_mana && mana_compatible`, where `mana_compatible` was an
-/// allowlist of the things allowed to sit beside the `AddMana` — you-only
-/// `GainLife`, you-only `Draw`, a self-`AddCounter`, `SkipNextUntap`,
-/// `ReflexiveTrigger`. CR 605.1a has no such list: **anything** may sit
-/// beside the mana as long as the ability doesn't target. Every rider nobody
-/// had thought of turned its whole ability into a stack ability, which is
-/// silent and expensive: the mana lands after the cost it was tapped for is
-/// already being paid, `effective_mana_abilities_into` never offers the
-/// source, and the bot simply never taps that permanent for that colour.
-///
-/// **83 abilities across 55 shipped cards were on the wrong side of it** —
-/// every painland (`{T}: Add {U} or {B}. This land deals 1 damage to you`),
-/// City of Brass, Ancient Tomb, Grand Coliseum, Tarnished Citadel, the ten
-/// Talismans, Grove of the Burnwillows, Gemstone Mine, Wall of Roots,
-/// Undiscovered Paradise, the five Mirage/Tempest depletion lands, Millikin,
-/// Elves of Deep Shadow, Pentad Prism, Krark-Clan Ironworks — a cube's whole
-/// painful-mana axis, producing colours no caster could spend.
-///
-/// The five that stay non-mana under the rule are the five that **target**
-/// (Deathrite Shaman's "exile target land card from a graveyard", Priest of
-/// Forgotten Gods, Witch Engine, and Radiant Lotus and Spectral Searchlight,
-/// which add the mana to a *target player's* pool), which is CR 605.1a's own
-/// first criterion and not a judgement. `core_rules::structural_audit`
-/// re-asks the whole catalog every run, with those five as the reviewed list.
+/// The rule, not an allowlist of riders: anything may sit beside the mana if
+/// the ability doesn't target. The old allowlist turned 83 abilities on 55
+/// cards (painlands, City of Brass, Talismans, ...) into stack abilities the
+/// bot never tapped for mana. The five that stay non-mana are the five that
+/// target (Deathrite Shaman, Priest of Forgotten Gods, Witch Engine, Radiant
+/// Lotus, Spectral Searchlight); `core_rules::structural_audit` re-checks
+/// the catalog with those as the reviewed list.
 ///
 /// Loyalty abilities live in their own `CardDefinition` field and never reach
-/// this, so the third criterion needs no test here.
-///
-/// CR 605.1a (2026-09-25 text) adds a fourth criterion: the ability's cost
-/// and effect move no card to or from a library. Chromatic Sphere, Sungrass
-/// Egg, Millikin — a draw or mill beside the mana puts the ability on the
-/// stack ([`effect_moves_library_card`]).
+/// this. CR 605.1a (2026-09-25 text) adds a fourth criterion: cost and effect
+/// move no card to or from a library — a draw or mill beside the mana
+/// (Chromatic Sphere, Millikin) puts it on the stack
+/// ([`effect_moves_library_card`]).
 pub(crate) fn is_mana_ability(effect: &Effect) -> bool {
     effect_could_add_mana(effect)
         && !effect.requires_target()
@@ -1042,13 +999,9 @@ pub fn effect_moves_library_card(e: &Effect) -> bool {
 }
 
 /// CR 605.1a's first criterion on its own: could this effect add mana to a
-/// player's pool when it resolves?
-///
-/// Split out of [`is_mana_ability`] rather than written twice: the two are
-/// each half of the same rule and the suite's whole-catalog audit
-/// (`core_rules::mana_abilities`) asks exactly "could it add mana, yet the
-/// engine says it is not a mana ability" — a question that needs *this*
-/// predicate, not a second copy of it that can drift.
+/// player's pool when it resolves? Split from [`is_mana_ability`] so the
+/// whole-catalog audit (`core_rules::mana_abilities`) uses this predicate,
+/// not a drifting copy.
 pub fn effect_could_add_mana(e: &Effect) -> bool {
     match e {
         Effect::AddMana { .. } => true,
@@ -1237,17 +1190,14 @@ mod mana_summary {
     /// something. Set by `mana_summary_of`, never read by `unpack`.
     pub(super) const SELF_GRANT: u64 = 1 << 61;
     /// Bits 51-58 are `available_mana`'s per-definition budget (PERF
-    /// `(-317)`): what the bot's producible-mana estimate accumulates for a
-    /// permanent with this definition that is **untapped, not summoning-sick
-    /// and granted nothing**. [`AM_EXACT`] is the claim and the three fields
-    /// beside it are the answer; clear means "run the walk", so the pack is
-    /// never wrong in the permissive direction — it only declines to answer.
-    /// Read through [`GameState::printed_mana_budget`]; the packing stays
-    /// here, as every other family on this word does.
+    /// `(-317)`) for an untapped, non-summoning-sick, grant-free permanent.
+    /// [`AM_EXACT`] is the claim, the three fields beside it the answer; clear
+    /// means "run the walk", so the pack only ever declines, never errs. Read
+    /// through [`GameState::printed_mana_budget`].
     ///
-    /// These are the LAST free bits of the mana word (43-50 are
-    /// `PLAIN_TAP`/`PLAIN_LAND`/`LAND_MANA_REPLACER`, 59-62 the four marker
-    /// bits, 63 the memo's). A sixth family needs a sixth `CardMemo` word.
+    /// These are the LAST free bits of the mana word (43-50 `PLAIN_TAP` /
+    /// `PLAIN_LAND` / `LAND_MANA_REPLACER`, 59-62 markers, 63 the memo). A
+    /// sixth family needs a sixth `CardMemo` word.
     pub(super) const AM_COLORS_SHIFT: u32 = 51;
     /// Bit 56: some countable ability produces true colourless `{C}`.
     pub(super) const AM_COLORLESS: u64 = 1 << 56;
@@ -1326,13 +1276,11 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
     }) {
         return None;
     }
-    // So is a colour read off the instance: the chosen colour (Room of
+    // So is a colour read off the instance — a chosen colour (Room of
     // Refuge, Coldsteel Heart) or the source's own colours. The definition
-    // states neither, so the memo's row claimed no colour and the pip loops
-    // never tapped the source for one — a W/U deck's Room of Refuge set to
-    // white left {2}{W} unpayable beside two Islands for fourteen turns, and
-    // 447 of 474 hands whose only source of a colour was the Room couldn't
-    // cast it (2026-11-23 FRA audit). The live walk reads both.
+    // states neither, so a memoized row claimed no colour and the pip loops
+    // never tapped it (a white-set Room of Refuge left {2}{W} unpayable,
+    // 2026-11-23 FRA audit). The live walk reads both.
     if def.activated_abilities.iter().any(|a| {
         matches!(
             a.effect,
@@ -1425,18 +1373,12 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
 }
 
 /// [`mana_summary`]'s `AM_*` half: what `bot::available_mana` would
-/// accumulate for an untapped, non-summoning-sick permanent with this
-/// definition that is granted nothing — or `0`, declining to answer, when the
-/// printed list is not simple enough to state.
-///
-/// It declines on exactly the three things that make the estimate's walk do
-/// more than accumulate: an ability the estimate cannot cost that still
-/// produces colour (the `opaque_source` arm), a countable ability whose
-/// amount is a runtime value (the other `opaque_source` arm), and a best
-/// above one mana (which would need a wider field than the word has left).
-/// The four predicates are [`crate::game::mana_shape`]'s — the same ones the
-/// walk uses, so the pack and the walk cannot drift, and `available_mana`'s
-/// `debug_assert_eq!` re-runs the walk against every packed answer it takes.
+/// accumulate for an untapped, non-summoning-sick, grant-free permanent with
+/// this definition, or `0` (declined) when the walk would do more than
+/// accumulate — an uncostable colour producer or a runtime amount (the
+/// `opaque_source` arms), or a best above one mana. Uses
+/// [`crate::game::mana_shape`]'s predicates, like the walk, and
+/// `available_mana` `debug_assert_eq!`s every packed answer.
 fn available_mana_bits(def: &crate::card::CardDefinition) -> u64 {
     use crate::game::mana_shape::{
         is_countable_mana_ability, mana_ability_output, mana_amount_is_dynamic,
@@ -1512,16 +1454,14 @@ pub(crate) fn card_has_mana_static(c: &CardInstance) -> bool {
 }
 
 /// `available_mana`'s per-definition budget, off the mana-summary memo word:
-/// `Some((best single activation, the colours it could make, produces true
-/// colourless))` when the pack states this definition's whole contribution to
-/// that estimate, `None` when the caller must run its own walk (PERF
-/// `(-317)`).
+/// `Some((best single activation, colours it could make, produces true
+/// colourless))` when the pack states the whole contribution, `None` when the
+/// caller must walk (PERF `(-317)`).
 ///
-/// ⚠ **Only sound for a permanent that is untapped, not summoning-sick and
-/// granted nothing** — the pack reads the printed list alone, and the walk it
-/// replaces skips tap abilities on the first two and chains the scan's grants
-/// on the third. The caller establishes all three; `available_mana`'s
-/// `debug_assert_eq!` is the ratchet.
+/// ⚠ Only sound for a permanent that is untapped, not summoning-sick and
+/// granted nothing (the walk skips tap abilities for the first two and adds
+/// grants for the third). The caller establishes all three;
+/// `available_mana`'s `debug_assert_eq!` is the ratchet.
 pub(crate) fn printed_mana_budget(
     c: &CardInstance,
 ) -> Option<(u32, crate::mana::ColorSet, bool)> {
@@ -1545,19 +1485,11 @@ pub(crate) fn card_redirects_deaths(c: &CardInstance) -> bool {
 
 impl ManaSourceInfo {
     /// How replaceable this source is among `others`: for each colour it
-    /// makes, how many *other* listed sources also make that colour,
-    /// minimised over its colours. A colourless source has nothing to
-    /// preserve and scores `u32::MAX`.
-    ///
-    /// This is what stops the generic portion of a cost eating a splash.
-    /// Paying `{2}{B}` off 8 Swamp / 6 Forest / 3 Island, the engine
-    /// reserved a Swamp for the `{B}` and paid the `{2}` in battlefield
-    /// order — as likely to be an Island as anything else, stranding the
-    /// blue cards the three Islands exist to cast. Spending the most
-    /// replaceable source first takes a Swamp (7 backups) before a Forest
-    /// (5) before an Island (2), and never changes *whether* the current
-    /// cost can be paid — only which of several interchangeable sources
-    /// pays it.
+    /// makes, how many *other* sources also make it, minimised over its
+    /// colours (`u32::MAX` for colourless). Spending the most replaceable
+    /// source first keeps generic costs from eating a splash: `{2}{B}` off 8
+    /// Swamp / 6 Forest / 3 Island pays with Swamps, not the Islands. Never
+    /// changes *whether* a cost is payable.
     fn redundancy(&self, others: &[ManaSourceInfo]) -> u32 {
         if self.colors.is_empty() {
             return u32::MAX;
@@ -1599,8 +1531,6 @@ fn collect_self_cast_triggers(
         .collect()
 }
 
-/// Count distinct colors of mana that decreased between two pool
-/// snapshots — i.e. the spell's converge value.
 /// Colored "or pay" halves of additional cast costs whose resource half
 /// isn't available right now (`ExileFromGraveyardOrPay` with a thin
 /// graveyard): the printed pay cost joins the spell's cost
@@ -1641,6 +1571,8 @@ pub(crate) fn or_pay_cost_symbols(
     out
 }
 
+/// Count distinct colors of mana that decreased between two pool
+/// snapshots — i.e. the spell's converge value.
 fn converge_count(before: &crate::mana::ManaPool, after: &crate::mana::ManaPool) -> u32 {
     use crate::mana::Color;
     let mut count = 0u32;
@@ -1688,17 +1620,6 @@ pub(crate) fn waterbend_amount(
     })
 }
 
-/// Walk the battlefield's static abilities + per-player tax charges to
-/// compute the total extra generic mana the caster owes for casting `card`.
-///
-/// Honors:
-///   * `StaticEffect::AdditionalCostAfterFirstSpell` (Damping Sphere): if
-///     the caster has already cast at least one spell this turn and the
-///     spell matches the static's `filter`, charge `amount` more.
-///   * `Player.first_spell_tax_charges` (Chancellor of the Annex): each
-///     pending charge taxes the caster's *next* spell {1} more. Consumed by
-///     the caller on a successful cast (we only **read** here so callers
-///     can see the tax before payment; the caster path decrements after).
 /// CR 702.34a — the card's flashback-only additional cost(s), with the cast's
 /// chosen `x` folded into any X-dependent count (Conflagrate's "Discard X
 /// cards"). `cast_flashback` validates + pays these on top of the flashback
@@ -1722,9 +1643,6 @@ pub(crate) fn flashback_additional_costs(
         .collect()
 }
 
-/// CR 601.2f — strive (an ability word, CR 207.2c) and Fireball: "this spell costs
-/// [cost] more to cast for each target beyond the first". Returns the total
-/// surcharge for `extra_targets` filled additional slots.
 /// Hinata, Dawn-Crowned — `(tax, reduction)` in generic mana for a spell
 /// `caster` casts with these targets: {N} less per target for the static's
 /// controller, {N} more for an opponent's. Targets count once each however
@@ -1765,6 +1683,9 @@ pub fn per_target_cost_shift(
     (tax.saturating_mul(n), less.saturating_mul(n))
 }
 
+/// CR 601.2f — strive (an ability word, CR 207.2c) and Fireball: "this spell costs
+/// [cost] more to cast for each target beyond the first". Returns the total
+/// surcharge for `extra_targets` filled additional slots.
 pub fn strive_cost_for_spell(
     card: &crate::card::CardInstance,
     extra_targets: usize,
@@ -1788,26 +1709,15 @@ fn carries_cost_static(c: &crate::card::CardInstance) -> bool {
 }
 
 /// The static sources any of the three cost walks below can match, gathered
-/// once and handed to their `_over` forms.
-///
-/// A source whose `static_abilities` carries nothing
+/// once per sweep and handed to their `_over` forms. A source with nothing
 /// [`static_affects_spell_cost`](crate::effect::static_affects_spell_cost)
-/// admits contributes nothing to [`extra_cost_for_spell`],
-/// [`colored_spell_tax_for_spell`] or [`cost_reduction_for_spell_full`] — the
-/// walks load its `definition` through an `Arc`, run their match over statics
-/// none of the arms can take, and move on. That is the whole of their cost on
-/// a board with no cost statics, and the bot's affordability pre-filter pays
-/// it three times **per hand card**. Building this once per sweep is sound by
-/// construction: the filter drops only sources whose inner loop cannot match.
+/// admits can't contribute to [`extra_cost_for_spell`],
+/// [`colored_spell_tax_for_spell`] or [`cost_reduction_for_spell_full`], and
+/// the bot's affordability pre-filter walks all three per hand card.
 ///
-/// ⚠ **The predicate used to be `!static_abilities.is_empty()`, which is the
-/// weaker claim "nothing to iterate" rather than "nothing to match"** — an
-/// anthem, a Sphere of Safety, any of the ~200 non-cost statics kept its
-/// permanent in the list and its holder paid the 22-arm match per hand card
-/// per check. On `sealed` the three walks were **18.1 M Ir, 1.02 % of the
-/// pool, with 96.7 % of the reduction walk's 49,140 calls making no callee
-/// call at all** — pure match over sources that could not match (PERF
-/// `(-296)`).
+/// ⚠ The predicate used to be `!static_abilities.is_empty()` ("nothing to
+/// iterate"), not "nothing to match": every anthem kept its permanent in the
+/// list and paid the 22-arm match per hand card (PERF `(-296)`).
 ///
 /// Battlefield sources come first so [`battlefield`](Self::battlefield) is a
 /// prefix; [`all`](Self::all) adds the CR 315.5 command-zone half that only
@@ -1819,14 +1729,9 @@ pub(crate) struct CostStaticSources<'a> {
 
 impl<'a> CostStaticSources<'a> {
     pub(crate) fn gather(state: &'a crate::game::GameState) -> Self {
-        // ⚠ **THE `is_empty()` TEST STAYS IN FRONT AND IT IS THE MEASUREMENT.**
-        // Written as `static_abilities.iter().any(..)` alone — which is
-        // semantically identical, since `any` over an empty slice is false —
-        // the predicate came out as an out-of-line call per battlefield card
-        // and `--decks fixed` read **+0.153 %**: that pool's boards carry
-        // almost no statics at all, so it paid the call and saved nothing,
-        // while `sealed` still read -0.229 %. With the cheap test first the
-        // empty case is the same code it was (PERF `(-296)`).
+        // ⚠ The `is_empty()` test stays in front; it is the measurement.
+        // `iter().any(..)` alone is equivalent but compiled to an out-of-line
+        // call per card and read +0.153 % on `fixed` (PERF `(-296)`).
         let mut cards: Vec<&crate::card::CardInstance> = state
             .battlefield
             .iter()
@@ -1893,6 +1798,10 @@ pub fn life_tax_for_spell(
     life
 }
 
+/// Total extra generic mana the caster owes for `card`: Damping Sphere's
+/// `AdditionalCostAfterFirstSpell` (after one spell this turn, if `filter`
+/// matches) plus `Player.first_spell_tax_charges` (Chancellor of the Annex,
+/// {1} per charge; only read here, the cast path decrements).
 pub fn extra_cost_for_spell(
     state: &crate::game::GameState,
     caster: usize,
@@ -2126,20 +2035,11 @@ pub(crate) fn consume_first_spell_tax(state: &mut crate::game::GameState, caster
     }
 }
 
-/// Sum all generic-mana cost reductions applicable to a spell being cast.
-///
-/// Supports two flavors:
-///   * `StaticEffect::CostReduction { filter, amount }` — flat per-spell
-///     reduction whose `filter` matches the cast card.
-///   * `StaticEffect::CostReductionTargetingFilter { spell_filter,
-///     target_filter, amount }` — Killian-style "if the spell targets a
-///     creature, it costs {2} less". Honors the cast's chosen target via
-///     `target` (so Lightning Bolt at face counts as targeting a player,
-///     Lightning Bolt at a creature counts as targeting a creature).
-///
-/// CR 601.2f / 118.7a: cost reductions can never reduce a colored or X
-/// pip. The caller funnels the returned reduction through
-/// `ManaCost::reduce_generic`, which clamps at the generic pip total.
+/// Sum all generic-mana cost reductions applicable to a spell being cast:
+/// `CostReduction { filter, amount }` (flat, filter on the card) and
+/// `CostReductionTargetingFilter` (Killian: "if it targets a creature, {2}
+/// less", read off the cast's chosen `target`). CR 601.2f / 118.7a — never
+/// reduces a coloured or X pip; the caller clamps via `ManaCost::reduce_generic`.
 /// True if the filter tree names a controller clause explicitly
 /// (`ControlledByYou` / `ControlledByOpponent`) — such filters replace the
 /// implicit "you control" scope of affinity-style counts.
@@ -2758,11 +2658,9 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
         ));
     }
     // One-shot "the next instant or sorcery you cast this turn costs {N}
-    // less" discounts (Thundertrap Trainer). Each was stamped with the
-    // caster's instant/sorcery tally at grant time; it applies only while
-    // that tally is unchanged — i.e. to the *next* such spell — and then
-    // naturally lapses once the tally ticks up on cast (no consume hook
-    // needed). The tally increments at spell-commit, after this read.
+    // less" (Thundertrap Trainer): stamped with the caster's instant/sorcery
+    // tally at grant time, it applies while the tally is unchanged and lapses
+    // when it ticks up at spell-commit (after this read) — no consume hook.
     if card.definition.is_instant() || card.definition.is_sorcery() {
         let cast_so_far = state.players[caster].instants_or_sorceries_cast_this_turn;
         for &(amount, granted_at) in &state.players[caster].pending_is_discounts {
@@ -2838,12 +2736,9 @@ fn self_cost_reduction_from_card(
 ) -> u32 {
     use crate::effect::StaticEffect;
     let mut reduction = 0u32;
-    // Card-intrinsic Affinity-for-[filter] cost reduction: "{1} less for
-    // each [filter]" baked onto the spell card itself. Counts every
-    // battlefield permanent matching `affinity_filter`. CR 601.2f / 118.7a —
-    // generic-only, the colored-pip clamp happens in
-    // `ManaCost::reduce_generic` once the caller folds this back into the
-    // cost.
+    // Card-intrinsic Affinity-for-[filter]: "{1} less for each [filter]",
+    // counting matching battlefield permanents. CR 601.2f / 118.7a —
+    // generic-only; `ManaCost::reduce_generic` clamps.
     if let Some(filter) = &card.definition.affinity_filter {
         let gates = crate::game::effects::PrintedGates::default();
         let count = state
@@ -3215,22 +3110,13 @@ fn self_cost_reduction_from_card(
     reduction
 }
 
-/// Trinisphere floor: the largest `StaticEffect::SpellCostFloor` amount
-/// among untapped battlefield permanents (affects every player's spells).
-/// Returns 0 if none in play.
 /// Which of the cast *cost* pipeline's battlefield statics exist right now,
-/// as a bit per family, gathered in one walk.
-///
-/// Same device as [`GameState::cast_lock_scan`] one stage later in the cast:
-/// `cast_spell_with_convoke` asked the battlefield six separate times per
-/// cast — flash grants, the coloured tax, the coloured reduction, the
-/// Trinisphere floor, granted convoke and the Gaddock Teeg lock — for
-/// statics a normal board does not have, 11,950,000 Ir / 0.69 % over 7,550
-/// casts. A bit is a pure over-approximation: the block it gates still runs
-/// its own controller / tapped / filter tests unchanged, so a set bit can
-/// only cost a walk and a clear bit can only skip work that was a no-op.
-/// `debug_assert!`s at each gated site prove the skipped work *was* a no-op
-/// on every cast the suite exercises.
+/// one bit per family, from one walk — the device of
+/// [`GameState::cast_lock_scan`] one stage earlier: replaces six per-cast
+/// battlefield walks (flash grants, coloured tax and reduction, Trinisphere,
+/// granted convoke, Gaddock Teeg). Bits over-approximate (gated blocks keep
+/// their own tests), and `debug_assert!`s at each site prove the skipped work
+/// was a no-op.
 pub(crate) mod cast_static {
     /// `AnyPlayerSpellsHaveFlash` / `ControllerSpellsHaveFlash` /
     /// `ControllerSorceriesAsFlash` (Sigarda's Aid, Vedalken Orrery, …).
@@ -3299,6 +3185,9 @@ pub(crate) fn cast_cost_scan(state: &crate::game::GameState) -> u32 {
     m
 }
 
+/// Trinisphere floor: the largest `StaticEffect::SpellCostFloor` amount
+/// among untapped battlefield permanents (affects every player's spells).
+/// Returns 0 if none in play.
 pub(crate) fn spell_cost_floor(state: &crate::game::GameState) -> u32 {
     use crate::effect::StaticEffect;
     state
@@ -3413,12 +3302,9 @@ impl crate::game::GameState {
 /// multi-color/multi-mana lands to "{T}: Add {C}".
 pub(crate) fn multi_mana_ability_count(def: &crate::card::CardDefinition) -> bool {
     use crate::effect::Effect;
-    // The Oracle says "tap to add more than one mana" — for our purposes:
-    // any land with two or more separate mana abilities, OR any single
-    // ability that produces an `AnyOneColor`/`AnyColors` payload (which
-    // could conceptually be more than one), counts. Single-color basics
-    // (one ability, `Colors([X])` of length 1) and single-color non-basics
-    // (one ability) pass through unchanged.
+    // "Tap to add more than one mana": a land with two or more mana
+    // abilities, or one ability with an `AnyOneColor`/`AnyColors` payload.
+    // Single-ability single-colour lands pass through unchanged.
     let mana_abilities: Vec<_> = def
         .activated_abilities
         .iter()
@@ -3485,20 +3371,11 @@ fn payload_yields_multiple(pool: &crate::effect::ManaPayload) -> bool {
     }
 }
 
-/// Elesh Norn, Mother of Machines: count how many times an ETB trigger
-/// from a permanent owned by `etb_controller` should fire.
-///
-/// Rules:
-/// - "Permanents entering the battlefield don't cause abilities of permanents
-///   your opponents control to trigger" → if any opponent of the
-///   permanent's controller has an Elesh Norn, the trigger is suppressed
-///   (returns 0).
-/// - "If a permanent entering the battlefield causes a triggered ability of
-///   a permanent you control to trigger, that ability triggers an additional
-///   time" → each Elesh Norn on the trigger-source's side adds one extra fire.
-///
-/// `etb_controller` is the controller of the ability's source — for self-ETB
-/// triggers, that's the entering permanent itself.
+/// Elesh Norn, Mother of Machines: how many times an ETB trigger from a
+/// permanent controlled by `etb_controller` (the ability source's controller;
+/// for self-ETB, the entering permanent) fires: 0 if any opponent has an
+/// Elesh Norn ("don't cause abilities of permanents your opponents control to
+/// trigger"), else one extra per Elesh Norn on its own side.
 pub fn etb_trigger_multiplier(
     state: &crate::game::GameState,
     etb_controller: usize,
@@ -3581,15 +3458,11 @@ pub fn etb_trigger_multiplier(
 }
 
 /// Aboleth Spawn's Probing Telepathy — the seats that copy each fire of a
-/// triggered ability of `entering` that its own entry caused, one entry per
-/// `CopyOpponentsEnteringCreatureTriggers` static an opponent of
-/// `controller` (the entering creature's controller) has on the battlefield.
-/// Empty — and a single lane read — on any board without one: the static is
-/// in the `LANE_ETB_STATIC` predicate, the lane every entering permanent
-/// already reads for `etb_trigger_multiplier`.
-///
-/// Callers push one Probing Telepathy trigger (`probing_telepathy.rs`) per
-/// (seat, Aboleth) per fire, on top of the fire it copies.
+/// triggered ability of `entering` caused by its own entry: one entry per
+/// `CopyOpponentsEnteringCreatureTriggers` static an opponent of `controller`
+/// has. One lane read (`LANE_ETB_STATIC`) on a board without one. Callers
+/// push one Probing Telepathy trigger (`probing_telepathy.rs`) per (seat,
+/// Aboleth) per fire, on top of the fire it copies.
 pub(crate) fn entering_trigger_copiers(
     state: &crate::game::GameState,
     controller: usize,
@@ -3638,15 +3511,12 @@ pub(crate) fn creature_etb_triggers_suppressed(state: &crate::game::GameState) -
 }
 
 /// CR 603-style "triggers an additional time" — extra fires a triggered
-/// ability gets because its `source` is a creature controlled by a player who
-/// controls a subtype-keyed trigger doubler: `DoubleControllerAllyTriggers`
-/// (Katara, the Fearless — Allies) or the general
-/// `DoubleControllerTriggersOfType` (Harmonic Prodigy — Shaman / another
-/// Wizard), `DoubleControllerLegendaryCreatureTriggers` (Annie Joins Up) or
-/// the unconditional `DoubleControllerPermanentTriggers` (Fractured Realm).
-/// 0 unless the source is a matching permanent `controller` controls. A gated
-/// doubler (`WhileCondition` — Bifur's "as long as you have an enduring
-/// story") counts only while `active_static` finds its gate open.
+/// ability gets because its `source` is a matching creature `controller`
+/// controls under a subtype-keyed doubler: `DoubleControllerAllyTriggers`
+/// (Katara), `DoubleControllerTriggersOfType` (Harmonic Prodigy),
+/// `DoubleControllerLegendaryCreatureTriggers` (Annie Joins Up) or the
+/// unconditional `DoubleControllerPermanentTriggers` (Fractured Realm). A
+/// `WhileCondition` doubler (Bifur) counts only while `active_static` opens it.
 pub(crate) fn ally_trigger_extra_fires(
     state: &crate::game::GameState,
     controller: usize,
@@ -3678,13 +3548,10 @@ fn static_trigger_extra_fires(
     source: crate::card::CardId,
 ) -> usize {
     use crate::effect::StaticEffect;
-    // Presence gate. The layer read below is a whole-game gather and this
-    // runs once per trigger dispatch, on boards that almost never carry a
-    // doubler. The gate is *exact*, not an approximation: the sum below can
-    // only be non-zero when some permanent `controller` controls prints one
-    // of these five statics, which is the same set and the same seat filter
-    // the loop tests. A doubler granted by another effect would not be
-    // counted by the loop either — it reads `c.definition.static_abilities`.
+    // Presence gate, exact: the sum below is non-zero only when some
+    // permanent `controller` controls prints one of these five statics
+    // (the loop reads `c.definition.static_abilities` too), so the
+    // whole-game layer gather runs only on boards with a doubler.
     if !state.battlefield.iter().any(|c| {
         c.controller == controller
             && c.definition.static_abilities.iter().any(|sa| {
@@ -3794,20 +3661,12 @@ pub(crate) fn creature_dies_triggers_suppressed(state: &crate::game::GameState) 
         .any(|c| c.dispatch_scan_bits() & crate::card::dispatch_bits::DIES_SUPPRESS != 0)
 }
 
-/// Strict Proctor ETB-trigger tax — CR 614 replacement effect.
-///
-/// Strict Proctor — "Whenever a permanent entering causes a triggered
-/// ability to trigger, counter that ability unless its controller pays
-/// {amount}." Read at ETB-trigger dispatch time for each
-/// `StaticEffect::EtbTriggerTax` in play.
-///
-/// Returns `true` if the trigger should fire (controller paid or no tax in
-/// play), `false` if it should be countered (controller declined or
-/// couldn't pay). Countering the ability has no other consequence — the
-/// trigger simply never fires (CR 701.5a).
-///
-/// `trigger_source` is the permanent whose ability is triggering (used to
-/// aim the pay-or-counter decision at something visible).
+/// Strict Proctor ETB-trigger tax (CR 614) — "Whenever a permanent entering
+/// causes a triggered ability to trigger, counter that ability unless its
+/// controller pays {amount}", for each `StaticEffect::EtbTriggerTax` in play.
+/// Returns `true` if the trigger fires (paid, or no tax), `false` if it is
+/// countered (it simply never fires, CR 701.5a). `trigger_source` aims the
+/// pay-or-counter decision at something visible.
 pub(crate) fn apply_etb_trigger_tax(
     state: &mut crate::game::GameState,
     trigger_source: crate::card::CardId,
@@ -3837,17 +3696,12 @@ pub(crate) fn apply_etb_trigger_tax(
     if total_tax == 0 {
         return true;
     }
-    // `AutoDecider` answers `Bool(false)` to **every** `OptionalTrigger`, so a
-    // bare `decide` here declined every tax and a headless controller under a
-    // Strict Proctor lost every ETB trigger it owned — the decision-plumbing
-    // audit's "Ad Nauseam pattern", and the opposite of the policy
-    // `catalog::strict_proctor`'s own doc comment describes. Keeping your own
-    // trigger is worth the mana when you can afford it.
-    //
-    // CR 605.3a — a cost paid while an ability resolves may be paid with mana
-    // abilities, so the tax auto-taps (as `equip` / `pay_action_mana` do).
-    // It used to read and pay the floated pool only, so a seat that doesn't
-    // pre-float — every bot — lost every taxed trigger.
+    // `AutoDecider` declines every `OptionalTrigger`, which lost a headless
+    // controller every ETB trigger under a Strict Proctor (the "Ad Nauseam
+    // pattern"); keeping your trigger is worth the mana when affordable.
+    // CR 605.3a — the tax may be paid with mana abilities, so it auto-taps
+    // (as `equip` / `pay_action_mana` do); paying from the floated pool only
+    // lost every bot every taxed trigger.
     let pay = if matches!(state.decider.kind(), crate::decision::DeciderKind::Auto) {
         state.could_pay_generic(trigger_controller, total_tax)
     } else {
@@ -3947,23 +3801,13 @@ impl crate::game::GameState {
         if card.cast_condition_held && card.definition.keywords.has_kw(&Keyword::CantBeCounteredIfCastCondition) {
             return true;
         }
-        // The three remaining routes are all battlefield statics, and each one
-        // used to take its own whole-board `static_abilities` walk — three per
-        // cast, for mechanics almost no board has, and the third built a
-        // `Vec<SelectionRequirement>` of cloned filters to walk afterwards.
-        // One pass answers all three. The two filter tests are pure, so
-        // meeting them in board order rather than in rule order cannot change
-        // the answer.
-        //
-        // * `SpellsUncounterable` — "creature and enchantment spells you
-        //   control can't be countered" (Destiny Spinner), the caster's own
-        //   permanents only. The card is mid-cast (in no zone yet), so the
-        //   filter matches on the card itself.
-        // * `CreatureSpellsCantBeCountered` — symmetric (Leyline of
-        //   Lifeforce): any player's copy protects every player's creature
-        //   spells.
-        // * `SpellsCantBeCounteredMatching` — the filtered symmetric sibling
-        //   (Root Sliver).
+        // The three remaining routes are battlefield statics, answered in one
+        // pass (the filter tests are pure, so board order can't change the
+        // answer):
+        // * `SpellsUncounterable` — the caster's own permanents (Destiny
+        //   Spinner); the card is mid-cast, so the filter matches it directly.
+        // * `CreatureSpellsCantBeCountered` — symmetric (Leyline of Lifeforce).
+        // * `SpellsCantBeCounteredMatching` — filtered symmetric (Root Sliver).
         let card_is_creature = self.computed_is_creature(card);
         for src in self.battlefield.iter() {
             let own = src.controller == caster;
@@ -4294,12 +4138,9 @@ impl crate::game::GameState {
         })
     }
 
-    /// CR 305.2 — Number of additional lands `player` may play this turn
-    /// over the default "one." Counts every battlefield permanent that
-    /// the given player controls whose static abilities include
-    /// `StaticEffect::ExtraLandPerTurn` (Exploration, Azusa Lost But
-    /// Seeking, Wayward Swordtooth). Each granting permanent adds one,
-    /// so two Explorations stack to "three lands per turn."
+    /// CR 305.2 — additional lands `player` may play this turn beyond one:
+    /// one per permanent they control with `StaticEffect::ExtraLandPerTurn`
+    /// (Exploration, Azusa), so two Explorations make three.
     pub fn extra_land_plays_per_turn(&self, player: usize) -> u32 {
         use crate::effect::StaticEffect;
         if !self.battlefield.has_land_play_static() {
@@ -4576,24 +4417,21 @@ impl crate::game::GameState {
         })
     }
 
-    /// Does any battlefield permanent's definition carry a static the
-    /// mana-ability path reads per activation (`dispatch_bits::MANA_STATIC`:
-    /// a production multiplier, an extra-mana land-tap grant, a named-source
-    /// activation tax)? One lane read on a hit; a miss walks the memo words
-    /// and fills the lane. Every land tap asked all three as whole-board
-    /// `static_abilities` walks — ~780 Ir a tap over 24,232 taps on a
-    /// six-game `cube` run (PERF `(-197)`).
     /// Does any battlefield permanent's definition carry a static that can
     /// redirect a card bound for a graveyard (`mana_summary::DEATH_REDIRECT`)?
-    /// One lane read on a hit; the four per-death `static_abilities` walks
-    /// in the death path and `graveyard_exile_redirects` run only when it
-    /// says so (PERF `(-203)`). The dying card is already off the
-    /// battlefield when those ask, so its *own* statics are read separately.
+    /// The per-death `static_abilities` walks run only when it says so (PERF
+    /// `(-203)`); the dying card's own statics are read separately, since it
+    /// is already off the battlefield.
     #[inline]
     pub(crate) fn board_redirects_deaths(&self) -> bool {
         self.battlefield.has_death_redirect(card_redirects_deaths)
     }
 
+    /// Does any battlefield permanent's definition carry a static the
+    /// mana-ability path reads per activation (`dispatch_bits::MANA_STATIC`:
+    /// production multiplier, extra-mana land-tap grant, named-source tax)?
+    /// One lane read on a hit; a miss walks the memo words and fills the lane
+    /// (PERF `(-197)`).
     pub(crate) fn board_has_mana_static(&self) -> bool {
         match self.battlefield.mana_static_lane() {
             Ok(found) => found,
@@ -4685,13 +4523,9 @@ impl crate::game::GameState {
         )
     }
 
-    /// [`best_color_for_hand`] restricted to a legal set — a "produce one of
-    /// *these* colors" ability (Mox Amber's legendary union, a dual land's
-    /// two). Falls back to the set's first entry, which is what the bare
-    /// `ChooseColor` ask did for every headless seat.
-    ///
-    /// One walker for both: the unrestricted form is this one over all five,
-    /// so the needs-aware answer cannot drift between the two shapes.
+    /// [`best_color_for_hand`] restricted to a legal set (Mox Amber, a dual's
+    /// two), falling back to the set's first entry. The unrestricted form is
+    /// this over all five, so the two can't drift.
     ///
     /// [`best_color_for_hand`]: Self::best_color_for_hand
     pub(crate) fn best_color_for_hand_among(&self, p: usize, legal: &[ManaColor]) -> ManaColor {
@@ -4710,18 +4544,11 @@ impl crate::game::GameState {
     }
 
     /// The one answer to "add one mana of a color of your choice", from the
-    /// legal set, for every shape of the question `Effect::AddMana` carries.
-    ///
-    /// Seven sites asked it and every one of them fell back to
-    /// `legal[0]`/`White` for a headless seat, because a bare
-    /// `Decision::ChooseColor` reaches `AutoDecider` and it answers with the
-    /// first legal colour. That wastes the pip for any non-white deck — in
-    /// the *training* path, where every seat is headless — and the engine has
-    /// had the needs-aware answer since the extra-mana riders were written.
-    /// One function so the seven cannot drift; the parallel-walker class this
-    /// repo keeps closing.
-    ///
-    /// A real decider (scripted test, UI seat) is still asked.
+    /// legal set, for every shape `Effect::AddMana` carries. A real decider
+    /// (scripted test, UI seat) is asked; a headless one gets the needs-aware
+    /// answer instead of `AutoDecider`'s first legal colour (which wasted the
+    /// pip for non-white decks in training). One function for all seven
+    /// sites so they can't drift.
     pub(crate) fn chosen_mana_color(
         &mut self,
         p: usize,
@@ -4818,19 +4645,14 @@ impl crate::game::GameState {
         pick_densest(&totals, legal)
     }
 
-    /// The colour a "choose a color" carried by `source` names.
-    ///
-    /// A real decider is asked and its answer is authoritative. A headless one
-    /// — and **every bot seat**, because a bare `decider.decide` never reaches
-    /// `decide_pending_policy` — keys on what the card does with the answer
-    /// (`CardDefinition::chosen_color_aimed_at_opponents`): the colour the
-    /// opponents are most invested in when the card reads it off their side,
-    /// this seat's own densest when it reads it off ours. Both sides are
-    /// `color_weights`, the one census.
-    ///
-    /// Every site that used to fall back to `legal[0]` named **White**, for
-    /// about a hundred cards: Voice of All's protection, Iona's lock, Story
-    /// Circle's prevention and Heraldic Banner's anthem all on the same word.
+    /// The colour a "choose a color" carried by `source` names. A real
+    /// decider's answer is authoritative. A headless one — and every bot
+    /// seat, since a bare `decider.decide` never reaches
+    /// `decide_pending_policy` — keys on
+    /// `CardDefinition::chosen_color_aimed_at_opponents`: the opponents'
+    /// most-invested colour when the card reads it off their side, this
+    /// seat's densest otherwise (both from `color_weights`). The old
+    /// `legal[0]` fallback named White for ~100 cards (Iona, Heraldic Banner).
     pub(crate) fn chosen_color_for_source(
         &mut self,
         p: usize,
@@ -5014,16 +4836,11 @@ impl crate::game::GameState {
         events: &mut Vec<GameEvent>,
     ) {
         use crate::effect::{ExtraManaKind, StaticEffect};
-        // Every land tap reaches here, and the walk below builds a `Vec` and
-        // clones the turn-scoped list whether or not anything on the board
-        // grants extra mana. Two presence questions answer it without
-        // allocating: a short-circuiting `any` over mostly-empty
-        // `static_abilities`, and an emptiness check. **Asked before the
-        // `land_id` lookup**, which is a second whole-battlefield walk for a
-        // card nobody reads on a board with no such grant.
-        // The lane is a superset (`MANA_STATIC` covers three static kinds);
-        // a board that has one of the others and no `ExtraManaOnLandTap`
-        // walks below and collects nothing, as before.
+        // Every land tap reaches here; two allocation-free presence questions
+        // (the turn list's emptiness, the `MANA_STATIC` lane) settle the
+        // common case before the `land_id` lookup's battlefield walk. The
+        // lane is a superset, so a board with another mana static walks and
+        // collects nothing, as before.
         if self.extra_mana_on_land_tap_this_turn.is_empty() && !self.board_has_mana_static() {
             return;
         }
@@ -5176,13 +4993,8 @@ impl GameState {
 
 /// An activated ability as the per-permanent walkers read it: printed ones
 /// borrowed from the card definition, synthesized ones (grants, intrinsic
-/// basic-land abilities) boxed.
-///
-/// This was a `Cow<ActivatedAbility>`, which inlines the whole struct into
-/// every element — `Effect` alone is 448 bytes — so a Forest's one-element
-/// list cost a ~600-byte allocation and memcpy, once per untapped permanent
-/// per `mana_source_table`. The synthesized side is the rare one and is the
-/// side that pays a pointer here.
+/// basic-land abilities) boxed. Not a `Cow<ActivatedAbility>`, which inlined
+/// the ~600-byte struct into every element of every per-permanent list.
 #[derive(Debug, Clone)]
 pub enum AbilityRef<'a> {
     Printed(&'a crate::effect::ActivatedAbility),
@@ -5199,14 +5011,10 @@ impl std::ops::Deref for AbilityRef<'_> {
     }
 }
 
-/// How `activate_ability_inner` holds the ability it is activating for the
-/// rest of the call: a printed one as the definition's `Arc` plus its index,
-/// a synthesized one (grant, intrinsic land mana) by value.
-///
-/// The call needs `&mut self` from here on, so the ability cannot stay
-/// borrowed out of `self` — it used to be deep-cloned for that, an `Effect`
-/// and every cost field per activation. An `Arc` clone answers the same
-/// borrow question for a refcount.
+/// How `activate_ability_inner` holds the ability it is activating: a printed
+/// one as the definition's `Arc` plus its index, a synthesized one (grant,
+/// intrinsic land mana) by value. The call needs `&mut self`, so the ability
+/// can't stay borrowed; an `Arc` clone replaces a deep clone.
 enum HeldAbility {
     Printed(std::sync::Arc<crate::card::CardDefinition>, usize),
     Owned(crate::effect::ActivatedAbility),
@@ -5261,13 +5069,10 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
     use crate::mana::ColorSet;
     match pool {
         ManaPayload::Colors(cs) => cs.iter().collect(),
-        // `AnyColorInCommanderIdentity` promises all five at the
-        // definition level, where the commander is not known. That over-
-        // promises in a Commander game, but harmlessly: every card in a
-        // legal deck is inside the commander's identity (CR 903.5c), so
-        // every pip auto-tap asks this source for is a color it can
-        // actually make. A stolen off-identity spell is the exception,
-        // and it fails the payment rather than producing a wrong color.
+        // `AnyColorInCommanderIdentity` promises all five at definition level
+        // (the commander isn't known). Harmless: every legal deck card is in
+        // the identity (CR 903.5c); a stolen off-identity spell fails the
+        // payment rather than producing a wrong colour.
         ManaPayload::AnyOneColor(_)
         | ManaPayload::AnyColorInCommanderIdentity
         | ManaPayload::CircledColors
@@ -5298,17 +5103,12 @@ pub(crate) fn payload_produced_colors(pool: &ManaPayload) -> crate::mana::ColorS
         ManaPayload::OfColor(c, _) => ColorSet::single(*c),
         ManaPayload::OfColors(cs, _) => cs.iter().collect(),
         ManaPayload::Colorless(_) => ColorSet::empty(),
-        // Spend-restricted sources are not auto-tapped: their mana can
-        // only fund some spells, so tapping one to "cover" a colored
-        // pip could strand an otherwise-payable cast. The controller
-        // activates them deliberately (or they float via a trigger),
-        // and `pay_for_spell` consumes the floated mana.
-        // A rider is spendable on anything, so its source auto-taps like
-        // an unrestricted one (Path of Ancestry is a land with no other
-        // ability — leaving it out made it produce nothing for a bot).
-        // A real restriction stays opaque to the table: the auto-tapper can't
-        // know what it is funding. A payment that comes up short retries with
-        // them floated (`pay_with_restricted_sources`), where the kind is known.
+        // Spend-restricted sources aren't auto-tapped (tapping one for a
+        // coloured pip could strand a payable cast); the controller taps them
+        // deliberately and `pay_for_spell` spends the float. A rider is
+        // spendable on anything, so it auto-taps (Path of Ancestry produced
+        // nothing for a bot otherwise). A short payment retries with real
+        // restrictions floated (`pay_with_restricted_sources`).
         ManaPayload::Restricted(inner, r) if r.is_rider() => {
             payload_produced_colors(inner)
         }
@@ -5367,10 +5167,6 @@ impl GameState {
             })
     }
 
-    /// Whether a may-play permission's own condition holds right now:
-    /// `WhileExiledIfHolderControls` wants its holder to control a creature
-    /// of the named type (Flameshape's Wizard); every other duration is
-    /// usable for as long as it lasts.
     /// `Effect::CapGrantedCastsAtCast`: whether a granted card's mana value
     /// is within the cap recorded for it, read now (CR 601.2).
     pub(crate) fn granted_cast_under_cap(&self, card_id: CardId, mana_value: u32) -> bool {
@@ -5385,6 +5181,10 @@ impl GameState {
         i64::from(mana_value) <= i64::from(self.evaluate_value(cap, &ctx))
     }
 
+    /// Whether a may-play permission's own condition holds right now:
+    /// `WhileExiledIfHolderControls` wants its holder to control a creature
+    /// of the named type (Flameshape's Wizard); every other duration is
+    /// usable for as long as it lasts.
     pub(crate) fn may_play_usable(&self, perm: &crate::card::MayPlayPermission) -> bool {
         match perm.duration {
             crate::card::MayPlayDuration::WhileExiledIfHolderControls { creature_type } => {
@@ -5595,10 +5395,6 @@ impl GameState {
         self.place_land_card(p, card, from_hand)
     }
 
-    /// CR 305 — Play a land from the controller's graveyard, legal only while
-    /// a `StaticEffect::MayPlayLandsFromGraveyard` permanent (Crucible of
-    /// Worlds, Ramunap Excavator) is in play. Honors the same sorcery-speed
-    /// and one-land-per-turn restrictions as a hand land play.
     /// CR 702.139 — pay {3} at sorcery speed to move a companion from the
     /// sideboard to its owner's hand (once per game; it leaves the
     /// sideboard for good).
@@ -5633,6 +5429,10 @@ impl GameState {
         Ok(Vec::new())
     }
 
+    /// CR 305 — Play a land from the controller's graveyard, legal only while
+    /// a `StaticEffect::MayPlayLandsFromGraveyard` permanent (Crucible of
+    /// Worlds, Ramunap Excavator) is in play. Honors the same sorcery-speed
+    /// and one-land-per-turn restrictions as a hand land play.
     pub(crate) fn play_land_from_graveyard(
         &mut self,
         card_id: CardId,
@@ -5719,12 +5519,10 @@ impl GameState {
         if !from_hand && !self.players[p].played_land_not_from_hand_this_turn {
             self.players[p].played_land_not_from_hand_this_turn = true;
         }
-        // Damping Sphere: if any battlefield permanent grants
-        // `LandsTapColorlessOnly`, downgrade this land's mana abilities
-        // to `{T}: Add {C}` if the original would have produced more than
-        // one mana per tap. Applied in-place on the new instance's
-        // definition before the card lands on the battlefield, so all
-        // downstream activations see the replaced ability set.
+        // Damping Sphere (`LandsTapColorlessOnly`): a land whose ability makes
+        // more than one mana per tap becomes `{T}: Add {C}`, rewritten on the
+        // new instance's definition before it lands so every later
+        // activation sees it.
         if self.lands_tap_colorless_only_active()
             && multi_mana_ability_count(&card.definition)
         {
@@ -5796,16 +5594,11 @@ impl GameState {
         // the copied card's (the token path's order).
         let mut copy_events = Vec::new();
         self.apply_enters_as_copy(card_id, p, &mut copy_events);
-        // CR 614.12 — a land drop is a battlefield entry like any other, so
-        // the as-enters replacements run here too, before the counters and
-        // before the ETB triggers. Cavern of Souls names its creature type
-        // as it is *played*, which is the only way it ever enters.
-        //
-        // A `wants_ui` controller is asked rather than answered for, and this
-        // is the one entry path with nowhere to park the continuation — no
-        // stack item above it, and nothing replayable behind it (the land is
-        // pushed and `lands_played_this_turn` is already spent). So park it
-        // on a `LandEntry` resume and finish the entry when the answer lands.
+        // CR 614.12 — a land drop is a battlefield entry, so as-enters
+        // replacements run here before counters and ETBs (Cavern of Souls
+        // names its type as it's played). A `wants_ui` controller is asked,
+        // and with no stack item or replay to park on (the land drop is
+        // spent), the continuation goes on a `LandEntry` resume.
         if self.apply_as_enters_replacements_suspending(card_id)
             && let Some(sig) = self.suspend_signal.take()
         {
@@ -5860,25 +5653,6 @@ impl GameState {
         out
     }
 
-    /// Push the source-itself ETB triggered abilities for a permanent that
-    /// has just entered the battlefield. Used by `play_land` and by Move →
-    /// Battlefield zone changes so triggered abilities fire consistently
-    /// regardless of how the permanent arrived.
-    /// CR 614.13 — apply "[permanents] enter the battlefield tapped"
-    /// replacement effects from *other* permanents to a permanent that has
-    /// just entered. Powers Authority of the Consuls / Imposing Sovereign /
-    /// Thalia, Heretic Cathar (opponents' creatures) and the symmetric
-    /// land-tappers (Root Maze, Kismet). Taps the entrant if any active
-    /// `StaticEffect::EntersTapped` whose `applies_to` selector matches it is
-    /// in play. Called from [`fire_self_etb_triggers`], the universal "a
-    /// permanent entered" hook, so every enter path (cast, token, reanimate,
-    /// land drop) is covered.
-    /// CR 614 — a permanent printed `enters_under_opponent_control` enters
-    /// under an opponent of its controller's choice. Applied at the entry hook,
-    /// before any ETB trigger reads a controller. With one opponent alive the
-    /// choice is forced; with several the controller picks the first alive
-    /// opponent in seat order (a bot-policy default, like the other
-    /// auto-resolved entry choices).
     /// CR 702.138 — the filter an escaping card puts on the graveyard cards
     /// it exiles (`CardDefinition::escape_exile_filter`, Helbrute).
     pub(crate) fn escape_exile_filter_of(
@@ -5893,6 +5667,8 @@ impl GameState {
             .and_then(|c| c.definition.escape_exile_filter.clone())
     }
 
+    /// CR 614 — a permanent printed `enters_under_opponent_control` enters
+    /// under the first alive opponent in seat order, a bot-policy default.
     pub(crate) fn apply_enters_under_opponent_control(&mut self, card_id: CardId) {
         let Some(c) = self.battlefield_find(card_id) else { return };
         // The guard keeps the replacement one-shot: every entry path funnels
@@ -5911,6 +5687,10 @@ impl GameState {
         }
     }
 
+    /// CR 614.13 — other permanents' `StaticEffect::EntersTapped`
+    /// replacements (Authority of the Consuls, Root Maze), applied to a
+    /// permanent that just entered from
+    /// [`fire_self_etb_triggers`](Self::fire_self_etb_triggers).
     pub(crate) fn apply_enters_tapped_replacement(&mut self, card_id: CardId) {
         use crate::effect::StaticEffect;
         use crate::game::layers::{AffectedPermanents, affected_includes};
@@ -6072,10 +5852,6 @@ impl GameState {
         !matches!(self.ask_entering(seat, &decision), crate::decision::DecisionAnswer::Bool(false))
     }
 
-    /// CR 614 — true when `seat` controls an "enters untapped" replacement
-    /// (Spelunking) that outranks every enters-tapped effect on their lands.
-    /// Shared by `apply_enters_tapped_replacement` and by the as-enters
-    /// "if you don't, it enters tapped" branch, which have to agree.
     /// CR 614 — an "enters untapped" replacement covers the entering
     /// permanent `id`: a land under `lands_enter_untapped_for`, or a
     /// permanent matching a `MatchingEnterUntapped` static its controller
@@ -6099,6 +5875,10 @@ impl GameState {
             })
     }
 
+    /// CR 614 — true when `seat` controls an "enters untapped" replacement
+    /// (Spelunking) that outranks every enters-tapped effect on their lands.
+    /// Shared by `apply_enters_tapped_replacement` and by the as-enters
+    /// "if you don't, it enters tapped" branch, which have to agree.
     pub(crate) fn lands_enter_untapped_for(&self, seat: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.has_etb_static()
@@ -6124,20 +5904,13 @@ impl GameState {
         self.apply_enters_tapped_replacement(card_id);
     }
 
-    /// CR 306.5b / 310.7 with CR 707 — the *entering* counters are seeded from
-    /// the printed line before the copy replacement rewrites it, so a copier
-    /// that becomes a planeswalker or a battle lands with none of them.
-    ///
-    /// The copier is a creature (Spark Double, Clone), so the seeding pass on
-    /// the way in sees `base_loyalty == 0` and skips; the rewrite then makes it
-    /// a planeswalker with no loyalty counters, and the first SBA sweep kills
-    /// it. Same argument and same place as
-    /// [`reapply_enters_tapped_after_copy`](Self::reapply_enters_tapped_after_copy):
-    /// re-decide against the **copied** characteristics once the copy lands.
-    ///
-    /// Only ever adds — a copier that was already a planeswalker kept its own
-    /// seeding, and this overwrites it with the copied value, which is what
-    /// CR 707.2 says the copy's printed loyalty now is.
+    /// CR 306.5b / 310.7 with CR 707 — entering counters are seeded from the
+    /// printed line before the copy replacement rewrites it, so a creature
+    /// copier (Spark Double) that becomes a planeswalker or battle would land
+    /// with none and die to SBA. Like
+    /// [`reapply_enters_tapped_after_copy`](Self::reapply_enters_tapped_after_copy),
+    /// re-decide against the copied characteristics. Overwrites a copier's
+    /// own seeding with the copied value (CR 707.2).
     pub(crate) fn reseed_entering_counters_after_copy(&mut self, card_id: CardId) {
         use crate::card::CounterType;
         let Some(c) = self.battlefield_find(card_id) else { return };
@@ -6242,6 +6015,7 @@ impl GameState {
         ctx
     }
 
+    /// Push a just-entered permanent's own ETB triggers, for every enter path.
     pub fn fire_self_etb_triggers(&mut self, card_id: CardId, controller: usize) {
         // CR 614 — "enters under the control of an opponent of your choice"
         // (Captive Audience). A control-setting entry replacement, so it lands
@@ -6449,12 +6223,10 @@ impl GameState {
             }
             return Err(GameError::CardNotInHand(card_id));
         }
-        // Snapshot the front-face definition AND look up the back face.
-        // On a rejected cast the inner path returns the card to the hand
-        // with its (then-swapped) back-face definition; we restore the
-        // front face here so the player can still cast either face on
-        // retry. Without the restore, one failed back-face cast burns the
-        // front face for the rest of the game.
+        // Snapshot the front-face definition and look up the back face: a
+        // rejected cast returns the card to hand with the swapped back face,
+        // so restore the front here (or one failed back-face cast burns the
+        // front face for the game).
         let (front_def, back_def) = {
             let card = self
                 .players[p]
@@ -6651,17 +6423,12 @@ impl GameState {
         }
     }
 
-    /// SOS Prepare — cast a copy of a prepared creature's inset prepare
-    /// spell. The copy is paid for and timing-checked like a normal spell
-    /// of its card type via the regular `cast_spell` pipeline (a fresh
-    /// `CardInstance` is hopped through the caster's hand the way the
-    /// Muldrotha / library-top paths do), then flagged `is_token` on the
-    /// stack so it ceases to exist when it leaves the stack (CR 707.10a —
-    /// it never hits a graveyard). Casting it removes the creature's
-    /// Prepared counter ("unprepares it").
-    ///
-    /// Only the prepared creature's *current controller* may cast the
-    /// copy — a stolen prepared creature brings its spell along.
+    /// SOS Prepare — cast a copy of a prepared creature's inset prepare spell
+    /// through the regular `cast_spell` pipeline (a fresh `CardInstance`
+    /// hopped through hand, as the Muldrotha paths do), then flagged
+    /// `is_token` on the stack so it ceases to exist off it (CR 707.10a).
+    /// Casting removes the Prepared counter. Only the creature's *current
+    /// controller* may cast it.
     pub(crate) fn cast_prepare_spell(
         &mut self,
         creature_id: CardId,
@@ -6698,17 +6465,12 @@ impl GameState {
         self.settle_prepare_after_cast(copy_id, result)
     }
 
-    /// SOS Prepare — settle the bookkeeping for a prepare-spell copy after a
-    /// cast attempt (direct or a mid-cast-suspension resume replay). No-op
-    /// unless `copy_id` is registered in `pending_prepare_copies`.
-    ///
-    /// - Copy on the stack → flag it `is_token` (CR 707.10a — it ceases to
-    ///   exist off the stack; flagged only now because an in-hand token
-    ///   would be swept by the token SBA), unprepare the source creature,
-    ///   drop the registration.
-    /// - Cast suspended again (`Ok` with a fresh `pending_decision`, copy
-    ///   parked back in hand) → keep the registration for the next resume.
-    /// - Cast failed (or the copy vanished) → unmaterialize the copy.
+    /// SOS Prepare — settle a prepare-spell copy after a cast attempt (direct
+    /// or resume replay); no-op unless `copy_id` is in
+    /// `pending_prepare_copies`. On the stack → flag it `is_token` (CR
+    /// 707.10a; not earlier, or the token SBA sweeps it from hand), unprepare
+    /// the source, drop the registration. Suspended again → keep it. Failed
+    /// or vanished → unmaterialize the copy.
     pub(crate) fn settle_prepare_after_cast(
         &mut self,
         copy_id: CardId,
@@ -6778,23 +6540,15 @@ impl GameState {
                 }
             }
         }
-        // {X} cast costs: a hand-paying caster who didn't send an X picks
-        // one via a `ChooseAmount` modal (suspend + clean replay — nothing
-        // has been paid yet). Without this the client's `x_value: None`
-        // resolved every human-cast X spell at X=0 (a 0/0 Fractal Summoning
-        // token, a 0-card Mind Twist, …).
+        // {X} cast costs: a hand-paying caster who sent no X picks one via a
+        // `ChooseAmount` modal (suspend + clean replay; nothing paid yet).
+        // Without it every human X spell resolved at X=0.
         //
-        // Gated on [`manual_mana`], not `wants_ui`. Choosing X *is* paying a
-        // cost, so it belongs to the same population as hand-picking lands —
-        // and the two are not the same set, because bot seats set `wants_ui`
-        // to get their decisions surfaced. The old gate deadlocked bot games
-        // outright: the suspend returns `Ok`, so `would_accept` reported an
-        // unaffordable X spell as castable; the bot committed it, answered
-        // the modal, and the replayed cast then failed on mana or on timing.
-        // `perform_action`'s rollback restored the pending decision along
-        // with everything else, so the bot answered the same decision the
-        // same way forever. That livelocked ~14 % of cube games, and they
-        // were dropped from every ladder and recommender measurement.
+        // Gated on [`manual_mana`], not `wants_ui`: choosing X is paying a
+        // cost, and bot seats set `wants_ui` too. Prompting a bot livelocked
+        // ~14 % of cube games — the suspend returns `Ok`, so `would_accept`
+        // called an unaffordable X spell castable, the replay failed, and the
+        // rollback restored the same decision forever.
         {
             let p = self.priority.player_with_priority;
             if x_value.is_none()
@@ -7947,9 +7701,6 @@ impl GameState {
         capped
     }
 
-    /// CR 702.32 — cast a spell paying its optional Kicker cost. The kicker
-    /// mana is added to the spell's cost and the resolving spell is stamped
-    /// `kicked`, which `Predicate::SpellWasKicked` reads.
     /// CR 702.33b — cast a spell paying the chosen subset of its
     /// `kicker_options`. The picks are stamped onto the spell so
     /// `Predicate::SpellWasKickedWith` riders fire per option (the Volvers).
@@ -7977,6 +7728,9 @@ impl GameState {
         out
     }
 
+    /// CR 702.32 — cast a spell paying its optional Kicker cost. The kicker
+    /// mana is added to the spell's cost and the resolving spell is stamped
+    /// `kicked`, which `Predicate::SpellWasKicked` reads.
     pub(crate) fn cast_spell_kicked(
         &mut self,
         card_id: CardId,
@@ -7988,11 +7742,6 @@ impl GameState {
         self.cast_spell_with_convoke(card_id, target, additional_targets, mode, x_value, &[], &[], CastFlags { kicked: true, ..Default::default() })
     }
 
-    /// CR 702.153 — cast a spell paying its optional Casualty cost. The named
-    /// creature (controlled by the caster, power ≥ the casualty number) is
-    /// sacrificed as an additional cost before the spell is put on the stack;
-    /// then the just-cast spell is copied (the copy's controller may choose
-    /// new targets — AutoDecider keeps the originals).
     /// CR 601.2h — run `f` on a throwaway clone first; only when the whole
     /// additional-cost cast sequence succeeds is it re-applied to the real
     /// state, so a late payment failure can't leave partial state (a spell
@@ -8006,6 +7755,11 @@ impl GameState {
         f(self)
     }
 
+    /// CR 702.153 — cast a spell paying its optional Casualty cost. The named
+    /// creature (controlled by the caster, power ≥ the casualty number) is
+    /// sacrificed as an additional cost before the spell is put on the stack;
+    /// then the just-cast spell is copied (the copy's controller may choose
+    /// new targets — AutoDecider keeps the originals).
     pub(crate) fn cast_spell_casualty(
         &mut self,
         card_id: CardId,
@@ -8514,10 +8268,6 @@ impl GameState {
         Ok(events)
     }
 
-    /// CR 702.176 — cast a spell paying its optional Bargain cost. If
-    /// `sacrifice` is `Some`, that artifact/enchantment/token the caster
-    /// controls is sacrificed as an additional cost and the resolving spell is
-    /// stamped `bargained` (read by `Predicate::SpellWasBargained`).
     /// CR 702.47 — cast `card_id` splicing the given hand cards onto it.
     /// Each splice card must carry a `Keyword::Splice` whose quality matches
     /// one of the spell's subtypes; it stays in hand (revealed), its splice
@@ -8636,6 +8386,10 @@ impl GameState {
         Ok(cost_events)
     }
 
+    /// CR 702.176 — cast a spell paying its optional Bargain cost. If
+    /// `sacrifice` is `Some`, that artifact/enchantment/token the caster
+    /// controls is sacrificed as an additional cost and the resolving spell is
+    /// stamped `bargained` (read by `Predicate::SpellWasBargained`).
     pub(crate) fn cast_spell_bargain(
         &mut self,
         card_id: CardId,
@@ -8730,15 +8484,11 @@ impl GameState {
         x_value: Option<u32>,
     ) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
-        // The card must be a Spree / Tiered / ChooseModesCast spell in hand;
-        // validate the modes. Selection bounds per variant:
-        // - Spree (CR 702.172a): 1..=all, distinct.
-        // - Tiered (FIN "Choose one additional cost."): exactly one.
-        // - ChooseModesCast: `min..=max`, repeats iff `allow_repeats`
-        //   (Choreographed Sparks "one or both"; Moment of Reckoning
-        //   "up to four, same mode more than once").
-        // - ChooseModesByPoints (the BLB Season cycle): any picks whose
-        //   point prices total at most the printed budget, repeats allowed.
+        // The card must be a Spree / Tiered / ChooseModesCast spell in hand.
+        // Selection bounds: Spree (CR 702.172a) 1..=all distinct; Tiered
+        // exactly one; ChooseModesCast `min..=max`, repeats iff
+        // `allow_repeats` (Moment of Reckoning); ChooseModesByPoints (BLB
+        // Seasons) any picks within the point budget, repeats allowed.
         // CR 700.2 / 601.2b — "choose one; if …, choose more instead".
         let widen = self.players[p].hand.iter().find(|c| c.id == card_id).and_then(|c| {
             match c.definition.modes_widen.as_ref()? {
@@ -9113,14 +8863,6 @@ impl GameState {
         Ok(events)
     }
 
-    /// CR 702.36b — cast a card with Morph face down as a 2/2 creature for {3}.
-    /// The card is set face down (its real definition stashed) before going on
-    /// the stack, so it's a nameless colorless 2/2 creature spell and enters the
-    /// battlefield face down; turn it up later for its Morph cost.
-    /// CR 702.36b — the generic mana a face-down cast costs `seat`: the flat
-    /// {3}, less every `FaceDownSpellsCostLess` static they control (Dream
-    /// Chisel) and any turn-scoped grant (Goblin Maskmaker). Surfaced as
-    /// `PlayerView.face_down_cast_cost`.
     /// CR 702.153 — the casualty number `seat` may pay casting `def`: its own
     /// Casualty N, else a `FirstInstantSorceryHasCasualty` grant (Anhelo, the
     /// Painter) when it is an instant or sorcery and `seat` has cast none yet
@@ -9141,6 +8883,10 @@ impl GameState {
         })
     }
 
+    /// CR 702.36b — the generic mana a face-down cast costs `seat`: the flat
+    /// {3}, less every `FaceDownSpellsCostLess` static they control (Dream
+    /// Chisel) and any turn-scoped grant (Goblin Maskmaker). Surfaced as
+    /// `PlayerView.face_down_cast_cost`.
     pub fn face_down_cast_cost(&self, seat: usize) -> u32 {
         let reduction: u32 = self
             .battlefield
@@ -9174,6 +8920,10 @@ impl GameState {
         3u32.saturating_sub(reduction + turn_grant + first)
     }
 
+    /// CR 702.36b — cast a card with Morph face down as a 2/2 creature for {3}.
+    /// The card is set face down (its real definition stashed) before going on
+    /// the stack, so it's a nameless colorless 2/2 creature spell and enters the
+    /// battlefield face down; turn it up later for its Morph cost.
     pub(crate) fn cast_face_down(&mut self, card_id: CardId) -> Result<Vec<GameEvent>, GameError> {
         let p = self.priority.player_with_priority;
         let card = self.players[p].hand.iter().find(|c| c.id == card_id).ok_or(GameError::CardNotInHand(card_id))?;
@@ -10685,13 +10435,9 @@ impl GameState {
                 })
         });
 
-        // The four name locks below are the same shape as the cost statics
-        // above — three battlefield walks and a hand lookup, per cast, for
-        // statics a normal board does not carry. `NAME_LOCK` rides
-        // `cast_cost_scan`'s existing walk; the fourth lock lives on a
-        // *player*, not a permanent, so it gets the cheap presence test its
-        // own field affords. With both clear the spell's name is never
-        // looked up.
+        // The four name locks below: three ride `cast_cost_scan`'s walk
+        // (`NAME_LOCK`), the fourth lives on a player and has its own cheap
+        // presence test. With both clear the name is never looked up.
         let name_locked_seat = self
             .players
             .iter()
@@ -10726,24 +10472,17 @@ impl GameState {
             return Err(GameError::SpellNameLocked);
         }
 
-        // CR 601.2b — interactive additional-cost choices for a hand-paying
-        // caster on the plain cast path: which permanent to sacrifice
-        // ("sacrifice a …" — Crop Rotation, Reckless Abandon) or which card to
-        // discard ("discard a card" — Big Score, Illuminate History) instead of
-        // the engine auto-picking. Suspend *here* — before the card leaves hand
-        // or any cost is paid — and re-run the whole cast on answer with the
-        // pick stashed. Each cost type guards on its own stash so a card with
-        // several such costs chains (suspend → replay → suspend). Only a genuine
-        // choice is surfaced (more legal options than required); lone options
-        // and multi-count costs keep the auto-pick. The alt-cost / convoke /
-        // delve paths are excluded so their own choice plumbing isn't disturbed.
+        // CR 601.2b — interactive additional-cost choices on the plain cast
+        // path: which permanent to sacrifice (Crop Rotation) or card to
+        // discard (Big Score). Suspend here, before the card leaves hand or
+        // anything is paid, and replay the cast with the pick stashed; each
+        // cost guards on its own stash so several chain. Only genuine choices
+        // are surfaced (more options than required); multi-count costs and
+        // the alt-cost / convoke / delve paths keep their own plumbing.
         //
-        // [`manual_mana`], not `wants_ui`: an additional cost is a cost, and
-        // prompting a bot for one livelocks the game (see the {X} prompt in
-        // `cast_spell` for the full chain). This was the residual 1-in-96
-        // deadlock left after the {X} and ability-cost gates were fixed —
-        // Bonfire of the Damned and friends, whose discard cost suspended a
-        // cast the bot could not actually pay for.
+        // [`manual_mana`], not `wants_ui`: prompting a bot for a cost
+        // livelocks the game (see the {X} prompt in `cast_spell`) — the last
+        // 1-in-96 deadlock (Bonfire of the Damned's discard cost).
         if self.players[p].manual_mana
             && convoke_creatures.is_empty()
             && delve_cards.is_empty()
@@ -10955,14 +10694,11 @@ impl GameState {
         // leak it onto the next cast.
         let spend_float_choice = self.pending_cast_spend_float.take();
 
-        // CR 601.2 — the timing gate, asked BEFORE the card leaves hand.
-        // Everything below this line writes the player, the hand zone and the
-        // card, so a rejection under it is three CoW unshares and a put-back
-        // for a cast that was never legal (PERF candidate (Q): this branch is
-        // 21.6 % of `cube`'s rollbacks and 48.1 % of `sealed`'s). The bestow
-        // path is excluded because `bestowed` is stamped below and rewrites
-        // the type line Sigarda's Aid reads; it asks again after the stamp,
-        // and every other path asserts the two answers agree.
+        // CR 601.2 — the timing gate, asked BEFORE the card leaves hand, so a
+        // never-legal cast doesn't pay three CoW unshares and a put-back
+        // (PERF candidate (Q)). Bestow is excluded: `bestowed` is stamped
+        // below and changes the type line Sigarda's Aid reads, so it asks
+        // after the stamp; other paths assert the answers agree.
         if !bestow
             && let Some(hand_card) = self.players[p].hand.iter().find(|c| c.id == card_id)
             && self.sorcery_timing_bars_at(p, hand_card, cost_statics, x_value.unwrap_or(0))
@@ -10990,15 +10726,11 @@ impl GameState {
         {
             waterbend = Some(amt);
         }
-        // CR 702.32 — opt-in Kicker. Only stamp `kicked` if the card
-        // actually has a kicker cost (mana or action); a mana kicker is
-        // folded into the spell's mana cost below, an action kicker joins
-        // the additional-cast-cost payment.
-        // CR 702.33b — an "and/or" kicker cast carries its chosen option
-        // indices instead of a single kicker cost.
-        // Guarded: `cast_kicker_options` is a `ColdState` field, so the `take`
-        // deep-copies the whole cold group — once per cast, for a list that is
-        // empty on every spell without an "and/or" kicker.
+        // CR 702.32 — opt-in Kicker: stamp `kicked` only if the card has a
+        // kicker cost; a mana kicker folds into the mana cost, an action
+        // kicker joins the additional costs. CR 702.33b — an "and/or" kicker
+        // carries chosen option indices. Guarded: `cast_kicker_options` is a
+        // `ColdState` field, and an unguarded `take` deep-copies the group.
         let kicker_options: Vec<u8> = if self.cast_kicker_options.is_empty() {
             Vec::new()
         } else {
@@ -11184,16 +10916,12 @@ impl GameState {
             }
         }
 
-        // Timing: sorcery-speed requires empty stack + main phase + active player priority.
-        // Instant-speed (Instant type or Flash) may be cast whenever you have priority.
-        // Teferi, Time Raveler's +1 sets `sorceries_as_flash` on its
-        // controller — those casters can ignore the sorcery-timing gate
-        // until their next turn (when do_untap clears the flag).
-        // Teferi's static (`OpponentsSorceryTimingOnly`) flips the rule for
-        // opponents: even instants must wait until their main phase.
-        // Sigarda's Aid — a battlefield static can grant flash timing to
-        // matching spells (Auras + Equipment). Serpent of the Pass — a
-        // card-intrinsic `SelfFlashIf` condition on the spell being cast.
+        // Timing: sorcery speed needs empty stack + main phase + active
+        // player; instants/Flash whenever you have priority. Teferi's +1
+        // (`sorceries_as_flash`, cleared in do_untap) lifts the gate; his
+        // static (`OpponentsSorceryTimingOnly`) imposes it on opponents'
+        // instants. Sigarda's Aid grants flash; Serpent of the Pass has a
+        // card-intrinsic `SelfFlashIf`.
         if bestow {
             if self.sorcery_timing_bars(p, &card, cost_statics) {
                 cast_census::rollback(line!());
@@ -11390,23 +11118,14 @@ impl GameState {
             return Err(GameError::TargetHasProtection(crate::card::CardId(0)));
         }
 
-        // Enforce the spell's target selection requirement (e.g. Terror's
-        // "non-black, non-artifact creature"): if the effect binds a filter to
-        // slot N and the chosen target doesn't match, reject the cast.
-        // For modal cards (`ChooseMode`), only look at the chosen mode's
-        // filter — Drown in the Loch's mode 0 (counter spell) and mode 1
-        // (destroy creature) have incompatible filters, and the legacy
-        // "first match across all modes" path picked mode 0's `IsSpellOnStack`
-        // even when the caster picked mode 1.
-        // Multi-target spells (Snow Day, Render Speechless, Crackle with
-        // Power) thread additional slots through `additional_targets`.
-        // CR 702.165 — a promised Gift validates (and later resolves) against
-        // its enhanced `gifted_effect`, whose target filter can be broader than
-        // the printed one (Into the Flood Maw: creature → nonland permanent).
-        // Compute the per-slot violation up front (releasing the borrow on
-        // `card`) so a rejected cast can move the card back to hand.
-        // Cross-slot filters (Barrin's Spite's "controlled by the same player")
-        // read the whole chosen slot vector, not just their own target.
+        // Enforce the spell's target requirements (Terror's "non-black,
+        // non-artifact creature"); a mismatched slot rejects the cast. Modal
+        // cards check only the chosen mode's filter (Drown in the Loch's two
+        // modes are incompatible). Extra slots arrive in `additional_targets`
+        // (Snow Day). CR 702.165 — a promised Gift validates against its
+        // broader `gifted_effect` (Into the Flood Maw). Computed up front so a
+        // rejected cast can return the card to hand; cross-slot filters
+        // (Barrin's Spite) read the whole slot vector.
         self.target_slots_scratch = std::iter::once(target.clone())
             .chain(additional_targets.iter().cloned().map(Some))
             .collect();
@@ -11954,13 +11673,11 @@ impl GameState {
         // A hop through the hand and a prepared copy aren't cast from it.
         spell_kind.from_hand = self.casting_hop.is_none()
             && !self.scratch.pending_prepare_copies.iter().any(|(c, _)| *c == card_id);
-        // CR 601.2g — float-spend confirmation. If the caster has pre-existing
-        // floating mana that the cost could *either* spend *or* avoid (untapped
-        // sources can cover it), ask before auto-spending it instead of silently
-        // consuming mana they may have been holding. Skipped for convoke/delve
-        // casts (their pool already carries cost-reduction mana). Nothing has
-        // been tapped yet on this no-convoke path, so we abort by simply
-        // returning the card to hand; the cast re-runs from the top on answer.
+        // CR 601.2g — float-spend confirmation: if floating mana could either
+        // pay the cost or be avoided, ask before spending it. Skipped for
+        // convoke/delve (their pool carries reduction mana). Nothing is
+        // tapped yet, so abort by returning the card to hand; the cast
+        // re-runs on answer.
         if forced_only
             && spend_float_choice.is_none()
             && convoke_creatures.is_empty()
@@ -12081,12 +11798,10 @@ impl GameState {
         {
             let floating = self.players[p].mana_pool.total();
             if floating > 0 {
-                // `AutoDecider`'s 0 made Chorus of the Conclave's own ability
-                // dead for every headless seat. The whole floating pool is the
-                // right answer and not a judgement call: the printed cost is
-                // already paid, the bot taps as it casts (so what is left is
-                // leftover), and the pool empties at the end of the step
-                // anyway — every unspent point is a +1/+1 counter thrown away.
+                // `AutoDecider`'s 0 made Chorus of the Conclave's ability dead
+                // for headless seats. The whole floating pool is right: the
+                // printed cost is paid, what's left is leftover, and the pool
+                // empties at end of step anyway.
                 let extra = if matches!(
                     self.decider.kind(),
                     crate::decision::DeciderKind::Auto
@@ -12375,10 +12090,6 @@ impl GameState {
             })
     }
 
-    /// Pick the `count` lowest-power permanents from `candidates` (by id) —
-    /// the AutoDecider heuristic for a forced "Sacrifice another …" activation
-    /// cost, so the activator keeps their higher-power creatures. Ties keep the
-    /// candidates' (battlefield) order via a stable sort.
     /// The cheapest set of at least one of `candidates` (battlefield ids)
     /// whose mana values sum to `need` or more: a single permanent that covers
     /// it alone (the lowest such), else the biggest first until covered.
@@ -12404,6 +12115,10 @@ impl GameState {
         None
     }
 
+    /// Pick the `count` lowest-power permanents from `candidates` (by id) —
+    /// the AutoDecider heuristic for a forced "Sacrifice another …" activation
+    /// cost, so the activator keeps their higher-power creatures. Ties keep the
+    /// candidates' (battlefield) order via a stable sort.
     pub(crate) fn auto_pick_lowest_power(&self, candidates: &[CardId], count: usize) -> Vec<CardId> {
         // Power first, then — among equals — a token before a card and the
         // cheaper card before the dearer: a 2/2 legend worth five mana went
@@ -12505,8 +12220,6 @@ impl GameState {
             .collect()
     }
 
-    /// CR 601.2b — can every additional cast cost be paid right now? Checked
-    /// before mana so an unpayable spell reverts cleanly.
     /// The untapped `filter` permanents `p` controls to tap for a total
     /// power of at least `power`, biggest first (teamwork); `None` when the
     /// whole set falls short.
@@ -12535,6 +12248,8 @@ impl GameState {
         (sum >= power).then_some(picks)
     }
 
+    /// CR 601.2b — can every additional cast cost be paid right now? Checked
+    /// before mana so an unpayable spell reverts cleanly.
     pub(crate) fn additional_costs_payable(
         &self,
         p: usize,
@@ -12672,16 +12387,16 @@ impl GameState {
         })
     }
 
-    /// CR 601.2b — which option of a [`OneOf`](crate::card::AdditionalCastCost::OneOf)
-    /// `p` pays: the first payable in the order the caster loses least —
-    /// a token to sacrifice, life with 10 to spare, a card from hand, a
-    /// nontoken sacrifice, then life. Deterministic, so a replay agrees.
     /// `PayLifeOrPay`'s choice: pay the life while it leaves `p` at 10 or more.
     pub(crate) fn pays_life_half(&self, p: usize, life: u32) -> bool {
         self.players.get(p).is_some_and(|pl| pl.life - life as i32 >= 10)
             && self.cost_life_payable(p, self.players[p].life, life)
     }
 
+    /// CR 601.2b — which option of a [`OneOf`](crate::card::AdditionalCastCost::OneOf)
+    /// `p` pays: the first payable in the order the caster loses least —
+    /// a token to sacrifice, life with 10 to spare, a card from hand, a
+    /// nontoken sacrifice, then life. Deterministic, so a replay agrees.
     pub(crate) fn pick_one_of_cost(
         &self,
         p: usize,
@@ -13455,24 +13170,13 @@ impl GameState {
     }
 
     /// Common post-cost-payment bookkeeping for the three cast paths
-    /// (`cast_spell_with_convoke`, `cast_flashback`, `cast_spell_alternative`).
-    ///
-    /// 1. Bumps game-wide and per-player `spells_cast_this_turn` (Storm).
-    /// 2. Consumes one Chancellor-of-the-Annex first-spell tax charge.
-    /// 3. Stamps `StackItem::Spell.uncounterable` if the caster controls a
-    ///    Cavern of Souls of the matching type or the card itself is
-    ///    uncounterable.
-    /// 4. Pushes the spell onto the stack, then pushes its
-    ///    `EventKind::SpellCast` + `EventScope::SelfSource` triggers ABOVE
-    ///    it so they resolve first (and still fire if the spell is
-    ///    countered in response).
-    /// 5. Resets priority to the active player so the cast can be responded
-    ///    to.
-    // The argument list is wide because each cast path's resolution-time
-    // context (`x_value`, `converged_value`, `mana_spent`) must reach
-    // `finalize_cast` without round-tripping through a struct. The three
-    // callers (regular cast, flashback, alternative cast) all hand off
-    // the scalars directly from local variables computed during payment.
+    /// (`cast_spell_with_convoke`, `cast_flashback`, `cast_spell_alternative`):
+    /// bump `spells_cast_this_turn` (Storm); consume a Chancellor of the Annex
+    /// charge; stamp `uncounterable` (Cavern of Souls or the card itself);
+    /// push the spell, then its `SpellCast`/`SelfSource` triggers above it;
+    /// reset priority to the active player.
+    // Wide argument list: each path hands its payment-time scalars
+    // (`x_value`, `converged_value`, `mana_spent`) straight in.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn finalize_cast(
         &mut self,
@@ -13578,17 +13282,11 @@ impl GameState {
         if !fdef.is_creature() {
             self.noncreature_spells_cast_this_turn += 1;
         }
-        // Per-name lifetime tally — "you've cast another spell named X this
-        // game" (Approach of the Second Sun).
-        //
-        // Gated on the cast card asking the question. `CastOwnNameThisGameAtLeast`
-        // reads the **source's own** name and the source is the card that
-        // carries the predicate, so a name nobody asks about can never be
-        // read back out. Counting every cast instead left a growing
-        // `hashbrown` table in the *hot* player group: it was cloned on
-        // every `PlayerData` unshare — 22,060 of them on six `cube` games —
-        // where an empty map hits hashbrown's empty-singleton fast path and
-        // allocates nothing. See PERF `(-149)`.
+        // Per-name lifetime tally ("another spell named X this game",
+        // Approach of the Second Sun), only for a card that asks:
+        // `CastOwnNameThisGameAtLeast` reads its own name. Counting every cast
+        // grew a map in the hot player group, cloned on each unshare (PERF
+        // `(-149)`).
         if card.definition.counts_own_name_casts() {
             *self
                 .players[p]
@@ -13854,16 +13552,11 @@ impl GameState {
         }
         self.randomize_single_target_on_stack();
         self.push_on_cast_triggers_x(card_id, p, on_cast_triggers, x_value);
-        // SpellCast / YourControl triggers (Prowess, Magecraft, Repartee, …)
-        // fire *at cast time*, before the spell resolves. The trigger goes
-        // on the stack above the spell so it resolves first (and still
-        // fires if the spell itself is countered in response). Filters
-        // (e.g. CastSpellTargetsMatch) read the just-cast spell's target
-        // from the stack while the spell still sits there.
-        //
-        // Threads `mana_spent` (and X / Converge) into the trigger context
-        // so Increment / Opus payoffs reading `Value::CastSpellManaSpent`
-        // observe the actual amount paid for *this* spell.
+        // SpellCast / YourControl triggers (Prowess, Magecraft, Repartee)
+        // fire at cast time, above the spell (so they resolve first, even if
+        // it's countered); filters read the spell's target off the stack.
+        // `mana_spent` / X / Converge are threaded so `Value::CastSpellManaSpent`
+        // (Increment, Opus) sees this spell's payment.
         self.fire_spell_cast_triggers(p, card_id, !was_creature_spell, mana_spent, converged_value, false);
         // CR 702.145d — a daybound spell cast while neither day nor night
         // makes it day.
@@ -13884,15 +13577,11 @@ impl GameState {
         // CR 702.62 suspend accelerants (Deep-Sea Kraken): an opponent's cast
         // ticks a time counter off their suspended accelerant cards.
         self.process_suspend_accelerants(p);
-        // The three hooks below — Ward, BecameTarget, crime — each used to
-        // find the just-pushed spell on the stack and clone its target slots
-        // out for themselves, three walks and three `Vec<Target>` clones per
-        // cast for one list that cannot change between them (the hooks only
-        // *push* triggers; nothing resolves until priority is given below).
-        // Read from the stack rather than from `target` / `additional_targets`
-        // above, because `randomize_single_target_on_stack` can have replaced
-        // the primary target — but read once. An empty list is also what an
-        // absent spell (countered before this hook) gave each of them.
+        // Ward, BecameTarget and crime hooks share one read of the cast
+        // spell's targets (they only push triggers, so it can't change).
+        // From the stack, not `target`, since
+        // `randomize_single_target_on_stack` may have replaced it; an absent
+        // (already countered) spell gives an empty list.
         let cast_targets: Vec<Target> = self
             .stack
             .iter()
@@ -13977,24 +13666,13 @@ impl GameState {
         self.dispatch_triggers_for_events(&events);
     }
 
-    /// CR 702.21 — push a Ward triggered ability onto the stack for each
-    /// target permanent (controlled by another player) that has
-    /// `Keyword::Ward(WardCost)`. Each trigger is `Effect::CounterUnless`
-    /// aimed at the just-cast spell. At resolution the engine auto-pays
-    /// on the spell controller's behalf if affordable; otherwise the
-    /// spell is countered. Trivial Ward variants (e.g. `WardCost::Mana`
-    /// with an empty/zero cost) are skipped — a $0 pay is always affordable
-    /// and the visible outcome is identical to no Ward at all, so we save
-    /// the stack churn.
-    ///
-    /// Shared core for Ward enforcement: walk `targets`, and for each
-    /// permanent target controlled by a player other than `actor` whose
-    /// `Keyword::Ward(WardCost)` is non-trivial, push a Ward trigger
-    /// above whatever is currently on top of the stack. The trigger's
-    /// `target` carries `target_for_trigger` — the spell card-id (for
-    /// casts) or the source permanent's id (for activated abilities) —
-    /// so `Effect::CounterUnless` can walk the stack for the topmost
-    /// matching `Spell` or `Trigger`.
+    /// CR 702.21 — for each permanent in `targets` controlled by someone other
+    /// than `actor` with a non-trivial `Keyword::Ward(WardCost)`, push a Ward
+    /// trigger (`Effect::CounterUnless`) above the stack top; it auto-pays
+    /// for the spell's controller if affordable, else counters. Zero-cost
+    /// ward is skipped (same outcome, no churn). The trigger's `target` is
+    /// `target_for_trigger` — the spell's card id for casts, the source's id
+    /// for abilities — so `CounterUnless` can find the topmost match.
     pub(crate) fn push_ward_triggers_for_targets(
         &mut self,
         actor: usize,
@@ -14020,13 +13698,9 @@ impl GameState {
                 // CR 702.21a — "an opponent controls": a teammate's spell
                 // doesn't trigger ward.
                 Some(c) if !self.same_team(c.controller, actor) => {
-                    // A whole-game gather per opposing target, for a keyword
-                    // almost no board has: `card_keyword_possible` answers
-                    // "could this permanent's computed set carry Ward" from
-                    // printed keywords, end-of-turn grants, keyword counters
-                    // and the in-scope grant scan, with no layer pass, and
-                    // `false` is authoritative (the gather `debug_assert!`s
-                    // the implication). 1,914 gathers at ~3,040 Ir each.
+                    // Presence-gated: `card_keyword_possible` answers "could
+                    // this carry Ward" without a layer pass, and `false` is
+                    // authoritative (the gather `debug_assert!`s it).
                     if !self.card_keyword_possible(perm_id, |k| matches!(k, Keyword::Ward(_))) {
                         continue;
                     }
@@ -14164,13 +13838,10 @@ impl GameState {
         self.push_ward_triggers_for_targets(activator, ability_source, targets);
     }
 
-    /// Push pre-collected `SpellCast`/`SelfSource` triggers from the
-    /// just-cast card onto the stack as `Trigger` items, so they resolve
-    /// before the spell itself. Caller is responsible for collecting the
-    /// effect list before the card moves into the stack item.
-    /// Push a card's "when you cast this spell" triggers, carrying the cast's
-    /// `x_value` so an on-cast trigger body can read `Value::XFromCost`
-    /// (Hydroid Krasis's "gain half X life and draw half X cards").
+    /// (Cast-time `SpellCast`/`SelfSource` triggers are pushed above the
+    /// spell, carrying the cast's `x_value` for `Value::XFromCost` — Hydroid
+    /// Krasis; the caller collects them before the card moves.)
+    ///
     /// Grip of Chaos — "Whenever a spell or ability is put onto the stack, if
     /// it has a single target, reselect its target at random." Called right
     /// after a push; a no-op unless a Grip is on the battlefield.
@@ -14312,7 +13983,6 @@ impl GameState {
         }
     }
 
-    /// Cast a spell from the graveyard using its Flashback cost.
     /// CR 702.146 — Disturb: cast a graveyard card transformed (its back
     /// face goes on the stack) for its disturb cost, sorcery speed. The
     /// back face's graveyard→exile rider is enforced at the graveyard
@@ -14403,17 +14073,11 @@ impl GameState {
     }
 
     /// Multi-target spells (Chelonian Tackle's "then it fights up to one
-    /// target creature an opponent controls"): the client's cast flow only
-    /// collects slot 0, so slots 1+ arrive empty and the extra half of the
-    /// effect silently no-ops. Bind the next missing slot here — a
-    /// `wants_ui` caster picks via a `ChooseTarget` cursor decision
-    /// (suspend + clean replay; nothing has been paid yet), everyone else
-    /// auto-fills. No legal candidate leaves the slot empty, which is the
-    /// printed "up to one" behavior.
-    ///
-    /// Shared by the hand cast and the flashback cast, whose replay action
-    /// `replay` rebuilds. Returns `true` when a slot prompt was posed and the
-    /// cast must suspend.
+    /// target creature"): the client only collects slot 0, so bind the next
+    /// missing slot here — a `wants_ui` caster picks via `ChooseTarget`
+    /// (suspend + clean replay; nothing paid yet), others auto-fill; no
+    /// candidate leaves it empty ("up to one"). Shared by hand and flashback
+    /// casts (`replay` rebuilds the action). Returns `true` if it suspended.
     fn pose_extra_cast_target(
         &mut self,
         card_id: CardId,
@@ -14545,23 +14209,14 @@ impl GameState {
             } else {
                 Vec::new()
             };
-            // One freeze for the whole walk, the same reason
-            // `legal_targets_for_filter` takes one: every candidate asks
-            // `evaluate_requirement_static`'s layer-4 reads and
-            // `check_target_legality`'s Shroud/Hexproof reads, and
-            // `check_target_legality` opens a scope of its own per call —
-            // so unfrozen this re-gathers every continuous effect in the
-            // game once per battlefield permanent *plus* once per player.
-            // The spell itself, for the checks that read its qualities: the
-            // cast rejects a slot naming a creature with protection from its
-            // colour (CR 702.16b), hexproof from its colour (CR 702.11e) or a
-            // player with protection from its type (CR 702.16j), so a slot
-            // offering one is a prompt whose answer always fails — and
-            // `perform_action` drops a failed answer's decision, which lands
-            // the caster back before the cast with the same prompt waiting:
-            // a bot that picked the protected creature recast forever (Arc
-            // Lightning at a Kor Firewalker, cube ladder games capped at
-            // 50,000 actions, 2026-10-27).
+            // One freeze for the whole walk (as in `legal_targets_for_filter`):
+            // every candidate reads layers, and `check_target_legality` opens
+            // its own scope per call. The spell is passed so the checks can
+            // read its qualities: a slot offering a creature with protection
+            // (CR 702.16b) or hexproof (CR 702.11e) from its colour, or a
+            // player with protection from its type (CR 702.16j), is a prompt
+            // whose answer always fails, and a bot recast forever (Arc
+            // Lightning at Kor Firewalker, 2026-10-27).
             let spell = self.find_card_anywhere(card_id).cloned();
             let candidates: Vec<Target> = self.with_frozen_layers(|s| {
                 s.battlefield
@@ -14622,6 +14277,7 @@ impl GameState {
         false
     }
 
+    /// Cast a spell from the graveyard using its Flashback cost.
     pub(crate) fn cast_flashback(
         &mut self,
         card_id: CardId,
@@ -14816,17 +14472,10 @@ impl GameState {
         // opponent's (Shaman's Trance).
         let mut spell_kind = card.definition.spell_kind();
         spell_kind.from_graveyard = card.owner == p;
-        // CR 601.2g — float-spend confirmation. Nothing is mutated yet (the
-        // card is still in the graveyard; additional costs unpaid), so suspend
-        // cleanly and replay the whole flashback on answer.
-        // CR 601.2g float-spend confirmation is a *mana payment* question,
-        // so it keys on `manual_mana` — the flag that exists for exactly this
-        // rule — rather than `wants_ui`, which bot seats also set. Prompting
-        // a bot here is the same livelock as the {X} and additional-cost
-        // modals: the suspend returns `Ok`, so the probe reports the cast as
-        // legal, and the failed replay is rolled back with the decision
-        // restored. Latent rather than observed only because the bot stopped
-        // floating mana when it stopped pre-tapping its board.
+        // CR 601.2g — float-spend confirmation. Nothing is mutated yet (card
+        // still in the graveyard, additional costs unpaid), so suspend and
+        // replay the flashback. Keyed on `manual_mana`, not `wants_ui` (bot
+        // seats set that too; prompting a bot livelocks the probe).
         if spend_float.is_none()
             && self.players[p].manual_mana
             && !cost.symbols.is_empty()
@@ -15350,21 +14999,14 @@ impl GameState {
         )
     }
 
-    /// Cast a spell from an arbitrary zone (graveyard or exile) without
-    /// paying any mana cost. The card is lifted out of `source_zone`,
-    /// stamped with `cast_via_flashback = true` when `exile_after` is
-    /// set (so the resolver routes it to exile), and threaded through
-    /// `finalize_cast` with `mana_spent = 0` / `converged_value = 0`.
-    /// No timing / target / cost / alt-cost checks run — the caller is
-    /// responsible for any timing window enforcement at the call site.
-    ///
-    /// Used by:
-    /// - `GameAction::CastFromZoneWithoutPaying` (player invokes a
-    ///   `may_play_until` permission, e.g. Practiced Scrollsmith's
-    ///   exiled card)
-    /// - `Effect::CastWithoutPayingImmediate` (immediate resolve-time
-    ///   cast — Improvisation Capstone, The Dawning Archaic, Nita)
-    /// - `Effect::CastFreeParadigmCopy` (per-main-phase paradigm copy)
+    /// Cast a spell from graveyard or exile without paying its mana cost.
+    /// The card is lifted out of `source_zone`, stamped
+    /// `cast_via_flashback = true` when `exile_after` (resolver exiles it), and
+    /// run through `finalize_cast` with zero mana/converge. No timing, target
+    /// or cost checks — callers enforce their own windows. Used by
+    /// `GameAction::CastFromZoneWithoutPaying` (may-play permissions),
+    /// `Effect::CastWithoutPayingImmediate` (Improvisation Capstone, Nita) and
+    /// `Effect::CastFreeParadigmCopy`.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn cast_card_for_free(
         &mut self,
@@ -15377,41 +15019,22 @@ impl GameState {
         x_value: Option<u32>,
         exile_after: bool,
     ) -> Result<Vec<GameEvent>, GameError> {
-        // ⚠ **A CAGE MAKES THIS CAST IMPOSSIBLE, NOT ERRONEOUS, AND THE
-        // DIFFERENCE ABORTED THE PROCESS.** Grafdigger's Cage ("players can't
-        // cast spells from graveyards or libraries"), Drannith Magistrate and
-        // the graveyard locks all refuse the cast correctly, and
-        // `cast_card_from_zone_spending` reports that refusal as
-        // `CardNotInHand` — indistinguishable, to a caller, from the engine
-        // invariant of the same name. **Nine of this function's thirteen
-        // effect-resolution call sites took it with `?`**: `Cascade`,
-        // `Discover`, `Ripple`, `KnowledgePool`, `PossibilityStorm`,
-        // `CastAnyOrderWithoutPaying`, `CastFromHandWithoutPaying`,
-        // `CastFreeParadigmCopy` and `ExileTopMayPayEnergyToCast`. An `Err`
-        // out of a resolution leaves the stack item
-        // `resolve_top_of_stack_inner` has already popped, so the
-        // round-closing `PassPriority` comes back `Err` with the state moved
-        // and `perform_action_uncheckpointed`'s guard fires — which is how
-        // this was found, on `cube` / `all` seed 1254 of the 2026-09-13
-        // sweep, The Dawning Archaic attacking into a Cage. Release builds
-        // compile the guard out, so what shipped was quieter and not better:
-        // the trigger vanished off the stack and the action reported failure.
-        // **Cascade into an opponent's Drannith Magistrate is the same bug on
-        // a board people actually assemble** — far likelier than the 10-drop
-        // the sweep happened to find, which is why the check sits here and not
-        // only on that arm. (`CastWithoutPayingImmediate` still carries its
-        // own copy: a discounted or `pay_own_cost` cast charges mana, so it
-        // calls `cast_card_from_zone_spending` directly and never reaches
-        // this line.)
+        // ⚠ A cast lock makes this cast impossible, not erroneous. Grafdigger's
+        // Cage, Drannith Magistrate and the graveyard locks refuse correctly,
+        // but `cast_card_from_zone_spending` reports it as `CardNotInHand`,
+        // indistinguishable from the engine invariant. Nine effect call sites
+        // (`Cascade`, `Discover`, `Ripple`, ...) took it with `?`, erroring out
+        // of a resolution whose item was already popped — debug builds abort
+        // (seed 1254, The Dawning Archaic into a Cage), release silently lost
+        // the trigger. Cascade into Drannith Magistrate is the common board,
+        // so the check lives here, not per arm. (`CastWithoutPayingImmediate`
+        // calls the helper directly for paid casts and keeps its own copy.)
         //
-        // CR 608.2 — an instruction a player is unable to follow is ignored,
-        // so the effect resolves and does nothing. Every caller of THIS entry
-        // point is an effect saying "cast it if you can"; the player-action
-        // path (`cast_from_zone_without_paying`) calls
-        // `cast_card_from_zone_spending` directly and still gets its `Err`,
-        // because there a refusal IS the rejection of an illegal action.
-        // Everything else the helper can raise still propagates: those are
-        // engine invariants and the guard is how they get found.
+        // CR 608.2 — an instruction a player can't follow is ignored, so the
+        // effect does nothing. Every caller of this entry point is "cast it if
+        // you can"; the player action (`cast_from_zone_without_paying`) calls
+        // the helper directly and still gets its `Err`. Every other error
+        // still propagates — those are engine invariants.
         if matches!(
             source_zone,
             crate::card::Zone::Graveyard | crate::card::Zone::Library | crate::card::Zone::Exile
@@ -15437,24 +15060,12 @@ impl GameState {
     }
 
     /// [`cast_card_for_free`](Self::cast_card_for_free) with the mana the
-    /// caller actually charged.
-    ///
-    /// "For free" is the usual case and keeps the zero-argument entry
-    /// point, but it is not the only one: a `may_play_until` permission
-    /// stamped with `pay_own_cost` (Suspend Aggression, Ark of Hunger)
-    /// bills the card's real cost through `granted_alt_cast_cost_eot`, and
-    /// a miracle grant bills its miracle cost. Those casts spend mana, and
-    /// `finalize_cast`'s `mana_spent` is what
-    /// `Predicate::IncrementSatisfied`,
-    /// `Predicate::CastSpellManaSpentAtLeast` and
-    /// `mana_spent_on_spells_this_turn` all read.
-    ///
-    /// **It was hardcoded 0 on every path through here.** A Pensive
-    /// Professor (0/2) watched its controller pay {1}{R}{W} for a Suspend
-    /// Aggression off a may-play grant and never incremented, because
-    /// Increment compares the stashed `mana_spent` against the listening
-    /// creature's P/T and the stash said zero. Life tolls (Valgavoth) and
-    /// evidence tolls are not mana and still pass 0.
+    /// caller actually charged: a `pay_own_cost` may-play grant (Suspend
+    /// Aggression, Ark of Hunger, via `granted_alt_cast_cost_eot`) or a
+    /// miracle grant spends mana, and `finalize_cast`'s `mana_spent` feeds
+    /// `Predicate::IncrementSatisfied`, `CastSpellManaSpentAtLeast` and
+    /// `mana_spent_on_spells_this_turn`. Hardcoding 0 broke Pensive
+    /// Professor's Increment. Life/evidence tolls are not mana and pass 0.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn cast_card_from_zone_spending(
         &mut self,
@@ -15631,17 +15242,10 @@ impl GameState {
         let card_ref = self
             .find_card_anywhere(card_id)
             .ok_or(GameError::CardNotInHand(card_id))?;
-        // CR 305.1 — a land is *played*, never cast: it never uses the
-        // stack, and it consumes the land drop. "You may play that card"
-        // grants do cover lands (CR 118.x), and `play_land` already honours
-        // the permission from exile — so the land belongs on that path, not
-        // this one.
-        //
-        // Accepting it here got both halves wrong at once: the land went on
-        // the stack (respondable, counterable) and `lands_played_this_turn`
-        // never moved, so every may-play land was an *extra* free land drop.
-        // The affordance split (`may_play_castable` / `may_play_lands`) is
-        // what lets the client send the right action for each.
+        // CR 305.1 — a land is *played*, never cast (no stack; it uses the
+        // land drop). May-play grants cover lands via `play_land`; accepting
+        // one here put it on the stack and gave an extra free land drop. The
+        // client picks the action via `may_play_castable` / `may_play_lands`.
         if card_ref.definition.is_land() {
             return Err(GameError::CardNotInHand(card_id));
         }
@@ -15698,13 +15302,11 @@ impl GameState {
                 }
             }
         }
-        // Two ways to invoke a free cast: a per-card `may_play_until`
-        // permission (Discovery / Paradigm / etc.), or an Omniscience-style
-        // standing static letting the controller free-cast their own hand
-        // spells. The latter doesn't exile the spell afterwards (it goes
-        // wherever it normally would).
-        // Aluren grants flash to the free creature cast; track it so the
-        // sorcery-speed gate below is relaxed for that path only.
+        // A free cast comes from a per-card `may_play_until` permission
+        // (Discovery, Paradigm) or an Omniscience-style static over the
+        // controller's hand (which doesn't exile the spell afterwards).
+        // Aluren grants flash to the free creature cast, relaxing the
+        // sorcery-speed gate below for that path only.
         let mut aluren_flash = false;
         let mut miracle_window = false;
         // Valgavoth — "during your turn, you may play cards exiled with this,
@@ -15855,23 +15457,12 @@ impl GameState {
         Ok(events)
     }
 
-    /// Cast a commander from your command zone (Phase L).
-    ///
-    /// Differences vs. `cast_spell`:
-    /// * The card is sourced from `players[p].command` instead of
-    ///   `players[p].hand`.
-    /// * Cost = printed cost + `{2}` × `commander_cast_count[card_id]`
-    ///   (the commander tax, CR 903.8).
-    /// * On a successful payment the cast count is bumped so the next
-    ///   cast pays `{4}` extra, then `{6}`, etc.
-    /// * The Phase J zone-change replacement is already registered for
-    ///   each seated commander, so when the resulting permanent
-    ///   eventually leaves play it gets snagged back into the command
-    ///   zone automatically.
-    ///
-    /// Sorcery-speed / target legality / etc. piggyback off the same
-    /// helpers as `cast_spell_with_convoke` to keep behavior aligned.
-    /// X / mode / target slots are threaded through verbatim.
+    /// Cast a commander from your command zone (Phase L). Unlike `cast_spell`:
+    /// sourced from `players[p].command`; cost = printed + `{2}` ×
+    /// `commander_cast_count[card_id]` (CR 903.8 tax), bumped on success; the
+    /// Phase J zone-change replacement returns it to the command zone later.
+    /// Timing/target checks share `cast_spell_with_convoke`'s helpers; X, mode
+    /// and targets pass through verbatim.
     pub(crate) fn cast_from_command_zone(
         &mut self,
         card_id: CardId,
@@ -15885,14 +15476,11 @@ impl GameState {
     }
 
     /// [`cast_from_command_zone`](Self::cast_from_command_zone) for seat `p`.
-    /// With `without_paying`, "cast your commander from the command zone
-    /// without paying its mana cost" (Geode Golem): no printed cost and X = 0,
-    /// and no timing check — it's cast while an ability resolves (CR 608.2g) —
-    /// but the commander tax is still owed (CR 903.8 makes it an *additional*
-    /// cost, and "you still pay any additional costs"), as is every other
-    /// additional cost the cast would carry. A hand-pipeline variant (kicker,
-    /// convoke, delve, …) casts a commander on a hop instead
-    /// (`GameState::cast_hopped_from_command_zone`).
+    /// With `without_paying` (Geode Golem): no printed cost, X = 0, no timing
+    /// check (cast while an ability resolves, CR 608.2g), but the commander
+    /// tax and other additional costs are still owed (CR 903.8). Hand-pipeline
+    /// variants (kicker, convoke, delve, …) go through
+    /// `GameState::cast_hopped_from_command_zone`.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn cast_from_command_zone_as(
         &mut self,
@@ -16073,15 +15661,11 @@ impl GameState {
         Ok(events)
     }
 
-    /// Cast a spell using its `alternative_cost` (a "pitch" cost) instead of
-    /// its regular mana cost. Pays the alt cost's mana, deducts life, and
-    /// exiles the chosen `pitch_card` from hand if the alt cost requires one.
-    /// The spell otherwise behaves identically to a normal cast (goes onto
-    /// the stack, resolves later, etc.).
-    ///
-    /// `zone` picks the source: `Hand` is the ordinary case, `Command` is a
-    /// commander cast for its alternative cost (CR 903.8's tax is an
-    /// *additional* cost, so it rides on top of the alt cost — CR 601.2f).
+    /// Cast a spell using its `alternative_cost` (a "pitch" cost): pays the
+    /// alt cost's mana and life and exiles the `pitch_card` if required; the
+    /// spell is otherwise a normal cast. `zone` is `Hand` or `Command` (a
+    /// commander cast for its alt cost; CR 903.8's tax is an *additional*
+    /// cost and rides on top, CR 601.2f).
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn cast_spell_alternative_from(
         &mut self,
@@ -16170,13 +15754,9 @@ impl GameState {
             return Err(GameError::InsufficientEnergy);
         }
 
-        // Pre-flight: confirm the caster has enough cards in their
-        // graveyard for the `exile_from_graveyard_count` additional
-        // cost. Picks are committed AFTER the mana payment succeeds
-        // (mirroring `exile_other_filter` on activated abilities) so a
-        // failed mana pay rolls back cleanly. The auto-picker takes the
-        // lowest-CMC matching cards so higher-value graveyard cards
-        // stay put.
+        // Pre-flight: enough graveyard cards for `exile_from_graveyard_count`?
+        // Picks (lowest CMC first) are committed after mana payment succeeds,
+        // as with `exile_other_filter`, so a failed payment rolls back cleanly.
         let exile_gy_picks: Vec<CardId> = if alt.exile_from_graveyard_count > 0 {
             let n = alt.exile_from_graveyard_count as usize;
             let mut picks: Vec<(CardId, i32)> = self.players[p]
@@ -16572,17 +16152,10 @@ impl GameState {
         }
         apply_spell_cost_floor(self, &mut mana_cost);
         let spell_kind = self.spell_kind_for(p, &card);
-        // CR 601.2g — float-spend confirmation. The spell card is safe to put
-        // back in its zone (nothing else is committed yet — pitch/gy-exile/
-        // return happen after payment), so suspend and replay the alt cast.
-        // CR 601.2g float-spend confirmation is a *mana payment* question,
-        // so it keys on `manual_mana` — the flag that exists for exactly this
-        // rule — rather than `wants_ui`, which bot seats also set. Prompting
-        // a bot here is the same livelock as the {X} and additional-cost
-        // modals: the suspend returns `Ok`, so the probe reports the cast as
-        // legal, and the failed replay is rolled back with the decision
-        // restored. Latent rather than observed only because the bot stopped
-        // floating mana when it stopped pre-tapping its board.
+        // CR 601.2g — float-spend confirmation. Nothing is committed yet
+        // (pitch/gy-exile/return happen after payment), so suspend and replay
+        // the alt cast. Keyed on `manual_mana`, not `wants_ui` (bot seats set
+        // that too; prompting a bot livelocks the probe, as the {X} modal did).
         if spend_float.is_none()
             && self.players[p].manual_mana
             && !mana_cost.symbols.is_empty()
@@ -16861,10 +16434,6 @@ impl GameState {
         })
     }
 
-    /// CR 702.8 — true if a permanent `player` controls grants `card` flash via
-    /// a `ControllerSpellsHaveFlash` (filtered) or `ControllerSorceriesAsFlash`
-    /// (Teferi, Time Raveler; Hypersonic Dragon) static. Excludes the
-    /// card-intrinsic `SelfFlashIf` path, which each cast site handles inline.
     /// CR 601.2b — "you may cast this spell as though it had flash if you pay
     /// [cost] more". Returns the surcharge only when the caster is actually
     /// outside sorcery timing, so a main-phase cast pays the printed cost.
@@ -16892,6 +16461,10 @@ impl GameState {
         .then_some(extra)
     }
 
+    /// CR 702.8 — true if a permanent `player` controls grants `card` flash via
+    /// a `ControllerSpellsHaveFlash` (filtered) or `ControllerSorceriesAsFlash`
+    /// (Teferi, Time Raveler; Hypersonic Dragon) static. Excludes the
+    /// card-intrinsic `SelfFlashIf` path, which each cast site handles inline.
     pub(crate) fn battlefield_grants_flash(&self, player: usize, card: &CardInstance) -> bool {
         use crate::effect::StaticEffect;
         if self.player_locked_to_sorcery_timing(player) {
@@ -16916,14 +16489,9 @@ impl GameState {
         })
     }
 
-    /// CR 109.2 — a slot that doesn't say "card" ("target creature") names a
-    /// permanent: a card in a graveyard or in exile is out of its reach
-    /// unless the effect can reach off the board or the filter names that
-    /// zone — the scope the target enumerator and auto-picker walk.
     /// CR 601.2c — whether an Adventure / Omen half's chosen targets break its
     /// own per-slot filters, cross-slot atoms included (Burglar's Plot's
-    /// "two target nonland permanents that share a card type"). The full
-    /// cast path runs the same check against the card's main effect.
+    /// "share a card type"); the full cast path checks the main effect.
     pub(crate) fn half_targets_violate(
         &mut self,
         effect: &crate::effect::Effect,
@@ -16956,6 +16524,9 @@ impl GameState {
         bad
     }
 
+    /// CR 109.2 — a slot that doesn't say "card" names a permanent: graveyard
+    /// and exile cards are out of reach unless the effect reaches off the board
+    /// or the filter names that zone.
     pub(crate) fn target_out_of_zone(
         &self,
         effect: &crate::effect::Effect,
@@ -16986,30 +16557,21 @@ impl GameState {
             && (exiled || !effect.may_target_offboard_card() || filter.is_some_and(|f| f.names_permanent()))
     }
 
-    /// Validate that a target is legally targetable by the given controller.
-    ///
-    /// Returns an error if the target has Hexproof (opponent) or Shroud (anyone),
-    /// or has Protection from the caster's color identity. For player targets,
-    /// also checks the `ControllerHasHexproof` static (Leyline of Sanctity).
-    ///
-    /// **Ward** — if the target permanent has `Keyword::Ward(n)` and the caster
-    /// is an opponent, the caster must have `{n}` generic mana available.
-    /// This check is read-only; use `pay_ward_cost` after a successful check
-    /// to actually deduct the mana.
+    /// Validate that a target is legally targetable by the given controller:
+    /// errors on Hexproof (opponent), Shroud (anyone), or Protection from the
+    /// caster's color identity; player targets also check
+    /// `ControllerHasHexproof` (Leyline of Sanctity). Ward (`Keyword::Ward(n)`,
+    /// opponent caster) needs `{n}` available — read-only; `pay_ward_cost`
+    /// deducts it.
     pub fn check_target_legality(&self, target: &Target, caster: usize) -> Result<(), GameError> {
         self.check_target_legality_with_source(target, caster, None)
     }
 
     /// Same as [`check_target_legality`] but also enforces CR 115.5 — "a
-    /// spell or ability on the stack is an illegal target for itself" —
-    /// when `source_card_id` is provided. Used by the cast pipeline for
-    /// spells like Stifle/Squelch that target stack spells/abilities;
-    /// passing the casting spell's own `CardId` rejects a self-target
-    /// at cast time.
-    /// The body reads the layer system several times over (Shroud,
-    /// Hexproof, the Artifact Ward keyword scan), each of which would
-    /// otherwise re-gather every continuous effect in the game; the whole
-    /// check is `&self`, so one freeze scope covers it.
+    /// spell or ability on the stack is an illegal target for itself" — when
+    /// `source_card_id` is given (Stifle/Squelch can't target themselves).
+    /// The body reads layers several times (Shroud, Hexproof, Artifact Ward),
+    /// so one freeze scope (it's `&self`) covers the whole check.
     pub(crate) fn check_target_legality_with_source(
         &self,
         target: &Target,
@@ -17125,18 +16687,12 @@ impl GameState {
         if self.truce_active() {
             return Err(GameError::TargetHasShroud(*cid));
         }
-        // One computed read for the three CR 613 keyword questions in this
-        // function. Each took a `computed_permanent` of its own, and outside
-        // a freeze scope that is a whole-game gather apiece — for the same
-        // card at the same game state. `None` (not a battlefield permanent)
-        // is the `false` the per-keyword helper returned.
-        //
-        // Presence-gated (PERF `(-216)`): the bot's auto-targeting asks this
-        // of most permanents on the board and almost none can carry any of
-        // the three keywords, so the view — a whole-board gather when the
-        // scope this opened is the outermost — is only taken when the target
-        // could. `false` is authoritative; the gate is skipped once the
-        // scope's gather has already happened, when the view is a memo read.
+        // One computed read for the function's three CR 613 keyword questions
+        // (each was a whole-game gather outside a freeze scope); `None` (not
+        // a battlefield permanent) means `false`. Presence-gated (PERF
+        // `(-216)`): auto-targeting asks this of most permanents and almost
+        // none can carry the keywords. `false` is authoritative; the gate is
+        // skipped once the scope has gathered and the view is a memo read.
         let asked = |k: &Keyword| match k {
             Keyword::Shroud | Keyword::Hexproof => true,
             Keyword::CantBeTargetedByAbilitiesFromMatching(_) => source_card_id.is_some(),
@@ -17670,17 +17226,11 @@ impl GameState {
     /// permanents they control (Serra's Emissary).
     pub(crate) fn player_protection_card_types(&self, player: usize) -> Vec<crate::card::CardType> {
         use crate::effect::StaticEffect;
-        // Cheapest term first, and it is the same conjunction reordered.
-        // `chosen_card_type` is an instance field on the `CardData` the
-        // controller compare already loaded and is `None` on every permanent
-        // that has never stamped a choice, so it settles the card without the
-        // second pointer chase into `definition` and the `static_abilities`
-        // walk. The static test stays: another card can carry a
-        // `chosen_card_type` for a different reason.
-        //
-        // A loop rather than the four-adapter chain, by the `call_mut`
-        // census's rule — `prevent_combat_to_target` asks this once per
-        // combat-damage event.
+        // Cheapest term first (same conjunction, reordered):
+        // `chosen_card_type` is an instance field already loaded and `None`
+        // on nearly every permanent, sparing the definition chase. The static
+        // test stays, since another card may carry the field. A loop rather
+        // than an adapter chain: this runs per combat-damage event.
         let mut out = Vec::new();
         for c in &self.battlefield {
             if c.controller != player {
@@ -17696,8 +17246,6 @@ impl GameState {
         out
     }
 
-    /// True if `player` controls any permanent granting "you have hexproof"
-    /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
     /// CR 702.16 — `player` controls a `ControllerProtectionFromMatching`
     /// static whose quality `src` (a permanent, or a card wherever it is) has.
     pub(crate) fn player_protected_from_source(&self, player: usize, src: crate::card::CardId) -> bool {
@@ -17736,6 +17284,8 @@ impl GameState {
         })
     }
 
+    /// True if `player` controls any permanent granting "you have hexproof"
+    /// via `StaticEffect::ControllerHasHexproof` (Leyline of Sanctity).
     pub fn player_has_static_hexproof(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
         self.players.get(player).is_some_and(|p| p.hexproof_until_next_turn || p.hexproof_this_turn)
@@ -17865,15 +17415,15 @@ impl GameState {
         events.push(GameEvent::PermanentExiled { card_id: cid });
     }
 
-    /// True if `player` controls a permanent granting the broad "ignore
-    /// opponents' hexproof" static (Kaya, Bane of the Dead) — plain `Hexproof`
-    /// on opponents' permanents *and* opponent players no longer shields them.
     /// Detection Tower's turn-scoped grant (`ignore_opponent_hexproof_this_turn`).
     pub(crate) fn ignores_opponent_hexproof_this_turn(&self, player: usize) -> bool {
         !self.ignore_opponent_hexproof_this_turn.is_empty()
             && self.ignore_opponent_hexproof_this_turn.contains(&(player, self.turn_number))
     }
 
+    /// True if `player` controls a permanent granting the broad "ignore
+    /// opponents' hexproof" static (Kaya, Bane of the Dead) — plain `Hexproof`
+    /// on opponents' permanents *and* opponent players no longer shields them.
     pub(crate) fn player_ignores_hexproof(&self, player: usize) -> bool {
         use crate::effect::StaticEffect;
         self.battlefield.iter().any(|c| {
@@ -17917,13 +17467,6 @@ impl GameState {
     // `push_ward_triggers_for_targets` (CR 702.21) which handles the full
     // `WardCost` enum (Mana / Life / Discard / SacrificeCreature).
 
-    /// Push `SpellCast` triggered abilities (e.g. Prowess, Up the Beanstalk)
-    /// onto the stack. They will resolve when priority is passed through.
-    /// `cast_card` is the id of the spell that just resolved (or just got
-    /// cast); the trigger's optional `EventSpec::filter` predicate is
-    /// evaluated with `Selector::TriggerSource` bound to this card so
-    /// "whenever you cast a spell with property X" filters can read the
-    /// cast spell's mana value, color, type, etc.
     /// Veyran — how many `DoubleYourInstantSorceryCastTriggers` statics
     /// `caster` controls, when `cast_card` is an instant or sorcery spell.
     fn instant_sorcery_cast_doublers(&self, caster: usize, cast_card: CardId) -> usize {
@@ -17942,6 +17485,9 @@ impl GameState {
             .count()
     }
 
+    /// Push `SpellCast` triggers (Prowess, Up the Beanstalk) with
+    /// `Selector::TriggerSource` bound to the cast spell so filters can read
+    /// its properties.
     pub(crate) fn fire_spell_cast_triggers(
         &mut self,
         controller: usize,
@@ -17956,22 +17502,12 @@ impl GameState {
         // delayed triggers (Codie). Fire each matching watcher once, with
         // the cast spell bound as the trigger source, and consume it.
         //
-        // (-45), the cost of asking. `delayed_triggers` is empty on almost
-        // every cast and the take / partition / reassign round trip costs the
-        // same either way: `Iterator::partition` under `finalize_cast` was
-        // 7,556 calls at 553 Ir each on `--decks sos` (4.18 M, 0.28 % of the
-        // program), twice a cast, plus two `find_card_anywhere` lookups that
-        // only these two blocks read. One length check answers all of it. The
-        // second block re-checks because the first pushes repeating watchers
-        // back.
-        //
-        // And the list is non-empty on more than half the casts of a sealed
-        // game (8,324 partitions over 14,486 casts at the `(-260)` tip) while
-        // almost never holding a watcher *for this cast*: each block below
-        // asks its match read-only first and enters the take / partition /
-        // reassign only when something fires — `(-257)`'s device, on the
-        // per-cast walk. A partition that keeps nothing leaves the list
-        // exactly as it was, so the gate changes no order and no outcome.
+        // Each block asks its match read-only first and only then does the
+        // take / partition / reassign (PERF `(-45)`, `(-257)`'s device): the
+        // list is often non-empty but almost never holds a watcher for *this*
+        // cast. A partition keeping nothing leaves the list unchanged, so the
+        // gate changes no outcome. The second block re-checks because the
+        // first pushes repeating watchers back.
         let watches_cast = |dt: &crate::game::types::DelayedTrigger| {
             dt.controller == controller
                 && matches!(
@@ -18160,14 +17696,10 @@ impl GameState {
                 );
             }
         }
-        // One battlefield pass for the ability-strip presence gate and both
-        // grant lists (the dispatcher's `DispatchScan`), instead of one walk
-        // each. CR 113.10b — permanents under a "loses all abilities"
-        // continuous effect (Mercurial Transformation / Turn to Frog) don't
-        // fire printed Magecraft / spell-cast triggers, so the stripped set
-        // drops those listeners below; it is empty on almost every board,
-        // which a `Vec` answers with a length check and a `HashSet` answers
-        // with a hash.
+        // One battlefield pass for the strip gate and both grant lists (the
+        // dispatcher's `DispatchScan`). CR 113.10b — permanents that lost all
+        // abilities (Turn to Frog) don't fire printed Magecraft/cast
+        // triggers; the stripped set is almost always empty, so a `Vec`.
         let scan = self.dispatch_board_scan();
         let stripped = self.permanents_with_abilities_removed(scan.strip_on_battlefield);
         // Whether the cast spell came from its caster's hand, read off the
@@ -18324,14 +17856,10 @@ impl GameState {
                 }
             }
         }
-        // CR — "Whenever you cast a multicolored spell, you may return this
-        // from your graveyard to your hand" (the Dissension Eidolon cycle):
-        // a `FromYourGraveyard`-scoped SpellCast trigger fires from its owner's
-        // graveyard when that owner is the caster.
-        // The caster's graveyard only (the old form collected every
-        // graveyard's ids, filtered to the caster's, and re-found each by id
-        // — a quadratic walk per cast), and behind the zone's lane (PERF
-        // `(-231)`): its predicate covers the `FromYourGraveyard` scope.
+        // "Whenever you cast a multicolored spell, you may return this from
+        // your graveyard" (Dissension Eidolons): a `FromYourGraveyard`
+        // SpellCast trigger fires from the caster's graveyard only, behind
+        // the zone's lane (PERF `(-231)`).
         let gy = &self.players[controller].graveyard;
         if gy.has_graveyard_trigger() {
             for c in gy.iter() {
@@ -18510,26 +18038,14 @@ impl GameState {
 
     // ── Payment snapshot / restore ───────────────────────────────────────────
 
-    /// Capture mana pool + tapped state of every permanent `payer` *controls*.
-    /// Used by the cast/activate/counter paths so a payment that fails
-    /// mid-way (after auto-tap has already tapped lands) can be reverted to
-    /// pristine state.
-    ///
-    /// **Controller, not owner** (CR 106.4 / 302.1): auto-tap taps what the
-    /// payer *controls* (`mana_source_table_inner` filters on `controller`),
-    /// so a snapshot keyed on `owner` silently omitted every stolen mana
-    /// source — a Threaten'd Birds of Paradise or a Mind Control'd land that
-    /// a failed payment had tapped stayed tapped, because
-    /// `restore_payment_state` finds nothing to put back for a card the
-    /// snapshot never recorded.
+    /// Capture mana pool + tapped state of every permanent `payer` *controls*,
+    /// so a payment failing after auto-tap can be reverted. Controller, not
+    /// owner (CR 106.4 / 302.1): auto-tap taps what the payer controls, and an
+    /// owner-keyed snapshot left a stolen Birds of Paradise tapped.
     pub(crate) fn snapshot_payment_state(&self, payer: usize) -> PaymentSnapshot {
-        // `collect` over a `Filter` cannot size-hint past the filter, so it
-        // walks the 0->4->8->16 growth ladder: 17,838 `do_reserve_and_handle`
-        // growths over 11,420 snapshots, 1.56 a call and the largest single
-        // context in `(-108)`'s table. `(-109)` half (a) made that one
-        // `with_capacity` at the board's length; `(-356)` makes it **none** —
-        // the buffer comes off `snap_pool`'s free list, and `reserve` is a
-        // no-op on a parked one that already has the room.
+        // Off `snap_pool`'s free list (PERF `(-356)`; `(-109)` had made it
+        // one `with_capacity`): `reserve` is a no-op on a parked buffer that
+        // already has the room.
         let mut tapped = snap_pool::take();
         tapped.reserve(self.battlefield.len());
         tapped.extend(
@@ -18546,16 +18062,11 @@ impl GameState {
         // (it parks its buffer), so the compiler refuses a partial move out
         // of it. Taking the pool leaves an empty one behind for the drop.
         self.players[payer].mana_pool = std::mem::take(&mut snapshot.pool);
-        // **The snapshot is taken in battlefield order, so it is an ordered
-        // subsequence of the board** unless the payment moved a permanent —
-        // one merge walk then answers every entry at a single `CardId`
-        // compare per board card, where asking
-        // `snapshot.tapped.iter().find(id)` per permanent was O(board x
-        // snapshot) and the opponent's half of the board paid a full scan
-        // each to find nothing. The cursor reaching the end of the snapshot
-        // is the proof the merge was valid: a greedy in-order match that
-        // consumes every entry has matched each one against the board card
-        // carrying its id. PERF `(-340)`.
+        // The snapshot is taken in battlefield order, so (unless the payment
+        // moved a permanent) it is an ordered subsequence of the board: one
+        // merge walk with a cursor replaces a per-permanent `find` (O(board x
+        // snapshot)). The cursor reaching the end proves the merge valid.
+        // PERF `(-340)`.
         let snap = &snapshot.tapped[..];
         let mut cursor = 0usize;
         let mut moved: SmallVec<[(usize, bool); 4]> = SmallVec::new();
@@ -18614,14 +18125,6 @@ impl GameState {
         }
     }
 
-    /// Snapshot, auto-tap, and pay `cost` atomically. Returns the auto-tap
-    /// events plus the pre-payment pool snapshot (callers like `cast_spell`
-    /// use it to compute converge). On payment failure the snapshot is
-    /// restored — pool and tapped flags revert to the pre-call state.
-    /// CR 702.8 — may `p` cast `card` at instant speed? A card-intrinsic
-    /// `SelfFlashIf`, a battlefield grant (Sigarda's Aid), a flash *surcharge*
-    /// (Vedalken Orrery-style taxes), or Winding Canyons' turn-scoped
-    /// creature-spell permission. The six cast entry points share this.
     /// "As though it had flash if it targets [filter]" (Timely Ward): the
     /// declared slot-0 target satisfies a `SelfFlashIfTargets`.
     pub(crate) fn flash_by_target(
@@ -18638,26 +18141,20 @@ impl GameState {
             })
     }
 
+    /// CR 702.8 — may `p` cast `card` at instant speed? `SelfFlashIf`, a
+    /// battlefield grant (Sigarda's Aid), a flash surcharge (Vedalken Orrery),
+    /// or Winding Canyons' turn permission; shared by the six cast entry points.
     pub(crate) fn flash_granted_for(&self, p: usize, card: &crate::card::CardInstance) -> bool {
         self.flash_granted_for_with(p, card, u32::MAX)
     }
 
-    /// [`flash_granted_for`](Self::flash_granted_for) with
-    /// [`cast_cost_scan`]'s mask: the board walk is skipped when no permanent
-    /// grants flash. The card-intrinsic legs (`SelfFlashIf`, the flash
-    /// surcharge) and the turn-scoped one are not statics and always run.
     /// CR 601.2 / 307.1 — does the sorcery-speed timing gate bar `p` from
-    /// casting `card` right now?
-    ///
-    /// **One expression, two call sites** (PERF candidate (Q)):
-    /// [`cast_spell_with_convoke`](Self::cast_spell_with_convoke) asks it
-    /// *before* it takes the card out of hand, which is what keeps a
-    /// mistimed cast from unsharing `PlayerData`, the hand `Vec` and the card
-    /// and then putting it all back — 21.6 % of `cube`'s rollbacks and 48.1 %
-    /// of `sealed`'s came from this one check. The bestow path asks it again
-    /// after the stamp, because `bestowed` rewrites the type line a
-    /// flash-granting static (Sigarda's Aid) reads; every other path carries a
-    /// `debug_assert!` that the two answers agree.
+    /// casting `card` right now? One expression, two call sites (PERF
+    /// candidate (Q)): [`cast_spell_with_convoke`](Self::cast_spell_with_convoke)
+    /// asks before taking the card out of hand, so a mistimed cast doesn't
+    /// unshare and roll back (most rollbacks came from here). The bestow path
+    /// re-asks after the stamp (`bestowed` changes the type line Sigarda's Aid
+    /// reads); other paths `debug_assert!` the two answers agree.
     pub(crate) fn sorcery_timing_bars(
         &self,
         p: usize,
@@ -18685,6 +18182,9 @@ impl GameState {
             && !self.players[p].sorceries_as_flash
     }
 
+    /// [`flash_granted_for`](Self::flash_granted_for) with [`cast_cost_scan`]'s
+    /// mask: the board walk is skipped when nothing grants flash (the
+    /// intrinsic, surcharge and turn-scoped legs always run).
     pub(crate) fn flash_granted_for_with(
         &self,
         p: usize,
@@ -18734,6 +18234,8 @@ impl GameState {
                 && card.definition.card_types.contains(&crate::card::CardType::Sorcery))
     }
 
+    /// Snapshot, auto-tap and pay `cost` atomically, returning the auto-tap
+    /// events and the pre-payment pool (for converge); restored on failure.
     pub(crate) fn try_pay_with_auto_tap(
         &mut self,
         payer: usize,
@@ -18873,33 +18375,20 @@ impl GameState {
             .is_ok()
     }
 
-    /// Pay `cost` for `payer`, auto-tapping mana sources as needed.
-    /// Used with a snapshot the caller already captured — for paths that
-    /// mutate state between snapshot and payment (convoke taps creatures
-    /// in between, `activate_ability` applies its tap-cost in between).
+    /// Pay `cost` for `payer`, auto-tapping as needed, with a snapshot the
+    /// caller already took (convoke and `activate_ability` mutate between
+    /// snapshot and payment).
     ///
-    /// `forced_only` implements "proper tapping" for human players (CR
-    /// 601.2g — the active player chooses which mana sources to tap):
-    /// - If the pool already covers the cost, pay from it directly (the
-    ///   player has arranged their mana).
-    /// - Otherwise the engine auto-taps **only if the payment is forced** —
-    ///   i.e. after a full auto-tap, no untapped source the player controls
-    ///   *could have contributed to this cost* remains. If a relevant
-    ///   untapped source is left over, the player had a real choice, so the
-    ///   cast is rejected with `ManualTapRequired` (rolled back) and they
-    ///   tap manually before re-submitting.
+    /// `forced_only` is "proper tapping" for humans (CR 601.2g): a pool that
+    /// covers the cost pays directly; otherwise auto-tap only if the payment
+    /// is forced (no untapped source that could have contributed remains),
+    /// else reject with `ManualTapRequired` (rolled back) so they tap
+    /// manually. False for bots, tests, and engine auto-pays.
     ///
-    /// `forced_only` is false for bots, scripted tests, and engine-driven
-    /// auto-pays (Counter-unless-paid, "pay X or sacrifice"), which keep
-    /// the original full auto-tap behavior.
-    ///
-    /// CR 119.4 / 107.4f — a Phyrexian pip paid with 2 life needs the life:
-    /// a player can pay life only while their life total is at least the
-    /// amount. The pool pays a Phyrexian pip with life whenever its colour is
-    /// missing and cannot see the life total, so when the payment it made
-    /// would take more life than the payer has, it is undone and retried with
-    /// one more Phyrexian pip (then two, …) demanded as mana. Only a cost with
-    /// a Phyrexian pip whose payment overdrew the life total pays for the retry.
+    /// CR 119.4 / 107.4f — a Phyrexian pip paid with 2 life needs the life.
+    /// The pool pays one with life whenever its colour is missing, blind to
+    /// the life total, so a payment that overdraws life is undone and retried
+    /// with one more Phyrexian pip demanded as mana (then two, …).
     pub(crate) fn try_pay_after_snapshot_mode(
         &mut self,
         payer: usize,
@@ -18990,14 +18479,11 @@ impl GameState {
         let relaxed = self.relax_cost_colors_for_spell(Some(payer), cost, kind);
         let cost: &crate::mana::ManaCost = &relaxed;
         if forced_only {
-            // "Keep my leftover floating mana": lift out only the *excess*
-            // float (the off-pip mana that would hit the generic), pay the cost
-            // from the remaining pip-matching float + freshly-tapped sources,
-            // then restore the excess. Pip-matching float is still spent on its
-            // pip (auto-tap accounts for the pool). We only reach here after the
-            // cast confirmed this is payable (see `float_spend_is_optional`); if
-            // it somehow can't, restore the excess and fall through to spending
-            // it (it was forced after all).
+            // "Keep my leftover floating mana": lift out the excess float
+            // (off-pip mana that would hit the generic), pay from pip-matching
+            // float + fresh taps, restore the excess. Reached only after
+            // `float_spend_is_optional` confirmed payability; if it fails
+            // anyway, restore and spend it (it was forced).
             if spend_float == Some(false) {
                 let protected = self.protectable_float(payer, cost);
                 if protected.total() > 0 {
@@ -19034,14 +18520,10 @@ impl GameState {
             if self.hand_mana_source_could_pay(payer, cost) {
                 return Err(GameError::ManualTapRequired { cost: cost.summary() });
             }
-            // Eagerly tap for the *forced colored* pips — their colour can
-            // only come from those sources, so there's no choice to leave
-            // the player (which Forest pays {G} doesn't matter). This mana
-            // stays floating in the pool; if the rest of the cost needs a
-            // manual tap, the player only has to tap the ambiguous part.
-            // A colour producible by sources of different kind/signature
-            // (Forest vs Mox Emerald) is NOT forced — leave those pips out
-            // of the eager tap so the choice check below can prompt.
+            // Eagerly tap for *forced* coloured pips (only one kind of source
+            // makes the colour, so there's no choice); that mana floats and a
+            // manual tap covers only the ambiguous rest. A colour from sources
+            // of different kinds (Forest vs Mox Emerald) is not forced.
             let color_is_forced = |col: ManaColor| -> bool {
                 use crate::fxhash::HashSet;
                 let need = cost
@@ -19199,18 +18681,15 @@ impl GameState {
     }
 
     /// CR 106.6 — the auto-tapper never taps a source whose mana carries a
-    /// real spend restriction (Secluded Courtyard, Unclaimed Territory,
-    /// Castle Garenbrig): it can't know what it is funding. The payment can:
-    /// when the ordinary attempt came up short, float the payer's untapped
-    /// restricted sources that `kind` may spend — one more each try, each
-    /// asked for a colour the cost still lacks — and pay again. Only this
-    /// failure path pays for the walk; `None` leaves the caller to restore.
+    /// real spend restriction (Secluded Courtyard, Castle Garenbrig): it can't
+    /// know what it funds. When the ordinary attempt comes up short, this
+    /// floats the payer's restricted sources `kind` may spend — one more per
+    /// try, each for a colour still lacking — and pays again. `None` leaves
+    /// the caller to restore.
     ///
-    /// `failed` is the short attempt's auto-tap events. A source it
-    /// sacrificed (a Treasure) cannot be untapped by the restore: its mana
-    /// stays in the pool and its events stand (CR 605.3b), where they used
-    /// to vanish with the attempt — no "whenever you sacrifice" trigger, no
-    /// sweep, and the Treasure sat in a graveyard (pod seed 819163).
+    /// `failed` is the short attempt's auto-tap events: a source it
+    /// sacrificed (a Treasure) can't be restored, so its mana and events stand
+    /// (CR 605.3b) rather than vanishing (pod seed 819163).
     fn pay_with_restricted_sources(
         &mut self,
         payer: usize,
@@ -19416,18 +18895,12 @@ impl GameState {
     }
 
     /// Does paying `cost` for `player` involve a *genuine* choice of which
-    /// mana sources to tap — one the engine shouldn't make for them?
-    ///
-    /// Returns true only when the cost is affordable from untapped sources
-    /// AND the player could tap different sources leaving different mana
-    /// behind. Forced colored pips (a colour only one kind of source can
-    /// make) and interchangeable sources (two of the same basic) are *not*
-    /// choices, so they auto-tap. Hybrid / mono-hybrid costs fall back to
-    /// the conservative "any relevant untapped source remains" check.
-    ///
-    /// Only consulted on the forced-only (human) path when the pool doesn't
-    /// already cover the cost; `pay()` is still the source of truth for
-    /// whether the resulting tap actually pays.
+    /// mana sources to tap — one the engine shouldn't make for them? True only
+    /// when affordable from untapped sources AND different taps leave
+    /// different mana. Forced coloured pips and interchangeable sources
+    /// aren't choices; hybrid costs use the conservative "any relevant source
+    /// remains" check. Consulted only on the forced-only (human) path;
+    /// `pay()` stays the source of truth.
     fn payment_requires_manual_choice(
         &self,
         player: usize,
@@ -19442,14 +18915,11 @@ impl GameState {
         if self.hand_mana_source_could_pay(player, cost) {
             return true;
         }
-        // CR 601.2g — a converge cast's payoff *is* the set of colours spent,
-        // so which half of a dual land pays is the caster's decision. The rest
-        // of this function only asks which *sources* tap; when a multi-colour
-        // source has to tap anyway, that test sees one legal assignment and
-        // stays quiet, and the auto-tapper silently picked a colour (Snarl
-        // Song `{5}{G}` off five Forests + Forum of Amity tapped the Forum for
-        // white without asking). A dual that is *not* forced to tap is already
-        // covered by the held-back-sources rules below.
+        // CR 601.2g — a converge cast's payoff *is* the colours spent, so
+        // which half of a dual pays is the caster's call. When a multi-colour
+        // source must tap anyway, the source test below sees one assignment
+        // and stays quiet (Snarl Song tapped Forum of Amity for white
+        // unasked). An unforced dual is covered by the held-back rules.
         if kind.wants_converge && self.forced_multicolor_source_exists(player, cost, kind) {
             return true;
         }
@@ -19560,14 +19030,11 @@ impl GameState {
         false
     }
 
-    /// Does paying `cost` require tapping a source that can make more than
-    /// one colour — i.e. is a colour choice unavoidable?
-    ///
-    /// Answered by dry-running the payment on a clone with every multi-colour
-    /// source pretend-tapped: if the cost is still payable without them, the
-    /// duals are held back and the ordinary held-back-sources analysis in
-    /// [`payment_requires_manual_choice`] governs. If it isn't, at least one
-    /// dual must tap and the caster picks its colour.
+    /// Does paying `cost` require tapping a multi-colour source, i.e. is a
+    /// colour choice unavoidable? Dry-runs the payment on a clone with every
+    /// such source pretend-tapped: if still payable, the
+    /// [`payment_requires_manual_choice`] analysis governs; if not, a dual
+    /// must tap and the caster picks its colour.
     ///
     /// [`payment_requires_manual_choice`]: Self::payment_requires_manual_choice
     fn forced_multicolor_source_exists(
@@ -19613,16 +19080,10 @@ impl GameState {
     }
 
     /// Ceiling for the "choose X" prompt on an {X} cost: floating mana plus
-    /// one per untapped mana source, minus the cost's fixed part, divided by
-    /// how many `{X}` pips the cost has. Display / clamp guidance only — the
-    /// payment path remains the authority on whether the chosen X is actually
-    /// affordable.
-    ///
-    /// The divisor is what an `{X}{X}` cost needs: `with_x_value` substitutes
-    /// *every* X, so announcing X on Divergent Equation's `{X}{X}{U}` spends
-    /// `2X + 1`. Without it the picker offered X up to the full mana available
-    /// — X=6 off seven Islands, a 13-mana cast — and every value past the real
-    /// ceiling bounced off the payment path.
+    /// one per untapped mana source, minus the fixed part, divided by the
+    /// number of `{X}` pips (`with_x_value` substitutes every X, so
+    /// Divergent Equation's `{X}{X}{U}` costs `2X + 1`). Guidance only — the
+    /// payment path decides affordability.
     fn max_prompt_x(&self, player: usize, cost: &crate::mana::ManaCost) -> u32 {
         let pool = self.players[player].mana_pool.total();
         let sources = self
@@ -19650,23 +19111,15 @@ impl GameState {
         (pool + sources).saturating_sub(fixed) / x_pips
     }
 
-    /// Could *any* announced X make this cost payable right now?
+    /// Could *any* announced X make this cost payable right now? Tests only
+    /// the coloured/hybrid skeleton, which no X and no reduction (CR 601.2f)
+    /// can change; if it's unpayable even with a full auto-tap, the "choose X"
+    /// picker is a dead end (Traumatic Critique `{X}{U}{R}` with no red source
+    /// soft-locked the client).
     ///
-    /// Only the pips that no amount of X — and no cost reduction — can change
-    /// are tested: `{X}` and generic both come off the flexible part of a
-    /// cost, and CR 601.2f forbids reductions from touching a coloured pip.
-    /// So if the coloured/hybrid skeleton alone can't be paid even with a
-    /// full auto-tap, nothing about this cast is going to work, and posing
-    /// the "choose X" picker is a dead end: every value the player picks
-    /// bounces off the payment path with a mana error the client only logs.
-    /// That is the reported soft-lock — Traumatic Critique `{X}{U}{R}` with
-    /// no red source in play.
-    ///
-    /// Deliberately an *under*-approximation: a false "reachable" costs
-    /// nothing (the payment path still rejects), while a false
-    /// "unreachable" would make a castable spell uncastable. Convoke is
-    /// excluded for exactly that reason — it can pay a coloured pip by
-    /// tapping a creature of that colour, which this probe can't see.
+    /// An under-approximation on purpose: a false "reachable" costs nothing,
+    /// a false "unreachable" makes a castable spell uncastable. So convoke
+    /// (which can pay a coloured pip with a creature) is excluded.
     fn x_cost_pips_are_payable(
         &self,
         player: usize,
@@ -19729,20 +19182,9 @@ impl GameState {
 
     // ── Auto-tap mana sources ─────────────────────────────────────────────────
 
-    /// Tap untapped mana sources to cover `cost` for `player`, returning the
-    /// events produced. Called before spell/ability payment so the client
-    /// doesn't need to manually tap lands before casting.
-    ///
-    /// `activate_ability` uses `priority.player_with_priority` for permission
-    /// checks, but auto-tap may run in contexts where priority is held by
-    /// another player (e.g. resolving a Pact upkeep trigger during the
-    /// caster's upkeep). We temporarily override priority to `player` so
-    /// our `activate_ability` calls don't reject the tap.
-    /// Count untapped permanents `player` controls that can tap for
-    /// `color` — used by `auto_tap_for_cost_inner` to decide which half
-    /// of a hybrid pip is actually producible. Counts an "add any one
-    /// color" source (Birds of Paradise, etc.) toward every color, since
-    /// the tap loop can script it to the needed color.
+    /// Count untapped permanents `player` controls that can tap for `color`,
+    /// for `auto_tap_for_cost_inner`'s hybrid-half choice. "Any one color"
+    /// sources (Birds of Paradise) count for every colour.
     fn untapped_producers_of(&self, player: usize, color: ManaColor) -> u32 {
         self.with_frozen_layers(|g| g.untapped_producers_of_inner(player, color))
     }
@@ -19769,6 +19211,9 @@ impl GameState {
             .count() as u32
     }
 
+    /// Tap sources to cover `cost` so clients needn't tap before casting;
+    /// overrides priority to `player` while it runs, e.g. paying a Pact during
+    /// the caster's upkeep.
     pub fn auto_tap_for_cost(&mut self, player: usize, cost: &crate::mana::ManaCost) -> Vec<GameEvent> {
         self.auto_tap_for_cost_filtered(player, cost, false, false)
     }
@@ -19846,26 +19291,9 @@ impl GameState {
         }
     }
 
-    /// One pass over the battlefield collecting every untapped mana
-    /// source this player controls, with the colours each can make.
-    ///
-    /// Built once per auto-tap and consulted from there on. The first
-    /// version of the smart-tap selection called
-    /// `effective_mana_abilities` inside the per-pip selection loop, once
-    /// per candidate per colour — O(pips × sources × colours) *engine*
-    /// calls, each of which walks the layer system. That is invisible in
-    /// a two-player 40-card game and quadratic death in 4-player
-    /// Commander: it took `bot_vs_bot_commander_demo_terminates` from
-    /// seconds to past its 600 s timeout. Colours can't change from
-    /// tapping, so there is no reason to recompute them per pip.
-    /// One WUBRG mask per untapped mana source `player` controls, saying
-    /// which colours that source can make.
-    ///
-    /// Exposed for the net encoder, which needs "could this card in hand
-    /// be cast right now" as a *feature* and cannot mutate the game to
-    /// find out. `mana_source_table` itself stays private: its ordering
-    /// and redundancy fields are auto-tap's business, and callers outside
-    /// this module have no use for them.
+    /// One WUBRG mask per untapped mana source `player` controls. Exposed for
+    /// the net encoder ("castable right now" as a feature, without mutating
+    /// the game); `mana_source_table`'s ordering/redundancy fields stay private.
     pub fn untapped_mana_colors(&self, player: usize) -> Vec<[bool; 5]> {
         self.mana_source_table(player, false, None)
             .iter()
@@ -19879,6 +19307,10 @@ impl GameState {
             .collect()
     }
 
+    /// One battlefield pass per auto-tap collecting each untapped source's
+    /// colours. Computing colours per pip was quadratic in Commander and timed
+    /// out `bot_vs_bot_commander_demo_terminates`.
+    ///
     /// Frozen: every untapped permanent asks `effective_mana_abilities`, and
     /// each of those runs `printed_land_mana_ability_lost_with` and
     /// `intrinsic_land_mana_abilities`, both of which take a layer pass. One
@@ -19970,18 +19402,12 @@ impl GameState {
             // picked it, its activation failed and the payment gave up with
             // Islands untapped (2026-11-14).
             abilities.retain(|(_, a)| !self.exile_other_cost_unpayable(c.id, a, player));
-            // A spend-restricted (non-rider) mana ability claims no colour
-            // (`payload_produced_colors`), but listed as the row's first
-            // ability it was the source's *generic* ability: the generic loop
-            // tapped Gideon's Memorial ("spend only to cast planeswalker
-            // spells") for a creature's {3}, got mana the spell can't spend and
-            // came up one short — Plains + 3 Forests + Memorial could not cast
-            // {3}{W} unless the Memorial happened to sit last on the
-            // battlefield. Every non-planeswalker spell that needed every land
-            // was uncastable, and the card played at −8.3 points in FRA
-            // sealed (2026-11-22). The kind-aware retry
-            // (`pay_with_restricted_sources`) taps these when they may fund
-            // the payment.
+            // A spend-restricted (non-rider) mana ability claims no colour,
+            // but listed first it became the source's generic ability: the
+            // generic loop tapped Gideon's Memorial for a creature's {3} and
+            // came up short (−8.3 points in FRA sealed, 2026-11-22). The
+            // kind-aware retry (`pay_with_restricted_sources`) taps these when
+            // they may fund the payment.
             abilities.retain(|(_, a)| !crate::game::mana_shape::mana_is_spend_restricted(&a.effect));
             // An X-sized ability claims no colour: the pip loops would
             // activate it with X = 0 (see `auto_tap_x_sized_sources`).
@@ -20183,18 +19609,11 @@ impl GameState {
         let mut avail_colorless = pool.colorless_amount();
         let pool_snow = pool.snow_amount();
 
-        // Inline rather than `Vec::new()`: both buffers are per-call, hold one
-        // entry per pip of a printed cost, and their first `push` was
-        // ~23,000 of a six-game run's first allocations with no re-growth
-        // (PERF `(-158)`'s census, `malloc` column). A cost with more pips of
-        // one kind than the slots below spills to the heap exactly as before.
-        // One boxed `ScriptedDecider` for the whole payment. Both pip loops
-        // below install a one-answer script on an `AnyOneColor` source and
-        // take it straight back out; building it per pip was a `Box` plus a
-        // `VecDeque` allocation each, and this row is `cube`'s largest engine
-        // allocation site that is not a deliberate `reserve` (PERF `(-159)`).
-        // `None` until the first such source, so a payment that scripts
-        // nothing still allocates nothing.
+        // Inline buffers: per-call, one entry per pip, and their first push
+        // was a major allocation site (PERF `(-158)`); a bigger cost spills.
+        // One boxed `ScriptedDecider` for the whole payment, created at the
+        // first `AnyOneColor` source and reused per pip (PERF `(-159)`), so a
+        // payment that scripts nothing allocates nothing.
         let mut scripted_slot: Option<Box<dyn crate::decision::Decider + Send + Sync>> = None;
         let mut still_need_colors: SmallVec<[ManaColor; 8]> = SmallVec::new();
         // Hybrid pips are resolved after the fixed-color pass so the
@@ -20260,14 +19679,10 @@ impl GameState {
         }
         let mut snow_short = snow_pips.saturating_sub(pool_snow);
 
-        // Resolve hybrid pips ({a/b}). Each can be paid by one mana of
-        // either color — from the pool, or by tapping a source that makes
-        // it. Resolve "forced" pips (only one color reachable) first so a
-        // limited board isn't spent on the wrong half: {W/B}{W/B} with a
-        // Plains + a Swamp must split W and B, and {W/B} with only a Swamp
-        // must tap the Swamp rather than hunting for a white source (the
-        // previous code always tried color A and stranded the cast).
-        // `reach` = pool mana + untapped sources that can make the color.
+        // Resolve hybrid pips ({a/b}) from pool or a source of either colour,
+        // "forced" pips (one colour reachable) first so a limited board isn't
+        // spent on the wrong half: {W/B}{W/B} off Plains + Swamp must split.
+        // `reach` = pool mana + untapped sources that can make the colour.
         fn reach(c: ManaColor, avail: &[u32; 5], prod: &[u32; 5]) -> u32 {
             avail[color_index(c)] + prod[color_index(c)]
         }
@@ -20316,13 +19731,9 @@ impl GameState {
         let pool_total_left: u32 = avail.iter().sum::<u32>() + avail_colorless;
         let generic_to_tap = generic.saturating_sub(pool_total_left).max(snow_short);
 
-        // Nothing to tap: the two loops below are no-ops and `events` is
-        // still empty, so return before building the source table. That
-        // table is a layer pass per untapped permanent
-        // (`mana_source_table`, **3.85 % of the profile over 7,550 calls** at
-        // the forty-seventh tip; the forty-eighth pass's (E) took the gather
-        // off it) and every caller whose pool already covers the cost was
-        // paying for it.
+        // Nothing to tap: the loops below are no-ops, so return before
+        // building the source table (a layer pass per untapped permanent,
+        // which callers whose pool covers the cost were paying for).
         if still_need_colors.is_empty() && generic_to_tap == 0 {
             crate::game::pay_census::record_tap(1, 1);
             return events;
@@ -20372,36 +19783,22 @@ impl GameState {
             }
         }
 
-        // Tap a color-matched source for each still-needed colored pip.
-        // For abilities that produce `AnyOneColor` (Black Lotus, Birds of
-        // Paradise, Mox Diamond, etc.) the source's own resolver asks the
-        // installed `Decider` which color to add. We temporarily swap in a
-        // `OneColorDecider` that answers with `color`, so the chosen color
-        // matches the pip we're trying to satisfy. (Without this, the
-        // default `AutoDecider` always picks White and leaves the requested
-        // color unfilled.)
+        // Tap a colour-matched source for each still-needed coloured pip. An
+        // `AnyOneColor` source (Black Lotus, Birds of Paradise) asks the
+        // `Decider` for its colour, so swap in a `OneColorDecider` answering
+        // `color` (the default `AutoDecider` would always pick White).
         for color in still_need_colors {
             // Hybrid-resolved pips aren't `Colored` symbols in the cost,
             // so their color joins the covered set here.
             if diverse {
                 covered[color_index(color)] = true;
             }
-            // `controller` not `owner`: a permanent you've stolen
-            // (Threaten / Mind Control) is a tap-for-mana source for
-            // you, regardless of its original ownership — `sources` is
-            // filtered on controller for the same reason.
-            //
-            // Among sources that make this colour, spend the *least*
-            // flexible one: a Swamp pays {B} before a Dimir dual does,
-            // leaving the dual free for whichever colour comes up next.
-            // Same reasoning as the "dedicated first" reservation in
-            // `manual_tap_is_a_real_choice`. Cheapest first, then
-            // narrowest; `min_by_key` keeps the first of equal keys, so
-            // battlefield order still breaks remaining ties as before.
-            // A colour claimed by a filter ability ("{1}, {T}: Add one mana of
-            // any color", Painted Bluffs) eats mana already in the pool, so a
-            // free source of the colour goes first: two Bluffs beside two
-            // Mountains tapped all four for {R}{R} against {2}{R}{R}.
+            // `controller` not `owner`: a stolen permanent taps for its
+            // controller. Spend the *least* flexible matching source (a
+            // Swamp before a Dimir dual), cheapest then narrowest, as in
+            // `manual_tap_is_a_real_choice`; `min_by_key` keeps battlefield
+            // order for ties. A filter ability ("{1}, {T}: Add any color",
+            // Painted Bluffs) eats pool mana, so a free source goes first.
             let source = sources
                 .iter()
                 .filter(|s| !self.source_card(s).is_some_and(|c| c.tapped))
@@ -20423,22 +19820,17 @@ impl GameState {
                     .unwrap_or_else(|| Box::new(crate::decision::OneColorDecider::default()));
                 b.rearm_script(crate::decision::DecisionAnswer::Color(color));
                 let prev_decider = std::mem::replace(&mut self.decider, b);
-                // Force synchronous resolution: if the player normally wants
-                // a UI prompt for `AnyOneColor`, auto-tap must still finish
-                // inline (otherwise the cast aborts mid-payment with a
-                // pending decision). The scripted decider already supplies
-                // the right answer.
-                // The raw field, not `seat_prompts`: this saves and restores it around
-                // a forced-synchronous auto-tap, so it must round-trip exactly.
+                // Force synchronous resolution: a player who normally gets a UI
+                // prompt for `AnyOneColor` must still finish auto-tap inline
+                // (or the cast aborts mid-payment); the scripted decider
+                // answers. The raw field, not `seat_prompts`, so the
+                // save/restore round-trips exactly.
                 let prev_wants_ui = self.players[player].wants_ui;
                 self.players[player].wants_ui = false;
-                // One allocation for the batch instead of the 0->4->8->16
-                // ladder the pushes walk up: this row is 1.72 reserve-growths
-                // a call on `cube` and 1.93 on the actor (PERF (-108)), both
-                // above (-103)'s threshold. Guarded on emptiness so a payment
-                // that taps nothing still allocates nothing. Ahead of the
-                // activation since `(-243)`, which writes into `events`
-                // directly instead of returning a `Vec` to append.
+                // One allocation for the batch instead of the growth ladder
+                // (PERF (-108)); guarded on emptiness so a payment that taps
+                // nothing allocates nothing. Ahead of the activation since
+                // `(-243)`, which writes into `events` directly.
                 if events.is_empty() {
                     events.reserve(16);
                 }
@@ -20449,35 +19841,24 @@ impl GameState {
             }
         }
 
-        // Tap any mana source for remaining generic pips, spending the
-        // most replaceable ones first — see `source_redundancy`.
-        //
-        // `redundancy` reads `sources`, which this loop never mutates
-        // (tapping writes the battlefield, and the table's colours can't
-        // change from a tap — that is why it is built once at all), so the
-        // ranking is constant across the pips and is computed once here.
-        // It used to be recomputed per live source per pip. Gated on there
-        // being a generic pip at all: most costs have none, and building the
-        // ranking is O(sources² × colours).
+        // Tap any mana source for remaining generic pips, most replaceable
+        // first (`source_redundancy`). The ranking is constant across pips
+        // (tapping can't change `sources`' colours), so it's computed once,
+        // and only when a generic pip exists (it's O(sources² × colours)).
         let keep_by_idx: SmallVec<[u32; 16]> = if smart && generic_to_tap > 0 {
             sources.iter().map(|s| s.redundancy(&sources)).collect()
         } else {
             SmallVec::new()
         };
         for _ in 0..generic_to_tap {
-            // Same controller-vs-owner fix as the colored-pip loop.
-            // Under `diverse`, a source that can make a color not yet
-            // being spent outranks everything (each fresh color is
-            // converge value); the fresh color rides along so the tap
-            // can script it on an any-color source, and the ability
-            // index switches to that color's half on a dual.
-            // `converge_rarest`: how many untapped sources can still make
-            // each fresh colour. A dual then takes the colour with the
-            // fewest alternatives (Paradox Gardens pays green beside an
-            // Island, not blue), so the colour only it could make is not
-            // the one left unspent. Recomputed per pip — each tap changes
-            // the counts. Flag off, every fresh source ranks equal here and
-            // the key is the historical (stale, rank, keep).
+            // Controller, not owner, as in the coloured-pip loop. Under
+            // `diverse`, a source that can make a colour not yet spent
+            // outranks everything (converge value), and the fresh colour is
+            // scripted on an any-colour source / picks a dual's half.
+            // `converge_rarest`: a dual takes the colour with the fewest
+            // remaining producers (Paradox Gardens pays green beside an
+            // Island), recomputed per pip. Flag off, the key is the historical
+            // (stale, rank, keep).
             let mut supply = [0u32; 5];
             if diverse && rarest {
                 for s in sources.iter() {
@@ -20660,22 +20041,11 @@ impl GameState {
 
     // ── Activate ability ──────────────────────────────────────────────────────
 
-    /// Collect the activated abilities granted to the permanent `card_id`
-    /// by `StaticEffect::GrantActivatedAbility` statics in play (Galazeth
-    /// Prismari, Cryptolith Rite). Each grant's `applies_to` filter is
-    /// evaluated from the static source's controller so "you control"
-    /// clauses scope to that player's permanents. Returned in battlefield
-    /// order so a permanent's granted-ability indices are stable within a
-    /// recompute. Surfaced by `activate_ability` at indices ≥ the
-    /// permanent's printed-ability count.
-    /// Intrinsic basic-land-type mana abilities for a battlefield
-    /// permanent, derived from its *computed* land types (CR 305.6): any
-    /// land with a basic land type has the intrinsic `{T}: Add <color>`.
-    /// We derive only for basic land types the permanent gained via a
-    /// continuous effect (computed but not printed), so printed basics —
-    /// which hard-code `tap_add` — aren't double-counted. Lets Blood Moon
-    /// / Spreading Seas / Urborg-style type changers tap for the right
-    /// colour. Surfaced at ability indices after printed + granted.
+    /// Intrinsic basic-land-type mana abilities for a battlefield permanent,
+    /// from its *computed* land types (CR 305.6). Only for basic types gained
+    /// by a continuous effect, so printed basics (which hard-code `tap_add`)
+    /// aren't double-counted; lets Blood Moon / Spreading Seas / Urborg tap
+    /// for the right colour. Indexed after printed + granted.
     pub(crate) fn intrinsic_land_mana_abilities(
         &self,
         card_id: CardId,
@@ -20740,14 +20110,10 @@ impl GameState {
 
     /// CR 305.6 / CR 612 — a basic land's printed `{T}: Add <color>` is really
     /// the intrinsic ability its type line grants, so it goes away once a type
-    /// rewrite takes that basic type off the *computed* type line (Spreading
-    /// Seas, Blood Moon, a Trait Doctoring color/land-word change). Printed
-    /// mana abilities that aren't a basic type's intrinsic ability are real
-    /// rules text and survive.
-    ///
-    /// Takes the computed land-type list the caller already holds — every
-    /// caller is inside a scope that has one, so the `&self` variant that
-    /// fetched its own (a whole-game gather per call) is gone. See
+    /// rewrite removes that basic type from the *computed* type line (Spreading
+    /// Seas, Blood Moon, Trait Doctoring). Other printed mana abilities are
+    /// real rules text and survive. Takes the caller's computed land-type
+    /// list; see
     /// [`intrinsic_land_mana_abilities_with`](Self::intrinsic_land_mana_abilities_with).
     pub(crate) fn printed_land_mana_ability_lost_with(
         card: &crate::card::CardInstance,
@@ -20763,11 +20129,9 @@ impl GameState {
     /// The printed half of
     /// [`printed_land_mana_ability_lost_with`](Self::printed_land_mana_ability_lost_with):
     /// the basic land type ability `index` is the intrinsic ability *of*, or
-    /// `None` when the ability is real rules text and can't be taken away by a
-    /// type rewrite. No layer read at all — which is the point. A caller that
-    /// gets `None` here knows the answer without a computed type line, and one
-    /// that gets `Some` only needs the line when something in scope can
-    /// rewrite it (`land_type_change_in_scope`).
+    /// `None` when it is real rules text no type rewrite can remove. No layer
+    /// read: `None` settles it, and `Some` needs the computed line only when
+    /// `land_type_change_in_scope`.
     pub(crate) fn printed_land_mana_basic(
         card: &crate::card::CardInstance,
         index: usize,
@@ -20834,21 +20198,12 @@ impl GameState {
         out
     }
 
-    /// [`effective_mana_abilities_of`](Self::effective_mana_abilities_of) into
-    /// a caller-owned buffer. Every hot caller asks this once per untapped
-    /// permanent from inside a `battlefield.iter()`, and the owning form built
-    /// (and dropped) a `Vec` per permanent per call — 47,798 allocations over
-    /// six bench games for a list that is one element wide on a basic land.
-    /// One buffer hoisted to the loop head is the same list at one allocation
-    /// per loop; every element borrows from `&'a self`, so reusing it across
-    /// cards is sound.
     /// CR 602.5 — which of `card`'s mana abilities can't be activated right
     /// now: `(all, tap)` — every one (Scheming Fence's pick, Arrest's
     /// `CantActivateAbilities`), or those with {T} in the cost (Serra
-    /// Bestiary's `CantActivateTapAbilities`). One answer for every mana
-    /// walker — the source table, the payability check, the colour count and
-    /// the bot's `available_mana` — so none counts a source the activation
-    /// gate refuses.
+    /// Bestiary's `CantActivateTapAbilities`). Shared by every mana walker
+    /// (source table, payability, colour count, the bot's `available_mana`)
+    /// so none counts a source the activation gate refuses.
     pub(crate) fn mana_abilities_lock(&self, card: &crate::card::CardInstance, scan: &GrantScan<'_>) -> (bool, bool) {
         if !scan.locked.is_empty() && scan.locked.contains(&card.id) {
             return (true, true);
@@ -20864,6 +20219,10 @@ impl GameState {
         (all && kws.has_kw(&Keyword::CantActivateAbilities), tap && kws.has_kw(&Keyword::CantActivateTapAbilities))
     }
 
+    /// [`effective_mana_abilities_of`](Self::effective_mana_abilities_of) into
+    /// a caller-owned buffer: callers ask once per untapped permanent inside a
+    /// battlefield walk, and every element borrows from `&'a self`, so one
+    /// hoisted buffer is sound.
     pub(crate) fn effective_mana_abilities_into<'a>(
         &'a self,
         card: &'a crate::card::CardInstance,
@@ -20877,23 +20236,14 @@ impl GameState {
         }
         let card_id = card.id;
         let printed_count = card.definition.activated_abilities.len();
-        // One layer read for the whole list. Both CR 305.6 checks below ask
-        // the same card for the same thing — its *computed* land types — and
-        // a `computed_permanent` outside a freeze scope gathers every
-        // continuous effect in the game. This was one gather per printed mana
-        // ability plus one more for the intrinsic pass.
-        //
-        // And the layer pass is skipped outright when nothing in scope can
-        // rewrite a land type: exactly three modifications write
-        // `subtypes.land_types` (see `rewrites_land_types`), and with none of
-        // them present the computed type line *is* the printed one. Inside a
-        // freeze scope the effect list is already gathered, so the test is a
-        // walk of it; outside one, `frozen_effects` returns `None` and the
-        // old path stands rather than paying a gather to save a gather.
-        //
-        // The scan answers it for the whole loop when it was built inside the
-        // scope (`GrantScan::land_types_rewritten`); the per-card read is the
-        // fallback for a scan built outside one.
+        // One layer read for the whole list: both CR 305.6 checks below ask
+        // for the card's *computed* land types. Skipped outright when nothing
+        // in scope can rewrite a land type (only three modifications write
+        // `subtypes.land_types`, see `rewrites_land_types`): inside a freeze
+        // scope that's a walk of the gathered list; outside, the old path
+        // stands rather than pay a gather to save one. A scan built inside
+        // the scope answers for the whole loop
+        // (`GrantScan::land_types_rewritten`).
         let rewrites = match scan.land_types_rewritten {
             some @ Some(_) => some,
             None => self.frozen_effects().map(|fx| fx.iter().any(rewrites_land_types)),
@@ -20924,31 +20274,20 @@ impl GameState {
             Some(cp) => &cp.subtypes().land_types,
             None => &card.definition.subtypes.land_types,
         };
-        // The printed abilities are borrowed from `card.definition`, which
-        // outlives the call — only `granted_abilities_for` and
-        // `intrinsic_land_mana_abilities` synthesize, and all three callers
-        // read `.effect` and the cost fields. Cloning them was one
-        // `ActivatedAbility` deep copy per printed mana ability per untapped
-        // permanent per `auto_tap_for_cost_inner`.
-        // CR 305.7 / 113.10b — a permanent that has lost all abilities has no
+        // Printed abilities are borrowed from `card.definition` (only grants
+        // and intrinsics synthesize); callers read `.effect` and cost fields.
+        // CR 305.7 / 113.10b — a permanent that lost all abilities has no
         // printed mana ability either.
         //
-        // ⚠ The per-ability CR 305.6 check below is **not** this rule: it only
-        // drops a printed `{T}: Add <colour>` whose colour matches a basic
-        // type the card *printed*, so a land with no printed basic type kept
-        // every one of them. A Blood-Mooned Sandsteppe Citadel tapped for
-        // white — the whole `tri_land` cycle, plus any land whose mana
-        // ability is real rules text, ignored Blood Moon and Magus of the
-        // Moon outright. `activate_ability` has always gated on this flag
-        // (line ~14400); the auto-tapper's source table did not, so the two
-        // disagreed and the tapper won.
-        // It costs nothing: `computed` is the pass this function already ran,
-        // and it is `None` only on the gate above — inside a freeze scope with
-        // nothing in it that writes a land type. A land stripped *without* a
-        // land-type rewrite (Humility on an animated manland) is not covered
-        // here and would need the gate to widen; `activate_ability`'s own
-        // check, which pays `ability_strip_in_scope`, still refuses it.
-        // Blood Sun's strip spares mana abilities (CR 113.10b).
+        // ⚠ The per-ability CR 305.6 check below is not this rule: it only
+        // drops a `{T}: Add <colour>` matching a *printed* basic type, so a
+        // Blood-Mooned Sandsteppe Citadel (every tri-land) kept tapping for
+        // white. `activate_ability` always gated on this flag; the source
+        // table didn't, and the tapper won. Free: `computed` is this
+        // function's pass, `None` only when nothing in scope rewrites a land
+        // type. A strip *without* a land-type rewrite (Humility on an
+        // animated manland) isn't covered here; `activate_ability` still
+        // refuses it. Blood Sun's strip spares mana abilities (CR 113.10b).
         let lost_all = computed.as_ref().is_some_and(|cp| cp.lost_all_abilities && !cp.keeps_mana_abilities());
         for (i, a) in card.definition.activated_abilities.iter().enumerate() {
             if is_mana_ability(&a.effect)
@@ -21060,15 +20399,11 @@ impl GameState {
     }
 
     /// The board-level half of [`granted_abilities_for`]: which grant sources
-    /// are live right now, independent of which permanent is asking. Building
-    /// it costs three whole-battlefield walks and both graveyards — the same
-    /// walks [`granted_abilities_for`] used to run *per call*, from three
-    /// per-card loops (`bot::usable_abilities`, `effective_mana_abilities`,
-    /// `bot::available_mana`). Build one per loop and hand it to
-    /// [`granted_abilities_with`](Self::granted_abilities_with).
-    ///
-    /// Bound to `&self`, so it is invalid the moment the board changes; there
-    /// is deliberately no cached copy on `GameState`.
+    /// are live right now, independent of which permanent asks. Costs three
+    /// battlefield walks plus both graveyards, so build one per loop and hand
+    /// it to [`granted_abilities_with`](Self::granted_abilities_with).
+    /// Bound to `&self`, so invalid once the board changes; deliberately not
+    /// cached on `GameState`.
     pub(crate) fn grant_scan<'a>(&'a self) -> GrantScan<'a> {
         use crate::effect::{Selector, StaticEffect};
         let mut scan = GrantScan::default();
@@ -21127,15 +20462,9 @@ impl GameState {
             }
         }
         // CR 315.5 — a face-up conspiracy grants from the command zone too.
-        // Not lane-gated: the lane is about the battlefield, and this leg
-        // already opens on the `is_empty` presence gate `for_each_static_source`
-        // carried before the lane made that visitor's last caller inline it.
-        // That gate is load-bearing and its number is worth keeping: chaining
-        // the command zone onto the battlefield iterator instead costs about
-        // **20 Ir a permanent** (`Chain<slice::Iter, FlatMap<_, Filter<_>>>`'s
-        // per-element branch plus the `FlatMap` state machine), measured at
-        // `fixed` -0.675 % / `cube` -0.406 % by deleting the command half as a
-        // deliberately wrong probe.
+        // Not lane-gated (the lane is battlefield-only); the `is_empty` gate
+        // is load-bearing — chaining the command zone onto the battlefield
+        // iterator cost ~20 Ir a permanent (`fixed` 0.675 %, `cube` 0.406 %).
         if self.players.iter().any(|p| !p.command.is_empty()) {
             let mut ignored = false;
             for p in &self.players {
@@ -21195,13 +20524,9 @@ impl GameState {
                 }
             }
         }
-        // **The attachment/pairing half was the scan's one ungated walk.** The
-        // battlefield pass above is behind `act_grant_lane` and the graveyard
-        // pass behind each pile's own, but this one ran on every `grant_scan`
-        // — thirteen call sites, `available_mana` and `mana_source_table`
-        // among them — over a board where nearly nothing carries either bonus.
-        // `(-296)`'s device: one presence lane, definition-only, so `ABSENT`
-        // answers the whole pass for a word load.
+        // The attachment/pairing half was the scan's one ungated walk, run by
+        // every `grant_scan` caller; one definition-only presence lane
+        // (`(-296)`'s device) answers it with a word load.
         if self.battlefield.has_attach_grant() {
             for src in self.battlefield.iter() {
                 // CR 702.95 — Soulbond-granted activated abilities (Deadeye
@@ -21238,25 +20563,16 @@ impl GameState {
     }
 
     /// Fill in [`GrantScan::land_types_rewritten`] — the board-level half of
-    /// [`effective_mana_abilities_of`]'s CR 305.6 gate — for a scan that is
-    /// about to be asked about many cards.
-    ///
-    /// **Not done in [`grant_scan`](Self::grant_scan)**, and the measurement
-    /// says why: `granted_abilities_for` builds a fresh scan *per card*, so
-    /// paying the read there taxes every one of those to save the loops that
-    /// reuse a scan, and the whole thing measured **+0.206 %**. Call it from
-    /// the loop that benefits instead.
+    /// [`effective_mana_abilities_of`]'s CR 305.6 gate — for a scan about to be
+    /// asked about many cards. Not done in [`grant_scan`](Self::grant_scan):
+    /// `granted_abilities_for` builds a scan per card, and paying it there
+    /// measured +0.206 %. Call it from the loop that benefits.
     fn scan_land_type_rewrites(&self, scan: &mut GrantScan<'_>) {
-        // `mana_source_table` opens its freeze scope and this is its *first*
-        // computed read, so `frozen_effects()` pays a whole-game gather —
-        // 7,550 of them over six bench games at ~1,875 Ir — and nothing else
-        // in that scope reads the memo it fills. `land_type_change_in_scope`
-        // is the printed-static twin of `rewrites_land_types` and `false`
-        // from it is authoritative (`gather_continuous_effects`
-        // `debug_assert!`s the implication), so it settles the scan from a
-        // board walk. Where the gather has already happened
-        // (`layers_memoized`) the forty-seventh pass's rule applies in
-        // reverse and the memo read is the cheap side.
+        // This is the scope's first computed read, so `frozen_effects()` would
+        // pay a whole-game gather nothing else here reads. `false` from
+        // `land_type_change_in_scope` (printed twin of `rewrites_land_types`,
+        // `debug_assert!`ed in `gather_continuous_effects`) settles it from a
+        // board walk; once `layers_memoized`, the memo read is cheaper.
         if !self.layers_memoized() && !self.land_type_change_in_scope() {
             scan.land_types_rewritten = Some(false);
             return;
@@ -21268,12 +20584,10 @@ impl GameState {
     /// Reduce a grant's `EachPermanent` requirement to a
     /// [`PrintedGrantFilter`] when the walker would answer it off the printed
     /// line on this board: an `And` chain over `ControlledByYou`, at most one
-    /// card-type leaf with no layer-4 card-type source in scope, and at most
-    /// one `HasCreatureType` leaf with no creature-type source in scope.
-    /// `None` for every other shape. `gates` memoizes the two presence gates
-    /// across one scan's statics — `false` from either is authoritative,
-    /// which is exactly the case the walker reads the printed line in
-    /// (`has_type` / `has_ctype` in `evaluate_requirement_static_hinted`).
+    /// card-type leaf (no layer-4 card-type source in scope) and at most one
+    /// `HasCreatureType` leaf (no creature-type source). `None` otherwise.
+    /// `gates` memoizes the two presence gates across one scan; `false` from
+    /// either is authoritative, as in `evaluate_requirement_static_hinted`.
     fn printed_grant_filter(
         &self,
         req: &crate::card::SelectionRequirement,
@@ -21349,6 +20663,10 @@ impl GameState {
         }
     }
 
+    /// Activated abilities granted to `card_id` by
+    /// `StaticEffect::GrantActivatedAbility` statics (Galazeth Prismari,
+    /// Cryptolith Rite), filtered from the source controller's view, in
+    /// battlefield order, at indices ≥ the printed count.
     pub fn granted_abilities_for(
         &self,
         card_id: CardId,
@@ -21384,54 +20702,29 @@ impl GameState {
     }
 
     /// [`granted_abilities_with`](Self::granted_abilities_with) for a
-    /// battlefield permanent the caller already holds. The `CardId` form opens
-    /// with a `battlefield_find`, and its hot callers — `available_mana`,
-    /// `effective_mana_abilities_with`, the bot's activatable sweep — are all
-    /// already iterating the battlefield, so that scan is pure duplication.
+    /// battlefield permanent the caller already holds, sparing the `CardId`
+    /// form's `battlefield_find` in callers already iterating the battlefield.
     ///
-    /// **Borrows rather than clones.** Every source it can draw from — the
-    /// instance's own grant lists, the scan's statics and graveyard grants, an
-    /// imprint pile, another permanent's or a graveyard card's definition — is
-    /// reachable from `&'a self`, `me` or the scan, and the caller either
-    /// folds the list or wraps each element in an `AbilityRef`. Deep-copying
-    /// them was `ActivatedAbility::clone` **11,324 calls / 7,868,320 Ir on
-    /// `--decks sos`** at the fifty-eighth tip, plus a `Box` per element in
-    /// two of the three callers. The single ability with nothing to borrow
-    /// from — CR 804.2's deploy-creatures grant — is a `LazyLock` constant.
-    /// `#[inline]` on the gate, not on the body: the whole point is that the
-    /// three sweep call sites test ten lengths without a call at all, and
-    /// `release-fast` (cgu 16, no LTO) will not inline across a codegen unit
-    /// without being told.
+    /// Borrows rather than clones: every source is reachable from `&'a self`,
+    /// `me` or the scan (deep copies were costly at the fifty-eighth tip).
+    /// The one ability with nothing to borrow from, CR 804.2's
+    /// deploy-creatures grant, is a `LazyLock` constant. `#[inline]` is on
+    /// the gate so the sweep call sites test lengths without a call;
+    /// `release-fast` (cgu 16, no LTO) won't inline across units unasked.
     #[inline]
     pub(crate) fn granted_abilities_of<'a>(
         &'a self,
         me: &'a CardInstance,
         scan: &GrantScan<'a>,
     ) -> Vec<&'a crate::effect::ActivatedAbility> {
-        // **"This permanent is granted nothing" is the common answer, and it
-        // is nine length loads away.** Every `out.push`/`out.extend` in the
-        // body draws from one of nine sources — the instance's two grant
-        // lists, the four `GrantScan` vectors, the deploy-creatures flag, the
-        // counter bag (Agatha's Soul Cauldron) and the definition's Station
-        // bands — plus `static_abilities`, which is where all six
-        // `HasActivatedAbilitiesOf*` markers *and* the Conspicuous Snoop
-        // re-read come from, so an empty one rules out that whole half at
-        // once. With all ten empty the body can only return `Vec::new()`.
-        //
-        // **`me.counters.is_empty()` cost this gate a third of its
-        // population**, and a `GrantScan::cauldron` bit read off
-        // `grant_scan`'s walk was built and refuted at the ninety-third pass
-        // (`sealed` -0.124 % / `cube` -0.038 % / `fixed` +0.006 %: the walk
-        // ran per sweep on boards that carry no `static_abilities`). PERF
-        // `(-199)` takes the same bit off the zone's counter-grant *lane*
-        // instead — no walk per sweep — and moves the definition's own
-        // statics behind the mana-summary word's `SELF_GRANT` bit.
-        //
-        // Worth gating because the three callers are whole-battlefield
-        // sweeps (`available_mana`, `effective_mana_abilities_into`,
-        // `main_phase_action_with`), so the question is asked per permanent
-        // per sweep. The counts this was sized on are in PERF's Baseline,
-        // under the ninety-second pass.
+        // "Granted nothing" is the common answer, and ten length loads settle
+        // it: every push in the body draws from the instance's two grant
+        // lists, the four `GrantScan` vectors, the deploy flag, the counter
+        // bag (Agatha's Soul Cauldron), Station bands, or `static_abilities`
+        // (all `HasActivatedAbilitiesOf*` markers and Conspicuous Snoop).
+        // Asked per permanent per whole-board sweep. The counter-bag leg is
+        // answered by the zone's lane (PERF `(-199)`); a `GrantScan` bit for it
+        // was refuted at the ninety-third pass.
         if self.grants_nothing(me, scan) {
             debug_assert!(
                 self.granted_abilities_of_inner(me, scan).is_empty(),
@@ -21445,20 +20738,13 @@ impl GameState {
     }
 
     /// The grants-nothing gate of
-    /// [`granted_abilities_of`](Self::granted_abilities_of): seven length
-    /// loads and a memo bit that rule out every source its body draws from.
-    /// Shared with the auto-tapper's memo path (`mana_source_table_inner`),
-    /// which may read a permanent's *printed* mana summary only when this
-    /// says nothing is granted — one predicate, so the two cannot drift.
-    ///
-    /// Ten length loads inline, exactly the form every caller inlined before
-    /// PERF `(-199)`; a row they refuse goes to
-    /// [`grants_nothing_slow`](Self::grants_nothing_slow), which asks the
-    /// same questions of *this* permanent instead of the board. Two
-    /// functions rather than one because the per-permanent form is past the
-    /// inlining threshold: as one body it cost every row an out-of-line call
-    /// (`fixed` 1.55 M self + 1.8 M in its closures) for a question the
-    /// loads answer on most of them.
+    /// [`granted_abilities_of`](Self::granted_abilities_of): length loads and
+    /// a memo bit that rule out every source its body draws from. Shared with
+    /// `mana_source_table_inner`, which may read a printed mana summary only
+    /// when this says nothing is granted, so the two can't drift. Rows the
+    /// inline loads refuse go to
+    /// [`grants_nothing_slow`](Self::grants_nothing_slow), kept out of line
+    /// because as one body every row paid an out-of-line call (PERF `(-199)`).
     #[inline]
     pub(crate) fn grants_nothing(&self, me: &CardInstance, scan: &GrantScan<'_>) -> bool {
         (scan.statics.is_empty()
@@ -21476,15 +20762,12 @@ impl GameState {
     }
 
     /// The per-permanent half of [`grants_nothing`](Self::grants_nothing)
-    /// (PERF `(-199)`; the loads alone refused 42 k of 78 k rows on a six-game
-    /// `cube` run, nearly all for a grant aimed at something else): an
-    /// Equipment or a Soulbond pair grants only along its link, a grant
-    /// static only where its selector reaches — `This` and
+    /// (PERF `(-199)`): an Equipment or Soulbond pair grants only along its
+    /// link; a grant static only where its selector reaches (`This` and
     /// `AttachedTo(This)` by id, `EachPermanent` by the printed filter's
-    /// `Some(false)`, and anything the filter cannot settle refuses as
-    /// before. The counter bag matters only on a board with a Cauldron (the
-    /// zone's counter-grant lane, read lazily), and the definition's own
-    /// statics only through the `SELF_GRANT` bit of its mana-summary word.
+    /// `Some(false)`; anything else refuses). The counter bag matters only on
+    /// a board with a Cauldron (lazy lane read), the definition's own statics
+    /// only through the `SELF_GRANT` mana-summary bit.
     #[inline(never)]
     fn grants_nothing_slow(&self, me: &CardInstance, scan: &GrantScan<'_>) -> bool {
         use crate::effect::Selector;
@@ -21651,19 +20934,13 @@ impl GameState {
         for (applies_to, ability, src, fast) in &scan.statics {
             match applies_to {
                 Selector::EachPermanent(req) => {
-                    // Evaluate the filter from the granting source's
-                    // controller so "ControlledByYou" picks that
-                    // player's permanents (and `NamedBySource` reads
-                    // the granting source's chosen name).
-                    // `me` is a battlefield permanent by this function's
-                    // contract, so hand it over rather than making the
-                    // walker re-find it by id — one `battlefield_find` per
-                    // (permanent x grant), on a path the mana sweep runs for
-                    // every untapped permanent.
-                    // The scan's printed reduction answers first; the
-                    // walker is the oracle for every shape it declined, and
-                    // the audit under `-C debug-assertions=yes` is what
-                    // keeps the two in step.
+                    // Evaluate from the granting source's controller so
+                    // "ControlledByYou" / `NamedBySource` read that player and
+                    // source. `me` is passed directly (it's a battlefield
+                    // permanent by contract), sparing a `battlefield_find`
+                    // per (permanent x grant). The scan's printed reduction
+                    // answers first; the walker is the oracle for the rest,
+                    // kept in step by the `-C debug-assertions=yes` audit.
                     let walk = || self.evaluate_requirement_static_on(req, me, src.controller, Some(src.id));
                     let pass = match fast.and_then(|f| f.test(me, src.controller)) {
                         Some(p) => {
@@ -21871,12 +21148,9 @@ impl GameState {
             }
         }
         // Agatha's Soul Cauldron — a creature you control with a +1/+1
-        // counter has all activated abilities of creature cards exiled
-        // with any Cauldron its controller controls.
-        // The counter bag first: `auto_tap_for_cost_inner` asks this per
-        // untapped permanent per tap batch and most permanents carry no
-        // counter at all, so an empty-bag check answers before
-        // `is_creature`'s `Vec<CardType>` walk runs.
+        // counter has all activated abilities of creature cards exiled with
+        // a Cauldron its controller controls. Empty-bag check first: asked
+        // per untapped permanent per tap batch, before `is_creature`'s walk.
         if !me.counters.is_empty()
             && self.computed_is_creature(me)
             && me.counter_count(crate::card::CounterType::PlusOnePlusOne) > 0
@@ -22080,26 +21354,16 @@ impl GameState {
     }
 
     #[allow(clippy::too_many_arguments)]
-    /// CR 106.6 — mana a *creature* produces carries provenance so a
-    /// "spend only mana produced by creatures" cost (Myr Superion) can find
-    /// it. Tagging the pool delta here catches printed, granted (Cryptolith
-    /// Rite) and intrinsic mana abilities in one place.
     /// The printed land tap without the generic gate walk (PERF `(-204)`).
     ///
-    /// `activate_ability_inner` asks ~100 questions of every activation, and
-    /// nearly every activation on the bot path is a land tapping for mana.
     /// When the definition word says ability `ability_index` is a bare
     /// `{T}: Add …` on a plain land (`mana_summary::PLAIN_TAP` /
-    /// `PLAIN_LAND`) and the board says nothing in scope can reach it — no
-    /// card-type or land-type rewrite, no `CantActivateTapAbilities` grant,
-    /// no mana static, not detained, not bestowed, untapped and yours —
-    /// every gate on the generic path is settled by inspection, and this
-    /// performs the same mutations in the same order: the pending-pick
-    /// takes, the tap, the two events, the per-turn land flag, the
-    /// cost-scratch resets, the multiplier around the generic resolver, the
-    /// CR 605.1b extra mana. `None` hands the activation to the generic path
-    /// untouched. `core_rules::land_tap_fast_path` compares the two paths'
-    /// whole states and event lists; `FORCE_GENERIC_ACTIVATION` is its switch.
+    /// `PLAIN_LAND`) and nothing on the board can reach it (no type rewrite,
+    /// `CantActivateTapAbilities`, mana static, detain, bestow; untapped and
+    /// yours), every generic gate is settled, and this performs the same
+    /// mutations in the same order. `None` hands the activation to the
+    /// generic path untouched. `core_rules::land_tap_fast_path` compares the
+    /// two paths' whole states; `FORCE_GENERIC_ACTIVATION` is its switch.
     fn activate_plain_land_tap(
         &mut self,
         card_id: CardId,
@@ -22247,6 +21511,10 @@ impl GameState {
         self.activate_ability_into_unguarded(card_id, ability_index, target, additional_targets, x_value, chosen_mode, events)
     }
 
+    /// CR 106.6 — mana a *creature* produces carries provenance so a
+    /// "spend only mana produced by creatures" cost (Myr Superion) can find
+    /// it. Tagging the pool delta here catches printed, granted (Cryptolith
+    /// Rite) and intrinsic mana abilities in one place.
     #[allow(clippy::too_many_arguments)]
     fn activate_ability_into_unguarded(
         &mut self,
@@ -22483,17 +21751,12 @@ impl GameState {
         // so a failure can't leak it onto a later activation).
         let spend_float = self.pending_cast_spend_float.take();
 
-        // Source zone: battlefield by default, the controller's graveyard
-        // when the ability is flagged `from_graveyard`, or the controller's
-        // hand when flagged `from_hand` (Spirit Guides' exile-to-pitch mana
-        // abilities). We scan battlefield first; if missing, fall back to
-        // graveyards then hands (any player's; ownership is verified below).
-        // The gate prelude below asks "where is this card on the battlefield"
-        // ten times, each a linear walk over ~18 `Arc`-boxed permanents whose
-        // `id` is behind a pointer. One walk answers all of them: `bf_src!`
-        // revalidates the index against `card_id` and falls back to the walk
-        // rather than lying, so a future mutation between here and a use site
-        // costs one deref, not a wrong answer.
+        // Source zone: battlefield by default, else the controller's
+        // graveyard (`from_graveyard`) or hand (`from_hand`, Spirit Guides);
+        // any player's, ownership verified below. One `position` walk serves
+        // the prelude's ten "where is it" questions; `bf_src!` revalidates
+        // the index against `card_id` and falls back to a walk, never a wrong
+        // answer.
         let bf_pos = self.battlefield.iter().position(|c| c.id == card_id);
         macro_rules! bf_src {
             () => {
@@ -22505,14 +21768,10 @@ impl GameState {
         }
         let (source_in_gy, source_in_hand, source_in_exile, source_in_command, source_owner) = {
             if bf_pos.is_some() {
-                // The permanent's own owner, not `None`: making this total is
-                // what lets the fourteen reads below be a plain `usize`. The
-                // four flags are all `false` here and every read is inside one
-                // of them, so the value is never consulted — but a value that
-                // is *true* if it ever is beats a sentinel that panics.
-                // (A `bf_pos.and_then(get)` form, skipping the macro's dead
-                // re-`find`, was built and reads 15-42 k Ir *worse* on all
-                // three pools. Kept as measured.)
+                // The permanent's own owner rather than a panicking sentinel,
+                // so the reads below can be a plain `usize`; all four flags
+                // are false so it is never consulted. (A `bf_pos.and_then(get)`
+                // form measured 15-42 k Ir worse on all three pools.)
                 (false, false, false, false, bf_src!().map_or(p, |c| c.owner))
             } else if let Some(o) = self
                 .players
@@ -22542,19 +21801,12 @@ impl GameState {
             }
         };
 
-        // This card's computed view, shared by the battlefield branch below and
-        // the CR 602.5 gates further down. Nothing between the two points
-        // mutates a layer input (the one write is the `{X}` prompt, which
-        // returns), so one view serves both.
-        //
-        // *Lazy*, and that is the whole point: `Some(_)` means taken (possibly
-        // `Some(None)` — not a battlefield permanent), `None` means nobody has
-        // needed it yet. Every consumer below asks a printed-static presence
-        // gate first, so the common activation — a land tapping for mana —
-        // answers `stripped` / `is_creature` / `land_mana_lost` and all three
-        // CR 602.5 gates off the printed line and never gathers at all. Taking
-        // it eagerly was the largest single gather left in the simulator
-        // (2.07 % over 18,386 calls).
+        // This card's computed view, shared by the battlefield branch and the
+        // CR 602.5 gates below (nothing between mutates a layer input).
+        // *Lazy*: `None` = not yet needed, `Some(None)` = not a battlefield
+        // permanent. Every consumer asks a printed-static presence gate first,
+        // so a land tapping for mana never gathers; taking it eagerly was the
+        // largest single gather left in the simulator.
         let mut bf_cp: Option<Option<std::sync::Arc<crate::game::layers::ComputedPermanent>>> =
             None;
         // Take-once accessor for `bf_cp`. A macro rather than a closure because
@@ -22615,34 +21867,21 @@ impl GameState {
             )?
         } else {
             let pos = bf_pos.ok_or(GameError::CardNotOnBattlefield(card_id))?;
-            // CR 113.10b — a permanent with all abilities stripped (Turn to
-            // Frog / Mercurial Transformation / Blood Moon) can't have its
-            // printed activated abilities used, mana abilities included; the
-            // intrinsic basic-land ability of its computed type survives
-            // (CR 305.7), and granted mana abilities stay, matching the
-            // auto-tapper's source table.
-            // `StaticEffect::GrantActivatedAbility` (Galazeth Prismari,
-            // Cryptolith Rite, …): surface granted abilities as virtual
-            // activated abilities at indices ≥ printed_count, so standard
-            // activate_ability validation and mana payment work without
-            // modifying every ability lookup path. Stripped permanents
-            // (CR 113.10b) keep their granted mana abilities but lose
-            // non-mana grants.
+            // CR 113.10b — a permanent stripped of all abilities (Turn to
+            // Frog, Blood Moon) can't use printed activated abilities, mana
+            // ones included; its computed type's intrinsic basic-land ability
+            // (CR 305.7) and granted mana abilities survive, as in the
+            // auto-tapper's source table. `GrantActivatedAbility` (Galazeth
+            // Prismari, Cryptolith Rite) surfaces grants as virtual abilities
+            // at indices ≥ printed_count; stripped permanents keep only
+            // granted mana ones.
             //
-            // The grant/intrinsic halves are indexed only at
-            // `ability_index >= printed_count`, and the printed count is a
-            // definition read with no layer in it — so decide it first and
-            // skip both for a printed index. That is nearly every
-            // activation (a land tapping for mana is index 0), and each one
-            // was a whole-board `grant_scan` plus a second
-            // `computed_permanent`.
-            //
-            // That rare branch is the one place here that needs the layer
-            // system unconditionally, so it keeps the one-scope shape and
-            // seeds `bf_cp` on its way out: both helpers gather, and sharing
-            // the scope with the view makes the three reads one gather. The
-            // printed-index path below takes no scope at all, because each of
-            // its three answers now has a presence gate in front of it.
+            // Grants/intrinsics live only at `ability_index >= printed_count`,
+            // a layer-free read, so a printed index (nearly every activation)
+            // skips the whole-board `grant_scan`. That rare branch takes one
+            // freeze scope and seeds `bf_cp` on the way out (three reads, one
+            // gather); the printed path takes no scope — its answers are
+            // presence-gated.
             let printed_count = self.battlefield[pos].definition.activated_abilities.len();
             let want_extra = ability_index >= printed_count;
             let (granted, intrinsic) = if want_extra {
@@ -22705,13 +21944,10 @@ impl GameState {
                 // copy of an `Effect` and every cost field — 18,386 of them
                 // per six games, nearly all a land tapping for mana.
                 let def = std::sync::Arc::clone(&self.battlefield[pos].definition);
-                // CR 305.7 / 613.1f — "loses all abilities" loses the printed
-                // mana abilities too: a Blood-Mooned Temple has no `{T}: Add
-                // {U}`, only its new type's intrinsic ability (the leg below).
-                // This used to carve mana abilities out, so the direct
-                // activation path disagreed with the auto-tapper's source
-                // table, which drops the printed list on `lost_all_abilities`.
-                // Blood Sun's strip spares the printed mana abilities.
+                // CR 305.7 / 613.1f — "loses all abilities" loses printed mana
+                // abilities too (a Blood-Mooned Temple keeps only its new
+                // type's intrinsic ability, the leg below), agreeing with the
+                // auto-tapper's source table. Blood Sun's strip spares them.
                 if stripped && !(keeps_mana && is_mana_ability(&def.activated_abilities[ability_index].effect)) {
                     return Err(GameError::AbilityIndexOutOfBounds);
                 }
@@ -22781,13 +22017,10 @@ impl GameState {
 
         // CR 732.3 — before any cost is paid, so a rejected announcement
         // leaves no trace. Not for a mana ability: the auto-tapper announces
-        // one inside the announcement it pays for, and letting it touch the
-        // watch (reset it, as it did until 2026-09-09) hid the loop the guard
-        // exists for — Basalt Monolith tapping itself for {C}{C}{C} to pay
-        // its own {3} untap read as (untap, tap, untap, tap, …), a key
-        // stream that never repeated, and ran an `abilarms` game to the
-        // 6,000-action cap (`--decks all --seed 773`). Its own key can never
-        // repeat on an unmoved state anyway: a mana ability moves a pool.
+        // one inside the announcement it pays for, and letting it reset the
+        // watch hid Basalt Monolith's untap loop (`abilarms`, `--decks all
+        // --seed 773`). A mana ability moves a pool, so its key can't repeat
+        // on an unmoved state anyway.
         if !ability_is_mana {
             self.check_free_activation_loop(card_id, ability_index)?;
         }
@@ -22875,22 +22108,12 @@ impl GameState {
         if source_in_command && !ability.from_command_zone {
             return Err(GameError::CardNotOnBattlefield(card_id));
         }
-        // ...and the mirror, which was missing: an ability flagged for another
-        // zone does not function on the **battlefield**. The four gates above
-        // stop a printed battlefield ability being activated from a graveyard;
-        // nothing stopped the reverse, so Eternal Student's "{1}{B}, Exile this
-        // card from your graveyard: create two Inklings" was activatable while
-        // it was a 4/2 in play — and the payment path, asked to exile a
-        // graveyard card that is on the battlefield, accepted the activation
-        // without the mana. Found by the `debug-assertions` sweep: the bot's
-        // `sink::AB_TOKEN` presence gate was correctly clear (one blue mana
-        // against `{1}{B}`) and `would_accept` said yes anyway.
-        //
-        // The rule this expresses already existed four times over, on the
-        // *granting* statics — Necrotic Ooze, Marvin, Safehouse and Conspicuous
-        // Snoop each skip `from_graveyard` abilities with the comment "those
-        // function only from the graveyard". This is the same rule at the one
-        // site that matters, so no card needs a per-card fix.
+        // ...and the mirror: an ability flagged for another zone does not
+        // function on the battlefield. Without it Eternal Student's
+        // graveyard-exile ability was activatable in play, and the payment
+        // accepted it without the mana. The granting statics (Necrotic Ooze,
+        // Marvin, Safehouse, Conspicuous Snoop) already skip `from_graveyard`
+        // abilities for the same reason.
         if bf_pos.is_some() {
             if ability.from_graveyard {
                 return Err(GameError::CardNotInGraveyard(card_id));
@@ -22924,21 +22147,11 @@ impl GameState {
         }
 
         // CR 201.3 — Pithing Needle / Phyrexian Revoker / Sorcerous Spyglass:
-        // a permanent that named this source's card name shuts off its
-        // activated abilities unless they're mana abilities. The suppression
-        // is global (affects every player's matching sources), so we scan the
-        // whole battlefield for a `named_card` matching this source's printed
-        // name.
-        //
-        // **And for the static that means it.** `named_card` alone is not a
-        // Pithing Needle: thirteen shipped cards stamp one for something else
-        // entirely — Skyseer's Chariot taxes, Disruptor Flute bumps a cast
-        // cost, Meddling Mage and Nevermore lock casting, Alpine Moon
-        // neutralizes lands — and reading the field bare made every one of
-        // them a Pithing Needle as well. It stayed invisible because the one
-        // test that crosses the two (Skyseer's Chariot naming Radiant Lotus)
-        // named a card whose only ability was wrongly a mana ability and so
-        // never reached this gate.
+        // a permanent naming this source's card name shuts off its non-mana
+        // activated abilities, for every player. Only the static that means
+        // it counts: thirteen cards stamp `named_card` for other things
+        // (Skyseer's Chariot, Meddling Mage, Alpine Moon, ...) and reading the
+        // field bare made each one a Pithing Needle.
         if !ability_is_mana && !ability.emblem_ability {
             let source_name = if source_in_gy {
                 self.players[source_owner].graveyard.iter()
@@ -23141,17 +22354,12 @@ impl GameState {
             }
         }
 
-        // The three CR 602.5 gates below all read one bit of *this* card's
-        // computed view, nothing between them touches a layer input, and this
-        // is a `&mut self` path — so each `computed_permanent` was its own
-        // whole-game gather. They share `bf_cp`, which is lazy: each gate asks
-        // a presence gate for the exact bit it wants and only forces the view
-        // when the answer could be `true`. Off the battlefield the keyword
-        // gates answer `false` outright (a `bf_src!()` miss), which is the
-        // same answer the old code paid a gather to get back as `None`. Both
-        // take `ability_lock_possible_on` off the permanent this frame has
-        // already found rather than the `CardId` form, which opens with a
-        // second `battlefield_find`.
+        // The three CR 602.5 gates below read *this* card's computed view and
+        // nothing between them touches a layer input, so they share the lazy
+        // `bf_cp`: each asks a presence gate for its bit and forces the view
+        // only when the answer could be `true`. Off the battlefield the
+        // keyword gates answer `false` outright. They take
+        // `ability_lock_possible_on` off the already-found permanent.
         let tap_gated = (ability.tap_cost && !ability.emblem_ability) || ability.untap_self_cost;
         let on_battlefield = !source_in_gy && !source_in_hand && !source_in_command;
 
@@ -23202,14 +22410,10 @@ impl GameState {
             return Err(GameError::AbilitySuppressedByNamedCard);
         }
 
-        // Once-per-turn: reject if this ability index has already been
-        // used since the most recent turn-cleanup. The ability is recorded
-        // as "used" *after* successful activation below so failed mana
-        // payments / illegal targets don't burn the per-turn budget.
-        // (Graveyard activations don't track per-card once-per-turn state
-        // since the card may move between zones; the gate is no-op.)
-        // CR 602.5f — "activate only once each turn" and its "no more than N
-        // times each turn" generalization share the permanent's tally.
+        // Once-per-turn (CR 602.5f, and its "no more than N times" form):
+        // reject if the tally is spent. Recorded *after* a successful
+        // activation, so a failed payment doesn't burn it. Graveyard
+        // activations don't track it (the card moves between zones).
         let per_turn_cap = ability
             .max_activations_per_turn
             .or(ability.once_per_turn.then_some(1));
@@ -23271,13 +22475,9 @@ impl GameState {
             }
         }
 
-        // Sorcery-speed gate: reject the activation if the ability is
-        // flagged sorcery-speed and the controller can't currently
-        // cast sorceries (not their main phase, or stack non-empty).
-        // Used by cards with printed "Activate only as a sorcery" — e.g.
-        // SOS Summoned Dromedary, Stone Docent, Cauldron of Essence's
-        // reanimation. The pre-fix flow let upkeep activations leak
-        // through silently.
+        // Sorcery-speed gate for "Activate only as a sorcery" (Stone Docent,
+        // Cauldron of Essence): reject outside main phase / with a non-empty
+        // stack.
         if ability.sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
@@ -23325,13 +22525,10 @@ impl GameState {
             }
         }
 
-        // Slot-0 targets that live in an off-board zone ("target card in a
-        // graveyard" — Sundering Archaic's `{2}`): the client's targeting
-        // cursor can only click permanents and players, so it activates
-        // with no target. The cast and loyalty paths already gather the
-        // pick through a `ChooseCards` modal; without the same here the
-        // ability resolved targetless and did nothing, so it could not be
-        // used at all.
+        // Slot-0 targets in an off-board zone (Sundering Archaic's "target
+        // card in a graveyard"): the client cursor can't click them, so it
+        // activates targetless. Gather the pick via a `ChooseCards` modal, as
+        // the cast and loyalty paths do; otherwise the ability did nothing.
         if target.is_none()
             && self.seat_prompts(p)
             && let Some(filter) = ability
@@ -23390,19 +22587,12 @@ impl GameState {
             let _ = tgt; let _ = p;
         }
 
-        // Enforce the ability's own target selection requirement (e.g.
-        // Wasteland's "destroy target nonbasic land", Goblin Bombardment's
-        // "any target"). Spell casts already validate this in `cast_spell`;
-        // activated abilities went unchecked, which let bots/UIs aim a
-        // Wasteland at a Plains. Mirror the cast-side gate for parity.
-        //
-        // Cross-slot filters read the whole chosen slot vector rather than
-        // their own target, so stamp it the way `cast_spell` does — an
-        // activated "another target" (Simic Guildmage's counter move) is
-        // otherwise validated against an empty scratch and passes whatever it
-        // was aimed at. Skipped entirely for an untargeted activation, which
-        // is every mana ability and so most of this function's traffic; the
-        // whole block is one expression so the stamp is cleared once.
+        // Enforce the ability's own target requirement (Wasteland's nonbasic
+        // land), mirroring `cast_spell` — unchecked, bots aimed Wastelands at
+        // Plains. Cross-slot filters read the whole slot vector, so stamp it
+        // as `cast_spell` does (Simic Guildmage's "another target"). Skipped
+        // for untargeted activations (every mana ability); one expression so
+        // the stamp is cleared once.
         let target_violation = if target.is_none() && additional_targets.is_empty() {
             // CR 602.2b + 601.2c — an ability announces its required target;
             // one activated with none resolved for nobody (a pinger's ping).
@@ -23484,14 +22674,11 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Graveyard-card targets (reanimation abilities — Cauldron of
-        // Essence's "Return target creature card from your graveyard"):
-        // the in-scene cursor can't select graveyard cards, so clients
-        // activate with `target: None`. Bind slot 0 here — a `wants_ui`
-        // activator with a real choice picks via a `ChooseCards` modal
-        // (suspend + clean replay, like the cost picks below); otherwise
-        // auto-pick. Without this the effect went on the stack unbound
-        // and silently no-opped.
+        // Graveyard-card targets (Cauldron of Essence's reanimation): the
+        // in-scene cursor can't pick graveyard cards, so clients send
+        // `target: None`. Bind slot 0 here — a `wants_ui` activator with a
+        // real choice gets a `ChooseCards` modal (suspend + replay), else
+        // auto-pick. Unbound, the effect silently no-opped.
         let mut target = target;
         if target.is_none()
             && ability.effect.prefers_graveyard_target()
@@ -23571,15 +22758,9 @@ impl GameState {
                 .map(Target::Permanent);
         }
 
-        // Pre-flight life-cost gate: reject activation cleanly when the
-        // controller doesn't have enough life. Mirror the mana-cost
-        // pre-pay check (we want a clean error, not a "you can't pay
-        // and just lost a tap" surprise). Activation that gets past
-        // this point will deduct the life after tap/mana succeed.
-        // "Pay life equal to [a value]" rides on the same gate (War Room's
-        // "…equal to the number of colors in your commanders' color
-        // identity"). Evaluated ONCE, here, so the gate and the payment
-        // below cannot disagree if the board moves between them.
+        // Pre-flight life-cost gate: reject cleanly when life is short rather
+        // than burn the tap. Variable "pay life equal to ..." (War Room) is
+        // evaluated ONCE here, so gate and payment can't disagree.
         let life_cost = match &ability.life_cost_value {
             None => ability.life_cost,
             Some(v) => {
@@ -23626,21 +22807,13 @@ impl GameState {
             return Err(GameError::SelectionRequirementViolated);
         }
 
-        // Pre-flight exile-other-from-gy gate: confirm `count` graveyard
-        // cards matching the cost's filter exist, *excluding* the source
-        // itself for graveyard activations where source_in_gy is true. If
-        // fewer than `count` match, reject cleanly so tap/mana aren't burned.
-        // The actual exile happens after payment succeeds.
-        //
-        // CR 602.5b — a `wants_ui` activator with more candidates than required
-        // chooses which cards to exile via a `ChooseCards` modal (graveyard
-        // cards aren't selectable with the in-scene cursor). Bots and the
-        // no-real-choice case keep the lowest-CMC auto-pick so higher-value
-        // graveyard cards stay put. Affects Grim Lavamancer, Scrapheap
-        // Scrounger, et al.
-        // Exile-a-card-from-HAND as an additional cost (Holistic Wisdom).
-        // Validated here so tap/mana aren't burned on an unpayable cost; the
-        // exile itself happens once payment succeeds.
+        // Pre-flight exile-other-from-gy gate: need `count` matching graveyard
+        // cards (excluding a graveyard source), or reject before tap/mana are
+        // burned; the exile happens after payment. CR 602.5b — a `wants_ui`
+        // activator with a real choice picks via `ChooseCards`; otherwise the
+        // lowest-CMC auto-pick (Grim Lavamancer, Scrapheap Scrounger).
+        // Exile-a-card-from-HAND as an additional cost (Holistic Wisdom),
+        // validated here the same way.
         let exile_from_hand_pick: Option<CardId> =
             if let Some(filter) = ability.exile_from_hand_cost.as_ref() {
                 let pick = self.players[p]
@@ -23979,20 +23152,13 @@ impl GameState {
             Vec::new()
         };
 
-        // Pre-flight sacrifice-other gate: confirm `count` battlefield
-        // permanents the activator controls match the cost's filter
-        // (excluding the source itself, since activating from the
-        // battlefield can pair this with `sac_cost: true` for the source).
-        // If fewer than `count` match, reject cleanly so tap/mana aren't burned.
-        //
-        // CR 602.5b — the activator chooses which permanent(s) to sacrifice as
-        // a cost. For a `wants_ui` activator making a *single* such sacrifice
-        // with a genuine choice (more than one legal candidate) we suspend on a
-        // `ChooseTarget` and replay the activation with the pick. Bots,
-        // multi-sacrifice (count > 1), and "no real choice" keep the
-        // lowest-power auto-pick (so the activator keeps better creatures).
-        // CR 701.21 — a permanent that can't be sacrificed can't pay a
-        // "Sacrifice this" cost (Assault Suit's equipped creature).
+        // Pre-flight sacrifice-other gate: need `count` matching permanents
+        // other than the source (which `sac_cost` may also sacrifice), or
+        // reject before tap/mana are burned. CR 602.5b — a `wants_ui`
+        // activator with a real single choice picks via `ChooseTarget` +
+        // replay; otherwise the lowest-power auto-pick. CR 701.21 — a
+        // permanent that can't be sacrificed can't pay "Sacrifice this"
+        // (Assault Suit).
         if ability.sac_cost && !self.sacrificeable_for_cost_id(card_id) {
             return Err(GameError::SelectionRequirementViolated);
         }
@@ -24277,15 +23443,11 @@ impl GameState {
             }
         }
 
-        // Pre-flight tap-another gate (CR 602.5b): confirm an untapped
-        // permanent (other than the source) the activator controls matches the
-        // cost's filter. A hand-paying activator with more than one candidate
-        // chooses which to tap (suspend + replay, like the sacrifice cost);
-        // bots and the no-real-choice case tap the lowest-power match so
-        // higher-value creatures stay open — *unless* the payoff scales with the
-        // tapped creature's power (Station's charge add, CR 702.184a), in which
-        // case tapping the highest-power creature is strictly better.
-        // Tapped after payment succeeds.
+        // Pre-flight tap-another gate (CR 602.5b): need an untapped other
+        // permanent matching the filter. A hand-paying activator with several
+        // candidates chooses (suspend + replay); otherwise tap the lowest
+        // power — or the highest when the payoff scales with it (Station,
+        // CR 702.184a). Tapped after payment succeeds.
         let tap_other_pick: Option<CardId> = if let Some(filter) =
             ability.tap_other_filter.as_ref()
         {
@@ -24463,13 +23625,10 @@ impl GameState {
             // CR 107.3 — "Discard X cards:" pays the activation's X (Gix).
             let count = if ability.discard_cost_x { x_value.unwrap_or(0) } else { *count } as usize;
             if ability.discard_cost_same_name {
-                // CR 601 — "Discard N cards with the same name." Take the
-                // *cheapest* qualifying name, matching the sibling branch
-                // below and this gate's own stated intent: a `find` over the
-                // map picked whichever name the walk reached first, i.e. an
-                // arbitrary choice that could bin a bomb while a spare land
-                // sat next to it. Ties on mana value fall back to the name so
-                // the pick is total.
+                // CR 601 — "Discard N cards with the same name": take the
+                // *cheapest* qualifying name, like the sibling branch (a bare
+                // `find` picked arbitrarily and could bin a bomb). Ties fall
+                // back to the name so the pick is total.
                 let mut by_name: crate::fxhash::HashMap<&str, Vec<CardId>> =
                     crate::fxhash::HashMap::default();
                 let mut mv_of: crate::fxhash::HashMap<&str, u32> =
@@ -25310,28 +24469,16 @@ impl GameState {
         }
         self.phyrexianize_for_payer(p, &mut effective_mana_cost);
 
-        // CR 601.2g — float-spend confirmation. Before tapping anything, if the
-        // activator has pre-existing floating mana the mana cost could either
-        // spend or avoid (untapped sources can cover it), ask first. Nothing is
-        // mutated yet at this point (tap-cost applies below), so suspending is a
-        // clean replay of the whole activation.
-        // CR 601.2g float-spend confirmation is a *mana payment* question,
-        // so it keys on `manual_mana` — the flag that exists for exactly this
-        // rule — rather than `wants_ui`, which bot seats also set. Prompting
-        // a bot here is the same livelock as the {X} and additional-cost
-        // modals: the suspend returns `Ok`, so the probe reports the cast as
-        // legal, and the failed replay is rolled back with the decision
-        // restored. Latent rather than observed only because the bot stopped
-        // floating mana when it stopped pre-tapping its board.
+        // CR 601.2g — float-spend confirmation: with pre-existing floating
+        // mana the cost could either spend or avoid, ask before tapping
+        // anything (nothing is mutated yet, so suspending is a clean replay).
+        // Keyed on `manual_mana`, not `wants_ui` (bot seats set that too, and
+        // prompting a bot livelocks the probe as the {X} modal did).
         //
-        // …and only when the activation could still go through. The {T} / {Q}
-        // gate is forty lines below, so an *already tapped* source got the
-        // modal anyway: answering it replayed the activation, which died on
-        // `CardIsTapped`, and the client re-posed the same modal on the next
-        // retry. Recorded 2026-08-20 as "stuck paying for fields of strife" —
-        // both copies tapped, {W}{W} floating, and a prompt that would not go
-        // away. Mirrors the tap-cost branch's own conditions so the two agree
-        // on what "payable" means.
+        // Only when the activation could still go through: the {T}/{Q} gate
+        // is below, so an already-tapped source used to re-pose this modal
+        // forever (two tapped Fields of Strife, 2026-08-20). Mirrors the
+        // tap-cost branch's conditions.
         let self_tap_cost_payable = {
             let on_bf = self.battlefield_find(card_id);
             (!ability.tap_cost || on_bf.is_some_and(|c| !c.tapped))
@@ -25446,14 +24593,11 @@ impl GameState {
             ) {
                 Ok(r) => r,
                 Err(e) => {
-                    // `ManualTapRequired` deliberately keeps eager-tapped
-                    // mana floating (the retry only taps the ambiguous
-                    // rest), so the payer's snapshot is NOT restored on
-                    // that path — but the tap-cost above was paid outside
-                    // it and must revert, or the retry can never pay {T}
-                    // again: a human answering the float-spend prompt got
-                    // permanently locked out of Forum of Amity's surveil
-                    // with the land stuck tapped (recorded 2026-08-19).
+                    // `ManualTapRequired` keeps eager-tapped mana floating (the
+                    // retry taps only the ambiguous rest), but the tap-cost was
+                    // paid outside the snapshot and must revert, or the retry
+                    // can never pay {T} again (Forum of Amity stuck tapped,
+                    // 2026-08-19).
                     if ability.tap_cost
                         && let Some(perm) = self.battlefield.find_by_id_mut(card_id)
                     {
@@ -25661,14 +24805,10 @@ impl GameState {
         let mut cost_sac_count: u32 = 0;
         let mut cost_sac_total_power: i32 = 0;
 
-        // Sacrifice-as-cost: with tap and mana costs paid, sacrifice the
-        // source. The effect runs/queues after, and any selectors that
-        // reference the source by id will miss it on the battlefield —
-        // which matches the Oracle (sac is part of the activation cost,
-        // so the source is in the graveyard by the time the ability
-        // resolves). Cards whose effect references self after sacrifice
-        // (Greater Good's "draw cards equal to its power") need to
-        // capture that data via `Effect::SacrificeAndRemember` instead.
+        // Sacrifice-as-cost: with tap and mana paid, sacrifice the source; the
+        // ability resolves with the source already gone, per the Oracle.
+        // Effects reading the source afterwards (Greater Good's power) use
+        // `Effect::SacrificeAndRemember`.
         // CR 702.6 — "Unattach this Equipment" as a cost (Sunforger): the
         // source must be attached, and it detaches before the effect runs.
         if ability.unattach_cost {
@@ -25856,12 +24996,8 @@ impl GameState {
                 .unwrap_or(p);
             if is_creature {
                 // Stamp the sacrificed creature's P/T on the resolution
-                // scratch so downstream `Value::SacrificedPower` /
-                // `Value::SacrificedToughness` reads (Witch's Cauldron's
-                // "gain life equal to the sacrificed creature's
-                // toughness", future Thud-style `sac_cost` activations)
-                // see the right values. Same plumbing as
-                // `Effect::SacrificeAndRemember`.
+                // scratch for `Value::SacrificedPower` / `SacrificedToughness`
+                // (Witch's Cauldron), as `Effect::SacrificeAndRemember` does.
                 let snap_pt = self
                     .battlefield_find(card_id)
                     .map(|c| (c.power(), c.toughness(), c.definition.cost.cmc(), self.lki_clone(c)));
@@ -25998,18 +25134,11 @@ impl GameState {
             sac_other_picks.extend(extra);
         }
 
-        // Sacrifice-another-from-bf-as-cost: with tap/mana/life paid,
-        // sacrifice each cost-picked battlefield permanent (already
-        // validated to exist via the pre-flight `sac_other_picks`
-        // lookup). Used by cards like Greater Good's `{0}, Sacrifice a
-        // creature: …`, Korlash, Heir to Blackblade's `{B}, Sacrifice a
-        // Swamp: …`, Witherbloom Harvester-style "sac another creature
-        // for an effect" activations.
-        // CR 602.5b — the whole cost-sacrifice batch feeds
-        // `Value::Sacrificed{Count,TotalPower}` (Sword of the Ages sacrifices
-        // any number of creatures and reads their total power). Seed from the
-        // source's own `sac_cost` so an earlier resolution's tally can't leak
-        // in but this activation's does.
+        // Sacrifice-another-as-cost: with tap/mana/life paid, sacrifice each
+        // permanent from the pre-flight `sac_other_picks` (Greater Good,
+        // Korlash). CR 602.5b — the whole batch feeds
+        // `Value::Sacrificed{Count,TotalPower}` (Sword of the Ages), seeded
+        // from the source's own `sac_cost` so a prior resolution can't leak in.
         self.sacrificed_count = cost_sac_count;
         self.sacrificed_total_power = cost_sac_total_power;
         // Skipped whole when there is nothing to record and nothing recorded:
@@ -26119,14 +25248,11 @@ impl GameState {
             }
         }
 
-        // Add-counter-as-cost (CR 602.5b "Put a verse counter on this:"):
-        // paid before the ability goes on the stack, so a body reading the
-        // source's counters sees the new total. Yisan.
-        // CR 614.16 — a counter *cost* is still a counter placement, so it
-        // goes through `scaled_counter_count` like every other add site.
-        // Without it Vizier of Remedies shaved the counter an `AddCounter`
-        // effect placed and not the one a cost placed, and Devoted Druid
-        // (whose untap is `add_counter_cost`) killed itself through the combo.
+        // Add-counter-as-cost (CR 602.5b, Yisan): paid before the ability goes
+        // on the stack, so the body sees the new total. CR 614.16 — still a
+        // counter placement, so it goes through `scaled_counter_count`
+        // (otherwise Vizier of Remedies spared Devoted Druid's effect counter
+        // but not its cost counter, and the combo killed the Druid).
         if let Some((kind, count)) = ability.add_counter_cost {
             let scaled = if self.battlefield.find_by_id(card_id).is_some() {
                 self.scaled_counter_count_on(card_id, kind, count)
@@ -26375,14 +25501,9 @@ impl GameState {
             }
         }
 
-        // Tap-N-as-cost (CR 602.5b): with tap/mana/life paid, tap each
-        // pre-selected untapped permanent. Heritage Druid's "Tap three
-        // untapped Elves you control" cost runs here.
-        // `tapped_for_cost` is a `ColdState` field, so writing it unshares the
-        // whole cold group against `perform_action`'s checkpoint — 1,742 Ir
-        // for a deep copy of ~85 collections. Nearly every activation is a
-        // land tapping for mana with no tap-N cost at all, and the write it
-        // wanted was empty-to-empty. Read first (free through `Deref`).
+        // Tap-N-as-cost (CR 602.5b, Heritage Druid): tap each pre-selected
+        // permanent. `tapped_for_cost` is a `ColdState` field, so read first:
+        // an unguarded empty-over-empty write deep-copies the cold group.
         if !tap_n_picks.is_empty() || !self.tapped_for_cost.is_empty() {
             self.tapped_for_cost = tap_n_picks.clone();
         }
@@ -26482,14 +25603,9 @@ impl GameState {
             link(self);
         }
 
-        // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile
-        // each cost-picked graveyard card (already validated to exist via
-        // the pre-flight `exile_other_picks` lookup). Used by cards like
-        // Postmortem Professor's `{1}{B}, Exile an instant or sorcery
-        // card from your graveyard: …` (count 1), Lorehold Pledgemage's
-        // `{2}{R}{W}, Exile a card from your graveyard: +1/+1 EOT`
-        // (count 1), and Grim Lavamancer's `{R}, {T}, Exile two cards
-        // from your graveyard` (count 2).
+        // Exile-another-from-gy-as-cost: with tap/mana/life paid, exile each
+        // card picked by the pre-flight `exile_other_picks` (Postmortem
+        // Professor, Lorehold Pledgemage, Grim Lavamancer's two).
         clear_cold!(self.cost_exiled_cards);
         for other_cid in exile_other_picks {
             // Your own graveyard, or — for "a single graveyard" — its owner's.
@@ -26616,12 +25732,10 @@ impl GameState {
         // Mana abilities resolve immediately (no stack, no priority reset).
         if ability_is_mana {
             // Carry a cost-sacrificed permanent's stats into the inline
-            // resolution (resolve_effect resets the scratch) — Slobad's
-            // "add {R} equal to the sacrificed artifact's mana value".
-            // Borrowed, not cloned: `ability` comes out of `held`, which owns
-            // an `Arc<CardDefinition>` of its own, so the effect tree outlives
-            // the `&mut self` resolution without a deep copy. Every land tap
-            // paid that copy and its drop (6.2 M Ir / 0.35 % over 18,774).
+            // resolution (resolve_effect resets the scratch) — Slobad's "add
+            // {R} equal to the sacrificed artifact's mana value". Borrowed,
+            // not cloned: `held` owns its own `Arc<CardDefinition>`, so the
+            // effect tree outlives the resolution (the copy cost every land tap).
             let sac_wrapper;
             let effect: &Effect = match cost_sac_pt {
                 Some((power, toughness)) => {
@@ -26645,13 +25759,10 @@ impl GameState {
             // it afterward. Only tapping qualifies per the printed text.
             self.mana_production_multiplier =
                 if ability.tap_cost { self.mana_production_multiplier_for_source(p, card_id) } else { 1 };
-            // Resolved straight into `events`: the `Vec` this used to return
-            // and append was one of the program's two largest allocation
-            // sites (PERF `(-104)`). The extra-mana events below still have
-            // to land *before* the ability's own, so they are buffered and
-            // spliced in at `mark` — a `Vec` only the boards that carry such
-            // a grant ever allocate, and the batch order the trace records is
-            // unchanged.
+            // Resolved straight into `events` (PERF `(-104)`). Extra-mana
+            // events must land *before* the ability's own, so they're buffered
+            // and spliced in at `mark` (allocated only on boards with such a
+            // grant); the traced batch order is unchanged.
             let mark = events.len();
             let resolved = self.continue_ability_resolution_x_into(
                 card_id,
@@ -26883,24 +25994,17 @@ impl Drop for PaymentSnapshot {
 }
 
 /// A one-slot free list for the scripted colour decider the auto-tapper swaps
-/// into `self.decider`.
+/// into `self.decider`. Pure scratch — `rearm_script` overwrites its state
+/// before every use — so reusing the `Box` across calls saves an allocation
+/// per auto-tap (PERF `(-359)`).
 ///
-/// It is pure scratch — `rearm_script` overwrites its whole state before every
-/// use and it never escapes the call — but `auto_tap_for_cost_inner` allocated
-/// a fresh `Box` per call: **6,440 on `cube` and 7,240 on `sealed`** a
-/// six-game run at ~222 Ir apiece (PERF `(-359)`).
+/// ⚠ One slot, not a list: the loops already recycle within a call, so only
+/// a re-entrant call allocates a second box.
 ///
-/// ⚠ **One slot, not a list.** The two loops already recycle within a call
-/// through `scripted_slot`, so a second box is live only during a re-entrant
-/// call and letting that one allocate is the right trade.
-///
-/// ⚠ **The assumption reuse rests on is `rearm_script`, and it is not a new
-/// one:** the within-call recycling already requires that the box coming back
-/// out of `self.decider` is the `OneColorDecider` that went in, because a
-/// foreign decider's default `rearm_script` is a no-op and would answer the
-/// wrong colour. Crossing calls widens the window, not the assumption — and a
-/// wrong colour moves a trace, so the golden traces and the `--bench`
-/// invariant are its gate.
+/// ⚠ Reuse relies on the box coming back out of `self.decider` being the
+/// `OneColorDecider` that went in (a foreign decider's default
+/// `rearm_script` is a no-op and would answer the wrong colour). The golden
+/// traces and the `--bench` invariant gate it.
 mod decider_pool {
     use std::cell::RefCell;
 
@@ -26928,28 +26032,9 @@ mod decider_pool {
     }
 }
 
-/// A free list of [`PaymentSnapshot`]'s `tapped` buffers, on `fx_pool`'s
-/// pattern.
-///
-/// One snapshot is built and dropped on **every** payment attempt and the
-/// buffer is pure scratch: that was **8,724 allocations a six-game `cube`
-/// run at 222 Ir apiece**, the eighth-largest allocation site in the program
-/// (PERF `(-356)`). Nothing about the answer changes — the buffer is cleared
-/// and re-extended in battlefield order, so `restore_payment_state`'s
-/// ordered-subsequence merge still holds and no trace moves.
-///
-/// ⚠ **An inline `SmallVec` was tried here first and is REFUTED**: it removes
-/// the allocation but `SmallVec`'s `Extend` costs ~24 Ir an item where
-/// `Vec`'s reserved one costs ~2, so it read +0.014 % on `cube`. PERF
-/// `(-356)` has the table.
 /// A free list of [`GameState::mana_source_table`]'s buffer, on `snap_pool`'s
-/// pattern.
-///
-/// The table is rebuilt on **every** auto-tap that reaches the selection
-/// loops and dropped at the end of the same call: its `reserve(16)` was
-/// **7,610 allocations a six-game `cube` run** (PERF `(-367)`).
-/// `ManaSourceInfo` is plain data, so `clear` costs nothing and the whole
-/// capacity survives into the next payment.
+/// pattern: the table is rebuilt and dropped per auto-tap (PERF `(-367)`).
+/// `ManaSourceInfo` is plain data, so `clear` is free and capacity survives.
 mod source_pool {
     use super::ManaSourceInfo;
     use std::cell::RefCell;
@@ -27002,6 +26087,10 @@ impl Drop for PooledSources {
     }
 }
 
+/// A free list of [`PaymentSnapshot`]'s `tapped` buffers, built and dropped
+/// per payment attempt, PERF `(-356)`; cleared and re-extended in battlefield
+/// order, so `restore_payment_state`'s merge still holds. ⚠ An inline
+/// `SmallVec` was tried and refuted — its `Extend` is ~12x dearer.
 mod snap_pool {
     use crabomination_base::card::CardId;
     use std::cell::RefCell;
@@ -27073,17 +26162,12 @@ impl GameState {
 
     /// Ashiok, Wicked Manipulator (CR 614.1a) — "If you would pay life while
     /// your library has at least that many cards in it, exile that many cards
-    /// from the top of your library instead." Returns true (and has exiled
-    /// the cards, their events in `events`) when `p` controls such a static
-    /// and their library holds at least `life` cards; false leaves the caller
-    /// to pay the life as usual. A replacement on *paying* life only — a life
-    /// loss never comes here.
-    ///
-    /// Affordability is not this function's business: CR 119.4 lets a player
-    /// pay life only when their life total is at least the amount, and a
-    /// replacement of the payment doesn't change whether it can be paid, so
-    /// every cost gate keeps reading the life total. One lane read on a board
-    /// without a life static (the static is in `LANE_LIFE_STATIC`).
+    /// from the top of your library instead." Returns true (cards exiled,
+    /// events in `events`) when `p` controls such a static and the library is
+    /// deep enough; false leaves the caller to pay life. Paying life only,
+    /// never life loss. Affordability stays with the cost gates (CR 119.4: a
+    /// replaced payment is still payable only at that life total). One lane
+    /// read (`LANE_LIFE_STATIC`) on a board without it.
     pub(crate) fn replace_life_payment(
         &mut self,
         p: usize,

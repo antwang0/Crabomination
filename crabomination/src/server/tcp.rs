@@ -25,27 +25,17 @@ use super::{ClientChannel, SeatChannel};
 const MAX_FRAME_BYTES: usize = 16 * 1024 * 1024;
 
 /// How many outbound messages may queue for one connection before the
-/// coalescer starts shedding the oldest *streaming* message (a `View` or
-/// `Events`). Control messages (seat assignment, match start/over, action
-/// errors) are never shed, and consecutive `View`s collapse to the latest
-/// before counting against this cap — so in practice it only bites when a
-/// wedged socket lets a burst of distinct `Events` pile up. Bounds per-seat
-/// memory to O(cap) regardless of how long a socket write blocks, instead of
-/// the old unbounded `mpsc` backlog that a stalled client could grow without
-/// limit.
+/// coalescer sheds the oldest *streaming* message (`View` / `Events`).
+/// Control messages (seat assignment, match start/over, action errors) are
+/// never shed and consecutive `View`s collapse first, so it only bites when
+/// a wedged socket piles up distinct `Events`. Bounds per-seat memory to
+/// O(cap) however long a write blocks.
 const MAX_PENDING_OUT: usize = 256;
 
-/// TCP keepalive parameters. With these defaults the OS detects a peer that
-/// stops responding (process killed, machine crash, NAT eviction, cable
-/// pulled) within roughly two minutes of the last successful read/write,
-/// rather than letting a match thread block forever on a dead socket.
-///
-/// - Idle: probes begin after 60s of no traffic in either direction.
-/// - Interval: subsequent probes are 15s apart.
-/// - Retries: after 4 unanswered probes the connection is reported dead.
-///
-/// Total worst-case detection time after the peer disappears:
-/// `idle + interval * retries` ≈ 60s + 60s = ~2 min.
+/// TCP keepalive parameters: the OS reports a peer that stops responding
+/// (killed, crashed, NAT eviction, cable pulled) dead after roughly
+/// `idle + interval * retries` ≈ 60 s + 60 s = ~2 min, rather than a match
+/// thread blocking forever on a dead socket.
 const KEEPALIVE_IDLE: Duration = Duration::from_secs(60);
 const KEEPALIVE_INTERVAL: Duration = Duration::from_secs(15);
 const KEEPALIVE_RETRIES: u32 = 4;
@@ -286,19 +276,17 @@ where
     });
 }
 
-/// Wrap a [`TcpStream`] into a server-side [`SeatChannel`]. Spawns one reader
+/// Wrap a [`TcpStream`] into a server-side [`SeatChannel`]: one reader
 /// thread (socket → mpsc<ClientMsg>) plus a coalescing writer pair
-/// (mpsc<ServerMsg> → bounded outbox → socket). When either side
-/// disconnects, the threads exit.
+/// (mpsc<ServerMsg> → bounded outbox → socket). The threads exit when either
+/// side disconnects.
 ///
 /// `#[inline]` is a codegen decision, not a speed one: the reader's
-/// `serde_json::from_slice::<ClientMsg>` instantiates that whole `Deserialize`
-/// tree (`GameAction`, the views, `DecisionWire` …) wherever this body is
-/// codegen'd. An inlinable function with no in-crate caller is codegen'd in
-/// no crate at all, so the ~13 % of the engine's LLVM IR that was the wire
-/// decoder now lands only in the binary that opens a socket
-/// (`crabomination_server`, the client) — never in `bot_ladder` or
-/// `selfplay_train`. PERF "Serde derives" has the numbers.
+/// `serde_json::from_slice::<ClientMsg>` instantiates the whole
+/// `Deserialize` tree, and an inlinable function with no in-crate caller is
+/// codegen'd in no crate at all — so the wire decoder (~13 % of the engine's
+/// LLVM IR) lands only in binaries that open a socket, never in `bot_ladder`
+/// or `selfplay_train`. PERF "Serde derives".
 #[inline]
 pub fn tcp_seat(stream: TcpStream) -> io::Result<SeatChannel> {
     stream.set_nodelay(true)?;
@@ -563,16 +551,11 @@ mod tests {
         writer_thread.join().unwrap();
     }
 
-    /// When the network peer closes the connection at the OS level, the
-    /// server's reader thread sees EOF on `read_exact`, returns Err, drops
-    /// its `in_tx`, and `seat.rx` becomes `Disconnected`. The server can
-    /// detect peer-loss purely by polling its mpsc receiver — no separate
-    /// keepalive needed.
-    ///
-    /// Note: dropping the `ClientChannel` wrapper alone is *not* sufficient
-    /// to close the socket — the wrapper's reader thread still owns one
-    /// clone of the stream and stays blocked in `read_exact`. We force a
-    /// true close via `shutdown(Both)` on the raw socket.
+    /// When the peer closes the connection, the server's reader sees EOF,
+    /// drops its `in_tx`, and `seat.rx` becomes `Disconnected`: peer loss is
+    /// detectable by polling the receiver alone. Dropping the `ClientChannel`
+    /// wrapper is not enough to close the socket (its reader thread still
+    /// holds a clone of the stream), so the test forces `shutdown(Both)`.
     #[test]
     fn tcp_seat_rx_disconnects_on_peer_shutdown() {
         use std::net::Shutdown;

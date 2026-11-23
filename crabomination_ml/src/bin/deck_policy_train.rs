@@ -1,21 +1,18 @@
-//! `deck_policy_train` — step 2 of the deck-building net (ML_NOTES "A deck
-//! net that builds decks"): the add-one-card builder, by imitation of the
-//! rated builder.
+//! `deck_policy_train` — the add-one-card deck builder (ML_NOTES "A deck net
+//! that builds decks", step 2 onward), by imitation of the rated builder.
 //!
-//! Rolls `--pools` sealed pools per set (FRA and SOS boosters, seeds disjoint
-//! from `fra_card_eval`'s gate seeds), builds each with the rated builder as
-//! it builds the bot's opponents today (`rated_sealed_build`, best of 16,
-//! polished), and trains the policy `crabomination::deck_policy` reads: from
-//! the pool and a partial deck, which pool card next (or stop). A target deck
-//! is a set, so each training state is a random-order prefix of its spells,
-//! and any remaining target card — or stop, once complete — counts as right.
-//! One pool in twenty is held out.
+//! Rolls `--pools` sealed pools per set (FRA and SOS, seeds disjoint from
+//! `fra_card_eval`'s gate seeds), builds each with `rated_sealed_build` (best
+//! of 16, polished), and trains the policy `crabomination::deck_policy` reads:
+//! from the pool and a partial deck, which pool card next (or stop). A target
+//! deck is a set, so each state is a random-order prefix of its spells and
+//! any remaining target card (or stop, once complete) counts as right. One
+//! pool in twenty is held out.
 //!
-//! Reports held-out loss and next-step accuracy as it trains; at the end
-//! exports the best policy (`--export`, checked against the engine's reading
-//! of it) and reads, on the held-out pools, the greedy build's spell overlap
-//! with the teacher's and how often the land step reproduces the teacher's
-//! lands from the teacher's own spells.
+//! Reports held-out loss and next-step accuracy while training; at the end
+//! exports the best policy (`--export`, checked against the engine's reading)
+//! and reads, on held-out pools, the greedy build's spell overlap with the
+//! teacher's and how often the land step reproduces the teacher's lands.
 //!
 //! ```text
 //! deck_policy_train --pools 40000 --steps 30000 --export .ladder/deckpol/policy.json
@@ -392,25 +389,18 @@ fn write_race_logs(dir: &std::path::Path, logs: &[RaceLog]) {
     }
 }
 
-/// Step 3's expert: on each row, the policy's greedy build and seven
-/// sampled ones (temperatures 1, 1, 1, 1.5, 1.5, 2, 2), deduplicated, race
-/// the row's current best deck — four pairs each, then sixteen fresh pairs
-/// for the top two — and the confirmed leader replaces it at ≥ `accept` %.
-/// Returns, per set, (rows raced, rows replaced, mean confirmed share of
-/// the replacements).
-/// With `final_pairs > 0` (step 3b) the leader must also clear
-/// `final_accept` % over that many fresh pairs; the last tuple element is
-/// then the mean final share of every leader that reached it — near 50 if
-/// the first two stages pass ties.
-/// With `pair_cands` (step 3c) the candidates also include the greedy build
-/// held to each colour pair ([`DeckPolicy::build_in`]), and the top
-/// `confirm_top` screen leaders are confirmed; the last element counts the
-/// replacements that were pair builds.
-/// With a value for the set (step 6, `values`) there are no screen games:
-/// every candidate is scored by the same-pool deck value and the top
-/// `value_top` go to the confirmation. The two elements after count the
-/// confirmed candidates and give their mean 16-pair share — the screen's
-/// quality, whichever screened.
+/// Step 3's expert: per row, the policy's greedy build and seven samples
+/// (temperatures 1, 1, 1, 1.5, 1.5, 2, 2), deduplicated, race the row's
+/// current best deck (four pairs each, then sixteen fresh pairs for the top
+/// two); the confirmed leader replaces it at ≥ `accept` %. Returns
+/// one `RaceStats` per set.
+/// - `final_pairs > 0` (step 3b): the leader must also clear `final_accept` %
+///   over that many fresh pairs (a final share near 50 means ties pass).
+/// - `pair_cands` (step 3c): candidates include the greedy build held to each
+///   colour pair ([`DeckPolicy::build_in`]); the top `confirm_top` screen
+///   leaders are confirmed.
+/// - a value for the set (step 6, `values`): no screen games; the top
+///   `value_top` candidates by same-pool deck value go to the confirmation.
 #[allow(clippy::too_many_arguments)]
 fn race_generation(
     policy: &DeckPolicy,

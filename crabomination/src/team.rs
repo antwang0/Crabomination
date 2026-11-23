@@ -1,14 +1,10 @@
 //! Team grouping for multiplayer formats.
 //!
-//! Every seat belongs to exactly one team. In free-for-all formats each
-//! team is a singleton (`team_of(seat) == TeamId(seat)`), so "opponents of
-//! X" reduces to "every other seat". In team formats (Two-Headed Giant,
-//! Three-Player Star) multiple seats share a team and that team becomes
-//! the unit for "target opponent" / "each opponent" semantics.
-//!
-//! `GameState::new` populates `teams` with one singleton team per seat
-//! automatically. Team formats call `assign_teams` to re-partition seats
-//! after construction.
+//! Every seat is on exactly one team. In free-for-all each team is a
+//! singleton (`team_of(seat) == TeamId(seat)`), so "opponents" is every other
+//! seat; in team formats (Two-Headed Giant) the team is the unit for "target
+//! / each opponent". `GameState::new` makes singleton teams; team formats
+//! call `assign_teams` afterwards.
 
 use serde::{Deserialize, Serialize};
 
@@ -20,19 +16,11 @@ pub struct Team {
     pub id: TeamId,
     /// Seat indices of the players on this team.
     pub members: Vec<usize>,
-    /// Shared life pool. `Some(n)` means the team's members share a
-    /// single life total (Two-Headed Giant — CR 810.8). `None` means
-    /// each member keeps their own `Player.life` (solo teams / FFA /
-    /// 1v1 — the default).
+    /// Shared life pool: `Some(n)` when members share one total (Two-Headed
+    /// Giant, CR 810.8), `None` for per-player `Player.life` (the default).
     ///
-    /// When set, every life mutation routes here instead of the
-    /// per-player field; `Player.life` is left at its initial value
-    /// and effectively ignored. `effective_life(seat)` collapses
-    /// both modes for callers that just want "what's the current
-    /// life total to consult for X."
-    ///
-    /// `#[serde(default)]` so snapshots written before the field
-    /// existed deserialize cleanly as `None` (solo-team semantics).
+    /// When set, life mutations route here and `Player.life` is ignored;
+    /// `effective_life(seat)` covers both. Old snapshots load as `None`.
     #[serde(default)]
     pub shared_life: Option<i32>,
 }

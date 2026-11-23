@@ -3,11 +3,10 @@
 //! reshuffled from their real deck.
 //!
 //! [`determinize_hidden`](super::bot::determinize_hidden) never reads the
-//! opponent's hand, but it redeals from their *true* unseen cards — hand
-//! plus library — so every search in every mode knows the opponent's exact
-//! decklist and only mis-sorts hand against library (ML_NOTES round 39).
-//! Against a human in the client that is the human's sealed or cube build,
-//! which no player at the table could know. This redeal keeps only what
+//! opponent's hand, but it redeals from their *true* unseen cards (hand plus
+//! library), so every search knows the opponent's exact decklist and only
+//! mis-sorts hand against library (ML_NOTES round 39) — against a human, a
+//! sealed or cube build no player could know. This redeal keeps only what
 //! the seat can see:
 //!
 //! * the public zones, untouched, and the opponent's hand and library

@@ -7,22 +7,16 @@ use crate::mana::{Color, ManaError};
 
 /// An insertion-ordered set of ids, backed by a `Vec`.
 ///
-/// A `Vec` and not a `HashSet` for the same two reasons as
-/// [`CounterBag`](crate::card::CounterBag). **Clone cost**: `ColdState`
-/// carries ~20 of these behind one `CowBox`, so *every* write to any cold
-/// field deep-copies the whole group — an empty `hashbrown` table clone
-/// still walks its control bytes where an empty `Vec` clone allocates
-/// nothing. That is what this type bought: **before** it, `RawTable::clone`
-/// ran 984,988 times under the CoW unshare for 1.22 % of the program; at the
-/// forty-eighth pass's tip the whole program's `RawTable::clone` is 34,220
-/// calls / 0.28 %, and none of them is a `ColdState` field.
-/// **Order**: `RandomState` reseeds a `HashSet`'s iteration order per
-/// process, so any consumer that iterates one leaks that reseed into game
-/// state.
+/// Not a `HashSet`, for the same two reasons as
+/// [`CounterBag`](crate::card::CounterBag). Clone cost: `ColdState` carries
+/// ~20 of these behind one `CowBox`, and an empty `hashbrown` clone still
+/// walks its control bytes where an empty `Vec` clone allocates nothing
+/// (this removed `ColdState`'s share of `RawTable::clone` under the CoW
+/// unshare). Order: `RandomState` reseeds a `HashSet`'s iteration order per
+/// process, which would leak into game state.
 ///
-/// These sets hold a handful of ids each, so the linear scans are cheaper
-/// than hashing. `insert` keeps set semantics (no duplicates) and returns
-/// whether the value was new, matching `HashSet::insert`.
+/// A handful of ids each, so linear scans beat hashing. `insert` keeps set
+/// semantics and returns novelty like `HashSet::insert`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(transparent)]
 pub struct IdSet<T>(Vec<T>);
@@ -109,17 +103,14 @@ impl<T: PartialEq> Extend<T> for IdSet<T> {
     }
 }
 
-/// [`IdSet`] with an inline buffer, for a **local** that never leaves its frame.
+/// [`IdSet`] with an inline buffer, for a local that never leaves its frame.
 ///
-/// The stored `IdSet`/`IdMap` fields keep the `Vec` backing on purpose: they
-/// sit inside `ColdState` and `PlayerData`, where the *size class* of the
-/// group is the constraint (PERF's 1,016-byte `PlayerData` ceiling) and an
-/// empty `Vec` clone allocates nothing. A local has neither problem and pays
-/// the opposite cost: `insert` / `entry_or_default` reach the heap on their
-/// first entry and — the census's finding — **never re-grow**, so a
-/// `with_capacity` only moves the allocation while an inline buffer removes
-/// it. PERF `(-158)` has the per-line attribution; four inline slots covers
-/// every measured case and a wider one spills to the heap exactly as before.
+/// Stored `IdSet`/`IdMap` fields keep the `Vec` backing on purpose: inside
+/// `ColdState` and `PlayerData` the group's size class is the constraint
+/// (PERF's 1,016-byte `PlayerData` ceiling). A local instead pays one heap
+/// allocation on first insert and never re-grows, so an inline buffer
+/// removes it where `with_capacity` would only move it. Four slots covered
+/// every measured case; wider spills to the heap. PERF `(-158)`.
 #[derive(Debug, Clone)]
 pub struct SmallIdSet<T>(smallvec::SmallVec<[T; 4]>);
 
@@ -182,13 +173,11 @@ impl<'a, T> IntoIterator for &'a SmallIdSet<T> {
     }
 }
 
-/// [`IdMap`] with an inline buffer. Same rule as [`SmallIdSet`]: locals only,
-/// and the bodies are [`IdMap`]'s verbatim so the two cannot drift — the
-/// `small_id_containers_agree_with_the_heap_backed_ones` test is the check.
-///
-/// The surface is exactly what the swapped locals call plus what that test
-/// needs to compare the two types; a method neither of those wants is not
-/// here, and the next local to move over adds it beside its `IdMap` twin.
+/// [`IdMap`] with an inline buffer. Locals only, like [`SmallIdSet`]; the
+/// bodies are [`IdMap`]'s verbatim, checked by
+/// `small_id_containers_agree_with_the_heap_backed_ones`. The surface is only
+/// what current callers and that test use — add a method beside its `IdMap`
+/// twin when needed.
 #[derive(Debug, Clone)]
 pub struct SmallIdMap<K, V>(smallvec::SmallVec<[(K, V); 4]>);
 
@@ -243,17 +232,12 @@ impl<K, V> IntoIterator for SmallIdMap<K, V> {
 
 /// An insertion-ordered map from ids to values, backed by a `Vec`.
 ///
-/// The map sibling of [`IdSet`], and it exists for the order half of that
-/// type's argument rather than the clone half: `dispatch_triggers_for_events`
-/// walks `died_card_snapshots` pushing `TriggerCandidate`s, and a
-/// `TriggerCandidate`'s position decides where its ability lands on the
-/// stack. A `HashMap`'s iteration order is reseeded per process by
-/// `RandomState`, so two runs on one seed could stack two LKI triggers in
-/// opposite orders. Insertion order is die order, which is the order CR
-/// 603.3b wants anyway.
-///
-/// Holds a handful of entries — it is cleared at the end of every dispatch
-/// batch — so the linear scans are cheaper than hashing.
+/// The map sibling of [`IdSet`], here for determinism of order:
+/// `dispatch_triggers_for_events` walks `died_card_snapshots` and each
+/// candidate's position decides its stack slot, so a `RandomState`-ordered
+/// `HashMap` could stack LKI triggers differently per process. Insertion
+/// order is die order, as CR 603.3b wants. Holds a handful of entries
+/// (cleared every dispatch batch), so linear scans beat hashing.
 #[derive(Debug, Clone)]
 pub struct IdMap<K, V>(Vec<(K, V)>);
 
@@ -393,10 +377,9 @@ impl<'de, K: serde::Deserialize<'de>, V: serde::Deserialize<'de>> serde::Deseria
 mod id_set_tests {
     use super::{IdMap, IdSet, SmallIdMap, SmallIdSet};
 
-    /// The inline-backed locals are the heap-backed types' bodies verbatim, so
-    /// the only way they can differ is a typo. Run the same op sequence — one
-    /// that crosses the four-slot inline buffer in both directions — through
-    /// both and compare. PERF `(-158)`.
+    /// The inline types copy the heap types' bodies, so only a typo can split
+    /// them: run one op sequence crossing the four-slot buffer through both.
+    /// PERF `(-158)`.
     #[test]
     fn small_id_containers_agree_with_the_heap_backed_ones() {
         let ops = [5u32, 1, 5, 9, 2, 7, 7, 3, 1, 11, 0];
@@ -451,10 +434,9 @@ mod id_set_tests {
         assert_eq!(a, b, "equality is order-insensitive");
     }
 
-    /// The property the trigger dispatcher depends on: walking an `IdMap`
-    /// yields die order, and re-writing an existing key does not move it.
-    /// A `HashMap` here put two LKI triggers on the stack in `RandomState`
-    /// order — different in every process.
+    /// The trigger dispatcher relies on this: iteration is die order and
+    /// re-writing a key keeps its position (a `HashMap` stacked LKI triggers
+    /// in per-process `RandomState` order).
     #[test]
     fn id_map_iterates_in_insertion_order() {
         let mut m: super::IdMap<u32, &str> = super::IdMap::default();
@@ -525,10 +507,8 @@ pub fn default_true() -> bool {
 
 // ── Turn step sequence ────────────────────────────────────────────────────────
 
-// `TurnStep` now lives in `crabomination_base` (below the card catalog in the
-// crate graph) so that cards keying off specific steps don't pull in game
-// logic. Re-exported here so existing `game::types::TurnStep` /
-// `game::TurnStep` paths keep working unchanged.
+// `TurnStep` lives in `crabomination_base` (below the card catalog) so cards
+// keying off steps don't pull in game logic; re-exported for existing paths.
 pub use crabomination_base::TurnStep;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -557,16 +537,13 @@ pub struct Attack {
     pub target: AttackTarget,
 }
 
-// `PartialEq` is load-bearing, not decoration: the bot's combat-instant
-// enumerator used to dedupe its candidates by `format!("{a:?}")` into a
-// `Vec<String>` — 0.21 % of a `cube` run in `format_inner` alone. PERF `(-290)`.
+// `PartialEq` is load-bearing: the bot's combat-instant enumerator dedupes
+// candidates with it instead of by `format!("{a:?}")`. PERF `(-290)`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GameAction {
     PlayLand(CardId),
-    /// Play a modal-double-faced-card land using its **back face**. The
-    /// resulting `CardInstance.definition` is swapped to the back face's
-    /// definition before entering the battlefield, so all subsequent abilities
-    /// (mana abilities, ETB triggers, land types) come from the back face.
+    /// Play an MDFC land by its back face: `definition` is swapped to the back
+    /// face before it enters, so all its abilities come from that face.
     PlayLandBack(CardId),
     /// CR 305 — play a land from the controller's graveyard, legal only while
     /// a `StaticEffect::MayPlayLandsFromGraveyard` permanent (Crucible of
@@ -577,9 +554,6 @@ pub enum GameAction {
     /// its owner's hand. Once per game (the card leaves the sideboard).
     CompanionToHand(CardId),
     CastSpell { card_id: CardId, target: Option<Target>, additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
-    /// CR 702.32 — cast a spell paying its optional Kicker cost in addition
-    /// to the mana cost. The resolving spell is stamped `kicked` so
-    /// `Predicate::SpellWasKicked` riders fire (Tear Asunder).
     /// CR 702.33b — cast a spell paying any subset of its `kicker_options`
     /// ("Kicker {A} and/or {B}" — the Volver cycle). Each paid index is
     /// stamped on the spell for `Predicate::SpellWasKickedWith`.
@@ -592,6 +566,8 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
+    /// CR 702.32 — cast a spell paying its optional Kicker cost; the spell is
+    /// stamped `kicked` for `Predicate::SpellWasKicked` (Tear Asunder).
     CastSpellKicked {
         card_id: CardId,
         target: Option<Target>,
@@ -869,9 +845,9 @@ pub enum GameAction {
         x_value: Option<u32>,
     },
     /// CR 702.78 — cast a spell paying its optional Conspire cost: tap two
-    /// untapped, unsummoning-sick-irrelevant creatures you control that each
-    /// share a color with the spell. Doing so copies the spell once (the copy
-    /// may choose new targets).
+    /// untapped creatures you control (summoning sickness irrelevant) that
+    /// each share a color with it, copying the spell once (new targets
+    /// allowed).
     CastSpellConspire {
         card_id: CardId,
         conspire_creatures: [CardId; 2],
@@ -894,12 +870,9 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
-    /// Cast a modal-double-faced card via its **back face**. Mirrors
-    /// `PlayLandBack` but for non-land back faces (creature/instant/
-    /// sorcery). The card's `definition` is swapped to the back face's
-    /// definition before payment + cast, so cost / type / effect all
-    /// resolve against the back face. Used by real MDFCs whose two
-    /// faces are both spells (pathway-style cards, STX Deans).
+    /// Cast an MDFC via its non-land back face — `PlayLandBack` for spells.
+    /// `definition` is swapped before payment, so cost, type and effect all
+    /// come from the back face (STX Deans).
     CastSpellBack {
         card_id: CardId,
         target: Option<Target>,
@@ -908,13 +881,11 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
-    /// SOS Prepare — cast a copy of a prepared creature's inset prepare
-    /// spell. Legal while `creature_id` is on the battlefield, controlled
-    /// by the acting player, and carries a `CounterType::Prepared`
-    /// counter. The copy is paid for and timed like a normal spell of its
-    /// card type and ceases to exist when it leaves the stack (it never
-    /// hits a graveyard); casting it removes the Prepared counter
-    /// ("unprepares it").
+    /// SOS Prepare — cast a copy of a prepared creature's inset spell. Legal
+    /// while `creature_id` is on the battlefield under the actor's control
+    /// with a `CounterType::Prepared` counter, which casting removes. Paid
+    /// and timed like a normal spell of its type; the copy ceases to exist
+    /// when it leaves the stack.
     CastPrepareSpell {
         creature_id: CardId,
         target: Option<Target>,
@@ -937,12 +908,10 @@ pub enum GameAction {
         x_value: Option<u32>,
         convoke_creatures: Vec<CardId>,
     },
-    /// CR 701.67 — cast a spell paying its "waterbend {N}" additional cost,
-    /// tapping each artifact/creature in `helpers` for {1} of the waterbend
-    /// generic (clamped to N; the rest comes from real mana). For an optional
-    /// "you may waterbend {N}" rider this is the *pay* branch (the plain
-    /// `CastSpell` is the decline branch). For `waterbend {X}`, `x_value`
-    /// is the chosen X (= the waterbend amount).
+    /// CR 701.67 — cast a spell paying its "waterbend {N}" additional cost:
+    /// each artifact/creature in `helpers` taps for {1} of it (clamped to N,
+    /// the rest from mana). For an optional rider this is the pay branch and
+    /// plain `CastSpell` the decline. For `waterbend {X}`, `x_value` is X.
     CastSpellWaterbend {
         card_id: CardId,
         target: Option<Target>,
@@ -952,11 +921,9 @@ pub enum GameAction {
         x_value: Option<u32>,
         helpers: Vec<CardId>,
     },
-    /// Cast a spell with `Keyword::Delve` (CR 702.66), exiling each card in
-    /// `delve_cards` from the caster's graveyard to pay {1} of the spell's
-    /// generic cost. Each must currently be in the caster's graveyard. The
-    /// generic-only clamp matches convoke — colored and {X} pips still come
-    /// from real mana.
+    /// Cast a spell with `Keyword::Delve` (CR 702.66): each card in
+    /// `delve_cards` (from the caster's graveyard) is exiled to pay {1} of the
+    /// generic cost. Colored and {X} pips still come from mana.
     CastSpellDelve {
         card_id: CardId,
         target: Option<Target>,
@@ -1013,28 +980,21 @@ pub enum GameAction {
         /// (Autumn-Tail, Kitsune Sage). Empty for the single-target majority.
         #[serde(default)]
         additional_targets: Vec<Target>,
-        /// X value paid to an `{X}` symbol in the activation's mana cost.
-        /// Threaded through to `EffectContext.x_value` so the body can
-        /// read `Value::XFromCost`. Used by Pernicious Deed's
-        /// `{X}, Sacrifice this: destroy each permanent with MV ≤ X`,
-        /// Walking Ballista's `{X}: this creature deals X damage`, and
-        /// other X-cost activated abilities.
+        /// X paid to an `{X}` in the activation cost, read by the body as
+        /// `Value::XFromCost` (Pernicious Deed, Walking Ballista).
         #[serde(default)]
         x_value: Option<u32>,
-        /// CR 601.2b — the mode chosen for a modal activated ability
-        /// (`Effect::ChooseMode` at the top of its body). `None` lets the
-        /// engine pick: a UI seat defers to the client's resolution-time
-        /// modal, a bot asks its decider. A submitted mode is authoritative
-        /// and also drives per-slot target validation, which is the only way
-        /// a UI seat can pick a mode whose body takes a target.
+        /// CR 601.2b — the mode for a modal activated ability
+        /// (`Effect::ChooseMode` atop its body). `None` lets the engine ask
+        /// (UI seat: resolution-time modal; bot: its decider). A submitted
+        /// mode is authoritative and drives per-slot target validation — the
+        /// only way a UI seat can pick a mode whose body targets.
         #[serde(default)]
         mode: Option<usize>,
     },
-    /// Activate an ability whose generic mana can be paid by tapping helpers:
-    /// CR 701.67 Waterbend {N} (artifacts or creatures) or CR 702.51 convoke on
-    /// the ability (creatures only — Heirloom Epic). Each helper pays {1},
-    /// clamped to the generic total; the rest comes from mana. The ability must
-    /// be flagged `ActivatedAbility.waterbend` or `.convoke`.
+    /// Activate an ability flagged `ActivatedAbility.waterbend` (CR 701.67,
+    /// artifacts or creatures) or `.convoke` (CR 702.51, creatures —
+    /// Heirloom Epic): each helper taps for {1} of the generic cost.
     ActivateAbilityWaterbend {
         card_id: CardId,
         ability_index: usize,
@@ -1048,18 +1008,14 @@ pub enum GameAction {
     /// Declare attackers: each attacker picks a defending player or a
     /// planeswalker controlled by a non-active player.
     DeclareAttackers(Vec<Attack>),
-    /// CR 702.22c — declare attackers and, in the same announcement, the
-    /// attacking bands. Each entry of `bands` lists one band's members: at
-    /// most one may lack `Keyword::Banding`, and every member must attack the
-    /// same defender (CR 702.22d). Plain `DeclareAttackers` is this with no
-    /// bands.
+    /// CR 702.22c — declare attackers with their bands. Each band has at
+    /// most one member without `Keyword::Banding`, all attacking one
+    /// defender (CR 702.22d).
     DeclareAttackersBanded { attacks: Vec<Attack>, bands: Vec<Vec<CardId>> },
-    /// CR 508.1g — declare attackers and, in the same announcement, the
-    /// **optional costs to attack** that are being paid. `exert` is the set
-    /// of chosen attackers that pay exert (CR 701.43d); a creature outside it
-    /// does not exert, whatever its keyword says, and so gets neither the
-    /// skipped untap nor the linked "when you do" bonus. Plain
-    /// `DeclareAttackers` leaves the choice to the engine's policy.
+    /// CR 508.1g — declare attackers together with the optional attack costs
+    /// paid. `exert` lists the attackers that exert (CR 701.43d); any other
+    /// doesn't, so gets neither the skipped untap nor the "when you do" bonus.
+    /// Plain `DeclareAttackers` leaves the choice to the engine's policy.
     DeclareAttackersExerting { attacks: Vec<Attack>, exert: Vec<CardId> },
     DeclareBlockers(Vec<(CardId, CardId)>),
     ActivateLoyaltyAbility { card_id: CardId, ability_index: usize, target: Option<Target>, #[serde(default)] x_value: Option<u32> },
@@ -1102,11 +1058,9 @@ pub enum GameAction {
     /// graveyard (re-escapable); permanents enter the battlefield.
     CastEscape { card_id: CardId, exile_cards: Vec<CardId>, target: Option<Target>, #[serde(default)] additional_targets: Vec<Target>, mode: Option<usize>, x_value: Option<u32> },
     /// Cast a graveyard card with `Keyword::FlashbackTap(N)` by tapping
-    /// `tap_creatures` (must list exactly N untapped creatures the
-    /// caster controls). Used by Group Project ("Flashback—Tap three
-    /// untapped creatures you control"). Mana cost is zero (the tap is
-    /// the *entire* flashback cost); the resolved spell routes to exile
-    /// per CR 702.34a via the standard `cast_via_flashback` plumbing.
+    /// exactly N untapped creatures you control (Group Project); the tap is
+    /// the whole cost. Exiled on resolution per CR 702.34a via
+    /// `cast_via_flashback`.
     CastFlashbackTap {
         card_id: CardId,
         tap_creatures: Vec<CardId>,
@@ -1116,15 +1070,11 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
-    /// Cast a card from its current zone (graveyard or exile) without
-    /// paying its mana cost — consumes the `CardInstance.may_play_until`
-    /// permission stamped by `Effect::GrantMayPlay`. Used by Practiced
-    /// Scrollsmith, Suspend Aggression, Elemental Mascot, Tablet of
-    /// Discovery, Ark of Hunger, Archaic's Agony, and the Paradigm cards'
-    /// upkeep recurrence. Source zone is read off the permission target's
-    /// current zone (single-pass `find_card_zone`); the action rejects
-    /// when no permission exists, has expired, or the card has moved to a
-    /// zone where the cast no longer makes sense.
+    /// Cast a card from graveyard or exile without paying its mana cost,
+    /// consuming the `CardInstance.may_play_until` permission from
+    /// `Effect::GrantMayPlay` (Practiced Scrollsmith, the Paradigm cards).
+    /// Rejected if the permission is missing or expired or the card has
+    /// moved to a zone where the cast no longer applies.
     CastFromZoneWithoutPaying {
         card_id: CardId,
         target: Option<Target>,
@@ -1133,15 +1083,10 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
-    /// Cast a Commander from your command zone (Phase L). The mana
-    /// cost is the printed cost plus `{2}` for every prior time this
-    /// commander has been cast from the command zone this game
-    /// (the "commander tax", CR 903.8). Targets / modes / X follow
-    /// the same convention as `CastSpell`. The card is removed from
-    /// the command zone, pushed onto the stack as a spell, and ends
-    /// up on the battlefield (or in the appropriate zone) on
-    /// resolution — and Phase J's registered replacement effect
-    /// snags it back to the command zone when it would leave play.
+    /// Cast a commander from the command zone, paying the printed cost plus
+    /// {2} per prior cast from there this game (commander tax, CR 903.8).
+    /// Targets / modes / X as `CastSpell`. Phase J's replacement effect
+    /// returns it to the command zone when it would leave play.
     CastFromCommandZone {
         card_id: CardId,
         target: Option<Target>,
@@ -1161,12 +1106,9 @@ pub enum GameAction {
     },
     PassPriority,
     SubmitDecision(DecisionAnswer),
-    /// CR 702.29 — Activate a card's Cycling ability from your hand.
-    /// `card_id` must be in the caster's hand and carry a
-    /// `Keyword::Cycling(cost)`. Pays the cycling cost, discards the
-    /// card to the controller's graveyard, draws a card. Per CR
-    /// 702.29c, "When you cycle this card" triggers fire from
-    /// whatever zone the card winds up in after the discard.
+    /// CR 702.29 — cycle a hand card with `Keyword::Cycling(cost)`: pay,
+    /// discard, draw. "When you cycle this card" triggers fire from wherever
+    /// the card lands after the discard (CR 702.29c).
     Cycle {
         card_id: CardId,
         /// X paid to an `{X}` symbol in the cycling cost ({X}{1}{U} —
@@ -1186,40 +1128,31 @@ pub enum GameAction {
     /// cost, discards the card, then searches the library for a land of the
     /// named type and puts it into hand (shuffling after).
     Landcycle { card_id: CardId },
-    /// CR 702.6 — Activate an Equipment's equip ability, moving it onto
-    /// `target` (a creature you control). Sorcery-speed only (CR 702.6e):
-    /// legal only during the controller's main phase with an empty stack.
-    /// Pays the `Keyword::Equip(cost)` mana cost, then attaches the
-    /// Equipment, conferring its `equipped_bonus` via the layer system.
+    /// CR 702.6 — equip onto `target` (a creature you control) at sorcery
+    /// speed (CR 702.6e), paying `Keyword::Equip(cost)`; `equipped_bonus`
+    /// applies via the layer system.
     Equip { equipment: CardId, target: CardId },
-    /// CR 702.151 — Reconfigure an Equipment-creature. Sorcery-speed only.
-    /// With `target: Some(c)`, pay the reconfigure cost and attach to a
-    /// creature you control (it stops being a creature while attached).
-    /// With `target: None`, pay the cost to unattach it (it becomes a
-    /// creature again). Lion Sash.
+    /// CR 702.151 — reconfigure at sorcery speed (Lion Sash): `Some(c)`
+    /// attaches to your creature (no longer a creature while attached),
+    /// `None` unattaches.
     Reconfigure { equipment: CardId, target: Option<CardId> },
-    /// CR 702.122 — Crew a Vehicle. Taps each creature in `crew_creatures`
-    /// (each must be an untapped creature the activator controls, other than
-    /// the Vehicle); their total power must meet or exceed the Vehicle's
-    /// `Keyword::Crew(N)`. On success the Vehicle becomes an artifact
-    /// creature until end of turn. Crew is an activated ability usable any
-    /// time the controller has priority (instant speed, CR 702.122a).
+    /// CR 702.122 — crew a Vehicle at instant speed by tapping
+    /// `crew_creatures` (untapped, yours, not the Vehicle) with total power
+    /// ≥ `Keyword::Crew(N)`; it becomes an artifact creature until end of
+    /// turn.
     Crew { vehicle: CardId, crew_creatures: Vec<CardId> },
-    /// CR 702.171 — Saddle a Mount. Taps each creature in `creatures` (each
-    /// an untapped creature the activator controls, other than the Mount);
-    /// their total power must meet or exceed the Mount's `Keyword::Saddle(N)`.
-    /// On success the Mount becomes saddled until end of turn. Sorcery speed.
+    /// CR 702.171 — saddle a Mount at sorcery speed by tapping `creatures`
+    /// (untapped, yours, not the Mount) with total power ≥
+    /// `Keyword::Saddle(N)`; it is saddled until end of turn.
     Saddle { mount: CardId, creatures: Vec<CardId> },
     /// CR 702.49 — Ninjutsu. During the declare-blockers step, return an
     /// unblocked attacker (`returning`) to hand and put `ninja` (a card with
     /// Ninjutsu in your hand) onto the battlefield tapped and attacking the
     /// same defender, paying the ninjutsu cost.
     Ninjutsu { ninja: CardId, returning: CardId },
-    /// CR 104.3a — the acting player concedes and leaves the game
-    /// immediately. Carries no seat: the *server* attributes it to the
-    /// connection that sent it (so a client can't concede on another seat's
-    /// behalf), and a player may concede at any time regardless of priority.
-    /// See `GameState::concede` and the server's `handle_action` intercept.
+    /// CR 104.3a — the acting player concedes, at any time. Carries no seat:
+    /// the server attributes it to the sending connection so no client can
+    /// concede for another (`GameState::concede`, `handle_action`).
     Concede,
     /// CR 901.9 — roll the planar die. A special action: legal only while the
     /// active player has priority with an empty stack during their own main
@@ -1276,11 +1209,9 @@ pub struct DelayedTrigger {
     pub bound_subject: Option<crate::game::effects::EntityRef>,
     /// True for one-shot triggers; removed after firing.
     pub fires_once: bool,
-    /// Absolute turn number this watcher survives *through*. `None` uses the
-    /// kind's own duration (most "this turn" kinds are swept at cleanup);
-    /// `Some(n)` keeps it alive until the cleanup step of turn `n`, which is
-    /// how "until the end of your next turn" riders outlive the turn they
-    /// were installed on (Season of the Bold).
+    /// Turn this watcher survives through: `Some(n)` keeps it until turn
+    /// `n`'s cleanup ("until the end of your next turn" — Season of the
+    /// Bold); `None` uses the kind's own duration.
     #[serde(default)]
     pub expires_after_turn: Option<u32>,
 }
@@ -1320,36 +1251,30 @@ pub enum DelayedKind {
     /// At the beginning of the next cleanup step (Waylay). Fires after the end
     /// step, so the affected objects survive it.
     NextCleanupStep,
-    /// At the beginning of `controller`'s next pre-combat main phase.
-    /// Used by Chancellor of the Tangle ("at the beginning of your first
-    /// main phase, add {G}"). Fires once on the controller's PreCombatMain
-    /// step so the mana lands in the pool with main-phase windows still
-    /// open (mana pools empty on step transition, MTG rule 500.4).
+    /// At the beginning of `controller`'s next precombat main phase
+    /// (Chancellor of the Tangle), so the mana lands while main-phase
+    /// windows are open (pools empty between steps, CR 500.4).
     YourNextMainPhase,
     /// "At the beginning of your next main phase" — first or second, the
     /// controller's next main phase to begin (CR 505.1). Mana Drain
     /// countering on your own turn banks for this turn's second main phase.
     YourNextMainPhaseAny,
-    /// "When [card] dies this turn, …" — fires on a `CreatureDied` event for
-    /// the watched card id (CR 603.4 event-keyed delayed trigger). Registered
-    /// by `Effect::WhenTargetDiesThisTurn` capturing the targeted creature.
-    /// Expires at cleanup if the watched card hasn't died (the "this turn"
-    /// window). Powers Searing Blood's "deals 3 to its controller".
+    /// "When [card] dies this turn, …" (CR 603.4) — fires on the watched
+    /// card's `CreatureDied`; registered by `Effect::WhenTargetDiesThisTurn`,
+    /// swept at cleanup (Searing Blood).
     WhenCardDies(crate::card::CardId),
     /// "… when that token dies" with no turn window (Tatsumasa, the Dragon's
     /// Fang). Same shape as `WhenCardDies` but survives cleanup.
     WhenTokenDies(crate::card::CardId),
-    /// "When that creature dies" with no turn window, for a card that can
-    /// change zones (Xira, the Golden Sting): the watched object is the card
-    /// at that battlefield timestamp (CR 400.7), so the same card back on
-    /// the battlefield is a new object the watch ignores. Dropped once that
-    /// object is gone. With a counter kind it fires only if the object died
-    /// with one on it ("if it has an egg counter on it", CR 603.4).
+    /// "When that creature dies" with no turn window (Xira, the Golden
+    /// Sting): watches the card at that battlefield timestamp, so the card
+    /// returning is a new object it ignores (CR 400.7); dropped once that
+    /// object is gone. With a counter kind, fires only if it died with one
+    /// on it (CR 603.4).
     WhenObjectDies(crate::card::CardId, u64, Option<crate::card::CounterType>),
-    /// "Whenever a creature you control enters this turn, …" (CR 603.4).
-    /// Fires once per creature controlled by `DelayedTrigger.controller`
-    /// that enters for the rest of the turn; the entering creature is the
-    /// trigger source. Expires at cleanup. Powers First Day of Class.
+    /// "Whenever a creature you control enters this turn, …" (CR 603.4) —
+    /// once per entering creature, which is the trigger source. Swept at
+    /// cleanup (First Day of Class).
     CreatureYouControlEntersThisTurn,
     /// "Whenever a creature [matching filter] enters this turn, …" — any
     /// controller's (CR 603.4); the filter reads the entering creature with
@@ -1359,15 +1284,13 @@ pub enum DelayedKind {
     /// The same watch "until your next turn" (Kardur, Doomscourge): expires
     /// as the controller's next turn begins rather than at cleanup.
     MatchingCreatureEntersUntilYourNextTurn(crate::card::SelectionRequirement),
-    /// "Until end of turn, whenever a creature you control dies, …" (CR 603.4).
-    /// Fires once per creature owned+controlled (via death LKI) by
-    /// `DelayedTrigger.controller` that dies for the rest of the turn; the dead
-    /// creature is the trigger source. Expires at cleanup. Powers Waltz of Rage.
+    /// "Until end of turn, whenever a creature you control dies, …" (CR 603.4)
+    /// — control read from death LKI; the dead creature is the trigger
+    /// source. Swept at cleanup (Waltz of Rage).
     CreatureYouControlDiesThisTurn,
-    /// "Until end of turn, whenever a creature [matching the filter] dies, …"
-    /// (CR 603.4) — any player's creature. Fires once per dead creature whose
-    /// death LKI snapshot matches the filter; the dead creature is the trigger
-    /// source. Expires at cleanup. Powers Massacre Girl's death chain.
+    /// "Until end of turn, whenever a creature [filter] dies, …" (CR 603.4) —
+    /// any player's, matched on death LKI; the dead creature is the trigger
+    /// source. Swept at cleanup (Massacre Girl).
     MatchingCreatureDiesThisTurn(crate::card::SelectionRequirement),
     /// "Until end of turn, whenever a creature you control deals combat damage
     /// to a player, …" (CR 603.4). Fires per qualifying combat-damage event; the
@@ -1382,13 +1305,13 @@ pub enum DelayedKind {
     /// player this turn, …" (The Clone Saga III) — any controller's creature,
     /// once per creature per combat-damage event. Swept at cleanup.
     NamedCreatureDealsCombatDamageToPlayerThisTurn(String),
-    /// "When you cast your next spell this turn, …" (CR 603.7e). Fires once
-    /// on the controller's next spell cast, with the cast spell bound as the
-    /// trigger source; expires at cleanup if no spell was cast. Codie.
     /// CR 603.4 — "When you next activate an exhaust ability that isn't a mana
     /// ability this turn, [body]" (Pit Automaton). Consumed by the first such
     /// activation; expires at cleanup.
     YourNextExhaustActivationThisTurn,
+    /// "When you cast your next spell this turn, …" (CR 603.7e). Fires once
+    /// on the controller's next spell cast, with the cast spell bound as the
+    /// trigger source; expires at cleanup if no spell was cast. Codie.
     YourNextSpellCastThisTurn,
     /// "When you next attack this turn, [body]" (CR 603.7e). Consumed by the
     /// controller's next attack declaration, after the attackers are tapped;
@@ -1462,10 +1385,8 @@ pub enum DelayedKind {
     /// step (`Effect::DelayUntil { kind: EndOfCombat }`; Fortune, Loyal Steed).
     EndOfCombat,
     /// "Until end of turn, whenever [the watched creature] deals damage, [body]"
-    /// (CR 603.4). Fires per damage the watched permanent deals — combat or
-    /// noncombat, to any target — with the amount bound via
-    /// `Value::TriggerEventAmount`; the body runs for `DelayedTrigger.controller`.
-    /// Expires at cleanup. Paladin of Prahv's Forecast rider.
+    /// (CR 603.4) — any damage to anything, amount via
+    /// `Value::TriggerEventAmount`. Swept at cleanup (Paladin of Prahv).
     SourceDealsDamageThisTurn(crate::card::CardId),
     /// "Until end of turn, whenever [the watched creature] deals combat damage
     /// to a player, [body]" (CR 603.4 — Captain Howler's pumped creature). The
@@ -1489,23 +1410,18 @@ pub enum DelayedKind {
     /// cleanup.
     CombatDamageToYouPreventedThisTurn,
     /// "Whenever a card is put into an opponent's graveyard from anywhere this
-    /// turn, [body]" (CR 603.4). Fires per `CardPutIntoGraveyard` event whose
-    /// owner is an opponent of `DelayedTrigger.controller`; that owner is bound
-    /// as the body's `Target(0)` (so "that player loses 1 life" is exact in
-    /// multiplayer). Expires at cleanup. Duskmantle Guildmage's first ability.
+    /// turn, [body]" (CR 603.4). That owner is bound as the body's `Target(0)`,
+    /// so "that player" is exact in multiplayer. Swept at cleanup
+    /// (Duskmantle Guildmage).
     CardEntersOpponentGraveyardThisTurn,
     /// "Whenever a spell or ability an opponent controls causes you to
-    /// discard cards this turn, [body]" (CR 603.4). Fires per card discarded
-    /// by `DelayedTrigger.controller` while `GameState.resolution_causer` is one
-    /// of their opponents; the discarded card is the trigger source. Expires
-    /// at cleanup. Pure Intentions.
+    /// discard cards this turn, [body]" (CR 603.4) — per card discarded while
+    /// `GameState.resolution_causer` is an opponent; that card is the trigger
+    /// source. Swept at cleanup (Pure Intentions).
     OpponentCausesYouToDiscardThisTurn,
-    /// Until end of turn, each time a permanent one of
-    /// `DelayedTrigger.controller`'s opponents controls deals damage to them,
-    /// with that permanent as the trigger source (Hellish Rebuke: "…gain
-    /// 'When this permanent deals damage to the player who cast Hellish
-    /// Rebuke, sacrifice this permanent. You lose 2 life.'"). Expires at
-    /// cleanup.
+    /// Until end of turn, each time an opponent's permanent damages the
+    /// controller, with that permanent as trigger source (Hellish Rebuke).
+    /// Swept at cleanup.
     OpponentPermanentDamagesYouThisTurn,
 }
 
@@ -1520,9 +1436,6 @@ pub struct PendingDecision {
 }
 
 impl PendingDecision {
-    /// CR 800.4a — whether the spell or ability this decision is resolving
-    /// belongs to seat `p` (cast by it, owned by it, or controlled by it):
-    /// when `p` leaves the game, that object ceases to exist mid-resolution.
     /// [`PendingEffectState::departed_filler`] for an effect resolution
     /// paused on a per-seat ask.
     pub(crate) fn departed_filler(&self) -> Option<crate::decision::DecisionAnswer> {
@@ -1534,6 +1447,8 @@ impl PendingDecision {
         }
     }
 
+    /// CR 800.4a — whether the resolving spell or ability belongs to seat `p`
+    /// (cast, owned or controlled by it), so it ceases to exist if `p` leaves.
     pub fn resolves_for(&self, p: usize) -> bool {
         match &self.resume {
             ResumeContext::Spell { card, caster, .. } => *caster == p || card.owner == p,
@@ -1550,19 +1465,15 @@ impl PendingDecision {
         if let crate::decision::Decision::SearchLibrary { player, .. } = &self.decision {
             return *player;
         }
-        // CR 701.9a — a player discards cards *they* choose. "Target player
-        // discards N" (Arcane Omens) therefore asks the discarding seat,
-        // not the caster; `Decision::Discard.player` always names whoever
-        // is picking. Left to the resume's owner, the caster got to choose
-        // which cards their opponent threw away.
+        // CR 701.9a — a player discards cards *they* choose, so "target player
+        // discards N" (Arcane Omens) asks `Decision::Discard.player`, not the
+        // caster (who used to pick the opponent's discards).
         if let crate::decision::Decision::Discard { player, .. } = &self.decision {
             return *player;
         }
-        // A suspended effect usually wants its answer from the spell's caster
-        // / ability's controller. The exception is a forced sacrifice (CR
-        // 701.16), where the *sacrificing* player chooses — which for an Edict
-        // is the targeted opponent, not the caster. `SacrificePending` carries
-        // that player, so prefer it over the resume's owner.
+        // Usually the caster / controller answers; `answering_player` covers
+        // exceptions such as a forced sacrifice (CR 701.16), where the Edict's
+        // target chooses.
         match &self.resume {
             ResumeContext::Spell { in_progress, caster, .. } => {
                 in_progress.answering_player().unwrap_or(*caster)
@@ -1650,19 +1561,9 @@ impl PendingEffectState {
     }
 }
 
-/// One triggered ability waiting to be pushed onto the stack.
-/// Captures the resolved per-trigger data after filter-gating (the
-/// `EventSpec::filter` predicate is already evaluated when this is
-/// built) so the resume path doesn't need to re-walk filters.
-///
-/// Holds Effect / Option / Vec — boxed everywhere it'd otherwise
-/// bloat `ResumeContext` past the threshold the Clippy
-/// `large_enum_variant` lint trips on, but kept inline here because
-/// the existing variants in `ResumeContext` are already this size.
 /// A triggered ability gathered during event dispatch, before APNAP
-/// ordering (CR 603.3) and `EventSpec::filter` gating. Lives at module
-/// scope so the same-controller ordering pass can take ownership of the
-/// collected vector.
+/// ordering (CR 603.3) and `EventSpec::filter` gating. Module-scope so the
+/// same-controller ordering pass can own the collected vector.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TriggerCandidate {
     pub source: CardId,
@@ -1671,9 +1572,8 @@ pub struct TriggerCandidate {
     pub filter: Option<crate::effect::Predicate>,
     pub subject: Option<crate::game::effects::EntityRef>,
     pub event_amount: u32,
-    /// True if the originating event was an ETB (PermanentEntered). Strict
-    /// Proctor's CR 614 tax only applies to ETB-triggered abilities — this
-    /// flag is read at push-time to gate the tax.
+    /// The originating event was an ETB — gates Strict Proctor's tax
+    /// (CR 614) at push time.
     pub triggered_by_etb: bool,
     /// True if the originating event was a creature dying — Drivnod's
     /// "a creature dying causes … triggers an additional time" doubler.
@@ -1683,38 +1583,28 @@ pub struct TriggerCandidate {
     /// Gandalf the White's leave doubler reads its last known information.
     #[serde(default)]
     pub triggered_by_leave: Option<CardId>,
-    /// True if the originating event was a creature attacking — Isshin /
-    /// Windcrag Siege (Mardu) "a creature attacking causes … triggers an
-    /// additional time" doubler.
+    /// The originating event was a creature attacking (Isshin / Windcrag
+    /// Siege doubler).
     #[serde(default)]
     pub triggered_by_attack: bool,
-    /// True if the originating event was a land entering (`LandPlayed`,
-    /// which every land entry reports) — Ancient Greenwarden's "if a land
-    /// entering causes a triggered ability … triggers an additional time"
-    /// doubler for landfall triggers.
+    /// The originating event was a land entering (`LandPlayed`, reported by
+    /// every land entry) — Ancient Greenwarden's doubler.
     #[serde(default)]
     pub triggered_by_land_entry: bool,
-    /// True if the originating event was a permanent turned face up —
-    /// Panoptic Projektor's "if turning a face-down permanent face up causes
-    /// a triggered ability … to trigger, that ability triggers an additional
-    /// time".
+    /// The originating event was a permanent turning face up (Panoptic
+    /// Projektor's doubler).
     #[serde(default)]
     pub triggered_by_face_up: bool,
-    /// True if the originating event was a card draw — Krang, the
-    /// All-Powerful's "a player drawing a card causes a triggered ability …
-    /// triggers an additional time".
+    /// The originating event was a card draw (Krang, the All-Powerful's
+    /// doubler).
     #[serde(default)]
     pub triggered_by_draw: bool,
-    /// The player whose life gain fired this trigger (a `LifeGained`), else
-    /// `None` — Dr. Beverly Crusher's "if you gaining life causes a
-    /// triggered ability … to trigger, that ability triggers an additional
-    /// time".
+    /// The player whose `LifeGained` fired this trigger (Dr. Beverly
+    /// Crusher's doubler).
     #[serde(default)]
     pub lifegain_player: Option<usize>,
-    /// The controller of the creature whose being dealt damage fired this
-    /// trigger (a `DamageDealt` to a creature), else `None` — Wayta, Trainer
-    /// Prodigy's "a creature you control being dealt damage causes …
-    /// triggers an additional time" doubler.
+    /// Controller of the creature whose being dealt damage fired this trigger
+    /// (Wayta, Trainer Prodigy's doubler).
     #[serde(default)]
     pub damaged_creature_controller: Option<usize>,
     /// CR 605.1b — fired from a mana ability (a permanent tapped for mana).
@@ -1728,6 +1618,8 @@ pub struct TriggerCandidate {
     pub actor: Option<usize>,
 }
 
+/// One triggered ability waiting to be pushed onto the stack, captured after
+/// `EventSpec::filter` gating so the resume path needn't re-walk filters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PendingTriggerPush {
     pub source: CardId,
@@ -1735,36 +1627,26 @@ pub struct PendingTriggerPush {
     pub effect: Effect,
     pub subject: Option<crate::game::effects::EntityRef>,
     pub event_amount: u32,
-    /// Modal trigger mode (already picked at push-time). `None`
-    /// when the trigger isn't modal.
+    /// Mode picked at push time; `None` for a non-modal trigger.
     #[serde(default)]
     pub mode: Option<usize>,
-    /// CR 603.4 — intervening 'if' clause. When `Some(pred)`, the
-    /// resolver re-checks the predicate against the current game state
-    /// before running the trigger's body; failure means the trigger
-    /// fizzles. Populated by `fire_step_triggers` from the trigger's
-    /// `EventSpec.filter` when that filter is intended as a resolve-
-    /// time gate. Defaults to `None` for snapshot back-compat and for
-    /// triggers whose filter is intended only as a trigger-time gate.
+    /// CR 603.4 — intervening 'if' clause, re-checked at resolution (the
+    /// trigger does nothing if it fails). Set by `fire_step_triggers` from
+    /// `EventSpec.filter` when that is a resolve-time gate; `None` otherwise.
     #[serde(default)]
     pub intervening_if: Option<crate::card::Predicate>,
     /// The seat that caused the firing event — see `TriggerCandidate.actor`.
     #[serde(default)]
     pub actor: Option<usize>,
-    /// CR 605.1b — this trigger fired from a mana ability (a land or other
-    /// permanent tapped for mana / mana added). Combined with a targetless
-    /// mana-adding body it makes the ability a *mana* ability, which CR 605.4a
-    /// resolves off-stack.
+    /// CR 605.1b — fired from a mana ability. With a targetless mana-adding
+    /// body that makes it a mana ability, resolved off-stack (CR 605.4a).
     #[serde(default)]
     pub from_mana_ability: bool,
-    /// CR 601.2b — the originating cast's X, converge count, and total mana
-    /// spent, for a trigger queued straight off a spell resolving (the
-    /// entrant's own ETB). A body reading `Value::XFromCost` /
-    /// `ConvergedValue` / `CastSpellManaSpent` needs them, and unlike the
-    /// event-dispatch path there is no permanent to read them back off yet.
-    /// All zero for every other push site, which keeps the resolve-time
-    /// fallbacks (`x_value` off the source permanent, converge/mana 0) in
-    /// place — see [`GameState::push_pending_trigger`].
+    /// CR 601.2b — the originating cast's X, converge count and mana spent,
+    /// for a trigger queued straight off a resolving spell (its own ETB),
+    /// where no permanent yet carries them. Zero at every other push site,
+    /// keeping the resolve-time fallbacks — see
+    /// [`GameState::push_pending_trigger`].
     ///
     /// [`GameState::push_pending_trigger`]: crate::game::GameState::push_pending_trigger
     #[serde(default)]
@@ -1820,17 +1702,11 @@ impl ResumeContext {
     /// Whether this suspend stashed an action to *replay*, rather than
     /// pausing something already committed.
     ///
-    /// The distinction matters to the affordance probes. A replay suspend
-    /// returns `Ok` without the action having happened — the cast is still
-    /// in hand, nothing is paid — so a probe that reads `Ok` as "accepted"
-    /// reports an unaffordable spell as castable. That lie is what let the
-    /// bot commit casts it could not pay for, whose failed replay was then
-    /// rolled back with the pending decision restored, wedging the game.
-    ///
-    /// The other contexts (`Spell`, `Trigger`, `Ability`, `Mulligan`,
-    /// `CleanupDiscard`, `CombatDamage`, the trigger-ordering picks) pause
-    /// *resolution* of something that already resolved onto the stack, so
-    /// the action itself did complete and `Ok` is honest.
+    /// Affordance probes must not read a replay suspend's `Ok` as "accepted":
+    /// nothing was paid yet, and treating it as castable let the bot commit
+    /// unpayable casts whose failed replay wedged the game. The other
+    /// contexts pause the resolution of something already done, so their
+    /// `Ok` is honest.
     pub(crate) fn is_action_replay(&self) -> bool {
         matches!(
             self,
@@ -1872,21 +1748,15 @@ pub enum ResumeContext {
         mode: usize,
         x_value: u32,
         converged_value: u32,
-        /// Total mana spent paying the originating spell's cost. Threaded
-        /// so a suspended spell resolution that consults
-        /// `Value::CastSpellManaSpent` reads the right amount on resume.
-        /// Defaults to 0 for snapshot backwards-compatibility.
+        /// Mana spent on the cast, for `Value::CastSpellManaSpent` on resume.
         #[serde(default)]
         mana_spent: u32,
         in_progress: PendingEffectState,
         remaining: Effect,
         /// Which part of the spell `remaining` belongs to: 0 the main effect,
         /// 1 a fused split's right half (CR 709 / 702.102), 2 + i spliced
-        /// effect `i` (CR 702.47b). The tail runs BELOW the main effect in
-        /// `continue_spell_resolution`, so without this a suspension anywhere
-        /// in the spell replayed the whole tail on every resume — Far // Away
-        /// took two creatures instead of one. Defaults to 0 for snapshot
-        /// back-compat and for every spell with no tail.
+        /// effect `i` (CR 702.47b). Without it, a suspend replayed the whole
+        /// tail on every resume (Far // Away took two creatures).
         #[serde(default)]
         tail_stage: u8,
     },
@@ -1897,26 +1767,17 @@ pub enum ResumeContext {
         mode: usize,
         in_progress: PendingEffectState,
         remaining: Effect,
-        /// X paid into the originating spell's cost. Threaded so a
-        /// suspended ETB trigger that consults `Value::XFromCost` reads
-        /// the right value when it's resumed after a pending decision.
-        /// Defaults to 0 for snapshot backwards-compatibility.
+        /// The originating spell's X, for `Value::XFromCost` on resume.
         #[serde(default)]
         x_value: u32,
-        /// Converge value (number of distinct colors of mana spent on
-        /// the originating spell's cost). Same role as `x_value` for
-        /// `Value::ConvergedValue`.
+        /// Converge value, as `x_value` for `Value::ConvergedValue`.
         #[serde(default)]
         converged_value: u32,
-        /// Total mana spent paying the originating spell's cost. Same
-        /// role as `x_value` / `converged_value` for
-        /// `Value::CastSpellManaSpent`.
+        /// Mana spent, as `x_value` for `Value::CastSpellManaSpent`.
         #[serde(default)]
         mana_spent: u32,
-        /// The trigger's subject (`ctx.trigger_source` — the just-cast
-        /// spell, the taxed caster, the dying creature). Threaded so a
-        /// suspended trigger that reads `PlayerRef::Triggerer` /
-        /// `Selector::TriggerSource` still resolves it on resume.
+        /// The trigger's subject (`ctx.trigger_source`), so
+        /// `PlayerRef::Triggerer` / `Selector::TriggerSource` resolve on resume.
         #[serde(default)]
         trigger_source_ent: Option<crate::game::effects::EntityRef>,
         /// The firing event's amount (`Value::TriggerEventAmount`).
@@ -1947,14 +1808,6 @@ pub enum ResumeContext {
         mulligans_taken: usize,
         next_player: Option<usize>,
     },
-    /// Suspended *before* pushing a triggered ability onto the stack
-    /// because its controller has `wants_ui` and the effect requires
-    /// a target. `pending` is the one trigger awaiting its target;
-    /// `remaining` is the queue of triggers from the same event
-    /// batch that haven't been processed yet. On answer, push
-    /// `pending` with the chosen target, then continue draining
-    /// `remaining` (which may suspend again on the next targeted
-    /// trigger).
     /// CR 700.2a / 603.3c — a hand-paying seat (`Player::manual_mana`) picks
     /// the mode of its modal trigger whose modes target, before the target:
     /// target slots are bound at push time, so the pick can't defer to
@@ -1964,6 +1817,9 @@ pub enum ResumeContext {
         pending: PendingTriggerPush,
         remaining: Vec<PendingTriggerPush>,
     },
+    /// Suspended before pushing a trigger whose `wants_ui` controller must
+    /// pick a target. On answer `pending` is pushed with it and `remaining`
+    /// (the rest of the event batch) drains on, possibly suspending again.
     TriggerTargetPick {
         pending: PendingTriggerPush,
         remaining: Vec<PendingTriggerPush>,
@@ -1976,15 +1832,11 @@ pub enum ResumeContext {
         #[serde(default)]
         picked: Vec<Target>,
     },
-    /// CR 601.2b — a `wants_ui` caster is choosing how to pay one of a spell's
-    /// additional cast costs: which permanent to sacrifice ("sacrifice a …" —
-    /// Crop Rotation, Reckless Abandon) or which card(s) to discard ("discard a
-    /// card" — Big Score, Illuminate History). The cast suspended at its very
-    /// top — before the card left hand or any cost was paid — and is fully
-    /// re-run on answer with the pick stored in `pending_cast_sacrifices` /
-    /// `pending_cast_discards` (the resume picks the field by answer type).
-    /// Carries the original cast parameters so the resume can re-invoke
-    /// `cast_spell` verbatim (which may suspend again for a further cost).
+    /// CR 601.2b — a `wants_ui` caster picks what to sacrifice (Crop
+    /// Rotation) or discard (Big Score) for an additional cast cost. The cast
+    /// suspended before anything was paid and `cast_spell` is re-run verbatim
+    /// with the pick in `pending_cast_sacrifices` / `pending_cast_discards`
+    /// (possibly suspending again for a further cost).
     CastAdditionalCost {
         caster: usize,
         card_id: CardId,
@@ -1999,23 +1851,18 @@ pub enum ResumeContext {
         #[serde(default)]
         kicked: bool,
     },
-    /// CR 601.2g — a `wants_ui` payer is answering "spend your floating mana,
-    /// or tap lands instead?" before a mana payment (a cast, flashback,
-    /// alternative cost, or activated ability). The action suspended at its
-    /// payment point (any pre-payment mutation rolled back) and is re-run
-    /// verbatim on answer with the choice stored in `pending_cast_spend_float`
-    /// (`Bool(true)` = spend the float, `Bool(false)` = keep it, pay from
-    /// sources). Carries the originating `GameAction` so the resume replays the
-    /// exact action — kicker / buyback / flashback / etc. survive the round-trip.
+    /// CR 601.2g — a `wants_ui` payer answers "spend floating mana, or tap
+    /// sources?" before a payment. The action suspended at its payment point
+    /// (pre-payment mutations rolled back) and the stored `GameAction` is
+    /// replayed verbatim with the choice in `pending_cast_spend_float`
+    /// (`Bool(true)` = spend the float).
     ActionFloatConfirm {
         actor: usize,
         action: Box<GameAction>,
     },
-    /// CR 614.12a — a land drop's as-enters replacement is asking its
-    /// `wants_ui` controller (Cavern of Souls' creature type). **Not** a
-    /// replay context: the land is already on the battlefield and the drop is
-    /// spent, so the resume applies the answer and finishes the entry
-    /// (`finish_land_entry`) rather than re-running `PlayLand`.
+    /// CR 614.12a — a land drop's as-enters replacement asks its `wants_ui`
+    /// controller (Cavern of Souls). Not a replay: the land is already in
+    /// play, so the resume finishes the entry (`finish_land_entry`).
     LandEntry {
         player: usize,
         card_id: CardId,
@@ -2030,14 +1877,10 @@ pub enum ResumeContext {
         actor: usize,
         action: Box<GameAction>,
     },
-    /// CR 602.5 — a `wants_ui` activator is choosing a battlefield permanent
-    /// to pay one of an activated ability's "another …" costs: sacrifice
-    /// (`sac_other_filter`) or tap (`tap_other_filter`). `kind` says which, so
-    /// the resume stashes the pick in the right transient field. The
-    /// activation suspended at its top — before any cost was paid — and is
-    /// fully re-run on answer; carries the activation parameters so the resume
-    /// can re-invoke `activate_ability` verbatim. (Graveyard-exile costs use
-    /// the auto-pick — the targeting cursor can't select graveyard cards.)
+    /// CR 602.5 — a `wants_ui` activator picks for one of an activated
+    /// ability's cost choices; `kind` names which transient field gets the
+    /// pick. The activation suspended before any cost was paid and
+    /// `activate_ability` is re-run verbatim on answer.
     ActivateAbilityChoice {
         activator: usize,
         card_id: CardId,
@@ -2048,12 +1891,8 @@ pub enum ResumeContext {
         x_value: Option<u32>,
         kind: AbilityCostChoice,
     },
-    /// CR 514.1 — the active player's hand is over the maximum hand size
-    /// at cleanup and they have `wants_ui`, so the discard-down is surfaced
-    /// as an interactive `Decision::Discard`. On answer, the chosen cards
-    /// are discarded; if the hand is still over the maximum (an under-
-    /// discard) the decision is re-posed, otherwise the rest of cleanup and
-    /// the step advance run.
+    /// CR 514.1 — a `wants_ui` active player discards down to hand size at
+    /// cleanup. Re-posed on an under-discard; otherwise cleanup continues.
     CleanupDiscard { player: usize },
     /// CR 903.9a — a prompting owner chooses whether `commander`, in their
     /// graveyard or in exile, goes to the command zone
@@ -2062,21 +1901,18 @@ pub enum ResumeContext {
     /// CR 704.5j — a prompting `player` chooses which of their same-name
     /// legends to keep (`GameState::pose_legend_choice`).
     LegendRule { player: usize, name: String, duplicates: Vec<(CardId, String)> },
-    /// CR 510.1c-d — the active player (with `wants_ui`) is choosing combat
-    /// damage ordering / assignment for `attacker` during the current damage
-    /// step. On answer the choice is cached and the damage step is re-entered
-    /// (gathering the next choice or applying damage once all are made).
+    /// CR 510.1c-d — a `wants_ui` active player chooses `attacker`'s damage
+    /// ordering / assignment. The answer is cached and the damage step
+    /// re-entered.
     CombatDamage {
         /// The active player making the choice (always the attacking player).
         player: usize,
         attacker: CardId,
         kind: CombatDecisionKind,
     },
-    /// A `wants_ui` caster's spell references a target slot beyond the ones
-    /// the client sent (multi-target spells — Chelonian Tackle's fight
-    /// defender). The cast suspended before any cost was paid; on answer the
-    /// pick is appended to the action's `additional_targets` and the action
-    /// is replayed (which may suspend again for a further slot).
+    /// A `wants_ui` caster's spell needs a target slot the client didn't send
+    /// (Chelonian Tackle's fight defender). Suspended before payment; the
+    /// pick is appended to `additional_targets` and the action replayed.
     CastExtraTargetPick {
         caster: usize,
         action: Box<GameAction>,
@@ -2112,13 +1948,12 @@ pub enum ResumeContext {
 }
 
 impl GameEvent {
-    /// True for the events a cost payment leaves behind that cannot make a
-    /// state-based action apply: the announcement itself, mana, tapping,
-    /// targeting, hand and library traffic. Anything that moves a permanent,
-    /// a counter or a life total is *not* here, and an unknown kind is not
-    /// either — the gate this feeds sweeps on doubt. Nor is a card leaving a
-    /// graveyard: a graveyard count is a P/T term (Bonehoard, Lhurgoyf), and
-    /// casting a creature out of one left a 0/0 Germ alive.
+    /// True for cost-payment events that cannot make a state-based action
+    /// apply: announcement, mana, tapping, targeting, hand and library
+    /// traffic. Anything moving a permanent, counter or life total — or of
+    /// unknown kind — is excluded, since the gate sweeps on doubt. So is a
+    /// card leaving a graveyard: graveyard counts feed P/T (Lhurgoyf), and
+    /// casting out of one once left a 0/0 Germ alive.
     pub(crate) fn inert_for_state_based_actions(&self) -> bool {
         use GameEvent as E;
         matches!(
@@ -2212,12 +2047,10 @@ impl GameAction {
         )
     }
 
-    /// The card a cast variant names when that variant runs the hand pipeline
+    /// The card of a cast variant that runs the hand pipeline
     /// (`cast_spell_with_convoke`) and so can cast a commander from the
-    /// command zone on a hop (CR 903.8): kicker, bestow, waterbend, convoke,
-    /// delve, a face-down morph / disguise cast, an Adventure (CR 715.3). The
-    /// command zone's own action (`CastFromCommandZone`: plain,
-    /// alternative) and mutate have their own paths.
+    /// command zone on a hop (CR 903.8; Adventure CR 715.3).
+    /// `CastFromCommandZone` and mutate have their own paths.
     pub(crate) fn command_zone_hop_card(&self) -> Option<CardId> {
         use GameAction as A;
         match self {
@@ -2235,10 +2068,9 @@ impl GameAction {
         }
     }
 
-    /// The `card_id` of the spell a `Cast*` action casts, if it carries one in
-    /// a `card_id` field (every variant except `CastPrepareSpell`, which names a
-    /// battlefield creature rather than the spell). Used by per-turn lock pieces
-    /// that must inspect the cast spell's card types before payment.
+    /// The cast card of a `Cast*` action (all but `CastPrepareSpell`, which
+    /// names a battlefield creature), for lock pieces that inspect the
+    /// spell's types before payment.
     pub(crate) fn cast_card_id(&self) -> Option<CardId> {
         use GameAction as A;
         match self {
@@ -2371,9 +2203,7 @@ pub enum PendingEffectState {
         revealed: Vec<CardId>,
         rest_to_graveyard: bool,
         /// Subset of `revealed` eligible to take (Satyr Wayfinder — lands
-        /// only). `None` means "all revealed are eligible" (no filter /
-        /// back-compat); `Some(vec)` lists the only takeable cards (which
-        /// may be empty when nothing matched the filter).
+        /// only); `None` = all, `Some` may be empty.
         #[serde(default)]
         eligible: Option<Vec<CardId>>,
         /// Number of cards to put into hand (default 1). The decision picks
@@ -2399,9 +2229,8 @@ pub enum PendingEffectState {
         /// by the rest-to-graveyard sweep (Discerning Taste).
         #[serde(default)]
         gain_life_greatest_power_rest: bool,
-        /// Printed "you MAY put ..." — an explicit empty pick from a UI
-        /// player is honored as a decline (no auto-fill), and a partial
-        /// pick is respected rather than topped up.
+        /// Printed "you may put …": an empty or partial UI pick is honored
+        /// rather than auto-filled.
         #[serde(default)]
         optional: bool,
         /// Picked LAND cards route to the battlefield tapped; other picks
@@ -2467,11 +2296,9 @@ pub enum PendingEffectState {
         revealed: Vec<CardId>,
     },
     PutOnLibraryPending { player: usize, count: usize },
-    /// Suspended on a `ChooseColor` for an `AnyOneColor(count)` mana
-    /// payload — Black Lotus, Birds of Paradise, Mox Diamond. The UI picks
-    /// a color and the engine adds `count` mana of that color. When
-    /// `restriction` is set (Great Hall of the Biblioplex, Resonating
-    /// Lute), the added mana carries that spend restriction.
+    /// Suspended on a `ChooseColor` for an `AnyOneColor(count)` mana payload
+    /// (Black Lotus); adds `count` of the color, carrying `restriction` if
+    /// set (Great Hall of the Biblioplex).
     AnyOneColorPending {
         player: usize,
         count: u32,
@@ -2482,9 +2309,8 @@ pub enum PendingEffectState {
     /// engine adds mana of that color equal to their devotion to it.
     DevotionColorPending { player: usize },
     /// Suspended on a `ChooseColor` for `Effect::PreventAllDamageFromChosen
-    /// ColorThisTurn` (Avacyn, Guardian Angel). The already-resolved
-    /// prevention recipients are carried across the suspend; the apply step
-    /// pushes one shield per recipient scoped to the chosen source color.
+    /// ColorThisTurn` (Avacyn, Guardian Angel): one shield per carried
+    /// recipient, scoped to the chosen color.
     PreventFromChosenColorPending { targets: Vec<PreventionTarget> },
     /// Suspended on a `DiscardChosen` decision (Inquisition of Kozilek,
     /// Thoughtseize). The caster picks cards from `target_player`'s hand;
@@ -2501,12 +2327,9 @@ pub enum PendingEffectState {
     /// replacement.
     BottomChosenFromHandAndDrawPending { target_player: usize },
     TopChosenFromHandPending { target_player: usize },
-    /// CR 701.16 — suspended on a `ChooseTarget` decision for a forced
-    /// single-permanent sacrifice (Edicts, Annihilator with N=1, "sacrifice a
-    /// creature" riders). `player` is the one doing the sacrificing (the
-    /// chooser per the rules — the targeted player for an Edict). The apply
-    /// step removes the chosen permanent. Only the single-sacrifice case is
-    /// surfaced; multi-sacrifice keeps the auto-pick.
+    /// CR 701.16 — suspended on a `ChooseTarget` for a forced single
+    /// sacrifice (Edicts, Annihilator 1). `player` sacrifices and chooses.
+    /// Multi-sacrifice keeps the auto-pick.
     SacrificePending { player: usize },
     /// Suspended on an `ExileChosenUntilSourceLeaves` decision (Brain
     /// Maggot, Tidehollow Sculler, Kitesail Freebooter). The caster picks
@@ -2535,12 +2358,10 @@ pub enum PendingEffectState {
     /// caster picks card(s) from `target_player`'s hand; the apply step exiles
     /// each and grants the owner a may-play permission taxed `extra_cost` more.
     ExileFromHandTaxedPending { target_player: usize, extra_cost: u32 },
-    /// Suspended on a `ChooseCreatureType` decision for `Effect::NameCreatureType`
-    /// (Cavern of Souls). The chooser picks a creature type and the engine
-    /// stamps it onto `target_id.chosen_creature_type`.
-    /// When `options` is non-empty the printed effect offers a closed list
-    /// (A Killer Among Us — Human, Merfolk or Goblin); an answer outside it
-    /// is clamped to the first option.
+    /// Suspended on a `ChooseCreatureType` for `Effect::NameCreatureType`
+    /// (Cavern of Souls), stamped onto `target_id.chosen_creature_type`.
+    /// Non-empty `options` is a closed list (A Killer Among Us); an answer
+    /// outside it clamps to the first.
     ChooseCreatureTypePending {
         target_id: CardId,
         #[serde(default)]
@@ -2579,10 +2400,9 @@ pub enum PendingEffectState {
     /// a `NamedCreatureDealsCombatDamageToPlayerThisTurn` watcher running `body`.
     NamedCreatureCombatDamagePending { controller: usize, source: CardId, body: Box<Effect> },
     /// Suspended on a `ChooseModes` for a resolution-time "choose N" /
-    /// Escalate effect. The apply step validates the answer shape, drops
-    /// out-of-range indices, and stashes it in
-    /// `GameState.scratch.stashed_resolution_answer`; the re-queued originating
-    /// effect consumes the stash instead of re-asking its decider.
+    /// Escalate effect. The validated answer goes to
+    /// `GameState.scratch.stashed_resolution_answer`, which the re-queued
+    /// effect consumes instead of re-asking.
     ModesAnswerPending { num_modes: usize },
     /// Suspended on a `ChooseMode` for a modal trigger whose pick was
     /// deferred to resolution (`wants_ui` controller). Same stash-and-rerun
@@ -2606,11 +2426,9 @@ pub enum PendingEffectState {
     /// the ask prompted (a per-player fan-out's opponent, a payer, a chooser).
     /// The answer is applied as `inner`'s.
     Seated { player: usize, inner: Box<PendingEffectState> },
-    /// Suspended on a yes/no question routed to `player` (who may differ
-    /// from the resolving controller — rhystic taxes, Tempting Offer,
-    /// Browbeat, Clash). The validated answer is *appended* to
-    /// `GameState.scratch.resolution_answer_log`; the re-run replays the log in
-    /// ask order to reach the next unanswered question.
+    /// A yes/no routed to `player` (rhystic taxes, Tempting Offer, Clash).
+    /// The answer is appended to `GameState.scratch.resolution_answer_log`,
+    /// which the re-run replays in ask order.
     SeatBoolAnswerPending { player: usize },
     /// Suspended on a `DivideDamage` split. The raw division is stashed;
     /// the re-run renormalises a malformed answer (wrong length / sum).
@@ -2620,13 +2438,10 @@ pub enum PendingEffectState {
     /// rather than a permanent stamp (`ChooseCreatureTypePending`).
     CreatureTypeAnswerPending,
     /// Suspended on a `ChooseCards` pick inside a resolving effect
-    /// ("return up to two target creature cards…", fateseal, mill-then-
-    /// take). Same stash-and-rerun shape as `ModesAnswerPending`: the raw
-    /// id list is stashed; the re-queued arm validates ids against its
-    /// candidate set (and min/max) itself, so a stale or malformed answer
-    /// degrades to the legal subset. `player` routes the modal when the
-    /// picker isn't the resolving controller (an opponent choosing which
-    /// of their permanents to bounce).
+    /// (fateseal, mill-then-take). Stash-and-rerun like `ModesAnswerPending`;
+    /// the re-queued arm validates the ids itself, so a bad answer degrades
+    /// to the legal subset. `player` is the picker (an opponent choosing
+    /// what to bounce).
     CardsAnswerPending { player: usize },
     /// As `CardsAnswerPending`, but the answer is *appended* to
     /// `GameState.scratch.resolution_answer_log` so the arm can ask more questions
@@ -2637,10 +2452,9 @@ pub enum PendingEffectState {
     /// one per seat (`ask_seat_target_logged` — the council ballots, Cuombajj
     /// Witches' opponent aiming the damage).
     SeatTargetAnswerPending { player: usize },
-    /// Suspended on a "cast the exiled card without paying?" offer after a
-    /// dig already mutated state (Cascade, Discover, Possibility Storm,
-    /// Ripple, Amped Raptor). Completion-style — no re-run: the answer
-    /// handler casts `card` from exile on yes, or applies `decline` on no.
+    /// "Cast the exiled card without paying?" after a dig already mutated
+    /// state (Cascade, Discover, Ripple). No re-run: yes casts `card`, no
+    /// applies `decline`.
     MayCastExiledPending {
         player: usize,
         card: crate::card::CardId,
@@ -2663,30 +2477,23 @@ pub enum MayCastDecline {
     ToBottom,
 }
 
-/// Sentinel trigger-mode value meaning "the controller's mode pick was
-/// deferred to resolution" (`pick_trigger_mode` defers for `wants_ui`
-/// controllers whose modal trigger has no targeting modes). Only the
-/// `Effect::ChooseMode` resolution arm inspects `ctx.mode` against this;
-/// non-modal effects never read it, so the sentinel rides the existing
-/// `Option<usize>` plumbing (`unwrap_or(0)` sites included) untouched.
+/// Sentinel trigger mode: the pick was deferred to resolution
+/// (`pick_trigger_mode`, for a `wants_ui` controller whose modal trigger has
+/// no targeting modes). Only the `Effect::ChooseMode` arm checks for it.
 pub(crate) const MODE_PICK_DEFERRED: usize = usize::MAX;
 
 // ── Events ────────────────────────────────────────────────────────────────────
 
-/// Which face / cast path a `SpellCast` event came from. Lets replays /
-/// spectator UIs distinguish a back-face MDFC cast from the printed front
-/// face, and a Flashback graveyard-replay from a normal hand cast.
+/// Which face / cast path a `SpellCast` event came from, for replays and
+/// spectator UIs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default, serde::Serialize, serde::Deserialize)]
 pub enum CastFace {
     /// Default: cast from hand (or a generic alt-cost path).
     #[default]
     Front,
-    /// Cast via `GameAction::CastSpellBack` against a non-land MDFC's
-    /// `back_face`. The card's definition is swapped to the back face's
-    /// for the duration of the cast and resolution.
+    /// Cast via `GameAction::CastSpellBack` (non-land MDFC back face).
     Back,
-    /// Cast via `Keyword::Flashback` from the controller's graveyard.
-    /// The card exiles after resolution rather than going to graveyard.
+    /// Cast via `Keyword::Flashback` from the graveyard.
     Flashback,
 }
 
@@ -2700,10 +2507,8 @@ pub enum PreventionTarget {
     /// source of your choice would deal to you and/or permanents you control"
     /// (Refraction Trap). Matches the seat and everything it controls.
     PlayerAndPermanents(usize),
-    /// Every creature `.0` controls, now or later this turn: "prevent all
-    /// damage [black and/or red] sources would deal to creatures you control
-    /// this turn" (Surge of Salvation — read per damage event, so a creature
-    /// you gain control of later is covered too).
+    /// Every creature `.0` controls, read per damage event so later gains
+    /// are covered (Surge of Salvation).
     CreaturesOf(usize),
     /// A floating shield with no recipient restriction: "the next time a source
     /// of your choice would deal damage to any target this turn, prevent that
@@ -2711,23 +2516,18 @@ pub enum PreventionTarget {
     Anything,
 }
 
-/// What a spell looked like when it was cast — the colors of its mana cost and
-/// its card types. Kept per player for the turn (`Player.spell_casts_this_turn`)
-/// so "if an opponent cast a [color] [type] spell this turn" riders can read
-/// back a spell that has long since left the stack.
+/// A cast spell's colors, card types and mana value, kept per player for the
+/// turn (`Player.spell_casts_this_turn`) for "if an opponent cast a [color]
+/// [type] spell this turn" riders.
 ///
-/// **Four bytes and `Copy`**, so the per-turn list is a `CopyVec` and both the
-/// cast that appends one and the `PlayerData` unshare that copies the list are
-/// allocation-free. It carried a `Vec<crate::card::CardType>` until PERF
-/// `(-150)`: one allocation per cast, and one per profile on each of the
-/// 22,060 unshares a six-game `cube` run makes.
+/// Four bytes and `Copy`, so the per-turn list is a `CopyVec` and neither the
+/// cast nor the `PlayerData` unshare allocates. PERF `(-150)`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CastProfile {
     pub colors: crate::mana::ColorSet,
     pub card_types: crate::card::CardTypeSet,
-    /// The cast half's printed mana value, saturated at 255 (Rhino, Barreling
-    /// Brute's "a spell with mana value 4 or greater this turn"). Fits the
-    /// struct's padding byte — still four bytes.
+    /// The cast half's printed mana value, saturated at 255 (Rhino,
+    /// Barreling Brute); fits the padding byte.
     #[serde(default)]
     pub mana_value: u8,
 }
@@ -2737,13 +2537,9 @@ impl Default for PreventionTarget {
     fn default() -> Self { PreventionTarget::Player(0) }
 }
 
-/// A continuous prevention effect (CR 615.1) modelled as a "shield" around
-/// a player or permanent. Created by `Effect::PreventNextDamage` /
-/// `PreventAllDamageThisTurn`; consumed by the non-combat damage path and
-/// cleared at cleanup (the "this turn" window, CR 514.2).
-///
-/// `Default` is derived so construction sites only spell out the fields that
-/// differ (`..Default::default()`).
+/// A continuous prevention effect (CR 615.1) as a "shield" around a player
+/// or permanent, from `Effect::PreventNextDamage` /
+/// `PreventAllDamageThisTurn`; cleared at cleanup (CR 514.2).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PreventionShield {
     pub target: PreventionTarget,
@@ -2783,9 +2579,8 @@ pub struct PreventionShield {
     /// +0/+1).
     #[serde(default)]
     pub counter_kind: Option<crate::card::CounterType>,
-    /// Kill-Suit Cultist — "destroy that creature instead". When a shield
-    /// on a permanent target soaks damage, destroy that permanent after the
-    /// shield pass. Pairs with `one_event` (soaks the next event, then gone).
+    /// Kill-Suit Cultist — "destroy that creature instead": the shielded
+    /// permanent is destroyed after the shield pass. Pairs with `one_event`.
     #[serde(default)]
     pub destroy: bool,
     /// CR 614.9 — Carom / Razia: damage this shield prevents is dealt to
@@ -2924,10 +2719,8 @@ pub enum GameEvent {
     StepChanged(TurnStep),
     TurnStarted { player: usize, turn: u32 },
     CardDrawn { player: usize, card_id: CardId },
-    /// CR 121 — the turn's first card drawn by `player` (fired once per turn,
-    /// when `cards_drawn_this_turn` reaches 1). Carries the drawn card so
-    /// "the first time each turn you draw a card" triggers (God-Eternal
-    /// Kefnet) can inspect and act on it.
+    /// CR 121 — `player`'s first draw of the turn, carrying the card
+    /// (God-Eternal Kefnet).
     FirstCardDrawnThisTurn { player: usize, card_id: CardId },
     /// CR 121 — the turn's `n`th card drawn by `player` (fired once per
     /// turn, when `cards_drawn_this_turn` reaches `n`; emitted for 2 and 3).
@@ -2937,37 +2730,23 @@ pub enum GameEvent {
     /// A spell or ability an opponent of `player` controls caused that
     /// discard (`GameState.resolution_causer`). Spiritual Focus.
     OpponentCausedYouToDiscard { player: usize, card_id: CardId },
-    /// CR 701.9 batch — a player discarded one or more cards in a single
-    /// effect resolution. Fired once per resolution alongside the per-card
-    /// `CardDiscarded`s, carrying the count for "whenever you discard one or
-    /// more cards, …" payoffs (Magmakin Artillerist) via
-    /// `Value::TriggerEventAmount`.
+    /// CR 701.9 — one or more discards in a single resolution, fired once
+    /// beside the per-card `CardDiscarded`s with the count as event amount
+    /// (Magmakin Artillerist).
     DiscardedBatch { player: usize, count: u32 },
-    /// A land entered the battlefield under `player`'s control. `played` is
-    /// true only for an actual land play (CR 305.1); a fetched / reanimated /
-    /// put-onto-the-battlefield land enters with `played: false`. Landfall
-    /// ("whenever a land you control enters") fires on both. `from_hand` is
-    /// true for a land played from its player's hand, false for one played
-    /// from a graveyard, exile or a library (The Lost and the Damned's "enters
-    /// from anywhere other than your hand") and for every unplayed entry.
+    /// A land entered under `player`'s control; landfall hears every entry.
+    /// `played` only for a land play (CR 305.1); `from_hand` only for a play
+    /// from hand (The Lost and the Damned).
     LandPlayed { player: usize, card_id: CardId, played: bool, from_hand: bool },
     /// `face` distinguishes front-face / back-face / flashback casts.
-    /// Defaults to `Front` for the typical hand cast; back-face MDFC
-    /// casts and flashback graveyard replays carry the right tag so
-    /// replays can render the correct cost.
     SpellCast { player: usize, card_id: CardId, face: CastFace },
     /// CR 115.7 — a spell on the stack had its single target redirected.
     SpellTargetChanged { card_id: CardId, new_target: Target },
-    /// `exhaust` is true when the activated ability carried CR 702.177 Exhaust
-    /// (drives "whenever you activate an exhaust ability" — Adrenaline Jockey).
-    /// `adapt` is true for CR 702.108 adapt abilities (drives "whenever you
-    /// activate an adapt ability" — Gyre Engineer).
-    /// `tap_cost` is true when {T} (or {Q}) was part of the activation cost —
-    /// Haunting Wind / Powerleech / Artifact Possession key on the *absence*
-    /// of it, since the companion tap event already covers that half.
-    /// `sacrificed` — one or more permanents were sacrificed to pay the cost
-    /// (Ashnod the Uncaring's "if one or more permanents were sacrificed to
-    /// activate it").
+    /// `exhaust`: a CR 702.177 Exhaust ability (Adrenaline Jockey). `adapt`:
+    /// CR 702.108 (Gyre Engineer). `tap_cost`: {T}/{Q} was in the cost —
+    /// Haunting Wind keys on its absence, since the tap event covers that
+    /// half. `sacrificed`: permanents were sacrificed to pay (Ashnod the
+    /// Uncaring).
     AbilityActivated {
         source: CardId,
         exhaust: bool,
@@ -2982,10 +2761,8 @@ pub enum GameEvent {
         /// CR 702.49a — a ninjutsu ability (Satoru Umezawa's "whenever you
         /// activate a ninjutsu ability"); `source` is the ninja.
         ninjutsu: bool,
-        /// CR 605.1a — a mana ability without `{T}` in its cost (a `{T}` one
-        /// announces itself as `TappedForMana`). Only
-        /// `ActivationTrait::ManaWithoutTap` sees it; every other activation
-        /// listener reads "an ability" as a non-mana one.
+        /// CR 605.1a — a mana ability without `{T}` (a `{T}` one emits
+        /// `TappedForMana`). Only `ActivationTrait::ManaWithoutTap` hears it.
         mana: bool,
         /// CR 606.1 — a loyalty ability (Way of the Paradox's "whenever you
         /// activate a loyalty ability"); `source` is the planeswalker.
@@ -3000,10 +2777,8 @@ pub enum GameEvent {
         /// CR 702.142 — a boast ability (Frenzied Raider).
         boast: bool,
     },
-    /// `source` is the permanent that produced the mana (a tapped land, a mana
-    /// rock, …) when known, so clients can anchor mana-flow visuals to it.
-    /// `None` for mana with no single permanent source (rituals, X-cost /
-    /// devotion effects resolved through a decision).
+    /// `source` is the producing permanent when there is one, for client
+    /// mana-flow visuals; `None` for rituals and decision-resolved mana.
     ManaAdded { player: usize, color: Color, source: Option<CardId> },
     ColorlessManaAdded { player: usize, source: Option<CardId> },
     PermanentEntered { card_id: CardId },
@@ -3031,12 +2806,10 @@ pub enum GameEvent {
         to_player: Option<usize>,
         to_card: Option<CardId>,
         combat: bool,
-        /// Controller of the damage's source (None when unattributable).
-        /// Powers "a source you control deals damage to …" scoping.
+        /// Controller of the damage's source, if attributable.
         from_controller: Option<usize>,
-        /// The damage source's own identity (None when unattributable).
-        /// Powers the "other than this <permanent>" exclusion on
-        /// source-scoped watchers (Talon of Pain).
+        /// The damage source, if attributable (Talon of Pain's "other than
+        /// this" exclusion).
         from_card: Option<CardId>,
     },
     /// Some or all of a damage event was prevented by a shield (CR 615.13).
@@ -3132,13 +2905,13 @@ pub enum GameEvent {
     /// CR 605 — `card_id` was tapped to pay a mana ability's `{T}` cost
     /// (Extraplanar Lens, War's Toll). The tapped permanent is the subject.
     TappedForMana { card_id: CardId, player: usize },
-    /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
     /// CR 701.38 — a player cast one vote on a ballot; `choice` is the
     /// printed word they voted for.
     Voted { player: usize, choice: String },
     /// CR 701.38 — every player has finished voting on a ballot (Grudge
     /// Keeper). Fired once per `Effect::Vote`, after the tally is known.
     VotingFinished,
+    /// CR 705.1 — `player` won a coin flip (Chance Encounter, Krark).
     CoinFlipWon { player: usize },
     /// CR 701.30d — `player` won a clash.
     ClashWon { player: usize },
@@ -3149,51 +2922,34 @@ pub enum GameEvent {
     /// CR 705.1 — `player` lost a coin flip (Karplusan Minotaur,
     /// Goblin Bomb).
     CoinFlipLost { player: usize },
-    /// CR 706.6 — `player` rolled one or more dice (`count` dice). Fires
-    /// once per roll instruction (Barbarian Class, Wand of Wonder). `high` is
-    /// the greatest (modified) result rolled, so result-gated triggers like
-    /// "whenever you roll a 5 or higher" can filter on `event_amount`.
+    /// CR 706.6 — `player` rolled `count` dice, once per roll instruction
+    /// (Barbarian Class). `high` is the greatest modified result, for
+    /// "roll a 5 or higher" filters.
     DiceRolled { player: usize, count: u32, high: u8 },
     /// CR 706.2 — one die `player` rolled showed its highest *natural* face.
     /// One event per such die (Netherese Puzzle-Ward).
     RolledNaturalMax { player: usize },
     CreatureDied { card_id: CardId },
-    /// CR 700.4 — a permanent hit a graveyard from the battlefield (any card
-    /// type). Synthesized once per dispatch batch from the raw removal
-    /// chokepoint, carrying the dead permanent's last `controller` and its
-    /// `is_creature` / `is_artifact` flags. `EventKind::CreatureOrArtifactDied`
-    /// filters on those flags for "whenever a creature or artifact you control
-    /// dies" (Judge Magister Gabranth, G'raha Tia); creatures also emit
-    /// `CreatureDied`, so listeners pick exactly one rail.
+    /// CR 700.4 — any permanent went from battlefield to graveyard;
+    /// synthesized per dispatch batch with its last `controller` and type
+    /// flags for `EventKind::CreatureOrArtifactDied` (G'raha Tia). Creatures
+    /// also emit `CreatureDied`, so listeners pick exactly one rail.
     PermanentDied { card_id: CardId, controller: usize, is_creature: bool, is_artifact: bool },
-    /// A creature was sacrificed by `who` (CR 701.16). Fires before the
-    /// corresponding `CreatureDied` event so order-sensitive sacrifice
-    /// triggers (Mortician Beetle, Yahenni-class) see the
-    /// sacrifice-specific event first.
+    /// A creature was sacrificed by `who` (CR 701.16), fired before its
+    /// `CreatureDied` (Mortician Beetle sees it first).
     CreatureSacrificed { card_id: CardId, who: usize },
-    /// A permanent (any card type) was sacrificed by `who`. Broader-
-    /// scope sibling of `CreatureSacrificed` — fires for every
-    /// sacrifice resolution; for creature sacrifices the engine emits
-    /// `CreatureSacrificed` first (preserving Mortician-style sub-
-    /// trigger order) and `PermanentSacrificed` second. The two
-    /// events let "whenever you sacrifice a permanent" payoffs
-    /// (Korvold, Mayhem Devil, Yarok) catch Treasure / Clue / Food /
-    /// land sacrifices alongside creature sacrifices, without
-    /// double-firing creature-specific sub-triggers.
+    /// Any permanent sacrificed by `who` (Korvold, Mayhem Devil). For a
+    /// creature it follows `CreatureSacrificed`, so creature-only triggers
+    /// don't double-fire.
     PermanentSacrificed { card_id: CardId, who: usize },
-    /// CR 603.6 — a creature left the battlefield to a zone other than a
-    /// graveyard (bounced / exiled / shuffled away), i.e. left *without
-    /// dying*. `controller` is its last controller on the battlefield, read
-    /// from the leaving card (it's gone by dispatch time). Dour Port-Mage,
-    /// Three Tree Scribe.
+    /// CR 603.6 — a creature left the battlefield without dying; `controller`
+    /// is its last controller (Dour Port-Mage).
     CreatureLeftWithoutDying { card_id: CardId, controller: usize },
-    /// CR 603.10 — any permanent left the battlefield for a zone other than a
-    /// graveyard (bounced / exiled / shuffled away / melded). The "leaves the
-    /// battlefield" event a death does not produce: `CreatureDied` already
-    /// reaches `EventKind::PermanentLeavesBattlefield`, this is the other half.
-    /// `controller` is its last controller (the card is gone by dispatch).
-    /// The exit snapshots the leaver into `died_card_snapshots` so its own
-    /// leaves trigger fires off last-known information.
+    /// CR 603.10 — any permanent left the battlefield for a non-graveyard
+    /// zone: the half of `EventKind::PermanentLeavesBattlefield` that
+    /// `CreatureDied` doesn't cover. `controller` is its last controller; the
+    /// leaver is snapshotted into `died_card_snapshots` so its own leaves
+    /// trigger reads LKI.
     PermanentLeftBattlefield { card_id: CardId, controller: usize },
     PumpApplied { card_id: CardId, power: i32, toughness: i32 },
     /// `placer` is the player who put the counters (CR 122.6): the controller
@@ -3204,10 +2960,9 @@ pub enum GameEvent {
     /// hears them, with `placer` read as for `CounterAdded`.
     KeywordCounterAdded { card_id: CardId, keyword: crate::card::Keyword, count: u32, placer: Option<usize> },
     CounterRemoved { card_id: CardId, counter_type: CounterType, count: u32 },
-    /// A permanent became tapped. `actor` is the player who tapped it via a
-    /// spell/ability effect (Some), or `None` for game-driven taps (attacking,
-    /// crewing, mana). Read by "whenever you tap …" triggers (CR — Sharae,
-    /// Solitary Sanctuary).
+    /// A permanent became tapped. `actor` is the player whose effect tapped
+    /// it, `None` for game-driven taps (attack, crew, mana) — Solitary
+    /// Sanctuary.
     PermanentTapped {
         card_id: CardId,
         actor: Option<usize>,
@@ -3231,11 +2986,8 @@ pub enum GameEvent {
     /// gain control of this permanent" triggers (Risky Move); `from` is the
     /// previous controller.
     ControlChanged { card_id: CardId, from: usize, to: usize },
-    /// CR 701.44 — a permanent explored. `card_id` is the exploring
-    /// permanent; `controller` is its controller (whose library was
-    /// revealed). `explored_land` is true when the revealed top card was a
-    /// land (Nicanzil filters land vs nonland explores; surfaced through
-    /// `event_amount_for` as 1/0).
+    /// CR 701.44 — `card_id` explored. `explored_land` (event amount 1/0)
+    /// lets Nicanzil filter land vs nonland explores.
     Explored { card_id: CardId, controller: usize, explored_land: bool },
     /// CR 701.50 — `card_id` connived (its controller drew and discarded).
     Connived { card_id: CardId, controller: usize },
@@ -3250,9 +3002,8 @@ pub enum GameEvent {
     /// Sun's Creation's "whenever you discover" payoff reads `value` via
     /// `Value::TriggerEventAmount`).
     Discovered { player: usize, value: u32 },
-    /// CR 701.37 — a permanent became monstrous.
-    /// CR 701.37 — `n` is the monstrosity value, read via
-    /// `Value::TriggerEventAmount` (Polukranos's X damage).
+    /// CR 701.37 — a permanent became monstrous; `n` is the monstrosity
+    /// value (event amount — Polukranos).
     BecameMonstrous { card_id: CardId, n: u32 },
     /// CR 712 — a permanent transformed to its other face.
     Transformed { card_id: CardId },
@@ -3277,11 +3028,9 @@ pub enum GameEvent {
     /// "put into your graveyard from your hand" family
     /// (`EventKind::PutIntoGraveyardFromHand`: Desert Warfare).
     CardPutIntoGraveyardFromHand { player: usize, card_id: CardId },
-    /// CR 701.25a — a surveiled card was put into `player`'s graveyard from
-    /// their library. Not a mill (CR 701.13): it matches the "put into your
-    /// graveyard from your library" family (`EventKind::CardMilled`) but not
-    /// the literal "mills" wording (`EventKind::Milled`). The surveil also
-    /// emits a `CardPutIntoGraveyard` for the same card.
+    /// CR 701.25a — a surveiled card went library → graveyard. Not a mill
+    /// (CR 701.13): matches `EventKind::CardMilled`, not `EventKind::Milled`.
+    /// A `CardPutIntoGraveyard` is also emitted.
     CardSurveiledIntoGraveyard { player: usize, card_id: CardId },
     /// A card a reveal-until put from its library into a graveyard (Old
     /// Stickfingers' creature cards). The "put into a graveyard from a
@@ -3303,9 +3052,7 @@ pub enum GameEvent {
     ScryPerformed { player: usize, looked_at: usize, bottomed: usize },
     AttackerDeclared(CardId),
     BlockerDeclared { blocker: CardId, attacker: CardId },
-    /// An attacker finished declare-blockers without any blockers
-    /// assigned (CR 509.3g). Emitted at the end of `declare_blockers`
-    /// once for each attacker with zero entries in `block_map`.
+    /// An attacker ended declare-blockers unblocked (CR 509.3g).
     AttackerWentUnblocked { attacker: CardId },
     CombatResolved,
     FirstStrikeDamageResolved,
@@ -3341,10 +3088,9 @@ pub enum GameEvent {
     /// CR 701.54 — the Ring tempted `player`; `level` is their new
     /// temptation count (1–4), `bearer` the creature they chose (if any).
     RingTempted { player: usize, level: u32, bearer: Option<CardId> },
-    /// CR 731 — the game became day or night. `was_transition` is true only
-    /// when flipping between day and night (CR 502.2 "day becomes night or
-    /// night becomes day"), false when establishing day/night from neither —
-    /// so "whenever day becomes night …" triggers fire on the former only.
+    /// CR 731 — the game became day or night. `was_transition` is false when
+    /// established from neither, so "day becomes night" triggers (CR 502.2)
+    /// skip it.
     DayNightChanged { day_night: DayNight, was_transition: bool },
     LoyaltyAbilityActivated { planeswalker: CardId, loyalty_change: i32 },
     LoyaltyChanged { card_id: CardId, new_loyalty: i32 },
@@ -3358,25 +3104,17 @@ pub enum GameEvent {
     /// exiled from there). Fires per card removed. Used by Strixhaven
     /// "cards leave your graveyard" payoffs.
     CardLeftGraveyard { player: usize, card_id: CardId },
-    /// A card was put into `player`'s graveyard from anywhere (battlefield
-    /// death/sacrifice, mill, discard, spell resolution). `is_land` is
-    /// precomputed from the card's types so trigger matching needn't re-look
-    /// up the (already-moved) card. Drives `EventKind::LandPutIntoGraveyard`
-    /// (The Gitrog Monster).
+    /// A card was put into `player`'s graveyard from anywhere. `is_land` is
+    /// precomputed for `EventKind::LandPutIntoGraveyard` (The Gitrog
+    /// Monster).
     CardPutIntoGraveyard { player: usize, card_id: CardId, is_land: bool },
     /// A card moved from `player`'s graveyard to their hand (dredge, or any
     /// graveyard→hand return). Drives `EventKind::PutIntoHandFromGraveyard`
     /// (Golgari Brownscale's "gain 2 life when returned to hand").
     CardPutIntoHandFromGraveyard { player: usize, card_id: CardId },
-    /// A permanent became the target of a spell or activated ability.
-    /// `target` is the permanent being targeted; `caster` is the player
-    /// who cast the spell / activated the ability. Fires per target at
-    /// announce-time (immediately after the spell hits the stack or the
-    /// ability is pushed). Used by SOS Tenured Concocter and any future
-    /// "whenever this becomes the target of …" trigger.
-    /// `by` is the object that declared the target — the spell, activated
-    /// ability's source, or triggered ability's source. Gates
-    /// `EventSpec::causer_filter` ("becomes the target of an Aura spell").
+    /// A permanent became a target, per target at announce time (Tenured
+    /// Concocter). `caster` is the spell's / ability's controller; `by` the
+    /// declaring object, for `EventSpec::causer_filter`.
     BecameTarget { target: CardId, caster: usize, by: Option<CardId> },
     /// `BecameTarget`'s player half: `player` became a target of `caster`'s
     /// spell or ability. Shares its kind bit; only
@@ -3386,16 +3124,12 @@ pub enum GameEvent {
     /// spell or ability (`object`). Fires ONCE per targeting decision, unlike
     /// the per-object `BecameTarget` (Psychic Battle).
     ChoseTargets { chooser: usize, object: CardId },
-    /// CR 702.29c — `player` cycled `card_id` (paid the cycling cost
-    /// and discarded the card to draw). Fires *in addition* to the
-    /// `CardDiscarded` emission from the same activation, so cycle-
-    /// specific triggers ("When you cycle this card", "Whenever a
-    /// player cycles a card") see a distinct event from regular hand
-    /// discards.
     /// CR 701.15 — a regeneration shield was applied to this permanent.
     Regenerated {
         card_id: CardId,
     },
+    /// CR 702.29c — `player` cycled `card_id`, fired beside the
+    /// `CardDiscarded` so cycle triggers see a distinct event.
     CardCycled {
         player: usize,
         card_id: CardId,
@@ -3406,10 +3140,9 @@ pub enum GameEvent {
     /// CR 104.3a — `player` conceded and left the game. Emitted before the
     /// `GameOver` that the resulting state-based-action pass produces.
     PlayerConceded { player: usize },
-    /// CR 104.3 / 800.4a — `player` lost the game and left it, for any cause
-    /// but a concession (that is `PlayerConceded`). Emitted by the
-    /// state-based sweep, before any `GameOver` it produces: in a pod the
-    /// game goes on, and this is what says who went out.
+    /// CR 104.3 / 800.4a — `player` lost and left, for any cause but a
+    /// concession (`PlayerConceded`). Emitted by the SBA sweep before any
+    /// `GameOver`; in a pod it is what says who went out.
     PlayerLost { player: usize, cause: crate::player::LossCause },
     GameOver { winner: Option<usize> },
     /// CR 608.2c — a resolution's instructions are followed in order: the
@@ -3444,33 +3177,22 @@ pub enum StackItem {
         card: Box<CardInstance>,
         caster: usize,
         target: Option<Target>,
-        /// Additional targets for slots 1+ (`Selector::Target(n)` with
-        /// `n > 0`). `target` carries slot 0 for back-compat; multi-target
-        /// spells like Crackle with Power / Snow Day populate this Vec
-        /// with the rest. Defaults to empty for snapshot round-trip.
+        /// Targets for slots 1+ (`Selector::Target(n)`, `n > 0`); `target`
+        /// is slot 0.
         #[serde(default)]
         additional_targets: Vec<Target>,
         /// Chosen mode index for `ChooseMode` effects (0 if `None`).
         mode: Option<usize>,
-        /// X paid into the spell's cost. Threaded into `EffectContext.x_value`
-        /// at resolution time so `Value::XFromCost` reads the actual paid X.
+        /// X paid, read at resolution as `Value::XFromCost`.
         x_value: u32,
-        /// Number of distinct colors of mana spent paying this spell's
-        /// cost. Read by `Value::ConvergedValue` (Prismatic Ending, Pest
-        /// Control). Convoke pips contribute generic only, so they don't
-        /// raise this value.
+        /// Distinct colors of mana spent (`Value::ConvergedValue` — Prismatic
+        /// Ending). Convoke pays generic only, so it doesn't raise this.
         converged_value: u32,
-        /// Total mana spent paying this spell's cost (sum of all
-        /// `ManaPool` decreases during payment). Read by
-        /// `Value::CastSpellManaSpent` and `Predicate::ManaSpentAtLeast`
-        /// for SOS's Increment / Opus payoffs that scale on "amount of
-        /// mana spent to cast that spell". Defaults to 0 via
-        /// `#[serde(default)]` for snapshot back-compat.
+        /// Total mana spent on the cost, for `Value::CastSpellManaSpent` /
+        /// `Predicate::ManaSpentAtLeast` (SOS Increment / Opus).
         #[serde(default)]
         mana_spent: u32,
-        /// True if this spell can't be countered by spells or abilities
-        /// (Cavern of Souls–style protection). `Effect::CounterSpell` skips
-        /// these stack items.
+        /// Can't be countered (Cavern of Souls); `Effect::CounterSpell` skips it.
         uncounterable: bool,
     },
     /// A triggered/loyalty ability waiting to resolve.
@@ -3480,85 +3202,44 @@ pub enum StackItem {
         effect: Box<Effect>,
         target: Option<Target>,
         mode: Option<usize>,
-        /// X paid into the originating spell's cost, threaded so
-        /// `Value::XFromCost` reads the right number when the trigger
-        /// resolves. ETB triggers fired off a spell on resolution
-        /// inherit the spell's X; loyalty/state triggers default to 0.
-        /// Defaults to 0 via `#[serde(default)]` for snapshot
-        /// backwards-compatibility.
+        /// The originating spell's X for `Value::XFromCost` (an ETB inherits
+        /// it; other triggers are 0).
         #[serde(default)]
         x_value: u32,
-        /// Converge value (number of distinct colors of mana spent on
-        /// the originating spell's cost). Threaded the same way as
-        /// `x_value` so ETB triggers consulting `Value::ConvergedValue`
-        /// (Rancorous Archaic, Snarl Song, Together as One) read the
-        /// right number. Defaults to 0 for snapshot
-        /// backwards-compatibility.
+        /// Converge value, as `x_value` (Rancorous Archaic).
         #[serde(default)]
         converged_value: u32,
-        /// The trigger's "source" entity (the just-cast spell, the
-        /// dying creature, etc.) — distinct from `source`, which
-        /// always points to the ability-owner. For
-        /// `EventKind::SpellCast/YourControl` triggers, this carries
-        /// the cast spell's CardId so the resolving trigger can locate
-        /// it (Effect::CopySpell, Selector::CastSpellTarget). For ETB
-        /// triggers, it's the ETBing permanent. Defaults to `None`
-        /// for snapshot back-compat; trigger resolutions then fall
-        /// back to using `source` as `trigger_source`.
+        /// The trigger's subject (the cast spell for a `SpellCast` trigger,
+        /// the entrant for an ETB) — distinct from `source`, the ability's
+        /// owner. `None` falls back to `source`.
         #[serde(default)]
         trigger_source: Option<crate::game::effects::EntityRef>,
-        /// Total mana spent paying the originating spell's cost.
-        /// Threaded so spell-cast triggers consulting
-        /// `Value::CastSpellManaSpent` (Increment / Opus payoffs:
-        /// Cuboid Colony, Berta, Fractal Tender, Tackle Artist, …)
-        /// read the right amount. Defaults to 0 for snapshot
-        /// backwards-compatibility.
+        /// The originating spell's mana spent, as `x_value` (Increment /
+        /// Opus payoffs).
         #[serde(default)]
         mana_spent: u32,
-        /// Per-event amount of the fired event — life gained, life lost,
-        /// damage dealt, cards drawn, etc. Set by
-        /// `dispatch_triggers_for_events` from the event payload (typically
-        /// the event's `amount` field) so trigger bodies can read it via
-        /// `Value::TriggerEventAmount`. Used by Light of Promise's
-        /// "Whenever you gain life, put that many +1/+1 counters on
-        /// target creature you control." Defaults to 0 for snapshot
-        /// backwards-compatibility.
+        /// The fired event's amount (life gained, damage, …), set by
+        /// `dispatch_triggers_for_events` for `Value::TriggerEventAmount`
+        /// (Light of Promise).
         #[serde(default)]
         event_amount: u32,
-        /// CR 603.4 — intervening 'if' clause that must be re-checked
-        /// as the trigger resolves. "When/Whenever/At [trigger event], if
-        /// [condition], [effect]." When `Some(pred)`, the trigger
-        /// resolver re-evaluates `pred` against the *current* game state
-        /// before running the body. If the predicate now evaluates to
-        /// false, the trigger does nothing (it's still removed from the
-        /// stack but its `effect` is not run). Populated by
-        /// `fire_step_triggers` from the trigger's `EventSpec.filter`
-        /// when that filter is intended as a resolve-time gate
-        /// (Triskaidekaphile-style "if you have exactly 13 cards in your
-        /// hand, …" upkeep gates and similar). Defaults to `None` for
-        /// snapshot backwards-compatibility and for triggers whose
-        /// `event.filter` is intended as a trigger-only gate (the
-        /// majority).
+        /// CR 603.4 — intervening 'if' clause, re-checked at resolution; if
+        /// false the trigger leaves the stack doing nothing. Set by
+        /// `fire_step_triggers` when `EventSpec.filter` is a resolve-time
+        /// gate (Triskaidekaphile); `None` for trigger-only gates.
         #[serde(default)]
         intervening_if: Option<crate::card::Predicate>,
-        /// Extra chosen targets beyond slot 0 (`target`), for two-target
-        /// activated abilities (Autumn-Tail's "Attach target Aura … to
-        /// another creature"). Indexed as slots 1, 2, … in the effect tree.
-        /// Empty for the vast single-target majority. `#[serde(default)]`
-        /// for snapshot back-compat.
+        /// Targets for slots 1+ beyond `target` (Autumn-Tail).
         #[serde(default)]
         additional_targets: Vec<Target>,
-        /// True when this stack item is an ACTIVATED ability rather than a
-        /// triggered one (CR 602). Mana abilities never reach the stack, so an
-        /// item carrying this flag is always a copyable nonmana activation
-        /// (Illusionist's Bracers). Defaults to `false` for snapshot back-compat.
+        /// An activated (CR 602), not triggered, ability — always a copyable
+        /// nonmana activation, since mana abilities never reach the stack
+        /// (Illusionist's Bracers).
         #[serde(default)]
         activated: bool,
-        /// The player the firing event named — the damaged seat for a
-        /// "…deals combat damage to a player" trigger. Seeds
-        /// `trigger_event_player_scratch` at resolution so
-        /// `ControlledByTriggerPlayer` target filters re-check against the
-        /// right seat (CR 608.2b). `None` for events with no such player.
+        /// The player the firing event named (the damaged seat), seeding
+        /// `trigger_event_player_scratch` so `ControlledByTriggerPlayer`
+        /// filters re-check against it (CR 608.2b).
         #[serde(default)]
         trigger_player: Option<usize>,
         /// Per-colour breakdown of the mana spent paying this *activation's*
@@ -3566,13 +3247,9 @@ pub enum StackItem {
         /// spent on this activation cost"). Empty for triggered abilities.
         #[serde(default)]
         mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
-        /// CR 701.27f — set by `transform_permanent` on every item already on
-        /// the stack whose `source` is the permanent that just transformed.
-        /// An ability of a permanent transforms it "only if it hasn't
-        /// transformed or converted since the ability was put onto the
-        /// stack", and an item pushed *after* the transform defaults to
-        /// `false`, which is exactly that anchor. Read at resolution into
-        /// `resolving_source_transformed`.
+        /// CR 701.27f — set by `transform_permanent` on stack items whose
+        /// source just transformed, so "transform it only if it hasn't
+        /// transformed since" holds; read into `resolving_source_transformed`.
         #[serde(default)]
         source_transformed_since_push: bool,
         /// CR 113.7 / 115.1 — this ability's own identity as an object on the
@@ -3582,18 +3259,13 @@ pub enum StackItem {
         /// ([`is_stack_ability_id`]); a copy is stamped afresh. 0 = unstamped.
         #[serde(default)]
         ability_id: u32,
-        /// CR 608.2b — bit `i` set when target slot `i` was a battlefield
-        /// permanent as the ability went on the stack (stamped by
-        /// `GameState::push_stack`), so resolution can tell "no longer in the
-        /// zone it was in when it was targeted" from a card target whose slot
-        /// aimed at a graveyard all along. Slots past 7 are unchecked.
+        /// CR 608.2b — bit `i` set when slot `i` was a battlefield permanent
+        /// at push (`GameState::push_stack`), so resolution can tell "left its
+        /// zone" from a graveyard target. Slots past 7 are unchecked.
         #[serde(default)]
         bf_slots: u8,
-        /// CR 400.7 — `trigger_source` was a card in a graveyard as this went
-        /// on the stack (stamped by `push_stack`). If it has left every
-        /// graveyard by resolution it is a new object, and a move of "it"
-        /// finds nothing (a discarded card returned to hand before Tinybones'
-        /// trigger resolved).
+        /// CR 400.7 — `trigger_source` was in a graveyard at push. If it left
+        /// by resolution it is a new object and "it" finds nothing (Tinybones).
         #[serde(default)]
         ts_in_gy: bool,
     },
@@ -3611,10 +3283,8 @@ pub fn is_stack_ability_id(id: CardId) -> bool {
     (ABILITY_ID_BASE..0xFFFF_0000).contains(&id.0)
 }
 
-/// Builder for `StackItem::Trigger`. The variant has 11 fields and ~25
-/// push sites; hand-written literals kept drifting (several passed
-/// `event_amount: 0` where an amount was available — audit P3). Defaults
-/// every rider field; chain setters for the ones the site actually has.
+/// Builder for `StackItem::Trigger`: defaults every rider field, so push
+/// sites chain only what they have (hand-written literals drifted — audit P3).
 #[derive(Debug, Clone)]
 pub struct TriggerPush {
     source: CardId,
@@ -3814,10 +3484,9 @@ pub enum GameError {
     TargetHasProtection(CardId),
     #[error("Mana: {0}")]
     Mana(#[from] ManaError),
-    /// The payer (a UI player) has more than one way to tap mana for this
-    /// cost, so the engine declines to choose for them — they tap the
-    /// sources they want, then re-submit. Only raised for human-initiated
-    /// casts/activations; bots and engine-driven auto-pays still auto-tap.
+    /// A UI payer has more than one way to tap for this cost, so they tap
+    /// sources themselves and re-submit. Bots and engine auto-pays still
+    /// auto-tap.
     #[error("Tap mana to pay {cost} — you have more than one way to pay, so choose your sources")]
     ManualTapRequired { cost: String },
     #[error("Wrong step for this action (currently {actual:?})")]

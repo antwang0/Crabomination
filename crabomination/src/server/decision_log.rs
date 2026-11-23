@@ -1,20 +1,16 @@
-//! Optional shadow log of a human's decisions. When `CRAB_DECISION_LOG`
-//! is set (a directory), every action a human seat submits is logged as
-//! one JSON line next to what the heuristic bot would have done from the
-//! *same position with the same information* — the tool for evaluating
-//! the bot's judgment against a human's game, and for debugging the
-//! specific decisions where they part ways (the converge repair started
-//! as exactly this kind of suspicion). Unset = zero overhead.
+//! Optional shadow log of a human's decisions. When `CRAB_DECISION_LOG` is
+//! set (a directory), every action a human seat submits is logged as one
+//! JSON line beside what the heuristic bot would have done from the *same
+//! position with the same information*: for judging the bot against a
+//! human's game and debugging where they part ways. Unset = zero overhead.
 //!
 //! File shape (`<dir>/decisions-<unix-ts>-<seq>.jsonl`): a header line
 //! (players, which seats are human), one line per human action with
-//! `you`/`bot` human-readable summaries, an `agree` flag and the raw
-//! `GameAction` JSON for tooling, and a footer with the disagreement
-//! tally. The shadow consult is read-only: `Bot::next_action` takes
-//! `&GameState` and simulates on clones, and a *fresh* `HeuristicBot`
-//! is built per query because the bot struct keeps per-step combat
-//! latches — a persistent shadow that answered once would go quiet for
-//! the rest of the step.
+//! `you`/`bot` summaries, an `agree` flag and the raw `GameAction` JSON, and
+//! a footer with the disagreement tally. The consult is read-only
+//! (`Bot::next_action` simulates on clones), and a *fresh* `HeuristicBot` is
+//! built per query because the bot keeps per-step combat latches — a
+//! persistent shadow would go quiet for the rest of the step.
 
 use std::cell::RefCell;
 use std::fs::File;

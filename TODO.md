@@ -1,582 +1,268 @@
 # Crabomination — TODO
 
-Improvement opportunities for the engine, client, and tooling.
-Items are grouped by area and roughly ordered by impact within each group.
+Improvement opportunities for the engine, client, and tooling, grouped by area
+and roughly ordered by impact within each group.
 
+This file is the working handoff; the archives are reference. Each carries an
+index table at the top (triaged at the sixty-seventh pass — don't re-take that).
 
-Split for size — this file is the working handoff, the archives below are
-reference. All three carry an index table at the top; triaged at the
-sixty-seventh pass, so don't re-take that.
+- `ENGINE_BACKLOG.md` — engine backlog and audits, ordered bugs / mechanics &
+  primitives / rules coverage / tooling. Its last block, "The 2026-09-12/13
+  handoff detail, moved verbatim from TODO's NEXT", holds the printed-body skip
+  taxonomy, the `cap` bucket's four shapes, the sweep-table discipline, the
+  closed-with-a-reason leads, the `EventKind` fan-out census, the modal census,
+  the collision log and the seed discipline. Findings go there, not into NEXT.
+- `CARD_BACKLOG.md` — per-set card residuals, titled by subject, open first.
+- `CLIENT_BACKLOG.md` — the Bevy GUI backlog. The client builds here after four
+  apt packages; that file's header has the command and the disk caveat.
+- `PERF.md` — how to measure, the standing rules, baseline, log, profile of
+  record, candidates. `PERF_ARCHIVE.md` holds, verbatim, the Log from `(-249)`
+  down, the Baseline's closing states from `(-185)` down, and the candidates
+  from `(-192)` down (incl. the `(-90)`/`(-92)` maps and `(-174)`'s open half).
 
-- `ENGINE_BACKLOG.md` — engine backlog and audits, ordered **bugs /
-  mechanics & primitives / rules coverage / tooling**: the correctness audit,
-  the robustness filters, the decision-plumbing audit, missing mechanics,
-  follow-ups not yet done, suggested next-up tasks, the CR coverage audit —
-  **and, at the end, "The 2026-09-12/13 handoff detail, moved verbatim from
-  TODO's NEXT"**: the printed-body skip taxonomy, the four shapes in the `cap`
-  bucket, the sweep-table discipline, the closed-with-a-reason leads, and — in
-  its own dated sub-block — the whole `EventKind` fan-out census, the modal
-  census, the collision log and the seed discipline. NEXT had grown past its
-  own 15-line bound twice, once to 163 lines and once to seven paragraphs, by
-  holding them; findings go there, not here.
-- `CARD_BACKLOG.md` — per-set card residuals: what each set still
-  approximates, and the remaining gap lists. Titled by **subject**, ordered
-  open-first, then the closed sets whose only content is residuals.
-- `CLIENT_BACKLOG.md` — the Bevy GUI backlog (visualization / UX / refactor).
-  The client **does** build here after four apt packages; that file's header
-  has the command and the disk caveat.
-- `PERF.md` — the perf record: how to measure, **the standing rules**,
-  baseline, log, profile of record, candidates. `PERF_ARCHIVE.md` holds,
-  verbatim, the Log entries from `(-249)` down, the Baseline's closing
-  states from the `(-185)` tip down, and the candidates section's entries
-  from `(-192)` down (the `(-90)`/`(-92)` maps and `(-174)`'s open half
-  among them).
 ## NEXT — the handoff. Rewritten each run; <= 15 lines. Every number lives in PERF.
 
-1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before tracker prose; **fetch before every push AND before you start** — a concurrent ML session landed three commits mid-run again (four Commander rules bugs in `mod.rs`/`stack.rs`/`bot.rs`/`card.rs`, Rounds 77b/79) and that forced a **second base** mid-session. Gotchas in **CLAUDE.md**, measurement in **PERF's "How to measure" + "Standing rules"**, the 2026-09-12/13 detail in **ENGINE_BACKLOG's "moved verbatim"** block. NEXT is 15 lines and stays 15.
-2. **Gates at the closing tip `cf9a3ad1`** (the branch's, after nine concurrent commits merged in): suite **20,327 / 0 / 6** (`CRAB_ANSWER_LOG=strict`); clippy **0** over the workspace; `--bench` **195,806 / 27.49 / 611.9 / 0 stalls — byte-identical to the committed invariant** across every one of this run's 45 cards and two engine fields, `determinism ok (all pairs split)`, `thread_determinism ok (3 vs 1)`, `peak_rss_mib` 29.6; `audit_panics` **0 bare**; every mirror column at its ratchet (`seat_walks` 0, `retarget` 0, `each_player` 1-allowlisted, `target_opponent` 1 known, the three invented-* columns 0, `loop_splice` 13/13/0/0) and **both 614 gates clean — `audit_enters_tapped` at 0 with the gate on the whole census**. CR_COVERAGE **146/146**. **Pod smoke at a FRESH seed 9103: 2,000 games at each of 2..8 seats = 14,000 games, 14,000 DECIDED, every `undecided_by` column zero, zero panics.** turns/game 19.36 / 32.58 / 45.60 / 57.27 / 64.15 / 78.18 / 92.63. **FRONTIER 9109** — ⚠ and the pod smoke was then re-run at **scale**: five fresh seeds (9104-9108) × 2..8 seats × 2,000 games = **70,000 pod games, all 35 blocks 2,000/2,000 decided, every `undecided_by` column zero, zero panics** (`panic = "abort"` means a panic takes the process, so a complete block IS the crash-freedom result). Mean turns/game 19.45 / 32.51 / 45.31 / 56.94 / 64.39 / 77.80 / 92.58 — **linear in seats at ~12.2 turns a seat above two**, which is the curve to watch: a run that bends it is doing something to the format rather than to a card. ⚠ **And the NON-Commander side, which `--bench` cannot reach:** it plays `--decks fixed` (basic lands + 34 spells), so none of the 83 converted taplands is in it. Four fresh seeds × cube/sos/sealed × 300 games an archetype = **30,000 two-player games, 0 undecided, 0 panics**, in under 15 seconds total. **A byte-identical `--bench` is a statement about the fixed pool and nothing else** — when a change touches cards, run the pools that hold them. ⚠ Two suite numbers were measured this run and **both were right**: the Bevy client's ~200 tests build only when its apt dependencies are present, so the count moves 20,0xx ↔ 20,2xx with the box, not with the tree. **Session `011z4qQX` (after Turtle Power! as seat 180):** suite **22,830 / 0 / 7** (strict answer log, before the Ruinous Powers rebase); workspace clippy **0**; `--bench` **200,190 — byte-identical**; 4-seat (seed 17901, seats 180/174/171/165 as built, `--card-census`: nothing unplayed) and 6-seat (17902, with 178/177/176/175/163: nothing unplayed) pods 1,000/1,000 decided. **Session `011z4qQX` (after Blast from the Past, built as seat 181 and landed as 182):** suite **22,845 / 0 / 7** (strict answer log, after the wrapper-census fix); workspace clippy **0**; `--bench` **200,190 — byte-identical**; 4-seat (seed 18101, seats 181/180/178/174 as built) and 6-seat (18102, 181/179/177/176/175/163 as built) pods 1,000/1,000 decided, `--card-census` nothing unplayed. **Session `011z4qQX` (after the Fireball / Klauth's Will / clutter / loop-digest fixes):** suite **22,875 / 0 / 7**; `--bench` **200,190 byte-identical**; all-seat census (seeds 21001+) decided but one CR 104.4b draw; strict debug pods (18301 × 30 at 182/180/179/181, 18302 × 30 six seats) and 8-seat pods (18401, 18402 × 500) all decided.
-3. 🔎🔎 **THE FIND, AND IT IS A METHOD: RANK A CLONE BY WHETHER ITS OWNER NEEDS TO OWN — not by the line the allocation census names.** All three rows are the same question asked of a `Clone`, none is a buffer, and the largest one (`(-364)`, -0.530 % of `cube`) was found by walking **up** from the census row (`card.rs` lines inside a derived `Clone`, nothing to do there) to the **field type** that asked for the copy. Candidate **(R)** in PERF is this census and it is where to start.
-4. 📐📐 **THE THREE SHAPES, IN THE ORDER THEY PAID:** ① a clone inside a loop whose trip count is "1 + something nobody has" → `std::iter::repeat_n`, which yields the ORIGINAL last (`(-361)`, six sites, one device); ② a table materialized before anyone asked whether it was needed → ask first, and **an EMPTY table is the cleared table** (`(-362)`, four lines, -0.548 / -0.410 / -0.513 %); ③ a `Box<T>` in a type the engine clones, where T is immutable → `Arc<T>` (`(-364)`, 395 files of sed, three misses caught by `cargo check --workspace --all-targets`).
-5. 💡💡 **THE TOP LEAD IS PERF'S CANDIDATE (S) — its cheap half is TAKEN as `(-370)` (-0.023 / -0.050 / -0.026 %, and it reached only 5.6 % of the unshares, because most of the census row is a zone's FIRST push and no headroom can remove one), and the expensive half is CENSUSED AND PRICED, NO BUILD SPENT: `CowBox<Vec<T>>::push`'s UNSHARE PATH COSTS TWO ALLOCATIONS — 36,724 of `cube`'s 664,995 (5.5 %), ~10.2 M Ir, 0.69 %.** `cow.rs:107` is the buffer, `cow.rs:110` is the `Arc` box, 18,362 shared-path pushes apiece; top callers `send_to_graveyard` 12,888 / `finalize_cast` 5,358 / `resolve_top_of_stack_inner` 4,068. **The device already exists in the tree** — `fx_pool::alloc_with` (`mod.rs:1029`) parks a replaced `Arc` and takes one back once its refcount has dropped, `(-166)`'s rule, 68-82 % hit rate one level out. ✅✅ **ITS ONE STRUCTURAL UNKNOWN IS NOW MEASURED AND IT IS FREE: an EMPTY `impl Drop for CowBox<T>` reads +0.004 / +0.001 / +0.00004 %** (a null experiment, two builds, no pool). **That also corrects `(-369)`'s rule — drop FLAGS on a value moved through returns cost; a FIELD's drop glue does not.** What is left to price is a uniqueness check per drop (~110 k atomic loads) and a TLS park bounded by the 18,362 unshares, against ~36,724 allocations recovered: **roughly -0.4 % of `cube`, and the remaining unknown is the pool's HIT RATE, not its cost.** The `Drop` forces one edit, `into_inner`'s `ManuallyDrop` + `ptr::read` (five lines, written and reverted with the experiment). ⚠⚠ **THE OBVIOUS PARK POINT IS STILL WRONG AND (S) SAYS WHY:** parking the handle `push` REPLACES manufactures the very unshares the pool exists to serve — it is shared right now, so a pool reference leaves `strong_count` at 2 and the *other* holder's next write deep-copies where it would have written in place. **Park only at a release site where the handle is already unique.** Two further traps in (S): `Drop` cannot be specialized to `CowBox<Vec<T>>` (and would forbid `into_inner`'s move out of `self`), and a `thread_local!` in a generic body is ONE static for every instantiation — use a `CowPooled` trait with a macro-generated static per impl; the tree needs three (`CardInstance`, `StackItem`, `ContinuousEffect`). Budget ~0.22 % here, ~3x that shipped.
-6. 💡 **SHAPE ③ HAS STOCK LEFT TOO.** `Effect` still carries `Box<Effect>` (149 fields, 3,354 `Box::clone` / 1.24 M incl on `cube`), `Box<SelectionRequirement>` (42 fields, ~0.28 M) and `Box<Selector>`/`Box<Value>`. ⚠ **`Box<Effect>` is NOT `(-364)`'s safety case** — a nested effect *is* rewritten (X substitution, modes), so the swap needs `Arc::make_mut` and **the write sites have to be found before the read win is priced**. `(-364)` was safe precisely because the workspace compiled with zero of them.
-7. ⚠⚠ **`(-363)` IS THE FLOOR UNDER SHAPE ③ AND IT COST A BUILD: AN EXACT ALLOCATION PREDICTION IS NOT A PREDICTION OF THE ROW.** `players` as `SmallVec<[Player; 2]>` removed **exactly** the 22,034 spine allocations it promised and cost **+0.754 / +0.652 / +0.722 %** — `self.players[…]` is the most-read field in the engine and a `SmallVec` read is a branch where a `Vec` read is a load. The allocator gave back 4.0 M; the deref spent 10.2 M. **`Box`→`Arc` is one pointer hop and is fine; inlining a table the engine indexes is not.**
-8. 📐📐 **THE POOL TRILOGY, AND IT IS TWO NUMBERS: allocations recovered PER CALL, and FRAMES THE GUARD CROSSES.** `(-367)` one buffer / one frame / 0.96 a call **WINS -0.127 %**; `(-368)` two buffers / one frame / 0.55 a call **LOSES +0.126 %** (an empty accumulator never allocated, so the `take` is pure overhead on half the calls); `(-369)` one buffer / **four frames** / 0.92 a call **LOSES +0.037 %** — a `Drop` guard costs drop-flag bookkeeping at every frame it is returned through, and `perform_action_inner` alone picked up +764 k for a value it only passes along. `(-359)`'s ~52 Ir a `LocalKey::with` pair is the per-touch constant. **Ask how many frames the guard crosses before reaching for it.** 📐 **AND AN ALLOCATION HAS A PRICE RANGE, NOT A PRICE: 111 / 222 / 245 / 278 / 509 Ir**, all measured by deletion (`(-355)` / `(-362)` / `(-364)`). A buffer a caller builds is 222; one `GameState::clone` copies is 278 (the fill loop and the drop go too); one carrying a `String` and six `Vec`s is 509 (the `memcpy` goes too). **Size a lead by the BYTES it copies, not only by the count.** ⚠ **AND THE BOX WAS A NON-EVENT, WHICH IS ITSELF A READING**: the base missed its prediction by **+0.017 / +0.010 / +0.016 %**, an order of magnitude under the two previous fresh-container steps. **A fresh container is a fresh box, but "fresh box" does not mean "the last offset" — re-take the base and read what it says.**
-9. ⚠ **AN `Arc` SWAP NEEDS THE ATOMIC CHECK AND IT PASSED**: `bench_ab.py` over 32 pairs reads **-0.19 % median / -0.26 % mean (sd 2.74)**, i.e. nothing, and the reason is structural — `simulate_match_pairs_piloted` takes `&[CardFactory]`, so every thread builds its own `CardDefinition`s and **no `Arc<TokenDefinition>` is ever shared across threads.** Check the sharing before worrying about the refcount.
-10. **Perf queue: ✅ (O)'s `TokenDefinition` row TAKEN as `(-364)` (one level up), its `lethals` row as `(-365)`, four short-lived lists as `(-366)`, `mana_source_table`'s buffer as `(-367)` and the CoW unshare's headroom as `(-370)`, `GameState::clone`'s two lines split ✅ `(-362)` / ❌ `(-363)`.** ❌ **The auto-tap `events` buffer is DECLINED, censused by consumer, no build spent**: 15 of its 21 consumers *move* the buffer into their own accumulator, so an out-param buys at most ~29 % of the row for a five-site signature change. ❌ **`PrintedList::push` is DECLINED as (T)** — 18,534 allocations, but the `Vec` form either reallocs at `into_boxed_slice` or puts +8 bytes on `ComputedPermanent` (226,734 constructions), and the rate is 0.082 pushes a pass. Open on the shortlist: `affected_from_requirement` `types` (3,684), `computed_permanent_hinted` (5,852 sealed), `compute_permanents`' `pass` buffer ❌ REFUTED as `(-369)`. Also open: **(H)** (price the clone side first), **(N)**, **(P)**.
-11. ⚠ **`(-361)`'s `fixed` COLUMN IS THE CONTROL AND IT IS HOW TO READ A THREE-POOL SPLIT.** That pool fires almost no triggers and read **+0.010 %** while the two trigger-heavy pools paid 0.19 / 0.10 %. **A row whose pools split like that is a WORKLOAD row; one that moves all three together is a codegen row** — and `fixed` is the cheapest pool to check it against.
-12. **THE GLOBAL LINE TABLE SAYS THE *Ir* PROFILE IS FLAT — do not re-derive it.** Largest single source line 0.97 %, 12,537 lines hold 86.9 %. ⚠ **But "flat" was never true of the ALLOCATION table, and it is not true of the CLONE table either** — 3,005 `TokenDefinition::clone` calls were 0.53 % of `cube` between them. ⚠ `Battlefield`'s lane word has exactly ONE two-bit field left (shift 62), with a `const` assertion in `zone.rs`.
-13. ⚠⚠ **SIX TRAPS, ALL LIVE.** `cargo build --profile profiling-fast -p crabomination --bin bot_ladder --no-default-features` — **both flags load-bearing**; `nm <bin> | grep -cE " (T|t) (_)?mi_"` = 0 before filing a number. ⚠ **DO NOT EDIT THE TREE WHILE A MEASUREMENT BINARY IS BUILDING.** ⚠ **Never overlap two sweep blocks on four cores.** ⚠ **DISK: this box started with 30 GB free and hit `No space left on device` TWICE mid-run**, and it fails a build as a *compile error* (`couldn't create a temp dir`) — `target/debug/incremental` reached **12 GB** on its own and `rm -rf` returns all of it with nothing to rebuild; do it BEFORE the release build, not after. ⚠ **An A/B's base must be rebuilt after every rebase**: a concurrent ML/Commander session landed seven commits across this run and three of them touched the engine, so `(-362)`, `(-366)` and `(-368)` each needed their own fresh base. ⚠ Box timings, SIXTEENTH box (4 cores, 15 GB, Xeon @ 2.80 GHz): cold `profiling-fast` **~9 m**, engine-only **3m27-3m51s** (10m37s when a base-crate commit lands under it), cold `release` **31m32s**, three pools' callgrind in parallel **~60 s**, full suite **119-127 s**, workspace clippy ~4 m.
-14. **Build times are CLOSED as a lever** (PERF's three build-time sections). The one thing to keep doing: `cargo check -p crabomination --no-default-features` while iterating, the affected test binary only, full suite at the end.
-15. **Cards & rules, leftover only:** `audit_dropped_may` 199; `audit_keyword_drift`'s last rows (bestow / flashback / kicker; escalate landed `01P3edJz`) each need a PRIMITIVE; card skips `nocolors` 950 / `noback` 60 / `nosubtypes` 43 / `nokeywords` 29; `audit_incomplete` 858 documented approximations. `audit_panics` clean (70 sites off the bin/test paths: 59 guarded, 11 lock-poison, **0 bare**). ⚠ 605 `definition.is_*()` reads remain and **that is NOT a grep to run to the end**.
+1. **FIRST:** `git fetch origin claude/modern_decks && git checkout -B claude/modern_decks origin/claude/modern_decks`. Rebase, never force; code before tracker prose; fetch before you start and before every push (concurrent ML / Commander sessions land engine commits mid-run). Gotchas in CLAUDE.md, measurement in PERF's "How to measure" + "Standing rules", the 2026-09-12/13 detail in ENGINE_BACKLOG's "moved verbatim" block.
+2. **Gates at the closing tip `cf9a3ad1`:** suite 20,327 / 0 / 6 (`CRAB_ANSWER_LOG=strict`); clippy 0; `--bench` 195,806 / 27.49 / 611.9 / 0 stalls, byte-identical, `determinism ok`, `thread_determinism ok (3 vs 1)`; `audit_panics` 0 bare; every mirror ratchet at its floor (`seat_walks` 0, `retarget` 0, `each_player` 1-allowlisted, `target_opponent` 1 known, invented-* 0, `loop_splice` 13/13/0/0); both 614 gates clean; CR_COVERAGE 146/146. Pod smoke seeds 9103-9108 × 2..8 seats × 2,000 games: all decided, 0 panics; mean turns/game is linear in seats at ~12.2 turns a seat above two — a run that bends that curve is changing the format, not a card. **FRONTIER 9109.** ⚠ `--bench` plays `--decks fixed` only, so a byte-identical `--bench` says nothing about cards in other pools — when a change touches cards, run the pools that hold them (cube / sos / sealed). ⚠ The suite count moves ~200 with the box (the client's tests build only when its apt deps are present). Later session `011z4qQX` gates (suite 22,875 / 0 / 7, `--bench` 200,190 byte-identical, pods decided): ENGINE_BACKLOG under that id.
+3. 🔎 **The method: rank a clone by whether its owner needs to own it**, not by the line the allocation census names — walk up from the census row to the field type that asked for the copy (`(-364)`). PERF candidate (R) is this census; start there.
+4. 📐 **The three shapes, in the order they paid:** ① a clone in a loop whose trip count is "1 + something nobody has" → `std::iter::repeat_n` (`(-361)`); ② a table materialized before anyone asked → ask first, and an empty table is the cleared table (`(-362)`); ③ a `Box<T>` in a cloned type with immutable T → `Arc<T>` (`(-364)`; `cargo check --workspace --all-targets` catches the misses).
+5. 💡 **Top lead: PERF candidate (S).** Cheap half taken as `(-370)`. Expensive half censused, no build spent: `CowBox<Vec<T>>::push`'s unshare path costs two allocations (`cow.rs:107` buffer, `cow.rs:110` `Arc` box); `fx_pool::alloc_with` (`mod.rs:1029`) is the existing device. An empty `impl Drop for CowBox<T>` is free (and corrects `(-369)`'s rule: drop flags on a value moved through returns cost, a field's drop glue does not); the open unknown is the pool's hit rate. ⚠ Park only at a release site where the handle is already unique — parking the handle `push` replaces manufactures unshares. ⚠ `Drop` can't be specialized to `CowBox<Vec<T>>`, and a `thread_local!` in a generic body is one static for every instantiation — use a `CowPooled` trait with a macro-generated static per impl (`CardInstance`, `StackItem`, `ContinuousEffect`). The `Drop` forces `into_inner` to `ManuallyDrop` + `ptr::read`. Numbers in (S).
+6. 💡 **Shape ③ has stock left:** `Box<Effect>`, `Box<SelectionRequirement>`, `Box<Selector>` / `Box<Value>`. ⚠ `Box<Effect>` is not `(-364)`'s safety case — nested effects are rewritten (X substitution, modes), so it needs `Arc::make_mut` and the write sites found before the read win is priced.
+7. ⚠ **`(-363)`: an exact allocation prediction is not a prediction of the row.** `players` as `SmallVec<[Player; 2]>` removed exactly the promised allocations and lost, because a `SmallVec` read is a branch where a `Vec` read is a load. `Box`→`Arc` is one pointer hop and fine; inlining a table the engine indexes is not.
+8. 📐 **The pool trilogy (`(-367)` won, `(-368)` / `(-369)` lost):** what matters is allocations recovered per call and frames the guard crosses — a `Drop` guard costs drop-flag bookkeeping at every frame it is returned through. An allocation's price is a range (PERF has it); size a lead by the bytes it copies, not only the count. A fresh container is a fresh box: re-take the base and read what it says.
+9. ⚠ **An `Arc` swap needs the atomic check, and it passed** (`bench_ab.py`, noise): `simulate_match_pairs_piloted` takes `&[CardFactory]`, so each thread builds its own `CardDefinition`s and no `Arc<TokenDefinition>` is shared across threads. Check the sharing before worrying about the refcount.
+10. **Perf queue:** taken `(-362)`, `(-364)`..`(-367)`, `(-370)`; refuted `(-363)`, `(-369)`. Declined, no build spent: the auto-tap `events` buffer (15 of 21 consumers move it into their own accumulator) and `PrintedList::push` as (T). Open on the shortlist: `affected_from_requirement` `types`, `computed_permanent_hinted`; also (H) (price the clone side first), (N), (P).
+11. ⚠ **`fixed` is the control for a three-pool split** (`(-361)`): a row whose pools split (trigger-heavy pools move, `fixed` doesn't) is a workload row; one that moves all three together is a codegen row.
+12. **The Ir profile is flat — do not re-derive it** (largest line 0.97 %). ⚠ The allocation and clone tables are not flat. ⚠ `Battlefield`'s lane word has one two-bit field left (shift 62), with a `const` assertion in `zone.rs`.
+13. ⚠ **Traps, all live.** `cargo build --profile profiling-fast -p crabomination --bin bot_ladder --no-default-features` — both flags load-bearing; `nm <bin> | grep -cE " (T|t) (_)?mi_"` = 0 before filing a number. Don't edit the tree while a measurement binary builds. Never overlap two sweep blocks on four cores. Disk fills mid-run and fails a build as a compile error — clear `target/debug/incremental` before the release build. Rebuild an A/B's base after every rebase. Box timings: PERF.
+14. **Build times are closed as a lever** (PERF's three build-time sections). While iterating: `cargo check -p crabomination --no-default-features`, the affected test binary only, full suite at the end.
+15. **Cards & rules, leftover only:** `audit_dropped_may` 199; `audit_keyword_drift`'s last rows (bestow / flashback / kicker) each need a primitive; card skips `nocolors` 950 / `noback` 60 / `nosubtypes` 43 / `nokeywords` 29; `audit_incomplete` 858 documented approximations; `audit_panics` 0 bare. ⚠ 605 `definition.is_*()` reads remain and that is not a grep to run to the end.
+
 ## NEXT — Commander. The other 3-hour handoff; <= 15 lines. Rewritten each Commander run.
 
-1. ⚠⚠ **TWO SESSIONS WORKED THE SAME LANE THIS RUN (`01HuMdRo`): the other one picked up `scripts/audit_when_you_do.py` and closed ~40 reflexive payoffs while this one was mid-suite, so three rebases were needed and ITS pass broke `nested_modals_are_all_reachable` (a `ChooseMode` inside a `ReflexiveTrigger`). Fixed in `53c766dfd` — and `governing_modal` now also sees `BindScratch`/`WithX`, which a carried reflexive body is wrapped in. If you add a wrapper that a push resolves THROUGH, add it to `governing_modal`; if you add one a push resolves AS ITS OWN STACK OBJECT, teach that gate instead.** Several sessions share this branch: fetch before you start and before every push; rebase, never force; `cargo check -p crabomination_catalog` after each rebase.** Seat numbers race: re-run `scripts/seat_decks.py` on top of the other session's seats after a conflicted rebase (checkout `--ours` of `pod/decks.rs` + `pod/mod.rs`, re-seat, `target_decks_are_legal`). New seats go at the END of `target_decks()`.
-2. ⚠ **One optimized build at a time; `CARGO_INCREMENTAL=0`; never edit or `git pull` while a suite or measurement build is compiling.** `cr_903_5a_the_official_precon_seats_play_pod_games` plays one game a seat (**6,188** now; `--cargo-profile overflow` with `CRAB_SEAT_SHARD=0/2` then `1/2` is ~215 s a shard after an 18-minute build, `01E4rMUL`) — run the suite with `-E 'not test(cr_903_5a_the_official_precon_seats_play_pod_games)'` and that test alone with `--cargo-profile overflow`. ⚠ A smoke script must check the build succeeded (`test target/release/bot_ladder -nt <changed source>`): a failed build leaves the stale binary running (`019Y6J4R`, 2026-10-18).
-3. **State (2026-11-01, `01WRuXc4Bu`): 6,188 seats** — 6163-6188 are 26 more Star Trek EDHREC single-commander average decks (Locutus, Hugh, Gwyndala, Ensign Chekov, Jurati, Pavel Chekov FP, Enterprise-A, Enterprise-C, La Forge TAE, Scotty CE, Worf SNM, Lt. Sulu, Q Stacking the Deck, Jean-Luc, Vash, Uhura, Tilly, B'Elanna Scrapper, Sam Kirk, Pike, Lt. Arex, Wesley, Q Illustrious Host, Will Riker FitF, McCoy, Voq), closed by 38 cards in `decks::trek_singles4`..`7` (1 🟡 row). Star Trek is Commander-legal from 2026-11-13. Residual-free decks **5,477 / 6,188** (`pod_residuals.py --summary`); 11 of the new seats carry older rows (The One Ring is cube-frozen, The Borg Queen, Shore Leave Planet …).
-4. **Workflow:** rebuild `/tmp/crab_commander` (68 pages of `commanders/year.json` → `edhrec_commanders.json`, Scryfall `oracle_cards` → `oracle_cards.jsonl.gz`); `scripts/edhrec_scan_top.py` for singles, **`scripts/edhrec_scan_pairs.py --legal --max N`** for pairs (keyed on seated commander *sets*); rank by Σ 1/missing; seat only decks your own cards closed (diff `--max 0` before/after a batch and check each deck's old gap). ⚠ `--pod-decks` with more than `--seats` entries plays ONE game with every listed deck seated — smoke new seats in groups of four. ⚠ A Prismatic Piper / Faceless One pair average mixes chosen colors — the legality test rejects it; drop and re-seat.
-5. **Next decks, by cards short:** two — **Chief Montgomery Scott** (needs an "enters with X counters" rider on a put-from-hand; + Worlds Within Worlds: exile all creatures, each player puts creatures from hand, return the exiled). Three — Georgiou, Brad Boimler, Scotty (Miracle Worker), Zero, M'Ress, Armus, Khan. ⚠ `edhrec_scan_pairs.py --legal --max 0` lists 20+ complete partner / Doctor / Background pairs closed by earlier runs' cards and never seated (The War Doctor // Clara Oswald, Halana // Tymna, Bruse Tarl // Reyhan …) — seating them is a choice, not a card job. Re-run `edhrec_scan_top.py` after each batch.
-6. **Gotchas:** `GameState` is at its **1,680-byte cap** (`cow::tests::game_state_stays_small`) — a new turn-scoped field goes in `ColdState` with a guarded clear; `requirement_matches_card` (the printed walker for hand / free-cast filters) answers false for a leaf it has no arm for — check it when a hand filter "never matches"; `TokenDefinition.dynamic_pt` is mint-time; `BecomeCreature` adds Creature, not Artifact; colour atoms inside predicates count toward CR 903.4 identity; ETB-filter conditions are intervening-if (CR 603.4). **A commander casts from the command zone through any hand-pipeline variant on a hop** (`game/helper_cast.rs`, `HopFrom::CommandZone`; kicker, bestow, waterbend, convoke / delve, face-down, Adventure): a new cast variant that should reach the command zone goes in `GameAction::command_zone_hop_card`, and its body adds `commander_tax_for` under the hop and bumps `commander_cast_count`. ⚠ **A new `CounterType` / `WardCost` variant needs an arm in `crabomination_client`**, which `--exclude crabomination_client` never compiles (`01Y6ZRFx`'s two were patched by another session, `f7cda4ed4`).
-7. **`01WRuXc4Bu` gotchas:** an exiled card can now carry instance-granted `from_exile` abilities (`GainActivatedAbility`; index = printed + granted; dropped by `exile_remove_at`) and the bot offers every `from_exile` ability of an owned exiled card. `filtered_enter_counters` passes the entrant as `ctx.trigger_source` (use `DistinctCreatureTypesAmongYourOtherNonBorgCreatures` for "already control"). `RevealUntilLandsToBattlefield` fills `LastMoved`. ⚠ **Do not edit sources while `cargo nextest` compiles**: four runs this session raced their own edits (a catalog crate compiled before / after `all_factories.rs` saw the new names). `fire_step_triggers(TurnStep::BeginCombat)` is the way to test a combat trigger.
-8. **Sweeps this run (closing tip, release):** **29437** (the 26 new seats at 3-6 seats, 270 games: 0 bad), **29438** (every deck at 4 seats, 1,547: 1 CR 104.4a draw — Grothama's leave trigger decks the last two seats at once), census **29439-29440** (the new seats in 7 groups of 4, 112 games: all decided; never activated in 16 games: La Forge TAE's tap, Pike's two, Sands of Delirium's {X} mill, Armus's channel — bot-heuristic leads), **29441** (every deck at 6 seats, `CRAB_POD_CONCEDE=20`, 1,032: 0 bad), **29442** (`--a dflt`, new seats at 4-5, 52: 0 bad) — **3,013 pod games, 0 panics, 1 undecided (0.03 %)**. Gates: suite **29,500 / 1 / 8** strict → the one (Trelane is a `Q`) fixed and re-run; `--bench` **196,176 / 27.64 / 613.0** byte-identical, cube / sos / sealed decision-identical, A/B -1.63 % median (noise); clippy **0** (`--workspace --exclude crabomination_client --all-targets`, 86 min cold). **Next seed 29443.**
-9. **Earlier runs' NEXT lines** (`01WRuXc6` state, the TRC precons, the Numa / Horde OPEN line, and the per-session lines of `01WvrAp6` … `01WRuXc5aX`) moved verbatim to ENGINE_BACKLOG "The Commander NEXT's lines as `01WRuXc3G1` found them" and "… as `01WRuXc4Bu` found them"; each session's FIXED/OPEN section there has the detail.
+1. ⚠ **Several sessions share this branch:** fetch before you start and before every push; rebase, never force; `cargo check -p crabomination_catalog` after each rebase. Seat numbers race: after a conflicted rebase, checkout `--ours` of `pod/decks.rs` + `pod/mod.rs`, re-run `scripts/seat_decks.py` on top of the other session's seats, run `target_decks_are_legal`. New seats go at the end of `target_decks()`. If you add a wrapper a push resolves through, add it to `governing_modal` (it sees `BindScratch`/`WithX`); if one a push resolves as its own stack object, teach that gate instead (`nested_modals_are_all_reachable`, fixed in `53c766dfd`).
+2. ⚠ **One optimized build at a time; `CARGO_INCREMENTAL=0`; never edit or `git pull` while a suite or measurement build is compiling.** `cr_903_5a_the_official_precon_seats_play_pod_games` plays one game a seat (6,188): run the suite with `-E 'not test(cr_903_5a_the_official_precon_seats_play_pod_games)'` and that test alone with `--cargo-profile overflow` (`CRAB_SEAT_SHARD=0/2` then `1/2`, ~215 s a shard after an 18-minute build). ⚠ A smoke script must check the build succeeded (`test target/release/bot_ladder -nt <changed source>`) — a failed build leaves the stale binary running.
+3. **State (2026-11-01, `01WRuXc4Bu`): 6,188 seats** — 6163-6188 are 26 Star Trek EDHREC single-commander average decks, closed by 38 cards in `decks::trek_singles4`..`7` (1 🟡 row). Star Trek is Commander-legal from 2026-11-13. Residual-free decks 5,477 / 6,188 (`pod_residuals.py --summary`); 11 of the new seats carry older rows (The One Ring is cube-frozen, The Borg Queen, Shore Leave Planet …).
+4. **Workflow:** rebuild `/tmp/crab_commander` (68 pages of `commanders/year.json` → `edhrec_commanders.json`, Scryfall `oracle_cards` → `oracle_cards.jsonl.gz`); `scripts/edhrec_scan_top.py` for singles, `scripts/edhrec_scan_pairs.py --legal --max N` for pairs (keyed on seated commander sets); rank by Σ 1/missing; seat only decks your own cards closed (diff `--max 0` before/after a batch). ⚠ `--pod-decks` with more than `--seats` entries plays ONE game with every listed deck seated — smoke new seats in groups of four. ⚠ A Prismatic Piper / Faceless One pair average mixes chosen colors — the legality test rejects it; drop and re-seat.
+5. **Next decks, by cards short:** two — Chief Montgomery Scott (needs an "enters with X counters" rider on a put-from-hand; + Worlds Within Worlds). Three — Georgiou, Brad Boimler, Scotty (Miracle Worker), Zero, M'Ress, Armus, Khan. `edhrec_scan_pairs.py --legal --max 0` lists 20+ complete pairs never seated (The War Doctor // Clara Oswald, Halana // Tymna, Bruse Tarl // Reyhan …) — seating them is a choice, not a card job. Re-run `edhrec_scan_top.py` after each batch.
+6. **Gotchas:** `GameState` is at its 1,680-byte cap (`cow::tests::game_state_stays_small`) — a new turn-scoped field goes in `ColdState` with a guarded clear; `requirement_matches_card` answers false for a leaf it has no arm for (check it when a hand filter "never matches"); `TokenDefinition.dynamic_pt` is mint-time; `BecomeCreature` adds Creature, not Artifact; colour atoms inside predicates count toward CR 903.4 identity; ETB-filter conditions are intervening-if (CR 603.4). A new cast variant that should reach the command zone goes in `GameAction::command_zone_hop_card` (`game/helper_cast.rs`, `HopFrom::CommandZone`), and its body adds `commander_tax_for` under the hop and bumps `commander_cast_count`. ⚠ A new `CounterType` / `WardCost` variant needs an arm in `crabomination_client`, which `--exclude crabomination_client` never compiles.
+7. **`01WRuXc4Bu` gotchas:** an exiled card can carry instance-granted `from_exile` abilities (`GainActivatedAbility`; index = printed + granted; dropped by `exile_remove_at`), and the bot offers every `from_exile` ability of an owned exiled card. `filtered_enter_counters` passes the entrant as `ctx.trigger_source` (use `DistinctCreatureTypesAmongYourOtherNonBorgCreatures` for "already control"). `RevealUntilLandsToBattlefield` fills `LastMoved`. `fire_step_triggers(TurnStep::BeginCombat)` is the way to test a combat trigger.
+8. **Sweeps this run (closing tip, release):** seeds 29437-29442 — 3,013 pod games, 0 panics, 1 undecided (Grothama's leave trigger decks the last two seats at once, a CR 104.4a draw). Never activated in the census: La Forge TAE's tap, Pike's two, Sands of Delirium's {X} mill, Armus's channel — bot-heuristic leads. Gates: suite 29,500 / 1 / 8 strict → the one (Trelane is a `Q`) fixed; `--bench` 196,176 / 27.64 / 613.0 byte-identical, cube / sos / sealed decision-identical; clippy 0 (`--workspace --exclude crabomination_client --all-targets`, 86 min cold). **Next seed 29443.**
+9. **Earlier runs' NEXT lines** moved verbatim to ENGINE_BACKLOG "The Commander NEXT's lines as `01WRuXc3G1` found them" and "… as `01WRuXc4Bu` found them"; each session's FIXED/OPEN section there has the detail.
 
-## Standing index (every number lives in PERF, ENGINE_BACKLOG or
-INCOMPLETE_CARDS; a line here that restates one is a line to delete)
+## Standing index (every number lives in PERF, ENGINE_BACKLOG or INCOMPLETE_CARDS; a line here that restates one is a line to delete)
 
-0. **THE BUILD IS THE LEVER, NOT THE SOURCE.** PGO is a ~24 % win on both
-   pools and `-C target-cpu=native` is flat — width buys nothing here, layout
-   buys everything. **`panic = "abort"` is landed on every optimized profile
-   (`(-250)`: +4.5-5.5 % paired wall clock, -3.1..-3.8 % Ir on all three
-   pools, found off the cachegrind I1-miss table)** — CLAUDE.md carries the
-   one consequence (exit 134, tests still unwind). **And the profile this file measures on is 8.3 % slower
-   than `release`, which nobody had priced.** Ladder against it: LTO 0.917,
-   `release-fast`+PGO 0.762, `release`+PGO **0.724** — they stack. **A profile
-   must be raised under the profile it is consumed under**, or it is partially
-   applied with no warning and the win vanishes; the binary size is the check.
-   Matrix in PERF's Baseline.
-   `scripts/pgo_build.sh`, **opt-in and staying opt-in** so committed readings
-   stay plain `release-fast` ones (CLAUDE.md carries the hazard). Measured on
-   the actor too, and **the same binaries read -23.1 % or -4.9 % depending on
-   the learner/actor balance** — PERF says why, and the rule that fell out is
-   the more useful half: print `t_step_ms` against `elapsed_s` before quoting
-   any `selfplay_train` throughput number. **BOLT is blocked here** — no
-   `llvm-bolt` in the toolchain and no `perf` in the image.
-1. **Perf queue** — PERF "Perf candidates" and its Baseline carry every
-   number; this is the state and the rules only.
-   **`(-87)` IS TAKEN — pass 97 priced it, pass 98 built it as the
-   `zone::Battlefield` lane** (`walk_and_store`, hit 75.6 / 79.5 / 72.9 %
-   against the ask counts the census predicted 93.95 / 75.76 / 74.30 % for,
-   and the pass reads 78.5 / 73.1 / 80.2 % of its own deletion ceiling). The
-   device then generalised to `(-89)`'s damage-shield walks at four times the
-   rate of its first two lanes. **The transferable half is the method, not the
-   entry: a census that prices a memo's hit rate before anyone builds it cost
-   one `release-fast` build and turned a "nobody has priced it" into a
-   shipped 0.6-0.9 %.** `(-90)` and `(-92)` below are maps to read first, not
-   leads.
-   **`(-90)` is a map, not a lead** — the
-   ninety-sixth pass's whole-profile re-read at `3b8bfd03`, with three sized
-   leads (`compute_permanent_pass`' 279.5 Ir body, the diffuse allocation
-   table, `granted_abilities_of_inner`) and, more usefully, **four things it
-   refutes by inspection with no build spent**: every freeze scope worth
-   widening (the gather count is at its floor — `cg_contexts.py` says all six
-   top contexts are one gather per distinct game state, and Ir/call says
-   "gather" and is wrong about all of them), and a batch event-kind mask in
-   front of `dispatch_triggers_for_events` (11 `event_matches_spec` calls a
-   dispatch, so the inner fan-out is not the cost) — **that last one is
-   TAKEN as `(-195)` in the per-pair form** (cube -1.10 %, sealed -1.34 %):
-   the fan-out is small per dispatch but the mask also skips the per-pair
-   setup ahead of the loop.
-   **Read `(-90)` before pulling anything else off this queue.**
-   **Open, in order:**
-   **`(-82)` IS NOW CLOSED — its `available_mana` half is refuted off the
-   dumps with no build spent** (pass 97): 12,240 builds against 12,478
-   `cast_candidates` calls is **0.98 builds a call**, 92 % of builds are
-   inside `cast_candidates`, its 5,474 real-board calls already take
-   `main_phase_action_with`'s shared cell, and its 7,004 simulation calls sit
-   in a loop that `dry_run`s a mutation into the board on every iteration —
-   different board, no cache can span it. What is left is 694 builds (5.7 %,
-   ~0.11 % of `cube`) in the picker chain. **The rule: `asks / builds` is a
-   ratio in the dump — ask "is this already shared?" with
-   `cg_edges.py --callers` before theorising about who could share.** Then
-   `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
-   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`. **`(-92)` IS THE ENTRY TO READ
-   FIRST AND IT IS A MAP, NOT A LEAD: the profile is FLAT.** The whole-program
-   line profile (new, in PERF's "Profile of record") says the hottest single
-   line is 0.97 %, 11,165 lines hold 86 % of the run, and slice iteration
-   plus the pointer/`Vec` machinery under it is **~30 %** of the program.
-   Six functions have been read by line across three passes and all six say
-   "no hot line" — **stop looking for one**; `cg_calls.py` and
-   `cg_contexts.py` are the two questions a flat profile still answers.
-   `(-92)` names the three shapes it does still see, cheapest first.
-   **`(-91)` IS TAKEN** (`cd0842e9`,
-   `fixed` -0.673 / `cube` -0.721 / `sealed` -0.813 %, recomputes down
-   89-93 %, robustness grid green over 33,120 games). The device generalises
-   and the Baseline states it as a rule: **put the cache INSIDE the handle it
-   is keyed on**, not beside it — a `Deref`-only newtype makes every write a
-   compile error, and moving the memo into it makes the one expression the
-   newtype cannot stop (`c.definition = other.definition.clone()`) *correct*
-   instead of rare. **It read 95 / 63 / 43 % of the ceiling that entry
-   filed and the gap is now explained: there is none.** A second, independent
-   implementation of the same change, built at `cd4ad277` by a concurrent
-   session, lands within 0.009 / 0.014 / 0.011 % of the ceiling probe's own
-   *absolute* totals on all three pools. The percentage shrank because
-   `3b8bfd03` took 31 M of `sealed` out from under the ceiling between the
-   probe and the implementation. **A ceiling is a percentage of the base it
-   was read at** — Baseline, ninety-seventh pass.
-   **Two entries at the top of the queue, both sized on all three pools at
-   the ninety-fifth pass, one of them now half taken:**
-   `(-89)` (the combat-damage prevention cascade, **1.55 / 2.34 / 1.69 %**,
-   ten questions a damage event; its two largest rows are already taken for
-   -0.087 / -0.114 / -0.098 %, eight are left, and **both taken mechanisms
-   were then applied to a neighbouring row in the same cascade and both lost
-   there** — read the refutations before repeating either).
-   **`(-88)` IS CLOSED — half taken, half refuted with a census.** Taken at
-   `ec5dc3a9` (`fixed` -0.559 / `cube` -0.751 / `sealed` -0.533 %): the SBA
-   death sweep's whole-board layer pass is now a pass over the permanents its
-   own gate names, because `card_death_possible` is a *necessary* condition
-   for death and the sweep was throwing that walk's result away. Refuted at
-   `6e44ce7c`: `CRAB_SBA_CENSUS` says **17.8-19.0 %** of sweeps re-see a
-   state, and a skip loses anyway — **price the witness against the work; a
-   witness over the same collection as the work is never cheaper than the hit
-   rate.** The instrument stays, gated and free (+0.004 / +0.001 / +0.003 %).
-   **The `call_mut` census is CLOSED**
-   — all six rows swept at the ninety-fifth pass, and the capture rule
-   predicted the order on every one (see the Baseline; `process_echo` is read
-   and left at 0.01 %, which is the result, not an omission).
-   **The `#[inline]` family is CLOSED past the card-type
-   predicates** — `has_keyword` + `counter_count` + `same_team` read +0.45 /
-   +0.54 / +0.42 %, and +0.15 / +0.17 / +0.12 % with `has_keyword` dropped, so
-   every combination loses including the 10-Ir one-liner. Do not rebuild it.
-   **`same_team` then won by the other route in the same hours** (one team row
-   instead of two, -0.135 / -0.105 / -0.112 %), which is the two halves of one
-   rule meeting from opposite sides: read a hot small function's body for a
-   repeated question *before* reaching for the attribute. **And then a second
-   time, from the callers** — four walks stopped asking it per permanent
-   (-0.200 / -0.160 / -0.169 %, calls -72 / -73 / -71 %). The function is now
-   1.4 M Ir of `cube` and the family is done.
-   **Taken/closed:** `(-84)`(a) and (b), `(-70)`, `(-79)`, `(-77)`, `(-60)`,
-   `(-39)`, the `Box` class, `(-80)` rows 1-2, `(-82)`'s targeting half.
-   **Refuted with a ledger, do not rebuild:** `(-85)` (a gate is read 3.5x per
-   scope exit, so a slot costs ~113 k Ir and nothing else — add gates freely),
-   `(-86)`, `(-84)`(c), the Cauldron bit, `(-80)` row 1.
-   **The rules this queue runs on, none of which restate a number:**
-   * **Run `cg_edges.py --callees` on a 3 % row before theorising about it.**
-     `(-82)` sized a function from outside and got the conclusion backwards.
-   * **Rank a `call_mut` census by the closure's CAPTURES, not its call
-     count** — 5x between the top two rows of one table. **And check the
-     CONSUMER before applying the rule**: it is about `collect()` into a
-     `Vec`; `sum`/`fold`/`count`/`for_each`/`any` are already internal
-     iteration and a hand-written loop loses to them
-     (`combat_damage_shaved_for`, +0.010 % on `cube`, reverted).
-   * **Halve a no-LTO `#[inline]` reading and halve it again**;
-     `[profile.profiling-lto]` is the instrument that checks it (`profiling`
-     OOMs on the candidate side only — Cargo.toml says why). **And pick the
-     candidate by what its body EXPANDS TO at the call site, not by its self
-     Ir** — a 10-Ir row whose one statement is a call to something large is
-     the worst candidate on the table and the one a count ranks first.
-   * **Divide a loop's item count by its call count before hoisting a
-     per-item board walk out of it — and when the hoist fails because the loop
-     is short, ask whether the scope is long.**
-   * **A per-definition presence bit pays only when the walk it replaces is
-     over a list that is usually non-empty.**
-   * **`SmallVec` cannot replace a `Vec` of BORROWED data that outlives its
-     last use** — no `#[may_dangle]` on its `Drop`, so the shared borrow runs
-     to the drop point and every `&mut self` call after it is an error.
-     `DispatchScan`'s two lists are that shape (29,474 allocations a `cube`
-     run, ~0.15 %) and are **not** reachable without a borrow refactor of two
-     long functions. Tried, ten errors, reverted.
-   * **Price a `Vec -> SmallVec` swap as `alloc + free` minus `n x (spill
-     check + external next)`.** `Vec::from_iter` specializes to *internal*
-     iteration and `SmallVec`'s `Extend` does not, so the collect becomes an
-     external `next()` loop: `blockers_of` gave back 4.19 M of the 4.15 M +
-     2.2 M its allocations cost, for -0.072 % of `cube` net. **And the same
-     rule at seven times the size, which is the one to quote** (pass 97): the
-     SBA death gate's candidate list read -0.065 / -0.362 / **+0.007** % as a
-     `collect()` into a `SmallVec` and -0.580 / -0.766 / -0.549 % as a `for`
-     loop. One collect over a battlefield gave the whole win back on two
-     pools and reversed the sign on the third. **Fill a `SmallVec` with a
-     loop**; the inline storage is fine, the iteration protocol is not.
-   * **A `same_team`-shaped call inside a collection walk is a per-*seat*
-     question asked per element.** Three answers: hoist it when an earlier
-     term of the same `&&` pins its argument, put a cheaper term in front of
-     it when one exists, or build a per-seat mask — and the mask pays only
-     where the loop is long and nothing cheaper already gates the walk (its
-     own build and closure ate three quarters of what it saved in
-     `eval_material_inner`). ~140 sites were left alone on that test.
-   * **A scope only gathers if a read inside it asks for a computed view** —
-     read its first `&self` calls in source order; `(-81)`'s named remaining
-     first-reads are the cheapest leads.
-   * **Fold a `'N` row into its parent before ranking a self table**, and
-     **Ir/call on a function a gate is about to split is the average of two
-     populations.**
-   * **A dormant gate's cost is its CALL COUNT, and `(-85)`'s "add gates
-     freely" was calibrated at ~20 k calls** (pass 97). In front of
-     `presence_gate` (242,788 asks a `cube` run) a census hook read `cube`
-     **+0.049 %** as a `OnceLock<bool>` and **+0.187 %** as an `#[inline]`
-     `AtomicU8` — worse, because `#[inline]` expanded the reader's *cold*
-     branch (an `env::var` that allocates a `String`) into every call site.
-     **Never `#[inline]` a reader whose slow path allocates.**
-   * **A rebase shrinks a patch without shrinking its measurement**, and
-     **cite an anchor by a hash already on `origin`** — the last one was
-     filed at a hash that no longer resolves.
-   * **Split a patch whose rows you want to attribute, or attribute
-     nothing** (pass 97). Extracting the SBA death filter's fat-capture
-     closure into a method moved `call_mut` -14.5 M against the new method's
-     +5.0 M on `cube` — which reads like a 0.33 % win for the extraction and
-     is not: measured alone the extraction is **-0.015 %**. That `call_mut`
-     fall belonged to the narrowing landed beside it, because the filter ran
-     over fewer cards.
-   **One open question, not re-landed unilaterally:** the Cauldron revert is a
-   20x asymmetric pool split — 0.006 % of the bench pool against 0.125 % of
-   `sealed`, and `sealed`/`cube` are the pools the training loop plays.
+0. **The build is the lever, not the source.** PGO is a ~24 % win and
+   `-C target-cpu=native` is flat; `panic = "abort"` is landed on every
+   optimized profile (`(-250)`; CLAUDE.md carries the consequence). The
+   profile this file measures on is slower than `release`; LTO and PGO stack
+   (matrix in PERF's Baseline). A profile must be raised under the profile it
+   is consumed under, or it is partially applied with no warning — the binary
+   size is the check. `scripts/pgo_build.sh` is opt-in and stays opt-in.
+   Before quoting any `selfplay_train` throughput, print `t_step_ms` against
+   `elapsed_s` (the same binaries read very differently by learner/actor
+   balance; PERF says why). BOLT is blocked here (no `llvm-bolt`, no `perf`).
+1. **Perf queue** — PERF "Perf candidates" and its Baseline carry every number;
+   this is the state and the rules only.
+   **Read the maps first:** `(-90)` (the whole-profile re-read, with leads and
+   four things refuted by inspection — the gather count is at its floor; its
+   event-kind mask was taken as `(-195)`) and `(-92)` (the profile is flat;
+   six functions read by line say "no hot line" — stop looking for one;
+   `cg_calls.py` and `cg_contexts.py` are what a flat profile still answers).
+   **Open, in order:** `(-89)` (the combat-damage prevention cascade — eight
+   rows left; both taken mechanisms lost on a neighbouring row, read the
+   refutations first), `(-83)`, `(-9)`'s open half, `(-80)` rows 3/4,
+   `(-51)(a)`, `(-69)`, `(-61)`, `(-59)`.
+   **Taken/closed:** `(-87)` (the `zone::Battlefield` lane; then generalised to
+   `(-89)`'s shield walks), `(-91)` (put the cache inside the handle it is
+   keyed on), `(-88)` (half taken, half refuted by `CRAB_SBA_CENSUS`), `(-82)`
+   (refuted off the dumps), `(-84)`(a)(b), `(-70)`, `(-79)`, `(-77)`, `(-60)`,
+   `(-39)`, the `Box` class, `(-80)` rows 1-2, the `call_mut` census, the
+   `#[inline]` family past the card-type predicates (every combination loses —
+   don't rebuild it; `same_team` then won by removing the repeated question).
+   **Refuted, do not rebuild:** `(-85)`, `(-86)`, `(-84)`(c), the Cauldron bit,
+   `(-80)` row 1.
+   **Rules this queue runs on:**
+   * Run `cg_edges.py --callees` on a 3 % row before theorising about it, and
+     `cg_edges.py --callers` to ask "is this already shared?" — `asks / builds`
+     is a ratio in the dump.
+   * A census that prices a memo's hit rate before anyone builds it is cheap
+     and turns "nobody has priced it" into a shipped win (`(-87)`).
+   * A ceiling is a percentage of the base it was read at (`(-91)`).
+   * Price a witness against the work; a witness over the same collection as
+     the work is never cheaper than the hit rate (`(-88)`).
+   * Rank a `call_mut` census by the closure's captures, not its call count —
+     and check the consumer: the rule is about `collect()` into a `Vec`;
+     `sum`/`fold`/`count`/`for_each`/`any` already iterate internally.
+   * Halve a no-LTO `#[inline]` reading and halve it again
+     (`[profile.profiling-lto]` checks it); pick the candidate by what its body
+     expands to at the call site, not by its self Ir. Read a hot small
+     function's body for a repeated question before reaching for the attribute.
+   * Divide a loop's item count by its call count before hoisting a per-item
+     board walk; when the loop is short, ask whether the scope is long.
+   * A per-definition presence bit pays only when the walk it replaces is over
+     a list that is usually non-empty.
+   * `SmallVec` cannot replace a `Vec` of borrowed data that outlives its last
+     use (no `#[may_dangle]`); `DispatchScan`'s two lists are that shape and
+     need a borrow refactor.
+   * Price a `Vec -> SmallVec` swap as `alloc + free` minus `n x (spill check +
+     external next)`; fill a `SmallVec` with a loop, never a `collect()`.
+   * A `same_team`-shaped call inside a collection walk is a per-seat question
+     asked per element: hoist it, put a cheaper term in front, or build a
+     per-seat mask (pays only on long, otherwise ungated loops).
+   * A scope only gathers if a read inside it asks for a computed view;
+     `(-81)`'s named first-reads are the cheapest leads.
+   * Fold a `'N` row into its parent before ranking a self table; Ir/call on a
+     function a gate is about to split averages two populations.
+   * A dormant gate's cost is its call count (`(-85)`'s "add gates freely" was
+     calibrated at ~20 k calls). Never `#[inline]` a reader whose slow path
+     allocates.
+   * A rebase shrinks a patch without shrinking its measurement; cite an anchor
+     by a hash already on `origin`.
+   * Split a patch whose rows you want to attribute, or attribute nothing.
+   **Open question, not re-landed unilaterally:** the Cauldron revert is a 20x
+   asymmetric pool split (bench pool vs `sealed`, which training plays).
    Decide it deliberately or leave it.
 2. **Perf method** — PERF's "How to measure", "Standing rules for a perf
    pass", "Which pool a change moves". Read all three pools; a pool split is
    a revert.
-3. **Instruments** — **`--feature-census` is now deterministic and is the
-   ENCODER'S regression check**: `selfplay_train --feature-census 8 --seed 5`
-   twice, diff the two outputs, and a byte-identical pair says the encoding
-   did not move over ~29 k encoded objects. Use it on anything touching
-   `encode.rs` (item 4's caution had no such check before). It was
-   *not* reproducible until the ninety-sixth pass — the census's own games
-   left `bot::jitter_below` unseeded. **That hole is closed on the training
-   actors too now** (item 7): `play_recorded_game_mcts` pins the stream per game,
-   so the census's own pin is belt-and-braces and any recorded game replays. **And PERF's "Profile of record" now carries the ACTOR's profile**
-   — three of its top rows (`encode_state` 5.7 %, deck building 1.8 %,
-   `__memcpy` at twice `cube`'s share) have no row in any `bot_ladder`
-   profile at all. Then: `CRAB_SIM_REJECTS`, `CRAB_PAY_FAILS`,
-   `CRAB_SBA_CENSUS` (new at pass 97 — the SBA re-sweep rate; it closed
-   `(-88)`'s open half and stays as the instrument),
+3. **Instruments** — `--feature-census` is deterministic and is the encoder's
+   regression check: `selfplay_train --feature-census 8 --seed 5` twice and
+   diff; byte-identical means the encoding did not move. Use it on anything
+   touching `encode.rs`. PERF's "Profile of record" carries the actor's
+   profile (rows no `bot_ladder` profile has). Also `CRAB_SIM_REJECTS`,
+   `CRAB_PAY_FAILS`, `CRAB_SBA_CENSUS` (the SBA re-sweep rate),
    `server::bot_rejection_count`, `--bench`'s stall split and `undecided_by`,
-   and `selfplay_train`'s new `actors:` line (plus `actor_s` /
-   `actor_games_per_s` in `stats.jsonl`). **Quote `actors:`, never `done:`,
-   for anything about the simulator** — the old rate divided games by a clock
-   the learner owns and read up to 3x low.
+   and `selfplay_train`'s `actors:` line (plus `actor_s` / `actor_games_per_s`
+   in `stats.jsonl`). Quote `actors:`, never `done:`, for anything about the
+   simulator — `done:` divides by a clock the learner owns.
 4. **Encoding caution** — pool / `Vocab` / `TrainRow` / observation and deck
    encodings invalidate the trained nets. Nothing since `dc478735` touches
-   `encode.rs`, `crabomination_ml` or `crabomination_nn`.
-   ⚠ **A CARD FIX IS NOT AN ENCODING CHANGE, BUT IT IS A SEEDED-GAME CHANGE.**
-   The 2026-09-12 subtype / keyword fixes move no pool membership, no vocab
-   index and no encoded feature (the encoder reads neither subtypes nor
-   keywords), so no net needs a retrain — but `clearwater_pathway` is in the
-   cube pool and `lonesome_unicorn` in the deck pools, so a seeded game that
-   draws one can play out differently from the same seed before them. Say which
-   of the two a card commit is; they are not the same claim.
-5. **Robustness gate** — `scripts/robustness_grid.sh` + the actor leg, the
-   seeded 4,000-pairing cube sweep (arm it in
-   `bot_vs_bot_random_cube_decks_terminate`), the two census env vars.
-   **Re-run at the ninety-seventh pass** (`6e44ce7c`), because that pass lands
-   a `debug_assert!` in the SBA death sweep: same recipe, **12,000 games,
-   1,157,922 rows, 0 stalls, rc 0, no panic / assertion / overflow**, both the
-   "memo is stale" and the new "is not a necessary condition" strings verified
-   present. Earlier, at `9b1fa94b` — the same
+   `encode.rs`, `crabomination_ml` or `crabomination_nn`. ⚠ A card fix is not
+   an encoding change but is a seeded-game change (a pool card that plays
+   differently changes the same seed's game) — say which a card commit is.
+5. **Robustness gate** — `scripts/robustness_grid.sh` + the actor leg (the
    `-C debug-assertions=yes` + `overflow` build of `-p crabomination_ml --bin
-   selfplay_train`, 4 seeds x `--actors 3 --games 3000 --steps 20`:
-   **12,000 games, 1,161,305 rows, 0 stalls, rc 0, no panic / assertion /
-   overflow**, with the audit binary's 5 assertion strings verified present.
-   It is the only leg that reaches the encoder-side memos (the vocab-index
-   slot), and nothing in this file had ever recorded a run of it. 123-126
-   games/s there, which is an *audit* build and not a throughput number.
-   **Green at `599825ba`: 30 cells, 33,120 games, 0 undecided, 0 failures**
-   (and at `10a794a8` before it), with the audit binary's assertion strings
-   verified present (the script's own header check — `strings | grep -c
-   "memo is stale"` must be > 0, and a 0 means `RUSTFLAGS` did not reach the
-   crate). **That count is a LINE count, not a message count** — Rust's
-   string literals land contiguously in `.rodata`, so several messages share
-   one `strings` line; there are eight such assertions in the tree and the
-   header prints 5. The gate is "> 0"; do not read the number as a census,
-   and do not "fix" it by expecting it to track the assertion count. Run it
-   after any pass that
-   lands a `debug_assert!` or a presence gate: the 19 k-test suite is not
-   their audit, because an assertion needs a *board* to fire on. Five earlier
-   runs (through `b635037f`) were also clean and are in git; do not add a
-   line per run here. **The 4,000-pairing cube sweep is RE-ARMED AND CLEAN at `527f872f`** —
-   981.7 s under nextest in a debug build, every match terminated inside its
-   180 s budget, `bot_rejection_count()` unmoved. It had not been run since
-   the eighty-seventh pass, and the twelve passes since carry the `CardMemo`
-   redesign, the SBA death sweep's narrowed scope, the target-walker
-   unification and the encoder's in-place write. Re-arm it after a pass that
-   changes what the *bot* proposes or what the engine accepts; the recipe is
-   in the test's own doc comment. Previously: the
-   passes since have been behaviour-preserving by construction and `--bench`
-   is byte-identical through them (195,528 / 27.44 / 611.0 / 0 stalls /
-   `determinism ok` / `thread_determinism ok 3 vs 1`).
-6. **Bugs** — ENGINE_BACKLOG's live-match section: **no open entry left.**
-   Card audits clean — see INCOMPLETE_CARDS.
-7. **ML** — ML_NOTES. ~~Open: should `selfplay` seed `jitter_below` from
-   `--seed`?~~ **ANSWERED YES (2026-09-11)**: `play_recorded_game_mcts` pins the
-   stream per game, so a recorded game replays from its seed —
-   `sample_scored_index` already documented the seeded stream as the
-   reproducibility hook and the actors were the one path that installed none.
-   ⚠ **Runs started after this generate different games than runs before it**
-   (same distribution, different draws; no encoding / pool / `TrainRow` change,
-   so **no retrain**). A whole net-in-the-loop run is still not reproducible —
-   `n` comes off a shared atomic, so the weights game `n` sees vary. ML_NOTES
-   has the reasoning and the test.
-7b. **Test suite** — `find_data_tests.sh` was wrong **five ways** and is
-   fixed; its output is a DELETE list and every bug put live engine tests on
-   it. Bugs 4 and 5 are the ninety-third pass's. **(4)** is bug 1 one function
-   down: a helper's body ended on the line after its signature unless the
-   opening brace was on that line, so every multi-line-signature helper
-   spliced its own signature into each caller — sixteen live engine tests
-   (`modern/lands_equipment_vehicles.rs`'s fourteen, two in
-   `core_rules/xtra.rs`). **(5)** the marker list asked "does it touch a
-   `GameState`", and the deck-format engine does not need one — nineteen
-   legality tests (all of `core_rules/format.rs`, `multiplayer.rs`'s two
-   commander validators, CR 100.2a/100.4a, CR 407.3, cns's Proclamation).
-   **A pure-data test is one with no LOGIC under it, not one with no
-   `GameState` in it.** **Population 200 (189 + 11 sacred)**; neither fix
-   ADDED a row, which is the check to run on the next one, and both were found
-   by **reading three tests in the file at the top of the by-file count — a
-   filter's false positives cluster, because they share a helper or an API.**
-   **Seven slices taken**: `stx/part_23` (19), `classic_sets/ogw` (8),
-   `modern/aggro_allied_batches` (11, including three copy-paste batch blocks
-   — the convention's other half), `modern/singles_and_legends` (7),
-   `modern/cube_rounds` (4), `stx/part_00` (5) and `modern/decks_11_13` (4).
-   The pattern is in the tree seven times over, and **the sacred list is
-   byte-identical across all of them — run that diff after a fold.** Two
-   rules found doing it: **a test that pins a card-specific *effect shape* — a
-   modal `min`/`max`, a `Search` filter, a `CantBeBlockedBy(_)` /
-   `Madness(_)` / `Suspend(4, _)` / `Typecycling(_)` variant — is not an echo
-   and does not fold** (`rna.rs`, `mh/mh2b.rs` and most of
-   `cube_expansion_singles.rs` are those), and **a per-cycle table
-   that already names its card in the failure message is the folded form** —
-   leave `ths.rs` / `rtr.rs`'s `*_stat_lines` and `cube_rounds`'s two
-   `*_cycle_definitions` alone.
-   **AND THE REMAINDER IS SIZED, WHICH CHANGES WHAT IT IS WORTH.** Of the 189
-   non-sacred rows, **65 are the effect-shape kind that does not fold and 124
-   are plain echoes that do — and those 124 are spread over 77 files at one to
-   five each.** The big slices are gone; every further commit is a 1-5-test
-   file with a table of its own. Since the sweep buys **no build time** (see
-   PERF's "Test-suite cleanup"), a whole pass spent on a 77-file long tail is
-   a poor trade against anything on the perf queue. Take a file when you are
-   already editing it; do not open a pass for this. One commit per file,
-   binary green either side.
+   selfplay_train`, 4 seeds × `--actors 3 --games 3000 --steps 20` — the only
+   leg that reaches the encoder-side memos), the seeded 4,000-pairing cube
+   sweep (arm it in `bot_vs_bot_random_cube_decks_terminate`; recipe in its
+   doc comment), the two census env vars. Last green: grid at `599825ba`,
+   actor leg at `6e44ce7c`, cube sweep at `527f872f`; earlier runs are in git
+   — don't add a line per run. Run the grid after any pass that lands a
+   `debug_assert!` or a presence gate (the suite is not their audit: an
+   assertion needs a board to fire on); re-arm the cube sweep after a pass
+   that changes what the bot proposes or the engine accepts. The script's
+   header check (`strings | grep -c "memo is stale"` > 0, else `RUSTFLAGS`
+   didn't reach the crate) counts lines, not messages — don't read it as a
+   census.
+6. **Bugs** — ENGINE_BACKLOG's live-match section: no open entry. Card audits
+   clean — see INCOMPLETE_CARDS.
+7. **ML** — ML_NOTES. `selfplay` seeds `jitter_below` per game
+   (`play_recorded_game_mcts`, 2026-09-11), so a recorded game replays from its
+   seed; runs before and after it draw different games (no retrain). A whole
+   net-in-the-loop run is still not reproducible (`n` comes off a shared
+   atomic).
+7b. **Test suite** — `find_data_tests.sh` (fixed five ways; its output is a
+   DELETE list, so every bug put live engine tests on it). A pure-data test is
+   one with no logic under it, not one with no `GameState`. False positives
+   cluster (shared helper or API) — read three tests at the top of the by-file
+   count. The sacred list must be byte-identical across a fold. Doesn't fold: a
+   test pinning a card-specific effect shape (modal `min`/`max`, a `Search`
+   filter, a `CantBeBlockedBy(_)` / `Madness(_)` / `Suspend(4, _)` /
+   `Typecycling(_)` variant), and a per-cycle table that already names its card
+   in the failure message (`ths.rs` / `rtr.rs`'s `*_stat_lines`,
+   `cube_rounds`'s `*_cycle_definitions`). Seven slices taken; the remainder
+   (124 foldable echoes over 77 files at one to five each) buys no build time —
+   take a file when already editing it, one commit per file, binary green
+   either side; don't open a pass for it.
 8. **Tip state / build time / filters** — PERF's newest Baseline blocks.
-   **Anchor, MEASURED at `79019a42` (on `origin`): `fixed` 935,959,897 /
-   `cube` 2,777,133,820 / `sealed` 2,773,877,997** — the interval off
-   `181ce81a` is **-1.137 / -1.857 / -1.115 %** over six commits. Earlier:
-   `b12393f9` 942,328,403 / 2,805,505,066 / 2,793,794,620 — the ninety-eighth pass is
-   **-0.464 / -0.854 / -0.405 %** off `181ce81a` over two commits. Earlier:
-   `181ce81a` 946,720,798 / 2,829,667,509 / 2,805,164,959; `a69a8287`
-   946,679,422 / 2,829,634,060 / 2,805,064,393 — the whole
-   ninety-sixth pass is **-3.25 / -3.70 / -4.00 %** off `e0bc5c46`, over
-   eight commits whose individual readings compose to it (PERF's closing
-   block has the per-commit table). Earlier anchors on `origin`:
-   `42235e7e` 952,230,291 / 2,851,583,965 / 2,820,631,303; `cd0842e9`
-   957,023,198 / 2,865,614,181 / 2,831,048,757; `599825ba` 963,502,971 /
-   2,886,424,672 / 2,854,266,716, with `--bench`
-   byte-identical to the committed invariant (195,528 / 27.44 / 611.0 / 0
-   stalls, determinism **and** thread_determinism ok), suite 19,029 / 0 / 5,
-   golden traces 7/7 unmoved, clippy clean, and the robustness grid green
-   at both memo commits. Further back, `e0cbb4a7`:
-   963,706,773 / 2,899,018,180 / 2,885,278,610, and `e0bc5c46`:
-   978,492,848 / 2,938,264,442 / 2,921,980,262.
-   **Two sessions read `e0bc5c46` independently and agreed to 435 Ir on
-   `cube`, 58 on `fixed` and 81,279 on `sealed`** — the third such check, and
-   the reason an anchor is checkable at all.
-   **⚠ `--bench` IS NOT A THROUGHPUT INSTRUMENT and this pass proved it
-   three times.** Three release gates, one container, `host_calib_ms`
-   53 / 55 / 55, `games_per_s` 364.80 / 362.97 / **337.51** — the clock went
-   the *wrong way* by 7 % while Ir fell monotonically by 3.3-4.0 %. (And the
-   whole container reads 337-365 against the last one's 217 at the same
-   thread count.) Quote Ir, or `ab_wall.py`'s five ABBA blocks. What
-   `--bench` is for is the invariant: decisions / turns / stalls /
-   determinism, byte-identical at every gate this pass.
-   **`games_per_s` IS NOT PORTABLE ACROSS CONTAINERS and the reason is the
-   thread count, not the box**: `--bench` defaults to
-   `available_parallelism - 1`, this container reports `nproc` 4 and so runs
-   **3** threads where the run that filed `games_per_s 292.65` ran 4 —
-   217.09 at `--threads 3`, 280.47 at `--threads 4`, same binary, same
-   minute. The header line carries the count and the Baseline blocks quote
-   only the numbers block, which is how a 33 % lever went unrecorded.
-   **Quote `games_per_s_th`, or pin `--threads` and say so.** `host_calib_ms`
-   and `bin_bytes` do *not* catch this — both agreed to within 0.11 % and
-   15 % respectively across the gap. Earlier anchors are in git and in PERF's Baseline blocks; do not
-   add a line per anchor here. Three rules the series produced, and they are
-   the whole reason to keep it:
-   **cite an anchor by a hash already on `origin`** (one was filed at
-   `c1e4363c`, which no longer resolves — a doc written between two rebases);
-   **re-read the anchor, don't sum the rows** (one row was filed ~7x high
-   because its A/B ran in a worktree whose base predated the change it
-   widened); and **two sessions reading the same tip agree to ~100 Ir on 1-3
-   G**, which is what makes an anchor checkable at all.
-   Then PERF's "Build time"
-   — **the critical-path question it left open is answered**: the target was
-   `crabomination_catalog`'s own test harness, 110.7 s of a 213.5 s workspace
-   makespan for zero tests, now `test = false` (**-11.3 %** on a base-crate
-   edit, **flat** on the engine-file loop; quote a build number with the file
-   it touched). The section also now carries the ABBA rule for build-time A/B
-   and why a one-sided series across a restart read the sign backwards. Then
-   ENGINE_BACKLOG for the
-   seven filters. **`--bench` is a 1.2-s run on a shared box: check
-   `host_calib_ms` (idle 44-49, and it read 54 then 60 across one session's
-   base and tip readings — an ~11 % container slowdown over three hours)
-   **and `bin_bytes`** before believing a `games_per_s`.** The second is new
-   and is item 0's own rule made automatic: LTO, PGO and `target-cpu` leave no
-   `cfg` and no path difference, so a PGO binary prints `release-fast build`
-   exactly like a plain one — the size is what tells them apart, and a
-   partially-applied profile is what it catches. For a clock comparison use
-   `ab_wall.py`: 5 ABBA blocks of `--games 2000 --decks fixed` resolve
-   **±2.40 %** and nothing smaller, so a sub-1 % Ir change will read FLAT and
-   that is the expected answer, not a contradiction.
-   **`cargo nextest` is not in the image** — `curl -sSLf
-   https://get.nexte.st/latest/linux -o /tmp/nt.tar.gz && tar -xzf
-   /tmp/nt.tar.gz -C ~/.cargo/bin` is the whole setup; don't fall back to
-   `cargo test`. Build budgets, re-measured on a quiet box: cold
-   `profiling-fast` bot_ladder ~11 min, an engine-only rebuild of it ~3 min,
-   `release` ~20 min, a debug suite build + run ~9 min, one `--decks cube`
-   callgrind ~1-2 min. **A whole three-pool A/B is therefore ~10 min when the
-   caches are warm**, not the hour the earlier budgets imply — the difference
-   is contention, so run the base callgrinds *while* the candidate builds and
-   nothing else. **Take `release` once at the tip as the closing gate,
-   not per candidate.**
-
-**Compacted at the ninety-first pass from 90 lines** — a paragraph per pass
-restating numbers that live one file away, which the header forbids. Add a
-pointer, not a paragraph.
+   Anchor measured at `79019a42` (on `origin`): `fixed` 935,959,897 / `cube`
+   2,777,133,820 / `sealed` 2,773,877,997; earlier anchors are in git and
+   PERF. Anchor rules: cite a hash already on `origin`; re-read the anchor,
+   don't sum the rows; two sessions reading the same tip agree to ~100 Ir.
+   ⚠ `--bench` is not a throughput instrument — it is the invariant
+   (decisions / turns / stalls / determinism). Quote Ir, or `ab_wall.py`'s five
+   ABBA blocks of `--games 2000 --decks fixed` (they resolve ±2.40 %, so a
+   sub-1 % Ir change reads flat). `games_per_s` is not portable across
+   containers: `--bench` runs `available_parallelism - 1` threads — quote
+   `games_per_s_th` or pin `--threads`; check `host_calib_ms` and `bin_bytes`
+   (a PGO binary prints `release-fast build` like a plain one) before
+   believing it. PERF's "Build time" has the critical-path answer
+   (`crabomination_catalog`'s harness is now `test = false`; quote a build
+   number with the file it touched) and the ABBA rule. ENGINE_BACKLOG has the
+   seven filters. Run the base callgrinds while the candidate builds and
+   nothing else; take `release` once at the tip as the closing gate, not per
+   candidate. Install nextest per CLAUDE.md; don't fall back to `cargo test`.
 
 ## Standing rules for a perf pass — in `PERF.md`
 
-Moved verbatim (555 lines, every rule a refutation with numbers) to `PERF.md`,
-under "How to measure". Read it before proposing anything on the perf queue.
+Under "How to measure". Read it before proposing anything on the perf queue.
 
 ## Environment note
 
-The `crabomination_client` (Bevy GUI) needs system libs the base image lacks.
-They install cleanly via apt in the routine environment:
-`apt-get update && apt-get install -y libwayland-dev libasound2-dev
-libudev-dev libxkbcommon-dev`. After that `cargo build/test -p
-crabomination_client` compiles (first build ~6 min). The GUI still can't be
-*run* headless (no GPU/display — see the `verifier-client` skill), but client
-code and its unit tests now compile and test here.
+The client needs system libs the base image lacks: `apt-get update && apt-get
+install -y libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev`, then
+`cargo build/test -p crabomination_client` compiles (first build ~6 min).
+`target/` disk hygiene is in CLAUDE.md ("Container notes"). Beyond that:
 
-Two gotchas seen this run: `apt-get install` without a preceding `apt-get
-update` 404s on a stale index (the `.claude/hooks/install-client-deps.sh` hook
-already does the update, but its failures are silenced, so check
-`pkg-config --exists wayland-client` before blaming the crate); and a full
-`cargo test --workspace` including the client can fill the disk — `rm -rf
-target/debug/incremental` reclaims several GB without a full rebuild.
-
-**A full disk arrives as `rustc` exit 101, which reads exactly like a compiler
-error** (ninety-first pass): `cargo test --no-run` failed on `classic_sets`
-with a bare "process didn't exit successfully ... (exit status: 101)" and no
-diagnostic, because the writes that would have printed one also failed. Check
-`df` before debugging the crate. What filled it that run was `target` at 28 GB
-— `deps` 19 GB and `incremental` back to 5.3 GB — plus five full `release-fast`
-rebuilds under different `RUSTFLAGS`, which cargo never garbage-collects.
-`rm -rf target/debug/incremental target/debug/examples` freed 5.8 GB and
-`rm -rf target/release-fast` another 7.7 GB, both without a workspace rebuild.
-
-**The audit builds are the other 3 GB, and this run hit 97 % (1.3 GB free).**
-`scripts/robustness_grid.sh` fills `target-audit/` (~1.5 GB) and the actor leg
-adds `selfplay_train` to the same dir for another ~1.5; on top of that, an
-A/B session accumulates copied `profiling-fast` binaries at **215 MB each** in
-whatever scratch dir the base/candidate pair lives in. Delete the A/B binaries
-as soon as their callgrind dumps are taken (the dumps are 1-3 MB and are the
-thing worth keeping), and `rm -rf target-audit` once the grid is green.
-
-**Two cold builds concurrently did NOT OOM at the ninetieth pass** — a `release`
-bot_ladder and a `profiling-fast` one in a second worktree ran together to
-completion-ish on 15 GB, peaking ~10 GB used with 4 GB free. So the "sequential
-builds only" line above holds for a *throughput* reason, not a memory one: load
-average hit 8 on 4 cores and each build took roughly twice its solo wall time,
-which is worse than running them in series. Size the rule by cores, not by RAM.
-
-**Killing `cargo` does not kill its `rustc` children.** `pkill -f "cargo build
-…"` leaves the running `rustc` processes alive, each still holding a core — one
-orphan from a cancelled `release` build burned 8 CPU-minutes competing with the
-build that replaced it before it was noticed. After cancelling a build, check
-`pgrep rustc` and read `/proc/<pid>/cwd` plus `--crate-name` off the cmdline to
-tell whose it is; a worktree build and a main-tree build look identical
-otherwise.
-
-**A build started before a `git rebase` compiles the pre-rebase source.**
-Concurrent sessions land engine commits every few minutes here, so a long
-`release` build straddling a rebase silently produces a binary that is not the
-tip — and `--bench` run on it is measuring the wrong commit. Rebase first, then
-build; if a rebase lands mid-build and touched any crate in the graph, restart
-it rather than trusting the artifact.
+- `apt-get install` without a preceding `apt-get update` 404s on a stale index;
+  `.claude/hooks/install-client-deps.sh` does the update but silences its
+  failures — check `pkg-config --exists wayland-client` before blaming the
+  crate. The GUI can't be run headless (see the `verifier-client` skill), but
+  its code and unit tests compile and test here.
+- A full disk arrives as `rustc` exit 101 with no diagnostic — check `df`
+  before debugging the crate. Cargo never garbage-collects `release-fast`
+  rebuilds under different `RUSTFLAGS`; `rm -rf target/debug/incremental
+  target/debug/examples target/release-fast` frees space without a workspace
+  rebuild. `scripts/robustness_grid.sh` fills `target-audit/` (~3 GB with the
+  actor leg) — `rm -rf target-audit` once the grid is green; delete copied
+  A/B binaries (215 MB each) once their callgrind dumps are taken.
+- Two concurrent cold builds fit in 15 GB but each takes ~twice its solo wall
+  time: run builds in series for throughput.
+- Killing `cargo` does not kill its `rustc` children — after cancelling a
+  build check `pgrep rustc` (read `/proc/<pid>/cwd` and `--crate-name` to tell
+  whose it is).
+- A build started before a `git rebase` compiles the pre-rebase source.
+  Rebase first, then build; if a rebase lands mid-build and touched the graph,
+  restart it.
 
 ## Engine — Robustness / defects
 
 **No open entries.** The determinism class, the panic/unwrap census and the
-twenty-three robustness filters are all closed; each filter is a *shape* that
-fails the way a training run notices (a silent wrap at game 400 k, a loud
-panic, a hang), and nine of them found nothing, which is the result worth
-keeping. **The whole record — what each filter hunted, what it found, and the
-rule it yielded — moved verbatim to `ENGINE_BACKLOG.md` at the fifty-fourth
-pass.** Read it before proposing a robustness sweep; re-deriving a closed
-filter is the failure mode it exists to prevent.
+twenty-three robustness filters are closed; the whole record — what each
+filter hunted, what it found, the rule it yielded (nine found nothing, which is
+the result worth keeping) — is in `ENGINE_BACKLOG.md`. Read it before
+proposing a robustness sweep.
 
-Standing goals that outlive it: no panic/unwrap reachable from bot self-play;
-cross-process determinism at a fixed seed (golden traces assert it, and
-`CRAB_THREAD_CHECK=1 --bench` asserts it across thread counts); stall rate
-tracked on `--bench` (`stalls_by cap / stuck / draw` — re-open only if `cap`
-or `stuck` goes non-zero).
-
+Standing goals: no panic/unwrap reachable from bot self-play; cross-process
+determinism at a fixed seed (golden traces, and `CRAB_THREAD_CHECK=1 --bench`
+across thread counts); stall rate tracked on `--bench` (`stalls_by cap / stuck
+/ draw` — re-open only if `cap` or `stuck` goes non-zero).
 
 ## ML — defects (index)
 
 ### Every committed deck net fails to load — FIXED for the future, not for those nets
 
-**The code half is the fifty-fourth pass's freeze; the artifact half
-closed 2026-08-24 (next paragraph).** `VOCAB_SNAPSHOT` froze
-the embedding index at the fifty-fourth pass, `pad_vocab` zero-extends a
-shorter table and `--use-deck-best` runs end to end at 91.7 % of the unjudged
-rate. The seven committed `*/deck-latest.safetensors` predate the freeze, so
-nothing can say which card each of their rows meant; `vocab_fit` refuses them
-by name and they need retraining. `nets/champion.safetensors` is unaffected.
-**The full write-up — what the bug was, what the fix does, what is
-deliberately not fixed and why, and the out-of-range clamp found alongside it
-— moved verbatim to `ML_NOTES.md` at the fifty-seventh pass.**
-
-**Resolved 2026-08-24 for the artifact, not the class.** No retrain was
-needed: the deck stream rides along in every `selfplay_train` run, so the
-recent run directories already hold vocab-164 deck nets. Two were re-gated
-at the round-11 shape (`.ladder/run_deck_regate.sh`, 800 games × 12 pools
-per cell, seeds 43/97): `nets_r45_ctrl_s43` 59.6/61.1, `nets_r41_v7_s43`
-59.7/61.5 — pooled 60.3/60.6, a statistical tie on the historical 60–62
-band. The r45 artifact (newest champion-class run) is committed as
-`nets/deck-champion.safetensors`; `--use-deck-best`, `--gate-builder-hc`
-and `--distill-gen` are live again. No retraining "for those nets" was
-ever needed — the run directories held current-vocab spares all along.
-The structural class is closed by the freeze above; this artifact is at
-the frozen size (164), so `vocab_fit` accepts it and future card
-additions only pad it.
+`VOCAB_SNAPSHOT` froze the embedding index at the fifty-fourth pass;
+`pad_vocab` zero-extends a shorter table. The seven committed
+`*/deck-latest.safetensors` predate the freeze, and `vocab_fit` refuses them by
+name; `nets/champion.safetensors` is unaffected. Resolved 2026-08-24 for the
+artifact: no retrain was needed — run directories already held vocab-164 deck
+nets, and the re-gated r45 one (a statistical tie on the historical band) is
+committed as `nets/deck-champion.safetensors`, so `--use-deck-best`,
+`--gate-builder-hc` and `--distill-gen` are live again and future card
+additions only pad it. Full write-up (and the out-of-range clamp found
+alongside): `ML_NOTES.md`.
 
 ## Engine — Missing Mechanics
 
-Moved verbatim to `ENGINE_BACKLOG.md` at the sixty-second pass, when this
-file passed the ~1k-line trigger again — it is a backlog of unimplemented
-mechanics, which is what that file is for. Nothing is closed by the move.
+In `ENGINE_BACKLOG.md` (moved at the sixty-second pass; nothing closed by the
+move).
 
 ## Engine — Approximation Cleanups
 
-Most prior approximations have been resolved (Windfall, Dark Confidant,
-Biorhythm, Coalition Relic, Fellwar Stone, Static Prison, Rofellos, Grim
-Lavamancer, Ichorid, Render Speechless — see `git log -p -- TODO.md` for the
-per-card primitive + tests). Still open:
+Earlier approximations are resolved (`git log -p -- TODO.md` has the per-card
+primitives + tests). Still open:
 
 | Card / Feature | Current Approximation | Correct Behaviour |
 |---|---|---|
@@ -602,183 +288,132 @@ approximations (each documented at the card site):
 | Oracle's Gift | Counters land on the freshly-minted batch only | "…on each Fractal you control" (pre-existing Fractals miss out) |
 | Swords to Plowshares rider | Lifegain approximated off the target's controller-as-resolved | Printed: target's controller gains the life — verify the `PlayerRef::ControllerOf` shape is exact |
 
+
 ---
 
 ## Engine — Rollback / Undo system (plan)
 
-Two deliverables share one mechanism: (a) **transactional action
-application** inside the engine — every rejected `GameAction` restores the
-exact pre-action state, structurally killing the audit-P0 partial-mutation
-family (Squad/Casualty under-pay, `declare_attackers` mid-loop corruption,
-back-face land corruption, madness mana loss); (b) **player-facing
-undo/take-back** — instant in single-player vs the bot (the main UX win),
+One mechanism, two deliverables: (a) transactional action application — every
+rejected `GameAction` restores the exact pre-action state, structurally killing
+the audit-P0 partial-mutation family (Squad/Casualty under-pay,
+`declare_attackers` mid-loop corruption, back-face land corruption, madness
+mana loss); (b) player-facing undo/take-back — instant vs the bot,
 consent-gated in multiplayer. The same checkpoint recorder later feeds the
-replay scrubber (Client UX Tier 3) and crash recovery.
+replay scrubber and crash recovery.
 
-**Approach: whole-state snapshots, not inverse commands.** `GameState` has
-a hand-written `Clone` (`game/mod.rs:859`) and full serde; the affordance
-prober and bot dry-runs already clone the state per candidate action, so
-the cost profile is known-acceptable. Inverse ops for a ~9k-line effect
-resolver would be unmaintainable and would inherit every funnel-bypass bug
-the audit found.
+**Approach: whole-state snapshots, not inverse commands.** `GameState` has a
+hand-written `Clone` (`game/mod.rs:859`) and full serde, and bot dry-runs
+already clone per candidate; inverse ops for the effect resolver would be
+unmaintainable and inherit every funnel-bypass bug.
 
 ### Phases 0 and 1 — ✅ shipped
-Seeded serialized `GameState.rng` behind every "at random" (so undo cannot
-re-roll a shuffle and replay is bit-exact); persisted-history serde fidelity
-is still gated on the `CardInstanceWire` dropped-fields fix and the round-trip
-property test (Infrastructure → Snapshot Round-Trip Test), which in-memory
-undo does not need. Then a checkpoint at the top of `perform_action`, restored
-on `Err`, for **every** action, pinned by
-`cow::tests::rejected_action_restores_state_exactly`. Three semantics worth
-remembering, because each was a bug first:
-- Suspension is not failure. `GameError::ManualTapRequired` is exempted —
-  it deliberately leaves forced pips tapped and mana floating for the
-  client's pending-cast driver (pinned by the `sos::mana_shapes` tests).
-- The restore keeps the **live** decider; the checkpoint clone holds a
-  blank one, and swapping that in wipes a `ScriptedDecider` mid-script.
-- A failed *resume* restores to the suspended state, not to before the
-  original action. Multi-step atomicity across a suspend/resume chain is
-  future work if it is ever needed.
+Seeded serialized `GameState.rng` behind every "at random" (undo cannot
+re-roll a shuffle; replay is bit-exact); persisted-history serde fidelity is
+still gated on the `CardInstanceWire` dropped-fields fix and the round-trip
+property test (Infrastructure → Snapshot Round-Trip Test), which in-memory undo
+does not need. A checkpoint at the top of `perform_action`, restored on `Err`,
+for every action (`cow::tests::rejected_action_restores_state_exactly`).
+Semantics, each a bug first:
+- Suspension is not failure: `GameError::ManualTapRequired` is exempted — it
+  leaves forced pips tapped and mana floating for the client's pending-cast
+  driver (`sos::mana_shapes` tests).
+- The restore keeps the live decider; the checkpoint clone holds a blank one,
+  and swapping that in wipes a `ScriptedDecider` mid-script.
+- A failed resume restores to the suspended state, not to before the original
+  action. Multi-step atomicity across a suspend/resume chain is future work.
 
-**Perf:** the checkpoint is the engine's largest single structural cost —
-`-5.47 %` of the whole program on the bench workload, and it is *never*
-read there (see PERF's forty-third pass and candidate (-13)). Any narrowing
-of it is a rules-correctness argument first and a perf change second.
-
+**Perf:** the checkpoint is the engine's largest single structural cost and is
+never read on the bench workload (PERF's forty-third pass, candidate (-13)).
+Any narrowing is a rules-correctness argument first and a perf change second.
 
 ### Phases 2–5 — player take-back (plan, 2026-10-01)
 
-The plan (snapshot ring, `SubmitAuto`, consent, view rewind) moved verbatim
-to `ENGINE_BACKLOG.md`'s last section, "Rollback / Undo — Phases 2–5".
+The plan (snapshot ring, `SubmitAuto`, consent, view rewind) is in
+`ENGINE_BACKLOG.md`'s last section, "Rollback / Undo — Phases 2–5".
 
 ---
 
 ## Bot / AI
 
 ### Playing stack — next steps after the combat fix (2026-11-11)
-**Done 2026-11-12** (ML_NOTES "Five search flags, gated"). Items 1, 2, 4 and
-5 were built as flags and gated. 1 (`-ts`) was flat, so it is not adopted and
-item 3 does not run. 2a, 2b, 4 (it was a missing sooner-win preference, not a
-missing arm: `-wd2`) and 5 (`-hr`) were adopted as a bundle,
-`MctsConfig::with_search_fixes`: 50.85 pooled vs the combat-fixed search, the
-blunder set 60 / 60 from 57.0. Item 6: the set has 60 items (the crack-back
-item was not built; no position isolates it). Item 7: the FRA leaf reads
-55 / 60 and the lobby's non-Cube pilot 51 / 60. Follow-ups, same day: the
-lobby's Modern / SOS duels now play the client's pilot (61.75 / 61.9 pooled
-over the old one; ML_NOTES "The lobby's non-Cube duels"). The blunder set has
-65 items; the client reads 62 / 65, failing the three "save the answer for
-the bigger threat" items (ML_NOTES "The blunder set, 60 → 65").
-Read 2026-11-13, corrected 2026-11-14 (ML_NOTES "What the leaf misreads,
-and why", "The counter item on real positions"). The leaf reads real boards
-correctly; the shells were the problem. On real boards (`bot_puzzles
---real-counter`) the client still spends the counter 82 % of the time where
-holding wins, because the menu search's hold arm is a priority pass whose
-rollouts spend the mana later in the turn (59 / 60). The Murder item is the
-heuristic's opponent-turn removal timing, plus a policy prior that decides a
-tie. The hold arm (`-ho`, ML_NOTES "The hold arm") halves the spends where
-holding wins (66 to 39 of 84) and reads NO LOSS on the ladder (49.7
-pooled), but costs a shell blunder item, so it is not adopted. `-ho-rh`
-holds best (20 spends of 81) but costs two items. **Next:** rebuild the
-blunder set on real shells (the shell items now mislead in both
-directions), then re-read `-ho` there. Its remaining gap is the rollouts'
-fidelity inside a 3-turn horizon.
+**Status (ML_NOTES "Five search flags, gated").** Items 2a, 2b, 4 (`-wd2`, a
+missing sooner-win preference) and 5 (`-hr`) are adopted as a bundle,
+`MctsConfig::with_search_fixes`; item 1 (`-ts`) was flat, so item 3 does not
+run. The lobby's Modern / SOS duels play the client's pilot. The blunder set
+has 65 items; the client fails the three "save the answer for the bigger
+threat" items. The leaf reads real boards correctly (the shells were the
+problem — ML_NOTES "What the leaf misreads, and why", "The counter item on
+real positions"): on real boards (`bot_puzzles --real-counter`) the client
+still spends the counter where holding wins, because the menu search's hold
+arm is a priority pass whose rollouts spend the mana later in the turn. The
+Murder item is the heuristic's opponent-turn removal timing plus a policy
+prior that decides a tie. The hold arm (`-ho`, ML_NOTES "The hold arm")
+halves those spends at no ladder loss but costs a shell blunder item, so it is
+not adopted; `-ho-rh` holds best but costs two items. **Next:** rebuild the
+blunder set on real shells (the shell items mislead in both directions), then
+re-read `-ho` there; its remaining gap is rollout fidelity inside a 3-turn
+horizon.
 
-Numbers and reasoning: ML_NOTES "Why the champion reads 0.442 on a 0.500
-base rate", "The combat window of the menu search" (the combat fix
-`-df-anm10` is adopted and confirmed on SOS / FRA / cube) and "The
-blunder set, 35 → 48 items". Item 4 comes first; then 1-3 in order;
-5-7 as they fit:
-1. **Two-seat leaf.** A search-side flag averaging the leaf's
-   `win_prob(seat)` with `1 − win_prob(opp)`. Calibration: +0.013 AUC on
-   every net, but confounded by the opponent's view holding its real hand.
-   Read it on the blunder set and leaf pairs, then one paired SOS gate,
-   and record the cost per move (2× leaf encode + forward).
-2. **Two search fixes**, sharing item 1's gate run: (a) no Gumbel noise at
-   play time (it still breaks near-ties, worst in main phases, which have
-   no anchor); (b) `decision_menu::key` stops merging same-named permanents
-   in different states (counters, which of two twins is the target).
-3. **Value training, decided by 1.** If the two-seat read pays, build it
-   into the net (an antisymmetric output or a p + p' = 1 penalty on the
-   paired rows): the gain at 1× cost, and it pins the level that now
-   drifts with the training seed (r81 seeds read 0.442–0.521). Retrain on
-   the champion recipe, value only, with a policy trunk separate from the
-   value's (the shared trunk cost the value ~2 leaf points in the re-read).
-   Read the result on leaf pairs, calibration, then the ladder.
-4. **An ability arm in the menu search's main window** (added 2026-11-12;
-   do first). The 48-item blunder set's `ping_for_lethal`: the client
-   misses a Prodigal Sorcerer ping for the win 4 times in 10, `dflt` never.
-   The main window offers no activated abilities; the old `sink_arm` read
-   51.6 / 49.2 / 50.6. Offer hostile-targeted and lethal-relevant
-   activations as arms; read the blunder set, then a paired SOS gate
-   against `-df-anm10`.
-5. **Held removal.** `hold_the_murder_at_high_life`: the client and `dflt`
-   both Murder a 1/1 flier at 20 life (0 / 10; the pair scores 0). Needs a
-   later-value read of the removal against the target's threat (the
-   `save_the_removal` lead). Expect a ladder cost from a crude rule; gate it.
-6. **Harder blunder items.** The client reads 46.6 / 48, two items of
-   headroom. Owed: lethal in several steps (pump then attack, remove the
-   blocker then attack), a trick held through the opponent's turn instead
-   of cast main-phase, an attack that loses to the crack-back two turns
-   out, and SOS / FRA versions of the 2026-11-12 shapes (the policy
-   trained on SOS cards, so plain bodies confound a failure).
-7. **The FRA and cube pilots on the 48 items.** The FRA champion leaf
-   (`CRAB_NET=nets/fra-champion.safetensors`) and the cube pilot have not
-   been on the new items; read them before item 4's gate so its baseline
-   covers every format the menu search plays.
+The 2026-11-11 item list, by outcome (reasoning in ML_NOTES "Why the
+champion reads 0.442 on a 0.500 base rate", "The combat window of the menu
+search", "The blunder set"):
+1. **Two-seat leaf** (`-ts`, averaging `win_prob(seat)` with
+   `1 − win_prob(opp)`) — flat, not adopted; so 3 does not run.
+2. **Two search fixes** — (a) no Gumbel noise at play time; (b)
+   `decision_menu::key` stops merging same-named permanents in different
+   states. Adopted in the bundle.
+3. **Value training, decided by 1** (an antisymmetric output or a p + p' = 1
+   penalty, value only, separate policy trunk) — not run.
+4. **An ability arm in the menu search's main window** — adopted as `-wd2`
+   (the miss was a sooner-win preference, not a missing arm).
+5. **Held removal** — adopted as `-hr`.
+6. **Harder blunder items** — the set is at 65; the crack-back item (an attack
+   that loses to the crack-back two turns out) is not built — no position
+   isolates it.
+7. **The FRA and lobby pilots on the set** — read (ML_NOTES).
 No training run without the user's go-ahead.
 
 ### One net for every mode, Commander included (2026-09-28)
-The plan, its gates and the per-step code locations are ML_NOTES "One net
-for every mode". Step 1 (the table net, `server::encode_table`,
-`server::card_tokens`, parity in both crates) is built and untrained; next
-is step 2, the any-seat recorder and mode mixer. No training run without
-the user's go-ahead.
+The plan, its gates and per-step code locations are ML_NOTES "One net for every
+mode". Step 1 (the table net, `server::encode_table`, `server::card_tokens`,
+parity in both crates) is built and untrained; next is step 2, the any-seat
+recorder and mode mixer. No training run without the user's go-ahead.
 
 ### Instant-Speed Responses
-~~The bot never responds to spells on the stack.~~ `pick_stack_response`
-now counters an opponent's spell when it targets the bot's permanents /
-the bot, or costs 3+ — cheapest affordable counter first, `would_accept`
+`pick_stack_response` counters an opponent's spell that targets the bot or its
+permanents, or costs 3+ — cheapest affordable counter first, `would_accept`
 dry-run as the final gate (so Spell Snare's MV filter etc. are honored).
 Future: respond with removal/protection instants, not just counters;
-race-aware "is this worth a card" valuation. Round 43: the buff 2-for-1
-(`buff_2for1`, kill the creature under the opponent's own pump) is
-built and zero-incidence in bot mirrors — human-facing, default off.
+race-aware "is this worth a card" valuation. `buff_2for1` (kill the creature
+under the opponent's own pump, round 43) is built and zero-incidence in bot
+mirrors — human-facing, default off.
 
 ### Sacrifice Prioritisation
-~~When forced to sacrifice, the bot always picks the first eligible
-permanent.~~ Now sorts candidates: **tokens first, then by lowest CMC,
-then by lowest power**. This is enforced inside `Effect::Sacrifice` so
-both Innocent-Blood-style edict flow and forced sacrifices from
-activated abilities see the same ordering. Future improvements:
-respect "you may sacrifice" optionality (skip when the cheapest
-candidate is more valuable than the payoff).
+Forced sacrifices sort candidates tokens first, then lowest CMC, then lowest
+power, inside `Effect::Sacrifice` (edicts and activated-ability costs alike).
+Future: respect "you may sacrifice" optionality (skip when the cheapest
+candidate is worth more than the payoff).
 
 ### Planeswalker Targeting
-~~The bot never attacks planeswalkers.~~ Now redirects attackers at an
-opponent's planeswalker when total attacking power can finish it off in
-one swing (push claude/modern_decks `b34a23a`). Smallest-power-first
-allocation keeps beefy attackers free to face-attack the player when the
-walker fills up. Round 43: the chip candidate exists (`walker_chip`, one declaration at
-the lowest-loyalty unfinishable walker, sims judge it) — zero-incidence
-in the walker-free sealed gate pools, so it stays default off on the
-strength of the recorded ten-turn-ultimate loss, not a ladder number.
+The bot redirects attackers at an opponent's planeswalker when total
+attacking power can finish it in one swing, smallest power first (`b34a23a`).
+`walker_chip` (round 43: one declaration at the lowest-loyalty unfinishable
+walker, sims judge it) is zero-incidence in the walker-free sealed pools and
+stays default off on the strength of the recorded ten-turn-ultimate loss.
 Still open: the inverse case (a low-loyalty walker not worth committing
 trample beaters to).
 
 ### Smarter Mana Rock Usage
-The bot taps mana rocks eagerly before knowing what it wants to cast.  A
-"plan this turn's spending first" pass before mana-ability activation would
-avoid situations where it taps a Sol Ring with nothing to cast.
+The bot taps mana rocks eagerly before knowing what it wants to cast. A "plan
+this turn's spending first" pass before mana-ability activation would avoid
+tapping a Sol Ring with nothing to cast.
 
 ### Encoder / net follow-ups — moved to `ML_NOTES.md`
-The belief-head recall diagnostic, the encoder-v7 gap list, the
-static-anthem P/T hole, the feature-occupancy precondition and the
-prioritized next-round candidate list live in **`ML_NOTES.md` → "Encoder and
-net follow-ups (moved from TODO, 2026-08-23)"**, verbatim. They are long
-experiment narratives and they exist so nobody re-derives the dead ends.
-One of them is load-bearing for *this* branch: **static-anthem P/T is
-invisible to the encoder**, and a modern-decks pool is exactly the pool
-change that makes it the top encoder item.
+In `ML_NOTES.md` → "Encoder and net follow-ups (moved from TODO, 2026-08-23)":
+the belief-head recall diagnostic, the encoder-v7 gap list, the static-anthem
+P/T hole, the feature-occupancy precondition and the next-round candidates.
+Load-bearing for this branch: **static-anthem P/T is invisible to the
+encoder**, and a modern-decks pool makes it the top encoder item.
 
 ### Multiple Difficulty Levels
 - Easy: current random bot
@@ -791,72 +426,52 @@ change that makes it the top encoder item.
 
 ### Engine test coverage — the old gap list is stale, and the real finding is a ratio
 
-The three "priority gaps" this section listed (combat, the layer system,
-stack ordering) all closed without anyone striking them out: `core_rules`
-alone carries 75 combat tests in `combat_keywords.rs`, 57 that cite CR 613 /
-layer ordering / timestamps, and `golden_trace.rs` compares whole games
-action-for-action, which is the only thing that catches a reordered
-iteration. Checked and removed at the fifty-fourth pass rather than left to
-be re-derived.
+The old priority gaps (combat, the layer system, stack ordering) are closed:
+`core_rules` carries combat tests in `combat_keywords.rs`, CR 613 / layer /
+timestamp tests, and `golden_trace.rs` compares whole games action for action
+(the only thing that catches a reordered iteration).
 
-**What is open is the pure-data sweep, and it is smaller than it looks.**
-`scripts/find_data_tests.sh` finds **174 non-sacred pure-data tests** (plus
-25 marked `[CR]`, which are sacred) across 62 files — asserts that only echo
-`CardDefinition` shape, the largest cluster being `stx/part_23.rs` (19),
-`modern/lands_equipment_vehicles.rs` (11), `core_rules/format.rs` (11) and
-`classic_sets/rna.rs` (11). Folding them into one table-driven audit per set
-is the standing rule.
-
-**Do not justify it on build time.** 174 tests at ~8 lines is ~1,400 of the
-suite's **375,047** lines — 0.37 % — and PERF's "Build time" section already
-measured a 537-line cleanup as inside the noise band, because the rebuild is
-dominated by relinking the integration binaries. The justification, if a run
-takes it, is maintenance shape only.
+Open is the pure-data sweep (`scripts/find_data_tests.sh`; see Standing index
+7b): fold card-shape echo tests into one table-driven audit per set. Don't
+justify it on build time — the suite's rebuild is dominated by relinking the
+integration binaries (PERF "Build time"); it is maintenance shape only.
 
 ### Snapshot Round-Trip Test
-`GameSnapshot` and `GameState` serialisation exist.  Add a property-based test
+`GameSnapshot` and `GameState` serialisation exist. Add a property-based test
 that plays N random actions, serialises/deserialises the state, and asserts
 game continuity — catching any `Serialize`/`Deserialize` drift.
 
 ### Card Correctness CI
 `scripts/verify_cards.py` (with its Scryfall cache) verifies CMC, P/T, types,
-and keywords.  Wire it as a CI step that runs against `scripts/.scryfall_cache.json`
-(no network) to catch regressions when catalog entries change.
+and keywords. Wire it as a CI step against `scripts/.scryfall_cache.json` (no
+network) to catch regressions when catalog entries change.
 
 ### Bot vs. Bot Simulation
 Automate a "run 1 000 cube games bot vs. bot, report win rates by colour pair"
-script.  Useful for catching degenerate card interactions and unbalanced pools
-without manual play.
+script — catches degenerate card interactions and unbalanced pools without
+manual play.
 
 ### Replay / Game Log Export
-The server already collects `GameEventWire` events.  A replay file format
-(sequence of `(action, resulting_state_hash)`) would enable post-game review
-and deterministic bug reproduction. Partially covered: `CRAB_REPLAY_DIR`
-(`server/replay.rs`) logs the event stream per match, and
-`CRAB_DECISION_LOG` (`server/decision_log.rs`, 2026-08-18) logs every
-*human* action beside what the heuristic bot would have done from the
-same position — one JSONL line per decision with an `agree` flag and a
-disagreement tally in the footer. That second log is the bot-debugging
-instrument: sort by `agree:false` and read the disagreements (it's how
-converge-blind payment would have been caught from game data). The
-viewer's first tier exists (2026-08-18): replay files are v2 — each
-line carries first-appearance card names, since wire events hold only
-ids and a file has no live state to resolve them — and
-`scripts/replay_scan.py DIR` reports over a directory of them (the
-`replay_view` narrator was retired 2026-09-29). Still open: an in-client
-replay mode driving the real renderer with step/seek, and state-hash
-checkpoints for deterministic reproduction.
+A replay file format (sequence of `(action, resulting_state_hash)`) would
+enable post-game review and deterministic bug reproduction. Partly there:
+`CRAB_REPLAY_DIR` (`server/replay.rs`) logs the event stream per match (v2
+files carry first-appearance card names, since wire events hold only ids), and
+`scripts/replay_scan.py DIR` reports over a directory of them.
+`CRAB_DECISION_LOG` (`server/decision_log.rs`) logs every human action beside
+what the heuristic bot would have done — one JSONL line per decision with an
+`agree` flag and a disagreement tally; sort by `agree:false` to debug the bot.
+Still open: an in-client replay mode driving the real renderer with step/seek,
+and state-hash checkpoints for deterministic reproduction.
 
 ### Scryfall Art Pre-fetch CLI
 `all_cube_cards()` drives the in-game prefetch, but there is no standalone CLI
-tool to warm the asset cache before a session.  A `cargo run --bin prefetch_art`
-that downloads missing Scryfall images to the local cache would speed up first-
-session load times.
+to warm the asset cache. A `cargo run --bin prefetch_art` that downloads
+missing Scryfall images to the local cache would speed up first-session loads.
 
 ### WASM / Web Build
-`Cargo.toml` already has a `wasm-release` profile.  Completing the web build
-(removing native-only dependencies, adding a WASM server bridge) would make
-the game playable in a browser without installation.
+`Cargo.toml` already has a `wasm-release` profile. Completing the web build
+(removing native-only dependencies, adding a WASM server bridge) would make the
+game playable in a browser without installation.
 
 ---
 
@@ -864,8 +479,7 @@ the game playable in a browser without installation.
 
 ### Commander + Two-Headed Giant — what the phased rollout left open
 
-Phases A–N shipped (git has the per-phase detail; FEATURE_ROADMAP's
-"Commander status" is the map). Open:
+Phases A–N shipped (FEATURE_ROADMAP's "Commander status" is the map). Open:
 - **2HG, CR 810.5 shared-turn priority** ("active team's primary player first,
   may yield to a teammate") — rotation is per-seat; both teammates already get
   priority inside the passes-to-advance loop, so this is cosmetic.
@@ -892,36 +506,26 @@ Phases A–N shipped (git has the per-phase detail; FEATURE_ROADMAP's
 
 ## Card Implementations (high-priority unblocked cards)
 
-These cards are in the cube or demo decks and need only existing primitives —
-no new engine features required:
-
-Every row in this table has shipped (Bloodtithe Harvester's sac-a-Blood
-ping, Dread Return's flashback sacrifice, Balefire Dragon's power-scaled
-sweep, and Karn, Scion of Urza's real text included — earlier ⏳ marks
-were stale). See git history for the per-card details.
+Every row of the old table (cube / demo-deck cards needing only existing
+primitives) has shipped; git history has the per-card detail.
 
 ## Simulation throughput
 
-**`PERF.md` is the record — baseline, log, profile of record, candidates.
-Nothing here duplicates it.** What this section keeps is the one structural
-fact the rest of the file leans on: the heavy zones (battlefield / stack /
-exile / per-player library, hand, graveyard, command, sideboard /
-continuous_effects) are `CowBox`-wrapped (`crate::cow`), so a
-`GameState::clone` — probe, probe template, `evaluate_action_outcome`, the
-`perform_action` checkpoint — is reference bumps plus only the zones the
-action mutates. The sharp edge that follows from it, and the one that keeps
-producing perf rows: **any `&mut` access unshares, including an `iter_mut`
-used read-only or a write that changes nothing.**
+`PERF.md` is the record. Two structural facts the rest of this file leans on:
 
-**The second structural fact, added 2026-08-24: an actor's per-game work is
-not all simulation.** `selfplay_train`'s `actor_loop` calls `sealed_pool`
-twice and `heuristic_sealed_build` twice **per game** — 32 candidate builds
-a side under `--deck-judge` — and until pass 53 that was ~485 M Ir a game
-against ~48 M for the game itself. `cube::card_def` memoizes
-`CardFactory -> CardDefinition` and it is now ~20 M. Measure deck work with
-`bot_ladder --decks sealed --games 1`, which plays no games at all.
+- The heavy zones (battlefield / stack / exile / per-player library, hand,
+  graveyard, command, sideboard / continuous_effects) are `CowBox`-wrapped
+  (`crate::cow`), so a `GameState::clone` — probe, probe template,
+  `evaluate_action_outcome`, the `perform_action` checkpoint — is reference
+  bumps plus the zones the action mutates. **Any `&mut` access unshares,
+  including an `iter_mut` used read-only or a write that changes nothing.**
+- An actor's per-game work is not all simulation: `selfplay_train`'s
+  `actor_loop` builds sealed pools and decks per game (32 candidate builds a
+  side under `--deck-judge`); `cube::card_def` memoizes `CardFactory ->
+  CardDefinition`. Measure deck work with `bot_ladder --decks sealed --games
+  1`, which plays no games.
 
-Remaining scaling levers that are *not* engine instructions: the racing
-schedule (`racing_rounds` + small `games_per_pairing`); the deck builder's
-own residual ((-39) in PERF); and, if ever needed, early adjudication of
-stalled games via `eval_material`.
+Remaining scaling levers that are not engine instructions: the racing schedule
+(`racing_rounds` + small `games_per_pairing`); the deck builder's residual
+((-39) in PERF); and, if ever needed, early adjudication of stalled games via
+`eval_material`.

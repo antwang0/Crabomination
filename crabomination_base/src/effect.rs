@@ -1,8 +1,6 @@
-//! Primitive, data-driven effect system.
-//!
-//! Replaces the earlier variant-per-effect `SpellEffect`/`TriggerCondition`/
-//! `EffectCondition`/`StaticAbilityTemplate` quartet with a small set of
-//! composable algebras:
+//! Primitive, data-driven effect system: a small set of composable algebras
+//! that replaced the old per-effect `SpellEffect`/`TriggerCondition`/
+//! `EffectCondition`/`StaticAbilityTemplate` enums.
 //!
 //! * [`Selector`] — lazy reference to game objects or players, resolved at
 //!   effect-time.
@@ -12,8 +10,7 @@
 //! * [`EventSpec`]— structural trigger filter over the [`GameEvent`] stream.
 //! * [`StaticEffect`] — description of a static ability's continuous effect.
 //!
-//! Everything that was previously a one-off enum variant lives as a tree of
-//! these primitives; a new card rarely needs engine changes.
+//! A new card is usually a tree of these primitives, not an engine change.
 
 use serde::{Deserialize, Serialize};
 
@@ -59,11 +56,9 @@ pub enum PlayerRef {
     PlayerWithMostLife,
     /// The owner of a selected entity.
     OwnerOf(Box<Selector>),
-    /// The owner of the card currently being moved (resolved per-card by
-    /// `place_card_in_dest`). Lets one `Move`/`Search` route *each* card to
-    /// its own owner — "return all attacking creatures to their owners'
-    /// hands" (Aetherize, Evacuation). Has no meaning outside a placement
-    /// context, where it resolves to `None`.
+    /// The owner of the card currently being moved (resolved per card by
+    /// `place_card_in_dest`), so one `Move` sends each card to its own owner
+    /// (Evacuation). `None` outside a placement context.
     OwnerOfMoved,
     /// The controller of a selected entity.
     ControllerOf(Box<Selector>),
@@ -78,43 +73,32 @@ pub enum PlayerRef {
     /// first alive one; `resolve_players` returns all of them. Lets a
     /// per-player body name "one of *their* opponents" (Bend or Break).
     OpponentOf(Box<PlayerRef>),
-    /// The player who triggered the event (for triggered abilities).
     /// Every opponent other than the trigger's own player — "each other
     /// opponent" on a trigger whose player is one of them (Grenzo's Ruffians).
     EachOpponentExceptTriggerer,
+    /// The player who triggered the event (for triggered abilities).
     Triggerer,
-    /// The seat that *caused* the firing event — the caster for a
-    /// `BecameTarget`, the damaged seat for a combat-damage trigger. Reads
-    /// the trigger's stamped actor (`GameState::trigger_event_player_scratch`),
-    /// so it resolves "that spell or ability's controller" (Lava Runner)
-    /// where `Triggerer` would give the targeted permanent's controller.
+    /// The seat that caused the firing event (the trigger's stamped actor,
+    /// `GameState::trigger_event_player_scratch`): "that spell or ability's
+    /// controller" (Lava Runner), where `Triggerer` gives the target's controller.
     TriggerEventPlayer,
-    /// A specific seat index. Used internally to flatten selector-based
-    /// player refs (e.g. `OwnerOf(Selector)`) into a concrete seat before
-    /// passing them across context boundaries — the original-card lookup
-    /// can become stale once the card has been moved out of its source zone.
+    /// A concrete seat index, used internally to flatten selector-based refs
+    /// (`OwnerOf(Selector)`) before crossing a context boundary, where the card
+    /// lookup could go stale once the card moves.
     Seat(usize),
-    /// The player or planeswalker controller being attacked by the source
-    /// creature. Resolves to `None` when the source isn't currently
-    /// attacking. Used for "defending player" triggers (Goblin Guide,
-    /// Hypnotic Specter).
+    /// The player (or planeswalker controller) the source creature is attacking;
+    /// `None` when it isn't attacking. Goblin Guide.
     DefendingPlayer,
-    /// The controller of the source that most recently dealt combat damage to
-    /// the permanent the inner selector resolves to (reads
-    /// `CardInstance.combat_damager_controller`). Survives the combat teardown
-    /// that clears `block_map`, so a "whenever this is dealt combat damage"
-    /// trigger can name the attacking player (Souls of the Faultless).
+    /// Controller of the source that last dealt combat damage to the inner
+    /// permanent (`CardInstance.combat_damager_controller`, which outlives the
+    /// `block_map` teardown). Souls of the Faultless.
     CombatDamagerController(Box<Selector>),
-    /// CR 506.2 — the player (or planeswalker controller) the creature
-    /// `selector` resolves to is attacking; `None` when it isn't. The
-    /// per-attacker form of `DefendingPlayer` for a fan-out over several
-    /// attackers (Jurin, Leading the Charge).
+    /// CR 506.2 — the player (or planeswalker controller) `selector`'s creature
+    /// is attacking; per-attacker `DefendingPlayer` for fan-outs (Jurin).
     DefendingPlayerOf(Box<Selector>),
-    /// The controller of the most recent source that dealt damage to the
-    /// permanent the inner selector resolves to this turn (reads the last entry
-    /// of `CardInstance.damaged_by_this_turn`). Unlike `CombatDamagerController`
-    /// this covers noncombat damage too — Belltower Sphinx's "that source's
-    /// controller mills that many."
+    /// Controller of the last source that dealt damage (combat or not) to the
+    /// inner permanent this turn (`CardInstance.damaged_by_this_turn`). Belltower
+    /// Sphinx.
     LastDamagerControllerOf(Box<Selector>),
     /// The player with the lowest life total, ties broken by the resolving
     /// controller's choice (auto-picks the earliest seat). Loxodon Peacekeeper.
@@ -175,12 +159,9 @@ pub enum PlayerRef {
     /// Each opponent who voted, on the most recent ballot, for a choice the
     /// controller also voted for (Erestor of the Council, Model of Unity).
     OpponentsWhoVotedTheSame,
-    /// A printed "**choose an opponent**" — ONE opponent, picked by the
-    /// effect's controller. Not a fan-out: `GameState::default_hostile_
-    /// opponent` is the engine's single ranked answer for an open choice of
-    /// opponent at 3+ seats (commander-damage race, then lowest life, then
-    /// fewest untapped blockers, ties by seat index), and it is the only
-    /// opponent in a duel. The Rack, Cursed Rack, Pallimud, Booby Trap.
+    /// A printed "choose an opponent": ONE opponent picked by the controller, not
+    /// a fan-out. `GameState::default_hostile_opponent` ranks the choice at 3+
+    /// seats; in a duel it is the only opponent. The Rack, Booby Trap.
     HostileOpponent,
     /// "A player of your choice" — not a target (CR 115.10), so a mana
     /// ability naming it stays one (CR 605.1a). `Effect::AddMana` asks it as a
@@ -193,16 +174,13 @@ pub enum PlayerRef {
 }
 
 impl PlayerRef {
-    /// True for the refs that name a *set* of seats — the ones
-    /// `GameState::resolve_players_unranged` gives a dedicated fan-out arm.
+    /// True for refs naming a *set* of seats (those with a fan-out arm in
+    /// `GameState::resolve_players_unranged`).
     ///
-    /// The singular `resolve_player` answers every one of these with the
-    /// first seat in the set, which is exact when the set holds one player
-    /// (`EachOpponent` at two seats) and drops the rest when it does not
-    /// (`EachPlayer` at two seats: the effect happens to seat 0 only). An
-    /// effect arm that resolves its `who` singularly therefore has to be
-    /// handed a ref that is single *here*, and `resolve_player`'s
-    /// `debug_assert!` is the gate that says so.
+    /// `resolve_player` answers these with the set's first seat, which drops the
+    /// rest when the set has more than one (`EachPlayer` in a duel hits seat 0
+    /// only). An arm that resolves `who` singularly must be handed a ref that is
+    /// single here; `resolve_player`'s `debug_assert!` enforces it.
     pub fn is_fan_out(&self) -> bool {
         matches!(
             self,
@@ -222,27 +200,18 @@ impl PlayerRef {
     }
 }
 
-/// Which players a player-targeted static effect affects. The static
-/// is anchored on a permanent (the "source") and reads off that
-/// source's controller seat at recompute time. Used by
-/// `StaticEffect::PlayerCannotGainLife` and any future player-static
-/// (lose-life redirection, hand-size caps, draw caps, etc.).
+/// Which players a player-targeted static affects, read off the source
+/// permanent's controller at recompute time (`StaticEffect::PlayerCannotGainLife`).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum PlayerStaticTarget {
     /// The source's controller — Sulfuric Vortex's "no player can gain
     /// life" applied to the controller-only side. Rare.
     Controller,
-    /// Each opponent of the source's controller — the default for the
-    /// printed "your opponents can't gain life" wording (Erebos, God of the
-    /// Dead).
+    /// Each opponent of the source's controller — "your opponents can't gain
+    /// life" (Erebos, God of the Dead).
     ///
-    /// ⚠ **This used to offer itself as a "Tainted Remedy approximation",
-    /// which it is not.** Tainted Remedy turns an opponent's life gain into a
-    /// *loss*; `PlayerCannotGainLife` merely stops it. The correct primitive —
-    /// `StaticEffect::LifeGainBecomesLoss` — was already two files away, so
-    /// the note offered a strictly weaker shape for a card the engine could
-    /// model exactly. A doc comment is not the place to settle how a card that
-    /// does not exist yet will be approximated.
+    /// ⚠ Not a Tainted Remedy approximation: that card turns gain into *loss*,
+    /// which is `StaticEffect::LifeGainBecomesLoss`.
     EachOpponent,
     /// Every player on the table — Sulfuric Vortex (each player can't
     /// gain life), Stigma Lasher's "permanents you control share the
@@ -280,11 +249,9 @@ pub enum ExiledPlaySpend {
 
 // ── Selector ─────────────────────────────────────────────────────────────────
 
-/// A lazy reference to a (possibly empty, possibly multi-) set of game
-/// objects — permanents, cards in other zones, or players.
-///
-/// Resolved by the effect engine at execution time against the current game
-/// state; used as the operand of most [`Effect`] mutations.
+/// A lazy reference to a (possibly empty or multi-) set of permanents, cards
+/// in other zones, or players, resolved at execution time; the operand of
+/// most [`Effect`] mutations.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Selector {
     /// The source permanent/spell/ability itself.
@@ -303,11 +270,8 @@ pub enum Selector {
     /// The batch an enclosing [`Effect::WithTriggerBatch`] bound, wherever
     /// each card is now; empty outside one.
     BoundTriggerBatch,
-    /// Every declared target slot (permanents/players still legal). Powers
-    /// "then [do X] to each of those [targets]" riders that operate on the
-    /// whole cast-time target list rather than a single slot — Biogenic
-    /// Upgrade ("distribute counters among 1–3 creatures, then double the
-    /// counters on each of those creatures").
+    /// Every declared target slot still legal — "then double the counters on
+    /// each of those creatures" (Biogenic Upgrade).
     AllTargets,
     /// [`Selector::AllTargets`] from slot `n` on — "each of X target
     /// creatures" after a first target (Spinning Wheel Kick's damage dealer).
@@ -317,20 +281,15 @@ pub enum Selector {
     RandomOf(Box<Selector>),
     /// The object that caused this trigger (attacker, dying creature, etc).
     TriggerSource,
-    /// The permanent the source chose and remembered as it entered — the
-    /// `CardInstance.chosen_permanent` stamp (Dauntless Bodyguard's
-    /// "the chosen creature"). Resolves to nothing if the remembered
-    /// permanent has left the battlefield.
+    /// The permanent the source chose as it entered
+    /// (`CardInstance.chosen_permanent` — Dauntless Bodyguard); nothing once it
+    /// has left the battlefield.
     ChosenPermanentOfSource,
-    /// The permanent tapped to pay the source spell's `TapPermanents`
-    /// additional cost — the `CardData::cost_tapped` stamp (Swallow Whole's
-    /// "the creature tapped to pay this spell's additional cost"). Resolves
-    /// to nothing once that permanent has left the battlefield.
+    /// The permanent tapped for the source spell's `TapPermanents` cost
+    /// (`CardData::cost_tapped` — Swallow Whole); nothing once it has left.
     CostTappedPermanentOfSource,
-    /// CR 509.1 — every attacker the source permanent is currently blocking
-    /// (all of them under a multi-block). Resolves via
-    /// `GameState.block_map[source]`. Used by "whenever this blocks a creature,
-    /// [affect that creature]" triggers (Wall of Frost).
+    /// CR 509.1 — every attacker the source is blocking
+    /// (`GameState.block_map[source]`). Wall of Frost.
     BlockedAttacker,
     /// CR 506.3/508.1b — the player, planeswalker or battle the source
     /// creature is attacking (Mage Slayer's "the player or planeswalker it's
@@ -340,10 +299,8 @@ pub enum Selector {
     /// planeswalker that creature is attacking" off an attack trigger watching
     /// other creatures (Raid Bombardment).
     AttackedByTriggerSource,
-    /// The mirror of `BlockedAttacker`: every creature currently blocking the
-    /// source attacker (reverse-lookup of `GameState.block_map`). Used by
-    /// "whenever this becomes blocked by a creature, [affect that creature]"
-    /// triggers (Grasping Giant).
+    /// Mirror of `BlockedAttacker`: every creature blocking the source
+    /// (reverse `block_map` lookup). Grasping Giant.
     BlockingCreatures,
     /// The creatures blocking the trigger's subject (She-Hulk: "for each
     /// creature blocking it", "it" being the blocked Hero).
@@ -379,10 +336,8 @@ pub enum Selector {
     /// `exile_permanent_cost` (Curie, Emergent Intelligence's "becomes a copy
     /// of the exiled creature").
     ExiledForCost,
-    /// CR 702.95 — the creature the effect's source is paired with by
-    /// soulbond (`CardInstance.soulbond_partner`), while both are on the
-    /// battlefield; empty when unpaired. Mirage Phalanx's "each of those
-    /// creatures has … create a token that's a copy of this creature".
+    /// CR 702.95 — the source's soulbond partner (`CardInstance.soulbond_partner`)
+    /// while both are on the battlefield; empty when unpaired. Mirage Phalanx.
     SoulbondPartner,
 
     /// The last card the effect's controller drew this turn, if it's still in
@@ -390,11 +345,9 @@ pub enum Selector {
     /// a land", Jandor's Ring's discard cost.
     LastCardYouDrew,
 
-    /// The most-recently-created token from `Effect::CreateToken` in
-    /// the current resolution. Used by Quandrix-style "create a token,
-    /// then put X +1/+1 counters on it" cards (Fractal Anomaly,
-    /// Applied Geometry). Resets between resolution roots — within a
-    /// single `Effect::Seq`, the latest CreateToken's id is visible.
+    /// The latest token `Effect::CreateToken` made in this resolution ("create a
+    /// token, then put X counters on it" — Fractal Anomaly). Reset per resolution
+    /// root.
     LastCreatedToken,
     /// CR 701.47c — "the amassed Army": the Army the current resolution's
     /// last `Effect::Amass` chose, whether or not it got counters (Goblin
@@ -404,13 +357,9 @@ pub enum Selector {
     /// (Planeswalker's Mischief exiles it). Empty when nothing was revealed.
     LastRevealedCard,
 
-    /// All tokens created by `Effect::CreateToken` in the current
-    /// resolution (the multi-token variant of `LastCreatedToken`). Used
-    /// by Fractal Spawning ("create two 0/0 Fractals, put a +1/+1
-    /// counter on each of them") and any multi-mint-then-counter
-    /// printed Oracle. Resets between resolution roots; within an
-    /// `Effect::Seq`, every CreateToken from the current resolution
-    /// is included. Push: modern_decks batch 28.
+    /// Every token `Effect::CreateToken` made in this resolution (Fractal
+    /// Spawning's "put a +1/+1 counter on each of them"). Reset per resolution
+    /// root.
     LastCreatedTokens,
     /// The permanents a proliferate in this resolution put a counter on
     /// (CR 701.34a — Ripples of Potential's "permanents you control that had
@@ -430,24 +379,19 @@ pub enum Selector {
     /// Bretagard's chapter III).
     OnePerDistinctName(SelectionRequirement),
 
-    /// All cards moved by `Effect::Move` (and Mill / Exile shortcuts)
-    /// in the current resolution. Used by Practiced Scrollsmith,
-    /// Suspend Aggression, Tablet of Discovery, Ark of Hunger, etc.
-    /// to chain a `GrantMayPlay` immediately after the Move targets
-    /// the same card(s). Cleared between resolution roots.
+    /// Every card moved by `Effect::Move` (and Mill / Exile shortcuts) this
+    /// resolution, so a following `GrantMayPlay` hits the same cards (Practiced
+    /// Scrollsmith). Reset per resolution root.
     LastMoved,
-    /// The most recent source that dealt damage to the permanent the inner
-    /// selector resolves to this turn (the last entry of
-    /// `CardInstance.damaged_by_this_turn`) — Vraska the Unseen's "destroy
-    /// that creature".
+    /// The last source that damaged the inner permanent this turn
+    /// (`CardInstance.damaged_by_this_turn`) — Vraska the Unseen.
     LastDamagerOf(Box<Selector>),
     /// Every creature in the sector picked by the enclosing
     /// `Effect::ChooseSector`.
     CreaturesInChosenSector,
-    /// The permanent sacrificed to pay the current spell's / ability's cost
-    /// (`GameState.sacrificed_card`, stamped by `Effect::WithSacrificedPt`).
-    /// Now a card in its owner's graveyard — Rescue from the Underworld
-    /// reanimates it alongside its target.
+    /// The permanent sacrificed to pay this spell's / ability's cost
+    /// (`GameState.sacrificed_card`, stamped by `Effect::WithSacrificedPt`), now
+    /// a graveyard card. Rescue from the Underworld.
     SacrificedCard,
     /// The card(s) exiled from a graveyard to pay this activation's cost
     /// (Necropolis). Empty outside such an activation.
@@ -464,26 +408,19 @@ pub enum Selector {
     /// Obsessed Stalker).
     OpponentsCombatDamagedByOwnName,
 
-    /// The chosen target slot (0-indexed) of the spell whose cast
-    /// triggered this ability. Resolves against the topmost matching
-    /// `StackItem::Spell` (the just-cast spell whose `SpellCast` event
-    /// produced this trigger). Empty when the trigger source isn't a
-    /// spell or the slot is unfilled. Used by Strixhaven Repartee
-    /// payoff effects whose body operates on the spell's target rather
-    /// than choosing a fresh one — e.g. Conciliator's Duelist's "exile
-    /// up to one *target* creature".
+    /// Target slot N (0-indexed) of the spell whose cast fired this trigger, read
+    /// off the topmost matching `StackItem::Spell`; empty when the source isn't a
+    /// spell or the slot is unfilled. Repartee payoffs that act on the spell's
+    /// target (Conciliator's Duelist).
     CastSpellTarget(u8),
     /// Every permanent the just-cast spell targets, across all its slots
     /// ("gain control of those permanents" — Dack Fayden's emblem).
     AllCastSpellTargets,
 
-    /// CR 702 Radiance (Ravnica) — the `subject` permanent plus every other
-    /// permanent on the battlefield that shares a card type with it (creatures
-    /// for the usual cards, enchantments for Leave No Trace) and shares a
-    /// computed color with it. A colorless subject resolves to just itself.
-    /// Lets a non-damage body (untap + pump for Rally the Righteous, destroy
-    /// for Leave No Trace) fan out the same way `Effect::RadianceDamage` does.
-    /// `subject` is usually a target slot.
+    /// CR 702 Radiance — `subject` (usually a target slot) plus every other
+    /// permanent sharing a card type and a computed color with it; a colorless
+    /// subject is just itself. The non-damage sibling of `Effect::RadianceDamage`
+    /// (Rally the Righteous, Leave No Trace).
     RadianceGroup { subject: Box<Selector> },
 
     /// All game objects matching `filter` in `zone`.
@@ -498,10 +435,8 @@ pub enum Selector {
     /// resolution just created (`LastCreatedTokens`) — "create X Soldiers …
     /// destroy all other creatures" (Martial Coup).
     EachPermanentExceptLastCreated(SelectionRequirement),
-    /// All battlefield permanents controlled by `who` matching `filter`.
-    /// The player-relative sibling of `EachPermanent` — lets one effect
-    /// touch every permanent a *targeted* player controls (Sleep: tap +
-    /// stun all creatures target player controls).
+    /// `who`'s `filter` permanents — player-relative `EachPermanent` for a
+    /// targeted player (Sleep).
     ControlledBy { who: PlayerRef, filter: SelectionRequirement },
     /// All battlefield permanents *owned* by `who` matching `filter` — the
     /// ownership twin of `ControlledBy` ("a permanent owned by the voter" —
@@ -511,32 +446,22 @@ pub enum Selector {
     /// `subject` itself ("other creatures that player controls" — Mark for
     /// Death). Empty if `subject` resolves to nothing.
     OtherCreaturesControlledByControllerOf(Box<Selector>),
-    /// The single creature `ctx.controller` controls with the least
-    /// toughness (first in battlefield order on a tie). Resolves to an
-    /// empty set when the controller has no creatures. Powers Bolster
-    /// (CR 701.21 — "choose a creature with the least toughness among
-    /// creatures you control").
+    /// The controller's creature with the least toughness (first in battlefield
+    /// order on a tie); empty with none. Bolster (CR 701.21).
     LeastToughnessYouControl,
-    /// The single creature `ctx.controller` controls with the greatest power
-    /// (first in battlefield order on a tie). Empty when the controller has
-    /// no creatures. Powers Triumph of Gerrard's "target creature you control
-    /// with the greatest power" chapters (modeled non-targeted).
+    /// The controller's creature with the greatest power (first on a tie); empty
+    /// with none. Triumph of Gerrard (modeled non-targeted).
     GreatestPowerYouControl,
     /// The single permanent `who` controls with the greatest mana value among
     /// those matching `filter` (Juxtapose). Ties go to the first in
     /// battlefield order, standing in for the printed controller's choice.
     GreatestManaValueControlledMatching { who: PlayerRef, filter: SelectionRequirement },
-    /// The single creature `ctx.controller` controls with the greatest power
-    /// among those matching `filter`. Empty when none match — read through
-    /// `Value::PowerOf` this yields 0, so `Max(Const(n), PowerOf(..))` floors at
-    /// n (Triumphant Chomp — "2 or the greatest power among Dinosaurs you
-    /// control, whichever is greater").
+    /// The controller's creature matching `filter` with the greatest power. Empty
+    /// reads as 0 through `Value::PowerOf`, so `Max(Const(n), PowerOf(..))` floors
+    /// at n (Triumphant Chomp).
     GreatestPowerControlledMatching(SelectionRequirement),
-    /// The single *other* creature `ctx.controller` controls with the greatest
-    /// toughness (first in battlefield order on a tie), excluding the effect's
-    /// own source. Empty when the controller has no other creatures. Powers
-    /// "greatest toughness among other creatures you control" (Flourishing
-    /// Hunter, read through `Value::ToughnessOf`).
+    /// The controller's *other* creature (excluding the source) with the greatest
+    /// toughness, first on a tie; empty with none. Flourishing Hunter.
     GreatestToughnessYouControl,
     /// The single creature with the least power among ALL creatures on the
     /// battlefield, any controller (first in battlefield order on a tie —
@@ -554,73 +479,47 @@ pub enum Selector {
     /// belongs to this combat ("all creatures banded with it" — Icatian
     /// Skirmishers, Urza's Engine). Empty outside a declared band.
     BandedWith(Box<Selector>),
-    /// CR 702.6e — the Aura/Equipment attached to the source that granted the
-    /// ability now resolving, for granted lines that name their granter
-    /// ("{T}: Put an aim counter on Hankyu" — Hankyu, Rakdos Riteknife).
-    /// Resolves to the attachments on the source that grant abilities; two
-    /// granters on one host are indistinguishable, so all of them match.
+    /// CR 702.6e — the Aura/Equipment granting the resolving ability, for granted
+    /// lines that name their granter (Hankyu). Two granters on one host are
+    /// indistinguishable, so all of them match.
     AttachmentGranting,
-    /// One card the effect's controller chooses from their own hand matching
-    /// `filter` — the "reveal a [card] in your hand" shape (Assembly Hall).
-    /// Resolves to nothing when nothing matches. The pick is the first match
-    /// in hand order (selector resolution has no decision hook).
+    /// A `filter` card from the controller's hand ("reveal a [card] in your
+    /// hand" — Assembly Hall): the first match in hand order, since selectors
+    /// have no decision hook. Nothing on no match.
     ChosenCardInHand(SelectionRequirement),
-    /// One legal object chosen uniformly at random from the battlefield
-    /// permanents and players matching `filter` — "any target chosen at
-    /// random" (Goblin Test Pilot). Resolves to nothing when the pool is
-    /// empty; never asks for a target slot.
+    /// One `filter` permanent or player chosen uniformly at random (Goblin Test
+    /// Pilot); never a target slot. Empty pool, nothing.
     RandomAmong(SelectionRequirement),
 
     /// Top `count` cards of `who`'s library.
     TopOfLibrary { who: PlayerRef, count: Value },
-    /// Greedy walk of the top of `who`'s library, including each card
-    /// (in order) until the running mana-value sum reaches `threshold`
-    /// inclusive (i.e. the final card pushes the sum past the gate, and
-    /// is included). Used by Improvisation Capstone's "exile cards from
-    /// the top of your library until you exile cards with total mana
-    /// value 4 or greater" rider — the engine previously hard-coded
-    /// `Const(4)` cards, which under-counts when the top is land-heavy
-    /// (top three MV-0 lands + one MV-4 spell = 4 cards, sum 4; the
-    /// printed Oracle would walk past lands and stop when sum hits the
-    /// threshold). Resolution: walk top→down summing each card's
-    /// computed MV; stop after including the card that raises sum to
-    /// ≥ threshold. Empty library returns nothing; library smaller than
-    /// the running cap returns the whole library.
+    /// The top cards of `who`'s library, walked down until their mana values sum
+    /// to at least `threshold` (the card that crosses it is included); the whole
+    /// library if it never does. Improvisation Capstone's "until you exile cards
+    /// with total mana value 4 or greater".
     TopOfLibraryUntilMvAtLeast { who: PlayerRef, threshold: Value },
     /// Bottom `count` cards of `who`'s library.
     BottomOfLibrary { who: PlayerRef, count: Value },
     /// Every card in `who`'s zone matching `filter`.
     CardsInZone { who: PlayerRef, zone: Zone, filter: SelectionRequirement },
 
-    /// Cards discarded earlier in this same resolution (across all players)
-    /// matching `filter`. Backed by
-    /// `GameState.scratch.discarded_card_ids_this_resolution`. Used by Mind Roots's
-    /// "Put up to one land card discarded this way onto the battlefield
-    /// tapped under your control" rider — at resolution time the discarded
-    /// cards have already moved into their owner's graveyard, and this
-    /// selector walks `discarded_card_ids_this_resolution` then filters in
-    /// the gy zone.
+    /// Cards (any player's) discarded earlier in this resolution matching
+    /// `filter`, found in the graveyard via
+    /// `GameState.scratch.discarded_card_ids_this_resolution`. Mind Roots.
     DiscardedThisResolution { filter: SelectionRequirement },
 
-    /// Cards put into exile earlier in this same resolution matching `filter`.
-    /// Backed by `GameState.scratch.exiled_card_ids_this_resolution`; looked up in the
-    /// exile zone. "If you exiled a land/nonland card this way" (Bonehoard
-    /// Dracosaur).
+    /// Cards exiled earlier in this resolution matching `filter`
+    /// (`scratch.exiled_card_ids_this_resolution`). Bonehoard Dracosaur.
     ExiledThisResolution { filter: SelectionRequirement },
 
-    /// Entities damaged earlier in this same resolution: players (always) plus
-    /// permanents matching `filter`. Backed by
-    /// `GameState.scratch.damaged_this_resolution`. "Tap each creature damaged this
-    /// way / those players can't cast noncreature spells" (Aurelia's Fury) —
-    /// `Effect::Tap` reads the creatures, `CantCastNoncreatureThisTurn` reads
-    /// the players.
+    /// Entities damaged earlier in this resolution: players always, permanents
+    /// matching `filter` (`GameState.scratch.damaged_this_resolution`). Aurelia's
+    /// Fury.
     DamagedThisResolution { filter: SelectionRequirement },
 
-    /// Cards destroyed earlier in this same resolution that match `filter`,
-    /// read from `GameState.scratch.destroyed_this_resolution` (wherever they ended
-    /// up). "Destroy all enchantments, then return all enchantment cards put
-    /// into graveyards this way to the battlefield" — Cleansing Meditation's
-    /// Threshold half.
+    /// Cards destroyed earlier in this resolution matching `filter`, wherever
+    /// they are now (`GameState.scratch.destroyed_this_resolution`). Cleansing
+    /// Meditation.
     DestroyedThisResolution { filter: SelectionRequirement },
 
     /// A single player, lifted to selector form.
@@ -633,14 +532,9 @@ pub enum Selector {
     /// CR 701.54 — `who`'s Ring-bearer, if they have one on the battlefield
     /// (Galadriel, Elven-Queen's "put a +1/+1 counter on your Ring-bearer").
     RingBearerOf(PlayerRef),
-    /// Take at most `count` entities from `inner` (in resolution order).
-    /// Wraps another selector to clamp how many entities flow through —
-    /// used by SOS Heated Argument's "you may exile *a card* from your
-    /// graveyard", Practiced Scrollsmith's "exile *target* noncreature/
-    /// nonland card from your graveyard", and Pull from the Grave's
-    /// "up to two creature cards from your graveyard". The cap is
-    /// evaluated against the controller's resolution context, so values
-    /// like `Value::CountersOn(...)` work as expected.
+    /// At most `count` entities of `inner`, in resolution order ("up to two
+    /// creature cards from your graveyard" — Pull from the Grave). `count` is
+    /// evaluated in the controller's resolution context.
     Take { inner: Box<Selector>, count: Box<Value> },
     /// Like `Take` but picks `count` entities uniformly at random instead of
     /// the first in resolution order (Capricious Hellraiser's random exile).
@@ -650,12 +544,9 @@ pub enum Selector {
     /// printed one: Highcliff Felidar, Stitcher Geralf's exiled cards.
     TakeGreatestPower { inner: Box<Selector>, count: Box<Value> },
 
-    /// All battlefield permanents (including the anchor itself) whose
-    /// printed name matches the entity resolved by `inner`. Powers the
-    /// printed "and each other permanent with the same name" / "all
-    /// permanents with that name" riders — Maelstrom Pulse, Echoing Truth,
-    /// Bile Blight-style sweepers. `inner` is typically `Target(0)`; if it
-    /// resolves to nothing (or a non-permanent), this yields nothing.
+    /// Every battlefield permanent (the anchor included) with the same printed
+    /// name as `inner` (usually `Target(0)`); empty if `inner` is not a permanent.
+    /// Maelstrom Pulse, Echoing Truth.
     SharingNameWith(Box<Selector>),
 
     /// Every *other* battlefield permanent sharing at least one colour with
@@ -679,32 +570,27 @@ pub enum Selector {
     /// Best of Both Worlds' "the Borg assimilated with this Saga".
     AssimilatedBySource,
 
-    /// One half of the split made by the enclosing `Effect::SeparateIntoPiles`
-    /// — the pile the chooser picked (`chosen: true`) or the leftover.
-    /// Backed by `GameState.separated_piles`; ids on the battlefield resolve
-    /// as permanents, the rest as cards (Death or Glory splits a graveyard).
+    /// One pile of the enclosing `Effect::SeparateIntoPiles`: `chosen` or the
+    /// leftover (`GameState.separated_piles`); battlefield ids resolve as
+    /// permanents, the rest as cards.
     SeparatedPile { chosen: bool },
 
-    /// Exactly these objects, in this order. Ids on the battlefield resolve as
-    /// permanents, the rest as cards.
+    /// Exactly these objects, in order; battlefield ids resolve as permanents,
+    /// the rest as cards.
     ///
-    /// **Runtime-only** — built by `Effect::ForEach`'s suspend splice so the
-    /// entities it has not reached yet survive the suspension. A card never
-    /// names a `CardId`, and `scripts/audit_variant_coverage.py` carries this
-    /// as a by-design dead primitive.
+    /// Runtime-only: `Effect::ForEach`'s suspend splice builds it so unreached
+    /// entities survive the suspension. No card names a `CardId`;
+    /// `scripts/audit_variant_coverage.py` lists it as dead by design.
     ExactObjects(Vec<crate::card::CardId>),
-    /// The permanents `inner` picks whose power is greater than `than`,
-    /// evaluated once before any is affected — "destroy all creatures with
-    /// power greater than target creature's power" (Fell the Mighty). Cards
-    /// elsewhere compare their printed power (Desecrator Hag's ties).
+    /// `inner`'s permanents with power greater than `than`, read once before any
+    /// is affected (Fell the Mighty). Cards elsewhere compare printed power.
     PowerAbove { inner: Box<Selector>, than: Box<Value> },
 
     /// No entities (placeholder/default).
     None,
-    /// Like `TakeGreatestPower` but keeps the `count` entities with the
-    /// greatest mana value (ties keep resolution order) — the auto-pick for
-    /// "choose a nonland card exiled this way; you may cast it" (Author of
-    /// Shadows), where the card worth casting is the priciest one.
+    /// `TakeGreatestPower` by mana value instead (ties in resolution order) — the
+    /// auto-pick for "choose a card exiled this way; you may cast it" (Author of
+    /// Shadows).
     TakeGreatestManaValue { inner: Box<Selector>, count: Box<Value> },
 }
 
@@ -778,10 +664,8 @@ pub enum Value {
     Const(i32),
     /// Number of entities the selector resolves to.
     CountOf(Box<Selector>),
-    /// Number of entities the selector resolves to that also match `filter`.
-    /// Lets a count read a filtered slice of a non-zone selector (e.g. count
-    /// the land/blue/red cards among `Selector::LastMoved`). Culmination of
-    /// Studies.
+    /// Entities of `sel` also matching `filter` — a filtered count of a non-zone
+    /// selector like `LastMoved` (Culmination of Studies).
     CountMatching { sel: Box<Selector>, filter: SelectionRequirement },
     /// Sum of the mana values of the entities the selector resolves to
     /// (Summon: Bahamut's IV — "total mana value of other permanents you
@@ -791,10 +675,8 @@ pub enum Value {
     /// The printed (copiable) power of the first entity `what` resolves to —
     /// "draw cards equal to its base power" (Curie, Emergent Intelligence).
     BasePowerOf(Box<Selector>),
-    /// CR 700.8 — the size of the controller's party: the number of distinct
-    /// roles (Cleric, Rogue, Warrior, Wizard) among creatures they control,
-    /// capped at 4. A single creature counts for at most one role. Powers
-    /// Zendikar Rising party payoffs (Squad Commander, Tajuru Paragon).
+    /// CR 700.8 — party size: distinct roles (Cleric, Rogue, Warrior, Wizard)
+    /// among the controller's creatures, one role per creature, max 4.
     PartyCount,
     /// Number of creatures currently blocking the resolved permanent
     /// (Spined Sliver's "+1/+1 for each creature blocking it").
@@ -807,12 +689,9 @@ pub enum Value {
     /// so a static that scales with its own host's toughness can read it
     /// without reading itself (Snowblind's "toughness minus 1").
     BaseToughnessOf(Box<Selector>),
-    /// Marked damage on the first entity the selector resolves to (CR 120.3).
-    /// Read from the live permanent, or from CR 603.10 leaves-battlefield LKI
-    /// when the source has already died — so a dies-trigger can scale on "the
-    /// amount of damage dealt to it this turn" (Tangled Colony's Rat count).
-    /// Approximates "dealt this turn" as the marked damage at death (exact
-    /// unless the damage was removed mid-turn).
+    /// Marked damage on the selector's first entity (CR 120.3), from the live
+    /// permanent or its CR 603.10 LKI, so a dies-trigger can read "damage dealt
+    /// to it this turn" (Tangled Colony). Damage removed mid-turn is missed.
     MarkedDamageOn(Box<Selector>),
     /// CR 120.10 — the excess damage dealt this turn to the selected
     /// creatures (`excess_damage_this_turn`), read off LKI once one has died:
@@ -864,9 +743,8 @@ pub enum Value {
     /// controller's (Oreskos Explorer: "the number of players who control
     /// more lands than you").
     PlayersWithGreaterTally(crate::card::PlayerTally),
-    /// Living players whose `tally` is strictly smaller than the source
-    /// controller's — never the controller, so "each opponent who controls
-    /// fewer creatures than you" (Birth of the Imperium). The mirror of
+    /// Living players with a strictly smaller `tally` than the source's
+    /// controller, never the controller (Birth of the Imperium). Mirror of
     /// `PlayersWithGreaterTally`.
     PlayersWithFewerTally(crate::card::PlayerTally),
     /// CR 700.2 — how many modes were chosen for the resolved spell (Riku of
@@ -882,15 +760,11 @@ pub enum Value {
     /// the players `who` resolves to, so `EachOpponent` reads Vren, the
     /// Relentless' "creatures that were exiled under your opponents' control".
     CreaturesExiledFromControlThisTurn(PlayerRef),
-    /// Life `who` has gained so far this turn (CR 119.3). Backed by
-    /// `Player.life_gained_this_turn`. Used by Accomplished Alchemist's
-    /// "{T}: Add X mana of any one color, where X is the amount of life
-    /// you gained this turn."
+    /// Life `who` has gained this turn (CR 119.3; `Player.life_gained_this_turn`).
+    /// Accomplished Alchemist.
     LifeGainedThisTurn(PlayerRef),
-    /// Life lost so far this turn (CR 119.3) — the **maximum** over the
-    /// players `who` resolves to, so `EachOpponent` reads "the most life any
-    /// opponent has lost this turn" (Spinerock Knoll's hideaway gate).
-    /// Backed by `Player.life_lost_this_turn`.
+    /// Life lost this turn (CR 119.3), max over seats, so `EachOpponent` reads the
+    /// most any opponent lost (Spinerock Knoll). `Player.life_lost_this_turn`.
     LifeLostThisTurn(PlayerRef),
     /// The *sum* of the life the players `who` resolves to lost this turn —
     /// "the total amount of life your opponents lost this turn" (Florian,
@@ -930,27 +804,22 @@ pub enum Value {
     /// Noncombat damage red sources the resolved players controlled dealt
     /// this turn, to anything (Temple of Power's activation gate).
     RedNoncombatDamageDealtThisTurn(PlayerRef),
-    /// The combat-damage-only slice of `DamageTakenThisTurn`
-    /// (`Player.combat_damage_taken_this_turn`). Takes the MAX across the
-    /// resolved players, so `EachPlayer` reads "the most combat damage any one
-    /// player was dealt this turn" (Sidequest: Play Blitzball).
+    /// Combat-only slice of `DamageTakenThisTurn`, max over seats
+    /// (`Player.combat_damage_taken_this_turn`). Sidequest: Play Blitzball.
     CombatDamageTakenThisTurn(PlayerRef),
     /// How many of the resolved players were dealt combat damage this turn
     /// (`combat_damage_taken_this_turn > 0`) — "the number of opponents that
     /// were dealt combat damage this turn" (Tymna the Weaver).
     PlayersDealtCombatDamageThisTurn(PlayerRef),
-    /// [`Value::PlayersDealtCombatDamageThisTurn`] narrowed to damage from a
-    /// creature matching `by` (read against the source as "this") — "your
-    /// opponents who were dealt combat damage by this or a Dragon this turn"
-    /// (Estinien Varlineau).
+    /// [`Value::PlayersDealtCombatDamageThisTurn`] narrowed to damage from a `by`
+    /// creature (read with the source as "this"). Estinien Varlineau.
     PlayersDealtCombatDamageThisTurnBy { who: PlayerRef, by: Box<crate::card::SelectionRequirement> },
     /// How many players control at least `n` more lands than you (Surveyor's
     /// Scope's "players who control at least two more lands than you").
     PlayersWithLandsAtLeastMore(u32),
-    /// Total damage dealt to the ability's source permanent this turn
-    /// (`CardInstance.damage_dealt_to_this_turn`) — "if 4 or more damage was
-    /// dealt to it this turn" (Rushing-Tide Zubera). Reads death-time LKI so a
-    /// dies-trigger sees the damage that killed it.
+    /// Damage dealt to the source this turn
+    /// (`CardInstance.damage_dealt_to_this_turn`, LKI for dies-triggers).
+    /// Rushing-Tide Zubera.
     DamageDealtToSourceThisTurn,
     /// Damage dealt to the source this turn by *other* sources sharing its
     /// name (Blazing Effigy). Reads the per-name tally on the death LKI
@@ -962,10 +831,8 @@ pub enum Value {
     CreaturesDiedThisResolution,
     /// Number of cards `who` owns in the exile zone (Kaya, Orzhov Usurper's −5).
     CardsInExileOwnedBy(PlayerRef),
-    /// Cards `who` owns in exile matching `filter` (Candlekeep Inspiration's
-    /// "cards you own in exile ... that are instant cards, are sorcery cards,
-    /// and/or have an Adventure"). Sum with a graveyard count for "in exile
-    /// and in your graveyard".
+    /// `filter` cards `who` owns in exile (Candlekeep Inspiration); add a
+    /// graveyard count for "in exile and in your graveyard".
     CardsInExileOwnedMatching { who: PlayerRef, filter: SelectionRequirement },
     /// Distinct card types among cards in `who`'s graveyard (the delirium
     /// count as a number — Lucid Dreams' "draw X").
@@ -995,11 +862,8 @@ pub enum Value {
     /// Cards `who` has discarded this turn (max over resolved players).
     /// Backed by `Player.cards_discarded_this_turn` (Dihada's Ploy).
     CardsDiscardedThisTurn(PlayerRef),
-    /// Cards put into `who`'s graveyard from anywhere this turn (max over
-    /// resolved players). Backed by `Player.cards_to_graveyard_this_turn`, the
-    /// CR 700.4 tally `Predicate::CardsToGraveyardThisTurnAtLeast` reads
-    /// (Fraying Sanity, Cruel Calculations, Welcome the Dead — the last two
-    /// narrow the source zone, which the tally doesn't record).
+    /// Cards put into `who`'s graveyard from anywhere this turn (max over seats;
+    /// `Player.cards_to_graveyard_this_turn`, the CR 700.4 tally). Fraying Sanity.
     CardsPutIntoGraveyardThisTurn(PlayerRef),
     /// Cards put into `who`'s graveyard this turn from anywhere other than the
     /// battlefield (Dimir Strandcatcher): the turn's graveyard arrivals minus
@@ -1009,10 +873,9 @@ pub enum Value {
     /// (`Player.creature_cards_to_graveyard_this_turn`) — Raphael, Fiendish
     /// Savior's end-step gate.
     CreatureCardsPutIntoGraveyardThisTurn(PlayerRef),
-    /// The number of different mana costs among nonland cards in `who`'s
-    /// graveyard (max over resolved players) — Embodiment of Agonies. {2}{B}
-    /// and {1}{B}{B} differ; a card with no mana cost has none and isn't
-    /// counted.
+    /// Distinct mana costs among nonland cards in `who`'s graveyard (max over
+    /// seats). {2}{B} ≠ {1}{B}{B}; no mana cost isn't counted. Embodiment of
+    /// Agonies.
     DistinctManaCostsInGraveyard(PlayerRef),
     /// Cards put into `who`'s graveyard from their hand (discarded) or
     /// library (milled) this turn — Welcome the Dead's X. Surveil isn't
@@ -1041,11 +904,9 @@ pub enum Value {
     /// Distinct card types across every graveyard (Altar of the Goyf,
     /// Lhurgoyf-style counts as a spell value).
     CardTypesInAllGraveyards,
-    /// Noncreature spells `who` has cast so far this turn — the **maximum**
-    /// over the resolved players. Backed by
-    /// `Player.noncreature_spells_cast_this_game_turn`. Magebane Lizard's
-    /// "damage equal to the number of noncreature spells they've cast this
-    /// turn" (the count includes the spell that triggered it).
+    /// Noncreature spells `who` has cast this turn, max over seats, including the
+    /// triggering one (`Player.noncreature_spells_cast_this_game_turn`). Magebane
+    /// Lizard.
     NoncreatureSpellsCastThisTurn(PlayerRef),
     /// Total spells `who` has cast so far this turn (max over resolved
     /// players). Backed by `Player.spells_cast_this_game_turn` — Narset, Jeskai
@@ -1055,13 +916,8 @@ pub enum Value {
     /// (`Player.historic_spells_cast_this_turn`): Peri Brown's "the first
     /// historic spell you cast each turn".
     HistoricSpellsCastThisTurn(PlayerRef),
-    /// Spells `who` has cast this turn **other than** the source spell/ability
-    /// itself — `spells_cast_this_turn` minus one, clamped at 0. The current
-    /// spell is already counted at cast time, so subtracting one yields "the
-    /// number of other spells you've cast this turn" (Thunder Salvo).
-    /// Total spells cast this turn across every player (Erayo's "the fourth
-    /// spell of a turn"). The summed sibling of `SpellsCastThisTurn`, which
-    /// takes the max over the resolved seats.
+    /// Total spells cast this turn across every player (Erayo). The summed
+    /// sibling of `SpellsCastThisTurn`, which takes the max over seats.
     SpellsCastThisTurnTotal,
     /// Spells and abilities that caused a player to guess or to group cards
     /// or permanents into a pile this turn (The Celestial Toymaker).
@@ -1070,35 +926,25 @@ pub enum Value {
     /// cards were put into exile while it was on the battlefield (Bell Borca,
     /// Spectral Sergeant: "noted **for it**"). Backed by `CardCold::exile_note`.
     GreatestManaValueNotedForSource,
+    /// Spells `who` has cast this turn other than the source itself (the count
+    /// minus one, floored at 0): Thunder Salvo's "other spells you've cast".
     OtherSpellsCastThisTurn(PlayerRef),
-    /// Instant and sorcery spells `who` has cast so far this turn (summed over
-    /// the resolved players — `EachPlayer` is the table's tally). Backed by
-    /// `Player.instants_or_sorceries_cast_this_turn` — the `Value` sibling of
-    /// `Predicate::InstantsOrSorceriesCastThisTurnAtLeast` (Rionya, Fire
-    /// Dancer's "one plus the number of instant and sorcery spells you've
-    /// cast this turn").
+    /// Instant and sorcery spells `who` has cast this turn, summed over seats
+    /// (`Player.instants_or_sorceries_cast_this_turn`). Rionya, Fire Dancer.
     InstantsOrSorceriesCastThisTurn(PlayerRef),
-    /// The total mana value of the spells `who` has cast this turn **other
-    /// than** the source spell (summed over the resolved players). Walks
-    /// `Player.spell_ids_cast_this_turn`; a spell that has since left the
-    /// stack reads its printed mana value, so an X spell counts X = 0 once
-    /// resolved. Call Forth the Tempest.
+    /// Total mana value of `who`'s spells cast this turn other than the source,
+    /// summed over seats. A spell that has left the stack reads its printed mana
+    /// value (X = 0). Call Forth the Tempest.
     TotalManaValueOfOtherSpellsCastThisTurn(PlayerRef),
-    /// The greatest mana value among instant and sorcery spells `who` has cast
-    /// this turn (0 if none), stamped at cast time so an X spell counts its X
-    /// (CR 202.3e). Backed by `Player.greatest_is_mana_value_this_turn`.
-    /// Rootha, Mastering the Moment.
+    /// Greatest mana value among `who`'s instants and sorceries cast this turn,
+    /// stamped at cast so X counts (CR 202.3e). Rootha, Mastering the Moment.
     GreatestInstantOrSorceryManaValueCastThisTurn(PlayerRef),
-    /// Creatures `who` declared as attackers this turn (max over resolved
-    /// players). Creatures *put onto the battlefield attacking* don't count,
-    /// matching the Windbrisk Heights ruling on "attacked with N creatures".
-    /// Backed by `Player.creatures_attacked_this_turn`.
+    /// Creatures `who` declared as attackers this turn (max over seats); ones put
+    /// onto the battlefield attacking don't count (Windbrisk Heights ruling).
     CreaturesAttackedWithThisTurn(PlayerRef),
-    /// CR 702.121 (Melee) — the number of distinct opponents the active
-    /// player attacked this combat, read from the live `GameState.attacking`
-    /// declarations (Player / Planeswalker-controller / Battle-protector map
-    /// to a defending player). One in a normal 1v1 combat; more in multiplayer
-    /// when a batch spreads attackers across seats.
+    /// CR 702.121 Melee — distinct opponents the active player attacked this
+    /// combat, read from `GameState.attacking` (planeswalkers and battles map to
+    /// their defending player).
     OpponentsAttackedThisCombat,
     /// The number of distinct opponents the context's controller attacked
     /// (with a creature attacking that player, CR 508.1) this turn — Fast
@@ -1117,20 +963,17 @@ pub enum Value {
     TurnNumber,
     /// Equip abilities `who` activated this turn (Forge Anew's first equip).
     EquipsActivatedThisTurn(PlayerRef),
-    /// How many turns `who` has begun this game, the current one included —
-    /// "during your first, second, or third turns of the game" (Serra
-    /// Avenger) is `TurnsBegunBy(You) <= 3`. Extra turns count; skipped ones
-    /// don't (CR 500.7, 500.11 — a skipped turn never begins).
+    /// Turns `who` has begun this game, the current one included (Serra Avenger:
+    /// `<= 3`). Extra turns count; skipped ones never begin (CR 500.7, 500.11).
     TurnsBegunBy(PlayerRef),
     /// CR 905.2b — a number the controller noted as they drafted cards with
     /// this source's name. `Max` takes the highest note (Lurking Automaton),
     /// `Sum` totals them (Cogwork Grinder). Zero outside a drafted game.
     DraftNoteNumber { agg: DraftNoteAgg },
     GraveyardSizeOf(PlayerRef),
-    /// The largest graveyard among the players `who` resolves to — "an
-    /// opponent has N or more cards in their graveyard" is this against N
-    /// (Jace's Phantasm, Merfolk Windrobber, Soaring Thought-Thief).
-    /// `GraveyardSizeOf` reads one seat, the first of a fan-out.
+    /// The largest graveyard among `who`'s players — "an opponent has N or more
+    /// cards in their graveyard" (Jace's Phantasm). `GraveyardSizeOf` reads only
+    /// a fan-out's first seat.
     GreatestGraveyardSizeAmong(PlayerRef),
     /// Number of cards in `who`'s graveyard matching `filter`. Powers
     /// "equal to the number of Arcane cards in your graveyard" (Ire of
@@ -1142,25 +985,18 @@ pub enum Value {
     /// The same count across every *opponent's* graveyard (Nameless Race's
     /// "white cards in their graveyards"). Team-aware.
     CardsInOpponentsGraveyardsMatching { filter: SelectionRequirement },
-    /// Number of cards in `who`'s hand matching `filter`. Powers Amplify
-    /// (CR 702.38 — "+N/+N counters for each [type] card you reveal in your
-    /// hand"; all matching cards are auto-revealed) and other reveal-from-hand
-    /// counts.
+    /// `filter` cards in `who`'s hand — Amplify (CR 702.38; all matches
+    /// auto-revealed).
     CardsInHandMatching { who: PlayerRef, filter: SelectionRequirement },
-    /// Maximum graveyard size across **every alive player** in the game.
-    /// Reads `players[*].graveyard.len()` and returns the max. Backs
-    /// "if a graveyard has 20 or more cards" payoffs (Visions of Beyond,
-    /// future Tombstalker / Mercurial Chemister-style scaling). Distinct
-    /// from `GraveyardSizeOf(p)` which only inspects a single player.
+    /// Largest graveyard among living players ("if a graveyard has 20 or more
+    /// cards" — Visions of Beyond). Compare `GraveyardSizeOf`.
     MaxGraveyardSize,
     /// How many alive players' graveyards hold at least `n` cards — "draw a
     /// card for each graveyard with seven or more cards in it" (The Master of
     /// Lake-town).
     GraveyardsWithAtLeast(u32),
-    /// The greatest *printed* power among the cards the selector resolves to,
-    /// in whatever zone they sit (a battlefield permanent reads its printed
-    /// power too); 0 when none. Szat's Will's "the greatest power among
-    /// creature cards exiled this way".
+    /// Greatest printed power among the selector's cards in any zone; 0 when
+    /// none. Szat's Will.
     GreatestPowerAmongCards(Box<Selector>),
     /// The greatest computed power *or* toughness among the battlefield
     /// permanents the selector resolves to; 0 when none (Freelance Muscle's
@@ -1187,11 +1023,9 @@ pub enum Value {
     /// count of mutate cards merged onto it). Archipelagore / Insatiable
     /// Hemophage's "X is the number of times this creature has mutated".
     MutateCount,
-    /// CR 700.5 — controller's devotion to the given color(s): the number
-    /// of mana symbols matching any listed color among the mana costs of
-    /// permanents they control. Hybrid / Phyrexian pips count for each
-    /// color half they contain. Drives Gray Merchant of Asphodel, the Nyx
-    /// gods, Nykthos.
+    /// CR 700.5 devotion: mana symbols of the listed colors among the controller's
+    /// permanents' costs; hybrid / Phyrexian pips count for each color half. Gray
+    /// Merchant of Asphodel.
     DevotionTo(Vec<crate::mana::Color>),
     /// The greatest number of the controller's creatures that share a
     /// creature type (Skemfar Shadowsage — "creatures you control that have
@@ -1219,10 +1053,8 @@ pub enum Value {
     /// CR 702.143 — foretold cards `who` owns in exile: face down with a
     /// foretell cost, printed or granted (Niko Defies Destiny's chapter I).
     ForetoldCardsOwnedInExile(PlayerRef),
-    /// CR 120.10 — the amount of excess damage dealt during the current
-    /// resolution ("gain life / add mana equal to the excess damage" — The
-    /// Last Agni Kai, Razor Rings). Backed by
-    /// `GameState.excess_damage_this_resolution`.
+    /// CR 120.10 — excess damage dealt this resolution
+    /// (`GameState.excess_damage_this_resolution`). The Last Agni Kai.
     ExcessDamageDealtThisResolution,
     /// Face-down creatures on the battlefield, any controller (Ixidron's
     /// characteristic-defining power/toughness).
@@ -1230,15 +1062,12 @@ pub enum Value {
     /// Total damage that actually landed during this resolution — "gain life
     /// equal to the damage dealt this way" (Brightflame).
     DamageDealtThisResolution,
-    /// Total mana spent to cast the spell most recently countered during
-    /// the CURRENT resolution (`GameState.countered_spell_mana_spent`,
-    /// stamped by `Effect::CounterSpell`). Mana Sculpt's "add an amount of
-    /// {C} equal to the amount of mana spent to cast that spell".
+    /// Mana spent on the spell countered this resolution
+    /// (`GameState.countered_spell_mana_spent`, from `Effect::CounterSpell`).
+    /// Mana Sculpt.
     CounteredSpellManaSpent,
-    /// The mana *value* of the spell countered during this resolution — the
-    /// printed-cost sibling of `CounteredSpellManaSpent` (which reads what was
-    /// actually paid). Plasm Capture. Backed by
-    /// `GameState.countered_spell_mana_value`, cleared per resolution.
+    /// Mana value of the spell countered this resolution, the printed-cost
+    /// sibling of `CounteredSpellManaSpent` (Plasm Capture).
     CounteredSpellManaValue,
     /// The controller's starting life total (Resolute Archangel).
     StartingLifeTotal,
@@ -1283,15 +1112,14 @@ pub enum Value {
     /// Powers "if X is 4 or more, …" scaling (Mossborn Hydra's doubled
     /// counters at X≥4).
     IfAtLeast { value: Box<Value>, threshold: i32, then: Box<Value>, else_: Box<Value> },
-    /// Power of the most recently sacrificed creature this resolution
-    /// (set by `Effect::SacrificeAndRemember`). Used by Thud / Greater
-    /// Gargadon-style sacrifice + damage spells.
     /// The power of the card revealed to pay this cast's
     /// `AdditionalCastCost::RevealFromHand` (Titan's Presence). 0 with no reveal.
     RevealedForCostPower,
     /// The mana value of that revealed card (Disaster Radius); the reveal
     /// picks the match with the greatest mana value for it.
     RevealedForCostManaValue,
+    /// Power of the creature last sacrificed this resolution (set by
+    /// `Effect::SacrificeAndRemember`). Thud.
     SacrificedPower,
     /// How many counters the current resolution removed via
     /// `Effect::RemoveCountersUpTo` — "for each counter removed this way"
@@ -1329,24 +1157,19 @@ pub enum Value {
     /// six-sided die for each mana from Treasures spent to activate this
     /// ability", Mr. House). Carried by `Effect::WithTreasureManaSpent`.
     TreasureManaSpentToActivate,
-    /// How many times the latest `Effect::MayPayRepeatedly` in this
-    /// resolution was paid — "you may pay {2}{R} any number of times. When
-    /// you pay this cost one or more times, … that many …" (Bloodthirsty
-    /// Adversary). Reset between independent resolutions.
+    /// Times the latest `Effect::MayPayRepeatedly` was paid this resolution
+    /// (Bloodthirsty Adversary).
     TimesPaidThisEffect,
-    /// Toughness of the most recently sacrificed creature this
-    /// resolution (set by `Effect::SacrificeAndRemember`). Used by
-    /// Tribute to Hunger (gain life equal to sacrificed creature's
-    /// toughness) and similar sacrifice + lifegain spells.
+    /// Toughness of the creature last sacrificed this resolution (set by
+    /// `Effect::SacrificeAndRemember`). Tribute to Hunger.
     SacrificedToughness,
     /// Mana value of the most recently sacrificed permanent this
     /// resolution (set by `Effect::SacrificeAndRemember`). Reckoner's
     /// Bargain ("gain life equal to the sacrificed permanent's mana value").
     SacrificedManaValue,
-    /// Mana value of the permanent exiled to pay this activation's
-    /// `ActivatedAbility::exile_permanent_cost` (Food Chain), or of the
-    /// Equipment its `unattach_equipment_cost` detached (Captain America), or
-    /// of the spell its `exile_spell_cost` took off the stack (Synthesis Pod).
+    /// Mana value of what this activation's cost exiled (`exile_permanent_cost`
+    /// — Food Chain), unattached (`unattach_equipment_cost`) or took off the
+    /// stack (`exile_spell_cost` — Synthesis Pod).
     ExiledForCostManaValue,
     /// Number of cards in *every* graveyard sharing the resolving source's
     /// name (Accumulated Knowledge).
@@ -1354,14 +1177,9 @@ pub enum Value {
     /// Number of cards in *every* graveyard sharing the name of the spell that
     /// fired this trigger (the Odyssey Shrine cycle).
     CardsNamedLikeTriggerSpellInAllGraveyards,
-    /// Number of cards discarded so far within the current effect
-    /// resolution. Bumped by every `GameEvent::CardDiscarded` emission
-    /// in `Effect::Discard` / `Effect::DiscardChosen`. Used by Borrowed
-    /// Knowledge mode 1 ("draw cards equal to the number of cards
-    /// discarded this way"), Colossus of the Blood Age's die trigger,
-    /// and similar "draw what you discarded" payoffs. Reset to 0
-    /// between independent resolutions, so a `Seq([Discard, Draw])`
-    /// reads exactly the discards from this resolution.
+    /// Cards discarded so far in this resolution (every `CardDiscarded` from
+    /// `Effect::Discard` / `DiscardChosen`), so `Seq([Discard, Draw])` draws what
+    /// it discarded (Borrowed Knowledge). Reset per resolution.
     CardsDiscardedThisEffect,
     /// Number of cards drawn so far within the current effect resolution — the
     /// draw-side twin of `CardsDiscardedThisEffect` ("draws that many cards,
@@ -1391,55 +1209,34 @@ pub enum Value {
     /// library ("for each card you put on top of your library" — Starving
     /// Revenant). Reset between independent resolutions.
     SurveilKeptOnTopThisEffect,
+    /// The mana value of the card the last `Effect::Discover` hit this
+    /// resolution, or its cap N when it hit nothing (Hit the Mother Lode).
+    DiscoveredManaValue,
     /// Parley's other count: the land cards revealed by the enclosing
     /// `Effect::Parley` (Phabine's Citizen tokens).
-    /// The mana value of the card the last `Effect::Discover` hit this
-    /// resolution, or its cap N when it hit nothing (Hit the Mother Lode's
-    /// "if the discovered card's mana value is less than 10").
-    DiscoveredManaValue,
     LandCardsRevealedThisEffect,
     /// The greatest mana value among the cards the enclosing `Effect::Parley`
     /// revealed (Alexander, Ship's Fool).
     ParleyGreatestManaValue,
-    /// Amount of {E} paid by an `Effect::PayAnyEnergy` earlier in the current
-    /// resolution. Reset between independent resolutions. Aether Spike's
-    /// "counter that spell unless its controller pays {1} for each {E} paid
-    /// this way" reads it as the `extra_generic` of a `CounterUnlessPaid`.
+    /// {E} paid by an `Effect::PayAnyEnergy` earlier this resolution (Aether
+    /// Spike's `extra_generic`).
     EnergyPaidThisEffect,
-    /// Maximum, across all players, of cards discarded so far within
-    /// the current effect resolution. Reads from
-    /// `state.scratch.cards_discarded_per_player_this_resolution`. Used by
-    /// Windfall's printed "draws cards equal to the greatest number of
-    /// cards a player discarded this way" — a `Seq([Discard(EachPlayer,
-    /// 100), Draw(EachPlayer, MaxCardsDiscardedThisEffectByAnyPlayer)])`
-    /// produces the correct dynamic yield instead of the prior flat 7.
-    /// Reset to 0 between independent resolutions.
+    /// The most cards any one player discarded in this resolution
+    /// (`scratch.cards_discarded_per_player_this_resolution`): Windfall's "draws
+    /// cards equal to the greatest number of cards a player discarded this way".
     MaxCardsDiscardedThisEffectByAnyPlayer,
-    /// Nonland cards the players `who` resolves to discarded within the
-    /// current effect resolution, summed
-    /// (`scratch.nonland_cards_discarded_per_player_this_resolution`). The
-    /// count sibling of `Predicate::DiscardedNonlandThisEffect` — Garruk,
-    /// Veiled Butcher's "for each opponent who didn't discard two nonland
-    /// cards this way", judged per opponent under a `ForEach`.
+    /// Nonland cards `who` discarded in this resolution, summed
+    /// (`scratch.nonland_cards_discarded_per_player_this_resolution`); count
+    /// sibling of `Predicate::DiscardedNonlandThisEffect`. Garruk, Veiled Butcher.
     NonlandCardsDiscardedThisEffectBy(PlayerRef),
-    /// Number of *creature* cards discarded so far within the current
-    /// effect resolution. Bumped alongside `CardsDiscardedThisEffect`
-    /// whenever the discarded card has `CardType::Creature`. Used by
-    /// Plargg, Dean of Chaos's "if a creature card was discarded this
-    /// way, this creature deals 2 damage to any target" conditional
-    /// rider — gates an `Effect::If { ValueAtLeast(this, 1), ... }`.
-    /// Reset to 0 between independent resolutions.
+    /// Creature cards discarded so far in this resolution (Plargg, Dean of Chaos's
+    /// "if a creature card was discarded this way"). Reset per resolution.
     CreatureCardsDiscardedThisEffect,
-    /// Greatest mana value among cards discarded within the current effect
-    /// resolution (`GameState.greatest_discarded_mv_this_resolution`). Used by
-    /// Ill-Timed Explosion's "deals X damage to each creature, where X is the
-    /// greatest mana value among cards discarded this way." 0 if none discarded.
+    /// Greatest mana value discarded this resolution, 0 if none
+    /// (`GameState.greatest_discarded_mv_this_resolution`). Ill-Timed Explosion.
     GreatestDiscardedManaValueThisEffect,
-    /// Number of creature cards among the cards moved so far within the current
-    /// effect resolution (`last_moved_cards`) that are now in a graveyard —
-    /// i.e. creature cards milled this way (Dread Summons' "for each creature
-    /// card put into a graveyard this way, create a 2/2 Zombie"). Reset between
-    /// resolutions.
+    /// Creature cards among this resolution's `last_moved_cards` now in a
+    /// graveyard — creature cards milled this way (Dread Summons).
     CreatureCardsMilledThisEffect,
     /// The filtered sibling: cards moved to a graveyard earlier in this
     /// resolution matching `filter` (Saprazzan Breaker's "if a land card was
@@ -1480,15 +1277,11 @@ pub enum Value {
     /// (Season of Gathering's "draw cards equal to the greatest power among
     /// creatures you control").
     GreatestPowerControlled { who: PlayerRef },
-    /// Mana value (CMC) of the first card the selector resolves to.
-    /// Looks the card up across the battlefield, graveyards, exile, and
-    /// hands. Used by Wrath of the Skies (destroy each nonland with mana
-    /// value X) and similar "filter by mana value" effects.
+    /// Mana value of the selector's first card, looked up on the battlefield and
+    /// in graveyards, exile and hands. Wrath of the Skies.
     ManaValueOf(Box<Selector>),
-    /// Highest mana value among the permanents or cards the selector
-    /// resolves to, in any zone; 0 if none. Rush of Knowledge ("draw cards
-    /// equal to the highest mana value among permanents you control"), The
-    /// Kenriths' Royal Funeral (cards exiled with it).
+    /// Highest mana value among the selector's permanents or cards in any zone; 0
+    /// if none. Rush of Knowledge.
     HighestManaValueAmong(Box<Selector>),
     /// Number of distinct colors of the resolved permanent/card (CR 105.2 —
     /// "for each of its colors"). Reads printed colors; a colorless/devoid
@@ -1498,33 +1291,23 @@ pub enum Value {
     /// resolves to (Volo, Itinerant Scholar's "for each creature type noted
     /// for target permanent you control named Volo's Journal").
     NotedCreatureTypesOf(Box<Selector>),
-    /// CR 903.4 — the number of distinct colors in a player's commanders'
-    /// color identity. Zero outside a Commander game and zero for a seat
-    /// whose commander is colorless; a two-commander seat reads the union
-    /// (CR 702.124c), which is what `Player::commander_identity` already
-    /// holds. War Room's "Pay life equal to the number of colors in your
-    /// commanders' color identity".
+    /// CR 903.4 — colors in `who`'s commanders' color identity (the union for two
+    /// commanders, CR 702.124c). War Room.
     ///
-    /// ⚠ **Zero for a seat with no commander, which is NOT what
-    /// `GameState::commander_identity_colors` answers.** That helper returns
-    /// all five colours there on purpose, so
-    /// `ManaPayload::AnyColorInCommanderIdentity` keeps a fixing land fixing
-    /// in a cube. The same fallback read as a *cost* is five life for a card,
-    /// so this variant reads the raw identity instead.
+    /// ⚠ Zero for a seat with no commander, unlike
+    /// `GameState::commander_identity_colors`, which answers all five so
+    /// `ManaPayload::AnyColorInCommanderIdentity` still fixes in a cube. As a
+    /// life *cost* that fallback would charge five.
     CommandersColorIdentityCount(PlayerRef),
     /// The greatest mana value among the player's commanders, wherever they
     /// are (CR 903.3 — a commander is a commander in every zone; CR 202.3 —
     /// printed mana value). Zero with no commander (Tangleweave Armor).
     GreatestCommanderManaValue(PlayerRef),
-    /// Number of distinct colors among the entities the selector resolves to,
-    /// unioned across all of them ("there are five colors among permanents you
-    /// control" — Case of the Shattered Pact). Contrast `ColorCountOf`, which
-    /// reads a single object's colors.
+    /// Distinct colors across all the selector's entities (Case of the Shattered
+    /// Pact). `ColorCountOf` reads one object.
     DistinctColorsAmong(Box<Selector>),
-    /// Number of distinct planeswalker types among the planeswalkers the
-    /// selector resolves to (CR 205.3j — Tam, the Possibility's "proliferate
-    /// X times, where X is the number of planeswalker types among
-    /// planeswalkers you control").
+    /// Distinct planeswalker types among the selector's planeswalkers (CR
+    /// 205.3j). Tam, the Possibility.
     DistinctPlaneswalkerTypesAmong(Box<Selector>),
     /// The number of colors among permanents the controller controls and
     /// spells they've cast this turn (First Family).
@@ -1532,17 +1315,12 @@ pub enum Value {
     /// The number of card types among spells the controller has cast this
     /// turn (April O'Neil, Hacktivist), off `Player::spell_casts_this_turn`.
     CardTypesAmongSpellsCastThisTurn,
-    /// Converge value: the number of distinct colors of mana spent on the
-    /// spell's cost. Stashed on `StackItem::Spell` at cast time and read
-    /// from `EffectContext.converged_value` here. Used by Prismatic
-    /// Ending and Pest Control.
+    /// Converge: distinct colors of mana spent on the spell
+    /// (`EffectContext.converged_value`, stashed at cast). Prismatic Ending.
     ConvergedValue,
-    /// The number of distinct colors among the mana spent on the resolving
-    /// spell or ability (CR 601.2h / 602.2b), read from
-    /// `EffectContext.mana_spent_by_color` — so, unlike `ConvergedValue`, an
-    /// activated ability counts the mana paid to activate it ("if exactly
-    /// three colors of mana were spent to activate this ability" — Paragon
-    /// of Modernity).
+    /// Distinct colors of mana spent on the resolving spell or ability (CR
+    /// 601.2h / 602.2b; `EffectContext.mana_spent_by_color`). Unlike
+    /// `ConvergedValue`, counts an activation's mana (Paragon of Modernity).
     DistinctColorsSpent,
     /// Mana from artifact sources spent to cast the source (Coin of Mastery's
     /// enters-with rider): the `CardData::cast_artifact_mana` stamp, so 0 for
@@ -1564,10 +1342,9 @@ pub enum Value {
     /// for each mana from a Treasure spent to cast it" (Marut): the
     /// `CardData::cast_treasure_mana` stamp.
     TreasureManaSpentToCastSource,
-    /// "Each creature `who` controlled that dealt combat damage to a player
-    /// this turn" (Excess): the distinct creatures in the other players'
-    /// combat-damage lists, gone ones included — on the battlefield read by
-    /// controller, elsewhere by owner.
+    /// Excess: the distinct creatures `who` controlled that dealt combat damage
+    /// to a player this turn, gone ones included (by controller on the
+    /// battlefield, owner elsewhere).
     CreaturesThatCombatDamagedAPlayerThisTurn(PlayerRef),
     /// CR 702.157 — the number of times the source permanent's Squad cost was
     /// paid (`CardInstance.squad_count`). Reads `ctx.source`. Zero off-source.
@@ -1580,35 +1357,22 @@ pub enum Value {
     /// the trigger's subject on the stack (Rumbling Aftershocks). Zero when the
     /// subject isn't a spell.
     CastSpellTimesKicked,
-    /// The mana symbols of `color` in the *triggering* spell's mana cost — a
-    /// hybrid or Phyrexian pip counts once if it holds the color (CR 202.1,
-    /// counted as devotion counts it). Namor the Sub-Mariner's "create that
-    /// many". Zero when the subject isn't a card.
+    /// Mana symbols of `color` in the triggering spell's cost, hybrid / Phyrexian
+    /// counted once as devotion does (CR 202.1). Namor the Sub-Mariner. 0 for
+    /// non-cards.
     CastSpellPipsOf(crate::mana::Color),
-    /// Total mana spent paying the originating spell's cost. Stashed on
-    /// `StackItem::Spell.mana_spent` at cast time, propagated onto
-    /// spell-cast `StackItem::Trigger.mana_spent`, and read from
-    /// `EffectContext.mana_spent` here. Powers SOS's Increment /
-    /// Opus payoffs: Cuboid Colony / Berta / Fractal Tender's
-    /// "Whenever you cast a spell, if the amount of mana you spent is
-    /// greater than this creature's power or toughness, put a +1/+1
-    /// counter on this creature", and Opus's "this creature gets +N/+N
-    /// for the rest of the turn (and an extra +N/+N if five or more
-    /// mana was spent)".
+    /// Total mana spent on the originating spell (`StackItem::Spell.mana_spent`,
+    /// carried onto its cast triggers, read via `EffectContext.mana_spent`). SOS
+    /// Increment and Opus payoffs.
     CastSpellManaSpent,
-    /// Number of distinct card types in the top `count` cards of `who`'s
-    /// library. Used by Atraxa, Grand Unifier's reveal-and-sort ETB —
-    /// "reveal the top 10, take up to one of each card type" is
-    /// approximated as "draw N where N = distinct types in those 10".
+    /// Distinct card types in the top `count` of `who`'s library — Atraxa's
+    /// reveal approximated as "draw N".
     DistinctTypesInTopOfLibrary { who: PlayerRef, count: Box<Value> },
     /// Number of distinct card types among the cards in `who`'s graveyard.
     /// Backs Broodspinner's "create that many Insects equal to the number of
     /// card types among cards in your graveyard" payoff.
     DistinctTypesInGraveyard { who: PlayerRef },
-    /// Number of distinct card types among the cards in exile stamped
-    /// `exiled_with = source` (the resolving source). Backs Keen-Eyed
-    /// Curator's "four or more card types among cards exiled with this
-    /// creature" threshold.
+    /// Distinct card types among cards exiled with the source. Keen-Eyed Curator.
     DistinctCardTypesExiledWith,
     /// Distinct mana values among cards in exile stamped `exiled_with =
     /// source` (Azor's Gateway's "five or more different mana values").
@@ -1657,11 +1421,8 @@ pub enum Value {
     /// or are named "Slime Against Humanity" (Slime Against Humanity's counter
     /// count).
     OozesInExileAndGraveyard,
-    /// Number of cards `who` has drawn on the current turn. Powers
-    /// Strixhaven's Quandrix scaling — Fractal Anomaly's "X +1/+1
-    /// counters where X is the number of cards you've drawn this turn"
-    /// and similar payoffs. Backed by `Player.cards_drawn_this_turn`,
-    /// reset on the player's untap.
+    /// Cards `who` has drawn this turn (`Player.cards_drawn_this_turn`). Fractal
+    /// Anomaly.
     CardsDrawnThisTurn(PlayerRef),
     /// "for each card your opponents have drawn this turn" — the sum of
     /// `cards_drawn_this_turn` over the controller's living opponents
@@ -1670,15 +1431,11 @@ pub enum Value {
     /// Clues `who` has sacrificed this turn (`Player.clues_sacrificed_this_turn`;
     /// Briarbridge Patrol).
     CluesSacrificedThisTurn(PlayerRef),
-    /// Cards `who` has drawn during the current step. Backed by
-    /// `Player.cards_drawn_this_step`, reset on every step change.
-    /// Powers Orcish Bowmasters' "except the first one they draw in
-    /// each of their draw steps" exemption.
+    /// Cards `who` has drawn this step (`Player.cards_drawn_this_step`). Orcish
+    /// Bowmasters' first-draw exemption.
     CardsDrawnThisStep(PlayerRef),
-    /// Number of lands the player has played this turn (CR 305 / landfall).
-    /// Backed by `Player.lands_played_this_turn`; a `> 0` value powers
-    /// "if a land entered under your control this turn" landfall riders
-    /// (Groundswell, Searing Blaze). Reset on the player's untap.
+    /// Lands the player has played this turn (`Player.lands_played_this_turn`);
+    /// `> 0` is landfall's "if a land entered" (Searing Blaze).
     LandsPlayedThisTurn(PlayerRef),
     /// Artifacts that entered the battlefield under the player's control this
     /// turn (`Player.artifacts_entered_this_turn`) — Malcator's end-step gate.
@@ -1696,10 +1453,8 @@ pub enum Value {
     /// (`Player.mounts_vehicles_entered_this_turn`) — Cloudspire Coordinator's
     /// X token count.
     MountsVehiclesEnteredThisTurn(PlayerRef),
-    /// Creatures of `1` (other than the resolution's trigger source) that
-    /// entered under the controller's control this turn — Geralf, the
-    /// Fleshwright's "+1/+1 counter for each other Zombie that entered the
-    /// battlefield under your control this turn".
+    /// Other creatures of the given type that entered under the controller this
+    /// turn (Geralf, the Fleshwright).
     OtherCreaturesOfTypeEnteredThisTurn(crate::card::CreatureType),
     /// Nontoken creatures that entered under `who`'s control this turn
     /// (Gyome, Master Chef's end-step Food count).
@@ -1730,10 +1485,8 @@ pub enum Value {
     /// player half of "each counter among players and permanents"
     /// (Lumbering Megasloth).
     CountersAmongPlayers,
-    /// How many of the players `who` resolves to have at least `at_least`
-    /// poison counters — the count Corrupted scales by at a table ("for each
-    /// opponent who has three or more poison counters": Wurmquake, Glissa's
-    /// Retriever).
+    /// How many of `who`'s players have `at_least` poison — Corrupted's count at
+    /// a table (Wurmquake).
     PlayersWithPoisonAtLeast { who: PlayerRef, at_least: u32 },
     /// How many of the controller's opponents lost life this turn (Kaito,
     /// Bane of Nightmares' 0).
@@ -1750,22 +1503,16 @@ pub enum Value {
     /// The greatest total toxic value among creatures the player controls
     /// (Goliath Hatchery's Corrupted draw; CR 702.180b sums instances).
     GreatestToxicAmongControlled(PlayerRef),
-    /// Two raised to the inner value, clamped to a sane upper bound (≤30).
-    /// Used by SOS Mathemagics — "target player draws 2ˣ cards" — so the
-    /// X-cost bombshell scales correctly at the small/medium values
-    /// typical of casting it. The clamp avoids deck-out / overflow when
-    /// X is ≥31.
+    /// Two to the inner value, clamped at 30 to avoid overflow (SOS Mathemagics,
+    /// "draws 2ˣ cards").
     Pow2(Box<Value>),
     /// Half of the inner value, rounded down. Used by SOS Pox Plague's
     /// "loses half their life", "discards half", "sacrifices half"
     /// clauses.
     HalfDown(Box<Value>),
-    /// Number of permanents controlled by the resolved player. Useful for
-    /// per-player effects like Pox Plague's "sacrifices half the
-    /// permanents they control" clause inside a `ForEach` over each
-    /// player, where `Selector::EachPermanent(ControlledByYou)` would
-    /// always read the spell's controller instead of the iterated
-    /// player.
+    /// Permanents the resolved player controls — per-player reads inside a
+    /// `ForEach` (Pox Plague), where `EachPermanent(ControlledByYou)` would read
+    /// the spell's controller.
     PermanentCountControlledBy(PlayerRef),
     /// The filtered sibling of `PermanentCountControlledBy` — how many
     /// permanents the resolved player controls that match the filter
@@ -1781,61 +1528,35 @@ pub enum Value {
     /// CR 700.11 — how many times the controller descended this turn (permanent
     /// cards put into their graveyard). The Mycotyrant's end-step token count.
     TimesDescendedThisTurn,
-    /// Number of creatures controlled by the resolved player. Sibling of
-    /// `PermanentCountControlledBy` filtered to creatures. Powers
-    /// Biorhythm's "each player's life total becomes the number of
-    /// creatures they control" inside a `ForEach` over each player.
+    /// Creatures the resolved player controls, for per-player `ForEach` reads
+    /// (Biorhythm).
     CreatureCountControlledBy(PlayerRef),
-    /// The size of the largest group of creatures the controller controls that
-    /// share a creature type (CR — "the greatest number of creatures you
-    /// control that have a creature type in common"). Changelings count toward
-    /// every type. 0 if you control no creatures. White Lotus Tile's mana
-    /// ability.
+    /// The largest group of the controller's creatures sharing a creature type;
+    /// changelings count for every type. White Lotus Tile.
     GreatestSharedCreatureTypeCount,
     /// Creatures the evaluating player controls that share a creature type
     /// with `.0` (Mana Echoes). Changelings share with everything.
     CreaturesSharingTypeWith(Box<Selector>),
-    /// Number of nonbasic lands controlled by the resolved player. Read
-    /// per-recipient inside a `ForEach` over each player so a single effect
-    /// scales independently for each player — Sunspine Lynx's "deals damage
-    /// to each player equal to the number of nonbasic lands that player
-    /// controls."
+    /// Nonbasic lands the resolved player controls, read per recipient inside a
+    /// `ForEach` (Sunspine Lynx).
     NonbasicLandCountControlledBy(PlayerRef),
-    /// Number of loyalty counters on the first permanent the selector
-    /// resolves to. Used by Strixhaven's **Confront the Past** mode 2
-    /// ("Confront the Past deals damage to target planeswalker equal to
-    /// the number of loyalty counters on it") and any future
-    /// "loyalty-counter-X" payoff. Returns 0 for non-permanents and
-    /// non-planeswalkers (the field is just the `CounterType::Loyalty`
-    /// count, which is 0 for cards without loyalty).
+    /// Loyalty counters on the selector's first permanent; 0 for anything else
+    /// (Confront the Past).
     LoyaltyOf(Box<Selector>),
-    /// The amount carried by the event that fired the current trigger
-    /// (life gained, life lost, damage dealt, cards drawn, …). Read
-    /// from `EffectContext.event_amount`, which is set by the
-    /// `dispatch_triggers_for_events` dispatcher from the event's
-    /// `amount` field. Used by Light of Promise's "Whenever you gain
-    /// life, put that many +1/+1 counters on target creature you
-    /// control." — the trigger body reads `Value::TriggerEventAmount`
-    /// for the count of counters to drop. Returns 0 in non-trigger
-    /// resolution contexts (spells, activated abilities, delayed
-    /// triggers that have moved past the original event).
+    /// The amount on the event that fired this trigger (life gained, damage,
+    /// cards drawn, …), from `EffectContext.event_amount`. Light of Promise. 0
+    /// outside a trigger.
     TriggerEventAmount,
     /// CR 605.1a / 106.4 — the mana the `TappedForMana` event's permanent
     /// produced in the trigger's batch, one per pip event (Tyvar the
     /// Bellicose's "equal to the amount of mana this creature produced").
     TriggerManaProduced,
-    /// The number of Auras the trigger's controller controlled that were
-    /// attached to the dying creature (the trigger subject) when it left the
-    /// battlefield. Read from `GameState.auras_at_death`. Powers Hateful
-    /// Eidolon's "draw a card for each Aura you controlled that was attached
-    /// to it".
+    /// Auras the trigger's controller controlled attached to the dying subject
+    /// when it left (`GameState.auras_at_death`). Hateful Eidolon.
     AurasYouControlledOnDyingSubject,
-    /// CR 603.10a — the number of the dying creature's (the trigger
-    /// subject's) attachments at the moment it left the battlefield that
-    /// match `filter`, wherever those cards are now (an Aura is usually in a
-    /// graveyard by then, an Equipment still on the battlefield). Read from
-    /// `GameState.auras_at_death`. Gunner Conscript's "if it was enchanted" /
-    /// "if it was equipped", Cass's "if it was enchanted or equipped".
+    /// CR 603.10a — attachments on the dying subject when it left that match
+    /// `filter`, wherever they are now (`GameState.auras_at_death`). Gunner
+    /// Conscript's "if it was enchanted / equipped".
     AttachmentsOnDyingSubject { filter: SelectionRequirement },
     /// The number of spells `who` has cast this turn from anywhere other than
     /// their hand (Paradox — Impending Flux, Surge of Brilliance):
@@ -1848,20 +1569,14 @@ pub enum Value {
     /// Cards in exile linked to the source (`exiled_with`) matching `filter` —
     /// Soulflayer's delved creature cards.
     CardsExiledWithSourceMatching(SelectionRequirement),
-    /// CR 706.4 — the result of the most recent die roll in this resolution.
-    /// Set by the `Effect::RollDie` resolver just before it runs each result-
-    /// table arm, so an inner effect can reference the rolled face ("create
-    /// that many Treasure tokens" — Ancient Copper Dragon). Returns 0 outside
-    /// a die-roll context.
+    /// CR 706.4 — the most recent die roll this resolution, set before each
+    /// result-table arm runs (Ancient Copper Dragon). 0 outside a roll.
     LastDieRoll,
     /// CR 706.4 — how many different results the most recent roll showed
     /// ("for each different result" — Circuits Act).
     LastRollDistinctResults,
-    /// Number of creatures that died under `who`'s control so far this
-    /// turn. Backed by `Player.creatures_died_this_turn` (bumped from the
-    /// SBA death loop). Powers Witherbloom "harvest" payoffs that scale
-    /// off the turn's carnage (e.g. "draw a card for each creature that
-    /// died under your control this turn"). The companion predicate is
+    /// Creatures that died under `who`'s control this turn
+    /// (`Player.creatures_died_this_turn`). Predicate sibling:
     /// `Predicate::CreaturesDiedThisTurnAtLeast`.
     CreaturesDiedThisTurn(PlayerRef),
     /// Creatures that left the battlefield under `who`'s control this turn,
@@ -1876,9 +1591,7 @@ pub enum Value {
     /// Card types among permanents `who` sacrificed this turn (Korvold,
     /// Gleeful Glutton's "{1} less for each card type").
     CardTypesSacrificedThisTurn(PlayerRef),
-    /// Number of creatures that died this turn across **every** player.
-    /// Sums `Player.creatures_died_this_turn` over all seats. Powers
-    /// table-wide aristocrat scaling, mirroring
+    /// Creatures that died this turn across every seat; mirrors
     /// `Predicate::CreaturesDiedThisTurnTotalAtLeast`.
     CreaturesDiedThisTurnTotal,
     /// Number of creatures that died **under the controller's control** this
@@ -1900,10 +1613,8 @@ pub enum Value {
     /// power among the permanents sacrificed during this resolution, read off
     /// their death snapshots (Shadowgrange Archfiend).
     GreatestSacrificedPowerThisResolution,
-    /// Creatures that died this turn whose death-time snapshot matches
-    /// `filter`, read with the controller as "you" — "each nontoken creature
-    /// put into your graveyard from the battlefield this turn" is
-    /// `NotToken.and(OwnedByYou)` (Caller of the Claw).
+    /// Creatures that died this turn whose death snapshot matches `filter`, with
+    /// the controller as "you" (Caller of the Claw: `NotToken.and(OwnedByYou)`).
     CreatureDeathsThisTurnMatching { filter: SelectionRequirement },
     /// The total power (last known) of the creatures matching `filter` that
     /// died this turn — "the total power of Daleks that died this turn"
@@ -1913,32 +1624,24 @@ pub enum Value {
     /// `Player.zuberas_died_this_turn`. Powers the Champions-of-Kamigawa
     /// Zubera death-trigger cycle ("for each Zubera that died this turn").
     ZuberasDiedThisTurnTotal,
-    /// Number of permanents destroyed by `Effect::Destroy` earlier in this
-    /// same resolution. Backed by `GameState.permanents_destroyed_this_resolution`.
-    /// Powers Culling Ritual's "Add {B} or {G} for each permanent destroyed
-    /// this way" — evaluate it in a later `Seq` step after the destruction.
+    /// Permanents `Effect::Destroy` destroyed earlier this resolution
+    /// (`permanents_destroyed_this_resolution`). Culling Ritual.
     PermanentsDestroyedThisResolution,
-    /// Creatures destroyed by `Effect::Destroy` earlier in this same
-    /// resolution that `who` controlled as they were destroyed, tokens
-    /// included. Deadly Tempest's "each player loses life equal to the number
-    /// of creatures they controlled that were destroyed this way".
+    /// Creatures (tokens too) destroyed earlier this resolution that `who`
+    /// controlled as they died (Deadly Tempest).
     CreaturesDestroyedThisResolutionControlledBy(PlayerRef),
     /// As `CreaturesDestroyedThisResolutionControlledBy`, tokens excluded —
     /// Ceaseless Conflict's "for each nontoken creature you controlled that
     /// was destroyed this way".
     NontokenCreaturesDestroyedThisResolutionControlledBy(PlayerRef),
-    /// Every permanent destroyed so far this resolution that `who` controlled
-    /// as it was destroyed, of any type — From the Ashes's "for each land
-    /// destroyed this way, its controller may search". Reads the same scratch
-    /// as `CreaturesDestroyedThisResolutionControlledBy`.
+    /// Permanents of any type destroyed this resolution that `who` controlled
+    /// (From the Ashes); same scratch as
+    /// `CreaturesDestroyedThisResolutionControlledBy`.
     PermanentsDestroyedThisResolutionControlledBy(PlayerRef),
     /// Nonartifact creatures destroyed earlier in this resolution, tokens
     /// included (Join the Collective's Borg).
     NonartifactCreaturesDestroyedThisResolution,
-    /// Number of snow permanents (CR 205.4g — supertype Snow) controlled by
-    /// the resolved player. Powers Skred ("deals damage to target creature
-    /// equal to the number of snow permanents you control") and other
-    /// snow-matters scaling.
+    /// Snow permanents (CR 205.4g) the resolved player controls. Skred.
     SnowPermanentCountControlledBy(PlayerRef),
     /// CR 702.43 — Domain: the number of distinct basic land types among lands
     /// the resolved player controls (0–5). Powers Tribal Flames / Territorial
@@ -1958,10 +1661,8 @@ pub enum Value {
     /// `Effect::PutNameSticker` in this resolution put on something; 0 when
     /// it put none ("Add {R} for each unique vowel on that sticker").
     NameStickerUniqueVowels,
-    /// [`Value::GreatestCommanderManaValue`] counting only a commander the
-    /// player owns on the battlefield or in the command zone (Imposing
-    /// Grandeur, Stinging Study); one in a library, hand, graveyard or exile
-    /// adds nothing.
+    /// [`Value::GreatestCommanderManaValue`] counting only commanders on the
+    /// battlefield or in the command zone (Imposing Grandeur).
     GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef),
     /// [`Value::DungeonsCompleted`] counting each dungeon name once —
     /// "each differently named dungeon you've completed" (Ellywick's emblem).
@@ -2002,19 +1703,16 @@ pub enum Predicate {
     Not(Box<Predicate>),
     All(Vec<Predicate>),
     Any(Vec<Predicate>),
-    /// True if `pred` holds for **some** player `who` names, each checked with
-    /// that player bound as `PlayerRef::Triggerer` — "if an opponent [did X]"
-    /// (Mindbreak Trap, Guul Draz Specter). A single-player predicate handed
-    /// `EachOpponent` reads only the first seat (CR 800.4); this asks each.
+    /// `pred` holds for some player `who` names, each bound as `Triggerer` — "if
+    /// an opponent [did X]" (Mindbreak Trap). A single-player predicate given
+    /// `EachOpponent` reads only the first seat (CR 800.4).
     ForAnyPlayer { who: PlayerRef, pred: Box<Predicate> },
     /// A `kind` counter put on `what` (one permanent) now would land: no
     /// Solemnity lock and no restriction (Blightbeetle) zeroes it. CR
     /// 702.100b — a creature evolves only if the counter was put.
     CounterWouldLand { what: Selector, kind: crate::card::CounterType },
-    /// "If any of those creatures have power or toughness equal to the chosen
-    /// number" (Squall, Gunblade Duelist): a creature attacking the trigger's
-    /// player (`PlayerRef::Triggerer`) whose power or toughness is the
-    /// source's `chosen_number`.
+    /// Squall, Gunblade Duelist: a creature attacking the trigger's player has
+    /// power or toughness equal to the source's `chosen_number`.
     AttackerOfTriggererPtEqualsSourceChosenNumber,
     /// At least one entity matches the selector.
     SelectorExists(Selector),
@@ -2060,10 +1758,8 @@ pub enum Predicate {
     /// CR 105 — the two named target slots have exactly the same colour set
     /// ("unless either one is a color the other isn't" — Dead Ringers).
     TargetsHaveIdenticalColors(u8, u8),
-    /// The object in target slot `0` shares a colour with a permanent the
-    /// controller controls matching `filter` (Jaded Response's "if it shares a
-    /// color with a creature you control"). Reads the target wherever it is —
-    /// stack spell or permanent.
+    /// The target in slot `slot` (stack spell or permanent) shares a colour with
+    /// a `filter` permanent you control (Jaded Response).
     TargetSharesColorWithControlled { slot: u8, filter: crate::card::SelectionRequirement },
     /// The permanent in target `slot` shares a colour with the mana the
     /// trigger's tap produced (a `TappedForMana` trigger's event amount is
@@ -2073,23 +1769,16 @@ pub enum Predicate {
     /// resolution. Backed by `GameState::players_sacrificed_this_resolution`.
     /// Gates "if you sacrificed a permanent this way, …" (Deadly Brew).
     PlayerSacrificedThisResolution(PlayerRef),
-    /// CR 120.10 — true if excess damage was dealt to a creature / planeswalker
-    /// / battle during the current resolution (Orbital Plunge's "if excess
-    /// damage was dealt this way"). Backed by
-    /// `GameState.excess_damage_this_resolution`.
+    /// CR 120.10 — excess damage was dealt this resolution
+    /// (`GameState.excess_damage_this_resolution`). Orbital Plunge.
     ExcessDamageDealtThisResolution,
-    /// The controller has cast a spell with the SOURCE's printed name at
-    /// least `n` times this game (per-name lifetime tally, self-inclusive:
-    /// at resolution the resolving cast already counts, so "you've cast
-    /// ANOTHER spell named X this game" is `n = 2`). Approach of the
-    /// Second Sun.
+    /// The controller has cast a spell with the source's printed name at least
+    /// `n` times this game. The resolving cast counts, so "another spell named X"
+    /// is `n = 2` (Approach of the Second Sun).
     CastOwnNameThisGameAtLeast(u32),
-    /// At least `n` mode instances were chosen for this cast
-    /// (`ctx.spree_modes`, stamped by `CastSpellSpree` /
-    /// `ChooseModesCast`). With distinct modes and `max = n`, this is
-    /// exactly "if you chose all of the above" (Multiple Choice's fourth
-    /// bullet). A plain single-mode `CastSpell { mode }` fallback carries
-    /// one mode, so the gate correctly fails.
+    /// At least `n` mode instances were chosen for this cast (`ctx.spree_modes`).
+    /// With distinct modes and `max = n` this is "if you chose all of the above"
+    /// (Multiple Choice); a single-mode cast fails it.
     ChoseModesAtLeast(u8),
     /// It's `who`'s turn.
     IsTurnOf(PlayerRef),
@@ -2113,16 +1802,12 @@ pub enum Predicate {
     /// controller ("…deals combat damage to one of your opponents" —
     /// Gonti, Night Minister). Teammates and the controller are false.
     PlayerIsOpponent { who: PlayerRef },
-    /// True during the controller's main phase (CR — RNA Addendum). Read at an
-    /// instant's resolution, which for these cards is the same step it was cast
-    /// in (the stack can't advance a step mid-resolution), so it faithfully
-    /// captures "if you cast this spell during your main phase."
+    /// During the controller's main phase. An instant resolves in the step it was
+    /// cast, so this captures "if you cast this during your main phase".
     YourMainPhase,
-    /// The active player (whose turn it is) controls at least one permanent the
-    /// selector resolves to. Gates "at the beginning of the upkeep of enchanted
-    /// [permanent]'s controller, …" Aura triggers (Warp Artifact, Cursed Land,
-    /// Wanderlust): pair with an `AnyPlayer` upkeep trigger so it fires only on
-    /// the enchanted permanent's controller's upkeep.
+    /// The active player controls something the selector resolves to — "at the
+    /// beginning of the upkeep of enchanted permanent's controller" Auras (Warp
+    /// Artifact) pair it with an `AnyPlayer` upkeep trigger.
     ActivePlayerControls(Box<Selector>),
     /// The game is currently in the given turn step (CR 500). Gates
     /// "activate only during [your] upkeep / end step" abilities; pair with
@@ -2130,28 +1815,20 @@ pub enum Predicate {
     CurrentStepIs(crate::turn_step::TurnStep),
     /// The given entity's properties match the filter.
     EntityMatches { what: Selector, filter: SelectionRequirement },
-    /// At least one entity the selector resolves to matches the filter
-    /// (false when the selector is empty — unlike `EntityMatches`, which is
-    /// vacuously true). Gates "if a [creature] card was exiled this way, …"
-    /// over an optional ("up to one") target — Diregraf Scavenger.
+    /// Some entity of `what` matches `filter`; false when empty, unlike the
+    /// vacuous `EntityMatches`. For "up to one" targets (Diregraf Scavenger).
     EntityMatchesAny { what: Selector, filter: SelectionRequirement },
     /// `who` has gained at least `at_least` total life this turn.
     /// Backed by `Player.life_gained_this_turn`. Used by Strixhaven's
     /// **Infusion** rider — "If you gained life this turn, …".
     LifeGainedThisTurnAtLeast { who: PlayerRef, at_least: Value },
-    /// True while `who` has NOT yet completed a life-gain trigger batch
-    /// this turn. Used as the event filter on `LifeGained` triggers that
-    /// read "whenever you gain life for the first time each turn" (Leech
-    /// Collector): a gain that happened before the listener arrived
-    /// already flipped the flag, so later gains that turn don't qualify.
-    /// Pair with `once_per_turn()` so a multi-event first batch still
-    /// fires only once. Backed by `Player.gained_life_earlier_this_turn`.
+    /// `who` has not yet completed a life-gain trigger batch this turn
+    /// (`Player.gained_life_earlier_this_turn`): "the first time you gain life
+    /// each turn" (Leech Collector). Pair with `once_per_turn()`.
     FirstLifeGainThisTurn { who: PlayerRef },
-    /// The trigger's batch is `who`'s first of `kind` this turn — "whenever
-    /// you create one or more tokens / surveil for the first time each turn"
-    /// (Akim, the Soaring Wind; Whispering Snitch). A batch before the
-    /// listener arrived still counts. Backed by the per-turn batch tallies
-    /// `GameState::tally_first_each_turn_batches` keeps.
+    /// The trigger's batch is `who`'s first of `kind` this turn, counting batches
+    /// from before the listener arrived (Akim, the Soaring Wind). Backed by
+    /// `GameState::tally_first_each_turn_batches`.
     FirstBatchThisTurn { who: PlayerRef, kind: FirstBatchKind },
     /// "Activate only if you've scried or surveilled this turn" (Proctor of
     /// Potential, CR 701.22 / 701.25). Backed by the per-turn scry and
@@ -2163,16 +1840,12 @@ pub enum Predicate {
     /// "A spell that targets only a single [filter]" (Precursor Golem): the
     /// spell `what` names has exactly one target, and it matches `filter`.
     SpellTargetsOnlyOne { what: Selector, filter: crate::card::SelectionRequirement },
-    /// CR 700.14 — true exactly on the spell-cast whose payment first
-    /// pushes the active player's running mana-spent-on-spells total to
-    /// `n` (i.e. prior total `< n` and new total `>= n`). Used as the
-    /// resolve-time filter on `EventKind::Expend` triggers (Roughshod Duo
-    /// "Whenever you expend 4").
+    /// CR 700.14 — this cast's payment takes the active player's mana spent on
+    /// spells this turn from below `n` to at least `n`. The filter on
+    /// `EventKind::Expend` triggers (Roughshod Duo).
     ExpendReached(u32),
-    /// Among the cards discarded during this resolution, the effect's
-    /// controller discarded one and none an opponent discarded has a greater
-    /// mana value ("if you discarded the card with the greatest mana value
-    /// among those cards or tied for greatest" — Cait, Cage Brawler).
+    /// Among this resolution's discards, the controller discarded one with the
+    /// greatest mana value (ties count) — Cait, Cage Brawler.
     YouDiscardedGreatestManaValueThisEffect,
     /// CR 700.6 — `who` has the city's blessing. "As long as you have the
     /// city's blessing, …" (Ascend payoffs).
@@ -2191,25 +1864,18 @@ pub enum Predicate {
     /// The evaluating source was marked by `Effect::MarkSourceThisTurn` this
     /// turn.
     SourceMarkedThisTurn,
-    /// CR 702.85a — the spell this `SpellCast` trigger fired on has cascade:
-    /// printed, or given by a "when you cast" cascade trigger whose condition
-    /// holds for it (Wild-Magic Sorcerer, Maelstrom Nexus, a delirious
-    /// Bloodbraid Marauder). Aurora Phoenix.
+    /// CR 702.85a — the spell this `SpellCast` trigger fired on has cascade,
+    /// printed or granted by a cast trigger that holds for it. Aurora Phoenix.
     CastSpellHasCascade,
     /// CR 725 — `who` is the monarch ("as long as you're the monarch, …").
     IsMonarch { who: PlayerRef },
-    /// CR 725 — `who` was the monarch as the current turn began. Reads the
-    /// turn-start snapshot, so a mid-turn monarch change doesn't rewrite it
-    /// (Knights of the Black Rose's "if you were the monarch as the turn
-    /// began").
+    /// CR 725 — `who` was the monarch as the turn began (turn-start snapshot).
+    /// Knights of the Black Rose.
     WasMonarchAtTurnStart { who: PlayerRef },
     /// CR 726 — `who` currently has the initiative.
     HasInitiative { who: PlayerRef },
-    /// CR 903 — `who` controls a commander that is theirs. The Lieutenant
-    /// ability word's condition ("as long as you control your commander",
-    /// CR 207.2c — the word itself has no rules meaning, the text does).
-    /// A commander an opponent has stolen is not one you control, and with
-    /// two commanders either one satisfies it.
+    /// CR 903 — `who` controls their own commander (either of two); Lieutenant's
+    /// condition. A stolen commander doesn't count.
     ControlsOwnCommander { who: PlayerRef },
     /// `who` controls `at_least` lands that share one name (Endless Atlas —
     /// "three or more lands with the same name"): the largest same-name
@@ -2223,10 +1889,8 @@ pub enum Predicate {
     /// (Alchemist's Talent, Rain of Riches — on a `SpellCast` trigger,
     /// `Selector::TriggerSource`).
     CastWithTreasureMana { what: Selector },
-    /// Snow mana of one of the spell's own colours was spent to cast the
-    /// spell `what` resolves to (Boreal Outrider — "if {S} of any of that
-    /// spell's colors was spent to cast it", on a `SpellCast` trigger with
-    /// `Selector::TriggerSource`). Reads `CardData::cast_snow_colors`.
+    /// Snow mana of one of the spell's own colours was spent on `what`
+    /// (`CardData::cast_snow_colors`). Boreal Outrider.
     SnowOfItsColorSpentToCast { what: Selector },
     /// `SpendRestriction::MarksCast(mark)` mana was spent to cast `what`
     /// (Barracks of the Thousand's "using mana produced by" this).
@@ -2239,10 +1903,9 @@ pub enum Predicate {
     /// abilities use `speed: 4`; "as long as your speed is N or higher" uses
     /// the listed threshold. Backed by `Player.speed`.
     SpeedAtLeast { who: PlayerRef, speed: u32 },
-    /// True if any player matched by `who` has been dealt damage this turn.
-    /// Backed by `Player.was_dealt_damage_this_turn`. Powers Bloodthirst
-    /// (CR 702.54) — pair with `who: EachOpponent` for "if an opponent was
-    /// dealt damage this turn."
+    /// Some `who` player was dealt damage this turn
+    /// (`Player.was_dealt_damage_this_turn`). Bloodthirst (CR 702.54) with
+    /// `EachOpponent`.
     PlayerDamagedThisTurn { who: PlayerRef },
     /// True if a creature or planeswalker any player matched by `who`
     /// controlled was dealt excess damage this turn (CR 120.10 — Rith).
@@ -2268,15 +1931,11 @@ pub enum Predicate {
     /// `Player.life_gained_this_turn`. Powers "if you gained or lost life this
     /// turn" end-step payoffs (Starlit Soothsayer, Star Charter).
     PlayerGainedLifeThisTurn { who: PlayerRef },
-    /// True if any player matched by `who` has drawn at least `n` cards this
-    /// turn. Backed by `Player.cards_drawn_this_turn`. Paired with
-    /// `who: Triggerer` + `once_per_turn` to model "whenever a player draws
-    /// their Nth card each turn" (Faerie Mastermind's second-draw payoff).
+    /// Some `who` player has drawn `n`+ cards this turn. With `Triggerer` +
+    /// `once_per_turn`: "draws their Nth card each turn" (Faerie Mastermind).
     PlayerDrewAtLeastThisTurn { who: PlayerRef, n: u32 },
-    /// Suppressor Skyguard — "if that player has another opponent who isn't
-    /// being attacked": the active (attacking) player has a live opponent
-    /// other than you that no current attacker is aimed at (directly or
-    /// through a permanent it controls).
+    /// Suppressor Skyguard: the attacking player has a live opponent other than
+    /// you whom no attacker is aimed at.
     AttackingPlayerLeftAnotherOpponentUnattacked,
     /// True if any player matched by `who` has an effective life total at most
     /// `life`. Powers "unless an opponent has N or less life" gates (Vampire
@@ -2290,37 +1949,27 @@ pub enum Predicate {
     /// `life`. Powers "as long as you have N or more life" statics (Angel of
     /// Vitality).
     PlayerLifeAtLeast { who: PlayerRef, life: i32 },
-    /// True if any player matched by `who` has an effective life total at least
-    /// `delta` above the life total they started the game with (CR 103.4).
-    /// Powers "as long as you have at least N life more than your starting life
-    /// total" statics/activations (Righteous Valkyrie, Speaker of the Heavens).
+    /// Some `who` player has life at least `delta` above their starting total (CR
+    /// 103.4). Righteous Valkyrie.
     PlayerLifeAtLeastAboveStarting { who: PlayerRef, delta: i32 },
-    /// True if any player matched by `who` has an effective life total less than
-    /// or equal to half the life total they started the game with (rounded
-    /// down). Powers "if your life total is less than or equal to half your
-    /// starting life total" gates (Cecil, Dark Knight).
+    /// Some `who` player has at most half their starting life (rounded down).
+    /// Cecil, Dark Knight.
     PlayerLifeAtMostHalfStarting { who: PlayerRef },
-    /// True if any player matched by `who` has the most life, or is tied for
-    /// the most, among all (non-eliminated) players. Powers Dethrone (CR
-    /// 702.105 — "attacks the player with the most life or tied for most
-    /// life"); pair with `who: DefendingPlayer` on an `Attacks` trigger.
+    /// Some `who` player has (or ties for) the most life — Dethrone (CR 702.105)
+    /// with `DefendingPlayer`.
     PlayerHasMostLife { who: PlayerRef },
     /// No opponent of the evaluating controller has more life than `who`
     /// (Veteran Soldier's "if no opponent has more life than that player" —
     /// the controller's own total does not count, unlike `PlayerHasMostLife`).
     PlayerHasMostLifeAmongOpponents { who: PlayerRef },
-    /// The controller controls a permanent of the source's chosen color, read
-    /// off its current colors (Lurebound Scarecrow's "when you control no
-    /// permanents of the chosen color"). A friendly read, so the as-enters
-    /// pick names your densest color (`chosen_color_aimed_at_opponents`).
+    /// The controller controls a permanent of the source's chosen color (Lurebound
+    /// Scarecrow); friendly, so the as-enters pick names your densest color.
     YouControlPermanentOfSourcesChosenColor,
     /// `who` controls strictly more `filter` permanents than each other player
     /// (Rivalry's land leader, Damping Engine's permanent leader).
     PlayerControlsMostOf { who: PlayerRef, filter: SelectionRequirement },
-    /// `value`, read with `PlayerRef::You` bound to `who`, is strictly
-    /// greater than the same value read for each other live player — "if
-    /// that player has more cards in hand / more life than each other
-    /// player" (Battle Angels of Tyr).
+    /// `value` read with `You` = `who` beats it read for every other live player
+    /// (Battle Angels of Tyr).
     PlayerValueExceedsEachOther { who: PlayerRef, value: Value },
     /// True if any player matched by `who` has strictly less life than at least
     /// one of their opponents. Geyadrone Dihada's "if you have less life than
@@ -2343,10 +1992,8 @@ pub enum Predicate {
     /// True if the effect's source creature attacked this turn (CR 702.142
     /// Boast gate). Backed by `CardInstance.attacked_this_turn`.
     SourceAttackedThisTurn,
-    /// The top of the stack is an activated or triggered ability that targets
-    /// only the effect's source — one slot, filled with it (Agrus Kos,
-    /// Eternal Soldier's "becomes the target of an ability that targets only
-    /// it", asked as that ability is announced).
+    /// The top of the stack is an ability with one target, the source (Agrus Kos,
+    /// Eternal Soldier), asked as it is announced.
     AbilityOnStackTargetsOnlySource,
     /// CR 500.7 — the current turn is an extra turn. Backed by
     /// `GameState.current_turn_is_extra`. Medomai the Ageless's
@@ -2367,10 +2014,8 @@ pub enum Predicate {
     /// Powers "as long as this creature is equipped, …" team statics (Auriok
     /// Steelshaper's Soldier/Knight anthem).
     SourceIsEquipped,
-    /// The source permanent is currently a creature, reading the *computed*
-    /// (layer-aware) types — true for an animated manland. Gates abilities
-    /// granted by animation (Wandering Fumarole's `{0}` switch, Lavaclaw
-    /// Reaches' firebreathing).
+    /// The source is a creature by computed types (an animated manland).
+    /// Wandering Fumarole.
     SourceIsCreature,
     /// The ability's source permanent is still on the battlefield — the
     /// intervening-'if' half of "…if [this] is still on the battlefield"
@@ -2386,22 +2031,16 @@ pub enum Predicate {
     /// An opponent of the controller had at least `n` creatures enter under
     /// their control this turn (Whiplash Trap's alternative cost).
     AnOpponentHadCreaturesEnterAtLeast(u32),
-    /// CR 400.7 — the source is on the battlefield as the SAME object a
-    /// delayed trigger was scheduled for: its `battlefield_timestamp` (stamped
-    /// fresh on every entry) still equals the recorded one. A card keeps its
-    /// `CardId` across zones, so `SourceOnBattlefield` alone reads a permanent
-    /// that left and came back as the one that was there (Hellkite Courser's
-    /// end-step return). Schedule it with [`UNBOUND_OBJECT_STAMP`] as the
-    /// object enters: the entry stamp binds it (`rebind_object_stamp`), and
-    /// attach / transform / turn-face-up re-stamps carry it along, since those
-    /// keep the object.
+    /// CR 400.7 — the source is on the battlefield as the same object a delayed
+    /// trigger was scheduled for (its `battlefield_timestamp` is unchanged; a
+    /// `CardId` alone survives leaving and returning — Hellkite Courser).
+    /// Schedule with [`UNBOUND_OBJECT_STAMP`] as the object enters; the entry
+    /// stamp binds it (`rebind_object_stamp`), and attach / transform /
+    /// turn-face-up re-stamps carry it.
     SourceIsSameObjectOnBattlefield { battlefield_timestamp: u64 },
-    /// CR 400.7 — the delayed body's `Target(0)` is still the object that was
-    /// captured, in whatever zone: its `battlefield_timestamp` is unchanged, so
-    /// it has not re-entered the battlefield since. A card that came back and
-    /// left again is a new object (Liliana's emblem returned a Phantasmal
-    /// Image once per death it had ever had). Stamped by
-    /// `Effect::DelayUntilWithCapture`.
+    /// CR 400.7 — the delayed body's `Target(0)` is still the captured object
+    /// (`battlefield_timestamp` unchanged), so a card that came back and left
+    /// again doesn't match. Stamped by `Effect::DelayUntilWithCapture`.
     TargetIsCapturedObject { battlefield_timestamp: u64 },
     /// The source is blocking a creature that at least one *other* blocker
     /// matching `filter` is also blocking, and every blocker on it matches
@@ -2423,10 +2062,8 @@ pub enum Predicate {
     /// (Sarevok, Deathbringer) — every player's
     /// `permanent_left_battlefield_this_turn` is clear.
     NoPermanentLeftBattlefieldThisTurn,
-    /// The context's controller has cast no spell yet this game — read by a
-    /// spell's own alternative cost before its cast is counted, so it is "this
-    /// is the first spell you've cast this game" (Once Upon a Time). Backed by
-    /// `Player.cast_a_spell_this_game`.
+    /// The controller has cast no spell this game, read before the cast counts —
+    /// "this is the first spell you've cast" (Once Upon a Time).
     FirstSpellYouCastThisGame,
     /// A creature left the battlefield under `who`'s control this turn (Tale
     /// of Momo's cost reduction). Backed by
@@ -2436,10 +2073,8 @@ pub enum Predicate {
     /// Aang's "if you've done all four this turn"). Backed by
     /// `Player.bends_this_turn`.
     BentAllFourThisTurn { who: PlayerRef },
-    /// EOE Void — true if a nonland permanent left the battlefield this turn
-    /// (any controller) or `who` cast a spell for its warp cost this turn.
-    /// Backed by `GameState.nonland_permanent_left_bf_this_turn` +
-    /// `Player.warped_spell_this_turn`.
+    /// EOE Void: a nonland permanent left the battlefield this turn, or `who`
+    /// cast a spell for warp this turn.
     VoidActive { who: PlayerRef },
     /// True while at least one player controls no creatures (Sothera, the
     /// Supervoid's end-step cash-in).
@@ -2452,19 +2087,15 @@ pub enum Predicate {
     /// 702.139). Backed by `CardInstance.cast_from_escape`; gates the
     /// "sacrifice it unless it escaped" ETB rider on Kroxa / Uro.
     SourceCastFromEscape,
-    /// True if the source permanent reached the battlefield by being cast as
-    /// a spell (any cast path), as opposed to being a token, conjured, or put
-    /// onto the battlefield by another effect. Gates "if you cast it" ETB
-    /// riders (Skitterbeam Battalion) — token copies and reanimated bodies
-    /// don't re-fire. Backed by the persistent `CardInstance` cast flags.
+    /// The source reached the battlefield by being cast (any path), not as a
+    /// token or by an effect — "if you cast it" ETB riders (Skitterbeam
+    /// Battalion). Backed by `CardInstance` cast flags.
     SourceWasCast,
     /// `SourceWasCast` asked of the trigger's subject — "whenever an Aura you
     /// control enters, if you cast it" (Light-Paws, Emperor's Voice).
     TriggerSourceWasCast,
-    /// The narrower sibling: true only if the source permanent reached the
-    /// battlefield by being cast **from its owner's hand** (Phage the
-    /// Untouchable's "if you didn't cast it from your hand, you lose the
-    /// game"). Backed by `CardInstance.cast_from_hand`.
+    /// The source was cast from its owner's hand
+    /// (`CardInstance.cast_from_hand`) — Phage the Untouchable.
     SourceCastFromOwnersHand,
     /// CR 702.77 — true if a card in exile is champion-linked to the
     /// effect's source (`exiled_by` points at it). Gates "when a [type] is
@@ -2474,17 +2105,12 @@ pub enum Predicate {
     /// source. Scopes a `Blocks`/`AnyPlayer` trigger to "whenever a creature
     /// blocks *this* creature" (Nessian Boar).
     TriggerBlocksSource,
-    /// True if the trigger's object (the just-cast spell, `trigger_source`)
-    /// has the same name the effect's source stamped via `Effect::NameCard`
-    /// (`CardInstance.named_card`). Gates "whenever an opponent casts a spell
-    /// with the chosen name" triggers — Silverquill Silencer.
+    /// The just-cast spell has the name the source stamped via `Effect::NameCard`
+    /// (Silverquill Silencer).
     TriggerObjectNameMatchesNamedCard,
-    /// True if the trigger's object (the triggering spell/permanent,
-    /// `trigger_source`) has a creature type matching the effect source's
-    /// ETB-chosen `chosen_creature_type` (Changeling satisfies any type).
-    /// Gates chosen-type *event* triggers — "whenever you cast a spell of
-    /// the chosen type" (Vanquisher's Banner) and "whenever a creature of
-    /// the chosen type enters or attacks" (Kindred Discovery).
+    /// The trigger object (`trigger_source`) has the source's
+    /// `chosen_creature_type` (changelings match) — "whenever you cast a spell of
+    /// the chosen type" (Vanquisher's Banner).
     TriggerObjectIsChosenType,
     /// True if any player `who` resolves to attacked with a creature this
     /// turn (Raid, CR 702.108 ability word). Backed by
@@ -2552,10 +2178,9 @@ pub enum Predicate {
     /// "[who] had `at_least` lands enter the battlefield under their control
     /// this turn" (Lavaball Trap). Reads `Player.lands_entered_this_turn`.
     LandsEnteredThisTurnAtLeast { who: PlayerRef, at_least: u32 },
-    /// "[who] had a creature matching `filter` enter the battlefield under
-    /// their control this turn" (Permafrost Trap). Matches over
-    /// `Player.creatures_entered_this_turn`, so a creature that has since left
-    /// the battlefield still counts.
+    /// A `filter` creature entered under `who` this turn
+    /// (`Player.creatures_entered_this_turn`; departed ones count). Permafrost
+    /// Trap.
     CreatureEnteredThisTurnMatching { who: PlayerRef, filter: SelectionRequirement },
     /// "A creature spell [who] cast this turn was countered by a spell or
     /// ability an opponent controlled" (Summoning Trap). Reads
@@ -2567,32 +2192,24 @@ pub enum Predicate {
     /// `Player.noncreature_destroyed_by_opponent_this_turn`, stamped in the
     /// destroy funnel where the destroying effect's controller is known.
     NoncreaturePermanentDestroyedByOpponentThisTurn { who: PlayerRef },
-    /// True if any player `who` resolves to discarded a *nonland* card within
-    /// the current effect resolution. Backed by
-    /// `GameState.scratch.nonland_cards_discarded_per_player_this_resolution`. Gates
-    /// Kroxa's "each opponent who didn't discard a nonland card this way loses
-    /// 3 life" — pair `Not(DiscardedNonlandThisEffect { Triggerer })` with a
-    /// per-opponent `ForEach` so each opponent is judged independently.
+    /// Any player `who` resolves to discarded a nonland card this resolution
+    /// (`scratch.nonland_cards_discarded_per_player_this_resolution`). Kroxa:
+    /// `Not(..{ Triggerer })` under a per-opponent `ForEach`.
     DiscardedNonlandThisEffect { who: PlayerRef },
-    /// True if `who` discarded at least one card (any type) within the current
-    /// effect resolution. Backed by
-    /// `GameState.scratch.cards_discarded_per_player_this_resolution`. Gates "if you
-    /// discarded a card this way, …" riders (Fanatic of the Harrowing).
+    /// `who` discarded a card this resolution
+    /// (`scratch.cards_discarded_per_player_this_resolution`). Fanatic of the
+    /// Harrowing.
     DiscardedThisEffect { who: PlayerRef },
     /// The most recently discarded card (cost or effect) had this creature
     /// type — Necromancer's Stockpile's "if the discarded card was a Zombie".
     /// Backed by `GameState.last_discarded_creature_types`.
     LastDiscardedHasCreatureType(crate::card::CreatureType),
-    /// `who` has had at least `at_least` cards leave their graveyard
-    /// this turn. Backed by `Player.cards_left_graveyard_this_turn`.
-    /// Used by Lorehold "if a card left your graveyard this turn"
-    /// payoffs — Living History's combat trigger, Primary Research's
-    /// end-step draw rider, Wilt in the Heat's cost reduction rider.
+    /// At least `at_least` cards left `who`'s graveyard this turn
+    /// (`Player.cards_left_graveyard_this_turn`). Lorehold payoffs (Living
+    /// History).
     CardsLeftGraveyardThisTurnAtLeast { who: PlayerRef, at_least: Value },
-    /// [`Predicate::CardsLeftGraveyardThisTurnAtLeast`] counting creature
-    /// cards only ("if a creature card left your graveyard this turn" —
-    /// Syrix, Carrier of the Flame). Backed by
-    /// `Player.creature_cards_left_graveyard_this_turn`.
+    /// [`Predicate::CardsLeftGraveyardThisTurnAtLeast`] for creature cards only
+    /// (Syrix, Carrier of the Flame).
     CreatureCardsLeftGraveyardThisTurnAtLeast { who: PlayerRef, at_least: Value },
     /// True if an opponent of `who` has cast a spell since `who`'s last turn
     /// ended (I Bask in Your Silent Awe's abandon check). Reads the
@@ -2606,19 +2223,15 @@ pub enum Predicate {
     /// library this turn. `PlayerRef::EachOpponent` is satisfied by any one
     /// opponent. Archive Trap's "rather than pay" gate.
     SearchedLibraryThisTurn { who: PlayerRef },
-    /// CR 702.76 — Prowl gate: true if a creature of any listed type under
-    /// the resolving controller's control dealt combat damage to a player
-    /// this turn (`Player.prowl_types_this_turn`; Changeling damage
-    /// satisfies any type).
+    /// CR 702.76 Prowl: a controller's creature of a listed type dealt combat
+    /// damage to a player this turn (`Player.prowl_types_this_turn`).
     ProwlTypeDealtCombatDamage { types: Vec<crate::card::CreatureType> },
     /// [`ProwlTypeDealtCombatDamage`](Self::ProwlTypeDealtCombatDamage) under
     /// ANY player's control: "if a player was dealt combat damage by a Zombie
     /// this turn" (Lost Monarch of Ifnir).
     TypeDealtCombatDamageByAnyone { types: Vec<crate::card::CreatureType> },
-    /// True if any player matching `who` had at least `at_least` cards put
-    /// into their graveyard from anywhere this turn (CR 700.4 tally —
-    /// `Player.cards_to_graveyard_this_turn`). Ravenous Trap's free
-    /// alt-cost gate.
+    /// Some `who` player had `at_least` cards put into their graveyard this turn
+    /// (CR 700.4 tally). Ravenous Trap.
     CardsToGraveyardThisTurnAtLeast { who: PlayerRef, at_least: u32 },
     /// "[N] or more creature cards were put into graveyards from anywhere this
     /// turn" (Case of the Gorgon's Kiss). Counts every player's tally.
@@ -2629,29 +2242,19 @@ pub enum Predicate {
     /// "If a source you controlled dealt [N] or more damage this turn"
     /// (Dragon Cultist): one source's damage while you controlled it.
     SourceYouControlledDealtDamageThisTurnAtLeast(u32),
-    /// `who` has cast at least `at_least` spells on the current turn.
-    /// Backed by `Player.spells_cast_this_game_turn`. Used by Burrog Barrage
-    /// ("if you've cast another instant or sorcery spell this turn, …")
-    /// and similar pumps that key off spell-count.
+    /// `who` has cast at least `at_least` spells this turn
+    /// (`Player.spells_cast_this_game_turn`). Burrog Barrage.
     SpellsCastThisTurnAtLeast { who: PlayerRef, at_least: Value },
-    /// True if `who` has **not** cast any spell from their hand this turn
-    /// (CR 601). Backed by `Player.spells_cast_from_hand_this_turn == 0` —
-    /// casts from exile/graveyard/command zone don't count. Gates "if you
-    /// haven't cast a spell from your hand this turn" (Prairie Dog,
-    /// Emergent Haunting).
+    /// `who` has cast no spell from hand this turn (CR 601); other zones don't
+    /// count. Prairie Dog.
     NoSpellCastFromHandThisTurn { who: PlayerRef },
-    /// True while the just-cast spell is the first noncreature spell cast this
-    /// turn (any player). Backed by `GameState.noncreature_spells_cast_this_turn`
-    /// (already incremented for the current cast at trigger time, so the first
-    /// noncreature spell reads == 1). Nullstone Gargoyle. Pair with a
-    /// noncreature-spell event filter so a later creature spell doesn't match.
+    /// The just-cast spell is the turn's first noncreature spell by anyone
+    /// (`GameState.noncreature_spells_cast_this_turn == 1`, already counting it).
+    /// Nullstone Gargoyle; pair with a noncreature-spell event filter.
     FirstNoncreatureSpellThisTurn,
-    /// `who` has cast *exactly* `count` spells so far this turn. Backed by
-    /// `Player.spells_cast_this_game_turn` (already incremented for the current
-    /// cast at trigger time). Used by "whenever a player casts their second
-    /// spell each turn" triggers (Ledger Shredder) — pair with
-    /// `PlayerRef::Triggerer` + `EventScope::AnyPlayer` so it reads the
-    /// caster's own count and fires exactly on the Nth spell.
+    /// `who` has cast exactly `count` spells this turn, counting the current one
+    /// ("their second spell each turn" — Ledger Shredder; pair with
+    /// `PlayerRef::Triggerer` + `EventScope::AnyPlayer`).
     SpellsCastThisTurnEquals { who: PlayerRef, count: Value },
     /// No spells were cast by any player during the previous turn — the
     /// classic Innistrad day-side werewolf transform check. Backed by
@@ -2661,20 +2264,15 @@ pub enum Predicate {
     /// werewolf "transform back" check. Backed by
     /// `GameState.spells_cast_last_turn >= 2`.
     TwoOrMoreSpellsCastLastTurn,
-    /// At least `at_least` creatures controlled by `who` died this turn.
-    /// Backed by `Player.creatures_died_this_turn` (bumped from the SBA
-    /// dies handler and `remove_to_graveyard_with_triggers`). Used by
-    /// Witherbloom "if a creature died under your control this turn, …"
-    /// end-step payoffs (Essenceknit Scholar).
+    /// At least `at_least` of `who`'s creatures died this turn
+    /// (`Player.creatures_died_this_turn`). Essenceknit Scholar.
     CreaturesDiedThisTurnAtLeast { who: PlayerRef, at_least: Value },
     /// A creature matching `filter` died this turn, under any controller
     /// ("if a non-Zombie creature died this turn" — Undead Sprinter). Read
     /// against the death-time definitions in `creature_deaths_this_turn`.
     CreatureDiedThisTurnMatching { filter: SelectionRequirement },
-    /// CR 122 — at least `at_least` *different kinds* of counters exist among
-    /// the creatures `who` controls (Hundred-Battle Veteran's "three or more
-    /// different kinds of counters among creatures you control"). Counts
-    /// distinct `CounterType`s, not totals.
+    /// CR 122 — at least `at_least` distinct counter kinds among `who`'s
+    /// creatures (Hundred-Battle Veteran).
     DistinctCounterKindsAmongCreaturesAtLeast { who: PlayerRef, at_least: u32 },
     /// `who` has sacrificed at least `at_least` permanents this turn. Backed
     /// by `Player.permanents_sacrificed_this_turn`. Used by "if you
@@ -2687,66 +2285,42 @@ pub enum Predicate {
     /// `who` has sacrificed a Food this turn (Elanor Gardner). Backed by
     /// `Player.foods_sacrificed_this_turn`.
     SacrificedFoodThisTurn { who: PlayerRef },
-    /// At least `at_least` creatures died this turn under **any** player's
-    /// control — the global "Morbid" condition (CR 700.4 "a creature died
-    /// this turn"). Sums `Player.creatures_died_this_turn` across all
-    /// players, so a removal spell that killed an opponent's creature
-    /// earlier this turn satisfies it. Cleaner than OR-ing
-    /// `CreaturesDiedThisTurnAtLeast` over each seat. Used by Tragic Slip.
+    /// CR 700.4 Morbid — at least `at_least` creatures died this turn under any
+    /// player's control (summed over seats). Tragic Slip.
     CreaturesDiedThisTurnTotalAtLeast { at_least: Value },
-    /// `who` has caused at least `at_least` cards to be exiled this turn.
-    /// Backed by `Player.cards_exiled_this_turn`. Used by Strixhaven
-    /// "if one or more cards were put into exile this turn" payoffs
-    /// (Ennis the Debate Moderator).
+    /// `who` has exiled at least `at_least` cards this turn
+    /// (`Player.cards_exiled_this_turn`). Ennis the Debate Moderator.
     CardsExiledThisTurnAtLeast { who: PlayerRef, at_least: Value },
     /// "…if there are N or more cards in exile" (Ketramose's attack / block
     /// gate). Counts every owner's exiled cards.
     CardsInExileAtLeast(u32),
-    /// `who` has cast at least `at_least` instant **or** sorcery spells on
-    /// the current turn. Refines `SpellsCastThisTurnAtLeast` (which
-    /// counts every spell type) for cards that explicitly gate on the
-    /// "instant or sorcery" subset — Potioner's Trove's "Activate only
-    /// if you've cast an instant or sorcery spell this turn", future
-    /// Magecraft-adjacent payoffs. Backed by
-    /// `Player.instants_or_sorceries_cast_this_turn`.
+    /// `who` has cast at least `at_least` instants or sorceries this turn
+    /// (`Player.instants_or_sorceries_cast_this_turn`). Potioner's Trove.
     InstantsOrSorceriesCastThisTurnAtLeast { who: PlayerRef, at_least: Value },
     /// `who` has cast at least `at_least` creature spells on the current
     /// turn. Backed by `Player.creatures_cast_this_turn`. Reserved for
     /// future "if you've cast a creature spell this turn, …" payoffs.
     CreaturesCastThisTurnAtLeast { who: PlayerRef, at_least: Value },
-    /// `who` has cast at least `at_least` noncreature spells on the current
-    /// turn. Backed by `Player.noncreature_spells_cast_this_game_turn` — the
-    /// noncreature half of "if you've cast both a creature and a noncreature
-    /// spell this turn" (Eshki Dragonclaw).
+    /// `who` has cast at least `at_least` noncreature spells this turn (Eshki
+    /// Dragonclaw).
     NoncreatureSpellsCastThisTurnAtLeast { who: PlayerRef, at_least: Value },
-    /// True if the spell pointed to by `Selector::TriggerSource` (typically
-    /// the just-cast spell during a `SpellCast` trigger evaluation) has at
-    /// least one chosen target matching `filter`. Used by Strixhaven's
-    /// **Repartee** trigger — "Whenever you cast an instant or sorcery
-    /// spell that targets a creature, …" — by chaining
-    /// `cast_is_instant_or_sorcery()` AND `CastSpellTargetsMatch(Creature)`.
-    /// Evaluated against the topmost matching `StackItem::Spell`'s `target`
-    /// slot.
+    /// The spell at `Selector::TriggerSource` has a chosen target matching
+    /// `filter` (topmost matching `StackItem::Spell`). Repartee: with
+    /// `cast_is_instant_or_sorcery()`, "a spell that targets a creature".
     CastSpellTargetsMatch(SelectionRequirement),
     /// The just-cast spell has exactly one target in total and it matches the
     /// filter ("…that targets only a single creature you control" — Leyline
     /// of Resonance). Counts slot 0 plus every additional target.
     CastSpellTargetsOnlyOneMatching(SelectionRequirement),
-    /// The resolving spell is an instant or sorcery targeting only a single
-    /// object, and it is this trigger's target — "an instant or sorcery spell
-    /// you control that targets only a single creature deals damage to that
-    /// creature" (Imodane). Read off the resolution snapshot: the card is in
-    /// no zone while it resolves.
+    /// The resolving instant or sorcery targets only a single object, and it is
+    /// this trigger's target (Imodane). Read off the resolution snapshot, since
+    /// the card is in no zone while it resolves.
     ResolvingInstantOrSorceryTargetsOnlyTriggerTarget,
-    /// True if the just-cast spell (located via `ctx.trigger_source`) is
-    /// itself a card matching `filter` — e.g. a noncreature spell (Sprite
-    /// Dragon, Dragon's Rage Channeler) or an artifact spell. Evaluated
-    /// against the topmost matching `StackItem::Spell`'s card definition.
+    /// The just-cast spell (topmost matching `StackItem::Spell`) matches
+    /// `filter`. Sprite Dragon.
     CastSpellMatches(SelectionRequirement),
-    /// The just-cast spell matches `filter` **and** is the first such spell its
-    /// caster has cast this turn ("if it's the first instant spell … you've
-    /// cast this turn" — Alania, Divergent Storm). Reads
-    /// `Player.spell_ids_cast_this_turn`, which already includes this cast.
+    /// The just-cast spell matches `filter` and is its caster's first such spell
+    /// this turn (Alania, Divergent Storm).
     CastSpellFirstMatchingThisTurn(SelectionRequirement),
     /// On an `AuraAttachedToAny` trigger: the Aura (`ctx.trigger_source`) is
     /// attached to a nonland permanent an opponent controls whose mana value is
@@ -2756,12 +2330,8 @@ pub enum Predicate {
     /// as an Adventure (CR 715 — its `adventuring` flag is set). Powers
     /// Chancellor of Tales' "whenever you cast an Adventure spell".
     CastSpellIsAdventure,
-    /// True if the card pointed to by `ctx.trigger_source` (the just-cast
-    /// spell or just-played land) shares at least one card type with the card
-    /// exiled by this source (`exiled_with == ctx.source`). Drives the
-    /// Innistrad "Cemetery" cycle's intervening-`if` — "Whenever a player
-    /// plays a land or casts a spell, if it shares a card type with the
-    /// exiled card, …" (Cemetery Gatekeeper, Cemetery Protector).
+    /// The trigger object (just-cast spell or played land) shares a card type
+    /// with the card this source exiled. Innistrad's Cemetery cycle.
     SharesCardTypeWithExiledBySource,
     /// The just-cast spell shares a colour or mana value with the card exiled
     /// with the trigger's source (Thought Prison's imprint).
@@ -2769,10 +2339,8 @@ pub enum Predicate {
     /// The activation's chosen X equals the mana value of the card exiled with
     /// the source (Soul Foundry's "{X}, {T}" — X is that card's mana value).
     ExiledWithSourceManaValueIsX,
-    /// True if the just-cast spell (via `ctx.trigger_source`) was kicked —
-    /// read off the stack instance's `kicked` flag, so cast triggers
-    /// ("when you cast this spell, if it was kicked" — Scourge of the
-    /// Skyclaves) see the kicker state before resolution.
+    /// The just-cast spell was kicked (its stack instance's flag), for cast
+    /// triggers (Scourge of the Skyclaves).
     CastSpellWasKicked,
     /// `CastSpellWasKicked` for one of a "kicker {A} and/or {B}" spell's
     /// kickers, by index (Wastescape Battlemage's two cast triggers).
@@ -2792,26 +2360,15 @@ pub enum Predicate {
     /// every player `who` names controls a permanent that is any player's
     /// commander (CR 903.3).
     PlayerControlsACommander { who: PlayerRef },
-    /// True if the spell pointed to by `ctx.trigger_source` (the just-cast
-    /// spell driving a `SpellCast` trigger) has at least one `{X}` symbol
-    /// in its mana cost. Used by Quandrix's "whenever you cast a spell
-    /// with `{X}` in its mana cost" payoffs (Geometer's Arthropod,
-    /// Matterbending Mage, Paradox Surveyor's reveal filter). Evaluated
-    /// against the topmost matching `StackItem::Spell`'s `card.definition.
-    /// mana_cost` via `ManaCost::has_x()`.
+    /// The just-cast spell (`ctx.trigger_source`) has `{X}` in its mana cost
+    /// (`ManaCost::has_x`). Quandrix payoffs (Geometer's Arthropod).
     CastSpellHasX,
-    /// CR 602.1a / 107.3 — the activated ability whose activation fired this
-    /// `AbilityActivated` trigger (the newest activated ability on the stack
-    /// from `ctx.trigger_source`) has `{X}` in its activation cost (Unbound
-    /// Flourishing's "or that ability's activation cost contains {X}").
+    /// CR 602.1a / 107.3 — the activation that fired this `AbilityActivated`
+    /// trigger has `{X}` in its cost (Unbound Flourishing).
     ActivationCostHasX,
-    /// True if the just-cast spell's total mana spent (the value stashed
-    /// on `StackItem::Spell.mana_spent` at cast time, threaded onto the
-    /// `StackItem::Trigger.mana_spent`) is at least `at_least`. Powers
-    /// Opus's "if five or more mana was spent to cast that spell"
-    /// branches (Deluge Virtuoso, Expressive Firedancer-style bigger-
-    /// payoff modal) and Increment's "mana spent > P or T" gate (read
-    /// from `ctx.mana_spent` at trigger-resolution time).
+    /// The just-cast spell's total mana spent (`StackItem::Spell.mana_spent`,
+    /// carried onto the trigger) is at least `at_least`. Opus and Increment
+    /// payoffs.
     CastSpellManaSpentAtLeast(u32),
     /// CR 702.137 (Adamant) — at least `at_least` mana of `color` was spent
     /// casting the resolving spell. Reads the per-color payment breakdown
@@ -2821,17 +2378,13 @@ pub enum Predicate {
     /// this spell" (Desecrate Reality): the resolving spell's total spend less
     /// its colored breakdown.
     ColorlessManaSpentAtLeast(u32),
-    /// "If [color] mana was spent to cast this" read from the *source
-    /// permanent's* own cast provenance (`CardInstance.cast_mana_spent_by_color`),
-    /// not the live spell-resolution context. Used by ETB triggers that look
-    /// back at how their own creature was paid for (Gruul Scrapper's "if {R}
-    /// was spent, gain haste"; Steamcore Weird's "if {R} was spent, deal 2").
+    /// "If [color] mana was spent to cast this", read from the source's own cast
+    /// provenance (`CardInstance.cast_mana_spent_by_color`) for ETB triggers
+    /// (Gruul Scrapper).
     SourceCastWithColorSpent { color: crate::mana::Color, at_least: u32 },
-    /// CR 702.137 (Adamant) with no color named — "if at least `at_least` mana
-    /// of the same color was spent to cast this" (Henge Walker), read from the
-    /// source's own cast provenance like `SourceCastWithColorSpent`. Separate
-    /// from five `SourceCastWithColorSpent` arms because those colors would be
-    /// symbols in the card's CR 903.4 identity, and the card prints none.
+    /// CR 702.137 Adamant with no color named (Henge Walker), from the source's
+    /// cast provenance. Not five `SourceCastWithColorSpent` arms: those colors
+    /// would enter the card's CR 903.4 identity.
     SourceCastWithOneColorSpent { at_least: u32 },
     /// True if no *colored* mana was spent casting the just-cast spell
     /// (`ctx.trigger_source`) — Void Mirror's counter gate. Free casts
@@ -2841,35 +2394,22 @@ pub enum Predicate {
     /// permanent's chosen color (`CardInstance.chosen_color` on `ctx.source`).
     /// Diamond Mare's "whenever you cast a spell of the chosen color" payoff.
     CastSpellSharesChosenColorOfSource,
-    /// Gate on whether colorless `{C}` mana was spent casting the just-cast
-    /// spell (`ctx.trigger_source`). `spent: true` = "if {C} was spent" (Drowner
-    /// of Truth), `false` = "if {C} wasn't spent" (Wumpus Aberration). Computed
-    /// from the stack spell's total mana spent minus its colored breakdown, so
-    /// {C} paid for a generic pip counts. Free casts spend nothing → not spent.
+    /// Whether `{C}` was spent on the just-cast spell: `true` = Drowner of Truth,
+    /// `false` = Wumpus Aberration. Total spent minus the colored breakdown, so
+    /// `{C}` paid for generic counts; a free cast spent none.
     CastSpellColorlessManaSpent { spent: bool },
-    /// True if the just-cast spell's *owner* is not `ctx.controller`. A
-    /// spell's owner is the player who owns the physical card (CR
-    /// 108.3) — typically the same as its controller, but they diverge
-    /// when one player casts another's card (Sen Triplets, Wandering
-    /// Archaic, Possibility Storm, etc.). Used by Nita, Forum
-    /// Conciliator's "whenever you cast a spell you don't own" trigger
-    /// — fires only on the rare path where you cast a spell from an
-    /// opponent's zone. Evaluated against `ctx.trigger_source`'s
-    /// `StackItem::Spell.card.owner`.
+    /// The just-cast spell's owner (CR 108.3) is not `ctx.controller` — "whenever
+    /// you cast a spell you don't own" (Nita, Forum Conciliator).
     CastSpellNotOwnedByYou,
-    /// The caster-relative sibling of [`Predicate::CastSpellNotOwnedByYou`]:
-    /// the just-cast spell's owner isn't the player who cast it, judged off
-    /// the stack item rather than the listener's controller ("whenever a
-    /// player casts a spell they don't own" — Gonti, Night Minister).
+    /// The just-cast spell's owner isn't its caster (judged off the stack item,
+    /// unlike [`Predicate::CastSpellNotOwnedByYou`]) — Gonti, Night Minister.
     CastSpellNotOwnedByCaster,
     /// True if the just-cast spell (via `ctx.trigger_source`) was cast from
     /// exile — reads the `StackItem::Spell.card.cast_from_exile` flag.
     /// Nassari, Dean of Expression's "whenever you cast a spell from exile".
     CastSpellFromExile,
-    /// True if the just-cast spell (via `ctx.trigger_source`) was cast from
-    /// its caster's hand — reads the `StackItem::Spell.card.cast_from_hand`
-    /// flag. Jodah, the Unifier's "whenever you cast a legendary spell from
-    /// your hand". (`CastFromHand` is the resolving spell's own flag.)
+    /// The just-cast spell was cast from its caster's hand (stack flag). Jodah,
+    /// the Unifier. `CastFromHand` is the resolving spell's own flag.
     CastSpellFromHand,
     /// `CastSpellFromExile`, and it is the caster's first spell cast from
     /// exile this turn (`Player.spells_cast_from_exile_this_turn == 1`) —
@@ -2883,15 +2423,12 @@ pub enum Predicate {
     /// (identical card-type sets) — Demonic Covenant's "if two cards that
     /// share all their card types were milled this way".
     TwoShareAllCardTypes(Selector),
-    /// True if the just-cast spell (via `ctx.trigger_source`) was cast from its
-    /// owner's library — reads `StackItem::Spell.card.cast_from_library`.
-    /// Melek, Izzet Paragon's "whenever you cast an instant or sorcery spell
-    /// from your library, copy it".
+    /// The just-cast spell was cast from its owner's library. Melek, Izzet
+    /// Paragon.
     CastSpellFromLibrary,
-    /// "When you do" on a once-per-turn top-of-library grant (The Fourth
-    /// Doctor): the triggering spell or land (`ctx.trigger_source`) was cast
-    /// or played under this source's grant — reads
-    /// `PlayerCold::library_top_grant_used`.
+    /// The Fourth Doctor's "when you do": the triggering spell or land was played
+    /// under this source's top-of-library grant
+    /// (`PlayerCold::library_top_grant_used`).
     UsedSourcesLibraryTopGrant,
     /// True if the just-cast spell (via `ctx.trigger_source`) was cast from a
     /// graveyard — reads `StackItem::Spell.card.cast_from_graveyard`. River
@@ -2903,88 +2440,55 @@ pub enum Predicate {
     /// The Ring has tempted `who` at least `n` times this game (CR 701.54 —
     /// Frodo, Adventurous Hobbit's "two or more times").
     RingTemptedAtLeast { who: PlayerRef, n: u32 },
-    /// True if `ctx.source` (the listening permanent's id) is currently
-    /// in the engine's `permanents_gained_counter_this_turn` set — i.e.
-    /// the listening permanent has had one or more counters put on it
-    /// during the current turn. Used by Fractal Tender's end-step rider
-    /// ("if you put a counter on this creature this turn, …"). Cleared
-    /// at cleanup along with the other "this turn" tallies.
+    /// The source has had a counter put on it this turn
+    /// (`permanents_gained_counter_this_turn`, cleared at cleanup). Fractal
+    /// Tender's end-step rider.
     SourceGainedCounterThisTurn,
-    /// True when `ctx.source` (the ability's source permanent) currently has at
-    /// least `n` counters of `counter` on it. Powers "if there are N or more
-    /// [kind] counters on it, …" intervening-`if` riders (Charitable Levy's
-    /// three-collection-counter sacrifice threshold).
+    /// The source has at least `n` `counter` counters (Charitable Levy).
     SourceHasCountersAtLeast { counter: crate::card::CounterType, n: u32 },
     /// `ctx.source` has a `keyword` counter on it (CR 122.1b) — "you may
     /// remove a deathtouch counter from it. When you do" (Kappa Tech-Wrecker).
     SourceHasKeywordCounter(crate::card::Keyword),
-    /// CR 716.2 — true when `ctx.source` (a Class enchantment) is exactly at
-    /// level `n`. Gates a Class's `{cost}: Level N` activated ability (its
-    /// `condition` is `SourceClassLevelIs(N-1)`) and its "when this Class
-    /// becomes level N" trigger (a `ClassLevelReached` trigger filtered on
-    /// `SourceClassLevelIs(N)`).
+    /// CR 716.2 — the source Class is at exactly level `n`. Gates its "Level N"
+    /// ability (`SourceClassLevelIs(N-1)`) and its "becomes level N" trigger
+    /// (`ClassLevelReached` filtered on `SourceClassLevelIs(N)`).
     SourceClassLevelIs(u8),
     /// CR 716.2 — true when `ctx.source` (a Class enchantment) is at level `n`
     /// or higher. Gates a Class's level-`n` triggered abilities so they only
     /// fire once the Class has reached that level.
     SourceClassLevelAtLeast(u8),
-    /// True if the just-cast spell's total mana spent is **strictly
-    /// greater than** the source permanent's power or toughness. Used
-    /// by SOS's Increment keyword payoff: "Whenever you cast a spell,
-    /// if the amount of mana you spent is greater than this creature's
-    /// power or toughness, put a +1/+1 counter on this creature."
-    /// Evaluated against `ctx.source` (the listening permanent) at
-    /// trigger-evaluation time.
+    /// The just-cast spell's mana spent is strictly greater than the source's
+    /// power or toughness — SOS Increment.
     IncrementSatisfied,
-    /// True if `who`'s `zone` contains at least `at_least` cards whose
-    /// `definition.name` matches the resolving spell's name. Used by
-    /// Dragon's Approach's "if you have four or more cards named Dragon's
-    /// Approach in your graveyard, search your library for a Dragon
-    /// creature card" rider. The name is read from
-    /// `EffectContext.source_name` (the resolving spell's name); when no
-    /// source is available the predicate is `False`.
+    /// `who`'s `zone` holds at least `at_least` cards named like the resolving
+    /// spell (`EffectContext.source_name`; `False` with no source). Dragon's
+    /// Approach.
     SameNamedInZoneAtLeast { who: PlayerRef, zone: Zone, at_least: Value },
-    /// True when the resolving spell was cast from its caster's
-    /// graveyard (typically via Flashback / Aftermath / Jump-Start /
-    /// Yawgmoth's Will-style "cast from graveyard" effects). Backed by
-    /// `EffectContext.cast_from_graveyard`, stamped from the resolving
-    /// card's `CardInstance.cast_from_graveyard`. Used by Increasing Vengeance
-    /// ("If this spell was cast from a graveyard, copy that spell twice
-    /// instead") and Antiquities on the Loose's "cast from anywhere
-    /// other than your hand" rider.
+    /// The resolving spell was cast from its caster's graveyard (Flashback,
+    /// Jump-Start, …; `EffectContext.cast_from_graveyard`). Increasing Vengeance.
     CastFromGraveyard,
-    /// True while the resolving spell or ability is controlled by an opponent
-    /// of the evaluating controller (Sacred Ground's land destruction). Reads
-    /// `GameState.resolution_causer`.
+    /// The resolving spell or ability is controlled by an opponent of the
+    /// evaluating controller (`GameState.resolution_causer`). Sacred Ground.
     ///
-    /// ⚠ **As a trigger filter this is only sound on an event whose dispatch
-    /// replays the causer.** `resolution_causer` is cleared the moment the
-    /// resolution ends, and triggers dispatch after that — so at filter time
-    /// it is `None` unless something carried it across.
-    /// `pending_permanent_deaths` does exactly that for `PermanentDied`,
-    /// which is why Sacred Ground works; nothing else does. A discard rider
-    /// wants `EventKind::OpponentCausedYouToDiscard`, which asks the question
-    /// at emission instead (Pure Intentions, Sand Golem).
+    /// ⚠ As a trigger filter this is only sound on an event whose dispatch
+    /// replays the causer: `resolution_causer` is cleared when the resolution
+    /// ends, before triggers dispatch. Only `pending_permanent_deaths` carries it
+    /// across (`PermanentDied`). A discard rider wants
+    /// `EventKind::OpponentCausedYouToDiscard`, which decides at emission (Pure
+    /// Intentions).
     #[serde(alias = "DiscardCausedByOpponent")]
     CausedByOpponentSpellOrAbility,
-    /// True when the resolving spell was cast from its caster's hand
-    /// (the typical case). Not the inverse of `CastFromGraveyard`: exile,
-    /// library and command-zone casts are neither. Reserved for
-    /// "if you cast this spell from your hand, …" rider patterns —
-    /// Quandrix, the Proof's "instant and sorcery spells you cast from
-    /// your hand have cascade" static gates against this predicate.
-    /// Note: triggers / activated abilities default `cast_from_hand`
-    /// to `true`, so this predicate evaluates as `True` outside of
-    /// spell-resolution context too.
+    /// The resolving spell was cast from its caster's hand. Not the inverse of
+    /// `CastFromGraveyard` (exile / library / command casts are neither). Quandrix,
+    /// the Proof. Triggers and activated abilities default `cast_from_hand` to
+    /// `true`, so this is `True` outside spell resolution.
     CastFromHand,
     /// The two player refs resolve to the same seat — "whenever enchanted
     /// player is dealt damage" is `SamePlayer(TriggerEventPlayer,
     /// EnchantedPlayer)` (Grievous Wound).
     SamePlayer(PlayerRef, PlayerRef),
-    /// True while the current turn is in (or has only ever reached) its first
-    /// combat phase — i.e. no extra combat has begun yet. Gates "if it's the
-    /// first combat phase of the turn, …" attack riders (Genji Glove) so the
-    /// extra combat they grant doesn't re-trigger and loop.
+    /// No extra combat has begun this turn — so an attack rider's extra combat
+    /// doesn't loop (Genji Glove).
     IsFirstCombatPhaseThisTurn,
     /// The turn's current combat phase is its `n`th (1-based) — pins a
     /// delayed trigger to the combat it was created in (CR 506.1).
@@ -3018,11 +2522,8 @@ pub enum Predicate {
     /// planeswalkers or battles they protect) is being attacked this combat,
     /// by anyone (Party Dude's "one or more of your opponents are attacked").
     AnOpponentIsAttacked,
-    /// True when the resolving spell was kicked (CR 702.32) — its optional
-    /// kicker cost was paid at cast time. Reads `EffectContext.kicked`,
-    /// stamped from the resolving `CardInstance.kicked` flag. Used by
-    /// "if this spell was kicked, …" riders (Tear Asunder). Non-spell
-    /// contexts default `kicked` to `false`.
+    /// The resolving spell was kicked (CR 702.32; `EffectContext.kicked`). Tear
+    /// Asunder. `false` outside a spell.
     SpellWasKicked,
     /// CR 702.33b — the resolving spell was kicked with option `n` of its
     /// `kicker_options` (Anavolver's "kicked with its {1}{U} kicker").
@@ -3047,29 +2548,22 @@ pub enum Predicate {
     /// The last card discarded during this resolution is the given color
     /// (Chandra Ablaze's "if a red card is discarded this way").
     LastDiscardedWasColor(crate::mana::Color),
-    /// The entering permanent bound to `ctx.trigger_source` arrived from a
-    /// graveyard this turn, or was cast from one (escape / unearth — read
-    /// via `!cast_from_hand`; exile-casts over-trigger, noted per card).
-    /// Breathless Knight.
+    /// The entering permanent arrived from a graveyard this turn or was cast from
+    /// one (`!cast_from_hand`; exile casts over-trigger). Breathless Knight.
     TriggerSourceEnteredFromGraveyard,
     /// The entering permanent bound to `ctx.trigger_source` entered because its
     /// spell was cast (reads `CardInstance.entered_by_cast`). Gates "whenever a
     /// creature you control enters, if you cast it, …" (The Sibsig Ceremony).
     TriggerSourceEnteredByCast,
-    /// CR 702.85 — Heroic. True when the just-cast spell (the trigger source,
-    /// an `EntityRef::Card` on the stack) targets the trigger's own source
-    /// permanent (`ctx.source`). Gates "Whenever you cast a spell that targets
-    /// this creature, …" triggers. Reads the cast spell's `target` /
-    /// `additional_targets` off the stack.
+    /// CR 702.85 Heroic — the just-cast spell targets the trigger's source
+    /// (read off the stack spell's `target` / `additional_targets`).
     CastSpellTargetsSource,
     /// CR 702.176 — true iff the Bargain additional cost was paid (an
     /// artifact, enchantment, or token sacrificed) at cast time. Reads
     /// `EffectContext.bargained`, stamped from `CardInstance.bargained`.
     SpellWasBargained,
-    /// CR 702.187 — true iff this spell was cast from a graveyard for its
-    /// Mayhem cost. Reads `EffectContext.cast_via_mayhem`, stamped from
-    /// `CardInstance.cast_via_mayhem`. Gates "if this spell's mayhem cost was
-    /// paid, …" riders (Sandman's Quicksand).
+    /// CR 702.187 — this spell was cast for its Mayhem cost
+    /// (`EffectContext.cast_via_mayhem`). Sandman's Quicksand.
     SpellWasMayhem,
     /// CR 702.35 — "if its madness cost was paid". Reads
     /// `EffectContext.cast_via_madness`, stamped from
@@ -3082,45 +2576,31 @@ pub enum Predicate {
     /// and its siblings): a spell was cast that way earlier in this resolution
     /// (Soundwave, Sonic Spy).
     CastImmediatelyThisResolution,
-    /// CR 701.67 — true iff this spell's optional "you may waterbend {N}"
-    /// additional cost was paid. Reads `EffectContext.cast_via_waterbend`,
-    /// stamped from `CardInstance.cast_via_waterbend`. Gates "if its additional
-    /// cost was paid, …" riders (Katara, Seeking Revenge; Secret of Bloodbending).
+    /// CR 701.67 — this spell's optional waterbend cost was paid
+    /// (`EffectContext.cast_via_waterbend`). Katara, Seeking Revenge.
     SpellWasWaterbend,
-    /// CR 701.59 — true iff this spell's "collect evidence N" additional cost
-    /// was paid. Reads `EffectContext.cast_collected_evidence`, stamped from
-    /// `CardInstance.cast_collected_evidence`. Gates "if evidence was collected,
-    /// …" branches (Behind the Mask, Analyze the Pollen).
+    /// CR 701.59 — this spell's collect-evidence cost was paid
+    /// (`EffectContext.cast_collected_evidence`). Behind the Mask.
     SpellCollectedEvidence,
-    /// CR 702.165 — true iff the effect's source permanent was cast with its
-    /// Gift promised (reads `CardInstance.gift_promised`, which persists onto
-    /// the battlefield). Gates a permanent-gift card's "if the gift was
-    /// promised, …" ETB (Scrapshooter, Starforged Sword).
+    /// CR 702.165 — the source was cast with its gift promised
+    /// (`CardInstance.gift_promised`). Scrapshooter.
     SourceGiftPromised,
     /// "Do this only once each turn": the source already did it this turn
     /// (`Effect::MarkDoneThisTurn`). Gates the trigger; see
     /// `shortcut::may_once_each_turn`.
     SourceDoneThisTurn,
-    /// CR 603.3d — the source's triggered ability at `index` already
-    /// triggered this turn under its "only once each turn" clause. Lets two
-    /// printed triggers share one budget (Bill Potts' spell and ability
-    /// halves are one ability).
+    /// CR 603.3d — the source's trigger `index` already used its once-each-turn
+    /// budget, so two printed triggers can share one (Bill Potts).
     SourceTriggerUsedThisTurn(u8),
     /// True if the most recently discarded card this resolution had mana value
     /// ≤ `n`. Reads `GameState.last_discarded_mana_value` (Hollow Marauder's
     /// "draw unless they discarded a card with mana value 4 or greater").
     LastDiscardedManaValueAtMost(u32),
-    /// CR 715 — true iff `ctx.controller` owns a card in exile that is on an
-    /// Adventure (a creature card cast for its Adventure half, waiting in exile
-    /// to be recast). Gates Howling Galefang's "has haste as long as you own a
-    /// card in exile that has an Adventure".
+    /// CR 715 — the controller owns an exiled card on an Adventure (Howling
+    /// Galefang).
     OwnExiledAdventureCard,
-    /// True if any opponent of `ctx.controller` controls more lands
-    /// than `ctx.controller` does. Backed by walking the battlefield
-    /// and counting `Land` permanents per seat. Used by catch-up ramp
-    /// spells like Gift of Estates ("If an opponent controls more
-    /// lands than you, …"), Tithe, Knight of the White Orchid's ETB
-    /// trigger, and Land Tax.
+    /// Some opponent controls more lands than `ctx.controller` (Gift of Estates,
+    /// Land Tax).
     OpponentControlsMoreLandsThanYou,
     /// An opponent controls at least `n` more lands than you (Isolated
     /// Watchtower's "at least two more").
@@ -3133,19 +2613,16 @@ pub enum Predicate {
     /// creatures. Linvala, the Preserver's second ETB ("if an opponent
     /// controls more creatures than you, create a 3/3 Angel").
     AnOpponentControlsMoreCreatures,
-    /// True if a single opponent of `ctx.controller` controls at least `n`
-    /// permanents matching `filter` — per opponent, not summed across the
-    /// table (CR 102.2: "an opponent"). The Modern Horizons 3 cycle's "if an
-    /// opponent controls four or more nonbasic lands" (Razorlash Transmogrant).
+    /// A single opponent (not the table summed, CR 102.2) controls at least `n`
+    /// `filter` permanents — Razorlash Transmogrant's "four or more nonbasic
+    /// lands".
     AnOpponentControlsAtLeast { filter: crate::card::SelectionRequirement, n: u32 },
     /// True if any opponent of `ctx.controller` has strictly more cards in
     /// hand. Beza, the Bounding Spring's "draw a card if an opponent has more
     /// cards in hand than you".
     AnOpponentHasMoreCardsInHand,
-    /// CR (Innistrad "Coven") — `who` controls three or more creatures with
-    /// different powers (every pairwise power distinct counts as ≥3 distinct
-    /// power values). Gates Coven attack triggers and "activate only if …"
-    /// abilities (Sigarda, Champion of Light; Dawnhart Mentor; Sungold Sentinel).
+    /// Coven: `who` controls three or more creatures with different powers
+    /// (Sigarda, Champion of Light).
     CovenActive { who: PlayerRef },
     /// CR 702.166 — Corrupted (Phyrexia: All Will Be One ability word): an
     /// opponent of `who` has three or more poison counters. Gates Corrupted
@@ -3154,92 +2631,61 @@ pub enum Predicate {
     /// Churning Reservoir — an oil counter was removed from `who`'s permanent
     /// this turn, or an oil-countered permanent of theirs hit a graveyard.
     OilActivityThisTurn { who: PlayerRef },
-    /// `who` controls a creature whose power is greater than or equal to every
-    /// creature's power on the battlefield — i.e. controls the creature with
-    /// the greatest power, or one tied for it (Summon: Fenrir III "Ecliptic
-    /// Growl"). False if `who` controls no creature.
+    /// `who` controls a creature with the greatest power on the battlefield (ties
+    /// count); false with no creature. Summon: Fenrir III.
     ControlsGreatestPowerCreature { who: PlayerRef },
     /// The toughness twin of `ControlsGreatestPowerCreature` (Abzan
     /// Beastmaster's "the creature with the greatest toughness or tied").
     ControlsGreatestToughnessCreature { who: PlayerRef },
-    /// True when exactly one creature is attacking this combat — the
-    /// CR 702.83a "attacks alone" condition that gates Exalted. Read
-    /// from `GameState.attacking.len() == 1`. Outside a combat with
-    /// declared attackers it evaluates `false`. Combined with an
-    /// `Attacks / YourControl` trigger it implements the printed
-    /// Exalted reminder ("Whenever a creature you control attacks
-    /// alone, that creature gets +1/+1 until end of turn").
+    /// Exactly one creature is attacking — CR 702.83a "attacks alone" (Exalted,
+    /// with an `Attacks / YourControl` trigger). `false` outside combat.
     AttackingAlone,
-    /// CR 506.2 — the trigger source is attacking a player and no other
-    /// creature is attacking that player (Jin Sakai's "if no other creatures
-    /// are attacking that player"). Unlike `AttackingAlone`, attackers aimed
-    /// at other players don't count — the distinction only exists in a pod.
+    /// CR 506.2 — the trigger source attacks a player no other creature is
+    /// attacking (Jin Sakai). Unlike `AttackingAlone`, attacks on other players
+    /// don't count — a pod-only distinction.
     TriggerSourceAttacksItsPlayerAlone,
-    /// True when at least `n` creatures are attacking this combat. Powers
-    /// the Battalion ability word ("Whenever this creature and at least two
-    /// other creatures attack" → `n == 3`). Read from
-    /// `GameState.attacking.len() >= n`; `false` outside a combat with
-    /// declared attackers.
+    /// At least `n` creatures are attacking — Battalion is `n == 3`. `false`
+    /// outside combat.
     AttackingWithAtLeast(u32),
-    /// **Pack tactics** (OTJ ability word) — `who` attacked this combat with
-    /// creatures whose total power is at least `at_least`. Summed from the
-    /// computed power of every attacking creature controlled by `who`
-    /// (`GameState.attacking`); `false` outside a combat with declared
-    /// attackers. Battle Cry Goblin's "if you attacked with creatures with
-    /// total power 6 or greater this combat".
+    /// Pack tactics (OTJ) — `who`'s attacking creatures this combat have total
+    /// computed power at least `at_least`. Battle Cry Goblin.
     AttackedWithTotalPowerAtLeast { who: PlayerRef, at_least: u32 },
-    /// `who` declared at least `at_least` attackers this combat. Counts every
-    /// attacking creature controlled by `who` (`GameState.attacking`); `false`
-    /// outside a combat with declared attackers. Argent Dais's "whenever two
-    /// or more creatures attack" (with `who: ActivePlayer`).
+    /// `who` declared at least `at_least` attackers this combat; `false` outside
+    /// combat. Argent Dais (with `ActivePlayer`).
     AttackedWithCountAtLeast { who: PlayerRef, at_least: u32 },
-    /// CR 506.2 — some player a creature is attacking this combat (directly;
-    /// attacking a planeswalker attacks the planeswalker) has at least
-    /// `at_least` poison counters. Norn's Decree's "if one or more players
-    /// being attacked are poisoned".
+    /// CR 506.2 — a player being attacked directly this combat has at least
+    /// `at_least` poison. Norn's Decree.
     AnAttackedPlayerHasPoisonAtLeast { at_least: u32 },
-    /// CR 506.2 / 508.1 — `who` declared at least `at_least` attackers this
-    /// combat **aimed at `defender`**: attacking the player themselves, plus,
-    /// when `include_planeswalkers`, attacking a planeswalker `defender`
-    /// controls. The defender-side refinement of `AttackedWithCountAtLeast`,
-    /// which counts a player's whole declaration wherever it is pointed.
+    /// CR 506.2 / 508.1 — `who` declared at least `at_least` attackers this combat
+    /// at `defender` (and, with `include_planeswalkers`, at planeswalkers
+    /// `defender` controls). The defender-side refinement of
+    /// `AttackedWithCountAtLeast`, which counts the whole declaration.
     ///
-    /// ⚠ **The two are the same predicate in a duel and different ones in a
-    /// pod**, which is the whole reason this exists: an opponent swinging at a
-    /// third player is not attacking you, and at two seats there is no third
-    /// player for the distinction to show up in.
+    /// ⚠ Identical in a duel, different in a pod: a swing at a third player is
+    /// not an attack on you.
     ///
-    /// `include_planeswalkers` is a printed difference, not a knob. Trouble in
-    /// Pairs says "attacks **you** with two or more creatures" (false — a
-    /// creature attacking your planeswalker is attacking the planeswalker, CR
-    /// 506.2); Mangara, the Diplomat says "two or more of those creatures are
-    /// attacking **you and/or planeswalkers you control**" (true). A creature
-    /// attacking a Battle counts for neither.
+    /// `include_planeswalkers` follows the printed text: Trouble in Pairs says
+    /// "attacks you" (false, CR 506.2); Mangara, the Diplomat says "you and/or
+    /// planeswalkers you control" (true). Attacks on Battles count for neither.
     ///
-    /// ⚠ Reads `GameState.attacking`, so it is only complete once the whole
-    /// declaration is in — see the note on the defender-side walk in
-    /// `combat.rs`. On a `ControllerAttackedByOpponent` trigger it belongs
-    /// inside the effect (`Effect::If`), not in the `EventSpec` filter.
+    /// ⚠ Reads `GameState.attacking`, complete only once the whole declaration
+    /// is in (see the defender-side walk in `combat.rs`): on a
+    /// `ControllerAttackedByOpponent` trigger put it in `Effect::If`, not the
+    /// `EventSpec` filter.
     AttackedDefenderWithCountAtLeast {
         who: PlayerRef,
         defender: PlayerRef,
         at_least: u32,
         include_planeswalkers: bool,
     },
-    /// `who` declared one or more attackers this combat matching `filter`.
-    /// Reads `GameState.attacking`; `false` outside a combat with declared
-    /// attackers. Gates "Whenever you attack with one or more creatures with
-    /// flying / power 4+" triggers (Teo, Spirited Glider; Bitter Work).
+    /// `who` attacked with a `filter` creature this combat; `false` outside
+    /// combat. Teo, Spirited Glider.
     AttackedWithCreatureMatching { who: PlayerRef, filter: SelectionRequirement },
-    /// The player `player` resolves to is attacked (the player, not a
-    /// planeswalker) by a creature the evaluating controller controls that
-    /// matches `filter` — "whenever one or more Devils you control attack one
-    /// or more players, you and those players …" (Zurzoth, Chaos Rider).
+    /// `player` is attacked (directly) by a `filter` creature the evaluating
+    /// controller controls (Zurzoth, Chaos Rider).
     PlayerAttackedByMatching { player: PlayerRef, filter: SelectionRequirement },
-    /// Some opponent's top library card shares a card type with the card
-    /// `what` names (Gandalf, Westward Voyager's "each opponent reveals the
-    /// top card of their library. If any of those cards shares a card type
-    /// with that spell").
+    /// Some opponent's top card shares a card type with `what` (Gandalf,
+    /// Westward Voyager).
     AnOpponentsTopCardSharesCardTypeWith(Selector),
     /// CR 700.13 — `who` has committed a crime this turn. Backed by
     /// `Player.committed_crime_this_turn`. Powers "as long as / if you've
@@ -3249,11 +2695,8 @@ pub enum Predicate {
     /// control, or they turned a permanent face up, this turn. Backed by
     /// `Player.face_down_activity_this_turn` (Oblivious Bookworm).
     FaceDownActivityThisTurn { who: PlayerRef },
-    /// CR 709.5 — `who` controls at least `count` unlocked doors among the
-    /// Rooms they control (each Room can have up to two doors unlocked). Powers
-    /// "as long as there are N or more unlocked doors among Rooms you control"
-    /// statics (Rampaging Soulrager). Reads `CardInstance.unlocked_doors`
-    /// (a per-door bitmask).
+    /// CR 709.5 — `who` has at least `count` unlocked doors among their Rooms
+    /// (`CardInstance.unlocked_doors` bitmask). Rampaging Soulrager.
     UnlockedDoorsControlledAtLeast { who: PlayerRef, count: u32 },
     /// CR 709.5 — `who` controls at least `count` unlocked doors with
     /// **distinct names** (Promising Stairs' "eight or more different names
@@ -3263,10 +2706,7 @@ pub enum Predicate {
     /// Assassin, Mercenary, Pirate, Rogue, or Warlock. Powers "as long as you
     /// control an outlaw" / "if you control an outlaw" riders (Take the Fall).
     ControlsOutlaw { who: PlayerRef },
-    /// CR 700.4-ish — **Delirium**: `who`'s graveyard holds cards of at
-    /// least 4 distinct card types (the count of *types*, not cards). Backed
-    /// by scanning the graveyard's `definition.card_types`. Used by Unholy
-    /// Heat, Dragon's Rage Channeler, etc.
+    /// Delirium: `who`'s graveyard has 4+ distinct card types (Unholy Heat).
     DeliriumActive { who: PlayerRef },
     /// Descend N (LCI ability word) — `who` has `count` or more permanent
     /// cards in their graveyard. Gates "Descend 4 —" P/T pumps and ETB riders
@@ -3290,21 +2730,14 @@ pub enum Predicate {
     /// (Zhalfirin Decoy's activation gate, Bellowing Elk's static). Reads
     /// `Player.creatures_entered_this_turn`.
     CreatureEnteredThisTurn { who: PlayerRef },
-    /// "If another creature entered the battlefield under `who`'s control this
-    /// turn" — self-excluding sibling of `CreatureEnteredThisTurn`. The source's
-    /// own arrival doesn't satisfy it (Bellowing Elk: "As long as you had
-    /// *another* creature enter … this turn"). Compares the entered-ids list
-    /// against `ctx.source`.
+    /// Another creature entered under `who`'s control this turn — the
+    /// self-excluding sibling of `CreatureEnteredThisTurn` (Bellowing Elk).
     AnotherCreatureEnteredThisTurn { who: PlayerRef },
-    /// "if it doesn't have the same name as another creature you control or a
-    /// creature card in your graveyard" (Guardian Project): the trigger
-    /// subject's name is on no other creature `ctx.controller` controls and on
-    /// no creature card in their graveyard.
+    /// Guardian Project: no other creature you control and no creature card in
+    /// your graveyard shares the trigger subject's name.
     TriggerSourceNameUniqueAmongYourCreatures,
-    /// **Celebration** (WOE) — two or more nonland permanents entered under
-    /// `who`'s control this turn. Reads
-    /// `Player.nonland_permanents_entered_this_turn` (Armory Mice, Belligerent
-    /// of the Ball).
+    /// Celebration (WOE): two or more nonland permanents entered under `who`
+    /// this turn (`Player.nonland_permanents_entered_this_turn`). Armory Mice.
     CelebrationActive { who: PlayerRef },
     /// **Threshold** (Odyssey ability word) — `who` has seven or more cards in
     /// their graveyard. Gates "as long as / if" threshold riders (Nimble
@@ -3359,11 +2792,9 @@ pub enum Duration {
     /// `UntilYourNextUntap`, so the affected permanent is still animated as
     /// its controller untaps (Xenic Poltergeist).
     UntilYourNextUpkeep,
-    /// Until the controller's next turn begins — the oracle "until your next
-    /// turn" (CR 611.2b), which is every catalog use; the engine maps it beside
-    /// `UntilYourNextUntap`. It was read as "any player's next turn" before
-    /// 2026-09-07, so Liliana's -2/-1 and Mouth of the Storm's -3/-0 ended
-    /// before the opponent's combat.
+    /// "Until your next turn" (CR 611.2b), mapped beside `UntilYourNextUntap`.
+    /// Before 2026-09-07 it ended at any player's next turn (Liliana's -2/-1
+    /// expired before the opponent's combat).
     UntilNextTurn,
     /// CR 611.2c — "for as long as this permanent remains tapped" (Thran
     /// Weaponry). The affected set is locked in at resolution; the SBA sweep
@@ -3374,10 +2805,8 @@ pub enum Duration {
     /// stops being attached or leaves the battlefield.
     WhileSourceAttached,
     /// CR 611.2c — "for as long as this creature remains on the battlefield"
-    /// (Tishana's Tidebinder). The SBA sweep drops the effect once the source
-    /// is gone. Distinct from a *static* ability, which is re-gathered every
-    /// pass and so needs no sweep at all: this is for an effect a resolution
-    /// installs.
+    /// (Tishana's Tidebinder), for an effect a resolution installs; the SBA sweep
+    /// drops it once the source is gone. Statics need no sweep.
     WhileSourceOnBattlefield,
     /// CR 611.2b — "for as long as you control [this]": also ends when
     /// another player gains control of the source (Aegis Angel).
@@ -3388,10 +2817,8 @@ pub enum Duration {
     UntilEndOfYourNextTurn,
     /// Indefinite (for effects like "gain control" without a clause).
     Permanent,
-    /// "until this card is cast from exile" (Emrakul, the Exigent Doom's land
-    /// grant): an activated-ability grant that `finalize_cast` strips when the
-    /// source card is next cast from exile (CR 611.2b) — not from any other
-    /// zone, which it can reach only by leaving exile uncast.
+    /// "Until this card is cast from exile" (Emrakul, the Exigent Doom): a grant
+    /// `finalize_cast` strips when the source is next cast from exile (CR 611.2b).
     UntilSourceCast,
     /// CR 708.8 — "until this creature is turned face down" (Vesuvan
     /// Shapeshifter's copy): ends as `Effect::TurnFaceDown` turns it, so the
@@ -3455,28 +2882,16 @@ pub enum LibraryPosition {
     Top,
     Bottom,
     Shuffled,
-    /// "On top or bottom — the card's owner chooses." Used by Run Behind
-    /// ("Target creature's owner puts it on their choice of the top or
-    /// bottom of their library."). At `place_card_in_dest` time, the
-    /// owner is asked via `Decision::OptionalTrigger { description: "Put
-    /// on top of library?" }`; yes = top, no = bottom. AutoDecider's
-    /// default (`Bool(false)`) collapses to bottom — preserving the
-    /// previous Run-Behind behavior. ScriptedDecider can flip to top
-    /// for tests.
+    /// The card's owner chooses top or bottom (Run Behind), asked via
+    /// `Decision::OptionalTrigger` at `place_card_in_dest` time; yes = top.
+    /// AutoDecider's default puts it on the bottom.
     OwnerChoice,
-    /// "The owner puts it into their library second from the top or on the
-    /// bottom" (Deem Inferior). The owner chooses via `Decision::
-    /// OptionalTrigger`; yes = second from top (`FromTop(1)`), no = bottom.
-    /// AutoDecider defaults to bottom.
+    /// Deem Inferior: the owner chooses second from the top (`FromTop(1)`) or the
+    /// bottom via `Decision::OptionalTrigger`; AutoDecider picks bottom.
     SecondFromTopOrBottom,
-    /// "Put this card Nth from the top of the owner's library." Used by
-    /// Approach of the Second Sun ({6}{W}{W}: "If this spell was cast
-    /// from your hand and you've cast another spell named Approach of
-    /// the Second Sun this game, you win the game. Otherwise, put this
-    /// spell's owner gains 7 life and puts this spell into their
-    /// library seventh from the top.") and similar cards. Per CR 401.7,
-    /// if the library has fewer than N cards, the card goes on the
-    /// bottom instead. `FromTop(0)` is equivalent to `Top`.
+    /// Nth from the top of the owner's library (Approach of the Second Sun's
+    /// seventh). With fewer than N cards it goes on the bottom (CR 401.7).
+    /// `FromTop(0)` is `Top`.
     FromTop(usize),
     /// "Just beneath the top X cards" — `FromTop(X)` with the resolving
     /// spell's X (Unexpectedly Absent). Flattened to `FromTop` while the
@@ -3484,23 +2899,16 @@ pub enum LibraryPosition {
     BeneathTopX,
 }
 
-/// Where the non-matching revealed cards go after a
-/// `RevealUntilFind` resolves. The default (`Graveyard`) matches the
-/// historical behavior baked into older catalogs; SOS Strixhaven cards
-/// like Geometer's Arthropod and Paradox Surveyor print "put the rest
-/// on the bottom of your library in a random order" and use
-/// `BottomRandom`.
+/// Where a `RevealUntilFind`'s non-matching cards go. `Graveyard` is the
+/// historical default; SOS cards that print "the rest on the bottom in a
+/// random order" (Geometer's Arthropod) use `BottomRandom`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum RevealMissDest {
     /// Misses go to the controller's graveyard (legacy / Spoils-style).
     #[default]
     Graveyard,
-    /// Misses go on the bottom of the controller's library, randomized.
-    /// The engine inserts each miss in the order it was revealed; with
-    /// no RNG hook available the order is effectively "as-revealed",
-    /// which is a reasonable approximation since gameplay doesn't read
-    /// the bottom of the library in any deterministic way before the
-    /// next shuffle.
+    /// Misses go on the bottom of the controller's library in revealed order —
+    /// no RNG hook here, and nothing reads the bottom before the next shuffle.
     BottomRandom,
     /// Misses are shuffled into the controller's library after the find
     /// resolves (Transmogrify, Indomitable Creativity).
@@ -3520,10 +2928,8 @@ pub enum ZoneDest {
     Library { who: PlayerRef, pos: LibraryPosition },
     Graveyard,
     Exile,
-    /// CR 702.170 — exile face up and mark **plotted**, so the card's owner
-    /// may cast it for free as a sorcery on a later turn. The effect-granted
-    /// half of plot: no plot cost is paid (Kellan Joins Up, Jace Reawakened,
-    /// Make Your Own Luck, Aven Interrupter).
+    /// CR 702.170 — exile face up as plotted, castable free as a sorcery on a
+    /// later turn; no plot cost paid (Kellan Joins Up).
     ExilePlotted,
     /// Exile, stamping `exiled_with = ctx.source` so the source can reach the
     /// card later (`Selector::CardExiledWithSource`, Kaho's free cast).
@@ -3536,15 +2942,11 @@ pub enum ZoneDest {
     /// command zone", Hellkite Courser). A direct move, not the optional CR
     /// 903.9 redirect.
     Command,
-    /// "If it's a [filter] card, put it [`then`]; otherwise [`else_`]" — the
-    /// branch is read off the moved card as it is placed (Nazahn's "if you
-    /// reveal a card named Hammer of Nazahn this way, put it onto the
-    /// battlefield. Otherwise, put that card into your hand").
+    /// "If it's a [filter] card, put it [`then`]; otherwise [`else_`]", read off
+    /// the card as it is placed (Nazahn's Hammer).
     IfCard { filter: Box<SelectionRequirement>, then: Box<ZoneDest>, else_: Box<ZoneDest> },
-    /// CR 303.4f / 301.5c — onto the battlefield under the mover's control
-    /// attached to `host` ("return up to two target Aura and/or Equipment
-    /// cards … attached to that creature" — Unfinished Business). A card that
-    /// can't legally attach to it stays where it is (CR 303.4i).
+    /// CR 303.4f / 301.5c — onto the battlefield attached to `host` (Unfinished
+    /// Business); one that can't legally attach stays (CR 303.4i).
     BattlefieldAttached { host: Box<Selector> },
 }
 
@@ -3577,30 +2979,23 @@ pub enum CounteredSpellZone {
     /// "…put that card onto the battlefield under your control instead"
     /// (Desertion). Cards that fail the filter fall back to the graveyard.
     CountererBattlefieldIfMatching(Box<SelectionRequirement>),
-    /// "If a permanent spell is countered this way, exile it instead … You may
-    /// cast that card without paying its mana cost for as long as it remains
-    /// exiled" (Thranduil's Decree): a matching card goes to exile with a free
-    /// may-cast for the countering player (CR 601.2 / 118.9); the rest to the
-    /// graveyard.
+    /// Thranduil's Decree: a countered card matching the filter is exiled with a
+    /// free may-cast for the countering player (CR 601.2 / 118.9); the rest go to
+    /// the graveyard.
     ExileCountererMayCastFreeIfMatching(Box<SelectionRequirement>),
 }
 
 /// What mana to add to a pool.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ManaPayload {
-    /// Add one mana of any of the colors of the card imprinted on the source
-    /// (a card in exile with `exiled_with == ctx.source`). The player chooses
-    /// among those colors; produces nothing if there is no imprinted card or it
-    /// is colorless. Chrome Mox.
+    /// One mana of a color of the card imprinted on the source (`exiled_with`);
+    /// nothing if none or colorless. Chrome Mox.
     ImprintedCardColor,
     /// Add each listed color once.
     Colors(Vec<Color>),
     /// Add `amount` colorless mana.
     Colorless(Value),
-    /// Add `amount` mana of one specified color (no player choice).
-    /// Used by power-scaled mana abilities like Topiary Lecturer's
-    /// "{T}: Add an amount of {G} equal to this creature's power" or
-    /// Cryptolith Rite-style "add 1 of color X for each Y you control".
+    /// `amount` mana of one fixed color (Topiary Lecturer's power-scaled {G}).
     OfColor(Color, Value),
     /// Add `amount` mana of any one color (player chooses).
     AnyOneColor(Value),
@@ -3609,42 +3004,25 @@ pub enum ManaPayload {
     /// `n` mana of different colors (CR 106.1 — Component Pouch, Guild Globe):
     /// [`Self::AnyColors`] with no color picked twice.
     DifferentColors(Value),
-    /// Add `amount` mana, each pip chosen from the given color subset
-    /// (player chooses per pip). The restricted-palette sibling of
-    /// `AnyColors`. Used by Culling Ritual's "Add {B} or {G} for each
-    /// permanent destroyed this way". Falls back to the first listed
-    /// color when the decider can't choose.
+    /// `amount` mana, each pip chosen from the given colors (Culling Ritual's "{B}
+    /// or {G}"). Falls back to the first color when the decider can't choose.
     OfColors(Vec<Color>, Value),
-    /// CR 903.4 — "Add one mana of any color in your commander's color
-    /// identity" (Command Tower, Arcane Signet, Commander's Sphere, Path of
-    /// Ancestry, Opal Palace). The legal-color set is the union of the
-    /// controller's commanders' color identities.
+    /// CR 903.4 — one mana of any color in the controller's commanders' combined
+    /// identity (Command Tower, Arcane Signet).
     ///
-    /// With no commander the set is empty. Rather than produce nothing, the
-    /// engine keeps its pre-Commander approximation there — any color — so
-    /// these cards behave in a cube or constructed game exactly as they did
-    /// before this variant existed and no non-Commander trace moves. In a
-    /// Commander game, where the rule has something to say, it is faithful.
+    /// With no commander it produces any color, as it did before Commander
+    /// existed, so cube and constructed games (and their traces) are unchanged.
     AnyColorInCommanderIdentity,
-    /// "Add one mana of either of the circled colors" (Cryptic Spires): two
-    /// colors circled as the deck is built. The engine has no deck-building
-    /// choice, so it reads them off the controller's commander identity —
-    /// exact for a one- or two-color identity, its first two colors (WUBRG
-    /// order) otherwise; with no commander, white and blue.
+    /// "Either of the circled colors" (Cryptic Spires). There is no deck-building
+    /// choice, so it reads the commander identity: exact for one or two colors,
+    /// its first two (WUBRG order) otherwise; white and blue with no commander.
     CircledColors,
-    /// Add one mana of any color a controller's opponent's land could
-    /// produce. The pool of legal colors is the union of basic-land
-    /// types under any opponent's control (`Plains` → White, `Island`
-    /// → Blue, `Swamp` → Black, `Mountain` → Red, `Forest` → Green).
-    /// If no opponent controls a basic-typed land, falls back to
-    /// colorless (so the activation never silently no-ops). Used by
-    /// Fellwar Stone — `{T}: Add one mana of any color an opponent's
-    /// land could produce.`
+    /// One mana of any color an opponent's basic-typed land could produce
+    /// (Fellwar Stone); colorless when there is none, so it never no-ops.
     AnyColorOpponentCouldProduce,
-    /// CR 106.7 — one mana of any color a land *you* control could produce
-    /// (Harvester Druid): the colors your lands' mana abilities make, their
-    /// basic land types' intrinsic ones included (CR 305.6). No color, no
-    /// mana.
+    /// CR 106.7 — one mana of a color a land you control could produce,
+    /// intrinsic basic-type colors included (CR 305.6); none, no mana. Harvester
+    /// Druid.
     AnyColorYouCouldProduce,
     /// CR 106.7 — [`Self::AnyColorYouCouldProduce`] over your *basic* lands
     /// only (Star Compass).
@@ -3653,11 +3031,9 @@ pub enum ManaPayload {
     /// produce": the colors the Gates' own mana abilities (and chosen colors)
     /// make.
     AnyColorAGateYouControlCouldProduce,
-    /// CR 106.7 — "`n` mana of any type that a land you control could
-    /// produce" (Reflecting Pool, Naga Vitalist, Incubation Druid): the
-    /// colors — and {C} — your lands' own mana abilities make, read off the
-    /// board as it resolves. One type, `n` of it; nothing when no land could
-    /// produce any (two Reflecting Pools alone).
+    /// CR 106.7 — `n` mana of one type (colors or {C}) a land you control could
+    /// produce, read off the board (Reflecting Pool). Nothing when no land could
+    /// produce any.
     AnyTypeALandYouControlCouldProduce(Value),
     /// "One mana of any type that a Gate you control could produce" (Plaza
     /// of Harmony): [`Self::AnyTypeALandYouControlCouldProduce`] over Gates.
@@ -3669,11 +3045,8 @@ pub enum ManaPayload {
     /// could produce (Squandered Resources). The controller picks among the
     /// sacrificed lands' basic types; a typeless land yields {C}.
     AnyTypeSacrificedLandProduces,
-    /// Add one mana of any color among the cards **exiled with this source**
-    /// (Pit of Offerings — "{T}: Add one mana of any of the exiled cards'
-    /// colors"). The controller picks among the union of those cards'
-    /// printed colors; produces nothing when the union is empty, which is
-    /// the printed behaviour before the ETB exile has found anything.
+    /// One mana of any color among the cards exiled with this source (Pit of
+    /// Offerings); nothing when that union is empty, as printed.
     AnyColorAmongExiledWithSource,
     /// Add one mana of any color among legendary creatures and planeswalkers
     /// you control (Mox Amber). The legal-color set is the union of those
@@ -3694,16 +3067,11 @@ pub enum ManaPayload {
     /// "Choose a color of a permanent you control. Add one mana of that color"
     /// (Meteor Crater). Colorless-only boards produce nothing.
     AnyColorAmongYourPermanents,
-    /// **Vivid** — "For **each** color among permanents you control, add one
-    /// mana of that color" (Bloom Tender, Faeburrow Elder).
+    /// Vivid — one mana of *each* color among your permanents (Bloom Tender).
     ///
-    /// ⚠ Not [`Self::AnyColorAmongYourPermanents`], which reads the same
-    /// colour set and adds **one** mana chosen from it. This adds one of every
-    /// colour in the set, so a five-colour board taps a 1/1 Elf for `{W}{U}{B}
-    /// {R}{G}`; the two differ by everything at more than one colour, and
-    /// agree exactly at one, which is where a mistake would hide. There is no
-    /// choice to make, so no seat is asked. A colourless board produces
-    /// nothing.
+    /// ⚠ Not [`Self::AnyColorAmongYourPermanents`], which adds one mana chosen
+    /// from that set. They agree only at one color, which is where a mistake
+    /// would hide. No choice, so no seat is asked; colorless board, no mana.
     OneOfEachColorAmongYourPermanents,
     /// "For each color among monocolored permanents you control, add one mana
     /// of that color" (Tarnation Vista): Vivid's set over monocolored ones.
@@ -3715,18 +3083,13 @@ pub enum ManaPayload {
     /// Player chooses a color, then adds mana of that color equal to their
     /// devotion to it (CR 700.5). Nykthos, Shrine to Nyx's second ability.
     DevotionOfChosenColor,
-    /// Resolve the inner payload normally, but tag every colored pip it
-    /// produces with `restriction` ("Spend this mana only to …"). Used by
-    /// the Strixhaven school mana sources (Abstract Paintmage, Tablet of
-    /// Discovery, Hydro-Channeler, Great Hall of the Biblioplex,
-    /// Resonating Lute). Colorless pips are restricted too
-    /// (`add_restricted_colorless` — Powerstone tokens, Omen Hawker's {C}).
+    /// The inner payload with every pip tagged with `restriction` ("Spend this
+    /// mana only to …"), colorless too (`add_restricted_colorless`). Strixhaven
+    /// school mana, Powerstone tokens.
     Restricted(Box<ManaPayload>, SpendRestriction),
-    /// Like `Restricted`, but the restriction is "spend only to cast a
-    /// creature spell of the source's chosen creature type, and that spell
-    /// can't be countered" (Cavern of Souls). The chosen type is read off
-    /// the source permanent at resolution; with none chosen the mana is
-    /// added unrestricted.
+    /// Like `Restricted`, but "only to cast a creature spell of the chosen type,
+    /// and that spell can't be countered" (Cavern of Souls); the type is read off
+    /// the source at resolution, unrestricted with none.
     RestrictedToChosenType(Box<ManaPayload>),
     /// Like `RestrictedToChosenType`, without Cavern's uncounterable rider
     /// (Unclaimed Territory — "creature spell of the chosen type").
@@ -3735,11 +3098,9 @@ pub enum ManaPayload {
     /// of the chosen type (Secluded Courtyard's "or activate an ability of a
     /// creature or creature card of the chosen type").
     RestrictedToChosenTypeOrAbility(Box<ManaPayload>),
-    /// The Kindred-inclusive sibling of `RestrictedToChosenTypeOrAbility`:
-    /// "spend this mana only to cast a spell of the chosen type or activate
-    /// an ability of a source of the chosen type" (Eclipsed Realms) — any
-    /// spell or source carrying the type (`SpendRestriction::
-    /// TypeSpellOrItsAbility`, CR 308.3).
+    /// Kindred-inclusive sibling of `RestrictedToChosenTypeOrAbility`: any spell
+    /// or source carrying the type (`SpendRestriction::TypeSpellOrItsAbility`, CR
+    /// 308.3). Eclipsed Realms.
     RestrictedToChosenTypeSpellOrAbility(Box<ManaPayload>),
     /// `RestrictedToChosenTypePlain` that also funds any legendary creature
     /// spell (The Ringhart Crest's "a creature spell of the chosen type or a
@@ -3760,12 +3121,11 @@ pub enum ManaPayload {
 
 // ── Event specification (triggers) ───────────────────────────────────────────
 
-/// Kinds of game events a trigger can watch for. Mirrors the `GameEvent`
-/// stream in [`GameEvent`].
+/// Kinds of game events a trigger can watch for; mirrors [`GameEvent`].
 ///
-/// `#[repr(u8)]` so [`EventKind::bit`] can read the variant tag as the first
-/// byte (RFC 2195) — the trigger dispatcher masks a batch's reachable kinds
-/// into a `u128` and asks it per (permanent, trigger) pair.
+/// `#[repr(u8)]` so [`EventKind::bit`] can read the tag as the first byte
+/// (RFC 2195): the dispatcher masks a batch's kinds into a `u128` per
+/// (permanent, trigger) pair.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum EventKind {
@@ -3773,50 +3133,28 @@ pub enum EventKind {
     EntersBattlefield,
     /// A creature died (hit a graveyard from the battlefield).
     CreatureDied,
-    /// CR 700.4 — a creature *or* artifact hit a graveyard from the
-    /// battlefield. Matches `GameEvent::PermanentDied` whose `is_creature`
-    /// or `is_artifact` flag is set (an artifact creature counts once).
-    /// "Whenever another creature or artifact you control dies" (Judge Magister
-    /// Gabranth); pair with `once_per_turn` for "one or more … die … only once
-    /// each turn" (G'raha Tia). Scope by `YourControl`; exclude the source with
-    /// a `Predicate` filter for the "another" rider.
+    /// CR 700.4 — a creature or artifact died (an artifact creature counts once).
+    /// Judge Magister Gabranth; with `once_per_turn`, G'raha Tia. Use a
+    /// `Predicate` filter for "another".
     CreatureOrArtifactDied,
-    /// Any permanent hit a graveyard from the battlefield (matches
-    /// `GameEvent::PermanentDied`). Filter the subject via
-    /// `Predicate::EntityMatches { what: TriggerSource, .. }` — Carth the
-    /// Lion's "or a planeswalker you control dies".
+    /// Any permanent died (`GameEvent::PermanentDied`); filter the subject with
+    /// `Predicate::EntityMatches { what: TriggerSource, .. }` (Carth the Lion).
     PermanentDied,
-    /// A creature was sacrificed. Per CR 701.16, "sacrifice" is a distinct
-    /// game event from "die" — Mortician Beetle / Yahenni / Bone Picker
-    /// ("Whenever a player sacrifices a creature") want this specific
-    /// event, not a death-of-any-cause trigger. The `Effect::Sacrifice`
-    /// resolver emits both events in order (CreatureSacrificed first,
-    /// then CreatureDied) so existing death-triggers still fire.
+    /// A creature was sacrificed (CR 701.16; distinct from dying — Mortician
+    /// Beetle). `Effect::Sacrifice` emits it before `CreatureDied`.
     CreatureSacrificed,
-    /// Any permanent was sacrificed (creature, artifact, enchantment,
-    /// land, planeswalker). Per CR 701.16, this is the broader-scope
-    /// sibling of `CreatureSacrificed` — "Whenever you sacrifice a
-    /// permanent" payoffs (Korvold, Fae-Cursed King; Mayhem Devil;
-    /// Cruel Celebrant for permanents) want this event so they catch
-    /// Treasure-sac, Clue-sac, Food-sac, and land-sacrifice resolutions
-    /// alongside creature sacrifices. The `Effect::Sacrifice` resolver
-    /// emits this event for every sacrificed permanent, regardless of
-    /// type; for creatures it additionally emits `CreatureSacrificed`
-    /// (creatures fire BOTH events, matching CR 701.16's "every
-    /// sacrifice of a creature is a sacrifice of a permanent" wording).
+    /// Any permanent was sacrificed (CR 701.16) — "whenever you sacrifice a
+    /// permanent" (Korvold, Mayhem Devil). A creature fires both this and
+    /// `CreatureSacrificed`.
     PermanentSacrificed,
     /// Any permanent left the battlefield.
     PermanentLeavesBattlefield,
-    /// CR 701.8 — a permanent was destroyed by a spell or ability (not by
-    /// combat damage or a state-based action). The event's actor is the
-    /// destroying effect's controller, so `EventScope::YourControl` with
-    /// `actor_is_opponent` reads "a spell or ability an opponent controls
-    /// destroys a permanent you control" (Karmic Justice).
+    /// CR 701.8 — a spell or ability (not combat damage or an SBA) destroyed a
+    /// permanent. The actor is the destroyer's controller, so `YourControl` +
+    /// `actor_is_opponent` is Karmic Justice.
     PermanentDestroyedByEffect,
-    /// CR 603.6 — a creature left the battlefield *without dying* (moved to
-    /// hand / exile / library, not to a graveyard). Dour Port-Mage, Three
-    /// Tree Scribe. Distinct from `CreatureDied`/`PermanentLeavesBattlefield`,
-    /// which fire on the graveyard exit.
+    /// CR 603.6 — a creature left the battlefield without dying (to hand / exile
+    /// / library). Dour Port-Mage. `CreatureDied` covers the graveyard exit.
     CreatureLeavesBattlefieldNotDying,
     /// A card was drawn.
     CardDrawn,
@@ -3830,10 +3168,9 @@ pub enum EventKind {
     /// there by an effect (`GameEvent::CardPutIntoGraveyardFromHand`). Desert
     /// Warfare's "a Desert card is put into your graveyard from your hand".
     PutIntoGraveyardFromHand,
-    /// A spell or ability an opponent controls caused a player to discard a
-    /// card (CR 701.9 + `GameState.resolution_causer`). Keyed on the *discarding*
-    /// player, so `EventScope::YourControl` reads "causes you to discard"
-    /// (Spiritual Focus). Emitted alongside `CardDiscarded`.
+    /// An opponent's spell or ability made a player discard (CR 701.9 +
+    /// `GameState.resolution_causer`), keyed on the discarder — `YourControl` =
+    /// Spiritual Focus. Emitted with `CardDiscarded`.
     OpponentCausedYouToDiscard,
     /// A land was played.
     LandPlayed,
@@ -3845,19 +3182,12 @@ pub enum EventKind {
     SpellCopied,
     /// A creature was declared as an attacker.
     Attacks,
-    /// CR 701.43d — the creature was **exerted** as it attacked. "You may
-    /// exert this creature as it attacks" is an optional cost to attack (CR
-    /// 508.1g) and the "when you do" printed in the same paragraph is a
-    /// *linked* ability (CR 607.2h), so the bonus rides this rather than a
-    /// plain `Attacks` trigger: a creature that attacks without being exerted
-    /// gets neither the skipped untap nor the bonus. Glorybringer,
-    /// Ahn-Crop Crasher, Glory-Bound Initiate.
+    /// CR 701.43d — the creature was exerted as it attacked. Exert is an optional
+    /// attack cost (CR 508.1g) and its "when you do" is a linked ability (CR
+    /// 607.2h), so the bonus rides this, not `Attacks`. Glorybringer.
     Exerted,
-    /// CR 508 — "Whenever you attack": fires **once** per combat for the
-    /// attacking player when they declare one or more attackers, regardless of
-    /// how many. Use a `SelfSource`/`YourControl` trigger over this instead of
-    /// per-attacker `Attacks` for "whenever you attack, …" abilities (Razorkin
-    /// Hordecaller). Dispatched directly from `declare_attackers`.
+    /// CR 508 — "whenever you attack": once per combat when the player declares
+    /// any attackers (Razorkin Hordecaller). Dispatched from `declare_attackers`.
     YouAttack,
     /// A creature was declared as a blocker. Fired once per blocker
     /// from `declare_blockers` (CR 509.1i). Dispatched in addition to
@@ -3876,89 +3206,57 @@ pub enum EventKind {
     /// Scavengers' counter rider). Fires whenever a regeneration shield is
     /// applied, whatever granted it.
     Regenerated,
-    /// An attacking creature finished the declare-blockers step
-    /// without any blockers assigned to it (CR 509.3g — "Whenever
-    /// [creature] attacks and isn't blocked"). Fires once per
-    /// unblocked attacker after `declare_blockers` completes. The
-    /// `BecomesBlocked` event fires for attackers WITH blockers; this
-    /// is the parallel rail for unblocked attackers.
+    /// CR 509.3g — "attacks and isn't blocked": once per unblocked attacker after
+    /// `declare_blockers`; the counterpart of `BecomesBlocked`.
     AttacksAndIsntBlocked,
     /// Combat damage was dealt to a player by a creature.
     DealsCombatDamageToPlayer,
-    /// "Whenever this permanent deals damage to a player" — the
-    /// combat-agnostic sibling of `DealsCombatDamageToPlayer` (Soltari
-    /// Visionary). Fires from both the combat step and the non-combat damage
-    /// funnel, with the damaged player bound to slot 0.
+    /// "Whenever this deals damage to a player", combat or not (Soltari
+    /// Visionary); the player is bound to slot 0.
     DealsDamageToPlayer,
-    /// Combat damage was dealt to a planeswalker by a creature (keyed on the
-    /// dealer). Pair with `EventScope::SelfSource`/`YourControl`; the damaged
-    /// planeswalker is the default target slot (Vraska's Assassin token
-    /// destroys it; Vraska, Swarm's Eminence grows the dealer).
+    /// A creature dealt combat damage to a planeswalker, keyed on the dealer; the
+    /// planeswalker is the default target slot (Vraska's Assassin).
     DealsCombatDamageToPlaneswalker,
-    /// The listening permanent's controller was dealt combat damage (keyed on
-    /// the *recipient*, not the dealer). Pair with `EventScope::SelfSource` for
-    /// "whenever combat damage is dealt to you" downsides (Risona removes an
-    /// indestructible counter). The amount rides in via `Value::TriggerEventAmount`.
+    /// The listener's controller was dealt combat damage, keyed on the recipient
+    /// (Risona). Amount via `TriggerEventAmount`.
     ControllerDealtCombatDamage,
     /// Combat damage was dealt to a creature by a creature.
     DealsCombatDamageToCreature,
-    /// "Whenever this permanent deals damage to a creature" — the
-    /// combat-agnostic sibling of `DealsCombatDamageToCreature` (Neko-Te,
-    /// Kumano's Blessing). Fires from both the combat step and the
-    /// non-combat damage funnel, with the damaged creature bound to slot 0.
+    /// "Whenever this deals damage to a creature", combat or not (Neko-Te); the
+    /// creature is bound to slot 0.
     DealsDamageToCreature,
-    /// "Whenever this permanent deals combat damage" — recipient-agnostic
-    /// (player, planeswalker or creature). The union of
-    /// `DealsCombatDamageToPlayer` and `DealsCombatDamageToCreature`
-    /// (Descendant of Kiyomaro). The damaged entity is bound to slot 0.
+    /// "Whenever this deals combat damage" to anything — the union of the player
+    /// and creature kinds (Descendant of Kiyomaro); recipient in slot 0.
     DealsCombatDamage,
     /// "Whenever this permanent deals damage" — recipient- *and*
     /// combat-agnostic (Kiyomaro, First to Stand). Fires from the combat
     /// steps and the non-combat damage funnel alike.
     DealsDamage,
-    /// CR 702.130 — **Enrage**: a permanent was dealt damage (combat or
-    /// non-combat). Fires the source's enrage trigger. Unlike
-    /// `DealsCombatDamageToCreature` (which is keyed on the *dealer* and
-    /// only on combat damage), this is keyed on the *recipient* and fires
-    /// on any damage — combat, burn spells, Fight, pingers — matching the
-    /// printed "Whenever this creature is dealt damage" wording. The
-    /// damage amount is exposed to the trigger body via
-    /// `Value::TriggerEventAmount`. Used with `EventScope::SelfSource` for
-    /// enrage creatures; `AnyPlayer`/`YourControl` scopes also work for
-    /// "whenever a creature you control is dealt damage" payoffs.
+    /// CR 702.130 Enrage — a permanent was dealt damage of any kind, keyed on the
+    /// recipient (unlike `DealsCombatDamageToCreature`). Amount via
+    /// `Value::TriggerEventAmount`; `SelfSource` for enrage, wider scopes for
+    /// "a creature you control is dealt damage".
     DealtDamage,
-    /// A permanent was dealt **combat** damage — the combat-only sibling of
-    /// `DealtDamage`, keyed on the *recipient*. Pair with `EventScope::
-    /// SelfSource` for "whenever this creature is dealt combat damage" (Souls
-    /// of the Faultless). The amount rides in via `Value::TriggerEventAmount`.
+    /// A permanent was dealt combat damage — combat-only `DealtDamage`, keyed on
+    /// the recipient (Souls of the Faultless). Amount via `TriggerEventAmount`.
     DealtCombatDamage,
-    /// CR 510 / 119 — a **player** was dealt noncombat damage (a spell,
-    /// ability, or Fight — not combat damage). Keyed on the damaged player,
-    /// so `EventScope::OpponentControl` fires "whenever an opponent is dealt
-    /// noncombat damage" (Chandra's Spitfire). The amount rides in via
-    /// `Value::TriggerEventAmount`.
+    /// CR 510 / 119 — a player was dealt noncombat damage, keyed on that player
+    /// (`OpponentControl` = Chandra's Spitfire). Amount via `TriggerEventAmount`.
     PlayerDealtNoncombatDamage,
-    /// A source the trigger's controller controls dealt noncombat damage to a
-    /// creature equal to that creature's toughness (Taii Wakeen, Perfect
-    /// Shot). Keyed on the damaged creature; the amount rides in via
-    /// `Value::TriggerEventAmount`.
+    /// Your source dealt noncombat damage to a creature equal to its toughness
+    /// (Taii Wakeen), keyed on the creature; amount via `TriggerEventAmount`.
     YourSourceDealtNoncombatDamageEqualToToughness,
     /// A player was dealt damage (combat or not). Pair with
     /// `EventScope::YourSourceDamagedOpponent` for "whenever a source you
     /// control deals damage to an opponent" (Quest for Pure Flame).
     PlayerDamaged,
-    /// An instant or sorcery spell its controller controls dealt damage (to
-    /// any object or player). Pair with `EventScope::YourControl`. Fires once
-    /// per spell resolution regardless of how many things it hit. Blaze
-    /// Commando. The amount rides in via `Value::TriggerEventAmount`.
+    /// Your instant or sorcery dealt damage, once per resolution however many it
+    /// hit (Blaze Commando). Amount via `TriggerEventAmount`.
     YourInstantOrSorceryDealtDamage,
-    /// An instant or sorcery spell its controller controls dealt damage to a
-    /// **player**. Pair with `EventScope::YourControl`. Unlike
-    /// `YourInstantOrSorceryDealtDamage` this fires once per damaged player,
-    /// binding that player as the trigger subject so
-    /// `SelectionRequirement::ControlledByTriggerPlayer` reads "that player
-    /// controls" (Satyr Firedancer). The amount rides in via
-    /// `Value::TriggerEventAmount`.
+    /// A controller's instant or sorcery dealt damage to a player, once per
+    /// player (unlike `YourInstantOrSorceryDealtDamage`), binding them as the
+    /// subject so `ControlledByTriggerPlayer` reads "that player controls" (Satyr
+    /// Firedancer).
     YourInstantOrSorceryDealtDamageToPlayer,
     /// A player gained life.
     LifeGained,
@@ -3969,38 +3267,29 @@ pub enum EventKind {
     /// actually happened). Fires once per scry/surveil resolution; the acting
     /// player rides in as the subject. Matoya, Archon Elder.
     ScriedOrSurveiled,
-    /// CR 714.2e — the final chapter ability of a Saga resolved (Narci, Fable
-    /// Singer; Tom Bombadil). The Saga is the subject and its mana value the
-    /// event amount, read as the chapter resolved (CR 714.4 sacrifices it
-    /// before any trigger resolves).
+    /// CR 714.2e — a Saga's final chapter resolved (Narci, Fable Singer). Subject
+    /// the Saga, amount its mana value, read before CR 714.4 sacrifices it.
     SagaFinalChapterResolved,
     /// CR 701.22 — "whenever you scry" only (Flamespeaker Adept); the same
     /// event as `ScriedOrSurveiled`, narrowed by its `surveil` flag.
     Scried,
     /// CR 701.25 — "whenever you surveil" only (Mirko, Dimir Spybug).
     Surveilled,
-    /// CR 701.17 — the literal "mills" wording only ("whenever a player mills
-    /// one or more creature cards" — Zellix; "cards are milled" — Mirelurk
-    /// Queen). `CardMilled` is the wider "put into a graveyard from a
-    /// library" family, which a surveil also fires (Narcomoeba, Unshakable
-    /// Tail).
+    /// CR 701.17 — the literal "mills" wording only (Zellix). `CardMilled` is the
+    /// wider library-to-graveyard family that surveil also fires (Narcomoeba).
     Milled,
     /// CR 701.49 — a player completed a dungeon (the final room's ability
     /// resolved). "Whenever you complete a dungeon" (Dungeon Crawler).
     DungeonCompleted,
-    /// CR 701.34 — a player proliferated. Fires once per proliferate
-    /// instance (so a Tekuthal-doubled proliferate fires payoffs twice);
-    /// the proliferating player is the event actor. "Whenever you
-    /// proliferate" (Scheming Aspirant, Ezuri, Voidwing Hybrid).
+    /// CR 701.34 — a player proliferated, once per instance (a doubled
+    /// proliferate fires twice). Ezuri, Stalker of Spheres.
     Proliferated,
     /// A player foraged (CR 701.61 — exiled three graveyard cards or sacrificed
     /// a Food; `GameEvent::Foraged`). The foraging player is the event actor.
     /// "Whenever you forage" (Corpseberry Cultivator).
     Foraged,
-    /// A player collected evidence (CR 701.59 — as a cost or via
-    /// `Effect::CollectEvidence`; `GameEvent::EvidenceCollected`). The
-    /// collecting player is the event actor. "Whenever you collect evidence"
-    /// (Surveillance Monitor, Evidence Examiner).
+    /// CR 701.59 — a player collected evidence (as a cost or via
+    /// `Effect::CollectEvidence`). Surveillance Monitor.
     EvidenceCollected,
     /// A player gave a promised gift (CR 702.165; `GameEvent::GiftGiven`). The
     /// gifting player is the event actor. "Whenever you give a gift" (Jolly
@@ -4010,21 +3299,14 @@ pub enum EventKind {
     /// the player half of All Will Be One's "counters on a permanent or
     /// player". Event amount = counters added.
     PoisonAdded,
-    /// CR 701.54 — the Ring tempted a player (and they chose a Ring-bearer).
-    /// Matched to `GameEvent::RingTempted`; the chosen bearer rides in as the
-    /// trigger subject. Powers "whenever you choose a creature as your
-    /// Ring-bearer" payoffs (Call of the Ring).
+    /// CR 701.54 — the Ring tempted a player; the chosen bearer is the subject
+    /// (Call of the Ring).
     RingTempted,
-    /// CR 700.14 — "Whenever you expend N." Matched to
-    /// `GameEvent::Expended`; the threshold N rides the trigger's
-    /// `EventSpec.filter` as `Predicate::ExpendReached(n)` so the trigger
-    /// fires only when the turn's spell-mana total first reaches N.
+    /// CR 700.14 — "whenever you expend N": the filter carries
+    /// `Predicate::ExpendReached(n)`, so it fires as the total first reaches N.
     Expend,
-    /// CR 716.2 — a Class enchantment gained a level (`GameEvent::
-    /// ClassLevelReached`). Scoped to the leveling Class itself
-    /// (`EventScope::This`) and filtered on `Predicate::SourceClassLevelIs(N)`
-    /// so a "when this Class becomes level N" trigger fires only on that
-    /// level. The Class is the trigger source.
+    /// CR 716.2 — a Class gained a level. Scope `EventScope::This` and filter on
+    /// `Predicate::SourceClassLevelIs(N)` for "becomes level N".
     ClassLevelReached,
     /// A player lost life.
     LifeLost,
@@ -4047,10 +3329,8 @@ pub enum EventKind {
     TurnBegins,
     /// A counter was added to a permanent/player.
     CounterAdded(CounterType),
-    /// One or more counters of the given kind were removed from a permanent
-    /// (a single event carries the total removed as its amount). Scope by
-    /// `SelfSource` for "whenever counters are removed from this" — Chandra,
-    /// Fire Artisan's loyalty-removal trigger.
+    /// Counters of a kind were removed (one event, the total as amount). Chandra,
+    /// Fire Artisan.
     CounterRemoved(CounterType),
     /// A counter of *any* kind was added to a permanent (CR 122). Fires once
     /// per `CounterAdded` event regardless of counter type — "whenever one or
@@ -4062,61 +3342,34 @@ pub enum EventKind {
     /// `AbilityActivated`. One payload variant, so the four share a kind bit
     /// (`EventKind` is at its 128-tag `u128` mask).
     AbilityActivatedWith(ActivationTrait),
-    /// One or more cards left a player's graveyard (returned to hand /
-    /// battlefield, exiled from graveyard, etc.). Used by Strixhaven
-    /// "cards leave your graveyard" payoffs (Garrison Excavator, Living
-    /// History, Spirit Mascot, Hardened Academic). The event fires once
-    /// per card removed; the trigger handler is expected to be idempotent
-    /// across batches (Strixhaven cards say "one or more cards" but the
-    /// engine fires per-card and lets the trigger fire as many times).
+    /// A card left a player's graveyard, once per card (Strixhaven "one or more
+    /// cards leave" payoffs fire per card — Living History).
     CardLeftGraveyard,
-    /// One or more cards were put into exile (from any zone). Fires per card
-    /// on the central exile-placement funnel. Pair with `once_per_turn` +
-    /// `IsTurnOf(You)` for "whenever one or more cards are put into exile
-    /// during your turn" (Stonebinder's Familiar).
+    /// A card was put into exile from any zone, per card. With `once_per_turn` +
+    /// `IsTurnOf(You)`: Stonebinder's Familiar.
     CardExiled,
-    /// "Whenever one or more cards are put into exile from [zones]" — the
-    /// origin-scoped sibling of `CardExiled` (CR 400.7). The payload is a mask
-    /// of [`exile_from`] origins: Ketramose, the New Dawn reads the battlefield
-    /// and graveyards, Laelia, the Blade Reforged your library and graveyard.
-    /// One kind-mask bit for every mask.
+    /// "One or more cards are put into exile from [zones]" — the origin-scoped
+    /// sibling of `CardExiled` (CR 400.7), payload a mask of [`exile_from`]
+    /// origins (Ketramose). One kind-mask bit for every mask.
     CardExiledFrom(u8),
-    /// A permanent became the target of a spell or activated ability.
-    /// Fires once per Permanent target at announce-time (when the spell
-    /// hits the stack or the activated ability is pushed). Multi-target
-    /// spells emit one event per target. For BecameTarget triggers the
-    /// trigger source must be the targeted permanent (an implicit
-    /// "target == source" check applied by `event_matches_spec`); the
-    /// EventScope refines on the caster (`OpponentControl` → caster is
-    /// an opponent, `YourControl` → caster is you). Used by SOS Tenured
-    /// Concocter's "Whenever this creature becomes the target of a
-    /// spell or ability an opponent controls, you may draw a card".
+    /// A permanent became the target of a spell or ability, once per target at
+    /// announce time. The trigger source must be the targeted permanent
+    /// (`event_matches_spec`); the scope refines on the caster. SOS Tenured
+    /// Concocter.
     BecameTarget,
     /// CR 601.2c — "whenever a player chooses one or more targets": one event
     /// per targeting decision, not per targeted object (Psychic Battle).
     ChoseTargets,
-    /// CR 702.29c — A card was cycled (the controller paid a cycling
-    /// cost to discard it from hand and draw). This event is emitted
-    /// from `GameState::cycle_card` *in addition* to `CardDiscarded`,
-    /// so cycle-specific triggers ("When you cycle this card",
-    /// "Whenever a player cycles a card") can fire without also
-    /// triggering on regular hand-discards. The triggered ability's
-    /// source typically lives on the cycled card itself (CR 702.29c —
-    /// "These abilities trigger from whatever zone the card winds up
-    /// in after it's cycled" — the engine reads the card from its new
-    /// home in the graveyard). `EventScope::SelfSource` fires when the
-    /// source card was the one cycled; `EventScope::YourControl` fires
-    /// when any of the controller's cards were cycled.
+    /// CR 702.29c — a card was cycled, emitted by `GameState::cycle_card` beside
+    /// `CardDiscarded` so cycle triggers skip plain discards. The ability usually
+    /// lives on the cycled card and triggers from its new zone; `SelfSource` =
+    /// this card, `YourControl` = any of yours.
     CardCycled,
-    /// CR 614.13ish "milled" — this card was put into a graveyard from a
-    /// library (`GameEvent::CardMilled`). With `SelfSource` scope the
-    /// trigger fires from the graveyard off the milled card itself
-    /// (Narcomoeba, Creeping Chill).
+    /// A card was milled (`GameEvent::CardMilled`); with `SelfSource` it fires
+    /// from the graveyard (Narcomoeba).
     CardMilled,
-    /// DSK — "Whenever you manifest dread, …" (`GameEvent::ManifestedDread`).
-    /// The event subject is the card put into the graveyard "this way" (the
-    /// non-manifested card), so a body can return it to hand (Paranormal
-    /// Analyst). The manifesting player is the event actor.
+    /// DSK manifest dread; the subject is the card put into the graveyard
+    /// (Paranormal Analyst), the manifester the actor.
     ManifestedDread,
     /// CR 702.108 — a permanent became untapped (Inspired). Fired once per
     /// permanent that flips tapped→untapped during the untap step. The
@@ -4125,14 +3378,10 @@ pub enum EventKind {
     /// A permanent became tapped (Magda, Brazen Outlaw). The tapped
     /// permanent is the event subject; matched to `GameEvent::PermanentTapped`.
     Tapped,
-    /// CR 702.122/702.171 — "Whenever this creature crews a Vehicle or saddles
-    /// a Mount (during your main phase)." Fires from the crewing/saddling
-    /// creature's side (`SelfSource` matches when the source is among the
-    /// crew/riders); the crewed Vehicle / saddled Mount is the event subject,
-    /// so `Selector::TriggerSource` binds to it. Matched to
-    /// `GameEvent::VehicleCrewed` / `GameEvent::MountSaddled`. `main_phase_only`
-    /// is the printed "during your main phase" rider (Canyon Vaulter, Reckless
-    /// Velocitaur); Gearshift Ace's and a Vehicle's "becomes crewed" carry none.
+    /// CR 702.122 / 702.171 — "whenever this creature crews a Vehicle or saddles
+    /// a Mount", fired from the crewer's side; the Vehicle / Mount is the subject
+    /// (`Selector::TriggerSource`). `main_phase_only` is the printed "during your
+    /// main phase" (Canyon Vaulter).
     CrewsOrSaddles { main_phase_only: bool },
     /// CR 702.26 — a permanent phased in. The phasing-in permanent is the
     /// event subject; matched to `GameEvent::PermanentPhasedIn`.
@@ -4148,11 +3397,9 @@ pub enum EventKind {
     /// player" (Risky Move). `SelfSource`; the trigger's controller must be
     /// the *new* controller, so it fires once for whoever just took it.
     GainedControlOfThis,
-    /// CR 800.4 — "When you lose control of this permanent" (Duplicity). The
-    /// trigger is controlled by the seat that *lost* control, not by the
-    /// permanent's new controller. `yours`: "whenever an opponent gains control
-    /// of a permanent from you" (Zidane) — any other permanent of the source's
-    /// controller, to an opponent; one mask bit for both.
+    /// CR 800.4 — "when you lose control of this permanent" (Duplicity), controlled
+    /// by the seat that lost it. `yours`: an opponent gained control of any of your
+    /// other permanents (Zidane); one mask bit for both.
     LostControl { yours: bool },
     /// CR 701.44 — a permanent explored (Wildgrowth Walker, Tishana's
     /// Wayfinder payoffs). The exploring permanent is the event subject;
@@ -4162,33 +3409,25 @@ pub enum EventKind {
     /// Ultron's "whenever a creature you control connives"). The conniver is
     /// the event subject; matched to `GameEvent::Connived`.
     Connived,
-    /// CR 120.10 / 120.4a — a creature or planeswalker was dealt excess
-    /// damage. The permanent is the event subject, its controller the actor
-    /// (so `OpponentControl` reads "an opponent controls"); the excess rides
-    /// in as `Value::TriggerEventAmount`. `noncombat_only` matches
-    /// `GameEvent::ExcessNoncombatDamage` alone (Fall of Cair Andros);
-    /// without it `GameEvent::ExcessCombatDamage` matches too (Aegar, the
-    /// Freezing Flame). One payload variant: the kind mask is full.
+    /// CR 120.10 / 120.4a — a creature or planeswalker was dealt excess damage
+    /// (subject the permanent, actor its controller, amount the excess).
+    /// `noncombat_only` matches `ExcessNoncombatDamage` alone (Fall of Cair
+    /// Andros); otherwise combat too (Aegar). One payload variant: the kind mask
+    /// is full.
     DealtExcessDamage { noncombat_only: bool },
-    /// CR 701.57 — the controller performed a discover (Curator of Sun's
-    /// Creation's "whenever you discover" payoff). The discovering player is
-    /// the event subject; matched to `GameEvent::Discovered`. The discover
-    /// value is exposed via `Value::TriggerEventAmount`.
+    /// CR 701.57 — the player discovered (subject); the discover value is
+    /// `TriggerEventAmount`. Curator of Sun's Creation.
     Discovered,
     /// CR 701.37 — a permanent became monstrous (Fleecemane Lion, Nessian
     /// Wilds Ravager "when this becomes monstrous" triggers). The permanent
     /// is the event subject; matched to `GameEvent::BecameMonstrous`.
     BecameMonstrous,
-    /// CR 107.16 — the controller got one or more {E} (energy counters).
-    /// Fires once per `AddEnergy` resolution ("Whenever you get one or more
-    /// {E}"); the amount is exposed via `Value::TriggerEventAmount`. The
-    /// event subject is the player; matched to `GameEvent::EnergyGained`.
+    /// CR 107.16 — the player got {E}, once per `AddEnergy`; amount via
+    /// `TriggerEventAmount`.
     EnergyGained,
-    /// CR 705.1 — the player won a coin flip ("Whenever you win a coin
-    /// flip"), matched to `GameEvent::CoinFlipWon`; with `clash`, CR 701.30d
-    /// — the player won a clash ("Whenever you win a clash", Marvo), matched
-    /// to `GameEvent::ClashWon`. One event per win; the player is the
-    /// subject. One kind with a payload because the `u128` mask is full.
+    /// CR 705.1 — won a coin flip; with `clash`, CR 701.30d — won a clash (Marvo).
+    /// One event per win, the player as subject. A payload because the `u128`
+    /// mask is full.
     WonContest { clash: bool },
     /// CR 705.1 — the player lost a coin flip ("Whenever you lose a coin
     /// flip"). Fires once per lost flip; matched to `GameEvent::CoinFlipLost`.
@@ -4203,21 +3442,15 @@ pub enum EventKind {
     /// "Whenever you roll a die's highest natural result" (Netherese
     /// Puzzle-Ward): once per die. Matched to `GameEvent::RolledNaturalMax`.
     RolledNaturalMax,
-    /// CR 701.9 batch — the player discarded one or more cards in a single
-    /// effect resolution ("Whenever you discard one or more cards"). Fires once
-    /// per resolution; the count is exposed via `Value::TriggerEventAmount`. The
-    /// player is the event subject; matched to `GameEvent::DiscardedBatch`.
+    /// CR 701.9 — the player discarded one or more cards, once per resolution;
+    /// count via `TriggerEventAmount`.
     DiscardedOneOrMore,
-    /// CR 303.4 — an Aura became attached to a permanent. "Whenever an Aura you
-    /// control becomes attached to a creature you control" (`EventScope::
-    /// YourControl` requires the attached-to permanent to be a creature you
-    /// control). The attached-to permanent is the event subject. Matched to
-    /// `GameEvent::AuraAttached`. Siona, Captain of the Pyleas.
+    /// CR 303.4 — an Aura became attached; the attached-to permanent is the
+    /// subject (`YourControl` needs it to be your creature). Siona, Captain of the
+    /// Pyleas.
     AuraAttached,
-    /// Same event, but the *Aura* is the trigger subject and the host is
-    /// unrestricted — "whenever an Aura you control becomes attached to a
-    /// nonland permanent an opponent controls …" (Eriette, the Beguiler), where
-    /// the body has to reach both objects.
+    /// `AuraAttached` with the Aura as subject and any host (Eriette, the
+    /// Beguiler), so the body can reach both.
     AuraAttachedToAny,
     /// This Equipment became attached to a permanent (Blade of Shared Souls;
     /// fires off `GameEvent::AttachmentMoved` with a live host).
@@ -4238,100 +3471,63 @@ pub enum EventKind {
     /// turned face up", megamorph payoffs). The flipped permanent is the
     /// subject (`EventScope::SelfSource`). Matched to `GameEvent::TurnedFaceUp`.
     TurnedFaceUp,
-    /// CR 111.10 — a token was created ("whenever you create a token" /
-    /// "whenever you create a Blood token"). The new token is the event
-    /// subject; pair `EventScope::YourControl` with a TriggerSource filter
-    /// to narrow by token kind. Matched to `GameEvent::TokenCreated`.
+    /// CR 111.10 — a token was created (subject); narrow the kind with a
+    /// TriggerSource filter.
     TokenCreated,
     /// CR 709.5h — a Room door was unlocked (at cast-entry or via the unlock
     /// special action). Fired with the Room permanent as the subject.
     DoorUnlocked,
-    /// DSK Eerie ability word — "whenever you fully unlock a Room" (both doors
-    /// unlocked). Fired with the Room permanent as the subject; pair with
-    /// `EventScope::YourControl` so the unlocker's permanents trigger. Matched
-    /// to `GameEvent::RoomFullyUnlocked`.
+    /// DSK Eerie — a Room was fully unlocked (subject); pair with `YourControl`.
     RoomFullyUnlocked,
-    /// CR 903.9 — "whenever your commander is put into the command zone from
-    /// anywhere" (Myth Unbound). Pair with `EventScope::YourControl`: the
-    /// commander's owner drives it. Matched to
-    /// `GameEvent::CommanderPutIntoCommandZone`.
+    /// CR 903.9 — your commander was put into the command zone from anywhere
+    /// (Myth Unbound). `YourControl` = its owner.
     CommanderPutIntoCommandZone,
     /// MKM — "whenever you solve a Case" (Case File Auditor). Fired with the
     /// solved Case as the subject; pair with `EventScope::YourControl` so the
     /// solver's permanents trigger. Matched to `GameEvent::CaseSolved`.
     CaseSolved,
-    /// A **land card** was put into a graveyard from anywhere (death,
-    /// sacrifice, mill, discard, spell resolution). Matched to
-    /// `GameEvent::CardPutIntoGraveyard { is_land: true, .. }`. Not a
-    /// fan-out kind: "Whenever one or more land cards are put into your
-    /// graveyard … draw a card" (The Gitrog Monster) fires once per batch
-    /// of simultaneous land-to-graveyard events. Use `EventScope::YourControl`
-    /// (the graveyard owner is the event player).
+    /// A land card went to a graveyard from anywhere, once per simultaneous batch
+    /// (The Gitrog Monster). `YourControl` = the graveyard's owner.
     LandPutIntoGraveyard,
-    /// A card was put into a graveyard from anywhere. With
-    /// `EventScope::SelfSource` the trigger fires off the card now sitting
-    /// in the graveyard (Emrakul's "when this is put into a graveyard from
-    /// anywhere, its owner shuffles their graveyard into their library").
+    /// A card was put into a graveyard from anywhere; with `SelfSource` it fires
+    /// from the graveyard (Emrakul's shuffle).
     PutIntoGraveyard,
     /// "When this card is put into your hand from your graveyard" (Golgari
-    /// Brownscale). With `EventScope::SelfSource` the trigger fires off the
-    /// card now sitting in its owner's hand (dredge, or any graveyard→hand
-    /// return). Matched to `GameEvent::CardPutIntoHandFromGraveyard`.
+    /// Brownscale); `SelfSource` fires from the hand.
     PutIntoHandFromGraveyard,
-    /// CR 502.2 / 731 — the game's day/night designation flipped ("Whenever
-    /// day becomes night or night becomes day"). Fires once per transition;
-    /// this is a global game event with no player subject, so pair it with
-    /// `EventScope::AnyPlayer`. Matched to `GameEvent::DayNightChanged`.
-    /// Brimstone Vandal listens here.
+    /// CR 502.2 / 731 — day/night flipped; global, so pair with
+    /// `EventScope::AnyPlayer`. Brimstone Vandal.
     DayNightChanged,
-    /// CR 700.13 — `who` **committed a crime**: they cast a spell or activated
-    /// an ability whose chosen targets include an opponent, anything an
-    /// opponent controls or owns, or a spell/ability an opponent controls.
-    /// Fires once per such spell/ability (not once per qualifying target). The
-    /// committer is the event subject; pair with `EventScope::YourControl`
-    /// ("whenever you commit a crime" — Kaervek, Gisa). Matched to
-    /// `GameEvent::CommittedCrime`.
+    /// CR 700.13 — `who` committed a crime (targeted an opponent, their
+    /// permanents/cards, or their spells), once per spell or ability. Pair with
+    /// `YourControl` (Kaervek).
     CommittedCrime,
-    /// CR 702.170 — "When this card becomes plotted, …". Fires from exile as a
-    /// card is plotted; the just-plotted card is the event source (Aloe
-    /// Alchemist, Longhorn Sharpshooter). Modeled as a `SelfSource` trigger
-    /// dispatched directly by `plot_card`.
+    /// CR 702.170 — "when this card becomes plotted", a `SelfSource` trigger from
+    /// exile dispatched by `plot_card` (Aloe Alchemist).
     BecomesPlotted,
-    /// CR 701.23 — a player searched their own library. The searcher is the
-    /// event subject; pair with `EventScope::OpponentControl` ("whenever an
-    /// opponent searches their library" — Ob Nixilis, Unshackled). Fires once
-    /// per search, whether or not a card was found. Matched to
-    /// `GameEvent::PlayerSearchedLibrary`.
+    /// CR 701.23 — a player searched their library, found or not (Ob Nixilis,
+    /// Unshackled with `OpponentControl`).
     PlayerSearchedLibrary,
     /// CR 103.2c — a spell or ability caused a player to shuffle their library.
     /// The shuffling player is the event subject (Psychogenic Probe).
     LibraryShuffled,
-    /// A permanent left the battlefield for its owner's hand (Azorius
-    /// Aethermage's "whenever a permanent is returned to your hand"). The
-    /// trigger's subject is the bounced card; `EventScope::YourControl` reads
-    /// the hand it landed in.
+    /// A permanent was returned to its owner's hand (Azorius Aethermage); subject
+    /// the card, `YourControl` = whose hand.
     PermanentReturnedToHand,
     /// CR 605 — a permanent was tapped to pay a mana ability's `{T}` cost.
     /// The tapped permanent is the event subject (Extraplanar Lens).
     TappedForMana,
-    /// CR 701.6 — a spell on the stack was countered. The event's actor is the
-    /// player who controlled the countering spell or ability (so
-    /// `EventScope::YourControl` reads "a spell or ability you control counters
-    /// a spell" — Lullmage Mentor); the subject is the countered spell's card.
+    /// CR 701.6 — a spell was countered. Actor the counterer's controller
+    /// (`YourControl` = Lullmage Mentor), subject the countered card.
     SpellCountered,
     /// CR 725.3 — a player became the monarch. The event's player is the
     /// new monarch, so `EventScope::OpponentControl` reads "an opponent
     /// becomes the monarch" (Knights of the Black Rose).
     BecameMonarch,
-    /// CR 121 — the turn's `n`th card drawn by a player (fired once per turn
-    /// per player, when their `cards_drawn_this_turn` reaches `n`); the
-    /// trigger subject is the drawn card. "Whenever an opponent draws their
-    /// second card each turn" (Gleaming Splendor) is `(2)` — per player, so
-    /// in a pod each opponent's second draw triggers separately; "whenever
-    /// you draw your third card each turn" (Astrologian's Planisphere) is
-    /// `(3)`; Alandra, Sky Dreamer's fifth is `(5)`. The engine emits the
-    /// event for `n` = 2, 3 and 5 only (the first draw has its own kind); one
-    /// mask bit serves every `n`.
+    /// CR 121 — a player's `n`th draw of the turn (subject the drawn card), per
+    /// player. Gleaming Splendor `(2)`, Astrologian's Planisphere `(3)`. Emitted
+    /// for `n` = 2, 3 and 5 only (the first draw has its own kind); one mask bit
+    /// for every `n`.
     NthCardDrawnThisTurn(u8),
     /// CR 800.4a — "When enchanted player loses the game" (Curse of
     /// Vengeance): queued for each Aura attached to a player as that player
@@ -4341,22 +3537,14 @@ pub enum EventKind {
     /// for every permanent carrying it as any player leaves; the departing
     /// player's own permanents are gone with them.
     PlayerLeftGame,
-    /// CR 615 — damage that would have been dealt to a player was prevented
-    /// (Selfless Squire's "whenever damage that would be dealt to you is
-    /// prevented"). Matched to `GameEvent::DamagePrevented` with a player;
-    /// the event amount is the damage prevented, and the scope reads that
-    /// player.
+    /// CR 615 — damage to a player was prevented (Selfless Squire); amount = the
+    /// prevented damage.
     DamageToPlayerPrevented,
-    /// "Whenever one or more cards are put into exile from your hand or a
-    /// spell or ability you control exiles one or more permanents from the
-    /// battlefield" (Ranar the Ever-Watchful, Hero of Bretagard). One event
-    /// per player per trigger batch, synthesized at dispatch from the exile
-    /// tally; the event amount is how many cards ("that many").
+    /// "Cards are put into exile from your hand or a spell or ability you control
+    /// exiles permanents" (Ranar the Ever-Watchful): one event per player per
+    /// batch, synthesized from the exile tally; amount = the card count.
     CardsExiledFromHandOrByYou,
-    /// CR 701.12 — a creature fought ("whenever a creature you control
-    /// fights" — Foe-Razer Regent). One event per fighter; the creature is the
-    /// subject and its controller the scope's actor. Matched to
-    /// `GameEvent::CreatureFought`.
+    /// CR 701.12 — a creature fought, one event per fighter (Foe-Razer Regent).
     Fights,
     /// A keyword action was performed — the action is the payload. ⚠ The
     /// last bit of the `u128` kind mask (tag 127): a new action-shaped kind
@@ -4368,10 +3556,8 @@ pub enum EventKind {
 /// them all, so `event_kind_matches` reads the payload.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KeywordAct {
-    /// CR 701.16a — a player investigated (`Effect::Investigate`; one event
-    /// per investigation, the investigator the actor). `first_only` matches
-    /// only that player's first investigation of the turn (Erdwal
-    /// Illuminator), counted whether or not the listener was there for it.
+    /// CR 701.16a — a player investigated. `first_only`: only their first this
+    /// turn, counted even if the listener wasn't there (Erdwal Illuminator).
     Investigated { first_only: bool },
     /// CR 702.110b — a creature exploited a creature (its exploit trigger
     /// sacrificed one); the exploiter is the subject (Colonel Autumn), the
@@ -4389,22 +3575,16 @@ pub enum KeywordAct {
     /// CR 702.112b — a permanent became renowned; it is the subject (Valeron
     /// Wardens' "whenever a creature you control becomes renowned").
     BecameRenowned,
-    /// CR 706.2 — one die's result, one event per die rolled (the roll as a
-    /// whole is `EventKind::RolledDice`); the result is the event amount, so
-    /// "whenever you roll a 4 or higher" pairs it with `DieResultAtLeast`
-    /// (Mr. House, Ground Pounder).
+    /// CR 706.2 — one die's result (amount), per die; the whole roll is
+    /// `RolledDice`. With `DieResultAtLeast`: Mr. House.
     DieResult,
-    /// A player bent (`None` = any of the four): CR 701.65b airbend (exiled
-    /// objects under an airbend instruction), 701.66b earthbend (its delayed
-    /// return trigger was created), 701.67c waterbend (a waterbend cost was
-    /// paid), 702.189b firebend (a firebending ability resolved). The bender
-    /// is the actor (Avatar Aang).
+    /// A player bent (`None` = any): airbend (CR 701.65b), earthbend (701.66b,
+    /// its return trigger created), waterbend (701.67c, cost paid), firebend
+    /// (702.189b, ability resolved). The bender is the actor (Avatar Aang).
     Bent(Option<BendKind>),
-    /// An instant or sorcery spell's resolution made a player gain life ("a
-    /// white instant or sorcery spell causes you to gain life" — Firesong and
-    /// Sunspeaker). The spell is the subject (filter its color/type with
-    /// `Predicate::EntityMatches` on `TriggerSource`), the gainer the actor,
-    /// the total gained the event amount; one event per gainer.
+    /// An instant or sorcery's resolution made a player gain life (Firesong and
+    /// Sunspeaker). Subject the spell (filter via `EntityMatches` on
+    /// `TriggerSource`), actor the gainer, amount the total; one per gainer.
     SpellCausedLifeGain,
     /// CR 702.30a — a permanent's echo cost was paid at its controller's
     /// upkeep; the permanent is the subject ("When this creature's echo cost
@@ -4420,10 +3600,9 @@ pub enum KeywordAct {
     /// CR 123.3 — a player put a sticker on an object; the player is the actor,
     /// the object the subject (Wee Champion).
     StickerPlaced,
-    /// One or more cards were put into a library from another zone since the
-    /// last dispatch (a scry or reorder isn't one); one event a batch, the
-    /// count the amount, the first receiving library's owner the actor (Wan
-    /// Shi Tong, All-Knowing; Dutiful Knowledge Seeker).
+    /// Cards were put into a library from another zone (not a scry or reorder):
+    /// one event per batch, amount the count, actor the first library's owner
+    /// (Wan Shi Tong).
     CardsPutIntoLibrary,
     /// CR 701.51c — a player opened an Attraction (it entered from their
     /// Attraction deck); the opener is the actor, the Attraction the subject.
@@ -4455,11 +3634,9 @@ impl BendKind {
 }
 
 impl EventKind {
-    /// This kind's bit in a kind mask: `1 << tag`, the variant's position.
-    /// One byte load and a shift, and `const` so a table of them folds to
-    /// constants. Payload variants (`StepBegins(s)`, `CounterAdded(k)`, …)
-    /// share one bit — a mask answers "could this kind match", never the
-    /// payload half.
+    /// This kind's bit in a kind mask: `1 << tag`, `const` so tables fold.
+    /// Payload variants share one bit: a mask answers "could this kind match",
+    /// never the payload.
     #[inline]
     pub const fn bit(&self) -> u128 {
         // SAFETY: `#[repr(u8)]` lays every variant out as a `u8` tag followed
@@ -4469,11 +3646,9 @@ impl EventKind {
         1u128 << tag
     }
 
-    /// [`bit`](Self::bit) folded to one word — kinds `i` and `i + 64` share
-    /// a bit. A fold is sound as a *skip* (a clear bit means "no kind of
-    /// this tag or its twin"), which is all a definition-level memo of "the
-    /// kinds this card's printed triggers listen to" needs, and it fits the
-    /// one spare word on [`crate::card::CardMemo`].
+    /// [`bit`](Self::bit) folded to one word (kinds `i` and `i + 64` share a
+    /// bit). Sound as a skip — enough for the per-definition trigger-kind memo
+    /// in the spare word of [`crate::card::CardMemo`].
     #[inline]
     pub const fn fold(&self) -> u64 {
         Self::fold_bits(self.bit())
@@ -4548,53 +3723,35 @@ pub enum EventScope {
     AnotherOfYours,
     /// The active player (for step-based triggers).
     ActivePlayer,
-    /// Trigger fires while the source card sits in **its owner's
-    /// graveyard** (not the battlefield). Used by recursion creatures —
-    /// Bloodghast's landfall, Ichorid's upkeep return, Silversmote
-    /// Ghoul's lifegain return — where the ability fires off the
-    /// graveyard copy and typically references it via `Selector::This`.
-    /// The dispatcher walks graveyards in addition to the battlefield
-    /// for triggers with this scope; the trigger's effective controller
-    /// is the graveyard owner.
+    /// The trigger fires from its owner's graveyard, not the battlefield
+    /// (Bloodghast); the dispatcher walks graveyards for this scope and the owner
+    /// is the controller.
     FromYourGraveyard,
-    /// [`FromYourGraveyard`](Self::FromYourGraveyard) on **any** player's
-    /// event — the graveyard analogue of `AnyPlayer`: a step trigger fires on
-    /// every player's step, not only its owner's (Kami of Transience's "at
-    /// the beginning of each end step, if …, return this card").
+    /// [`FromYourGraveyard`](Self::FromYourGraveyard) on any player's event, so a
+    /// step trigger fires on every player's step (Kami of Transience).
     FromYourGraveyardAnyPlayer,
     /// A `PlayerDamaged` event whose source is controlled by the trigger's
     /// controller and whose damaged player is an opponent of them ("a source
     /// you control deals damage to an opponent" — Quest for Pure Flame).
     YourSourceDamagedOpponent,
-    /// A `PlayerDamaged` event that is COMBAT damage to an opponent from a
-    /// creature the trigger's controller controls ("whenever an opponent is
-    /// dealt combat damage by one or more creatures you control" — Lolth's
-    /// emblem). One trigger per damaging creature; an intervening `if` that
-    /// the first resolution falsifies makes them one.
+    /// Combat damage to an opponent from a creature you control (Lolth's emblem).
+    /// One trigger per creature; an intervening `if` the first resolution
+    /// falsifies collapses them.
     YourCreatureCombatDamagedOpponent,
     /// [`YourSourceDamagedOpponent`](Self::YourSourceDamagedOpponent) with the
     /// printed "other than this <permanent>" exclusion (Talon of Pain): the
     /// damage event's own source must not be the trigger's source.
     YourOtherSourceDamagedOpponent,
-    /// The mirror of `YourSourceDamagedOpponent`: a `PlayerDamaged` event whose
-    /// source is controlled by an opponent of the trigger's controller and
-    /// whose damaged player *is* the trigger's controller ("whenever a source
-    /// an opponent controls deals damage to you" — Michiko Konda). The damage
-    /// dealer's controller is bound as the trigger player.
+    /// Mirror of `YourSourceDamagedOpponent`: an opponent's source damaged you
+    /// (Michiko Konda). The dealer's controller is bound as the trigger player.
     OpponentSourceDamagedYou,
-    /// The permanent sibling of `OpponentSourceDamagedYou`, paired with
-    /// `EventKind::DealtDamage`: a source an opponent controls dealt damage to
-    /// a permanent the trigger's controller controls ("… deals damage to you
-    /// or a permanent you control" — Elesh Norn). The subject is the damaged
-    /// permanent; the dealer's controller is the trigger player
-    /// (`PlayerRef::TriggerEventPlayer`).
+    /// With `EventKind::DealtDamage`: an opponent's source damaged a permanent you
+    /// control (Elesh Norn). Subject the permanent; the dealer's controller is
+    /// `PlayerRef::TriggerEventPlayer`.
     OpponentSourceDamagedYourPermanent,
-    /// A permanent **you control** (any, including the source) becomes the
-    /// target of a spell or ability an **opponent** controls. Used with
-    /// `EventKind::BecameTarget` — Battle Mammoth. Unlike SelfSource, the
-    /// targeted permanent need not be the trigger source; the dispatcher
-    /// checks the targeted permanent's controller == trigger controller and
-    /// the caster is an opponent.
+    /// With `EventKind::BecameTarget`: any permanent you control (not only the
+    /// source) became the target of an opponent's spell or ability. Battle
+    /// Mammoth.
     YourPermanentTargetedByOpponent,
     /// **You** or a permanent you control becomes the target of a spell or
     /// ability an opponent controls — once per such target (Leovold, Rayne;
@@ -4608,60 +3765,39 @@ pub enum EventScope {
     /// becomes the target of any spell or ability, friendly or hostile.
     /// Used with `EventKind::BecameTarget` — Nadu, Winged Wisdom.
     YourCreatureTargeted,
-    /// A creature an **opponent** controls becomes the target of a spell or
-    /// ability the source's controller controls. Used with
-    /// `EventKind::BecameTarget` — Willbreaker. The targeted creature is the
-    /// trigger source (`Selector::TriggerSource`).
+    /// With `EventKind::BecameTarget`: your spell or ability targeted an
+    /// opponent's creature (Willbreaker); the creature is `TriggerSource`.
     OpponentCreatureTargetedByYou,
     /// CR 115.1 — a player or a battlefield permanent becomes the target of
     /// an *ability* the source's controller controls (a spell's targets
     /// don't count; nor do cards in other zones). Loki, God of Mischief.
     PlayerOrPermanentTargetedByYourAbility,
-    /// A creature an **opponent** controls attacks the source's controller
-    /// or a planeswalker they control — the "attacks you or a planeswalker
-    /// you control" wording (a bare "attacks you" is
-    /// `ControllerAttackedDirectlyByOpponent`). Used with `EventKind::Attacks`; the
-    /// dispatcher binds the attacking creature's controller into the
-    /// trigger's target slot (so "that creature's controller gains control"
-    /// resolves via `PlayerRef::Target(0)` — Coveted Jewel).
+    /// With `EventKind::Attacks`: an opponent's creature attacks you or your
+    /// planeswalker (bare "attacks you" is
+    /// `ControllerAttackedDirectlyByOpponent`). The attacker's controller is
+    /// bound to `PlayerRef::Target(0)` (Coveted Jewel).
     ControllerAttackedByOpponent,
-    /// A creature an **opponent** controls attacks a *planeswalker* the
-    /// source's controller controls (only — attacks on the player don't
-    /// fire it). Mila, Crafty Companion's "whenever an opponent attacks
-    /// one or more planeswalkers you control". Same dispatcher as
-    /// `ControllerAttackedByOpponent`, gated on the attack target.
+    /// An opponent's creature attacks a planeswalker you control (not you) —
+    /// Mila, Crafty Companion. Same dispatcher as `ControllerAttackedByOpponent`.
     ControllerPlaneswalkerAttackedByOpponent,
-    /// CR 508.1 — "Whenever a player attacks one of your opponents" (Breena,
-    /// the Demagogue; Combat Calligrapher): once per declaration per opponent
-    /// of the source's controller who is attacked, whoever the attacking
-    /// player is. Used with `EventKind::Attacks`; the dispatcher binds the
-    /// attacking player into the target slot (`PlayerRef::Target(0)`) and the
-    /// attacked opponent as the trigger source (`PlayerRef::Triggerer`).
+    /// CR 508.1 — "whenever a player attacks one of your opponents" (Breena),
+    /// once per declaration per attacked opponent. Attacker in `Target(0)`,
+    /// attacked opponent as `Triggerer`.
     OpponentOfYoursAttacked,
-    /// CR 508.1 — "Whenever a player attacks" (Mirkwood Trapper): once per
-    /// declaration with at least one attacker, whoever declares it. The
-    /// attacking player rides the target slot (`PlayerRef::Target(0)`) and
-    /// the trigger source, so the filter can ask whom they attacked — the
-    /// declaration is complete when it is dispatched.
+    /// CR 508.1 — "whenever a player attacks" (Mirkwood Trapper), once per
+    /// declaration. The attacker is `Target(0)` and the trigger source; the
+    /// declaration is complete at dispatch, so the filter can ask whom.
     AnyPlayerAttacks,
-    /// CR 508.1 — "Whenever you attack a player" (Karazikar, the Eye
-    /// Tyrant): once per declaration per player the source's controller
-    /// attacks, gated by the trigger's filter. The attacked player rides the
-    /// trigger source (`PlayerRef::Triggerer`) and the trigger player, so a
-    /// target slot can read "target creature that player controls"
+    /// CR 508.1 — "whenever you attack a player" (Karazikar), once per attacked
+    /// player, who is `Triggerer` and the trigger player
     /// (`ControlledByTriggerPlayer`).
     YouAttackedPlayer,
-    /// The creature the source Aura was attached to has died (left the
-    /// battlefield). Matches a `CreatureDied` event whose subject is recorded
-    /// in `GameState.auras_at_death` as having carried the source Aura.
-    /// Powers "when enchanted creature dies" Aura triggers (Minion's Return).
+    /// The creature the source Aura enchanted died (per
+    /// `GameState.auras_at_death`) — Minion's Return.
     EnchantedBySource,
-    /// A permanent was tapped by an effect the source's controller controls
-    /// ("whenever you tap …" — Sharae, Solitary Sanctuary). Matches a
-    /// `PermanentTapped` whose `actor` equals the trigger's controller; the
-    /// tapped permanent is the subject, so a `.with_filter` restricts it (e.g.
-    /// to an opponent's creature). Distinct from `Tapped`/`YourControl`, which
-    /// key off the tapped permanent's controller rather than the tapper.
+    /// A permanent was tapped by your effect (Sharae): keyed on the tapper
+    /// (`PermanentTapped.actor`), unlike `Tapped` / `YourControl`. Subject the
+    /// tapped permanent.
     YouTapped,
     /// "Whenever you put one or more counters on …" — a `CounterAdded` whose
     /// placer (CR 122.6) is the trigger's controller, whoever controls the
@@ -4671,22 +3807,16 @@ pub enum EventScope {
     /// control" (Bold Plagiarist): a `CounterAdded` whose placer (CR 122.6) is
     /// an opponent of the trigger's controller and controls the permanent.
     OpponentPutsCountersOnTheirOwn,
-    /// CR 506.3 — a creature an opponent controls attacks the source's
-    /// controller **directly** ("whenever a creature attacks you" — Hissing
-    /// Miasma, Orim's Prayer): an attack on a planeswalker they control is
-    /// not an attack on them. `ControllerAttackedByOpponent` is the "you or a
-    /// planeswalker you control" wording; same dispatcher, gated on the
-    /// attack target.
+    /// CR 506.3 — an opponent's creature attacks you directly (Orim's Prayer);
+    /// planeswalker attacks don't count. Same dispatcher as
+    /// `ControllerAttackedByOpponent`.
     ControllerAttackedDirectlyByOpponent,
     /// [`YourSourceDamagedOpponent`](Self::YourSourceDamagedOpponent) with
     /// ANY damaged player, its controller included ("whenever a source you
     /// control deals 5 or more damage to a player" — Dragonborn Champion).
     YourSourceDamagedAnyPlayer,
-    /// [`YourSourceDamagedOpponent`](Self::YourSourceDamagedOpponent) read
-    /// while the card sits in its owner's graveyard ("whenever a source you
-    /// control deals noncombat damage to an opponent, you may pay {2}; if you
-    /// do, return this card from your graveyard" — Asgardian Inspiration).
-    /// "You" is the graveyard owner.
+    /// [`YourSourceDamagedOpponent`](Self::YourSourceDamagedOpponent) read from
+    /// the owner's graveyard (Asgardian Inspiration); "you" is the owner.
     FromYourGraveyardSourceDamagedOpponent,
     /// [`OpponentSourceDamagedYou`](Self::OpponentSourceDamagedYou) from ANY
     /// source, yours included ("whenever a source of the chosen color deals
@@ -4718,10 +3848,9 @@ pub struct EventSpec {
     /// Optional cast-time predicate (e.g. "whenever you cast a noncreature
     /// spell" is SpellCast + filter=NotCreatureSpell).
     pub filter: Option<Predicate>,
-    /// CR 603.3d — "This ability triggers only once each turn." When set, the
-    /// trigger fires at most once per turn (and once per batch of simultaneous
-    /// events), tracked via `GameState::triggered_once_per_turn_used`. Defaults
-    /// to false via `#[serde(default)]` for snapshot back-compat. Dramatic Finale.
+    /// CR 603.3d — "triggers only once each turn" (and once per batch), tracked
+    /// in `GameState::triggered_once_per_turn_used`. `#[serde(default)]` for
+    /// snapshot back-compat. Dramatic Finale.
     #[serde(default)]
     pub once_per_turn: bool,
     /// "Whenever one or more …" (CR 603.2c): one trigger per batch of
@@ -4729,44 +3858,32 @@ pub struct EventSpec {
     /// (Attuned Hunter's "one or more cards leave your graveyard").
     #[serde(default)]
     pub once_per_batch: bool,
-    /// With `once_per_batch` on a combat-damage kind: the batch is every
-    /// player dealt damage in the sub-step, not each one — "deal combat
-    /// damage to **one or more players**" (Contaminant Grafter) fires once
-    /// where "to a player" fires per damaged seat.
+    /// With `once_per_batch` on combat damage: one fire for all players dealt
+    /// damage in the sub-step — "one or more players" (Contaminant Grafter).
     #[serde(default)]
     pub batch_across_players: bool,
-    /// With `once_per_batch` on `Attacks`: one fire per DEFENDING PLAYER —
-    /// "whenever one or more tokens you control attack a player" (Neyali,
-    /// Meriadoc) triggers for each player attacked (ruling), where "attack"
-    /// alone fires once for the declaration.
+    /// With `once_per_batch` on `Attacks`: one fire per defending player (Neyali,
+    /// ruling), where plain "attack" fires once per declaration.
     #[serde(default)]
     pub batch_per_defender: bool,
-    /// With `once_per_batch` on a combat-damage kind: the one fire's
-    /// `TriggerEventAmount` is the batch's total damage to that player, not
-    /// the first dealer's — "mills a card for each 1 damage dealt to them"
-    /// (Anowon, the Ruin Thief).
+    /// With `once_per_batch` on combat damage: the amount is the batch's total to
+    /// that player, not the first dealer's (Anowon, the Ruin Thief).
     #[serde(default)]
     pub batch_sums_damage: bool,
-    /// With `once_per_batch`: the one fire's `TriggerEventAmount` is the
-    /// number of card types among the batch's subject cards — "each
-    /// opponent loses 1 life for each card type among those cards"
-    /// (Polluted Cistern).
+    /// With `once_per_batch`: the amount is the number of card types among the
+    /// batch's cards (Polluted Cistern).
     #[serde(default)]
     pub batch_counts_card_types: bool,
-    /// With `once_per_batch`: the one fire's `TriggerEventAmount` is how many
-    /// of the batch's events match, filter included — "put a +1/+1 counter on
-    /// each of up to X target creatures, where X is the number of nonland
-    /// cards milled this way" (The Wise Mothman).
+    /// With `once_per_batch`: the amount is how many batch events match, filter
+    /// included (The Wise Mothman).
     #[serde(default)]
     pub batch_counts_subjects: bool,
     /// "This ability triggers only N times each turn" counted per event
     /// subject (Nadu's granted trigger is per creature). `None` = uncapped.
     #[serde(default)]
     pub per_subject_cap: Option<u8>,
-    /// The event's actor (caster / controller of the triggering spell or
-    /// ability) must be an opponent of the trigger's controller. Refines
-    /// scopes that don't already gate on the actor — Opaline Sliver's
-    /// "becomes the target of a spell an opponent controls" on SelfSource.
+    /// The event's actor must be an opponent of the trigger's controller, for
+    /// scopes that don't already gate the actor (Opaline Sliver).
     #[serde(default)]
     pub actor_is_opponent: bool,
     /// "…becomes tapped, if it isn't being declared as an attacker" — excludes
@@ -4774,34 +3891,27 @@ pub struct EventSpec {
     /// Circle). Defaults to false. Only meaningful for `Tapped`.
     #[serde(default)]
     pub exclude_attacker_taps: bool,
-    /// "…activates an ability without {T} in its activation cost" (Haunting
-    /// Wind, Powerleech, Artifact Possession). Only meaningful for
-    /// `AbilityActivated`; a tap-cost activation is filtered out so the
-    /// companion `Tapped` trigger is the one that fires.
+    /// "Activates an ability without {T} in its cost" (Haunting Wind):
+    /// `AbilityActivated` only; tap-cost activations go to the `Tapped` trigger.
     #[serde(default)]
     pub exclude_tap_cost_abilities: bool,
-    /// Restricts a damage event by the object that *dealt* it — "whenever a
-    /// Goblin deals combat damage to a player" (Cabal Slaver). `Selector::
-    /// TriggerSource` binds the damaged player on those events, so the dealer
-    /// can't be reached through `filter`. Only meaningful for damage kinds.
+    /// Restricts a damage event by its dealer (Cabal Slaver's Goblin), which
+    /// `filter` can't reach since `TriggerSource` is the damaged player. Damage
+    /// kinds only.
     #[serde(default)]
     pub dealer_filter: Option<crate::card::SelectionRequirement>,
-    /// Restricts a targeting event by the object that *declared* the target —
-    /// "whenever this creature becomes the target of an Aura spell" (Fugitive
-    /// Druid). `Selector::TriggerSource` binds the targeted permanent on those
-    /// events, so the targeting spell/ability source can't be reached through
-    /// `filter`. Only meaningful for `EventKind::BecameTarget`.
+    /// Restricts a targeting event by the object that declared the target ("the
+    /// target of an Aura spell" — Fugitive Druid), which `filter` can't reach.
+    /// `EventKind::BecameTarget` only.
     #[serde(default)]
     pub causer_filter: Option<crate::card::SelectionRequirement>,
     /// CR 113.6b — where this trigger functions, when that isn't just the
     /// zone its card's abilities ordinarily work from. Eminence.
     #[serde(default)]
     pub zone: TriggerZone,
-    /// "Whenever you cast **or copy** …" (Magecraft): a `SpellCast` trigger
-    /// that also fires when its controller copies a matching spell — a copy
-    /// is not cast (CR 707.10), so the cast walk alone never sees it. The
-    /// dispatcher runs the cast walk once per copy for these
-    /// (`fire_spell_cast_triggers`' copy-only mode).
+    /// Magecraft's "cast or copy": also fires when the controller copies a
+    /// matching spell (a copy isn't cast, CR 707.10), via
+    /// `fire_spell_cast_triggers`' copy-only mode.
     #[serde(default)]
     pub or_copy: bool,
     /// "Whenever a spell or ability causes **its controller** to shuffle"
@@ -4814,10 +3924,9 @@ pub struct EventSpec {
     /// (a spell or a triggered ability doesn't count).
     #[serde(default)]
     pub by_activated_ability: bool,
-    /// With `once_per_batch` on `LifeLost`: a player's loss counts only when
-    /// their TOTAL across the batch is exactly this — "one or more opponents
-    /// each lose exactly 1 life" (Ob Nixilis, Captive Kingpin; its ruling sums
-    /// all combat damage to a player, which the engine emits per attacker).
+    /// With `once_per_batch` on `LifeLost`: counts a player only if their batch
+    /// total is exactly this (Ob Nixilis, Captive Kingpin; the ruling sums combat
+    /// damage the engine emits per attacker).
     #[serde(default)]
     pub batch_life_lost_exactly: Option<u32>,
     /// "…deals combat damage to a player **or battle**": a
@@ -4827,11 +3936,9 @@ pub struct EventSpec {
     pub or_battle: bool,
 }
 
-/// CR 113.6b — "an ability that states which zones it functions in functions
-/// only from those zones". The command-zone axis: Eminence (CR 207.2c — an
-/// ability word, so the condition is the printed text) reads "in the command
-/// zone or on the battlefield", and Oloro's second upkeep trigger reads "in
-/// the command zone" alone.
+/// CR 113.6b — zones an ability functions from; the command-zone axis.
+/// Eminence (CR 207.2c) is "command zone or battlefield"; Oloro's second
+/// upkeep trigger is "command zone" alone.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub enum TriggerZone {
     /// Wherever the ability would ordinarily function — the battlefield for a
@@ -5014,30 +4121,6 @@ impl EventSpec {
 
 // ── Effect ───────────────────────────────────────────────────────────────────
 
-/// The root instruction tree evaluated by the effect resolver.
-///
-/// All effects and abilities — spell effects, triggered-ability effects,
-/// activated-ability effects — are `Effect` trees. Combinators let a single
-/// card express modal choices, iteration, and conditionals without needing
-/// engine changes per card.
-//
-// `TokenDefinition` is boxed in every variant that carries one. It grew to
-// 1296 bytes (a `String`, six `Vec`s, `Subtypes`, `Option<EquipBonus>`),
-// and because an enum is sized to its largest variant and stored inline,
-// all ~900 `Effect` variants paid it: `size_of::<Effect>()` was **1464
-// bytes**, now **448**.
-//
-// That is not an abstract tidiness point. `run_effect` matches on this
-// enum across ~900 arms, and at opt-level 0 rustc gives every arm's
-// locals their own stack slots rather than colouring non-overlapping ones
-// together — so its debug frame is roughly the *sum* over all arms even
-// though one executes. The frame was 2.56 MB, three of them nest, and
-// that overflowed the default 8 MB main-thread stack outright (the
-// since-retired `deck_duel` binary hit it). Boxing took the frame to ~1.8 MB.
-//
-// Keep new fat payloads boxed. `Box<T>` is serde-transparent, so the
-// on-disk format is unaffected, and `&Box<T>` derefs to `&T` at every
-// read site — the cost is `Box::new` at construction and nothing else.
 /// The toll a player pays before copying a Chain spell (CR 706 —
 /// [`Effect::MayCopyThisSpell`]).
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
@@ -5087,6 +4170,16 @@ fn one_u32() -> u32 {
     1
 }
 
+/// The root instruction tree evaluated by the effect resolver: every spell,
+/// triggered and activated effect. Combinators express modes, iteration and
+/// conditionals without per-card engine code.
+//
+// Fat payloads are boxed (`TokenDefinition` in every variant that carries
+// one). An enum is sized to its largest variant, and at opt-level 0
+// `run_effect`'s frame is roughly the sum of its arms' locals; unboxed it was
+// 2.56 MB, which overflowed the 8 MB main stack three frames deep. `Box<T>`
+// is serde-transparent and derefs at read sites, so keep new fat payloads
+// boxed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Effect {
     // ── Combinators ──────────────────────────────────────────────────────────
@@ -5105,27 +4198,21 @@ pub enum Effect {
     ForEach { selector: Selector, body: Box<Effect> },
     /// Execute `body` `count` times.
     Repeat { count: Value, body: Box<Effect> },
-    /// "Choose any number of [from]. [body for each]" — the controller picks
-    /// a subset (CR 608.2d), then `body` runs once per pick with it bound as
-    /// `Selector::TriggerSource`, like `ForEach` (Ripples of Potential's
-    /// phase-out). A headless seat takes the candidates `headless_takes`
-    /// matches, none when it is `None`.
+    /// "Choose any number of [from]. [body for each]": the controller picks a
+    /// subset (CR 608.2d), then `body` runs per pick bound as
+    /// `Selector::TriggerSource`, like `ForEach` (Ripples of Potential). A
+    /// headless seat takes what `headless_takes` matches (none if `None`).
     ForEachChosen {
         from: Selector,
         body: Box<Effect>,
         #[serde(default)]
         headless_takes: Option<SelectionRequirement>,
     },
-    /// Run `body` once per player `who` resolves to, each time with that player
-    /// as the effect's controller, in APNAP order (CR 101.4). The general form
-    /// of the "each opponent does X of their choice" clauses (Rottenmouth
-    /// Viper's pay-or-sacrifice-or-discard).
+    /// `body` once per `who` player, as controller, APNAP (CR 101.4) — "each
+    /// opponent does X of their choice" (Rottenmouth Viper).
     EachPlayerDoes { who: PlayerRef, body: Box<Effect> },
-    /// CR 705 — flip a coin `count` times. For each flip, asks the
-    /// controller's decider for `Decision::CoinFlip` (heads = true,
-    /// tails = false), then runs `on_heads` or `on_tails`. Used by
-    /// Karplusan Minotaur, Mana Clash, Krark's Thumb, and Ral Zarek's
-    /// -7 ultimate.
+    /// CR 705 — flip `count` coins (`Decision::CoinFlip`, heads = true), running
+    /// `on_heads` or `on_tails` per flip. Karplusan Minotaur, Krark's Thumb.
     FlipCoin {
         count: Value,
         on_heads: Box<Effect>,
@@ -5135,34 +4222,21 @@ pub enum Effect {
     /// `flipper` rather than the effect's controller, so their Krark's-Thumb
     /// advantage and their win/lose triggers apply.
     FlipCoinBy { flipper: PlayerRef, on_heads: Box<Effect>, on_tails: Box<Effect> },
-    /// CR 705 — "each player flips a coin" (Goblin Assassin). Every seat `who`
-    /// resolves to flips its own coin in APNAP order; `on_heads` / `on_tails`
-    /// then run with that seat as the controller, so a body written against
-    /// `PlayerRef::You` reads "that player".
+    /// CR 705 — each `who` seat flips its own coin (APNAP), then `on_heads` /
+    /// `on_tails` runs as that seat (Goblin Assassin).
     EachPlayerFlipsCoin { who: PlayerRef, on_heads: Box<Effect>, on_tails: Box<Effect> },
-    /// CR 705 — flip a coin repeatedly until the controller loses a flip or
-    /// chooses to stop. Losing a flip cancels everything (zero wins). Then,
-    /// in order, every `(threshold, effect)` whose threshold is at most the
-    /// number of wins runs. Fiery Gambit (1+ → 3 dmg, 2+ → draw 3, 3+ →
-    /// each opponent loses 5).
+    /// CR 705 — flip until the controller loses or stops; a loss means zero
+    /// wins. Then every `(threshold, effect)` with threshold ≤ wins runs, in
+    /// order (Fiery Gambit).
     FlipCoinsUntilLoseOrStop { tiers: Vec<(u32, Box<Effect>)> },
-    /// CR 705.2 — Mana Clash: the controller and `opponent` each flip a coin;
-    /// each player whose coin is tails takes 1 damage from `source`. Repeat
-    /// until both come up heads on the same flip. `opponent` resolves to the
-    /// target opponent (Target(0)).
+    /// CR 705.2 — Mana Clash: you and `opponent` flip; each tails takes 1 from
+    /// `source`; repeat until both heads.
     ManaClash { opponent: Selector },
-    /// CR 706 — roll `count` N-sided dice. For each die, ask the
-    /// controller's decider for `Decision::DieRoll { sides }` (which
-    /// returns `DecisionAnswer::DieRoll(n)` with `1 <= n <= sides`),
-    /// then walk `results` and run the **first** matching arm whose
-    /// `[low, high]` range covers `n`. If no arm matches, no effect
-    /// runs for that die. Mirrors `FlipCoin`'s shape for the die
-    /// equivalent. Used by Goblin Goliath, Wand of the Elements, and
-    /// future Krark / Aether Sphere Harvester-style "roll N dice with
-    /// a results table" cards. CR 706.1 + 706.3 covered; CR 706.2 result
-    /// modifiers via `modifier`; per-card 706.2b reroll via `reroll_at_most`.
-    /// (An *engine-wide* reroll granted by a separate source — a global "you may
-    /// reroll" replacement — is still ⏳.)
+    /// CR 706 — roll `count` d`sides` (`Decision::DieRoll`), running the first
+    /// arm of `results` whose `[low, high]` covers each roll (none if no arm
+    /// matches). The die analogue of `FlipCoin` (Goblin Goliath). CR 706.2
+    /// modifiers via `modifier`, 706.2b rerolls via `reroll_at_most`; an
+    /// engine-wide reroll granted by another source is still ⏳.
     RollDie {
         /// Number of sides on each die (e.g. 6 for d6, 20 for d20).
         /// Must be at least 2.
@@ -5170,209 +4244,122 @@ pub enum Effect {
         /// Number of dice to roll. Each die rolls independently and
         /// runs its own results-table dispatch.
         count: Value,
-        /// CR 706.2 — a flat modifier added to each natural die result
-        /// before the results table is consulted (e.g. "roll a d20 and
-        /// add 2"). The modified result is floored at 1 (a die's result
-        /// is never reduced below 1) but may exceed `sides`, which lets
-        /// an "N+" top arm catch boosted rolls. Defaults to 0 (no
-        /// modifier) for snapshot back-compat. The natural roll is still
-        /// what the decider returns; the modifier is applied on top.
+        /// CR 706.2 — added to each natural roll before the table is read, floored at
+        /// 1 but allowed past `sides` so an "N+" arm catches boosts. The decider
+        /// still returns the natural roll. Default 0 for snapshot back-compat.
         #[serde(default = "crate::effect::zero_value")]
         modifier: Value,
-        /// CR 706.2b — reroll threshold. When greater than 0, any natural
-        /// result `<= reroll_at_most` is rerolled exactly once and the new
-        /// natural face is kept (even if it's also low — a single reroll
-        /// per die, per the "reroll … once" pattern). The modifier is
-        /// applied after the (re)roll. Models cards like "if you roll a 1,
-        /// reroll" / "you may reroll any die that rolled a 1-N". Defaults
-        /// to 0 (never reroll) for snapshot back-compat.
+        /// CR 706.2b — a natural result `<= reroll_at_most` is rerolled once and the
+        /// new face kept; the modifier applies after. 0 (default, snapshot
+        /// back-compat) never rerolls.
         #[serde(default)]
         reroll_at_most: u8,
-        /// CR 706.6 — "roll two d20 and ignore the lower roll" (Berserker's
-        /// Frenzy): roll this many extra dice and drop that many lowest
-        /// natural results before any arm, doubles check or trigger sees them.
-        /// Stacks with Pixie Guide-style `RollExtraDiceIgnoreLowest` statics.
-        /// Defaults to 0 for snapshot back-compat.
+        /// CR 706.6 — roll this many extra dice and drop that many lowest natural
+        /// results before anything reads them (Berserker's Frenzy). Stacks with
+        /// `RollExtraDiceIgnoreLowest` statics. Default 0 for snapshot back-compat.
         #[serde(default)]
         ignore_lowest: u8,
-        /// CR 706.3a — the results table. Each arm is `(low, high,
-        /// effect)`; the first arm with `low <= rolled <= high` fires
-        /// for that die. Use `(low, sides, effect)` for an "N+" arm,
-        /// or `(n, n, effect)` for a single-number arm.
+        /// CR 706.3a — results table of `(low, high, effect)`; the first arm with
+        /// `low <= roll <= high` fires. `(low, sides, ..)` is "N+", `(n, n, ..)` one
+        /// number.
         results: Vec<(u8, u8, Effect)>,
-        /// CR 706.5 — "if any of the dice rolled the same number, [effect]".
-        /// When `count >= 2` and two or more dice share a *natural* face
-        /// (doubles), this fires once after the per-die results dispatch.
-        /// Defaults to `None` (no doubles check) for snapshot back-compat.
+        /// CR 706.5 — with `count >= 2`, fires once after the per-die results if two
+        /// natural faces match. Default `None` for snapshot back-compat.
         #[serde(default)]
         on_doubles: Option<Box<Effect>>,
     },
-    /// CR 706 — "Roll two d`sides` and choose one result. [first] … equal to
-    /// that result. Then [second] … equal to the other result" (Wild
-    /// Endeavor). Both dice are rolled (one `DiceRolled` event), then the
-    /// resolution continues as [`Effect::AssignTwoDieResults`], so a
-    /// suspended choice replays with the same faces.
+    /// CR 706 — roll two d`sides`, choose which result feeds `first` and which
+    /// `second` (Wild Endeavor). One `DiceRolled` event, then it continues as
+    /// [`Effect::AssignTwoDieResults`] so a suspended choice replays the faces.
     RollTwoDiceAssign { sides: u8, first: Box<Effect>, second: Box<Effect> },
     /// The choice half of [`Effect::RollTwoDiceAssign`], its faces fixed: the
     /// controller picks which of `a` / `b` `first` reads through
     /// `Value::LastDieRoll`; `second` reads the other. Equal faces ask nothing.
     AssignTwoDieResults { a: u8, b: u8, first: Box<Effect>, second: Box<Effect> },
-    /// CR 706 — Chaos Dragon: "each player rolls a d`sides`. If one or more
-    /// opponents had the highest result, this creature can't attack those
-    /// players or planeswalkers they control this combat." Every living seat
-    /// rolls in turn order from the controller (each roll is its own
-    /// `DiceRolled` event); each opponent tied for the top result is granted
-    /// to the source as `Keyword::CantAttackPlayer` until end of combat.
+    /// CR 706 — Chaos Dragon: every living seat rolls a d`sides` (one
+    /// `DiceRolled` each, turn order from the controller); each opponent tied for
+    /// the top is granted to the source as `Keyword::CantAttackPlayer` until end
+    /// of combat.
     EachPlayerRollsSourceCantAttackHighest { sides: u8 },
     /// Modal — controller picks one of `modes` at cast time; the chosen index
     /// is stored in the stack item's `mode` field.
     ChooseMode(Vec<Effect>),
-    /// "Choose `picks.len()` —" multi-mode pick. At resolution, runs each
-    /// mode whose index appears in `picks` (in that order). Used by the
-    /// Strixhaven Command cycle (Witherbloom / Lorehold / Quandrix /
-    /// Silverquill / Prismari Commands), Charms, and any other "choose
-    /// two of four" spell.
+    /// "Choose `picks.len()` —": runs each mode index in `picks`, in order
+    /// (Strixhaven Commands, Charms). CR 700.2d: no mode twice. The auto-decider
+    /// supplies a per-card default; a mode-pick UI may override.
     ///
-    /// CR 700.2d covers this: "If a player is allowed to choose more
-    /// than one mode for a modal spell or ability, that player normally
-    /// can't choose the same mode more than once." The `picks` field
-    /// stores the controller's chosen indices; the auto-decider feeds
-    /// them in deterministically (a sensible default for each card),
-    /// and a later mode-pick UI can override the picks per-cast.
+    /// Each target-bearing mode owns a slot by its position among the
+    /// target-bearing modes in `picks` (first reads `ctx.targets[0]`, …), so
+    /// "choose one or both" with different targets works (Steal the Show).
+    /// Non-targeting modes see the full context. Cast-time validation
+    /// (`target_filter_for_slot_in_mode`) uses the same default-`picks` order.
     ///
-    /// Each target-bearing mode owns its own target slot, assigned by the
-    /// mode's position among the target-bearing modes in `picks`: the first
-    /// such mode reads `ctx.targets[0]`, the second `ctx.targets[1]`, and so
-    /// on. This lets "choose one or both" spells whose modes target
-    /// different things (Steal the Show — target player for one mode, target
-    /// creature for the other) supply and resolve a target per chosen mode.
-    /// Non-targeting modes run with the full context. Cast-time validation
-    /// keys off the same default-`picks` ordering
-    /// (`target_filter_for_slot_in_mode`), so targets line up at resolution
-    /// even when a decider runs only a subset.
+    /// Limitation: a decider picking another subset still supplies targets in
+    /// default-picks slot order; full cast-time mode selection is in TODO.md.
     ///
-    /// Limitation: because `picks` is the card's default, cast-time target
-    /// validation assumes the default mode set; a decider that picks a
-    /// different subset still supplies targets in the default-picks slot
-    /// order. Full cast-time mode selection is tracked in TODO.md.
-    ///
-    /// `up_to: Some(n)` is "choose up to N —" with targeted modes (CR 700.2):
-    /// `n` is read at resolution and caps the pick (zero runs nothing); slots
-    /// stay keyed to `picks`, so a trigger names a target for every targeted
-    /// mode up front. The Ruinous Wrecking Crew (N = X).
+    /// `up_to: Some(n)` is "choose up to N —" (CR 700.2): `n` is read at
+    /// resolution and caps the picks (zero runs nothing); slots stay keyed to
+    /// `picks`. The Ruinous Wrecking Crew (N = X).
     ChooseN {
         picks: Vec<u8>,
         modes: Vec<Effect>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         up_to: Option<Box<Value>>,
     },
-    /// CR 700.2 — "Choose up to N, where N is [a live count]." Evaluates `max`
-    /// at resolution, caps it at `modes.len()`, and lets the controller pick up
-    /// to that many *distinct* modes (AutoDecider takes the first `count`). The
-    /// modes must be self-targeting (no chosen target slots) — Bumi, King of
-    /// Three Trials (X = Lessons in your graveyard; modes pump self / scry /
-    /// earthbend).
+    /// CR 700.2 — "choose up to N" with N a live count: `max`, capped at
+    /// `modes.len()`, distinct modes (AutoDecider takes the first). Modes must
+    /// not have target slots. Bumi, King of Three Trials.
     ChooseUpToN { max: Box<Value>, modes: Vec<Effect> },
-    /// A resolution-time "choose one or more": the base `mode` always runs, a
-    /// `Decision::ChooseModes` answer adds distinct modes, and `cost` runs once
-    /// per added mode. No card uses it — the printed escalate keyword (CR
-    /// 702.120a) is paid as the spell is cast: `CardDefinition::escalate` on a
-    /// `ChooseModesCast` body (the four Collective spells).
+    /// A resolution-time "choose one or more": `mode` always runs, a
+    /// `Decision::ChooseModes` answer adds distinct modes, `cost` runs per added
+    /// mode. Unused: printed escalate (CR 702.120a) is paid at cast via
+    /// `CardDefinition::escalate` on a `ChooseModesCast` body.
     Escalate {
         modes: Vec<Effect>,
         cost: Box<Effect>,
     },
-    /// CR 702.172 — Spree. "Choose one or more additional costs." Each mode
-    /// carries its own mana cost; the chosen modes are picked at cast time
-    /// (`GameAction::CastSpellSpree`), their costs folded into the total, and
-    /// stamped onto the resolving `CardInstance.spree_modes`. At resolution the
-    /// chosen modes run in printed order, each target-bearing mode consuming
-    /// the next target slot (slot 0 = `target`, then `additional_targets`).
-    /// Targets are validated at resolution, not cast time.
+    /// CR 702.172 Spree: modes picked at cast (`GameAction::CastSpellSpree`),
+    /// their costs added, stamped on `CardInstance.spree_modes`. They resolve in
+    /// printed order, each target-bearing mode taking the next slot (`target`,
+    /// then `additional_targets`); targets are validated at resolution.
     Spree { modes: Vec<SpreeMode> },
-    /// FIN "Tiered" (Choose one additional cost.) — a modal spell where the
-    /// caster picks **exactly one** mode, pays that mode's additional mana cost
-    /// at cast time, and runs its effect at resolution. Shares Spree's cast
-    /// plumbing (`GameAction::CastSpellSpree` stamps the single chosen index
-    /// onto `CardInstance.spree_modes`) but the cast validator enforces a
-    /// one-mode selection. Fire/Ice/Thunder/Restoration Magic.
+    /// FIN Tiered: exactly one mode, its extra cost paid at cast. Spree's cast
+    /// plumbing with a one-mode validator (Fire/Ice/Thunder Magic).
     Tiered { modes: Vec<SpreeMode> },
-    /// Cast-time multi-mode selection without per-mode costs: "Choose one
-    /// or both —" (Choreographed Sparks: min 1, max 2, no repeats) and
-    /// "Choose up to four. You may choose the same mode more than once."
-    /// (Moment of Reckoning: min 0, max 4, repeats). Shares Spree's cast
-    /// plumbing — `GameAction::CastSpellSpree` validates the picks against
-    /// min/max/repeats and stamps them onto `CardInstance.spree_modes`; at
-    /// resolution the chosen instances run in printed order, each
-    /// target-bearing instance consuming the next target slot (slot 0 =
-    /// `target`, then `additional_targets`). A plain `CastSpell { mode }`
-    /// falls back to running that single mode (bot / back-compat path).
-    /// `max: 0` is "Choose X" (Doomsday Confluence): exactly the cast's X
-    /// picks.
+    /// Cast-time multi-mode selection without per-mode costs: "choose one or
+    /// both" (Choreographed Sparks: 1..2, no repeats), "choose up to four, same
+    /// mode allowed" (Moment of Reckoning). Spree's cast and resolution plumbing,
+    /// validated against min/max/repeats. A plain `CastSpell { mode }` runs that
+    /// one mode. `max: 0` is "Choose X" (Doomsday Confluence).
     ChooseModesCast { modes: Vec<Effect>, min: u8, max: u8, allow_repeats: bool },
-    /// BLB "Choose up to `budget` {P} worth of modes. You may choose the same
-    /// mode more than once." — the Season cycle. Each mode has a point price
-    /// in `points`; the picks must total at most `budget`. Shares
-    /// `ChooseModesCast`'s cast plumbing (`GameAction::CastSpellSpree` stamps
-    /// the validated picks onto `CardInstance.spree_modes`) and its
-    /// resolution: chosen instances run in printed order, each target-bearing
-    /// instance consuming the next target slot.
+    /// BLB Seasons: "choose up to `budget` {P} worth of modes", repeats allowed;
+    /// each mode costs `points[i]`. `ChooseModesCast`'s cast and resolution
+    /// plumbing.
     ChooseModesByPoints { modes: Vec<Effect>, points: Vec<u8>, budget: u8 },
-    /// "Choose one that hasn't been chosen —" (Captive Audience). Picks a mode
-    /// at RESOLUTION from the ones the source hasn't used yet, records it on
-    /// `CardInstance.modes_chosen`, and runs it. Does nothing once every mode
-    /// has been chosen.
+    /// "Choose one that hasn't been chosen —" (Captive Audience): picks an unused
+    /// mode at resolution, recording it in `CardInstance.modes_chosen`; nothing
+    /// once all are used.
     ChooseUnchosenMode { modes: Vec<Effect> },
-    /// "Choose one that hasn't been chosen **this turn** —" (Teval's Judgment,
-    /// Monument to Endurance). [`Effect::ChooseUnchosenMode`] whose record
-    /// resets each turn: the picks live on the same
-    /// `CardInstance.modes_chosen`, behind a four-byte header holding the turn
-    /// they were made in, and a stale header clears the list on the next
-    /// resolution.
+    /// [`Effect::ChooseUnchosenMode`] whose record resets each turn (Teval's
+    /// Judgment): `CardInstance.modes_chosen` carries a four-byte turn header,
+    /// and a stale header clears the list on the next resolution.
     ChooseUnchosenModeThisTurn { modes: Vec<Effect> },
-    /// "You may [body]" — emit a yes/no decision via
-    /// `Decision::OptionalTrigger`. Run `body` only on `Bool(true)`. The
-    /// `description` string is shown to the player (and serialized into
-    /// the decision wire payload). The decision is asked of the
-    /// effect's *controller* (`ctx.controller`).
+    /// "You may [body]": asks `ctx.controller` yes/no via
+    /// `Decision::OptionalTrigger` (showing `description`) and runs `body` on
+    /// `Bool(true)`. For a mana cost see `Effect::MayPay`.
     ///
-    /// Used by SOS / STX cards that bake a "you may" into the middle of
-    /// a sequence: Stadium Tidalmage's loot trigger, Pursue the Past's
-    /// optional discard, Witherbloom Charm mode 0's optional sacrifice,
-    /// Tenured Concocter's may-draw on becomes-target, and any future
-    /// "you may pay X to do Y" rider where the cost itself is `Effect::
-    /// Noop` (free) or already paid up-front. For paid optional costs
-    /// (Bayou Groff's "may pay {1} to return on death") see the related
-    /// `Effect::MayPay` primitive in TODO.md — `MayDo` is the no-cost
-    /// variant.
+    /// `AutoDecider` declines, as "you may" defaults to no. The bot is not the
+    /// `AutoDecider`: `decide_pending_policy` takes pure-upside bodies and
+    /// declines self-costs, so `MayDo` doesn't switch a good effect off.
     ///
-    /// The `AutoDecider` answers `false` (skip) by default; tests can
-    /// override via `ScriptedDecider::new([DecisionAnswer::Bool(true)])`.
-    /// This matches MTG rules: any "you may" defaults to "no" unless the
-    /// controller actively chooses to do it. The bot is not the
-    /// `AutoDecider` here — `decide_pending_policy` takes an optional
-    /// trigger whose body is pure upside and declines one that imposes a
-    /// self-cost, so wrapping a beneficial effect in `MayDo` does not turn
-    /// it off under bot play.
+    /// ⚠ The yes/no is asked before the body's targets: a test's
+    /// `ScriptedDecider` needs `[Bool(true), Target(…)]`. The other order lands
+    /// the `Target` on the prompt as "no" and silently skips the body.
     ///
-    /// **The yes/no is asked before the body's target selector runs**, which
-    /// is what a `ScriptedDecider` in a test has to match: a targeted body
-    /// wants `[Bool(true), Target(…)]` and not the other way round. Answering
-    /// in the wrong order does not error — the `Target` answer lands on the
-    /// yes/no prompt, reads as "no", and the test sees a silently skipped
-    /// effect.
-    ///
-    /// `description` is a `String` (rather than `&'static str`) because
-    /// `Effect` derives `Deserialize` and serde requires owned data when
-    /// the parent enum is bound to a non-static lifetime via the rest of
-    /// `GameState`. Card factories pass `"…".into()` which is a no-cost
-    /// `&str → String` move at construction time.
+    /// `description` is a `String` because `Effect` derives `Deserialize`.
     MayDo { description: String, body: Box<Effect> },
-    /// "[Player] may [body]" — [`Effect::MayDo`] routed to another seat. The
-    /// yes/no goes to `who` and `body` runs with `who` as its controller, so
-    /// its "you" and its target choice belong to that player (Ley Line's
-    /// "that player may put a +1/+1 counter on target creature of their
-    /// choice").
+    /// [`Effect::MayDo`] routed to `who`: the yes/no is theirs and `body` runs
+    /// with `who` as controller, target choice included (Ley Line).
     MayDoBy { who: PlayerRef, description: String, body: Box<Effect> },
     /// "[Player] may [A] or [B]": `who` picks one of `options` (a
     /// `ChooseOption` ask, judged by outcome for a bot) and its effect runs
@@ -5380,11 +4367,8 @@ pub enum Effect {
     /// option first where there is one. Lavabrink Floodgates.
     PlayerChoosesOne { who: PlayerRef, options: Vec<VoteOption> },
 
-    /// "[Player] may pay [cost]. If they do, `body`; otherwise `else_`" —
-    /// [`Effect::MayPay`] routed to another seat (Phyrexian Tyranny's
-    /// "that player loses 2 life unless they pay {2}"). The yes/no and the
-    /// payment both belong to `who`, and `body`/`else_` run with `who` as
-    /// their controller.
+    /// [`Effect::MayPay`] routed to `who`: the yes/no and payment are theirs, and
+    /// `body` / `else_` run with them as controller (Phyrexian Tyranny).
     MayPayBy {
         who: PlayerRef,
         description: String,
@@ -5407,23 +4391,16 @@ pub enum Effect {
         max: Value,
         then: Box<Effect>,
     },
-    /// "Each player may bid life…the high bidder loses life equal to the high
-    /// bid and [`then`]" — the controller opens, then every other player in
-    /// turn order may top the standing bid; the round repeats until a full
-    /// pass leaves the high bid standing. `then` runs for the high bidder.
-    /// Pain's Reward (CR 104.3 — a bid above your life total is legal).
+    /// Pain's Reward life bidding: the controller opens, others may top it in
+    /// turn order until a full pass; the high bidder loses the bid and `then`
+    /// runs for them (CR 104.3 — bidding above your life is legal).
     LifeBidding { then: Box<Effect> },
-    /// "Starting with you, each player may pay any amount of life. Repeat
-    /// this process until no one pays life. Each player creates a
-    /// `definition` token for each 1 life they paid this way." Plague of
-    /// Vermin (CR 119.4: no more life than a player has).
+    /// Plague of Vermin: from you, players may pay any life (CR 119.4) until a
+    /// round with no payment; each makes a `definition` token per life paid.
     EachPlayerPaysLifeForTokens { definition: std::sync::Arc<crate::card::TokenDefinition> },
-    /// "You may pay {X}. When you do, [body with X]." — the controller
-    /// picks X at resolution via `Decision::ChooseAmount` (0 = decline,
-    /// the AutoDecider default), capped by their pool plus one per untapped
-    /// mana source, pays {X} generic, and `body` runs with `ctx.x_value = X`
-    /// so `Value::XFromCost` reads the chosen amount. Tester of the
-    /// Tangential's "pay {X}: move X +1/+1 counters".
+    /// "You may pay {X}. When you do, [body]": X via `Decision::ChooseAmount`
+    /// (0 = decline, the AutoDecider default), capped by pool plus untapped
+    /// sources; `body` runs with `ctx.x_value = X` (Tester of the Tangential).
     MayPayX { description: String, body: Box<Effect> },
     /// [`Effect::MayPayX`] with X at most `cap` ("X can't be greater than the
     /// amount of life you gained this turn" — Shanna, Purifying Blade).
@@ -5440,24 +4417,12 @@ pub enum Effect {
     /// in `color` pips rather than generic (Leyline Tyrant).
     MayPayXOfColor { color: crate::mana::Color, description: String, body: Box<Effect> },
 
-    /// Optional **paid** branch: the controller is asked yes/no, and if
-    /// they accept *and* can afford `mana_cost`, the engine deducts the
-    /// mana from their pool and runs `body`. If the controller declines
-    /// or can't afford the cost, the body is skipped.
+    /// "You may pay [mana]. If you do, [body]": yes/no, then pay and run `body`;
+    /// declined or unaffordable skips it. The paid sibling of `MayDo` (Bayou
+    /// Groff).
     ///
-    /// Sibling to `Effect::MayDo` (the no-cost variant). Powers cards
-    /// like Bayou Groff ("when this dies, you may pay {1}; if you do,
-    /// return it to its owner's hand"), Killian's Confidence's "may pay
-    /// {W/B} to return from gy", and any other "may pay X to do Y"
-    /// rider where the cost is pure mana.
-    ///
-    /// Payment takes the floating pool first, then the controller's
-    /// untapped sources (CR 605.3a — mana abilities may be activated while
-    /// paying a cost mid-resolution).
-    ///
-    /// X-cost variants (where the optional cost has its own X prompt)
-    /// are out of scope here — those should land as a sibling
-    /// `MayPayX { mana_cost, x_value, body }` if/when needed.
+    /// Payment takes the floating pool first, then untapped sources (CR 605.3a).
+    /// An optional cost with its own X belongs in `MayPayX`.
     MayPay {
         description: String,
         mana_cost: crate::mana::ManaCost,
@@ -5467,11 +4432,8 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
-    /// CR 119.4 — "You may pay N life. If you do, `body`." The controller is
-    /// asked yes/no; the payment (which is a life loss, CR 119.4) is only
-    /// possible while their life total is at least `amount`. Declined or
-    /// unpayable runs `else_`. Seymour Flux, and the broad "pay N life: draw /
-    /// scry / pump" cluster. Sibling of [`Effect::MayPay`] for life costs.
+    /// CR 119.4 — "you may pay N life. If you do, `body`", payable only at life ≥
+    /// `amount`; declined or unpayable runs `else_`. Seymour Flux.
     MayPayLife {
         description: String,
         amount: Value,
@@ -5480,13 +4442,9 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
-    /// "You may pay {X}, where X ≤ `max`; if you do, [body reads X as
-    /// `Value::TriggerEventAmount`]." The controller is prompted for a number
-    /// in `0..=min(max, mana in pool)` via `Decision::ChooseAmount`; that many
-    /// generic mana are spent from their floated pool and `body` runs with
-    /// `event_amount` set to the paid amount. The X-cost sibling of
-    /// `Effect::MayPay` — Well of Lost Dreams ("pay {X} ≤ life gained, draw X").
-    /// `AutoDecider` pays 0 (nothing unprompted).
+    /// "You may pay {X}, X ≤ `max`": X via `Decision::ChooseAmount` within
+    /// `0..=min(max, pool)`, spent from the floating pool; `body` reads it as
+    /// `Value::TriggerEventAmount` (Well of Lost Dreams). AutoDecider pays 0.
     MayPayGenericUpTo { max: Value, body: Box<Effect> },
     /// "You may pay `mana_cost` any number of times; `body` runs once per
     /// payment" (Magnetic Mountain's per-creature untap toll). Loops while the
@@ -5498,22 +4456,16 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
-    /// Reflexive "when you do" payoff (CR 603.7). Wrap a *targeted* body that
-    /// should choose its targets **after** the gating cost is paid — e.g. the
-    /// inner half of `MayPay { body: Reflexive(<targeted bite>) }` (Itzquinth)
-    /// or `MaySacrifice { then: Reflexive(<targeted support>) }` (Glorifier of
-    /// Suffering). The wrapper is opaque to the cast/trigger-time target walk
-    /// (it isn't listed in `target_filter_for_slot` / `requires_target`), so the
-    /// outer trigger doesn't try to pre-validate the nested targets; at
-    /// resolution the body is auto-targeted fresh and run.
+    /// CR 603.7 reflexive "when you do": wraps a targeted body whose targets are
+    /// chosen after the gating cost is paid (`MayPay { body: Reflexive(..) }` —
+    /// Itzquinth). Opaque to the cast/trigger-time target walk
+    /// (`target_filter_for_slot`, `requires_target`); the body is auto-targeted
+    /// fresh at resolution.
     Reflexive { body: Box<Effect> },
 
-    /// "You may sacrifice [count] [filter]. If you do, [then]." — the
-    /// reflexive sacrifice cost (Bloodcrazed Socialite's attack +2/+2,
-    /// Gut, True Soul Zealot's attack-sac → Skeleton). Asks the controller
-    /// yes/no (gated on owning a legal candidate); on yes, the seat picks
-    /// which non-source matching permanent(s) to sacrifice (weakest first is
-    /// the headless default) and `then` runs.
+    /// "You may sacrifice [count] [filter]. If you do, [then]" (Bloodcrazed
+    /// Socialite): offered only with a legal non-source candidate; the seat picks
+    /// which (headless: weakest).
     MaySacrifice {
         description: String,
         filter: SelectionRequirement,
@@ -5524,11 +4476,9 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
-    /// "You may sacrifice [this / the source]. If you do, [then]." (CR 701.16 +
-    /// 603.7 — the reflexive self-sacrifice cost; Eden, Seat of the Sanctum's
-    /// mill-then-may-sac-then-return). Asks the controller yes/no (gated on the
-    /// source still being on the battlefield); on yes, the source is sacrificed
-    /// and `then` runs, else `else_`.
+    /// CR 701.16 + 603.7 — "you may sacrifice this. If you do, [then]", else
+    /// `else_`; offered only while the source is on the battlefield (Eden, Seat
+    /// of the Sanctum).
     MaySacrificeSource {
         description: String,
         then: Box<Effect>,
@@ -5536,10 +4486,9 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
-    /// "You may tap [count] untapped [filter] you control. If you do, [then]."
-    /// The reflexive tap cost (Caparocti Sunborn's attack → discover 3). Asks
-    /// the controller yes/no (gated on owning `count` untapped matches); on
-    /// yes, the lowest-impact matches are tapped and `then` runs.
+    /// "You may tap [count] untapped [filter] you control. If you do, [then]"
+    /// (Caparocti Sunborn); offered with enough matches, taps the lowest-impact
+    /// ones.
     MayTap {
         description: String,
         filter: SelectionRequirement,
@@ -5549,12 +4498,9 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
-    /// "You may discard [count] card(s). If you do, [then]." The reflexive
-    /// discard cost (Toph, Hardheaded Teacher — "you may discard a card; if you
-    /// do, return target instant or sorcery card from your graveyard to your
-    /// hand"). Asks the controller yes/no (gated on holding `count` cards); on
-    /// yes the highest-mana-value cards are discarded (least castable) and
-    /// `then` runs, else `else_`.
+    /// "You may discard [count] card(s). If you do, [then]", else `else_` (Toph,
+    /// Hardheaded Teacher). Offered only with `count` cards in hand; discards the
+    /// highest mana values.
     MayDiscard {
         description: String,
         count: Value,
@@ -5563,14 +4509,12 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
-    /// Like [`Effect::MayDiscard`] but the discarded card(s) must match
-    /// `filter`. The gate offers the choice only when the controller holds
-    /// `count` matching cards; the auto-picker discards the highest-MV
-    /// matches. "Sacrifice this unless you discard a noncreature card"
-    /// (Drekavac) rides this with `then: Noop, else_: SacrificeSource`.
     /// "…, then discard `count` of them" (Casting of Bones): the controller
     /// discards from among the cards they drew earlier in this resolution.
     DiscardOneOfDrawn { count: Value },
+    /// [`Effect::MayDiscard`] restricted to `filter` matches (offered only with
+    /// `count` of them; highest mana values go). Drekavac: `then: Noop, else_:
+    /// SacrificeSource`.
     MayDiscardMatching {
         description: String,
         count: Value,
@@ -5580,24 +4524,12 @@ pub enum Effect {
         else_: Option<Box<Effect>>,
     },
 
-    /// Reveal-from-hand gate: "you may reveal a [filter] card from your
-    /// hand. If you do, run `then`; otherwise run `else_`." Used by the
-    /// STX Snarl dual-land cycle (Frostboil, Furycalm, Necroblossom,
-    /// Shineshadow, Vineglimmer) — the printed Oracle reads "As ~~~
-    /// enters, you may reveal a [C1] or [C2] card from your hand. If you
-    /// don't, ~~~ enters tapped."
+    /// "You may reveal a [filter] card from your hand. If you do, `then`;
+    /// otherwise `else_`" — the STX Snarl lands. Asked of `ctx.controller`,
+    /// filter checked per hand card via `evaluate_requirement_on_card`.
     ///
-    /// Asked of the effect's *controller* (`ctx.controller`). Filter is
-    /// evaluated against each hand card via `evaluate_requirement_on_card`.
-    /// AutoDecider auto-reveals whenever a matching card exists — the
-    /// bot always wants to keep the land untapped if it can. A future
-    /// UI wire could surface a `Decision::Reveal` shape so a human
-    /// player can decline to reveal (a strategic bluff); not modeled
-    /// here since no test exercises the decline-with-match path.
-    ///
-    /// If no card matches the filter, `else_` runs unconditionally
-    /// (matches printed "if you don't reveal, …" — including the case
-    /// where you can't).
+    /// AutoDecider always reveals when it can (a bluffing decline isn't
+    /// modeled). With no match, `else_` runs.
     IfRevealFromHand {
         filter: SelectionRequirement,
         then: Box<Effect>,
@@ -5606,29 +4538,20 @@ pub enum Effect {
 
     // ── Damage / life ────────────────────────────────────────────────────────
     DealDamage { to: Selector, amount: Value },
-    /// CR 702 Radiance (Ravnica) — deal `amount` damage to the creature `subject`
-    /// resolves to *and* each other creature that shares a color with it
-    /// (Cleansing Beam, Wojek Embermage). `subject` carries the target slot
-    /// (`TargetFiltered { slot: 0, filter: Creature }`), so cast/auto-target
-    /// legality flows through the normal slot-0 path; the fan-out then reads the
-    /// chosen creature's computed colors. A colorless subject hits only itself.
+    /// CR 702 Radiance — `amount` damage to `subject`'s creature and each other
+    /// creature sharing a color with it (Cleansing Beam). `subject` carries slot
+    /// 0, so targeting goes through the normal path; a colorless subject hits
+    /// only itself.
     RadianceDamage { subject: Selector, amount: Value },
-    /// Deal `amount` damage to the creature `subject` resolves to *and* each
-    /// other creature on the battlefield with the same name (Izzet Staticaster).
-    /// `subject` carries the target slot; the fan-out reads the chosen
-    /// creature's printed name. Mirrors `RadianceDamage`'s shape.
+    /// `amount` to `subject`'s creature and each other creature with its name
+    /// (Izzet Staticaster) — `RadianceDamage`'s shape.
     SameNameDamage { subject: Selector, amount: Value },
-    /// Each creature the controller controls deals `amount` damage to the `to`
-    /// target — each damage is sourced from that creature (so its deathtouch /
-    /// lifelink apply). "Each creature you control deals 1 damage to that
-    /// creature" — Case of the Gateway Express.
+    /// Each creature you control deals `amount` to `to`, sourced from itself
+    /// (Case of the Gateway Express).
     EachControlledCreatureDealsDamage { to: Selector, amount: Value },
-    /// Damage to each player, computed *per player* from what they control:
-    /// `amount` × the number of permanents matching `filter` they control
-    /// (Acidic Soil — "damage to each player equal to the number of lands they
-    /// control"), or a flat `amount` to each player controlling at least one
-    /// match when `flat` (Disorder's player half). Players with no match take
-    /// nothing.
+    /// Damage to each player computed from what they control: `amount` × their
+    /// `filter` permanents (Acidic Soil), or with `flat` a flat `amount` to each
+    /// player with any (Disorder). No match, no damage.
     DealDamageToEachPlayerPerPermanent {
         filter: SelectionRequirement,
         amount: Value,
@@ -5639,12 +4562,9 @@ pub enum Effect {
     /// lethal (its remaining toughness) is dealt to that creature's
     /// controller (CR 120.10, trample-like). Flame Spill.
     DealDamageExcessToController { to: Selector, amount: Value },
-    /// "Deal N damage divided as you choose among one or more / any number
-    /// of targets." Targets are chosen at cast time across slots
-    /// `0..max_targets` (each filtered by `filter`); the per-target split
-    /// is decided at resolution via `Decision::DivideDamage` (AutoDecider
-    /// spreads as evenly as possible). Used by Forked Bolt, Pyrokinesis,
-    /// Fiery Cannonade-adjacent "divide" spells, Crackle with Power.
+    /// "N damage divided as you choose": targets chosen at cast across slots
+    /// `0..max_targets` (each `filter`ed), split at resolution via
+    /// `Decision::DivideDamage` (AutoDecider spreads evenly). Forked Bolt.
     DealDamageDivided {
         total: Value,
         filter: SelectionRequirement,
@@ -5655,84 +4575,55 @@ pub enum Effect {
         #[serde(default)]
         retaliate_to_source: bool,
     },
-    /// "Deals N damage divided evenly, rounded down, among any number of
-    /// targets" (Fireball). Same slot shape as `DealDamageDivided`, but each
-    /// chosen target takes `total / n` — no `DivideDamage` decision; the
-    /// remainder is lost per the printed rounding.
+    /// Fireball: `DealDamageDivided`'s slots, each target taking `total / n`
+    /// (remainder lost); no decision.
     DealDamageDividedEvenly {
         total: Value,
         filter: SelectionRequirement,
         max_targets: u8,
     },
-    /// Two creatures fight: each deals damage equal to its current
-    /// power to the other simultaneously. Both creatures take damage
-    /// and die simultaneously to SBA. `attacker` is typically
-    /// `Selector::Target(0)` or `Selector::This` (a friendly fighter);
-    /// `defender` is typically `Selector::Target(1)` or an
-    /// auto-selected opp creature. If either selector resolves to no
-    /// permanent the effect no-ops cleanly (matches MTG's "if either
-    /// is no longer a creature, no damage is dealt"). Used by SOS
-    /// Chelonian Tackle, STX Decisive Denial mode 1, and similar
-    /// fight-style green/quandrix removal.
+    /// Two creatures fight: each deals damage equal to its power to the other at
+    /// once. No-op when either side isn't a permanent (as printed). Chelonian
+    /// Tackle.
     Fight { attacker: Selector, defender: Selector },
-    /// "For each [filter] creature, create a `definition` token. Each of those
-    /// tokens fights a different one of those creatures" (Ezuri's Predation,
-    /// CR 701.14). The creatures are read at resolution from the controller's
-    /// view; a token doubler's extra tokens are created but fight nothing.
+    /// Ezuri's Predation (CR 701.14): a `definition` token per `filter` creature,
+    /// each fighting a different one; doubler extras fight nothing.
     CreateTokensToFightEach {
         filter: crate::card::SelectionRequirement,
         definition: std::sync::Arc<crate::card::TokenDefinition>,
     },
-    /// One-sided fight — `source` deals damage equal to its power to `target`
-    /// (no back-swing). Damage carries `source` so lifelink / deathtouch /
-    /// wither apply (CR 701.12-style but unidirectional). No-ops if either
-    /// selector resolves to no permanent. Stew the Coneys, Tail Swipe,
-    /// Pounce, Friendly Rivalry's per-fighter swing.
+    /// One-sided fight: `source` deals its power to `target`, carrying `source`
+    /// so lifelink / deathtouch / wither apply. No-op if either is missing (Tail
+    /// Swipe).
     DealDamageEqualToPower { source: Selector, target: Selector },
-    /// The permanent `source` resolves to (LKI once it has left) deals
-    /// `amount` damage to each entity `to` resolves to — "it deals that much
-    /// damage to the chosen player" (Saskia the Unyielding), where "it" is
-    /// the trigger's creature, not the ability's source. The damage carries
-    /// that creature, so its lifelink, deathtouch and infect apply.
+    /// The permanent `source` resolves to (LKI once gone) deals `amount` to each
+    /// `to` entity, carrying that creature's lifelink / deathtouch / infect
+    /// (Saskia the Unyielding, where "it" isn't the ability's source).
     DealDamageFrom { source: Selector, to: Selector, amount: Value },
-    /// The `source` permanent deals damage equal to its power to each entity
-    /// `targets` resolves to (the source is always excluded), and — when
-    /// `each_opponent` — to each opponent of the source's controller. Power is
-    /// read once up front; damage carries `source` so lifelink/deathtouch/
-    /// wither apply. Chandra's Ignition (each opponent), Nibelheim Aflame
-    /// (creatures only). No-op if `source` resolves to no permanent.
+    /// `source` deals its power (read once) to each `targets` entity except
+    /// itself, and with `each_opponent` to each of its controller's opponents;
+    /// carries `source`. Chandra's Ignition. No-op without `source`.
     DealDamageEqualToPowerToEach {
         source: Selector,
         targets: Selector,
         each_opponent: bool,
     },
-    /// Each permanent `dealers` resolves to deals damage equal to its power
-    /// to the single entity `target` resolves to (Nissa's Judgment). The
-    /// many-sources mirror of `DealDamageEqualToPowerToEach`; each hit
-    /// carries its own dealer so lifelink/deathtouch apply per source.
+    /// Each `dealers` permanent deals its power to `target` (Nissa's Judgment),
+    /// each carrying its dealer. Mirror of `DealDamageEqualToPowerToEach`.
     EachDealsDamageEqualToPower { dealers: Selector, target: Selector },
-    /// Each permanent `dealers` resolves to deals `amount` damage to each
-    /// entity `to` resolves to; every hit carries its own dealer, so the
-    /// dealer's deathtouch / lifelink / protection apply (CR 120.3). Sarkhan
-    /// the Masterless: "each Dragon you control deals 1 damage to that
-    /// creature." The filtered sibling of `EachControlledCreatureDealsDamage`.
+    /// Each `dealers` permanent deals `amount` to each `to` entity, each hit
+    /// carrying its dealer (CR 120.3). Sarkhan the Masterless. Filtered sibling of
+    /// `EachControlledCreatureDealsDamage`.
     EachDealsDamage { dealers: Selector, to: Selector, amount: Value },
-    /// `first` and `second` each deal damage to the other at once — `first`
-    /// deals `first_amount`, `second` deals `second_amount`, both read before
-    /// either hit lands, and state-based actions wait for both (CR 120.3,
-    /// 704.3). Not a fight (CR 701.14): Grim Contest's "each of those
-    /// creatures deals damage equal to its toughness to the other". No-ops
-    /// when either side resolves to no permanent.
+    /// `first` and `second` damage each other at once, amounts read before either
+    /// lands and SBAs waiting for both (CR 120.3, 704.3). Not a fight (CR
+    /// 701.14): Grim Contest uses toughness. No-op if either is missing.
     DealDamageToEachOther { first: Selector, second: Selector, first_amount: Value, second_amount: Value },
-    /// CR 701.12 — Exchange control of the two permanents the selectors
-    /// resolve to (one each). A permanent control swap (Vedalken Plotter,
-    /// Aura Thief, Switcheroo). If either selector resolves to no permanent
-    /// the effect no-ops. Both permanents change controller simultaneously.
+    /// CR 701.12 — exchange control of the two permanents at once (Switcheroo);
+    /// no-op if either is missing.
     ExchangeControl { a: Selector, b: Selector },
-    /// Perplexing Chimera — exchange control of `what` and the spell whose
-    /// cast fired the current trigger: the spell's controller takes `what`,
-    /// and the trigger's controller takes over the spell. (The printed "you
-    /// may choose new targets" rider is not modeled.)
+    /// Perplexing Chimera: exchange control of `what` and the triggering spell.
+    /// The "choose new targets" rider isn't modeled.
     ExchangeControlWithTriggeringSpell { what: Selector },
     /// Twist Allegiance — you and each player `who` resolves to swap control
     /// of every creature you each control for `duration`; the swapped
@@ -5741,21 +4632,15 @@ pub enum Effect {
     /// Overblaze — each resolved permanent's damage is doubled for the rest of
     /// the turn (CR 614.2), via `doubled_damage_sources_this_turn`.
     DoubleDamageFromSourceThisTurn { what: Selector },
-    /// Jeska, Thrice Reborn's 0 — until your next turn, if the creature `what`
-    /// resolves to would deal combat damage to one of your opponents, it deals
-    /// triple that damage instead (CR 614.1a), via
-    /// `tripled_combat_damage_to_opponents`.
+    /// Jeska, Thrice Reborn's 0: until your next turn `what`'s combat damage to
+    /// your opponents is tripled (CR 614.1a; `tripled_combat_damage_to_opponents`).
     TripleCombatDamageToYourOpponentsUntilYourNextTurn { what: Selector },
-    /// Whims of the Fates — starting with the controller, each player splits
-    /// the permanents they control into `piles` piles and sacrifices one
-    /// chosen at random. The split is round-robin over a shuffled list (no
-    /// player choice).
+    /// Whims of the Fates: each player splits their permanents into `piles` piles
+    /// (round-robin over a shuffle, no choice) and sacrifices one at random.
     EachPlayerSplitsAndSacrificesRandomPile { piles: u8 },
-    /// "Separate [cards] into two piles. [chooser] chooses one." `splitter`
-    /// picks the first pile, `chooser` picks which pile is "chosen"; the two
-    /// bodies then run against `Selector::SeparatedPile`. Invasion's
-    /// Do or Die / Death or Glory / Bend or Break / Fight or Flight /
-    /// Stand or Fall.
+    /// "Separate [cards] into two piles. [chooser] chooses one": `splitter` makes
+    /// the piles, `chooser` picks; the bodies read `Selector::SeparatedPile`.
+    /// Invasion's split cards (Do or Die).
     SeparateIntoPiles {
         what: Selector,
         splitter: PlayerRef,
@@ -5774,28 +4659,22 @@ pub enum Effect {
         chosen: Box<Effect>,
         other: Box<Effect>,
     },
-    /// Run `body` with the entities `what` resolves to as its targets — a
-    /// resolution-time choice ("choose a land you control", not a target)
-    /// read by a body that reads targets (`SameNameAsTarget`: Canoptek
-    /// Wraith's "basic land cards which have the same name as the chosen
-    /// land", inside `ChooseOneAmong`).
+    /// Runs `body` with `what` as its targets — a resolution-time "choose" (not
+    /// a target) feeding a body that reads targets (Canoptek Wraith, inside
+    /// `ChooseOneAmong`).
     WithTargets { what: Selector, body: Box<Effect> },
-    /// "For each different power among [filter] permanents, choose one with
-    /// that power" (Celestial Judgment), or with `up_to` "choose any number
-    /// with different powers" (Sigardian Zealot): the controller picks per
-    /// power, then `chosen` / `other` run over the two piles as for
-    /// `ChooseSomeAmong`. Headless: own first, own best (mana value, then
-    /// toughness), theirs weakest; with `up_to` only own.
+    /// "For each different power among [filter], choose one" (Celestial
+    /// Judgment), or with `up_to` "any number with different powers" (Sigardian
+    /// Zealot); `chosen` / `other` run as for `ChooseSomeAmong`. Headless: own
+    /// first, own best (mana value, toughness), theirs weakest; `up_to` own only.
     ChoosePerDistinctPower {
         filter: SelectionRequirement,
         up_to: bool,
         chosen: Box<Effect>,
         other: Box<Effect>,
     },
-    /// "Choose a [card] with mana value 1, then do the same for 2 and 3.
-    /// Return those cards" (Queen Kayla, Gruesome Menagerie): one pick of
-    /// `what` per listed mana value, every pick asked before the piles run,
-    /// so `chosen` moves them together. With `up_to` a value may be passed.
+    /// Queen Kayla: one `what` pick per listed mana value, all asked before
+    /// `chosen` moves them together; `up_to` lets a value pass.
     ChoosePerManaValue {
         what: Selector,
         values: Vec<u32>,
@@ -5814,85 +4693,52 @@ pub enum Effect {
         chosen: Box<Effect>,
         other: Box<Effect>,
     },
-    /// "Return a [`filter`] you control to its owner's hand", chosen as the
-    /// effect resolves — not a target (Whitemane Lion's ruling), so hexproof
-    /// is no bar and nothing fizzles. `keep_best` names the most valuable one
-    /// (Time Wipe saves it); otherwise the cheapest, a tapped one first.
+    /// "Return a [`filter`] you control to hand", chosen at resolution, not
+    /// targeted (Whitemane Lion ruling). `keep_best` returns the most valuable
+    /// (Time Wipe); otherwise the cheapest, tapped first.
     ReturnOneYouControl { filter: SelectionRequirement, keep_best: bool },
-    /// "Choose one of [`what`] at random" — `ChooseOneAmong` with a uniform
-    /// pick instead of a player's: `chosen` runs against it and `other`
-    /// against the rest (The Nipton Lottery's "choose a creature at random …
-    /// then destroy all other creatures").
+    /// `ChooseOneAmong` with a uniform random pick (The Nipton Lottery).
     ChooseOneAtRandomAmong { what: Selector, chosen: Box<Effect>, other: Box<Effect> },
-    /// "An opponent chooses one of [`what`]" as a veto: the opponent a
-    /// wrapping `ChooseOpponentThen` named (else the most hostile) names one,
-    /// and `then`
-    /// runs against the others via `Selector::SeparatedPile { chosen: false }`.
-    /// A headless chooser names the highest mana value. Plargg and Nassari.
+    /// "An opponent chooses one of [`what`]" as a veto: the opponent a wrapping
+    /// `ChooseOpponentThen` named (else the most hostile) names one, and `then`
+    /// runs on the rest (`SeparatedPile { chosen: false }`). Headless picks the
+    /// highest mana value. Plargg and Nassari.
     OpponentVetoesOne { what: Selector, then: Box<Effect> },
-    /// Abstract Performance — exile the top `count` cards of your library in
-    /// a face-down pile, then the next `count` in a face-up pile; an opponent
-    /// (the hostile one) chooses a pile to put into your graveyard; you may
-    /// cast a spell from the other without paying its mana cost and put the
-    /// rest into your hand. The chooser is asked before anything moves (the
-    /// face-up pile is read off the library).
+    /// Abstract Performance: top `count` cards into a face-down pile, the next
+    /// `count` face up; the hostile opponent picks one for your graveyard; you
+    /// may cast a spell from the other free and take the rest. The chooser is
+    /// asked before anything moves.
     FaceDownFaceUpPiles { count: u32 },
-    /// CR 701.12 — exchange control of a permanent you control matching
-    /// `filter` (chosen at resolution: `Decision::ChooseCards` for a
-    /// `wants_ui` controller, lowest CardId otherwise) and the permanent
-    /// `with` resolves to. Vedalken Plotter's ETB land swap.
+    /// CR 701.12 — exchange control of your `filter` permanent (chosen at
+    /// resolution; non-UI: lowest CardId) and `with` (Vedalken Plotter).
     ExchangeControlChoosing { filter: SelectionRequirement, with: Selector },
     GainLife  { who: Selector, amount: Value },
     LoseLife  { who: Selector, amount: Value },
-    /// CR 701.10d — "double a player's life total." Each player the selector
-    /// resolves to gains life equal to their current total (so 20 → 40). A
-    /// player at 0 or negative is unaffected (no negative-doubling). Beacon
-    /// of Immortality.
+    /// CR 701.10d — each player gains their current life (Beacon of
+    /// Immortality); 0 or less is unaffected.
     DoubleLife { who: Selector },
-    /// Each player the selector resolves to loses life equal to half their
-    /// *own* current life total (rounded up when `rounded_up`, else down).
-    /// Per-player evaluation — `LoseLife`'s single global amount can't scale
-    /// to each target's own total. Stingerback Terror ("each opponent loses
-    /// half their life, rounded up").
+    /// Each resolved player loses half their own life (rounded per
+    /// `rounded_up`) — per player, which `LoseLife` can't do. Stingerback
+    /// Terror.
     LoseHalfLife { who: Selector, rounded_up: bool },
     /// "Each player loses `per` life for each [`filter`] they control"
     /// (Stronghold Discipline). Per-player evaluation, so each seat's own
     /// board sets its own loss.
     LoseLifePerControlled { who: Selector, filter: SelectionRequirement, per: Value },
-    /// Deal each player the selector resolves to damage equal to half their
-    /// *own* current life total (rounded up when `rounded_up`, else down).
-    /// Per-player evaluation, routed through the damage funnel (so doubling /
-    /// prevention / redirection apply, unlike `LoseHalfLife`). Heartless
-    /// Hidetsugu ("deals damage to each player equal to half that player's
-    /// life total, rounded down").
+    /// Each resolved player is dealt half their own life as damage (rounded per
+    /// `rounded_up`), through the damage funnel unlike `LoseHalfLife`. Heartless
+    /// Hidetsugu.
     DealHalfLifeDamage { to: Selector, rounded_up: bool },
-    /// Set a player's life total to a specific value (CR 119.5).
-    /// "If an effect sets a player's life total to a specific number, the
-    /// player gains or loses the necessary amount of life to end up with
-    /// the new total." Used by Biorhythm-style "set life to creature
-    /// count", Tree of Redemption-style "exchange life with toughness",
-    /// and any future effect that pins life to a specific number.
-    ///
-    /// Implementation note: the resolver computes `delta = new_total -
-    /// current_life` and emits either a `LifeGained` event (delta > 0)
-    /// or `LifeLost` event (delta < 0). Delta of 0 emits no event
-    /// (matches CR 119.9 / 119.10 zero-life-change semantics).
+    /// CR 119.5 — set a player's life total; they gain or lose the difference
+    /// (`LifeGained` / `LifeLost`, nothing for zero). Biorhythm.
     SetLifeTotal { who: Selector, amount: Value },
-    /// CR 701.12c — "exchange life totals" between the players the two
-    /// selectors resolve to (Soul Conduit, Magus of the Mirror, Mirror
-    /// Universe-style swaps). Each side's previous total is captured before
-    /// either changes, then each player gains/loses to reach the other's
-    /// previous total; `LifeGained`/`LifeLost` events fire so lifegain-
-    /// matters payoffs see the swing. A no-op when both selectors land on
-    /// the same player.
+    /// CR 701.12c — exchange the two players' life totals (Soul Conduit). Both
+    /// totals are read first, then each gains or loses to the other's, firing
+    /// life events. No-op on one player.
     ExchangeLifeTotals { a: Selector, b: Selector },
-    /// One-turn "[selected players] can't gain life this turn" lock.
-    /// Sets `Player.cannot_gain_life_this_turn = true` for each player
-    /// the selector resolves to. Cleared by `do_untap` at the start
-    /// of any new turn. Distinct from `StaticEffect::PlayerCannotGainLife`
-    /// — this is a one-shot effect with no source permanent to anchor
-    /// to (Skullcrack, Sulfurous Blast's flashback rider, future
-    /// one-turn lifegain locks).
+    /// "Can't gain life this turn" (Skullcrack): sets
+    /// `Player.cannot_gain_life_this_turn`, cleared by `do_untap`. The sourceless
+    /// one-shot counterpart of `StaticEffect::PlayerCannotGainLife`.
     LifeGainLockThisTurn { who: Selector },
     /// One-turn "[selected players]' life total can't change this turn" lock —
     /// both gain and loss are dropped. Sets `Player.life_locked_this_turn`,
@@ -5904,41 +4750,31 @@ pub enum Effect {
     /// "Players can't lose life this turn" (Everybody Lives!) — unlike
     /// `LifeLockThisTurn`, life can still be gained.
     CantLoseLifeThisTurn { who: Selector },
-    /// CR 104.3d — Angel's Grace: until end of turn the controller can't
-    /// lose the game and their opponents can't win it. With `damage_floor`,
-    /// damage that would drop their life below 1 drops it to 1 instead.
-    /// Sets `Player.{cant_lose_this_turn, damage_floor_this_turn}`; cleared
-    /// by `do_untap` at the turn boundary.
+    /// CR 104.3d — Angel's Grace: this turn the controller can't lose and
+    /// opponents can't win; with `damage_floor`, damage stops at 1 life. Cleared
+    /// by `do_untap`.
     CantLoseThisTurn { damage_floor: bool },
     /// CR 614 / 104.3 — "The next time you would lose the game this turn,
     /// instead draw seven cards and your life total becomes 1" (Stunning
     /// Reversal): arms one turn-scoped loss replacement for the controller.
     NextLossThisTurnDrawSevenAtOne,
-    /// Forbidding Spirit — "until your next turn, creatures can't attack you or
-    /// planeswalkers you control unless their controller pays {amount} for
-    /// each." Sets `Player.attack_tax_until_your_turn` on the controller;
-    /// cleared at that player's next untap step.
+    /// Forbidding Spirit: until your next turn, attacking you or your
+    /// planeswalkers costs {amount} per creature
+    /// (`Player.attack_tax_until_your_turn`).
     TaxAttackersUntilYourNextTurn { amount: Value },
     /// "Until your next turn, creatures can't attack you" (Chronomantic
     /// Escape): the controller's `attackable_only_by_until_next_turn` shield,
     /// admitting no attacker. Planeswalkers they control stay attackable.
     CreaturesCantAttackYouUntilYourNextTurn,
-    /// Sivitri, Dragon Master's +1 — "until your next turn, creatures can't
-    /// attack you or planeswalkers you control unless their controller pays
-    /// {amount} life for each of those creatures." Sets
-    /// `Player.attack_life_tax_until_your_turn` on the controller.
+    /// Sivitri, Dragon Master's +1: the same tax in life
+    /// (`Player.attack_life_tax_until_your_turn`).
     TaxAttackersInLifeUntilYourNextTurn { amount: Value },
-    /// Channel — until end of turn the controller may pay 1 life per point
-    /// of colorless shortfall when paying costs ("you may pay 1 life: add
-    /// {C}"). Sets `Player.channel_life_for_mana`; the payment funnel
-    /// converts on demand.
+    /// Channel: this turn, pay 1 life per {C} of shortfall when paying costs
+    /// (`Player.channel_life_for_mana`).
     ChannelLifeForMana,
-    /// Permanently set `Player.cannot_gain_life` on each player the selector
-    /// resolves to — "that player can't gain life for the rest of the game"
-    /// (Screaming Nemesis, Everlasting Torment, Witch of the Moors). Sticks
-    /// across recomputes and turns (nothing resets the flag). Non-player
-    /// resolutions are ignored, so `Selector::Target(0)` over a damage target
-    /// only fires when a player was hit.
+    /// "Can't gain life for the rest of the game" (Screaming Nemesis): sets
+    /// `Player.cannot_gain_life` permanently. Non-players are ignored, so
+    /// `Target(0)` over a damage target fires only on a player.
     LifeGainLockGame { who: Selector },
     /// Set `Player.spells_uncounterable_this_turn` on each resolved player —
     /// "spells you control can't be countered for the rest of this turn"
@@ -5948,10 +4784,8 @@ pub enum Effect {
     /// (Domri, Anarch of Bolas's "Creature spells you cast this turn can't be
     /// countered"). Cleared at the next untap.
     GrantCreatureSpellsUncounterableThisTurn { who: Selector },
-    /// Add `colors` to each resolved player's
-    /// `hexproof_from_colors_this_turn` — "you and permanents you control
-    /// gain hexproof from [colors] until end of turn" (Veil of Summer's
-    /// rider). Cleared at the next untap.
+    /// Veil of Summer: adds `colors` to each player's
+    /// `hexproof_from_colors_this_turn`; cleared at the next untap.
     GrantHexproofFromColorThisTurn { who: Selector, colors: Vec<crate::mana::Color> },
     /// "You gain hexproof until your next turn" (Blossoming Calm). Sets
     /// `Player.hexproof_until_next_turn`; cleared at that player's untap.
@@ -5963,27 +4797,21 @@ pub enum Effect {
     /// "those players can't cast noncreature spells this turn"
     /// (Ranger-Captain of Eos). Cleared at the next untap.
     CantCastNoncreatureThisTurn { who: Selector },
-    /// "Until your next turn, [those players] can't cast noncreature spells"
-    /// (Hope of Ghirapur): `CantCastNoncreatureThisTurn` that the turn
-    /// boundaries re-arm until the controller's next turn begins
-    /// (`Player.noncreature_locked_by`).
+    /// Hope of Ghirapur: `CantCastNoncreatureThisTurn` re-armed until the
+    /// controller's next turn (`Player.noncreature_locked_by`).
     CantCastNoncreatureUntilYourNextTurn { who: Selector },
     /// "Each player names a card" — one `NameCard` decision per resolved seat
     /// in APNAP order, stashed in `GameState.scratch.names_this_resolution` for a
     /// later step in the same resolution to read (Conundrum Sphinx).
     EachPlayerNamesCard { who: PlayerRef },
-    /// "Each player reveals the top card of their library. If it's the card
-    /// they named, that player puts it into their hand; if it isn't, they put
-    /// it on the bottom of their library." Reads the names stashed by
-    /// `EachPlayerNamesCard` (Conundrum Sphinx).
+    /// Conundrum Sphinx: each player reveals their top card; the named one goes
+    /// to hand, otherwise bottom (names from `EachPlayerNamesCard`).
     EachPlayerRevealTopKeepIfNamed { who: PlayerRef },
     /// Controller loses `amount` life, a different selector gains it.
     Drain { from: Selector, to: Selector, amount: Value },
-    /// "Each opponent loses `amount` life. You gain life equal to the life
-    /// lost this way" (Gray Merchant, Kokusho): each `from` player loses
-    /// `amount`, then each `to` player gains the **total** actually lost
-    /// (CR 119.3 — after replacement). `Drain` gains `amount` once, which is
-    /// the same at two seats and one opponent's worth at a table.
+    /// "Each opponent loses N. You gain life equal to the life lost this way"
+    /// (Gray Merchant): `to` gains the total actually lost after replacement (CR
+    /// 119.3). `Drain` gains `amount` once — one opponent's worth at a table.
     DrainLifeLost { from: Selector, to: Selector, amount: Value },
 
     /// CR 122 / 107.16 — the controller gets `amount` energy counters
@@ -5994,116 +4822,79 @@ pub enum Effect {
     /// A per-player resource that only accumulates; payoffs read the count.
     /// Mizzix ("get an experience counter") → `AddExperience(Const(1))`.
     AddExperience(Value),
-    /// Pay `amount` energy counters as a cost at resolution; if the
-    /// controller has at least that much, deduct it and resolve `then`,
-    /// otherwise do nothing. Models energy-only activated/triggered
-    /// payoffs ("Pay {E}{E}{E}: …") without a dedicated cost field on
-    /// `ActivatedAbility` — the player commits by activating, and the
-    /// energy is consumed when the ability resolves.
+    /// Pay `amount` energy at resolution, then `then`; nothing if short. Models
+    /// "Pay {E}{E}{E}: …" without an `ActivatedAbility` cost field.
     PayEnergy { amount: u32, then: Box<Effect> },
-    /// "You may pay an amount of {E} equal to `amount`; if you do, `then`."
-    /// The `u32` sibling `PayEnergy` takes a fixed cost; this evaluates a
-    /// `Value` (typically the returned card's mana value). Pays and runs
-    /// `then` when the controller can afford it (bots/tests always take the
-    /// upside); no-op otherwise. Jolted Awake's energy reanimation.
+    /// "You may pay {E} equal to `amount`; if you do, `then`" — `PayEnergy` with
+    /// a `Value` (Jolted Awake). Always paid when affordable.
     PayEnergyValue { amount: Value, then: Box<Effect> },
     /// CR 702.62 — remove a time counter from the resolving ability's source
     /// if it is a suspended card in exile; removing the last casts it through
     /// the suspend funnel. Nihilith's graveyard accelerant.
     RemoveTimeCounterFromSuspendedSource,
-    /// CR 701.56 — `who` time travels: for each permanent they control and each
-    /// suspended card they own (in exile) with one or more time counters, they
-    /// may add or remove a time counter. The bot heuristic removes one from
-    /// each suspended card (so it's cast sooner) and adds one to each permanent
-    /// with time counters (vanishing — so it lives longer). UI per-object
-    /// choice is a follow-up.
+    /// CR 701.56 — `who` time travels, adding or removing a time counter on each
+    /// permanent / suspended card with one. Bot heuristic: remove from suspended
+    /// cards, add to permanents. Per-object UI choice is a follow-up.
     TimeTravel { who: PlayerRef },
-    /// "Remove `amount` time counters from each permanent and each suspended
-    /// card" (`add: false`) / "put `amount` time counters on each permanent
-    /// with a time counter on it and each suspended card" (Dust of Moments).
-    /// A removal that takes a suspended card's last counter casts it (CR 702.62).
+    /// Dust of Moments: remove (`add: false`) or add `amount` time counters on
+    /// each permanent with one and each suspended card. Removing the last casts
+    /// it (CR 702.62).
     TimeCountersOnEachPermanentAndSuspended { add: bool, amount: u32 },
-    /// "You may pay any amount of {E}; deal that much damage to `to`"
-    /// (Galvanic Discharge). The controller spends energy at resolution; the
-    /// bot heuristic pays exactly lethal to a creature target (its remaining
-    /// effective toughness, capped at available energy) or all available
-    /// energy against a planeswalker / player. UI prompting is a follow-up.
+    /// "Pay any amount of {E}; deal that much damage" (Galvanic Discharge). Bot
+    /// heuristic: exact lethal to a creature (capped by energy), everything at a
+    /// walker or player. UI prompting is a follow-up.
     PayAnyEnergyDealDamage { to: Selector },
-    /// "You may pay any amount of {E}, then `then`." The controller chooses how
-    /// much energy to pay via `Decision::ChooseAmount` (capped at available
-    /// energy); the amount is stashed in `state.energy_paid_this_resolution`
-    /// so `then` can scale off `Value::EnergyPaidThisEffect`. Bots pay all
-    /// available energy. Aether Spike's "pay any amount of {E}; counter that
-    /// spell unless its controller pays {1} for each {E} paid this way."
+    /// "You may pay any amount of {E}, then `then`" (Aether Spike): the amount
+    /// via `Decision::ChooseAmount`, stashed in
+    /// `state.energy_paid_this_resolution` for `Value::EnergyPaidThisEffect`.
+    /// Bots pay everything.
     PayAnyEnergy { then: Box<Effect> },
-    /// "Each player may exile their hand and draw `amount` cards. If
-    /// `amount` is `play_if_at_least` or more, you may play cards you own
-    /// exiled this way until the end of your next turn" (Wheel of Potential,
-    /// inside its `PayAnyEnergy`). A headless seat takes the wheel when its
-    /// hand is smaller than `amount`.
+    /// Each player may exile their hand and draw `amount`; at `amount` ≥
+    /// `play_if_at_least` you may play your exiled cards until the end of your
+    /// next turn (Wheel of Potential). Headless takes it if its hand is smaller.
     EachPlayerMayExileHandDraw { amount: Value, play_if_at_least: u32 },
-    /// "Each player gains control of a nonland permanent of your choice
-    /// controlled by the player to their right" (Inniaz, the Gale Force): the
-    /// controller picks one `filter` permanent from each living seat's right
-    /// neighbour (CR 101.4 — the previous seat), then every pick changes
-    /// control at once, for good.
+    /// Inniaz, the Gale Force: the controller picks one `filter` permanent from
+    /// each living seat's right neighbour (CR 101.4, the previous seat); all
+    /// change control at once, for good.
     EachPlayerGainsChosenFromRightNeighbor { filter: SelectionRequirement },
-    /// "Sacrifice/return this unless you pay {E}…" (CR 107.16). Pays `amount`
-    /// energy if the controller can afford it; otherwise resolves `otherwise`
-    /// (typically `SacrificeSource` / return-to-hand). AutoDecider pays when
-    /// able. Lathnu Hellion, Greenbelt Rampager.
+    /// CR 107.16 — "sacrifice / return this unless you pay {E}": pays if able,
+    /// else `otherwise` (Lathnu Hellion).
     PayEnergyOrElse { amount: u32, otherwise: Box<Effect> },
-    /// `Value`-amount sibling of `PayEnergyOrElse`: pay {E} equal to `amount`
-    /// (evaluated at resolution — usually the gained creature's mana value) or
-    /// resolve `otherwise`. Volatile Stormdrake's "sacrifice that creature
-    /// unless you pay {E} equal to its mana value".
+    /// `PayEnergyOrElse` with a `Value` amount read at resolution (Volatile
+    /// Stormdrake).
     PayEnergyOrElseValue { amount: Value, otherwise: Box<Effect> },
-    /// "Sacrifice this unless you pay `mana_cost`" (CR 608-style ETB
-    /// tax). Pays `mana_cost` from the controller's floating pool if
-    /// affordable; otherwise resolves `otherwise` (typically
-    /// `SacrificeSource`). The mana sibling of `PayEnergyOrElse`. Used by
-    /// Archway Commons' "When this land enters, sacrifice it unless you
-    /// pay {1}."
+    /// "Sacrifice this unless you pay [mana]" (Archway Commons): pays from the
+    /// floating pool if it can, else runs `otherwise`. The mana sibling of
+    /// `PayEnergyOrElse`.
     PayManaOrElse { mana_cost: crate::mana::ManaCost, otherwise: Box<Effect> },
-    /// CR 702.29 — the resolution half of an echo trigger for a `wants_ui`
-    /// controller: "sacrifice this unless you pay its echo cost". `None` =
-    /// Echo—Discard a card. Prompted via the seat-routed yes/no ask; a paid
-    /// mana echo auto-taps lands like the synchronous `process_echo` path.
+    /// CR 702.29 — echo's resolution half for a `wants_ui` controller ("sacrifice
+    /// unless you pay"); `None` = discard echo. Mana echo auto-taps like
+    /// `process_echo`.
     EchoPayOrSacrifice { mana_cost: Option<crate::mana::ManaCost> },
     /// CR 702.24 — the `wants_ui` sibling for cumulative upkeep: "sacrifice
     /// this unless you pay `cost` × its age counters". Mana/Life kinds only;
     /// the age counter was already added by `process_cumulative_upkeep`.
     CumulativeUpkeepPayOrSacrifice { cost: crate::card::CumulativeUpkeepCost },
-    /// Balance (Restore Balance): each player sacrifices lands/creatures down
-    /// to the fewest controlled by any player, and discards down to the
-    /// smallest hand. Each player keeps their best (highest-MV, then power)
-    /// permanents and highest-MV cards; a `wants_ui` picker is a follow-up.
+    /// Balance: players sacrifice lands / creatures to the fewest, discard to the
+    /// smallest hand, keeping the priciest (then strongest). A `wants_ui` picker
+    /// is a follow-up.
     Balance,
-    /// The generalized Balance: for each entry in `filters`, every player
-    /// sacrifices down to the fewest matching permanents any player controls
-    /// (keeping their highest-MV, then highest-power); with `hands`, hands then
-    /// discard down to the smallest. `Balance` is
-    /// `BalanceMatching { filters: [Land, Creature], hands: true }`;
-    /// Balancing Act balances over `Permanent` as one group.
+    /// Generalized Balance: per `filters` entry, each player sacrifices down to
+    /// the fewest matches anyone controls (keeping highest mana value, then
+    /// power); with `hands`, hands discard down too. Balance is `[Land,
+    /// Creature] + hands`; Balancing Act is `[Permanent]`.
     BalanceMatching { filters: Vec<SelectionRequirement>, hands: bool },
-    /// Genesis Wave — reveal the top X cards (X from the cast cost), put
-    /// every permanent card with mana value ≤ X onto the battlefield, and
-    /// the rest into the graveyard. (Printed "any number" collapses to
-    /// "all matching".)
+    /// Genesis Wave: reveal the top X; permanents with mana value ≤ X enter, the
+    /// rest go to the graveyard ("any number" taken as all).
     GenesisWave,
-    /// CR 107.16 — exile the top card of the controller's library, then they
-    /// may pay `energy` {E}; if they do, they may cast that card without
-    /// paying its mana cost (the spell stays exiled if not cast). Amped
-    /// Raptor's "exile the top card, you may pay {E}{E}{E}{E} to cast it".
+    /// CR 107.16 — Amped Raptor: exile the top card, then may pay `energy` {E} to
+    /// cast it free (it stays exiled otherwise).
     ExileTopMayPayEnergyToCast { energy: u32 },
 
     // ── Cards / draw / discard / mill ────────────────────────────────────────
     Draw    { who: Selector, amount: Value },
-    /// CR 701.48 — Learn. `who` may reveal a Lesson card they own from their
-    /// sideboard ("outside the game") and put it into their hand, or discard
-    /// a card to draw a card. Resolved via `Decision::Learn`. When `who`'s
-    /// sideboard holds no Lesson, falls back to the legacy `Draw 1`
-    /// approximation so no-sideboard games behave as before.
+    /// CR 701.48 Learn — `who` may fetch a Lesson from their sideboard or rummage
+    /// (`Decision::Learn`). With no sideboard Lesson it draws one card, as before.
     Learn   { who: PlayerRef },
     /// Discard `amount` cards. If `random`, chosen randomly; else by `who`.
     Discard { who: Selector, amount: Value, random: bool },
@@ -6122,45 +4913,30 @@ pub enum Effect {
     /// for "exile a card from your hand" on a permanent that later counts
     /// what it exiled (Azor's Gateway).
     ExileFromHandLinked { who: Selector, amount: Value },
-    /// "Exile a card from your hand face down. It becomes foretold. Its
-    /// foretell cost is its mana cost reduced by {`reduce`}." (Ethereal
-    /// Valkyrie.) The controller picks the card; it isn't foretelling
-    /// (Ranar's free first foretell is untouched), but it can't be cast this
-    /// turn (CR 702.143b) and it tallies as exiled from hand.
+    /// "Exile a card from your hand face down. It becomes foretold" with cost
+    /// reduced by {`reduce`} (Ethereal Valkyrie). Not a foretell action (Ranar's
+    /// free one is untouched); not castable this turn (CR 702.143b).
     ForetellFromHand { reduce: u32 },
-    /// "[Player] exiles a card from their hand. If a creature card is exiled
-    /// this way, that player creates a token that's a copy of that card."
-    /// (Arcane Artisan.) Each resolved player picks their own card (a bot
-    /// its best creature); the token is stamped as created by the source, so
-    /// `Selector::TokensCreatedBySource` finds it later.
+    /// Arcane Artisan: each resolved player exiles a card from hand (bot: best
+    /// creature); a creature yields a token copy stamped as created by the source
+    /// (`Selector::TokensCreatedBySource`).
     ExileFromHandCopyCreature { who: Selector },
-    /// "Each resolved player discards their whole hand, then draws that many
-    /// cards." Captures the hand size *before* discarding (Soratami Seer,
-    /// Mind's Eye-style wheels). Distinct from `Discard` + `Draw` because the
-    /// draw count must read the pre-discard hand.
+    /// Each player discards their hand and draws as many as it held — read
+    /// before discarding, which `Discard` + `Draw` can't (Soratami Seer).
     DiscardHandDrawThatMany { who: Selector },
     /// [`Self::DiscardHandDrawThatMany`] drawing `less` fewer — "then draws
     /// that many cards minus one" (Dark Deal).
     DiscardHandDrawThatManyLess { who: Selector, less: u32 },
-    /// "`who` discards `count` cards unless they discard a card matching
-    /// `instead`" (Wrench Mind). With a match in hand the discarder keeps
-    /// the small side automatically (lowest-MV match); otherwise the full
-    /// `count` is discarded via the regular Discard path.
+    /// Wrench Mind: `who` discards `count` unless they discard an `instead` card
+    /// (auto: lowest-mana-value match).
     DiscardUnlessKind { who: PlayerRef, count: Value, instead: SelectionRequirement },
-    /// Ad Nauseam — repeatedly offer "reveal the top card of your library
-    /// and put it into your hand, losing life equal to its mana value?"
-    /// until the controller declines or the library empties. AutoDecider
-    /// declines immediately; scripted/UI deciders drive the loop.
+    /// Ad Nauseam: repeatedly offer the top card to hand for its mana value in
+    /// life, until declined or empty. AutoDecider declines at once.
     RevealTopToHandLoseLifeRepeat,
-    /// Discard any number of cards (0 to hand-size, player's choice). Used by
-    /// "discard any number of cards, then draw that many cards plus one"
-    /// effects (Colossus of the Blood Age, Mind Roots-style "any number"
-    /// discards). The discarded count is added to
-    /// `state.cards_discarded_this_resolution`, so a follow-up `Draw` step
-    /// in the same `Seq` can reference `Value::CardsDiscardedThisEffect`
-    /// for the "draw equal to discarded" rider. AutoDecider picks 0 (the
-    /// conservative default); ScriptedDecider supplies the exact discard
-    /// list via `DecisionAnswer::Discard(_)`.
+    /// Discard any number of cards, adding to
+    /// `state.cards_discarded_this_resolution` for a following
+    /// `Value::CardsDiscardedThisEffect` (Colossus of the Blood Age). AutoDecider
+    /// discards none; `DecisionAnswer::Discard` scripts a list.
     DiscardAnyNumber {
         who: Selector,
         /// Restricts which hand cards may be picked ("discard any number of
@@ -6168,30 +4944,22 @@ pub enum Effect {
         /// wording.
         #[serde(default = "SelectionRequirement::any")]
         filter: SelectionRequirement,
-        /// The printed cap on "discard **up to N** cards, then …"
-        /// (Greasewrench Goblin's exhaust). `None` is the uncapped "any
-        /// number" wording. Enforced on the answer, not just on the prompt,
-        /// so an over-long pick from a UI seat is truncated rather than
-        /// honoured.
+        /// The printed cap on "discard up to N" (Greasewrench Goblin); `None` is "any
+        /// number". Enforced on the answer, so an over-long UI pick is truncated.
         #[serde(default)]
         max: Option<Value>,
     },
-    /// Set `Player.max_hand_size = None` on each resolved player, for the
-    /// rest of the game. Used by Wisdom of Ages ("You have no maximum hand
-    /// size for the rest of the game"), Reliquary Tower's static (which
-    /// actually wires through a layer, but the simpler "for the rest of the
-    /// game" cards can flip the flag directly). Skips the cleanup-step CR
-    /// 514.1 discard-down step in `do_cleanup`.
+    /// "No maximum hand size for the rest of the game" (Wisdom of Ages): sets
+    /// `Player.max_hand_size = None`, skipping the CR 514.1 discard in
+    /// `do_cleanup`.
     SetNoMaxHandSize { who: Selector },
     /// `who` chooses a card from their hand and puts it on top of their library
     /// (CR 701). No-op if the hand is empty. Enter the Infinite's "then put a
     /// card from your hand on top of your library."
     PutCardFromHandOnTopOfLibrary { who: Selector },
-    /// "Put `count` cards from your hand on the bottom of your library"
-    /// (Sawtooth Loon's "draw two cards, then put two cards from your hand on
-    /// the bottom"). Chain after a `Draw` in a `Seq`. Same auto-pick residual
-    /// as [`Effect::PutCardFromHandOnTopOfLibrary`] — the picker is the
-    /// synchronous decider, so a UI seat isn't prompted.
+    /// "Put `count` cards from your hand on the bottom" (Sawtooth Loon), after a
+    /// `Draw`. Auto-picked like [`Effect::PutCardFromHandOnTopOfLibrary`]; a UI
+    /// seat isn't prompted.
     PutCardsFromHandOnBottom { who: Selector, count: Value },
     /// CR 701.19 — "Look at [who]'s hand." The resolving controller sees the
     /// hand for the rest of the game (`GameState.hands_revealed_to`), so the
@@ -6228,30 +4996,22 @@ pub enum Effect {
         #[serde(default)]
         destroy: bool,
     },
-    /// "Each player returns a permanent matching `filter` they control to its
-    /// owner's hand" (Curfew). APNAP order; each player picks their own, and a
-    /// player controlling no match does nothing.
-    /// `opponents`: only the controller's opponents do (Summon: Valefor).
+    /// Curfew: each player (APNAP) returns one of their `filter` permanents to
+    /// hand. `opponents`: only opponents (Summon: Valefor).
     EachPlayerReturnsAMatchingPermanent {
         filter: SelectionRequirement,
         #[serde(default)]
         opponents: bool,
     },
-    /// CR 402.2b — set each resolved player's maximum hand size to a specific
-    /// number (`Player.max_hand_size = Some(size)`). Used by "your maximum
-    /// hand size is N" cards such as Null Profusion (zero) or Library of Leng
-    /// adjuncts. The cleanup-step CR 514.1 enforcement then discards down to
-    /// `size`.
+    /// CR 402.2b — sets `Player.max_hand_size = Some(size)` (Null Profusion);
+    /// cleanup (CR 514.1) discards down to it.
     SetMaxHandSize { who: Selector, size: Value },
     /// CR 402.2 — "your maximum hand size is reduced by `by`" (for the rest
     /// of the game): a player with no maximum hand size stays without one.
     /// Inspired Idea's uncleaved half.
     ReduceMaxHandSize { who: Selector, by: Value },
     Mill    { who: Selector, amount: Value },
-    /// The controller mills `amount` cards, then puts one card matching
-    /// `filter` from among those milled this way into their hand (the
-    /// controller chooses; nothing happens if none qualify). Cache Grab
-    /// ("mill four, then return a permanent card milled this way to hand").
+    /// Mill `amount`, then one `filter` card among them to hand (Cache Grab).
     MillThenToHand {
         amount: Value,
         filter: SelectionRequirement,
@@ -6260,11 +5020,8 @@ pub enum Effect {
         #[serde(default)]
         otherwise: Option<Box<Effect>>,
     },
-    /// Like [`MillThenToHand`] but the controller may take *up to* `take`
-    /// matching cards (not just one). `take` is a [`Value`] so it can scale
-    /// with game state — Gather the Pack's spell mastery ("put up to two
-    /// creature cards instead of one if 2+ instant/sorcery cards are in your
-    /// graveyard").
+    /// [`MillThenToHand`] taking up to `take` matches, a [`Value`] so it can scale
+    /// (Gather the Pack's spell mastery).
     MillThenToHandN {
         amount: Value,
         filter: SelectionRequirement,
@@ -6274,20 +5031,15 @@ pub enum Effect {
         #[serde(default)]
         otherwise: Option<Box<Effect>>,
     },
-    /// The controller mills one card, then runs a sub-effect keyed on the
-    /// milled card's card type: `land` if it's a land, else `creature` if it's
-    /// a creature, else `noncreature` (a nonland noncreature card). Old
-    /// Rutstein — land → Treasure, creature → Insect, else → Blood. The
-    /// sub-effects don't reference the milled card.
+    /// Mill one, then run `land`, `creature` or `noncreature` by its type (Old
+    /// Rutstein). The branches don't reference the card.
     MillThenBranchByType {
         land: Box<Effect>,
         creature: Box<Effect>,
         noncreature: Box<Effect>,
     },
-    /// The resolved player mills `amount` cards; then the ability's controller
-    /// draws one card for each milled card matching `filter` (Coerced
-    /// Confession — "target player mills four cards; you draw a card for each
-    /// creature card put into their graveyard this way").
+    /// `who` mills `amount`; the controller draws per milled `filter` card
+    /// (Coerced Confession).
     MillThenDrawPerType { who: Selector, amount: Value, filter: SelectionRequirement },
     /// Reveal cards from the top of each resolved player's library until
     /// `lands` land cards are revealed, then put all revealed cards into
@@ -6297,10 +5049,8 @@ pub enum Effect {
     /// matching `filter` or `max` cards have been milled, whichever comes
     /// first; the milled cards are `Selector::LastMoved` (Helm of Obedience).
     MillUntilMatching { who: Selector, filter: SelectionRequirement, max: Value },
-    /// CR 701.13 with a repeat rider — the resolved player mills two cards; if
-    /// the two milled cards share `axis`, repeat. Sphinx's Tutelage shares a
-    /// colour (nonland cards only); The Tale of Tamiyo shares a card type and
-    /// draws on each repeat.
+    /// CR 701.13 — `who` mills two, repeating while they share `axis`. Sphinx's
+    /// Tutelage; The Tale of Tamiyo draws per repeat.
     MillTwoRepeatSharing {
         who: Selector,
         axis: MillShareAxis,
@@ -6324,42 +5074,29 @@ pub enum Effect {
     /// "Exile that many cards from the bottom of your library" — the
     /// controller's, each stamped `exiled_with = source` (The Temporal Anchor).
     ExileBottomOfLibraryLinked { amount: Value },
-    /// "As many times as you choose, you may exile the top card of your
-    /// library. If the total mana value of the cards exiled this way is
-    /// `limit` or less, [`then`]" (Dance with Calamity). The controller is
-    /// asked before each card; a headless seat keeps exiling while the total
-    /// is below `stop_at`. The cards are recorded for
-    /// `Selector::ExiledThisResolution`.
+    /// Dance with Calamity: repeatedly may exile the top card; if the total mana
+    /// value is `limit` or less, `then`. Headless keeps going below `stop_at`.
+    /// Cards are recorded for `Selector::ExiledThisResolution`.
     ExileTopPushingLuck { stop_at: u32, limit: u32, then: Box<Effect> },
     /// "If a source you control would deal noncombat damage to a permanent or
     /// player this turn, it deals that much damage plus `amount` instead"
     /// (Taii Wakeen, Perfect Shot). Turn-scoped, stacking across activations.
     YourNoncombatDamageBonusThisTurn { amount: Value },
-    /// CR 702.170 — "exile that spell instead of putting it into your graveyard
-    /// as it resolves; it becomes plotted" (Lilah, Undefeated Slickshot).
-    /// Stamps the resolving spell so its post-resolution route is
-    /// `ZoneDest::ExilePlotted`.
+    /// CR 702.170 — the resolving spell is exiled plotted instead of the
+    /// graveyard (Lilah, Undefeated Slickshot).
     PlotSpellOnResolve { what: Selector },
-    /// "Exile that card with a [counter] counter on it instead of putting it
-    /// into your graveyard as it resolves" (Goliath Daydreamer's dream
-    /// counter). Stamps the spell `what` names on the stack; a spell that
-    /// doesn't resolve isn't exiled.
+    /// The spell `what` names is exiled with a `counter` counter as it resolves
+    /// (Goliath Daydreamer); not if it doesn't resolve.
     ExileSpellOnResolveWithCounter { what: Selector, counter: crate::card::CounterType },
-    /// CR 702.62a — "exile that card with `time_counters` time counters on it
-    /// instead of putting it into your graveyard as it resolves. Then if the
-    /// exiled card doesn't have suspend, it gains suspend" (Gandalf of the
-    /// Secret Fire). Stamps the spell `what` names on the stack.
+    /// CR 702.62a — the spell `what` names is exiled with `time_counters` as it
+    /// resolves and gains suspend (Gandalf of the Secret Fire).
     SuspendSpellOnResolve { what: Selector, time_counters: u8 },
-    /// "You may cast a spell from among [filter] cards in exile without paying
-    /// its mana cost" — during the resolution, timing ignored (Goliath
-    /// Daydreamer: cards you own in exile with dream counters on them).
-    /// `filter` is read for the controller.
+    /// "You may cast a spell from among [filter] cards in exile free" during the
+    /// resolution, timing ignored (Goliath Daydreamer).
     MayCastFromExileFree { filter: SelectionRequirement },
-    /// "You may cast up to `count` [filter] spells with total mana value
-    /// `total_mana_value` or less from your graveyard and/or hand without
-    /// paying their mana costs. If those spells would be put into your
-    /// graveyard, exile them instead." (Invoke Calamity). The picks are cast
-    /// one after another during the resolution (the second resolves first).
+    /// Invoke Calamity: cast up to `count` `filter` spells with total mana value
+    /// ≤ `total_mana_value` free from graveyard and/or hand, exiled instead of
+    /// going to the graveyard. Cast in sequence (the second resolves first).
     CastUpToFreeFromHandAndGraveyard { count: u32, filter: SelectionRequirement, total_mana_value: u32 },
     /// "You may cast a [filter] spell from your hand, from your graveyard, or
     /// from among cards you own in exile without paying its mana cost" (Kaya
@@ -6369,60 +5106,41 @@ pub enum Effect {
     /// your hand without paying its mana cost. If you don't, `else_`"
     /// (Kellan, the Kid).
     MayCastPermanentFromHandFree { max_mv: Value, else_: Box<Effect> },
-    /// The general form: "you may cast a [filter] spell with mana value
-    /// `max_mv` or less from your hand without paying its mana cost. If you
-    /// don't, `else_`" (Baral and Kari Zev's "lesser mana value that shares a
-    /// card type"). `filter` is read off the hand card.
+    /// "You may cast a [filter] spell with mana value ≤ `max_mv` from hand free;
+    /// if you don't, `else_`" (Baral and Kari Zev).
     MayCastFromHandFreeMatching { filter: SelectionRequirement, max_mv: Value, else_: Box<Effect> },
-    /// "[`who`] may cast a spell from their hand without paying its mana
-    /// cost. If they do, `if_cast`. If they don't, `else_`" (Cmdr. Troi,
-    /// Outgoing Empath). `who` picks among their nonland hand cards (headless:
-    /// the priciest); `if_cast` runs as the controller with `Target(0)` bound
-    /// to the cast spell.
+    /// "[`who`] may cast a spell from hand free. If they do, `if_cast`, else
+    /// `else_`" (Cmdr. Troi). Headless casts the priciest; `if_cast` runs as the
+    /// controller with `Target(0)` = the cast spell.
     PlayerMayCastFromHandFree { who: PlayerRef, if_cast: Box<Effect>, else_: Box<Effect> },
     /// Assimilate (Star Trek) — each card `what` names enters under the
     /// controller's control (a permanent: its control is gained) with a +1/+1
     /// counter, an artifact creature whose only creature type is Borg.
     Assimilate { what: Selector },
-    /// "[who] reveals cards from the top of their library until they reveal a
-    /// creature card. Assimilate that card. … the rest on the bottom in a
-    /// random order" (The Borg Queen); with `one_of_all`, each player `who`
-    /// names reveals and only one of the creature cards is assimilated (Gift
-    /// of Perfection).
+    /// "Reveal until a creature card, assimilate it, the rest on the bottom at
+    /// random" (The Borg Queen); `one_of_all`: every `who` reveals and only one
+    /// card is assimilated (Gift of Perfection).
     RevealUntilCreatureAssimilate { who: PlayerRef, one_of_all: bool },
-    /// Process (Battle for Zendikar / OGW) — "you may put up to `count` cards
-    /// an opponent owns from exile into that player's graveyard. If you do,
-    /// [`then`]." The controller is asked yes/no (`Decision::OptionalTrigger`);
-    /// on yes the oldest `count` eligible exile cards (owned by an opponent of
-    /// the controller) move to their owners' graveyards and `then` runs. With
-    /// no eligible cards, or on decline, `then` is skipped (the "if you do"
-    /// rider). `then` reads the trigger's chosen target(s) via the shared
-    /// context — Wasteland Strangler's -3/-3, Mind Raker's discard, etc.
+    /// Process — "you may put up to `count` cards an opponent owns from exile
+    /// into their graveyard. If you do, [`then`]." On yes the oldest eligible
+    /// cards move; none eligible or declined skips `then`, which reads the
+    /// trigger's targets (Wasteland Strangler).
     Process { count: u32, then: Box<Effect> },
-    /// Each player the selector resolves to mills half the cards in their
-    /// *own* library (rounded up when `rounded_up`, else down). Per-player —
-    /// `Mill`'s global amount can't scale to each target's own library size.
-    /// Lord Xander, the Collector ("target opponent mills half their library,
-    /// rounded down").
+    /// Each resolved player mills half their own library (rounded per
+    /// `rounded_up`), which `Mill` can't scale per player. Lord Xander.
     MillHalf { who: Selector, rounded_up: bool },
-    /// Each player the selector resolves to discards half the cards in their
-    /// *own* hand (rounded up when `rounded_up`, else down), chosen the same
-    /// way as `Discard` (random pick-first for the bot harness). Lord Xander
-    /// ("target opponent discards half the cards in their hand, rounded down").
+    /// Each player discards half their own hand (rounded per `rounded_up`), picked
+    /// as `Discard` does. Lord Xander.
     DiscardHalf { who: Selector, rounded_up: bool },
-    /// Each player the selector resolves to sacrifices half the permanents
-    /// they control matching `filter` (rounded up when `rounded_up`, else
-    /// down). Per-player. Lord Xander ("target opponent sacrifices half the
-    /// permanents they control, rounded down" — `filter` = `Permanent`).
+    /// Each player sacrifices half their own `filter` permanents (rounded per
+    /// `rounded_up`). Lord Xander.
     SacrificeHalf { who: Selector, filter: SelectionRequirement, rounded_up: bool },
     /// "[Each player] chooses up to `keep` [filter] they control, then
     /// sacrifices the rest" (Archfiend of Depravity). Each keeps its best
     /// (the inverse of `Sacrifice`'s weakest-first pick).
     SacrificeAllButN { who: Selector, keep: Value, filter: SelectionRequirement },
-    /// "For each creature, its controller sacrifices it unless they pay
-    /// `amount` life" (Killing Wave): APNAP, each player picks which of
-    /// their creatures to pay for (no more than their life covers), then
-    /// the life is paid and the rest are sacrificed together.
+    /// Killing Wave: APNAP, each player chooses which creatures to pay `amount`
+    /// life for (within their life); the rest are sacrificed together.
     EachCreatureSacrificedUnlessLife { amount: Value },
     /// "Each opponent chooses a [filter] card in their graveyard. Put those
     /// cards [to]" (Dredge the Mire) — each chooser gives up its least
@@ -6440,10 +5158,9 @@ pub enum Effect {
     /// cards discarded this way loses life equal to that mana value" (Scythe
     /// Specter). Reads this resolution's discards.
     GreatestDiscardersLoseLife,
-    /// "As this enters, each player chooses war or peace" (Archangel of
-    /// Strife): each seat's pick is stamped on the source's `modes_chosen`
-    /// (by seat; 0 war, 1 peace) for `StaticEffect::WarOrPeace`. A bot picks
-    /// war for the source's controller and peace for everyone else.
+    /// Archangel of Strife: each seat's war (0) / peace (1) pick is stamped on
+    /// `modes_chosen` for `StaticEffect::WarOrPeace`. Bots: war for the
+    /// controller, peace for others.
     EachPlayerChoosesWarOrPeace,
     /// "Each opponent sacrifices a permanent of their choice that shares a
     /// card type with [what]" (Martyr's Bond) — `what` read through LKI.
@@ -6459,10 +5176,8 @@ pub enum Effect {
     /// orders the bottom `count` cards of their library (the ones an effect
     /// just bottomed). Runs after the effect that bottomed them.
     OrderLibraryBottom { who: PlayerRef, count: Value },
-    /// "Look at the top `count` cards of your library. You may reveal up to
-    /// `take` cards matching `filter` from among them, then put those on top of
-    /// your library and the rest on the bottom in any order." Fertile Thicket
-    /// (up to one basic land), Munda, Ambush Leader (any number of Allies).
+    /// Look at the top `count`; reveal up to `take` `filter` cards and put them
+    /// on top, the rest on the bottom in any order. Fertile Thicket, Munda.
     LookTopKeepMatchingOnTop {
         who: PlayerRef,
         count: Value,
@@ -6473,11 +5188,9 @@ pub enum Effect {
     /// put N +1/+1 counters on it and it becomes monstrous (emitting
     /// `GameEvent::BecameMonstrous`). Once monstrous, this is a no-op.
     Monstrosity { n: Value },
-    /// CR 701.15 — *goad* each creature `what` resolves to: the resolving
-    /// effect's controller is added to the creature's `goaded_by` list.
-    /// Goaded creatures attack each combat if able and attack a player other
-    /// than a goader if able, until that goader's next turn. Disrupt Decorum
-    /// (mass goad), Bloodthirsty Blade.
+    /// CR 701.15 — goad each `what` creature: the controller joins its
+    /// `goaded_by`, so it must attack each combat, a non-goader if able, until
+    /// that goader's next turn. Disrupt Decorum.
     Goad { what: Selector },
     /// CR 701.15a — "[what] is no longer goaded" (Serene Sleuth): ends every
     /// resolved and held goad on each creature. A static that says a creature
@@ -6486,10 +5199,9 @@ pub enum Effect {
     /// "…is goaded for the rest of the game" (Nettling Nuisance): `Goad`, and
     /// the goad never expires.
     GoadForTheGame { what: Selector },
-    /// Radiant Performer — CR 707.10: copy the spell `what` names once for
-    /// each other permanent or player it could target, each copy (the
-    /// resolving controller's) aimed at a different one. Spells only; a
-    /// targeted ability is not copied.
+    /// Radiant Performer (CR 707.10): copy the spell `what` once per other
+    /// permanent or player it could target, each copy (yours) aimed at a
+    /// different one. Spells only.
     CopySpellForEachOtherLegalTarget { what: Selector },
     /// Precursor Golem — CR 707.10: the spell's CASTER copies the spell `what`
     /// names once for each other permanent matching `filter` it could target,
@@ -6498,10 +5210,9 @@ pub enum Effect {
     /// CR 701.15 / 611.2b — `Goad` that lasts as long as `hold` does rather
     /// than until the goader's next turn (Hot Pursuit, Immortal Obligation).
     GoadWhile { what: Selector, hold: GoadLasts },
-    /// Territorial Hellkite — choose an opponent at random that the source
-    /// didn't attack during its controller's last combat and remember it as the
-    /// source's `chosen_player` (its `MustAttackChosenPlayer` target); with none
-    /// to choose, forget the choice and tap the source.
+    /// Territorial Hellkite: remember a random opponent the source didn't attack
+    /// last combat as its `chosen_player` (`MustAttackChosenPlayer`); with none,
+    /// forget it and tap the source.
     ChooseRandomOpponentNotAttackedLastCombat,
     /// "You may attach to it any number of [what]" — the controller chooses
     /// which of the permanents `what` resolves to become attached to `to`
@@ -6524,11 +5235,9 @@ pub enum Effect {
     /// "Reverse the game's turn order" (Aeon Engine). A second reversal
     /// restores the original order.
     ReverseTurnOrder,
-    /// "Reveal the top [count] cards of your library. You may put a permanent
-    /// card from among them onto the battlefield [with an indestructible
-    /// counter]. You may put a permanent card from among them into your hand.
-    /// Put the rest into your graveyard" (Wakanda Forever!). The picks are the
-    /// engine's: the two highest-mana-value permanent cards.
+    /// Wakanda Forever!: reveal the top `count`; one permanent card onto the
+    /// battlefield (with an indestructible counter if set), one into hand, the
+    /// rest to the graveyard. The engine picks the two priciest permanents.
     RevealDeployOneTakeOne { count: Value, indestructible: bool },
     /// "Choose one at random —" (Umaro, Raging Yeti). Not a die roll. The
     /// mode is picked as it resolves, and a targeted mode takes the
@@ -6539,10 +5248,8 @@ pub enum Effect {
     /// card chosen this way to the battlefield under your control" (Rejoin
     /// the Fight).
     EachOpponentReturnsFromYourGraveyard { filter: crate::card::SelectionRequirement },
-    /// The creature spell(s) `what` names, now on the stack, gain haste
-    /// and/or "sacrifice at the beginning of the next end step" as they
-    /// resolve — the rider on a free cast (Strago and Relm). Run after the
-    /// cast.
+    /// Free-cast rider (Strago and Relm): the creature spells `what` names gain
+    /// haste and/or end-step sacrifice as they resolve. Run after the cast.
     GrantCastSpellRiders { what: Selector, haste: bool, sacrifice_eot: bool },
     /// CR 702.88 — the spell(s) `what` names, on the stack, gain rebound
     /// (Ojer Pakpatiq, Deepest Epoch: "whenever you cast an instant spell
@@ -6556,45 +5263,34 @@ pub enum Effect {
     /// paying their mana costs" (Etali, Primal Storm) — Kefka's loop without
     /// the owners' life loss. Lands are skipped.
     CastExiledFree { what: Selector },
-    /// CR 603.7 — "When that creature leaves the battlefield, return this
-    /// card from exile to the battlefield under its owner's control" (Lucius
-    /// the Eternal): a delayed trigger watching `what`, returning the source
-    /// card if it is still in exile when it fires.
+    /// CR 603.7 — Lucius the Eternal: when `what` leaves the battlefield, return
+    /// this card from exile if it's still there.
     ReturnSourceWhenTargetLeaves { what: Selector },
-    /// "For each opponent, choose a [filter] that player controls. Destroy
-    /// the chosen permanents" (Ultimate Magic: Meteor). The effect's
-    /// controller picks one per opponent; all are destroyed together.
-    /// `random_one`: "Destroy one of them chosen at random" (Chaos Defiler) —
-    /// only one pick, drawn from the game's RNG, is destroyed.
+    /// "For each opponent, choose a [filter] that player controls. Destroy the
+    /// chosen permanents" (Ultimate Magic: Meteor). `random_one`: only one pick,
+    /// chosen by the game RNG, is destroyed (Chaos Defiler).
     DestroyOnePerOpponent {
         filter: crate::card::SelectionRequirement,
         #[serde(default)]
         random_one: bool,
     },
-    /// "For each kind of counter among `who`'s permanents matching `filter`,
-    /// put a counter of that kind on [`onto`]" — keyword counters are kinds
-    /// too (CR 122.1b). Several recipients take the kinds in turn (Exotic
-    /// Pets' "either of those tokens"). With `or_plus_one` each kind may be
-    /// a +1/+1 counter instead (Bribe Taker): only shield and keyword kinds
-    /// are kept, every other kind becomes +1/+1.
+    /// "For each kind of counter among `who`'s `filter` permanents, put one of
+    /// that kind on [`onto`]" — keyword counters included (CR 122.1b); several
+    /// recipients take kinds in turn (Exotic Pets). `or_plus_one` (Bribe Taker):
+    /// only shield and keyword kinds are kept, the rest become +1/+1.
     AddCounterOfEachKindAmong { onto: Selector, who: PlayerRef, filter: crate::card::SelectionRequirement, or_plus_one: bool },
     /// "For each kind of counter on target permanent or player, give that
     /// permanent or player another counter of that kind" (Skyship Plunderer).
     AddCounterOfEachKindOn { what: Selector },
-    /// "For each kind of counter on target permanent, put another counter of
-    /// that kind on it or remove one from it" (Dramatist's Puppet, CR 122.1).
-    /// The controller's pick per kind: more of a helpful kind on its own side,
-    /// less of it on an opponent's (a harmful kind the other way round).
+    /// Dramatist's Puppet (CR 122.1): per counter kind on the target, add or
+    /// remove one — more helpful kinds on your side, fewer on theirs.
     AddOrRemoveCounterOfEachKindOn { what: Selector },
-    /// "Choose a counter on a permanent you control. Put a counter of that
-    /// kind on [`what`] if it doesn't have a counter of that kind" (Aven
-    /// Courier). The kind is picked as it resolves: a keyword counter, then
-    /// shield, then +1/+1, never a harmful kind.
+    /// Aven Courier: copy a counter kind from your permanent onto `what` if it
+    /// lacks it; picks keyword, then shield, then +1/+1, never harmful.
     AddMissingCounterKindFromYours { what: Selector },
-    /// "Choose a kind of counter on a creature you control. Put a counter of
-    /// that kind on each other creature you control" (Contractual
-    /// Safeguard). `shield_first` is its addendum: a shield counter goes on
-    /// your best creature first, and may be the kind chosen.
+    /// Contractual Safeguard: a counter kind on your creature goes onto each
+    /// other creature you control. `shield_first`: a shield counter on your best
+    /// creature first, which may be the kind chosen.
     SpreadCounterKindToOthers { shield_first: bool },
     /// "Put the same number of each kind of counter on [`to`]" as [`from`]
     /// has, keyword counters included (Denry Klin, Editor in Chief).
@@ -6618,73 +5314,59 @@ pub enum Effect {
     /// Master): each gets the other's current power as a layer-7b set for
     /// `duration`. Nothing happens unless both are creatures on the battlefield.
     ExchangePower { a: Selector, b: Selector, duration: Duration },
-    /// "Choose left or right. Starting with you and proceeding in the chosen
-    /// direction, each player chooses a creature controlled by the next player
-    /// in that direction. Each player gains control of the creature they
-    /// chose" (Order of Succession, CR 101.4). The caster picks the direction
-    /// that nets it the most; each chooser takes the next player's best.
+    /// Order of Succession (CR 101.4): pick a direction; each player takes a
+    /// creature of the next player that way. The caster picks the direction that
+    /// nets it most; each chooser takes the next player's best.
     EachPlayerTakesCreatureOfNext,
     /// Lim-Dûl's Vault — look at the top five; as many times as you choose,
     /// pay 1 life, bottom them and look at the next five; then shuffle and put
     /// the last five on top. The controller is asked before each dig.
     LookTopFiveDigForLife,
-    /// Put one `body` trigger on the stack per permanent `what` resolves to,
-    /// sourced from that permanent (so `Selector::This` is it), targets
-    /// picked as it triggers. The "tokens … except they have 'When this token
-    /// enters, …'" rider (Aggressive Biomancy): the copy's own enters event
-    /// has already passed by the time a granted ability could see it.
+    /// One `body` trigger per `what` permanent, sourced from it (`Selector::This`)
+    /// with targets picked as it triggers — the token-copy "except it has 'When
+    /// this enters, …'" rider (Aggressive Biomancy), whose enters event a granted
+    /// ability would already have missed.
     EachPushesTrigger { what: Selector, body: Box<Effect> },
     /// CR 700.8 — "Each player chooses a party from among creatures they
     /// control, then sacrifices the rest" (Stick Together). Each keeps a
     /// largest party of their strongest creatures.
     EachPlayerKeepsPartySacrificesRest,
-    /// "Look at the top `count` cards of your library. You may reveal a
-    /// Cleric card, a Rogue card, a Warrior card, and/or a Wizard card from
-    /// among them and put those cards into your hand. Put the rest on the
-    /// bottom in a random order" (Harper Recruiter): a largest party.
+    /// Harper Recruiter: look at the top `count`, take a Cleric, Rogue, Warrior
+    /// and/or Wizard (the largest party), bottom the rest at random.
     LookTopTakeParty { who: PlayerRef, count: Value },
-    /// "Reveal the top `count` cards of your library. For each card type
-    /// among noncreature spells you've cast this turn, you may put a card of
-    /// that type from among the revealed cards into your hand. Put the rest
-    /// on the bottom of your library in a random order" (Hurkyl, Master
-    /// Wizard; `game/effects/reveal_cast_types.rs`).
+    /// Hurkyl, Master Wizard: reveal the top `count`; take one card per card type
+    /// among noncreature spells you cast this turn; the rest bottom at random
+    /// (`game/effects/reveal_cast_types.rs`).
     RevealTopTakeOnePerCastType { who: PlayerRef, count: Value },
-    /// "Choose a creature you control, then each opponent chooses a creature
-    /// they control with equal or lesser power. If you chose a creature this
-    /// way, exile each creature not chosen by any player this way" (Sculpted
-    /// Sunburst; `game/effects/sculpted_sunburst.rs`).
+    /// Sculpted Sunburst: you choose a creature, each opponent one with equal or
+    /// lesser power; exile every unchosen creature
+    /// (`game/effects/sculpted_sunburst.rs`).
     ChooseCreaturesByPowerExileRest,
     /// "Return target creature to its owner's hand. Gain control of all Auras
     /// and Equipment that were attached to it, then attach them to another
     /// creature" (Fumble; `game/effects/fumble.rs`).
     BounceStealAttachmentsReattach { what: Selector },
-    /// "Search your library for up to `max` creature cards with different
-    /// powers and reveal them. An opponent chooses `back` of those cards.
-    /// Shuffle the chosen cards into your library and put the rest into your
-    /// hand" (Threats Undetected; `game/effects/threats_undetected.rs`).
+    /// Threats Undetected: search up to `max` creatures with different powers; an
+    /// opponent shuffles `back` of them in, the rest to hand
+    /// (`game/effects/threats_undetected.rs`).
     SearchDistinctPowersOpponentReturnsTwo { max: u32, back: u32 },
     /// Musician's "{T}: Put a music counter on target creature. If it doesn't
     /// have [the upkeep toll], it gains that ability" (`game/effects/music.rs`).
     AddMusicCounterGrantUpkeepToll { what: Selector },
-    /// "Remove target blocking creature from combat. Creatures it was
-    /// blocking that hadn't become blocked by another creature this combat
-    /// become unblocked, then it blocks an attacking creature of your choice"
-    /// (Balduvian Warlord; `game/effects/reblock.rs`).
+    /// Balduvian Warlord: remove a blocker from combat (its attackers unblocked
+    /// unless blocked by another), then it blocks an attacker of your choice
+    /// (`game/effects/reblock.rs`).
     RemoveBlockerThenReblock { what: Selector },
     /// Beamsplitter Mage — `CopyForEachOtherTargetableCreature` with one
     /// copy, aimed at the other creature its caster chooses
     /// (`game/effects/spell_copy_others.rs`).
     CopyForChosenOtherTargetableCreature,
-    /// "Look at the top `count` cards of your library. Exile one of them face
-    /// down with a `kind` counter on it, then put the rest on the bottom of
-    /// your library in any order" (The Dragon-Kami Reborn;
-    /// `game/effects/hatching.rs`).
+    /// The Dragon-Kami Reborn: look at the top `count`, exile one face down with
+    /// a `kind` counter, bottom the rest (`game/effects/hatching.rs`).
     LookTopExileOneFaceDownWithCounter { count: Value, kind: crate::card::CounterType },
-    /// The rest of a token-copy's "except" clause, written into the tokens
-    /// this resolution created (`Selector::LastCreatedTokens`) as copiable
-    /// values: artifact subtypes and activated abilities `CreateTokenCopyOf`
-    /// has no field for (Brenard's "1/1 Food Golem … with '{2}, {T},
-    /// Sacrifice this token: You gain 3 life'").
+    /// The rest of a token copy's "except" clause, stamped as copiable values on
+    /// `Selector::LastCreatedTokens`: artifact subtypes and activated abilities
+    /// `CreateTokenCopyOf` has no field for (Brenard's Food Golem).
     StampTokenCopyExceptions {
         artifact_subtypes: Vec<crate::card::ArtifactSubtype>,
         activated: Vec<ActivatedAbility>,
@@ -6694,18 +5376,16 @@ pub enum Effect {
         #[serde(default)]
         triggered: Vec<TriggeredAbility>,
     },
-    /// "Return this card from your graveyard to the battlefield attached to
-    /// [host]" with the host a declared selector, so an activated ability
-    /// announces its target (Gryff's Boon). `ReturnSelfAttachedToTarget` reads
-    /// a bare slot 0 no ability declares.
+    /// "Return this card attached to [host]" with a declared selector host, so an
+    /// activated ability announces it (Gryff's Boon). `ReturnSelfAttachedToTarget`
+    /// reads an undeclared slot 0.
     ReturnSelfAttachedTo { host: Selector },
     /// "[what] can't attack you or planeswalkers you control" for `duration`
     /// — `Keyword::CantAttackPlayer` naming the resolving controller.
     GrantCantAttackYou { what: Selector, duration: Duration },
-    /// Orzhov Advokist — "each player may put `counters` +1/+1 counters on a
-    /// creature they control. If a player does, creatures that player
-    /// controls can't attack you or planeswalkers you control until your
-    /// next turn." The creature is the taker's greatest-power one.
+    /// Orzhov Advokist: each player may put `counters` +1/+1 counters on their
+    /// strongest creature; those who do can't attack you or your planeswalkers
+    /// until your next turn.
     EachPlayerMayCounterForPeace { counters: u32 },
     /// Agitator Ant — "each player may put `counters` +1/+1 counters on a
     /// creature they control. Goad each creature that had counters put on it
@@ -6715,33 +5395,24 @@ pub enum Effect {
     /// player; per vote, `on_opponent` runs with the voted-for opponent bound
     /// as `PlayerRef::Triggerer`, or `on_you` when the controller got it.
     EachPlayerVotesForAPlayer { on_opponent: Box<Effect>, on_you: Box<Effect> },
-    /// "For each player, choose friend or foe. Each friend [friend]. Each foe
-    /// [foe]." (Battlebond: Zndrsplt's Judgment, Pir's Whim). The controller
-    /// chooses for every living player, itself included, in turn order; then
-    /// each friend runs `friend` and each foe runs `foe`, as that player
-    /// (`EachPlayerDoes`). Untargeted.
+    /// Battlebond friend or foe (Zndrsplt's Judgment): the controller labels every
+    /// living player, itself included; each then runs `friend` or `foe` as that
+    /// player (`EachPlayerDoes`). Untargeted.
     FriendOrFoe { friend: Box<Effect>, foe: Box<Effect> },
-    /// "Choose a player. They [first]. Choose a second player to [second].
-    /// Then choose a third player to [third]." (Gluntch, the Bestower): the
-    /// controller names a different living player per body, then each body
+    /// Gluntch, the Bestower: name a different living player per body; each body
     /// runs as its player (`EachPlayerDoes`). Untargeted (CR 115.10).
     ChooseDistinctPlayers(Vec<Effect>),
-    /// CR 701.38 secret council where any player (yourself included) may get
-    /// votes and the count matters (Círdan the Shipwright): `per_vote` runs
-    /// once per vote a player received, then `unvoted` once for each player
-    /// who received none — both with that player bound as
-    /// `PlayerRef::Triggerer`.
+    /// CR 701.38 secret council for players, counts mattering (Círdan the
+    /// Shipwright): `per_vote` per vote received, `unvoted` per player with none,
+    /// each with that player as `PlayerRef::Triggerer`.
     SecretCouncilPlayerVote { per_vote: Box<Effect>, unvoted: Box<Effect> },
-    /// CR 701.38 secret council for a permanent (Trap the Trespassers): each
-    /// player votes for a permanent matching `filter` (read with the
-    /// controller as "you"); `per_vote` then runs once per vote with the
-    /// voted-for permanent as `Target(0)`.
+    /// CR 701.38 secret council for a permanent (Trap the Trespassers): votes for
+    /// `filter` permanents (controller as "you"); `per_vote` per vote with the
+    /// permanent as `Target(0)`.
     SecretCouncilPermanentVote { filter: SelectionRequirement, per_vote: Box<Effect> },
-    /// CR 701.38 — "Each player secretly votes for up to one [filter], then
-    /// those votes are revealed. If no [permanent] got votes, [on_none].
-    /// Otherwise, [on_most] each [permanent] with the most votes or tied for
-    /// most votes" (Vault 11: Voter's Dilemma). A voter may abstain;
-    /// `on_most` runs once per top permanent, as `Target(0)`.
+    /// CR 701.38 — each player secretly votes for up to one [filter]; no votes
+    /// runs `on_none`, otherwise `on_most` once per top (tied) permanent as
+    /// `Target(0)`. Abstaining is allowed. Vault 11: Voter's Dilemma.
     SecretCouncilPermanentVoteMost {
         filter: SelectionRequirement,
         on_most: Box<Effect>,
@@ -6751,11 +5422,10 @@ pub enum Effect {
     /// All silence: `all_silence` damage to each. All snitch: `all_snitch` to
     /// each. Otherwise `mixed` to each opponent who chose silence.
     OpponentsChooseSilenceOrSnitch { all_silence: u32, all_snitch: u32, mixed: u32 },
-    /// "Each opponent chooses [option labels]. For each player who chose X,
-    /// …" (Master of Ceremonies, Seize the Spotlight): every living opponent
-    /// picks in turn order, then each pick's body runs in that order with
-    /// `PlayerRef::CurrentVoter` bound to the opponent who chose it. Not a
-    /// vote (CR 701.38) — no ballot modifiers, no `Voted` events.
+    /// "Each opponent chooses [option]. For each player who chose X, …" (Master
+    /// of Ceremonies): picks in turn order, then each pick's body runs with
+    /// `PlayerRef::CurrentVoter` bound. Not a vote (CR 701.38): no ballot
+    /// modifiers or `Voted` events.
     EachOpponentChooses { prompt: String, options: Vec<VoteOption> },
     /// Kwain, Itinerant Meddler — "Each player may draw a card, then each
     /// player who drew a card this way gains `life` life." Asked APNAP; the
@@ -6768,22 +5438,16 @@ pub enum Effect {
     /// Mystic Barrier — "choose left or right", stamped on the source (left:
     /// toward the next seat, the CR 803.1a direction; right: the previous).
     ChooseAttackDirection,
-    /// Teyo, Geometric Tactician's −2 — "choose left or right. Until your
-    /// next turn, each player may attack only the nearest opponent in the
-    /// last chosen direction and planeswalkers controlled by that opponent."
-    /// The Mystic Barrier restriction without a permanent: stamped on
-    /// `ColdState::temporary_attack_direction` and lifted as the
-    /// controller's next turn begins.
+    /// Teyo, Geometric Tactician's −2: Mystic Barrier's attack-direction
+    /// restriction without a permanent, stamped on
+    /// `ColdState::temporary_attack_direction` until the controller's next turn.
     ChooseAttackDirectionUntilYourNextTurn,
-    /// Selective Obliteration — "each player chooses a color. Then exile each
-    /// permanent unless it's colorless or it's only the color its controller
-    /// chose." Each player picks the color most common among their own
-    /// permanents.
+    /// Selective Obliteration: each player picks a color (their most common);
+    /// exile every permanent that isn't colorless or only that color.
     EachPlayerChoosesColorExileOthers,
-    /// Cloudform / Lightform — "it becomes an Aura with enchant creature.
-    /// Manifest the top card of your library and attach this to it" (CR
-    /// 701.34). The printed enchantment becomes an Aura here (swapped in
-    /// through `temporary_copies`, reverted as it leaves the battlefield).
+    /// Cloudform (CR 701.34): manifest the top card and attach this to it as an
+    /// Aura with enchant creature (via `temporary_copies`, reverting as it
+    /// leaves).
     ManifestTopAttachSource,
     /// Jeskai Infiltrator — "exile it and the top card of your library in a
     /// face-down pile, shuffle that pile, then manifest those cards."
@@ -6805,16 +5469,13 @@ pub enum Effect {
     /// gains control of all nonland permanents other than [this] controlled
     /// by the next player in the chosen direction."
     RotateNonlandPermanents,
-    /// Aminatou's Augury — "for each nonland card type, you may cast a spell
-    /// of that type from among [what] without paying its mana cost" this
-    /// turn. Every nonland card is offered; each cast spends one of its types
-    /// from the group's budget (`Player::free_type_cast_budgets`).
+    /// Aminatou's Augury: this turn cast one spell of each nonland card type from
+    /// `what` free; each cast spends one of its types
+    /// (`Player::free_type_cast_budgets`).
     GrantFreeCastOnePerCardType { what: Selector },
-    /// Yennett — "reveal the top card of your library. You may cast it
-    /// without paying its mana cost if it matches `filter`. If you don't
-    /// cast it, draw a card." `land_or_hand` is Ziatora's Envoy's shape: a
-    /// land on top may be played instead, and a miss is put into your hand
-    /// rather than drawn.
+    /// Yennett: reveal the top card; cast it free if it matches `filter`, else
+    /// draw. `land_or_hand` (Ziatora's Envoy): a land may be played instead, and a
+    /// miss goes to hand rather than drawing.
     CastTopFreeIfElseDraw {
         filter: crate::card::SelectionRequirement,
         #[serde(default)]
@@ -6824,25 +5485,21 @@ pub enum Effect {
     /// that card without paying its mana cost. If you don't, exile it." A
     /// land needs a land play left on your own turn.
     PlayTopFreeElseExile,
-    /// "You may play lands … from among [what]" during the resolution (Gix,
-    /// Yawgmoth Praetor's ruling): one land in exile or your graveyard, on
-    /// your turn with a land play left (CR 305.2b / 305.3). Pair with
-    /// `CastAnyOrderWithoutPaying` for the spells.
+    /// "You may play lands from among [what]" during the resolution (Gix,
+    /// Yawgmoth Praetor ruling): one land, on your turn with a land play left
+    /// (CR 305.2b / 305.3). Pair with `CastAnyOrderWithoutPaying`.
     PlayLandAmongNow { what: Selector },
     /// Ulalek, Fused Atrocity — "copy all spells you control, then copy all
     /// other activated and triggered abilities you control" (CR 707.10).
     CopyAllSpellsAndAbilitiesYouControl,
-    /// Benthic Anomaly — "for each opponent, choose a creature that player
-    /// controls. Create a token that's a copy of one of those creatures,
-    /// except its power and toughness are those creatures' totals and it's a
-    /// colorless Eldrazi creature." The controller's choices; headless, each
-    /// opponent's greatest-power creature and a copy of the priciest.
+    /// Benthic Anomaly: choose a creature per opponent; token-copy one of them
+    /// with P/T equal to the choices' totals, as a colorless Eldrazi. Headless:
+    /// each opponent's strongest, copying the priciest.
     CopyOnePerOpponentWithTotalStats,
     /// "Copy the next loyalty ability you activate this turn" `copies` times
-    /// (Jaya's Phoenix: once; Repeated Reverberation: twice). Adds a one-shot
-    /// `LoyaltyCopyGrant` to the controller. `linked`: one "when you next"
-    /// shared with the source's spell rider — whichever fires first spends
-    /// the other (`DropLinkedLoyaltyCopies`).
+    /// (Jaya's Phoenix) via a one-shot `LoyaltyCopyGrant`. `linked`: shares one
+    /// "when you next" with the source's spell rider; whichever fires spends the
+    /// other (`DropLinkedLoyaltyCopies`).
     CopyNextLoyaltyAbility {
         copies: u32,
         #[serde(default)]
@@ -6859,20 +5516,17 @@ pub enum Effect {
     /// by spending `min_mana` or more mana to activate it, copy that ability"
     /// (Dynaheir, Invoker Adept).
     CopyNextCostlyAbilityThisTurn { min_mana: u32 },
-    /// Leori, Sparktouched Hunter — "choose a planeswalker type. Until end of
-    /// turn, whenever you activate an ability of a planeswalker of that type,
-    /// copy that ability." The type is the one most common among the
-    /// planeswalkers the controller has on the battlefield and in hand.
+    /// Leori, Sparktouched Hunter: this turn, copy each activated ability of a
+    /// planeswalker of the chosen type (your most common on battlefield and in
+    /// hand).
     CopyLoyaltyAbilitiesOfChosenTypeThisTurn,
-    /// Guff Rewrites History — each resolved permanent's owner shuffles it
-    /// into their library; each player who controlled one exiles from the
-    /// top until a nonland card, puts the rest on the bottom in a random
-    /// order, and may cast that card without paying its mana cost.
+    /// Guff Rewrites History: owners shuffle the permanents in; each player who
+    /// controlled one exiles until a nonland card, bottoms the rest, and may cast
+    /// it free.
     ShuffleInThenCastFromTopFree { what: Selector },
-    /// CR 901.9 — `who` rolls the planar die as an effect (Fractured
-    /// Powerstone): no surcharge, no timing gate. A blank does nothing, chaos
-    /// ensues, or `who` planeswalks. Outside Planechase only "whenever chaos
-    /// ensues" triggers and the roll itself can matter.
+    /// CR 901.9 — `who` rolls the planar die as an effect (no cost, no timing):
+    /// blank, chaos, or planeswalk. Outside Planechase only chaos triggers and
+    /// the roll matter.
     RollPlanarDie { who: PlayerRef },
     /// CR 701.31 — `who` planeswalks (Path of the Schemer's will of the
     /// planeswalkers).
@@ -6886,79 +5540,58 @@ pub enum Effect {
     /// The inverse of [`Suspect`] — clear the `suspected` flag on every creature
     /// `what` resolves to ("~ are no longer suspected", Absolving Lammasu).
     ClearSuspected { what: Selector },
-    /// CR 701.35 — *detain* each permanent `what` resolves to: stamp
-    /// `detained_by = the effect's controller`. A detained permanent can't
-    /// attack or block and its activated abilities can't be activated until
-    /// the detainer's next turn (cleared at that turn's start). Lyev Skyknight.
+    /// CR 701.35 — detain: `detained_by` = the controller; it can't attack, block
+    /// or activate until the detainer's next turn. Lyev Skyknight.
     Detain { what: Selector },
-    /// CR 509.4 — create `definition` under your control *blocking* the
-    /// attacking creature in target slot 0 (`filter` should require an
-    /// attacker — Flash Foliage). No-op if the target isn't attacking; the
-    /// token joins the block map and marks the attacker blocked.
+    /// CR 509.4 — create `definition` blocking the attacker in slot 0 (Flash
+    /// Foliage; `filter` should require an attacker). No-op if it isn't
+    /// attacking.
     CreateTokenBlocking { definition: std::sync::Arc<crate::card::TokenDefinition>, filter: SelectionRequirement },
     /// CR 509.4 — "create … that's blocking that creature" (Brimaz): the
     /// attacker the source blocks, not a target.
     CreateTokenBlockingThat { definition: std::sync::Arc<crate::card::TokenDefinition> },
-    /// "For each creature attacking you or a planeswalker you control, create
-    /// a token that's a copy of that creature and that's blocking that
-    /// creature. Exile those tokens at end of combat." (Mirror Match, CR
-    /// 509.4 / 707.2). The copies block without being declared as blockers.
+    /// Mirror Match (CR 509.4 / 707.2): a blocking token copy of each creature
+    /// attacking you or your planeswalkers, exiled at end of combat.
     CopyAttackersAsBlockers,
-    /// "Choose a creature card in an opponent's graveyard, then that player
-    /// chooses a creature card in your graveyard. You may return those cards
-    /// to the battlefield under their owners' control." (Dawnbreak Reclaimer.)
-    /// An opponent with a creature card must be picked when one exists; with
-    /// none, you still name the opponent who picks from yours.
+    /// Dawnbreak Reclaimer: you pick a creature card in an opponent's graveyard,
+    /// they pick one in yours, and you may return both. An opponent with a
+    /// creature card must be picked when one exists.
     ChooseGraveyardCreaturesEachMayReturn,
-    /// "Search `who`'s library for a card, then that player chooses a card
-    /// name. If you searched for a creature card that doesn't have that name,
-    /// you may put it onto the battlefield under your control. Then that
-    /// player shuffles." (Sphinx Ambassador.)
+    /// Sphinx Ambassador: search `who`'s library for a card; they name a card;
+    /// a creature not of that name may enter under your control; they shuffle.
     SearchTheirLibraryAgainstNamedCard { who: PlayerRef },
-    /// "Tap all untapped [filter] you control. Each one tapped this way deals
-    /// damage equal to its power to `target`. That creature deals damage equal
-    /// to its power divided as its controller chooses among any number of
-    /// those" (Master of the Wild Hunt). The division is asked first, of the
-    /// target's controller; headless it kills the most, smallest first.
+    /// Master of the Wild Hunt: tap your untapped [filter]s, each dealing its
+    /// power to `target`, which divides its power among them. The division is
+    /// asked first, of the target's controller; headless kills the most,
+    /// smallest first.
     TapMatchingDealPowerAndTakeDivided { filter: SelectionRequirement, target: Selector },
     /// "For each player, you choose a creature that player controls. Then each
     /// player sacrifices all other creatures they control that don't share a
     /// creature type with the chosen creature they control" (Winnowing).
     EachPlayerSacrificesUnlikeChosen,
-    /// "You may exile any number of cards from your graveyard with
-    /// `min_types` or more card types among them. If you do, put a permanent
-    /// card from among them onto the battlefield with a finality counter"
-    /// (Winter, Cynical Opportunist). The engine picks the set
-    /// (`effects/graveyard_spread.rs`).
+    /// Winter, Cynical Opportunist: exile any graveyard cards with `min_types`+
+    /// card types among them; if you do, one permanent card among them enters
+    /// with a finality counter. The engine picks (`effects/graveyard_spread.rs`).
     ExileTypeSpreadReturnPermanent { min_types: u32 },
-    /// "Return `count` of them at random to the battlefield and put the rest
-    /// on the bottom of your library" over the spell's targets still in your
-    /// graveyard (Sinister Waltz, after an `ApplyToTargets` that declares
-    /// the graveyard slots).
+    /// Sinister Waltz: of the spell's graveyard targets still there, `count` at
+    /// random return, the rest bottomed (after an `ApplyToTargets` declaring
+    /// the slots).
     ReturnTargetCardsAtRandom { count: Value },
-    /// "Each player exiles all artifact cards from their graveyard, then
-    /// sacrifices all artifacts they control, then puts all cards they
-    /// exiled this way onto the battlefield." (Scrap Mastery.) Each step
-    /// runs for every player, in APNAP order, before the next.
+    /// Scrap Mastery: each player exiles graveyard artifacts, sacrifices their
+    /// artifacts, then returns the exiled ones; each step APNAP before the next.
     EachPlayerRecyclesArtifacts,
-    /// "[Target] of an opponent's choice": you name an opponent (headless,
-    /// the most hostile), who picks a permanent matching `filter` — read with
-    /// **you** as the controller, so "you don't control" means the caster —
-    /// and `body` runs with it bound as `Target(0)` (Volcanic Offering).
-    /// `chooser` names the picking player instead (Bladegriff Prototype's
-    /// "of that player's choice"); `theirs` keeps the pick among the chooser's
-    /// own ("… they control", Magus of the Arena). A "target … of an
-    /// opponent's choice" pick must be a legal target for you (CR 115.4);
-    /// `untargeted` is a plain choice ("target opponent chooses a creature
-    /// they control" — Wei Assassins), where hexproof doesn't stop it. The
-    /// spell's own targets follow the pick, from `Target(1)` on. Nothing
-    /// happens without a match.
-    /// "You and `who` each secretly choose a [filter] that player controls.
-    /// Then those choices are revealed, and that player sacrifices those
-    /// permanents" (Malik, Grim Manipulator). Neither pick sees the other's;
-    /// the same permanent chosen twice is sacrificed once. Headless: you name
-    /// their priciest, they name their cheapest.
+    /// "You and `who` each secretly choose a [filter] that player controls; that
+    /// player sacrifices them" (Malik, Grim Manipulator). A permanent chosen
+    /// twice is sacrificed once. Headless: you name their priciest, they their
+    /// cheapest.
     YouAndPlayerChooseTheirPermanentsToSacrifice { who: PlayerRef, filter: SelectionRequirement },
+    /// "[Target] of an opponent's choice" (Volcanic Offering): you name an
+    /// opponent (headless: the most hostile), who picks a `filter` permanent read
+    /// with *you* as controller; `body` runs with it as `Target(0)`. `chooser`
+    /// names the picker instead (Bladegriff Prototype); `theirs` restricts to the
+    /// chooser's own (Magus of the Arena). The pick must be legal for you to
+    /// target (CR 115.4) unless `untargeted` (Wei Assassins). The spell's own
+    /// targets follow from `Target(1)`. Nothing happens without a match.
     OpponentChoosesPermanentThen {
         filter: SelectionRequirement,
         body: Box<Effect>,
@@ -6969,15 +5602,13 @@ pub enum Effect {
         #[serde(default)]
         untargeted: bool,
     },
-    /// CR 701.49 — Venture into the dungeon: enter the first room of a
-    /// chosen dungeon (auto: Lost Mine of Phandelver) or advance to the
-    /// next room; room abilities resolve inline (`base::dungeons`).
-    /// Resolving the final room completes the dungeon
-    /// (`Player.dungeons_completed`, `EventKind::DungeonCompleted`).
-    /// CR 309.5b/309.6 — the dungeon a player finished leaves the game. Tail
-    /// of the bottommost room's ability so the removal happens as that ability
-    /// finishes resolving, not while it's still on the stack.
+    /// CR 309.5b / 309.6 — the finished dungeon leaves the game. Appended to the
+    /// bottommost room's ability so removal happens as it finishes resolving.
     CompleteDungeon,
+    /// CR 701.49 — venture into the dungeon: enter the first room of a chosen
+    /// dungeon (auto: Lost Mine of Phandelver) or advance; room abilities resolve
+    /// inline (`base::dungeons`). The final room completes it
+    /// (`Player.dungeons_completed`, `EventKind::DungeonCompleted`).
     Venture,
     /// CR 726.2 — "venture into `dungeon`": like [`Effect::Venture`] but the
     /// dungeon is fixed rather than chosen (the initiative's Undercity). A
@@ -6985,40 +5616,28 @@ pub enum Effect {
     VentureInto { dungeon: String },
     /// CR 726 — `who` takes the initiative.
     TakeInitiative { who: PlayerRef },
-    /// CR 701.29 — *fateseal N*: look at the top `amount` cards of each
-    /// targeted opponent's library and put any number of them on the bottom
-    /// (the rest stay on top). The library-side mirror of Scry. AutoDecider
-    /// bottoms nothing; a `wants_ui` controller / scripted decider chooses.
+    /// CR 701.29 — fateseal N: look at the top `amount` of each targeted
+    /// opponent's library and bottom any number. AutoDecider bottoms none.
     Fateseal { who: PlayerRef, amount: Value },
-    /// "Look at the top `count` cards of your library. Put any number of them
-    /// into your hand and the rest into your graveyard. You lose `life_per_card`
-    /// life for each card put into your hand this way." Search for Blex,
-    /// Painful Truths-family digs. AutoDecider takes none (the safe default);
-    /// a scripted/`wants_ui` decider picks the subset.
+    /// Look at the top `count`; any number to hand, the rest to the graveyard,
+    /// losing `life_per_card` per card kept (Painful Truths family).
+    /// AutoDecider keeps none; a scripted / `wants_ui` decider picks.
     DigToHandLoseLife { count: Value, life_per_card: Value },
-    /// CR 701.59 — *collect evidence N*: the controller may exile cards with
-    /// total mana value `amount` or greater from their graveyard; if they do,
-    /// `then` resolves (the "when you do" reflexive payoff). The exile is the
-    /// cost, so `then` only fires when it's paid. Sample Collector. (The
-    /// engine auto-picks the cheapest qualifying set to exile; `then`'s
-    /// targets are chosen when the ability goes on the stack.)
+    /// CR 701.59 — collect evidence N: the controller may exile graveyard cards
+    /// totalling mana value `amount`+, and only then `then` runs. Sample
+    /// Collector. The engine picks the cheapest qualifying set; `then`'s targets
+    /// are chosen when the ability is put on the stack.
     CollectEvidence { amount: Value, then: Box<Effect> },
-    /// CR 701.59 — *collect evidence X*, where the controller chooses X: they
-    /// may exile any cards from their graveyard; X is the total mana value
-    /// exiled. If they do, `then` resolves with `ctx.x_value = X` (read via
-    /// `Value::XFromCost`). Incinerator of the Guilty. UI players pick the
-    /// exact set; the bot policy exiles the whole graveyard when it opts in.
+    /// CR 701.59 — collect evidence X: exile any graveyard cards, X their total
+    /// mana value; then `then` with `ctx.x_value = X` (Incinerator of the Guilty).
+    /// UI picks the set; the bot exiles everything when it opts in.
     CollectEvidenceX { then: Box<Effect> },
-    /// CR 701.61 — *forage*: as an optional cost, exile three cards from your
-    /// graveyard **or** sacrifice a Food. If paid, the reflexive `then` payoff
-    /// resolves. Engine prefers exiling three graveyard cards; falls back to
-    /// sacrificing a Food. Ships Bloomburrow forage payoffs.
+    /// CR 701.61 — forage (exile three graveyard cards, else sacrifice a Food) as
+    /// an optional cost; if paid, `then` resolves.
     Forage { then: Box<Effect> },
-    /// CR 701.57 — *discover N*: exile cards from the top of the controller's
-    /// library until exiling a nonland card with mana value `n` or less, then
-    /// either cast it without paying its mana cost or put it into hand; the
-    /// rest go to the bottom in a random order. Geological Appraiser,
-    /// Trumpeting Carnosaur.
+    /// CR 701.57 — discover N: exile from the top until a nonland card with mana
+    /// value ≤ `n`, cast it free or put it in hand; the rest bottom at random.
+    /// Geological Appraiser.
     Discover {
         n: Value,
         /// When `Some`, the stop condition is "a card matching this filter
@@ -7034,21 +5653,15 @@ pub enum Effect {
     /// [`Effect::ExileTopUntilNonland`] with every card stamped
     /// `exiled_with = source` (Krang & Shredder's "a card exiled with").
     ExileTopUntilNonlandWithSource { who: PlayerRef },
-    /// "Exile cards from the top of your library until you exile a [filter]
-    /// card": every exiled card is recorded for `Selector::ExiledThisResolution`
-    /// (Unpredictable Cyclone's cycling replacement chains the free cast and
-    /// the bottoming off it).
+    /// Exile from the top until a `filter` card, recording every card for
+    /// `Selector::ExiledThisResolution` (Unpredictable Cyclone).
     ExileTopUntilMatching { filter: crate::card::SelectionRequirement },
-    /// "Exile cards from the top of your library until you exile a nonland
-    /// card, then put that card into your hand. If the card's mana value is
-    /// `again_at_least` or greater, repeat this process. [This] deals
-    /// `damage_each` damage to you for each card put into your hand this way"
-    /// (Demonlord Belzenlok). An empty library ends the process.
+    /// Demonlord Belzenlok: exile from the top until a nonland card, to hand;
+    /// repeat while its mana value is `again_at_least`+, taking `damage_each`
+    /// per card. An empty library stops it.
     ExileUntilNonlandToHandRepeat { again_at_least: u32, damage_each: u32 },
-    /// "Exile the top `batch` cards. If the last card exiled isn't a land
-    /// card, repeat this process." `then` runs afterwards and reads the
-    /// nonland tally through [`Value::NonlandCardsExiledThisEffect`].
-    /// Rally the Horde.
+    /// Rally the Horde: exile the top `batch`, repeating while the last isn't a
+    /// land; then `then` reads [`Value::NonlandCardsExiledThisEffect`].
     ExileTopBatchesUntilLandLast { batch: u32, then: Box<Effect> },
     /// "Reveal the top `count` cards of your library. An opponent chooses one
     /// of them. Put that card into your graveyard and the rest into your
@@ -7064,11 +5677,9 @@ pub enum Effect {
     /// this source without paying its mana cost." Kaho, Minamo Historian —
     /// `filter`'s X resolves against the activation's chosen X.
     MayCastExiledWithSource { filter: crate::card::SelectionRequirement },
-    /// "Exile cards from the top of `who`'s library until you exile a nonland
-    /// card; you may play/cast that card [`duration`]. The other exiled cards
-    /// stay in exile." The impulse-until-nonland family (Territorial Bruntar's
-    /// landfall, Solstice Revelations) — unlike `Discover`, there's no MV cap
-    /// on the stop and the passed-over cards aren't bottomed.
+    /// Exile from the top of `who`'s library until a nonland card, which you may
+    /// play for `duration`; the others stay exiled (Territorial Bruntar). Unlike
+    /// `Discover`: no mana value cap and no bottoming.
     ExileTopUntilNonlandMayPlay {
         who: PlayerRef,
         duration: crate::card::MayPlayDuration,
@@ -7076,62 +5687,41 @@ pub enum Effect {
         /// normal mana cost from exile.
         #[serde(default)]
         free: bool,
-        /// When `Some`, the may-play is granted only if the nonland card's mana
-        /// value is *less than* this value; otherwise it's put into hand
-        /// instead (Solstice Revelations — "if its mana value is less than the
-        /// number of Mountains you control").
+        /// `Some`: the may-play applies only below this mana value, else the card
+        /// goes to hand (Solstice Revelations).
         #[serde(default)]
         hand_unless_mv_below: Option<Value>,
-        /// Grant the may-cast permission to the EXILING player (the library
-        /// owner) rather than the effect's controller — "ITS CONTROLLER
-        /// exiles ... then may cast it" (Transforming Flourish). Defaults
-        /// false (the caster gets the cast — the impulse-draw family).
+        /// Grant the cast to the exiling player (library owner), not the controller
+        /// (Transforming Flourish). `false` (default) is the impulse-draw family.
         #[serde(default)]
         grant_to_exiling_player: bool,
     },
-    /// "Look at the top `count` cards of your library. You may put a land card
-    /// from among them onto the battlefield tapped. Put the rest on the bottom
-    /// of your library in a random order." Ignis Scientia's ETB. Reuses the
-    /// Impulse machinery (`to_battlefield` + `tapped`).
+    /// Ignis Scientia: look at the top `count`, a land may enter tapped, bottom
+    /// the rest at random (Impulse machinery, `to_battlefield` + `tapped`).
     DigForLandToBattlefield { count: Value },
     /// CR 702.39 — *provoke*: untap the creature `what` resolves to and force
     /// it to block this combat's source attacker if able. Sets the target's
     /// `must_block` to the effect source. Used by `shortcut::provoke`.
     Provoke { what: Selector },
-    /// CR 701.44 — each permanent `who` resolves to *explores*: its
-    /// controller reveals the top card of their library. If it's a land,
-    /// it goes to hand; otherwise the exploring permanent gets a +1/+1
-    /// counter and the revealed card stays on top (the optional
-    /// "put into graveyard" choice is collapsed to keep-on-top). An empty
-    /// library still counts as a (cardless) explore and grants the counter.
-    /// Each explore emits `GameEvent::Explored` so payoff triggers
-    /// ("whenever a creature you control explores") can fire.
+    /// CR 701.44 — each `who` permanent explores: a revealed land goes to hand,
+    /// otherwise a +1/+1 counter and the card stays on top (the graveyard option
+    /// is collapsed). An empty library still explores and grants the counter.
+    /// Emits `GameEvent::Explored`.
     Explore { who: Selector },
-    /// One explore with no "would explore" replacement left to apply — what
-    /// `Explore` becomes after Twists and Turns' "instead you scry 1, then
-    /// that creature explores" (`game/explore.rs`). Engine-built, never on a
-    /// card.
+    /// One explore with no replacement left — what `Explore` becomes after Twists
+    /// and Turns' scry (`game/explore.rs`). Engine-built only.
     ExploreAfterScry { who: Selector },
-    /// "Look at the top `count` cards of your library, put one of them into
-    /// your hand, and the rest on the bottom of your library (or into your
-    /// graveyard if `rest_to_graveyard`)." Impulse / Strategic Planning /
-    /// Flow State. The controller picks via the `SearchLibrary` decision
-    /// (auto-decider keeps the top card).
-    /// `pick_filter` restricts which revealed cards are eligible to take
-    /// (Satyr Wayfinder — "you may put a *land* card into your hand"); the
-    /// rest (including non-eligible cards) follow `rest_to_graveyard`.
-    /// `None` means any revealed card is eligible.
+    /// Look at the top `count`, one to hand, the rest on the bottom (or the
+    /// graveyard with `rest_to_graveyard`) — Impulse. Picked via the
+    /// `SearchLibrary` decision (auto keeps the top card). `pick_filter`
+    /// restricts what may be taken (Satyr Wayfinder's land); `None` = anything.
     LookPickToHand(Box<LookPick>),
-    /// "Look at the top `count` cards; put one back on top and the rest into
-    /// your graveyard" (Sage of Days). The controller (via the `SearchLibrary`
-    /// picker) keeps one revealed card on top; the rest are milled. Shares the
-    /// `ImpulsePending` machinery with `keep_on_top: true`. With
-    /// `who: Some(..)` the effect reads another player's library instead and
-    /// auto-picks (lowest MV kept on an opponent's — Dimir Charm mode 3).
-    /// With `exile_rest` the non-kept cards are exiled instead of milled
-    /// (Devourer of Destiny's opening-hand reveal), and with
-    /// `rest_bottom_random` they go to the bottom in a random order
-    /// (Aladdin's Lamp).
+    /// Look at the top `count`; keep one on top, mill the rest (Sage of Days),
+    /// via the `ImpulsePending` machinery with `keep_on_top: true`. `who:
+    /// Some(..)` reads another player's library and auto-picks (lowest mana
+    /// value kept on an opponent's — Dimir Charm). `exile_rest` exiles instead
+    /// (Devourer of Destiny); `rest_bottom_random` bottoms them (Aladdin's
+    /// Lamp).
     LookTopKeepOneRestToGraveyard {
         count: Value,
         #[serde(default)]
@@ -7156,45 +5746,32 @@ pub enum Effect {
     /// draws a card" (Martyr's Cry). The draw is per exiled permanent and goes
     /// to the permanent's controller, not the effect's.
     ExileEachMatchingThenControllerDraws { filter: SelectionRequirement },
-    /// Tempting offer (ability word, CR 207.2c): run `body` for the
-    /// controller; each opponent may copy it for themselves, and the
-    /// controller re-runs it once per opponent who accepted. Tempt with
-    /// Bunnies. `declined` runs once under each opponent who didn't
-    /// (Wernog's "each opponent who doesn't loses 1 life").
+    /// Tempting offer (CR 207.2c): `body` runs for the controller, each opponent
+    /// may run it too, and the controller re-runs it per acceptor (Tempt with
+    /// Bunnies). `declined` runs under each opponent who didn't (Wernog).
     TemptingOffer {
         body: Box<Effect>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         declined: Option<Box<Effect>>,
     },
 
-    /// CR 101.4 — "for each opponent, [body]": run `body` once per opponent of
-    /// the controller, in APNAP order, with that opponent bound as the body's
-    /// `PlayerRef::Triggerer` / `Selector::TriggerSource`. The fan-out
-    /// `PlayerRef::EachOpponent` cannot express, because the body has to name
-    /// *that* opponent rather than the whole set — Adeline's "for each
-    /// opponent, create a token attacking that player". At two players it is
-    /// one run of `body`, which is what the singular forms already did.
+    /// CR 101.4 — "for each opponent, [body]": `body` once per opponent in APNAP
+    /// order, bound as `PlayerRef::Triggerer` / `Selector::TriggerSource`, for
+    /// bodies that must name *that* opponent (Adeline), which `EachOpponent`
+    /// can't. One run in a duel.
     ForEachOpponent { body: Box<Effect> },
 
-    /// CR 207.2c "join forces" — "Starting with you, each player may pay any
-    /// amount of mana. [body], where X is the total amount of mana paid this
-    /// way." Every seat is asked, in turn order from the controller, before
-    /// any mana is paid, so a suspend-and-replay is idempotent; `body` then
-    /// runs once with the total in `EffectContext::event_amount`
-    /// (`Value::TriggerEventAmount`). Minds Aglow, Collective Voyage,
-    /// Mana-Charged Dragon.
+    /// CR 207.2c join forces: every seat, from the controller in turn order, may
+    /// pay any mana; `body` runs once with the total as
+    /// `Value::TriggerEventAmount` (Minds Aglow). All asks precede payment, so a
+    /// suspend-and-replay is idempotent.
     JoinForces { description: String, body: Box<Effect> },
     /// "[who] may [accept]. If a player does, [`if_any`]; if no one does,
-    /// [`otherwise`]." Every player in `who` is asked, in APNAP order,
-    /// **whatever the earlier answers were** — Argothian Wurm's ruling
-    /// ("all remaining players still get the option") and Desecration
-    /// Demon's ("each opponent in turn order may choose ... even if an
-    /// opponent already chose"). Each accepter runs `on_accept` with
-    /// themselves bound to slot 0; `if_any` runs **once** however many
-    /// accepted ("a maximum of one +1/+1 counter each combat, no matter how
-    /// many creatures were sacrificed"). CR 101.4a puts every choice before
-    /// every action, which is also what makes a suspend mid-ask replay-safe.
-    /// Vexing Devil, Browbeat, Risk Factor, Desecration Demon.
+    /// [`otherwise`]." Every player in `who` is asked in APNAP order regardless
+    /// of earlier answers (Argothian Wurm and Desecration Demon rulings). Each
+    /// accepter runs `on_accept` bound to slot 0; `if_any` runs once however many
+    /// accepted. CR 101.4a puts every choice before any action, which also makes
+    /// a mid-ask suspend replay-safe. Vexing Devil, Browbeat.
     PlayersMayAccept {
         who: PlayerRef,
         description: String,
@@ -7206,29 +5783,22 @@ pub enum Effect {
     /// control this turn, it enters under your control instead." Gather
     /// Specimens (CR 614 control-ETB replacement; expires at cleanup).
     StealCreatureEtbThisTurn,
-    /// "Each token that would be created under an opponent's control this
-    /// turn is created under your control instead" (Crafty Cutpurse, CR 614).
-    /// Sets the controller's `steals_opponent_tokens_this_turn`, read by the
-    /// token mint funnel; expires at the next untap.
+    /// Crafty Cutpurse (CR 614): opponents' tokens this turn are created under
+    /// you (`steals_opponent_tokens_this_turn`, until the next untap).
     StealOpponentTokensThisTurn,
-    /// "Exile all [filter]. Each player creates [definition] and puts a number
-    /// of +1/+1 counters on it equal to the total power of the ones they
-    /// controlled that were exiled this way" (Oversimplify). Powers are read
-    /// before the exile; a token that left counts (CR 111.7).
+    /// Oversimplify: exile all [filter]; each player makes `definition` with
+    /// counters equal to their exiled ones' total power (read before; a token
+    /// counts, CR 111.7).
     ExileAllThenTokenPerPlayerByPower {
         filter: SelectionRequirement,
         definition: std::sync::Arc<crate::card::TokenDefinition>,
     },
-    /// "You may put a card matching `filter` from your hand or graveyard
-    /// onto the battlefield." Dakkon, Shadow Slayer −6. Auto-pick: the
-    /// highest-MV match; a `wants_ui` controller picks (or declines) via
-    /// the search decision.
+    /// Dakkon, Shadow Slayer −6: put a `filter` card from hand or graveyard onto
+    /// the battlefield (auto: priciest; UI via the search decision).
     PutFromHandOrGraveyardOntoBattlefield { filter: crate::card::SelectionRequirement },
-    /// "Reveal the top card of your library and put it into your hand. `who`
-    /// loses life equal to its mana value." Sorin, Grim Nemesis +1 (`who:
-    /// EachOpponent`); Caustic Bronco's saddled/unsaddled attack (each opponent
-    /// / you). With `you_gain`, the controller also gains that much life
-    /// (Twilight Prophet's city's-blessing drain).
+    /// Reveal the top card to hand; `who` loses its mana value (Sorin, Grim
+    /// Nemesis +1). `you_gain` also gains the controller that much (Twilight
+    /// Prophet).
     RevealTopToHandLoseMv {
         who: PlayerRef,
         #[serde(default)]
@@ -7251,18 +5821,13 @@ pub enum Effect {
         #[serde(default)]
         tapped: bool,
     },
-    /// "Look at the top `count` cards of your library. For each, put it into
-    /// your graveyard unless you pay `life` life. Then put the rest into your
-    /// hand." Moonlight Bargain. The auto payer buys every card it can afford
-    /// while staying above 1 life.
+    /// Moonlight Bargain: look at the top `count`; each goes to the graveyard
+    /// unless you pay `life`, the rest to hand. Auto buys while above 1 life.
     LookTopEachPayLifeOrBin { count: Value, life: u32 },
-    /// "Choose `count` cards in your hand drawn this turn. For each of those
-    /// cards, pay `life` life or put the card on top of your library."
-    /// (Sylvan Library.) The cards drawn this turn are read as the last
-    /// `cards_drawn_this_turn` cards of the hand — a draw appends — so a card
-    /// put into hand some other way after a draw this turn can stand in for
-    /// one. The controller chooses the cards, then answers one pay-or-return
-    /// per card; the returns go on top in the chosen order.
+    /// Sylvan Library: choose `count` hand cards drawn this turn; per card pay
+    /// `life` or put it on top (in chosen order). "Drawn this turn" is the last
+    /// `cards_drawn_this_turn` cards of the hand, so a card added after a draw
+    /// can stand in.
     PayLifeOrPutBackDrawnThisTurn { count: u32, life: u32 },
     /// CR 708.2a — turn each resolved permanent face down: it becomes a 2/2
     /// creature with no name, types, or abilities. A no-op on a permanent
@@ -7271,27 +5836,20 @@ pub enum Effect {
     /// [`Effect::TurnFaceDown`] with one listed creature type: "turn them face
     /// down. They're 2/2 Horror creatures" (Illithid Harvester, CR 708.2).
     TurnFaceDownAs { what: Selector, creature_type: crate::card::CreatureType },
-    /// CR 614 — "The next time you would draw a card this turn, [`body`]
-    /// instead." Queues a one-shot replacement on the controller consumed by
-    /// the next draw (the Onslaught Words cycle). Charges stack and are
-    /// spent front-first; unused ones evaporate at end of turn.
+    /// CR 614 — "the next time you would draw this turn, [`body`] instead"
+    /// (Onslaught Words): stacked one-shot charges, spent front first, gone at
+    /// end of turn.
     ReplaceYourNextDrawThisTurn { body: Box<Effect> },
-    /// CR 707.9 — turn each face-down permanent the selector picks face up
-    /// *without* paying its morph cost (Break Open, Ixidor, Reality
-    /// Sculptor). Non-face-down picks are skipped. A pick whose face-up side
-    /// isn't a creature card (a cloaked land) *can't* be turned up; `if_cant`
-    /// then runs with that permanent stamped as target 0 — Etrata, Deadly
-    /// Fugitive's "exile it, then you may cast the exiled card for free".
+    /// CR 707.9 — turn each face-down pick face up without paying its morph cost
+    /// (Break Open). One whose face-up side isn't a creature card (a cloaked
+    /// land) can't be; `if_cant` runs with it as target 0 (Etrata, Deadly
+    /// Fugitive).
     TurnFaceUpFree { what: Selector, if_cant: Option<Box<Effect>> },
-    /// "Creatures you control gain each of `keywords` until end of turn if a
-    /// creature you control already has it" (Concerted Effort's upkeep sweep).
-    /// Reads the controller's *computed* keywords once, then grants the union
-    /// to every creature they control.
+    /// Concerted Effort: each of `keywords` one of your creatures has (computed,
+    /// read once) goes to all your creatures until end of turn.
     ShareKeywordsAmongYourCreatures { keywords: Vec<Keyword> },
-    /// "Choose a card name. Target player reveals cards from the top of their
-    /// library until one with that name is revealed. If it is, the rest of the
-    /// revealed cards go to their graveyard and the named card goes back on
-    /// top. Otherwise they shuffle." Tunnel Vision.
+    /// Tunnel Vision: name a card; target player reveals until it; if found the
+    /// rest are binned and it goes back on top, else they shuffle.
     NameCardRevealUntilThenBin { who: PlayerRef },
     /// "`who` chooses a card name, then reveals the top card of their
     /// library. On a match it goes to their hand, otherwise to their
@@ -7301,35 +5859,28 @@ pub enum Effect {
     /// cost (Sword of the Ages' "then exile this artifact and those creature
     /// cards"). Reads the batch stashed by `activate_ability`.
     ExileCostSacrificedBatch,
-    /// "Exile the top `exile_count` cards of your library, then reveal cards
-    /// from the top until you reveal a card with the name a preceding
-    /// `Effect::NameCard` stamped on the source. Put that card into your hand
-    /// and exile all other cards revealed this way." Divining Witch.
+    /// Divining Witch: exile the top `exile_count`, then reveal until the card
+    /// the source named (`Effect::NameCard`), take it, exile the rest.
     ExileTopThenRevealUntilNamed { exile_count: Value },
     /// "Reveal the top `count` cards of your library and put all of them with
     /// the name a preceding `Effect::NameCard` stamped into your hand. Exile
     /// the rest." Desperate Research.
     RevealTopTakeNamedExileRest { count: Value },
-    /// "Each player chooses from the lands they control a land of each basic
-    /// land type, then sacrifices the rest." Global Ruin. Each player keeps
-    /// their first land of each basic type (a `Decision::ChooseCards` pick for
-    /// a UI seat) and sacrifices every other land.
+    /// Global Ruin: each player keeps one land of each basic type (first, or a
+    /// `ChooseCards` pick for UI) and sacrifices the rest.
     EachPlayerKeepsOneOfEachBasicTypeSacrificesRest,
-    /// "Each player chooses a card in their hand, then reveals it. The owner
-    /// of each creature card revealed this way with the lowest mana value
-    /// puts it onto the battlefield." Stronghold Gambit. Each player's pick
-    /// routes through `Decision::ChooseCards` (auto-pick: their cheapest
-    /// creature card, else their cheapest card).
+    /// Stronghold Gambit: each player reveals a chosen hand card
+    /// (`Decision::ChooseCards`; auto: cheapest creature, else cheapest card);
+    /// owners of the lowest-mana-value creature cards put them onto the
+    /// battlefield.
     RevealChosenCardsLowestCreaturesEnter,
     /// "Until end of turn, [what] loses 'Prevent all damage that would be
     /// dealt to this'" (Glittering Lion / Lynx). Sets
     /// `CardInstance.damage_prevention_off_eot`.
     TurnOffDamagePreventionThisTurn { what: Selector },
-    /// CR 611.2 — "This turn, whenever a [`filter`] …": installs a floating
-    /// watcher that every matching permanent carries for the rest of the turn,
-    /// including ones that enter after this resolves (Mage Hunters' Onslaught).
-    /// The trigger fires with the matching permanent as its source, so
-    /// `EventScope::SelfSource` and `Selector::This` read that permanent.
+    /// CR 611.2 — "this turn, whenever a [`filter`] …": a floating watcher every
+    /// matching permanent carries for the turn, later arrivals included (Mage
+    /// Hunters' Onslaught). The matching permanent is the trigger's source.
     GrantTriggeredAbilityThisTurnToMatching {
         filter: crate::card::SelectionRequirement,
         trigger: Box<crate::card::TriggeredAbility>,
@@ -7342,27 +5893,23 @@ pub enum Effect {
     /// that can't be blocked. No blocker is assigned, so nothing deals or is
     /// dealt combat damage by the block.
     AttackingCreaturesBecomeBlocked,
-    /// "You may reselect which player or permanent [what] is attacking"
-    /// (Misleading Signpost). Ignores attack restrictions and costs, and is
-    /// not a new attack (no "whenever … attacks" trigger) — the rulings.
-    /// `players_only`: "which player" — no planeswalker (Capricopian).
-    /// "Choose target player and any number of target attacking creatures
-    /// their opponents control. Those creatures are now attacking that player"
-    /// (Portal Manipulator). Both picks are made as it resolves: the player
-    /// (the controller's ask; headless, whoever can take the most), then every
-    /// attack aimed at the controller or its planeswalkers that the controller
-    /// could target moves. Not a new attack — restrictions, costs and attack
-    /// triggers are ignored.
+    /// Portal Manipulator: at resolution pick a player (headless: whoever can
+    /// take the most), then every attack on the controller or its planeswalkers
+    /// by a creature the controller could target moves to that player. Not a new
+    /// attack: restrictions, costs and attack triggers are ignored.
     AttackersNowAttackChosenPlayer,
+    /// "You may reselect which player or permanent [what] is attacking"
+    /// (Misleading Signpost): ignores restrictions and costs, and is not a new
+    /// attack (no attack triggers). `players_only`: no planeswalker
+    /// (Capricopian).
     ReselectAttackTarget {
         what: Selector,
         #[serde(default)]
         players_only: bool,
     },
-    /// Look at the top `count` cards of `who`'s library, exile one (auto-pick:
-    /// highest MV) and bottom the rest randomly; `grant` says what the exiled
-    /// card may then do (Gonti, Vivien's −2, Florian, The Key to the Vault).
-    /// `who` defaults to an opponent (Gonti).
+    /// Look at the top `count` of `who`'s library (default an opponent), exile
+    /// one (auto: priciest), bottom the rest; `grant` says what it may then do
+    /// (Gonti, Vivien's −2).
     LookTopExileOneMayPlay {
         count: Value,
         #[serde(default = "player_ref_target_zero")]
@@ -7370,21 +5917,17 @@ pub enum Effect {
         #[serde(default)]
         grant: LookExileGrant,
     },
-    /// "Look at the top `count` cards. You may put a land card from among them
-    /// onto the battlefield tapped. If you don't, put a card from among them
-    /// into your hand. Put the rest on the bottom in a random order." Planar
-    /// Genesis. Resolution prefers ramp: deploys a land if one is revealed,
-    /// otherwise takes the highest-mana-value card to hand.
+    /// Planar Genesis: look at the top `count`; a land may enter tapped, else
+    /// take a card; the rest bottom at random. Prefers deploying a land, else
+    /// takes the priciest card.
     LookTopDeployLandOrHand { count: Value },
     /// "Look at the top card of your library. If it's a land card, you may put
     /// it onto the battlefield (tapped if `tapped`)." A non-land — or a decline —
     /// stays on top (unlike the bottoming look-top variants). Mobile Homestead.
     LookTopMayDeployLand { tapped: bool },
-    /// "Look at the top card of your library. If it matches `filter`, you may
-    /// reveal it and put it into your hand. If you don't put it into your hand,
-    /// put it on the bottom of your library." Vivien's Grizzly, Duskwatch
-    /// Recruiter. The yes/no is a `Decision::OptionalTrigger` (UI players
-    /// suspend/resume like `Effect::MayDo`).
+    /// Look at the top card; if it matches `filter` you may reveal it and take
+    /// it, else bottom it (Vivien's Grizzly). The yes/no is a
+    /// `Decision::OptionalTrigger`, suspending like `Effect::MayDo`.
     LookTopMayRevealMatchToHandElseBottom { filter: SelectionRequirement },
     /// Cabal Therapy: choose a nonland card name; target player discards
     /// every card with that name from their hand.
@@ -7393,10 +5936,8 @@ pub enum Effect {
     /// (Trapfinder's Trick). The reveal is knowledge-only; every match is
     /// discarded through the normal discard path so discard triggers fire.
     RevealHandDiscardAllMatching { who: PlayerRef, filter: SelectionRequirement },
-    /// "Target player reveals their hand. For each [`filter`] card revealed
-    /// this way, that player discards it unless they pay `life` life"
-    /// (Sirocco). The revealing player is asked per card, in hand order, and
-    /// a payment they can't afford counts as a decline.
+    /// Sirocco: target player reveals their hand and discards each `filter` card
+    /// unless they pay `life` (asked per card; unaffordable = decline).
     RevealHandDiscardMatchingUnlessPayLife {
         who: PlayerRef,
         filter: SelectionRequirement,
@@ -7406,10 +5947,8 @@ pub enum Effect {
     /// only: the hand becomes visible to the resolving controller for the rest
     /// of the game via `hands_revealed_to`.
     RevealHand { who: PlayerRef },
-    /// "Target player reveals the top card of their library" (Aven
-    /// Windreader); every resolved player, for "each player reveals"
-    /// (Haunting Imitation). The top card becomes visible to every player for
-    /// as long as it stays on top.
+    /// The player reveals their top card (Aven Windreader; every player for
+    /// Haunting Imitation); visible to all while it stays on top.
     RevealTopOfLibrary { who: PlayerRef },
     /// "Reveal the top card of `who`'s library. If it matches `filter`,
     /// `on_match`. Then that player shuffles." (Prophecy.)
@@ -7427,22 +5966,20 @@ pub enum Effect {
     /// "Target player loses all rad counters" (Survivor's Med Kit's RadAway)
     /// — rad only, unlike `RemoveAllPlayerCounters`.
     RemoveAllRadCounters { who: PlayerRef },
-    /// "Remove `count` `kind` counters from among [filter] permanents you
-    /// control. When you do, [then]" — the resolution-time sibling of
-    /// `ActivatedAbility::remove_counter_among_filter` (Overseer of Vault 76's
-    /// three quest counters). Does nothing unless `count` can be removed;
-    /// drains weakest-first, as the cost does. Wrap in `MayDo` for "you may".
+    /// "Remove `count` `kind` counters from among your [filter]s. When you do,
+    /// [then]" — resolution-time sibling of
+    /// `ActivatedAbility::remove_counter_among_filter` (Overseer of Vault 76).
+    /// Nothing unless all `count` can go; drains weakest first. Wrap in `MayDo`
+    /// for "you may".
     RemoveCountersFromAmongThen {
         kind: crate::card::CounterType,
         count: u32,
         filter: SelectionRequirement,
         then: Box<Effect>,
     },
-    /// "Remove a counter from a [filter] you control. If you do, [then]"
-    /// (Mister Hyde, Monster Within) — any kind, on any match. Does nothing
-    /// without a counter to remove. The headless pick takes the counter a seat
-    /// least wants on its own permanent: stun, then -1/-1, then any other kind,
-    /// +1/+1 and loyalty last; ties go to the weakest permanent.
+    /// "Remove a counter from a [filter] you control. If you do, [then]" (Mister
+    /// Hyde) — any kind. Headless removes what a seat least wants: stun, -1/-1,
+    /// other kinds, then +1/+1 and loyalty; ties to the weakest permanent.
     RemoveAnyCounterFromAmongThen { filter: SelectionRequirement, then: Box<Effect> },
     /// "Deals `amount` damage to each creature for each Aura attached to that
     /// creature" (Baki's Curse). Creatures with no Aura take nothing.
@@ -7459,23 +5996,16 @@ pub enum Effect {
     /// a player draws this way, that player gains `life_per_card` life."
     /// (Truce.) Asked in APNAP order.
     EachPlayerDrawsUpToElseGainsLife { max: u32, life_per_card: u32 },
-    /// Liar's Pendulum: name a card, then target opponent guesses whether a
-    /// card with that name is in your hand. Reveal and draw when they guess
-    /// wrong. The guess rides a `Decision::OptionalTrigger` asked of the
-    /// opponent.
+    /// Liar's Pendulum: name a card; an opponent guesses whether it's in your
+    /// hand (`OptionalTrigger`); if wrong, reveal and draw.
     LiarsPendulum,
-    /// Gollum, Scheming Guide — the controller chooses land or nonland, an
-    /// opponent guesses whether the top card of the controller's library is
-    /// the chosen kind, and the card is revealed (CR 701.20): a right guess
-    /// runs `right`, a wrong one `wrong`. The kind is the game RNG's pick (a
-    /// bluff is policy, not rules); the guess rides a `Decision::OptionalTrigger`
-    /// asked of the first opponent in turn order. An empty library is a
-    /// right guess.
+    /// Gollum, Scheming Guide: the controller picks land or nonland (game RNG —
+    /// a bluff is policy), the first opponent guesses (`OptionalTrigger`), the
+    /// top card is revealed (CR 701.20); `right` or `wrong` runs. An empty
+    /// library is a right guess.
     GuessTopCardKind { right: Box<Effect>, wrong: Box<Effect> },
-    /// Scythe of the Wretched: a creature the Equipment's host damaged this
-    /// turn died — return that card to the battlefield under the Equipment
-    /// controller's control and attach the Equipment to it. The check reads
-    /// the death LKI snapshot's `damaged_by_this_turn`.
+    /// Scythe of the Wretched: a creature its host damaged this turn died (per
+    /// LKI `damaged_by_this_turn`); return it under you and attach the Equipment.
     ReturnVictimAndAttachSelf,
     /// Imprint — exile up to `count` cards matching `filter` from a **single**
     /// graveyard (the controller picks the graveyard, then the cards), linked
@@ -7492,10 +6022,8 @@ pub enum Effect {
     /// Brain Pry: choose a nonland card name; target player reveals their hand
     /// and discards one card with that name. If they can't, you draw a card.
     NameCardTargetDiscardsOneOrYouDraw,
-    /// "Choose a nonland card name, then reveal the top `count` cards of
-    /// your library. Put all cards with the chosen name from among them into
-    /// your hand and the rest into your graveyard." Tamiyo, Collector of
-    /// Tales +1.
+    /// Tamiyo, Collector of Tales +1: name a nonland card, reveal the top
+    /// `count`, take every copy, bin the rest.
     NameCardRevealTop { count: Value },
     /// "Put a creature card with mana value `mv` exiled with [the source]
     /// onto the battlefield under your control. That creature is a Nightmare
@@ -7513,27 +6041,21 @@ pub enum Effect {
     /// (CR 707.12; Q, Stacking the Deck's granted ability). The copy is staged
     /// in exile as a token and ceases to exist if it isn't cast.
     CopyCardMayCast { what: Selector },
-    /// Myra the Magnificent — exile the card `what` names and choose an
-    /// Attraction you control without a midway counter: put one on it, link
-    /// the card to it (`exiled_with`), and give it "whenever you visit this,
-    /// copy the exiled card; you may cast the copy free" for as long as it
-    /// stays on the battlefield (CR 717). No such Attraction: the exile alone.
+    /// Myra the Magnificent: exile `what` and link it to a chosen Attraction you
+    /// control without a midway counter, which gets one plus "whenever you visit
+    /// this, copy the exiled card; you may cast the copy free" (CR 717). No such
+    /// Attraction: just the exile.
     ExileOntoAttractionWithMidway { what: Selector },
-    /// "Copy those cards. You may cast up to `max` of the copies without
-    /// paying their mana costs" (Baron Helmut Zemo's boast, over
-    /// `Selector::CostExiledCards`): each card `what` resolves to is offered
-    /// as a `CopyCardAndCastFree`, priciest first, until `max` copies were
-    /// cast; the uncast copies cease to exist (CR 707.12).
+    /// "Copy those cards. You may cast up to `max` copies free" (Baron Helmut
+    /// Zemo, over `Selector::CostExiledCards`): each card offered as a
+    /// `CopyCardAndCastFree`, priciest first; uncast copies cease to exist (CR
+    /// 707.12).
     CopyCardsAndCastFreeUpTo { what: Selector, max: u32 },
-    /// "Copy those cards. You may cast any number of spells with total mana
-    /// value `total` or less from among the copies without paying their mana
-    /// costs" (Uldaros Theorix): priciest first, each copy offered while its
-    /// mana value still fits what is left.
+    /// Uldaros Theorix: copy those cards and cast copies free with total mana
+    /// value ≤ `total`, priciest first while each fits.
     CopyCardsAndCastFreeTotalMv { what: Selector, total: Value },
-    /// Imprint payoff: turn the card exiled face down with this source face up
-    /// and, if it's a creature card, put it onto the battlefield under the
-    /// source's controller (Summoner's Egg). Non-creature cards stay exiled
-    /// face up.
+    /// Summoner's Egg: turn the imprinted card face up; a creature enters under
+    /// the source's controller, anything else stays exiled.
     RevealImprintDeployCreature,
     /// "Target opponent reveals their hand. You may copy an instant or sorcery
     /// card in it. If you do, you may cast the copy without paying its mana
@@ -7543,21 +6065,15 @@ pub enum Effect {
     /// a card" (Possessed Portal's end step). Each player is asked in APNAP
     /// order; the auto-picker discards when it can.
     EachPlayerSacrificesUnlessDiscards,
-    /// "Target opponent reveals the top `count` cards of their library. You
-    /// may put a nonland permanent card with mana value `count` or less from
-    /// among them onto the battlefield under your control. Then that player
-    /// shuffles." (Both Xs are the same value, as printed.) Lonis, Genetics
-    /// Expert.
+    /// Lonis, Genetics Expert: target opponent reveals the top `count`; you may
+    /// put a nonland permanent with mana value ≤ `count` onto the battlefield
+    /// under your control; they shuffle.
     RevealOpponentTopPutOntoBattlefield { count: Value, filter: SelectionRequirement },
-    /// "Look at the top `count` cards of your library. You may put a card
-    /// matching `filter` from among them onto the battlefield tapped and
-    /// attacking (joining the current combat); it gains indestructible until
-    /// end of turn. Put the rest on the bottom in a random order." Winota,
-    /// Joiner of Forces. No-op outside combat. Auto-picks the highest-power
-    /// match; the new attacker hits the same defender the triggering creature
-    /// (`trigger_source`) is attacking. With `return_at_end_of_combat` the
-    /// indestructible grant is replaced by a return to its owner's hand at end
-    /// of combat (Arthur, Marigold Knight).
+    /// Winota, Joiner of Forces: look at the top `count`; a `filter` card may
+    /// enter tapped and attacking the defender `trigger_source` attacks, with
+    /// indestructible until end of turn; the rest bottom at random. Auto-picks
+    /// the highest power; no-op outside combat. `return_at_end_of_combat`
+    /// replaces indestructible with a return to hand (Arthur, Marigold Knight).
     LookTopMayDeployAttacking {
         count: Value,
         filter: SelectionRequirement,
@@ -7601,20 +6117,14 @@ pub enum Effect {
     /// choice unless they pay `cost`" (Fade Away). One pay-or-sacrifice
     /// decision per matching permanent, asked of its controller.
     SacrificeEachUnlessPays { filter: SelectionRequirement, cost: crate::mana::ManaCost },
-    /// "Target opponent chooses one of the top two cards of your graveyard.
-    /// Exile that card and put the other one into your hand" (Phyrexian
-    /// Grimoire). `who` is the choosing player; the graveyard is the effect
-    /// controller's. A one-card graveyard goes straight to hand.
+    /// Phyrexian Grimoire: `who` picks one of your top two graveyard cards to
+    /// exile; the other to hand (a lone card goes straight to hand).
     TopTwoGraveyardOpponentSplits { who: Selector },
-    /// "That permanent's activated abilities can't be activated this turn"
-    /// (Interdict). Records each resolved permanent in
-    /// `GameState.abilities_locked_this_turn`; `activate_ability` rejects
-    /// non-mana activations from a locked source until cleanup.
+    /// Interdict: the permanents' activated abilities can't be activated this
+    /// turn (`GameState.abilities_locked_this_turn`; mana abilities exempt).
     LockActivatedAbilitiesThisTurn { what: Selector },
-    /// "Create `definition`. Return this card to the battlefield under its
-    /// owner's control when that token dies." Tatsumasa, the Dragon's Fang —
-    /// pairs with an `exile_self_cost` activation, so the source is in exile
-    /// while the token lives.
+    /// Tatsumasa, the Dragon's Fang: create `definition`; return this card
+    /// (exiled by `exile_self_cost`) when the token dies.
     CreateTokenReturnSelfWhenItDies { definition: std::sync::Arc<crate::card::TokenDefinition> },
     /// Firion — reduce the generic portion of each resolved permanent's
     /// printed Equip cost by `amount` (stamped onto the minted token copy).
@@ -7645,16 +6155,12 @@ pub enum Effect {
     /// is read as each delayed trigger resolves (Tilonalli's Summoner's
     /// "exile those tokens unless you have the city's blessing").
     ExileAtNextEndStepUnless { what: Selector, unless: Predicate },
-    /// "Sacrifice this permanent unless you sacrifice any number of `filter`
-    /// with total power `total_power` or greater" (Phyrexian Dreadnought's
-    /// ETB). The controller picks the fodder (the source itself is never
-    /// eligible); an auto seat pays only when it can reach the bar without
-    /// spending more bodies than the source is worth, so it usually declines.
+    /// Phyrexian Dreadnought: sacrifice this unless you sacrifice `filter`s with
+    /// total power `total_power`+ (never the source). An auto seat pays only if
+    /// it costs fewer bodies than the source is worth, so usually declines.
     SacrificeSourceUnlessSacrificeTotalPower { filter: SelectionRequirement, total_power: Value },
-    /// "Target player discards a card unless they put a card from their hand
-    /// on top of their library. If that player discards a card this way,
-    /// `then`" (Tainted Specter). The victim chooses; an empty hand does
-    /// neither and `then` doesn't run.
+    /// Tainted Specter: the victim discards unless they put a hand card on top;
+    /// `then` only on a discard. Empty hand: neither.
     DiscardUnlessPutCardOnTop { who: PlayerRef, then: Box<Effect> },
     /// "This creature assigns no combat damage this turn" (Kukemssa Pirates'
     /// price for the artifact). Flags each resolved permanent for the rest of
@@ -7668,34 +6174,24 @@ pub enum Effect {
     /// Fires on the very next upkeep step, whoever's turn it is; the Homelands
     /// cantrip rider (Headstone, Jinx, Prophecy, Renewal).
     AtNextTurnsUpkeep { body: Box<Effect> },
-    /// CR 702.141 Encore — for each opponent, create a token copy of the
-    /// source (read from exile after the encore cost exiled it) that attacks
-    /// that opponent this turn if able (goad-style requirement). The tokens
-    /// gain haste and are sacrificed at the beginning of the next end step.
+    /// CR 702.141 Encore: per opponent, a hasty token copy of the source (read
+    /// from exile) that must attack them, sacrificed at the next end step.
     EncoreTokens,
-    /// Memories Returning — reveal the top five cards; alternating picks
-    /// (you take one to hand, an opponent bottoms one, twice each) leave you
-    /// three cards in hand and two on the bottom. Auto-heuristics: you take
-    /// the highest mana value, the opponent bottoms the highest remaining.
+    /// Memories Returning: reveal five; you take one, an opponent bottoms one,
+    /// twice each (you: priciest; they: priciest remaining).
     RevealFiveDraftAgainstOpponent,
-    /// Choco — look at the top `count` cards of your library; put one into
-    /// your hand (auto-pick: highest-MV nonland, else highest-MV), then put
-    /// every land card from among the rest onto the battlefield tapped and
-    /// the remainder into your graveyard.
+    /// Choco: look at the top `count`; one to hand (priciest nonland), lands
+    /// among the rest enter tapped, the remainder to the graveyard.
     LookTopTakeOneDeployLandsRestGraveyard { count: Value },
     /// Triple Triad — each player exiles their library top. Until end of
     /// turn the controller may play the card they own exiled this way for
     /// free, plus each other card exiled this way with lesser mana value.
     ExileEachTopFreePlayLesser,
-    /// Random Encounter — shuffle your library, mill `amount`; put each
-    /// creature card milled this way onto the battlefield with haste, and
-    /// return those creatures to their owners' hands at the beginning of the
-    /// next end step.
+    /// Random Encounter: shuffle, mill `amount`; milled creatures enter with
+    /// haste and return to hand at the next end step.
     MillDeployCreaturesUntilEndStep { amount: Value },
-    /// Gilgamesh — look at the top `count` cards of your library; put every
-    /// card matching `filter` onto the battlefield ("any number" resolved as
-    /// take-all); bottom the rest in a random order. When one or more entered
-    /// this way, `then` runs with the moved cards on `Selector::LastMoved`.
+    /// Gilgamesh: look at the top `count`; all `filter` cards enter, the rest
+    /// bottom at random; if any entered, `then` with them on `LastMoved`.
     LookTopPutMatchingOntoBattlefield {
         count: Value,
         filter: SelectionRequirement,
@@ -7722,24 +6218,15 @@ pub enum Effect {
         #[serde(default)]
         mandatory: bool,
     },
-    /// "Reveal the top `count` cards of your library. For each card type, you
-    /// may put a card of that type from among them into your hand. Put the
-    /// rest on the bottom of your library in a random order." Atraxa, Grand
-    /// Unifier. Resolution takes one revealed card per card type present
-    /// (a card satisfying multiple types is taken once); the leftovers are
-    /// bottomed. Card types considered: artifact, battle, creature,
-    /// enchantment, instant, land, planeswalker, sorcery.
+    /// Atraxa, Grand Unifier: reveal the top `count`; take one card per card type
+    /// present (a multi-type card once), bottom the rest at random.
     RevealTopTakeOnePerType { who: PlayerRef, count: Value },
-    /// Reveal the top `count` cards of `who`'s library, put every card
-    /// matching `filter` into their hand, and bottom the rest in a random
-    /// order (CR 401.4). "Put any number" is resolved as take-all-matching
-    /// (the value-maximizing default). Torsten, Founder of Benalia's
-    /// "reveal seven, take creatures and/or lands."
-    /// Reveal the top `count` cards of `who`'s library, put every card matching
-    /// `filter` into their graveyard and the rest on the bottom in a random
-    /// order (The Fourteenth Doctor's "put all Doctor cards revealed this way
-    /// into your graveyard").
+    /// Reveal the top `count` of `who`'s library; every `filter` match to the
+    /// graveyard, the rest bottom at random (The Fourteenth Doctor).
     RevealTopMatchingToGraveyard { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    /// Reveal the top `count` of `who`'s library; every `filter` match to hand,
+    /// the rest bottom at random (CR 401.4). "Any number" is take-all (Torsten,
+    /// Founder of Benalia).
     RevealTopTakeMatchingToHand {
         who: PlayerRef,
         count: Value,
@@ -7749,10 +6236,8 @@ pub enum Effect {
         #[serde(default)]
         distinct_powers: bool,
     },
-    /// Reveal the top `count` cards of `who`'s library, put every card matching
-    /// `filter` into their hand, and put the rest into their graveyard (CR 701).
-    /// The graveyard-partition sibling of `RevealTopTakeMatchingToHand`.
-    /// Borborygmos Enraged's combat trigger ("lands to hand, the rest to gy").
+    /// Reveal the top `count` of `who`'s library: `filter` matches to hand, the
+    /// rest to the graveyard (Borborygmos Enraged).
     RevealTopTakeMatchingRestToGraveyard {
         who: PlayerRef,
         count: Value,
@@ -7762,21 +6247,17 @@ pub enum Effect {
     /// of your library; put every card of the chosen type into your hand and
     /// the rest into your graveyard.
     ChooseTypeRevealTopPartition { count: Value },
-    /// "Reveal the top `count` cards of your library. For each card type, you
-    /// may exile a card of that type from among them. Put the rest into your
-    /// graveyard. You may cast a spell from among the exiled cards without
-    /// paying its mana cost if you exiled `free_cast_at` or more cards this
-    /// way. Then put the rest of the exiled cards into your hand."
-    /// (Portent of Calamity.) Each exiled card is exiled *for* one card type.
+    /// Portent of Calamity: reveal the top `count`; exile one per card type
+    /// (each exiled *for* one type), the rest to the graveyard; with
+    /// `free_cast_at`+ exiled you may cast one free; the other exiled cards go to
+    /// hand.
     RevealTopExileOnePerCardType { count: Value, free_cast_at: u32 },
     /// Fertile Imagination: choose a card type; target opponent reveals their
     /// hand; create `per` 1/1 green Saproling tokens for each card of the
     /// chosen type revealed this way.
     FertileImagination { per: Value },
-    /// Guild Feud: target opponent reveals the top three cards of their
-    /// library, may put a creature from among them onto the battlefield, and
-    /// puts the rest into their graveyard; you do the same with your top three.
-    /// If two creatures are put onto the battlefield this way, they fight.
+    /// Guild Feud: an opponent and then you each reveal three, may deploy a
+    /// creature, bin the rest; two deployed creatures fight.
     GuildFeud,
     /// Aethermage's Touch: reveal the top `count` cards of your library; put a
     /// creature card from among them onto the battlefield with a delayed
@@ -7808,24 +6289,17 @@ pub enum Effect {
     /// from its graveyard to the battlefield under your control with an extra
     /// +1/+1 counter, as a black Zombie in addition to its other types.
     GraveBetrayalReanimate,
-    /// Exchange `who`'s hand and graveyard (CR 701.10-style swap): every card
-    /// in hand moves to the graveyard and every card in the graveyard moves to
-    /// hand. Harness Infinity. (Resolved as a direct zone-vector swap; per-card
-    /// enters/leaves-graveyard triggers don't fire — a faithful-enough
-    /// approximation for the one card that does this.)
+    /// Harness Infinity: swap `who`'s hand and graveyard as zone vectors (CR
+    /// 701.10-style); per-card graveyard triggers don't fire.
     ExchangeHandAndGraveyard { who: PlayerRef },
     /// "Exchange your hand and library, then shuffle" (Mordenkainen's −10):
     /// the hand becomes the library (shuffled) and the library the hand.
     ExchangeHandAndLibrary { who: PlayerRef },
-    /// Each player in `who` exiles all but the bottom `keep` cards of their
-    /// library (face down — face-down exile isn't modeled, so the cards are
-    /// exiled plainly). Doomsday Excruciator's "each player exiles all but the
-    /// bottom six cards of their library."
+    /// Doomsday Excruciator: each `who` player exiles all but the bottom `keep`
+    /// cards of their library (face up; face-down exile isn't modeled).
     ExileLibraryExceptBottom { who: PlayerRef, keep: Value },
-    /// "Choose up to `max` face-up exiled cards you own. Exile all the cards
-    /// from your library, then put the chosen cards on top of your library"
-    /// (Mirror of Fate). The choice comes first, so a card the library exile
-    /// moves can't be chosen.
+    /// Mirror of Fate: choose up to `max` of your face-up exiled cards, exile
+    /// your library, put the chosen on top. The choice comes first.
     ExileLibraryThenTopFromExile { max: u32 },
 
     // ── Zone moves ───────────────────────────────────────────────────────────
@@ -7835,19 +6309,9 @@ pub enum Effect {
     /// order": every card `what` resolves to goes to the bottom of its
     /// owner's library, the group shuffled first (Sanwell, Avenger Ace).
     BottomInRandomOrder { what: Selector },
-    /// "[Return/put/exile] up to `count` cards of your choice from the set
-    /// `from` resolves to" — the player-chooses sibling of
-    /// `Move { what: Take {..} }` (which auto-takes in iteration order).
-    /// Resolution-time `Decision::ChooseCards`; the auto decider takes the
-    /// first `count` so bot play keeps maximizing. `filter` narrows the
-    /// resolved set (Bind to Life's "a creature card from AMONG the milled
-    /// seven" — `from: LastMoved`, filter Creature). Divergent Equation,
-    /// Pull from the Grave, Return to the Ranks, Emeritus of Ideation.
-    /// "Return any number of target [filter] cards with total mana value `cap`
-    /// or less from `from` to `to`" (March from the Tomb). Takes the cheapest
-    /// matches first until the next one would break the budget, so the count is
-    /// maximized. No-op when nothing matches. The moved cards are
-    /// `Selector::LastMoved`.
+    /// "Return any number of target [filter] cards with total mana value `cap` or
+    /// less" (March from the Tomb): cheapest first until the next would bust the
+    /// budget. No-op with no match; moved cards are `Selector::LastMoved`.
     MoveWithinTotalManaValue {
         from: Selector,
         filter: SelectionRequirement,
@@ -7861,6 +6325,10 @@ pub enum Effect {
         #[serde(default)]
         by_power: bool,
     },
+    /// "[Return/put/exile] up to `count` cards of your choice from `from`" — the
+    /// player-chooses sibling of `Move { what: Take {..} }`, via
+    /// `Decision::ChooseCards` (auto takes the first `count`). `filter` narrows
+    /// the set (Bind to Life: `from: LastMoved`, Creature). Pull from the Grave.
     MoveChosen {
         from: Selector,
         #[serde(default)]
@@ -7870,41 +6338,31 @@ pub enum Effect {
         up_to: bool,
         to: ZoneDest,
     },
-    /// "Put `what` into its owner's library just beneath the top `count`
-    /// cards of that library" (Quarry Colossus). The dynamic-`count` sibling
-    /// of `LibraryPosition::FromTop`; CR 401.7 bottoms it when the library is
-    /// shorter than `count`.
+    /// Quarry Colossus: put `what` beneath the top `count` cards of its owner's
+    /// library (dynamic `FromTop`; CR 401.7 bottoms it if shorter).
     PutIntoLibraryBeneathTop { what: Selector, count: Value },
     /// Search `who`'s library for a card matching `filter` and move to `to`.
     Search { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
-    /// "Search your library for any number of cards matching `filter`, put
-    /// them into `to`, then shuffle" (Ugin, Eye of the Storms). The picker
-    /// keeps choosing until they decline; every moved card is visible to
-    /// `Selector::ExiledThisResolution` / `Selector::LastMoved` for a chained
-    /// rider. CR 701.24c — the library is shuffled even on an empty pick.
+    /// "Search for any number of `filter` cards, put them into `to`, shuffle"
+    /// (Ugin, Eye of the Storms); moved cards feed `ExiledThisResolution` /
+    /// `LastMoved`. CR 701.24c — shuffles even on an empty pick.
     SearchAnyNumber { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest },
-    /// Transmute Artifact — search your library for an artifact card; if its
-    /// mana value is at most the sacrificed artifact's it enters, otherwise
-    /// you may pay the difference in generic mana to bring it in, and it goes
-    /// to the graveyard if you don't. Reads the cast-cost sacrifice's mana
-    /// value (`sacrificed_mana_value`).
+    /// Transmute Artifact: search for an artifact; it enters if its mana value is
+    /// at most the sacrificed one's (`sacrificed_mana_value`), else pay the
+    /// difference or it goes to the graveyard.
     TransmuteArtifact,
-    /// Search several of `who`'s zones at once for a card matching `filter`
-    /// and move it to `to` — "search your graveyard, hand, and/or library"
-    /// (Dark Supplicant, Delivery Moogle). Candidates pool every listed zone;
-    /// the pick is taken from whichever zone holds it. Listing
-    /// [`Zone::Library`] makes it a real library search (shuffle, search
-    /// taxes/locks, `PlayerSearchedLibrary`); omitting it skips all of that.
+    /// "Search your graveyard, hand, and/or library" for a `filter` card to `to`
+    /// (Dark Supplicant), pooling the listed zones. Listing [`Zone::Library`]
+    /// makes it a real library search (shuffle, taxes / locks,
+    /// `PlayerSearchedLibrary`).
     SearchZones {
         who: PlayerRef,
         zones: Vec<crate::card::Zone>,
         filter: SelectionRequirement,
         to: ZoneDest,
     },
-    /// "Search your library for a land card of each basic land type, put those
-    /// cards onto the battlefield, then shuffle" (Gaea's Balance). One card per
-    /// basic type, each chosen from the cards carrying that type; a type with
-    /// no match is simply skipped.
+    /// Gaea's Balance: search one land per basic type and put them onto the
+    /// battlefield, then shuffle; unmatched types are skipped.
     SearchEachBasicLandType { who: PlayerRef, tapped: bool },
     /// CR 614 — "Until end of turn, spells and abilities you control that would
     /// add colored mana instead add that much `color` mana; you may spend that
@@ -7917,17 +6375,13 @@ pub enum Effect {
     /// player does, counter it" (Ice Cave). Walks the other seats in turn
     /// order and takes the first willing payer.
     OtherPlayerMayPayToCounter { what: Selector },
-    /// "Search your library for up to `count` cards matching `filter` and put
-    /// them into `to`." Resolves as a chain of single `Search` picks (each
-    /// reuses the `SearchPending` suspend), shrinking `count` per pick.
-    /// AutoDecider declines (finds none). Nylea's Intervention (lands → hand),
-    /// Deathbellow War Cry (Minotaurs → battlefield). "With different names"
-    /// is `R::NameDiffersFromLastMoved` in the filter.
+    /// "Search for up to `count` `filter` cards into `to`" as a chain of single
+    /// `Search` picks (each reusing the `SearchPending` suspend). AutoDecider
+    /// finds none. Nylea's Intervention. "Different names" is
+    /// `R::NameDiffersFromLastMoved` in the filter.
     SearchUpToN { who: PlayerRef, filter: SelectionRequirement, to: ZoneDest, count: Value },
-    /// CR 701.23 — `body`'s searches are ONE search: "search for up to two
-    /// basic land cards, put one onto the battlefield tapped and the other
-    /// into your hand" (Cultivate) picks with two `Search`es but pays one
-    /// tax and is one search event (`game/search_batch.rs`).
+    /// CR 701.23 — `body`'s searches count as one: one tax and one search event
+    /// (Cultivate's two picks; `game/search_batch.rs`).
     OneSearch { body: Box<Effect> },
     /// CR 701.23a — `picker` searches `who`'s library: the pick decision
     /// routes to `picker`'s seat, not the library's owner (Hide // Seek's
@@ -7940,16 +6394,11 @@ pub enum Effect {
         filter: SelectionRequirement,
         definition: std::sync::Arc<crate::card::TokenDefinition>,
     },
-    /// CR 701.52 — `who` seeks `count` cards matching `filter`: the engine
-    /// randomly chooses among the matching cards in their library (no
-    /// player choice) and moves each to `to`, then no shuffle is needed
-    /// (the picks are already random). Hidden-information mechanic from
-    /// Tarkir: Dragonstorm (Roost Seek, Nesting Instinct, Divining Dive).
+    /// CR 701.52 — seek `count` `filter` cards: random picks from `who`'s
+    /// library, no choice and no shuffle (Tarkir: Dragonstorm).
     Seek { who: PlayerRef, filter: SelectionRequirement, count: Value, to: ZoneDest },
-    /// Return `count` cards matching `filter` at random from `who`'s graveyard
-    /// to their hand ("return a[n] [filter] card at random from your graveyard
-    /// to your hand" — Charmbreaker Devils). No player choice; stops early if
-    /// the graveyard runs out of matches.
+    /// Return `count` random `filter` cards from `who`'s graveyard to hand
+    /// (Charmbreaker Devils); stops when out of matches.
     ReturnRandomFromGraveyard { who: PlayerRef, filter: SelectionRequirement, count: Value },
     /// Pick a card at random in `who`'s graveyard; a creature card goes onto
     /// the battlefield under their control, anything else goes to `miss`.
@@ -7965,10 +6414,8 @@ pub enum Effect {
     /// library (Repopulate) — the payoff-free sibling of
     /// `ShuffleFilteredGraveyardIntoLibraryGainLife`.
     ShuffleFilteredGraveyardIntoLibrary { who: PlayerRef, filter: SelectionRequirement },
-    /// Shuffle every card matching `filter` from `who`'s graveyard into their
-    /// library, then that player gains life equal to the number shuffled this
-    /// way (Elixir — "shuffle all nonland cards … gain life equal to the number
-    /// of cards shuffled").
+    /// Elixir: shuffle every `filter` card from `who`'s graveyard into their
+    /// library; they gain life equal to the count.
     ShuffleFilteredGraveyardIntoLibraryGainLife {
         who: PlayerRef,
         filter: SelectionRequirement,
@@ -7991,36 +6438,28 @@ pub enum Effect {
     /// Spellskite — change the primary target of the selected stack spell
     /// to this permanent, if it's a legal target for that spell (CR 115.7).
     RedirectSpellTargetToSelf { what: Selector },
-    /// Gideon's Sacrifice — "All damage that would be dealt this turn to you
-    /// and permanents you control is dealt to the chosen permanent instead."
-    /// Registers a `(controller, chosen)` entry in `damage_redirect_this_turn`
-    /// (CR 614.9), consulted by `damage_redirect_target`. `creatures_only`:
-    /// "to you and CREATURES you control" (Heroic Sacrifice) — damage to your
-    /// noncreature permanents isn't redirected.
+    /// Gideon's Sacrifice: this turn, damage to you and your permanents goes to
+    /// the chosen permanent (CR 614.9; `damage_redirect_this_turn`, read by
+    /// `damage_redirect_target`). `creatures_only`: only you and your creatures
+    /// (Heroic Sacrifice).
     RedirectYourDamageToChosen {
         what: Selector,
         #[serde(default)]
         creatures_only: bool,
     },
-    /// Turn the Tables — "All combat damage that would be dealt to you this
-    /// turn is dealt to `what` instead." The combat-only, player-only sibling
-    /// of `RedirectYourDamageToChosen`; registers a `(controller, what)` entry
-    /// in `combat_damage_redirect_this_turn`.
+    /// Turn the Tables: this turn, combat damage to you is dealt to `what`
+    /// instead (`combat_damage_redirect_this_turn`).
     RedirectYourCombatDamageToTarget { what: Selector },
     /// Shriveling Rot mode 1 — "until end of turn, whenever a creature is dealt
     /// damage, destroy it". The lethal-damage SBA treats *any* marked damage as
     /// lethal for the rest of the turn (indestructible still survives).
     DamagedCreaturesDieThisTurn,
-    /// Green Dragon's Poison Breath — "until end of turn, whenever a creature
-    /// an opponent controls is dealt damage, destroy it": the
-    /// `DamagedCreaturesDieThisTurn` sweep scoped to the controller's
-    /// opponents' creatures.
+    /// Poison Breath: `DamagedCreaturesDieThisTurn` limited to your opponents'
+    /// creatures.
     DamagedOpponentCreaturesDieThisTurn,
-    /// "Return any number of cards with different mana values from your
-    /// graveyard to your hand" (Seasons Past). The picker keeps at most one
-    /// card per mana value; `max` caps the count ("return X target cards with
-    /// different mana values" — Long Rest). Publishes the returns on
-    /// `Selector::LastMoved`.
+    /// Seasons Past: return any graveyard cards with different mana values to
+    /// hand (at most one per value); `max` caps the count (Long Rest). Returns
+    /// are on `Selector::LastMoved`.
     ReturnDistinctManaValuesFromGraveyard {
         who: PlayerRef,
         #[serde(default)]
@@ -8029,11 +6468,9 @@ pub enum Effect {
     /// Shriveling Rot mode 2 — "until end of turn, whenever a creature dies,
     /// that creature's controller loses life equal to its toughness".
     CreatureDeathsDrainToughnessThisTurn,
-    /// Deliver Unto Evil — up to `max_targets` target cards in your graveyard
-    /// (slots `0..max_targets`, filter `filter`). On resolution: if you control
-    /// a Bolas planeswalker, return them all to your hand; otherwise an
-    /// opponent chooses two of them to leave in your graveyard and the rest go
-    /// to your hand.
+    /// Deliver Unto Evil: up to `max_targets` graveyard targets (slots
+    /// `0..max_targets`). With a Bolas planeswalker all return to hand;
+    /// otherwise an opponent leaves two behind.
     DeliverUntoEvil { max_targets: u8, filter: SelectionRequirement },
     /// Nicol Bolas, Dragon-God's +1 rider — "Each opponent exiles a card from
     /// their hand or a permanent they control." Each opponent chooses one
@@ -8043,35 +6480,25 @@ pub enum Effect {
     /// deck onto the battlefield under your control, face up. No-op when the
     /// Attraction deck is empty.
     OpenAnAttraction,
-    /// "Each opponent exiles a card from their hand and may play that card for
-    /// as long as it remains exiled. Each spell cast this way costs
-    /// `surcharge` more" (Lightstall Inquisitor). The permission is stamped on
-    /// the exiled card with the card's own cost plus the surcharge as the
-    /// alternative cast cost; an `{X}` card stamps X = 0.
+    /// Lightstall Inquisitor: each opponent exiles a hand card they may play
+    /// while exiled for `surcharge` more (stamped as the card's own cost plus
+    /// surcharge; X = 0).
     EachOpponentExilesHandCardMayPlay { surcharge: u32 },
-    /// "Each opponent chooses a creature they control and exiles it" — the
-    /// exiles are stamped `exiled_with = source`, so a later
-    /// `Selector::CardExiledWithSource` can cash them back in (Sothera, the
-    /// Supervoid). Auto-picks the weakest creature for a non-UI seat.
+    /// Sothera, the Supervoid: each opponent exiles a creature (auto: weakest),
+    /// stamped `exiled_with = source` for `CardExiledWithSource`.
     EachOpponentExilesOwnCreature,
     /// Nicol Bolas, Dragon-God's −8 — "Each opponent who doesn't control a
     /// legendary creature or planeswalker loses the game" (CR 104.3a).
     EachOpponentWithoutLegendaryLoses,
-    /// Finale of Promise — slot 0 is up to one target instant card, slot 1 up
-    /// to one target sorcery card, each in your graveyard with mana value X or
-    /// less. Free-cast each (exiled on resolve); if X ≥ 10, copy each twice
-    /// with new targets.
+    /// Finale of Promise: free-cast up to one graveyard instant (slot 0) and
+    /// sorcery (slot 1) with mana value ≤ X, exiled after; at X ≥ 10 copy each
+    /// twice.
     FinaleOfPromise,
-    /// Feather, the Redeemed — mark the selected spell on the stack so that,
-    /// as it resolves, it's exiled instead of going to the graveyard and
-    /// returns to its controller's hand at the next end step. Applied by
-    /// Feather's cast trigger to `Selector::TriggerSource`.
+    /// Feather, the Redeemed: the marked spell is exiled as it resolves and
+    /// returns to hand at the next end step.
     MarkExileReturnOnResolve { what: Selector },
-    /// Niv-Mizzet Reborn — reveal the top ten cards of your library; for each
-    /// of the ten guild color pairs, take one revealed card whose printed
-    /// colors are exactly that pair into your hand; put the rest on the bottom
-    /// of your library in a random order. (When a pair has several matches the
-    /// first revealed is taken.)
+    /// Niv-Mizzet Reborn: reveal the top ten; per guild color pair take the first
+    /// card whose printed colors are exactly that pair; the rest bottom at random.
     NivMizzetReveal,
     /// Gifts Ungiven — search up to `count` library cards with different
     /// names and reveal them; the targeted opponent chooses `opponent_picks`
@@ -8087,64 +6514,50 @@ pub enum Effect {
         #[serde(default)]
         filter: Option<crate::card::SelectionRequirement>,
     },
-    /// Move the resolving spell (`ctx.source`) from the stack into its
-    /// owner's library, then shuffle. The Beacon cycle's "Shuffle this card
-    /// into its owner's library" recursion rider (Beacon of Immortality,
-    /// Beacon of Destruction). Runs at resolution before the spell would go
-    /// to the graveyard, so the card never lands in the graveyard.
+    /// The Beacon cycle's "shuffle this card into its owner's library": moves the
+    /// resolving spell from the stack to the library, before it would reach the
+    /// graveyard.
     ShuffleSelfIntoLibrary,
-    /// "This creature's owner shuffles it into their library. If that player
-    /// does, they reveal cards from the top of that library until a card
-    /// named [this] is revealed. The player puts that card onto the
-    /// battlefield and all other cards revealed this way into their
-    /// graveyard" (Mirror-Mad Phantasm). Does nothing unless the source is
-    /// still on the battlefield.
+    /// Mirror-Mad Phantasm: the owner shuffles it into their library, then
+    /// reveals until a card of its name, which enters; the other revealed cards
+    /// go to the graveyard. Nothing unless the source is on the battlefield.
     ShuffleSelfRevealUntilSameNameToBattlefield,
     /// "Return [this spell] to its owner's hand" as part of its own
     /// resolution (Journey to the Oracle's discard rider). Flags the
     /// post-resolution routing the same way `ShuffleSelfIntoLibrary` does.
     ReturnResolvingSpellToHand,
-    /// "Distribute `total` counters of `kind` among the permanents created
-    /// earlier in THIS resolution" (`GameState.scratch.last_created_tokens`) — the
-    /// resolution-time sibling of the cast-time `DistributeCounters`
-    /// (fresh tokens can't be cast-time targets, CR 601.2d). A UI
-    /// controller picks each token's share via `ChooseAmount` (the last
-    /// token takes the remainder); non-UI seats split as evenly as
-    /// possible. Fractal Bloom.
+    /// Distribute `total` `kind` counters among tokens created this resolution
+    /// (`scratch.last_created_tokens`) — resolution-time `DistributeCounters`,
+    /// since fresh tokens can't be cast-time targets (CR 601.2d). UI picks shares
+    /// via `ChooseAmount` (last takes the rest); others split evenly. Fractal
+    /// Bloom.
     DistributeCountersAmongLastCreated {
         total: Value,
         kind: crate::card::CounterType,
     },
-    /// "Put this card into its owner's library `from_top` cards from the
-    /// top" for the RESOLVING spell (Approach of the Second Sun's
-    /// seventh-from-the-top). Sets a transient consumed by the
-    /// post-resolution routing instead of the graveyard trip; `from_top`
-    /// is clamped to the library size.
+    /// Put the resolving spell `from_top` cards down its owner's library (clamped)
+    /// instead of the graveyard, via a transient the post-resolution routing reads
+    /// (Approach of the Second Sun).
     PutResolvingSpellInLibraryFromTop(u32),
-    /// "Exile this spell, then put it onto the battlefield transformed under
-    /// its owner's control" for the RESOLVING spell — the front face isn't a
-    /// permanent, so the card is claimed by the post-resolution routing rather
-    /// than by an effect reaching for a battlefield object (Esper Origins).
-    /// `counter` is placed on the permanent as it arrives.
+    /// "Exile this spell, then return it transformed" for the resolving spell,
+    /// claimed by the post-resolution routing since the front face isn't a
+    /// permanent (Esper Origins). `counter` is placed as it enters.
     PutResolvingSpellOnBattlefieldTransformed {
         #[serde(default)]
         counter: Option<crate::card::CounterType>,
     },
-    /// Revel in Silence: each resolved player can't cast spells or activate
-    /// loyalty abilities for the rest of the turn
-    /// (`Player.silenced_this_turn`).
-    /// CR 614 — "if target land is tapped for mana, it produces colorless
-    /// mana instead of its usual type", indefinitely (Quarum Trench Gnomes).
+    /// CR 614 — "if target land is tapped for mana, it produces colorless mana
+    /// instead", indefinitely (Quarum Trench Gnomes).
     ReplaceTargetLandManaWithColorless { what: Selector },
-    /// CR 615 — "if a spell or ability that targets this creature would cause
-    /// a source to deal damage to it this turn, prevent that damage"
-    /// (Silhouette). Turn-scoped; read at the damage funnel against the
-    /// resolution's own target list.
+    /// CR 615 — Silhouette: this turn, prevent damage to it from a source caused
+    /// by a spell or ability that targets it.
     PreventTargetingDamageThisTurn { what: Selector },
     /// "Choose a card name. Target opponent reveals `count` cards at random
     /// from their hand, then discards all cards with that name revealed this
     /// way." Nebuchadnezzar.
     NameCardRevealRandomDiscardNamed { who: PlayerRef, count: Value },
+    /// Revel in Silence: each resolved player can't cast spells or activate
+    /// loyalty abilities for the rest of the turn (`Player.silenced_this_turn`).
     SilencePlayersThisTurn { who: PlayerRef },
     /// "[who] can't cast spells until [their] next turn" (Innocuous
     /// Researcher): the silence carries over each turn boundary until that
@@ -8166,13 +6579,11 @@ pub enum Effect {
     /// under your control" (Tevesh Szat's −10): every player's commanders in
     /// their command zone, in seat order. Not a cast, so no tax.
     PutCommandersFromCommandZonesOntoBattlefield,
-    /// "Put a commander you own from the command zone onto the battlefield"
-    /// (Hellkite Courser). Not a cast: no commander tax, no cast-count bump.
-    /// With two commanders there the owner chooses; with none it does nothing.
-    /// The entrant is exposed on `Selector::LastMoved`. `haste` grants it
-    /// haste; `return_at_end_step` registers a CR 603.7a delayed trigger that
-    /// returns it to the command zone at the beginning of the next end step
-    /// (only if it is still on the battlefield).
+    /// Put a commander you own from the command zone onto the battlefield
+    /// (Hellkite Courser) — not a cast (no tax, no cast count); the owner picks
+    /// between two; on `Selector::LastMoved`. `haste` grants haste;
+    /// `return_at_end_step` adds a CR 603.7a delayed return to the command zone
+    /// at the next end step, if it is still there.
     PutCommanderOntoBattlefield {
         who: PlayerRef,
         #[serde(default)]
@@ -8180,10 +6591,9 @@ pub enum Effect {
         #[serde(default)]
         return_at_end_step: bool,
     },
-    /// CR 903.8 — "cast your commander from the command zone without paying
-    /// its mana cost" (Geode Golem; the "you may" is a `MayDo` around it). The
-    /// commander tax is an additional cost and is still paid; a cast that
-    /// can't be paid, or a commander not in the command zone, does nothing.
+    /// CR 903.8 — cast your commander from the command zone without paying its
+    /// mana cost (Geode Golem, inside a `MayDo`). Tax is still paid; nothing if
+    /// unpayable or not there.
     CastCommanderWithoutPaying,
     /// "The next spell you cast this turn has affinity for artifacts"
     /// (Saheeli, the Gifted's +1): it costs {1} less for each artifact you
@@ -8196,34 +6606,26 @@ pub enum Effect {
 
     // ── Mana ─────────────────────────────────────────────────────────────────
     AddMana { who: PlayerRef, pool: ManaPayload },
-    /// "Add mana equal to [permanent]'s mana cost" (Elemental Resonance).
-    /// Reads the resolved permanent's printed cost pip-by-pip: colored →
-    /// that color, generic/{C} → colorless, hybrid → its first color, X →
-    /// skipped. Mana goes to the resolving controller's pool.
+    /// Elemental Resonance: add mana equal to a permanent's printed cost —
+    /// colored as colored, generic / {C} as colorless, hybrid its first color, X
+    /// skipped.
     AddManaEqualToPermanentCost { permanent: Selector },
     /// "Add `amount` mana in any combination of its colors" (Omnath, Locus
     /// of All): `what` is a card in any zone; each pip is one of its colors,
     /// the controller's pick. A colorless card adds nothing.
     AddManaAmongColorsOf { what: Selector, amount: Value },
-    /// Invasion of Alara: "Exile cards from the top of your library until
-    /// you exile `count` nonland cards [matching `filter`]. You may cast one
-    /// of those without paying its mana cost. Put one of them into your hand.
-    /// Then put the other cards exiled this way on the bottom of your library
-    /// in a random order."
+    /// Invasion of Alara: exile from the top until `count` nonland [filter]
+    /// cards; cast one free, take one, bottom the rest at random.
     ExileUntilCastOneTakeOne { count: u32, filter: SelectionRequirement },
-    /// CR 500.4 exception — add these fixed color pips to the resolving
-    /// player's pool and mark them "you don't lose this mana as steps and
-    /// phases end" (Savage Ventmaw's attack trigger). The mana survives every
-    /// step/phase empty this turn and clears at cleanup.
+    /// CR 500.4 exception (Savage Ventmaw): add these pips, kept through step
+    /// and phase ends until cleanup.
     AddManaKeptThisTurn { who: PlayerRef, colors: Vec<Color> },
     /// Like `AddManaKeptThisTurn` but adds `amount` mana of a single `color`
     /// (Neheb, Dreadhorde Champion — "add that much {R}", where the amount is
     /// the number of cards discarded this resolution).
     AddManaKeptThisTurnCount { who: PlayerRef, color: Color, amount: Value },
-    /// Klauth, Unrivaled Ancient — `AddManaKeptThisTurnCount` in any
-    /// combination of colors: `amount` pips, each color chosen per pip, kept
-    /// through step and phase ends until cleanup, restricted to spells
-    /// ("Spend this mana only to cast spells" — `SpendRestriction::SpellsOnly`).
+    /// Klauth, Unrivaled Ancient: `amount` pips of chosen colors, kept until
+    /// cleanup and restricted to spells (`SpendRestriction::SpellsOnly`).
     AddManaKeptThisTurnAnyColors { who: PlayerRef, amount: Value },
     /// `amount` pips in any combination of `colors`, each chosen per pip,
     /// kept through step and phase ends until cleanup, spent freely (Grand
@@ -8241,10 +6643,8 @@ pub enum Effect {
         #[serde(default)]
         restriction: Option<crate::mana::SpendRestriction>,
     },
-    /// CR 702.189a — firebending's resolution: add `amount` {R} to the
-    /// controller's pool, kept as steps and phases end until end of combat.
-    /// A triggered ability that uses the stack (CR 605.1b: it triggers on an
-    /// attack, not on mana), so it can be copied or countered.
+    /// CR 702.189a — firebending: add `amount` {R} kept until end of combat. A
+    /// stack trigger (CR 605.1b), so it can be copied or countered.
     Firebend { amount: Value },
     /// "Add `amount` {R}. Until end of combat, you don't lose this mana as
     /// steps end" (Avatar Roku, Firebender) — firebending's mana without
@@ -8257,25 +6657,17 @@ pub enum Effect {
 
     // ── Permanent mutations ──────────────────────────────────────────────────
     Destroy { what: Selector },
-    /// CR 701.19 — "Destroy ... It can't be regenerated." Behaves like
-    /// `Destroy` but bypasses regeneration shields (Terminate, Putrefy,
-    /// Day of Judgment, Vindicate, ...). Indestructible and Shield-counter
-    /// replacements still apply — only regeneration is denied.
+    /// CR 701.19 — destroy, can't be regenerated (Terminate). Indestructible and
+    /// shield counters still apply.
     DestroyNoRegen { what: Selector },
-    /// "Destroy all [filter]. They can't be regenerated. The controller of
-    /// each of those permanents gains life equal to its mana value" (Seeds of
-    /// Innocence). Life is paid out per destroyed permanent, to its own
-    /// controller.
+    /// Seeds of Innocence: destroy all [filter], no regeneration; each
+    /// controller gains life equal to their permanents' mana value.
     DestroyAllNoRegenGainControllerLifePerManaValue { filter: SelectionRequirement },
-    /// "Destroy each nonland permanent with mana value equal to `value`" —
-    /// resolves `value` at resolution (typically `CountersOn { This, Charge }`)
-    /// and destroys every nonland permanent whose mana value matches. Ratchet
-    /// Bomb, Engineered Explosives, Blast Zone.
+    /// Destroy each nonland permanent with mana value `value` (usually charge
+    /// counters on this) — Engineered Explosives.
     DestroyEachNonlandWithManaValue { value: Value },
-    /// Creature-scoped sibling of `DestroyEachNonlandWithManaValue`: destroys
-    /// every *creature* whose mana value matches `value` (Sanguine Praetor's
-    /// "destroy each creature with the same mana value as the sacrificed
-    /// creature" via `Value::SacrificedManaValue`).
+    /// `DestroyEachNonlandWithManaValue` for creatures (Sanguine Praetor, via
+    /// `Value::SacrificedManaValue`).
     DestroyEachCreatureWithManaValue { value: Value },
     /// The filtered form of `DestroyEachNonlandWithManaValue`: destroys every
     /// permanent matching `filter` whose mana value equals `value` (Powder
@@ -8287,64 +6679,47 @@ pub enum Effect {
     /// "Destroy `what` and all other permanents with the same name" (Wake of
     /// Destruction).
     DestroyAllSharingNameWith { what: Selector },
-    /// "Choose a number between 0 and `max`. Destroy all creatures with power
-    /// greater than or equal to the chosen number." The controller picks the
-    /// number at resolution (`Decision::ChooseAmount`); a bot/AutoDecider picks
-    /// 0 (destroy everything). Expel the Interlopers.
+    /// Expel the Interlopers: choose 0..=`max` (`Decision::ChooseAmount`; auto
+    /// 0) and destroy creatures with at least that power.
     ChooseNumberDestroyByPower { max: u32 },
     /// "Choose a number between 0 and `max`. Each player sacrifices that many
     /// [`filter`] of their choice" (By Invitation Only, CR 701.21). The
     /// controller picks at resolution (`AmountKind::EachSacrificesCount`).
     ChooseNumberEachPlayerSacrifices { max: u32, filter: crate::card::SelectionRequirement },
-    /// CR 701.15 — add a regeneration shield to each resolved permanent.
-    /// The shield is a one-shot replacement that fires the next time the
-    /// permanent would be destroyed this turn (tap + remove from combat +
-    /// heal damage instead of dying). Powers "{cost}: Regenerate this
-    /// creature" activated abilities (Drudge Skeletons, River Boa, Korlash).
+    /// CR 701.15 — a regeneration shield on each resolved permanent: the next
+    /// destruction this turn taps it, removes it from combat and heals it
+    /// instead (Drudge Skeletons).
     Regenerate { what: Selector },
-    /// CR 701.19 — "Regenerate `what`. You gain control of that creature if it
-    /// regenerates this way" (Debt of Loyalty). The shield carries the
-    /// resolving controller in `CardInstance.regeneration_control_grant`; the
-    /// control change happens when — and only when — the shield is consumed.
+    /// CR 701.19 — Debt of Loyalty: regenerate `what`; you gain control when
+    /// (and only if) the shield is consumed
+    /// (`CardInstance.regeneration_control_grant`).
     RegenerateThenGainControl { what: Selector },
     /// CR 701.19 — "it can't be regenerated this turn": existing shields stop
     /// applying and new ones do nothing for the rest of the turn. Rage of
     /// Purphoros, the Terror-style removal riders.
     CantBeRegeneratedThisTurn { what: Selector },
-    /// "If [each resolved permanent] would die this turn, exile it instead."
-    /// Installs an until-end-of-turn death replacement (CR 614, same shape
-    /// as a finality counter) on every permanent the selector resolves to.
-    /// Because the redirect lasts the whole turn, it catches deaths from
-    /// later combat / removal too, not just the spell's own damage. Used by
-    /// Wilt in the Heat (paired with a `DealDamage`).
+    /// "If [it] would die this turn, exile it instead": a turn-long CR 614 death
+    /// replacement (finality-counter shape), so later deaths that turn are caught
+    /// too. Wilt in the Heat.
     ExileIfWouldDieThisTurn { what: Selector },
-    /// CR 614 — "If a permanent you control would be put into a graveyard
-    /// from the battlefield this turn, exile it instead" (Cosmic
-    /// Intervention): every permanent the controller controls when it would
-    /// die, entering later included. The cards are recorded against the
-    /// source for [`Effect::ReturnCardsExiledInsteadBySource`].
+    /// CR 614 — Cosmic Intervention: this turn your dying permanents (later
+    /// arrivals included) are exiled instead, recorded against the source for
+    /// [`Effect::ReturnCardsExiledInsteadBySource`].
     ExileYourDyingPermanentsThisTurn,
     /// "Return it to the battlefield under its owner's control": each card
     /// `ExileYourDyingPermanentsThisTurn` exiled for this source and still
     /// in exile.
     ReturnCardsExiledInsteadBySource,
-    /// CR 614 — "If [it] would leave the battlefield, exile it instead of
-    /// putting it anywhere else." Registers a replacement bound to each
-    /// resolved permanent (battlefield → graveyard / hand / library becomes
-    /// exile) that lapses when that object leaves (CR 400.7). From the
-    /// Catacombs, Whip of Erebos, Geth, Gruesome Encore, Llanowar Greenwidow.
+    /// CR 614 — "if it would leave the battlefield, exile it instead": a
+    /// replacement bound to each resolved permanent, lapsing when it leaves (CR
+    /// 400.7). Whip of Erebos, Gruesome Encore.
     ExileIfLeavesBattlefield { what: Selector },
-    /// Exile each card `what` resolves to, linked to the object `link`
-    /// resolves to (its `exiled_with`), so that object's own
-    /// `Selector::CardExiledWithSource` finds it later — Timothar's Bat
-    /// returning the Vampire exiled with it.
+    /// Exile `what` linked to the object `link` names (`exiled_with`), for its
+    /// own `CardExiledWithSource` (Timothar's Bat).
     ExileLinkedTo { what: Selector, link: Selector },
-    /// "Target instant/sorcery card in your graveyard gains flashback until
-    /// end of turn; its flashback cost equals its mana cost." Installs an
-    /// until-end-of-turn `granted_flashback_eot` (= the card's own mana
-    /// cost) on each resolved graveyard card, making it castable via the
-    /// normal flashback path (pay the cost, exile on resolve). Used by the
-    /// SOS "Flashback" instant.
+    /// "Gains flashback until end of turn equal to its mana cost": sets
+    /// `granted_flashback_eot` on each resolved graveyard card, castable via the
+    /// normal flashback path. SOS "Flashback".
     GrantFlashbackThisTurn { what: Selector },
     /// `GrantFlashbackThisTurn` at a printed flashback cost ("gains flashback
     /// {2}{R}{G} until end of turn" — The Fugitive Doctor).
@@ -8353,87 +6728,64 @@ pub enum Effect {
     /// until end of turn" (Filigree Racer, CR 702.133): stamps
     /// `granted_jumpstart_eot`, cleared at cleanup.
     GrantJumpStartThisTurn { what: Selector },
-    /// "Target card in your graveyard gains escape until end of turn. The
-    /// escape cost is equal to its mana cost plus exile `exile_count` other
-    /// cards from your graveyard" (Desdemona, Freedom's Edge — CR 702.138).
-    /// Recorded in `GameState::granted_escape_eot`, read first by
-    /// `effective_escape_grant`; cleared at cleanup.
+    /// CR 702.138 — "gains escape until end of turn; cost its mana cost plus
+    /// exiling `exile_count` other graveyard cards" (Desdemona, Freedom's Edge).
+    /// In `GameState::granted_escape_eot`, read first by `effective_escape_grant`;
+    /// cleared at cleanup.
     GrantEscapeThisTurn { what: Selector, exile_count: u32 },
     /// As `GrantEscapeThisTurn` with a printed escape cost ("each creature
     /// card in your graveyard gains 'Escape—{3}{B}, exile four other cards'"
     /// — The Grim Captain's Locker).
     GrantEscapeWithCostThisTurn { what: Selector, cost: crate::mana::ManaCost, exile_count: u32 },
-    /// "Target creature card in your graveyard gains embalm until end of turn.
-    /// The embalm cost is equal to its mana cost." (CR 702.88 — Cursecloth
-    /// Wrappings.) Pushes a real embalm activation onto the card's
-    /// `granted_activated_eot`, so it activates through the normal
-    /// graveyard-ability path and is cleared at cleanup.
+    /// CR 702.88 — "gains embalm until end of turn, cost its mana cost"
+    /// (Cursecloth Wrappings): a real embalm activation in
+    /// `granted_activated_eot`, cleared at cleanup.
     GrantEmbalmThisTurn { what: Selector },
     /// CR 702.141 — "[card] gains encore until end of turn. The encore cost
     /// is equal to its mana cost" (Araumi of the Dead Tide).
     GrantEncoreThisTurn { what: Selector },
-    /// "Target instant/sorcery card in your graveyard gains harmonize until
-    /// end of turn; its harmonize cost equals its mana cost" (Songcrafter
-    /// Mage). Stamps an until-end-of-turn `granted_harmonize_eot` (= the
-    /// card's own mana cost), castable via the normal Harmonize path (CR
-    /// 702.180 — pay the cost, optionally tap a creature to reduce it, exile
-    /// on resolve). Cleared at cleanup.
+    /// CR 702.180 — "gains harmonize until end of turn, cost its mana cost"
+    /// (Songcrafter Mage): `granted_harmonize_eot`, castable via the normal
+    /// Harmonize path; cleared at cleanup.
     GrantHarmonizeThisTurn { what: Selector },
-    /// "[Each resolved card] gains miracle `cost` until end of turn." Stamps
-    /// an until-end-of-turn `may_play_until` permission **plus** a
-    /// `granted_alt_cast_cost_eot` of `cost`, so the controller may cast the
-    /// card this turn by paying `cost` (rather than its full mana cost or
-    /// for free). Used by Lorehold, the Historian's "instant and sorcery
-    /// cards in your hand have miracle {2}" grant.
+    /// "Gains miracle `cost` until end of turn": a turn-long `may_play_until` plus
+    /// `granted_alt_cast_cost_eot` of `cost` (Lorehold, the Historian).
     GrantMiracle { what: Selector, cost: crate::mana::ManaCost },
     /// `GrantMiracle` whose cost is each card's own mana cost reduced by
     /// `{reduce}` generic (Aminatou, Veil Piercer — "its miracle cost is equal
     /// to its mana cost reduced by {4}").
     GrantMiracleReduced { what: Selector, reduce: u32 },
     Exile   { what: Selector },
-    /// The "Enduring" cycle (Bloomburrow): "When this dies, if it was a
-    /// creature, return it to the battlefield. It's an enchantment." Returns
-    /// the source from its owner's graveyard to the battlefield under their
-    /// control, then strips the Creature card type from the returned object
-    /// so it comes back as a noncreature enchantment (and the gate self-
-    /// limits — a noncreature can't satisfy "if it was a creature", so it
-    /// won't loop). No-op if the source isn't a creature card in a graveyard.
+    /// Bloomburrow Enduring: "when this dies, if it was a creature, return it.
+    /// It's an enchantment." Returns the source from the graveyard without the
+    /// Creature type, so the gate can't loop. No-op unless it's a creature card
+    /// in a graveyard.
     ReturnSelfAsEnchantment,
-    /// Otherworldly Escort — "when this dies, if it's not a `unless`, return it
-    /// to the battlefield under its owner's control with `amount` `kind`
-    /// counters on it. It's a `types` (and no longer its old creature types)."
-    /// The retype rides the card's definition, so the next death sees it and
-    /// the gate self-limits, as `ReturnSelfAsEnchantment`'s does.
+    /// Otherworldly Escort: "if it's not a `unless`, return it with `amount`
+    /// `kind` counters; it's a `types`." The retype is on the card's definition,
+    /// so the gate self-limits like `ReturnSelfAsEnchantment`.
     ReturnSelfRetypedWithCounters {
         unless: crate::card::CreatureType,
         types: Vec<crate::card::CreatureType>,
         kind: crate::card::CounterType,
         amount: u32,
     },
-    /// "When this creature dies, return it to the battlefield tapped and with
-    /// `amount` `kind` counters under its owner's control." Returns the source
-    /// from its owner's graveyard (Unstoppable Slasher — two stun counters).
-    /// No-op if the source isn't in a graveyard.
+    /// "When this dies, return it tapped with `amount` `kind` counters"
+    /// (Unstoppable Slasher). No-op unless in a graveyard.
     ReturnSelfTappedWithCounters { kind: crate::card::CounterType, amount: u32 },
-    /// "Return it to the battlefield tapped under its owner's control." The
-    /// plain, counter-less sibling of `ReturnSelfTappedWithCounters` — used by
-    /// a granted "when this dies, return it tapped" rider (Fake Your Own Death).
-    /// No-op if the source isn't in a graveyard.
+    /// Return the source tapped from its owner's graveyard — counterless
+    /// `ReturnSelfTappedWithCounters` (Fake Your Own Death).
     ReturnSelfTapped,
     /// "Return it to the battlefield under its owner's control" (untapped) —
     /// the untapped sibling of `ReturnSelfTapped` (Presumed Dead's granted
     /// die-trigger). No-op if the source isn't in a graveyard.
     ReturnSelf,
-    /// CR 702.171 — "Exile the source and up to one creature that saddled it
-    /// this turn (`CardInstance.saddled_by`), then return those cards to the
-    /// battlefield under their owners' control." A same-resolution flicker
-    /// (Fortune, Loyal Steed). Bots/tests take one saddler; the source is
-    /// always included. No-op for anything not on the battlefield.
+    /// CR 702.171 — flicker the source and up to one creature that saddled it
+    /// this turn (`CardInstance.saddled_by`). Fortune, Loyal Steed. Bots take one
+    /// saddler; no-op off the battlefield.
     ExileAndReturnSelfWithSaddler,
-    /// Bronzehide Lion — "when this creature dies, return it to the
-    /// battlefield [as its `back_face` Aura] attached to a creature you
-    /// control" (auto-pick: greatest power). No-op if the source isn't in a
-    /// graveyard, has no back face, or its owner controls no creature.
+    /// Bronzehide Lion: return the dead source as its `back_face` Aura on your
+    /// strongest creature. No-op without a graveyard card, back face or creature.
     ReturnSelfTransformedAttached,
     /// "Return this card to the battlefield attached to [slot-0 target]"
     /// (Gift of Immortality's end-step re-attach). No-op if the source isn't
@@ -8443,13 +6795,10 @@ pub enum Effect {
     /// that creature" — the trigger-source sibling of
     /// [`Effect::ReturnSelfAttachedToTarget`] (the Scourge Dragon Auras).
     ReturnSelfAttachedToTrigger,
-    /// "[Chooser] chooses a [filter] permanent. Return this card from its
-    /// owner's graveyard to the battlefield attached to it" — Necrotic Plague
-    /// (a creature they don't control), Traveling Plague (any creature). A
-    /// source still on the battlefield, orphaned by its host's destruction, is
-    /// re-attached in place (Steam Vines' land). `filter` is read from the
-    /// chooser's seat, so "they don't control" is `Not(ControlledByYou)`.
-    /// No-op on an empty pool.
+    /// "[Chooser] chooses a [filter] permanent; return this card attached to it"
+    /// (Necrotic Plague). A source orphaned on the battlefield is re-attached in
+    /// place (Steam Vines). `filter` is read from the chooser's seat. No-op with
+    /// no candidate.
     ReturnSelfAttachedToChoiceOf { chooser: PlayerRef, filter: crate::card::SelectionRequirement },
     /// "Return the top creature card of `who`'s graveyard to the battlefield."
     /// Top = most recently put into the graveyard (Mistmoon Griffin). No-op if
@@ -8459,16 +6808,12 @@ pub enum Effect {
     /// the bottom" (Preferred Selection's declined branch). The rest stay on
     /// top in order; an auto seat buries the priciest card.
     LookTopPutOneOnBottom { count: Value },
-    /// CR 712 — Transform the targeted double-faced permanent(s): swap each to
-    /// its other face in place (same object, keeping counters / tapped state /
-    /// attachments per CR 712.9). Toggles front↔back; a `Transforms` event
-    /// fires per permanent so "when this transforms" triggers can react.
+    /// CR 712 — transform each target in place, keeping counters, tapped state
+    /// and attachments (CR 712.9); emits `Transforms` per permanent.
     Transform { what: Selector },
-    /// CR 709.5 — "unlock a locked door of up to one target Room." Unlocks one
-    /// still-locked door of each Room the selector resolves to (the left door
-    /// first, else the right), firing that door's unlock triggers and the
-    /// Eerie `RoomFullyUnlocked` event. No-op for fully-unlocked Rooms.
-    /// Ghostly Keybearer's combat-damage trigger.
+    /// CR 709.5 — unlock one locked door (left first) of each resolved Room,
+    /// firing its unlock triggers and the Eerie `RoomFullyUnlocked` event.
+    /// Ghostly Keybearer.
     UnlockRoomDoor { what: Selector },
     /// CR 709.5c — "Lock or unlock a door of target Room you control" (Marina
     /// Vendrell). Unlocks a still-locked door when there is one; otherwise
@@ -8481,18 +6826,13 @@ pub enum Effect {
     /// CR 701.64a — "Harness [this permanent]": each matching permanent that
     /// isn't harnessed becomes harnessed (`CardInstance.harnessed`).
     Harness { what: Selector },
-    /// CR 710.2 — Flip the matching flip-card permanent(s) to their flipped
-    /// (bottom) face in place (same object, keeping counters / tapped state /
-    /// attachments). One-way; no-op on a permanent already flipped or without a
-    /// flip face. Emits `Flipped` so "when this flips" triggers can react.
+    /// CR 710.2 — flip each flip card to its bottom face in place; one-way,
+    /// no-op if already flipped. Emits `Flipped`.
     Flip { what: Selector },
-    /// CR 701.42 — Meld. If the source's controller both owns and controls
-    /// the source and a permanent named `partner`, exile both, then put the
-    /// melded card (resolved from the registry by `into`) onto the
-    /// battlefield under their control. The two component cards ride in
-    /// `CardInstance.meld_parts`, so the melded permanent leaves the
-    /// battlefield as both cards (CR 712.16/712.17). No-op otherwise
-    /// (701.37b).
+    /// CR 701.42 Meld: if the controller owns and controls the source and a
+    /// `partner`, exile both and put `into` onto the battlefield. The parts ride
+    /// `CardInstance.meld_parts`, so it leaves as both cards (CR 712.16/712.17).
+    /// Otherwise no-op (701.37b).
     Meld {
         partner: String,
         into: String,
@@ -8502,19 +6842,15 @@ pub enum Effect {
         #[serde(default)]
         attacking: bool,
     },
-    /// "[Filter] spells you cast this turn cost {amount} less to cast" —
-    /// turn-scoped generic cost reduction (Urza, Planeswalker's +2).
-    /// Pushed onto `Player.turn_spell_discounts`, consulted by
-    /// `cost_reduction_for_spell`, cleared at cleanup (CR 514.2).
+    /// Urza, Planeswalker's +2: [filter] spells cost {amount} less this turn
+    /// (`Player.turn_spell_discounts`, cleared at cleanup, CR 514.2).
     SpellsCostLessThisTurn { filter: SelectionRequirement, amount: u32 },
     /// `SpellsCostLessThisTurn` whose amount is a `Value` fixed as it resolves
     /// (Rowan, Scion of War: "X is the amount of life you lost this turn",
     /// 2023-09-01 ruling).
     SpellsCostLessThisTurnByValue { filter: SelectionRequirement, amount: Value },
-    /// "Choose a card name. Spells with the chosen name cost {amount} less to
-    /// cast this turn" (Cheering Fanatic) — every player's spells. The name
-    /// is picked from the nonland cards in the controller's hand (the only
-    /// names the discount can pay off for them), priciest first.
+    /// Cheering Fanatic: name a card (the priciest nonland in hand); spells with
+    /// that name cost {amount} less this turn, for everyone.
     NameSpellsCostLessThisTurn { amount: u32 },
     /// "Until your next turn, [filter] spells `who` casts cost {amount} less
     /// to cast" (Will Kenrith's −2) — the discount mirror of
@@ -8524,10 +6860,8 @@ pub enum Effect {
     /// (Goblin Maskmaker). Bumps `Player.face_down_discount_this_turn`, read
     /// by `face_down_cast_cost` and cleared at cleanup (CR 514.2).
     FaceDownSpellsCostLessThisTurn { amount: u32 },
-    /// "The next face-down creature spell you cast this turn costs {amount}
-    /// less to cast" (Panoptic Projektor). Bumps
-    /// `Player.next_face_down_discount_this_turn`, spent by the next
-    /// face-down cast and cleared at cleanup.
+    /// Panoptic Projektor: the next face-down creature spell this turn costs
+    /// {amount} less (`Player.next_face_down_discount_this_turn`).
     NextFaceDownSpellCostsLessThisTurn { amount: u32 },
     /// "That spell gains [keywords]" — grants keywords to a spell on the
     /// stack for as long as it's there (Judith, Carnage Connoisseur).
@@ -8541,25 +6875,22 @@ pub enum Effect {
     /// pile, shuffle that pile, and put it back on top" (Triumph of Saint
     /// Katherine) — only while [what] is still in its owner's graveyard.
     ShuffleIntoTopPile { what: Selector, depth: Value },
-    /// "Copy it. You may cast the copy by paying `cost` rather than paying its
-    /// mana cost" (Blue Mage's Cane) — an alternative cost for a copy cast as
-    /// "You may cast [what] by paying `extra` in addition to its other costs.
-    /// If that spell would be put into a graveyard, exile it instead"
-    /// (`exile_after`) — Ogre Battlecaster's graveyard instant/sorcery. The
-    /// card's own cost plus `extra`, taxes and discounts on top.
+    /// "You may cast [what] by paying `extra` in addition to its other costs"
+    /// (Ogre Battlecaster): its own cost plus `extra`, taxes and discounts on
+    /// top; `exile_after` exiles it instead of the graveyard.
     CastImmediatePayingExtra {
         what: Selector,
         source_zone: crate::card::Zone,
         extra: crate::mana::ManaCost,
         exile_after: bool,
     },
-    /// this resolves; taxes and discounts still apply.
+    /// "Copy it. You may cast the copy by paying `cost` rather than its mana
+    /// cost" (Blue Mage's Cane) — an alternative cost for a copy cast as this
+    /// resolves; taxes and discounts still apply.
     CastCopyForCost { what: Selector, source_zone: crate::card::Zone, cost: crate::mana::ManaCost },
-    /// "That creature enters with N additional [kind] counters" on a spell
-    /// still on the stack, or on a card a following move puts onto the
-    /// battlefield ("return it with N counters", Grave Endeavor) — stamps the
-    /// object's `pending_etb_counters`
-    /// (Bloodlord of Vaasgoth's granted bloodthirst).
+    /// "That creature enters with N additional [kind] counters" on a spell on the
+    /// stack, or on a card a following move puts onto the battlefield (Grave
+    /// Endeavor): stamps the object's `pending_etb_counters`.
     SpellEntersWithCounters { what: Selector, kind: crate::card::CounterType, amount: Value },
     /// "It gains [keyword]" on a spell still on the stack — stamps the
     /// keyword onto the spell's card, so it holds as the permanent enters
@@ -8573,34 +6904,25 @@ pub enum Effect {
     /// spell's card like `SpellGainsKeyword`, so the permanent it becomes has
     /// it (Rivaz of the Claw's "When this creature dies, exile it.").
     SpellGainsTrigger { what: Selector, trigger: Box<crate::card::TriggeredAbility> },
-    /// "Exile target [permanent], then search its owner's graveyard, hand,
-    /// and library for any number of cards with the same name as that
-    /// [permanent] and exile them. Then that player shuffles." Crumble to
-    /// Dust, Spreading Plague-style name sweeps. `what` resolves the
-    /// anchor permanent (slot 0); its printed name keys the sweep.
+    /// "Exile target [permanent], then search its owner's graveyard, hand, and
+    /// library for any number of cards with the same name and exile them"
+    /// (Crumble to Dust). `what` is the anchor (slot 0).
     ExileSameNameAsTarget { what: Selector },
-    /// Exile target card(s) and stamp each with `exiled_with = source`, the
-    /// permanent association read by counting effects like
-    /// `Value::DistinctCardTypesExiledWith`. Keen-Eyed Curator's
-    /// "{1}: Exile target card from a graveyard."
+    /// Exile the targets stamped `exiled_with = source`, for counts like
+    /// `Value::DistinctCardTypesExiledWith` (Keen-Eyed Curator).
     ExileTaggedWithSource { what: Selector },
-    /// CR 702.75 — Hideaway N. Look at the top `count` cards of the controller's
-    /// library, exile one face down stamped `exiled_with = source`, then put the
-    /// rest on the bottom in a random order. The hidden card is later played via
-    /// `CastWithoutPayingImmediate { what: Selector::CardExiledWithSource }`.
-    /// The controller's pick is auto-resolved to the highest-mana-value card.
+    /// CR 702.75 Hideaway N: look at the top `count`, exile one face down with
+    /// `exiled_with = source` (auto: the priciest), bottom the rest at random.
+    /// Played later via `CastWithoutPayingImmediate { what:
+    /// CardExiledWithSource }`.
     Hideaway { count: Value },
-    /// "Exile any number of target cards from graveyards." The controller
-    /// picks a subset (via `Decision::ChooseCards`) of every graveyard card
-    /// matching `filter`; chosen cards move to exile. AutoDecider exiles
-    /// nothing (the conservative "up to" default); the bot exiles opponents'
-    /// cards. Devious Cover-Up's graveyard-strip rider.
+    /// "Exile any number of target cards from graveyards" (Devious Cover-Up): a
+    /// `Decision::ChooseCards` subset of `filter` matches. AutoDecider exiles
+    /// none; the bot exiles opponents' cards.
     ExileAnyNumberFromGraveyards { filter: crate::card::SelectionRequirement },
-    /// "You may exile one or more cards matching `filter` from *your*
-    /// graveyard. When you do, `then` runs" (CR 603.7 reflexive). The exiled
-    /// cards are placed on `Selector::LastMoved`, so `then` can read their
-    /// count via `Value::CountOf(Selector::LastMoved)` — Specter of Mortality's
-    /// team `-X/-X`. Declining (or an empty graveyard) skips `then`.
+    /// CR 603.7 — "you may exile one or more `filter` cards from your graveyard.
+    /// When you do, `then`." The exiled cards are `Selector::LastMoved`
+    /// (Specter of Mortality's -X/-X); declining skips `then`.
     MayExileFromYourGraveyard {
         filter: crate::card::SelectionRequirement,
         /// At most this many ("you may exile a creature card" — Creeping Inn:
@@ -8620,10 +6942,8 @@ pub enum Effect {
         #[serde(default)]
         opponents_only: bool,
     },
-    /// Living End / Living Death: each player exiles all creature cards
-    /// from their graveyard, sacrifices all creatures they control, then
-    /// puts the exiled cards onto the battlefield under their owner's
-    /// control.
+    /// Living End: each player exiles graveyard creatures, sacrifices their
+    /// creatures, then the exiled cards enter under their owners.
     LivingEnd,
     /// "Exile that player's graveyard" — graveyard hate scoped to a single
     /// player (Go Blank). `who` resolves to the affected player; `filter`
@@ -8661,10 +6981,8 @@ pub enum Effect {
     /// shares a permanent type with `with` to its owner's hand." `with` is the
     /// permanent that just entered.
     MayReturnSharingPermanentType { with: Selector },
-    /// Mindleech Mass — look at the resolved player's hand and cast one of the
-    /// cards from it without paying its mana cost. `filter` narrows the castable
-    /// cards (Mindclaw Shaman's "an instant or sorcery spell from among
-    /// those cards"); `None` is any nonland card.
+    /// Mindleech Mass: look at the player's hand and cast one card free.
+    /// `filter` narrows it (Mindclaw Shaman); `None` = any nonland.
     LookAtHandCastFree {
         who: Selector,
         #[serde(default)]
@@ -8677,12 +6995,9 @@ pub enum Effect {
     /// creature card from the controller's hand onto the battlefield blocking
     /// the creature the source was blocking (CR 509.1 — a late blocker).
     ReturnSelfDeployBlocker,
-    /// Ink-Treader Nephilim — copy the resolved spell once for each other
-    /// creature it could legally target, each copy aimed at a different one.
-    ///
-    /// `casters_creatures`: Mirrorwing Dragon's "for each other creature
-    /// **they control** that the spell could target" — only the caster's
-    /// creatures, each checked against the spell's own target filter.
+    /// Ink-Treader Nephilim: copy the resolved spell once per other creature it
+    /// could target, each copy aimed at a different one. `casters_creatures`:
+    /// only the caster's creatures (Mirrorwing Dragon).
     CopySpellForEachOtherLegalCreature {
         what: Selector,
         #[serde(default)]
@@ -8696,23 +7011,18 @@ pub enum Effect {
     /// a card with that permanent's name and put it onto the battlefield under
     /// *your* control; then that player shuffles.
     SearchOpponentLibraryForSameName { what: Selector },
-    /// "Search `who`'s library for a card with the same name as `what`, put it
-    /// onto the battlefield under `who`'s control, then shuffle" (Verdant
-    /// Succession). Unlike `SearchOpponentLibraryForSameName`, `what` may be a
-    /// card that has already left the battlefield (a death trigger's subject).
+    /// Verdant Succession: search `who`'s library for a card named like `what`
+    /// (may have left the battlefield), put it onto the battlefield, shuffle.
     SearchSameNameToBattlefield { who: PlayerRef, what: Selector },
-    /// "For each card exiled this way, search that player's library for all
-    /// cards with the same name and exile them. Then that player shuffles"
-    /// (Haunting Echoes). Names are read off the cards exiled earlier in this
-    /// resolution, so it pairs with a preceding graveyard exile.
+    /// Haunting Echoes: exile every library card named like a card exiled
+    /// earlier this resolution, then shuffle.
     ExileLibraryCardsNamedLikeExiledThisResolution { who: PlayerRef },
     /// Development — "create a 3/1 red Elemental token unless any opponent has
     /// you draw a card", `times` times. Each iteration asks an opponent.
     TokenUnlessOpponentLetsYouDraw { token: std::sync::Arc<TokenDefinition>, times: u32 },
-    /// Sunforger — search the controller's library for a card matching
-    /// `filter`, cast it without paying its mana cost, then shuffle.
-    /// With `include_hand`, the hand is searched too and only a library
-    /// find shuffles (Aether Searcher).
+    /// Sunforger: search for a `filter` card, cast it free, shuffle.
+    /// `include_hand`: hand too, shuffling only on a library find (Aether
+    /// Searcher).
     SearchAndCastFree {
         filter: SelectionRequirement,
         #[serde(default)]
@@ -8745,29 +7055,22 @@ pub enum Effect {
     /// library, reveals that many cards, battlefields every artifact, creature
     /// and land, then every enchantment, and bottoms the rest.
     WarpWorld,
-    /// "You choose a card matching `filter` from `who`'s graveyard or hand
-    /// and exile it." A single cross-zone choice by the resolving controller
-    /// (Memory Leak; Mairsil's cage). Headless: the highest-mana-value match,
-    /// and from your own cards one with an activated ability first.
+    /// Memory Leak: exile a `filter` card from `who`'s graveyard or hand, your
+    /// choice. Headless: priciest, and from your own cards one with an activated
+    /// ability first.
     ExileChosenFromHandOrGraveyard { who: PlayerRef, filter: SelectionRequirement },
-    /// "Target player reveals the top `reveal` cards of their library. You
-    /// choose `pick` of those cards and put them into that player's graveyard.
-    /// Put the rest on top in any order." Bamboozle; Balshan Beguiler at
-    /// (2, 1). The chooser is the effect's controller (auto-picks the
-    /// highest-mana-value cards).
+    /// "Target player reveals the top `reveal`; you put `pick` of them into their
+    /// graveyard, the rest back in any order" (Bamboozle; Balshan Beguiler at
+    /// (2, 1)). Auto-picks the priciest.
     RevealTopChooseToGraveyard { who: PlayerRef, reveal: Value, pick: Value },
-    /// "Gain control of target Aura that's attached to a permanent. Attach it
-    /// to another permanent it can enchant." Aura Graft — the new host is
-    /// chosen by the effect's controller (auto-picks their own cheapest legal
-    /// permanent, else any legal one).
+    /// Aura Graft: gain control of the Aura and move it to another permanent it
+    /// can enchant (auto: your cheapest legal one, else any).
     GainControlAndReattachAura { what: Selector },
     /// "Mill a card. For each coloured mana symbol in the milled card's mana
     /// cost, add one mana of that colour." Charmed Pendant.
     MillAddManaForColoredSymbols { who: PlayerRef },
-    /// "Exile `count` cards matching `filter` from `who`'s graveyard" — the
-    /// mandatory, graveyard-only sibling of `ExileChosenFromHandOrGraveyard`
-    /// (Decaying Soil's upkeep). Auto-picks the cheapest matches; fewer
-    /// matches than `count` exiles what there is.
+    /// Decaying Soil: exile `count` `filter` cards from `who`'s graveyard,
+    /// mandatory (cheapest; fewer if short).
     ExileFromGraveyard { who: PlayerRef, count: Value, filter: SelectionRequirement },
     /// "Exile the *bottom* card of `who`'s graveyard" (Phyrexian Furnace). The
     /// graveyard is ordered, so this is index 0 — the oldest card, not the
@@ -8781,30 +7084,22 @@ pub enum Effect {
     /// Choice). Sets `GameState.vote_controller_this_turn` to the resolved
     /// player; each vote this turn is answered by them on the voter's behalf.
     ControlVotesThisTurn { who: PlayerRef },
-    /// CR 701.38 — "Will of the council." Starting with the controller, each
-    /// player votes for one permanent matching `filter` (evaluated relative to
-    /// the controller, so Council's Judgment's "a nonland permanent you don't
-    /// control" reads `Nonland.and(ControlledByOpponent)`). Every permanent
-    /// with the most votes (or tied for most) is exiled. Resolved inline via
-    /// the per-seat decider; AutoDecider's first-legal pick makes the vote
-    /// deterministic for bots/tests. No targeting (CR 701.31c), so it ignores
-    /// hexproof/shroud.
+    /// CR 701.38 Will of the council: from the controller, each player votes for
+    /// a `filter` permanent (read relative to the controller); the most-voted
+    /// (ties included) are exiled. AutoDecider votes first-legal. Not targeting
+    /// (CR 701.31c), so hexproof doesn't stop it. Council's Judgment.
     WillOfTheCouncilExile { filter: SelectionRequirement },
-    /// The general form of [`Effect::WillOfTheCouncilExile`]: each player votes
-    /// for one of the cards `candidates` resolves to (which may live in any
-    /// zone), and every card tied for most votes is moved to `to` (Custodi
-    /// Squire's graveyard ballot).
+    /// General [`Effect::WillOfTheCouncilExile`]: votes over `candidates` (any
+    /// zone); every card tied for most moves to `to` (Custodi Squire).
     WillOfTheCouncilOnCards { candidates: Selector, to: ZoneDest },
     /// "Put the bottom card of your library into your graveyard. If it's a
     /// creature card with power less than or equal to `max_power`, put it onto
     /// the battlefield" (Grenzo, Dungeon Warden).
     BottomCardToGraveyardThenDeploy { max_power: Value },
-    /// "Starting with the next opponent in turn order, each player chooses a
-    /// [filter]. Destroy the chosen [permanents]" (Sadistic Shell Game); the
-    /// filter's "you" is the resolving controller.
-    /// `starting_with_you`: "starting with you" (The Horus Heresy, Druid of
-    /// Purification) rather than with the next opponent — the caster picks
-    /// first and every later seat sees the pick (CR 101.4).
+    /// "Starting with the next opponent, each player chooses a [filter]. Destroy
+    /// the chosen" (Sadistic Shell Game); "you" in the filter is the controller.
+    /// `starting_with_you`: the caster picks first and later seats see it (CR
+    /// 101.4) — The Horus Heresy.
     EachPlayerChoosesToDestroy {
         filter: SelectionRequirement,
         #[serde(default)]
@@ -8814,10 +7109,8 @@ pub enum Effect {
         #[serde(default)]
         may: bool,
     },
-    /// "Destroy target [filter] that player controls of their choice" (The
-    /// Abyss, Magus of the Abyss): `who` picks one permanent they control
-    /// matching `filter` and it is destroyed — `no_regen` for "it can't be
-    /// regenerated". The filter's "you" is `who`.
+    /// The Abyss: `who` destroys one of their `filter` permanents (`no_regen`:
+    /// can't be regenerated). "You" in the filter is `who`.
     PlayerChoosesToDestroy {
         who: PlayerRef,
         filter: SelectionRequirement,
@@ -8828,60 +7121,43 @@ pub enum Effect {
     /// `filters` from among those controlled by the player to their left.
     /// Destroy each permanent chosen this way." Grenzo's Rebuttal.
     EachPlayerDestroysChosenFromLeftNeighbor { filters: Vec<SelectionRequirement> },
-    /// CR 603.6e — "Exile [what] until [this] leaves the battlefield."
-    /// Moves the resolved card(s) to exile, linking each to the source
-    /// permanent (the ability's source). When that source leaves play the
-    /// engine returns the exiled card(s) to `return_to`. Powers Banisher
-    /// Priest / Fiend Hunter / Oblivion Ring (return to battlefield) and
-    /// Brain Maggot / Tidehollow Sculler (return to hand).
-    /// Exile each resolved permanent/card stamped `exiled_with = source`
-    /// (recoverable via `Selector::CardExiledWithSource`) but with no
-    /// return-when-the-source-leaves link — the effect that scheduled it owns
-    /// the return (Legion's Initiative).
+    /// Exile each resolved object with `exiled_with = source`
+    /// (`Selector::CardExiledWithSource`) but no leaves-the-battlefield return —
+    /// the scheduling effect owns the return (Legion's Initiative).
     ExileLinked { what: Selector },
-    /// Stamp `exiled_with = source` on each `Selector::LastMoved` card now in
-    /// exile, so `Value::CardsExiledWithSourceCount` counts it — "the number
-    /// of cards exiled with it" after an exile that picks at resolution
-    /// (Unlicensed Hearse after `ExileUpToNFromGraveyards`).
+    /// Stamp `exiled_with = source` on `LastMoved` cards in exile for
+    /// `CardsExiledWithSourceCount` (Unlicensed Hearse).
     LinkLastMovedExilesToSource,
-    /// Search the City — the trigger source is a card its controller just
-    /// played. If a card exiled with this source shares its name, return one
-    /// to its owner's hand; when that empties the pile, sacrifice this source
-    /// and its controller takes an extra turn.
+    /// Search the City: if an exiled card shares the played card's name, return
+    /// one; when the pile empties, sacrifice this and take an extra turn.
     SearchTheCityReturn,
+    /// CR 603.6e — "exile [what] until [this] leaves the battlefield", linked to
+    /// the source; when it leaves, the cards go to `return_to` (Oblivion Ring
+    /// to the battlefield, Tidehollow Sculler to hand).
     ExileUntilSourceLeaves {
         what: Selector,
         return_to: crate::card::ExileReturnZone,
     },
-    /// "If a creature is put into exile this way, return each other card
-    /// exiled with this Vehicle to the battlefield under its owner's control"
-    /// (Mysterious Limousine): after an `ExileUntilSourceLeaves`, every card
-    /// still linked to the source bar this resolution's `LastMoved` returns
-    /// as its link says (CR 610.3); nothing happens when nothing was exiled.
+    /// Mysterious Limousine: after an `ExileUntilSourceLeaves`, if a creature was
+    /// exiled, every other card still linked to the source (bar this
+    /// resolution's `LastMoved`) returns as its link says (CR 610.3).
     ReturnOtherLinkedExiles,
-    /// CR 603.6e — "Exile any number of other permanents you control matching
-    /// `filter` until this leaves the battlefield" (Lumbering Battlement). The
-    /// controller picks the subset (`Decision::ChooseCards`, min 0); each pick
-    /// is linked to the source exactly like `ExileUntilSourceLeaves`.
-    /// `shelter`: the exile protects rather than pays off (Glorious
-    /// Protector), so a headless controller exiles only what the stack
-    /// threatens; otherwise it exiles everything (Battlement's +2/+2 each).
+    /// CR 603.6e — exile any number of your other `filter` permanents until this
+    /// leaves (Lumbering Battlement), each linked like `ExileUntilSourceLeaves`.
+    /// `shelter` (Glorious Protector): headless exiles only what the stack
+    /// threatens; otherwise everything.
     ExileAnyNumberUntilSourceLeaves {
         filter: SelectionRequirement,
         #[serde(default)]
         shelter: bool,
     },
-    /// CR 603.6e — "each player chooses [count] [filter] they control. Exile
-    /// them until this leaves the battlefield" (Foreboding Steamboat). Each
-    /// player (APNAP) picks from their own permanents — all of them when they
-    /// have `count` or fewer — then every pick is exiled at once, linked to
-    /// the source.
+    /// CR 603.6e — "each player chooses [count] [filter] they control; exile them
+    /// until this leaves" (Foreboding Steamboat): APNAP picks (all if `count` or
+    /// fewer), exiled at once, linked to the source.
     EachPlayerExilesChosenUntilSourceLeaves { count: Value, filter: SelectionRequirement },
-    /// CR 725 — Palace Jailer's "exile [what] until an opponent becomes the
-    /// monarch". Exiles the resolved permanent(s) with a `monarch_guard` set to
-    /// the controller (who has just become the monarch); the card returns to the
-    /// battlefield the moment the monarchy leaves that player, not when the
-    /// source leaves play.
+    /// CR 725 — Palace Jailer: exile until an opponent becomes the monarch. The
+    /// card carries a `monarch_guard` for the controller and returns when the
+    /// monarchy leaves them, not when the source leaves.
     ExileUntilOpponentMonarch { what: Selector },
     /// Mirror March — flip a coin until you lose a flip, then create that many
     /// token copies of `what`. The copies gain haste and are exiled at the
@@ -8894,44 +7170,32 @@ pub enum Effect {
     /// creature card; until your next turn the source's base P/T become twice
     /// that card's. The reveal is bottomed in a random order.
     RevealUntilCreatureDoubleBasePt,
-    /// Illusionist's Bracers — copy the activated ability that just triggered
-    /// this. Mana abilities never reach the stack, so the topmost `activated`
-    /// stack item from the source is always a legal copy target (CR 707.10).
-    /// The copy may choose new targets in every declared slot; the original
-    /// is offered first, so a conservative decider keeps it.
+    /// Illusionist's Bracers: copy the activated ability that triggered this. The
+    /// source's topmost `activated` stack item is always legal (mana abilities
+    /// never reach the stack, CR 707.10). The copy may retarget every slot,
+    /// original offered first.
     CopyActivatedAbilityMayChooseTargets,
-    /// Agrus Kos, Eternal Soldier — copy the newest ability on the stack that
-    /// targets only the source once for each other creature its controller
-    /// controls that the ability could target, each copy aimed at a
-    /// different one. The copies are the controller's (CR 707.10).
+    /// Agrus Kos, Eternal Soldier: copy the ability targeting only the source
+    /// once per other creature you control it could target (CR 707.10).
     CopyAbilityTargetingSourceForEachOtherCreature,
-    /// Exile each resolved permanent, then return it to the battlefield under
-    /// its owner's control at the beginning of the next end step, entering with
-    /// an extra +1/+1 counter (creatures) or loyalty counter (planeswalkers).
-    /// Registers a per-card `DelayedKind::NextEndStep` trigger. Semester's End.
+    /// Semester's End: exile, then return at the next end step with an extra
+    /// +1/+1 (creature) or loyalty (planeswalker) counter.
     ExileReturnNextEndStep { what: Selector },
-    /// Exile each resolved permanent, then return it to the battlefield under
-    /// its **owner's** control at the beginning of the next end step, with no
-    /// extra counter. The plain-flicker sibling of `ExileReturnNextEndStep`
-    /// (Voidwalk, Voyager Staff — "return it under its owner's control").
-    /// Exile each resolved permanent, returning it under its owner's control
-    /// at the beginning of the controller's next upkeep (Kaya, Ghost
-    /// Assassin's 0). The upkeep-timed sibling of
-    /// `ExileReturnToOwnerNextEndStep`.
+    /// Exile each resolved permanent, returning it under its owner's control at
+    /// the controller's next upkeep (Kaya, Ghost Assassin's 0).
     ExileReturnAtYourNextUpkeep { what: Selector },
+    /// Exile each resolved permanent and return it under its owner's control at
+    /// the next end step, no counter (Voidwalk) — the plain-flicker sibling of
+    /// `ExileReturnNextEndStep`.
     ExileReturnToOwnerNextEndStep {
         what: Selector,
         /// The permanent returns tapped (Mystifying Maze).
         #[serde(default)]
         tapped: bool,
     },
-    /// "You may exile this. If you do, return it to the battlefield under its
-    /// owner's control at the beginning of your next upkeep. It gains haste."
-    /// An optional self-flicker whose return is deferred to the controller's
-    /// next upkeep (CR 603.4). Obzedat, Ghost Council's end-step ability.
-    /// "You may exile this card. If you do, [body]." The source is moved from
-    /// wherever it now sits (a death trigger sees it in the graveyard) into
-    /// exile, and only then does `body` run — Academy Rector, Gamekeeper.
+    /// "You may exile this card. If you do, [body]": the source moves from
+    /// wherever it is (a death trigger finds it in the graveyard) to exile, then
+    /// `body` runs (Academy Rector).
     MayExileSelfThen { body: Box<Effect> },
     /// Scrying Glass — "choose a number greater than 0 and a color; `who`
     /// reveals their hand; if they reveal exactly that many cards of that
@@ -8940,30 +7204,20 @@ pub enum Effect {
     /// "Attach target Aura card from a graveyard to this creature" — the Aura
     /// returns to the battlefield already attached (Iridescent Drake).
     AttachAuraFromGraveyardTo { aura: Selector, host: Selector },
-    /// CR 603.10a — "return any number of Aura cards that were attached to it
-    /// from your graveyard to the battlefield attached to `host`, then attach
-    /// any number of Equipment that were attached to it to that creature"
-    /// (Cass, Hand of Vengeance). "It" is the dying trigger subject; its
-    /// attachments are read from `GameState.auras_at_death`. The controller
-    /// takes every one it may (each only helps the new host): the Aura cards
-    /// its controller owns still in their graveyard, and the Equipment it
-    /// controls still on the battlefield.
+    /// CR 603.10a — Cass, Hand of Vengeance: return the dying subject's Auras
+    /// from your graveyard attached to `host`, and attach its Equipment to it
+    /// (`GameState.auras_at_death`). Takes every one it may: Aura cards it owns
+    /// still in the graveyard, Equipment it controls still on the battlefield.
     ReturnDyingSubjectAttachmentsTo { host: Selector },
-    /// "Attach an Equipment that was attached to [this] to [host]" (Zack
-    /// Fair, sacrificed as its own cost): the first Equipment the source's
-    /// leaves-battlefield record (`auras_at_death`) names that its controller
-    /// still controls is attached to `host`.
+    /// Zack Fair: attach the first Equipment from the source's leaves record
+    /// (`auras_at_death`) still controlled by you to `host`.
     AttachSourcesFormerEquipmentTo { host: Selector },
-    /// CR 707.2 + 303.4f — for each permanent `hosts` resolves to, create a
-    /// token that's a copy of the Aura `source` resolves to (on the
-    /// battlefield or, after a sacrifice, as its last known card) entering
-    /// attached to that permanent (Three Dog, Galaxy News DJ).
+    /// CR 707.2 + 303.4f — per `hosts` permanent, a token copy of Aura `source`
+    /// (or its LKI) attached to it (Three Dog, Galaxy News DJ).
     CreateTokenCopyOfAttachedToEach { source: Selector, hosts: Selector },
-    /// "Reveal up to `max` nonland cards from your hand. For each of those
-    /// cards that has the same mana value as another card revealed this way,
-    /// create a Treasure token" (Vault 21: House Gambit). The controller
-    /// reveals the set that pays best: whole groups of equal mana value,
-    /// largest first, each only while at least two of it still fit.
+    /// Vault 21: House Gambit: reveal up to `max` nonland hand cards; a Treasure
+    /// per card sharing a mana value with another revealed one. Reveals whole
+    /// equal-value groups, largest first, while two of a group still fit.
     TreasurePerPairedManaValueInHand { max: u32 },
     /// CR 701.3 — "Attach [this] to `host`" (The Aetherspark's +1). Moves the
     /// source's attachment without paying an equip cost; a `host` that resolves
@@ -8973,16 +7227,16 @@ pub enum Effect {
     /// player adds an additional `extra`" (Bubbling Muck). The turn-scoped
     /// sibling of `StaticEffect::ExtraManaOnLandTap`.
     ExtraManaOnLandTapThisTurn { land: crate::card::LandType, extra: crate::mana::Color },
+    /// "You may exile this. If you do, return it at the beginning of your next
+    /// upkeep. It gains haste" (Obzedat, Ghost Council; CR 603.4).
     MayExileSelfReturnNextUpkeepHaste,
     /// "Return this card to the battlefield tapped under its owner's control
     /// at the beginning of their next upkeep" (Phytotitan). Fired from a
     /// dies-trigger; registers a `DelayedKind::YourNextUpkeep` return.
     ReturnSelfAtNextUpkeepTapped,
-    /// CR 702.55 — Haunt. Exile the source card (the dying creature, or the
-    /// resolving instant/sorcery) "haunting" a creature, then register a
-    /// `DelayedKind::WhenHauntedCreatureDies` delayed trigger that runs `body`
-    /// when that creature dies. The haunted creature is auto-picked (preferring
-    /// an opponent's) — the controller's choice is a deferred UI follow-up.
+    /// CR 702.55 Haunt: exile the source haunting a creature (auto: an
+    /// opponent's; choice is a UI follow-up) with a
+    /// `DelayedKind::WhenHauntedCreatureDies` trigger running `body`.
     HauntCreature { body: Box<Effect> },
     Tap     { what: Selector },
     /// CR 702.171 — "Target Mount you control becomes saddled" (Guidelight
@@ -8993,15 +7247,12 @@ pub enum Effect {
     /// control" (Tangle Wire). Auto-pick: lands, then other noncreatures,
     /// then creatures by ascending power. Taps as many as exist when short.
     PlayerTapsUntapped { who: PlayerRef, filter: SelectionRequirement, amount: Value },
-    /// "Until end of turn, if you would put one or more +1/+1 counters on a
-    /// creature you control, put that many plus one instead" (Prairie Dog).
-    /// Bumps `Player.extra_plus_one_counters_this_turn`, a transient
-    /// Hardened-Scales bonus cleared at cleanup.
+    /// Prairie Dog: this turn, +1/+1 counters on your creatures get one extra
+    /// (`Player.extra_plus_one_counters_this_turn`).
     GrantExtraPlusOneCountersThisTurn { who: PlayerRef },
-    /// Combine Guildmage — "this turn, each creature you control enters with an
-    /// additional +1/+1 counter." Bumps `Player.extra_etb_p1p1_counters_this_turn`
-    /// (stacking across activations); cleared at cleanup. Distinct from
-    /// `GrantExtraPlusOneCountersThisTurn`, which amplifies counters *placed*.
+    /// Combine Guildmage: this turn your creatures enter with an extra +1/+1
+    /// counter (stacks; `Player.extra_etb_p1p1_counters_this_turn`). Unlike
+    /// `GrantExtraPlusOneCountersThisTurn`, which amplifies placement.
     CreaturesEnterWithExtraCounterThisTurn { who: PlayerRef },
     /// "The next time one or more enchantment creatures you control enter
     /// this turn, each enters with `amount` additional +1/+1 counters"
@@ -9014,21 +7265,15 @@ pub enum Effect {
     /// Marks the attacker blocked with no blockers assigned, so (absent
     /// trample) it deals no combat damage. Curtain of Light.
     BecomeBlocked { what: Selector },
-    /// Sweep (CR 207.2c ability word) — "Return any number of `filter` you
-    /// control to their owner's hand." The controller picks the subset (min 0);
-    /// the count is published as `Value::PermanentsReturnedThisEffect` for a
-    /// follow-up step in the same resolution to scale off (Barrel Down
-    /// Sokenzan, Sink into Takenuma).
+    /// Sweep (CR 207.2c): return any number of your `filter` permanents to hand;
+    /// the count is `Value::PermanentsReturnedThisEffect` for a later step (Barrel
+    /// Down Sokenzan).
     ReturnAnyNumberToHand { filter: SelectionRequirement },
-    /// "Put any number of target [filter] cards from your graveyard on top of
-    /// your library" (Footbottom Feast). The controller picks the subset
-    /// (min 0); the picks go on top in mana-value order, the greatest last,
-    /// so it is the one drawn first.
+    /// Footbottom Feast: put any number of graveyard [filter] cards on top, in
+    /// mana-value order with the priciest drawn first.
     PutAnyNumberFromGraveyardOnTop { filter: SelectionRequirement },
-    /// "Tap any number of untapped permanents matching `filter` you control;
-    /// this source gets +`power`/+`toughness` until end of turn for each one
-    /// tapped this way" (Orphans of the Wheat). The controller chooses which
-    /// to tap (min 0); the pump scales with the count.
+    /// Orphans of the Wheat: tap any number of your `filter` permanents; this
+    /// gets +`power`/+`toughness` per tapped.
     TapAnyNumberThenPumpPerTapped {
         filter: SelectionRequirement,
         power: i32,
@@ -9048,10 +7293,9 @@ pub enum Effect {
     /// Entrancing Lyre — tap `what` and lock it from untapping for as long as
     /// the source permanent stays tapped (`CardInstance.untap_locked_by`).
     TapAndUntapLock { what: Selector },
-    /// Somnophore — tap `what` and lock it from untapping for as long as the
-    /// source permanent stays on the battlefield
-    /// (`CardInstance.untap_locked_while_present`); with `while_you_control`,
-    /// for as long as the effect's controller controls it (Shipbreaker Kraken).
+    /// Somnophore: tap `what` and keep it from untapping while the source remains
+    /// (`CardInstance.untap_locked_while_present`); `while_you_control`: while you
+    /// control it (Shipbreaker Kraken).
     TapAndLockWhileSourcePresent {
         what: Selector,
         #[serde(default)]
@@ -9068,10 +7312,8 @@ pub enum Effect {
     /// creatures don't untap during their controllers' next untap steps"
     /// (Triton Tactics), reading the game-level `blocks_declared_this_turn` log.
     TapBlockedByAndSkipUntap { what: Selector },
-    /// CR 506.4 — remove every targeted creature from combat: an attacker is
-    /// pulled from the attack (its blocks released), a blocker is unassigned.
-    /// It stops being an attacking/blocking creature but stays on the
-    /// battlefield (Labyrinth of Skophos, Falter-style effects).
+    /// CR 506.4 — remove each target from combat (attacker's blocks released,
+    /// blocker unassigned); it stays on the battlefield.
     RemoveFromCombat { what: Selector },
     /// CR 508.1a — "that creature can't attack during its controller's next
     /// turn" (Wall of Dust). Arms `CardInstance.attack_ban`, which the
@@ -9088,65 +7330,50 @@ pub enum Effect {
     /// run `body`, then keep asking whether to run it again, up to `max`
     /// iterations. The costless sibling of `MayPayRepeatedly`.
     MayRepeat { description: String, body: Box<Effect>, max: u32 },
-    /// Pygmy Hippo — "you may have defending player activate a mana ability of
-    /// each land they control and lose all unspent mana. If you do, this
-    /// creature assigns no combat damage this turn and at the beginning of
-    /// your next main phase this turn, you add that much {C}."
+    /// Pygmy Hippo: the defender taps all their lands for mana and loses it; this
+    /// assigns no combat damage and you add that much {C} at your next main
+    /// phase this turn.
     DrainDefendersLandsForManaNextMain,
     /// "Until end of turn, if you tap a land you control for mana, it produces
     /// [color] instead of any other type" (Deep Water). The turn-scoped,
     /// controller-scoped sibling of `StaticEffect::LandsProduceColorInstead`.
     YourLandsProduceColorThisTurn(crate::mana::Color),
-    /// "That player chooses a color. Until end of turn, lands tapped for mana
-    /// produce mana of the chosen color instead of any other type" (Hall of
-    /// Gemstone). The global twin of `YourLandsProduceColorThisTurn` — the
-    /// lock binds every seat, not just the chooser's.
+    /// Hall of Gemstone: a chosen color for every land tapped for mana this turn,
+    /// for every seat — global `YourLandsProduceColorThisTurn`.
     AllLandsProduceChosenColorThisTurn { chooser: PlayerRef },
     /// "Each player may discard up to `max` cards. This deals damage to each
     /// player equal to `max` minus the number they discarded" (Mind Bomb).
     EachPlayerMayDiscardUpToThenDamage { max: u32 },
-    /// "Each player may discard a card. Each player who discarded a card this
-    /// way may search their library for a basic land card, reveal it, put it
-    /// into their hand, then shuffle" (Borderland Explorer). APNAP order; a
-    /// seat that declines the discard is skipped.
+    /// Borderland Explorer: APNAP, each player may discard; those who did may
+    /// tutor a basic land to hand.
     EachPlayerMayDiscardThenTutorBasic,
-    /// CR 701.3c — "attach target Aura attached to a [type] to another
-    /// permanent of that type" (Enchantment Alteration). Moves the *targeted*
-    /// Aura rather than the source; the new host must satisfy the Aura's own
-    /// enchant filter, else the move is illegal and nothing happens.
+    /// CR 701.3c — move the targeted Aura to another permanent of that type
+    /// (Enchantment Alteration); illegal for its enchant filter, nothing happens.
     ReattachTargetAura { aura: Selector, to: Selector },
-    /// CR 702.26 — phase out every permanent the selector resolves to. The
-    /// permanent moves to `GameState.phased_out` (treated as nonexistent) and
-    /// phases back in during its controller's next untap step. Vodalian
-    /// Illusionist. With `until_source_leaves` the permanents skip the
-    /// untap-step phase-in and only return when the source leaves the
-    /// battlefield (Out of Time); the source gains one time counter per
-    /// permanent phased out this way.
+    /// CR 702.26 — phase out each resolved permanent (into `GameState.phased_out`)
+    /// until its controller's next untap step (Vodalian Illusionist).
+    /// `until_source_leaves`: they return only when the source leaves, which gains
+    /// a time counter per permanent (Out of Time).
     PhaseOut {
         what: Selector,
         #[serde(default)]
         until_source_leaves: bool,
     },
-    /// CR 702.26 — chain after a `PhaseOut { until_source_leaves: true }`
-    /// whose hold is printed "for as long as **you control** [this]" (The
-    /// Phasing of Zhalfir): losing control of the source phases them in, as
-    /// its leaving already does. A hold with no control clause (Out of Time,
-    /// Oubliette) does not take this.
+    /// CR 702.26 — after `PhaseOut { until_source_leaves: true }` printed "for as
+    /// long as you control [this]" (The Phasing of Zhalfir): losing control phases
+    /// them in too. Not for holds without that clause (Out of Time).
     HoldPhasedOutWhileYouControlSource,
-    /// CR 702.26 — "[what] phase out. Until the end of your next turn, they
-    /// can't phase in" (Teferi, Timeless Voyager's −8): each phases out as
-    /// `PhaseOut` does and carries a `ColdState::phase_in_locks` row its
-    /// controller's untap step honours until the resolving controller's next
-    /// turn has begun (and so, at that later untap step, ended).
+    /// CR 702.26 — "phase out; until the end of your next turn, they can't phase
+    /// in" (Teferi, Timeless Voyager's −8): `PhaseOut` plus a
+    /// `ColdState::phase_in_locks` row honoured until the controller's next turn
+    /// has begun (so ends at the untap after it).
     PhaseOutUntilYourNextTurnEnds { what: Selector },
     /// "That player exiles a card at random from their hand. The player may
     /// play that card this turn" (Elkin Lair). The exile is stamped
     /// `exiled_with = source`, so a delayed trigger can bin whatever is left.
     ExileRandomFromHandMayPlayThisTurn { who: PlayerRef },
-    /// CR 502.1 — "during your next untap step, as you untap your permanents,
-    /// return [what] to its owner's hand" (Undiscovered Paradise). Arms a flag
-    /// the untap step consumes, so the bounce is a turn-based action rather
-    /// than a trigger.
+    /// CR 502.1 — Undiscovered Paradise: return `what` to hand during your next
+    /// untap step, a turn-based action (an armed flag), not a trigger.
     ReturnToHandAtYourNextUntapStep { what: Selector },
     /// CR 702.26 — "simultaneously, all phased-out [filter] phase in and all
     /// [filter] with phasing phase out" (Time and Tide). Both sets are read
@@ -9159,14 +7386,9 @@ pub enum Effect {
     /// may pay `life` life. If you do, put it into that player's graveyard"
     /// (Wand of Denial).
     LookTopMayPayLifeToBin { who: PlayerRef, filter: SelectionRequirement, life: u32 },
-    /// Untap every permanent the selector resolves to. The optional
-    /// `up_to` cap limits the count to "up to N" — used by Frantic
-    /// Search ("untap up to three lands"), Cryptolith Rite-style
-    /// abilities, etc. `None` means "untap all matching" (the
-    /// pre-cap default behavior). When the selector resolves to more
-    /// than `up_to` matches, the picker takes the first `up_to`
-    /// in resolution order; auto-resolution favors highest-CMC lands
-    /// for max mana refund.
+    /// Untap each resolved permanent; `up_to` caps it at N (Frantic Search),
+    /// `None` = all. Over the cap, the first `up_to` in resolution order;
+    /// auto-resolution prefers the priciest lands.
     Untap   { what: Selector, #[serde(default)] up_to: Option<Value> },
     /// "Simultaneously untap all tapped [what] and tap all untapped [what]"
     /// (Breaking Wave). A sequenced Untap-then-Tap would re-tap everything it
@@ -9174,52 +7396,29 @@ pub enum Effect {
     SwapTappedState { what: Selector },
     /// Give a temporary +P/+T bonus.
     PumpPT  { what: Selector, power: Value, toughness: Value, duration: Duration },
-    /// Double the resolved creature's power `times` times for `duration`
-    /// (CR — Exponential Growth: "double target creature's power X times").
-    /// Computes the creature's current power and adds `power * (2^times - 1)`
-    /// as a pump bonus, so power ends at `power * 2^times`. `times` ≤ 0 is a
-    /// no-op. Reusable for any "double power N times" card.
+    /// Exponential Growth: double the creature's power `times` times for
+    /// `duration` (adds `power * (2^times - 1)`). `times` ≤ 0 is a no-op.
     DoublePower { what: Selector, times: Value, duration: Duration },
-    /// CR 701.10 — "double the number of `kind` counters on each [selector]."
-    /// For every resolved permanent, add counters of `kind` equal to the number
-    /// it currently has (so N → 2N). Honors counter-doubling replacements
-    /// (Doubling Season) on the added counters. Kalonian Hydra's on-attack
-    /// trigger over the controller's creatures.
+    /// CR 701.10 — double the `kind` counters on each resolved permanent (add as
+    /// many as it has), through counter doublers (Kalonian Hydra).
     DoubleCountersOnEach { what: Selector, kind: crate::card::CounterType },
-    /// CR 701.10 — "double the number of each kind of counter on the resolved
-    /// permanent(s)." For every counter kind present, add that many more (N →
-    /// 2N per kind). Honors counter-doubling replacements. Vorel of the Hull
-    /// Clade, Gilder Bairn.
+    /// CR 701.10 — double every counter kind on each permanent (N → 2N), through
+    /// doublers. Vorel of the Hull Clade.
     DoubleAllCountersOn { what: Selector },
-    /// Override the resolved permanent's base power and toughness via a
-    /// layer-7b continuous effect. Unlike `PumpPT` (which adds to the
-    /// existing P/T via direct bonus fields), `SetBasePT` installs a
-    /// proper `Modification::SetPowerToughness(p, t)` continuous effect
-    /// that participates in the layer system. Used by Strixhaven's
-    /// **Square Up** ({U}{R}: "Until end of turn, target creature has
-    /// base power and toughness 0/4") and any future "base P/T
-    /// becomes" effect. Counters and +P/+T modifications still stack
-    /// on top per CR 613.7f / 613.7c — so a +1/+1 counter on a Square-
-    /// Upped creature makes it 1/5, not 1/1.
+    /// Sets base P/T through a layer-7b `Modification::SetPowerToughness`, unlike
+    /// `PumpPT`'s bonus fields (Square Up). Counters and pumps still apply on top
+    /// (CR 613.7c / 613.7f): a +1/+1 counter makes a 0/4 a 1/5.
     SetBasePT { what: Selector, power: Value, toughness: Value, duration: Duration },
     /// CR 613.7d — switch each resolved permanent's power and toughness for
     /// `duration` (layer-7d, applied after all other P/T changes). Twisted
     /// Image, Wandering Fumarole's animated `{0}` ability.
     SwitchPT { what: Selector, duration: Duration },
-    /// CR 613.4b — each resolved permanent's base power and toughness are
-    /// `power` / `toughness` for `duration`, re-read on every layer pass
-    /// rather than locked in as it resolves (Svogthos: "power and toughness
-    /// each equal to the number of creature cards in your graveyard"). The
-    /// values are read with the permanent's controller as "you".
+    /// CR 613.4b — base P/T are `power` / `toughness` for `duration`, re-read
+    /// every layer pass with the permanent's controller as "you" (Svogthos).
     SetBasePtLive { what: Selector, power: Value, toughness: Value, duration: Duration },
-    /// Animate each permanent picked by `what` into a creature for
-    /// `duration` (the canonical "manland" effect — Celestial Colonnade,
-    /// Creeping Tar Pit, Mutavault, …). Installs a stack of continuous
-    /// effects: layer-4 `AddCardType(Creature)` + each creature subtype,
-    /// layer-7b `SetPowerToughness`, and layer-6 keyword grants. The
-    /// permanent keeps its other types (a land stays a land — it becomes a
-    /// "land creature"). Typically targets `Selector::This` from an
-    /// activated ability, but works on any resolved permanent.
+    /// Animate each `what` permanent into a creature for `duration` (manlands —
+    /// Mutavault): layer-4 `AddCardType(Creature)` and subtypes, layer-7b
+    /// `SetPowerToughness`, layer-6 keywords. It keeps its other types.
     BecomeCreature {
         what: Selector,
         power: Value,
@@ -9228,10 +7427,9 @@ pub enum Effect {
         keywords: Vec<Keyword>,
         duration: Duration,
     },
-    /// CR 205.1b — "[what] becomes a P/T [types] creature", *replacing* its
-    /// other card types (the Urza's Saga Opal / Veiled / Hidden enchantments
-    /// stand up as creatures and stop being enchantments). Indefinite;
-    /// `SetCardTypesTo` reverts it by a later layer-4 timestamp.
+    /// CR 205.1b — "becomes a P/T [types] creature", replacing its other card
+    /// types (Opal Guardian). Indefinite; `SetCardTypesTo` reverts it by a later
+    /// layer-4 timestamp.
     BecomeCreatureLosingTypes {
         what: Selector,
         power: Value,
@@ -9247,24 +7445,17 @@ pub enum Effect {
     /// land … (He's not a creature during that time.)" (Hydro-Man, Fluid
     /// Felon). The layer-4 replacement ends with the duration.
     SetCardTypesFor { what: Selector, card_types: Vec<crate::card::CardType>, duration: Duration },
-    /// "[what] becomes an artifact creature for `duration`" — adds
-    /// `CardType::Creature` (layer 4) only, keeping the permanent's printed
-    /// power/toughness (correct for Vehicles, which carry P/T even when not a
-    /// creature). Unlike `BecomeCreature` this never sets P/T. Guidelight
-    /// Matrix's "target Vehicle you control becomes an artifact creature until
-    /// end of turn".
+    /// "Becomes an artifact creature" for `duration`: adds `CardType::Creature`
+    /// (layer 4) only, keeping printed P/T — right for Vehicles (Guidelight
+    /// Matrix). Unlike `BecomeCreature`, never sets P/T.
     AnimateAsCreature { what: Selector, duration: Duration },
-    /// CR 611.2c — grant `keyword` to every permanent matching `filter` for
-    /// the rest of the turn. Unlike `GrantKeyword` over `EachPermanent` the
-    /// affected set is *not* locked in at resolution, so permanents that
-    /// arrive later are covered too (Falter — "creatures without flying can't
-    /// block this turn"). `filter` is matched card-locally, so a keyword
-    /// granted by another continuous effect isn't seen.
+    /// CR 611.2c — `keyword` to every `filter` permanent for the turn, not locked
+    /// in at resolution, so later arrivals get it too (Falter). `filter` is
+    /// matched card-locally: keywords from other effects aren't seen.
     GrantKeywordToMatchingThisTurn { filter: SelectionRequirement, keyword: Keyword },
-    /// CR 611.2c / 613.1f — until end of turn, each permanent `what` picks as
-    /// this resolves loses `keyword` and can't have it: a later grant, static
-    /// or resolved, doesn't give it back this turn (Arcane Lighthouse's
-    /// rulings). A layer-6 `CantHaveKeyword` over that set.
+    /// CR 611.2c / 613.1f — each `what` (fixed at resolution) loses `keyword` and
+    /// can't regain it this turn (Arcane Lighthouse rulings): a layer-6
+    /// `CantHaveKeyword`.
     CantHaveKeywordThisTurn { what: Selector, keyword: Keyword },
     /// CR 613 layer 7b — "[what]'s base power becomes `power`" for `duration`,
     /// leaving base toughness intact (Belligerent Yearling: base power becomes
@@ -9275,20 +7466,15 @@ pub enum Effect {
     /// "that creature attacks during its controller's next combat phase if
     /// able" with `MustAttack` (Sizzling Soloist).
     GrantKeywordThroughControllersNextCombat { what: Selector, keyword: Keyword },
-    /// Grant several keywords at once to a single `what` (one target slot).
-    /// "Target creature gains flying, double strike, and vigilance until end of
-    /// turn" (Case of the Shattered Pact) — cleaner than a `Seq` of separate
-    /// `GrantKeyword`s, which would each declare their own target.
+    /// Several keywords on one `what` (one target slot) — Case of the Shattered
+    /// Pact; a `Seq` of `GrantKeyword`s would declare a target each.
     GrantKeywords { what: Selector, keywords: Vec<Keyword>, duration: Duration },
-    /// Each permanent picked by `what` loses `keyword` for `duration`
-    /// (CR 613.7 layer 6 — the removal outranks any earlier grant).
-    /// Shadowspear's "lose hexproof and indestructible until end of turn";
-    /// `Duration::Permanent` is the indefinite loss (Ageless Sentinels).
+    /// `what` loses `keyword` for `duration` (CR 613.7 layer 6, outranking
+    /// earlier grants): Shadowspear; `Duration::Permanent` for Ageless
+    /// Sentinels.
     LoseKeyword { what: Selector, keyword: Keyword, duration: Duration },
-    /// CR 614.x — "If a creature would deal combat damage to a creature this
-    /// turn, it deals double that damage to that creature instead" (Blind
-    /// Fury). Creature-to-creature combat damage only: the player-facing and
-    /// noncombat paths are untouched.
+    /// CR 614 — Blind Fury: this turn, combat damage creature-to-creature is
+    /// doubled; player and noncombat damage untouched.
     DoubleCombatDamageToCreaturesThisTurn,
     /// CR 701.33 — abandon `this` scheme: turn it face down and put it on the
     /// bottom of its owner's scheme deck. The ongoing-scheme escape hatch
@@ -9312,11 +7498,10 @@ pub enum Effect {
     /// "Target player skips their next draw step" (Fatigue). Adds one charge to
     /// `Player.skip_next_draw_step`.
     SkipPlayerDrawStep { player: PlayerRef },
-    /// CR 727 — "Restart the game." The current game ends with no winner and a
-    /// fresh one begins from every card involved, with the effect's controller
-    /// as starting player (727.1a). Cards exiled with the source are exempt
-    /// from the reshuffle (727.5) and, when `deploy_source_exiles`, enter the
-    /// battlefield under the controller's control — Karn Liberated's −14.
+    /// CR 727 — restart the game: no winner, a fresh game from every card, the
+    /// controller starting (727.1a). Cards exiled with the source are exempt
+    /// (727.5) and with `deploy_source_exiles` enter under the controller (Karn
+    /// Liberated's −14).
     RestartGame { deploy_source_exiles: bool },
     /// CR 305.1 — "Target player can't play lands this turn" (Turf Wound).
     /// Sets `Player.cant_play_lands_this_turn`, cleared at the turn boundary.
@@ -9364,11 +7549,9 @@ pub enum Effect {
     /// they control one at a time; each gets +1/+1 until end of turn for each
     /// creature chosen before it. Headless, the smallest go first.
     Parade,
-    /// Slaughter the Strong — "Each player chooses any number of creatures
-    /// they control with total power `max` or less, then sacrifices all other
-    /// creatures they control." Each seat keeps greedily, greatest power
-    /// first while the running total fits (0-power creatures always fit),
-    /// then everything else is sacrificed at once.
+    /// Slaughter the Strong: each player keeps creatures with total power ≤ `max`
+    /// (greedily, greatest power first; 0-power always fits) and sacrifices the
+    /// rest at once.
     EachPlayerKeepsTotalPowerAtMost { max: u32 },
     /// Tree of Redemption — "Exchange your life total with this creature's
     /// toughness": your life becomes its toughness and its base toughness
@@ -9386,15 +7569,12 @@ pub enum Effect {
     /// counters whenever they cast a spell" (Nuka-Nuke Launcher). Stacks
     /// per grant; cleared at the turn boundary after their next turn.
     RadOnCastUntilEndOfTheirNextTurn { who: PlayerRef, amount: u32 },
-    /// "You and [opponent] each secretly choose 1 through `max`. Then those
-    /// choices are revealed. If they match, [on_match]. Otherwise,
-    /// [on_miss]" (Expert-Level Safe). A prompting seat names its number
-    /// (`ask_seat_option`); any other picks uniformly at random — the game's
-    /// equilibrium strategy. `on_miss` reads
-    /// the opponent's guess as `Value::TriggerEventAmount` (The Toymaker's
-    /// Trap). `fresh`: "a number that hasn't been chosen" — the source
-    /// keeps the numbers it chose (`CardCold::chosen_numbers`), both picks
-    /// come from the rest, and with none left nothing happens.
+    /// "You and [opponent] each secretly choose 1 through `max`; if they match,
+    /// [on_match], else [on_miss]" (Expert-Level Safe). A prompting seat names its
+    /// number (`ask_seat_option`), any other picks uniformly — the equilibrium.
+    /// `on_miss` reads the opponent's guess as `Value::TriggerEventAmount` (The
+    /// Toymaker's Trap). `fresh`: only numbers the source hasn't chosen
+    /// (`CardCold::chosen_numbers`); none left, nothing happens.
     SecretNumbersMatch {
         opponent: PlayerRef,
         max: u32,
@@ -9403,46 +7583,34 @@ pub enum Effect {
         #[serde(default)]
         fresh: bool,
     },
-    /// "Note one of its creature types that hasn't been noted for [this]"
-    /// (Volo's Journal): the first spell `what` resolves to offers its
-    /// unnoted types (a changeling, the game's suggested types); the pick
-    /// lands in the source's `CardCold::noted_creature_types`.
+    /// Volo's Journal: note one of the first `what` spell's unnoted creature
+    /// types (changelings offer the suggested types) in the source's
+    /// `CardCold::noted_creature_types`.
     NoteCreatureTypeOf { what: Selector },
-    /// "At the beginning of combat on enchanted opponent's turn, that player
-    /// may pay {1} for each artifact they control. If they don't, creatures
-    /// can't attack this combat" (Overencumbered) — the payment half; the
-    /// Aura's trigger gates the turn.
+    /// Overencumbered's payment half: the enchanted player may pay {1} per
+    /// artifact, else creatures can't attack this combat.
     EnchantedPlayerPaysPerArtifactOrNoAttacks,
-    /// "Return `count` cards exiled with [this] to the battlefield under
-    /// their owners' control and put the rest on the bottom of their owners'
-    /// libraries" (Vault 13: Dweller's Journey). The controller picks; a
-    /// headless seat returns its own cards first, then the priciest.
+    /// Vault 13: Dweller's Journey: return `count` cards exiled with this, bottom
+    /// the rest. Headless returns its own first, then the priciest.
     ReturnSomeExiledWithSourceRestToBottom { count: u32 },
     /// "Destroy any number of target [filter] with total mana value `cap` or
     /// less" (Rampaging Yao Guai), picked on resolution: the controller chooses;
     /// a headless seat takes the opponents' priciest that fit.
     DestroyWithinTotalManaValue { filter: SelectionRequirement, cap: Value },
-    /// "Return it to the battlefield. It's [its back face] … attached to
-    /// [host]" (Harold and Bob, First Numens): the source card returns from
-    /// its owner's graveyard already transformed to its back face, attached to
-    /// the first `host`. A back face that is an Aura enters as that Aura.
+    /// Harold and Bob, First Numens: return the source transformed to its back
+    /// face attached to the first `host` (an Aura back face enters as one).
     ReturnSelfTransformedAttachedTo { host: Selector },
-    /// CR 303.4f — "return [`what`] to the battlefield attached to [`host`]"
-    /// where `host` is a player: each `what` card in a graveyard enters under
-    /// the effect controller's control enchanting the first player `host`
-    /// resolves to (Lynde, Cheerful Tormentor's end-step return of a Curse).
+    /// CR 303.4f — each `what` graveyard card enters under you enchanting the
+    /// first `host` player (Lynde, Cheerful Tormentor's Curse).
     ReturnToBattlefieldAttachedToPlayer { what: Selector, host: PlayerRef },
-    /// CR 303.4f / 701.23 — search your library for a `filter` card and put
-    /// it onto the battlefield attached to the player `host` resolves to,
-    /// then shuffle. `distinct_names`: it can't share a name with an Aura
-    /// already attached to that player (Curse of Misfortunes). Bitterheart
-    /// Witch. The pick is the priciest legal card.
+    /// CR 303.4f / 701.23 — search for a `filter` card and put it onto the
+    /// battlefield attached to player `host`, then shuffle (Bitterheart Witch;
+    /// picks the priciest). `distinct_names`: no name shared with an Aura already
+    /// on that player (Curse of Misfortunes).
     SearchAttachToPlayer { filter: crate::card::SelectionRequirement, host: PlayerRef, distinct_names: bool },
-    /// CR 701.3 — attach `filter` Auras attached to `from` to opponents of
-    /// the effect controller (one each, the controller's choice; headless:
-    /// the highest-life opponent). `all` moves every such Aura, else one.
-    /// `then` runs only if an Aura moved ("if you do, draw two cards" —
-    /// Lynde; the Unluckiest Planeswalker's −3 moves them all).
+    /// CR 701.3 — move `filter` Auras on `from` to opponents (one each,
+    /// controller's choice; headless: highest life). `all` moves every one, else
+    /// one; `then` runs only if one moved (Lynde, the Unluckiest Planeswalker).
     ReattachPlayerAurasToOpponents {
         from: PlayerRef,
         filter: crate::card::SelectionRequirement,
@@ -9453,24 +7621,20 @@ pub enum Effect {
     /// `what` names, choosing new targets for the copy they control (Curse of
     /// Echoes). Each seat is asked; a headless seat copies.
     EachOtherPlayerMayCopy { what: Selector, except: PlayerRef },
-    /// CR 509.1 / 506.4 — General Jarkeld: if each of the two blocked
-    /// attackers `first` and `second` could be blocked by all of the other's
-    /// blockers, every creature blocking exactly one of them switches to
-    /// blocking the other. Otherwise nothing happens.
+    /// CR 509.1 / 506.4 — General Jarkeld: if each of two blocked attackers could
+    /// be blocked by the other's blockers, every creature blocking exactly one
+    /// switches to the other.
     SwitchBlockers { first: Selector, second: Selector },
     /// CR 701.52a — "roll to visit your Attractions": roll a d6 (a die roll,
     /// even with no Attraction out), then visit each Attraction you control
     /// with that number lit up (Line Cutter).
     RollToVisitAttractions,
-    /// CR 702.159b — "claim the prize": the controller claims the source
-    /// Attraction's prize. Emits the claim event for "whenever you claim the
-    /// prize of an Attraction" (The Most Dangerous Gamer); the prize's own
-    /// actions are the effects sequenced after it.
+    /// CR 702.159b — claim the source Attraction's prize, emitting the claim
+    /// event (The Most Dangerous Gamer); the prize itself is the following
+    /// effects.
     ClaimThePrize,
-    /// "The next time [who] would roll one or more dice this turn, instead
-    /// they roll that many dice plus one and you choose one of those rolls to
-    /// ignore" (Bamboozling Beeble, CR 706.6): the effect controller ignores
-    /// the lowest of a friendly roll and the highest of an opponent's.
+    /// CR 706.6 — Bamboozling Beeble: `who`'s next roll this turn adds a die and
+    /// you ignore one (the lowest of a friend's, the highest of an opponent's).
     NextRollExtraDieThisTurn { who: PlayerRef },
     /// CR 701.30 — "[body], then clash with an opponent. If you win, repeat
     /// this process" (Hoarder's Greed). Each win re-enters this effect, so a
@@ -9480,25 +7644,19 @@ pub enum Effect {
     /// (Delina, Wild Mage's "15-20: … and you may roll again"). Each yes
     /// re-enters this effect, like `RepeatWhileClashWon`.
     RepeatWhileMay { body: Box<Effect>, again: Predicate, description: String },
-    /// "Remove any number of counters from among permanents on the
-    /// battlefield. You draw cards and lose life equal to the number of
-    /// counters removed this way" (Eventide's Shadow). The controller picks
-    /// permanents; each loses all its counters.
+    /// Eventide's Shadow: strip all counters from chosen permanents; draw and
+    /// lose life per counter.
     RemoveCountersFromAmongDrawAndLoseLife,
-    /// Audacious Swap — "The owner of target nonenchantment permanent
-    /// shuffles it into their library, then exiles the top card of their
-    /// library. If it's a land card, they put it onto the battlefield.
-    /// Otherwise, they may cast it without paying its mana cost." The owner
-    /// casts; a seat that can't (or declines) leaves the card in exile.
+    /// Audacious Swap: the owner shuffles the target in and exiles their top
+    /// card; a land enters, otherwise they may cast it free (else it stays
+    /// exiled).
     OwnerShufflesInExilesTopPlaysOrCasts { what: Selector },
     /// "Double the value of X" for the spell `what` resolves to while it is
     /// on the stack (Unbound Flourishing's cast trigger) — the stack item's
     /// X doubles, so an "enters with X counters" reads the doubled value.
     DoubleXOfSpell { what: Selector },
-    /// CR 705 — "Choose a source you control and flip a coin. If you win the
-    /// flip, the next time that source would deal damage this turn, it deals
-    /// double that damage instead. If you lose, prevent that damage"
-    /// (Desperate Gambit).
+    /// CR 705 — Desperate Gambit: choose your source and flip; win: its next
+    /// damage this turn doubles, lose: it is prevented.
     CoinFlipDoubleOrPreventNextDamage { filter: SelectionRequirement },
     /// "Search your library and graveyard for five cards and exile the rest.
     /// Put the chosen cards on top of your library in any order. You lose half
@@ -9508,10 +7666,8 @@ pub enum Effect {
     /// the triggering land could produce" (Mana Web). `land` resolves the land
     /// that was tapped for mana.
     TapLandsSharingProductionWith { land: Selector },
-    /// "Each player sacrifices the creature they control with the greatest mana
-    /// value unless they pay that creature's mana cost" (Tariff). Ties are
-    /// broken by the permanent's own controller (auto-pick: the cheapest to
-    /// keep). The pay-or-sacrifice decision belongs to each player.
+    /// Tariff: each player sacrifices their priciest creature unless they pay
+    /// its mana cost; ties broken by its controller (auto: cheapest to keep).
     EachPlayerSacrificesGreatestManaValueUnlessPays,
     /// "The next [filter] spell you cast this turn can't be countered"
     /// (Insist, Overmaster). Arms a one-shot grant consumed by the next
@@ -9533,13 +7689,10 @@ pub enum Effect {
     /// `BecomeChosenColor` whose choice is any nonempty set of colors. A
     /// headless seat still names its one best color.
     BecomeChosenColors { what: Selector, duration: Duration },
-    /// CR 205.1b — the creature-type sibling of `BecomeChosenColor`: the
-    /// controller names a creature type and every permanent picked by `what`
-    /// becomes exactly that type for `duration` (Unnatural Selection). One
-    /// choice covers the whole effect. `excluded` carries the printed
-    /// restriction ("a creature type other than Wall" — Imagecrafter,
-    /// Standardize, Mistform Mutant); the decision offers no excluded type
-    /// and a decider that names one anyway is overruled.
+    /// CR 205.1b — the creature-type sibling of `BecomeChosenColor`: one named
+    /// type for every `what` permanent for `duration` (Unnatural Selection).
+    /// `excluded` is the printed restriction ("other than Wall" — Standardize);
+    /// the decision doesn't offer it and overrules a decider that names it.
     BecomeChosenCreatureType {
         what: Selector,
         duration: Duration,
@@ -9554,10 +7707,8 @@ pub enum Effect {
     /// for `duration` (CR 205.4, layer 4) — Thermal Flux's "becomes snow" /
     /// "isn't snow until end of turn".
     ChangeSupertype { what: Selector, supertype: crate::card::Supertype, gain: bool, duration: Duration },
-    /// Each permanent picked by `what` becomes exactly `colors` (replacing
-    /// its colors) for `duration` (CR 105 / layer-5 `SetColors`). The
-    /// fixed-color sibling of `BecomeChosenColor`. Crimson Wisps ("becomes
-    /// red"), Crimson Wisps-style color set without a player choice.
+    /// `what` becomes exactly `colors` for `duration` (CR 105, layer-5
+    /// `SetColors`) — fixed-color `BecomeChosenColor` (Crimson Wisps).
     BecomeColor {
         what: Selector,
         colors: Vec<crate::mana::Color>,
@@ -9568,20 +7719,16 @@ pub enum Effect {
         #[serde(default)]
         additive: bool,
     },
-    /// Each permanent picked by `what` has its creature types set to exactly
-    /// `creature_types` for `duration` (CR 305.7 / layer-4 `SetCreatureTypes`).
-    /// The type-line half of "becomes a [color] [type]" cards — pair with
-    /// `BecomeColor` / `SetBasePT` / `LoseAllAbilities` for the full rewrite
-    /// (Kasmina's Transmutation → blue Frog, Kenrith's Transformation → Elk,
-    /// Turn to Frog, Lignify → Treefolk).
     /// CR 613 layer 7d — "switch target creature's power and toughness" for
     /// `duration` (Transmutation).
     SwitchPowerToughness { what: Selector, duration: Duration },
+    /// Each `what` permanent's creature types become exactly `creature_types` for
+    /// `duration` (CR 305.7, layer-4 `SetCreatureTypes`) — the type-line half of
+    /// "becomes a [color] [type]", paired with `BecomeColor` / `SetBasePT` /
+    /// `LoseAllAbilities` (Turn to Frog).
     BecomeCreatureType { what: Selector, creature_types: Vec<crate::card::CreatureType>, duration: Duration },
-    /// CR 205.1b / 613.4 — each permanent picked by `what` gains
-    /// `creature_types` *in addition* to its own for `duration` (layer-4
-    /// additive `AddCreatureType`, unlike `BecomeCreatureType`'s full set).
-    /// "That creature becomes a Mutant in addition to its other types"
+    /// CR 205.1b / 613.4 — `creature_types` added to each `what` permanent's own
+    /// for `duration` (layer-4 `AddCreatureType`), unlike `BecomeCreatureType`
     /// (Jenova, Ancient Calamity).
     AddCreatureTypes { what: Selector, creature_types: Vec<crate::card::CreatureType>, duration: Duration },
     /// CR 205.3 — "gains all creature types" for `duration`: a layer-4
@@ -9592,18 +7739,14 @@ pub enum Effect {
     /// color word with another, both chosen by the controller (layer 3;
     /// rewrites Protection-from-color). Trait Doctoring, Mind Bend.
     ReplaceColorWord { what: Selector, duration: Duration },
-    /// CR 612 / 305.7 — change the target's text by replacing all instances
-    /// of one basic land type with another, both chosen by the controller
-    /// (layer 3; rewrites the type line + landwalk, so a swapped basic taps
-    /// for the new color). Trait Doctoring, Mind Bend.
+    /// CR 612 / 305.7 — replace one basic land type with another in the target's
+    /// text, both chosen (layer 3; type line and landwalk). Mind Bend.
     ReplaceBasicLandType { what: Selector, duration: Duration },
-    /// CR 612.1 — change target spell or permanent's text by replacing all
-    /// instances of one creature type with another, indefinitely; the new
-    /// type can't be Wall (CR 205.3m). Unlike its color/land-type siblings
-    /// this rewrites the object's *definition* rather than emitting a layer-3
-    /// effect, so it survives a zone change into the battlefield and reaches
-    /// creature-type words inside ability text. Artificial Evolution. With
-    /// `to` set only the replaced type is chosen (New Blood's "with Vampire").
+    /// CR 612.1 — replace every instance of one creature type with another in a
+    /// spell or permanent's text, indefinitely; never Wall (CR 205.3m)
+    /// (Artificial Evolution). It rewrites the *definition*, not a layer-3
+    /// effect, so it survives entering the battlefield and reaches ability text.
+    /// `to` set: only the replaced type is chosen (New Blood).
     ReplaceCreatureTypeText {
         what: Selector,
         #[serde(default)]
@@ -9628,10 +7771,8 @@ pub enum Effect {
     /// Tablet of the Guilds: whenever you cast a spell that is at least one of
     /// the source's chosen colors, gain 1 life for each chosen color it is.
     GainLifePerChosenColorOfCast,
-    /// Each permanent picked by `what` gains protection from a color of the
-    /// controller's choice for `duration` (`Decision::ChooseColor` →
-    /// `Keyword::Protection(color)`). Mother of Runes, Giver of Runes, Gods
-    /// Willing, Apostle's Blessing.
+    /// Protection from a chosen color for `duration` (`Decision::ChooseColor` →
+    /// `Keyword::Protection`). Mother of Runes.
     GrantProtectionFromChosenColor { what: Selector, duration: Duration },
     /// [`Effect::GrantProtectionFromChosenColor`] with colorless as one more
     /// choice (Giver of Runes): taken when the threat on the stack is
@@ -9640,48 +7781,35 @@ pub enum Effect {
     /// "… gains protection from the card type of your choice" (Pippin, Guard
     /// of the Citadel): the controller names a card type as this resolves.
     GrantProtectionFromChosenCardType { what: Selector, duration: Duration },
-    /// "Choose a color. [Target] gains hexproof from that color until end of
-    /// turn. It can't be blocked by creatures of that color this turn"
-    /// (Skrelv, Defector Mite). The color is picked as for
-    /// `GrantProtectionFromChosenColor` — the threat's, else the densest
-    /// among opponents.
+    /// Skrelv, Defector Mite: choose a color; hexproof from it and unblockable by
+    /// it this turn. Chosen as for `GrantProtectionFromChosenColor` (the
+    /// threat's, else the densest among opponents).
     GrantHexproofAndEvasionFromChosenColor { what: Selector, duration: Duration },
-    /// "[what] becomes the color of your choice and gains hexproof from that
-    /// color" for `duration` (Mondo Gecko): one pick, made as for
-    /// `GrantHexproofAndEvasionFromChosenColor`, sets the color (layer 5)
-    /// and grants `HexproofFromColor` of it.
+    /// Mondo Gecko: becomes a chosen color (layer 5, picked as for
+    /// `GrantHexproofAndEvasionFromChosenColor`) with `HexproofFromColor` of it.
     BecomeChosenColorWithHexproof { what: Selector, duration: Duration },
-    /// CR 702.16 — each permanent and player `what` picks gains protection
-    /// from the player `from` resolves to, for `duration` (`EndOfTurn` or
-    /// `UntilNextTurn`): a permanent gets `ProtectionFromMatching(
-    /// ControlledBySeat)`; a player can't be targeted or dealt damage by
-    /// anything that player controls. Guardian Archon, Eon Frolicker.
+    /// CR 702.16 — protection from player `from` for `duration` (`EndOfTurn` or
+    /// `UntilNextTurn`): permanents get `ProtectionFromMatching(ControlledBySeat)`;
+    /// a player can't be targeted or damaged by what that player controls
+    /// (Guardian Archon).
     GainProtectionFromPlayer { what: Selector, from: PlayerRef, duration: Duration },
-    /// CR 509.1b — each permanent `what` picks "can't be blocked by creatures
-    /// [the players `by` resolves to] control" for `duration`
-    /// (`CantBeBlockedBy(ControlledBySeat ∨ …)`). The Black Gate; Rikku's
-    /// "creatures your opponents control" (`EachOpponent`).
+    /// CR 509.1b — "can't be blocked by creatures [by] controls" for `duration`
+    /// (`CantBeBlockedBy(ControlledBySeat ∨ …)`). The Black Gate.
     CantBeBlockedByPlayer { what: Selector, by: PlayerRef, duration: Duration },
-    /// CR 603.7d — "until your next turn, whenever [those creatures] deal
-    /// combat damage, [body]": a delayed trigger per permanent `what` picks,
-    /// controlled by this effect's controller (Tamiyo, Field Researcher's +1).
-    /// `to_player`: only combat damage to a player counts (Kang Dynasty).
+    /// CR 603.7d — until your next turn, a delayed trigger per `what` permanent
+    /// firing `body` on its combat damage (Tamiyo, Field Researcher).
+    /// `to_player`: player damage only.
     WatchCombatDamageUntilYourNextTurn {
         what: Selector,
         body: Box<Effect>,
         #[serde(default)]
         to_player: bool,
     },
-    /// Grant a transient triggered ability to each permanent picked by
-    /// `what`, for `duration`. Stashed in `GameState.
-    /// granted_triggers_eot`; `Duration::Permanent` bakes the trigger onto the
-    /// permanent's own definition instead (the Volver kickers). The dispatcher
-    /// walks both printed `triggered_abilities` and granted ones,
-    /// firing matching events from either source. Used by Root
-    /// Manipulation ("creatures you control gain 'whenever this
-    /// creature attacks, you gain 1 life'") and Rabid Attack
-    /// ("creatures gain 'when this creature dies, draw a card'" — die
-    /// half requires LTB-trigger-snapshot follow-up).
+    /// A transient triggered ability on each `what` permanent for `duration`, in
+    /// `GameState.granted_triggers_eot` (`Duration::Permanent` bakes it into the
+    /// definition — Volver kickers). The dispatcher reads printed and granted
+    /// triggers alike (Root Manipulation). The dies half of Rabid Attack needs an
+    /// LTB-snapshot follow-up.
     GrantTriggeredAbility {
         what: Selector,
         trigger: Box<crate::card::TriggeredAbility>,
@@ -9691,25 +7819,17 @@ pub enum Effect {
     /// trigger, baked onto it until it leaves (Olivia, Crimson Bride's
     /// "When you don't control a legendary Vampire, exile this creature").
     GrantStateTrigger { what: Selector, trigger: Box<crate::card::StateTriggeredAbility> },
-    /// "Target creature loses all abilities until end of turn." Installs a
-    /// `Modification::RemoveAllAbilities` continuous effect against each
-    /// resolved permanent at layer 6. While in scope, the layer system
-    /// clears keywords on the computed permanent AND flips its
-    /// `lost_all_abilities` flag — the trigger dispatcher and activated-
-    /// ability resolver consult that flag to skip the printed
-    /// triggered/activated abilities (CR 113.10b). Used by Turn to Frog,
-    /// Mercurial Transformation, Lignify (the "loses all abilities" half
-    /// of these "creature becomes X" effects).
+    /// "Loses all abilities": a layer-6 `Modification::RemoveAllAbilities`, which
+    /// clears keywords and sets `lost_all_abilities` so triggers and activations
+    /// skip printed abilities (CR 113.10b). Turn to Frog, Lignify.
     LoseAllAbilities { what: Selector, duration: Duration },
     AddCounter    { what: Selector, kind: CounterType, amount: Value },
     /// "Put up to `amount` `kind` counters on [what]. This ability can't cause
     /// the total number of `kind` counters on it to be greater than `cap`."
     /// Clamps per target against its current pool (Clockwork Avian).
     AddCounterCapped { what: Selector, kind: CounterType, amount: Value, cap: Value },
-    /// "Put up to `max` `kind` counters on [what]" — the controller picks the
-    /// count once and it applies to every resolved permanent (Esper Terra's
-    /// "if it's a Saga, put up to three lore counters on it"). `filter`, when
-    /// set, narrows the resolved permanents (the Saga check).
+    /// "Put up to `max` `kind` counters on [what]": one count for every resolved
+    /// permanent (Esper Terra); `filter` narrows them.
     AddCountersUpTo {
         what: Selector,
         kind: CounterType,
@@ -9718,41 +7838,31 @@ pub enum Effect {
         filter: Option<SelectionRequirement>,
     },
     RemoveCounter { what: Selector, kind: CounterType, amount: Value },
-    /// CR 603.7e — "Until the end of your next turn, whenever you cast a
-    /// spell, [body]." A repeating cast watcher whose window outlives the
-    /// installing turn (Season of the Bold's three-point mode); the cast
-    /// spell is bound as the body's `Selector::TriggerSource`.
+    /// CR 603.7e — until the end of your next turn, `body` on each spell you
+    /// cast (Season of the Bold); the spell is `TriggerSource`.
     OnEachSpellYouCastUntilEndOfYourNextTurn { body: Box<Effect> },
-    /// "For each color, put a `kind` counter on a permanent matching `filter`
-    /// of that color. If you put counters on `win_at` permanents this way,
-    /// you win the game" (Call the Spirit Dragons). One pick per color in
-    /// WUBRG order; a multicolored permanent may be picked more than once,
-    /// so the win check counts *distinct* recipients.
+    /// Call the Spirit Dragons: per color (WUBRG) put a `kind` counter on a
+    /// `filter` permanent of that color; win with `win_at` distinct recipients
+    /// (a multicolored one can be picked twice).
     CounterOnMatchingOfEachColor {
         filter: SelectionRequirement,
         kind: CounterType,
         win_at: u32,
     },
-    /// CR 603.7e — "When you next cast a creature spell this turn, that
-    /// creature enters with N additional counters of `kind`." Registers a
-    /// one-shot rider on the controller (`Player.pending_creature_etb_counters`)
-    /// drained onto the next creature spell they cast this turn; unused riders
-    /// expire at cleanup. The FIN "Summon" saga chapters (Fenrir "Heavenward
-    /// Howl", Brynhildr "Gestalt Mode"-adjacent growth).
+    /// CR 603.7e — "when you next cast a creature spell this turn, it enters with
+    /// N `kind` counters": a one-shot rider on
+    /// `Player.pending_creature_etb_counters`, expiring at cleanup (FIN Summon
+    /// sagas).
     GrantNextCreatureSpellCounters { kind: CounterType, amount: Value },
-    /// CR 603.7e — "When you next cast a creature spell this turn, that creature
-    /// gains `keyword`." One-shot rider (`Player.pending_creature_etb_keywords`)
-    /// applied to the next creature spell's permanent as it enters; expires at
-    /// cleanup (Summon: Brynhildr's "Gestalt Mode" haste).
+    /// CR 603.7e — your next creature spell this turn gains `keyword` as it
+    /// enters (`Player.pending_creature_etb_keywords`; Summon: Brynhildr).
     GrantNextCreatureSpellKeyword { keyword: Keyword },
     /// For each permanent matching `filter` whose current power exceeds its
     /// base power, put that many +1/+1 counters on it (the per-permanent
     /// difference). Sovereign Okinec Ahau's attack trigger (CR 122).
     AddCountersForPowerOverBase { filter: SelectionRequirement },
-    /// CR 701.63 — *endure N*: the controller of `target` either puts N
-    /// +1/+1 counters on it, or creates an N/N white Spirit creature token.
-    /// The choice is the controller's (AutoDecider keeps the counters so the
-    /// enduring permanent grows). N=0 does nothing (CR 701.63b).
+    /// CR 701.63 — endure N: `target`'s controller adds N +1/+1 counters or makes
+    /// an N/N Spirit (AutoDecider: counters). N = 0 does nothing.
     Endure { target: Selector, n: Value },
     /// CR 701.68 — *blight N*: the controller puts N -1/-1 counters on a
     /// creature they control (their choice). With no creature they can't
@@ -9766,10 +7876,8 @@ pub enum Effect {
     /// creature with haste (in addition to its other types) and gets N +1/+1
     /// counters; a delayed trigger returns it tapped when it dies or is exiled.
     Earthbend { n: Value },
-    /// CR 701.65 — *airbend* the object(s) `what` resolves to: exile each,
-    /// and for as long as it stays exiled its owner may cast it for {2}
-    /// rather than its mana cost. Wrap in `ApplyToTargets` for the common
-    /// "airbend up to one target [filter]" shape.
+    /// CR 701.65 — airbend: exile each `what`; its owner may cast it for {2}
+    /// while exiled. Wrap in `ApplyToTargets` for "up to one target".
     Airbend { what: Selector },
     /// Remove every counter of every kind from `what` (CR 122.6 — Vampire
     /// Hexmage's "remove all counters from target permanent"). The count
@@ -9783,38 +7891,29 @@ pub enum Effect {
     /// choice; auto-picks the first present kind). Thrull Parasite's "remove a
     /// counter from target nonland permanent".
     RemoveAnyCounter { what: Selector },
-    /// Remove up to `amount` counters (any kinds, controller's choice; the
-    /// auto-picker drains present kinds greedily) from `what`. A permanent
-    /// target drains its counters; a player target drains poison counters
-    /// (CR 122.6 — Price of Betrayal's "artifact, creature, planeswalker, or
-    /// opponent"). Fewer than `amount` present removes all of them. The pick
-    /// takes first the kinds whose removal helps the remover (a harmful
-    /// counter off its own side, any other off an opponent's); `only_helpful`
-    /// stops there — "up to" with no payoff for the count (Heartless Act).
+    /// Remove up to `amount` counters (any kinds, controller's choice) from
+    /// `what`; a player loses poison (CR 122.6 — Price of Betrayal). The pick
+    /// first takes kinds whose removal helps the remover (harmful off its own
+    /// side, any off an opponent's); `only_helpful` stops there (Heartless Act).
     RemoveCountersUpTo {
         what: Selector,
         amount: Value,
         #[serde(default)]
         only_helpful: bool,
     },
-    /// "You may remove up to `max` `kind` counters from among all permanents
-    /// [matching `filter`]" (Sensational Spider-Man's stun counters): the
-    /// headless pick takes them off the controller's own permanents first,
-    /// then anyone's; the count lands on `Value::CountersRemovedThisEffect`.
+    /// Sensational Spider-Man: remove up to `max` `kind` counters from `filter`
+    /// permanents (headless: your own first); count on
+    /// `Value::CountersRemovedThisEffect`.
     RemoveCountersOfKindAmongUpTo { kind: crate::card::CounterType, max: Value, filter: SelectionRequirement },
-    /// Set the loyalty (CR 606) of `what` to `value` — a loyalty-set effect
-    /// ("its loyalty becomes …" / "reset to its starting loyalty"). Overwrites
-    /// the `Loyalty` counter count outright rather than adding/removing.
-    /// Geyadrone Dihada's +1 loyalty-reset rider.
+    /// CR 606 — set `what`'s loyalty to `value`, overwriting the counter count
+    /// (Geyadrone Dihada).
     SetLoyalty { what: Selector, value: Value },
     /// "You may activate loyalty abilities of ~ twice this turn rather than
     /// only once" — Kaito, Dancing Shadow's combat-damage rider. Sets the
     /// resolved planeswalkers' `loyalty_twice_this_turn` (cleared at cleanup).
     GrantLoyaltyTwiceThisTurn { what: Selector },
-    /// CR 702.65 — Aura swap: "Exchange this Aura with an Aura card in your
-    /// hand." The source Aura returns to hand and the chosen hand Aura enters
-    /// attached to the same permanent (Arcanum Wings). Auto-picks the
-    /// highest-MV hand Aura; a `wants_ui` controller gets a ChooseCards pick.
+    /// CR 702.65 — aura swap: this Aura returns to hand and a hand Aura enters on
+    /// the same permanent (Arcanum Wings). Auto: priciest; UI via ChooseCards.
     AuraSwapFromHand,
     /// Ria Ivor — "the next time target creature would deal combat damage to
     /// one or more players this combat, prevent that damage; create that many
@@ -9843,11 +7942,9 @@ pub enum Effect {
     /// Awaken the Erstwhile — "each player discards all the cards in their
     /// hand, then creates that many `token` tokens." Resolved in turn order.
     EachPlayerDiscardsHandMakeTokens { token: std::sync::Arc<crate::card::TokenDefinition> },
-    /// Memory Jar — "each player exiles all cards from their hand face down and
-    /// draws seven cards. At the beginning of the next end step, each player
-    /// discards their hand and returns to their hand each card they exiled this
-    /// way." Stamps the exiles with the source and registers the end-step
-    /// delayed trigger itself, so the whole card is one effect.
+    /// Memory Jar: each player exiles their hand face down and draws seven; at
+    /// the next end step they discard and take back the exiles. One effect with
+    /// its own delayed trigger.
     EachPlayerExilesHandDrawsSeven,
     /// The end-step half of `EachPlayerExilesHandDrawsSeven`, registered as a
     /// delayed trigger by that effect (not printed on any card directly).
@@ -9860,21 +7957,15 @@ pub enum Effect {
     /// creatures your opponents control with power ≤ that number can't block
     /// this turn." The affected set is locked in at resolution (computed power).
     OpponentWeakCreaturesCantBlockByYourCounters,
-    /// Galloping Lizrog — "remove any number of +1/+1 counters from among
-    /// creatures you control; put twice that many +1/+1 counters on this."
-    /// The choose-any-number is collapsed to all other creatures (the
-    /// optimal play), then doubled onto the source (honoring CR 614.16
-    /// counter doublers).
+    /// Galloping Lizrog: remove +1/+1 counters from your creatures and put twice
+    /// that many on this. "Any number" is collapsed to all other creatures;
+    /// counter doublers apply (CR 614.16).
     DoubleP1P1CountersFromYourCreatures,
-    /// CR 702.43c — the Modular death trigger's counter move: put the dying
-    /// source's last-known +1/+1 counters on the targeted artifact creature.
-    /// A `StaticEffect::ModularBonusCounters` (Zabaz) controlled by the
-    /// recipient's controller adds its bonus.
+    /// CR 702.43c — Modular: move the dying source's last-known +1/+1 counters to
+    /// the target. `StaticEffect::ModularBonusCounters` (Zabaz) adds its bonus.
     ModularCounters { what: Selector },
-    /// CR 702.62a-f — exile the selected creature with `time_counters` time
-    /// counters; if it doesn't have suspend, it gains suspend (the card
-    /// "Suspend"). Its owner's `process_suspend` ticks it down and free-casts
-    /// it when the last counter is removed.
+    /// CR 702.62a-f — exile with `time_counters`, gaining suspend if needed (the
+    /// card Suspend); `process_suspend` ticks and free-casts it.
     GrantSuspend { what: Selector, time_counters: u32 },
     /// "Choose a counter on target permanent or suspended card. Remove that
     /// counter or put another of those counters on it" (Clockspinning). The
@@ -9891,32 +7982,28 @@ pub enum Effect {
     /// (Idris, Soul of the TARDIS): the cards exiled with the source lend
     /// their abilities to it, stamped as they're exiled.
     AcquireAbilitiesOfExiledWithSource,
-    /// "Choose a [filter] card exiled with [this]. [This] has all activated
-    /// and triggered abilities of the last chosen card" (Koh, the Face
-    /// Stealer): the controller picks one card exiled with the source
-    /// (headless: the one lending the most abilities), and the source's
-    /// borrowed abilities are replaced by that card's.
+    /// Koh, the Face Stealer: choose a `filter` card exiled with the source
+    /// (headless: the one lending most abilities); the source's borrowed
+    /// abilities become that card's.
     BorrowAbilitiesOfChosenExiled { filter: crate::card::SelectionRequirement },
     /// "Choose up to `max` [keep]. Exile all other creatures" (The Day of
     /// the Doctor's IV, inside its "you may"). The controller chooses among
     /// every match, anyone's; headless, its own greatest-power ones.
     ExileOtherCreaturesKeepingUpTo { keep: crate::card::SelectionRequirement, max: u32 },
-    /// CR 707.9b — a copy "except it's [types] named [name]" (The Eleventh
-    /// Hour's Prisoner Zero): the name and creature types become part of the
-    /// selected permanents' copiable values.
-    /// CR 707.9b — "except it's a [type]" *instead of* its other creature
-    /// types (Hour of Eternity's 4/4 black Zombies, unlike eternalize's).
+    /// CR 707.9b — "except it's a [type]" *instead of* its other creature types
+    /// (Hour of Eternity; unlike eternalize).
     SetCopiableCreatureTypes { what: Selector, creature_types: Vec<crate::card::CreatureType> },
+    /// CR 707.9b — a copy "except it's [types] named [name]" (The Eleventh Hour's
+    /// Prisoner Zero): name and creature types join the copiable values.
     SetCopiableNameAndTypes {
         what: Selector,
         #[serde(with = "crate::static_str_serde")]
         name: crate::static_str_serde::StaticStr,
         creature_types: Vec<crate::card::CreatureType>,
     },
-    /// "[It] becomes … named [name]" — NOT a copy effect, so the name is no
-    /// copiable value (CR 707.2): a copy of it keeps the printed name. Baked
-    /// over the copiable definition (`CardInstance::bake_grant`) until the
-    /// permanent leaves the battlefield (The Curse of Fenric's chapter II).
+    /// "Becomes … named [name]" — not a copy effect, so copies keep the printed
+    /// name (CR 707.2). Baked via `CardInstance::bake_grant` until it leaves (The
+    /// Curse of Fenric).
     BecomeNamed {
         what: Selector,
         #[serde(with = "crate::static_str_serde")]
@@ -9937,26 +8024,20 @@ pub enum Effect {
     /// cards exiled with the source — "a card type shared among two exiled
     /// cards used to craft it" (Apex Observatory, CR 702.167c).
     ChooseCardTypeSharedByExiledWithSource,
-    /// "The next spell you cast this turn of the chosen type can be cast
-    /// without paying its mana cost" (Apex Observatory): the source's
-    /// `chosen_card_type` is granted to its controller until a matching cast
-    /// spends it or the turn ends.
+    /// Apex Observatory: your next spell of the source's `chosen_card_type` this
+    /// turn is free.
     NextSpellOfSourceChosenTypeFreeThisTurn,
     /// CR 123.2 — "You get {TK}{TK}": `amount` ticket counters on `who`
     /// (Command Performance). `Player.tickets`; nothing spends them yet (name
     /// stickers are free).
     GainTickets { who: PlayerRef, amount: u32 },
-    /// Lonis's steal: target opponent reveals the top `count` cards of their
-    /// library; you may put a nonland permanent card with mana value at most
-    /// `max_mv` from among them onto the battlefield under your control; the
-    /// rest go to the bottom in random order. Auto-picks the highest-MV
-    /// legal card.
+    /// Lonis's steal: target opponent reveals the top `count`; you may put a
+    /// nonland permanent with mana value ≤ `max_mv` onto the battlefield (auto:
+    /// the priciest), the rest bottom at random.
     OpponentRevealsPickToBattlefield { count: Value, max_mv: Value },
-    /// Gaea's Will — until end of turn you may play lands and cast spells
-    /// from your graveyard: every nonland card there, and every one that
-    /// arrives later this turn, gets a pay-own-cost `may_play_until`
-    /// permission (`CastFromGraveyardsThisTurn`'s registry); lands ride the
-    /// graveyard land-play gate.
+    /// Gaea's Will: this turn you may play lands and cast spells from your
+    /// graveyard, later arrivals included (`CastFromGraveyardsThisTurn`'s
+    /// registry; lands via the graveyard land-play gate).
     PlayFromGraveyardThisTurn,
     /// CR 701.46a — Adapt N: "if this permanent has no +1/+1 counters on it,
     /// put N +1/+1 counters on it" — or, once, as though it had none when an
@@ -9966,25 +8047,20 @@ pub enum Effect {
     /// it had no +1/+1 counters on it" (Biomancer's Familiar). One waiver per
     /// resolution; the next `Adapt` by that creature consumes it.
     AdaptAsThoughNoCounters { what: Selector },
-    /// "Until end of turn, you may cast [filter] spells from your graveyard /
-    /// any graveyard" (Urabrask's The Great Work III). A rules permission for
-    /// the turn, not a stamp: a matching card put into a covered graveyard
-    /// later this turn is castable too. Paid at its own cost; `exile_after`
-    /// is "if it would be put into a graveyard, exile it instead".
+    /// "Until end of turn, you may cast [filter] spells from your / any
+    /// graveyard" (The Great Work III): a turn permission, so later arrivals
+    /// count. Own cost; `exile_after` exiles instead of the graveyard.
     CastFromGraveyardsThisTurn { any_graveyard: bool, filter: SelectionRequirement, exile_after: bool },
     /// Gaea's Will — "If a card would be put into your graveyard from
     /// anywhere this turn, exile it instead" (turn-scoped Rest in Peace,
     /// own cards only).
     ExileYourGraveyardBoundThisTurn,
-    /// Glimpse of Tomorrow — shuffle all permanents you own into your
-    /// library, reveal that many cards; non-Aura permanents enter the
-    /// battlefield, then Auras (auto-attached), the rest to the bottom in
-    /// random order.
+    /// Glimpse of Tomorrow: shuffle your permanents in, reveal that many;
+    /// non-Auras enter, then Auras (auto-attached), the rest bottom at random.
     GlimpseOfTomorrow,
-    /// Garth One-Eye — choose a not-yet-chosen name among `names`, create a
-    /// copy of that card and you may cast it (approximated: the copy is put
-    /// into your hand as a real card; used names tracked in
-    /// `CardInstance.name_choices_used`).
+    /// Garth One-Eye: pick an unchosen name from `names` and get a copy you may
+    /// cast — approximated as a real card in hand
+    /// (`CardInstance.name_choices_used`).
     GarthOneEye { names: Vec<String> },
     /// Chef's Kiss — gain control of target single-target spell, copy it,
     /// and reselect each target at random among legal targets that aren't
@@ -9996,12 +8072,10 @@ pub enum Effect {
     /// Portent Tracker — choose target battle: if an opponent protects it,
     /// remove a defense counter; otherwise put one on it (CR 310.7).
     AdjustBattleDefense { what: Selector },
-    /// Yusri, Fortune's Flame — choose a number 1..=`max`, flip that many
-    /// coins; run `per_win` per won flip and `per_loss` per lost flip, then
-    /// `all_won` if the chosen number was `all_won_min`+ and every flip won.
-    /// With `stop_on_loss` the flipping stops at the first lost flip ("flip a
-    /// coin that many times or until you lose a flip" — Squee's Revenge).
-    /// `all_won` reads the chosen number as `Value::XFromCost`.
+    /// Yusri, Fortune's Flame: choose 1..=`max`, flip that many; `per_win` /
+    /// `per_loss` per flip, then `all_won` (reading the number as
+    /// `Value::XFromCost`) if it was `all_won_min`+ and every flip won.
+    /// `stop_on_loss` stops at the first loss (Squee's Revenge).
     FlipCoinsChooseCount {
         max: u32,
         per_win: Box<Effect>,
@@ -10011,114 +8085,76 @@ pub enum Effect {
         #[serde(default)]
         stop_on_loss: bool,
     },
-    /// Vraska, Betrayal's Sting's −2 — "[what] becomes a Treasure artifact
-    /// with '{T}, Sacrifice: add one mana of any color' and loses all other
-    /// card types and abilities" (layer 4 type swap + layer 6 ability wipe +
-    /// a granted sac-for-mana ability, all while it stays on the battlefield).
-    /// `while_source`: only for as long as the source stays on the
-    /// battlefield (Kitesail Larcenist).
+    /// Vraska, Betrayal's Sting's −2: becomes a Treasure artifact with "{T},
+    /// Sacrifice: add one mana of any color", losing other types and abilities
+    /// (layers 4 and 6). `while_source`: only while the source remains (Kitesail
+    /// Larcenist).
     BecomeTreasure {
         what: Selector,
         #[serde(default)]
         while_source: bool,
     },
-    /// CR 122.1b — Add a keyword counter to `what`. The host gains the
-    /// named keyword while at least one counter of this kind is present
-    /// (applied as a layer-6 grant in `compute_battlefield`). Removed
-    /// independently of the keyword; the host loses the keyword
-    /// (assuming no other source) when the last keyword counter is
-    /// removed. Push (modern_decks batch 183): added per CR 122.1b.
+    /// CR 122.1b — keyword counters on `what`: it has the keyword while one
+    /// remains (a layer-6 grant in `compute_battlefield`).
     AddKeywordCounter { what: Selector, keyword: crate::card::Keyword, amount: Value },
-    /// CR 122.1b / "choose a kind of counter at random" — pick uniformly at
-    /// random one option `what` doesn't already have (a keyword counter from
-    /// `keyword_options`, or a +1/+1 counter when `plus_one_plus_one`), and put
-    /// one of that kind on it. Crystalline Giant. If every option is already
-    /// present, nothing happens.
+    /// CR 122.1b — a counter of a random kind `what` lacks (from
+    /// `keyword_options`, or +1/+1 with `plus_one_plus_one`). Crystalline Giant.
+    /// Nothing if it has them all.
     AddRandomMissingCounter {
         what: Selector,
         keyword_options: Vec<crate::card::Keyword>,
         #[serde(default)]
         plus_one_plus_one: bool,
     },
-    /// CR 122.1b — Remove up to `amount` keyword counters of `keyword`
-    /// from `what`. Clamped at the source's actual count; the host loses
-    /// the keyword (assuming no other source) when the last counter of
-    /// this kind is removed. Counterpart to `AddKeywordCounter`. Push
-    /// (claude/modern_decks, batches 192-193): added — closes the loop
-    /// for "strip flight" / "remove a vigilance counter" style effects.
+    /// CR 122.1b — remove up to `amount` `keyword` counters from `what`; the last
+    /// one takes the keyword with it. Counterpart to `AddKeywordCounter`.
     RemoveKeywordCounter { what: Selector, keyword: crate::card::Keyword, amount: Value },
-    /// CR 122.5 — move `amount` counters of `kind` from `from` to `to`.
-    /// Clamped at the source's actual counter count; emits a single
-    /// `CounterRemoved` for the source and a single `CounterAdded` for
-    /// each target. The doubling-counter replacement (CR 614.16) does
-    /// NOT apply to the destination — moves are explicitly NOT counter
-    /// creation under CR 122.5 (the counters already exist; they're
-    /// being relocated). Powers Tester of the Tangential's "pay {X}.
-    /// When you do, move X +1/+1 counters from this creature onto
-    /// another target creature" combat trigger.
+    /// CR 122.5 — move `amount` `kind` counters from `from` to `to` (clamped);
+    /// one `CounterRemoved` and one `CounterAdded` per target. Moving isn't
+    /// creating, so doublers (CR 614.16) don't apply. Tester of the Tangential.
     MoveCounter   { from: Selector, to: Selector, kind: CounterType, amount: Value },
     /// Move every counter (all kinds) from `from` onto `to` (The Ozolith's
     /// begin-combat transfer). Relocation, not creation — no doublers.
     MoveAllCounters { from: Selector, to: Selector },
-    /// CR 122.5 — "move any number of counters from [from] onto [to]"
-    /// (Resourceful Defense, Slippery Bogbonder): per source and per kind of
-    /// counter, the controller chooses how many move. `from` may name several
-    /// permanents ("from among creatures you control"); `to` is never a source.
-    /// `kind` limits it to one counter kind ("any number of +1/+1 counters").
     /// CR 122.8 — "remove any number of counters from [what]" (Rhys, the
-    /// Evermore): per permanent and per kind (keyword counters too), the
-    /// controller says how many come off. Headless: every kind its owner
-    /// would rather lose, none of the rest.
+    /// Evermore): per permanent and kind (keyword counters too) the controller
+    /// picks how many. Headless: every kind its owner would rather lose.
     RemoveAnyNumberOfCounters { what: Selector },
+    /// CR 122.5 — "move any number of counters from [from] onto [to]"
+    /// (Resourceful Defense): per source and kind the controller picks how many.
+    /// `from` may be several permanents; `to` is never a source; `kind` limits
+    /// it to one kind.
     MoveAnyNumberOfCounters {
         from: Selector,
         to: Selector,
         #[serde(default)]
         kind: Option<crate::card::CounterType>,
     },
-    /// CR 603.7 — a reflexive "when you do, …" sub-trigger: push `body`
-    /// onto the stack as a triggered ability of the same source and
-    /// controller instead of resolving it inline. The containing
-    /// effect/ability finishes resolving first (mana abilities resolve
-    /// immediately), then the body waits for priority like any trigger —
-    /// so opponents get a response window the inline fold denied them.
-    /// The body's targets are auto-picked at push time (a reflexive
-    /// trigger targets when it triggers, CR 603.7d). Rubble Rouser's
-    /// "{T}, Exile a card from your graveyard: Add {R}. When you do,
-    /// this creature deals 1 damage to each opponent."
+    /// CR 603.7 reflexive "when you do": push `body` as a trigger of the same
+    /// source and controller instead of resolving inline, so opponents get a
+    /// response window. Targets are picked at push (CR 603.7d). Rubble Rouser.
     ReflexiveTrigger { body: Box<Effect> },
-    /// "Put the same number and kind of counters on …" — `amount` counters of
-    /// the kind the triggering `CounterAdded` event put (Bold Plagiarist,
-    /// Captain Marvel). Rewritten to an `AddCounter` as the trigger is
-    /// created (`for_trigger_event`); a no-op anywhere else. `event_placer`:
-    /// the event's placer puts them ("they put …" — CR 122.6), not the
-    /// trigger's controller.
+    /// "Put the same number and kind of counters on …" (Bold Plagiarist): the
+    /// kind of the triggering `CounterAdded`, rewritten to `AddCounter` as the
+    /// trigger is created (`for_trigger_event`); no-op elsewhere. `event_placer`:
+    /// the event's placer puts them (CR 122.6).
     AddCounterOfTriggerKind {
         what: Selector,
         amount: Value,
         #[serde(default)]
         event_placer: bool,
     },
-    /// CR 701.34a — Proliferate. "Choose any number of permanents and/or
-    /// players that have a counter, then give each another counter of a
-    /// kind already there." The auto-decider implements a strategic
-    /// baseline: grow good counters (+1/+1, Loyalty, Charge, Page) on the
-    /// controller's permanents, grow bad counters (-1/-1, Stun) on enemy
-    /// permanents, any other kind by default, and add one poison to each
-    /// opponent already poisoned. (No multi-select UI yet.)
+    /// CR 701.34a Proliferate. Auto-decider baseline: grow good counters (+1/+1,
+    /// Loyalty, Charge, Page) on yours, bad ones (-1/-1, Stun) on theirs, others
+    /// by default, and poison on poisoned opponents. No multi-select UI yet.
     Proliferate,
-    /// "For each [permanent matching `filter`], choose a counter on it. You
-    /// may put an additional counter of that kind on that permanent" (The
-    /// Caves of Androzani II, III). One kind per permanent, chosen the way
-    /// proliferate chooses (good counters on yours, bad on theirs); not a
-    /// proliferate (CR 701.34), so no player counters and no Proliferated
-    /// event.
+    /// "For each [filter], choose a counter on it; you may add one of that kind"
+    /// (The Caves of Androzani). Chosen like proliferate, but it isn't one (CR
+    /// 701.34): no player counters, no Proliferated event.
     AddOneOfAChosenCounterToEach { filter: crate::card::SelectionRequirement },
     /// Gain control of `what`. `to` names the new controller (`None` = the
-    /// effect's controller, the common case — Threaten, Act of Treason). A
-    /// `Some(pref)` hands control to another player — Wishclaw Talisman's
-    /// "target opponent gains control" downside. `#[serde(default)]` keeps
-    /// pre-field snapshots deserializing as `None`.
+    /// effect's controller — Threaten; `Some` = Wishclaw Talisman's "target
+    /// opponent gains control"). `#[serde(default)]` keeps old snapshots loading.
     GainControl {
         what: Selector,
         #[serde(default)]
@@ -10132,10 +8168,9 @@ pub enum Effect {
     /// creature" (Master Thief): the steal also ends when the source changes
     /// controller, not only when it leaves. Swept with Vedalken Shackles.
     GainControlWhileYouControlSource { what: Selector },
-    /// CR 611.2c — "gain control of `what` for as long as this permanent
-    /// remains tapped" (Vedalken Shackles). The steal unwinds in the SBA
-    /// sweep once the source untaps or leaves; while it holds something the
-    /// source skips its own untap step ("you may choose not to untap").
+    /// CR 611.2c — Vedalken Shackles: control `what` while the source stays
+    /// tapped (unwound by the SBA sweep); while it holds one the source skips
+    /// untapping.
     GainControlWhileSourceTapped { what: Selector },
     /// Both clauses — "for as long as you control this and it remains tapped"
     /// (Rubinia Soulsinger, Helm of Possession).
@@ -10148,10 +8183,8 @@ pub enum Effect {
     /// `filter`" (Rootwater Matriarch: "for as long as that creature is
     /// enchanted"). The SBA sweep hands it back once it stops matching.
     GainControlWhileMatches { what: Selector, filter: crate::card::SelectionRequirement },
-    /// CR 611.2c — "gain control of [what] for as long as `monarch` is the
-    /// monarch" (Garland, Royal Kidnapper). `monarch` is resolved once, at
-    /// resolution; the SBA sweep returns the permanent when that seat stops
-    /// being the monarch.
+    /// CR 611.2c — Garland, Royal Kidnapper: control `what` while `monarch`
+    /// (fixed at resolution) is the monarch; the SBA sweep returns it.
     GainControlWhileMonarch { what: Selector, monarch: PlayerRef },
     /// CR 611.2c — "gain control of that permanent for as long as that Aura is
     /// attached to it" (Eriette, the Beguiler). The Aura is
@@ -10172,30 +8205,23 @@ pub enum Effect {
     /// triggered ability of [what] triggers, that ability triggers an
     /// additional time" (Lwaxana Troi, Charming Guest).
     DoubleTriggersWhileSourceTapped { what: Selector },
-    /// Mindblaze's back half — the controller picks a number greater than 0,
-    /// the resolved player reveals their library, and if it holds *exactly*
-    /// that many cards with the name a preceding `Effect::NameCard` stamped,
-    /// the source deals `damage` to them. That player shuffles either way.
+    /// Mindblaze: pick a number > 0; the player reveals their library; exactly
+    /// that many of the named card deals `damage` to them. They shuffle.
     RevealLibraryNamedCountPunish { who: Selector, damage: Value },
     /// Moonring Mirror's upkeep — the controller may exile their whole hand
     /// face down stamped `exiled_with = source`; if they do, every *other*
     /// card they own already stamped that way returns to their hand.
     ExileHandThenReclaimLinked,
-    /// Reweave — the resolved permanent's controller sacrifices it, then
-    /// reveals from the top of their library until a permanent card sharing a
-    /// card type with it turns up, puts that card onto the battlefield, and
-    /// shuffles.
+    /// Reweave: sacrifice `what`; its controller reveals until a permanent card
+    /// sharing a type, puts it onto the battlefield, shuffles.
     SacrificeThenRevealUntilSharedType { what: Selector },
     /// The exile twin of `SacrificeThenRevealUntilSharedType` (Chaotic
-    /// Transformation): exile the permanent `what` resolves to; its controller
-    /// reveals from the top of their library until a card sharing a card type
-    /// with it, puts that card onto the battlefield, then shuffles
+    /// Transformation): exile `what`; its controller reveals until a card sharing
+    /// a type, puts it onto the battlefield, shuffles
     /// (`game/exile_reveal_shared.rs`).
     ExileThenRevealUntilSharedType { what: Selector },
-    /// Struggle for Sanity — the resolved opponent reveals their hand, then
-    /// they and the controller alternate exiling one card each (they go first)
-    /// until the hand is empty. Their picks return to hand; the controller's
-    /// go to the graveyard.
+    /// Struggle for Sanity: the opponent reveals their hand; they and you
+    /// alternately exile one (them first); theirs return, yours are binned.
     AlternatingExileFromHand { who: Selector },
     /// "Double the amount of each type of unspent mana you have" (Doubling
     /// Cube) — every color and colorless pip in the controller's pool is
@@ -10213,20 +8239,14 @@ pub enum Effect {
     /// turn, it deals that much damage plus `amount` instead" — every source,
     /// every player (Rankle and Torbran). Stacks per resolution.
     DamageToPlayersAndBattlesPlusThisTurn { amount: u32 },
-    /// CR 614.1a — "If a source you control would deal damage this turn to an
-    /// opponent or a permanent an opponent controls, it deals triple that
-    /// damage instead" (Isengard Unleashed). Sets
-    /// `Player.triple_your_source_damage_to_opponents_this_turn`.
+    /// CR 614.1a — Isengard Unleashed: your sources' damage to opponents and
+    /// their permanents is tripled this turn.
     TripleYourSourcesDamageToOpponentsThisTurn,
-    /// CR 614.1a — "If a source you control would deal damage to an opponent
-    /// this turn, it deals double that damage to that player instead" (Goblin
-    /// Goliath): players only, not their permanents. Sets
-    /// `Player.double_your_source_damage_to_opponents_this_turn`.
+    /// CR 614.1a — Goblin Goliath: your sources' damage to opponent players (not
+    /// permanents) is doubled this turn.
     DoubleYourSourcesDamageToOpponentPlayersThisTurn,
-    /// CR 614.1a / 111.7 — "Until end of turn, if a creature would enter and
-    /// it wasn't cast, exile it instead" (Hallowed Moonlight): a non-cast
-    /// creature card goes to exile, a creature token is never made. Sets
-    /// `Player.exiles_uncast_creatures_this_turn`.
+    /// CR 614.1a / 111.7 — Hallowed Moonlight: this turn, uncast creatures are
+    /// exiled instead of entering; tokens are never made.
     ExileUncastCreaturesThisTurn,
     /// Goblin Welder: if both targets are still legal, artifact `a`'s
     /// controller simultaneously sacrifices it and returns artifact card `b`
@@ -10234,31 +8254,25 @@ pub enum Effect {
     WeldArtifacts { a: Selector, b: Selector },
     /// Create `count` copies of the given token under `who`'s control.
     CreateToken { who: PlayerRef, count: Value, definition: std::sync::Arc<TokenDefinition> },
-    /// CR 614.13 — "Until end of turn, if one or more tokens would be created
-    /// under your control, twice that many of those tokens are created
-    /// instead" (Kaya, Geist Hunter's −2): one more doubling for `who` this
-    /// turn, stacking with `StaticEffect::DoubleTokens`.
+    /// CR 614.13 — Kaya, Geist Hunter's −2: one more token doubling for `who`
+    /// this turn, stacking with `StaticEffect::DoubleTokens`.
     DoubleTokensThisTurn { who: PlayerRef },
-    /// "Each player creates a `definition` token for each [`filter`] they
-    /// control" (Waiting in the Weeds). Unlike [`Effect::CreateToken`] with
-    /// `PlayerRef::EachPlayer`, the count is evaluated per receiving player
-    /// rather than once in the resolving controller's context.
+    /// Waiting in the Weeds: each player makes a `definition` token per
+    /// `filter` they control — counted per player, unlike `CreateToken` with
+    /// `EachPlayer`.
     EachPlayerCreatesTokenPerControlled {
         filter: SelectionRequirement,
         definition: std::sync::Arc<TokenDefinition>,
     },
-    /// "You may remove any number of `kind` counters from this. If you do,
-    /// create that many `definition` tokens." The tokens are stamped
-    /// `created_by = source`, so `ExileTokensCreatedBySourceForCounters` can
-    /// trade them back (Tetravus).
+    /// Tetravus: remove any number of `kind` counters, make that many tokens
+    /// stamped `created_by = source` for
+    /// `ExileTokensCreatedBySourceForCounters`.
     RemoveCountersToCreateTokens { kind: CounterType, definition: std::sync::Arc<TokenDefinition> },
     /// The mirror: "you may exile any number of tokens created with this. If
     /// you do, put that many `kind` counters on it" (Tetravus).
     ExileTokensCreatedBySourceForCounters { kind: CounterType },
-    /// Register a `DelayedKind::NextEndStep` exile for every token minted
-    /// earlier in this resolution (reads `last_created_tokens`). Chain after
-    /// a `CreateToken` inside a `Seq` for "create N transient tokens, exile
-    /// them at the next end step" (Valduk, Keeper of the Flame).
+    /// Exile every token minted this resolution at the next end step (after a
+    /// `CreateToken` — Valduk, Keeper of the Flame).
     ExileLastCreatedTokensAtNextEndStep,
     /// The cleanup-step sibling: "Exile them at the beginning of the next
     /// cleanup step" (Waylay), so the tokens survive the end step.
@@ -10270,60 +8284,42 @@ pub enum Effect {
     /// Incubate N (CR 701.53): create an Incubator double-faced token under
     /// `who`'s control with `amount` +1/+1 counters on it.
     Incubate { who: PlayerRef, amount: Value },
-    /// Amass N (CR 701.43): put `count` +1/+1 counters on an Army `who`
-    /// controls, creating a 0/0 black Army creature token first if they
-    /// control none. `extra_type` is added to the Army (Amass Zombies /
-    /// Amass Orcs mint a token that's also that subtype).
+    /// Amass N (CR 701.43): `count` +1/+1 counters on `who`'s Army, making a 0/0
+    /// one first if needed; `extra_type` adds a subtype (Amass Orcs).
     Amass { who: PlayerRef, count: Value, extra_type: Option<crate::card::CreatureType> },
-    /// "Empower Jace N" (Multiverse Reforged): put `count` loyalty counters on
-    /// a Jace planeswalker token `who` controls, first creating a blue Jace
-    /// token with "[−1]: Surveil 1" and "[−3]: Draw a card" if they control
-    /// none. The Amass shape (CR 701.43a) on a planeswalker token.
+    /// Empower Jace N: `count` loyalty on your Jace token, first making one
+    /// ("[−1]: Surveil 1", "[−3]: Draw a card") if needed — Amass on a walker.
     EmpowerJace { who: PlayerRef, count: Value },
-    /// CR 606.3 override for this turn only — "until end of turn, you may
-    /// activate loyalty abilities of Jace planeswalkers you control on any
-    /// player's turn any time you could cast an instant" (Jace's
-    /// Machinations; `game/jace_instant_loyalty.rs`).
+    /// CR 606.3 override — Jace's Machinations: this turn, Jace loyalty abilities
+    /// at instant speed on any turn (`game/jace_instant_loyalty.rs`).
     JaceLoyaltyAtInstantSpeedThisTurn,
-    /// "You may activate the loyalty abilities of planeswalkers you control
-    /// twice this turn rather than only once" (Urza Assembles the Titans III;
-    /// CR 606.3 override, `game/loyalty_twice_turn.rs`). Covers planeswalkers
-    /// that arrive later in the turn too.
+    /// CR 606.3 override — Urza Assembles the Titans III: loyalty abilities twice
+    /// this turn, later arrivals too (`game/loyalty_twice_turn.rs`).
     LoyaltyAbilitiesTwiceThisTurn,
-    /// Create `count` tokens already tapped and attacking (CR 508.3a). The
-    /// new tokens join the current combat attacking the same defender the
-    /// effect's source is attacking (falling back to the controller's first
-    /// opponent when the source isn't itself an attacker). Powers "create N
-    /// tokens tapped and attacking" riders and Mobilize (CR 702.181).
-    /// `cleanup` registers the tokens to leave at end of combat. No-op
-    /// outside the combat phase.
+    /// Create `count` tokens tapped and attacking (CR 508.3a) the source's
+    /// defender, else the controller's first opponent — Mobilize (CR 702.181).
+    /// `cleanup` removes them at end of combat. No-op outside combat.
     CreateTokenAttacking {
         who: PlayerRef,
         count: Value,
         definition: std::sync::Arc<TokenDefinition>,
         #[serde(default)]
         cleanup: AttackingTokenCleanup,
-        /// Who the tokens attack. `None` keeps the default — the defender the
-        /// effect's source is attacking, else the controller's first opponent
-        /// — which is right for a token that joins the source's own attack.
-        /// `Some` is for "attacking that player" (Adeline, under
-        /// `ForEachOpponent`), where the defender is the fan-out's opponent.
+        /// Whom the tokens attack. `None`: the source's defender, else the first
+        /// opponent. `Some`: "attacking that player" (Adeline under
+        /// `ForEachOpponent`).
         #[serde(default)]
         defender: Option<PlayerRef>,
     },
-    /// CR 508.3a — put the resolved permanent(s) into the current combat
-    /// tapped and attacking, bypassing the declare-attackers timing/sickness
-    /// gates. Each joins attacking the same defender the effect's source is
-    /// attacking (else the controller's first opponent). No-op outside combat.
-    /// Composes with a preceding `Move … → Battlefield { tapped: true }` to
-    /// reanimate a creature "tapped and attacking" (Alesha, Who Smiles at Death,
-    /// via `Selector::LastMoved`).
+    /// CR 508.3a — put the resolved permanents into combat tapped and attacking
+    /// the source's defender (else the first opponent), skipping declare-attackers
+    /// gates. After a tapped `Move` to the battlefield it reanimates "tapped and
+    /// attacking" (Alesha, via `LastMoved`). No-op outside combat.
     JoinCombatAttacking { what: Selector },
-    /// CR 508.4 — `JoinCombatAttacking` where the effect names no defender
-    /// ("create a token that's tapped and attacking"): each one's controller
-    /// chooses a defending player or a planeswalker one controls (headless:
-    /// the source's defender). Flamerush Rider, Delina. `cleanup` is applied
-    /// to every mover as the combat ends (each token a doubler made too).
+    /// CR 508.4 — `JoinCombatAttacking` with no named defender: each one's
+    /// controller picks a player or planeswalker (headless: the source's
+    /// defender). Flamerush Rider. `cleanup` applies to every mover, doubler
+    /// tokens included.
     JoinCombatAttackingChosen {
         what: Selector,
         #[serde(default)]
@@ -10333,54 +8329,38 @@ pub enum Effect {
     /// creature card, the source gets +power/+toughness until end of turn equal
     /// to that card's power and toughness. Bioplasm's attack trigger.
     ExileTopSelfPumpIfCreature,
-    /// Myriad (CR 702.116): for each opponent of the source's controller
-    /// other than the player the source is attacking, create a token that's
-    /// a copy of the source, tapped and attacking that opponent. The copies
-    /// are exiled at end of combat. No-op outside combat / when the source
-    /// isn't attacking a player.
+    /// Myriad (CR 702.116): per opponent other than the one attacked, a tapped
+    /// and attacking token copy of the source, exiled at end of combat. No-op
+    /// unless the source is attacking a player.
     Myriad,
-    /// Shredder, Shadow Master — Myriad's shape with its own terms: "for each
-    /// other opponent, create a token that's a copy of [the source] tapped and
-    /// attacking that player, except it isn't legendary", cleaned up by
-    /// `cleanup` at end of combat. Unlike Myriad the source must be attacking
-    /// a *player* ("attacks a player").
+    /// Shredder, Shadow Master: Myriad with its own terms — non-legendary copies,
+    /// `cleanup` at end of combat, and the source must be attacking a player.
     CopiesAttackEachOtherOpponent { non_legendary: bool, cleanup: AttackingTokenCleanup },
-    /// "Create a token that's a copy of [card], tapped and attacking. Exile
-    /// the token at end of combat" (Gyrus, Waker of Corpses). `source` names
-    /// the card to copy, found on the battlefield, in exile or a graveyard
-    /// (CR 707.2 — its copiable values). The token attacks the defender the
-    /// effect's source is attacking (CR 508.4 — it was never declared, so no
-    /// "whenever ~ attacks" trigger), else the controller's first opponent.
-    /// No-op outside combat. `sacrifice`: "Sacrifice that token at end of
-    /// combat" (Phantom Steed) rather than exile it. The token is
-    /// `LastCreatedToken` for a chained copy exception.
+    /// Gyrus, Waker of Corpses: a tapped and attacking token copy of `source`
+    /// (found on the battlefield, in exile or a graveyard; CR 707.2), exiled at
+    /// end of combat (`sacrifice`: sacrificed — Phantom Steed). It attacks the
+    /// source's defender, else the first opponent, never declared (CR 508.4).
+    /// No-op outside combat. The token is `LastCreatedToken`.
     TokenCopyAttackingUntilEndOfCombat {
         source: Selector,
         #[serde(default)]
         sacrifice: bool,
     },
-    /// "Create a tapped and attacking token that's a copy of [source]" with
-    /// no end-of-combat cleanup; the token is `Selector::LastCreatedToken`
-    /// for a chained rider (Satya, Aetherflux Genius's end-step "sacrifice
-    /// it unless you pay {E}"). It attacks what the effect's source is
-    /// attacking, else the hostile opponent. No-op outside combat.
+    /// A tapped and attacking token copy of `source` with no cleanup, as
+    /// `LastCreatedToken` for a chained rider (Satya, Aetherflux Genius). Attacks
+    /// the source's defender, else the hostile opponent; no-op outside combat.
     TokenCopyTappedAttacking { source: Selector },
-    /// "The next instant or sorcery spell you cast this turn costs {amount}
-    /// less to cast" (Thundertrap Trainer, Maelstrom Muse). `amount` is
-    /// evaluated at resolution, so `Value::PowerOf(TriggerSource)` reads the
-    /// source's power as the ability resolves. Pushes a one-shot discount
-    /// onto `Player.pending_is_discounts` that lapses after the next such
-    /// spell.
+    /// "The next instant or sorcery you cast this turn costs {amount} less"
+    /// (Thundertrap Trainer). `amount` is read at resolution; a one-shot
+    /// discount on `Player.pending_is_discounts`.
     GrantNextInstantOrSorceryDiscountThisTurn { amount: Value },
     /// "The next spell you cast this turn costs {amount} less to cast" — any
     /// spell (Peerless Samurai). Pushes onto `Player.pending_spell_discounts`,
     /// keyed on the spells-cast tally so it lapses with the next spell.
     GrantNextSpellDiscountThisTurn { amount: Value },
-    /// "The next [filter] spell you cast this turn costs {amount} less to
-    /// cast" (Invasion of the Giants III — the next Giant spell). The grant
-    /// waits on `Player.next_matching_spell_discounts` for the first cast
-    /// that matches `filter`, which takes the discount and consumes it; a
-    /// cast that doesn't match passes it by. Cleared at end of turn.
+    /// "The next [filter] spell you cast this turn costs {amount} less"
+    /// (Invasion of the Giants): waits on `Player.next_matching_spell_discounts`
+    /// for the first matching cast; others pass it by. Cleared at end of turn.
     GrantNextMatchingSpellDiscountThisTurn { filter: crate::card::SelectionRequirement, amount: u32 },
     /// "The next [filter] spell you cast this turn has undaunted" (Võx, Child
     /// of the Collective; CR 702.125): the discount grant above at {1} per
@@ -10390,36 +8370,23 @@ pub enum Effect {
     /// its mana cost" (World War Hulk I): `Player.free_next_spells`, spent by
     /// the first matching cast, cleared at end of turn.
     GrantNextMatchingSpellFreeThisTurn { filter: crate::card::SelectionRequirement },
-    /// Support N (CR 701.32): "Put a +1/+1 counter on each of up to N target
-    /// creatures." Each of slots `0..max_targets` is an optional creature
-    /// target (filtered by `filter`); every supplied target gains one +1/+1
-    /// counter at resolution.
+    /// Support N (CR 701.32): a +1/+1 counter on each of up to N optional
+    /// `filter` creature targets.
     SupportCounters { max_targets: u8, filter: SelectionRequirement },
-    /// "Distribute N `counter` counters among any number of target creatures"
-    /// (CR 601.2d divided choice — Jugan, the Rising Star; Hatchery Spider).
-    /// Each of slots `0..max_targets` is an optional target (filtered by
-    /// `filter`); the per-target split is decided at resolution via
-    /// `Decision::DivideDamage` (AutoDecider spreads as evenly as possible).
+    /// CR 601.2d — distribute N `counter` counters among up to `max_targets`
+    /// optional `filter` targets (Hatchery Spider), split at resolution via
+    /// `Decision::DivideDamage` (AutoDecider spreads evenly).
     DistributeCounters { total: Value, counter: CounterType, filter: SelectionRequirement, max_targets: u8 },
-    /// "Distribute N `counter` counters among [these]" with no target: the
-    /// candidates are `what` as it resolves (Stumpsquall Hydra's "it and any
-    /// number of commanders"), split by `Decision::DivideDamage` like
-    /// `DistributeCounters`; a candidate may get none.
+    /// Untargeted `DistributeCounters` over `what` as it resolves (Stumpsquall
+    /// Hydra), split via `Decision::DivideDamage`; a candidate may get none.
     DistributeCountersAmong { what: Selector, total: Value, counter: CounterType },
-    /// "Do X to each of up to N target permanents" (CR 115 — the generic
-    /// multi-target rider). Slots `0..max_targets` are targets filtered by
-    /// `filter`; at resolution `effect` runs once per supplied target with
-    /// `Selector::Target(0)` bound to that target. Powers "return up to
-    /// three target creatures" (Sea God's Scorn), "deal 1 damage to each
-    /// of up to three target creatures" (Wrap in Flames), "tap up to N
-    /// target permanents", etc. The inner effect must address its operand
-    /// via `Selector::Target(0)`.
+    /// "Do X to each of up to N targets" (CR 115): slots `0..max_targets`
+    /// filtered by `filter`; `effect` runs per supplied target with
+    /// `Selector::Target(0)` bound to it (Sea God's Scorn).
     ///
-    /// `min_targets` is how many targets the printed text *requires*:
-    /// 0 = "up to N / any number" (every slot optional, including slot 0 —
-    /// a `wants_ui` caster may decline each pick); 1 = "one or two
-    /// targets" (Prismari Charm). Targets fill left-to-right; declining
-    /// ends selection.
+    /// `min_targets` is how many the text requires: 0 = "up to N" (every slot,
+    /// slot 0 included, may be declined), 1 = "one or two" (Prismari Charm).
+    /// Targets fill left to right; declining ends selection.
     ApplyToTargets {
         max_targets: u8,
         #[serde(default)]
@@ -10427,75 +8394,51 @@ pub enum Effect {
         filter: SelectionRequirement,
         effect: Box<Effect>,
     },
-    /// A trigger its source GRANTS to the object it fired on ("Other
-    /// creatures have 'Whenever this creature attacks, …'" — Grothama): as it
-    /// goes on the stack it becomes that object's ability — the subject is its
-    /// source and its controller controls it, and the granter is its
-    /// `TriggerSource` — and runs `0` (CR 113.10: the creature has the ability).
+    /// A trigger its source grants to the object it fired on (Grothama): on the
+    /// stack it becomes that object's ability (CR 113.10) — subject as source and
+    /// controller, the granter as `TriggerSource` — and runs `0`.
     AsSubjectsAbility(Box<Effect>),
-    /// CR 601.2c — a sequence whose members own **consecutive** target slots:
-    /// each member's slot 0 is the slot after the previous targeting member's
-    /// last ([`Effect::target_slot_count`]), and at resolution each runs with
-    /// its own slice of the targets. "Exile X target cards from target
-    /// player's graveyard" (Suffer the Past) is `[player step, CapTargetsAtX
-    /// over an ApplyToTargets]` — the entwined-`ChooseModesCast` shape without
-    /// a mode choice. A member that targets nothing reads the whole list.
+    /// CR 601.2c — a sequence whose members own consecutive target slots (each
+    /// starts after the previous member's last, [`Effect::target_slot_count`])
+    /// and resolve on their own slice. Suffer the Past is `[player step,
+    /// CapTargetsAtX over ApplyToTargets]`. Non-targeting members read the whole
+    /// list.
     SlotGroups(Vec<Effect>),
-    /// "Up to X targets" wrapper (Crackle with Power): truncates the
-    /// supplied cast-time target list to the cast's `x_value` before
-    /// running `body` (usually an `ApplyToTargets` whose `max_targets` is
-    /// the static slot ceiling). Cast-time slot enumeration still offers
-    /// the ceiling; an over-select at small X is dropped at resolution.
+    /// "Up to X targets" (Crackle with Power): truncates the targets to the
+    /// cast's `x_value` before `body` (usually `ApplyToTargets` at the static
+    /// ceiling). Over-selects at small X are dropped at resolution.
     CapTargetsAtX { body: Box<Effect> },
-    /// "N target …" where N is the paid {X} (CR 601.2c — Synod Artificer's
-    /// "Tap X target noncreature artifacts"). Like `CapTargetsAtX`, but slots
-    /// `0..X` are *required* rather than optional, so an activation that supplies
-    /// too few targets is rejected instead of half-firing. `body` is normally an
-    /// `ApplyToTargets` whose `max_targets` is the static slot ceiling.
+    /// "X target …" (CR 601.2c — Synod Artificer): like `CapTargetsAtX` but slots
+    /// `0..X` are required, so too few targets is rejected rather than
+    /// half-firing.
     TargetsExactlyX { body: Box<Effect> },
     /// The `Value`-driven sibling of `CapTargetsAtX`: "up to [amount] target
     /// creatures", where the cap is computed at resolution rather than paid as
     /// {X} (Mogis's Marauder's devotion-to-black cap).
     CapTargetsAt { amount: Value, body: Box<Effect> },
-    /// CR 601.2c — "**for each opponent**, [verb] up to one target X *that
-    /// player* controls". A transparent wrapper over an `ApplyToTargets`: it
-    /// caps the chosen targets at the controller's opponent count *and*
-    /// forbids two of them from sharing a controller, which together are
-    /// exactly the printed clause — one target per opponent, each chosen as
-    /// the spell or ability goes on the stack.
+    /// CR 601.2c — "for each opponent, [verb] up to one target X that player
+    /// controls": a transparent wrapper over an `ApplyToTargets` capping the
+    /// targets at the opponent count and forbidding two with one controller.
+    /// A wrapper because slots are declared statically
+    /// (`Selector::TargetFiltered { slot, .. }`) and only the game knows the
+    /// opponent count. The Primordials, Grasp of Fate.
     ///
-    /// It is a wrapper rather than one target slot per opponent because a slot
-    /// is declared statically by the card literal (`Selector::TargetFiltered
-    /// { slot, .. }`) and "one per opponent" is a count only the game knows.
-    /// The five Primordials, Grasp of Fate, Omega and Tempted by the Oriq.
-    ///
-    /// ⚠ The permissiveness this leaves is "up to": a printed *mandatory*
-    /// per-opponent target (only Sylvan Primordial) could be declined here.
-    /// Every other card in the family prints "up to one", and for all eight
-    /// the targets are pure upside, so no real seat declines one.
+    /// ⚠ Every target is "up to", so Sylvan Primordial's mandatory one could be
+    /// declined; all are pure upside, so no real seat does.
     ForEachOpponentTarget { body: Box<Effect> },
-    /// [`Effect::ForEachOpponentTarget`] over **every** player, you included
-    /// — "for each player, … up to one target X that player controls"
-    /// (Battle at the Helvault, Unexplained Absence, The Curse of Fenric).
-    /// The cap is the living player count; the one-per-controller rule is the
-    /// same.
+    /// [`Effect::ForEachOpponentTarget`] over every player, you included (Battle
+    /// at the Helvault): capped at the living player count, one per controller.
     ForEachPlayerTarget { body: Box<Effect> },
-    /// Transparent wrapper declaring that target slots `>= min` are optional
-    /// ("up to one target …") for an otherwise-conventional `body` whose slots
-    /// come from *distinct* effects — the case `ApplyToTargets` can't express
-    /// because it rebinds every supplied target to `Target(0)`. Primal Might is
-    /// `OptionalTargets { min: 1, body: Seq[counters on Target(0), Fight{
-    /// attacker: Target(0), defender: Target(1) }] }`: slot 0 (the friendly
-    /// creature) is required, slot 1 (the enemy it fights) may be declined, and
-    /// the Fight no-ops when slot 1 resolves to nothing. Evaluation just runs
-    /// `body`; the wrapper only feeds the targeting walk (`min_targets_in_mode`
-    /// / `target_slot_optional`).
+    /// Transparent wrapper making target slots `>= min` optional ("up to one
+    /// target …") for a `body` whose slots come from distinct effects, which
+    /// `ApplyToTargets` can't express (it rebinds every target to `Target(0)`).
+    /// Primal Might: `min: 1`, the fight's enemy slot may be declined and the
+    /// `Fight` no-ops. Only the targeting walk reads it (`min_targets_in_mode` /
+    /// `target_slot_optional`).
     OptionalTargets { min: u8, body: Box<Effect> },
-    /// Run `body` with the context's X set to `x` (evaluated first), so an
-    /// X-relative filter in it (`ManaValueAtMostXFromCost`) reads a number
-    /// the card names instead of a cast's X — Kodama of the East Tree's
-    /// "a permanent card with equal or lesser mana value" than the entrant:
-    /// `WithX { x: ManaValueOf(TriggerSource), body }`.
+    /// Run `body` with X set to `x` (evaluated first), so X-relative filters
+    /// (`ManaValueAtMostXFromCost`) read a card-named number — Kodama of the East
+    /// Tree: `WithX { x: ManaValueOf(TriggerSource), body }`.
     WithX { x: Value, body: Box<Effect> },
     /// CR 601 — "Until your next turn, your opponents can't cast spells from
     /// anywhere other than their hands" (Avatar's Wrath): a lock the
@@ -10505,14 +8448,11 @@ pub enum Effect {
     /// they exile the top card of their library. They may play it this turn"
     /// (Urabrask, Heretic Praetor). Spent by that draw; lapses at cleanup.
     NextDrawThisTurnBecomesImpulse { who: PlayerRef },
-    /// Run `body` with the spell's target slots `slot..slot + count` moved to
-    /// slots `0..count`.
+    /// Run `body` with target slots `slot..slot + count` moved to `0..count`.
     ///
-    /// **Runtime-only** — built by the modal arms' suspend splice, never by a
-    /// card. A modal run gives each target-bearing mode its own slots through
-    /// `EffectContext.targets`, and a parked continuation is resumed with the
-    /// spell's *whole* target list, so the slots have to be named in the
-    /// effect or every remaining mode reads slot 0.
+    /// Runtime-only, built by the modal arms' suspend splice: a parked
+    /// continuation resumes with the spell's whole target list, so each
+    /// remaining mode's slots must be named in the effect or all read slot 0.
     BindTargetSlot {
         slot: u8,
         /// A mode with two targets ("target creature you control fights
@@ -10523,55 +8463,40 @@ pub enum Effect {
     },
     /// Run `body` with `ctx.targets` set to exactly these objects.
     ///
-    /// **Runtime-only**, and the sibling of `BindTargetSlot`: that one pins a
-    /// slot of the spell's own target list, this one pins objects the arm
-    /// picked itself (a card in the exile pile, the permanent this iteration
-    /// is about). A parked continuation is resumed under the stack item's
-    /// context, so without it the rest of that iteration's body reads the
-    /// caster's targets.
+    /// Runtime-only sibling of `BindTargetSlot`, pinning objects the arm picked
+    /// itself (an exile-pile card, this iteration's permanent). Without it a
+    /// resumed continuation reads the caster's targets.
     BindTargetObjects { ids: Vec<crate::card::CardId>, body: Box<Effect> },
     /// CR 603.2c — "whenever one or more [cards] …, [body] one of them": on a
     /// `once_per_batch` trigger the dispatcher fills `ids` with the batch's
-    /// matching subjects, and `body` runs with them as its target list, so
-    /// `AllTargets` reads "them" (Conspiracy Theorist, Colossal Grave-Reaver).
-    /// They are bound, never chosen: no cast-time slot.
+    /// subjects and `body` reads them as targets (`AllTargets` = "them" —
+    /// Conspiracy Theorist). Bound, never chosen: no cast-time slot.
     OverTriggerBatch {
         body: Box<Effect>,
         #[serde(default)]
         ids: Vec<crate::card::CardId>,
     },
-    /// CR 603.2c — the [`Effect::OverTriggerBatch`] binding for a trigger that
-    /// also chooses its own targets: the dispatcher fills `ids` with the
-    /// batch's matching subjects and `body` reads them as
-    /// [`Selector::BoundTriggerBatch`], its target slots untouched ("return
-    /// target artifact card … if its mana value is at most their total power",
-    /// Vulpine Harvester). Members are fixed when the trigger fires; a
-    /// departed one reads last-known information.
+    /// CR 603.2c — [`Effect::OverTriggerBatch`] for a trigger that also picks its
+    /// own targets: `body` reads the batch as [`Selector::BoundTriggerBatch`]
+    /// with its slots untouched (Vulpine Harvester). Members are fixed at fire
+    /// time; departed ones read LKI.
     WithTriggerBatch {
         body: Box<Effect>,
         #[serde(default)]
         ids: Vec<crate::card::CardId>,
     },
-    /// Run `body` with one piece of the resolver's per-iteration scratch state
-    /// pinned to the value the iteration that parked it had.
+    /// Run `body` with one piece of the resolver's per-iteration `GameState`
+    /// scratch (the `VoteTally::PerVote` ballot, the die face) pinned to the
+    /// parking iteration's value.
     ///
-    /// **Runtime-only**, and the third of the `Bind*` family. The other two pin
-    /// `EffectContext.targets`; this one pins state that lives on `GameState`
-    /// instead — the ballot a `VoteTally::PerVote` body runs for, the die face
-    /// a results-table arm runs under.
-    /// A parked continuation resumes long after the loop restored that state,
-    /// so a loop splicing its remaining iterations has to name it *inside* the
-    /// effect.
+    /// Runtime-only, the third `Bind*`. A parked continuation resumes after the
+    /// loop restored that state, so the splice must name it inside the effect.
     BindScratch { scratch: ScratchBinding, body: Box<Effect> },
-    /// Eerie Ultimatum — return any number of permanent cards with different
-    /// names from the controller's graveyard to the battlefield. The controller
-    /// picks at resolution (`Decision::ChooseCards`); duplicate names are
-    /// dropped so each returned card has a distinct name.
+    /// Eerie Ultimatum: return any graveyard permanent cards with different names
+    /// (`Decision::ChooseCards`; duplicates dropped).
     ReturnGraveyardPermanentsDifferentNames,
-    /// "Return all [filter] cards from `who`'s graveyard to the battlefield"
-    /// (Push the Limit). No pick — every match comes back under the effect's
-    /// controller. With `sacrifice_eot` each returns is sacrificed at the
-    /// beginning of the next end step.
+    /// Push the Limit: return every [filter] card from `who`'s graveyard under
+    /// you; `sacrifice_eot` sacrifices them at the next end step.
     ReturnAllMatchingFromGraveyardToBattlefield {
         who: PlayerRef,
         filter: SelectionRequirement,
@@ -10594,16 +8519,12 @@ pub enum Effect {
     /// a finality counter on it and is a [creature_type] in addition to its
     /// other types" (The Tomb of Aclazotz's Vampire).
     MayCastCreatureFromGraveyardThisTurnAs { creature_type: crate::card::CreatureType },
-    /// "Put a `filter` card from a graveyard onto the battlefield under your
-    /// control" (Victor, Valgavoth's Seneschal). Untargeted: a resolution-time
-    /// `Decision::ChooseCards` over *every* graveyard, auto-picking the highest
-    /// mana value for a non-UI seat.
+    /// Victor, Valgavoth's Seneschal: put a `filter` card from any graveyard onto
+    /// the battlefield under you — untargeted `ChooseCards` (auto: priciest).
     PutGraveyardCardOntoBattlefield { filter: SelectionRequirement },
-    /// "`who` shuffles up to `max` `filter` cards from their graveyard into
-    /// their library." Resolution-time `Decision::ChooseCards` by the affected
-    /// player (no targeting) — a graveyard-recursion / anti-mill rider
-    /// (Cathartic Parting, Rite of Renewal). Mirror of
-    /// `ReturnGraveyardCardsToHand` for the library destination.
+    /// "`who` shuffles up to `max` `filter` cards from their graveyard into their
+    /// library" — their `Decision::ChooseCards`, untargeted (Cathartic Parting).
+    /// Library mirror of `ReturnGraveyardCardsToHand`.
     ShuffleGraveyardCardsIntoLibrary {
         who: PlayerRef,
         filter: SelectionRequirement,
@@ -10613,54 +8534,38 @@ pub enum Effect {
         #[serde(default)]
         to_top: bool,
     },
-    /// Genesis Ultimatum — look at the top `count` cards of the controller's
-    /// library; put any number of permanent cards among them onto the
-    /// battlefield and the rest into hand. The controller picks the permanents
-    /// to deploy at resolution (`Decision::ChooseCards`).
+    /// Genesis Ultimatum: look at the top `count`; chosen permanent cards enter,
+    /// the rest to hand.
     LookTopNDeployPermanentsRestToHand { count: Value },
-    /// Yidaro, Wandering Monster — "When you cycle this card, shuffle it into
-    /// your library from your graveyard. If you've cycled a card with this
-    /// name `threshold` or more times this game, put it onto the battlefield
-    /// from your graveyard instead." Reads `GameState.cycled_count_by_name`.
+    /// Yidaro, Wandering Monster: on cycling, shuffle it in from the graveyard,
+    /// or deploy it after `threshold` cycles of the name
+    /// (`GameState.cycled_count_by_name`).
     CycleRecurFromGraveyard { threshold: u32 },
-    /// Illuna, Apex of Wishes — exile cards from the top of the controller's
-    /// library until a nonland *permanent* card is exiled, then put that card
-    /// onto the battlefield or into hand (controller's choice via
-    /// `Decision::OptionalTrigger`). The other exiled cards stay in exile.
+    /// Illuna, Apex of Wishes: exile until a nonland permanent card, then
+    /// battlefield or hand (`Decision::OptionalTrigger`); the rest stay exiled.
     ExileTopUntilPermanentToBattlefieldOrHand,
-    /// Nethroi, Apex of Death — return any number of creature cards from the
-    /// controller's graveyard with total power `max_total` or less to the
-    /// battlefield. The controller picks the set at resolution
-    /// (`Decision::ChooseCards`); picks are accepted greedily until the next
-    /// would exceed the cap.
+    /// Nethroi, Apex of Death: return graveyard creature cards with total power
+    /// ≤ `max_total`, picked at resolution (`Decision::ChooseCards`), accepted
+    /// greedily until the next would bust the cap.
     ReturnGraveyardCreaturesUpToTotalPower { max_total: Value },
-    /// Scout for Survivors — return up to `max_count` creature cards from the
-    /// controller's graveyard with total **mana value** `max_total` or less to
-    /// the battlefield, each with `counters` +1/+1 counters. The controller
-    /// picks the set at resolution; picks are accepted greedily until the next
-    /// would exceed either cap.
+    /// Scout for Survivors: return up to `max_count` graveyard creature cards
+    /// with total mana value ≤ `max_total`, each with `counters` +1/+1 counters;
+    /// picks accepted greedily within both caps.
     ReturnGraveyardCreaturesUpToTotalManaValue {
         max_total: Value,
         max_count: Value,
         counters: u32,
     },
-    /// "Return any number of cards with total mana value `max_total` or less
-    /// from your graveyard to your hand" (Pair o' Dice Lost). The controller
-    /// picks at resolution; picks are accepted greedily until the next would
-    /// exceed the cap. Headless: the costliest cards first.
+    /// Pair o' Dice Lost: return graveyard cards with total mana value ≤
+    /// `max_total`, accepted greedily (headless: priciest first).
     ReturnGraveyardCardsToHandUpToTotalManaValue { max_total: Value },
-    /// Protean Hulk — search the controller's *library* for any number of
-    /// creature cards with total mana value `max_total` or less, put them
-    /// onto the battlefield, then shuffle. The controller picks the set at
-    /// resolution; picks are accepted greedily until the next would exceed
-    /// the cap. The library variant of
-    /// [`ReturnGraveyardCreaturesUpToTotalManaValue`].
+    /// Protean Hulk: the library version of
+    /// [`ReturnGraveyardCreaturesUpToTotalManaValue`] — search for creatures with
+    /// total mana value ≤ `max_total`, put them onto the battlefield, shuffle.
     SearchLibraryCreaturesUpToTotalManaValue { max_total: Value },
-    /// Command the Dreadhorde — choose any number of creature and/or
-    /// planeswalker cards in *any* graveyard, deal damage to the controller
-    /// equal to their total mana value, then put them onto the battlefield
-    /// under the controller's control. The set is chosen at resolution
-    /// (`Decision::ChooseCards`).
+    /// Command the Dreadhorde: choose creature / planeswalker cards in any
+    /// graveyard (`Decision::ChooseCards`), take damage equal to their total mana
+    /// value, put them onto the battlefield under your control.
     CommandTheDreadhorde,
     /// Swift Silence — counter every other spell on the stack, then draw a
     /// card for each spell countered this way (CR 701.5).
@@ -10672,63 +8577,38 @@ pub enum Effect {
     /// hand, then discards each nonland card revealed this way. Lands revealed
     /// this way stay in hand.
     RevealRandomDiscardNonland { who: Selector, count: Value },
-    /// "Target opponent reveals a card at random from their hand" (the
-    /// Planeswalker's cycle). The card stays in hand; its mana value is
-    /// stamped for `Value::LastRevealedManaValue` and the card itself for
-    /// `Selector::LastRevealedCard`, so a follow-up clause in the same `Seq`
-    /// can scale off it or exile it.
+    /// "Target opponent reveals a card at random from their hand": it stays put,
+    /// stamped for `Value::LastRevealedManaValue` and
+    /// `Selector::LastRevealedCard` for a later clause.
     RevealRandomFromHand { who: Selector },
-    /// Mass Polymorph — "Exile all creatures you control, then reveal cards
-    /// from the top of your library until you reveal that many creature cards.
-    /// Put all creature cards revealed this way onto the battlefield, then
-    /// shuffle the rest of the revealed cards into your library."
+    /// Mass Polymorph: exile your creatures, reveal until that many creature
+    /// cards, deploy them, shuffle the rest in.
     MassPolymorph,
-    /// Wild Evocation — "that player reveals a card at random from their hand.
-    /// If it's a land card, the player puts it onto the battlefield. Otherwise,
-    /// the player casts it without paying its mana cost if able." The free cast
-    /// uses auto-targets; an uncastable pick simply stays in hand.
+    /// Wild Evocation: the player reveals a random hand card; a land enters,
+    /// otherwise they cast it free (auto-targets) if able.
     RandomHandCardDeployOrCastFree { who: Selector },
-    /// "Tap up to N target permanents; they don't untap during their
-    /// controller's next untap step" where N is a runtime `Value`
-    /// (Archipelagore — N = `Value::MutateCount`). The controller chooses up
-    /// to the evaluated count of matching permanents at resolution
-    /// (`Decision::ChooseCards`), so the dynamic count sidesteps the
-    /// fixed-slot declared-target model. `skip_untap` adds the
-    /// `skip_next_untap` flag to each tapped permanent.
-    /// `exact: true` turns the pick into an all-or-nothing cost: the chooser
-    /// must tap exactly `count` (min = max in the `ChooseCards` decision;
-    /// AutoDecider fills top-down). Aziza's "tap three untapped creatures
-    /// you control" — the surrounding `If` guarantees enough candidates.
+    /// "Tap up to N target permanents" with N a runtime `Value` (Archipelagore's
+    /// `MutateCount`), chosen at resolution (`Decision::ChooseCards`) instead of
+    /// fixed slots. `skip_untap` sets `skip_next_untap`. `exact`: exactly
+    /// `count`, an all-or-nothing cost (Aziza; the surrounding `If` guarantees
+    /// candidates).
     TapUpToValue { count: Value, filter: SelectionRequirement, skip_untap: bool, exact: bool },
-    /// CR 702.110b — the source exploited a creature: emits
-    /// `GameEvent::Exploited` ("whenever a creature you control exploits a
-    /// creature", Colonel Autumn). [`shortcut::exploit`] runs it once the
-    /// sacrifice happened.
+    /// CR 702.110b — emits `GameEvent::Exploited` (Colonel Autumn);
+    /// [`shortcut::exploit`] runs it after the sacrifice.
     NoteExploited,
-    /// Enlist (CR 702.154): "As this attacks, you may tap a nonattacking
-    /// creature you control without summoning sickness. When you do, add its
-    /// power to this creature's power until end of turn." The "you may" /
-    /// "which creature" collapses to auto-tapping the highest-power eligible
-    /// creature (only when its power is positive, so it's never a downgrade).
+    /// Enlist (CR 702.154): auto-taps the highest-power eligible nonattacking
+    /// creature, only when that power is positive, and adds it to this
+    /// creature's power until end of turn.
     Enlist,
     /// Enlist (CR 702.154), then — only when a creature was enlisted —
     /// `then` ("if it enlisted a creature this combat, …": Aradesh, the
     /// Founder's payoff on its own attack).
     EnlistThen { then: Box<Effect> },
-    /// Create `count` token copies of the permanent resolved by `source`,
-    /// controlled by `who`. The copy inherits the source's printed
-    /// CardDefinition (name, P/T, types, keywords, activated/triggered
-    /// abilities, static abilities). `extra_creature_types` are added on
-    /// top of the source's printed creature subtypes (Applied Geometry,
-    /// Echocasting Symposium: "create a token that's a copy of target X,
-    /// except it's a 0/0 Fractal creature in addition to its other
-    /// types" — pass `vec![CreatureType::Fractal]` to honor the printed
-    /// "in addition to" rider). The token is stamped with `is_token =
-    /// true` so token-cleanup SBA removes it when it leaves the
-    /// battlefield. Power/toughness override is honored when both
-    /// `override_pt: Some((p, t))` is set (Applied Geometry overrides
-    /// the source's printed P/T to 0/0). The override applies *before*
-    /// any +1/+1 counter pile.
+    /// Create `count` token copies of `source` for `who`, from its printed
+    /// definition. `extra_creature_types` are added to the copied subtypes
+    /// ("a 0/0 Fractal in addition to its other types" — Applied Geometry), and
+    /// `override_pt` replaces P/T before any counters. Tokens are `is_token`, so
+    /// the token SBA removes them off the battlefield.
     CreateTokenCopyOf {
         who: PlayerRef,
         count: Value,
@@ -10741,11 +8621,9 @@ pub enum Effect {
         extra_card_types: Vec<crate::card::CardType>,
         #[serde(default)]
         override_pt: Option<(i32, i32)>,
-        /// CR 707.2 rider — the copy's color is set to these colors ("except
-        /// it's a 5/5 black Demon" — Ardyn, the Usurper). Applied as a color
-        /// indicator (CR 105.2c) plus stripping the copied cost's colored pips
-        /// (generic count preserved) so the copy is exactly these colors.
-        /// `None` keeps the source's own colors.
+        /// CR 707.2 — the copy is exactly these colors ("a 5/5 black Demon" — Ardyn):
+        /// a color indicator (CR 105.2c) plus the copied cost's colored pips stripped
+        /// (generic kept). `None` keeps the source's colors.
         #[serde(default)]
         override_colors: Option<Vec<crate::mana::Color>>,
         /// The token copy enters tapped (Sin, Spira's Punishment — "create a
@@ -10780,23 +8658,18 @@ pub enum Effect {
         #[serde(default)]
         remove_keywords: Vec<crate::card::Keyword>,
     },
-    /// "… a Food artifact with \"{2}, {T}, Sacrifice this artifact: You gain
-    /// 3 life\" and it loses all other card types" (Shelob, Child of
-    /// Ungoliant's copy; Supper for Spiders' returned cards): each permanent
-    /// `what` names becomes an artifact — Food its only subtype — with the
-    /// Food ability added, its other abilities kept. Written into its
+    /// "… a Food artifact with '{2}, {T}, Sacrifice: gain 3 life' and loses all
+    /// other card types" (Shelob, Child of Ungoliant): each `what` permanent
+    /// becomes an artifact — Food — keeping its abilities, written into its
     /// copiable values (CR 707.9b).
     BecomeFoodArtifact { what: Selector },
-    /// CR 707.9b — "… and it has '[static ability]'" as a copy exception:
-    /// written into the copiable values of each permanent `what` names, beside
-    /// `AmendCopiableValues` (Dollhouse of Horrors' "This token gets +1/+1 for
-    /// each Construct you control").
+    /// CR 707.9b — "and it has '[static]'" as a copy exception in `what`'s
+    /// copiable values, beside `AmendCopiableValues` (Dollhouse of Horrors).
     AddCopiableStaticAbilities { what: Selector, statics: Vec<crate::card::StaticAbility> },
     /// CR 707.9b — a copy exception written into the copiable values of each
-    /// permanent `what` names, so a copy of it carries it too: "except its
-    /// name is …" (Mishra's Warform), "except it's a … Zombie" (creature types
-    /// replaced — The Scarab God), "… an Illusion in addition to its other
-    /// types" (Phantom Steed), "… a legendary blue and black Zombie" (Olag).
+    /// `what`, so its copies carry it: a new name (Mishra's Warform), replaced or
+    /// added creature types (The Scarab God, Phantom Steed), supertypes and
+    /// colors (Olag).
     AmendCopiableValues {
         what: Selector,
         #[serde(default, with = "crate::static_str_serde::opt")]
@@ -10817,11 +8690,8 @@ pub enum Effect {
         #[serde(default)]
         set_card_types: Option<Vec<crate::card::CardType>>,
     },
-    /// Create `count` token copies of the permanent resolved by `source`
-    /// (controlled by `who`), each gaining haste until end of turn and
-    /// sacrificed at the beginning of the next end step. Devastating Onslaught
-    /// ("create X tokens that are copies of target artifact or creature you
-    /// control").
+    /// Devastating Onslaught: `count` token copies of `source` for `who`, with
+    /// haste until end of turn, sacrificed at the next end step.
     CreateTokenCopiesHasteSac {
         who: PlayerRef,
         count: Value,
@@ -10839,43 +8709,25 @@ pub enum Effect {
     /// token they control (their choice; AutoDecider keeps the highest-power
     /// one). No-op if they control no creature token.
     Populate { who: PlayerRef },
-    /// CR 716.2 — advance the source Class enchantment by one level, emitting a
-    /// `GameEvent::ClassLevelReached` (so "when this Class becomes level N"
-    /// triggers fire). The resolution effect of a `{cost}: Level N` activated
-    /// ability. No-op if the source isn't a Class on the battlefield.
+    /// CR 716.2 — advance the source Class one level, emitting
+    /// `GameEvent::ClassLevelReached`; the "Level N" ability's effect. No-op off
+    /// the battlefield.
     AdvanceClassLevel,
-    /// CR 707.2 — `what` becomes a copy of the permanent resolved by
-    /// `source`: its copiable characteristics (name, mana cost, card
-    /// types, subtypes, abilities, P/T, loyalty) are overwritten with a
-    /// clone of the source's current definition. The copy is locked in at
-    /// resolution time — later changes to the source don't propagate (a
-    /// one-shot definition rewrite, the same mechanism the engine uses for
-    /// MDFC face-swap, rather than a layer-1 continuous effect). Instance
-    /// state (id, owner, controller, counters, tapped, summoning sickness,
-    /// token-ness) is preserved. `extra_creature_types` are added on top
-    /// of the copied subtypes (Phantasmal Image's "it's an Illusion in
-    /// addition to its other types"). Powers Clone, Phantasmal Image,
-    /// Mockingbird (enter-as-a-copy). If `source` resolves to nothing the
-    /// effect is a no-op (the copier stays itself — usually a 0/0 that
-    /// dies to SBA, matching the printed "you may" decline).
     /// "The next time one or more creatures or planeswalkers enter this turn,
-    /// they enter as copies of [of]" (Mystic Reflection, CR 707.2 / 614.12).
-    /// Arms `GameState::next_entries_copy`; `apply_enters_as_copy` applies it
-    /// to each entering creature or planeswalker until the next SBA check.
+    /// they enter as copies of [of]" (Mystic Reflection, CR 707.2 / 614.12). Arms
+    /// `GameState::next_entries_copy`, which `apply_enters_as_copy` applies until
+    /// the next SBA check.
     NextEntriesEnterAsCopy { of: Selector },
     /// CR 704.5j — "the legend rule doesn't apply to permanents [who]
     /// controls this turn" (Hall of Echoes).
     LegendRuleOffThisTurn { who: PlayerRef },
-    /// "Until end of turn, your opponents and creatures your opponents
-    /// control with hexproof can be the targets of spells and abilities you
-    /// control as though they didn't have hexproof" (Detection Tower): the
-    /// turn-scoped `IgnoreOpponentsCreatureHexproof` plus opponent players.
+    /// Detection Tower: this turn your spells and abilities ignore hexproof on
+    /// opponents and their creatures.
     IgnoreOpponentHexproofThisTurn,
-    /// "Have [this] become a legendary Equipment artifact named `name`. If
-    /// you do, it gains equip `equip` and 'Equipped creature gets
-    /// +`power`/+`toughness`' and loses all other abilities" (The Irencrag
-    /// becoming Everflame, Heroes' Legacy). Baked over the permanent's
-    /// definition (`CardInstance::bake_grant`) until it leaves.
+    /// "Become a legendary Equipment artifact named `name` with equip `equip` and
+    /// 'Equipped creature gets +P/+T', losing all other abilities" (The Irencrag
+    /// → Everflame), baked over the definition (`CardInstance::bake_grant`) until
+    /// it leaves.
     BecomeEquipment {
         what: Selector,
         #[serde(with = "crate::static_str_serde")]
@@ -10884,6 +8736,12 @@ pub enum Effect {
         power: i32,
         toughness: i32,
     },
+    /// CR 707.2 — `what` becomes a copy of `source`: copiable characteristics
+    /// overwritten by a clone of its current definition, locked in at resolution
+    /// (a one-shot rewrite, like MDFC face-swap, not a layer-1 effect). Instance
+    /// state (id, owner, controller, counters, tapped, sickness, token-ness)
+    /// stays. `extra_creature_types` adds types (Phantasmal Image). With no
+    /// `source` it no-ops, so a 0/0 clone dies to SBA as a declined "you may".
     BecomeCopyOf {
         what: Selector,
         source: Selector,
@@ -10903,29 +8761,21 @@ pub enum Effect {
         #[serde(default)]
         keep_name: bool,
     },
-    /// CR 707.9b — "becomes a copy of [source], except its name is [its
-    /// own], it's legendary in addition to its other types, and it has this
-    /// ability" (Lazav, the Multifarious): `BecomeCopyOf` keeping its own
-    /// activated abilities, then its printed name and the Legendary supertype.
+    /// CR 707.9b — Lazav, the Multifarious: `BecomeCopyOf` keeping its own
+    /// activated abilities, name and Legendary.
     BecomeCopyKeepingIdentity { what: Selector, source: Selector },
     /// CR 707.9b — "becomes a copy of [source], except it doesn't copy that
     /// creature's color and it has this ability" (Vesuvan Doppelganger): the
     /// copier keeps its current colors and the triggered ability running this.
     BecomeCopyKeepingColorAndThisAbility { what: Selector, source: Selector },
-    /// CR 707.9b — "becomes a copy of [source], except its name is [its own]
-    /// and it has `keywords` and this ability" (Kimahri, Valiant Guardian):
-    /// `BecomeCopyOf` keeping its own triggered abilities, then its name and
-    /// the keywords.
+    /// CR 707.9b — Kimahri, Valiant Guardian: `BecomeCopyOf` keeping its
+    /// triggered abilities and name, plus `keywords`.
     BecomeCopyKeepingName { what: Selector, source: Selector, keywords: Vec<Keyword> },
-    /// CR 707.2 — continuous (layer-1) sibling of `BecomeCopyOf`: each
-    /// `what` becomes a copy of `source` for `duration`, via a
-    /// `Modification::CopyCardDefinition` continuous effect (the snapshot is
-    /// locked in at resolution). `non_legendary` strips the Legendary
-    /// supertype from the copy (CR 707.9b — Echoing Equation's "except
-    /// they aren't legendary"). Computed characteristics (types, colors,
-    /// keywords, P/T) and printed-ability dispatch both honor the copy
-    /// while it lasts. `Duration::WhileSourceTapped` here watches the copied
-    /// `source` ("for as long as that creature remains tapped" — Zygon).
+    /// CR 707.2 — layer-1 sibling of `BecomeCopyOf`: each `what` is a copy of
+    /// `source` for `duration` via `Modification::CopyCardDefinition` (snapshot
+    /// at resolution). `non_legendary` strips Legendary (CR 707.9b — Echoing
+    /// Equation). `Duration::WhileSourceTapped` watches the copied `source`
+    /// (Zygon).
     BecomeCopyOfFor {
         what: Selector,
         source: Selector,
@@ -10933,21 +8783,16 @@ pub enum Effect {
         #[serde(default)]
         non_legendary: bool,
     },
-    /// CR 707.9b — "except he's a legendary Human Mercenary Villain creature"
-    /// (Taskmaster, Mercenary Mimic): after a copy effect on `what`, its
-    /// copiable type line becomes exactly creature with `creature_types` —
-    /// the copied card types and creature types are replaced, not added to.
+    /// CR 707.9b — Taskmaster, Mercenary Mimic: after a copy, `what`'s copiable
+    /// type line is exactly creature with `creature_types` (replaced).
     SetCopyTypeLine { what: Selector, creature_types: Vec<crate::card::CreatureType> },
-    /// "Until end of turn, [what] gains 'If this creature would deal combat
-    /// damage to a player, prevent that damage. This creature's controller
-    /// and that player each draw half that many cards, rounded down'"
-    /// (Sokrates, Athenian Teacher; CR 615).
+    /// CR 615 — Sokrates, Athenian Teacher: this turn `what`'s combat damage to a
+    /// player is prevented and both draw half of it, rounded down.
     CombatDamageToPlayersBecomesDrawsThisTurn { what: Selector },
-    /// CR 707.9a/b — the "except …" of a copy effect that just ran on `what`:
-    /// rewrites the copiable values it installed, so a later copy of `what`
-    /// sees them too. `keep_activated` / `keep_triggered` index the copier's
-    /// *printed* abilities ("and it has this ability" — Volrath, the
-    /// Shapestealer; Mizzium Transreliquat keeps only its second one).
+    /// CR 707.9a/b — the "except …" of a copy that just ran on `what`, rewriting
+    /// the installed copiable values so later copies see it. `keep_activated` /
+    /// `keep_triggered` index the copier's printed abilities (Volrath, the
+    /// Shapestealer; Mizzium Transreliquat).
     AmendCopy {
         what: Selector,
         #[serde(default)]
@@ -10980,10 +8825,8 @@ pub enum Effect {
     /// its other types" (Navigator's Compass): the additive sibling of
     /// `LandsBecomeChosenBasicType` — one layer-4 `AddLandType` per land.
     GainChosenBasicLandType { what: Selector, duration: Duration },
-    /// The controller chooses one basic land type, then every land picked by
-    /// `what` becomes that type for `duration` (losing other types/abilities).
-    /// Terraformer — "{1}: Choose a basic land type. Each land you control
-    /// becomes that type until end of turn."
+    /// Terraformer: choose a basic land type; every `what` land becomes it for
+    /// `duration`, losing other types and abilities.
     LandsBecomeChosenBasicType {
         what: Selector,
         duration: Duration,
@@ -10993,10 +8836,8 @@ pub enum Effect {
         #[serde(default)]
         from_chosen_basic: bool,
     },
-    /// "As [this] enters, choose a basic land type." Asks the controller (via
-    /// the `ChooseColor` decision, basics mapping 1:1 onto colors) and stamps
-    /// the choice on the source's `chosen_land_type`. Paired with
-    /// `StaticEffect::LandsYouControlAreChosenType` (Realmwright).
+    /// "As this enters, choose a basic land type" (via `ChooseColor`, basics
+    /// mapping 1:1), stamped on `chosen_land_type` (Realmwright).
     ChooseBasicLandTypeForSource,
     /// Grant `what` landwalk of the source's `chosen_land_type` (stamped by a
     /// preceding `ChooseBasicLandTypeForSource`), permanently. Traveler's
@@ -11006,19 +8847,15 @@ pub enum Effect {
     /// 1; in turn order each may top the high bid. The high bidder loses that
     /// much life; if you win, counter that spell." Mages' Contest.
     BidLifeToCounterTargetSpell { what: Selector },
-    /// CR 305 — each resolved permanent *gains* all five basic land types for
-    /// `duration` (additive, keeping existing types and abilities). Installs a
-    /// layer-4 `AddLandType` continuous effect per basic type so the lands tap
-    /// for any color (Energybending, Prismatic Omen-style fixers).
+    /// CR 305 — each permanent gains all five basic land types for `duration`
+    /// (additive layer-4 `AddLandType`). Energybending.
     GainAllBasicLandTypes { what: Selector, duration: Duration },
     /// CR 305 — each resolved permanent *gains* one land type in addition to
     /// its other types (layer 4, additive). Sealock Monster's monstrosity
     /// trigger ("target land becomes an Island in addition to its other types").
     GainLandType { what: Selector, land_type: crate::card::LandType, duration: Duration },
-    /// Target becomes a creature with the given P/T and creature types,
-    /// losing all other card types, abilities, and creature subtypes
-    /// (CR 613 layers 4/6/7). Oko's "becomes a 3/3 Elk", Turn to Frog's
-    /// "0/1 blue Frog with no abilities", etc. Defaults to a vanilla 1/1.
+    /// Becomes a creature with the given P/T and types, losing all other types,
+    /// abilities and subtypes (CR 613 layers 4/6/7): Oko's Elk. Default 1/1.
     ResetCreature {
         what: Selector,
         #[serde(default = "value_one")]
@@ -11029,12 +8866,9 @@ pub enum Effect {
         creature_types: Vec<crate::card::CreatureType>,
         duration: Duration,
     },
-    /// CR 603 — the EXO Oath cycle's shared template: "At the beginning of
-    /// each player's upkeep, that player chooses target player who leads them
-    /// on `tally` and is their opponent. The first player may [`body`]."
-    /// `body` resolves with the upkeep player as its controller and the chosen
-    /// opponent in target slot 0. Multiplayer auto-picks the biggest lead
-    /// instead of prompting.
+    /// CR 603 — the EXO Oath template: at each upkeep, that player picks an
+    /// opponent leading them on `tally`; `body` runs as the upkeep player with
+    /// the opponent in slot 0. Multiplayer auto-picks the biggest lead.
     OathCatchUp { tally: crate::card::PlayerTally, body: Box<Effect> },
     /// Move every counter of `kind` from each resolved `from` onto `to` (Spike
     /// Cannibal). Relocation, not creation — no doublers (CR 122.5).
@@ -11043,19 +8877,15 @@ pub enum Effect {
     /// (Goldberry, River-Daughter). One counter per kind `from` carries and
     /// `to` lacks; relocation, not creation (CR 122.5).
     MoveOneOfEachAbsentKind { from: Selector, to: Selector },
-    /// "Choose target player matching `filter`, then `then`." A player target
-    /// slot 0 with an explicit restriction, for bodies that don't reference
-    /// the target themselves — the EXO Keeper cycle's "choose target opponent
-    /// who <trails you> as you activate this ability".
+    /// Target a `filter` player (slot 0), then `then`, for bodies that don't
+    /// reference the target — EXO Keepers' "target opponent who <trails you>".
     TargetPlayerThen { filter: crate::card::SelectionRequirement, then: Box<Effect> },
     /// Attach `what` (Aura/Equipment) to `to`.
     Attach { what: Selector, to: Selector },
-    /// Licid (Stronghold) — "This creature loses this ability and becomes an
-    /// Aura enchantment with enchant creature. Attach it to `host`. You may
-    /// pay `end_cost` to end this effect." The source's creature definition
-    /// is stashed on the instance and its live one is rewritten to
-    /// Enchantment — Aura with a single `LicidDetach` ability; the aura
-    /// riders ride the printed `equipped_bonus`, inert until attached.
+    /// Licid: becomes an Aura with enchant creature attached to `host`; pay
+    /// `end_cost` to end it. The creature definition is stashed and the live one
+    /// is an Aura with one `LicidDetach` ability; the riders sit on the printed
+    /// `equipped_bonus`, inert until attached.
     LicidAttach { host: Selector, end_cost: crate::mana::ManaCost },
     /// The `end_cost` half of [`Effect::LicidAttach`] — the source unattaches
     /// and goes back to being a creature.
@@ -11064,74 +8894,51 @@ pub enum Effect {
     // ── Stack interaction ────────────────────────────────────────────────────
     /// Counter target spell (removes from stack; sends to owner's graveyard).
     CounterSpell { what: Selector },
-    /// CR 115.7 — "Change the target of target spell with a single target."
-    /// Re-enumerates the spell's legal targets and lets this effect's
-    /// controller repoint it (the current target is offered first, so an
-    /// auto-decider is a no-op). A spell with zero or several targets is
-    /// left alone. Shunt, Deflection.
+    /// CR 115.7 — change the target of a spell with a single target: the
+    /// controller repoints it (current target offered first). Spells with zero or
+    /// several targets are left alone. Shunt.
     ChangeSpellTarget { what: Selector },
     /// Meddle — `ChangeSpellTarget` when the single target is a creature,
     /// and only to another creature.
     ChangeSpellCreatureTarget { what: Selector },
-    /// Test of Talents — "Counter target instant or sorcery spell. Search
-    /// its controller's graveyard, hand, and library for any number of
-    /// cards with the same name as that spell and exile them. That player
-    /// shuffles, then draws a card for each card exiled from their hand
-    /// this way." The exile sweep is exhaustive (every same-named card),
-    /// keyed on the countered spell's printed name and owner.
+    /// Test of Talents: counter the spell, exile every same-named card from its
+    /// controller's graveyard, hand and library; they shuffle and draw one per
+    /// card exiled from hand.
     CounterSpellExileSameNamed { what: Selector },
     /// Counter target spell; if the mana spent to cast it was less than its
     /// mana value, the controller draws a card (Unravel).
     CounterSpellDrawIfUnderpaid { what: Selector },
-    /// Counter target spell and route it to a specific zone instead of the
-    /// owner's graveyard. CR 701.6a's default is "a countered spell is put
-    /// into its owner's graveyard"; cards like Memory Lapse / Remand /
-    /// Spell Crumple print an "instead" clause that overrides this. The
-    /// on-stack card is removed from the stack and placed into `zone`
-    /// (top of library for Memory Lapse; exile for Spell Crumple; owner's
-    /// hand for Remand).
+    /// Counter target spell into `zone` instead of the graveyard (CR 701.6a's
+    /// default): library top (Memory Lapse), exile (Spell Crumple), hand
+    /// (Remand).
     CounterSpellToZone {
         what: Selector,
         zone: CounteredSpellZone,
     },
-    /// "Return / put / exile target spell …" — the same lift as
-    /// `CounterSpellToZone`, but not a counter (CR 701.6a): a spell that
-    /// can't be countered moves all the same (Reprieve, Sudden Setback,
-    /// Spell Queller, Commit).
+    /// Move a target spell like `CounterSpellToZone` without countering (CR
+    /// 701.6a), so uncounterable spells move too (Reprieve, Spell Queller).
     MoveSpellToZone {
         what: Selector,
         zone: CounteredSpellZone,
     },
-    /// Ashiok's Erasure — counter target spell, exile it linked to the source
-    /// (returns to its owner's hand when the source leaves), and stamp the
-    /// source's `named_card` so its `OpponentsCantCastNamed` static locks that
-    /// name while the source stays on the battlefield.
+    /// Ashiok's Erasure: counter and exile the spell linked to the source, and
+    /// stamp its `named_card` so `OpponentsCantCastNamed` locks the name.
     CounterSpellExileNameLock { what: Selector },
-    /// Counter target activated/triggered ability. The selector resolves
-    /// to a permanent (the ability's source), and the engine removes the
-    /// topmost `StackItem::Trigger` whose `source` matches. Used by
-    /// Consign to Memory.
+    /// Counter an activated or triggered ability: removes the topmost
+    /// `StackItem::Trigger` from the `what` source (Consign to Memory).
     CounterAbility { what: Selector },
     /// "Counter target activated ability from an artifact source and destroy
     /// that artifact if it's on the battlefield" (Ouphe Vandals) — the
     /// `CounterAbility` sibling that also kills the source.
     CounterAbilityAndDestroySource { what: Selector },
-    /// "Counter up to one target activated or triggered ability. If an
-    /// ability of an artifact, creature, or planeswalker is countered this
-    /// way, that permanent loses all abilities for as long as this creature
-    /// remains on the battlefield" (Tishana's Tidebinder) — the
-    /// `CounterAbility` sibling that strips the source.
+    /// Tishana's Tidebinder: counter up to one ability; an artifact, creature or
+    /// planeswalker source loses all abilities while this remains.
     CounterAbilityAndStripSource { what: Selector },
-    /// Counter target spell, activated ability, or triggered ability (Voidslime).
-    /// The one selector may resolve to a stack spell (matched by card id) or an
-    /// ability's source (matched like `CounterAbility`); whichever kind the
-    /// target names is removed. Uncounterable spells are skipped.
+    /// Voidslime: counter a spell (by card id) or ability (by source, like
+    /// `CounterAbility`). Uncounterable spells are skipped.
     CounterSpellOrAbility { what: Selector },
-    /// Counter target spell **unless** its controller pays `mana_cost`.
-    /// At resolution, the engine attempts to auto-pay on behalf of the
-    /// targeted spell's controller — if affordable, the spell stays;
-    /// otherwise it's countered. Used by Mystical Dispute (counter unless
-    /// controller pays {3}). Spells flagged `uncounterable` are skipped.
+    /// Counter the spell unless its controller pays `mana_cost`, auto-paid on
+    /// their behalf (Mystical Dispute). `uncounterable` spells are skipped.
     CounterUnlessPaid {
         what: Selector,
         mana_cost: crate::mana::ManaCost,
@@ -11144,38 +8951,24 @@ pub enum Effect {
         /// is its power" (Mausoleum Wanderer rides `SacrificedPower`).
         #[serde(default)]
         extra_generic: Option<Value>,
-        /// The mirror branch — "…unless its controller pays {2}. If they do,
-        /// surveil 2" (Don't Make a Sound). Runs only when the tax was
-        /// actually paid, in this effect's own context, so `PlayerRef::You`
-        /// is the counterspell's controller. Same shape as
-        /// [`Effect::UnlessPlayerPays`]'s `if_paid`.
+        /// "…unless its controller pays {2}. If they do, surveil 2" (Don't Make a
+        /// Sound): runs only when paid, in this effect's context (`You` = the
+        /// counterspell's controller). As [`Effect::UnlessPlayerPays`]'s `if_paid`.
         #[serde(default)]
         if_paid: Option<Box<Effect>>,
     },
-    /// CR 702.21 — Ward's "counter that spell or ability unless its
-    /// controller pays [cost]" trigger body. Walks the stack for the
-    /// topmost `Spell` with `card.id == target` or `Trigger` with
-    /// `source == target`, then tries to auto-pay the `cost` on behalf
-    /// of that item's controller. If unpaid, the item is removed
-    /// (spells go to graveyard; abilities just vanish off the stack).
-    ///
-    /// Distinct from `CounterUnlessPaid` because (a) it also counters
-    /// activated/triggered abilities (for the "or ability" half of CR
-    /// 702.21a), and (b) the cost menu is the broader
-    /// `WardCost` (mana / life / discard / sacrifice creature).
+    /// CR 702.21 Ward: counter the topmost stack item from `target` (spell or
+    /// trigger) unless its controller pays `cost` (auto-paid). Unlike
+    /// `CounterUnlessPaid` it counters abilities too (CR 702.21a) and takes a
+    /// `WardCost` (mana / life / discard / sacrifice).
     CounterUnless {
         what: Selector,
         cost: crate::card::WardCost,
     },
-    /// "Unless [who] pays [cost], [then]." The generic Rhystic-tax rider:
-    /// resolve `who` to a player (typically `PlayerRef::Triggerer` — the
-    /// opponent who cast the spell / drew the card), ask them yes/no whether to
-    /// pay `cost`, and if they decline or can't afford it, resolve `then` (in
-    /// the trigger's own context, so `PlayerRef::You` in `then` is the rider's
-    /// controller). Powers Rhystic Study, Mystic Remora, Esper Sentinel
-    /// (draw), Smothering Tithe (Treasure), Indulgent Tormentor, etc. The
-    /// AutoDecider declines to pay by default (the conservative line — let the
-    /// effect happen). When `who` resolves to no one, `then` resolves outright.
+    /// "Unless [who] pays [cost], [then]" — the Rhystic tax (Rhystic Study,
+    /// Smothering Tithe). `who` (usually `Triggerer`) is asked; declining or
+    /// unaffordable runs `then` in the trigger's context (`You` = the rider's
+    /// controller). AutoDecider declines. No `who`: `then` runs outright.
     UnlessPlayerPays {
         who: PlayerRef,
         cost: crate::card::WardCost,
@@ -11191,15 +8984,10 @@ pub enum Effect {
     /// copy of the spell `what` names, with Legendary stripped (CR 707.9b),
     /// so a permanent copy survives the legend rule beside the original.
     CopySpellNonLegendary { what: Selector },
-    /// As `CopySpell`, but when the copied spell is a permanent spell the
-    /// resulting token permanent carries riders: `grant_haste` gives it
-    /// haste until end of turn, and `sacrifice_eot` schedules a
-    /// next-end-step sacrifice. Choreographed Sparks — "Copy target
-    /// creature spell you control. The copy gains haste and 'At the
-    /// beginning of the end step, sacrifice this token.'" The riders are
-    /// stamped on the copy's `CardInstance.resolve_riders` and applied by
-    /// the permanent-spell resolution path in `stack.rs`; they no-op for
-    /// instant/sorcery copies.
+    /// `CopySpell` whose permanent-spell copies get riders: `grant_haste` and
+    /// `sacrifice_eot` (Choreographed Sparks). Stamped on the copy's
+    /// `CardInstance.resolve_riders`, applied by the permanent path in
+    /// `stack.rs`; no-op on instants and sorceries.
     CopySpellWithRiders {
         what: Selector,
         count: Value,
@@ -11210,10 +8998,8 @@ pub enum Effect {
         #[serde(default)]
         may_choose_new_targets: bool,
     },
-    /// CR 707.9b — copy the spell `what` once, "except the copy is a 1/1
-    /// Spirit in addition to its other types" (Donal, Herald of Wings). The
-    /// exception is part of the copy's copiable values, so the token the
-    /// copy resolves into keeps it.
+    /// CR 707.9b — Donal, Herald of Wings: copy the spell as a 1/1 Spirit in
+    /// addition to its types, kept by the token it becomes.
     CopySpellAsOneOneSpirit { what: Selector },
     /// CR 707.9b — copy the spell `what` once, "except it isn't legendary if
     /// the spell is legendary" (Double Major); the token it resolves into
@@ -11223,61 +9009,36 @@ pub enum Effect {
     /// addition to its other types" (Tawnos, the Toymaker's artifact copy);
     /// the token it resolves into keeps the exception.
     CopySpellAddingTypes { what: Selector, types: Vec<crate::card::CardType> },
-    /// CR 701.50 — each permanent `what` names connives `amount`: its
-    /// controller draws that many, discards that many, and it gets a +1/+1
-    /// counter per nonland card discarded *this way* (Kamiz, Change of
-    /// Plans, Mask of the Schemer). The `shortcut::connive` helper is the
-    /// self-only form and counts every discard of the resolution.
+    /// CR 701.50 — each `what` permanent connives `amount`: draw and discard that
+    /// many, a +1/+1 counter per nonland card discarded this way (Kamiz).
+    /// `shortcut::connive`, the self-only form, counts every discard of the
+    /// resolution.
     Connive { what: Selector, amount: Value },
-    /// Gogo — copy target activated or triggered ability on the stack
-    /// `times` times (the selector resolves to the ability's *source*
-    /// permanent, mirroring `CounterAbility`). The copier controls each copy
-    /// and may choose new targets for it (CR 707.10c).
+    /// Gogo: copy the ability from the `what` source (as `CounterAbility`)
+    /// `times` times; each copy is the copier's and may retarget (CR 707.10c).
     CopyAbility { what: Selector, times: Value },
-    /// Copy target spell **unless** its caster pays `mana_cost`. Used by
-    /// Wandering Archaic ("Whenever an opponent casts an instant or sorcery
-    /// spell, that player may pay {2}. If they don't, you may copy the
-    /// spell."). The resolver: (a) walks the stack for the spell whose
-    /// `card.id` matches `what`; (b) asks the spell's caster yes/no via
-    /// `Decision::OptionalTrigger`; (c) if they accept *and* can afford
-    /// `mana_cost` from their pool, deducts it and skips the copy; (d) if
-    /// they decline or can't afford, copies the spell `count` times above
-    /// it on the stack.
-    ///
-    /// AutoDecider's default answer is `false` (decline to pay) — the
-    /// printed Oracle implies most casters won't have an extra {2}
-    /// floating, so the conservative default is "let the copy happen."
-    /// ScriptedDecider can override via `DecisionAnswer::Bool(true)` for
-    /// tests that want to exercise the pay path.
+    /// Wandering Archaic: the caster of `what` may pay `mana_cost`
+    /// (`Decision::OptionalTrigger`); if they don't or can't, copy the spell
+    /// `count` times. AutoDecider declines.
     CopySpellUnlessPaid {
         what: Selector,
         mana_cost: crate::mana::ManaCost,
         count: Value,
     },
-    /// Copy target spell `count` times, then "you may choose new targets
-    /// for the copy/copies" (CR 707.12 + 115.7). Same resolver as
-    /// `CopySpell`, but after each copy is pushed the controller's decider
-    /// is consulted (`Decision::ChooseTarget`, original target offered
-    /// first) to re-point the copy's primary target at any legal object.
-    /// Reverberate / Fork / Twincast. AutoDecider keeps the original
-    /// target (first legal); a scripted/UI decider can repoint it.
+    /// Copy target spell `count` times, each copy may be retargeted (CR 707.12 +
+    /// 115.7) via `Decision::ChooseTarget`, original offered first so the
+    /// AutoDecider keeps it. Twincast.
     CopySpellMayChooseTargets { what: Selector, count: Value },
     /// Copy the spell `what` names under `who`'s control; they may choose new
     /// targets (CR 707.10c, 115.7). "Target opponent may also copy that
     /// spell" (Parnesse, the Subtle Brush) under a `PlayersMayAccept`.
     CopySpellForPlayer { what: Selector, who: PlayerRef },
-    /// CR 706 — the Onslaught Chain cycle's rider: "Then `who` may copy this
-    /// spell and may choose a new target for that copy." The copy is controlled
-    /// by `who`, who retargets it, so a chain can bounce around the table.
-    /// `cost` is the printed toll paid first ("may sacrifice a land",
-    /// "may discard a card"); a declined or unpayable toll ends the chain.
-    /// Asked through the installed decider — the target seat's own UI prompt is
-    /// a follow-up (see TODO.md's decision-plumbing audit).
+    /// CR 706 — Onslaught Chain rider: `who` may copy this spell and retarget it,
+    /// so the chain bounces around the table. `cost` is the toll paid first; a
+    /// declined or unpayable toll ends it. Asked through the installed decider;
+    /// a per-seat UI prompt is a follow-up (TODO.md decision-plumbing audit).
     MayCopyThisSpell { who: PlayerRef, cost: ChainCopyCost },
-    /// CR 702.18 — "until end of turn, this permanent can be the target of
-    /// spells and abilities controlled by `player` as though it didn't have
-    /// shroud" (Autumn Willow). Waives shroud on `ctx.source` for that seat
-    /// only; cleared at cleanup.
+    /// CR 702.18 — Autumn Willow: `player` ignores the source's shroud this turn.
     WaiveShroudForPlayerThisTurn { player: PlayerRef },
     /// "Destroy each [filter] unless its controller pays `life` life" — one
     /// pay-or-die decision per permanent, asked of its controller (Giant
@@ -11288,21 +9049,16 @@ pub enum Effect {
         #[serde(default)]
         no_regen: bool,
     },
-    /// Zada, Hedron Grinder — the triggering spell targets only this source, so
-    /// copy it once per *other* creature its controller controls that the spell
-    /// could legally target, each copy aimed at a different one. No-op when the
-    /// spell targets anything besides the source.
+    /// Zada, Hedron Grinder: a spell targeting only this is copied per other
+    /// creature you control it could target. No-op if it targets anything else.
     CopyForEachOtherTargetableCreature,
-    /// Feather, Radiant Arbiter — "you may choose any number of other
-    /// creatures that spell could target and pay `per_copy` for each of those
-    /// creatures. If you do, for each of those creatures, copy that spell. The
-    /// copy targets that creature." The spell is the trigger's source.
+    /// Feather, Radiant Arbiter: pay `per_copy` per other creature the spell
+    /// could target to copy it onto each.
     MayPayToCopyOntoOtherCreatures { per_copy: crate::mana::ManaCost },
-    /// CR 115.7d — "You may choose new targets for target spell." Repoints
-    /// every declared slot of the targeted spell in place (Redirect), each
-    /// against its own printed filter. This effect's controller (the
-    /// redirector) chooses via `Decision::ChooseTarget`. Unlike
-    /// `CopySpellMayChooseTargets` this mutates the original spell.
+    /// CR 115.7d — "you may choose new targets for target spell": each declared
+    /// slot repointed in place against its own filter, chosen by this effect's
+    /// controller (Redirect). Unlike `CopySpellMayChooseTargets`, mutates the
+    /// original.
     ChooseNewTargetsForSpell { what: Selector },
     /// "You may choose new targets for any number of other spells and/or
     /// abilities" (Boltbender, CR 115.7d): untargeted, so the controller's
@@ -11316,12 +9072,10 @@ pub enum Effect {
     /// player who revealed the greatest mana value (uniquely) may repoint the
     /// targets of the spell that just chose them. A tie changes nothing.
     RevealTopGreatestMayChangeTargets,
-    /// Demonstrate (CR 702.144) — copy this spell for its caster, then pick an
-    /// opponent who also copies it; every copy may choose new targets. Modeled
-    /// as a non-optional "always demonstrate" (the printed "you may" collapses
-    /// since copying a beneficial spell is virtually always correct). Driven
-    /// off a `SpellCast`/`SelfSource` self-cast trigger so both copies land
-    /// above the original.
+    /// Demonstrate (CR 702.144): copy for the caster, then an opponent copies it
+    /// too; each copy may retarget. Always demonstrates (copying a beneficial
+    /// spell is ~always right). Driven by a `SpellCast`/`SelfSource` trigger so
+    /// both copies land above the original.
     Demonstrate,
     /// "Exile this face down. It becomes foretold" (The Foretold Soldier,
     /// CR 702.143): the source leaves for exile face down, keeping its
@@ -11329,26 +9083,15 @@ pub enum Effect {
     ExileSelfForetold,
 
     // ── Cast-without-paying / may-play ───────────────────────────────────────
-    /// "Until [duration], you may cast/play that card [from where it is]."
-    /// Stamps `CardInstance.may_play_until` on every card matched by `what`
-    /// (typically a single target in graveyard or exile). The granted
-    /// player then invokes `GameAction::CastFromZoneWithoutPaying` during
-    /// a sorcery-speed (or instant-speed if the card is an instant) window
-    /// to actually cast it.
-    ///
-    /// `to_owner` flips the recipient from "this effect's controller" to
-    /// "the matched card's owner" — used by Suspend Aggression's "its
-    /// owner may play it until the end of their next turn."
-    ///
-    /// `exile_after` propagates to the permission so casts pay this off
-    /// land the resolved instant/sorcery in exile (Nita, The Dawning
-    /// Archaic). For permanent spells the flag is ignored — they enter
-    /// the battlefield normally.
-    /// "You may play those cards [duration]. If you cast a spell this way,
-    /// pay life equal to its mana value rather than pay its mana cost"
-    /// (Inside Information). Stamps a `MayPlayPermission` with `pay_life` on
-    /// each resolved card: the cast costs no mana and bills life instead.
+    /// "You may play those cards [duration]. If you cast a spell this way, pay
+    /// life equal to its mana value" (Inside Information): a
+    /// `MayPlayPermission` with `pay_life`.
     GrantMayPlayForLife { what: Selector, duration: crate::card::MayPlayDuration },
+    /// "Until [duration], you may cast/play that card": stamps
+    /// `CardInstance.may_play_until` on each `what` card, cast via
+    /// `GameAction::CastFromZoneWithoutPaying` at its normal timing. `to_owner`
+    /// grants the card's owner instead (Suspend Aggression). `exile_after` sends
+    /// cast instants / sorceries to exile; permanents ignore it.
     GrantMayPlay {
         what: Selector,
         duration: crate::card::MayPlayDuration,
@@ -11367,22 +9110,15 @@ pub enum Effect {
         #[serde(default)]
         any_color: bool,
     },
-    /// Mark the may-play permission on each card `what` resolves to (chain
-    /// after `GrantMayPlay` in a `Seq`): casting the card through it leaves
-    /// its caster unable to cast further spells this turn — "if you do, you
-    /// can't cast additional spells this turn" on a later-in-the-turn grant.
-    /// (Conduit of Worlds casts as it resolves instead, per its 2023-02-04
-    /// ruling, so no shipped card uses this today.)
+    /// Chained after `GrantMayPlay`: a cast through the permission stops its
+    /// caster casting more spells this turn. No shipped card uses it (Conduit of
+    /// Worlds casts as it resolves, per its 2023-02-04 ruling).
     LockSpellsAfterGrantedCast { what: Selector },
-    /// Mark the may-play permission on each card `what` resolves to (chain
-    /// after `GrantMayPlay`): "if that spell would be put into a graveyard,
-    /// put it on the bottom of its owner's library instead" (Quintorius,
-    /// Loremaster).
+    /// After `GrantMayPlay`: a spell cast through it goes to the library bottom
+    /// instead of the graveyard (Quintorius, Loremaster).
     BottomInsteadAfterGrantedCast { what: Selector },
-    /// Mark the may-play permission on each card `what` resolves to (chain
-    /// after `GrantMayPlay`): "if you do, it enters tapped" — a land played
-    /// or a permanent spell cast through the grant enters the battlefield
-    /// tapped (Kaldring, the Rimestaff; CR 614.1c).
+    /// After `GrantMayPlay`: what is played through it enters tapped (Kaldring,
+    /// the Rimestaff; CR 614.1c).
     EntersTappedAfterGrantedPlay { what: Selector },
     /// Mark the may-play permission on each card `what` resolves to (chain
     /// after `GrantMayPlay`): "if you cast a spell this way, it has affinity
@@ -11392,12 +9128,9 @@ pub enum Effect {
     /// group (chain after `GrantMayPlay`): "you may cast a spell from among
     /// them" — the first cast through any of them consumes the rest.
     OneCastAmongGranted { what: Selector },
-    /// "When you play a card this way, [body]" (Fires of Mount Doom), chained
-    /// after a `GrantMayPlay`: each card `what` resolves to is registered
-    /// (turn-scoped) with this source and controller, and playing it — a cast
-    /// or a land drop through its permission — pushes `body` as a trigger of
-    /// the source (CR 603.2), the played card its subject. An unplayed
-    /// registration lapses at cleanup.
+    /// "When you play a card this way, [body]" (Fires of Mount Doom), after a
+    /// `GrantMayPlay`: each card is registered for the turn, and playing it
+    /// pushes `body` as the source's trigger (CR 603.2) with it as subject.
     WhenPlayedThisWayThisTurn { what: Selector, body: Box<Effect> },
     /// The "up to `plays`" sibling of `OneCastAmongGranted` (March of Reckless
     /// Joy's "you may play up to two of those cards"): the grants form one
@@ -11407,69 +9140,34 @@ pub enum Effect {
     /// may **cast**": a land among them can't be played (Ian Malcolm,
     /// Chaotician). Chain after `GrantMayPlay`.
     GrantedCastOnly { what: Selector },
-    /// The once-each-turn sibling of `OneCastAmongGranted` (Maralen, Fae
-    /// Ascendant: "once each turn, you may cast a spell from among cards
-    /// exiled with Maralen this turn"): the grants join the source's group,
-    /// and when a cast through that group already happened this turn
-    /// (`TurnRegistries.one_cast_groups_spent_this_turn`) they're void.
+    /// Once-each-turn `OneCastAmongGranted` (Maralen, Fae Ascendant): the grants
+    /// are void once a cast through the group happened this turn
+    /// (`TurnRegistries.one_cast_groups_spent_this_turn`).
     OneCastPerTurnAmongGranted { what: Selector },
-    /// CR 601.2 — "you may cast a spell with mana value less than or equal
-    /// to [value] from among them" read as the spell is cast, not as the
-    /// permission is granted (Maralen, Fae Ascendant: "the number of Elves
-    /// and/or Faeries you control"). Chain after the grant: each card `what`
-    /// picks gets a this-turn cap (`TurnRegistries.granted_cast_mv_caps`),
-    /// evaluated for the grant's controller and source at every cast.
+    /// CR 601.2 — a mana value cap on granted casts read at cast time, not at
+    /// grant (Maralen's Elf/Faerie count): chained after the grant, stored in
+    /// `TurnRegistries.granted_cast_mv_caps`.
     CapGrantedCastsAtCast { what: Selector, max_mana_value: Value },
-    /// Stamp a conditional surcharge onto cards just granted a may-play
-    /// permission (chain after `GrantMayPlay` in a `Seq`): "it costs
-    /// [cost] more to cast this way unless the spell targets a permanent
-    /// matching [filter]" — Mavinda, Students' Advocate's {8} rider.
-    /// Writes `CardInstance.granted_cast_surcharge_eot`; consumed by the
-    /// permission-cast path at target-validation time.
+    /// After `GrantMayPlay`: "it costs [cost] more this way unless it targets a
+    /// [filter]" (Mavinda, Students' Advocate) — in
+    /// `CardInstance.granted_cast_surcharge_eot`, checked at target validation.
     StampMayPlaySurcharge {
         what: Selector,
         cost: crate::mana::ManaCost,
         filter: crate::card::SelectionRequirement,
     },
-    /// Grant a one-shot permission to cast `what`'s MDFC **back face from the
-    /// graveyard**, paying the back's cost. Sets the
-    /// `may_cast_back_from_graveyard` flag on the resolved card; the controller
-    /// then casts the back via `GameAction::CastSpellBack`, which hops the card
-    /// out of the graveyard and consumes the permission. No-op if `what` has no
-    /// back face.
+    /// A one-shot permission to cast `what`'s MDFC back face from the graveyard
+    /// (`may_cast_back_from_graveyard`, consumed by `GameAction::CastSpellBack`).
+    /// No-op without a back face.
     ///
-    /// ⚠ **NO CARD BUILDS THIS, AND THE CARD THIS DOC USED TO NAME DOES NOT
-    /// PRINT IT** — `audit_variant_coverage.py`'s docstring triaged it on
-    /// 2026-08-30 and the triage never reached the code: it was built for a
-    /// Pestilent Cauldron whose oracle text was fabricated, and `2ca109bc`
-    /// replaced that card with the printed one, whose three abilities are a
-    /// Pest mint, a lifegain-scaled mill and a graveyard exile. **A comment
-    /// claiming a mechanic is worth one grep**, and this one had been repeated
-    /// in three places (here, `CardInstance::may_cast_back_from_graveyard`, and
-    /// the bot test that sets the flag by hand).
-    ///
-    /// The half the triage did not name: **the printed shape is Disturb**
-    /// (CR 702.145, "you may cast this card from your graveyard transformed for
-    /// its disturb cost"), a KEYWORD on the card, which reaches
-    /// `CastSpellBack` through `Keyword::Disturb(_)` — nine catalog cards — not
-    /// through an effect that grants permission. So this is not a card in
-    /// waiting *and* not a duplicate of a live variant: it is the one-shot
-    /// grant nothing prints. The FLAG stays (it is a capability, and dropping
-    /// a `CardInstance` field is a `CardData`-size change); only this
-    /// effect-shaped writer is orphaned.
+    /// ⚠ No card builds this: it was written for a Pestilent Cauldron with
+    /// fabricated oracle text. The printed shape is Disturb (CR 702.145), a
+    /// keyword reaching `CastSpellBack` through `Keyword::Disturb(_)`. The flag
+    /// stays as a capability; only this writer is orphaned.
     GrantCastBackFromGraveyard { what: Selector },
-    /// Resolve-now equivalent of `GrantMayPlay`: at effect resolution
-    /// time, ask the controller "cast `what` without paying its mana
-    /// cost?" via `Decision::OptionalTrigger`. On yes, the card is
-    /// pushed through the free-cast helper from `source_zone` with
-    /// auto-targets / auto-decisions; on no (or no match), nothing
-    /// happens.
-    ///
-    /// Used by Improvisation Capstone (each exiled non-land card),
-    /// The Dawning Archaic (attack trigger), Nita Forum Conciliator
-    /// (could use either model; we use this for the trigger half).
-    /// `source_zone` is `Graveyard` for "cast it from your graveyard"
-    /// and `Exile` for "cast it from exile."
+    /// Resolve-now `GrantMayPlay`: asks "cast `what` free?"
+    /// (`Decision::OptionalTrigger`); on yes it is free-cast from `source_zone`
+    /// with auto-targets. Improvisation Capstone, The Dawning Archaic.
     CastWithoutPayingImmediate {
         what: Selector,
         source_zone: crate::card::Zone,
@@ -11479,10 +9177,8 @@ pub enum Effect {
         /// (Capricious Hellraiser, CR 707.12).
         #[serde(default)]
         copy: bool,
-        /// When non-zero the cast isn't free: the controller pays the card's
-        /// own mana cost reduced by this much generic ("that copy costs {2}
-        /// less to cast" — God-Eternal Kefnet). Declining, or being unable to
-        /// pay, skips the cast.
+        /// Non-zero: not free — pay the card's cost minus this much generic
+        /// (God-Eternal Kefnet); declining or unpayable skips the cast.
         #[serde(default)]
         reduce_generic: u32,
         /// The cast isn't free at all — the controller pays the card's own
@@ -11491,24 +9187,17 @@ pub enum Effect {
         #[serde(default)]
         pay_own_cost: bool,
     },
-    /// "You may cast that card by paying life equal to the spell's mana value
-    /// rather than paying its mana cost", as the effect resolves (Bismuth
-    /// Mindrender — not later in the turn, 2024-06-07 ruling). CR 119.4: only
-    /// with at least that much life.
+    /// Bismuth Mindrender: may cast it now for life equal to its mana value (CR
+    /// 119.4; not later in the turn per the 2024-06-07 ruling).
     CastImmediateForLife { what: Selector, source_zone: crate::card::Zone },
     /// "You may cast [it], and mana of any type can be spent to cast that
     /// spell" as the effect resolves (Tinybones, the Pickpocket): its own cost,
     /// paid as generic mana equal to its mana value (CR 609.4b).
     CastImmediateAnyManaType { what: Selector, source_zone: crate::card::Zone },
-    /// "You may cast any number of spells from among them without paying
-    /// their mana costs" — repeatedly offers the remaining castable cards
-    /// (a declined card is re-offered after each accepted cast), so the
-    /// controller effectively picks the CAST ORDER; the loop ends after a
-    /// full pass with no accepts. Lands are skipped (played, not cast).
-    /// Improvisation Capstone.
-    /// `filter` narrows what may be cast this way — Epic Experiment's
-    /// "instant and sorcery spells with mana value X or less". `None` offers
-    /// every nonland card.
+    /// "You may cast any number of spells from among them free": re-offers the
+    /// remaining cards after each accepted cast, so the controller picks the
+    /// order; ends after a pass with no accepts. Lands skipped. `filter` narrows
+    /// it (Epic Experiment); `None` = any nonland.
     CastAnyOrderWithoutPaying {
         what: Selector,
         source_zone: crate::card::Zone,
@@ -11528,110 +9217,73 @@ pub enum Effect {
         #[serde(default)]
         exile_after: bool,
     },
-    /// "You may cast a [filter] spell from your hand without paying its
-    /// mana cost" (Maelstrom Archangel; Oracle of Bones restricts to
-    /// instants/sorceries). The controller picks one matching nonland hand
-    /// card via `Decision::ChooseCards` (min 0 — may decline; AutoDecider
-    /// declines) and it's free-cast with auto-targets.
+    /// "You may cast a [filter] spell from your hand free" (Maelstrom Archangel):
+    /// one nonland hand card via `Decision::ChooseCards` (AutoDecider declines),
+    /// cast with auto-targets.
     CastFromHandWithoutPaying {
         #[serde(default)]
         filter: Option<SelectionRequirement>,
     },
-    /// "You may cast a [filter] spell from your hand or graveyard by paying
-    /// life equal to its mana value rather than paying its mana cost"
-    /// (Anrakyr the Traveller). One pick, cast during resolution; a card
-    /// whose mana value exceeds the caster's life can't be paid for (CR 119.4).
+    /// Anrakyr the Traveller: cast one `filter` spell from hand or graveyard for
+    /// life equal to its mana value, during resolution (CR 119.4).
     MayCastFromHandOrGraveyardForLife { filter: SelectionRequirement },
     /// "Each [filter] card in your graveyard gains unearth {cost} until end of
     /// turn" (Ghost Ark) — the one-shot twin of
     /// `StaticEffect::GraveyardCardsHaveUnearth`.
     GraveyardCardsGainUnearthThisTurn { filter: SelectionRequirement, cost: crate::mana::ManaCost },
-    /// CR 702.104 — Tribute N. An opponent may put N +1/+1 counters on the
-    /// source as it enters; if they decline, `otherwise` runs. The opponent
-    /// answers via `Decision::OptionalTrigger` (synchronous decider, like
-    /// TemptingOffer; AutoDecider declines, so the trigger half fires).
-    /// Run as a SelfSource ETB trigger — `shortcut::tribute`.
+    /// CR 702.104 Tribute N: an opponent may put N +1/+1 counters on the entering
+    /// source (`Decision::OptionalTrigger`; AutoDecider declines), else
+    /// `otherwise`. Built by `shortcut::tribute`.
     Tribute { n: u32, otherwise: Box<Effect> },
-    /// Paradigm (SOS supplemental keyword) — registers a non-one-shot
-    /// `DelayedKind::YourNextMainPhase` trigger that on each of the
-    /// controller's pre-combat main phases offers them "cast a copy of
-    /// this from exile without paying its mana cost?" via
-    /// `Effect::CastFreeParadigmCopy`. Used as the trailing effect of
-    /// the Paradigm Lesson cycle (Restoration Seminar, Decorum
-    /// Dissertation, Germination Practicum, Echocasting Symposium,
-    /// Improvisation Capstone). Pairs with `exile_on_resolve = true` so
-    /// the card lands in exile and stays reachable for the recurring
-    /// copy trigger.
+    /// Paradigm (SOS): a recurring `DelayedKind::YourNextMainPhase` trigger
+    /// offering "cast a copy of this from exile free?" each precombat main
+    /// (`Effect::CastFreeParadigmCopy`). Trails the Paradigm Lessons, with
+    /// `exile_on_resolve = true`.
     RegisterParadigm,
-    /// Paradigm body. At trigger-fire time, locates the trigger's
-    /// `source` (the Paradigm-exiled card) in exile, asks the controller
-    /// "cast a copy?" via OptionalTrigger, and on yes mints a tokenized
-    /// copy of the card's definition + free-casts it with auto-targets.
-    /// The original exiled card is left untouched so the recurrence
-    /// continues each main phase.
+    /// Paradigm body: finds the exiled source and, on yes, free-casts a token
+    /// copy of it; the original stays for the next main phase.
     CastFreeParadigmCopy,
 
-    /// Cipher (CR 702.99). Trailing effect of a Cipher spell: the controller
-    /// may exile this spell card "encoded" on a creature they control (stamping
-    /// `CardInstance.encoded_on`). The combat-damage-to-player dispatch then
-    /// offers a free copy whenever that creature connects. Sets a pending flag
-    /// consumed by `continue_spell_resolution` so the card routes to exile
-    /// instead of the graveyard.
+    /// Cipher (CR 702.99): may encode this spell on your creature
+    /// (`CardInstance.encoded_on`), which casts a free copy on each combat
+    /// damage to a player. A pending flag routes the card to exile in
+    /// `continue_spell_resolution`.
     Cipher,
 
-    /// Cascade (CR 702.85). Triggered "when you cast this spell": exile
-    /// cards from the top of the controller's library until a nonland
-    /// card with mana value strictly less than `max_mv` is exiled. The
-    /// controller may cast that card without paying its mana cost. The
-    /// remaining exiled cards go to the bottom of the library (random
-    /// order — approximated as bottom, the same indistinguishable model
-    /// `RevealMissDest::BottomRandom` uses, since the bottom ordering is
-    /// hidden until the next shuffle/reveal).
+    /// Cascade (CR 702.85): exile from the top until a nonland card with mana
+    /// value < `max_mv`, may cast it free; the rest go to the bottom (unordered,
+    /// like `RevealMissDest::BottomRandom`).
     ///
-    /// `max_mv` is the cascading spell's mana value. Card factories pass
-    /// `Value::Const(printed_mv)` (cascade's MV gate is the printed cost,
-    /// unaffected by cost reduction per CR 702.85b). The shortcut
-    /// [`cascade`] wires the standard SpellCast/SelfSource trigger.
-    ///
-    /// `filter` narrows what stops the walk: Jodah, the Unifier's
-    /// "until you exile a legendary nonland card with lesser mana value".
+    /// `max_mv` is the printed mana value (CR 702.85b ignores cost reduction);
+    /// [`cascade`] wires the trigger. `filter` narrows the stop (Jodah, the
+    /// Unifier).
     Cascade {
         max_mv: Value,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         filter: Option<SelectionRequirement>,
     },
-    /// CR 702.60 — Ripple N. The source spell's cast trigger: reveal the top N
-    /// cards of your library; you may cast any with the same name as the source
-    /// for free; put the rest on the bottom. Cast-from-library recursion (a
-    /// rippled copy ripples again) falls out of the cast path naturally — the
-    /// shortcut [`ripple`] wires the SpellCast/SelfSource trigger.
-    ///
-    /// `of_trigger_spell`: the rippling spell is the trigger's source rather
-    /// than the ability's — "Spells you cast have ripple 4" (Thrumming
-    /// Stone) rides a `SpellCast` trigger on the Stone.
+    /// CR 702.60 Ripple N: reveal the top N, cast any same-named cards free,
+    /// bottom the rest; rippled copies ripple again via the cast path. [`ripple`]
+    /// wires the trigger. `of_trigger_spell`: the trigger's source spell ripples
+    /// (Thrumming Stone).
     Ripple {
         n: Value,
         #[serde(default)]
         of_trigger_spell: bool,
     },
-    /// "Reveal the top `count` cards of your library. You may cast a spell
-    /// with mana value `max_mv` or less from among them without paying its
-    /// mana cost. Put the rest on the bottom." (Sunbird's Invocation, CR
-    /// 601.2 — cast from the library.) One cast at most; lands are skipped.
-    /// "Reveal the top card of your library; you may cast it without paying
-    /// its mana cost if it matches `filter`" — a declined or unmatched card
-    /// stays on top (Powerbalance's "if the two spells have the same mana
-    /// value", read through `WithX`).
+    /// "Reveal the top card; you may cast it free if it matches `filter`" — a
+    /// declined or unmatched card stays on top (Powerbalance, via `WithX`).
     RevealTopMayCastFreeKeepOnTop { filter: SelectionRequirement },
-    /// "Reveal cards from the top of your library until you reveal a nonland
-    /// card with mana value `max_mv` or less [matching `filter`]. You may cast
-    /// it without paying its mana cost. Put the rest on the bottom in a random
-    /// order" — revealed, not exiled as cascade does (Treasure Keeper, Neera).
+    /// Reveal until a nonland card with mana value ≤ `max_mv` (and `filter`), may
+    /// cast it free, bottom the rest at random — revealed, not exiled (Treasure
+    /// Keeper).
     RevealUntilMayCastFree {
         max_mv: Value,
         #[serde(default)]
         filter: Option<SelectionRequirement>,
     },
+    /// Sunbird's Invocation: reveal the top `count`, cast at most one spell with
+    /// mana value ≤ `max_mv` free (CR 601.2), bottom the rest. Lands skipped.
     RevealTopMayCastOneFree {
         count: Value,
         max_mv: Value,
@@ -11644,37 +9296,25 @@ pub enum Effect {
     /// source] this turn by sources they controlled." (Grothama,
     /// All-Devouring's leaves-the-battlefield trigger.)
     EachPlayerDrawsDamageTheyDealtToSource,
-    /// Exterminator Magmarch — "if another opponent controls one or more
-    /// nonland permanents that spell could target, choose one of those
-    /// permanents. Copy that spell. The copy targets the chosen permanent."
-    /// `what` is the spell (a `SpellCast` trigger's `TriggerSource`); the copy
-    /// is the copier's (CR 707.10c).
+    /// Exterminator Magmarch: if another opponent controls a nonland permanent
+    /// the spell (`TriggerSource`) could target, copy it onto one; the copy is
+    /// the copier's (CR 707.10c).
     CopySpellOntoAnotherOpponentsPermanent { what: Selector },
-    /// Zevlor, Elturel Exile — "for each other opponent, choose that player or
-    /// a permanent they control, copy that spell, and the copy targets the
-    /// chosen player or permanent". `what` is the spell (the trigger's
-    /// `TriggerSource`); the copies are the copier's (CR 707.10c).
+    /// Zevlor, Elturel Exile: per other opponent, copy the spell onto that player
+    /// or one of their permanents (CR 707.10c).
     CopySpellForEachOtherOpponent { what: Selector },
 
-    /// Exile the top card of `who`'s library and stamp a may-play
-    /// permission on it for `duration`. Used by Conspiracy Theorist,
-    /// Elemental Mascot, Ark of Hunger, Archaic's Agony and similar
-    /// "exile top of library; until [end of next turn / end of turn] you
-    /// may play that card" effects. A single-shot composite that
-    /// combines `Move(TopOfLibrary → Exile)` + `MayPlayPermission`
-    /// stamp atomically so the may-play targets the just-moved card.
-    /// `count` exiles that many cards off the top (Fallen Shinobi peels
-    /// two), stamping each with the may-play permission.
+    /// Exile the top `count` cards of `who`'s library, each with a may-play for
+    /// `duration` (Ark of Hunger; Fallen Shinobi's two) — one composite so the
+    /// permission hits the moved cards.
     ExileTopAndGrantMayPlay {
         who: PlayerRef,
         count: Value,
         duration: crate::card::MayPlayDuration,
-        /// "You may cast" *paying* the card's cost as generic — the
-        /// any-type-mana pay-to-cast rider (Nassari, Dean of Expression).
-        /// With `pay_own_cost` too it is "as though it were mana of any
-        /// COLOR": the own cost with only its coloured pips generic (CR
-        /// 609.4b — {C} and snow pips keep). `false` keeps the free-cast grant
-        /// (Urza, Lord High Artificer; Kotis).
+        /// The cast pays the card's cost as generic (Nassari, Dean of Expression).
+        /// With `pay_own_cost` it is "mana of any COLOR": own cost, colored pips
+        /// generic (CR 609.4b; {C} and snow kept). `false` keeps the free cast (Urza,
+        /// Lord High Artificer).
         #[serde(default)]
         pay_any_color: bool,
         /// Only cards at or under this mana value get the permission — the
@@ -11682,14 +9322,10 @@ pub enum Effect {
         /// with mana value X or less"). `None` grants on every exiled card.
         #[serde(default)]
         max_mana_value: Option<Value>,
-        /// "You may play them" *paying their own mana cost* — the plain
-        /// impulse-draw grant (Light Up the Stage, Reckless Impulse,
-        /// Wrenn's Resolve). Stamps the card's actual cost as its alt-cast
-        /// cost so the may-play isn't a free cast. Mutually exclusive with
-        /// `pay_any_color`; `false` keeps the free-cast default. ⚠ That
-        /// default is only right when the Oracle says "without paying its
-        /// mana cost": forty impulse cards had it and were cast for nothing
-        /// (`scripts/audit_free_impulse.py` checks the class).
+        /// "You may play them" paying their own cost — plain impulse draw (Light Up
+        /// the Stage). Exclusive with `pay_any_color`. ⚠ The `false` free-cast
+        /// default is right only for "without paying its mana cost";
+        /// `scripts/audit_free_impulse.py` checks the class.
         #[serde(default)]
         pay_own_cost: bool,
         /// "If you don't [cast it], …" fallback (Chandra, Torch of
@@ -11706,18 +9342,13 @@ pub enum Effect {
         token: std::sync::Arc<TokenDefinition>,
     },
 
-    /// "Look at the top card of `library`'s library and exile it face down.
-    /// `grantee` may play it for as long as it remains exiled, and mana of
-    /// any type can be spent to cast it" (Gonti, Night Minister). The
-    /// any-type spend is the card's mana value as generic (CR 609.4b), the
-    /// same equivalence Gonti, Lord of Luxury uses. `spend` narrows it: a
-    /// card printing neither clause pays its own cost (Mindleecher), "as
-    /// though it were mana of any color" keeps {C} pips (Rogue Class).
-    /// "Look at the top `count` cards of your library and exile them face
-    /// down. For as long as they remain exiled, you may play them if you
-    /// control a [creature_type]" (Gandalf, Goblins' Bane's Flameshape). Each
-    /// is paid at its own cost.
+    /// Gandalf, Goblins' Bane: exile the top `count` face down; play them while
+    /// exiled if you control a `creature_type`, at their own cost.
     ExileTopFaceDownPlayIfYouControl { count: Value, creature_type: crate::card::CreatureType },
+    /// Gonti, Night Minister: exile the top of `library`'s library face down;
+    /// `grantee` may play it while exiled, any mana type spendable (its mana
+    /// value as generic, CR 609.4b). `spend` narrows: own cost (Mindleecher), or
+    /// "any color" keeping {C} pips (Rogue Class).
     ExileTopFaceDownGrantPlay {
         library: PlayerRef,
         grantee: PlayerRef,
@@ -11729,16 +9360,12 @@ pub enum Effect {
         cast_only: bool,
     },
 
-    /// CR 614 — "As this enters, exile up to `count` cards matching `filter`
-    /// from your graveyard." Each exiled card is stamped `exiled_with =
-    /// source`, so `Selector::CardExiledWithSource` and
-    /// `Value::CardsExiledWithSourceCount` see them (Mimeoplasm, Revered One).
+    /// CR 614 — as this enters, exile up to `count` `filter` graveyard cards
+    /// stamped `exiled_with = source` (Mimeoplasm, Revered One).
     AsEntersExileFromYourGraveyard { count: Value, filter: SelectionRequirement },
 
-    /// CR 707.2 — "this permanent becomes a copy of `what`, except it's
-    /// `base_pt` and has this ability." `what` picks a card exiled with the
-    /// source; the granting activated ability is re-appended so it can copy
-    /// again (Mimeoplasm, Revered One).
+    /// CR 707.2 — become a copy of an exiled-with card, `base_pt` and keeping the
+    /// granting ability so it can copy again (Mimeoplasm, Revered One).
     BecomeCopyOfExiledCard { what: Selector, base_pt: Option<(i32, i32)> },
 
     // ── Sacrifice ────────────────────────────────────────────────────────────
@@ -11758,26 +9385,19 @@ pub enum Effect {
     /// for `keep`" (Keldon Firebombers). Each player keeps their `keep`
     /// highest-mana-value matches; the rest go.
     EachPlayerSacrificesDownTo { filter: SelectionRequirement, keep: Value },
-    /// Living Death (CR — mass reanimation swap): each player exiles all
-    /// creature cards from their graveyard, then sacrifices all creatures they
-    /// control, then puts the cards they exiled this way onto the battlefield
-    /// under their own control.
+    /// Living Death: each player exiles graveyard creatures, sacrifices their
+    /// creatures, then deploys the exiled cards.
     LivingDeath,
-    /// "If this is the first time this ability has resolved this turn, [mode 0].
-    /// If the second time, [mode 1]. …" (CR 603-style escalation — Vito,
-    /// Fanatic of Aclazotz). Runs `modes[min(n, len-1)]` where `n` is the count
-    /// of prior resolutions this turn keyed by the source, then increments.
+    /// Vito, Fanatic of Aclazotz: runs `modes[min(n, len-1)]` for the n-th
+    /// resolution this turn (keyed by source), then counts it.
     EscalatingThisTurn { modes: Vec<Effect> },
-    /// Bringer of the Last Gift's ETB: each player sacrifices all creatures
-    /// they control *except the source*, then each player returns all creature
-    /// cards that were already in their graveyard (not put there this way) to
-    /// the battlefield under their control.
+    /// Bringer of the Last Gift: everyone sacrifices their other creatures, then
+    /// returns the creature cards already in their graveyard.
     SacrificeOthersThenReanimate,
-    /// Each player, in APNAP order, may put one permanent card matching
-    /// `filter` from their hand onto the battlefield (Show and Tell); with
-    /// `others_only` the source's controller is skipped (Hunted Wumpus,
-    /// Charmed Griffin). Every seat auto-picks its highest-mana match —
-    /// the "may" isn't a real prompt yet (tracked in TODO.md).
+    /// Show and Tell: each player (APNAP) may put a `filter` permanent card from
+    /// hand onto the battlefield; `others_only` skips the controller (Hunted
+    /// Wumpus). Every seat auto-picks its priciest; the "may" isn't prompted yet
+    /// (TODO.md).
     EachPlayerMayPutPermanentFromHand {
         filter: SelectionRequirement,
         #[serde(default)]
@@ -11787,45 +9407,32 @@ pub enum Effect {
         #[serde(default)]
         repeat: bool,
     },
-    /// "`who` exiles `count` permanents they control of their choice" — the
-    /// exile analogue of Annihilator's forced sacrifice (Bane of Bala Ged).
-    /// The affected player chooses which permanents; a `wants_ui` player with
-    /// a genuine choice is prompted, bots/no-choice auto-pick the weakest.
+    /// "`who` exiles `count` permanents of their choice" — exile Annihilator
+    /// (Bane of Bala Ged). UI prompts on a real choice; else the weakest.
     PlayerExilesPermanents { who: PlayerRef, count: Value, filter: SelectionRequirement },
-    /// "`who` returns `count` permanents they control of their choice to
-    /// their owner's hand" — the bounce analogue of
-    /// `PlayerExilesPermanents` (Devastating Mastery's alt-cost rider,
-    /// Multiple Choice's X=2 bullet). `up_to` makes the count optional
-    /// ("up to two"); the auto path returns the weakest matches.
+    /// "`who` returns `count` permanents of their choice to hand" — bounce
+    /// analogue of `PlayerExilesPermanents` (Devastating Mastery). `up_to` makes
+    /// it optional; auto returns the weakest.
     PlayerReturnsPermanentsToHand {
         who: PlayerRef,
         count: Value,
         filter: SelectionRequirement,
         up_to: bool,
     },
-    /// Sacrifice this effect's source permanent (CR 701.16), firing proper
-    /// death triggers. Used by end-of-turn self-sacrifice (Blitz, Ball
-    /// Lightning) where `Effect::Move { This → Graveyard }` would skip the
-    /// `CreatureDied` event.
+    /// CR 701.16 — sacrifice this effect's source, with death triggers (Ball
+    /// Lightning); a `Move` to the graveyard would skip `CreatureDied`.
     SacrificeSource,
     /// Exile this effect's source permanent (no death trigger). Used by
     /// temporary tokens exiled at the next end step (Manaform Hellkite's
     /// Dragon Illusion, Kari Zev's Ragavan-style temps).
     ExileSource,
-    /// Sacrifice the specific permanent(s) named by `what` (CR 701.16), firing
-    /// proper sacrifice + death triggers. Unlike `Effect::Sacrifice` (which
-    /// makes a player choose `count` matching permanents) this sacrifices an
-    /// already-chosen object — e.g. a creature reanimated this turn that a
-    /// delayed trigger must sacrifice at the next end step (Footsteps of the
-    /// Goryo, Apprentice Necromancer). The sacrificing player is each target's
-    /// own controller.
+    /// CR 701.16 — sacrifice the specific permanents `what` names (each by its
+    /// controller), unlike `Effect::Sacrifice`'s player choice: a delayed
+    /// end-step sacrifice (Footsteps of the Goryo).
     SacrificePermanent { what: Selector },
-    /// "Sacrifice this permanent unless you sacrifice [count] [filter]." (The
-    /// Gitrog Monster's upkeep cost; Cosmic Larva's two lands.) The controller
-    /// may sacrifice `count` permanents matching `filter` they control to
-    /// spare the source; with fewer than `count` — or a UI seat declining —
-    /// the source is sacrificed instead. AutoDecider keeps the source by
-    /// sacrificing the weakest matching permanents when enough are available.
+    /// "Sacrifice this unless you sacrifice [count] [filter]" (The Gitrog
+    /// Monster): with too few, or a UI decline, the source goes. AutoDecider
+    /// keeps it by sacrificing the weakest matches.
     SacrificeSourceUnlessSacrifice {
         filter: SelectionRequirement,
         #[serde(default = "one_u32")]
@@ -11835,42 +9442,31 @@ pub enum Effect {
     /// its owner's hand" (the Invasion-block Lair lands). The bounce sibling of
     /// `SacrificeSourceUnlessSacrifice`.
     SacrificeSourceUnlessReturn { filter: SelectionRequirement },
-    /// "Sacrifice this permanent unless you pay [cost]" over the full
-    /// [`crate::card::WardCost`] menu — discard, exile-from-graveyard, life,
-    /// mana. Rotting Giant, Cursed Monstrosity. A UI seat gets a yes/no;
-    /// the AutoDecider pays whenever the cost is payable.
+    /// "Sacrifice this unless you pay [cost]" over [`crate::card::WardCost`]
+    /// (Rotting Giant). UI gets yes/no; AutoDecider pays whenever it can.
     SacrificeSourceUnlessCost { cost: crate::card::WardCost },
-    /// "Sacrifice any number of [filter]. [payoff] for each one." The
-    /// controller chooses how many to sacrifice via `Decision::ChooseAmount`
-    /// (AutoDecider sacrifices none). For each sacrifice, `per_each` runs
-    /// once — so a `GainLife 3` body pays 3 × count. Plunge into Darkness.
+    /// Plunge into Darkness: sacrifice any number of [filter]
+    /// (`Decision::ChooseAmount`, auto 0); `per_each` runs per sacrifice.
     SacrificeAnyNumber {
         who: PlayerRef,
         filter: SelectionRequirement,
         per_each: Box<Effect>,
     },
-    /// "Pay any amount of life. Look at that many cards from the top of your
-    /// library, put one into your hand, and exile the rest." The controller
-    /// chooses the amount via `Decision::ChooseAmount` (capped at current
-    /// life; AutoDecider pays 0). Plunge into Darkness mode 1.
+    /// Plunge into Darkness: pay X life (≤ life; auto 0), look at X, take one,
+    /// exile the rest.
     PayLifeLookTake { who: PlayerRef },
-    /// Vizkopa Confessor — "Pay any amount of life. Target opponent reveals
-    /// that many cards from their hand. You choose one of them and exile it."
-    /// The controller pays N via `Decision::ChooseAmount` (AutoDecider pays 0),
-    /// then `opp` reveals their cheapest N cards (modeling their free choice of
-    /// which to reveal) and the controller exiles one. `opp` is `EachOpponent`
-    /// (exact in 1v1; the "target" nuance is dropped in multiplayer).
+    /// Vizkopa Confessor: pay N life (`Decision::ChooseAmount`, auto 0); `opp`
+    /// reveals their cheapest N (modeling their choice) and you exile one. `opp`
+    /// is `EachOpponent`, exact in a duel.
     PayLifeRevealExileFromHand { opp: PlayerRef },
     /// "You may pay any amount of life. If you do, draw that many cards."
     /// Amount via `Decision::ChooseAmount`, capped at current life
     /// (AutoDecider pays 0). Necrodominance's end step.
     PayLifeDraw { who: PlayerRef },
-    /// CR 701.30 — "Clash with an opponent": you and the most hostile
-    /// opponent (or `with`, "clash with defending player" — Marvo) each
-    /// reveal your library's top card and may bottom it, deciding in APNAP
-    /// order; the winner gets a `GameEvent::ClashWon`, and if it's you,
-    /// `on_win` runs with that opponent as `PlayerRef::ChosenPlayerOfSource`
-    /// ("that player" — Pollen Lullaby). Recross the Paths.
+    /// CR 701.30 — clash with the most hostile opponent (or `with` — Marvo): both
+    /// reveal the top card and may bottom it (APNAP); the winner gets
+    /// `GameEvent::ClashWon`, and if it's you `on_win` runs with them as
+    /// `ChosenPlayerOfSource` (Pollen Lullaby).
     ClashWithOpponent {
         on_win: Box<Effect>,
         /// "Otherwise, …" — runs when the controller doesn't win (Pulling
@@ -11907,30 +9503,22 @@ pub enum Effect {
     /// from their hand, then creates `token` once per card revealed this way.
     EachPlayerRevealsCreaturesForTokens { token: std::sync::Arc<crate::card::TokenDefinition> },
 
-    /// False Cure — "until end of turn, whenever a player gains life, that
-    /// player loses `per` life for each 1 life gained." A turn-scoped watcher
-    /// over *every* seat, unlike the controller-scoped
-    /// [`Effect::WheneverYouGainLifeThisTurn`].
+    /// False Cure: this turn, every player loses `per` per life gained — unlike
+    /// the controller-scoped [`Effect::WheneverYouGainLifeThisTurn`].
     AnyLifeGainPunishedThisTurn { per: u32 },
 
-    /// The general shape of [`Effect::RevealUntilNonlandDamage`]: reveal from
-    /// the top until a nonland card, bottom the reveals in a random order,
-    /// then run `then` with the revealed card's mana value published as
-    /// [`Value::LastRevealedManaValue`]. Goblin Machinist, Kaboom!.
+    /// General [`Effect::RevealUntilNonlandDamage`]: reveal until a nonland card,
+    /// bottom them at random, then `then` with its mana value as
+    /// [`Value::LastRevealedManaValue`]. Kaboom!.
     RevealUntilNonlandThen { then: Box<Effect> },
 
-    /// "Choose a creature type, then [`then`]" — the resolution-time sibling
-    /// of [`Effect::NameCreatureType`]. Stamps the pick on the source's
-    /// `chosen_creature_type` (so `SelectionRequirement::
-    /// IsSourceChosenCreatureType` and friends resolve inside `then`) and
-    /// runs the body. Riptide Chronologist, Riptide Shapeshifter, Walking
-    /// Desecration, Peer Pressure.
+    /// "Choose a creature type, then [`then`]" — the resolution-time
+    /// [`Effect::NameCreatureType`], stamping the source's
+    /// `chosen_creature_type` for `then` (Riptide Shapeshifter).
     ChooseCreatureTypeThen { who: PlayerRef, then: Box<Effect> },
 
-    /// "Each player chooses a creature type. [`then`]" — every seat picks in
-    /// APNAP order and the union is published for the body through
-    /// `SelectionRequirement::IsTypeChosenThisWay`. Harsh Mercy,
-    /// Patriarch's Bidding.
+    /// "Each player chooses a creature type. [`then`]": APNAP; the union is
+    /// `SelectionRequirement::IsTypeChosenThisWay` (Patriarch's Bidding).
     EachPlayerChoosesCreatureTypeThen {
         then: Box<Effect>,
         /// Run `then` once per player instead, as that player (`You`) with
@@ -11939,12 +9527,10 @@ pub enum Effect {
         #[serde(default)]
         per_player: bool,
     },
-    /// "Choose an opponent. [then]" — not a target (CR 115.10 doesn't apply):
-    /// the controller names an opponent, stamped on the source's
-    /// `chosen_player` for `PlayerRef::ChosenPlayerOfSource` inside `then`.
-    /// Asked as a seat ballot; the headless pick is the opponent with the
-    /// fewest creatures (the gift goes where it helps least), turn order
-    /// breaking ties. Sylvan Offering.
+    /// "Choose an opponent. [then]" — not a target (CR 115.10): stamped on the
+    /// source's `chosen_player` for `ChosenPlayerOfSource`. A seat ballot;
+    /// headless picks the fewest creatures, turn order breaking ties (Sylvan
+    /// Offering).
     ChooseOpponentThen { then: Box<Effect> },
     /// [`Effect::ChooseOpponentThen`] whose ballot (and headless pick) is led
     /// by the opponent `lead` names (Sandstone Oracle: the most cards in hand).
@@ -11953,10 +9539,9 @@ pub enum Effect {
     /// body (Truth or Consequences: one opponent takes every consequences
     /// vote's damage), read back by `PlayerRef::ChosenPlayerOfSource`.
     WithRandomOpponent { body: Box<Effect> },
-    /// "Deals `amount` damage to a creature or player" chosen as it resolves —
-    /// not a target (Comet, Stellar Pup's 2022-10-07 ruling). The headless
-    /// pick is the greatest-power opposing creature the damage kills, else
-    /// the opponent with the least life.
+    /// Comet, Stellar Pup: `amount` damage to a creature or player chosen at
+    /// resolution, untargeted (2022-10-07 ruling). Headless: the strongest
+    /// enemy it kills, else the lowest-life opponent.
     DealDamageToChosenCreatureOrPlayer { amount: Value },
     /// CR 706.6 — "roll a d20 for each [thing] and ignore all but the highest
     /// roll" (Iron Mastiff): `roll` rolls `dice` dice (at least one) and
@@ -11965,72 +9550,52 @@ pub enum Effect {
     /// "You may activate [this]'s loyalty ability two more times this turn"
     /// (Comet, Stellar Pup's 6), CR 606.3.
     LoyaltyTwoMoreTimesThisTurn { what: Selector },
-    /// "Deals `amount` damage to [that player] or a planeswalker that player
-    /// controls" — not a target: the controller picks on resolution, from a
-    /// ballot whose headless answer is a planeswalker the damage would kill,
-    /// else the player (Vial Smasher, Curse of the Pierced Heart).
+    /// `amount` to [that player] or one of their planeswalkers, chosen at
+    /// resolution (headless: a walker it kills, else the player). Vial Smasher.
     DealDamageToPlayerOrPlaneswalker { who: PlayerRef, amount: Value },
     /// [`Effect::WithRandomOpponent`] over every living player, you included
     /// ("choose a player at random" — Wildfire Devils).
     WithRandomPlayer { body: Box<Effect> },
-    /// The continuation of a suspended "cast the exiled card without paying
-    /// its mana cost?" offer (Cascade, Discover, Possibility Storm) for a
-    /// prompting seat: on the logged yes, `player` casts `card` from exile,
-    /// naming the spell's target first (CR 601.2c). Engine-built, never on a card.
+    /// Continuation of a suspended "cast the exiled card free?" offer (Cascade,
+    /// Discover) for a prompting seat: on yes `player` casts `card`, target first
+    /// (CR 601.2c). Engine-built only.
     CastExiledFreeAsking { card: crate::card::CardId, player: usize },
-    /// "You may cast it from your graveyard as an Adventure until the end of
-    /// your next turn" — the source card, now in its owner's graveyard, on a
-    /// dies trigger (Hildibrand Manderville). Only the owner's own graveyard
-    /// is "your graveyard".
+    /// Hildibrand Manderville: may cast the dead source from your own graveyard
+    /// as an Adventure until the end of your next turn.
     GrantAdventureFromGraveyard,
-    /// "Do this only once each turn" — spend the source's use for the turn,
-    /// where the printed action actually happens (inside a `MayDo`'s
-    /// accepted branch), so declining keeps it. Read by
-    /// `Predicate::SourceDoneThisTurn`.
+    /// "Do this only once each turn": spends the source's use where the action
+    /// happens (inside `MayDo`'s yes), so declining keeps it
+    /// (`Predicate::SourceDoneThisTurn`).
     MarkDoneThisTurn,
-    /// "That player [does body]" — run `body` with `who` as its controller,
-    /// so `You` / a controller-side choice reads that player (Skullwinder's
-    /// "that player returns a card from their graveyard to their hand").
-    /// No-op when `who` resolves to nobody or to a seat that has left.
+    /// "That player [does body]": `body` with `who` as controller (Skullwinder).
+    /// No-op if `who` is nobody or has left.
     AsPlayer { who: PlayerRef, body: Box<Effect> },
-    /// Skyserpent Seeker-style ramp: reveal from the top of your library until
-    /// you reveal `count` land cards; put those lands onto the battlefield
-    /// (`tapped`), and put the rest on the bottom of your library in a random
-    /// order. Stops early if the library runs out.
+    /// Reveal until `count` lands; they enter (`tapped`), the rest bottom at
+    /// random; stops at the library's end (Skyserpent Seeker).
     RevealUntilLandsToBattlefield { count: Value, tapped: bool },
-    /// "Reveal cards from the top of your library until you reveal `count`
-    /// `filter` cards, put all of them onto the battlefield, then shuffle the
-    /// rest into your library" (Synthetic Destiny). Stops early on an empty
-    /// library. With `rest_bottom` the rest go on the bottom in a random order
-    /// instead of a shuffle (Empty the Laboratory).
-    /// "Reveal cards from the top of your library until you reveal a card
-    /// that shares a card type with [with]. Put that card onto the
-    /// battlefield and the rest on the bottom of your library in a random
-    /// order" (Reality Scramble, with `with` the permanent it just put on the
-    /// bottom — which can be the card revealed, CR 701.20). The card types
-    /// are read as this resolves; a `with` that resolves to nothing, or to a
-    /// card with no card type, reveals nothing.
+    /// Reality Scramble: reveal until a card sharing a card type with `with`
+    /// (read as this resolves; may be the revealed card, CR 701.20), put it onto
+    /// the battlefield, bottom the rest at random. A `with` with no card type
+    /// reveals nothing.
     RevealUntilSharesCardTypeToBattlefield { with: Selector },
+    /// "Reveal until `count` `filter` cards, put them all onto the battlefield,
+    /// shuffle the rest in" (Synthetic Destiny); stops on an empty library.
+    /// `rest_bottom` bottoms the rest at random instead (Empty the Laboratory).
     RevealUntilMatchingToBattlefield {
         filter: SelectionRequirement,
         count: Value,
         #[serde(default)]
         rest_bottom: bool,
     },
-    /// "Reveal cards from the top of your library until you reveal a
-    /// [filter] card. Put that card onto the battlefield and the rest on the
-    /// bottom of your library in a random order" — and, with
-    /// `damage_controller`, "this deals damage to you equal to the number of
-    /// cards revealed this way" (Audacious Reshapers).
-    /// `may`: "you may put that card onto the battlefield" (Genesis Storm) —
-    /// declined, it goes to the bottom with the rest.
-    /// "…then reveal cards from the top of your library until you reveal a
-    /// creature card with greater mana value. Put that card onto the
-    /// battlefield and the rest on the bottom in a random order" (Lukka,
-    /// Coppercoat Outcast's −2): [`Self::RevealUntilOneToBattlefieldRestBottom`]
-    /// over creatures above the mana value of the card the resolution last
-    /// moved (`Selector::LastMoved` — the creature it just exiled).
+    /// Lukka, Coppercoat Outcast's −2:
+    /// [`Self::RevealUntilOneToBattlefieldRestBottom`] over creatures with
+    /// greater mana value than `Selector::LastMoved` (the creature it just
+    /// exiled).
     RevealUntilCreatureAboveLastMovedToBattlefield,
+    /// "Reveal until a [filter] card; put it onto the battlefield, the rest on
+    /// the bottom at random." `damage_controller`: damage to you per card
+    /// revealed (Audacious Reshapers). `may`: putting it in is optional, else it
+    /// is bottomed too (Genesis Storm).
     RevealUntilOneToBattlefieldRestBottom {
         filter: SelectionRequirement,
         damage_controller: bool,
@@ -12041,16 +9606,12 @@ pub enum Effect {
     /// planeswalker you control, [body]" — registers a floating trigger;
     /// the attacker is bound as `Selector::TriggerSource`. Tamiyo +2.
     OnAttackedUntilYourNextTurn { body: Box<Effect> },
-    /// "Until end of turn, whenever a creature matching `filter` attacks,
-    /// [body]" — registers a turn-scoped floating trigger fired by any
-    /// player's qualifying attacker; the attacker is bound as
-    /// `Selector::TriggerSource`. Summon: Leviathan II/III.
+    /// "Until end of turn, whenever a `filter` creature attacks, [body]", any
+    /// player's attacker, bound as `TriggerSource` (Summon: Leviathan).
     OnMatchingAttacksThisTurn { filter: SelectionRequirement, body: Box<Effect> },
-    /// "Until end of turn, whenever a creature matching `filter` blocks,
-    /// [body]" — the block-side sibling of `OnMatchingAttacksThisTurn`
-    /// (Benefactor's Draught's "a creature an opponent controls"). `filter`
-    /// reads from the registering controller; the blocker is bound as
-    /// `Selector::TriggerSource`.
+    /// "Until end of turn, whenever a [filter] creature blocks, [body]" — the
+    /// block-side `OnMatchingAttacksThisTurn` (Benefactor's Draught). `filter`
+    /// reads from the registering controller; the blocker is `TriggerSource`.
     OnMatchingBlocksThisTurn { filter: SelectionRequirement, body: Box<Effect> },
     /// "Whenever a creature blocks this turn, its controller gets `amount`
     /// poison counters" (Noxious Assault). Turn-scoped flag consumed at
@@ -12060,13 +9621,9 @@ pub enum Effect {
     /// would deal damage to `who` or a permanent they control, it deals
     /// double that damage instead (CR 614.5-style replacement).
     StaggerPlayerUntilYourNextTurn { who: PlayerRef },
-    /// "Sacrifice a [filter] with the greatest mana value" picker.
-    /// Mirrors `Sacrifice` but the candidate sort prefers maximum CMC.
-    /// Used by Soul Shatter ("Each opponent sacrifices a creature or
-    /// planeswalker with the greatest mana value among permanents
-    /// that player controls"). Auto-decider picks the highest-CMC
-    /// matching permanent per player. When `by_power` is set the sort
-    /// key is greatest *power* instead (Crackling Doom, Tribute to Hunger).
+    /// Sacrifice the `filter` permanent with the greatest mana value (Soul
+    /// Shatter), or greatest power with `by_power` (Crackling Doom). Auto picks
+    /// the top one per player.
     SacrificeGreatestMV {
         who: Selector,
         count: Value,
@@ -12075,27 +9632,21 @@ pub enum Effect {
         by_power: bool,
     },
 
-    /// "Punisher" choice (CR 601-style "unless"). Each player `chooser`
-    /// resolves to may avoid `otherwise` by performing one of `options`.
-    /// The engine resolves heuristically: that player performs the first
-    /// option they can afford (LoseLife within their life total, Sacrifice
-    /// with a legal permanent); if none is affordable, `otherwise` runs
-    /// for the ability's controller. Options run with the chooser as the
-    /// effect controller, so they use `Selector::Player(PlayerRef::You)`.
-    /// Indulgent Tormentor: each opponent pays 3 life or sacrifices a
-    /// creature, otherwise the controller draws a card.
+    /// Punisher ("unless"): each `chooser` player may avoid `otherwise` by
+    /// doing one of `options`. Heuristic: the first affordable option (life
+    /// within their total, a legal sacrifice); if none, `otherwise` runs for the
+    /// controller. Options run with the chooser as controller (use
+    /// `PlayerRef::You`). Indulgent Tormentor.
     Punisher {
         chooser: Selector,
         options: Vec<Effect>,
         otherwise: Box<Effect>,
     },
 
-    /// CR 701.55 — "[player] faces a villainous choice — [A], or [B]." Each
-    /// resolved `who` (in APNAP order) chooses one option, then that option's
-    /// actions are performed with the chooser as effect controller (so
-    /// `PlayerRef::You` = the chooser). Unlike `Punisher` there is no fallback
-    /// payoff: both options are genuine choices. The bot heuristic picks the
-    /// lower-`self`-harm option; UI-player prompting is a follow-up (TODO.md).
+    /// CR 701.55 — villainous choice: each `who` (APNAP) picks an option, run
+    /// with them as controller (`You` = chooser). No fallback payoff, unlike
+    /// `Punisher`. The bot picks the lower self-harm option; UI prompting is a
+    /// follow-up (TODO.md).
     VillainousChoice {
         who: Selector,
         option_a: Box<Effect>,
@@ -12123,11 +9674,8 @@ pub enum Effect {
     /// step where the put-onto-battlefield clause is handled separately.
     RevealTopCard { who: PlayerRef },
 
-    /// Reveal the top card of `who`'s library; if it matches `filter`, run
-    /// `then`, otherwise `else_` when there is one. The card stays on top
-    /// either way. The CHK "Deceiver" cycle (reveal top, if a land then
-    /// pump/grant the source — Brutal/Cruel/Feral/Callous Deceiver);
-    /// Paroxysm's "otherwise, it gets +3/+3".
+    /// Reveal `who`'s top card; `then` if it matches `filter`, else `else_` if
+    /// any. It stays on top. CHK Deceivers, Paroxysm.
     RevealTopThenIf {
         who: PlayerRef,
         filter: SelectionRequirement,
@@ -12140,10 +9688,8 @@ pub enum Effect {
     /// onto the battlefield under its owner's control (firing ETB). Otherwise
     /// it stays on top. Chaos Warp.
     RevealTopPutPermanentOntoBattlefield { who: PlayerRef },
-    /// Reveal the top card of `who`'s library. If it matches `filter`, they may
-    /// put it onto the battlefield with a `counter` counter on it and
-    /// `extra_types` added to its types; a miss or a decline leaves it on top.
-    /// Arbiter of the Ideal.
+    /// Arbiter of the Ideal: reveal `who`'s top card; a `filter` match may enter
+    /// with a `counter` counter and `extra_types`; otherwise it stays on top.
     RevealTopMayPutOntoBattlefield {
         who: PlayerRef,
         filter: SelectionRequirement,
@@ -12152,19 +9698,14 @@ pub enum Effect {
         #[serde(default)]
         extra_types: Vec<crate::card::CardType>,
     },
-    /// Reveal the top `count` cards; put every card matching `filter` onto the
-    /// battlefield under `who`'s control, the rest on the bottom of the library.
-    /// Gishath, Sun's Avatar's combat-damage trigger (reveal = damage dealt,
-    /// filter = Dinosaur creature card). "Any number" is auto-take-all.
+    /// Gishath, Sun's Avatar: reveal the top `count`; every `filter` card enters
+    /// under `who`, the rest are bottomed ("any number" = all).
     RevealTopNPutMatchingToBattlefield { who: PlayerRef, count: Value, filter: SelectionRequirement },
 
-    /// Reveal the top card of `who`'s library; if it's a land, put it onto the
-    /// battlefield (`tapped`: Risen Reef, Fecund Greenshell). Otherwise put it
-    /// into their hand — or, with `nonland_stays`, leave it on top ("If it's a
-    /// land card, you may put it onto the battlefield tapped", Explorer's
-    /// Scope). Coiling Oracle, Growth Spiral, Llanowar Loamspeaker-style ramp.
-    /// `may`: the player may keep the land off the battlefield (it then goes
-    /// to hand, or stays on top with `nonland_stays`) — Risen Reef.
+    /// Reveal `who`'s top card: a land enters (`tapped`: Risen Reef), otherwise
+    /// to hand — or with `nonland_stays` it stays on top (Explorer's Scope).
+    /// Coiling Oracle. `may`: the land may stay off the battlefield (then hand,
+    /// or top with `nonland_stays`).
     RevealTopLandToBattlefieldElseHand {
         who: PlayerRef,
         #[serde(default)]
@@ -12185,20 +9726,17 @@ pub enum Effect {
     /// into their hand. Matter Reshaper's death trigger.
     RevealTopPutPermanentMvElseHand { who: PlayerRef, max_mv: Value },
 
-    /// "You may put a [filter] card from your hand onto the battlefield." The
-    /// controller picks up to `count` matching cards from `who`'s hand (via
-    /// `ChooseCards`, min 0 — always optional) and they enter under the
-    /// controller's control, `tapped` if set. With `haste`, each entrant gains
-    /// haste until end of turn; with `sacrifice_eot`, each is sacrificed at the
-    /// beginning of the next end step (Sneak Attack, Through the Breach). Plain
-    /// form (no haste / no sac) ships Elvish Piper / Quicksilver Amulet.
-    /// "You may put a [filter] card you own from your hand or from the command
-    /// zone onto the battlefield. If you do, [then]" (Next of Kin). Not a cast:
-    /// a commander put in this way pays no tax (CR 903.8).
+    /// "You may put a [filter] card you own from your hand or the command zone
+    /// onto the battlefield. If you do, [then]" (Next of Kin). Not a cast: a
+    /// commander pays no tax (CR 903.8).
     PutFromHandOrCommandZoneOntoBattlefield {
         filter: SelectionRequirement,
         then: Option<Box<Effect>>,
     },
+    /// "You may put a [filter] card from your hand onto the battlefield": up to
+    /// `count` from `who`'s hand via `ChooseCards` (always optional), under the
+    /// controller, `tapped` if set (Elvish Piper). `haste` and `sacrifice_eot`
+    /// make Sneak Attack.
     PutFromHandOntoBattlefield {
         who: PlayerRef,
         filter: SelectionRequirement,
@@ -12235,19 +9773,15 @@ pub enum Effect {
     /// activation's sacrificed permanent; a no-op when none was paid.
     GrantSacrificedLandTypesLandwalk { what: Selector, duration: Duration },
 
-    /// Phyrexian Splicer — "choose one of `options`: until end of turn, target
-    /// creature with the chosen ability loses it and another target creature
-    /// gains it." The controller picks the keyword at resolution; a `from`
-    /// that doesn't have it makes the whole thing a no-op.
+    /// Phyrexian Splicer: pick one of `options`; `from` loses it and `to` gains
+    /// it this turn. No-op if `from` lacks it.
     MoveChosenKeyword { options: Vec<Keyword>, from: Selector, to: Selector },
 
-    /// CR 123.3 / 123.6 — "(you may) put a name sticker on `what`". The
-    /// controller picks one of the name stickers on their three sheets that
-    /// isn't on an object they own (a ballot ordered most-unique-vowels
-    /// first, so a first-option bot takes the richest sticker; `optional`
-    /// appends a "no sticker" entry). Does nothing on an object the
-    /// controller doesn't own (CR 123.3b). The pick is recorded for
-    /// [`Value::NameStickerUniqueVowels`] (0 when declined / none left).
+    /// CR 123.3 / 123.6 — "(you may) put a name sticker on `what`": one of the
+    /// controller's unused stickers, ballot ordered most unique vowels first (so
+    /// a first-option bot takes the richest); `optional` adds "no sticker". Not
+    /// on an object they don't own (CR 123.3b). Recorded for
+    /// [`Value::NameStickerUniqueVowels`] (0 when none).
     PutNameSticker { what: Selector, optional: bool },
 
     /// Scroll Rack — "Exile any number of cards from your hand face down. Put
@@ -12260,10 +9794,9 @@ pub enum Effect {
     /// exiled at the beginning of the next end step.
     TokenCopyOfOpponentChoice { who: PlayerRef },
 
-    /// No Quarter — on a `BecomesBlocked` / `Blocks` trigger, destroy the
-    /// weaker half of the pair. `attacker_side` picks which one dies: `false`
-    /// destroys the blocker when the attacker outclasses it, `true` destroys
-    /// the attacker when the blocker does.
+    /// No Quarter: on a block trigger, destroy the weaker of the pair —
+    /// `attacker_side: false` the outclassed blocker, `true` the outclassed
+    /// attacker.
     DestroyBlockPairWeakerSide { attacker_side: bool },
 
     /// CR 614.9 — "All damage that would be dealt this turn by target spell is
@@ -12279,10 +9812,9 @@ pub enum Effect {
     /// counters on it (All Hallow's Eve). The upkeep tick and the payoff live
     /// on the definition; this only starts the fuse.
     ExileSelfWithCountdown,
-    /// CR 702.62a — "Exile [this] with N time counters on it" on a spell that
-    /// has suspend N (Rousing Refrain): the resolving spell is exiled instead
-    /// of going to the graveyard with its printed suspend N time counters, so
-    /// it is suspended again. A copy just ceases to exist (CR 707.10a).
+    /// CR 702.62a — Rousing Refrain: the resolving spell is exiled with its
+    /// printed suspend N time counters instead of the graveyard. A copy just
+    /// ceases to exist (CR 707.10a).
     ExileSelfSuspended,
 
     /// CR 702.18 — "You gain shroud until end of turn" (Gilded Light). No
@@ -12321,37 +9853,30 @@ pub enum Effect {
         duration: Duration,
     },
 
-    /// "Rather than pay the mana cost of the next spell you cast this turn,
-    /// you may pay life equal to that spell's mana value" (Marshland
-    /// Bloodcaster). Arms `Player::life_alt_next_spell_this_turn`; the next
-    /// spell `who` casts this turn spends it, paid that way or not.
+    /// Marshland Bloodcaster: `who`'s next spell this turn may be paid in life
+    /// equal to its mana value (`Player::life_alt_next_spell_this_turn`, spent
+    /// by that spell either way).
     NextSpellThisTurnMayCostLife { who: PlayerRef },
     /// "Return it to the battlefield face down under its owner's control.
     /// It's a Forest land" (Yedora, Grave Gardener) — every card `what`
     /// resolves to in a graveyard enters as a nameless face-down Forest.
     ReturnFaceDownAsForest { what: Selector },
-    /// "Put [what] onto the battlefield face down under your control. It's a
-    /// 2/2 Cyberman artifact creature" (Missy, Cybership, Death in Heaven,
-    /// The Cyber-Controller) — from any zone; a permanent `what` resolves to
-    /// is turned face down in place under its controller (Cyber Conversion).
+    /// Put `what` onto the battlefield face down as a 2/2 Cyberman artifact
+    /// creature (Missy), from any zone; a permanent turns face down in place
+    /// (Cyber Conversion).
     PutFaceDownAsCyberman { what: Selector, tapped: bool },
-    /// "For each permanent type, return up to one card of that type from your
-    /// graveyard to the battlefield. You lose `life_per_card` life for each
-    /// card returned this way" (Revival Experiment, CR 110.4). A card counts
-    /// for one type; the pick takes the highest mana value per type.
+    /// Revival Experiment (CR 110.4): return up to one card per permanent type
+    /// (one type per card, priciest), losing `life_per_card` each.
     ReturnOnePerPermanentType { life_per_card: i32 },
 
-    /// "Choose a nonland permanent you don't control, then each other player
-    /// chooses a nonland permanent they don't control that hasn't been chosen
-    /// this way. Destroy all other nonland permanents" (Fortunate Few). Each
-    /// seat, in turn order from the controller, spares the lowest-mana-value
-    /// candidate.
+    /// Fortunate Few: from the controller in turn order, each seat spares one
+    /// unchosen nonland permanent it doesn't control (the cheapest); all other
+    /// nonland permanents are destroyed.
     EachPlayerSparesOneTheyDontControl,
 
-    /// The end of an "until your next turn" `GrantActivatedAbilityToMatching`
-    /// with `Duration::Permanent`: strips `ability` from every matching
-    /// permanent's granted list. Scheduled by a `DelayUntil` (Song of
-    /// Freyalise's chapters I and II).
+    /// Ends an "until your next turn" `GrantActivatedAbilityToMatching` with
+    /// `Duration::Permanent` by stripping `ability`; scheduled by a `DelayUntil`
+    /// (Song of Freyalise).
     RevokeGrantedActivatedAbility {
         filter: SelectionRequirement,
         ability: Box<crate::effect::ActivatedAbility>,
@@ -12376,11 +9901,9 @@ pub enum Effect {
     /// exiled card into its owner's hand.
     ExileTopFaceDownTokenReturns { token: std::sync::Arc<crate::card::TokenDefinition> },
 
-    /// "You may put a creature card from your hand onto the battlefield tapped
-    /// and attacking. Return that creature to its owner's hand at the
-    /// beginning of the next end step" (Ilharg, the Raze-Boar). CR 508.4 — the
-    /// creature enters attacking without being declared, so no attack
-    /// triggers fire, and its controller chooses what it attacks.
+    /// Ilharg, the Raze-Boar: may put a creature from hand onto the battlefield
+    /// tapped and attacking (CR 508.4 — not declared, no attack triggers; its
+    /// controller picks the defender), returned to hand at the next end step.
     DeployCreatureFromHandAttacking {
         filter: SelectionRequirement,
         /// `true` returns the creature to hand at the next end step; `false`
@@ -12408,78 +9931,60 @@ pub enum Effect {
     /// face-down pile, shuffle that pile, then manifest those cards" under
     /// the resolving controller (Ghastly Conscription).
     ManifestFromGraveyard { who: PlayerRef, filter: SelectionRequirement },
-    /// "Return it to the battlefield face down under your control" (Ashcloud
-    /// Phoenix): each graveyard card the selector resolves to turns face down
-    /// and enters as a 2/2 under the effect's controller, like a manifest —
-    /// so a card with morph can be turned up for its morph cost.
+    /// Ashcloud Phoenix: each graveyard card enters face down as a 2/2 under you,
+    /// like a manifest (a morph can be turned up).
     PutFaceDownOntoBattlefield { what: Selector },
-    /// Magar of the Magic Strings — each graveyard card `what` resolves to
-    /// enters face down under the effect's controller as a 3/3
-    /// ([`facedown_noted_spell_definition`]) that runs `on_hit` whenever it
-    /// deals combat damage to a player, and is exiled if it would leave.
-    /// `Selector::This` in `on_hit` is the puppet, whose face-up card is the
-    /// noted one (`CopyCardAndCastFree` copies it).
+    /// Magar of the Magic Strings: each `what` graveyard card enters face down
+    /// under the controller as a 3/3 ([`facedown_noted_spell_definition`]) that
+    /// runs `on_hit` on combat damage to a player and is exiled if it would
+    /// leave. `Selector::This` in `on_hit` is the puppet; `CopyCardAndCastFree`
+    /// copies its face-up card.
     ///
     /// [`facedown_noted_spell_definition`]: crate::card::facedown_noted_spell_definition
     PutFaceDownAsNotedSpell { what: Selector, on_hit: Box<Effect> },
-    /// CR 701.34 from the hand — the resolved player manifests `count`
-    /// cards from their hand; if `controller_draws`, the effect's
-    /// controller draws one card per card manifested (Kozilek, the Broken
+    /// CR 701.34 — the player manifests `count` cards from hand;
+    /// `controller_draws`: you draw one per manifest (Kozilek, the Broken
     /// Reality).
     ManifestFromHand { who: Selector, count: Value, controller_draws: bool },
     /// Create a token and attach it to the resolved permanent (Role tokens
     /// — Wicked Role; CR 111.10). The token must be an Aura-style
     /// attachment; it enters attached.
     CreateTokenAttachedTo { target: Selector, definition: std::sync::Arc<crate::card::TokenDefinition> },
-    /// Like `CreateTokenAttachedTo`, but mints one token per permanent the
-    /// selector resolves to (CR 111.10) — "for each creature your opponents
-    /// control, create a Cursed Role token attached to that creature"
-    /// (Asinine Antics).
+    /// `CreateTokenAttachedTo` once per `target` permanent (CR 111.10) — Asinine
+    /// Antics.
     CreateTokenAttachedToEach { target: Selector, definition: std::sync::Arc<crate::card::TokenDefinition> },
-    /// Indomitable Creativity: destroy up to X chosen permanent targets
-    /// matching `filter` (slots `0..X` from the cast's target list); for
-    /// each destroyed this way its controller reveals from the top until an
-    /// artifact or creature card, puts it onto the battlefield, and
-    /// shuffles the rest in.
+    /// Indomitable Creativity: destroy up to X `filter` targets (slots `0..X`);
+    /// for each, its controller reveals until an artifact or creature card, puts
+    /// it onto the battlefield and shuffles the rest in.
     DestroyTargetsPolymorph { filter: SelectionRequirement },
     /// Destroy X chosen permanent targets matching `filter` (slots `0..X`
     /// from the cast's target list) — the plain sibling of
     /// `DestroyTargetsPolymorph`. Heliod's Intervention mode 0.
     DestroyTargets { filter: SelectionRequirement },
-    /// "Choose a land of each basic land type, then destroy those lands."
-    /// (Sundering Titan.) The source's controller chooses; the engine
-    /// auto-picks one land per basic type (Plains/Island/Swamp/Mountain/
-    /// Forest), preferring an opponent's land, and destroys the union.
+    /// Sundering Titan: destroy one land per basic type (auto-picked, preferring
+    /// opponents').
     DestroyLandOfEachBasicType,
-    /// CR 702.72 — Champion a [filter]: exile another matching permanent you
-    /// control linked to the source (returns when the source leaves), or
-    /// sacrifice the source if you exile nothing. Mistbind Clique,
-    /// Changeling Hero.
+    /// CR 702.72 — champion a [filter]: exile another of yours linked to the
+    /// source, or sacrifice the source if none (Mistbind Clique).
     Champion { filter: SelectionRequirement },
-    /// Exile up to `count` cards from graveyards, chosen by the controller
-    /// (Faerie Macabre). `of` restricts candidates to one player's graveyard
-    /// ("that player's graveyard" — Skullsnatcher); `single` restricts the
-    /// picks to a single graveyard ("from a single graveyard" — Rag Dealer:
-    /// picks after the first must share the first pick's owner). A
-    /// `wants_ui` controller picks via `ChooseCards`; the auto path takes
-    /// the highest-MV opponent cards.
+    /// Exile up to `count` graveyard cards chosen by the controller (Faerie
+    /// Macabre). `of` limits to one player's graveyard (Skullsnatcher); `single`
+    /// to one graveyard, set by the first pick (Rag Dealer). UI picks via
+    /// `ChooseCards`; auto takes the priciest opponent cards.
     ExileUpToNFromGraveyards { count: Value, of: Option<PlayerRef>, single: bool },
     /// Choose a color, exile the top `amount` cards of `who`'s library, and
     /// create one `token` per exiled card of the chosen color (Oona, Queen
     /// of the Fae).
     ExileTopMintPerChosenColor { who: Selector, amount: Value, token: std::sync::Arc<crate::card::TokenDefinition> },
-    /// Spells cast by opponents of the effect's controller that match
-    /// `filter` cost `{amount}` more until the controller's next turn
-    /// (Elspeth Conquers Death chapter II). Cleared at the controller's
-    /// untap step.
+    /// Elspeth Conquers Death II: opponents' `filter` spells cost `{amount}` more
+    /// until the controller's next untap.
     SpellTaxUntilYourNextTurn { amount: u32, filter: SelectionRequirement },
-    /// Cataclysm-family: each resolved player chooses one artifact, one
-    /// creature, one enchantment, and one planeswalker from among the
-    /// nonland permanents they control and sacrifices the rest (Ajani,
-    /// Nacatl Avenger's -4; `effects/keep_one.rs`).
-    /// Tragic Arrogance — as `SacrificeAllButOnePerType` (nonland), but the
-    /// resolving controller chooses for every player.
+    /// Tragic Arrogance: `SacrificeAllButOnePerType` (nonland) with the
+    /// resolving controller choosing for every player.
     SacrificeAllButOnePerTypeYouChoose { who: Selector },
+    /// Cataclysm family: each resolved player keeps one artifact, creature,
+    /// enchantment and planeswalker among their nonland permanents and
+    /// sacrifices the rest (Ajani, Nacatl Avenger's -4; `effects/keep_one.rs`).
     SacrificeAllButOnePerType {
         who: Selector,
         /// Cataclysm also lets each player keep one land ("an artifact, a
@@ -12488,13 +9993,10 @@ pub enum Effect {
         #[serde(default)]
         include_land: bool,
     },
-    /// "Each [resolved] player chooses a [`filter`] permanent they control,
-    /// then sacrifices the rest [of their `filter` permanents]" — Deadly
-    /// Vanity (keep one creature or planeswalker). Like
-    /// `SacrificeAllButOnePerType` but scoped to a single filter; each player
-    /// picks their keeper in APNAP order (a bot keeps its highest mana value).
-    /// `destroy`: "destroy the rest" instead (Divine Reckoning) —
-    /// indestructible and regeneration apply (CR 701.8).
+    /// "Each player chooses a [`filter`] permanent they control, then sacrifices
+    /// the rest" (Deadly Vanity) — `SacrificeAllButOnePerType` for one filter,
+    /// keepers picked APNAP (bot: priciest). `destroy`: destroys instead (Divine
+    /// Reckoning; CR 701.8).
     EachPlayerKeepsOneSacrificeRest {
         who: Selector,
         filter: SelectionRequirement,
@@ -12504,24 +10006,18 @@ pub enum Effect {
         #[serde(default)]
         bounce: bool,
     },
-    /// "Starting with you, each player chooses up to one [filter] permanent
-    /// from among permanents your opponents control. Exile those permanents."
-    /// (The Legend of Yangchen.) Each living seat in turn order from the
-    /// controller picks (CR 101.4); the picks are exiled at once (CR 608.2c).
-    /// A headless seat names the highest-mana-value one it doesn't control.
+    /// The Legend of Yangchen: from the controller in turn order (CR 101.4), each
+    /// seat picks up to one [filter] permanent your opponents control; all are
+    /// exiled at once (CR 608.2c). Headless names the priciest it doesn't
+    /// control.
     EachPlayerChoosesOpponentPermanentExile { filter: SelectionRequirement },
-    /// "Wish" — put a card you own matching `filter` from your sideboard
-    /// ("outside the game") into your hand (Burning Wish, Ring of Ma'rûf).
-    /// Chosen via `Decision::ChooseCards` for a `wants_ui` controller;
-    /// auto-picks the first sideboard match otherwise. A Commander game has
-    /// no sideboard, so it finds nothing there.
+    /// Wish: a `filter` card you own from your sideboard to hand (Burning Wish);
+    /// `Decision::ChooseCards` for UI, first match otherwise. Commander has no
+    /// sideboard, so it finds nothing.
     WishToHand { filter: SelectionRequirement },
-    /// "You may reveal exactly two cards you own with different names from
-    /// outside the game. An opponent chooses one of them. You put that card
-    /// into your hand." (Extrapolate the Impossible.) The pair comes from the
-    /// sideboard; with fewer than two names there the reveal can't be made
-    /// and nothing happens. The opponent is the caster's most hostile one (or
-    /// the caster's pick at 3+ seats); the other card stays outside the game.
+    /// Extrapolate the Impossible: reveal two differently named sideboard cards;
+    /// an opponent (the most hostile, or the caster's pick at 3+ seats) picks one
+    /// for your hand. Fewer than two names: nothing happens.
     WishPairOpponentChooses,
     /// `WishToHand`, "or choose a face-up [filter] card you own in exile"
     /// (Karn, the Great Creator's −2) — only that card reaches into exile.
@@ -12529,10 +10025,8 @@ pub enum Effect {
     /// "Shuffle up to `max` cards you own matching `filter` from outside the
     /// game into your library" (Research // Development's left half).
     WishToLibrary { filter: SelectionRequirement, max: Value },
-    /// "Exile another target nonland permanent. If you controlled it, return it
-    /// to the battlefield tapped. Otherwise, its controller [does something]"
-    /// (Unyielding Gatekeeper). The branch reads the exiled permanent's
-    /// controller at the moment it left.
+    /// Unyielding Gatekeeper: exile the target; if you controlled it, it returns
+    /// tapped, else its controller does `theirs` (control read as it left).
     ExileThenBranchByController { what: Selector, theirs: Box<Effect> },
     /// CR 702.106b — search your library for a creature card with the OTHER of
     /// the source's two chosen names (the one the trigger's spell isn't),
@@ -12548,10 +10042,9 @@ pub enum Effect {
     /// the other into their graveyard.
     ManifestDread { who: PlayerRef },
 
-    /// Manifest dread `count` times, then put `counters` +1/+1 counters on each
-    /// of the creatures manifested this way (Valgavoth's Onslaught, where both
-    /// are the cast's X). Self-contained so the manifested set is tracked across
-    /// the repeats without leaking into `last_moved_cards`.
+    /// Valgavoth's Onslaught: manifest dread `count` times, then `counters`
+    /// +1/+1 on each; self-contained so the set doesn't leak into
+    /// `last_moved_cards`.
     ManifestDreadRepeatThenCounters { count: Value, counters: Value },
 
     /// CR 702.182 — Cloak: put the top `amount` cards of `who`'s library onto
@@ -12566,24 +10059,18 @@ pub enum Effect {
         from_hand: bool,
     },
 
-    /// "Exile [what] and the top `count` cards of your library in a face-down
-    /// pile, shuffle that pile, then cloak those cards. They enter tapped"
-    /// (Become Anonymous, CR 702.182). `what` is exiled first; whatever of it
-    /// reached exile (a commander sent home doesn't) joins the pile.
+    /// CR 702.182 — Become Anonymous: exile `what` and the top `count` face down,
+    /// shuffle, cloak them tapped. Only what reached exile joins (a commander
+    /// sent home doesn't).
     CloakPileWithTop { what: Selector, count: Value },
 
-    /// Reveal the top `count` cards of the controller's library; an opponent
-    /// chooses one of them, which goes to the controller's hand. Each
-    /// remaining revealed card is exiled, gaining `counter` if `Some`.
-    /// Karn, Scion of Urza's +1 (reveal two, opponent chooses, exile the
-    /// other with a silver counter). A UI opponent is prompted; a bot chooser
-    /// gives the controller the lowest-mana-value card.
-    /// "Reveal the top `count` cards of your library. Starting with the next
-    /// opponent in turn order, each opponent chooses a different [pick_filter]
-    /// card from among them. Put the chosen cards into your hand and the rest
-    /// on the bottom of your library in a random order" (Manifold Insights).
-    /// A bot opponent hands over the lowest-mana-value card left.
+    /// Manifold Insights: reveal the top `count`; from the next opponent in turn
+    /// order, each opponent picks a different `pick_filter` card for your hand;
+    /// the rest bottom at random. Bots hand over the cheapest left.
     RevealTopEachOpponentChoosesToHand { count: Value, pick_filter: SelectionRequirement },
+    /// Karn, Scion of Urza's +1: reveal the top `count`; an opponent picks one
+    /// for your hand, the rest are exiled (with `counter` if `Some`). UI
+    /// opponents are prompted; bots hand over the cheapest.
     RevealTopOpponentChoosesToHand {
         count: Value,
         counter: Option<crate::card::CounterType>,
@@ -12597,29 +10084,23 @@ pub enum Effect {
         pick_to_battlefield: bool,
     },
 
-    /// "Return a card of an opponent's choice matching `filter` from your
-    /// graveyard to your hand" — untargeted (Tasigur, the Golden Fang). The
-    /// choosing opponent is prompted when they want a UI; a bot chooser hands
-    /// back the lowest-mana-value match. `chooser` names that opponent
-    /// ("defending player chooses" — O-Kagachi Made Manifest); `None` lets the
-    /// controller pick which opponent chooses. The card goes on `LastMoved`.
+    /// "Return a [filter] card of an opponent's choice from your graveyard to
+    /// your hand", untargeted (Tasigur). Bots hand back the cheapest. `chooser`
+    /// names that opponent (O-Kagachi Made Manifest); `None` lets the controller
+    /// pick. On `LastMoved`.
     ReturnFromGraveyardOpponentChooses {
         filter: SelectionRequirement,
         #[serde(default)]
         chooser: Option<PlayerRef>,
     },
 
-    /// Menacing Ogre — every player secretly picks a number up to `max`, the
-    /// picks are revealed at once, and each player who named the highest loses
-    /// that much life. `on_you_win` runs when the source's controller is among
-    /// them. The picks go through `ask_seat_amount`, so a UI seat is prompted
-    /// on its own turn through the suspend machinery.
+    /// Menacing Ogre: everyone secretly picks up to `max`; the highest loses that
+    /// much life; `on_you_win` runs if the controller is among them. Via
+    /// `ask_seat_amount`, so UI seats are prompted through suspend.
     EachPlayerChoosesNumberHighestLoses { max: u32, on_you_win: Box<Effect> },
-    /// Wheel of Misfortune — each player secretly picks a number (0 to
-    /// `max`), revealed at once; the source deals the highest number in
-    /// damage to each player who picked it, and each player who didn't pick
-    /// the lowest discards their hand and draws seven. A headless seat picks
-    /// 0, its controller 1 (it cast the wheel to refill).
+    /// Wheel of Misfortune: secret numbers 0..=`max`; the highest is dealt that
+    /// much by the source, everyone not lowest wheels for seven. Headless picks
+    /// 0, its controller 1.
     WheelOfMisfortune { max: u32 },
 
     /// CR 708.2 — "Look at target face-down creature." The resolving
@@ -12636,10 +10117,8 @@ pub enum Effect {
     /// than one qualifies the controller takes the highest-value one.
     ReturnFromExileWithCounter { counter: crate::card::CounterType },
 
-    /// Put every creature card stamped `exiled_with == ctx.source` (exiled by
-    /// this permanent — e.g. via `StaticEffect::ExileDyingOpponentCreatures`)
-    /// onto the battlefield under the controller, optionally granting each
-    /// `Keyword::Decayed`. Gisa, Glorious Resurrector's upkeep.
+    /// Gisa, Glorious Resurrector: every creature card exiled by this source
+    /// enters under you, optionally with `Keyword::Decayed`.
     ReturnExiledBySourceToBattlefield {
         #[serde(default)]
         decayed: bool,
@@ -12658,39 +10137,29 @@ pub enum Effect {
     /// controller's library, each with one `counter` counter on it.
     ExileTopWithCounters { count: Value, counter: crate::card::CounterType },
 
-    /// CR 401.6 — "Until end of turn, you may look at the top card of your
-    /// library any time, and you may play lands and cast spells from the top
-    /// of your library." Sets `Player.play_from_top_this_turn` for the
-    /// effect's controller (The Belligerent's attack trigger).
+    /// CR 401.6 — this turn you may look at and play from the top of your
+    /// library (`Player.play_from_top_this_turn`). The Belligerent.
     GrantPlayFromTopThisTurn,
     /// `GrantPlayFromTopThisTurn` whose spells cost life equal to their mana
     /// value rather than their mana cost — Bolas's Citadel for a turn
     /// (Gwenom, Remorseless).
     GrantPlayFromTopPayLifeThisTurn,
-    /// "Until end of turn, you may look at the top card of [who]'s library
-    /// any time, you may play the top card of their library, and you may
-    /// spend mana as though it were mana of any color to cast spells this
-    /// way" (Xanathar, Guild Kingpin). Adds the seat to the controller's
+    /// "Until end of turn, you may look at and play the top card of [who]'s
+    /// library, mana as any color" (Xanathar, Guild Kingpin): adds the seat to
     /// `Player.may_play_library_top_of`.
     MayPlayLibraryTopOfThisTurn { who: PlayerRef },
-    /// "[who] plays with their hand revealed. You may play lands and cast
-    /// spells from that player's hand this turn" (Sen Triplets). Adds the
-    /// seat to the controller's `Player.may_play_hand_of`, which also reveals
-    /// that hand (`GameState::hand_visible_to`).
+    /// Sen Triplets: `who` plays with their hand revealed and you may play from
+    /// it this turn (`Player.may_play_hand_of`, `GameState::hand_visible_to`).
     MayPlayHandOfThisTurn { who: PlayerRef },
 
-    /// "You may cast up to `count` spells from among face-up cards your
-    /// opponents own from exile this turn without paying their mana costs."
-    /// Grants the controller a free `may_play_until` end-of-turn permission
-    /// on up to `count` opponent-owned cards in exile (Ashiok, Nightmare
-    /// Muse −7). Approximation: the per-spell cast cap isn't enforced beyond
-    /// the number of cards granted.
+    /// Ashiok, Nightmare Muse −7: free end-of-turn `may_play_until` on up to
+    /// `count` face-up opponent-owned exiled cards. The spell cap is just the
+    /// number of cards granted.
     CastUpToNFromOpponentsExile { count: Value },
 
-    /// Omnath, Locus of Creation — run `branches[n]` where `n` is the number
-    /// of times *this ability* has already resolved this turn (0-indexed), then
-    /// bump that count. Past the last branch it does nothing. The sibling of
-    /// `EscalatingThisTurn`, which repeats its last branch instead.
+    /// Omnath, Locus of Creation: `branches[n]` for this ability's n-th
+    /// resolution this turn; past the last, nothing (`EscalatingThisTurn`
+    /// repeats the last).
     NthResolutionThisTurn { branches: Vec<Effect> },
 
     /// Scholarship Sponsor — each player controlling fewer lands than the
@@ -12707,10 +10176,8 @@ pub enum Effect {
         tapped: bool,
     },
 
-    /// Uvilda, Dean of Perfection — the controller may exile an instant or
-    /// sorcery card from their hand with `count` hone counters on it. The
-    /// per-upkeep tick-down + reduced cast-from-exile is handled engine-side
-    /// (`GameState::process_hone`).
+    /// Uvilda, Dean of Perfection: may exile an instant / sorcery from hand with
+    /// `count` hone counters (`GameState::process_hone` does the rest).
     HoneFromHand { count: Value },
 
     /// Controller chooses `count` cards from their hand and puts them on top of
@@ -12722,26 +10189,18 @@ pub enum Effect {
     /// same continuation machinery as a symmetric discard.
     EachPlayerPutsHandCardOnTop { who: Selector },
 
-    /// Sacrifice one creature `who` controls matching `filter` and store its
-    /// power in the resolution context for later `Value::SacrificedPower`
-    /// references. Used by Thud (sacrifice creature, deal damage equal to
-    /// its power) and similar spells.
+    /// Sacrifice one `filter` creature of `who`'s, storing its power for
+    /// `Value::SacrificedPower` (Thud).
     SacrificeAndRemember { who: PlayerRef, filter: SelectionRequirement },
 
-    /// Destroy the resolved permanent and record its power/toughness/mana value
-    /// on the resolution context (like [`Effect::SacrificeAndRemember`]) so a
-    /// following `Value::SacrificedToughness`/`SacrificedPower` reads it. Orzhov
-    /// Charm's "destroy target creature and you lose life equal to its
-    /// toughness".
+    /// Destroy and record P/T / mana value like [`Effect::SacrificeAndRemember`],
+    /// for a following `Value::SacrificedToughness` (Orzhov Charm).
     DestroyAndRemember { what: Selector },
 
-    /// Internal plumbing: re-stamp the P/T (and mana value) of a creature
-    /// sacrificed as an *activation cost* before running `body`, so
-    /// `Value::SacrificedPower/Toughness` and the
-    /// `ManaValueEqualsSacrificedPlus` search filter read them at resolution
-    /// even after intervening resolutions reset the scratch (Witch's Oven,
-    /// Transfigure). Wrapped around the queued ability effect by
-    /// `activate_ability`; not meant for card definitions.
+    /// Internal: re-stamp the P/T and mana value of a creature sacrificed as an
+    /// activation cost before `body`, so `Value::SacrificedPower/Toughness` and
+    /// `ManaValueEqualsSacrificedPlus` survive intervening resolutions (Witch's
+    /// Oven). Wrapped by `activate_ability`; not for card definitions.
     WithSacrificedPt {
         power: i32,
         /// Summed power of every permanent sacrificed to the cost (Soulblast).
@@ -12765,53 +10224,41 @@ pub enum Effect {
         body: Box<Effect>,
     },
 
-    /// Internal plumbing (CR 701.50a): the last step of one creature's connive —
-    /// a +1/+1 counter on `conniver` per nonland card discarded since entry
-    /// `since` of the resolution's discard list, then the `Connived` event.
-    /// Its own node so a suspended discard parks it behind itself.
+    /// Internal (CR 701.50a): the end of one connive — a +1/+1 counter on
+    /// `conniver` per nonland discard since entry `since`, then `Connived`. Its
+    /// own node so a suspended discard parks it.
     ConniveFinish { conniver: crate::card::CardId, controller: usize, since: u32 },
 
-    /// Internal plumbing: re-stamp the power of the creature tapped to pay a
-    /// Station ability's cost (CR 702.184a) before running `body`, so
-    /// `Value::TappedForCostPower` reads it at resolution. Wrapped around the
-    /// queued Station effect by `activate_ability`; not for card definitions.
+    /// Internal: re-stamp the power tapped for a Station cost (CR 702.184a)
+    /// before `body`, for `Value::TappedForCostPower`. Wrapped by
+    /// `activate_ability`.
     WithTappedPower { power: i32, body: Box<Effect> },
-    /// Internal plumbing: re-stamp how much mana from Treasures paid this
-    /// activation before running `body`, for
-    /// `Value::TreasureManaSpentToActivate`. Wrapped around the queued effect
-    /// by `activate_ability` when any was spent; not for card definitions.
+    /// Internal: re-stamp Treasure mana spent on the activation before `body`,
+    /// for `Value::TreasureManaSpentToActivate`. Wrapped by `activate_ability`.
     WithTreasureManaSpent { amount: u32, body: Box<Effect> },
-    /// Internal plumbing: re-stamp how many counters the activation's
-    /// `remove_all_counters_cost` removed before running `body`, for
-    /// `Value::CountersRemovedAsCost` — the tally is paid at activation
-    /// (CR 602.2b) and an activation in response resets the scratch.
-    /// Wrapped by `activate_ability`; not for card definitions.
+    /// Internal: re-stamp the counters `remove_all_counters_cost` removed before
+    /// `body`, for `Value::CountersRemovedAsCost` (paid at activation, CR
+    /// 602.2b). Wrapped by `activate_ability`; not for card definitions.
     WithCountersRemovedAsCost { amount: u32, body: Box<Effect> },
-    /// Internal plumbing: re-stamp what the activation's costs exiled,
-    /// tapped, sacrificed and discarded before running `body` — the costs are
-    /// paid at activation (CR 602.2b) and every later activation resets the
-    /// scratch these live in, so an ability activated in response used to
-    /// erase Tawnos's exiled card, Osgir's, Coin of Fate's, Cryptic Gateway's
-    /// tapped creatures and Sword of the Ages' sacrificed batch. Wrapped by
+    /// Internal: re-stamp what the activation's costs exiled, tapped, sacrificed
+    /// and discarded before `body` (paid at activation, CR 602.2b); a response
+    /// activation used to erase them (Tawnos, Coin of Fate). Wrapped by
     /// `activate_ability` when any is set; not for card definitions.
     WithPaidCosts { paid: Box<PaidCostRecord>, body: Box<Effect> },
 
-    /// Internal plumbing: re-stamp how many nonland cards the caster
-    /// discarded to pay an "as an additional cost, discard" (CR 601.2h) before
-    /// running `body`, so `Predicate::DiscardedNonlandThisEffect` reads the
-    /// cast-time discard (Grab the Prize). Wrapped by the cast path.
+    /// Internal: re-stamp nonland cards discarded for an additional cost (CR
+    /// 601.2h) before `body`, for `Predicate::DiscardedNonlandThisEffect` (Grab
+    /// the Prize). Wrapped by the cast path.
     WithCastDiscards { nonland: u32, body: Box<Effect> },
 
-    /// Internal plumbing: re-stamp the (power, mana value) of the card
-    /// revealed to pay an `AdditionalCastCost::RevealFromHand` before running
-    /// `body`, so `Value::RevealedForCost*` reads THIS spell's reveal even
-    /// when another reveal-cost spell was cast in response. Wrapped by the
-    /// cast path.
+    /// Internal: re-stamp the (power, mana value) revealed for an
+    /// `AdditionalCastCost::RevealFromHand` before `body`, so
+    /// `Value::RevealedForCost*` reads this spell's reveal despite responses.
+    /// Wrapped by the cast path.
     WithRevealedForCost { power: i16, mana_value: i16, body: Box<Effect> },
-    /// Internal plumbing: the card discarded to pay this activation's cost,
-    /// carried to resolution for `Effect::IfDiscardedForCost`. Wrapped around
-    /// the queued ability by `activate_ability` only when its effect holds an
-    /// `IfDiscardedForCost`; not meant for card definitions.
+    /// Internal: the card discarded for this activation's cost, for
+    /// `Effect::IfDiscardedForCost`. Wrapped by `activate_ability` only when
+    /// needed.
     WithDiscardedForCost { card: crate::card::CardId, body: Box<Effect> },
     /// "If the discarded card was a [filter] card, [then]" — the card
     /// discarded to pay this activation's cost (Moria Scavenger's "if the
@@ -12823,77 +10270,59 @@ pub enum Effect {
     /// may look at one (Intet, Kheru Mind-Eater, Predators' Hour).
     ExileFaceDown { body: Box<Effect> },
 
-    /// CR 701.16a — "investigate": `body` is the Clue `CreateToken`, and each
-    /// Clue its `count` asks for is one investigation by each player its
-    /// `who` names (`GameEvent::Investigated`), however many tokens a
-    /// replacement actually makes. Built by `shortcut::investigate*`.
+    /// CR 701.16a — investigate: `body` is the Clue `CreateToken`; each Clue its
+    /// `count` asks for is one investigation per `who` player
+    /// (`GameEvent::Investigated`), whatever replacements make. Built by
+    /// `shortcut::investigate*`.
     Investigate { body: Box<Effect> },
 
-    /// "Target opponent reveals their hand. You choose a card from it
-    /// matching `filter`. They discard it." Inquisition of Kozilek,
-    /// Thoughtseize, etc. Currently the **caster** auto-picks the first
-    /// matching card via `AutoDecider`; an interactive picker UI is a
-    /// future improvement.
+    /// "Target opponent reveals their hand; you choose a [filter] card; they
+    /// discard it" (Thoughtseize). The caster auto-picks the first match; a
+    /// picker UI is future work.
     DiscardChosen {
         from: Selector,
         count: Value,
         filter: SelectionRequirement,
     },
-    /// "Target player reveals `reveal` cards from their hand. You choose one of
-    /// them; that player discards it." The reveal-capped sibling of
-    /// [`Effect::DiscardChosen`] — the caster only sees the revealed subset
-    /// (Disciple of Phenax). Which cards get revealed is the revealing
-    /// player's choice; the engine takes them in hand order. `pick` is how many
-    /// of the revealed cards the caster chooses (Noggin Whack's "three … two").
+    /// [`Effect::DiscardChosen`] over only `reveal` revealed cards (Disciple of
+    /// Phenax), taken in hand order; the caster picks `pick` (Noggin Whack).
     DiscardChosenFromRevealed {
         from: Selector,
         reveal: Value,
         #[serde(default = "crate::effect::one_value")]
         pick: Value,
     },
-    /// "Look at `from`'s hand; you may choose `count` card(s) matching
-    /// `filter`. That player puts the chosen card(s) on the bottom of their
-    /// library, then draws that many cards." Vendilion Clique. Same
-    /// caster-picks-from-hand shape as [`Effect::DiscardChosen`], but the
-    /// chosen card is bottomed and replaced rather than discarded.
+    /// Vendilion Clique: look at `from`'s hand, choose `count` `filter` cards;
+    /// they bottom them and draw that many.
     ///
-    /// Approximations: (1) the printed "may" is modeled as forced-if-able —
-    /// the caster auto-picks the first matching card (declining is rarely
-    /// desired), same as `DiscardChosen`; (2) `from` follows the engine's
-    /// ETB-trigger convention of `EachOpponent` (player-targeting on triggers
-    /// is an engine-wide gap, see Archon of Cruelty) — faithful in 1v1, so
-    /// the printed "target player" self-cast mode is not yet available.
+    /// Approximations: the "may" is forced-if-able (first match, like
+    /// `DiscardChosen`); `from` follows the ETB `EachOpponent` convention
+    /// (trigger player-targeting is an engine-wide gap, see Archon of Cruelty),
+    /// so the "target player" self-cast mode isn't available.
     BottomChosenFromHandAndDraw {
         from: Selector,
         count: Value,
         filter: SelectionRequirement,
     },
-    /// "Look at `from`'s hand and choose `count` card(s) matching `filter`.
-    /// That player puts them on top of their library" (Painful Memories).
-    /// The library-top sibling of [`Effect::BottomChosenFromHandAndDraw`],
-    /// with no replacement draw.
+    /// Painful Memories: choose `count` `filter` cards from `from`'s hand to go
+    /// on top — [`Effect::BottomChosenFromHandAndDraw`] on top, no draw.
     TopChosenFromHand {
         from: Selector,
         count: Value,
         filter: SelectionRequirement,
     },
-    /// "Look at `from`'s hand. Exile a card matching `filter`; its owner may
-    /// play it, and it costs `extra_cost` more for as long as it remains
-    /// exiled." Elite Spellbinder. The owner keeps a may-play grant (with an
-    /// added generic tax) through their next turn — an approximation of the
-    /// printed "for as long as it remains exiled".
+    /// Elite Spellbinder: exile a `filter` card from `from`'s hand; its owner may
+    /// play it for `extra_cost` more. Approximated as a may-play through their
+    /// next turn rather than "as long as it remains exiled".
     ExileFromHandTaxed {
         from: Selector,
         count: Value,
         filter: SelectionRequirement,
         extra_cost: u32,
     },
-    /// CR 603.6e — "Target player reveals their hand; you choose [count]
-    /// card(s) matching [filter]. Exile [them] until [this] leaves the
-    /// battlefield." The caster picks from `from`'s hand; the chosen
-    /// card(s) are exiled and linked to the ability's source. Powers Brain
-    /// Maggot / Tidehollow Sculler / Kitesail Freebooter (`return_to`
-    /// = Hand).
+    /// CR 603.6e — "target player reveals their hand; you choose [count]
+    /// [filter] cards; exile them until this leaves", linked to the source
+    /// (Tidehollow Sculler, `return_to` = Hand).
     ExileChosenUntilSourceLeaves {
         from: Selector,
         count: Value,
@@ -12901,13 +10330,10 @@ pub enum Effect {
         return_to: crate::card::ExileReturnZone,
     },
 
-    /// "Target player reveals their hand; you choose [count] card(s) matching
-    /// [filter] and exile [them]." Same caster-picks-from-hand shape as
-    /// `DiscardChosen`, but the chosen cards are exiled permanently (not
-    /// linked to a source, unlike `ExileChosenUntilSourceLeaves`). Thought-Knot
-    /// Seer. With `link_to_source` the exiled cards are stamped
-    /// `exiled_with = source` (recoverable via `Selector::CardExiledWithSource`
-    /// — Bane Alley Broker's face-down stash); `face_down` hides them.
+    /// "Reveal your hand; I choose [count] [filter] cards to exile" for good,
+    /// unlike `ExileChosenUntilSourceLeaves` (Thought-Knot Seer).
+    /// `link_to_source` stamps `exiled_with = source` (Bane Alley Broker);
+    /// `face_down` hides them.
     ExileChosenFromHand {
         from: Selector,
         count: Value,
@@ -12918,11 +10344,9 @@ pub enum Effect {
         face_down: bool,
     },
 
-    /// `what` becomes the given card type *in addition* to its other types,
-    /// indefinitely (anchored to the permanent — expires when it leaves).
-    /// Phyrexian Scriptures chapter I's "becomes an artifact". With
-    /// `until_eot` the grant is a CR 611.2 end-of-turn effect instead
-    /// (Liquimetal Torque, Myr Landshaper).
+    /// `what` gains a card type in addition to its others, indefinitely (ends
+    /// when it leaves) — Phyrexian Scriptures I. `until_eot`: a CR 611.2
+    /// end-of-turn effect (Liquimetal Torque).
     AddCardTypeIndefinitely {
         what: Selector,
         card_type: crate::card::CardType,
@@ -12935,36 +10359,29 @@ pub enum Effect {
     /// "isn't an artifact").
     LoseCardTypeUntilEot { what: Selector, card_type: crate::card::CardType },
 
-    /// Grant `what` an activated ability. `Duration::Permanent` anchors the
-    /// grant to the permanent (`CardInstance.granted_activated_abilities`,
-    /// cleared when it leaves the battlefield — Urza's Saga chapters I/II);
-    /// `EndOfTurn`/`EndOfCombat` ride `granted_activated_eot`, cleared at
-    /// cleanup (Lightning Volley, Retraction Helix).
+    /// Grant `what` an activated ability. `Duration::Permanent` anchors it to
+    /// the permanent (`granted_activated_abilities`, gone when it leaves — Urza's
+    /// Saga); `EndOfTurn` / `EndOfCombat` use `granted_activated_eot`, cleared at
+    /// cleanup.
     GainActivatedAbility { what: Selector, ability: Box<ActivatedAbility>, duration: Duration },
 
     // ── Delayed triggers and pact costs ──────────────────────────────────────
-    /// Register a delayed triggered ability that fires later. `kind` selects
-    /// the future event (your next upkeep, next end step, …); `body` is the
-    /// effect that resolves when the trigger fires. Captures the current
-    /// `ctx.targets[0]` so the body can reference it via `Selector::Target(0)`.
+    /// Register a delayed trigger: `kind` is the future event, `body` the
+    /// effect. Captures `ctx.targets[0]` for `Selector::Target(0)`.
     DelayUntil {
         kind: DelayedTriggerKind,
         body: Box<Effect>,
     },
-    /// `DelayUntil` with an explicit capture: `capture` is resolved NOW and
-    /// becomes the delayed body's slot-0 target, so "that creature" survives
-    /// the wait (Gift of Immortality's re-attach, Rescue from the Underworld's
-    /// sacrificed card).
+    /// `DelayUntil` with `capture` resolved now as the body's slot 0, so "that
+    /// creature" survives the wait (Gift of Immortality).
     DelayUntilWithCapture {
         kind: DelayedTriggerKind,
         capture: Selector,
         body: Box<Effect>,
     },
-    /// "Add an amount of {C} equal to [amount] at the beginning of your
-    /// next main phase" — `amount` is evaluated NOW (so resolution-scoped
-    /// scratch values like `CounteredSpellManaSpent` are read while still
-    /// live) and baked as a constant into the registered delayed trigger.
-    /// Mana Sculpt, Mana Drain.
+    /// "Add {C} equal to [amount] at the beginning of your next main phase"
+    /// (Mana Drain): `amount` is read now, while scratch like
+    /// `CounteredSpellManaSpent` is live, and baked into the delayed trigger.
     AddManaAtNextMainPhase {
         amount: Value,
         /// When true the mana is added as `AnyColors` (the player picks each
@@ -12979,27 +10396,22 @@ pub enum Effect {
         first_main: bool,
     },
 
-    /// "When [target creature] dies this turn, [body]." Registers an
-    /// event-keyed delayed trigger watching `ctx.targets[slot]`'s death. The
-    /// targeted creature's controller is captured as `Target::Player` so the
-    /// body can reference it via `Selector::Target(0)` even after the
-    /// creature has left the battlefield. Expires at cleanup. Used by
-    /// Searing Blood ("deals 3 damage to its controller", slot 0) and
-    /// Devouring Tendrils ("gain 2 life", the damaged permanent in slot 1).
-    /// "When this creature dies this turn, [body]" (Golden Guardian's fight):
-    /// [`Self::WhenTargetDiesThisTurn`] watching the effect's own source, with
-    /// the body run from the source's card (`ExileSelfReturnTransformed` lifts
-    /// it out of the graveyard).
+    /// "When this creature dies this turn, [body]" (Golden Guardian):
+    /// [`Self::WhenTargetDiesThisTurn`] on the source, the body run from its card
+    /// (`ExileSelfReturnTransformed` lifts it out of the graveyard).
     WhenSourceDiesThisTurn { body: Box<Effect> },
+    /// "When [target creature] dies this turn, [body]": a delayed trigger on
+    /// `ctx.targets[slot]`'s death, its controller captured so
+    /// `Selector::Target(0)` survives the death. Expires at cleanup. Searing
+    /// Blood (slot 0), Devouring Tendrils (slot 1).
     WhenTargetDiesThisTurn {
         body: Box<Effect>,
         /// Which target slot to watch (default 0 via `#[serde(default)]`).
         #[serde(default)]
         slot: usize,
-        /// Cast-time filter for the watched target when this effect is the
-        /// slot's *only* mention (Melira's "another target creature or
-        /// artifact"); `None` when a preceding effect already declared it
-        /// (Searing Blood's damage). Surfaced by the target walkers.
+        /// Cast-time filter for the watched target when this is the slot's only
+        /// mention (Melira); `None` when an earlier effect declared it (Searing
+        /// Blood).
         #[serde(default)]
         filter: Option<SelectionRequirement>,
     },
@@ -13011,46 +10423,35 @@ pub enum Effect {
     /// isn't blocked, [body]" (Delif's Cone): fires once, on its
     /// `AttackerWentUnblocked`; the creature is `Selector::TriggerSource`.
     WhenTargetAttacksUnblockedThisTurn { body: Box<Effect>, slot: usize },
-    /// "When that creature dies, [body]" with no "this turn" — the
-    /// untimed `WhenTargetDiesThisTurn` (Xira, the Golden Sting's egg). The
-    /// watch outlives cleanup; the dead creature is the body's trigger source.
-    /// `if_had_counter`: "if it has a [kind] counter on it", read off the
-    /// death's last-known counters as it triggers.
+    /// The untimed `WhenTargetDiesThisTurn` (Xira, the Golden Sting): outlives
+    /// cleanup; the dead creature is the trigger source. `if_had_counter` reads
+    /// the death's last-known counters.
     WhenTargetDies { body: Box<Effect>, slot: usize, if_had_counter: Option<crate::card::CounterType> },
 
-    /// "Whenever a creature you control enters this turn, [body]." Registers
-    /// a turn-scoped delayed trigger (CR 603.4) that fires once per creature
-    /// the controller controls that enters for the rest of the turn; the
-    /// entering creature is exposed to `body` as `Selector::TriggerSource`.
-    /// Expires at cleanup. Used by First Day of Class.
+    /// CR 603.4 — "whenever a creature you control enters this turn, [body]",
+    /// once per entrant (`Selector::TriggerSource`); expires at cleanup (First
+    /// Day of Class).
     CreaturesYouControlEnteringThisTurn {
         body: Box<Effect>,
     },
 
-    /// "Each player puts a creature card with mana value `max_mv` or less from
-    /// their graveyard onto the battlefield" (Crypt Champion). Each player's
-    /// highest-mana-value eligible creature is auto-chosen (UI players don't
-    /// pick which — a documented approximation), moved under that player's
-    /// control in APNAP order.
+    /// Crypt Champion: each player reanimates their priciest creature with mana
+    /// value ≤ `max_mv`, APNAP. UI players don't choose (approximation).
     EachPlayerReanimateCreatureMaxMv {
         max_mv: u32,
     },
 
-    /// "Whenever target creature deals damage this turn, you gain that much
-    /// life" (CR 603.4). Watches the creature in target slot `slot`; each time
-    /// it deals damage (combat or noncombat) the controller gains that much
-    /// (the amount rides in via `Value::TriggerEventAmount`). Expires at
-    /// cleanup. Paladin of Prahv's Forecast rider.
+    /// CR 603.4 — "whenever target creature deals damage this turn, you gain that
+    /// much life" (Paladin of Prahv); slot `slot`, amount via
+    /// `TriggerEventAmount`; expires at cleanup.
     GainLifeWhenTargetDealsDamageThisTurn {
         #[serde(default)]
         slot: usize,
     },
 
-    /// CR 603.4 — "Whenever [the creature in target slot `slot`] deals combat
-    /// damage to a player this turn, [body]" (Captain Howler). Expires at
-    /// cleanup; the amount rides in via `Value::TriggerEventAmount`.
-    /// `this_combat`: "… this combat" (Stensian Sanguinist) — only damage in
-    /// the combat phase the trigger was created in counts (CR 506.1).
+    /// CR 603.4 — "whenever [slot `slot`] deals combat damage to a player this
+    /// turn, [body]" (Captain Howler); amount via `TriggerEventAmount`.
+    /// `this_combat`: only this combat phase (Stensian Sanguinist; CR 506.1).
     WhenTargetDealsCombatDamageToPlayerThisTurn {
         #[serde(default)]
         slot: usize,
@@ -13058,58 +10459,46 @@ pub enum Effect {
         #[serde(default)]
         this_combat: bool,
     },
-    /// CR 603.7 — "When [the object `what` names] deals combat damage to a
-    /// player this turn, [body]": the untargeted sibling of
-    /// `WhenTargetDealsCombatDamageToPlayerThisTurn`, firing once (Optimus
-    /// Prime, Autobot Leader's bolstered creature, bound by a `ForEach`).
+    /// CR 603.7 — the untargeted `WhenTargetDealsCombatDamageToPlayerThisTurn`
+    /// for `what`, firing once (Optimus Prime, Autobot Leader, under a
+    /// `ForEach`).
     WhenObjectDealsCombatDamageToPlayerThisTurn { what: Selector, body: Box<Effect> },
-    /// "Note the type of mana spent to pay this activation cost" (Jeweled
-    /// Amulet): stamps the source's `chosen_color` with the color the
-    /// activation spent, or clears it when the mana was colorless, so a
-    /// `ManaPayload::ChosenColorOfSource` ability adds that type back.
+    /// Jeweled Amulet: stamp the source's `chosen_color` with the color spent on
+    /// the activation (cleared for colorless), for
+    /// `ManaPayload::ChosenColorOfSource`.
     NoteSpentManaTypeOnSource,
 
-    /// "Until end of turn, whenever a creature you control dies, [body]."
-    /// Registers a turn-scoped delayed trigger (CR 603.4) that fires once per
-    /// creature the controller controlled (read from death LKI) that dies for
-    /// the rest of the turn; the dead creature is exposed to `body` as
-    /// `Selector::TriggerSource`. Expires at cleanup. Used by Waltz of Rage.
+    /// CR 603.4 — "until end of turn, whenever a creature you control dies,
+    /// [body]" (Waltz of Rage), read from death LKI; the dead creature is
+    /// `TriggerSource`.
     CreaturesYouControlDyingThisTurn {
         body: Box<Effect>,
     },
 
-    /// "Until end of turn, whenever a creature [matching `filter`] dies, [body]"
-    /// — any player's creature (CR 603.4). Registers a turn-scoped delayed
-    /// trigger firing once per dead creature whose death LKI matches `filter`;
-    /// the dead creature is `Selector::TriggerSource`. Massacre Girl's chain.
+    /// CR 603.4 — until end of turn, `body` per dying creature (anyone's) whose
+    /// LKI matches `filter`; dead one = `TriggerSource`. Massacre Girl.
     WheneverCreatureDiesThisTurn {
         filter: SelectionRequirement,
         body: Box<Effect>,
     },
 
-    /// "Whenever a creature [matching `filter`] enters this turn, [body]" —
-    /// any controller's creature (CR 603.4; Theoretical Duplication's
-    /// "nontoken creature an opponent controls"). The entering creature is
-    /// `Selector::TriggerSource`. Expires at cleanup.
+    /// CR 603.4 — this turn, `body` per entering `filter` creature (anyone's) as
+    /// `TriggerSource` (Theoretical Duplication).
     WheneverCreatureEntersThisTurn {
         filter: SelectionRequirement,
         body: Box<Effect>,
     },
 
-    /// "Until your next turn, whenever a creature [matching `filter`] enters,
-    /// [body]" — the entering creature is `Selector::TriggerSource`; expires
-    /// as the controller's next turn begins. Kardur, Doomscourge's goad reach
-    /// over creatures that enter after it (its 2021 ruling).
+    /// Until your next turn, `body` per entering `filter` creature
+    /// (`TriggerSource`) — Kardur, Doomscourge (2021 ruling).
     WheneverCreatureEntersUntilYourNextTurn {
         filter: SelectionRequirement,
         body: Box<Effect>,
     },
 
-    /// "Until end of turn, whenever a creature you control deals combat damage
-    /// to a player, [body]." Registers a turn-scoped delayed trigger (CR 603.4)
-    /// that fires per qualifying combat-damage event; the dealing creature is
-    /// exposed to `body` as `Selector::TriggerSource`. Expires at cleanup.
-    /// Used by Mistway Spy's turn-face-up grant.
+    /// CR 603.4 — "until end of turn, whenever a creature you control deals
+    /// combat damage to a player, [body]" (Mistway Spy); the dealer is
+    /// `TriggerSource`.
     CreaturesYouControlDealingCombatDamageThisTurn {
         body: Box<Effect>,
     },
@@ -13120,57 +10509,39 @@ pub enum Effect {
         filter: SelectionRequirement,
         body: Box<Effect>,
     },
-    /// "Choose a card name. Whenever a creature with the chosen name deals
-    /// combat damage to a player this turn, [body]" (The Clone Saga III). The
-    /// controller names a card (a `NameCard` decision; the bot names its own
-    /// strongest creature) and a turn-scoped delayed trigger (CR 603.7) fires
-    /// once per such creature per combat-damage event, whoever controls it;
-    /// the dealer is `Selector::TriggerSource`. Expires at cleanup.
+    /// The Clone Saga III: name a card (bot: its own strongest creature); this
+    /// turn, each creature with that name dealing combat damage to a player
+    /// fires `body` (CR 603.7), whoever controls it; dealer = `TriggerSource`.
     NameCardThenNamedCreatureCombatDamageThisTurn {
         body: Box<Effect>,
     },
 
-    /// "Until end of turn, whenever you gain life, [body]." Registers a
-    /// turn-scoped delayed trigger (CR 603.4) firing per `LifeGained` event for
-    /// the controller; the amount is bound via `Value::TriggerEventAmount`.
-    /// Expires at cleanup. Vizkopa Guildmage's second activated ability
-    /// ("each opponent loses that much life").
+    /// CR 603.4 — "until end of turn, whenever you gain life, [body]" (Vizkopa
+    /// Guildmage), amount via `TriggerEventAmount`.
     WheneverYouGainLifeThisTurn { body: Box<Effect> },
-    /// "For each 1 damage prevented this way, [body]" after a this-turn
-    /// combat fog for you (Inkshield): a turn-scoped delayed trigger (CR
-    /// 603.4) firing per combat damage event to the controller that was
-    /// prevented, the prevented amount bound via `Value::TriggerEventAmount`.
-    /// Expires at cleanup.
+    /// "For each 1 damage prevented this way, [body]" after a this-turn fog
+    /// (Inkshield): CR 603.4 trigger per prevented combat damage event to you,
+    /// amount via `TriggerEventAmount`.
     WheneverCombatDamageToYouPreventedThisTurn { body: Box<Effect> },
 
-    /// "Whenever a spell or ability an opponent controls causes you to discard
-    /// cards this turn, [body]." Registers a turn-scoped delayed trigger
-    /// (CR 603.4) firing once per such discard with the discarded card bound
-    /// as the trigger source. Expires at cleanup. Pure Intentions.
+    /// CR 603.4 — Pure Intentions: this turn, `body` per discard an opponent's
+    /// spell or ability makes you do (the card as trigger source).
     WheneverOpponentMakesYouDiscardThisTurn { body: Box<Effect> },
 
-    /// "Until end of turn, whenever a card is put into an opponent's graveyard
-    /// from anywhere, [body]." Registers a turn-scoped delayed trigger
-    /// (CR 603.4); the graveyard's owner is bound as the body's `Target(0)`
-    /// (Duskmantle Guildmage — "that player loses 1 life"). Expires at cleanup.
+    /// CR 603.4 — Duskmantle Guildmage: this turn, `body` per card put into an
+    /// opponent's graveyard, its owner as `Target(0)`.
     WheneverCardEntersOpponentGraveyardThisTurn { body: Box<Effect> },
 
-    /// "Whenever you cast a spell this turn, [body]" — like
-    /// `OnYourNextSpellCastThisTurn` but repeating until cleanup
-    /// (Rediscover the Way chapter III; gate the body with an
-    /// `Effect::If` over `Selector::TriggerSource` for spell-type filters).
+    /// Repeating `OnYourNextSpellCastThisTurn` until cleanup (Rediscover the Way
+    /// III); gate type filters with `Effect::If` on `TriggerSource`.
     OnEachSpellCastThisTurn { body: Box<Effect> },
-    /// "When you cast your next spell this turn, [body]." Registers a
-    /// one-shot turn-scoped delayed trigger (CR 603.7e); the cast spell is
-    /// exposed to `body` as `Selector::TriggerSource`. Expires at cleanup.
-    /// Codie, Vociferous Codex.
+    /// CR 603.7e — Codie: `body` on your next spell this turn, one-shot, spell =
+    /// `TriggerSource`.
     OnYourNextSpellCastThisTurn {
         body: Box<Effect>,
     },
-    /// "When you next attack this turn, [body]." A one-shot turn-scoped
-    /// delayed trigger (CR 603.7e) consumed by the controller's next attack
-    /// declaration, after the attackers are tapped — All-Out Assault's
-    /// "untap each creature you control". Expires at cleanup.
+    /// CR 603.7e — All-Out Assault: `body` on your next attack this turn, after
+    /// attackers tap.
     OnYourNextAttackThisTurn {
         body: Box<Effect>,
     },
@@ -13193,54 +10564,40 @@ pub enum Effect {
     /// `stake` life and the loser loses it, then the winner may play the next
     /// round at twice the stake (asked of them; doubling stops at 2^31).
     GameOfChaosRound { opponent: PlayerRef, stake: u32 },
-    /// CR 603.7e — one-shot "when you next cast a spell of `card_type` this
-    /// turn, [body]"; the cast spell is `Selector::TriggerSource`. Casts of
-    /// any other type leave it armed, so Smoldering Stagecoach's "the next
-    /// instant spell and the next sorcery spell you cast this turn each have
-    /// cascade" is two of these, each consumed only by its own type.
+    /// CR 603.7e — one-shot "when you next cast a `card_type` spell this turn,
+    /// [body]" (`TriggerSource` = the spell). Other types leave it armed, so
+    /// Smoldering Stagecoach's instant and sorcery riders are two of these.
     OnYourNextSpellOfTypeThisTurn {
         card_type: crate::card::CardType,
         body: Box<Effect>,
     },
-    /// CR 603.7e — one-shot "when you next cast a [filter] spell this turn,
-    /// [body]"; the cast spell is `Selector::TriggerSource` and its X is the
-    /// body's `Value::XFromCost` (Brass Infiniscope — "a spell with {X} in
-    /// its mana cost … gain half X life"). Non-matching casts leave it armed.
+    /// CR 603.7e — one-shot on your next `filter` spell this turn, spell =
+    /// `TriggerSource`, its X = `Value::XFromCost` (Brass Infiniscope). Others
+    /// leave it armed.
     OnYourNextSpellMatchingThisTurn {
         filter: SelectionRequirement,
         body: Box<Effect>,
     },
-    /// "When you cast a spell with the chosen name for the first time this
-    /// turn, [body]." Like `OnYourNextSpellCastThisTurn` but only fires for a
-    /// cast whose name matches the source's `named_card`; other casts don't
-    /// consume it. One-shot, expires at cleanup. Medomai's Prophecy III.
+    /// Medomai's Prophecy III: `OnYourNextSpellCastThisTurn` for the source's
+    /// `named_card` only; other casts don't consume it.
     OnYourNextNamedSpellThisTurn {
         body: Box<Effect>,
     },
 
-    /// Signal the Clans — "Search your library for three creature cards and
-    /// reveal them. If you reveal three cards with different names, choose one
-    /// of them at random and put that card into your hand. Shuffle the rest
-    /// into your library." Auto-search picks the three highest-mana-value
-    /// distinct-named creature cards (there's never a reason to reveal a
-    /// duplicate name or fewer than three); if three distinct names are found
-    /// one is taken uniformly at random. The library is always shuffled.
+    /// Signal the Clans: search for three differently named creature cards (the
+    /// priciest), take one at random, shuffle. Fewer than three names: nothing
+    /// is taken; it always shuffles.
     SignalTheClans,
-    /// Unexpected Results — "Shuffle your library, then reveal the top card. If
-    /// it's a nonland card, you may cast it without paying its mana cost. If
-    /// it's a land card, you may put it onto the battlefield and return
-    /// Unexpected Results to its owner's hand." The nonland free-cast goes
-    /// through `cast_card_for_free` from the library (declining leaves it on
-    /// top); the land branch puts it onto the battlefield and returns this
-    /// spell to hand via `return_resolving_spell_to_hand`.
+    /// Unexpected Results: shuffle, reveal the top. Nonland: may cast it free
+    /// (`cast_card_for_free`; declined stays on top). Land: may put it onto the
+    /// battlefield and return this spell to hand
+    /// (`return_resolving_spell_to_hand`).
     UnexpectedResults,
-    /// Search your library (and graveyard, `graveyard`) for up to `count`
-    /// `filter` cards with different names (mana value ≤ X when `mv_at_most_x`);
-    /// an opponent chooses two for `denied`, the rest go to `rest`.
-    /// Ecological Appreciation (two shuffled back, the rest onto the
-    /// battlefield), Elemental Teachings (two to the graveyard, the rest onto
-    /// the battlefield tapped). Auto-pickers: caster takes the highest-MV
-    /// candidates in library order, the opponent denies the first two.
+    /// Search library (and graveyard with `graveyard`) for up to `count`
+    /// differently named `filter` cards (mana value ≤ X with `mv_at_most_x`); an
+    /// opponent sends two to `denied`, the rest to `rest` (Ecological
+    /// Appreciation). Auto: priciest in library order; opponent denies the first
+    /// two.
     SearchSplitWithOpponent {
         count: u32,
         filter: SelectionRequirement,
@@ -13253,14 +10610,10 @@ pub enum Effect {
         #[serde(default)]
         denied_smallest: bool,
     },
-    /// Fact or Fiction / Atris — reveal the top `count` cards of your library;
-    /// an opponent separates them into two piles; put one pile into your hand
-    /// and the other into your graveyard. The split + pick are modeled by a
-    /// value heuristic (opponent isolates the single highest-mana-value card;
-    /// you keep the pile with the greater total mana value), so it resolves
-    /// without an interactive `Decision::SplitPiles`.
-    /// `to_bottom` sends the unchosen pile to the bottom of the library
-    /// instead of the graveyard (Jace, Architect of Thought's −2).
+    /// Fact or Fiction: reveal the top `count`; an opponent splits two piles; one
+    /// to hand, one to the graveyard (`to_bottom`: the bottom — Jace, Architect
+    /// of Thought). Heuristic instead of `Decision::SplitPiles`: the opponent
+    /// isolates the priciest card, you keep the higher total.
     FactOrFiction {
         count: Value,
         #[serde(default)]
@@ -13275,12 +10628,9 @@ pub enum Effect {
     /// hand; you may cast the exiled card without paying its mana cost.
     AllureOfTheUnknown,
 
-    /// Possibility Storm — fires when a player casts a spell from their hand
-    /// (the cast spell is the trigger source). That player exiles the spell,
-    /// then exiles cards from the top of their library until they exile one
-    /// sharing a card type with it; they may cast that card without paying
-    /// its mana cost. All cards exiled this way then go to the bottom of
-    /// their library in a random order.
+    /// Possibility Storm (trigger source = the spell cast from hand): exile it,
+    /// exile from the top until a card sharing a type, may cast that free; all
+    /// exiled cards bottom at random.
     PossibilityStorm,
 
     /// CR 614 — "Permanents enter tapped this turn" (Due Respect). A
@@ -13307,10 +10657,9 @@ pub enum Effect {
     /// counters on it equal to its mana value. If it doesn't have suspend, it
     /// gains suspend" (The Eleventh Doctor, The Wedding of River Song).
     MayExileFromHandSuspended { who: PlayerRef, filter: SelectionRequirement },
-    /// Alaundo the Seer — `who` exiles a card from their hand with time
-    /// counters equal to its mana value; it gains only suspend's last-counter
-    /// cast (no upkeep tick, CR 702.62a). Then a time counter comes off each
-    /// other card `who` owns in exile, through the suspend funnel.
+    /// Alaundo the Seer: exile a hand card with time counters equal to its mana
+    /// value (only the last-counter cast, no upkeep tick, CR 702.62a), then tick
+    /// each other exiled card of `who`'s.
     ExileFromHandWithTimeCountersThenTick { who: PlayerRef },
     /// "Choose a suspended card you own and remove `amount` time counters from
     /// it" (Amy Pond) — through the suspend funnel, so the last one casts it
@@ -13332,20 +10681,15 @@ pub enum Effect {
     /// then free-cast one of the *other* cards exiled with the source.
     KnowledgePool,
 
-    /// "Pay {cost} or you lose the game." Used for pact upkeep payments
-    /// (Pact of Negation, Summoner's Pact). Auto-pays when the controller
-    /// can afford; eliminates the controller otherwise. (No interactive
-    /// "do I want to pay?" prompt yet — pact costs are virtually always
-    /// paid, and skipping the prompt avoids another suspend path.)
+    /// "Pay {cost} or lose the game" (pact upkeeps): auto-pays if affordable,
+    /// else the controller loses. No prompt; pacts are ~always paid.
     PayOrLoseGame {
         mana_cost: crate::mana::ManaCost,
         life_cost: u32,
     },
 
-    /// Add `count` "first-spell tax" charges against each player resolved
-    /// by the selector. Each charge taxes that player's next spell {1}
-    /// more (consumed at cast time via `consume_first_spell_tax`). Used by
-    /// Chancellor of the Annex's opening-hand reveal — `who: EachOpponent`.
+    /// Chancellor of the Annex: `count` first-spell taxes on each player, each
+    /// adding {1} to their next spell (`consume_first_spell_tax`).
     AddFirstSpellTax {
         who: PlayerRef,
         count: Value,
@@ -13356,35 +10700,18 @@ pub enum Effect {
     /// Cleared in `do_untap`. Used by Teferi, Time Raveler's +1.
     GrantSorceriesAsFlash { who: PlayerRef },
 
-    /// "Reveal cards from the top of `who`'s library until you reveal a
-    /// card matching `find`, or `cap` cards have been revealed. Put the
-    /// found card (if any) into `to`; mill the rest, lose 1 life per
-    /// card revealed." Used by Spoils of the Vault.
-    ///
-    /// The auto-decider picks the **first** matching card (so the search
-    /// resolves deterministically in tests). Real Oracle has the player
-    /// name a card up-front; we bypass that, instead matching anything
-    /// passing `find`. The "lose 1 per revealed" rider is wired to
-    /// `life_per_revealed` so callers can disable it (Spoils → 1; future
-    /// "search until type, no life cost" cards → 0).
-    ///
-    /// `miss_dest` controls where the non-matching revealed cards end
-    /// up. Defaults to `RevealMissDest::Graveyard` for snapshot
-    /// back-compat — the previous behavior. Several Strixhaven cards
-    /// (Geometer's Arthropod, Paradox Surveyor, Follow the Lumarets)
-    /// printed-want misses placed on the bottom of the library in
-    /// random order; pass `RevealMissDest::BottomRandom` to honor that.
-    /// "Reveal cards from the top of `who`'s library until you reveal
-    /// `count` cards matching `find`. Put them into `to`, then put the rest
-    /// on the bottom in a random order" (Old Stickfingers) — one reveal, so
-    /// it stops when the library runs out rather than re-reading the bottom.
+    /// Old Stickfingers: reveal until `count` `find` cards, put them into `to`,
+    /// bottom the rest at random. One reveal, so it stops at the library's end.
     RevealUntilNFound { who: PlayerRef, find: SelectionRequirement, count: Value, to: ZoneDest },
-    /// Vivid (Sanar, Innovative First-Year): "reveal cards from the top of your
-    /// library until you reveal `count` nonland cards. For each color among
-    /// permanents you control, you may exile a card of that color from among
-    /// the revealed cards. Then shuffle. You may cast the exiled cards this
-    /// turn" (paying their costs).
+    /// Vivid (Sanar, Innovative First-Year): reveal until `count` nonland cards;
+    /// per color among your permanents, may exile one of that color; shuffle;
+    /// cast the exiled cards this turn at cost.
     RevealUntilNonlandsExileOnePerColor { count: Value },
+    /// Spoils of the Vault: reveal until a `find` card or `cap` cards; the find
+    /// goes to `to`, the rest to `miss_dest`, losing `life_per_revealed` per card.
+    /// Auto takes the first match; the printed card-naming is bypassed by
+    /// `find`. `miss_dest` defaults to `RevealMissDest::Graveyard` for snapshot
+    /// back-compat; SOS cards use `BottomRandom` (Geometer's Arthropod).
     RevealUntilFind {
         who: PlayerRef,
         find: SelectionRequirement,
@@ -13395,29 +10722,18 @@ pub enum Effect {
         miss_dest: RevealMissDest,
     },
 
-    /// CR-style "impulse exile until a unique name" — Tainted Pact. Exile
-    /// the top card of `who`'s library; they may put it into their hand
-    /// unless it shares a name with a card already exiled this way, in which
-    /// case the process ends with that card exiled. Repeat until a card is
-    /// taken or a duplicate name is exiled (or the library empties). The
-    /// "you may keep digging" choice is asked of the controller via
-    /// `Decision::OptionalTrigger`; the default (AutoDecider) takes the first
-    /// uniquely-named card, and a `Bool(true)` answer means "decline, keep
-    /// digging."
+    /// Tainted Pact: exile `who`'s top card; take it, or keep digging
+    /// (`Decision::OptionalTrigger`, `Bool(true)` = dig), until a card is taken,
+    /// a duplicate name is exiled, or the library empties. AutoDecider takes the
+    /// first uniquely named card.
     ExileUntilDuplicateName { who: PlayerRef },
 
-    /// Grant the controller one additional land play this turn. Used by
-    /// Explore, Dryad of the Ilysian Grove, Oracle of Mul Daya, and similar
-    /// "you may play an additional land" effects. Bumps
-    /// `Player.extra_land_plays` by `count`.
+    /// `count` extra land plays this turn (`Player.extra_land_plays`) — Explore,
+    /// Oracle of Mul Daya.
     GrantExtraLandPlay { who: PlayerRef, count: Value },
 
-    /// "As [this] enters, choose a creature type." Used by Cavern of Souls.
-    /// Asks the controller via the `ChooseCreatureType` decision and stores
-    /// the chosen type on the source permanent's `chosen_creature_type`
-    /// field. Subsequent cast paths consult that field via
-    /// `caster_grants_uncounterable` to gate which creature spells the
-    /// Cavern protects (only those that share the named type).
+    /// "As this enters, choose a creature type" (Cavern of Souls): stored on the
+    /// source's `chosen_creature_type`, read by `caster_grants_uncounterable`.
     NameCreatureType { what: Selector },
 
     /// "As this enters, choose a planeswalker type" (Deification). Asked as a
@@ -13429,23 +10745,17 @@ pub enum Effect {
     /// (Callous Oppressor — "an opponent chooses a creature type").
     NameCreatureTypeBy { what: Selector, who: PlayerRef },
 
-    /// As [`Effect::NameCreatureType`], but the choice is limited to a closed
-    /// list — A Killer Among Us's "secretly choose Human, Merfolk, or
-    /// Goblin". Only `options` are offered, and an answer outside them is
-    /// clamped to the first.
+    /// [`Effect::NameCreatureType`] over a closed list (A Killer Among Us); an
+    /// answer outside `options` is clamped to the first.
     NameCreatureTypeAmong { what: Selector, options: Vec<crate::card::CreatureType> },
 
-    /// CR 201.3 — "As [this] enters, choose a card name." Pithing Needle,
-    /// Phyrexian Revoker. Asks the controller via the `NameCard` decision and
-    /// stores the chosen name on the source permanent's `named_card` field;
-    /// `activate_ability` then suppresses non-mana activated abilities of
-    /// sources with that name. `what` selects the permanent to stamp
-    /// (typically `Selector::This`).
+    /// CR 201.3 — "as this enters, choose a card name" (Pithing Needle), stored
+    /// on `what`'s `named_card`; `activate_ability` suppresses that name's
+    /// non-mana abilities.
     ///
-    /// CR 201.4a — `restrict_to` narrows the namespace to card names whose
-    /// printed characteristics match ("choose a LAND card name" — Petrified
-    /// Hamlet). The suggestion feed is filtered and an off-namespace answer is
-    /// rejected. `None` allows any card name.
+    /// CR 201.4a — `restrict_to` narrows to names with matching printed
+    /// characteristics ("a land card name" — Petrified Hamlet); off-namespace
+    /// answers are rejected. `None` = any name.
     NameCard {
         what: Selector,
         #[serde(default)]
@@ -13456,18 +10766,16 @@ pub enum Effect {
     /// next `NameCard` (Day of the Moon's three chapters).
     RememberNamedCard { what: Selector },
 
-    /// "As [this] enters, choose a number." Stores the chosen number on the
-    /// source permanent's `chosen_number` field (Sanctum Prelate — read by the
-    /// chosen-MV noncreature lock). `max` bounds the choice.
-    /// Stamp `n` as the source permanent's `chosen_number` — a branch of an
-    /// `AsEntersChooseMode` naming its pick for statics gated on
-    /// `Value::ChosenNumberOfSource` (Greymond, Avacyn's Stalwart's two
-    /// chosen abilities).
+    /// Stamp `n` as the source's `chosen_number` — an `AsEntersChooseMode` branch
+    /// for statics gated on `Value::ChosenNumberOfSource` (Greymond, Avacyn's
+    /// Stalwart).
     SetSourceChosenNumber(u32),
     /// "As [this] enters, choose a letter" (Katerina of Myra's Marvels): the
     /// letter's index (A = 0 … Z = 25) as the source's `chosen_number`, read
     /// by `SelectionRequirement::NameBeginsWithChosenLetterOfSource`.
     ChooseLetterForSource,
+    /// "As this enters, choose a number" up to `max`, stored as the source's
+    /// `chosen_number` (Sanctum Prelate).
     ChooseNumberForSource {
         max: u32,
         /// The number is life the chooser pays (Phyrexian Processor), so the
@@ -13483,16 +10791,13 @@ pub enum Effect {
         own_creature_pt: bool,
     },
 
-    /// CR 729 — "Players play a Magic subgame, using their libraries as their
-    /// decks. Each player who doesn't win the subgame loses half their life,
-    /// rounded up" (Shahrazad). The nest is bot-piloted and bounded; a stalled
-    /// or drawn subgame has no winner, so everyone pays.
+    /// CR 729 — Shahrazad: a bot-piloted, bounded subgame on the players'
+    /// libraries; non-winners lose half their life rounded up (a stalled or
+    /// drawn one has no winner).
     PlaySubgame,
 
-    /// CR 509.1 — "If each of those creatures could block all creatures the
-    /// other is blocking, remove both from combat; each then blocks all
-    /// creatures the other was blocking" (Sorrow's Path). A no-op when either
-    /// swap would be illegal.
+    /// CR 509.1 — Sorrow's Path: two blockers swap block assignments if each
+    /// could block the other's attackers; else no-op.
     SwapBlockAssignments { a: Selector, b: Selector },
 
     /// CR 614 — grant Kumano's rider until end of turn: a creature `what`
@@ -13517,11 +10822,9 @@ pub enum Effect {
     /// Mount): two delayed triggers, each bound to the other permanent.
     SacrificeEachWhenOtherLeavesThisTurn { a: Selector, b: Selector },
 
-    /// CR 614 — "As this enters, exile `count` creature cards from your
-    /// graveyard. If you can't, put this into its owner's graveyard instead.
-    /// For each card exiled this way, this enters with a +2/+0, +1/+1, or
-    /// +0/+2 counter on it" (Frankenstein's Monster). The kind is chosen per
-    /// exiled card.
+    /// CR 614 — Frankenstein's Monster: as it enters, exile `count` graveyard
+    /// creature cards or go to the graveyard instead; per card a chosen +2/+0,
+    /// +1/+1 or +0/+2 counter.
     EnterExilingGraveyardCreaturesForCounters { count: Value },
 
     /// CR 614 — "As this enters, pay any amount of life", capped by `max`
@@ -13529,94 +10832,65 @@ pub enum Effect {
     /// `chosen_number` for `DynamicPt::ChosenNumberAsEntered` to read.
     PayAnyAmountOfLifeCapped { max: Value },
 
-    /// "As [this] enters, choose a permanent matching `filter`." Stores the
-    /// chosen permanent's id on the source's `chosen_permanent` field
-    /// (Dauntless Bodyguard). `Selector::ChosenPermanentOfSource` reads it
-    /// back. No-op (leaves `None`) when no legal choice exists.
+    /// "As this enters, choose a [filter] permanent", stored as the source's
+    /// `chosen_permanent` (Dauntless Bodyguard); none legal, `None`.
     ChoosePermanentForSource { filter: SelectionRequirement },
 
-    /// CR 201.3 — "Choose a nonland card name. Opponents can't cast spells
-    /// with the chosen name until your next turn" (Academic Probation). Asks
-    /// the resolving controller via the `NameCard` decision and records the
-    /// name in their `opponents_cant_cast_named` lock; the cast-legality gate
-    /// rejects opponents' spells with a matching name until the controller's
-    /// next turn clears it.
+    /// CR 201.3 — Academic Probation: name a nonland card; opponents can't cast
+    /// it until your next turn (`opponents_cant_cast_named`).
     NameOpponentCastLock,
 
-    /// "[That card]'s owner can't cast spells with that name until your next
-    /// turn" (Reflector Mage). Reads the name of the card resolved by `what`
-    /// (typically the just-bounced `Selector::Target(0)`) and records it in
-    /// the resolving controller's `opponents_cant_cast_named` lock — the same
-    /// lock Academic Probation uses, but keyed off a *targeted* card's name
-    /// instead of a chosen one. The cast-legality gate then rejects that
-    /// owner's (an opponent's) spells of that name until the controller's
-    /// next turn clears it.
+    /// Reflector Mage: the name of `what` (usually the bounced `Target(0)`) goes
+    /// in the controller's `opponents_cant_cast_named` lock until their next turn
+    /// — Academic Probation's lock, keyed off a target.
     LockTargetNameUntilYourNextTurn { what: Selector },
     /// "Your opponents can't cast spells with mana value `mv` until your next
     /// turn" (Living Breakthrough): recorded in the controller's
     /// `opponents_cant_cast_mv`, cleared as that player's next turn begins.
     LockOpponentsManaValueUntilYourNextTurn { mv: Value },
 
-    /// "[Player] skips their next `count` turns." Bumps the affected
-    /// player's `skip_turns` counter; the turn-advance logic in
-    /// `do_cleanup` decrements and bypasses each scheduled-skip turn.
-    /// Used by Ral Zarek, Guest Lecturer's -7 ult ("Flip five coins.
-    /// Target opponent skips their next X turns, where X is the number
-    /// of coins that came up heads.") via a `FlipCoin` + `SkipTurns`
-    /// chain.
+    /// "[Player] skips their next `count` turns": bumps `skip_turns`, consumed by
+    /// `do_cleanup`'s turn advance (Ral Zarek, Guest Lecturer's -7 with
+    /// `FlipCoin`).
     SkipTurns { who: PlayerRef, count: Value },
-    /// CR 506 — "[Player] skips their next combat phase" (Stonehorn
-    /// Dignitary, Fog Bank-adjacent tempo). Bumps `who`'s `skip_next_combat`
-    /// counter; `advance_step` consumes it when their turn would enter Begin
-    /// Combat, jumping to the postcombat main.
+    /// CR 506 — `who` skips their next combat phase (`skip_next_combat`,
+    /// consumed by `advance_step`). Stonehorn Dignitary.
     SkipNextCombatPhase { who: PlayerRef },
     /// CR 725 — `who` becomes the monarch. "You become the monarch."
     BecomeMonarch { who: PlayerRef },
     /// CR 725 — "`who` can't become the monarch this turn" (Jared Carthalion,
     /// True Heir): every way of becoming it is skipped until cleanup.
     CantBecomeMonarchThisTurn { who: PlayerRef },
-    /// CR 701.54 — "the Ring tempts you." Increments `who`'s ring-temptation
-    /// count (capped at 4) and lets them designate a creature they control as
-    /// their Ring-bearer. The bearer-specific abilities (can't-be-blocked-by-
-    /// greater-power at 1+, attack loot at 2+, blocked-creature sacrifice at
-    /// 3+, combat-damage drain at 4+) are applied directly off the player's
-    /// temptation level rather than synthesized as a literal emblem.
+    /// CR 701.54 — the Ring tempts `who`: temptation count +1 (max 4) and a
+    /// Ring-bearer chosen. Bearer abilities are read off the level rather than
+    /// an emblem.
     RingTempts { who: PlayerRef },
-    /// CR 701.54c (level 3+) — register every creature in `what` to be
-    /// sacrificed by its controller at end of combat (reuses the
-    /// `attacking_token_cleanup` funnel). Used for The Ring-bearer's
-    /// "blocking creature's controller sacrifices it at end of combat."
+    /// CR 701.54c — each `what` creature is sacrificed at end of combat (via
+    /// `attacking_token_cleanup`): the Ring-bearer's level 3.
     SacrificeAtEndOfCombat { what: Selector },
-    /// CR 702.131 — Ascend. If `who` controls ten or more permanents, they
-    /// get the city's blessing (a permanent player designation). A no-op
-    /// otherwise. "Ascend" on a sorcery/instant resolves once; the
-    /// permanent-static variant re-checks each time it's seen.
+    /// CR 702.131 — Ascend: with ten or more permanents `who` gets the city's
+    /// blessing. One-shot here; the static form re-checks.
     Ascend { who: PlayerRef },
     /// CR 731 — "it becomes day." Sets the game's day designation.
     BecomeDay,
     /// CR 731 — "it becomes night." Sets the game's night designation.
     BecomeNight,
-    /// CR 500.7 — "[Player] takes [count] extra turn(s) after this one."
-    /// Banks `count` onto each resolved player's `extra_turns`; consumed
-    /// by `advance_turn`. Time Walk, Temporal Manipulation, Ral Zarek's
-    /// -7 coin-flip emblem.
+    /// CR 500.7 — extra turn(s) after this one (`extra_turns`, consumed by
+    /// `advance_turn`). Time Walk.
     TakeExtraTurn { who: PlayerRef, count: Value },
     /// "During that turn, power-up abilities can't be activated" (Kang the
     /// Conqueror): marks `who`'s newest banked extra turn (CR 500.7).
     PowerUpLockedDuringExtraTurn { who: PlayerRef },
-    /// CR 701.35 — "Put target creature on the bottom of its owner's library.
-    /// That creature's controller reveals cards from the top of their library
-    /// until they reveal a creature card, puts it onto the battlefield, and
-    /// the rest on the bottom in any order." Proteus Staff.
+    /// Proteus Staff: bottom the target creature; its controller reveals until a
+    /// creature card, deploys it, bottoms the rest.
     BottomThenRevealUntilCreature { what: Selector },
     /// "Each player exiles the top card of their library. The player who
     /// exiled the card with the greatest mana value takes an extra turn after
     /// this one." Ties re-run over the tied players (Timesifter).
     ExileTopGreatestManaValueTakesExtraTurn,
-    /// "This creature gains all activated abilities of target creature until
-    /// end of turn" (Quicksilver Elemental) — the grants are stamped onto the
-    /// source's `granted_activated_eot`, or onto each permanent `to` names
-    /// ("each Horror you control gains…", Grell Philosopher).
+    /// Quicksilver Elemental: gain `from`'s activated abilities this turn
+    /// (`granted_activated_eot`), or give them to each `to` permanent (Grell
+    /// Philosopher).
     GainAllActivatedAbilitiesOf {
         what: Selector,
         duration: Duration,
@@ -13627,10 +10901,8 @@ pub enum Effect {
         #[serde(default)]
         spend_as_any: Option<crate::mana::Color>,
     },
-    /// CR 701.12 — "Its controller chooses target permanent another player
-    /// controls that shares a card type with it. Exchange control of those
-    /// permanents." (Confusion in the Ranks.) The partner is picked as the
-    /// effect resolves; the auto-picker takes the highest mana value.
+    /// CR 701.12 — Confusion in the Ranks: exchange control with a permanent of
+    /// another player sharing a type, picked at resolution (auto: priciest).
     ExchangeControlWithSharedType { what: Selector },
     /// "Search your library for a nonland card and reveal it. Each opponent who
     /// cast a spell this turn with the same name as that card loses `amount`
@@ -13651,20 +10923,15 @@ pub enum Effect {
     /// this turn." The affected player picks draw step / main phase / combat
     /// phase (`Decision::ChooseModes`); the pick is turn-scoped. Fatespinner.
     ChooseStepToSkipThisTurn { who: PlayerRef },
-    /// CR 724 — "End the turn." Exiles all spells and abilities from the
-    /// stack (including the resolving card), removes everything from combat,
-    /// and skips straight to the cleanup step. Sundial of the Infinite,
-    /// Day's Undoing.
+    /// CR 724 — end the turn: exile the stack, remove everything from combat,
+    /// jump to cleanup. Sundial of the Infinite.
     EndTheTurn,
-    /// CR 724.2 — "End the combat phase." Exiles the stack (the resolving card
-    /// too), removes everything from combat and jumps to the next main phase
-    /// without an end of combat step (724.2e). No-op outside combat (724.2g).
-    /// Mandate of Peace.
+    /// CR 724.2 — end the combat phase: exile the stack, clear combat, go to the
+    /// next main without end of combat (724.2e). No-op outside combat. Mandate
+    /// of Peace.
     EndTheCombatPhase,
-    /// CR 614 — "Until end of turn, if a player taps a land for mana, it
-    /// produces [something else] instead of any other type and amount."
-    /// `mine_only` scopes it to the controller's own land taps (Harvest
-    /// Mage); `nonbasic_only` to nonbasic lands (Pale Moon).
+    /// CR 614 — this turn, a land tapped for mana makes something else instead.
+    /// `mine_only`: your lands (Harvest Mage); `nonbasic_only` (Pale Moon).
     ReplaceLandManaThisTurn {
         #[serde(default)]
         mine_only: bool,
@@ -13677,43 +10944,33 @@ pub enum Effect {
         #[serde(default)]
         land_type: Option<crate::card::LandType>,
     },
-    /// CR 615.7 — "Prevent all damage a [filter] source of your choice would
-    /// deal this turn." The source is chosen as the effect resolves among
-    /// battlefield permanents and stack spells matching `filter` (AutoDecider
-    /// picks a stack spell first, else the highest-power permanent).
-    /// Burrenton Forge-Tender. `gain_life_from_colors` adds Samite
-    /// Ministration's "whenever damage from a black or red source is prevented
-    /// this way, you gain that much life" rider (empty = no refund).
+    /// CR 615.7 — prevent all damage a chosen `filter` source (battlefield or
+    /// stack; auto: a stack spell, else the strongest permanent) would deal this
+    /// turn (Burrenton Forge-Tender). `gain_life_from_colors`: Samite
+    /// Ministration's refund (empty = none).
     PreventAllDamageFromChosenSourceThisTurn {
         filter: crate::card::SelectionRequirement,
         gain_life_from_colors: Vec<crate::mana::Color>,
     },
-    /// CR 615.8 — "The next time a source of your choice would deal damage to
-    /// you this turn, prevent that damage. When damage is prevented this way,
-    /// [rider]" (New Way Forward). The shield is scoped to the controller and
-    /// expires after one instance; `rider` runs for the controller with the
-    /// prevented amount bound to `Value::TriggerEventAmount` and the shielded
-    /// source bound as `Selector::Target(0)`.
+    /// CR 615.8 — prevent the next damage a chosen source would deal you this
+    /// turn, then `rider` (New Way Forward) with the amount as
+    /// `TriggerEventAmount` and the source as `Target(0)`.
     PreventNextDamageToYouFromChosenSourceWithRider {
         filter: crate::card::SelectionRequirement,
         rider: Box<Effect>,
     },
-    /// "Put `amount` +1/+1 counters *or* charge counters on a permanent
-    /// matching `onto` you control" (Dismantle) — both the counter kind and the
-    /// recipient are picked as the effect resolves. A `wants_ui` controller
-    /// gets a `ChooseModes` kind pick and a `ChooseTarget` recipient pick;
-    /// other seats take the first listed kind and the highest-mana-value
-    /// recipient. A zero `amount` or an empty candidate set is a no-op.
+    /// Dismantle: put `amount` +1/+1 *or* charge counters on your `onto`
+    /// permanent, kind and recipient picked at resolution (UI: `ChooseModes` +
+    /// `ChooseTarget`; others: first kind, priciest recipient). No-op at zero or
+    /// with no candidate.
     AddCountersOfChosenKind {
         onto: crate::card::SelectionRequirement,
         kinds: Vec<CounterType>,
         amount: Value,
     },
-    /// CR 615.7 — "Prevent all damage `what` would deal this turn." The
-    /// targeted sibling of `PreventAllDamageFromChosenSourceThisTurn`; `what`
-    /// may name a permanent or a spell on the stack. With `gain_life`, the
-    /// effect's controller gains life equal to the damage prevented this way,
-    /// event by event (Hallow).
+    /// CR 615.7 — prevent all damage `what` (permanent or stack spell) would
+    /// deal this turn; targeted `PreventAllDamageFromChosenSourceThisTurn`.
+    /// `gain_life`: gain the prevented amount, per event (Hallow).
     PreventAllDamageFromTargetThisTurn {
         what: Selector,
         #[serde(default)]
@@ -13724,14 +10981,11 @@ pub enum Effect {
         #[serde(default)]
         next_instance_only: bool,
     },
-    /// CR 615.7 — "The next time a [filter] source of your choice would deal
-    /// damage to you this turn, prevent that damage." A one-event,
-    /// source-restricted shield around the controller. Circle of Protection
-    /// cycle.
-    /// CR 615.7 — "The next time a [filter] source of your choice would deal
-    /// damage to you this turn, prevent all but 1 of that damage"
-    /// (Forcefield): a one-event `all_but: 1` shield.
+    /// CR 615.7 — prevent all but 1 of the next damage a chosen [filter] source
+    /// would deal you this turn (Forcefield): a one-event `all_but: 1` shield.
     PreventAllButOneFromChosenSource { filter: crate::card::SelectionRequirement },
+    /// CR 615.7 — prevent the next damage a chosen [filter] source would deal you
+    /// this turn: a one-event shield (Circles of Protection).
     PreventNextDamageFromChosenSource {
         filter: crate::card::SelectionRequirement,
         /// Deflecting Palm — damage prevented by this shield is dealt to
@@ -13761,10 +11015,8 @@ pub enum Effect {
         #[serde(default)]
         exile_top_per_prevented: bool,
     },
-    /// CR 615.7 — "Prevent the next `amount` damage that a source of your
-    /// choice would deal to you and/or permanents you control this turn. If
-    /// damage is prevented this way, deal that much damage to `to`."
-    /// One shared pool across the whole team (Refraction Trap).
+    /// CR 615.7 — Refraction Trap: prevent the next `amount` from a chosen source
+    /// to you and your permanents (one shared pool), dealing that much to `to`.
     PreventNextFromChosenSourceToTeam {
         amount: Value,
         to: Selector,
@@ -13778,12 +11030,10 @@ pub enum Effect {
         #[serde(default)]
         gain_life_colors: Vec<Color>,
     },
-    /// CR 615.7 — "The next time a source of your choice would deal damage to
-    /// any target this turn, prevent that damage." Unlike
-    /// `PreventNextFromChosenSourceToTeam` the shield floats over every
-    /// recipient, so it soaks whichever damage event the chosen source deals
-    /// first (Martyr's Cause). `what` names the source outright instead of
-    /// asking (Impulsive Maneuvers' losing flip aims at the attacker).
+    /// CR 615.7 — prevent the next damage a chosen source would deal to any
+    /// target this turn: the shield covers every recipient, unlike
+    /// `PreventNextFromChosenSourceToTeam` (Martyr's Cause). `what` names the
+    /// source instead of asking (Impulsive Maneuvers).
     PreventNextEventFromChosenSourceAnywhere {
         #[serde(default)]
         what: Option<Selector>,
@@ -13797,10 +11047,9 @@ pub enum Effect {
     /// `duration`" (Samite Elder). Reads the live colors of the permanent(s)
     /// `of` resolves to and grants one `Keyword::Protection` per color.
     GrantProtectionFromColorsOf { what: Selector, of: Selector, duration: Duration },
-    /// "Search your library for any number of cards matching `filter`, exile
-    /// them stamped with this source, then shuffle" (Skyship Weatherlight).
-    /// The linked exile is readable by `Selector::ExiledWithSource` and
-    /// [`Effect::ReturnRandomExiledWithSource`].
+    /// Skyship Weatherlight: search any number of `filter` cards, exile them
+    /// linked to this, shuffle (`Selector::ExiledWithSource`,
+    /// [`Effect::ReturnRandomExiledWithSource`]).
     SearchExileLinked { who: PlayerRef, filter: SelectionRequirement, count: Value },
     /// "Choose a card at random that was exiled with this source. Put it into
     /// its owner's hand" (Skyship Weatherlight's `{4}, {T}`).
@@ -13812,12 +11061,9 @@ pub enum Effect {
     /// The chooser is asked yes/no per result; an auto seat rerolls anything
     /// below the current most-common value.
     RerollStoredResults { what: Selector },
-    /// CR 614.9 — "The next time damage would be dealt to `what` this turn,
-    /// that damage is dealt to `to` instead" (Mirrorwood Treefolk). A one-shot
-    /// per-permanent redirect consumed by the first damage event.
-    /// `chosen_source`: only damage from "a source of your choice", picked on
-    /// resolution (Jade Monolith); `whole_turn`: "all damage … this turn",
-    /// not consumed (Kor Chant).
+    /// CR 614.9 — the next damage to `what` this turn is dealt to `to` instead
+    /// (Mirrorwood Treefolk). `chosen_source`: only from a chosen source (Jade
+    /// Monolith); `whole_turn`: all damage this turn, not consumed (Kor Chant).
     RedirectNextDamageTo {
         what: Selector,
         to: Selector,
@@ -13826,72 +11072,50 @@ pub enum Effect {
         #[serde(default)]
         whole_turn: bool,
     },
-    /// Goblin Game (CR 720-adjacent silliness) — each player secretly hides at
-    /// least one item, all are revealed, each player loses life equal to their
-    /// own count, and the player(s) with the fewest then lose half their life
-    /// rounded up. Counts are asked per seat (`ask_seat_amount`); an auto seat
-    /// hides one.
+    /// Goblin Game: everyone secretly hides 1+ items (`ask_seat_amount`; auto 1),
+    /// loses that much life, and the fewest lose half their life rounded up.
     GoblinGame,
-    /// "Each player reveals their hand, chooses one card of each color from
-    /// it, then discards all other nonland cards" (Noxious Vapors). The keep
-    /// set is one card per color present; multicolored cards count for every
-    /// colour they carry, so a gold card can be the only keep.
+    /// Noxious Vapors: each player keeps one card per color in hand (a gold card
+    /// covers all of its colors) and discards other nonlands.
     EachPlayerKeepsOneOfEachColorDiscardsRest,
     /// "Each player chooses a land they control of each basic land type.
     /// Return those lands to their owners' hands" (Planar Overlay).
     EachPlayerReturnsALandOfEachBasicType,
-    /// Parley — "each player reveals the top card of their library. For each
-    /// nonland card revealed this way, [`then`]. Then each player draws a
-    /// card." The nonland count is published as
-    /// `Value::CardsRevealedThisEffect` for the body to read, and the revealed
-    /// cards stay on top (the draw takes them).
+    /// Parley: each player reveals their top card; `then` per nonland revealed
+    /// (`Value::CardsRevealedThisEffect`), then each draws (the revealed cards).
     Parley { then: Box<Effect> },
     /// "Reveal any number of `filter` cards in your hand, then [`then`]" — the
     /// Urza's Destiny Scent / Seer cycle and Metalworker. The revealed count is
     /// published as `Value::CardsRevealedThisEffect` for the body to read.
     RevealAnyNumberFromHand { filter: crate::card::SelectionRequirement, then: Box<Effect> },
-    /// "Exile `what`, then search its controller's graveyard, hand, and library
-    /// for all cards with the same name and exile them; that player shuffles."
-    /// The Urza's Destiny name-hate cycle (Eradicate, Quash, Scour, Sowing Salt,
-    /// Splinter). `what` may be a stack object (Quash counters it).
+    /// The Urza's Destiny name-hate cycle (Eradicate, Quash): exile `what` (Quash
+    /// counters it) and every same-named card from its controller's graveyard,
+    /// hand and library; they shuffle.
     ExileAllCopiesOfTargetName { what: Selector },
-    /// "Choose a card name. Search `who`'s graveyard, hand, and library for up
-    /// to `count` cards with that name and exile them. Then that player
-    /// shuffles." (Ancient Vendetta.) The name is chosen by the effect's
-    /// controller at resolution.
+    /// Ancient Vendetta: name a card; exile up to `count` of it from `who`'s
+    /// graveyard, hand and library; they shuffle.
     NameCardThenExileFromZones { who: PlayerRef, count: u32 },
-    /// "Exile all tokens with the same name as `what`" (Dual Nature's leave
-    /// trigger). Nontoken permanents sharing the name are untouched; `what`
-    /// resolves off the death/leave LKI snapshot when it has already gone.
-    /// `same_controller`: only tokens `what`'s controller controls ("all tokens
-    /// that player controls with the same name" — Legions to Ashes).
+    /// Dual Nature: exile all tokens named like `what` (read from LKI if gone);
+    /// nontokens untouched. `same_controller`: only `what`'s controller's tokens
+    /// (Legions to Ashes).
     ExileTokensSharingNameWith {
         what: Selector,
         #[serde(default)]
         same_controller: bool,
     },
-    /// "Exile `what`, then return it to the battlefield under its owner's
-    /// control" — an immediate blink (Flicker, Ghostly Flicker, Conjurer's
-    /// Closet, Displacer Kitten, Teleportation Circle). Tokens cease to exist
-    /// (CR 111.7).
+    /// Exile `what` and return it under its owner's control (Ghostly Flicker).
+    /// Tokens cease to exist (CR 111.7).
     ///
-    /// ⚠ **CR 400.7's "new object" holds for everything a card can read —
-    /// tapped state, counters, attachments, summoning sickness, damage — but
-    /// NOT for the `CardId`.** The resolver moves the same instance out and
-    /// back, so the handle survives the blink. The doc here used to say "the
-    /// returned card is a new object" flatly, which is the claim that matters
-    /// and is false in one respect: anything keyed on the id (a delayed
-    /// trigger, an `exiled_with` link, a "that creature" reference held across
-    /// the blink) still matches where the rules say it should have lost track.
-    /// Every shipped user of this effect is a friendly self-blink where that
-    /// cannot be observed; a card that blinks to *break* such a link needs the
-    /// id to change first.
+    /// ⚠ CR 400.7's "new object" holds for everything a card reads (tapped,
+    /// counters, attachments, sickness, damage) but not the `CardId`: the same
+    /// instance goes out and back, so id-keyed state (delayed triggers,
+    /// `exiled_with`, held references) still matches. Harmless for friendly
+    /// self-blinks; a card blinking to *break* such a link needs a fresh id.
     ExileAndReturnToOwner { what: Selector },
-    /// CR 120.4a — "deal `amount` damage to `to`; excess damage is dealt to
-    /// `excess_to` instead." The split happens before the damage event, so the
-    /// creature takes exactly lethal (marked damage and the source's deathtouch
-    /// counted). `condition` gates the rider (Ram Through's "if the creature
-    /// you control has trample"); `None` always redirects.
+    /// CR 120.4a — `amount` damage to `to`, excess to `excess_to`, split before
+    /// the event so the creature takes exactly lethal (marked damage and
+    /// deathtouch counted). `condition` gates the rider (Ram Through's trample);
+    /// `None` always redirects.
     DealDamageExcessTo {
         to: Selector,
         amount: Value,
@@ -13906,70 +11130,51 @@ pub enum Effect {
     /// their hand and discards each card sharing a name with a card spliced
     /// onto that spell (CR 702.47).
     CounterSpellDiscardSplicedNames { what: Selector },
-    /// "Reveal the top `count` cards of your library. For each of those
-    /// cards, put that card into your hand unless any opponent pays
-    /// `life` life. Then exile the rest." (Sword-Point Diplomacy.)
-    /// Opponents are asked in turn order per card via `ask_seat_bool`;
-    /// `payer` asks that one player only ("that player may pay" — Protection
-    /// Racket's per-opponent pass).
+    /// Sword-Point Diplomacy: reveal the top `count`; each card goes to hand
+    /// unless an opponent pays `life` (asked per card in turn order via
+    /// `ask_seat_bool`); the rest are exiled. `payer` asks one player only
+    /// (Protection Racket).
     RevealTopPayOrTake {
         count: Value,
         life: Value,
         #[serde(default)]
         payer: Option<PlayerRef>,
     },
-    /// CR 714.4 (DFC sagas) — "Exile this Saga, then return it to the
-    /// battlefield transformed under your control." The return is a new
-    /// object: lore counters clear and the back face's ETB fires. Fable of
-    /// the Mirror-Breaker chapter III. A `from_graveyard` ability uses the
-    /// same effect to return the card transformed from a graveyard (Garland,
-    /// Knight of Cornelia).
+    /// CR 714.4 — exile this Saga and return it transformed under your control,
+    /// a new object (lore counters clear, back-face ETB fires) — Fable of the
+    /// Mirror-Breaker III. With `from_graveyard`, returns it from a graveyard
+    /// (Garland, Knight of Cornelia).
     ExileSelfReturnTransformed,
-    /// "When this dies, return it to the battlefield tapped and transformed
-    /// under its owner's control" (the LCI Ojer gods). The dies-trigger
-    /// sibling of `ExileSelfReturnTransformed`: from the graveyard only,
-    /// tapped, and under the card's owner rather than the trigger's
-    /// controller (CR 400.3 — a stolen god returns to its owner).
+    /// LCI Ojer gods: "when this dies, return it tapped and transformed under
+    /// its owner's control" — from the graveyard only, to the owner (CR 400.3),
+    /// unlike `ExileSelfReturnTransformed`.
     ReturnSelfTransformedTappedToOwner,
     /// The mirror of `ExileSelfReturnTransformed` — "exile this, then return it
     /// to the battlefield (front face up)". Used by the FIN Dominants' Saga
     /// chapter III to reset the flip cycle.
     ExileSelfReturnFrontFace,
-    /// CR 500.8 — "there is an additional combat phase after this one."
-    /// Banks `count` onto `GameState.additional_combat_phases`; when the
-    /// active player leaves the End of Combat step with the counter set, the
-    /// turn loops back to Begin Combat (a fresh combat phase) instead of
-    /// advancing to the postcombat main. Built for combat-phase activated
-    /// extra-combat effects (Hellkite Charger, Aggravated Assault while in
-    /// combat), usually paired with an `Untap` so creatures can attack again.
-    /// Main-phase-cast "after this main phase, an additional combat + main"
-    /// sorceries (Relentless Assault) use `AdditionalCombatPhaseAfterMain`.
+    /// CR 500.8 — additional combat phase(s) after this one: banks `count` on
+    /// `GameState.additional_combat_phases`, looping End of Combat back to Begin
+    /// Combat. For in-combat extra combats (Hellkite Charger), usually with an
+    /// `Untap`. Main-phase "combat + main" sorceries use
+    /// `AdditionalCombatPhaseAfterMain`.
     AdditionalCombatPhase { count: Value },
-    /// "You choose which creatures attack this turn, and which creatures
-    /// block and how." Master Warcraft — sets `GameState.combat_chooser` to
-    /// the resolving controller; both declaration steps then hand priority to
-    /// that seat instead of the active/defending player. Clears at cleanup.
+    /// Master Warcraft: this turn you declare attackers and blockers
+    /// (`GameState.combat_chooser`); cleared at cleanup.
     ChooseCombatThisTurn,
     /// "You choose which creatures block this turn and how those creatures
     /// block" (Berserker's Frenzy) — `ChooseCombatThisTurn`'s block half: the
     /// resolving controller submits every block declaration this turn.
     ChooseBlocksThisTurn,
-    /// "You choose which creatures block **this combat** and how those
-    /// creatures block" (Odric, Master Tactician): `ChooseBlocksThisTurn`
-    /// ended at the end of this combat, so an additional combat is the
-    /// defenders' own again.
+    /// Odric, Master Tactician: `ChooseBlocksThisTurn` ending with this combat.
     ChooseBlocksThisCombat,
-    /// CR 500.8 — "After this main phase, there is an additional combat
-    /// phase followed by an additional main phase." Banks a combat phase
-    /// that begins when the active player leaves their current main phase;
-    /// the following main phase comes from the normal EndCombat → PostMain
-    /// flow. Relentless Assault.
+    /// CR 500.8 — "after this main phase, an additional combat phase followed by
+    /// an additional main phase": the banked combat begins as the current main
+    /// phase ends; the main follows normally (Relentless Assault).
     AdditionalCombatPhaseAfterMain { count: Value },
-    /// "Only the chosen creatures can attack during that combat phase" (Last
-    /// Night Together, after its `AdditionalCombatPhaseAfterMain`): at the
-    /// beginning of the combat it banked, every creature you control other
-    /// than the resolving spell's target creatures can't attack until end of
-    /// combat (CR 508.1c). The targets are read at resolution.
+    /// Last Night Together: at the start of the combat its
+    /// `AdditionalCombatPhaseAfterMain` banked, your creatures other than the
+    /// spell's targets (read at resolution) can't attack (CR 508.1c).
     OnlyTargetsCanAttackNextCombat,
     /// **Runtime-only** — the delayed half of `OnlyTargetsCanAttackNextCombat`:
     /// each creature you control not in `except` can't attack this combat.
@@ -13985,24 +11190,17 @@ pub enum Effect {
     /// CR 500.8 — "there is an additional beginning phase after this phase"
     /// (Sphinx of the Second Sun), banked on the game.
     AdditionalBeginningPhase { count: Value },
-    /// "At the beginning of each combat this turn, [body]." Registers a
-    /// turn-scoped `DelayedKind::EachCombatThisTurn` delayed trigger that
-    /// runs `body` at the start of every Begin-Combat step for the rest of
-    /// the controller's turn, then expires at cleanup. Full Throttle pairs
-    /// this with `AdditionalCombatPhaseAfterMain` to untap attackers between
-    /// its extra combats.
+    /// "At the beginning of each combat this turn, [body]": a turn-scoped
+    /// `DelayedKind::EachCombatThisTurn`, expiring at cleanup (Full Throttle,
+    /// with `AdditionalCombatPhaseAfterMain`).
     AtEachCombatThisTurn { body: Box<Effect> },
     /// CR 500.8 — "At the beginning of that combat, [body]" after an
     /// `AdditionalCombatPhaseAfterMain` in the same resolution: a one-shot
     /// delayed trigger bound to the combat just banked (Moraug).
     AtTheAddedCombat { body: Box<Effect> },
-    /// CR 114 — "[Player] gets an emblem with '[triggered abilities]'."
-    /// Appends an `Emblem` (named after its source) to the player's
-    /// emblem zone. Emblems never leave; their triggered abilities fire
-    /// from the command zone alongside battlefield permanents (the
-    /// dispatcher walks each player's emblems). Used by planeswalker
-    /// ultimates — Professor Dellian Fel's -6, the upkeep-draw / end-step
-    /// emblems, etc.
+    /// CR 114 — `who` gets an emblem (named after its source) whose triggered
+    /// abilities fire from the command zone. Planeswalker ultimates (Professor
+    /// Dellian Fel).
     CreateEmblem {
         who: PlayerRef,
         name: String,
@@ -14031,14 +11229,9 @@ pub enum Effect {
     /// the controller's spells this turn at the count so far plus `more`.
     CapSpellsThisTurn { more: u32 },
 
-    /// "[Player] wins the game." Used by Approach of the Second Sun's
-    /// second-cast win condition, Coalition Victory, Test of Endurance,
-    /// Felidar Sovereign, and similar alt-win effects. The engine
-    /// eliminates every other player so the standard
-    /// `check_state_based_actions` win-detection path (≤ 1 alive player
-    /// → `game_over = Some(winner)`) promotes the named player to the
-    /// winner on the next SBA pass. No CR violation: the state-based
-    /// action approach matches CR 104.2a's "you win the game" wording.
+    /// "[Player] wins the game" (Approach of the Second Sun, Felidar Sovereign):
+    /// eliminates every other player so the SBA pass (CR 104.2a) declares the
+    /// winner.
     WinGame { who: PlayerRef },
 
     /// CR 104.2a/104.4b — "the player with the highest life total wins the
@@ -14055,38 +11248,29 @@ pub enum Effect {
     /// Strixhaven Stadium's ten-point payoff.
     LoseGame { who: PlayerRef },
 
-    /// "Prevent all combat damage that would be dealt this turn." Sets
-    /// `GameState.prevent_combat_damage_this_turn = true`; combat
-    /// damage resolution (`resolve_combat_damage_with_filter`) reads
-    /// the flag and zeroes every assigned damage value (CR 615.1
-    /// replacement-effect emulation — see the note on the field). The
-    /// flag clears in `do_cleanup` alongside other until-end-of-turn
-    /// state. Used by Owlin Shieldmage's ETB and the Holy Day / fog
-    /// family of effects.
+    /// "Prevent all combat damage this turn" (fogs, Owlin Shieldmage): sets
+    /// `GameState.prevent_combat_damage_this_turn`, which
+    /// `resolve_combat_damage_with_filter` reads to zero assignments (CR 615.1
+    /// emulation; see the field). Cleared in `do_cleanup`.
     PreventAllCombatDamageThisTurn,
     /// CR 615 — "Prevent all combat damage that would be dealt by [filter]
     /// creatures this turn" (Hunter's Ambush's nongreen fog). The filtered
     /// sibling of `PreventAllCombatDamageThisTurn`.
     PreventAllCombatDamageByMatchingThisTurn { filter: crate::card::SelectionRequirement },
 
-    /// CR 615.1 fog with an exception — "Prevent all combat damage this turn
-    /// except combat damage dealt by [filter] creatures." Inspire Awe ("by
-    /// enchanted creatures and enchantment creatures"). Sets the global fog
-    /// flag plus the per-dealer exception filter.
+    /// CR 615.1 — fog except combat damage by `except` creatures (Inspire Awe):
+    /// the global flag plus a per-dealer exception.
     PreventCombatDamageExceptDealtBy { except: SelectionRequirement },
 
-    /// CR 615 — "Prevent all combat damage that would be dealt to `who` this
-    /// turn" (Druid's Deliverance's player-scoped fog). Records the resolved
-    /// player(s) in `GameState.combat_damage_prevented_to_players_this_turn`;
-    /// the combat resolver zeroes any combat hit aimed at them.
+    /// CR 615 — prevent combat damage to `who` this turn
+    /// (`GameState.combat_damage_prevented_to_players_this_turn`). Druid's
+    /// Deliverance.
     PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef },
     /// Take the Bait — "prevent all combat damage that would be dealt to you
     /// and planeswalkers you control this turn".
     PreventAllCombatDamageToPlayerAndWalkersThisTurn { who: PlayerRef },
-    /// CR 615 — "Prevent all damage that would be dealt to you this turn"
-    /// (Selfless Squire): combat or not, from any source. Each prevention
-    /// emits `GameEvent::DamagePrevented`, which
-    /// `EventKind::DamageToPlayerPrevented` reads.
+    /// CR 615 — prevent all damage to you this turn (Selfless Squire), emitting
+    /// `GameEvent::DamagePrevented` per prevention.
     PreventAllDamageToPlayerThisTurn { who: PlayerRef },
     /// CR 615 — "Until your next turn, prevent all damage that would be dealt
     /// to you" (Morningtide's Light): the player-scoped shield cleared as
@@ -14100,42 +11284,31 @@ pub enum Effect {
     /// controls attacks if able" (Rowan Kenrith's +2): a requirement on the
     /// player, so a creature they get later is bound too.
     AttackIfAbleDuringTheirNextTurn { who: Selector },
-    /// CR 508.1d — "Up to one target creature an opponent controls attacks
-    /// [this] during its controller's next turn if able" (Gideon,
-    /// Battle-Forged's +2). The one-creature sibling of
-    /// `LureCreaturesToSourceNextTurn`, kept on the controller's
-    /// `creature_attack_lures`.
+    /// CR 508.1d — "up to one target creature an opponent controls attacks [this]
+    /// next turn if able" (Gideon, Battle-Forged +2): one-creature
+    /// `LureCreaturesToSourceNextTurn`, on `creature_attack_lures`.
     LureTargetToSourceNextTurn { what: Selector },
 
-    /// CR 701.21 — "[source's controller] sacrifices [the source] unless they
-    /// pay {X}, where X is its mana value." The pay-or-sacrifice threat used by
-    /// Soul Tithe (granted to the enchanted permanent via its Aura). Reads the
-    /// source permanent's live mana value; the controller keeps it by paying
-    /// that much generic mana (auto-tapping), otherwise it is sacrificed.
+    /// CR 701.21 — the source's controller sacrifices it unless they pay {X},
+    /// X its live mana value (auto-tapping). Soul Tithe.
     SacrificeSourceUnlessPayManaValue,
 
-    /// "When this enters, sacrifice it unless you pay [cost]." The fixed-cost
-    /// sibling of `SacrificeSourceUnlessPayManaValue` — the printed cost is a
-    /// literal `ManaCost`, not the source's mana value (which is 0 for a land).
-    /// The source's controller keeps it by paying (auto-tap), else it is
-    /// sacrificed. Gateway Plaza, Transguild Promenade ("pay {1}").
+    /// "When this enters, sacrifice it unless you pay [cost]" (Gateway Plaza):
+    /// fixed-cost sibling of `SacrificeSourceUnlessPayManaValue` (a land's mana
+    /// value is 0). Auto-tapped.
     SacrificeSourceUnlessPay { cost: crate::mana::ManaCost },
 
-    /// "Shuffle any number of cards from your hand into your library, then
-    /// draw that many cards" (Credit Voucher). The controller picks the subset
-    /// via `Decision::ChooseCards`; AutoDecider shuffles none. With `bottom`
-    /// the cards go on the bottom of the library instead of being shuffled in
-    /// (Valakut Awakening).
+    /// "Shuffle any number of cards from hand into your library, then draw that
+    /// many" (Credit Voucher), via `Decision::ChooseCards` (AutoDecider: none).
+    /// `bottom` bottoms them instead (Valakut Awakening).
     ShuffleAnyNumberFromHandThenDraw {
         who: PlayerRef,
         #[serde(default)]
         bottom: bool,
     },
 
-    /// "Each player reveals the top card of their library. If all cards
-    /// revealed this way are creature cards, put those cards onto the
-    /// battlefield under their owners' control" (Game Preserve). Nothing moves
-    /// unless every revealed card is a creature.
+    /// Game Preserve: everyone reveals their top card; if all are creatures they
+    /// all enter under their owners.
     EachPlayerRevealTopAllEnterIfAllCreatures,
 
     /// "Each player reveals the top `count` cards of their library, puts all
@@ -14169,52 +11342,41 @@ pub enum Effect {
     /// CR 801.5a keeps the pick inside both players' ranges of influence.
     OpponentChoosesTargetForDamage { amount: Value },
 
-    /// CR 614.9 — "Prevent all combat damage that would be dealt to and dealt
-    /// by `target` this turn." Adds the target creature to
-    /// `GameState.combat_damage_prevented_creatures`; the combat resolver
-    /// then skips that creature in both directions. Maze of Ith.
+    /// CR 614.9 — Maze of Ith: no combat damage to or by `target` this turn
+    /// (`GameState.combat_damage_prevented_creatures`).
     PreventAllCombatDamageInvolving { target: Selector },
 
-    /// CR 615 — "Prevent all combat damage that would be dealt to `target` this
-    /// turn." Incoming-only (the creature still deals its own combat damage) —
-    /// the turn-scoped sibling of the `PreventAllCombatDamageToThis` static.
-    /// Adds the target to `GameState.combat_damage_prevented_to_this_turn`,
-    /// which the resolver consults via `combat_damage_prevented_to_self`.
-    /// Fleeting Flight.
+    /// CR 615 — prevent all combat damage dealt *to* `target` this turn (it still
+    /// deals its own) — Fleeting Flight. Turn-scoped `PreventAllCombatDamageToThis`
+    /// via `GameState.combat_damage_prevented_to_this_turn`.
     PreventCombatDamageToTargetThisTurn { target: Selector },
 
-    /// "Prevent all combat damage that would be dealt by target creature this
-    /// turn" — the deal-side mirror of `PreventCombatDamageToTargetThisTurn`.
-    /// Adds the target to `GameState.combat_damage_prevented_by_this_turn`.
-    /// Azorius Ploy.
+    /// Azorius Ploy: no combat damage dealt by `target` this turn
+    /// (`combat_damage_prevented_by_this_turn`), mirror of
+    /// `PreventCombatDamageToTargetThisTurn`.
     PreventCombatDamageByTargetThisTurn { target: Selector },
     /// CR 615 — "Prevent all damage `target` would deal this turn", combat and
     /// noncombat alike (Chain of Silence). The all-damage superset of
     /// `PreventCombatDamageByTargetThisTurn`.
     PreventAllDamageByTargetThisTurn { target: Selector },
 
-    /// CR 615 — "Prevent all damage that would be dealt this turn by [filter]
-    /// creatures" (Obscuring Haze's "by creatures your opponents control").
+    /// CR 615 — "prevent all damage that would be dealt this turn by [filter]
+    /// creatures" (Obscuring Haze).
     ///
-    /// The all-damage superset of
+    /// All-damage superset of
     /// [`PreventAllCombatDamageByMatchingThisTurn`](Self::PreventAllCombatDamageByMatchingThisTurn)
-    /// and the filtered sibling of
+    /// and filtered sibling of
     /// [`PreventAllDamageByTargetThisTurn`](Self::PreventAllDamageByTargetThisTurn).
-    /// The **filter**, not a snapshot of ids: the printed effect asks what a
-    /// source is when the damage would be dealt, so a creature that changes
-    /// controller — or one that enters after this resolves — is covered or
-    /// not by its state then. The controller-relative atoms
-    /// (`ControlledByOpponent`) are evaluated from the seat that resolved it.
+    /// Kept as a filter, not an id snapshot: a source is judged when the damage
+    /// would be dealt, so control changes and later arrivals count.
+    /// Controller-relative atoms read from the resolving seat.
     PreventAllDamageByMatchingThisTurn { filter: crate::card::SelectionRequirement },
-    /// Note that the resolving source did something this turn, for
-    /// `Predicate::SourceMarkedThisTurn` to read back until cleanup (Thirsting
-    /// Axe's "if equipped creature didn't deal combat damage to a creature
-    /// this turn": a combat-damage trigger marks, the end step reads).
+    /// Mark that the source did something this turn, for
+    /// `Predicate::SourceMarkedThisTurn` until cleanup (Thirsting Axe).
     MarkSourceThisTurn,
-    /// CR 615.1 — "prevent all combat damage that would be dealt this turn to
-    /// [filter]" (Pack Leader's Dogs you control). A filter judged when the
-    /// damage would be dealt, from the resolving seat, so a Dog that arrives
-    /// later is covered and one that changes controller isn't.
+    /// CR 615.1 — prevent combat damage this turn to `filter` (Pack Leader),
+    /// judged when dealt from the resolving seat, so later arrivals count and
+    /// controller changes don't.
     PreventCombatDamageToMatchingThisTurn { filter: crate::card::SelectionRequirement },
 
     /// "You may have `dealer` deal damage equal to its power to `to`. If you
@@ -14222,20 +11384,16 @@ pub enum Effect {
     /// becomes-blocked trigger; declining leaves combat untouched.
     MayDealPowerThenNoCombatDamage { dealer: Selector, to: Selector },
 
-    /// "Target creature can't block `source` this turn." Records a
-    /// `(target, source)` pair in `GameState.cant_block_pairs`; the
-    /// declare-blockers validator rejects that specific block. Kozilek's
-    /// Pathfinder ({C}: target creature can't block this creature this turn).
+    /// Kozilek's Pathfinder: `target` can't block `source` this turn
+    /// (`GameState.cant_block_pairs`).
     CantBlockSourceThisTurn { target: Selector },
     /// CR 509.1b — "creatures matching `filter` can't block this turn"
     /// (Concussive Bolt's metalcraft rider). Snapshots the matching creatures
     /// at resolution; cleared at cleanup.
     MatchingCantBlockThisTurn { filter: SelectionRequirement },
 
-    /// CR 508.1a — "[creatures] can attack this turn as though they didn't
-    /// have defender." Records the resolved permanents in
-    /// `GameState.attack_despite_defender_this_turn`; cleared at cleanup
-    /// (Krotiq Nestguard's activated ability).
+    /// CR 508.1a — may attack this turn as though without defender
+    /// (`attack_despite_defender_this_turn`). Krotiq Nestguard.
     AttackDespiteDefenderThisTurn { what: Selector },
 
     /// CR 509.1c — "Target creature blocks `source` this turn if able."
@@ -14282,44 +11440,34 @@ pub enum Effect {
         no_regen: bool,
     },
 
-    /// "Prevent the next N damage that would be dealt to `target` this
-    /// turn." (CR 615.7) Pushes a per-target prevention shield consumed
-    /// by the non-combat damage path; the shield expires at cleanup.
-    /// Samite Healer, Healing Salve, Awe Strike-style effects.
+    /// CR 615.7 — prevent the next N damage to `target` this turn (Samite
+    /// Healer): a per-target shield expiring at cleanup.
     PreventNextDamage { target: Selector, amount: Value },
-    /// "Prevent the next N damage that would be dealt to `target` this turn.
-    /// For each 1 damage prevented this way, put a +1/+1 counter on it."
-    /// Test of Faith — the counter rider rides the shield
-    /// (`counters_on_target`). `counter` overrides the kind (Sacred Boon's
-    /// +0/+1); `None` is +1/+1.
+    /// Test of Faith: prevent the next N damage to `target` this turn, a +1/+1
+    /// counter per point prevented (`counters_on_target`). `counter` overrides
+    /// the kind (Sacred Boon's +0/+1).
     PreventNextDamageWithCounters {
         target: Selector,
         amount: Value,
         #[serde(default)]
         counter: Option<crate::card::CounterType>,
     },
-    /// CR 615.7 — "Prevent the next N damage that would be dealt *by* this
-    /// permanent this turn" (Barbed Wire). The deal-side mirror of
-    /// `PreventNextDamage`: a floating shield keyed to the source, soaking the
-    /// next N damage it deals to anything.
+    /// CR 615.7 — Barbed Wire: prevent the next N damage this permanent deals
+    /// this turn, a shield keyed to the source.
     PreventNextDamageFromSourceThisTurn { amount: Value },
     /// CR 615 — "The next time a source of your choice would deal damage to
     /// you this turn, prevent half that damage, rounded down" (Dark Sphere).
     PreventNextHalfDamageToYouThisTurn,
-    /// CR 615 — "The next time a source of your choice would deal damage to
-    /// you this turn, that source deals it and this also deals that much to
-    /// the source's controller" (Eye for an Eye). The damage still lands; the
-    /// mirror rides alongside it.
+    /// CR 615 — Eye for an Eye: the next damage a chosen source deals you this
+    /// turn also deals that much to its controller.
     MirrorNextDamageToYouThisTurn,
     /// CR 614.9 — "Until end of turn, if damage would be dealt to any
     /// creature, you may have that damage dealt to you instead" (Blood of the
     /// Martyr). Set on the effect's controller; cleared at end of turn.
     RedirectCreatureDamageToYouThisTurn,
 
-    /// "The next `amount` damage that would be dealt to `target` this turn is
-    /// dealt to `to` instead." (CR 614.9 — Carom, Razia's redirect.) Pushes a
-    /// per-target prevention shield flagged with `redirect_to`; when it soaks
-    /// damage, that damage is re-dealt to the chosen permanent.
+    /// CR 614.9 — Carom: the next `amount` to `target` this turn is dealt to `to`
+    /// instead (a shield flagged `redirect_to`).
     RedirectNextDamage { target: Selector, to: Selector, amount: Value },
 
     /// CR 614.9 — "The next time `what` would deal combat damage to `to` this
@@ -14327,11 +11475,9 @@ pub enum Effect {
     /// one-event shield on `to`, scoped to `what` and redirecting back onto it.
     RedirectNextDamageBackAtSource { what: Selector, to: Selector },
 
-    /// "Prevent all damage that would be dealt to `target` this turn."
-    /// (CR 615) A fog scoped to one player/permanent — Pradesh Gypsies,
-    /// "you don't lose / prevent all damage to you". Non-combat path.
-    /// With `redirect_to` set the prevented damage is dealt to that
-    /// entity instead (CR 614.9 — Sivvi's Valor).
+    /// CR 615 — prevent all damage to `target` this turn (Pradesh Gypsies), a
+    /// one-target fog. `redirect_to` deals it there instead (CR 614.9 — Sivvi's
+    /// Valor).
     PreventAllDamageThisTurn {
         target: Selector,
         #[serde(default)]
@@ -14341,12 +11487,9 @@ pub enum Effect {
     /// 1 damage prevented this way, put a +1/+1 counter on it." Brace for
     /// Impact — the counter rider rides the shield (`counters_on_target`).
     PreventAllDamageThisTurnWithCounters { target: Selector },
-    /// CR 615 — "Prevent all damage that would be dealt to `target` this turn
-    /// by sources you don't control. If damage from a creature source is
-    /// prevented this way, [this] deals that much damage to that creature. If
-    /// damage from a noncreature source is prevented this way, [this] deals
-    /// that much damage to the source's controller." (Comeuppance.) The
-    /// reflected damage is a new event from the resolving card.
+    /// CR 615 — Comeuppance: prevent damage to `target` this turn from sources
+    /// you don't control; this deals that much to a creature source, or to a
+    /// noncreature source's controller, as a new event.
     PreventOpposingDamageThisTurnReflecting { target: Selector },
 
     /// CR 615 — "Prevent all damage that `from` would deal to `to` this turn."
@@ -14363,27 +11506,20 @@ pub enum Effect {
     /// untapped ones tap when the controller declines to choose.
     TapOrUntap { what: Selector },
 
-    /// CR 615 — "Until your next turn, prevent all damage that would be dealt
-    /// to and dealt by `target`" (Kiora, the Crashing Wave's +1). Registers the
-    /// permanent in `damage_locked_until_turn_of`, checked on both ends of
-    /// every damage event and dropped at the controller's next untap step.
+    /// CR 615 — Kiora, the Crashing Wave +1: until your next turn, no damage to
+    /// or by `target` (`damage_locked_until_turn_of`).
     PreventDamageToAndByUntilYourNextTurn { target: Selector },
 
     /// CR 701.6 — counter target spell only if a card exiled with the source
     /// shares its name (Mindreaver). A no-op when nothing matches.
     CounterSpellIfNameExiledWithSource { what: Selector },
 
-    /// "The next time damage would be dealt to `target` creature this turn,
-    /// destroy that creature instead." (Kill-Suit Cultist.) A one-event
-    /// prevent-all shield flagged `destroy`: it soaks the next damage event
-    /// and destroys the protected permanent.
+    /// Kill-Suit Cultist: the next damage to `target` this turn destroys it
+    /// instead (a one-event shield flagged `destroy`).
     ReplaceNextDamageWithDestroy { target: Selector },
 
-    /// "The next time a source would deal damage to `target` this turn,
-    /// prevent that damage; `target` gains life equal to the damage
-    /// prevented this way." (CR 615.1 prevention + life gain.) Pushes a
-    /// per-target prevention shield flagged `gain_life`; when it soaks
-    /// damage the protected player gains that much life. Reverse Damage.
+    /// CR 615.1 — prevent the next damage to `target` this turn, and it gains
+    /// that much life (Reverse Damage): a per-target shield flagged `gain_life`.
     PreventNextDamageAndGainLife { target: Selector, amount: Value },
 
     /// "Damage can't be prevented this turn." (CR 615.12) Sets a global
@@ -14403,24 +11539,15 @@ pub enum Effect {
     /// when that player's turn begins.
     PlayerProtectionUntilNextTurn { who: PlayerRef },
 
-    /// Register "when [the token just created in this resolution] leaves the
-    /// battlefield, run `body`" as a delayed trigger. The current trigger
-    /// source (e.g. a card this resolution exiled) is captured as the body's
-    /// `Target(0)`. Hofri Ghostforge's "when that token leaves, return the
-    /// exiled card to its owner's graveyard".
+    /// "When [the token created this resolution] leaves, [body]": a delayed
+    /// trigger with the current trigger source captured as `Target(0)` (Hofri
+    /// Ghostforge).
     WhenLastCreatedTokenLeaves { body: Box<Effect> },
 
-    /// "Choose a creature type. Creatures other than creatures of the
-    /// chosen type get -P/-T until end of turn." Crippling Fear-style
-    /// choose-and-sweep primitive. Synchronously surfaces a
-    /// `ChooseCreatureType` decision (caster's seat) and then applies
-    /// `PumpPT(power, toughness, EOT)` to every battlefield creature
-    /// whose `definition.subtypes.creature_types` does NOT contain the
-    /// answered type. The decision is resolved synchronously off
-    /// `self.decider`, so AutoDecider (which picks `Demon`) and
-    /// ScriptedDecider both work; UI players don't get a separate
-    /// prompt today (degraded to the auto-decider choice — same as
-    /// other implicit-choice cards).
+    /// Crippling Fear: choose a creature type (`ChooseCreatureType`, caster's
+    /// seat); every other creature gets `PumpPT(power, toughness, EOT)`. Asked
+    /// synchronously off `self.decider` (AutoDecider: `Demon`); UI players get no
+    /// prompt yet.
     DiminishCreaturesExceptChosenType { power: Value, toughness: Value },
 
     /// CR 615 — "Prevent all damage that would be dealt to `target` this turn
@@ -14428,24 +11555,19 @@ pub enum Effect {
     /// color is picked as the effect resolves (`Decision::ChooseColor`).
     PreventAllDamageFromChosenColorThisTurn { target: Selector },
 
-    /// "Search your graveyard, hand, and/or library for an Aura card and put
-    /// it onto the battlefield attached to [the source]. If you search your
-    /// library this way, shuffle." Boonweaver Giant. Candidates pool all three
-    /// zones; the Aura's own enchant filter is not re-checked.
+    /// Boonweaver Giant: search graveyard, hand and/or library for an Aura and
+    /// attach it to the source (shuffle if the library was searched). The
+    /// enchant filter isn't re-checked.
     SearchAuraAttachToSource,
-    /// "Search your library for an Aura card with mana value less than or
-    /// equal to [`cap`] and with a different name than each Aura you control,
-    /// put that card onto the battlefield attached to [this], then shuffle"
-    /// (Light-Paws, Emperor's Voice). Only an Aura that can enchant the source
-    /// is offered.
+    /// Light-Paws, Emperor's Voice: search for an Aura with mana value ≤ `cap`
+    /// and a name unlike your Auras that can enchant the source; attach it;
+    /// shuffle.
     SearchAuraAttachToSourceCappedBy { cap: Selector },
 
-    /// CR 303.4f / 301.5c — put every `filter` card from the controller's
-    /// `zones` (preference order, greatest mana value first, at most `max`)
-    /// onto the battlefield attached to `host`, or, with `host: None`, each to
-    /// its own best legal permanent (a creature when `creatures_only`). A card
-    /// with no legal host stays where it is (CR 303.4i). Mantle of the
-    /// Ancients, Unfinished Business, Retether, Liberated Livestock.
+    /// CR 303.4f / 301.5c — put each `filter` card from the controller's `zones`
+    /// (in order, priciest first, at most `max`) onto the battlefield attached to
+    /// `host`, or with `host: None` to its own best legal host (a creature with
+    /// `creatures_only`). No legal host: it stays (CR 303.4i). Retether.
     PutOntoBattlefieldAttached {
         zones: Vec<crate::card::Zone>,
         filter: SelectionRequirement,
@@ -14481,11 +11603,9 @@ pub enum Effect {
     /// `color` mana as steps and phases end" (The Last Agni Kai). Ends in the
     /// cleanup step with the turn's other until-end-of-turn effects.
     KeepUnspentColorManaThisTurn { who: PlayerRef, color: crate::mana::Color },
-    /// CR 613.1c / 612 — "exchange [a]'s text box and [b]'s" (Deadpool,
-    /// Trading Card): each takes the other's keywords and static, activated,
-    /// triggered and loyalty abilities, for as long as it stays on the
-    /// battlefield (CR 400.7 — a new object reverts). Name, types, cost and
-    /// P/T stay. No-op unless both are permanents.
+    /// CR 613.1c / 612 — Deadpool, Trading Card: `a` and `b` swap text boxes
+    /// (keywords and abilities) while on the battlefield (CR 400.7). Name, types,
+    /// cost and P/T stay. No-op unless both are permanents.
     ExchangeTextBoxes { a: Selector, b: Selector },
     /// For each of `keywords` a creature card in your graveyard has, a counter
     /// of it on a creature you control; then a +1/+1 counter on the source per
@@ -14528,12 +11648,11 @@ pub enum Effect {
     /// Exile each resolved spell from the stack (not a counter), linked to
     /// the source (Smirking Spelljacker).
     ExileSpellLinked { what: Selector },
-    /// Look at the top `count` of `who`'s library, exile `take` (usually one) face down that
-    /// you may play with mana of any type while it stays exiled, the rest to
-    /// that player's graveyard (`rest_to_graveyard`, Thief of Sanity) or the
-    /// bottom (Siphon Insight). The engine picks the card. `any_color`: mana
-    /// spends as any *color* only, so a {C} pip still wants colorless
-    /// (Siphon Insight).
+    /// Look at the top `count` of `who`'s library; exile `take` face down,
+    /// playable with any mana type while exiled; the rest to the graveyard
+    /// (`rest_to_graveyard`, Thief of Sanity) or bottom. The engine picks.
+    /// `any_color`: any *color* only, so {C} pips still want colorless (Siphon
+    /// Insight).
     LookTopExileOneFaceDownMayPlay {
         who: PlayerRef,
         count: Value,
@@ -14580,27 +11699,20 @@ pub enum Effect {
     /// "The next [filter] spell you cast this turn can be cast as though it
     /// had flash" (Quicken — the next sorcery). Spent by the first match.
     NextMatchingSpellHasFlashThisTurn { filter: crate::card::SelectionRequirement },
-    /// "The next spell of the chosen type you cast this turn can be cast as
-    /// though it had flash" (Progenitor's Icon) — the source's chosen
-    /// creature type, read at resolution. Spent by the first spell of that
-    /// type cast.
+    /// Progenitor's Icon: your next spell of the chosen type this turn has
+    /// flash.
     NextSpellOfChosenTypeHasFlashThisTurn,
 
-    /// "For each planeswalker you control, you may activate one of its loyalty
-    /// abilities this turn as though none of its loyalty abilities have been
-    /// activated this turn." The Chain Veil. Bumps the controller's
-    /// `extra_loyalty_activations` budget.
+    /// The Chain Veil: one more loyalty activation per planeswalker this turn
+    /// (`extra_loyalty_activations`).
     GrantExtraLoyaltyActivations,
 
-    /// "Choose a card in your hand. `who` guesses whether its mana value is
-    /// greater than `threshold`. If they guessed wrong, you may cast that card
-    /// without paying its mana cost." Master of Predicaments. The guess is a
-    /// `Decision::OptionalTrigger` on the guesser's seat (true = "greater").
+    /// Master of Predicaments: `who` guesses whether your chosen hand card's mana
+    /// value exceeds `threshold` (`OptionalTrigger`, true = greater); wrong, you
+    /// may cast it free.
     GuessManaValueAboveElseCastFree { who: PlayerRef, threshold: u32 },
-    /// The Seventh Doctor — `GuessManaValueAboveElseCastFree` with the line
-    /// read off a `Value` (the number of artifacts you control), and
-    /// `otherwise` run when no spell was cast this way ("If you don't cast a
-    /// spell this way, investigate").
+    /// The Seventh Doctor: `GuessManaValueAboveElseCastFree` against a `Value`,
+    /// with `otherwise` if nothing was cast.
     GuessManaValueAgainstValue { who: PlayerRef, threshold: Value, otherwise: Box<Effect> },
 
     /// "`who` may pay `life`. If they don't, they return a permanent they
@@ -14608,10 +11720,8 @@ pub enum Effect {
     /// affected player, asked of that player.
     PlayerReturnsPermanentUnlessPaysLife { who: PlayerRef, life: u32 },
 
-    /// "Return to its owner's hand each creature `who` controls with power
-    /// greater than the number of cards in their hand" (Noetic Scales). The
-    /// comparison is re-read per player, which a single `Value` filter can't
-    /// express.
+    /// Noetic Scales: bounce `who`'s creatures with power greater than their hand
+    /// size, compared per player.
     ReturnCreaturesWithPowerGreaterThanHand { who: PlayerRef },
 
     /// "Search `who`'s library for a card with the same name as `subject`,
@@ -14627,17 +11737,13 @@ pub enum Effect {
         count: Option<Value>,
     },
 
-    /// CR 615 — "Prevent the next `total` damage that would be dealt this turn
-    /// to any number of targets, divided as you choose." The prevention-side
-    /// sibling of `DealDamageDivided`; shares `Decision::DivideDamage`.
-    /// Serra's Hymn.
+    /// CR 615 — Serra's Hymn: prevent the next `total` this turn divided among
+    /// targets (`Decision::DivideDamage`), like `DealDamageDivided`.
     PreventNextDamageDivided { total: Value, filter: SelectionRequirement, max_targets: u8 },
 
-    /// Stamp `what`'s first resolved permanent on the source's
-    /// `chosen_permanent` slot, so a later `Selector::ChosenPermanentOfSource`
-    /// can name it. The resolution-time sibling of
-    /// `Effect::ChoosePermanentForSource` (which picks by filter at ETB) —
-    /// Diabolic Servitude remembers the creature it reanimated.
+    /// Stamp `what`'s first permanent on the source's `chosen_permanent` for
+    /// `Selector::ChosenPermanentOfSource` — resolution-time
+    /// `Effect::ChoosePermanentForSource` (Diabolic Servitude).
     RememberPermanentOnSource { what: Selector },
 
     /// "You may put an Aura card from your hand onto the battlefield attached
@@ -14660,53 +11766,40 @@ pub enum Effect {
     /// Loops until a win, a decline, or the loser is destroyed.
     CoinFlipDestroyLoop { win: Selector, lose: Selector, repeat_cost: crate::mana::ManaCost },
 
-    /// Thieves' Auction — exile all nontoken permanents, then, starting with
-    /// the controller, each player in turn order picks one of the exiled
-    /// cards and puts it onto the battlefield tapped under their control,
-    /// repeating until every exiled card is claimed.
+    /// Thieves' Auction: exile all nontoken permanents; from you in turn order,
+    /// players claim one each onto the battlefield tapped until none are left.
     ThievesAuction,
 
-    /// Stamp the resolved player on the source's `chosen_player` slot so a
-    /// later `PlayerRef::ChosenPlayerOfSource` can name them — the player
-    /// twin of [`Effect::RememberPermanentOnSource`]. Backs the Torment
-    /// Nightmare Horrors' "that player gains N life" leave trigger.
+    /// Stamp the player on the source's `chosen_player` for
+    /// `ChosenPlayerOfSource` — player [`Effect::RememberPermanentOnSource`]
+    /// (Torment Nightmare Horrors).
     RememberPlayerOnSource { who: PlayerRef },
-    /// CR 508.1d — "[this] attacks that player this combat if able" (Ruhan of
-    /// the Fomori): a requirement on the source bound to `who` for the
-    /// current combat, kept apart from `chosen_player` so another effect
-    /// naming a player on it can't overwrite it.
+    /// CR 508.1d — Ruhan of the Fomori: the source must attack `who` this combat,
+    /// kept apart from `chosen_player` so it can't be overwritten.
     MustAttackPlayerThisCombat { who: PlayerRef },
-    /// CR 614.12 — "as this enters, choose a player" (`opponent`: "choose an
-    /// opponent"): the controller's pick, stamped on the source's
-    /// `chosen_player`. Offered as a seat ballot led by the most hostile
-    /// opponent, the headless answer. True-Name Nemesis, Stuffy Doll.
+    /// CR 614.12 — "as this enters, choose a player" (`opponent`: an opponent),
+    /// stamped on `chosen_player` via a seat ballot led by the most hostile
+    /// opponent. True-Name Nemesis.
     ChoosePlayerForSource { opponent: bool },
-    /// CR 701.6a-adjacent — "Target spell's controller exiles it with `count`
-    /// delay counters on it"; at each of their upkeeps one comes off, and the
-    /// last removal puts it back on the stack (Ertai's Meddling). Ticked by
-    /// `process_delayed_spells`.
+    /// Ertai's Meddling (CR 701.6a-adjacent): the spell's controller exiles it
+    /// with `count` delay counters, one removed each upkeep; the last returns it
+    /// to the stack (`process_delayed_spells`).
     ///
     /// Approximation: the return is a free cast from exile with an auto-picked
-    /// target rather than a literal copy of the original spell.
+    /// target, not the original spell.
     ExileSpellWithDelayCounters { what: Selector, count: Value },
-    /// CR 508.1a/d — "Target player chooses any number of creatures they
-    /// control. During that player's next turn, the chosen creatures attack if
-    /// able, and other creatures can't attack. At the beginning of that turn's
-    /// end step, destroy each of the chosen creatures that didn't attack"
-    /// (Oracle en-Vec). Registered on `GameState.attack_mandates`.
+    /// CR 508.1a/d — Oracle en-Vec: next turn the player's chosen creatures must
+    /// attack and others can't; chosen ones that didn't attack are destroyed at
+    /// end step (`GameState.attack_mandates`).
     AttackMandateNextTurn { who: PlayerRef },
 
-    /// CR 614 — "As this enters, sacrifice any number of creatures. This
-    /// creature's power becomes their total power and its toughness their
-    /// total toughness" (Dracoplasm). The totals are stamped on the source's
-    /// `chosen_number` / `remembered_amount`, read back by
-    /// `DynamicPt::EnteredTotals`.
+    /// CR 614 — Dracoplasm: as it enters, sacrifice any number of creatures; its
+    /// P/T become their totals, stamped on `chosen_number` /
+    /// `remembered_amount` for `DynamicPt::EnteredTotals`.
     AsEntersSacrificeForTotalPt,
 
-    /// "Any player may exile `count` cards from their graveyard. If a player
-    /// does, `then`." Walks the seats in turn order starting with the
-    /// source's controller and takes the first willing payer; `then` runs
-    /// once. Carrion Rats, Carrion Wurm.
+    /// Carrion Rats: in turn order from you, the first player willing to exile
+    /// `count` graveyard cards does; then `then` runs once.
     AnyPlayerMayExileFromGraveyard { count: Value, then: Box<Effect> },
 
     /// CR 614 — "Until end of turn, if `from` would draw a card, instead that
@@ -14714,16 +11807,12 @@ pub enum Effect {
     /// `GameState.draws_redirected_this_turn` and consumed in `draw_one`.
     RedirectDrawsThisTurn { from: PlayerRef },
 
-    /// CR 615 — "If any source would deal `at_least` or more damage to a
-    /// permanent or player this turn, it deals `becomes` damage instead"
-    /// (Equal Treatment). A turn-scoped global damage rewrite applied in
-    /// `scale_damage_to`.
+    /// CR 615 — Equal Treatment: this turn, any damage of `at_least`+ becomes
+    /// `becomes` (in `scale_damage_to`).
     DamageBecomesThisTurn { at_least: u32, becomes: u32 },
 
-    /// "This deals `amount` damage to target player or planeswalker. That
-    /// player (or that planeswalker's controller) may instead have the damage
-    /// dealt to a creature they control" (Flaming Gambit). The redirect
-    /// choice belongs to the victim.
+    /// Flaming Gambit: `amount` to a player or planeswalker; the victim may
+    /// redirect it to their creature.
     DamageTargetPlayerMayRedirect { amount: Value },
 
     /// CR 707 — "Copy the target spell for each other permanent or player it
@@ -14740,20 +11829,13 @@ pub enum Effect {
     /// token that's a copy of that creature" (Parallel Evolution).
     CopyEachCreatureToken,
 
-    /// The punisher / "any opponent may" shape — each seat `who` resolves to is
-    /// asked `prompt` in turn order from the controller. The first yes runs
-    /// `accepted` (with that seat readable as [`PlayerRef::AcceptingPlayer`])
-    /// and stops; `otherwise` runs only when every seat declines. Book Burning,
-    /// Breaking Point, Dwarven Driller, Dwarven Scorcher, Distant Memories.
-    /// "When you cast this spell, any player may pay `life` life. If a player
-    /// does, counter [this spell]" (Dash Hopes) — rides a `SpellCast /
-    /// SelfSource` trigger. Only a seat that can pay is asked (CR 119.4);
-    /// `game/effects/punisher_counter.rs` has the headless policy.
+    /// "When you cast this spell, any player may pay `life` life; if one does,
+    /// counter it" (Dash Hopes), on a `SpellCast / SelfSource` trigger. Only
+    /// seats that can pay are asked (CR 119.4); headless policy in
+    /// `game/effects/punisher_counter.rs`.
     AnyPlayerMayPayLifeToCounterThis { life: u32 },
-    /// "Any player may sacrifice a [filter] of their choice. If a player
-    /// does, put this creature on top of its owner's library" (Shivan
-    /// Wumpus) — asked in turn order from the controller; the first
-    /// sacrifice ends it.
+    /// Shivan Wumpus: in turn order from you, the first player to sacrifice a
+    /// [filter] puts this on top of its owner's library.
     AnyPlayerMaySacrificeToTopdeckSource { filter: SelectionRequirement },
     /// "Each player discards any number of cards, then draws that many
     /// cards" (Flux): APNAP choices, discards together, then each seat draws
@@ -14791,16 +11873,19 @@ pub enum Effect {
     /// indefinite layer-4 rewrite.
     SetArtifactSubtypes { what: Selector, subtypes: Vec<crate::card::ArtifactSubtype> },
     /// "It becomes a Vehicle artifact" (Captain Rex Nebula): for `duration`,
-    /// each permanent `what` names has exactly `subtypes` as its artifact
-    /// subtypes and no creature or land types (CR 205.1a with the card-type
-    /// rewrite a `SetCardTypesFor` beside it makes) — crewing it later adds
-    /// Creature but no creature types back.
+    /// exactly `subtypes` as artifact subtypes and no creature or land types
+    /// (CR 205.1a, with a `SetCardTypesFor` beside it); crewing adds Creature
+    /// but no creature types.
     BecomeArtifactSubtypesFor { what: Selector, subtypes: Vec<crate::card::ArtifactSubtype>, duration: Duration },
     /// "Spells [who] casts this turn cost {`amount`} more to cast" (Academy
     /// Loremaster) — `Player.spell_tax_this_turn`, cleared at the turn
     /// boundary.
     SpellsCostMoreThisTurn { who: PlayerRef, amount: u32 },
 
+    /// "Any opponent may" punisher: each `who` seat is asked `prompt` in turn
+    /// order from the controller; the first yes runs `accepted` (that seat is
+    /// [`PlayerRef::AcceptingPlayer`]) and stops; `otherwise` runs if all
+    /// decline. Book Burning.
     AnyPlayerMayAccept {
         who: PlayerRef,
         prompt: String,
@@ -14813,11 +11898,9 @@ pub enum Effect {
     /// fire, matching `ExchangeHandAndGraveyard`.
     ExchangeGraveyardAndLibrary { who: PlayerRef },
 
-    /// CR 407.4 — "[who] antes the top card of their library." With `optional`
-    /// each resolved player is asked first; `then` runs once per player who
-    /// actually anted (bound as that effect's controller — Rebirth's "that
-    /// player's life total becomes 20") and `else_` once per player who
-    /// declined (Amulet of Quoz's coin flip).
+    /// CR 407.4 — `who` antes their top card. `optional` asks first; `then` runs
+    /// per player who anted, as controller (Rebirth), `else_` per decliner
+    /// (Amulet of Quoz).
     AnteTopOfLibrary {
         who: PlayerRef,
         #[serde(default)]
@@ -14845,38 +11928,28 @@ pub enum Effect {
     /// a seat that can't afford the life is never asked.
     PlayerMayPayLifeElse { who: PlayerRef, life: Value, else_: Box<Effect> },
 
-    /// CR 614.12a — a modal choice made **as a permanent enters**, asked at
-    /// resolution rather than read off the stack item.
+    /// CR 614.12a — a modal choice made as a permanent enters, asked at
+    /// resolution.
     ///
-    /// [`Effect::ChooseMode`] cannot do this: it reads `ctx.mode`, the pick
-    /// made when the spell or trigger went on the stack, and an as-enters
-    /// replacement has no stack item — so it silently takes mode 0 and never
-    /// asks. Nor can a yes/no `May*` node stand in, because `AutoDecider`
-    /// **declines** every `OptionalTrigger`, which would take the downside
-    /// branch for every headless seat. This raises its own two-or-more-mode
-    /// question: `AutoDecider` answers mode 0, the bot scores each mode by
-    /// outcome, and a `wants_ui` seat suspends for a real prompt.
-    ///
-    /// The shocklands' "you may pay 2 life, if you don't it enters tapped",
-    /// Lavabrink Venturer's odd-or-even, Roots of Life's Island-or-Swamp.
+    /// [`Effect::ChooseMode`] can't: it reads `ctx.mode` from the stack item, and
+    /// an as-enters replacement has none, so it silently takes mode 0. A `May*`
+    /// node can't either: `AutoDecider` declines every `OptionalTrigger`, taking
+    /// the downside for headless seats. Here `AutoDecider` answers mode 0, the
+    /// bot scores modes by outcome, and a `wants_ui` seat suspends for a prompt.
+    /// Shocklands, Lavabrink Venturer.
     AsEntersChooseMode(Vec<Effect>),
 
-    /// CR 614.12 — the "if you don't, it enters tapped" branch of an
-    /// **as-enters** replacement (the shocklands and their {3}-life
-    /// descendants). Sets the source's tapped flag directly, which is what
-    /// separates it from [`Effect::Tap`]: a permanent that *enters* tapped
-    /// never *becomes* tapped, so no `PermanentTapped` event is emitted and a
-    /// "whenever a permanent becomes tapped" watcher does not see it. Honours
-    /// the CR 614 "lands enter untapped" override (Spelunking) the same way
-    /// `apply_enters_tapped_replacement` does. Only meaningful inside a
+    /// CR 614.12 — the "if you don't, it enters tapped" branch of an as-enters
+    /// replacement (shocklands). Unlike [`Effect::Tap`] it sets the tapped
+    /// flag directly: entering tapped isn't *becoming* tapped, so no
+    /// `PermanentTapped` event. Honours "lands enter untapped" (Spelunking) as
+    /// `apply_enters_tapped_replacement` does. Only inside
     /// `CardDefinition::as_enters_effect`.
     SourceEntersTapped,
 
-    /// "Each player may exile any number of cards from their graveyard,"
-    /// then `then` runs once (Grave Consequences). Each seat picks its own
-    /// batch via `Decision::ChooseCards`; unlike
-    /// [`Effect::AnyPlayerMayExileFromGraveyard`] every seat is asked and
-    /// `then` runs regardless.
+    /// Grave Consequences: each player may exile any graveyard cards (their own
+    /// `Decision::ChooseCards`), then `then` runs once regardless — unlike
+    /// [`Effect::AnyPlayerMayExileFromGraveyard`].
     EachPlayerMayExileAnyNumberFromGraveyard { then: Box<Effect> },
 
     /// "Each player loses `per` life for each `filter` card in their
@@ -14899,17 +11972,14 @@ pub enum Effect {
     /// earlier note; read back by [`Value::RememberedAmountOfSource`].
     NoteAmountOnSource { amount: Value },
 
-    /// A damage trigger's "noncombat" gate (Smaug, the Impenetrable — "is
-    /// dealt noncombat damage"): rewritten per event as the trigger is
-    /// collected (`for_trigger_event`) into `body` for noncombat damage; the
-    /// battlefield walk skips a combat-damage event outright (CR 603.2).
-    /// `EventKind` has no bit left for a noncombat kind of its own.
+    /// A damage trigger's "noncombat" gate (Smaug, the Impenetrable): rewritten
+    /// per event at collection (`for_trigger_event`) into `body` for noncombat
+    /// damage; the battlefield walk skips combat damage outright (CR 603.2).
+    /// `EventKind` has no bit left for a noncombat kind.
     IfTriggerDamageNoncombat { body: Box<Effect> },
 
-    /// "Counter target spell. If that spell is countered this way, exile it
-    /// instead… You may play it without paying its mana cost for as long as it
-    /// remains exiled" (Spelljack). The exiled card gets a may-play grant for
-    /// the countering player with no duration.
+    /// Spelljack: counter the spell into exile; the counterer may play it free
+    /// while it stays exiled.
     CounterSpellExileMayPlayFree { what: Selector },
 
     /// "Exile any number of `filter` cards from your graveyard," recording them
@@ -14940,16 +12010,11 @@ pub enum Effect {
     /// "Until that player's next turn, … their life total can't change"
     /// (Teferi's Reproach, CR 119.10).
     LifeLockUntilNextTurn { who: Selector },
-    /// "For each of those permanents, choose a different opponent. Each
-    /// opponent gains control of the permanent for which they were chosen"
-    /// (Dack Fayden, Helping Hand). The permanents `what` resolves to are
-    /// paired with the controller's living opponents in turn order; one left
-    /// over past the last opponent stays put.
+    /// Dack Fayden, Helping Hand: pair the `what` permanents with your living
+    /// opponents in turn order, each gaining control of theirs; extras stay put.
     DistributeControlAmongOpponents { what: Selector },
-    /// "Each player mills `count` cards. For each player, you may cast a card
-    /// that player milled this way without paying its mana cost" (The
-    /// Ur-Sphinx). Every seat mills first (turn order from you); then one
-    /// free cast is offered from each seat's milled cards.
+    /// The Ur-Sphinx: everyone mills `count` (from you), then you may cast one
+    /// milled card free per player.
     EachPlayerMillsYouMayCastOne { count: Value },
     /// "Creatures `who` controls can't attack [subtype] planeswalkers
     /// `defender` controls this turn" (Jace, Multiverse Architect). Cleared
@@ -14960,21 +12025,17 @@ pub enum Effect {
         subtype: crate::card::PlaneswalkerSubtype,
     },
 
-    /// "Prevent all damage that sources of the color of your choice would deal
-    /// this turn" (Prismatic Strands) — the recipient-less sibling of
-    /// [`Effect::PreventAllDamageFromChosenColorThisTurn`].
-    /// "Prevent all damage that [colors] sources would deal this turn"
-    /// (Luminesce) — or, with `to_your_creatures`, "… would deal to
-    /// creatures you control this turn" (Surge of Salvation). One turn-long
-    /// shield per colour (CR 615.1); a source of several colours is caught by
-    /// each.
+    /// "Prevent all damage [colors] sources would deal this turn" (Luminesce), or
+    /// with `to_your_creatures` only to your creatures (Surge of Salvation). One
+    /// turn-long shield per colour (CR 615.1); multicolour sources hit each.
     PreventDamageFromColorsThisTurn { colors: Vec<crate::mana::Color>, #[serde(default)] to_your_creatures: bool },
+    /// Prismatic Strands: prevent all damage sources of a chosen color would deal
+    /// this turn — the recipient-less
+    /// [`Effect::PreventAllDamageFromChosenColorThisTurn`].
     PreventAllDamageFromChosenColorGlobally,
 
-    /// "Other players can't play lands or cast spells from their graveyards
-    /// this turn. You may play lands and cast spells from other players'
-    /// graveyards this turn as though those cards were in your graveyard"
-    /// (Shaman's Trance).
+    /// Shaman's Trance: this turn, only you play from graveyards — anyone's, as
+    /// your own.
     ShamansTrance,
 }
 
@@ -15033,11 +12094,9 @@ pub enum DelayedTriggerKind {
     /// "At end of combat, …" — fires once at the current turn's end-of-combat
     /// step (Fortune, Loyal Steed's saddle blink).
     EndOfCombat,
-    /// "At the beginning of your next pre-combat main phase, …" Used by
-    /// Chancellor of the Tangle's opening-hand reveal — the mana ritual
-    /// fires on main rather than upkeep so the {G} doesn't empty out of
-    /// the pool before the player can spend it (mana pools clear on
-    /// step transition, MTG rule 500.4).
+    /// "At the beginning of your next precombat main phase" (Chancellor of the
+    /// Tangle's reveal), so the ritual mana isn't lost to a step change (CR
+    /// 500.4).
     YourNextMainPhase,
     /// "At the beginning of your next main phase" — first or second,
     /// whichever of the controller's begins next (CR 505.1).
@@ -15070,22 +12129,17 @@ pub enum DelayedTriggerKind {
     EachAttackThisTurn,
 }
 
-/// Opening-hand ("if this is in your opening hand, you may ...") effect.
-/// Resolved by `GameState::apply_opening_hand_effects` after all players
-/// finish mulligans and before the first turn begins.
+/// "If this is in your opening hand, you may …", resolved by
+/// `GameState::apply_opening_hand_effects` after mulligans, before turn one.
 ///
-/// Each variant covers one of the canonical Magic shapes:
 /// * **Leyline / Gemstone Caverns** — the card begins the game on the
-///   battlefield instead of in hand.
-/// * **Chancellor of the Tangle / of the Annex** — the card stays in hand,
-///   but reveals at game start to register a one-shot trigger that fires
-///   later.
+///   battlefield.
+/// * **Chancellors** — the card stays in hand and is revealed to register a
+///   one-shot trigger for later.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum OpeningHandEffect {
-    /// "If [card] is in your opening hand, you may begin the game with it
-    /// on the battlefield." After moving to play, run `extra` so cards like
-    /// Gemstone Caverns can stamp themselves with a luck counter (or any
-    /// other one-shot ETB-style follow-up).
+    /// "If this is in your opening hand, you may begin the game with it on the
+    /// battlefield", then `extra` (Gemstone Caverns' luck counter).
     StartInPlay {
         tapped: bool,
         extra: Effect,
@@ -15097,11 +12151,9 @@ pub enum OpeningHandEffect {
         kind: DelayedTriggerKind,
         body: Effect,
     },
-    /// "Any time you could mulligan and [card] is in your hand, you may
-    /// exile all the cards from your hand, then draw that many cards."
-    /// Surfaces as an additional answer in the mulligan decision; not run
-    /// post-mulligan. The variant exists so the catalog can declaratively
-    /// flag the card and `apply_opening_hand_effects` skips it.
+    /// "Any time you could mulligan, you may exile your hand and draw that
+    /// many": an extra mulligan-decision answer, not run after mulligans; the
+    /// variant flags the card so `apply_opening_hand_effects` skips it.
     MulliganHelper,
 }
 
@@ -15202,10 +12254,8 @@ pub struct ResolutionCarry {
 }
 
 impl Default for Effect {
-    /// Default `Effect` is `Noop` — a permanent with no spell effect
-    /// (creature, enchantment, etc.) leaves this slot at its default.
-    /// Lets `CardDefinition` derive `Default`, so card constructors can
-    /// use `..Default::default()` and skip boilerplate.
+    /// `Noop`, so `CardDefinition` can derive `Default` and permanents without a
+    /// spell effect use `..Default::default()`.
     fn default() -> Self { Effect::Noop }
 }
 
@@ -15323,22 +12373,17 @@ pub struct LookPick {
     /// meaningful with `rest_to_graveyard`.
     #[serde(default)]
     pub gain_life_greatest_power_rest: bool,
-    /// Printed "you MAY put ... into your hand": an explicit empty pick
-    /// from a UI player is honored as a decline (the whole revealed set
-    /// follows the rest-routing), and a partial pick (fewer than `take`)
-    /// is respected rather than topped up. Mandatory picks (`false`)
-    /// auto-fill top-down as before, and the AutoDecider harness keeps
-    /// the fill either way so bot play is unchanged.
+    /// Printed "you MAY put … into your hand": a UI player's empty pick
+    /// declines (all go to the rest-routing) and a short pick is respected.
+    /// Mandatory picks (`false`) fill top-down; AutoDecider fills either way.
     #[serde(default)]
     pub optional: bool,
     /// "If you put a card into your hand this way, [effect]" — runs once
     /// after the picks land (Sidequest: Catch a Fish's Food + transform).
     #[serde(default)]
     pub then_if_picked: Option<Box<Effect>>,
-    /// The mirror: "If you didn't put a card into your hand this way,
-    /// [effect]" (Rosecot Knight, Pulsar Squadron Ace, Ainok Wayfarer and
-    /// Ostrich-Horse all print it as a +1/+1 counter consolation). Runs once,
-    /// on the same `source`, when the pick set came back empty.
+    /// "If you didn't put a card into your hand this way, [effect]", once on the
+    /// same `source` when the pick is empty (Rosecot Knight's counter).
     #[serde(default)]
     pub then_if_not_picked: Option<Box<Effect>>,
     /// Typed routing (Zimone's Experiment): picked LAND cards go onto
@@ -15416,12 +12461,11 @@ impl Default for LookPick {
     }
 }
 
-/// Moved here from the engine so `CardDefinition::type_scan_bits` can use
-/// it: the answer is a property of the printed static and nothing else.
-/// True when `effect` can emit a layer-4 card-type modification. Twin of
-/// [`static_effect_strips_abilities`] for the card-type family; the two share
-/// the gate-wrapper peel because `static_effect_to_effects` recurses through
-/// the same wrappers.
+/// True when `effect` can emit a layer-4 card-type modification. Lives here
+/// (not the engine) so `CardDefinition::type_scan_bits` can use it — it
+/// depends only on the printed static. Twin of
+/// [`static_effect_strips_abilities`]; both peel the gate wrappers because
+/// `static_effect_to_effects` recurses through them.
 pub fn static_effect_changes_card_types(effect: &StaticEffect) -> bool {
     use StaticEffect as SE;
     match effect {
@@ -15448,18 +12492,15 @@ pub fn static_effect_changes_card_types(effect: &StaticEffect) -> bool {
     }
 }
 
-/// Moved here from the engine so `CardDefinition::layer4_scan_bits` can use
-/// it: the answer is a property of the printed static and nothing else.
-/// True when `effect` can emit a layer-4 land-type modification. Twin of
-/// [`static_effect_changes_card_types`] for the land-type family; shares the
-/// gate-wrapper peel for the same reason.
+/// True when `effect` can emit a layer-4 land-type modification; used by
+/// `CardDefinition::layer4_scan_bits`. Twin of
+/// [`static_effect_changes_card_types`].
 ///
-/// Six variants, and the list is exhaustive against the emitters in
-/// `gather_continuous_effects_inner` and `static_effect_to_effects`: Alpine
-/// Moon and Ultima blank a land's types on their way to stripping it, and the
-/// other four write one directly. `LandsYouControlAreChosenType` is a no-op
-/// until its ETB stamps `chosen_land_type`, but the gate over-approximates
-/// rather than reading the instance — the static is the tell.
+/// The list is exhaustive against the emitters in
+/// `gather_continuous_effects_inner` and `static_effect_to_effects` (Alpine
+/// Moon and Ultima count: they blank land types on the way to stripping).
+/// `LandsYouControlAreChosenType` is a no-op until its ETB stamps
+/// `chosen_land_type`, but the gate over-approximates: the static is the tell.
 pub fn static_effect_changes_land_types(effect: &StaticEffect) -> bool {
     use StaticEffect as SE;
     match effect {
@@ -15480,14 +12521,13 @@ pub fn static_effect_changes_land_types(effect: &StaticEffect) -> bool {
     }
 }
 
-/// Moved here for the same reason as [`static_effect_changes_land_types`].
-/// True when `effect` can emit a layer-4 *creature*-type modification.
+/// Lives here for the same reason as [`static_effect_changes_land_types`].
+/// True when `effect` can emit a layer-4 creature-type modification.
 ///
-/// Five variants, and the list is exhaustive against the `AddCreatureType` /
-/// `SetCreatureTypes` emitters in `static_effect_to_effects` and in
-/// `gather_continuous_effects_inner`'s stateful passes. `SelfIsCreatureIf` is
-/// the stateful one — it reads a live predicate, so it never routes through
-/// `static_effect_to_effects`, but the printed static is the same tell.
+/// Exhaustive against the `AddCreatureType` / `SetCreatureTypes` emitters in
+/// `static_effect_to_effects` and `gather_continuous_effects_inner`'s stateful
+/// passes. `SelfIsCreatureIf` reads a live predicate, so it never routes
+/// through `static_effect_to_effects`, but the static is the same tell.
 pub fn static_effect_changes_creature_types(effect: &StaticEffect) -> bool {
     use StaticEffect as SE;
     match effect {
@@ -15514,15 +12554,14 @@ pub fn static_effect_changes_creature_types(effect: &StaticEffect) -> bool {
 }
 
 /// True when `effect` can put a layer-6 `Modification::RemoveAllAbilities`
-/// into the gathered set — the static-ability half of the presence gate on
-/// `GameState::permanents_with_abilities_removed`. Over-approximates: the
-/// state gates (counters, turn, class level, predicate) are ignored, so a
-/// `true` here only means "gather and check". Every gather site that emits
-/// the modification `debug_assert!`s against this or `card_can_strip_abilities`,
-/// so a seventh source can't quietly appear without the gate learning about it.
+/// into the gathered set — the static half of the gate on
+/// `GameState::permanents_with_abilities_removed`. Over-approximates (state
+/// gates ignored), so `true` means "gather and check". Every emitting gather
+/// site `debug_assert!`s against this or `card_can_strip_abilities`, so a new
+/// source can't bypass the gate.
 ///
-/// Moved here from the engine so `CardDefinition::dispatch_scan_bits` can use
-/// it, for the same reason [`static_effect_changes_card_types`] lives here.
+/// Lives here so `CardDefinition::dispatch_scan_bits` can use it, as with
+/// [`static_effect_changes_card_types`].
 pub fn static_effect_strips_abilities(effect: &StaticEffect) -> bool {
     use StaticEffect as SE;
     match effect {
@@ -15551,25 +12590,20 @@ pub fn static_effect_strips_abilities(effect: &StaticEffect) -> bool {
     }
 }
 
-/// True when `effect`, on a permanent OTHER than the spell being cast, can
-/// change what that spell costs — the presence predicate behind
+/// True when `effect`, on a permanent other than the spell being cast, can
+/// change what the spell costs — the presence predicate behind
 /// `actions::CostStaticSources`.
 ///
-/// ⚠ **THE LIST IS EVERY ARM OF THE THREE SOURCE LOOPS AND NOTHING ELSE.**
-/// `extra_cost_for_spell_over`, `colored_spell_tax_for_spell_over` and
-/// `cost_reduction_for_spell_full_over`'s `for src in srcs` block are the
-/// walks; a variant they match and this does not is a source silently dropped
-/// and a spell silently mispriced. The self-cost family
-/// (`SelfCostReduced*`, `self_cost_reduction_if_control`, the intrinsic
-/// affinity fields) is deliberately absent: those are read off the CARD being
-/// cast, never off a source, and `cost_reduction_for_spell_full_over` reads
-/// them after the loop ends.
+/// ⚠ The list must be exactly the arms of the three source loops
+/// (`extra_cost_for_spell_over`, `colored_spell_tax_for_spell_over`, and
+/// `cost_reduction_for_spell_full_over`'s `for src in srcs`); a missing arm
+/// silently misprices spells. The self-cost family (`SelfCostReduced*`,
+/// `self_cost_reduction_if_control`, intrinsic affinity) is deliberately
+/// absent: it is read off the card being cast, after the loop.
 ///
-/// The audit is a `debug_assert_eq!` in `bot::can_afford_in_state_with`, the
-/// narrowed list's only consumer: it recomputes all three values over the
-/// unfiltered board and compares. Over-approximates like its siblings — the
-/// controller, filter and state gates are ignored, so `true` means "keep the
-/// source and let the walk decide".
+/// Audited by a `debug_assert_eq!` in `bot::can_afford_in_state_with` that
+/// recomputes all three over the unfiltered board. Over-approximates like its
+/// siblings: `true` means "keep the source and let the walk decide".
 pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
     use StaticEffect as SE;
     match effect {
@@ -15615,10 +12649,9 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::LinkedExileCastCostReduction { .. }
         | SE::FirstMatchingSpellEachTurnCostsLess { .. }
         | SE::FirstKickedSpellEachTurnCostsLess { .. }
-        // Zimone's per-counter first-X-spell discount, Family Matters'
-        // non-hand discount and Grand Larceny's spells-you-don't-own one
-        // were missing, so the bot's affordability read (and its
-        // cost-static audit) dropped them.
+        // Source-side discounts the bot's affordability read (and its audit) must
+        // also see: Zimone's per-counter first-X-spell, Family Matters' non-hand,
+        // Grand Larceny's spells-you-don't-own.
         | SE::FirstMatchingSpellEachTurnCostsLessPerCounter { .. }
         | SE::NonHandCastCostReduction { .. }
         | SE::SpellsYouDontOwnCostLess { .. }
@@ -15630,10 +12663,9 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::YourISSpellsCostLessPerTargetCreature { .. }
         | SE::SpellsCostLessPerSameNameInYourGraveyard
         | SE::PerTargetSpellCost { .. } => true,
-        // Gate wrappers: the reduction loop peels every one through
-        // `active_static` (a Class level, CR 716.2; Momo's "during your
-        // turn"). The two tax walks peel none — over-approximating is free (a
-        // kept source costs one iteration), dropping one misprices a spell.
+        // Gate wrappers: the reduction loop peels them all through `active_static`
+        // (Class level, CR 716.2; Momo's "during your turn"); the tax walks peel
+        // none. Over-approximating costs one iteration; dropping one misprices.
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }
         | SE::WhileNotYourTurn { inner }
@@ -15643,13 +12675,11 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
     }
 }
 
-/// True when `effect` is one of the `SelfCostReduced*` statics
-/// `cost_reduction_for_spell_full_over`'s tail reads off the card **being
-/// cast** (as opposed to [`static_affects_spell_cost`], which is about the
-/// *sources* on the board). The tail's single walk `debug_assert_eq!`s its own
-/// handled-ness against this on every static it sees, so the two lists cannot
-/// drift; [`CardDefinition::has_self_cost_reduction`] is the memoized gate that
-/// keeps the whole tail off a card carrying none of them.
+/// True when `effect` is a `SelfCostReduced*` static that
+/// `cost_reduction_for_spell_full_over`'s tail reads off the card being cast
+/// (cf. [`static_affects_spell_cost`] for board sources). The tail
+/// `debug_assert_eq!`s against this per static, so the lists can't drift;
+/// [`CardDefinition::has_self_cost_reduction`] is the memoized gate.
 pub fn static_effect_is_self_cost_reduction(effect: &StaticEffect) -> bool {
     use StaticEffect as SE;
     matches!(
@@ -15678,9 +12708,8 @@ pub fn static_effect_is_self_cost_reduction(effect: &StaticEffect) -> bool {
 }
 
 /// The `GrantActivatedAbility` twin of [`static_grants_triggered_ability`],
-/// with the same wrapper set and the same over-approximation: `grant_scan`'s
-/// walk peels *and evaluates* the gates, so a `true` here may still be a
-/// closed gate, and only `false` is acted on.
+/// same wrappers and over-approximation: `grant_scan` peels and evaluates the
+/// gates, so only `false` is acted on.
 pub fn static_effect_grants_activated(effect: &StaticEffect) -> bool {
     use StaticEffect as SE;
     match effect {
@@ -15697,10 +12726,8 @@ pub fn static_effect_grants_activated(effect: &StaticEffect) -> bool {
 }
 
 /// True when `effect` can be a `GrantTriggeredAbility` once the gate wrappers
-/// are peeled — i.e. when the engine's `active_static` could hand one back.
-/// The wrapper set is `active_static`'s, so the two must be edited together;
-/// this over-approximates only the gates, exactly as the walk it gates does
-/// before evaluating them.
+/// are peeled, i.e. when the engine's `active_static` could return one. Uses
+/// `active_static`'s wrapper set, so edit the two together.
 pub fn static_grants_triggered_ability(effect: &StaticEffect) -> bool {
     use StaticEffect as SE;
     match effect {
@@ -15715,16 +12742,15 @@ pub fn static_grants_triggered_ability(effect: &StaticEffect) -> bool {
 }
 
 /// True when `effect` can emit a layer-6 `AddKeyword` matching `pred`. Twin of
-/// [`static_effect_strips_abilities`] for the keyword-grant family.
+/// [`static_effect_strips_abilities`] for keyword grants.
 ///
-/// The variant list is mechanical, not judged: 23 of `StaticEffect`'s variants
-/// carry a `Keyword` field, three of those only *remove* one (`LoseKeyword`,
-/// `CantHaveKeyword`) or name a supertype, and four more grant a keyword they
-/// don't carry as a field — so the scan for `Keyword` in the enum is necessary
-/// and not sufficient, and those four are spelled out below.
+/// Scanning the enum for `Keyword` fields is necessary but not sufficient:
+/// some such variants only remove a keyword (`LoseKeyword`,
+/// `CantHaveKeyword`), and some grant one without carrying the field — those
+/// are spelled out below.
 ///
-/// Moved here from the engine so [`CardDefinition::can_grant_keyword`] can use
-/// it, for the same reason [`static_effect_changes_card_types`] lives here.
+/// Lives here so [`CardDefinition::can_grant_keyword`] can use it, as with
+/// [`static_effect_changes_card_types`].
 ///
 /// [`CardDefinition::can_grant_keyword`]: crate::card::CardDefinition::can_grant_keyword
 pub fn static_effect_grants_keyword(
@@ -15751,16 +12777,13 @@ pub fn static_effect_grants_keyword(
         | SE::SelfHasKeywordIf { keyword, .. } => pred(keyword),
         // Layer 4, but it reads as a computed changeling (`layers.rs`).
         SE::EveryCreatureType { .. } => pred(&Keyword::Changeling),
-        // Unbounded — the granted keyword carries a payload the static does
-        // not fix (an exiled card's keywords or card types, a draft note, an
-        // ETB-chosen colour, a counter count), so the only sound answer while
-        // the static is present is "maybe". All five are rare enough that the
-        // gate still reads `false` on essentially every board.
-        // CR 612 — Swirl the Mists rewrites every non-chosen colour word, so
-        // it turns `Protection(A)` into `Protection(B)`: a keyword no field
-        // on the affected card carried, produced by a *text* change. It is
-        // unbounded in exactly the same sense as the five below, and
-        // `static_effect_removes_keyword` carries it for the other direction.
+        // Unbounded: the granted keyword comes from a payload the static doesn't
+        // fix (exiled cards, a draft note, a chosen colour or type, a counter
+        // count), so the only sound answer is "maybe"; all are rare enough that
+        // the gate still reads `false` on nearly every board. Swirl the Mists
+        // (`AllColorWordsBecomeChosen`, CR 612) is here too: a text change turns
+        // `Protection(A)` into `Protection(B)`. `static_effect_removes_keyword`
+        // carries it for the other direction.
         SE::GainKeywordsOfCards { .. }
         | SE::SelfHasDraftNotedKeywords
         | SE::AnnihilatorPerPlusOneCounter

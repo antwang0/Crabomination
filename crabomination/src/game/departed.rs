@@ -1,31 +1,18 @@
 //! CR 800.4f/g — where an ask goes when the seat it names has left the game.
 //!
-//! Multiplayer is the only place this arises: in a duel a departed opponent
-//! ends the game, so nothing is ever asked of one. In a pod it is ordinary —
-//! a tribute creature (CR 702.104) entering under one seat asks *an opponent*
-//! whether to pay tribute, and that opponent may have been dead for ten
-//! turns. Four-seat pods over the target decks hit it in 4.4 % of games, all
+//! Multiplayer only (in a duel a departure ends the game): e.g. a tribute
+//! creature (CR 702.104) asks an opponent who may be long dead. Asks go
 //! through [`GameState::ask_seat_bool`](crate::game::GameState::ask_seat_bool)
 //! and its siblings.
 //!
-//! The rules split the answer by whether the ask is a *cost*:
+//! * **CR 800.4f** — a departed player's cost (or choice whether to pay one)
+//!   is not paid: a Rhystic tax goes to the "unless" half, asking no one.
+//! * **CR 800.4g** — any other choice: the object's controller picks another
+//!   player to make it, another opponent if the original was an opponent.
 //!
-//! * **CR 800.4f** — "If an object requires a player who has left the game to
-//!   pay a cost or choose whether to pay a cost, that cost is not paid." So a
-//!   Rhystic tax owed by a departed seat is simply not paid, and resolution
-//!   continues into the "unless" half. It is not asked of anyone.
-//! * **CR 800.4g** — "If an object requires a player who has left the game to
-//!   make a choice other than whether to pay a cost, the controller of the
-//!   object chooses another player to make that choice. If the original choice
-//!   was to be made by an opponent of the controller of the object, that
-//!   player chooses another opponent if possible."
-//!
-//! CR 800.4h ("if a *rule* requires" — the next player in turn order chooses)
-//! needs no arm here: every rule-required ask the engine suspends on names the
-//! asking seat's own cards (a mulligan, a cleanup discard, a combat-damage
-//! assignment order), and CR 800.4a has already taken those out of the game.
-//! There is nothing left to choose, which is why `objects_leave_with_player`
-//! drops one of those rather than re-seating it.
+//! CR 800.4h (rule-required asks) needs no arm: every such ask names the
+//! asking seat's own cards, which CR 800.4a already removed, so
+//! `objects_leave_with_player` drops it.
 
 use crate::game::GameState;
 
@@ -44,10 +31,7 @@ impl GameState {
     /// Route an ask that names `seat` per CR 800.4f/g. `source` is the object
     /// making the demand (its controller is the one CR 800.4g hands the choice
     /// to); `is_cost` states whether the question is "pay a cost / choose
-    /// whether to pay one".
-    ///
-    /// A live seat answers its own questions, which is every ask in a duel and
-    /// nearly every ask in a pod — one `is_alive` read before anything else.
+    /// whether to pay one". A live seat answers its own questions.
     pub(crate) fn route_ask(
         &self,
         seat: usize,
@@ -64,23 +48,14 @@ impl GameState {
         AskRoute::Seat(self.reseat_ask(seat, source))
     }
 
-    /// CR 800.4g's re-seating, on its own and **total**: who the object's
-    /// controller hands a departed seat's choice to. Shared by
-    /// [`route_ask`](Self::route_ask) and
-    /// [`route_ask_choice`](Self::route_ask_choice) so neither has to reason
-    /// about an `AskRoute` the other cannot produce.
+    /// CR 800.4g's re-seating, as a total function: who a departed seat's
+    /// choice goes to. Shared by [`route_ask`](Self::route_ask) and
+    /// [`route_ask_choice`](Self::route_ask_choice).
     fn reseat_ask(&self, seat: usize, source: crate::card::CardId) -> usize {
-        // The object's controller is the one who re-seats the choice; with the
-        // source gone too (an ability resolving off a permanent that has left),
-        // fall back to the seat that still has to finish resolving, which the
-        // caller identifies by holding priority.
-        //
-        // Every candidate is checked for being in the game: in a pod two
-        // seats can be gone at once, and a source owned by one departed seat
-        // resolving while priority still names another handed the choice from
-        // one departed seat to the next (a six-seat pod asked a dead seat to
-        // pick from a dead seat's graveyard). The last resort is the next
-        // seat in turn order that is still in the game.
+        // The object's controller re-seats the choice; with the source gone,
+        // fall back to the priority holder. Every candidate must be in the
+        // game (two seats can be gone at once — a six-seat pod once asked a
+        // dead seat); last resort is the next live seat in turn order.
         let alive = |c: &usize| self.players.get(*c).is_some_and(|p| p.is_alive());
         let controller = self
             .find_card_anywhere(source)
@@ -94,27 +69,17 @@ impl GameState {
             // the one pick that needs no policy.
             return controller;
         }
-        // "…that player chooses another opponent if possible" — the ranked
-        // pick, so the re-seating is the same question the rest of the engine
-        // answers with `default_hostile_opponent` and a fixed seed reproduces
-        // it. No opponent left means the controller chooses themselves, which
-        // the first sentence of 800.4g allows.
+        // "…another opponent if possible" — the deterministic ranked pick.
+        // With no opponent left the controller chooses (800.4g allows it).
         self.default_hostile_opponent(controller).filter(alive).unwrap_or(controller)
     }
 
     /// Whether an interactive seat should be handed a modal — `wants_ui`,
     /// **and still in the game** (CR 800.4).
     ///
-    /// The `is_alive` half is what the 102 hand-written `players[x].wants_ui`
-    /// reads this replaces were each missing. A seat that has left has no
-    /// player behind it, so a decision addressed to one is a table waiting on
-    /// somebody who cannot answer — the recurring shape in this engine's
-    /// multiplayer bugs, and the reason CR 800.4a/f/g/h exist at all. One
-    /// predicate so a new ask site cannot reintroduce it, and so the answer
-    /// matches [`route_ask`](Self::route_ask)'s.
-    ///
-    /// Identical to a bare `wants_ui` read in a duel: a seat leaving there
-    /// ends the game.
+    /// A modal posed to a departed seat waits forever. Use this one
+    /// predicate (not a bare `wants_ui` read) at every ask site so the answer
+    /// matches [`route_ask`](Self::route_ask)'s. Same as `wants_ui` in a duel.
     pub(crate) fn seat_prompts(&self, seat: usize) -> bool {
         self.players.get(seat).is_some_and(|p| p.wants_ui && p.is_alive())
     }
@@ -164,14 +129,10 @@ impl GameState {
         }
     }
 
-    /// [`route_ask`](Self::route_ask) for a question that is *not* about
-    /// paying a cost, which is every ask but the yes/no ones — CR 800.4f
-    /// cannot apply, so there is always a seat to ask.
-    ///
-    /// Built on [`reseat_ask`](Self::reseat_ask) rather than by unwrapping
-    /// `route_ask`'s answer: `audit_panics` counts an `unreachable!` as a bare
-    /// panic reachable from self-play, and "the other variant cannot happen
-    /// here" is a claim a total function does not have to make.
+    /// [`route_ask`](Self::route_ask) for a non-cost question: CR 800.4f
+    /// cannot apply, so there is always a seat to ask. Built on
+    /// [`reseat_ask`](Self::reseat_ask) rather than unwrapping `route_ask`,
+    /// which would need an `unreachable!` (`audit_panics` flags those).
     pub(crate) fn route_ask_choice(&self, seat: usize, source: crate::card::CardId) -> usize {
         if self.players.get(seat).is_none_or(|p| p.is_alive()) {
             return seat;
@@ -265,11 +226,8 @@ mod tests {
         assert!(g.scratch.resolution_answer_log.is_empty(), "no answer outlives the dropped continuation");
     }
 
-    /// CR 800.4 generally: no modal the engine poses may name a seat that has
-    /// left. `seat_prompts` is the one predicate behind every suspend, so this
-    /// is the shape check rather than a per-card one — the 102 hand-written
-    /// `players[x].wants_ui` reads it replaced were each a place this could
-    /// recur, and each of them was missing the `is_alive` half.
+    /// CR 800.4: no modal may name a departed seat. `seat_prompts` is behind
+    /// every suspend, so this is a shape check, not a per-card one.
     #[test]
     fn cr_800_4_a_departed_seat_is_never_handed_a_modal() {
         let mut g = multi_player_game(4);

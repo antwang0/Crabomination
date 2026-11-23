@@ -52,12 +52,11 @@ pub(super) fn pick_cycle(state: &GameState, seat: usize, w: &EvalWeights) -> Opt
 
 /// CR 702.29e — a landcycle (`Landcycling` / `Typecycling`, FRA's "basic
 /// landcycling {2}" on its six-drops) when `seat` holds no land, has fewer
-/// than `ENOUGH_LANDS` out, and cannot cast the card next turn: in its own
-/// main phase while the land drop is unused (the fetched land is played on
-/// the next tick), else at an opponent's end step. No bot path cycled one:
-/// 3,000 FRA sealed duels (2026-10-24) held Hexhaven Battalion in 22 % of the
-/// games that drew it and never landcycled anything. Behind the
-/// `duel_sinks` seat flag (or a commander, as the cycling above).
+/// than `ENOUGH_LANDS` out, and can't cast the card next turn: in its own
+/// main phase while the land drop is unused (the land is played next
+/// tick), else at an opponent's end step. No bot path used to landcycle
+/// (FRA sealed, 2026-10-24). Behind the `duel_sinks` seat flag (or a
+/// commander, as the cycling above).
 /// Under `color_fixing` it also cycles, short of lands or not, a card whose
 /// land makes a splash colour (four or fewer sources in the deck) that a
 /// spell in hand, castable with one more land, is stranded on — if the

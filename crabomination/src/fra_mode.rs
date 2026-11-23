@@ -1,19 +1,16 @@
 //! Reality Fracture (FRA) sealed: the set's booster sheet and a pack roller,
 //! so a sealed pool can be opened from FRA instead of Secrets of Strixhaven.
 //!
-//! [`crate::selfplay::sealed_pool`] reads [`SealedSet::current`] —
-//! `CRAB_SEALED_SET=fra` in the environment — so every caller that opens a
-//! sealed pool (the self-play trainer's actors, `bot_ladder --decks sealed`,
-//! the client's sealed opponent) switches set together, and the default stays
-//! SOS: a training field, a gate deck and a recorded reference all keep their
-//! meaning unless the variable is set.
+//! [`crate::selfplay::sealed_pool`] reads [`SealedSet::current`]
+//! (`CRAB_SEALED_SET=fra`), so every sealed-pool caller (trainer actors,
+//! `bot_ladder --decks sealed`, the client's opponent) switches together; the
+//! default stays SOS so fields, gate decks and references keep their meaning.
 //!
-//! **The pack.** Fourteen cards: one rare or mythic (mythic one time in
-//! eight), three uncommons, ten commons, no duplicates within a pack. A Play
-//! Booster's wildcard, foil and land slots are folded into the common and
-//! rare counts; what a sealed pool needs is the rarity mix, and this keeps it
-//! (84 cards from six packs: six rare-slot cards, eighteen uncommons). Rarities
-//! are Scryfall's for set `fra` (280 non-basic cards, fetched 2026-10-23).
+//! **The pack.** Fourteen cards: one rare or mythic (mythic 1 in 8), three
+//! uncommons, ten commons, no duplicates in a pack. Play Booster wildcard,
+//! foil and land slots are folded into those counts, which keeps the rarity
+//! mix a sealed pool needs. Rarities are Scryfall's for `fra` (280
+//! non-basics, fetched 2026-10-23).
 
 use crate::card::CardDefinition;
 use rand::{Rng, RngExt};

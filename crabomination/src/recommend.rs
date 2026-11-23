@@ -1,20 +1,17 @@
 //! Sealed-deck building and bot-vs-bot match simulation.
 //!
-//! Two halves, which used to sit under a simulation-ranked recommender
-//! (`Session`: race the top builds of a pool against a generated field,
-//! then refine and local-search the winner — retired 2026-09-29 with its
-//! only front end, the `recommend_pool` binary):
+//! (The simulation-ranked `Session` recommender that used to sit on top was
+//! retired 2026-09-29 with the `recommend_pool` binary.)
 //!
-//! * **Building.** Given a sealed pool, enumerate candidate builds across
-//!   the full color lattice (pairs, pair + splash, 3/4/5-color) and rank
-//!   them with a cheap static score, or sample a randomized build from the
-//!   top shapes ([`build_random_deck_from`]) so a field of them looks like
-//!   a room of humans rather than clones. `selfplay` and the client's
-//!   sealed opponents build here.
-//! * **Simulation.** Play two decks against each other under chosen
-//!   pilots ([`simulate_match_games_piloted`], the antithetic-pair loop
-//!   behind `bot_ladder`), plus the per-game stop diagnostics
-//!   ([`stop_reason`], [`cap_diagnosis`]) every simulator shares.
+//! * Building: enumerate candidate builds across the colour lattice (pairs,
+//!   pair + splash, 3/4/5-colour) and rank them with a cheap static score,
+//!   or sample a randomized build from the top shapes
+//!   ([`build_random_deck_from`]) so a field looks like a room of humans,
+//!   not clones. `selfplay` and the client's sealed opponents build here.
+//! * Simulation: play two decks under chosen pilots
+//!   ([`simulate_match_games_piloted`], the antithetic-pair loop behind
+//!   `bot_ladder`), plus the shared stop diagnostics ([`stop_reason`],
+//!   [`cap_diagnosis`]).
 
 use crate::fxhash::HashMap;
 
@@ -49,42 +46,30 @@ pub struct SimConfig {
     /// Minimum static score for a card to be splash-worthy.
     pub splash_min_score: i32,
     /// The repaired sealed builder: card-quality scoring
-    /// ([`draft::card_quality`]), splash candidates restricted to single
-    /// colored pips, and basic lands split by squared pip demand so a
-    /// double-pip card gets the sources it actually needs.
-    ///
-    /// A flag rather than a rewrite so the previous builder stays as the
-    /// measurement control — all three defects were found together (a
-    /// {3}{U}{U} bomb "splashed" off three Islands) and are fixed
-    /// together, so they are measured together.
+    /// ([`draft::card_quality`]), splashes restricted to single-pip cards,
+    /// and basics split by squared pip demand. A flag, not a rewrite, so the
+    /// old builder stays as the measurement control (the three defects were
+    /// found together — a {3}{U}{U} bomb "splashed" off three Islands).
     pub builder_v2: bool,
-    /// The quality- and curve-aware *shape ranker*
-    /// ([`static_build_score_v3`]): candidate color shapes are ranked
-    /// with [`draft::score_card_quality`] plus a curve-shape penalty,
-    /// instead of the legacy body-blind scorer that `builder_v2` still
-    /// uses for shape choice (it only repaired the per-card picks).
+    /// The quality- and curve-aware shape ranker
+    /// ([`static_build_score_v3`]): shapes ranked by
+    /// [`draft::score_card_quality`] plus a curve penalty, instead of the
+    /// legacy body-blind scorer `builder_v2` still uses for shape choice.
     ///
-    /// Default **off**: `static_build_score` feeds the gauntlet's shape
-    /// softmax, so flipping this changes every generated field — the
-    /// ladder's sealed gate decks included. It stays a control-selectable
-    /// flag (same rule as `builder_v2`) until the `--gate-builder-v3`
-    /// race adopts it; the client's sealed opponent opts in explicitly.
+    /// Default off: it feeds the gauntlet's shape softmax, so flipping it
+    /// changes every generated field, ladder gate decks included. Stays a
+    /// flag until the `--gate-builder-v3` race adopts it; the client's
+    /// sealed opponent opts in explicitly.
     pub builder_v3: bool,
     /// Score main-deck picks with [`draft::aggro_curve_delta`] on top of the
     /// quality scorer: cheap proactive cards up, six-plus-drops down.
     ///
-    /// The builder had no working curve. `CardBrief::base_score`'s bucket
-    /// spans three points against a quality term worth ~fifteen, and it
-    /// ranks a one-drop *below* a five-drop; `card_quality` has no mana-value
-    /// term at all. `curve_penalty` exists but only ranks colour shapes and
-    /// only under [`builder_v3`](Self::builder_v3), which is itself off.
-    /// The result is decks that top out heavy and do nothing before turn
-    /// four — reported from client games as "the bot doesn't build its deck
-    /// aggressive enough".
-    ///
-    /// Default **off**, same rule as `builder_v2` / `builder_v3`: this
-    /// changes every generated field including the ladder's sealed gate
-    /// decks, so it stays control-selectable until measured.
+    /// Without it the builder has no working curve: `base_score`'s bucket is
+    /// small against quality and ranks a one-drop below a five-drop,
+    /// `card_quality` has no mana-value term, and `curve_penalty` only ranks
+    /// shapes under [`builder_v3`](Self::builder_v3). Decks top out heavy
+    /// ("the bot doesn't build aggressive enough"). Default off for the same
+    /// reason as `builder_v3`: it changes every generated field.
     pub curve_aggro: bool,
     /// Score cards by their measured value ([`crate::card_ratings`]) instead
     /// of the static `base_score + quality`, in both the picks and the v3
@@ -97,16 +82,12 @@ pub struct SimConfig {
     /// ([`ShapeSlots`]) — instead of strictly by score. The rated builder
     /// turns it on for half its candidates and lets the judge choose.
     pub shape_slots: bool,
-    /// Restrict the shape lattice to one colour identity: a shape is
-    /// enumerated only when its main colours **and** its splash sit inside
-    /// this set, so `{Red, White}` builds a Lorehold deck and nothing else
-    /// (the client's `--opponent-colors`). Empty — the default — is
-    /// unrestricted, every shape in the lattice.
+    /// Restrict the lattice to one colour identity: a shape is enumerated
+    /// only when its main colours and splash sit inside this set (the
+    /// client's `--opponent-colors`). Empty (default) = unrestricted.
     ///
-    /// Fewer than two colours leaves *no* shape: the lattice enumerates
-    /// pairs and wider, never a mono-colour build, so a one-colour
-    /// restriction is an empty candidate set rather than a mono deck.
-    /// Callers that take this from a user reject that spelling up front.
+    /// Fewer than two colours leaves no shape (the lattice never builds
+    /// mono-colour), so callers taking this from a user reject it up front.
     pub color_restriction: ColorSet,
 }
 
@@ -196,14 +177,8 @@ fn color_letter(c: Color) -> char {
     }
 }
 
-/// Up to five colours, inline.
-///
-/// A shape's colour list is at most WUBRG and its splash is one colour, so
-/// both fit in six bytes — and the lattice describes 56 shapes with them
-/// before `rank_shape` reads one. As `Vec`s that was 60 allocations to build
-/// the shape list, two more per shape to copy them into the [`ShapeBuild`],
-/// and 36 extra bytes per element in the sort that ranks the result
-/// (PERF (-63)).
+/// Up to five colours, inline — a shape's colours and splash without the
+/// per-shape `Vec` allocations (PERF (-63)).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct ColorList {
     buf: [Color; 5],
@@ -213,9 +188,8 @@ pub(crate) struct ColorList {
 impl ColorList {
     const EMPTY: Self = Self { buf: Color::ALL, len: 0 };
 
-    /// The mask's colours in WUBRG order — the order the `Color::ALL` walk
-    /// this replaces produced, and the lattice's order is a tie-break in a
-    /// stable sort, so it is not free to change.
+    /// The mask's colours in WUBRG order. Not free to change: the lattice
+    /// order is a tie-break in a stable sort.
     fn from_mask(mask: u8) -> Self {
         let mut out = Self::EMPTY;
         for (i, c) in Color::ALL.into_iter().enumerate() {
@@ -231,9 +205,8 @@ impl ColorList {
         Self { buf: [c; 5], len: 1 }
     }
 
-    /// A caller's `&[Color]` as an inline list. Colour lists are subsets of
-    /// WUBRG everywhere this is reached, so the `take` is a bound, not a
-    /// truncation.
+    /// A caller's `&[Color]` (always a WUBRG subset, so `take` is a bound,
+    /// not a truncation).
     fn of(colors: &[Color]) -> Self {
         debug_assert!(colors.len() <= 5, "a colour list is a subset of WUBRG");
         let mut out = Self::EMPTY;
@@ -248,48 +221,36 @@ impl ColorList {
         &self.buf[..self.len as usize]
     }
 
-    /// The list as a bitmask — what `SimConfig::color_restriction`'s subset
-    /// test wants, and a five-bit `&`.
+    /// The list as a bitmask, for `SimConfig::color_restriction`'s subset test.
     fn set(&self) -> ColorSet {
         self.as_slice().iter().collect()
     }
 }
 
-/// Everything the shape lattice reads off a pool card that does not depend
-/// on the shape: its brief, and its scorer output against the pool's own pip
-/// totals.
-///
-/// The scorer's colour argument is `colors_of_picks(picks)` — a property of
-/// the *pool*, not of the candidate — so a card's base score is the same for
-/// all ~57 shapes, and only the pick jitter and the fixing bonus (a function
-/// of `colors.len()`) vary. The builder used to recompute all of it per
-/// shape: a `card_brief` lookup and a `score_card_with_colors` per pool card
-/// per shape.
+/// The shape-independent part of each pool card: its brief and its scorer
+/// output against the pool's own pip totals. The scorer's colour argument is
+/// a property of the pool, so the base score is the same for every shape;
+/// only the pick jitter and fixing bonus vary. Computed once instead of per
+/// card per shape.
 pub struct PoolScores<'a> {
     picks: &'a [CardFactory],
     /// `(brief, base score)` per entry of `picks`, in order.
     cards: Vec<(&'static crate::cube::CardBrief, i32)>,
-    /// Which scorer produced `cards`' second element — `SimConfig::builder_v2`
-    /// at every call site that reaches [`build_shape`]. Read by the
-    /// `debug_assert` there, so a caller that builds these under one scorer
-    /// and ranks splashes under the other fails the suite.
+    /// Which scorer produced `cards`' scores (`SimConfig::builder_v2`).
+    /// Checked by a `debug_assert` in [`build_shape`] so mixing scorers
+    /// between scoring and splash ranking fails the suite.
     quality: bool,
-    /// Whether `cards`' base scores carry [`draft::aggro_curve_delta`] —
-    /// `SimConfig::curve_aggro`. Checked by the same `debug_assert` as
-    /// `quality`, for the same reason.
+    /// Whether the scores carry [`draft::aggro_curve_delta`]
+    /// (`SimConfig::curve_aggro`). Same `debug_assert`.
     aggro: bool,
-    /// Whether `cards`' base scores are the measured ones —
-    /// `SimConfig::rated_cards`. Checked by the same `debug_assert`.
+    /// Whether the scores are the measured ones (`SimConfig::rated_cards`).
+    /// Same `debug_assert`.
     rated: bool,
     /// Descending-score orders over `picks`, one per fixing bonus a shape's
     /// colour count can imply, built on first ask. See [`Self::order`].
     orders: [std::cell::OnceCell<Vec<u32>>; 3],
-    /// A dense id per *distinct* card in `picks`, and how many there are.
-    ///
-    /// The copy cap counts copies of a card, and the builder counted them in a
-    /// `HashMap<CardFactory, u32>` built and probed per shape. The pool's
-    /// distinct-card partition is invariant across every shape, so the counter
-    /// is an array indexed by this and the hash comes off the per-shape path.
+    /// A dense id per distinct card in `picks`, and how many there are, so
+    /// the copy-cap counter is a per-shape array instead of a `HashMap`.
     dup_group: Vec<u32>,
     groups: usize,
 }
@@ -348,11 +309,8 @@ impl<'a> PoolScores<'a> {
     }
 
     /// `picks` indices, descending by `base + bonus * is_fixing`, stably.
-    ///
-    /// There are three of these, not fifty-seven: the bonus is a function of
-    /// the shape's colour *count*, so every pair shares one order and every
-    /// three-or-more-colour shape shares another. Built on first ask, so a
-    /// caller that builds one shape pays for one order.
+    /// Three orders cover every shape, since the bonus depends only on the
+    /// colour count; built on first ask.
     fn order(&self, bonus: i32) -> &[u32] {
         let slot = match bonus {
             0 => 0,
@@ -383,7 +341,6 @@ impl<'a> PoolScores<'a> {
 const ALLOW_WORDS: usize = 16;
 const ALLOW_BITS: usize = ALLOW_WORDS * 64;
 
-/// The two piles plus what [`assemble_lands`] needs to skip re-deriving them.
 /// How much of a shape a caller needs. `Ranked` stops at the spells and the
 /// score; `Full` also builds the leftovers pile and the pool-land index, which
 /// exist only to feed [`assemble_lands`].
@@ -395,19 +352,14 @@ enum Detail {
 
 struct MainDeck {
     main: Vec<CardFactory>,
-    /// Copies of each of the pool's distinct cards (`PoolScores::dup_group`'s
-    /// dense ids) that reached `main`. The copy cap builds it anyway, and it
-    /// *is* the main deck as a multiset — which is what the lattice dedups on,
-    /// so `lattice` uses it as the key rather than sorting a fresh
-    /// `Vec<CardFactory>` per shape (PERF (-63)).
+    /// Copies of each distinct pool card (`PoolScores::dup_group` ids) in
+    /// `main` — the main deck as a multiset, which `lattice` dedups on
+    /// instead of sorting a `Vec<CardFactory>` per shape (PERF (-63)).
     counts: Vec<u8>,
     leftovers: Vec<CardFactory>,
     /// `(index in leftovers, colours it taps for)` per pool land, ascending.
-    ///
-    /// A land never occupies a spell slot, so every pool land lands in the
-    /// `off` pile, and `off` keeps pool order — so this *is* the order and
-    /// the contents `assemble_lands` used to rediscover with a `card_brief`
-    /// per leftover.
+    /// Lands never take spell slots, so all of them reach `off` in pool order;
+    /// this saves `assemble_lands` a `card_brief` per leftover.
     lands: Vec<(u32, crate::mana::ColorSet)>,
 }
 
@@ -425,23 +377,18 @@ fn suggest_main_deck_shape<R: Rng>(
     shape_slots: bool,
 ) -> MainDeck {
     let picks = scores.picks;
-    // `leftovers`/`lands` exist for `assemble_lands` and nothing else, so a
-    // caller that only ranks the shape pays neither the two pool-sized vectors
-    // nor the copy that joins them (PERF (-63)).
+    // `leftovers`/`lands` only feed `assemble_lands`; a ranking-only caller
+    // skips them (PERF (-63)).
     let full = detail == Detail::Full;
-    // The shape's colours as a five-bit field: "castable in these colours" is
-    // then one `&`-and-compare per pool card rather than a `contains` scan per
-    // pip colour, and it runs once per (pool card x shape). A colourless card
-    // has an empty `pip_colors`, which is a subset of everything — the
-    // `pips.is_empty()` leg this replaces.
+    // The shape's colours as a bitmask: "castable" is one subset test per
+    // card. A colourless card's empty `pip_colors` is a subset of everything.
     let want = colors.iter().fold(crate::mana::ColorSet::empty(), |mut s, &c| {
         s.insert(c);
         s
     });
     let allowed = |f: CardFactory, brief: &crate::cube::CardBrief| -> bool {
-        // Lands never occupy spell slots in the sealed builder —
-        // `assemble_lands` owns the land base. (High jitter used to
-        // promote off-color duals into the 22-24 spell main.)
+        // Lands never occupy spell slots — `assemble_lands` owns the land
+        // base. (High jitter used to promote off-colour duals into the main.)
         if brief.is_land {
             return false;
         }
@@ -457,24 +404,18 @@ fn suggest_main_deck_shape<R: Rng>(
     // Fixing-aware bonus: mana rocks / land fetchers earn their keep in
     // proportion to how many colors the build stretches across.
     let fixing_bonus = PoolScores::fixing_bonus(colors.len());
-    // With no pick jitter a pick scores `base + fixing_bonus * is_fixing`, so
-    // the pool's descending order is one of the three `PoolScores` holds
-    // rather than one sort per shape — and a stable sort commutes with a
-    // filter, so walking that order and skipping what this shape disallows is
-    // the same sequence sorting the filtered list produced. `allowed` is
-    // recorded in a bitmask by the pass that already evaluates it. The
-    // jittered path (gauntlet and variant builds) still sorts.
+    // With no jitter, walk one of `PoolScores`' cached orders and skip what
+    // `allowed` (recorded in a bitmask) rejects — a stable sort commutes with
+    // a filter, so this matches sorting the filtered list. Jittered builds
+    // still sort.
     let ordered = (noise == 0 && picks.len() <= ALLOW_BITS).then(|| scores.order(fixing_bonus));
-    // Pre-sized: `scored` and `off` partition `picks` between them, and the
-    // two output piles partition `scored`. Growing them a doubling at a time
-    // was the largest single caller of `RawVec::grow_one` in the build.
-    // Pick *indices*, not factories: both paths hand `take` an index so the
-    // copy cap can read the dense card id off it.
+    // Pre-sized (`scored`/`off` partition `picks`; growth by doubling was
+    // the build's top `RawVec::grow_one` caller). Pick indices, not
+    // factories, so the copy cap can read the dense card id.
     let mut scored: Vec<(u32, i32)> =
         Vec::with_capacity(if ordered.is_some() { 0 } else { picks.len() });
     let mut off: Vec<CardFactory> = Vec::with_capacity(if full { picks.len() } else { 0 });
-    // A sealed pool is about a fifth lands; one allocation rather than five
-    // doublings.
+    // A sealed pool is about a fifth lands.
     let mut lands: Vec<(u32, crate::mana::ColorSet)> =
         Vec::with_capacity(if full { picks.len() / 4 } else { 0 });
     let mut allow = [0u64; ALLOW_WORDS];
@@ -502,15 +443,11 @@ fn suggest_main_deck_shape<R: Rng>(
         };
         scored.push((i as u32, base + jitter + fix));
     }
-    /// One pick down the copy-cap funnel: into the main deck while it has a
-    /// slot and the cap allows, into the leftovers otherwise. `at` indexes
-    /// `picks`; the cap counts copies of the *card*, which is
-    /// `PoolScores::dup_group`'s dense id for it.
-    ///
-    /// Under `curve` the slot also has to be the right *shape* — see
-    /// [`CurveSlots`]. A pick the curve refuses is neither taken nor
-    /// discarded: it goes to `deferred` for the unconstrained second pass,
-    /// because a pool that cannot fill the reserve must still make 23 cards.
+    /// One pick down the copy-cap funnel: into `main` while it has a slot and
+    /// the cap (counted per `PoolScores::dup_group` id) allows, else into the
+    /// leftovers. A pick the curve or shape slots refuse goes to `deferred`
+    /// for the unconstrained second pass, so a pool that cannot fill the
+    /// reserve still makes a full deck.
     #[inline]
     #[allow(clippy::too_many_arguments)]
     fn take(
@@ -572,11 +509,9 @@ fn suggest_main_deck_shape<R: Rng>(
                  curve.as_mut(), shape.as_mut(), &mut deferred);
         }
     }
-    // Second pass, unconstrained: the curve is a target, not a quota the
-    // pool has to be able to meet. A pool with four playable two-drops
-    // leaves a reserved slot unfilled, and a 22-card deck is worse than an
-    // off-curve one — so whatever the curve turned away competes for what is
-    // left, still in score order.
+    // Second pass, unconstrained: the curve is a target, not a quota — a
+    // short deck is worse than an off-curve one. Refused picks compete for
+    // what is left, still in score order.
     for i in std::mem::take(&mut deferred) {
         take(i, scores, &mut counts, target_spells, &mut main, &mut leftovers, full,
              None, None, &mut Vec::new());
@@ -625,12 +560,8 @@ pub(crate) fn is_fixing_card(def: &crate::card::CardDefinition) -> bool {
         || def.triggered_abilities.iter().any(|t| searches_land(&t.effect))
 }
 
-/// The five colors' pip totals, heaviest first.
-///
-/// `colors_of_picks` already summed exactly these — a color absent from a
-/// cost contributes zero pips to it — so both shape rankers used to walk
-/// their whole spell list five more times, with a `card_def` lookup per
-/// card per color, to rebuild a number they were holding.
+/// The five colors' pip totals, heaviest first, read off the
+/// `colors_of_picks` totals the rankers already hold.
 fn sorted_pip_totals(totals: &crate::draft::ColorCounts) -> [i32; 5] {
     let mut pips = [0i32; 5];
     for (i, (_, n)) in totals.iter().enumerate() {
@@ -646,9 +577,7 @@ fn sorted_pip_totals(totals: &crate::draft::ColorCounts) -> [i32; 5] {
 /// (what a 3+-color build pays in mana reliability).
 pub(crate) fn static_build_score(main: &[CardFactory], target_spells: usize) -> i32 {
     let main_colors = colors_of_picks(main);
-    // One `support()` for the whole main deck rather than one `is_empty` and
-    // five `get`s per card: the shape ranker runs this 56 times a build over
-    // ~23 cards each (PERF (-63)).
+    // One `support()` for the whole deck rather than per card (PERF (-63)).
     let seat = main_colors.support();
     let mut score: i32 = main
         .iter()
@@ -667,15 +596,12 @@ pub(crate) fn static_build_score(main: &[CardFactory], target_spells: usize) -> 
     score
 }
 
-/// [`static_build_score`] with the two defects the v2 repair left in the
-/// *shape ranker*: per-card scores come from
-/// [`draft::score_card_quality`] (v2 fixed the picks but still ranked
-/// whole shapes body-blind, so a pair of individually-worse colors could
-/// outrank the pair holding the bombs), and a degenerate curve now costs
-/// points ([`curve_penalty`] — nothing anywhere else enforces one; the
-/// only curve signal was the flat CMC bucket bonus). Behind
-/// `SimConfig::builder_v3` so the v2 ranker stays as the measurement
-/// control; raced by `selfplay_train --gate-builder-v3`.
+/// [`static_build_score`] with the shape ranker's two v2 defects fixed:
+/// per-card scores from [`draft::score_card_quality`] (v2 ranked shapes
+/// body-blind, so worse colours could outrank the pair holding the bombs),
+/// and a degenerate curve costs points ([`curve_penalty`]). Behind
+/// `SimConfig::builder_v3` so v2 stays the control; raced by
+/// `selfplay_train --gate-builder-v3`.
 pub(crate) fn static_build_score_v3(main: &[CardFactory], target_spells: usize, rated: bool) -> i32 {
     let main_colors = if rated {
         hybrid_aware_colors(main)
@@ -725,21 +651,14 @@ fn hybrid_aware_colors(main: &[CardFactory]) -> crate::draft::ColorCounts {
     totals
 }
 
-/// The curve a build must hit, in slots, under `SimConfig::curve_aggro`.
+/// The curve a build must hit, in slots, under `SimConfig::curve_aggro`:
+/// [`curve_penalty`]'s numbers (≥ 5 spells at mana value ≤ 2, ≤ 6 at ≥ 5)
+/// scaled to the spell count. `curve_penalty` only scores finished shapes;
+/// this constrains assembly, which otherwise fills strictly by score.
 ///
-/// [`curve_penalty`] already names this codebase's notion of a sane limited
-/// curve — at least five spells at mana value ≤ 2, at most six at ≥ 5 — but
-/// it only scores *finished shapes*, and only under `builder_v3`. Nothing
-/// made the assembly build to it: `take` fills strictly by score, so a pool
-/// whose best cards are expensive yields a deck that does nothing before
-/// turn four however well the shape scored. `curve_aggro`'s scoring term
-/// biases the order; this constrains the result.
-///
-/// Same two numbers, scaled to the spell count, as slots: `early` is
-/// reserved for mana value ≤ 2 and only those may claim it, `top` caps mana
-/// value ≥ 5 outright, and everything else competes for `open` in score
-/// order exactly as before. Capacity is `early + open == target_spells`, so
-/// the constraint reshapes the deck without shrinking it.
+/// `early` is reserved for mana value ≤ 2, `top` caps mana value ≥ 5, and
+/// everything else competes for `open` in score order. `early + open ==
+/// target_spells`, so the deck is reshaped, not shrunk.
 struct CurveSlots {
     /// Reserved for mana value ≤ 2.
     early: usize,
@@ -782,13 +701,12 @@ impl CurveSlots {
     }
 }
 
-/// The deck shape a build is held to under `SimConfig::shape_slots`: the
-/// ranges where [`crate::card_ratings::shape_penalty`]'s residual was flat
-/// on FRA — 16–19 creatures, 8–11 spells of mana value ≤ 2, 2–5 of ≥ 5 —
-/// scaled from 23 spells to the build's count. A pick is refused when it
-/// would push a count past its maximum, or leave too few slots to reach a
-/// minimum; refused picks go to the same unconstrained second pass as
-/// [`CurveSlots`]', so a pool that cannot meet the ranges still fills.
+/// The deck shape held under `SimConfig::shape_slots`: the ranges where
+/// [`crate::card_ratings::shape_penalty`]'s residual was flat on FRA (16–19
+/// creatures, 8–11 at mana value ≤ 2, 2–5 at ≥ 5), scaled from 23 spells.
+/// A pick is refused if it would pass a maximum or make a minimum
+/// unreachable; refused picks go to the unconstrained second pass, as with
+/// [`CurveSlots`].
 struct ShapeSlots {
     left: usize,
     have: [usize; 3],
@@ -822,34 +740,23 @@ impl ShapeSlots {
     }
 }
 
-/// Soft curve-shape penalty on a spell list: 4 points per early spell
-/// (mana value ≤ 2) short of five, 3 per spell at five-plus mana beyond
-/// six. Magnitudes sit between a pip of color fit (6) and a spell-slot
-/// shortfall (8) on purpose — a curve hole should steer a close shape
-/// choice, not overrule card quality outright. Zero for any list that
-/// looks like a normal limited deck.
+/// Soft curve penalty: 4 per early spell (mana value ≤ 2) short of five,
+/// 3 per five-plus drop beyond six. Deliberately below a colour-fit pip (6)
+/// and a slot shortfall (8): a curve hole steers a close shape choice but
+/// doesn't overrule card quality.
 pub(crate) fn curve_penalty(main: &[CardFactory]) -> i32 {
     let early = main.iter().filter(|&&f| crate::cube::card_brief(f).cmc <= 2).count() as i32;
     let top = main.iter().filter(|&&f| crate::cube::card_brief(f).cmc >= 5).count() as i32;
     (5 - early).max(0) * 4 + (top - 6).max(0) * 3
 }
 
-/// Top splash-worthy cards for splashing `third` next to `pair`: any card
-/// whose colors include `third` and fit within pair+third (score ≥ the
-/// bar). Gold cards straddling the pair and the splash qualify — "U/B
-/// splashing a B/G bomb" is a real sealed build, and a mono-only rule
-/// silently excluded exactly the cards most worth splashing.
-///
-/// Its scorer argument was `colors_of_picks(pool)` and its scorer was
-/// `cfg.builder_v2`'s — the pool property and the scorer [`PoolScores`] has
-/// already scored every card with — so both the whole-pool colour walk and
-/// the per-card score were re-derived once per splash shape, thirty times
-/// over one pool.
+/// Top splash-worthy cards for splashing `third` next to `pair`: colours
+/// include `third`, fit within pair+third, score ≥ the bar. Gold cards
+/// straddling pair and splash qualify ("U/B splashing a B/G bomb" is a real
+/// build). Reuses [`PoolScores`]' per-card scores.
 fn splash_cards(scores: &PoolScores<'_>, pair: &[Color], third: Color, cfg: &SimConfig) -> Vec<CardFactory> {
-    // Same five-bit test `suggest_main_deck_shape` uses, and the same reason:
-    // this is a whole-pool walk run once per splash shape — 30 of the 56 — so
-    // the `colors().all(|c| ... pair.contains(&c))` scan was paid ~2,550 times
-    // a build.
+    // Same bitmask test as `suggest_main_deck_shape`: a whole-pool walk per
+    // splash shape.
     let want = pair.iter().fold(crate::mana::ColorSet::single(third), |mut s, &c| {
         s.insert(c);
         s
@@ -863,10 +770,8 @@ fn splash_cards(scores: &PoolScores<'_>, pair: &[Color], third: Color, cfg: &Sim
             if !(brief.pip_colors.contains(third) && brief.pip_colors.is_subset_of(want)) {
                 return None;
             }
-            // A splash is a handful of off-color sources, so it can only
-            // support ONE colored pip. Without this the builder splashed
-            // {3}{U}{U} Emeritus of Ideation off three Islands — a card
-            // it then measurably failed to cast.
+            // A splash supports only one coloured pip (the builder once
+            // splashed {3}{U}{U} Emeritus of Ideation off three Islands).
             if cfg.builder_v2 && pips.get(third) > 1 {
                 return None;
             }
@@ -877,12 +782,10 @@ fn splash_cards(scores: &PoolScores<'_>, pair: &[Color], third: Color, cfg: &Sim
     hits.into_iter().take(cfg.splash_max_cards).map(|(f, _)| f).collect()
 }
 
-/// Proportional basic split over arbitrarily many colors (≥1 source per
-/// color with any pips when possible). Generalizes
-/// `draft::suggest_basic_split` beyond two colors. Pips are weighted by
-/// earliness — a {B} pip on a two-drop needs its source in the opening
-/// hand, a {B} pip on a six-drop can wait — so a splash of expensive
-/// cards leans on fewer sources than the raw pip count suggests.
+/// Proportional basic split over any number of colours (≥ 1 source per
+/// colour with pips), generalizing `draft::suggest_basic_split`. Pips are
+/// weighted by earliness (a two-drop's pip needs its source sooner than a
+/// six-drop's), so expensive splashes lean on fewer sources.
 fn basic_split(
     main: &[CardFactory],
     colors: &[Color],
@@ -897,11 +800,8 @@ fn basic_split(
                 .map(|&f| {
                     let brief = crate::cube::card_brief(f);
                     let pips = brief.pips.get(c);
-                    // Casting {U}{U} on curve needs roughly half again
-                    // the sources {U} does, not the same — a linear pip
-                    // count under-serves every double-pip card in the
-                    // deck. Squaring is the cheap standing-in for the
-                    // hypergeometric answer.
+                    // {U}{U} on curve needs ~1.5x the sources {U} does;
+                    // squaring stands in for the hypergeometric answer.
                     let demand = if squared_pips { pips * pips } else { pips };
                     demand * 7u32.saturating_sub(brief.cmc).max(1)
                 })
@@ -939,15 +839,11 @@ fn basic_split(
 }
 
 /// Does the rated builder give a colour holding a double-pip spell at least
-/// [`DOUBLE_PIP_SOURCES`] sources? [`basic_split`] weights each pip by
-/// (7 − mana value), so a {B}{B} six-drop barely counts and the spot check
-/// (2026-10-29) found five Swamps under two Apex Witchstalkers and
-/// Overwrite the Multiverse. **Off:** with the floor against without
-/// (`fra_card_eval --ab --best 16 --trial floor`, 2,000 pools x 8 pairs,
-/// `--pilot fra-fixes`, seeds 43 / 97): FRA 50.19 % [50.07, 50.31] / 50.15 %
-/// [50.03, 50.26] (one deck in seven changes), SOS 50.03 / 50.02; on top of
-/// the judge polish FRA 52.79 / 52.84 against the polish's 52.64 / 52.66.
-/// Real but small — under the +0.3 bar set before the run.
+/// [`DOUBLE_PIP_SOURCES`] sources? [`basic_split`]'s earliness weighting
+/// barely counts a {B}{B} six-drop (the 2026-10-29 spot check found five
+/// Swamps under two Apex Witchstalkers). Off: the `fra_card_eval --ab
+/// --trial floor` race measured FRA +0.15..0.19, SOS +0.03 — real but under
+/// the +0.3 bar set beforehand.
 pub const RATED_PIP_FLOOR: bool = false;
 
 /// The source count [`RATED_PIP_FLOOR`] guarantees: about what a strong
@@ -971,10 +867,10 @@ pub fn with_pip_floor<R>(on: bool, f: impl FnOnce() -> R) -> R {
     r
 }
 
-/// Move basics toward any main colour with a double-pip spell until it has
-/// [`DOUBLE_PIP_SOURCES`] sources (basics plus duals that make it), taking
-/// them from the colour with the most basics that can spare one — its own
-/// floor is that number too if it has a double pip, one source otherwise.
+/// Move basics toward each main colour with a double-pip spell until it has
+/// [`DOUBLE_PIP_SOURCES`] sources (basics plus duals), taken from the
+/// colour with the most basics that stays above its own floor (that number
+/// if it has a double pip, else one).
 fn double_pip_floor(main: &[CardFactory], colors: &[Color], duals: &[CardFactory], basics: &mut HashMap<Color, u32>) {
     let double = |c: Color| main.iter().any(|&f| crate::cube::card_brief(f).pips.get(c) >= 2);
     let dual_sources = |c: Color| duals.iter().filter(|&&f| crate::cube::card_brief(f).produces.contains(c)).count() as u32;
@@ -1027,9 +923,8 @@ pub(crate) fn land_produced_colors(def: &crate::card::CardDefinition) -> crate::
         if let Effect::AddMana { pool, .. } = &ab.effect {
             match pool {
                 // "{T}: Add {W} or {U}" is `OfColors` (the FRA Annexes and
-                // Commons): without it seven of FRA's ten duals tapped for
-                // nothing here, and 119 pool copies made 0 of 20 decks
-                // (spot check, 2026-10-29).
+                // Commons); missing it left seven of FRA's ten duals out of
+                // every deck (spot check, 2026-10-29).
                 ManaPayload::Colors(cs) | ManaPayload::OfColors(cs, _) => {
                     for c in cs {
                         seen.insert(*c);
@@ -1044,11 +939,9 @@ pub(crate) fn land_produced_colors(def: &crate::card::CardDefinition) -> crate::
     seen
 }
 
-/// Split `total` land slots between on-color duals from the pool and
-/// proportional basics. A pool land qualifies when it taps for at least
-/// two of the build's colors and nothing outside them — an off-color or
-/// mono-color utility land is just a worse basic to this builder. Used
-/// duals are removed from `leftovers`.
+/// Split `total` land slots between on-colour pool duals (tapping for ≥ 2
+/// of the build's colours and nothing else — anything else is a worse
+/// basic here) and proportional basics. Used duals leave `leftovers`.
 fn assemble_lands(
     leftovers: &mut Vec<CardFactory>,
     lands: &[(u32, crate::mana::ColorSet)],
@@ -1068,8 +961,6 @@ fn assemble_lands(
         if duals.len() >= total as usize {
             break;
         }
-        // `ColorSet` is a five-bit field, so "at least two of the build's
-        // colours and nothing outside them" is two mask tests.
         let on_color = crate::mana::ColorSet(produced.0 & want.0).len();
         if on_color >= 2 && produced.is_subset_of(want) {
             duals.push(leftovers[at as usize]);
@@ -1093,11 +984,9 @@ fn assemble_lands(
     (duals, basics)
 }
 
-/// Swap main-colour basics for basics of `c` until `lands` hold at least
-/// `n` sources of it (a land counts when it can make `c`): a splash the
-/// deck-building policy takes gets the sources the rated builder's
-/// pip-share split would deny it — one basic for two one-pip cards.
-/// Each swap takes from the main colour with the most basics left.
+/// Swap main-colour basics (from the colour with the most left) for basics
+/// of `c` until `lands` hold `n` sources of it, so a policy-chosen splash
+/// gets the sources the pip-share split would deny it.
 pub fn ensure_sources(lands: &mut [CardFactory], c: Color, n: usize, main: &[Color]) {
     let makes = |f: &CardFactory| land_produced_colors(crate::cube::card_def(*f)).contains(c);
     while lands.iter().filter(|f| makes(f)).count() < n {
@@ -1108,12 +997,11 @@ pub fn ensure_sources(lands: &mut [CardFactory], c: Color, n: usize, main: &[Col
     }
 }
 
-/// The land half of a rated build for spells chosen some other way (the
-/// deck-building policy, `crate::deck_policy`): the spells' colours (hybrid
-/// pips read as the builder reads them), on-colour duals from what the pool
-/// has left, then basics split by pips — [`assemble_lands`] as
-/// `ShapeBuild::complete` calls it. `total` lands, fewer only when the
-/// spells carry no coloured pip at all and the pool no dual for them.
+/// The land half of a rated build for spells chosen elsewhere
+/// (`crate::deck_policy`): [`assemble_lands`] over the spells' colours
+/// (hybrid-aware) and the pool's remaining duals, as `ShapeBuild::complete`
+/// calls it. Returns `total` lands, fewer only when the spells have no
+/// coloured pip and the pool no dual.
 pub fn lands_for_spells(pool: &[CardFactory], spells: &[CardFactory], total: u32) -> Vec<CardFactory> {
     let counts = hybrid_aware_colors(spells);
     let mut colors: Vec<Color> = Color::ALL.into_iter().filter(|&c| counts.get(c) > 0).collect();
@@ -1144,11 +1032,8 @@ pub fn lands_for_spells(pool: &[CardFactory], spells: &[CardFactory], total: u32
     lands
 }
 
-/// `"R/W"`, `"R/W + b"`. One `String`, pushed a char at a time: this runs
-/// once per shape in the lattice and every candidate build carries one, and
-/// the `map(to_string).collect::<Vec<_>>().join("/")` it replaces allocated a
-/// one-byte `String` per colour, a `Vec` to hold them, and the join's buffer
-/// — one candidate's label was 1,803 Ir, 3.6 % of a heuristic sealed build.
+/// `"R/W"`, `"R/W + b"`. Pushed a char at a time into one `String`: the
+/// per-colour `join` it replaced was a measurable share of a sealed build.
 fn candidate_label(colors: &[Color], splash: &[Color]) -> String {
     let mut s = String::with_capacity(2 * (colors.len() + splash.len()) + 3);
     for (i, &c) in colors.iter().enumerate() {
@@ -1169,14 +1054,10 @@ fn candidate_label(colors: &[Color], splash: &[Color]) -> String {
     s
 }
 
-/// One shape's spells, ranked but not yet given a land base — everything
-/// [`ShapeBuild::complete`] needs to finish it into a [`CandidateBuild`].
-///
-/// The lattice exists to be *ranked*: `build_random_deck_from` reads only
-/// `static_score`, `colors` and `splash` off its 56 entries and then rebuilds
-/// the one it picked. Land assembly is 12.3 % of a deck build and the label
-/// is another 0.5 %, so both are deferred to the caller that actually wants a
-/// deck (PERF (-63)).
+/// One shape's spells, ranked but without land base or label —
+/// [`ShapeBuild::complete`] finishes it into a [`CandidateBuild`]. The
+/// lattice is mostly only ranked, so land assembly is deferred to callers
+/// that want a deck (PERF (-63)).
 pub(crate) struct ShapeBuild {
     pub colors: ColorList,
     pub splash: ColorList,
@@ -1194,11 +1075,9 @@ pub(crate) struct ShapeBuild {
     detail: Detail,
 }
 
-/// [`build_shape`] as far as the ranking needs: chosen spells and static
-/// score, no land base and no label. `noise > 0` jitters the card picks for
-/// randomized (gauntlet / variant) builds. `None` when the shape is
-/// hollow — no splash-worthy cards for a splash shape, or no playables
-/// at all.
+/// [`build_shape`] as far as ranking needs: spells and static score.
+/// `noise > 0` jitters picks for randomized builds. `None` when the shape is
+/// hollow (no splash-worthy cards for a splash shape, or no playables).
 fn rank_shape<R: Rng>(
     colors: &[Color],
     splash_colors: &[Color],
@@ -1310,10 +1189,8 @@ pub fn enumerate_candidates(pool: &[CardFactory], cfg: &SimConfig) -> Vec<Candid
     enumerate_candidates_with(&PoolScores::new(pool, cfg.builder_v2, cfg.curve_aggro, cfg.rated_cards), cfg)
 }
 
-/// [`enumerate_candidates`] against a prebuilt [`PoolScores`], for a caller
-/// that goes on to build more decks from the same pool: building one is a
-/// whole-pool walk, and everything downstream of the lattice reads the same
-/// shape-invariant facts.
+/// [`enumerate_candidates`] against a prebuilt [`PoolScores`], for callers
+/// building more decks from the same pool.
 pub(crate) fn enumerate_candidates_with(
     scores: &PoolScores<'_>,
     cfg: &SimConfig,
@@ -1321,20 +1198,18 @@ pub(crate) fn enumerate_candidates_with(
     lattice(scores, cfg, Detail::Full).into_iter().map(|s| s.complete(cfg)).collect()
 }
 
-/// [`enumerate_candidates_with`] stopping at the ranking — the lattice as
-/// [`ShapeBuild`]s, in the same order, with no land base, leftovers pile or
-/// label built. What [`build_random_deck_from`] wants: it reads the score and
-/// the colours and rebuilds the shape it picks.
+/// [`enumerate_candidates_with`] stopping at the ranking: [`ShapeBuild`]s in
+/// the same order, no land base or label. [`build_random_deck_from`] reads
+/// the scores and colours and rebuilds the shape it picks.
 pub(crate) fn enumerate_shapes(scores: &PoolScores<'_>, cfg: &SimConfig) -> Vec<ShapeBuild> {
     lattice(scores, cfg, Detail::Ranked)
 }
 
 /// The shape lattice itself, at whichever detail the caller can use.
 fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<ShapeBuild> {
-    // (main colors, splash colors) shapes: 10 pairs each with its three
-    // splashes then bare, then the 16 wide subsets — the order the two
-    // `color_subsets` passes this replaces produced, and the sort below is
-    // stable, so it is a tie-break rather than presentation.
+    // (main, splash) shapes: 10 pairs each with its three splashes then
+    // bare, then the 16 wide subsets. The sort below is stable, so this
+    // order is a tie-break and must not change.
     const SHAPES: usize = 56;
     let mut shapes: Vec<(ColorList, ColorList)> = Vec::with_capacity(SHAPES);
     for mask in 1u8..(1 << 5) {
@@ -1356,8 +1231,7 @@ fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<Shap
     }
     debug_assert_eq!(shapes.len(), SHAPES);
 
-    // Empty is "unrestricted", so read it as WUBRG once and the per-shape
-    // test below is a single subset check.
+    // Empty means unrestricted: read it as WUBRG.
     let allowed = if cfg.color_restriction.is_empty() {
         ColorSet::all()
     } else {
@@ -1365,16 +1239,12 @@ fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<Shap
     };
     let mut rng = StdRng::seed_from_u64(0); // noise=0 → unused; keeps API one-shape
     let mut out: Vec<ShapeBuild> = Vec::with_capacity(SHAPES);
-    // Keyed on the copy-cap counts, which the builder already has: two shapes
-    // agree iff their main decks are the same multiset, and that is exactly
-    // what `counts` records. Sorting a fresh `Vec<CardFactory>` per shape to
-    // ask the same question was 652,126 Ir of `ipnsort` over twelve builds.
+    // Dedup on the copy-cap counts: equal iff the main decks are the same
+    // multiset, without sorting a `Vec<CardFactory>` per shape (PERF (-63)).
     let mut seen_mains: crate::fxhash::HashSet<Vec<u8>> = crate::fxhash::HashSet::default();
     for (colors, splash_colors) in shapes {
-        // A colour restriction narrows the lattice before any build work.
-        // The splash is in the test too: "only Lorehold" has to mean no
-        // third colour arriving through a splash slot, which is the one way
-        // a pair-shaped build reaches outside its pair.
+        // The restriction covers the splash too: "only Lorehold" means no
+        // third colour through a splash slot.
         if !colors.set().union(splash_colors.set()).is_subset_of(allowed) {
             continue;
         }
@@ -1400,36 +1270,22 @@ fn lattice(scores: &PoolScores<'_>, cfg: &SimConfig, detail: Detail) -> Vec<Shap
 
 // ─────────────────────────────── gauntlet ────────────────────────────────
 
-/// Build one randomized deck from `pulls`. Color identity is sampled by a
-/// softmax over the top shapes' static scores (temperature-scaled), card
-/// choice gets score jitter, and spell/land counts are sampled from the
-/// config ranges — so a field of these looks like a room of humans, not
-/// clones.
+/// Build one randomized deck from `pulls`: colours by a temperature-scaled
+/// softmax over the top shapes, jittered card picks, spell/land counts
+/// sampled from the config ranges.
 pub(crate) fn build_random_deck<R: Rng>(pulls: &[CardFactory], cfg: &SimConfig, rng: &mut R) -> GauntletDeck {
-    // Same shape lattice as user candidates (pairs, splashes, 3/4/5-color).
-    // A field that only ever builds pairs never bombs back at splash-shaped
-    // candidates — inflating their measured win rates.
+    // Same full lattice as user candidates: a pairs-only field never bombs
+    // back at splash shapes and inflates their win rates.
     let scores = PoolScores::new(pulls, cfg.builder_v2, cfg.curve_aggro, cfg.rated_cards);
     let shapes = enumerate_shapes(&scores, cfg);
     build_random_deck_from(&shapes, &scores, cfg, rng)
 }
 
-/// [`build_random_deck`] with the shape lattice already enumerated.
-///
-/// `enumerate_shapes(scores, cfg)` runs one `rank_shape` per shape —
-/// ~26 of them — and is **deterministic in `(pulls, cfg)`**: its own rng is
-/// `StdRng::seed_from_u64(cfg.seed)` and `noise = 0` means it never draws
-/// from it. So a caller building *n* random decks from one pool
-/// (`selfplay::build_candidates`, which `best_build_by` runs at n = 32 per
-/// side per game under `selfplay_train --use-deck-best`, and
-/// `recommend_pool` at n = 512) was re-deriving the identical lattice every
-/// time: n x 26 `rank_shape` calls where 26 + n do. Everything that varies
-/// per candidate — the softmax roll, the spell/land split, the pick jitter —
-/// is downstream of the lattice and reads only `rng`.
-///
-/// `scores` is that pool's [`PoolScores`], for the same reason:
-/// `enumerate_shapes` had to build one to produce `shapes`, and this
-/// function built a second one per candidate.
+/// [`build_random_deck`] with the shape lattice (and its [`PoolScores`])
+/// already built. `enumerate_shapes` is deterministic in `(pulls, cfg)` — it
+/// never draws from its rng — so a caller building n decks from one pool
+/// (`selfplay::build_candidates`) enumerates once; everything that varies
+/// per deck (softmax roll, spell/land split, pick jitter) reads only `rng`.
 pub(crate) fn build_random_deck_from<R: Rng>(
     shapes: &[ShapeBuild],
     scores: &PoolScores<'_>,
@@ -1437,16 +1293,12 @@ pub(crate) fn build_random_deck_from<R: Rng>(
     rng: &mut R,
 ) -> GauntletDeck {
     let t = cfg.build_temperature.max(0.0);
-    // Honest field: weight shape choice by the actual static-score gaps
-    // (softmax over the top 5) instead of flat rank weights — a pool whose
-    // best build dominates plays it nearly always, while close calls stay
-    // diverse. A ~12-point score gap costs ~e× likelihood at t = 1;
-    // t → 0 collapses to the argmax.
-    // `shapes[0]` below is an index and the lattice is empty for a pool with
-    // no playable card at all. An out-of-bounds here is a panic on the actor's
-    // deck-building path — `selfplay::build_candidates_cfg` calls this twice
-    // per game — and a panic at game 400 k kills a training run. Degrade to an
-    // empty deck: the game decks out, the bench counts it, the run survives.
+    // Softmax over the top 5 shapes' static scores: a dominant build is
+    // played nearly always, close calls stay diverse. A ~12-point gap costs
+    // ~e× likelihood at t = 1; t → 0 is the argmax.
+    // An empty lattice (no playable card) must not panic on `shapes[0]` —
+    // this is on the self-play actor's path, and a panic kills a training
+    // run. Degrade to an empty deck instead.
     if shapes.is_empty() {
         return GauntletDeck { label: "empty".to_string(), cards: Vec::new() };
     }
@@ -1467,10 +1319,8 @@ pub(crate) fn build_random_deck_from<R: Rng>(
     }
     let chosen = &shapes[idx];
 
-    // Noisy rebuild of the chosen shape: jittered card picks, sampled
-    // spell/land counts. The jitter is deliberately mild — a field of
-    // near-greedy builds is the honest opposition; heavy jitter made the
-    // field soft and inflated every candidate's measured win rate.
+    // Noisy rebuild of the chosen shape. The jitter is deliberately mild:
+    // heavy jitter made the field soft and inflated measured win rates.
     let (spells, lands) = sample_deck_split(cfg, rng);
     let noise = (t * 2.0).round() as i32;
     let build = build_shape(
@@ -1482,9 +1332,7 @@ pub(crate) fn build_random_deck_from<R: Rng>(
         scores,
     )
     .or_else(|| {
-        // The noisy rebuild can only fail if the shape was hollow — and it
-        // came from the lattice, so it isn't. Defensive: the same shape
-        // unjittered.
+        // Defensive: a lattice shape shouldn't be hollow; retry unjittered.
         build_shape(
             chosen.colors.as_slice(),
             chosen.splash.as_slice(),
@@ -1495,10 +1343,8 @@ pub(crate) fn build_random_deck_from<R: Rng>(
         )
     })
     .or_else(|| {
-        // And if *that* fails, the rest of the lattice. "It came from the
-        // lattice, so it isn't hollow" is a claim this function cannot check,
-        // and the `expect` that used to sit here is a panic on the actor's
-        // deck-building path. A hollow shape is skipped, not fatal.
+        // Then the rest of the lattice: a hollow shape is skipped, never a
+        // panic on the actor's path.
         shapes.iter().find_map(|s| {
             build_shape(
                 s.colors.as_slice(),
@@ -1510,10 +1356,9 @@ pub(crate) fn build_random_deck_from<R: Rng>(
             )
         })
     });
-    // Every shape in the lattice is hollow, so the pool has no playable card
-    // in any colour pair. Same degradation as the empty lattice above, and
-    // **not** a `debug_assert!`: an empty or unplayable pool is a legal input
-    // to a deck builder, not an engine invariant a caller has broken.
+    // Every shape hollow: same degradation as the empty lattice. Not a
+    // `debug_assert!` — an unplayable pool is legal input, not a broken
+    // invariant.
     let Some(build) = build else {
         return GauntletDeck { label: "empty".to_string(), cards: Vec::new() };
     };
@@ -1522,10 +1367,8 @@ pub(crate) fn build_random_deck_from<R: Rng>(
 
 // ─────────────────────────────── simulation ──────────────────────────────
 
-/// Which bot drives a seat. The recommender only ever needs the scored
-/// bot and the uniform control, but the bot ladder pits two *evaluation
-/// profiles* against each other, so the seat pilot is a value rather than
-/// a bool.
+/// Which bot drives a seat — a value rather than a bool because the ladder
+/// pits evaluation profiles against each other.
 #[derive(Debug, Clone, Copy)]
 pub enum Pilot {
     /// The scored bot with a specific evaluation profile.
@@ -1591,13 +1434,10 @@ pub struct SimCost {
     /// Undecided games the BOARD bound ended ([`StopReason::BoardCap`]): a
     /// token-doubling runaway, not a loop and not slow.
     ///
-    /// ⚠ **Counted apart because it is the one undecided shape a longer run
-    /// cannot clear.** It used to be summed into `action_capped`, and a
-    /// robustness sweep's answer to "is this cap a defect?" is "re-run the
-    /// cell with a bigger `CRAB_MAX_ACTIONS`" — which a Krenko board defeats
-    /// by construction: it doubles past 1,024 permanents in one activation
-    /// whatever the budget. Seed 1169 on `cube` and `all` is the worked
-    /// example (1,967 Goblins at turn 29), and it read as ten defects.
+    /// ⚠ Counted apart from `action_capped` because a bigger
+    /// `CRAB_MAX_ACTIONS` can't clear it (a Krenko board doubles past 1,024
+    /// permanents in one activation); summed in, seed 1169 on `cube` read as
+    /// ten defects.
     pub board_capped: u64,
     /// Undecided games where neither bot had a move accepted for eight
     /// consecutive rounds — the loop was stuck, not slow.
@@ -1614,13 +1454,9 @@ impl SimCost {
         self.count_stop(o.stop, o.winner.is_none());
     }
 
-    /// Tally one game's exit into the four undecided buckets.
-    ///
-    /// Split out of [`SimCost::record`] so the suite can gate the buckets
-    /// without a `GameOutcome`, which is crate-private: the BOARD cap being
-    /// counted apart from the action cap is what a robustness sweep's verdict
-    /// rests on (see `board_capped`), and that deserves a test rather than a
-    /// comment.
+    /// Tally one game's exit into the four undecided buckets. Public so the
+    /// suite can test the buckets (see `board_capped`) without the
+    /// crate-private `GameOutcome`.
     pub fn count_stop(&mut self, stop: StopReason, no_winner: bool) {
         match stop {
             StopReason::ActionCap => self.action_capped += 1,
@@ -1695,11 +1531,9 @@ pub fn simulate_match_games_piloted(
 }
 
 /// [`simulate_match_games_piloted`] against the build on the far end of
-/// `cross` — the unpaired control arm of the cross-binary ladder. The
-/// unseeded jitter this arm keeps is per-process and so costs the mirrors
-/// nothing: tie-breaks decide *actions*, and the actions are what crosses
-/// the link. `seed_base` must be `Some` (the shuffle is what both sides
-/// have to agree on).
+/// `cross` — the cross-binary ladder's unpaired control arm. Unseeded jitter
+/// is harmless here: only actions cross the link. `seed_base` must be `Some`
+/// (both sides must agree on the shuffle).
 #[allow(clippy::too_many_arguments)]
 pub fn simulate_match_games_cross(
     deck_a: &[CardFactory],
@@ -1711,9 +1545,8 @@ pub fn simulate_match_games_cross(
     mut cross: Option<&mut crate::crossplay::CrossGame>,
     i_am_a: bool,
 ) -> MatchTally {
-    // Build the two seat arrangements ONCE (libraries loaded, unshuffled)
-    // and clone per game — definitions are Arc'd, so a state clone is a
-    // fraction of re-invoking ~80 card factories per game.
+    // Build both seat arrangements once (unshuffled) and clone per game —
+    // far cheaper than re-invoking ~80 card factories.
     let template_a0 = build_match_template(deck_a, deck_b);
     let template_b0 = build_match_template(deck_b, deck_a);
     let mut tally = MatchTally {
@@ -1731,10 +1564,8 @@ pub fn simulate_match_games_cross(
             )
         });
         let template = if a_seat0 { &template_a0 } else { &template_b0 };
-        // Swap the pilots along with the decks so side A plays seat 0 and
-        // seat 1 equally often — turn order is worth a few points of win
-        // rate on its own and would otherwise be confounded with the
-        // profile under test.
+        // Swap pilots with decks so turn order (worth a few points) isn't
+        // confounded with the profile under test.
         let seated =
             if a_seat0 { [pilots[0], pilots[1]] } else { [pilots[1], pilots[0]] };
         // Unpaired games keep the unseeded jitter: this is the control
@@ -1786,22 +1617,18 @@ pub struct PairedTally {
     pub undecided: u32,
     /// Work done, for throughput reporting.
     pub cost: SimCost,
-    /// One entry per *fully decided* pair, in play order. A pair with an
-    /// undecided game is absent rather than recorded as a split: its games
-    /// still count in the unpaired totals above, but it carries no paired
-    /// evidence, and scoring it 0 would dilute the mean toward "even" with
-    /// games that never finished.
+    /// One entry per fully decided pair, in play order. A pair with an
+    /// undecided game is absent, not a split: scoring it 0 would dilute the
+    /// mean toward even. Its games still count in the unpaired totals.
     pub pairs: Vec<i8>,
     /// Under `CRAB_AIVAT`, A's summed luck over each entry of `pairs`'s two
     /// games (`server::aivat`); empty otherwise.
     pub pair_luck: Vec<f64>,
 }
 
-/// Wilson score interval at `z` standard normal deviates.
-///
-/// Not the normal approximation: at p̂ = 0 or 1 that has zero width, which
-/// once let a lucky 5-0 candidate claim a lower bound of 1.0 and eliminate
-/// the entire rest of the field (see
+/// Wilson score interval at `z` standard normal deviates. Not the normal
+/// approximation, which has zero width at p̂ = 0 or 1 (a lucky 5-0 once
+/// claimed a lower bound of 1.0; see
 /// `wilson_interval_is_not_degenerate_at_extremes`).
 pub fn wilson(wins: u32, n: u32, z: f64) -> (f64, f64) {
     if n == 0 {
@@ -1817,10 +1644,9 @@ pub fn wilson(wins: u32, n: u32, z: f64) -> (f64, f64) {
 
 /// Paired win-rate estimate from per-pair scores in {−1, 0, +1}.
 ///
-/// `p̂ = (E[S] + 1) / 2` and `SE(p̂) = sd(S) / (2√n)`, both read off the
-/// empirical pair-score distribution — no independence assumption between
-/// the two games of a pair, which is exactly the assumption pairing
-/// breaks.
+/// `p̂ = (E[S] + 1) / 2` and `SE(p̂) = sd(S) / (2√n)`, read off the
+/// empirical distribution — no independence assumption between a pair's
+/// games, which pairing breaks.
 pub struct PairedStat {
     pub n: usize,
     pub p: f64,
@@ -1848,33 +1674,19 @@ pub fn paired_stat(pairs: &[i8]) -> Option<PairedStat> {
     Some(PairedStat { n, p, se, rho })
 }
 
-/// [`simulate_match_games_piloted`] with **antithetic seat pairing**: each
-/// pair plays the same shuffle twice with the pilots swapped between the
-/// seats.
+/// [`simulate_match_games_piloted`] with antithetic seat pairing: each pair
+/// plays the same shuffle twice with the pilots swapped.
 ///
-/// The ordinary ladder draws a fresh shuffle for every game and swaps
-/// seats on alternate games, so seat luck and deal luck are averaged away
-/// rather than cancelled. In a 40-card mirror most of the game-to-game
-/// variance *is* the deal — one pilot flooding while the other curves out
-/// says nothing about either. Playing both sides of one deal makes that
-/// noise cancel within the pair instead of across thousands of games:
-/// whoever was going to win on the strength of the cards wins their copy
-/// of it in each direction, and the pair splits. Only a genuine piloting
-/// edge produces sweeps.
+/// In a 40-card mirror most game-to-game variance is the deal. Playing both
+/// sides of one deal cancels it within the pair: a deal-decided game is won
+/// by each pilot once and the pair splits, so only a real piloting edge
+/// sweeps. The pair score S ∈ {−1, 0, +1} has E[S] = 2p − 1 and
+/// Var(S) = 2p(1−p)(1 + ρ); a decisive-deal field drives ρ negative and the
+/// estimate's variance falls by (1 + ρ). `bot_ladder` reports the measured ρ.
 ///
-/// Formally the pair score S ∈ {−1, 0, +1} has E[S] = 2p − 1 and
-/// Var(S) = 2p(1−p)(1 + ρ), where ρ is the within-pair correlation. A
-/// decisive-deal field drives ρ negative, and the variance of the win-rate
-/// estimate falls by exactly that (1 + ρ) factor versus the same number of
-/// unpaired games. `bot_ladder` measures ρ and reports the realized
-/// efficiency rather than asserting one.
-///
-/// This is only a variance reduction, not a change of estimand: the mean
-/// is the same win rate the unpaired ladder estimates, which is why the
-/// unpaired total is still reported alongside it as the control.
-///
-/// Both games of a pair take their shuffle from one `seed_base + k` stream,
-/// so a mirror deals seat 0 the identical library in both directions.
+/// A variance reduction, not a new estimand: the mean is the unpaired win
+/// rate, which is still reported as the control. Both games draw from one
+/// `seed_base + k` stream, so seat 0 gets the same library both times.
 pub fn simulate_match_pairs_piloted(
     deck_a: &[CardFactory],
     deck_b: &[CardFactory],
@@ -1887,20 +1699,14 @@ pub fn simulate_match_pairs_piloted(
 }
 
 /// [`simulate_match_pairs_piloted`] with the other build on the far end of
-/// `cross`: side A is this process when `i_am_a`, and the pilot for the seat
-/// this process does *not* hold is the peer's bot rather than `pilots[..]`.
+/// `cross`: this process is side A when `i_am_a`, and the seat it does not
+/// hold is played by the peer. Both processes run this loop over the same
+/// seeds, so no schedule is sent; see `crate::crossplay`.
 ///
-/// Both processes run this same loop over the same seeds, so the pair
-/// structure, the shuffles and the seat swap are identical on both sides and
-/// nothing about the schedule has to be sent. What differs is only which
-/// seat each polls. See `crate::crossplay`.
-///
-/// The jitter seed is salted by seat here and not in the in-process loop:
-/// one process interleaves both seats' draws on one stream, two processes
-/// each have their own, and salting keeps the two seats independent while
-/// leaving a pair's second game an exact replay of the first with the
-/// binaries swapped — which is what makes a self-vs-self run split every
-/// pair.
+/// The jitter seed is salted by seat (unlike the in-process loop, where one
+/// stream serves both seats): it keeps the seats independent while a pair's
+/// second game stays an exact replay with binaries swapped, so self-vs-self
+/// splits every pair.
 #[allow(clippy::too_many_arguments)]
 pub fn simulate_match_pairs_cross(
     deck_a: &[CardFactory],
@@ -1928,15 +1734,12 @@ pub fn simulate_match_pairs_cross(
         let mut decided_both = true;
         let mut luck_a = 0.0f64;
         for a_seat0 in [true, false] {
-            // Re-seeded per game, *not* carried across the pair: the second
-            // game has to draw the same shuffle as the first, which a shared
-            // generator would not do.
+            // Re-seeded per game so the second game draws the same shuffle.
             let mut shuffle_rng = StdRng::seed_from_u64(seed);
             let template = if a_seat0 { &template_a0 } else { &template_b0 };
             let seated = if a_seat0 { [pilots[0], pilots[1]] } else { [pilots[1], pilots[0]] };
-            // Both games of the pair get the *same* jitter stream, so the
-            // bots' tie-breaks replay identically and the only thing left
-            // that can separate the two games is the profiles themselves.
+            // Same jitter stream for both games, so tie-breaks replay and
+            // only the profiles separate the two.
             let outcome = match &mut cross {
                 None => match trace_dump_dir() {
                     None => play_one_game(
@@ -2016,12 +1819,10 @@ pub fn simulate_match_pairs_cross(
     tally
 }
 
-/// Sample a variant's spell/land split that always sums to the legal
-/// 40-card sealed deck: spells from `spell_count_range`, lands = 40 −
-/// spells (clamped into `land_count_range`, re-deriving spells from the
-/// clamp if the config ranges don't line up). Independent sampling used
-/// to produce 38-39-card decks, which are illegal AND thinner-deck
-/// advantaged — they won tournaments on the bug.
+/// Sample a spell/land split summing to 40: spells from
+/// `spell_count_range`, lands = 40 − spells clamped into `land_count_range`,
+/// spells re-derived from the clamp. (Independent sampling made illegal,
+/// thinner 38-39-card decks that won on the bug.)
 fn sample_deck_split<R: Rng>(cfg: &SimConfig, rng: &mut R) -> (usize, u32) {
     const DECK_SIZE: usize = 40;
     let spells = rng.random_range(cfg.spell_count_range.0..=cfg.spell_count_range.1);
@@ -2037,8 +1838,7 @@ pub(crate) fn build_match_template(seat0: &[CardFactory], seat1: &[CardFactory])
     let mut g = GameState::new(vec![Player::new(0, "A"), Player::new(1, "B")]);
     for (seat, deck) in [seat0, seat1].into_iter().enumerate() {
         for &f in deck {
-            // `card_arc`, not `f()`: a `CardDefinition` is 8,232 bytes and a
-            // library is ~40 of them per seat per game.
+            // `card_arc`, not `f()`: a `CardDefinition` is several KB.
             g.add_card_to_library(seat, crate::cube::card_arc(f));
         }
         g.players[seat].wants_ui = true;
@@ -2046,18 +1846,13 @@ pub(crate) fn build_match_template(seat0: &[CardFactory], seat1: &[CardFactory])
     g
 }
 
-/// Consecutive no-move rounds before a bot play loop gives the game up.
-/// Two bots that both pass priority forever produce one such round per
-/// pass, so this is deliberately small. Shared with
-/// [`crate::selfplay`]'s recording loop, which is otherwise a separate
-/// hand-written copy of the same fixed point — the two stall counts are
-/// only comparable if this number is.
+/// Consecutive no-move rounds before a bot play loop gives the game up;
+/// deliberately small. Shared with [`crate::selfplay`]'s recording loop so
+/// the two stall counts stay comparable.
 pub const STALE_ROUNDS: usize = 8;
 
-/// Why a game's play loop stopped. An undecided game is not one failure
-/// mode but three, and the bench's `stalls` count merged them: a capped
-/// game was doing work and ran out of budget, a stuck one had no bot able
-/// to move at all, and a draw is a legitimate rules outcome. They want
+/// Why a game's play loop stopped. Undecided games split into out of
+/// budget, board-capped, stuck (no bot could move) and drawn — they want
 /// different fixes, so the outcome says which.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum StopReason {
@@ -2067,40 +1862,32 @@ pub enum StopReason {
     ActionCap,
     /// The battlefield passed [`MAX_BATTLEFIELD`] (or the stack
     /// [`MAX_STACK`] spells or [`MAX_STACK_ITEMS`] items): a token-doubling
-    /// board or a copy chain whose next action costs more than the last,
-    /// bounded here so one game cannot hold a thread for hours. Counted with
-    /// the action cap.
+    /// board or copy chain, bounded so one game cannot hold a thread for
+    /// hours.
     BoardCap,
     /// [`STALE_ROUNDS`] consecutive rounds in which neither bot had an
     /// action accepted.
     NoLegalMove,
 }
 
-/// The simulator's battlefield bound. Scute Swarm's landfall copy doubles
-/// its own count on every land drop: a cube dflt mirror at seed 43 had
-/// 1,377 copies and 671 of their triggers on the stack at action 4,001,
-/// every one of the next resolutions a priority stop over a board that
-/// size, and the 50,000-action cap was still hours away (2026-09-08). No
-/// legitimate 40-card game approaches a thousand permanents; a board past
-/// it is a runaway, ended as undecided the way an action-capped one is.
+/// The simulator's battlefield bound. No legitimate 40-card game nears a
+/// thousand permanents; a board past it is a runaway (Scute Swarm doubling
+/// on every land drop — 1,377 copies at action 4,001, cube seed 43,
+/// 2026-09-08), ended as undecided like an action-capped game.
 pub const MAX_BATTLEFIELD: usize = 1_024;
 
-/// The stack's simulator bound on SPELLS, `MAX_BATTLEFIELD`'s sibling: a
-/// spell-copy chain past it copies nothing more, and a stack holding that
-/// many spells ends the game as a `BoardCap`. A Venser, Fervent Forger
-/// copying a Replication Technique that copies Venser grew the stack to 1,692
-/// items, and each action past that walked the whole stack per target pick —
-/// one never returned (a four-seat pod, seed 65002 game 41). Triggers are not
-/// counted: a 771-creature attack puts 771 legitimate triggers there.
+/// The stack's bound on SPELLS: a copy chain past it copies nothing more,
+/// and a stack holding that many ends the game as a `BoardCap` (Venser
+/// copying a Replication Technique that copies Venser never returned; pod
+/// seed 65002 game 41). Triggers aren't counted — a big attack legitimately
+/// stacks hundreds.
 pub const MAX_STACK: usize = 512;
 
-/// The stack's bound on ITEMS of any kind, triggers included: four times the
-/// board bound, so a whole-board trigger fan-out is far inside it. Dina, Soul
-/// Steeper beside Exquisite Blood against a seat that can't lose pushed 9,000
-/// triggers with only passes between them, which the play budget never counts
-/// (six-seat audit pod, seed 4500524 game 17, ran for hours). At eight times
-/// the board, a fetch putting three lands under ~1,470 Scute Swarms stacked
-/// 4,405 landfall triggers at ~0.17 s a pass (five-seat pod, seed 1017885).
+/// The stack's bound on ITEMS, triggers included: four times the board
+/// bound, so a whole-board fan-out fits. Catches trigger loops the action
+/// budget never counts (Dina + Exquisite Blood against a seat that can't
+/// lose, pod seed 4500524 game 17). Eight times was too loose: ~1,470 Scute
+/// Swarms stacked 4,405 triggers at ~0.17 s a pass (pod seed 1017885).
 pub const MAX_STACK_ITEMS: usize = 4 * MAX_BATTLEFIELD;
 
 /// Where the board-bound gates stop a token effect (a held cast, a declined
@@ -2116,9 +1903,8 @@ pub const BOARD_GATE: usize = MAX_BATTLEFIELD - MAX_BATTLEFIELD / 8;
 pub const TOKEN_DOUBLER_CEILING: u32 = 10;
 
 /// [`BOARD_GATE`]'s stack sibling: an optional free cast is declined once this
-/// many spells are on the stack, an eighth short of [`MAX_STACK`]. Jadzi's
-/// magecraft under Thousand-Year Storm recast its top card into the bound
-/// (three-seat audit pod, seed 16000293 game 20).
+/// many spells are on the stack, an eighth short of [`MAX_STACK`] (Jadzi
+/// under Thousand-Year Storm; pod seed 16000293 game 20).
 pub const STACK_GATE: usize = MAX_STACK - MAX_STACK / 8;
 
 /// Why a driver loop stops, in the loop's own order — the rules first, then
@@ -2159,12 +1945,11 @@ pub(crate) struct GameOutcome {
     pub luck: f64,
 }
 
-/// `CRAB_AIVAT=1`: score every real draw's luck with the champion slot's
-/// value net (`server::aivat`), and play each accepted move with
-/// `perform_action` rather than adopting the bot's settled state — the two
-/// are the same state by `GameState::accept_on`'s contract, and only the
-/// driver's own `perform_action` is outside every bot's search, so only it
-/// may log draws. Read once.
+/// `CRAB_AIVAT=1`: score every real draw's luck with the champion value net
+/// (`server::aivat`), and play each accepted move with `perform_action`
+/// instead of adopting the bot's settled state (the same state per
+/// `GameState::accept_on`), since only the driver's own call is outside
+/// every bot's search and may log draws. Read once.
 pub fn aivat_on() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ON.get_or_init(|| std::env::var_os("CRAB_AIVAT").is_some_and(|v| v != "0"))
@@ -2190,13 +1975,9 @@ pub(crate) fn play_one_game(
 }
 
 /// A full game's observable history: one line per accepted action, each
-/// pairing the action with the state it produced. Two engine builds that
-/// agree on this agree on everything a game can be judged by.
-///
-/// Deliberately textual. A struct would be cheaper to compare and useless
-/// to read: when a trace moves, the question is always *which* action
-/// diverged and what the board looked like there, and a committed text
-/// snapshot answers that from the diff alone.
+/// with the state it produced. Two builds that agree on this agree on
+/// everything a game can be judged by. Textual on purpose, so a moved trace's
+/// diff shows which action diverged and the board there.
 pub struct GameTrace {
     pub lines: Vec<String>,
     pub winner: Option<usize>,
@@ -2204,8 +1985,7 @@ pub struct GameTrace {
 }
 
 impl GameTrace {
-    /// FNV-1a over the joined lines. Compact stand-in for the whole trace
-    /// where committing the text would be all bulk and no signal.
+    /// FNV-1a over the joined lines, where committing the text would be bulk.
     pub fn digest(&self) -> u64 {
         let mut h: u64 = 0xcbf2_9ce4_8422_2325;
         for b in self.lines.join("\n").bytes() {
@@ -2231,17 +2011,15 @@ impl GameTrace {
     }
 }
 
-/// `CRAB_SETTLE_CHECK=1` — the action-cap loop finder. Every time the loop
-/// adopts a bot's `settled` state it also runs the action for real on a
-/// clone and reports when the two disagree; it reports an accepted action
-/// that left the board's fingerprint unchanged, and a rejected decision
-/// answer with its error and the decision it answered (a rejected answer
-/// drops its decision, so a prompt whose every answer fails sends the
-/// caster back before the cast: the cube stall of 2026-10-27, Arc
-/// Lightning's extra-target prompt offering a protected creature).
+/// `CRAB_SETTLE_CHECK=1` — the action-cap loop finder. Whenever the loop
+/// adopts a bot's `settled` state it also runs the action on a clone and
+/// reports: the two disagreeing, an accepted action that left the board's
+/// fingerprint unchanged, and a rejected decision answer with its error (a
+/// rejected answer drops the decision and rolls back the cast — the cube
+/// stall of 2026-10-27, Arc Lightning offering a protected target).
 /// `CRAB_SETTLE_MATCH=<substring>` also reports every action whose debug
-/// text contains it. With `bot_ladder`'s `CRAB_LADDER_ONLY` and
-/// `CRAB_MAX_ACTIONS`. A diagnostic; read once.
+/// text contains it. Pairs with `bot_ladder`'s `CRAB_LADDER_ONLY` and
+/// `CRAB_MAX_ACTIONS`. Read once.
 fn settle_check() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ON.get_or_init(|| std::env::var_os("CRAB_SETTLE_CHECK").is_some_and(|v| v != "0"))
@@ -2287,16 +2065,13 @@ fn settle_diag(before: &GameState, settled: &GameState, label: &str, action: cra
     }
 }
 
-/// `CRAB_OFFER_CHECK=1` — the census behind the settle check. At every
-/// pending prompt it answers each offered option on a clone and reports the
-/// ones the engine rejects: an option a prompt offers and then refuses is
-/// the cube stall's class (a rejected answer drops the decision and rolls
-/// the action back), and a bot only reveals it if it happens to pick that
-/// option. One line per (source, prompt, error) the first time it is seen,
-/// prefixed `offer-check:`; `ALL` marks a prompt with no accepted option.
-/// Covers the prompts whose options are enumerable — targets, modes,
-/// colours, library searches, options. `offer-probed: N` lines count the
-/// prompts probed, at each power of two from 1 024. A diagnostic; read once.
+/// `CRAB_OFFER_CHECK=1` — the census behind the settle check: at every
+/// enumerable prompt (targets, modes, colours, library searches, options)
+/// answer each offered option on a clone and report the ones the engine
+/// rejects (the cube stall's class, which a bot only reveals by picking
+/// it). One `offer-check:` line per new (source, prompt, error); `ALL` marks
+/// a prompt with no accepted option. `offer-probed: N` lines count prompts
+/// probed, at each power of two from 1 024. Read once.
 fn offer_check() -> bool {
     static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
     *ON.get_or_init(|| std::env::var_os("CRAB_OFFER_CHECK").is_some_and(|v| v != "0"))
@@ -2335,8 +2110,7 @@ fn offer_probe(g: &GameState) {
     if answers.is_empty() {
         return;
     }
-    // Proof of coverage, so a quiet census reads as "probed and clean", not
-    // "never ran": a line at each power of two from 1 024 of prompts probed.
+    // Proof of coverage, so a quiet census reads "clean", not "never ran".
     static PROBED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = PROBED.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
     if n.is_power_of_two() && n >= 1024 {
@@ -2419,15 +2193,12 @@ fn named_ids(g: &GameState, line: &str) -> String {
 }
 
 /// `CRAB_DUMP_TRACES=<dir>` — every game the in-process paired loop plays is
-/// written to `<dir>/<job seed>_<pair>_<seat order>.txt` as its
+/// written to `<dir>/<seed base>_<pair>_<seat order>_<n>.txt` as its
 /// [`GameTrace`] text. Read once.
 ///
-/// The instrument for "two binaries on one seed play different games":
-/// `bot_ladder`'s stdout is outcomes only, `--bench` reaches one pool, and
-/// the golden traces are one pairing — so a divergence on a `cube` board
-/// was invisible until it moved a callgrind total. Dump both binaries' runs
-/// and diff the directories; the first differing line names the action and
-/// the board. Off the hot path: one `OnceLock` read per game.
+/// For "two binaries on one seed play different games": dump both runs and
+/// diff the directories; the first differing line names the action and the
+/// board.
 fn trace_dump_dir() -> Option<&'static std::path::Path> {
     static DIR: std::sync::OnceLock<Option<std::path::PathBuf>> = std::sync::OnceLock::new();
     DIR.get_or_init(|| {
@@ -2488,10 +2259,9 @@ fn trace_state(g: &GameState) -> String {
     )
 }
 
-/// The optional observers a game can be played under. Both are off on the
-/// hot path; bundled so the play loop keeps one signature as they are added
-/// (see filter 11 — the alternative is a second hand-written copy of the
-/// loop per observer, and the two then drift).
+/// The optional observers a game can be played under, all off on the hot
+/// path. Bundled so the play loop keeps one signature instead of a drifting
+/// copy per observer (see filter 11).
 #[derive(Default)]
 pub(crate) struct GameHooks<'a> {
     /// One line per accepted action; see [`GameTrace`].
@@ -2499,9 +2269,8 @@ pub(crate) struct GameHooks<'a> {
     /// The other build's half of a cross-binary game: this process polls
     /// only `cross.seat` and reads the other seat's actions off the link.
     pub cross: Option<&'a mut crate::crossplay::CrossGame>,
-    /// Every seat's hand and library when the game ends, as `id=name` lists
-    /// (`CRAB_DUMP_TRACES`' footer: a card the deck holds and the trace never
-    /// names was drawn and kept, or never drawn).
+    /// Every seat's zones when the game ends, as `id=name` lists
+    /// (`CRAB_DUMP_TRACES`' footer).
     pub end_zones: Option<&'a mut Vec<String>>,
 }
 
@@ -2516,13 +2285,11 @@ fn play_one_game_traced(
     let GameHooks { mut trace, mut cross, end_zones } = hooks;
     let mut final_zones: Option<Vec<String>> = None;
     let mut last_snap: Option<(u32, crate::game::types::TurnStep)> = None;
-    // `CRAB_MAX_ACTIONS=<n>` lowers the action cap for a diagnostic run, so
-    // a game that would hold a thread for an hour under the 50,000 default
-    // ends at `n` and `CRAB_CAP_DIAG=1` names its board. Read once.
+    // `CRAB_MAX_ACTIONS=<n>` lowers the action cap for a diagnostic run
+    // (pair with `CRAB_CAP_DIAG=1` to name the board). Read once.
     let max_actions = max_actions_override().unwrap_or(max_actions);
-    // Installed for the duration of this game and cleared after, so a
-    // seeded game can't leak its stream into whatever the worker plays
-    // next. See `bot::set_jitter_seed`.
+    // Installed for this game and cleared after, so a seeded game can't
+    // leak its stream into the worker's next one. See `bot::set_jitter_seed`.
     crate::server::bot::set_jitter_seed(jitter_seed);
     let mut g = template.clone();
     // Profile settings the engine reads off the seat, not the bot.
@@ -2531,11 +2298,10 @@ fn play_one_game_traced(
             g.players[seat].smart_tap = w.smart_tap;
             g.players[seat].converge_rarest = w.converge_rarest;
         }
-        // The player-slot polarity flag reaches search seats too: the
-        // search's candidate list is built by the same picker, so an MCTS
-        // pilot without it self-targets exactly as the scored one did. The
-        // other seat flags keep their Scored-only push (a search seat has
-        // never carried `smart_tap`, and its baselines are read that way).
+        // `hostile_player_targets` reaches search seats too (MCTS builds its
+        // candidates with the same picker, so it would self-target without
+        // it). `smart_tap`/`converge_rarest` stay Scored-only: search
+        // baselines were measured without them.
         g.players[seat].hostile_player_targets = match pilot {
             Pilot::Scored(w) | Pilot::Policy(w) => w.hostile_player_targets,
             Pilot::Mcts(cfg) => cfg.weights.hostile_player_targets,
@@ -2564,12 +2330,9 @@ fn play_one_game_traced(
             None => g.players[seat].library.shuffle(&mut rand::rng()),
         }
     }
-    // A seeded deal implies a seeded *game*: mulligan reshuffles, random
-    // discards and every other in-game roll come off the state's own
-    // stream, drawn from the shuffle stream so it stays a function of the
-    // caller's seed. Without this a mulligan re-randomized the deal and
-    // the pair's two games diverged — which is also what broke the
-    // antithetic pairing's variance reduction on exactly those games.
+    // A seeded deal implies a seeded game: the state's own rng (mulligans,
+    // random discards) is reseeded off the shuffle stream. Otherwise a
+    // mulligan re-randomizes the deal and a pair's two games diverge.
     if let Some(r) = &mut seeded {
         g.rng.reseed(r.random());
     }
@@ -2598,8 +2361,8 @@ fn play_one_game_traced(
             .collect();
     }
     let (mut actions, mut stale) = (0usize, 0usize);
-    // `CRAB_PROGRESS_WATCH=<turn>` — see `progress_watch_line`. Hoisted out of
-    // the loop: one `OnceLock` load a *game*, not one an action.
+    // `CRAB_PROGRESS_WATCH=<turn>` — see `progress_watch_line`. Read once a
+    // game, not per action.
     let (watch_from, mut watched_turn) = (progress_watch_from(), u32::MAX);
     while stop_reason(&g, actions, max_actions, stale).is_none() {
         if let Some(from) = watch_from
@@ -2614,12 +2377,10 @@ fn play_one_game_traced(
             if offer_check() {
                 offer_probe(&g);
             }
-            // Cross-binary: poll only the seat this process pilots and
-            // publish what it chose; the other seat's action arrives on the
-            // link, carrying the peer's digest of the state it chose in.
-            // The peer's step is always `plain` — a settled state never
-            // crosses the wire, so the receiver runs the action itself,
-            // which is what `accept_on` documents as equivalent.
+            // Cross-binary: poll only our seat and publish its choice; the
+            // other seat's action arrives on the link with the peer's state
+            // digest. It is always `plain` (settled states never cross the
+            // wire), which `accept_on` documents as equivalent.
             let step = match &mut cross {
                 Some(cx) => {
                     let pre = crate::crossplay::state_digest(&g);
@@ -2640,16 +2401,13 @@ fn play_one_game_traced(
             let Some(step) = step else { continue };
             let crate::server::bot::BotStep { action, settled } = step;
             let settled = if aivat { None } else { settled };
-            // Formatted before the move, because `perform_action` takes it
-            // by value; only kept when the move is accepted.
+            // Formatted before `perform_action` consumes the action.
             let pending = trace.as_ref().map(|_| format!("p{s} {action:?}"));
-            // The footer's zones as they stood before this move: a move that
-            // ends the game clears the loser's zones, so that is the snapshot
-            // a game-ending move leaves behind.
+            // Footer zones before this move: a game-ending move clears the
+            // loser's zones.
             let zones_before = end_zones.as_ref().map(|_| zone_lines(&g));
-            // The dump's board snapshot, once per (turn, step): what each seat
-            // could do when it acted. Dump mode only, so the golden traces
-            // (`trace_game`, no `end_zones`) keep their format.
+            // The dump's board snapshot, once per (turn, step). Dump mode
+            // only, so the golden traces keep their format.
             if end_zones.is_some()
                 && let Some(t) = trace.as_mut()
                 && last_snap != Some((g.turn_number, g.step))
@@ -2657,12 +2415,10 @@ fn play_one_game_traced(
                 last_snap = Some((g.turn_number, g.step));
                 t.push(board_snapshot(&g));
             }
-            // A `settled` state is the finalist's dry-run result — the same
-            // state a successful `perform_action(action)` on `g` would have
-            // produced (see `GameState::accept_on`). This driver *owns* `g`,
-            // so we adopt the probe's state instead of running the same
-            // action a second time. Self-play discards events, so nothing
-            // here needs a `Vec<GameEvent>` back.
+            // A `settled` state is the finalist's dry run — what
+            // `perform_action(action)` would produce (`GameState::accept_on`).
+            // This driver owns `g`, so adopt it rather than replay the action;
+            // events are discarded anyway.
             let ok = if let Some(settled) = settled {
                 if settle_check() {
                     settle_diag(&g, &settled, &format!("p{s} {action:?}"), action.clone());
@@ -2670,9 +2426,8 @@ fn play_one_game_traced(
                 g = *settled;
                 true
             } else {
-                // The comment above says self-play discards the events; hand
-                // the buffer back for its capacity rather than dropping the
-                // allocation (`GameState::recycle_events`, PERF `(-80)`).
+                // Events are discarded; hand the buffer back for its capacity
+                // (`GameState::recycle_events`, PERF `(-80)`).
                 let before = settle_check().then(|| (settle_fingerprint(&g), format!("p{s} {action:?}")));
                 // The pre-action board, for the rejected-answer report.
                 let snap = settle_check().then(|| g.clone());
@@ -2714,11 +2469,10 @@ fn play_one_game_traced(
                 }
             };
             if ok {
-                // `find_card_anywhere` visits the zones cheapest-first, which
-                // is only order-independent while an id lives in one zone.
-                // Debug-only and traced games only — the golden traces are
-                // full bot games, so this is where a zone move that forgot to
-                // remove would surface, without taxing every simulated game.
+                // `find_card_anywhere` is only order-independent while an id
+                // lives in one zone. Checked in debug traced games only: the
+                // golden traces surface a zone move that forgot to remove,
+                // without taxing every simulated game.
                 #[cfg(debug_assertions)]
                 if trace.is_some()
                     && let Some(dup) = g.duplicate_zone_id()
@@ -2737,9 +2491,8 @@ fn play_one_game_traced(
                 }
             }
         }
-        // A fault voids the run, not this game: the two builds no longer
-        // agree about what an action does, so nothing after it is a
-        // comparison. Stop here and let the caller report it.
+        // A fault voids the run: the builds disagree about an action, so
+        // nothing after it is a comparison. Stop and let the caller report.
         if cross.as_ref().is_some_and(|cx| cx.fault.is_some()) {
             break;
         }
@@ -2753,13 +2506,10 @@ fn play_one_game_traced(
     // that hits a cap on the same iteration it goes stale is reported as
     // capped. A cross-play fault breaks out early with no reason of its own.
     let stop = stop_reason(&g, actions, max_actions, stale).unwrap_or(StopReason::NoLegalMove);
-    // `CRAB_CAP_DIAG=1` reports the capped games; `CRAB_CAP_DIAG=<n>` reports
-    // every game that ran past `n` actions, capped or not. The second form is
-    // the one that finds a *slow* game — a pair on `--decks all --seed 43` took
-    // nine minutes and decided, so the cap-only form never saw it.
-    // Read once through a `OnceLock` — one `getenv` a *game* is far cheaper
-    // than `adjust_life`'s one an *adjustment* (PERF `(-169)`), but it is the
-    // same class and it scales with the 10-30k-game gate runs.
+    // `CRAB_CAP_DIAG=1` reports capped games; `CRAB_CAP_DIAG=<n>` reports
+    // every game past `n` actions, capped or not — the form that finds a slow
+    // game that still decided. Read once (`getenv` per game is PERF `(-169)`'s
+    // class).
     if let Some(floor) = cap_diag_floor() {
         let floor = floor.unwrap_or(max_actions);
         if actions >= floor || matches!(stop, StopReason::ActionCap | StopReason::BoardCap) {
@@ -2774,9 +2524,8 @@ fn play_one_game_traced(
 
 /// `# snap T{turn} {step} active pN || pK life L lands N/U hand […] crt […]`:
 /// each seat's life, lands (total / untapped), hand as `name:mv` (`*` when
-/// payable now), and
-/// creatures as `id=name P/T` plus flags T(apped) S(ick) A(ttacking)
-/// B(locking). The `CRAB_DUMP_TRACES` board line.
+/// payable now), and creatures as `id=name P/T` plus flags T(apped) S(ick)
+/// A(ttacking) B(locking). The `CRAB_DUMP_TRACES` board line.
 fn board_snapshot(g: &GameState) -> String {
     let mut out = format!("# snap T{} {:?} active p{}", g.turn_number, g.step, g.active_player_idx);
     for (i, p) in g.players.iter().enumerate() {
@@ -2872,18 +2621,7 @@ fn zone_lines(g: &GameState) -> Vec<String> {
     out
 }
 
-/// `CRAB_CAP_DIAG=1` — what a game that hit the action cap was actually doing;
-/// `CRAB_CAP_DIAG=<n>` — the same line for any game that ran past `n` actions.
-///
-/// The bench prints `undecided_by cap N` and stops there, so the next question
-/// — *which* board, *which* loop — has cost a rebuild every time it has been
-/// asked. Read once, on the capped game only, so it costs the throughput path
-/// nothing; same shape as `CRAB_SBA_CENSUS`.
-///
-/// **A runaway names itself in one of the two tallies**: an unbounded stack is
-/// a trigger or activation loop, an unbounded battlefield is a token loop.
-/// `CRAB_CAP_DIAG` — set at all (outer `Some`) and, if it parses above 1, the
-/// action floor to report at (inner `Some`). See PERF `(-169)`.
+/// `CRAB_MAX_ACTIONS=<n>`: a lower action cap for a diagnostic run. Read once.
 fn max_actions_override() -> Option<usize> {
     static CAP: std::sync::OnceLock<Option<usize>> = std::sync::OnceLock::new();
     *CAP.get_or_init(|| {
@@ -2891,6 +2629,12 @@ fn max_actions_override() -> Option<usize> {
     })
 }
 
+/// `CRAB_CAP_DIAG=1` — print [`cap_diagnosis`] for every capped game;
+/// `CRAB_CAP_DIAG=<n>` — for any game past `n` actions. Outer `Some` = set,
+/// inner `Some` = the floor (when it parses above 1). Read once, so the
+/// throughput path pays nothing (PERF `(-169)`). A runaway names itself in
+/// one of the tallies: an unbounded stack is a trigger or activation loop,
+/// an unbounded battlefield a token loop.
 pub(crate) fn cap_diag_floor() -> Option<Option<usize>> {
     static FLOOR: std::sync::OnceLock<Option<Option<usize>>> = std::sync::OnceLock::new();
     *FLOOR.get_or_init(|| {
@@ -2908,23 +2652,13 @@ fn progress_watch_from() -> Option<u32> {
 
 /// The turn watch's inputs, spelled out, for a game that will not draw.
 ///
-/// ⚠ **`cap_diagnosis` says the watch did not fire; this says WHY.** Both
-/// questions come up on the same board and only the first one had an
-/// instrument: `all` 1159 reads `repeats 0/12` at turn 18,202, which means the
-/// digest keeps moving and says nothing at all about *which* of the fourteen
-/// quantities behind it is the one moving. Answering that has cost a rebuild
-/// and a guess every time — the guess on record ("the bot taps a different
-/// number of lands each turn") was never measured.
+/// ⚠ `cap_diagnosis` says the watch did not fire; this says why — diff two
+/// consecutive lines and the drifting quantity names itself.
 ///
-/// Printed from the self-play driver rather than from the watch itself,
-/// because the watch runs on **every bot probe's clone too** (3,234 `end_turn`
-/// calls a six-game run against ~150 real turns) and a dump from there is
-/// mostly other people's futures. Here `g` is the one real game.
-///
-/// Diff two consecutive lines and the drifting quantity names itself. It is a
-/// *view* of [`GameState::fingerprint_as`]'s field list, not a second copy of
-/// its mix — the two are meant to agree about what is watched, not about how
-/// it is hashed.
+/// Printed from the driver, not the watch, because the watch also runs on
+/// every bot probe's clone; here `g` is the real game. A view of
+/// [`GameState::fingerprint_as`]'s field list, not a copy of its hash: the
+/// two should agree on what is watched.
 fn progress_watch_line(g: &GameState) -> String {
     use std::fmt::Write;
     let mut s = format!("progress: turn {}", g.turn_number);
@@ -2944,9 +2678,8 @@ fn progress_watch_line(g: &GameState) -> String {
             p.dungeon.as_ref().map_or(0, |(_, room)| *room as u32 + 1),
         );
     }
-    // Two small order-sensitive digests so a board of 900 permanents still
-    // fits on a line: `ids` moves when a permanent enters or leaves, `tapped`
-    // when the same board ends the turn tapped differently.
+    // Order-sensitive digests so a huge board fits on a line: `ids` moves
+    // when a permanent enters or leaves, `tapped` when tapping differs.
     let hash = |it: &mut dyn Iterator<Item = u64>| {
         it.fold(0u64, |a, v| {
             let mut z = a.wrapping_add(v).wrapping_add(0x9E37_79B9_7F4A_7C15);
@@ -2968,31 +2701,24 @@ fn progress_watch_line(g: &GameState) -> String {
     s
 }
 
-/// What a capped game *did*, as opposed to what its board looks like now.
+/// What a capped game did, as opposed to what its board looks like now:
+/// a tally of performed actions, so a loop whose card is in no zone
+/// `cap_diagnosis` samples still names itself.
 ///
-/// `cap_diagnosis` samples four zones at the stop point, and its own header
-/// warning says why that is not enough: a loop whose card is in none of them
-/// when the cap fires is invisible in every line it prints. The action the
-/// bot kept taking is never invisible — it is the loop by definition — so
-/// this tallies the performed actions and the capped game names its own
-/// repeat.
-///
-/// Off unless `CRAB_CAP_DIAG` is set; the caller hoists [`Self::armed`] out of
-/// its loop so a live run pays one `bool` test an action and no formatting.
+/// Off unless `CRAB_CAP_DIAG` is set; callers hoist [`Self::armed`] out of
+/// the loop so a live run pays one `bool` test per action.
 #[derive(Default)]
 pub struct ActionCensus {
     on: bool,
     counts: HashMap<String, usize>,
-    /// The same actions keyed by *card* alone, for the question the per-seat
-    /// line cannot answer: which cards a run never played at all.
+    /// The same actions keyed by card alone: which cards a run never played.
     cards: HashMap<String, usize>,
     /// Printed activated (`false`) and loyalty (`true`) abilities by card and
     /// index: which abilities of a played card no seat ever activated.
     abilities: HashMap<(String, bool, usize), usize>,
-    /// Cards seen as the source of a triggered ability on the stack: a deck
-    /// card with printed triggers missing here never fired one (a dead
-    /// kind/scope pair — Tahngarth, First Mate's "whenever an opponent
-    /// attacks" was one).
+    /// Cards seen as the source of a trigger on the stack: a deck card with
+    /// printed triggers missing here never fired one (e.g. a dead kind/scope
+    /// pair, as Tahngarth, First Mate's "whenever an opponent attacks" was).
     triggered: HashMap<String, usize>,
     /// The same by printed trigger index (matched by effect): a card with one
     /// live trigger and one dead one reads "triggered" above.
@@ -3019,13 +2745,6 @@ impl ActionCensus {
         Self { on: true, ..Default::default() }
     }
 
-    /// How often each card was named by an accepted action. A deck card
-    /// missing from this map was never cast, played or activated in the run.
-    ///
-    /// Read it **by key**, walking a deck list, not by iterating it: this is a
-    /// `HashMap` and its walk order is a hash layout, which is the one thing
-    /// a report must not inherit (`render` below is the only place in the
-    /// type that reads an order, and it sorts first).
     /// The `n` most frequent action lines, most frequent first (ties by
     /// name, so the listing is deterministic).
     pub fn top_actions(&self, n: usize) -> Vec<(&str, usize)> {
@@ -3035,6 +2754,10 @@ impl ActionCensus {
         v
     }
 
+    /// How often each card was named by an accepted action; a deck card
+    /// missing here was never cast, played or activated. Read it by key
+    /// (walking a deck list), never by iteration — a report must not inherit
+    /// hash order.
     pub fn card_counts(&self) -> &HashMap<String, usize> {
         &self.cards
     }
@@ -3094,10 +2817,8 @@ impl ActionCensus {
     /// The key for an action *about to be taken*, or `None` when off. Taken
     /// before the action so a cast names the card in the zone it left.
     ///
-    /// `seat` is the poller's index, and it is in the key rather than beside
-    /// it because the first capped game this found read `ActivateAbility#0
-    /// Eldrazi Spawn x7535` against a *different* seat's mana pool, and
-    /// nothing in the line said whether that was real.
+    /// `seat` is in the key so a line can't be misread against another
+    /// seat's board.
     pub fn key_for(
         &self,
         g: &GameState,
@@ -3213,8 +2934,7 @@ impl ActionCensus {
     }
 
     /// The twelve commonest actions, count-descending then name-ascending so
-    /// two runs of one seed print the same line (the `HashMap` above is an
-    /// unordered container and this is the only place its order is read).
+    /// two runs of one seed print the same line.
     pub fn render(&self) -> String {
         let mut rows: Vec<(&String, &usize)> = self.counts.iter().collect();
         rows.sort_by(|a, b| b.1.cmp(a.1).then_with(|| a.0.cmp(b.0)));
@@ -3254,27 +2974,20 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
         g.turn_number,
         g.stack.len()
     );
-    // ⚠ THE ONE KNOWN SHAPE, NAMED SO IT IS NOT RE-DIAGNOSED. A seat whose
-    // life is at or near `i32::MAX` cannot be killed by damage and cannot
-    // deck out fast enough to matter, so the game is unwinnable and the action
-    // cap is the backstop working. It is Beacon of Immortality every time —
-    // double target player's life, shuffle itself back — and it has been
-    // pinned three times now (`cube` 1018, 1069, 1076) with
-    // `CRAB_LIFE_WATCH`, which prints the doubling series. ENGINE_BACKLOG's
-    // OPEN section has the diagnosis; what is open there is adjudication, not
-    // a rules defect. `fresh_seed_sweep.sh` counts these separately so a cube
-    // block does not read as a failure for a board nobody is going to change.
+    // ⚠ The one known shape, named so it isn't re-diagnosed: a seat near
+    // `i32::MAX` life (Beacon of Immortality doubling; `cube` 1018, 1069,
+    // 1076, via `CRAB_LIFE_WATCH`) can't be killed, so the cap is the
+    // backstop working. ENGINE_BACKLOG's OPEN section has it (adjudication,
+    // not a rules defect); `fresh_seed_sweep.sh` counts these separately.
     if g.players.iter().any(|p| p.life > crate::player::SCALE_CEILING.saturating_mul(1_000)) {
         let _ = write!(s, "  [SATURATED LIFE — the known unwinnable board, not a new defect]");
     }
-    // ⚠ THE WATCH'S OWN STATE, because a cap past turn 30 is first of all a
-    // question about the watch. CR 104.4's turn-granular half draws a game
-    // whose fingerprint comes back to one anchor `NO_PROGRESS_DRAW_REPEATS`
-    // times; `repeats` says how close it got and `since` how long it has been
-    // away. `repeats 0 / since 0` with a live anchor on a turn-2000 board means
-    // the fingerprint moves every sample — the loop is not what the watch
-    // watches — and that is a different investigation from "the budget ran
-    // out a few turns early", which is what every cap before `all` 1159 was.
+    // ⚠ The watch's own state: a late cap is first a question about it.
+    // CR 104.4's turn watch draws a game whose fingerprint returns to one
+    // anchor `NO_PROGRESS_DRAW_REPEATS` times; `repeats` is how close it got,
+    // `since` how long it has been away. `repeats 0 / since 0` on a very late
+    // board means the fingerprint moves every sample (the loop is outside
+    // what the watch watches), not that the budget ran out early.
     let (anchor, repeats, since) = g.no_progress_watch;
     let _ = write!(
         s,
@@ -3284,9 +2997,8 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
         GameState::NO_PROGRESS_MAX_PERIOD,
     );
     for (seat, p) in g.players.iter().enumerate() {
-        // The pool and the untapped count are what say whether a repeated
-        // activation was *paid for*: an unbounded loop of a `{cost}` ability
-        // means an unbounded mana source, and it will show here.
+        // Pool and untapped count show whether a repeated activation was
+        // paid for (an unbounded `{cost}` loop means an unbounded mana source).
         let untapped = g
             .battlefield
             .iter()
@@ -3336,15 +3048,9 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     if !on_stack.is_empty() {
         let _ = write!(s, "\n  stack: {}", render(&on_stack));
     }
-    // ⚠ **PER SEAT, AND UNTRUNCATED.** A whole-battlefield tally sorted by
-    // count and cut to twelve rows is the wrong shape for the question a
-    // capped game actually asks — "which seat is looping, off what" — and it
-    // cost this run a second sweep: the eight-seat cap read `p5
-    // ActivateAbility#0 Eldrazi Spawn x7535` while the board line showed no
-    // Eldrazi Spawn at all, because seven Vampires and five Forests pushed
-    // the one-count rows past the cut. The action census names the seat; the
-    // board has to answer for the same seat or the two cannot be read
-    // together.
+    // ⚠ Per seat and untruncated: the action census names a seat, so the
+    // board must answer for that seat. A truncated whole-board tally once hid
+    // the looping Eldrazi Spawn behind higher-count rows.
     for (seat, _) in g.players.iter().enumerate() {
         let board = tally_all(
             g.battlefield
@@ -3365,16 +3071,10 @@ pub(crate) fn cap_diagnosis(g: &GameState, actions: usize) -> String {
     if !exiled.is_empty() {
         let _ = write!(s, "\n  exile: {}", render(&exiled));
     }
-    // ⚠ **A LOOP WHOSE CARD IS NOT ON THE BATTLEFIELD AT THE SAMPLE POINT IS
-    // INVISIBLE IN EVERY LINE ABOVE, AND THAT COST TWO SESSIONS THE 1274
-    // DIAGNOSIS.** `all` 1274 cycles one card hand -> battlefield -> library
-    // every turn (cast it, sacrifice it, it goes back on top instead of
-    // dying) and the counts said so — `hand 2 lib 1` returning to itself
-    // while the board alternated by one permanent — but nothing named the
-    // card, because the `board` / `stack` / `exile` tallies are the three
-    // zones it is not in when the cap fires. A one-card library and a
-    // three-card hand are the whole of the engine on that board.
-    // Same `tally` cap as the others, so a 50-card library prints 12 rows.
+    // ⚠ A loop whose card is off the battlefield at the sample point is
+    // invisible above (`all` 1274 cycled one card hand -> battlefield ->
+    // library every turn), so hands and libraries are listed too, with the
+    // same 12-row `tally` cap.
     for (seat, p) in g.players.iter().enumerate() {
         let hand = tally(p.hand.iter().map(|c| c.definition.name.to_string()));
         if !hand.is_empty() {
@@ -3408,9 +3108,8 @@ mod tests {
         assert_eq!(stop_reason(&g, 0, 1_000, 0), Some(StopReason::BoardCap));
     }
 
-    /// Every pair is two games, and only fully decided pairs are scored.
-    /// The unpaired totals stay the ground truth for "how many games did
-    /// we actually play", which is what the ladder's control column reads.
+    /// Every pair is two games, and only fully decided pairs are scored;
+    /// the unpaired totals still count every game played.
     #[test]
     fn pairs_play_two_games_each_and_score_only_decided_pairs() {
         let deck = deck_of(&[
@@ -3441,17 +3140,10 @@ mod tests {
         assert!(t.pairs.len() as u32 * 2 <= t.wins_a + t.wins_b);
     }
 
-    /// Antithetic pairing is only worth its complexity if the two games of
-    /// a pair really are the same deal. They are unobservable from the
-    /// tally directly, so this asserts the consequence: a profile played
-    /// against *itself* splits its pairs far more often than independent
-    /// games would, because whichever side the deal favoured wins its copy
-    /// in each direction.
-    ///
-    /// Not asserted at 100%: the scored bot jitters ties from an unseeded
-    /// RNG (`main_phase_action_with`), so a pair can still diverge. That
-    /// residual is exactly why the ladder measures the realized rho
-    /// instead of assuming the ideal one.
+    /// A pair's two games really are the same deal: a profile against itself
+    /// splits most pairs, since the deal-favoured side wins in each
+    /// direction. Not 100%: unseeded tie jitter (`main_phase_action_with`)
+    /// can still diverge a pair, which is why the ladder measures rho.
     #[test]
     fn self_mirror_pairs_mostly_split() {
         let deck = deck_of(&[
@@ -3578,10 +3270,8 @@ mod tests {
             splashy.basics.get(&Color::Green).copied().unwrap_or(0) >= 1,
             "splash color gets at least one basic source",
         );
-        // …and the double-green six-drop in the same pool is left out of
-        // it. A splash is a couple of off-color sources: it can support
-        // {1}{G}, never {4}{G}{G}. Leaving that distinction out is what
-        // put a {3}{U}{U} bomb in a deck with three Islands.
+        // …and the double-green six-drop is left out: a splash supports
+        // {1}{G}, never {4}{G}{G}.
         assert!(
             !splashy.main.iter().any(|&f| f as *const () == catalog::craw_wurm as *const ()),
             "a double-pip card is not splash material",
@@ -3602,10 +3292,9 @@ mod tests {
         );
     }
 
-    /// Every randomized build is a legal 40-card sealed deck — independent
-    /// spell/land sampling used to mint 38-39-card decks, which won
-    /// tournaments on thinner-deck consistency. (This also pinned the
-    /// retired recommender's refine variants; the builder is what is left.)
+    /// Every randomized build is a legal 40-card deck (independent
+    /// spell/land sampling used to mint 38-39-card decks that won on
+    /// thinner-deck consistency).
     #[test]
     fn random_builds_are_forty_cards() {
         let cfg = SimConfig::default();
@@ -3670,12 +3359,9 @@ mod tests {
         assert_eq!(tally.wins_b, 0, "the land pile never wins");
     }
 
-    /// CRN: with a fixed seed base, the shuffle streams are reproducible —
-    /// two identical simulate calls give identical tallies when both bots
-    /// are deterministic-ish enough to be draw-dominated. We assert the
-    /// weaker structural property that holds regardless of bot jitter:
-    /// deck-A-vs-land-pile is decided purely by A's draws, so the same
-    /// seeds give the same tally.
+    /// CRN: a fixed seed base reproduces the shuffle streams. Asserted
+    /// against a land pile, where only A's draws decide the game, so bot
+    /// jitter can't move the tally.
     #[test]
     fn crn_seeded_games_are_reproducible_vs_static_opponent() {
         let mut deck: Vec<CardFactory> = Vec::new();
@@ -3734,11 +3420,8 @@ mod tests {
         assert_eq!(curve_penalty(&mixed), 0, "five early + six top is a legal curve");
     }
 
-    /// The builder's curve was inert: `base_score`'s bucket ranks a one-drop
-    /// *below* a five-drop and spans three points against a quality term
-    /// worth ~fifteen, so a pool of bombs built a pile of bombs. Flag on,
-    /// the curve term reorders cards of similar quality toward the cheap end
-    /// without burying a genuine bomb.
+    /// Under `curve_aggro` the curve term reorders cards of similar quality
+    /// toward the cheap end without burying a genuine bomb.
     #[test]
     fn curve_aggro_prefers_the_cheap_end() {
         use crate::draft::{aggro_curve_delta, score_brief_aggro, score_brief_quality};
@@ -3773,9 +3456,8 @@ mod tests {
     /// built main deck leans cheaper than with it off.
     #[test]
     fn curve_aggro_builds_a_cheaper_main_deck() {
-        // Distinct cards, not copies: `COPY_CAP` is 4, so a pool of twelve
-        // of the same card puts the same four in either deck and the build
-        // cannot express a preference at all.
+        // Distinct cards, not copies: under `COPY_CAP` a pool of copies
+        // builds the same deck either way.
         let white = |b: &&'static crate::cube::CardBrief| !b.is_land;
         let mut cheap: Vec<CardFactory> = Vec::new();
         let mut dear: Vec<CardFactory> = Vec::new();
@@ -3872,9 +3554,7 @@ mod tests {
     }
 
     /// End to end: a pool whose best cards are all expensive still builds to
-    /// a curve under the flag. Before this the assembly took strictly by
-    /// score, so the deck was whatever the pool's top of curve happened to
-    /// be.
+    /// a curve under the flag.
     #[test]
     fn curve_slots_build_the_early_drops_into_the_deck() {
         let mut cheap: Vec<CardFactory> = Vec::new();
@@ -3918,11 +3598,8 @@ mod tests {
         );
     }
 
-    /// The v3 shape ranker sees card quality: the same spell list scores
-    /// exactly the legacy rank plus its quality sum minus its curve
-    /// penalty, so a body with evasion outranks what the legacy scorer
-    /// called its equal. Pins the composition so neither term can be
-    /// dropped silently.
+    /// Pins the v3 ranker's composition: legacy rank + quality sum − curve
+    /// penalty, so neither term can be dropped silently.
     #[test]
     fn static_score_v3_adds_quality_and_curve() {
         let main = five_bolts_six_angels();
@@ -3937,12 +3614,10 @@ mod tests {
         );
     }
 
-    /// `builder_v2`'s mana model: a double pip needs more than twice one
-    /// pip's sources, so four {3}{W}{W} bodies outweigh four one-mana
-    /// {R} spells even though the red pips are earlier. This is the
-    /// deliberate reversal of `basic_split_leans_on_cheap_pips` above —
-    /// the builder that produced three Islands for a {3}{U}{U} bomb was
-    /// counting pips linearly.
+    /// `builder_v2`'s squared pips: four {3}{W}{W} bodies outweigh four {R}
+    /// spells despite the earlier red pips — the deliberate reversal of
+    /// `basic_split_leans_on_cheap_pips` (linear pips gave a {3}{U}{U} bomb
+    /// three Islands).
     #[test]
     fn squared_pips_serve_double_costs() {
         let mut main: Vec<CardFactory> = Vec::new();
@@ -3971,9 +3646,8 @@ mod tests {
         assert!((s.p - 0.65).abs() < 1e-9, "got {}", s.p);
     }
 
-    /// All splits is the signature of a perfectly cancelled deal: the
-    /// estimate is dead even and, crucially, has *zero* width. Independent
-    /// games can never report that, which is the whole point.
+    /// All splits is a perfectly cancelled deal: dead even with zero width,
+    /// which independent games can never report.
     #[test]
     fn all_splits_is_an_even_result_with_no_uncertainty() {
         let s = paired_stat(&[0; 8]).unwrap();
@@ -3995,11 +3669,9 @@ mod tests {
         assert!((s.se - (0.5f64 / 8.0).sqrt() / 2.0).abs() < 1e-9, "got {}", s.se);
     }
 
-    /// The failure mode worth being able to see: every pair a sweep means
-    /// the two games of a pair agreed *more* than chance, so the pairing
-    /// inflated variance instead of cancelling it (rho = +1, half the
-    /// precision of independent games). If a real run ever printed this,
-    /// pairing would be costing us games rather than saving them.
+    /// The failure mode: every pair a sweep means pairing inflated variance
+    /// instead of cancelling it (rho = +1, half the precision of
+    /// independent games).
     #[test]
     fn all_sweeps_is_variance_inflation_not_reduction() {
         let pairs = [1, -1, 1, -1, 1, -1, 1, -1];
@@ -4016,9 +3688,8 @@ mod tests {
     }
 
     /// Wilson bounds: an undefeated small sample keeps a non-degenerate
-    /// interval. The normal approximation gave ±0 at p̂ = 1, so a lucky
-    /// 5-0 candidate claimed lower bound 1.0 and racing eliminated the
-    /// entire rest of the field in round 0.
+    /// interval (the normal approximation gave ±0 at p̂ = 1, and a lucky 5-0
+    /// eliminated the whole field in round 0).
     #[test]
     fn wilson_interval_is_not_degenerate_at_extremes() {
         let (lb, ub) = wilson(5, 5, 1.96);

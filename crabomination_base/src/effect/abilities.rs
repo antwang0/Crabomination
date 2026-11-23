@@ -116,13 +116,9 @@ pub enum StaticEffect {
         per_power: i32,
         per_toughness: i32,
     },
-    /// Self-buff scaled by the number of the controller's battlefield
-    /// permanents matching `filter`: "this creature gets `+per_power`/
-    /// `+per_toughness` for each [filter] you control." Resolved live in
-    /// `gather_continuous_effects` (the count needs the GameState). Powers
-    /// Karn's Construct token ("+1/+1 for each artifact you control") and
-    /// similar self-scaling bodies (Master of Etherium, Ornithopter of
-    /// Paradise-style counts).
+    /// "This creature gets +`per_power`/+`per_toughness` for each [filter] you
+    /// control" (Karn's Construct token). Resolved live in
+    /// `gather_continuous_effects`, since the count needs the `GameState`.
     PumpSelfByControlledPermanents {
         filter: SelectionRequirement,
         per_power: i32,
@@ -137,12 +133,10 @@ pub enum StaticEffect {
         per_power: i32,
         per_toughness: i32,
     },
-    /// "As long as [condition], this creature gets +P/+T and has [keyword]."
-    /// A conditional self-anthem gated by a `Predicate` evaluated live (with
-    /// the source/controller as context) on every layer recompute. Powers
-    /// threshold creatures — Carnage Interpreter (≤1 card in hand → +2/+2,
-    /// menace), Keen-Eyed Curator (4+ card types exiled with it → +4/+4,
-    /// trample), etc. `keyword` is granted only while the condition holds.
+    /// "As long as [condition], this creature gets +P/+T and has [keyword]"
+    /// (Carnage Interpreter: one or fewer cards in hand). The `Predicate` is
+    /// evaluated live with the source as context on every layer recompute; the
+    /// pump and `keyword` apply only while it holds.
     PumpSelfIf {
         condition: Predicate,
         power: i32,
@@ -224,14 +218,11 @@ pub enum StaticEffect {
     /// where X is the number of cards in your hand"). Resolved in
     /// `gather_continuous_effects`, so it recomputes every layer pass.
     PumpPTByValue { applies_to: Selector, power: Value, toughness: Value },
-    /// "As long as [condition], [creatures the selector picks] get +P/+T."
-    /// The conditional-team sibling of `PumpSelfIf` (self) and `PumpPT`
-    /// (unconditional team). Resolved live in `gather_continuous_effects`:
-    /// the predicate is evaluated with the source as context, and while it
-    /// holds a layer-7 pump is emitted for `selector_to_affected(applies_to)`.
-    /// Powers quest/threshold anthems — Beastmaster Ascension ("as long as
-    /// this has seven or more quest counters, creatures you control get
-    /// +5/+5").
+    /// "As long as [condition], [creatures the selector picks] get +P/+T" — the
+    /// conditional-team sibling of `PumpSelfIf` / `PumpPT` (Beastmaster
+    /// Ascension). Resolved live in `gather_continuous_effects`: the predicate
+    /// is evaluated with the source as context, and while it holds a layer-7
+    /// pump is emitted for `selector_to_affected(applies_to)`.
     PumpTeamIf {
         condition: Predicate,
         applies_to: Selector,
@@ -317,11 +308,10 @@ pub enum StaticEffect {
     /// `evaluate_requirement_static`, so board-state conditions (IsEquipped,
     /// IsEnchanted, IsModified) track correctly.
     SelfHasKeywordWhile { keyword: Keyword, condition: SelectionRequirement },
-    /// "This creature has <keyword> as long as <condition>", where the
-    /// condition is a live board [`Predicate`] evaluated with the source as
-    /// context (not a source-matching filter like `SelfHasKeywordWhile`). Powers
-    /// "has lifelink as long as you control another Faerie" (Barrow Naughty) and
-    /// similar board-state-gated self keywords.
+    /// "This creature has <keyword> as long as <condition>" (Barrow Naughty:
+    /// another Faerie), where the condition is a live board [`Predicate`] with
+    /// the source as context, not a source-matching filter like
+    /// `SelfHasKeywordWhile`.
     SelfHasKeywordWhilePredicate { keyword: Keyword, condition: Predicate },
     /// "All [filter] have protection from the chosen color" — the color is
     /// read from the source's `chosen_color` ETB stamp (Ward Sliver). No-op
@@ -368,11 +358,10 @@ pub enum StaticEffect {
     ChooseColorAsAttached,
     /// "As this Equipment becomes attached to a creature, choose a creature
     /// card name and a creature type. Equipped creature's name and creature
-    /// type are the last chosen name and creature type" (Psychic Paper). The
-    /// choices are made with the attachment (`apply_as_attached_choices`);
-    /// the rename is a copiable-value edit on the host (CR 707.9b) that lasts
-    /// while this stays attached to it (CR 611.2c, the `WhileSourceAttached`
-    /// copy sweep).
+    /// type are the last chosen name and creature type" (Psychic Paper). Chosen
+    /// with the attachment (`apply_as_attached_choices`); the rename is a
+    /// copiable-value edit on the host (CR 707.9b) lasting while attached (CR
+    /// 611.2c, the `WhileSourceAttached` copy sweep).
     AttachedTakesChosenNameAndType,
     /// "Enchanted creature is a copy of the chosen creature" (Metamorphic
     /// Alteration, CR 707.2): applied with each attachment by
@@ -454,15 +443,11 @@ pub enum StaticEffect {
         max: u32,
     },
     /// "[applies_to] you control get +per/+per for each [count_filter] you
-    /// control." A team anthem whose bonus scales with a controlled-permanent
-    /// count. `applies_to` and `count_filter` are controller-relative card
-    /// filters (the "you control" is implied). Warrior of Light — legendary
-    /// creatures you control get +X/+X where X is the number of legendary
-    /// creatures you control (`applies_to == count_filter`). With
-    /// `count_graveyard`, matching cards in the controller's graveyard are
-    /// added to the count (Cid, Timeless Artificer — Artificers on the
-    /// battlefield *and* in the graveyard). Resolved live in
-    /// `gather_continuous_effects_inner`.
+    /// control" — a team anthem scaling with a controlled-permanent count
+    /// (Warrior of Light: legendary creatures, `applies_to == count_filter`).
+    /// Both filters are controller-relative. With `count_graveyard`, matching
+    /// cards in the controller's graveyard count too (Cid, Timeless Artificer).
+    /// Resolved live in `gather_continuous_effects_inner`.
     PumpTeamByControlledPermanents {
         applies_to: SelectionRequirement,
         count_filter: SelectionRequirement,
@@ -848,14 +833,11 @@ pub enum StaticEffect {
     /// The live-magnitude sibling: "the first instant or sorcery spell you cast
     /// each turn costs {1} less for each [value]" (Eluge, the Shoreless Sea).
     CostReductionFirstInstantOrSorceryPerValue { per: Value },
-    /// Target-aware generic cost reduction for spells whose chosen target
-    /// matches `target_filter`. Powers Killian, Ink Duelist's "spells you
-    /// cast that target a creature cost {2} less to cast."
-    ///
-    /// Applied during `cast_spell_with_convoke` (and the back-face / alt-
-    /// cost siblings) *after* the cast's target is validated. The reduction
-    /// is clamped at the spell's current generic-pip total (it cannot
-    /// reduce a colored pip), matching CR 601.2f / CR 118.7a.
+    /// Generic cost reduction for spells whose chosen target matches
+    /// `target_filter` (Killian, Ink Duelist: "spells you cast that target a
+    /// creature cost {2} less"). Applied in `cast_spell_with_convoke` and its
+    /// back-face / alt-cost siblings after the target is validated, clamped at
+    /// the generic pips (CR 601.2f / 118.7a).
     CostReductionTargetingFilter {
         spell_filter: SelectionRequirement,
         target_filter: SelectionRequirement,
@@ -872,11 +854,10 @@ pub enum StaticEffect {
     /// `extra_cost_for_spell`.
     AdditionalCost { filter: SelectionRequirement, amount: u32 },
     /// Drought — "Spells cost an additional 'Sacrifice a Swamp' to cast for
-    /// each black mana symbol in their mana costs" (CR 601.2b; CR 107.4, a
-    /// hybrid or Phyrexian black symbol counts). Every player's spells, one
-    /// Swamp per symbol per copy, paid through the shared
-    /// `AdditionalCastCost::SacrificePermanent` payer; activated abilities,
-    /// mana abilities the auto-tapper fires included, pay it in
+    /// each black mana symbol in their mana costs" (CR 601.2b; CR 107.4 —
+    /// hybrid and Phyrexian black symbols count). Every player's spells, paid
+    /// through the shared `AdditionalCastCost::SacrificePermanent` payer;
+    /// activated abilities (auto-tapped mana abilities included) pay it in
     /// `activate_ability_into`.
     SacrificeSwampPerBlackSymbolToCast,
     /// Grand-Arbiter-style tax: spells matching `filter` cast by an opponent of
@@ -1010,24 +991,19 @@ pub enum StaticEffect {
     /// "Dash costs you pay cost {amount} less" (Warbringer) — read off the
     /// battlefield by the dash cast path for the static's controller only.
     ControllerDashCostsLess { amount: u32 },
-    /// Card-intrinsic "This spell costs {X} less to cast, where X is your
-    /// devotion to `colors`" (Theros — Daybreak Chimera, etc.). Read by
-    /// `cost_reduction_for_spell` off the *spell being cast*; the count is the
-    /// caster's devotion (each colored pip in those colors among permanents
-    /// they control, CR 700.5). Generic-only; clamped by
-    /// `ManaCost::reduce_generic`. No continuous-layer effect.
+    /// "This spell costs {X} less to cast, where X is your devotion to
+    /// `colors`" (Daybreak Chimera; CR 700.5). Read by
+    /// `cost_reduction_for_spell` off the spell being cast; generic only,
+    /// clamped by `ManaCost::reduce_generic`.
     SelfCostReducedByDevotion { colors: Vec<crate::mana::Color> },
     /// "This spell costs {N} less to cast for each card you've discarded
     /// this turn" (Hollow One). Card-intrinsic; read by
     /// `cost_reduction_for_spell` off `Player.cards_discarded_this_turn`.
     SelfCostReducedPerDiscardThisTurn { per: u32 },
     /// "This spell costs {N} less to cast for each creature you attacked with
-    /// this turn" (Search Party Captain). Card-intrinsic; read by
-    /// `cost_reduction_for_spell` off `Player.creatures_attacked_this_turn`.
-    /// Generic-only; clamped by `ManaCost::reduce_generic`. No layer effect.
-    /// When `all_players` is true the count spans every player's attackers
-    /// ("for each creature that attacked this turn" — Witchstalker Frenzy),
-    /// otherwise just the caster's.
+    /// this turn" (Search Party Captain), read by `cost_reduction_for_spell`
+    /// off `Player.creatures_attacked_this_turn`; generic only. With
+    /// `all_players`, every player's attackers count (Witchstalker Frenzy).
     SelfCostReducedPerCreatureAttackedThisTurn {
         per: u32,
         #[serde(default)]
@@ -1214,15 +1190,13 @@ pub enum StaticEffect {
     /// library find nothing (CR 701.19 "can't search"). Checked in the
     /// `Effect::Search` resolver alongside Shadow of Doubt's turn-wide lock.
     OpponentsCantSearchLibraries,
-    /// Opposition Agent — "You control your opponents while they're
-    /// searching their libraries. While an opponent is searching their
-    /// library, they exile each card they find. You may play those cards for
-    /// as long as they remain exiled, and you may spend mana as though it were
-    /// mana of any color to cast them." Read by the library-search resolvers
-    /// through `GameState::search_hijacker`: the static's controller answers
-    /// the search pick, and each card found in the library is exiled with a
-    /// `WhileExiled` may-play permission for them (cast cost = mana value as
-    /// generic). No layer effect.
+    /// Opposition Agent — "You control your opponents while they're searching
+    /// their libraries… they exile each card they find. You may play those
+    /// cards for as long as they remain exiled, and you may spend mana as
+    /// though it were mana of any color to cast them." Library-search resolvers
+    /// read it through `GameState::search_hijacker`: the static's controller
+    /// makes the pick, and each found card is exiled with a `WhileExiled`
+    /// may-play for them (cast cost = mana value as generic).
     ControlOpponentsSearches,
     /// CR 601.2c — the Flagbearer restriction (Standard Bearer, Coalition Honor
     /// Guard, Coalition Flag): while an opponent of this permanent's controller
@@ -1230,26 +1204,16 @@ pub enum StaticEffect {
     /// least one Flagbearer on the battlefield if able. Enforced at cast /
     /// activation time by `flagbearer_violation`.
     FlagbearersMustBeTargeted,
-    /// CR 119.7 — Targeted players can't gain life while this static is
-    /// active. The `applies_to` selector resolves to one or more
-    /// `PlayerView`-style entries; each matching player has their
-    /// `Player.cannot_gain_life` flag set in the per-recompute pass
-    /// in `compute_battlefield`. Adjust_life drops positive deltas
-    /// targeting those players. Powers Erebos, God of the Dead's
-    /// "Each opponent can't gain life" and similar lifegain-prevention
-    /// statics. `target: PlayerStaticTarget` carries the affected player
-    /// set so the same primitive can express "you can't gain life"
-    /// (rare) and the more common "each opponent can't gain life".
+    /// CR 119.7 — the players `target` names can't gain life (Erebos, God of
+    /// the Dead: each opponent). `compute_battlefield` sets their
+    /// `Player.cannot_gain_life` each recompute, and `adjust_life` drops
+    /// positive deltas for them.
     PlayerCannotGainLife { target: PlayerStaticTarget },
-    /// CR 119.8 — Targeted players can't lose life while this static is
-    /// active. Sibling of `PlayerCannotGainLife`. The check consults
-    /// the active battlefield via `player_cannot_lose_life_now` from
-    /// the lose-life paths (`Effect::LoseLife`, `Effect::Drain`,
-    /// damage-to-player). Cost-side life payments are also gated —
-    /// per CR 119.8 "a cost that involves having that player pay
-    /// life can't be paid." Used by Platinum Emperion-class statics
-    /// ("your life total can't change") and by future "your opponent
-    /// can't lose life" payoffs.
+    /// CR 119.8 — the players `target` names can't lose life (Platinum
+    /// Emperion). Checked via `player_cannot_lose_life_now` on the lose-life
+    /// paths (`Effect::LoseLife`, `Effect::Drain`, damage to a player); life
+    /// payments are gated too ("a cost that involves having that player pay
+    /// life can't be paid").
     PlayerCannotLoseLife { target: PlayerStaticTarget },
     /// CR 119.4b / 701.21 — "Players can't pay life or sacrifice creatures to
     /// cast spells or activate abilities" (Angel of Jubilation). Read by
@@ -1288,29 +1252,23 @@ pub enum StaticEffect {
     /// `LifeGainMultiplier` in `life_gain_multiplier_now`, against the
     /// controller's life before the gain.
     ControllerLifeGainDoubledAtOrBelow { life: i32 },
-    /// CR 121.2a / 614 — draw replacement: while active, when the source's
-    /// controller would draw a card, they draw two instead (Thought
-    /// Reflection). Consulted per draw event in `draw_one`; the extra draw is
-    /// not itself re-doubled by the same pass (CR 614.5), though stacked
-    /// doublers each apply once.
+    /// CR 121.2a / 614 — when the source's controller would draw a card, they
+    /// draw two instead (Thought Reflection). Consulted per draw in `draw_one`;
+    /// the extra draw isn't re-doubled by the same pass (CR 614.5), though
+    /// stacked doublers each apply once.
     ///
-    /// ⚠ **Not Alhammarret's Archive**, which this doc used to name: that card
-    /// and Teferi's Ageless Insight print an exception for the first draw of
-    /// your draw step, which is
+    /// ⚠ Not Alhammarret's Archive: that card and Teferi's Ageless Insight
+    /// except the first draw of your draw step, which is
     /// [`Self::ControllerDrawsDoubledExceptFirstEachDrawStep`].
     ControllerDrawsDoubled,
 
-    /// CR 121.2a / 614 — "If you would draw a card **except the first one you
-    /// draw in each of your draw steps**, draw two cards instead"
-    /// (Alhammarret's Archive, Teferi's Ageless Insight). The exception is the
-    /// whole difference from [`Self::ControllerDrawsDoubled`]: under Thought
-    /// Reflection the turn's draw-step draw is doubled and under these two it
-    /// is not, so the two cannot share a variant.
-    ///
-    /// "The first one you draw in each of **your** draw steps" is read as
-    /// `step == Draw && active player == the drawer && this was their first
-    /// draw of the step`, off `Player::cards_drawn_this_step`. A draw taken in
-    /// another player's draw step is not in *your* draw step and is doubled.
+    /// CR 121.2a / 614 — "If you would draw a card except the first one you
+    /// draw in each of your draw steps, draw two cards instead" (Alhammarret's
+    /// Archive). That exception is the whole difference from
+    /// [`Self::ControllerDrawsDoubled`], so they can't share a variant. Read as
+    /// `step == Draw && active player == drawer && first draw of the step` (off
+    /// `Player::cards_drawn_this_step`); a draw in another player's draw step
+    /// is doubled.
     ControllerDrawsDoubledExceptFirstEachDrawStep,
     /// Like `ControllerDrawsDoubled` but only while `condition` holds for the
     /// source's controller ("Max speed — if you would draw a card, draw two
@@ -1417,23 +1375,19 @@ pub enum StaticEffect {
     /// damage whose source is a creature (the combat approximation shared
     /// with `ControllerCreaturesCombatDamageCantBePrevented`).
     CombatDamageCantBePrevented,
-    /// CR 508.1g — creatures can't attack the source's controller (and, when
-    /// `protect_planeswalkers`, a planeswalker they control) unless the
-    /// attacking player pays `amount` generic mana for each such attacker.
-    /// Checked in `declare_attackers`, which sums the tax across every
-    /// attacker hitting a protected player/walker and auto-pays it from the
-    /// active player's mana pool (rejecting the declaration if it can't be
-    /// covered). `amount` is a `Value` evaluated with the static's controller
-    /// as "you", so fixed taxes use `Value::Const(n)` (Ghostly Prison /
-    /// Propaganda / Windborn Muse = 2, Baird = 1, all `protect_planeswalkers`
-    /// per card) while dynamic ones scale off the controller's board — Sphere
-    /// of Safety = number of enchantments you control. Copies stack. Paid from
-    /// the pool, auto-tapping mana sources for any shortfall.
     /// Onakke Oathkeeper — "creatures can't attack planeswalkers you control
-    /// unless their controller pays {N} for each creature they control
-    /// that's attacking a planeswalker you control" (CR 508.1g). The
-    /// planeswalker-only sibling of `AttackTaxToController`.
+    /// unless their controller pays {N} for each creature they control that's
+    /// attacking a planeswalker you control" (CR 508.1g). The planeswalker-only
+    /// sibling of `AttackTaxToController`.
     AttackTaxOnYourPlaneswalkers { amount: Value },
+    /// CR 508.1g — creatures can't attack the source's controller (and, with
+    /// `protect_planeswalkers`, their planeswalkers) unless the attacking
+    /// player pays `amount` generic for each such attacker. `declare_attackers`
+    /// sums the tax over all protected attacks and pays it from the pool,
+    /// auto-tapping for any shortfall, or rejects the declaration. `amount` is
+    /// evaluated with the static's controller as "you": `Value::Const(2)` for
+    /// Ghostly Prison, a count of enchantments for Sphere of Safety. Copies
+    /// stack.
     AttackTaxToController {
         amount: Value,
         protect_planeswalkers: bool,
@@ -1453,15 +1407,11 @@ pub enum StaticEffect {
         #[serde(default)]
         filter: Option<SelectionRequirement>,
     },
-    /// CR 509.1d — block tax. "Creatures can't block unless their controllers
-    /// pay `amount` for each of those creatures." Checked in `declare_blockers`,
-    /// which sums the tax across every active source and auto-pays it from each
-    /// blocking player's mana pool (rejecting the declaration if it can't be
-    /// covered). `only_while_attacking` gates the static on the source itself
-    /// being an attacking creature this combat (Archangel of Tithes — the
-    /// block-tax half is live only while it attacks); `false` makes it an
-    /// always-on enchantment-style tax. Paid from the pool, auto-tapping mana
-    /// sources for any shortfall.
+    /// CR 509.1d — "Creatures can't block unless their controllers pay `amount`
+    /// for each of those creatures." `declare_blockers` sums the tax over every
+    /// active source and pays it from each blocking player's pool, auto-tapping
+    /// for any shortfall, or rejects the declaration. `only_while_attacking`
+    /// limits it to while the source is attacking (Archangel of Tithes).
     BlockTaxToController {
         amount: Value,
         #[serde(default)]
@@ -1499,13 +1449,10 @@ pub enum StaticEffect {
     /// Two-Headed Coin). Read by `flip_one_coin` for its controller; each
     /// coin is its own flip, so a simultaneous batch heads only its first.
     FirstCoinFlipEachTurnHeads,
-    /// Damping-Sphere-style "lands that tap for more than one mana enter
-    /// producing only {C}". Detected at `play_land` time: if any active
-    /// `LandsTapColorlessOnly` static is in play, the entering land's
-    /// mana abilities are replaced with a single `{T}: Add {C}` ability
-    /// when the original would produce > 1 mana per tap. Skipped on the
-    /// front-face of MDFCs (which have only one ability) and on basic
-    /// lands (single-color, single-mana already).
+    /// Damping Sphere — "lands that tap for more than one mana produce {C}
+    /// instead". At `play_land`, while one is active, an entering land whose
+    /// ability would produce more than one mana gets a single `{T}: Add {C}`
+    /// instead. MDFC front faces and basics are skipped (already one mana).
     LandsTapColorlessOnly,
     /// "Lands `applies_to` are every basic land type" (CR 305.7 — Leyline of
     /// the Guildpact). Emits a layer-4 `SetLandTypes([Plains, Island, Swamp,
@@ -1671,15 +1618,10 @@ pub enum StaticEffect {
     /// {cost}" (Solemn Doomguide). Surfaced beside the encore grant as a
     /// virtual `from_graveyard` ability.
     GraveyardCardsHaveUnearth { filter: SelectionRequirement, cost: crate::mana::ManaCost },
-    /// "If one or more tokens would be created under your control, twice
-    /// that many tokens are created instead." Used by Adrix and Nev,
-    /// Twincasters (Quandrix uncommon legendary). Doubling Season uses a
-    /// stronger variant that also doubles counter accrual; this variant
-    /// covers the token half only. The static is read at
-    /// `Effect::CreateToken` resolution time: each active `DoubleTokens`
-    /// permanent the controller has on the battlefield doubles the
-    /// token count (2 doublers → 4×, 3 → 8×, …). CR 614.13 framing —
-    /// the effect is a replacement that scales the create-token event.
+    /// CR 614.13 — "If one or more tokens would be created under your control,
+    /// twice that many tokens are created instead" (Adrix and Nev). The token
+    /// half of Doubling Season. Read at `Effect::CreateToken` resolution: each
+    /// active copy the controller has doubles the count (2 → 4×, 3 → 8×).
     DoubleTokens,
     /// Primal Vigor's token half — `DoubleTokens` for every player, whoever
     /// controls the source (CR 614.13).
@@ -1694,22 +1636,19 @@ pub enum StaticEffect {
     /// (Moonlit Meditation). A once-per-turn CR 614 replacement on the token
     /// batch, keyed off the Aura's host; declines when the Aura is unattached.
     FirstTokensEachTurnBecomeCopiesOfAttached,
-    /// "The first time you would create one or more tokens during each of
-    /// your turns, you may instead choose a creature other than [this] and
-    /// create that many tokens that are copies of that creature" (Esix,
-    /// Fractal Bloom). The same once-per-turn CR 614 replacement as
+    /// "The first time you would create one or more tokens during each of your
+    /// turns, you may instead choose a creature other than [this] and create
+    /// that many tokens that are copies of that creature" (Esix, Fractal
+    /// Bloom). The once-per-turn CR 614 replacement of
     /// `FirstTokensEachTurnBecomeCopiesOfAttached`, on its controller's turn
-    /// only; the engine picks the creature of greatest mana value (any
-    /// controller's) and declines when there is none.
+    /// only; the engine picks the creature of greatest mana value (anyone's)
+    /// and declines when there is none.
     FirstTokensOnYourTurnBecomeCopiesOfChosen,
-    /// "If one or more counters would be put on a permanent you control,
-    /// twice that many of those counters are put on that permanent instead."
-    /// The counter-half of CR 614.16, matching Doubling Season / Branching
-    /// Evolution-class permanents. Read at `Effect::AddCounter` resolution
-    /// time: each active `DoubleCounters` permanent the controller has on the
-    /// battlefield doubles the counter count (2 doublers → 4×, …). Composes
-    /// multiplicatively with `DoubleTokens` for cards that print both halves
-    /// (Doubling Season itself ships both static abilities).
+    /// CR 614.16 — "If one or more counters would be put on a permanent you
+    /// control, twice that many of those counters are put on that permanent
+    /// instead" (Branching Evolution). Read at `Effect::AddCounter` resolution:
+    /// each active copy doubles the count. Composes multiplicatively with
+    /// `DoubleTokens` (Doubling Season prints both).
     DoubleCounters,
     /// Vorinclex, Monstrous Raider: counters this permanent's controller puts
     /// on a permanent or player are doubled; counters an opponent of theirs
@@ -1725,11 +1664,10 @@ pub enum StaticEffect {
     /// "creature, Spacecraft, or Planet"). Read against the receiving
     /// permanent in `scaled_counter_count_on`.
     DoubleCountersMatching { filter: crate::card::SelectionRequirement },
-    /// CR 614.16 additive variant — "If one or more +1/+1 counters would be
-    /// put on a creature you control, that many *plus one* are put on it
-    /// instead." Hardened Scales / Conclave Mentor / Kalonian Hydra-class.
-    /// Each active copy adds one to a +1/+1 placement onto the controller's
-    /// creatures; applied before any `DoubleCounters` multiplier.
+    /// CR 614.16, additive — "If one or more +1/+1 counters would be put on a
+    /// creature you control, that many plus one are put on it instead"
+    /// (Hardened Scales). Each copy adds one; applied before any
+    /// `DoubleCounters` multiplier.
     ExtraPlusOneCounters,
     /// "If one or more +1/+1 counters would be put on [filter] you control,
     /// that many plus one are put on it instead" — the filtered sibling of
@@ -1750,23 +1688,19 @@ pub enum StaticEffect {
     /// Loyal Companion. Like `ExtraPlusOneCounters` but only for placements onto
     /// the static's own source permanent; applied before any doubler.
     ExtraPlusOneCounterOnSelf,
-    /// CR 614.16 multiplicative variant scoped to +1/+1 counters — "If one or
-    /// more +1/+1 counters would be put on a creature you control, twice that
-    /// many are put on it instead." Branching Evolution / Kami of Whispered
-    /// Hopes / The Earth Crystal-class. Unlike `DoubleCounters` (which doubles
-    /// *any* counter kind), this only doubles +1/+1 placements onto the
-    /// controller's creatures. Composes multiplicatively with `DoubleCounters`.
+    /// CR 614.16, multiplicative, +1/+1 only — "…twice that many are put on it
+    /// instead" (Kami of Whispered Hopes). Unlike `DoubleCounters`, only +1/+1
+    /// placements onto the controller's creatures; composes multiplicatively
+    /// with it.
     DoublePlusOneCounters,
     /// Primal Vigor's counter half — "+1/+1 counters put on a creature" are
     /// doubled for every creature, whoever controls the source (CR 614.16).
     DoublePlusOneCountersEveryone,
-    /// CR 614.16 additive variant for *every* counter kind — "If one or more
-    /// counters would be put on an artifact or creature you control, that many
-    /// plus one of each of those kinds are put on it instead."
-    /// Winding Constrictor-class. Each active copy adds one to a placement of
-    /// any kind onto the controller's creatures (the "counters you'd get"
-    /// player-counter clause is approximated away); applied alongside
-    /// `ExtraPlusOneCounters` before the `DoubleCounters` multiplier.
+    /// CR 614.16, additive, every counter kind — "If one or more counters would
+    /// be put on an artifact or creature you control, that many plus one of
+    /// each of those kinds are put on it instead" (Winding Constrictor; its
+    /// player-counter clause is approximated away). Applied with
+    /// `ExtraPlusOneCounters`, before the `DoubleCounters` multiplier.
     ExtraCounterAllKinds,
     /// `ExtraCounterAllKinds` over "a creature or planeswalker you control or
     /// … yourself" (Lae'zel, Vlaakith's Champion): creatures and players as
@@ -1786,12 +1720,10 @@ pub enum StaticEffect {
     /// {E} instead" (Aether Refinery). Applied after `EnergyGainBonus`, one
     /// doubling per copy.
     EnergyGainDoubles,
-    /// CR 614.2 — "If a source would deal damage … it deals double that
-    /// damage instead." A *global* damage-replacement (Furnace of Rath,
-    /// Gratuitous Violence-class): read
-    /// off the battlefield by `GameState::damage_doublers`, every active
-    /// instance doubles the dealt amount (2 → 4×, …). Applied on both damage
-    /// funnels — the noncombat `deal_damage_to_from` and combat's
+    /// CR 614.2 — "If a source would deal damage … it deals double that damage
+    /// instead" (Furnace of Rath), global. Read by
+    /// `GameState::damage_doublers`; each active instance doubles. Applied on
+    /// both damage funnels, noncombat `deal_damage_to_from` and combat's
     /// `scale_combat_damage`.
     DoubleDamageDealt,
     /// CR 614.5 — "If a source would deal damage to a permanent or player,
@@ -1997,15 +1929,13 @@ pub enum StaticEffect {
     /// gated on the static's controller having an empty hand; `scale_damage_to`.
     DoubleYourSourcesDamageWhileHellbent,
     /// CR 614.2 — "If a source you control would deal damage to a permanent or
-    /// player, it deals **`factor` times** that damage instead" (Fiery
-    /// Emancipation, City on Fire — both ×3).
+    /// player, it deals `factor` times that damage instead" (Fiery
+    /// Emancipation, ×3).
     ///
-    /// ⚠ Its own field rather than a count of doublings, because the rest of
-    /// the damage-scaling funnel accumulates *powers of two*
-    /// (`amount << doublers >> halvers`) and 3 is not one. Two of these
-    /// multiply (×9), and they compose with the doublers by multiplication,
-    /// which is what CR 614's "instead" chain does whatever order the affected
-    /// player picks.
+    /// ⚠ Its own field rather than a doubling count: the rest of the funnel
+    /// accumulates powers of two (`amount << doublers >> halvers`) and 3 isn't
+    /// one. Two of these multiply (×9) and compose with the doublers by
+    /// multiplication, as CR 614's "instead" chain does in any order.
     MultiplyDamageFromYourSources { factor: u32 },
     /// CR 614.5 — "If a source you control would deal *noncombat* damage to an
     /// opponent or a permanent an opponent controls, it deals double that
@@ -2021,11 +1951,9 @@ pub enum StaticEffect {
     DoubleYourNoncombatDamageWhile { condition: Predicate },
     /// "If a source you control would deal noncombat damage to an opponent or a
     /// permanent an opponent controls, it deals that much damage plus `amount`
-    /// instead." The additive sibling of `DoubleNoncombatDamageToOpponents`,
-    /// applied in the same `deal_damage_to_from` funnel. When `while_revolt`,
-    /// gated on CR 702.139 revolt (a permanent left the battlefield under the
-    /// static controller's control this turn). Aether Revolt. `players_only`:
-    /// "to an opponent" alone, not their permanents (Torture Pit).
+    /// instead" — the additive sibling of `DoubleNoncombatDamageToOpponents`,
+    /// in the same `deal_damage_to_from` funnel. `while_revolt` gates it on CR
+    /// 702.139 revolt; `players_only` drops the permanents (Torture Pit).
     NoncombatDamageToOpponentsBonus {
         amount: u32,
         while_revolt: bool,
@@ -2108,13 +2036,11 @@ pub enum StaticEffect {
     /// `GameState::scale_damage_to`; the static's own permanent is excluded.
     CapDamageToYourOtherMatchingCreatures { filter: SelectionRequirement, cap: u32 },
     /// CR 614.5 — "If a [color] source you control would deal damage to an
-    /// opponent or a permanent an opponent controls, it deals that much
-    /// damage plus `amount` instead." (Torbran, Thane of Red Fell.)
-    /// `source_color: None` matches any source you control. Consulted by
-    /// `GameState::scale_damage_to` (additive bonus applied before the
-    /// doublers/halvers).
-    /// `other`: "another source" — the static's own permanent is excluded
-    /// (Thor, Asgard's Avenger).
+    /// opponent or a permanent an opponent controls, it deals that much damage
+    /// plus `amount` instead" (Torbran, Thane of Red Fell); `source_color:
+    /// None` matches any source. Added in `GameState::scale_damage_to` before
+    /// the doublers / halvers. `other`: "another source", excluding the
+    /// static's own permanent (Thor, Asgard's Avenger).
     AddDamageToOpponents {
         source_color: Option<crate::mana::Color>,
         amount: u32,
@@ -2159,37 +2085,32 @@ pub enum StaticEffect {
     /// only while the damage source is a *spell* of that color with one of the
     /// listed card types, controlled by this static's controller.
     YourColorSpellDamageDoubled { color: crate::mana::Color },
-    /// CR 614.x — "Permanents entering the battlefield don't cause
-    /// abilities of permanents your opponents control to trigger. If a
-    /// permanent entering the battlefield causes a triggered ability of
-    /// a permanent you control to trigger, that ability triggers an
-    /// additional time." Elesh Norn, Mother of Machines. Read at ETB
-    /// trigger dispatch via `etb_trigger_multiplier`: any opponent's
-    /// permanent with this static suppresses your ETB triggers
-    /// (multiplier = 0); each of your own adds one extra fire.
+    /// Elesh Norn, Mother of Machines — "Permanents entering the battlefield
+    /// don't cause abilities of permanents your opponents control to trigger.
+    /// If a permanent entering the battlefield causes a triggered ability of a
+    /// permanent you control to trigger, that ability triggers an additional
+    /// time." In `etb_trigger_multiplier`, an opponent's copy zeroes your ETB
+    /// triggers and each of your own adds one fire.
     EtbTriggerSpotlight,
-    /// CR 603.x — "If a permanent entering the battlefield causes a
-    /// triggered ability of a permanent you control to trigger, that
-    /// ability triggers an additional time." Yarok / Panharmonicon. Unlike
-    /// `EtbTriggerSpotlight` this only *adds* fires for the controller's own
-    /// ETB triggers — it never suppresses opponents'. Read at ETB-trigger
-    /// dispatch via `etb_trigger_multiplier`. `entering` narrows which
-    /// entering permanents count, read from this static's controller's view
-    /// (`Any` for Yarok; Panharmonicon's artifact-or-creature).
+    /// "If a permanent entering the battlefield causes a triggered ability of a
+    /// permanent you control to trigger, that ability triggers an additional
+    /// time" (Panharmonicon). Unlike `EtbTriggerSpotlight` it only adds fires,
+    /// never suppresses. Read via `etb_trigger_multiplier`; `entering` narrows
+    /// which entrants count, from this static's controller's view (`Any` for
+    /// Yarok).
     DoubleControllerEtbTriggers { entering: crate::card::SelectionRequirement },
     /// "If a [leaving] permanent leaving the battlefield causes a triggered
     /// ability of a permanent you control to trigger, that ability triggers
     /// an additional time" — Gandalf the White's leaving half. `leaving` is
     /// read against the left object's last known information (CR 603.10a).
     DoubleControllerLeaveTriggers { leaving: crate::card::SelectionRequirement },
-    /// Aboleth Spawn's Probing Telepathy — "Whenever a creature entering
-    /// under an opponent's control causes a triggered ability of that creature
-    /// to trigger, you may copy that ability. You may choose new targets for
-    /// the copy." Read at the three ETB-trigger push sites via
-    /// `entering_trigger_copiers`: each fire of the entering creature's *own*
-    /// ETB-caused trigger gets one extra copy per such static an opponent of
-    /// its controller has, controlled by that opponent (targets picked for
-    /// them), its body wrapped in a "may" asked of them.
+    /// Aboleth Spawn — "Whenever a creature entering under an opponent's
+    /// control causes a triggered ability of that creature to trigger, you may
+    /// copy that ability. You may choose new targets for the copy." Read at the
+    /// three ETB-trigger push sites via `entering_trigger_copiers`: each fire
+    /// of the entering creature's own ETB-caused trigger gets one copy per such
+    /// static an opponent of its controller has, controlled by that opponent,
+    /// as a "may" asked of them.
     CopyOpponentsEnteringCreatureTriggers,
     /// "If a triggered ability of an Ally you control triggers, that ability
     /// triggers an additional time." Katara, the Fearless. Read at trigger
@@ -2197,19 +2118,10 @@ pub enum StaticEffect {
     /// any non-ETB or ETB trigger whose source is an Ally the controller
     /// controls.
     DoubleControllerAllyTriggers,
-    /// CR 603.x — "If a triggered ability of a [type] you control triggers,
-    /// that ability triggers an additional time." The generalization of
-    /// `DoubleControllerAllyTriggers` to an arbitrary set of creature types.
-    /// Read at trigger dispatch via `subtype_trigger_extra_fires`; adds one
-    /// fire per copy for any trigger whose source is a creature the
-    /// controller controls of one of `types`. When `exclude_source` is set,
-    /// the doubler never doubles its own triggers (Harmonic Prodigy's
-    /// "Shaman or *another* Wizard" — the source Wizard is itself, so its
-    /// own prowess isn't doubled by the Wizard clause).
     /// Drivnod, Carnage Dominus — "If a creature dying causes a triggered
-    /// ability of a permanent you control to trigger, that ability triggers
-    /// an additional time." Read at trigger dispatch off the
-    /// `triggered_by_death` candidate flag.
+    /// ability of a permanent you control to trigger, that ability triggers an
+    /// additional time." Read at trigger dispatch off the `triggered_by_death`
+    /// candidate flag.
     DoubleControllerDeathTriggers,
     /// The Masamune — "Equipped creature has 'If a creature dying causes a
     /// triggered ability of this creature … to trigger, that ability triggers
@@ -2295,18 +2207,23 @@ pub enum StaticEffect {
     /// field; the damaged creature's last-known information counts when the
     /// damage was lethal.
     DoubleControllerCreatureDamagedTriggers,
-    /// CR 603.x — the filter-based sibling of `DoubleControllerTriggersOfType`:
-    /// "If a triggered ability of a creature you control matching `filter`
-    /// triggers, that ability triggers an additional time" (Delney, Streetwise
-    /// Lookout's power-2-or-less clause). A source that has just left the
-    /// battlefield is read by last known information (CR 603.10a);
-    /// `include_spells` also covers "a triggered ability of a [matching]
-    /// **spell** you control" (Echoes of Eternity).
+    /// The filter-based sibling of `DoubleControllerTriggersOfType`: "If a
+    /// triggered ability of a creature you control matching `filter` triggers,
+    /// that ability triggers an additional time" (Delney, Streetwise Lookout).
+    /// A source that just left is read by last known information (CR 603.10a);
+    /// `include_spells` adds "a triggered ability of a [matching] spell you
+    /// control" (Echoes of Eternity).
     DoubleControllerTriggersMatching {
         filter: crate::card::SelectionRequirement,
         #[serde(default)]
         include_spells: bool,
     },
+    /// "If a triggered ability of a [type] you control triggers, that ability
+    /// triggers an additional time" — `DoubleControllerAllyTriggers` for any
+    /// creature types. Read via `subtype_trigger_extra_fires`: one extra fire
+    /// per copy for a trigger whose source is a controlled creature of one of
+    /// `types`. `exclude_source` keeps the doubler off its own triggers
+    /// (Harmonic Prodigy's "another Wizard").
     DoubleControllerTriggersOfType {
         types: Vec<crate::card::CreatureType>,
         #[serde(default)]
@@ -2325,13 +2242,10 @@ pub enum StaticEffect {
     /// additional time" (Veyran, Voice of Duality). Read by
     /// `fire_spell_cast_triggers`; copies raise no cast triggers here.
     DoubleYourInstantSorceryCastTriggers,
-    /// CR 614.x — "Creatures entering the battlefield don't cause triggered
-    /// abilities to trigger." Torpor Orb, Tocatli Honor Guard. When any
-    /// permanent with this static is in play, an entering **creature**
-    /// fires no ETB triggers at all (its own or other permanents'
-    /// "whenever a creature enters" reactions). `etb_trigger_multiplier`
-    /// returns 0 for creature entrants while this is active. `also_dies`
-    /// extends suppression to creature-death triggers (Hushbringer).
+    /// "Creatures entering the battlefield don't cause triggered abilities to
+    /// trigger" (Torpor Orb): an entering creature fires no ETB triggers, its
+    /// own or other permanents' (`etb_trigger_multiplier` returns 0).
+    /// `also_dies` extends it to creature-death triggers (Hushbringer).
     SuppressCreatureEtbTriggers {
         #[serde(default)]
         also_dies: bool,
@@ -2449,15 +2363,12 @@ pub enum StaticEffect {
     /// Underworld Breach: each nonland card in the controller's graveyard
     /// has escape — its own mana cost plus exile `exile_count` other cards.
     GraveyardCardsHaveEscape { exile_count: u32 },
-    /// The narrowed Underworld Breach: cards in the controller's graveyard
-    /// matching `filter` may be cast for their own mana cost plus exiling
-    /// `exile_count` other graveyard cards — during the controller's own turn
-    /// only when `your_turn_only`. Kotis, Sibsig Champion ("you may cast a
-    /// creature spell from your graveyard by exiling three other cards from
-    /// your graveyard in addition to paying its other costs"). Rides the
-    /// escape cast path (`effective_escape` / `GameAction::CastEscape`).
-    /// `once_per_turn`: each source's grant is spent by one cast a turn
-    /// (Kotis's "once during each of your turns").
+    /// A narrowed Underworld Breach: cards in the controller's graveyard
+    /// matching `filter` may be cast for their mana cost plus exiling
+    /// `exile_count` other graveyard cards (Kotis, Sibsig Champion), via the
+    /// escape path (`effective_escape` / `GameAction::CastEscape`).
+    /// `your_turn_only`: the controller's turn only; `once_per_turn`: each
+    /// source's grant is spent by one cast a turn.
     GraveyardCardsHaveEscapeMatching {
         filter: SelectionRequirement,
         exile_count: u32,
@@ -2496,13 +2407,12 @@ pub enum StaticEffect {
     /// off-battlefield `HasLandType` arms; the battlefield half is a
     /// `LandTypeChanger`.
     OwnedLandCardsOffBattlefieldHaveLandType(crate::card::LandType),
-    /// "[`having`] spells you control and [`having`] cards you own that
-    /// aren't on the battlefield are [`add`]s in addition to their other
-    /// types" (Biotransference's creatures are artifacts). Read by the
-    /// off-battlefield card-type arms (`card_off_battlefield_gains_card_type`);
-    /// the battlefield half is an `AddCardTypeToMatching`. CR 205.1a / 611.3a.
-    /// `nonland`: only cards that aren't lands too ("nonland permanent cards"
-    /// — Encroaching Mycosynth, one static per permanent type).
+    /// "[`having`] spells you control and [`having`] cards you own that aren't
+    /// on the battlefield are [`add`]s in addition to their other types" (CR
+    /// 205.1a / 611.3a; Biotransference). Read by
+    /// `card_off_battlefield_gains_card_type`; the battlefield half is an
+    /// `AddCardTypeToMatching`. `nonland`: nonland cards only (Encroaching
+    /// Mycosynth).
     OwnedCardsOffBattlefieldHaveCardType {
         having: crate::card::CardType,
         add: crate::card::CardType,
@@ -2817,19 +2727,16 @@ pub enum StaticEffect {
     /// `named_card` (CR 201.3, stamped by `Effect::NameCard`); mana abilities
     /// are taxed too, matching the printed wording's lack of an exclusion.
     NamedSourcesActivationTax { amount: u32 },
-    /// CR 201.3 — "Activated abilities of sources with the chosen name can't
-    /// be activated unless they're mana abilities" (Pithing Needle, Phyrexian
-    /// Revoker, Sorcerous Spyglass). The name comes from the static source's
-    /// `named_card`, exactly as [`Self::NamedSourcesActivationTax`]'s does.
+    /// CR 201.3 — "Activated abilities of sources with the chosen name can't be
+    /// activated unless they're mana abilities" (Pithing Needle). The name is
+    /// the static source's `named_card`, as for
+    /// [`Self::NamedSourcesActivationTax`].
     ///
-    /// The suppression used to be *implicit* — any battlefield permanent
-    /// whose `named_card` matched shut the source's abilities off — and
-    /// `named_card` is not a Pithing Needle flag: thirteen shipped cards
-    /// stamp one for a tax (Skyseer's Chariot), a cast lock (Meddling Mage,
-    /// Nevermore), a cost bump (Disruptor Flute) or a land neutralization
-    /// (Alpine Moon), and every one of them silently suppressed the named
-    /// card's whole activated-ability set as well. Naming the effect is what
-    /// keeps the two apart.
+    /// This used to be implicit — any permanent whose `named_card` matched shut
+    /// the abilities off — but `named_card` also backs taxes, cast locks
+    /// (Meddling Mage) and land neutralization (Alpine Moon), and every such
+    /// card silently suppressed the named card's abilities too. A named effect
+    /// keeps them apart.
     NamedSourcesAbilitiesCantBeActivated,
     /// CR 602.5 / 614 — "Activated abilities of enchanted/equipped creature
     /// cost {N} more to activate" (Oppressive Rays). Applies only to
@@ -2897,18 +2804,11 @@ pub enum StaticEffect {
     /// (checked in `cast_spell`; the life is paid on a successful cast and
     /// the finality counter stamped via `CardInstance.pending_etb_counters`).
     GraveyardCastWithLifeSurcharge { filter: SelectionRequirement, life: u32 },
-    /// "Once during each of your turns, you may cast a [filter] spell from
-    /// your graveyard by sacrificing a [sacrifice] in addition to paying its
-    /// other costs" (Exploration Broodship's {8+} station band). Checked in
-    /// `cast_spell` on the source's controller's turn; each source grants one
-    /// cast per turn (`PlayerCold::graveyard_sac_cast_sources_this_turn`).
-    /// Read off `static_abilities` and off the active station bands' `statics`.
-    /// "Once during each of your turns, you may cast a [filter] spell from
-    /// your graveyard" (Gisa and Geralf: a Zombie creature spell) — the
-    /// no-sacrifice sibling of `GraveyardCastBySacrificingOncePerTurn`,
-    /// sharing its per-source tally. With `exile_after`, "if a spell cast
-    /// this way would be put into your graveyard, exile it instead" (Kess,
-    /// Dissident Mage) — the flashback rider (CR 702.34a) on a plain grant.
+    /// "Once during each of your turns, you may cast a [filter] spell from your
+    /// graveyard" (Gisa and Geralf) — the no-sacrifice sibling of
+    /// `GraveyardCastBySacrificingOncePerTurn`, sharing its per-source tally.
+    /// With `exile_after`, a spell cast this way that would go to the graveyard
+    /// is exiled instead (Kess, Dissident Mage; CR 702.34a).
     GraveyardCastOncePerTurn {
         filter: SelectionRequirement,
         #[serde(default)]
@@ -2922,19 +2822,24 @@ pub enum StaticEffect {
         #[serde(default)]
         enters_tapped: bool,
     },
+    /// "Once during each of your turns, you may cast a [filter] spell from your
+    /// graveyard by sacrificing a [sacrifice] in addition to paying its other
+    /// costs" (Exploration Broodship's station band). Checked in `cast_spell`
+    /// on the controller's turn; one cast per source per turn
+    /// (`PlayerCold::graveyard_sac_cast_sources_this_turn`). Read off
+    /// `static_abilities` and the active station bands' `statics`.
     GraveyardCastBySacrificingOncePerTurn {
         filter: SelectionRequirement,
         sacrifice: SelectionRequirement,
     },
-    /// "Once during each of your turns, you may play a land from your
-    /// graveyard or cast a [filter] spell from your graveyard. If you do, it
-    /// gains 'When this permanent is put into a graveyard from the
-    /// battlefield, exile it and you gain `rider_life` life.'" (Serra
-    /// Paragon). The land play and the cast share the per-source tally of
-    /// `GraveyardCastOncePerTurn`; the rider is baked onto the permanent as it
-    /// enters (`bake_grant`, so it ends with the object — CR 400.7).
-    /// The Eighth Doctor's is a historic land (`land_filter`; `None` is any
-    /// land) and an "exile it if it would leave the battlefield" rider.
+    /// "Once during each of your turns, you may play a land from your graveyard
+    /// or cast a [filter] spell from your graveyard. If you do, it gains 'When
+    /// this permanent is put into a graveyard from the battlefield, exile it
+    /// and you gain `rider_life` life.'" (Serra Paragon). Shares
+    /// `GraveyardCastOncePerTurn`'s tally; the rider is baked onto the
+    /// permanent as it enters (`bake_grant`, so it ends with the object — CR
+    /// 400.7). The Eighth Doctor's version: a historic land (`land_filter`;
+    /// `None` = any land) and an exile-if-it-would-leave rider.
     GraveyardPlayOncePerTurnWithRider {
         filter: SelectionRequirement,
         rider: GraveyardPlayRider,
@@ -2952,18 +2857,13 @@ pub enum StaticEffect {
     /// Transcendent Rival) — the player is the source's `chosen_player`; the
     /// SBA pass that eliminates them pushes the trigger (CR 603.2, 104.2a).
     YouWinWhenChosenPlayerLoses,
-    /// "Creatures you control of the chosen type get +P/+T" — a tribal anthem
-    /// keyed to the source permanent's `chosen_creature_type` (set at ETB via
-    /// `Effect::NameCreatureType`). Resolved live in `gather_continuous_effects`
-    /// (reads the source's chosen type), emitting a layer-7 pump over the
-    /// controller's matching creatures. `exclude_source: true` skips the source
-    /// itself ("**other** creatures …" — Adaptive Automaton); `false` includes
-    /// it (Patchwork Banner). No effect while no type has been chosen.
-    /// `opponents: true` instead applies the (typically negative) modifier to
-    /// each *opponent's* creatures of the chosen type (Plague Engineer).
-    /// When `per_counter: Some(kind)`, `power`/`toughness` are each multiplied
-    /// by the number of `kind` counters on the source — "+1/+1 for each charge
-    /// counter on this" (Door of Destinies).
+    /// "Creatures you control of the chosen type get +P/+T", keyed to the
+    /// source's `chosen_creature_type` (set by `Effect::NameCreatureType`) and
+    /// resolved live in `gather_continuous_effects`; nothing while no type is
+    /// chosen. `exclude_source` for "other creatures" (Adaptive Automaton).
+    /// `opponents` applies the (usually negative) modifier to opponents'
+    /// creatures instead (Plague Engineer). `per_counter: Some(kind)`
+    /// multiplies by the source's `kind` counters (Door of Destinies).
     AnthemForChosenType {
         power: i32,
         toughness: i32,
@@ -2984,14 +2884,12 @@ pub enum StaticEffect {
     /// (stamped by `Effect::ChooseColorForSelf`). Heraldic Banner. Resolved
     /// live in `gather_continuous_effects`; no effect while no color is chosen.
     AnthemForChosenColor { power: i32, toughness: i32 },
-    /// "[filter] you control get +P/+T [and have keywords]" — a fixed-filter
-    /// team anthem (Balthier and Fran → Vehicles; Ardyn, the Usurper → Demons).
-    /// Unlike `AnthemForChosenType` (keyed to a chosen creature type stamped at
-    /// ETB) the filter is printed on the card. Resolved live in
-    /// `gather_continuous_effects`: a layer-7 pump plus one layer-6 keyword
-    /// grant per `keywords` entry over the controller's permanents matching
-    /// `filter` (via `AffectedPermanents::CardMatch`). `opponents: true` targets
-    /// each opponent's matching permanents instead.
+    /// "[filter] you control get +P/+T [and have keywords]" — a printed-filter
+    /// anthem (Balthier and Fran: Vehicles), unlike `AnthemForChosenType`.
+    /// Resolved live in `gather_continuous_effects` as a layer-7 pump plus a
+    /// layer-6 grant per `keywords` entry, over
+    /// `AffectedPermanents::CardMatch`. `opponents` targets opponents'
+    /// permanents instead.
     AnthemForFilter {
         filter: SelectionRequirement,
         #[serde(default)]
@@ -3041,13 +2939,10 @@ pub enum StaticEffect {
         #[serde(default)]
         all_players: bool,
     },
-    /// "As long as [condition], this has [keyword]" — the self keyword-grant
-    /// sibling of `SetBasePtIf` / `PumpSelfIf`, gated on a live `Predicate`
-    /// (source as ability context). Freya Crescent's "During your turn, Freya
-    /// has flying" (`Predicate::IsTurnOf(You)`). Emits a layer-6 self
-    /// `AddKeyword` while the predicate holds. Unlike `SelfHasKeywordWhile`
-    /// (a `SelectionRequirement` over the source's own characteristics) this
-    /// reads game state via the `Predicate` machinery.
+    /// "As long as [condition], this has [keyword]" (Freya Crescent: during
+    /// your turn, flying). Emits a layer-6 self `AddKeyword` while the
+    /// `Predicate` holds (source as context). Unlike `SelfHasKeywordWhile`,
+    /// which tests the source's own characteristics, this reads game state.
     SelfHasKeywordIf { keyword: Keyword, condition: Predicate },
     /// CR 905.2b — the source has every keyword its controller noted while
     /// drafting cards with the source's name (Animus of Predation). No
@@ -3084,20 +2979,12 @@ pub enum StaticEffect {
     /// list is accepted on any spell whose controller has this static, not
     /// just spells printed with `Keyword::Delve`.
     SpellsYouCastHaveDelve,
-    /// "Instant and sorcery spells you cast have Affinity for [filter]"
-    /// (CR 702.40). The static grants every IS spell the controller casts
-    /// an Affinity-style discount of {1} per battlefield permanent matching
-    /// `permanent_filter`. Applied during `cost_reduction_for_spell` —
-    /// stacks additively with the spell's own card-intrinsic
-    /// `CardDefinition.affinity_filter` (so Witherbloom, the Balancer's
-    /// own Affinity-for-creatures self-cast doesn't double-dip; non-Balancer
-    /// IS spells the controller casts only get the static grant).
-    ///
-    /// CR 601.2f / 118.7a: generic-only via the existing
-    /// `ManaCost::reduce_generic` clamp. Powers Witherbloom, the Balancer's
-    /// "Instant and sorcery spells you cast have affinity for creatures"
-    /// printed second clause. Future "your IS spells have affinity for
-    /// [Artifacts / Lands / Pests]" cards plug in unchanged.
+    /// "Instant and sorcery spells you cast have affinity for [filter]" (CR
+    /// 702.40; Witherbloom, the Balancer): {1} less per permanent matching
+    /// `permanent_filter`, generic only (CR 601.2f / 118.7a). Applied in
+    /// `cost_reduction_for_spell`, additively with the spell's own
+    /// `CardDefinition.affinity_filter`, so Witherbloom's self-cast affinity
+    /// doesn't double-dip.
     GrantAffinityToISSpells {
         permanent_filter: SelectionRequirement,
     },
@@ -3140,30 +3027,23 @@ pub enum StaticEffect {
     /// as deathtouch damage. No continuous-layer effect (spells aren't
     /// permanents).
     YourISSpellsHaveDeathtouch,
-    /// "Whenever you cast a creature spell, that creature enters with
-    /// N additional counters of `kind` on it." Read at creature-spell
-    /// resolution time (`stack.rs::resolve_spell`'s ETB-counter path)
-    /// — after the card's printed `enters_with_counters` are applied
-    /// and before SBA. `value` can be `Const(N)`, `XFromCost`, or
-    /// `ConvergedValue`, so the static covers fixed-count riders
-    /// (Hardened Scales-style) AND mana-spent-scaled riders
-    /// (Wildgrowth Archaic — "X is the number of colors of mana spent
-    /// to cast it" → `Value::ConvergedValue`). Only the controlled
-    /// card's creature spells trigger the rider (the static is gated
-    /// on `src.controller == caster`).
+    /// "Whenever you cast a creature spell, that creature enters with N
+    /// additional counters of `kind` on it." Read at creature-spell resolution
+    /// (`stack.rs::resolve_spell`), after printed `enters_with_counters` and
+    /// before SBA, for the static controller's own casts. `value` may be
+    /// `Const(N)`, `XFromCost` or `ConvergedValue` (Wildgrowth Archaic: colours
+    /// spent).
     ExtraEtbCountersForCreatureCasts {
         kind: CounterType,
         value: Value,
     },
     /// "Each other creature you control of the chosen type enters with an
-    /// additional counter of `kind` on it" (Metallic Mimic). Keyed to the
-    /// source permanent's `chosen_creature_type` (set at ETB via
-    /// `Effect::NameCreatureType`). Unlike `ExtraEtbCountersForCreatureCasts`
-    /// this fires for *any* matching creature entry the controller makes
-    /// (casts, tokens, reanimation), gated on the entering creature being a
-    /// different object whose creature types include the chosen type. Read at
-    /// both ETB-counter sites (`stack.rs` spell-resolve and `movement.rs`
-    /// move-to-battlefield) via `chosen_type_etb_counter_specs`.
+    /// additional counter of `kind` on it" (Metallic Mimic), keyed to the
+    /// source's `chosen_creature_type`. Unlike
+    /// `ExtraEtbCountersForCreatureCasts` it applies to any entry (casts,
+    /// tokens, reanimation) of a different matching object. Read at both
+    /// ETB-counter sites (`stack.rs`, `movement.rs`) via
+    /// `chosen_type_etb_counter_specs`.
     ChosenTypeEntersWithCounter { kind: CounterType },
     /// "Creatures you control of the chosen type have [keyword]" — a keyword
     /// grant keyed to the source permanent's `chosen_creature_type` (set at ETB
@@ -3295,35 +3175,22 @@ pub enum StaticEffect {
     /// `UntapYoursEachUntapStepFiltered`: only the source untaps, and only on
     /// an untap step that isn't its controller's.
     UntapSelfEachOtherUntapStep,
-    /// Strict Proctor — "Whenever a permanent entering causes a
-    /// triggered ability to trigger, counter that ability unless its
-    /// controller pays {amount}." Read at ETB-trigger dispatch time
-    /// (both the self-source path in `fire_self_etb_triggers` and the
-    /// unified dispatcher in `dispatch_triggers_for_events`). For each
-    /// ETB trigger pushed onto the stack, the trigger's controller is
-    /// asked yes/no whether to pay `amount` generic mana from their
-    /// pool. On yes + affordable: pay, fire the trigger normally. On
-    /// no/unaffordable: the ability is countered (CR 701.5a) — it never
-    /// fires and the trigger's source permanent is untouched. The
-    /// AutoDecider opts in to paying when the controller has enough mana
-    /// floated; otherwise it declines. Stacks across multiple Strict
-    /// Proctors (one tax per source).
+    /// Strict Proctor — "Whenever a permanent entering causes a triggered
+    /// ability to trigger, counter that ability unless its controller pays
+    /// {amount}." Read at ETB-trigger dispatch (`fire_self_etb_triggers` and
+    /// `dispatch_triggers_for_events`): for each ETB trigger pushed, its
+    /// controller is asked whether to pay `amount` generic from their pool;
+    /// declining or being unable counters the ability (CR 701.5a). The
+    /// AutoDecider pays when enough mana is floated. One tax per Proctor.
     EtbTriggerTax {
         amount: u32,
     },
-    /// CR 502.3 — "Permanents matching `applies_to` don't untap during
-    /// their controllers' untap steps." The classic Stasis / Winter Orb /
-    /// Frozen Aether pattern. Read by `do_untap` in `game/stack.rs`:
-    /// for every battlefield permanent the engine would normally untap,
-    /// it first walks the static effects in play and skips the untap if
-    /// any active `PreventUntap` selector matches the permanent.
-    ///
-    /// The selector is evaluated against the candidate permanent (not
-    /// the source of the static), so a permanent-targeted prevention
-    /// ("nonbasic lands don't untap during their controllers' untap
-    /// steps" via `applies_to = EachPermanent(Nonland & Land)`) and a
-    /// global prevention ("creatures don't untap" via
-    /// `EachPermanent(Creature)`) both compose cleanly.
+    /// CR 502.3 — "Permanents matching `applies_to` don't untap during their
+    /// controllers' untap steps" (Stasis, Winter Orb). `do_untap` skips any
+    /// permanent an active `PreventUntap` selector matches. The selector is
+    /// evaluated against the candidate, not the source, so both targeted
+    /// ("nonbasic lands don't untap") and global ("creatures don't untap")
+    /// forms compose.
     PreventUntap {
         applies_to: Selector,
     },
@@ -3373,22 +3240,18 @@ pub enum StaticEffect {
     /// `GameState::player_casts_cheap_creature_free` from the free-cast
     /// action; grants instant-speed timing for the qualifying creature.
     AnyoneCastsCheapCreaturesFree { max_mv: u32 },
-    /// "Attacking creatures you control have <keyword>." Blade Historian
-    /// (double strike), and any future combat anthem keyed on the
-    /// declare-attackers set. Resolved at `compute_battlefield` time (which
-    /// has the live `GameState.attacking` list) into a layer-6 keyword grant
-    /// scoped to the controller's attackers — `affects()` can't see combat
-    /// state on its own, so this can't route through `selector_to_affected`.
+    /// "Attacking creatures you control have <keyword>" (Blade Historian).
+    /// Resolved in `compute_battlefield`, which has the live
+    /// `GameState.attacking` list, into a layer-6 grant on the controller's
+    /// attackers; `affects()` can't see combat state, so this can't go through
+    /// `selector_to_affected`.
     GrantKeywordToAttackers { keyword: Keyword },
-    /// "[Permanents matching `applies_to`] have '<ability>'." Grants a single
-    /// activated ability to every permanent the selector picks — Galazeth
-    /// Prismari ("Artifacts you control have '{T}: Add one mana of any
-    /// color'"), Cryptolith Rite ("Creatures you control have '{T}: Add one
-    /// mana of any color'"). `applies_to` is an `EachPermanent(filter)`
-    /// evaluated from the static source's controller, so "you control"
-    /// clauses scope correctly. Surfaced by `activate_ability` as a virtual
-    /// ability at index ≥ the permanent's printed-ability count, so the
-    /// standard cost-pay / mana-emit path works unchanged.
+    /// "[Permanents matching `applies_to`] have '<ability>'" (Cryptolith Rite:
+    /// "Creatures you control have '{T}: Add one mana of any color'").
+    /// `applies_to` is an `EachPermanent(filter)` evaluated from the static's
+    /// controller, so "you control" scopes correctly. `activate_ability`
+    /// surfaces it as a virtual ability at an index past the printed ones, so
+    /// the normal cost and mana path works unchanged.
     GrantActivatedAbility {
         applies_to: Selector,
         ability: ActivatedAbility,
@@ -3529,15 +3392,15 @@ pub enum StaticEffect {
     /// Tlincalli Hunter's "a creature spell you cast from exile". Shares
     /// the same once-per-turn tally, and also waives an adventurer's cast.
     FreeExileCastOncePerTurnMatching(SelectionRequirement),
-    /// CR 121.2a — "If you would draw a card, look at the top `count` cards of
-    /// your library instead. Put one into your hand and the rest on the bottom
-    /// in any order." (Tomorrow, Azami's Familiar.) `rest_to_graveyard`: "and
-    /// the rest into your graveyard" (Underrealm Lich).
     /// CR 121.2a / 614 — "The first time you would draw a card each turn,
     /// instead look at the top two cards of your library. Put one of them into
     /// your graveyard and the other back on top of your library. Then draw a
-    /// card." (Scion of Halaster's grant to your commander creatures.)
+    /// card." (Scion of Halaster's grant to your commander.)
     FirstDrawEachTurnMillsOneOfTwo,
+    /// CR 121.2a — "If you would draw a card, look at the top `count` cards of
+    /// your library instead. Put one into your hand and the rest on the bottom
+    /// in any order" (Tomorrow, Azami's Familiar). `rest_to_graveyard`: "and
+    /// the rest into your graveyard" (Underrealm Lich).
     ReplaceDrawWithLookN {
         count: u32,
         #[serde(default)]
@@ -3959,13 +3822,10 @@ pub enum StaticEffect {
     /// stack survives every counter path (`abilities_uncounterable`),
     /// including a ward trigger (CR 702.21a).
     SpellsAndAbilitiesCantBeCountered,
-    /// CR 614.x — "If a nontoken creature would enter the battlefield and it
-    /// wasn't cast, exile it instead." Containment Priest. A global ETB
-    /// replacement read off the battlefield in `place_card_in_dest`'s
-    /// Battlefield arm: any non-cast nontoken creature being put onto the
-    /// battlefield (reanimation, blink-return, reveal-and-put) is rerouted
-    /// to exile. Cast creature spells bypass this path entirely (they enter
-    /// via `resolve_spell` in `stack.rs`), so they are unaffected.
+    /// "If a nontoken creature would enter the battlefield and it wasn't cast,
+    /// exile it instead" (Containment Priest). A global replacement in
+    /// `place_card_in_dest`'s battlefield arm (reanimation, blink, put-onto).
+    /// Cast creature spells enter via `resolve_spell` and are unaffected.
     ExileNontokenCreaturesNotCast,
     /// CR 614.1a / 614.12 — "If this creature would enter and it wasn't
     /// cast or no mana was spent to cast it, exile it instead." A self
@@ -4186,12 +4046,10 @@ pub enum StaticEffect {
     /// CR 602.5a summoning-sickness gate on {T}/{Q} costs (Tyvar, Jubilant
     /// Brawler; Thousand-Year Elixir kin).
     ControllerCreatureAbilitiesAsThoughHaste,
-    /// CR 122.1 — Solemnity-style lock: "Counters can't be put on
-    /// permanents or players." A global replacement read at every
-    /// counter-placement site (`Effect::AddCounter`, `Effect::Proliferate`,
-    /// enters-with-counters). While any instance is on the battlefield the
-    /// placement is dropped. Powers Solemnity (the persist / Phyrexian
-    /// Unlife combo enabler).
+    /// CR 122.1 — Solemnity-style lock: "Counters can't be put on permanents
+    /// or players." While any instance is on the battlefield, every placement
+    /// site (`Effect::AddCounter`, `Effect::Proliferate`, enters-with-counters)
+    /// drops the counters.
     CountersCantBePlaced,
     /// CR 122.1 / 614.17 — "[it] can't have counters put on it": the per-object
     /// sibling of `CountersCantBePlaced`. `applies_to` is `This` (Melira's
@@ -4217,14 +4075,11 @@ pub enum StaticEffect {
     /// ("until your next upkeep"), each 1 damage that would be dealt to its
     /// controller removes a `kind` counter from it instead (Soul Echo).
     ReplaceDamageToYouRemovingStampedCounters { kind: crate::card::CounterType },
-    /// CR 614.6 — graveyard-hate replacement: "If a card would be put into
-    /// a graveyard from anywhere, exile it instead." When `opponents_only`
-    /// the redirect applies only to cards bound for a graveyard belonging to
-    /// an *opponent* of the static's controller (Leyline of the Void);
-    /// otherwise it applies to every player's graveyard (Rest in Peace).
-    /// `colors: Some(..)` restricts the redirect to cards of those printed
-    /// colors (Sanctifier en-Vec's black/red filter). Consulted at every
-    /// graveyard-placement site via `graveyard_exiled_for`.
+    /// CR 614.6 — "If a card would be put into a graveyard from anywhere, exile
+    /// it instead" (Rest in Peace). `opponents_only` limits it to graveyards of
+    /// the static controller's opponents (Leyline of the Void); `colors:
+    /// Some(..)` to cards of those printed colours (Sanctifier en-Vec).
+    /// Consulted at every graveyard placement via `graveyard_exiled_for`.
     ExileCardsBoundForGraveyard {
         opponents_only: bool,
         /// Restrict the redirect to the static's controller's own cards
@@ -4662,15 +4517,12 @@ pub enum StaticEffect {
     /// every player's attackers.
     LandwalkIgnored(crate::card::LandType),
     /// CR 500.7 / 614 — "If an opponent would begin an extra turn, that player
-    /// skips that turn instead" (Trouble in Pairs). A replacement on the
-    /// *beginning* of the turn, so the extra turn is still spent: the charge
-    /// comes off `Player.extra_turns` and the turn passes normally, which is
-    /// what stops a single Time Warp looping forever under it.
-    ///
-    /// "Opponent" is relative to this static's controller, so a seat with one
-    /// of these out still takes its **own** extra turns. Read at the one place
-    /// `extra_turns` is consumed (`stack.rs`'s turn advance), off printed
-    /// static abilities like `LandwalkIgnored`.
+    /// skips that turn instead" (Trouble in Pairs). It replaces the turn's
+    /// beginning, so the extra turn is still spent (the charge comes off
+    /// `Player.extra_turns`), which stops a lone Time Warp looping under it.
+    /// "Opponent" is relative to this static's controller, whose own extra
+    /// turns are unaffected. Read where `extra_turns` is consumed (`stack.rs`'s
+    /// turn advance), off printed statics.
     OpponentsSkipExtraTurns,
     /// The symmetric form — "if a player would begin an extra turn, that
     /// player skips that turn instead" (Gerrard's Hourglass Pendant): binds
@@ -4767,13 +4619,10 @@ pub struct ActivatedAbility {
     #[serde(default)]
     pub max_activations_per_turn: Option<u32>,
     pub sorcery_speed: bool,
-    /// True if activating this ability requires sacrificing the source
-    /// permanent as part of its cost. The sacrifice is applied **after**
-    /// tap and mana payment succeed but **before** the effect is queued
-    /// for resolution — so by the time the effect runs (or is pushed onto
-    /// the stack), the source is already in the graveyard. Used by cards
-    /// like Mind Stone (`{1}, {T}, Sacrifice this: Draw a card`),
-    /// Cathar Commando, Greater Good, Zuran Orb, etc.
+    /// Sacrifice the source as part of the cost (Mind Stone, Greater Good). The
+    /// sacrifice happens after tap and mana payment succeed and before the
+    /// effect is queued, so the source is already in the graveyard when it
+    /// runs.
     pub sac_cost: bool,
     /// "Return N [filter] you control to their owner's hand" as an activation
     /// cost (Floodbringer, Flooded Shoreline's two Islands). Paid before the
@@ -4828,31 +4677,15 @@ pub struct ActivatedAbility {
     /// `tap_cost` is not a {T} (CR 302.6 doesn't gate it) and the emblem is the source.
     #[serde(default)]
     pub emblem_ability: bool,
-    /// Optional gating predicate. When set, the activation is rejected
-    /// before any cost is paid unless the predicate evaluates to true
-    /// against the source/controller context. Used by activated abilities
-    /// that include a printed "activate only if …" clause:
-    /// - Resonating Lute's `{T}: Draw a card. Activate only if you have
-    ///   seven or more cards in your hand.`
-    /// - Potioner's Trove's `{T}: You gain 2 life. Activate only if
-    ///   you've cast an instant or sorcery spell this turn.`
-    /// - Stone Docent's `{W}, Exile this card from your graveyard:
-    ///   You gain 2 life. Surveil 1. Activate only as a sorcery.` (the
-    ///   sorcery-speed half is already covered by `sorcery_speed`; the
-    ///   gate here is for arbitrary predicates).
+    /// Gating predicate for a printed "activate only if …" clause (Resonating
+    /// Lute: seven or more cards in hand); the activation is rejected before
+    /// any cost is paid unless it holds against the source / controller
+    /// context. Sorcery timing is `sorcery_speed`, not this.
     #[serde(default)]
     pub condition: Option<Predicate>,
-    /// Additional life-payment cost (in addition to mana, tap, and sac).
-    /// Paid up front during activation. Activation is rejected with
-    /// `GameError::InsufficientLife` when the controller's current life
-    /// is below `life_cost` (mirrors the mana-cost pre-pay check). Used
-    /// by activated abilities that bake "Pay N life:" into the cost
-    /// line — Great Hall of the Biblioplex's `{T}, Pay 1 life: Add one
-    /// mana of any color`, future Phyrexian-mana flavoured activations,
-    /// City of Brass-style "tap for damage" hybrids, etc.
-    ///
-    /// Defaults to 0 via `#[serde(default)]` so existing literal
-    /// initialisations pick up the new field automatically.
+    /// Additional "Pay N life" cost (Great Hall of the Biblioplex), paid up
+    /// front. Rejected with `GameError::InsufficientLife` when the controller's
+    /// life is below `life_cost`, like the mana pre-pay check.
     #[serde(default)]
     pub life_cost: u32,
     /// "Pay half your life, rounded up" as the activation cost (CR 118.4 —
@@ -4868,11 +4701,10 @@ pub struct ActivatedAbility {
     /// [`Self::x_life_cost`], which reads the activation's announced X.
     #[serde(default)]
     pub life_cost_value: Option<Value>,
-    /// "Pay X life" as a variable additional cost, where X is the activation's
-    /// chosen `x_value` (CR 107.16). The body reads the same X via
-    /// `Value::XFromCost`. Mirrors `energy_x_cost` but drains life. Powers
-    /// Krumar Initiate's `{X}{B}, {T}, Pay X life: This creature endures X.`
-    /// Mutually independent from the fixed `life_cost`. Defaults to false.
+    /// "Pay X life" as a variable additional cost, X being the activation's
+    /// `x_value` (CR 107.16; Krumar Initiate). The body reads X via
+    /// `Value::XFromCost`. Like `energy_x_cost` but life; independent of
+    /// `life_cost`.
     #[serde(default)]
     pub x_life_cost: bool,
     /// CR 601.2g — "Spend only [colour] mana on X" (Atalya, Samite Master).
@@ -4889,20 +4721,11 @@ pub struct ActivatedAbility {
     /// color to activate" this ability (Grell Philosopher's borrowed ones).
     #[serde(default)]
     pub spend_color_as_any: Option<crate::mana::Color>,
-    /// True if this ability is activated from the controller's graveyard
-    /// rather than the battlefield. The activation walker searches the
-    /// graveyard for the source instead of the battlefield. Used by
-    /// SOS cards with `{cost}: do X` activated abilities that read like
-    /// "Activate only from your graveyard." — Summoned Dromedary's
-    /// `{1}{W}: return this from gy to hand. sorcery.`, Teacher's Pest's
-    /// `{B}{G}: return this from gy to bf tapped.`, Stone Docent (with
-    /// `exile_self_cost`), Eternal Student (with `exile_self_cost`),
-    /// and Postmortem Professor (with `exile_self_cost` toggled
-    /// separately for the "exile an IS from gy" portion not handled
-    /// here — the source itself is in gy).
-    ///
-    /// Defaults to false via `#[serde(default)]` so all existing
-    /// literal initializations pick up the new field automatically.
+    /// Activated from the controller's graveyard rather than the battlefield
+    /// ("activate only from your graveyard"; Summoned Dromedary). The
+    /// activation walker looks for the source there; pair with
+    /// `exile_self_cost` for "exile this card from your graveyard" costs (Stone
+    /// Docent).
     #[serde(default)]
     pub from_graveyard: bool,
     /// True if this ability is activated from the **exile zone** (the card
@@ -4911,39 +4734,17 @@ pub struct ActivatedAbility {
     /// `from_graveyard`. Defaults to false via `#[serde(default)]`.
     #[serde(default)]
     pub from_exile: bool,
-    /// True if activating this ability exiles the source as part of
-    /// its cost. Used together with `from_graveyard: true` for cards
-    /// whose printed cost line reads "Exile this card from your
-    /// graveyard: …" (Stone Docent, Eternal Student). The exile
-    /// happens after tap (n/a from gy) + mana + life payments succeed
-    /// but **before** the effect resolves, mirroring `sac_cost`'s
-    /// timing.
-    ///
-    /// Defaults to false via `#[serde(default)]`.
+    /// Exile the source as part of the cost — with `from_graveyard`, "Exile
+    /// this card from your graveyard: …" (Stone Docent). Timed like `sac_cost`:
+    /// after mana and life payments, before the effect resolves.
     #[serde(default)]
     pub exile_self_cost: bool,
-    /// Optional cost: exile a *different* card from the controller's
-    /// graveyard matching this filter. Used by activated abilities
-    /// whose printed cost line reads "Exile a [filter] card from your
-    /// graveyard:" where the exiled card is **not** the source — for
-    /// example Postmortem Professor's `{1}{B}, Exile an instant or
-    /// sorcery card from your graveyard: Return this card from your
-    /// graveyard to the battlefield.` and Lorehold Pledgemage's
-    /// `{2}{R}{W}, Exile a card from your graveyard: This creature
-    /// gets +1/+1 until end of turn.`
-    ///
-    /// The exile is applied after tap / mana / life payments succeed
-    /// but before the effect resolves, mirroring `sac_cost` /
-    /// `exile_self_cost`. If no graveyard card matches, activation is
-    /// rejected with `GameError::SelectionRequirementViolated`. The
-    /// auto-picker takes the lowest-CMC matching card so the activator
-    /// keeps higher-value cards in their graveyard.
-    ///
-    /// Defaults to None via `#[serde(default)]`. The `u32` count
-    /// (defaults to 1 when constructing via the bare-filter helpers) is
-    /// the number of graveyard cards that must be exiled to activate.
-    /// Used at count 2 for Grim Lavamancer's "exile two cards from
-    /// your graveyard as an additional cost".
+    /// Exile `count` other cards matching the filter from the controller's
+    /// graveyard ("Exile a [filter] card from your graveyard:"; Lorehold
+    /// Pledgemage; count 2 for Grim Lavamancer). Timed like `sac_cost`;
+    /// rejected with `GameError::SelectionRequirementViolated` when too few
+    /// match. The auto-picker takes the lowest-CMC cards. The bare-filter
+    /// helpers default the count to 1.
     #[serde(default)]
     pub exile_other_filter: Option<(SelectionRequirement, u32)>,
     /// Optional additional cost: exile one card matching the filter from the
@@ -4994,17 +4795,10 @@ pub struct ActivatedAbility {
     /// rejected.
     #[serde(default)]
     pub x_nonzero: bool,
-    /// Optional self-counter cost-reduction kind. When `Some(kind)`, the
-    /// activation's generic mana cost is reduced by one for each counter
-    /// of `kind` on the source permanent (clamped at the printed generic
-    /// total). Mirrors `affinity_filter` on spells, but reads the
-    /// source's own counter pool instead of a battlefield filter — the
-    /// shape needed by Strixhaven's Book artifacts whose printed Oracle
-    /// is "This ability costs {1} less to activate for each [counter]
-    /// counter on this artifact." Currently powers:
-    /// - Diary of Dreams's `{5}, {T}: Draw a card.` (Page counters)
-    ///
-    /// Defaults to None via `#[serde(default)]`.
+    /// "This ability costs {1} less to activate for each [kind] counter on
+    /// this" (Diary of Dreams). Reduces the generic cost by the source's `kind`
+    /// counters, clamped at the printed generic — `affinity_filter` for
+    /// activations.
     #[serde(default)]
     pub self_counter_cost_reduction: Option<crate::card::CounterType>,
     /// "Pay {1} for each [kind] counter on this creature" — the surcharge
@@ -5051,30 +4845,12 @@ pub struct ActivatedAbility {
     /// graveyard at payment time (Battlefield Butcher). Defaults to None.
     #[serde(default)]
     pub cost_reduction_per_graveyard: Option<SelectionRequirement>,
-    /// Optional cost: sacrifice a *different* permanent the activator
-    /// controls matching this filter. Mirrors `exile_other_filter` but
-    /// for sacrifice rather than exile. Used by activated abilities
-    /// whose printed cost line reads "Sacrifice a [filter]:" where the
-    /// sacrifice is **not** the source — for example Greater Good's
-    /// `{0}, Sacrifice a creature: Draw cards equal to the sacrificed
-    /// creature's power.` and Korlash, Heir to Blackblade's `{B},
-    /// Sacrifice a Swamp: Regenerate this creature.` The `u32` count
-    /// (defaults to 1 when constructing via bare-filter helpers) is the
-    /// number of permanents that must be sacrificed.
-    ///
-    /// The sacrifice is applied after tap / mana / life payments succeed
-    /// but **before** the effect resolves, mirroring `sac_cost` /
-    /// `exile_other_filter`. If no controlled permanent matches,
-    /// activation is rejected with
-    /// `GameError::SelectionRequirementViolated`. The auto-picker
-    /// takes the lowest-power matching creature (or the first matching
-    /// non-creature) so the activator keeps higher-value creatures
-    /// alive.
-    ///
-    /// Defaults to None via `#[serde(default)]`. When set together with
-    /// `sac_cost: true`, both the source AND the filter-matched
-    /// permanents are sacrificed (rare but allowed for cost-stacking
-    /// shapes).
+    /// Sacrifice `count` other permanents matching the filter ("Sacrifice a
+    /// [filter]:"; Greater Good, Korlash). Timed like `sac_cost`; rejected with
+    /// `GameError::SelectionRequirementViolated` when nothing matches. The
+    /// auto-picker takes the lowest-power creature (or first matching
+    /// noncreature). With `sac_cost` too, both the source and these are
+    /// sacrificed. The bare-filter helpers default the count to 1.
     #[serde(default)]
     pub sac_other_filter: Option<(SelectionRequirement, u32)>,
     /// "Sacrifice N [filter] with different names" — the `sac_other_filter`
@@ -5092,19 +4868,15 @@ pub struct ActivatedAbility {
     /// The auto-pick takes it only when nothing else matches.
     #[serde(default)]
     pub sac_other_may_be_source: bool,
-    /// A SECOND, DIFFERENT sacrifice in the same cost line — "Sacrifice a
-    /// Swamp **and** a Forest:" (Jarad, Golgari Lich Lord's graveyard
-    /// ability).
+    /// A second, different sacrifice in the same cost line — "Sacrifice a Swamp
+    /// and a Forest:" (Jarad, Golgari Lich Lord).
     ///
-    /// ⚠ **One `(filter, count)` cannot say this.** `(Swamp-or-Forest, 2)`
-    /// is paid by two Swamps, and `(Swamp, 1)` alone drops half the cost —
-    /// which is why the card shipped with both sacrifices spelled in its
-    /// EFFECT behind a `condition`, the shape CR 602.5b forbids and the one
-    /// that put 3,119 Greater Good activations on one stack. Paid alongside
-    /// `sac_other_filter` and picked DISJOINTLY from it, so a permanent that
-    /// matches both halves (a Bayou) cannot pay both.
-    ///
-    /// Defaults to None via `#[serde(default)]`.
+    /// ⚠ One `(filter, count)` can't say this: `(Swamp-or-Forest, 2)` is paid
+    /// by two Swamps, and `(Swamp, 1)` drops half the cost. The card once
+    /// spelled both sacrifices in its effect behind a `condition` — the shape
+    /// CR 602.5b forbids, which let Greater Good stack thousands of
+    /// activations. Picked disjointly from `sac_other_filter`, so a Bayou can't
+    /// pay both.
     #[serde(default)]
     pub sac_other_second: Option<(SelectionRequirement, u32)>,
     /// "Sacrifice all [filter] you control" as an activation cost (Tomb of
@@ -5130,14 +4902,10 @@ pub struct ActivatedAbility {
     /// threaded to the effect as `Value::XFromCost`.
     #[serde(default)]
     pub sac_other_x: bool,
-    /// Optional cost: tap an *untapped, different* permanent the activator
-    /// controls matching this filter (CR 602.5b "tap an untapped … you
-    /// control" costs). Mirrors `sac_other_filter` but taps rather than
-    /// sacrifices. Used by Opposition (`Tap an untapped creature you
-    /// control: Tap target …`) and similar. The auto-picker takes the
-    /// lowest-power matching untapped permanent so higher-value creatures
-    /// stay open. Rejected with `GameError::SelectionRequirementViolated`
-    /// when nothing matches. Defaults to None via `#[serde(default)]`.
+    /// Tap an untapped other permanent matching the filter (CR 602.5b;
+    /// Opposition: "Tap an untapped creature you control: …"). The auto-picker
+    /// takes the lowest-power match; rejected with
+    /// `GameError::SelectionRequirementViolated` when nothing matches.
     #[serde(default)]
     pub tap_other_filter: Option<SelectionRequirement>,
     /// Optional cost: tap *N* untapped, different permanents the activator
@@ -5164,37 +4932,20 @@ pub struct ActivatedAbility {
     /// power reaches N.
     #[serde(default)]
     pub tap_total_power: Option<u32>,
-    /// Optional cost: return a *different* permanent the activator controls
-    /// matching this filter to its owner's hand (CR 602.5b "Return a [filter]
-    /// you control to its owner's hand:" costs). Mirrors `sac_other_filter`
-    /// but bounces rather than sacrifices. Powers Quirion Ranger ("Return a
-    /// Forest you control …"), Wirewood Symbiote ("Return an Elf you control
-    /// …"), Scryb Ranger, etc. The auto-picker takes the lowest-power match
-    /// (or first matching noncreature) so higher-value permanents stay put.
-    /// Rejected with `GameError::SelectionRequirementViolated` when nothing
-    /// matches. The bounce is applied after tap / mana / life payments
-    /// succeed but before the effect resolves. Defaults to None.
+    /// Return another permanent matching the filter to its owner's hand (CR
+    /// 602.5b; Quirion Ranger: "Return a Forest you control …"). The
+    /// auto-picker takes the lowest-power match (or first matching
+    /// noncreature); rejected with `GameError::SelectionRequirementViolated`
+    /// when nothing matches. Timed like `sac_cost`.
     #[serde(default)]
     pub bounce_other_filter: Option<(SelectionRequirement, u32)>,
-    /// True if this ability is activated from the controller's hand
-    /// rather than the battlefield. The activation walker searches the
-    /// hand for the source instead of the battlefield. Pairs with
-    /// `exile_self_cost: true` for the "Exile this card from your hand:"
-    /// cost line — the pitch mana abilities of Elvish Spirit Guide
-    /// (`Exile this from your hand: Add {G}.`) and Simian Spirit Guide
-    /// (`… Add {R}.`). Tap costs are illegal from hand and rejected.
-    ///
-    /// Defaults to false via `#[serde(default)]`.
+    /// Activated from the controller's hand rather than the battlefield. Pairs
+    /// with `exile_self_cost` for "Exile this card from your hand:" (Elvish
+    /// Spirit Guide). Tap costs are illegal from hand and rejected.
     #[serde(default)]
     pub from_hand: bool,
-    /// Optional {E} (energy) cost (CR 107.16). When > 0, the activator must
-    /// have at least this many energy counters; they're spent up front during
-    /// activation, mirroring the mana/life pre-pay gate. Powers the
-    /// energy-gated mana abilities of Aether Hub and Servant of the Conduit
-    /// (`{T}, Pay {E}: Add one mana of any color`).
-    ///
-    /// Defaults to 0 via `#[serde(default)]` so existing literal
-    /// initialisations pick up the new field automatically.
+    /// {E} (energy) cost (CR 107.16): the activator must have this many energy
+    /// counters, spent up front like the mana / life pre-pay (Aether Hub).
     #[serde(default)]
     pub energy_cost: u32,
     /// Optional cost: pay `X` energy, where `X` is the activation's chosen
@@ -5204,16 +4955,10 @@ pub struct ActivatedAbility {
     /// plus that filter. Mutually exclusive with a fixed `energy_cost`.
     #[serde(default)]
     pub energy_x_cost: bool,
-    /// Optional cost: discard `count` cards from the activator's hand
-    /// matching this filter (CR 602.5b "Discard a [filter] card:" cost
-    /// lines). Mirrors `sac_other_filter`/`exile_other_filter` but moves
-    /// from hand → graveyard. Used by Fauna Shaman (`{G}, {T}, Discard a
-    /// creature card: …`), Survival of the Fittest, etc. Applied after
-    /// tap/mana/life payments succeed but before the effect resolves. The
-    /// auto-picker takes the lowest-CMC matching hand card. Rejected with
+    /// Discard `count` cards matching the filter (CR 602.5b "Discard a [filter]
+    /// card:"; Fauna Shaman). Timed like `sac_cost`; the auto-picker takes the
+    /// lowest-CMC match; rejected with
     /// `GameError::SelectionRequirementViolated` when nothing matches.
-    ///
-    /// Defaults to None via `#[serde(default)]`.
     #[serde(default)]
     pub discard_cost: Option<(SelectionRequirement, u32)>,
     /// "Mill N cards:" as a cost (CR 701.13, 602.5b) — The Warring Triad.
@@ -5266,15 +5011,11 @@ pub struct ActivatedAbility {
     /// on creatures you control). Generic-only reduction.
     #[serde(default)]
     pub cost_reduction_per_counter: Option<(crate::card::CounterType, SelectionRequirement)>,
-    /// Optional cost: remove `count` counters of the given type from the
-    /// source permanent (CR 602.5b "Remove a [kind] counter from this:"
-    /// cost lines). Modeled as a real cost — not an effect — so the ability
-    /// can't be over-activated off the stack (each activation must pay from
-    /// the counters present when it's announced). Powers Walking Ballista,
-    /// Triskelion, Hangarback Walker (`Remove a +1/+1 counter from this:`).
-    /// Applied after tap/mana/life payments but before the effect resolves.
-    /// Rejected with `GameError::SelectionRequirementViolated` when the
-    /// source lacks enough counters. Defaults to None via `#[serde(default)]`.
+    /// Remove `count` counters of the kind from the source (CR 602.5b; Walking
+    /// Ballista). A real cost, not an effect, so each activation must pay from
+    /// the counters present when it's announced. Timed like `sac_cost`;
+    /// rejected with `GameError::SelectionRequirementViolated` when the source
+    /// is short.
     #[serde(default)]
     pub remove_counter_cost: Option<(crate::card::CounterType, u32)>,
     /// CR 122.1b + 602.5b — "Remove a [keyword] counter from this:" (Myojin
@@ -5310,14 +5051,11 @@ pub struct ActivatedAbility {
     /// known while the ability waits on the stack (Clay Golem). 0 = none.
     #[serde(default)]
     pub roll_die_cost: u8,
-    /// Optional cost: remove `u32` counters of the named kind (`None` = any
-    /// mix of kinds — Tekuthal's "remove three counters") from among
-    /// permanents matching the filter the activator controls (CR 602.5b —
-    /// "Remove N [kind] counters from among creatures you control:"). Unlike
-    /// `remove_counter_cost` the counters may come from any mix of matching
-    /// permanents, not just the source. Rejected when the total available is
-    /// below the count; the auto-picker drains lowest-value permanents first.
-    /// Hopeful Initiate. Defaults to None via `#[serde(default)]`.
+    /// Remove N counters of the kind (`None` = any mix, Tekuthal) from among
+    /// matching permanents the activator controls (CR 602.5b; Hopeful
+    /// Initiate). Unlike `remove_counter_cost`, any mix of permanents may pay.
+    /// Rejected when too few are available; the auto-picker drains the
+    /// lowest-value permanents first.
     #[serde(default)]
     pub remove_counter_among_filter:
         Option<(Option<crate::card::CounterType>, u32, SelectionRequirement)>,
@@ -5347,15 +5085,8 @@ pub struct ActivatedAbility {
     /// (`game/suspended_counter_cost.rs`; the last one casts the card).
     #[serde(default)]
     pub remove_counter_among_or_suspended: bool,
-    /// True if activating this ability returns the source permanent to its
-    /// owner's hand as part of the cost (CR 602.5b "Return this … to its
-    /// owner's hand:" cost lines). The bounce happens after tap/mana/life
-    /// payments succeed but before the effect resolves, mirroring
-    /// `sac_cost`. Powers Grinning Ignus (`{R}, Return this to its owner's
-    /// hand: Add {C}{C}{R}.`) and Rootha, Mercurial Artist (`{2}, Return
-    /// Rootha to its owner's hand: Copy target instant or sorcery spell`).
-    ///
-    /// Defaults to false via `#[serde(default)]`.
+    /// Return the source to its owner's hand as part of the cost (CR 602.5b;
+    /// Grinning Ignus). Timed like `sac_cost`.
     #[serde(default)]
     pub return_self_cost: bool,
     /// "Put this on the bottom of its owner's library:" as a cost (CR 602.5b —
@@ -5374,13 +5105,9 @@ pub struct ActivatedAbility {
     /// Defaults to false.
     #[serde(default)]
     pub any_player: bool,
-    /// True if activating this ability discards the source from the activator's
-    /// hand as part of its cost (CR 602.5b "Discard this card:" cost lines).
-    /// Pairs with `from_hand: true`. The discard (hand → graveyard, firing a
-    /// `CardDiscarded` event) happens after mana/life payments succeed but
-    /// before the effect resolves, mirroring `exile_self_cost`. Powers
-    /// Elemental Masterpiece's `{U/R}{U/R}, Discard this card: Create a
-    /// Treasure`. Defaults to false.
+    /// Discard the source from hand as part of the cost (CR 602.5b "Discard
+    /// this card:"; Elemental Masterpiece). Pairs with `from_hand`; the discard
+    /// fires `CardDiscarded` and is timed like `exile_self_cost`.
     #[serde(default)]
     pub discard_self_cost: bool,
     /// CR 602.5b — "Put a card from your hand on top of your library:" as an
@@ -5405,15 +5132,12 @@ pub struct ActivatedAbility {
     /// by its mana cost, colored pips matching colored (CR 702.193b).
     #[serde(default)]
     pub power_up: bool,
-    /// Craft (CR 702.167) — exile `count` *other* objects matching this
-    /// filter from among permanents you control and/or cards in your
-    /// graveyard, as an additional cost. Pairs with
-    /// `Effect::ExileSelfReturnTransformed` (which exiles the source and
-    /// returns it transformed). Activate only as a sorcery
-    /// (`sorcery_speed: true`). The auto-picker exiles graveyard cards
-    /// first, then the lowest-power battlefield permanents, so higher-value
-    /// board pieces stay put. A count of 0 is "craft with one or more": every
-    /// matching graveyard card, else one permanent. Defaults to None.
+    /// Craft (CR 702.167) — exile `count` other matching objects from your
+    /// permanents and/or graveyard as an additional cost. Pairs with
+    /// `Effect::ExileSelfReturnTransformed` and `sorcery_speed`. The
+    /// auto-picker exiles graveyard cards first, then the lowest-power
+    /// permanents. Count 0 is "craft with one or more": every matching
+    /// graveyard card, else one permanent.
     #[serde(default)]
     pub craft_exile_cost: Option<(SelectionRequirement, u32)>,
     /// "Craft with N **or more**" (The Enigma Jewel): N is a floor, and the
@@ -5454,13 +5178,10 @@ pub struct ActivatedAbility {
     /// Researcher's tap-untap sibling. Defaults to None.
     #[serde(default)]
     pub collect_evidence_cost: Option<u32>,
-    /// Optional cost: exile a spell the activator controls from the stack
-    /// matching this filter (CR 602.5b "Exile [a spell] you control:"). The
-    /// exiled spell leaves the stack and won't resolve. Powers Nivmagus
-    /// Elemental (`Exile an instant or sorcery spell you control: …`). The
-    /// auto-picker exiles the top-most (most recently cast) matching spell.
-    /// Rejected with `GameError::SelectionRequirementViolated` when no
-    /// controlled spell matches. Defaults to None.
+    /// Exile a spell you control matching the filter from the stack (CR 602.5b;
+    /// Nivmagus Elemental); it won't resolve. The auto-picker takes the most
+    /// recently cast match; rejected with
+    /// `GameError::SelectionRequirementViolated` when none matches.
     #[serde(default)]
     pub exile_spell_cost: Option<SelectionRequirement>,
     /// Optional cost: put `u32` counters of the given kind on the source
@@ -5489,13 +5210,12 @@ pub struct ActivatedAbility {
     /// exiled permanent's mana value is stamped for `Value::ExiledForCostManaValue`.
     #[serde(default)]
     pub exile_permanent_cost: Option<(SelectionRequirement, u32)>,
-    /// "Exile one or more other [filter] you control with total mana value
-    /// X: return target … card with mana value X or less" (Fabrication
-    /// Foundry). With this set, `exile_permanent_cost`'s count is ignored: the
-    /// cost exiles at least one match whose mana values sum to at least the
-    /// slot-0 target card's mana value (the activator names X; the auto-pick
-    /// is the cheapest cover). No target, or not enough mana value on board,
-    /// rejects the activation.
+    /// "Exile one or more other [filter] you control with total mana value X:
+    /// return target … card with mana value X or less" (Fabrication Foundry).
+    /// `exile_permanent_cost`'s count is then ignored: the cost exiles at least
+    /// one match whose mana values sum to at least the slot-0 target's (the
+    /// activator names X; the auto-pick is the cheapest cover). No target, or
+    /// too little mana value on board, rejects the activation.
     #[serde(default)]
     pub exile_permanent_cost_covers_target_mv: bool,
     /// CR 107.3 — a generic cost whose amount is defined by the game state

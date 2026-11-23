@@ -1,10 +1,7 @@
-//! Optional crash dumps: set `CRAB_CRASH_DUMP_DIR` to have a match that
-//! panics write the `GameState` it started from, plus the panic message, to a
-//! JSON file. Unset = disabled (and the state is never cloned).
-//!
-//! Before this, `run_match_caught` logged one line and dropped the state, so a
-//! catalog bug that panicked mid-match left nothing to reproduce from
-//! (FEATURE_ROADMAP Tier 16 — crash recovery).
+//! Optional crash dumps: with `CRAB_CRASH_DUMP_DIR` set, a match that panics
+//! writes its latest `GameState` checkpoint (or the pre-match state) and the
+//! panic message to a JSON file, so a mid-match catalog bug leaves a repro.
+//! Unset = disabled, and the state is never serialized.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -32,21 +29,20 @@ fn keep() -> usize {
     })
 }
 
-/// True when dumping is configured. Callers gate the (non-trivial) state
-/// serialization on this so the disabled path costs nothing.
+/// True when dumping is configured; callers gate state serialization on it.
 pub(crate) fn enabled() -> bool {
     dump_dir().is_some()
 }
 
-/// Serialize the state a match is about to run, ready to hand to [`write`] if
-/// that match panics. `None` when dumping is off or the state won't serialize.
+/// Serialize the state a match is about to run, for [`write`] if it panics.
+/// `None` when dumping is off or serialization fails.
 pub(crate) fn capture(state: &crabomination::game::GameState) -> Option<String> {
     enabled().then(|| serde_json::to_string(state).ok()).flatten()
 }
 
-/// The latest mid-match checkpoint from a running match's snapshot sink,
-/// serialized. `None` when dumping is off, the match never published, or the
-/// state won't serialize — callers fall back to the pre-match capture.
+/// The running match's latest checkpoint from its snapshot sink, serialized.
+/// `None` when off, never published, or unserializable (callers fall back to
+/// the pre-match capture).
 pub(crate) fn capture_checkpoint(
     sink: Option<&crabomination::server::SnapshotSink>,
 ) -> Option<String> {
@@ -81,8 +77,8 @@ fn render(ctx: &str, panic_msg: &str, state_json: &str, ts: u64) -> String {
     )
 }
 
-/// Keep only the newest `keep` `*.json` files in `dir`, by filename — the
-/// names are timestamp-then-counter ordered, so lexical order is chronological.
+/// Keep only the newest `keep` `*.json` files in `dir`; names are
+/// timestamp-then-counter, so lexical order is chronological.
 fn prune(dir: &Path, keep: usize) {
     let Ok(entries) = std::fs::read_dir(dir) else { return };
     let mut names: Vec<PathBuf> = entries
@@ -100,8 +96,7 @@ fn prune(dir: &Path, keep: usize) {
     }
 }
 
-/// Write a dump into `dir`. Split from [`write`] so tests can target a temp
-/// directory without touching the process environment.
+/// Write a dump into `dir` (split from [`write`] so tests use a temp directory).
 fn write_to(dir: &Path, ctx: &str, panic_msg: &str, state_json: &str, ts: u64) -> Option<PathBuf> {
     use std::sync::atomic::{AtomicU64, Ordering};
     static SEQ: AtomicU64 = AtomicU64::new(0);
@@ -122,9 +117,8 @@ fn write_to(dir: &Path, ctx: &str, panic_msg: &str, state_json: &str, ts: u64) -
     Some(path)
 }
 
-/// Write a crash dump for a panicking match. Returns the path written, or
-/// `None` when dumping is off or the write failed (never fatal — a failed
-/// dump must not take the server down on top of the match it already lost).
+/// Write a crash dump for a panicking match. Returns the path, or `None` when
+/// off or the write failed; never fatal.
 pub(crate) fn write(ctx: &str, panic_msg: &str, state_json: &str) -> Option<PathBuf> {
     let dir = dump_dir()?;
     let ts = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);

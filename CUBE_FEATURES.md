@@ -1,14 +1,10 @@
 # Cube Implementation Tracker
 
-Tracking the work to make this Modern-style cube fully playable — efficient
-creatures, interaction, value engines, and combo lines (see the maybeboard at
-the end).
-
-The catalog already implements the BRG / Goryo's demo decks
-(`DECK_FEATURES.md` is source of truth there); some overlap the cube. Every
-card in the maybeboard below is now in the catalog (verified by grepping the
-list against `crabomination_catalog/src`). Done (✅) cards and engine features
-are elided — only remaining 🟡/⏳ work is listed.
+Tracks making this Modern-style cube fully playable. Every card in the
+maybeboard below is in the catalog (verified by grepping the list against
+`crabomination_catalog/src`); the BRG / Goryo's demo decks that overlap it are
+tracked in `DECK_FEATURES.md`. Done (✅) cards and engine features are elided —
+only remaining 🟡/⏳ work is listed.
 
 ## Legend
 
@@ -17,24 +13,21 @@ are elided — only remaining 🟡/⏳ work is listed.
 
 ### Per-color card status
 
-Per-color tables (White / Blue / Black / Red / Green / Artifacts &
-Planeswalkers / Multicolor / Lands) are empty — done cards are elided and no
-partials remain. Outstanding cards are in the maybeboard below; populate a
-color table only when a card is in-progress (🟡) but not finished.
+No partials remain, so the per-color tables (White / Blue / Black / Red /
+Green / Artifacts & Planeswalkers / Multicolor / Lands) are empty. Add a row
+only when a card is in progress (🟡) but not finished.
 
 ## Engine features needed
 
-None outstanding. Face-down permanents (the last 🟡) closed with
-`Effect::TurnFaceDown` + the general `as_enters_effect` replacement — CR
-708.2a/2b/8 conformance lives in `core_rules/cr_recent40`. The rest of the
-engine checklist is in `DECK_FEATURES.md` / `FEATURE_ROADMAP.md`.
+None outstanding (face-down permanents, the last 🟡, closed with
+`Effect::TurnFaceDown` + the general `as_enters_effect` replacement; CR
+708.2a/2b/8 conformance in `core_rules/cr_recent40`). The rest of the engine
+checklist is in `DECK_FEATURES.md` / `FEATURE_ROADMAP.md`.
 
 ## Plan
 
-The original batch plan (token primitives, Equipment/Vehicles, cascade/storm/
-madness/delve/cycling, DFC/split/adventure, multi-pick decisions, counters and
-proliferate) is fully worked through. Promote cards ⏳ → 🟡 → ✅ as any future
-dependent feature lands, and add an engine row back when something goes 🟡.
+The original batch plan is done. Promote cards ⏳ → 🟡 → ✅ as dependent
+features land, and add an engine row back when something goes 🟡.
 
 ## Maybeboard (raw)
 

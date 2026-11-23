@@ -1,19 +1,14 @@
 //! CR 603.2 — an ability triggers the moment its event happens. Triggers are
-//! collected after a resolution, from the permanents still on the
-//! battlefield, so a listener the same resolution removed never saw the
-//! events that happened while it was still there: Soul Warden under a Martial
-//! Coup (X ≥ 5) gained nothing for the five Soldiers that entered before the
-//! sweep. This pass supplies those triggers from the departed listener's
-//! snapshot, for the entries the batch records between its own entry (if
-//! any) and its departure.
+//! collected after a resolution from permanents still on the battlefield, so
+//! a listener the resolution removed missed events from while it was there
+//! (Soul Warden under Martial Coup). This pass fires those from the departed
+//! listener's snapshot, for events between its entry and departure.
 //!
-//! Scope: the kinds [`looks_back`] names — ones that only the dispatch walk
-//! fires, so a departed listener can't also have fired from a direct hook —
-//! and only departures with an in-order event — the synthesized
-//! `PermanentDied` is appended after the batch, so it can't date a departure.
-//! A once-each-turn / "one or more" listener fires at most once, and a
-//! once-each-turn one only if the turn's budget (`triggered_once_per_turn_used`)
-//! is unspent; the caller records what it spends.
+//! Scope: the kinds [`looks_back`] names (fired only by the dispatch walk, so
+//! no double fire) and departures with an in-order event (the synthesized
+//! `PermanentDied` comes after the batch). A once-each-turn / "one or more"
+//! listener fires at most once, the former only if
+//! `triggered_once_per_turn_used` is unspent; the caller records the spend.
 
 use super::GameState;
 use super::types::{GameEvent, TriggerCandidate};
@@ -25,11 +20,10 @@ use crate::game::effects::{EffectContext, events};
 /// "whenever a creature dies" (one bounced or exiled; one that died looks back
 /// in `simultaneous_deaths`), "whenever you gain / an opponent loses life",
 /// "whenever a player draws / discards a card", "whenever a counter is put
-/// on" and "whenever a permanent is returned to your hand" — the last a
-/// leaves-the-battlefield trigger that also sees its own return (CR 603.10a;
-/// Stormfront Riders). Printed listeners of
-/// each fire only from the walk (`fire_life_gained_watchers` serves delayed
-/// ones).
+/// on" and "whenever a permanent is returned to your hand" (a leaves trigger
+/// that sees its own return — CR 603.10a, Stormfront Riders). Printed
+/// listeners fire only from the walk (`fire_life_gained_watchers` serves
+/// delayed ones).
 fn looks_back(kind: &EventKind) -> bool {
     matches!(
         kind,

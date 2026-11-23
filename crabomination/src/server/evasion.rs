@@ -1,17 +1,15 @@
-//! A pre-combat "target creature gains [keyword] until end of turn" (Rogue's
-//! Passage, Sunhome, Witch's Clinic, Whirler Rogue) was activated by no bot
-//! path: its main-phase score reads a temporary grant as idle, so a 400-game
-//! census never activated one. The bot now spends idle first-main mana on one,
-//! aimed at its biggest ready attacker that lacks the keyword, or on a
-//! board-wide one ("all Zombies gain menace" — Lord of the Accursed) when a
-//! ready attacker of ours gains; a grant that taps its source doesn't count
-//! the source as an attacker. Commander games only, so two-player play is
-//! unchanged.
+//! Pre-combat evasion and haste grants, which no bot path activated (the
+//! main-phase score reads a temporary grant as idle). Commander games only,
+//! so two-player play is unchanged.
 //!
-//! Haste grants had the same gap (a 6-seat `--a dflt` census, seed 1360001:
-//! Flamekin Village, Crashing Drawbridge, Otepec Huntmaster, Skyship Stalker
-//! never activated): [`pick_haste_grant`] gives haste to the biggest creature
-//! that entered this turn (CR 302.6, 702.10b), so it can join the attack.
+//! - "Target creature gains [keyword] until end of turn" (Rogue's Passage,
+//!   Sunhome, Whirler Rogue): idle first-main mana, aimed at the biggest
+//!   ready attacker lacking the keyword, or a board-wide one ("all Zombies
+//!   gain menace" — Lord of the Accursed) when a ready attacker gains. A
+//!   grant that taps its source doesn't count the source as an attacker.
+//! - Haste (Flamekin Village, Crashing Drawbridge): [`pick_haste_grant`]
+//!   gives it to the biggest creature that entered this turn (CR 302.6,
+//!   702.10b) so it can join the attack.
 
 use crate::card::{Keyword, KeywordSlice};
 use crate::effect::{Duration, Effect, Selector};

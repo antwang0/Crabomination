@@ -1,48 +1,26 @@
 //! Capture of the *decisions* the bot makes, not just the positions it
 //! reaches.
 //!
-//! Every training row the program has ever produced is `(encoded state →
-//! who eventually won)`. The candidate set and the chosen action are
-//! discarded at the moment they exist. Three separate problems trace back
-//! to that one omission:
-//!
-//! * There is no policy head, and there cannot be one, because nothing in
-//!   the data says which action was taken.
-//! * Search cannot be distilled. AlphaZero compounds because MCTS is a
-//!   policy-improvement operator whose output is written back into the
-//!   network; here the search's conclusions evaporate at the end of every
-//!   decision.
-//! * Stacking generations is null twice over (rounds 14 and 18), and the
-//!   leading explanation is that generation N+1's pilot differs from
-//!   generation N's only by a leaf number inside an unchanged decision
-//!   procedure. Recording decisions is what would let a successor learn
-//!   to *choose* differently rather than merely to evaluate differently.
+//! Training rows used to be only `(encoded state → who eventually won)`,
+//! discarding the candidate set and the chosen action. Without them there
+//! can be no policy head, search conclusions can't be distilled back into
+//! the net, and a successor generation can only learn to *evaluate*
+//! differently, not to *choose* differently (the leading explanation of
+//! rounds 14 and 18's null stacking).
 //!
 //! # Candidates as successor states
 //!
-//! A policy target needs some representation of "the actions that were
-//! available". The obvious route is an action vocabulary — a taxonomy of
-//! `GameAction` shapes with their parameters — and it is a poor fit here:
-//! the engine's action space is enormous and open (every cast variant,
-//! every target, every X), and a vocabulary would need extending for
-//! every new mechanic.
+//! Each candidate is recorded as the *state it leads to*, not as an action
+//! vocabulary (the action space is open: every cast variant, target and X,
+//! and every new mechanic). The net already scores states, so a policy
+//! target is "which of these N successors did the player pick", a softmax
+//! over the existing evaluator with no new architecture; search values over
+//! candidates are a soft target over the same successors.
 //!
-//! Instead each candidate is recorded as the *state it leads to*. The
-//! network already scores states, so a policy target becomes "which of
-//! these N successor states did the player pick", learnable as a softmax
-//! over the existing evaluator with no new architecture and no new
-//! vocabulary. It also takes search distillation for free: MCTS visit
-//! counts over candidates are exactly a soft target over the same
-//! successor states.
-//!
-//! The cost is real and is why this is off by default: recording a
-//! decision clones and encodes the state once per candidate, where the
-//! snapshot cadence encodes once per position.
-//!
-//! Off by default; the hook pays one relaxed atomic load per decision
-//! when disabled. Thread-local buffer, drained per game, for the same
-//! reason as [`super::leaf_capture`] — enabling this under a
-//! multi-threaded ladder would capture into per-thread buffers that
+//! Off by default, because recording clones and encodes the state once per
+//! candidate; disabled, the hook is one relaxed atomic load per decision.
+//! Thread-local buffer drained per game, as in [`super::leaf_capture`] — so
+//! enabling it under a multi-threaded ladder would fill per-thread buffers
 //! nothing drains.
 
 use std::cell::RefCell;
@@ -113,18 +91,13 @@ pub struct CapturedDecision {
     /// Per-candidate value from a *search*, aligned with `successors`,
     /// when the decision came from one. `None` for heuristic picks.
     ///
-    /// This is what makes distillation possible rather than mere
-    /// imitation. A one-hot target teaches the net to copy the pilot and
-    /// therefore caps it at the pilot; a search's per-candidate values
-    /// carry how much better each option looked, and the search is
-    /// stronger than the evaluator inside it. Stored raw (mean reward per
-    /// arm, in win-probability units) so the trainer picks the
-    /// temperature rather than baking one in here.
-    ///
-    /// Note this is *mean reward*, not visit counts. `MctsBot::search`
-    /// selects by highest mean, because at 64 iterations visit counts are
-    /// dominated by the one-per-arm seeding pass and carry little signal
-    /// — so means are the faithful record of what the search preferred.
+    /// What makes distillation rather than imitation: a one-hot target caps
+    /// the net at the pilot, while per-candidate values say how much better
+    /// each option looked to a search stronger than its evaluator. Stored
+    /// raw (mean reward per arm, win-probability units) so the trainer picks
+    /// the temperature. Means, not visit counts: `MctsBot::search` selects
+    /// by highest mean, and at 64 iterations visits are dominated by the
+    /// seeding pass.
     pub values: Option<Vec<f32>>,
     /// False: `values` are mean rewards in win-probability units (UCB1
     /// roots — the trainer picks the softmax temperature). True: they are
@@ -138,12 +111,10 @@ pub struct CapturedDecision {
     pub visits: Option<Vec<u32>>,
     /// The behaviour policy's record (round 72): the i32 scores the live
     /// picker fed `choose_scored` / `sample_scored_index`, aligned with
-    /// `successors` and filtered alongside them on the reject remap, like
-    /// `values`. With `temp` this makes the probability the pilot played
-    /// `chosen` exactly recoverable — `softmax(scores / temp)[chosen]` —
-    /// which is what an off-policy policy-gradient step needs for its
-    /// importance ratio. `None` for search roots (their record is
-    /// `values`).
+    /// `successors` and filtered with them on the reject remap, like
+    /// `values`. With `temp`, `softmax(scores / temp)[chosen]` recovers the
+    /// probability the pilot played `chosen` — an off-policy gradient's
+    /// importance ratio. `None` for search roots (their record is `values`).
     pub scores: Option<Vec<i32>>,
     /// Sampling temperature in force at the pick, in the scores' units;
     /// 0 = argmax (deterministic behaviour, no ratio to correct).
@@ -250,14 +221,10 @@ pub fn enabled() -> bool {
 /// Hook at a decision site: `candidates` are the actions considered and
 /// `chosen` indexes the one taken.
 ///
-/// A candidate the engine rejects is dropped rather than encoded, and
-/// `chosen` is remapped onto the surviving list — an index that silently
-/// pointed at the wrong successor would be worse than no data at all,
-/// since it would train the policy toward whatever happened to shift into
-/// that slot.
-///
-/// Decisions with fewer than two surviving candidates are not recorded:
-/// a forced move carries no policy signal and would just dilute the set.
+/// A candidate the engine rejects is dropped and `chosen` remapped onto the
+/// survivors: an index pointing at the wrong successor would train the
+/// policy toward whatever shifted into that slot. Decisions with fewer than
+/// two surviving candidates aren't recorded (no policy signal).
 pub fn maybe(state: &GameState, seat: usize, candidates: &[GameAction], chosen: usize) {
     maybe_valued(state, seat, candidates, chosen, None, false, None)
 }

@@ -1,46 +1,29 @@
 //! Puzzle benchmark: fixed positions with machine-certified answers.
 //!
-//! Why this exists. Until now a bot change was measured two ways, and
-//! neither one localises anything. The paired ladder costs minutes of
-//! wall clock to produce a win rate with a ±2-point interval and says
-//! nothing about *which* decisions moved it — round 31 spent a whole
-//! round establishing "combat declarations need the sims' precision",
-//! which a combat puzzle set would have shown in seconds. Holdout AUC
-//! measures prediction on positions nobody chose, which is a different
-//! question from whether the bot plays them well.
-//!
-//! A puzzle is a fixed position, a seat, and a goal. Scoring is
-//! deterministic (no sampling interval), fast (no games to simulate),
-//! and diagnostic (tagged by mechanic and difficulty).
+//! The paired ladder gives a win rate with a ±2-point interval and says
+//! nothing about *which* decisions moved it; holdout AUC measures
+//! prediction on positions nobody chose. A puzzle is a fixed position, a
+//! seat and a goal, scored deterministically, fast, and tagged by mechanic
+//! and difficulty.
 //!
 //! # The uniqueness problem, and why it mostly dissolves
 //!
-//! The obvious objection to puzzle benchmarks is that most Magic
-//! positions have no single objectively best play, so the answer key is
-//! a matter of opinion. That is true of *move*-checked puzzles. It is
-//! not true of **outcome**-checked ones: "the opponent is at 5, win this
-//! turn" has an unambiguous pass condition that every winning line
-//! satisfies, however it gets there. There is nothing to disagree about
-//! because no specific move is ever asserted.
-//!
-//! Better still, the answer key is *derived*, not authored.
-//! [`solve`] brute-forces the position with the engine as its legality
-//! oracle, which certifies three things at authoring time: that a
-//! solution exists at all, that the greedy line does not stumble into
-//! it, and the minimum search depth that finds it. That last number is
-//! an objective difficulty tier rather than an author's guess.
+//! Most Magic positions have no single best play, so *move*-checked puzzles
+//! are opinion. These are **outcome**-checked: "the opponent is at 5, win
+//! this turn" is met by every winning line, and no specific move is ever
+//! asserted. The answer key is *derived*: [`solve`] brute-forces the
+//! position with the engine as legality oracle, certifying that a solution
+//! exists, that the greedy line doesn't stumble into it, and the minimum
+//! search depth that finds it (an objective difficulty tier).
 //!
 //! # The action space
 //!
-//! [`legal_actions`] enumerates candidates and then validates every one
-//! through [`GameState::would_accept`]. Nothing here re-implements an
-//! engine rule: eligibility to attack, block legality, sorcery timing,
-//! targeting restrictions, and mana payment are all decided by actually
-//! attempting the action on a clone. That matters for certification —
-//! a solver built on the *bot's* candidate enumeration could only ever
-//! find lines the bot already considers, so it could never certify a
-//! puzzle whose whole point is that the bot's enumeration misses the
-//! answer.
+//! [`legal_actions`] enumerates candidates and validates every one through
+//! [`GameState::would_accept`], so no engine rule is re-implemented: attack
+//! eligibility, block legality, timing, targeting and mana payment are all
+//! decided by attempting the action on a clone. A solver built on the bot's
+//! own candidate enumeration could never certify a puzzle whose point is
+//! that the bot's enumeration misses the answer.
 
 use crate::game::types::TurnStep;
 use crate::card::CardId;
@@ -48,13 +31,11 @@ use crate::game::{Attack, AttackTarget, GameAction, GameState, Target};
 
 use super::bot::{Bot, HeuristicBot};
 
-/// Combinatorial guards. A puzzle position is small by construction, but
-/// `legal_actions` is called at every node of a depth-first search and
-/// combat subsets are exponential, so both are capped rather than left
-/// to the position's good manners. A cap that binds is reported by
-/// [`Enumeration::truncated`] rather than silently shrinking the space —
-/// a benchmark that quietly stops looking reads as "no solution exists",
-/// which is exactly the wrong answer to record.
+/// Combinatorial guards: `legal_actions` runs at every node of a DFS and
+/// combat subsets are exponential, so both are capped. A binding cap is
+/// reported by [`Enumeration::truncated`] rather than silently shrinking
+/// the space, since a search that quietly stops looking reads as "no
+/// solution exists".
 const MAX_COMBAT_CREATURES: usize = 8;
 /// Ceiling on actions returned from one node.
 const MAX_ACTIONS: usize = 256;
@@ -74,13 +55,10 @@ pub enum Goal {
     TakeNoDamage,
     /// Win within this turn and the next `n` turns.
     ///
-    /// Why the multi-turn goals exist: every single-turn goal is, by
-    /// construction, inside the horizon the heuristic's combat sims
-    /// already search — they simulate a full turn cycle with exact
-    /// damage math, which is why the first corpus batch certified 0/7.
-    /// A position whose right play only pays off *next* turn is outside
-    /// that horizon, and round 31's result says that is where the real
-    /// edge lives. These are the goals that can express it.
+    /// Every single-turn goal is inside the horizon the heuristic's combat
+    /// sims already search (a full turn cycle with exact damage math), so
+    /// a play that only pays off *next* turn needs these goals to be
+    /// expressed — and round 31 says that is where the real edge lives.
     WinWithin(u32),
     /// Still alive after this turn and the next `n` turns. The goal that
     /// can ask "should you attack, or keep those creatures back to
@@ -266,12 +244,10 @@ pub fn legal_actions(state: &GameState, seat: usize) -> Enumeration {
             }
         }
 
-        // Every variant below is brute-forced over the same small space —
-        // no target, each player, each permanent; each mode of a modal
-        // spell; a few X values — and kept only if the engine accepts it.
-        // The enumeration asks the engine rather than reading the card,
-        // which is the point (see the module docs), and a puzzle board is
-        // small enough that the product stays in the low hundreds.
+        // Every variant is brute-forced over the same small space (no
+        // target, each player, each permanent; each mode; a few X values)
+        // and kept only if the engine accepts it. A puzzle board keeps the
+        // product in the low hundreds.
         let targets = target_pool(state);
         let modes_of = |e: &crate::effect::Effect| -> Vec<Option<usize>> {
             match e {
@@ -422,19 +398,12 @@ pub struct Certificate {
 }
 
 impl Certificate {
-    /// A "solution" made entirely of priority passes.
-    ///
-    /// These are real in the sense that the goal is met, and useless as
-    /// benchmark items. The heuristic's behaviour is step-sensitive, so
-    /// passing once can move the position to a window where autopilot
-    /// then finds the win — the certified line for the corpus's first
-    /// kept candidate was exactly `[PassPriority]`. That records a
-    /// timing quirk rather than a decision the bot got wrong, and it
-    /// would have entered the corpus as a finding about removal
-    /// targeting, which it is not.
-    /// An *empty* line is not degenerate, it is trivial — a different
-    /// verdict with a different meaning, so the emptiness check has to
-    /// come first or every depth-0 candidate reports as pass-only.
+    /// A "solution" made entirely of priority passes: the goal is met, but
+    /// the heuristic is step-sensitive, so passing once can move to a window
+    /// where autopilot finds the win. That records a timing quirk, not a
+    /// decision the bot got wrong. An *empty* line is trivial rather than
+    /// degenerate, so the emptiness check comes first or every depth-0
+    /// candidate reports as pass-only.
     pub fn is_degenerate(&self) -> bool {
         !self.line.is_empty()
             && self.line.iter().all(|a| matches!(a, GameAction::PassPriority))
@@ -442,11 +411,8 @@ impl Certificate {
 }
 
 /// Depth-first search for a line achieving `goal`, shallowest first.
-///
-/// Iterative deepening rather than plain DFS, because the *depth* of the
-/// shallowest solution is the number a puzzle records as its difficulty:
-/// a lethal that needs one attack declaration is a different puzzle from
-/// one that needs a pump, a second pump, and then the right attack.
+/// Iterative deepening because the shallowest solution's depth is the
+/// puzzle's recorded difficulty.
 pub fn solve(state: &GameState, seat: usize, goal: Goal, max_depth: usize) -> Option<Certificate> {
     for depth in 1..=max_depth {
         let mut truncated = false;
@@ -459,15 +425,10 @@ pub fn solve(state: &GameState, seat: usize, goal: Goal, max_depth: usize) -> Op
 }
 
 /// Fresh [`HeuristicBot`]s for a playout, synced to combat declarations
-/// that have already happened.
-///
-/// The bot latches "I have declared attackers/blockers this combat" on
-/// itself so the match actor can poll it every tick without it
-/// re-submitting. A bot constructed mid-combat has those latches clear,
-/// so it will happily declare blocks a second time — which silently
-/// undid the premise of every combat puzzle: a position built by
-/// declining blocks had them re-declared underneath it, and a lethal
-/// swing read as survived. Sync the latches to the position instead.
+/// that have already happened. The bot latches "declared this combat" on
+/// itself; a bot built mid-combat has the latch clear and re-declares,
+/// which once undid every combat puzzle's premise (declined blocks were
+/// re-declared and a lethal swing read as survived).
 fn playout_bots(g: &GameState) -> [HeuristicBot; 2] {
     [synced_bot(g), synced_bot(g)]
 }
@@ -488,18 +449,11 @@ pub(crate) fn synced_bot(g: &GameState) -> HeuristicBot {
 /// Play `state` forward to the end of the turn with *both* seats on the
 /// default heuristic, and return where it lands.
 ///
-/// Every goal is judged here rather than at the node itself, because most
-/// of them are only meaningful once the turn has resolved: "survive this
-/// turn" is trivially true the instant before blockers are declared, and
-/// an earlier version of this file duly certified an empty line as the
-/// answer to a lethal-attack-incoming puzzle. Judging after a playout
-/// asks the question that actually matters — *if I stop choosing here and
-/// let the default policy finish, does the goal hold?*
-///
-/// It also gives depth 0 a precise meaning: the default policy solves
-/// this position unaided, i.e. the puzzle is trivial. That is exactly the
-/// "greedy doesn't stumble into it" criterion a puzzle has to fail to be
-/// worth keeping.
+/// Goals are judged after the playout because most only mean something
+/// once the turn has resolved ("survive this turn" is trivially true just
+/// before blockers): *if I stop choosing here and let the default policy
+/// finish, does the goal hold?* Depth 0 then means the default policy
+/// solves the position unaided — the trivial puzzle a keeper must not be.
 fn resolve(state: &GameState, seat: usize, horizon: u32) -> GameState {
     let mut g = state.clone();
     let mut bots = playout_bots(&g);
@@ -544,15 +498,11 @@ fn search(
         if next.perform_action(a.clone()).is_err() {
             continue;
         }
-        // A combat declaration does not advance the step on its own, and
-        // an *empty* one leaves no trace at all: `attacking()` stays
-        // empty, so the enumerator offers the identical declaration at
-        // the next node and the search spins on it until the depth
-        // budget runs out. That is why declining to attack -- the whole
-        // point of a hold-back puzzle -- certified as unsolvable.
-        // `HeuristicBot` solves this with a per-combat latch on itself;
-        // the harness has no such state, so it steps past the declaration
-        // window explicitly before handing control on.
+        // A combat declaration doesn't advance the step, and an *empty* one
+        // leaves no trace (`attacking()` stays empty), so the enumerator
+        // would offer it again at every node and declining to attack would
+        // certify as unsolvable. `HeuristicBot` has a per-combat latch; the
+        // harness has none, so it steps past the declaration window.
         if matches!(a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)) {
             advance_past_declaration(&mut next, seat);
         }
@@ -571,21 +521,12 @@ fn search(
 /// Advance the game until `seat` faces a *substantive* choice, the turn
 /// ends, or the game does.
 ///
-/// The subtlety this exists to handle: declaring attackers does not deal
-/// damage. Between the declaration and the damage step sit several
-/// priority windows where passing is the only thing the seat can do, and
-/// an earlier version of this function handed control back at the first
-/// of them. The search then spent its depth budget on `PassPriority`
-/// chains and never reached the damage that decides a lethal puzzle.
-///
-/// So `seat` auto-passes through windows where passing is its only
-/// option, and only stops where it has a real decision. That also gives
-/// [`Certificate::depth`] its meaning: the number of substantive choices
-/// in the line, not the number of engine ticks.
-///
-/// The opponent is piloted by the default heuristic throughout, which is
-/// what makes a puzzle's answer robust rather than a scripted line —
-/// "win this turn" has to survive the opponent blocking as well as it can.
+/// Between a declaration and the damage step sit several priority windows
+/// where passing is the only option; handing control back at each made the
+/// search spend its depth on `PassPriority` chains. So `seat` auto-passes
+/// those, and [`Certificate::depth`] counts substantive choices, not engine
+/// ticks. The opponent is the default heuristic throughout, so "win this
+/// turn" must survive the opponent blocking as well as it can.
 fn settle(g: &mut GameState, seat: usize, horizon: u32) {
     let opp = 1 - seat;
     let mut bots = playout_bots(g);
@@ -607,12 +548,9 @@ fn settle(g: &mut GameState, seat: usize, horizon: u32) {
             return; // an unanswerable decision would spin the loop
         }
         // The seat under test gets first refusal, and the order is
-        // load-bearing. `HeuristicBot` returns `Some(PassPriority)` from
-        // most branches rather than `None`, so letting the opponent act
-        // first meant this loop never stopped: it consumed the seat's
-        // own block window, the engine advanced to damage unblocked, and
-        // every multi-turn puzzle certified as unsolvable while the
-        // enumeration was perfectly correct.
+        // load-bearing: `HeuristicBot` returns `Some(PassPriority)` from most
+        // branches, so letting the opponent act first consumed the seat's
+        // own block window and every multi-turn puzzle read as unsolvable.
         if has_substantive_choice(g, seat) {
             return;
         }
@@ -654,12 +592,8 @@ fn has_substantive_choice(g: &GameState, seat: usize) -> bool {
 }
 
 /// Play the position out with `bot` piloting `seat` and the default
-/// heuristic on the other side — the scoring counterpart of [`resolve`],
-/// which uses the heuristic on both sides.
-///
-/// Same latch-sync as every other playout here (`playout_bots`): a bot
-/// handed a position mid-combat must not re-declare what has already
-/// been declared.
+/// heuristic on the other side (the scoring counterpart of [`resolve`]),
+/// with the same latch-sync as `playout_bots`.
 pub fn play_with(state: &GameState, seat: usize, bot: &mut dyn Bot, horizon: u32) -> GameState {
     let mut g = state.clone();
     let opp = 1 - seat;

@@ -1,10 +1,9 @@
 //! Zone wrappers that carry a maintained answer alongside their cards.
 //!
-//! A zone whose whole-collection walk is hot enough to want a presence gate
-//! has nowhere to put one: the walk *is* the gate. The wrapper is where the
-//! answer lives, and its `&mut` entry points are where it is invalidated —
-//! so the invalidation is a property of the type rather than an enumeration
-//! of write sites that has to stay right.
+//! A hot whole-zone walk has nowhere to keep a presence gate except a
+//! wrapper. The wrapper holds the answer and its `&mut` entry points
+//! invalidate it, so invalidation is a property of the type rather than an
+//! enumeration of write sites.
 
 use crabomination_base::memo_audit::board_audit;
 use crate::card::CardInstance;
@@ -22,19 +21,15 @@ const PRESENT: u8 = 2;
 const GY_LANE_ANTHEM: u32 = 0;
 const GY_LANE_ACT_GRANT: u32 = 2;
 const GY_LANE_TOKEN: u32 = 4;
-/// A card here carries a trigger that can fire from the graveyard — the
-/// question every combat-damage dispatch asks of the dealer's controller's
-/// graveyard (PERF `(-210)`), every step's `fire_step_triggers` asks of the
-/// active player's (`(-218)`), and every event dispatch asks of both
-/// (`(-230)`), each with a definition deref per card without it.
+/// A card here carries a trigger that can fire from the graveyard. Asked by
+/// combat-damage dispatch (PERF `(-210)`), `fire_step_triggers` (`(-218)`)
+/// and every event dispatch (`(-230)`).
 const GY_LANE_TRIGGER: u32 = 6;
 
-/// The [`GY_LANE_TRIGGER`] predicate: definition-only, as every lane
-/// predicate must be. Both graveyard-firing families — the
-/// `FromYourGraveyard` scope and the `SelfSource` kinds the dispatcher fires
-/// from here (cycling, milling, discard, "put into a graveyard from
-/// anywhere"; `is_graveyard_self_source_kind` is the one list). Wider than
-/// the two combat/step walkers need, which is the sound direction for them.
+/// The [`GY_LANE_TRIGGER`] predicate (definition-only, as every lane
+/// predicate must be): the `FromYourGraveyard` scope plus the `SelfSource`
+/// kinds fired from here (`is_graveyard_self_source_kind` is the one list).
+/// Wider than the combat/step walkers need, which is the sound direction.
 fn card_has_graveyard_trigger(c: &CardInstance) -> bool {
     use crate::effect::EventScope;
     c.definition.triggered_abilities.iter().any(|t| {
@@ -44,23 +39,17 @@ fn card_has_graveyard_trigger(c: &CardInstance) -> bool {
     })
 }
 
-/// A player's graveyard: the CoW card list, plus the whole-zone questions hot
-/// walkers ask of it — "does any card here carry a
+/// A player's graveyard: the CoW card list plus memoized whole-zone
+/// questions hot walkers ask of it, one two-bit lane each (`GY_LANE_*`) —
+/// e.g. "any
 /// [`StaticEffect::GraveyardAnthem`](crate::effect::StaticEffect::GraveyardAnthem)?"
-/// (the Incarnation cycle's "as long as this card is in your graveyard and you
-/// control a [Land subtype] …") and the `GrantActivatedAbilityFromGraveyard`
-/// twin `grant_scan` asks (Riftstone Portal). One lane per question; see the
-/// `GY_LANE_*` constants.
+/// (Incarnation cycle) or "any graveyard activated grant?" (Riftstone Portal).
+/// The memo replaced two ungated walks over a zone that grows all game
+/// (eighty-fourth pass).
 ///
-/// `gather_continuous_effects_inner`'s anthem pass and
-/// `keyword_grant_in_scope`'s off-battlefield tail are both ungated
-/// whole-zone walks over a zone that grows all game; deleting the pair is
-/// `fixed` -0.717 % / `cube` -0.423 % (eighty-fourth pass).
-///
-/// The memo is sound *by construction*: [`DerefMut`] and the `&mut`
-/// [`IntoIterator`] are the only ways to reach the cards mutably, and both
-/// clear it — the enumeration of graveyard write sites never has to be right.
-/// [`Deref`] leaves every read site untouched.
+/// Sound by construction: [`DerefMut`] and the `&mut` [`IntoIterator`] are
+/// the only mutable routes to the cards and both clear the memo. [`Deref`]
+/// leaves read sites untouched.
 #[derive(Debug, Default)]
 pub struct Graveyard {
     cards: CowBox<Vec<CardInstance>>,
@@ -84,17 +73,14 @@ fn card_has_anthem(c: &CardInstance) -> bool {
         })
 }
 
-/// Does this card grant an activated ability from the graveyard (Riftstone
-/// Portal)? The [`GY_LANE_ACT_GRANT`] predicate — the same bare match
-/// `grant_scan`'s walk makes, so the lane is exact rather than an
-/// over-approximation.
-/// CR 704.5d's per-card question: is this a token sitting outside the
-/// battlefield? The per-card half of [`Graveyard::has_token`] and
-/// [`CardPile::has_token`].
+/// CR 704.5d's per-card question: is this a token outside the battlefield?
+/// The per-card half of [`Graveyard::has_token`] and [`CardPile::has_token`].
 fn card_is_token(c: &CardInstance) -> bool {
     c.is_token
 }
 
+/// The [`GY_LANE_ACT_GRANT`] predicate (Riftstone Portal): the same bare
+/// match `grant_scan` makes, so the lane is exact.
 fn card_has_gy_activated_grant(c: &CardInstance) -> bool {
     c.definition.static_abilities.iter().any(|sa| {
         matches!(
@@ -105,47 +91,37 @@ fn card_has_gy_activated_grant(c: &CardInstance) -> bool {
 }
 
 impl Graveyard {
-    /// True when some card in this graveyard carries a `GraveyardAnthem`
-    /// static. Memoized; a miss walks the zone once.
-    ///
-    /// The memo is sound by construction, and the `debug_assert!` is the
-    /// audit anyway: it costs nothing in any release profile and turns the
-    /// whole suite — and any `-C debug-assertions=yes` ladder run, which deals
-    /// far more interesting graveyards than 18,793 tests do — into a check
-    /// that no write path ever reached the cards without clearing it.
+    /// True when some card here carries a `GraveyardAnthem` static.
+    /// Memoized; a miss walks the zone once. The `debug_assert!` in
+    /// `lane` audits the memo in the suite and any
+    /// debug-assertions ladder run, free in release.
     #[inline]
     pub fn has_anthem(&self) -> bool {
         self.lane(GY_LANE_ANTHEM, card_has_anthem, "anthem")
     }
 
     /// CR 611 — true when some card here grants an activated ability from the
-    /// graveyard (Riftstone Portal), the leg `grant_scan` walks both
-    /// graveyards for on every call. Memoized on the same word.
+    /// graveyard (Riftstone Portal); `grant_scan` asks on every call.
     pub fn has_activated_grant(&self) -> bool {
         self.lane(GY_LANE_ACT_GRANT, card_has_gy_activated_grant, "activated-grant")
     }
 
-    /// CR 704.5d — does this graveyard hold a token that has to cease to
-    /// exist? Asked of every graveyard on every state-based sweep; the answer
-    /// is `false` on nearly all of them. Instance state, not definition
-    /// state — sound for the same reason the other two lanes are, since a
-    /// write is the only thing that can change it and every write clears the
-    /// word.
+    /// CR 704.5d — does this graveyard hold a token that must cease to exist?
+    /// Asked on every state-based sweep. Instance state, but still sound:
+    /// only a write can change it and every write clears the word.
     pub fn has_token(&self) -> bool {
         self.lane(GY_LANE_TOKEN, card_is_token, "token")
     }
 
-    /// One lane's answer: a word load and two mask tests on a hit, the zone
-    /// walk plus one store on a miss. `what` names the lane in the audit.
     #[inline]
     /// Does any card here carry a trigger that can fire from the graveyard
     /// (`card_has_graveyard_trigger`)? Memoized; a miss walks the zone once.
-    /// Read by `fire_combat_damage_triggers`, `fire_step_triggers` and
-    /// `dispatch_triggers_for_events`.
     pub fn has_graveyard_trigger(&self) -> bool {
         self.lane(GY_LANE_TRIGGER, card_has_graveyard_trigger, "graveyard-trigger")
     }
 
+    /// One lane's answer: a word load on a hit, the zone walk plus one store
+    /// on a miss. `what` names the lane in the audit.
     fn lane(&self, shift: u32, walk: fn(&CardInstance) -> bool, what: &str) -> bool {
         let cur = (self.lanes.load(Ordering::Relaxed) >> shift) & 0b11;
         debug_assert!(
@@ -166,9 +142,9 @@ impl Graveyard {
         }
     }
 
-    /// Append, through [`CowBox`]'s own `push` so an unshare materializes
-    /// with room for the card. Inherent, so it shadows the `Deref`'d
-    /// `Vec::push`; the memo is invalidated exactly as `DerefMut` would.
+    /// Append via [`CowBox`]'s `push` (an unshare materializes with room for
+    /// the card). Shadows the `Deref`'d `Vec::push`; clears the memo as
+    /// `DerefMut` does.
     pub fn push(&mut self, mut card: CardInstance) {
         card.in_library = false;
         self.lanes.store(0, Ordering::Relaxed);
@@ -255,30 +231,23 @@ impl<'a> IntoIterator for &'a mut Graveyard {
     }
 }
 
-/// A plain card pile — library, hand, exile — with the one whole-zone
-/// question the state-based sweep asks of it: **does it hold a token?**
+/// A plain card pile — library, hand, exile — with memoized whole-zone
+/// questions (`PILE_LANE_*`), first of all CR 704.5d's "does it hold a
+/// token?", which the state-based sweep used to answer by walking every
+/// library per seat per sweep.
 ///
-/// CR 704.5d makes a token outside the battlefield cease to exist, and the
-/// sweep that enforces it walked every library, hand and exile on every
-/// sweep for a case that fires a handful of times a game. The library is the
-/// expensive one: a whole deck per seat per sweep.
-///
-/// Same shape and the same soundness argument as [`Graveyard`]: [`DerefMut`],
-/// the `&mut` [`IntoIterator`] and [`push`](Self::push) are the only routes to
-/// the cards, and each clears the memo — so the enumeration of write sites
-/// never has to be right. [`Deref`] leaves every read site untouched, which is
-/// why swapping the field type touches no caller.
+/// Same soundness argument as [`Graveyard`]: [`DerefMut`], the `&mut`
+/// [`IntoIterator`] and [`push`](Self::push) are the only routes to the cards
+/// and each clears the memo. [`Deref`] leaves read sites untouched.
 #[derive(Debug, Default)]
 pub struct CardPile {
     cards: CowBox<Vec<CardInstance>>,
     /// One two-bit lane, packed like the other zones' so a single store on
     /// the write path clears it.
     lanes: AtomicU8,
-    /// How many times anything took `&mut` at this pile — the per-object twin
-    /// of [`Battlefield::writes`], bumped at the same two places that clear
-    /// `lanes`. `GameState::exile` is one of the gather's inputs (PERF
-    /// `(-303)`'s read audit, 5 sites), so the state-level gather memo's key
-    /// needs it. The starting value is arbitrary — only a *change* is read.
+    /// Bumped wherever `lanes` is cleared — the twin of
+    /// [`Battlefield::writes`]. `GameState::exile` feeds the gather, so the
+    /// gather memo's key needs it (PERF `(-303)`). Only a *change* is read.
     writes: u32,
     /// A player's library (set by [`CardPile::library`]). Every card this pile
     /// admits is stamped `in_library`; any other pile clears the stamp.
@@ -307,9 +276,9 @@ fn card_has_exile_trigger(c: &CardInstance) -> bool {
 }
 
 impl CardPile {
-    /// One lane's answer: a word load and two mask tests on a hit, the pile
-    /// walk plus one store on a miss. Lanes clear together, so a miss stores
-    /// only its own lane and the others go back to unknown.
+    /// One lane's answer: a word load on a hit, the pile walk plus one store
+    /// on a miss. The store writes only this lane; the others reset to
+    /// unknown.
     #[inline]
     fn lane(&self, shift: u32, walk: fn(&CardInstance) -> bool, what: &str) -> bool {
         let cur = (self.lanes.load(Ordering::Relaxed) >> shift) & 0b11;
@@ -349,9 +318,8 @@ impl CardPile {
         self.lane(PILE_LANE_EXILE_TRIGGER, card_has_exile_trigger, "exile-trigger")
     }
 
-    /// Append through [`CowBox::push`] so the unshare materializes with room
-    /// for the card. Inherent, so it shadows the `Deref`'d `Vec::push` at
-    /// every existing call site.
+    /// Append via [`CowBox::push`] (an unshare materializes with room for the
+    /// card). Shadows the `Deref`'d `Vec::push`.
     pub fn push(&mut self, mut card: CardInstance) {
         self.admit(&mut card);
         self.note_write();
@@ -450,10 +418,8 @@ impl CardPile {
 }
 
 impl Clone for CardPile {
-    /// The cards clone as a `CowBox` (a refcount bump); the memo describes
-    /// those same cards, so it comes along — and so does the write counter,
-    /// so a clone starts stamped like its parent and diverges on its own
-    /// first write.
+    /// A refcount bump on the cards; the memo and write counter come along,
+    /// so a clone diverges from its parent on its own first write.
     fn clone(&self) -> Self {
         Self {
             cards: self.cards.clone(),
@@ -529,16 +495,13 @@ pub fn deserialize_library<'de, D: serde::Deserializer<'de>>(deserializer: D) ->
     Ok(pile)
 }
 
-/// Packed two-bit memo lanes for [`Battlefield`], so one store on the write
-/// path clears every lane. Each lane holds the same `UNKNOWN` / `ABSENT` /
-/// `PRESENT` triple the graveyard's memo uses, and a `u64` word takes
-/// thirty-two of them (a `u32` until PERF `(-207)` filled its sixteen).
+/// Packed two-bit memo lanes for [`Battlefield`] (`UNKNOWN` / `ABSENT` /
+/// `PRESENT`), so one store on the write path clears every lane. A `u64`
+/// holds thirty-two (a `u32` until PERF `(-207)`).
 ///
-/// **A lane has exactly one predicate**, however many callers ask through it
-/// ([`LANE_SHIELD`] has nine). Nothing enforces that structurally; what
-/// catches a second predicate on a lane is [`Battlefield::lane`]'s
-/// `debug_assert!`, which recomputes with the predicate it was *handed* and
-/// compares against the stored bit.
+/// **A lane has exactly one predicate**, however many callers ask through it.
+/// Only [`Battlefield::lane`]'s `debug_assert!` (recomputing with the handed
+/// predicate) catches a second one.
 const LANE_LAND: u32 = 0;
 const LANE_CREATURE: u32 = 2;
 const LANE_DAMAGE_SCALE: u32 = 4;
@@ -548,13 +511,10 @@ const LANE_DISPATCH: u32 = 10;
 const LANE_SHIELD: u32 = 12;
 const LANE_GRANT: u32 = 14;
 const LANE_LISTENER: u32 = 16;
-/// PERF `(-128)`: how many times anything took `&mut` at the battlefield —
-/// the three chokepoints `Battlefield`'s own doc names as where every tap,
-/// damage, counter and untap write goes. Read by `sba_census` to ask how many
-/// state-based-action sweeps follow *no* mutable reach at all, which is the
-/// population a dirty-bit gate could actually serve (the 18 % of sweeps whose
-/// board fingerprint is unchanged is the ceiling; this is the reachable part
-/// of it). Global rather than per-zone because the census runs one thread.
+/// PERF `(-128)`: how many times anything took `&mut` at the battlefield
+/// (its three chokepoints). `sba_census` uses it to count SBA sweeps that
+/// follow no mutable reach — what a dirty-bit gate could serve. Global
+/// because the census runs one thread.
 #[cfg(feature = "trig-census")]
 pub static BATTLEFIELD_REACHES: std::sync::atomic::AtomicU64 =
     std::sync::atomic::AtomicU64::new(0);
@@ -573,99 +533,75 @@ pub fn note_battlefield_reach() {
 pub fn note_battlefield_reach() {}
 
 const LANE_ACT_GRANT: u32 = 18;
-/// Not a presence lane: `PRESENT` here means "the member list beside it is
-/// computed", and the list is what the caller reads. It shares the word so
-/// that the one store every write path already makes clears it too.
+/// Not a presence lane: `PRESENT` means "the member list beside it is
+/// computed". It shares the word so every write path's store clears it.
 const LANE_TRIGGERER: u32 = 20;
 const LANE_PT_REDUCE: u32 = 22;
 const LANE_GATE_KEYWORD: u32 = 24;
-/// Any permanent's definition carries a `dispatch_bits::MANA_STATIC` static
-/// — the presence question three per-activation walks on the mana path ask
-/// (PERF `(-197)`).
+/// Any permanent carries a `dispatch_bits::MANA_STATIC` static (mana-path
+/// walks, PERF `(-197)`).
 const LANE_MANA_STATIC: u32 = 26;
-/// Any permanent's definition grants activated abilities to *countered*
-/// creatures (Agatha's Soul Cauldron) — the one reason a permanent's counter
-/// bag matters to the grants-nothing gate (PERF `(-199)`).
+/// Any permanent grants activated abilities to *countered* creatures
+/// (Agatha's Soul Cauldron) — why counters matter to the grants-nothing gate
+/// (PERF `(-199)`).
 const LANE_COUNTER_GRANT: u32 = 28;
-/// Any permanent's definition carries a static that redirects a card bound
-/// for a graveyard — the question four per-death walks ask (PERF `(-203)`).
+/// Any permanent redirects a card bound for a graveyard (per-death walks,
+/// PERF `(-203)`).
 const LANE_DEATH_REDIRECT: u32 = 30;
-/// Any permanent's *definition* can change a card type — `type_bits::ALL`,
-/// the attachment-gated half over-approximated (a lane predicate reads no
-/// instance field). `ABSENT` settles `card_type_change_unscoped`'s
-/// battlefield walk, which every land tap and every SBA death sweep asks
+/// Any permanent's *definition* can change a card type (`type_bits::ALL`;
+/// the attachment-gated half over-approximated, as a lane predicate reads no
+/// instance field). `ABSENT` settles `card_type_change_unscoped`'s walk
 /// (PERF `(-207)`).
 const LANE_CARD_TYPE: u32 = 32;
-/// Any permanent's definition carries a draw-replacement static — the twelve
-/// `StaticEffect`s `draw_one` walks the board for, up to eleven walks a draw
-/// (PERF `(-233)`). See [`card_has_draw_static`].
+/// Any permanent carries a draw-replacement static (`draw_one`, PERF
+/// `(-233)`). See [`card_has_draw_static`].
 const LANE_DRAW_STATIC: u32 = 34;
-/// Any permanent's definition carries a static that changes how *another*
-/// permanent enters — an ETB-trigger suppressor / doubler, an enters-tapped
-/// or lands-enter-untapped static — the walks every entering permanent
-/// makes (PERF `(-234)`). See [`card_has_etb_static`].
+/// Any permanent changes how *another* permanent enters (ETB-trigger
+/// suppressor / doubler, enters-tapped, lands-enter-untapped; PERF
+/// `(-234)`). See [`card_has_etb_static`].
 const LANE_ETB_STATIC: u32 = 36;
-/// Any permanent's definition carries a static that replaces or redirects
-/// damage to a player — the six `StaticEffect`s `deal_damage_to_from` and
-/// `damage_redirect_target` walk the board for on every damage event (PERF
-/// `(-235)`). See [`card_has_damage_replacement_static`].
+/// Any permanent replaces or redirects damage to a player
+/// (`deal_damage_to_from`, `damage_redirect_target`; PERF `(-235)`). See
+/// [`card_has_damage_replacement_static`].
 const LANE_DAMAGE_STATIC: u32 = 38;
-/// Any permanent's definition carries a static that locks or extends land
-/// plays — the four `StaticEffect`s `can_player_play_land` and its helpers
-/// walk the board for per land-play question (PERF `(-236)`). See
-/// [`card_has_land_play_static`].
+/// Any permanent locks or extends land plays (`can_player_play_land`; PERF
+/// `(-236)`). See [`card_has_land_play_static`].
 const LANE_LAND_PLAY_STATIC: u32 = 40;
-/// Any permanent's definition lets mana be spent as though it were any
-/// colour — the three `StaticEffect`s the payment relaxation walks the board
-/// for on every payment (PERF `(-237)`). See [`card_has_any_color_static`].
+/// Any permanent lets mana be spent as though it were any colour (payment
+/// relaxation; PERF `(-237)`). See [`card_has_any_color_static`].
 const LANE_ANY_COLOR_STATIC: u32 = 42;
-/// Any permanent's definition changes a maximum hand size — the six
-/// `StaticEffect`s `effective_max_hand_size` walks the board for, four walks
-/// a call (PERF `(-238)`). See [`card_has_hand_size_static`].
+/// Any permanent changes a maximum hand size (`effective_max_hand_size`;
+/// PERF `(-238)`). See [`card_has_hand_size_static`].
 const LANE_HAND_SIZE_STATIC: u32 = 44;
-/// Any permanent's definition puts counters on *another* permanent as it
-/// enters — the eight `StaticEffect`s the two enters-with-counters walkers
-/// match, per resolving permanent spell and per entering creature (PERF
-/// `(-239)`). See [`card_has_etb_counter_static`].
+/// Any permanent puts counters on *another* permanent as it enters (the two
+/// enters-with-counters walkers; PERF `(-239)`). See
+/// [`card_has_etb_counter_static`].
 const LANE_ETB_COUNTER_STATIC: u32 = 46;
-/// Any permanent's definition carries a damage-prevention static —
-/// `prevent_static_scan`'s twelve, folded into a mask by a board walk on every
-/// damage event (PERF `(-240)`). See [`card_has_prevent_static`].
+/// Any permanent carries a damage-prevention static
+/// (`prevent_static_scan`; PERF `(-240)`). See [`card_has_prevent_static`].
 const LANE_PREVENT_STATIC: u32 = 48;
-/// Any permanent's definition charges a block tax — `BlockTaxToController`,
-/// the static `block_tax_for` walks the board for per declared blocker (PERF
-/// `(-241)`). See [`card_has_block_tax_static`].
+/// Any permanent charges a block tax (`BlockTaxToController`, read by
+/// `block_tax_for`; PERF `(-241)`). See [`card_has_block_tax_static`].
 const LANE_BLOCK_TAX_STATIC: u32 = 50;
-/// Any permanent's definition carries a static the untap step reads — the
-/// eleven `StaticEffect`s `do_untap`'s walks match (Mist of Stagnation,
-/// Seedborn Muse, the prevention and cap families, the off-turn untappers),
-/// once per untap step, real or simulated (PERF `(-249)`). See
-/// [`card_has_untap_static`].
+/// Any permanent carries a static `do_untap` reads (Mist of Stagnation,
+/// Seedborn Muse, prevention / cap families, off-turn untappers; PERF
+/// `(-249)`). See [`card_has_untap_static`].
 const LANE_UNTAP_STATIC: u32 = 52;
-/// Any permanent's definition carries a static that changes a life total's
-/// arithmetic — the seven `StaticEffect`s `adjust_life`'s helpers walk the
-/// board for, up to seven walks per life change, real or simulated (PERF
-/// `(-262)`). See [`card_has_life_static`].
+/// Any permanent changes life-total arithmetic (`adjust_life`'s helpers;
+/// PERF `(-262)`). See [`card_has_life_static`].
 const LANE_LIFE_STATIC: u32 = 54;
 /// Any permanent's *definition* can grant activated abilities along an
-/// attachment or a Soulbond pairing — the second, ungated battlefield walk
-/// every `grant_scan` used to make (PERF `(-315)`). The two instance gates
-/// (`attached_to`, `soulbond_partner`) are over-approximated, a lane
-/// predicate reading no instance field. See [`card_has_attach_grant`].
+/// attachment or Soulbond pairing (`grant_scan`; PERF `(-315)`). The instance
+/// gates (`attached_to`, `soulbond_partner`) are over-approximated. See
+/// [`card_has_attach_grant`].
 const LANE_ATTACH_GRANT: u32 = 56;
-/// Any permanent's definition lets its controller activate a summoning-sick
-/// creature's abilities as though it had haste (Tyvar, CR 602.5a) — the walk
-/// `tap_ability_summoning_sick` closes with, once per untapped summoning-sick
-/// creature the bot's mana sweep and every activation gate meet (PERF
-/// `(-316)`). See [`card_has_haste_static`].
+/// Any permanent lets summoning-sick creatures activate as though they had
+/// haste (Tyvar, CR 602.5a; `tap_ability_summoning_sick`, PERF `(-316)`).
+/// See [`card_has_haste_static`].
 const LANE_HASTE_STATIC: u32 = 58;
-/// Any permanent's definition caps how many creatures may attack or block in
-/// one combat (Silent Arbiter, Dueling Grounds) — the ungated
-/// `flat_map` over every permanent's `static_abilities` that
-/// `combat_participation_cap` used to make once per declaration and once per
-/// attack plan, real or simulated (PERF `(-324)`). One lane for both
-/// flavours: a board carrying neither answers both asks from the word.
-/// See [`card_has_combat_cap_static`].
+/// Any permanent caps attackers or blockers per combat (Silent Arbiter,
+/// Dueling Grounds; `combat_participation_cap`, PERF `(-324)`). One lane for
+/// both flavours. See [`card_has_combat_cap_static`].
 const LANE_COMBAT_CAP: u32 = 60;
 /// [`Battlefield::attach_fold`]'s stamp half (bits 0-30) and its one-bit
 /// answer (bit 31). A word of 0 is "never folded"; `writes` starts at 1.
@@ -677,30 +613,25 @@ const LANE_ABSENT_BITS: u64 = 0x5555_5555_5555_5555;
 /// The lane count the predicate table below covers (shift 0 ..= 60).
 const LANE_COUNT: usize = 31;
 
-/// ⚠ **One two-bit field is left in the word** (shift 62). A thirty-third
-/// presence question after that needs a second word on `Battlefield` — which
-/// `cow::tests::game_state_stays_small` prices — or a lane it can share with
-/// an existing one. This is a build failure rather than a silent overlap.
-/// PERF `(-347)` is the measurement that says the last slot is not worth
+/// ⚠ **One two-bit field is left in the word** (shift 62). Past that, a new
+/// lane needs a second word on `Battlefield` (priced by
+/// `cow::tests::game_state_stays_small`) or a shared lane; this assert makes
+/// overflow a build failure. PERF `(-347)`: the last slot is not worth
 /// spending on `card_color_change_unscoped`.
 const _: () = assert!(
     (LANE_COUNT as u32) * 2 <= u64::BITS,
     "the lane word is full: a thirty-third lane needs a second word or a shared lane",
 );
 
-/// Every presence lane's predicate, indexed by lane shift / 2, so a
-/// membership write can answer a lane off the **one card it moved**
-/// (PERF `(-213)`): a push leaves an `ABSENT` lane `ABSENT` when the new
-/// card fails its predicate and makes it `PRESENT` when it passes; a
-/// removal leaves a `PRESENT` lane `PRESENT` when the removed card fails
-/// it (the witness is elsewhere) and drops it to `UNKNOWN` when it passes.
-/// `None` on the two member-list lanes. **Each entry must be the very
-/// predicate that lane's callers hand to [`Battlefield::lane`]** — the
-/// lane audits recompute against the handed one on every read, so an
-/// entry that drifts fails the suite.
 /// A lane's definition-only predicate.
 type LanePredicate = fn(&CardInstance) -> bool;
 
+/// Every presence lane's predicate, indexed by shift / 2, so a membership
+/// write can update a lane off the **one card it moved** (PERF `(-213)`): a
+/// push turns `ABSENT` to `PRESENT` iff the card passes; a removal of a
+/// passing card drops `PRESENT` to `UNKNOWN`. `None` on member-list lanes.
+/// **Each entry must be the very predicate that lane's callers hand to
+/// [`Battlefield::lane`]** — the lane audit fails the suite on drift.
 const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
     Some(crate::game::card_can_change_land_types),       // LANE_LAND
     Some(crate::game::card_can_change_creature_types),   // LANE_CREATURE
@@ -737,23 +668,20 @@ const LANE_PREDICATES: [Option<LanePredicate>; LANE_COUNT] = [
 
 /// Does this permanent contribute anything to
 /// [`GameState::dispatch_board_scan`](crate::game::GameState::dispatch_board_scan)?
-/// The [`LANE_DISPATCH`] predicate, and the one the lane's `debug_assert!`
-/// audits against — so the memo and the walk it gates cannot drift.
+/// The [`LANE_DISPATCH`] predicate, also the one its audit checks against.
 fn card_has_dispatch_bits(c: &CardInstance) -> bool {
     c.dispatch_scan_bits() & crate::card::dispatch_bits::BOARD_SCAN != 0
 }
 
-/// Does this permanent's definition carry a static the mana-ability path
-/// reads per activation? The [`LANE_MANA_STATIC`] predicate — the engine's
-/// one definition of it, shared with the lane's fill.
+/// The [`LANE_MANA_STATIC`] predicate: a static the mana-ability path reads
+/// per activation (the engine's one definition of it).
 fn card_has_mana_static(c: &CardInstance) -> bool {
     crate::game::actions::card_has_mana_static(c)
 }
 
 
-/// Can this permanent grant a keyword to anything, whatever the predicate
-/// asks? The [`LANE_GRANT`] predicate, and the one that lane's
-/// `debug_assert!` audits against.
+/// Can this permanent grant a keyword to anything? The [`LANE_GRANT`]
+/// predicate, also the one its audit checks against.
 fn card_has_any_grant_bits(c: &CardInstance) -> bool {
     c.grant_scan_bits() & crate::card::grant_bits::ANY_GRANT != 0
 }
@@ -765,10 +693,9 @@ fn card_has_listener_bits(c: &CardInstance) -> bool {
     c.dispatch_scan_bits() & crate::card::dispatch_bits::LISTENER != 0
 }
 
-/// Does this permanent carry a printed `GrantActivatedAbility` static, under
-/// whatever CR 611.2 wrappers? The [`LANE_ACT_GRANT`] predicate — an
-/// over-approximation of `grant_scan`'s walk, which also *evaluates* those
-/// wrappers, and that is the sound direction.
+/// Does this permanent carry a printed `GrantActivatedAbility` static under
+/// any CR 611.2 wrapper? The [`LANE_ACT_GRANT`] predicate; over-approximates
+/// `grant_scan` (which evaluates the wrappers), the sound direction.
 fn card_has_activated_grant(c: &CardInstance) -> bool {
     c.definition
         .static_abilities
@@ -776,20 +703,16 @@ fn card_has_activated_grant(c: &CardInstance) -> bool {
         .any(|sa| crate::effect::static_effect_grants_activated(&sa.effect))
 }
 
-/// Is one of the keywords the whole-board presence gate
+/// Is any keyword
 /// [`GameState::board_keyword_matching`](crate::game::GameState::board_keyword_matching)
 /// is ever asked about *printed* on this permanent? The [`LANE_GATE_KEYWORD`]
-/// predicate: the union of every caller's list, so one lane answers all of
-/// them and the gate's per-permanent printed scan runs only on a board that
-/// carries one. A caller asking about a keyword missing from this list gets a
-/// wrong `false` on the printed leg — which is what the gate's own
-/// `debug_assert!` (recomputing the board's keywords) fires on.
+/// predicate: the union of every caller's list. A keyword missing here gives
+/// a wrong `false` on the printed leg, which the gate's `debug_assert!`
+/// catches.
 ///
-/// ⚠ `Soulbond` is in the list for a *second* consumer that does not go
-/// through `board_keyword_matching` at all: `apply_soulbond_pairing` reads the
-/// lane directly (PERF `(-327)`), because its walk asks the printed keywords
-/// and nothing else. Widening the union costs the other callers only on a
-/// board that plays the keyword.
+/// ⚠ `Soulbond` is here for `apply_soulbond_pairing`, which reads the lane
+/// directly rather than via `board_keyword_matching` (PERF `(-327)`).
+/// Widening the union costs other callers only on boards with the keyword.
 pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
     use crate::card::Keyword::*;
     c.definition.keywords.iter().any(|k| {
@@ -824,24 +747,16 @@ pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
 /// Can this permanent contribute a trigger of its **own** to
 /// [`GameState::dispatch_triggers_for_events`](crate::game::GameState::dispatch_triggers_for_events)
 /// — a printed triggered ability or a CR 721.2a Station band? The
-/// [`LANE_TRIGGERER`] predicate, and the dispatcher's fast-path `continue`
-/// calls it rather than spelling it a second time: a member list and the gate
-/// it stands in for have to be the same question or the list is unsound.
+/// [`LANE_TRIGGERER`] predicate. The dispatcher's fast path calls it too: the
+/// member list and the gate it replaces must ask the same question.
 pub(crate) fn card_is_triggerer(c: &CardInstance) -> bool {
     !c.definition.triggered_abilities.is_empty() || !c.definition.station.is_empty()
 }
 
-/// Does this permanent's definition carry a static that can replace, skip,
-/// redirect or tax a draw? The [`LANE_DRAW_STATIC`] predicate — the union of
-/// every `StaticEffect` `draw_one` and its helpers match on, so a clear lane
-/// is authoritative for all of them. Definition-only; the per-instance
-/// `active_static` gates inside those helpers only narrow it.
-/// Does this permanent's definition carry a static that changes how a
-/// permanent enters the battlefield — the ETB-trigger suppressors and
-/// doublers `etb_trigger_multiplier` counts, the ETB-trigger copier
-/// `entering_trigger_copiers` looks for (Aboleth Spawn), the cross-permanent
-/// `EntersTapped` statics and the `LandsEnterUntapped` override
-/// `apply_enters_tapped_replacement` walks for? The [`LANE_ETB_STATIC`]
+/// Does this permanent's definition change how a permanent enters — the
+/// ETB-trigger suppressors / doublers (`etb_trigger_multiplier`), the copier
+/// (`entering_trigger_copiers`, Aboleth Spawn), cross-permanent
+/// `EntersTapped` and `LandsEnterUntapped`? The [`LANE_ETB_STATIC`]
 /// predicate; definition-only.
 fn card_has_etb_static(c: &CardInstance) -> bool {
     use crate::effect::StaticEffect as S;
@@ -860,8 +775,8 @@ fn card_has_etb_static(c: &CardInstance) -> bool {
     })
 }
 
-/// Does this permanent's definition carry a static that replaces or
-/// redirects damage dealt to a player — The Mindskinner, Crumbling Sanctuary,
+/// Does this permanent's definition replace or redirect damage dealt to a
+/// player — The Mindskinner, Crumbling Sanctuary,
 /// Delaying Shield, Nefarious Lich, Pariah's Shield, Palisade Giant? The
 /// [`LANE_DAMAGE_STATIC`] predicate; definition-only.
 fn card_has_damage_replacement_static(c: &CardInstance) -> bool {
@@ -965,10 +880,9 @@ fn card_has_etb_counter_static(c: &CardInstance) -> bool {
     })
 }
 
-/// Does this permanent's definition carry one of the twelve damage-
-/// prevention statics `prevent_static_scan` folds? The
-/// [`LANE_PREVENT_STATIC`] predicate — the same arm list, so a clear lane is
-/// exactly a zero mask. Definition-only.
+/// Does this permanent's definition carry a damage-prevention static
+/// `prevent_static_scan` folds? The [`LANE_PREVENT_STATIC`] predicate (the
+/// same arm list, so a clear lane is exactly a zero mask); definition-only.
 fn card_has_prevent_static(c: &CardInstance) -> bool {
     use crate::effect::StaticEffect as S;
     c.definition.static_abilities.iter().any(|sa| {
@@ -998,11 +912,9 @@ fn card_has_prevent_static(c: &CardInstance) -> bool {
     })
 }
 
-/// Does this permanent's definition cap how many creatures may attack or
-/// block in one combat (Silent Arbiter, Dueling Grounds)? The
-/// [`LANE_COMBAT_CAP`] predicate — the same `sa.effect` test
-/// `combat_participation_cap` makes, both flavours in one answer;
-/// definition-only.
+/// Does this permanent's definition cap attackers or blockers per combat
+/// (Silent Arbiter, Dueling Grounds)? The [`LANE_COMBAT_CAP`] predicate — the
+/// same test `combat_participation_cap` makes; definition-only.
 fn card_has_combat_cap_static(c: &CardInstance) -> bool {
     use crate::effect::StaticEffect as SE;
     c.definition.static_abilities.iter().any(|sa| {
@@ -1026,10 +938,9 @@ fn card_has_block_tax_static(c: &CardInstance) -> bool {
         })
 }
 
-/// Does this permanent's definition carry a static the untap step reads —
-/// one of the eleven `do_untap` walks for, under any of the `While*`
-/// wrappers `active_static` peels (peeled unconditionally here, the sound
-/// direction)? The [`LANE_UNTAP_STATIC`] predicate; definition-only.
+/// Does this permanent's definition carry a static `do_untap` reads, under
+/// any `While*` wrapper (peeled unconditionally, the sound direction)? The
+/// [`LANE_UNTAP_STATIC`] predicate; definition-only.
 pub(crate) fn card_has_untap_static(c: &CardInstance) -> bool {
     c.definition.static_abilities.iter().any(|sa| static_effect_touches_untap(&sa.effect))
 }
@@ -1059,14 +970,10 @@ fn static_effect_touches_untap(e: &crate::effect::StaticEffect) -> bool {
     }
 }
 
-/// Does this permanent's definition carry a static that changes a life
-/// total's arithmetic — one of the seven `adjust_life`'s helpers walk for
-/// (the gain-to-loss / gain-to-draw replacements, the gain bonus and
-/// multiplier, the cannot-gain / cannot-lose locks, the loss doubler) or
-/// replaces a life *payment* (Ashiok, Wicked Manipulator), under
-/// any of the `While*` wrappers `active_static` peels (peeled unconditionally
-/// here, the sound direction)? The [`LANE_LIFE_STATIC`] predicate;
-/// definition-only.
+/// Does this permanent's definition change life-total arithmetic (what
+/// `adjust_life`'s helpers walk for) or replace a life *payment* (Ashiok,
+/// Wicked Manipulator), under any `While*` wrapper (peeled unconditionally,
+/// the sound direction)? The [`LANE_LIFE_STATIC`] predicate; definition-only.
 pub(crate) fn card_has_life_static(c: &CardInstance) -> bool {
     c.definition.static_abilities.iter().any(|sa| static_effect_touches_life(&sa.effect))
 }
@@ -1099,12 +1006,10 @@ fn static_effect_touches_life(e: &crate::effect::StaticEffect) -> bool {
     }
 }
 
-/// Does this permanent's definition let its controller activate a
-/// summoning-sick creature's abilities as though it had haste (Tyvar, CR
-/// 602.5a), under any of the `While*` wrappers (peeled unconditionally here,
-/// the sound direction — the walk this gates matches the effect bare)? The
-/// [`LANE_HASTE_STATIC`] predicate; definition-only, so the walk's
-/// `controller == p` test stays the caller's.
+/// Does this permanent's definition grant the haste-as-though for
+/// activations (Tyvar, CR 602.5a), under any `While*` wrapper (peeled, the
+/// sound direction)? The [`LANE_HASTE_STATIC`] predicate; definition-only, so
+/// the `controller == p` test stays the caller's.
 fn card_has_haste_static(c: &CardInstance) -> bool {
     c.definition.static_abilities.iter().any(|sa| static_effect_is_haste_gate(&sa.effect))
 }
@@ -1122,6 +1027,10 @@ fn static_effect_is_haste_gate(e: &crate::effect::StaticEffect) -> bool {
     }
 }
 
+/// Does this permanent's definition carry a static that can replace, skip,
+/// redirect or tax a draw? The [`LANE_DRAW_STATIC`] predicate: the union of
+/// what `draw_one` and its helpers match, so a clear lane is authoritative.
+/// Definition-only; their `active_static` gates only narrow it.
 fn card_has_draw_static(c: &CardInstance) -> bool {
     use crate::effect::StaticEffect as S;
     // `ungated`: Archmage Ascension's tutor is `WhileCountersAtLeast`.
@@ -1168,8 +1077,7 @@ fn grant_bits(cards: &[CardInstance]) -> u64 {
 
 /// [`card_is_triggerer`] over a whole board as an index mask — the member
 /// list's audit, recomputed by [`Battlefield::trigger_members`]'
-/// `debug_assert!`. `0` past 64 cards, which is where the list stops being
-/// representable and so is never stored.
+/// `debug_assert!`. `0` past 64 cards (the list is never stored there).
 fn triggerer_bits(cards: &[CardInstance]) -> u64 {
     if cards.len() > 64 {
         return 0;
@@ -1200,13 +1108,9 @@ fn dispatch_bits(cards: &[CardInstance]) -> u64 {
 
 /// `CRAB_TRIG_CENSUS` — the trigger dispatcher's member-list census.
 ///
-/// PERF `(-115)`: the lane replaces the dispatch walk's per-card gate with a
-/// list of the indices that can pass it, so what it is worth is
-/// `hits x (board - members)` visits against the walks the misses still make.
-/// Three counts answer that and nothing else does — the lane's read and its
-/// fill both inline away, so no callgrind row carries them.
-///
-/// Off unless the variable is set; one `OnceLock`-backed load when it is.
+/// PERF `(-115)`: the member list saves `hits x (board - members)` visits;
+/// these counts measure that, since the lane inlines away and no callgrind
+/// row carries it. Off unless the variable is set.
 #[cfg(feature = "trig-census")]
 pub mod trig_census {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
@@ -1219,24 +1123,20 @@ pub mod trig_census {
     /// the two sides of what a hit skips.
     pub static BOARD: AtomicU64 = AtomicU64::new(0);
     pub static MEMBERS: AtomicU64 = AtomicU64::new(0);
-    /// Dispatches that walked the board with a grant live, where the lane is
-    /// no use and the walk is the whole cost, and the permanents they walked.
+    /// Dispatches that walked the board with a grant live (the lane is no
+    /// use there), and the permanents they walked.
     pub static GRANTED: AtomicU64 = AtomicU64::new(0);
     pub static GRANT_BOARD: AtomicU64 = AtomicU64::new(0);
-    /// Loop bodies the walk actually runs — `popcount` on a hit, the whole
-    /// board otherwise. The denominator every per-visit Ir figure needs, and
-    /// it is free: both numbers are known before the walk starts.
+    /// Loop bodies the walk runs — `popcount` on a hit, the whole board
+    /// otherwise. The denominator for per-visit Ir figures.
     pub static VISITS: AtomicU64 = AtomicU64::new(0);
 
-    /// PERF `(-120)`: **which** of the four gates made a dispatch grant-live,
-    /// as the sixteen buckets of the `GRANT_*` reason mask, and the visits
-    /// each bucket cost. `GRANTED` counts them as one bit and so cannot say
-    /// whether the grant-live walks are reachable by an event-kind filter.
+    /// PERF `(-120)`: **which** of the four gates made a dispatch grant-live
+    /// (the sixteen `GRANT_*` mask buckets), and each bucket's visits.
     pub static REASON: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
     pub static REASON_VISITS: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
-    /// The same masks recomputed with the three unfiltered gates dropped when
-    /// no event in the batch could match any ability under them — i.e. what
-    /// `(-120)`'s filter would leave. `[0]` is "would have become no-grant".
+    /// The same masks under `(-120)`'s event-kind filter. `[0]` is "would
+    /// have become no-grant".
     pub static FILTERED: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
     pub static FILTERED_VISITS: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
 
@@ -1254,10 +1154,9 @@ pub mod trig_census {
         "static+own+equip", "turn+own+equip", "all",
     ];
 
-    /// `0` not yet read, `1` off, `2` on. **Not a `OnceLock`**: the gate is
-    /// asked once per dispatch and `get_or_init` there is ~20 Ir apiece. One
-    /// relaxed byte and a compare is ~2, and the store is idempotent, so the
-    /// race two threads can run here has one outcome.
+    /// `0` not yet read, `1` off, `2` on. **Not a `OnceLock`**: asked once
+    /// per dispatch, and a relaxed byte is ~2 Ir against `get_or_init`'s ~20.
+    /// The store is idempotent, so the init race has one outcome.
     static ON: std::sync::atomic::AtomicU8 = std::sync::atomic::AtomicU8::new(0);
 
     #[inline]
@@ -1337,13 +1236,10 @@ pub mod trig_census {
 
 /// `CRAB_TRIG_CENSUS` — the **activated**-grant walk's census, PERF `(-122)`.
 ///
-/// The candidate there is to evaluate each `Selector::EachPermanent` grant's
-/// requirement once over the board into an index mask at `grant_scan` time,
-/// so `granted_abilities_of_inner`'s per-permanent ask becomes a bit test.
-/// Whether that wins is one comparison and no callgrind row carries either
-/// side: the mask would cost `grants x board` evaluations per scan, and the
-/// walk costs one per (permanent that reaches `_inner`) x grant. Gated on the
-/// same variable as the trigger census above.
+/// Compares a board-wide requirement mask built at `grant_scan` time
+/// (`grants x board` evaluations) against the per-permanent walk in
+/// `granted_abilities_of_inner` (one per asking permanent x grant). Same
+/// variable as the trigger census.
 #[cfg(feature = "trig-census")]
 pub mod grant_census {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
@@ -1392,13 +1288,10 @@ pub mod grant_census {
 /// `CRAB_TRIG_CENSUS` — the requirement walker's recursion census, PERF
 /// `(-126)`.
 ///
-/// 65 % of `evaluate_requirement_static_hinted`'s calls are its own recursion
-/// through `And` / `Or` / `Not`, and the only devices that could remove them
-/// need to know *what shape* the children are: flattening the combinators into
-/// a slice variant only helps chains of three or more, and evaluating a leaf
-/// child without a call only helps children that are leaves. Neither number is
-/// on any callgrind row — a recursive edge is one row whatever the callee's
-/// discriminant. Gated on the same variable as the censuses above.
+/// Counts the *shape* of `evaluate_requirement_static_hinted`'s
+/// `And` / `Or` / `Not` recursion (leaf vs nested children) — what flattening
+/// or an inline leaf fast path could serve; callgrind can't split a recursive
+/// edge by callee discriminant. Same variable as the censuses above.
 #[cfg(feature = "trig-census")]
 pub mod req_census {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
@@ -1453,15 +1346,11 @@ pub mod req_census {
     }
 }
 
-/// PERF `(-129)`: what the trigger dispatcher's innermost loop actually
-/// multiplies. `event_matches_spec` is 1,028,014 calls on `cube` against
-/// 103,082 on `fixed` for roughly twice the board, so the question is which
-/// factor of (pairs x batch) carries the ratio — and how many of those calls
-/// are made by a (permanent, trigger) pair no event in the batch could ever
-/// match, which is the population a per-pair kind gate would remove.
-///
-/// On `trig-census` beside the other three; the counters live outside the
-/// `for ev in events` loop so the census itself cannot be what is measured.
+/// PERF `(-129)`: which factor of (pairs x batch) drives
+/// `event_matches_spec`'s call count, and how many calls come from
+/// (permanent, trigger) pairs no event in the batch could match — what a
+/// per-pair kind gate would remove. Counters sit outside the
+/// `for ev in events` loop so the census doesn't measure itself.
 #[cfg(feature = "trig-census")]
 pub mod ems_census {
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
@@ -1470,9 +1359,8 @@ pub mod ems_census {
     /// carried — the mean batch size is the ratio.
     pub static DISPATCHES: AtomicU64 = AtomicU64::new(0);
     pub static BATCH: AtomicU64 = AtomicU64::new(0);
-    /// Distinct `EventKind` discriminants a dispatch's triggers presented,
-    /// summed — what a per-dispatch memo on the kind would have to evaluate
-    /// against the batch, against `PAIRS` which is what it would serve.
+    /// Distinct `EventKind` discriminants per dispatch's triggers, summed —
+    /// the cost of a per-dispatch kind memo, against `PAIRS` it would serve.
     pub static KINDS: AtomicU64 = AtomicU64::new(0);
     /// (permanent, trigger) pairs that reached the `for ev in events` loop.
     pub static PAIRS: AtomicU64 = AtomicU64::new(0);
@@ -1515,49 +1403,10 @@ pub mod ems_census {
     }
 }
 
-/// The battlefield: the CoW card list, plus the whole-board questions asked of
-/// it often enough to want a memo — the two layer-4 type gates ("can any
-/// permanent here contribute an `AddLandType` / `SetLandTypes` /
-/// `ReplaceBasicLandType` to the gathered set", and the same for the
-/// creature-type family), the three damage-scaling / prevention gates, the
-/// whole-board damage-shield family, and the trigger dispatcher's board scan.
-/// One lane per question; see the `LANE_*` constants.
-///
-/// `land_type_change_in_scope` and `creature_type_change_in_scope` are
-/// 0.60 / 1.13 / 0.52 % of the three pools and each miss is a 262-642 Ir walk
-/// over every permanent (PERF `(-87)`). The freeze-scope `PresenceGate`
-/// memoizes them for the lifetime of a scope, but roughly half the misses
-/// arrive holding `&mut self` — `activate_ability_inner`'s CR 602.5 tap gate,
-/// the bot's `available_mana` — and a scope that borrows `&self` can never
-/// serve those. `CRAB_GATE_CENSUS` (pass 97) measured the gates' inputs
-/// unchanged on 93.95 % of `cube`'s 242,788 asks, so the answer wants to
-/// outlive the scope, and the zone is where it can.
-///
-/// **The invalidation is two disjoint questions, and each is answered where it
-/// is cheap.** Every lane is a function of exactly one thing: the multiset of
-/// *definitions* on the battlefield (`card_can_change_*_types` is written to
-/// read no instance field, deliberately — see its doc comment;
-/// `dispatch_scan_bits` is a pure function of the definition by construction).
-///
-/// * *Membership* — a permanent entering or leaving — can only happen through
-///   [`DerefMut`] or the inherent [`push`](Self::push), and both clear the
-///   lanes. There is no third route: `Vec`'s own mutators are reached through
-///   `DerefMut`.
-/// * *A definition rewrite on a permanent already here* is reached through an
-///   element handle, two derefs below anything this type can observe. It is
-///   caught by stamping each computed lane with
-///   [`definition_epoch`](crate::card::definition_epoch), which the two
-///   accessors that can rewrite a definition bump.
-///
-/// So [`iter_mut`](Self::iter_mut), [`get_mut`](Self::get_mut) and the `&mut`
-/// [`IntoIterator`] — the tap, damage, counter and untap paths, 139,280
-/// invalidations a `cube` run before this split — leave the lanes alone.
-/// Slots in [`Battlefield`]'s find memo. **One slot thrashes**: the callers
-/// the memo exists for ask about two or three permanents in turn (the combat
-/// resolver's attacker and blocker, the block picker's pair), so a single
-/// entry is overwritten by the very next ask and hits only on an exact
-/// repeat. Direct-mapping by `CardId` gives each of them its own slot; 16 is
-/// 60 bytes more on the zone against a board of ~15-25 permanents.
+/// Slots in [`Battlefield`]'s find memo, direct-mapped by `CardId`. **One
+/// slot thrashes**: callers alternate between two or three permanents
+/// (attacker and blocker), so each ask evicted the next one's answer. 16 slots
+/// cost 60 bytes against a ~15-25 permanent board.
 const FIND_HINTS: usize = 16;
 
 /// The memo slot a `CardId` maps to. Ids come off a monotonic counter, so the
@@ -1567,6 +1416,31 @@ const fn hint_slot(id: crate::card::CardId) -> usize {
     (id.0 as usize) & (FIND_HINTS - 1)
 }
 
+/// The battlefield: the CoW card list plus memoized whole-board questions,
+/// one two-bit lane each (see the `LANE_*` constants) — layer-4 type gates,
+/// damage scaling / prevention / shield gates, the dispatcher's board scan.
+///
+/// The freeze-scope `PresenceGate` can't serve the half of the asks that
+/// arrive holding `&mut self` (CR 602.5 tap gate, the bot's
+/// `available_mana`), and `CRAB_GATE_CENSUS` (pass 97) found the inputs
+/// unchanged on ~94 % of asks (PERF `(-87)`), so the answer lives on the zone
+/// and outlives the scope.
+///
+/// **Invalidation is two disjoint questions.** Every lane is a function of
+/// the multiset of *definitions* on the battlefield
+/// (`card_can_change_*_types` deliberately reads no instance field;
+/// `dispatch_scan_bits` is definition-pure).
+///
+/// * *Membership* changes only through [`DerefMut`] or the inherent
+///   [`push`](Self::push), and both clear the lanes (`Vec`'s mutators go
+///   through `DerefMut`).
+/// * *A definition rewrite in place* is caught by stamping each lane with
+///   [`definition_epoch`](crate::card::definition_epoch), which the two
+///   definition-rewriting accessors bump.
+///
+/// So [`iter_mut`](Self::iter_mut), [`get_mut`](Self::get_mut) and the `&mut`
+/// [`IntoIterator`] — the tap, damage, counter and untap paths — leave the
+/// lanes alone.
 #[derive(Debug)]
 pub struct Battlefield {
     cards: CowBox<Vec<CardInstance>>,
@@ -1576,12 +1450,11 @@ pub struct Battlefield {
     /// while this still matches.
     def_epoch: std::sync::atomic::AtomicU64,
     /// The indices [`find_by_id`](Self::find_by_id) last returned, one slot
-    /// per `CardId` low-bit class. Needs no invalidation at all — see that
-    /// function.
+    /// per `CardId` low-bit class. Needs no invalidation (see that function).
     find_hints: [std::sync::atomic::AtomicU32; FIND_HINTS],
     /// Which battlefield *indices* satisfy [`card_is_triggerer`], one bit
-    /// each. Read only while [`LANE_TRIGGERER`] says the list is computed, so
-    /// it inherits the lanes' invalidation whole and needs none of its own.
+    /// each. Read only while [`LANE_TRIGGERER`] says it is computed, so it
+    /// inherits the lanes' invalidation.
     trig_members: std::sync::atomic::AtomicU64,
     /// The dispatch scan's member list (PERF `(-215)`): the indices whose
     /// definition carries a `BOARD_SCAN` bit, valid while [`LANE_DISPATCH`]
@@ -1593,26 +1466,18 @@ pub struct Battlefield {
     /// How many times anything took `&mut` at this zone — the per-object twin
     /// of [`BATTLEFIELD_REACHES`], bumped at the same six chokepoints.
     ///
-    /// The lanes above are keyed on *definitions* and so survive an element
-    /// write; a memo whose answer reads instance fields (tapped, damage,
-    /// counters, `attached_to`) cannot. This counter is what such a memo
-    /// stamps itself with: equal stamp means no `&mut` has reached these cards
-    /// since, so nothing the memo read can have moved. Starts at 1 so that 0
-    /// is "never stamped".
+    /// The stamp for memos that read *instance* fields (tapped, damage,
+    /// counters, `attached_to`), which the definition-keyed lanes can't
+    /// serve: an equal stamp means no `&mut` reached the cards since. Starts
+    /// at 1 so 0 is "never stamped".
     ///
-    /// **Per-object, not the global census counter, and that is the whole
-    /// point**: the bot clones a state, mutates the clone and drops it, and
-    /// the parent's board is untouched throughout. A global counter counts the
-    /// clone's write against the parent (which is what made `sba_census`' 18 %
-    /// a floor rather than a ceiling); this one does not.
+    /// **Per-object, not global, by design**: a bot probe mutates a clone and
+    /// leaves the parent untouched; a global counter would charge the
+    /// clone's writes to the parent.
     ///
-    /// Plain `u32`: every writer holds `&mut self`, and the readers that
-    /// compare against it hold `&self` on the same thread. **32 bits because
-    /// `GameState`'s size guard is 16 bytes, not 24** — a false hit needs the
-    /// counter to come back to the *same* value, i.e. exactly 2^32 `&mut`
-    /// reaches at this one zone between a store and the next read, where a
-    /// whole game's battlefield takes on the order of 10^6 and a probe clone
-    /// a handful.
+    /// Plain `u32`: writers hold `&mut self`, readers `&self` on the same
+    /// thread. 32 bits for `GameState`'s size guard; a false hit needs
+    /// exactly 2^32 reaches between a store and a read (a game made ~10^6).
     writes: u32,
     /// The `writes` value `sba_fold` was computed at; 0 means "not computed"
     /// (the counter starts at 1).
@@ -1623,56 +1488,31 @@ pub struct Battlefield {
     /// `writes` it was folded at in bits 0-30, and **0 means "not computed"**
     /// (the counter starts at 1).
     ///
-    /// One word rather than a stamp plus a byte, because `GameState` has a
-    /// size guard (`cow::tests::game_state_stays_small`, 1,664 bytes) and the
-    /// pair costs eight bytes against this one's four. It needs its own stamp
-    /// rather than `sba_stamp`'s — the two folds are taken at different
-    /// moments, so a shared stamp would let either validate the other — and
-    /// the 31-bit stamp keeps `writes`' own argument: a false hit needs the
-    /// counter to return to the same value modulo 2^31, against ~10^6 `&mut`
-    /// reaches in a whole game.
+    /// One word rather than stamp plus byte for the size guard
+    /// (`cow::tests::game_state_stays_small`). Its own stamp, not
+    /// `sba_stamp`: the folds are taken at different moments, so a shared
+    /// stamp would let either validate the other. 31 bits keeps `writes`'
+    /// wraparound argument.
     attach_fold: std::sync::atomic::AtomicU32,
 }
 
 impl Battlefield {
-    /// The permanent with `id`, through a one-entry index memo.
+    /// The permanent with `id`, through a [`FIND_HINTS`]-slot index memo
+    /// direct-mapped by id (PERF `(-38)`). Callers such as the combat
+    /// resolver ask about the same few permanents repeatedly.
     ///
-    /// `GameState::battlefield_find` is 556 always-inlined call sites and
-    /// **4.03 % of the program** when it was first read (PERF `(-38)`;
-    /// 2.35 % at the last `cg_sites` read, after four of its six named sites
-    /// were paid off with `_on` forms). The remaining ones are the callers
-    /// that ask about the *same* permanent several times running — the
-    /// combat resolver's per-pair freeze scope asks three or four times for
-    /// the blocker alone, once per prevention gate — and a one-entry memo is
-    /// what that shape wants.
+    /// **No invalidation: the answer is verified, not trusted.**
+    /// `cards[hint].id == id` is the whole contract — a stale index, shorter
+    /// board or different permanent all fall through to the scan — so this
+    /// sits outside the lanes' epoch/clear protocol.
     ///
-    /// **The memo needs no invalidation, because the answer is verified
-    /// rather than trusted.** `cards[hint].id == id` is the whole contract: a
-    /// stale index, a shorter board, a different permanent in that slot all
-    /// fail the same test and fall through to the scan. That is why this sits
-    /// outside the lanes' epoch/clear protocol — nothing a write can do to
-    /// this zone can make a *hit* wrong.
+    /// A hit does rest on **battlefield ids being unique** (a hint may name a
+    /// later match than a scan would). That's a global invariant, audited by
+    /// the scan path's `debug_assert!` (fired by
+    /// `scripts/robustness_grid.sh`); auditing on the hit path would put a
+    /// board walk in front of the memo.
     ///
-    /// The one premise a hit rests on that a scan does not is that **ids on
-    /// the battlefield are unique** — a scan stops at the first match, a hint
-    /// can name a later one. That is a global engine invariant (`CardId`s come
-    /// off a monotonic counter), and the `debug_assert!` on the scan path is
-    /// its audit: it costs the tail of a walk the miss was making anyway, and
-    /// `scripts/robustness_grid.sh` is what fires it. Auditing it on the *hit*
-    /// path instead would put a board walk in front of the memo it is there to
-    /// avoid.
-    ///
-    /// Break-even is a repeat rate of about a tenth: a hit is a relaxed load,
-    /// a bounds check and one `CardId` compare against the ~58 Ir a scan of
-    /// ~23 `Arc`-boxed permanents costs (PERF's "price a `find` at its
-    /// expected stopping point"), and a miss adds those same few instructions
-    /// plus one store on top of the scan it was going to make anyway.
-    ///
-    /// **It is [`FIND_HINTS`] entries, direct-mapped by id, and that is what
-    /// makes the repeat rate real.** One entry hits only on an *exact*
-    /// repeat, and the callers this memo exists for alternate — attacker,
-    /// blocker, attacker — so each ask evicted the answer the next one
-    /// wanted.
+    /// Break-even is a repeat rate of about a tenth against a ~58 Ir scan.
     #[inline]
     pub fn find_by_id(&self, id: crate::card::CardId) -> Option<&CardInstance> {
         let slot = hint_slot(id);
@@ -1691,16 +1531,11 @@ impl Battlefield {
         Some(c)
     }
 
-    /// The `&mut` twin of [`find_by_id`](Self::find_by_id), and the reason it
-    /// is not spelled `iter_mut().find(…)`: that form takes `&mut` at the
-    /// cards **before** it knows whether the id is here, so it pays a
-    /// [`CowBox`](crate::cow::CowBox) unshare — a deep copy of the whole zone
-    /// — even to answer `None`. Locating on the shared side and reaching for
-    /// `&mut` only on a hit costs a miss nothing, and puts the one-entry memo
-    /// on the write path that the read path has had since PERF `(-38)`.
-    ///
-    /// Same uniqueness premise as `find_by_id`, audited by the same
-    /// `debug_assert!` on the scan path.
+    /// The `&mut` twin of [`find_by_id`](Self::find_by_id). Not
+    /// `iter_mut().find(…)`: that takes `&mut` **before** knowing the id is
+    /// here, paying a [`CowBox`](crate::cow::CowBox) unshare (a deep copy of
+    /// the zone) even for `None`. Locates on the shared side instead; same
+    /// uniqueness premise and audit as `find_by_id`.
     #[inline]
     pub fn find_by_id_mut(&mut self, id: crate::card::CardId) -> Option<&mut CardInstance> {
         let slot = hint_slot(id);
@@ -1786,14 +1621,11 @@ impl Battlefield {
         self.lane(LANE_INCOMING_PREVENT, walk)
     }
 
-    /// CR 615 — can any permanent here carry one of the whole-board damage
-    /// shields? The board half of nine `GameState` walks — Iroas, Glacial
-    /// Chasm, Mark of Asylum, The Wanderer, Emmara Tandris, Rune-Tail's
-    /// Essence, Well-Laid Plans, Light of Sanction, Indentured Oaf — each of
-    /// which walks every permanent's `static_abilities` for one variant and
-    /// finds nothing on almost every board. The predicate is their *union*:
-    /// each walk's own filter is an instance field applied after the static is
-    /// found, so the definition question they share is the whole walk.
+    /// CR 615 — can any permanent here carry a whole-board damage shield?
+    /// The board half of nine `GameState` walks (Iroas, Glacial Chasm, Mark
+    /// of Asylum, The Wanderer, Emmara Tandris, Rune-Tail's Essence,
+    /// Well-Laid Plans, Light of Sanction, Indentured Oaf). The predicate is
+    /// their union; each walk's own filter is an instance field applied after.
     #[inline]
     pub fn has_damage_shield(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
         self.lane(LANE_SHIELD, walk)
@@ -1882,10 +1714,9 @@ impl Battlefield {
     }
 
     /// Does any permanent here cap combat participation
-    /// ([`card_has_combat_cap_static`])? Read by
-    /// `combat_participation_cap`, whose four callers are two declaration
-    /// gates and two of the bot's plans — all outside a freeze scope, which
-    /// is why this is a lane and not a presence slot (PERF `(-324)`).
+    /// ([`card_has_combat_cap_static`])? Read by `combat_participation_cap`,
+    /// whose callers are all outside a freeze scope — hence a lane, not a
+    /// presence slot (PERF `(-324)`).
     #[inline]
     pub fn has_combat_cap_static(&self) -> bool {
         self.lane(LANE_COMBAT_CAP, card_has_combat_cap_static)
@@ -1918,30 +1749,23 @@ impl Battlefield {
 
     /// Does any permanent here let its controller activate a summoning-sick
     /// creature's abilities as though it had haste
-    /// ([`card_has_haste_static`])? Read by `tap_ability_summoning_sick`, once
-    /// per untapped summoning-sick creature the mana sweep and the activation
-    /// gate meet (PERF `(-316)`).
+    /// ([`card_has_haste_static`])? Read by `tap_ability_summoning_sick`
+    /// (PERF `(-316)`).
     #[inline]
     pub fn has_haste_static(&self) -> bool {
         self.lane(LANE_HASTE_STATIC, card_has_haste_static)
     }
 
-    /// One lane's answer: a word load and two mask tests on a hit, the board
-    /// walk plus one store on a miss.
+    /// One lane's answer: a word load on a hit, the board walk plus one store
+    /// on a miss.
     ///
     /// **`walk` is `Copy` and passed to `any` by value, never by reference.**
-    /// `&F: FnMut` routes every element through
-    /// `core::ops::function::impls::call_mut`, which does not inline: the
-    /// first build of this memo took the gates' 33.7 M Ir down to 5.9 M and
-    /// handed **18.8 M** of it straight back through that shim (`cube`,
-    /// ninety-eighth pass). A fn item passed by value monomorphizes into the
-    /// loop exactly as `battlefield.iter().any(card_can_change_land_types)`
-    /// did before the memo existed.
+    /// `&F: FnMut` goes through a non-inlining `call_mut` shim, which gave
+    /// back over half the memo's win when first built (ninety-eighth pass).
     ///
-    /// The `debug_assert!` is the audit that no write path reached the cards
-    /// without clearing the word: it costs nothing in any release profile, and
-    /// `scripts/robustness_grid.sh` is what fires it over boards the suite
-    /// never deals.
+    /// The `debug_assert!` audits that no write reached the cards without
+    /// clearing the word; `scripts/robustness_grid.sh` fires it on boards the
+    /// suite never deals.
     #[inline]
     fn lane(&self, shift: u32, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
         let stale = self.def_epoch.load(Ordering::Relaxed)
@@ -1964,10 +1788,9 @@ impl Battlefield {
     }
 
     /// `iter_mut` that does **not** invalidate — the tap / damage / counter /
-    /// untap paths. Inherent, so it shadows the `Deref`'d `Vec::iter_mut` at
-    /// every existing call site without touching one. Sound because the lanes
-    /// read only definitions, and a definition rewrite through the handle this
-    /// hands out bumps `definition_epoch` instead.
+    /// untap paths. Shadows the `Deref`'d `Vec::iter_mut`. Sound because the
+    /// lanes read only definitions, and a definition rewrite through these
+    /// handles bumps `definition_epoch`.
     #[inline]
     pub fn iter_mut(&mut self) -> std::slice::IterMut<'_, CardInstance> {
         self.cards_unchecked_mut().iter_mut()
@@ -1979,28 +1802,25 @@ impl Battlefield {
         self.cards_unchecked_mut().get_mut(i)
     }
 
-    /// `&mut` at the cards **without** clearing the lanes. Private: every
-    /// caller is one of the element-write accessors above, whose contract is
-    /// that membership does not move. Public mutation goes through
-    /// [`DerefMut`], which clears.
+    /// `&mut` at the cards **without** clearing the lanes. Private: only the
+    /// element-write accessors, which never move membership, call it. Public
+    /// mutation goes through [`DerefMut`], which clears.
     #[inline]
     fn cards_unchecked_mut(&mut self) -> &mut Vec<CardInstance> {
         self.note_write();
         &mut self.cards
     }
 
-    /// One `&mut` reach at this zone: the census tick and the per-object
-    /// [`writes`](Self::writes) bump, in the six places that hand out `&mut`
-    /// at the cards. Every instance-keyed memo on this zone is stamped with
-    /// the counter this advances.
+    /// One `&mut` reach at this zone: the census tick and the
+    /// [`writes`](Self::writes) bump, at all six places that hand out `&mut`
+    /// at the cards.
     #[inline]
     fn note_write(&mut self) {
         note_battlefield_reach();
         self.writes = self.writes.wrapping_add(1);
     }
 
-    /// This zone's write counter — see [`writes`](Self::writes). Read by any
-    /// memo one level up that has to know whether the board moved.
+    /// This zone's write counter — see [`writes`](Self::writes).
     #[inline]
     pub fn writes(&self) -> u32 {
         self.writes
@@ -2008,22 +1828,18 @@ impl Battlefield {
 
     /// A whole-board fold over *instance* fields, memoized on the zone.
     ///
-    /// `Some(packed)` is the answer the last fold stored, and it is this
-    /// board's answer because no `&mut` has reached the cards since — the
-    /// contract [`writes`](Self::writes) documents. `None` means "fold, then
-    /// hand the result to [`store_sba_fold`](Self::store_sba_fold)".
-    ///
-    /// One consumer (`GameState::sba_board_scan`), named like the zone's other
-    /// lanes. The packing is the caller's business; this only holds a word.
+    /// `Some(packed)` is the last stored fold, valid because no `&mut` has
+    /// reached the cards since (see [`writes`](Self::writes)). `None` means
+    /// "fold, then call [`store_sba_fold`](Self::store_sba_fold)". One
+    /// consumer (`GameState::sba_board_scan`), which owns the packing.
     #[inline]
     pub fn sba_fold(&self) -> Option<u64> {
         (self.sba_stamp.load(Ordering::Relaxed) == self.writes)
             .then(|| self.sba_fold.load(Ordering::Relaxed))
     }
 
-    /// Record what a fold found, valid until the next `&mut` at the cards.
-    /// The value goes down before the stamp: a reader that sees the stamp then
-    /// sees a value at least as new as it.
+    /// Record a fold, valid until the next `&mut` at the cards. Value before
+    /// stamp, so a reader that sees the stamp sees a value at least as new.
     #[inline]
     pub fn store_sba_fold(&self, packed: u64) {
         self.sba_fold.store(packed, Ordering::Relaxed);
@@ -2036,18 +1852,13 @@ impl Battlefield {
     /// answer to [`store_attach_fold`](Self::store_attach_fold)".
     ///
     /// ⚠ **Both facts read INSTANCE fields, so this is a `writes`-keyed fold
-    /// like [`sba_fold`](Self::sba_fold) and NOT a `definition_epoch`-keyed
-    /// lane**: the lanes deliberately survive an element write, which is
-    /// exactly what an `attached_to` assignment is. PERF `(-318)`;
-    /// `combat_census` priced the key at 50-68 % before it was built, against
-    /// the 10.6-18.9 % the `sba_fold` precedent would have predicted — several
-    /// `fire_combat_damage_triggers` calls land per combat damage step with no
-    /// board write between them.
+    /// like [`sba_fold`](Self::sba_fold), NOT a `definition_epoch`-keyed
+    /// lane**: lanes survive element writes, and an `attached_to` assignment
+    /// is one. PERF `(-318)`.
     ///
-    /// **One bit, not two.** The pairing half reads 0.0 % on all three pools,
-    /// and its consumer skips the same walk the attachment half does, so they
-    /// fold into one `any` that short-circuits — which is what keeps the miss
-    /// path from taxing the walk it is meant to save.
+    /// **One bit, not two**: both halves gate the same walk, so one
+    /// short-circuiting `any` keeps the miss path cheap (the pairing half was
+    /// ~never present).
     #[inline]
     pub fn attach_fold(&self) -> Option<bool> {
         let w = self.attach_fold.load(Ordering::Relaxed);
@@ -2063,21 +1874,16 @@ impl Battlefield {
         self.attach_fold.store(w, Ordering::Relaxed);
     }
 
-    /// The miss path, out of line so the hit path stays a word load at each of
-    /// the two call sites.
+    /// The miss path, out of line so the hit path stays a word load.
     ///
-    /// **Not `#[cold]`.** It is taken on roughly half the asks, and marking it
-    /// cold makes LLVM optimize it for size — which stops the `walk` fn item
-    /// inlining into the loop and turns every card visit into a call. That
-    /// cost 9.2 M Ir over 920,622 visits on `cube` and ate two thirds of the
-    /// memo's win (ninety-eighth pass). `#[inline(never)]` instead: one
-    /// instance per predicate, with the predicate inlined into its loop, and
-    /// the two call sites keep a word load for the hit.
+    /// **Not `#[cold]`**: taken on about half the asks, and cold makes LLVM
+    /// optimize for size, which stops `walk` inlining into the loop — that ate
+    /// two thirds of the memo's win (ninety-eighth pass). `#[inline(never)]`
+    /// keeps one instance per predicate with the predicate inlined.
     #[inline(never)]
     fn walk_and_store(&self, shift: u32, walk: impl Fn(&CardInstance) -> bool) -> bool {
-        // A rewrite since the epoch was read would be missed by the stamp, so
-        // read it *before* the walk: the stamp is then conservative — a lane
-        // computed across a rewrite is thrown away on the next ask.
+        // Read the epoch *before* the walk so the stamp is conservative: a
+        // lane computed across a rewrite is discarded on the next ask.
         let epoch = crate::card::definition_epoch();
         let found = self.cards.iter().any(walk);
         self.store_lane(shift, epoch, found);
@@ -2104,14 +1910,11 @@ impl Battlefield {
     /// then hand that same epoch back to the matching `store_*`".
     ///
     /// `audit` is the lane's predicate, recomputed by the `debug_assert!` so a
-    /// stale word — a write that reached the cards without clearing it — fails
-    /// loudly under `-C debug-assertions=yes`; `what` names the lane in that
-    /// message. Costs nothing in any release profile.
+    /// stale word fails loudly under debug assertions; `what` names the lane.
     ///
-    /// `what` is a *format argument*, so the three lanes share one literal in
-    /// the binary: `robustness_grid.sh`'s "is the assertion actually compiled
-    /// in" check counts `memo is stale` and still sees it, but a per-lane
-    /// `strings` grep will not. The name is there at runtime, where it matters.
+    /// `what` is a *format argument*, so the lanes share one literal:
+    /// `robustness_grid.sh`'s compiled-in check (grepping `memo is stale`)
+    /// still sees it, but a per-lane `strings` grep will not.
     #[inline]
     fn split_lane(
         &self,
@@ -2142,13 +1945,9 @@ impl Battlefield {
     /// means "unknown — walk, then hand that same epoch back to
     /// [`store_dispatch`](Self::store_dispatch)".
     ///
-    /// The two type gates ask through the closure form above because their
-    /// walk *is* a predicate. The dispatcher's is not: the same pass also
-    /// builds two grant lists, so a closure form would walk the board twice on
-    /// every miss — and the `DerefMut` invalidation serves only 48.1 / 38.3 /
-    /// 32.2 % of the type gates' asks (PERF `(-87)`), which is about where a
-    /// doubled miss breaks even. Splitting the read from the store makes the
-    /// miss cost the walk the caller was making anyway and nothing else.
+    /// Split read/store rather than the closure form: the dispatcher's pass
+    /// also builds two grant lists, so a closure would walk the board twice on
+    /// every miss, about break-even at the hit rates PERF `(-87)` measured.
     pub fn dispatch_lane(&self) -> Result<bool, u64> {
         self.dispatch_members().map(|bits| bits != 0)
     }
@@ -2192,14 +1991,11 @@ impl Battlefield {
     /// then hand that same epoch to
     /// [`store_grant_members`](Self::store_grant_members)".
     ///
-    /// A presence bit was what this lane held until PERF `(-189)`, and it
-    /// answered the wrong question: `keyword_grant_in_scope` asks about *one*
-    /// keyword, and a board with any lord, aura or equipment on it reads
-    /// `PRESENT` — 47 % of the asks on `fixed` — so the caller walked all ~23
-    /// permanents to find the one or two granters and test them. The list
-    /// names them, so a hit visits only those. Same shape as
-    /// [`trigger_members`](Self::trigger_members), same invalidation, and a
-    /// board wider than 64 has no list and keeps walking.
+    /// A list, not a presence bit (PERF `(-189)`): `keyword_grant_in_scope`
+    /// asks about *one* keyword, and any lord, aura or equipment made a
+    /// presence bit read `PRESENT`, so the caller still walked the board. Same
+    /// shape and invalidation as [`trigger_members`](Self::trigger_members);
+    /// boards wider than 64 have no list.
     pub fn grant_members(&self) -> Result<u64, u64> {
         let epoch = crate::card::definition_epoch();
         let known = self.def_epoch.load(Ordering::Relaxed) == epoch
@@ -2228,9 +2024,8 @@ impl Battlefield {
     }
 
     /// The combat-damage listener lane, same caller-filled contract as
-    /// [`dispatch_lane`](Self::dispatch_lane). Split form because the walk it
-    /// gates builds two trigger lists rather than answering a predicate — and
-    /// that walk cannot short-circuit, so the fill it hands back is exact.
+    /// [`dispatch_lane`](Self::dispatch_lane). Split because the gated walk
+    /// builds two trigger lists; it can't short-circuit, so its fill is exact.
     pub fn listener_lane(&self) -> Result<bool, u64> {
         self.split_lane(LANE_LISTENER, card_has_listener_bits, "listener")
     }
@@ -2254,10 +2049,9 @@ impl Battlefield {
     }
 
     /// Does any permanent's definition grant activated abilities to countered
-    /// creatures (Agatha's Soul Cauldron)? `walk` is the engine's memo-word
-    /// read (`actions::card_grants_to_countered`), asked lazily by the
-    /// grants-nothing gate for a permanent that carries counters, so a board
-    /// without one never reads its counter bags (PERF `(-199)`).
+    /// creatures (Agatha's Soul Cauldron)? `walk` is
+    /// `actions::card_grants_to_countered`; asked lazily by the grants-nothing
+    /// gate so a board without one never reads counter bags (PERF `(-199)`).
     #[inline]
     pub fn has_counter_granter(&self, walk: impl Fn(&CardInstance) -> bool + Copy) -> bool {
         self.lane(LANE_COUNTER_GRANT, walk)
@@ -2272,11 +2066,9 @@ impl Battlefield {
     }
 
     /// The activated-grant lane, same caller-filled contract as
-    /// [`dispatch_lane`](Self::dispatch_lane). Split form because
-    /// `grant_scan`'s walk builds a list and evaluates each grant's CR 611.2
-    /// gate, so it is not the lane's predicate — but it is already iterating
-    /// each permanent's `static_abilities`, which is empty on most of a board,
-    /// so filling the lane from it costs one wrapper-peel per printed static.
+    /// [`dispatch_lane`](Self::dispatch_lane). Split because `grant_scan`'s
+    /// walk builds a list and evaluates CR 611.2 gates rather than the lane's
+    /// predicate; it already iterates `static_abilities`, so the fill is cheap.
     pub fn act_grant_lane(&self) -> Result<bool, u64> {
         self.split_lane(LANE_ACT_GRANT, card_has_activated_grant, "activated-grant")
     }
@@ -2291,13 +2083,10 @@ impl Battlefield {
     /// `Err(epoch)` means "unknown — walk, then hand that same epoch to
     /// [`store_trigger_members`](Self::store_trigger_members)".
     ///
-    /// Every other lane answers *is there one*, which still leaves the caller
-    /// walking the board; this one answers *which*, so on a hit the walk does
-    /// not happen. That is what separates it from the forty-eighth pass's
-    /// refuted trigger-carrier mask (+0.58 %, PERF): those bits were rebuilt
-    /// inside `dispatch_board_scan` on every dispatch, so the loads added to
-    /// one walk paid for the loads removed from another. These outlive the
-    /// dispatch, and the fill rides the walk a miss was making anyway.
+    /// Answers *which*, not *is there one*, so a hit skips the walk. Unlike
+    /// the forty-eighth pass's refuted trigger-carrier mask (rebuilt on every
+    /// dispatch), these bits outlive the dispatch and are filled by the walk a
+    /// miss makes anyway.
     pub fn trigger_members(&self) -> Result<u64, u64> {
         let epoch = crate::card::definition_epoch();
         let known = self.def_epoch.load(Ordering::Relaxed) == epoch
@@ -2316,8 +2105,8 @@ impl Battlefield {
 
     /// Record the member list a caller's own full walk built, stamped at the
     /// `epoch` [`trigger_members`](Self::trigger_members) handed out. A board
-    /// wider than 64 has no list, so the lane stays unknown there and the next
-    /// dispatch walks — the caller must not have built bits for one either.
+    /// wider than 64 has no list (the lane stays unknown); the caller must not
+    /// build bits for one either.
     pub fn store_trigger_members(&self, epoch: u64, bits: u64) {
         if self.cards.len() > 64 {
             return;
@@ -2328,20 +2117,16 @@ impl Battlefield {
 
     /// Visit every permanent that can carry a printed trigger or a Station
     /// band — the [`trigger_members`](Self::trigger_members) list on a hit,
-    /// the whole board on a miss (the dispatcher fills the list; this never
-    /// does) — or the whole board when `all`: the shape for a hook whose grant presence read says a
-    /// permanent with no printed trigger may carry one this time. One call,
-    /// not an `if` over two walks: a closure handed to two generic walks is
-    /// codegen'd out of line and called per permanent (~30 Ir each, +0.24 %
-    /// of a sealed six-game run at `4db20c51`), where a single call site
-    /// inlines it.
+    /// the whole board on a miss (this never fills the list) — or the whole
+    /// board when `all` (a grant may give a trigger to anything). One call
+    /// site for `f`, not an `if` over two walks: two generic walks left the
+    /// closure out of line (+0.24 % sealed at `4db20c51`).
     #[inline]
     pub fn for_each_triggerer_or_all(&self, all: bool, mut f: impl FnMut(&CardInstance)) {
         let n = self.cards.len();
-        // One bit loop, one call site: "all" is a full mask over each
-        // 64-card chunk (a board past 64 has no member list either). A
-        // second `f` call site — the tail walk this used to have — is a
-        // second inlining decision, and LLVM took neither.
+        // One bit loop, one call site: "all" is a full mask per 64-card
+        // chunk. A second `f` call site is a second inlining decision LLVM
+        // declined.
         let (whole, mut bits) = match self.trigger_members() {
             Ok(bits) if !all => (false, bits),
             _ => (true, 0),
@@ -2369,15 +2154,12 @@ impl Battlefield {
         }
     }
 
-    /// Append, through [`CowBox`]'s own `push` so an unshare materializes with
-    /// room for the card (PERF `(-76)`). Inherent, so it shadows the `Deref`'d
-    /// `Vec::push`.
+    /// Append via [`CowBox`]'s `push` so an unshare materializes with room
+    /// (PERF `(-76)`); shadows the `Deref`'d `Vec::push`.
     ///
-    /// **An addition can only turn a lane `PRESENT`**, and whether it does
-    /// is a question about the new card alone: every `PRESENT` lane stays,
-    /// every `ABSENT` lane is re-answered off the card by its registered
-    /// predicate ([`LANE_PREDICATES`]), and the two member-list lanes clear,
-    /// their indices being what they hold (PERF `(-212)`, `(-213)`).
+    /// **An addition can only turn a lane `PRESENT`**, decided off the new
+    /// card alone: `PRESENT` lanes stay, `ABSENT` lanes are re-answered by
+    /// [`LANE_PREDICATES`], member lists are extended (PERF `(-212)`..`(-214)`).
     pub fn push(&mut self, mut card: CardInstance) {
         card.entered_from_library = card.in_library;
         card.in_library = false;
@@ -2387,11 +2169,9 @@ impl Battlefield {
     }
 
     /// `Vec::remove`, shadowed: **a removal can only turn a lane `ABSENT`**,
-    /// and only if the removed card was a witness — every `ABSENT` lane
-    /// stays, a `PRESENT` lane stays when the card fails its predicate and
-    /// drops to `UNKNOWN` when it passes (PERF `(-212)`, `(-213)`). Every
-    /// removal route on the death path goes through here or
-    /// [`take_by_id`](Self::take_by_id).
+    /// and only via a witness — a `PRESENT` lane drops to `UNKNOWN` iff the
+    /// removed card passes its predicate (PERF `(-212)`, `(-213)`). Every
+    /// death-path removal goes through here or [`take_by_id`](Self::take_by_id).
     pub fn remove(&mut self, index: usize) -> CardInstance {
         self.note_write();
         let card = self.cards.remove(index);
@@ -2406,9 +2186,8 @@ impl Battlefield {
         Some(self.remove(pos))
     }
 
-    /// `Vec::retain`, shadowed: removal-only, but of cards the zone does not
-    /// see go, so every `PRESENT` lane and member list drops and every
-    /// `ABSENT` lane stays.
+    /// `Vec::retain`, shadowed: removal of cards the zone doesn't see, so
+    /// `PRESENT` lanes and member lists drop and `ABSENT` lanes stay.
     pub fn retain(&mut self, f: impl FnMut(&CardInstance) -> bool) {
         self.note_write();
         self.lanes_after_removal(None);
@@ -2423,11 +2202,10 @@ impl Battlefield {
         card
     }
 
-    /// The member-list lanes as `(lane, predicate, list)`, for the membership
-    /// writes to keep each list exact (PERF `(-214)`): a push appends bit
-    /// `len` when the new card qualifies, a removal at `i` shifts the bits
-    /// above `i` down one. The predicate is the one the list's audit
-    /// recomputes with.
+    /// The member-list lanes as `(lane, predicate, list)`, so membership
+    /// writes keep each list exact (PERF `(-214)`): a push sets bit `len` if
+    /// the card qualifies, a removal at `i` shifts higher bits down. The
+    /// predicate is the list audit's.
     fn member_lanes(&self) -> [(u32, LanePredicate, &std::sync::atomic::AtomicU64); 3] {
         [
             (LANE_GRANT, card_has_any_grant_bits, &self.grant_members),
@@ -2477,9 +2255,8 @@ impl Battlefield {
     }
 
     /// The lane word after a removal: `ABSENT` lanes kept, `PRESENT` lanes
-    /// kept when `card` (the one that left) fails their predicate and dropped
-    /// otherwise, member lists shifted down past `index` — all three dropped
-    /// whole when the leaver is unknown (`retain`).
+    /// kept iff the leaver fails their predicate, member lists shifted down
+    /// past `index` — all dropped when the leaver is unknown (`retain`).
     #[inline(never)]
     fn lanes_after_removal(&self, removed: Option<(usize, &CardInstance)>) {
         let w = self.type_gates.load(Ordering::Relaxed);
@@ -2495,9 +2272,9 @@ impl Battlefield {
         if let Some((index, card)) = removed {
             for (shift, _, list) in self.member_lanes() {
                 if (w >> shift) & LANE_MASK == PRESENT as u64 {
-                    // `index` is at most 63 (a list exists only up to 64
-                    // cards); the bits above index 63 are none, and a shift
-                    // by 64 is the overflow the closing grid found.
+                    // `index` <= 63 (lists exist only up to 64 cards);
+                    // `checked_shr` avoids the shift-by-64 overflow the
+                    // closing grid found.
                     let bits = list.load(Ordering::Relaxed);
                     let low = bits & ((1u64 << index) - 1);
                     let high = bits.checked_shr(index as u32 + 1).unwrap_or(0) << index;
@@ -2557,10 +2334,9 @@ impl Clone for Battlefield {
             grant_members: std::sync::atomic::AtomicU64::new(
                 self.grant_members.load(Ordering::Relaxed),
             ),
-            // The clone's cards are this zone's cards until something writes
-            // to one of them, and a write bumps the *clone's* counter — so a
-            // memo stamped before the clone describes the clone too, and
-            // carrying both is what makes a probe start warm.
+            // The clone shares these cards until a write bumps the *clone's*
+            // counter, so memos stamped before the clone stay valid for it
+            // and a probe starts warm.
             writes: self.writes,
             sba_stamp: std::sync::atomic::AtomicU32::new(self.sba_stamp.load(Ordering::Relaxed)),
             sba_fold: std::sync::atomic::AtomicU64::new(self.sba_fold.load(Ordering::Relaxed)),
@@ -2617,8 +2393,7 @@ impl From<CowBox<Vec<CardInstance>>> for Battlefield {
 }
 
 // `for c in &bf` / `for c in &mut bf` — as on `Graveyard`, deref coercion
-// doesn't apply to `for` loops. The `&mut` arm is the second invalidation
-// point.
+// doesn't apply to `for` loops.
 impl<'a> IntoIterator for &'a Battlefield {
     type Item = &'a CardInstance;
     type IntoIter = std::slice::Iter<'a, CardInstance>;
@@ -2689,12 +2464,9 @@ mod tests {
         assert_eq!(plain.memo(), Some(false));
     }
 
-    /// The second lane. Riftstone Portal is the only
-    /// `GrantActivatedAbilityFromGraveyard` shape in the catalog, so the lane
-    /// it gates is `ABSENT` on every board the bench deals — which is what
-    /// makes it a win and also what makes it invisible to the suite unless a
-    /// test deals the card. Both lanes answer independently off one packed
-    /// word, and neither store disturbs the other.
+    /// Riftstone Portal is the only `GrantActivatedAbilityFromGraveyard`
+    /// shape, so the lane is invisible to the suite unless a test deals it.
+    /// Both lanes share one packed word and neither store disturbs the other.
     #[test]
     fn the_activated_grant_lane_is_independent_of_the_anthem_lane() {
         let g = gy(vec![crate::catalog::riftstone_portal(), crate::catalog::wonder()]);
@@ -2749,9 +2521,8 @@ mod tests {
         assert_eq!(g.memo(), None, "&mut iteration invalidated");
     }
 
-    /// CR 704.5d's lane on the graveyard. Instance state, not definition
-    /// state — the only lane of the three that is, and it is sound for the
-    /// same reason: a write is the only thing that can change the answer.
+    /// CR 704.5d's graveyard lane: instance state, sound because only a
+    /// write can change the answer.
     #[test]
     fn the_graveyard_token_lane_reads_instance_state() {
         let mut g = gy(vec![crate::catalog::shivan_dragon()]);
@@ -2877,10 +2648,9 @@ mod tests {
             .into()
     }
 
-    /// `find_by_id`'s index memo is verified, not invalidated: every way it
-    /// can go stale — a removal that shifts the board under it, a removal
-    /// that shortens the board past it, the card it names leaving — has to
-    /// fall through to the scan and answer correctly anyway.
+    /// `find_by_id`'s memo is verified, not invalidated: every way it goes
+    /// stale (board shifted, shortened, card gone) must fall through to the
+    /// scan and still answer correctly.
     #[test]
     fn find_by_id_hint_survives_every_membership_change() {
         let mut b = bf(vec![
@@ -2905,9 +2675,8 @@ mod tests {
     }
 
     /// The `&mut` twin locates on the shared side: a miss answers `None`
-    /// without unsharing, where `iter_mut().find(…)` deep-copied the whole
-    /// zone first. A hit writes, so it unshares — and the snapshot doesn't
-    /// see the write.
+    /// without unsharing; a hit unshares, and the snapshot doesn't see the
+    /// write.
     #[test]
     fn find_by_id_mut_misses_without_unsharing() {
         let mut a = bf(vec![crate::catalog::grizzly_bears(), crate::catalog::blood_moon()]);
@@ -2990,9 +2759,8 @@ mod tests {
         assert_eq!(b.memo(LANE_CREATURE), None, "DerefMut invalidated");
     }
 
-    /// A definition rewrite reaches the cards two derefs below anything the
-    /// zone can observe, so the lanes are stamped with `definition_epoch`
-    /// instead. Rewriting through the element handle must still be seen.
+    /// A definition rewrite through an element handle is invisible to the
+    /// zone, so the `definition_epoch` stamp must catch it.
     #[test]
     fn battlefield_definition_rewrite_invalidates_through_the_epoch() {
         let land = |c: &CardInstance| {
@@ -3071,11 +2839,10 @@ mod tests {
         assert_eq!(b.memo(LANE_LAND), Some(false), "the land lane survived the store");
     }
 
-    /// PERF `(-212)` — a membership write demotes only the lanes it can
-    /// change: a push can only turn a lane `PRESENT` (so `ABSENT` drops and
-    /// `PRESENT` stays), a removal only `ABSENT` (the reverse); the
-    /// member-list lanes clear either way. The lane audits recompute on
-    /// every read, so a kept state that was wrong would fail here.
+    /// PERF `(-212)` — a membership write changes only the lanes it can: a
+    /// push can only turn a lane `PRESENT`, a removal only `ABSENT`; member
+    /// lists are kept exact (`(-214)`). The lane audits recompute on every
+    /// read, so a wrongly kept state fails here.
     #[test]
     fn membership_writes_demote_only_the_lanes_they_can_change() {
         let land = crate::game::card_can_change_land_types;
@@ -3114,12 +2881,10 @@ mod tests {
         let mut b = bf(vec![crate::catalog::grizzly_bears(), crate::catalog::grave_titan()]);
         let Err(epoch) = b.trigger_members() else { panic!("unknown until filled") };
         b.store_trigger_members(epoch, triggerer_bits(&b));
-        // The epoch is process-wide (`card::definition_epoch`): a game in
-        // another test thread that rewrites a definition makes every memo
-        // read stale, correctly (seen failing this test beside the policy
-        // pilot's whole-game tests, 2026-10-31). When the epoch moved since
-        // the last stamp, re-stamp and read again: what this checks is that
-        // the writes keep the list exact, not that no other thread ran.
+        // The epoch is process-wide, so another test thread's definition
+        // rewrite legitimately makes the memo stale (seen 2026-10-31). If the
+        // epoch moved, re-stamp and re-read: this checks list exactness, not
+        // thread isolation.
         let mut stamped = epoch;
         let mut members = |b: &Battlefield| match b.trigger_members() {
             Err(e) if e != stamped => {
@@ -3150,10 +2915,9 @@ mod tests {
         assert!(b.trigger_members().is_err(), "the 65th card drops the list");
     }
 
-    /// `(-115)`'s lane is a *positional* answer where the others are a
-    /// presence bit, and the dispatcher reads it **instead of** the per-card
-    /// gate — so a stale one silently drops a trigger rather than costing a
-    /// walk. It has to fall over exactly where the presence lanes do.
+    /// `(-115)`'s lane is *positional* and read **instead of** the per-card
+    /// gate, so a stale one silently drops a trigger. It must invalidate
+    /// exactly where the presence lanes do.
     #[test]
     fn trigger_member_list_is_filled_and_invalidated() {
         let mut b = bf(vec![

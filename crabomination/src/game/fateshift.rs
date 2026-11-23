@@ -359,8 +359,8 @@ impl GameState {
     /// `Effect::PlayLandAmongNow` — "you may play lands from among [what]" as
     /// the effect resolves (Gix's ruling): on the controller's own turn with
     /// a land play left, they may play one of those lands (exiled, or in their
-    /// graveyard) now. Headless,
-    /// the first. Counts the land play and reports it as played.
+    /// graveyard) now. Headless, the first. Counts the land play and reports
+    /// it as played.
     pub(crate) fn play_land_among_now(
         &mut self,
         what: &Selector,

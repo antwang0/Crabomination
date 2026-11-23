@@ -238,18 +238,14 @@ pub mod mod_families {
     /// (`card::is_ability_lock_keyword`) — the [`KEYWORD`] subset the
     /// activation gates ask about, so they read one word instead of the list.
     pub const ABILITY_LOCK: u32 = 1 << 7;
-    /// A modification that **edits an existing keyword** rather than granting
-    /// one: `RemoveKeyword` / `CantHaveKeyword` (layer 6) and the two layer-3
-    /// text rewrites that move a keyword's payload without changing its shape
-    /// (`ReplaceColorWord` on `Protection`, `ReplaceBasicLandType` on
-    /// `Landwalk`). Kept out of [`KEYWORD`] because that bit means "a grant"
-    /// to the gates that already consume it, and out of [`STRIP`] because
-    /// that one means `RemoveAllAbilities` exactly.
+    /// A modification that edits an existing keyword rather than granting
+    /// one: `RemoveKeyword` / `CantHaveKeyword` (layer 6) and the layer-3
+    /// rewrites `ReplaceColorWord` (`Protection`) / `ReplaceBasicLandType`
+    /// (`Landwalk`). Not in [`KEYWORD`] (that bit means "a grant") nor
+    /// [`STRIP`] (that means `RemoveAllAbilities` exactly).
     ///
-    /// ⚠ **The four were mapped to NO family until `(-346)`**, and
-    /// `keyword_removal_in_scope` was gating a walk that looks for them on
-    /// [`KEYWORD`] — see [`ContinuousEffects::any_in_family`], which is the
-    /// guard that now makes that mistake a test failure.
+    /// ⚠ These four had no family until PERF `(-346)`, which silently broke a
+    /// gate; [`ContinuousEffects::any_in_family`] now catches that in tests.
     pub const KEYWORD_EDIT: u32 = 1 << 8;
     /// `SetPowerToughnessLive` — the gather's rewrite pass asks for it.
     pub const LIVE_PT: u32 = 1 << 9;
@@ -261,14 +257,10 @@ pub mod mod_families {
 
 /// The [`mod_families`] `m` belongs to.
 ///
-/// ⚠ **Exhaustive on purpose, and it was a `_ => 0` until `(-346)`.** A
-/// modification that falls through to "no family" is invisible to every
-/// [`ContinuousEffects::has_family`] gate, and the failure mode is silent: the
-/// gate answers `false`, its caller skips the walk that would have found the
-/// modification, and the rules question comes back with the printed answer.
-/// That is exactly what `RemoveKeyword` and `CantHaveKeyword` did for one
-/// commit. A new variant now has to be *named* here, and the family-less ones
-/// are named with the reason they can be.
+/// ⚠ Exhaustive on purpose (it was `_ => 0` until PERF `(-346)`). A
+/// family-less modification is silently invisible to every
+/// [`ContinuousEffects::has_family`] gate, so the rules question gets the
+/// printed answer. A new variant must be named here; family-less ones say why.
 pub fn modification_families(m: &Modification) -> u32 {
     use Modification as M;
     use mod_families as F;
@@ -288,21 +280,18 @@ pub fn modification_families(m: &Modification) -> u32 {
         M::RemoveAllAbilities | M::RemoveAllAbilitiesButMana => F::STRIP,
         M::SetPowerToughnessLive(_) => F::LIVE_PT,
         M::TriggersAdditionalTime => F::TRIGGER_DOUBLE,
-        // Family-less, each for the same reason: **nothing gates on it**. The
-        // requirement walker's `has_stype` and `has_atype` closures read the
-        // computed view unconditionally, and controller changes are asked
-        // about through the computed view or not at all. Give one of these a
-        // family the day a gate wants it — and note that the walker closure
-        // is where such a gate would go, so the cost model is `(-345)`'s.
+        // Family-less because nothing gates on them: the requirement walker's
+        // `has_stype` / `has_atype` read the computed view unconditionally,
+        // as do controller checks. Add a family when a gate wants one (cost
+        // model: PERF `(-345)`).
         M::AddSupertype(_)
         | M::RemoveSupertype(_)
         | M::SetArtifactSubtypes(_)
         | M::AddArtifactSubtype(_)
         | M::ChangeController(_) => 0,
-        // Layer 7. The toughness question is the only one anything gates on
-        // and it is answered by `modification_reduces_toughness` below, which
-        // is the shared oracle rather than a second arm list — the shape this
-        // whole function's warning is about.
+        // Layer 7: the only gated question (toughness) is answered by the
+        // shared oracle `modification_reduces_toughness` below, not a second
+        // arm list.
         M::SetPowerToughness(..)
         | M::SetPowerToughnessToManaValue
         | M::SetPower(_)
@@ -319,27 +308,22 @@ pub fn modification_families(m: &Modification) -> u32 {
     kind | pt
 }
 
-/// The resolved continuous effects a game holds (`GameState::continuous_
-/// effects`), behind the same `CowBox` as before, with a fold of the
-/// [`mod_families`] present in it held beside the list (PERF `(-208)`).
+/// The resolved continuous effects (`GameState::continuous_effects`) in a
+/// `CowBox`, with a cached fold of the [`mod_families`] present (PERF
+/// `(-208)`) so presence gates read one word instead of walking the list.
 ///
-/// Seven presence gates walked the list on every ask for one modification
-/// kind — every SBA sweep, every land tap, every type-flavoured predicate.
-/// Reads go through `Deref`; every `&mut` route (`DerefMut`, [`push`](Self::push))
-/// clears the fold, and the first ask after a write recomputes it. The list
-/// is written a few times a turn and asked hundreds of times in between.
-/// Atomics rather than a `Cell` so `GameState` stays `Sync`; the same
-/// load-modify-store contract as `Battlefield`'s lanes.
+/// Reads go through `Deref`; every `&mut` route (`DerefMut`,
+/// [`push`](Self::push)) clears the fold and the next ask recomputes it.
+/// Atomic rather than `Cell` so `GameState` stays `Sync` (same contract as
+/// `Battlefield`'s lanes).
 #[derive(Debug, Default)]
 pub struct ContinuousEffects {
     list: crate::cow::CowBox<Vec<ContinuousEffect>>,
     /// `mod_families::VALID | families`, or 0 while unknown.
     fold: std::sync::atomic::AtomicU32,
-    /// How many times anything took `&mut` at the list — the per-object twin
-    /// of [`crate::zone::Battlefield`]'s `writes` (PERF `(-306)`), bumped at
-    /// the same two places that clear `fold`. The resolved-effect list is one
-    /// of the gather's inputs, so the state-level gather memo's key needs it.
-    /// The starting value is arbitrary — only a *change* is read.
+    /// Count of `&mut` reaches at the list, bumped where `fold` is cleared —
+    /// the twin of [`crate::zone::Battlefield`]'s `writes` (PERF `(-306)`),
+    /// part of the gather memo's key. Only a change is read.
     writes: u32,
 }
 
@@ -368,30 +352,17 @@ impl ContinuousEffects {
         self.families() & family != 0
     }
 
-    /// `has_family(mask) && iter().any(pred)` — the fold used as a gate on a
-    /// per-entry walk — **with the implication that makes it sound audited.**
+    /// `has_family(mask) && iter().any(pred)`, with the premise audited.
     ///
-    /// ⚠ **The short-circuit is only correct when every entry `pred` accepts
-    /// carries a bit of `mask` in [`modification_families`], and that is a
-    /// premise the caller writes down in two places at once.** It shipped
-    /// wrong once: `(-345)`'s keyword-removal gate read
-    /// `has_family(KEYWORD) && any(RemoveKeyword | CantHaveKeyword)`, and
-    /// `modification_families` mapped **neither** of those to a family, so a
-    /// resolved "loses flying until your next turn" was invisible to the gate
-    /// and every "creature with flying" filter still matched the grounded
-    /// creature. Nothing in the type system connected the two halves.
+    /// ⚠ The short-circuit is only sound if every entry `pred` accepts carries
+    /// a bit of `mask` in [`modification_families`]. That once shipped wrong
+    /// (PERF `(-345)`: a "loses flying" effect was invisible to its gate).
+    /// Under `debug-assertions` a `false` answer re-runs `pred` over the list
+    /// and asserts it finds nothing, so a mis-mapped modification fails tests.
     ///
-    /// This does. Under `debug-assertions` the `false` answer re-runs `pred`
-    /// over the whole list and asserts it finds nothing, so the first board
-    /// that reaches a mis-mapped modification fails the suite or a sweep cell
-    /// instead of answering wrongly. Release pays the fold and the walk, as
-    /// before.
-    ///
-    /// ⚠ **`pred` is `Copy` and goes to `any` by value, never by reference** —
-    /// `&F: FnMut` routes every element through
-    /// `core::ops::function::impls::call_mut`, which does not inline;
-    /// `Battlefield::lane`'s doc prices the same mistake at 18.8 M Ir, and the
-    /// first cut of this helper paid **+0.16 % on all three pools** for it.
+    /// ⚠ `pred` is `Copy` and passed to `any` by value, never by reference:
+    /// `&F: FnMut` goes through a non-inlined `call_mut` (see
+    /// `Battlefield::lane`'s doc; the first cut paid +0.16 % on all pools).
     #[inline]
     pub fn any_in_family(
         &self,
@@ -506,20 +477,15 @@ pub struct ContinuousEffect {
 
 /// The ids an [`AffectedPermanents::Specific`] names.
 ///
-/// Inline rather than a `Vec`, and the slot is **free**: `CardId` is a `u32`,
-/// so `CopyVec<[CardId; 4]>` is the same 24 bytes as the `Vec` it replaces and
-/// `(-152)`'s ceiling rule — an inline slot in a stored, cloned struct is
-/// priced at the clone — has nothing to charge. The allocation it removes is
-/// not free: almost every emitter names exactly **one** permanent, and
-/// `just(id)` was 48,418 of a six-game `fixed` run's allocations
-/// inside `gather_continuous_effects_inner` alone. `CopyVec` rather than
-/// `SmallVec` so `ContinuousEffect::clone` is a `memcpy` too. PERF `(-161)`.
+/// Inline rather than a `Vec`: `CopyVec<[CardId; 4]>` is the same 24 bytes,
+/// so the slot costs nothing at clone (PERF `(-152)`'s rule) and removes an
+/// allocation from almost every emitter, which names one permanent.
+/// `CopyVec` rather than `SmallVec` so `ContinuousEffect::clone` is a
+/// `memcpy`. PERF `(-161)`.
 pub type AffectedIds = crate::copyvec::CopyVec<[CardId; 4]>;
 
-/// `AffectedIds` must not be wider than the `Vec` it replaced — the whole
-/// case for the inline slot is that it is free in a struct this hot to clone.
-/// 64-bit only: on wasm32 a `Vec` is 12 bytes, and the browser client is not
-/// what the clone budget is measured on.
+/// `AffectedIds` must not be wider than a `Vec` (the inline slot must stay
+/// free to clone). 64-bit only: on wasm32 a `Vec` is 12 bytes.
 #[cfg(target_pointer_width = "64")]
 const _: () = assert!(
     std::mem::size_of::<AffectedIds>() <= std::mem::size_of::<Vec<CardId>>(),
@@ -531,29 +497,21 @@ pub enum AffectedPermanents {
     /// Only the source permanent itself.
     Source,
     /// All permanents matching the given predicate.
-    /// `controller: Some(p)` — only that player's permanents; `None` — all players.
-    /// `exclude_source: true` skips the effect's source permanent — matches the
-    /// printed "**other** [type]" wording (Hofri Ghostforge's "Other creatures
-    /// you control get +1/+0", various "Other X you control" anthems). Defaults
-    /// to `false` (include source) via `#[serde(default)]` for snapshot back-
-    /// compat with pre-push-XXXV serialized states.
-    /// `card_types` is matched as a conjunction: a permanent must carry
-    /// *every* listed type (so `[Artifact, Creature]` means "artifact
-    /// creatures", not "artifacts or creatures"). Empty = any type.
+    /// `controller: Some(p)` — only that player's permanents; `None` — all.
+    /// `exclude_source` — the printed "other [type]" wording (Hofri
+    /// Ghostforge). `card_types` is a conjunction (`[Artifact, Creature]` =
+    /// "artifact creatures"); empty = any type.
     All {
         controller: Option<usize>,
         card_types: Vec<CardType>,
         #[serde(default)]
         exclude_source: bool,
-        /// Optional color filter (Honor of the Pure's "White creatures you
-        /// control"). `None` = any color. Matched against the card's cost
-        /// colors. `#[serde(default)]` keeps old snapshots valid.
+        /// Color filter, matched against cost colors (Honor of the Pure).
+        /// `None` = any color.
         #[serde(default)]
         color: Option<crate::mana::Color>,
-        /// Optional token filter (Intangible Virtue's "creature tokens you
-        /// control", Always Watching's "nontoken creatures"). `None` = either;
-        /// `Some(true)` = tokens only; `Some(false)` = nontokens only.
-        /// `#[serde(default)]` keeps old snapshots valid.
+        /// Token filter: `Some(true)` tokens only (Intangible Virtue),
+        /// `Some(false)` nontokens only (Always Watching), `None` either.
         #[serde(default)]
         token: Option<bool>,
         /// Optional ownership filter relative to the permanent's controller
@@ -561,18 +519,13 @@ pub enum AffectedPermanents {
         /// `None` = either; `Some(false)` = borrowed permanents only.
         #[serde(default)]
         owned_by_controller: Option<bool>,
-        /// "Colorless only" filter (Ruination Guide's "other colorless
-        /// creatures you control"). Devoid-aware (CR 702.114). `#[serde(default)]`
-        /// keeps old snapshots valid.
+        /// "Colorless only" filter (Ruination Guide). Devoid-aware (CR 702.114).
         #[serde(default)]
         colorless: bool,
     },
-    /// All permanents controlled by any player on a team other than the
-    /// source's. In 1v1 / free-for-all this is "everyone but the source's
-    /// controller" — but in team formats (2HG) teammates of the source
-    /// must not be hit. `friendly_seats` lists the source's team; empty
-    /// means "use the legacy single-seat `source_controller` check"
-    /// (snapshots predating push-XLIII).
+    /// All permanents controlled by players outside the source's team (2HG
+    /// teammates are spared). `friendly_seats` lists the team; empty falls
+    /// back to the single-seat `source_controller` check (old snapshots).
     AllOpponents {
         source_controller: usize,
         card_types: Vec<CardType>,
@@ -592,22 +545,16 @@ pub enum AffectedPermanents {
     Specific(AffectedIds),
     /// All creatures with the given creature type (lord effect).
     /// `controller: Some(p)` restricts to that player's creatures; `None` = all.
-    /// `exclude_source: true` skips the effect's source permanent itself —
-    /// matches printed "**other** [creature type]s" wording (Goblin King,
-    /// Quintorius Field Historian, etc.). `#[serde(default)]` so existing
-    /// literal initializers stay valid (defaults to false = include source).
+    /// `exclude_source` — printed "other [creature type]s" (Goblin King).
     AllWithCreatureType {
         controller: Option<usize>,
         creature_type: crate::card::CreatureType,
         #[serde(default)]
         exclude_source: bool,
     },
-    /// All permanents bearing at least `at_least` counters of the given
-    /// kind. Used for SOS Emil's "creatures you control with +1/+1
-    /// counters have trample" lord-with-counter pattern, and the
-    /// broader "Monstrous / Levelup-creatures get [keyword]" buff
-    /// shape. `controller: Some(p)` restricts to that player; `None` =
-    /// all. `card_types` empty means any permanent type matches.
+    /// All permanents with at least `at_least` counters of `counter` (SOS
+    /// Emil's "creatures with +1/+1 counters have trample"). `controller:
+    /// None` = all players; empty `card_types` = any type.
     AllWithCounter {
         controller: Option<usize>,
         card_types: Vec<CardType>,
@@ -615,23 +562,17 @@ pub enum AffectedPermanents {
         at_least: u32,
     },
     /// A requirement the simpler variants can't express (disjunctions,
-    /// `IsNonbasicLand`, type unions). Evaluated card-locally via
-    /// [`requirement_matches_card`], relative to `source_controller` for
-    /// `ControlledByYou`/`ControlledByOpponent`. Only emitted for filters
-    /// whose every leaf is computable from a card's printed characteristics
-    /// (no power/combat/zone state), so the match is correct without a
-    /// `GameState` handle. Powers Thalia, Heretic Cathar ("creatures **and
-    /// nonbasic lands** your opponents control enter tapped").
+    /// `IsNonbasicLand`, type unions), matched card-locally via
+    /// [`requirement_matches_card`] relative to `source_controller`. Only
+    /// emitted when every leaf is readable from printed characteristics, so
+    /// no `GameState` is needed (Thalia, Heretic Cathar).
     CardMatch {
         source_controller: usize,
         requirement: Box<SelectionRequirement>,
     },
-    /// Like `CardMatch`, but additionally gated on the affected permanent's
-    /// *computed* power (CR 613.8 — a layer-6 keyword grant doesn't feed back
-    /// into layer 7, so the dependency is acyclic). Evaluated in a second
-    /// per-card pass once the gate-free power is known. Powers Temur
-    /// Ascendancy's "creatures you control with power 4 or greater have
-    /// haste".
+    /// `CardMatch` also gated on computed power (Temur Ascendancy), evaluated
+    /// in a second pass once gate-free power is known; acyclic because a
+    /// layer-6 grant doesn't feed layer 7 (CR 613.8).
     CardMatchPowerGated {
         source_controller: usize,
         requirement: Box<SelectionRequirement>,
@@ -649,15 +590,9 @@ impl AffectedPermanents {
 
 // ── Computed permanent ────────────────────────────────────────────────────────
 
-/// Which `CardDefinition` field an [`Overlay`] projects into, as a **type**
-/// rather than the `fn` pointer field it used to be.
-///
-/// There are exactly four projections and each characteristic's is fixed at
-/// compile time, so storing it cost 8 bytes on every overlay (32 on every
-/// `ComputedPermanent`) and turned the printed-side read — the overwhelmingly
-/// common one — into an indirect call the optimizer cannot see through once
-/// the struct has been handed out behind an `Arc`. As a type parameter the
-/// read is a field offset and the overlay is just its `Option<Box<_>>`.
+/// Which `CardDefinition` field an [`Overlay`] projects into, as a type
+/// parameter: the printed-side read is a field offset rather than a stored
+/// `fn` pointer (8 bytes per overlay and an opaque indirect call).
 pub trait DefProj: 'static {
     type Val: Clone + 'static;
     fn printed(def: &crate::card::CardDefinition) -> &Self::Val;
@@ -696,27 +631,18 @@ impl DefProjList for KeywordsOf {
     }
 }
 
-/// A layer-computed characteristic that is usually exactly the printed one —
-/// the **layer pass's working form**, which borrows the definition.
+/// A layer-computed characteristic that is usually exactly the printed one:
+/// the layer pass's working form, borrowing the definition.
 ///
-/// Projects into the permanent's `CardDefinition`; the printed value is
-/// cloned only when a layer actually writes through `DerefMut`.
-/// `compute_permanent_pass` runs ~1.5 M times per six games and was **40 % of
-/// every allocation the simulator makes**, nearly all of it cloning
-/// collections nothing then modified.
+/// The printed value is cloned only when a layer writes through `DerefMut`
+/// (the pass used to clone every collection it never modified). `Deref` /
+/// `DerefMut` to `T` keep the pass body reading like the plain type; the
+/// override is boxed so the struct stays 24 bytes (`Subtypes` is seven
+/// `Vec`s).
 ///
-/// `Deref`/`DerefMut` to `T` keep the value reading like the plain type, so
-/// the pass body writes `card_types.push(..)` and `subtypes.creature_types`
-/// unchanged. The override is boxed so the struct stays 24 bytes whatever
-/// `T` is — `Subtypes` alone is seven `Vec`s.
-///
-/// **The borrow is why this is not the stored form.** Four of these on one
-/// `ComputedPermanent` held four `Arc<CardDefinition>` handles to the *same*
-/// definition — three redundant reference-count pairs and 24 bytes per
-/// computed permanent, priced by probe at the eighty-fifth pass (PERF
-/// `(-70)`) as `fixed` 0.532 % / `cube` 0.580 %.
-/// [`into_overlay`](Self::into_overlay) drops the handle at the one
-/// construction site and [`ComputedPermanent`] keeps exactly one.
+/// Not the stored form because of the borrow: [`into_overlay`](Self::into_overlay)
+/// drops it so [`ComputedPermanent`] holds one definition handle, not four
+/// (PERF `(-70)`).
 pub(crate) struct Printed<'a, P: DefProj> {
     src: &'a crate::card::CardDefinition,
     over: Option<Box<P::Val>>,
@@ -736,10 +662,8 @@ impl<'a, P: DefProj> Printed<'a, P> {
     }
 }
 
-/// [`Printed`] with the definition handle removed: the **stored** half of a
-/// computed characteristic. A read takes the definition from the one
-/// `Arc<CardDefinition>` [`ComputedPermanent`] holds, so the four
-/// characteristics cost one reference bump to build and one to drop.
+/// [`Printed`] without the definition handle: the stored form. Reads take
+/// the definition from [`ComputedPermanent`]'s single `Arc<CardDefinition>`.
 pub struct Overlay<P: DefProj> {
     over: Option<Box<P::Val>>,
 }
@@ -783,24 +707,16 @@ impl<P: DefProjList> Clone for OverlayList<P> {
     }
 }
 
-/// [`Printed`] for a *list*, with the override stored as a `Box<[T]>`.
+/// [`Printed`] for a list, with the override stored as a `Box<[T]>`.
 ///
-/// `Box<Vec<T>>` is two allocations — the boxed header and the `Vec`'s buffer
-/// — and `Printed<Vec<_>>::push` was making both, 51,798 times on a six-game
-/// `cube` run, for a list that is materialized once and then appended to once.
-/// The growth headroom a `Vec` exists for is never used here. `Box<[T]>` is
-/// one allocation; the cost is the fat pointer, **+8 bytes** on
-/// `ComputedPermanent`, which is `Arc`-allocated 227,418 times a run.
+/// One allocation instead of `Box<Vec<T>>`'s two; the list is materialized
+/// and appended once, so `Vec` headroom is never used. The fat pointer's +8
+/// bytes on `ComputedPermanent` was measured cheaper than the allocation
+/// (eighty-fourth pass). Unboxing the override (`Option<T>`, +208 bytes) lost
+/// 1.755 % and is in TODO's "do not rebuild".
 ///
-/// Both halves are measured rather than argued (eighty-fourth pass): the
-/// eight bytes alone, by padding the struct, read `fixed` **+0.040 %** /
-/// `cube` **+0.058 %**, against allocations worth 0.10 % / 0.33 %. Unboxing
-/// the override entirely — `Option<T>`, +208 bytes — reads **+1.755 %** and
-/// is in TODO's "do not rebuild".
-///
-/// `Deref<Target = [T]>` rather than `&Vec<T>`: every read site uses slice
-/// API (`contains`, `iter`, `has_kw`, `is_empty`), and the four writers are
-/// the inherent methods below.
+/// `Deref<Target = [T]>`: every reader uses slice API; the writers are the
+/// inherent methods below.
 pub(crate) struct PrintedList<'a, P: DefProjList> {
     src: &'a crate::card::CardDefinition,
     over: Option<Box<[P::Item]>>,
@@ -868,16 +784,10 @@ impl<P: DefProjList> std::ops::Deref for PrintedList<'_, P> {
     }
 }
 
-/// The one write shape that is not a general `DerefMut`: appending.
-///
-/// `deref_mut` materializes with `proj(src).clone()`, and `Vec::clone` hands
-/// back `capacity == len` — so the push that follows the first write always
-/// reallocates. At the eighty-first tip that pairing is exact on a `cube` run:
-/// `compute_permanent_pass` makes **51,706 `Vec::clone` calls, 51,706
-/// `grow_one` calls and 51,706 `__rust_alloc` calls**, three allocations for
-/// one appended keyword. Materializing with room for the element removes the
-/// third. Inherent, so it shadows the `Deref`'d `Vec::push` at every existing
-/// call site without touching one.
+/// Appending, the one write that bypasses `DerefMut`: `Vec::clone` returns
+/// `capacity == len`, so clone-then-push always reallocated (eighty-first
+/// tip). Materializing with room for the element saves that allocation.
+/// Inherent, so it shadows the `Deref`'d `Vec::push` at existing call sites.
 impl<T: Clone + 'static, P: DefProj<Val = Vec<T>>> Printed<'_, P> {
     #[inline]
     pub(crate) fn push(&mut self, value: T) {
@@ -917,11 +827,9 @@ impl<P: DefProj> std::ops::DerefMut for Printed<'_, P> {
 /// The fully resolved state of a permanent after all layers are applied.
 /// Use this instead of reading `CardInstance` fields directly when layers matter.
 ///
-/// The four characteristics are private [`Overlay`]s read through the
-/// same-named accessors ([`card_types`](Self::card_types) …): each is a
-/// projection into `def`, which is the **one** `Arc<CardDefinition>` handle
-/// this struct holds. It held four — one per characteristic — until PERF
-/// `(-70)`.
+/// The four characteristics are private [`Overlay`]s read through same-named
+/// accessors ([`card_types`](Self::card_types) …), each projecting into the
+/// single `def` handle (PERF `(-70)`).
 #[derive(Clone)]
 pub struct ComputedPermanent {
     pub id: CardId,
@@ -935,21 +843,14 @@ pub struct ComputedPermanent {
     keywords: OverlayList<KeywordsOf>,
     pub power: i32,
     pub toughness: i32,
-    /// CR 613.4 — base power and toughness (after layers 7a/7b, before 7c,
-    /// counters and 7d switching), a nibble each: 0..=13 exactly, 14 for any
-    /// negative value, 15 for 14 or more. Every reader compares with a
-    /// printed small N ("base power or toughness 1" — Bess, Soul Nourisher),
-    /// and the byte rides the struct's padding (72 bytes, PERF's padding
-    /// probe). Read through [`Self::base_pt`].
+    /// CR 613.4 — base P/T (after 7a/7b, before 7c, counters, 7d), a nibble
+    /// each: 0..=13 exact, 14 = negative, 15 = 14+. Readers only compare with
+    /// a small printed N (Bess, Soul Nourisher); the byte rides padding.
+    /// Read through [`Self::base_pt`].
     base_pt_nibbles: u8,
-    /// True when at least one `Modification::RemoveAllAbilities` continuous
-    /// effect is in scope for this permanent. Lets the trigger dispatcher
-    /// and activated-ability resolver skip the card's printed
-    /// `triggered_abilities` / `activated_abilities` / `static_abilities` so
-    /// "loses all abilities" cards (Turn to Frog, Mercurial Transformation,
-    /// Lignify) honor CR 113.10 — the layer-6 strip applies to printed
-    /// abilities, not just keywords. Defaults to false so pre-push snapshots
-    /// keep their existing behavior.
+    /// A `RemoveAllAbilities` effect is in scope: trigger dispatch and
+    /// ability resolution skip the printed abilities too, not just keywords
+    /// (CR 113.10 — Turn to Frog, Lignify).
     pub lost_all_abilities: bool,
     /// [`Self::creature_types_set`] and [`Self::keeps_mana_abilities`] as bits:
     /// one byte, so the struct stays 72 (PERF's padding probe).
@@ -1048,15 +949,11 @@ pub fn apply_layers(
         .collect()
 }
 
-/// Whether the two CR 613.8 gated re-runs can fire at all. **A property of
-/// the effect list, not of the permanent** — so a whole-battlefield pass asks
-/// it once rather than once per card, and asking it takes *one* walk rather
-/// than three: on a board carrying none of the three (the common one) every
-/// `any()` runs to the end, so the early exit buys nothing and three walks
-/// cost three times one.
-/// Packed into one `u16` ([`Flags`] spelled out) because it rides inline
-/// in `GameState`'s two gather memos, which `cow::tests::game_state_stays_small`
-/// caps; nine `bool`s overflowed the padding the five had used.
+/// Whether the CR 613.8 gated re-runs can fire at all. A property of the
+/// effect list, not the permanent, so a battlefield pass computes it once, in
+/// one walk (separate `any()`s each run to the end on the common board).
+/// Packed into a `u16` ([`Flags`] unpacked) because it rides inline in
+/// `GameState`'s gather memos, capped by `cow::tests::game_state_stays_small`.
 #[derive(Clone, Copy, Default, PartialEq, Eq)]
 pub(crate) struct SecondPass(u16);
 
@@ -1217,10 +1114,7 @@ impl ChangelingRead {
 }
 
 /// Apply all active continuous effects to a single permanent, returning
-/// its `ComputedPermanent`. Same per-card work as one iteration of
-/// [`apply_layers`] — for callers that only need one card's computed
-/// state and shouldn't pay to build (and discard) every other
-/// permanent's view.
+/// its `ComputedPermanent` — one iteration of [`apply_layers`].
 pub fn apply_layers_one(
     card: &crate::card::CardInstance,
     effects: &[ContinuousEffect],
@@ -1228,11 +1122,9 @@ pub fn apply_layers_one(
     compute_permanent(card, effects)
 }
 
-/// [`apply_layers_one`] with the effect list's [`SecondPass`] gates already
-/// resolved — for a caller applying *one* list to several permanents, which
-/// pays that walk per card otherwise. The gates are a function of the list
-/// alone, so passing a set taken from the same list is exactly the answer
-/// this would have computed.
+/// [`apply_layers_one`] with the list's [`SecondPass`] gates precomputed, for
+/// a caller applying one list to several permanents. The gates must come
+/// from the same `effects`.
 pub(crate) fn apply_layers_one_gated(
     card: &crate::card::CardInstance,
     effects: &[ContinuousEffect],
@@ -1280,11 +1172,9 @@ fn compute_permanent_gated(
     compute_permanent_pass(card, effects, Gates::PRINTED)
 }
 
-/// The CR 613.8 re-run, out of line. `compute_permanent_gated` is 269,492
-/// calls on a `cube` run and **none of them takes this path** — but keeping
-/// it inline put `pass1`'s buffer and six callee-saved pushes in the entry
-/// block of all 269,492, 29 Ir of dispatch in front of a 293 Ir callee.
-/// PERF `(-131)`, and the rule is `(-129)`'s.
+/// The CR 613.8 re-run, cold and out of line: almost no call takes it, and
+/// inlining it put `pass1`'s frame in every caller's entry block. PERF
+/// `(-131)` (rule from `(-129)`).
 #[cold]
 #[inline(never)]
 fn compute_permanent_second_pass(
@@ -1337,9 +1227,7 @@ fn compute_permanent_pass(
     let mut supertypes = Printed::<SupertypesOf>::new(def);
     let mut subtypes = Printed::<SubtypesOf>::new(def);
     // CR 702.103d — while bestowed, the permanent is an Aura enchantment,
-    // not a creature. Strip the Creature type and add the Aura subtype so
-    // it isn't a valid blocker/attacker/removal target and the orphan-Aura
-    // checks treat it correctly.
+    // not a creature.
     if card.bestowed {
         card_types.retain(|t| !matches!(t, CardType::Creature));
         if !card_types.contains(&CardType::Enchantment) {
@@ -1356,12 +1244,9 @@ fn compute_permanent_pass(
     }
     let mut colors = colors_from_card(card);
     let mut keywords = PrintedList::<KeywordsOf>::new(def);
-    // Three of this body's instance inputs — the EOT keyword grants, the
-    // keyword counters and the two removal lists — are `CardCold` members, so
-    // one byte settles all three on a card that has never written the group
-    // (PERF `(-351)`). This is the program's largest engine row at 226,734
-    // calls, and each of the three guards below was a chase plus a length
-    // load. Read once; the recompute-and-compare covers all three at once.
+    // The EOT keyword grants, keyword counters and removal lists are
+    // `CardCold` members, so one byte settles all three guards below on a
+    // card that never wrote the group (PERF `(-351)`).
     let cold_pristine = card.cold_pristine();
     debug_assert!(
         !cold_pristine
@@ -1371,16 +1256,11 @@ fn compute_permanent_pass(
                 && card.removed_keywords.is_empty()),
         "cold_written said pristine and a CardCold layer input is set",
     );
-    // EOT-granted keywords join the layer walk as synthetic L6 effects at
-    // their grant timestamps (CR 613.7), so a grant resolved *after* a
-    // RemoveAllAbilities / RemoveKeyword effect survives it while an
-    // earlier one is stripped. Untracked grants (tests, legacy snapshots)
-    // default to timestamp 0 — ordered first, like the old pre-merge.
-    // Cleared at Cleanup via `clear_end_of_turn_effects`.
-    // Empty on nearly every permanent, and this runs once per layer pass —
-    // 99,840 of them over six bench games. `collect()` on an empty iterator
-    // allocates nothing but is still a `SpecFromIterNested::from_iter` call
-    // with its size-hint dance; the emptiness check is two loads.
+    // EOT-granted keywords join the walk as synthetic L6 effects at their
+    // grant timestamps (CR 613.7), so a grant after a strip survives it and
+    // an earlier one doesn't. Untracked grants default to timestamp 0.
+    // Cleared at Cleanup (`clear_end_of_turn_effects`). The emptiness check
+    // skips a `collect` call on nearly every permanent.
     let eot_grants: Vec<ContinuousEffect> = if cold_pristine || card.granted_keywords_eot.is_empty()
     {
         Vec::new()
@@ -1418,11 +1298,9 @@ fn compute_permanent_pass(
     // CR 613.7f — +1/+1, -1/-1, and the rarer one-sided counters
     // (-0/-1, -0/-2, -1/-0, +1/+0, +0/+1, +2/+0, +0/+2), which affect only one
     // of power/toughness, so track per-stat deltas.
-    // One pass over the permanent's counters rather than ten keyed lookups:
-    // this runs per card per layer pass (12.0 M per-card computations for six
-    // bot games), and a permanent carries one or two counter kinds when it
-    // carries any at all. Summing over the map is order-independent, so the
-    // `HashMap` iteration order cannot leak into game state.
+    // One pass over the counters rather than a keyed lookup per kind (a
+    // permanent carries one or two kinds at most). The sum is
+    // order-independent, so `HashMap` order cannot leak into game state.
     let (counter_power_delta, counter_toughness_delta) = {
         let (mut dp, mut dt) = (0i32, 0i32);
         for (kind, n) in &card.counters {
@@ -1461,43 +1339,21 @@ fn compute_permanent_pass(
     let mut every_creature_type = false;
     let mut cant_have_keywords: Vec<Keyword> = Vec::new();
 
-    // Sort effects by layer, then sublayer, then timestamp — but only build
-    // the list at all when there is something to put in it. The chain is
-    // empty on most passes (`affected_includes_gated` runs 29,436 times over
-    // 89,154 of them on `--decks sos`, i.e. a third of an effect apiece), and
-    // an empty `collect()` is still a `Vec::from_iter` call with its
-    // size-hint dance — 90,170 of them for 6.5 M Ir, which is candidate
-    // (-45)'s largest row. Two loads answer it instead.
+    // Sort effects by layer, sublayer, timestamp — building the list only
+    // when there is something to put in it (it is usually empty).
     //
-    // **Skipping the build is refuted** (sixty-eighth pass): making the
-    // gather leave the list layer-sorted and walking a `filter` instead read
-    // `fixed` +0.173 % and `sos` +0.208 % (`cube` -0.205 %). The list is ~2
-    // effects long, so a `collect` whose result is 0-1 elements never
-    // allocates, and the `is_layer_sorted` guard that made the skip sound for
-    // a hand-built list cost more than the `Vec` it avoided. See PERF's Log.
+    // Skipping the build (gather leaves the list layer-sorted, walk a
+    // `filter`) was tried and lost (sixty-eighth pass; PERF's Log).
     //
-    // **Inline storage, not the heap** (PERF (-106)): the `Vec` form was the
-    // program's single largest allocation context — 61,518 of a `cube` run's
-    // 1,384,794 allocations, 4.4 % of every malloc, all of them
-    // `do_reserve_and_handle` under these two `extend`s. Eight slots at 8
-    // bytes a reference covers a list that is ~2 long ((-56b)); the list is a
-    // pure local consumed by the loop below, so nothing outside sees the type.
-    // (-56b) refuted four ways of *not* building the list and named this one
-    // as the fifth ("a stack-backed `Extend` target, which is a dependency
-    // decision") — `smallvec` is a dependency now, and its `Extend` is the
-    // same external-iteration shape `Vec::extend_desugared` already was, so
-    // the swap moves the buffer and nothing else.
+    // Inline storage, not the heap (PERF `(-106)`): the `Vec` form was the
+    // largest allocation context. Eight slots cover a list ~2 long
+    // (`(-56b)`, which also refuted four ways of not building it).
     let mut sorted: smallvec::SmallVec<[&ContinuousEffect; 8]> = smallvec::SmallVec::new();
     if !effects.is_empty() || !eot_grants.is_empty() {
-        // Two `extend`s rather than one `collect` over a `chain`: `eot_grants`
-        // is empty on almost every card, and `Chain::next` pays its "which
-        // side" branch on **every element of the first side** whether or not
-        // the second has any.
-        // Plain loops, not `extend` (PERF `(-229)`): `SmallVec::extend` over
-        // a `Filter` is a generic the inliner takes or leaves per build, and
-        // the two outcomes differ by ~47 M Ir a six-game `cube` run (420,672
-        // calls at ~137 Ir out of line, against ~0 inlined). A `push` loop is
-        // the inlined shape written down, so a later build cannot flip it.
+        // Two loops rather than one over a `chain` (`Chain::next` branches on
+        // every element of the first side). Plain `push` loops, not
+        // `extend` (PERF `(-229)`): `SmallVec::extend` over a `Filter` is
+        // inlined or not per build, and the out-of-line outcome is costly.
         for e in effects.iter() {
             if affects(e, effects, card, &gates) {
                 sorted.push(e);
@@ -1513,9 +1369,8 @@ fn compute_permanent_pass(
         });
     }
 
-    // By reference, not by value: `SmallVec`'s by-value `IntoIter` carries the
-    // whole inline buffer, so `for effect in sorted` moves 72 bytes on every
-    // pass whether or not the list has anything in it.
+    // By reference: `SmallVec`'s by-value `IntoIter` moves the whole inline
+    // buffer.
     for effect in &sorted {
         match &effect.modification {
             // Layer 2
@@ -1682,9 +1537,8 @@ fn compute_permanent_pass(
     // CR 702.22 — "loses all 'bands with other' abilities" (Shelkin Brownie,
     // Tolaria) can't name a payload, so a removal of `BandsWithOther` strips
     // every instance whatever its quality.
-    // Both retains are gated on their input being non-empty: `retain` takes
-    // `&mut`, which materializes the printed keyword list even when it
-    // removes nothing, and the empty case is the overwhelming majority.
+    // Gated on non-empty input: `retain` materializes the printed list even
+    // when it removes nothing.
     if !cold_pristine
         && (!card.removed_keywords_eot.is_empty() || !card.removed_keywords.is_empty())
     {
@@ -1738,20 +1592,11 @@ fn compute_permanent_pass(
         _ => 15,
     };
     let base_pt_nibbles = nib(power) | (nib(toughness) << 4);
-    // Saturating, for `CardInstance::pump`'s reason: Exponential Growth can
-    // put a pump bonus at `i32::MAX` in one resolution, and this is the sum
-    // every consumer reads. An overflow here is a panic under
-    // `overflow-checks` and a large negative power in release. The order is
-    // load-bearing and the saturation is per step, so the eight adds cannot
-    // be folded into one `i64` sum: `MAX + 1 - 1` is `MAX - 1` here and `MAX`
-    // there, and the sweep's saturated boards reach exactly that.
-    //
-    // What they *can* be is skipped. `x.saturating_add(0)` is `x`, and a
-    // permanent with no layer-7 modification, no pump, no permanent bonus and
-    // no P/T counter has all eight terms zero — most of a board, every
-    // recompute. One OR chain and one branch in front of eight `add`/`cmov`
-    // pairs: PERF `(-308)`, and the eight were 9.1 M / 0.60 % of `sealed`,
-    // the largest single line in this function by three times.
+    // Saturating, as in `CardInstance::pump` (Exponential Growth can reach
+    // `i32::MAX`). Saturation is per step and the order is load-bearing, so
+    // the adds cannot be folded into one `i64` sum (`MAX + 1 - 1` differs).
+    // When all eight terms are zero — most permanents — the adds are
+    // skipped behind one OR (PERF `(-308)`).
     if (mod_power
         | mod_toughness
         | card.power_bonus
@@ -1808,10 +1653,8 @@ fn colors_from_card(card: &crate::card::CardInstance) -> ColorSet {
     {
         return v.definition.printed_color_set();
     }
-    // The memoized form: this is one of `compute_permanent_pass`'s three
-    // per-call definition reads and by far the most expensive (~56 Ir against
-    // `base_power`'s 13), and the answer cannot change without a write
-    // reaching the card. See `card::CardMemo`.
+    // Memoized (`card::CardMemo`): the costliest of the pass's definition
+    // reads, and it cannot change without a write to the card.
     card.printed_color_set()
 }
 
@@ -1826,12 +1669,10 @@ fn affects(
     gates: &Gates,
 ) -> bool {
     // CR 613.6 — an effect that starts applying in layer 4 keeps the set it
-    // had there in every later layer, and that set was fixed before layer 4
-    // changed any type. So in the second pass a `CardMatch` that is (part
-    // of) a card-type changer — its own requirement names a changer from the
-    // same source — reads the printed types: Titania's Song / March of the
-    // Machines' "each noncreature artifact" would otherwise read its own
-    // output and drop both the type and the P/T set it animated.
+    // had there, fixed before layer 4 changed any type. So in the second
+    // pass a `CardMatch` that is part of a card-type changer (same source,
+    // same requirement) reads printed types; otherwise March of the
+    // Machines' "each noncreature artifact" would read its own output.
     let gate_card_types = match (&effect.affected, gates.card_types) {
         (AffectedPermanents::CardMatch { requirement, .. }, Some(_))
             if all.iter().any(|o| {
@@ -1851,11 +1692,10 @@ fn affects(
 }
 
 /// Whether `card` is one of the permanents described by `affected`, given the
-/// describing effect's `source` permanent. Split out of [`affects`] so the
-/// enters-tapped ETB replacement (CR 614.13) can reuse the same selector
-/// matching without constructing a throwaway `ContinuousEffect`.
-/// Power-gated matches resolve against the card's printed power + counters
-/// (callers with a computed view use [`affected_includes_gated`]).
+/// describing effect's `source` permanent — the enters-tapped replacement
+/// (CR 614.13) reuses it without building a `ContinuousEffect`. Power-gated
+/// matches read printed power + counters (callers with a computed view use
+/// [`affected_includes_gated`]).
 pub(crate) fn affected_includes(
     affected: &AffectedPermanents,
     source: CardId,
@@ -1899,22 +1739,17 @@ fn affected_includes_gated(
             if *exclude_source && source == card.id {
                 return false;
             }
-            // Cheapest-first, and `&&` rather than six `let`s ANDed at the
-            // end: the seat compare rejects roughly half the battlefield, and
-            // the two `cost.symbols` walks below it are loops LLVM will not
-            // sink past an AND it cannot see.
+            // Cheapest-first `&&` chain: the seat compare rejects about half
+            // the board, and LLVM won't sink the colour walks past an AND.
             controller.is_none_or(|c| c == card.controller)
                 && token.is_none_or(|want| card.is_token == want)
                 && owned_by_controller
                     .is_none_or(|want| (card.owner == card.controller) == want)
                 && (card_types.is_empty()
                     || card_types.iter().all(|t| computed_types.contains(t)))
-                // CR 105.2 — the coloured pips (hybrid and Phyrexian too)
-                // UNION the colour indicator, empty under Devoid. This
-                // walked `Colored(_)` alone, so a {G/W} creature and a
-                // token whose only colour is its indicator both read as
-                // colourless to a colour-filtered anthem. The set is a
-                // bitmask; `is_none_or` keeps it off the common board.
+                // CR 105.2 — coloured pips (hybrid, Phyrexian too) UNION the
+                // colour indicator, empty under Devoid; not `Colored(_)` pips
+                // alone, which missed {G/W} creatures and indicator tokens.
                 && color.is_none_or(|want| colors().contains(want))
                 // CR 702.114 — Devoid is folded into `printed_color_set`.
                 && (!*colorless || colors().is_empty())
@@ -2015,11 +1850,9 @@ fn affected_includes_gated(
     }
 }
 
-/// True when `req`'s every leaf is computable from a card's *printed*
-/// characteristics alone (type/supertype/subtype/color/token/controller and
-/// boolean combinations) — i.e. no power/toughness, combat, counter, or zone
-/// state. Such requirements can be matched by [`requirement_matches_card`]
-/// without a `GameState`, so `affected_from_requirement` may safely route them
+/// True when every leaf of `req` is readable from the card instance alone
+/// (no combat or zone state), so [`requirement_matches_card`] can match it
+/// without a `GameState` and `affected_from_requirement` may route it
 /// through [`AffectedPermanents::CardMatch`].
 pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
     use SelectionRequirement as R;
@@ -2031,15 +1864,11 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // Color counts read the printed colors, like `HasColor` (Rienne's
         // "other multicolored creatures you control").
         R::Multicolored | R::Monocolored => true,
-        // `card.owner` is a `CardInstance` field like `is_token`, and
-        // `requirement_matches_card` has always read it. It was missing here,
-        // so any filter this list could not otherwise flatten was **dropped**
-        // rather than routed — `card_match_fallback` returns `None` on a
-        // non-card-only tree, and `None` means no static at all.
+        // An instance field like `is_token`. A leaf missing from this list
+        // drops the whole static (`card_match_fallback` returns `None`).
         R::OwnedByYou => true,
-        // Tap state is a live `CardInstance` field, re-read on every layer
-        // recompute — safe to route through the dynamic CardMatch path
-        // (Augusta, Dean of Order's tapped/untapped anthems).
+        // Live instance state, re-read each layer recompute (Augusta, Dean
+        // of Order).
         R::Tapped | R::Untapped | R::Unattached | R::AttachedToYou => true,
         // Face-down is likewise a live `CardInstance` flag (Ixidor, Reality
         // Sculptor's "face-down creatures get +1/+1").
@@ -2047,17 +1876,13 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         // The printed activated abilities (Raggadragga's "each creature you
         // control with a mana ability").
         R::HasManaAbility => true,
-        // Counter presence is live `CardInstance` state, likewise re-read each
-        // layer recompute via the dynamic CardMatch path ("permanents you
-        // control with counters on them have ward {1}" — Innkeeper's Talent).
+        // Live counter state likewise (Innkeeper's Talent).
         R::WithAnyCounter | R::WithCounter(_) => true,
         R::IsOutlaw | R::HasColor(_) | R::HasCreatureType(_) | R::HasLandType(_) | R::HasSupertype(_)
         | R::HasArtifactSubtype(_) | R::HasEnchantmentSubtype(_) | R::HasCardType(_)
         | R::HasMutate => true,
-        // Keyword presence is live `CardInstance` state too — the grant, the
-        // keyword counter and the two removal lists are all instance fields
-        // that effect resolution writes, so `requirement_matches_card` reads
-        // them off `has_keyword` on every layer recompute. See its doc.
+        // Keyword presence is live instance state too; see
+        // `requirement_matches_card`'s doc.
         R::HasKeyword(_) | R::HasToxic | R::HasCumulativeUpkeep | R::HasModular | R::HasProtection | R::HasPartner => true,
         // OtherThanSource is matched in `affects()` (which knows the source id),
         // so it's safe to route a filter containing it through CardMatch.
@@ -2067,10 +1892,8 @@ pub(crate) fn requirement_is_card_only(req: &SelectionRequirement) -> bool {
         R::ToughnessGreaterThanPower | R::PowerToughnessUnequal => true,
         // Mana value is a printed characteristic, read like the type leaves.
         R::ManaValueAtMost(_) | R::ManaValueAtLeast(_) | R::ManaValueExactly(_) => true,
-        // So is a name (`requirement_matches_card` reads it off the
-        // definition). Missing here, a name-scoped grant was dropped outright
-        // — Leitmotif Composer's "creatures named Leitmotif Composer can't be
-        // blocked this turn" did nothing.
+        // So is a name (Leitmotif Composer's name-scoped grant was dropped
+        // without this).
         R::HasName(_) => true,
         R::And(a, b) | R::Or(a, b) => {
             requirement_is_card_only(a) && requirement_is_card_only(b)
@@ -2098,18 +1921,12 @@ fn requirement_mentions_other_than_source(req: &SelectionRequirement) -> bool {
 /// a single permanent. `source_controller` resolves `ControlledByYou` /
 /// `ControlledByOpponent`. Unsupported leaves resolve to `false`.
 ///
-/// ⚠ **The keyword leaves read the instance's four sources, not
-/// `definition.keywords`** — `CardInstance::has_keyword` and its
-/// value-agnostic sibling `has_keyword_tag`. `granted_keywords_eot`,
-/// `keyword_counters` (CR 122.1b) and the two removal lists are live
-/// `CardInstance` fields written by effect resolution, exactly like the
-/// `Tapped` / `FaceDown` / `WithCounter` leaves above them — they are *inputs*
-/// to the layer pass, not its output, so reading them here is not circular.
-/// They used to be skipped, and a static anthem filtered on a keyword then
-/// missed a creature that gained the keyword until end of turn or off a
-/// keyword counter, and still pumped one whose keyword had been stripped.
-/// The *type* leaves stay printed: creature types are layer-4 output and
-/// `AllWithCreatureType` plus `gate_types` is the machinery for that.
+/// ⚠ The keyword leaves read the instance (`CardInstance::has_keyword` /
+/// `has_keyword_tag`), not `definition.keywords`: EOT grants, keyword
+/// counters (CR 122.1b) and the removal lists are layer-pass inputs like
+/// `Tapped`, so this is not circular, and skipping them mis-scoped keyword
+/// anthems. Type leaves stay printed: creature types are layer-4 output,
+/// handled by `AllWithCreatureType` plus `gate_types`.
 pub(crate) fn requirement_matches_card(
     req: &SelectionRequirement,
     card: &crate::card::CardInstance,
@@ -2231,12 +2048,9 @@ pub(crate) fn requirement_matches_card_typed(
         R::HasProtection => keywords.map_or_else(|| card.has_protection(), |kws| kws.iter().any(Keyword::is_protection)),
         R::HasPartner => keywords.map_or_else(|| card.has_partner(), |kws| kws.iter().any(Keyword::is_partner)),
         R::HasMutate => def.mutate.is_some(),
-        // CR 105.2 — colour is the mana cost's coloured pips (hybrid and
-        // Phyrexian included) UNION the colour indicator, and empty under
-        // Devoid. This walked `Colored(_)` alone: a hybrid pip
-        // ({G/W} — Kitchen Finks) and a token's or DFC back's colour
-        // indicator both read as no colour, so a "green creatures you
-        // control get +1/+1" static skipped them.
+        // CR 105.2 — coloured pips (hybrid, Phyrexian included) UNION the
+        // colour indicator, empty under Devoid (Kitchen Finks' {G/W}, an
+        // indicator-only token).
         R::HasColor(c) => color_set().contains(c),
         // CR 702.114 — Devoid is a CDA: the object is colorless regardless of
         // its (possibly colored) cost pips.
@@ -2255,10 +2069,8 @@ pub(crate) fn requirement_matches_card_typed(
         // Source exclusion is enforced in `affects()` (source id known there);
         // treat as always-matching for the printed-characteristics walk.
         R::OtherThanSource => true,
-        // CR 613 lord scope read against printed P/T + counters (same
-        // approximation `CardMatchPowerGated` uses): Tapestry Warden grants
-        // its keyword to "creatures you control with toughness greater than
-        // their power".
+        // Read against printed P/T + counters, the `CardMatchPowerGated`
+        // approximation (Tapestry Warden).
         R::ToughnessGreaterThanPower => {
             let plus = card.counter_count(CounterType::PlusOnePlusOne) as i32;
             let minus = card.counter_count(CounterType::MinusOneMinusOne) as i32;

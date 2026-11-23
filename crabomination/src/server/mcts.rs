@@ -1,91 +1,57 @@
 //! A Monte Carlo bot: pick the play whose random continuations turn out
 //! best, rather than the play that scores best right now.
 //!
-//! The heuristic bot in [`super::bot`] chooses by *evaluating* a position —
-//! a hand-written function saying what a board is worth. This one chooses
-//! by *playing the game out*: for each candidate it simulates a number of
-//! short continuations with a cheap policy, averages how they end up, and
-//! takes the best average. The appeal is that it needs no opinion about
-//! what a board is worth beyond the final score, so it can find lines
-//! nobody encoded a rule for.
+//! The heuristic bot in [`super::bot`] *evaluates* a position; this one
+//! *plays it out*: each candidate gets a number of short continuations
+//! under a cheap policy, and the best average wins. It needs no opinion of
+//! a board beyond the final score, so it can find lines no rule encodes.
 //!
 //! ## What this is, precisely
 //!
 //! Root-level Monte Carlo with UCB1 allocation and depth-limited rollouts —
-//! not full MCTS. There is one level of tree (the root's candidate plays);
-//! below that, rollouts run to a turn horizon and the position is scored
-//! with the same evaluator the heuristic bot uses.
+//! not full MCTS. One level of tree (the root's candidates); below it,
+//! rollouts run to a turn horizon and are scored with the heuristic bot's
+//! evaluator. Deliberate: bots run in debug builds (see CLAUDE.md), where a
+//! rollout to game end costs thousands of heuristic decisions, so spending
+//! the whole budget at the root is what makes search affordable at all.
+//! [`MctsConfig`] exposes the knobs so the trade can be re-measured.
 //!
-//! That is a deliberate choice, not a shortcut taken blindly. Growing a
-//! deeper tree only pays when rollouts are cheap enough to afford many of
-//! them, and here they are not: this engine runs its bots inside debug
-//! builds (see CLAUDE.md), where a single game costs on the order of half a
-//! second, so a rollout to game end is thousands of times more expensive
-//! than the heuristic bot's entire decision. Depth-limiting the rollout and
-//! spending the whole budget at the root is what makes any Monte Carlo
-//! search affordable at all here. [`MctsConfig`] exposes the knobs so the
-//! trade can be re-measured rather than argued about.
+//! ## Measured result (original root-only search)
 //!
-//! ## Measured result
+//! It lost: 41.5 % [38.5, 44.6] over 1000 ladder games against the
+//! heuristic bot at ~33x the wall clock; `heuristic_rollouts` narrowed it to
+//! 45.0 % over 240 games at ~54x. Rollout quality was the binding
+//! constraint, for reasons that are properties of Magic, not bugs:
 //!
-//! **It loses, and it isn't close.** Against the heuristic bot over 1000
-//! ladder games it wins 41.5 % [38.5 %, 44.6 %], consistently across all
-//! four archetypes, while costing about 33x as much wall clock (1.25
-//! games/sec against ~41). Nothing here is adopted; it exists as a
-//! measured, reproducible answer to "what about Monte Carlo".
+//! * **The rollout policy is the estimator.** 24 uniform-random samples over
+//!   a two-turn horizon is a very noisy estimate against a noiseless
+//!   hand-tuned evaluator.
+//! * **Rollouts can't reach a result.** A truncated playout is scored by the
+//!   same heuristic evaluator, so the search averages noisy samples *of*
+//!   that opinion rather than escaping it.
+//! * **Branching is enormous and mostly irrelevant.** Most priority-window
+//!   actions are passes and taps; the interesting branching is narrow but
+//!   deep, the worst shape for a root-budget search.
 //!
-//! `heuristic_rollouts` narrows it — 45.0 % [38.8 %, 51.3 %] over 240
-//! games, inconclusive at that size but clearly better than 41.5 % — at
-//! ~54x cost. That direction is the diagnosis confirming itself: rollout
-//! quality is the binding constraint, not the number of samples.
-//!
-//! The result is what the theory predicts for this shape of game, and the
-//! reasons are worth writing down because they are properties of Magic and
-//! of this engine, not bugs to be fixed:
-//!
-//! * **The rollout policy is the estimator.** Monte Carlo replaces domain
-//!   knowledge with sampling, so a uniform-random rollout is only as good
-//!   as the law of large numbers makes it — and 24 samples over a two-turn
-//!   horizon is a *very* noisy estimate. The heuristic evaluator it is
-//!   competing against is not noisy at all; it encodes years of accreted
-//!   knowledge about what a board is worth. Beating it by sampling needs
-//!   either far more samples or far better rollouts.
-//! * **Rollouts can't reach a result.** In games where MCTS shines, a
-//!   playout ends in a win or a loss and the reward is ground truth. Here a
-//!   playout is truncated after a couple of turns and scored with... the
-//!   same heuristic evaluator. So the search is not escaping the
-//!   evaluator's opinion, it is averaging noisy samples *of* that opinion.
-//! * **Branching is enormous and mostly irrelevant.** Most legal actions in
-//!   a Magic priority window are passes and mana taps; the interesting
-//!   branching is narrow but deep, which is the worst shape for a search
-//!   that spends its budget at the root.
-//!
-//! The productive directions from here, in the order the evidence supports:
-//! give rollouts a strong policy (`heuristic_rollouts`) so each sample is
-//! worth more, and get the cost down enough to afford real depth — which in
-//! this engine means the release build the project deliberately doesn't
-//! use for bots. Both are measurable with the knobs already here.
+//! Hence the directions taken since: strong rollout policies and cheaper
+//! search to afford depth.
 //!
 //! ## Hidden information
 //!
-//! Rollouts re-shuffle every library first. Without that, a rollout draws
-//! the cards that are *actually* on top, so the search optimises against
-//! one known future rather than the distribution — the classic
-//! determinisation failure. Hands stay as they are: this bot sees the same
-//! state the heuristic bot does, so that the ladder compares policies
-//! rather than information.
+//! Rollouts re-shuffle every library first, so the search optimises against
+//! the draw distribution rather than the actual top cards (the classic
+//! determinisation failure). Hands stay as they are: this bot sees what the
+//! heuristic bot sees, so the ladder compares policies, not information.
 
 use rand::RngExt;
 use rand::seq::SliceRandom;
 use rand::rng;
 
-/// Wall-clock split of where search time goes, for the `PERF.md`
-/// "MCTS leaf-evaluation throughput" candidate. Free unless
-/// `CRAB_MCTS_TIMING` is set (the check is one cached bool); the ladder
-/// prints the table after a run. Wall clock rather than instruction
-/// counts because the routine image ships neither valgrind nor perf,
-/// and the question is a coarse four-way split, not a per-line
-/// attribution.
+/// Wall-clock split of where search time goes (PERF "MCTS leaf-evaluation
+/// throughput" candidate). Free unless `CRAB_MCTS_TIMING` is set (one
+/// cached bool); the ladder prints the table after a run. Wall clock
+/// because the routine image ships neither valgrind nor perf and the
+/// question is a coarse four-way split.
 pub mod timing {
     use std::sync::OnceLock;
     use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
@@ -385,77 +351,51 @@ pub struct MctsConfig {
     pub extend_close: f64,
     /// How close "close" is, in reward (win-probability) units.
     pub close_margin: f64,
-    /// Search combat declarations too (round 31). Off, the bot searches
-    /// only main-phase plays and combat falls through to the heuristic —
-    /// the shape every MCTS result through round 29 was measured on. On,
-    /// attack and block declarations are searched over the same candidate
-    /// menus the sim searches score (`attack_candidates_for_mcts` /
-    /// `block_candidates_for_mcts`), with rollouts in place of the
-    /// one-turn simulations — which sees through *sampled* opposing
-    /// combat instead of the greedy declarations the sims assume.
+    /// Search combat declarations too (round 31). Off, only main-phase
+    /// plays are searched and combat falls through to the heuristic (the
+    /// shape of every result through round 29). On, attack and block
+    /// declarations are searched over the sim searches' candidate menus
+    /// (`attack_candidates_for_mcts` / `block_candidates_for_mcts`), with
+    /// rollouts seeing *sampled* opposing combat instead of the greedy
+    /// declarations the sims assume.
     pub search_combat: bool,
-    /// Gumbel root search (round 37, Danihelka et al. ICLR 2022):
-    /// replace UCB1 allocation with Sequential Halving over
-    /// Gumbel-perturbed prior logits, arms scored by
-    /// `g + logit + σ(q̂)`. Priors come from the net's policy head over
-    /// each candidate's successor state when the profile's net carries
-    /// one, else from the candidate generator's scores — the same source
-    /// round 29's P-UCT negative used, but consumed by an allocator with
-    /// a policy-improvement guarantee at small budgets instead of by a
-    /// visit bonus that starves arms.
+    /// Gumbel root search (round 37, Danihelka et al. ICLR 2022): Sequential
+    /// Halving over Gumbel-perturbed prior logits instead of UCB1, arms
+    /// scored by `g + logit + σ(q̂)`. Priors come from the net's policy head
+    /// over each candidate's successor when the profile's net has one, else
+    /// from the candidate generator's scores.
     ///
-    /// Why this and not another UCB knob: round 29 found every selection
-    /// lever null-to-negative and only iterations paying. Sequential
-    /// Halving is not a tuning of UCB1 — it is the allocator built for
-    /// exactly this regime (few arms, tiny budget, pick the argmax at
-    /// the end), and its improved policy `softmax(logits + σ(q̂))` is the
-    /// distillation target with the guarantee, where round 35 softmaxed
-    /// raw arm means at a hand-picked temperature.
+    /// Not another UCB knob: round 29 found every selection lever
+    /// null-to-negative. Sequential Halving is the allocator built for few
+    /// arms and a tiny budget, and its improved policy
+    /// `softmax(logits + σ(q̂))` is a distillation target with a guarantee.
     ///
     /// Ignores `exploration`, `prior_weight`, `early_stop` and
     /// `extend_close` — the phase plan is the budget policy.
     pub gumbel: bool,
-    /// σ(q̂) = (c_visit + max_arm_visits) · c_scale · q̂ — the transform
-    /// that puts observed rewards on the logit scale. Defaults are the
-    /// reference implementation's (mctx: `maxvisit_init` 50, value scale
-    /// 0.1); rewards here are already calibrated win probabilities, the
-    /// scale mctx assumes.
+    /// σ(q̂) = (c_visit + max_arm_visits) · c_scale · q̂, putting rewards on
+    /// the logit scale. Defaults are mctx's (`maxvisit_init` 50, value scale
+    /// 0.1); rewards here are already calibrated win probabilities.
     pub gumbel_c_visit: f64,
     pub gumbel_c_scale: f64,
-    /// Worker threads the root search may use. **1 is the serial search
-    /// every ladder number in `ML_NOTES.md` was measured on** and stays the
-    /// default; the client sets it, the training actors must not (they
-    /// already run one game per core, and threads spawned *inside* each
-    /// actor oversubscribe the box).
+    /// Worker threads the root search may use. 1 (the default) is the
+    /// serial search every `ML_NOTES.md` ladder number was measured on; the
+    /// client sets it, the training actors must not (they already run a game
+    /// per core and would oversubscribe the box).
     ///
     /// Root parallelisation: the seeding pass runs once, then each worker
-    /// runs its own UCB1 continuation from those shared statistics and the
-    /// per-arm `(visits, reward)` are summed. The budget is **split, not
-    /// multiplied** — `iterations` rollouts still happen — so the only
-    /// thing that changes is which arm each rollout lands on: a worker
-    /// allocates against its own visit counts rather than the merged ones.
-    /// That is the standard root-parallel trade and it is a behaviour
-    /// change, so it gates on the ladder like anything else that moves what
-    /// gets evaluated (profiles `mcts-dflt-256-par4` / `-par8`).
-    ///
-    /// **Gate (2026-09-08, `mcts-dflt-256-par4` vs `mcts-dflt-256`, sealed
-    /// mirrors, paired, 720 games a seed): 51.8 [49.4, 54.2] on seed 43 and
-    /// 49.3 [47.0, 51.6] on seed 97** — straddling 50 from either side, so
-    /// no evidence that splitting the budget four ways costs anything. Both
-    /// intervals are ±2.3, which is what a *search-level* arm costs in
-    /// precision: 283 and 287 of 360 pairs diverged, because extra threads
-    /// perturb the search's own random stream and the antithetic mirrors
-    /// break (the round-51 lesson). A sub-2-point effect is not resolved
-    /// here and would want ~4x the cells.
-    ///
-    /// Latency, which is the point (release-fast, `--threads 1`, 256
-    /// iterations, per searched decision): serial 61-62 ms, 4 workers
-    /// 20.4-20.8 ms (**3.0x**), 8 workers 11.7-15.5 ms. The budget itself is
-    /// unmoved at 256.0 rollouts a decision in all three.
+    /// runs its own UCB1 continuation from the shared statistics and the
+    /// per-arm `(visits, reward)` are summed. The budget is split, not
+    /// multiplied; only the allocation changes (each worker reads its own
+    /// visit counts), which is a behaviour change gated like any other.
+    /// Gated 2026-09-08 (`mcts-dflt-256-par4` vs `mcts-dflt-256`): 51.8 /
+    /// 49.3, no evidence of a cost; ±2.3 intervals because extra threads
+    /// break the antithetic mirrors (the round-51 lesson). Latency at 256
+    /// iterations (release-fast): 61 ms serial, 20.6 ms at 4 workers (3.0x),
+    /// 11.7-15.5 ms at 8.
     ///
     /// The close-call extension (`extend_close`) is never split: its stop
-    /// condition reads the merged means, so it runs serially after the
-    /// workers join.
+    /// condition reads the merged means, so it runs after the workers join.
     pub search_threads: usize,
     /// Phase 4 of "the net makes every decision" (`ML_NOTES` 2026-10-31):
     /// the decision windows searched over the COMPLETE move list
@@ -494,14 +434,12 @@ pub struct MctsConfig {
     pub menu_sample: bool,
     /// The combat window's declaration fix (ML_NOTES "Shortcomings review",
     /// 2026-11-10). Off, a menu search in an attack / block window (a)
-    /// carries `PassPriority` as an arm beside the empty declaration — the
-    /// rollout behind it lets the heuristic declare, the game played after
-    /// it declares nothing, so a third of the budget prices a move that is
-    /// not the one made — and (b) latches "declared" on *any* pick, so a
-    /// spell cast before blocks (a flash blocker, removal) can never be
-    /// followed by a block. On, the pass is dropped wherever a declaration
-    /// is on the list and only a declaration closes the window. Ladder
-    /// suffix `-df`; on wherever the menu search plays
+    /// carries `PassPriority` as an arm beside the empty declaration, which
+    /// prices a heuristic declaration that is not the move made, and (b)
+    /// latches "declared" on any pick, so a spell cast before blocks can
+    /// never be followed by a block. On, the pass is dropped wherever a
+    /// declaration is listed and only a declaration closes the window.
+    /// Ladder suffix `-df`; on wherever the menu search plays
     /// ([`MctsConfig::with_combat_fix`]).
     pub menu_declare_fix: bool,
     /// The heuristic's own declaration as the combat window's anchor: it is
@@ -513,28 +451,23 @@ pub struct MctsConfig {
     /// 0.10 wherever the menu search plays ([`MctsConfig::with_combat_fix`]).
     pub menu_anchor: f64,
     /// Take the anchor from the heuristic on the *material* leaf (the
-    /// pilot's weights with the net slot cleared) instead of the pilot's
-    /// own. The net-leaf heuristic attacks a 4/4 into an untapped
-    /// deathtoucher — the value net prices the trade as free
-    /// (`bot_puzzles --leaf-pairs`) — and an anchor that makes the mistake
-    /// cannot guard against it. Ladder suffix `-anm<hundredths>`; on
-    /// wherever the menu search plays ([`MctsConfig::with_combat_fix`]).
+    /// pilot's weights with the net slot cleared). The net-leaf heuristic
+    /// attacks a 4/4 into an untapped deathtoucher (the value net prices the
+    /// trade as free), so an anchor that shares the mistake can't guard it.
+    /// Ladder suffix `-anm<hundredths>`; on wherever the menu search plays
+    /// ([`MctsConfig::with_combat_fix`]).
     pub menu_anchor_material: bool,
     /// A decided rollout's reward moves this far toward 0.5 per turn the
-    /// rollout ran before the game ended, so a win now outranks the same
-    /// win two turns later and a later loss a sooner one. Undecided leaves
-    /// are untouched. Without it every arm of a won position reads 1.000
-    /// and the tie goes to the prior — the blunder set's `ping_for_lethal`,
-    /// where the pass and the attack (which taps Prodigal Sorcerer) tied
-    /// the ping that wins at once (2026-11-12). 0.0 (the default) is off;
-    /// ladder suffix `-wd<hundredths>`.
+    /// rollout ran, so a win now outranks the same win later (and a later
+    /// loss a sooner one). Undecided leaves are untouched. Without it every
+    /// arm of a won position reads 1.000 and the prior breaks the tie (the
+    /// blunder set's `ping_for_lethal`). 0.0 (default) is off; ladder suffix
+    /// `-wd<hundredths>`.
     pub win_discount: f64,
     /// Read a net leaf from both seats and average `p(seat)` with
-    /// `1 − p(opponent)` (two-player only; twice the leaf's cost). The
-    /// champion's level drifts with the training seed (0.442 mean on a
-    /// 0.500 base rate) and the two readings' errors partly cancel: +0.013
-    /// AUC on every net offline (ML_NOTES "Why the champion reads 0.442").
-    /// Ladder suffix `-ts`.
+    /// `1 − p(opponent)` (two-player only; twice the leaf's cost). The two
+    /// readings' errors partly cancel: +0.013 AUC offline (ML_NOTES "Why
+    /// the champion reads 0.442"). Ladder suffix `-ts`.
     pub two_seat_leaf: bool,
     /// The menu search plays without Gumbel noise: the halving and the
     /// final pick rank arms by prior plus σ(q̂) alone. The noise is a
@@ -549,19 +482,16 @@ pub struct MctsConfig {
     /// merge. Ladder suffix `-ks`.
     pub menu_state_keys: bool,
     /// A "hold" arm in the own-main window: a priority pass whose rollouts
-    /// cast no spell for `seat` for the rest of the turn (lands, attacks and
-    /// the opponent's turn as before). The plain pass arm's rollouts spend
-    /// the mana a step later, so without it holding up an answer is never
-    /// what the search prices (ML_NOTES "The counter item on real
-    /// positions": 59 / 60 of the pass arm's rollouts spend it). Its prior
-    /// is the pass arm's. Ladder suffix `-ho`.
+    /// cast no spell for `seat` for the rest of the turn. The plain pass
+    /// arm's rollouts spend the mana a step later, so without it holding up
+    /// an answer is never priced (ML_NOTES "The counter item on real
+    /// positions"). Its prior is the pass arm's. Ladder suffix `-ho`.
     pub menu_hold_arm: bool,
-    /// A wall-clock cap on one search, in milliseconds (0 = none, the
-    /// default: the budget alone stops it, and a search replays). Past it
-    /// every rollout loop stops after its current rollout; the seeding pass
-    /// still rolls each arm once. For a human's table, where the budget's
-    /// tail is the wait (pods: p99 5-7 s at 256, 2026-11-21). Ladder suffix
-    /// `+dlN`. Not read by the Gumbel search.
+    /// A wall-clock cap on one search, in ms (0 = none, the default: the
+    /// budget alone stops it, and a search replays). Past it every rollout
+    /// loop stops after its current rollout; the seeding pass still rolls
+    /// each arm once. For a human's table, where the budget's tail is the
+    /// wait. Ladder suffix `+dlN`. Not read by the Gumbel search.
     pub deadline_ms: u32,
 }
 
@@ -646,38 +576,29 @@ impl Default for MctsConfig {
 impl MctsConfig {
     /// The combat-window fix as the client and the lobby play it
     /// (`mcts-net67-menu-mc-df-anm10`, adopted 2026-11-10): the declaration
-    /// fix, and the material-leaf heuristic's declaration as an anchor the
-    /// search must beat by 0.10. Over the menu search without it, paired
-    /// 120 x 12, seeds 43 / 97: SOS sealed 50.0 / 51.3, FRA sealed (FRA
-    /// leaf) 53.7 / 51.2, cube 55.4 / 54.7; the blunder set 35 / 35 (was
-    /// 23.6). ML_NOTES "The combat window of the menu search".
+    /// fix plus the material-leaf heuristic's declaration as an anchor the
+    /// search must beat by 0.10. Blunder set 35 / 35 (was 23.6); ML_NOTES
+    /// "The combat window of the menu search" has the ladder cells.
     pub fn with_combat_fix(self) -> Self {
         Self { menu_declare_fix: true, menu_anchor: 0.10, menu_anchor_material: true, ..self }
     }
 
-    /// The 2026-11-12 search fixes, on top of [`Self::with_combat_fix`]
-    /// (ML_NOTES "Five search flags, gated"): a decided rollout's reward
-    /// moves 0.02 per turn toward 0.5 ([`Self::win_discount`]), no Gumbel
-    /// noise at play time ([`Self::menu_no_noise`]), keys that tell
-    /// same-named permanents apart ([`Self::menu_state_keys`]) and no hard
-    /// kill on a trivial body at 10+ life ([`EvalWeights::hold_removal`]).
-    /// Each read NO LOSS against the combat-fixed search on SOS sealed
-    /// (pooled 50.0 / 49.9 / 49.8 / 50.25, paired 120 x 12, seeds 43 / 97,
-    /// `.ladder/s12`); together the blunder set reads 60 / 60 from 57.0.
+    /// The 2026-11-12 search fixes on top of [`Self::with_combat_fix`]
+    /// (ML_NOTES "Five search flags, gated"): [`Self::win_discount`] 0.02,
+    /// [`Self::menu_no_noise`], [`Self::menu_state_keys`] and
+    /// [`EvalWeights::hold_removal`]. Each read NO LOSS on SOS sealed;
+    /// together the blunder set went 57.0 -> 60 / 60.
     pub fn with_search_fixes(self) -> Self {
         let mut weights = self.weights;
         weights.hold_removal = true;
         Self { win_discount: 0.02, menu_no_noise: true, menu_state_keys: true, weights, ..self }
     }
 
-    /// The hold arm ([`Self::menu_hold_arm`], ladder `-ho`), ADOPTED
+    /// The hold arm ([`Self::menu_hold_arm`], ladder `-ho`), adopted
     /// 2026-11-20 on top of [`Self::with_search_fixes`] (ML_NOTES "The price
-    /// of the honest redeal, and the removal item on real boards"): paired
-    /// 120 x 12 on fresh seeds 5 / 61, SOS sealed 50.4 / 50.1, FRA sealed
-    /// (FRA leaf) 49.7 / 50.8; the 75-item blunder set 69.0 from 68.4, the
-    /// two real-board counter items 10 / 10 from 2 and 4 (`.ladder/ho2`).
-    /// The scope check after it read cube 52.0 / 50.5 and Modern 49.6 / 50.8,
-    /// so the client's menu pilot and the lobby's duels carry it.
+    /// of the honest redeal, and the removal item on real boards"): NO LOSS
+    /// on SOS / FRA sealed, cube and Modern; real-board counter items 10 / 10
+    /// from 2 and 4. The client's menu pilot and the lobby's duels carry it.
     pub fn with_hold_arm(self) -> Self {
         Self { menu_hold_arm: true, ..self }
     }
@@ -833,13 +754,11 @@ fn is_declaration(a: &GameAction) -> bool {
 /// Sequential Halving's phase plan: `(surviving arms, rollouts per arm)`
 /// per phase, spending at most `budget` rollouts in total.
 ///
-/// Arm counts halve each phase down to a final pair; the per-phase spend
-/// is the remaining budget split evenly over the remaining phases, so
-/// later (narrower) phases visit each survivor more — with `arms`
-/// dividing evenly the whole budget is spent exactly. Every phase visits
-/// each survivor at least once when the budget allows; a budget too thin
-/// even for that truncates rather than overspends, because a
-/// budget-matched gate is only a gate if both sides spend what they say.
+/// Arm counts halve each phase down to a final pair; each phase gets the
+/// remaining budget split evenly over the remaining phases, so narrower
+/// phases visit each survivor more. A budget too thin to visit every
+/// survivor once truncates rather than overspends: a budget-matched gate is
+/// only a gate if both sides spend what they say.
 fn sequential_halving_plan(arms: usize, budget: u32) -> Vec<(usize, u32)> {
     if arms < 2 || budget == 0 {
         return Vec::new();
@@ -882,27 +801,19 @@ fn sequential_halving_plan(arms: usize, budget: u32) -> Vec<(usize, u32)> {
 /// prior logits, growing with visit depth so better-estimated rewards
 /// override the prior more.
 ///
-/// `q` must be the *normalized* reward — see [`completed_sigma`]. The
-/// first gate of round 37 fed raw win probabilities in, and their
-/// across-arm spread (~0.05) made σ gaps of ~0.3 logits against Gumbel
-/// noise of stddev ~1.28: the final argmax was a noise lottery, and all
-/// six cells lost by ~15–20 points.
+/// `q` must be the *normalized* reward — see [`completed_sigma`]. Round 37's
+/// first gate fed raw win probabilities in; their ~0.05 spread left σ gaps
+/// far below the Gumbel noise and every cell lost by ~15-20 points.
 fn sigma_q(q: f64, max_visits: u32, c_visit: f64, c_scale: f64) -> f64 {
     (c_visit + max_visits as f64) * c_scale * q
 }
 
 /// Per-arm σ terms for one decision: observed mean rewards min-max
-/// normalized to [0, 1] *across the decision's visited arms* (the
-/// reference implementation's `rescale_values`), then scaled by
-/// [`sigma_q`]. Unvisited arms get 0 — they compete on their perturbed
-/// prior alone, and every live arm is visited from phase 1 whenever the
-/// budget allows.
-///
-/// The normalization is the part that makes the transform work at all:
-/// two candidate lines in one position differ by a few points of win
-/// probability, and σ has to spread *that* gap over the (c_visit +
-/// max_visits)·c_scale ≈ 5–7 logit range the procedure assumes, not the
-/// gap's raw size.
+/// normalized to [0, 1] across the visited arms (mctx's `rescale_values`),
+/// then scaled by [`sigma_q`]. Unvisited arms get 0 and compete on their
+/// perturbed prior alone. The normalization is what makes the transform
+/// work: two lines differ by a few points of win probability, and σ must
+/// spread that gap over the ~5-7 logit range the procedure assumes.
 fn completed_sigma(
     visits: &[u32],
     totals: &[f64],
@@ -945,14 +856,12 @@ struct PriorStats {
 }
 
 /// Phase 5's policy target for a searched menu decision: the Gumbel
-/// improved policy, `logit + σ(q̂)`, over the arms' candidate states (the
-/// states the prior was read from), recorded as logits with the decision's
-/// kind. Unlike the search's own selection, q̂ is the raw mean reward, not
-/// min-max scaled across the arms: with eight arms and tens of rollouts
-/// each, the scaling stretches a noise-sized gap to the full σ range and
+/// improved policy, `logit + σ(q̂)`, over the arms' candidate states,
+/// recorded as logits with the decision's kind. Unlike the search's own
+/// selection, q̂ is the raw mean reward: min-max scaling over eight arms of
+/// tens of rollouts stretches a noise-sized gap to the full σ range and
 /// would make every target one-hot. An unvisited arm takes the visited
-/// arms' mean (the mixed value's visit-weighted part); a refused arm is
-/// dropped.
+/// arms' mean; a refused arm is dropped.
 #[allow(clippy::too_many_arguments)]
 fn record_search_target(
     state: &GameState,
@@ -1106,11 +1015,9 @@ pub struct MctsBot {
     menu_predeclared: Option<((u32, TurnStep), u8)>,
 }
 
-/// Stack for a root-parallel search worker. The engine's other worker
-/// threads (`bot_ladder`, `crossplay`, `selfplay_train`'s actors) all
-/// take 32 MB for the same reason: effect resolution recurses through
-/// trigger and token-copy chains, and an unoptimized build's frames brush
-/// the 8 MB default.
+/// Stack for a root-parallel search worker: 32 MB like the engine's other
+/// worker threads, because effect resolution recurses through trigger and
+/// token-copy chains and unoptimized frames brush the 8 MB default.
 use crate::server::ENGINE_STACK_BYTES as WORKER_STACK_BYTES;
 
 impl MctsBot {
@@ -1123,12 +1030,10 @@ impl MctsBot {
         super::decision_menu::Keying { structural: self.cfg.menu_declare_fix, state: self.cfg.menu_state_keys }
     }
 
-    /// Score a finished rollout on a 0..=1 scale.
-    ///
-    /// A decided game pins to the extremes; anything else is squashed from
-    /// the material evaluation. UCB1 assumes bounded rewards, and material
-    /// scores are unbounded and scale-dependent, so feeding them in raw
-    /// would make the exploration constant meaningless.
+    /// Score a finished rollout on a 0..=1 scale. A decided game pins to the
+    /// extremes; anything else is squashed from the material evaluation,
+    /// since UCB1 assumes bounded rewards and raw material scores would make
+    /// the exploration constant meaningless.
     fn reward(&self, g: &GameState, seat: usize) -> f64 {
         let _t = timing::lap(&timing::LEAF_NS);
         let r = self.reward_inner(g, seat);
@@ -1144,14 +1049,10 @@ impl MctsBot {
                 None => 0.5,
             };
         }
-        // The value net, when the profile carries one, is a *native* UCB1
-        // reward: a calibrated win probability already in [0, 1], with no
-        // squash scale to tune. This is a better fit than it ever was as
-        // a replacement inside the shallow sims — those needed fine
-        // discrimination between near-identical lines, while a bandit
-        // over rollout outcomes needs exactly a bounded win estimate.
-        // Empty slot falls through to the heuristic, per the EvalWeights
-        // convention.
+        // The value net, when the profile carries one, is a native UCB1
+        // reward: a calibrated win probability in [0, 1], no squash scale to
+        // tune. Empty slot falls through to the heuristic, per the
+        // EvalWeights convention.
         if self.cfg.weights.net_slot != 0
             && let Some(p) = super::net_eval::win_prob(g, seat, self.cfg.weights.net_slot)
         {
@@ -1192,11 +1093,9 @@ impl MctsBot {
             lib.shuffle(r);
             p.library = lib;
         }
-        // Under a determinizing profile the opponent's *hand* is
-        // redealt too (the library shuffle above never covered it —
-        // rollouts have been reading the held cards since the first
-        // MCTS experiment). Salted per rollout so the bandit averages
-        // over imagined hands.
+        // Under a determinizing profile the opponent's *hand* is redealt
+        // too (the library shuffle above never covered it). Salted per
+        // rollout so the bandit averages over imagined hands.
         if self.cfg.weights.determinize > 0 {
             let salt = 0x3C75_0000 ^ r.random::<u32>() as u64;
             super::bot::redeal_hidden(g, seat, salt, &self.cfg.weights);
@@ -1275,13 +1174,10 @@ impl MctsBot {
                 let answer = {
                     let pending = g.pending_decision.as_ref().unwrap();
                     if self.cfg.heuristic_rollouts {
-                        // `decide_pending_policy` exists so simulations
-                        // answer decisions the way the bot's future self
-                        // would; every heuristic sim loop uses it, and this
-                        // rollout was the one lookahead still scoring every
-                        // line under an AutoDecider future — no-op scries,
-                        // first-candidate tutors, head-of-hand discards,
-                        // declined optional triggers, amounts of zero.
+                        // Answer decisions the way the bot's future self
+                        // would, as every heuristic sim loop does; under
+                        // AutoDecider the rollout scored no-op scries,
+                        // first-candidate tutors, declined triggers etc.
                         // `eval_modes: false` is the in-sim convention (no
                         // nested clone-and-resolve).
                         super::bot::decide_pending_policy(
@@ -1339,21 +1235,17 @@ impl MctsBot {
     /// The Gumbel root search (round 37): Sequential Halving over arms
     /// scored by `g + logit + σ(q̂)`.
     ///
-    /// Structure, phase by phase: validate every arm (a rejected action
-    /// is parked, as in the UCB1 path), compute one prior logit per
-    /// surviving arm, perturb each once with Gumbel noise, then run the
-    /// halving plan — every phase rolls out each survivor equally often
-    /// and keeps the better-scoring half. The final pick is the argmax of
-    /// the same score over the last survivors, which is what makes the
-    /// procedure a policy improvement even at tiny budgets: an arm only
-    /// wins by out-scoring the prior's favourite *after* its rewards have
-    /// been watched.
+    /// Validate every arm (a rejected action is parked, as in UCB1), take
+    /// one prior logit per survivor, perturb each once with Gumbel noise,
+    /// then run the halving plan: each phase rolls out every survivor
+    /// equally and keeps the better half. The final pick is the argmax of
+    /// the same score, so an arm only beats the prior's favourite after its
+    /// rewards have been watched — a policy improvement even at tiny budgets.
     ///
-    /// Priors: the net's policy head over each candidate's successor
-    /// state when the profile's net carries one (`net_eval::policy_logit`
-    /// — the state the head was trained on), else the log-softmax of the
-    /// candidate generator's scores at `prior_temp`. The fallback keeps
-    /// the profile runnable with a headless net as its own control arm.
+    /// Priors: the net's policy head over each candidate's successor state
+    /// (`net_eval::policy_logit`) when the profile's net has one, else the
+    /// log-softmax of the candidate generator's scores at `prior_temp`, so a
+    /// headless net still runs as its own control arm.
     fn gumbel_search(
         &self,
         state: &GameState,
@@ -1413,12 +1305,9 @@ impl MctsBot {
         };
         let mut visits = vec![0u32; n];
         let mut total = vec![0.0f64; n];
-        // Arms are compared on `g + logit + σ(normalized q̂)` — σ terms
-        // recomputed per phase from the visits so far ([`completed_sigma`]:
-        // rewards min-max normalized across the decision's visited arms,
-        // an unvisited arm competing on its perturbed prior alone).
-        // Survivors of a phase share a visit count, so the comparison is
-        // always on the same footing.
+        // Arms are compared on `g + logit + σ(normalized q̂)`, σ recomputed
+        // per phase ([`completed_sigma`]). Survivors of a phase share a
+        // visit count, so the comparison is on equal footing.
         for (m, per_arm) in sequential_halving_plan(live.len(), self.cfg.iterations) {
             let sig =
                 completed_sigma(&visits, &total, self.cfg.gumbel_c_visit, self.cfg.gumbel_c_scale);
@@ -1458,13 +1347,11 @@ impl MctsBot {
             })
             .unwrap_or(live[0]);
 
-        // The distillation target is the *improved policy* — `logit +
-        // σ(normalized q̂)` per arm, no Gumbel noise (the noise is
-        // exploration, not belief). Softmaxing these downstream at
-        // temperature 1 is Danihelka et al.'s completed-Q construction,
-        // with an unvisited arm completed by its prior alone. Parked
-        // arms carry -inf and are dropped with their candidates, as in
-        // the UCB1 capture.
+        // The distillation target is the improved policy, `logit +
+        // σ(normalized q̂)` per arm, without the Gumbel noise (exploration,
+        // not belief): Danihelka et al.'s completed-Q construction, an
+        // unvisited arm completed by its prior. Parked arms carry -inf and
+        // are dropped with their candidates, as in the UCB1 capture.
         if super::decision_capture::enabled() {
             let improved: Vec<f32> = (0..n)
                 .map(|i| {
@@ -1529,11 +1416,10 @@ impl MctsBot {
         let base = self.cfg.iterations;
         let hard_max = (base as f64 * self.cfg.extend_close.max(1.0)).round() as u32;
         let mut done: u32 = n as u32;
-        // The base budget, spread over workers when the profile asks for
-        // them. Falls through to the serial loop below for the remainder —
-        // which is the whole budget at `search_threads: 1`, and the
-        // close-call extension either way (it stops on the *merged* means,
-        // so it cannot be split).
+        // The base budget, spread over workers when asked. The serial loop
+        // below takes the remainder: the whole budget at `search_threads: 1`,
+        // and the close-call extension either way (it stops on the merged
+        // means, so it cannot be split).
         if self.cfg.search_threads > 1 {
             done = self.parallel_spend(
                 state, seat, &candidates, &priors, &mut visits, &mut total, done, base,
@@ -1607,12 +1493,9 @@ impl MctsBot {
             eprintln!("{line}");
         }
         // Record the root decision with the search's per-arm means, so a
-        // policy target can be distilled from what the *search* concluded
-        // rather than from which action it happened to output. Without
-        // this hook the recorder only ever sees the heuristic fallback's
-        // picks, and an MCTS-piloted run would quietly measure the wrong
-        // policy. Arms the engine rejected are parked at NEG_INFINITY and
-        // are dropped alongside their candidates downstream.
+        // policy target distils what the search concluded; without it the
+        // recorder only sees the heuristic fallback's picks. Rejected arms
+        // are parked at NEG_INFINITY and dropped with their candidates.
         if super::decision_capture::enabled() {
             let means: Vec<f32> = (0..n)
                 .map(|i| {
@@ -1641,14 +1524,10 @@ impl MctsBot {
     }
 
     /// The UCB1 allocation loop: spend rollouts from `done` up to
-    /// `hard_max`, one arm chosen per rollout, and return the new `done`.
-    /// `base` is where the close-call extension phase begins — past it a
-    /// rollout is only spent while the top two means are still within
-    /// `close_margin`.
-    ///
-    /// Extracted from [`Self::search`] so the same loop is both the serial
-    /// search and one root-parallel worker's continuation; the body is
-    /// unchanged from the shape every ladder number was measured on.
+    /// `hard_max`, one arm per rollout, and return the new `done`. Past
+    /// `base` (the close-call extension) a rollout is only spent while the
+    /// top two means are within `close_margin`. Shared by the serial search
+    /// and each root-parallel worker; the body is the measured shape.
     #[allow(clippy::too_many_arguments)]
     fn ucb1_spend(
         &self,
@@ -1736,27 +1615,16 @@ impl MctsBot {
 
     /// The base budget spent by `search_threads` independent UCB1
     /// continuations off the seeded statistics, summed back into
-    /// `visits`/`total`. Returns `base`: the budget is spent either way,
-    /// and a worker that stopped early (`early_stop`) leaves rollouts
-    /// unspent on purpose, exactly as the serial loop does.
+    /// `visits`/`total`. Returns `base`: a worker that stopped early
+    /// (`early_stop`) leaves rollouts unspent on purpose, as the serial loop
+    /// does.
     ///
-    /// Each worker starts from a *copy* of the seeded arrays, so what is
-    /// merged back is its delta. Arms parked at the root (`u32::MAX`)
-    /// stay parked: `perform_action` on a clone is deterministic, so every
-    /// worker parks the same set the seeding pass did.
-    ///
-    /// Scoped threads rather than a pool: a worker's whole job is
-    /// `budget / workers` rollouts of ~240 µs each, so ~20 µs of spawn is
-    /// under a percent, and a pool would have to own the borrowed root
-    /// state across decisions to pay for itself.
-    ///
-    /// Each worker is built with the engine's 32 MB stack, like every other
-    /// thread in the tree that resolves effects — a rollout runs the same
-    /// recursive trigger/copy chains a game does, and the default 8 MB is
-    /// not enough for them in an unoptimized build (`.cargo/config.toml`'s
-    /// `RUST_MIN_STACK`, and PERF's standing "effect-resolution recursion
-    /// depth" constraint). `RUST_MIN_STACK` only reaches a process cargo
-    /// launched, so the size is stated here rather than inherited.
+    /// Each worker starts from a copy of the seeded arrays and its delta is
+    /// merged back. Root-parked arms (`u32::MAX`) stay parked: `perform_action`
+    /// on a clone is deterministic, so every worker parks the same set.
+    /// Scoped threads, not a pool: spawn is under a percent of a worker's
+    /// job. Each worker gets the engine's 32 MB stack explicitly, because
+    /// `RUST_MIN_STACK` only reaches processes cargo launched.
     #[allow(clippy::too_many_arguments)]
     fn parallel_spend(
         &self,
@@ -1782,11 +1650,8 @@ impl MctsBot {
         let extra = budget % workers as u32;
         let results: Vec<(Vec<u32>, Vec<f64>)> = std::thread::scope(|scope| {
             let mut handles = Vec::with_capacity(workers);
-            // Chunks whose thread could not be spawned at all. Running them
-            // here keeps the budget exact: a search that quietly spent
-            // three quarters of its iterations because the box was out of
-            // threads is the kind of thing that shows up as "the bot got
-            // worse" months later.
+            // Chunks whose thread could not be spawned run here, keeping the
+            // budget exact rather than silently short.
             let mut inline: Vec<(Vec<u32>, Vec<f64>)> = Vec::new();
             let (seeded_v, seeded_t) = (seed_visits.as_slice(), seed_total.as_slice());
             for w in 0..workers {
@@ -1828,10 +1693,9 @@ impl MctsBot {
                 }
                 // A worker can only park an arm the seeding pass accepted if
                 // `perform_action` stopped being a function of (state,
-                // action) — and then `v[i] - seed_visits[i]` is `u32::MAX -
-                // 1` added to a visit count, i.e. every mean the argmax
-                // reads is garbage. Assert it in the suite, drop the
-                // worker's contribution in the field.
+                // action), and then `v[i] - seed_visits[i]` wraps and every
+                // mean is garbage. Assert in the suite; drop the worker's
+                // contribution in the field.
                 debug_assert_ne!(
                     v[i],
                     u32::MAX,
@@ -1853,9 +1717,8 @@ impl MctsBot {
     /// never has. `None` for an action the engine rejects.
     ///
     /// A combat declaration is followed by passes until its step is over:
-    /// the rollout's fresh policy bots carry no "already declared" latch,
-    /// and would otherwise re-declare over an empty declaration (the
-    /// failure `puzzle::playout_bots` documents).
+    /// the rollout's fresh bots carry no "already declared" latch and would
+    /// re-declare (see `puzzle::playout_bots`).
     pub fn probe_actions(&self, state: &GameState, seat: usize, actions: &[GameAction], n: u32) -> Vec<Option<f64>> {
         actions
             .iter()
@@ -1878,13 +1741,11 @@ impl MctsBot {
     }
 
     /// Every rollout's reward after each of `actions`, rollout `k` of every
-    /// action run under [`PinnedStreams`] seeded `seeds[k]` — common random
-    /// numbers: the same redeal, library order and rollout jitter behind the
-    /// k-th sample of each arm, so a difference between two arms' k-th
-    /// rewards carries the arms' difference and not the deal's. Each rollout
-    /// is [`Self::arm_rollout`], the menu search's own (redeal *before* the
-    /// arm). `None` for an action the engine rejects. Diagnostic
-    /// (`bot_puzzles --crn-census`): the search itself does not pair yet.
+    /// action under [`PinnedStreams`] seeded `seeds[k]` (common random
+    /// numbers: same redeal, library order and jitter, so the k-th rewards
+    /// differ by the arms, not the deal). Each rollout is
+    /// [`Self::arm_rollout`]. `None` for a rejected action. Diagnostic
+    /// (`bot_puzzles --crn-census`).
     pub fn probe_actions_crn(&self, state: &GameState, seat: usize, actions: &[GameAction], seeds: &[u64]) -> Vec<Option<Vec<f64>>> {
         actions
             .iter()
@@ -2265,10 +2126,9 @@ impl MctsBot {
         let mut g = state.clone();
         self.determinise(&mut g, seat, &mut draw_rng());
         // A spell or ability played while `seat`'s declaration is still due
-        // (`menu_declare_fix` lets one be followed by the declaration): the
-        // rollout's heuristic declares at once, with the spell still on the
-        // stack, so a flash blocker or a kill on an attacker would be priced
-        // as if it had not happened. Resolve it first.
+        // (`menu_declare_fix`): resolve it first, or the rollout's heuristic
+        // declares with it still on the stack and the flash blocker / kill
+        // is priced as if it had not happened.
         let settle = self.cfg.menu_declare_fix
             && !matches!(arm, GameAction::PassPriority)
             && !is_declaration(arm)
@@ -2297,10 +2157,9 @@ impl MctsBot {
     }
 
     /// The round-51 fetch arms: search a pending `SearchLibrary` instead of
-    /// letting it fall through to the heuristic. Every other pending
-    /// decision still does fall through — this is the one whose answer is a
-    /// whole card and whose heuristic is a fixed ranking with no board read
-    /// past mana. `None` means "not a searched fetch tick".
+    /// the heuristic's fixed ranking (the one pending decision whose answer
+    /// is a whole card); every other pending decision falls through. `None`
+    /// means "not a searched fetch tick".
     fn fetch_search(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         use crate::decision::{Decision, DecisionAnswer};
         let pending = state.pending_decision.as_ref()?;
@@ -2333,13 +2192,11 @@ impl MctsBot {
         Some(self.search(state, seat, arms))
     }
 
-    /// The round-31 combat arms: search the attack/block declaration when
-    /// it is this seat's to make and still pending. `None` means "not a
-    /// searched combat tick" and the caller falls through to the normal
-    /// path. Master Warcraft-style declarations for the *other* side
-    /// (forced-only) stay with the heuristic, as does every non-declaration
-    /// tick of the phase — tricks, defensive removal follow-ups, passes —
-    /// via the shared latch on the fallback bot.
+    /// The round-31 combat arms: search the attack/block declaration when it
+    /// is this seat's and still pending. `None` means "not a searched combat
+    /// tick". Forced declarations for the other side (Master Warcraft) and
+    /// every non-declaration tick of the phase stay with the heuristic, via
+    /// the shared latch on the fallback bot.
     fn combat_search(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         if state.pending_decision.is_some()
             || state.player_with_priority() != seat
@@ -2462,11 +2319,9 @@ impl MctsBot {
         if candidates.is_empty() {
             return self.fallback.next_action(state, seat);
         }
-        // `mcts_land_first`: the land drop the menu offers is made, not
-        // searched. Against "pass" it can't win — the rollout after a pass
-        // plays the land itself later in the turn — so the two arms tie and
-        // pass took the coin flip: 646 of 4,226 own turns with a land in hand
-        // played none (FRA sealed, `mcts-net67-256` mirror, 2026-10-25).
+        // `mcts_land_first`: the land drop is made, not searched. Against
+        // "pass" it ties (the rollout after a pass plays the land later), so
+        // pass won coin flips and own turns went by with no land played.
         if self.cfg.weights.mcts_land_first
             && let Some((land, _)) = candidates.iter().find(|(a, _)| matches!(a, GameAction::PlayLand(_)))
         {
@@ -2700,13 +2555,10 @@ mod tests {
         );
     }
 
-    /// Root parallelisation splits the budget, it does not multiply it:
-    /// `iterations` rollouts happen whether one worker runs them or four.
-    ///
-    /// The arithmetic this pins is the merge. Each worker starts from a
-    /// *copy* of the seeded statistics, so what goes back is its delta; a
-    /// merge that summed the whole array instead would quadruple every
-    /// visit count and every reward total, and the argmax reads means.
+    /// Root parallelisation splits the budget, it does not multiply it.
+    /// Pins the merge: each worker starts from a copy of the seeded stats
+    /// and only its delta goes back; summing the whole array would
+    /// quadruple every count and total.
     #[test]
     fn root_parallel_search_splits_the_budget_rather_than_multiplying_it() {
         use crate::player::Player;
@@ -2775,21 +2627,15 @@ mod tests {
         assert!(DEADLINE.with(|d| d.get()).is_none(), "the guard restored no deadline");
     }
 
-    /// CR 508.1d — the declaration this bot *returns* has to be legal, and
+    /// CR 508.1d — the declaration this bot *returns* must be legal, and
     /// nothing between the menu and the return checks that.
     ///
-    /// Every candidate becomes an arm and `search` picks one on rollout
-    /// score alone. The rollouts run through `sim_step`, where a rejected
-    /// declaration is rolled back and retried as a priority pass — so an
-    /// illegal arm does not score badly, it scores as a perfectly ordinary
-    /// "attacked with nobody" line and can win the search outright. The real
-    /// `perform_action` then rejects it and the bot loses its whole combat.
-    ///
-    /// This is the half of the menu bug the heuristic search cannot show:
-    /// `pick_attacks_scored` scores its candidates with a direct
-    /// `declare_attackers`, so an illegal one comes back `None` and is
-    /// skipped. Only the Monte Carlo consumer can actually play one, and it
-    /// is the consumer the training actors use.
+    /// Rollouts run through `sim_step`, where a rejected declaration is
+    /// retried as a priority pass, so an illegal arm scores as an ordinary
+    /// "attacked with nobody" line and can win; the real `perform_action`
+    /// then rejects it and the bot loses its combat. `pick_attacks_scored`
+    /// can't show this (its direct `declare_attackers` skips illegal ones);
+    /// only the Monte Carlo consumer, which the training actors use, can.
     #[test]
     fn combat_search_never_returns_an_illegal_declaration() {
         use crate::card::Keyword;
@@ -2800,12 +2646,10 @@ mod tests {
         g.step = TurnStep::DeclareAttackers;
         g.active_player_idx = 0;
         g.priority.player_with_priority = 0;
-        // Attacking is a losing line on this board — a 1/1 and a 2/2 into an
-        // untapped 6/6 — so "attack with nobody" is what the rollouts
-        // actually prefer. That is the arm the rules forbid.
-        // The grant, not a printed keyword: `CardInstance::has_keyword`
-        // cannot see a layer-6 `AddKeyword`, which is the read the planner
-        // used to make, so this is the board that separates the two.
+        // Attacking is a losing line (a 1/1 and a 2/2 into an untapped 6/6),
+        // so "attack with nobody" — the forbidden arm — is what rollouts
+        // prefer. The keyword is a layer-6 grant, not printed:
+        // `CardInstance::has_keyword` can't see it, which separates the reads.
         let anthem = crate::card::CardDefinition {
             name: "Bloodlust Anthem",
             card_types: vec![crate::card::CardType::Enchantment],
@@ -3180,13 +3024,10 @@ mod tests {
         assert!((one - 5.1).abs() < 1e-9, "got {one}");
     }
 
-    /// The round-37 gate-1 lesson, pinned: rewards are min-max
-    /// normalized across the decision's arms before σ, so the best and
-    /// worst *observed* arms are separated by the full (c_visit +
-    /// max_visits)·c_scale range however small their raw win-probability
-    /// gap is. Unnormalized, a 0.05 gap was ~0.3 logits against Gumbel
-    /// noise of stddev ~1.28 and the final argmax was a noise lottery —
-    /// all six gate cells lost by 15–20 points.
+    /// The round-37 gate-1 lesson, pinned: rewards are min-max normalized
+    /// across the arms before σ, so the best and worst observed arms span
+    /// the full (c_visit + max_visits)·c_scale range however small their
+    /// raw gap. Unnormalized, the final argmax was a noise lottery.
     #[test]
     fn completed_sigma_normalizes_rewards_across_arms() {
         // Three visited arms with a tiny raw spread, one unvisited.

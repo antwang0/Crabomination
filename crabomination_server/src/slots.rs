@@ -5,18 +5,13 @@ use std::collections::HashMap;
 use std::net::IpAddr;
 use std::sync::{Arc, Mutex};
 
-/// Tracks concurrent connections to enforce global and per-IP caps.
+/// Concurrent-connection accounting for the global and per-IP caps.
 ///
-/// One [`SlotGuard`] is acquired per accepted connection (so a pair-mode
-/// match holds two slots — one per seat, each indexed by the seat's own
-/// peer IP). The guard's `Drop` impl releases the counters, so a panicking
-/// match thread still frees its slot.
-///
-/// Per-IP limits operate on the raw remote address, so clients behind a
-/// shared NAT or load balancer share one counter. That's the right behavior
-/// for a hobby server (the only signal we have is the socket-level peer
-/// address); production setups would want X-Forwarded-For unwrapping at a
-/// reverse-proxy layer above us.
+/// One [`SlotGuard`] per accepted connection (a pair-mode match holds two, each
+/// keyed by its seat's peer IP); its `Drop` releases the counters, so a
+/// panicking match thread still frees its slot. Per-IP limits use the raw
+/// socket address, so clients behind one NAT share a counter; X-Forwarded-For
+/// handling would belong in a reverse proxy.
 #[derive(Clone)]
 pub(crate) struct SlotManager {
     inner: Arc<Mutex<SlotState>>,
@@ -30,25 +25,18 @@ pub(crate) struct SlotManager {
 pub(crate) struct SlotState {
     total: usize,
     per_ip: HashMap<IpAddr, usize>,
-    /// High-water mark of `total` — the most concurrent connections ever
-    /// held at once. Lets operators size the global cap against real peak
-    /// load rather than guessing.
+    /// Most connections ever held at once, for sizing the global cap.
     peak: usize,
-    /// High-water mark of any single IP's slot count over the server's
-    /// lifetime. The live `max_per_ip` resets when an abusive IP disconnects;
-    /// this persists the worst concentration ever seen, so a burst of
-    /// single-source abuse is still visible in telemetry after it clears.
+    /// Most slots any single IP ever held. Unlike the live `max_per_ip`, it
+    /// survives the abusive IP disconnecting.
     peak_per_ip: usize,
     /// Cumulative connections refused because the global cap was full.
     refused_global: u64,
-    /// Cumulative connections refused because the per-IP cap was full —
-    /// distinct from `refused_global` so a single abusive IP hammering the
-    /// per-IP cap reads differently from genuine global saturation.
+    /// Connections refused by the per-IP cap, kept apart from `refused_global`
+    /// so one abusive IP reads differently from real saturation.
     refused_per_ip: u64,
-    /// Cumulative connections accepted (lifetime). The denominator the
-    /// refusal counters lacked: `refused / (accepted + refused)` is the
-    /// pressure ratio, so operators can tell "a few refusals against heavy
-    /// healthy traffic" from "refusing most of what arrives".
+    /// Connections accepted (lifetime): the denominator for the refusal
+    /// ratio `refused / (accepted + refused)`.
     accepted: u64,
 }
 
@@ -59,44 +47,33 @@ pub(crate) struct SlotSnapshot {
     pub(crate) peak: usize,
     pub(crate) refused_global: u64,
     pub(crate) refused_per_ip: u64,
-    /// Distinct remote IPs currently holding at least one slot. Read against
-    /// `current` it separates "one IP holding many slots" (possible abuse)
-    /// from "many IPs each holding a few" (healthy load).
+    /// Distinct IPs holding at least one slot. Against `current` it separates
+    /// one IP holding many slots (abuse) from many IPs holding a few.
     pub(crate) distinct_ips: usize,
-    /// Largest number of slots any single IP currently holds. A value
-    /// approaching `current` while `distinct_ips` stays low is the clearest
-    /// single-source-abuse signal — sharper than `distinct_ips` alone.
+    /// Most slots any single IP holds right now. Near `current` with low
+    /// `distinct_ips` is the clearest single-source-abuse signal.
     pub(crate) max_per_ip: usize,
-    /// Lifetime high-water mark of any single IP's concurrent slots. Unlike
-    /// `max_per_ip` (a live read), this survives the abusive IP disconnecting.
+    /// Lifetime high-water mark of `max_per_ip`; survives the IP disconnecting.
     pub(crate) peak_per_ip: usize,
-    /// Lifetime accepted-connection count — the denominator for
-    /// [`refusal_rate_pct`](Self::refusal_rate_pct).
+    /// Lifetime accepted count, the denominator of [`refusal_rate_pct`](Self::refusal_rate_pct).
     pub(crate) accepted: u64,
-    /// The configured global cap (0 = unlimited), carried so
-    /// [`occupancy_pct`](Self::occupancy_pct) can be read off a snapshot
-    /// without a second call back into the manager.
+    /// Configured global cap (0 = unlimited), so
+    /// [`occupancy_pct`](Self::occupancy_pct) reads off the snapshot alone.
     pub(crate) global_cap: usize,
 }
 
 impl SlotSnapshot {
-    /// Percentage of all connection *attempts* (accepted + refused) that
-    /// were turned away. 0 when nothing has arrived yet. A rising rate is
-    /// the single clearest "the server is under-provisioned or under
-    /// attack" signal — refusal counts alone don't show whether 100
-    /// refusals is a blip against heavy traffic or near-total rejection.
+    /// Percent of connection attempts (accepted + refused) refused; 0 before any
+    /// arrive. The clearest under-provisioned / under-attack signal.
     pub(crate) fn refusal_rate_pct(&self) -> u64 {
         let refused = self.refused_global.saturating_add(self.refused_per_ip);
         let attempts = self.accepted.saturating_add(refused);
         refused.saturating_mul(100).checked_div(attempts).unwrap_or(0)
     }
 
-    /// Live global-cap occupancy as a percentage (`current / global_cap`).
-    /// Returns 0 when the global cap is unlimited (no ceiling to fill).
-    /// Unlike [`refusal_rate_pct`](Self::refusal_rate_pct) — which only moves
-    /// once the server is *already* turning connections away — occupancy
-    /// rises smoothly toward 100 as load approaches the cap, so it's the
-    /// earlier "provision more headroom" signal.
+    /// Global-cap occupancy (`current / global_cap`) as a percent; 0 with an
+    /// unlimited cap. Rises smoothly before any refusal, so it is the earlier
+    /// headroom signal than [`refusal_rate_pct`](Self::refusal_rate_pct).
     pub(crate) fn occupancy_pct(&self) -> u64 {
         if self.global_cap == 0 {
             return 0;
@@ -116,11 +93,9 @@ pub(crate) enum SlotRefusal {
 
 impl SlotManager {
     pub(crate) fn new(global_cap: usize, per_ip_cap: usize) -> Self {
-        // A per-IP cap above the global cap is toothless — a single IP could
-        // never reach it before the global cap refuses everyone, so per-IP
-        // protection would be silently disabled. Clamp it to the global cap so
-        // the effective per-IP limit matches what an operator can reason about.
-        // (`global_cap == 0` means "unbounded global", so no clamp applies.)
+        // A per-IP cap above the global cap could never trip, silently disabling
+        // per-IP protection, so clamp it to the global cap (unless the global cap is
+        // 0, unbounded).
         let per_ip_cap = if global_cap != 0 { per_ip_cap.min(global_cap) } else { per_ip_cap };
         Self {
             inner: Arc::new(Mutex::new(SlotState::default())),
@@ -130,10 +105,8 @@ impl SlotManager {
     }
 
     pub(crate) fn try_acquire(&self, addr: IpAddr) -> Result<SlotGuard, SlotRefusal> {
-        // Poisoning here means a previous holder panicked while updating
-        // counters. The state is still structurally valid (we only do
-        // small arithmetic under the lock), so recover via `into_inner`
-        // instead of propagating the panic.
+        // A poisoned lock only means a holder panicked mid-arithmetic; the counters
+        // are still valid, so recover via `into_inner`.
         let mut state = self.inner.lock().unwrap_or_else(|p| p.into_inner());
         if self.global_cap != 0 && state.total >= self.global_cap {
             state.refused_global += 1;
@@ -159,8 +132,7 @@ impl SlotManager {
         })
     }
 
-    /// Snapshot the live occupancy + cumulative refusal counters for a
-    /// rolling telemetry line. Recovers a poisoned lock (see `try_acquire`).
+    /// Snapshot occupancy and refusal counters for telemetry (recovers a poisoned lock).
     pub(crate) fn snapshot(&self) -> SlotSnapshot {
         let state = self.inner.lock().unwrap_or_else(|p| p.into_inner());
         SlotSnapshot {
@@ -226,8 +198,7 @@ mod tests {
 
     #[test]
     fn per_ip_cap_clamped_to_global() {
-        // A configured per-IP cap above the global cap is clamped down so the
-        // effective per-IP limit is meaningful (never above the global cap).
+        // A per-IP cap above the global cap is clamped down to it.
         let mgr = SlotManager::new(3, 10);
         assert_eq!(mgr.per_ip_cap, 3, "per-IP cap clamped to the global cap");
         // With global==0 (unbounded) the per-IP cap is left as-is.
@@ -277,8 +248,7 @@ mod tests {
             let _c = mgr.try_acquire(ip(1)).expect("ip1 #3");
             assert_eq!(mgr.snapshot().peak_per_ip, 3, "peaked at 3 from one IP");
         }
-        // The abusive IP has disconnected: live max resets, but the lifetime
-        // high-water mark persists for operator telemetry.
+        // Abusive IP gone: live max resets, lifetime high-water mark persists.
         let s = mgr.snapshot();
         assert_eq!(s.max_per_ip, 0, "live concentration cleared");
         assert_eq!(s.peak_per_ip, 3, "peak concentration remembered");

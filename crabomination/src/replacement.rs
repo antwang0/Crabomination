@@ -1,18 +1,14 @@
-//! Replacement effects framework (Phase H — Commander prerequisite).
+//! Replacement effects framework (Commander prerequisite).
 //!
-//! A [`ReplacementEffect`] watches a specific game event and, when it
-//! fires, returns a *modified* event in place of the original. Today
-//! the engine only models zone-change replacements (the Commander
-//! "would go to graveyard/exile/hand/library → command zone instead"
-//! rule, CR 903.9b); the data shape leaves room to grow.
+//! A [`ReplacementEffect`] watches an event and returns a *modified* event in
+//! its place. Only zone-change replacements are modelled (Commander's "→
+//! command zone instead", CR 903.9b).
 //!
-//! Replacements are registered on [`crate::game::GameState`] via
-//! `register_replacement` and consulted by zone-change paths
-//! (`place_card_in_dest`, `remove_from_battlefield_to_graveyard_raw`,
-//! `remove_from_battlefield_to_exile`). The engine walks the registry
-//! at the moment of placement, swaps the destination if a match
-//! fires, and re-consults — capped by [`MAX_REPLACEMENT_ITERATIONS`]
-//! so chained replacements can't infinite-loop.
+//! Registered on [`crate::game::GameState`] via `register_replacement` and
+//! consulted at placement by the zone-change paths (`place_card_in_dest`,
+//! `remove_from_battlefield_to_graveyard_raw`,
+//! `remove_from_battlefield_to_exile`): a match swaps the destination and the
+//! registry is re-consulted, capped by [`MAX_REPLACEMENT_ITERATIONS`].
 
 use serde::{Deserialize, Serialize};
 
@@ -24,10 +20,8 @@ use crate::card::{CardId, Zone};
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ReplacementId(pub u32);
 
-/// What card a replacement effect listens for. Kept narrow on
-/// purpose — the only consumer in scope (Commander) needs to match
-/// a single known card by `CardId`. Broader predicates ("any creature
-/// you control", "any card with X type") would extend this enum
+/// What card a replacement listens for. Narrow on purpose: Commander only
+/// matches one card by `CardId`; broader predicates would extend this enum
 /// without touching the resolver.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ReplacementSource {
@@ -35,16 +29,12 @@ pub enum ReplacementSource {
     Card(CardId),
 }
 
-/// A registered zone-change replacement. Fires when a card matching
-/// `source` would move *from* `from` (or any zone if `None`) *to*
-/// any one of `to_zones`; the destination is rewritten to
-/// `redirect_to`.
+/// A registered zone-change replacement: when a card matching `source` would
+/// move from `from` (any zone if `None`) to one of `to_zones`, the
+/// destination becomes `redirect_to`.
 ///
-/// Commander's "may redirect to command zone" semantics live on top
-/// of this: callers pass `optional: true` and the resolver delegates
-/// the yes/no choice to the card owner via the `Decider` when
-/// Phase L wires it in. For Phase H all replacements are mandatory —
-/// `optional` is reserved for the next phase.
+/// `optional` is reserved for Commander's "may redirect" (the owner's yes/no
+/// through the `Decider`); for now every replacement is mandatory.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ReplacementEffect {
     pub id: ReplacementId,
@@ -67,10 +57,6 @@ pub struct ReplacementEffect {
     pub optional: bool,
 }
 
-/// Hard cap on how many times the resolver will walk the registry
-/// for a single zone change. Each pass can fire at most one
-/// replacement, so this also caps the total replacements applied
-/// per move. Set high enough that legitimate chained replacements
-/// (commander-redirect → ETB-redirect, etc.) have plenty of headroom
-/// while still stopping a pathological loop.
+/// Max registry walks per zone change (each fires at most one replacement):
+/// headroom for legitimate chains, a stop for pathological loops.
 pub const MAX_REPLACEMENT_ITERATIONS: usize = 16;

@@ -1,27 +1,17 @@
 //! Game-scoped randomness (`GameRng`).
 //!
-//! Everything the *rules* randomize — mulligan reshuffles, "at random"
-//! discards, random target picks, a shuffled library — draws from the
-//! `GameState`'s own stream rather than the thread RNG. Two reasons, both
-//! of which had already cost us:
+//! Everything the rules randomize (mulligan reshuffles, random discards and
+//! targets, library shuffles) draws from the `GameState`'s own stream, never
+//! the thread RNG, for:
 //!
-//! * **Reproducibility.** A seeded game has to replay identically, in this
-//!   process and the next. With `rand::rng()` in the mulligan path a fixed
-//!   seed reproduced the deal and then diverged the moment either seat
-//!   mulliganed, so a self-play trace could not be replayed and a crash at
-//!   game 400 000 could not be re-run.
-//! * **Paired ladder validity.** `simulate_match_pairs_piloted` plays one
-//!   shuffle from both seats so the deal cancels. Any reshuffle drawn from
-//!   the thread RNG un-cancels it silently — the pairing still *reports* a
-//!   variance reduction, just a smaller one than it should, on exactly the
-//!   games (mulligans) where the deal matters most.
+//! * **Reproducibility** — a seeded game must replay identically (a thread
+//!   RNG in the mulligan path once made traces and crashes unreplayable).
+//! * **Paired ladder validity** — `simulate_match_pairs_piloted` plays one
+//!   shuffle from both seats; a thread-RNG reshuffle silently un-cancels it.
 //!
-//! Interior mutability (an atomic, not a `Cell`, so `GameState` stays
-//! `Sync`) so a draw needs only `&self`: the call sites are overwhelmingly
-//! `self.players[x].library.shuffle(...)`, which cannot also borrow `self`
-//! mutably. `Relaxed` is the right ordering — a `GameState` is owned by one
-//! thread at a time, and the atomic is here for the trait bound, not for
-//! cross-thread communication.
+//! An atomic (not a `Cell`, so `GameState` stays `Sync`) so a draw needs only
+//! `&self` — call sites like `self.players[x].library.shuffle(...)` can't
+//! also borrow `self` mutably. `Relaxed` suffices: one thread owns a state.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 

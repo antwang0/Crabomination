@@ -1,9 +1,7 @@
 //! CR 601.2f / 733.1 — a spell that costs more for each target beyond the
-//! first (strive, CR 207.2c; Fireball). The cast-time "choose an additional target"
-//! prompt offered a slot the caster could not pay for: picking it made the
-//! whole cast illegal and rewound it to before the cast, so a
-//! seat answering at random (`--a uniform`) re-cast Launch the Fleet 643
-//! times into the action cap.
+//! first (strive, CR 207.2c; Fireball). The "choose an additional target"
+//! prompt must not offer a slot the caster can't pay for: picking one rewound
+//! the whole cast (a `--a uniform` seat re-cast Launch the Fleet 643 times).
 
 use super::GameState;
 use super::types::{GameAction, Target};

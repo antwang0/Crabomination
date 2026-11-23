@@ -1,17 +1,14 @@
 //! `OftenEmpty` — a `Vec` whose `Clone` tests `is_empty()` first.
 //!
-//! `Vec::clone` is an out-of-line call that builds a `RawVec` and copies
-//! `len` elements even when `len` is 0 — ~45 Ir for a `Vec::new()`. The
-//! per-object lists on `CardData` are empty on nearly every permanent and
-//! are cloned on every CoW unshare of the card, so the empties were most of
-//! `Vec::clone`'s 471 k calls on a six-game `cube` run (PERF `(-200)`).
-//! The guard inlines to a length test; a non-empty list clones exactly as
-//! before. Same size as the `Vec` it wraps, so `(-165)`'s owner-growth rule
-//! does not apply.
+//! `Vec::clone` is an out-of-line call that does work even for `len == 0`, and
+//! the per-object lists on `CardData` are empty on nearly every permanent but
+//! cloned on every CoW unshare of the card (PERF `(-200)`). The guard inlines
+//! to a length test; a non-empty list clones as before. Same size as the `Vec`,
+//! so `(-165)`'s owner-growth rule doesn't apply.
 //!
-//! `Deref`/`DerefMut` make it read and write like the `Vec`; the iterator
-//! and `From` impls cover the sites `Deref` cannot reach (`for x in &list`,
-//! struct literals, `assert_eq!` against a `Vec`).
+//! `Deref` / `DerefMut` make it read and write like the `Vec`; the iterator and
+//! `From` impls cover what `Deref` can't (`for x in &list`, struct literals,
+//! `assert_eq!` against a `Vec`).
 
 use std::ops::{Deref, DerefMut};
 

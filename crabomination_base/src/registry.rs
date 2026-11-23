@@ -1,16 +1,9 @@
-//! Card-name → `CardDefinition` resolver hook.
-//!
-//! `CardInstance` round-trips through serde by *name*: serialization writes
-//! the card's name, and deserialization must rebuild the full
-//! `CardDefinition`. The authoritative name→factory index lives in the
-//! top-level `crabomination` crate (it aggregates the cube, demo decks, SoS
-//! and STX pools), which depends on this crate — so this crate cannot call it
-//! directly without a dependency cycle.
-//!
-//! Instead the top-level crate installs a resolver via [`set_card_resolver`]
-//! at load time (see its `ctor` registration), and `CardInstance`'s
-//! `Deserialize` impl calls [`resolve_card`]. If no resolver has been
-//! installed, resolution fails and deserialization returns an error.
+//! Card-name → `CardDefinition` resolver hook. `CardInstance` serializes by
+//! name, and deserializing needs the full definition, but the name→factory
+//! index lives in the top-level `crabomination` crate, which depends on this
+//! one. So that crate installs a resolver via [`set_card_resolver`] at load
+//! time (its `ctor` registration), and `CardInstance`'s `Deserialize` calls
+//! [`resolve_card`]; with none installed, deserialization fails.
 
 use std::sync::OnceLock;
 

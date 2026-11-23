@@ -178,38 +178,33 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::FREYALISE_COMMANDERS,
             main: decks::FREYALISE_MAIN,
         },
-        // Eighth, appended for the third time for the same reason: the pod's
-        // only **Choose a Background** pair (CR 702.124k), whose second
-        // commander is a legendary enchantment rather than a creature.
-        // `--seats 8` is what reaches it.
+        // Eighth, appended for the same reason: the only Choose a Background
+        // pair (CR 702.124k), whose second commander is a legendary
+        // enchantment. `--seats 8`.
         PodDeck {
             name: "Zellix + Background (UR)",
             commanders: decks::ZELLIX_COMMANDERS,
             main: decks::ZELLIX_MAIN,
         },
-        // Ninth, appended for the fourth time for the same reason: the pod's
-        // only **commander ninjutsu** seat (CR 702.49d), and the only one
-        // whose commander leaves the command zone by an action that is not a
-        // cast. `--seats 9` is what reaches it.
+        // Ninth, same reason: the only commander ninjutsu seat (CR 702.49d),
+        // a commander that leaves the command zone without being cast.
+        // `--seats 9`.
         PodDeck {
             name: "Yuriko (UB)",
             commanders: decks::YURIKO_COMMANDERS,
             main: decks::YURIKO_MAIN,
         },
-        // Tenth, appended for the fifth time for the same reason: the pod's
-        // only seat that plays the **multiplayer-native** mechanics — the
-        // monarch (CR 725), goad (CR 701.15), melee (CR 702.121),
-        // voting (CR 701.38), tempting offer and join forces (CR 207.2c),
-        // the initiative (CR 726) and myriad (CR 702.116) — none of which
-        // any of the nine above had ever piloted. `--seats 10` reaches it.
+        // Tenth, same reason: the only seat playing the multiplayer-native
+        // mechanics — monarch (CR 725), goad (CR 701.15), melee (CR 702.121),
+        // voting (CR 701.38), tempting offer / join forces (CR 207.2c), the
+        // initiative (CR 726), myriad (CR 702.116). `--seats 10`.
         PodDeck {
             name: "Adriana (RW)",
             commanders: decks::ADRIANA_COMMANDERS,
             main: decks::ADRIANA_MAIN,
         },
-        // Eleventh, appended for the sixth time for the same reason: the
-        // pod's first **official precon** (Sultai Arisen, TDC) and its
-        // graveyard seat. `--seats 11` reaches it.
+        // Eleventh, same reason: the first official precon (Sultai Arisen,
+        // TDC), a graveyard seat. `--seats 11`.
         PodDeck {
             name: "Teval (BGU)",
             commanders: decks::TEVAL_COMMANDERS,
@@ -37688,28 +37683,20 @@ pub fn play_one_pod_game(
     play_one_pod_game_censused(template, pilots, max_actions, seed, None)
 }
 
-/// [`play_one_pod_game`] with the action census handed in, so a caller can
-/// total across games. `None` keeps the `CRAB_CAP_DIAG` behaviour: a census
-/// armed for this game only, rendered if the game did not decide.
-/// `max_actions` is the budget in plays (non-pass actions); see
-/// `PodOutcome::plays`.
-/// CR 732.1b / 732.2a — an optional loop repeats as many times as its player
-/// chooses. A seat past this many activations of one ability of one permanent
-/// in a turn is in a loop the bot cannot price (Woe Strider sacrificing
-/// Prowling Geistcatcher's returns, which pay Gravespawn Sovereign to bring
-/// the Geistcatcher back: 2,723 scries in one main phase); its next one is a
-/// pass instead. Casts of one card count the same way: a cast its own answer
-/// made illegal is rewound (CR 733.1), and a seat that answers the same way
-/// again re-casts it until the cap (Launch the Fleet, 643 casts in one turn).
-/// Pods only — the two-player drivers never reach it.
+/// CR 732.1b / 732.2a — an optional loop repeats as often as its player
+/// chooses. Past this many activations of one ability of one permanent in a
+/// turn, the bot is in a loop it cannot price (Woe Strider / Prowling
+/// Geistcatcher / Gravespawn Sovereign: 2,723 scries in one main phase), so
+/// its next one is a pass. Casts of one card count the same way: a cast its
+/// own answer made illegal is rewound (CR 733.1) and can be re-cast until the
+/// cap (Launch the Fleet, 643 casts in a turn). Pods only.
 const POD_SAME_ACTIVATION_PER_TURN: u32 = 64;
 
-/// Casts per turn of a legendary permanent whose name the seat already
-/// controls. The copy dies to the legend rule (CR 704.5j) as it resolves, so
-/// each cast is net zero unless a recursion engine pays it back — Scrap
-/// Trawler returning the binned copy while The Eternity Elevator and
-/// Liberator refund the mana ran 64 casts a name for every name, every turn
-/// (8-seat seed 931516: one game ran for hours). Pods only.
+/// Casts per turn of a legend whose name the seat already controls. The copy
+/// dies to the legend rule (CR 704.5j), so each cast is net zero unless a
+/// recursion engine pays it back (Scrap Trawler + The Eternity Elevator +
+/// Liberator: 64 casts a name per turn, one 8-seat game ran for hours). Pods
+/// only.
 const POD_DUPLICATE_LEGEND_CASTS_PER_TURN: u32 = 2;
 
 /// This turn's activation counts by (seat, source, ability index; a cast is
@@ -38078,6 +38065,11 @@ fn pod_concede_rate() -> Option<u32> {
     *RATE.get_or_init(|| std::env::var("CRAB_POD_CONCEDE").ok().and_then(|s| s.parse().ok()))
 }
 
+/// [`play_one_pod_game`] with the action census handed in, so a caller can
+/// total across games. `None` keeps the `CRAB_CAP_DIAG` behaviour: a census
+/// armed for this game only, rendered if the game did not decide.
+/// `max_actions` is the budget in plays (non-pass actions); see
+/// `PodOutcome::plays`.
 pub fn play_one_pod_game_censused(
     template: &GameState,
     pilots: &[Pilot],
@@ -38185,11 +38177,9 @@ pub(crate) fn play_pod_game_observed(
         }
         let mut any = false;
         for (seat, bot) in bots.iter_mut().enumerate() {
-            // Eliminated seats are polled like any other: the bot answers
-            // `None` for a seat without priority, and CR 800.4a has already
-            // taken their objects and any decision addressed to them. Skipping
-            // them here instead was a deadlock — a pending decision the loop
-            // never polled suppressed every other seat's actions.
+            // Eliminated seats are polled like any other (the bot answers
+            // `None` without priority; CR 800.4a already took their objects and
+            // asks). Skipping them deadlocked on a pending decision never polled.
             let Some(step) = bot.next_action_settled(&g, seat) else { continue };
             let crate::server::bot::BotStep { mut action, mut settled } = step;
             let cast_card = action.cast_card_id().and_then(|id| g.find_card_anywhere(id));
@@ -38424,11 +38414,9 @@ pub(crate) fn play_pod_game_observed(
             }
         }
         // CR 800.4f/g/h — no ask may be owed by a seat that has left the game.
-        // `seat_prompts` and `route_ask` are what keep it so, and this is the
-        // audit over real boards rather than against a re-derived list: the
-        // whole class was found by a run of this check as an env-var probe
-        // (88 of 2,000 four-seat games), and a new ask site that forgets the
-        // rule reintroduces it silently. Debug-only, one `Option` test a round.
+        // `seat_prompts` and `route_ask` keep it so; this audits real boards,
+        // since a new ask site that forgets the rule reintroduces the bug
+        // silently (this check found the class). Debug-only.
         debug_assert!(
             g.pending_decision
                 .as_ref()
@@ -39296,13 +39284,6 @@ pub fn run_pod(
 
 #[cfg(test)]
 mod tests {
-    /// CR 601.2g — a `{1}, {T}` mana source must not pay its own {1}. The
-    /// payment snapshot was taken before the {T} cost and the restricted-source
-    /// search (Vedalken Engineer's artifact-only mana, allowed on an artifact's
-    /// ability) restored it, untapping Dimir Signet so it funded itself until
-    /// the stack overflowed: this exact game, casting Breya. (A replay: once
-    /// the bot or these decks change, the game stops reaching that board and
-    /// this only proves the game still finishes.)
     /// CR 704.3 — the step advance into the next turn's upkeep sweeps before
     /// anyone has priority: a commander that went home across End → Upkeep
     /// left its Darksteel Mutation attached to nothing (a replay: debug
@@ -39329,6 +39310,11 @@ mod tests {
         assert_eq!((t.games, t.undecided()), (1, 0));
     }
 
+    /// CR 601.2g — a `{1}, {T}` mana source must not pay its own {1}: the
+    /// restricted-source search (Vedalken Engineer) restored a payment
+    /// snapshot taken before the {T}, so Dimir Signet funded itself until the
+    /// stack overflowed casting Breya. A replay: once the bot or decks change
+    /// it only proves the game still finishes.
     #[test]
     fn a_mana_source_paying_for_itself_does_not_overflow() {
         let d = target_decks();
@@ -39390,20 +39376,13 @@ mod tests {
         }
     }
 
-    /// CR 702.124b/d — the partner seat is the pod's only two-commander deck,
-    /// and it is here so the pair is exercised by real games rather than only
-    /// by a fixture: both commanders start in the command zone, its 99 is 98
-    /// (CR 702.124b counts both toward the 100), and the games finish.
+    /// CR 702.124b/d — the partner seat, so the pair is exercised by real
+    /// games: both commanders start in the command zone, its 99 is 98, and the
+    /// games finish. It sits past `pod_field(4)`, so the test names the field.
     ///
-    /// Krark/Rograkh sits past `pod_field(4)` in `target_decks`, so a four-seat
-    /// pod never draws it and the committed outcome table is untouched by its
-    /// existence; this test names the field explicitly. It is found by its
-    /// *pairing* rather than by position — Edgar Markov was appended after it
-    /// and `last()` silently stopped being the partner seat.
-    ///
-    /// ⚠ "Two commanders" stopped being unique when the Choose-a-Background
-    /// seat was appended (CR 702.124k is also a pair), so the shape here is
-    /// the one CR 702.124h names: two *creature* cards, each with Partner.
+    /// ⚠ Found by shape, not position (`last()` broke when Edgar was
+    /// appended), and the shape is CR 702.124h's — two *creature* cards with
+    /// Partner — since the Background seat is also a pair.
     #[test]
     fn cr_702_124b_a_two_commander_seat_plays_a_pod_game() {
         let field = target_decks();
@@ -39431,23 +39410,15 @@ mod tests {
         }
     }
 
-    /// CR 903.3a — "[this card] can be your commander" on a **non-creature**.
-    /// `CardDefinition::can_be_commander` had been validated since it shipped
-    /// and never piloted; this is the seat that pilots it. Found by its
-    /// *shape* and not its position, for the reason the Partner test above
-    /// records.
-    ///
-    /// Two consequences of a planeswalker commander and both hold: it is
-    /// recast from the command zone under the CR 903.8 tax like any other,
-    /// and its (commander, player) damage tally stays at zero for the whole
-    /// game, because CR 903.10a counts **combat** damage and a planeswalker
-    /// deals none — so the seat wins and loses by every other route instead.
+    /// CR 903.3a — a non-creature commander (planeswalker), the seat that
+    /// pilots `CardDefinition::can_be_commander`; found by shape like the
+    /// Partner test. It is recast under the CR 903.8 tax like any other, and
+    /// its commander-damage tally stays zero: CR 903.10a counts combat damage.
     #[test]
     fn cr_903_3a_a_planeswalker_commander_seat_plays_a_pod_game() {
         let field = target_decks();
-        // One commander, and it is not a creature: the Background seat's
-        // second commander is also a non-creature, so the arity is what keeps
-        // this pinned to the planeswalker.
+        // One commander, not a creature: the arity keeps this off the
+        // Background seat, whose second commander is a non-creature too.
         let pw = *field
             .iter()
             .find(|d| d.commanders.len() == 1 && !d.commanders[0]().is_creature())
@@ -39471,20 +39442,12 @@ mod tests {
         }
     }
 
-    /// CR 702.124k — "Choose a Background": two cards lead the deck when one
-    /// has the keyword and the other is a legendary Background enchantment.
-    /// The keyword and `format::is_background_pair` shipped validated and
-    /// never piloted; this is the seat that pilots them.
-    ///
-    /// What this asserts that the Partner test does not: the second commander
-    /// is **not a creature** (CR 702.124k's Background half, which
-    /// `is_legal_commander` rejects on its own), CR 702.124c combines the two
-    /// identities across a creature and an enchantment, and the games finish.
-    /// CR 702.124d's second tally is zero for the whole game by construction
-    /// here — CR 903.10a counts combat damage and an enchantment deals none —
-    /// which is the planeswalker seat's consequence reached from the other
-    /// direction, and why this pair is worth running rather than the mono-red
-    /// Gut + Archaeologist one.
+    /// CR 702.124k — "Choose a Background": the seat that pilots the keyword
+    /// and `format::is_background_pair`. Unlike the Partner test, the second
+    /// commander is not a creature (which `is_legal_commander` rejects on its
+    /// own), CR 702.124c combines identities across a creature and an
+    /// enchantment, and CR 702.124d's second tally stays zero (an enchantment
+    /// deals no combat damage) — why this pair rather than Gut + Archaeologist.
     #[test]
     fn cr_702_124k_a_background_pair_plays_a_pod_game() {
         use crate::card::KeywordSlice;
@@ -39525,16 +39488,11 @@ mod tests {
         }
     }
 
-    /// CR 702.49d — **commander ninjutsu**: the one route out of the command
-    /// zone that is not a cast, so CR 903.8's tax never applies to it. The
-    /// keyword shipped validated and, until this seat, was never piloted.
-    ///
-    /// What this asserts that no other seat does: the commander begins in the
-    /// command zone like any other, its `commander_cast_count` is untouched
-    /// by the ninjutsu route, and the deck finishes seeded games. The 21-damage
-    /// tally is live here where the planeswalker and Background seats have it
-    /// at zero — a Ninja that connects is combat damage from a commander
-    /// (CR 903.10a) — which is the third corner of the same square.
+    /// CR 702.49d — commander ninjutsu: the one way out of the command zone
+    /// that is not a cast, so the CR 903.8 tax never applies. The commander
+    /// starts in the command zone, ninjutsu leaves `commander_cast_count`
+    /// untouched, and seeded games finish; unlike the planeswalker and
+    /// Background seats, its commander-damage tally is live (CR 903.10a).
     #[test]
     fn cr_702_49d_a_commander_ninjutsu_seat_plays_a_pod_game() {
         use crate::card::{Keyword, KeywordSlice};
@@ -39575,19 +39533,17 @@ mod tests {
         }
     }
 
-    /// CR 903.5a/c — the eleventh to seventeenth seats are official lists
-    /// taken card for card (Sultai Arisen, Mind Flayarrrs, Blood Rites, Heads I
-    /// Win, Tails You Lose, Goblin Storm, Wretched Ranks, Tramplesaurus Rex). They seat what no
-    /// hand-built list did — graveyard casts (Kotis, CR 601.2a), graveyard-only
-    /// mana (Lord of the Forsaken, CR 106.6), a pay-one-of-three additional
-    /// cost (Dusk Mangler, CR 601.2b), a trigger that works while suspended
-    /// (Nihilith, CR 702.62b) — so a four-seat pod with each has to finish.
+    /// CR 903.5a/c — the official-list seats, taken card for card. They seat
+    /// what no hand-built list did — graveyard casts (Kotis, CR 601.2a),
+    /// graveyard-only mana (Lord of the Forsaken, CR 106.6), a pay-one-of-three
+    /// additional cost (Dusk Mangler, CR 601.2b), a trigger that works while
+    /// suspended (Nihilith, CR 702.62b) — so a four-seat pod with each must
+    /// finish.
     #[test]
     fn cr_903_5a_the_official_precon_seats_play_pod_games() {
         let field = target_decks();
-        // One seeded game a seat: the test is the suite's long pole. Three a
-        // seat had grown it past half an hour; at 741 seats the first 290
-        // rows' second and third seeds took it to 55 minutes.
+        // One seeded game a seat: this is the suite's long pole (three a seat
+        // took it to 55 minutes).
         let seats: &[(&str, &[u64])] = &[
             ("Teval", &[0x7E7A1_u64]),
             ("N'ghathrod", &[0xC1B]),
@@ -40198,14 +40154,10 @@ mod tests {
             ("Sharuum the Hegemon", &[0x0B91]),
             ("Cloud, Planet's Champion", &[0x0B92]),
             ("Lara Croft, Tomb Raider", &[0x0B93]),
-            // Re-seeded 2026-11-22: at 0x0B94 the own-side blink fix
-            // (`own_blink_pick`, which now blinks enters-trigger creatures
-            // rather than the biggest) fed Preston an Illusion per blink and
-            // the seat stalled at 126 life behind a token wall into the board
-            // cap (turn 45) — never using its "sacrifice five Illusions:
-            // exile" outlet (open in ENGINE_BACKLOG). Not a loop; with the
-            // fix disabled the same seed decides at turn 44. 0x7EFE44, the
-            // table's next free seed, decides at turn 51.
+            // Re-seeded 2026-11-22: at 0x0B94 the `own_blink_pick` fix fed
+            // Preston an Illusion per blink into a board cap (turn 45), never
+            // using its "sacrifice five Illusions" outlet (ENGINE_BACKLOG). Not
+            // a loop; 0x7EFE44 decides at turn 51.
             ("Preston, the Vanisher", &[0x7EFE44]),
             ("Jenson Carthalion, Druid Exile", &[0x0B95]),
             ("Lazav, Dimir Mastermind", &[0x0B96]),
@@ -45752,14 +45704,11 @@ mod tests {
             ("Dr. Leonard \"Bones\" McCoy", &[0x222B]),
             ("Voq, Torchbearer", &[0x222C]),
         ];
-        // One work item per (seat, seed), pulled by a worker per core: this
-        // test is the suite's long pole (~630 s of a ~640 s debug run on four
-        // cores when it walked the list on one thread). Each game is seeded,
-        // so the order they run in changes nothing. `RUST_MIN_STACK` (32 MiB,
-        // `.cargo/config.toml`) sizes the workers' stacks.
-        // `CRAB_SEAT_SHARD=i/n` runs every n-th job from the i-th (0-based):
-        // at ~4,050 seats the whole list outruns a two-hour window on four
-        // cores, so it can be checked in pieces.
+        // One work item per (seat, seed), pulled by a worker per core (this
+        // test is the suite's long pole); every game is seeded, so order
+        // changes nothing. `RUST_MIN_STACK` (`.cargo/config.toml`) sizes the
+        // workers' stacks. `CRAB_SEAT_SHARD=i/n` runs every n-th job from the
+        // i-th (0-based), so the list can be checked in pieces.
         let shard = std::env::var("CRAB_SEAT_SHARD").ok().and_then(|v| {
             let (i, n) = v.split_once('/')?;
             Some((i.parse::<usize>().ok()?, n.parse::<usize>().ok()?.max(1)))
@@ -45798,12 +45747,9 @@ mod tests {
         });
     }
 
-    /// CR 702.121 (Melee) — the tenth seat is the field's only
-    /// multiplayer-native list, so this asserts both halves: its commander
-    /// grants melee to the rest of the board, and the 99 actually carries the
-    /// mechanics that only mean something past two seats. A pod game at four
-    /// seats then has to finish, because none of that code had ever run in
-    /// self-play before this deck existed.
+    /// CR 702.121 (Melee) — the multiplayer-native seat: its commander grants
+    /// melee to the board, the 99 carries the mechanics that only mean
+    /// something past two seats, and a four-seat game with it finishes.
     #[test]
     fn cr_702_121_the_multiplayer_native_seat_plays_a_pod_game() {
         let field = target_decks();
@@ -45975,20 +45921,13 @@ mod tests {
         }
     }
 
-    /// The pod's half of the two-player `thread_determinism` gate: a chunk
-    /// split is what a thread count changes, and nothing else, so a run
-    /// split three ways must merge to what one chunk produced.
-    ///
-    /// The per-game seed is `seed_base + i * <golden>` rather than anything
-    /// derived from the worker, which is what makes that true — this is the
-    /// test that says so, and it fails the moment a future scheduler reaches
-    /// for a per-worker stream. `--threads 1/2/3` over 400 four-seat games
-    /// reads byte-identical at the tip; this is the same fact at suite cost.
+    /// The pod's half of the two-player `thread_determinism` gate: a run split
+    /// three ways must merge to what one chunk produced. It holds because the
+    /// per-game seed is `seed_base + i * <golden>`, not per-worker; this fails
+    /// the moment a scheduler reaches for a per-worker stream.
     #[test]
     fn cr_903_a_pod_run_is_independent_of_how_it_is_chunked() {
-        // Three seats and six games: the split is what is under test, not the
-        // sample size, and a four-seat dozen costs the suite 55 s of critical
-        // path for the same fact.
+        // Three seats, six games: the split is under test, not the sample.
         let field = pod_field(3);
         let whole = run_pod_games(&field, 0, 6, 43, 20_000, Pilot::default());
         let mut split = PodTally { wins: vec![0; 3], ..Default::default() };
@@ -46000,8 +45939,7 @@ mod tests {
         assert_eq!(whole.total_turns, split.total_turns);
         assert_eq!(whole.total_actions, split.total_actions);
         assert_eq!(whole.undecided(), split.undecided());
-        // And the run is decided end to end, which is the smoke test's own
-        // claim at a size the suite can carry.
+        // And the run is decided end to end, the smoke test's own claim.
         assert_eq!(whole.undecided(), 0, "six three-seat pods, all decided");
     }
 
@@ -46028,20 +45966,6 @@ mod tests {
         assert_eq!((split.hero_wins, split.groups), (t.hero_wins, t.groups));
     }
 
-    /// The Commander guardrail the two-player golden traces are, at pod
-    /// scale: a committed outcome per fixed seed, so a change that moves pod
-    /// play shows up here as a diff rather than as a number in a smoke-test
-    /// log a reviewer has to remember. The committed values were produced by
-    /// a different process on a different day, which makes this a
-    /// cross-process determinism check too.
-    ///
-    /// The triple, not a line-per-action trace: a pod game is ~2,000 actions,
-    /// so a real trace would be a 400 KB file that every Commander commit
-    /// re-blesses, and the winner/turns/actions triple moves on exactly the
-    /// changes a trace would move on.
-    ///
-    /// When a rules change legitimately moves one, re-bless it in the same
-    /// commit and say why in the message.
     /// CR 614.13 — Romana II copying a token Mondrak, Glory Dominus under
     /// nine Mondraks is a 512-token batch of doublers: the pod plays a pass.
     /// One Mondrak copies freely (seed 990872, game 5 ran to 901 Mondraks).
@@ -46087,362 +46011,23 @@ mod tests {
         assert!(token_blowup(&g, 0, &act), "tripler + doubler: 3 + 6 x 2 = 15 doublings");
     }
 
+    /// The Commander guardrail the two-player golden traces are, at pod scale:
+    /// a committed (winner, turns, actions) per fixed seed, so a change that
+    /// moves pod play shows up as a diff. The values came from another
+    /// process, so this is a cross-process determinism check too. A triple,
+    /// not a per-action trace: it moves on exactly the changes a trace would.
+    ///
+    /// When a change legitimately moves one, re-bless it in the same commit,
+    /// say why (bisected) in the message, and replace the `Latest:` line.
     #[test]
     fn cr_903_seeded_pod_outcomes_match_the_committed_table() {
         // (seed, winner, turns, actions)
-        // Re-blessed 2026-10-07 (`server/hideaway.rs`, a pod bot plays a
-        // hideaway land's hidden card once its condition holds — Mosswort
-        // Bridge had never been activated; the suite passed on the parent
-        // with the session's other bot pickers in): seed 4242 70→58 turns,
-        // 3143→2771 actions, same winner; 0xC0FFEE and 43 unmoved. Release
-        // pods, 1,000 games at seeds 152003/4/6/8, before/after: 32.85/32.81,
-        // 46.01/45.95, 69.71/69.59, 97.00/97.23 turns at 3/4/6/8 seats, all
-        // decided; `--bench` byte-identical.
-        // Re-blessed 2026-10-06 (CR 603.3d, the asking queue also takes a
-        // prompting seat's non-cast ETB, attack, "whenever you attack",
-        // spell-cast and self-cast triggers): seed 4242 67→70 turns, same
-        // winner; the other two unmoved. 2,000 games at seed 9991,
-        // before/after: 40.85/40.86, 62.81/62.67, 82.69/82.99 turns at 3/4/6
-        // seats, every block decided.
-        // Re-blessed 2026-10-06 (CR 603.3d, a prompting seat's targeted
-        // self-death trigger goes through the asking queue, so a pod bot
-        // picks its targets by policy like every other trigger — bisected by
-        // disabling that routing alone): seed 43 77→74 turns, 4242 97→67,
-        // same winners; 0xC0FFEE unmoved. `bot_ladder --commander --a dflt`,
-        // 2,000 games at seed 9991, before/after: 40.45/40.85, 62.51/62.81,
-        // 82.27/82.69 turns at 3/4/6 seats, every block 2,000/2,000 decided.
-        // Re-blessed 2026-10-05 (`01VKHeZo`, Hideaway asks its player which
-        // looked-at card to hide; bisected: its parent passes and every later
-        // commit to the tip reads the same rows). A pod bot ranks a library
-        // pick by mana value with the FIRST of equal cards, where the old
-        // engine pick took the last: seed 4242 89→97 turns, 4409→4745
-        // actions; 0xC0FFEE 2482→2486 and 43 3646→3649 actions; same winners.
-        // Re-blessed 2026-10-02 (`01NqgJKc`, two causes, each bisected):
-        // 0xC0FFEE 58→64 turns, 2585→3089 actions, same winner, at 2edb33140
-        // (a prompting seat may decline a clone's copy — its parent
-        // e51c60cf8 passes); 4242 4753→4757 actions, same winner and turns,
-        // at df2425130 (`Punisher` asks each chooser — its parent passes on
-        // that row). Seed 43 unmoved.
-        // Re-blessed 2026-10-02 (Kozilek's Command's fourth mode exiles up to
-        // X target cards from any graveyards instead of one target player's;
-        // bisected: its parent passes, and the later commits to the tip read
-        // the same rows): seed 43 71→60 turns, 4242 72→99, same winners;
-        // 0xC0FFEE unmoved.
-        // Re-blessed 2026-09-29 (seven "Remove a counter" costs paid on
-        // activation — a380ef08a; bisected: its parent 1f1b7bc71 passes):
-        // Icatian Javelineers' ping became a bare `DealDamage` the bot's ping
-        // pickers fire. Seed 43 71→66 turns, 4242 61→72, same winners;
-        // 0xC0FFEE unmoved. Pod smoke at that tip: 98 release groups (3 seats
-        // × 12 games, 5 × 10, seeds 9473000+ / 9475000+) all decided; cube /
-        // sos / sealed × 150 all decided; `--bench` byte-identical.
-        // Re-blessed 2026-09-29 (a pod bot no longer casts Walking Ballista /
-        // Hangarback Walker for X=0 — `dies_at_x0`; bisected: that commit
-        // alone): seed 4242 104→61 turns, same winner; the other two unmoved.
-        // `bot_ladder --commander --a dflt`, 2,000 games at seed 9991,
-        // before/after: 40.32/40.24, 60.37/59.84, 82.93/82.05 turns at 3/4/6
-        // seats, every block 2,000/2,000 decided; `--bench` byte-identical.
-        // Re-blessed 2026-09-28 (CR 700.2a — 23 `ChooseN` spells choose their
-        // modes at cast, so a pod bot picks Kolaghan's / Kozilek's / Austere
-        // Command's modes instead of the fixed defaults; `git bisect` names
-        // that commit alone): seed 43 54→71 turns, same winner; the other two
-        // unmoved. Pod smoke after it: 3,960 release games (3/4/5/6/8 seats ×
-        // every deck × 20, seeds 9931000+ … 9981000+), all decided.
-        // Re-blessed 2026-09-28 (Judith, the Scourge Diva pings on her own
-        // death — ruling; `git bisect` over bc45fd069..c9adf798b names that
-        // commit alone, and every later commit to 42b269a1e reads the same
-        // rows): seed 0xC0FFEE seat 2 → seat 1, 68→58 turns; seed 43 seat 2
-        // → seat 0, 86→54 turns; 4242 same winner and turns, 2962→2970
-        // actions. Pod smoke after it: 3,000 strict debug-assertion games
-        // (4/6/8 seats, seeds 2004000+), all decided.
-        // Re-blessed 2026-09-27 (`server/pre_combat_tap.rs`, a pod bot taps
-        // an opponent's biggest would-be attacker at their beginning of
-        // combat): seed 4242 74→61 turns, same winner; the other two
-        // unmoved. `bot_ladder --commander --a dflt`, 2,000 games at seed
-        // 9991, before/after: 41.02/41.02, 61.08/61.07, 83.87/83.83 turns at
-        // 3/4/6 seats, every block 2,000/2,000 decided.
-        // Re-blessed 2026-09-27 (pod end-step sinks — bisected by disabling
-        // each alone): `pick_cash_in` (a rock's "sacrifice: draw" at six
-        // lands) moves seed 43 65→67 turns, same winner;
-        // `pick_self_counter_sink` moves 0xC0FFEE one action; 4242 unmoved.
-        // (A first cut of `end_step_ping` also fired Walking Ballista's
-        // remove-a-counter ping and moved 0xC0FFEE to seat 1 in 45 turns;
-        // counter-paid pings are excluded now.)
-        // `bot_ladder --commander --a dflt`, 2,000 games at seed 9991,
-        // before/after: 41.04/41.02, 61.20/61.08, 84.15/83.87 turns at
-        // 3/4/6 seats, every block 2,000/2,000 decided; `--bench` 197,136
-        // byte-identical.
-        // Re-blessed 2026-09-27 (`server/channel.rs`, a pod bot channels a
-        // spare Kamigawa land — bisected by disabling it alone): seed 43
-        // 86→65 turns, same winner; 0xC0FFEE 3171→3174 actions; 4242
-        // unmoved. 6 seats × decks 1-6, 150 games at seed 3100001,
-        // before/after: 68.51/68.49 turns, all decided; `--bench` 197,136
-        // byte-identical.
-        // Re-blessed 2026-09-27 (CR 103.5c, a multiplayer game's first
-        // mulligan is free — bisected: reverting it alone restores the old
-        // rows): seed 0xC0FFEE seat 1 → seat 3, 68→71 turns; 4242 seat 0 →
-        // seat 3, 60→74; 43 unmoved. `bot_ladder --commander` (baseline
-        // pilot), 2,000 games at seed 9991, before/after: 32.56/32.38,
-        // 45.41/45.30, 67.85/68.19 turns at 3/4/6 seats, all decided.
-        // Re-blessed 2026-09-27 (`EvalWeights::pod_horizon` adopted: the
-        // attack sim prices the crack-back of every opponent before our next
-        // turn, not just the next seat's). Seed 0xC0FFEE 44→63 turns, same
-        // winner; seed 43 58→70 turns and seat 0 → seat 2; 4242 unmoved.
-        // The default pilot's aggregate, 2,000 games a seat count at seed
-        // 9991, `podhorizon-off` / `dflt`: 22.10/22.10 (duels untouched),
-        // 39.42/41.47, 56.92/62.88, 69.60/78.65, 78.81/86.11, 94.72/107.00,
-        // 110.99/124.69 turns, every block 2,000/2,000 decided — fewer alpha
-        // strikes, longer pods. (`bot_ladder --commander` without `--a`
-        // pilots `baseline`, which this does not touch.)
-        // Re-blessed 2026-09-26 (CR 605.3b, auto-tap resolves a prompting
-        // seat's any-color source inline — bisected to 34774e835, and which
-        // lands pay a generic pip changes with it): a pod seat's Command Tower /
-        // Arcane Signet tapped for a generic pip used to add nothing and
-        // leave its color prompt pending. Seed 43 61→58 turns and 4242
-        // 49→62, both now won by seat 0; 0xC0FFEE unmoved. Aggregate, 2,000
-        // games a seat count at seed 9991, before/after: 19.67/19.51,
-        // 32.92/32.62, 45.96/45.62, 57.25/56.80, 68.47/67.89, 83.14/81.91,
-        // 98.68/97.39 turns, every block 2,000/2,000 decided. `--bench`
-        // byte-identical (197,136).
-        // Re-blessed 2026-09-24 (CR 117.3c, a bot seat lets its own ability
-        // from a source resolve before activating it again): seed 43
-        // 2394→2395 actions, same winner and turns; the other two unmoved.
-        // Re-blessed 2026-09-24 (CR 119.3, "you gain life equal to the life
-        // lost this way" gains the table's total): Judith's Gray Merchant and
-        // Kokusho drain three opponents, so seed 0xC0FFEE is 52→44 turns /
-        // 2248→1829 actions, same winner; the other two unmoved. Aggregate,
-        // 2,000 games at seed 9981, before/after: 45.83/45.86 turns at four
-        // seats, 65.90/66.02 at six, every block 2,000/2,000 decided.
-        // Re-blessed 2026-09-23 (CR 106.6, the payment floats a spend-
-        // restricted source the spell may spend): seed 4242 55→53 turns /
-        // 2436→2318 actions, same winner; the other two unmoved. Aggregate,
-        // 2,000 games a seat count at seed 9971, before/after: 19.48/19.46,
-        // 32.33/32.32, 45.12/45.11, 57.00/57.01, 64.47/64.46, 77.53/77.56,
-        // 93.79/93.86, every block 2,000/2,000 decided; 13 seats (500, seed
-        // 9972) 162.15/161.86. `--bench` byte-identical.
-        // Re-blessed 2026-09-19 (Shifting Woodland, and the card is less
-        // interesting than how it was found): the census's reader ended a
-        // card's body at the next `pub fn`, so a PRIVATE helper between two
-        // factories was read as part of the preceding card — and the card
-        // after such a helper had its own body hidden. Ending at the next
-        // `fn` of any visibility surfaced one more row, this one.
-        // **Nine actions across two of the three games** (4068 → 4061,
-        // 2542 → 2540), same winners and same turns.
-        // Re-blessed 2026-09-19 (the fastlands, same class): "enters tapped
-        // unless you control two or fewer other lands" off the trigger and
-        // onto `EntersTappedUnless`, 17 call sites through one helper.
-        // **Three actions in one of the three games** (4071 → 4068) and
-        // nothing else — same winners, same turns — beside the seed-9102
-        // aggregate's largest move of 0.29 turns at eight seats
-        // (19.38/19.36, 32.40/32.40, 45.26/45.24, 57.01/57.08, 64.89/64.87,
-        // 77.66/77.80, 93.43/93.14), every block 2,000/2,000 decided.
-        // `--bench` byte-identical again.
-        // Re-blessed 2026-09-19 (CR 614.1c, "enters tapped" is a REPLACEMENT):
-        // the shared `etb_tap()` helper and its call sites moved from an
-        // `EntersBattlefield` trigger to `StaticEffect::EntersTapped`, so a
-        // tapland is tapped as it enters rather than by a trigger resolving
-        // after its controller has had priority. Every pod deck runs taplands,
-        // so all three games are different games — and the first one is 47→97
-        // turns, which is the largest single move this table has taken.
-        // ⚠ **Three games is a re-bless gate, not a measurement, and this is
-        // the clearest case of it yet.** The aggregate is 2,000 games a seat
-        // count at seed 9102, after against before, and it barely moves:
-        // 19.36/19.37 turns at two seats, 32.40/32.35 at three, 45.24/45.30 at
-        // four, 57.08/56.88 at five, 64.87/64.74 at six, 77.80/77.85 at seven,
-        // 93.14/93.34 at eight — largest move 0.20 turns — with every block
-        // 2,000/2,000 decided on both sides. `--bench` is byte-identical
-        // (195,806 / 27.49 / 611.9 / 0 stalls, both determinism checks ok):
-        // `archetypes()` plays basic lands, which have no such replacement.
-        // Re-blessed 2026-09-19 (the sinkless sacrifice): the bot no longer
-        // volunteers a sacrifice whose ability only makes mana, so a board with
-        // a mana-rock-shaped sacrifice outlet stops spending actions it never
-        // cashes in. All three games get SHORTER and cheaper — 55→47 turns /
-        // 2360→1909 actions, 101→67 / 3969→2831, 57→49 / 2480→2116 — which is
-        // the shape the fix predicts; two winners hold and seed 4242's moves
-        // 3→2. ⚠ Three games is a re-bless gate, not a measurement: the
-        // aggregate is 2,000 games a seat count at seed 9101, after vs before,
-        // and it barely moves — 19.33/19.30 turns at two seats (the control),
-        // 32.62/32.59 at three, 45.15/45.30 at four, 57.21/57.20 at five,
-        // 64.11/64.50 at six, 77.71/77.57 at seven, 92.84/92.89 at eight, every
-        // block 2,000/2,000 decided on both sides. The seeded games move far
-        // more than the aggregate because the outlet has to be on the board
-        // with something to feed it; when it is, the loop was thousands of
-        // actions long. `--bench` is byte-identical (the 2-player pool has no
-        // such outlet), so no golden trace moves.
-        // Re-blessed twice on 2026-09-19, and the second one rides the first.
-        // ① **The Judith list's retune** — 28 of its 72 nonbasics changed, so
-        // all three games are different games. Its aggregate is 3,000 games a
-        // configuration at seed 43: Judith 23.2→33.6 % at two seats,
-        // 16.0→26.2 at three and 6.2→14.6 at four, the four-seat field
-        // flattening 43.5/6.2/22.2/28.0 → 40.8/14.6/20.3/24.3, 100 % decided
-        // and zero stalls on both sides.
-        // ② **Two target-deck card defects** — Sowing Mycospawn's tutored land
-        // was entering tapped against its oracle (Sigarda) and Delighted
-        // Halfling's legendary-only + uncounterable rider was dropped
-        // (Sigarda, Tatyova). ⚠ Neither touched `--bench` (195,806 / 27.49 /
-        // 611.9 / 0 stalls, byte-identical) or a golden trace, which is the
-        // answer to "these are cube cards, so they need a bench re-bless":
-        // they are, and it did not move. Against the pre-retune list they
-        // moved this table by four actions in one of three games; against the
-        // retuned one they move it by **nothing**, so the values below are ①'s
-        // unchanged — which is the same reading from the other side.
-        // ⚠ Three games is a re-bless gate, not a measurement — read the
-        // aggregates above, and read the two-seat row as the control.
-        // Re-blessed twice. ① The auto-targeter's ranked "target opponent":
-        // the same `default_hostile_opponent` the defender already used now
-        // fills an open opponent slot on every cast too, so two of the three
-        // seeded games diverged (92→63, 79→69 turns; same winners). The
-        // aggregate behind that one is 32,000 pod games a side — **identical**
-        // at two seats (the control: a duel has one candidate and the ranking
-        // never runs), -0.06/0.00 turns at three, -0.24/-0.17 at four,
-        // -0.37/-0.43 at five. ② Two target-deck card defects fixed (Sowing
-        // Mycospawn's tutored land was entering tapped against its oracle,
-        // Delighted Halfling's legendary-only + uncounterable rider was
-        // dropped): **four actions** in one of the three games, same winners
-        // and same turns everywhere, and the 4,000-game aggregate reads
-        // 39.91 vs 39.90 turns at four seats and 50.15 vs 50.15 at five, deck
-        // shares within noise. ⚠ Neither move touched `--bench` (195,806 /
-        // 27.49 / 611.9 / 0 stalls, byte-identical) or a golden trace, which
-        // is the answer to "these are cube cards, so they need a bench
-        // re-bless": they are, and it did not move.
-        // Re-blessed 2026-09-19 (the target-clause class): three pod-deck
-        // cards stopped fanning a printed "target opponent / target player"
-        // clause out over the whole table — Endurance ("up to one target
-        // player puts their graveyard on the bottom", Tatyova), Indulgent
-        // Tormentor ("unless **target opponent** sacrifices … or pays 3
-        // life", Judith) and Nihil Spellbomb ("exile **target player's**
-        // graveyard", Judith). At two seats each is the same object it always
-        // was; at four it is one seat instead of three, so two of the three
-        // seeded games are different games. ⚠ Three games is a re-bless gate,
-        // not a measurement — the aggregate is in DECK_FEATURES.
-        // Re-blessed 2026-09-19 (board wipes): DECK_FEATURES' standing item was
-        // that Sigarda, Hanna and Tatyova had no way to break a stalled board.
-        // Five swaps close it — Wrath of God and Fumigate for Sigarda, River's
-        // Rebuke for Hanna, Evacuation and Bane of Progress for Tatyova — and
-        // the aggregate moved with them: the four-seat spread TIGHTENS from
-        // 25.1 to 23.6 points (39.8/14.7/20.0/25.5 → 40.9/17.1/17.3/24.7,
-        // 3,000 games at seed 43), and games run ~9 % longer.
-        // Re-blessed 2026-09-23 (overkill spill, `server/pod_attack.rs`):
-        // face attackers past a kill now go at the next opponent instead of
-        // piling onto one seat; seed 43 is the same winner 13 turns sooner.
-        // Re-blessed 2026-09-23 (sacrifice costs): Bone Splinters and Village
-        // Rites (Judith) sacrifice on cast, not at resolution, so they can't be
-        // cast creatureless; seed 0xC0FFEE is the same winner 45 turns sooner.
-        // Aggregate within noise (3,000 games, seed 43: Judith 16.9 → 17.1 %,
-        // 44.90 → 44.96 turns).
-        // Re-blessed 2026-09-23 (Toxic Deluge's X): the bot sizes a pay-X-life
-        // X to the toughest opposing creature instead of its spare mana, so
-        // Judith's Deluge is a sweeper; seed 4242 is the same winner two
-        // turns sooner.
-        // Re-blessed 2026-09-23 (CR 800.4a): a player who has left the game is
-        // no longer a legal target, so nothing is aimed at a departed seat and
-        // a trigger that was is countered. Seeds 43 and 4242: same winners.
-        // Re-blessed 2026-09-26 (CR 109.2): a "target creature" slot can't
-        // name a creature card in a graveyard. Judith's Slaughter Pact was
-        // cast at a Walking Ballista that had died (and fizzled); the cast is
-        // rejected now and the bot takes its next play. Seed 4242 changes
-        // winner (seat 2 → 3); the other two are untouched.
-        // Re-blessed 2026-09-26 (`server/generic_sink.rs`): in a pod the bot
-        // activates, post-combat, any non-mana ability no shape generator
-        // covers when the resolved outcome beats passing. Same winners; seed
-        // 43 runs four turns longer, 0xC0FFEE seven actions.
-        // Re-blessed 2026-09-27 (`server/manland.rs`): the bot animates a
-        // creature-land with idle first-main mana so it can attack. Seed 43
-        // changes winner (seat 2 → 0); 0xC0FFEE and 4242 keep theirs.
-        // Re-blessed 2026-09-27 (`server/counter_sink.rs`): idle mana puts a
-        // Forge of Heroes-style counter on the bot's own permanent. Same
-        // winners; seed 43 two turns sooner.
-        // Re-blessed 2026-09-28 (`server/graveyard_hate.rs`): at an
-        // opponent's end step Ghost Vacuum (Sigarda, Hanna, Tatyova) exiles
-        // an opponent's best graveyard card. Seeds 0xC0FFEE (3 → 2) and 43
-        // (0 → 2) change winner; aggregate within noise (3,000 games, seed
-        // 43: 43.2/17.9/14.3/24.6 → 43.0/17.3/14.3/25.4 %, 45.67 → 45.63
-        // turns).
-        // Re-blessed 2026-09-28 (Dauthi Voidwalker, Judith's seat: "an exiled
-        // card AN OPPONENT OWNS", chosen on resolution — it could free its
-        // controller's own void card and targeted the first one): 4242
-        // 108→104 turns / 4818→4725 actions, same winner; the other two
-        // unmoved. Vesuva and Gideon's Sacrifice sit in no golden seat.
-        // Re-blessed 2026-09-28 (CR 605.1a, 2026-09-25 text: an ability that
-        // draws or mills beside its mana is not a mana ability — Sigarda's
-        // Chromatic Sphere now uses the stack; bisected against the same
-        // tip's CR 800.4i change, which moves nothing): 0xC0FFEE 2583→2585
-        // and 4242 4815→4818 actions, same winners and turns.
-        // Re-blessed 2026-09-28 (`targeting.rs::best_graveyard_card`: a
-        // graveyard target names the richest card and reaches every
-        // opponent's graveyard — bisected: the picker alone moves it, the
-        // same commit's card conversions do not): seed 4242 61→108 turns,
-        // same winner; the other two unmoved. Aggregate, 2,000 games at
-        // seed 9991, before/after: 40.12/40.06, 60.43/60.02, 83.77/83.32
-        // turns at 3/4/6 seats, every block 2,000/2,000 decided; `--bench`
-        // 197,136 byte-identical.
-        // Re-blessed 2026-09-28 (`server/generic_sink.rs`): the generic
-        // activation sink also runs at the end step of the opponent seated
-        // just before the bot. Same winners; seed 43 takes 21 more actions.
-        // Aggregate within noise (3,000 games, seed 43: 43.0/17.3/14.3/25.4
-        // → 42.9/17.2/14.6/25.3 %, 45.63 → 45.62 turns).
-        // Re-blessed 2026-09-29 (`server/land_ramp.rs`): pod seats now take
-        // their land-fetch activations (Sakura-Tribe Elder, Burnished Hart).
-        // Same winners; seed 43 66→71 turns, the other two unmoved.
-        // Re-blessed 2026-10-02 (`game/commander_return.rs`): a pod seat
-        // prompts, so its CR 903.9a return is a pending `CommanderRedirect`
-        // posed once the action settles rather than an answer inside the
-        // sweep. Seeds 43 (0 → 3) and 4242 (3 → 1) change winner; aggregate
-        // within noise (seed 9301, every deck in 4- and 6-seat blocks, 4,600
-        // / 3,100 games, all decided: 42.28 → 42.25 / 66.19 → 66.14 turns).
-        // Re-blessed 2026-10-02 (`EvalWeights::pod_share_eval` adopted at
-        // T = 60, round 80: a pod position is the seat's share of the table,
-        // not its material less the table's sum; reverting the default to 0
-        // alone restores the rows above): 0xC0FFEE seat 1 → seat 2, 61→54
-        // turns; 43 71→65, same winner; 4242 seat 1 → seat 0, 91→187 turns
-        // (a tail game — `podshare-off`'s own four-seat block below runs to
-        // 144). Aggregate, `bot_ladder --commander`, 2,000 games at seed
-        // 9991, `podshare-off` / `dflt`: 40.63/40.52, 60.44/61.91,
-        // 82.80/81.82 turns at 3/4/6 seats, every block 2,000/2,000 decided,
-        // longest 87/91, 144/154, 173/164 turns; `--bench` counters
-        // byte-identical (duels run the old difference).
-        // Re-blessed 2026-10-03 (auto-tapper: a free source pays a coloured
-        // pip before a filter ability, so a "{1}, {T}: any color" land no
-        // longer eats the pool — reverting that hunk alone restores the rows
-        // above): 0xC0FFEE 2491→2492 actions, same winner; 43 seat 3 → seat
-        // 0, 65→77 turns; 4242 seat 0 → seat 3, 187→82 turns. Aggregate,
-        // `bot_ladder --commander`, 2,000 games at seed 9991, before/after:
-        // 32.36/32.43, 45.66/45.60, 68.34/68.20 turns at 3/4/6 seats, every
-        // block 2,000/2,000 decided; `--bench` 196,176 byte-identical.
-        // Re-blessed 2026-10-04 (hideaway: "you may play that card" now plays
-        // a hidden LAND too, where it was cast-only and stranded the land in
-        // exile — bisected to that commit alone): 0xC0FFEE 2492→2482
-        // actions, same winner; 43 unchanged; 4242 82→89 turns, same winner.
-        // Re-blessed 2026-10-06 (CR 903.9b: a pod seat prompts, so a commander
-        // bounced to hand or tucked is OFFERED the command zone once the
-        // action settles — `commander_redirect_offers` — and the answer is
-        // an action; bisected to that commit alone): 0xC0FFEE 2486→2490
-        // actions, same winner and turns; 43 and 4242 unmoved.
-        // Re-blessed 2026-10-14 (CR 106.6: restricted floating mana that
-        // covers a cost is spent before the auto-tapper taps a source —
-        // `cdbd98019`; bisected to that hunk alone): 0xC0FFEE and 43 unmoved;
-        // 4242 seat 3 → seat 0, 58→82 turns, 2771→4050 actions.
-        // Re-blessed 2026-10-23 (CR 700.4: a death replaced away from the
-        // graveyard fires no dies triggers — Sanctifier en-Vec / Dauthi
-        // Voidwalker exile Kokusho and Judith, whose own death triggers used
-        // to fire anyway; bisected to `70983b332` alone): 0xC0FFEE and 43
-        // unmoved; 4242 same winner and turns, 4050→3966 actions.
-        // Re-blessed 2026-10-29 (the generic sink skips until-end-of-turn
-        // activations — a post-combat firebreath or animation buys nothing;
-        // bisected to that hunk alone): 4242 unmoved; 0xC0FFEE 2490→2487 and
-        // 43 3800→3801 actions, same winners and turns.
-        // Re-blessed 2026-10-29 (pods crack a cantrip mana rock at an
-        // opponent's end step — `server/cantrip_rock.rs`): 0xC0FFEE unmoved;
-        // 43 74→48 turns, 3801→2205 actions; 4242 seat 0 → seat 1, 82→75
-        // turns, 3966→3458 actions.
-        // Re-blessed 2026-11-22 (equip auto-taps its cost, CR 602.2b, so the
-        // bots equip at all; reverting that change alone restores the old
-        // rows): 0xC0FFEE unmoved; 43 48→91 turns, 2205→4825 actions; 4242
-        // seat 1 → seat 3, 75→64 turns, 3458→3014 actions.
-        // Re-blessed 2026-11-23 (`pick_sacrifice_value` scores doing nothing
-        // with the stack settled, as it scores the sacrifice — `pass_baseline`
-        // — and skips end-of-turn-only gains; reverting that change alone
-        // restores the old rows): 0xC0FFEE unmoved; 43 91→87 turns,
-        // 4825→4652 actions; 4242 seat 3 → seat 1, 64→60 turns, 3014→2926.
+        // Re-bless history: `git log -L` on `GOLDEN`. ⚠ Three games is a
+        // re-bless gate, not a measurement — size a move with a
+        // `bot_ladder --commander` aggregate.
+        // Latest: 2026-11-23, `pick_sacrifice_value` scores a settled pass
+        // (`pass_baseline`) and skips end-of-turn-only gains: 43 91→87 turns,
+        // 4242 seat 3 → seat 1, 64→60 turns; 0xC0FFEE unmoved.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 54, 2487),
             (43, Some(0), 87, 4652),

@@ -1,42 +1,36 @@
 //! The **table net**: one value net for every seat count (ML_NOTES "One net
 //! for every mode", step 1).
 //!
-//! [`PlayNet`](crate::PlayNet) is two-seat by type — eight zone groups, each
-//! either "self" or "opp", and a scalar win head. This net reads a table
-//! instead:
+//! [`PlayNet`](crate::PlayNet) is two-seat by type (self/opp groups, scalar
+//! win head). This net reads a table instead:
 //!
-//! * **Slots.** Slot 0 is the seat the state was encoded for; slots 1.. are
-//!   the other living seats in turn order (slot 1 takes the next turn). A
-//!   duel is one opponent slot, a four-seat pod three. Every slot has a row
-//!   of [`SEAT_FEATS`] and its objects grouped by [`TABLE_ZONES`] zones;
-//!   only slot 0 ever has hand or library objects — the encoder never sees
-//!   another seat's hidden cards.
-//! * **Objects.** `relu(W_obj · [name ⊕ description ⊕ feats])`, one weight
-//!   matrix for every slot and zone. The *name* is a learned row per card
-//!   name (the frozen vocabulary, index 0 unknown). The *description* is the
-//!   mean of learned rows for the card's descriptor tokens — hashed buckets
-//!   the engine derives from the card definition — so a card the name table
-//!   never saw still says what it does. Descriptors are stored once per
-//!   distinct card in a state ([`TableState::add_desc`]) and objects point at
-//!   them.
-//! * **Interaction** (optional, `tblocks.*`): the same pre-LN transformer
-//!   blocks as the play net, over every object at the table, with a zone tag
-//!   and a slot tag added into the stream at entry so attention can tell
-//!   whose object it is looking at.
+//! * **Slots.** Slot 0 is the encoded seat; slots 1.. are the other living
+//!   seats in turn order (slot 1 plays next). Each slot has a row of
+//!   [`SEAT_FEATS`] and objects grouped by [`TABLE_ZONES`] zones; only slot
+//!   0 has hand or library objects — the encoder never sees another seat's
+//!   hidden cards.
+//! * **Objects.** `relu(W_obj · [name ⊕ description ⊕ feats])`, one matrix
+//!   for every slot and zone. *Name* is a learned row per card (frozen
+//!   vocabulary, index 0 unknown). *Description* is the mean of learned
+//!   rows for the card's hashed descriptor tokens, so an unseen card still
+//!   says what it does. Descriptors are stored once per distinct card
+//!   ([`TableState::add_desc`]) and objects point at them.
+//! * **Interaction** (optional, `tblocks.*`): the play net's pre-LN
+//!   transformer blocks over every object, with zone and slot tags added
+//!   into the stream at entry.
 //! * **Seats.** Each (slot, zone) group is mean- and max-pooled; a slot's
 //!   pools plus its seat features go through one shared seat layer, plus a
 //!   learned per-slot row (turn-order distance, capped at [`SLOT_TAGS`]).
 //! * **Trunk.** `[me ⊕ mean(opponents) ⊕ max(opponents) ⊕ globals]` through
 //!   two relu layers. Any number of opponents pools to the same width.
 //! * **Value.** One logit per slot, `value2 · relu(value1 · [trunk ⊕ seat])`,
-//!   softmaxed over the living slots: each seat's chance to win. At two
-//!   slots that is `sigmoid(l0 − l1)` — the duel is the N = 2 case, not a
-//!   separate head.
+//!   softmaxed over the living slots. At two slots that is
+//!   `sigmoid(l0 − l1)`: the duel is the N = 2 case, not a separate head.
 //!
-//! Tensor names are disjoint from the play net's where the shapes differ
+//! Tensor names are disjoint from the play net's where shapes differ
 //! (`name_emb`, not `emb`), so neither loader accepts the other's file. The
-//! trainer mirrors this module in `crabomination_ml::table`; its parity tests
-//! hold the two to the same numbers.
+//! trainer mirrors this module in `crabomination_ml::table`, held to the
+//! same numbers by parity tests.
 
 use super::{
     NnError, Reader, TBlock, Tensor2, count_tblocks, get_tensor, load_tblocks, run_tblocks,
@@ -113,13 +107,11 @@ impl Default for TableObject {
     }
 }
 
-/// A game's card pool: every card that can appear in it — the set for
-/// sealed, the cube list, the decklists' union for constructed and
-/// Commander — each as its name index and its descriptor tokens, so a card
-/// the name table never saw still has an identity. One per game, shared by
-/// every row of it (`Arc`); the model encodes it once per game, and the
-/// belief head scores its cards (ML_NOTES "One model for every mode — the
-/// user's 2026-11-02 additions").
+/// A game's card pool (the sealed set, the cube list, or the decklists'
+/// union), each card as its name index and descriptor tokens. One per game,
+/// shared by its rows (`Arc`) and encoded once; the belief head scores its
+/// cards (ML_NOTES "One model for every mode — the user's 2026-11-02
+/// additions").
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct TablePool {
     cards: Vec<u16>,
@@ -349,9 +341,8 @@ pub struct TableRow {
     /// One trajectory per (game, encoded seat), as [`crate::TrainRow::traj`].
     pub traj: u32,
     pub ply: u16,
-    /// The absolute seat behind each slot — a trajectory's successor row can
-    /// have different slots (a seat left), so the per-slot λ-bootstrap maps
-    /// by seat, not by slot index.
+    /// The absolute seat behind each slot: a successor row can have
+    /// different slots (a seat left), so the λ-bootstrap maps by seat.
     pub seat_ids: Vec<u8>,
     /// The hidden truth, per slot, as indices into the state's pool (empty
     /// for slot 0, whose own cards the state shows, and without a pool):
@@ -672,8 +663,7 @@ impl TableNet {
         let bias = |name: &'static str| get(name).map(|t| t.data);
 
         // The stack is all-or-nothing: both tags and at least one block, or
-        // none of them. A partial set would run an architecture the weights
-        // were not trained for.
+        // none (a partial set would run the wrong architecture).
         let n_blocks = count_tblocks(&st);
         let tags =
             ["tag_zone.weight", "tag_slot.weight"].iter().filter(|n| st.tensor(n).is_ok()).count();

@@ -2,13 +2,11 @@
 //! creatures die at the same time (a Wrath, one state-based sweep), each
 //! dying creature's "whenever another creature [you control] dies" trigger
 //! sees every other creature that died with it — Midnight Reaper and a Bear
-//! under Wrath of God draw two. A noncreature listener destroyed in the same
-//! batch looks back too (Bastion of Remembrance under Planar Cleansing). The
-//! battlefield walk in `dispatch_triggers_for_events` can't find these
-//! observers (they are in the graveyard by dispatch time), and the self-death
-//! funnel only fires a creature's triggers for its own death, so this pass
-//! supplies the rest from the death snapshots. Deaths a later resolution step
-//! caused (`GameEvent::DeathStepEnded` between them) happened after it left.
+//! under Wrath of God draw two; a noncreature listener destroyed with them
+//! looks back too (Bastion of Remembrance). The dispatch walk can't see these
+//! (they're in the graveyard), so this pass fires them from the death
+//! snapshots. Deaths from a later resolution step (after a
+//! `GameEvent::DeathStepEnded`) happened after the listener left.
 
 use super::GameState;
 use super::types::{GameEvent, TriggerCandidate};

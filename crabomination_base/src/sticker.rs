@@ -1,16 +1,15 @@
-//! CR 123 — stickers (Unfinity). Only **name stickers** (CR 123.6) are
-//! modeled; ability, power/toughness and art stickers are not.
+//! CR 123 — stickers (Unfinity). Only name stickers (CR 123.6) are modeled;
+//! ability, power/toughness and art stickers are not.
 //!
-//! The data half lives here (in the base crate) because `CardInstance`'s
-//! `Deserialize` must rebuild a stickered name; the per-game half — which
-//! three sheets each player drew (CR 123.2a/c) — is `ColdState::sticker_sheets`
-//! in the engine, drawn lazily the first time a player is asked to put a
-//! sticker on something, so a game without sticker cards stores and pays
-//! nothing.
+//! The data half lives in the base crate because `CardInstance`'s `Deserialize`
+//! must rebuild a stickered name. The per-game half — which three sheets each
+//! player drew (CR 123.2a/c) — is `ColdState::sticker_sheets` in the engine,
+//! drawn lazily on a player's first sticker prompt, so a game without sticker
+//! cards pays nothing.
 //!
-//! The sheets are Unfinity's 48 printed inserts (Scryfall set `sunf`); a
-//! sheet's name is its three name stickers. Every seat brings all 48 (CR
-//! 123.2a's "at least ten, each unique") and draws three at random.
+//! The sheets are Unfinity's 48 printed inserts (Scryfall set `sunf`), each
+//! named for its three name stickers. Every seat brings all 48 (CR 123.2a's "at
+//! least ten, each unique") and draws three at random.
 
 /// One sticker sheet: its name and the name stickers on it.
 #[derive(Debug, Clone, Copy)]

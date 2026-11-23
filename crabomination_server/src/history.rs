@@ -1,8 +1,6 @@
-//! Optional per-match result persistence: one JSON line appended to the file
-//! named by `CRAB_MATCH_LOG` for every finished match. Unset = disabled.
-//! `CRAB_MATCH_LOG_MAX_BYTES` caps the live file, rotating it to `<path>.1`.
-//! Gives operators a durable match-results record (FEATURE_ROADMAP Tier 14)
-//! beyond the in-memory rolling stats that die with the process.
+//! Optional durable match log: one JSON line per finished match appended to
+//! `CRAB_MATCH_LOG` (unset = disabled). `CRAB_MATCH_LOG_MAX_BYTES` caps the
+//! live file, rotating it to `<path>.1`.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -11,8 +9,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use crabomination::server::{LossReason, MatchOutcome};
 
-/// Match-log line schema version. Bump when the field set or their meaning
-/// changes so downstream consumers can branch on `"v"` instead of guessing.
+/// Match-log line schema version (`"v"`); bump when fields or their meaning change.
 const SCHEMA_VERSION: u32 = 1;
 
 fn log_path() -> Option<&'static PathBuf> {
@@ -32,10 +29,9 @@ fn loss_reason_label(r: &LossReason) -> &'static str {
     }
 }
 
-/// Escape a string for embedding inside a JSON double-quoted value (RFC 8259
-/// §7). `format_label` is a fixed label set today, but escaping keeps the log
-/// valid JSON should a custom/deck-derived label ever carry a quote, backslash,
-/// or control character.
+/// JSON string escaping (RFC 8259 §7). `format_label` is a fixed set today;
+/// this keeps the log valid if a label ever carries a quote or control
+/// character.
 fn json_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 2);
     for c in s.chars() {
@@ -52,8 +48,7 @@ fn json_escape(s: &str) -> String {
     out
 }
 
-/// Render one match result as a JSON line. Numeric fields and fixed label sets
-/// are inlined directly; the free-form `format_label` is JSON-escaped.
+/// One match result as a JSON line; only the free-form `format_label` needs escaping.
 fn render_line(format_label: &str, duration: Duration, outcome: &MatchOutcome) -> String {
     let format_label = json_escape(format_label);
     let ts = SystemTime::now()
@@ -86,8 +81,8 @@ fn render_line(format_label: &str, duration: Duration, outcome: &MatchOutcome) -
         .map(|n| n.to_string())
         .collect::<Vec<_>>()
         .join(",");
-    // Explicit table size so a log reader never has to infer it from arrays
-    // that may be empty (e.g. an aborted 1-seat match with no final snapshot).
+    // Explicit table size, since the per-seat arrays may be empty (aborted
+    // match with no final snapshot).
     let players = outcome
         .final_life_totals
         .len()
@@ -103,9 +98,7 @@ fn render_line(format_label: &str, duration: Duration, outcome: &MatchOutcome) -
     )
 }
 
-/// Byte ceiling for the live match log, from `CRAB_MATCH_LOG_MAX_BYTES`.
-/// `None` (unset, unparseable, or 0) disables rotation — the historical
-/// unbounded-append behaviour.
+/// Byte ceiling for the live log (`CRAB_MATCH_LOG_MAX_BYTES`); `None` (unset, bad, or 0) means no rotation.
 fn max_bytes() -> Option<u64> {
     static MAX: OnceLock<Option<u64>> = OnceLock::new();
     *MAX.get_or_init(|| {
@@ -113,9 +106,8 @@ fn max_bytes() -> Option<u64> {
     })
 }
 
-/// Rotate `path` to `path.1` once it would exceed `limit`, so an operator
-/// leaving the log on for months keeps one bounded live file plus one
-/// bounded archive instead of an unbounded one. A previous `.1` is replaced.
+/// Rotate `path` to `path.1` (replacing any previous one) once it would exceed
+/// `limit`, so a long-running log stays bounded.
 fn rotate_if_needed(path: &Path, incoming: usize, limit: u64) {
     let Ok(meta) = std::fs::metadata(path) else { return };
     if meta.len() + incoming as u64 <= limit {
@@ -142,8 +134,7 @@ fn append(path: &Path, line: &str) {
     }
 }
 
-/// Append `outcome` to the match log, if one is configured. Called from every
-/// match-end path (lobby, bot, pair) alongside the rolling-stats fold.
+/// Append `outcome` to the match log if configured; called from every match-end path.
 pub(crate) fn record(format_label: &str, duration: Duration, outcome: &MatchOutcome) {
     if let Some(path) = log_path() {
         append(path, &render_line(format_label, duration, outcome));
@@ -205,8 +196,7 @@ mod tests {
         // Under the limit: nothing moves.
         rotate_if_needed(&path, 5, 100);
         assert!(!path.with_extension("jsonl.1").exists(), "no premature rotation");
-        // Over it: the live file becomes the archive and the next append
-        // starts a fresh one.
+        // Over it: the live file becomes the archive and the next append starts fresh.
         rotate_if_needed(&path, 80, 100);
         assert!(!path.exists(), "live log rotated away");
         assert_eq!(std::fs::read_to_string(path.with_extension("jsonl.1")).unwrap().len(), 40);

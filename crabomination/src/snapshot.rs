@@ -1,44 +1,34 @@
 //! Serializable snapshot of `GameState` for round-trip debug replay.
 //!
-//! `GameState` itself now `derive`s `Serialize`/`Deserialize`, so the
-//! preferred path for full-fidelity replay is `serde_json::to_string(&state)`
-//! / `from_str` directly. This module's `GameSnapshot` predates that
-//! work and remains as a smaller, schema-stable wrapper for the
-//! "in-game export" workflow — it captures only the user-facing engine
-//! state (life, board, hands, stack spells, turn/step) so the resulting
-//! JSON file is more readable and resilient to engine refactors than
-//! a raw `GameState` dump. Both formats coexist:
+//! `GameState` itself derives `Serialize`/`Deserialize`; `GameSnapshot`
+//! predates that and stays as a smaller, schema-stable "in-game export"
+//! of the user-facing state (life, board, hands, stack spells, turn/step),
+//! more readable and refactor-resilient than a raw dump.
 //!
-//! - **`GameSnapshot`** — schema-stable, slightly lossy (drops
-//!   trigger-stack items, transient fields). Use when the export
-//!   should round-trip across engine versions.
-//! - **Direct `GameState`** — lossless for the rules state: triggers,
-//!   delayed triggers, continuous effects, pending decision, decider
-//!   state. Use when the *position* has to come back exactly.
+//! - **`GameSnapshot`** — schema-stable, slightly lossy (drops trigger-stack
+//!   items, transient fields). Use when the export must survive engine
+//!   versions.
+//! - **Direct `GameState`** — lossless for the rules state (triggers, delayed
+//!   triggers, continuous effects, pending decision, decider state). Use when
+//!   the *position* must come back exactly.
 //!
-//! **Neither format replays a game bit-exactly on its own**, and the reason
-//! is one field: `GameState::rng` is `#[serde(skip)]`, so a restored state
-//! gets a fresh stream and the next "at random" the rules ask for diverges.
-//! Bit-exact replay is a property of the **seed**, carried out of band —
-//! `recommend::play_one_game`'s `shuffle_rng`, `bot_ladder`'s `--seed`,
-//! `selfplay_train`'s logged seeds — not of a serialized position. Said here
-//! because this module's own summary used to claim otherwise, and because
-//! the crash-at-game-400,000 workflow the RNG exists for depends on knowing
-//! which of the two to reach for.
+//! **Neither replays a game bit-exactly**: `GameState::rng` is
+//! `#[serde(skip)]`, so a restored state draws a fresh stream. Bit-exact
+//! replay comes from the **seed**, carried out of band
+//! (`recommend::play_one_game`'s `shuffle_rng`, `bot_ladder --seed`,
+//! `selfplay_train`'s logged seeds).
 //!
 //! # `GameSnapshot` fidelity
 //!
-//! - **Lossless**: player life, mana pool, library/hand/graveyard
-//!   contents, battlefield state (tap, damage, counters, P/T bonuses,
-//!   token-ness, attached_to), exile, turn/step/priority, generic
-//!   per-game counters (`spells_cast_this_turn`, `next_id`), attack /
-//!   block declarations, Spell stack items.
-//! - **Best-effort**: `Trigger` stack items carry a `Box<Effect>`; the
-//!   snapshot path drops them and reports `dropped_triggers`. The full
-//!   `GameState` round-trip preserves them.
+//! - **Lossless**: life, mana pool, library/hand/graveyard, battlefield state
+//!   (tap, damage, counters, P/T bonuses, token-ness, attached_to), exile,
+//!   turn/step/priority, per-game counters (`spells_cast_this_turn`,
+//!   `next_id`), attack/block declarations, Spell stack items.
+//! - **Best-effort**: `Trigger` stack items (they carry a `Box<Effect>`) are
+//!   dropped and counted in `dropped_triggers`.
 //! - **Reset on load**: `pending_decision`, `suspend_signal`,
-//!   `delayed_triggers`, `continuous_effects` (rebuilt from static
-//!   abilities of permanents on load).
+//!   `delayed_triggers`, `continuous_effects` (rebuilt from permanents'
+//!   static abilities).
 
 
 use serde::{Deserialize, Serialize};
@@ -150,11 +140,10 @@ pub struct CardSnapshot {
     /// predating cast-from-exile load as `None`.
     #[serde(default)]
     pub may_play_until: Option<crate::card::MayPlayPermission>,
-    /// CR 122.1b keyword counters — permanent state (never cleared at
-    /// cleanup), so a spectator/reconnect sync must preserve them or it
-    /// would render an Indestructible-countered creature as destructible.
-    /// `Vec` because `Keyword` can't be a JSON map key; `#[serde(default)]`
-    /// so older snapshots load as empty.
+    /// CR 122.1b keyword counters: permanent state, so a spectator/reconnect
+    /// sync must keep them (else an Indestructible-countered creature renders
+    /// destructible). `Vec` because `Keyword` can't be a JSON map key; old
+    /// snapshots load empty.
     #[serde(default)]
     pub keyword_counters: Vec<(Keyword, u32)>,
     /// Until-end-of-turn keyword grants. Kept for parity with
@@ -360,15 +349,11 @@ fn player_snap(p: &Player) -> PlayerSnapshot {
 // ── Restore (GameSnapshot → GameState) ────────────────────────────────────────
 
 impl GameSnapshot {
-    /// Reconstruct a playable `GameState` from a snapshot. Resolves card
-    /// names through [`crate::catalog::lookup_by_name`]; returns
-    /// `LoadError::UnknownCard` if any card name doesn't resolve.
-    ///
-    /// On success, the resulting state has:
-    /// - `decider = AutoDecider` (snapshot doesn't preserve scripted deciders)
-    /// - `pending_decision = None` (would need a scripted answer to fire)
-    /// - `delayed_triggers = vec![]`, `continuous_effects = vec![]`
-    ///   (the latter are reapplied by the layer system on next access)
+    /// Reconstruct a playable `GameState`, resolving names through
+    /// [`crate::catalog::lookup_by_name`] (`LoadError::UnknownCard` if one
+    /// doesn't). The result has `decider = AutoDecider`, `pending_decision =
+    /// None`, and empty `delayed_triggers` / `continuous_effects` (the layer
+    /// system reapplies the latter).
     pub fn restore(self) -> Result<GameState, LoadError> {
         let GameSnapshot {
             players,
@@ -656,12 +641,10 @@ mod tests {
 
     #[test]
     fn snapshot_round_trips_keyword_counters_and_eot_keyword_grants() {
-        // CR 122.1b keyword counters are permanent state (granted while
-        // present, never cleared at cleanup), so a spectator/reconnect
-        // sync must preserve them — dropping them silently renders an
-        // Indestructible-countered creature as destructible. EOT-granted
-        // keywords share the power_bonus lifetime, which the snapshot
-        // already captures, so they must round-trip too for parity.
+        // CR 122.1b keyword counters are permanent state and must survive a
+        // spectator/reconnect sync; EOT-granted keywords share the
+        // power_bonus lifetime the snapshot already keeps, so they
+        // round-trip too.
         use crate::card::{CounterType, Keyword};
         let mut g = two_player_game();
         let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -727,11 +710,9 @@ mod tests {
 
     #[test]
     fn restore_after_action_keeps_engine_consistent() {
-        // Restored state must still drive the engine: capture mid-game,
-        // restore, and play a `PlayLand`. The fact that the action is
-        // accepted (no `CardNotInHand` / `NotALand` error) is enough —
-        // we're proving the snapshot reattaches the catalog cleanly,
-        // not exercising bolt resolution semantics.
+        // A restored state still drives the engine: capture mid-game,
+        // restore, and the `PlayLand` is accepted — proof the catalog
+        // reattaches cleanly.
         let mut g = two_player_game();
         let forest = g.add_card_to_hand(0, catalog::forest());
         g.priority.player_with_priority = 0;

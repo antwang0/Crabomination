@@ -2,17 +2,14 @@
 //! was put into that zone since the last time state-based actions were
 //! checked, its owner may put it into the command zone."
 //!
-//! The "may" is the owner's. A seat that prompts (a client, a pod seat) is
-//! asked through a pending `Decision::CommanderRedirect` posed once the action
-//! that put it there settles ([`GameState::pose_commander_return`]); any other
-//! seat is answered by the decider inside the sweep, as before. A declined
-//! commander is remembered in `commander_return_declined` until it turns up in
-//! some other zone.
+//! A prompting owner is asked via a `Decision::CommanderRedirect` once the
+//! action settles ([`GameState::pose_commander_return`]); other seats are
+//! answered by the decider inside the sweep. A decline is remembered in
+//! `commander_return_declined` until the card changes zone.
 //!
-//! CR 903.9b's hand / library replacement is posed the same way to a
-//! prompting owner: the event can't suspend, so the card lands and the offer
-//! (`commander_redirect_offers`) is asked once the action settles. The rest
-//! of that resolution sees it in the hand or library (Chaos Warp's reveal).
+//! CR 903.9b's hand/library replacement is posed the same way: the event
+//! can't suspend, so the card lands and `commander_redirect_offers` is asked
+//! after; the rest of the resolution sees it there (Chaos Warp's reveal).
 
 use super::GameState;
 use super::types::{GameError, GameEvent, PendingDecision, ResumeContext};

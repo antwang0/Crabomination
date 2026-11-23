@@ -5,250 +5,123 @@ use std::time::Duration;
 use crate::config::Format;
 use crabomination::server::LossReason;
 
-/// Process-wide running counters of completed matches. Lets the server
-/// emit a rolling summary line ("served 42 matches: 31 bot, 11 pair;
-/// avg duration 4m13s") on each match completion alongside the per-match
-/// line. Updated by `run_bot_match` / `run_pair_match`; read in those
-/// same logging sites.
-///
-/// The struct holds raw totals; the formatted summary lives in
-/// `format_match_stats`. Wrapped in a `Mutex` so concurrent match
-/// threads can serialize their updates without an `Arc` allocation per
-/// thread (the SlotManager pattern uses `Arc<Mutex<…>>` because slot
-/// state has to outlive multiple owning threads; `MATCH_STATS` is a
-/// process-global `OnceLock` so a plain `Mutex<MatchStats>` suffices).
+/// Process-wide running totals of completed matches, rendered by
+/// `format_match_stats` as the rolling summary line logged after each match.
+/// Lives in a process-global `OnceLock<Mutex<_>>` (no per-thread `Arc`).
 #[derive(Debug, Default, Clone, Copy)]
 pub(crate) struct MatchStats {
     pub(crate) bot_matches: u64,
     pub(crate) pair_matches: u64,
-    /// Total cumulative match duration (sum). Average = total / count.
+    /// Sum of match durations.
     pub(crate) total_duration: Duration,
-    /// Shortest observed match duration. `None` until the first match
-    /// completes. Surfaces outlier-short games (instant disconnects,
-    /// concession-on-turn-1).
+    /// Shortest match (`None` until the first); surfaces instant disconnects.
     pub(crate) min_duration: Option<Duration>,
-    /// Longest observed match duration. `None` until the first match
-    /// completes. Surfaces stalls / long grindy games.
+    /// Longest match (`None` until the first); surfaces stalls.
     pub(crate) max_duration: Option<Duration>,
-    /// Bucketed histogram of match durations. Buckets:
-    /// `[0]` = under 30s, `[1]` = 30s-1m, `[2]` = 1-2m, `[3]` = 2-5m,
-    /// `[4]` = 5-10m, `[5]` = 10m+. Lets operators see the distribution
-    /// shape at a glance without leaving the per-match log line —
-    /// e.g. a sudden spike in the `<30s` bucket indicates many bots
-    /// are conceding turn 1 (often a regression signal).
+    /// Duration histogram: `<30s`, `30s-1m`, `1-2m`, `2-5m`, `5-10m`, `10m+`.
+    /// A spike in `<30s` usually means bots conceding turn 1.
     pub(crate) duration_buckets: [u32; 6],
-    /// Per-format histogram of completed matches, indexed by the local
-    /// server `Format` discriminant (Demo / Cube). Lets operators see
-    /// the running cube-vs-demo split in the rolling summary line. Push
-    /// (claude/modern_decks batch 162).
+    /// Completed matches per `Format`, indexed by `format_index`.
     pub(crate) format_buckets: [u64; FORMAT_BUCKET_COUNT],
-    /// Per-format cumulative final turn count, indexed like
-    /// `format_buckets`. Divided by the matching `format_buckets` count to
-    /// surface each format's average game length in the summary
-    /// (`demo:7(9t) cube:3(14t)`), so operators can tell a slow format apart
-    /// from a slow build without sampling per-match logs.
+    /// Sum of final turn counts per format (indexed like `format_buckets`),
+    /// for the per-format average game length (`demo:7(9t)`).
     pub(crate) format_turn_totals: [u64; FORMAT_BUCKET_COUNT],
-    /// Per-format cumulative wall-clock duration in seconds, indexed like
-    /// `format_buckets`. Divided by the matching count to surface each
-    /// format's average *wall-clock* game length alongside its turn count —
-    /// so operators can tell a format that's slow in real time (long decision
-    /// timeouts) from one that's merely long in turns. Push (modern_decks).
+    /// Sum of wall-clock seconds per format, so a format slow in real time
+    /// (long decision timeouts) reads apart from one merely long in turns.
     pub(crate) format_duration_totals: [u64; FORMAT_BUCKET_COUNT],
-    /// Cumulative turn count across all matches — divided by total
-    /// matches in the summary line. Operators see at a glance whether
-    /// games are concession-heavy (low avg turn count) or grindy
-    /// (high avg turn count) without sampling individual match logs.
-    /// Push (claude/modern_decks batch 172).
+    /// Sum of final turn counts; average = this / `total_matches()`.
     pub(crate) total_turns: u64,
-    /// Longest observed final turn count across all completed matches.
-    /// Surfaces "grindiest" games for outlier debugging — paired with
-    /// `total_turns / total_matches` (the running average) lets operators
-    /// distinguish "consistent 8-turn games" from "5-turn average with
-    /// one 30-turn outlier". `None` until the first match completes.
-    /// Push (claude/modern_decks batch 189).
+    /// Longest final turn count (`None` until the first match).
     pub(crate) max_turns: Option<u32>,
-    /// Shortest observed final turn count across all completed matches.
-    /// Paired with `max_turns` and the running average, this completes
-    /// the turn-count envelope so operators can distinguish a tight
-    /// "always 6-8 turn" distribution from a wide "2-turn concession to
-    /// 30-turn grind" spread without sampling individual match logs.
-    /// `None` until the first match completes. Push
-    /// (claude/modern_decks batch 205).
+    /// Shortest final turn count (`None` until the first match).
     pub(crate) min_turns: Option<u32>,
-    /// Number of matches that ended in a draw (MatchOutcome.winner =
-    /// Some(None)). Useful for spotting "stalemate" regressions
-    /// (typically a bot-vs-bot loop where neither side can finish).
-    /// Push (claude/modern_decks batches 192-194).
+    /// Matches that ended in a draw (`winner == Some(None)`), e.g. a bot loop
+    /// neither side can finish.
     pub(crate) draws: u64,
-    /// Number of matches that ended cleanly with a declared winner
-    /// (Some(Some(seat))). Pre-game-over exits (channel disconnect,
-    /// watchdog) yield None and are excluded from this counter, so
-    /// `wins + draws ≤ total_matches`. The delta surfaces "stuck"
-    /// matches that never produced an outcome. Push
-    /// (claude/modern_decks batches 192-194).
+    /// Matches with a declared winner (`Some(Some(seat))`). Disconnect /
+    /// watchdog exits are excluded, so `wins + draws <= total_matches`.
     pub(crate) wins: u64,
-    /// Per-seat wins (indexed by seat 0..SEAT_BUCKET_COUNT). Surfaces
-    /// turn-order bias in bot-vs-bot ladders: if `seat_wins[0]` is
-    /// twice `seat_wins[1]` over a long run, the active-player heuristic
-    /// or starting-hand luck is leaking through. Pre-warmup all-zero
-    /// rows render as `seat_wins=0/0` in the rolling summary so the
-    /// operator can spot empty samples. Push (claude/modern_decks
-    /// batch 198).
+    /// Wins per seat (seats past the cap fold into the last bucket); flags
+    /// turn-order bias in bot ladders.
     pub(crate) seat_wins: [u64; SEAT_BUCKET_COUNT],
-    /// Cumulative life delta on wins: for each completed match with a
-    /// winner, sum `winner_life - max(other_seat_life, 0)`. Divided by
-    /// `wins` in the summary line gives an average win-by-life number,
-    /// surfacing whether games are "blowouts" (high delta) or "races"
-    /// (low / negative delta — winner ended at 1 with opp at 0).
-    /// Saturates positive; clamped at zero when winner life is below
-    /// the negative of the opp's. Push (claude/modern_decks batch 202).
+    /// Sum over wins of `winner_life - max_opponent_life`, clamped at 0; the
+    /// average separates blowouts from races.
     pub(crate) cumulative_win_life_delta: i64,
-    /// Σ of (win-life-delta)² across sampled wins, for the population
-    /// standard deviation (σ = √(E[x²] − E[x]²)). Paired with the average,
-    /// σ distinguishes a consistent "win-by-5" meta from a bimodal
-    /// "blowout-or-squeaker" split the average alone hides. Deltas are
-    /// clamped ≥ 0, so the squared sum is non-negative; `u128` headroom
-    /// keeps it from overflowing over a long run.
+    /// Sum of squared win-life deltas, for the population σ. Deltas are ≥ 0;
+    /// `u128` keeps a long run from overflowing.
     pub(crate) cumulative_win_life_delta_squared: u128,
-    /// Number of matches counted in `cumulative_win_life_delta`. Lets
-    /// the formatter compute the average without dividing by `wins`
-    /// directly (a winner with no available life data — e.g. a forced
-    /// concession — is skipped in the cumulative sum but still counted
-    /// in `wins`).
+    /// Wins counted in `cumulative_win_life_delta`. Can trail `wins`: a win
+    /// with no life data is skipped there.
     pub(crate) win_life_samples: u64,
-    /// Bucketed histogram of win-by-life deltas, parallel to
-    /// `duration_buckets`. Buckets: `[0]` = 0 (won at parity / race),
-    /// `[1]` = 1-3, `[2]` = 4-6, `[3]` = 7-10, `[4]` = 11-15, `[5]` = 16+.
-    /// The average + σ give the centre and spread; this gives the
-    /// distribution *shape*, and feeds a median (p50) estimate that's
-    /// robust to the blowout outliers the mean is sensitive to.
+    /// Win-life-delta histogram: `0`, `1-3`, `4-6`, `7-10`, `11-15`, `16+`.
+    /// Gives the shape and an outlier-robust median.
     pub(crate) win_life_delta_buckets: [u32; 6],
-    /// Bucketed histogram of final turn counts, parallel to
-    /// `duration_buckets`. Buckets: `[0]` = 1-2 turns, `[1]` = 3-5,
-    /// `[2]` = 6-8, `[3]` = 9-12, `[4]` = 13-20, `[5]` = 21+. The
-    /// turn-count envelope (`min_turns`/`max_turns`/average) gives the
-    /// extremes and centre; this histogram gives the distribution
-    /// *shape* — e.g. a fat `[0]` bucket flags a concession regression
-    /// even when one long outlier keeps the average high. Mirrors the
-    /// duration histogram so operators read both in the same summary
-    /// line. Push (claude/modern_decks).
+    /// Final-turn histogram: `1-2`, `3-5`, `6-8`, `9-12`, `13-20`, `21+`. A fat
+    /// first bucket flags a concession regression even when a long outlier keeps
+    /// the average high.
     pub(crate) turn_buckets: [u32; 6],
-    /// Number of clean wins where every losing seat ended with life > 0
-    /// — i.e. the loser did *not* die to lethal face damage. These are
-    /// "alternate" wins (decking out, poison, mill, or a win-the-game
-    /// effect). Surfaced next to `wins` so operators can see the
-    /// damage-vs-alternate win split: a sudden rise in `deckout_wins`
-    /// relative to `wins` flags a stall regression where bots grind to
-    /// empty libraries instead of closing on life. Counted only on
-    /// `Some(Some(seat))` outcomes with available life data. Push
-    /// (claude/modern_decks).
+    /// Wins where every loser ended above 0 life ("alternate" wins: decking,
+    /// poison, concession, win-the-game effects). A rise relative to `wins` flags
+    /// bots grinding to empty libraries instead of closing on life.
     pub(crate) deckout_wins: u64,
-    /// Number of clean wins that *did* close via lethal face damage (every
-    /// losing seat at ≤ 0 life). The complement of `deckout_wins`, tracked
-    /// explicitly so the win-kind buckets reconcile with `wins`
-    /// (`damage_wins + deckout_wins == wins`) rather than leaving the common
-    /// case implicit. Push (claude/modern_decks).
+    /// Wins via lethal face damage (every loser at ≤ 0 life);
+    /// `damage_wins + deckout_wins == wins` when life or reason data exists.
     pub(crate) damage_wins: u64,
-    /// Subset of `deckout_wins` where at least one losing seat was
-    /// eliminated specifically by poison (CR 104.3c). Classified from the
-    /// outcome's precise `loss_reasons`, not the life-total heuristic, so
-    /// poison ladders show a distinct signal from pure deck-out grinds.
+    /// Subset of `deckout_wins` with a loser eliminated by poison (CR 104.3c),
+    /// classified from `loss_reasons`, not life totals.
     pub(crate) poison_wins: u64,
-    /// Subset of `deckout_wins` where at least one losing seat decked out
-    /// (drew from an empty library, CR 104.3a). The dredge/mill shells push
-    /// this bucket; reading it next to `poison_wins` splits the umbrella
-    /// non-damage win count into its two main alternate paths.
+    /// Subset of `deckout_wins` with a loser decked (CR 104.3a).
     pub(crate) deck_wins: u64,
-    /// Subset of `deckout_wins` where at least one losing seat was killed by
-    /// 21+ combat damage from a single commander (CR 903.10a). Relevant to
-    /// the Commander/Brawl formats; reads alongside `poison_wins`/`deck_wins`
-    /// as a third distinct alternate-win path.
+    /// Subset of `deckout_wins` with a loser killed by 21+ damage from one
+    /// commander (CR 903.10a).
     pub(crate) commander_damage_wins: u64,
-    /// Subset of `deckout_wins` where at least one losing seat conceded
-    /// (CR 104.3a). Split out from `other_wins` so a concession-heavy sample
-    /// (rage-quits, bot timeouts) is distinguishable from genuine "you lose
-    /// the game" effects.
+    /// Subset of `deckout_wins` with a loser who conceded (CR 104.3a), kept
+    /// apart from `other_wins` so rage-quits and bot timeouts are visible.
     pub(crate) concede_wins: u64,
-    /// Running sum of final turn counts for wins where a losing seat conceded.
-    /// Paired with `concede_wins` it yields [`avg_concede_turn`](Self::
-    /// avg_concede_turn) — the average turn a game was thrown in. A low value
-    /// (bots concede on turn 3) flags a broken evaluation that gives up too
-    /// early; a high one means concessions are genuine end-game resignations.
+    /// Sum of final turns over concession wins, for
+    /// [`avg_concede_turn`](Self::avg_concede_turn): a low value means bots give up
+    /// too early.
     pub(crate) concede_turn_sum: u64,
-    /// Subset of `deckout_wins` where at least one losing seat left for an
-    /// "other" reason (a "you lose the game" effect — CR 104.3g) — not life,
-    /// poison, deck-out, commander damage, or concession. Surfacing it
-    /// completes the alternate-win decomposition so the umbrella `deckout_wins`
-    /// doesn't hide an unclassified residue.
+    /// Subset of `deckout_wins` with a loser out for any other reason (a "you
+    /// lose the game" effect, CR 104.3g).
     pub(crate) other_wins: u64,
-    /// Running sum of squared final turn counts (`Σ turns²`). Paired with
-    /// `total_turns` (`Σ turns`) and the match count it yields the
-    /// population standard deviation of game length via
-    /// [`turn_count_stddev`](Self::turn_count_stddev) — a single number
-    /// that tells operators whether games cluster tightly around the
-    /// average (small σ) or swing wildly (large σ), complementing the
-    /// min/max envelope and the histogram shape.
+    /// Sum of squared final turn counts, for
+    /// [`turn_count_stddev`](Self::turn_count_stddev).
     pub(crate) total_turns_squared: u128,
-    /// Running sum of final turn counts for decisive matches (a declared
-    /// winner). Paired with `wins` it yields the average length of *decided*
-    /// games; compared against the draw average below it surfaces whether
-    /// stalemates are systematically longer grinds than clean wins.
+    /// Sum of final turn counts over decisive matches.
     pub(crate) decisive_turn_sum: u64,
-    /// Running sum of final turn counts for drawn matches. Paired with `draws`
-    /// it yields the average length of drawn games (see `decisive_turn_sum`).
+    /// Sum of final turn counts over drawn matches.
     pub(crate) draw_turn_sum: u64,
-    /// Running sum of squared match durations in **milliseconds**
-    /// (`Σ ms²`). The duration analogue of `total_turns_squared`: paired
-    /// with `total_duration` (`Σ ms`) and the match count it yields the
-    /// population standard deviation of match length via
-    /// [`duration_stddev`](Self::duration_stddev), so the rolling summary
-    /// reports duration σ next to the turn-count σ. Milliseconds keep the
-    /// squares well within `u128` even for very long sessions.
+    /// Sum of squared durations in milliseconds, for
+    /// [`duration_stddev`](Self::duration_stddev); ms keeps the squares well inside
+    /// `u128`.
     pub(crate) total_duration_squared_ms: u128,
-    /// Matches that completed without a declared outcome (`observe_winner`
-    /// got `None` — channel disconnect, watchdog kill, or a stuck loop). The
-    /// `wins + draws + inconclusive ≤ total_matches` identity makes this the
-    /// explicit count of the "stuck" delta operators previously had to derive
-    /// by subtraction; a rising `inconclusive_pct` flags a hang regression.
+    /// Matches with no declared outcome (`observe_winner(None)`: disconnect,
+    /// watchdog, stuck loop); a rise flags a hang regression.
     pub(crate) inconclusive: u64,
-    /// Running sum of the **winner's** battlefield permanent count at match
-    /// end (`outcome.final_board_sizes[winner]`). Paired with `board_samples`
-    /// it yields the average board a seat controls when it wins — a
-    /// development proxy that, next to `avg_decisive_turn`, tells a fast
-    /// face-damage win (small board, low turn) apart from a grindy attrition
-    /// win (wide board, high turn). Skipped when board data is unavailable
-    /// (aborted matches leave `final_board_sizes` empty).
+    /// Sum of the winner's end-of-match permanent count. Next to the decisive
+    /// turn average it separates fast face-damage wins from wide attrition wins.
+    /// Skipped when `final_board_sizes` is empty (aborted match).
     pub(crate) winner_board_sum: u64,
-    /// Running `Σ board²` over the same samples, so a population σ falls out of
-    /// √(E[x²] − E[x]²) — the winner-board analogue of `total_turns_squared`.
-    /// A tight σ next to `avg_winner_board` says wins land at a consistent
-    /// board width; a large σ flags an empty-board burn vs. wide-board grind
-    /// split the average alone hides.
+    /// Sum of squared winner board sizes, for the population σ.
     pub(crate) winner_board_sum_squared: u128,
-    /// Number of wins counted in `winner_board_sum` (a winner with no board
-    /// snapshot is still counted in `wins`, so this can trail `wins`).
+    /// Wins counted in `winner_board_sum` (can trail `wins`).
     pub(crate) winner_board_samples: u64,
-    /// Narrowest / widest board a seat held at victory. `None` until the first
-    /// sample. The σ tells you *how spread* winning boards are; these name the
-    /// actual extremes — a `min` of 0 means at least one win came off an empty
-    /// board (pure burn/mill), a large `max` flags the widest attrition grind.
+    /// Narrowest / widest winning board (`None` until the first sample); a
+    /// `min` of 0 means some win came off an empty board.
     pub(crate) winner_board_min: Option<u32>,
     pub(crate) winner_board_max: Option<u32>,
 }
 
-/// Cap on per-seat win tracking. Covers 1v1 (seats 0, 1) plus headroom
-/// for 4-player Commander pods. Wins for seats ≥ this cap fall into
-/// the last bucket so the array doesn't overflow on exotic formats.
+/// Per-seat win buckets: 1v1 plus 4-player Commander pods. Higher seats
+/// fold into the last bucket.
 pub(crate) const SEAT_BUCKET_COUNT: usize = 4;
 
-/// Number of buckets in `MatchStats.format_buckets`. Sized to cover the
-/// the four current `Format` variants (Demo / Cube / Sos / Commander).
-/// New formats slot into the next free index via `format_index`; bump
-/// this count when adding a fifth.
+/// Bucket count for `format_buckets`, one per `Format`; bump it when adding one.
 pub(crate) const FORMAT_BUCKET_COUNT: usize = 4;
 
-/// Map a local server `Format` (Demo / Cube / Sos / Commander) to its bucket index in
-/// `MatchStats.format_buckets`. Stable ordering — new formats append.
+/// Bucket index of a `Format` in `MatchStats.format_buckets`. Stable order;
+/// new formats append.
 pub(crate) fn format_index(f: Format) -> usize {
     match f {
         Format::Demo => 0,
@@ -258,8 +131,7 @@ pub(crate) fn format_index(f: Format) -> usize {
     }
 }
 
-/// Reverse map for the format-bucket index. Returns `None` for the
-/// trailing reserved slots so the formatter can skip empty buckets.
+/// Label for a format-bucket index; `None` past the last format.
 pub(crate) fn format_label_for_bucket(i: usize) -> Option<&'static str> {
     match i {
         0 => Some(Format::Demo.label()),
@@ -283,11 +155,9 @@ impl MatchStats {
         self.observe_format(f);
         self.observe_format_duration(f, d);
     }
-    /// Fold a completed match into every counter at once: the match-kind
-    /// tally (`record_bot`/`record_pair`), turn counts, winner/seat bias,
-    /// and — for decisive games — the win life-delta and win-kind buckets.
-    /// Centralizes the recording logic so `run_bot_match` / `run_pair_match`
-    /// stay in lockstep and new stats only land in one place.
+    /// Fold a completed match into every counter: match kind, turns, winner and
+    /// seat, and for decisive games the life delta, win kind and board. The one
+    /// recording path for `run_bot_match` and `run_pair_match`.
     pub(crate) fn record_outcome(
         &mut self,
         outcome: &crabomination::server::MatchOutcome,
@@ -336,22 +206,15 @@ impl MatchStats {
     pub(crate) fn avg_draw_turns(&self) -> u64 {
         self.draw_turn_sum.checked_div(self.draws).unwrap_or(0)
     }
-    /// Draw length as a percentage of decisive length — the "stalemate grind"
-    /// gauge the `decisive_turn_sum`/`draw_turn_sum` field docs call for,
-    /// surfaced as one number instead of leaving operators to divide the two
-    /// averages by hand. 100 = draws end as fast as wins; 200 = draws grind
-    /// twice as long (a stalemate-detection knob is likely worthwhile). Returns
-    /// 0 when either sample is empty (no ratio is defined yet).
+    /// Average draw length as a percent of average decisive length: 200 means
+    /// draws grind twice as long. 0 when either sample is empty.
     pub(crate) fn stalemate_grind_pct(&self) -> u64 {
         let decisive = self.avg_decisive_turns();
         let draw = self.avg_draw_turns();
         if decisive == 0 || draw == 0 { return 0; }
         draw.saturating_mul(100) / decisive
     }
-    /// Bump the cumulative turn counter — called at match completion
-    /// from the record paths if the caller has a final turn number.
-    /// Defensive against double-counting since this is invoked exactly
-    /// once per `record_*` (the caller passes the final turn).
+    /// Record one match's final turn count. Call exactly once per match.
     pub(crate) fn observe_turns(&mut self, turns: u32) {
         self.total_turns = self.total_turns.saturating_add(turns as u64);
         self.total_turns_squared = self
@@ -370,8 +233,7 @@ impl MatchStats {
     }
 
     /// Map a final turn count to its `turn_buckets` index.
-    /// `[0]` = 1-2, `[1]` = 3-5, `[2]` = 6-8, `[3]` = 9-12, `[4]` =
-    /// 13-20, `[5]` = 21+.
+    /// `turn_buckets` index for a final turn count.
     pub(crate) fn turn_bucket_index(turns: u32) -> usize {
         match turns {
             0..=2 => 0,
@@ -394,11 +256,8 @@ impl MatchStats {
             _ => "21+",
         }
     }
-    /// Bump the win/draw counters based on the MatchOutcome.winner
-    /// shape. `None` (pre-game-over exit — channel disconnect or
-    /// watchdog) is silently dropped: callers can compute "stuck"
-    /// matches as `total_matches - wins - draws`. `Some(None)` is a
-    /// draw; `Some(Some(_))` is a clean win.
+    /// Count a win (and its seat), a draw (`Some(None)`), or an inconclusive
+    /// match (`None`: disconnect or watchdog).
     pub(crate) fn observe_winner(&mut self, w: Option<Option<usize>>) {
         match w {
             Some(None) => self.draws = self.draws.saturating_add(1),
@@ -410,47 +269,34 @@ impl MatchStats {
             None => self.inconclusive = self.inconclusive.saturating_add(1),
         }
     }
-    /// Percentage of completed matches that produced no declared outcome
-    /// (stuck / disconnected). Surfaced next to `decisive_pct` so a hang
-    /// regression is visible directly rather than by subtraction.
+    /// Percent of all matches with no declared outcome.
     pub(crate) fn inconclusive_pct(&self) -> u64 {
         let total = self.total_matches();
         if total == 0 { return 0; }
         self.inconclusive.saturating_mul(100) / total
     }
-    /// Percentage of *all* completed matches that ended in a draw. Distinct
-    /// from `decisive_pct` (which is wins/(wins+draws), ignoring inconclusive
-    /// games): this is over the full denominator, so a creeping bot-vs-bot
-    /// stalemate regression shows up here even as `inconclusive_pct` stays low.
+    /// Percent of *all* matches that were draws (`decisive_pct` excludes
+    /// inconclusive games from its denominator).
     pub(crate) fn draw_pct(&self) -> u64 {
         let total = self.total_matches();
         if total == 0 { return 0; }
         self.draws.saturating_mul(100) / total
     }
-    /// Share of served matches that were bot-vs-bot (as opposed to a paired
-    /// human match), as a percentage. Surfaces ladder composition at a glance:
-    /// a self-play soak run should read ~100, a live human server much lower,
-    /// so a sudden shift flags a routing or matchmaking regression. Returns 0
-    /// before any match completes.
+    /// Percent of matches that were bot-vs-bot rather than paired humans: ~100
+    /// on a self-play soak. 0 before any match.
     pub(crate) fn bot_match_pct(&self) -> u64 {
         let total = self.total_matches();
         if total == 0 { return 0; }
         self.bot_matches.saturating_mul(100) / total
     }
-    /// Share of decisive (non-draw) wins taken by the player on the play
-    /// (seat 0), as a percentage. A value far from 50 over a long bot ladder
-    /// flags turn-order bias in the active-player heuristic — the
-    /// `seat_wins` histogram's stated purpose, surfaced without mental math.
-    /// Returns 50 (neutral) when no seated wins have been recorded.
+    /// Seat 0's share of seated wins, as a percent; far from 50 over a long
+    /// ladder flags turn-order bias. 50 with no wins.
     pub(crate) fn first_seat_win_pct(&self) -> u64 {
         let seated: u64 = self.seat_wins.iter().sum();
         if seated == 0 { return 50; }
         self.seat_wins[0].saturating_mul(100) / seated
     }
-    /// Seat `seat`'s share of all decided wins, as a percent. Generalizes
-    /// `first_seat_win_pct` to every seat so an N-player turn-order skew
-    /// (not just first-vs-rest) is visible. Returns 0 before any win is
-    /// recorded (no data) and for an out-of-range seat.
+    /// Seat `seat`'s share of seated wins, as a percent; 0 with no wins or an out-of-range seat.
     pub(crate) fn seat_win_share_pct(&self, seat: usize) -> u64 {
         let seated: u64 = self.seat_wins.iter().sum();
         if seated == 0 {
@@ -458,13 +304,9 @@ impl MatchStats {
         }
         self.seat_wins.get(seat).copied().unwrap_or(0).saturating_mul(100) / seated
     }
-    /// Accumulate the win-by-life delta for one match. `final_life`
-    /// is the per-seat life array; `winner` is the winning seat. The
-    /// delta is `winner_life - max_opponent_life` clamped to ≥0 so
-    /// the cumulative sum can't go negative even if both ended at
-    /// negative life (rare double-loss scenario). Skipped silently
-    /// when the winning seat is out of range or no life data is
-    /// available. Push (claude/modern_decks batch 202).
+    /// Record one win's life margin: winner life minus the best opponent's,
+    /// clamped ≥ 0 (a double loss at negative life can't go below). No-op when the
+    /// winner seat has no life data.
     pub(crate) fn observe_win_life_delta(&mut self, winner: usize, final_life: &[i32]) {
         let Some(&winner_life) = final_life.get(winner) else { return };
         let max_opp = final_life
@@ -483,7 +325,7 @@ impl MatchStats {
         let b = Self::win_life_delta_bucket_index(delta);
         self.win_life_delta_buckets[b] = self.win_life_delta_buckets[b].saturating_add(1);
     }
-    /// Partition a (clamped ≥0) win-by-life delta into one of six buckets.
+    /// `win_life_delta_buckets` index for a (≥ 0) delta.
     pub(crate) fn win_life_delta_bucket_index(delta: i64) -> usize {
         match delta {
             0 => 0,
@@ -494,9 +336,7 @@ impl MatchStats {
             _ => 5,
         }
     }
-    /// Representative upper bound of win-life-delta bucket `i` (the open
-    /// final bucket reports its lower edge, 16). Mirrors the duration /
-    /// turn `*_upper_bound` helpers.
+    /// Upper bound of win-life-delta bucket `i` (the open last bucket reports 16).
     pub(crate) fn win_life_delta_bucket_upper_bound(i: usize) -> i64 {
         match i {
             0 => 0,
@@ -507,10 +347,8 @@ impl MatchStats {
             _ => 16,
         }
     }
-    /// Estimate the p-th percentile win-by-life delta from the histogram —
-    /// robust to the blowout outliers that inflate the mean. Returns the upper
-    /// edge of the bucket holding the target sample, or 0 with no samples.
-    /// `p` is clamped to [0, 1]. Mirrors [`turn_percentile`](Self::turn_percentile).
+    /// `p`-th percentile win-life delta (bucket upper edge; 0 with no samples).
+    /// `p` is clamped to [0, 1].
     pub(crate) fn win_life_delta_percentile(&self, p: f32) -> i64 {
         Self::percentile_bucket(&self.win_life_delta_buckets, p)
             .map(Self::win_life_delta_bucket_upper_bound)
@@ -520,43 +358,29 @@ impl MatchStats {
     pub(crate) fn win_life_delta_median(&self) -> i64 {
         self.win_life_delta_percentile(0.5)
     }
-    /// Interquartile range of the win-by-life delta (p75 − p25), the margin
-    /// analogue of [`turn_count_iqr`](Self::turn_count_iqr). Robust to blowout
-    /// outliers that inflate σ: a tight IQR next to a wide σ marks a
-    /// mostly-consistent win margin with a few runaway stomps. Returns 0 with
-    /// no samples. Bucket-quantised like the other percentile readouts.
+    /// Interquartile range (p75 − p25) of the win-life delta; a tight IQR next to
+    /// a wide σ means a few runaway stomps. Bucket-quantised; 0 with no samples.
     pub(crate) fn win_life_delta_iqr(&self) -> i64 {
         self.win_life_delta_percentile(0.75)
             .saturating_sub(self.win_life_delta_percentile(0.25))
     }
-    /// Share (percent) of margin-tracked wins that were nail-biters — a final
-    /// life margin of 3 or less (delta buckets 0–1). The blowout-insensitive
-    /// companion to the mean/σ/IQR margin readouts: a high value means most
-    /// wins came down to the wire even when σ is inflated by a few runaway
-    /// stomps. Returns 0 with no margin samples.
+    /// Percent of margin-tracked wins with a margin of 3 or less (buckets 0–1); 0 with no samples.
     pub(crate) fn close_win_pct(&self) -> u64 {
         let total: u64 = self.win_life_delta_buckets.iter().map(|&n| n as u64).sum();
         let close =
             self.win_life_delta_buckets[0] as u64 + self.win_life_delta_buckets[1] as u64;
         close.saturating_mul(100).checked_div(total).unwrap_or(0)
     }
-    /// Share (percent) of margin-tracked wins that were blowouts — a final life
-    /// margin above 15 (delta bucket 5). The upper-tail mirror of
-    /// [`close_win_pct`](Self::close_win_pct): a rising value with a stable
-    /// mean flags a widening blowout tail (one deck stomping the field) that
-    /// the average alone hides. Returns 0 with no margin samples.
+    /// Percent of margin-tracked wins with a margin above 15 (bucket 5), the
+    /// upper-tail mirror of [`close_win_pct`](Self::close_win_pct). 0 with no
+    /// samples.
     pub(crate) fn blowout_win_pct(&self) -> u64 {
         let total: u64 = self.win_life_delta_buckets.iter().map(|&n| n as u64).sum();
         (self.win_life_delta_buckets[5] as u64).saturating_mul(100).checked_div(total).unwrap_or(0)
     }
-    /// Classify one clean win as a damage win or an "alternate" win
-    /// (deckout / poison / mill / win-the-game). Prefers the outcome's
-    /// precise per-seat `loss_reasons`; if any losing seat died to
-    /// something other than lethal face damage, the win is "alternate"
-    /// (`deckout_wins`), and poison / deck-out losses additionally bump
-    /// the `poison_wins` / `deck_wins` sub-buckets. Falls back to the
-    /// life-total heuristic when reason data is unavailable.
-    /// Push (claude/modern_decks).
+    /// Classify one win as damage or alternate. Uses the losers' `loss_reasons`
+    /// when present (any non-life loss makes it alternate, and each reason bumps its
+    /// sub-bucket); otherwise falls back to life totals.
     pub(crate) fn observe_win_kind(
         &mut self,
         winner: usize,
@@ -611,9 +435,7 @@ impl MatchStats {
             self.damage_wins = self.damage_wins.saturating_add(1);
         }
     }
-    /// Record the winner's end-of-match board size. No-op when the winner
-    /// seat has no snapshot (aborted match — `final_board_sizes` empty or
-    /// too short).
+    /// Record the winner's board size; no-op without a snapshot for that seat.
     pub(crate) fn observe_winner_board(&mut self, winner: usize, final_board_sizes: &[usize]) {
         if let Some(&board) = final_board_sizes.get(winner) {
             self.winner_board_sum = self.winner_board_sum.saturating_add(board as u64);
@@ -626,14 +448,12 @@ impl MatchStats {
         }
     }
 
-    /// Average board size (permanents controlled) a seat holds when it wins.
-    /// Returns 0 when no winner-board samples have been recorded yet.
+    /// Average winning board size; 0 with no samples.
     pub(crate) fn avg_winner_board(&self) -> u64 {
         self.winner_board_sum.checked_div(self.winner_board_samples).unwrap_or(0)
     }
 
-    /// Population standard deviation of winning board sizes (σ = √(E[x²] −
-    /// E[x]²)). Returns 0.0 until a winner-board sample exists.
+    /// Population σ of winning board sizes; 0.0 with no samples.
     pub(crate) fn winner_board_stddev(&self) -> f32 {
         if self.winner_board_samples == 0 {
             return 0.0;
@@ -644,13 +464,9 @@ impl MatchStats {
         (mean_sq - mean * mean).max(0.0).sqrt() as f32
     }
 
-    /// Coefficient of variation of the winner's board size (σ / mean, as a
-    /// percent). The scale-free companion to [`winner_board_stddev`](Self::
-    /// winner_board_stddev) and the sibling of [`win_life_delta_cv_pct`](Self::
-    /// win_life_delta_cv_pct): a burn format (winners at ~0 board) and a
-    /// go-wide format (winners at ~8 board) can share a σ yet differ wildly in
-    /// relative spread — the CV normalizes that so board-consistency is
-    /// comparable across formats. Returns 0 with no samples or a zero mean.
+    /// Coefficient of variation (σ / mean, percent) of winning board size, so
+    /// board consistency compares across burn and go-wide formats. 0 with no
+    /// samples or a zero mean.
     pub(crate) fn winner_board_cv_pct(&self) -> u64 {
         let mean = self.avg_winner_board();
         if self.winner_board_samples == 0 || mean == 0 {
@@ -659,8 +475,7 @@ impl MatchStats {
         (self.winner_board_stddev() as f64 * 100.0 / mean as f64).round() as u64
     }
 
-    /// Average win-by-life delta across all sampled wins. Returns 0
-    /// when no win-life samples have been recorded yet.
+    /// Average win-life delta; 0 with no samples.
     pub(crate) fn avg_win_life_delta(&self) -> i64 {
         if self.win_life_samples == 0 {
             0
@@ -669,10 +484,7 @@ impl MatchStats {
         }
     }
 
-    /// Population standard deviation of the win-by-life delta (σ = √(E[x²] −
-    /// E[x]²)). Returns 0.0 with no samples. A tight σ next to the average
-    /// means a consistent win margin; a large σ flags a "blowout-or-squeaker"
-    /// split the average hides.
+    /// Population σ of the win-life delta; 0.0 with no samples.
     pub(crate) fn win_life_delta_stddev(&self) -> f32 {
         if self.win_life_samples == 0 {
             return 0.0;
@@ -682,11 +494,8 @@ impl MatchStats {
         let mean_sq = self.cumulative_win_life_delta_squared as f64 / n;
         (mean_sq - mean * mean).max(0.0).sqrt() as f32
     }
-    /// Coefficient of variation of the win-by-life delta (σ / mean, as a
-    /// percent). Scale-free dispersion: unlike raw σ it stays comparable as the
-    /// average margin drifts, so a rising CV flags a swingier win-margin
-    /// distribution even when the mean shifts. Returns 0 with no samples or a
-    /// non-positive mean (the ratio is undefined there).
+    /// Coefficient of variation (σ / mean, percent) of the win-life delta. 0 with
+    /// no samples or a non-positive mean.
     pub(crate) fn win_life_delta_cv_pct(&self) -> u64 {
         let mean = self.avg_win_life_delta();
         if self.win_life_samples == 0 || mean <= 0 {
@@ -694,122 +503,87 @@ impl MatchStats {
         }
         (self.win_life_delta_stddev() as f64 * 100.0 / mean as f64).round() as u64
     }
-    /// Percent of *resolved* matches (wins + draws) that ended decisively
-    /// (i.e. had a winner). Returns 0 when nothing has resolved yet. A
-    /// sudden drop signals stalemate regressions (mutual lock, no win
-    /// condition reachable). Excludes unresolved/watchdog'd matches from
-    /// the denominator so disconnects don't deflate the rate.
+    /// Percent of resolved matches (wins + draws) with a winner; 0 if none. Drops
+    /// on stalemate regressions; disconnects don't count.
     pub(crate) fn decisive_pct(&self) -> u64 {
         let resolved = self.wins + self.draws;
         self.wins.saturating_mul(100).checked_div(resolved).unwrap_or(0)
     }
-    /// Matches that ended without a recorded winner or draw — a channel
-    /// disconnect or the watchdog tearing down a wedged game (`observe_winner`
-    /// saw `None`). `total - wins - draws`, saturating so it never underflows
-    /// if the winner counters ever outpace the match counter. A nonzero,
-    /// rising value flags a hang/crash regression the win/draw split hides.
+    /// Matches with neither a win nor a draw (`total - wins - draws`,
+    /// saturating); a rise flags a hang or crash regression.
     pub(crate) fn unresolved(&self) -> u64 {
         self.total_matches().saturating_sub(self.wins + self.draws)
     }
-    /// `unresolved()` as a percentage of all completed matches — the alertable
-    /// rate form of the raw count. Distinct from `inconclusive_pct` (which
-    /// counts only games `observe_winner(None)` saw): this derives from the
-    /// match counter, so a match that finished without any winner observation
-    /// at all still shows up here. Returns 0 before any match completes.
+    /// `unresolved()` as a percent of all matches. Unlike
+    /// `inconclusive_pct` it derives from the match counter, so it also counts a
+    /// match that never reported a winner at all. 0 before any match.
     pub(crate) fn unresolved_pct(&self) -> u64 {
         let total = self.total_matches();
         if total == 0 { return 0; }
         self.unresolved().saturating_mul(100) / total
     }
-    /// Percent of wins that closed via something other than lethal face
-    /// damage (deckout / poison / mill / win-the-game). Returns 0 when no
-    /// wins have been recorded. A rising share flags a stall regression
-    /// where bots grind to empty libraries instead of closing on life.
+    /// Percent of wins that were alternate (not lethal face damage); 0 with no wins.
     pub(crate) fn deckout_pct(&self) -> u64 {
         self.deckout_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
-    /// Percent of wins that closed via lethal face damage — the complement of
-    /// `deckout_pct`. Returns 0 when no wins have been recorded.
+    /// Percent of wins via lethal face damage; 0 with no wins.
     pub(crate) fn damage_pct(&self) -> u64 {
         self.damage_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
-    /// Percent of wins in which a losing seat died to poison (CR 104.3c).
-    /// A sub-split of `deckout_pct`; 0 when no wins recorded.
+    /// Percent of wins with a poison loss (CR 104.3c); 0 with no wins.
     pub(crate) fn poison_pct(&self) -> u64 {
         self.poison_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
-    /// Poison's share *among alternate (non-lethal-damage) wins*, not of all
-    /// wins — a sharper toxic-metagame signal than `poison_pct` when most
-    /// games still close on life. 0 when no alternate wins recorded.
+    /// Poison's share of alternate wins (not of all wins); 0 with no alternate wins.
     pub(crate) fn poison_of_alt_pct(&self) -> u64 {
         self.poison_wins.saturating_mul(100).checked_div(self.deckout_wins).unwrap_or(0)
     }
-    /// Percent of wins in which a losing seat decked out (CR 104.3a).
-    /// A sub-split of `deckout_pct`; 0 when no wins recorded.
+    /// Percent of wins with a deck-out loss (CR 104.3a); 0 with no wins.
     pub(crate) fn deck_pct(&self) -> u64 {
         self.deck_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
-    /// Percent of wins in which a losing seat left for an "other" reason
-    /// (concession / "you lose the game" effect). A sub-split of
-    /// `deckout_pct`; 0 when no wins recorded.
+    /// Percent of wins with an "other" loss (CR 104.3g); 0 with no wins.
     pub(crate) fn other_pct(&self) -> u64 {
         self.other_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
-    /// Average final turn of wins where a seat conceded, or 0 with none.
-    /// Watched alongside `concede_pct`: a concession share that spikes at a
-    /// *low* average turn flags an evaluation that rage-quits winnable games.
+    /// Average final turn of concession wins; 0 with none. A low value flags an
+    /// evaluation that quits winnable games.
     pub(crate) fn avg_concede_turn(&self) -> u64 {
         self.concede_turn_sum.checked_div(self.concede_wins).unwrap_or(0)
     }
-    /// Average concede turn as a percentage of a decisive game's length —
-    /// *when* players give up relative to how long a won game normally runs.
-    /// Below 100 means concessions land early (games feel decided before they
-    /// end — a balance/agency signal); near/above 100 means seats fight to the
-    /// bitter end before conceding. 0 when either sample is empty. Complements
-    /// `concede_pct` (how often) with *how early*.
+    /// Average concede turn as a percent of average decisive length: below 100
+    /// means seats concede early. 0 when either sample is empty.
     pub(crate) fn concede_earliness_pct(&self) -> u64 {
         let concede = self.avg_concede_turn();
         let decisive = self.avg_decisive_turns();
         if concede == 0 || decisive == 0 { return 0; }
         concede.saturating_mul(100) / decisive
     }
-    /// Percent of wins via 21+ commander damage (CR 903.10a).
-    /// A sub-split of `deckout_pct`; 0 when no wins recorded.
+    /// Percent of wins via 21+ commander damage (CR 903.10a); 0 with no wins.
     pub(crate) fn commander_damage_pct(&self) -> u64 {
         self.commander_damage_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
-    /// Percent of wins in which a losing seat conceded (CR 104.3a). Split out
-    /// from `other_pct` so a concession-heavy sample (rage-quits, bot timeouts)
-    /// is distinguishable from genuine "you lose the game" effects. A sub-split
-    /// of `deckout_pct`; 0 when no wins recorded.
+    /// Percent of wins with a concession (CR 104.3a); 0 with no wins.
     pub(crate) fn concede_pct(&self) -> u64 {
         self.concede_wins.saturating_mul(100).checked_div(self.wins).unwrap_or(0)
     }
-    /// Average turn count across all completed matches. Returns 0
-    /// pre-warmup. Used by `format_match_stats` for the operator
-    /// rolling-summary line.
+    /// Average final turn over all matches; 0 before any match.
     pub(crate) fn avg_turns(&self) -> u64 {
         let n = self.total_matches();
         self.total_turns.checked_div(n).unwrap_or(0)
     }
-    /// Increment the per-format match count. Used by both `record_bot`
-    /// and `record_pair` so the per-format histogram covers every
-    /// completed match regardless of source.
+    /// Count one match against its format.
     pub(crate) fn observe_format(&mut self, f: Format) {
         let idx = format_index(f).min(FORMAT_BUCKET_COUNT - 1);
         self.format_buckets[idx] = self.format_buckets[idx].saturating_add(1);
     }
-    /// Accumulate a completed match's final turn count into its format
-    /// bucket. Called once per match alongside `observe_turns`; divided by
-    /// `format_buckets` in the summary to surface each format's average
-    /// game length.
+    /// Add one match's final turn count to its format's total.
     pub(crate) fn observe_format_turns(&mut self, f: Format, turns: u32) {
         let idx = format_index(f).min(FORMAT_BUCKET_COUNT - 1);
         self.format_turn_totals[idx] = self.format_turn_totals[idx].saturating_add(turns as u64);
     }
-    /// Average final turn count for format bucket `i`, or `None` if no turn
-    /// data has been recorded for that format (so callers fall back to the
-    /// bare `label:count` rather than rendering a misleading `(0t)`).
+    /// Average final turn for format bucket `i`, or `None` without turn data (so
+    /// the summary prints `label:count`, not a misleading `(0t)`).
     pub(crate) fn format_avg_turns(&self, i: usize) -> Option<u64> {
         let total = *self.format_turn_totals.get(i)?;
         if total == 0 {
@@ -817,15 +591,13 @@ impl MatchStats {
         }
         total.checked_div(*self.format_buckets.get(i)?)
     }
-    /// Accumulate a completed match's wall-clock duration into its format
-    /// bucket. Called from the record paths alongside `observe_format`.
+    /// Add one match's wall-clock seconds to its format's total.
     pub(crate) fn observe_format_duration(&mut self, f: Format, d: Duration) {
         let idx = format_index(f).min(FORMAT_BUCKET_COUNT - 1);
         self.format_duration_totals[idx] =
             self.format_duration_totals[idx].saturating_add(d.as_secs());
     }
-    /// Average wall-clock seconds for format bucket `i`, or `None` when no
-    /// match has completed in that format yet.
+    /// Average wall-clock seconds for format bucket `i`, or `None` with no matches.
     pub(crate) fn format_avg_duration_secs(&self, i: usize) -> Option<u64> {
         let count = *self.format_buckets.get(i)?;
         if count == 0 {
@@ -833,9 +605,7 @@ impl MatchStats {
         }
         self.format_duration_totals.get(i)?.checked_div(count)
     }
-    /// Shared bookkeeping for both record paths — accumulates the
-    /// total + tracks the new min/max envelope. Pulled out of the
-    /// recorders so the min/max maintenance is canonical at one site.
+    /// Record a duration: total, min/max, histogram and squared sum.
     pub(crate) fn observe_duration(&mut self, d: Duration) {
         self.total_duration += d;
         self.min_duration = Some(match self.min_duration {
@@ -851,38 +621,19 @@ impl MatchStats {
         let ms = d.as_millis();
         self.total_duration_squared_ms = self.total_duration_squared_ms.saturating_add(ms * ms);
     }
-    /// Estimate the `p`th-percentile match duration from the histogram.
-    /// `p` is a fraction in `[0.0, 1.0]`. Returns the upper edge of the
-    /// bucket containing the `p`-th sample (rounded up), so the estimate
-    /// is conservative — an actual median match may be shorter, but
-    /// reporting `≤ this` gives operators a useful upper bound on the
-    /// typical match length. Returns `Duration::ZERO` if no matches have
-    /// been recorded.
-    ///
-    /// The bucketing is coarse (6 buckets) so this is a *quantile-class*
-    /// rather than a true percentile — but enough for spotting drift in
-    /// match-length distribution shape over time. Used by
-    /// `format_match_stats` to surface `p50` and `p95` in the rolling
-    /// summary line.
-    /// Index of the histogram bucket holding the `p`-th percentile sample,
-    /// or `None` when the histogram is empty. The rank is 1-indexed and
-    /// ceil-rounded so `p=1.0` selects the last sample and any `p>0` selects
-    /// at least the first. Ranks against the histogram's own sample count
-    /// (not `total_matches()`) so the quantile stays correct even if the two
-    /// ever drift. Shared by the duration / turn-count / win-life-delta
-    /// percentile readouts so the rank math lives in exactly one place.
+    /// Histogram bucket holding the `p`-th percentile sample, or `None` when
+    /// empty. The rank is 1-indexed and ceil-rounded (`p=1.0` is the last sample,
+    /// any `p>0` at least the first), counted against the histogram's own total.
+    /// Shared by every percentile readout.
     fn percentile_bucket(buckets: &[u32], p: f32) -> Option<usize> {
         let total: u64 = buckets.iter().map(|&n| n as u64).sum();
         if total == 0 {
             return None;
         }
         let p = p.clamp(0.0, 1.0);
-        // Rank in f64: `total as f32` loses integer precision past 2^24
-        // (~16.7M samples), which would drift the quantile on a long-running
-        // benchmark server. f64 is exact for the u64 sample counts we see. The
-        // 1e-6 nudge absorbs the representation error of promoting a non-exact
-        // f32 `p` (e.g. 0.3 → 0.30000001), so `ceil(total*p)` still lands on
-        // the mathematically intended integer rank rather than one above it.
+        // Rank in f64: `total as f32` loses precision past 2^24 samples. The 1e-6
+        // nudge absorbs f32 `p` promotion error (0.3 -> 0.30000001) so the ceil lands
+        // on the intended rank.
         let target = ((total as f64) * (p as f64) - 1e-6).ceil().max(1.0) as u64;
         let mut acc = 0u64;
         for (i, &n) in buckets.iter().enumerate() {
@@ -895,37 +646,29 @@ impl MatchStats {
         Some(buckets.len().saturating_sub(1))
     }
 
+    /// `p`-th percentile match duration, as the upper edge of its bucket: a
+    /// conservative "≤ this" from six coarse buckets. `Duration::ZERO` with no
+    /// matches.
     pub(crate) fn percentile(&self, p: f32) -> Duration {
         Self::percentile_bucket(&self.duration_buckets, p)
             .map(Self::bucket_upper_bound)
             .unwrap_or(Duration::ZERO)
     }
-    /// Turn-count analogue of [`percentile`](Self::percentile): the
-    /// upper turn-count bound of the bucket containing the `p`-th
-    /// percentile match, walking `turn_buckets`. Returns 0 when no
-    /// matches have completed. Lets operators read the game-length
-    /// distribution centre (p50) and tail (p95) directly instead of
-    /// eyeballing the histogram columns.
+    /// Turn-count analogue of [`percentile`](Self::percentile): upper bound of
+    /// the `turn_buckets` bucket holding the `p`-th match; 0 with no matches.
     pub(crate) fn turn_percentile(&self, p: f32) -> u32 {
         Self::percentile_bucket(&self.turn_buckets, p)
             .map(Self::turn_bucket_upper_bound)
             .unwrap_or(0)
     }
-    /// Interquartile range of final turn counts (p75 − p25), a spread measure
-    /// that — unlike [`turn_count_stddev`](Self::turn_count_stddev) — ignores
-    /// the blowout tail entirely. A tight IQR next to a wide σ is the signature
-    /// of a mostly-consistent length distribution with a few runaway grinds.
-    /// Returns 0 when no matches have completed. Bucket-quantised like the other
-    /// `turn_*` percentile readouts.
+    /// Interquartile range (p75 − p25) of final turn counts; unlike
+    /// [`turn_count_stddev`](Self::turn_count_stddev) it ignores the long tail.
+    /// Bucket-quantised; 0 with no matches.
     pub(crate) fn turn_count_iqr(&self) -> u32 {
         self.turn_percentile(0.75).saturating_sub(self.turn_percentile(0.25))
     }
-    /// Coefficient of variation of final turn counts (σ / mean, as a percent).
-    /// The turn-count analogue of [`win_life_delta_cv_pct`](Self::
-    /// win_life_delta_cv_pct): a scale-free spread readout that stays comparable
-    /// as the average length drifts, so a rising CV flags a swingier
-    /// fast-vs-grind length distribution even when the mean shifts. Returns 0
-    /// with no matches or a non-positive mean.
+    /// Coefficient of variation (σ / mean, percent) of final turn counts; 0 with
+    /// no matches or a zero mean.
     pub(crate) fn turn_count_cv_pct(&self) -> u64 {
         let mean = self.avg_turns();
         if self.total_matches() == 0 || mean == 0 {
@@ -933,16 +676,11 @@ impl MatchStats {
         }
         (self.turn_count_stddev() as f64 * 100.0 / mean as f64).round() as u64
     }
-    /// Label of the most-populated turn-length bucket — the *modal* game
-    /// length. Unlike the mean or the percentiles it names the single most
-    /// common length band, which is the readout that survives a bimodal
-    /// "fast concession vs. long grind" split (where the mean lands in an
-    /// empty valley between the two humps). Returns `None` before any match
-    /// has recorded a turn count; ties resolve to the shorter band (first
-    /// bucket wins).
+    /// Label of the most populated turn bucket (the modal game length), which
+    /// survives a bimodal fast/grind split where the mean falls between humps.
+    /// `None` with no data; ties go to the shorter band.
     pub(crate) fn turn_count_mode_bucket(&self) -> Option<&'static str> {
-        // Fold keeping the FIRST bucket on ties (strictly-greater replaces),
-        // so equal-count bands resolve to the shorter game length.
+        // Strictly-greater replaces, so ties keep the first (shorter) bucket.
         let mut best: Option<(usize, u32)> = None;
         for (i, &c) in self.turn_buckets.iter().enumerate() {
             if best.is_none_or(|(_, bc)| c > bc) {
@@ -951,33 +689,20 @@ impl MatchStats {
         }
         best.filter(|&(_, c)| c > 0).map(|(i, _)| Self::turn_bucket_label(i))
     }
-    /// Share (percent) of completed matches that ended in five turns or fewer
-    /// (`turn_buckets` 0–1). The turn-length analogue of `close_win_pct`: a
-    /// high value flags an aggro-dominated / mana-screw-prone ladder where
-    /// games routinely end before the midgame, which the mean/mode can hide
-    /// behind a long-grind tail. Returns 0 with no completed matches.
+    /// Percent of matches that ended by turn 5 (`turn_buckets` 0–1); 0 with no matches.
     pub(crate) fn fast_game_pct(&self) -> u64 {
         let total: u64 = self.turn_buckets.iter().map(|&n| n as u64).sum();
         let fast = self.turn_buckets[0] as u64 + self.turn_buckets[1] as u64;
         fast.saturating_mul(100).checked_div(total).unwrap_or(0)
     }
-    /// Share (percent) of completed matches that ran thirteen turns or longer
-    /// (`turn_buckets` 4–5). The grind-tail complement of
-    /// [`fast_game_pct`](Self::fast_game_pct): a high value flags a
-    /// control-/stall-dominated ladder where games routinely reach the late
-    /// game, which the mean/mode can hide behind a fast-concession spike.
-    /// Returns 0 with no completed matches.
+    /// Percent of matches that ran 13+ turns (`turn_buckets` 4–5), the grind
+    /// complement of [`fast_game_pct`](Self::fast_game_pct). 0 with no matches.
     pub(crate) fn slow_game_pct(&self) -> u64 {
         let total: u64 = self.turn_buckets.iter().map(|&n| n as u64).sum();
         let slow = self.turn_buckets[4] as u64 + self.turn_buckets[5] as u64;
         slow.saturating_mul(100).checked_div(total).unwrap_or(0)
     }
-    /// Population standard deviation of final turn counts, computed from
-    /// the running `Σ turns` and `Σ turns²` accumulators (σ = √(E[x²] −
-    /// E[x]²)). Returns 0.0 when no matches have completed. A small σ next
-    /// to the average means consistent game lengths; a large σ flags a
-    /// bimodal "fast concession vs. long grind" split the average alone
-    /// hides.
+    /// Population σ of final turn counts; 0.0 with no matches.
     pub(crate) fn turn_count_stddev(&self) -> f32 {
         let n = self.total_matches();
         if n == 0 {
@@ -988,14 +713,7 @@ impl MatchStats {
         let mean_sq = self.total_turns_squared as f64 / n;
         (mean_sq - mean * mean).max(0.0).sqrt() as f32
     }
-    /// Population standard deviation of match durations, computed from the
-    /// running `Σ ms` (`total_duration`) and `Σ ms²`
-    /// (`total_duration_squared_ms`) accumulators (σ = √(E[x²] − E[x]²)),
-    /// returned as a [`Duration`]. Returns `Duration::ZERO` when no matches
-    /// have completed. The duration analogue of
-    /// [`turn_count_stddev`](Self::turn_count_stddev): a tight σ next to the
-    /// average means consistent match lengths; a large σ flags a "fast
-    /// concession vs. long grind" split the average alone hides.
+    /// Population σ of match durations; `Duration::ZERO` with no matches.
     pub(crate) fn duration_stddev(&self) -> Duration {
         let n = self.total_matches();
         if n == 0 {
@@ -1007,12 +725,9 @@ impl MatchStats {
         let var = (mean_sq - mean * mean).max(0.0);
         Duration::from_millis(var.sqrt() as u64)
     }
-    /// The match-duration analogue of [`turn_count_cv_pct`](Self::
-    /// turn_count_cv_pct) and [`win_life_delta_cv_pct`](Self::
-    /// win_life_delta_cv_pct): duration σ as a percent of the mean duration, a
-    /// scale-free spread readout that stays comparable as the average match
-    /// length drifts (a 30 s σ means something very different for 1-minute vs
-    /// 10-minute games). Returns 0 with no matches or a non-positive mean.
+    /// Coefficient of variation (σ / mean, percent) of match duration, the
+    /// duration analogue of [`turn_count_cv_pct`](Self::turn_count_cv_pct). 0 with
+    /// no matches or a zero mean.
     pub(crate) fn duration_cv_pct(&self) -> u64 {
         let n = self.total_matches();
         if n == 0 {
@@ -1024,10 +739,9 @@ impl MatchStats {
         }
         (self.duration_stddev().as_millis() as f64 * 100.0 / mean_ms).round() as u64
     }
-    /// Upper edge (inclusive estimate) of turn bucket `i`. Matches the
-    /// cut points in [`turn_bucket_index`](Self::turn_bucket_index); the
-    /// open-ended `21+` bucket reports its lower edge (21) since it has
-    /// no finite upper bound.
+    /// Upper edge of turn bucket `i` (cut points of
+    /// [`turn_bucket_index`](Self::turn_bucket_index)); the open `21+` bucket
+    /// reports 21.
     pub(crate) fn turn_bucket_upper_bound(i: usize) -> u32 {
         match i {
             0 => 2,
@@ -1038,8 +752,7 @@ impl MatchStats {
             _ => 21,
         }
     }
-    /// Upper edge (inclusive estimate) of bucket `i` for percentile
-    /// reporting. Matches the cut points in `bucket_index`.
+    /// Upper edge of duration bucket `i` (cut points of `bucket_index`).
     pub(crate) fn bucket_upper_bound(i: usize) -> Duration {
         match i {
             0 => Duration::from_secs(30),
@@ -1050,10 +763,7 @@ impl MatchStats {
             _ => Duration::from_secs(3600),
         }
     }
-    /// Map a duration onto its histogram bucket index. Buckets are
-    /// power-of-rounded thresholds: 30s / 1m / 2m / 5m / 10m / 10m+.
-    /// Anything strictly less than 30s lands in bucket 0; bucket 5
-    /// is the open-ended `10m+` catch-all.
+    /// Duration histogram index: thresholds 30s / 1m / 2m / 5m / 10m, then `10m+`.
     pub(crate) fn bucket_index(d: Duration) -> usize {
         let s = d.as_secs();
         if s < 30 {
@@ -1070,9 +780,7 @@ impl MatchStats {
             5
         }
     }
-    /// Human-readable labels for the histogram buckets, parallel to
-    /// `duration_buckets`. Pulled out so the formatter and unit tests
-    /// can share the same labels.
+    /// Label for duration bucket `i`.
     pub(crate) fn bucket_label(i: usize) -> &'static str {
         match i {
             0 => "<30s",
@@ -1091,9 +799,7 @@ impl MatchStats {
         if n == 0 {
             Duration::ZERO
         } else {
-            // saturating: the wrap-protection guard for the absurd "u64
-            // overflow" case in match counts (would need centuries of
-            // continuous play to hit).
+            // Saturating, though overflow would take centuries of play.
             Duration::from_secs(self.total_duration.as_secs().saturating_div(n))
         }
     }
@@ -1105,10 +811,9 @@ pub(crate) fn match_stats() -> &'static std::sync::Mutex<MatchStats> {
     MATCH_STATS.get_or_init(|| std::sync::Mutex::new(MatchStats::default()))
 }
 
-/// Format the running stats as a one-line summary appended to each
-/// match-completion log: `served N matches: K bot, P pair; avg
-/// duration X`. Read after the per-match update so the new match is
-/// included in the rollup.
+/// One-line rolling summary appended to each match-completion log
+/// (`served N matches: K bot, P pair; avg duration X; ...`). Call after recording
+/// the match so it is included.
 pub(crate) fn format_match_stats(s: &MatchStats) -> String {
     let n = s.total_matches();
     let mut out = format!(
@@ -1130,11 +835,7 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
         }
         _ => {}
     }
-    // Turn-length distribution: median / tail / spread from the histogram +
-    // running σ. Surfaces the game-length shape (fast concessions vs. grinds)
-    // that the average alone hides. `turn_percentile`/`turn_count_stddev` were
-    // computed but never rendered; gate on a handful of matches so short logs
-    // stay tight.
+    // Turn-length median, tail and spread; only after a handful of matches.
     if n >= 5 {
         out.push_str(&format!(
             " turns_p50={} p95={} (σ={:.1}, cv={}%, fast={}%)",
@@ -1145,43 +846,30 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
             s.fast_game_pct(),
         ));
     }
-    // Win/draw split: only render once at least one win or draw is
-    // recorded so pre-warmup logs stay tight. The delta vs total
-    // matches surfaces "stuck" matches (channel disconnect /
-    // watchdog) — `total - wins - draws` is the unresolved count.
+    // Win/draw split, once anything has resolved.
     if s.wins + s.draws > 0 {
         out.push_str(&format!(
             " wins={} draws={} decisive={}%",
             s.wins, s.draws, s.decisive_pct()
         ));
-        // Draw rate over *all* matches — a stalemate-regression gauge that the
-        // resolved-only `decisive_pct` can't show. Only when draws exist.
+        // Draw rate over all matches, plus whether draws run longer than wins.
         if s.draws > 0 {
             out.push_str(&format!(" draw_rate={}%", s.draw_pct()));
-            // Are stalemates longer grinds than decided games? Show the split
-            // averages so a "draws run 3× longer" pattern is visible at a glance.
             out.push_str(&format!(
                 " turns(win/draw)={}/{}",
                 s.avg_decisive_turns(),
                 s.avg_draw_turns()
             ));
         }
-        // Unresolved (disconnect / watchdog) matches — surfaced explicitly so a
-        // hang regression is visible instead of hiding in `total - wins - draws`.
+        // Matches with no win or draw (disconnect / watchdog).
         let stuck = s.unresolved();
         if stuck > 0 {
             out.push_str(&format!(" stuck={stuck}"));
         }
-        // Alternate-win split: how many of those wins closed via
-        // something other than lethal face damage (deckout / poison /
-        // mill / win-the-game). Only rendered when at least one such
-        // win has been seen so the common all-damage case stays tight.
+        // Alternate-win split, only once one has been seen.
         if s.deckout_wins > 0 {
             out.push_str(&format!(" alt_wins={} ({}%)", s.deckout_wins, s.deckout_pct()));
-            // The complementary lethal-damage share, so the split reads
-            // directly (dmg + alt == wins) without subtracting in your head.
             out.push_str(&format!(" dmg_wins={} ({}%)", s.damage_wins, s.damage_pct()));
-            // Split the alternate-win share into its two main paths when seen.
             if s.poison_wins > 0 {
                 out.push_str(&format!(
                     " poison={} ({}%, {}% of alt)",
@@ -1204,9 +892,7 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
                 out.push_str(&format!(" other={} ({}%)", s.other_wins, s.other_pct()));
             }
         }
-        // Stuck/disconnected matches: prefer the explicit `inconclusive`
-        // counter (and its percentage) over the subtraction fallback so a
-        // hang regression reads directly off the summary line.
+        // Matches `observe_winner` saw as `None`.
         if s.inconclusive > 0 {
             out.push_str(&format!(
                 " unresolved={} ({}%)",
@@ -1214,9 +900,7 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
                 s.inconclusive_pct()
             ));
         }
-        // Per-seat win histogram: " seat_wins=12/8/0/0" (only render
-        // up to the highest non-zero seat so 1v1 doesn't surface
-        // padding zeros for the 4-player tail).
+        // Per-seat wins (`seat_wins=12/8`), trimmed after the last nonzero seat.
         let last_nonzero = s
             .seat_wins
             .iter()
@@ -1227,14 +911,11 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
             .map(|w| w.to_string())
             .collect();
         out.push_str(&format!(" seat_wins={}", parts.join("/")));
-        // First-player win share among decisive wins — turn-order-bias gauge.
-        // Only meaningful once both seats have had a chance to win.
+        // Seat 0's share, once a second seat has won.
         if last_nonzero >= 1 {
             out.push_str(&format!(" (p0={}%)", s.first_seat_win_pct()));
         }
-        // Average winning-seat life delta — "blowout" check. A high value
-        // (12+) means the winner cruised; near-zero values mean games
-        // ended in a race. Push (claude/modern_decks batch 202).
+        // Winner's life margin: high = blowouts, near zero = races.
         if s.win_life_samples > 0 {
             out.push_str(&format!(
                 " avg_win_life_lead={} (σ={:.1}, cv={}%, p50={}, p90={})",
@@ -1245,8 +926,7 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
                 s.win_life_delta_percentile(0.9)
             ));
         }
-        // Board development at victory — pairs with turns(win) to separate a
-        // fast face-damage win (small board) from a grindy attrition win.
+        // Winning board size and range.
         if s.winner_board_samples > 0 {
             out.push_str(&format!(" avg_win_board={}", s.avg_winner_board()));
             if let (Some(mn), Some(mx)) = (s.winner_board_min, s.winner_board_max) {
@@ -1261,10 +941,7 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
             format_duration(mx),
         ));
     }
-    // Append percentile estimates from the histogram so operators see
-    // the distribution shape without manual bucket math. Skip on the
-    // first match to avoid degenerate `p50=p95=<30s` noise from a single
-    // sample.
+    // Duration and turn percentiles; skipped on the first match (degenerate).
     if n >= 2 {
         out.push_str(&format!(
             " p50≤{}, p95≤{}, σ={} (cv={}%) (turns p50≤{}, p95≤{}, σ={:.1})",
@@ -1277,19 +954,14 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
             s.turn_count_stddev(),
         ));
     }
-    // Append histogram only when at least one bucket has hits — keeps
-    // the rolling log line tight pre-warmup. Format:
-    // " | <30s:3 30s-1m:5 1-2m:7 2-5m:2 5-10m:0 10m+:0" (zero buckets
-    // included for stability so log greppers can rely on the column).
+    // Duration histogram, every bucket printed (including zeros) so log
+    // greppers can rely on the columns.
     if s.total_matches() > 0 {
         out.push_str(" |");
         for (i, count) in s.duration_buckets.iter().enumerate() {
             out.push_str(&format!(" {}:{}", MatchStats::bucket_label(i), count));
         }
-        // Per-format breakdown — only render buckets with a label and a
-        // hit, so demo-only deployments don't get a "cube:0" trailer.
-        // Format: " | format=demo:7 cube:3". Push (claude/modern_decks
-        // batch 162).
+        // Per-format counts (`format=demo:7(9t,240s)`); empty formats are omitted.
         let format_chunks: Vec<String> = s
             .format_buckets
             .iter()
@@ -1311,9 +983,7 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
             out.push_str(" | format=");
             out.push_str(&format_chunks.join(" "));
         }
-        // Turn-count histogram — same shape as the duration histogram so
-        // operators can spot distribution drift in game length. Format:
-        // " | turns=1-2:3 3-5:5 6-8:7 9-12:2 13-20:0 21+:0".
+        // Turn histogram (`turns=1-2:3 3-5:5 ...`), same shape as the duration one.
         out.push_str(" | turns=");
         let turn_chunks: Vec<String> = s
             .turn_buckets
@@ -1326,10 +996,8 @@ pub(crate) fn format_match_stats(s: &MatchStats) -> String {
     out
 }
 
-/// Render a `Duration` as a short human-readable string for logs:
-/// `1h2m3s` / `5m12s` / `38s` / `420ms`. Sub-millisecond durations
-/// fall through to `<1ms`. Used by the per-match completion log so
-/// operators can spot stuck matches at a glance.
+/// Short log rendering of a `Duration`: `1h2m3s` / `5m12s` / `38s` /
+/// `420ms` / `<1ms`.
 pub(crate) fn format_duration(d: Duration) -> String {
     let total_secs = d.as_secs();
     let millis = d.subsec_millis();
