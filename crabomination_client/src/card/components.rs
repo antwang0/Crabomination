@@ -59,9 +59,18 @@ pub struct Card;
 #[derive(Component)]
 pub struct Animating;
 
-/// Marker: the pointer is currently hovering over this card (or one of its children).
+/// Marker: the pointer is currently hovering over this card (or one of its
+/// children) — or the keyboard cursor has it selected, which
+/// `kb_cursor::sync_kb_hover_marker` mirrors in here.
 #[derive(Component)]
 pub struct CardHovered;
+
+/// Marker: the *pointer* is over this card, whatever the keyboard cursor
+/// says. `CardHovered` can't tell the two apart, so when the mouse takes
+/// over from the keyboard this is what keeps the card actually under the
+/// pointer hovered.
+#[derive(Component)]
+pub struct PointerHovered;
 
 /// Links a card to its spawned border highlight entities.
 #[derive(Component)]

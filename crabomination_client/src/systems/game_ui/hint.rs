@@ -7,7 +7,6 @@ pub fn update_hint(
     targeting: Res<TargetingState>,
     legal_targets: Res<crate::game::LegalTargets>,
     blocking: Res<BlockingState>,
-    time: Res<Time>,
     binds: Res<crate::keybinds::Keybinds>,
     mut q: Query<&mut crate::mana_text::ManaText, With<HintText>>,
 ) {
@@ -189,20 +188,13 @@ pub fn update_hint(
         (true, false, _) => {
             format!("Your priority — respond, or {pass} to pass.")
         }
-        (false, ..) => {
-            // Cycle 1→2→3 dots every ~0.4s so the player can tell the
-            // bot is still working and the game hasn't hung. Stick on a
-            // visible dot count (never zero) so the line is the same
-            // width every frame. Named off `priority`, so it only ever
-            // shows while that seat really is the one to act.
-            let phase = (time.elapsed_secs() / 0.4) as u64 % 3;
-            let dots = match phase {
-                0 => ".  ",
-                1 => ".. ",
-                _ => "...",
-            };
-            format!("{} is thinking{}", player_name(cv, cv.priority), dots)
-        }
+        // Someone else is to act: nothing for the viewer to do, and the
+        // "Ana is thinking…" chip at the top of the table (`systems::thinking`)
+        // says who — after a 0.6 s wait, so a quick pass doesn't flicker it,
+        // and naming a pending decision's chooser rather than the priority
+        // holder. This line said "Bot 1 is thinking…" too, so a long think
+        // read it twice on one screen.
+        (false, ..) => String::new(),
     };
     apply_hint(&mut t, body, theme::ACCENT_GOLD, 13.0);
 }

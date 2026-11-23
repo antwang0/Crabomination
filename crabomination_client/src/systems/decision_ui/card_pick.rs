@@ -65,6 +65,15 @@ impl CardPick {
     pub fn confirm_label(&self, picked: usize) -> &'static str {
         if picked == 0 && self.min == 0 { self.none } else { self.verb }
     }
+
+    /// The Confirm button's colour with `picked` cards picked: neutral while
+    /// it would answer with nothing ("Find nothing", "Choose none"), green
+    /// once it takes a card. A search opened on a green "Find nothing" — the
+    /// colour every other modal gives the answer you came for — so the
+    /// obvious button failed to find.
+    pub fn confirm_bg(&self, picked: usize) -> Color {
+        if picked == 0 && self.min == 0 && self.max > 0 { theme::BUTTON_NEUTRAL_BG } else { theme::BUTTON_PRIMARY_BG }
+    }
 }
 
 /// The card pick `wire` asks for, or `None` when it asks for something else.
@@ -206,8 +215,8 @@ fn spawn_footer(panel: &mut ChildSpawnerCommands, ui_fonts: &UiFonts, pick: &Car
                     border_radius: BorderRadius::all(theme::RADIUS_BUTTON),
                     ..default()
                 },
-                BackgroundColor(theme::BUTTON_PRIMARY_BG),
-                HoverTint::new(theme::BUTTON_PRIMARY_BG),
+                BackgroundColor(pick.confirm_bg(0)),
+                HoverTint::new(pick.confirm_bg(0)),
                 DecisionConfirmButton,
             ))
             .with_children(|b| {
@@ -400,6 +409,7 @@ pub fn update_card_pick_readout(
     mut tiles: Query<(&CardPickTile, &mut BackgroundColor)>,
     mut count: Query<&mut Text, (With<CardPickCount>, Without<CardPickConfirmLabel>)>,
     mut confirm: Query<(&mut Text, &mut TextColor), With<CardPickConfirmLabel>>,
+    mut confirm_button: Query<(&mut BackgroundColor, &mut HoverTint), (With<DecisionConfirmButton>, Without<CardPickTile>)>,
 ) {
     if !state.is_changed() && !view.is_changed() {
         return;
@@ -419,6 +429,13 @@ pub fn update_card_pick_readout(
     for (mut text, mut color) in &mut confirm {
         text.0 = pick.confirm_label(n).to_string();
         color.0 = if pick.ready(n) { theme::TEXT_PRIMARY } else { theme::TEXT_MUTED };
+    }
+    let want = pick.confirm_bg(n);
+    for (mut bg, mut tint) in &mut confirm_button {
+        if tint.idle != want {
+            *tint = HoverTint::new(want);
+            bg.0 = want;
+        }
     }
 }
 
@@ -514,6 +531,7 @@ mod tests {
         let pick = card_pick(&cv, &search).unwrap();
         assert!(pick.ready(0) && pick.ready(1) && !pick.ready(2));
         assert_eq!((pick.confirm_label(0), pick.confirm_label(1)), ("Find nothing", "Take"));
+        assert_eq!((pick.confirm_bg(0), pick.confirm_bg(1)), (theme::BUTTON_NEUTRAL_BG, theme::BUTTON_PRIMARY_BG));
         assert_eq!(pick.count_line(0), "0 chosen (up to 1)");
         assert!(!pick.can_pick(ids[0]) && pick.can_pick(ids[1]));
         assert_eq!(pick_answer(&search, &[]), Some(DecisionAnswer::Search(None)));

@@ -13,13 +13,40 @@ pub struct FastForward {
     /// Pass until we're back in our own PreCombatMain with priority.
     pub next_turn: bool,
     /// Pass until the game reaches this step (right-click a phase-chart
-    /// row — roadmap "click-to-advance"). Cleared on arrival.
+    /// row — roadmap "click-to-advance"). Cleared on arrival, or once the
+    /// game is past it (`pass_until_window`). Set it with
+    /// [`FastForward::arm_pass_until`].
     pub pass_until: Option<TurnStep>,
+    /// `(armed on turn, due on turn)` for `pass_until`: the target is due
+    /// this turn if it is still ahead, else next turn.
+    pub pass_until_window: (u32, u32),
     /// Auto-pass disabled (the "hold priority" toggle — H key / toolbar
     /// button): `auto_advance_p0` never passes for the player, every
     /// priority window is stepped through manually. Explicit fast-forwards
     /// (End Turn / Next Turn / click-to-advance) still override.
     pub manual_priority: bool,
+}
+
+impl FastForward {
+    /// Pass until `target`, armed at `step` of `turn`.
+    pub fn arm_pass_until(&mut self, target: TurnStep, turn: u32, step: TurnStep) {
+        self.pass_until = Some(target);
+        let due = if target > step { turn } else { turn + 1 };
+        self.pass_until_window = (turn, due);
+    }
+
+    /// Whether the game is past the step `pass_until` waits for without
+    /// stopping on it. Only arrival used to disarm it, and some steps never
+    /// arrive with priority: Blockers and both damage steps are skipped
+    /// when nobody attacks (and passing on your own Attackers step declares
+    /// no attack), so a right-click on one passed every later window —
+    /// your own main phases included — until a turn finally reached it. A
+    /// turn number going backwards (a rematch, a take-back) is past it too.
+    pub fn pass_until_overshot(&self, turn: u32, step: TurnStep) -> bool {
+        let Some(target) = self.pass_until else { return false };
+        let (armed, due) = self.pass_until_window;
+        turn < armed || turn > due || (turn == due && step > target)
+    }
 }
 
 // ── Auto-advance non-interactive steps ───────────────────────────────────────
@@ -48,6 +75,13 @@ pub fn auto_advance_p0(
     // during mulligan).
     if cv.pending_decision.is_some() { return; }
     if cv.priority != cv.your_seat { return; }
+    // Click-to-advance went past its step without it coming (skipped, or
+    // never a priority window): disarm and hold here, the first window
+    // after it.
+    if ff.pass_until_overshot(cv.turn, cv.step) {
+        ff.pass_until = None;
+        return;
+    }
     // "Hold priority" toggle: step through every window manually. Explicit
     // fast-forwards still win (the player asked for them after toggling).
     if ff.manual_priority && !ff.end_turn && !ff.next_turn && ff.pass_until.is_none() {
@@ -243,5 +277,29 @@ pub fn auto_advance_p0(
 
     if should_advance {
         outbox.submit_auto(GameAction::PassPriority);
+    }
+}
+
+#[cfg(test)]
+mod pass_until_tests {
+    use super::*;
+
+    /// A pass-until armed on a step still ahead is due this turn, on one
+    /// already behind next turn; past the due step (skipped) it has
+    /// overshot, and so has a turn number that went backwards.
+    #[test]
+    fn pass_until_disarms_once_past_its_step() {
+        let mut ff = FastForward::default();
+        // Opponent's Main 1, turn 4: right-click Blockers. They don't attack.
+        ff.arm_pass_until(TurnStep::DeclareBlockers, 4, TurnStep::PreCombatMain);
+        assert!(!ff.pass_until_overshot(4, TurnStep::DeclareAttackers));
+        assert!(ff.pass_until_overshot(4, TurnStep::EndCombat), "Blockers skipped");
+        assert!(ff.pass_until_overshot(5, TurnStep::Upkeep), "certainly by the next turn");
+        // Your Main 2, turn 4: right-click Upkeep — next turn's.
+        ff.arm_pass_until(TurnStep::Upkeep, 4, TurnStep::PostCombatMain);
+        assert!(!ff.pass_until_overshot(4, TurnStep::End));
+        assert!(!ff.pass_until_overshot(5, TurnStep::Untap));
+        assert!(ff.pass_until_overshot(5, TurnStep::Draw));
+        assert!(ff.pass_until_overshot(1, TurnStep::Upkeep), "a rematch");
     }
 }

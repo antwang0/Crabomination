@@ -687,6 +687,18 @@ pub fn despawn_audit_picker(
 
 /// Click a pick row → set `AuditTarget` and boot the in-game scene.
 /// Click the back button → return to the main menu.
+/// Forget the audited card when the main menu opens. The picker goes
+/// straight into its game, and Skip / Mark Verified clear the target on the
+/// way back to it, but leaving an audit game any other way (Esc → Leave
+/// Game, game over → New Game) went to the menu with the target still set,
+/// and every later "Play vs Bot" or Rematch with no imported deck dealt the
+/// audit setup for that card again instead of the chosen format.
+pub fn clear_audit_target(mut target: ResMut<AuditTarget>) {
+    if target.0.is_some() {
+        target.0 = None;
+    }
+}
+
 /// Click an unverify ×  → drop that card from the verified set and
 /// re-spawn the picker so the row repaints.
 /// Click a pool-filter button → change `AuditPoolFilter` and respawn.

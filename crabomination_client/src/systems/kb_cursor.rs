@@ -305,6 +305,44 @@ pub fn handle_keyboard_cursor_input(
 /// Place / move the `KeyboardSelected` marker each frame so it always
 /// matches `KeyboardCursor::selection`. Cheap: each query is filtered
 /// to a handful of entities and the write set is tiny.
+/// The mouse takes over: any mouse movement or button press drops the
+/// keyboard selection, and takes its mirrored `CardHovered` off at once —
+/// ordered before `handle_game_input`, so the sync point between them
+/// applies it before this frame's click is read.
+///
+/// `handle_game_input` acts on whatever card is `CardHovered`, and the
+/// selection's mirror kept it there until Esc: Tab to a land, then click
+/// the Pass button with the mouse, and the click played the land as well;
+/// in declare-attackers, clicking Attack toggled the selected creature in
+/// and out of the plan instead. A card the pointer really is over
+/// (`PointerHovered`) stays hovered.
+pub fn drop_kb_selection_on_mouse(
+    mut commands: Commands,
+    mut cursor: ResMut<KeyboardCursor>,
+    mouse: Res<ButtonInput<MouseButton>>,
+    motion: Res<bevy::input::mouse::AccumulatedMouseMotion>,
+    selected_q: Query<(Entity, Has<crate::card::PointerHovered>), With<KeyboardSelected>>,
+) {
+    if cursor.selection.is_none() && selected_q.is_empty() {
+        return;
+    }
+    if mouse.get_just_pressed().next().is_none() && motion.delta.length_squared() < MOUSE_TAKEOVER_PX * MOUSE_TAKEOVER_PX {
+        return;
+    }
+    cursor.selection = None;
+    for (e, under_pointer) in &selected_q {
+        let mut ec = commands.entity(e);
+        ec.remove::<KeyboardSelected>();
+        if !under_pointer {
+            ec.remove::<crate::card::CardHovered>();
+        }
+    }
+}
+
+/// Mouse travel in one frame (physical px) that counts as the mouse taking
+/// over — above a trackpad's resting jitter.
+const MOUSE_TAKEOVER_PX: f32 = 2.0;
+
 pub fn apply_keyboard_selection(
     mut commands: Commands,
     cursor: Res<KeyboardCursor>,
@@ -363,9 +401,11 @@ pub fn sync_kb_hover_marker(
     selected_q: Query<Entity, With<KeyboardSelected>>,
     mut removed: RemovedComponents<KeyboardSelected>,
     has_hovered: Query<(), With<crate::card::CardHovered>>,
+    pointer_over: Query<(), With<crate::card::PointerHovered>>,
 ) {
     for e in removed.read() {
         if !selected_q.contains(e)
+            && !pointer_over.contains(e)
             && let Ok(mut ec) = commands.get_entity(e)
         {
             ec.try_remove::<crate::card::CardHovered>();

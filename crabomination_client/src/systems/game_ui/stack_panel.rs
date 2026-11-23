@@ -117,15 +117,14 @@ pub fn update_stack_panel(
     let tf = |size: f32| ui_fonts.tf(size);
 
     let your_priority = cv.priority == cv.your_seat;
-    let priority_name = if your_priority {
-        "You".to_string()
+    let priority = if your_priority {
+        "You have priority".to_string()
     } else {
-        player_name(cv, cv.priority)
+        format!("{} has priority", player_name(cv, cv.priority))
     };
     let header = format!(
-        "Stack  {}  |  {} has priority",
+        "Stack  {}  |  {priority}",
         if cv.stack.len() == 1 { "1 item".to_string() } else { format!("{} items", cv.stack.len()) },
-        priority_name,
     );
 
     commands.entity(panel_entity).with_children(|p| {
@@ -344,7 +343,7 @@ pub fn update_stack_panel(
             });
         } else {
             p.spawn((
-                Text::new(format!("Waiting for {priority_name}…")),
+                Text::new(format!("Waiting for {}…", player_name(cv, cv.priority))),
                 tf(11.0),
                 TextColor(theme::TEXT_MUTED),
             ));

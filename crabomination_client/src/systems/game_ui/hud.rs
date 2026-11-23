@@ -692,7 +692,7 @@ pub fn setup_game_hud(mut commands: Commands, ui_fonts: Res<UiFonts>, binds: Res
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
-                bottom: Val::Px(140.0),
+                bottom: Val::Px(super::table_awareness::ATTACK_BUTTON_BOTTOM),
                 left: Val::Px(0.0),
                 right: Val::Px(0.0),
                 display: Display::None,

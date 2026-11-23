@@ -25,6 +25,174 @@ because two exhaustive counter-label matches were never updated.
 Shipped rows were dropped in the same pass unless they carried an open
 residual; bodies are otherwise verbatim.
 
+## Code audit, ten areas (2026-11-23) — open (five fixed)
+
+✅ Fixed the same day: the trample split, the keyboard selection eating
+mouse clicks (`kb_cursor::drop_kb_selection_on_mouse` + `PointerHovered`),
+choose-N mode repaint, the stuck pass-until (`FastForward::
+pass_until_overshot`; Untap / Cleanup refused, step names in its log
+lines), and the sticky `AuditTarget` (`audit::clear_audit_target` on
+entering the menu). The checklist is TODO's "Client — defects from the
+2026-11-23 code audit".
+
+Ten read-only auditors, one per client area, ~70 findings after merging
+duplicates. **(V)** = re-read and confirmed in the code by the session that
+ran the audit; the rest were traced end to end by an auditor but not
+re-checked. Nothing here has been run; paths are `crabomination_client/src/`
+unless they start with `crabomination/`.
+
+**A. The client makes, or blocks, the wrong game action**
+- **(V)** Trample damage lost: the damage-assign modal seeds the leftover onto
+  the last blocker (`decision_ui/mod.rs:507`); the engine's default
+  (`crabomination/src/game/combat.rs` `default_damage_split`) leaves it to
+  trample over. Confirm as offered = no damage to the player.
+- **(V)** A keyboard-selected card stays `CardHovered` (`kb_cursor.rs`
+  `sync_kb_hover_marker`; cleared only by Esc), and `activate` is any left
+  click (`game_ui/input.rs:236`): Tab to a land, then mouse-click Pass → the
+  land is played too. In declare-attackers the click toggles that creature
+  instead of attacking.
+- Enter / Space in the alt-cost modal also cast the hovered card / pass
+  (`handle_game_input` doesn't stand down for it).
+- **(V)** "Choose N" modes: the repaint query has `Without<Interaction>`, which
+  every `ui_button::Button` has, so a dropped mode stays lit and the answer
+  silently differs (`decision_ui/mod.rs:2050`).
+- **(V)** Right-click "pass until" on a step that won't come (Untap, Cleanup,
+  Blockers with no attack) never disarms: every later priority window,
+  the viewer's own turns included, auto-passes (`phase_bar.rs:97`,
+  `auto_advance.rs:74`).
+- Attack All decides attackers itself, not from `cv.legal_attackers`: one
+  "can't attack" creature gets the whole batch rejected; a stolen hasty
+  creature is never included (`buttons.rs:106`, `input.rs:1262`).
+- Pods: a seat nobody attacked is stopped to declare blocks
+  (`ClientView::declares_blocks` is the duel rule; engine's
+  `may_declare_blocks` was fixed).
+- Next Turn / End Turn presses are dropped unless the viewer holds priority
+  and isn't blocking (`input.rs:418`, `:300`).
+- **(V)** `AuditTarget` survives Leave Game: every later Play vs Bot / Rematch
+  replays the audited card (`menu.rs:1954`).
+- Rematch knows only HumanVsBot / SpectateBotVsBot: after a lobby or LAN
+  match it silently starts an offline bot game (and `std::thread::spawn` on
+  wasm); after a puzzle, a Modern match under the old verdict banner; after
+  a draft under Modern / Commander, the menu format (`game_over.rs:654`).
+- Cast pickers (ability menu, alt-cast, pay-times, split, spree, helpers)
+  aren't `InGameRoot` and outlive the rope, game over, even the match.
+- A take-back request open across a disconnect stays forever after the
+  reconnect; auto-pass stops for the rest of the game (`takeback.rs`).
+- A rejected resume token leaves "reconnecting (attempt 1 of 8)" up forever
+  and keeps offering the dead Rejoin (`net_plugin.rs:607`).
+
+**B. The board or a panel shows the wrong state**
+- **(V)** Battlefield rows are laid out by `owner`, not `controller`
+  (`card/layout.rs:1078,1148,1188`): a stolen creature stays on its owner's
+  side; clicks to attack / block and the abilities menu also key on owner.
+- **(V)** Graveyard piles and player target zones are spawned once at startup
+  for the 2-seat demo state (`main.rs:1205`): pod seats 2+ have none, and the
+  keyboard cursor can't select those players.
+- A crewed Vehicle / animated land keeps its spawn-time row and never shows
+  tapped (`visual_sync.rs:1186`).
+- A permanent that transforms or turns face up keeps its old art; a back-face
+  MDFC loads `<back>.jpg`, which the prefetch saves as `<back>_back.jpg`.
+- Cards going to exile fly to the library or graveyard pile.
+- Spectating a duel puts both boards on the far side (`layout.rs:168`).
+- Opponents' face-down hand cards leak into the next match.
+- **(V)** Combat preview re-projects damage already dealt (false "☠ LETHAL")
+  through the damage and end-combat windows (`server/view.rs` `combat_preview`
+  never checks the step).
+- **(V)** After blocks are declared every attacker's chip turns red
+  "unblocked" (`combat_badge.rs:96` ignores `blocking.declared`).
+- **(V)** "Zzz" shows through the opponent's turn on creatures that can block
+  (`keyword_label.rs:596`; the inspector already checks the active player).
+- Pods: the "threatened" alarm sums every opponent's power, by owner, so it's
+  on at 40 life on turn 6 (`player_stats.rs:854`).
+- **(V)** Spectators see "Defeat." for any result (`game_over.rs:123`).
+- Alt peek never refreshes while held; an MDFC on its back face shows that
+  face twice (`ui.rs:738`). Zone browsers don't refresh while open.
+- Rematch carries the life history and life ticker over ("+20" floaters);
+  `MatchStats` leaks into a puzzle's game-over screen.
+- Chess clock never reset, ticks on the game-over screen; the server bills a
+  human for a bot's think time. Rope toast vanishes after a manual-mana suspend.
+- Stack panel / hint show "→ target" for a spell that targets a spell.
+- Combat hints don't change after attacks / blocks are declared; Attack All
+  reappears for held-back creatures.
+- First-strike commander damage counted twice for the lethal banner.
+- Turn-order strip ignores reversed turn order. Hint button dead for the
+  session if you leave while it's thinking.
+- Match history: pod games lost if you leave after elimination; puzzles and
+  lobby games filed as Modern; a spectated lobby game filed as a loss.
+- Draft: moving any card re-splits the basics (a splash is lost); no way out
+  of a draft before the deck is built.
+
+**C. Keyboard / pad dead ends**
+- Hand-card picks (discard, Brainstorm, mulligan bottom) can't be done by
+  keyboard. `ModalRoots` lacks the mode picker, ability menu, hand menu and
+  the cast pickers. Focus starts on the modal's invisible full-screen root
+  and returns there after every move (`modal_keys.rs:37`).
+- Pad presses injected in `PreUpdate` unordered against `compute_esc_focus` /
+  `modal_keyboard_nav` (may be missed). Remapping onto fixed keys
+  (W/A/S/D, Enter, digits) gives no clash warning; Done is dead while
+  capturing; the cursor's A exemption is hard-coded.
+- Auto-rematch field isn't a text field (digits move the camera, Esc opens
+  pause). X opens the bug prompt with "x" typed. An empty right-click hand
+  menu counts as open and eats the next Esc.
+- **(V)** Menu text fields drop the space bar (no `Key::Space` arm) and refuse
+  ':' in paths; `~` isn't expanded. A focused field keeps typing under the
+  Settings / History / Puzzles overlays.
+
+**D. Wrong or raw text**
+- **(V)** Server rejections reach the log raw: "Card CardId(42) is tapped".
+- **(V)** Debug enums in the log: "Step → PreCombatMain", "+1 PlusOnePlusOne on
+  …" (`crabomination/src/net.rs` `fmt_for_log`); phase-chart log lines; "Now a
+  Elf" / "TimeLord" in the inspector.
+- Brainstorm's prompt says "bottom" (it's top); search wording reused for
+  hand / graveyard / top-N picks; OrderBottom tiles captioned "Top".
+- Seat placeholders: "May play (P1)", "⛓ seat 1", "draws → P2",
+  "Enchanting: player 2", "(blocking #7)".
+- **(V)** Draft and sealed matches name seat 0 "You" (`menu.rs:435`): "You
+  loses 3 life", "You's graveyard", "Victory! You wins.".
+- Plurals: **(V)** "1 land drops", **(V)** "Picked 1 cards", "1 picks", "(1
+  cards)", "1 spells · 1 lands", "+ 2 bot". Land-drop chip shows on
+  opponents' turns.
+- Lobby: counts bots twice ("3/4 + 2 bot"), ignores the menu's format, offers a
+  Sealed that is SOS.
+- Labels that don't follow a rebind: "Space" in two hints, "Keep (K)",
+  "Mulligan (M)", "Press V", "Export State (X)", "Life history (I)".
+- "▶ on the play" / "→ your priority" chips use the Danger colour.
+- Alt tooltip lists activated abilities twice, the equip-token block twice,
+  ward twice with the mana value ("Ward {2}" for {1}{U}). Recast badges
+  print "Flashback {3}" for {1}{R}{R}.
+- Legend-rule choice buttons are indistinguishable ("#1 — Thalia").
+- Draft opponent colours differ between the picker and the match; "Pick
+  17/15" after a Lore Seeker.
+- Host LAN on a busy port silently becomes a bot game; port 0 accepted.
+  In-game render-quality changes aren't saved. Spectator chat is dropped
+  silently.
+
+## Seven bugs from a screenshot audit (2026-11-23) — shipped
+
+Found by capturing every harness screen offscreen (`scripts/client_shot.sh`)
+and reading them; each checked again on screen after the fix.
+
+- The stack panel's header said "You has priority" (now "You have priority").
+- A never-printed non-token card (the puzzles' `body("Ogre", 4, 4)`) was a
+  blank grey proxy: no type, no P/T, and `pt_label` shows only changed
+  stats, so a 4/4 read as nothing. `battlefield_face_path` now draws it the
+  token way when it has no art and no Oracle entry; a printed card whose art
+  is still downloading keeps its art path for the hot-swap.
+- The trigger-order modal numbered tiles "1." … "3." left to right under
+  "rightmost resolves first", so "3." resolved first; tiles now read
+  "Resolves 1st / 2nd / 3rd" (`order::resolution_tiles`).
+- Library search opened on a green "Find nothing"; the confirm button is
+  neutral while it answers with nothing and green once a card is picked
+  (`CardPick::confirm_bg`).
+- The Attack button and the "Attacking: …" summary sat at a fixed 140 / 186
+  px — over the hand's card art at 1920x1080. `place_attack_panels_above_hand`
+  lifts both clear of the hand's resting top edge (hovered cards ignored,
+  capped at mid-window). ⏳ At 1280x720 the summary still lies over the
+  creature row, as before (no room under it there).
+- Puzzle seats were named "P0" / "P1"; they get the menu name and "Bot".
+- "Bot 1 is thinking…" showed twice (the top chip and the left hint line);
+  the hint line is now empty while someone else is to act.
+
 ## First-game welcome (2026-11-15) — shipped
 
 `systems::intro`: the first played game opens a panel with six tips (play

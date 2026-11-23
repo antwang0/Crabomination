@@ -41,13 +41,26 @@ pub struct InFlightAnims<'w, 's> {
 /// its name, colours, types, keywords and base P/T. A token's art is
 /// fetched only for a short list of common tokens, so without this most
 /// tokens were a white card with their name in faint grey.
+///
+/// A non-token card Scryfall has never printed (no Oracle entry, no art on
+/// disk — the blunder puzzles' made-up `body("Ogre", 4, 4)`) is drawn the
+/// same way: its art will never arrive, and the name-only placeholder showed
+/// a 4/4 as a blank grey card, its P/T nowhere on screen (`pt_label` shows
+/// only stats that differ from the printed ones). A printed card whose art
+/// simply hasn't downloaded yet keeps its art path, so the prefetch can
+/// hot-swap the real image in.
 fn battlefield_face_path(c: &crabomination::net::PermanentView, art: Option<&crate::scryfall::CardArtDir>) -> String {
     let pt = c.is_creature().then_some((c.base_power, c.base_toughness));
-    if !c.is_token || art.is_none_or(|a| a.has_fitting_token_art(&c.name, &c.colors, pt)) {
+    let drawn = match art {
+        None => false,
+        Some(a) if c.is_token => !a.has_fitting_token_art(&c.name, &c.colors, pt),
+        Some(a) => !a.has_art(&c.name) && crate::card::oracle::printed(&c.name).is_none(),
+    };
+    if !drawn {
         return crate::scryfall::card_asset_path(&c.name);
     }
     let types: Vec<String> = c.card_types.iter().map(|t| format!("{t:?}")).collect();
-    let mut type_line = format!("Token {}", types.join(" "));
+    let mut type_line = if c.is_token { format!("Token {}", types.join(" ")) } else { types.join(" ") };
     if !c.creature_types.is_empty() {
         type_line.push_str(" — ");
         type_line.push_str(&c.creature_types.join(" "));

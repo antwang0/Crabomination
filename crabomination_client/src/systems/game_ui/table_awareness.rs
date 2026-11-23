@@ -41,6 +41,7 @@ impl Plugin for TableAwarenessPlugin {
                 (
                     handle_opponent_zone_chips,
                     update_attack_summary_panel,
+                    place_attack_panels_above_hand,
                     sync_attack_target_labels,
                 )
                     .run_if(in_state(AppState::InGame)),
@@ -545,13 +546,15 @@ pub struct AttackSummaryPanel;
 pub struct AttackSummaryRows;
 
 /// Bottom-centre panel just above the Attack All / Confirm Attack button
-/// (which sits at `bottom: 140px`). Hidden until the plan has an attacker.
+/// (`ATTACK_BUTTON_BOTTOM`, lifted clear of the hand by
+/// [`place_attack_panels_above_hand`]). Hidden until the plan has an
+/// attacker.
 pub fn setup_attack_summary_panel(mut commands: Commands) {
     commands
         .spawn((
             Node {
                 position_type: PositionType::Absolute,
-                bottom: Val::Px(186.0),
+                bottom: Val::Px(ATTACK_BUTTON_BOTTOM + SUMMARY_ABOVE_BUTTON),
                 left: Val::Px(0.0),
                 right: Val::Px(0.0),
                 justify_content: JustifyContent::Center,
@@ -638,6 +641,61 @@ pub fn update_attack_summary_panel(
             ));
         }
     });
+}
+
+/// The Attack All / Confirm Attack button's `bottom` with no hand to clear.
+pub const ATTACK_BUTTON_BOTTOM: f32 = 140.0;
+/// The attack summary sits this far above the button's bottom edge.
+const SUMMARY_ABOVE_BUTTON: f32 = 46.0;
+/// Gap between the hand's top edge and the attack button.
+const ABOVE_HAND_GAP: f32 = 10.0;
+
+/// The attack button's `bottom` (UI px) that clears a hand whose highest
+/// resting point is at `hand_top` (UI px from the top of a `window_h`-tall
+/// window): never lower than [`ATTACK_BUTTON_BOTTOM`], never past the
+/// middle of the window.
+fn attack_button_bottom(hand_top: Option<f32>, window_h: f32) -> f32 {
+    let above_hand = hand_top.map_or(0.0, |top| window_h - top + ABOVE_HAND_GAP);
+    above_hand.max(ATTACK_BUTTON_BOTTOM).min((window_h * 0.5).max(ATTACK_BUTTON_BOTTOM))
+}
+
+/// Keep the Attack button and the "Attacking: …" summary above the hand.
+/// Both sat at a fixed `bottom` (140 / 186 px), which is above the hand at
+/// 1280x720 but inside it at 1920x1080, where the summary's seat-coloured
+/// text ran over the card art. The hand's top is measured from the cards'
+/// resting poses — a hovered card is lifted and is left out, so pointing
+/// at the hand doesn't move the button.
+#[allow(clippy::type_complexity)]
+pub fn place_attack_panels_above_hand(
+    hand: Query<(&GlobalTransform, Has<crate::card::CardHovered>), (With<crate::card::HandCard>, Without<crate::card::StackCard>)>,
+    camera_q: Query<(&Camera, &GlobalTransform), With<MainCamera>>,
+    ui_scale: Res<UiScale>,
+    mut button: Query<&mut Node, (With<super::AttackAllPanel>, Without<AttackSummaryPanel>)>,
+    mut summary: Query<&mut Node, (With<AttackSummaryPanel>, Without<super::AttackAllPanel>)>,
+) {
+    let (Ok(mut button), Ok(mut summary)) = (button.single_mut(), summary.single_mut()) else { return };
+    if button.display == Display::None && summary.display == Display::None {
+        return;
+    }
+    let Ok((camera, cam_xform)) = camera_q.single() else { return };
+    let Some(viewport) = camera.logical_viewport_size() else { return };
+    let window_h = viewport.y / ui_scale.0;
+    let top_edge = [-0.5, 0.0, 0.5].map(|x| Vec3::new(x * crate::card::CARD_WIDTH, crate::card::CARD_HEIGHT / 2.0, 0.0));
+    let hand_top = hand
+        .iter()
+        .filter(|(_, hovered)| !hovered)
+        .flat_map(|(gtf, _)| top_edge.map(|p| gtf.transform_point(p)))
+        .filter_map(|world| theme::project_to_ui(camera, cam_xform, &ui_scale, world))
+        .map(|v| v.y)
+        .reduce(f32::min);
+    // Whole pixels, so a card settling doesn't relay the panels out every
+    // frame for a sub-pixel move.
+    let bottom = attack_button_bottom(hand_top, window_h).round();
+    for (node, want) in [(&mut button, bottom), (&mut summary, bottom + SUMMARY_ABOVE_BUTTON)] {
+        if node.bottom != Val::Px(want) {
+            node.bottom = Val::Px(want);
+        }
+    }
 }
 
 // ── Floating per-defender labels ─────────────────────────────────────────────
@@ -755,6 +813,16 @@ pub fn sync_attack_target_labels(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// The attack button rises to clear a tall hand, keeps its old place
+    /// below a short one (or none), and never climbs past mid-window.
+    #[test]
+    fn the_attack_button_clears_the_hand() {
+        assert_eq!(attack_button_bottom(None, 1080.0), ATTACK_BUTTON_BOTTOM);
+        assert_eq!(attack_button_bottom(Some(1000.0), 1080.0), ATTACK_BUTTON_BOTTOM, "a low hand");
+        assert_eq!(attack_button_bottom(Some(820.0), 1080.0), 1080.0 - 820.0 + ABOVE_HAND_GAP);
+        assert_eq!(attack_button_bottom(Some(100.0), 1080.0), 540.0, "capped at mid-window");
+    }
 
     /// Free-for-all seats get no team label; in a team format teammates
     /// share one, lettered in team order.

@@ -1861,7 +1861,10 @@ pub fn start_net_session_from_menu(world: &mut World) {
         NetMode::Puzzle { index } => {
             let items = crabomination::server::blunder::items();
             let Some(item) = items.get(index) else { return spawn_inprocess_bot(world, format) };
-            let (run, state) = crate::systems::puzzles::ActivePuzzle::new(item);
+            let (run, mut state) = crate::systems::puzzles::ActivePuzzle::new(item);
+            // The benchmark builds its positions with the engine's "P0" /
+            // "P1", which the HUD and log printed as the seats' names.
+            name_seats(&mut state, &menu_player_name(world), "Bot");
             world.insert_resource(crate::systems::puzzles::PuzzleRun { active: Some(run) });
             spawn_restored_state(world, state, 0);
         }

@@ -91,21 +91,25 @@ pub fn handle_phase_chart_clicks(
 ) {
     let Some(cv) = &view.0 else { return };
     let my_turn = cv.active_player == cv.your_seat;
+    let name = crate::systems::game_ui::step_name;
     // Right-click: click-to-advance — auto-pass priority until the game
-    // reaches the clicked step (cleared on arrival, or by re-clicking).
+    // reaches the clicked step (cleared on arrival, once the game is past
+    // it, or by re-clicking). Untap and Cleanup are refused like a left
+    // click: no priority window ever opens there, so a pass-until one
+    // could only end by overshooting.
     if mouse.just_pressed(MouseButton::Right) {
         for (interaction, row) in &hovered {
-            if *interaction == Interaction::None {
+            if *interaction == Interaction::None || matches!(row.0, TurnStep::Untap | TurnStep::Cleanup) {
                 continue;
             }
             if ff.pass_until == Some(row.0) {
                 ff.pass_until = None;
-                log.push(format!("Cancelled pass-until {:?}", row.0));
+                log.push(format!("Cancelled pass-until {}", name(row.0)));
             } else if row.0 == cv.step {
-                log.push(format!("Already at {:?}", row.0));
+                log.push(format!("Already at {}", name(row.0)));
             } else {
-                ff.pass_until = Some(row.0);
-                log.push(format!("Passing until {:?}", row.0));
+                ff.arm_pass_until(row.0, cv.turn, cv.step);
+                log.push(format!("Passing until {}", name(row.0)));
             }
         }
         return;
@@ -120,8 +124,8 @@ pub fn handle_phase_chart_clicks(
         let mode = stops.cycle(my_turn, row.0);
         let turn_kind = if my_turn { "your turns" } else { "opponents' turns" };
         log.push(format!(
-            "{:?} on {turn_kind}: {}",
-            row.0,
+            "{} on {turn_kind}: {}",
+            name(row.0),
             match mode {
                 StopMode::Auto => "auto-pass (default)",
                 StopMode::Always => "always stop",

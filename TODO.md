@@ -226,6 +226,65 @@ install -y libwayland-dev libasound2-dev libudev-dev libxkbcommon-dev`, then
   Rebase first, then build; if a rebase lands mid-build and touched the graph,
   restart it.
 
+## Client — defects from the 2026-11-23 code audit
+
+Ten read-only auditors over `crabomination_client`; the detail (file:line,
+scenario, evidence, fix) is `CLIENT_BACKLOG.md`'s "Code audit, ten areas
+(2026-11-23)" section, **(V)** = confirmed by a second read. The five that
+changed game actions are fixed (trample split, keyboard selection eating
+clicks, choose-N modes, stuck pass-until, sticky audit target).
+
+**Wrong action / blocked action**
+- [ ] Alt-cost modal: Enter / Space also cast the hovered card / pass.
+- [ ] Attack All guesses attackers instead of `cv.legal_attackers` (one "can't attack" creature rejects the batch; stolen creatures left out).
+- [ ] Pods: a seat nobody attacked is stopped to declare blocks (`declares_blocks` is the duel rule).
+- [ ] Next Turn / End Turn presses dropped unless holding priority.
+- [ ] Rematch after a lobby / LAN / puzzle / draft match starts the wrong game.
+- [ ] Cast pickers aren't `InGameRoot`: they outlive the rope, game over and the match.
+- [ ] Take-back request stuck after a reconnect (auto-pass dead for the game).
+- [ ] Rejected resume token: "reconnecting" banner forever; dead Rejoin kept.
+
+**Board / panels show the wrong state**
+- [ ] (V) Rows, clicks and the abilities menu key on `owner`, not `controller` (stolen permanents).
+- [ ] (V) Pod seats 2+ have no graveyard pile or player target zone.
+- [ ] Animated Vehicles / lands keep their spawn row and never show tapped.
+- [ ] Transform / turn face up never re-skins; back-face MDFC art path wrong.
+- [ ] Exiled cards fly to the library / graveyard pile.
+- [ ] Spectating a duel stacks both boards on the far side.
+- [ ] Opponents' face-down hand cards leak into the next match.
+- [ ] (V) Combat preview re-projects dealt damage (false LETHAL) — server `combat_preview`.
+- [ ] (V) Attackers all read "unblocked" after blocks are declared.
+- [ ] (V) "Zzz" through the opponent's turn on creatures that can block.
+- [ ] Pod threat alarm sums every opponent (on at full life).
+- [ ] (V) Spectators see "Defeat.".
+- [ ] Alt peek and zone browsers don't refresh while open; MDFC back face shown twice.
+- [ ] Rematch carries life history / life ticker; `MatchStats` leaks into puzzles.
+- [ ] Chess clock not reset, ticks after game over, bills humans for bot think; rope toast lost after a manual-mana suspend.
+- [ ] "→ target" for spells targeting spells; combat hints stale after declarations.
+- [ ] First-strike commander damage double-counted; turn-order strip ignores reversal; Hint dead after leaving mid-think.
+- [ ] Match history: pod losses lost on early leave; puzzles / lobby filed as Modern; spectated lobby game filed as a loss.
+- [ ] Draft: a card move re-splits basics (splash lost); no exit before the deck is built.
+
+**Keyboard / pad**
+- [ ] Hand-card picks (discard, Brainstorm) not keyboard-reachable; `ModalRoots` lacks the mode picker, ability / hand menus, cast pickers.
+- [ ] Modal focus starts on the invisible root and returns there after each move.
+- [ ] Pad keys injected unordered against `PreUpdate` readers; remaps onto fixed keys unwarned; keymap Done dead while capturing.
+- [ ] Auto-rematch field not a text field; X opens the bug prompt with "x"; empty hand menu eats Esc.
+- [ ] (V) Menu text fields: no space bar, no ':' in paths, no `~`; focused field types under overlays.
+
+**Text**
+- [ ] (V) Raw engine errors in the log ("CardId(42)"); (V) Debug enums ("Step → PreCombatMain", "PlusOnePlusOne", "TimeLord", "Now a Elf").
+- [ ] Brainstorm prompt says bottom (it's top); search wording for non-library picks; OrderBottom captioned "Top".
+- [ ] Seat placeholders ("May play (P1)", "seat 1", "→ P2", "player 2", "#7").
+- [ ] (V) Draft / sealed seat named "You" ("You loses", "You's", "You wins").
+- [ ] Plurals ((V) "1 land drops", (V) "Picked 1 cards", "1 picks", "(1 cards)", "1 spells", "2 bot"); land-drop chip on opponents' turns.
+- [ ] Lobby: bots counted twice, menu format ignored, fake Sealed.
+- [ ] Labels that ignore rebinds (Space, Keep (K), Mulligan (M), V, X, I).
+- [ ] Danger-coloured "on the play" / "your priority" chips.
+- [ ] Alt tooltip duplicates abilities / equip / ward ("Ward {2}"); recast badges as mana value ("Flashback {3}").
+- [ ] Legend-rule buttons indistinguishable; draft opponent colours mismatch; "Pick 17/15".
+- [ ] Host LAN busy port → silent bot game, port 0 accepted; in-game render quality not saved; spectator chat silently dropped.
+
 ## Engine — Robustness / defects
 
 **No open entries.** The determinism class, the panic/unwrap census and the

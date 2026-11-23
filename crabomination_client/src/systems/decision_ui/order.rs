@@ -37,7 +37,8 @@ pub struct OrderMove {
 pub struct OrderTile {
     pub id: CardId,
     pub name: String,
-    /// Under the art: its place ("1.") or its pile ("Top", "Graveyard").
+    /// Under the art: its place ("1.", "Resolves 1st") or its pile ("Top",
+    /// "Graveyard").
     pub caption: String,
     /// `Some(in the second pile)` when a click sends the card to the other
     /// pile (scry's bottom, surveil's graveyard).
@@ -252,10 +253,55 @@ pub(super) fn numbered_tiles(order: &[CardId], name_of: impl Fn(CardId) -> Strin
         .collect()
 }
 
+/// Tiles for a trigger push order, captioned by when each *resolves*: the
+/// last one pushed resolves first (CR 405.5), so with the prompt's
+/// "rightmost resolves first" the rightmost tile reads "Resolves 1st".
+/// Numbering them by place ("1." … "3." left to right) put "3." on the one
+/// that resolves first.
+pub(super) fn resolution_tiles(order: &[CardId], name_of: impl Fn(CardId) -> String) -> Vec<OrderTile> {
+    let n = order.len();
+    order
+        .iter()
+        .enumerate()
+        .map(|(i, id)| OrderTile {
+            id: *id,
+            name: name_of(*id),
+            caption: format!("Resolves {}", ordinal(n - i)),
+            second_pile: None,
+        })
+        .collect()
+}
+
+/// "1st", "2nd", "3rd", "4th", … "11th", "12th", "13th", "21st".
+fn ordinal(n: usize) -> String {
+    let suffix = match (n % 10, n % 100) {
+        (_, 11..=13) => "th",
+        (1, _) => "st",
+        (2, _) => "nd",
+        (3, _) => "rd",
+        _ => "th",
+    };
+    format!("{n}{suffix}")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crabomination::decision::ScryMode;
+
+    /// The trigger pushed last (rightmost) resolves first, and its caption
+    /// says so.
+    #[test]
+    fn trigger_tiles_are_captioned_in_resolution_order() {
+        let order = [CardId(1), CardId(2), CardId(3)];
+        let tiles = resolution_tiles(&order, |id| format!("T{}", id.0));
+        let captions: Vec<&str> = tiles.iter().map(|t| t.caption.as_str()).collect();
+        assert_eq!(captions, ["Resolves 3rd", "Resolves 2nd", "Resolves 1st"]);
+        assert_eq!(
+            [11, 12, 13, 21, 22, 104].map(ordinal),
+            ["11th", "12th", "13th", "21st", "22nd", "104th"].map(String::from)
+        );
+    }
 
     /// A move swaps neighbours and stops at the ends.
     #[test]

@@ -474,7 +474,7 @@ pub fn spawn_decision_ui(
             let name_of = |id: CardId| {
                 triggers.iter().find(|(t, _)| *t == id).map_or_else(|| "Triggered ability".to_string(), |(_, n)| n.clone())
             };
-            let tiles = numbered_tiles(&state.trigger_order, name_of);
+            let tiles = resolution_tiles(&state.trigger_order, name_of);
             let prompt = "Order your triggers  ·  ← → to reorder  ·  rightmost resolves first";
             spawn_order_modal(&mut commands, &asset_server, &ui_fonts, prompt, OrderList::Triggers, &tiles);
         }
@@ -504,21 +504,9 @@ pub fn spawn_decision_ui(
             spawn_order_modal(&mut commands, &asset_server, &ui_fonts, &prompt, OrderList::DamageOrder, &tiles);
         }
         DecisionWire::AssignCombatDamage { attacker, attacker_power, blockers } => {
+            let trample = attacker_tramples(cv, *attacker);
             if state.damage_assign.is_empty() {
-                // Seed with the default lethal-in-order split so the modal
-                // opens on the engine's fallback.
-                let mut left = *attacker_power;
-                state.damage_assign = blockers
-                    .iter()
-                    .map(|(id, _, lethal)| {
-                        let give = (*lethal).min(left);
-                        left -= give;
-                        (*id, give)
-                    })
-                    .collect();
-                if let Some(last) = state.damage_assign.last_mut() {
-                    last.1 += left;
-                }
+                state.damage_assign = seed_damage_assign(*attacker_power, blockers, trample);
             }
             state.spawned_for = Some(key);
             let attacker_name = cv
@@ -534,6 +522,7 @@ pub fn spawn_decision_ui(
                 &attacker_name,
                 damage_recipient_noun(cv, *attacker),
                 *attacker_power,
+                trample,
                 blockers,
                 &state.damage_assign,
             );
@@ -726,6 +715,48 @@ fn damage_recipient_noun(cv: &crabomination::net::ClientView, source: CardId) ->
     if is_blocker { "attackers" } else { "blockers" }
 }
 
+/// Whether `attacker` has trample, as the engine decides it for damage
+/// assignment (`Keyword::Trample` exactly — `AttackerInfo::has_trample`).
+fn attacker_tramples(cv: &crabomination::net::ClientView, attacker: CardId) -> bool {
+    cv.battlefield
+        .iter()
+        .find(|p| p.id == attacker)
+        .is_some_and(|p| p.keywords.contains(&crabomination::card::Keyword::Trample))
+}
+
+/// The damage-assignment modal's opening split: lethal to each blocker in
+/// order, as the engine's `default_damage_split` does. Without trample the
+/// leftover goes on the last blocker (CR 510.1d: it must be assigned
+/// somewhere); with trample it is left unassigned, which the engine
+/// tramples over to the player or planeswalker (CR 702.19c). The modal put
+/// it on the last blocker either way, so confirming a trampler's opening
+/// split dealt the player nothing.
+fn seed_damage_assign(power: u32, blockers: &[(CardId, String, u32)], trample: bool) -> Vec<(CardId, u32)> {
+    let mut left = power;
+    let mut split: Vec<(CardId, u32)> = blockers
+        .iter()
+        .map(|(id, _, lethal)| {
+            let give = (*lethal).min(left);
+            left -= give;
+            (*id, give)
+        })
+        .collect();
+    if !trample && let Some(last) = split.last_mut() {
+        last.1 += left;
+    }
+    split
+}
+
+/// The modal's header: what's assigned, and with trample where the rest goes.
+fn damage_assign_header(attacker_name: &str, recipients: &str, assigned: u32, power: u32, trample: bool) -> String {
+    let over = power.saturating_sub(assigned);
+    if trample {
+        format!("{attacker_name} (trample): assign combat damage to {recipients}  ·  {assigned} / {power} to blockers, {over} tramples over")
+    } else {
+        format!("{attacker_name}: assign combat damage to {recipients}  ·  {assigned} / {power} assigned")
+    }
+}
+
 /// CR 510.1d / 510.1e — modal letting the damage source's controller split
 /// combat damage among the recipients with per-recipient +/- steppers. The
 /// engine validates the split and falls back to lethal-in-order if it breaks
@@ -738,6 +769,7 @@ fn spawn_damage_assign_modal(
     attacker_name: &str,
     recipients: &str,
     attacker_power: u32,
+    trample: bool,
     blockers: &[(CardId, String, u32)],
     assign: &[(CardId, u32)],
 ) {
@@ -782,9 +814,7 @@ fn spawn_damage_assign_modal(
     let assigned: u32 = assign.iter().map(|(_, a)| *a).sum();
     commands.entity(panel).with_children(|panel| {
         panel.spawn((
-            Text::new(format!(
-                "{attacker_name}: assign combat damage to {recipients}  ·  {assigned} / {attacker_power} assigned",
-            )),
+            Text::new(damage_assign_header(attacker_name, recipients, assigned, attacker_power, trample)),
             ui_fonts.tf(16.0),
             TextColor(theme::TEXT_PRIMARY),
         ));
@@ -2043,11 +2073,8 @@ fn spawn_creature_type_modal(
 pub fn handle_choose_modes_toggle(
     view: Res<CurrentView>,
     mut state: ResMut<DecisionUiState>,
-    mut toggles: Query<
-        (&Interaction, &ChooseModesToggle, &mut BackgroundColor),
-        (Changed<Interaction>, With<Button>),
-    >,
-    mut all_toggles: Query<(&ChooseModesToggle, &mut BackgroundColor), Without<Interaction>>,
+    pressed: Query<(&Interaction, &ChooseModesToggle), (Changed<Interaction>, With<Button>)>,
+    mut toggles: Query<(&ChooseModesToggle, &mut BackgroundColor)>,
 ) {
     let Some(cv) = &view.0 else { return };
     let Some((count, num_modes)) =
@@ -2060,29 +2087,36 @@ pub fn handle_choose_modes_toggle(
     else {
         return;
     };
-    let mut evicted: Option<u8> = None;
-    for (interaction, toggle, mut bg) in toggles.iter_mut() {
-        if *interaction != Interaction::Pressed {
-            continue;
-        }
-        let selected = state.modes_selected.get_or_insert_with(Vec::new);
-        if let Some(pos) = selected.iter().position(|&m| m == toggle.0) {
-            selected.remove(pos);
-            *bg = BackgroundColor(theme::BUTTON_NEUTRAL_BG);
-        } else {
-            selected.push(toggle.0);
-            *bg = BackgroundColor(theme::BUTTON_SELECTED_BG);
-            // Exact-N picks: drop the oldest selection once over budget.
-            if count < num_modes && selected.len() > count {
-                evicted = Some(selected.remove(0));
-            }
+    let clicked: Vec<u8> =
+        pressed.iter().filter(|(i, _)| **i == Interaction::Pressed).map(|(_, t)| t.0).collect();
+    if clicked.is_empty() {
+        return;
+    }
+    let selected = state.modes_selected.get_or_insert_with(Vec::new);
+    for mode in clicked {
+        toggle_mode(selected, mode, count, num_modes);
+    }
+    // Repaint every toggle from the selection. The evicted mode's repaint
+    // used to go through a `Without<Interaction>` query, which no button
+    // matches (`ui_button::Button` requires `Interaction`), so a "choose
+    // two" pick of 1, 2, then 3 showed all three lit and sent {2, 3}.
+    for (toggle, mut bg) in &mut toggles {
+        let want = if selected.contains(&toggle.0) { theme::BUTTON_SELECTED_BG } else { theme::BUTTON_NEUTRAL_BG };
+        if bg.0 != want {
+            bg.0 = want;
         }
     }
-    if let Some(old) = evicted {
-        for (toggle, mut bg) in all_toggles.iter_mut() {
-            if toggle.0 == old {
-                *bg = BackgroundColor(theme::BUTTON_NEUTRAL_BG);
-            }
+}
+
+/// Flip `mode` in `selected`. An exact-N pick (`count < num_modes`) drops
+/// its oldest selection once over budget.
+fn toggle_mode(selected: &mut Vec<u8>, mode: u8, count: usize, num_modes: usize) {
+    if let Some(pos) = selected.iter().position(|&m| m == mode) {
+        selected.remove(pos);
+    } else {
+        selected.push(mode);
+        if count < num_modes && selected.len() > count {
+            selected.remove(0);
         }
     }
 }
@@ -2222,6 +2256,48 @@ mod commander_redirect_tests {
         assert_eq!(auto.0.get(&(a, "When this enters, draw".to_string())), None);
         // A new game starts from a fresh resource (menu.rs re-inserts it).
         assert_eq!(AutoOptionalAnswers::default().commander_redirect(a), None);
+    }
+}
+
+#[cfg(test)]
+mod choose_modes_tests {
+    use super::*;
+
+    /// "Choose two": picking a third drops the oldest; clicking a picked one
+    /// unpicks it; "choose any number" never drops.
+    #[test]
+    fn a_choose_two_pick_drops_its_oldest() {
+        let mut sel = Vec::new();
+        for m in [0, 1, 2] {
+            toggle_mode(&mut sel, m, 2, 4);
+        }
+        assert_eq!(sel, [1, 2]);
+        toggle_mode(&mut sel, 1, 2, 4);
+        assert_eq!(sel, [2]);
+        let mut any = Vec::new();
+        for m in [0, 1, 2] {
+            toggle_mode(&mut any, m, 3, 3);
+        }
+        assert_eq!(any, [0, 1, 2]);
+    }
+}
+
+#[cfg(test)]
+mod damage_assign_tests {
+    use super::*;
+
+    /// A 6/6 double-blocked by two 1/1s: without trample the extra 4 sit on
+    /// the last blocker; with trample they're left for the player, as the
+    /// engine's own default split does.
+    #[test]
+    fn a_tramplers_leftover_is_left_to_trample_over() {
+        let blockers = [(CardId(1), "Elf".to_string(), 1), (CardId(2), "Goblin".to_string(), 1)];
+        assert_eq!(seed_damage_assign(6, &blockers, false), [(CardId(1), 1), (CardId(2), 5)]);
+        assert_eq!(seed_damage_assign(6, &blockers, true), [(CardId(1), 1), (CardId(2), 1)]);
+        // Not enough power for both: lethal in order, nothing over.
+        assert_eq!(seed_damage_assign(1, &blockers, true), [(CardId(1), 1), (CardId(2), 0)]);
+        assert!(damage_assign_header("Wurm", "blockers", 2, 6, true).ends_with("2 / 6 to blockers, 4 tramples over"));
+        assert!(damage_assign_header("Bear", "blockers", 2, 2, false).ends_with("2 / 2 assigned"));
     }
 }
 

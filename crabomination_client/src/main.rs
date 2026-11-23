@@ -506,6 +506,7 @@ fn main() {
         // Audit-mode card picker.
         .add_systems(OnEnter(AppState::Audit), audit::spawn_audit_picker)
         .add_systems(OnExit(AppState::Audit), audit::despawn_audit_picker)
+        .add_systems(OnEnter(AppState::Menu), audit::clear_audit_target)
         .add_systems(
             Update,
             audit::handle_audit_picker.run_if(in_state(AppState::Audit)),
@@ -561,7 +562,8 @@ fn main() {
         // before `handle_game_input` reads it as a fallback for clicks.
         .add_systems(
             Update,
-            systems::kb_cursor::handle_keyboard_cursor_input
+            (systems::kb_cursor::drop_kb_selection_on_mouse, systems::kb_cursor::handle_keyboard_cursor_input)
+                .chain()
                 .before(handle_game_input)
                 .run_if(in_state(AppState::InGame)),
         )

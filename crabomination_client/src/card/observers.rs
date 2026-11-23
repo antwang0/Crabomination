@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use super::components::{BattlefieldCard, CardHoverLift, CardHovered, HandCard, BF_HOVER_LIFT, HOVER_LIFT_AMOUNT};
+use super::components::{BattlefieldCard, CardHoverLift, CardHovered, HandCard, PointerHovered, BF_HOVER_LIFT, HOVER_LIFT_AMOUNT};
 
 pub fn on_card_over(
     ev: On<PointerOver>,
@@ -12,7 +12,7 @@ pub fn on_card_over(
     if let Ok(child_of) = parents.get(hit_entity) {
         let parent = child_of.parent();
         if let Ok(mut ec) = commands.get_entity(parent) {
-            ec.insert(CardHovered);
+            ec.insert((CardHovered, PointerHovered));
         }
         if let Ok((transform, mut lift, hand_card, battlefield)) = lifts.get_mut(parent) {
             let target = if hand_card.is_some() {
@@ -38,7 +38,7 @@ pub fn on_card_out(
     if let Ok(child_of) = parents.get(hit_entity) {
         let parent = child_of.parent();
         if let Ok(mut ec) = commands.get_entity(parent) {
-            ec.remove::<CardHovered>();
+            ec.remove::<(CardHovered, PointerHovered)>();
         }
         if let Ok(mut lift) = lifts.get_mut(parent) {
             lift.target_lift = 0.0;

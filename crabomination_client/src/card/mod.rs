@@ -12,7 +12,7 @@ pub mod spawn;
 pub use components::{
     ActivatableHighlight,
     Animating, BattlefieldCard, Card, CardBorderHighlight, CardFrontTexture,
-    CardHighlightAssets, CardHoverLift, CardHovered, CardMeshAssets, CardOwner, CastableHighlight,
+    CardHighlightAssets, CardHoverLift, CardHovered, PointerHovered, CardMeshAssets, CardOwner, CastableHighlight,
     CombatLurch, DeathBeat, DyingHighlight, Vanishing, DEATH_BEAT_SECS,
     CommandZoneCard, DeckPile, DrawCardAnimation, ExilePile,
     FlippedFace,
