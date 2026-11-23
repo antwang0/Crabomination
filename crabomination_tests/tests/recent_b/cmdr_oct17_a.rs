@@ -671,3 +671,40 @@ fn novel_nunchaku_attaches_and_fights() {
     assert_eq!(g.battlefield_find(n).unwrap().attached_to, Some(wurm));
     assert!(g.battlefield_find(bears).is_none(), "the 7/5 fought the bears");
 }
+
+
+/// CR 106.6 / 605.3 — Gideon's Memorial's "{T}: one mana of any color; spend
+/// it only to cast planeswalker spells" is not general mana. The auto-tapper
+/// listed it as a source for generic pips, so wherever the Memorial sat
+/// ahead of a land on the battlefield, Plains + three Forests could not pay
+/// Thalia's {3}{W} (it tapped the Memorial for the {3} and came up one short)
+/// — the card played at −8.3 points in FRA sealed, −2.7 with the mana
+/// ability removed (2026-11-22). Its mana still pays for a planeswalker.
+#[test]
+fn gideons_memorial_mana_neither_blocks_other_spells_nor_stops_paying_for_walkers() {
+    use crabomination::server::bot::{Bot, HeuristicBot};
+    for order in ["P F F F M", "M P F F F", "P F F M F", "P M F F F"] {
+        let mut g = pod(2);
+        g.step = TurnStep::PostCombatMain;
+        for c in order.split(' ') {
+            let def = match c { "P" => catalog::plains(), "F" => catalog::forest(), _ => catalog::gideons_memorial() };
+            ready(&mut g, 0, def);
+        }
+        let thalia = g.add_card_to_hand(0, catalog::thalia_the_survivor());
+        let mut bot = HeuristicBot::with_weights(crabomination::server::EvalWeights::fra_fixes_on());
+        assert!(
+            matches!(bot.next_action(&g, 0), Some(GameAction::CastSpell { card_id, .. }) if card_id == thalia),
+            "{order}: the bot casts Thalia off Plains + three Forests",
+        );
+        cast(&mut g, thalia, None).unwrap_or_else(|e| panic!("{order}: {{3}}{{W}} off Plains + three Forests: {e:?}"));
+    }
+    let mut g = pod(2);
+    g.step = TurnStep::PostCombatMain;
+    let memorial = ready(&mut g, 0, catalog::gideons_memorial());
+    for _ in 0..3 {
+        ready(&mut g, 0, catalog::plains());
+    }
+    let gideon = g.add_card_to_hand(0, catalog::gideon_ally_of_zendikar());
+    cast(&mut g, gideon, None).expect("{2}{W}{W} off three Plains + the Memorial");
+    assert!(g.battlefield_find(memorial).is_some_and(|c| c.tapped), "the Memorial paid for the planeswalker");
+}

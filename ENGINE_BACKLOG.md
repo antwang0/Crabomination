@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 69 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 78 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc4Bu`) — 26 Star Trek seats, four primitives](#fixedopen-2026-11-01-commander-run-01wruxc4bu--26-star-trek-seats-four-primitives) | 25 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4Bu` found them (moved verbatim, 2026-11-01)](#the-commander-nexts-lines-as-01wruxc4bu-found-them-moved-verbatim-2026-11-01) | 4 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc3G1`) — 22 Star Trek seats, four primitives](#fixedopen-2026-11-01-commander-run-01wruxc3g1--22-star-trek-seats-four-primitives) | 19 |
@@ -212,6 +212,22 @@ FIXED:
   Memorial's discard-for-4-damage in combat). An exile-from-hand setup arm
   (Emrakul's ramp) measured −1.8 and was removed.
 - Preston, the Vanisher's precon seat re-seeded 0x0B94 → 0x7EFE44 (see OPEN).
+- **Madness and Strict Proctor's trigger tax paid from the floated pool
+  only** (`offer_madness_cast`, `apply_etb_trigger_tax`), Equip's blind spot:
+  both auto-tap now (CR 601.2g / 605.3a). Madness X sizes to what the payer
+  can afford; a cast's own mana is paid before its discard cost, so the
+  madness tap can't take it.
+- **Spend-restricted mana sources were tapped for generic pips**
+  (`mana_source_table_inner`, `mana_summary_of`): Gideon's Memorial
+  ("spend only on planeswalker spells") claimed no colour but stayed its row's
+  first ability, so wherever it sat ahead of a land, Plains + three Forests
+  could not pay {3}{W} — every non-planeswalker spell that needed every land
+  was uncastable. Found by ablation (no mana ability −8.3 → −2.7, hand ability
+  and statics nothing) and a paired-trace diff (the `could_pay` mark).
+  Restricted abilities now stay out of the table; the kind-aware retry taps
+  them (Throne of Eldraine's arm added there). Memorial −8.2 → −2.7. The
+  bot's `available_mana` still counts the restricted mana (an upper bound —
+  a planeswalker can spend it); removing it measured nothing.
 
 OPEN:
 - **158 catalog cards outside FRA have Vindictive Triumph's shape**
@@ -219,17 +235,10 @@ OPEN:
   `.ladder/fix1/zone_audit_catalog.tsv`. Many are fine (player targets,
   "attacking creature"); the rest need an oracle check ("target creature"
   vs "target creature card"), e.g. Cast into the Fire, Ruinous Intrusion.
-- **Gideon's Memorial plays at about −9**, worse than a blank card, and its
-  hand ability being used moved it only +0.3. A two-Plains probe casts the
-  same as without it; the planeswalker-only mana ability is the suspect.
 - **Preston, the Vanisher never uses "sacrifice five Illusions: exile"**: the
   material eval keeps five 0/1s over one exile, and past 150 permanents
   `board_is_cluttered` stops `pick_sacrifice_value` entirely. At 0x0B94 the
   seat stalled at 126 life behind a token wall into the board cap.
-- **Madness and the "pay {N} to keep this trigger" tax still pay from the
-  floated pool only** (`offer_madness_cast`, `actions.rs` trigger tax) — the
-  same blind spot as equip; Madness's is a documented policy inside a
-  synchronous discard path.
 - Fatehold Charm's bounce/pump modes are combat-window only; Chandra, Chill
   of Compliance's surveil rider is not known to `decide_scry`; Emrakul's ramp
   is unused (using it measured harmful in sealed).

@@ -1416,7 +1416,12 @@ fn set_played(out: &std::path::Path, sample_decks: usize, per_card: usize, bp: &
     };
     let base: Vec<Option<f64>> = par_map(sample.len(), bp.threads, &|j| share(&sample[j], j));
     eprintln!("{} sample decks built and played, {:.0}s", sample.len(), t0.elapsed().as_secs_f64());
-    let set: Vec<Factory> = packs.all().filter(|f| !crabomination::cube::card_def(*f).is_land()).collect();
+    let mut set: Vec<Factory> = packs.all().filter(|f| !crabomination::cube::card_def(*f).is_land()).collect();
+    // `--only "A|B"`: rate just these cards (an ablation or a re-read).
+    if let Some(only) = arg("--only") {
+        let names: Vec<&str> = only.split('|').collect();
+        set.retain(|f| names.contains(&crabomination::cube::card_def(*f).name));
+    }
     // One job per (card, deck) so every thread stays busy.
     let jobs: Vec<(usize, usize)> = set
         .iter()

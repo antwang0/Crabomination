@@ -1330,7 +1330,9 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
     let mut colors = crate::mana::ColorSet::empty();
     let mut color_idx = [0usize; 5];
     for (i, a) in def.activated_abilities.iter().enumerate() {
-        if !is_mana_ability(&a.effect) {
+        // Spend-restricted mana is not the auto-tapper's to make: see the
+        // live walk's `retain` in `mana_source_table_inner`.
+        if !is_mana_ability(&a.effect) || crate::game::mana_shape::mana_is_spend_restricted(&a.effect) {
             continue;
         }
         if first.is_none() {
@@ -3824,11 +3826,15 @@ pub(crate) fn apply_etb_trigger_tax(
     // bare `decide` here declined every tax and a headless controller under a
     // Strict Proctor lost every ETB trigger it owned — the decision-plumbing
     // audit's "Ad Nauseam pattern", and the opposite of the policy
-    // `catalog::strict_proctor`'s own doc comment describes. The tax is pure
-    // generic, so "can pay" is the floated total; keeping your own trigger is
-    // strictly better than losing it when you can afford the mana.
+    // `catalog::strict_proctor`'s own doc comment describes. Keeping your own
+    // trigger is worth the mana when you can afford it.
+    //
+    // CR 605.3a — a cost paid while an ability resolves may be paid with mana
+    // abilities, so the tax auto-taps (as `equip` / `pay_action_mana` do).
+    // It used to read and pay the floated pool only, so a seat that doesn't
+    // pre-float — every bot — lost every taxed trigger.
     let pay = if matches!(state.decider.kind(), crate::decision::DeciderKind::Auto) {
-        state.players[trigger_controller].mana_pool.total() >= total_tax
+        state.could_pay_generic(trigger_controller, total_tax)
     } else {
         matches!(
             state.decider.decide(&Decision::OptionalTrigger {
@@ -3844,7 +3850,7 @@ pub(crate) fn apply_etb_trigger_tax(
     };
     if pay {
         let cost = ManaCost::new(vec![crate::mana::generic(total_tax)]);
-        if state.players[trigger_controller].mana_pool.pay(&cost).is_ok() {
+        if state.try_pay_with_auto_tap_queued(trigger_controller, &cost).is_ok() {
             return true;
         }
         // Couldn't actually afford the tax — fall through and counter.
@@ -19283,6 +19289,12 @@ impl GameState {
                         inner,
                         c.chosen_creature_type.is_some_and(|t| SR::TypeSpellOrItsAbility(t).allows(kind)),
                     ),
+                    // Throne of Eldraine: monocolored spells of its chosen color.
+                    // The source table leaves every spend-restricted ability out
+                    // (`mana_is_spend_restricted`), so this arm is its only way in.
+                    ManaPayload::RestrictedToChosenColorMono(inner) => {
+                        (inner, c.chosen_color.is_some_and(|col| SR::MonocoloredSpellOf(col).allows(kind)))
+                    }
                     _ => continue,
                 };
                 if allowed {
@@ -19943,6 +19955,19 @@ impl GameState {
             // picked it, its activation failed and the payment gave up with
             // Islands untapped (2026-11-14).
             abilities.retain(|(_, a)| !self.exile_other_cost_unpayable(c.id, a, player));
+            // A spend-restricted (non-rider) mana ability claims no colour
+            // (`payload_produced_colors`), but listed as the row's first
+            // ability it was the source's *generic* ability: the generic loop
+            // tapped Gideon's Memorial ("spend only to cast planeswalker
+            // spells") for a creature's {3}, got mana the spell can't spend and
+            // came up one short — Plains + 3 Forests + Memorial could not cast
+            // {3}{W} unless the Memorial happened to sit last on the
+            // battlefield. Every non-planeswalker spell that needed every land
+            // was uncastable, and the card played at −8.3 points in FRA
+            // sealed (2026-11-22). The kind-aware retry
+            // (`pay_with_restricted_sources`) taps these when they may fund
+            // the payment.
+            abilities.retain(|(_, a)| !crate::game::mana_shape::mana_is_spend_restricted(&a.effect));
             // An X-sized ability claims no colour: the pip loops would
             // activate it with X = 0 (see `auto_tap_x_sized_sources`).
             let x_idx = abilities

@@ -22946,10 +22946,10 @@ impl GameState {
     }
 
     /// CR 702.35b — offer the owner of an exiled Madness card a yes/no cast
-    /// for `cost`, paid from their floated mana pool. Returns `true` if the
+    /// for `cost`, paid like any cast (auto-tapping mana sources). Returns `true` if the
     /// spell was cast (it is now on the stack, sourced from exile). Mirrors
-    /// the `Effect::MayPay` decision/payment shape; the `AutoDecider`
-    /// declines by default so ordinary bot games never auto-cast.
+    /// the `Effect::MayPay` decision/payment shape; an `AutoDecider` seat
+    /// casts whenever it can pay (the policy below).
     fn offer_madness_cast(
         &mut self,
         p: usize,
@@ -22966,21 +22966,29 @@ impl GameState {
         // AutoDecider's blanket "no" made Madness a dead keyword for every
         // server-hosted seat (this ask never suspends — it sits inside the
         // synchronous discard path). Auto seats now use a policy: cast
-        // whenever the floated pool can already pay (madness is a discount;
-        // declining with the mana up is strictly worse). Scripted deciders
-        // keep full control. Real interactive choice needs a resumable
-        // discard flow — TODO.md.
+        // whenever the cost can be paid (madness is a discount). Scripted
+        // deciders keep full control. Real interactive choice needs a
+        // resumable discard flow — TODO.md.
+        //
+        // CR 601.2g / 605.3a — the madness cast is a cast, so mana abilities
+        // may be activated while paying: the cost auto-taps, as `equip` and
+        // `pay_action_mana` do. It used to be paid from the floated pool
+        // only, so a seat that doesn't pre-float (every bot) could never
+        // cast for madness. Safe inside a cast's own discard cost: the
+        // cast's mana is paid before its additional costs (`cast_spell`,
+        // `cast_spell_alternative_from`, `activate_ability_inner`), so the
+        // madness tap can't take mana that cast still needs.
         // CR 107.3 — a madness {X} cost (From Under the Floorboards): X is
-        // everything the floated pool has left after the rest of the cost.
+        // the largest value the payer can afford.
         let x_value = cost.has_x().then(|| {
-            let mut probe = self.players[p].mana_pool.clone();
-            probe.pay(&cost.with_x_value(0)).map_or(0, |_| probe.total())
+            (1..=20u32).take_while(|&x| self.could_pay_cost(p, &cost.with_x_value(x))).last().unwrap_or(0)
         });
         let cost = &x_value.map_or_else(|| cost.clone(), |x| cost.with_x_value(x));
         let take = match self.decider.kind() {
             crate::decision::DeciderKind::Auto => {
-                let mut probe = self.players[p].mana_pool.clone();
-                probe.pay(cost).is_ok() && x_value != Some(0) && (life == 0 || self.players[p].life > 2 * life as i32)
+                x_value != Some(0)
+                    && (life == 0 || self.players[p].life > 2 * life as i32)
+                    && self.could_pay_cost(p, cost)
             }
             _ => matches!(
                 self.decider.decide(&Decision::OptionalTrigger {
@@ -22994,13 +23002,18 @@ impl GameState {
         if !take {
             return false;
         }
-        // Pre-flight: try paying. On failure (unaffordable pool), decline.
-        // Snapshot first — a failed cast must refund the madness payment
-        // (CR 601.2h atomicity).
-        let pool_before = self.players[p].mana_pool.clone();
-        if self.players[p].mana_pool.pay(cost).is_err() {
-            return false;
-        }
+        // Pre-flight: try paying. On failure (unaffordable), decline.
+        // Snapshot first — a failed cast must refund the madness payment,
+        // the lands it tapped included (CR 601.2h atomicity).
+        let snapshot = self.snapshot_payment_state(p);
+        let forced_only = self.players[p].manual_mana;
+        let mut tap_events = match self.try_pay_with_auto_tap_mode(p, cost, forced_only) {
+            Ok(receipt) => {
+                self.pay_life_cost(p, receipt.side_effects.life_lost);
+                receipt.auto_events
+            }
+            Err(_) => return false,
+        };
         if life > 0 && !self.replace_life_payment(p, life, events) {
             let applied = self.adjust_life_applied(p, -crate::game::life_amount(life));
             if applied < 0 {
@@ -23027,6 +23040,7 @@ impl GameState {
             false,
         ) {
             Ok(mut ev) => {
+                events.append(&mut tap_events);
                 events.append(&mut ev);
                 if let Some(crate::game::types::StackItem::Spell { card, .. }) = self
                     .stack
@@ -23039,7 +23053,7 @@ impl GameState {
                 true
             }
             Err(_) => {
-                self.players[p].mana_pool = pool_before;
+                self.restore_payment_state(p, snapshot);
                 false
             }
         }

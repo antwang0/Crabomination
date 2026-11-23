@@ -10070,3 +10070,31 @@ sides; same seeds, both arms on the final binary). Win share with vs without:
 Positive in all six splash cells, about half a point. The splashes still
 trail v2: s2 by 2.78 / 1.49 / 3.44, sfix by 6.87 / 5.17 / 5.84. The bot's
 fumbling was a small part of the splash's cost; the mana base is the rest.
+
+## FRA card values re-rated on the fixed engine: NOT adopted (2026-11-22)
+
+The 2026-11-22 FRA card-rating run fixed bugs that every earlier table was
+measured under: Equip never paid, shape-classified targets (Vindictive
+Triumph, Flickering Hound, Puppet Crafting, Yoshimaru), bot trigger answers,
+plus `skip_noop_casts` / `loyalty_fixes` / `hand_abilities_wide` in
+`fra-fixes` (ENGINE_BACKLOG "FIXED/OPEN 2026-11-22"). Re-rated by the
+2026-11-17 method and gate, pre-registered in `.ladder/fix2/run_rerate.sh`
+(16,000 pools, `--explore 3`, seed 7; ADOPT if best-of-16 > 50 on both seeds
+with the mean > +0.3).
+
+- The values move on exactly the fixed cards (old → new, points per copy):
+  Medic's Kitesail −3.07 → +2.25, Hunter's Axe −2.82 → +1.21, Lich's Relic
+  +0.29 → +3.96, Warrior's Blades −0.15 → +2.02, Vindictive Triumph −3.90 →
+  +0.02, Puppet Crafting −2.47 → +0.65, Chandra, Chill of Compliance −1.50 →
+  +0.32. No other card moves by more than 0.35; Spearman with the compiled
+  table 0.962.
+- Gate (rated builder on the new table vs the compiled one, 2,000 pools x 8,
+  `fra-fixes`): best-of-16 **49.79 / 49.95**, single samples 49.98 / 49.76.
+  FAILS. 1,750+ of the 2,000 pools build a different deck, so the builder
+  does use the new values; the decks it builds are no better.
+- Not adopted: `FRA_SIM_VALUE` stays as compiled. The deck-value net retrain
+  (new race logs under the fixed engine) was conditional on this lever
+  paying, and is not run.
+- The table was measured before the Gideon's Memorial auto-tap fix (same
+  ENGINE_BACKLOG section), so its Memorial row (−7.71) is stale: the card
+  plays at −2.7 now.

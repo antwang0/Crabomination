@@ -126,6 +126,30 @@ pub(crate) fn is_x_sized_mana_ability(a: &ActivatedAbility) -> bool {
     (a.sac_other_x || a.tap_n_x) && !a.mana_cost.has_x()
 }
 
+/// Whether a mana ability makes mana only *some* payments may spend —
+/// Gideon's Memorial's "spend this mana only to cast planeswalker spells",
+/// Cavern of Souls' chosen-type mana. A rider (`SpendRestriction::is_rider`)
+/// permits every payment, so it is not one.
+///
+/// The auto-tapper's source table leaves these abilities out (the
+/// kind-aware `pay_with_restricted_sources` retry taps them when they may
+/// fund the payment): listed, one was tapped for a generic pip it could not
+/// pay. Gideon's Memorial played at −8.3 points in FRA sealed, −2.7 with the
+/// ability removed (2026-11-22).
+pub(crate) fn mana_is_spend_restricted(eff: &Effect) -> bool {
+    let Effect::AddMana { pool, .. } = eff else { return false };
+    match pool {
+        ManaPayload::Restricted(_, r) => !r.is_rider(),
+        ManaPayload::RestrictedToChosenType(_)
+        | ManaPayload::RestrictedToChosenTypePlain(_)
+        | ManaPayload::RestrictedToChosenTypeOrAbility(_)
+        | ManaPayload::RestrictedToChosenTypeSpellOrAbility(_)
+        | ManaPayload::RestrictedToChosenTypeOrLegendary(_)
+        | ManaPayload::RestrictedToChosenColorMono(_) => true,
+        _ => false,
+    }
+}
+
 /// Whether a mana ability's amount is a runtime `Value` rather than a
 /// constant — [`mana_ability_output`] reports one for those, which is a
 /// *lower* bound and so cannot be spent as a per-colour budget.

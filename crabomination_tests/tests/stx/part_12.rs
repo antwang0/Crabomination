@@ -1707,3 +1707,30 @@ fn strict_proctor_headless_pays_the_tax_when_it_can_afford_it() {
     );
     assert_eq!(g.players[0].mana_pool.total(), 0, "the cast and the {{2}} tax spent all five");
 }
+
+/// CR 605.3a — the tax is paid while an ability resolves, so mana abilities
+/// may be activated for it. It read and paid the floated pool only, so a bot
+/// (bots don't pre-float) with two untapped lands lost every taxed trigger —
+/// the Equip blind spot (2026-11-22 FRA card-rating run).
+#[test]
+fn strict_proctor_headless_taps_lands_for_the_tax() {
+    let mut g = two_player_game();
+    let _ = g.add_card_to_battlefield(0, catalog::strict_proctor());
+    let lands: Vec<_> = (0..2).map(|_| g.add_card_to_battlefield(0, catalog::forest())).collect();
+    let id = g.add_card_to_hand(0, catalog::pest_beekeeper());
+    // Exactly the Beekeeper's {2}{G} floated: the {2} tax must come off the lands.
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![],
+        mode: None, x_value: None,
+    }).expect("Beekeeper castable");
+    drain_stack(&mut g);
+    assert!(
+        g.battlefield.iter().any(|c| c.controller == 0
+            && c.definition.subtypes.creature_types.contains(&CreatureType::Pest)
+            && c.id != id),
+        "the headless controller tapped two lands for the {{2}} and kept its ETB trigger",
+    );
+    assert!(lands.iter().all(|&l| g.battlefield_find(l).is_some_and(|c| c.tapped)), "both Forests paid the tax");
+}

@@ -169,6 +169,31 @@ fn madness_nonzero_cost_unaffordable_goes_to_graveyard() {
     assert!(!g.exile.iter().any(|c| c.id == bolt));
 }
 
+/// CR 601.2g / 605.3a — a madness cast is a cast, so its cost may be paid by
+/// activating mana abilities. It was paid from the floated pool only, so a
+/// headless seat with an untapped Mountain and nothing floating (every bot:
+/// none pre-float) binned every madness card it discarded — the same blind
+/// spot as Equip (2026-11-22 FRA card-rating run).
+#[test]
+fn madness_cost_auto_taps_an_untapped_land() {
+    use crabomination::mana::{ManaCost, ManaSymbol, Color};
+    let mut g = two_player_game();
+    let mountain = g.add_card_to_battlefield(0, catalog::mountain());
+    let bolt = g.add_card_to_hand(0, test_madness_bolt(
+        ManaCost::new(vec![ManaSymbol::Colored(Color::Red)])));
+    let opp_life_before = g.players[1].life;
+
+    let mut events = vec![];
+    g.discard_card(0, bolt, &mut events);
+    g.dispatch_triggers_for_events(&events);
+    drain_stack(&mut g);
+
+    assert!(g.battlefield_find(mountain).is_some_and(|c| c.tapped),
+        "the Mountain was tapped for the {{R}} madness cost");
+    assert_eq!(g.players[1].life, opp_life_before - 1,
+        "the madness bolt was cast and resolved at the opponent");
+}
+
 #[test]
 fn cr_70235_madness_exile_still_counts_as_a_discard() {
     // CR 701.8b / 702.35a — the discard still happens (CardDiscarded fires)
