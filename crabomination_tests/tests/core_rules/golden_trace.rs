@@ -564,9 +564,14 @@ const POD_DIGESTS: &[PodDigest] = &[
     // 2026-11-22: 1624 -> 1471 actions, 224 -> 210 plays, 46 -> 38 turns — equip
     // auto-taps its cost (CR 602.2b), so the bots equip at all (moved by that
     // change alone: reverting it restores the old row).
-    (3, 0x903_0001, Some(0), 1471, 210, 38),
-    // 2026-11-22: 3391 -> 3392 actions, 362 -> 363 plays — the same equip fix.
-    (4, 0x903_0002, Some(0), 3392, 363, 67),
+    // 2026-11-23: 1471 -> 1708 actions, 210 -> 237 plays, 38 -> 50 turns —
+    // `pick_sacrifice_value` scores passing with the stack settled
+    // (`pass_baseline`) and skips end-of-turn-only gains (moved by that change
+    // alone: reverting it restores the 2026-11-22 rows).
+    (3, 0x903_0001, Some(0), 1708, 237, 50),
+    // 2026-11-23: 3392 -> 3911 actions, 363 -> 455 plays, 67 -> 77 turns, seat
+    // 0 -> seat 2 — the same sacrifice-baseline change.
+    (4, 0x903_0002, Some(2), 3911, 455, 77),
 ];
 
 #[test]

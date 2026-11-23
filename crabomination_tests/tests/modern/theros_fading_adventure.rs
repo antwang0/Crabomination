@@ -1254,6 +1254,31 @@ fn coldsteel_heart_enters_tapped_and_taps_for_chosen_color() {
     assert_eq!(g.players[0].mana_pool.amount(Color::Blue), 1);
 }
 
+/// The engine's auto-tapper pays a coloured pip with a chosen-colour source.
+/// Its per-definition memo claimed no colour for "one mana of the chosen
+/// color", so the pip loop never tapped one: a W/U deck's Room of Refuge set
+/// to white left {2}{W} unpayable beside two Islands for fourteen turns
+/// (2026-11-23 FRA audit). White Knight's {W}{W} off a white Room and a white
+/// Coldsteel Heart, from untapped sources alone.
+#[test]
+fn chosen_color_sources_auto_tap_for_coloured_pips() {
+    let mut g = two_player_game();
+    let room = g.add_card_to_battlefield(0, catalog::room_of_refuge());
+    let heart = g.add_card_to_battlefield(0, catalog::coldsteel_heart());
+    for id in [room, heart] {
+        let c = g.battlefield_find_mut(id).unwrap();
+        c.chosen_color = Some(Color::White);
+        c.tapped = false;
+    }
+    let knight = g.add_card_to_hand(0, catalog::white_knight());
+    g.perform_action(GameAction::CastSpell {
+        card_id: knight, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("{W}{W} off two white chosen-colour sources");
+    assert!(g.battlefield_find(room).unwrap().tapped, "Room of Refuge tapped for {{W}}");
+    assert!(g.battlefield_find(heart).unwrap().tapped, "Coldsteel Heart tapped for {{W}}");
+}
+
 #[test]
 fn floodfarm_verge_blue_gated_on_plains_or_island() {
     let mut g = two_player_game();

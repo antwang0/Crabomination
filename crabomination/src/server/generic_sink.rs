@@ -186,7 +186,7 @@ pub(super) fn pick_generic_ability(state: &GameState, seat: usize, w: &EvalWeigh
 /// Every gain in `e` ends with the turn or the combat: a stat change, a
 /// keyword grant or an animation. A rider that lasts (a draw, a counter)
 /// keeps the ability in the probe.
-fn ability_is_temporary(e: &Effect) -> bool {
+pub(super) fn ability_is_temporary(e: &Effect) -> bool {
     use crate::effect::Duration::{EndOfCombat, EndOfTurn};
     match e {
         Effect::PumpPT { duration: EndOfTurn | EndOfCombat, .. }
@@ -237,6 +237,37 @@ mod tests {
             "got {got:?}"
         );
         let _ = bears;
+    }
+
+    /// The Echoverse Fulcrum's "{5}, {T}, exile it: destroy all creatures"
+    /// is taken by a duel seat (`duel_sinks`) facing a board it can't match,
+    /// and not when the board that goes is its own. A sweep used to carry
+    /// the targeted-removal bit, which fenced it out of this sink while
+    /// `pick_removal_destroy` skips sweeps: 534 casts and no wipe in 1,200
+    /// forced FRA games (2026-11-23 audit).
+    #[test]
+    fn echoverse_fulcrum_wipes_a_board_it_is_behind_on() {
+        let setup = |mine: usize, theirs: usize| {
+            let mut g = crate::game::two_player_game();
+            g.players[0].duel_sinks = true;
+            g.active_player_idx = 0;
+            g.step = TurnStep::PostCombatMain;
+            g.priority.player_with_priority = 0;
+            let f = g.add_card_to_battlefield(0, crate::catalog::the_echoverse_fulcrum());
+            for (seat, n) in [(0, mine), (1, theirs)] {
+                for _ in 0..n {
+                    g.add_card_to_battlefield(seat, crate::catalog::serra_angel());
+                }
+            }
+            g.players[0].mana_pool.add_colorless(5);
+            (g, f)
+        };
+        let (g, f) = setup(0, 3);
+        let got = pick_generic_ability(&g, 0, &EvalWeights::default());
+        assert!(matches!(got, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == f), "got {got:?}");
+        let (g, _) = setup(3, 1);
+        let got = pick_generic_ability(&g, 0, &EvalWeights::default());
+        assert!(got.is_none(), "wiped its own board: {got:?}");
     }
 
     /// Wizard Class levels up with spare mana in the post-combat main phase

@@ -26,7 +26,13 @@ fn same_filter_fan_out(eff: &Effect) -> bool {
         | Effect::OptionalTargets { body, .. }
         | Effect::TargetsExactlyX { body }
         | Effect::OneSearch { body }
-        | Effect::CapTargetsAt { body, .. } => same_filter_fan_out(body),
+        | Effect::CapTargetsAt { body, .. }
+        // A reflexive trigger's body arrives wrapped in its carried scratch
+        // (`carry_into_reflexive`) for a prompting seat: Seasoned
+        // Cryomancer's "tap up to that many target creatures" after a
+        // two-card discard named one target in 81 of 81 bot resolutions
+        // (2026-11-23 FRA audit). `auto_extra_targets_for` peels it too.
+        | Effect::BindScratch { body, .. } => same_filter_fan_out(body),
         Effect::Seq(parts) => {
             let mut targeting = parts.iter().filter(|e| e.requires_target());
             match (targeting.next(), targeting.next()) {

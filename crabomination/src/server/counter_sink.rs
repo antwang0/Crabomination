@@ -564,6 +564,59 @@ mod tests {
         assert!(matches!(got, Some(GameAction::ActivateAbility { card_id, ability_index: 1, .. }) if card_id == book), "{got:?}");
     }
 
+    /// The sacrifice picker scores its candidate with the stack settled and
+    /// its baseline without, so over the seat's own spell the spell's payoff
+    /// was credited to the sacrifice: Loot, the Anomaly fed six creatures to
+    /// one Extended Absence (2026-11-23 FRA audit). With a spell on the stack
+    /// it sacrifices nothing — Edgar's counter included — and Loot's
+    /// "-2/-0 until end of turn" is not a sink at all.
+    #[test]
+    fn no_sacrifice_over_the_seats_own_spell_or_for_an_end_of_turn_gain() {
+        let mut g = crate::game::two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let loot = g.add_card_to_battlefield(0, crate::catalog::loot_the_anomaly());
+        let edgar = g.add_card_to_battlefield(0, crate::catalog::edgar_ancient_bloodlord());
+        for id in [loot, edgar] {
+            g.clear_sickness(id);
+        }
+        for _ in 0..3 {
+            let b = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+            g.clear_sickness(b);
+        }
+        for _ in 0..7 {
+            g.add_card_to_graveyard(0, crate::catalog::island());
+        }
+        for _ in 0..3 {
+            g.add_card_to_library(0, crate::catalog::island());
+        }
+        let w = super::super::bot::EvalWeights::default();
+        let angel = g.add_card_to_hand(0, crate::catalog::serra_angel());
+        g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+        g.players[0].mana_pool.add_colorless(5);
+        g.perform_action(GameAction::CastSpell {
+            card_id: angel,
+            target: None,
+            additional_targets: Vec::new(),
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast the Angel");
+        assert!(!g.stack.is_empty());
+        g.priority.player_with_priority = 0;
+        let got = super::super::bot::pick_sacrifice_value(&g, 0, &w);
+        assert!(got.is_none(), "sacrificed over its own spell: {got:?}");
+        crate::game::drain_stack(&mut g);
+        g.step = TurnStep::PostCombatMain;
+        g.priority.player_with_priority = 0;
+        let got = super::super::bot::pick_sacrifice_value(&g, 0, &w);
+        assert!(
+            !matches!(got, Some(GameAction::ActivateAbility { card_id, .. }) if card_id == loot),
+            "Loot's -2/-0 after combat: {got:?}"
+        );
+    }
+
     /// Midnight Clock's "{2}{U}: put an hour counter" is bought at an
     /// opponent's end step only when the seat's hand is nearly empty.
     #[test]

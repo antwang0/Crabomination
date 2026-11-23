@@ -29630,6 +29630,8 @@ impl GameState {
                 }
                 Effect::MayDo { body, .. } => body,
                 Effect::TargetsExactlyX { body } => body,
+                // A reflexive body's carried scratch (`same_filter_fan_out`'s note).
+                Effect::BindScratch { body, .. } => body,
                 Effect::ForEachOpponentTarget { body } => {
                     distinct_controllers = true;
                     cap = cap.min(self.opponents_of(controller).len());

@@ -46438,10 +46438,15 @@ mod tests {
         // bots equip at all; reverting that change alone restores the old
         // rows): 0xC0FFEE unmoved; 43 48→91 turns, 2205→4825 actions; 4242
         // seat 1 → seat 3, 75→64 turns, 3458→3014 actions.
+        // Re-blessed 2026-11-23 (`pick_sacrifice_value` scores doing nothing
+        // with the stack settled, as it scores the sacrifice — `pass_baseline`
+        // — and skips end-of-turn-only gains; reverting that change alone
+        // restores the old rows): 0xC0FFEE unmoved; 43 91→87 turns,
+        // 4825→4652 actions; 4242 seat 3 → seat 1, 64→60 turns, 3014→2926.
         const GOLDEN: [(u64, Option<usize>, u32, usize); 3] = [
             (0xC0FFEE, Some(2), 54, 2487),
-            (43, Some(0), 91, 4825),
-            (4242, Some(3), 64, 3014),
+            (43, Some(0), 87, 4652),
+            (4242, Some(1), 60, 2926),
         ];
         let decks = rofellos_pod(4);
         let t = build_pod_template(&decks);

@@ -10098,3 +10098,37 @@ with the mean > +0.3).
 - The table was measured before the Gideon's Memorial auto-tap fix (same
   ENGINE_BACKLOG section), so its Memorial row (−7.71) is stale: the card
   plays at −2.7 now.
+
+## The FRA cards rated furthest from 17lands / Draftsim: audited, eight bugs fixed (2026-11-23)
+
+The 40 FRA cards whose sim value ranks furthest from the 17lands GIH (or
+Draftsim, where 17lands has too few games) — 24 rated below, 16 above — were
+checked by five agents against Scryfall oracle text and 1,200 forced-card
+games each (`CRAB_FORCE_CARDS` + `CRAB_DUMP_TRACES`; `.ladder/audit/a1`..`a5`).
+No card's implementation contradicted its text. Two engine bugs and six bot
+bugs explained part of the gaps (ENGINE_BACKLOG "Batch 3"). Per-card value
+before → after (`--set-played`, 400 decks x 4 pairs, seed 43, the same decks
+on both binaries, `.ladder/audit/run_sp.sh`; points of win rate, interval
+±1.2-2.4, Theorix Charm ±5.0):
+
+| card | before | after | the fix |
+|---|---|---|---|
+| The Echoverse Fulcrum | −4.51 | −2.37 | an untargeted activated sweep had no picker |
+| Edgar, Ancient Bloodlord | −2.38 | −0.15 | sacrifices credited with the seat's own stacked spell |
+| Pia, Aether Ascetic | −4.08 | −2.65 | discard declined when the search can find nothing |
+| Loot, the Anomaly | −3.64 | −2.32 | the settled baseline, and no end-of-turn-only sacrifice |
+| Last Gasp | −0.17 | +0.50 | a kill-shrink aimed at what it kills |
+| Theorix Charm | −3.37 | −2.88 | the same |
+| Seasoned Cryomancer | +2.24 | +2.34 | a prompting seat's reflexive "up to N" named one target |
+| Ghalta the Immovable | +5.09 | +4.32 | opposing blockers read by toughness under its grant |
+| Hexhaven Invigorator (control) | +1.72 | +1.66 | none |
+
+Every move is the predicted direction and the control is flat, but each is
+inside its own interval. Room of Refuge (chosen-colour mana never auto-tapped
+for its colour, the widest engine fix: 35 catalog files) is never deck-built,
+so it has no value to read. No card table was regenerated: the last re-rate
+didn't pay (above), and these cards' moves are ~1-2 points. What the audit
+found that is not fixed is in ENGINE_BACKLOG's OPEN list for the section;
+the largest is the known one — the opposing bot doesn't play around combat
+tricks, which inflates every cheap pump (Tethermage's Advantage cost the
+opponent a creature in ~75 % of its casts).

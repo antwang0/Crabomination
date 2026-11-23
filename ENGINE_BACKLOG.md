@@ -19,7 +19,7 @@ the handoff.
 
 | Part | Section | Lines |
 | --- | --- | --- |
-| Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 78 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc4Bu`) — 26 Star Trek seats, four primitives](#fixedopen-2026-11-01-commander-run-01wruxc4bu--26-star-trek-seats-four-primitives) | 25 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4Bu` found them (moved verbatim, 2026-11-01)](#the-commander-nexts-lines-as-01wruxc4bu-found-them-moved-verbatim-2026-11-01) | 4 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc3G1`) — 22 Star Trek seats, four primitives](#fixedopen-2026-11-01-commander-run-01wruxc3g1--22-star-trek-seats-four-primitives) | 19 |
@@ -229,7 +229,70 @@ FIXED:
   bot's `available_mana` still counts the restricted mana (an upper bound —
   a planeswalker can spend it); removing it measured nothing.
 
+**Batch 3 (2026-11-23): audit of the 40 FRA cards the sim rates furthest from
+17lands / Draftsim**, 24 below and 16 above, five agents, oracle text +
+1,200 forced-card games each (`.ladder/audit/a1`..`a5`). No card's text was
+wrong. Two engine bugs, six bot bugs fixed. Per-card value
+(`fra_card_eval --set-played`, 400 decks x 4 pairs, seed 43, the same decks
+both sides; `.ladder/audit/run_sp.sh`) before → after:
+- **Engine: chosen-colour mana never auto-tapped for a colour**
+  (`mana_summary_of`, `mana_source_table_inner`). "Add one mana of the chosen
+  color" (Room of Refuge, Coldsteel Heart; 35 catalog files) claimed no colour
+  in the memoised row, so the pip loops paid only generic with it: a white
+  Room left {2}{W} unpayable beside two Islands for fourteen turns, 447 of 474
+  hands whose only source of a colour was the Room couldn't cast it. The live
+  walk reads `chosen_color`; the memo declines instance-coloured definitions
+  (`AnyColorOfSource` too, whose live special case the memo also bypassed).
+- **Engine: a reflexive "up to N targets" named one target for a prompting
+  seat** (`trigger_slots::same_filter_fan_out`, `auto_extra_targets_for`): the
+  body arrives in `carry_into_reflexive`'s `BindScratch`, which neither walker
+  peeled. Seasoned Cryomancer's two-card discard stunned one creature in 81 of
+  81 bot resolutions. Cryomancer +2.2 → +2.3.
+- **Bot: an untargeted activated sweep had no picker** (`ability_sink_bits`):
+  "destroy all creatures" carried the targeted-removal bit, which fences
+  `generic_sink` off while `pick_removal_destroy` skips sweeps. The Echoverse
+  Fulcrum: 534 casts, 0 wipes. −4.5 → −2.4.
+- **Bot: `pick_sacrifice_value` credited the seat's own stacked spell to the
+  sacrifice** (baseline unsettled, candidate settled), and took
+  end-of-turn-only gains after combat. Loot, the Anomaly sacrificed six
+  creatures over one Extended Absence. The baseline is now passing with the
+  stack settled (`pass_baseline`, also `pick_x_counter_ability`), and an
+  end-of-turn gain is skipped unless it can lower toughness (Grim Hireling's
+  −X/−X). Refusing on a non-empty stack instead was measured first: it drops
+  the right sacrifices too (an outlet fed before the seat's own wipe), and the
+  seeded Commander demo ran 83 turns, 4x its CPU. Loot −3.6 → −2.3, Edgar
+  −2.4 → −0.2.
+- **Bot: opposing blockers read by power under "assigns combat damage equal
+  to its toughness"** (`blocker_damage`: `block_outcomes`,
+  `add_free_attackers`, `max_ground_blocker_power`): a 0/7 Ghalta killed
+  nothing to the attack planner, which attacked into it 59 % of the time
+  against 33 % into a 6/6. Ghalta +5.1 → +4.3. (`permanent_value` still
+  prices it by power — left alone, it moves every eval.)
+- **Bot: a kill-shrink cast as removal aimed at the biggest power**
+  (`shrink_kill_target`, under `debuff_removal_anytime`): 71 of 182 own-turn
+  Last Gasps left their target alive. Now aimed at the best creature it
+  kills, or not offered outside combat. Last Gasp −0.2 → +0.5, Theorix Charm
+  −3.4 → −2.9 (n 26).
+- **Bot: Pia, Aether Ascetic discarded into an empty search**
+  (`optional_trigger_beneficial`): 73 of 174 accepted discards found no
+  enchantment. Declined when the library holds no match. −4.1 → −2.6.
+Every move is the direction the audit predicted, but each is inside its own
+interval (1.2-2.4 points); no FRA card table was regenerated.
+
 OPEN:
+- **Audit leftovers** (`.ladder/audit/a1`..`a5` reports in the session):
+  Divining Duelist's untap mode targets the opponent's creature
+  (`decide_choose_target` has no effect polarity; 72 of 87 untaps); a mass
+  −N/−N (Rise of the Deathbringer) scores at baseline and wipes its own board;
+  Marwyn, the Clearcutter sacrifices lands while short of mana (33 of 215
+  activations at ≤ 5 lands); the opposing bot doesn't play around combat
+  tricks (Tethermage's Advantage killed a blocker or attacker in ~75 % of
+  casts); Room of Refuge / Theorist's Sanctum are never deck-built
+  (`land_produced_colors` reads chosen-colour as nothing, `assemble_lands`
+  wants two on-colour pips), and land values are measured against a basic
+  that isn't in the regression. Way of the Wildspeaker's "empower Jace 7" and
+  Rise of the Deathbringer aren't in the offline oracle cache — check them
+  against Scryfall.
 - **158 catalog cards outside FRA have Vindictive Triumph's shape**
   (targeted, graveyard-preferring, zone-less filter not naming a permanent):
   `.ladder/fix1/zone_audit_catalog.tsv`. Many are fine (player targets,

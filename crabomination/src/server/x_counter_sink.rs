@@ -8,12 +8,14 @@
 use crate::game::GameState;
 use crate::game::types::GameAction;
 
-use super::bot::{EvalWeights, eval_material, evaluate_action_outcome};
+use super::bot::{EvalWeights, evaluate_action_outcome};
 
 /// The best-scoring remove-X-counters activation `seat` can make, if any beats
 /// doing nothing.
 pub(super) fn pick_x_counter_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
-    let baseline = eval_material(state, seat, w);
+    // Settled on both sides (`pass_baseline`): against the unsettled board a
+    // spell of the seat's own on the stack was credited to the activation.
+    let baseline = super::bot::pass_baseline(state, seat, w)?;
     let mut best: Option<(i32, GameAction)> = None;
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in card.definition.activated_abilities.iter().enumerate() {

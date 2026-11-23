@@ -226,3 +226,52 @@ fn arwens_gift_discount() {
     })
     .expect("{2}{U}");
 }
+
+/// Seasoned Cryomancer — a seat that names its own targets (every bot seat in
+/// a sim game) taps and stuns up to as many creatures as the nonland cards it
+/// discarded. The reflexive body reaches the slot asks wrapped in its carried
+/// scratch, which neither fan-out walker peeled: 81 of 81 two-card discards
+/// named one target (2026-11-23 FRA audit).
+#[test]
+fn seasoned_cryomancer_stuns_two_for_a_prompting_seat() {
+    use crabomination::decision::Decision;
+    let mut g = pod(2);
+    g.players[0].wants_ui = true;
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let discards = [g.add_card_to_hand(0, catalog::grizzly_bears()), g.add_card_to_hand(0, catalog::grizzly_bears())];
+    let foes: Vec<CardId> = (0..2).map(|_| g.add_card_to_battlefield(1, catalog::grizzly_bears())).collect();
+    let cryo = g.add_card_to_battlefield(0, catalog::seasoned_cryomancer());
+    g.fire_self_etb_triggers(cryo, 0);
+    let mut named: Vec<CardId> = Vec::new();
+    for _ in 0..12 {
+        let Some(pd) = g.pending_decision.as_ref() else {
+            if g.stack.is_empty() {
+                break;
+            }
+            drain_stack(&mut g);
+            continue;
+        };
+        let answer = match &pd.decision {
+            Decision::Discard { .. } => DecisionAnswer::Discard(discards.to_vec()),
+            Decision::ChooseTarget { legal, .. } => {
+                let foe = foes.iter().copied().find(|f| !named.contains(f) && legal.contains(&Target::Permanent(*f)));
+                match foe {
+                    Some(f) => {
+                        named.push(f);
+                        DecisionAnswer::Target(Target::Permanent(f))
+                    }
+                    None => DecisionAnswer::DeclineTarget,
+                }
+            }
+            other => panic!("unexpected decision {other:?}"),
+        };
+        g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+    }
+    drain_stack(&mut g);
+    for f in foes {
+        let c = g.battlefield_find(f).unwrap();
+        assert!(c.tapped && c.counter_count(CounterType::Stun) == 1, "both foes tapped and stunned");
+    }
+}

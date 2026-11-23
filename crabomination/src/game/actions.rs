@@ -1326,6 +1326,21 @@ fn mana_summary_of(def: &crate::card::CardDefinition) -> Option<u64> {
     }) {
         return None;
     }
+    // So is a colour read off the instance: the chosen colour (Room of
+    // Refuge, Coldsteel Heart) or the source's own colours. The definition
+    // states neither, so the memo's row claimed no colour and the pip loops
+    // never tapped the source for one — a W/U deck's Room of Refuge set to
+    // white left {2}{W} unpayable beside two Islands for fourteen turns, and
+    // 447 of 474 hands whose only source of a colour was the Room couldn't
+    // cast it (2026-11-23 FRA audit). The live walk reads both.
+    if def.activated_abilities.iter().any(|a| {
+        matches!(
+            a.effect,
+            Effect::AddMana { pool: ManaPayload::ChosenColorOfSource | ManaPayload::AnyColorOfSource, .. }
+        )
+    }) {
+        return None;
+    }
     let mut first: Option<(usize, &crate::effect::ActivatedAbility)> = None;
     let mut colors = crate::mana::ColorSet::empty();
     let mut color_idx = [0usize; 5];
@@ -20011,6 +20026,9 @@ impl GameState {
                 let amount = crate::game::mana_shape::mana_ability_output(&a.effect).0;
                 let produced = if matches!(a.effect, Effect::AddMana { pool: ManaPayload::AnyColorOfSource, .. }) {
                     self.computed_permanent(c.id).map_or(crate::mana::ColorSet::empty(), |cp| cp.colors)
+                } else if matches!(a.effect, Effect::AddMana { pool: ManaPayload::ChosenColorOfSource, .. }) {
+                    // "Add one mana of the chosen color" (`mana_summary_of`'s note).
+                    c.chosen_color.map_or(crate::mana::ColorSet::empty(), crate::mana::ColorSet::single)
                 } else {
                     effect_produced_colors(&a.effect)
                 };

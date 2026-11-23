@@ -6523,6 +6523,17 @@ pub fn optional_trigger_beneficial(state: &GameState, source: CardId, descriptio
     {
         return false;
     }
+    // "You may discard a card. If you do, search your library for an
+    // enchantment card" with no enchantment left in the library trades a card
+    // for a shuffle: Pia, Aether Ascetic took 73 of its 174 accepted discards
+    // into an empty search (2026-11-23 FRA audit). The seat knows its own
+    // deck's contents.
+    if let Some(Effect::Search { filter, .. }) = body
+        && let Some(ctrl) = state.battlefield.find_by_id(source).map(|c| c.controller)
+        && !state.players[ctrl].library.iter().any(|c| state.evaluate_requirement_on_card(filter, c, ctrl))
+    {
+        return false;
+    }
     // Take it unless the body is self-costly; default to taking when the
     // body can't be introspected (most "you may" on your own permanents is
     // upside).
@@ -9116,6 +9127,22 @@ fn cast_candidates_all<'a>(
             } else {
                 (None, Vec::new())
             };
+            // `debuff_removal_anytime`: outside the combat-damage window a
+            // single-target kill-shrink is removal, so it is aimed at a
+            // creature it kills or not offered (`shrink_kill_target`).
+            let target = if w.debuff_removal_anytime
+                && single_target_shrink(mode_effect).is_some()
+                && !matches!(
+                    state.step,
+                    TurnStep::DeclareBlockers | TurnStep::FirstStrikeDamage | TurnStep::CombatDamage
+                ) {
+                match shrink_kill_target(state, seat, mode_effect, w) {
+                    Some(t) => Some(t),
+                    None => continue,
+                }
+            } else {
+                target
+            };
             // SOS Repartee: with a controlled payoff that wants an
             // instant/sorcery to target a CREATURE, an "any target"
             // spell the auto-targeter aimed at a player also gets a
@@ -11231,7 +11258,15 @@ pub(super) fn ability_sink_bits(ab: &crate::effect::ActivatedAbility) -> u32 {
         m |= sink::AB_ENERGY;
     }
     match &ab.effect {
-        Effect::Destroy { .. } | Effect::DestroyNoRegen { .. } => {
+        // Only the TARGETED shape: both removal generators (`pick_removal_
+        // sacrifice` / `pick_removal_destroy`) aim at one foe and skip a
+        // sweep, so a bit on "destroy all creatures" fenced it out of
+        // `generic_sink` with no owner left. The Echoverse Fulcrum ({5}, {T},
+        // exile it: destroy all creatures) was cast 534 times and its wipe
+        // activated 0 times in 1,200 forced FRA games (2026-11-23 audit).
+        Effect::Destroy { what } | Effect::DestroyNoRegen { what }
+            if matches!(what, Selector::Target(_) | Selector::TargetFiltered { .. }) =>
+        {
             m |= if ab.sac_cost { sink::AB_SAC_DESTROY } else { sink::AB_DESTROY };
         }
         // `pick_removal_fight` — removal too, under the same bit.
@@ -12145,14 +12180,32 @@ fn ability_is_pure_mana(e: &Effect) -> bool {
 }
 
 pub(super) fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeights) -> Option<GameAction> {
+    // ⚠ **THE CANDIDATE IS SCORED WITH THE STACK SETTLED, SO THE BASELINE
+    // MUST BE TOO** (`pass_baseline`). Against the board as it stood, the
+    // seat's own pending spell was credited to the sacrifice and any
+    // sacrifice "beat passing": Loot, the Anomaly fed six creatures to one
+    // Extended Absence, and 88 of its 98 activations and all 24 of Edgar,
+    // Ancient Bloodlord's came over the seat's own spell (2026-11-23 FRA
+    // audit). Refusing on a non-empty stack instead dropped the sacrifices
+    // that ARE right there — feeding an outlet before the seat's own wipe
+    // resolves — and a seeded Commander demo ran 83 turns instead of 44.
     if super::renewal_guard::board_is_cluttered(state, seat) {
         return None;
     }
-    let baseline = eval_material(state, seat, w);
+    let mut baseline: Option<Option<i32>> = None;
     let scan = state.grant_scan();
     for card in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in usable_abilities(state, card, &scan) {
             if !ability_sacrifices_a_permanent(&ab) {
+                continue;
+            }
+            // An until-end-of-turn gain reads as permanent to the material
+            // eval (`generic_sink`'s same skip): Loot's "-2/-0 until end of
+            // turn" after combat bought nothing for a creature. A shrink that
+            // can take toughness below zero is removal, not a gain — Grim
+            // Hireling's "sacrifice X Treasures: -X/-X" kills, and the eval
+            // sees the death.
+            if super::generic_sink::ability_is_temporary(&ab.effect) && !may_lower_toughness(&ab.effect) {
                 continue;
             }
             // Destroy-shaped sac removal keeps its dedicated trade math
@@ -12232,8 +12285,9 @@ pub(super) fn pick_sacrifice_value(state: &GameState, seat: usize, w: &EvalWeigh
                         continue;
                     }
                     let Some(settled) = state.accept(action.clone()) else { continue };
+                    let base = (*baseline.get_or_insert_with(|| pass_baseline(state, seat, w)))?;
                     if let Some(ev) = evaluate_action_outcome(state, seat, &action, Some(&settled), w)
-                        && ev > baseline
+                        && ev > base
                         && best.as_ref().is_none_or(|(b, _)| ev > *b)
                     {
                         best = Some((ev, action));
@@ -13968,7 +14022,9 @@ fn add_free_attackers(state: &GameState, seat: usize, mut attacks: Vec<Attack>, 
                 if let Some(bcp) = state.computed_permanent(**b) {
                     let k = bcp.keywords();
                     deathtouch |= k.has_kw(&Keyword::Deathtouch);
-                    damage = damage.saturating_add(bcp.power.max(0).saturating_mul(if k.has_kw(&Keyword::DoubleStrike) { 2 } else { 1 }));
+                    // `blocker_damage`'s rule, on the computed body already in hand.
+                    let dealt = if k.has_kw(&Keyword::AssignsCombatDamageByToughness) { bcp.toughness } else { bcp.power };
+                    damage = damage.saturating_add(dealt.max(0).saturating_mul(if k.has_kw(&Keyword::DoubleStrike) { 2 } else { 1 }));
                 }
             }
             !deathtouch && damage < cp.toughness.saturating_sub(card.damage as i32)
@@ -14167,6 +14223,29 @@ fn seat_has_attack_trigger(state: &GameState, seat: usize) -> bool {
 /// One-on-one blocks of `c` by each of `blockers` that can legally block it:
 /// (some block kills `c`, every block that kills `c` also dies). First strike
 /// on either side and deathtouch are counted; gang blocks are not.
+/// The combat damage `b` deals as a blocker: its toughness when it has
+/// `AssignsCombatDamageByToughness` (Ghalta the Immovable's grant, Doran), else
+/// its power — the blocker-side twin of [`attacker_damage_value_hinted`]. The
+/// three opponent-blocker reads (`block_outcomes`, `add_free_attackers`, the
+/// suicide filter's `max_ground_blocker_power`) read bare power, so a 0/7
+/// Ghalta "killed nothing" and opponents sent attackers into it 59 % of the
+/// time against 33 % into a 6/6 (2026-11-23 FRA audit). Only a body with
+/// toughness above power is asked: under the keyword the others deal less,
+/// which the power read already over-counts, and the layer walk stays off
+/// the common path.
+fn blocker_damage(state: &GameState, b: &crate::card::CardInstance) -> i32 {
+    let (p, t) = (b.power(), b.toughness());
+    if t > p
+        && state
+            .computed_permanent_on(b)
+            .is_some_and(|cp| cp.keywords().has_kw(&crate::card::Keyword::AssignsCombatDamageByToughness))
+    {
+        t
+    } else {
+        p
+    }
+}
+
 fn block_outcomes(
     state: &GameState,
     c: &crate::card::CardInstance,
@@ -14180,7 +14259,8 @@ fn block_outcomes(
     for b in blockers.iter().filter(|b| state.blocker_can_block_attacker(b.id, c.id)) {
         let b_strikes_first = b.has_keyword(&Keyword::FirstStrike) || b.has_keyword(&Keyword::DoubleStrike);
         let c_kills_b = deathtouch || c.power() >= b.toughness();
-        let b_kills_c = (b.has_keyword(&Keyword::Deathtouch) && b.power() >= 1) || b.power() >= c.toughness();
+        let b_damage = blocker_damage(state, b);
+        let b_kills_c = (b.has_keyword(&Keyword::Deathtouch) && b_damage >= 1) || b_damage >= c.toughness();
         // First strike: `c` kills `b` before `b` deals damage, unless `b`
         // strikes first too.
         let b_kills_c = b_kills_c && !(strikes_first && c_kills_b && !b_strikes_first);
@@ -14507,7 +14587,7 @@ fn pick_attacks_inner(
     let max_ground_blocker_power: i32 = opp_blockers
         .iter()
         .filter(|b| b.combat_keywords() & combat_kw::FLYING == 0)
-        .map(|b| b.power())
+        .map(|b| blocker_damage(state, b))
         .max()
         .unwrap_or(0);
     let mut attackers: Vec<crate::card::CardId> = raw_attackers
@@ -20987,6 +21067,73 @@ fn pick_burn_lethal(state: &GameState, seat: usize, w: &EvalWeights) -> Option<G
 
 /// The most valuable hostile creature a fixed-amount `DealDamage` in `eff`
 /// kills (marked damage counted) — the `burn_creature_arms` kill arm.
+/// What doing nothing scores, on the footing a candidate's
+/// `evaluate_action_outcome` is scored on: the board as it stands when the
+/// stack is empty, else passing with the stack settled — the seat's own
+/// pending spell resolves on both sides of the comparison. `None` when the
+/// pass doesn't settle; the caller then takes nothing.
+pub(super) fn pass_baseline(state: &GameState, seat: usize, w: &EvalWeights) -> Option<i32> {
+    if state.stack.is_empty() {
+        Some(eval_material(state, seat, w))
+    } else {
+        evaluate_action_outcome(state, seat, &GameAction::PassPriority, None, w)
+    }
+}
+
+/// Some `PumpPT` in `e` may lower toughness: a negative constant, or an
+/// amount only known at resolution (Grim Hireling's -X/-X).
+fn may_lower_toughness(e: &Effect) -> bool {
+    use crate::effect::Value;
+    e.any_nested(&|e| matches!(e, Effect::PumpPT { toughness, .. } if !matches!(toughness, Value::Const(t) if *t >= 0)))
+}
+
+/// The toughness a single-target until-end-of-turn shrink takes away (Last
+/// Gasp's -3/-3 → 3, Theorix Charm's -2/-2 mode → 2); `None` for any other
+/// shape, a sweep included.
+fn single_target_shrink(eff: &Effect) -> Option<i32> {
+    use crate::effect::{Duration, Selector, Value};
+    match eff {
+        Effect::PumpPT {
+            what: Selector::Target(_) | Selector::TargetFiltered { .. },
+            toughness: Value::Const(t),
+            duration: Duration::EndOfTurn | Duration::EndOfCombat,
+            ..
+        } if *t < 0 => Some(-*t),
+        _ => None,
+    }
+}
+
+/// `debuff_removal_anytime`'s aim for a [`single_target_shrink`]: the most
+/// valuable opposing creature it kills (toughness to 0, or the damage already
+/// marked made lethal on a destructible body). The auto-targeter's hostile
+/// pick is the biggest power and the cast scores at baseline
+/// (`contains_temporary_leaf`), so nothing preferred a kill: 71 of 182
+/// own-turn Last Gasps left their target alive, 54 of them beside a creature
+/// they would have killed (2026-11-23 FRA audit, one Witness 3/5 shrunk to 0/2
+/// beside a 2/2). `None` when nothing dies.
+fn shrink_kill_target(state: &GameState, seat: usize, eff: &Effect, w: &EvalWeights) -> Option<Target> {
+    let shrink = single_target_shrink(eff)?;
+    let filter = eff.primary_target_filter();
+    state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && c.definition.is_creature())
+        .filter(|c| {
+            state.computed_permanent(c.id).is_some_and(|cp| {
+                let left = cp.toughness - shrink;
+                left <= 0
+                    || (left <= c.damage as i32 && !cp.keywords().has_kw(&crate::card::Keyword::Indestructible))
+            })
+        })
+        .map(|c| (permanent_value(state, c.id, w), Target::Permanent(c.id)))
+        .filter(|(_, t)| {
+            filter.as_ref().is_none_or(|f| state.evaluate_requirement_static(f, t, seat, None))
+                && state.check_target_legality(t, seat).is_ok()
+        })
+        .max_by_key(|(v, _)| *v)
+        .map(|(_, t)| t)
+}
+
 fn burn_kill_target(state: &GameState, seat: usize, eff: &Effect, w: &EvalWeights) -> Option<Target> {
     use crate::effect::Value;
     // `any_nested` takes a `Fn`, so the largest amount is kept in a cell.
@@ -36036,4 +36183,71 @@ fn token_copy_nonlegend_targets(
     };
     let keep: Vec<_> = legal.iter().filter(|t| !legend(t)).cloned().collect();
     (!keep.is_empty() && keep.len() < legal.len()).then_some(keep)
+}
+
+/// The 2026-11-23 FRA card audit's bot fixes (`.ladder/audit/`).
+#[cfg(test)]
+mod fra_audit_tests {
+    use super::*;
+    use crate::catalog;
+    use crate::game::two_player_game;
+    use crate::game::types::{Target, TurnStep};
+    use crate::mana::Color;
+
+    /// `debuff_removal_anytime` aims a single-target kill-shrink at a
+    /// creature it kills, or doesn't offer it: Last Gasp went at the biggest
+    /// power, and 71 of 182 own-turn casts left their target alive
+    /// (`shrink_kill_target`).
+    #[test]
+    fn last_gasp_is_aimed_at_a_creature_it_kills() {
+        let w = EvalWeights::fra_fixes_on();
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let gasp = g.add_card_to_hand(0, catalog::last_gasp());
+        g.players[0].mana_pool.add(Color::Black, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        g.add_card_to_battlefield(1, catalog::serra_angel());
+        let aims = |g: &GameState| -> Vec<Option<Target>> {
+            cast_candidates(g, 0, &w, None)
+                .into_iter()
+                .filter_map(|(a, _)| match a {
+                    GameAction::CastSpell { card_id, target, .. } if card_id == gasp => Some(target),
+                    _ => None,
+                })
+                .collect()
+        };
+        assert!(aims(&g).is_empty(), "a 4/4 survives -3/-3: not offered");
+        let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        assert_eq!(aims(&g), vec![Some(Target::Permanent(bears))]);
+    }
+
+    /// A blocker under Ghalta the Immovable deals its toughness, and the
+    /// attack planner's block read says so: a 0/7 Ghalta kills a 2/2 and
+    /// lives. Read by power, it killed nothing, and opponents attacked into it
+    /// 59 % of the time against 33 % into a 6/6.
+    #[test]
+    fn a_ghalta_blocker_deals_its_toughness() {
+        let mut g = two_player_game();
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let ghalta = g.add_card_to_battlefield(1, catalog::ghalta_the_immovable());
+        let atk = g.battlefield_find(bears).unwrap().clone();
+        let blk = g.battlefield_find(ghalta).unwrap().clone();
+        assert_eq!(block_outcomes(&g, &atk, &[&blk]), (true, false), "Ghalta kills the 2/2 and survives");
+    }
+
+    /// Pia, Aether Ascetic's "you may discard a card. If you do, search for
+    /// an enchantment" is declined with no enchantment left in the library
+    /// (73 of 174 accepted discards searched for nothing), and taken with one.
+    #[test]
+    fn pia_declines_a_discard_into_an_empty_search() {
+        let mut g = two_player_game();
+        let pia = g.add_card_to_battlefield(0, catalog::pia_aether_ascetic());
+        g.add_card_to_library(0, catalog::island());
+        let ask = "Discard a card to search for an enchantment card?";
+        assert!(!optional_trigger_beneficial(&g, pia, ask), "nothing to find");
+        g.add_card_to_library(0, catalog::pacifism());
+        assert!(optional_trigger_beneficial(&g, pia, ask), "an enchantment to find");
+    }
 }
