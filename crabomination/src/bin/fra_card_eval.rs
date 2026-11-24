@@ -221,7 +221,10 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     let variant: Option<String> = arg("--trial").and_then(|t| t.strip_prefix("policy-value+").map(str::to_string));
     if let Some(v) = &variant {
         let polish_n = v.strip_prefix("polish").and_then(|n| n.parse::<usize>().ok());
-        assert!(matches!(v.as_str(), "rated" | "lands") || polish_n.is_some_and(|n| n > 0), "--trial policy-value+{v}: rated, lands or polishN");
+        assert!(
+            matches!(v.as_str(), "rated" | "lands" | "cands48") || polish_n.is_some_and(|n| n > 0),
+            "--trial policy-value+{v}: rated, lands, cands48 or polishN"
+        );
     }
     // `--trial policy-castable`: the splash rule's own gate — the policy's
     // greedy build under it against the same policy's build without it.
@@ -326,6 +329,8 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                             opts.land_variants = 3;
                             opts.max_lands = 18;
                         }
+                        // 16 at T = 1 (the adopted stream) plus 32 hotter.
+                        "cands48" => opts.hot_samples = 32,
                         _ => opts.polish = v["polish".len()..].parse().expect("checked above"),
                     }
                     (adopted, p.build_valued_with(&pool, value, 16, &mut StdRng::seed_from_u64(salt ^ 3), &opts))

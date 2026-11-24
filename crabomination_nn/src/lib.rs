@@ -554,8 +554,8 @@ impl DeckNet {
         self.emb.rows
     }
 
-    /// Grow the embedding table to `new_vocab` rows, zero-filling the ones
-    /// this net never saw. Sound because card names own a frozen index
+    /// Grow the embedding table to `new_vocab` rows, the ones this net never
+    /// saw copied from row 0 (the unknown slot). Sound because card names own a frozen index
     /// (`server::vocab_snapshot`) and a vocabulary only grows at the end.
     /// (Nets from before that freeze are unloadable, not merely short.)
     /// Narrowing is rejected.
@@ -566,7 +566,7 @@ impl DeckNet {
                 format!("net vocab {} is larger than the encoder's {new_vocab}", self.emb.rows),
             ));
         }
-        self.emb.pad_rows(new_vocab);
+        self.emb.pad_rows_with_row0(new_vocab);
         Ok(())
     }
 
@@ -1034,14 +1034,34 @@ impl Tensor2 {
         self.retranspose();
     }
 
-    /// Extend to `new_rows` by appending zero rows at the bottom. Used for
-    /// vocabulary growth: frozen card indices (`server::vocab_snapshot`)
-    /// only grow at the end, and an unseen card embedding as zeros matches
-    /// what an off-set card gets anyway.
+    /// Extend to `new_rows` by appending zero rows at the bottom: the
+    /// vocabulary-sized belief head's growth (frozen card indices,
+    /// `server::vocab_snapshot`, only grow at the end). An embedding table
+    /// pads with [`pad_rows_with_row0`](Self::pad_rows_with_row0) instead.
     pub fn pad_rows(&mut self, new_rows: usize) {
         debug_assert!(new_rows >= self.rows);
         self.data.resize(new_rows * self.cols, 0.0);
         self.rows = new_rows;
+        self.retranspose();
+    }
+
+    /// Extend an embedding table to `new_rows` with copies of row 0, the
+    /// trained unknown/token slot. [`pad_rows`](Self::pad_rows)'s zero row
+    /// is not "unknown": row 0 is a trained vector (norm 5.2 in the
+    /// champion), and a zero row sits nearly as far from it as a real card
+    /// does, so before 2026-11-23 a padded card read as a fourth thing that
+    /// was neither unknown, a token nor a card.
+    pub fn pad_rows_with_row0(&mut self, new_rows: usize) {
+        debug_assert!(new_rows >= self.rows);
+        let old = self.rows;
+        self.pad_rows(new_rows);
+        if old == 0 || new_rows == old {
+            return;
+        }
+        let row0: Vec<f32> = self.data[..self.cols].to_vec();
+        for r in old..new_rows {
+            self.data[r * self.cols..(r + 1) * self.cols].copy_from_slice(&row0);
+        }
         self.retranspose();
     }
 }
@@ -1239,6 +1259,9 @@ fn get_tensor_dyn(
             return Err(NnError::BadTensor(family, format!("{name}: rank {} shape", view.shape().len())));
         }
     };
+    if view.data().len() != rows * cols * 4 {
+        return Err(NnError::BadTensor(family, format!("{name}: data length != shape")));
+    }
     let data = view.data().as_chunks::<4>().0.iter().map(|c| f32::from_le_bytes(*c)).collect();
     Ok(Tensor2::new(rows, cols, data))
 }
@@ -1371,7 +1394,8 @@ impl PlayNet {
 
     /// Grow the embedding table (and the vocabulary-sized opponent-card
     /// head that shadows it) to `new_vocab` rows. See
-    /// [`DeckNet::pad_vocab`] for why zero-filling is sound.
+    /// [`DeckNet::pad_vocab`] for why padding is sound. The embedding pads
+    /// with row 0 (unknown); the belief head with zeros (no logit).
     pub fn pad_vocab(&mut self, new_vocab: usize) -> Result<(), NnError> {
         if new_vocab < self.emb.rows {
             return Err(NnError::BadTensor(
@@ -1379,7 +1403,7 @@ impl PlayNet {
                 format!("net vocab {} is larger than the encoder's {new_vocab}", self.emb.rows),
             ));
         }
-        self.emb.pad_rows(new_vocab);
+        self.emb.pad_rows_with_row0(new_vocab);
         if let Some(w) = &mut self.opp_w {
             w.pad_rows(new_vocab);
             self.opp_b.resize(new_vocab, 0.0);
@@ -2285,7 +2309,7 @@ mod tests {
         assert_eq!(net.vocab_size(), 5);
         assert!((net.forward(&s) - before).abs() < 1e-9, "a known card moved");
 
-        // Card 4 is one of the new rows: zero embedding, so it scores
+        // Card 4 is one of the new rows: a copy of row 0, so it scores
         // exactly as card 0 (the reserved unknown slot) does.
         let mut unknown = EncodedState::default();
         unknown.global[3] = 0.25;

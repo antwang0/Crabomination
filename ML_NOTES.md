@@ -7,6 +7,22 @@ only stays dead while the reasoning that killed it is readable.
 
 ## Tier 13 — AI
 
+> ⚠ **Round 88 (2026-11-24) — read before citing any attention, `--blocks`,
+> TableNet-blocks or "unknown card" result below.** candle 0.11's
+> `ops::softmax_last_dim` and fused `ops::layer_norm` (taken by
+> `LayerNorm::forward` on contiguous input) have no backward pass, so every
+> `--attn` net trained before round 88 has q / k at their random init (the
+> champion's and the policy champion's `attn.q`/`attn.k` are bit-identical),
+> and every `--blocks` / TableNet block had frozen ln1 / ln2 and q / k with
+> the residual branches detached — the "blocks collapse" of TableNet runs
+> 3-4. Attention results measured V / O mixing over a fixed random mixer;
+> blocks results measured a broken block. Also: a card row a net never
+> trained on is its N(0, 1) init, not "unknown" (row 0 is a trained vector),
+> and padded rows were zeros, a third encoding — so "reads them as unknown"
+> below is wrong for every net trained after the vocab append. Fixed in
+> round 88 (`ln_with_grad`, composed softmax, `pad_rows_with_row0`,
+> `--reset-unseen`); see the Round 88 entry at the end.
+
 - 🟢 **Deck-net re-gate (2026-08-24) — the fifth and sixth gates land on
   the historical band, and the committed-artifact defect closes without a
   retrain.** All seven committed `deck-latest` checkpoints were vocab 153

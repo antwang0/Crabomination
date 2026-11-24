@@ -639,7 +639,7 @@ fn encode_state_inner(
                     0
                 };
                 if through > 0 {
-                    gl[if p == seat { 39 } else { 40 }] += through as f32 / 12.0;
+                    gl[if p == seat { 39 } else { 40 }] += scaled(through) / 12.0;
                 }
             }
         }
@@ -1749,6 +1749,15 @@ pub(super) mod tests {
             g.battlefield.push(inst);
         }
         assert_globals_bounded(&encode_state(&g, 0, &vocab));
+        // Attacking too: globals 39 / 40 (power aimed at each life total)
+        // read raw power, unclamped, until 2026-11-23 — a saturated
+        // unblocked attacker put ~1.8e8 into the trunk.
+        g.attacking.push(crate::game::types::Attack {
+            attacker: crate::card::CardId(912),
+            target: crate::game::types::AttackTarget::Player(0),
+        });
+        assert_globals_bounded(&encode_state(&g, 0, &vocab));
+        assert_globals_bounded(&encode_state(&g, 1, &vocab));
     }
 
     /// `pump` saturates rather than wrapping, and `power()` reads the

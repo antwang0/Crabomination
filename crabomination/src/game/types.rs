@@ -2002,6 +2002,7 @@ impl GameAction {
             self,
             A::CastSpell { .. }
                 | A::CastSpellKicked { .. }
+                | A::CastSpellKickers { .. }
                 | A::CastSpellMultikicked { .. }
                 | A::CastBestow { .. }
                 | A::CastSpellBuyback { .. }

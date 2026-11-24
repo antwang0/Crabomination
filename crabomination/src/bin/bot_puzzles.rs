@@ -564,7 +564,7 @@ fn run_scoring(profiles: &[String]) {
     }
 }
 
-/// `--real-counter N [--reps R] [--truth T] [--pos K] PROFILE..`: the SOS counter
+/// `--real-counter N [--reps R] [--truth T] [--pos K] [--honest-truth] PROFILE..`: the SOS counter
 /// item (`blunder::transplant_counter`) on real positions from N games of
 /// SOS sealed self-play. Per position: the heuristic play-out of holding
 /// and of spending on the Tabulator (T games each), then each profile's
@@ -579,6 +579,9 @@ fn run_real_counter(games: u64, removal: bool) {
     let a: Vec<String> = std::env::args().collect();
     let flag = |f: &str, d: u64| a.iter().position(|x| x == f).and_then(|i| a.get(i + 1)).map_or(d, |v| v.parse().expect("a number"));
     let (reps, truth) = (flag("--reps", 3), flag("--truth", 20));
+    // `--honest-truth`: the truth play-outs redeal the opponent's hidden
+    // cards from seat 0's view (`blunder::hold_or_spend_truth`).
+    let honest_truth = a.iter().any(|x| x == "--honest-truth");
     // `--pos K`: only board K (for reading one board's search, CRAB_MCTS_ROOT=1).
     let only_pos = a.iter().position(|x| x == "--pos").and_then(|i| a.get(i + 1)).map(|v| v.parse::<usize>().expect("--pos K"));
     let skip: Vec<usize> = ["--real-counter", "--real-removal", "--reps", "--truth", "--pos"]
@@ -602,7 +605,7 @@ fn run_real_counter(games: u64, removal: bool) {
             continue;
         }
         let (pos, cards) = if removal { transplant_removal(real) } else { transplant_counter(real) };
-        let Some((h, s, f)) = hold_or_spend_truth(&pos, cards, truth) else {
+        let Some((h, s, f)) = hold_or_spend_truth(&pos, cards, truth, honest_truth) else {
             println!("#{k:<3} skipped: the spend can't be cast here");
             continue;
         };

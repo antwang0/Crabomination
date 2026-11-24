@@ -574,7 +574,14 @@ impl Bot for HoldAndCounter {
 /// The third count is the "free" line: the heuristic plays its own turn as
 /// it likes except for the answer, then answers the Embermare if it still
 /// can — what a pilot that casts some other spell now is choosing.
-pub fn hold_or_spend_truth(pos: &Position, cards: CounterCards, n: u64) -> Option<(u64, u64, u64)> {
+///
+/// `honest`: each play-out first redeals the opponent's hidden cards from
+/// seat 0's view (`determinize_hidden`), so the truth is the value of each
+/// line *to a player who cannot see the hand*. Without it the play-outs deal
+/// the real hand, the transplanted Embermare included, while a `det1` pilot
+/// sees it in about |hand| / (|hand| + |library|) of its rollouts: "hold
+/// right" then rewards knowing the hand (2026-11-23 audit).
+pub fn hold_or_spend_truth(pos: &Position, cards: CounterCards, n: u64, honest: bool) -> Option<(u64, u64, u64)> {
     {
         let mut g = pos.state.clone();
         g.perform_action(cards.spend()).ok()?;
@@ -591,6 +598,9 @@ pub fn hold_or_spend_truth(pos: &Position, cards: CounterCards, n: u64) -> Optio
                 g.players[p].library.shuffle(&mut rng);
             }
             g.rng.reseed(k ^ 0xC0FF_EE00);
+            if honest {
+                super::bot::determinize_hidden(&mut g, 0, k.wrapping_mul(0x9E37_79B9) ^ 0x4F4E_E57);
+            }
             if line == 1 {
                 if g.perform_action(cards.spend()).is_err() {
                     continue;

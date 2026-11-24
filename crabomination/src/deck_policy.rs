@@ -335,6 +335,9 @@ impl DeckPolicy {
         for _ in 0..samples {
             push(self.build(pool, Some((&mut *rng, 1.0))));
         }
+        for k in 0..opts.hot_samples {
+            push(self.build(pool, Some((&mut *rng, if k % 2 == 0 { 1.5 } else { 2.0 }))));
+        }
         for (a, &c1) in Color::ALL.iter().enumerate() {
             for &c2 in &Color::ALL[a + 1..] {
                 if let Some(d) = self.build_in(pool, [c1, c2]) {
@@ -396,6 +399,11 @@ pub struct ValuedOpts {
     pub max_lands: usize,
     /// The most value-guided swaps after the pick (0 = none).
     pub polish: usize,
+    /// Extra sampled candidates past the T = 1 ones, alternating T = 1.5
+    /// and T = 2 (lead "6c": the value's best-of-K margin grew ~+0.02
+    /// logits per doubling of K on the gen-1 FRA race, and the race itself
+    /// sampled at 1 / 1.5 / 2).
+    pub hot_samples: usize,
 }
 
 fn nonland(deck: &[CardFactory]) -> Vec<CardFactory> {
@@ -449,7 +457,11 @@ fn polish(pool: &[CardFactory], mut deck: Vec<CardFactory>, mut v: f64, value: &
         let (_, main_set) = main_colors(&spells);
         let mut ins: Vec<CardFactory> = Vec::new();
         for &f in pool {
-            if crate::cube::card_def(f).is_land() || !fits(f, main_set) || ins.iter().any(|g| key(g) == key(&f)) {
+            // `!value.knows`: a card the value has no row for scores 0, which
+            // reads as an upgrade over any below-median card (the guard the
+            // old `deck_value_build` had and `knows` documents; 2026-11-23).
+            let def = crate::cube::card_def(f);
+            if def.is_land() || !fits(f, main_set) || !value.knows(def.name) || ins.iter().any(|g| key(g) == key(&f)) {
                 continue;
             }
             let have = pool.iter().filter(|g| key(g) == key(&f)).count();

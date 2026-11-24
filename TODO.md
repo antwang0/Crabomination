@@ -406,12 +406,13 @@ real positions"): on real boards (`bot_puzzles --real-counter`) the client
 still spends the counter where holding wins, because the menu search's hold
 arm is a priority pass whose rollouts spend the mana later in the turn. The
 Murder item is the heuristic's opponent-turn removal timing plus a policy
-prior that decides a tie. The hold arm (`-ho`, ML_NOTES "The hold arm")
-halves those spends at no ladder loss but costs a shell blunder item, so it is
-not adopted; `-ho-rh` holds best but costs two items. **Next:** rebuild the
-blunder set on real shells (the shell items mislead in both directions), then
-re-read `-ho` there; its remaining gap is rollout fidelity inside a 3-turn
-horizon.
+prior that decides a tie. The hold arm (`-ho`) was re-gated on real-board
+items and **adopted 2026-11-21** (`MctsConfig::with_hold_arm`, b7b90e4b7: NO
+LOSS on SOS / FRA / cube / Modern, real-board counter items 10 / 10). The
+2026-11-23 audit found its rollouts refused only plain `CastSpell` (fixed
+behind `-hc`, round 88) and that the real-board truths deal the real hand
+(`--honest-truth`, round 88). Its remaining gap is rollout fidelity inside a
+3-turn horizon.
 
 The 2026-11-11 item list, by outcome (reasoning in ML_NOTES "Why the
 champion reads 0.442 on a 0.500 base rate", "The combat window of the menu

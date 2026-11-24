@@ -635,7 +635,7 @@ impl TableNet {
                 ),
             ));
         }
-        self.name_emb.pad_rows(new_vocab);
+        self.name_emb.pad_rows_with_row0(new_vocab);
         Ok(())
     }
 

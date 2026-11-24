@@ -70,6 +70,7 @@ use crabomination_ml::{DeckNetConfig, DeckTrainer, NetConfig, SampleWindow, Trai
 use crabomination_nn::{DeckNet, DeckRow, TrainRow};
 use rand::rngs::StdRng;
 use rand::{RngExt, SeedableRng};
+use rand::seq::SliceRandom;
 
 struct Args {
     actors: usize,
@@ -260,6 +261,35 @@ struct Args {
     /// horizon should approximate the *expected* run length under early
     /// stop, not the `--steps` cap.
     lr_cosine: u64,
+    /// `--lr-cosine auto`: the horizon is `--steps-per-game` x `--games`, so
+    /// the schedule anneals over the run actually made. A fixed 60 000
+    /// left r81 s43 (30,770 steps) at lr factor 0.53 and spent r87's R40
+    /// 40 k steps on the floor (2026-11-23 audit).
+    lr_cosine_auto: bool,
+    /// Sample only rows a relabel pass has reached (their λ-return, never
+    /// the raw result they enter with); `SampleWindow::
+    /// sample_labelled_with_targets`.
+    sample_labelled: bool,
+    /// Save every embedding row no trained row ever named as a copy of the
+    /// unknown row 0 (`Trainer::track_seen_cards`).
+    reset_unseen: bool,
+    /// Re-draw the card embedding and group tags at N(0, std) instead of
+    /// candle's N(0, 1) (`Trainer::set_embedding_init_std`). Fresh runs only.
+    emb_init_std: Option<f64>,
+    /// A frozen holdout (`write_shard` rows, from `--write-holdout`): every
+    /// checkpoint's val metrics, `best` and the stale stop read it, and the
+    /// actors' own holdout games train instead. Seed-independent, so AUC
+    /// compares across seeds and arms.
+    holdout_file: Option<PathBuf>,
+    /// Diagnostic mode: play `--holdout-games` games on a seed stream of
+    /// their own, keep at most 4 rows a game (two snapshots, both seats),
+    /// write them to this path and exit.
+    write_holdout: Option<PathBuf>,
+    holdout_games: usize,
+    /// Diagnostic mode: score each net in `--nets a,b,..` on this holdout
+    /// file (AUC, log-loss, mean prediction, and the ply 0-11 stratum).
+    score_holdout: Option<PathBuf>,
+    nets: Vec<PathBuf>,
     /// Actor-side softmax action sampling: temperature in eval units
     /// (0 = off). ~120 is one mid-size creature on the heuristic scale;
     /// ~300 ≈ 3 % win probability on the net's ±10 000 scale.
@@ -446,6 +476,15 @@ fn parse_args() -> Args {
         muon: false,
         muon_lr: 0.02,
         lr_cosine: 0,
+        lr_cosine_auto: false,
+        sample_labelled: false,
+        reset_unseen: false,
+        emb_init_std: None,
+        holdout_file: None,
+        write_holdout: None,
+        holdout_games: 2000,
+        score_holdout: None,
+        nets: Vec::new(),
         sample_temp: 0,
         sample_turns: 6,
         mcts_actors: 0,
@@ -635,7 +674,28 @@ fn parse_args() -> Args {
                 continue; // bare flag, consumes no value
             }
             "--muon-lr" => a.muon_lr = val().parse().expect("--muon-lr"),
-            "--lr-cosine" => a.lr_cosine = val().parse().expect("--lr-cosine"),
+            "--lr-cosine" => {
+                let v = val();
+                if v == "auto" {
+                    a.lr_cosine_auto = true;
+                } else {
+                    a.lr_cosine = v.parse().expect("--lr-cosine N|auto");
+                }
+            }
+            "--sample-labelled" => {
+                a.sample_labelled = true;
+                continue; // bare flag, consumes no value
+            }
+            "--reset-unseen" => {
+                a.reset_unseen = true;
+                continue; // bare flag, consumes no value
+            }
+            "--emb-init-std" => a.emb_init_std = Some(val().parse().expect("--emb-init-std")),
+            "--holdout-file" => a.holdout_file = Some(PathBuf::from(val())),
+            "--write-holdout" => a.write_holdout = Some(PathBuf::from(val())),
+            "--holdout-games" => a.holdout_games = val().parse().expect("--holdout-games"),
+            "--score-holdout" => a.score_holdout = Some(PathBuf::from(val())),
+            "--nets" => a.nets = val().split(',').filter(|x| !x.is_empty()).map(PathBuf::from).collect(),
             "--sample-temp" => a.sample_temp = val().parse().expect("--sample-temp"),
             "--sample-turns" => a.sample_turns = val().parse().expect("--sample-turns"),
             "--mcts-actors" => a.mcts_actors = val().parse().expect("--mcts-actors"),
@@ -661,6 +721,10 @@ fn parse_args() -> Args {
             }
             other => panic!("unknown flag {other} (see the module doc for usage)"),
         }
+    }
+    if a.lr_cosine_auto {
+        assert!(a.steps_per_game > 0.0, "--lr-cosine auto needs --steps-per-game (the horizon is steps/game x games)");
+        a.lr_cosine = (a.steps_per_game * a.games.expect("--lr-cosine auto needs --games") as f64).round().max(1.0) as u64;
     }
     a
 }
@@ -852,7 +916,7 @@ fn load_deck_net(path: &std::path::Path, vocab: &Vocab, why: &str) -> DeckNet {
     if have < want {
         eprintln!(
             "{}: deck net trained at vocab {have}, encoder is {want} — padded the {} newer \
-             cards to a zero embedding. They score as unknown until the net is retrained.",
+             cards to the unknown row (row 0). They score as unknown until the net is retrained.",
             path.display(),
             want - have,
         );
@@ -1044,8 +1108,10 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         }
         // A whole game's rows share a trajectory pair and `is_holdout`
         // hashes the game half of the id, so both seats land on one side.
+        // A frozen holdout replaces the actors' own: every row trains.
+        let frozen = args.holdout_file.is_some();
         let (val_rows, train_rows): (Vec<TrainRow>, Vec<TrainRow>) =
-            rec.rows.into_iter().partition(|r| is_holdout(r.traj, args.holdout));
+            rec.rows.into_iter().partition(|r| !frozen && is_holdout(r.traj, args.holdout));
         if !val_rows.is_empty() {
             const VAL_CAP: usize = 20_000;
             let mut v = shared.val.lock().unwrap();
@@ -1104,9 +1170,10 @@ impl LearnerTiming {
     }
 }
 
-fn sample_owned(shared: &Shared, n: usize, rng: &mut StdRng) -> Vec<(TrainRow, f32)> {
+fn sample_owned(shared: &Shared, n: usize, rng: &mut StdRng, labelled: bool) -> Vec<(TrainRow, f32)> {
     let w = shared.window.lock().unwrap();
-    w.sample_with_targets(n, rng).into_iter().map(|(r, t)| (r.clone(), t)).collect()
+    let draws = if labelled { w.sample_labelled_with_targets(n, rng) } else { w.sample_with_targets(n, rng) };
+    draws.into_iter().map(|(r, t)| (r.clone(), t)).collect()
 }
 
 /// Wilson score interval (z = 1.96), same construction as bot_ladder's.
@@ -1653,6 +1720,16 @@ fn main() {
         if args.record_combat { " + declare-blockers/end-combat" } else { " (no combat rows)" }
     );
     let vocab = Vocab::sos_sealed();
+    // Every trainer built from here on (CUDA) starts from `--seed`'s init.
+    crabomination_ml::set_init_seed(args.seed);
+    if let Some(path) = &args.write_holdout {
+        write_holdout(&args, &vocab, path);
+        return;
+    }
+    if let Some(path) = &args.score_holdout {
+        score_holdout(&args, &vocab, path);
+        return;
+    }
     if let Some(games) = args.gate_builder_v3 {
         gate_builder_v3(&args, games);
         return;
@@ -1744,6 +1821,14 @@ fn main() {
         Trainer::new(&cfg, args.lr).expect("trainer init")
     };
     trainer.set_bce(args.bce);
+    if let Some(std) = args.emb_init_std {
+        trainer.set_embedding_init_std(std).expect("--emb-init-std");
+        eprintln!("embeddings and group tags re-drawn at N(0, {std})");
+    }
+    if args.reset_unseen {
+        trainer.track_seen_cards(cfg.vocab);
+        eprintln!("unseen embedding rows save as the unknown row (--reset-unseen)");
+    }
     // A frozen copy of the pilot, for the `pilot_policy` reference.
     // lr 0 and never stepped: this exists only to score.
     let pilot_trainer: Option<Trainer> = args.record_decisions.then_some(args.use_best.as_ref()).flatten().and_then(|p| {
@@ -1873,6 +1958,19 @@ fn main() {
             let cfg = file_net_config(best, vocab.size()).unwrap_or_else(|| {
                 panic!("--gpu-eval: cannot read the pilot net {}", best.display())
             });
+            // `BatchEvalClient` serves the win and the shared policy logit
+            // only; the trait defaults would silently drop a kind table, an
+            // action head and a belief head, so the actors' priors would not
+            // be the net the lobby plays (2026-11-23 audit).
+            let bytes = std::fs::read(best).unwrap_or_else(|e| panic!("{}: {e}", best.display()));
+            let net = crabomination_nn::PlayNet::load(&bytes).unwrap_or_else(|e| panic!("{}: {e:?}", best.display()));
+            if net.has_policy_kinds() || net.has_action_head() || net.has_opp_head() {
+                panic!(
+                    "--gpu-eval cannot serve {}: it carries a kind table, action head or belief head \
+                     that the batched client would drop; run without --gpu-eval",
+                    best.display()
+                );
+            }
             let client = crabomination_ml::BatchEvalServer::start(
                 &cfg,
                 best,
@@ -1952,7 +2050,16 @@ fn main() {
 
     let shared = Shared {
         window: Mutex::new(SampleWindow::new(args.window)),
-        val: Mutex::new(Vec::new()),
+        val: Mutex::new(match &args.holdout_file {
+            Some(p) => {
+                let bytes = std::fs::read(p).unwrap_or_else(|e| panic!("--holdout-file {}: {e}", p.display()));
+                let rows = crabomination_nn::read_shard(&bytes)
+                    .unwrap_or_else(|| panic!("--holdout-file {}: not a shard", p.display()));
+                eprintln!("frozen holdout: {} rows from {}", rows.len(), p.display());
+                rows
+            }
+            None => Vec::new(),
+        }),
         deck_window: Mutex::new(std::collections::VecDeque::new()),
         decisions: Mutex::new(std::collections::VecDeque::new()),
         decisions_val: Mutex::new(Vec::new()),
@@ -2175,7 +2282,7 @@ fn main() {
                     timing.relabel += t0.elapsed();
                 }
                 let t0 = Instant::now();
-                let rows = sample_owned(&shared, args.batch, &mut rng);
+                let rows = sample_owned(&shared, args.batch, &mut rng, args.sample_labelled);
                 timing.sample += t0.elapsed();
                 let refs: Vec<(&TrainRow, f32)> = rows.iter().map(|(r, t)| (r, *t)).collect();
                 if args.lr_cosine > 0 {
@@ -2977,6 +3084,90 @@ fn feature_census(args: &Args, vocab: &Vocab, games: usize) {
 ///
 /// The heuristic gets a fitted one-parameter logistic (`p = sigmoid(score /
 /// t)`, `t` by scan), so it is scored as the best forecast it can support.
+/// `--write-holdout PATH`: a frozen, seed-independent holdout. Plays
+/// `--holdout-games` sealed games on a seed stream of its own (not
+/// `--seed`'s, so every run and arm scores the same games), with the actors'
+/// deck builder (`--actor-rated-decks` honoured) and the default pilot, and
+/// keeps two random snapshots a game, both seats (at most 4 rows), so long
+/// games and late plies stop dominating the metric. The actors' first-come
+/// 20 k-row holdout was ~165 games, different per seed (2026-11-23 audit).
+fn write_holdout(args: &Args, vocab: &Vocab, path: &std::path::Path) {
+    const HOLDOUT_SEED: u64 = 0x401D_F0E5_7000_0001;
+    let mut rng = StdRng::seed_from_u64(HOLDOUT_SEED ^ 0x5A17);
+    let mut rows: Vec<TrainRow> = Vec::new();
+    let mut games = 0usize;
+    let mut n = 0u64;
+    while games < args.holdout_games {
+        n += 1;
+        let salt = |k: u64| HOLDOUT_SEED ^ n.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0x9E37_79B9);
+        let pool_a = sealed_pool(salt(1));
+        let pool_b = sealed_pool(salt(2));
+        let build = |pool: &[crabomination::cube::CardFactory], seed: u64| {
+            if args.actor_rated_decks && crabomination::card_ratings::rates_pool(pool) {
+                crabomination::selfplay::heuristic_sealed_build_rated(pool, seed)
+            } else {
+                heuristic_sealed_build(pool, seed)
+            }
+        };
+        let deck_a = build(&pool_a, salt(3));
+        let deck_b = build(&pool_b, salt(4));
+        let template = sealed_game_template(&deck_a, &deck_b);
+        let rec = play_recorded_game(
+            &template,
+            [EvalWeights::default(), EvalWeights::default()],
+            rng.random_range(0..u64::MAX),
+            4_000,
+            vocab,
+        );
+        let pairs = rec.rows.len() / 2;
+        if pairs == 0 {
+            continue;
+        }
+        let mut picks: Vec<usize> = (0..pairs).collect();
+        picks.shuffle(&mut rng);
+        for &i in picks.iter().take(2) {
+            rows.push(rec.rows[2 * i].clone());
+            rows.push(rec.rows[2 * i + 1].clone());
+        }
+        games += 1;
+        if games % 250 == 0 {
+            eprintln!("holdout: {games} games, {} rows", rows.len());
+        }
+    }
+    std::fs::write(path, crabomination_nn::write_shard(&rows)).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    println!("wrote {} rows from {games} games to {}", rows.len(), path.display());
+}
+
+/// `--score-holdout PATH --nets a,b,..`: each net's AUC, log-loss, mean
+/// prediction (against the base rate) and early-ply (< 12) AUC on one frozen
+/// holdout — the paired comparison the per-seed first-come holdout could not
+/// give. Each net's architecture comes from its own file.
+fn score_holdout(_args: &Args, vocab: &Vocab, path: &std::path::Path) {
+    let bytes = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+    let rows = crabomination_nn::read_shard(&bytes).unwrap_or_else(|| panic!("{}: not a shard", path.display()));
+    let refs: Vec<&TrainRow> = rows.iter().collect();
+    let base = rows.iter().map(|r| r.win).sum::<f32>() / rows.len().max(1) as f32;
+    println!("holdout {}: {} rows, base rate {base:.3}", path.display(), rows.len());
+    println!("{:<60} {:>7} {:>8} {:>7} {:>9}", "net", "AUC", "logloss", "mean p", "AUC p<12");
+    for net in &_args.nets {
+        let Some(cfg) = file_net_config(net, vocab.size()) else {
+            println!("{:<60} unreadable", net.display());
+            continue;
+        };
+        let mut t = Trainer::new(&cfg, 0.0).expect("trainer");
+        if let Err(e) = t.load(net) {
+            println!("{:<60} load failed: {e}", net.display());
+            continue;
+        }
+        let p = t.predict_win_batch(&refs, 512).expect("forward");
+        let a = auc(p.iter().zip(&rows).map(|(&p, r)| (p, r.win)));
+        let ll = log_loss(p.iter().zip(&rows).map(|(&p, r)| (p, r.win)));
+        let mean = p.iter().map(|&x| x as f64).sum::<f64>() / p.len().max(1) as f64;
+        let early = auc(p.iter().zip(&rows).filter(|(_, r)| r.ply < 12).map(|(&p, r)| (p, r.win)));
+        println!("{:<60} {a:>7.4} {ll:>8.4} {mean:>7.3} {early:>9.4}", net.display().to_string());
+    }
+}
+
 fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     let best = args.use_best.as_ref().expect("--calibrate needs --use-best WEIGHTS");
     let cfg = net_config(args, vocab.size());
@@ -3098,6 +3289,7 @@ fn calibrate(args: &Args, vocab: &Vocab, games: usize) {
     );
     let mean_p = obs.iter().map(|o| o.0 as f64).sum::<f64>() / obs.len() as f64;
     println!("  mean prediction {mean_p:.4} against base rate {base:.4}");
+    reliability(&obs.iter().map(|o| (o.0, o.2)).collect::<Vec<_>>());
     println!("  by own hand size: positions, mean prediction, mean residual (result − net)");
     for (h, &(n, r, p)) in by_hand.iter().enumerate().filter(|(_, e)| e.0 > 0) {
         println!("    {h}{}  {n:>7}  {:.3}  {:+.3}", if h == 8 { "+" } else { " " }, p / n as f64, r / n as f64);
@@ -3350,6 +3542,43 @@ const PLY_EDGES: [u16; 6] = [0, 4, 8, 12, 20, 32];
 /// Both seats are snapshotted at the same `ply`, so every stratum's base
 /// rate is 0.5. The heuristic keeps its global temperature: refitting per
 /// bucket would give it a free parameter it doesn't have in play.
+/// Reliability bins (mean prediction vs observed rate per tenth) and the
+/// Platt fit `sigmoid(a·logit(p) + b)` that minimises log-loss: `a` < 1 says
+/// the net is over-confident, > 1 under-confident; `b` is its level offset.
+/// The search mixes the leaf with exact 0 / 1 terminal rewards, so either
+/// error shifts every arm whose rollouts sometimes end the game (round 88, B6).
+fn reliability(obs: &[(f32, f32)]) {
+    let mut bins = [(0u64, 0f64, 0f64); 10];
+    for &(p, y) in obs {
+        let b = &mut bins[((p * 10.0) as usize).min(9)];
+        b.0 += 1;
+        b.1 += p as f64;
+        b.2 += y as f64;
+    }
+    println!("  reliability: bin, n, mean prediction, observed rate");
+    for (i, &(n, sp, sy)) in bins.iter().enumerate().filter(|(_, b)| b.0 > 0) {
+        println!("    {:.1}-{:.1}  {n:>7}  {:.3}  {:.3}", i as f32 / 10.0, (i + 1) as f32 / 10.0, sp / n as f64, sy / n as f64);
+    }
+    let logit = |p: f32| {
+        let p = p.clamp(1e-4, 1.0 - 1e-4);
+        (p / (1.0 - p)).ln()
+    };
+    let z: Vec<(f32, f32)> = obs.iter().map(|&(p, y)| (logit(p), y)).collect();
+    let (mut best_a, mut best_b, mut best_ll) = (1.0f32, 0.0f32, f32::INFINITY);
+    for ai in 0..41 {
+        let a = 0.5 + ai as f32 * 0.05;
+        for bi in 0..41 {
+            let b = -0.5 + bi as f32 * 0.025;
+            let ll = log_loss(z.iter().map(|&(x, y)| (1.0 / (1.0 + (-(a * x + b)).exp()), y)));
+            if ll < best_ll {
+                (best_a, best_b, best_ll) = (a, b, ll);
+            }
+        }
+    }
+    let raw = log_loss(obs.iter().copied());
+    println!("  Platt fit: a {best_a:.2}  b {best_b:+.3}  log-loss {raw:.4} -> {best_ll:.4}");
+}
+
 fn ply_strata(obs: &[(f32, f32, f32, u16)], heur_t: f32) {
     println!("  by ply (snapshots are ~3/turn/seat, so ply 12 is about turn 4):");
     println!("    {:<8} {:>7}  {:>8} {:>8} {:>7}   {:>8} {:>8}", "ply", "n", "net AUC", "heur", "delta", "net LL", "heur LL");

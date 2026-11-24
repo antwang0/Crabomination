@@ -491,8 +491,43 @@ pub struct MctsConfig {
     /// budget alone stops it, and a search replays). Past it every rollout
     /// loop stops after its current rollout; the seeding pass still rolls
     /// each arm once. For a human's table, where the budget's tail is the
-    /// wait. Ladder suffix `+dlN`. Not read by the Gumbel search.
+    /// wait. Ladder suffix `+dlN`. Not read by the Gumbel search; the menu
+    /// search reads it between halving rounds.
     pub deadline_ms: u32,
+    /// Uniform rollouts answer pending decisions with the heuristic's
+    /// policy table on material weights (`decide_pending_policy`, no net,
+    /// `eval_modes: false`) instead of `AutoDecider`'s first option, which
+    /// declines every "may", keeps every scry, discards the first cards and
+    /// aims an "any target" trigger at its own controller (the caster's seat
+    /// is listed first). The 2026-08-30 fix reached only
+    /// `heuristic_rollouts`, which no adopted pilot sets (2026-11-23 audit).
+    /// Ladder suffix `-rp`.
+    pub rollout_prompts: bool,
+    /// The hold arm refuses every cast type in its rollouts (kicked,
+    /// flashback, prepared, convoke, ... — `GameAction::is_cast`), not only
+    /// `CastSpell`, and opens beside any castable arm. Ladder suffix `-hc`.
+    pub hold_all_casts: bool,
+    /// The menu search's final pick ranks only the last halving round's
+    /// survivors, as Sequential Halving (and `gumbel_search`) defines it.
+    /// Before, an arm cut in round 1 on 7-10 rollouts kept its frozen mean
+    /// and competed under the final, larger σ scale (a toy simulation picked
+    /// an eliminated arm in 4-13 % of decisions). Ladder suffix `-sv`.
+    pub menu_survivor_pick: bool,
+    /// Each rollout's determinisation also reseeds the engine's random
+    /// stream, so rollouts stop drawing the real game's future coin flips,
+    /// dice, random discards and at-random modes (and stop sharing them).
+    /// Ladder suffix `-rs`.
+    pub rollout_reseed: bool,
+    /// The menu's move keys carry a named permanent's side (`@me`/`@opp`)
+    /// when a same-named permanent has another controller
+    /// (`decision_menu::Keying::side`). Ladder suffix `-kx`.
+    pub menu_side_keys: bool,
+    /// The instant window (`MENU_INSTANT`) is anchored like combat: the
+    /// heuristic's move there — a pass included, its usual answer — stands
+    /// unless the search's pick beats it by `menu_anchor`. `MENU_INSTANT`
+    /// read −1.05 on 2026-10-31, before the anchor existed. Ladder suffix
+    /// `-ia`.
+    pub menu_instant_anchor: bool,
 }
 
 thread_local! {
@@ -569,6 +604,12 @@ impl Default for MctsConfig {
             two_seat_leaf: false,
             menu_no_noise: false,
             menu_state_keys: false,
+            rollout_prompts: false,
+            hold_all_casts: false,
+            menu_survivor_pick: false,
+            rollout_reseed: false,
+            menu_side_keys: false,
+            menu_instant_anchor: false,
         }
     }
 }
@@ -636,9 +677,23 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let (mut crn, mut declare_fix, mut anchor, mut anchor_material) = (false, false, -1.0f64, false);
     let (mut win_discount, mut two_seat, mut no_noise, mut state_keys) = (0.0f64, false, false, false);
     let (mut heuristic_rollouts, mut hold_arm) = (false, false);
+    let (mut rollout_prompts, mut hold_all_casts, mut survivor_pick, mut reseed) = (false, false, false, false);
+    let (mut side_keys, mut instant_anchor) = (false, false);
     for p in parts {
         if p == "crn" {
             crn = true;
+        } else if p == "rp" {
+            rollout_prompts = true;
+        } else if p == "hc" {
+            hold_all_casts = true;
+        } else if p == "sv" {
+            survivor_pick = true;
+        } else if p == "rs" {
+            reseed = true;
+        } else if p == "kx" {
+            side_keys = true;
+        } else if p == "ia" {
+            instant_anchor = true;
         } else if p == "ho" {
             hold_arm = true;
         } else if p == "rh" {
@@ -713,6 +768,12 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
         menu_no_noise: no_noise,
         menu_state_keys: state_keys,
         menu_hold_arm: hold_arm,
+        rollout_prompts,
+        hold_all_casts,
+        menu_survivor_pick: survivor_pick,
+        rollout_reseed: reseed,
+        menu_side_keys: side_keys,
+        menu_instant_anchor: instant_anchor,
         ..MctsConfig::default()
     })
 }
@@ -724,6 +785,8 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
 struct HoldCasts {
     inner: Box<dyn Bot>,
     turn: u32,
+    /// Refuse every cast type, not only `CastSpell` (`hold_all_casts`).
+    all: bool,
 }
 
 impl Bot for HoldCasts {
@@ -731,7 +794,8 @@ impl Bot for HoldCasts {
         let a = self.inner.next_action(state, seat)?;
         // A refused cast is a pass, not silence: the rollout counts a round
         // nobody acts in as stale and stops early.
-        if state.turn_number == self.turn && matches!(a, GameAction::CastSpell { .. }) {
+        let cast = if self.all { a.is_cast() } else { matches!(a, GameAction::CastSpell { .. }) };
+        if state.turn_number == self.turn && cast {
             return Some(GameAction::PassPriority);
         }
         Some(a)
@@ -1027,7 +1091,11 @@ impl MctsBot {
 
     /// How the menu search keys its moves.
     fn keying(&self) -> super::decision_menu::Keying {
-        super::decision_menu::Keying { structural: self.cfg.menu_declare_fix, state: self.cfg.menu_state_keys }
+        super::decision_menu::Keying {
+            structural: self.cfg.menu_declare_fix,
+            state: self.cfg.menu_state_keys,
+            side: self.cfg.menu_side_keys,
+        }
     }
 
     /// Score a finished rollout on a 0..=1 scale. A decided game pins to the
@@ -1100,6 +1168,9 @@ impl MctsBot {
             let salt = 0x3C75_0000 ^ r.random::<u32>() as u64;
             super::bot::redeal_hidden(g, seat, salt, &self.cfg.weights);
         }
+        if self.cfg.rollout_reseed {
+            g.rng.reseed(r.random::<u64>() ^ 0x5EED_F00D_0000_0001);
+        }
     }
 
     /// Play `g` forward to the horizon and score it.
@@ -1146,7 +1217,7 @@ impl MctsBot {
             .collect();
         if let Some(turn) = hold {
             let inner = std::mem::replace(&mut policy[seat], Box::new(HeuristicBot::uniform_baseline()));
-            policy[seat] = Box::new(HoldCasts { inner, turn });
+            policy[seat] = Box::new(HoldCasts { inner, turn, all: self.cfg.hold_all_casts });
         }
         // 400 at the profile's own horizon; a lap horizon buys fuel in
         // proportion, so the longer rollout is not cut short by it.
@@ -1184,6 +1255,16 @@ impl MctsBot {
                             &g,
                             pending.acting_player(),
                             &self.cfg.weights,
+                            &pending.decision,
+                            false,
+                        )
+                    } else if self.cfg.rollout_prompts {
+                        // Material weights: a prompt inside a rollout must
+                        // not reach the net (`rollout_prompts`).
+                        super::bot::decide_pending_policy(
+                            &g,
+                            pending.acting_player(),
+                            &EvalWeights { net_slot: 0, ..self.cfg.weights },
                             &pending.decision,
                             false,
                         )
@@ -1281,7 +1362,15 @@ impl MctsBot {
         if use_head {
             for &i in &live {
                 if let Some(g) = &succ[i]
-                    && let Some(l) = super::net_eval::policy_logit(g, seat, slot)
+                    // Kind-aware: a kind-table net was trained as shared
+                    // head plus kind row, so the shared head alone is no
+                    // net's logit (2026-11-23 audit).
+                    && let Some(l) = super::net_eval::policy_logit_kind(
+                        g,
+                        seat,
+                        slot,
+                        super::decision_menu::Kind::Priority.index(),
+                    )
                 {
                     logits[i] = l as f64;
                 }
@@ -1766,6 +1855,13 @@ impl MctsBot {
     /// off, nothing to decide, a forced move).
     fn menu_window(&mut self, state: &GameState, seat: usize) -> Option<GameAction> {
         use super::decision_menu::Kind;
+        // `deadline_ms` reaches the menu search too; `prior_search` checks it
+        // between halving rounds (before 2026-11-23 only `search` did, so a
+        // `+dlN` menu pilot ran uncapped).
+        let _deadline = DeadlineGuard::install(
+            (self.cfg.deadline_ms > 0)
+                .then(|| std::time::Instant::now() + std::time::Duration::from_millis(self.cfg.deadline_ms as u64)),
+        );
         let keying = self.keying();
         let key = |a: &GameAction| super::decision_menu::key_with(state, seat, a, keying);
         let mut m = super::decision_menu::menu_with(state, seat, &self.cfg.weights, keying)?;
@@ -1814,7 +1910,8 @@ impl MctsBot {
         // straight from the picker; a pass is not an anchor.
         let anchor_weights =
             if self.cfg.menu_anchor_material { EvalWeights { net_slot: 0, ..self.cfg.weights } } else { self.cfg.weights };
-        let anchor_key: Option<String> = (self.cfg.menu_anchor >= 0.0 && open)
+        let instant_anchor = self.cfg.menu_instant_anchor && window == MENU_INSTANT;
+        let anchor_key: Option<String> = (self.cfg.menu_anchor >= 0.0 && (open || instant_anchor))
             .then(|| match HeuristicBot::with_weights(anchor_weights).next_action(state, seat) {
                 None if m.kind == Kind::Block && state.active_player_idx != seat => {
                     Some(super::bot::heuristic_block_declaration(state, seat, &anchor_weights))
@@ -1822,7 +1919,7 @@ impl MctsBot {
                 a => a,
             })
             .flatten()
-            .filter(|a| !matches!(a, GameAction::PassPriority))
+            .filter(|a| instant_anchor || !matches!(a, GameAction::PassPriority))
             .and_then(|a| {
                 let k = key(&a);
                 if !m.moves.iter().any(|x| key(x) == k) {
@@ -1843,7 +1940,9 @@ impl MctsBot {
         let mut hold: Option<usize> = None;
         if self.cfg.menu_hold_arm
             && window == MENU_MAIN
-            && arms.iter().any(|a| matches!(a, GameAction::CastSpell { .. }))
+            && arms.iter().any(|a| {
+                if self.cfg.hold_all_casts { a.is_cast() } else { matches!(a, GameAction::CastSpell { .. }) }
+            })
             && m.moves.iter().any(|a| matches!(a, GameAction::PassPriority))
         {
             let prior = arms
@@ -2017,7 +2116,14 @@ impl MctsBot {
             use rand::RngExt;
             draw_rng().random::<u64>()
         });
-        for (m, per_arm) in sequential_halving_plan(n, self.cfg.iterations) {
+        // The last round's arms (`menu_survivor_pick`).
+        let mut finalists: Vec<usize> = Vec::new();
+        for (round, (m, per_arm)) in sequential_halving_plan(n, self.cfg.iterations).into_iter().enumerate() {
+            // `deadline_ms`: stop at a round boundary, so the arms compared
+            // last were compared on equal rollouts.
+            if round > 0 && past_deadline() {
+                break;
+            }
             let sig = completed_sigma(&visits, &total, self.cfg.gumbel_c_visit, self.cfg.gumbel_c_scale);
             live.retain(|&i| !dead[i]);
             if live.is_empty() {
@@ -2060,10 +2166,12 @@ impl MctsBot {
                     None => dead[i] |= visits[i] == 0,
                 }
             }
+            finalists.clone_from(&live);
         }
         let sig = completed_sigma(&visits, &total, self.cfg.gumbel_c_visit, self.cfg.gumbel_c_scale);
+        let survivors = self.cfg.menu_survivor_pick && finalists.iter().any(|&i| visits[i] > 0);
         let best = (0..n)
-            .filter(|&i| visits[i] > 0)
+            .filter(|&i| visits[i] > 0 && (!survivors || finalists.contains(&i)))
             .max_by(|&a, &b| {
                 (noise[a] + logits[a] + sig[a]).partial_cmp(&(noise[b] + logits[b] + sig[b])).unwrap_or(std::cmp::Ordering::Equal)
             })
@@ -2758,6 +2866,16 @@ mod tests {
         assert!(menu_profile("mcts-net67-menu-mc-df-anm10-rh").is_some_and(|c| c.heuristic_rollouts && c.horizon_turns == 3));
         assert!(menu_profile("mcts-net67-menu-mc-df-anm10-ho").is_some_and(|c| c.menu_hold_arm && c.horizon_turns == 3));
         assert!(!MctsConfig::default().menu_hold_arm, "the hold arm is opt-in");
+        // The 2026-11-23 audit flags, each opt-in and each its own suffix.
+        let d = MctsConfig::default();
+        assert!(!d.rollout_prompts && !d.hold_all_casts && !d.menu_survivor_pick && !d.rollout_reseed);
+        let all = menu_profile("mcts-net67-menu-mc-df-anm10-ho-rp-hc-sv-rs-kx").expect("parses");
+        assert!(all.rollout_prompts && all.hold_all_casts && all.menu_survivor_pick && all.rollout_reseed);
+        assert!(all.menu_side_keys && !d.menu_side_keys);
+        let ia = menu_profile("mcts-net67-menu-mic-df-anm10-ia").expect("parses");
+        assert!(ia.menu_instant_anchor && ia.menu_windows & MENU_INSTANT != 0 && !d.menu_instant_anchor);
+        let one = menu_profile("mcts-net67-menu-mc-sv").expect("parses");
+        assert!(one.menu_survivor_pick && !one.rollout_prompts && !one.hold_all_casts && !one.rollout_reseed);
         let held = menu_profile("mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr-ho").expect("the 2026-11-20 gate's A");
         assert_eq!(format!("{held:?}"), format!("{:?}", built.with_hold_arm()), "the builder is the profile gated");
         assert!(menu_profile("mcts-net67-menu-mc-bogus").is_none());

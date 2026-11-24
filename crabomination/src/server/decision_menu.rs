@@ -124,11 +124,17 @@ pub struct Keying {
     /// damage, tapped) when another permanent of the same name differs
     /// from it in one of them.
     pub state: bool,
+    /// A permanent named in a move carries whose it is (`@me` / `@opp`, from
+    /// the deciding seat) when a same-named permanent has another
+    /// controller. By name and state alone "Murder my Soldier token" and
+    /// "Murder theirs" were one move, and the list kept whichever the
+    /// generator made first (2026-11-23 audit).
+    pub side: bool,
 }
 
 impl Keying {
     /// Names alone.
-    pub const PLAIN: Keying = Keying { structural: false, state: false };
+    pub const PLAIN: Keying = Keying { structural: false, state: false, side: false };
 }
 
 /// [`menu`], its moves deduplicated by [`key_with`] at `keying`.
@@ -508,7 +514,7 @@ pub fn key_with(g: &GameState, seat: usize, a: &GameAction, keying: Keying) -> S
     {
         clear_targets(&mut a);
     }
-    name_ids(g, &format!("{a:?}"), keying.state)
+    name_ids(g, &format!("{a:?}"), keying.state, keying.side.then_some(seat))
 }
 
 /// A battlefield permanent's state, `[p/t dmg T]`, when another permanent
@@ -526,9 +532,21 @@ fn state_tag(g: &GameState, id: CardId) -> String {
     format!("[{}/{} d{}{}]", mine.0, mine.1, mine.2, if mine.3 { " T" } else { "" })
 }
 
+/// A battlefield permanent's controller relative to `seat`, `@me` / `@opp`,
+/// when a same-named permanent has another controller; empty otherwise.
+fn side_tag(g: &GameState, id: CardId, seat: usize) -> &'static str {
+    let Some(c) = g.battlefield_find(id) else { return "" };
+    let twin = g.battlefield.iter().any(|o| o.id != id && o.definition.name == c.definition.name && o.controller != c.controller);
+    match (twin, c.controller == seat) {
+        (false, _) => "",
+        (true, true) => "@me",
+        (true, false) => "@opp",
+    }
+}
+
 /// `CardId(n)` → the card's name wherever it is (with its [`state_tag`] at
-/// `state`).
-fn name_ids(g: &GameState, text: &str, state: bool) -> String {
+/// `state`, and its [`side_tag`] from `side`'s seat).
+fn name_ids(g: &GameState, text: &str, state: bool, side: Option<usize>) -> String {
     let mut out = String::with_capacity(text.len());
     let mut rest = text;
     while let Some(i) = rest.find("CardId(") {
@@ -543,6 +561,9 @@ fn name_ids(g: &GameState, text: &str, state: bool) -> String {
                 out.push_str(card_name(g, CardId(n)));
                 if state {
                     out.push_str(&state_tag(g, CardId(n)));
+                }
+                if let Some(seat) = side {
+                    out.push_str(side_tag(g, CardId(n), seat));
                 }
             }
             Err(_) => out.push_str(&rest[i..i + 7 + j + 1]),
@@ -1116,7 +1137,7 @@ mod tests {
     /// the first" read the same by names, so the list kept only one of
     /// them. The structural key tells them apart and still merges the two
     /// ways of pairing interchangeable attackers.
-    const STRUCT: Keying = Keying { structural: true, state: false };
+    const STRUCT: Keying = Keying { structural: true, state: false, side: false };
 
     #[test]
     fn structural_block_keys_keep_which_blockers_share_an_attacker() {
@@ -1236,11 +1257,43 @@ mod tests {
             mode: None,
             x_value: None,
         };
-        let st = Keying { structural: true, state: true };
+        let st = Keying { structural: true, state: true, side: false };
         assert_eq!(key(&g, 0, &on(plain)), key(&g, 0, &on(grown)), "by names the two are one move");
         assert_eq!(key_with(&g, 0, &on(plain), STRUCT), key(&g, 0, &on(plain)));
         assert_ne!(key_with(&g, 0, &on(plain), st), key_with(&g, 0, &on(grown), st));
         assert_eq!(key_with(&g, 0, &on(plain), st), key_with(&g, 0, &on(twin), st), "identical twins merge");
         assert!(key_with(&g, 0, &on(grown), st).contains("Raider[5/5 d0]"), "{}", key_with(&g, 0, &on(grown), st));
+    }
+
+    /// At `Keying::side` a Murder on my Raider and one on theirs are two
+    /// moves (by name and state they were one, and the list kept whichever
+    /// came first); a name with one controller keys as before.
+    #[test]
+    fn side_keys_tell_my_twin_from_theirs() {
+        use crate::card::{CardDefinition, CardType};
+        let mut g = crate::game::two_player_game();
+        let body = |name| CardDefinition {
+            name,
+            card_types: vec![CardType::Creature],
+            power: 2,
+            toughness: 2,
+            ..Default::default()
+        };
+        let mine = g.add_card_to_battlefield(0, body("Raider"));
+        let theirs = g.add_card_to_battlefield(1, body("Raider"));
+        let lone = g.add_card_to_battlefield(1, body("Ogre"));
+        let murder = g.add_card_to_hand(0, crate::catalog::murder());
+        let on = |t| GameAction::CastSpell {
+            card_id: murder,
+            target: Some(Target::Permanent(t)),
+            additional_targets: Vec::new(),
+            mode: None,
+            x_value: None,
+        };
+        let sk = Keying { structural: true, state: true, side: true };
+        assert_eq!(key(&g, 0, &on(mine)), key(&g, 0, &on(theirs)), "by names the two are one move");
+        assert_ne!(key_with(&g, 0, &on(mine), sk), key_with(&g, 0, &on(theirs), sk));
+        assert!(key_with(&g, 0, &on(theirs), sk).contains("Raider@opp"), "{}", key_with(&g, 0, &on(theirs), sk));
+        assert_eq!(key_with(&g, 0, &on(lone), sk), key(&g, 0, &on(lone)), "one controller: no tag");
     }
 }

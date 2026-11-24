@@ -442,7 +442,10 @@ impl AttnLayer {
         // the engine's attend-over-real-objects-only.
         let keybias = ((m.reshape((b, 1, 1, n))? - 1.0)? * 1e9)?;
         let scores = scores.broadcast_add(&keybias)?;
-        let attn = candle_nn::ops::softmax_last_dim(&scores)?;
+        // Composed softmax, never `softmax_last_dim`: candle 0.11's fused op
+        // is `apply_op1_no_bwd`, so its output is detached and q/k never saw
+        // a gradient (the champion's attn.q/k were still at init, 2026-11-23).
+        let attn = candle_nn::ops::softmax(&scores, candle_core::D::Minus1)?;
         let ctx = attn
             .matmul(&v)? // [B,H,N,hd]
             .transpose(1, 2)?
@@ -463,6 +466,18 @@ impl AttnLayer {
         }
         Ok(split_out)
     }
+}
+
+/// Layer norm that backpropagates. `LayerNorm::forward` takes candle 0.11's
+/// fused `ops::layer_norm` whenever the input is contiguous and the norm has
+/// a bias, and that op is `apply_op3_no_bwd`: the output is detached, so the
+/// block's ln weights, everything upstream through the branch, and (with
+/// the detached softmax) q/k got no gradient. That was TableNet runs 3-4's
+/// "blocks collapse" (2026-11-23 audit). Same numbers, eps 1e-5 as
+/// `LayerNormConfig::default()`.
+fn ln_with_grad(ln: &LayerNorm, x: &Tensor) -> CResult<Tensor> {
+    let bias = ln.bias().expect("TBlockLayer norms are built with a bias");
+    candle_nn::ops::layer_norm_slow(x, ln.weight(), bias, 1e-5)
 }
 
 impl TBlockLayer {
@@ -488,7 +503,7 @@ impl TBlockLayer {
         let (b, n, d) = x.dims3()?;
         let hd = d / ATTN_HEADS;
         let scale = 1.0 / (hd as f64).sqrt();
-        let xn = self.ln1.forward(x)?;
+        let xn = ln_with_grad(&self.ln1, x)?;
         let split = |t: Tensor| -> CResult<Tensor> {
             t.reshape((b, n, ATTN_HEADS, hd))?.transpose(1, 2)?.contiguous()
         };
@@ -496,10 +511,10 @@ impl TBlockLayer {
         let k = split(self.k.forward(&xn)?)?;
         let v = split(self.v.forward(&xn)?)?;
         let scores = (q.matmul(&k.transpose(2, 3)?)? * scale)?.broadcast_add(keybias)?;
-        let attn = candle_nn::ops::softmax_last_dim(&scores)?;
+        let attn = candle_nn::ops::softmax(&scores, candle_core::D::Minus1)?;
         let ctx = attn.matmul(&v)?.transpose(1, 2)?.contiguous()?.reshape((b, n, d))?;
         let x = x.add(&self.o.forward(&ctx)?)?;
-        let xn = self.ln2.forward(&x)?;
+        let xn = ln_with_grad(&self.ln2, &x)?;
         x.add(&self.ffn2.forward(&self.ffn1.forward(&xn)?.relu()?)?)
     }
 }
@@ -882,6 +897,34 @@ pub struct Trainer {
     bce: bool,
     opt: Opt,
     dev: Device,
+    /// Card ids seen in a trained row (`track_seen_cards`); at save every
+    /// other `emb.weight` row is written as a copy of row 0, the unknown
+    /// slot, instead of its untouched N(0, 1) init (2026-11-23 audit: the
+    /// SOS champion's 2,109 cube rows were confident random pseudo-cards).
+    seen_cards: Option<Vec<bool>>,
+}
+
+/// The seed every trainer device is initialised under (`set_init_seed`);
+/// `u64::MAX` = unset. candle's CUDA device otherwise starts curand at a
+/// fixed default (299792458), so every same-shape CUDA run began from
+/// identical weights and "training seeds" varied only the data (2026-11-23
+/// audit). The CPU backend refuses `set_seed` and keeps per-process entropy.
+static INIT_SEED: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(u64::MAX);
+
+/// Seed the initialisation of every trainer built after this call.
+pub fn set_init_seed(seed: u64) {
+    INIT_SEED.store(seed, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// The training device: CUDA when built with the feature and present,
+/// seeded from [`set_init_seed`].
+fn train_device() -> CResult<Device> {
+    let dev = Device::cuda_if_available(0)?;
+    let seed = INIT_SEED.load(std::sync::atomic::Ordering::Relaxed);
+    if seed != u64::MAX && dev.is_cuda() {
+        dev.set_seed(seed)?;
+    }
+    Ok(dev)
 }
 
 /// The trainer's optimizer: plain AdamW (the historical default) or the
@@ -1382,12 +1425,12 @@ impl Trainer {
     pub fn new(cfg: &NetConfig, lr: f64) -> CResult<Trainer> {
         // CPU unless the crate was built with the `cuda` feature AND a
         // device is present — then this silently returns the GPU.
-        let dev = Device::cuda_if_available(0)?;
+        let dev = train_device()?;
         let varmap = VarMap::new();
         let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
         let model = build_model(cfg, vb)?;
         let opt = AdamW::new(varmap.all_vars(), ParamsAdamW { lr, ..Default::default() })?;
-        Ok(Trainer { varmap, model, bce: false, opt: Opt::AdamW { o: opt, base_lr: lr }, dev })
+        Ok(Trainer { varmap, model, bce: false, opt: Opt::AdamW { o: opt, base_lr: lr }, dev, seen_cards: None })
     }
 
     /// [`new`](Self::new) with the Muon hybrid optimizer. Routing: a 2-D
@@ -1395,7 +1438,7 @@ impl Trainer {
     /// (`emb`, `attn.group`, `tblocks.group`), a prediction head, or a
     /// layer norm; everything else — and all 1-D tensors — goes to AdamW.
     pub fn new_muon(cfg: &NetConfig, p: MuonParams) -> CResult<Trainer> {
-        let dev = Device::cuda_if_available(0)?;
+        let dev = train_device()?;
         let varmap = VarMap::new();
         let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
         let model = build_model(cfg, vb)?;
@@ -1425,7 +1468,7 @@ impl Trainer {
             base_lr: p.lr,
             base_adamw_lr: p.adamw_lr,
         };
-        Ok(Trainer { varmap, model, bce: false, opt: Opt::Muon(opt), dev })
+        Ok(Trainer { varmap, model, bce: false, opt: Opt::Muon(opt), dev, seen_cards: None })
     }
 
     /// Drive an lr schedule: scale all optimizer lrs to `factor` × base.
@@ -1481,6 +1524,7 @@ impl Trainer {
     /// [`train_step`](Self::train_step) fitting supplied win targets — the
     /// λ-return path (see [`SampleWindow::relabel_lambda`]).
     pub fn train_step_with_targets(&mut self, rows: &[(&TrainRow, f32)]) -> CResult<LossParts> {
+        self.mark_seen(rows.iter().map(|(r, _)| *r));
         let batch = make_batch_with_targets(rows, &self.dev)?;
         let (win, life, len_p, aux_p, opp_p) = self.model.forward_train(&batch)?;
         let loss_win = if self.bce {
@@ -2036,7 +2080,57 @@ impl Trainer {
 
     /// Export weights as safetensors — the file `PlayNet::load` reads.
     pub fn save(&self, path: &std::path::Path) -> CResult<()> {
-        self.varmap.save(path)
+        let Some(seen) = &self.seen_cards else { return self.varmap.save(path) };
+        let data = self.varmap.data().lock().unwrap();
+        let mut out: std::collections::HashMap<String, Tensor> =
+            data.iter().map(|(k, v)| (k.clone(), v.as_tensor().clone())).collect();
+        drop(data);
+        if let Some(emb) = out.get("emb.weight") {
+            let rows: Vec<Vec<f32>> = emb.to_vec2()?;
+            let row0 = rows[0].clone();
+            let fixed: Vec<f32> = rows
+                .iter()
+                .enumerate()
+                .flat_map(|(i, r)| if i == 0 || seen.get(i).copied().unwrap_or(false) { r.clone() } else { row0.clone() })
+                .collect();
+            let t = Tensor::from_vec(fixed, emb.dims(), emb.device())?;
+            out.insert("emb.weight".into(), t);
+        }
+        candle_core::safetensors::save(&out, path)
+    }
+
+    /// Track which card ids reach a trained row, so [`save`](Self::save)
+    /// writes every unseen embedding row as the unknown row (`--reset-unseen`).
+    pub fn track_seen_cards(&mut self, vocab: usize) {
+        self.seen_cards = Some(vec![false; vocab]);
+    }
+
+    fn mark_seen<'a>(&mut self, rows: impl Iterator<Item = &'a TrainRow>) {
+        if let Some(seen) = &mut self.seen_cards {
+            for r in rows {
+                for o in r.state.objects() {
+                    if let Some(s) = seen.get_mut(o.card as usize) {
+                        *s = true;
+                    }
+                }
+            }
+        }
+    }
+
+    /// Re-draw the card embedding and the group tags at N(0, `std`): candle's
+    /// `embedding()` starts them at N(0, 1), where AdamW's ~lr-sized steps
+    /// moved the champion's trained rows to cosine 0.993-0.996 of their init
+    /// (a frozen random code) and the tags outweighed object content in the
+    /// attention scores (`--emb-init-std`, round 88).
+    pub fn set_embedding_init_std(&mut self, std: f64) -> CResult<()> {
+        let data = self.varmap.data().lock().unwrap();
+        for name in ["emb.weight", "attn.group.weight", "tblocks.group.weight"] {
+            if let Some(v) = data.get(name) {
+                let t = Tensor::randn(0f32, std as f32, v.dims(), &self.dev)?;
+                v.set(&t)?;
+            }
+        }
+        Ok(())
     }
 
     /// Resume from a previous export.
@@ -2050,7 +2144,8 @@ impl Trainer {
     ///   the old net did.
     /// - **Vocabulary axis.** A shorter `emb.weight` (and belief head) from
     ///   before cards were appended to the frozen vocabulary snapshot gets
-    ///   zero rows; sound only because the snapshot freezes each index.
+    ///   copies of row 0, the unknown slot (the belief head gets zero
+    ///   rows); sound only because the snapshot freezes each index.
     ///   `PlayNet::pad_vocab` is the inference-side twin.
     ///
     /// Rejecting a pre-freeze net is the caller's job
@@ -2088,6 +2183,13 @@ impl Trainer {
                 (Some(n), _) => {
                     let zeros = Tensor::zeros((want[0], n), src.dtype(), dev)?;
                     var.set(&Tensor::cat(&[src, &zeros], 1)?)?;
+                }
+                // The embedding pads with copies of row 0 (the trained
+                // unknown slot, as `PlayNet::pad_vocab` does); the belief
+                // head with zeros (no logit for a card it never saw).
+                (None, Some(n)) if name == "emb.weight" => {
+                    let row0 = src.narrow(0, 0, 1)?.broadcast_as((n, want[1]))?.contiguous()?;
+                    var.set(&Tensor::cat(&[src, &row0], 0)?)?;
                 }
                 (None, Some(n)) => {
                     let mut shape = want.to_vec();
@@ -2206,7 +2308,7 @@ pub struct DeckTrainer {
 
 impl DeckTrainer {
     pub fn new(cfg: &DeckNetConfig, lr: f64) -> CResult<DeckTrainer> {
-        let dev = Device::cuda_if_available(0)?;
+        let dev = train_device()?;
         let varmap = VarMap::new();
         let vb = VarBuilder::from_varmap(&varmap, DType::F32, &dev);
         let model = build_deck_model(cfg, vb)?;
@@ -2336,6 +2438,30 @@ impl SampleWindow {
         (0..n)
             .map(|_| {
                 let i = rng.random_range(0..self.rows.len());
+                (&self.rows[i], self.targets[i])
+            })
+            .collect()
+    }
+
+    /// [`sample_with_targets`](Self::sample_with_targets) over the rows a
+    /// relabel pass has reached only. A row enters with the raw game result
+    /// as its target and waits up to `relabel_every` steps for its λ-return,
+    /// so plain sampling trained 7-25 % of draws on raw results — a hidden
+    /// Monte Carlo share that moved with actor/learner throughput (2026-11-23
+    /// audit, from the r81-r87 `loss_win` traces). Falls back to every row
+    /// before the first pass.
+    pub fn sample_labelled_with_targets<'a, R: Rng>(
+        &'a self,
+        n: usize,
+        rng: &mut R,
+    ) -> Vec<(&'a TrainRow, f32)> {
+        let labelled = (self.relabel_mark.saturating_sub(self.evicted_total) as usize).min(self.rows.len());
+        if labelled == 0 {
+            return self.sample_with_targets(n, rng);
+        }
+        (0..n)
+            .map(|_| {
+                let i = rng.random_range(0..labelled);
                 (&self.rows[i], self.targets[i])
             })
             .collect()
@@ -3018,7 +3144,7 @@ mod tests {
     /// The vocabulary-axis twin of the test above: a short-vocab checkpoint
     /// padded in the trainer agrees with the engine's `pad_vocab`ed one.
     #[test]
-    fn short_vocab_checkpoints_load_zero_padded_in_the_trainer() {
+    fn short_vocab_checkpoints_load_padded_in_the_trainer() {
         use crabomination_nn::to_safetensors;
         let cfg = NetConfig { opp: true, ..small_cfg() };
         // The file is four cards short of the live vocabulary.
@@ -3058,7 +3184,7 @@ mod tests {
         let mut rng = StdRng::seed_from_u64(97);
         for i in 0..6 {
             // Indices span the padded range: the cards the file never saw
-            // must read as the zero rows on both sides, not as garbage.
+            // must read as row 0 (unknown) on both sides, not as garbage.
             let s = random_state(&mut rng, cfg.vocab);
             let want = trainer.predict_win(&s).expect("candle win");
             let got = net.forward(&s);
@@ -3421,6 +3547,52 @@ mod tests {
                 (got - want).abs() < 1e-4,
                 "state {i}: engine {got} vs candle {want}"
             );
+        }
+    }
+
+    /// Every attention / transformer-block parameter must receive a nonzero
+    /// gradient from the value loss. candle 0.11's `softmax_last_dim` and
+    /// fused `layer_norm` are `no_bwd` ops whose outputs are detached, and
+    /// the forward-only parity tests above could not see it: the shipped
+    /// champion's `attn.q`/`attn.k` were bit-identical to the policy net's
+    /// (same init, no gradient) and TableNet's ln1/ln2 sat at exactly 1/0
+    /// at step 80k (2026-11-23 audit).
+    #[test]
+    fn attention_and_block_params_receive_gradients() {
+        let mut rng = StdRng::seed_from_u64(31);
+        for cfg in [small_attn_cfg(), NetConfig { blocks: 2, ..small_cfg() }] {
+            let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
+            let rows: Vec<TrainRow> = (0..8)
+                .map(|i| TrainRow {
+                    state: random_state(&mut rng, cfg.vocab),
+                    win: (i % 2) as f32,
+                    life_diff: 0.0,
+                    game_len: 0.5,
+                    traj: i,
+                    ply: 0,
+                    aux: [0.0; AUX_FEATS],
+                    opp_hand: Vec::new(),
+                })
+                .collect();
+            let refs: Vec<&TrainRow> = rows.iter().collect();
+            let batch = make_batch(&refs, &trainer.dev).expect("batch");
+            let (win, ..) = trainer.model.forward_train(&batch).expect("forward");
+            let loss = candle_nn::loss::mse(&win, &batch.win).expect("loss");
+            let grads = loss.backward().expect("backward");
+            let data = trainer.varmap.data().lock().unwrap();
+            let mut checked = 0;
+            for (name, var) in data.iter() {
+                if !(name.starts_with("attn.") || name.starts_with("tblocks.")) {
+                    continue;
+                }
+                let g = grads
+                    .get(var.as_tensor())
+                    .unwrap_or_else(|| panic!("{name}: no gradient (detached op upstream?)"));
+                let mag = g.abs().unwrap().sum_all().unwrap().to_scalar::<f32>().unwrap();
+                assert!(mag > 0.0, "{name}: all-zero gradient");
+                checked += 1;
+            }
+            assert!(checked >= 9, "expected the attention/block tensors, saw {checked}");
         }
     }
 
@@ -4287,6 +4459,25 @@ mod tests {
     /// degrades to "the whole surviving window is new" — never a skip,
     /// never an out-of-bounds index. And a pass with nothing new predicts
     /// nothing at all.
+    /// `sample_labelled_with_targets` never draws a row the relabel pass
+    /// has not reached (its target would still be the raw result).
+    #[test]
+    fn labelled_sampling_skips_unrelabelled_rows() {
+        let mut w = SampleWindow::new(100);
+        for p in 0..10u16 {
+            w.push(traj_row(1, p, 1.0));
+        }
+        w.relabel_lambda_new_rows(0.5, |rows| vec![0.25; rows.len()]);
+        for p in 0..10u16 {
+            w.push(traj_row(2, p, 1.0));
+        }
+        let mut rng = StdRng::seed_from_u64(3);
+        let draws = w.sample_labelled_with_targets(500, &mut rng);
+        assert!(draws.iter().all(|(r, _)| r.traj == 1), "drew a row with a raw target");
+        let fresh = SampleWindow::new(10);
+        assert!(fresh.sample_labelled_with_targets(0, &mut rng).is_empty());
+    }
+
     #[test]
     fn incremental_relabel_mark_survives_eviction() {
         let mut w = SampleWindow::new(4);

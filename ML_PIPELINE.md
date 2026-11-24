@@ -101,6 +101,10 @@ observable: the opponent's hand and either library's *contents* never
 enter the feature vector, only their sizes. A net trained on these rows
 cannot learn to peek.
 
+⚠ The per-object and global lists below are the round-12 encoder (37 / 36).
+The live one is `OBJ_FEATS` 59 / `GLOBAL_FEATS` 57 (`crabomination_nn`); new
+features were appended, so the first 37 / 36 still mean what is listed.
+
 ### Eight zone groups (`NUM_GROUPS = 8`)
 
 `G_BF_SELF`, `G_BF_OPP`, `G_HAND_SELF`, `G_GY_SELF`, `G_GY_OPP`,
@@ -294,6 +298,13 @@ over the window. Trajectories never cross: a trajectory whose tail has
 been evicted simply bootstraps from its last surviving row.
 
 ### Holdout
+
+⚠ Round 88 (2026-11-24): `--holdout-file` replaces the actors' first-come
+20 k-row holdout (~165 games, different per `--seed`, so seed-to-seed AUC
+spread was mostly holdout noise) with a frozen shard every run scores
+(`--write-holdout`: 5,000 games on their own seed stream, ≤4 rows a game).
+On it AUC tracks the ladder at r 0.68 / 0.80 (16 FRA nets, rated / default
+field) against 0.21 for the old holdout; `--score-holdout` scores any nets.
 
 `--holdout`, default 5 %. Split **by trajectory, not by row** — consecutive
 snapshots of one game are near-duplicates, so a row-level split leaks the
