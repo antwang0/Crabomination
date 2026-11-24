@@ -220,11 +220,13 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
     // most N value-guided swaps after the pick.
     let variant: Option<String> = arg("--trial").and_then(|t| t.strip_prefix("policy-value+").map(str::to_string));
     if let Some(v) = &variant {
-        let polish_n = v.strip_prefix("polish").and_then(|n| n.parse::<usize>().ok());
-        assert!(
-            matches!(v.as_str(), "rated" | "lands" | "cands48") || polish_n.is_some_and(|n| n > 0),
-            "--trial policy-value+{v}: rated, lands, cands48 or polishN"
-        );
+        for lever in v.split('+') {
+            let polish_n = lever.strip_prefix("polish").and_then(|n| n.parse::<usize>().ok());
+            assert!(
+                matches!(lever, "rated" | "lands" | "cands48") || polish_n.is_some_and(|n| n > 0),
+                "--trial policy-value+{v}: rated, lands, cands48 or polishN, joined by +"
+            );
+        }
     }
     // `--trial policy-castable`: the splash rule's own gate — the policy's
     // greedy build under it against the same policy's build without it.
@@ -302,8 +304,8 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                 let (old, new) = if let Some(nv) = &value_ab {
                     use crabomination::selfplay as sp;
                     let sos_pool = crabomination::card_ratings::sos_pool(&pool);
-                    let (adopted_v, polish) = if sos_pool { (sp::sos_deck_value(), sp::SOS_SEALED_POLISH) } else { (sp::fra_deck_value(), 0) };
-                    let opts = crabomination::deck_policy::ValuedOpts { polish, ..Default::default() };
+                    let adopted_v = if sos_pool { sp::sos_deck_value() } else { sp::fra_deck_value() };
+                    let opts = sp::sealed_valued_opts();
                     let build = |v: &crabomination::deck_value::DeckValue| {
                         sp::sealed_deck_policy().build_valued_with(&pool, v, 16, &mut StdRng::seed_from_u64(salt ^ 3), &opts)
                     };
@@ -323,15 +325,18 @@ fn race_builders(pilot: Pilot, pools: usize, pairs: usize, seed: u64, threads: u
                     let value = policy_value.as_ref().expect("policy-value+ loads CRAB_DECK_VALUE");
                     let adopted = p.build_valued(&pool, value, 16, &mut StdRng::seed_from_u64(salt ^ 3));
                     let mut opts = crabomination::deck_policy::ValuedOpts::default();
-                    match v.as_str() {
-                        "rated" => opts.extra.push(rated(&pool)),
-                        "lands" => {
-                            opts.land_variants = 3;
-                            opts.max_lands = 18;
+                    // Levers combine with `+` (`polish3+cands48`).
+                    for lever in v.split('+') {
+                        match lever {
+                            "rated" => opts.extra.push(rated(&pool)),
+                            "lands" => {
+                                opts.land_variants = 3;
+                                opts.max_lands = 18;
+                            }
+                            // 16 at T = 1 (the adopted stream) plus 32 hotter.
+                            "cands48" => opts.hot_samples = 32,
+                            _ => opts.polish = lever["polish".len()..].parse().expect("checked above"),
                         }
-                        // 16 at T = 1 (the adopted stream) plus 32 hotter.
-                        "cands48" => opts.hot_samples = 32,
-                        _ => opts.polish = v["polish".len()..].parse().expect("checked above"),
                     }
                     (adopted, p.build_valued_with(&pool, value, 16, &mut StdRng::seed_from_u64(salt ^ 3), &opts))
                 } else if let Some((p, _)) = &policy
