@@ -1920,6 +1920,11 @@ impl MctsBot {
             })
             .flatten()
             .filter(|a| instant_anchor || !matches!(a, GameAction::PassPriority))
+            // The fresh bot never saw a declaration this step's search made;
+            // outside an open combat window its declaration is a repeat (an
+            // empty one leaves `attacking` empty and the engine takes it
+            // again — round 88's `-ia` loop).
+            .filter(|a| open || !is_declaration(a))
             .and_then(|a| {
                 let k = key(&a);
                 if !m.moves.iter().any(|x| key(x) == k) {

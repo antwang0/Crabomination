@@ -1058,6 +1058,53 @@ mod tests {
         assert_eq!(after.player_with_priority(), 0, "and it's our priority again");
     }
 
+    /// Round 88: under `-ia` the instant window's anchor (a fresh heuristic
+    /// bot, blind to the declaration already made) re-offered
+    /// `DeclareAttackers([])` after an empty declaration; `attacking` stays
+    /// empty, the engine takes it again, and the search looped in the
+    /// declare-attackers step (7,500 searches in one turn of a ladder game).
+    #[test]
+    fn the_instant_anchor_never_redeclares() {
+        use crate::server::mcts::{MENU_COMBAT, MENU_INSTANT, MENU_MAIN, MctsBot, MctsConfig};
+        let _g = SLOT.lock().unwrap_or_else(|e| e.into_inner());
+        let slot = super::super::net_eval::SLOT_FRA;
+        super::super::net_eval::set_slot(slot, Some(std::sync::Arc::new(HashPolicy)));
+        let mut g = crate::game::two_player_game();
+        for seat in 0..2 {
+            for _ in 0..5 {
+                g.add_card_to_library(seat, crate::catalog::island());
+            }
+        }
+        g.step = TurnStep::DeclareAttackers;
+        g.priority.player_with_priority = 0;
+        let m = g.add_card_to_battlefield(0, crate::catalog::mountain());
+        g.clear_sickness(m);
+        g.add_card_to_hand(0, crate::catalog::lightning_bolt());
+        let cfg = MctsConfig {
+            iterations: 6,
+            horizon_turns: 1,
+            weights: EvalWeights::default(),
+            menu_windows: MENU_MAIN | MENU_INSTANT | MENU_COMBAT,
+            policy_slot: slot,
+            menu_arms: 4,
+            menu_instant_anchor: true,
+            ..MctsConfig::default()
+        }
+        .with_combat_fix();
+        let mut bot = MctsBot::new(cfg);
+        let mut declared = 0;
+        for _ in 0..6 {
+            if g.step != TurnStep::DeclareAttackers {
+                break;
+            }
+            let Some(a) = bot.next_action(&g, 0) else { break };
+            declared += usize::from(matches!(a, GameAction::DeclareAttackers(_)));
+            assert!(g.perform_action(a.clone()).is_ok(), "{a:?}");
+        }
+        super::super::net_eval::set_slot(slot, None);
+        assert!(declared <= 1, "declared {declared} times in one step");
+    }
+
     /// Phase 4's search over every window plays a legal game: every move
     /// it makes, in every window, is one the engine takes.
     #[test]
@@ -1249,6 +1296,7 @@ mod tests {
         let mut g = super::super::action_gap::start_game(&sealed_template(seed), &cfg.weights, seed);
         let mut bots = [MctsBot::new(cfg), MctsBot::new(cfg)];
         let (mut fuel, mut stalled, mut declared) = (4000, 0, 0);
+        let mut last_decl: Option<(u32, crate::game::types::TurnStep, usize)> = None;
         while fuel > 0 && !g.is_game_over() && g.turn_number <= last_turn && stalled < 50 {
             fuel -= 1;
             let mut acted = false;
@@ -1256,6 +1304,11 @@ mod tests {
                 let Some(a) = bot.next_action(&g, seat) else { continue };
                 if matches!(a, GameAction::DeclareAttackers(ref v) if !v.is_empty()) {
                     declared += 1;
+                }
+                if matches!(a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)) {
+                    let here = (g.turn_number, g.step, seat);
+                    assert_ne!(last_decl, Some(here), "declared twice in one step: {a:?}");
+                    last_decl = Some(here);
                 }
                 let r = g.perform_action(a.clone());
                 assert!(r.is_ok(), "the engine refused the search's {a:?}: {r:?}");
