@@ -411,7 +411,7 @@ items and **adopted 2026-11-21** (`MctsConfig::with_hold_arm`, b7b90e4b7: NO
 LOSS on SOS / FRA / cube / Modern, real-board counter items 10 / 10). The
 2026-11-23 audit found its rollouts refused only plain `CastSpell` (fixed
 behind `-hc`, round 88) and that the real-board truths deal the real hand
-(`--honest-truth`, round 88). Its remaining gap is rollout fidelity inside a
+(`--honest-truth`, round 88; C5: the hold survives an honest truth). Round 88: `-rp` costs a real-board counter item, so the bundle re-gates without it. Its remaining gap is rollout fidelity inside a
 3-turn horizon.
 
 The 2026-11-11 item list, by outcome (reasoning in ML_NOTES "Why the
@@ -432,6 +432,24 @@ search", "The blunder set"):
    isolates it.
 7. **The FRA and lobby pilots on the set** — read (ML_NOTES).
 No training run without the user's go-ahead.
+
+### The net chooses every move (2026-11-25, the user's direction)
+No heuristic picks a move, rollouts included, batched to pay for it. Plan
+and Phase 0 are in ML_NOTES "The net chooses every move". Phase 0 found
+that a net-played move is 51 % move-list building (~100 trial applications
+a decision in `decision_menu::accepts`) and 43 % forward. Batching alone is
+<= 1.75x, so Phase 1 is a cheap legal-move list plus one-forward scoring
+(the action head, which `nets/policy-champion` lacks). Policy-played
+rollouts are 19x uniform ones today. No training without the user's
+go-ahead.
+
+Round 88 follow-ups:
+- `-ia` re-gate on the fixed binary (8f5ceceda);
+- the four-flag bundle `-hc-sv-rs-kx` (`.ladder/r88/gate_a4.sh`, running);
+- an SOS-only value slot for `nets_r88_R2_s97` (fails plain-card blunder
+  items as the all-format champion);
+- the engine accepts a repeated empty `DeclareAttackers` in one step (the
+  `-ia` loop's enabler).
 
 ### One net for every mode, Commander included (2026-09-28)
 The plan, its gates and per-step code locations are ML_NOTES "One net for every

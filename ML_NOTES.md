@@ -10215,3 +10215,200 @@ Draftsim 260 / 280). Only Academic Ascent falls, and inside its interval. The
 non-trick control diverges further (26 vs 253). So the gap between cheap cards'
 sim values and Draftsim is not a play-around problem. **Closed as a ratings
 lead**; `trick_read` and the census stay in the code, off.
+
+## Round 88: the audit fixes gated, two value retrains, a fifth policy generation (2026-11-24)
+
+The 2026-11-23 audit's fixes (e07b7eb10: attention q / k and LayerNorm now
+train, unseen card rows pad with the unknown row, a frozen holdout, five
+opt-in search flags) went through pre-registered gates. Scripts and raw
+cells are in `.ladder/r88/` (`gate_a.sh`, `gate_c.sh`, `train_d.sh`,
+`gate_d.sh`, `queue_e.sh`, `gate_a4.sh`). P below is the client / lobby
+pilot, `mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr-ho`.
+
+**B2, the committed nets on a frozen holdout.** The 165-game first-come
+validation set made seed-to-seed AUC noise look like net variance (see
+"AUC seed variance"). On 20,000 frozen rows (2,000 games, rated decks, a
+seed stream of its own): the champion is 0.8228 (it is r81 s43; the other
+r81 seeds 0.809-0.815), the FRA champion 0.8245 (the r87 nets 0.815-0.826).
+
+**A2, the untrained embedding rows reset to the unknown row: NOT adopted**
+(rule: NO LOSS, every format pooled >= 49.5, no cell < 48.5).
+
+| A = P-vb-pb on reset copies | seed 7 | seed 71 |
+|---|---|---|
+| cube 120 x 8 | 50.0 | 48.3 |
+| Modern 360 x 2 | 51.8 | **46.5** |
+| FRA sealed (policy rows only) | 49.6 | killed as moot |
+
+The N(0, 1) rows the champion never trained are worth something on cube and
+Modern: random but *distinct* rows tell cards apart, the unknown row
+doesn't.
+
+**The search-flag bundle `-rp-hc-sv-rs-kx`: fails its blunder clause by one
+item.** SOS 51.4 / 53.5, FRA 53.0 / 53.3 (seeds 7 / 71, all paired 120 x
+12); blunders 68.0 vs 69.0 (bar: >= B − 0.5). The lost item is
+`real_counter_112` (1 / 20 vs 20 / 20). Each flag alone on that item at 20
+reps: `-rp` 0 / 1, `-hc` `-sv` `-rs` `-kx` each 1 / 1. **Rollout prompts
+(`-rp`, the pilot's own prompt answers inside rollouts instead of
+AutoDecider) cost the counter item.** `gate_a4.sh` re-gates the four
+others (`-hc-sv-rs-kx`) on fresh seeds 13 / 89 under the same rule;
+result in `summary_a4.txt`.
+
+**Batch C (no training).**
+- C1 / C2 adopted in 54ea90a5d (FRA polish-3 51.0-51.4 over 4 seeds; 48
+  candidates; SOS polish-3 + cands48 52.4 / 52.3, FRA 51.2 / 51.1).
+- C3, the expert-iteration target census (`census.py`, 1,313 searched
+  decisions): the search's pick differs from the prior's argmax **42 %** of
+  the time, the raw-q target's argmax only **15.9 %**, mean KL(target ||
+  prior) 0.087 nats. The EI target is much flatter than what search plays,
+  which weakens "the policy loop is representation-bound": the loop trains
+  on a target that mostly agrees with the prior.
+- C4, the perfect-information ceiling (P+det0 vs P, SOS seed 7): **50.3**
+  [48.7, 52.0]. A belief model has little to recover at this budget.
+- C5, the real-board hold items under an honest truth (`--honest-truth`):
+  "hold right" positions 42 → 51 under the honest labels, and `-ho` still
+  holds in them (countered 19 / 51 vs B's 6 / 51; real-hand truth 11 / 42 vs
+  4 / 42).
+- C7 `-ia` (instant window with a heuristic anchor): **killed** after 16 h. It
+  was a bug, not volume: the anchor's fresh `HeuristicBot` re-offered
+  `DeclareAttackers([])` outside the open window, the engine accepts a
+  repeat empty declaration, and the search looped. Fixed in 8f5ceceda (the
+  anchor never re-offers a declaration outside an open combat window; a
+  regression test and a one-declaration-per-step assert in the search-game
+  harness). `-ia` needs a fresh gate on the fixed binary.
+
+**D, the SOS value net retrained on the fixes** (frozen holdout,
+`--sample-labelled`, `--lr-cosine auto`, `--reset-unseen`, trainable q / k;
+champion's base recipe; seeds 43 97 151 199). Scored: net67 vs dflt, SOS
+1000 x 12, seeds 211 / 307, fresh − champion:
+
+| arm | recipe delta | holdout AUC | fresh − champion |
+|---|---|---|---|
+| R0 | the champion's 0.12 steps / game | 0.820-0.826 | +0.47 [+0.02, +0.93] |
+| R1 | 0.274 steps / game, rated actor decks | 0.848-0.852 | +1.16 [+0.40, +1.93] |
+| R2 | R1 + `--emb-init-std 0.05` | 0.859-0.861 | **+2.39 [+2.10, +2.67]** |
+
+Search (R2 s97 as P's leaf, P-vb vs P, SOS 120 x 12): **52.8 / 53.0**. The
+pre-registered swap rule passed (E1). **The copy into `nets/champion` is
+held** on evidence the rule did not look at:
+- the blunder set under the R2 s97 leaf is 64.8 / 75 against the champion's
+  69.0 (same pilot, same policy);
+- five plain-card items the champion passes 20 / 20 all fail
+  (`flash_in_the_blocker`, `land_then_the_three_drop`,
+  `aura_on_your_own_creature`, `ping_for_lethal`,
+  `attack_then_bolt_for_lethal`). At 4 reps: R2 s97 0 / 5, R2 s43 4 / 5, R0
+  s43 3 / 5, champion 5 / 5. The FRA champion and the new FRA net are both
+  1 / 5;
+- the SOS gate never played cube or Modern, where `nets/champion` is also
+  the leaf.
+
+So set-trained nets misread boards of core cards. The likely cause,
+untested: those cards' rows are the unknown row (`--reset-unseen`) or
+never trained. R2 s97 fits an SOS-only slot, as `CRAB_FRA_NET` is for FRA.
+It does not fit the all-format champion. The user's call.
+
+**E2, the FRA value net on the R2 recipe** (`CRAB_SEALED_SET=fra`, rated
+field; realised 0.297 steps / game). Holdout 0.847-0.848 vs the FRA
+champion's 0.8245. Scored net67-fixes vs fra-fixes, rated FRA 1000 x 12,
+seeds 1013 / 1103: **+2.49 [+1.32, +3.65]** (s43 +2.75, s97 +1.40, s151
++2.80, s199 +3.00). Search, F s199 as the leaf (FRA 120 x 12): **52.8 /
+51.0**. The rule passes. Blunders equal the FRA champion's (plain 1 / 5,
+FRA cards 11.9 / 12 for both). **Proposed as `nets/fra-champion`**; the
+user's call.
+
+**E3, policy generation 5** (gen.sh's recipe, warm-started from the policy
+champion with q / k now training, the R2 s97 leaf, 6,000 games, 27,260 s,
+372 k searched rows): P-pb vs P, SOS 51.7 / 50.1 (pooled 50.9), FRA 51.9 /
+52.2. Every ladder clause passes. Blunders 64.0 vs 64.8 under the same
+leaf, and the bar is >= old − 0.5, so it **fails**. Not proposed. It is
+the first generation since gen 3 to read positive on both sets, so a
+gen 6 on the champion leaf is the natural follow-up.
+
+**Leads.** The `-ia` re-gate; the four-flag bundle (running); an SOS-only
+value slot for R2 s97; why set nets fail plain-card shells (rows, or the
+shells' card mix); and the net-chooses-every-move line (next entry). Every
+training step needs the user's go-ahead.
+
+## The net chooses every move: plan and Phase 0 (2026-11-25)
+
+The user's direction (2026-11-24): no heuristic picks a move, anywhere. The
+net decides every move, rollouts included, with heavy batching to pay for
+it. Phases:
+- **0** — measure (this entry).
+- **1** — one-forward move scoring (the action head scores every move off
+  one encoding of the decision state, not one forward per successor).
+- **2** — a lockstep rollout pool and a batched evaluator in the engine
+  crate: a CPU batched kernel, and a candle GPU backend on
+  `BatchEvalServer`'s protocol extended to the policy heads (today it
+  refuses nets with a kind table, action head or opp head, and lives only
+  in `selfplay_train`). Parity tests between the two.
+- **3** — the heuristic out of rollouts and prompts, then everywhere.
+- **4** — expert iteration on net-played rollouts.
+
+Gate: paired ladder at equal wall clock, plus the blunder set. Every
+training phase needs the user's go-ahead.
+
+**Census: who decides what today** (pilot P,
+`mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr-ho`; code read 2026-11-25):
+- **The policy net is asked once per searched decision**, at
+  `menu_arms` → `policy_pilot::scored_moves` (`server/mcts.rs` ~2024), and
+  only with kinds 0 / 1 / 2 (priority, attack, block). It sets the arm
+  priors; the arm is picked by prior + rollout mean.
+- **Rollouts are played by `HeuristicBot::uniform_baseline()` on both
+  seats** (`mcts.rs` ~1214). Its casts are uniform-random over valid casts;
+  land, attack, block and instant picks are the material heuristic's. Every
+  rollout prompt is `AutoDecider`'s first legal answer (`mcts.rs` ~1275).
+  The net appears only as the leaf.
+- **Not searched (`menu_windows = MAIN|COMBAT`):** every INSTANT window (the
+  opponent's turn, upkeep / draw / end step, combat after a declaration, own
+  main with a stack) and every prompt (mulligan, scry, discard, targets,
+  modes, order triggers, legend rule). The fallback `HeuristicBot` plays
+  these on the pilot's weights (`server/bot.rs` ~3896-4655). By count this
+  is most real moves (~150-250 a game, ~90 % passes).
+- **Combat declarations:** the anchor is a fresh `HeuristicBot` on material
+  weights. The search must beat it by 0.10, so most declarations are
+  probably still the heuristic's (unmeasured).
+- **Also outside the net:** the move list itself (heuristic generators,
+  `hold_removal` pruning, merging by key); mana payment (engine auto-tap,
+  `game/actions.rs` ~19217); colour / X choices from mana abilities;
+  engine-ordered target fill; the redeal of hidden cards (uniform,
+  `redeal_hidden`).
+- **Heads that exist:** `nets/policy-champion` has `head_policy` +
+  `head_policy_kind` (rows 0 priority, 1 attack, 2 block, 3-27 one per
+  prompt type, 31 other). It has **no `head_action` and no `head_opp`**. The
+  value files have `head_win` + `head_len` / `head_life` only. So Phase 1
+  needs a trained action head; kinds 3-27 exist but have never been asked
+  at play time.
+
+**Cost of a net-played move** (callgrind, `profiling-fast` at 8f5ceceda,
+24 SOS games of `policy-net` vs `policy-net` with
+`CRAB_NET=nets/policy-champion`, i.e. exactly what a `-np` rollout plays;
+213 G Ir, 20,026 decisions, 10.6 M Ir a decision):
+
+| stage | share | per unit |
+|---|---|---|
+| move list (`decision_menu::menu_with`) | **51.4 %** | 2.0 M legality trials (`accepts`, ~100 a decision), 34.3 % alone; keying via serde_json ~3 % |
+| forward (`forward_policy_kind`) | **42.9 %** | 54,086 forwards (2.7 a decision; most decisions are forced), 1.69 M Ir each; matmul 25 %, attention 11 % |
+| successor sims (`candidate_state`) | 3.6 % | 50,184 calls |
+| encode (`encode_state`) | ~1.5-3 % | |
+| everything else (the game itself, clones, allocation) | ~2-5 % | |
+
+At play time, P-np16 vs P-np16 (16 policy-played rollouts a decision) took
+737 s for 24 games against 38.7 s for P-it16 (16 uniform rollouts): **19x**
+(both under load ~25 on 24 cores).
+
+**What this changes in the plan.**
+- **Batching the forward is at most ~1.75x** (1 / 0.571, the forward at zero). The other half of a
+  net-played move is building the legal move list, and that half stays on
+  the CPU whatever runs the forward. The uniform rollout never builds a
+  list. It asks the heuristic for one move.
+- **Phase 1 must include a cheap move list.** The ~100 `accepts` trials a
+  decision each apply a candidate to a clone to test legality. Lever:
+  generate legal moves from the affordance tables without trial
+  application, or trial only the moves the net would pick (score first,
+  then validate in score order).
+- **The forward itself has room.** With one encoding per decision (the
+  action head), 2.7 forwards a decision become 1, and the CPU kernel could
+  batch the rollout pool's states.
+
+Raw files: `.ladder/p0/` (cg_pol.out, ann.txt, tree.txt, time_*.txt).
