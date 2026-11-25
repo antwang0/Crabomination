@@ -440,8 +440,12 @@ that a net-played move is 51 % move-list building (~100 trial applications
 a decision in `decision_menu::accepts`) and 43 % forward. Batching alone is
 <= 1.75x, so Phase 1 is a cheap legal-move list plus one-forward scoring
 (the action head, which `nets/policy-champion` lacks). Policy-played
-rollouts are 19x uniform ones today. No training without the user's
-go-ahead.
+rollouts are 19x uniform ones today. Phase 1 part 1 (0d70bdd45): the list
+is −27 %, and there is a root-only action head (one forward a decision). The
+2026-11-25 root-only gate is NOT adopted: SOS 49.6 is level, FRA ~47.0, and
+blunders 66/75 vs 69/75 (it loses aim items). Next: FRA actors, a
+target-owner role, or a hybrid with successor re-scoring of the top few.
+See ML_NOTES "Phase 1 gate".
 
 Round 88 follow-ups:
 - `-ia` re-gate on the fixed binary (8f5ceceda);

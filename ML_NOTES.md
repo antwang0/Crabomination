@@ -10472,3 +10472,39 @@ Tests:
 Smoke (120 games, 16-rollout search, 154 learner steps from the policy
 champion's trunk with a fresh head): held-out top-1 against the search's
 targets is **0.74** (chance 0.35).
+
+### Phase 1 gate: the root-only policy is NOT adopted (2026-11-25)
+
+The run (`.ladder/p1/run_rootonly.sh`, pre-registered): the gen-5 recipe with
+`--policy-root-only`, the champion leaf, the policy champion's trunk under a
+fresh head, 6,000 games, seed 48. Held-out top-1 against the search's
+targets is **0.796** (chance 0.352). The gate puts it as menu priors (`-pb`)
+against the client pilot on the policy champion, 120 x 12 sealed, paired:
+
+| cell | root-only priors win % |
+|---|---|
+| SOS seed 211 | 49.5 [47.9, 51.2] |
+| SOS seed 307 | 49.7 [47.9, 51.5] |
+| FRA seed 211 | **45.6** [43.6, 47.5] |
+| FRA seed 307 | 48.5 [46.6, 50.5] |
+| blunders (20 reps) | **66/75** vs 69/75 |
+
+The rule was ADOPT iff each pool >= 49.5, no cell < 48.5, and blunders
+>= old − 0.5. SOS pools 49.6, which is level. FRA pools ~47.0, and blunders
+fall by 3, so it fails on all three. The items it newly loses are aim
+items: Rancor on its own Bear, `ping_for_lethal`,
+`sos_remove_the_blocker_then_attack` and `real_counter_112`. Without a
+successor state, the head only sees whose object a target is through the
+reference embeddings, and that reading is weaker than scoring the board
+the move leaves.
+
+What to try next, in order:
+1. Add FRA actors to the generation. Every training game here was on the
+   champion leaf's default sealed pool, and FRA is where it loses.
+2. A target-owner/controller role on each object reference (mine vs
+   theirs, player vs permanent). The lost items are all of this shape.
+3. A hybrid: root-only for the list cut, then successor scoring for the
+   top few. This keeps most of the saving.
+Root-only is not a prior for the client or lobby. Phase 2 (batched
+lockstep rollouts) can still use it: there its baseline is the heuristic,
+not the champion.
