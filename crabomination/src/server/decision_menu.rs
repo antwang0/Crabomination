@@ -302,15 +302,7 @@ fn other_moves(g: &GameState, seat: usize) -> Vec<GameAction> {
     let mut cands: Vec<GameAction> = Vec::new();
     for c in p.hand.iter() {
         let id = c.id;
-        cands.extend([
-            GameAction::Cycle { card_id: id, x_value: None },
-            GameAction::Landcycle { card_id: id },
-            GameAction::ActivateDiscardAbility { card_id: id },
-            GameAction::Foretell { card_id: id },
-            GameAction::Plot { card_id: id },
-            GameAction::CastFaceDown { card_id: id },
-            GameAction::PlayLandBack(id),
-        ]);
+        cands.extend(hand_actions(id).into_iter().filter(|a| may_offer(g, seat, c, a)));
     }
     for c in p.graveyard.iter().filter(|c| c.definition.is_land()) {
         cands.push(GameAction::PlayLandFromGraveyard(c.id));
@@ -337,7 +329,35 @@ fn other_moves(g: &GameState, seat: usize) -> Vec<GameAction> {
 /// it. `would_accept` refuses those for a bot seat (a paused cast the bot
 /// can't finish deadlocked cube games), but they are legal moves and the
 /// client's pilot makes them.
+///
+/// One engine run per move: a refusal is final, and a suspension is read
+/// off the same probe ([`GameState::probe_on`]).
 fn accepts(g: &GameState, seat: usize, a: &GameAction) -> bool {
+    use crate::game::affordances::Probe;
+    match GameState::probe_on(g, a.clone()) {
+        Probe::Accepted(_) => true,
+        Probe::Rejected => false,
+        Probe::Suspended(probe) => some_answer_completes(&probe, seat),
+    }
+}
+
+/// Whether `probe` is suspended on `seat`'s own cost prompt and one of its
+/// first 16 answers completes the move.
+fn some_answer_completes(probe: &GameState, seat: usize) -> bool {
+    let Some(p) = probe.pending_decision.as_ref().filter(|p| p.resume.is_action_replay() && p.acting_player() == seat) else {
+        return false;
+    };
+    let (answers, _) = prompt_moves(probe, &p.decision);
+    answers.into_iter().take(16).any(|ans| {
+        let mut t = probe.clone();
+        t.perform_action(ans).is_ok() && !t.pending_decision.as_ref().is_some_and(|p| p.resume.is_action_replay())
+    })
+}
+
+/// [`accepts`] as it was before the one-probe form: a `would_accept`, then
+/// the action re-run on a clone. The parity test's reference.
+#[cfg(test)]
+fn accepts_reference(g: &GameState, seat: usize, a: &GameAction) -> bool {
     if g.would_accept(a.clone()) {
         return true;
     }
@@ -345,14 +365,46 @@ fn accepts(g: &GameState, seat: usize, a: &GameAction) -> bool {
     if probe.perform_action(a.clone()).is_err() {
         return false;
     }
-    let Some(p) = probe.pending_decision.as_ref().filter(|p| p.resume.is_action_replay() && p.acting_player() == seat) else {
-        return false;
-    };
-    let (answers, _) = prompt_moves(&probe, &p.decision);
-    answers.into_iter().take(16).any(|ans| {
-        let mut t = probe.clone();
-        t.perform_action(ans).is_ok() && !t.pending_decision.as_ref().is_some_and(|p| p.resume.is_action_replay())
-    })
+    some_answer_completes(&probe, seat)
+}
+
+/// The actions [`other_moves`] tries for each hand card.
+fn hand_actions(id: CardId) -> [GameAction; 7] {
+    [
+        GameAction::Cycle { card_id: id, x_value: None },
+        GameAction::Landcycle { card_id: id },
+        GameAction::ActivateDiscardAbility { card_id: id },
+        GameAction::Foretell { card_id: id },
+        GameAction::Plot { card_id: id },
+        GameAction::CastFaceDown { card_id: id },
+        GameAction::PlayLandBack(id),
+    ]
+}
+
+/// Whether a hand card could take one of [`other_moves`]' actions at all:
+/// the definition (or a grant) has what the engine's handler asks for
+/// first. `false` means the engine rejects it before anything else, so the
+/// probe is skipped; `true` leaves it to the probe. Seven doomed probes a
+/// hand card were 61 % of a game's legality trials (2026-11-25).
+fn may_offer(g: &GameState, seat: usize, c: &crate::card::CardInstance, a: &GameAction) -> bool {
+    use crate::card::Keyword;
+    let d = &c.definition;
+    match a {
+        GameAction::Cycle { .. } => {
+            d.keywords.iter().any(|k| matches!(k, Keyword::Cycling(_) | Keyword::CyclingLife(_) | Keyword::CyclingSacrifice(_)))
+                || g.granted_cycling_for(seat, c).is_some()
+        }
+        GameAction::Landcycle { .. } => {
+            d.keywords.iter().any(|k| matches!(k, Keyword::Landcycling(..) | Keyword::Typecycling(_)))
+                || g.granted_typecycling_for(c).is_some()
+        }
+        GameAction::ActivateDiscardAbility { .. } => d.discard_activated.is_some(),
+        GameAction::Foretell { .. } => d.foretell_cost.is_some() || g.hand_foretell_grant(seat, c).is_some(),
+        GameAction::Plot { .. } => d.plot_cost.is_some(),
+        GameAction::CastFaceDown { .. } => d.has_morph_ability(),
+        GameAction::PlayLandBack(_) => d.back_face.is_some() && !d.is_transforming_dfc(),
+        _ => true,
+    }
 }
 
 /// Every attack declaration: each eligible creature at no target or at any
@@ -792,8 +844,15 @@ fn prompt_moves(g: &GameState, d: &Decision) -> (Vec<GameAction>, bool) {
         Decision::PutOnLibrary { count, hand, .. } => {
             perms(&ids(hand), *count, &mut truncated).into_iter().map(DecisionAnswer::PutOnLibrary).collect()
         }
-        Decision::Mulligan { serum_powders, .. } => {
-            let mut v = vec![DecisionAnswer::Keep, DecisionAnswer::TakeMulligan];
+        Decision::Mulligan { serum_powders, mulligans_taken, .. } => {
+            // CR 103.5 puts no cap on mulligans, but past the seventh (eighth
+            // with a multiplayer free one) the kept hand is empty either way,
+            // so another is only a loop: a policy that prefers it never
+            // keeps (a root-only test pilot did, 8,000 times, 2026-11-25).
+            let mut v = vec![DecisionAnswer::Keep];
+            if *mulligans_taken < 8 {
+                v.push(DecisionAnswer::TakeMulligan);
+            }
             v.extend(serum_powders.iter().map(|id| DecisionAnswer::SerumPowder(*id)));
             v
         }
@@ -1065,6 +1124,60 @@ pub fn census_game(template: &GameState, pilot: super::MctsConfig, seed: u64) ->
 mod tests {
     use super::*;
 
+    /// The one-probe [`accepts`] answers as the two-probe reference did, and
+    /// [`may_offer`] never drops a move the engine would take. Every
+    /// candidate the generators try (base moves, the bot's casts, each hand
+    /// card's seven actions), at every priority stop of whole heuristic
+    /// games on cube decks (cycling, foretell, morph, MDFCs) and SOS sealed.
+    #[test]
+    fn the_cheap_legality_checks_answer_as_the_full_probe() {
+        let w = EvalWeights::default();
+        let mut states = 0;
+        let mut trials = 0;
+        let mut accepted = 0;
+        let templates: Vec<GameState> = (0..4u64)
+            .map(crate::cube::build_cube_state_seeded)
+            .chain((0..2u64).map(|s| {
+                let build = |k: u64| crate::selfplay::heuristic_sealed_build(&crate::selfplay::sealed_pool(s ^ k), s ^ (k << 4));
+                crate::selfplay::sealed_game_template(&build(1), &build(2))
+            }))
+            .collect();
+        for (i, t) in templates.iter().enumerate() {
+            let mut g = super::super::action_gap::start_game(t, &w, i as u64);
+            let mut bots = [super::super::bot::HeuristicBot::with_weights(w), super::super::bot::HeuristicBot::with_weights(w)];
+            let mut fuel = 3000;
+            while fuel > 0 && !g.is_game_over() && g.turn_number <= 12 {
+                fuel -= 1;
+                let seat = g.player_with_priority();
+                if g.pending_decision.is_none() {
+                    states += 1;
+                    let mut cands: Vec<(GameAction, Option<crate::card::CardInstance>)> =
+                        base_moves(&g, seat).into_iter().map(|a| (a, None)).collect();
+                    cands.extend(super::super::bot::cast_candidates(&g, seat, &w, None).into_iter().map(|(a, _)| (a, None)));
+                    for c in g.players[seat].hand.iter() {
+                        cands.extend(hand_actions(c.id).into_iter().map(|a| (a, Some(c.clone()))));
+                    }
+                    for (a, card) in cands {
+                        let full = accepts_reference(&g, seat, &a);
+                        trials += 1;
+                        accepted += full as u32;
+                        assert_eq!(accepts(&g, seat, &a), full, "turn {} {:?}: {a:?}", g.turn_number, g.step);
+                        if let Some(c) = card {
+                            assert!(full <= may_offer(&g, seat, &c, &a), "may_offer dropped a legal {a:?} ({})", c.definition.name);
+                        }
+                    }
+                }
+                use super::super::bot::Bot;
+                let a = bots[g.pending_decision.as_ref().map_or(seat, |p| p.acting_player())]
+                    .next_action(&g, g.pending_decision.as_ref().map_or(seat, |p| p.acting_player()));
+                if a.and_then(|a| g.perform_action(a).ok()).is_none() && g.perform_action(GameAction::PassPriority).is_err() {
+                    break;
+                }
+            }
+        }
+        assert!(states > 300 && accepted > 200, "too little coverage: {states} states, {trials} trials, {accepted} accepted");
+    }
+
     #[test]
     fn combinatorics_count_what_they_should() {
         let mut t = false;
@@ -1074,6 +1187,45 @@ mod tests {
         assert_eq!(compositions(5, 2, &mut t), vec![vec![1, 4], vec![2, 3], vec![3, 2], vec![4, 1]]);
         assert_eq!(compositions_with_zero(2, 2, &mut t).len(), 3);
         assert!(!t);
+    }
+
+    /// [`may_offer`] over every cube card: in hand at a main phase with ten
+    /// untapped basics, any of the seven hand actions the full probe takes
+    /// is one `may_offer` keeps. The games above only ever cycle; this
+    /// reaches plot, morph / disguise, landcycling and MDFC lands, plus a
+    /// foretell card and a hand-discard ability from outside the cube.
+    #[test]
+    fn may_offer_keeps_every_hand_action_any_cube_card_can_take() {
+        let mut taken = std::collections::BTreeMap::<String, u32>::new();
+        let mut seen = std::collections::HashSet::new();
+        // Foretell and a hand-discard ability aren't in the cube.
+        let extra: [crate::cube::CardFactory; 2] = [crate::catalog::delayed_blast_fireball, crate::catalog::magma_opus];
+        for f in crate::cube::all_cube_cards().into_iter().chain(extra) {
+            let def = f();
+            if !seen.insert(def.name) {
+                continue;
+            }
+            let mut g = crate::game::two_player_game();
+            g.step = TurnStep::PreCombatMain;
+            g.priority.player_with_priority = 0;
+            for land in [crate::catalog::plains, crate::catalog::island, crate::catalog::swamp, crate::catalog::mountain, crate::catalog::forest] {
+                for _ in 0..2 {
+                    let id = g.add_card_to_battlefield(0, land());
+                    g.clear_sickness(id);
+                }
+            }
+            let id = g.add_card_to_hand(0, def);
+            let card = g.players[0].hand.iter().find(|c| c.id == id).cloned().expect("in hand");
+            for a in hand_actions(id) {
+                if accepts_reference(&g, 0, &a) {
+                    *taken.entry(format!("{a:?}").split([' ', '(', '{']).next().unwrap_or("").to_string()).or_default() += 1;
+                    assert!(may_offer(&g, 0, &card, &a), "may_offer dropped {}'s legal {a:?}", card.definition.name);
+                }
+            }
+        }
+        for v in ["Cycle", "Landcycle", "ActivateDiscardAbility", "Foretell", "Plot", "CastFaceDown", "PlayLandBack"] {
+            assert!(taken.get(v).copied().unwrap_or(0) > 0, "no cube card took {v}: {taken:?}");
+        }
     }
 
     /// A two-slot spell fans out over its second slot: Burrog Barrage

@@ -13029,6 +13029,29 @@ short to say so.
 
 Entries `(-249)` and older are in `PERF_ARCHIVE.md`, verbatim.
 
+### ML 2026-11-25 — `(-372)` the move list's legality trials: one probe each, and no doomed hand actions
+
+**Pool:** a net-played move (`policy-net` vs `policy-net`, `CRAB_NET=nets/policy-champion.safetensors`, SOS sealed `--games 2 --threads 1 --seed 5`, 24 games), the workload of a `-np` rollout. `--bench` doesn't reach `decision_menu`; `GameState::accept_on` is the same probe behind a new `probe_on`, so its pools are unmoved by construction.
+
+**Method:** callgrind, `profiling-fast`, before at 8f5ceceda, after on the same tree with the change. The 24 games replay identically (same results file).
+
+| | before | after | delta |
+|---|---|---|---|
+| total Ir | 213.03 G | 183.25 G | **−14.0 %** |
+| `decision_menu::menu_with` (inclusive) | 109.48 G | 79.69 G | −27.2 % |
+| `decision_menu::accepts` | 73.14 G | 43.35 G | −40.7 % |
+| `forward_policy_kind` | 91.34 G | 91.34 G | 0 |
+
+**What changed:**
+- **One probe per trial.** `accepts` ran `would_accept` and then, on a refusal, the same action again on a clone, looking for a cost prompt some answer completes. `GameState::probe_on` returns accepted / suspended (with the state) / rejected from one run.
+- **No doomed hand actions.** `other_moves` tried seven actions per hand card: cycle, landcycle, channel-style discard, foretell, plot, face-down cast, MDFC land back. In a census game those were 61 % of all trials and all failed. `decision_menu::may_offer` skips any the card's definition, or the grant its handler looks up, can't take.
+
+Parity:
+- `the_cheap_legality_checks_answer_as_the_full_probe`: 66,206 trials over 1,663 states of cube and SOS games, one-probe equals two-probe on every one.
+- `may_offer_keeps_every_hand_action_any_cube_card_can_take`: every cube card, plus a foretell card and a channel card, in hand with ten basics. No legal action is dropped.
+
+**Left:** flashback casts from graveyard cards without flashback, and every untargeted cast that fans out over targets and X before failing, are most of the remaining trials. Flashback eligibility (jump-start, mayhem, graveyard casts, grants) is too intricate to mirror safely. The forward is now half the cost of a net-played move; the root-only action head (ML_NOTES "The net chooses every move") is the lever there.
+
 ### Commander 2026-09-29 (session `012RbSk7`) — a correctness fix priced twice: the resolving spell as a damage source
 
 `source_colors` / `protection_prevents_views` / a player's card-type

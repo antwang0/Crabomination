@@ -333,6 +333,72 @@ pub mod role {
     pub const CHOSEN: u8 = 8;
     /// A modal choice: mode 0, 1, and 2 or later.
     pub const MODE: u8 = 9;
+    /// The move's verb, [`super::verb`]: `VERB + 0..13`.
+    pub const VERB: u8 = 12;
+    /// The move's X, `X + 0..5` for X 1, 2, 3, 4 and 5 or more (no ref for
+    /// no X or X 0). A prompt's amount or die roll reads the same buckets.
+    pub const X: u8 = 25;
+    /// A prompt answer's variant, `ANSWER + 0..26` ([`super::answer_index`]):
+    /// keep and mulligan, yes and no, decline and cancel name no object.
+    pub const ANSWER: u8 = 30;
+    /// A `Bool(true)` answer (no ref for false).
+    pub const YES: u8 = 56;
+    /// A colour answer, `COLOR + 0..5` (W U B R G).
+    pub const COLOR: u8 = 57;
+    /// A card a scry sends to the bottom (the kept ones are [`CHOSEN`]).
+    pub const BOTTOM: u8 = 62;
+}
+
+/// The variant of a prompt answer, `0..26`, in `DecisionAnswer`'s order.
+pub fn answer_index(a: &crate::decision::DecisionAnswer) -> u8 {
+    use crate::decision::DecisionAnswer as D;
+    match a {
+        D::Target(_) => 0,
+        D::CancelAction => 1,
+        D::DeclineTarget => 2,
+        D::Mode(_) => 3,
+        D::Color(_) => 4,
+        D::ScryOrder { .. } => 5,
+        D::Discard(_) => 6,
+        D::Search(_) => 7,
+        D::Bool(_) => 8,
+        D::PutOnLibrary(_) => 9,
+        D::Keep => 10,
+        D::TakeMulligan => 11,
+        D::SerumPowder(_) => 12,
+        D::CreatureType(_) => 13,
+        D::CreatureTypePair(..) => 14,
+        D::NamedCard(_) => 15,
+        D::DieRoll(_) => 16,
+        D::DamageOrder(_) => 17,
+        D::Modes(_) => 18,
+        D::Learn(_) => 19,
+        D::TriggerOrder(_) => 20,
+        D::DamageDivision(_) => 21,
+        D::CombatDamageAssignment(_) => 22,
+        D::KeptLegend(_) => 23,
+        D::Amount(_) => 24,
+        D::Cards(_) => 25,
+    }
+}
+
+/// What kind of move `a` is, `0..13` ([`role::VERB`]).
+pub fn verb(a: &GameAction) -> u8 {
+    match a {
+        GameAction::PassPriority => 0,
+        GameAction::PlayLand(_) | GameAction::PlayLandBack(_) | GameAction::PlayLandFromGraveyard(_) => 1,
+        GameAction::CastSpell { .. } => 2,
+        GameAction::CastFlashback { .. } => 3,
+        GameAction::ActivateAbility { .. } => 4,
+        GameAction::ActivateLoyaltyAbility { .. } => 5,
+        GameAction::DeclareAttackers(_) | GameAction::DeclareAttackersBanded { .. } | GameAction::DeclareAttackersExerting { .. } => 6,
+        GameAction::DeclareBlockers(_) => 7,
+        GameAction::Cycle { .. } | GameAction::Landcycle { .. } => 8,
+        GameAction::SubmitDecision(_) => 9,
+        GameAction::CastPrepareSpell { .. } => 10,
+        GameAction::Equip { .. } => 11,
+        _ => 12,
+    }
 }
 
 /// The decision state's encoding for `seat` and every move's references
@@ -350,7 +416,8 @@ pub fn action_inputs(base: &GameState, seat: usize, moves: &[GameAction]) -> (cr
 pub fn action_refs(seat: usize, ids: &[Option<CardId>], a: &GameAction) -> Vec<ActionRef> {
     use crabomination_nn::NO_OBJECT;
     let obj = |c: CardId| ids.iter().position(|x| *x == Some(c)).map_or(NO_OBJECT, |i| i as u16);
-    let mut out: Vec<ActionRef> = Vec::new();
+    // The verb first, so a long declaration's truncation never drops it.
+    let mut out: Vec<ActionRef> = vec![(role::VERB + verb(a), NO_OBJECT)];
     match a {
         GameAction::DeclareAttackers(v) => {
             for at in v {
@@ -367,8 +434,32 @@ pub fn action_refs(seat: usize, ids: &[Option<CardId>], a: &GameAction) -> Vec<A
                 out.push((role::BLOCKED, obj(*at)));
             }
         }
+        GameAction::SubmitDecision(ans) => {
+            use crate::decision::DecisionAnswer as D;
+            out.push((role::ANSWER + answer_index(ans), NO_OBJECT));
+            match ans {
+                D::Bool(true) => out.push((role::YES, NO_OBJECT)),
+                D::Color(c) => out.push((role::COLOR + *c as u8, NO_OBJECT)),
+                D::Amount(n) if *n > 0 => out.push((role::X + (*n).min(5) as u8 - 1, NO_OBJECT)),
+                D::DieRoll(n) if *n > 0 => out.push((role::X + (*n).min(5) - 1, NO_OBJECT)),
+                D::ScryOrder { kept_top, bottom } => {
+                    out.extend(kept_top.iter().map(|&c| (role::CHOSEN, obj(c))));
+                    out.extend(bottom.iter().map(|&c| (role::BOTTOM, obj(c))));
+                }
+                _ => {}
+            }
+            if !matches!(ans, D::ScryOrder { .. })
+                && let Ok(v) = serde_json::to_value(a)
+            {
+                walk_action(&v, None, seat, &obj, &mut out);
+            }
+        }
         _ => {
             if let Ok(v) = serde_json::to_value(a) {
+                let x = v.as_object().and_then(|m| m.values().next()).and_then(|b| b.get("x_value")).and_then(|x| x.as_u64());
+                if let Some(x) = x.filter(|&x| x > 0) {
+                    out.push((role::X + (x.min(5) - 1) as u8, NO_OBJECT));
+                }
                 walk_action(&v, None, seat, &obj, &mut out);
             }
         }
@@ -407,7 +498,7 @@ fn walk_action(v: &serde_json::Value, key: Option<&str>, seat: usize, obj: &dyn 
                         let m = n.as_u64().unwrap_or(0).min(2) as u8;
                         out.push((role::MODE + m, crabomination_nn::NO_OBJECT));
                     }
-                    ("Discard" | "PutOnLibrary" | "Search" | "SerumPowder", _) => {
+                    ("Discard" | "PutOnLibrary" | "Search" | "SerumPowder" | "KeptLegend" | "Cards" | "TriggerOrder" | "DamageOrder", _) => {
                         let mut each = |x: &Value| {
                             if let Some(c) = id(x) {
                                 out.push((role::CHOSEN, obj(c)));
@@ -533,6 +624,14 @@ impl PolicyBot {
     /// no latch bookkeeping — what [`agreement_game`] asks at a decision
     /// another pilot is making.
     pub fn choose_from(&mut self, g: &GameState, seat: usize, m: decision_menu::Menu) -> Option<GameAction> {
+        if m.moves.len() > 1 && super::net_eval::slot_root_only(self.weights.net_slot) {
+            // One forward scores the whole list — declarations included, as
+            // whole sets — off the decision state.
+            let base = self.base(g, seat);
+            let (root, refs) = action_inputs(&base, seat, &m.moves);
+            let scores = super::net_eval::policy_action_terms(&root, self.weights.net_slot, m.kind.index(), &refs)?;
+            return Some(m.moves[pick(&scores, self.temp, &mut self.rng)].clone());
+        }
         if matches!(m.kind, Kind::Attack | Kind::Block) {
             return self.build_declaration(g, seat, m.kind).or_else(|| m.moves.first().cloned());
         }
@@ -622,6 +721,13 @@ pub fn scored_moves(g: &GameState, seat: usize, m: &decision_menu::Menu, slot: u
         return Vec::new();
     }
     let base = decision_base(g, seat);
+    if super::net_eval::slot_root_only(slot) {
+        // One forward over the decision state scores every move; the state
+        // handed back is the decision base (no successor was built).
+        let (root, refs) = action_inputs(&base, seat, &m.moves);
+        let Some(t) = super::net_eval::policy_action_terms(&root, slot, m.kind.index(), &refs) else { return Vec::new() };
+        return m.moves.iter().zip(t).map(|(a, l)| (a.clone(), l as f64, base.clone())).collect();
+    }
     let mut out: Vec<(GameAction, f64, GameState)> = m
         .moves
         .iter()
@@ -890,6 +996,107 @@ mod tests {
         fn has_policy(&self) -> bool {
             true
         }
+    }
+
+    /// The moves a head reading the decision state alone must tell apart
+    /// have different references: a card's cast and its cycle, X 2 and X 5,
+    /// keep and mulligan, yes and no, a scry's top and bottom, two colours.
+    #[test]
+    fn action_refs_tell_apart_moves_with_the_same_objects() {
+        use crate::decision::DecisionAnswer as D;
+        let c = CardId(7);
+        let ids = vec![Some(c)];
+        let refs = |a: GameAction| action_refs(0, &ids, &a);
+        let cast = |x| GameAction::CastSpell { card_id: c, target: None, additional_targets: Vec::new(), mode: None, x_value: x };
+        let pairs = [
+            (cast(None), GameAction::Cycle { card_id: c, x_value: None }),
+            (cast(Some(2)), cast(Some(5))),
+            (GameAction::SubmitDecision(D::Keep), GameAction::SubmitDecision(D::TakeMulligan)),
+            (GameAction::SubmitDecision(D::Bool(true)), GameAction::SubmitDecision(D::Bool(false))),
+            (
+                GameAction::SubmitDecision(D::ScryOrder { kept_top: vec![c], bottom: vec![] }),
+                GameAction::SubmitDecision(D::ScryOrder { kept_top: vec![], bottom: vec![c] }),
+            ),
+            (
+                GameAction::SubmitDecision(D::Color(crate::mana::Color::Red)),
+                GameAction::SubmitDecision(D::Color(crate::mana::Color::Green)),
+            ),
+        ];
+        for (a, b) in pairs {
+            let (ra, rb) = (refs(a.clone()), refs(b.clone()));
+            assert_ne!(ra, rb, "{a:?} and {b:?} read the same");
+            assert!(ra.iter().chain(&rb).all(|&(r, _)| (r as usize) < crabomination_nn::ACTION_ROLES), "{ra:?} {rb:?}");
+        }
+    }
+
+    /// A root-only policy: the action terms are a hash of each move's
+    /// references, and the successor logit panics — so a game it plays
+    /// proves the root-only path never builds a successor.
+    struct RootPolicy;
+    impl crabomination_nn::NetEvaluator for RootPolicy {
+        fn eval(&self, _s: crabomination_nn::EncodedState) -> f32 {
+            0.5
+        }
+        fn eval_policy(&self, _s: crabomination_nn::EncodedState) -> Option<f32> {
+            panic!("a root-only policy never scores a successor")
+        }
+        fn eval_policy_kind(&self, _s: crabomination_nn::EncodedState, _kind: u8) -> Option<f32> {
+            panic!("a root-only policy never scores a successor")
+        }
+        fn eval_action_terms(&self, _root: crabomination_nn::EncodedState, kind: u8, cands: &[Vec<ActionRef>]) -> Option<Vec<f32>> {
+            // Keeps its hand, else a hash of the references.
+            let keep = role::ANSWER + 10;
+            Some(
+                cands
+                    .iter()
+                    .map(|c| c.iter().map(|&(r, o)| if r == keep { 9.0 } else { (r as f32 * 1.7 + o as f32 * 0.31 + kind as f32).sin() }).sum())
+                    .collect(),
+            )
+        }
+        fn has_action(&self) -> bool {
+            true
+        }
+        fn action_root_only(&self) -> bool {
+            true
+        }
+        fn has_policy(&self) -> bool {
+            true
+        }
+    }
+
+    /// The root-only pilot plays a whole sealed game, combat included, from
+    /// one action-head read per decision; the engine takes every move.
+    #[test]
+    fn a_root_only_policy_plays_whole_games_without_successors() {
+        let _g = SLOT.lock().unwrap_or_else(|e| e.into_inner());
+        let slot = super::super::net_eval::SLOT_FRA;
+        super::super::net_eval::set_slot(slot, Some(std::sync::Arc::new(RootPolicy)));
+        let w = EvalWeights { net_slot: slot, ..EvalWeights::default() };
+        let mut g = super::super::action_gap::start_game(&sealed_template(5), &w, 5);
+        let mut bots = [PolicyBot::new(w, 0.0, 5), PolicyBot::new(w, 0.5, 6)];
+        let (mut fuel, mut combat) = (8000, 0);
+        while fuel > 0 && !g.is_game_over() && g.turn_number <= 14 {
+            fuel -= 1;
+            let mut acted = false;
+            for (seat, bot) in bots.iter_mut().enumerate() {
+                let Some(a) = bot.next_action(&g, seat) else { continue };
+                combat += u32::from(matches!(&a, GameAction::DeclareAttackers(_) | GameAction::DeclareBlockers(_)));
+                let r = g.perform_action(a.clone());
+                assert!(r.is_ok(), "the engine refused the root-only pilot's {a:?}: {r:?}");
+                acted = true;
+                break;
+            }
+            if !acted {
+                let _ = g.perform_action(GameAction::PassPriority);
+            }
+        }
+        // Scored moves come back for the whole list, each at the decision base.
+        let seat = g.player_with_priority();
+        if let Some(m) = decision_menu::menu(&g, seat, &w) {
+            assert_eq!(scored_moves(&g, seat, &m, slot).len(), m.moves.len());
+        }
+        super::super::net_eval::set_slot(slot, None);
+        assert!(bots.iter().map(|b| b.decisions).sum::<u64>() > 100 && combat > 0, "too little play: {combat} declarations");
     }
 
     /// The net slots are process-global; these tests use the FRA slot,

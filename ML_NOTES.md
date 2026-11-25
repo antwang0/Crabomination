@@ -10417,3 +10417,58 @@ At play time, P-np16 vs P-np16 (16 policy-played rollouts a decision) took
   batch the rollout pool's states.
 
 Raw files: `.ladder/p0/` (cg_pol.out, ann.txt, tree.txt, time_*.txt).
+
+### Phase 1, part 1: a cheaper move list and a root-only action head (2026-11-25)
+
+**The move list** (PERF `(-372)`): one probe per legality trial, and the
+seven hand actions a card can't take skipped before probing. A net-played
+move is −14.0 % instructions: the list −27 %, its trials −41 %. Results are
+identical (parity tests over 66 k trials and every cube card). The forward
+is now ~50 % of a net-played move, the list ~43 %.
+
+**Root-only scoring.** `selfplay_train --policy-root-only` trains the action
+head as the *whole* policy. Each move is scored from the decision state's
+per-object embeddings and the move's references, with no successor state
+and no per-candidate forward: one trunk pass a decision, combat
+declarations included (whole sets off the list).
+- The file carries the marker `head_action.root_only`
+  (`crabomination_nn::ACTION_ROOT_ONLY`). With it, `PlayNet::action_root_only`
+  makes `policy_pilot::{choose_from, scored_moves}` skip `candidate_state`.
+- Without the marker the head is the old term on the successor logit.
+- A root-only run refuses `--search-value-weight` (that needs the
+  successors).
+
+**References had to grow to carry a move alone** (`ACTION_ROLES` 12 → 64).
+As a term on the successor's logit the head never needed them; alone,
+these moves read the same:
+- a card's cast and its cycle;
+- X 2 and X 5;
+- keep and mulligan, yes and no;
+- a scry's top and bottom;
+- two colours.
+
+New roles, all in `policy_pilot::role`:
+- a verb per move (13);
+- X buckets (5; a prompt's amount and die roll too);
+- the answer variant (26);
+- yes, five colours, and scry-bottom.
+
+`action_refs_tell_apart_moves_with_the_same_objects` pins the pairs. No
+adopted net carries the head, so the shape change breaks nothing shipped.
+
+**A loop it found:** the engine offers `TakeMulligan` forever (CR 103.5 has
+no cap). A test policy that preferred it never kept, 8,000 mulligans on turn
+1. The move list now stops offering it after the eighth, when the kept hand
+is empty either way.
+
+Tests:
+- engine ↔ candle parity in both modes, with the marker read;
+- `a_root_only_policy_tells_moves_apart_by_their_verb`: the root-only head
+  fits cast vs cycle of one card, which a successor policy on uninformative
+  successors can't;
+- `a_root_only_policy_plays_whole_games_without_successors`: a stub whose
+  successor logit panics plays a sealed game, combat included.
+
+Smoke (120 games, 16-rollout search, 154 learner steps from the policy
+champion's trunk with a fresh head): held-out top-1 against the search's
+targets is **0.74** (chance 0.35).

@@ -65,6 +65,16 @@ pub mod scratch_census {
     }
 }
 
+/// What one dry run of an action found ([`GameState::probe_on`]).
+pub(crate) enum Probe {
+    /// The engine took it; the state it left.
+    Accepted(GameState),
+    /// It returned `Ok` only by suspending a bot seat into a replay modal;
+    /// the suspended state.
+    Suspended(GameState),
+    Rejected,
+}
+
 impl GameState {
 
     /// `(whole group, collections only)` fingerprints of the resolution-scratch
@@ -275,6 +285,19 @@ impl GameState {
     /// `clear_stale_target_suppression`) minus the checkpoint: adopt it only
     /// where a rejected action would be abandoned, not restored.
     pub(crate) fn accept_on(template: &GameState, action: GameAction) -> Option<GameState> {
+        match Self::probe_on(template, action) {
+            Probe::Accepted(g) => Some(g),
+            Probe::Suspended(_) | Probe::Rejected => None,
+        }
+    }
+
+    /// [`accept_on`](Self::accept_on) that tells a refusal from a bot's
+    /// suspension into a replay modal (a cost pick, a sacrifice to pay), and
+    /// hands back the suspended state. A caller asking "does some answer
+    /// complete it" reads the suspension off this one probe. It used to
+    /// re-run every refused action to find out: 12 % of a policy-played
+    /// game (`decision_menu::accepts`, 2026-11-25).
+    pub(crate) fn probe_on(template: &GameState, action: GameAction) -> Probe {
         crate::game::pay_census::in_probe(|| {
             let mut probe = template.clone();
             let acting = template.priority.player_with_priority;
@@ -317,11 +340,14 @@ impl GameState {
                 let (a2, c2) = probe.resolution_scratch_fingerprint();
                 scratch_census::tick(all == a2, coll == c2);
             }
-            if !ok || template.suspended_without_completing(&probe, acting) {
-                return None;
+            if !ok {
+                return Probe::Rejected;
             }
             probe.clear_stale_target_suppression();
-            Some(probe)
+            if template.suspended_without_completing(&probe, acting) {
+                return Probe::Suspended(probe);
+            }
+            Probe::Accepted(probe)
         })
     }
 

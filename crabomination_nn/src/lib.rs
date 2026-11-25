@@ -303,9 +303,16 @@ pub const AUX_FEATS: usize = 4;
 /// discard than as a main-phase play.
 pub const POLICY_KINDS: usize = 32;
 
-/// The action head's object roles (`head_action.role.*` rows): what an
-/// object is to a move — see [`ActionRef`].
-pub const ACTION_ROLES: usize = 12;
+/// The action head's roles (`head_action.role.*` rows): what an object is
+/// to a move (12), the move's verb (13: pass, land, cast, graveyard cast,
+/// activate, loyalty, attack, block, cycle, prompt answer, prepared cast,
+/// equip, other), its X size (5 buckets), a prompt answer's variant (26)
+/// and value (yes, 5 colours, scry bottom), one spare — see [`ActionRef`]
+/// and `server::policy_pilot::role`. These let a head that reads the
+/// decision state alone tell a cast from a cycle of the same card, X 2 from
+/// X 5, and keep from mulligan (2026-11-25; 12 before, when the head was a
+/// term on the successor's logit).
+pub const ACTION_ROLES: usize = 64;
 /// Most object references one move carries into the action head; a longer
 /// declaration keeps its first ones.
 pub const ACTION_MAX_REFS: usize = 16;
@@ -1126,7 +1133,17 @@ struct ActionHead {
     kind: Tensor2,   // [POLICY_KINDS, A]
     out_w: Tensor2,  // [1, A]
     out_b: f32,
+    /// The file carries [`ACTION_ROOT_ONLY`]: the head is the whole policy
+    /// logit, read off the decision state alone (no successor forward).
+    root_only: bool,
 }
+
+/// A marker tensor (any shape) in a policy file whose action head was
+/// trained as the whole policy: each move scored from the decision state's
+/// encoding and the move's references alone, one forward a decision
+/// (2026-11-25, the net-chooses-every-move plan's phase 1). Without it the
+/// head is a term on each successor's logit.
+pub const ACTION_ROOT_ONLY: &str = "head_action.root_only";
 
 /// The value net, loaded from a trainer-exported safetensors file.
 #[derive(Debug, Clone)]
@@ -1517,6 +1534,7 @@ impl PlayNet {
                     kind: get("head_action.kind.weight")?,
                     out_w: get("head_action.out.weight")?,
                     out_b: get("head_action.out.bias")?.data.first().copied().unwrap_or(0.0),
+                    root_only: st.tensor(ACTION_ROOT_ONLY).is_ok(),
                 }),
                 ..net
             },
@@ -1904,6 +1922,11 @@ impl PlayNet {
         self.action.is_some()
     }
 
+    /// Whether the action head is the whole policy ([`ACTION_ROOT_ONLY`]).
+    pub fn action_root_only(&self) -> bool {
+        self.action.as_ref().is_some_and(|a| a.root_only)
+    }
+
     /// The action head's term for each of a decision's moves (`cands[c]`
     /// the references of move `c`, first [`ACTION_MAX_REFS`] read), from
     /// one trunk pass over the decision state `root`. Added to each move's
@@ -2100,6 +2123,14 @@ pub trait NetEvaluator: Send + Sync {
         false
     }
 
+    /// Whether the action terms are the whole policy logit
+    /// ([`PlayNet::action_root_only`]): a caller scores a decision's moves
+    /// with one [`eval_action_terms`](Self::eval_action_terms) and no
+    /// successor states.
+    fn action_root_only(&self) -> bool {
+        false
+    }
+
     /// Whether [`eval_policy`](Self::eval_policy) can answer, so a profile
     /// can report its prior up front.
     fn has_policy(&self) -> bool {
@@ -2139,6 +2170,10 @@ impl NetEvaluator for PlayNet {
 
     fn has_action(&self) -> bool {
         self.has_action_head()
+    }
+
+    fn action_root_only(&self) -> bool {
+        PlayNet::action_root_only(self)
     }
 
     fn has_policy(&self) -> bool {

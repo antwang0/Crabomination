@@ -69,6 +69,12 @@ pub struct NetConfig {
     /// forward_action_terms`. Its output layer starts at zero, so a warm
     /// start scores exactly as before. Needs [`Self::policy`].
     pub policy_action: bool,
+    /// The action head is the whole policy logit
+    /// (`crabomination_nn::ACTION_ROOT_ONLY`, saved as a marker tensor):
+    /// each move scored from the decision state and its references alone,
+    /// no successor forward — one trunk pass a decision. Needs
+    /// [`Self::policy_action`].
+    pub policy_root_only: bool,
     /// Build the opponent-hand belief head (`head_opp.*`, h2 → vocab,
     /// round 39): per-name probability the opponent holds each card,
     /// multi-label BCE against `TrainRow::opp_hand`. Engine-consumed
@@ -91,6 +97,7 @@ impl NetConfig {
             policy: false,
             policy_kinds: false,
             policy_action: false,
+            policy_root_only: false,
             opp: false,
         }
     }
@@ -122,6 +129,8 @@ pub struct PlayModel {
     /// [`NetConfig::policy_kinds`].
     head_policy_kind: Option<(Tensor, Tensor)>,
     head_action: Option<ActionModel>,
+    /// [`NetConfig::policy_root_only`].
+    root_only: bool,
     head_opp: Option<Linear>,
 }
 
@@ -253,6 +262,14 @@ pub fn build_model(cfg: &NetConfig, vb: VarBuilder) -> CResult<PlayModel> {
             Some(linear(cfg.h2, cfg.vocab, vb.pp("head_opp"))?)
         } else {
             None
+        },
+        root_only: if cfg.policy_root_only {
+            assert!(cfg.policy_action, "a root-only policy is the action head");
+            // The marker the engine reads; never in a forward, so it never moves.
+            vb.get_with_hints(1, crabomination_nn::ACTION_ROOT_ONLY, candle_nn::Init::Const(1.0))?;
+            true
+        } else {
+            false
         },
     })
 }
@@ -723,6 +740,11 @@ impl PlayModel {
 
     pub fn has_action_head(&self) -> bool {
         self.head_action.is_some()
+    }
+
+    /// [`NetConfig::policy_root_only`].
+    pub fn root_only(&self) -> bool {
+        self.root_only
     }
 
     /// The action head's term for every candidate slot of a decision batch,
@@ -1956,6 +1978,9 @@ impl Trainer {
     /// action head's term for rows that carry its input.
     fn policy_logits(&self, rows: &[&DecisionRow], pad: &PaddedDecisions) -> CResult<(Tensor, Tensor)> {
         let (b, k) = (pad.b, pad.k);
+        if self.model.root_only() {
+            return self.root_only_logits(rows, pad);
+        }
         let batch = make_state_batch(&pad.flat, &self.dev)?;
         // Each candidate carries its row's decision kind; read only when the
         // model has the kind table, so every run without it is unchanged.
@@ -1991,6 +2016,30 @@ impl Trainer {
             }
         }
         Ok((win, logits))
+    }
+
+    /// [`policy_logits`](Self::policy_logits) for a root-only policy: the
+    /// action head's terms off each row's decision state, no successor
+    /// pass. The win output is zeros (the search-value term needs the
+    /// successors, so a root-only run refuses `--sv`). A row without a root
+    /// and references scores every candidate 0.
+    fn root_only_logits(&self, rows: &[&DecisionRow], pad: &PaddedDecisions) -> CResult<(Tensor, Tensor)> {
+        let (b, k) = (pad.b, pad.k);
+        let roots: Vec<&EncodedState> = rows
+            .iter()
+            .map(|r| r.root.as_ref().filter(|_| r.refs.is_some()).unwrap_or(&r.successors[0]))
+            .collect();
+        let rb = make_state_batch(&roots, &self.dev)?;
+        let widths: Vec<usize> = rb.ids.iter().map(|t| t.dim(1).unwrap_or(0)).collect();
+        let g = action_gather(rows, pad, &roots, &widths, &self.dev)?;
+        let row_kinds: Vec<u32> =
+            rows.iter().map(|r| if (r.kind as usize) < POLICY_KINDS { r.kind as u32 } else { 0 }).collect();
+        let rk = Tensor::from_vec(row_kinds, b, &self.dev)?;
+        let t = self.model.forward_action_terms(&rb, &rk, &g, k)?.expect("a root-only model has the action head");
+        let has: Vec<f32> = rows.iter().map(|r| f32::from(u8::from(r.root.is_some() && r.refs.is_some()))).collect();
+        let has = Tensor::from_vec(has, (b, 1), &self.dev)?;
+        let win = Tensor::zeros((b * k, 1), t.dtype(), &self.dev)?;
+        Ok((win, t.broadcast_mul(&has)?))
     }
 
     /// Win probability for a batch of rows in one forward pass — what
@@ -2704,7 +2753,7 @@ impl BatchEvalServer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crabomination_nn::{EncodedObject, PlayNet};
+    use crabomination_nn::{EncodedObject, NO_OBJECT, PlayNet};
     use rand::SeedableRng;
     use rand::rngs::StdRng;
 
@@ -2803,6 +2852,7 @@ mod tests {
             policy: false,
             policy_kinds: false,
             policy_action: false,
+            policy_root_only: false,
             opp: false,
         }
     }
@@ -2962,8 +3012,15 @@ mod tests {
     /// a reference past the state's objects, an out-of-range kind.
     #[test]
     fn action_head_matches_engine_inference() {
-        use crabomination_nn::NO_OBJECT;
-        let cfg = NetConfig { policy: true, policy_kinds: true, policy_action: true, ..small_cfg() };
+        for root_only in [false, true] {
+            action_head_parity(root_only);
+        }
+    }
+
+    /// [`action_head_matches_engine_inference`] for one head mode; a
+    /// root-only file also carries the marker the engine reads.
+    fn action_head_parity(root_only: bool) {
+        let cfg = NetConfig { policy: true, policy_kinds: true, policy_action: true, policy_root_only: root_only, ..small_cfg() };
         let trainer = Trainer::new(&cfg, 1e-3).expect("trainer");
         {
             let data = trainer.varmap.data().lock().unwrap();
@@ -2983,6 +3040,7 @@ mod tests {
         let _ = std::fs::remove_file(&path);
         let net = PlayNet::load(&bytes).expect("engine loads the action head");
         assert!(net.has_action_head());
+        assert_eq!(net.action_root_only(), root_only, "the engine reads the root-only marker");
         let mut rng = StdRng::seed_from_u64(44);
         for (case, kind) in [0u8, 1, 2, 9, 31, 200].into_iter().enumerate() {
             let root = random_state(&mut rng, cfg.vocab);
@@ -3048,6 +3106,42 @@ mod tests {
         let (with, without) = (fit(true), fit(false));
         assert!(with > 0.95, "with the action head: {with}");
         assert!(without < 0.7, "identical successors can't be told apart: {without}");
+    }
+
+    /// A root-only policy scores moves off the decision state alone, so the
+    /// verb is what tells a card's cast from its cycle: both moves name the
+    /// same object, and their successors here are noise (one pair of states
+    /// for every row, in random order). The root-only head fits it; the
+    /// successor policy can't.
+    #[test]
+    fn a_root_only_policy_tells_moves_apart_by_their_verb() {
+        let (cast, cycle) = (12 + 2, 12 + 8);
+        let mut rng = StdRng::seed_from_u64(8);
+        let (a, b) = (random_state(&mut rng, 12), random_state(&mut rng, 12));
+        let rows: Vec<DecisionRow> = (0..32)
+            .map(|_| {
+                let s = random_state(&mut rng, 12);
+                let (a, b) = (a.clone(), b.clone());
+                let o = 0u16;
+                let flip = rng.random_range(0..2) == 1;
+                // Always cycle; the list order flips.
+                let refs = if flip { vec![vec![(cast, NO_OBJECT), (0, o)], vec![(cycle, NO_OBJECT), (0, o)]] } else { vec![vec![(cycle, NO_OBJECT), (0, o)], vec![(cast, NO_OBJECT), (0, o)]] };
+                let succ = if rng.random_range(0..2) == 1 { vec![a, b] } else { vec![b, a] };
+                DecisionRow { successors: succ, chosen: usize::from(flip), root: Some(s), refs: Some(refs), ..Default::default() }
+            })
+            .collect();
+        let refs: Vec<&DecisionRow> = rows.iter().collect();
+        let fit = |root_only: bool| {
+            let cfg = NetConfig { policy: true, policy_kinds: true, policy_action: root_only, policy_root_only: root_only, ..small_cfg() };
+            let mut t = Trainer::new(&cfg, 1e-2).expect("trainer");
+            for _ in 0..300 {
+                t.train_policy_step(&refs).expect("step");
+            }
+            t.policy_top1(&refs).expect("top1")
+        };
+        let (root, succ) = (fit(true), fit(false));
+        assert!(root > 0.95, "root-only: {root}");
+        assert!(succ < 0.8, "successor noise can't carry the verb: {succ}");
     }
 
     /// Only the kind table can learn this: the same two successors, kind 3
@@ -4232,6 +4326,7 @@ mod tests {
                 policy: false,
                 policy_kinds: false,
                 policy_action: false,
+                policy_root_only: false,
                 opp: false,
             };
         let mut play = Trainer::new(&cfg, 1e-3).expect("play trainer");

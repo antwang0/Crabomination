@@ -248,6 +248,13 @@ pub fn slot_has_action(slot: u8) -> bool {
     net_for(slot).is_some_and(|n| n.has_action())
 }
 
+/// Whether the net in `slot` scores a decision's moves from the decision
+/// state alone ([`crabomination_nn::ACTION_ROOT_ONLY`]): one forward, no
+/// successor states.
+pub fn slot_root_only(slot: u8) -> bool {
+    net_for(slot).is_some_and(|n| n.has_action() && n.action_root_only())
+}
+
 /// Per-name probabilities that the opponent holds each vocabulary card,
 /// from the slot net's belief head — the weighted redeal's input. `None`
 /// when the slot is empty or its net carries no belief head.

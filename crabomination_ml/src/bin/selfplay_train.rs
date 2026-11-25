@@ -126,6 +126,10 @@ struct Args {
     /// move involves. Implies `--policy-kinds`. On `--init-from` a file
     /// without the head loads whole and the head starts at zero.
     policy_action: bool,
+    /// `--policy-root-only` (`NetConfig::policy_root_only`): the action head
+    /// is the whole policy, each move scored off the decision state alone.
+    /// Implies `--policy-action`; refuses `--sv`.
+    policy_root_only: bool,
     /// `--init-from W.safetensors`: a fresh run's learner takes W's shape and
     /// every tensor W carries, plus the policy head (and kind table under
     /// `--policy-kinds`) seeded from the win head — `--pg`'s warm start, so an
@@ -434,6 +438,7 @@ fn parse_args() -> Args {
         use_policy: None,
         policy_kinds: false,
         policy_action: false,
+        policy_root_only: false,
         init_from: None,
         policy_every: 4,
         policy_temp: 0.1,
@@ -548,6 +553,13 @@ fn parse_args() -> Args {
                 a.policy_head = true;
             }
             "--policy-kinds" => {
+                a.policy_kinds = true;
+                a.policy_head = true;
+                continue; // bare flag, consumes no value
+            }
+            "--policy-root-only" => {
+                a.policy_root_only = true;
+                a.policy_action = true;
                 a.policy_kinds = true;
                 a.policy_head = true;
                 continue; // bare flag, consumes no value
@@ -743,6 +755,7 @@ fn net_config(args: &Args, vocab: usize) -> crabomination_ml::NetConfig {
     cfg.policy = args.policy_head;
     cfg.policy_kinds = args.policy_kinds;
     cfg.policy_action = args.policy_action;
+    cfg.policy_root_only = args.policy_root_only;
     cfg.opp = args.opp_head;
     assert!(
         !(cfg.attn && cfg.blocks > 0),
@@ -805,6 +818,7 @@ fn file_net_config(
         policy: n.has_policy_head(),
         policy_kinds: n.has_policy_kinds(),
         policy_action: n.has_action_head(),
+        policy_root_only: n.action_root_only(),
         opp: n.has_opp_head(),
     })
 }
@@ -1700,6 +1714,10 @@ fn gate_builder_v3(args: &Args, games_per_pool: usize) {
 
 fn main() {
     let args = parse_args();
+    assert!(
+        !(args.policy_root_only && args.search_value_weight > 0.0),
+        "--policy-root-only has no successor pass for --search-value-weight"
+    );
     // No seat here renders a prompt; see `game::set_prompt_text`.
     crabomination::game::set_prompt_text(false);
     // Before anything encodes: the diagnostics below must see the same
@@ -1803,6 +1821,7 @@ fn main() {
             c.policy = true;
             c.policy_kinds = args.policy_kinds || c.policy_kinds;
             c.policy_action = args.policy_action || c.policy_action;
+            c.policy_root_only = args.policy_root_only || c.policy_root_only;
             c
         }
         _ => net_config(&args, vocab.size()),
@@ -1878,7 +1897,7 @@ fn main() {
         // A file that already carries the policy head (a previous imitation
         // run) loads whole; one without it gets the head seeded from the
         // win head.
-        const ACTION: [&str; 8] = [
+        const ACTION: [&str; 9] = [
             "head_action.obj.weight",
             "head_action.obj.bias",
             "head_action.role.weight",
@@ -1887,6 +1906,7 @@ fn main() {
             "head_action.kind.weight",
             "head_action.out.weight",
             "head_action.out.bias",
+            crabomination_nn::ACTION_ROOT_ONLY,
         ];
         if trainer.load(init).is_ok() {
             eprintln!("init: every tensor from {}", init.display());
@@ -1912,6 +1932,7 @@ fn main() {
                         "head_action.kind.weight",
                         "head_action.out.weight",
                         "head_action.out.bias",
+                        crabomination_nn::ACTION_ROOT_ONLY,
                     ],
                 )
                 .expect("--init-from: load the net into the learner");
