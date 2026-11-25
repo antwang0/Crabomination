@@ -10317,8 +10317,9 @@ champion's 0.8245. Scored net67-fixes vs fra-fixes, rated FRA 1000 x 12,
 seeds 1013 / 1103: **+2.49 [+1.32, +3.65]** (s43 +2.75, s97 +1.40, s151
 +2.80, s199 +3.00). Search, F s199 as the leaf (FRA 120 x 12): **52.8 /
 51.0**. The rule passes. Blunders equal the FRA champion's (plain 1 / 5,
-FRA cards 11.9 / 12 for both). **Proposed as `nets/fra-champion`**; the
-user's call.
+FRA cards 11.9 / 12 for both). **Swapped in as `nets/fra-champion`
+2026-11-25 at the user's request** (old file: r86 rated s43, in git and at
+`.ladder/r88/fra-champion-pre-r88.safetensors`).
 
 **E3, policy generation 5** (gen.sh's recipe, warm-started from the policy
 champion with q / k now training, the R2 s97 leaf, 6,000 games, 27,260 s,
