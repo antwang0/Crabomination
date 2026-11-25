@@ -45708,16 +45708,21 @@ mod tests {
         // test is the suite's long pole); every game is seeded, so order
         // changes nothing. `RUST_MIN_STACK` (`.cargo/config.toml`) sizes the
         // workers' stacks. `CRAB_SEAT_SHARD=i/n` runs every n-th job from the
-        // i-th (0-based), so the list can be checked in pieces.
+        // i-th (0-based), so the list can be checked in pieces; `CRAB_SEAT=<name
+        // prefix>` runs one seat, and `CRAB_SEAT_LOG=1` times each game
+        // (2026-11-25: Loot seed 0xad8 is the long pole, over an hour alone in
+        // debug; no other seat passes 8 minutes).
         let shard = std::env::var("CRAB_SEAT_SHARD").ok().and_then(|v| {
             let (i, n) = v.split_once('/')?;
             Some((i.parse::<usize>().ok()?, n.parse::<usize>().ok()?.max(1)))
         });
+        let only = std::env::var("CRAB_SEAT").ok();
         let jobs: Vec<(&str, u64)> = seats
             .iter()
             .flat_map(|(name, seeds)| seeds.iter().map(move |&seed| (*name, seed)))
             .enumerate()
             .filter(|(k, _)| shard.is_none_or(|(i, n)| k % n == i))
+            .filter(|(_, (name, _))| only.as_deref().is_none_or(|p| name.starts_with(p)))
             .map(|(_, j)| j)
             .collect();
         let next = std::sync::atomic::AtomicUsize::new(0);
@@ -45732,7 +45737,15 @@ mod tests {
                         let t = build_pod_template(&decks);
                         assert_eq!(t.players[0].library.len(), 100 - precon.commanders.len());
                         let pilots = vec![Pilot::default(); 4];
+                        let log = std::env::var_os("CRAB_SEAT_LOG").is_some();
+                        if log {
+                            eprintln!("seat {name} seed {seed:#x}: start");
+                        }
+                        let started = std::time::Instant::now();
                         let o = play_one_pod_game(&t, &pilots, 50_000, seed);
+                        if log {
+                            eprintln!("seat {name} seed {seed:#x}: {:.0}s, turn {}, {} actions", started.elapsed().as_secs_f64(), o.turns, o.actions);
+                        }
                         assert!(
                             o.winner.is_some(),
                             "{name} seed {seed} left the pod undecided ({:?}, turn {}, {} actions)",
