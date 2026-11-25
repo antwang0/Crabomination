@@ -99,7 +99,7 @@ pub(crate) fn local_bot(n_seats: usize, fra: bool, limited: bool) -> Box<dyn cra
         policy_slot,
         ..crabomination::server::MctsConfig::default()
     };
-    Box::new(crabomination::server::MctsBot::new(if menu { cfg.with_combat_fix().with_search_fixes().with_hold_arm() } else { cfg }))
+    Box::new(crabomination::server::MctsBot::new(if menu { cfg.with_combat_fix().with_search_fixes().with_hold_arm().with_audit_fixes() } else { cfg }))
 }
 
 /// The bot a Hint asks (`server::hint`): the local pilot for the state's

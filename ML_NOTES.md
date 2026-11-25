@@ -10250,9 +10250,13 @@ item.** SOS 51.4 / 53.5, FRA 53.0 / 53.3 (seeds 7 / 71, all paired 120 x
 `real_counter_112` (1 / 20 vs 20 / 20). Each flag alone on that item at 20
 reps: `-rp` 0 / 1, `-hc` `-sv` `-rs` `-kx` each 1 / 1. **Rollout prompts
 (`-rp`, the pilot's own prompt answers inside rollouts instead of
-AutoDecider) cost the counter item.** `gate_a4.sh` re-gates the four
-others (`-hc-sv-rs-kx`) on fresh seeds 13 / 89 under the same rule;
-result in `summary_a4.txt`.
+AutoDecider) cost the counter item.** `gate_a4.sh` re-gated the four
+others (`-hc-sv-rs-kx`) on fresh seeds 13 / 89 under the same rule: SOS
+51.3 / 49.7 (pooled 50.5), FRA 49.0 / 50.8 (pooled 49.9), blunders 69.0 vs
+69.0. **ADOPTED 2026-11-25** as `MctsConfig::with_audit_fixes()` (after
+`with_hold_arm()` in the client's menu pilot and the lobby's duels). It is
+a NO-LOSS correctness bundle, not a measured gain: the four cells pool to
++0.2.
 
 **Batch C (no training).**
 - C1 / C2 adopted in 54ea90a5d (FRA polish-3 51.0-51.4 over 4 seeds; 48
@@ -10324,7 +10328,7 @@ leaf, and the bar is >= old − 0.5, so it **fails**. Not proposed. It is
 the first generation since gen 3 to read positive on both sets, so a
 gen 6 on the champion leaf is the natural follow-up.
 
-**Leads.** The `-ia` re-gate; the four-flag bundle (running); an SOS-only
+**Leads.** The `-ia` re-gate; `-rp` (why the pilot's own prompt answers in rollouts lose the counter item); an SOS-only
 value slot for R2 s97; why set nets fail plain-card shells (rows, or the
 shells' card mix); and the net-chooses-every-move line (next entry). Every
 training step needs the user's go-ahead.

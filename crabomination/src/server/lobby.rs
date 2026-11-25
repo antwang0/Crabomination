@@ -72,7 +72,7 @@ fn default_bot(seats: usize, format: crate::net::LobbyFormat) -> Box<dyn super::
         cfg.menu_windows = super::mcts::MENU_MAIN | super::mcts::MENU_COMBAT;
         cfg.policy_slot = slot;
         // After the weights are final: the search fixes set one of them.
-        cfg = cfg.with_combat_fix().with_search_fixes().with_hold_arm();
+        cfg = cfg.with_combat_fix().with_search_fixes().with_hold_arm().with_audit_fixes();
     }
     Box::new(MctsBot::new(cfg))
 }

@@ -643,6 +643,16 @@ impl MctsConfig {
     pub fn with_hold_arm(self) -> Self {
         Self { menu_hold_arm: true, ..self }
     }
+
+    /// Four of the 2026-11-23 audit's search flags (ladder `-hc-sv-rs-kx`),
+    /// adopted 2026-11-25 on top of [`Self::with_hold_arm`] (ML_NOTES
+    /// "Round 88"): [`Self::hold_all_casts`], [`Self::menu_survivor_pick`],
+    /// [`Self::rollout_reseed`], [`Self::menu_side_keys`]. SOS 51.3 / 49.7,
+    /// FRA 49.0 / 50.8, blunders 69 / 69. [`Self::rollout_prompts`] (`-rp`)
+    /// is left out: it alone loses a real-board counter item.
+    pub fn with_audit_fixes(self) -> Self {
+        Self { hold_all_casts: true, menu_survivor_pick: true, rollout_reseed: true, menu_side_keys: true, ..self }
+    }
 }
 
 /// The ladder's and the puzzle tool's name for a menu-search pilot:
@@ -2883,6 +2893,9 @@ mod tests {
         assert!(one.menu_survivor_pick && !one.rollout_prompts && !one.hold_all_casts && !one.rollout_reseed);
         let held = menu_profile("mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr-ho").expect("the 2026-11-20 gate's A");
         assert_eq!(format!("{held:?}"), format!("{:?}", built.with_hold_arm()), "the builder is the profile gated");
+        let audited = menu_profile("mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr-ho-hc-sv-rs-kx").expect("the 2026-11-25 gate's A");
+        assert_eq!(format!("{audited:?}"), format!("{:?}", built.with_hold_arm().with_audit_fixes()), "the builder is the profile gated");
+        assert!(!built.with_hold_arm().with_audit_fixes().rollout_prompts, "-rp was not adopted");
         assert!(menu_profile("mcts-net67-menu-mc-bogus").is_none());
         assert!(menu_profile("mcts-net67-256").is_none());
     }

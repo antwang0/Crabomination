@@ -411,7 +411,7 @@ items and **adopted 2026-11-21** (`MctsConfig::with_hold_arm`, b7b90e4b7: NO
 LOSS on SOS / FRA / cube / Modern, real-board counter items 10 / 10). The
 2026-11-23 audit found its rollouts refused only plain `CastSpell` (fixed
 behind `-hc`, round 88) and that the real-board truths deal the real hand
-(`--honest-truth`, round 88; C5: the hold survives an honest truth). Round 88: `-rp` costs a real-board counter item, so the bundle re-gates without it. Its remaining gap is rollout fidelity inside a
+(`--honest-truth`, round 88; C5: the hold survives an honest truth). Round 88: `-rp` costs a real-board counter item, so the other four were adopted without it (`with_audit_fixes`). Its remaining gap is rollout fidelity inside a
 3-turn horizon.
 
 The 2026-11-11 item list, by outcome (reasoning in ML_NOTES "Why the
@@ -445,7 +445,8 @@ go-ahead.
 
 Round 88 follow-ups:
 - `-ia` re-gate on the fixed binary (8f5ceceda);
-- the four-flag bundle `-hc-sv-rs-kx` (`.ladder/r88/gate_a4.sh`, running);
+- `-hc-sv-rs-kx` ADOPTED 2026-11-25 (`with_audit_fixes`); `-rp` alone loses
+  `real_counter_112`, so it is unexplained and off;
 - an SOS-only value slot for `nets_r88_R2_s97` (fails plain-card blunder
   items as the all-format champion);
 - the engine accepts a repeated empty `DeclareAttackers` in one step (the
