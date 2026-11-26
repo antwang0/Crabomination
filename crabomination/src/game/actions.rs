@@ -25073,9 +25073,16 @@ impl GameState {
         }
 
         // "Put this on the bottom of its owner's library:" (Timestream
-        // Navigator) — the same timing as the bounce above.
+        // Navigator) — the same timing as the bounce above. From the
+        // graveyard too ("put this card from your graveyard on the bottom":
+        // Daniels, Temporal Agent).
+        let bottom_owner = if source_in_gy {
+            Some(source_owner)
+        } else {
+            self.battlefield_find(card_id).map(|c| c.owner)
+        };
         if ability.bottom_self_cost
-            && let Some(owner) = self.battlefield_find(card_id).map(|c| c.owner)
+            && let Some(owner) = bottom_owner
         {
             let ctx = crate::game::effects::EffectContext::for_spell(owner, None, 0, 0);
             self.move_card_to(
