@@ -393,3 +393,98 @@ fn nog_climbs_from_rogue_to_officer() {
     assert!(g.player_may_play_lands_from_graveyard(0));
     assert_eq!(g.max_lands_per_turn(0), 2);
 }
+
+/// `commander` plus `extra` and enough of `basic` to make 100 cards.
+fn deck(
+    commander: crabomination::card::CardDefinition,
+    extra: Vec<crabomination::card::CardDefinition>,
+    basic: fn() -> crabomination::card::CardDefinition,
+) -> crabomination::format::Deck {
+    let mut main = extra;
+    while main.len() < 99 {
+        main.push(basic());
+    }
+    crabomination::format::Deck { main, commanders: vec![commander], sideboard: vec![] }
+}
+
+fn off_identity(d: &crabomination::format::Deck) -> Vec<&'static str> {
+    match crabomination::format::validate_commander_deck(d) {
+        Ok(()) => vec![],
+        Err((_, cmd)) => cmd
+            .into_iter()
+            .filter_map(|e| match e {
+                crabomination::format::CommanderDeckError::OffColorIdentity { card_name, .. } => Some(card_name),
+                _ => None,
+            })
+            .collect(),
+    }
+}
+
+/// CR 903.5c with Tolabow's Rulebreaker (an ability word, CR 207.2c): its
+/// instants and sorceries may add ONE color — the red Bolts fit, the black
+/// sorcery is a second color and doesn't; a basic Swamp fits; an off-color
+/// creature never does.
+#[test]
+fn cr_903_5c_tolabow_rulebreaker_admits_one_extra_spell_color() {
+    let d = deck(
+        catalog::tolabow_loch_rascal(),
+        vec![
+            catalog::lightning_bolt(),
+            catalog::lava_spike(),
+            catalog::duress(),
+            catalog::swamp(),
+            catalog::grizzly_bears(),
+        ],
+        catalog::island,
+    );
+    assert_eq!(off_identity(&d), vec!["Duress", "Grizzly Bears"]);
+    let bolts = deck(catalog::tolabow_loch_rascal(), vec![catalog::lightning_bolt(), catalog::mountain()], catalog::island);
+    assert!(off_identity(&bolts).is_empty());
+}
+
+/// CR 903.5c with Valko's Rulebreaker: a Phyrexian of any color and any basic
+/// fit; a non-Phyrexian off-color card doesn't. His Phyrexians get menace and
+/// lifelink.
+#[test]
+fn cr_903_5c_valko_rulebreaker_admits_phyrexians() {
+    let d = deck(
+        catalog::valko_indorian(),
+        vec![catalog::vault_skirge(), catalog::plains(), catalog::counterspell()],
+        catalog::swamp,
+    );
+    assert_eq!(off_identity(&d), vec!["Counterspell"]);
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::valko_indorian());
+    let skirge = ready(&mut g, 0, catalog::vault_skirge());
+    assert!(g.permanent_has_keyword(skirge, &Keyword::Menace));
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    assert!(!g.permanent_has_keyword(bear, &Keyword::Lifelink));
+}
+
+/// Tolabow: an instant makes a prowess Otter.
+#[test]
+fn tolabow_makes_an_otter_per_instant() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::tolabow_loch_rascal());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, opt);
+    let otter = g.battlefield.iter().find(|c| c.definition.name == "Otter").map(|c| c.id).expect("an Otter");
+    assert!(g.permanent_has_keyword(otter, &Keyword::Prowess));
+}
+
+/// Jabs: a borrowed permanent's upkeep trigger fires twice; your own once.
+#[test]
+fn jabs_doubles_triggers_of_permanents_you_dont_own() {
+    for borrowed in [false, true] {
+        let mut g = pod(2);
+        ready(&mut g, 0, catalog::jabs_mistress_of_mockery());
+        let arena = g.add_card_to_battlefield(if borrowed { 1 } else { 0 }, catalog::phyrexian_arena());
+        g.battlefield.iter_mut().find(|c| c.id == arena).unwrap().controller = 0;
+        let hand = g.players[0].hand.len();
+        g.step = TurnStep::Upkeep;
+        g.fire_step_triggers(TurnStep::Upkeep);
+        drain_stack(&mut g);
+        assert_eq!(g.players[0].hand.len(), hand + if borrowed { 2 } else { 1 });
+    }
+}

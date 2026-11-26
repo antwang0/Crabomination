@@ -19526,6 +19526,9 @@ static DECKS: &[Factory] = &[
     super::decks::genesis_device,
     super::decks::tea_earl_grey_hot,
     super::decks::nog_ambitious_cadet,
+    super::decks::valko_indorian,
+    super::decks::tolabow_loch_rascal,
+    super::decks::jabs_mistress_of_mockery,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

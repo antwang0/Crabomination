@@ -1,14 +1,17 @@
 //! Star Trek (TRK/TRC) — the eighth batch of EDHREC Star Trek closers: six
 //! commanders whose single-commander average decks miss only the commander,
 //! Georgiou's, Daniels', Tasha Yar's and Nog's two-card gaps, and Neelix's three
-//! (scan of 2026-11-26). Tests in `tests/recent_b/trek_singles8.rs`.
+//! (scan of 2026-11-26); then non-Trek EDHREC singles short only their
+//! commander. Tests in `tests/recent_b/trek_singles8.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
     Keyword, LandType, MayPlayDuration, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{add_any_one_color, blitz, etb, investigate, mint_treasures, on_dies, target_filtered};
+use crate::effect::shortcut::{
+    add_any_one_color, blitz, etb, investigate, magecraft, mint_treasures, on_dies, target_filtered,
+};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u};
@@ -538,5 +541,78 @@ pub fn nog_ambitious_cadet() -> CardDefinition {
             2,
             2,
         )
+    }
+}
+
+// ── EDHREC singles short only their commander (scan of 2026-11-26) ──────────
+
+/// Valko Indorian — {3}{B} legendary 2/4 Human Wizard. Rulebreaker — a deck
+/// with this commander can have Phyrexian cards of any color identity and any
+/// basic land cards. Phyrexian creatures you control have menace and lifelink.
+pub fn valko_indorian() -> CardDefinition {
+    let phyrexians = || Selector::EachPermanent(R::Creature.and(R::ControlledByYou).and(R::HasCreatureType(CreatureType::Phyrexian)));
+    CardDefinition {
+        static_abilities: vec![
+            StaticAbility {
+                description: "Rulebreaker — A deck with this commander can have Phyrexian cards of any color identity and any basic land cards.",
+                effect: StaticEffect::RulebreakerAnyColorIdentity {
+                    cards: crate::effect::RulebreakerCards::OfCreatureType(CreatureType::Phyrexian),
+                },
+            },
+            StaticAbility {
+                description: "Phyrexian creatures you control have menace.",
+                effect: StaticEffect::GrantKeyword { applies_to: phyrexians(), keyword: Keyword::Menace },
+            },
+            StaticAbility {
+                description: "Phyrexian creatures you control have lifelink.",
+                effect: StaticEffect::GrantKeyword { applies_to: phyrexians(), keyword: Keyword::Lifelink },
+            },
+        ],
+        ..legend("Valko Indorian", cost(&[generic(3), b()]), vec![CreatureType::Human, CreatureType::Wizard], 2, 4)
+    }
+}
+
+/// Tolabow, Loch Rascal — {2}{U}{U} legendary 3/2 Otter. Rulebreaker — as a
+/// commander, its deck's instants and sorceries may add one color of your
+/// choice, and any basic lands. Whenever you cast an instant or sorcery
+/// spell, create a 1/1 blue and red Otter with prowess.
+pub fn tolabow_loch_rascal() -> CardDefinition {
+    let otter = TokenDefinition {
+        name: "Otter".into(),
+        power: 1,
+        toughness: 1,
+        keywords: vec![Keyword::Prowess],
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue, Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Otter], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Rulebreaker — If this is your commander, the color identity of instant and sorcery cards in your deck can include one color of your choice not in your commander's color identity, and your deck can have any basic land cards.",
+            effect: StaticEffect::RulebreakerSpellsOneExtraColor,
+        }],
+        triggered_abilities: vec![magecraft(Effect::CreateToken {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            definition: std::sync::Arc::new(otter),
+        })],
+        ..legend("Tolabow, Loch Rascal", cost(&[generic(2), u(), u()]), vec![CreatureType::Otter], 3, 2)
+    }
+}
+
+/// Jabs, Mistress of Mockery — {2}{R} legendary 2/3 Human Rogue. A triggered
+/// ability of a permanent you control but don't own triggers an additional
+/// time.
+pub fn jabs_mistress_of_mockery() -> CardDefinition {
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "If a triggered ability of a permanent you control but don't own triggers, that ability triggers an additional time.",
+            effect: StaticEffect::DoubleControllerTriggersMatching {
+                filter: R::Not(Box::new(R::OwnedByYou)),
+                include_spells: false,
+            },
+        }],
+        ..legend("Jabs, Mistress of Mockery", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Rogue], 2, 3)
     }
 }
