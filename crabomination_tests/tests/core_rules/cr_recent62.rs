@@ -127,6 +127,13 @@ fn cr_604_3_a_land_type_cda_counts_layer_four_types() {
     g.add_card_to_battlefield(0, catalog::island());
     g.add_card_to_battlefield(1, catalog::yavimaya_cradle_of_growth());
     assert_eq!(g.computed_permanent(kami).unwrap().toughness, 2, "Yavimaya and the Island");
+    // The filter-based CDA too: Squelching Leeches counts Swamps you control,
+    // and Urborg makes the Forest (and itself) one.
+    let leeches = g.add_card_to_battlefield(0, catalog::squelching_leeches());
+    g.add_card_to_battlefield(0, catalog::forest());
+    g.add_card_to_battlefield(0, catalog::urborg_tomb_of_yawgmoth());
+    let cp = g.computed_permanent(leeches).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3), "the Island, the Forest and Urborg");
 }
 
 /// CR 728.5 — exempted cards skip the reshuffle; Karn's −14 puts the cards it

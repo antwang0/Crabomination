@@ -3152,6 +3152,10 @@ pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: 3
 bench_ab.py      16 pairs: B/A median +0.04 %, mean +0.15 % (sd 3.36) — noise; no regression
 ```
 
+Later the same run, the requirement walker's mid-gather `HasLandType` leaf (plus the merged `5f42b533e` coven reorder):
+`--bench` 196,176 / 27.64 / 613.0 byte-identical, cube / sos / sealed decision-identical, `bench_ab.py` 10 pairs vs the
+same base median +3.29 % (sd 4.46) — no regression.
+
 ### 2026-11-01 (Commander run, `01WRuXc4Bu`) — guardrail; an any-kind counter registry, exile-zone grants
 
 Touched shared paths: `dispatch_triggers_for_events` walks the event list once more for `CounterAdded` /

@@ -6338,7 +6338,17 @@ impl GameState {
                     }
                     match computed() {
                         Some(cp) => cp.subtypes().land_types.contains(lt),
-                        None => card.definition.subtypes.land_types.contains(lt),
+                        // Mid-gather (a CDA counting Swamps): the printed line
+                        // plus any static that adds the type (CR 613.1d — Urborg's
+                        // Swamps reach Squelching Leeches).
+                        None => {
+                            card.definition.subtypes.land_types.contains(lt)
+                                || (card.definition.is_land()
+                                    && self
+                                        .land_type_granters(*lt)
+                                        .iter()
+                                        .any(|req| self.evaluate_requirement_on_card(req, card, card.controller)))
+                        }
                     }
                 };
                 let has_stype = |st: &Supertype| match computed() {

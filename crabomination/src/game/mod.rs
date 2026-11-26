@@ -11725,11 +11725,26 @@ impl GameState {
         p: usize,
         land_type: crate::card::LandType,
     ) -> i32 {
+        let granters = self.land_type_granters(land_type);
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == p && c.definition.is_land())
+            .filter(|c| {
+                self.permanent_has_land_type(c, land_type)
+                    || granters
+                        .iter()
+                        .any(|req| self.evaluate_requirement_on_card(req, c, c.controller))
+            })
+            .count() as i32
+    }
+
+    /// The `EachPermanent` filters of every battlefield static that adds
+    /// `land_type` (Urborg, Yavimaya, Swampbenders). Walked directly rather
+    /// than through `computed_permanent`: the callers run *inside* the layer
+    /// pass (a CDA's P/T), where re-entering it would recurse.
+    pub(crate) fn land_type_granters(&self, land_type: crate::card::LandType) -> Vec<&SelectionRequirement> {
         use crate::effect::{Selector, StaticEffect};
-        // Walked directly rather than through `computed_permanent`: this runs
-        // *inside* the layer pass (a CDA's P/T), so re-entering it would recurse.
-        let granters: Vec<&SelectionRequirement> = self
-            .battlefield
+        self.battlefield
             .iter()
             .flat_map(|src| src.definition.static_abilities.iter())
             .filter_map(|sa| match &sa.effect {
@@ -11744,17 +11759,7 @@ impl GameState {
                 }
                 _ => None,
             })
-            .collect();
-        self.battlefield
-            .iter()
-            .filter(|c| c.controller == p && c.definition.is_land())
-            .filter(|c| {
-                self.permanent_has_land_type(c, land_type)
-                    || granters
-                        .iter()
-                        .any(|req| self.evaluate_requirement_on_card(req, c, c.controller))
-            })
-            .count() as i32
+            .collect()
     }
 
     /// A dying creature's per-turn death record, read while it is still on
