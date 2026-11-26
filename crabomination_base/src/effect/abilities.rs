@@ -1551,6 +1551,11 @@ pub enum StaticEffect {
     /// Rulebreaker — "A deck with this commander has no maximum deck size"
     /// (Whtz, the Bibliophile): the CR 903.5a 100 becomes a minimum.
     RulebreakerNoMaxDeckSize,
+    /// Rulebreaker — "the color identity of instant and sorcery cards in your
+    /// deck can include one color of your choice not in your commander's color
+    /// identity, and your deck can have any basic land cards" (Tolabow, Loch
+    /// Rascal): one extra color, the same for every such card.
+    RulebreakerSpellsOneExtraColor,
     /// "Your starting hand size is reduced by N" (Sovereign's Realm's five).
     StartingHandSizeReduced(u32),
     /// "Your starting deck can't have basic land cards" (Sovereign's Realm).

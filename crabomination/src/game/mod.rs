@@ -35061,6 +35061,7 @@ fn static_effect_to_effects(
             | StaticEffect::DeckMayHaveCopies(_)
             | StaticEffect::RulebreakerAnyColorIdentity { .. }
             | StaticEffect::RulebreakerNoMaxDeckSize
+            | StaticEffect::RulebreakerSpellsOneExtraColor
             | StaticEffect::ExtraOpeningHand
             // ReplaceControllerLossWithReset — read by the loss SBA via
             // `apply_loss_reset` (Lich's Mirror); no layer effect.

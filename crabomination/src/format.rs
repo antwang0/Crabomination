@@ -916,10 +916,35 @@ pub fn validate_commander_deck(
             _ => None,
         })
         .collect();
+    // Tolabow's Rulebreaker: instants and sorceries may reach one chosen color
+    // past the identity — the one most of them need — and basics come along.
+    let spells_extra = deck
+        .commanders
+        .iter()
+        .any(|c| rulebreaker(c, |e| matches!(e, crate::effect::StaticEffect::RulebreakerSpellsOneExtraColor)));
+    let is_spell = |c: &CardDefinition| {
+        c.card_types.iter().any(|t| matches!(t, crate::card::CardType::Instant | crate::card::CardType::Sorcery))
+    };
+    let mut widened = combined;
+    if spells_extra {
+        let mut need = [0u32; 5];
+        for card in deck.main.iter().filter(|c| is_spell(c)) {
+            let id = color_identity(card);
+            for (k, c) in crate::mana::Color::ALL.iter().enumerate() {
+                if id.contains(c) && !combined.contains(c) {
+                    need[k] += 1;
+                }
+            }
+        }
+        if let Some(k) = (0..5).filter(|&k| need[k] > 0).max_by_key(|&k| (need[k], std::cmp::Reverse(k))) {
+            widened.insert(crate::mana::Color::ALL[k]);
+        }
+    }
     for card in &deck.main {
         let id = color_identity(card);
-        let excepted = !allowances.is_empty()
-            && (is_basic_land(card) || allowances.iter().any(|a| rulebreaker_allows(a, card)));
+        let excepted = ((!allowances.is_empty() || spells_extra) && is_basic_land(card))
+            || allowances.iter().any(|a| rulebreaker_allows(a, card))
+            || (spells_extra && is_spell(card) && id.is_subset_of(widened));
         if !id.is_subset_of(combined) && !excepted {
             cmd_errors.push(CommanderDeckError::OffColorIdentity {
                 card_name: card.name,
