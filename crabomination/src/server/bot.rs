@@ -4456,7 +4456,7 @@ fn decide_pending_policy_inner(
         // the same way a discard is ranked: surplus lands first,
         // then the priciest spells.
         crate::decision::Decision::PutOnLibrary { player, count, hand } if *player == seat => {
-            let order = hand_worst_first(state, seat, hand);
+            let order = shed_order(w, state, seat, hand);
             crate::decision::DecisionAnswer::PutOnLibrary(
                 order.into_iter().take(*count).collect(),
             )
@@ -4474,7 +4474,13 @@ fn decide_pending_policy_inner(
                     .iter()
                     .all(|(id, _)| state.players[seat].hand.iter().any(|c| c.id == *id)) =>
         {
-            decide_self_discard(state, seat, hand, *count)
+            if w.rating_fixes & RF_DISCARD != 0 {
+                crate::decision::DecisionAnswer::Discard(
+                    shed_order(w, state, seat, hand).into_iter().take(*count as usize).collect(),
+                )
+            } else {
+                decide_self_discard(state, seat, hand, *count)
+            }
         }
         // We pick from an OPPONENT's hand (Biting-Palm Ninja): take their best.
         crate::decision::Decision::Discard { player, count, hand }
@@ -6345,6 +6351,14 @@ pub fn decide_optional_trigger(
     let (take, priced) = match kind {
         // CR 704.5b — a "may draw" the library can't cover decks the seat.
         K::MayBody if may_draw_would_deck(state, seat, source, description) => (false, false),
+        // `RF_DISCARD`: "you may discard a card; if you do, ..." whose pitch is
+        // worth clearly more than the payoff. Not priced: the outcome second
+        // opinion reads material, and a card in hand has none.
+        K::MayBody
+            if w.rating_fixes & RF_DISCARD != 0 && may_discard_overpays(state, seat, source, description) =>
+        {
+            (false, false)
+        }
         K::MayBody => match super::accept_offer::accept_offer_answer(state, seat, source, description)
             .or_else(|| super::keyword_shield::shelter_exile_answer(state, seat, source, description))
             .or(shed)
@@ -7553,7 +7567,7 @@ fn decide_choose_cards(
     if all_in_hand {
         if !gain {
             // Shed the least useful cards, and only as many as forced.
-            let chosen: Vec<_> = hand_worst_first(state, seat, candidates)
+            let chosen: Vec<_> = shed_order(w, state, seat, candidates)
                 .into_iter()
                 .take(min as usize)
                 .collect();
@@ -7803,6 +7817,198 @@ fn hand_worst_first(
         .collect();
     scored.sort_by_key(|(s, _)| *s);
     scored.into_iter().map(|(_, id)| id).collect()
+}
+
+/// The shed order of every self-discard, discard-cost pick and put-back:
+/// [`hand_worst_first`], or with [`RF_DISCARD`] the card-value order of
+/// [`hand_keep_values`] (lowest first; ties keep hand order).
+fn shed_order(
+    w: &EvalWeights,
+    state: &GameState,
+    seat: usize,
+    offered: &[(crate::card::CardId, String)],
+) -> Vec<crate::card::CardId> {
+    if w.rating_fixes & RF_DISCARD == 0 {
+        return hand_worst_first(state, seat, offered);
+    }
+    let mut scored = hand_keep_values(state, seat, offered.iter().map(|(id, _)| *id));
+    scored.sort_by_key(|(s, _)| *s);
+    scored.into_iter().map(|(_, id)| id).collect()
+}
+
+/// An average spell in [`card_value10`] units (`card_ratings` scores average
+/// about 7).
+const AVERAGE_CARD10: i64 = 70;
+
+/// A nonland card's worth in tenths of a builder-score point: its measured
+/// rating (`card_ratings::rated_score`; FRA and SOS), else the rated
+/// builder's own static fallback rebuilt from the definition
+/// (`CardBrief::base_score + quality`, which `draft::score_brief_rated` uses
+/// for an unlisted card). A mana rock is rated like any other spell.
+fn card_value10(def: &CardDefinition) -> i64 {
+    let score = crate::card_ratings::rated_score(def.name).unwrap_or_else(|| {
+        use crate::card::CardType;
+        let pips: u32 = crate::draft::pip_counts(&def.cost).iter().map(|(_, n)| n).sum();
+        let has = |t: CardType| def.card_types.contains(&t);
+        i32::from(pips == 0) * 5
+            + i32::from(has(CardType::Creature)) * 3
+            + i32::from(has(CardType::Instant) || has(CardType::Sorcery)) * 2
+            + match def.cost.cmc() {
+                0 => 0,
+                1 => 1,
+                2..=4 => 3,
+                5 => 2,
+                _ => 1,
+            }
+            + crate::draft::card_quality(def)
+    });
+    i64::from(score) * 10
+}
+
+/// [`card_value10`] plus a castability term kept well inside the rating
+/// spread (a standard deviation is ~30): +10 for a spell the lands in play
+/// cast now or after one more drop, −5 per land past two drops away (at most
+/// −20), −15 for a coloured pip nothing the seat controls or holds can make.
+fn spell_keep_value(def: &CardDefinition, lands_in_play: usize, supply: crate::mana::ColorSet) -> i64 {
+    use crate::mana::ManaSymbol;
+    let gap = def.cost.cmc() as i64 - lands_in_play as i64;
+    let reach = match gap {
+        ..=1 => 10,
+        2 => 0,
+        _ => -(5 * (gap - 2)).min(20),
+    };
+    let off_colour =
+        def.cost.symbols.iter().any(|sym| matches!(sym, ManaSymbol::Colored(c) if !supply.contains(c)));
+    card_value10(def) + reach - if off_colour { 15 } else { 0 }
+}
+
+/// What a land is worth as land number `sources + 1` (lands in play plus the
+/// lands already kept): more than any spell under three, an average spell up
+/// to `target`, surplus past it.
+fn land_keep_value(sources: usize, target: usize) -> i64 {
+    if sources < 3 {
+        1_000
+    } else if sources < target {
+        AVERAGE_CARD10
+    } else {
+        -100
+    }
+}
+
+/// The lands `seat`'s hand wants: its priciest spell's mana value, held to
+/// four..six; five with no spell in hand (the [`hand_worst_first`] buffer).
+fn hand_land_target(state: &GameState, seat: usize) -> usize {
+    state.players[seat]
+        .hand
+        .iter()
+        .filter(|c| !c.definition.is_land())
+        .map(|c| c.definition.cost.cmc() as usize)
+        .max()
+        .map_or(5, |m| m.clamp(4, 6))
+}
+
+/// [`RF_DISCARD`]'s ranker: what keeping each `offered` hand card is worth
+/// (LOWER is pitched sooner), in offer order. Spells by [`spell_keep_value`]
+/// — card value, not mana value, so the bomb is the last thing shed, not the
+/// first. Lands by [`land_keep_value`], counted after the hand's lands that
+/// are not on offer.
+fn hand_keep_values(
+    state: &GameState,
+    seat: usize,
+    offered: impl Iterator<Item = crate::card::CardId> + Clone,
+) -> Vec<(i64, crate::card::CardId)> {
+    let hand = &state.players[seat].hand;
+    let lands_in_play =
+        state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();
+    let supply = seat_color_supply(state, seat);
+    let target = hand_land_target(state, seat);
+    let mut sources = lands_in_play
+        + hand.iter().filter(|c| c.definition.is_land() && !offered.clone().any(|id| id == c.id)).count();
+    offered
+        .filter_map(|id| {
+            let card = hand.iter().find(|c| c.id == id)?;
+            let value = if card.definition.is_land() {
+                sources += 1;
+                land_keep_value(sources - 1, target)
+            } else {
+                spell_keep_value(&card.definition, lands_in_play, supply)
+            };
+            Some((value, id))
+        })
+        .collect()
+}
+
+/// [`RF_DISCARD`]: is `description` a "you may discard N cards; if you do,
+/// ..." of `source` whose pitch — the N cards [`hand_keep_values`] ranks
+/// lowest — is worth clearly more than the payoff? Only two payoffs are
+/// priced; anything else is `false` and plays as before the flag.
+///
+/// - a search of our library into our hand: the best card it can find, by the
+///   same values, plus a point of margin (Pia, Aether Ascetic pitched a
+///   castable Way of the Wildspeaker to fetch Way of the Healer);
+/// - a plain draw: an average card each, plus a standard deviation — declined
+///   only when every card in hand is well above average.
+fn may_discard_overpays(state: &GameState, seat: usize, source: CardId, description: &str) -> bool {
+    use crate::effect::{PlayerRef, Selector, Value, ZoneDest};
+    fn find<'a>(eff: &'a Effect, desc: &str) -> Option<(&'a Value, &'a Effect)> {
+        match eff {
+            Effect::MayDiscard { description, count, then, .. } if description == desc => Some((count, then)),
+            Effect::MayDo { body, .. }
+            | Effect::MayPay { body, .. }
+            | Effect::MayTap { then: body, .. }
+            | Effect::MayDiscard { then: body, .. }
+            | Effect::ForEach { body, .. } => find(body, desc),
+            Effect::Seq(v)
+            | Effect::ChooseMode(v)
+            | Effect::ChooseN { modes: v, .. }
+            | Effect::Escalate { modes: v, .. }
+            | Effect::EscalatingThisTurn { modes: v } => v.iter().find_map(|e| find(e, desc)),
+            Effect::If { then, else_, .. } => find(then, desc).or_else(|| find(else_, desc)),
+            _ => None,
+        }
+    }
+    let Some(def) = optional_trigger_def(state, source) else { return false };
+    let node = find(&def.effect, description)
+        .or_else(|| def.triggered_abilities.iter().find_map(|t| find(&t.effect, description)))
+        .or_else(|| def.activated_abilities.iter().find_map(|a| find(&a.effect, description)));
+    let Some((Value::Const(n), then)) = node else { return false };
+    let n = (*n).max(0) as usize;
+    let hand = &state.players[seat].hand;
+    if n == 0 || hand.len() < n {
+        return false;
+    }
+    let mut kept = hand_keep_values(state, seat, hand.iter().map(|c| c.id));
+    kept.sort_by_key(|(v, _)| *v);
+    let pitch: i64 = kept.iter().take(n).map(|(v, _)| *v).sum();
+    let gain = match then {
+        Effect::Search { who: PlayerRef::You, filter, to: ZoneDest::Hand(PlayerRef::You) } => {
+            let lands_in_play =
+                state.battlefield.iter().filter(|c| c.controller == seat && c.definition.is_land()).count();
+            let sources = lands_in_play + hand.iter().filter(|c| c.definition.is_land()).count();
+            let supply = seat_color_supply(state, seat);
+            let target = hand_land_target(state, seat);
+            let best = state.players[seat]
+                .library
+                .iter()
+                .filter(|c| state.evaluate_requirement_on_card(filter, c, seat))
+                .map(|c| {
+                    if c.definition.is_land() {
+                        land_keep_value(sources, target)
+                    } else {
+                        spell_keep_value(&c.definition, lands_in_play, supply)
+                    }
+                })
+                .max();
+            // Nothing to find is `optional_trigger_beneficial`'s decline.
+            let Some(best) = best else { return false };
+            best + 10
+        }
+        Effect::Draw { who: Selector::You, amount: Value::Const(k) } => {
+            i64::from((*k).max(0)) * AVERAGE_CARD10 + 30
+        }
+        _ => return false,
+    };
+    pitch > gain
 }
 
 /// Order a Scry / Surveil / Rearrange window. `AutoDecider` keeps every
@@ -36682,6 +36888,192 @@ mod fra_audit_tests {
         assert!(!optional_trigger_beneficial(&g, pia, ask), "nothing to find");
         g.add_card_to_library(0, catalog::pacifism());
         assert!(optional_trigger_beneficial(&g, pia, ask), "an enchantment to find");
+    }
+
+    /// The seat's whole hand as a discard offer, in hand order.
+    fn offer(g: &GameState) -> Vec<(CardId, String)> {
+        g.players[0].hand.iter().map(|c| (c.id, c.definition.name.to_string())).collect()
+    }
+
+    fn discard_fix() -> EvalWeights {
+        EvalWeights { rating_fixes: RF_DISCARD, ..EvalWeights::default() }
+    }
+
+    /// `RF_DISCARD`: a forced discard on three lands sheds the filler
+    /// two-drop (Paradox Shaper, rated 2), then the land, and the bomb (Way
+    /// of the Wildspeaker, rated 12) last. With the bit off the order is
+    /// `hand_worst_first`'s: the five-drop first, the land kept.
+    #[test]
+    fn rf_discard_sheds_the_filler_not_the_bomb() {
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        let bomb = g.add_card_to_hand(0, catalog::way_of_the_wildspeaker());
+        let filler = g.add_card_to_hand(0, catalog::paradox_shaper());
+        let land = g.add_card_to_hand(0, catalog::forest());
+        let hand = offer(&g);
+        assert_eq!(
+            shed_order(&EvalWeights::default(), &g, 0, &hand),
+            hand_worst_first(&g, 0, &hand),
+            "bit off: the old ranker"
+        );
+        assert_eq!(hand_worst_first(&g, 0, &hand), vec![bomb, filler, land], "the old rule pitches the bomb");
+        assert_eq!(shed_order(&discard_fix(), &g, 0, &hand), vec![filler, land, bomb]);
+        // The discard-cost `ChooseCards` pick reads the same order.
+        let pick = |w: &EvalWeights| decide_choose_cards(w, &g, 0, crate::decision::PickValue::Cost, &hand, 1, 1);
+        assert_eq!(pick(&EvalWeights::default()), crate::decision::DecisionAnswer::Cards(vec![bomb]));
+        assert_eq!(pick(&discard_fix()), crate::decision::DecisionAnswer::Cards(vec![filler]));
+    }
+
+    /// `RF_DISCARD`: the traced loot — three lands, Undulating Witness (the
+    /// pool's best blue card) and a filler in hand. The filler goes; the old
+    /// rule pitched the Witness.
+    #[test]
+    fn rf_discard_keeps_the_witness_on_three_lands() {
+        let mut g = two_player_game();
+        for _ in 0..3 {
+            g.add_card_to_battlefield(0, catalog::island());
+        }
+        let witness = g.add_card_to_hand(0, catalog::undulating_witness());
+        let filler = g.add_card_to_hand(0, catalog::paradox_shaper());
+        g.add_card_to_hand(0, catalog::mountain());
+        let hand = offer(&g);
+        assert_eq!(hand_worst_first(&g, 0, &hand)[0], witness);
+        assert_eq!(shed_order(&discard_fix(), &g, 0, &hand)[0], filler);
+    }
+
+    /// `RF_DISCARD`: flooded on six lands, the land in hand is the first
+    /// card shed, ahead of the filler.
+    #[test]
+    fn rf_discard_sheds_the_surplus_land_when_flooded() {
+        let mut g = two_player_game();
+        for _ in 0..6 {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        let bomb = g.add_card_to_hand(0, catalog::way_of_the_wildspeaker());
+        let filler = g.add_card_to_hand(0, catalog::paradox_shaper());
+        let land = g.add_card_to_hand(0, catalog::forest());
+        assert_eq!(shed_order(&discard_fix(), &g, 0, &offer(&g)), vec![land, filler, bomb]);
+    }
+
+    /// `RF_DISCARD`: under three lands a land outranks every spell, the bomb
+    /// included; the land past the third source is worth an average spell.
+    #[test]
+    fn rf_discard_keeps_lands_while_mana_light() {
+        let mut g = two_player_game();
+        g.add_card_to_battlefield(0, catalog::forest());
+        let bomb = g.add_card_to_hand(0, catalog::way_of_the_wildspeaker());
+        let l1 = g.add_card_to_hand(0, catalog::forest());
+        let l2 = g.add_card_to_hand(0, catalog::forest());
+        let l3 = g.add_card_to_hand(0, catalog::forest());
+        assert_eq!(shed_order(&discard_fix(), &g, 0, &offer(&g)), vec![l3, bomb, l1, l2]);
+    }
+
+    /// `RF_DISCARD`: a mana rock is ranked by its rating, not as a three-drop
+    /// to pitch first. Murmuring Volume (rated 4) outlives Paradox Shaper
+    /// (rated 2) on two lands; the old rule pitched the Volume for costing
+    /// more.
+    #[test]
+    fn rf_discard_rates_a_mana_rock_like_a_spell() {
+        let mut g = two_player_game();
+        for _ in 0..2 {
+            g.add_card_to_battlefield(0, catalog::island());
+        }
+        let rock = g.add_card_to_hand(0, catalog::murmuring_volume());
+        let filler = g.add_card_to_hand(0, catalog::paradox_shaper());
+        let hand = offer(&g);
+        assert_eq!(hand_worst_first(&g, 0, &hand), vec![rock, filler]);
+        assert_eq!(shed_order(&discard_fix(), &g, 0, &hand), vec![filler, rock]);
+    }
+
+    /// `RF_DISCARD`: an unlisted card falls back to the builder's static
+    /// score, and the castability term breaks the tie between two equal
+    /// bodies — the one six lands away goes before the one castable now.
+    #[test]
+    fn rf_discard_unrated_cards_fall_back_to_the_static_score() {
+        let body = |name: &'static str, cmc: u32| CardDefinition {
+            name,
+            card_types: vec![crate::card::CardType::Creature],
+            power: 1,
+            toughness: 1,
+            cost: crate::mana::cost(&[crate::mana::generic(cmc)]),
+            ..Default::default()
+        };
+        let mut g = two_player_game();
+        let cheap = g.add_card_to_hand(0, body("Cheap", 1));
+        let pricey = g.add_card_to_hand(0, body("Pricey", 6));
+        assert_eq!(shed_order(&discard_fix(), &g, 0, &offer(&g)), vec![pricey, cheap]);
+    }
+
+    /// `RF_DISCARD`, the Pia shape: "you may discard a card. If you do,
+    /// search for an enchantment". With a castable Way of the Wildspeaker
+    /// the only card to pitch and Way of the Healer the best find, the may
+    /// is declined (it was taken, 133 of 139); with a surplus land to pitch
+    /// it is taken. Bit off: taken both times.
+    #[test]
+    fn rf_discard_pia_declines_a_bomb_for_a_worse_fetch() {
+        use crate::decision::OptionalKind;
+        let mut g = two_player_game();
+        for _ in 0..5 {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        let pia = g.add_card_to_battlefield(0, catalog::pia_aether_ascetic());
+        g.add_card_to_hand(0, catalog::way_of_the_wildspeaker());
+        g.add_card_to_library(0, catalog::way_of_the_healer());
+        g.add_card_to_library(0, catalog::island());
+        let ask = "Discard a card to search for an enchantment card?";
+        let take =
+            |g: &GameState, w: &EvalWeights| decide_optional_trigger(g, 0, pia, &OptionalKind::MayBody, ask, w, false);
+        assert!(take(&g, &EvalWeights::default()), "bit off: the discard is taken");
+        assert!(!take(&g, &discard_fix()), "the bomb is worth more than the fetch");
+        let land = g.add_card_to_hand(0, catalog::forest());
+        assert!(take(&g, &discard_fix()), "a surplus land is a fine pitch");
+        assert!(take(&g, &EvalWeights::default()));
+        assert_eq!(shed_order(&discard_fix(), &g, 0, &offer(&g))[0], land, "and the land is what goes");
+    }
+
+    /// `RF_DISCARD`: a "discard a card to draw a card" may is still taken on
+    /// an ordinary hand, and declined only when the worst card in hand is
+    /// well above average.
+    #[test]
+    fn rf_discard_rummage_is_declined_only_on_an_all_bomb_hand() {
+        use crate::decision::OptionalKind;
+        use crate::effect::{Selector, Value};
+        let mut g = two_player_game();
+        for _ in 0..5 {
+            g.add_card_to_battlefield(0, catalog::forest());
+        }
+        let rummager = g.add_card_to_battlefield(
+            0,
+            CardDefinition {
+                name: "Rummager",
+                card_types: vec![crate::card::CardType::Creature],
+                triggered_abilities: vec![crate::card::TriggeredAbility {
+                    event: crate::effect::EventSpec::new(
+                        crate::effect::EventKind::EntersBattlefield,
+                        crate::effect::EventScope::SelfSource,
+                    ),
+                    effect: Effect::MayDiscard {
+                        description: "discard to draw?".to_string(),
+                        count: Value::ONE,
+                        then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+                        else_: None,
+                    },
+                }],
+                ..Default::default()
+            },
+        );
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let take = |g: &GameState| {
+            decide_optional_trigger(g, 0, rummager, &OptionalKind::MayBody, "discard to draw?", &discard_fix(), false)
+        };
+        g.add_card_to_hand(0, catalog::way_of_the_wildspeaker());
+        assert!(!take(&g), "the only card to pitch is the bomb");
+        g.add_card_to_hand(0, catalog::paradox_shaper());
+        assert!(take(&g), "a filler to pitch");
     }
     /// `trick_read`: a lone Bears into an untapped Hill Giant, the attacker
     /// on a Forest with Giant Growth in hand. One uniform redeal blocks (it
