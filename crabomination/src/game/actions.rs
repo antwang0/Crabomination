@@ -4407,7 +4407,9 @@ impl crate::game::GameState {
                     .static_abilities
                     .iter()
                     .any(|sa| {
-                        matches!(sa.effect, StaticEffect::MayPlayLandsFromGraveyard)
+                        // Through `active_static`: Nog grants it only "while he
+                        // is an Officer".
+                        matches!(self.active_static(&sa.effect, c), Some(StaticEffect::MayPlayLandsFromGraveyard))
                             || (self.active_player_idx == player
                                 && matches!(
                                     sa.effect,
