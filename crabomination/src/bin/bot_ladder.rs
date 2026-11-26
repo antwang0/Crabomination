@@ -1279,6 +1279,9 @@ struct Args {
     /// decks (1-based, as the tally numbers them) instead of the first
     /// `--seats` — the official precons at a real four-seat table.
     pod_decks: Option<Vec<usize>>,
+    /// `--pod-random`: with `--commander`, each game seats `--seats` distinct
+    /// target decks drawn from the whole list by `(seed, game index)`.
+    pod_random: bool,
     /// `--b` was given. With `--commander` that makes the run a pod A/B —
     /// `--a` in one seat, `--b` in the rest — instead of an `--a` mirror.
     b_given: bool,
@@ -1297,6 +1300,7 @@ fn parse_args() -> Result<Args, String> {
     let mut peer = false;
     let commander = std::env::args().any(|a| a == "--commander");
     let card_census = std::env::args().any(|a| a == "--card-census");
+    let pod_random = std::env::args().any(|a| a == "--pod-random");
     let mut seats = 4usize;
     let mut first_game = 0u32;
     let mut pod_decks = None;
@@ -1338,6 +1342,7 @@ fn parse_args() -> Result<Args, String> {
             "--bench" => step = 1,
             "--commander" => step = 1,
             "--card-census" => step = 1,
+            "--pod-random" => step = 1,
             "--seats" => seats = need(i)?.parse().map_err(|_| "--seats must be a number")?,
             "--pod-decks" => {
                 let list: Result<Vec<usize>, _> =
@@ -1378,6 +1383,8 @@ fn parse_args() -> Result<Args, String> {
                      undecided game with --first I --games 1).\n\
                      --pod-decks I,J,.. with --commander seats exactly those target\n\
                      decks (1-based, the tally's numbering) instead of the first N.\n\
+                     --pod-random with --commander draws each game's --seats decks from\n\
+                     every target deck by (seed, game index); replay one with --first I.\n\
                      --commander with --b is a pod A/B: --a in one seat, --b in every\n\
                      other, each deal played once with --a in each seat; reports --a's\n\
                      share of wins against the 1/N a mirror gives."
@@ -1547,6 +1554,7 @@ fn parse_args() -> Result<Args, String> {
         card_census,
         first_game,
         pod_decks,
+        pod_random,
         b_given,
     })
 }
@@ -1624,11 +1632,21 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
         return run_pod_ab(args, &field, max_actions, threads);
     }
     let games = args.games as u32;
-    println!(
-        "commander: {seats}-seat pods, {games} games on {threads} threads, seed {}, decks: {}",
-        args.seed,
-        field.iter().map(|d| d.name).collect::<Vec<_>>().join(" | "),
-    );
+    if args.pod_random {
+        println!(
+            "commander: {seats}-seat pods, {games} games on {threads} threads, seed {}, decks drawn per game from all {}",
+            args.seed,
+            all.len(),
+        );
+        install_pod_panic_label();
+    } else {
+        println!(
+            "commander: {seats}-seat pods, {games} games on {threads} threads, seed {}, decks: {}",
+            args.seed,
+            field.iter().map(|d| d.name).collect::<Vec<_>>().join(" | "),
+        );
+    }
+    let all = &all;
     let started = std::time::Instant::now();
     let chunk = games.div_ceil(threads.max(1) as u32).max(1);
     let mut tally = PodTally { wins: vec![0; seats], ..Default::default() };
@@ -1640,7 +1658,7 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
         while first < end {
             let count = chunk.min(end - first);
             let field = field.clone();
-            let (seed, pilot, want_census) = (args.seed, args.a, args.card_census);
+            let (seed, pilot, want_census, random) = (args.seed, args.a, args.card_census, args.pod_random);
             // The same 32 MiB every other game worker in the tree already
             // takes, and for the same reason its siblings give: resolution
             // recurses through `Effect` trees whose debug-build frames run
@@ -1658,7 +1676,9 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
                 spawn
                     .spawn_scoped(scope, move || {
                         let mut c = ActionCensus::forced();
-                        let t = if want_census {
+                        let t = if random {
+                            run_random_pods(all, seats, first, count, seed, max_actions, pilot)
+                        } else if want_census {
                             run_pod_games_censused(
                                 &field, first, count, seed, max_actions, pilot, Some(&mut c),
                             )
@@ -1704,13 +1724,75 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
         println!("  undecided game {i}: {turns} turns, {actions} actions (--first {i} --games 1)");
     }
     for (i, d) in field.iter().enumerate() {
-        println!("  deck {i}  {:<28} wins {:>5} ({:.1} %)", d.name, tally.wins[i], pct(tally.wins[i]));
+        let name = if args.pod_random { "(drawn per game)" } else { d.name };
+        println!("  seat {i}  {name:<28} wins {:>5} ({:.1} %)", tally.wins[i], pct(tally.wins[i]));
     }
     if args.card_census {
         report_card_census(&field, &census);
     }
     // A pod that never decides is a broken pod, not a slow one.
     i32::from(tally.games == 0)
+}
+
+/// `--pod-random`'s draw: `seats` distinct indices into `all`, a pure function
+/// of `(seed, game)` so `--first I --games 1` replays game `I`.
+fn random_pod(all: usize, seats: usize, seed: u64, game: u32) -> Vec<usize> {
+    let mut x = seed ^ u64::from(game).wrapping_mul(0xD1B5_4A32_D192_ED03);
+    let mut next = || {
+        x = x.wrapping_add(0x9E37_79B9_7F4A_7C15);
+        let mut z = x;
+        z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
+        z ^ (z >> 31)
+    };
+    let mut picked = Vec::with_capacity(seats);
+    while picked.len() < seats.min(all) {
+        let i = (next() % all as u64) as usize;
+        if !picked.contains(&i) {
+            picked.push(i);
+        }
+    }
+    picked
+}
+
+thread_local! {
+    /// The game a `--pod-random` worker is playing, for the panic hook.
+    static POD_GAME: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
+}
+
+/// Names the game and its decks before a panic message: optimized profiles
+/// abort, so the hook is the only place the replay line can be printed.
+fn install_pod_panic_label() {
+    let prev = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        POD_GAME.with(|g| eprintln!("panic in {}", g.borrow()));
+        prev(info);
+    }));
+}
+
+/// `--pod-random`: games `first..first + count`, each its own drawn pod.
+fn run_random_pods(
+    all: &[crabomination::pod::PodDeck],
+    seats: usize,
+    first: u32,
+    count: u32,
+    seed: u64,
+    max_actions: usize,
+    pilot: crabomination::recommend::Pilot,
+) -> crabomination::pod::PodTally {
+    let mut tally = crabomination::pod::PodTally { wins: vec![0; seats], ..Default::default() };
+    for i in first..first.saturating_add(count) {
+        let ix = random_pod(all.len(), seats, seed, i);
+        let decks = ix.iter().map(|k| (k + 1).to_string()).collect::<Vec<_>>().join(",");
+        POD_GAME.with(|g| *g.borrow_mut() = format!("game {i} (--pod-random --first {i} --games 1; --pod-decks {decks})"));
+        let field: Vec<_> = ix.iter().map(|&k| all[k]).collect();
+        let t = crabomination::pod::run_pod_games(&field, i, 1, seed, max_actions, pilot);
+        if t.undecided() > 0 {
+            println!("  undecided game {i}: --pod-decks {decks}");
+        }
+        tally.merge(&t);
+    }
+    tally
 }
 
 /// `--commander --b`: the pod A/B. `--a` (the hero) in one seat and `--b`
