@@ -175875,3 +175875,114 @@ pub const SAFANA_28_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SAHIR_COMMANDERS: &[CardFactory] = &[sahir_visitor_in_darkness];
+
+/// **Sahir, Visitor in Darkness**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Swamps = 99.
+/// Sahir, Visitor in Darkness (EDHREC, fetched 2026-11-26).
+pub const SAHIR_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, bontus_monument, copper_tablet, jet_medallion,
+    lightning_greaves, loxodon_warhammer, mask_of_griselbrand, shadowspear, sol_ring,
+    swiftfoot_boots, the_darkness_crystal, the_soul_stone, thought_vessel, whip_of_erebos,
+    bojuka_bog, cabal_coffers, cabal_pit, city_of_brass, horizon_of_progress, ifnir_deadlands,
+    nykthos_shrine_to_nyx, reliquary_tower, urborg_tomb_of_yawgmoth, war_room, witchs_clinic,
+    barbed_servitor, bitterbloom_bearer, blood_artist, blood_celebrant, bloodgift_demon,
+    bloodthirsty_conqueror, creeping_bloodsucker, crypt_ghast, doctor_doom_unrivaled,
+    dread_presence, elegy_acolyte, gix_yawgmoth_praetor, gixian_puppeteer,
+    gray_merchant_of_asphodel, infernal_sovereign, plague_spitter, sheoldred_the_apocalypse,
+    sinkhole_surveyor, treasure_dredger, vilis_broker_of_blood, wall_of_blood, bitterblossom,
+    black_market_connections, blessing_of_leeches, carnival_of_souls, coercive_impetus,
+    dreadhorde_invasion, exquisite_blood, last_laugh, pestilence, phyrexian_arena,
+    vampiric_link, archenemys_charm, consuming_corruption, dark_ritual, deadly_rollick, defile,
+    fell_the_profane, imps_mischief, unexpected_fangs, withering_torment, ob_nixilis_reignited,
+    essence_harvest, exsanguinate, feed_the_swarm, profane_transfusion, reanimate,
+    repay_in_kind, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const AMBASSADOR_KEHLEYR_COMMANDERS: &[CardFactory] = &[ambassador_kehleyr];
+
+/// **Ambassador K'Ehleyr**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Ambassador K'Ehleyr (EDHREC, fetched 2026-11-26).
+pub const AMBASSADOR_KEHLEYR_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, commanders_plate, everflowing_chalice, howling_mine,
+    lightning_greaves, malfunctioning_holodeck, marble_diamond, mind_stone, pearl_medallion,
+    shadowspear, sol_ring, swiftfoot_boots, the_one_ring, the_ozolith, thought_vessel,
+    wayfarers_bauble, wedding_ring, abandoned_air_temple, eiganjo_seat_of_the_empire,
+    emeria_the_sky_ruin, karns_bastion, monumental_henge, reliquary_tower, rogues_passage,
+    war_room, windbrisk_heights, beverly_crusher_ships_doctor, cloud_midgar_mercenary,
+    deanna_troi_psychic_counsel, elesh_norn_grand_cenobite, esper_sentinel,
+    federation_field_medic, giver_of_runes, grand_abolisher, julian_bashir_frontier_doctor,
+    knight_of_the_white_orchid, loran_of_the_third_path, mangara_the_diplomat,
+    mikaeus_the_lunarch, mother_of_runes, psychosis_crawler, scrawling_crawler, soul_warden,
+    sun_titan, tataru_taru, troi_winging_it, wandering_archaic, witch_enchanter,
+    darksteel_mutation, land_tax, monologue_tax, noble_heritage, peace_in_our_time,
+    smothering_tithe, smugglers_share, akromas_will, clever_concealment, dawns_truce,
+    generous_gift, path_to_exile, reprieve, stroke_of_midnight, swords_to_plowshares,
+    teferis_protection, your_temple_is_under_attack, elspeth_suns_champion, austere_command,
+    cut_a_deal, damning_verdict, open_the_armory, promise_of_loyalty, steelshapers_gift,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const ARMUS_COMMANDERS: &[CardFactory] = &[armus_skin_of_evil];
+
+/// **Armus, Skin of Evil**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Armus, Skin of Evil (EDHREC, fetched 2026-11-26).
+pub const ARMUS_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, bontus_monument, caged_sun, charcoal_diamond,
+    cryptcaller_chariot, entropic_battlecruiser, everflowing_chalice, extraplanar_lens,
+    gauntlet_of_power, jet_medallion, mind_stone, sol_ring, swiftfoot_boots, the_soul_stone,
+    thought_vessel, bojuka_bog, cabal_coffers, cabal_stronghold, command_beacon,
+    geier_reach_sanitarium, myriad_landscape, nykthos_shrine_to_nyx, urborg_tomb_of_yawgmoth,
+    war_room, abyssal_nocturnus, abyssal_specter, aclazotz_deepest_betrayal, archfiend_of_ifnir,
+    archon_of_cruelty, banshee_of_the_dread_choir, braids_arisen_nightmare, cao_cao_lord_of_wei,
+    crypt_ghast, dreamstealer, elderfang_disciple, fell_specter, hostile_investigator,
+    hypnotic_specter, nezumi_shortfang, nirkana_revenant, scrawling_crawler,
+    tergrid_god_of_fright, the_haunt_of_hightower, the_raven_man, tinybones_bauble_burglar,
+    tinybones_pocket_nuisance, tinybones_trinket_thief, tinybones_the_pickpocket,
+    tourach_dread_cantor, witch_king_of_angmar, bandits_talent, black_market_connections,
+    court_of_ambition, creeping_dread, dying_to_serve, lilianas_caress, megrim,
+    quest_for_the_nihil_stone, raiders_wake, waste_not, words_of_waste, dark_ritual,
+    deadly_rollick, stinging_study, village_rites, demonic_tutor, duress, feed_the_swarm,
+    reanimate, syphon_mind, tendrils_of_despair,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
+
+pub const GRILKA_COMMANDERS: &[CardFactory] = &[grilka_widowed_warrior];
+
+/// **Grilka, Widowed Warrior**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Grilka, Widowed Warrior (EDHREC, fetched 2026-11-26).
+pub const GRILKA_MAIN: &[CardFactory] = &[
+    arcane_signet, cursed_mirror, d_7_battle_cruiser, debris_field_crusher, embercleave,
+    galvanizing_sawship, mana_vault, queens_diamond, ruby_medallion, sol_ring, the_one_ring,
+    the_reaver_cleaver, warmaker_gunship, worn_powerstone, ancient_tomb, castle_embereth,
+    command_tower, hanweir_battlements, kher_keep, war_room, birgi_god_of_storytelling,
+    captivating_crew, coercive_recruiter, combat_celebrant, delina_wild_mage,
+    drakuseth_maw_of_flames, etali_primal_storm, goldspan_dragon, imperial_recruiter,
+    inferno_titan, karlach_fury_of_avernus, kediss_emberclaw_familiar, moraug_fury_of_akoum,
+    neheb_dreadhorde_champion, neheb_the_eternal, port_razer, professional_face_breaker,
+    q_stacking_the_deck, simian_spirit_guide, terror_of_the_peaks, xorn, zealous_conscripts,
+    aggravated_assault, blood_mist, fable_of_the_mirror_breaker, underworld_breach, abrade,
+    big_score, chaos_warp, deflecting_swat, fling, kazuuls_fury, lightning_bolt,
+    unexpected_windfall, chandra_torch_of_defiance, blasphemous_act, chain_reaction,
+    dominion_infiltration, faithless_looting, glimpse_the_impossible, insurrection, jeskas_will,
+    mana_geyser, mob_rule, reckless_endeavor, seize_the_day, song_mad_treachery,
+    spectacular_showdown, sundering_eruption, twinflame, wheel_of_fortune,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

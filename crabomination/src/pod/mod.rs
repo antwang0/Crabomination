@@ -38011,6 +38011,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAFANA_28_COMMANDERS,
             main: decks::SAFANA_28_MAIN,
         },
+        // Seat 6261: Sahir, Visitor in Darkness's EDHREC average deck. `--pod-decks 6261`.
+        PodDeck {
+            name: "Sahir, Visitor in Darkness (B)",
+            commanders: decks::SAHIR_COMMANDERS,
+            main: decks::SAHIR_MAIN,
+        },
+        // Seat 6262: Ambassador K'Ehleyr's EDHREC average deck. `--pod-decks 6262`.
+        PodDeck {
+            name: "Ambassador K'Ehleyr (W)",
+            commanders: decks::AMBASSADOR_KEHLEYR_COMMANDERS,
+            main: decks::AMBASSADOR_KEHLEYR_MAIN,
+        },
+        // Seat 6263: Armus, Skin of Evil's EDHREC average deck. `--pod-decks 6263`.
+        PodDeck {
+            name: "Armus, Skin of Evil (B)",
+            commanders: decks::ARMUS_COMMANDERS,
+            main: decks::ARMUS_MAIN,
+        },
+        // Seat 6264: Grilka, Widowed Warrior's EDHREC average deck. `--pod-decks 6264`.
+        PodDeck {
+            name: "Grilka, Widowed Warrior (R)",
+            commanders: decks::GRILKA_COMMANDERS,
+            main: decks::GRILKA_MAIN,
+        },
     ]
 }
 
@@ -46207,6 +46231,10 @@ mod tests {
             ("Lae'zel, Vlaakith's Champion and Faceless One", &[0x2272]),
             ("Faceless One and Passionate Archaeologist", &[0x2273]),
             ("Safana, Calimport Cutthroat and Faceless One", &[0x2274]),
+            ("Sahir, Visitor in Darkness", &[0x2275]),
+            ("Ambassador K'Ehleyr", &[0x2276]),
+            ("Armus, Skin of Evil", &[0x2277]),
+            ("Grilka, Widowed Warrior", &[0x2278]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

@@ -2347,3 +2347,12 @@ approximated):
 | Card | Printed | Approximation |
 |---|---|---|
 | 🟡 Massimo, the Magician | each granted trigger copies "the exiled card" — its own | the exiled card is linked to the creature (`ExileLinkedTo`), so a creature that entered twice under Massimo (or under two Massimos) holds two triggers that each copy every card linked to it |
+
+## EDHREC singles short one card, second batch (2026-11-26, `01WRuXc3os`)
+
+`decks::cmdr_nov26_b`. Open 🟡 rows:
+
+| Card | Printed | Approximation |
+|---|---|---|
+| 🟡 Dominion Infiltration | X target creatures | `CapTargetsAtX` over eight slots (Glimpse the Sun God's shape): an X above 8 copies eight |
+| 🟡 Sahir, Visitor in Darkness | "a spell or ability you control causes you to lose exactly 1 life" | read as non-damage loss only (no ruling; a ping is the damage half's trigger, not both), and only losses during a resolution — life paid as a cost never counts |
