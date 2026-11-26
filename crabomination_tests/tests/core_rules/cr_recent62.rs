@@ -1,5 +1,5 @@
 //! CR conformance for this run's engine work:
-//! - CR 727 — restarting the game (Karn Liberated's −14).
+//! - CR 728 — restarting the game (Karn Liberated's −14).
 //! - CR 806 — the Free-for-All variant's default options.
 //! - CR 614 / 616 — the new damage-threshold replacements and their
 //!   interaction with the doubling/halving chain.
@@ -19,12 +19,12 @@ fn main_phase(seats: usize) -> GameState {
     g
 }
 
-// ── CR 727 — Restarting the Game ────────────────────────────────────────────
+// ── CR 728 — Restarting the Game ────────────────────────────────────────────
 
-/// CR 727.1/727.2 — a restart ends the game with no winner and rebuilds every
+/// CR 728.1/728.2 — a restart ends the game with no winner and rebuilds every
 /// player's library from all the cards that were in the game.
 #[test]
-fn cr_727_1_restart_returns_every_card_to_its_owners_library() {
+fn cr_728_1_restart_returns_every_card_to_its_owners_library() {
     let mut g = main_phase(2);
     for _ in 0..10 {
         g.add_card_to_library(0, catalog::grizzly_bears());
@@ -51,7 +51,7 @@ fn cr_727_1_restart_returns_every_card_to_its_owners_library() {
     g.restart_game(1, Vec::new(), &mut events);
 
     assert!(g.game_over.is_none(), "the restarted game is live, not over");
-    assert_eq!(g.active_player_idx, 1, "CR 727.1a — the restarter goes first");
+    assert_eq!(g.active_player_idx, 1, "CR 728.1a — the restarter goes first");
     assert!(g.battlefield.is_empty(), "no permanents carry over");
     for (p, before) in owned_before.iter().enumerate() {
         assert_eq!(g.players[p].hand.len(), 7, "CR 103.4 — a fresh opening hand");
@@ -65,11 +65,11 @@ fn cr_727_1_restart_returns_every_card_to_its_owners_library() {
     assert!(events.iter().any(|e| matches!(e, GameEvent::GameRestarted { starter: 1 })));
 }
 
-/// CR 727.2 / 111.7 — a restart gathers cards: a token on the battlefield is
+/// CR 728.2 / 111.7 — a restart gathers cards: a token on the battlefield is
 /// no card and does not join its owner's new library. Pod seed 29443 game 259:
 /// a Go-Shintai Shrine token came back as a nontoken library card.
 #[test]
-fn cr_727_2_a_restart_leaves_tokens_behind() {
+fn cr_728_2_a_restart_leaves_tokens_behind() {
     let mut g = main_phase(2);
     for _ in 0..10 {
         g.add_card_to_library(0, catalog::grizzly_bears());
@@ -117,10 +117,10 @@ fn cr_400_7_a_gone_tokens_shuffle_self_does_not_take_the_next_spell() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == opt), "Opt resolves into the graveyard");
 }
 
-/// CR 727.5 — exempted cards skip the reshuffle; Karn's −14 puts the cards it
+/// CR 728.5 — exempted cards skip the reshuffle; Karn's −14 puts the cards it
 /// exiled onto the battlefield under its controller's control.
 #[test]
-fn cr_727_5_karn_deploys_its_exiled_cards_after_the_restart() {
+fn cr_728_5_karn_deploys_its_exiled_cards_after_the_restart() {
     let mut g = main_phase(2);
     for _ in 0..10 {
         g.add_card_to_library(0, catalog::grizzly_bears());
@@ -156,7 +156,7 @@ fn cr_727_5_karn_deploys_its_exiled_cards_after_the_restart() {
         .find(|c| c.id == stolen)
         .expect("the Karn-exiled card came back");
     assert_eq!(deployed.controller, 0, "under Karn's controller");
-    assert_eq!(deployed.owner, 1, "CR 727.2 — ownership never changes");
+    assert_eq!(deployed.owner, 1, "CR 728.2 — ownership never changes");
     assert!(g.exile.is_empty(), "the exempt card left exile");
     assert_eq!(g.active_player_idx, 0);
     assert!(g.battlefield.iter().all(|c| c.id != karn), "Karn itself is reshuffled");
@@ -247,14 +247,14 @@ fn cr_601_2f_colored_tax_survives_a_cost_reduction() {
     );
 }
 
-/// CR 727.1 / 903.6 / 727.5a — a Commander restart: the seat that already
+/// CR 728.1 / 903.6 / 728.5a — a Commander restart: the seat that already
 /// left stays out of the new game, each commander starts it in the command
 /// zone (not shuffled into the library) and is still a commander there (a
 /// bounce offers the 903.9b redirect), and the pod's first-turn draw rule
 /// carries over. A pod sweep's Karn Liberated restart (seed 924892) let an
 /// eliminated seat back in and shuffled the commanders into the libraries.
 #[test]
-fn cr_727_1_a_commander_restart_keeps_the_pod_and_the_command_zone() {
+fn cr_728_1_a_commander_restart_keeps_the_pod_and_the_command_zone() {
     use crabomination::format::Format;
     let mut g = game_with_format(Format::Commander, 3);
     let cmds = g.seat_commanders(0, vec![catalog::grizzly_bears()]);

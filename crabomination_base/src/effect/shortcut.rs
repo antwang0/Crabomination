@@ -993,7 +993,7 @@ pub fn ripple(n: u32) -> TriggeredAbility {
 /// Station (CR 702.184): "Tap another untapped creature you control: Put a
 /// number of charge counters on this permanent equal to the tapped creature's
 /// power. Activate only as a sorcery." Every station card carries this ability
-/// (CR 721.4); pair it with `CardDefinition.station` bands.
+/// (CR 722.4); pair it with `CardDefinition.station` bands.
 pub fn station() -> ActivatedAbility {
     ActivatedAbility {
         sorcery_speed: true,

@@ -1242,7 +1242,7 @@ pub fn doom_reigns_supreme() -> CardDefinition {
 /// Construct a Cosmic Cube — {2}{B} enchantment — Plan. Drawing your second
 /// card each turn makes a 2/1 black menace Villain and adds a plan counter.
 /// At the seventh, sacrifice it: you control target opponent during their
-/// next turn (CR 723.1).
+/// next turn (CR 724.1).
 pub fn construct_a_cosmic_cube() -> CardDefinition {
     plan(
         "Construct a Cosmic Cube",

@@ -1131,7 +1131,7 @@ fn invasion_of_alara_casts_one_hit_and_keeps_the_other() {
 /// CR 310.12b — a defeated Siege with a sorcery back face is exiled and its
 /// back face cast free: Awaken the Maelstrom draws two, copies a permanent,
 /// spreads three +1/+1 counters and destroys an opponent's permanent, then
-/// goes to the graveyard as Invasion of Alara (CR 712.4).
+/// goes to the graveyard as Invasion of Alara (CR 712.6a).
 #[test]
 fn invasion_of_alara_defeated_casts_awaken_the_maelstrom() {
     let mut g = pod(3);

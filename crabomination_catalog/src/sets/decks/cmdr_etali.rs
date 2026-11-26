@@ -192,7 +192,7 @@ fn a_delina_copy(source: Selector) -> Effect {
 
 /// Delina's d20: each roll makes one attacking copy; on 15–20 you may roll
 /// again (`RepeatWhileMay` over `LastDieRoll`; a headless seat stops after 30
-/// repeats, CR 732.2).
+/// repeats, CR 733.2).
 fn a_delina_roll() -> Effect {
     Effect::RepeatWhileMay {
         body: Box::new(Effect::RollDie {

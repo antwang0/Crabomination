@@ -1,12 +1,12 @@
-//! CR 723 — controlling another player. The whole-turn grant (Mindslaver) is
+//! CR 724 — controlling another player. The whole-turn grant (Mindslaver) is
 //! `apply_pending_player_control`; this is the shared slot write and the
-//! CR 723.2 limited-duration form, one combat phase (Secret of Bloodbending).
+//! CR 724.2 limited-duration form, one combat phase (Secret of Bloodbending).
 
 use super::GameState;
 
 impl GameState {
     /// Point `seat`'s `controlled_by` slot at `controller` (`None` clears it).
-    /// CR 723.4 — a new controller sees what the controlled player sees,
+    /// CR 724.4 — a new controller sees what the controlled player sees,
     /// starting with their hand.
     pub(crate) fn set_player_controller(&mut self, seat: usize, controller: Option<usize>) {
         if seat >= self.players.len() {
@@ -24,7 +24,7 @@ impl GameState {
     }
 
     /// `Effect::ControlPlayerNextCombat` — `controller` controls `seat` during
-    /// `seat`'s next combat phase. CR 723.1a — a newer grant for the same seat
+    /// `seat`'s next combat phase. CR 724.1a — a newer grant for the same seat
     /// overwrites the older one.
     pub(crate) fn queue_combat_control(&mut self, seat: usize, controller: usize) {
         if seat == controller || !self.players.get(seat).is_some_and(|p| p.is_alive()) {
@@ -34,7 +34,7 @@ impl GameState {
         self.pending_combat_control.push((seat, controller));
     }
 
-    /// CR 723.2 — the active player's combat phase is beginning: a pending
+    /// CR 724.2 — the active player's combat phase is beginning: a pending
     /// combat grant on them takes effect now. Called as BeginCombat starts.
     pub(crate) fn begin_combat_control(&mut self) {
         let ap = self.active_player_idx;
@@ -49,7 +49,7 @@ impl GameState {
         self.set_player_controller(ap, Some(controller));
     }
 
-    /// CR 723.2 — the combat phase ended: the slot goes back to what it was
+    /// CR 724.2 — the combat phase ended: the slot goes back to what it was
     /// (a whole-turn Mindslaver grant resumes; otherwise the player is theirs).
     pub(crate) fn end_combat_control(&mut self) {
         // Read first: a `take` on the cold group unshares it (CLAUDE.md, CoW).

@@ -1,5 +1,5 @@
 //! Commander Legends: Battle for Baldur's Gate (CLB) — the initiative
-//! creatures (CR 726). Tests in `core_rules/cr_recent56`.
+//! creatures (CR 727). Tests in `core_rules/cr_recent56`.
 
 use crate::card::{
     ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope,

@@ -1,6 +1,6 @@
 //! CR conformance for the Mirrodin-completion pass:
-//! - CR 723 — controlling another player during their next turn (Mindslaver),
-//!   and for one combat phase (CR 723.2, Secret of Bloodbending).
+//! - CR 724 — controlling another player during their next turn (Mindslaver),
+//!   and for one combat phase (CR 724.2, Secret of Bloodbending).
 //! - CR 605.1a — a mana ability's `{T}` fires the tapped-for-mana event, and
 //!   the ability itself never uses the stack.
 //! - CR 500.8 / 502-506 — a turn-scoped step skip actually skips the step.
@@ -27,12 +27,12 @@ fn end_turn(g: &mut GameState) {
     }
 }
 
-// ── CR 723 — Controlling Another Player ──
+// ── CR 724 — Controlling Another Player ──
 
-/// CR 723.1 — the effect applies to the next turn the affected player takes,
-/// and CR 723.3 leaves them the active player.
+/// CR 724.1 — the effect applies to the next turn the affected player takes,
+/// and CR 724.3 leaves them the active player.
 #[test]
-fn cr_723_1_control_applies_on_the_targets_next_turn() {
+fn cr_724_1_control_applies_on_the_targets_next_turn() {
     let mut g = main_phase();
     let slaver = g.add_card_to_battlefield(0, catalog::mindslaver());
     g.clear_sickness(slaver);
@@ -46,14 +46,14 @@ fn cr_723_1_control_applies_on_the_targets_next_turn() {
     assert_eq!(g.pending_player_control, vec![(1, 0)]);
     assert_eq!(g.acting_seat_for(1), 1, "not yet their turn");
     end_turn(&mut g);
-    assert_eq!(g.active_player_idx, 1, "CR 723.3 — still the active player");
+    assert_eq!(g.active_player_idx, 1, "CR 724.3 — still the active player");
     assert_eq!(g.acting_seat_for(1), 0, "seat 0 makes their decisions");
     assert!(g.pending_player_control.is_empty(), "the pending entry was consumed");
 }
 
-/// CR 723.1 — the control ends when the next turn begins.
+/// CR 724.1 — the control ends when the next turn begins.
 #[test]
-fn cr_723_1_control_expires_after_that_turn() {
+fn cr_724_1_control_expires_after_that_turn() {
     let mut g = main_phase();
     g.pending_player_control.push((1, 0));
     end_turn(&mut g);
@@ -78,9 +78,9 @@ fn an_uncontrolled_turn_leaves_the_control_table_empty() {
     }
 }
 
-/// CR 723.1a — the most recently created control effect is the one that works.
+/// CR 724.1a — the most recently created control effect is the one that works.
 #[test]
-fn cr_723_1a_later_control_overwrites_earlier() {
+fn cr_724_1a_later_control_overwrites_earlier() {
     let mut g = two_player_game();
     g.players.push(crabomination::player::Player::new(2, "P2"));
     g.pending_player_control.push((2, 0));
@@ -89,10 +89,10 @@ fn cr_723_1a_later_control_overwrites_earlier() {
     assert_eq!(g.acting_seat_for(2), 1);
 }
 
-/// CR 723.4 — the controller sees everything the controlled player can,
+/// CR 724.4 — the controller sees everything the controlled player can,
 /// starting with their hand.
 #[test]
-fn cr_723_4_controller_sees_the_controlled_hand() {
+fn cr_724_4_controller_sees_the_controlled_hand() {
     let mut g = main_phase();
     g.add_card_to_hand(1, catalog::grizzly_bears());
     g.pending_player_control.push((1, 0));
@@ -123,10 +123,10 @@ fn run_to(g: &mut GameState, seat: usize, step: TurnStep) {
     panic!("never reached {step:?} on seat {seat}'s turn");
 }
 
-/// CR 723.2 — a limited-duration control (Secret of Bloodbending's "during
+/// CR 724.2 — a limited-duration control (Secret of Bloodbending's "during
 /// their next combat phase") starts with that combat phase and ends with it.
 #[test]
-fn cr_723_2_combat_phase_control_lasts_one_combat_phase() {
+fn cr_724_2_combat_phase_control_lasts_one_combat_phase() {
     let mut g = main_phase();
     stock(&mut g);
     g.pending_combat_control.push((1, 0));
@@ -140,10 +140,10 @@ fn cr_723_2_combat_phase_control_lasts_one_combat_phase() {
     assert!(g.combat_control_restore.is_none());
 }
 
-/// CR 723.2 + 723.1 — a whole-turn grant underneath a combat-phase one
+/// CR 724.2 + 723.1 — a whole-turn grant underneath a combat-phase one
 /// resumes when that combat phase ends.
 #[test]
-fn cr_723_2_combat_control_hands_back_to_a_whole_turn_controller() {
+fn cr_724_2_combat_control_hands_back_to_a_whole_turn_controller() {
     let mut g = multi_player_game(3);
     g.active_player_idx = 0;
     g.step = TurnStep::PreCombatMain;
@@ -153,7 +153,7 @@ fn cr_723_2_combat_control_hands_back_to_a_whole_turn_controller() {
     run_to(&mut g, 1, TurnStep::Upkeep);
     assert_eq!(g.acting_seat_for(1), 2);
     run_to(&mut g, 1, TurnStep::DeclareAttackers);
-    assert_eq!(g.acting_seat_for(1), 0, "CR 723.1a — the newer effect works");
+    assert_eq!(g.acting_seat_for(1), 0, "CR 724.1a — the newer effect works");
     run_to(&mut g, 1, TurnStep::PostCombatMain);
     assert_eq!(g.acting_seat_for(1), 2, "back to the whole-turn controller");
 }

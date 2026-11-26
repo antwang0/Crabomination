@@ -1341,7 +1341,7 @@ pub struct SpellKind {
     /// Casting a spell that isn't an artifact spell (Powerstone gate).
     pub casting_nonartifact_spell: bool,
     /// Activating an ability of any source (Omen Hawker's abilities-only mana).
-    /// The payment is a Class's level-up activation (CR 716.2a) — Sorcerer
+    /// The payment is a Class's level-up activation (CR 717.2a) — Sorcerer
     /// Class's mana may fund it.
     pub class_level: bool,
     /// The payment is a power-up activation (CR 702.193) — Quinjet

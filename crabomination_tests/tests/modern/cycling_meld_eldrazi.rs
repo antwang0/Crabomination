@@ -568,7 +568,7 @@ fn meld_requires_owning_both() {
     assert!(!g.battlefield.iter().any(|c| c.definition.name == "Urza, Planeswalker"));
 }
 
-/// CR 712.16 — a dying melded permanent goes to the graveyard as both
+/// CR 713.8 — a dying melded permanent goes to the graveyard as both
 /// component cards.
 #[test]
 fn melded_permanent_dies_as_both_cards() {

@@ -14,7 +14,7 @@ use crate::game::types::GameEvent;
 use crate::game::{GameError, GameState};
 
 impl GameState {
-    /// CR 725 — "The monarch controls enchanted creature" (Fealty to the
+    /// CR 726 — "The monarch controls enchanted creature" (Fealty to the
     /// Realm): hand each such Aura's host to the current monarch. The steal
     /// is keyed to the Aura staying attached (CR 611.2c), so the first record
     /// keeps the controller it reverts to.

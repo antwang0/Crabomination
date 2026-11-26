@@ -1546,7 +1546,7 @@ fn handle_action(
         return Applied::Accepted;
     }
 
-    // CR 723.5 — while a player is controlled, their controller makes every
+    // CR 724.5 — while a player is controlled, their controller makes every
     // choice for them, so the controller's connection may send the action.
     let expected = state.acting_seat_for(expected_actor(state, &action));
     if seat != expected {

@@ -201,7 +201,7 @@ fn the_same_seed_replays_identically_across_threads() {
 /// 25769803807, pair 5, pair seed **1663341901257141384**. At `--threads 1` it
 /// always split; at 2 and 3 it flipped, in both directions, run to run.
 ///
-/// The cause was `GameState::restart_game` (CR 727): it rebuilds the state
+/// The cause was `GameState::restart_game` (CR 728): it rebuilds the state
 /// with `GameState::new`, whose `GameRng` is `from_entropy`, so a seeded game
 /// that restarts drew its post-restart deal from OS entropy. This game
 /// restarts, which is why it and only it broke. Sequential replays could not

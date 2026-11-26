@@ -1,6 +1,6 @@
 //! Commander: the Blast from the Past precon (WHO, The Fourth Doctor + Sarah
 //! Jane Smith, `decks::cmdr_fourth_doctor`), and its primitives: granted read
-//! ahead (CR 714.3c), a non-legendary spell copy (CR 707.9b), a guess against
+//! ahead (CR 715.3c), a non-legendary spell copy (CR 707.9b), a guess against
 //! a live threshold with an else branch, one added counter of a chosen kind
 //! per permanent, and "counter all other spells" without a draw.
 
@@ -59,7 +59,7 @@ fn count(g: &GameState, id: CardId, kind: CounterType) -> u32 {
     g.battlefield_find(id).map_or(0, |c| c.counter_count(kind))
 }
 
-/// CR 714.3c — Barbara Wright gives your Sagas read ahead: The Sea Devils
+/// CR 715.3c — Barbara Wright gives your Sagas read ahead: The Sea Devils
 /// can start on chapter II, skipping chapter I's Salamander.
 #[test]
 fn barbara_wright_gives_your_sagas_read_ahead() {

@@ -814,10 +814,10 @@ fn cr_404_2_a_processed_face_down_card_lands_face_up() {
     assert!(!gy.face_down, "face up in the graveyard");
 }
 
-/// CR 712.4 — a disturbed DFC bounced to a hand is its front face there
+/// CR 712.6a — a disturbed DFC bounced to a hand is its front face there
 /// (Evacuation took a Generous Soul back as its back face, pod seed 818288).
 #[test]
-fn cr_712_4_a_bounced_disturb_back_face_is_its_front_in_hand() {
+fn cr_712_6a_a_bounced_disturb_back_face_is_its_front_in_hand() {
     let mut g = main_phase();
     let beggar = g.add_card_to_graveyard(0, catalog::beloved_beggar());
     g.players[0].mana_pool.add(crabomination::mana::Color::White, 6);
@@ -869,7 +869,7 @@ fn cr_400_7_a_bounced_permanent_forgets_its_chosen_type() {
     assert_eq!(held.chosen_creature_type, None);
 }
 
-/// CR 400.7 / 716 — a Class's level is battlefield-only: destroyed, it is a
+/// CR 400.7 / 717 — a Class's level is battlefield-only: destroyed, it is a
 /// level-less card in the graveyard (Fortune Teller's Talent sat there at
 /// level 1, pod seed 818500).
 #[test]
@@ -1226,11 +1226,11 @@ fn cr_608_2b_a_spell_whose_player_and_creature_targets_are_both_gone_fizzles() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bear));
 }
 
-/// CR 712.4 / 903.9a — a transformed commander that went to exile goes home
+/// CR 712.6a / 903.9a — a transformed commander that went to exile goes home
 /// front face up: Sephiroth, One-Winged Angel reached the command zone still
 /// transformed after a mass exile (eight-seat pod, seed 3121014 game 3).
 #[test]
-fn cr_712_4_a_transformed_commander_goes_home_front_face_up() {
+fn cr_712_6a_a_transformed_commander_goes_home_front_face_up() {
     let mut g = main_phase();
     let cmd = g.seat_commanders(0, vec![catalog::sephiroth_fabled_soldier()])[0];
     let pos = g.players[0].command.iter().position(|c| c.id == cmd).unwrap();
@@ -1265,12 +1265,12 @@ fn cr_903_9b_a_hand_shuffled_into_a_library_sends_its_commander_home() {
     assert_eq!(g.players[0].hand.len(), hand - 1, "draws the one card shuffled in");
 }
 
-/// CR 712.4 — a transformed permanent exiled "until this leaves" is exiled
+/// CR 712.6a — a transformed permanent exiled "until this leaves" is exiled
 /// front face up; only a defeated battle keeps its back face in exile. Aerial
 /// Extortionist exiled an Abolisher of Bloodlines as its back face (audit pod
 /// seed 3130108 game 5).
 #[test]
-fn cr_712_4_a_transformed_permanent_is_exiled_front_face_up() {
+fn cr_712_6a_a_transformed_permanent_is_exiled_front_face_up() {
     let mut g = main_phase();
     let src = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let dfc = g.add_card_to_battlefield(1, catalog::voldaren_bloodcaster());
@@ -1640,14 +1640,14 @@ fn cr_903_9b_a_commander_shuffled_in_instead_of_dying_goes_home() {
     assert!(g.players[0].library.iter().all(|c| c.id != id));
 }
 
-/// CR 732.2a / 400.7 — Naru Meha copying a Ghostly Flicker that is still on
+/// CR 733.2a / 400.7 — Naru Meha copying a Ghostly Flicker that is still on
 /// the stack blinks itself, and its new ETB copies the original again. The
 /// copier stops the optional loop (a blink keeps its `CardId` here, so the
 /// kept targets never go illegal): the stack drains, the game is live, and
 /// the original resolves. (Pod seed 924424; 77002 game 2 ran Naru + Displace
 /// to the action cap.)
 #[test]
-fn cr_732_2a_a_copier_blinking_itself_stops_the_loop() {
+fn cr_733_2a_a_copier_blinking_itself_stops_the_loop() {
     let mut g = main_phase();
     let naru = g.add_card_to_battlefield(0, catalog::naru_meha_master_wizard());
     let island = g.add_card_to_battlefield(0, catalog::island());

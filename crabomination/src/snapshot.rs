@@ -121,7 +121,7 @@ pub struct CardSnapshot {
     /// back-compat with pre-counter (bool) snapshots.
     #[serde(default)]
     pub loyalty_uses_this_turn: u8,
-    /// CR 712.16 melded-component cards (recursive snapshots).
+    /// CR 713.8 melded-component cards (recursive snapshots).
     /// `#[serde(default)]` so older snapshots load as empty.
     #[serde(default)]
     pub meld_parts: Vec<CardSnapshot>,

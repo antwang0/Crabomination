@@ -146,7 +146,7 @@ fn king_tchalla_draws_on_a_second_draw_and_transforms() {
     assert!(g.battlefield_find(king).is_some(), "damage to it is prevented");
 }
 
-/// The Marvel modal DFCs whose front also transforms (CR 712.11b): each back
+/// The Marvel modal DFCs whose front also transforms (CR 712.8b): each back
 /// face is cast straight from hand for its printed cost.
 #[test]
 fn modal_transform_backs_are_cast_from_hand() {
@@ -1015,7 +1015,7 @@ fn sedris_grants_unearth() {
     assert!(g.battlefield_find(bear).is_some());
 }
 
-/// Obeka, Brute Chronologist (CR 724): its tap lets the active player end the
+/// Obeka, Brute Chronologist (CR 725): its tap lets the active player end the
 /// turn — the stack is exiled and the turn skips to cleanup.
 #[test]
 fn obeka_ends_the_turn() {

@@ -131,7 +131,7 @@ fn darksteel_juggernaut_counts_your_artifacts() {
     assert_eq!(pt(&g, jugg), (2, 2), "itself and the Ring");
 }
 
-/// CR 724 — the enchanted creature untaps only while its controller is the
+/// CR 725 — the enchanted creature untaps only while its controller is the
 /// monarch; the Aura makes its caster the monarch.
 #[test]
 fn cr_724_fall_from_favor_locks_until_its_victim_takes_the_crown() {
@@ -4388,11 +4388,11 @@ fn breed_lethality_cards() {
     assert_eq!(g.players[1].life, 14);
 }
 
-/// CR 732.2 — two Enduring Scalelords are an optional loop (each counter
+/// CR 733.2 — two Enduring Scalelords are an optional loop (each counter
 /// may put one on the other); a bot seat must stop it by declining, or the
 /// game never leaves the step. A 1,000-game census capped two games on it.
 #[test]
-fn cr_732_2_bot_breaks_the_enduring_scalelord_loop() {
+fn cr_733_2_bot_breaks_the_enduring_scalelord_loop() {
     use crabomination::server::bot::{Bot, HeuristicBot};
     let mut g = main_phase();
     g.players[0].wants_ui = true;
@@ -4465,11 +4465,11 @@ fn cr_118_9_demon_of_fates_design_casts_one_enchantment_a_turn_for_life() {
     assert_eq!(pt(&g, demon), (11, 6));
 }
 
-/// CR 714.2e — Narci, Fable Singer: as a Saga's final chapter ability
+/// CR 715.2e — Narci, Fable Singer: as a Saga's final chapter ability
 /// resolves, each opponent loses (and you gain) the Saga's mana value; the
-/// Saga's sacrifice afterwards (CR 714.4) draws a card.
+/// Saga's sacrifice afterwards (CR 715.4) draws a card.
 #[test]
-fn cr_714_2e_narci_drains_on_a_sagas_final_chapter() {
+fn cr_715_2e_narci_drains_on_a_sagas_final_chapter() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::narci_fable_singer());
     g.add_card_to_library(0, catalog::forest());
@@ -4748,12 +4748,12 @@ fn cr_305_1_faldorn_makes_a_wolf_for_a_land_played_from_exile() {
     assert_eq!(count_named(&g, 0, "Wolf"), 1);
 }
 
-/// CR 715.4 / 118.9 — Tlincalli Hunter: Retrieve Prey makes a graveyard
+/// CR 716.4 / 118.9 — Tlincalli Hunter: Retrieve Prey makes a graveyard
 /// creature castable from exile, the first creature cast from exile that turn
 /// costs {0}, and the adventurer's own cast is from exile too (Faldorn counts
 /// both).
 #[test]
-fn cr_715_4_tlincalli_hunter_casts_a_creature_from_exile_for_free() {
+fn cr_716_4_tlincalli_hunter_casts_a_creature_from_exile_for_free() {
     let mut g = main_phase();
     g.add_card_to_battlefield(0, catalog::tlincalli_hunter());
     g.add_card_to_battlefield(0, catalog::faldorn_dread_wolf_herald());

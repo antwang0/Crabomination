@@ -52,7 +52,7 @@ fn activate(g: &mut GameState, id: CardId, index: usize, target: Option<Target>)
     Ok(())
 }
 
-/// Staunch Throneguard makes you the monarch (CR 724.1); Rambunctious Mutt
+/// Staunch Throneguard makes you the monarch (CR 725.1); Rambunctious Mutt
 /// destroys an opponent's artifact.
 #[test]
 fn throneguard_crowns_and_mutt_destroys() {

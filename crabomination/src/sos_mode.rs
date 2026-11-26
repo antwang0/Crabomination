@@ -327,7 +327,7 @@ fn sample_with_cap<R: Rng>(
     }
 }
 
-/// CR 717-adjacent bookkeeping: the SOS Special Guests (SPG) sheet, an
+/// CR 718-adjacent bookkeeping: the SOS Special Guests (SPG) sheet, an
 /// eleven-card bonus sheet that isn't part of the main set but shares its
 /// boosters. Nine were already catalogued for other sets; the sheet is
 /// listed once here so the pack generator and the ML vocabulary see it.

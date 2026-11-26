@@ -1,18 +1,18 @@
 //! Comprehensive-Rules conformance for behaviours exercised by the recent274–276
 //! batches: layer-changing self-animation (CR 613 / 711), once-only Renown
 //! (CR 702.112), and Deathtouch making any nonzero damage lethal (CR 702.2c).
-//! Plus CR 716 (Class enchantments) level-gated statics.
+//! Plus CR 717 (Class enchantments) level-gated statics.
 
 use crabomination::card::{CardType, Keyword};
 use crabomination::catalog;
 use crabomination::game::effects::EffectContext;
 use crabomination::game::{two_player_game, Target};
 
-/// CR 716.2 — a Class's `StaticEffect::WhileClassLevelAtLeast` anthem applies
+/// CR 717.2 — a Class's `StaticEffect::WhileClassLevelAtLeast` anthem applies
 /// only while the Class has reached that level. A level-2 "creatures you
 /// control have flying" grant is inert at level 1 and live at level 2.
 #[test]
-fn cr_716_2_level_gated_static_applies_only_at_level() {
+fn cr_717_2_level_gated_static_applies_only_at_level() {
     use crabomination::card::{
         CardDefinition, EnchantmentSubtype, SelectionRequirement as R, StaticAbility, Subtypes,
     };
@@ -53,11 +53,11 @@ fn cr_716_2_level_gated_static_applies_only_at_level() {
     );
 }
 
-/// CR 716.2 — the level gate also wraps a *live-recomputed* grant (a selector
+/// CR 717.2 — the level gate also wraps a *live-recomputed* grant (a selector
 /// mentioning `IsModified`, resolved per layer pass), not just static-selector
 /// anthems.
 #[test]
-fn cr_716_2_level_gate_wraps_live_grant() {
+fn cr_717_2_level_gate_wraps_live_grant() {
     use crabomination::card::{
         CardDefinition, CounterType, EnchantmentSubtype, SelectionRequirement as R, StaticAbility,
         Subtypes,
@@ -166,11 +166,11 @@ fn cr_702_2c_deathtouch_one_point_is_lethal() {
     );
 }
 
-/// CR 716.2d — a Class put onto the battlefield (not cast) has no level and is
+/// CR 717.2d — a Class put onto the battlefield (not cast) has no level and is
 /// treated as level 1: its level-2 bar is activatable, the level becomes 2
 /// (not 1), and the "becomes level 2" trigger fires (Wizard Class draws two).
 #[test]
-fn cr_716_2d_a_class_without_a_level_is_level_one() {
+fn cr_717_2d_a_class_without_a_level_is_level_one() {
     use crabomination::game::types::{GameAction, TurnStep};
     let mut g = two_player_game();
     let class = g.add_card_to_battlefield(0, catalog::wizard_class());

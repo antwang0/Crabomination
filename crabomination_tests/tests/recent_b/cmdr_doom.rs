@@ -198,10 +198,10 @@ fn cr_702_62a_kang_prime_suspends_the_first_nonland_card() {
     assert!(g.players[0].library.is_empty(), "the lands above it were exiled too");
 }
 
-/// CR 714.2 — Age of Ultron's chapter II makes a 2/2 Robot Villain per
+/// CR 715.2 — Age of Ultron's chapter II makes a 2/2 Robot Villain per
 /// opponent.
 #[test]
-fn cr_714_2_age_of_ultron_builds_robots_per_opponent() {
+fn cr_715_2_age_of_ultron_builds_robots_per_opponent() {
     let mut g = main_phase(4);
     let id = g.add_card_to_battlefield(0, catalog::age_of_ultron());
     g.battlefield.iter_mut().filter(|c| c.id == id).for_each(|c| c.add_counters(CounterType::Lore, 1));

@@ -297,7 +297,7 @@ fn invoke_the_divine_destroys_and_gains() {
 
 // ── Noncreature permanents ─────────────────────────────────────────────────
 
-/// Monarch on entry (CR 724); the upkeep token is an Angel while you're the
+/// Monarch on entry (CR 725); the upkeep token is an Angel while you're the
 /// monarch and a Spirit otherwise.
 #[test]
 fn court_of_grace_makes_an_angel_for_the_monarch() {

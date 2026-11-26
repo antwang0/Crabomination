@@ -98,11 +98,11 @@ fn graveyard_cast_payoffs_fire_only_for_graveyard_casts() {
     assert_eq!(g.players[1].life, life1 - 2, "Burning Vengeance hit the opponent");
 }
 
-/// CR 724.2 — Mandate of Peace ends the combat phase: the attackers leave
+/// CR 725.2 — Mandate of Peace ends the combat phase: the attackers leave
 /// combat without dealing damage, the game goes to the postcombat main, the
 /// spell is exiled (724.2b), and opponents can't cast spells this turn.
 #[test]
-fn cr_724_2_mandate_of_peace_ends_the_combat_phase() {
+fn cr_725_2_mandate_of_peace_ends_the_combat_phase() {
     let mut g = main_phase();
     let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
     g.active_player_idx = 1;
@@ -117,9 +117,9 @@ fn cr_724_2_mandate_of_peace_ends_the_combat_phase() {
     g.perform_action(cast(mandate, None)).expect("Mandate during combat");
     drain_stack(&mut g);
     assert_eq!(g.step, TurnStep::PostCombatMain);
-    assert!(g.attacking.is_empty(), "CR 724.2d — everything left combat");
+    assert!(g.attacking.is_empty(), "CR 725.2d — everything left combat");
     assert_eq!(g.players[0].life, 20, "no combat damage");
-    assert!(in_exile(&g, mandate), "CR 724.2b — the resolving spell is exiled");
+    assert!(in_exile(&g, mandate), "CR 725.2b — the resolving spell is exiled");
     let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
     flood(&mut g, 1);
     g.priority.player_with_priority = 1;

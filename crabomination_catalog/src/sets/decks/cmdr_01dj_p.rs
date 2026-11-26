@@ -44,7 +44,7 @@ fn spell(name: &'static str, mana: ManaCost, instant: bool, effect: Effect) -> C
 }
 
 /// Keldon Warcaller — {1}{R} 2/2 Human Warrior. Whenever it attacks, put a
-/// lore counter on target Saga you control (CR 714.2b: the chapter fires).
+/// lore counter on target Saga you control (CR 715.2b: the chapter fires).
 pub fn keldon_warcaller() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {

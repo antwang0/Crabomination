@@ -3,7 +3,7 @@
 //!   none, and CR 510.1a's "rather than the attacking player" hand-off.
 //! - CR 514.3a — "at the beginning of the next cleanup step" triggers go on
 //!   the stack in cleanup and grant priority.
-//! - CR 724 — ending the turn exiles the stack and jumps to cleanup.
+//! - CR 725 — ending the turn exiles the stack and jumps to cleanup.
 
 use crabomination::catalog;
 use crabomination::game::types::{Attack, AttackTarget, GameAction, Target};
@@ -122,10 +122,10 @@ fn cr_514_3a_cleanup_triggers_fire_after_the_end_step() {
     assert!(knights.iter().all(|id| g.battlefield_find(*id).is_none()));
 }
 
-/// CR 724.1b / 724.1d — ending the turn exiles everything still on the stack
+/// CR 725.1b / 725.1d — ending the turn exiles everything still on the stack
 /// and jumps straight to cleanup, so "until end of turn" grants expire.
 #[test]
-fn cr_724_1b_ending_the_turn_exiles_the_stack_and_expires_grants() {
+fn cr_725_1b_ending_the_turn_exiles_the_stack_and_expires_grants() {
     let mut g = two_player_game();
     let sundial = g.add_card_to_battlefield(0, catalog::sundial_of_the_infinite());
     g.battlefield_find_mut(sundial).unwrap().summoning_sick = false;
@@ -164,9 +164,9 @@ fn cr_724_1b_ending_the_turn_exiles_the_stack_and_expires_grants() {
     );
 }
 
-/// CR 724.1d — ending the turn during combat removes every creature from it.
+/// CR 725.1d — ending the turn during combat removes every creature from it.
 #[test]
-fn cr_724_1d_ending_the_turn_clears_combat() {
+fn cr_725_1d_ending_the_turn_clears_combat() {
     let mut g = two_player_game();
     let sundial = g.add_card_to_battlefield(0, catalog::sundial_of_the_infinite());
     let attacker = g.add_card_to_battlefield(0, catalog::grizzly_bears());
@@ -193,11 +193,11 @@ fn cr_724_1d_ending_the_turn_clears_combat() {
     assert_eq!(g.players[1].life, life, "no combat damage was ever dealt");
 }
 
-/// CR 724.1a — triggers that fired before "end the turn" began and aren't on
+/// CR 725.1a — triggers that fired before "end the turn" began and aren't on
 /// the stack yet cease to exist: Day's Undoing's seven draws happen first, so
 /// the opponent's Underworld Dreams never deals its seven damage.
 #[test]
-fn cr_724_1a_triggers_before_ending_the_turn_cease_to_exist() {
+fn cr_725_1a_triggers_before_ending_the_turn_cease_to_exist() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(1, catalog::underworld_dreams());
     for _ in 0..10 {

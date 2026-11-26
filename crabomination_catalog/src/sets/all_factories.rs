@@ -19533,6 +19533,8 @@ static DECKS: &[Factory] = &[
     super::decks::mists_of_lorien,
     super::decks::grizzlegom_hurloon_hero,
     super::decks::swampbenders,
+    // cmdr_nov26 (EDHREC singles short only their commander)
+    super::decks::massimo_the_magician,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

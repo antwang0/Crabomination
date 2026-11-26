@@ -132,7 +132,7 @@ fn soldiers_attacking(g: &GameState, seat: usize) -> usize {
         .count()
 }
 
-/// CR 726 / CR 603.4 — Undercellar Sweep: the Soldiers come when *a player
+/// CR 727 / CR 603.4 — Undercellar Sweep: the Soldiers come when *a player
 /// you're attacking* has the initiative, attacking that player; an
 /// initiative held by a player you're not attacking makes none.
 #[test]
@@ -443,7 +443,7 @@ fn chronatog_totem_pumps_only_as_a_creature() {
     assert_eq!((cp.power, cp.toughness), (4, 5));
 }
 
-/// CR 726.2 — Vadrik makes it day as it enters, and its discount reads its
+/// CR 727.2 — Vadrik makes it day as it enters, and its discount reads its
 /// power: a counter from day/night flipping cheapens instants by one more.
 #[test]
 fn vadrik_makes_day_and_discounts_by_power() {

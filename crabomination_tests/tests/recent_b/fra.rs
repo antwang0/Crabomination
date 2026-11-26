@@ -708,11 +708,11 @@ fn flies(g: &GameState, id: CardId) -> bool {
     g.computed_permanent(id).unwrap().keywords().contains(&Keyword::Flying)
 }
 
-/// CR 722.3 — the four "enters prepared" creatures enter with the
+/// CR 723.3 — the four "enters prepared" creatures enter with the
 /// designation, and casting the copy unprepares them. Semester Foreseer's
 /// own ETB surveil and Peer Review's Cadet ride along.
 #[test]
-fn cr_722_3_fra_prepare_creatures_enter_prepared() {
+fn cr_723_3_fra_prepare_creatures_enter_prepared() {
     let cases: [(Factory, Option<Target>); 4] = [
         (catalog::semester_foreseer, None),
         (catalog::void_extrapolator, None),

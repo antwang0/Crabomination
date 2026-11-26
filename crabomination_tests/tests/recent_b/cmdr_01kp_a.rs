@@ -347,12 +347,12 @@ fn lore(g: &mut GameState, saga: CardId) {
     drain_stack(g);
 }
 
-/// CR 714.2c — Storyweave's two lore counters take Teachings of the Kirin
+/// CR 715.2c — Storyweave's two lore counters take Teachings of the Kirin
 /// from I to III, so chapters II and III both trigger; the Orochi the third
 /// chapter returns is the next enchantment creature to enter this turn, and
 /// enters with Storyweave's two extra +1/+1 counters (CR 614.1c).
 #[test]
-fn cr_714_2c_storyweave_skips_teachings_to_its_orochi_with_counters() {
+fn cr_715_2c_storyweave_skips_teachings_to_its_orochi_with_counters() {
     let mut g = pod(2);
     g.players[0].library.clear();
     for _ in 0..3 {
@@ -693,7 +693,7 @@ fn tivadar_and_lightwielder_paladin_hunt_red() {
     assert!(g.exile.iter().any(|c| c.id == piker), "the red permanent of the damaged player");
 }
 
-/// Myra the Magnificent (CR 717): an instant cast from hand opens an
+/// Myra the Magnificent (CR 718): an instant cast from hand opens an
 /// Attraction; her {X}, {T} exiles Divination onto it with a midway counter,
 /// and visiting it later copies Divination for free.
 #[test]
@@ -1021,10 +1021,10 @@ fn cr_800_4_gusthas_scepter_stash_bins_when_control_is_lost() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == bolt), "binned with the Scepter gone");
 }
 
-/// Draconian Gate-Bot opens an Attraction (CR 717.4) or destroys one, which
-/// goes to its owner's junkyard (CR 717.6).
+/// Draconian Gate-Bot opens an Attraction (CR 718.4) or destroys one, which
+/// goes to its owner's junkyard (CR 718.6).
 #[test]
-fn cr_717_6_draconian_gate_bot_opens_or_junks_an_attraction() {
+fn cr_718_6_draconian_gate_bot_opens_or_junks_an_attraction() {
     let mut g = pod(2);
     g.seat_attraction_deck(0, vec![catalog::information_booth()]);
     let bot = g.add_card_to_hand(0, catalog::draconian_gate_bot());

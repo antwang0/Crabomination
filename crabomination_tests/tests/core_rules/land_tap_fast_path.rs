@@ -42,7 +42,7 @@ fn both_ways(name: &str, accept: bool, setup: Setup) {
     FORCE_GENERIC_ACTIVATION.set(false);
     assert_eq!(taken, u64::from(accept), "{name}: fast path taken {taken} times");
     assert_eq!(fast_events, slow_events, "{name}: events differ");
-    // Neither path touches the CR 732.3 watch: a mana ability is part of
+    // Neither path touches the CR 733.3 watch: a mana ability is part of
     // the announcement it pays for, and letting a land tap reset the watch
     // hid a paid loop (the Basalt Monolith find, 2026-09-09). Until then the
     // generic path recorded the tap and the fast path reset it (PERF

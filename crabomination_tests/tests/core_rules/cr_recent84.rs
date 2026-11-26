@@ -7,9 +7,9 @@
 use crabomination::catalog;
 use crabomination::game::*;
 
-/// CR 712.10 — the Saga back face of a sorcery DFC can't turn back over.
+/// CR 701.27e — the Saga back face of a sorcery DFC can't turn back over.
 #[test]
-fn cr_712_10_transform_into_a_sorcery_face_does_nothing() {
+fn cr_701_27e_transform_into_a_sorcery_face_does_nothing() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::esper_origins());
     let mut evs = vec![];

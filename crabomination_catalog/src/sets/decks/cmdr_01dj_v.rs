@@ -12,7 +12,7 @@ use crate::mana::{Color, cost, generic, u, x};
 
 /// Umara Wizard // Umara Skyfalls — {4}{U} 4/3 Merfolk Wizard; whenever you
 /// cast an instant, sorcery or Wizard spell, it gains flying until end of
-/// turn. Back (modal, CR 712.12): Umara Skyfalls, a land that enters tapped
+/// turn. Back (modal, CR 712.9): Umara Skyfalls, a land that enters tapped
 /// and taps for {U}.
 pub fn umara_wizard() -> CardDefinition {
     let skyfalls = CardDefinition {

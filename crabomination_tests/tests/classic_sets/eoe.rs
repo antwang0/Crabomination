@@ -564,7 +564,7 @@ fn lumen_frigate_charge_gated_anthem_band() {
 }
 
 /// The server view surfaces a Station card's next `{N+}` charge threshold so
-/// the client can show progress (CR 721).
+/// the client can show progress (CR 722).
 #[test]
 fn view_surfaces_station_next_threshold() {
     let mut g = two_player_game();
@@ -2289,7 +2289,7 @@ fn weapons_manufacturing_mints_munitions() {
     );
 }
 
-/// CR 721.2a — a Planet's 12+ activated Station band becomes usable once it has
+/// CR 722.2a — a Planet's 12+ activated Station band becomes usable once it has
 /// 12 charge counters (Uthros taps for {U} per artifact you control).
 #[test]
 fn station_activated_band_unlocks_at_threshold() {
@@ -3026,7 +3026,7 @@ fn dawnsire_10plus_fires_once_per_attack() {
     assert_eq!(g.stack.len(), 1, "one trigger for the declaration");
 }
 
-/// CR 721.2a — a station band's `YouAttack` ("whenever you attack") trigger
+/// CR 722.2a — a station band's `YouAttack` ("whenever you attack") trigger
 /// fires from the attack-declaration walk, once, at the band's threshold (the
 /// walk used to read printed triggers only).
 #[test]

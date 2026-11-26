@@ -338,7 +338,7 @@ pub fn legal_actions(state: &GameState, seat: usize) -> Enumeration {
                     }
                 }
             }
-            // A prepared creature's spell copy (CR 722.3).
+            // A prepared creature's spell copy (CR 723.3).
             if c.counter_count(crate::card::CounterType::Prepared) > 0 {
                 for target in targets.iter().cloned() {
                     let a = GameAction::CastPrepareSpell {

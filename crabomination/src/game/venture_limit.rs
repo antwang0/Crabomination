@@ -1,7 +1,7 @@
 //! "Each opponent can't venture into the dungeon more than once each turn"
 //! (Keen-Eared Sentry, `StaticEffect::OpponentsVentureOncePerTurn`). A
 //! venture (CR 701.49) — including the one taking the initiative makes
-//! (CR 725.2) — is refused for a player who already ventured this turn while
+//! (CR 726.2) — is refused for a player who already ventured this turn while
 //! an opponent controls such a static. `Player.ventured_this_turn` is only
 //! written while one is on the battlefield, so no other game pays for it.
 

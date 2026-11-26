@@ -491,7 +491,7 @@ pub fn order_of_whiteclay() -> CardDefinition {
 }
 
 /// Seasoned Dungeoneer — {3}{W} 3/4 Human Warrior. Entering, you take the
-/// initiative (CR 726); whenever you attack, an attacking party-role
+/// initiative (CR 727); whenever you attack, an attacking party-role
 /// creature gains protection from creatures and explores (CR 701.44).
 pub fn seasoned_dungeoneer() -> CardDefinition {
     CardDefinition {

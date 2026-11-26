@@ -195,9 +195,9 @@ pub fn target_decks() -> Vec<PodDeck> {
             main: decks::YURIKO_MAIN,
         },
         // Tenth, same reason: the only seat playing the multiplayer-native
-        // mechanics — monarch (CR 725), goad (CR 701.15), melee (CR 702.121),
+        // mechanics — monarch (CR 726), goad (CR 701.15), melee (CR 702.121),
         // voting (CR 701.38), tempting offer / join forces (CR 207.2c), the
-        // initiative (CR 726), myriad (CR 702.116). `--seats 10`.
+        // initiative (CR 727), myriad (CR 702.116). `--seats 10`.
         PodDeck {
             name: "Adriana (RW)",
             commanders: decks::ADRIANA_COMMANDERS,
@@ -1265,7 +1265,7 @@ pub fn target_decks() -> Vec<PodDeck> {
             main: decks::ANJE_MAIN,
         },
         // Hundred-and-fifty-third: Mystic Intellect (Commander 2019) — Jeskai
-        // flashback under Sevinne, the Chronoclasm (CR 724.2 Mandate of
+        // flashback under Sevinne, the Chronoclasm (CR 725.2 Mandate of
         // Peace, CR 508.1a Pramikon). `--pod-decks 153`.
         PodDeck {
             name: "Sevinne, the Chronoclasm (URW)",
@@ -1369,7 +1369,7 @@ pub fn target_decks() -> Vec<PodDeck> {
             main: decks::TIDUS_MAIN,
         },
         // Hundred-and-sixty-sixth: Mutant Menace (Fallout) — Sultai rad
-        // counters, mills and Mutants under The Wise Mothman (CR 728 healing
+        // counters, mills and Mutants under The Wise Mothman (CR 729 healing
         // radiation, CR 615 Bloatfly Swarm). `--pod-decks 166`.
         PodDeck {
             name: "The Wise Mothman (BGU)",
@@ -1496,7 +1496,7 @@ pub fn target_decks() -> Vec<PodDeck> {
         // Hundred-and-eighty-second: Blast from the Past (WHO, Doctor Who) —
         // Bant historic spells and Sagas under The Fourth Doctor + Sarah
         // Jane Smith (CR 702.124m's Doctor's companion pair; Barbara
-        // Wright's granted read ahead, CR 714.3c). `--pod-decks 182`.
+        // Wright's granted read ahead, CR 715.3c). `--pod-decks 182`.
         PodDeck {
             name: "The Fourth Doctor + Sarah Jane Smith (GWU)",
             commanders: decks::FOURTH_DOCTOR_COMMANDERS,
@@ -37681,6 +37681,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GRIZZLEGOM_COMMANDERS,
             main: decks::GRIZZLEGOM_MAIN,
         },
+        // Seat 6206: Massimo, the Magician's EDHREC average deck. `--pod-decks 6206`.
+        PodDeck {
+            name: "Massimo, the Magician (WUR)",
+            commanders: decks::MASSIMO_COMMANDERS,
+            main: decks::MASSIMO_MAIN,
+        },
     ]
 }
 
@@ -37736,7 +37742,7 @@ pub fn build_pod_template_from(decks: &[SeatDeck<'_>]) -> GameState {
     g
 }
 
-/// CR 717.2 — the Attraction deck a pod seat brings when its deck opens
+/// CR 718.2 — the Attraction deck a pod seat brings when its deck opens
 /// Attractions: every Attraction in the catalog, one of each name (CR
 /// 717.2a: at least ten). EDHREC's averages list no Attraction deck, so
 /// without this Myra the Magnificent, Draconian Gate-Bot and the other
@@ -37785,12 +37791,12 @@ pub fn play_one_pod_game(
     play_one_pod_game_censused(template, pilots, max_actions, seed, None)
 }
 
-/// CR 732.1b / 732.2a — an optional loop repeats as often as its player
+/// CR 733.1b / 733.2a — an optional loop repeats as often as its player
 /// chooses. Past this many activations of one ability of one permanent in a
 /// turn, the bot is in a loop it cannot price (Woe Strider / Prowling
 /// Geistcatcher / Gravespawn Sovereign: 2,723 scries in one main phase), so
 /// its next one is a pass. Casts of one card count the same way: a cast its
-/// own answer made illegal is rewound (CR 733.1) and can be re-cast until the
+/// own answer made illegal is rewound (CR 734.1) and can be re-cast until the
 /// cap (Launch the Fleet, 643 casts in a turn). Pods only.
 const POD_SAME_ACTIVATION_PER_TURN: u32 = 64;
 
@@ -38077,7 +38083,7 @@ fn zone_label(g: &GameState, id: crate::card::CardId) -> &'static str {
     } else if g.players.iter().any(|p| has(&p.command)) {
         "a command zone"
     } else if let Some(zone) = {
-        // Still a failure (CR 712.4: off the battlefield a melded or merged
+        // Still a failure (CR 713.8: off the battlefield a melded or merged
         // card is its parts), but one that names where the shell went.
         let inside = |z: &[crate::card::CardInstance]| {
             z.iter().any(|c| c.meld_parts.iter().chain(c.mutate_stack.iter()).any(|p| p.id == id))
@@ -38303,7 +38309,7 @@ pub(crate) fn play_pod_game_observed(
                 action = crate::game::GameAction::PassPriority;
                 settled = None;
             }
-            // CR 723.5 — a controlled seat plays the controller's policy; an
+            // CR 724.5 — a controlled seat plays the controller's policy; an
             // override the rules reject falls back to the seat's own action.
             let mut fallback = None;
             if let Some(forced) = controlled::controller_override(&g, seat, &action) {
@@ -38354,7 +38360,7 @@ pub(crate) fn play_pod_game_observed(
                 }
                 census.bump(key);
                 census.note_triggers(&g);
-                // CR 727 — a restart (Karn Liberated) begins a new game: its
+                // CR 728 — a restart (Karn Liberated) begins a new game: its
                 // commander tax starts over, so the history does too.
                 #[cfg(debug_assertions)]
                 if last_turn.is_some_and(|(t, ..)| g.turn_number < t) {
@@ -38724,7 +38730,7 @@ pub(crate) fn play_pod_game_observed(
                 }
             }
         }
-        // CR 725.4 / 726.4 — the monarch and the initiative pass on when their
+        // CR 726.4 / 727.4 — the monarch and the initiative pass on when their
         // holder leaves; neither stays with a seat that has left. Debug-only.
         #[cfg(debug_assertions)]
         // As for the ownership check below: a departure deferred past a
@@ -38771,11 +38777,11 @@ pub(crate) fn play_pod_game_observed(
                     || c.perm_power_bonus != 0
                     || c.perm_toughness_bonus != 0
                     || c.echo_paid
-                    // CR 708.9 / 712.8 — face up and front face up off the
+                    // CR 708.9 / 712.6d — face up and front face up off the
                     // battlefield (exile keeps foretold / hidden cards down).
                     || (z != Off::Exile && c.face_down)
                     || c.transformed
-                    // CR 710.4 / 709.5c / 716 / MKM — flip, Room, Class and
+                    // CR 710.4 / 709.5c / 717 / MKM — flip, Room, Class and
                     // Case designations are battlefield-only; so are a soulbond
                     // pair, a phasing link and this turn's loyalty activations
                     // (a planeswalker back the same turn is a new object).
@@ -39428,11 +39434,11 @@ mod tests {
 
     use super::*;
 
-    /// CR 717.2 — a seat whose deck opens Attractions brings an Attraction
+    /// CR 718.2 — a seat whose deck opens Attractions brings an Attraction
     /// deck of distinct names (at least ten), shuffled per game; a seat
     /// whose deck doesn't brings none.
     #[test]
-    fn cr_717_2_a_seat_that_opens_attractions_brings_an_attraction_deck() {
+    fn cr_718_2_a_seat_that_opens_attractions_brings_an_attraction_deck() {
         let myra = SeatDeck { commanders: decks::MYRA_THE_MAGNIFICENT_COMMANDERS, main: decks::MYRA_THE_MAGNIFICENT_MAIN };
         let other = SeatDeck::from(&target_decks()[0]);
         let g = build_pod_template_from(&[myra, other]);
@@ -39741,7 +39747,7 @@ mod tests {
             ("Ashling", &[0xA541]),
             // CR 702.35 madness (paid, {X}, targeted), a reversed turn order.
             ("Anje", &[0xA41E]),
-            // CR 702.34 flashback copied by Sevinne, CR 724.2 ending the
+            // CR 702.34 flashback copied by Sevinne, CR 725.2 ending the
             // combat phase.
             ("Sevinne", &[0x5E71]),
             // CR 603.2d Wayta's doubled enrage, CR 615 Temple Altisaur's
@@ -39760,7 +39766,7 @@ mod tests {
             // CR 306.5b Empower Jace tokens, CR 508.1 Jace's attack tax,
             // CR 702.26 Teferi's Reproach.
             ("Jace, Multiverse", &[0x7ACE]),
-            // CR 725 the monarch, CR 508.1c a gated attack restriction,
+            // CR 726 the monarch, CR 508.1c a gated attack restriction,
             // restricted Vibranium mana.
             ("T'Challa", &[0x7C4A]),
             // CR 702.157 squad's non-mana cost, CR 701.38 a most-votes
@@ -45822,6 +45828,7 @@ mod tests {
             ("Jabs, Mistress of Mockery", &[0x223B]),
             ("Grandmother Goby", &[0x223C]),
             ("Grizzlegom, Hurloon Hero", &[0x223D]),
+            ("Massimo, the Magician", &[0x223E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
@@ -45929,10 +45936,10 @@ mod tests {
         }
     }
 
-    /// CR 732.2a — an optional loop stops where its player chooses: past the
+    /// CR 733.2a — an optional loop stops where its player chooses: past the
     /// per-turn cap the same activation of the same permanent is a pass.
     #[test]
-    fn cr_732_2a_a_seat_stops_repeating_one_activation_past_the_cap() {
+    fn cr_733_2a_a_seat_stops_repeating_one_activation_past_the_cap() {
         let act = |card, ability_index| crate::game::GameAction::ActivateAbility {
             card_id: crate::card::CardId(card),
             ability_index,
@@ -45952,11 +45959,11 @@ mod tests {
         assert!(guard.admit(8, 1, &act(408, 0)), "a new turn resets it");
     }
 
-    /// CR 732.2a — an Equip (its own action, not `ActivateAbility`) counts
+    /// CR 733.2a — an Equip (its own action, not `ActivateAbility`) counts
     /// too: a free equip moved back and forth is the same loop (Puresteel
     /// Paladin and Assimilation Aegis, sweep 306001, 401 equips in a turn).
     #[test]
-    fn cr_732_2a_a_seat_stops_re_equipping_past_the_cap() {
+    fn cr_733_2a_a_seat_stops_re_equipping_past_the_cap() {
         let equip = |to| crate::game::GameAction::Equip {
             equipment: crate::card::CardId(303),
             target: crate::card::CardId(to),
@@ -45968,11 +45975,11 @@ mod tests {
         assert!(!guard.admit(38, 3, &equip(343)), "the 65th equip of one Equipment is a pass");
     }
 
-    /// CR 733.1 — a cast its own answer made illegal is rewound; casting the
+    /// CR 734.1 — a cast its own answer made illegal is rewound; casting the
     /// same card again past the per-turn cap is a pass (Launch the Fleet, 643
     /// rewound casts in one turn under `--a uniform`).
     #[test]
-    fn cr_733_1_a_seat_stops_recasting_one_card_past_the_cap() {
+    fn cr_734_1_a_seat_stops_recasting_one_card_past_the_cap() {
         let cast = |card| crate::game::GameAction::CastSpell {
             card_id: crate::card::CardId(card),
             target: None,
@@ -45989,12 +45996,12 @@ mod tests {
         assert!(guard.admit(4, 0, &cast(6)), "a new turn resets it");
     }
 
-    /// CR 732.2a — an optional loop spread over many copies of one card is
+    /// CR 733.2a — an optional loop spread over many copies of one card is
     /// still one loop: the 65th cast of a name in a turn is a pass, whichever
     /// copy it is (Shadowborn Apostle under Edgewalker and Athreos, God of
     /// Passage, seed 17100148).
     #[test]
-    fn cr_732_2a_a_seat_stops_recasting_one_name_past_the_cap() {
+    fn cr_733_2a_a_seat_stops_recasting_one_name_past_the_cap() {
         let cast = |card| crate::game::GameAction::CastSpell {
             card_id: crate::card::CardId(card),
             target: None,
@@ -46187,7 +46194,7 @@ mod tests {
         assert!(t.total_turns > 0);
     }
 
-    /// CR 732.4 — a mandatory loop that makes progress (each life gain
+    /// CR 733.4 — a mandatory loop that makes progress (each life gain
     /// triggers another) repeats no board, so the loop watch can't call it;
     /// the pass-streak cap ends it as an action cap after `PASS_STREAK_CAP`
     /// passes rather than at the 200-passes-per-play backstop (1.6 M actions

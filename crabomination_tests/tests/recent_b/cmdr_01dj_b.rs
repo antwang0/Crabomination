@@ -64,7 +64,7 @@ fn power(g: &GameState, id: CardId) -> i32 {
     g.computed_permanent(id).unwrap().power
 }
 
-/// CR 714.2b — Keldon Warcaller's attack trigger puts a lore counter on a
+/// CR 715.2b — Keldon Warcaller's attack trigger puts a lore counter on a
 /// Saga you control, and the counter fires that chapter: History of Benalia
 /// at chapter I goes to II and makes its second Knight.
 #[test]

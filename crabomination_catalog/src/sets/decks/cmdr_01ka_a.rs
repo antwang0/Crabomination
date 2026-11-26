@@ -48,7 +48,7 @@ fn on_roll(n: u8, effect: Effect) -> TriggeredAbility {
 }
 
 /// Soul Swindler — {4}{B} 5/3 Demon Employee. Indestructible as long as you've
-/// visited an Attraction this turn (CR 717.5); ETB open an Attraction.
+/// visited an Attraction this turn (CR 718.5); ETB open an Attraction.
 pub fn soul_swindler() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {

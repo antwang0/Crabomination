@@ -1,4 +1,4 @@
-//! CR 723.5 — while another player controls a seat (Mindslaver, Secret of
+//! CR 724.5 — while another player controls a seat (Mindslaver, Secret of
 //! Bloodbending), its controller makes that seat's choices. A pod's bots each
 //! play their own seat, so this stands in for the controller with the plainest
 //! hostile policy: the controlled seat casts, plays and activates nothing and
@@ -33,10 +33,10 @@ mod tests {
     use super::*;
     use crate::card::CardId;
 
-    /// CR 723.5 — a controlled seat's casts become passes and its attack
+    /// CR 724.5 — a controlled seat's casts become passes and its attack
     /// declaration is empty; an uncontrolled seat is untouched.
     #[test]
-    fn cr_723_5_controller_declines_the_controlled_seats_plays() {
+    fn cr_724_5_controller_declines_the_controlled_seats_plays() {
         let mut g = crate::game::multi_player_game(3);
         let cast = GameAction::CastSpell { card_id: CardId(1), target: None, additional_targets: vec![], mode: None, x_value: None };
         assert!(controller_override(&g, 1, &cast).is_none());

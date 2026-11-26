@@ -679,7 +679,7 @@ impl GameState {
         }
 
         self.step = next;
-        // CR 723.2 — a combat-phase player-control grant starts with the phase.
+        // CR 724.2 — a combat-phase player-control grant starts with the phase.
         if next == TurnStep::BeginCombat && !self.pending_combat_control.is_empty() {
             self.begin_combat_control();
         }
@@ -847,7 +847,7 @@ impl GameState {
                 // CR 801.2c — ranges of influence are determined as each turn
                 // begins, so a player leaving only shifts them now.
                 self.refresh_range_matrix();
-                // CR 723.1 — a pending player-control effect applies to the
+                // CR 724.1 — a pending player-control effect applies to the
                 // next turn its target actually takes, and expires here.
                 self.apply_pending_player_control(self.active_player_idx);
                 events.push(GameEvent::TurnStarted {
@@ -981,7 +981,7 @@ impl GameState {
                 // Uvilda — hone counters tick down at the owner's upkeep.
                 let mut hone = self.process_hone();
                 events.append(&mut hone);
-                // CR 726.2 — "At the beginning of the upkeep of the player who
+                // CR 727.2 — "At the beginning of the upkeep of the player who
                 // has the initiative, that player ventures into Undercity."
                 if self.initiative == Some(self.active_player_idx) {
                     self.push_undercity_venture(self.active_player_idx);
@@ -1007,7 +1007,7 @@ impl GameState {
                 // players receive priority (and thus before step triggers).
                 let mut rad = self.do_rad_counters();
                 events.append(&mut rad);
-                // CR 714.2b — as the active player's precombat main phase
+                // CR 715.2b — as the active player's precombat main phase
                 // begins, put a lore counter on each Saga they control,
                 // firing that chapter's ability.
                 let sagas: Vec<CardId> = self
@@ -1022,7 +1022,7 @@ impl GameState {
                 for id in sagas {
                     self.saga_advance(id);
                 }
-                // CR 703.4g / 717.4 — right after the lore counters, an active
+                // CR 703.4g / 718.4 — right after the lore counters, an active
                 // player who controls an Attraction rolls to visit them.
                 let mut visits = self.roll_to_visit_attractions(self.active_player_idx);
                 events.append(&mut visits);
@@ -1077,7 +1077,7 @@ impl GameState {
                         }
                     }
                 }
-                // CR 725.2 — "At the beginning of the monarch's end step,
+                // CR 726.2 — "At the beginning of the monarch's end step,
                 // that player draws a card." An inherent triggered ability
                 // with no source, so it uses the stack and can be responded
                 // to (and doubled) like any other trigger.
@@ -1739,7 +1739,7 @@ impl GameState {
         self.drain_trigger_queue(queue);
     }
 
-    /// CR 714.2b — a Saga entering the battlefield gets its first lore
+    /// CR 715.2b — a Saga entering the battlefield gets its first lore
     /// counter. CR 702.155 (Read Ahead): a read-ahead Saga instead enters with
     /// a chosen number of lore counters (1..final chapter), firing only the
     /// chosen chapter. Non-read-ahead Sagas defer to [`saga_advance`].
@@ -1821,7 +1821,7 @@ impl GameState {
         self.drain_trigger_queue(queue);
     }
 
-    /// CR 714 — put a lore counter on a Saga and fire the chapter ability/ies
+    /// CR 715 — put a lore counter on a Saga and fire the chapter ability/ies
     /// for the new lore-counter total. Called on ETB (chapter I) and as a
     /// turn-based action at the start of the controller's precombat main.
     pub fn saga_advance(&mut self, card_id: CardId) {
@@ -1833,7 +1833,7 @@ impl GameState {
             return;
         }
         let before = card.counter_count(Lore);
-        // CR 714.3a-b / 614.16 — the lore counter is a counter placement, so
+        // CR 715.3a-b / 614.16 — the lore counter is a counter placement, so
         // the replacements apply: under Doubling Season a Saga gets two and
         // its next two chapters trigger (Doubling Season's 2018 ruling).
         let n = self.scaled_counter_count_on(card_id, Lore, 1);
@@ -2144,7 +2144,7 @@ impl GameState {
             .any(|c| c.id == *source && c.definition.is_scheme())
     }
 
-    /// CR 714.2b — "when one or more lore counters are put onto this Saga, if
+    /// CR 715.2b — "when one or more lore counters are put onto this Saga, if
     /// the number of lore counters on it was less than N and became at least
     /// N, [effect]". Fires every chapter whose threshold the count just
     /// crossed, in chapter order, so a proliferate or a doubled placement
@@ -2170,7 +2170,7 @@ impl GameState {
         chapters.sort_by_key(|(n, _)| *n);
         let mut queue: Vec<PendingTriggerPush> = Vec::new();
         for (n, mut effect) in chapters {
-            // CR 714.2e — the final chapter announces its own resolution, for
+            // CR 715.2e — the final chapter announces its own resolution, for
             // "whenever the final chapter ability of a Saga you control
             // resolves" (Narci, Fable Singer; Tom Bombadil).
             if n == final_ch {
@@ -2201,21 +2201,21 @@ impl GameState {
 
     // ── Stack resolution ──────────────────────────────────────────────────────
 
-    /// CR 104.4b / 732.4 — how many consecutive triggered-ability resolutions
+    /// CR 104.4b / 733.4 — how many consecutive triggered-ability resolutions
     /// may leave the game-state fingerprint untouched before the loop is
     /// declared mandatory and the game a draw. Set well above any legitimate
     /// trigger chain (storm counts, cascade webs) so it only fires on a real
     /// loop.
     pub const MANDATORY_LOOP_DRAW_REPEATS: u32 = 400;
 
-    /// CR 104.4b / 732.4 — the longest loop, in trigger resolutions, the
+    /// CR 104.4b / 733.4 — the longest loop, in trigger resolutions, the
     /// watchdog can see: a chain that has not returned the fingerprint to its
     /// anchor within this many resolutions re-anchors on its latest state.
     /// The found loop (two Portable Holes and a mandatory Relic-Warder) has
     /// period 3; two of each would be 6.
     pub const MANDATORY_LOOP_MAX_PERIOD: u32 = 8;
 
-    /// CR 732.3 — how many times the *same* free activation (`{0}:` with no
+    /// CR 733.3 — how many times the *same* free activation (`{0}:` with no
     /// cost line) may be repeated without the game-state fingerprint moving
     /// before it's rejected. A fragmented loop is broken by a different game
     /// choice, not by a draw, so this is a rejection rather than 104.4b's
@@ -2259,7 +2259,7 @@ impl GameState {
     /// one compare on turns that couldn't be in a loop.
     pub const NO_PROGRESS_WATCH_FROM_TURN: u32 = 30;
 
-    /// CR 732.3 guard — reject an activation that repeats a loop. Called before
+    /// CR 733.3 guard — reject an activation that repeats a loop. Called before
     /// any cost is paid, so a rejected activation leaves no trace.
     ///
     /// The watch is `(source, ability)` plus [`activation_fingerprint`], and it
@@ -2410,7 +2410,7 @@ impl GameState {
     /// The digest behind both loop watchdogs; `with_stack` is the difference.
     /// The resolution watch (CR 104.4b) includes the stack — a re-pushing
     /// chain returns to the same depth, so a moving depth is progress. The
-    /// announcement watch (CR 732.3) must not, since announcing grows the
+    /// announcement watch (CR 733.3) must not, since announcing grows the
     /// stack. Mana pools are mixed on the announcement side only.
     fn fingerprint(&self, with_stack: bool) -> u64 {
         self.fingerprint_as(with_stack, self.turn_number, false)
@@ -2441,7 +2441,7 @@ impl GameState {
     /// The scalar half of [`fingerprint_as`](Self::fingerprint_as): turn,
     /// stack depth, per-seat totals and the two zone lengths. Because
     /// [`fp_mix`] is injective in its accumulator, an unequal head proves an
-    /// unequal digest. `with_life: false` leaves life totals out (the CR 732.2
+    /// unequal digest. `with_life: false` leaves life totals out (the CR 733.2
     /// drain watch, `drain_shortcut.rs`, reads them separately).
     pub(crate) fn fingerprint_head(&self, with_stack: bool, turn: u32, player_counters: bool, with_life: bool) -> u64 {
         // ⚠ A life total past the saturation band is a state ("can't be
@@ -2522,7 +2522,7 @@ impl GameState {
             return Ok(vec![]);
         };
         let mut events = vec![];
-        // CR 701.27f — scoped to the resolution the Trigger arm is about to
+        // CR 701.27g — scoped to the resolution the Trigger arm is about to
         // start. Cleared here rather than at that arm's end so a suspended
         // resolution keeps it across the answer (the resume runs out of
         // `submit_decision`, not through here) and a spell can never read a
@@ -2643,7 +2643,7 @@ impl GameState {
                     }
                 }
 
-                // CR 715 / 702.183 — while cast as its Adventure/Omen half the
+                // CR 716 / 702.183 — while cast as its Adventure/Omen half the
                 // card is its instant/sorcery half, so it resolves down the
                 // spell path (not onto the battlefield) regardless of its
                 // creature card type.
@@ -2725,7 +2725,7 @@ impl GameState {
                     // enters-as-copy path can swap in the copied object's,
                     // CR 707.5). Each keeps its intervening-`if`
                     // (`event.filter`) for CR 603.4 re-evaluation on the
-                    // battlefield. CR 701.28 / 712.14 — a converted cast enters
+                    // battlefield. CR 701.28 / 712.11 — a converted cast enters
                     // face up with the back face's ETBs and counters (Blaster).
                     let entering_def: &crate::card::CardDefinition = match &card.definition.back_face {
                         Some(back) if card.cast_converted => back,
@@ -3422,7 +3422,7 @@ impl GameState {
                         self.drain_trigger_queue(etb_queue);
                     }
 
-                    // CR 714.2b — a Saga enters with its first lore counter;
+                    // CR 715.2b — a Saga enters with its first lore counter;
                     // chapter I fires off the same lore-counter placement.
                     let is_saga = self
                         .battlefield
@@ -3432,7 +3432,7 @@ impl GameState {
                         self.saga_enter_advance(card_id);
                     }
 
-                    // CR 716.2 — a Class enters the battlefield at level 1.
+                    // CR 717.2 — a Class enters the battlefield at level 1.
                     if let Some(c) = self.battlefield.find_by_id_mut(card_id)
                         && c.definition.is_class()
                     {
@@ -3548,7 +3548,7 @@ impl GameState {
                 {
                     self.scratch.activation_mana_colors_scratch = mana_spent_by_color;
                 }
-                // CR 701.27f — scoped to this resolution; `Effect::Transform`
+                // CR 701.27g — scoped to this resolution; `Effect::Transform`
                 // reads it when the thing it would transform is the ability's
                 // own permanent.
                 if source_transformed_since_push {
@@ -3649,7 +3649,7 @@ impl GameState {
             }
         }
 
-        // CR 724 — Effect::EndTheTurn fired during this resolution: exile
+        // CR 725 — Effect::EndTheTurn fired during this resolution: exile
         // the rest of the stack, clear combat, and jump to cleanup.
         match self.end_requested.take() {
             Some(crate::game::EndRequest::Turn) => return self.do_end_the_turn(events),
@@ -3662,7 +3662,7 @@ impl GameState {
         Ok(events)
     }
 
-    /// CR 724.1 — end the turn: exile every spell and ability still on the
+    /// CR 725.1 — end the turn: exile every spell and ability still on the
     /// stack (real cards go to exile; trigger items and token copies cease),
     /// remove everything from combat, then advance from the end step
     /// straight into cleanup (damage wear-off, "this turn" expiry, and the
@@ -3671,7 +3671,7 @@ impl GameState {
         &mut self,
         events: Vec<GameEvent>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        // CR 724.1a / 724.2a — what triggered before the process began and
+        // CR 725.1a / 725.2a — what triggered before the process began and
         // isn't on the stack yet ceases to exist; 724.1f / 724.2f's triggers
         // (the sweep below, the next step) still fire.
         self.scratch.quiet_events.extend(events);
@@ -3686,7 +3686,7 @@ impl GameState {
                 events.push(GameEvent::PermanentExiled { card_id: cid });
             }
         }
-        // CR 724.1b — remove all attackers and blockers from combat.
+        // CR 725.1b — remove all attackers and blockers from combat.
         self.attacking.clear();
         if !self.attacked_permanent_defenders.is_empty() {
             self.attacked_permanent_defenders.clear();
@@ -3700,12 +3700,12 @@ impl GameState {
         clear_cold!(self.attack_bands);
         self.blockers_declared = false;
         self.set_combat_damage_dealt(false);
-        // CR 724.1d — the turn skips straight to the cleanup step.
+        // CR 725.1d — the turn skips straight to the cleanup step.
         self.step = TurnStep::End;
         self.advance_step(events)
     }
 
-    /// CR 724.2 — end the combat phase: exile the stack (724.2b), then leave
+    /// CR 725.2 — end the combat phase: exile the stack (724.2b), then leave
     /// from the end of combat step without entering it, so "at end of combat"
     /// triggers never fire (724.2e) while "until end of combat" effects expire
     /// and every creature leaves combat (724.2d).
@@ -3713,7 +3713,7 @@ impl GameState {
         &mut self,
         events: Vec<GameEvent>,
     ) -> Result<Vec<GameEvent>, GameError> {
-        // CR 724.1a / 724.2a — what triggered before the process began and
+        // CR 725.1a / 725.2a — what triggered before the process began and
         // isn't on the stack yet ceases to exist; 724.1f / 724.2f's triggers
         // (the sweep below, the next step) still fire.
         self.scratch.quiet_events.extend(events);
@@ -3783,7 +3783,7 @@ impl GameState {
     }
 
     /// CR 701.52a — roll a d6; every Attraction `p` controls with that number
-    /// lit up is visited, firing its visit ability (CR 717.5). A turn-based
+    /// lit up is visited, firing its visit ability (CR 718.5). A turn-based
     /// action: it doesn't use the stack, but the visit triggers do.
     pub(crate) fn roll_to_visit_attractions(&mut self, p: usize) -> Vec<GameEvent> {
         if !self.battlefield.iter().any(|c| c.controller == p && !c.definition.attraction_lights.is_empty()) {
@@ -3820,7 +3820,7 @@ impl GameState {
         events
     }
 
-    /// CR 717.5 — Attractions `p` has visited this turn.
+    /// CR 718.5 — Attractions `p` has visited this turn.
     pub(crate) fn attractions_visited_this_turn(&self, p: usize) -> u32 {
         self.players
             .get(p)
@@ -5037,7 +5037,7 @@ impl GameState {
         // Reset the Bloodthirst "damaged this turn" flag for *every* player
         // CR 701.38 — a vote-control grant lasts only for its own turn.
         self.vote_controller_this_turn = None;
-        // CR 725 — snapshot the crown for "…as the turn began" riders.
+        // CR 726 — snapshot the crown for "…as the turn began" riders.
         self.monarch_at_turn_start = self.monarch;
         // at the turn boundary (not just the active player) so a creature
         // cast on your turn reads damage dealt since this turn began.
@@ -6398,7 +6398,7 @@ impl GameState {
             }
         }
         // CR 800.4a — effects giving that player control of objects *or
-        // players* end; this is the player half (CR 723, Mindslaver). CR
+        // players* end; this is the player half (CR 724, Mindslaver). CR
         // 800.4b — a player can't be controlled by one who left, so a grant
         // naming the departed seat on either side never lands (otherwise a
         // live seat's turn routes through `acting_seat_for` to a dead seat).
@@ -6427,7 +6427,7 @@ impl GameState {
         if self.turn.block_chooser_this_combat == Some(p) {
             self.turn.block_chooser_this_combat = None;
         }
-        // CR 723.4's reveal and CR 701.19's peeks both name a player; neither
+        // CR 724.4's reveal and CR 701.19's peeks both name a player; neither
         // half means anything once one of them has left (and their hand has
         // left with them).
         retain_cold!(self.hands_revealed_to, |(a, b)| *a != p && *b != p);
@@ -6576,7 +6576,7 @@ impl GameState {
         if self.priority.player_with_priority == p {
             self.priority.player_with_priority = self.next_alive_seat(p);
         }
-        // CR 725.4 — if the monarch leaves the game, the active player
+        // CR 726.4 — if the monarch leaves the game, the active player
         // becomes the monarch; if the active player is the one leaving (or
         // there is no active player), the next player in turn order who can
         // still become the monarch does.
@@ -6599,8 +6599,8 @@ impl GameState {
                 }
             }
         }
-        // CR 726.4 — the same succession for the initiative, and the heir
-        // *takes* it, so CR 726.2's "whenever a player takes the initiative,
+        // CR 727.4 — the same succession for the initiative, and the heir
+        // *takes* it, so CR 727.2's "whenever a player takes the initiative,
         // that player ventures into Undercity" triggers for them.
         if self.initiative == Some(p) {
             let heir = if self.active_player_idx != p
@@ -7927,10 +7927,10 @@ impl GameState {
         // legend rule's: a creature among them dies (CR 700.4).
         self.put_legend_rule_victims(world_victims, events);
 
-        // Saga rule (CR 714.4 / 704.5s): a Saga whose lore counters have
+        // Saga rule (CR 715.4 / 704.5s): a Saga whose lore counters have
         // reached its final chapter number is sacrificed — unless one of its
         // chapter abilities is still a trigger on the stack (so the last
-        // chapter resolves before the Saga leaves). CR 714.4 has no creature
+        // chapter resolves before the Saga leaves). CR 715.4 has no creature
         // exemption: FIN's "Legendary Enchantment Creature — Saga" back faces
         // survive by exiling and re-entering front face up on their last
         // chapter, which resets the lore count before the SBA can see it.
@@ -9323,7 +9323,7 @@ impl GameState {
         self.note_left_without_dying(&card, stripped, &mut events);
         // CR 903.9b — a commander bounced this way may go to the command zone
         // instead (the replacement runs in `resolve_zone_change`); the placer
-        // also splits a melded or mutated pile (CR 712.8g / 721.3).
+        // also splits a melded or mutated pile (CR 713.5c / 722.3).
         let resolved = self.resolve_zone_change(id, crate::card::Zone::Battlefield, crate::card::Zone::Hand);
         if !card.is_token {
             self.place_card_at_resolved_zone(card, resolved);
@@ -9405,7 +9405,7 @@ impl GameState {
     ) {
         use crate::card::Zone;
         let owner = card.owner;
-        // CR 712.16/712.17 — a melded permanent leaves the battlefield as
+        // CR 713.8/712.14 — a melded permanent leaves the battlefield as
         // its two component cards.
         let mut card = card;
         if !card.meld_parts.is_empty() && zone != Zone::Battlefield {
@@ -9440,7 +9440,7 @@ impl GameState {
         }
         // The graveyard→exile redirect (Rest in Peace / Leyline / Disturb back
         // face, CR 614.6 / 702.146) and its void-counter rider read the back
-        // face, so capture them *before* the CR 712.4 front-face revert.
+        // face, so capture them *before* the CR 712.6a front-face revert.
         // One walk, not two: `graveyard_exiled_for` *is*
         // `graveyard_exile_redirects(..).0`, and both walked every static
         // ability on the battlefield.
@@ -9449,10 +9449,10 @@ impl GameState {
         let exile_on_graveyard = redirects || card.disturb_back_exiles();
         // CR 707 — a temporary copy reverts as it leaves, BEFORE the face
         // reverts below: a copy made after a transform saved the back face
-        // as its original (Olag), and restoring it last undid the CR 712.4
+        // as its original (Olag), and restoring it last undid the CR 712.6a
         // revert, so the card sat in exile as its back face.
         self.revert_copy_on_leave(&mut card);
-        // CR 710.4 / 712.4 — flip cards and transformed DFCs revert to their
+        // CR 710.4 / 712.6a — flip cards and transformed DFCs revert to their
         // unflipped / front face off the battlefield.
         card.revert_flip();
         card.revert_transform();
@@ -9480,7 +9480,7 @@ impl GameState {
             }
             card.leave_battlefield_state();
         }
-        // CR 717.6 — an Astrotorium-backed Attraction card bound for anywhere
+        // CR 718.6 — an Astrotorium-backed Attraction card bound for anywhere
         // but the battlefield, exile, or the command zone goes to its owner's
         // face-up junkyard pile instead.
         if !card.definition.attraction_lights.is_empty()

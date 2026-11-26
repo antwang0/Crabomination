@@ -177,12 +177,12 @@ pub struct PlayerCold {
     /// bottom. `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub planar_deck: CowBox<Vec<CardInstance>>,
-    /// CR 717.2 — this player's face-down Attraction deck, in the command
+    /// CR 718.2 — this player's face-down Attraction deck, in the command
     /// zone. Cards leave it only by being opened onto the battlefield
     /// (CR 701.51b). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub attraction_deck: CowBox<Vec<CardInstance>>,
-    /// CR 717.6a — the face-up "junkyard" pile of Attraction cards that would
+    /// CR 718.6a — the face-up "junkyard" pile of Attraction cards that would
     /// have gone anywhere but the battlefield, exile, or the command zone.
     #[serde(default)]
     pub attraction_junkyard: CowBox<Vec<CardInstance>>,
@@ -452,7 +452,7 @@ pub struct PlayerCold {
     /// control this turn").
     #[serde(default)]
     pub attacked_walkers_of_this_turn: Vec<usize>,
-    /// CR 717.5 — `(turn_number, count)`: Attractions this player visited
+    /// CR 718.5 — `(turn_number, count)`: Attractions this player visited
     /// during that turn. Stamped, not cleared — a stale turn reads as zero.
     #[serde(default)]
     pub attractions_visited: (u32, u32),
@@ -1322,13 +1322,13 @@ pub struct PlayerData {
     /// Generatorium). Reset each untap; routed through `spend_energy`.
     #[serde(default)]
     pub energy_spent_this_turn: u32,
-    /// Experience counters (CR 122 / 720-era Commander mechanic). A per-player
+    /// Experience counters (CR 122 / 721-era Commander mechanic). A per-player
     /// resource that only accumulates; payoffs read the count (Mizzix's cost
     /// reduction, Ezuri's +1/+1 distribution). Added by
     /// `Effect::AddExperience`. Default 0 for snapshot back-compat.
     #[serde(default)]
     pub experience: u32,
-    /// CR 122.1i / 728 — rad counters on this player. At the start of
+    /// CR 122.1i / 729 — rad counters on this player. At the start of
     /// their precombat main phase they mill that many cards; for each
     /// nonland milled, they lose 1 life and shed a rad counter (handled
     /// as a turn-based action in `do_rad_counters`). Default 0.

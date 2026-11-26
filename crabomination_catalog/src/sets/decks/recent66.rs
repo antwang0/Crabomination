@@ -383,7 +383,7 @@ pub fn prickly_pair() -> CardDefinition {
     }
 }
 
-/// The Weatherseed Treaty — {2}{G} Saga with Read Ahead (CR 702.155 / 714).
+/// The Weatherseed Treaty — {2}{G} Saga with Read Ahead (CR 702.155 / 715).
 /// I: search your library for a basic land, put it onto the battlefield tapped.
 /// II: create a 1/1 green Saproling. III: Domain — target creature you control
 /// gets +X/+X and gains trample until end of turn, where X is the number of

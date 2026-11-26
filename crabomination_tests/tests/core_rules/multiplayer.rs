@@ -2134,7 +2134,7 @@ fn cr_800_4m_through_a_departed_players_next_combat_ends_when_that_turn_would_ha
 }
 
 /// CR 800.4a — "any effects which give that player control of any objects or
-/// players end" covers control of *players* (CR 723, Mindslaver), not only of
+/// players end" covers control of *players* (CR 724, Mindslaver), not only of
 /// objects; CR 800.4b covers the other direction, "if a player would be
 /// controlled by a player who has left the game, they aren't". A live seat
 /// still pointed at a departed controller routes its whole turn through
@@ -9296,11 +9296,11 @@ fn cr_509_1c_a_block_cap_below_the_menace_count_unbinds_must_be_blocked() {
     g.perform_action(GameAction::DeclareBlockers(vec![])).expect("one block slot can't meet menace");
 }
 
-/// CR 725.4 — when the monarch leaves, the active player BECOMES the
+/// CR 726.4 — when the monarch leaves, the active player BECOMES the
 /// monarch, and that is an event ("whenever you become the monarch"). The
 /// leave path set the designation but dropped its events.
 #[test]
-fn cr_725_4_the_heir_becoming_monarch_is_an_event() {
+fn cr_726_4_the_heir_becoming_monarch_is_an_event() {
     let mut g = multi_player_game(3);
     g.active_player_idx = 0;
     g.priority.player_with_priority = 0;
@@ -9722,7 +9722,7 @@ fn cr_506_3b_a_copy_entering_under_an_opponent_is_never_attacking() {
     assert_eq!(g.attacking_ids(), vec![satya], "the copy never attacks");
 }
 
-/// CR 601.2f / 733.1 — a prompting seat casting a strive spell is offered
+/// CR 601.2f / 734.1 — a prompting seat casting a strive spell is offered
 /// the next target only when the surcharge for it can be paid. With exactly
 /// Call the Coppercoats' {2}{W} in pool the extra-opponent slot used to be
 /// offered, and taking it made the cast illegal and rewound it (a uniform-
@@ -10077,12 +10077,12 @@ fn cr_506_4_an_attacked_planeswalker_that_changes_control_leaves_combat() {
     assert_eq!(g.players.iter().map(|p| p.life).collect::<Vec<_>>(), lives);
 }
 
-/// CR 732.2 — a headless seat that always answers "again" to an optional
+/// CR 733.2 — a headless seat that always answers "again" to an optional
 /// loop names a bound: `RepeatWhileMay` stops after 30 repeats (bug: Delina,
 /// Wild Mage copying Wyll's extra dice rolled again for ever in the bot's
 /// attack sim, 3-seat pod seed 2947889).
 #[test]
-fn cr_732_2_a_headless_optional_loop_stops_at_its_bound() {
+fn cr_733_2_a_headless_optional_loop_stops_at_its_bound() {
     use crabomination::decision::ScriptedDecider;
     use crabomination::effect::{Effect, Predicate, Selector, Value};
     let mut g = multi_player_game(3);

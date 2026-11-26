@@ -293,7 +293,7 @@ pub fn jaces_sanctum() -> CardDefinition {
 }
 
 /// Mandate of Peace — combat only: opponents can't cast spells this turn, and
-/// the combat phase ends (CR 724.2; a trigger still waiting to go on the stack
+/// the combat phase ends (CR 725.2; a trigger still waiting to go on the stack
 /// ceases to exist, 724.2a).
 pub fn mandate_of_peace() -> CardDefinition {
     CardDefinition {

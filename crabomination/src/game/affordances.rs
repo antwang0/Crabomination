@@ -1669,7 +1669,7 @@ impl GameState {
     }
 
     /// Cards in `caster`'s hand with an Adventure half they could cast right
-    /// now (CR 715). The probe auto-targets the adventure effect.
+    /// now (CR 716). The probe auto-targets the adventure effect.
     fn adventurable_hand_cards_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         self.players[caster]
             .hand
@@ -1696,7 +1696,7 @@ impl GameState {
             .collect()
     }
 
-    /// CR 715.3d — cards in `caster`'s adventure exile they can take off the
+    /// CR 716.3d — cards in `caster`'s adventure exile they can take off the
     /// adventure right now: a land half is *played*, everything else is cast.
     fn adventure_exile_playable_on(&self, template: &GameState, caster: usize) -> Vec<CardId> {
         self.exile

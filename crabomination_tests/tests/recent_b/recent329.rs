@@ -510,7 +510,7 @@ fn valgavoth_exile_view_shows_the_life_price() {
 }
 
 /// Nuclear Fallout shrinks every creature by twice X and hands every player X
-/// rad counters — then CR 728's turn-based action spends them.
+/// rad counters — then CR 729's turn-based action spends them.
 ///
 /// ⚠ The first card in the catalog to reach `Effect::AddRadCounters`, which
 /// `audit_variant_coverage` had listed as a dead primitive: the rad mechanic

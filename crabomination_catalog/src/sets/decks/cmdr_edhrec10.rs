@@ -2821,7 +2821,7 @@ fn ayara_furnace_queen() -> CardDefinition {
                 Effect::ExileAtNextEndStep { what: Selector::LastMoved },
             ]),
         )],
-        // CR 712.8 — a transforming back face has no mana cost.
+        // CR 712.6d — a transforming back face has no mana cost.
         color_indicator: vec![Color::Black, Color::Red],
         ..legend(
             "Ayara, Furnace Queen",

@@ -653,7 +653,7 @@ pub fn slayers_plate() -> CardDefinition {
     }
 }
 
-/// Braids's Frightful Return — {2}{B} Saga, read ahead (CR 714.3c). I: you may
+/// Braids's Frightful Return — {2}{B} Saga, read ahead (CR 715.3c). I: you may
 /// sacrifice a creature; if you do, each opponent discards a card. II: return
 /// target creature card from your graveyard to your hand. III: target opponent
 /// may sacrifice a nonland, nontoken permanent; if they don't, they lose 2 life

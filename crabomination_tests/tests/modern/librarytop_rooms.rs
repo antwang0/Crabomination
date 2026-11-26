@@ -860,7 +860,7 @@ fn mizzium_mortars_overload_sweeps_only_their_board() {
     assert_eq!(g.battlefield_find(mine).unwrap().damage, 0, "own creature untouched");
 }
 
-// ── Fable of the Mirror-Breaker (DFC saga, CR 714.4) ─────────────────────────
+// ── Fable of the Mirror-Breaker (DFC saga, CR 715.4) ─────────────────────────
 
 /// Fable mints the Goblin Shaman on chapter I and transforms into Reflection
 /// of Kiki-Jiki on chapter III instead of being sacrificed.

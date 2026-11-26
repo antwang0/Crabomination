@@ -1,4 +1,4 @@
-//! Unfinity (UNF) — Attractions (CR 717) and the cards that open them.
+//! Unfinity (UNF) — Attractions (CR 718) and the cards that open them.
 //! Attraction cards live in the Attraction deck, not the main deck; a visit
 //! ability fires when the controller's d6 roll matches one of the card's
 //! lit-up numbers. Tests in `classic_sets/unf`.

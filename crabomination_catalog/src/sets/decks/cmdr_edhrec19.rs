@@ -139,7 +139,7 @@ pub fn sorins_vengeance() -> CardDefinition {
 }
 
 /// Worst Fears — {7}{B} sorcery. You control target player during their next
-/// turn (CR 723.1). Exile Worst Fears.
+/// turn (CR 724.1). Exile Worst Fears.
 pub fn worst_fears() -> CardDefinition {
     CardDefinition {
         exile_on_resolve: true,

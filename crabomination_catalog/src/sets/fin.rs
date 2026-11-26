@@ -6543,7 +6543,7 @@ pub fn excalibur_ii() -> CardDefinition {
 
 /// Summon: Choco/Mog — {2}{W} Enchantment Creature — Saga Bird Moogle 3/3.
 /// Chapters I–IV each: Stampede! — other creatures you control get +1/+0 until
-/// end of turn. Sacrificed after IV (CR 714 saga rule, applied to a creature).
+/// end of turn. Sacrificed after IV (CR 715 saga rule, applied to a creature).
 pub fn summon_choco_mog() -> CardDefinition {
     let stampede = || Effect::PumpPT {
         what: Selector::EachPermanent(
@@ -8103,7 +8103,7 @@ pub fn genji_glove() -> CardDefinition {
 }
 
 /// Ultima — {3}{W}{W} sorcery. Destroy all artifacts and creatures, then end
-/// the turn (CR 724).
+/// the turn (CR 725).
 pub fn ultima() -> CardDefinition {
     CardDefinition {
         name: "Ultima",

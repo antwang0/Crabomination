@@ -4587,7 +4587,7 @@ fn callous_sell_sword_enters_with_counter_per_creature_died() {
     assert_eq!(sell.toughness(), 4, "2 base + 2 counters");
 }
 
-/// CR 715.3: Burn Together — the chosen creature deals damage equal to its
+/// CR 716.3: Burn Together — the chosen creature deals damage equal to its
 /// power to another target, then is sacrificed.
 #[test]
 fn burn_together_flings_your_creature_at_a_player() {
@@ -7953,7 +7953,7 @@ fn city_blessing_predicate_gates_an_effect() {
     assert_eq!(g.players[0].hand.len(), before + 1, "with blessing → draw");
 }
 
-// ── CR 731 Day and Night + CR 502.2 transition ───────────────────────────────
+// ── CR 732 Day and Night + CR 502.2 transition ───────────────────────────────
 
 #[test]
 fn become_day_and_night_set_the_designation() {

@@ -203,7 +203,7 @@ fn mishras_research_desk_impulses_and_unearths() {
     assert!(g.battlefield_find(desk).is_some(), "unearthed");
 }
 
-/// CR 714.2 — Roads Go Ever, Ever On exiles two Plains and returns them.
+/// CR 715.2 — Roads Go Ever, Ever On exiles two Plains and returns them.
 #[test]
 fn roads_go_ever_ever_on_fetches_plains() {
     let mut g = pod(2);

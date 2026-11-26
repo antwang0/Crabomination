@@ -2877,7 +2877,7 @@ impl GameState {
                 card.exiled_with = None;
                 card.exiled_by = None;
             }
-            // CR 716.2 — a Class's level is battlefield-only.
+            // CR 717.2 — a Class's level is battlefield-only.
             card.reset_class_level();
             // CR 707 — a temporary copy reverts as it leaves.
             self.revert_copy_on_leave(&mut card);
@@ -3154,7 +3154,7 @@ impl GameState {
             card.spliced_effects.clear();
             card.spliced_names.clear();
         }
-        // CR 712.16/712.17 — a melded permanent leaving the battlefield
+        // CR 713.8/712.14 — a melded permanent leaving the battlefield
         // leaves as its two component cards; the melded shell ceases to
         // exist.
         if !card.meld_parts.is_empty() && intended != crate::card::Zone::Battlefield {
@@ -3180,7 +3180,7 @@ impl GameState {
             self.place_card_at_resolved_zone(card, resolved);
             return;
         }
-        // CR 717.6 — a card with an Astrotorium back headed anywhere but the
+        // CR 718.6 — a card with an Astrotorium back headed anywhere but the
         // battlefield, exile, or the command zone is put into its owner's
         // face-up "junkyard" pile in the command zone instead.
         if !card.definition.attraction_lights.is_empty()
@@ -3219,7 +3219,7 @@ impl GameState {
         if intended != crate::card::Zone::Battlefield {
             card.revert_flip();
         }
-        // CR 712.4 / 702.160a — a transformed DFC or prototyped card bound
+        // CR 712.6a / 702.160a — a transformed DFC or prototyped card bound
         // anywhere but exile shows its front / printed face (Evacuation on a
         // disturbed Generous Soul). In exile only a battle keeps its back
         // face, since a defeated Siege is cast transformed from there.
@@ -3338,7 +3338,7 @@ impl GameState {
                 let owner = card.owner;
                 card.exiled_with = None;
                 card.controller = owner;
-                card.revert_transform(); // CR 712.4
+                card.revert_transform(); // CR 712.6a
                 card.forget_spell_choices(); // CR 400.7
                 self.players[owner].command.push(card);
                 self.offboard_keyword_grants = true;
@@ -3382,13 +3382,13 @@ impl GameState {
                     && (self.nontoken_creature_etb_exile_active() || self.uncast_creature_entry_exiled()))
                     || Self::exiled_if_enters_uncast_or_free(&card)
                 {
-                    // CR 712.4 — a melded permanent that never reaches the
+                    // CR 713.8 — a melded permanent that never reaches the
                     // battlefield is its two cards (Gisela and Bruna melding
                     // under a Containment Priest exiled the shell whole, its
                     // commander half inside it).
                     let parts = std::mem::take(&mut card.meld_parts);
                     for mut card in if parts.is_empty() { vec![card] } else { parts } {
-                        // CR 712.4 — and a card returned transformed (a Saga's
+                        // CR 712.6a — and a card returned transformed (a Saga's
                         // chapter III) is front face up in exile; it kept its
                         // back face (pod sweep 305001, The Legend of Roku).
                         card.revert_transform();
@@ -3499,7 +3499,7 @@ impl GameState {
                 let entered_from_hand = card.cast_from_hand;
                 let mut card = card;
                 card.controller = self.apply_etb_control_replacement(&card, card.controller);
-                // CR 716.2 — a Class enters the battlefield at level 1.
+                // CR 717.2 — a Class enters the battlefield at level 1.
                 if card.definition.is_class() {
                     card.class_level = 1;
                 }
@@ -3572,7 +3572,7 @@ impl GameState {
                 self.note_entering_loyalty(cid, events);
                 // CR 702.32 / 702.63 — Fading / Vanishing enter-with-counters.
                 self.apply_fading_vanishing_etb(cid, events);
-                // CR 714.2b — a Saga entering from anywhere (reanimated,
+                // CR 715.2b — a Saga entering from anywhere (reanimated,
                 // blinked, or a Dominant's exile-and-return-transformed) gets
                 // its first lore counter; the cast path does this itself.
                 if self
@@ -3931,7 +3931,7 @@ impl GameState {
         }
     }
 
-    /// CR 725 — after the monarchy moves to `new_monarch`, return every
+    /// CR 726 — after the monarchy moves to `new_monarch`, return every
     /// monarch-guarded exile (Palace Jailer) whose guard player is no longer
     /// the monarch, to the battlefield under its owner's control.
     pub(crate) fn return_monarch_guarded_exiles(

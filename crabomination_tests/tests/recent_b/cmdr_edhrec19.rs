@@ -115,7 +115,7 @@ fn magar_puppet_recasts_its_noted_spell() {
 }
 
 /// Sorin's Vengeance drains 10; Worst Fears queues control of the target's
-/// next turn (CR 723.1) and exiles itself.
+/// next turn (CR 724.1) and exiles itself.
 #[test]
 fn magar_sorceries() {
     let mut g = pod(2);

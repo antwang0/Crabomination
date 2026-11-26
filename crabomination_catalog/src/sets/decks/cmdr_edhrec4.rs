@@ -1571,7 +1571,7 @@ pub fn overwhelming_victory() -> CardDefinition {
 }
 
 /// Secret of Bloodbending — {U}{U}{U}{U} Sorcery — Lesson. You may waterbend
-/// {10}. You control target opponent during their next combat phase (CR 723.2),
+/// {10}. You control target opponent during their next combat phase (CR 724.2),
 /// or during their next turn if the waterbend was paid. Exile it.
 pub fn secret_of_bloodbending() -> CardDefinition {
     use crate::card::{SpellSubtype, Waterbend};
@@ -2547,7 +2547,7 @@ pub fn the_invincible_iron_man() -> CardDefinition {
                 }),
             },
         }],
-        // A modal back face that the front also transforms into (CR 712.11b):
+        // A modal back face that the front also transforms into (CR 712.8b):
         // cast from hand for its own cost.
         color_indicator: vec![Color::Blue, Color::Red],
         ..legend("The Invincible Iron Man", cost(&[generic(4), u(), r()]), vec![CreatureType::Human, CreatureType::Hero], 5, 5)

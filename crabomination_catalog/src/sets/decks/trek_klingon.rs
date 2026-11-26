@@ -235,7 +235,7 @@ pub fn martok_hero_of_the_empire() -> CardDefinition {
 }
 
 /// Merciful Mandate — {1}{W} instant. Untap your creatures; during combat you
-/// may end the combat phase (CR 724.2).
+/// may end the combat phase (CR 725.2).
 pub fn merciful_mandate() -> CardDefinition {
     let in_combat = Predicate::Any(
         [

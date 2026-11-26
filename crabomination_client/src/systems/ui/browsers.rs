@@ -344,7 +344,7 @@ pub fn exile_browser(
                 });
             }
             if c.on_adventure {
-                // CR 715.3d — a land half is played, everything else is cast.
+                // CR 716.3d — a land half is played, everything else is cast.
                 badges.push(if cv.adventure_exile.contains(&c.id) {
                     "On an adventure — playable now".to_string()
                 } else {
@@ -546,7 +546,7 @@ pub fn exile_browser(
                 });
             }
         }
-        // CR 717.4 — the Attraction junkyard is its own out-of-play pile.
+        // CR 718.4 — the Attraction junkyard is its own out-of-play pile.
         // It rides the exile browser rather than a fourth overlay: both are
         // "cards that left play and aren't coming back on their own".
         for p in &cv.players {

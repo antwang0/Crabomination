@@ -268,7 +268,7 @@ pub(crate) mod mana_shape;
 pub mod rng;
 #[doc(hidden)]
 pub mod stack;
-/// CR 729 — nested subgames (Shahrazad).
+/// CR 730 — nested subgames (Shahrazad).
 pub mod subgame;
 
 pub mod types;
@@ -385,7 +385,7 @@ pub fn cast_at(g: &mut GameState, id: CardId, target: Target) -> Vec<GameEvent> 
 
 pub use types::*;
 
-/// CR 724 — what a resolving "end the …" effect asked to end.
+/// CR 725 — what a resolving "end the …" effect asked to end.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum EndRequest {
     Turn,
@@ -1287,7 +1287,7 @@ pub struct HandAffordances {
     /// CR 702.170d — plotted cards in exile castable for free right now.
     pub castable_plotted: Vec<CardId>,
     pub adventurable: Vec<CardId>,
-    /// CR 715.3d — cards in adventure exile playable right now: a land half is
+    /// CR 716.3d — cards in adventure exile playable right now: a land half is
     /// played, any other half is cast.
     pub adventure_exile: Vec<CardId>,
     /// CR 702.183 — hand cards with an Omen half castable right now.
@@ -1524,7 +1524,7 @@ pub struct TurnRegistries {
     /// cleanup.
     #[serde(default)]
     pub red_noncombat_damage_this_turn: Vec<(usize, u32)>,
-    /// CR 725 — seats that "can't become the monarch this turn" (Jared
+    /// CR 726 — seats that "can't become the monarch this turn" (Jared
     /// Carthalion, True Heir). `set_monarch` skips them. Cleared at cleanup.
     #[serde(default)]
     pub cant_become_monarch_this_turn: Vec<usize>,
@@ -1795,7 +1795,7 @@ pub struct ColdState {
     #[serde(default)]
     pub exiled_for_cost_card: Option<CardId>,
     /// `(turn, copier, original spell, copies)`: the last trigger source to
-    /// copy a spell with new targets, for the CR 732.2a guard in
+    /// copy a spell with new targets, for the CR 733.2a guard in
     /// `copy_loop.rs`. Turn-stamped; written only by such a copy.
     #[serde(default)]
     pub copier_repeat: Option<(u32, CardId, CardId, u32)>,
@@ -2257,12 +2257,12 @@ pub struct ColdState {
     /// share it (CR 614.1c); the next resolution drops it, as does cleanup.
     #[serde(default)]
     pub(crate) ench_creature_etb_bonus: Vec<(usize, u32, bool)>,
-    /// CR 723.1 — `(controlled, controller)` pairs waiting for `controlled` to
+    /// CR 724.1 — `(controlled, controller)` pairs waiting for `controlled` to
     /// actually take a turn (Mindslaver). A later entry for the same seat
-    /// overwrites the earlier one (CR 723.1a).
+    /// overwrites the earlier one (CR 724.1a).
     #[serde(default)]
     pub pending_player_control: Vec<(usize, usize)>,
-    /// CR 723.2 — `(controlled, controller)` pairs waiting for `controlled`'s
+    /// CR 724.2 — `(controlled, controller)` pairs waiting for `controlled`'s
     /// next combat phase (Secret of Bloodbending); `player_control.rs`.
     #[serde(default)]
     pub pending_combat_control: Vec<(usize, usize)>,
@@ -2438,7 +2438,7 @@ pub struct ColdState {
     /// one entry per resolution, spent by the next loss that turn.
     #[serde(default)]
     pub(crate) loss_reversals_this_turn: Vec<(usize, u32)>,
-    /// CR 732.2 — the life-only trigger loop watch (`drain_shortcut.rs`).
+    /// CR 733.2 — the life-only trigger loop watch (`drain_shortcut.rs`).
     /// Cold: only a trigger chain past the exact watch's period writes it.
     #[serde(skip)]
     pub(crate) drain_watch: Option<Box<drain_shortcut::DrainWatch>>,
@@ -2516,7 +2516,7 @@ pub struct ResolutionScratch {
     /// (Protective Sphere's "shares a color with the mana spent").
     #[serde(skip)]
     pub(crate) activation_mana_colors_scratch: Vec<(crate::mana::Color, u32)>,
-    /// CR 701.27f — the resolving ability's `source_transformed_since_push`: when
+    /// CR 701.27g — the resolving ability's `source_transformed_since_push`: when
     /// true, an instruction to transform *that* permanent is ignored. Here, not
     /// on `GameState`, because that struct is at its 1,600-byte cap
     /// (`cow::tests::game_state_stays_small`); both writes are guarded by a read.
@@ -2842,7 +2842,7 @@ pub struct ResolutionScratch {
     /// event, so the CR 704.3 gate at the end of `advance_step` reads this
     /// instead. Written only when one of those happens.
     pub(crate) phased_since_sweep: bool,
-    /// CR 724.1a / 724.2a — the events an "end the turn / combat phase"
+    /// CR 725.1a / 725.2a — the events an "end the turn / combat phase"
     /// resolution produced before the process began: kept for the log, but
     /// what they triggered ceases to exist, so `perform_action` prepends them
     /// after its dispatch.
@@ -2965,7 +2965,7 @@ pub struct GameState {
     /// `None` while the game is ongoing; `Some(None)` for a draw;
     /// `Some(Some(i))` when player `i` has won.
     pub game_over: Option<Option<usize>>,
-    /// CR 104.4b / 732.4 — mandatory-loop watchdog `(anchor, repeats, since)`:
+    /// CR 104.4b / 733.4 — mandatory-loop watchdog `(anchor, repeats, since)`:
     /// a state fingerprint seen after a *triggered-ability* resolution, how many
     /// later trigger resolutions returned to it, and how many passed without.
     /// A mandatory loop of period up to `MANDATORY_LOOP_MAX_PERIOD` keeps
@@ -2993,7 +2993,7 @@ pub struct GameState {
     /// turns before, which this sees.
     #[serde(default)]
     pub no_progress_watch: (u64, u32, u32),
-    /// CR 732.3 — fragmented-loop guard for non-mana activations (a mana ability
+    /// CR 733.3 — fragmented-loop guard for non-mana activations (a mana ability
     /// neither trips nor resets it: it is announced inside the cost it pays).
     /// Holds the state fingerprint, the last `(source, ability index)` announced,
     /// and how often that pair repeated without the fingerprint moving; past
@@ -3338,7 +3338,7 @@ pub struct GameState {
     /// with the given counter on it (Esper Origins). Cleared once consumed.
     #[serde(skip)]
     pub(crate) resolving_spell_to_battlefield_transformed: Option<Option<crate::card::CounterType>>,
-    /// CR 724 — set by `Effect::EndTheTurn` (`Turn`) or, during combat, by
+    /// CR 725 — set by `Effect::EndTheTurn` (`Turn`) or, during combat, by
     /// `Effect::EndTheCombatPhase` (`Combat`); consumed after the current
     /// stack item finishes resolving (exile the stack, clear combat, jump to
     /// cleanup or to the next main phase). One byte for both: `GameState`
@@ -3630,7 +3630,7 @@ pub struct GameState {
     /// off the stack) — `HasDraftNotedColorOfSource`.
     #[serde(skip)]
     pub(crate) source_name_scratch: Option<&'static str>,
-    /// CR 725 — who the monarch was as the current turn began. Snapshotted at
+    /// CR 726 — who the monarch was as the current turn began. Snapshotted at
     /// the untap step so `Predicate::WasMonarchAtTurnStart` survives a
     /// mid-turn crown change.
     #[serde(default)]
@@ -3728,7 +3728,7 @@ pub struct GameState {
     /// other player may play from a graveyard at all. Cleared at cleanup.
     #[serde(default)]
     pub graveyard_play_pooled_for: Option<usize>,
-    /// CR 723.1 — who is making `seat`'s decisions this turn, if anyone. Indexed
+    /// CR 724.1 — who is making `seat`'s decisions this turn, if anyone. Indexed
     /// by seat; set as that player's turn begins, cleared as the next begins.
     ///
     /// ⚠ **Empty is the cleared state, so a read must use `get`, never an
@@ -3774,7 +3774,7 @@ pub struct GameState {
     /// subject. `#[serde(skip)]`.
     #[serde(skip)]
     pub(crate) resolving_lki_subject: Option<CardId>,
-    /// CR 729.5 — how deep this game is nested inside subgames. The main game
+    /// CR 730.5 — how deep this game is nested inside subgames. The main game
     /// is 0; `play_subgame` refuses to nest past a fixed cap.
     #[serde(default)]
     pub(crate) subgame_depth: u32,
@@ -3827,19 +3827,19 @@ pub struct GameState {
     /// the replacement's extra mints aren't re-replaced (CR 614.5). Transient.
     #[serde(skip)]
     pub(crate) in_token_replacement: bool,
-    /// CR 725 — the monarch (if any). The monarch draws a card at the
+    /// CR 726 — the monarch (if any). The monarch draws a card at the
     /// beginning of their end step, and a creature dealing combat damage to
     /// the monarch makes its controller the new monarch. `#[serde(default)]`
     /// (None = no monarch) for snapshot back-compat.
     #[serde(default)]
     pub monarch: Option<usize>,
-    /// CR 726 — the player with the initiative (if any). Ventures into
+    /// CR 727 — the player with the initiative (if any). Ventures into
     /// Undercity on taking it and at the beginning of their upkeep; combat
     /// damage to them hands it over. `#[serde(default)]` for snapshot
     /// back-compat.
     #[serde(default)]
     pub initiative: Option<usize>,
-    /// CR 731 — the game's day/night designation (None = neither, the
+    /// CR 732 — the game's day/night designation (None = neither, the
     /// starting state). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub day_night: Option<crate::game::types::DayNight>,
@@ -4877,7 +4877,7 @@ impl GameState {
         }
     }
 
-    /// CR 725 — make `player` the monarch. No-op if they already are; emits
+    /// CR 726 — make `player` the monarch. No-op if they already are; emits
     /// `MonarchChanged` on a real change.
     pub fn set_monarch(&mut self, player: usize, events: &mut Vec<GameEvent>) {
         if self.monarch == Some(player) || self.turn.cant_become_monarch_this_turn.contains(&player) {
@@ -4889,8 +4889,8 @@ impl GameState {
         self.sync_monarch_control();
     }
 
-    /// CR 726 — `player` takes the initiative. CR 726.3 strips it from whoever
-    /// held it; CR 726.2/726.5 venture into Undercity either way, on the stack
+    /// CR 727 — `player` takes the initiative. CR 727.3 strips it from whoever
+    /// held it; CR 727.2/727.5 venture into Undercity either way, on the stack
     /// as a sourceless trigger controlled by the new holder.
     pub fn take_initiative(&mut self, player: usize, events: &mut Vec<GameEvent>) {
         if self.initiative != Some(player) {
@@ -4900,7 +4900,7 @@ impl GameState {
         self.push_undercity_venture(player);
     }
 
-    /// The CR 726.2 "venture into Undercity" trigger, pushed for `player`.
+    /// The CR 727.2 "venture into Undercity" trigger, pushed for `player`.
     pub(crate) fn push_undercity_venture(&mut self, player: usize) {
         self.push_stack(
             crate::game::types::TriggerPush::new(
@@ -5031,7 +5031,7 @@ impl GameState {
 
     /// CR 712 — flip one DFC permanent to its other face in place. The object
     /// is unchanged (counters/tapped/attachments persist); fires `Transformed`.
-    /// CR 712.9/712.10 — nothing happens if the permanent isn't a DFC, or if
+    /// CR 701.27d/701.27e — nothing happens if the permanent isn't a DFC, or if
     /// the face it would turn to is an instant or sorcery face.
     pub fn transform_permanent(&mut self, id: CardId, events: &mut Vec<GameEvent>) {
         if self.transform_prohibited(id) {
@@ -5055,7 +5055,7 @@ impl GameState {
             c.set_definition(front);
             c.transformed = false;
         }
-        // CR 701.27f — an ability of a permanent "transforms it only if it hasn't
+        // CR 701.27g — an ability of a permanent "transforms it only if it hasn't
         // transformed or converted since the ability was put onto the stack." Stamp
         // the items already there; anything pushed later keeps its builder's
         // `false`. Read first: the stack is a CoW group, and an unconditional walk
@@ -5169,7 +5169,7 @@ impl GameState {
         }
     }
 
-    /// CR 731 — set the game's day/night designation, emitting
+    /// CR 732 — set the game's day/night designation, emitting
     /// `DayNightChanged` on a real change.
     pub fn set_day_night(&mut self, dn: crate::game::types::DayNight, events: &mut Vec<GameEvent>) {
         use crate::game::types::DayNight;
@@ -5488,7 +5488,7 @@ impl GameState {
                 out.push(ability);
             }
         }
-        // CR 721.2a — a station card's own `{N+}` triggered-ability striations,
+        // CR 722.2a — a station card's own `{N+}` triggered-ability striations,
         // active only while it has at least `min` charge counters.
         if !card.definition.station.is_empty() {
             let charges = card.counter_count(crate::card::CounterType::Charge);
@@ -7336,7 +7336,7 @@ impl GameState {
             .collect()
     }
 
-    /// CR 717.2 — give `seat` an Attraction deck (top card first) in the
+    /// CR 718.2 — give `seat` an Attraction deck (top card first) in the
     /// command zone. Returns the new card ids in deck order.
     pub fn seat_attraction_deck(
         &mut self,
@@ -11018,22 +11018,22 @@ impl GameState {
         true
     }
 
-    /// CR 723 — the seat whose input drives `seat` right now: `seat` itself
+    /// CR 724 — the seat whose input drives `seat` right now: `seat` itself
     /// unless another player is controlling them this turn (Mindslaver).
     pub fn acting_seat_for(&self, seat: usize) -> usize {
         self.controlled_by.get(seat).copied().flatten().unwrap_or(seat)
     }
 
-    /// CR 723.1 — hand a pending player-control entry to the seat whose turn is
+    /// CR 724.1 — hand a pending player-control entry to the seat whose turn is
     /// starting, and drop any control that expired with the previous turn.
     /// Called from the turn-begin path.
     pub fn apply_pending_player_control(&mut self, seat: usize) {
-        // A turn ended mid-combat (CR 723.2's grant never saw its phase end)
+        // A turn ended mid-combat (CR 724.2's grant never saw its phase end)
         // carries no combat control into the next one.
         if self.combat_control_restore.is_some() {
             self.combat_control_restore = None;
         }
-        // CR 723.1a — the most recently created effect wins.
+        // CR 724.1a — the most recently created effect wins.
         let Some(pos) = self.pending_player_control.iter().rposition(|(c, _)| *c == seat) else {
             // Nobody takes control this turn, so every slot clears — and the empty
             // table *is* the cleared one, because the one reader (`acting_seat_for`)
@@ -11967,7 +11967,7 @@ impl GameState {
         // riders below add to the new object afterward).
         card.counters.clear();
         card.keyword_counters.clear();
-        // CR 712.16 — a melded shell dies as its two component cards.
+        // CR 713.8 — a melded shell dies as its two component cards.
         if !card.meld_parts.is_empty() {
             let mut card = card;
             let mut any_exiled = false;
@@ -11986,7 +11986,7 @@ impl GameState {
             return any_exiled;
         }
         let owner = card.owner;
-        // CR 717.6 — an Astrotorium-backed Attraction card never reaches a
+        // CR 718.6 — an Astrotorium-backed Attraction card never reaches a
         // graveyard; it goes to its owner's face-up junkyard pile instead.
         if !card.definition.attraction_lights.is_empty() {
             let mut card = card;
@@ -12014,7 +12014,7 @@ impl GameState {
             if let Some(src) = stamped_by {
                 card.exiled_with = Some(src);
             }
-            // CR 712.4 — front face up off the battlefield and stack; read
+            // CR 712.6a — front face up off the battlefield and stack; read
             // after the Disturb redirect, which keys on the back face.
             card.revert_transform();
             self.exile.push(card);
@@ -13319,7 +13319,7 @@ impl GameState {
     /// Only `RemoveKeyword`, `CantHaveKeyword` and `RemoveAllAbilities` take a
     /// keyword away (see [`board_keyword_matching`](Self::board_keyword_matching));
     /// `RemoveAllAbilities` has its own gate. The other two come from
-    /// `StaticEffect::LoseKeyword`, `StaticEffect::CantHaveKeyword`, a CR 721.2a
+    /// `StaticEffect::LoseKeyword`, `StaticEffect::CantHaveKeyword`, a CR 722.2a
     /// Station band's statics, `EquipBonus::remove_keywords`, and — the route
     /// `(-345)` missed — a *resolved* `Effect::LoseKeyword` whose duration is
     /// neither end-of-turn nor permanent (those go into the instance's own
@@ -15064,7 +15064,7 @@ impl GameState {
                     continue;
                 }
                 for sa in &card.definition.static_abilities {
-                    // CR 716.2 / 611.2 — peel the level/turn/counter gates to the
+                    // CR 717.2 / 611.2 — peel the level/turn/counter gates to the
                     // inner grant (Blacksmith's Talent's level-3 "during your
                     // turn, equipped creatures … have double strike and haste").
                     let Some(eff) = self.active_static(&sa.effect, card) else { continue };
@@ -17736,10 +17736,10 @@ impl GameState {
                 });
             }
         }
-        // CR 721.2 — Station symbols. Every band whose `{N+}` threshold is met
+        // CR 722.2 — Station symbols. Every band whose `{N+}` threshold is met
         // by the permanent's charge-counter count grants its abilities (layer
         // 6); a band with a `[P/T]` box also makes it a creature with that base
-        // P/T (CR 721.2b — layers 4 + 7a).
+        // P/T (CR 722.2b — layers 4 + 7a).
         for card in if any_station { &self.battlefield[..] } else { &[] } {
             if card.definition.station.is_empty() {
                 continue;
@@ -17777,7 +17777,7 @@ impl GameState {
                         modification: Modification::SetPowerToughness(power, toughness),
                     });
                 }
-                // CR 721.2a — static abilities granted by the band. A
+                // CR 722.2a — static abilities granted by the band. A
                 // value-scaled pump (Uthros Research Craft's "+1/+0 for each
                 // artifact") needs the game to count, so it is read here.
                 for se in &band.statics {
@@ -19989,7 +19989,7 @@ impl GameState {
         id
     }
 
-    /// CR 727 — restart the game. The current game ends with no winner; a new
+    /// CR 728 — restart the game. The current game ends with no winner; a new
     /// one begins from every card that was involved (727.2), shuffled into its
     /// owner's library, with `starter` starting (727.1a). `exempt` cards skip the
     /// reshuffle (727.5) and enter under `starter`'s control — Karn Liberated's
@@ -20067,7 +20067,7 @@ impl GameState {
                 pl.commanders = old.commanders.clone();
                 pl.commander_identity = old.commander_identity;
                 pl.sideboard = old.sideboard.clone();
-                // CR 727.1 — only the players still in the game start the new one.
+                // CR 728.1 — only the players still in the game start the new one.
                 pl.eliminated = old.eliminated;
                 pl
             })
@@ -20118,7 +20118,7 @@ impl GameState {
             for c in cards {
                 let def = c.definition.arc();
                 let card = CardInstance::new(c.id, def, p);
-                // CR 903.6 / 727.5a — a commander begins the new game in the
+                // CR 903.6 / 728.5a — a commander begins the new game in the
                 // command zone, and stays its deck's commander (903.9b's
                 // redirect is re-armed below).
                 if self.players[p].commanders.contains(&c.id) {
@@ -21789,7 +21789,7 @@ impl GameState {
     }
 
     /// [`CardInstance::face_view`] for a card off the battlefield, knowing
-    /// whether it is a spell on the stack (CR 709.3b / 709.4 / 715.3b).
+    /// whether it is a spell on the stack (CR 709.3b / 709.4 / 716.3b).
     pub(crate) fn face_view_of(&self, card: &CardInstance) -> Option<CardInstance> {
         let stack_x = self.stack.iter().find_map(|si| match si {
             crate::game::types::StackItem::Spell { card: c, x_value, .. } if c.id == card.id => {
@@ -21833,7 +21833,7 @@ impl GameState {
 
     /// A card's mana value in its current zone: a permanent's printed cost
     /// (a Room's unlocked doors', CR 709.5), else its zone face's (CR 709.4b
-    /// split cards combined, CR 715.3b an Adventure spell's own).
+    /// split cards combined, CR 716.3b an Adventure spell's own).
     pub(crate) fn zone_mana_value(&self, card: &CardInstance) -> u32 {
         if Self::may_have_zone_face(card) {
             let view = match self.battlefield_find(card.id) {
@@ -27113,7 +27113,7 @@ impl GameState {
         // pump.
         for ev in events {
             if let GameEvent::SpellCast { player, card_id, .. } = ev {
-                // CR 715.3b / 702.103b — Stomp is an instant spell and a
+                // CR 716.3b / 702.103b — Stomp is an instant spell and a
                 // bestowed spell an Aura, not creature spells.
                 let is_creature_spell = self.stack.iter().any(|si| matches!(
                     si,
@@ -31753,7 +31753,7 @@ impl GameState {
             Some(e) => e,
             None => {
                 if let Some(half) = card.alt_spell_half_of(&def) {
-                    // CR 715 / 702.183 — resolve the Adventure/Omen half's
+                    // CR 716 / 702.183 — resolve the Adventure/Omen half's
                     // effect, not the creature body.
                     &half.effect
                 } else if card.gift_promised
@@ -32137,7 +32137,7 @@ impl GameState {
         // Esper Origins — "exile it, then put it onto the battlefield
         // transformed under its owner's control". The front face is a sorcery,
         // so the flip happens on the card the routing already owns.
-        // CR 712.13a — an instant/sorcery back face can't enter, so the card
+        // CR 701.27j — an instant/sorcery back face can't enter, so the card
         // falls through to the graveyard.
         if let Some(counter) = self.resolving_spell_to_battlefield_transformed.take()
             && card
@@ -32399,7 +32399,7 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
-        // CR 715 — an adventure spell goes to exile (not the graveyard) on
+        // CR 716 — an adventure spell goes to exile (not the graveyard) on
         // resolution, marked so its creature half can be cast from exile.
         if card.adventuring {
             let mut card = card;
@@ -32408,7 +32408,7 @@ impl GameState {
             self.exile.push(card);
             return Ok(events);
         }
-        // CR 724.1a — a spell that ended the turn is exiled along with the
+        // CR 725.1a — a spell that ended the turn is exiled along with the
         // rest of the stack instead of going to the graveyard (Day's
         // Undoing). The flag stays set; `resolve_top_of_stack` consumes it.
         if self.end_requested.is_some() {
@@ -33746,7 +33746,7 @@ pub(crate) fn effective_loyalty_abilities(
 /// True when `card` — on the battlefield, in the command zone, or synthesized
 /// for an emblem — can contribute a `RemoveAllAbilities` to the gathered set.
 /// Covers the attachment half (Heliod's Punishment's `remove_abilities`) plus
-/// every static-ability route, including CR 721.2a Station bands.
+/// every static-ability route, including CR 722.2a Station bands.
 fn card_can_strip_abilities(card: &CardInstance) -> bool {
     // Both halves come off the per-object memo — see `card::dispatch_bits`.
     // This is a whole-battlefield `any`, and the walks it replaces are every
@@ -33762,7 +33762,7 @@ fn card_can_strip_abilities(card: &CardInstance) -> bool {
 /// [`GameState::card_type_change_in_scope`]; covers the attachment routes
 /// (`equipped_bonus`' two type fields, CR 702.151c Reconfigure), the two
 /// keywords that gate the type line (CR 702.183 Impending, CR 702.161 Living
-/// metal), a CR 721.2a Station band with printed P/T, and every static route
+/// metal), a CR 722.2a Station band with printed P/T, and every static route
 /// including Station-band statics.
 fn card_can_change_card_types(card: &CardInstance) -> bool {
     // Both halves are functions of the definition alone, so both come off the
@@ -33956,7 +33956,7 @@ fn static_effect_adds_toughness(effect: &crate::effect::StaticEffect) -> bool {
 /// True when `card` on the battlefield can contribute a toughness-lowering
 /// layer-7 modification. The printed-shape half of
 /// [`GameState::pt_reduction_in_scope`]: CR 613.4 7a routes (`dynamic_pt`,
-/// level bands, CR 721.2b Station bands), `equipped_bonus`' five P/T fields
+/// level bands, CR 722.2b Station bands), `equipped_bonus`' five P/T fields
 /// (incl. `scale` and conditional bands), CR 702.95 Soulbond, and every
 /// static route including Station-band statics.
 ///
@@ -34148,7 +34148,7 @@ fn static_effect_scales_damage(effect: &crate::effect::StaticEffect) -> bool {
 /// True when `card` on the battlefield can contribute a layer-4 land-type
 /// modification. The printed-shape half of
 /// [`GameState::land_type_change_in_scope`]: `equipped_bonus.set_land_types`
-/// and every static route, including CR 721.2a Station bands.
+/// and every static route, including CR 722.2a Station bands.
 ///
 /// **Reads no instance field, deliberately**: a pure function of
 /// `card.definition` lets `zone::Battlefield` memoize the walk against a
@@ -34171,7 +34171,7 @@ pub(crate) fn card_can_change_land_types(card: &CardInstance) -> bool {
 /// creature-type modification to the gathered set. The printed-shape half of
 /// [`GameState::creature_type_change_in_scope`]; covers the attachment route
 /// (`equipped_bonus`' two creature-type fields) and every static route,
-/// including CR 721.2a Station bands.
+/// including CR 722.2a Station bands.
 /// Reads no instance field and comes off the same memo, for the same reasons
 /// as [`card_can_change_land_types`] — see its comment for what the widened
 /// attachment route costs.
@@ -34358,7 +34358,7 @@ fn push_static_ability_effects(
 
 /// Convert a single `StaticEffect` from `card` into layer continuous effects.
 /// Split out of `push_static_ability_effects` so charge-gated Station bands
-/// (CR 721.2a) can reuse the same conversion. `your_turn` is true when the
+/// (CR 722.2a) can reuse the same conversion. `your_turn` is true when the
 /// source's controller is the active player (CR 611.2 turn gate).
 fn static_effect_to_effects(
     effect: &crate::effect::StaticEffect,
@@ -34372,7 +34372,7 @@ fn static_effect_to_effects(
 
     {
         match effect {
-            // CR 716.2 — a level-gated Class static: emit its inner effect
+            // CR 717.2 — a level-gated Class static: emit its inner effect
             // only while the source Class is at level `n` or higher.
             StaticEffect::WhileClassLevelAtLeast { n, inner } => {
                 if card.level() >= *n {
@@ -37128,7 +37128,7 @@ fn blocker_matches_block_filter(
         R::HasArtifactSubtype(a) => computed.subtypes().artifact_subtypes.contains(a),
         // Midnight Pathlighter — "except by legendary creatures".
         R::HasSupertype(s) => computed.supertypes().contains(s),
-        // Azure Fleet Admiral's "creatures the monarch controls" (CR 725).
+        // Azure Fleet Admiral's "creatures the monarch controls" (CR 726).
         R::ControlledByMonarch => monarch == Some(blocker.controller),
         // A resolved "can't be blocked by creatures [that player] controls"
         // (The Black Gate, `Effect::CantBeBlockedByPlayer`).

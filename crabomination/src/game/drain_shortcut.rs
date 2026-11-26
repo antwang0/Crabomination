@@ -1,4 +1,4 @@
-//! CR 732.2 — a shortcut through a finite mandatory drain. Enduring Tenacity
+//! CR 733.2 — a shortcut through a finite mandatory drain. Enduring Tenacity
 //! and Exquisite Blood trade X life a cycle until the drained seat is dead:
 //! no board ever repeats (so the CR 104.4b watch in `stack.rs` never fires)
 //! and nothing grows (so `growth_loop.rs` doesn't either), but against a
@@ -8,7 +8,7 @@
 //! A trigger chain outliving the exact watch's period arms this one: it
 //! digests the state without life totals and records the totals at each
 //! digest repeat (a "return"). When the last `m` returns repeat the `m`
-//! before them, the chain only moves life, and the proposal (CR 732.2a) is
+//! before them, the chain only moves life, and the proposal (CR 733.2a) is
 //! "repeat until one cycle before a seat would reach 0". The final cycles
 //! play out for real, so the death and its triggers take the ordinary path.
 

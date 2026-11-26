@@ -181,7 +181,7 @@ pub enum StaticEffect {
     /// spell from the command zone this game, pay 2 life that many times"
     /// (Liesa, Shroud of Dusk). Read off the spell's own definition as it is cast.
     CommanderTaxPaidInLife,
-    /// CR 725 — "The monarch controls enchanted creature" (Fealty to the
+    /// CR 726 — "The monarch controls enchanted creature" (Fealty to the
     /// Realm). Applied when the monarch changes (`GameState::
     /// sync_monarch_control`); the steal lasts while the Aura stays attached.
     MonarchControlsEnchanted,
@@ -264,7 +264,7 @@ pub enum StaticEffect {
         count_filter: SelectionRequirement,
         max: u32,
     },
-    /// CR 716.2 — a static ability that only applies while the source Class
+    /// CR 717.2 — a static ability that only applies while the source Class
     /// enchantment is at level `n` or higher. Wraps `inner`; its continuous
     /// effects are emitted only while `CardInstance.class_level >= n`. Powers a
     /// Class's higher-level static abilities (a level-gated anthem or granted
@@ -1543,7 +1543,7 @@ pub enum StaticEffect {
     /// (`None`: Relentless Rats, Hare Apparent) or "up to N" (`Some(N)`:
     /// Seven Dwarves, Nazgûl). Read by `format`'s copy counts, not the game.
     DeckMayHaveCopies(Option<u32>),
-    /// Rulebreaker (Commander, CR 903.4 exception printed on the card) — "A
+    /// Rulebreaker (Commander, CR 903.5e: a deck-construction ability of the commander) — "A
     /// deck with this commander can have [`cards`] of any color identity and
     /// any basic land cards" (Maular, Seluma, The Everforger). Read by
     /// `format::validate_commander_deck` for a commander, not by the game.
@@ -2183,7 +2183,7 @@ pub enum StaticEffect {
     /// permanent you control to trigger, that ability triggers an additional
     /// time" (Dr. Beverly Crusher).
     DoubleControllerLifeGainTriggers,
-    /// Barbara Wright — "Sagas you control have read ahead" (CR 714.3c): read
+    /// Barbara Wright — "Sagas you control have read ahead" (CR 715.3c): read
     /// in `saga_enter_advance` beside the printed `read_ahead` flag.
     YourSagasHaveReadAhead,
     /// Anhelo, the Painter — "The first instant or sorcery spell you cast
@@ -3946,7 +3946,7 @@ pub enum StaticEffect {
     /// "Your maximum hand size is reduced by N" (Thought Nibbler). The
     /// controller-scoped mirror of `OpponentsMaxHandSizeReduced`.
     ControllerMaxHandSizeReduced(u32),
-    /// CR 305 / 718 — "You may play lands from your graveyard." Crucible of
+    /// CR 305 / 719 — "You may play lands from your graveyard." Crucible of
     /// Worlds, Ramunap Excavator. Read by the land-play legality + the
     /// `PlayLandFromGraveyard` action: a land in the controller's graveyard
     /// becomes a legal land play (still bound by the one-land-per-turn cap).

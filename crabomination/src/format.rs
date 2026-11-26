@@ -778,7 +778,7 @@ pub fn is_legal_commander(def: &CardDefinition) -> bool {
 }
 
 /// CR 903.3(c)'s qualifier — a Spacecraft "with one or more power/toughness
-/// boxes". A station card's printed box is its band's `pt` (CR 721.2b), so The
+/// boxes". A station card's printed box is its band's `pt` (CR 722.2b), so The
 /// Seriema (5/5 at its 7+ band) qualifies and The Eternity Elevator, whose only
 /// band adds a mana ability, does not.
 fn is_spacecraft_with_pt(def: &CardDefinition) -> bool {
@@ -856,7 +856,7 @@ pub fn validate_commander_deck(
     if deck.commanders.iter().any(|c| rulebreaker(c, |e| matches!(e, crate::effect::StaticEffect::RulebreakerNoMaxDeckSize))) {
         generic.retain(|e| !matches!(e, DeckError::TooManyCards { .. }));
     }
-    // CR 903.5e — "Commander games do not use sideboards." `validate_deck_refs`
+    // CR 903.5f — "Commander games do not use sideboards." `validate_deck_refs`
     // takes a flat card list, which is what lets CR 903.5a count the commander
     // with the 99; the price is that it never sees this deck's sideboard, so
     // the rule is checked here instead of falling out of `FormatRules`.

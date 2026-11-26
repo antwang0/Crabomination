@@ -58,7 +58,7 @@ fn don_and_raph_give_the_next_noncreature_spell_affinity() {
 #[allow(dead_code)]
 fn _unused(_: CounterType) {}
 
-/// CR 715.3 — Mosswood Dreadknight dies, and its Adventure may be cast from
+/// CR 716.3 — Mosswood Dreadknight dies, and its Adventure may be cast from
 /// the graveyard: Dread Whispers draws and costs a life, then the Knight can
 /// be cast from exile.
 #[test]

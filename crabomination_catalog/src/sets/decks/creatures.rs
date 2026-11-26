@@ -20,7 +20,7 @@ use crate::mana::{Color, ManaCost, b, colorless, cost, g, generic, r, u, w};
 /// counter for each creature that died under your control this turn
 /// (`Value::CreaturesDiedThisTurn`). Adventure — Burn Together {R}
 /// Sorcery: target creature you control deals damage equal to its power
-/// to any other target, then its controller sacrifices it (CR 715).
+/// to any other target, then its controller sacrifices it (CR 716).
 pub fn callous_sell_sword() -> CardDefinition {
     use crate::card::CounterType;
     CardDefinition {

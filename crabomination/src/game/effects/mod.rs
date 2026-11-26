@@ -2174,7 +2174,7 @@ impl GameState {
         // are copied; converge is not (a copy has no mana spent: 0).
         let (orig_card_def, orig_caster, target, additional_targets, mode, x_value, choices) =
             if let StackItem::Spell { card, caster, target, additional_targets, mode, x_value, .. } = &self.stack[idx] {
-                // CR 707.2 / 715.3b — a spell cast as its Adventure (or Omen)
+                // CR 707.2 / 716.3b — a spell cast as its Adventure (or Omen)
                 // has only that half's characteristics, and so does its copy:
                 // the main face's definition resolved the copy as a token
                 // creature (Gorion copying Stomp made a Bonecrusher Giant).
@@ -11918,7 +11918,7 @@ impl GameState {
             Effect::TurnFaceDown { what } | Effect::TurnFaceDownAs { what, .. } => {
                 // CR 708.2a/708.2b — `turn_face_down` stashes the real card and
                 // swaps in the vanilla 2/2 body; it no-ops if already face down,
-                // and on a double-faced permanent (CR 712.16).
+                // and on a double-faced permanent (CR 713.8).
                 let typed = match effect {
                     Effect::TurnFaceDownAs { creature_type, .. } => Some(*creature_type),
                     _ => None,
@@ -12429,7 +12429,7 @@ impl GameState {
                 self.search_reveal_punish_same_name(amount, ctx, events)
             }
 
-            // CR 723.1 — "You control target player during that player's next
+            // CR 724.1 — "You control target player during that player's next
             // turn." A later entry for the same seat overwrites (723.1a).
             Effect::PlayersControlEachOthersNextTurn { first, second } => {
                 let (Some(a), Some(b)) = (self.resolve_player(first, ctx), self.resolve_player(second, ctx)) else {
@@ -13980,7 +13980,7 @@ impl GameState {
                 // Enter the first room of a chosen dungeon, or advance to a
                 // chosen next room; branch picks ride `Decision::ChooseMode`.
                 let (dungeon, room_idx) = match self.players[p].dungeon.clone() {
-                    // CR 726.2 — "venture into Undercity" enters that dungeon
+                    // CR 727.2 — "venture into Undercity" enters that dungeon
                     // specifically; a player mid-way through another dungeon
                     // can't start it.
                     None if forced.is_some() => (forced.clone().expect("forced"), 0u8),
@@ -16872,7 +16872,7 @@ impl GameState {
             }
 
             Effect::ExileUntilOpponentMonarch { what } => {
-                // CR 725 — exile until the monarchy leaves the controller
+                // CR 726 — exile until the monarchy leaves the controller
                 // (Palace Jailer). Guarded by the controller seat rather than
                 // the source, so `return_linked_exiles` skips it.
                 let source = ctx.source;
@@ -19562,7 +19562,7 @@ impl GameState {
                     .filter_map(|e| e.as_permanent_id())
                     .collect();
                 for id in ids {
-                    // CR 701.27f — an ability of a permanent that tries to transform it
+                    // CR 701.27g — an ability of a permanent that tries to transform it
                     // does so only if it hasn't transformed since the ability was put
                     // on the stack; otherwise two copies (Voldaren Bloodcaster, Vincent
                     // Valentine) flip it back and forth. Only the ability's own
@@ -20744,7 +20744,7 @@ impl GameState {
                         counter_type: *kind,
                         count: scaled, placer: self.resolution_causer,
                     });
-                    // CR 714.2b — lore counters fire every threshold crossed.
+                    // CR 715.2b — lore counters fire every threshold crossed.
                     if *kind == CounterType::Lore {
                         self.saga_chapters_crossed(cid, before, before + scaled);
                     }
@@ -20785,7 +20785,7 @@ impl GameState {
                                 let before = c.counter_count(*kind);
                                 c.add_counters(*kind, n);
                                 events.push(GameEvent::CounterAdded { card_id: cid, counter_type: *kind, count: n, placer: self.resolution_causer });
-                                // CR 714.2b — lore counters from any source
+                                // CR 715.2b — lore counters from any source
                                 // (proliferate, a doubler, Sagas' own advance)
                                 // fire every chapter threshold they cross.
                                 if *kind == CounterType::Lore {
@@ -24878,7 +24878,7 @@ impl GameState {
             }
 
             Effect::AdvanceClassLevel => {
-                // CR 716.2 — the resolution of a `{cost}: Level N` ability:
+                // CR 717.2 — the resolution of a `{cost}: Level N` ability:
                 // bump the source Class's level by one and announce it so
                 // "when this Class becomes level N" triggers fire (the caller
                 // dispatches the returned events).
@@ -24889,7 +24889,7 @@ impl GameState {
                 if !card.definition.is_class() {
                     return Ok(());
                 }
-                // CR 716.2a / 716.2d — "becomes N" from the level it is
+                // CR 717.2a / 717.2d — "becomes N" from the level it is
                 // treated as having (1 when it has none).
                 card.class_level = card.level().saturating_add(1);
                 let level = card.class_level;
@@ -32264,7 +32264,7 @@ impl GameState {
                 Ok(())
             }
 
-            // CR 724.2g — outside a combat phase nothing happens.
+            // CR 725.2g — outside a combat phase nothing happens.
             Effect::EndTheCombatPhase => {
                 if self.step.is_combat_phase() {
                     self.end_requested = Some(crate::game::EndRequest::Combat);
@@ -36992,7 +36992,7 @@ impl GameState {
                     return Ok(());
                 };
                 // Flip the card to its back face while it is still in the
-                // graveyard, so it enters as that object (CR 712.14-style).
+                // graveyard, so it enters as that object (CR 712.11-style).
                 if let Some(c) = self.players[owner].graveyard.iter_mut().find(|c| c.id == src)
                     && !c.transformed
                     && let Some(back) = c.definition.back_face.as_ref().map(|b| (**b).clone())
@@ -37019,7 +37019,7 @@ impl GameState {
                 // `run_effect` frame per repeat. A prompting seat's "again?" goes
                 // through `MayDo` re-entering this effect, so its suspend resumes
                 // at the right repeat.
-                // CR 732.2 — a headless seat names how many times it repeats an
+                // CR 733.2 — a headless seat names how many times it repeats an
                 // optional loop: at most `HEADLESS_REPEAT_CAP`. Delina copying Wyll
                 // makes "roll again" near-certain, so always-yes never stopped.
                 const HEADLESS_REPEAT_CAP: u32 = 30;
@@ -38692,7 +38692,7 @@ impl GameState {
                         .collect(),
                 };
                 for cid in candidate_ids {
-                    // CR 732.2a — a copier blinking itself with the copy stops
+                    // CR 733.2a — a copier blinking itself with the copy stops
                     // the loop (`game/copy_loop.rs`).
                     if let Some(copier) = ctx.source
                         && !self.admit_copier_repeat(copier, cid)
@@ -41744,7 +41744,7 @@ impl GameState {
 
             Effect::ExileSelfReturnTransformed | Effect::ReturnSelfTransformedTappedToOwner => {
                 let to_owner = matches!(effect, Effect::ReturnSelfTransformedTappedToOwner);
-                // CR 714.4 — exile this Saga (or lift the card out of a
+                // CR 715.4 — exile this Saga (or lift the card out of a
                 // graveyard), then return it transformed under its
                 // controller's control. Routed through `place_card_in_dest`
                 // so new-object state (counters clear, summoning sickness)
@@ -41775,11 +41775,11 @@ impl GameState {
                     c
                 };
                 let Some(mut card) = taken else { return Ok(()) };
-                // CR 712.4 — off the battlefield a transformed card shows its
+                // CR 712.6a — off the battlefield a transformed card shows its
                 // front face (Olag, a copy of Chandra, Fire of Kaladesh, is
                 // Ludevic again in exile).
                 card.revert_transform();
-                // CR 712.14a — what left is no double-faced card any more (a
+                // CR 712.11a — what left is no double-faced card any more (a
                 // copy's copied faces end with the copy effect): it stays in
                 // its current zone. CR 111.8 — nor does a token come back.
                 let back = match card.definition.back_face.as_ref() {
@@ -47735,7 +47735,7 @@ impl GameState {
                         self.scratch.proliferated_this_resolution.push(cid);
                     }
                 }
-                // CR 714.2b — a proliferated lore counter fires the chapter it
+                // CR 715.2b — a proliferated lore counter fires the chapter it
                 // crosses (Sagas advance twice in a turn with a proliferator).
                 if k == CounterType::Lore {
                     self.saga_chapters_crossed(cid, before, before + n);

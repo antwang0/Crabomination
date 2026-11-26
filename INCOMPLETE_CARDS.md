@@ -2339,3 +2339,11 @@ approximated):
 |---|---|---|
 | 🟡 Nog, Ambitious Cadet | {3}: the Scout becomes an Officer and *gains* "you may play lands from your graveyard" and an extra land play | printed as statics live `WhileCondition(is an Officer)` — an effect that later strips the Officer type takes the gained abilities with it (no effect-level static grant exists) |
 | 🟡 Genesis Device | sacrifice any number of lands, then search for up to that many land cards | `SacrificeAnyNumber` with a per-land `Search` (Scapeshift's shape): one search and shuffle per sacrificed land, not one search for all |
+
+## EDHREC singles short only their commander (2026-11-26, `01WRuXc5Gy`)
+
+`decks::cmdr_nov26`. Open 🟡 rows:
+
+| Card | Printed | Approximation |
+|---|---|---|
+| 🟡 Massimo, the Magician | each granted trigger copies "the exiled card" — its own | the exiled card is linked to the creature (`ExileLinkedTo`), so a creature that entered twice under Massimo (or under two Massimos) holds two triggers that each copy every card linked to it |

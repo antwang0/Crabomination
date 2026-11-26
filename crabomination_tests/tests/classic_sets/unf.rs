@@ -1,4 +1,4 @@
-//! Unfinity (UNF) — Attractions (CR 717) and the cards that open them.
+//! Unfinity (UNF) — Attractions (CR 718) and the cards that open them.
 
 use crabomination::card::{CardInstance, CounterType};
 use crabomination::catalog;
@@ -56,7 +56,7 @@ fn open_an_attraction_is_a_noop_with_an_empty_deck() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Deadbeat Attendant"));
 }
 
-/// CR 701.52a / 717.5 — the precombat-main roll visits every Attraction whose
+/// CR 701.52a / 718.5 — the precombat-main roll visits every Attraction whose
 /// lit-up numbers match, and only those.
 #[test]
 fn cr_701_52a_roll_to_visit_fires_only_the_matching_attractions() {
@@ -111,10 +111,10 @@ fn only_the_active_player_visits_their_attractions() {
     assert_eq!(g.players[1].hand.len(), hand + 2, "their draw step plus the visit");
 }
 
-/// CR 717.6 — an Attraction headed for the graveyard lands in its owner's
+/// CR 718.6 — an Attraction headed for the graveyard lands in its owner's
 /// junkyard instead.
 #[test]
-fn cr_717_6_a_destroyed_attraction_goes_to_the_junkyard() {
+fn cr_718_6_a_destroyed_attraction_goes_to_the_junkyard() {
     let mut g = two_player_game();
     let booth = g.add_card_to_battlefield(0, catalog::information_booth());
     let naturalize = g.add_card_to_hand(0, catalog::naturalize());
@@ -158,7 +158,7 @@ fn kiddie_coaster_visit_pumps_your_creatures() {
     assert_eq!(g.computed_permanent(bear).unwrap().power, 3);
 }
 
-/// The Attraction deck and junkyard reach the client view (CR 717.2/717.6a).
+/// The Attraction deck and junkyard reach the client view (CR 718.2/718.6a).
 #[test]
 fn attraction_zones_are_surfaced_to_the_client() {
     let mut g = two_player_game();

@@ -256,7 +256,7 @@ fn keyword_tag(kw: &Keyword) -> Option<&'static str> {
         CanAttackOnlyIfDefenderControls(_) => "Atk?",
         // "Can attack only if you control a [permanent]" (the you-side mirror).
         CanAttackOnlyIfYouControl(_) => "Atk?",
-        // CR 725 — "can't attack unless defending player is the monarch"
+        // CR 726 — "can't attack unless defending player is the monarch"
         // (Crown-Hunter Hireling): the crown decides whether it can swing.
         CantAttackUnlessDefenderIsMonarch => "Atk👑",
         // "Can't attack/block unless you control N or more [filter]" (Topiary
@@ -511,7 +511,7 @@ fn board_status_strip(
     must_block: bool,
 ) -> String {
     let mut parts: Vec<String> = Vec::new();
-    // CR 716 Class: show the current level. Leads the strip so the level reads
+    // CR 717 Class: show the current level. Leads the strip so the level reads
     // at a glance on the non-creature enchantment.
     if let Some(n) = class_level {
         parts.push(format!("Lvl {n}"));

@@ -2295,7 +2295,7 @@ fn cr_101_2_flashback_meets_the_mana_value_lock() {
     g.perform_action(flashback).expect("unlocked");
 }
 
-/// CR 101.2 / 715.3 — an Adventure is cast as its own face: Stomp (mana value
+/// CR 101.2 / 716.3 — an Adventure is cast as its own face: Stomp (mana value
 /// 2) meets a mana-value-2 lock and Meddling Mage naming "Stomp"; a lock on 3
 /// (Bonecrusher Giant's own value) doesn't stop it.
 #[test]
@@ -2321,7 +2321,7 @@ fn cr_101_2_an_adventure_cast_meets_the_locks_on_its_face() {
     g.perform_action(stomp).expect("the creature's mana value doesn't lock the Adventure");
 }
 
-/// CR 101.2 / 712.8c — a disturb cast is the back face: Meddling Mage naming
+/// CR 101.2 / 712.6b — a disturb cast is the back face: Meddling Mage naming
 /// Generous Soul stops Beloved Beggar's disturb cast from the graveyard.
 #[test]
 fn cr_101_2_a_disturb_cast_meets_the_name_lock_on_its_back_face() {

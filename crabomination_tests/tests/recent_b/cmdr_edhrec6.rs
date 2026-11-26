@@ -140,9 +140,9 @@ fn willbreaker_steals_what_you_target_while_you_control_it() {
 }
 
 /// Illithid Harvester (CR 708.2): tapped nontoken creatures turn face down as
-/// 2/2 Horrors; a double-faced one can't be turned face down (CR 712.16).
+/// 2/2 Horrors; a double-faced one can't be turned face down (CR 712.13).
 #[test]
-fn cr_712_16_illithid_harvester_skips_a_double_faced_creature() {
+fn cr_712_13_illithid_harvester_skips_a_double_faced_creature() {
     let mut g = pod(2);
     let giant = ready(&mut g, 1, catalog::hill_giant());
     let delver = ready(&mut g, 1, catalog::delver_of_secrets());
@@ -155,7 +155,7 @@ fn cr_712_16_illithid_harvester_skips_a_double_faced_creature() {
     assert!(g.battlefield_find(giant).unwrap().face_down);
     assert_eq!((c.power, c.toughness), (2, 2));
     assert!(c.subtypes().creature_types.contains(&CreatureType::Horror));
-    assert!(!g.battlefield_find(delver).unwrap().face_down, "CR 712.16");
+    assert!(!g.battlefield_find(delver).unwrap().face_down, "CR 713.8");
 }
 
 /// Plant Tadpoles: exactly X targets, tapped and held through their next untap.

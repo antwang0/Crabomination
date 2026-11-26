@@ -438,7 +438,7 @@ pub struct ClientView {
     /// as short human-readable lines. Empty on a clean turn.
     #[serde(default)]
     pub turn_effects: Vec<String>,
-    /// CR 731 — the game's day/night designation: `None` = neither (the
+    /// CR 732 — the game's day/night designation: `None` = neither (the
     /// starting state), `Some(true)` = day, `Some(false)` = night. Surfaced
     /// so UIs can show a day/night indicator.
     #[serde(default)]
@@ -602,11 +602,11 @@ pub struct ClientView {
     #[serde(default)]
     pub castable_plotted: Vec<CardId>,
     /// CardIds in the viewer's hand with an Adventure half they could cast
-    /// right now (CR 715). Lets the client offer the "cast the Adventure"
+    /// right now (CR 716). Lets the client offer the "cast the Adventure"
     /// affordance distinct from the plain creature cast. Empty off-priority.
     #[serde(default)]
     pub adventurable_hand: Vec<CardId>,
-    /// CR 715.3d — cards in the viewer's adventure exile playable right now. A
+    /// CR 716.3d — cards in the viewer's adventure exile playable right now. A
     /// land half (the FIN Town // Adventure cycle) is played as the turn's land
     /// drop; every other half is cast. Empty off-priority.
     #[serde(default)]
@@ -1012,7 +1012,7 @@ pub struct PlayerView {
     /// (Lethal Vapors, Chronatog).
     #[serde(default)]
     pub skip_turns: u32,
-    /// CR 723.1 — the seat currently making this player's decisions
+    /// CR 724.1 — the seat currently making this player's decisions
     /// (Mindslaver), or `None` when they're playing themselves.
     #[serde(default)]
     pub controlled_by: Option<usize>,
@@ -1038,11 +1038,11 @@ pub struct PlayerView {
     /// more per prior command-zone cast).
     #[serde(default)]
     pub commander_casts: Vec<(String, u32)>,
-    /// CR 717.2 — how many Attraction cards remain in this seat's Attraction
+    /// CR 718.2 — how many Attraction cards remain in this seat's Attraction
     /// deck. 0 in every game without Attractions.
     #[serde(default)]
     pub attraction_deck_size: usize,
-    /// CR 717.6a — the names in this seat's face-up junkyard pile. Public
+    /// CR 718.6a — the names in this seat's face-up junkyard pile. Public
     /// information; empty in every game without Attractions.
     #[serde(default)]
     pub attraction_junkyard: Vec<String>,
@@ -1120,11 +1120,11 @@ pub struct PlayerView {
     /// the player to guess why the cards are face up.
     #[serde(default)]
     pub hand_revealed_to_viewer: bool,
-    /// CR 725 — true when this player is the monarch. Surfaced so UIs can
+    /// CR 726 — true when this player is the monarch. Surfaced so UIs can
     /// show a crown on the monarch's portrait.
     #[serde(default)]
     pub is_monarch: bool,
-    /// CR 726 — true when this player has the initiative. Surfaced so UIs can
+    /// CR 727 — true when this player has the initiative. Surfaced so UIs can
     /// badge whoever is running the Undercity.
     #[serde(default)]
     pub has_initiative: bool,
@@ -1415,7 +1415,7 @@ pub struct KnownCard {
     /// here since it requires the first target).
     #[serde(default)]
     pub modal_target_optional: Vec<bool>,
-    /// CR 714 — for a Saga, its final (highest) chapter number, so the client
+    /// CR 715 — for a Saga, its final (highest) chapter number, so the client
     /// can render "Chapter N / final" alongside the lore-counter chip. `None`
     /// for non-Saga cards. The current chapter is the card's Lore counter
     /// count (already surfaced via the generic counter display).
@@ -1487,13 +1487,13 @@ pub struct KnownCard {
     /// checkboxes).
     #[serde(default)]
     pub spree_single_mode: bool,
-    /// CR 721 — for a Station card on the battlefield, the next `{N+}` charge
+    /// CR 722 — for a Station card on the battlefield, the next `{N+}` charge
     /// threshold it hasn't yet reached (so the client can show "Station → N"
     /// progress next to its charge counters). `None` for non-station cards or
     /// once every band is active. Pair with the `Charge` entry in `counters`.
     #[serde(default)]
     pub station_next_threshold: Option<u32>,
-    /// CR 721 — current charge-counter count on this Station card (mirror of
+    /// CR 722 — current charge-counter count on this Station card (mirror of
     /// `PermanentView.station_charges`), for the client's "N/M" progress chip.
     /// `None` for non-station cards.
     #[serde(default)]
@@ -1710,7 +1710,7 @@ pub struct ExileCardView {
     /// `ClientView.castable_plotted` for "castable right now".
     #[serde(default)]
     pub plotted: bool,
-    /// CR 715 — this card is in exile after its Adventure half resolved, so its
+    /// CR 716 — this card is in exile after its Adventure half resolved, so its
     /// other half can be cast (or, for a land half, played) from here. Pair
     /// with `ClientView.adventure_exile` for "playable right now".
     #[serde(default)]
@@ -1758,12 +1758,12 @@ pub struct PermanentView {
     pub counters: Vec<(CounterType, u32)>,
     pub attached_to: Option<CardId>,
     pub is_token: bool,
-    /// CR 721 — the next `{N+}` charge threshold this Station card hasn't
+    /// CR 722 — the next `{N+}` charge threshold this Station card hasn't
     /// reached, for the client's "Station → N" progress hint. `None` for
     /// non-station permanents or once every band is active.
     #[serde(default)]
     pub station_next_threshold: Option<u32>,
-    /// CR 721 — current charge-counter count on this Station card, so the
+    /// CR 722 — current charge-counter count on this Station card, so the
     /// client can render a "N/M" Station progress chip alongside
     /// `station_next_threshold`. `None` for non-station permanents.
     #[serde(default)]
@@ -1933,7 +1933,7 @@ pub struct PermanentView {
     /// badge Cases with their solve state.
     #[serde(default)]
     pub case_solved: Option<bool>,
-    /// CR 716.2 — a Class enchantment's current level. `None` for non-Classes.
+    /// CR 717.2 — a Class enchantment's current level. `None` for non-Classes.
     /// A UI hint so the client can badge a Class with its level.
     #[serde(default)]
     pub class_level: Option<u8>,
@@ -2155,7 +2155,7 @@ pub struct PermanentView {
     /// (unpaired) case.
     #[serde(default)]
     pub soulbond_partner: Option<CardId>,
-    /// CR 714 — for a Saga, its final (highest) chapter number. With the Lore
+    /// CR 715 — for a Saga, its final (highest) chapter number. With the Lore
     /// counter count (in `counters`) the client renders "Chapter N / final".
     /// `None` for non-Sagas.
     #[serde(default)]
@@ -2798,7 +2798,7 @@ pub enum GameEventWire {
     ScriedOrSurveiled { player: usize, surveil: bool },
     /// Wire mirror of `GameEvent::Proliferated` (CR 701.34).
     Proliferated { player: usize },
-    /// Wire mirror of `GameEvent::SagaFinalChapterResolved` (CR 714.2e).
+    /// Wire mirror of `GameEvent::SagaFinalChapterResolved` (CR 715.2e).
     SagaFinalChapterResolved { player: usize, saga: CardId },
     /// Wire mirror of `GameEvent::Foraged` (CR 701.61).
     Foraged { player: usize },
@@ -2908,7 +2908,7 @@ pub enum GameEventWire {
     CaseSolved { case: CardId },
     PoisonAdded { player: usize, amount: u32 },
     MonarchChanged { player: usize },
-    /// Wire mirror of `GameEvent::InitiativeTaken` (CR 726).
+    /// Wire mirror of `GameEvent::InitiativeTaken` (CR 727).
     InitiativeTaken { player: usize },
     CityBlessingGained { player: usize },
     RingTempted { player: usize, level: u32, bearer: Option<CardId> },
@@ -2956,15 +2956,15 @@ pub enum GameEventWire {
     /// Wire mirror of `GameEvent::PlayerLost` (CR 104.3 / 800.4a): `player`
     /// went out, and how (`LossCause::phrase`).
     PlayerLost { player: usize, cause: String },
-    /// Wire mirror of `GameEvent::ClassLevelReached` (CR 716.2). Lets client
+    /// Wire mirror of `GameEvent::ClassLevelReached` (CR 717.2). Lets client
     /// UIs log a Class levelling up.
     ClassLevelReached { player: usize, card_id: CardId, level: u8 },
     GameOver { winner: Option<usize> },
-    /// Wire mirror of `GameEvent::GameRestarted` (CR 727.1) — Karn Liberated.
+    /// Wire mirror of `GameEvent::GameRestarted` (CR 728.1) — Karn Liberated.
     GameRestarted { starter: usize },
     /// Wire mirror of `GameEvent::RolledToVisitAttractions` (CR 701.52a).
     RolledToVisitAttractions { player: usize, result: u8 },
-    /// Wire mirror of `GameEvent::AttractionVisited` (CR 717.5).
+    /// Wire mirror of `GameEvent::AttractionVisited` (CR 718.5).
     AttractionVisited { card_id: CardId },
     /// Wire mirror of `GameEvent::AttractionOpened` (CR 701.51c).
     AttractionOpened { card_id: CardId, player: usize },

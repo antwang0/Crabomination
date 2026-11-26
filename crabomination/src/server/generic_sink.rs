@@ -271,7 +271,7 @@ mod tests {
     }
 
     /// Wizard Class levels up with spare mana in the post-combat main phase
-    /// (CR 716.2a; never taken in an 80-group census, seed 28040).
+    /// (CR 717.2a; never taken in an 80-group census, seed 28040).
     #[test]
     fn wizard_class_levels_up_with_spare_mana() {
         let mut g = crate::game::multi_player_game(3);

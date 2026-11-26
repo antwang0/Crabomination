@@ -328,7 +328,7 @@ fn tricksters_talisman_copies_on_combat_damage() {
     assert_eq!(bears, 2, "a token copy");
 }
 
-/// CR 714.3b / 606.3 — Urza Assembles the Titans' chapter III (its third lore
+/// CR 715.3b / 606.3 — Urza Assembles the Titans' chapter III (its third lore
 /// counter, added after the draw step) lets Jace Beleren's loyalty abilities
 /// be activated twice this turn, and no more.
 #[test]
@@ -646,7 +646,7 @@ fn zurs_weirding_lets_others_bin_a_draw() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "declined: drawn");
 }
 
-/// CR 714 / 712 — The Dragon-Kami Reborn I exiles the Hill Giant face down
+/// CR 715 / 712 — The Dragon-Kami Reborn I exiles the Hill Giant face down
 /// with a hatching counter; III returns it as Dragon-Kami's Egg, and when the
 /// Egg dies the giant is cast for free (CR 118.9).
 #[test]

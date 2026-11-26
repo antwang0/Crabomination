@@ -5080,8 +5080,8 @@ pub fn dire_fleet_warmonger() -> CardDefinition {
 }
 
 /// Draconian Gate-Bot — {5} 4/2 artifact Robot. When it enters, choose one:
-/// open an Attraction (CR 717.4); or destroy target Attraction (to its
-/// owner's junkyard, CR 717.6).
+/// open an Attraction (CR 718.4); or destroy target Attraction (to its
+/// owner's junkyard, CR 718.6).
 pub fn draconian_gate_bot() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],

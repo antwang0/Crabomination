@@ -51,7 +51,7 @@ use crate::cube::CardFactory;
 pub struct DecklistParse {
     pub main: Vec<CardFactory>,
     pub sideboard: Vec<CardFactory>,
-    /// CR 717.2 — the supplementary Attraction deck. Attraction cards can't be
+    /// CR 718.2 — the supplementary Attraction deck. Attraction cards can't be
     /// in a main deck or sideboard, so they're routed here from any section.
     pub attractions: Vec<CardFactory>,
     /// CR 903.3 — the cards listed under a Commander header or marked
@@ -63,7 +63,7 @@ pub struct DecklistParse {
     pub unknown: Vec<UnknownCard>,
     /// Every sideboard card got there by Arena's blank-line convention alone
     /// — no `Sideboard` header, no `SB:` prefix. A Commander deck has no
-    /// sideboard (CR 903.5e), so in one a blank line is only grouping.
+    /// sideboard (CR 903.5f), so in one a blank line is only grouping.
     pub sideboard_is_implicit: bool,
 }
 
@@ -182,7 +182,7 @@ fn section_header(line: &str) -> Option<Section> {
     match h.to_ascii_lowercase().as_str() {
         "deck" | "mainboard" | "main" | "maindeck" | "main deck" => Some(Section::Main),
         "sideboard" | "side" => Some(Section::Side),
-        // CR 717.2 — the Attraction deck is its own supplementary list.
+        // CR 718.2 — the Attraction deck is its own supplementary list.
         // A header is optional: Attraction cards route there from any
         // section, since they can't legally be anywhere else.
         "attractions" | "attraction deck" => Some(Section::Main),
@@ -516,7 +516,7 @@ SB: 1 Grizzly Bears
         assert_eq!(bolts, 7);
     }
 
-    /// CR 717.2 — Attraction cards route to the Attraction deck no matter
+    /// CR 718.2 — Attraction cards route to the Attraction deck no matter
     /// which section they were listed under.
     #[test]
     fn attractions_route_to_their_own_deck() {
