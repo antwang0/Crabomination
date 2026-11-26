@@ -117,6 +117,18 @@ fn cr_400_7_a_gone_tokens_shuffle_self_does_not_take_the_next_spell() {
     assert!(g.players[0].graveyard.iter().any(|c| c.id == opt), "Opt resolves into the graveyard");
 }
 
+/// CR 613.1d / 604.3 — a characteristic-defining P/T counting a land type
+/// sees layer 4: Yavimaya makes the Island a Forest, so Traproot Kami counts
+/// it (it read printed types inside the layer pass).
+#[test]
+fn cr_604_3_a_land_type_cda_counts_layer_four_types() {
+    let mut g = main_phase(2);
+    let kami = g.add_card_to_battlefield(0, catalog::traproot_kami());
+    g.add_card_to_battlefield(0, catalog::island());
+    g.add_card_to_battlefield(1, catalog::yavimaya_cradle_of_growth());
+    assert_eq!(g.computed_permanent(kami).unwrap().toughness, 2, "Yavimaya and the Island");
+}
+
 /// CR 728.5 — exempted cards skip the reshuffle; Karn's −14 puts the cards it
 /// exiled onto the battlefield under its controller's control.
 #[test]

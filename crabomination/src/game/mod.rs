@@ -17420,16 +17420,16 @@ impl GameState {
                     }).count() as i32;
                     (base + n, base + n)
                 }
+                // CR 613.1d / 604.3 — a CDA sees layer 4: an Urborg-made Swamp
+                // or Yavimaya-made Forest counts (`lands_of_computed_type`).
                 crate::card::DynamicPt::LandsOfTypeInPlayPower { land_type, base_t } => {
-                    let n = self.battlefield.iter()
-                        .filter(|c| c.definition.subtypes.land_types.contains(&land_type))
-                        .count() as i32;
+                    let n = (0..self.players.len()).map(|p| self.lands_of_computed_type(p, land_type)).sum();
                     (n, base_t)
                 }
                 crate::card::DynamicPt::ForestsInPlay { base_p } => {
-                    let n = self.battlefield.iter()
-                        .filter(|c| c.definition.subtypes.land_types.contains(&crate::card::LandType::Forest))
-                        .count() as i32;
+                    let n = (0..self.players.len())
+                        .map(|p| self.lands_of_computed_type(p, crate::card::LandType::Forest))
+                        .sum();
                     (base_p, n)
                 }
                 crate::card::DynamicPt::InstantsSorceriesInGraveyardAndExile { base_t } => {

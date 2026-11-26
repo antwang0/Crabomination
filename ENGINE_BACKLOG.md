@@ -575,9 +575,11 @@ planner choices.
 - ✅ `bottom_self_cost` from the graveyard (Daniels); `MayPlayLandsFromGraveyard` read through `active_static` (Nog's
   Officer statics); `RulebreakerSpellsOneExtraColor` (Tolabow) and `RulebreakerCards::Lands` (Grizzlegom);
   `DynamicPt::LandsOfTypeOnBattlefield` (Swampbenders, computed types via `lands_of_computed_type`).
-- 🟡 Inside the layer pass every other land-type CDA reads printed types (`permanent_has_land_type` under
-  `layer_reads_are_printed`): Squelching Leeches and kin miss an Urborg-made Swamp. `lands_of_computed_type` is the
-  device; route the land-type `DynamicPt` arms through it.
+- 🟡 Inside the layer pass a land-type CDA read printed types (`permanent_has_land_type` under
+  `layer_reads_are_printed`). ✅ `LandsOfTypeInPlayPower` / `ForestsInPlay` now count through `lands_of_computed_type`
+  (`cr_604_3_a_land_type_cda_counts_layer_four_types`). Open: the filter-based arms (`PermanentsControlledMatching` with
+  `R::HasLandType` — Squelching Leeches) still miss an Urborg-made Swamp; the fix is in `requirement_on_permanent`'s
+  `HasLandType` leaf (a hot walker — price it).
 - OPEN cards (Commander-legal EDHREC singles short only their commander): Itazura, Yume, Miss Highwater, Sahir —
   each a new primitive (DECK_FEATURES `01WRuXc3U3`). Chief Montgomery Scott's deck moved to five missing.
 - ✅ *re-pinned by `01WRuXc5Gy` (`6117678c2`)* — **The CR moved under the pinned file.** The 2026-11-06 CR inserts 713 Meld Cards (713-733 shift +1: Monarch 726,
