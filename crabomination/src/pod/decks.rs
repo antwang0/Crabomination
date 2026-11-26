@@ -174257,3 +174257,32 @@ pub const JABS_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const GRANDMOTHER_GOBY_COMMANDERS: &[CardFactory] = &[grandmother_goby];
+
+/// **Grandmother Goby**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Grandmother Goby (EDHREC, fetched 2026-11-26).
+pub const GRANDMOTHER_GOBY_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, chimil_the_inner_sun, dawn_blessed_pennant, obelisk_of_urd,
+    patchwork_banner, rimefire_torque, sapphire_medallion, skullclamp, sol_ring, thought_vessel,
+    wizards_staff, boseiju_who_shelters_all, mistrise_village, mystic_sanctuary,
+    nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower, riptide_laboratory,
+    three_tree_city, war_room, archmage_emeritus, attuma_atlantean_warlord,
+    baral_chief_of_compliance, emperor_mihail_ii, kopala_warden_of_waves,
+    lier_disciple_of_the_drowned, lord_of_atlantis, lullmage_mentor, malevolent_hermit,
+    master_of_the_pearl_trident, merfolk_sovereign, merrow_reejerey, mindspring_merfolk,
+    mist_dancer, namor_the_sub_mariner, roaming_throne, seafloor_oracle, silver_myr,
+    sphinx_of_the_final_word, stonybrook_banneret, summon_leviathan, svyelun_of_sea_and_sky,
+    thryx_the_sudden_storm, tishanas_tidebinder, vodalian_hexcatcher, amphibian_downpour,
+    deeproot_pilgrimage, kindred_discovery, merrow_commerce, artistic_refusal,
+    commence_the_endgame, complete_the_circuit, eject, glen_elendras_answer,
+    harmonized_crescendo, high_tide, last_word, meeting_of_minds, out_cold, overwhelming_denial,
+    pongify, sink_into_stupor, transcendent_message, unexpected_assistance, curse_of_the_swine,
+    distant_melody, mists_of_lorien, raise_the_palisade, sea_gate_restoration, treasure_cruise,
+    wanderwine_farewell,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];

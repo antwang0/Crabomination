@@ -37669,6 +37669,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JABS_COMMANDERS,
             main: decks::JABS_MAIN,
         },
+        // Seat 6204: Grandmother Goby's EDHREC average deck. `--pod-decks 6204`.
+        PodDeck {
+            name: "Grandmother Goby (U)",
+            commanders: decks::GRANDMOTHER_GOBY_COMMANDERS,
+            main: decks::GRANDMOTHER_GOBY_MAIN,
+        },
     ]
 }
 
@@ -45808,6 +45814,7 @@ mod tests {
             ("Valko Indorian", &[0x2239]),
             ("Tolabow, Loch Rascal", &[0x223A]),
             ("Jabs, Mistress of Mockery", &[0x223B]),
+            ("Grandmother Goby", &[0x223C]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
