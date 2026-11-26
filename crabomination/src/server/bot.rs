@@ -306,6 +306,51 @@ impl BotStep {
     }
 }
 
+/// [`EvalWeights::rating_fixes`] bit: discards and loots shed the
+/// lowest-*valued* card (`card_ratings`), not the most expensive, and an
+/// optional discard is declined when the pitch is worth more than the gain.
+pub const RF_DISCARD: u32 = 1 << 0;
+/// [`EvalWeights::rating_fixes`] bit: aim fixes. An optional hostile slot is
+/// left empty when only our own permanents fit; bounce counts as hostile; a
+/// second answer isn't stacked on a target our own pending spell handles.
+pub const RF_AIM: u32 = 1 << 1;
+/// [`EvalWeights::rating_fixes`] bit: a damage / removal loyalty ability aims
+/// at what it kills, and isn't forced when it kills nothing.
+pub const RF_LOYALTY_AIM: u32 = 1 << 2;
+/// [`EvalWeights::rating_fixes`] bit: an until-end-of-turn −X/−X is scored
+/// by what dies (sweeps and single shots), not at the no-change baseline.
+pub const RF_SHRINK_EVAL: u32 = 1 << 3;
+/// [`EvalWeights::rating_fixes`] bit: an option settle values a known card on
+/// top of a library (Clash of Elements' owner's choice).
+pub const RF_LIBRARY_TOP: u32 = 1 << 4;
+/// [`EvalWeights::rating_fixes`] bit: the keyword-shield sink runs in duels
+/// (Liliana the Faultless), not only for a commander.
+pub const RF_DUEL_SHIELD: u32 = 1 << 5;
+/// [`EvalWeights::rating_fixes`] bit: timing. A tap-to-loot ability waits for
+/// the second main phase when its creature could attack; an instant with a
+/// rider on an attacking target waits for an attacker; flash creatures and
+/// instant removal may be held for the opponent's turn.
+pub const RF_TIMING: u32 = 1 << 6;
+/// Every [`EvalWeights::rating_fixes`] bit by ladder name.
+pub const RATING_FIX_NAMES: &[(&str, u32)] = &[
+    ("discard", RF_DISCARD),
+    ("aim", RF_AIM),
+    ("loyaim", RF_LOYALTY_AIM),
+    ("shrink", RF_SHRINK_EVAL),
+    ("libtop", RF_LIBRARY_TOP),
+    ("shield", RF_DUEL_SHIELD),
+    ("timing", RF_TIMING),
+];
+
+/// `"discard,aim"` (or `"all"`) -> the [`EvalWeights::rating_fixes`] mask.
+pub fn rating_fix_mask(names: &str) -> Option<u32> {
+    if names == "all" {
+        return Some(RATING_FIX_NAMES.iter().fold(0, |m, (_, b)| m | b));
+    }
+    names.split(',').try_fold(0, |m, n| RATING_FIX_NAMES.iter().find(|(k, _)| *k == n).map(|(_, b)| m | b))
+}
+
+
 /// Tunable weights for the bot's board evaluation, so a change to how the
 /// bot *values* things can be A/B-laddered against the previous numbers
 /// instead of argued about. Every profile is internally consistent: all
@@ -985,6 +1030,10 @@ pub struct EvalWeights {
     /// In `fra-fixes` (2026-11-22 gate, `.ladder/fix1`: FRA 50.0 x4, SOS
     /// 50.0 x2; Chandra, Chill of Compliance +2.1 ±1.8 on the play rating).
     pub loyalty_fixes: bool,
+    /// The 2026-11-26 "FRA ratings the bots distort" fixes, one bit each
+    /// (the `RF_*` constants) so each can be gated alone: profile
+    /// `fixes+rf:<names>` in `bot_ladder`. Zero (off) everywhere until gated.
+    pub rating_fixes: u32,
     /// MCTS, own post-combat main: a creature cast whose searched mean is
     /// within 0.02 of "pass" is cast. The rollout after a pass casts it next
     /// turn, so the arms tie and noise picked pass: the client pilot idled
@@ -1699,6 +1748,7 @@ impl EvalWeights {
             hand_abilities_wide: false,
             skip_noop_casts: false,
             loyalty_fixes: false,
+            rating_fixes: 0,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -1849,6 +1899,7 @@ impl EvalWeights {
             hand_abilities_wide: false,
             skip_noop_casts: false,
             loyalty_fixes: false,
+            rating_fixes: 0,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -1982,6 +2033,7 @@ impl EvalWeights {
             hand_abilities_wide: false,
             skip_noop_casts: false,
             loyalty_fixes: false,
+            rating_fixes: 0,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -3152,6 +3204,7 @@ impl EvalWeights {
             hand_abilities_wide: false,
             skip_noop_casts: false,
             loyalty_fixes: false,
+            rating_fixes: 0,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -3310,6 +3363,7 @@ impl EvalWeights {
             hand_abilities_wide: false,
             skip_noop_casts: false,
             loyalty_fixes: false,
+            rating_fixes: 0,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,
@@ -3583,6 +3637,7 @@ impl EvalWeights {
             hand_abilities_wide: false,
             skip_noop_casts: false,
             loyalty_fixes: false,
+            rating_fixes: 0,
             mcts_cast_ties: false,
             counter_reserve: false,
             counter_bar_low: false,

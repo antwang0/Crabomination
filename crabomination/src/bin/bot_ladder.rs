@@ -791,6 +791,10 @@ fn parse_profile(name: &str) -> Option<Pilot> {
         // top of `fra-fixes`, and all three together.
         "fixes+wide" => Some(Pilot::Scored(EvalWeights { hand_abilities_wide: true, ..EvalWeights::fra_fixes_on() })),
         "fixes+noop" => Some(Pilot::Scored(EvalWeights { skip_noop_casts: true, ..EvalWeights::fra_fixes_on() })),
+        // 2026-11-26 "FRA ratings the bots distort": `fixes+rf:discard,aim`
+        // (or `all`) on top of `fra-fixes`.
+        p if p.starts_with("fixes+rf:") => crabomination::server::bot::rating_fix_mask(&p[9..])
+            .map(|m| Pilot::Scored(EvalWeights { rating_fixes: m, ..EvalWeights::fra_fixes_on() })),
         "fixes+loy" => Some(Pilot::Scored(EvalWeights { loyalty_fixes: true, ..EvalWeights::fra_fixes_on() })),
         "fixes+p3" => Some(Pilot::Scored(EvalWeights {
             hand_abilities_wide: true,
