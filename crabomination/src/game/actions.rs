@@ -4398,8 +4398,8 @@ impl crate::game::GameState {
                     .static_abilities
                     .iter()
                     .any(|sa| {
-                        // Through `active_static`: Nog grants it only "while he
-                        // is an Officer".
+                        // Through the gate: Nog grants it only "while he is an
+                        // Officer".
                         self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::MayPlayLandsFromGraveyard))
                             || (self.active_player_idx == player
                                 && matches!(
