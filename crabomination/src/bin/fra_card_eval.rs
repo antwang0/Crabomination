@@ -1709,7 +1709,7 @@ fn field_rows_labelled(
 /// FRA card whose colours fit `set` replaces the deck's lowest-sim-value
 /// spell, pool or not — so a trace census sees cards the rated builder
 /// leaves out. Not a measurement of the decks.
-fn force_cards(deck: &mut Vec<Factory>, set: ColorSet) {
+fn force_cards(deck: &mut [Factory], set: ColorSet) {
     static FORCED: std::sync::OnceLock<Vec<Factory>> = std::sync::OnceLock::new();
     let forced = FORCED.get_or_init(|| {
         let Ok(spec) = std::env::var("CRAB_FORCE_CARDS") else { return Vec::new() };

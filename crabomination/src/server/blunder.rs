@@ -599,7 +599,7 @@ pub fn hold_or_spend_truth(pos: &Position, cards: CounterCards, n: u64, honest: 
             }
             g.rng.reseed(k ^ 0xC0FF_EE00);
             if honest {
-                super::bot::determinize_hidden(&mut g, 0, k.wrapping_mul(0x9E37_79B9) ^ 0x4F4E_E57);
+                super::bot::determinize_hidden(&mut g, 0, k.wrapping_mul(0x9E37_79B9) ^ 0x04F4_EE57);
             }
             if line == 1 {
                 if g.perform_action(cards.spend()).is_err() {

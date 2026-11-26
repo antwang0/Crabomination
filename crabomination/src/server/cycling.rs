@@ -83,15 +83,16 @@ pub(super) fn pick_landcycle(state: &GameState, seat: usize) -> Option<GameActio
         .hand
         .iter()
         .filter_map(|c| {
-            let (cost, fixes) = match c.definition.keywords.iter().find_map(|k| match k {
-                Keyword::Landcycling(mc, lt) => Some((mc.clone(), Some(*lt))),
-                Keyword::Typecycling(spec) => Some((spec.0.clone(), None)),
-                _ => None,
-            })? {
+            let (cost, fixes) = {
+                let (mc, lt) = c.definition.keywords.iter().find_map(|k| match k {
+                    Keyword::Landcycling(mc, lt) => Some((mc.clone(), Some(*lt))),
+                    Keyword::Typecycling(spec) => Some((spec.0.clone(), None)),
+                    _ => None,
+                })?;
                 // `color_fixing`: the land this finds makes a colour another
                 // spell in hand is stranded on — cycle for it with lands
                 // enough, or a land of the wrong colour, in hand.
-                (mc, lt) => {
+                {
                     let missing = super::bot::missing_colors(state, seat, Some(c.id));
                     let supply = super::bot::seat_color_supply(state, seat);
                     // The cycler itself cannot be cast next turn: too dear

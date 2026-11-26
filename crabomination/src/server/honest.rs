@@ -179,7 +179,7 @@ fn pop_belief(g: &GameState, seat: usize, pool: &'static PoolIx, pop: &HashMap<S
         return Some(b);
     }
     let logits: Vec<f32> = (0..pool.len())
-        .map(|i| (pop.get(pool.def(i).name.as_ref() as &str).copied().unwrap_or(0.0) + 0.5).ln())
+        .map(|i| (pop.get(pool.def(i).name).copied().unwrap_or(0.0) + 0.5).ln())
         .collect();
     let per_slot = vec![(logits.clone(), logits); slots.len().saturating_sub(1)];
     let b = Rc::new(build_belief(g, seat, pool, &per_slot)?);

@@ -3231,7 +3231,7 @@ fn write_holdout(args: &Args, vocab: &Vocab, path: &std::path::Path) {
             rows.push(rec.rows[2 * i + 1].clone());
         }
         games += 1;
-        if games % 250 == 0 {
+        if games.is_multiple_of(250) {
             eprintln!("holdout: {games} games, {} rows", rows.len());
         }
     }
