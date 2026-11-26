@@ -173978,3 +173978,58 @@ pub const DANIELS_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const TASHA_YAR_COMMANDERS: &[CardFactory] = &[tasha_yar_out_of_time];
+
+/// **Tasha Yar, Out of Time**'s EDHREC average deck, card for card:
+/// 67 nonbasic cards + 32 Mountains = 99.
+/// Tasha Yar, Out of Time (EDHREC, fetched 2026-11-26).
+pub const TASHA_YAR_MAIN: &[CardFactory] = &[
+    arcane_signet, cloud_key, cursed_mirror, diamond_pick_axe, embercleave, grafted_wargear,
+    heirloom_blade, mirror_box, relic_of_legends, ruby_medallion, skullclamp, sol_ring,
+    forge_of_heroes, treasure_vault, valakut_the_molten_pinnacle, aether_membrane,
+    atsushi_the_blazing_sky, blazing_firesinger, captain_lannery_storm, defiler_of_instinct,
+    epochrasite, fathom_fleet_swordjack, flamekin_herald, glint_horn_buccaneer,
+    iraxxa_empress_of_mars, jaxis_the_troublemaker, kari_zev_skyship_raider, memory_worm,
+    party_thrasher, port_razer, pyre_rhymer, reckless_lackey, redoubled_stormsinger,
+    riveteers_requisitioner, silent_arbiter, sunspine_lynx, witty_roastmaster, young_pyromancer,
+    charred_foyer_warped_space, goblin_oriflamme, guild_artisan, impact_tremors,
+    possibility_storm, shadow_of_the_goblin, wild_wasteland, audacious_swap, battle_hymn,
+    chaos_warp, dead_gone, desperate_ritual, grab_the_reins, lightning_bolt, tibalts_trickery,
+    unexpected_windfall, wild_magic_surge, zariel_archduke_of_avernus, blasphemous_act,
+    electroduplicate, ensnared_by_the_mara, faithless_looting, impending_flux, insurrection,
+    reckless_impulse, song_mad_treachery, twinflame, vandalblast, waltz_of_rage,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const NEELIX_COMMANDERS: &[CardFactory] = &[neelix_moral_support];
+
+/// **Neelix, Moral Support**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Forests = 99.
+/// Neelix, Moral Support (EDHREC, fetched 2026-11-26).
+pub const NEELIX_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, basilisk_collar, genesis_device, hunters_axe, instant_ramen,
+    loxodon_warhammer, replicator, shadowspear, swiftfoot_boots, tea_earl_grey_hot,
+    the_earth_crystal, u_s_s_discovery_at_black_alert, u_s_s_voyager_lone_wanderer,
+    blighted_woodland, gingerbread_cabin, mosswort_bridge, myriad_landscape,
+    oran_rief_the_vastwood, q_continuum, rogues_passage, shifting_woodland, tyrite_sanctum,
+    witchs_clinic, academy_manufactor, arbor_elf, blossoming_bogbeast, bristlebud_farmer,
+    curious_pair, elanor_gardner, essence_warden, gala_greeters, gilded_goose,
+    ginger_queen_of_sweets, greenhouse_propagator, jaddi_offshoot, jake_sisko_war_correspondent,
+    kogla_the_titan_ape, lily_bowen_raging_grandma, llanowar_elves, michelangelo_the_heart,
+    peregrin_took, prosperous_innkeeper, reclamation_sage, syr_ginger_the_meal_ender,
+    tireless_provisioner, tough_cookie, vigor, virulent_emissary, yorvo_lord_of_garenbrig,
+    comforting_counsel, doubling_season, fight_rigging, hardened_scales, heroic_feast,
+    ninja_pizza, party_dude, rancor, sphere_grid, stable_wormhole, trail_of_crumbs,
+    utopia_sprawl, beast_within, heroic_intervention, krosan_grip, pawpatch_formation,
+    return_of_the_wildspeaker, strength_of_will, tamiyos_safekeeping, bumis_feast_lecture,
+    harmonize, rampant_growth, rishkars_expertise, spider_food, venom_blast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest,
+];

@@ -37609,6 +37609,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::DANIELS_COMMANDERS,
             main: decks::DANIELS_MAIN,
         },
+        // Seat 6194: Tasha Yar, Out of Time's EDHREC average deck. `--pod-decks 6194`.
+        PodDeck {
+            name: "Tasha Yar, Out of Time (R)",
+            commanders: decks::TASHA_YAR_COMMANDERS,
+            main: decks::TASHA_YAR_MAIN,
+        },
+        // Seat 6195: Neelix, Moral Support's EDHREC average deck. `--pod-decks 6195`.
+        PodDeck {
+            name: "Neelix, Moral Support (G)",
+            commanders: decks::NEELIX_COMMANDERS,
+            main: decks::NEELIX_MAIN,
+        },
     ]
 }
 
@@ -45738,6 +45750,8 @@ mod tests {
             ("Rok-Tahk, Budding Scientist", &[0x222F]),
             ("Georgiou, Terran Emperor", &[0x2230]),
             ("Daniels, Temporal Agent", &[0x2231]),
+            ("Tasha Yar, Out of Time", &[0x2232]),
+            ("Neelix, Moral Support", &[0x2233]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
