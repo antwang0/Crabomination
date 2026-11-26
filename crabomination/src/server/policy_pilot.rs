@@ -749,6 +749,30 @@ pub fn scored_moves(g: &GameState, seat: usize, m: &decision_menu::Menu, slot: u
     out
 }
 
+/// The hybrid's list cut ([`crate::server::MctsConfig::menu_cut`]): `m`
+/// reduced to the `k` moves the root-only net in `slot` scores highest (one
+/// forward off the decision state), in list order, plus move `keep` (the
+/// search's anchor). `None` when `slot` holds no root-only net — the caller
+/// then scores the whole list.
+pub fn cut_menu(g: &GameState, seat: usize, m: &decision_menu::Menu, slot: u8, k: usize, keep: Option<usize>) -> Option<decision_menu::Menu> {
+    if !super::net_eval::slot_root_only(slot) {
+        return None;
+    }
+    let base = decision_base(g, seat);
+    let (root, refs) = action_inputs(&base, seat, &m.moves);
+    let t = super::net_eval::policy_action_terms(&root, slot, m.kind.index(), &refs)?;
+    let mut order: Vec<usize> = (0..m.moves.len()).collect();
+    order.sort_by(|&a, &b| t[b].partial_cmp(&t[a]).unwrap_or(std::cmp::Ordering::Equal));
+    order.truncate(k.max(1));
+    if let Some(i) = keep
+        && !order.contains(&i)
+    {
+        order.push(i);
+    }
+    order.sort_unstable();
+    Some(decision_menu::Menu { kind: m.kind, moves: order.into_iter().map(|i| m.moves[i].clone()).collect(), truncated: m.truncated })
+}
+
 /// The determinized copy a search decision's candidates are settled from —
 /// a fixed function of the decision, so the arms' states and the action
 /// head's root can be rebuilt to match.
@@ -1102,6 +1126,53 @@ mod tests {
     /// The net slots are process-global; these tests use the FRA slot,
     /// which no other test installs into, and serialize among themselves.
     static SLOT: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// The hybrid's cut keeps the root-only net's top moves in list order,
+    /// always carries the anchor, and is off without a root-only net.
+    #[test]
+    fn the_hybrid_cut_keeps_the_top_moves_and_the_anchor() {
+        let _g = SLOT.lock().unwrap_or_else(|e| e.into_inner());
+        let slot = super::super::net_eval::SLOT_FRA;
+        let w = EvalWeights::default();
+        let mut g = super::super::action_gap::start_game(&sealed_template(5), &w, 5);
+        let mut bots = [super::super::bot::HeuristicBot::with_weights(w), super::super::bot::HeuristicBot::with_weights(w)];
+        let mut seen = 0;
+        for _ in 0..4000 {
+            if g.is_game_over() || seen >= 5 {
+                break;
+            }
+            for seat in 0..2 {
+                let Some(m) = decision_menu::menu(&g, seat, &w) else { continue };
+                if m.moves.len() < 4 {
+                    continue;
+                }
+                assert!(cut_menu(&g, seat, &m, slot, 2, None).is_none(), "no root-only net, no cut");
+                super::super::net_eval::set_slot(slot, Some(std::sync::Arc::new(RootPolicy)));
+                let keep = m.moves.len() - 1;
+                let c = cut_menu(&g, seat, &m, slot, 2, Some(keep)).expect("a cut");
+                let plain = cut_menu(&g, seat, &m, slot, 2, None).expect("a cut");
+                super::super::net_eval::set_slot(slot, None);
+                assert_eq!(plain.moves.len(), 2);
+                assert!(c.moves.len() == 2 || c.moves.len() == 3, "{}", c.moves.len());
+                let pos = |a: &GameAction| m.moves.iter().position(|x| format!("{x:?}") == format!("{a:?}")).expect("from the list");
+                let idx: Vec<usize> = c.moves.iter().map(pos).collect();
+                assert!(idx.windows(2).all(|p| p[0] < p[1]), "list order: {idx:?}");
+                assert!(idx.contains(&keep), "the anchor is carried: {idx:?}");
+                assert_eq!(c.kind, m.kind);
+                seen += 1;
+            }
+            let mut acted = false;
+            for (seat, bot) in bots.iter_mut().enumerate() {
+                let Some(a) = bot.next_action(&g, seat) else { continue };
+                acted = g.perform_action(a).is_ok();
+                break;
+            }
+            if !acted {
+                let _ = g.perform_action(GameAction::PassPriority);
+            }
+        }
+        assert!(seen >= 3, "only {seen} lists of four or more");
+    }
 
     fn sealed_template(seed: u64) -> GameState {
         let build = |k: u64| crate::selfplay::heuristic_sealed_build(&crate::selfplay::sealed_pool(seed ^ k), seed ^ (k << 4));

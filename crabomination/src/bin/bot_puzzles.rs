@@ -918,6 +918,14 @@ fn main() {
         )
         .expect("load the policy net");
     }
+    // A second policy net: `-pb`'s priors, or `-hy<N>`'s root-only cutter.
+    if let Ok(pp) = std::env::var("CRAB_POLICY_NET_B") {
+        crabomination::server::net_eval::load_slot(
+            crabomination::server::net_eval::SLOT_POLICY_B,
+            std::path::Path::new(&pp),
+        )
+        .expect("load the second policy net");
+    }
     if args.iter().any(|a| a == "--leaf-pairs") {
         run_leaf_pairs();
         return;

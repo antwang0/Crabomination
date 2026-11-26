@@ -457,6 +457,23 @@ pub struct MctsConfig {
     /// Ladder suffix `-anm<hundredths>`; on wherever the menu search plays
     /// ([`MctsConfig::with_combat_fix`]).
     pub menu_anchor_material: bool,
+    /// The hybrid move scoring (ML_NOTES "Six experiments", 2026-11-26): a
+    /// root-only net in [`super::net_eval::SLOT_POLICY_B`] scores the whole
+    /// list in one forward and only its top `menu_cut` moves (plus the
+    /// anchor) get a successor state and a [`Self::policy_slot`] logit. 0
+    /// (default) is off: every move gets a successor. Ladder suffix
+    /// `-hy<N>`.
+    pub menu_cut: usize,
+    /// Answer a prompt (a `Kind::Prompt` list of two or more) with the
+    /// policy's top move — its prompt-kind logit over the candidate
+    /// states, no search — instead of the fallback heuristic. Only where
+    /// the prompt window is not searched. Ladder suffix `-pp`.
+    pub policy_prompts: bool,
+    /// Phase 5's target, sharpened: the search's pick is recorded at least
+    /// this many logits above every other arm (the raw-q target's top move
+    /// differs from the prior's on 15.9 % of decisions, the search's pick
+    /// on 42 % — round 88 C3). 0.0 (default) is the raw-q target.
+    pub target_pick_bonus: f64,
     /// A decided rollout's reward moves this far toward 0.5 per turn the
     /// rollout ran, so a win now outranks the same win later (and a later
     /// loss a sooner one). Undecided leaves are untouched. Without it every
@@ -598,6 +615,9 @@ impl Default for MctsConfig {
             menu_declare_fix: false,
             menu_anchor: -1.0,
             menu_anchor_material: false,
+            menu_cut: 0,
+            policy_prompts: false,
+            target_pick_bonus: 0.0,
             menu_hold_arm: false,
             deadline_ms: 0,
             win_discount: 0.0,
@@ -682,6 +702,8 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
     let w = parts.next()?;
     let (mut conf, mut pol, mut horizon, mut iters) = (2.0, None, 3u32, 256u32);
     let mut policy_slot = super::net_eval::SLOT_CANDIDATE;
+    let mut cut = 0usize;
+    let mut policy_prompts = false;
     let mut weights = EvalWeights::net_on_default().with_fra_fixes();
     let mut arms = MctsConfig::default().menu_arms;
     let (mut crn, mut declare_fix, mut anchor, mut anchor_material) = (false, false, -1.0f64, false);
@@ -737,6 +759,10 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
             arms = n;
         } else if p == "pb" {
             policy_slot = super::net_eval::SLOT_POLICY_B;
+        } else if p == "pp" {
+            policy_prompts = true;
+        } else if let Some(n) = p.strip_prefix("hy") {
+            cut = n.parse().ok()?;
         } else if p == "vb" {
             weights.net_slot = super::net_eval::SLOT_VALUE_B;
         } else if let Some(c) = p.strip_prefix("conf") {
@@ -773,6 +799,8 @@ pub fn menu_profile(name: &str) -> Option<MctsConfig> {
         menu_declare_fix: declare_fix,
         menu_anchor: anchor,
         menu_anchor_material: anchor_material,
+        menu_cut: cut,
+        policy_prompts,
         win_discount,
         two_seat_leaf: two_seat,
         menu_no_noise: no_noise,
@@ -953,12 +981,13 @@ fn record_search_target(
     }
     let mean = sum / n as f64;
     let max_v = st.visits.iter().copied().max().unwrap_or(0);
-    let target: Vec<f32> = (0..logits.len())
+    let mut target: Vec<f32> = (0..logits.len())
         .map(|i| {
             let q = if st.visits[i] > 0 { st.total[i] / st.visits[i] as f64 } else { mean };
             (logits[i] + sigma_q(q, max_v, cfg.gumbel_c_visit, cfg.gumbel_c_scale)) as f32
         })
         .collect();
+    sharpen_target(&mut target, st.best, cfg.target_pick_bonus);
     let successors: Vec<Option<GameState>> =
         states.into_iter().enumerate().map(|(i, g)| (!st.dead[i]).then_some(g)).collect();
     // The action head's input, off the same determinized copy the arms'
@@ -980,6 +1009,79 @@ fn record_search_target(
             ..Default::default()
         },
     );
+}
+
+/// Most prompts a turn the policy answers under
+/// [`MctsConfig::policy_prompts`] before the fallback takes over.
+const POLICY_PROMPT_CAP: u32 = 40;
+
+/// [`MctsConfig::target_pick_bonus`]: lift `target[pick]` to at least
+/// `bonus` above every other entry. A no-op at `bonus <= 0`.
+fn sharpen_target(target: &mut [f32], pick: usize, bonus: f64) {
+    if bonus <= 0.0 || pick >= target.len() {
+        return;
+    }
+    let rest = target.iter().enumerate().filter(|(i, _)| *i != pick).map(|(_, &t)| t).fold(f32::NEG_INFINITY, f32::max);
+    if rest.is_finite() {
+        target[pick] = target[pick].max(rest + bonus as f32);
+    }
+}
+
+/// `CRAB_SEARCH_CENSUS=1`: what the menu search did, summed over the run
+/// (`bot_ladder` prints [`report`]). Counts both seats.
+pub mod search_census {
+    use std::sync::atomic::{AtomicU64, Ordering::Relaxed};
+
+    /// `[0 ranked menu decisions, 1 moves on their lists, 2 successors
+    /// scored, 3 lists the hybrid cut, 4..8 attack windows: with an anchor
+    /// arm and a search / the search agreed with the anchor / the anchor
+    /// stood on the margin / the search overrode it, 8..12 the same for
+    /// block windows, 12 sum of the gap (thousandths) where the anchor
+    /// stood, 13 open combat windows decided without a search, 14 searched
+    /// open combat windows with no anchor arm, 15 prompts the policy
+    /// answered]`.
+    pub static N: [AtomicU64; 16] = [const { AtomicU64::new(0) }; 16];
+
+    pub fn on() -> bool {
+        static ON: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+        *ON.get_or_init(|| std::env::var("CRAB_SEARCH_CENSUS").is_ok_and(|v| !v.is_empty() && v != "0"))
+    }
+
+    pub fn add(i: usize, n: u64) {
+        if on() {
+            N[i].fetch_add(n, Relaxed);
+        }
+    }
+
+    pub fn report() -> Option<String> {
+        if !on() {
+            return None;
+        }
+        let n: Vec<u64> = N.iter().map(|x| x.load(Relaxed)).collect();
+        let per = |a: u64, b: u64| if b == 0 { 0.0 } else { a as f64 / b as f64 };
+        let side = |name: &str, o: usize| {
+            format!(
+                "{name}: {} searched with an anchor arm — search agreed {:.1} %, anchor stood on the margin {:.1} %, search overrode {:.1} %",
+                n[o],
+                100.0 * per(n[o + 1], n[o]),
+                100.0 * per(n[o + 2], n[o]),
+                100.0 * per(n[o + 3], n[o]),
+            )
+        };
+        Some(format!(
+            "  search_census {} ranked decisions, {:.2} moves a list, {:.2} successors scored a decision, {} lists cut\n  {}\n  {}\n               mean gap where the anchor stood {:.3}; {} open combat windows unsearched, {} searched with no anchor arm; {} prompts answered by the policy",
+            n[0],
+            per(n[1], n[0]),
+            per(n[2], n[0]),
+            n[3],
+            side("attack", 4),
+            side("block", 8),
+            per(n[12], n[6] + n[10]) / 1000.0,
+            n[13],
+            n[14],
+            n[15],
+        ))
+    }
 }
 
 /// Standard-Gumbel noise: `-ln(-ln u)`, u uniform in (0, 1). Added once
@@ -1087,6 +1189,11 @@ pub struct MctsBot {
     /// Picks that were not a declaration in the (turn, step) combat window
     /// still open ([`MctsConfig::menu_declare_fix`]).
     menu_predeclared: Option<((u32, TurnStep), u8)>,
+    /// [`MctsConfig::policy_prompts`]: prompts the policy has answered this
+    /// turn. Past [`POLICY_PROMPT_CAP`] the fallback answers, so a prompt
+    /// the policy's answer re-opens (an optional cost it can't stop paying,
+    /// a redo) can't hold the game.
+    policy_prompted: (u32, u32),
 }
 
 /// Stack for a root-parallel search worker: 32 MB like the engine's other
@@ -1096,7 +1203,7 @@ use crate::server::ENGINE_STACK_BYTES as WORKER_STACK_BYTES;
 
 impl MctsBot {
     pub fn new(cfg: MctsConfig) -> Self {
-        Self { cfg, fallback: HeuristicBot::with_weights(cfg.weights), menu_declared: None, menu_predeclared: None }
+        Self { cfg, fallback: HeuristicBot::with_weights(cfg.weights), menu_declared: None, menu_predeclared: None, policy_prompted: (0, 0) }
     }
 
     /// How the menu search keys its moves.
@@ -1911,6 +2018,25 @@ impl MctsBot {
             }
             Kind::Priority => MENU_INSTANT,
         };
+        if self.cfg.policy_prompts && window == MENU_PROMPT && self.policy_prompted.0 != state.turn_number {
+            self.policy_prompted = (state.turn_number, 0);
+        }
+        if self.cfg.policy_prompts
+            && window == MENU_PROMPT
+            && self.cfg.menu_windows & window == 0
+            && m.moves.len() >= 2
+            && self.policy_prompted.1 < POLICY_PROMPT_CAP
+            && let Some((a, _, _)) = super::policy_pilot::scored_moves(state, seat, &m, self.cfg.policy_slot)
+                .into_iter()
+                .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
+        {
+            search_census::add(15, 1);
+            self.policy_prompted.1 += 1;
+            if self.policy_prompted.1 == POLICY_PROMPT_CAP && std::env::var_os("CRAB_PP_TRACE").is_some() {
+                eprintln!("policy prompts: cap hit on turn {} at {:?} ({} moves), answered {a:?}", state.turn_number, m.kind, m.moves.len());
+            }
+            return Some(a);
+        }
         if self.cfg.menu_windows & window == 0 || m.moves.len() < 2 {
             return None;
         }
@@ -1977,6 +2103,7 @@ impl MctsBot {
         }
         let anchor = anchor_key.as_ref().and_then(|k| arms.iter().position(|a| &key(a) == k));
         let pick = if arms.len() == 1 || self.confident(&logits) {
+            search_census::add(13, u64::from(open));
             arms[0].clone()
         } else {
             let st = self.prior_search(state, seat, &arms, hold, &logits, noise, anchor);
@@ -1989,6 +2116,26 @@ impl MctsBot {
                 }
                 _ => st.best,
             };
+            if open && search_census::on() {
+                let o = if attacking { 4 } else { 8 };
+                match anchor {
+                    Some(a) if st.visits[a] > 0 => {
+                        search_census::add(o, 1);
+                        if a == st.best {
+                            search_census::add(o + 1, 1);
+                        } else if best == a {
+                            search_census::add(o + 2, 1);
+                            let gap = q(st.best) - q(a);
+                            if gap.is_finite() {
+                                search_census::add(12, (gap.max(0.0) * 1000.0) as u64);
+                            }
+                        } else {
+                            search_census::add(o + 3, 1);
+                        }
+                    }
+                    _ => search_census::add(14, 1),
+                }
+            }
             // `CRAB_MCTS_ROOT=1`: the menu search's arms on stderr — prior
             // logit, Gumbel draw, rollouts, mean reward — and its pick.
             if root_log() {
@@ -2042,7 +2189,20 @@ impl MctsBot {
         keep: Option<&str>,
     ) -> (Vec<GameAction>, Vec<f64>, Option<Vec<GameState>>, Option<Vec<f64>>) {
         let k = self.cfg.menu_arms.max(1);
+        let cut_menu = (self.cfg.menu_cut > 0 && m.moves.len() > self.cfg.menu_cut)
+            .then(|| {
+                let keying = self.keying();
+                let kept = keep.and_then(|kk| m.moves.iter().position(|a| super::decision_menu::key_with(state, seat, a, keying) == kk));
+                super::policy_pilot::cut_menu(state, seat, m, super::net_eval::SLOT_POLICY_B, self.cfg.menu_cut, kept)
+            })
+            .flatten();
+        search_census::add(3, u64::from(cut_menu.is_some()));
+        let full = m.moves.len();
+        let m = cut_menu.as_ref().unwrap_or(m);
         let mut scored = super::policy_pilot::scored_moves(state, seat, m, self.cfg.policy_slot);
+        search_census::add(0, 1);
+        search_census::add(1, full as u64);
+        search_census::add(2, scored.len() as u64);
         if scored.is_empty() {
             let (mut arms, logits) = super::policy_pilot::ranked_arms(state, seat, m, self.cfg.policy_slot, k);
             let key = |a: &GameAction| super::decision_menu::key_with(state, seat, a, self.keying());
@@ -2759,6 +2919,34 @@ mod tests {
     /// then rejects it and the bot loses its combat. `pick_attacks_scored`
     /// can't show this (its direct `declare_attackers` skips illegal ones);
     /// only the Monte Carlo consumer, which the training actors use, can.
+    #[test]
+    fn the_hybrid_cut_and_policy_prompts_parse_and_default_off() {
+        let base = menu_profile("mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr-ho-hc-sv-rs-kx").expect("the client pilot");
+        assert!(base.menu_cut == 0 && !base.policy_prompts && base.target_pick_bonus == 0.0);
+        let hy = menu_profile("mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr-ho-hc-sv-rs-kx-hy4-pp").expect("hybrid");
+        assert!(hy.menu_cut == 4 && hy.policy_prompts);
+        // The neighbours that share a first letter still read as themselves.
+        assert!(hy.weights.hold_removal && hy.menu_hold_arm && hy.hold_all_casts);
+        assert_eq!(hy.policy_slot, crate::server::net_eval::SLOT_CANDIDATE);
+    }
+
+    #[test]
+    fn a_sharpened_target_puts_the_pick_on_top_and_zero_leaves_it() {
+        let mut t = vec![1.0f32, 3.0, 2.0];
+        sharpen_target(&mut t, 2, 0.0);
+        assert_eq!(t, vec![1.0, 3.0, 2.0]);
+        sharpen_target(&mut t, 2, 1.0);
+        assert_eq!(t, vec![1.0, 3.0, 4.0]);
+        // Already clear of the margin: unchanged.
+        let mut u = vec![0.0f32, 5.0];
+        sharpen_target(&mut u, 1, 1.0);
+        assert_eq!(u, vec![0.0, 5.0]);
+        // A lone arm has nothing to clear.
+        let mut one = vec![0.5f32];
+        sharpen_target(&mut one, 0, 1.0);
+        assert_eq!(one, vec![0.5]);
+    }
+
     #[test]
     fn combat_search_never_returns_an_illegal_declaration() {
         use crate::card::Keyword;

@@ -170,6 +170,10 @@ struct Args {
     /// UCB1 captures only (Gumbel logits aren't win probabilities); needs
     /// `--record-decisions` and MCTS actors.
     search_value_weight: f32,
+    /// `--target-pick-bonus F`: `MctsConfig::target_pick_bonus` for the
+    /// menu-search actors (the searched pick at least F logits above every
+    /// other arm in the recorded policy target). 0 = the raw-q target.
+    target_pick_bonus: f64,
     /// TD(lambda) mixing for the win target. 1.0 (default) is the pure Monte
     /// Carlo label (the row's own game result), reproducing every prior gate
     /// round; below 1.0 the target bootstraps through the net's estimate of
@@ -377,6 +381,10 @@ struct Args {
     /// so the net learns from the decks the client's opponent now builds
     /// (round 84). Any other pool keeps `heuristic_sealed_build`.
     actor_rated_decks: bool,
+    /// `--actor-mix sos:2,fra:1,cube:1`: each actor game's format drawn at
+    /// these weights (sealed SOS, sealed FRA, two-colour cube decks), so one
+    /// net trains on every pool's cards. Empty = the process's sealed set.
+    actor_mix: Vec<(ActorMode, u32)>,
     /// Build training decks with the gate-passed deck net as judge
     /// (best-of-32 over the heuristic's noisy-greedy candidates) instead of
     /// the heuristic builder's own pick, so actors play the decks of the one
@@ -447,6 +455,7 @@ fn parse_args() -> Args {
         best_policy: false,
         opp_head: false,
         search_value_weight: 0.0,
+        target_pick_bonus: 0.0,
         lambda: 1.0,
         relabel_every: 200,
         window: 250_000,
@@ -514,6 +523,7 @@ fn parse_args() -> Args {
         pilot_net67: false,
         actor_fra_fixes: false,
         actor_rated_decks: false,
+        actor_mix: Vec::new(),
     };
     let mut it = std::env::args().skip(1);
     while let Some(flag) = it.next() {
@@ -592,6 +602,7 @@ fn parse_args() -> Args {
                 a.opp_head = true;
                 continue; // bare flag, consumes no value
             }
+            "--target-pick-bonus" => a.target_pick_bonus = val().parse().expect("--target-pick-bonus"),
             "--search-value-weight" => {
                 a.search_value_weight = val().parse().expect("--search-value-weight")
             }
@@ -611,6 +622,7 @@ fn parse_args() -> Args {
             "--actor-det" => a.actor_det = Some(val().parse().expect("--actor-det")),
             "--actor-fra-fixes" => a.actor_fra_fixes = true,
             "--actor-rated-decks" => a.actor_rated_decks = true,
+            "--actor-mix" => a.actor_mix = parse_mix(&val()),
             "--tail-reuse" => a.tail_reuse = val().parse().expect("--tail-reuse"),
             "--gpu-eval" => {
                 a.gpu_eval = true;
@@ -878,6 +890,8 @@ struct Shared {
     /// binding budget of a distillation run, so the mix has to be
     /// legible per checkpoint rather than inferred from the deque.
     games_mcts: AtomicU64,
+    /// Actor games by [`ActorMode`] (`--actor-mix`).
+    mode_games: [AtomicU64; 4],
     stalls: AtomicU64,
     /// The ways a stall happens, so a moving stall rate names its own cause
     /// instead of only its size. `stalls - capped - board - stuck` is the
@@ -938,6 +952,50 @@ fn load_deck_net(path: &std::path::Path, vocab: &Vocab, why: &str) -> DeckNet {
     net
 }
 
+/// One actor game's format under `--actor-mix`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum ActorMode {
+    /// No mix: the process's sealed set (`CRAB_SEALED_SET`).
+    Process = 0,
+    Sos = 1,
+    Fra = 2,
+    Cube = 3,
+}
+
+/// `--actor-mix sos:2,fra:1,cube:1` parsed to weights.
+fn parse_mix(v: &str) -> Vec<(ActorMode, u32)> {
+    v.split(',')
+        .map(|part| {
+            let (name, w) = part.split_once(':').unwrap_or((part, "1"));
+            let mode = match name {
+                "sos" => ActorMode::Sos,
+                "fra" => ActorMode::Fra,
+                "cube" => ActorMode::Cube,
+                other => panic!("--actor-mix: unknown format {other} (sos | fra | cube)"),
+            };
+            (mode, w.parse().expect("--actor-mix weight"))
+        })
+        .collect()
+}
+
+/// The format `mix` gives the game whose hash is `h`.
+fn pick_mode(mix: &[(ActorMode, u32)], h: u64) -> ActorMode {
+    let total: u64 = mix.iter().map(|m| m.1 as u64).sum();
+    if total == 0 {
+        return ActorMode::Process;
+    }
+    // The salt's low bits are a multiple of the game index; mix them first.
+    let mut r = (h ^ (h >> 33)).wrapping_mul(0xFF51_AFD7_ED55_8CCD);
+    r = (r ^ (r >> 33)) % total;
+    for &(m, w) in mix {
+        if r < w as u64 {
+            return m;
+        }
+        r -= w as u64;
+    }
+    ActorMode::Process
+}
+
 fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&DeckNet>, mcts: bool) {
     let actor_search = crabomination::selfplay::actor_mcts(args.mcts_actors, args.mcts_gumbel).map(|c| {
         if args.menu_search == 0 {
@@ -947,6 +1005,7 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
             menu_windows: args.menu_search,
             policy_slot: crabomination::server::net_eval::SLOT_CANDIDATE,
             menu_sample: true,
+            target_pick_bonus: args.target_pick_bonus,
             ..c
         }
     });
@@ -978,8 +1037,16 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
         let salt = |k: u64| {
             args.seed ^ n.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(k * 0x9E37_79B9)
         };
-        let pool_a = sealed_pool(salt(1));
-        let pool_b = sealed_pool(salt(2));
+        // `--actor-mix`: this game's format, a fixed function of the game
+        // index. Unset, every game is the process's sealed set.
+        let mode = pick_mode(&args.actor_mix, salt(9));
+        let open = |k: u64| match mode {
+            ActorMode::Process | ActorMode::Cube => sealed_pool(salt(k)),
+            ActorMode::Sos => crabomination::selfplay::sealed_pool_of(crabomination::fra_mode::SealedSet::Sos, salt(k), crabomination::selfplay::SEALED_PACKS),
+            ActorMode::Fra => crabomination::selfplay::sealed_pool_of(crabomination::fra_mode::SealedSet::Fra, salt(k), crabomination::selfplay::SEALED_PACKS),
+        };
+        let pool_a = open(1);
+        let pool_b = open(2);
         // Best-of-N under the gate-passed deck net when one is loaded,
         // otherwise the heuristic builder's own pick. Same candidate
         // generator either way, so only the judge differs.
@@ -994,8 +1061,16 @@ fn actor_loop(shared: &Shared, args: &Args, vocab: &Vocab, deck_judge: Option<&D
             }
             None => heuristic_sealed_build(pool, seed),
         };
-        let deck_a = build(&pool_a, salt(3));
-        let deck_b = build(&pool_b, salt(4));
+        // A cube game: two random two-colour 60-card decks off the whole
+        // cube pool (`bot_ladder --decks cube`'s decks, unmirrored).
+        let cube = |seed: u64| {
+            use rand::SeedableRng;
+            let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+            crabomination::cube::cube_deck(crabomination::cube::random_color_pair(&mut rng), &mut rng)
+        };
+        let (deck_a, deck_b) =
+            if mode == ActorMode::Cube { (cube(salt(3)), cube(salt(4))) } else { (build(&pool_a, salt(3)), build(&pool_b, salt(4))) };
+        shared.mode_games[mode as usize].fetch_add(1, Ordering::Relaxed);
         let template = sealed_game_template(&deck_a, &deck_b);
         // Honest pilots by default, MCTS or not. Non-MCTS actors once got plain
         // `net_eval()` (determinize 0), whose sims read the opponent's hand and
@@ -2092,6 +2167,7 @@ fn main() {
         run_start: Instant::now(),
         actor_ms: AtomicU64::new(0),
         games_mcts: AtomicU64::new(0),
+        mode_games: [const { AtomicU64::new(0) }; 4],
         stalls: AtomicU64::new(0),
         stalls_capped: AtomicU64::new(0),
         stalls_board: AtomicU64::new(0),
@@ -2546,6 +2622,10 @@ fn main() {
         shared.stalls.load(Ordering::Relaxed),
         secs
     );
+    if !args.actor_mix.is_empty() {
+        let n = |m: ActorMode| shared.mode_games[m as usize].load(Ordering::Relaxed);
+        eprintln!("actor mix: {} sos, {} fra, {} cube games claimed", n(ActorMode::Sos), n(ActorMode::Fra), n(ActorMode::Cube));
+    }
     if args.record_decisions {
         eprintln!(
             "decisions: {} trained-side rows, {} of them searched",

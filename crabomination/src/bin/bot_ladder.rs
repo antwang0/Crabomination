@@ -1473,6 +1473,13 @@ fn parse_args() -> Result<Args, String> {
                 Err(_) => {}
             }
         }
+        // A `-hy<N>` profile without a root-only cutter scores every move:
+        // the cell would measure the baseline against itself.
+        if [&a_name, &b_name].iter().any(|n| n.split('-').any(|p| p.starts_with("hy")))
+            && !crabomination::server::net_eval::slot_root_only(crabomination::server::net_eval::SLOT_POLICY_B)
+        {
+            return Err("a `-hy<N>` profile needs CRAB_POLICY_NET_B=<root-only policy weights>".into());
+        }
         // A `-pol` profile without the policy head would silently measure
         // `net67` — and the head swap is the whole cell — so it is an
         // error, not a fallback (unlike the gumbel prior below, where the
@@ -2835,6 +2842,9 @@ fn main() {
             .map(|(l, n)| format!("actions.rs:{l} {n} ({:.1} %)", pct(*n, rejections)))
             .collect();
         println!("  cast_census rejections by line: {}", top.join(", "));
+    }
+    if let Some(r) = crabomination::server::mcts::search_census::report() {
+        println!("{r}");
     }
     // Round 76: the modal / X holes as the scored main-phase pick sees them.
     // Off unless `CRAB_MENU_CENSUS` is set; `=2` adds the per-card tables.
