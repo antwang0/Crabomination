@@ -2330,3 +2330,12 @@ approximated):
 | Card | Printed | Approximation |
 |---|---|---|
 | 🟡 Jean-Luc, Mon Capitaine | Faeries counted against the creatures you "already control" (CR 614.12) | the entrant itself is excluded (`DistinctCreatureTypesAmongYourOtherNonBorgCreatures`), but in a batch of Faeries entering together (Data's two) the later ones see the earlier ones' Faerie type — one counter more |
+
+## EDHREC closers, eighth batch (2026-11-26, `01WRuXc3U3`)
+
+`decks::trek_singles8` (seats 6189-6205). Open 🟡 rows (each card plays; the clause named is approximated):
+
+| Card | Printed | Approximation |
+|---|---|---|
+| 🟡 Nog, Ambitious Cadet | {3}: the Scout becomes an Officer and *gains* "you may play lands from your graveyard" and an extra land play | printed as statics live `WhileCondition(is an Officer)` — an effect that later strips the Officer type takes the gained abilities with it (no effect-level static grant exists) |
+| 🟡 Genesis Device | sacrifice any number of lands, then search for up to that many land cards | `SacrificeAnyNumber` with a per-land `Search` (Scapeshift's shape): one search and shuffle per sacrificed land, not one search for all |
