@@ -45,7 +45,7 @@ impl GameState {
     /// Does `a` carry a board-wide goad static that reaches `c`? Baeloth's
     /// lesser-power clause and Mocking Doppelganger's same-name rider.
     fn board_goads(&self, a: &CardInstance, c: &CardInstance) -> bool {
-        a.definition.static_abilities.iter().any(|sa| match self.active_static(&sa.effect, a) {
+        a.definition.static_abilities.iter().any(|sa| match self.active_static_where(&sa.effect, a, |e| matches!(e, StaticEffect::OpponentCreaturesWithLesserPowerAreGoaded | StaticEffect::OthersNamedLikeThisAreGoaded | StaticEffect::MatchingAreGoaded { .. })) {
             Some(StaticEffect::OpponentCreaturesWithLesserPowerAreGoaded) => {
                 // CR 613.4c — the powers compared are the current ones,
                 // anthems included (the layer pass reads printed here). A
@@ -115,7 +115,7 @@ impl GameState {
         a.definition
             .static_abilities
             .iter()
-            .any(|sa| matches!(self.active_static(&sa.effect, a), Some(StaticEffect::AttachedIsGoaded)))
+            .any(|sa| self.static_active_is(&sa.effect, a, |e| matches!(e, StaticEffect::AttachedIsGoaded)))
     }
 
     fn goad_hold_active(&self, c: &CardInstance, hold: GoadHold) -> bool {

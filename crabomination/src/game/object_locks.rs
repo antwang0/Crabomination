@@ -33,8 +33,7 @@ impl GameState {
         self.battlefield.iter().any(|c| {
             (c.id == cid || c.attached_to == Some(cid) || c.chosen_permanent == Some(cid))
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(self.active_static(&sa.effect, c),
-                        Some(StaticEffect::CantHaveCountersPutOn { applies_to }) if reaches(applies_to, c, cid))
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::CantHaveCountersPutOn { applies_to } if reaches(applies_to, c, cid)))
                 })
         })
     }
@@ -45,7 +44,7 @@ impl GameState {
             c.definition
                 .static_abilities
                 .iter()
-                .any(|sa| matches!(self.active_static(&sa.effect, c), Some(StaticEffect::PermanentsCantPhaseIn)))
+                .any(|sa| self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::PermanentsCantPhaseIn)))
         })
     }
 
@@ -55,8 +54,7 @@ impl GameState {
         self.battlefield.iter().any(|c| {
             (c.id == cid || c.attached_to == Some(cid) || c.chosen_permanent == Some(cid))
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(self.active_static(&sa.effect, c),
-                        Some(StaticEffect::CantBecomeUntapped { applies_to }) if reaches(applies_to, c, cid))
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::CantBecomeUntapped { applies_to } if reaches(applies_to, c, cid)))
                 })
         })
     }

@@ -4267,10 +4267,7 @@ impl GameState {
             any_static
                 || !self.battlefield.iter().chain(self.command_zone_sources()).any(|c| {
                     c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            self.active_static(&sa.effect, c),
-                            Some(
-                                StaticEffect::PermanentsDontUntap
+                        self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::PermanentsDontUntap
                                     | StaticEffect::UntapAllYoursEachUntapStep
                                     | StaticEffect::UntapYoursEachUntapStepFiltered(_)
                                     | StaticEffect::UntapSelfEachOtherUntapStep
@@ -4281,9 +4278,7 @@ impl GameState {
                                     | StaticEffect::MaxOneUntapPerStep { .. }
                                     | StaticEffect::MaxUntapsPerStep { .. }
                                     | StaticEffect::UntapSelfEachUntapStep
-                                    | StaticEffect::UntapAttachedEachUntapStep
-                            )
-                        )
+                                    | StaticEffect::UntapAttachedEachUntapStep))
                     })
                 }),
             "card_has_untap_static missed a static do_untap reads: a lane that reads clear would skip it",
@@ -4314,10 +4309,7 @@ impl GameState {
                     if c.controller != p
                         && !u.contains(&c.controller)
                         && c.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                self.active_static(&sa.effect, c),
-                                Some(StaticEffect::UntapAllYoursEachUntapStep)
-                            )
+                            self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::UntapAllYoursEachUntapStep))
                         })
                     {
                         u.push(c.controller);
@@ -4352,7 +4344,7 @@ impl GameState {
                 .filter(|c| c.controller != p && !untappers.contains(&c.controller))
                 .flat_map(|c| {
                     c.definition.static_abilities.iter().filter_map(|sa| {
-                        match self.active_static(&sa.effect, c) {
+                        match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::UntapYoursEachUntapStepFiltered(..))) {
                             Some(StaticEffect::UntapYoursEachUntapStepFiltered(f)) => {
                                 Some((c.controller, f.clone()))
                             }
@@ -4574,7 +4566,7 @@ impl GameState {
         let mut untap_caps: Vec<(crate::fxhash::HashSet<crate::card::CardId>, u32)> = cap_scan
             .iter()
             .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
-            .filter_map(|(c, sa)| match self.active_static(&sa.effect, c) {
+            .filter_map(|(c, sa)| match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::MaxOneUntapPerStep { .. } | StaticEffect::MaxUntapsPerStep { .. })) {
                 Some(StaticEffect::MaxOneUntapPerStep { filter }) => Some((filter, 1)),
                 Some(StaticEffect::MaxUntapsPerStep { filter, max }) => Some((filter, *max)),
                 _ => None,

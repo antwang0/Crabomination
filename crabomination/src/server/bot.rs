@@ -8487,10 +8487,7 @@ impl BoardFacts {
                 // A gated grant (Peri Brown's first historic spell) counts
                 // while its gate is open.
                 if matches!(sa.effect, SE::WhileCondition { .. })
-                    && matches!(
-                        state.active_static(&sa.effect, c),
-                        Some(SE::GrantConvokeToSpells { .. } | SE::GrantImproviseToSpells { .. })
-                    )
+                    && state.static_active_is(&sa.effect, c, |e| matches!(e, SE::GrantConvokeToSpells { .. } | SE::GrantImproviseToSpells { .. }))
                 {
                     f.grants_convoke = true;
                 }

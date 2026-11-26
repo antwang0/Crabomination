@@ -98,7 +98,7 @@ impl GameState {
         use crate::effect::StaticEffect;
         self.battlefield.has_life_static()
             && self.battlefield.iter().any(|c| {
-                c.definition.static_abilities.iter().any(|sa| match self.active_static(&sa.effect, c) {
+                c.definition.static_abilities.iter().any(|sa| match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::PlayersCantPayLifeOrSacrificeNonlandForCosts | StaticEffect::PlayersCantPayLifeOrSacrificeCreaturesForCosts)) {
                     Some(StaticEffect::PlayersCantPayLifeOrSacrificeNonlandForCosts) => true,
                     Some(StaticEffect::PlayersCantPayLifeOrSacrificeCreaturesForCosts) => !nonland_only,
                     _ => false,
@@ -179,7 +179,7 @@ impl GameState {
         for c in self.battlefield.iter() {
             if let Some(color) = c.chosen_color
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(self.active_static(&sa.effect, c), Some(StaticEffect::ChosenColorEverywhere))
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::ChosenColorEverywhere))
                 })
             {
                 set.insert(color);

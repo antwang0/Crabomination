@@ -14,10 +14,7 @@ impl GameState {
         self.battlefield.iter().any(|src| {
             src.controller == seat
                 && src.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, src),
-                        Some(StaticEffect::DamageDoesntCauseControllerLifeLoss)
-                    )
+                    self.static_active_is(&sa.effect, src, |e| matches!(e, StaticEffect::DamageDoesntCauseControllerLifeLoss))
                 })
         })
     }

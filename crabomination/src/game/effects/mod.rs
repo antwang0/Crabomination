@@ -44126,10 +44126,7 @@ impl GameState {
                 if self.battlefield.iter().any(|src| {
                     src.controller == p
                         && src.definition.static_abilities.iter().any(|sa| {
-                            matches!(
-                                self.active_static(&sa.effect, src),
-                                Some(crate::effect::StaticEffect::CascadeMayPutExiledLandTapped)
-                            )
+                            self.static_active_is(&sa.effect, src, |e| matches!(e, crate::effect::StaticEffect::CascadeMayPutExiledLandTapped))
                         })
                 }) && let Some(land) = exiled.iter().copied().find(|id| {
                     self.exile.iter().any(|c| c.id == *id && c.definition.card_types.contains(&CardType::Land))

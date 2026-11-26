@@ -45829,8 +45829,8 @@ mod tests {
         // workers' stacks. `CRAB_SEAT_SHARD=i/n` runs every n-th job from the
         // i-th (0-based), so the list can be checked in pieces; `CRAB_SEAT=<name
         // prefix>` runs one seat, and `CRAB_SEAT_LOG=1` times each game
-        // (2026-11-25: Loot seed 0xad8 is the long pole, over an hour alone in
-        // debug; no other seat passes 8 minutes).
+        // (Loot seed 0xad8, once over an hour in debug, was Augur of Autumn's
+        // coven re-walked per static read: 26 s -> 5.6 s on `overflow`).
         let shard = std::env::var("CRAB_SEAT_SHARD").ok().and_then(|v| {
             let (i, n) = v.split_once('/')?;
             Some((i.parse::<usize>().ok()?, n.parse::<usize>().ok()?.max(1)))

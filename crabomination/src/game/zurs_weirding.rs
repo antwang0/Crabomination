@@ -16,7 +16,7 @@ impl GameState {
     /// The life a Zur's Weirding on the battlefield asks for, and its source.
     pub(crate) fn others_may_bin_draw(&self) -> Option<(CardId, u32)> {
         self.battlefield.iter().find_map(|c| {
-            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::DrawsRevealedOthersMayPayLifeToBin { .. })) {
                 Some(StaticEffect::DrawsRevealedOthersMayPayLifeToBin { life }) => Some((c.id, *life)),
                 _ => None,
             })

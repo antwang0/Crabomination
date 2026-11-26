@@ -49,7 +49,7 @@ impl GameState {
         }
         let Some((id, life)) = self.battlefield.iter().find_map(|c| {
             (c.controller == seat).then_some(())?;
-            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::LifeToZeroTransformsSelf { .. })) {
                 Some(StaticEffect::LifeToZeroTransformsSelf { life }) => Some((c.id, *life)),
                 _ => None,
             })
