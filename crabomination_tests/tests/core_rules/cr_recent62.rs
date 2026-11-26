@@ -85,6 +85,38 @@ fn cr_727_2_a_restart_leaves_tokens_behind() {
     assert!(g.players[0].library.iter().chain(g.players[0].hand.iter()).all(|c| !c.is_token));
 }
 
+/// CR 400.7 / 111.7 — a dead token copy of Cavalier of Gales can't be
+/// shuffled into a library, and its dies trigger must not flag the NEXT spell
+/// to resolve for the shuffle either. Pod seed 29444 game 101: a kicked
+/// Consult the Star Charts shuffled into its owner's library, still kicked.
+#[test]
+fn cr_400_7_a_gone_tokens_shuffle_self_does_not_take_the_next_spell() {
+    let mut g = main_phase(2);
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let cav = g.add_card_to_battlefield(0, catalog::cavalier_of_gales());
+    g.battlefield.iter_mut().find(|c| c.id == cav).unwrap().is_token = true;
+    let doom = g.add_card_to_hand(0, catalog::doom_blade());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+    g.perform_action(GameAction::CastSpell {
+        card_id: doom,
+        target: Some(crabomination::game::types::Target::Permanent(cav)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("doom blade");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(cav).is_none());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Blue, 1);
+    g.perform_action(GameAction::CastSpell { card_id: opt, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("opt");
+    drain_stack(&mut g);
+    assert!(g.players[0].graveyard.iter().any(|c| c.id == opt), "Opt resolves into the graveyard");
+}
+
 /// CR 727.5 — exempted cards skip the reshuffle; Karn's −14 puts the cards it
 /// exiled onto the battlefield under its controller's control.
 #[test]

@@ -32177,7 +32177,12 @@ impl GameState {
                         events,
                     );
                 }
-                self.shuffle_resolving_spell_into_library = true;
+                // A source in neither zone and not the resolving spell is gone
+                // (CR 400.7): flagging then shuffled the next spell to resolve
+                // (pod seed 29444 game 101, a kicked Consult the Star Charts).
+                if self.resolving_spell(src).is_some() {
+                    self.shuffle_resolving_spell_into_library = true;
+                }
                 Ok(())
             }
 
