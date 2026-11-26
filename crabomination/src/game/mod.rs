@@ -19998,8 +19998,11 @@ impl GameState {
         // 727.2 — gather every card in the game, wherever it lives, plus the
         // stack. Sideboards stay "outside the game" and are carried over as-is.
         let mut owned: Vec<Vec<CardInstance>> = vec![Vec::new(); self.players.len()];
+        // 727.2 names cards: a token or spell copy is no card and ceases to
+        // exist off the battlefield (CR 111.7). Carrying one made it a
+        // nontoken card in a library (pod seed 29443 game 259, a Shrine).
         let collect = |cards: Vec<CardInstance>, owned: &mut Vec<Vec<CardInstance>>| {
-            for c in cards {
+            for c in cards.into_iter().filter(|c| !c.is_token) {
                 if let Some(bucket) = owned.get_mut(c.owner) {
                     bucket.push(c);
                 }
@@ -20138,7 +20141,7 @@ impl GameState {
         }
 
         // 727.5 — the exempt cards never joined a deck; Karn deploys them.
-        for c in exempt {
+        for c in exempt.into_iter().filter(|c| !c.is_token) {
             let def = c.definition.arc();
             let id = c.id;
             let mut inst = CardInstance::new(id, def, c.owner);

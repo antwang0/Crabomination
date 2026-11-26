@@ -65,6 +65,26 @@ fn cr_727_1_restart_returns_every_card_to_its_owners_library() {
     assert!(events.iter().any(|e| matches!(e, GameEvent::GameRestarted { starter: 1 })));
 }
 
+/// CR 727.2 / 111.7 — a restart gathers cards: a token on the battlefield is
+/// no card and does not join its owner's new library. Pod seed 29443 game 259:
+/// a Go-Shintai Shrine token came back as a nontoken library card.
+#[test]
+fn cr_727_2_a_restart_leaves_tokens_behind() {
+    let mut g = main_phase(2);
+    for _ in 0..10 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+        g.add_card_to_library(1, catalog::grizzly_bears());
+    }
+    g.add_card_to_battlefield(0, catalog::mountain());
+    let token = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.battlefield.iter_mut().find(|c| c.id == token).unwrap().is_token = true;
+    let mut events = Vec::new();
+    g.restart_game(0, Vec::new(), &mut events);
+    let cards = g.players[0].library.len() + g.players[0].hand.len();
+    assert_eq!(cards, 11, "ten Bears and the Mountain; no token");
+    assert!(g.players[0].library.iter().chain(g.players[0].hand.iter()).all(|c| !c.is_token));
+}
+
 /// CR 727.5 — exempted cards skip the reshuffle; Karn's −14 puts the cards it
 /// exiled onto the battlefield under its controller's control.
 #[test]
