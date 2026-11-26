@@ -37675,6 +37675,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GRANDMOTHER_GOBY_COMMANDERS,
             main: decks::GRANDMOTHER_GOBY_MAIN,
         },
+        // Seat 6205: Grizzlegom, Hurloon Hero's EDHREC average deck. `--pod-decks 6205`.
+        PodDeck {
+            name: "Grizzlegom, Hurloon Hero (RG)",
+            commanders: decks::GRIZZLEGOM_COMMANDERS,
+            main: decks::GRIZZLEGOM_MAIN,
+        },
     ]
 }
 
@@ -45815,6 +45821,7 @@ mod tests {
             ("Tolabow, Loch Rascal", &[0x223A]),
             ("Jabs, Mistress of Mockery", &[0x223B]),
             ("Grandmother Goby", &[0x223C]),
+            ("Grizzlegom, Hurloon Hero", &[0x223D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

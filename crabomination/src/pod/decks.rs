@@ -174286,3 +174286,33 @@ pub const GRANDMOTHER_GOBY_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island,
 ];
+
+pub const GRIZZLEGOM_COMMANDERS: &[CardFactory] = &[grizzlegom_hurloon_hero];
+
+/// **Grizzlegom, Hurloon Hero**'s EDHREC average deck, card for card:
+/// 86 nonbasic cards + 4 Forests + 2 Islands + 3 Mountains + 2 Plains + 2 Swamps = 99.
+/// Grizzlegom, Hurloon Hero (EDHREC, fetched 2026-11-26).
+pub const GRIZZLEGOM_MAIN: &[CardFactory] = &[
+    amulet_of_vigor, arcane_signet, conduit_of_worlds, crucible_of_worlds, lightning_greaves,
+    sol_ring, swiftfoot_boots, arid_mesa, blood_crypt, bloodstained_mire, breeding_pool,
+    cinder_glade, commercial_district, hallowed_fountain, indatha_triome, jetmirs_garden,
+    ketria_triome, misty_rainforest, overgrown_tomb, raffines_tower, raugrin_triome,
+    reliquary_tower, sacred_foundry, savai_triome, scalding_tarn, sparas_headquarters,
+    steam_vents, stomping_ground, taiga, temple_garden, urborg_tomb_of_yawgmoth,
+    verdant_catacombs, windswept_heath, wooded_foothills, xanders_lounge,
+    yavimaya_cradle_of_growth, zagoth_triome, ziatoras_proving_ground, ashaya_soul_of_the_wild,
+    azusa_lost_but_seeking, cultivator_colossus, dryad_of_the_ilysian_grove,
+    goblin_anarchomancer, hexhaven_invigorator, horizon_explorer, icetill_explorer,
+    loot_exuberant_explorer, lotus_cobra, mina_and_denn_wildborn, moraug_fury_of_akoum,
+    omnath_locus_of_rage, oracle_of_mul_daya, overlord_of_the_hauntwoods, scute_swarm,
+    swampbenders, tannuk_memorial_ensign, tireless_provisioner, wayward_swordtooth,
+    wulfgar_of_icewind_dale, burgeoning, case_of_the_locked_hothouse, exploration,
+    nyleas_presence, prismatic_omen, rhythm_of_the_wild, spelunking, archdruids_charm,
+    beast_within, chaos_warp, crop_rotation, deflecting_swat, energybending,
+    heroic_intervention, blasphemous_act, cultivate, explore, farseek, kodamas_reach,
+    natures_lore, open_the_way, rampant_growth, reshape_the_earth, skyshroud_claim,
+    tempt_with_discovery, three_visits, through_the_forest_gate,
+    // Basics
+    forest, forest, forest, forest, island, island, mountain, mountain, mountain, plains,
+    plains, swamp, swamp,
+];
