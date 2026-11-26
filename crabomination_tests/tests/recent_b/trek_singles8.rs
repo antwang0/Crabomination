@@ -362,3 +362,34 @@ fn tea_earl_grey_hot_draws_then_burns() {
     assert_eq!(g.players[2].life, life - 2);
     assert!(g.battlefield_find(tea).is_none());
 }
+
+/// Nog: {1} makes the Rogue a 3/4 Scout; {3} makes the Scout an Officer, who
+/// may play lands from the graveyard; {3} while a Rogue does nothing.
+#[test]
+fn nog_climbs_from_rogue_to_officer() {
+    let mut g = pod(2);
+    let nog = ready(&mut g, 0, catalog::nog_ambitious_cadet());
+    g.add_card_to_graveyard(0, catalog::forest());
+    let activate = |g: &mut GameState, index: usize| {
+        g.players[0].mana_pool.add_colorless(3);
+        g.perform_action(GameAction::ActivateAbility {
+            card_id: nog,
+            ability_index: index,
+            target: None,
+            additional_targets: vec![],
+            x_value: None,
+            mode: None,
+        })
+        .expect("activate");
+        drain_stack(g);
+        g.players[0].mana_pool.empty();
+    };
+    activate(&mut g, 1);
+    assert!(!g.player_may_play_lands_from_graveyard(0), "still a Rogue");
+    activate(&mut g, 0);
+    let cp = g.computed_permanent(nog).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 4));
+    activate(&mut g, 1);
+    assert!(g.player_may_play_lands_from_graveyard(0));
+    assert_eq!(g.max_lands_per_turn(0), 2);
+}

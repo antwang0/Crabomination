@@ -1,6 +1,6 @@
 //! Star Trek (TRK/TRC) — the eighth batch of EDHREC Star Trek closers: six
 //! commanders whose single-commander average decks miss only the commander,
-//! Georgiou's, Daniels' and Tasha Yar's two-card gaps, and Neelix's three
+//! Georgiou's, Daniels', Tasha Yar's and Nog's two-card gaps, and Neelix's three
 //! (scan of 2026-11-26). Tests in `tests/recent_b/trek_singles8.rs`.
 
 use crate::card::{
@@ -464,5 +464,79 @@ pub fn tea_earl_grey_hot() -> CardDefinition {
             ..Default::default()
         }],
         ..Default::default()
+    }
+}
+
+/// Nog, Ambitious Cadet — {B}{G} legendary 2/2 Ferengi Rogue, menace. {1}: if
+/// a Rogue, he becomes a Ferengi Scout, base 3/4, and gains "whenever Nog
+/// becomes tapped, surveil 2." {3}: if a Scout, he becomes a Ferengi Officer
+/// and gains "you may play lands from your graveyard" and an extra land play
+/// each turn — printed here as statics live while he is an Officer.
+pub fn nog_ambitious_cadet() -> CardDefinition {
+    let is = |t: CreatureType| Predicate::EntityMatches { what: Selector::This, filter: R::HasCreatureType(t) };
+    let officer = |inner: StaticEffect| StaticEffect::WhileCondition { condition: is(CreatureType::Officer), inner: Box::new(inner) };
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may play lands from your graveyard.",
+                effect: officer(StaticEffect::MayPlayLandsFromGraveyard),
+            },
+            StaticAbility {
+                description: "You may play an additional land on each of your turns.",
+                effect: officer(StaticEffect::ExtraLandPerTurn),
+            },
+        ],
+        activated_abilities: vec![
+            ActivatedAbility {
+                mana_cost: cost(&[generic(1)]),
+                effect: Effect::If {
+                    cond: is(CreatureType::Rogue),
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::BecomeCreatureType {
+                            what: Selector::This,
+                            creature_types: vec![CreatureType::Ferengi, CreatureType::Scout],
+                            duration: Duration::Permanent,
+                        },
+                        Effect::SetBasePT {
+                            what: Selector::This,
+                            power: Value::Const(3),
+                            toughness: Value::Const(4),
+                            duration: Duration::Permanent,
+                        },
+                        Effect::GrantTriggeredAbility {
+                            what: Selector::This,
+                            trigger: Box::new(TriggeredAbility {
+                                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                                effect: Effect::Surveil { who: PlayerRef::You, amount: Value::Const(2) },
+                            }),
+                            duration: Duration::Permanent,
+                        },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+            ActivatedAbility {
+                mana_cost: cost(&[generic(3)]),
+                effect: Effect::If {
+                    cond: is(CreatureType::Scout),
+                    then: Box::new(Effect::BecomeCreatureType {
+                        what: Selector::This,
+                        creature_types: vec![CreatureType::Ferengi, CreatureType::Officer],
+                        duration: Duration::Permanent,
+                    }),
+                    else_: Box::new(Effect::Noop),
+                },
+                ..Default::default()
+            },
+        ],
+        ..legend(
+            "Nog, Ambitious Cadet",
+            cost(&[b(), g()]),
+            vec![CreatureType::Ferengi, CreatureType::Rogue],
+            2,
+            2,
+        )
     }
 }

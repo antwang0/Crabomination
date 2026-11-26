@@ -19525,6 +19525,7 @@ static DECKS: &[Factory] = &[
     super::decks::neelix_moral_support,
     super::decks::genesis_device,
     super::decks::tea_earl_grey_hot,
+    super::decks::nog_ambitious_cadet,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
