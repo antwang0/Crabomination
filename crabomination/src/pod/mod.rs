@@ -37957,6 +37957,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_SEVENTH_DOCTOR_23_COMMANDERS,
             main: decks::THE_SEVENTH_DOCTOR_23_MAIN,
         },
+        // Seat 6252: The Eleventh Doctor and Clara Oswald's EDHREC average deck. `--pod-decks 6252`.
+        PodDeck {
+            name: "The Eleventh Doctor and Clara Oswald (WU)",
+            commanders: decks::THE_ELEVENTH_DOCTOR_21_COMMANDERS,
+            main: decks::THE_ELEVENTH_DOCTOR_21_MAIN,
+        },
+        // Seat 6253: Faceless One and Scion of Halaster's EDHREC average deck. `--pod-decks 6253`.
+        PodDeck {
+            name: "Faceless One and Scion of Halaster (B)",
+            commanders: decks::FACELESS_ONE_4_COMMANDERS,
+            main: decks::FACELESS_ONE_4_MAIN,
+        },
+        // Seat 6254: Faceless One and Flaming Fist's EDHREC average deck. `--pod-decks 6254`.
+        PodDeck {
+            name: "Faceless One and Flaming Fist (W)",
+            commanders: decks::FACELESS_ONE_5_COMMANDERS,
+            main: decks::FACELESS_ONE_5_MAIN,
+        },
+        // Seat 6255: Sengir, the Dark Baron and The Prismatic Piper's EDHREC average deck. `--pod-decks 6255`.
+        PodDeck {
+            name: "Sengir, the Dark Baron and The Prismatic Piper (B)",
+            commanders: decks::SENGIR_11_COMMANDERS,
+            main: decks::SENGIR_11_MAIN,
+        },
+        // Seat 6256: Faceless One and Acolyte of Bahamut's EDHREC average deck. `--pod-decks 6256`.
+        PodDeck {
+            name: "Faceless One and Acolyte of Bahamut (G)",
+            commanders: decks::FACELESS_ONE_6_COMMANDERS,
+            main: decks::FACELESS_ONE_6_MAIN,
+        },
+        // Seat 6257: Sidar Kondo of Jamuraa and The Prismatic Piper's EDHREC average deck. `--pod-decks 6257`.
+        PodDeck {
+            name: "Sidar Kondo of Jamuraa and The Prismatic Piper (WG)",
+            commanders: decks::SIDAR_KONDO_OF_JAMURAA_10_COMMANDERS,
+            main: decks::SIDAR_KONDO_OF_JAMURAA_10_MAIN,
+        },
+        // Seat 6258: Lae'zel, Vlaakith's Champion and Faceless One's EDHREC average deck. `--pod-decks 6258`.
+        PodDeck {
+            name: "Lae'zel, Vlaakith's Champion and Faceless One (W)",
+            commanders: decks::LAEZEL_30_COMMANDERS,
+            main: decks::LAEZEL_30_MAIN,
+        },
+        // Seat 6259: Faceless One and Passionate Archaeologist's EDHREC average deck. `--pod-decks 6259`.
+        PodDeck {
+            name: "Faceless One and Passionate Archaeologist (R)",
+            commanders: decks::FACELESS_ONE_7_COMMANDERS,
+            main: decks::FACELESS_ONE_7_MAIN,
+        },
+        // Seat 6260: Safana, Calimport Cutthroat and Faceless One's EDHREC average deck. `--pod-decks 6260`.
+        PodDeck {
+            name: "Safana, Calimport Cutthroat and Faceless One (B)",
+            commanders: decks::SAFANA_28_COMMANDERS,
+            main: decks::SAFANA_28_MAIN,
+        },
     ]
 }
 
@@ -46144,6 +46198,15 @@ mod tests {
             ("The Fifth Doctor and Bill Potts", &[0x2269]),
             ("The Eighth Doctor and Tegan Jovanka", &[0x226A]),
             ("The Seventh Doctor and Nardole, Resourceful Cyborg", &[0x226B]),
+            ("The Eleventh Doctor and Clara Oswald", &[0x226C]),
+            ("Faceless One and Scion of Halaster", &[0x226D]),
+            ("Faceless One and Flaming Fist", &[0x226E]),
+            ("Sengir, the Dark Baron and The Prismatic Piper", &[0x226F]),
+            ("Faceless One and Acolyte of Bahamut", &[0x2270]),
+            ("Sidar Kondo of Jamuraa and The Prismatic Piper", &[0x2271]),
+            ("Lae'zel, Vlaakith's Champion and Faceless One", &[0x2272]),
+            ("Faceless One and Passionate Archaeologist", &[0x2273]),
+            ("Safana, Calimport Cutthroat and Faceless One", &[0x2274]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
