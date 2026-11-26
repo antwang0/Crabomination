@@ -37681,6 +37681,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GRIZZLEGOM_COMMANDERS,
             main: decks::GRIZZLEGOM_MAIN,
         },
+        // Seat 6206: Massimo, the Magician's EDHREC average deck. `--pod-decks 6206`.
+        PodDeck {
+            name: "Massimo, the Magician (WUR)",
+            commanders: decks::MASSIMO_COMMANDERS,
+            main: decks::MASSIMO_MAIN,
+        },
     ]
 }
 
@@ -45822,6 +45828,7 @@ mod tests {
             ("Jabs, Mistress of Mockery", &[0x223B]),
             ("Grandmother Goby", &[0x223C]),
             ("Grizzlegom, Hurloon Hero", &[0x223D]),
+            ("Massimo, the Magician", &[0x223E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

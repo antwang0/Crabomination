@@ -174316,3 +174316,31 @@ pub const GRIZZLEGOM_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, island, island, mountain, mountain, mountain, plains,
     plains, swamp, swamp,
 ];
+
+pub const MASSIMO_COMMANDERS: &[CardFactory] = &[massimo_the_magician];
+
+/// **Massimo, the Magician**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 6 Islands + 4 Mountains + 4 Plains = 99.
+/// Massimo, the Magician (EDHREC, fetched 2026-11-26).
+pub const MASSIMO_MAIN: &[CardFactory] = &[
+    arcane_signet, sol_ring, talisman_of_conviction, talisman_of_creativity,
+    talisman_of_progress, adarkar_wastes, arid_mesa, battlefield_forge, clifftop_retreat,
+    command_tower, exotic_orchard, flooded_strand, glacial_fortress, hallowed_fountain,
+    mystic_monastery, raugrin_triome, sacred_foundry, scalding_tarn, sea_of_clouds, shivan_reef,
+    spectator_seating, steam_vents, stormcarved_coast, sulfur_falls, training_center,
+    archmage_emeritus, bilbo_luckwearer, blade_historian, caldera_pyremaw,
+    delney_streetwise_lookout, gudul_lurker, guttersnipe, hardened_academic, invisible_stalker,
+    kykar_winds_fury, looter_il_kor, mercurial_spelldancer, mist_cloaked_herald,
+    monastery_mentor, shoreline_looter, silent_hallcreeper, slither_blade, storm_kiln_artist,
+    talrand_sky_summoner, triton_shorestalker, vega_the_watcher, willie_lumpkin_postman,
+    wraith_vicious_vigilante, fiery_inscription, jeskai_ascendancy, thousand_year_storm,
+    whirlwind_of_thought, an_offer_you_cant_refuse, boon_of_safety, brainstorm, consider, erode,
+    great_train_heist, into_the_flood_maw, light_of_hope, lightning_bolt, mystical_tutor, opt,
+    path_to_exile, peek, pongify, pull_from_eternity, rapid_hybridization, swords_to_plowshares,
+    thought_scour, three_steps_ahead, boltwave, careful_study, empty_city_ruse,
+    faithless_looting, false_peace, gitaxian_probe, helping_hand, honor, ponder, preordain,
+    requisition_raid, serum_visions, strike_it_rich, vandalblast,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    plains, plains, plains, plains,
+];
