@@ -10,7 +10,8 @@ use crate::card::{
     TokenDefinition, TriggeredAbility, Value, Zone,
 };
 use crate::effect::shortcut::{
-    add_any_one_color, blitz, etb, investigate, magecraft, mint_treasures, on_dies, target_filtered,
+    add_any_one_color, blitz, etb, investigate, magecraft, mint_treasures, on_cast_noncreature, on_dies,
+    target_filtered,
 };
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::types::TurnStep;
@@ -614,5 +615,55 @@ pub fn jabs_mistress_of_mockery() -> CardDefinition {
             },
         }],
         ..legend("Jabs, Mistress of Mockery", cost(&[generic(2), r()]), vec![CreatureType::Human, CreatureType::Rogue], 2, 3)
+    }
+}
+
+/// Grandmother Goby — {2}{U}{U} legendary 2/2 Merfolk Wizard. Whenever you
+/// cast a noncreature spell, counter it and create a 1/1 blue Merfolk per mana
+/// spent to cast it.
+pub fn grandmother_goby() -> CardDefinition {
+    let merfolk = TokenDefinition {
+        name: "Merfolk".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Merfolk], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        triggered_abilities: vec![on_cast_noncreature(Effect::Seq(vec![
+            Effect::CounterSpell { what: Selector::TriggerSource },
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::CastSpellManaSpent,
+                definition: std::sync::Arc::new(merfolk),
+            },
+        ]))],
+        ..legend("Grandmother Goby", cost(&[generic(2), u(), u()]), vec![CreatureType::Merfolk, CreatureType::Wizard], 2, 2)
+    }
+}
+
+/// Mists of Lórien — {2}{U} sorcery, replicate {U}. Return target nonland
+/// permanent and each other nonland permanent with its mana value to their
+/// owners' hands.
+pub fn mists_of_lorien() -> CardDefinition {
+    let to_hand = ZoneDest::Hand(PlayerRef::OwnerOfMoved);
+    CardDefinition {
+        name: "Mists of Lórien",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Replicate(cost(&[u()]))],
+        effect: Effect::WithX {
+            x: Value::ManaValueOf(Box::new(Selector::Target(0))),
+            body: Box::new(Effect::Seq(vec![
+                Effect::Move { what: target_filtered(R::Permanent.and(R::Nonland)), to: to_hand.clone() },
+                Effect::Move {
+                    what: Selector::EachPermanent(R::Permanent.and(R::Nonland).and(R::ManaValueExactlyXFromCost)),
+                    to: to_hand,
+                },
+            ])),
+        },
+        ..Default::default()
     }
 }

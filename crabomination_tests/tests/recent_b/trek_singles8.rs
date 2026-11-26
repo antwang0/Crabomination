@@ -488,3 +488,47 @@ fn jabs_doubles_triggers_of_permanents_you_dont_own() {
         assert_eq!(g.players[0].hand.len(), hand + if borrowed { 2 } else { 1 });
     }
 }
+
+/// Grandmother Goby counters your noncreature spell and pays a Merfolk per
+/// mana spent; a creature spell is left alone.
+#[test]
+fn grandmother_goby_turns_spells_into_merfolk() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::grandmother_goby());
+    let div = g.add_card_to_hand(0, catalog::divination());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, div);
+    assert_eq!(g.players[0].hand.len(), hand - 1, "countered: no draws");
+    let merfolk = g.battlefield.iter().filter(|c| c.definition.name == "Merfolk").count();
+    assert_eq!(merfolk, 3);
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 2);
+    cast(&mut g, bear);
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// Mists of Lórien: the target and every other nonland permanent of its mana
+/// value go home; other mana values and lands stay.
+#[test]
+fn mists_of_lorien_bounces_a_mana_value() {
+    let mut g = pod(2);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 0, catalog::grizzly_bears());
+    let giant = ready(&mut g, 1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::mists_of_lorien());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(crabomination::game::types::Target::Permanent(a)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].hand.iter().any(|c| c.id == a));
+    assert!(g.players[0].hand.iter().any(|c| c.id == b));
+    assert!(g.battlefield_find(giant).is_some());
+}

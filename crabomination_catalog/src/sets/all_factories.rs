@@ -19529,6 +19529,8 @@ static DECKS: &[Factory] = &[
     super::decks::valko_indorian,
     super::decks::tolabow_loch_rascal,
     super::decks::jabs_mistress_of_mockery,
+    super::decks::grandmother_goby,
+    super::decks::mists_of_lorien,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
