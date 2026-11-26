@@ -1334,6 +1334,7 @@ impl GameState {
             | EventScope::YourSourceDamagedAnyPlayer
             | EventScope::OpponentSourceDamagedYou
             | EventScope::SourceDamagedYou
+            | EventScope::YourSourceDamagedYou
             | EventScope::OpponentSourceDamagedYourPermanent
             | EventScope::YourOtherSourceDamagedOpponent
             | EventScope::YouTapped

@@ -2908,6 +2908,22 @@ impl GameState {
                     .collect();
                 types.iter().enumerate().any(|(i, a)| types[i + 1..].iter().any(|b| a.iter().any(|t| b.contains(t))))
             }
+            Predicate::DiscardedSharesCardTypeWith { who, with } => {
+                let (Some(a), Some(b)) = (self.resolve_player(who, ctx), self.resolve_player(with, ctx)) else {
+                    return false;
+                };
+                let types_of = |seat: usize| -> Vec<crate::card::CardType> {
+                    self.scratch
+                        .discarded_card_ids_this_resolution
+                        .iter()
+                        .filter_map(|id| self.find_card_anywhere(*id))
+                        .filter(|c| c.owner == seat)
+                        .flat_map(|c| c.definition.card_types.iter().cloned())
+                        .collect()
+                };
+                let mine = types_of(b);
+                types_of(a).iter().any(|t| mine.contains(t))
+            }
             Predicate::AllMatchingShareAColor(filter) => {
                 // Common Cause — intersect the colours of every match; a
                 // colourless one empties the set immediately.

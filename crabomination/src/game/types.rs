@@ -2817,6 +2817,10 @@ pub enum GameEvent {
     /// `amount` is the prevented portion.
     DamagePrevented { amount: u32, to_player: Option<usize>, to_card: Option<CardId> },
     LifeLost { player: usize, amount: u32 },
+    /// `player` lost `amount` life (not through damage) during the resolution
+    /// of a spell or ability `player` controlled — synthesized at the end of the
+    /// outermost resolution, beside that `LifeLost` (Sahir, Visitor in Darkness).
+    LifeLostToOwnEffect { player: usize, amount: u32 },
     LifeGained { player: usize, amount: u32 },
     /// `player` gained `amount` life during the resolution of instant or
     /// sorcery spell `spell` (its own gain or its lifelink damage).

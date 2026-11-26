@@ -33641,6 +33641,7 @@ fn event_amount(event: &GameEvent) -> u32 {
         GameEvent::LifeGained { amount, .. }
         | GameEvent::SpellCausedLifeGain { amount, .. }
         | GameEvent::LifeLost { amount, .. }
+        | GameEvent::LifeLostToOwnEffect { amount, .. }
         | GameEvent::PaidLife { amount, .. }
         | GameEvent::DamageDealt { amount, .. }
         | GameEvent::PoisonAdded { amount, .. }

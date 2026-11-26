@@ -1617,8 +1617,9 @@ impl GameState {
                 return;
             }
         }
-        // Damage-source attribution: the source permanent's controller, or
-        // the resolving spell's caster (mirrors `scale_damage_to`).
+        // Damage-source attribution: the source permanent's controller, the
+        // resolving spell's caster (mirrors `scale_damage_to`), or — for an
+        // ability functioning from the command zone (Eminence) — its owner.
         let from_controller = source.and_then(|s| {
             self.battlefield_find(s)
                 .map(|c| c.controller)
@@ -1626,6 +1627,7 @@ impl GameState {
                     Some((id, caster, _, _)) if *id == s => Some(*caster),
                     _ => None,
                 })
+                .or_else(|| self.command_card(s).map(|c| c.owner))
         });
         // CR 614.9 — Mirrorwood Treefolk's one-shot: the next damage aimed at
         // a registered permanent goes somewhere else instead. Consumed here.

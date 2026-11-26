@@ -117,7 +117,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         E::ClassLevelReached { .. } => bits!(K::ClassLevelReached),
         E::PoisonAdded { .. } => bits!(K::PoisonAdded),
         E::RingTempted { .. } => bits!(K::RingTempted),
-        E::LifeLost { .. } => bits!(K::LifeLost),
+        E::LifeLost { .. } | E::LifeLostToOwnEffect { .. } => bits!(K::LifeLost),
         E::StepChanged(_) => bits!(K::StepBegins(crate::TurnStep::Untap)),
         E::TurnStarted { .. } => bits!(K::TurnBegins),
         E::CounterAdded { .. } => bits!(
@@ -428,7 +428,10 @@ fn reference_event_kind_matches(
         (EventKind::ClassLevelReached, GameEvent::ClassLevelReached { .. }) => true,
         (EventKind::PoisonAdded, GameEvent::PoisonAdded { .. }) => true,
         (EventKind::RingTempted, GameEvent::RingTempted { .. }) => true,
-        (EventKind::LifeLost, GameEvent::LifeLost { .. }) => true,
+        // The synthesized twin reaches only "causes you to lose life" listeners;
+        // every other `LifeLost` trigger already saw the loss itself.
+        (EventKind::LifeLost, GameEvent::LifeLost { .. }) => !spec.self_caused,
+        (EventKind::LifeLost, GameEvent::LifeLostToOwnEffect { .. }) => spec.self_caused,
         (EventKind::StepBegins(s), GameEvent::StepChanged(got)) => s == got,
         (EventKind::TurnBegins, GameEvent::TurnStarted { .. }) => true,
         (EventKind::CounterAdded(k), GameEvent::CounterAdded { counter_type, .. }) => counter_type == k,
@@ -869,8 +872,11 @@ fn event_matches_spec_rest(
     }
 
     // "…causes its controller to shuffle" (Widespread Panic).
+    // "…causes you to lose life" (Sahir) rides the synthesized twin, which is
+    // self-caused by construction.
     if spec.self_caused
         && !matches!(event, GameEvent::LibraryShuffled { player, cause } if *cause == Some(*player))
+        && !matches!(event, GameEvent::LifeLostToOwnEffect { .. })
     {
         return false;
     }
@@ -1227,6 +1233,11 @@ fn event_matches_spec_rest(
             event,
             GameEvent::DamageDealt { to_player: Some(p), .. } if *p == source.controller
         ),
+        EventScope::YourSourceDamagedYou => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
+                if *p == source.controller && *fc == source.controller
+        ),
         EventScope::OpponentSourceDamagedYourPermanent => match event {
             GameEvent::DamageDealt { to_card: Some(c), from_controller: Some(fc), .. } => {
                 !state.same_team(*fc, source.controller)
@@ -1569,6 +1580,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::Enlisted { controller: player, .. }
         | GameEvent::BecameRenowned { controller: player, .. }
         | GameEvent::LifeLost { player, .. }
+        | GameEvent::LifeLostToOwnEffect { player, .. }
         | GameEvent::PaidLife { player, .. }
         | GameEvent::ScriedOrSurveiled { player, .. }
         | GameEvent::OpponentCausedYouToDiscard { player, .. }
@@ -1770,6 +1782,7 @@ pub(crate) fn event_subject(event: &GameEvent, kind: &EventKind) -> Option<Entit
         GameEvent::LifeGained { player, .. }
         | GameEvent::CardsExiledFromHandOrBy { player, .. }
         | GameEvent::LifeLost { player, .. }
+        | GameEvent::LifeLostToOwnEffect { player, .. }
         | GameEvent::ManaAdded { player, .. }
         | GameEvent::DiscardedBatch { player, .. }
         | GameEvent::EnergyGained { player, .. }
@@ -1894,6 +1907,11 @@ pub(crate) fn emblem_event_matches(
         EventScope::SourceDamagedYou => {
             matches!(event, GameEvent::DamageDealt { to_player: Some(p), .. } if *p == controller)
         }
+        EventScope::YourSourceDamagedYou => matches!(
+            event,
+            GameEvent::DamageDealt { to_player: Some(p), from_controller: Some(fc), .. }
+                if *p == controller && *fc == controller
+        ),
         EventScope::FromYourGraveyard
         | EventScope::FromYourGraveyardAnyPlayer
         | EventScope::FromYourGraveyardSourceDamagedOpponent
@@ -2124,6 +2142,7 @@ mod tests {
             },
             E::DamagePrevented { amount: 1, to_player: Some(0), to_card: None },
             E::LifeLost { player: 0, amount: 1 },
+            E::LifeLostToOwnEffect { player: 0, amount: 1 },
             E::LifeGained { player: 0, amount: 1 },
             E::SpellCausedLifeGain { player: 0, spell: c, amount: 1 },
             E::EchoPaid { card_id: c, controller: 0 },

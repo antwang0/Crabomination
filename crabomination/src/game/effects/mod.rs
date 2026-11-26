@@ -3666,6 +3666,31 @@ impl GameState {
                 events.push(GameEvent::DiscardedBatch { player, count });
             }
         }
+        // "A spell or ability you control causes you to lose life" (Sahir): the
+        // outermost resolution's losses of its own controller, less those that
+        // were damage (a damage loss follows its `DamageDealt` directly).
+        if self.resolution_depth == 0 {
+            let me = ctx.controller;
+            let own: Vec<u32> = events[mark..]
+                .iter()
+                .enumerate()
+                .filter_map(|(i, e)| match e {
+                    GameEvent::LifeLost { player, amount }
+                        if *player == me
+                            && !matches!(
+                                i.checked_sub(1).map(|j| &events[mark + j]),
+                                Some(GameEvent::DamageDealt { to_player: Some(p), .. }) if *p == me
+                            ) =>
+                    {
+                        Some(*amount)
+                    }
+                    _ => None,
+                })
+                .collect();
+            for amount in own {
+                events.push(GameEvent::LifeLostToOwnEffect { player: me, amount });
+            }
+        }
         *out = events;
         Ok(())
     }

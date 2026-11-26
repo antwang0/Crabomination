@@ -1725,6 +1725,10 @@ pub enum Predicate {
     /// Two of the objects `.0` resolves to share a card type (Rowdy Crew's "if
     /// two cards that share a card type are discarded this way").
     TwoShareACardType(Selector),
+    /// A card `who` discarded earlier in this resolution shares a card type
+    /// with a card `with` discarded in it (Creeping Dread's "each opponent who
+    /// discarded a card that shares a card type with the card you discarded").
+    DiscardedSharesCardTypeWith { who: PlayerRef, with: PlayerRef },
     /// An opponent of the controller was dealt noncombat damage last turn
     /// (`Player.dealt_noncombat_damage_last_turn` — Command the Stage).
     OpponentDealtNoncombatDamageLastTurn,
@@ -3822,6 +3826,10 @@ pub enum EventScope {
     /// source, yours included ("whenever a source of the chosen color deals
     /// damage to you" — Circle of Affliction). The dealer is the subject.
     SourceDamagedYou,
+    /// A source the trigger's controller controls dealt damage to them ("a
+    /// source you control deals … damage to you" — Sahir). A source in its
+    /// owner's command zone is that player's (Eminence pings).
+    YourSourceDamagedYou,
 }
 
 impl EventScope {
