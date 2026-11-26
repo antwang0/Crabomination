@@ -10508,3 +10508,95 @@ What to try next, in order:
 Root-only is not a prior for the client or lobby. Phase 2 (batched
 lockstep rollouts) can still use it: there its baseline is the heuristic,
 not the champion.
+
+## Six experiments, a mixed-format champion, and seven bot fixes for distorted FRA ratings (2026-11-26)
+
+Code: e52f7aad8 (experiments), 55a4c2bab..(this commit) (bot fixes). Queue
+and raw cells: `.ladder/x6/` (`run.sh`, `summary.txt`); bot-fix gates:
+`.ladder/rf/`. Every rule below was written down before its run. Client
+pilot P = `mcts-net67-menu-mc-df-anm10-wd2-nn-ks-hr-ho-hc-sv-rs-kx`; baseline
+blunders 69.0/75.
+
+**X2, why set-trained nets lose plain-card items.** Plain cards are the one
+unknown row in every set-trained net (2,386 of 2,550 rows in R2 s97). On the
+five plain-card items: champion 5/5, R2 s97 0/5, R2 s97 with those rows
+redrawn as random distinct rows 1/5 and 2/5. Distinct rows are not enough;
+the rows need training.
+
+**Search census (`CRAB_SEARCH_CENSUS=1`, 240 games a set).** SOS: 7.42 moves
+a list; attack decisions: the anchor and the search agree 63.6 %, the anchor
+stands on the margin 28.9 %, is overridden 7.5 % (block 59.1 / 33.9 / 6.9).
+FRA: 8.64 moves; attack 52.7 / 37.9 / 9.4, block 54.3 / 37.7 / 8.0. Mean gap
+where the anchor stood: 0.027.
+
+**X1, hybrid move scoring (`-hy<N>`: root-only net cuts the list to N, the
+main policy scores those successors). FAIL.** Successors scored fall 7.7 →
+3.3 a decision, but hy4 reads SOS 47.7 [46.0, 49.4], FRA 42.5 [40.5, 44.5];
+hy6 SOS 48.1 [46.4, 49.8], FRA 44.7 [42.7, 46.8]; blunders 69.0 / 68.9. The
+root-only cut drops the move the successor scorer would have picked.
+
+**X3, the policy answers prompts (`-pp`). FAIL.** Blunders 67.0/75; first
+SOS cell 44.8 [42.7, 46.8], so the gate stopped there (FRA cell not run to
+the end).
+
+**X5, one net for three formats (`--actor-mix sos:2,fra:1,cube:1`, R2
+recipe). Passes every clause but blunders; SWAPPED IN at the user's call.**
+Seed 43 ran 250k games (125,176 SOS / 62,455 FRA / 62,369 cube); seed 97
+early-stopped at 138,894.
+
+| | champion (r81) | R2 s97 | M s43 | M s97 | FRA champion |
+|---|---|---|---|---|---|
+| SOS holdout AUC | 0.8228 | 0.8611 | 0.8560 | 0.8507 | |
+| FRA holdout AUC | 0.7612 | | 0.8393 | 0.8337 | 0.8478 |
+| SOS scored vs dflt (g211 / g307) | 51.5 / 51.6 | 52.9 / 55.3 | 53.3 / 54.6 | 52.1 / 53.1 | |
+| FRA scored (g1013 / g1103) | | | 51.9 / 50.9 | 51.3 / 51.9 | 55.1 / 55.0 |
+
+M s43 as the search leaf against the r81 champion (`P-vb` vs `P`): SOS 52.1 /
+52.1; Modern 51.2 [48.2, 54.3] and 52.8 [50.1, 55.5]; cube 52.3 [50.2, 54.4]
+and 54.7 [52.5, 56.9]. Blunders **64.7/75** against 69.0 (pairs 13/14): it
+newly fails `attack_then_bolt_for_lethal`, `flash_in_the_blocker`,
+`ping_for_lethal`, `kill_the_lord`, `kill_the_beater_not_the_lord`, part of
+`real_counter_4` and a landcycle item, and fixes `land_then_the_three_drop`
+and `aura_on_your_own_creature`. A leaf-pairs read says the new-recipe nets
+price sparse test boards very low ("2/2 each at 20 life": champion 0.313, R2
+s97 0.241, M s43 0.095), so the blunder loss looks like the sparse shells
+being out of distribution, not card rows alone. Open: judge on real-position
+items, or put sparse boards in training.
+
+**Champion swap (2026-11-26, the user's call):** `nets/champion.safetensors`
+is now M s43 (`nets_x6_M_s43/best.safetensors`; the r81 net is in git and at
+`.ladder/x6/champion_r81.safetensors`). FRA games keep `fra-champion`
+(M is 3–4 points behind it on FRA). The rest of the queue (X6, X4) stays
+pinned to the r81 net it was registered against.
+
+**X6 (generation 6, raw vs sharpened target) and X4 (anchor margin): running.**
+
+### Bot fixes for TODO's "FRA ratings the bots distort"
+
+`EvalWeights::rating_fixes` is a bit mask (`RF_*`), off everywhere; ladder
+profile `fixes+rf:<names>` (`all` for every bit), `bot_puzzles`
+`<profile>+rf:<names>`. Gate: head-to-head against `fra-fixes`, 125 games x
+48 sealed decks, paired; pass iff every cell >= 49.8 and FRA pooled >= 50.0.
+
+| bit | what it does | FRA s43 / 97 / 11 / 29 | SOS 43 / 97 | cube 43 / 97 |
+|---|---|---|---|---|
+| `all` | | **52.8 / 53.1 / 53.0 / 52.3** | 51.2 / 51.9 | 50.9 / 52.3 |
+| `discard` | discards, loots, discard costs and put-backs shed the lowest-*valued* card (`card_ratings`, static score off-table), lands priced against spells; a may-discard is declined when the pitch outweighs a fetch or a draw | 52.6 / 52.1 / 52.5 / 51.7 | 51.0 / 51.3 | 50.8 / 51.9 |
+| `timing` | a flash creature and a non-attacker-rider instant (Prophesied End) wait for the opponent's turn (cast once they attack, else at their end step; the best other line that leaves the mana is played meanwhile); a tap-to-loot on a creature that could attack waits for the second main | 50.3 / 50.9 / 50.7 / 50.6 | 50.2 / 50.3 | 50.2 / 50.0 |
+| `shrink` | an until-end-of-turn −X/−X that kills is scored by the board after deaths; a sweep that kills nothing or loses the board is refused | 50.3 / 50.2 / 49.9 / 50.1 | 50.0 / 50.1 | 50.0 / 50.2 |
+| `aim` | bounce is not aimed at our own creature for nothing; an optional hostile trigger slot is declined when only our permanents fit; a second answer is not stacked on a target our pending spell already removes | 50.0 / 50.1 / 50.1 / 50.0 | 50.1 / 50.2 | 49.9 / 50.3 |
+| `loyaim` | a constant-damage loyalty minus aims at the best creature it kills and is not offered when it kills nothing | 50.0 / 50.0 / 50.0 / 50.1 | 50.0 / 50.0 | 50.0 / 50.0 |
+| `libtop` | the option settle values a known nonland permanent on top of our library (Clash of Elements' owner's choice) | 50.1 / 50.0 / 50.0 / 50.1 | 50.0 / 50.0 | 50.0 / 50.0 |
+| `shield` | the keyword-shield response runs in duels (Liliana the Faultless) | 50.0 x4 | 50.0 / 50.0 | 50.0 / 50.0 |
+
+All seven pass; the discard ranker is nearly all of the gain. Not adopted
+yet: the blunder tripwire and the set-played re-rate under `fixes+rf:all`
+are still to read (`.ladder/rf/blunders.txt`, `set_played_*`).
+
+Left open by the fixes: activated-ability discard costs are chosen by the
+engine, not the bot (Murmuring Volume's loot, probably Seasoned Cryomancer's
+pitch); Jace's Machinations at instant speed (needs off-turn loyalty
+activations); general instant removal on the opponent's turn (`hold_instants`
+was rejected 2026-11-17, only the two narrow shapes above are held); −X
+loyalty damage and destroy/exile minuses keep the engine's aim; scry still
+bins by mana value.

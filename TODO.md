@@ -433,6 +433,127 @@ search", "The blunder set"):
 7. **The FRA and lobby pilots on the set** — read (ML_NOTES).
 No training run without the user's go-ahead.
 
+### FRA ratings the bots distort (2026-11-26 scan, the user's Tinybones doubt)
+**Status 2026-11-26: seven fixes built behind `EvalWeights::rating_fixes`
+(off), all pass the head-to-head gate; `fixes+rf:all` is +2.8 on FRA, +1.5 SOS,
++1.6 cube over `fra-fixes`, nearly all from the discard ranker. See ML_NOTES
+"Six experiments ... seven bot fixes". Owed before adoption: the blunder
+tripwire and the set-played re-rate (`.ladder/rf/`). Still open from the
+lists below: engine-chosen discard costs (Murmuring Volume, Cryomancer's
+pitch), Jace's Machinations at instant speed, general instant removal on the
+opponent's turn, −X / destroy loyalty aims, Paradox Shaper / Fblthp, and the
+report's small-n ranking (Clash of Elements n = 14).**
+
+**Discard ranker (lead).** `hand_worst_first` (`server/bot.rs`) keeps lands
+until five are in play and otherwise pitches the *most expensive* spell, which
+in Limited is usually the bomb. A forced discard therefore costs a bot its best
+card: in 3,200 traces (`.ladder/flip/tr`) Tinybones' discard took Way of the
+Wildspeaker 12 times and Saheeli, Consul 10 times out of 67. The same rule runs
+the bot's own loots. Fix: rank by card value (`FRA_SIM_VALUE` or the deck
+builder's rating), behind an off-by-default flag in `fra-fixes`; gate it
+(paired gauntlet, FRA + SOS + cube), then re-rate FRA (`fra_card_eval`
+set-played). It should move both groups below.
+- **Forced discard (bots overrate):** Tinybones, Pocket Nuisance (played
+  +2.1, 17lands GIH 51.5 % = #131/139) and Rank Rat (+0.7, #132/139) are the
+  set's only two, and both are top-third in the sim and bottom-6 % by humans.
+- **Self-discard (confirmed, traces in `.ladder/gaps/a/`):** across hero
+  self-discards the pitched spell was the hand's highest-MV one 75–95 % of
+  the time (Undulating Witness, the pool's best blue card, pitched 24 times;
+  `635ab599f6f542c1_0_1_94` T5: a loot on 3 lands pitches Witness, keeps a
+  Mountain). Seasoned Cryomancer pitches bombs early and two lands late (24
+  of 77: no stun); Pia, Aether Ascetic takes the may 133 / 139 and pitches the
+  priciest spell 110 times (once a castable Way of the Wildspeaker for Way of
+  the Healer) — `MayDiscard` never compares the pitch with the best fetch.
+  The ranker also scores a mana rock as a 3-MV spell (Murmuring Volume pitched
+  33 times). All seven cards' code matches Oracle.
+- **Murmuring Volume −6.3 is NOT the loot** (it loots only at hand ≤ 2, mostly
+  pitching surplus lands). Next: how `fra_card_eval`'s rated-deck insertion
+  treats a mana rock (what does it cut?).
+
+**More gaps from the discard audit:**
+- **Liliana the Faultless never shields (0 activations in 1,880 games):**
+  `pick_keyword_shield` (`server/bot/keyword_shield.rs:124`) returns early
+  when the seat has no commander, so the shield sink is Commander-only;
+  `duel_sinks` doesn't open it and `generic_sink` skips until-EOT grants.
+- **Optional "up to" slots filled with our own creature:** Cryomancer stunned
+  its own Cryomancer 7 of 59 times, 5 with no enemy creature
+  (`4e4ea524aabd65e5_0_1_61` T5). ChooseTarget path, bot.rs ~4440–4500
+  (`decide_choose_target` ~7113 or `engine_trigger_answer`, not isolated).
+- **Flash creatures always at sorcery speed:** Divining Duelist 0 / 117 at
+  instant speed; Twinned Vision 197 / 199 in its own main phase.
+- **Arni taps to loot precombat** (114 / 197), losing its attack, 11 times into
+  an empty board (`pick_card_draw_ability`, bot.rs ~12690).
+
+**Owner's-choice blind spot (confirmed).** Clash of Elements ("its owner may
+put it on top and take 2, else bottom") is resolved by `option_eval`
+(`decide_option_by_outcome`), which settles both options on
+`eval_material`; the material eval has no library term, so a card on top is
+worth the same as one on the bottom and "top + 2 damage" always loses. In
+13/13 traced casts the owner chose bottom: the bot turns a tempo spell into
+3-mana instant removal of anything. Fix: value a known top-of-library card
+(roughly a card in hand, minus a draw) in the settle, or give this shape its
+own rule (top unless the permanent is a token or worth less than a draw).
+Card code matches Scryfall. Its played rating (+9.8 ±9.0) comes from 14 decks
+and is noise; the report should rank by a shrunk estimate or flag n < 50.
+
+**Removal / tempo audit (2026-11-26, traces in `.ladder/gaps/b/`).** All
+eight cards' code matches Oracle; every gap is bot play.
+- **Unsummon bounces our own creature for nothing:** 26 of 214 casts hit our
+  own creature with no opposing creature in play (`tr_ub/324d970804e31a8a_0_1_42`
+  T5: own vanilla Surveillance Phantasm, empty enemy board). Bounce-to-hand is
+  missing from `hostile_leaf` in `target_polarity_misaimed` (bot.rs ~6420),
+  and an own target earns a flat +2 units (~23927). 0 of 214 in combat.
+- **Prophesied End always gives a card:** 149 / 149 casts on a non-attacker.
+  `pick_combat_only_instant` (~5815) covers only spells that *require* an
+  attacking target, not a rider conditioned on attacking.
+- **Rise of the Deathbringer's sweep is judged blind:** until-end-of-turn
+  PumpPT scores at the no-change baseline (`action_outcome_is_temporary` /
+  `contains_temporary_leaf`, ~22655 / ~22838), so lethal −3/−3 on either
+  board is invisible; 5 of 29 sweeps killed no enemy, 5 killed more of ours
+  (`tr_ub/2398c7ef51e1a4cb_0_0_116` T14). The same blindness likely touches
+  every lethal −X/−X (Last Gasp is aimed right only via the target path).
+- **Stacking a second answer on our own pending target:** 22 times in 240
+  games (Multiply by Zero, then Unsummon on the same creature; the first
+  fizzles). No check that our unresolved spell already answers the target.
+- **Instant removal at sorcery speed:** Last Gasp / Multiply by Zero aimed
+  right (225 / 225) but > 90 % cast in our main phase, 2 / 225 in combat.
+- Terminal Criticism: half its casts hit a Jace token; narrow in this field
+  (probably a fair rating). Icy Reception: fine.
+
+**Other disagreements to read** (played rating vs 17lands GIH, colour-adjusted;
+from the `fra_pool_report.html` data, cards with ≥ 500 GIH games):
+- **Tempo / bounce, bots underrate:** Unsummon −4.1 (GIH 57.6), Fatehold Charm
+  −4.2 (open issue), Icy Reception −1.5, Teyo −0.8. Bounce is probably cast
+  for no gain (own-side or a token-less target at the wrong time).
+- **Counters, bots underrate:** Countersculpt −1.4, Theorix Charm −2.3 —
+  the known hold/counter gap.
+- **Cheap instant removal, bots underrate:** Last Gasp −0.5, Multiply by Zero
+  −0.8, Prophesied End −1.8 (cast outside combat, giving a card?). Card code
+  for all three checked and correct.
+- **Paradox Shaper −3.4, Fblthp ×2 ≈0 (GIH 60.2)** — read why.
+
+**Planeswalker / overrated audit (2026-11-26, traces in `.ladder/gaps/c/`).**
+All ten cards' code matches Oracle.
+- **Loyalty targeting is single-shot (Chandra, Torch of Defiance +0.9):**
+  first activation −3 in 62 / 71 casts; 21 of 74 −3s (28 %) went into a
+  creature with toughness ≥ 5 and killed nothing (`tr_RW/122aae0350556b91_0_0_55`
+  T10: 4 damage into a 4/5 beside a killable 2/3 and 3/3; Chandra died T11).
+  `auto_target_for_ability` (`game/effects/targeting.rs:39`) offers the
+  biggest creature with no lethality check, and `pick_loyalty_ability`
+  (bot.rs ~13818, cash-out at ~13905) then forces the minus. +1 mana never
+  used; 39 / 71 Chandras activated once and died. Hits every damage / removal
+  minus in the catalog.
+- **Jace's Machinations at sorcery speed:** 131 / 136 casts in its owner's
+  main phase, zero instant-speed loyalty activations — the card's point is
+  lost. The other Jace-token cards are played sanely (the token draws 1–2 and
+  dies); their gap to humans looks like valuation, not a misplay.
+- **Refuted (no defect):** Thopter / Saheeli fliers (only 3 of 1,248 Thopter
+  attacks unblocked while a profitable block sat idle — the value is
+  evasion); Thalia (the tax bites: 10.7 % vs 3.7 % of turns holding a
+  taxed-out spell); Warrior's Blades (ETB kills 61 / 85, equips sensibly);
+  Way of the Wildspeaker / Warlord (granted −4 used first, sane). Their high
+  sim ratings are the sim's general taste for removal and evasion.
+
 ### The net chooses every move (2026-11-25, the user's direction)
 No heuristic picks a move, rollouts included, batched to pay for it. Plan
 and Phase 0 are in ML_NOTES "The net chooses every move". Phase 0 found
