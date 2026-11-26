@@ -4550,6 +4550,13 @@ fn decide_pending_policy_inner(
             }
             decide_pending_policy_inner(state, seat, w, &d, eval_modes)
         }
+        // `RF_AIM`: an optional slot of a hostile trigger stays empty when
+        // only our own permanents fit it.
+        crate::decision::Decision::ChooseTarget { legal, optional: true, .. }
+            if w.rating_fixes & RF_AIM != 0 && hostile_slot_fits_only_own(state, seat, legal) =>
+        {
+            crate::decision::DecisionAnswer::DeclineTarget
+        }
         crate::decision::Decision::ChooseTarget { legal, optional, .. } if !legal.is_empty() => {
             // Round 53: judge the corner candidates by settled outcome at
             // the real decision. Inside a sim (`eval_modes` off) the
@@ -6552,6 +6559,201 @@ fn target_polarity_misaimed(
         && !eff
             .target_filter_for_slot_in_mode_kicked(0, mode, false)
             .is_some_and(requirement_restricts_to_your_creatures)
+}
+
+/// `eff` returns its slot-0 target from the battlefield to a hand.
+fn bounces_slot0(eff: &Effect) -> bool {
+    use crate::effect::{Selector, ZoneDest};
+    eff.any_nested(&|e| match e {
+        Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(_) } => true,
+        Effect::Move { what: Selector::TargetFiltered { slot: 0, filter }, to: ZoneDest::Hand(_) } => {
+            !filter.mentions_offboard_zone()
+        }
+        _ => false,
+    })
+}
+
+/// [`RF_AIM`]: a bounce aimed at a creature of the caster's own with nothing
+/// to save it from. Unsummon went at our own creature across an empty board
+/// (26 of 214 casts, 2026-11-25 FRA audit): bounce was missing from
+/// [`target_polarity_misaimed`]'s hostile leaves and an own target scores a
+/// flat gain. A creature an opponent's stack item targets, or one wearing an
+/// opponent's Aura, keeps the cast (the bounce answers those), as does a
+/// slot that only names the caster's own.
+fn bounce_misaimed_at_own(state: &GameState, seat: usize, eff: &Effect, mode: Option<usize>, target: Option<&Target>) -> bool {
+    use crate::game::types::StackItem;
+    let Some(Target::Permanent(id)) = target else { return false };
+    let Some(card) = state.battlefield_find(*id) else { return false };
+    if card.controller != seat
+        || !state.computed_is_creature(card)
+        || !bounces_slot0(eff)
+        || eff
+            .target_filter_for_slot_in_mode_kicked(0, mode, false)
+            .is_some_and(requirement_restricts_to_your_creatures)
+    {
+        return false;
+    }
+    let aimed_here = |t: &Option<Target>, extras: &[Target]| {
+        t.iter().chain(extras).any(|t| matches!(t, Target::Permanent(p) if p == id))
+    };
+    let threatened = state.stack.iter().any(|item| match item {
+        StackItem::Spell { caster, target, additional_targets, .. } => {
+            !state.same_team(*caster, seat) && aimed_here(target, additional_targets)
+        }
+        StackItem::Trigger { controller, target, additional_targets, .. } => {
+            !state.same_team(*controller, seat) && aimed_here(target, additional_targets)
+        }
+    });
+    let cursed = state
+        .battlefield
+        .iter()
+        .any(|a| a.attached_to == Some(*id) && a.definition.is_aura() && !state.same_team(a.controller, seat));
+    !threatened && !cursed
+}
+
+/// [`RF_AIM`]: the open trigger-target ask is a hostile slot (tap, stun,
+/// bounce, removal — [`Effect::permanent_slot_is_hostile`]) that could name
+/// an opponent's permanent, and every legal choice is on `seat`'s own side.
+/// The engine's fill declines such a slot (`declines_own_side_pick`), but a
+/// prompting seat — every simulated bot seat — answers it itself, and the
+/// last resort of [`decide_choose_target`] is our least valuable permanent:
+/// Seasoned Cryomancer's "up to" stun went on the Cryomancer itself (7 of 59
+/// triggers, 2026-11-25 FRA audit).
+fn hostile_slot_fits_only_own(state: &GameState, seat: usize, legal: &[Target]) -> bool {
+    use crate::game::types::ResumeContext;
+    let Some(pd) = state.pending_decision.as_ref() else { return false };
+    let ResumeContext::TriggerTargetPick { pending, picked, .. } = &pd.resume else { return false };
+    // A further slot leads with the engine's fill and is answered above.
+    if !picked.is_empty() {
+        return false;
+    }
+    let slot = 0u8;
+    let mode = pending.mode.filter(|&m| m != crate::game::types::MODE_PICK_DEFERRED);
+    !legal.is_empty()
+        && legal.iter().all(|t| {
+            matches!(t, Target::Permanent(id)
+                if state.battlefield_find(*id).is_some_and(|c| state.same_team(c.controller, seat)))
+        })
+        && pending.effect.permanent_slot_is_hostile(slot, mode)
+        && pending
+            .effect
+            .target_filter_for_slot_in_mode(slot, mode)
+            .is_some_and(|f| !f.excludes_opponents_side())
+}
+
+/// Does `eff` take its target off the battlefield or kill it — destroy,
+/// exile, a move to another zone, or a toughness change that kills?
+fn removes_its_target(eff: &Effect) -> bool {
+    use crate::effect::ZoneDest;
+    eff.any_nested(&|e| match e {
+        Effect::Destroy { .. }
+        | Effect::DestroyNoRegen { .. }
+        | Effect::Exile { .. }
+        | Effect::ExileUntilSourceLeaves { .. }
+        | Effect::ExileWithSource { .. } => true,
+        Effect::Move { to, .. } => !matches!(to, ZoneDest::Battlefield { .. } | ZoneDest::BattlefieldAttached { .. }),
+        _ => false,
+    }) || stat_change_kills(eff)
+}
+
+/// [`RF_AIM`]: the permanents an unresolved spell or ability of `seat`'s own
+/// already removes ([`removes_its_target`], or damage that is lethal as the
+/// board stands). A second answer on one of them fizzles the first: Multiply
+/// by Zero, then Unsummon on the same creature with it still on the stack,
+/// 22 times in 240 games (2026-11-25 FRA audit).
+fn own_pending_answers(state: &GameState, seat: usize) -> Vec<CardId> {
+    use crate::game::types::StackItem;
+    let mut out: Vec<CardId> = Vec::new();
+    for item in state.stack.iter() {
+        let (eff, target, extras) = match item {
+            StackItem::Spell { card, caster, target, additional_targets, mode, .. } if *caster == seat => {
+                (mode_branch(&card.definition.effect, *mode), target, additional_targets)
+            }
+            StackItem::Trigger { controller, effect, target, additional_targets, mode, .. } if *controller == seat => {
+                (mode_branch(effect, *mode), target, additional_targets)
+            }
+            _ => continue,
+        };
+        let removes = removes_its_target(eff);
+        let damage = face_damage(eff);
+        for t in target.iter().chain(extras) {
+            let Target::Permanent(id) = t else { continue };
+            let dies = || {
+                damage.is_some_and(|d| {
+                    state.battlefield_find(*id).zip(state.computed_permanent(*id)).is_some_and(|(c, cp)| {
+                        cp.toughness - c.damage as i32 <= d
+                            && !cp.keywords().has_kw(&crate::card::Keyword::Indestructible)
+                    })
+                })
+            };
+            if (removes || dies()) && !out.contains(id) {
+                out.push(*id);
+            }
+        }
+    }
+    out
+}
+
+/// [`RF_AIM`]: the slot-0 target for a removal cast whose first pick is in
+/// `pending` ([`own_pending_answers`]) — the most valuable opposing permanent
+/// the slot accepts that no pending answer of ours handles, and that a damage
+/// or shrink spell would kill. `None`: the cast waits.
+fn second_answer_target(
+    state: &GameState,
+    seat: usize,
+    eff: &Effect,
+    mode: Option<usize>,
+    pending: &[CardId],
+    w: &EvalWeights,
+) -> Option<Target> {
+    let filter = eff.target_filter_for_slot_in_mode_kicked(0, mode, false);
+    let reach = face_damage(eff).or_else(|| single_target_shrink(eff));
+    state
+        .battlefield
+        .iter()
+        .filter(|c| !state.same_team(c.controller, seat) && !pending.contains(&c.id))
+        .filter(|c| {
+            reach.is_none_or(|n| {
+                state.computed_permanent(c.id).is_some_and(|cp| {
+                    cp.card_types().contains(&crate::card::CardType::Creature)
+                        && cp.toughness - c.damage as i32 <= n
+                        && !cp.keywords().has_kw(&crate::card::Keyword::Indestructible)
+                })
+            })
+        })
+        .map(|c| (permanent_value(state, c.id, w), Target::Permanent(c.id)))
+        .filter(|(_, t)| {
+            filter.is_none_or(|f| state.evaluate_requirement_static(f, t, seat, None))
+                && state.check_target_legality(t, seat).is_ok()
+        })
+        .max_by_key(|(v, _)| *v)
+        .map(|(_, t)| t)
+}
+
+/// [`RF_AIM`]: the hand-cast aim after the two own-goal checks — `None`
+/// drops the cast (a bounce of our own creature for nothing, or a second
+/// answer with nothing else worth it), otherwise the target to cast at.
+fn rf_aim_target(
+    state: &GameState,
+    seat: usize,
+    eff: &Effect,
+    mode: Option<usize>,
+    target: Option<Target>,
+    w: &EvalWeights,
+) -> Option<Option<Target>> {
+    if bounce_misaimed_at_own(state, seat, eff, mode, target.as_ref()) {
+        return None;
+    }
+    if let Some(Target::Permanent(id)) = &target
+        && state.battlefield_find(*id).is_some_and(|c| !state.same_team(c.controller, seat))
+        && (removes_its_target(eff) || face_damage(eff).is_some())
+    {
+        let pending = own_pending_answers(state, seat);
+        if pending.contains(id) {
+            return second_answer_target(state, seat, eff, mode, &pending, w).map(Some);
+        }
+    }
+    Some(target)
 }
 
 /// Does `seat` control a permanent worth strictly less than `source`? That is
@@ -9463,6 +9665,16 @@ fn cast_candidates_all<'a>(
             } else {
                 target
             };
+            // `RF_AIM`: no bounce of our own creature for nothing, no second
+            // answer on a permanent our own pending spell already handles.
+            let target = if w.rating_fixes & RF_AIM != 0 {
+                match rf_aim_target(state, seat, mode_effect, mode, target, w) {
+                    Some(t) => t,
+                    None => continue,
+                }
+            } else {
+                target
+            };
             // SOS Repartee: with a controlled payoff that wants an
             // instant/sorcery to target a CREATURE, an "any target"
             // spell the auto-targeter aimed at a player also gets a
@@ -10800,6 +11012,14 @@ fn cast_candidates_all<'a>(
             {
                 continue;
             }
+            let target = if w.rating_fixes & RF_AIM != 0 {
+                match rf_aim_target(state, seat, &c.definition.effect, None, target, w) {
+                    Some(t) => t,
+                    None => continue,
+                }
+            } else {
+                target
+            };
             let action = GameAction::CastFlashback {
                 card_id: c.id, target, additional_targets, mode: None, x_value: None,
             };
@@ -14165,6 +14385,59 @@ fn creates_emblem(e: &Effect) -> bool {
     found
 }
 
+/// [`RF_LOYALTY_AIM`]: the target for a loyalty ability dealing a constant
+/// amount of damage to its slot-0 target, when the engine's pick
+/// (`auto_target_for_ability`: the biggest creature, no lethality read) is an
+/// opposing creature. The most valuable opposing creature the damage kills
+/// (toughness left <= damage, destructible, damage to it not prevented, a
+/// legal target of this source) replaces it. With none, `None` — don't offer
+/// the ability — when it spends loyalty and the damage is all it does;
+/// otherwise the engine's pick stands. Chandra, Torch of Defiance put 21 of
+/// 74 −3s into a creature with toughness >= 5 beside ones it killed, or
+/// with nothing to kill at all (2026-11-25 FRA audit).
+fn loyalty_damage_aim(
+    state: &GameState,
+    seat: usize,
+    source: CardId,
+    ability: &crate::effect::LoyaltyAbility,
+    target: Option<Target>,
+    w: &EvalWeights,
+) -> Option<Option<Target>> {
+    let eff = &ability.effect;
+    let Some(Target::Permanent(first)) = &target else { return Some(target) };
+    let Some(amount) = face_damage(eff) else { return Some(target) };
+    let opposing_creature = |c: &crate::card::CardInstance| {
+        !state.same_team(c.controller, seat) && state.computed_is_creature(c)
+    };
+    if !state.battlefield_find(*first).is_some_and(opposing_creature) {
+        return Some(target);
+    }
+    let filter = eff.primary_target_filter().or_else(|| eff.target_filter_for_slot(0));
+    let kill = state
+        .battlefield
+        .iter()
+        .filter(|c| opposing_creature(c))
+        .filter(|c| {
+            state.computed_permanent(c.id).is_some_and(|cp| {
+                cp.toughness - c.damage as i32 <= amount
+                    && !cp.keywords().has_kw(&crate::card::Keyword::Indestructible)
+            }) && !state.permanent_prevents_all_damage_to_self(c.id)
+        })
+        .map(|c| (permanent_value(state, c.id, w), Target::Permanent(c.id)))
+        .filter(|(_, t)| {
+            filter.is_none_or(|f| state.evaluate_requirement_static(f, t, seat, Some(source)))
+                && state.check_target_legality(t, seat).is_ok()
+                && !state.ability_target_has_protection(t, source)
+        })
+        .max_by_key(|(v, _)| *v)
+        .map(|(_, t)| t);
+    match kill {
+        Some(t) => Some(Some(t)),
+        None if ability.loyalty_cost < 0 && matches!(eff, Effect::DealDamage { .. }) => None,
+        None => Some(target),
+    }
+}
+
 /// Walk every planeswalker the bot controls and pick the first activatable
 /// loyalty ability. Auto-target via `auto_target_for_effect` for abilities
 /// that require a target. Prefers a +loyalty ability when available
@@ -14210,6 +14483,17 @@ fn pick_loyalty_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Opti
                 }
             } else {
                 None
+            };
+            // `RF_LOYALTY_AIM`: damage at an opposing creature goes at the
+            // best one it kills; a minus that is only that damage and kills
+            // nothing is not offered (the plus is).
+            let target = if w.rating_fixes & RF_LOYALTY_AIM != 0 {
+                match loyalty_damage_aim(state, seat, card.id, ability, target, w) {
+                    Some(t) => t,
+                    None => continue,
+                }
+            } else {
+                target
             };
             // Variable-X (`-X`) ability: commit all current loyalty — or,
             // under `loyalty_fixes`, offer every X from 1 up and let the
@@ -32284,6 +32568,210 @@ mod tests {
         assert!(
             permanent_value(&g, f, &v2) > permanent_value(&g, l, &v2),
             "v2 sees that the flier actually does something",
+        );
+    }
+
+    /// `RF_AIM`: Unsummon is not cast at our own creature across an empty
+    /// board (trace `tr_ub/324d970804e31a8a_0_1_42` T5), and still goes at an
+    /// opposing creature.
+    #[test]
+    fn rf_aim_holds_a_bounce_off_our_own_creature() {
+        use crate::mana::Color;
+        let board = |enemy: bool| {
+            let mut g = two_player_game();
+            g.step = TurnStep::PostCombatMain;
+            let mine = g.add_card_to_battlefield(0, catalog::surveillance_phantasm());
+            let theirs = enemy.then(|| g.add_card_to_battlefield(1, catalog::hill_giant()));
+            let unsummon = g.add_card_to_hand(0, catalog::unsummon());
+            g.players[0].mana_pool.add(Color::Blue, 1);
+            g.priority.player_with_priority = 0;
+            (g, mine, theirs, unsummon)
+        };
+        let off = EvalWeights::fra_fixes_on();
+        let on = EvalWeights { rating_fixes: RF_AIM, ..off };
+        let (g, mine, _, unsummon) = board(false);
+        let action = main_phase_action_with(&g, 0, true, &off).action;
+        assert!(
+            matches!(&action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                if *card_id == unsummon && *t == mine),
+            "flag off: the audited own-creature bounce, got {action:?}"
+        );
+        let action = main_phase_action_with(&g, 0, true, &on).action;
+        assert!(
+            !matches!(&action, GameAction::CastSpell { card_id, .. } if *card_id == unsummon),
+            "flag on: Unsummon is held, got {action:?}"
+        );
+        let (g, _, theirs, unsummon) = board(true);
+        for w in [&off, &on] {
+            let action = main_phase_action_with(&g, 0, true, w).action;
+            assert!(
+                matches!(&action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                    if *card_id == unsummon && Some(*t) == theirs),
+                "an opposing creature is bounced either way, got {action:?}"
+            );
+        }
+    }
+
+    /// `RF_AIM`: Seasoned Cryomancer's "up to two target creatures" stun
+    /// stays empty with no opposing creature (`.ladder/gaps/a` trace
+    /// `4e4ea524aabd65e5_0_1_61` T5 stunned the Cryomancer itself).
+    #[test]
+    fn rf_aim_leaves_an_optional_stun_slot_empty() {
+        use crate::decision::{Decision, DecisionAnswer};
+        use crate::mana::Color;
+        let off = EvalWeights::fra_fixes_on();
+        let on = EvalWeights { rating_fixes: RF_AIM, ..off };
+        let mut g = two_player_game();
+        g.players[0].wants_ui = true;
+        for _ in 0..4 {
+            g.add_card_to_library(0, catalog::grizzly_bears());
+        }
+        // Two nonland discards: the trigger offers its two-target stun.
+        g.add_card_to_hand(0, catalog::hill_giant());
+        g.add_card_to_hand(0, catalog::hill_giant());
+        let cryo = g.add_card_to_hand(0, catalog::seasoned_cryomancer());
+        g.players[0].mana_pool.add(Color::Blue, 3);
+        g.priority.player_with_priority = 0;
+        g.perform_action(GameAction::CastSpell {
+            card_id: cryo,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cryomancer");
+        let mut fuel = 40;
+        let (legal, optional) = loop {
+            fuel -= 1;
+            assert!(fuel > 0, "the stun ask never came");
+            match g.pending_decision.as_ref().map(|p| p.decision.clone()) {
+                Some(Decision::ChooseTarget { legal, optional, .. }) => break (legal, optional),
+                Some(d) => {
+                    let answer = decide_pending_policy(&g, 0, &off, &d, true);
+                    g.perform_action(GameAction::SubmitDecision(answer)).expect("answer");
+                }
+                None => {
+                    g.perform_action(GameAction::PassPriority).expect("pass");
+                }
+            }
+        };
+        assert!(optional, "an 'up to' slot");
+        assert_eq!(legal, vec![Target::Permanent(cryo)], "only the Cryomancer is in play");
+        let d = g.pending_decision.as_ref().map(|p| p.decision.clone()).expect("asked");
+        assert_eq!(
+            decide_pending_policy(&g, 0, &off, &d, true),
+            DecisionAnswer::Target(Target::Permanent(cryo)),
+            "flag off: the audited self-stun"
+        );
+        assert_eq!(decide_pending_policy(&g, 0, &on, &d, true), DecisionAnswer::DeclineTarget, "flag on: empty");
+        // With an opposing creature the slot is filled across the table.
+        let theirs = g.add_card_to_battlefield(1, catalog::hill_giant());
+        let d = match d {
+            Decision::ChooseTarget { source, mut legal, source_name, description, optional, extra_cast_slot } => {
+                legal.push(Target::Permanent(theirs));
+                Decision::ChooseTarget { source, legal, source_name, description, optional, extra_cast_slot }
+            }
+            other => other,
+        };
+        assert_eq!(
+            decide_pending_policy(&g, 0, &on, &d, true),
+            DecisionAnswer::Target(Target::Permanent(theirs)),
+            "flag on: an opposing creature is still stunned"
+        );
+    }
+
+    /// `RF_AIM`: with Multiply by Zero on the stack aimed at a creature, a
+    /// second answer (Unsummon) is not aimed at the same creature — the
+    /// first would fizzle (22 times in 240 games, `.ladder/gaps/b`).
+    #[test]
+    fn rf_aim_does_not_stack_a_second_answer_on_a_pending_target() {
+        use crate::mana::Color;
+        let board = |second: bool| {
+            let mut g = two_player_game();
+            let big = g.add_card_to_battlefield(1, catalog::hill_giant());
+            let small = second.then(|| g.add_card_to_battlefield(1, catalog::grizzly_bears()));
+            let zero = g.add_card_to_hand(0, catalog::multiply_by_zero());
+            g.players[0].mana_pool.add(Color::Black, 2);
+            g.priority.player_with_priority = 0;
+            g.perform_action(GameAction::CastSpell {
+                card_id: zero,
+                target: Some(Target::Permanent(big)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            })
+            .expect("multiply by zero");
+            assert_eq!(g.stack.len(), 1, "the first answer is unresolved");
+            let unsummon = g.add_card_to_hand(0, catalog::unsummon());
+            g.players[0].mana_pool.add(Color::Blue, 1);
+            g.priority.player_with_priority = 0;
+            (g, big, small, unsummon)
+        };
+        let off = EvalWeights::fra_fixes_on();
+        let on = EvalWeights { rating_fixes: RF_AIM, ..off };
+        let (g, big, small, unsummon) = board(true);
+        assert_eq!(own_pending_answers(&g, 0), vec![big]);
+        let action = main_phase_action_with(&g, 0, true, &off).action;
+        assert!(
+            matches!(&action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                if *card_id == unsummon && *t == big),
+            "flag off: the audited stacked answer, got {action:?}"
+        );
+        let action = main_phase_action_with(&g, 0, true, &on).action;
+        assert!(
+            matches!(&action, GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }
+                if *card_id == unsummon && Some(*t) == small),
+            "flag on: the other creature, got {action:?}"
+        );
+        let (g, _, _, unsummon) = board(false);
+        let action = main_phase_action_with(&g, 0, true, &on).action;
+        assert!(
+            !matches!(&action, GameAction::CastSpell { card_id, .. } if *card_id == unsummon),
+            "flag on, nothing else to answer: Unsummon waits, got {action:?}"
+        );
+    }
+
+    /// `RF_LOYALTY_AIM`: Chandra, Torch of Defiance's −3 (4 damage) goes at
+    /// a creature it kills, not the 4/5 beside them (trace
+    /// `tr_RW/122aae0350556b91_0_0_55` T10), and is not activated when it
+    /// kills nothing.
+    #[test]
+    fn rf_loyalty_aim_points_a_damage_minus_at_what_it_kills() {
+        let board = |killable: bool| {
+            let mut g = two_player_game();
+            g.priority.player_with_priority = 0;
+            g.add_card_to_battlefield(0, catalog::chandra_torch_of_defiance());
+            g.add_card_to_battlefield(1, weights_test_creature("Test 4/5", 5, 4, 5, &[]));
+            let small = killable.then(|| {
+                g.add_card_to_battlefield(1, weights_test_creature("Test 2/3", 2, 2, 3, &[]));
+                g.add_card_to_battlefield(1, weights_test_creature("Test 3/3", 3, 3, 3, &[]))
+            });
+            (g, small)
+        };
+        let off = EvalWeights::fra_fixes_on();
+        let on = EvalWeights { rating_fixes: RF_LOYALTY_AIM, ..off };
+        let toughness = |g: &GameState, a: &GameAction| match a {
+            GameAction::ActivateLoyaltyAbility { ability_index: 2, target: Some(Target::Permanent(t)), .. } => {
+                g.computed_permanent(*t).map(|cp| cp.toughness)
+            }
+            _ => None,
+        };
+        let (g, small) = board(true);
+        let action = pick_loyalty_ability(&g, 0, &off).expect("chandra activates");
+        assert_eq!(toughness(&g, &action), Some(5), "flag off: the audited 4 damage into a 4/5, got {action:?}");
+        let action = pick_loyalty_ability(&g, 0, &on).expect("chandra activates");
+        assert!(
+            matches!(&action, GameAction::ActivateLoyaltyAbility { ability_index: 2, target: Some(Target::Permanent(t)), .. }
+                if Some(*t) == small),
+            "flag on: the 3/3 dies, got {action:?}"
+        );
+        let (g, _) = board(false);
+        let action = pick_loyalty_ability(&g, 0, &off).expect("chandra activates");
+        assert_eq!(toughness(&g, &action), Some(5), "flag off: the minus goes into the 4/5 for nothing, got {action:?}");
+        let action = pick_loyalty_ability(&g, 0, &on).expect("chandra activates");
+        assert!(
+            matches!(&action, GameAction::ActivateLoyaltyAbility { ability_index: 0 | 1, .. }),
+            "flag on: nothing dies, a plus is used, got {action:?}"
         );
     }
 }
