@@ -37621,6 +37621,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::NEELIX_COMMANDERS,
             main: decks::NEELIX_MAIN,
         },
+        // Seat 6196: Nog, Ambitious Cadet's EDHREC average deck. `--pod-decks 6196`.
+        PodDeck {
+            name: "Nog, Ambitious Cadet (BG)",
+            commanders: decks::NOG_COMMANDERS,
+            main: decks::NOG_MAIN,
+        },
+        // Seat 6197: Ro Laren, Double Agent's EDHREC average deck. `--pod-decks 6197`.
+        PodDeck {
+            name: "Ro Laren, Double Agent (R)",
+            commanders: decks::RO_LAREN_COMMANDERS,
+            main: decks::RO_LAREN_MAIN,
+        },
+        // Seat 6198: Kes, Evolving Telepath's EDHREC average deck. `--pod-decks 6198`.
+        PodDeck {
+            name: "Kes, Evolving Telepath (U)",
+            commanders: decks::KES_COMMANDERS,
+            main: decks::KES_MAIN,
+        },
+        // Seat 6199: Spock, Voice of Reason's EDHREC average deck. `--pod-decks 6199`.
+        PodDeck {
+            name: "Spock, Voice of Reason (U)",
+            commanders: decks::SPOCK_3_COMMANDERS,
+            main: decks::SPOCK_3_MAIN,
+        },
+        // Seat 6200: Amanda Grayson, Logic's Link's EDHREC average deck. `--pod-decks 6200`.
+        PodDeck {
+            name: "Amanda Grayson, Logic's Link (G)",
+            commanders: decks::AMANDA_GRAYSON_COMMANDERS,
+            main: decks::AMANDA_GRAYSON_MAIN,
+        },
+        // Seat 6201: Valko Indorian's EDHREC average deck. `--pod-decks 6201`.
+        PodDeck {
+            name: "Valko Indorian (B)",
+            commanders: decks::VALKO_INDORIAN_COMMANDERS,
+            main: decks::VALKO_INDORIAN_MAIN,
+        },
+        // Seat 6202: Tolabow, Loch Rascal's EDHREC average deck. `--pod-decks 6202`.
+        PodDeck {
+            name: "Tolabow, Loch Rascal (U)",
+            commanders: decks::TOLABOW_COMMANDERS,
+            main: decks::TOLABOW_MAIN,
+        },
+        // Seat 6203: Jabs, Mistress of Mockery's EDHREC average deck. `--pod-decks 6203`.
+        PodDeck {
+            name: "Jabs, Mistress of Mockery (R)",
+            commanders: decks::JABS_COMMANDERS,
+            main: decks::JABS_MAIN,
+        },
     ]
 }
 
@@ -45752,6 +45800,14 @@ mod tests {
             ("Daniels, Temporal Agent", &[0x2231]),
             ("Tasha Yar, Out of Time", &[0x2232]),
             ("Neelix, Moral Support", &[0x2233]),
+            ("Nog, Ambitious Cadet", &[0x2234]),
+            ("Ro Laren, Double Agent", &[0x2235]),
+            ("Kes, Evolving Telepath", &[0x2236]),
+            ("Spock, Voice of Reason", &[0x2237]),
+            ("Amanda Grayson, Logic's Link", &[0x2238]),
+            ("Valko Indorian", &[0x2239]),
+            ("Tolabow, Loch Rascal", &[0x223A]),
+            ("Jabs, Mistress of Mockery", &[0x223B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
