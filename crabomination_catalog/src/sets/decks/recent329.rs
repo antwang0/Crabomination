@@ -517,7 +517,7 @@ pub fn kaito_bane_of_nightmares() -> CardDefinition {
 /// Nuclear Fallout — {X}{B}{B} sorcery. Twice -X/-X to every creature, and
 /// X rad counters to every player.
 ///
-/// ⚠ **The first card in the catalog to hand out a rad counter.** CR 728 is
+/// ⚠ **The first card in the catalog to hand out a rad counter.** CR 729 is
 /// fully modelled — `do_rad_counters` is the precombat-main turn-based action
 /// that mills one per counter, loses 1 life per nonland milled and removes a
 /// counter for each — and `Effect::AddRadCounters` was implemented with

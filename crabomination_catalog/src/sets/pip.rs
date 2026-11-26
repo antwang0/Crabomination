@@ -3,7 +3,7 @@
 //! Nuclear Fallout, the fourth, lives in `decks::recent329` — a concurrent
 //! session shipped it the same day off the same `audit_variant_coverage` row.
 //!
-//! CR 122.1i / 728: a rad counter is a counter on a *player*. As their
+//! CR 122.1i / 729: a rad counter is a counter on a *player*. As their
 //! precombat main phase begins, a player with rad counters mills that many
 //! cards; for each nonland card milled this way they lose 1 life and remove a
 //! rad counter. The turn-based action is `GameState::do_rad_counters`; these

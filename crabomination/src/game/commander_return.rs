@@ -179,7 +179,7 @@ impl GameState {
         card.exiled_with = None;
         card.controller = owner;
         card.reveal();
-        // CR 712.4 — front face up off the battlefield and the stack.
+        // CR 712.6a — front face up off the battlefield and the stack.
         card.revert_transform();
         card.forget_spell_choices();
         self.players[owner].command.push(card);
@@ -213,7 +213,7 @@ impl GameState {
         card.exiled_with = None;
         card.controller = owner;
         card.reveal();
-        // CR 712.4 — front face up off the battlefield and the stack.
+        // CR 712.6a — front face up off the battlefield and the stack.
         card.revert_transform();
         card.forget_spell_choices();
         self.players[owner].command.push(card);

@@ -2013,7 +2013,7 @@ pub(crate) fn requirement_matches_card_typed(
         R::HasActivatedAbility => def.has_activated_ability(),
         R::HasTapAbility => def.activated_abilities.iter().any(|a| a.tap_cost),
         R::HasEmbalmOrEternalize => def.has_embalm_or_eternalize(),
-        // CR 715.1 — "a card that has an Adventure" among milled/revealed
+        // CR 716.1 — "a card that has an Adventure" among milled/revealed
         // cards (Seek Thrills): this walker answered false.
         R::HasAdventure => def.adventure.is_some(),
         R::HasNonManaActivatedAbility => {

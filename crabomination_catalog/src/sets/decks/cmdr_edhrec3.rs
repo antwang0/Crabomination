@@ -1891,7 +1891,7 @@ fn saga() -> Subtypes {
 
 /// Tom Bombadil — {W}{U}{B}{R}{G} 4/4 God Bard. Hexproof and indestructible
 /// while your Sagas hold four or more lore counters. Once each turn, when a
-/// Saga of yours finishes (CR 714.2e), reveal until a Saga card and put it
+/// Saga of yours finishes (CR 715.2e), reveal until a Saga card and put it
 /// onto the battlefield; the rest go to the bottom in a random order.
 pub fn tom_bombadil() -> CardDefinition {
     use crate::card::CounterType;
@@ -2063,7 +2063,7 @@ pub fn the_kami_war() -> CardDefinition {
 }
 
 /// Moonmist — {1}{G} Instant. Transform all Humans (only double-faced ones
-/// turn over, CR 701.27c). Prevent all combat damage this turn dealt by
+/// turn over, CR 701.27d). Prevent all combat damage this turn dealt by
 /// creatures other than Werewolves and Wolves (CR 615).
 pub fn moonmist() -> CardDefinition {
     CardDefinition {
@@ -2430,7 +2430,7 @@ pub fn venom_lethal_protector() -> CardDefinition {
         // The face prints {3}{B}{R}{G}; carried as its colors, since the
         // catalog tells a nonmodal DFC by a back face with no cost (CR 712.2,
         // `cr_712_transforming_and_modal_dfcs_are_told_apart`). Its mana
-        // value is the front's anyway (CR 712.8e).
+        // value is the front's anyway (CR 712.6d).
         color_indicator: vec![Color::Black, Color::Red, Color::Green],
         keywords: vec![Keyword::Menace, Keyword::Trample, Keyword::Haste],
         triggered_abilities: vec![TriggeredAbility {

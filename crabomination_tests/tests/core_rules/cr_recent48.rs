@@ -1,8 +1,8 @@
 //! CR conformance for this run's sweep:
 //! - CR 503 — the upkeep step.
 //! - CR 512 — the ending phase.
-//! - CR 714 — Saga cards.
-//! - CR 721 — station cards.
+//! - CR 715 — Saga cards.
+//! - CR 722 — station cards.
 
 use crabomination::card::{CardType, CounterType, Keyword};
 use crabomination::catalog;
@@ -82,12 +82,12 @@ fn cr_512_1_cleanup_clears_damage_and_pumps() {
     assert_eq!((c.damage, c.power_bonus), (0, 0));
 }
 
-// ── CR 714 — Saga Cards ──
+// ── CR 715 — Saga Cards ──
 
-/// CR 714.3a / 714.2b — a Saga enters with one lore counter and its chapter I
+/// CR 715.3a / 715.2b — a Saga enters with one lore counter and its chapter I
 /// ability triggers off that placement.
 #[test]
-fn cr_714_3a_saga_enters_with_a_lore_counter() {
+fn cr_715_3a_saga_enters_with_a_lore_counter() {
     let mut g = two_player_game();
     let saga = g.add_card_to_hand(0, catalog::history_of_benalia());
     g.players[0].mana_pool.add(crabomination::mana::Color::White, 2);
@@ -105,10 +105,10 @@ fn cr_714_3a_saga_enters_with_a_lore_counter() {
     assert!(g.battlefield.iter().any(|c| c.definition.name == "Knight"), "chapter I fired");
 }
 
-/// CR 714.3c — the controller puts a lore counter on each of their Sagas as
+/// CR 715.3c — the controller puts a lore counter on each of their Sagas as
 /// their precombat main phase begins, and only on their own turn.
 #[test]
-fn cr_714_3c_lore_counter_at_precombat_main() {
+fn cr_715_3c_lore_counter_at_precombat_main() {
     let mut g = two_player_game();
     for p in 0..2 {
         for _ in 0..5 {
@@ -137,11 +137,11 @@ fn cr_714_3c_lore_counter_at_precombat_main() {
     assert_eq!(g.battlefield_find(saga).unwrap().counter_count(CounterType::Lore), 2);
 }
 
-/// CR 714.2b — "if the number of lore counters was less than N and became at
+/// CR 715.2b — "if the number of lore counters was less than N and became at
 /// least N": a proliferated lore counter fires the chapter it crosses, and a
 /// multi-counter jump fires every chapter it passes.
 #[test]
-fn cr_714_2b_chapters_fire_on_every_threshold_crossed() {
+fn cr_715_2b_chapters_fire_on_every_threshold_crossed() {
     use crabomination::effect::{Effect, Selector, Value};
     let mut g = two_player_game();
     let saga = g.add_card_to_battlefield(0, catalog::history_of_benalia());
@@ -162,13 +162,13 @@ fn cr_714_2b_chapters_fire_on_every_threshold_crossed() {
         g.battlefield.iter().any(|c| c.definition.name == "Knight"),
         "chapter II minted a Knight on the way past"
     );
-    assert!(g.battlefield_find(saga).is_none(), "and chapter III finished the Saga (CR 714.4)");
+    assert!(g.battlefield_find(saga).is_none(), "and chapter III finished the Saga (CR 715.4)");
 }
 
-/// CR 714.4 — a Saga at its final chapter number is sacrificed, but not while
+/// CR 715.4 — a Saga at its final chapter number is sacrificed, but not while
 /// that chapter's ability is still on the stack.
 #[test]
-fn cr_714_4_final_chapter_resolves_before_the_sacrifice() {
+fn cr_715_4_final_chapter_resolves_before_the_sacrifice() {
     let mut g = two_player_game();
     let saga = g.add_card_to_battlefield(0, catalog::history_of_benalia());
     g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);
@@ -179,12 +179,12 @@ fn cr_714_4_final_chapter_resolves_before_the_sacrifice() {
     assert!(g.battlefield_find(saga).is_none(), "then the SBA sacrifices it");
 }
 
-// ── CR 721 — Station Cards ──
+// ── CR 722 — Station Cards ──
 
-/// CR 721.2b — a station band's `{N+}` makes the permanent a creature with that
+/// CR 722.2b — a station band's `{N+}` makes the permanent a creature with that
 /// base P/T only once it has N or more charge counters.
 #[test]
-fn cr_721_2b_station_band_animates_at_its_threshold() {
+fn cr_722_2b_station_band_animates_at_its_threshold() {
     let mut g = two_player_game();
     let ship = g.add_card_to_battlefield(0, catalog::sledge_class_seedship());
     let cp = g.computed_permanent(ship).expect("on battlefield");
@@ -196,19 +196,19 @@ fn cr_721_2b_station_band_animates_at_its_threshold() {
     assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
-/// CR 721.2c — a station card has no power or toughness outside the
+/// CR 722.2c — a station card has no power or toughness outside the
 /// battlefield: its printed characteristics carry none.
 #[test]
-fn cr_721_2c_no_pt_outside_the_battlefield() {
+fn cr_722_2c_no_pt_outside_the_battlefield() {
     let def = catalog::sledge_class_seedship();
     assert!(!def.card_types.contains(&CardType::Creature));
     assert_eq!((def.power, def.toughness), (0, 0), "the P/T lives in the station band");
 }
 
-/// CR 721.4 — the station ability itself is always available, whatever the
+/// CR 722.4 — the station ability itself is always available, whatever the
 /// charge count, and it charges by the tapped creature's power.
 #[test]
-fn cr_721_4_station_ability_is_always_active() {
+fn cr_722_4_station_ability_is_always_active() {
     let mut g = two_player_game();
     let ship = g.add_card_to_battlefield(0, catalog::sledge_class_seedship());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

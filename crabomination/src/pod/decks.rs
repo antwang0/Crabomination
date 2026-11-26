@@ -458,10 +458,10 @@ pub const ADRIANA_COMMANDERS: &[CardFactory] = &[adriana_captain_of_the_guard];
 /// The field's tenth deck and the first built around what only happens at
 /// three seats or more. Every other list wins by killing the seat across the
 /// table faster; this one is 27 cards whose text has no meaning in a duel —
-/// **the monarch** (CR 725), **goad** (CR 701.15), **melee** (CR 702.121),
+/// **the monarch** (CR 726), **goad** (CR 701.15), **melee** (CR 702.121),
 /// **will of the council** and **council's dilemma** (CR 701.38), **tempting
 /// offer** and **join forces** (ability words, CR 207.2c), **the initiative**
-/// (CR 726) and **myriad** (CR 702.116). Nine implemented
+/// (CR 727) and **myriad** (CR 702.116). Nine implemented
 /// mechanics that no pod deck had ever piloted, which is why they are here:
 /// a mechanic the field never plays is a mechanic self-play never crashes on.
 ///
@@ -478,7 +478,7 @@ pub const ADRIANA_MAIN: &[CardFactory] = &[
     // Rocks
     sol_ring, arcane_signet, boros_signet, commanders_sphere, mind_stone, fellwar_stone,
     wayfarers_bauble,
-    // The monarch (CR 725): the card engine, and a standing invitation to attack you
+    // The monarch (CR 726): the card engine, and a standing invitation to attack you
     palace_sentinels, palace_jailer, throne_warden, protector_of_the_crown,
     crown_hunter_hireling,
     // Goad (CR 701.15): the opponents Adriana's melee wants attacked
@@ -491,7 +491,7 @@ pub const ADRIANA_MAIN: &[CardFactory] = &[
     custodi_soulcaller, deputized_protester, wings_of_the_guard, grenzos_ruffians, impact_tremors,
     fumiko_the_lowblood, hellraiser_goblin, the_akroan_war,
     // Voting (CR 701.38) and the two offers (ability words, CR 207.2c), plus
-    // the initiative (CR 726) and myriad (CR 702.116)
+    // the initiative (CR 727) and myriad (CR 702.116)
     councils_judgment, custodi_squire, lieutenants_of_the_guard, coercive_portal,
     tempt_with_glory, tempt_with_vengeance, mana_charged_dragon, caves_of_chaos_adventurer,
     blade_of_selves,

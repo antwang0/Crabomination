@@ -650,7 +650,7 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
-    /// CR 715 — cast the instant/sorcery "adventure" half of an Adventurer
+    /// CR 716 — cast the instant/sorcery "adventure" half of an Adventurer
     /// card from hand. On resolution the card is exiled with permission to
     /// cast the creature half later.
     CastAdventure {
@@ -681,7 +681,7 @@ pub enum GameAction {
         mode: Option<usize>,
         x_value: Option<u32>,
     },
-    /// CR 715 — cast the creature half of a card that's in exile after going
+    /// CR 716 — cast the creature half of a card that's in exile after going
     /// on an adventure (its `on_adventure` flag is set).
     CastAdventureCreature {
         card_id: CardId,
@@ -2050,7 +2050,7 @@ impl GameAction {
 
     /// The card of a cast variant that runs the hand pipeline
     /// (`cast_spell_with_convoke`) and so can cast a commander from the
-    /// command zone on a hop (CR 903.8; Adventure CR 715.3).
+    /// command zone on a hop (CR 903.8; Adventure CR 716.3).
     /// `CastFromCommandZone` and mutate have their own paths.
     pub(crate) fn command_zone_hop_card(&self) -> Option<CardId> {
         use GameAction as A;
@@ -2706,7 +2706,7 @@ pub enum LandManaOutput {
     ColorOfChoice,
 }
 
-/// CR 731 — the game's day/night designation. The game starts as neither
+/// CR 732 — the game's day/night designation. The game starts as neither
 /// (`GameState.day_night == None`); once it becomes day or night it has
 /// exactly one of these from then on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -2786,7 +2786,7 @@ pub enum GameEvent {
     PermanentExiled { card_id: CardId },
     /// CR 701.52a — a player rolled the d6 to visit their Attractions.
     RolledToVisitAttractions { player: usize, result: u8 },
-    /// CR 717.5 — one Attraction's lit-up numbers matched the roll, so its
+    /// CR 718.5 — one Attraction's lit-up numbers matched the roll, so its
     /// visit ability triggers.
     AttractionVisited { card_id: CardId },
     /// CR 701.51c — `player` opened an Attraction: `card_id` entered from
@@ -2847,7 +2847,7 @@ pub enum GameEvent {
     /// `surveil` distinguishes the two for surveil-only / scry-only payoffs;
     /// `looked_at` is the trigger amount ("for each card looked at").
     ScriedOrSurveiled { player: usize, surveil: bool, looked_at: u32 },
-    /// CR 714.2e — the final chapter ability of `player`'s Saga `saga`
+    /// CR 715.2e — the final chapter ability of `player`'s Saga `saga`
     /// resolved; `mana_value` is the Saga's, read as the chapter resolved.
     SagaFinalChapterResolved { player: usize, saga: CardId, mana_value: u32 },
     /// CR 701.34 — `player` proliferated (once per proliferate instance;
@@ -2880,7 +2880,7 @@ pub enum GameEvent {
     /// CR 702.165 — `player` gave a promised gift as a spell/ability with Gift
     /// resolved. Powers "whenever you give a gift" (Jolly Gerbils).
     GiftGiven { player: usize },
-    /// CR 716.2 — the Class `source` (controlled by `player`) gained a level,
+    /// CR 717.2 — the Class `source` (controlled by `player`) gained a level,
     /// reaching `level`. Powers "when this Class becomes level N" triggers
     /// (`EventKind::ClassLevelReached`, `EventScope::This`, filtered on
     /// `Predicate::SourceClassLevelIs(N)`).
@@ -3080,16 +3080,16 @@ pub enum GameEvent {
     /// a Case" triggers (Case File Auditor).
     CaseSolved { case: CardId, controller: usize },
     PoisonAdded { player: usize, amount: u32 },
-    /// CR 725 — `player` became the monarch.
+    /// CR 726 — `player` became the monarch.
     MonarchChanged { player: usize },
-    /// CR 726 — `player` took the initiative.
+    /// CR 727 — `player` took the initiative.
     InitiativeTaken { player: usize },
     /// CR 700.6 — `player` got the city's blessing (Ascend).
     CityBlessingGained { player: usize },
     /// CR 701.54 — the Ring tempted `player`; `level` is their new
     /// temptation count (1–4), `bearer` the creature they chose (if any).
     RingTempted { player: usize, level: u32, bearer: Option<CardId> },
-    /// CR 731 — the game became day or night. `was_transition` is false when
+    /// CR 732 — the game became day or night. `was_transition` is false when
     /// established from neither, so "day becomes night" triggers (CR 502.2)
     /// skip it.
     DayNightChanged { day_night: DayNight, was_transition: bool },
@@ -3150,7 +3150,7 @@ pub enum GameEvent {
     /// step before this one killed something and a later step follows, so
     /// deaths on either side were sequential, not simultaneous (CR 603.10a).
     DeathStepEnded,
-    /// CR 727.1 — the game was restarted; `starter` takes the first turn.
+    /// CR 728.1 — the game was restarted; `starter` takes the first turn.
     GameRestarted { starter: usize },
 }
 
@@ -3248,7 +3248,7 @@ pub enum StackItem {
         /// spent on this activation cost"). Empty for triggered abilities.
         #[serde(default)]
         mana_spent_by_color: Vec<(crate::mana::Color, u32)>,
-        /// CR 701.27f — set by `transform_permanent` on stack items whose
+        /// CR 701.27g — set by `transform_permanent` on stack items whose
         /// source just transformed, so "transform it only if it hasn't
         /// transformed since" holds; read into `resolving_source_transformed`.
         #[serde(default)]
@@ -3400,7 +3400,7 @@ impl TriggerPush {
             activated: self.activated,
             trigger_player: self.trigger_player,
             mana_spent_by_color: self.mana_spent_by_color,
-            // CR 701.27f — false at push by definition; `transform_permanent`
+            // CR 701.27g — false at push by definition; `transform_permanent`
             // sets it on items already on the stack.
             source_transformed_since_push: false,
             ability_id: 0,
@@ -3445,9 +3445,9 @@ pub enum GameError {
     /// CR 801 — the object or player is outside the actor's range of influence.
     #[error("Out of your range of influence")]
     OutOfRange,
-    /// CR 732.3 — this free activation has been repeated without moving the
+    /// CR 733.3 — this free activation has been repeated without moving the
     /// game state; the loop must be broken by a different game choice.
-    #[error("This would repeat a loop — make a different choice (CR 732.3)")]
+    #[error("This would repeat a loop — make a different choice (CR 733.3)")]
     LoopMustBeBroken,
     #[error("Card {0:?} not found in hand")]
     CardNotInHand(CardId),

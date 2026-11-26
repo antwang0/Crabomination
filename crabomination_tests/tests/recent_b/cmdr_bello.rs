@@ -103,7 +103,7 @@ fn bello_animates_big_artifacts_on_your_turn() {
     assert!(!is_creature(&g, archive), "not on an opponent's turn");
 }
 
-/// CR 716 — two tapped Treasures on entry; level 2 makes a Treasure tap for
+/// CR 717 — two tapped Treasures on entry; level 2 makes a Treasure tap for
 /// two; level 3 burns each opponent for a spell cast with Treasure mana.
 #[test]
 fn alchemists_talent_levels_up_its_treasures() {
@@ -161,7 +161,7 @@ fn bootleggers_stash_turns_lands_into_treasure() {
 }
 
 /// Saprolings tap for {G}; a Saproling each end step; the adventure makes two
-/// (CR 715).
+/// (CR 716).
 #[test]
 fn brightcap_badger_grows_a_mana_colony() {
     let mut g = main_phase();

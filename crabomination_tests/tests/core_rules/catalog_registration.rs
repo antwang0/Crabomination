@@ -1539,7 +1539,7 @@ fn every_card_has_the_activation_timing_it_prints() {
         // sorcery restriction the card does not print — is a real class too
         // (the monstrosity helpers carried one for twenty-odd cards, fixed in
         // the same commit), but its remaining rows need a per-card read
-        // against CR: a Class's level abilities are sorcery-speed by CR 716.4
+        // against CR: a Class's level abilities are sorcery-speed by CR 717.4
         // and print nothing, and "activate only during your turn" is a
         // *different* rider the engine approximates with this flag. The triage
         // so far is in CARD_BACKLOG.
@@ -2454,7 +2454,7 @@ fn every_card_carries_its_printed_numbers() {
             wrong.push(format!("{} enters on {} loyalty, printed {loyalty}", def.name, def.base_loyalty));
         }
         if def.dynamic_pt.is_none() {
-            // CR 721 — a Spacecraft is a 0/0 artifact until it stations; the
+            // CR 722 — a Spacecraft is a 0/0 artifact until it stations; the
             // printed P/T is the last band that sets one (a later band may add
             // only abilities — U.S.S. Prometheus), which is what the cache holds.
             let station_pt = def.station.iter().rev().find_map(|b| b.pt);

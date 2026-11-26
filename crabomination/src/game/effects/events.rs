@@ -973,7 +973,7 @@ fn event_matches_spec_rest(
             event,
             GameEvent::CardExiledFrom { card_id, .. } if *card_id == source.id
         ) || matches!(
-            // CR 717.5 — the visit ability belongs to the Attraction that was
+            // CR 718.5 — the visit ability belongs to the Attraction that was
             // visited, so only that object's trigger fires.
             event,
             GameEvent::AttractionVisited { card_id } if *card_id == source.id
@@ -1036,7 +1036,7 @@ fn event_matches_spec_rest(
             event,
             GameEvent::CardPutIntoHandFromGraveyard { card_id, .. } if *card_id == source.id
         ) || matches!(
-            // CR 716.2 — "When this Class becomes level N" fires off the
+            // CR 717.2 — "When this Class becomes level N" fires off the
             // Class itself; the specific level is checked by the trigger's
             // `Predicate::SourceClassLevelIs(N)` filter.
             event,

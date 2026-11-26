@@ -1,4 +1,4 @@
-//! CR 701.27f — an ability can't transform a permanent that has already
+//! CR 701.27g — an ability can't transform a permanent that has already
 //! transformed since the ability went on the stack.
 //!
 //! "If an activated or triggered ability of a permanent that isn't a delayed
@@ -20,7 +20,7 @@ use crabomination::game::*;
 /// Two Clues sacrificed in one batch are two triggers, and the second one's
 /// transform is ignored.
 #[test]
-fn cr_701_27f_a_second_transform_of_the_same_source_is_ignored() {
+fn cr_701_27g_a_second_transform_of_the_same_source_is_ignored() {
     let mut g = two_player_game();
     let sleuth = g.add_card_to_battlefield(0, catalog::daring_sleuth());
     let evs: Vec<GameEvent> = (0..2)
@@ -42,7 +42,7 @@ fn cr_701_27f_a_second_transform_of_the_same_source_is_ignored() {
 /// The rule is about the ability's OWN permanent. A single trigger still
 /// transforms it, so the guard cannot be reading "any transform at all".
 #[test]
-fn cr_701_27f_one_trigger_still_transforms() {
+fn cr_701_27g_one_trigger_still_transforms() {
     let mut g = two_player_game();
     let sleuth = g.add_card_to_battlefield(0, catalog::daring_sleuth());
     let clue = g.add_token_to_battlefield(0, &clue_token());
@@ -57,7 +57,7 @@ fn cr_701_27f_one_trigger_still_transforms() {
 /// Three is the count a toggle would get right by accident. Every copy after
 /// the first is ignored, so the face is the same as it is for two.
 #[test]
-fn cr_701_27f_a_third_copy_is_ignored_too() {
+fn cr_701_27g_a_third_copy_is_ignored_too() {
     let mut g = two_player_game();
     let sleuth = g.add_card_to_battlefield(0, catalog::daring_sleuth());
     let evs: Vec<GameEvent> = (0..3)
@@ -79,9 +79,9 @@ fn cr_701_27f_a_third_copy_is_ignored_too() {
 /// by accident. Legion's Landing reads "whenever you attack with three or more
 /// creatures, transform this"; `EventKind::Attacks` fans out, so three
 /// attackers were three transforms and landed on the back face by parity.
-/// Four attackers put it back on the front until CR 701.27f.
+/// Four attackers put it back on the front until CR 701.27g.
 #[test]
-fn cr_701_27f_legions_landing_survives_an_even_attack() {
+fn cr_701_27g_legions_landing_survives_an_even_attack() {
     use crabomination::game::types::{Attack, AttackTarget, GameAction, TurnStep};
     let mut g = two_player_game();
     g.active_player_idx = 0;

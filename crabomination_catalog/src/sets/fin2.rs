@@ -14,7 +14,7 @@ use crate::effect::{LookPick,
 use crate::game::TurnStep;
 use crate::mana::{Color, b, cost, g, generic, r, u, w};
 
-// ── Town // Adventure lands (CR 715.3d — the land half is *played* from
+// ── Town // Adventure lands (CR 716.3d — the land half is *played* from
 //    adventure exile, not cast) ─────────────────────────────────────────────
 
 /// A FIN "Land — Town // Adventure" rare: an enters-tapped mono-color Town

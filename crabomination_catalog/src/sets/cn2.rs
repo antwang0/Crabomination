@@ -34,7 +34,7 @@ fn creature(
     }
 }
 
-/// "When this creature enters, you become the monarch." (CR 725.3)
+/// "When this creature enters, you become the monarch." (CR 726.3)
 fn etb_monarch() -> TriggeredAbility {
     etb(Effect::BecomeMonarch { who: PlayerRef::You })
 }

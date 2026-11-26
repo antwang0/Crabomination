@@ -519,7 +519,7 @@ fn cr_613_8_type_filtered_sets_read_layer_four_types() {
     assert_eq!(pt(&g, vault), (3, 3), "a 2/2 land creature under the anthem");
 }
 
-/// Bot: after combat, an idle creature stations Inspirit (CR 721 — the bot
+/// Bot: after combat, an idle creature stations Inspirit (CR 722 — the bot
 /// never activated a station ability, so every Spacecraft stayed inert).
 #[test]
 fn bot_stations_inspirit() {

@@ -247,7 +247,7 @@ mod recent286 {
     }
 
     /// A Class's level resets when it leaves and re-enters the battlefield
-    /// (CR 716.2 — the level is battlefield-only).
+    /// (CR 717.2 — the level is battlefield-only).
     #[test]
     fn class_level_resets_on_leave() {
         let mut g = two_player_game();
@@ -259,11 +259,11 @@ mod recent286 {
         assert_eq!(g.battlefield_find(class2).unwrap().class_level, 1, "re-enters at level 1");
     }
 
-    /// CR 716.4 — Class levels are gained one at a time: the "Level 3" ability
+    /// CR 717.4 — Class levels are gained one at a time: the "Level 3" ability
     /// can't be activated while the Class is still at level 1 (its `condition` is
     /// `SourceClassLevelIs(2)`).
     #[test]
-    fn cr_716_4_cannot_skip_a_level() {
+    fn cr_717_4_cannot_skip_a_level() {
         let mut g = two_player_game();
         let class = g.move_card_to_battlefield_for_test(0, crabomination::catalog::stormchasers_talent());
         drain_stack(&mut g);
@@ -514,7 +514,7 @@ mod recent286 {
         assert!(g.players[1].life <= life - 5, "level-3 mirror drain applied");
     }
 
-    /// CR 716.2 — a Class's level survives a full-state snapshot round-trip.
+    /// CR 717.2 — a Class's level survives a full-state snapshot round-trip.
     #[test]
     fn class_level_survives_serde_roundtrip() {
         use crabomination::game::GameState;
@@ -550,7 +550,7 @@ mod recent286 {
     }
 
     /// Level 3 grants double strike + haste to equipped creatures you control, but
-    /// only at level 3 and only during your turn (CR 716.2 / 720).
+    /// only at level 3 and only during your turn (CR 717.2 / 721).
     #[test]
     fn blacksmiths_talent_level_3_your_turn_grant() {
         use crabomination::game::effects::EffectContext;

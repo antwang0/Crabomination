@@ -4,7 +4,7 @@
 //! - CR 508.1d — an "if one attacks, all attack if able" requirement is
 //!   checked against the declared batch, so it costs nothing when none of the
 //!   group attacks.
-//! - CR 713.4 — a double-faced card is its front face for all game purposes
+//! - CR 714.4 — a double-faced card is its front face for all game purposes
 //!   while the back stays inert.
 //! - CR 203.1 / 213.1 / 200.2 — printed-only parts of a card (illustration,
 //!   collector data) are not characteristics and have no gameplay effect.
@@ -84,10 +84,10 @@ fn cr_508_1d_group_attack_requirement_is_batch_relative() {
     .expect("the group stays home");
 }
 
-/// CR 713.4 / 203.1 — a DFC is the card its front face names for every game
+/// CR 714.4 / 203.1 — a DFC is the card its front face names for every game
 /// purpose; the back face contributes no characteristics until it transforms.
 #[test]
-fn cr_713_4_dfc_is_its_front_face_until_it_transforms() {
+fn cr_714_4_dfc_is_its_front_face_until_it_transforms() {
     let mut g = two_player_game();
     let id = g.add_card_to_battlefield(0, catalog::birgi_god_of_storytelling());
     let live = g.battlefield_find(id).expect("on the battlefield");

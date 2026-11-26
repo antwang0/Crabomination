@@ -1502,7 +1502,7 @@ pub fn barren_glory() -> CardDefinition {
 // ── Vadrik, Astral Archmage ─────────────────────────────────────────────────
 
 /// Vadrik, Astral Archmage — {1}{U}{R} legendary 1/2 Human Wizard. It becomes
-/// day as it enters if it's neither (CR 726.2). Your instants and sorceries
+/// day as it enters if it's neither (CR 727.2). Your instants and sorceries
 /// cost {X} less, X its power. Day/night changing: a +1/+1 counter on it.
 pub fn vadrik_astral_archmage() -> CardDefinition {
     CardDefinition {

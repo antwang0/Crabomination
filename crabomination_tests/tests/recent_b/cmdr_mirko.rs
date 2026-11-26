@@ -398,7 +398,7 @@ fn mission_briefing_grants_the_chosen_card() {
     cast_from_zone(&mut g, second).expect("the chosen card");
 }
 
-/// CR 719 — Case of the Shifting Visage is solved with fifteen cards in the
+/// CR 720 — Case of the Shifting Visage is solved with fifteen cards in the
 /// graveyard; solved, a nonlegendary creature spell is copied.
 #[test]
 fn cr_719_shifting_visage_copies_creature_spells() {

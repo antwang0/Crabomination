@@ -1,5 +1,5 @@
 //! "You may cast it from your graveyard as an Adventure until the end of your
-//! next turn" (Hildibrand Manderville, CR 715.3): a per-player grant, not a
+//! next turn" (Hildibrand Manderville, CR 716.3): a per-player grant, not a
 //! `may_play_until` — that permission casts the whole card, and a creature
 //! cast is exactly what this one withholds.
 

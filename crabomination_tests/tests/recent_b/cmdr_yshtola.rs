@@ -518,7 +518,7 @@ fn bot_aims_a_lockdown_aura_at_the_opponent() {
 }
 
 /// Hildibrand Manderville, dying, may be cast from the graveyard as Gentleman's
-/// Rise until the end of your next turn (CR 715.3 — the Adventure only, never
+/// Rise until the end of your next turn (CR 716.3 — the Adventure only, never
 /// the creature); the bot takes it, and the grant lapses after that turn.
 #[test]
 fn hildibrand_dies_into_a_graveyard_adventure() {

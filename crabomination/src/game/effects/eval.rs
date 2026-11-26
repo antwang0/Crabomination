@@ -4478,7 +4478,7 @@ impl GameState {
                 self.last_discarded_mana_value.is_some_and(|mv| mv <= *n)
             }
             Predicate::OwnExiledAdventureCard => {
-                // CR 715 — the controller owns a card in exile on an Adventure.
+                // CR 716 — the controller owns a card in exile on an Adventure.
                 let owner = ctx.controller;
                 self.exile.iter().any(|c| c.owner == owner && c.on_adventure)
             }
@@ -5608,7 +5608,7 @@ impl GameState {
             R::Planeswalker => card_type(CardType::Planeswalker),
             R::Nonland => card_type(CardType::Land).map(|v| !v),
             R::Noncreature => card_type(CardType::Creature).map(|v| !v),
-            // CR 715 / 702.183 — the walker reads the adventure/omen half's
+            // CR 716 / 702.183 — the walker reads the adventure/omen half's
             // types here and never the layer view.
             R::HasCardType(ct) => Some(match card.alt_spell_half() {
                 Some(half) => half.card_types.contains(ct),
@@ -6223,7 +6223,7 @@ impl GameState {
                     None => self.requirement_card_off_battlefield(*cid),
                 };
                 let Some(card) = card else { return false; };
-                // CR 709.3b / 709.4 / 715.3b — a split / Adventure / Room
+                // CR 709.3b / 709.4 / 716.3b — a split / Adventure / Room
                 // card off the battlefield is read with its zone's face.
                 let face;
                 let card = match bf_card {
@@ -7142,7 +7142,7 @@ impl GameState {
                         card.definition.cost.cmc() < self.trigger_event_amount_scratch
                     }
                     R::HasCardType(ct) => {
-                        // CR 715 / 702.183 — an Adventure/Omen card is its
+                        // CR 716 / 702.183 — an Adventure/Omen card is its
                         // instant/sorcery half on the stack; report those types.
                         if let Some(half) = card.alt_spell_half() {
                             half.card_types.contains(ct)
@@ -7695,7 +7695,7 @@ impl GameState {
         card: &CardInstance,
         controller: usize,
     ) -> bool {
-        // CR 709.3b / 709.4 / 715.3b / 202.3e — read the card as it is in its
+        // CR 709.3b / 709.4 / 716.3b / 202.3e — read the card as it is in its
         // zone, once, before the walk.
         if Self::may_have_zone_face(card)
             && let Some(v) = self.face_view_of(card)
@@ -8218,7 +8218,7 @@ impl GameState {
                 card.definition.cost.cmc() < self.trigger_event_amount_scratch
             }
             R::HasCardType(ct) => {
-                        // CR 715 / 702.183 — an Adventure/Omen card is its
+                        // CR 716 / 702.183 — an Adventure/Omen card is its
                         // instant/sorcery half on the stack; report those types.
                         if let Some(half) = card.alt_spell_half() {
                             half.card_types.contains(ct)

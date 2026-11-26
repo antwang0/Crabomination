@@ -52,10 +52,10 @@ fn cr_800_4a_a_permanent_sees_each_player_leave() {
     }
 }
 
-/// CR 723.1 — each of two players controls the other's next turn; the swap
+/// CR 724.1 — each of two players controls the other's next turn; the swap
 /// takes effect on the turn itself, and the caster controls nobody.
 #[test]
-fn cr_723_1_two_players_control_each_others_next_turn() {
+fn cr_724_1_two_players_control_each_others_next_turn() {
     let mut g = pod(3);
     let mut ctx = EffectContext::for_spell(0, Some(Target::Player(1)), 0, 0);
     ctx.targets = vec![Target::Player(1), Target::Player(2)];

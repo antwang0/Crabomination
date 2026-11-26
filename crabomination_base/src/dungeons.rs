@@ -26,12 +26,12 @@ pub struct DungeonDefinition {
 
 /// The three AFR dungeons, in venture-choice order. Undercity is excluded —
 /// CR 309.7 / its own text: you can only enter it by "venturing into Undercity"
-/// (the initiative, CR 726).
+/// (the initiative, CR 727).
 pub fn dungeon_names() -> [&'static str; 3] {
     ["Lost Mine of Phandelver", "Dungeon of the Mad Mage", "Tomb of Annihilation"]
 }
 
-/// The name of the initiative's dungeon (CR 726.2).
+/// The name of the initiative's dungeon (CR 727.2).
 pub const UNDERCITY: &str = "Undercity";
 
 pub fn dungeon_by_name(name: &str) -> Option<DungeonDefinition> {
@@ -44,7 +44,7 @@ pub fn dungeon_by_name(name: &str) -> Option<DungeonDefinition> {
     }
 }
 
-/// CR 726 — the initiative's dungeon (Baldur's Gate).
+/// CR 727 — the initiative's dungeon (Baldur's Gate).
 pub fn undercity() -> DungeonDefinition {
     DungeonDefinition {
         name: UNDERCITY,

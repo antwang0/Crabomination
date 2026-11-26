@@ -1155,7 +1155,7 @@ pub fn update_player_stats_chips(
         if let Some(body) = devotion_chip_body(&p.devotion).filter(|_| devotion_matters(cv)) {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
         }
-        // CR 724 monarch — a plain crown when the viewer holds it, otherwise a
+        // CR 725 monarch — a plain crown when the viewer holds it, otherwise a
         // crown tagged with whoever currently does, so the table always knows
         // where the monarchy sits (and who to attack to steal it back).
         if p.is_monarch {
@@ -1176,7 +1176,7 @@ pub fn update_player_stats_chips(
                 .unwrap_or("?");
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, format!("🗳 {name}"));
         }
-        // CR 726 the initiative — same treatment as the crown: whoever holds it
+        // CR 727 the initiative — same treatment as the crown: whoever holds it
         // is who you attack to take the Undercity off them.
         if p.has_initiative {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::Initiative, "🗝 initiative".to_string());
@@ -1284,7 +1284,7 @@ pub fn update_player_stats_chips(
         if p.cant_cast_noncreature {
             spawn_stat_chip(row, &ui_fonts, StatChipKind::SpellLock, "⊘ no noncreature".to_string());
         }
-        // CR 731 day/night — a global designation; show it whenever set.
+        // CR 732 day/night — a global designation; show it whenever set.
         match cv.day_night {
             Some(true) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Day, "☀ day".to_string()),
             Some(false) => spawn_stat_chip(row, &ui_fonts, StatChipKind::Night, "☾ night".to_string()),
@@ -1753,11 +1753,11 @@ pub fn update_opponent_stats_rows(
                 if let Some(body) = devotion_chip_body(&p.devotion).filter(|_| devotion_matters(cv)) {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Devotion, format!("◆ {body}"));
                 }
-                // CR 724 monarch crown — show which opponent holds the crown.
+                // CR 725 monarch crown — show which opponent holds the crown.
                 if p.is_monarch {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Monarch, "👑".to_string());
                 }
-                // CR 726 — which opponent has the initiative.
+                // CR 727 — which opponent has the initiative.
                 if p.has_initiative {
                     spawn_stat_chip(row, &ui_fonts, StatChipKind::Initiative, "🗝".to_string());
                 }

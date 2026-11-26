@@ -100,7 +100,7 @@ fn into_main(g: &mut GameState) {
     assert_eq!(g.step, TurnStep::PreCombatMain);
 }
 
-/// CR 728 — Strong turns radiation into life gain.
+/// CR 729 — Strong turns radiation into life gain.
 #[test]
 fn cr_728_strong_heals_from_radiation() {
     let mut g = pod(2);
@@ -114,7 +114,7 @@ fn cr_728_strong_heals_from_radiation() {
     assert_eq!(g.players[0].rad_counters, 0);
 }
 
-/// CR 728 — without Strong, the same mills cost life.
+/// CR 729 — without Strong, the same mills cost life.
 #[test]
 fn cr_728_radiation_costs_life() {
     let mut g = pod(2);

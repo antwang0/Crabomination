@@ -711,7 +711,7 @@ fn questing_druid_grows_and_adventure_impulses() {
         card_id: druid, target: None, additional_targets: vec![], mode: None, x_value: None,
     }).expect("Seek the Beast");
     drain_stack(&mut g);
-    // The adventuring card itself also sits in exile (CR 715.3d).
+    // The adventuring card itself also sits in exile (CR 716.3d).
     assert_eq!(
         g.exile.iter().filter(|c| c.owner == 0 && c.id != druid).count(),
         2,

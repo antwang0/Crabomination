@@ -173,7 +173,7 @@ fn cr_115_6_spell_only_target_restriction_lets_abilities_through() {
     assert!(g.battlefield_find(lurker).expect("lurker").skip_next_untap);
 }
 
-/// CR 104.4b / 732.4 — a loop of mandatory triggered abilities with no way to
+/// CR 104.4b / 733.4 — a loop of mandatory triggered abilities with no way to
 /// stop draws the game. A state-neutral trigger that keeps re-resolving never
 /// moves the fingerprint the watchdog samples, so the watchdog fires.
 #[test]
@@ -211,7 +211,7 @@ fn cr_104_4b_progressing_trigger_chain_is_not_a_draw() {
     assert!(g.game_over.is_none(), "a chain that gains life each time is progress");
 }
 
-/// CR 104.4b / 732.4 — a loop whose *period* is longer than one resolution
+/// CR 104.4b / 733.4 — a loop whose *period* is longer than one resolution
 /// (two states alternating) is still a mandatory loop. The watchdog anchors a
 /// fingerprint and counts returns to it, so a period-2 chain draws too.
 #[test]
@@ -238,9 +238,9 @@ fn cr_104_4b_period_two_trigger_loop_draws_the_game() {
 /// brings the Warder back; the Warder's ETB has only its controller's own
 /// Hole A to exile, which returns Hole B, whose ETB exiles the Warder, which
 /// returns Hole A — period 3, forever. The old watch reset on every step and
-/// the game ran to the action cap; it must end as a draw (CR 732.4).
+/// the game ran to the action cap; it must end as a draw (CR 733.4).
 #[test]
-fn cr_732_4_two_portable_holes_and_a_mandatory_warder_end_as_a_draw() {
+fn cr_733_4_two_portable_holes_and_a_mandatory_warder_end_as_a_draw() {
     use crabomination::card::{CardDefinition, CardType, ExileReturnZone, SelectionRequirement};
     use crabomination::effect::Effect;
     use crabomination::effect::shortcut::{etb, target_filtered};

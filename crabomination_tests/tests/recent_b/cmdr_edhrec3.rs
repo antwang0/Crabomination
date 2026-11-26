@@ -897,7 +897,7 @@ fn horn_of_gondor_musters_per_human() {
     assert_eq!(named(&g, "Human Soldier"), 2, "one Human, one more Soldier");
 }
 
-/// Horn of Valhalla: its adventure (CR 715.3) makes X Soldiers and exiles
+/// Horn of Valhalla: its adventure (CR 716.3) makes X Soldiers and exiles
 /// it; cast later, the Equipment pumps by your creature count.
 #[test]
 fn horn_of_valhalla_calls_soldiers_then_scales() {
@@ -1236,7 +1236,7 @@ fn iroh_dragon_of_the_west_lights_up_countered_creatures() {
 }
 
 /// The Legend of Roku (Fire Lord Zuko's list): I exiles three to play, II
-/// adds a mana, III returns it as Avatar Roku (CR 714.2 / 712).
+/// adds a mana, III returns it as Avatar Roku (CR 715.2 / 712).
 #[test]
 fn the_legend_of_roku_becomes_avatar_roku() {
     let mut g = pod(2);
@@ -1257,7 +1257,7 @@ fn the_legend_of_roku_becomes_avatar_roku() {
     assert_eq!(roku.definition.name, "Avatar Roku");
 }
 
-/// CR 712.4 — under Containment Priest the returning Avatar Roku (a nontoken
+/// CR 712.6a — under Containment Priest the returning Avatar Roku (a nontoken
 /// creature that wasn't cast) is exiled instead, and in exile it is The
 /// Legend of Roku again, front face up (pod sweep 305001 found it kept its
 /// back face).
@@ -1431,7 +1431,7 @@ fn saga(g: &mut GameState, def: crabomination::card::CardDefinition) -> CardId {
 }
 
 /// Tom Bombadil (Terra's list): four lore counters among your Sagas give him
-/// hexproof and indestructible; a Saga's final chapter (CR 714.2e) digs up the
+/// hexproof and indestructible; a Saga's final chapter (CR 715.2e) digs up the
 /// next Saga, once each turn.
 #[test]
 fn tom_bombadil_chains_sagas_once_a_turn() {
@@ -1508,7 +1508,7 @@ fn the_kami_war_becomes_o_kagachi() {
     assert_eq!(g.computed_permanent(war).unwrap().power, 9);
 }
 
-/// Moonmist (Terra's list): Humans transform (CR 701.27c: a single-faced
+/// Moonmist (Terra's list): Humans transform (CR 701.27d: a single-faced
 /// one doesn't), and only Werewolves and Wolves deal combat damage (CR 615).
 #[test]
 fn moonmist_transforms_humans_and_fogs_the_rest() {

@@ -40,7 +40,7 @@ pub(crate) fn half_spell_probe(
     probe
 }
 
-/// A card cast transformed (disturb): CR 712.8c — the spell has its back
+/// A card cast transformed (disturb): CR 712.6b — the spell has its back
 /// face's characteristics, its mana value from the front face's mana cost.
 pub(crate) fn disturb_probe(card: &CardInstance) -> CardInstance {
     let Some(back) = card.definition.back_face.as_ref() else { return card.clone() };

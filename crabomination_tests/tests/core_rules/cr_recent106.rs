@@ -1366,12 +1366,12 @@ fn cr_601_2f_flashback_pays_thalias_tax() {
     assert_eq!(g.players[0].mana_pool.total(), 0);
 }
 
-/// CR 601.2f / 715.3 — an Adventure is a noncreature spell with only the
+/// CR 601.2f / 716.3 — an Adventure is a noncreature spell with only the
 /// adventure's characteristics, so Thalia taxes Stomp though Bonecrusher
 /// Giant is a creature card. The half-card paths (adventure, omen, split,
 /// aftermath) paid neither taxes nor reductions.
 #[test]
-fn cr_715_3_thalia_taxes_an_adventure() {
+fn cr_716_3_thalia_taxes_an_adventure() {
     use crabomination::mana::Color;
     let mut g = two_player_game();
     g.active_player_idx = 0;

@@ -62,7 +62,7 @@ fn melded(g: &GameState) -> Option<CardId> {
     g.battlefield.iter().find(|c| c.definition.name == "Brisela, Voice of Nightmares").map(|c| c.id)
 }
 
-/// CR 712.4 / 701.37 — a melded permanent that a replacement keeps off the
+/// CR 713.8 / 701.37 — a melded permanent that a replacement keeps off the
 /// battlefield is its two cards: under an opponent's Containment Priest
 /// ("exiled instead" for a creature entering uncast) Gisela and Bruna go to
 /// exile one by one, and the commander half is an exiled card its owner can

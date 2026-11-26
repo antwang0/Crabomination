@@ -791,7 +791,7 @@ pub enum Value {
     /// ("as long as you've rolled three or more dice this turn" — The Space
     /// Family Goblinson; "your third die each turn" — Resolute Veggiesaur).
     DiceRolledThisTurn(PlayerRef),
-    /// CR 717.5 — Attractions the resolved players visited this turn, summed
+    /// CR 718.5 — Attractions the resolved players visited this turn, summed
     /// ("for each Attraction you've visited this turn" — Squirrel Squatters).
     AttractionsVisitedThisTurn(PlayerRef),
     /// CR 303.4 — how many `filter` permanents are attached to the players
@@ -1853,9 +1853,9 @@ pub enum Predicate {
     /// `who` has discarded a card this turn (Asmoranomardicadaistinaculdacar's
     /// alternative-cost gate). Reads `Player.discarded_this_turn`.
     DiscardedThisTurn { who: PlayerRef },
-    /// CR 731 — it's currently day.
+    /// CR 732 — it's currently day.
     IsDay,
-    /// CR 731 — it's currently night.
+    /// CR 732 — it's currently night.
     IsNight,
     /// CR 706.2 — true when the firing die result (`Performed(DieResult)`) is
     /// at least `n` — or, off a whole-roll `RolledDice`, its greatest result —
@@ -1867,12 +1867,12 @@ pub enum Predicate {
     /// CR 702.85a — the spell this `SpellCast` trigger fired on has cascade,
     /// printed or granted by a cast trigger that holds for it. Aurora Phoenix.
     CastSpellHasCascade,
-    /// CR 725 — `who` is the monarch ("as long as you're the monarch, …").
+    /// CR 726 — `who` is the monarch ("as long as you're the monarch, …").
     IsMonarch { who: PlayerRef },
-    /// CR 725 — `who` was the monarch as the turn began (turn-start snapshot).
+    /// CR 726 — `who` was the monarch as the turn began (turn-start snapshot).
     /// Knights of the Black Rose.
     WasMonarchAtTurnStart { who: PlayerRef },
-    /// CR 726 — `who` currently has the initiative.
+    /// CR 727 — `who` currently has the initiative.
     HasInitiative { who: PlayerRef },
     /// CR 903 — `who` controls their own commander (either of two); Lieutenant's
     /// condition. A stolen commander doesn't count.
@@ -2327,7 +2327,7 @@ pub enum Predicate {
     /// at most the Aura's (Eriette, the Beguiler).
     AuraHostIsCheaperOpponentPermanent,
     /// True if the just-cast spell (located via `ctx.trigger_source`) was cast
-    /// as an Adventure (CR 715 — its `adventuring` flag is set). Powers
+    /// as an Adventure (CR 716 — its `adventuring` flag is set). Powers
     /// Chancellor of Tales' "whenever you cast an Adventure spell".
     CastSpellIsAdventure,
     /// The trigger object (just-cast spell or played land) shares a card type
@@ -2449,11 +2449,11 @@ pub enum Predicate {
     /// `ctx.source` has a `keyword` counter on it (CR 122.1b) — "you may
     /// remove a deathtouch counter from it. When you do" (Kappa Tech-Wrecker).
     SourceHasKeywordCounter(crate::card::Keyword),
-    /// CR 716.2 — the source Class is at exactly level `n`. Gates its "Level N"
+    /// CR 717.2 — the source Class is at exactly level `n`. Gates its "Level N"
     /// ability (`SourceClassLevelIs(N-1)`) and its "becomes level N" trigger
     /// (`ClassLevelReached` filtered on `SourceClassLevelIs(N)`).
     SourceClassLevelIs(u8),
-    /// CR 716.2 — true when `ctx.source` (a Class enchantment) is at level `n`
+    /// CR 717.2 — true when `ctx.source` (a Class enchantment) is at level `n`
     /// or higher. Gates a Class's level-`n` triggered abilities so they only
     /// fire once the Class has reached that level.
     SourceClassLevelAtLeast(u8),
@@ -2596,7 +2596,7 @@ pub enum Predicate {
     /// ≤ `n`. Reads `GameState.last_discarded_mana_value` (Hollow Marauder's
     /// "draw unless they discarded a card with mana value 4 or greater").
     LastDiscardedManaValueAtMost(u32),
-    /// CR 715 — the controller owns an exiled card on an Adventure (Howling
+    /// CR 716 — the controller owns an exiled card on an Adventure (Howling
     /// Galefang).
     OwnExiledAdventureCard,
     /// Some opponent controls more lands than `ctx.controller` (Gift of Estates,
@@ -3267,8 +3267,8 @@ pub enum EventKind {
     /// actually happened). Fires once per scry/surveil resolution; the acting
     /// player rides in as the subject. Matoya, Archon Elder.
     ScriedOrSurveiled,
-    /// CR 714.2e — a Saga's final chapter resolved (Narci, Fable Singer). Subject
-    /// the Saga, amount its mana value, read before CR 714.4 sacrifices it.
+    /// CR 715.2e — a Saga's final chapter resolved (Narci, Fable Singer). Subject
+    /// the Saga, amount its mana value, read before CR 715.4 sacrifices it.
     SagaFinalChapterResolved,
     /// CR 701.22 — "whenever you scry" only (Flamespeaker Adept); the same
     /// event as `ScriedOrSurveiled`, narrowed by its `surveil` flag.
@@ -3305,7 +3305,7 @@ pub enum EventKind {
     /// CR 700.14 — "whenever you expend N": the filter carries
     /// `Predicate::ExpendReached(n)`, so it fires as the total first reaches N.
     Expend,
-    /// CR 716.2 — a Class gained a level. Scope `EventScope::This` and filter on
+    /// CR 717.2 — a Class gained a level. Scope `EventScope::This` and filter on
     /// `Predicate::SourceClassLevelIs(N)` for "becomes level N".
     ClassLevelReached,
     /// A player lost life.
@@ -3495,7 +3495,7 @@ pub enum EventKind {
     /// "When this card is put into your hand from your graveyard" (Golgari
     /// Brownscale); `SelfSource` fires from the hand.
     PutIntoHandFromGraveyard,
-    /// CR 502.2 / 731 — day/night flipped; global, so pair with
+    /// CR 502.2 / 732 — day/night flipped; global, so pair with
     /// `EventScope::AnyPlayer`. Brimstone Vandal.
     DayNightChanged,
     /// CR 700.13 — `who` committed a crime (targeted an opponent, their
@@ -3520,7 +3520,7 @@ pub enum EventKind {
     /// CR 701.6 — a spell was countered. Actor the counterer's controller
     /// (`YourControl` = Lullmage Mentor), subject the countered card.
     SpellCountered,
-    /// CR 725.3 — a player became the monarch. The event's player is the
+    /// CR 726.3 — a player became the monarch. The event's player is the
     /// new monarch, so `EventScope::OpponentControl` reads "an opponent
     /// becomes the monarch" (Knights of the Black Rose).
     BecameMonarch,
@@ -5610,11 +5610,11 @@ pub enum Effect {
     /// inline (`base::dungeons`). The final room completes it
     /// (`Player.dungeons_completed`, `EventKind::DungeonCompleted`).
     Venture,
-    /// CR 726.2 — "venture into `dungeon`": like [`Effect::Venture`] but the
+    /// CR 727.2 — "venture into `dungeon`": like [`Effect::Venture`] but the
     /// dungeon is fixed rather than chosen (the initiative's Undercity). A
     /// player already in a different dungeon is unaffected.
     VentureInto { dungeon: String },
-    /// CR 726 — `who` takes the initiative.
+    /// CR 727 — `who` takes the initiative.
     TakeInitiative { who: PlayerRef },
     /// CR 701.29 — fateseal N: look at the top `amount` of each targeted
     /// opponent's library and bottom any number. AutoDecider bottoms none.
@@ -6043,7 +6043,7 @@ pub enum Effect {
     CopyCardMayCast { what: Selector },
     /// Myra the Magnificent: exile `what` and link it to a chosen Attraction you
     /// control without a midway counter, which gets one plus "whenever you visit
-    /// this, copy the exiled card; you may cast the copy free" (CR 717). No such
+    /// this, copy the exiled card; you may cast the copy free" (CR 718). No such
     /// Attraction: just the exile.
     ExileOntoAttractionWithMidway { what: Selector },
     /// "Copy those cards. You may cast up to `max` copies free" (Baron Helmut
@@ -6652,7 +6652,7 @@ pub enum Effect {
     AddRedUntilEndOfCombat { amount: Value },
     /// Engine-appended to a Saga's final chapter ability (never printed):
     /// emits `GameEvent::SagaFinalChapterResolved` as the chapter resolves,
-    /// so a countered chapter emits nothing (CR 714.2e).
+    /// so a countered chapter emits nothing (CR 715.2e).
     SagaFinalChapterResolved,
 
     // ── Permanent mutations ──────────────────────────────────────────────────
@@ -6809,7 +6809,7 @@ pub enum Effect {
     /// top in order; an auto seat buries the priciest card.
     LookTopPutOneOnBottom { count: Value },
     /// CR 712 — transform each target in place, keeping counters, tapped state
-    /// and attachments (CR 712.9); emits `Transforms` per permanent.
+    /// and attachments (CR 712.12); emits `Transforms` per permanent.
     Transform { what: Selector },
     /// CR 709.5 — unlock one locked door (left first) of each resolved Room,
     /// firing its unlock triggers and the Eerie `RoomFullyUnlocked` event.
@@ -6831,7 +6831,7 @@ pub enum Effect {
     Flip { what: Selector },
     /// CR 701.42 Meld: if the controller owns and controls the source and a
     /// `partner`, exile both and put `into` onto the battlefield. The parts ride
-    /// `CardInstance.meld_parts`, so it leaves as both cards (CR 712.16/712.17).
+    /// `CardInstance.meld_parts`, so it leaves as both cards (CR 713.8/712.14).
     /// Otherwise no-op (701.37b).
     Meld {
         partner: String,
@@ -7155,7 +7155,7 @@ pub enum Effect {
     /// until this leaves" (Foreboding Steamboat): APNAP picks (all if `count` or
     /// fewer), exiled at once, linked to the source.
     EachPlayerExilesChosenUntilSourceLeaves { count: Value, filter: SelectionRequirement },
-    /// CR 725 — Palace Jailer: exile until an opponent becomes the monarch. The
+    /// CR 726 — Palace Jailer: exile until an opponent becomes the monarch. The
     /// card carries a `monarch_guard` for the controller and returns when the
     /// monarchy leaves them, not when the source leaves.
     ExileUntilOpponentMonarch { what: Selector },
@@ -7498,7 +7498,7 @@ pub enum Effect {
     /// "Target player skips their next draw step" (Fatigue). Adds one charge to
     /// `Player.skip_next_draw_step`.
     SkipPlayerDrawStep { player: PlayerRef },
-    /// CR 727 — restart the game: no winner, a fresh game from every card, the
+    /// CR 728 — restart the game: no winner, a fresh game from every card, the
     /// controller starting (727.1a). Cards exiled with the source are exempt
     /// (727.5) and with `deploy_source_exiles` enter under the controller (Karn
     /// Liberated's −14).
@@ -8709,7 +8709,7 @@ pub enum Effect {
     /// token they control (their choice; AutoDecider keeps the highest-power
     /// one). No-op if they control no creature token.
     Populate { who: PlayerRef },
-    /// CR 716.2 — advance the source Class one level, emitting
+    /// CR 717.2 — advance the source Class one level, emitting
     /// `GameEvent::ClassLevelReached`; the "Level N" ability's effect. No-op off
     /// the battlefield.
     AdvanceClassLevel,
@@ -9655,7 +9655,7 @@ pub enum Effect {
 
     // ── Counters on players ──────────────────────────────────────────────────
     AddPoison { who: Selector, amount: Value },
-    /// CR 122.1i / 728 — give each resolved player `amount` rad counters.
+    /// CR 122.1i / 729 — give each resolved player `amount` rad counters.
     AddRadCounters { who: Selector, amount: Value },
 
     // ── Misc atomic operations needed by existing cards ──────────────────────
@@ -10791,7 +10791,7 @@ pub enum Effect {
         own_creature_pt: bool,
     },
 
-    /// CR 729 — Shahrazad: a bot-piloted, bounded subgame on the players'
+    /// CR 730 — Shahrazad: a bot-piloted, bounded subgame on the players'
     /// libraries; non-winners lose half their life rounded up (a stalled or
     /// drawn one has no winner).
     PlaySubgame,
@@ -10856,9 +10856,9 @@ pub enum Effect {
     /// CR 506 — `who` skips their next combat phase (`skip_next_combat`,
     /// consumed by `advance_step`). Stonehorn Dignitary.
     SkipNextCombatPhase { who: PlayerRef },
-    /// CR 725 — `who` becomes the monarch. "You become the monarch."
+    /// CR 726 — `who` becomes the monarch. "You become the monarch."
     BecomeMonarch { who: PlayerRef },
-    /// CR 725 — "`who` can't become the monarch this turn" (Jared Carthalion,
+    /// CR 726 — "`who` can't become the monarch this turn" (Jared Carthalion,
     /// True Heir): every way of becoming it is skipped until cleanup.
     CantBecomeMonarchThisTurn { who: PlayerRef },
     /// CR 701.54 — the Ring tempts `who`: temptation count +1 (max 4) and a
@@ -10871,9 +10871,9 @@ pub enum Effect {
     /// CR 702.131 — Ascend: with ten or more permanents `who` gets the city's
     /// blessing. One-shot here; the static form re-checks.
     Ascend { who: PlayerRef },
-    /// CR 731 — "it becomes day." Sets the game's day designation.
+    /// CR 732 — "it becomes day." Sets the game's day designation.
     BecomeDay,
-    /// CR 731 — "it becomes night." Sets the game's night designation.
+    /// CR 732 — "it becomes night." Sets the game's night designation.
     BecomeNight,
     /// CR 500.7 — extra turn(s) after this one (`extra_turns`, consumed by
     /// `advance_turn`). Time Walk.
@@ -10908,14 +10908,14 @@ pub enum Effect {
     /// cast a spell this turn with the same name as that card loses `amount`
     /// life. Then shuffle." (Grim Reminder.)
     SearchRevealPunishSameNameCasters { amount: Value },
-    /// CR 723.1 — "You control target player during that player's next turn."
+    /// CR 724.1 — "You control target player during that player's next turn."
     /// Registers a pending control entry consumed when that player actually
     /// takes a turn (Mindslaver).
     ControlPlayerNextTurn { who: PlayerRef },
-    /// CR 723.2 — "You control target opponent during their next combat
+    /// CR 724.2 — "You control target opponent during their next combat
     /// phase" (Secret of Bloodbending): control for that one combat phase only.
     ControlPlayerNextCombat { who: PlayerRef },
-    /// CR 723.1 — "The first player controls the second player during the
+    /// CR 724.1 — "The first player controls the second player during the
     /// second player's next turn, and the second player controls the first
     /// player during the first player's next turn" (Cruel Entertainment).
     PlayersControlEachOthersNextTurn { first: PlayerRef, second: PlayerRef },
@@ -10923,10 +10923,10 @@ pub enum Effect {
     /// this turn." The affected player picks draw step / main phase / combat
     /// phase (`Decision::ChooseModes`); the pick is turn-scoped. Fatespinner.
     ChooseStepToSkipThisTurn { who: PlayerRef },
-    /// CR 724 — end the turn: exile the stack, remove everything from combat,
+    /// CR 725 — end the turn: exile the stack, remove everything from combat,
     /// jump to cleanup. Sundial of the Infinite.
     EndTheTurn,
-    /// CR 724.2 — end the combat phase: exile the stack, clear combat, go to the
+    /// CR 725.2 — end the combat phase: exile the stack, clear combat, go to the
     /// next main without end of combat (724.2e). No-op outside combat. Mandate
     /// of Peace.
     EndTheCombatPhase,
@@ -11140,7 +11140,7 @@ pub enum Effect {
         #[serde(default)]
         payer: Option<PlayerRef>,
     },
-    /// CR 714.4 — exile this Saga and return it transformed under your control,
+    /// CR 715.4 — exile this Saga and return it transformed under your control,
     /// a new object (lore counters clear, back-face ETB fires) — Fable of the
     /// Mirror-Breaker III. With `from_graveyard`, returns it from a graveyard
     /// (Garland, Knight of Cornelia).
@@ -12664,7 +12664,7 @@ pub fn static_affects_spell_cost(effect: &StaticEffect) -> bool {
         | SE::SpellsCostLessPerSameNameInYourGraveyard
         | SE::PerTargetSpellCost { .. } => true,
         // Gate wrappers: the reduction loop peels them all through `active_static`
-        // (Class level, CR 716.2; Momo's "during your turn"); the tax walks peel
+        // (Class level, CR 717.2; Momo's "during your turn"); the tax walks peel
         // none. Over-approximating costs one iteration; dropping one misprices.
         SE::WhileClassLevelAtLeast { inner, .. }
         | SE::WhileYourTurn { inner }

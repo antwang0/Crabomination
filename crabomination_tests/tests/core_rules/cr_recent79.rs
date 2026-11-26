@@ -5,7 +5,7 @@
 //!   and the land enters under the player who played it (CR 305.1).
 //! - CR 614 — an as-enters replacement resolves before the enters-with-counters
 //!   replacement, so a count can read what it did.
-//! - CR 716.2 — a Class's level-gated cost static applies only at that level.
+//! - CR 717.2 — a Class's level-gated cost static applies only at that level.
 
 use crabomination::card::{CounterType, MayPlayDuration, MayPlayPermission};
 use crabomination::catalog;
@@ -132,9 +132,9 @@ fn cr_614_as_enters_effect_precedes_enters_with_counters() {
     );
 }
 
-/// CR 716.2 — a Class's level-2 cost static is inert at level 1.
+/// CR 717.2 — a Class's level-2 cost static is inert at level 1.
 #[test]
-fn cr_716_2_class_level_gates_a_cost_static() {
+fn cr_717_2_class_level_gates_a_cost_static() {
     let mut g = game();
     let talent = g.add_card_to_battlefield(0, catalog::artists_talent());
     let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());

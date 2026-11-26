@@ -1135,7 +1135,7 @@ fn stomp(g: &mut GameState, giant: CardId, target: Target) -> Result<(), GameErr
     Ok(())
 }
 
-/// CR 707.2 / 715.3b — Gorion copies an Adventure spell, and the copy has
+/// CR 707.2 / 716.3b — Gorion copies an Adventure spell, and the copy has
 /// only the Adventure's characteristics: two Stomps kill a 3/3, and no
 /// token Bonecrusher Giant appears.
 #[test]
@@ -1152,7 +1152,7 @@ fn gorion_copies_an_adventure_spell() {
     assert!(g.exile.iter().any(|c| c.id == giant && c.on_adventure), "the original goes on an adventure");
 }
 
-/// CR 715.3b — Edgewall Innkeeper draws for the creature cast of an
+/// CR 716.3b — Edgewall Innkeeper draws for the creature cast of an
 /// Adventurer card, not for the Adventure cast.
 #[test]
 fn edgewall_innkeeper_draws_on_the_creature_half_only() {
@@ -1385,7 +1385,7 @@ fn kuldotha_phoenix_needs_upkeep_and_metalcraft() {
     assert!(g.battlefield_find(ph).is_some());
 }
 
-/// CR 726.2 — Sunstreak Phoenix makes it day as it enters.
+/// CR 727.2 — Sunstreak Phoenix makes it day as it enters.
 #[test]
 fn sunstreak_phoenix_makes_it_day() {
     let mut g = pod(2);

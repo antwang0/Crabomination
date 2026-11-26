@@ -293,7 +293,7 @@ fn forum_filibuster_makes_inkling_and_returns_aura() {
 }
 
 /// Intermediate Chirography — Inkling on entry; level 2 counters your first
-/// life loss each turn onto a creature (CR 716.2a).
+/// life loss each turn onto a creature (CR 717.2a).
 #[test]
 fn intermediate_chirography_levels() {
     let mut g = pod(2);

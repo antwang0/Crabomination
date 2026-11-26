@@ -1555,7 +1555,7 @@ fn jarad_recurs_from_graveyard() {
 /// It shipped as two `Effect::Sacrifice` steps behind a `condition` asking
 /// whether you control the two lands — the Greater Good shape, which stays
 /// true until the ability RESOLVES. A bot could announce it as many times as
-/// the CR 732.3 watchdog allowed, and every extra resolution sacrificed
+/// the CR 733.3 watchdog allowed, and every extra resolution sacrificed
 /// another pair of lands with Jarad already in hand.
 #[test]
 fn cr_602_5b_jarads_swamp_and_forest_are_paid_at_announcement() {

@@ -187,7 +187,7 @@ fn rona_casts_an_exiled_artifact() {
     assert!(g.battlefield_find(ring).is_some());
 }
 
-/// CR 714.2 — The Antiquities War digs for artifacts and animates them.
+/// CR 715.2 — The Antiquities War digs for artifacts and animates them.
 #[test]
 fn the_antiquities_war_animates_artifacts() {
     let mut g = pod(2);

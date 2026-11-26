@@ -332,7 +332,7 @@ fn cr_122_1h_black_crystal_returns_with_finality() {
     assert_eq!(g.battlefield_find(back[0]).unwrap().counter_count(CounterType::Finality), 1);
 }
 
-/// CR 724 / 611.2c — Garland makes an opponent the monarch, takes one of
+/// CR 725 / 611.2c — Garland makes an opponent the monarch, takes one of
 /// their creatures (+2/+2 while it's Garland's), and loses it when the crown
 /// moves on.
 #[test]

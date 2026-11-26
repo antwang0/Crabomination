@@ -197,12 +197,12 @@ fn cr_104_4b_a_finite_life_drain_is_not_a_loop() {
     assert_eq!(g.game_over, Some(Some(0)), "the drain wins");
 }
 
-/// CR 732.2a — a finite drain is shortcut: against 1,000,000 life, the
+/// CR 733.2a — a finite drain is shortcut: against 1,000,000 life, the
 /// 20,000 passes `vito_blood_drain` allows are a fiftieth of the laps, and
 /// the game still ends with the drained seat out and every point tallied
 /// (pod seed 1071172 ran an eight-seat game to the action cap this way).
 #[test]
-fn cr_732_2a_a_long_finite_drain_is_shortcut_to_its_end() {
+fn cr_733_2a_a_long_finite_drain_is_shortcut_to_its_end() {
     let g = vito_blood_drain(1_000_000, false);
     assert_eq!(g.game_over, Some(Some(0)), "the drain wins");
     // The killing point's Exquisite Blood trigger never resolves: the game is over.
@@ -211,11 +211,11 @@ fn cr_732_2a_a_long_finite_drain_is_shortcut_to_its_end() {
     assert_eq!(g.players[1].life_lost_this_turn, 1_000_000);
 }
 
-/// CR 732.2a / 800.4a — at four seats the shortcut stops one lap short of the
+/// CR 733.2a / 800.4a — at four seats the shortcut stops one lap short of the
 /// drained seat's death, the death happens for real, and the drain moves on:
 /// Vito's next trigger targets a living opponent.
 #[test]
-fn cr_732_2a_a_shortcut_drain_at_four_seats_kills_each_opponent_in_turn() {
+fn cr_733_2a_a_shortcut_drain_at_four_seats_kills_each_opponent_in_turn() {
     use crabomination::game::types::GameAction;
     let mut g = multi_player_game(4);
     g.active_player_idx = 0;

@@ -392,7 +392,7 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push("⛨ saddled".to_string());
     }
 
-    // Station progress (CR 721) — show the next {N+} charge threshold so the
+    // Station progress (CR 722) — show the next {N+} charge threshold so the
     // player can see how close the Spacecraft is to its next striation.
     if let Some(threshold) = p.station_next_threshold {
         let charges = p
@@ -731,7 +731,7 @@ fn build_tooltip_body(p: &crabomination::net::PermanentView) -> Option<String> {
         lines.push(String::from("(won't untap)"));
     }
 
-    // CR 714 — Saga chapter progress. The current chapter is the Lore counter
+    // CR 715 — Saga chapter progress. The current chapter is the Lore counter
     // count; `saga_final_chapter` is the highest chapter number (sacrificed
     // after it resolves).
     if let Some(final_ch) = p.saga_final_chapter {

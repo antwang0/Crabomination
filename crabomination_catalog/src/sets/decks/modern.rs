@@ -8529,7 +8529,7 @@ pub fn tezzeret_cruel_captain() -> CardDefinition {
 /// Cruel Somnophage — {1}{B} Creature — Nightmare */*. Power and toughness
 /// are each equal to the number of creature cards in all graveyards (CR
 /// 604.3). Adventure — Can't Wake Up {1}{U} Sorcery: target player mills
-/// four cards (CR 715).
+/// four cards (CR 716).
 pub fn cruel_somnophage() -> CardDefinition {
     CardDefinition {
         name: "Cruel Somnophage",
@@ -9767,7 +9767,7 @@ pub fn wee_dragonauts() -> CardDefinition {
 }
 
 /// Palace Sentinels — {3}{W} Creature — Human Soldier 2/4. When it enters, you
-/// become the monarch (CR 725).
+/// become the monarch (CR 726).
 pub fn palace_sentinels() -> CardDefinition {
     use crate::effect::shortcut::etb;
     CardDefinition {
@@ -21560,7 +21560,7 @@ pub fn bonecrusher_giant() -> CardDefinition {
             },
         }],
         // Adventure — Stomp {1}{R}: damage can't be prevented this turn; deal
-        // 2 damage to any target (CR 715).
+        // 2 damage to any target (CR 716).
         adventure: Some(Box::new(Adventure {
             name: "Stomp",
             cost: cost(&[generic(1), r()]),
@@ -27375,7 +27375,7 @@ pub fn talon_gates_of_madara() -> CardDefinition {
 }
 
 /// Virtue of Loyalty // Ardenvale Fealty — {3}{W}{W} Enchantment // {1}{W}
-/// Instant — Adventure (CR 715). Adventure: create a 2/2 white Knight with
+/// Instant — Adventure (CR 716). Adventure: create a 2/2 white Knight with
 /// vigilance. Enchantment: at the beginning of your end step, put a +1/+1
 /// counter on each creature you control, then untap those creatures.
 pub fn virtue_of_loyalty() -> CardDefinition {
@@ -37767,7 +37767,7 @@ pub fn squadron_hawk() -> CardDefinition {
 /// Felidar Guardian — {3}{W} 1/4 Cat Beast. ETB: you may exile another target
 /// permanent you control, then return it to the battlefield under its owner's
 /// control (a blink). The "may" is the controller's: two Guardians blinking
-/// each other is an optional loop, not a mandatory one (CR 732.4).
+/// each other is an optional loop, not a mandatory one (CR 733.4).
 pub fn felidar_guardian() -> CardDefinition {
     CardDefinition {
         name: "Felidar Guardian",
@@ -39249,7 +39249,7 @@ pub fn wrenn_and_six() -> CardDefinition {
 /// **+4**: Target player exiles a card from their hand.
 /// **-3**: Exile target permanent.
 /// **-14**: Restart the game, leaving the cards Karn exiled in exile, then
-/// return them to the battlefield under your control (CR 727).
+/// return them to the battlefield under your control (CR 728).
 pub fn karn_liberated() -> CardDefinition {
     use crate::card::{LoyaltyAbility, PlaneswalkerSubtype, Supertype as Sup};
     CardDefinition {
@@ -47604,7 +47604,7 @@ pub fn exalted_angel() -> CardDefinition {
     }
 }
 
-// ── End the turn (CR 724) ────────────────────────────────────────────────────
+// ── End the turn (CR 725) ────────────────────────────────────────────────────
 
 /// Sundial of the Infinite — {2} Artifact. {1}, {T}: End the turn. Activate
 /// only during your turn.
@@ -47852,7 +47852,7 @@ pub fn reckoner_bankbuster() -> CardDefinition {
     }
 }
 
-// ── DFC saga (CR 714.4) ──────────────────────────────────────────────────────
+// ── DFC saga (CR 715.4) ──────────────────────────────────────────────────────
 
 /// Reflection of Kiki-Jiki — back face of Fable of the Mirror-Breaker.
 /// {1}, {T}: Create a token copy of another target nonlegendary creature you

@@ -2298,7 +2298,7 @@ pub(crate) fn cost_reduction_for_spell_full_over<'a>(
     // zone (Hymn of the Wilds, Brago's Favor), so walk those too.
     for src in srcs {
         for sa in &src.definition.static_abilities {
-            // Every gate `active_static` peels: a Class level (CR 716.2,
+            // Every gate `active_static` peels: a Class level (CR 717.2,
             // Artist's Talent level 2), "during your turn" (Momo), a
             // `WhileCondition`. Class levels were the only one read here.
             let Some(effect) = state.active_static(&sa.effect, src) else { continue };
@@ -5282,7 +5282,7 @@ impl GameState {
         // CR 118.x — "you may play that card" grants cover lands too. An
         // impulse-exiled land (Light Up the Stage, Gonti Night Minister,
         // Chandra Torch of Defiance) is played from exile, not cast.
-        // CR 715.3d — a card whose permanent half is a land is *played* out of
+        // CR 716.3d — a card whose permanent half is a land is *played* out of
         // adventure exile, not cast (the FIN Town // Adventure cycle).
         let from_adventure = !from_top
             && foreign_top.is_none()
@@ -5633,7 +5633,7 @@ impl GameState {
         // logic in `resolve_top_of_stack`; play_land needs an analogous push
         // so triggered abilities on lands actually fire.
         self.fire_self_etb_triggers(card_id, p);
-        // CR 714.2b — a Saga land (Urza's Saga) enters with its first lore
+        // CR 715.2b — a Saga land (Urza's Saga) enters with its first lore
         // counter; chapter I fires off the land drop too.
         if self
             .battlefield
@@ -7114,7 +7114,7 @@ impl GameState {
     /// `card_id` from their graveyard now: `p`'s turn, the card matches the
     /// grant's filter and isn't barred from graveyard casts, and `p` controls
     /// something to sacrifice. Read off printed statics and off the station
-    /// bands whose threshold the source's charge counters meet (CR 721.2a).
+    /// bands whose threshold the source's charge counters meet (CR 722.2a).
     pub(crate) fn graveyard_sac_cast_grant(
         &self,
         p: usize,
@@ -9232,7 +9232,7 @@ impl GameState {
         Ok(events)
     }
 
-    /// CR 715 — cast the instant/sorcery adventure half of a card from hand.
+    /// CR 716 — cast the instant/sorcery adventure half of a card from hand.
     /// Pay the adventure cost; on resolution the card is exiled (with
     /// `on_adventure` set) instead of going to the graveyard, so the creature
     /// half can be cast from exile later via `cast_adventure_creature`.
@@ -9298,7 +9298,7 @@ impl GameState {
             .find(|c| c.id == card_id)
             .map(|c| c.definition.adventure_additional_cast_cost.clone())
             .unwrap_or_default();
-        // CR 715.3 — the Adventure's own mana cost is the one Drought reads.
+        // CR 716.3 — the Adventure's own mana cost is the one Drought reads.
         let mut extra = extra;
         if let Some(c) = self.static_sacrifice_cast_cost(&adv.cost) {
             extra.push(c);
@@ -9323,7 +9323,7 @@ impl GameState {
                 return Err(GameError::InsufficientLife);
             }
         }
-        // CR 601.2f / 715.3 — the Adventure spell's taxes and discounts.
+        // CR 601.2f / 716.3 — the Adventure spell's taxes and discounts.
         if let Some(card) = self.players[p].hand.iter().find(|c| c.id == card_id) {
             let probe = super::cast_cost::half_spell_probe(card, Some(adv.name), &adv.cost, &adv.card_types);
             // CR 101.2 — the locks read the face being cast.
@@ -9454,7 +9454,7 @@ impl GameState {
         Ok(events)
     }
 
-    /// CR 715 — cast the creature half of a card that's in exile after going
+    /// CR 716 — cast the creature half of a card that's in exile after going
     /// on an adventure. Pays the card's regular mana cost.
     pub(crate) fn cast_adventure_creature(
         &mut self,
@@ -9519,7 +9519,7 @@ impl GameState {
         card.on_adventure = false;
         card.adventuring = false;
         card.cast_from_hand = false;
-        // CR 715.4 — the creature half is cast from exile.
+        // CR 716.4 — the creature half is cast from exile.
         card.cast_from_exile = true;
         let mut events = receipt.auto_events;
         events.push(GameEvent::SpellCast { player: p, card_id, face: CastFace::Front });
@@ -13197,7 +13197,7 @@ impl GameState {
             }
             None => x_value,
         };
-        // CR 709.3b / 715.3b — the spell has only the cast half's
+        // CR 709.3b / 716.3b — the spell has only the cast half's
         // characteristics (Adventure / Omen, a split card's right half, both
         // halves when fused), so the cast filters and spell-type tallies
         // (Magecraft / Prowess) read that face.
@@ -14002,7 +14002,7 @@ impl GameState {
         if !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
-        // CR 101.2 / 712.8c — the locks read the back face being cast.
+        // CR 101.2 / 712.6b — the locks read the back face being cast.
         self.face_cast_lock(p, &super::cast_cost::disturb_probe(&card))?;
         let mut cost = disturb_cost;
         self.add_spell_taxes(p, &card, None, &mut cost);
@@ -17340,7 +17340,7 @@ impl GameState {
     /// their library: a live opponent of `searcher` who controls a
     /// `ControlOpponentsSearches` permanent. With several such opponents
     /// (multiplayer, two Agents on different sides) the first in APNAP order
-    /// takes the search — CR 722's control effects would timestamp-order
+    /// takes the search — CR 723's control effects would timestamp-order
     /// them, and the engine keeps no timestamp for a static's control grant,
     /// so APNAP is the deterministic stand-in.
     pub(crate) fn search_hijacker(&self, searcher: usize) -> Option<usize> {
@@ -21219,7 +21219,7 @@ impl GameState {
                 }
             }
         }
-        // CR 721.2a — Station `{N+}` activated-ability bands. While the source's
+        // CR 722.2a — Station `{N+}` activated-ability bands. While the source's
         // charge-counter count meets a band threshold, that band's activated
         // abilities are usable (a Planet's `12+ | {cost}: …`).
         if !me.definition.station.is_empty() {
@@ -21674,7 +21674,7 @@ impl GameState {
             && let Some(out) =
                 self.activate_plain_land_tap(card_id, ability_index, p, x_value, events)
         {
-            // The CR 732.3 watch is neither asked nor reset (PERF `(-219)`,
+            // The CR 733.3 watch is neither asked nor reset (PERF `(-219)`,
             // then 2026-09-09): a mana ability is activated *inside* another
             // ability's announcement (CR 602.2b / 605.3), so it is not a
             // game choice of its own. Resetting the watch here let the
@@ -21995,7 +21995,7 @@ impl GameState {
         // reaches most of them.
         let ability_is_mana = is_mana_ability(&ability.effect);
 
-        // CR 732.3 — before any cost is paid, so a rejected announcement
+        // CR 733.3 — before any cost is paid, so a rejected announcement
         // leaves no trace. Not for a mana ability: the auto-tapper announces
         // one inside the announcement it pays for, and letting it reset the
         // watch hid Basalt Monolith's untap loop (`abilarms`, `--decks all

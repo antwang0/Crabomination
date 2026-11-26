@@ -549,13 +549,13 @@ fn cr_903_4_no_commander_keeps_the_any_color_fallback() {
     assert_eq!(g.players[0].mana_pool.total(), 1);
 }
 
-// ── CR 903.5e — Commander games do not use sideboards ─────────────────────
+// ── CR 903.5f — Commander games do not use sideboards ─────────────────────
 
-/// CR 903.5e. `validate_deck_refs` takes a flat card list — which is what lets
+/// CR 903.5f. `validate_deck_refs` takes a flat card list — which is what lets
 /// CR 903.5a count the commander with the 99 — so it never sees a sideboard,
 /// and a Commander deck could carry one past validation.
 #[test]
-fn cr_903_5e_a_commander_deck_may_not_have_a_sideboard() {
+fn cr_903_5f_a_commander_deck_may_not_have_a_sideboard() {
     use crabomination::format::{Deck, DeckError, validate_commander_deck};
     let mut main: Vec<CardDefinition> = vec![catalog::forest(); 99];
     main[0] = catalog::llanowar_elves();
@@ -571,8 +571,38 @@ fn cr_903_5e_a_commander_deck_may_not_have_a_sideboard() {
     assert!(cmd.is_empty(), "nothing Commander-specific is wrong with the list");
     assert!(
         generic.contains(&DeckError::SideboardNotAllowed { found: 1 }),
-        "CR 903.5e, got {generic:?}",
+        "CR 903.5f, got {generic:?}",
     );
+}
+
+// ── CR 903.5e — a deck-construction ability works only on the commander ──
+
+/// CR 903.5e / 113.6n. Maular's Rulebreaker admits a mana value 7+ creature
+/// of any identity — while Maular is the commander. The same card in the 99
+/// of a mono-green deck modifies nothing, so Stormtide Leviathan is off
+/// identity there (and Maular, green, is fine).
+#[test]
+fn cr_903_5e_a_deck_construction_ability_applies_only_from_the_commander() {
+    use crabomination::format::{CommanderDeckError, Deck, validate_commander_deck};
+    let deck = |commander: CardDefinition, extra: Vec<CardDefinition>| {
+        let mut main = extra;
+        main.resize_with(99, catalog::forest);
+        Deck { commanders: vec![commander], main, ..Default::default() }
+    };
+    let off = |d: &Deck| -> Vec<&'static str> {
+        validate_commander_deck(d).err().map_or(vec![], |(_, cmd)| {
+            cmd.into_iter()
+                .filter_map(|e| match e {
+                    CommanderDeckError::OffColorIdentity { card_name, .. } => Some(card_name),
+                    _ => None,
+                })
+                .collect()
+        })
+    };
+    let led = deck(catalog::maular_the_next_evolution(), vec![catalog::stormtide_leviathan()]);
+    assert!(off(&led).is_empty(), "Maular as commander lets the Leviathan in");
+    let in_99 = deck(bear_commander(), vec![catalog::maular_the_next_evolution(), catalog::stormtide_leviathan()]);
+    assert_eq!(off(&in_99), vec!["Stormtide Leviathan"], "Maular in the 99 lets nothing in");
 }
 
 // ── CR 106.6 — a rider narrows nothing, and the estimate has to agree ──────

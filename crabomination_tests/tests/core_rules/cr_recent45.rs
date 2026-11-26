@@ -2,7 +2,7 @@
 //! - CR 115.7a/b — changing a target of an activated ability (Reroute).
 //! - CR 502.3 — the active player decides which permanents untap.
 //! - CR 504 — the draw step's turn-based draw.
-//! - CR 722 — preparation cards and the prepared designation.
+//! - CR 723 — preparation cards and the prepared designation.
 
 use crabomination::card::{CounterType, Keyword};
 use crabomination::catalog;
@@ -171,12 +171,12 @@ fn cr_103_7a_only_the_starting_players_first_draw_is_skipped() {
     );
 }
 
-// ── CR 722 — Preparation cards ──
+// ── CR 723 — Preparation cards ──
 
-/// CR 722.3a — a permanent can't gain the prepared designation unless it has
+/// CR 723.3a — a permanent can't gain the prepared designation unless it has
 /// a prepare spell, and can't gain it twice.
 #[test]
-fn cr_722_3a_prepared_needs_a_prepare_spell_and_never_stacks() {
+fn cr_723_3a_prepared_needs_a_prepare_spell_and_never_stacks() {
     let mut g = two_player_game();
     let plain = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     assert!(
@@ -196,10 +196,10 @@ fn cr_722_3a_prepared_needs_a_prepare_spell_and_never_stacks() {
     let _ = plain;
 }
 
-/// CR 722.3c — the prepared permanent's controller casts the copy, and the
+/// CR 723.3c — the prepared permanent's controller casts the copy, and the
 /// permanent loses the designation as the spell becomes cast.
 #[test]
-fn cr_722_3c_casting_the_copy_unprepares_the_permanent() {
+fn cr_723_3c_casting_the_copy_unprepares_the_permanent() {
     let mut g = two_player_game();
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
     let prep = g.add_card_to_battlefield(0, catalog::abigale_poet_laureate());
@@ -222,9 +222,9 @@ fn cr_722_3c_casting_the_copy_unprepares_the_permanent() {
     assert!(g.battlefield_find(prep).is_some(), "the creature itself stays put");
 }
 
-/// CR 722.3 — the prepare spell can't be cast off an unprepared permanent.
+/// CR 723.3 — the prepare spell can't be cast off an unprepared permanent.
 #[test]
-fn cr_722_3_unprepared_permanent_cant_cast_its_spell() {
+fn cr_723_3_unprepared_permanent_cant_cast_its_spell() {
     let mut g = two_player_game();
     let prep = g.add_card_to_battlefield(0, catalog::abigale_poet_laureate());
     float(&mut g, 0);
@@ -241,10 +241,10 @@ fn cr_722_3_unprepared_permanent_cant_cast_its_spell() {
     );
 }
 
-/// CR 722.4 / 722.2c — in every zone a preparation card has only its normal
+/// CR 723.4 / 723.2c — in every zone a preparation card has only its normal
 /// characteristics: it's one creature card, not a creature plus a spell.
 #[test]
-fn cr_722_4_preparation_card_is_one_creature_card_in_every_zone() {
+fn cr_723_4_preparation_card_is_one_creature_card_in_every_zone() {
     let def = catalog::abigale_poet_laureate();
     assert!(def.is_creature(), "the card's own type line is the creature half");
     assert!(def.prepare_spell.is_some(), "with the inset spell alongside");

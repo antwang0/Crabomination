@@ -3,7 +3,7 @@
 //!   keeps the noncopy effects on it and doesn't re-fire ETB triggers.
 //! - CR 116.2b/116.3 — turning a face-down creature face up is a special
 //!   action: legal with a spell on the stack, and the actor keeps priority.
-//! - CR 717.2/717.4/717.5 — the Attraction deck sits in the command zone
+//! - CR 718.2/718.4/718.5 — the Attraction deck sits in the command zone
 //!   outside the library, and the precombat-main roll visits only the
 //!   Attractions whose lit numbers match.
 
@@ -86,7 +86,7 @@ fn cr_116_2b_turn_face_up_is_a_special_action_at_instant_speed() {
 /// The Attraction deck lives in the command zone, and the precombat-main roll
 /// fires only the visit abilities whose lit numbers match the die.
 #[test]
-fn cr_717_2_and_717_5_only_lit_attractions_are_visited() {
+fn cr_718_2_and_717_5_only_lit_attractions_are_visited() {
     let mut g = two_player_game();
     let library = g.players[0].library.len();
     for def in [catalog::information_booth(), catalog::kiddie_coaster()] {
@@ -127,7 +127,7 @@ fn cr_717_2_and_717_5_only_lit_attractions_are_visited() {
 
 /// A visit ability is a normal triggered ability — its pump ends at cleanup.
 #[test]
-fn cr_717_5_a_visit_pump_wears_off_at_end_of_turn() {
+fn cr_718_5_a_visit_pump_wears_off_at_end_of_turn() {
     let mut g = two_player_game();
     let coaster = g.add_card_to_battlefield(0, catalog::kiddie_coaster());
     let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());

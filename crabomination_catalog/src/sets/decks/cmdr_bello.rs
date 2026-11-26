@@ -124,7 +124,7 @@ pub fn bello_bard_of_the_brambles() -> CardDefinition {
 
 /// Alchemist's Talent — two tapped Treasures; L2: Treasures tap for two of
 /// one color; L3: a spell cast with Treasure mana deals its mana value to
-/// each opponent (CR 716 Class levels).
+/// each opponent (CR 717 Class levels).
 pub fn alchemists_talent() -> CardDefinition {
     let level_up = |mana: ManaCost, from: u8| ActivatedAbility {
         mana_cost: mana,

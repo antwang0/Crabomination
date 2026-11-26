@@ -490,11 +490,11 @@ pub enum ArtifactSubtype {
     Map,
     // The Brothers' War mana token (CR 111.10q).
     Powerstone,
-    // Edge of Eternities: station card (CR 721) and its Lander token.
+    // Edge of Eternities: station card (CR 722) and its Lander token.
     Spacecraft, Lander,
     // Final Fantasy: Book (grimoire equipment).
     Book,
-    // Unfinity: Attraction (CR 717) — lives in the Attraction deck, not the deck.
+    // Unfinity: Attraction (CR 718) — lives in the Attraction deck, not the deck.
     Attraction,
     // The Junk token: sacrifice to impulse-draw at sorcery speed.
     Junk,
@@ -1188,7 +1188,7 @@ pub enum CounterType {
     Net,
     /// Soul Echo's echo counters.
     Echo,
-    /// CR 717 — a midway counter on an Attraction (Myra the Magnificent).
+    /// CR 718 — a midway counter on an Attraction (Myra the Magnificent).
     Midway,
     /// Beckett Mariner, Impetuous Ensign's promotion counters.
     Promotion,
@@ -2734,7 +2734,7 @@ pub enum Keyword {
     /// enforced as `MustAttack` on the bearer's controller's turn and as
     /// `MustBlock` otherwise.
     MustAttackOrBlock,
-    /// CR 725 — "can't attack unless defending player is the monarch"
+    /// CR 726 — "can't attack unless defending player is the monarch"
     /// (Crown-Hunter Hireling).
     CantAttackUnlessDefenderIsMonarch,
     /// "This creature can't attack unless defending player controls a [filter]"
@@ -3158,10 +3158,10 @@ pub struct LevelBand {
     pub keywords: Vec<Keyword>,
 }
 
-/// CR 721.2 — one `{N+}[abilities][P/T]` striation of a station card.
+/// CR 722.2 — one `{N+}[abilities][P/T]` striation of a station card.
 /// While the permanent has `min` or more charge counters, it gains
 /// `keywords` (layer 6); if `pt` is `Some`, it also becomes a creature with
-/// that base power/toughness in addition to its other types (CR 721.2b,
+/// that base power/toughness in addition to its other types (CR 722.2b,
 /// layers 4 + 7a).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StationBand {
@@ -3170,17 +3170,17 @@ pub struct StationBand {
     pub keywords: Vec<Keyword>,
     #[serde(default)]
     pub pt: Option<(i32, i32)>,
-    /// CR 721.2a — static abilities active only while the threshold is met
+    /// CR 722.2a — static abilities active only while the threshold is met
     /// (e.g. Lumen-Class Frigate's `{2+}: other creatures you control get
     /// +1/+1`). Converted to layer effects in `gather_continuous_effects`.
     #[serde(default)]
     pub statics: Vec<crate::effect::StaticEffect>,
-    /// CR 721.2a — triggered abilities active only while the threshold is met
+    /// CR 722.2a — triggered abilities active only while the threshold is met
     /// (e.g. Synthesizer Labship's `{2+}` combat-damage trigger). Surfaced
     /// off the source via `statics_granted_triggers_for` when charges ≥ `min`.
     #[serde(default)]
     pub triggers: Vec<TriggeredAbility>,
-    /// CR 721.2a — activated abilities active only while the threshold is met
+    /// CR 722.2a — activated abilities active only while the threshold is met
     /// (e.g. a Planet's `12+ | {cost}: …` band). Surfaced off the source via
     /// `granted_abilities_for` (appended after printed + instance-granted) when
     /// charges ≥ `min`, so the activation index path treats them as grants.
@@ -4134,7 +4134,7 @@ pub enum SelectionRequirement {
     /// Zimone's Hypothesis's "each creature with power of the chosen
     /// quality".
     PowerParity { odd: bool },
-    /// Controlled by the monarch (CR 725; Azure Fleet Admiral's "can't be
+    /// Controlled by the monarch (CR 726; Azure Fleet Admiral's "can't be
     /// blocked by creatures the monarch controls").
     ControlledByMonarch,
     /// Controlled by a player whom at least `n` creatures matching `filter`
@@ -4301,7 +4301,7 @@ pub enum SelectionRequirement {
     /// CR 708 — the candidate permanent was turned face up this turn
     /// (`TurnRegistries.turned_face_up_this_turn`; Kaust, Eyes of the Glade).
     TurnedFaceUpThisTurn,
-    /// CR 715.1 — the card has an Adventure (Frantic Firebolt's count).
+    /// CR 716.1 — the card has an Adventure (Frantic Firebolt's count).
     HasAdventure,
     /// CR 701.14 — the candidate fought this turn
     /// (`TurnRegistries.fought_this_turn`; Boxing Ring).
@@ -5454,14 +5454,14 @@ pub struct CardDefinition {
     /// non-leveler cards.
     #[serde(default)]
     pub level_bands: Vec<LevelBand>,
-    /// CR 717.1 — the numbers lit up on this Attraction card. A visit ability
+    /// CR 718.1 — the numbers lit up on this Attraction card. A visit ability
     /// triggers when the controller's roll-to-visit result is one of these.
     /// Empty for every non-Attraction card.
     #[serde(default)]
     pub attraction_lights: Vec<u8>,
-    /// CR 721 — Station-card striations (`{N+}` symbols), ordered by `min`.
+    /// CR 722 — Station-card striations (`{N+}` symbols), ordered by `min`.
     /// Empty for non-station cards. Cards with any station band always carry
-    /// the Station ability (CR 721.4); add it via `shortcut::station()`.
+    /// the Station ability (CR 722.4); add it via `shortcut::station()`.
     #[serde(default)]
     pub station: Vec<StationBand>,
     pub loyalty_abilities: Vec<LoyaltyAbility>,
@@ -5697,7 +5697,7 @@ pub struct CardDefinition {
     /// filters treat the card as a creature everywhere but the battlefield.
     #[serde(default)]
     pub creature_off_battlefield: bool,
-    /// CR 714 — Saga chapter abilities as `(chapter_number, effect)`; a
+    /// CR 715 — Saga chapter abilities as `(chapter_number, effect)`; a
     /// combined chapter ("I, II — …") is listed once per number. Non-empty
     /// marks a Saga: it enters with one lore counter, gains one at each of its
     /// controller's precombat main phases (firing that chapter), and is
@@ -6054,7 +6054,7 @@ pub struct CardDefinition {
     /// the cast `kicked`, which `Predicate::SpellWasKicked` reads.
     #[serde(default)]
     pub kicker_action_cost: Option<AdditionalCastCost>,
-    /// CR 715.3 / 601.2b — "As an additional cost to cast this spell, …"
+    /// CR 716.3 / 601.2b — "As an additional cost to cast this spell, …"
     /// printed on the card's Adventure half (My Precious // Allure of Power's
     /// "sacrifice a creature"): paid by an Adventure cast only, never by a
     /// cast of the card's main half.
@@ -6090,7 +6090,7 @@ pub struct CardDefinition {
     /// (`GameAction::CastForetell`). Defaults to `None`.
     #[serde(default)]
     pub foretell_cost: Option<crate::mana::ManaCost>,
-    /// CR 715 — Adventure. When `Some`, this creature card also has an
+    /// CR 716 — Adventure. When `Some`, this creature card also has an
     /// instant/sorcery "adventure" half that can be cast instead
     /// (`GameAction::CastAdventure`). On resolution the card is exiled
     /// (rather than going to the graveyard) with permission to cast the
@@ -6265,7 +6265,7 @@ impl SplitHalf {
     }
 }
 
-/// CR 715 — the instant/sorcery "adventure" half of an Adventurer card. The
+/// CR 716 — the instant/sorcery "adventure" half of an Adventurer card. The
 /// creature half lives on the parent [`CardDefinition`]; this struct holds
 /// only what the adventure spell needs to be cast and resolved.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -7824,7 +7824,7 @@ pub(crate) mod debug_flag {
 
 impl CardDefinition {
     /// CR 712.1 — a transforming double-faced card, told apart from a modal one
-    /// (CR 712.11b) by an ability on either face that transforms it or returns
+    /// (CR 712.8b) by an ability on either face that transforms it or returns
     /// it transformed (Search for Azcanta, the Ojer gods). Only a modal DFC's
     /// back face may be played or cast from hand (CR 712.2); a transforming
     /// card enters front face up.
@@ -8685,7 +8685,7 @@ impl CardDefinition {
         is_self_attach(&self.effect)
             || self.triggered_abilities.iter().any(|t| is_self_attach(&t.effect))
     }
-    /// CR 716 — a Class enchantment (enters at level 1, gains levels at
+    /// CR 717 — a Class enchantment (enters at level 1, gains levels at
     /// sorcery speed via its `Level N` activated abilities).
     pub fn is_class(&self) -> bool {
         self.subtypes.enchantment_subtypes.contains(&EnchantmentSubtype::Class)
@@ -8811,7 +8811,7 @@ impl CardDefinition {
     pub fn has_bestow(&self) -> Option<&ManaCost> {
         self.bestow.as_ref()
     }
-    /// CR 715 — the adventure half, if this card has Adventure.
+    /// CR 716 — the adventure half, if this card has Adventure.
     pub fn has_adventure(&self) -> Option<&Adventure> {
         self.adventure.as_deref()
     }
@@ -9082,7 +9082,7 @@ pub enum ExileReturnZone {
 pub struct ExileLink {
     pub source: CardId,
     pub return_to: ExileReturnZone,
-    /// CR 725 — Palace Jailer's "until an opponent becomes the monarch". When
+    /// CR 726 — Palace Jailer's "until an opponent becomes the monarch". When
     /// `Some(p)`, the card returns as soon as the monarchy leaves player `p`
     /// (not when `source` leaves the battlefield), so `return_linked_exiles`
     /// skips it and `set_monarch` drives the return instead.
@@ -9353,7 +9353,7 @@ pub struct CardCold {
     /// `Value::SourceCrewerCount` for "for each creature that crewed it this
     /// turn" (Luxurious Locomotive). Cleared at end of turn / on leaving play.
     pub crewed_by: Vec<CardId>,
-    /// CR 712.16 — the two component cards of a melded permanent. Non-empty
+    /// CR 713.8 — the two component cards of a melded permanent. Non-empty
     /// only on a melded object; when it leaves the battlefield, the parts go
     /// to that zone instead and the melded shell ceases to exist.
     pub meld_parts: Vec<CardInstance>,
@@ -9888,7 +9888,7 @@ pub mod dispatch_bits {
     /// A printed static suppresses creature death triggers
     /// (`SuppressCreatureEtbTriggers { also_dies: true }`).
     pub const DIES_SUPPRESS: u64 = 1 << 38;
-    /// A printed static or a CR 721.2a Station band static strips abilities.
+    /// A printed static or a CR 722.2a Station band static strips abilities.
     pub const STRIP: u64 = 1 << 39;
     /// A printed static can be a `GrantTriggeredAbility` once the gate
     /// wrappers `active_static` peels are peeled. Over-approximates the
@@ -10463,7 +10463,7 @@ pub struct CardData {
     /// MKM Case — true once this Case has been solved. The live `definition` is
     /// rebuilt to include the "Solved —" abilities (`case_definition_solved`).
     pub case_solved: bool,
-    /// CR 716.2 — a Class enchantment's current level (0 for non-Class cards;
+    /// CR 717.2 — a Class enchantment's current level (0 for non-Class cards;
     /// a Class enters at level 1). Its level-2/3 abilities are gated on this
     /// via `Predicate::SourceClassLevelIs`/`SourceClassLevelAtLeast` and
     /// `StaticEffect::WhileClassLevelAtLeast`, so no definition rebuild is
@@ -10773,7 +10773,7 @@ pub struct CardData {
     /// to this'" (the Glittering Lion / Lynx escape hatch). Consulted by
     /// `permanent_prevents_all_damage_to_self`; cleared at cleanup.
     pub damage_prevention_off_eot: bool,
-    /// CR 720-style "exiled with [a permanent]": a permanent tag stamped on a
+    /// CR 721-style "exiled with [a permanent]": a permanent tag stamped on a
     /// card in exile that some source put there and keeps caring about (e.g.
     /// Keen-Eyed Curator's "card types among cards exiled with this
     /// creature"). Unlike `exiled_by`, the card never returns — this is a
@@ -10809,12 +10809,12 @@ pub struct CardData {
     /// Persistent until it leaves the battlefield. Round-trips through
     /// `CardInstanceWire` with a `#[serde(default)]`.
     pub suspected: bool,
-    /// CR 715 — true while this card is on the stack as its adventure
+    /// CR 716 — true while this card is on the stack as its adventure
     /// (instant/sorcery) half. The resolver runs `definition.adventure`'s
     /// effect instead of the creature body and exiles the card (setting
     /// `on_adventure`) instead of sending it to the graveyard.
     pub adventuring: bool,
-    /// CR 715 — true while this card sits in exile after going on an
+    /// CR 716 — true while this card sits in exile after going on an
     /// adventure, available to be cast as its creature half from exile
     /// (`GameAction::CastAdventureCreature`). Cleared once the creature is
     /// cast (or the card otherwise changes zones).
@@ -11355,7 +11355,7 @@ impl From<CardData> for CardInstance {
 impl CardInstance {
     /// The instant/sorcery alternate half (Adventure or Omen) this card is
     /// currently on the stack as, if any. While set, the card resolves down the
-    /// spell path with the half's card types and effect (CR 715 / CR 702.183).
+    /// spell path with the half's card types and effect (CR 716 / CR 702.183).
     pub fn alt_spell_half(&self) -> Option<&Adventure> {
         self.alt_spell_half_of(&self.definition)
     }
@@ -11440,7 +11440,7 @@ impl CardInstance {
         d.split.is_some() || d.room.is_some() || self.adventuring || self.omen_casting || self.bestowed
     }
 
-    /// CR 709.3b / 709.4 / 715.3b — this card with the characteristics it has
+    /// CR 709.3b / 709.4 / 716.3b — this card with the characteristics it has
     /// in its zone when they aren't the main face's: an Adventure / Omen or a
     /// split half on the stack has only that half's; a split card or Room
     /// anywhere else has both halves combined (cost, colors, mana value,
@@ -12056,7 +12056,7 @@ impl CardInstance {
         self.face_down = true;
     }
 
-    /// CR 712.16 — a double-faced permanent (either face up, or melded) can't
+    /// CR 713.8 — a double-faced permanent (either face up, or melded) can't
     /// be turned face down.
     pub fn is_double_faced(&self) -> bool {
         self.definition.back_face.is_some() || self.front_face.is_some() || !self.meld_parts.is_empty()
@@ -12135,13 +12135,13 @@ impl CardInstance {
         }
     }
 
-    /// CR 716.2d — the level every rule reads: a permanent with no level is
+    /// CR 717.2d — the level every rule reads: a permanent with no level is
     /// treated as level 1 (a Class put onto the battlefield, not cast).
     pub fn level(&self) -> u8 {
         self.class_level.max(1)
     }
 
-    /// CR 716.2 — the Class level is battlefield-only; clear it as a Class
+    /// CR 717.2 — the Class level is battlefield-only; clear it as a Class
     /// leaves the battlefield so it re-enters at level 1.
     pub fn reset_class_level(&mut self) {
         self.class_level = 0;
@@ -12374,7 +12374,7 @@ impl CardInstance {
         }
     }
 
-    /// CR 712.4 — a transforming double-faced permanent that leaves the
+    /// CR 712.6a — a transforming double-faced permanent that leaves the
     /// battlefield has only its front-face characteristics in the new zone.
     /// Restore the front face (no-op for a permanent showing its front).
     pub fn revert_transform(&mut self) {
@@ -12440,7 +12440,7 @@ impl CardInstance {
                 }
             }
         }
-        // CR 730.2d — the merged permanent is a token only if its *topmost*
+        // CR 731.2d — the merged permanent is a token only if its *topmost*
         // component is one.
         let top_is_token = top.is_token;
         self.set_definition(Arc::new(def));
@@ -12705,7 +12705,7 @@ impl CardInstance {
         if self.chosen_permanent.is_some() {
             self.chosen_permanent = None;
         }
-        // CR 716 — a Class's level is battlefield-only (a destroyed Fortune
+        // CR 717 — a Class's level is battlefield-only (a destroyed Fortune
         // Teller's Talent sat in a graveyard at level 1).
         if self.class_level != 0 {
             self.class_level = 0;
@@ -12993,7 +12993,7 @@ struct CardInstanceWire {
     /// definition is rebuilt on load.
     #[serde(default)]
     case_solved: bool,
-    /// CR 716.2 — Class level. `#[serde(default)]` (0) for back-compat.
+    /// CR 717.2 — Class level. `#[serde(default)]` (0) for back-compat.
     #[serde(default)]
     class_level: u8,
     /// CR 708 — on the battlefield face down (morph / manifest). `name` stores
@@ -13177,7 +13177,7 @@ struct CardInstanceWire {
     /// as `false`.
     #[serde(default)]
     suspected: bool,
-    /// CR 715 Adventure flags. `#[serde(default)]` so older snapshots load
+    /// CR 716 Adventure flags. `#[serde(default)]` so older snapshots load
     /// as `false`.
     #[serde(default)]
     adventuring: bool,
@@ -13231,7 +13231,7 @@ struct CardInstanceWire {
     /// CR 702.150 Compleated life payment. `#[serde(default)]`.
     #[serde(default)]
     compleated_life_paid: u32,
-    /// CR 712.16 melded-component cards. `#[serde(default)]` so older
+    /// CR 713.8 melded-component cards. `#[serde(default)]` so older
     /// snapshots load as empty.
     #[serde(default)]
     meld_parts: Vec<CardInstance>,
@@ -13496,7 +13496,7 @@ impl<'de> serde::Deserialize<'de> for CardInstance {
             let d = c.definition.case_definition_solved();
             c.set_definition(Arc::new(d));
         }
-        // CR 716.2 — Class level round-trips as a plain field (abilities are
+        // CR 717.2 — Class level round-trips as a plain field (abilities are
         // predicate-gated, so no definition rebuild is needed).
         c.class_level = wire.class_level;
         c.is_token = wire.is_token;

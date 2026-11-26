@@ -440,7 +440,7 @@ pub fn teachings_of_the_kirin() -> CardDefinition {
 
 /// Storyweave — {2}{G} instant. Choose one — two +1/+1 counters on target
 /// creature you control; or two lore counters on target Saga you control
-/// (each chapter it reaches triggers, CR 714.2c), and the next time one or
+/// (each chapter it reaches triggers, CR 715.2c), and the next time one or
 /// more enchantment creatures you control enter this turn, each enters with
 /// two additional +1/+1 counters.
 pub fn storyweave() -> CardDefinition {
@@ -1089,7 +1089,7 @@ pub fn surge_of_salvation() -> CardDefinition {
 
 /// Myra the Magnificent — {2}{U}{R} 2/4 legendary Human Performer. Whenever
 /// you cast an instant or sorcery spell from your hand, open an Attraction
-/// (CR 717). {X}, {T}: exile target instant or sorcery card with mana value X
+/// (CR 718). {X}, {T}: exile target instant or sorcery card with mana value X
 /// from your graveyard and choose an Attraction you control without a midway
 /// counter; put one on it, and for as long as it stays on the battlefield,
 /// whenever you visit it, copy the exiled card and you may cast the copy free.

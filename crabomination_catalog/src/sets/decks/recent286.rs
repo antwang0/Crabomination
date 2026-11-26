@@ -1,4 +1,4 @@
-//! Class enchantment cards (CR 716) — the Bloomburrow Talent cycle
+//! Class enchantment cards (CR 717) — the Bloomburrow Talent cycle
 //! (Stormchaser's, Gossip's, Hunter's, Scavenger's, Bandit's) plus AFR's Wizard,
 //! Cleric, and Warlock Class. Each is an Enchantment — Class that enters at level 1 and gains levels
 //! at sorcery speed via its `{cost}: Level N` activated abilities
@@ -360,7 +360,7 @@ pub fn bandits_talent() -> CardDefinition {
     }
 }
 
-/// Wizard Class — {U} Enchantment — Class (AFR, CR 716).
+/// Wizard Class — {U} Enchantment — Class (AFR, CR 717).
 /// L1: you have no maximum hand size. L2: when this becomes level 2, draw two
 /// cards. L3: whenever you draw a card, put a +1/+1 counter on target creature
 /// you control.
@@ -401,7 +401,7 @@ pub fn wizard_class() -> CardDefinition {
     }
 }
 
-/// Cleric Class — {W} Enchantment — Class (AFR, CR 716).
+/// Cleric Class — {W} Enchantment — Class (AFR, CR 717).
 /// L1: if you would gain life, gain that much plus 1. L2: whenever you gain
 /// life, put a +1/+1 counter on target creature you control. L3: when this
 /// becomes level 3, return target creature card from your graveyard to the
@@ -456,7 +456,7 @@ pub fn cleric_class() -> CardDefinition {
     }
 }
 
-/// Warlock Class — {B} Enchantment — Class (AFR, CR 716).
+/// Warlock Class — {B} Enchantment — Class (AFR, CR 717).
 /// L1: at your end step, if a creature died this turn, each opponent loses 1
 /// life. L2: when this becomes level 2, look at the top three cards of your
 /// library, put one into your hand and the rest into your graveyard. L3: at
@@ -542,7 +542,7 @@ fn sword_token() -> TokenDefinition {
 /// have double strike and haste.
 pub fn blacksmiths_talent() -> CardDefinition {
     // L3 grant: double strike + haste to your equipped creatures, gated on
-    // level 3 and your turn (CR 716.2 / 611.2).
+    // level 3 and your turn (CR 717.2 / 611.2).
     let equipped = R::Creature.and(R::ControlledByYou).and(R::IsEquipped);
     let while_l3_your_turn = |kw: Keyword| StaticAbility {
         description: "During your turn, equipped creatures you control have double strike and haste.",

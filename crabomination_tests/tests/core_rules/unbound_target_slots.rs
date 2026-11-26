@@ -222,7 +222,7 @@ fn no_body_declares_a_slot_it_never_binds() {
                 bodies.push(("back-face", &l.effect));
             }
         }
-        // CR 715 — an Adventure's instant/sorcery half is cast on its own.
+        // CR 716 — an Adventure's instant/sorcery half is cast on its own.
         if let Some(adv) = def.adventure.as_ref() {
             bodies.push(("adventure", &adv.effect));
         }

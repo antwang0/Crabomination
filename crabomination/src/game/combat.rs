@@ -840,7 +840,7 @@ impl GameState {
                 {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
-                // CR 725 — Crown-Hunter Hireling: only the monarch.
+                // CR 726 — Crown-Hunter Hireling: only the monarch.
                 Keyword::CantAttackUnlessDefenderIsMonarch if defender != self.monarch => {
                     return Some((line!(), GameError::CannotAttack(id)));
                 }
@@ -2758,7 +2758,7 @@ impl GameState {
                         you_attack.push((c.id, ctrl, t.effect.clone(), t.event.filter.clone()));
                     }
                 }
-                // CR 721.2a — a station card's `{N+}` band triggers, live at
+                // CR 722.2a — a station card's `{N+}` band triggers, live at
                 // `min` charge counters (Dawnsire's "whenever you attack").
                 if !c.definition.station.is_empty() {
                     let charges = c.counter_count(crate::card::CounterType::Charge);
@@ -3814,7 +3814,7 @@ impl GameState {
     }
 
     /// CR 511.3 — "As the end of combat step ends, all creatures, battles,
-    /// and planeswalkers are removed from combat." Also CR 724.1b's
+    /// and planeswalkers are removed from combat." Also CR 725.1b's
     /// end-the-turn teardown.
     pub(crate) fn remove_all_from_combat(&mut self) {
         if !self.attack_player_requirements.is_empty() {
@@ -6226,7 +6226,7 @@ impl GameState {
                 if let Some(cmdr) = self.commander_card_of(atk.id) {
                     self.record_commander_damage(p, cmdr, amount);
                 }
-                // CR 725 — a creature dealing combat damage to the monarch
+                // CR 726 — a creature dealing combat damage to the monarch
                 // makes its controller the new monarch.
                 if amount > 0 && self.monarch == Some(p) {
                     let ctrl = self.battlefield.find_by_id(atk.id).map(|c| c.controller);
@@ -6235,7 +6235,7 @@ impl GameState {
                             self.set_monarch(ctrl, events);
                         }
                 }
-                // CR 726.2 — the same handover for the initiative.
+                // CR 727.2 — the same handover for the initiative.
                 if amount > 0 && self.initiative == Some(p) {
                     let ctrl = self.battlefield.find_by_id(atk.id).map(|c| c.controller);
                     if let Some(ctrl) = ctrl

@@ -1726,7 +1726,7 @@ pub fn insatiable_skittermaw() -> CardDefinition {
     }
 }
 
-// ── EOE Station cards (CR 721 + CR 702.184) ──────────────────────────────────
+// ── EOE Station cards (CR 722 + CR 702.184) ──────────────────────────────────
 // Each Spacecraft enters as a noncreature artifact carrying the Station
 // activated ability (`shortcut::station`). Once charge counters reach a band's
 // `{N+}` threshold, the band's keywords + base P/T apply (it becomes a
@@ -5621,10 +5621,10 @@ fn robot_token() -> TokenDefinition {
     }
 }
 
-// ── Planets (CR 721 Station lands) ──────────────────────────────────────────
+// ── Planets (CR 722 Station lands) ──────────────────────────────────────────
 //
 // "Land — Planet": enters tapped, taps for one color, carries Station. All
-// five carry their 12+ charge-counter activated Station band (CR 721.2a).
+// five carry their 12+ charge-counter activated Station band (CR 722.2a).
 
 fn eoe_planet(name: &'static str, color: crate::mana::Color) -> CardDefinition {
     CardDefinition {
@@ -5671,7 +5671,7 @@ fn planet_mana_band(
     }
 }
 
-// All five Planets ride faithful 12+ activated Station bands (CR 721.2a).
+// All five Planets ride faithful 12+ activated Station bands (CR 722.2a).
 pub fn adagia_windswept_bastion() -> CardDefinition {
     let mut c = eoe_planet("Adagia, Windswept Bastion", crate::mana::Color::White);
     // 12+ | {3}{W}, {T}: Create a token that's a copy of target artifact or

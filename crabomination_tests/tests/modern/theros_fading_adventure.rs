@@ -216,7 +216,7 @@ fn world_rule_keeps_only_the_newest_world_permanent() {
         "older World goes to its owner's graveyard");
 }
 
-// ── Adventure (CR 715) ───────────────────────────────────────────────────────
+// ── Adventure (CR 716) ───────────────────────────────────────────────────────
 
 /// Stomp (Bonecrusher Giant's adventure) deals 2 damage and exiles the card,
 /// Queen of Ice's Rage of Winter taps a creature, which stays tapped through
@@ -552,7 +552,7 @@ fn casualty_normal_cast_no_copy() {
     assert_eq!(g.players[0].hand.len(), hand_before - 1 + 2, "drew 2, no copy");
 }
 
-// ── More Adventure cards (CR 715) ────────────────────────────────────────────
+// ── More Adventure cards (CR 716) ────────────────────────────────────────────
 
 /// Rider in Need (Lonesome Unicorn) is {2}{W} and makes a 2/2 Knight WITH
 /// VIGILANCE; the Unicorn casts later. The printed-body audit's adventure

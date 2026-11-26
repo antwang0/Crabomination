@@ -179,7 +179,7 @@ fn cr_608_2d_mistbreath_elder_returns_another_then_grows() {
     assert_eq!(elder.counter_count(crabomination::card::CounterType::PlusOnePlusOne), 1);
 }
 
-// ── CR 709.3b / 709.4b / 715.3b — a half's characteristics on the stack ─────
+// ── CR 709.3b / 709.4b / 716.3b — a half's characteristics on the stack ─────
 
 fn stack_card(g: &GameState, id: CardId) -> crabomination::card::CardInstance {
     g.stack
@@ -193,11 +193,11 @@ fn stack_card(g: &GameState, id: CardId) -> crabomination::card::CardInstance {
         .expect("on the stack")
 }
 
-/// CR 715.3b — Stomp on the stack is an instant with only Stomp's
+/// CR 716.3b — Stomp on the stack is an instant with only Stomp's
 /// characteristics: prowess triggers and "counter target creature spell"
 /// can't target it.
 #[test]
-fn cr_715_3b_an_adventure_spell_is_not_a_creature_spell() {
+fn cr_716_3b_an_adventure_spell_is_not_a_creature_spell() {
     use crabomination::card::SelectionRequirement as R;
     let mut g = main_phase();
     let monk = g.add_card_to_battlefield(0, catalog::monastery_swiftspear());

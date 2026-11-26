@@ -90,7 +90,7 @@ pub(super) fn event_glyph(ev: &crabomination::net::GameEventWire) -> &'static st
         // tally that closes it gets a filled one.
         E::Voted { .. } => "☑ ",
         E::VotingFinished => "▣ ",
-        // CR 726 — the initiative changing hands.
+        // CR 727 — the initiative changing hands.
         E::InitiativeTaken { .. } => "🗝 ",
         // Phasing — a hollow circle reads as "now you don't".
         E::PermanentPhasedOut { .. } => "◌ ",

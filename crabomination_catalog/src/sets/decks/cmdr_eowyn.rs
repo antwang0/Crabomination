@@ -426,7 +426,7 @@ pub fn faramir_steward_of_gondor() -> CardDefinition {
 }
 
 /// Fealty to the Realm — makes you the monarch; the monarch controls the
-/// enchanted creature (CR 725), which attacks each combat and can't attack
+/// enchanted creature (CR 726), which attacks each combat and can't attack
 /// you.
 pub fn fealty_to_the_realm() -> CardDefinition {
     CardDefinition {

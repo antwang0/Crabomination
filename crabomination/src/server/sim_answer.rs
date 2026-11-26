@@ -1,4 +1,4 @@
-//! The bot's in-sim answer to a pending ask, with the sims' own CR 732.2 stop.
+//! The bot's in-sim answer to a pending ask, with the sims' own CR 733.2 stop.
 
 use crate::decision::{AmountKind, Decision, DecisionAnswer};
 use crate::game::GameState;

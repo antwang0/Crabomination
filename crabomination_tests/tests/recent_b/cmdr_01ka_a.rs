@@ -60,7 +60,7 @@ fn roll_to_visit(g: &mut GameState, roll: u8, rest: Vec<DecisionAnswer>) {
 }
 
 /// CR 701.52a / 706.2 — rolling to visit is a die roll, so Dee Kay's "whenever
-/// you roll a 2" drains off it; CR 717.5 — the visit counts toward "you've
+/// you roll a 2" drains off it; CR 718.5 — the visit counts toward "you've
 /// visited an Attraction this turn" (Soul Swindler's indestructible), and a
 /// miss visits nothing.
 #[test]
@@ -102,7 +102,7 @@ fn squirrel_squatters_mints_a_squirrel_per_attraction_visited() {
 }
 
 /// Motion Sickness: "whenever you visit an Attraction" fires off the Aura (not
-/// the Attraction, CR 717.5's visit ability) and moves it onto a tapped
+/// the Attraction, CR 718.5's visit ability) and moves it onto a tapped
 /// creature (CR 701.3).
 #[test]
 fn motion_sickness_moves_to_a_tapped_creature_on_a_visit() {
@@ -172,11 +172,11 @@ fn cr_603_4_done_for_the_day_pays_only_with_an_employee() {
     assert_eq!(paid(&g), 1);
 }
 
-/// CR 717.2 / 717.2a — a pod seat whose deck opens Attractions brings an
+/// CR 718.2 / 718.2a — a pod seat whose deck opens Attractions brings an
 /// Attraction deck of ten or more distinct names (in the command zone, not the
 /// 100); a seat whose deck never opens one brings none.
 #[test]
-fn cr_717_2a_a_pod_seat_that_opens_attractions_brings_an_attraction_deck() {
+fn cr_718_2a_a_pod_seat_that_opens_attractions_brings_an_attraction_deck() {
     use crabomination::pod::{build_pod_template, target_decks};
     let field = target_decks();
     let gamer = *field.iter().find(|d| d.name.starts_with("The Most Dangerous Gamer")).expect("seat");

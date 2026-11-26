@@ -51,7 +51,7 @@ fn cast_adventure(g: &mut GameState, id: CardId, target: Option<Target>) {
     drain_stack(g);
 }
 
-// ── Town // Adventure lands (CR 715.3d) ─────────────────────────────────────
+// ── Town // Adventure lands (CR 716.3d) ─────────────────────────────────────
 
 /// The land half is played out of adventure exile — not cast — and it costs the
 /// turn's land drop.
@@ -406,7 +406,7 @@ fn dominants_are_registered_with_saga_creature_backs() {
 }
 
 /// The flip line exiles and returns the front face transformed, and the Saga
-/// back enters with its first lore counter (CR 714.2b).
+/// back enters with its first lore counter (CR 715.2b).
 #[test]
 fn dominant_flip_returns_a_saga_creature_with_a_lore_counter() {
     let mut g = two_player_game();
@@ -431,7 +431,7 @@ fn dominant_flip_returns_a_saga_creature_with_a_lore_counter() {
     assert!(shiva.definition.is_creature() && !shiva.definition.saga_chapters.is_empty());
 }
 
-/// CR 714.4 — a Saga creature is still sacrificed at its final chapter, so the
+/// CR 715.4 — a Saga creature is still sacrificed at its final chapter, so the
 /// cycle's last chapter resets itself front face up instead.
 #[test]
 fn saga_creature_resets_itself_on_its_last_chapter() {
@@ -580,7 +580,7 @@ fn crystal_fragments_flips_into_alexander() {
     drain_stack(&mut g);
     let saga = g.battlefield_find(gear).expect("returned transformed");
     assert_eq!(saga.definition.name, "Summon: Alexander");
-    assert_eq!(saga.counter_count(CounterType::Lore), 1, "CR 714.2b first chapter");
+    assert_eq!(saga.counter_count(CounterType::Lore), 1, "CR 715.2b first chapter");
 }
 
 /// Zenos spares his chosen creature from the sweep, then transforms when it
@@ -699,7 +699,7 @@ fn esper_terra_copies_a_saga_with_lore_counters() {
     assert_eq!(back.definition.name, "Esper Terra");
     // Chapter I minted a hasty copy of the Saga with three lore counters, so
     // the copy ran all three of its own chapters (III taps the opponent's
-    // board) and was sacrificed to CR 714.4 on the way out.
+    // board) and was sacrificed to CR 715.4 on the way out.
     assert!(g.battlefield_find(victim).unwrap().tapped, "the copy's chapter III fired");
     assert!(
         !g.battlefield.iter().any(|c| c.is_token && c.definition.name == "Summon: Alexander"),
@@ -732,6 +732,6 @@ fn esper_origins_returns_transformed_from_the_graveyard() {
     let maduin = g.battlefield_find(card).expect("on the battlefield, not exiled");
     assert_eq!(maduin.definition.name, "Summon: Esper Maduin");
     assert_eq!(maduin.counter_count(CounterType::Finality), 1);
-    assert_eq!(maduin.counter_count(CounterType::Lore), 1, "CR 714.2b first chapter");
+    assert_eq!(maduin.counter_count(CounterType::Lore), 1, "CR 715.2b first chapter");
     assert_eq!(g.players[0].life, 22);
 }

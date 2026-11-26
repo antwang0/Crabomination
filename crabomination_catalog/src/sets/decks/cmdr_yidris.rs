@@ -137,7 +137,7 @@ pub fn blood_tyrant() -> CardDefinition {
 }
 
 /// Cruel Entertainment — two target players each control the other's next
-/// turn (CR 723.1).
+/// turn (CR 724.1).
 pub fn cruel_entertainment() -> CardDefinition {
     spell(
         "Cruel Entertainment",

@@ -142,7 +142,7 @@ fn jace_flips_with_five_in_the_graveyard() {
 }
 
 /// Esika gives other legendary creatures vigilance and a mana ability; her
-/// back, The Prismatic Bridge, is cast for {W}{U}{B}{R}{G} (CR 712.12).
+/// back, The Prismatic Bridge, is cast for {W}{U}{B}{R}{G} (CR 712.9).
 #[test]
 fn esika_and_the_prismatic_bridge() {
     let mut g = main_phase();
@@ -335,7 +335,7 @@ fn ringhart_crest_mana_is_restricted() {
 }
 
 /// Journey to Eternity — the enchanted creature dying comes back, then the
-/// Aura returns transformed as Atzal (CR 712.14a — it returns transformed).
+/// Aura returns transformed as Atzal (CR 712.11a — it returns transformed).
 #[test]
 fn journey_to_eternity_returns_as_atzal() {
     let mut g = main_phase();
@@ -669,7 +669,7 @@ fn valki_exiles_the_chosen_creature_card() {
 }
 
 /// Ludevic exiles X creature cards (X can't be 0) and, as it transforms
-/// (CR 712.14), Olag becomes a copy of one of them except it's named Olag,
+/// (CR 712.11), Olag becomes a copy of one of them except it's named Olag,
 /// 4/4, a legendary blue and black Zombie (CR 707.9b), with X +1/+1 counters.
 /// The exiled cards are "exiled with" Ludevic (CR 607.2a); an Island stays.
 #[test]
@@ -714,7 +714,7 @@ fn ludevic_becomes_olag_as_a_copy() {
 /// then return her transformed". In exile the card is Ludevic again (CR
 /// 712.4), so it comes back transformed — as Olag — instead of panicking.
 #[test]
-fn cr_712_14a_olag_copying_chandra_returns_transformed_without_panicking() {
+fn cr_712_11a_olag_copying_chandra_returns_transformed_without_panicking() {
     let mut g = main_phase();
     let ludevic = g.add_card_to_battlefield(0, catalog::ludevic_necrogenius());
     g.add_card_to_graveyard(0, catalog::chandra_fire_of_kaladesh());

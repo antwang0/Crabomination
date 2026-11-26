@@ -31,7 +31,7 @@ fn p1p1(g: &GameState, id: CardId) -> u32 {
     g.battlefield_find(id).map_or(0, |c| c.counter_count(CounterType::PlusOnePlusOne))
 }
 
-/// CR 725 — Jared hands an opponent the monarchy and you can't take it back
+/// CR 726 — Jared hands an opponent the monarchy and you can't take it back
 /// this turn, even by a Court entering; while you're the monarch, damage to
 /// Jared becomes +1/+1 counters.
 #[test]
@@ -89,12 +89,12 @@ fn cleopatra_draws_off_grakmaws_counters() {
     assert_eq!((cp.power, cp.toughness), (3, 3));
 }
 
-/// CR 725.4 — the monarch Jared crowned concedes the same turn: Jared's
+/// CR 726.4 — the monarch Jared crowned concedes the same turn: Jared's
 /// controller is the active player but can't become the monarch, so the
 /// crown passes to the next player in turn order instead of staying with
 /// the departed seat.
 #[test]
-fn cr_725_4_a_barred_active_player_is_passed_over_on_succession() {
+fn cr_726_4_a_barred_active_player_is_passed_over_on_succession() {
     let mut g = pod(3);
     let jared = g.add_card_to_hand(0, catalog::jared_carthalion_true_heir());
     cast(&mut g, jared, None).expect("jared");

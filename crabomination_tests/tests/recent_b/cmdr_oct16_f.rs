@@ -99,7 +99,7 @@ fn death_to_our_enemies_fires_on_the_fourth_plan_counter() {
     assert_eq!(g.players[1].life, opp_life - 7);
 }
 
-/// CR 714.2 — Origin of Captain America's chapters: a counter plus first
+/// CR 715.2 — Origin of Captain America's chapters: a counter plus first
 /// strike and vigilance, a Sturdy Shield token (+1/+2, equip {2}), then a
 /// stun counter on a tapped creature.
 #[test]
@@ -1390,7 +1390,7 @@ fn contact_other_plane_reads_the_d20() {
     }
 }
 
-/// CR 725.2 — Stirring Bard takes the initiative on entry; its {T} gives a
+/// CR 726.2 — Stirring Bard takes the initiative on entry; its {T} gives a
 /// creature menace and haste.
 #[test]
 fn stirring_bard_takes_the_initiative_and_hastes() {
@@ -1428,7 +1428,7 @@ fn sword_of_kaldra_exiles_what_it_damages() {
     assert!(g.exile.iter().any(|c| c.id == myr), "exiled, not just damaged");
 }
 
-/// CR 724.1 — Glorious End ends the turn (the stack is exiled with it) and you
+/// CR 725.1 — Glorious End ends the turn (the stack is exiled with it) and you
 /// lose at the beginning of your next end step, not an opponent's.
 #[test]
 fn glorious_end_ends_the_turn_then_you_lose() {
@@ -1530,7 +1530,7 @@ fn candlekeep_inspiration_sets_base_pt_from_spells_in_exile_and_graveyard() {
     assert_eq!((cp.power, cp.toughness), (3, 3), "two in the graveyard and one owned in exile; the land and the opponent's card don't count");
 }
 
-/// CR 725.2 / 701.15a — Bloodboil Sorcerer takes the initiative; its Crown of
+/// CR 726.2 / 701.15a — Bloodboil Sorcerer takes the initiative; its Crown of
 /// Madness sacrifices an artifact or creature to goad.
 #[test]
 fn bloodboil_sorcerer_takes_the_initiative_and_goads() {

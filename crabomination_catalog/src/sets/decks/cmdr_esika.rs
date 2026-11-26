@@ -989,7 +989,7 @@ pub fn liliana_heretical_healer() -> CardDefinition {
 /// Ludevic, Necrogenius // Olag, Ludevic's Hubris — transforms exiling X
 /// creature cards; Olag copies the priciest of them.
 pub fn ludevic_necrogenius() -> CardDefinition {
-    // CR 712.14 / 707.9b — "as this transforms", it becomes a copy of a
+    // CR 712.11 / 707.9b — "as this transforms", it becomes a copy of a
     // creature card the cost exiled, then gets one +1/+1 counter per such card.
     let olag = CardDefinition {
         as_transforms_effect: Some(Effect::Seq(vec![

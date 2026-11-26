@@ -1024,8 +1024,8 @@ fn overwhelming_victory_pumps_by_the_excess() {
 }
 
 /// Secret of Bloodbending: unpaid, the caster controls the opponent's next
-/// combat phase (CR 723.2); with waterbend {10}, their whole next turn
-/// (CR 723.1). Either way the card is exiled.
+/// combat phase (CR 724.2); with waterbend {10}, their whole next turn
+/// (CR 724.1). Either way the card is exiled.
 #[test]
 fn secret_of_bloodbending_controls_a_combat_or_a_turn() {
     for paid in [false, true] {

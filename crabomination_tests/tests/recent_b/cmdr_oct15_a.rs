@@ -62,7 +62,7 @@ fn off_identity(d: &Deck) -> Vec<&'static str> {
     }
 }
 
-/// Rulebreaker (CR 903.4's exception on Maular): a mana value 7+ creature and
+/// Rulebreaker (CR 903.5e, on Maular): a mana value 7+ creature and
 /// a basic land of any color fit; a cheap off-color spell still doesn't.
 #[test]
 fn maular_rulebreaker_admits_big_creatures_and_basics() {
@@ -267,7 +267,7 @@ fn ninja_teen_sneaks_a_creature_from_the_graveyard() {
     assert!(g.attacking.iter().any(|a| a.attacker == wurm), "and attacks");
 }
 
-/// Below level 3 there's no graveyard sneak (CR 716 — a Class level's
+/// Below level 3 there's no graveyard sneak (CR 717 — a Class level's
 /// ability only exists once the level is gained).
 #[test]
 fn ninja_teen_level_two_grants_no_sneak() {

@@ -3261,7 +3261,7 @@ fn jenova_dies_draw_reads_granted_mutant_type() {
 }
 
 /// Summon: Choco/Mog is a Saga *creature*: its chapters pump the rest of the
-/// team, and it's sacrificed after chapter IV like any Saga (CR 714 on a
+/// team, and it's sacrificed after chapter IV like any Saga (CR 715 on a
 /// creature body).
 #[test]
 fn summon_choco_mog_saga_creature_pumps_and_sacrifices() {
@@ -4835,11 +4835,11 @@ fn traveling_chocobo_doubles_your_landfall() {
     assert_eq!(counters(&g), 2, "landfall triggered an additional time");
 }
 
-/// CR 712.9 / 122.2 — transforming a permanent is the same object staying in
+/// CR 712.12 / 122.2 — transforming a permanent is the same object staying in
 /// place, so counters ride along. Cecil flips with a +1/+1 counter and the back
 /// face (4/4) computes 5/5.
 #[test]
-fn cr_712_9_transform_keeps_counters() {
+fn cr_712_12_transform_keeps_counters() {
     let mut g = two_player_game();
     let cecil = g.add_card_to_battlefield(0, catalog::cecil_dark_knight());
     g.battlefield_find_mut(cecil).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
@@ -5749,11 +5749,11 @@ fn vanille_and_fang_meld_into_ragnarok() {
         "Ragnarok on the battlefield");
 }
 
-/// CR 712.16/712.17: a melded permanent leaving the battlefield leaves as
+/// CR 713.8/712.14: a melded permanent leaving the battlefield leaves as
 /// both component cards — killing Ragnarok yields Vanille AND Fang in the
 /// graveyard.
 #[test]
-fn cr_712_17_melded_permanent_leaves_as_both_cards() {
+fn cr_712_14_melded_permanent_leaves_as_both_cards() {
     use crabomination::decision::{DecisionAnswer, ScriptedDecider};
     let mut g = two_player_game();
     let vanille = g.add_card_to_battlefield(0, catalog::vanille_cheerful_lcie());

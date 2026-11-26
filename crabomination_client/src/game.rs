@@ -261,7 +261,7 @@ pub struct TargetingState {
 pub enum HandCastVariant {
     /// CR 702.103 — cast a creature as an Aura.
     Bestow,
-    /// CR 715 — the Adventure (instant/sorcery) half, and the creature half
+    /// CR 716 — the Adventure (instant/sorcery) half, and the creature half
     /// cast later from exile.
     Adventure,
     AdventureCreature,

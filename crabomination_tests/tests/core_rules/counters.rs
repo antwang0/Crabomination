@@ -511,11 +511,11 @@ fn disowned_ancestor_outlasts_and_citadel_castellan_is_renowned() {
 
 // ── CR 122.1i / 122.1i — Rad counters ───────────────────────────────────────
 
-/// CR 724.2 — at the start of a player's precombat main phase, if they have
+/// CR 725.2 — at the start of a player's precombat main phase, if they have
 /// rad counters they mill that many cards; for each *nonland* milled they
 /// lose 1 life and shed a rad counter.
 #[test]
-fn cr_728_2_rad_counters_mill_and_drain_on_nonland() {
+fn cr_729_2_rad_counters_mill_and_drain_on_nonland() {
     let mut g = two_player_game();
     // Seat the rad counters on P1 and stock their library with nonland cards
     // so every mill is a "hit": -1 life and -1 rad counter per card.
@@ -537,7 +537,7 @@ fn cr_728_2_rad_counters_mill_and_drain_on_nonland() {
 /// CR 122.1i — a land milled by the rad action does NOT cost life or remove a
 /// rad counter, so the rad pool persists turn over turn until a nonland is hit.
 #[test]
-fn cr_728_2_rad_milling_a_land_keeps_the_counter() {
+fn cr_729_2_rad_milling_a_land_keeps_the_counter() {
     let mut g = two_player_game();
     g.players[1].rad_counters = 1;
     // Top of P1's library after their draw step is a Forest (a land).

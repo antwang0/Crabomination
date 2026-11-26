@@ -1,4 +1,4 @@
-//! CR 732.2a — an optional loop a copier runs by re-aiming a copy at itself.
+//! CR 733.2a — an optional loop a copier runs by re-aiming a copy at itself.
 //! Naru Meha copying a Displace / Ghostly Flicker that is still on the stack
 //! blinks Naru, whose new ETB copies the original again: real rules let the
 //! copy's controller stop by keeping the original targets, which CR 400.7 made

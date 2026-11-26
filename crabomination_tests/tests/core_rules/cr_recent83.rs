@@ -1,7 +1,7 @@
 //! CR conformance for this run:
 //! - CR 711 — leveler cards: band P/T + abilities, the always-live level-up
 //!   ability, the sub-N1 default body, and the off-battlefield printed P/T.
-//! - CR 715 — adventurer cards: only the Adventure's characteristics are
+//! - CR 716 — adventurer cards: only the Adventure's characteristics are
 //!   evaluated on the stack, and the exiled card can be played but not
 //!   re-cast as an Adventure.
 //! - CR 614 — an "as this enters" replacement applies on every battlefield
@@ -89,12 +89,12 @@ fn cr_711_6_off_battlefield_uses_the_printed_body() {
     assert_eq!((d.power, d.toughness), (2, 1));
 }
 
-// ── CR 715 — Adventurer Cards ───────────────────────────────────────────────
+// ── CR 716 — Adventurer Cards ───────────────────────────────────────────────
 
 /// 715.3b — on the stack as an Adventure the spell has only the Adventure's
 /// characteristics: a Land // Sorcery adventurer is a *sorcery* spell.
 #[test]
-fn cr_715_3b_adventure_spell_has_only_its_own_characteristics() {
+fn cr_716_3b_adventure_spell_has_only_its_own_characteristics() {
     let mut g = two_player_game();
     let midgar = g.add_card_to_hand(0, catalog::midgar_city_of_mako());
     for _ in 0..3 {
@@ -119,7 +119,7 @@ fn cr_715_3b_adventure_spell_has_only_its_own_characteristics() {
 /// 715.3d — the exiled adventurer may be *played*, but not cast as an
 /// Adventure a second time.
 #[test]
-fn cr_715_3d_exiled_adventurer_cannot_adventure_again() {
+fn cr_716_3d_exiled_adventurer_cannot_adventure_again() {
     let mut g = two_player_game();
     let midgar = g.add_card_to_hand(0, catalog::midgar_city_of_mako());
     for _ in 0..3 {
@@ -152,7 +152,7 @@ fn cr_715_3d_exiled_adventurer_cannot_adventure_again() {
 
 /// 715.3d — the land half still costs the turn's land drop.
 #[test]
-fn cr_715_3d_adventure_land_costs_the_land_drop() {
+fn cr_716_3d_adventure_land_costs_the_land_drop() {
     let mut g = two_player_game();
     let midgar = g.add_card_to_hand(0, catalog::midgar_city_of_mako());
     for _ in 0..3 {

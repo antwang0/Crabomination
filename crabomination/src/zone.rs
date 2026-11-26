@@ -746,7 +746,7 @@ pub(crate) fn card_has_gate_keyword(c: &CardInstance) -> bool {
 
 /// Can this permanent contribute a trigger of its **own** to
 /// [`GameState::dispatch_triggers_for_events`](crate::game::GameState::dispatch_triggers_for_events)
-/// — a printed triggered ability or a CR 721.2a Station band? The
+/// — a printed triggered ability or a CR 722.2a Station band? The
 /// [`LANE_TRIGGERER`] predicate. The dispatcher's fast path calls it too: the
 /// member list and the gate it replaces must ask the same question.
 pub(crate) fn card_is_triggerer(c: &CardInstance) -> bool {

@@ -868,7 +868,7 @@ fn cr_702_103_jump_start_requires_a_discard() {
     }).is_err(), "no card to discard → can't jump-start");
 }
 
-// ── CR 724 — Ending the Turn ──────────────────────────────────────────────────
+// ── CR 725 — Ending the Turn ──────────────────────────────────────────────────
 
 /// Sundial of the Infinite ends the turn: a spell still on the stack is
 /// exiled (not resolved), combat state clears, and play skips to cleanup.
@@ -889,7 +889,7 @@ fn cr_724_sundial_exiles_the_stack_and_skips_to_cleanup() {
     drain_stack(&mut g);
     assert!(g.exile.iter().any(|c| c.id == bolt), "bolt exiled off the stack (728.1a)");
     assert_eq!(g.players[1].life, 20, "bolt never resolved");
-    // CR 724.1d + 514.3 — the turn skips to cleanup, which grants no
+    // CR 725.1d + 514.3 — the turn skips to cleanup, which grants no
     // priority and ends the turn: play resumes in the opponent's upkeep.
     assert_eq!(g.active_player_idx, 1, "turn ended (728.1d)");
     assert_eq!(g.step, TurnStep::Upkeep, "no cleanup priority (514.3)");
@@ -3364,12 +3364,12 @@ fn cr_509_1b_cant_be_blocked_by_power_at_least() {
     assert_block(vanilla(4), false, "power 4 can't block");
 }
 
-// ── CR 712.4 — a transformed DFC reverts to its front face off-battlefield ────
+// ── CR 712.6a — a transformed DFC reverts to its front face off-battlefield ────
 
 /// A transformed double-faced permanent that dies is its front face in the
-/// graveyard (CR 712.4).
+/// graveyard (CR 712.6a).
 #[test]
-fn cr_712_4_transformed_dfc_reverts_to_front_in_graveyard() {
+fn cr_712_6a_transformed_dfc_reverts_to_front_in_graveyard() {
     let mut g = two_player_game();
     let delver = g.add_card_to_battlefield(0, catalog::delver_of_secrets());
     let mut events = Vec::new();
@@ -5377,11 +5377,11 @@ fn cr_111_10_token_created_fires_per_token() {
 /// singular "whenever you create a Blood token" triggers **twice**, and both
 /// see five or more Blood.
 ///
-/// The second transform is **ignored**, not a flip back: CR 701.27f, "if an
+/// The second transform is **ignored**, not a flip back: CR 701.27g, "if an
 /// activated or triggered ability of a permanent … tries to transform it, the
 /// permanent does so only if it hasn't transformed or converted since the
 /// ability was put onto the stack." The two-trigger count is the CR 603.6
-/// assertion; the face is the CR 701.27f one, and the two together are why
+/// assertion; the face is the CR 701.27g one, and the two together are why
 /// this test asserted a single transform before `EventKind::TokenCreated`
 /// joined `event_kind_fans_out` — one trigger got the face right for the
 /// wrong reason and hid the doubled token from the very ability under test.
@@ -5415,7 +5415,7 @@ fn cr_614_13_token_doubling_fires_per_doubled_token() {
     assert_eq!(
         g.battlefield_find(caster).unwrap().definition.name,
         "Bloodbat Summoner",
-        "CR 701.27f — the second trigger's transform is ignored, not a flip back"
+        "CR 701.27g — the second trigger's transform is ignored, not a flip back"
     );
 }
 
@@ -5458,7 +5458,7 @@ fn cr_509_1b_can_block_only_flying_restriction() {
     );
 }
 
-// ── CR 731 — Day and Night (spell-driven) ────────────────────────────────────
+// ── CR 732 — Day and Night (spell-driven) ────────────────────────────────────
 
 /// A spell with "It becomes night" sets the day/night state to night from
 /// outside the upkeep transition.
@@ -8995,12 +8995,12 @@ fn cr_118_9d_a_free_cast_still_pays_increases() {
     assert_eq!(g.players[1].life, 17);
 }
 
-/// CR 714.3b / 614.16 — the precombat-main lore counter is a counter
+/// CR 715.3b / 614.16 — the precombat-main lore counter is a counter
 /// placement: under Doubling Season a Saga gets two and both chapters
 /// trigger (Doubling Season's 2018-04-27 ruling); under Solemnity it gets
 /// none (CR 122.1 lock on enchantments).
 #[test]
-fn cr_714_3b_lore_counters_take_the_counter_replacements() {
+fn cr_715_3b_lore_counters_take_the_counter_replacements() {
     use crabomination::card::CounterType::Lore;
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::doubling_season());
@@ -9025,7 +9025,7 @@ fn cr_714_3b_lore_counters_take_the_counter_replacements() {
 
 // ── CR 712 — modal double-faced cards ────────────────────────────────────────
 
-/// CR 712.9/712.14 — a modal DFC's back land face is chosen when the card is
+/// CR 712.9/712.11 — a modal DFC's back land face is chosen when the card is
 /// played; it enters and functions as that face only (Boggart Bog, the pain-
 /// land back of Boggart Trawler, taps for B).
 #[test]
@@ -9583,12 +9583,12 @@ fn cr_603_4_attacker_toughness_intervening_if() {
     );
 }
 
-// ── CR 715.3 — an adventure card exiles after its adventure resolves ─────────
+// ── CR 716.3 — an adventure card exiles after its adventure resolves ─────────
 
-/// CR 715.3 — casting the Adventure half exiles the card afterwards, from where
+/// CR 716.3 — casting the Adventure half exiles the card afterwards, from where
 /// its creature half can be cast; `SpellCast.adventuring` marks the cast.
 #[test]
-fn cr_715_3_adventure_card_exiles_for_later_creature_cast() {
+fn cr_716_3_adventure_card_exiles_for_later_creature_cast() {
     use crabomination::game::types::Target;
     let mut g = two_player_game();
     g.active_player_idx = 0;
@@ -9610,7 +9610,7 @@ fn cr_715_3_adventure_card_exiles_for_later_creature_cast() {
     drain_stack(&mut g);
     assert!(
         g.exile.iter().any(|c| c.id == gh),
-        "the adventure card sits in exile, ready to be cast as its creature (CR 715.3)",
+        "the adventure card sits in exile, ready to be cast as its creature (CR 716.3)",
     );
 }
 
@@ -10865,8 +10865,8 @@ fn cr_603_10a_self_death_trigger_fires() {
     assert_eq!(g.players[1].life, opp - 1, "Zulaport drained on its own death");
 }
 
-// ── CR 724 — "End the turn" ends "until end of turn" effects ─────────────────
-/// CR 724.2 — Time Stop ends the turn, so a resolved "until end of turn" pump
+// ── CR 725 — "End the turn" ends "until end of turn" effects ─────────────────
+/// CR 725.2 — Time Stop ends the turn, so a resolved "until end of turn" pump
 /// wears off immediately as the turn is cleaned up.
 #[test]
 fn cr_724_end_the_turn_ends_until_eot_effects() {
@@ -12938,7 +12938,7 @@ fn cr_306_5b_a_copy_of_a_planeswalker_enters_with_its_loyalty() {
 }
 
 /// CR 712 — Delver of Secrets' own upkeep trigger, which nothing tested: the
-/// transform *machinery* was covered (CR 712.4 above) and the card's use of it
+/// transform *machinery* was covered (CR 712.6a above) and the card's use of it
 /// was not.
 ///
 /// The card's printed "look at the top card of your library; you may reveal

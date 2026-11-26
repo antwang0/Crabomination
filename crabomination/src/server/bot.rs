@@ -3733,7 +3733,7 @@ pub struct HeuristicBot {
     /// is lost, so the bot tracks what it has already committed to across
     /// consecutive prompts from the same source. `(source, cards, life)`.
     reveal_commit: Option<(CardId, usize, i32)>,
-    /// "You may" answers taken this step. CR 732.2 — an optional loop is
+    /// "You may" answers taken this step. CR 733.2 — an optional loop is
     /// one a player stops by declining; two Enduring Scalelords feed each
     /// other a +1/+1 counter forever, so past [`OPTIONAL_LOOP_CAP`] yeses in
     /// one step the bot declines.
@@ -3932,7 +3932,7 @@ impl HeuristicBot {
                         self.optional_yes_this_step += 1;
                     }
                 }
-                // An "up to N" upside is the same stop (CR 732.2): a token copy
+                // An "up to N" upside is the same stop (CR 733.2): a token copy
                 // of a nonlegendary Esper Terra takes up to three lore counters
                 // and each chapter copies it again — 800 triggers deep before
                 // the loop watch called it (three-seat audit pod seed 192001).
@@ -4315,7 +4315,7 @@ fn decide_pending_policy_inner(
     }
     match decision {
         // CR 903.9a — the owner's "may": a commander on an Adventure stays in
-        // exile, where its creature half is cast with no tax (CR 715.4).
+        // exile, where its creature half is cast with no tax (CR 716.4).
         crate::decision::Decision::CommanderRedirect { commander, would_be: crate::card::Zone::Exile }
             if state.exile.iter().any(|c| c.id == *commander && c.on_adventure) =>
         {
@@ -10217,7 +10217,7 @@ fn cast_candidates_all<'a>(
     }
     });
 
-    // Adventure (CR 715): for any hand card with an adventure half that
+    // Adventure (CR 716): for any hand card with an adventure half that
     // *targets* something (removal / bounce / pump — Stomp, Petty Theft,
     // Swift End, Boulder Rush), offer a `CastAdventure` candidate. Token /
     // card-draw adventures are skipped here so the bot still prefers playing
@@ -10750,12 +10750,12 @@ fn cast_candidates_all<'a>(
     }
     });
 
-    // Adventure creature (CR 715) and plotted cards (CR 702.170d): cast the
+    // Adventure creature (CR 716) and plotted cards (CR 702.170d): cast the
     // creature half / a plotted card from exile. `would_accept` enforces the
     // later-turn + sorcery-speed timing, so this is only offered when legal.
     for c in state.exile.iter().filter(|c| c.owner == seat) {
         let action = if c.on_adventure && c.definition.is_land() {
-            // CR 715.3d — a land half is played, not cast (FIN's Town cycle).
+            // CR 716.3d — a land half is played, not cast (FIN's Town cycle).
             GameAction::PlayLand(c.id)
         } else if c.on_adventure || c.self_exile_castable() {
             let (target, additional_targets) = if c.definition.effect.requires_target() {
@@ -11097,7 +11097,7 @@ fn cast_candidates_all<'a>(
         }
         None => true,
     });
-    // CR 732.2 — an optional loop is one its player stops: a card already cast
+    // CR 733.2 — an optional loop is one its player stops: a card already cast
     // `RECAST_LOOP_CAP` times this turn is held. Enduring Renewal handed back
     // the one-drops Phyrexian Altar sacrificed to pay for the next, 16,000
     // actions to the cap (four-seat pod, seeds 1174/1201/1806/2732, 23568).
@@ -12461,7 +12461,7 @@ fn pick_self_pump_counter(state: &GameState, seat: usize, w: &EvalWeights) -> Op
                             crate::effect::StaticEffect::SelfIsCreatureWhileCountersAtLeast { kind: k, n }
                             if k == kind && card.counter_count(*kind) < *n)
                     })
-                    // CR 721 — Station: charge toward an unmet band, tapping
+                    // CR 722 — Station: charge toward an unmet band, tapping
                     // creatures only once combat is over (they'd have attacked).
                     || (*kind == CounterType::Charge
                         && ab.tap_other_filter.is_some()
@@ -14305,7 +14305,7 @@ fn turns_to_lethal(life: i32, clock: i32) -> i32 {
 }
 
 /// The player an attack is aimed at by default: an opposing monarch first
-/// whatever else is true (CR 724 — stealing the crown denies their end-step
+/// whatever else is true (CR 725 — stealing the crown denies their end-step
 /// card and hands it to us), otherwise
 /// [`GameState::default_hostile_opponent`], which is the same question the
 /// engine's auto-targeter asks and now the same answer.
@@ -21809,7 +21809,7 @@ fn eval_material_inner(
         // "draw a card" beats "gain 3 life" (a card is a future play;
         // three life at a healthy total is nearly nothing).
         let emblems: i32 = p.emblems.iter().map(|e| emblem_value(state, i, e)).sum();
-        // CR 725 / 726 — the crown and the initiative are recurring resources,
+        // CR 726 / 727 — the crown and the initiative are recurring resources,
         // not one-shots: the monarch draws at each of their end steps and the
         // initiative-holder ventures on top of that. Priced above a single
         // hand card (4) because they keep paying until someone takes them.
@@ -28363,7 +28363,7 @@ mod tests {
     }
 
     /// The bot casts an Adventure half (Stomp) as removal when it can afford
-    /// the adventure but not the creature (CR 715).
+    /// the adventure but not the creature (CR 716).
     #[test]
     fn bot_casts_adventure_half_as_removal() {
         let mut g = two_player_game();
@@ -30929,7 +30929,7 @@ mod tests {
         }
     }
 
-    /// CR 732.2 — a card already cast `RECAST_LOOP_CAP` times this turn is not
+    /// CR 733.2 — a card already cast `RECAST_LOOP_CAP` times this turn is not
     /// offered again: Enduring Renewal + Phyrexian Altar recast the same
     /// one-drops to the 16,000-action cap (four-seat pod, seed 23568).
     #[test]
@@ -30950,7 +30950,7 @@ mod tests {
         assert!(!offered(&g), "at the cap the loop stops");
     }
 
-    /// CR 732.2 — an "up to N" upside counts toward the optional-loop cap: past
+    /// CR 733.2 — an "up to N" upside counts toward the optional-loop cap: past
     /// it, the bot takes 0 (a nonlegendary Esper Terra copy's lore counters
     /// re-armed its own copy chapters, 800 triggers deep — audit seed 192001).
     #[test]
@@ -31892,7 +31892,7 @@ mod monarch_tests {
     use crate::catalog;
     use crate::player::Player;
 
-    /// CR 725/726 — the crown and the initiative are recurring resources, so
+    /// CR 726/727 — the crown and the initiative are recurring resources, so
     /// the material eval prices holding them (and an opponent holding them).
     #[test]
     fn eval_material_prices_the_crown() {

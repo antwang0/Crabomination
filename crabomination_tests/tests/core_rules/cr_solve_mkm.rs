@@ -12,11 +12,11 @@ fn is_solved(g: &crabomination::game::GameState, id: crabomination::card::CardId
     g.battlefield.iter().find(|c| c.id == id).map(|c| c.case_solved).unwrap_or(false)
 }
 
-/// CR 719.3a — "To solve — [condition]" is an end-step trigger on *its
+/// CR 720.3a — "To solve — [condition]" is an end-step trigger on *its
 /// controller's* end step, and once solved a Case stays solved even if the
 /// condition later stops holding (719.3b).
 #[test]
-fn cr_719_3a_case_solves_at_controllers_end_step_and_persists() {
+fn cr_720_3a_case_solves_at_controllers_end_step_and_persists() {
     let mut g = two_player_game();
     let case = g.add_card_to_battlefield(0, catalog::case_of_the_crimson_pulse());
     assert!(g.players[0].hand.is_empty(), "solve condition (empty hand) holds");
@@ -76,10 +76,10 @@ fn cr_613_7_anthem_and_counter_both_apply() {
     assert_eq!((c.power, c.toughness), (4, 4), "2/2 + anthem + counter = 4/4");
 }
 
-/// CR 719.3c — the "Solved —" abilities are dead until the Case is solved,
+/// CR 720.3c — the "Solved —" abilities are dead until the Case is solved,
 /// and switch on the moment it is.
 #[test]
-fn cr_719_3c_solved_abilities_are_dead_until_solved() {
+fn cr_720_3c_solved_abilities_are_dead_until_solved() {
     let mut g = two_player_game();
     let case = g.add_card_to_battlefield(0, catalog::case_of_the_crimson_pulse());
     let printed = |g: &crabomination::game::GameState| {
@@ -94,10 +94,10 @@ fn cr_719_3c_solved_abilities_are_dead_until_solved() {
     assert_eq!(printed(&g), 2, "the Solved upkeep trigger switched on");
 }
 
-/// CR 719.3b — the solved designation is battlefield-only: a Case that leaves
+/// CR 720.3b — the solved designation is battlefield-only: a Case that leaves
 /// and comes back is unsolved again, with its Solved abilities off.
 #[test]
-fn cr_719_3b_solved_is_lost_when_the_case_leaves_the_battlefield() {
+fn cr_720_3b_solved_is_lost_when_the_case_leaves_the_battlefield() {
     let mut g = two_player_game();
     let case = g.add_card_to_battlefield(0, catalog::case_of_the_crimson_pulse());
     g.active_player_idx = 0;
@@ -113,12 +113,12 @@ fn cr_719_3b_solved_is_lost_when_the_case_leaves_the_battlefield() {
     assert_eq!(gy.definition.triggered_abilities.len(), 1, "Solved abilities came back off");
 }
 
-// ── CR 730 — Merging with Permanents (Mutate) ────────────────────────────────
+// ── CR 731 — Merging with Permanents (Mutate) ────────────────────────────────
 
-/// CR 730.2a — a merged permanent has the *topmost* component's
+/// CR 731.2a — a merged permanent has the *topmost* component's
 /// characteristics, with every component's abilities unioned in.
 #[test]
-fn cr_730_2a_merged_permanent_takes_the_topmost_characteristics() {
+fn cr_731_2a_merged_permanent_takes_the_topmost_characteristics() {
     let mut g = two_player_game();
     let host = g.add_card_to_battlefield(0, catalog::garruks_companion()); // 3/2 Trample
     let recluse = g.add_card_to_hand(0, catalog::glowstone_recluse()); // 2/3 Reach
@@ -142,10 +142,10 @@ fn cr_730_2a_merged_permanent_takes_the_topmost_characteristics() {
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Trample), "component's keyword");
 }
 
-/// CR 730.2b — merging isn't entering the battlefield: an "another creature
+/// CR 731.2b — merging isn't entering the battlefield: an "another creature
 /// enters" watcher doesn't fire for the merge.
 #[test]
-fn cr_730_2b_merging_is_not_entering_the_battlefield() {
+fn cr_731_2b_merging_is_not_entering_the_battlefield() {
     let mut g = two_player_game();
     g.add_card_to_battlefield(0, catalog::soul_warden());
     let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
@@ -164,10 +164,10 @@ fn cr_730_2b_merging_is_not_entering_the_battlefield() {
     assert_eq!(g.players[0].life, life, "no creature entered");
 }
 
-/// CR 730.2d — a merged permanent is a token only if the topmost component is
+/// CR 731.2d — a merged permanent is a token only if the topmost component is
 /// a token. A real card mutated onto a token makes the pile a nontoken.
 #[test]
-fn cr_730_2d_token_status_follows_the_topmost_component() {
+fn cr_731_2d_token_status_follows_the_topmost_component() {
     let mut g = two_player_game();
     let host = g.add_card_to_battlefield(0, catalog::garruks_companion());
     g.battlefield_find_mut(host).unwrap().is_token = true;

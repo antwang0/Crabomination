@@ -3,7 +3,7 @@
 //!   triggered ability is its controller, and "that player may" routes to the
 //!   named seat (`Effect::MayDoBy`).
 //! - CR 204 — an object with a colour indicator is each colour it denotes.
-//! - CR 733.1 — an illegal action is reversed whole; payments already made
+//! - CR 734.1 — an illegal action is reversed whole; payments already made
 //!   are cancelled.
 
 use crabomination::card::CardType;
@@ -93,10 +93,10 @@ fn cr_204_2_color_indicator_defines_color() {
     assert_eq!(g.computed_permanent(monkey.id).unwrap().colors.to_vec(), vec![Color::Green]);
 }
 
-/// CR 733.1 — a declaration the acting player can't pay for is reversed whole:
+/// CR 734.1 — a declaration the acting player can't pay for is reversed whole:
 /// no attackers are declared and the mana already floated is untouched.
 #[test]
-fn cr_733_1_unpayable_attack_declaration_is_reversed_whole() {
+fn cr_734_1_unpayable_attack_declaration_is_reversed_whole() {
     let mut g = two_player_game();
     let tax = g.add_card_to_battlefield(1, catalog::war_tax());
     mana(&mut g, 1);

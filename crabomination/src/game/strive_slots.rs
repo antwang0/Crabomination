@@ -1,4 +1,4 @@
-//! CR 601.2f / 733.1 — a spell that costs more for each target beyond the
+//! CR 601.2f / 734.1 — a spell that costs more for each target beyond the
 //! first (strive, CR 207.2c; Fireball). The "choose an additional target"
 //! prompt must not offer a slot the caster can't pay for: picking one rewound
 //! the whole cast (a `--a uniform` seat re-cast Launch the Fleet 643 times).

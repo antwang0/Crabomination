@@ -17,8 +17,8 @@ Moved to `SHIPPED.md` (size trigger). Check it before proposing anything.
 ## Commander status (CR 903 + the 800-series it rests on)
 
 The map for the next Commander run — audited 2026-09-18 against the tree and
-the shipped CR text (now `crabomination/MagicCompRules_20260925.txt`; its
-605.1a / 800.4i / battle changes are in). Don't re-audit; update rows as they
+the shipped CR text (now `crabomination/MagicCompRules_20261106.txt`, re-pinned
+2026-11-26: 713 Meld inserted, 713-733 cited as 714-734, 903.5e / 903.5f). Don't re-audit; update rows as they
 move. Per-deck card completion lives in `DECK_FEATURES.md`; what each Commander
 session changed lives in ENGINE_BACKLOG under its session id. Last touched
 2026-11-01 by `01WRuXc4Bu` (no row moved: Star Trek seats 6163-6188).
@@ -27,7 +27,7 @@ session changed lives in ENGINE_BACKLOG under its session id. Last touched
 | Feature | State | Where |
 |---|---|---|
 | `Format::Commander`: 40 life, 100-card, singleton, command zone at start | ✅ | `format.rs` (`FormatRules`, `validate_commander_deck`), `game/mod.rs::apply_format`, `seat_commanders` |
-| Rulebreaker deck construction ("a deck with this commander can have … of any color identity" / "no maximum deck size") | ✅ *since 2026-10-15* | `StaticEffect::RulebreakerAnyColorIdentity { cards }` / `RulebreakerNoMaxDeckSize`, read by `format::validate_commander_deck` only (Maular, Seluma, The Everforger, Whtz; `RulebreakerCards::Auras` — The Unluckiest Planeswalker; `OfCreatureType(Phyrexian)` — Valko; `Lands` — Grizzlegom), and `RulebreakerSpellsOneExtraColor` (Tolabow: the deck's instants and sorceries share one extra color, widened by the color most of them need). CR 903.5e in the 2026-11-06 CR (not in the pinned 20260925 file); `recent_b/cmdr_oct15_a.rs`, `recent_b/cmdr_016x_a.rs`, `recent_b/trek_singles8.rs` (`cr_903_5c_*`) |
+| Rulebreaker deck construction ("a deck with this commander can have … of any color identity" / "no maximum deck size") | ✅ *since 2026-10-15* | `StaticEffect::RulebreakerAnyColorIdentity { cards }` / `RulebreakerNoMaxDeckSize`, read by `format::validate_commander_deck` only (Maular, Seluma, The Everforger, Whtz; `RulebreakerCards::Auras` — The Unluckiest Planeswalker; `OfCreatureType(Phyrexian)` — Valko; `Lands` — Grizzlegom), and `RulebreakerSpellsOneExtraColor` (Tolabow: the deck's instants and sorceries share one extra color, widened by the color most of them need). CR 903.5e (only from the commander: `core_rules/commander_mana.rs` `cr_903_5e_*`); `recent_b/cmdr_oct15_a.rs`, `recent_b/cmdr_016x_a.rs`, `recent_b/trek_singles8.rs` (`cr_903_5c_*`) |
 | Commander designation persists across zones; a copy is not a commander | ✅ | `player.rs::Player::commanders` (zone-independent `CardId`s); `GameState::is_commander`. A token/copy has its own `CardId` |
 | Commander tax {2} per prior cast, as an additional cost | ✅ | `actions.rs::cast_from_command_zone` — added before `cost_reduction_for_spell` / `reduce_by_cost`, so reductions and the floor see it |
 | CR 903.9a graveyard/exile return as an SBA (dies triggers fire first) | ✅ | `commander_return.rs` (`commander_zone_return_sba`, `commander_return_declined`). A death replaced into exile (Sanctifier en-Vec, Kalitas, Rest in Peace) fires none of the commander's own dies triggers (`death_was_replaced`, `stack.rs`; `cr_700_4_a_replaced_death_fires_no_dies_trigger_of_its_own`); the exile return is still offered. A prompting owner is asked through a pending `CommanderRedirect` once the action settles (`pose_commander_return`, `ResumeContext::CommanderReturn`; `cr_903_9a_prompting_owner_*`), other seats by the decider. Waits for the resolution (CR 704.3): `check_state_based_actions_mid_resolution` runs no return and skips the orphan-Aura check (`cr_704_3_commander_return_waits_for_the_resolution`; Danse Macabre, Shifting Shadow) |

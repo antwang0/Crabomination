@@ -34,12 +34,12 @@ fn mana(g: &mut GameState, seat: usize) {
     g.players[seat].mana_pool.add_colorless(20);
 }
 
-// ── CR 726 — The Initiative ─────────────────────────────────────────────────
+// ── CR 727 — The Initiative ─────────────────────────────────────────────────
 
-/// CR 726.2 — "Whenever you take the initiative … venture into Undercity."
+/// CR 727.2 — "Whenever you take the initiative … venture into Undercity."
 /// The designation and the first room land together.
 #[test]
-fn cr_726_2_taking_the_initiative_ventures_into_undercity() {
+fn cr_727_2_taking_the_initiative_ventures_into_undercity() {
     let mut g = main_phase();
     let id = g.add_card_to_hand(0, catalog::aarakocra_sneak());
     mana(&mut g, 0);
@@ -56,10 +56,10 @@ fn cr_726_2_taking_the_initiative_ventures_into_undercity() {
     );
 }
 
-/// CR 726.3 — only one player has the initiative; taking it strips the
-/// previous holder. CR 726.2's combat clause is the handover.
+/// CR 727.3 — only one player has the initiative; taking it strips the
+/// previous holder. CR 727.2's combat clause is the handover.
 #[test]
-fn cr_726_3_combat_damage_moves_the_initiative() {
+fn cr_727_3_combat_damage_moves_the_initiative() {
     let mut g = main_phase();
     let mut events = Vec::new();
     g.take_initiative(1, &mut events);
@@ -77,10 +77,10 @@ fn cr_726_3_combat_damage_moves_the_initiative() {
     assert_eq!(g.initiative, Some(0), "the attacker's controller took it");
 }
 
-/// CR 726.2 — "At the beginning of the upkeep of the player who has the
+/// CR 727.2 — "At the beginning of the upkeep of the player who has the
 /// initiative, that player ventures into Undercity."
 #[test]
-fn cr_726_2_upkeep_ventures_again() {
+fn cr_727_2_upkeep_ventures_again() {
     let mut g = main_phase();
     let mut events = Vec::new();
     g.take_initiative(0, &mut events);
@@ -95,10 +95,10 @@ fn cr_726_2_upkeep_ventures_again() {
     );
 }
 
-/// CR 726.5 — re-taking the initiative you already have still ventures, and
+/// CR 727.5 — re-taking the initiative you already have still ventures, and
 /// doesn't create a second designation.
 #[test]
-fn cr_726_5_retaking_ventures_without_duplicating() {
+fn cr_727_5_retaking_ventures_without_duplicating() {
     let mut g = main_phase();
     let mut events = Vec::new();
     g.take_initiative(0, &mut events);
@@ -164,10 +164,10 @@ fn undermountain_adventurer_pays_six_after_a_dungeon() {
     assert_eq!(g.players[0].mana_pool.total(), 6);
 }
 
-/// CR 726.4 — when the initiative's holder leaves the game, the active player
+/// CR 727.4 — when the initiative's holder leaves the game, the active player
 /// takes it.
 #[test]
-fn cr_726_4_the_initiative_passes_when_its_holder_leaves() {
+fn cr_727_4_the_initiative_passes_when_its_holder_leaves() {
     let mut g = multi_player_game(3);
     g.active_player_idx = 0;
     let mut events = Vec::new();
@@ -176,7 +176,7 @@ fn cr_726_4_the_initiative_passes_when_its_holder_leaves() {
     g.players[1].life = 0;
     g.check_state_based_actions();
     assert_eq!(g.initiative, Some(0), "the active player picks it up");
-    // CR 726.2 — and *takes* it, so it ventures into Undercity.
+    // CR 727.2 — and *takes* it, so it ventures into Undercity.
     drain_stack(&mut g);
     assert_eq!(g.players[0].dungeon.as_ref().map(|(d, _)| d.as_str()), Some("Undercity"));
 }

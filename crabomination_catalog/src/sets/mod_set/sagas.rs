@@ -1,4 +1,4 @@
-//! Saga enchantments (CR 714) — chapter abilities tick off lore counters.
+//! Saga enchantments (CR 715) — chapter abilities tick off lore counters.
 //!
 //! Each card sets `saga_chapters: vec![(chapter, effect), …]`; the engine
 //! adds the first lore counter on ETB and one more each precombat main,

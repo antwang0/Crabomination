@@ -121,7 +121,7 @@ fn archivist_draws_the_monarch_a_card() {
     g.monarch = Some(0);
     let hand = g.players[0].hand.len();
     step(&mut g, TurnStep::End);
-    // The monarch's own end-step draw (CR 725.2) plus the Archivist's.
+    // The monarch's own end-step draw (CR 726.2) plus the Archivist's.
     assert!(g.players[0].hand.len() > hand);
 }
 
@@ -231,7 +231,7 @@ fn fealty_to_the_realm_takes_a_creature() {
     assert_eq!(g.battlefield_find(angel).unwrap().controller, 0);
 }
 
-/// CR 725 — "The monarch controls enchanted creature": when the crown moves,
+/// CR 726 — "The monarch controls enchanted creature": when the crown moves,
 /// the creature follows it, and it can't attack Fealty's controller. The
 /// Aura leaving hands it back to its owner (CR 611.2c).
 #[test]

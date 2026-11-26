@@ -1,4 +1,4 @@
-//! CR 104.4b / 732.4 — the bot must not start a mandatory loop of its own.
+//! CR 104.4b / 733.4 — the bot must not start a mandatory loop of its own.
 //! Gremlin Tamer under Secret Arcade: each Gremlin token is an enchantment,
 //! so its arrival re-triggers Eerie without end and the engine's growth-loop
 //! watch (`game/growth_loop.rs`) draws the game. The static scorer can't see

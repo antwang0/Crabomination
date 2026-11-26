@@ -98,10 +98,10 @@ fn cr_104_4b_free_activation_is_watched() {
 }
 
 
-/// CR 732.3 — a fragmented loop of free activations is broken by rejecting
+/// CR 733.3 — a fragmented loop of free activations is broken by rejecting
 /// the repeat, not by drawing the game (that's 732.4's mandatory case).
 #[test]
-fn cr_732_3_repeated_free_activation_is_rejected() {
+fn cr_733_3_repeated_free_activation_is_rejected() {
     use crabomination::card::{CardDefinition, CardType};
     use crabomination::effect::{ActivatedAbility, Effect};
     use crabomination::game::types::GameError;
@@ -147,7 +147,7 @@ fn cr_732_3_repeated_free_activation_is_rejected() {
     assert!(g.game_over.is_none(), "a fragmented loop is not a draw");
 }
 
-/// CR 732.3 — the same loop **without** resolving between activations, which is
+/// CR 733.3 — the same loop **without** resolving between activations, which is
 /// the shape a real one takes.
 ///
 /// The test above drains the stack every iteration, so `stack.len()` is 0 at
@@ -166,7 +166,7 @@ fn cr_732_3_repeated_free_activation_is_rejected() {
 /// nothing to pay with. The watch is still the backstop for a printed `{0}`
 /// that consumes nothing, which is what Blinking Spirit is.
 #[test]
-fn cr_732_3_repeat_is_rejected_without_resolving_between_activations() {
+fn cr_733_3_repeat_is_rejected_without_resolving_between_activations() {
     use crabomination::game::types::GameError;
     for (name, def, index) in [("Blinking Spirit", catalog::blinking_spirit(), 0usize)] {
         let mut g = two_player_game();
@@ -241,7 +241,7 @@ fn cr_602_5b_greater_goods_sacrifice_is_paid_at_announcement() {
     assert_eq!(g.stack.len(), 1, "one activation on the stack, not two");
 }
 
-/// CR 732.3 — a paid loop whose cost is met by the source's own mana ability.
+/// CR 733.3 — a paid loop whose cost is met by the source's own mana ability.
 /// Basalt Monolith taps for {C}{C}{C} and pays {3} to untap: mana-neutral, so
 /// the board is identical at every untap announcement. The mana activation in
 /// between used to *reset* the watch, so the untap's key never repeated and an
@@ -249,7 +249,7 @@ fn cr_602_5b_greater_goods_sacrifice_is_paid_at_announcement() {
 /// 2026-09-09). A mana ability is announced inside the cost it pays (CR
 /// 602.2b) and leaves the watch alone.
 #[test]
-fn cr_732_3_a_paid_loop_through_the_sources_own_mana_ability_is_rejected() {
+fn cr_733_3_a_paid_loop_through_the_sources_own_mana_ability_is_rejected() {
     use crabomination::game::types::GameError;
     let mut g = two_player_game();
     g.step = TurnStep::PreCombatMain;
@@ -284,7 +284,7 @@ fn cr_732_3_a_paid_loop_through_the_sources_own_mana_ability_is_rejected() {
     assert!(g.game_over.is_none(), "a fragmented loop is not a draw");
 }
 
-/// CR 104.4b / 732.4 — a mandatory loop that adds an object every cycle never
+/// CR 104.4b / 733.4 — a mandatory loop that adds an object every cycle never
 /// repeats a board, yet it is still a loop: Secret Arcade makes each Gremlin
 /// Tamer token an enchantment, so every token's arrival re-triggers Eerie. The
 /// game is a draw long before the board bound, and nobody wins.

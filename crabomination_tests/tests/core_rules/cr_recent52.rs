@@ -1,8 +1,8 @@
 //! CR conformance for the card types and zones the coverage report flagged:
 //! - CR 408 — the command zone (emblems, commanders, and the CR 903.9b
 //!   redirect) is not the battlefield and not a permanent zone.
-//! - CR 718 — Prototype cards' alternative cost / P/T / color set.
-//! - CR 720 — Omen cards' alternative spell half and the shuffle-on-resolve.
+//! - CR 719 — Prototype cards' alternative cost / P/T / color set.
+//! - CR 721 — Omen cards' alternative spell half and the shuffle-on-resolve.
 //! - CR 602.1b — "Activate only if …" restrictions.
 
 use crabomination::card::Zone;
@@ -53,12 +53,12 @@ fn cr_408_3_commanders_start_and_return_to_the_command_zone() {
     }
 }
 
-// ── CR 718 — Prototype cards ────────────────────────────────────────────────
+// ── CR 719 — Prototype cards ────────────────────────────────────────────────
 
-/// CR 718.4 — outside the stack and battlefield a prototype card has only its
+/// CR 719.4 — outside the stack and battlefield a prototype card has only its
 /// normal characteristics; the alternative set is carried alongside.
 #[test]
-fn cr_718_4_prototype_card_keeps_its_normal_characteristics_in_hand() {
+fn cr_719_4_prototype_card_keeps_its_normal_characteristics_in_hand() {
     let def = catalog::goring_warplow();
     assert_eq!((def.power, def.toughness), (5, 4));
     assert_eq!(def.cost.cmc(), 6);
@@ -67,10 +67,10 @@ fn cr_718_4_prototype_card_keeps_its_normal_characteristics_in_hand() {
     assert_eq!(proto.cost.cmc(), 2);
 }
 
-/// CR 718.3b — a prototyped permanent has ONLY the alternative mana cost,
+/// CR 719.3b — a prototyped permanent has ONLY the alternative mana cost,
 /// power, and toughness, and takes its color from that cost (CR 105.2).
 #[test]
-fn cr_718_3b_prototyped_permanent_uses_only_the_alternative_characteristics() {
+fn cr_719_3b_prototyped_permanent_uses_only_the_alternative_characteristics() {
     let mut g = two_player_game();
     let warplow = g.add_card_to_hand(0, catalog::goring_warplow());
     g.players[0].mana_pool.add(Color::Black, 2);
@@ -88,13 +88,13 @@ fn cr_718_3b_prototyped_permanent_uses_only_the_alternative_characteristics() {
     let card = g.battlefield_find(warplow).expect("permanent");
     assert_eq!(card.definition.cost.cmc(), 2, "and so is the printed six-drop cost");
     assert!(card.cast_as_prototype);
-    // CR 718.5 — everything else is unchanged.
+    // CR 719.5 — everything else is unchanged.
     assert!(cp.keywords().contains(&crabomination::card::Keyword::Deathtouch));
 }
 
-/// CR 718.3 — casting normally is still available and yields the big body.
+/// CR 719.3 — casting normally is still available and yields the big body.
 #[test]
-fn cr_718_3_normal_cast_keeps_the_printed_body() {
+fn cr_719_3_normal_cast_keeps_the_printed_body() {
     let mut g = two_player_game();
     let warplow = g.add_card_to_hand(0, catalog::goring_warplow());
     g.players[0].mana_pool.add_colorless(6);
@@ -112,10 +112,10 @@ fn cr_718_3_normal_cast_keeps_the_printed_body() {
     assert!(!g.battlefield_find(warplow).unwrap().cast_as_prototype);
 }
 
-/// CR 718.3a — the prototype cost is the only one evaluated for a prototyped
+/// CR 719.3a — the prototype cost is the only one evaluated for a prototyped
 /// cast: mana that would pay the printed {6} but not {1}{B} is rejected.
 #[test]
-fn cr_718_3a_prototyped_cast_evaluates_only_the_alternative_cost() {
+fn cr_719_3a_prototyped_cast_evaluates_only_the_alternative_cost() {
     let mut g = two_player_game();
     let warplow = g.add_card_to_hand(0, catalog::goring_warplow());
     g.players[0].mana_pool.add_colorless(6);
@@ -132,12 +132,12 @@ fn cr_718_3a_prototyped_cast_evaluates_only_the_alternative_cost() {
     );
 }
 
-// ── CR 720 — Omen cards ─────────────────────────────────────────────────────
+// ── CR 721 — Omen cards ─────────────────────────────────────────────────────
 
-/// CR 720.2c — an omen card is one card: it's in hand once, and its Omen half
+/// CR 721.2c — an omen card is one card: it's in hand once, and its Omen half
 /// isn't separately castable as a creature.
 #[test]
-fn cr_720_2c_an_omen_card_is_a_single_card() {
+fn cr_721_2c_an_omen_card_is_a_single_card() {
     let def = catalog::marang_river_regent();
     let omen = def.has_omen().expect("omen half");
     assert_ne!(omen.name, def.name, "the two halves have different names");
@@ -145,10 +145,10 @@ fn cr_720_2c_an_omen_card_is_a_single_card() {
     assert!(omen.card_types.contains(&crabomination::card::CardType::Instant));
 }
 
-/// CR 720.3d — an Omen spell is shuffled into its owner's library as it
+/// CR 721.3d — an Omen spell is shuffled into its owner's library as it
 /// resolves rather than going to the graveyard.
 #[test]
-fn cr_720_3d_omen_shuffles_into_the_library_on_resolution() {
+fn cr_721_3d_omen_shuffles_into_the_library_on_resolution() {
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::forest());
@@ -175,10 +175,10 @@ fn cr_720_3d_omen_shuffles_into_the_library_on_resolution() {
     assert_eq!(g.players[0].library.len(), lib - 3 + 1);
 }
 
-/// CR 720.3b — while on the stack as an Omen the spell has only the
+/// CR 721.3b — while on the stack as an Omen the spell has only the
 /// alternative characteristics, so the creature body never enters.
 #[test]
-fn cr_720_3b_omen_spell_does_not_become_a_creature() {
+fn cr_721_3b_omen_spell_does_not_become_a_creature() {
     let mut g = two_player_game();
     for _ in 0..5 {
         g.add_card_to_library(0, catalog::forest());

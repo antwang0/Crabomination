@@ -82,7 +82,7 @@ fn in_graveyard(g: &GameState, seat: usize, id: CardId) -> bool {
     g.players[seat].graveyard.iter().any(|c| c.id == id)
 }
 
-/// CR 721 — Hearthhull at 8+ charge counters is a 6/7 flier with haste;
+/// CR 722 — Hearthhull at 8+ charge counters is a 6/7 flier with haste;
 /// its 2+ ability sacrifices a land for two cards, and each land sacrifice
 /// drains each opponent for 2.
 #[test]

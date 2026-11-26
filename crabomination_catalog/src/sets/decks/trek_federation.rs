@@ -29,7 +29,7 @@ fn legend(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, 
     }
 }
 
-/// A legendary Spacecraft: station plus its bands (CR 721).
+/// A legendary Spacecraft: station plus its bands (CR 722).
 fn spacecraft(name: &'static str, mana: ManaCost, bands: Vec<StationBand>) -> CardDefinition {
     CardDefinition {
         name,

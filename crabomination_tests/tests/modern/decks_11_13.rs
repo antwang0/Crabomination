@@ -2314,8 +2314,8 @@ fn cruel_somnophage_pt_counts_creature_cards_in_all_graveyards() {
     assert_eq!((card.power, card.toughness), (3, 3));
 }
 
-/// CR 715.3: Can't Wake Up, the Adventure half, mills the target player
-/// four and the card goes on an adventure in exile (CR 715.4).
+/// CR 716.3: Can't Wake Up, the Adventure half, mills the target player
+/// four and the card goes on an adventure in exile (CR 716.4).
 #[test]
 fn cant_wake_up_mills_four_then_exiles_on_adventure() {
     let mut g = two_player_game();

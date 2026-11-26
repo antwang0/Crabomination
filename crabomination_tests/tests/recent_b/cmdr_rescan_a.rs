@@ -527,7 +527,7 @@ fn thawing_glaciers_returns_to_hand_at_cleanup() {
     assert!(g.players[0].hand.iter().any(|c| c.id == glaciers));
 }
 
-/// CR 724 — Chief Magistrate crowns you; at your upkeep the monarch copies
+/// CR 725 — Chief Magistrate crowns you; at your upkeep the monarch copies
 /// each creature token, the fresh Goblin included.
 #[test]
 fn chief_magistrate_copies_tokens_while_monarch() {
@@ -1548,7 +1548,7 @@ fn lore(g: &mut GameState, saga: CardId) {
     drain_stack(g);
 }
 
-/// CR 714.2 — Fall of the Impostor's chapter III exiles the target
+/// CR 715.2 — Fall of the Impostor's chapter III exiles the target
 /// opponent's greatest-power creature.
 #[test]
 fn fall_of_the_impostor_exiles_the_biggest() {
@@ -1562,7 +1562,7 @@ fn fall_of_the_impostor_exiles_the_biggest() {
     assert!(g.battlefield_find(bear).is_some());
 }
 
-/// CR 714.2 — The Phasing of Zhalfir's III wipes creatures and pays each
+/// CR 715.2 — The Phasing of Zhalfir's III wipes creatures and pays each
 /// controller a 2/2 Phyrexian per creature of theirs destroyed.
 #[test]
 fn phasing_of_zhalfir_replaces_the_dead_with_phyrexians() {
@@ -1846,7 +1846,7 @@ fn the_irencrag_becomes_everflame() {
     assert_eq!(pt(&g, tomik), (5, 4));
 }
 
-/// CR 715.3 / 601.2b — Allure of Power costs a creature: with none to
+/// CR 716.3 / 601.2b — Allure of Power costs a creature: with none to
 /// sacrifice the Adventure can't be cast; with one it goes and two are drawn.
 /// The card's main-half cast pays no sacrifice.
 #[test]

@@ -431,10 +431,10 @@ fn cr_614_9_kor_dirge_redirects_a_chosen_source_all_turn() {
 }
 
 /// Braids's Frightful Return chapter III: an opponent with nothing to
-/// sacrifice loses 2 life and its controller draws (CR 714.2b — the chapter
+/// sacrifice loses 2 life and its controller draws (CR 715.2b — the chapter
 /// triggers as the third lore counter lands).
 #[test]
-fn cr_714_2b_braidss_frightful_return_chapter_three_punishes() {
+fn cr_715_2b_braidss_frightful_return_chapter_three_punishes() {
     let mut g = pod(2);
     let saga = g.add_card_to_battlefield(0, catalog::braidss_frightful_return());
     g.battlefield_find_mut(saga).unwrap().add_counters(CounterType::Lore, 2);

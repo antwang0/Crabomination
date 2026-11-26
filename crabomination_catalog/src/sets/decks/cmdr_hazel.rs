@@ -170,7 +170,7 @@ pub fn garruk_cursed_huntsman() -> CardDefinition {
 
 /// Gourmand's Talent — during your turn your artifacts are Foods with the
 /// Food ability; L2: a 3/3 Raccoon on your first life gain each turn; L3: a
-/// +1/+1 counter on each creature you control then (CR 716 Class levels).
+/// +1/+1 counter on each creature you control then (CR 717 Class levels).
 pub fn gourmands_talent() -> CardDefinition {
     let level_up = |mana: ManaCost, from: u8| ActivatedAbility {
         mana_cost: mana,

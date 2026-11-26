@@ -52,7 +52,7 @@ fn protector_of_the_crown_crowns_and_soaks() {
     let mut g = two_player_game();
     let prot = g.move_card_to_battlefield_for_test(0, catalog::protector_of_the_crown());
     drain_stack(&mut g);
-    assert_eq!(g.monarch, Some(0), "CR 725.3 — the ETB crowns its controller");
+    assert_eq!(g.monarch, Some(0), "CR 726.3 — the ETB crowns its controller");
 
     let mut evs = vec![];
     g.deal_damage_to_from(

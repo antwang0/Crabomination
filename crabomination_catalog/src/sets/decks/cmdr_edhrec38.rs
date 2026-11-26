@@ -42,7 +42,7 @@ fn you_are_monarch() -> Predicate {
 
 /// Jared Carthalion, True Heir — {R}{G}{W} legendary 3/3 Human Warrior.
 /// Enters: target opponent becomes the monarch, and you can't this turn
-/// (CR 725). While you're the monarch, damage to it is prevented and becomes
+/// (CR 726). While you're the monarch, damage to it is prevented and becomes
 /// that many +1/+1 counters.
 pub fn jared_carthalion_true_heir() -> CardDefinition {
     CardDefinition {
