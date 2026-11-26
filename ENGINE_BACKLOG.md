@@ -20,6 +20,8 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc5Gy`) — coven / gated-static cost, CR re-pin, Massimo](#fixedopen-2026-11-26-commander-run-01wruxc5gy--coven--gated-static-cost-cr-re-pin-massimo) | 24 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc5Gy` found them (moved verbatim, 2026-11-26)](#the-commander-nexts-lines-as-01wruxc5gy-found-them-moved-verbatim-2026-11-26) | 4 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc3U3`) — `--pod-random`, two pod bugs, 17 seats, two Rulebreakers](#fixedopen-2026-11-26-commander-run-01wruxc3u3----pod-random-two-pod-bugs-17-seats-two-rulebreakers) | 32 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc3U3` found them (moved verbatim, 2026-11-26)](#the-commander-nexts-lines-as-01wruxc3u3-found-them-moved-verbatim-2026-11-26) | 11 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-01 (Commander run, `01WRuXc4Bu`) — 26 Star Trek seats, four primitives](#fixedopen-2026-11-01-commander-run-01wruxc4bu--26-star-trek-seats-four-primitives) | 25 |
@@ -555,6 +557,41 @@ planner choices.
 ## The Commander NEXT's line 9 as `01WRuXc4hq` found it (moved verbatim, 2026-10-31)
 
 9. **`01WRuXc48R` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc48R`): residual rank, `audit_up_to_one --pod`, a literal-cap census.** ⚠ **CR 903.5a bug class: eleven "reveal until" effects were `cap: 60` (a 60-card library's depth) and stopped 60 cards into a 99-card library** — now `1000` (Chaos Wand, Dazzling Sphinx, Gríma, Page, Plargg, Sacred Guide, Spinner of Souls, Thicket Elemental, Clifftop Lookout, The Regalia, Warrior of Light), plus Selective Memory / The Bath Song's "any number"; **grep `Const(60)` in any new card**. Four "up to one" slots hit their own side (Koh, Psychic Pickpocket, Rhino's Rampage, Sol'Kanar → `OptionalTargets { min: 0 }`; `ExileLinked`/`ExileWithSource` now hostile in `permanent_slot_is_hostile`); Koh's re-choice keeps other grants; Aesir chapter I is a pick. Gates: suite **29,360 / 0 / 8** (strict), clippy **0** (84 min cold on 4 cores — budget it), `--bench` **196,176 / 613.0 / 0 stalls byte-identical**, determinism ok. Pods: start-tree 29400 (4 seats, 1,500 games) and 29700 (6 seats, 600); closing-tree 29800/29900/30000/30100 at 3/5/8/4 seats, 1,550 games — **3,650 games, 0 panics, 3 finite board caps** (Rabble Rousing's Citizens `--pod-decks 650,750,4954,5239 --seed 29686 --first 1`; Innkeeper's Talent + The Great Henge `312,1517,3440,5168 --seed 30174 --first 1`; Eidolon of Blossoms / Shizuko `588,2548,3003,3883,5827 --seed 29939 --first 0`), no stalls, no draws. **Next seed 30200.** Next: the rank top is choice-exposure only (Dawnhand's blight is a cost — needs cost-payment plumbing; Queen Kayla needs a simultaneous put across per-MV picks); `audit_up_to_one` false positives come from `dump_cards --effects` not dumping station / granted triggers (Dawnsire, Baseball Bat) — widen the dump, not the regex.
+
+## FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc5Gy`) — coven / gated-static cost, CR re-pin, Massimo
+
+- ✅ **Loot, Exuberant Explorer's per-seat game (seed 0xad8), the precon test's long pole** (over an hour in debug): Augur of
+  Autumn's `WhileCondition(CovenActive)` was evaluated by every `active_static` caller before the caller checked the inner
+  kind, and each coven read walked every creature through a layer pass into a `HashSet`. `distinct_creature_powers(seat,
+  cap)` (one walker for coven, `DistinctPowersAmongCreaturesControlled` and the server view's coven flag, which read printed
+  creature type); `active_static_where` / `static_active_is` peel to `ungated()`, test the caller's kind, then evaluate gates
+  (74 sites converted by script: every `matches!(…active_static…, Some(K))` and match-with-`_` shape). `overflow`: 26 s ->
+  5.6 s, same 59 turns / 5,499 actions. ~35 non-`matches!` callers (`let Some(e) = active_static(..) else { continue }`
+  then a match) are unconverted: convert one when a profile names it.
+- ✅ **CR re-pin to 2026-11-06** (`MagicCompRules_20261106.txt`). Old->new map = rule-text equality with rule references
+  normalized (228 moved rules); by hand: 713.4->714.4, 714.2b->715.2b, 716.2a->717.2a, 724.1a/b->725.1a/b, 724.2a/b->725.2a/b
+  (wording edits), and the 712 citations that were already loose, by context: meld -> 713.8, a DFC's front face off the
+  battlefield -> 712.6a, can't be turned face down -> 712.13, transform no-ops -> 701.27d / 701.27e / 701.27j, 712.8 ->
+  712.6d, 712.8c -> 712.6b. `audit_cr_citations` 46 / 74 before and after. CR 903.5e test in `core_rules/commander_mana.rs`.
+- ✅ **Massimo, the Magician** (`decks::cmdr_nov26`, seat 6206) from existing pieces: `ApplyToTargets` 0..1 +
+  `ExileLinkedTo { link: TriggerSource }` + a permanent `GrantTriggeredAbility` whose body is `CopyCardAndCastFree {
+  CardExiledWithSource }`. 🟡 row in INCOMPLETE_CARDS (two links on one creature).
+- Checked, not a bug: the census's never-activated Sands of Delirium {X} mill is a reasonable decline (milling a 90-card
+  library); the activation path does offer {X} abilities.
+- OPEN: Sahir — `GameEvent::LifeLost` carries no cause and the dispatch runs in `perform_action` after the outermost
+  resolution has cleared `resolution_causer`, so "a spell or ability you control causes you to lose exactly 1 life" can't be
+  read off the event; cheapest shape is a synthesized event pushed at the end of the outermost resolution
+  (`effects/mod.rs`, where the causer is still set) for each `LifeLost` of the causer; Eminence exists
+  (`TriggerZone::CommandZoneToo`). Itazura (opponents' secret numbers), Yume (granted assist + the assisting seat's
+  choice), Miss Highwater (contract counters, lose-game token copies).
+- Closing gates: suite **29,603 / 2 / 14** (`CRAB_ANSWER_LOG=strict`, the per-seat pod test skipped) — the two were Massimo's printed toughness (3/2, guessed 3/3), fixed and re-run; the per-seat test both shards green; `--bench` byte-identical, cube / sos / sealed decision-identical, `bench_ab.py` +3.08 % median (noise) — PERF `01WRuXc5Gy`. Sweeps: TODO's Commander NEXT item 5. `cargo clippy --workspace --exclude crabomination_client --all-targets`: 5 pre-existing warnings fixed -> **0** (60 min cold).
+
+## The Commander NEXT's lines as `01WRuXc5Gy` found them (moved verbatim, 2026-11-26)
+
+3. **State (2026-11-26, `01WRuXc3U3`): 6,205 seats**, all residual-free additions (DECK_FEATURES `01WRuXc3U3`). Commander rules: every row of FEATURE_ROADMAP's Commander status is ✅ save the bot's waterbend cast; Rulebreaker now has five allowances.
+5. **Sweeps this run (audit build):** seeds 29443-29445 × 3/4/5/6/8 seats, ~11,400 random games: 2 invariant panics (both fixed, ENGINE_BACKLOG `01WRuXc3U3`), undecided 0.1-0.2 % (CR 104.4a draws and board caps). **Next seed 29446.**
+6. **Next decks** (`edhrec_scan_top.py /tmp/crab_commander` after `commander_backlog.py`'s `load_commanders` with `COMMANDER_PAGES = 68`; check `legalities.commander` — Unfinity / Secret Lair / Dune commanders are not legal): five singles short only their commander — Massimo, Itazura, Yume, Miss Highwater, Sahir — each a primitive; four two-card gaps (Sash and Waistcoat, Chira, Glava, Matoc). Chief Montgomery Scott is five short now.
+7. ⚠ **CR re-pin pending:** the 2026-11-06 CR shifts 713-733 by one (Meld Cards inserted) and adds 903.5e; the tree cites the pinned 20260925 file. One commit: `scripts/cr_diff.py`, then `scripts/audit_cr_citations.py`.
 
 ## FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc3U3`) — `--pod-random`, two pod bugs, 17 seats, two Rulebreakers
 

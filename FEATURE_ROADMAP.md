@@ -21,7 +21,7 @@ the shipped CR text (now `crabomination/MagicCompRules_20261106.txt`, re-pinned
 2026-11-26: 713 Meld inserted, 713-733 cited as 714-734, 903.5e / 903.5f). Don't re-audit; update rows as they
 move. Per-deck card completion lives in `DECK_FEATURES.md`; what each Commander
 session changed lives in ENGINE_BACKLOG under its session id. Last touched
-2026-11-01 by `01WRuXc4Bu` (no row moved: Star Trek seats 6163-6188).
+2026-11-26 by `01WRuXc5Gy` (the CR re-pin; the Rulebreaker row cites 903.5e).
 
 ### Format core (CR 903)
 | Feature | State | Where |
