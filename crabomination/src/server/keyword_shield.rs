@@ -15,7 +15,11 @@
 //!   for any targeted removal an exile its controller may take (Livio's
 //!   aegis, whose may was always declined).
 //!
-//! Commander games only, so two-player play is unchanged.
+//! Commander games only, so two-player play is unchanged — except under the
+//! `RF_DUEL_SHIELD` rating fix, which opens the same picker to a seat with
+//! no commander, restricted to removal that actually takes the creature
+//! (damage short of lethal is let through) and never spending a discard on
+//! a token.
 
 use crate::card::{CardId, Keyword};
 use crate::effect::{Effect, PlayerRef, Selector, ZoneDest};
@@ -118,10 +122,30 @@ pub(super) fn exile_mass_return_pays(state: &GameState, seat: usize, e: &Effect)
     mine > 0 && mine >= theirs
 }
 
+/// The constant damage the first removal leaf of `e` deals to its target,
+/// when that leaf is damage — [`threat`]'s walk, so the two agree on which
+/// leaf is the threat. `None` for destroy / exile, or an amount only known
+/// at resolution.
+fn threat_damage(e: &Effect) -> Option<i32> {
+    match e {
+        Effect::DealDamage { amount: crate::effect::Value::Const(n), .. } if threat(e).is_some() => Some(*n),
+        Effect::Seq(v) => v.iter().find(|e| threat(e).is_some()).and_then(threat_damage),
+        Effect::ApplyToTargets { effect, .. } => threat_damage(effect),
+        _ => None,
+    }
+}
+
 /// A protective activation that saves one of `seat`'s permanents from the
 /// opponent's removal on top of the stack, if one is accepted.
-pub(super) fn pick_keyword_shield(state: &GameState, seat: usize) -> Option<GameAction> {
-    if state.players[seat].commanders.is_empty() {
+///
+/// `duel` (`RF_DUEL_SHIELD`) lets a seat with no commander use it too. The
+/// picker is reactive already (it reads only the top of the stack); the duel
+/// path adds two limits the pod path never had: constant damage that leaves
+/// the victim alive is not answered, and a discard cost (Liliana the
+/// Faultless) is not paid to save a token.
+pub(super) fn pick_keyword_shield(state: &GameState, seat: usize, duel: bool) -> Option<GameAction> {
+    let pod = !state.players[seat].commanders.is_empty();
+    if !pod && !duel {
         return None;
     }
     let (effect, target, owner) = match state.stack.last()? {
@@ -137,6 +161,19 @@ pub(super) fn pick_keyword_shield(state: &GameState, seat: usize) -> Option<Game
         (_, Some(Target::Permanent(id))) if state.battlefield_find(*id).is_some_and(|c| c.controller == seat) => Some(*id),
         _ => return None,
     };
+    // The duel limits. `spend_ok`: may this ability's cost go to the victim?
+    let victim_card = victim.and_then(|v| state.battlefield_find(v));
+    if !pod
+        && let (Some(c), Some(dmg)) = (victim_card, threat_damage(effect))
+        && state.computed_permanent(c.id).is_some_and(|cp| {
+            cp.card_types().contains(&crate::card::CardType::Creature) && dmg < cp.toughness - c.damage as i32
+        })
+    {
+        return None;
+    }
+    let spend_ok = |ab: &crate::effect::ActivatedAbility| {
+        pod || ab.discard_cost.is_none() || !victim_card.is_some_and(|c| c.is_token)
+    };
     let fits = |k: &Keyword| match threat {
         Threat::TargetedLethal => true,
         Threat::TargetedOther => matches!(k, Keyword::Hexproof | Keyword::Shroud),
@@ -145,7 +182,7 @@ pub(super) fn pick_keyword_shield(state: &GameState, seat: usize) -> Option<Game
     for c in state.battlefield.iter().filter(|c| c.controller == seat) {
         for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
             let Some((kw, who)) = shield(&ab.effect) else { continue };
-            if !fits(&kw) {
+            if !fits(&kw) || !spend_ok(ab) {
                 continue;
             }
             // Whom it covers: the source only, a target (the victim), or a
@@ -187,6 +224,9 @@ pub(super) fn pick_keyword_shield(state: &GameState, seat: usize) -> Option<Game
                     | Effect::GrantProtectionFromChosenCardType { what, .. } => what,
                     _ => continue,
                 };
+                if !spend_ok(ab) {
+                    continue;
+                }
                 let aim = match what {
                     Selector::This if v == c.id => None,
                     Selector::Target(_) | Selector::TargetFiltered { .. } => Some(Target::Permanent(v)),
@@ -209,7 +249,7 @@ pub(super) fn pick_keyword_shield(state: &GameState, seat: usize) -> Option<Game
     if let Some(v) = victim {
         for c in state.battlefield.iter().filter(|c| c.controller == seat) {
             for (idx, ab) in c.definition.activated_abilities.iter().enumerate() {
-                if shelter_exile(&ab.effect).is_none() {
+                if shelter_exile(&ab.effect).is_none() || !spend_ok(ab) {
                     continue;
                 }
                 let action = GameAction::ActivateAbility {
@@ -292,12 +332,12 @@ mod tests {
         })
         .expect("Murder");
         g.priority.player_with_priority = 0;
-        assert!(pick_keyword_shield(&g, 0).is_none(), "no mana");
+        assert!(pick_keyword_shield(&g, 0, false).is_none(), "no mana");
         for c in [Color::Green, Color::Blue] {
             g.players[0].mana_pool.add(c, 1);
         }
         g.players[0].mana_pool.add_colorless(1);
-        let a = pick_keyword_shield(&g, 0).expect("shroud");
+        let a = pick_keyword_shield(&g, 0, false).expect("shroud");
         assert!(matches!(a, GameAction::ActivateAbility { card_id, .. } if card_id == mystics));
         g.perform_action(a).expect("activate");
         crate::game::drain_stack(&mut g);
@@ -323,7 +363,7 @@ mod tests {
         })
         .expect("Murder");
         g.priority.player_with_priority = 0;
-        let a = pick_keyword_shield(&g, 0).expect("protection");
+        let a = pick_keyword_shield(&g, 0, false).expect("protection");
         assert!(matches!(a, GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. }
             if card_id == mother && t == bear));
         g.perform_action(a).expect("activate");
@@ -356,7 +396,7 @@ mod tests {
         g.priority.player_with_priority = 0;
         g.players[0].mana_pool.add(Color::White, 1);
         g.players[0].mana_pool.add_colorless(1);
-        let a = pick_keyword_shield(&g, 0).expect("aegis exile");
+        let a = pick_keyword_shield(&g, 0, false).expect("aegis exile");
         assert!(matches!(a, GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. }
             if card_id == livio && t == bear));
         g.perform_action(a).expect("activate");
@@ -392,6 +432,65 @@ mod tests {
         assert!(!exile_mass_return_pays(&g, 0, ret), "two of theirs for one of ours");
     }
 
+    /// `RF_DUEL_SHIELD`: in a duel, Liliana the Faultless pays {1}, tap and a
+    /// discard to give a Craw Wurm hexproof against the Murder aimed at it
+    /// (0 activations in 1,880 FRA games — the picker was Commander-only).
+    /// A Shock that leaves the 6/4 alive is let through, an empty stack
+    /// offers nothing, and without the bit the duel bot never shields.
+    #[test]
+    fn liliana_the_faultless_shields_in_a_duel() {
+        use crate::server::bot::{Bot, EvalWeights, HeuristicBot, RF_DUEL_SHIELD};
+        let board = |removal: Option<fn() -> crate::card::CardDefinition>| {
+            let mut g = crate::game::two_player_game();
+            g.active_player_idx = 1;
+            g.step = TurnStep::PreCombatMain;
+            let liliana = g.add_card_to_battlefield(0, crate::catalog::liliana_the_faultless());
+            g.clear_sickness(liliana);
+            let wurm = g.add_card_to_battlefield(0, crate::catalog::craw_wurm());
+            g.add_card_to_hand(0, crate::catalog::island());
+            g.players[0].mana_pool.add_colorless(1);
+            if let Some(def) = removal {
+                let spell = g.add_card_to_hand(1, def());
+                g.players[1].mana_pool.add(Color::Black, 3);
+                g.players[1].mana_pool.add(Color::Red, 1);
+                g.priority.player_with_priority = 1;
+                g.perform_action(GameAction::CastSpell {
+                    card_id: spell, target: Some(Target::Permanent(wurm)), additional_targets: vec![], mode: None, x_value: None,
+                })
+                .expect("removal");
+            }
+            g.priority.player_with_priority = 0;
+            (g, liliana, wurm)
+        };
+        let shields = |a: &Option<GameAction>, liliana: CardId, wurm: CardId| {
+            matches!(a, Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
+                if *card_id == liliana && *t == wurm)
+        };
+        let off = EvalWeights::fra_fixes_on();
+        let on = EvalWeights { rating_fixes: RF_DUEL_SHIELD, ..off };
+
+        let (mut g, liliana, wurm) = board(Some(crate::catalog::murder));
+        assert!(pick_keyword_shield(&g, 0, false).is_none(), "no commander, no bit");
+        let a = HeuristicBot::with_weights(off).next_action(&g, 0);
+        assert!(!shields(&a, liliana, wurm), "off: the duel bot lets the Murder resolve, got {a:?}");
+        let a = HeuristicBot::with_weights(on).next_action(&g, 0);
+        assert!(shields(&a, liliana, wurm), "on: hexproof in answer to the Murder, got {a:?}");
+        g.perform_action(a.unwrap()).expect("activate");
+        crate::game::drain_stack(&mut g);
+        assert!(g.battlefield_find(wurm).is_some(), "the Murder lost its target");
+        assert!(g.players[0].hand.is_empty(), "the discard was paid");
+
+        let (g, liliana, wurm) = board(Some(crate::catalog::shock));
+        assert!(pick_keyword_shield(&g, 0, true).is_none(), "2 damage leaves a 6/4 alive");
+        let a = HeuristicBot::with_weights(on).next_action(&g, 0);
+        assert!(!shields(&a, liliana, wurm), "got {a:?}");
+
+        let (g, liliana, wurm) = board(None);
+        assert!(pick_keyword_shield(&g, 0, true).is_none(), "nothing on the stack");
+        let a = HeuristicBot::with_weights(on).next_action(&g, 0);
+        assert!(!shields(&a, liliana, wurm), "got {a:?}");
+    }
+
     /// Together Forever insures a countered creature against Murder; an
     /// uncountered one is outside its filter.
     #[test]
@@ -415,7 +514,7 @@ mod tests {
             .expect("Murder");
             g.priority.player_with_priority = 0;
             g.players[0].mana_pool.add_colorless(1);
-            let picked = pick_keyword_shield(&g, 0);
+            let picked = pick_keyword_shield(&g, 0, false);
             assert_eq!(
                 matches!(picked, Some(GameAction::ActivateAbility { card_id, target: Some(Target::Permanent(t)), .. })
                     if card_id == tf && t == bear),

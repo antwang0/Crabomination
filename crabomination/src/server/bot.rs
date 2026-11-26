@@ -8434,6 +8434,19 @@ fn settle_answer_with(
     answer: crate::decision::DecisionAnswer,
     nested: &dyn Fn(&crate::decision::Decision) -> Option<crate::decision::DecisionAnswer>,
 ) -> Option<i32> {
+    settle_answer_plus(state, seat, w, answer, nested, &|_| 0)
+}
+
+/// [`settle_answer_with`], plus `term` of the settled state — what the
+/// material eval cannot see there (`library_top_term`).
+fn settle_answer_plus(
+    state: &GameState,
+    seat: usize,
+    w: &EvalWeights,
+    answer: crate::decision::DecisionAnswer,
+    nested: &dyn Fn(&crate::decision::Decision) -> Option<crate::decision::DecisionAnswer>,
+    term: &dyn Fn(&GameState) -> i32,
+) -> Option<i32> {
     let mut g = state.clone();
     dry_run(&mut g, GameAction::SubmitDecision(answer)).ok()?;
     let mut fuel = 64u32;
@@ -8471,7 +8484,47 @@ fn settle_answer_with(
     }
     let v = eval_material(&g, seat, w);
     super::leaf_capture::maybe(&g, seat, v);
-    Some(v)
+    Some(v.saturating_add(term(&g)))
+}
+
+/// `RF_LIBRARY_TOP`: what `seat` gets from a permanent of its own that an
+/// option moved from the battlefield to the top of its library (Clash of
+/// Elements' "top and take 2" against "bottom"). The material eval has no
+/// library term, so top and bottom scored alike and the life always decided:
+/// 13 of 13 traced Clashes went to the bottom.
+///
+/// The card comes back as the owner's next draw, so it is worth what it
+/// would be in hand less the draw it replaces. A hand card is a flat four
+/// units, a two-drop's worth at two units a mana value; the known card is
+/// priced on that scale by its own mana value, so the term is
+/// `2 * (mana value - 2)` units — nothing for a two-drop or a mana dork
+/// (the bottom, and the life kept), six for a five-drop. Mana value rather
+/// than `permanent_value`: profiles price a body very differently
+/// (`creature_base` is ten units in some) and this has to trade against the
+/// same life curve under all of them. A token never reaches a library.
+///
+/// No term when the option cost life and what is left is within the opposing
+/// creatures' combined power: the next swing decides the game before the
+/// draw matters.
+fn library_top_term(before: &GameState, after: &GameState, seat: usize, w: &EvalWeights) -> i32 {
+    let Some(top) = after.players.get(seat).and_then(|p| p.library.iter().next()) else { return 0 };
+    let Some(was) = before.battlefield_find(top.id) else { return 0 };
+    if was.is_token || was.owner != seat || was.definition.is_land() {
+        return 0;
+    }
+    let life = after.effective_life(seat);
+    if life < before.effective_life(seat) {
+        let incoming = after
+            .battlefield
+            .iter()
+            .filter(|c| !after.same_team(c.controller, seat) && c.definition.is_creature())
+            .filter_map(|c| after.computed_permanent(c.id).map(|cp| cp.power.max(0)))
+            .fold(0i32, |a, p| a.saturating_add(p));
+        if life <= incoming {
+            return 0;
+        }
+    }
+    (2 * (was.printed_cmc() as i32 - 2)).max(0) * w.unit
 }
 
 /// Pick a `Decision::ChooseOption` answer by settled outcome
@@ -8494,7 +8547,12 @@ fn decide_option_by_outcome(
         let alike = |d: &Decision| {
             matches!(d, Decision::ChooseOption { source: s, .. } if *s == source).then_some(answer.clone())
         };
-        let Some(score) = settle_answer_with(state, seat, w, answer.clone(), &alike) else {
+        let settled = if w.rating_fixes & RF_LIBRARY_TOP != 0 {
+            settle_answer_plus(state, seat, w, answer.clone(), &alike, &|g| library_top_term(state, g, seat, w))
+        } else {
+            settle_answer_with(state, seat, w, answer.clone(), &alike)
+        };
+        let Some(score) = settled else {
             continue;
         };
         if best.is_none_or(|(b, _)| score > b) {
@@ -16742,11 +16800,7 @@ pub mod menu_census {
     /// The pick's own price of a line: the temporary pin, else the settled
     /// outcome, else the baseline — exactly `pick_by_outcome`'s rule.
     fn price(state: &GameState, seat: usize, a: &GameAction, baseline: i32, w: &EvalWeights) -> i32 {
-        if super::action_outcome_is_temporary(state, a) {
-            baseline
-        } else {
-            super::evaluate_action_outcome(state, seat, a, None, w).unwrap_or(baseline)
-        }
+        super::pinned_or_outcome(state, seat, a, None, baseline, w)
     }
 
     /// The X an action would cast with, on the shapes the enumerators size.
@@ -23312,11 +23366,42 @@ fn is_noop_cast(state: &GameState, seat: usize, f: &Finalist, w: &EvalWeights) -
 fn pick_by_outcome_with_cut(
     state: &GameState,
     seat: usize,
-    finalists: Vec<Finalist>,
+    mut finalists: Vec<Finalist>,
     cut: Vec<(i32, GameAction)>,
     rest: Option<&mut Vec<(i32, Finalist)>>,
     w: &EvalWeights,
 ) -> Option<Finalist> {
+    // `RF_SHRINK_EVAL`: a sweep that is all shrink and gains nothing is not
+    // a line. Dropped here, ahead of the lone-finalist return, which would
+    // cast it unpriced.
+    //
+    // `refused` is the best outcome among the dropped sweeps, each at or
+    // under the baseline. A pick that scores below it is worse than a line
+    // already refused for gaining nothing, so the tick passes instead: with
+    // the sweep gone, Rise's other mode (draw and lose life equal to our
+    // greatest power) would otherwise be the lone finalist at 2 life.
+    let mut refused: Option<i32> = None;
+    if w.rating_fixes & RF_SHRINK_EVAL != 0 && !policy_ranking(w) {
+        let mut baseline = None;
+        finalists.retain(|f| {
+            if !matches!(f.action, GameAction::CastSpell { .. }) {
+                return true;
+            }
+            let b = *baseline.get_or_insert_with(|| eval_material(state, seat, w));
+            match shrink_read(state, seat, &f.action, f.settled.as_deref(), b, w) {
+                ShrinkRead::Losing(ev) => {
+                    refused = Some(refused.map_or(ev, |r| r.max(ev)));
+                    false
+                }
+                _ => true,
+            }
+        });
+        if let (Some(r), [f]) = (refused, finalists.as_slice())
+            && pinned_or_outcome(state, seat, &f.action, f.settled.as_deref(), baseline.unwrap_or(r), w) < r
+        {
+            return None;
+        }
+    }
     // Under the census a lone finalist is still a pick (an X spell alone on
     // the menu is exactly the X decision it counts), so it is scored too;
     // under X by outcome a lone X finalist has its X to decide.
@@ -23347,11 +23432,8 @@ fn pick_by_outcome_with_cut(
             let ev = if by_policy {
                 policy_rank_score(state, seat, &f.action, f.settled.as_deref(), w)
                     .unwrap_or(baseline)
-            } else if action_outcome_is_temporary(state, &f.action) {
-                baseline
             } else {
-                evaluate_action_outcome(state, seat, &f.action, f.settled.as_deref(), w)
-                    .unwrap_or(baseline)
+                pinned_or_outcome(state, seat, &f.action, f.settled.as_deref(), baseline, w)
             };
             (ev, f)
         })
@@ -23381,6 +23463,9 @@ fn pick_by_outcome_with_cut(
         .enumerate()
         .max_by_key(|(_, (ev, f))| (*ev, f.score))
         .map(|(i, _)| i)?;
+    if refused.is_some_and(|r| evd[best].0 < r) {
+        return None;
+    }
     if menu_census::on() {
         menu_census::tick(state, seat, &evd, best, w);
         let third = evd.last().map(|(_, f)| f.score).unwrap_or(0);
@@ -23430,11 +23515,7 @@ fn better_x(
         if !state.would_accept(alt.clone()) {
             continue;
         }
-        let alt_ev = if action_outcome_is_temporary(state, &alt) {
-            baseline
-        } else {
-            evaluate_action_outcome(state, seat, &alt, None, w).unwrap_or(baseline)
-        };
+        let alt_ev = pinned_or_outcome(state, seat, &alt, None, baseline, w);
         if alt_ev > ev && best.as_ref().is_none_or(|(_, b)| alt_ev > *b) {
             best = Some((alt, alt_ev));
         }
@@ -23609,6 +23690,125 @@ pub(super) fn action_outcome_is_temporary(state: &GameState, action: &GameAction
     };
     let Some(card) = state.find_card_anywhere(card_id) else { return false };
     contains_temporary_leaf(mode_branch(&card.definition.effect, mode))
+}
+
+/// How `RF_SHRINK_EVAL` prices a cast — see [`shrink_read`].
+enum ShrinkRead {
+    /// Bit off, not a shrink, or nothing died: the pick's old rule.
+    No,
+    /// Something died: the settled outcome, the shrink itself expired.
+    Priced(i32),
+    /// An untargeted sweep that is all shrink (Rise of the Deathbringer's
+    /// -3/-3 mode) and gains nothing: it killed no creature (carries the
+    /// baseline), or the deaths leave its caster no better off (carries
+    /// that outcome). The scored pick drops it rather than cast it as the
+    /// last finalist standing.
+    Losing(i32),
+}
+
+/// `RF_SHRINK_EVAL`: an until-end-of-turn -X/-X is pinned to the baseline
+/// with every other temporary stat change ([`action_outcome_is_temporary`]),
+/// but the creatures it kills stay dead. So Rise of the Deathbringer's sweep
+/// was cast on static score alone: 5 of 29 killed no opposing creature and 5
+/// killed more of the caster's than of the opponent's.
+///
+/// Under the bit a cast whose effect can lower toughness until end of turn
+/// is settled, and when a creature left the battlefield it is priced on that
+/// board — after the pump's own continuous effects are taken back out, so
+/// the survivors score at their real size. With no death the old pin stands
+/// (a positive pump, or a shrink that kills nothing, is the baseline as
+/// before), except for the untargeted all-shrink sweep, which has nothing
+/// else to offer and is [`ShrinkRead::Losing`]. Lookahead follow-ups are
+/// not walked. A bounce in the same effect keeps the old rule: its
+/// permanent leaving is not a death.
+fn shrink_read(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+    settled: Option<&GameState>,
+    baseline: i32,
+    w: &EvalWeights,
+) -> ShrinkRead {
+    use crate::effect::{Duration, Value, ZoneDest};
+    use crate::game::layers::{EffectDuration, Layer};
+    if w.rating_fixes & RF_SHRINK_EVAL == 0 {
+        return ShrinkRead::No;
+    }
+    let GameAction::CastSpell { card_id, mode, .. } = action else { return ShrinkRead::No };
+    let Some(card) = state.find_card_anywhere(*card_id) else { return ShrinkRead::No };
+    let eff = mode_branch(&card.definition.effect, *mode);
+    let shrinks = eff.any_nested(&|e| {
+        matches!(e, Effect::PumpPT { toughness, duration: Duration::EndOfTurn | Duration::EndOfCombat, .. }
+            if !matches!(toughness, Value::Const(t) if *t >= 0))
+    });
+    if !shrinks || eff.any_nested(&|e| matches!(e, Effect::Move { to: ZoneDest::Hand(_), .. })) {
+        return ShrinkRead::No;
+    }
+    let sweep = !eff.requires_target() && only_temporary_stats(eff) && stat_change_kills(eff);
+    // The same redeal the outcome eval judges every finalist against.
+    let redeal = (w.determinize > 0).then(|| sim_start_state(state, seat, w, 0));
+    let (from, settled) = match &redeal {
+        Some(g) => (g, None),
+        None => (state, settled),
+    };
+    let Some(mut g) = settle_to_quiescence(from, action, settled, w) else { return ShrinkRead::No };
+    let died = from.battlefield.iter().any(|c| c.definition.is_creature() && g.battlefield_find(c.id).is_none());
+    if !died {
+        return if sweep { ShrinkRead::Losing(baseline) } else { ShrinkRead::No };
+    }
+    let old = |ts: u64| from.continuous_effects.iter().any(|e| e.timestamp == ts);
+    let expires = |e: &crate::game::layers::ContinuousEffect| {
+        matches!(e.layer, Layer::L7PowerTough)
+            && matches!(e.duration, EffectDuration::UntilEndOfTurn | EffectDuration::UntilEndOfCombat)
+            && !old(e.timestamp)
+    };
+    if g.continuous_effects.iter().any(expires) {
+        g.continuous_effects.retain(|e| !expires(e));
+    }
+    // An end-of-turn pump lives on the card (`CardInstance::pump`), not in
+    // the layer list: put each survivor's bonus back to what it was.
+    let pumped: Vec<(CardId, i32, i32)> = from
+        .battlefield
+        .iter()
+        .filter(|c| {
+            g.battlefield_find(c.id)
+                .is_some_and(|a| (a.power_bonus, a.toughness_bonus) != (c.power_bonus, c.toughness_bonus))
+        })
+        .map(|c| (c.id, c.power_bonus, c.toughness_bonus))
+        .collect();
+    for (id, p, t) in pumped {
+        if let Some(c) = g.battlefield_find_mut(id) {
+            c.power_bonus = p;
+            c.toughness_bonus = t;
+        }
+    }
+    match score_settled_state(&g, seat, w) {
+        Some(ev) if sweep && ev <= baseline => ShrinkRead::Losing(ev),
+        Some(ev) => ShrinkRead::Priced(ev),
+        None => ShrinkRead::No,
+    }
+}
+
+/// The scored pick's price of `action`: [`shrink_read`]'s under
+/// `RF_SHRINK_EVAL`, else the baseline for a known-temporary cast, else the
+/// settled outcome.
+fn pinned_or_outcome(
+    state: &GameState,
+    seat: usize,
+    action: &GameAction,
+    settled: Option<&GameState>,
+    baseline: i32,
+    w: &EvalWeights,
+) -> i32 {
+    match shrink_read(state, seat, action, settled, baseline, w) {
+        ShrinkRead::Priced(ev) | ShrinkRead::Losing(ev) => return ev,
+        ShrinkRead::No => {}
+    }
+    if action_outcome_is_temporary(state, action) {
+        baseline
+    } else {
+        evaluate_action_outcome(state, seat, action, settled, w).unwrap_or(baseline)
+    }
 }
 
 /// A pure temporary-pump instant aimed at **one** target creature (Giant
@@ -24324,7 +24524,9 @@ fn pick_stack_response_top(state: &GameState, seat: usize, w: &EvalWeights) -> O
     .or_else(|| pick_sweeper_shield(state, seat, w))
     .or_else(|| pick_retarget_shield(state, seat, w))
     .or_else(|| super::regenerate::pick_regen_response(state, seat).map(Picked::Plain))
-    .or_else(|| super::keyword_shield::pick_keyword_shield(state, seat).map(Picked::Plain));
+    .or_else(|| {
+        super::keyword_shield::pick_keyword_shield(state, seat, w.rating_fixes & RF_DUEL_SHIELD != 0).map(Picked::Plain)
+    });
     if picked.is_some() {
         response_census::add(9, 1);
     }
@@ -24824,11 +25026,7 @@ pub(crate) fn main_phase_candidates_for_mcts(
             if menu_census::action_x(a).is_none() {
                 continue;
             }
-            let ev = if action_outcome_is_temporary(state, a) {
-                baseline
-            } else {
-                evaluate_action_outcome(state, seat, a, None, w).unwrap_or(baseline)
-            };
+            let ev = pinned_or_outcome(state, seat, a, None, baseline, w);
             if let Some((alt, _)) = better_x(state, seat, a, ev, baseline, w) {
                 *a = alt;
             }
@@ -37605,5 +37803,157 @@ mod fra_audit_tests {
         assert_eq!(blocks(&g, 1, false), 1, "one uniform redeal walks into it");
         assert_eq!(blocks(&g, 1, true), 0, "the attack is read as a trick");
         assert_eq!(blocks(&board(false), 1, true), 1, "no unseen trick, nothing to read");
+    }
+}
+
+#[cfg(test)]
+mod shrink_and_library_top_tests {
+    use super::*;
+    use crate::catalog;
+    use crate::game::two_player_game;
+    use crate::game::types::{Target, TurnStep};
+    use crate::mana::Color;
+
+    type Board = &'static [fn() -> crate::card::CardDefinition];
+
+    /// `RF_SHRINK_EVAL`: Rise of the Deathbringer's "all creatures get -3/-3"
+    /// is priced by what it kills. Pinned to the baseline it was cast on
+    /// static score — into a board where only the caster's creatures die, or
+    /// where nothing does. `mine` / `theirs` are each side's creatures; the
+    /// answer is whether the sweep mode is the bot's play.
+    #[test]
+    fn rise_of_the_deathbringer_sweeps_only_when_it_wins_the_board() {
+        let play = |mine: Board, theirs: Board, life: i32, w: &EvalWeights| {
+            let mut g = two_player_game();
+            g.players[0].life = life;
+            g.active_player_idx = 0;
+            g.step = TurnStep::PreCombatMain;
+            g.priority.player_with_priority = 0;
+            for (seat, side) in [(0, mine), (1, theirs)] {
+                for def in side {
+                    g.add_card_to_battlefield(seat, def());
+                }
+                for _ in 0..10 {
+                    g.add_card_to_library(seat, catalog::swamp());
+                }
+            }
+            let rise = g.add_card_to_hand(0, catalog::rise_of_the_deathbringer());
+            g.players[0].mana_pool.add(Color::Black, 5);
+            // The mode Rise was cast in, if it was: 0 draws, 1 sweeps.
+            match main_phase_action_with(&g, 0, true, w).action {
+                GameAction::CastSpell { card_id, mode, .. } if card_id == rise => mode,
+                _ => None,
+            }
+        };
+        let off = EvalWeights::fra_fixes_on();
+        let on = EvalWeights { rating_fixes: RF_SHRINK_EVAL, ..off };
+        let bears: Board = &[catalog::grizzly_bears, catalog::grizzly_bears];
+        let wurm: Board = &[catalog::craw_wurm];
+        // Two of theirs die, our 6/4 lives. (At 6 life the draw mode — draw
+        // 6, lose 6 — is out of the comparison.)
+        assert_eq!(play(wurm, bears, 6, &on), Some(1), "kills two of theirs and none of ours");
+        // Only ours dies. At 1 life the draw mode (draw 1, lose 1) is no
+        // alternative, so the old pin cast the sweep at the baseline — and
+        // the hold gate let it through on the survivors' shrunken stats.
+        // Now the sweep is refused and the losing draw is not cast in its
+        // place.
+        let elves: Board = &[catalog::llanowar_elves];
+        let wurms: Board = &[catalog::craw_wurm, catalog::craw_wurm];
+        assert_eq!(play(elves, wurms, 1, &off), Some(1), "today: cast blind into our own board");
+        assert_eq!(play(elves, wurms, 1, &on), None, "kills only our own creature");
+        assert_ne!(play(bears, wurm, 20, &on), Some(1), "nor with the draw mode live");
+        // Nothing dies.
+        assert_eq!(play(&[], wurm, 20, &off), Some(1), "today: cast for nothing");
+        assert_ne!(play(&[], wurm, 20, &on), Some(1), "kills nothing");
+    }
+
+    /// `RF_SHRINK_EVAL` leaves a positive pump on the old pin: Giant Growth
+    /// is not a shrink, and a shrink that kills nothing but is aimed
+    /// (Last Gasp at a 6/4) keeps the baseline.
+    #[test]
+    fn shrink_read_leaves_pumps_and_dry_shrinks_on_the_baseline() {
+        let mut g = two_player_game();
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        let wurm = g.add_card_to_battlefield(1, catalog::craw_wurm());
+        let enemy_bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let growth = g.add_card_to_hand(0, catalog::giant_growth());
+        let gasp = g.add_card_to_hand(0, catalog::last_gasp());
+        g.players[0].mana_pool.add(Color::Green, 1);
+        g.players[0].mana_pool.add(Color::Black, 2);
+        let w = EvalWeights { rating_fixes: RF_SHRINK_EVAL, ..EvalWeights::fra_fixes_on() };
+        let baseline = eval_material(&g, 0, &w);
+        let cast = |card_id, t| GameAction::CastSpell {
+            card_id,
+            target: Some(Target::Permanent(t)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        };
+        assert!(matches!(shrink_read(&g, 0, &cast(growth, bear), None, baseline, &w), ShrinkRead::No));
+        assert_eq!(pinned_or_outcome(&g, 0, &cast(growth, bear), None, baseline, &w), baseline, "+3/+3 is the baseline");
+        assert!(matches!(shrink_read(&g, 0, &cast(gasp, wurm), None, baseline, &w), ShrinkRead::No), "a 6/4 lives");
+        assert_eq!(pinned_or_outcome(&g, 0, &cast(gasp, wurm), None, baseline, &w), baseline);
+        let kill = pinned_or_outcome(&g, 0, &cast(gasp, enemy_bear), None, baseline, &w);
+        assert!(kill > baseline, "the dead bear is priced: {kill} vs {baseline}");
+        let off = EvalWeights::fra_fixes_on();
+        assert_eq!(pinned_or_outcome(&g, 0, &cast(gasp, enemy_bear), None, baseline, &off), baseline, "off: the pin");
+    }
+
+    /// `RF_LIBRARY_TOP`: Clash of Elements' owner's choice. A six-drop goes
+    /// back on top for 2 damage at 20 life; a one-mana dork is not worth a
+    /// draw and 2 life; at 2 life the damage is the game. Off, the material
+    /// eval sees only the life and every permanent went to the bottom.
+    #[test]
+    fn clash_of_elements_owner_keeps_a_bomb_on_top() {
+        use crate::decision::{Decision, DecisionAnswer};
+        let choice = |def: fn() -> crate::card::CardDefinition, life: i32, w: &EvalWeights| {
+            let mut g = two_player_game();
+            for p in &mut g.players {
+                p.wants_ui = true;
+            }
+            g.active_player_idx = 0;
+            g.step = TurnStep::PreCombatMain;
+            g.priority.player_with_priority = 0;
+            g.players[1].life = life;
+            for seat in 0..2 {
+                for _ in 0..10 {
+                    g.add_card_to_library(seat, catalog::island());
+                }
+            }
+            let victim = g.add_card_to_battlefield(1, def());
+            let clash = g.add_card_to_hand(0, catalog::clash_of_elements());
+            g.players[0].mana_pool.add(Color::Blue, 2);
+            g.players[0].mana_pool.add(Color::Red, 1);
+            g.perform_action(GameAction::CastSpell {
+                card_id: clash,
+                target: Some(Target::Permanent(victim)),
+                additional_targets: vec![],
+                mode: None,
+                x_value: None,
+            })
+            .expect("cast");
+            let asked = loop {
+                match g.pending_decision.clone() {
+                    Some(p) if matches!(p.decision, Decision::ChooseOption { .. }) => break p,
+                    Some(p) => panic!("unexpected ask {:?}", p.decision),
+                    None => {
+                        assert!(!g.stack.is_empty(), "the owner was never asked");
+                        g.perform_action(GameAction::PassPriority).expect("pass");
+                    }
+                }
+            };
+            assert_eq!(asked.acting_player(), 1, "the owner chooses");
+            decide_pending_policy(&g, 1, w, &asked.decision, true)
+        };
+        let (bottom, top) = (DecisionAnswer::Amount(0), DecisionAnswer::Amount(1));
+        let off = EvalWeights::fra_fixes_on();
+        let on = EvalWeights { rating_fixes: RF_LIBRARY_TOP, ..off };
+        assert_eq!(choice(catalog::shivan_dragon, 20, &off), bottom, "today: the life decides");
+        assert_eq!(choice(catalog::shivan_dragon, 20, &on), top, "a six-drop is worth 2 life");
+        assert_eq!(choice(catalog::llanowar_elves, 20, &on), bottom, "a dork is not worth a draw");
+        assert_eq!(choice(catalog::shivan_dragon, 2, &on), bottom, "2 damage at 2 life loses");
     }
 }
