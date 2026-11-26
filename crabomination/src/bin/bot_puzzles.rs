@@ -58,6 +58,17 @@ fn bot_for(profile: &str) -> Option<Box<dyn Bot>> {
         }
         return Some(Box::new(HeuristicBot::with_weights(p3(heuristic_weights(base)?))));
     }
+    // `<profile>+rf:<names>`: the profile with those `EvalWeights::rating_fixes`
+    // bits on (`discard,aim,...` or `all`).
+    if let Some((base, names)) = profile.split_once("+rf:") {
+        let mask = crabomination::server::bot::rating_fix_mask(names)?;
+        if let Some(cfg) = mcts_cfg(base) {
+            let weights = EvalWeights { rating_fixes: mask, ..cfg.weights };
+            return Some(Box::new(MctsBot::new(MctsConfig { weights, ..cfg })));
+        }
+        let w = heuristic_weights(base)?;
+        return Some(Box::new(HeuristicBot::with_weights(EvalWeights { rating_fixes: mask, ..w })));
+    }
     // `<profile>+cfix`: the profile with `EvalWeights::color_fixing` on.
     if let Some(base) = profile.strip_suffix("+cfix") {
         if let Some(cfg) = mcts_cfg(base) {
