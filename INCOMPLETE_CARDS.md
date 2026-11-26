@@ -2330,3 +2330,11 @@ approximated):
 | Card | Printed | Approximation |
 |---|---|---|
 | 🟡 Jean-Luc, Mon Capitaine | Faeries counted against the creatures you "already control" (CR 614.12) | the entrant itself is excluded (`DistinctCreatureTypesAmongYourOtherNonBorgCreatures`), but in a batch of Faeries entering together (Data's two) the later ones see the earlier ones' Faerie type — one counter more |
+
+## EDHREC singles short only their commander (2026-11-26, `01WRuXc5Gy`)
+
+`decks::cmdr_nov26`. Open 🟡 rows:
+
+| Card | Printed | Approximation |
+|---|---|---|
+| 🟡 Massimo, the Magician | each granted trigger copies "the exiled card" — its own | the exiled card is linked to the creature (`ExileLinkedTo`), so a creature that entered twice under Massimo (or under two Massimos) holds two triggers that each copy every card linked to it |
