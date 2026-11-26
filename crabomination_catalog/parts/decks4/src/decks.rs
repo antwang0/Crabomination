@@ -1458,3 +1458,6 @@ pub use trek_singles6::*;
 #[path = "../../../src/sets/decks/trek_singles7.rs"]
 mod trek_singles7;
 pub use trek_singles7::*;
+#[path = "../../../src/sets/decks/trek_singles8.rs"]
+mod trek_singles8;
+pub use trek_singles8::*;

@@ -19509,6 +19509,17 @@ static DECKS: &[Factory] = &[
     super::decks::armus_skin_of_evil,
     super::decks::helas_arcanum,
     super::decks::dr_leonard_bones_mccoy,
+    // trek_singles8 (Star Trek EDHREC closers, eighth batch)
+    super::decks::commander_raffi_musiker,
+    super::decks::culber_and_stamets_star_crossed,
+    super::decks::janice_rand_essential_aide,
+    super::decks::laan_noonien_singh_security,
+    super::decks::lieutenant_nyota_uhura,
+    super::decks::rok_tahk_budding_scientist,
+    super::decks::georgiou_terran_emperor,
+    super::decks::cruel_bargain,
+    super::decks::daniels_temporal_agent,
+    super::decks::stray_from_history,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

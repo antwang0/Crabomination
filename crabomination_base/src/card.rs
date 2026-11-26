@@ -433,6 +433,8 @@ pub enum CreatureType {
     Q,
     // Star Trek (Lt. Arex, Ever-Adapting).
     Edosian,
+    // Star Trek (Rok-Tahk, Budding Scientist).
+    Brikar,
 }
 
 /// Land subtypes (basic land types + others).

@@ -400,3 +400,4 @@ mod trek_singles4;
 mod trek_singles5;
 mod trek_singles6;
 mod trek_singles7;
+mod trek_singles8;
