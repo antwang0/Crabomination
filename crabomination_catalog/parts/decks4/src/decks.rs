@@ -1464,3 +1464,6 @@ pub use trek_singles8::*;
 #[path = "../../../src/sets/decks/cmdr_nov26.rs"]
 mod cmdr_nov26;
 pub use cmdr_nov26::*;
+#[path = "../../../src/sets/decks/cmdr_nov26_b.rs"]
+mod cmdr_nov26_b;
+pub use cmdr_nov26_b::*;

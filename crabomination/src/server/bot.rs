@@ -6367,6 +6367,7 @@ pub fn decide_optional_trigger(
             (false, false)
         }
         K::MayBody => match super::accept_offer::accept_offer_answer(state, seat, source, description)
+            .or_else(|| super::accept_offer::stand_down_answer(state, seat, source, description))
             .or_else(|| super::keyword_shield::shelter_exile_answer(state, seat, source, description))
             .or(shed)
         {

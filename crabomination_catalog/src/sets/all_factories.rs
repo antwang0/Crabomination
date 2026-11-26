@@ -19535,6 +19535,11 @@ static DECKS: &[Factory] = &[
     super::decks::swampbenders,
     // cmdr_nov26 (EDHREC singles short only their commander)
     super::decks::massimo_the_magician,
+    // cmdr_nov26_b (EDHREC singles short one card, second batch)
+    super::decks::sahir_visitor_in_darkness,
+    super::decks::peace_in_our_time,
+    super::decks::creeping_dread,
+    super::decks::dominion_infiltration,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

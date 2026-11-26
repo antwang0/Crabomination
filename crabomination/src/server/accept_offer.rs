@@ -105,3 +105,41 @@ mod tests {
         assert_eq!(accept_offer_answer(&g, 1, bb, ask), Some(false), "4 life does not");
     }
 }
+
+/// `Some(answer)` for a "you may [draw]; if you do, you can't attack this turn"
+/// ask another seat's permanent puts to the active player (`MayDoBy` with a
+/// `CantAttackThisTurn` body — Peace in Our Time). The generic screen sees no
+/// self-cost and takes every draw, so no one ever attacked into it. The
+/// source's controller takes it (its counter is their win); anyone else takes
+/// it only with no creature ready to attack.
+pub(super) fn stand_down_answer(state: &GameState, seat: usize, source: CardId, description: &str) -> Option<bool> {
+    fn stands_down(e: &Effect, desc: &str) -> bool {
+        match e {
+            Effect::MayDoBy { description, body, .. } if description == desc => {
+                matches!(&**body, Effect::Seq(v) if v.iter().any(|x| matches!(x, Effect::CantAttackThisTurn { .. })))
+            }
+            Effect::Seq(v) => v.iter().any(|x| stands_down(x, desc)),
+            _ => false,
+        }
+    }
+    let c = state.battlefield.find_by_id(source)?;
+    if !c.definition.triggered_abilities.iter().any(|t| stands_down(&t.effect, description)) {
+        return None;
+    }
+    if seat == c.controller {
+        return Some(true);
+    }
+    let ready = state.battlefield.iter().any(|p| {
+        p.controller == seat
+            && !p.tapped
+            && state.computed_permanent(p.id).is_some_and(|cp| {
+                use crate::card::Keyword;
+                let kws = cp.keywords();
+                cp.card_types().contains(&crate::card::CardType::Creature)
+                    && cp.power > 0
+                    && !kws.contains(&Keyword::Defender)
+                    && (!p.summoning_sick || kws.contains(&Keyword::Haste))
+            })
+    });
+    Some(!ready)
+}

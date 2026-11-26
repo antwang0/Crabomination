@@ -1192,6 +1192,8 @@ pub enum CounterType {
     Midway,
     /// Beckett Mariner, Impetuous Ensign's promotion counters.
     Promotion,
+    /// Peace in Our Time's tally of skipped attacks.
+    Peace,
 }
 
 /// Every zone a card can occupy.
