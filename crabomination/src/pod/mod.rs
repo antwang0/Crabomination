@@ -37579,6 +37579,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::VOQ_COMMANDERS,
             main: decks::VOQ_MAIN,
         },
+        // Seat 6189: Janice Rand, Essential Aide's EDHREC average deck. `--pod-decks 6189`.
+        PodDeck {
+            name: "Janice Rand, Essential Aide (G)",
+            commanders: decks::JANICE_RAND_COMMANDERS,
+            main: decks::JANICE_RAND_MAIN,
+        },
+        // Seat 6190: Lieutenant Nyota Uhura's EDHREC average deck. `--pod-decks 6190`.
+        PodDeck {
+            name: "Lieutenant Nyota Uhura (U)",
+            commanders: decks::LIEUTENANT_NYOTA_UHURA_COMMANDERS,
+            main: decks::LIEUTENANT_NYOTA_UHURA_MAIN,
+        },
+        // Seat 6191: Rok-Tahk, Budding Scientist's EDHREC average deck. `--pod-decks 6191`.
+        PodDeck {
+            name: "Rok-Tahk, Budding Scientist (G)",
+            commanders: decks::ROK_TAHK_COMMANDERS,
+            main: decks::ROK_TAHK_MAIN,
+        },
+        // Seat 6192: Georgiou, Terran Emperor's EDHREC average deck. `--pod-decks 6192`.
+        PodDeck {
+            name: "Georgiou, Terran Emperor (B)",
+            commanders: decks::GEORGIOU_COMMANDERS,
+            main: decks::GEORGIOU_MAIN,
+        },
+        // Seat 6193: Daniels, Temporal Agent's EDHREC average deck. `--pod-decks 6193`.
+        PodDeck {
+            name: "Daniels, Temporal Agent (BG)",
+            commanders: decks::DANIELS_COMMANDERS,
+            main: decks::DANIELS_MAIN,
+        },
     ]
 }
 
@@ -45703,6 +45733,11 @@ mod tests {
             ("Will Riker, First in the Field", &[0x222A]),
             ("Dr. Leonard \"Bones\" McCoy", &[0x222B]),
             ("Voq, Torchbearer", &[0x222C]),
+            ("Janice Rand, Essential Aide", &[0x222D]),
+            ("Lieutenant Nyota Uhura", &[0x222E]),
+            ("Rok-Tahk, Budding Scientist", &[0x222F]),
+            ("Georgiou, Terran Emperor", &[0x2230]),
+            ("Daniels, Temporal Agent", &[0x2231]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
