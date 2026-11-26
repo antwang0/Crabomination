@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-26 (Commander run, `01WRuXc3U3`) — guardrail; restart and shuffle-self fixes, land-play static read
+
+Touched shared paths: `player_may_play_lands_from_graveyard` reads each static through `active_static` (one call per
+static of the seat's permanents, on the land-from-graveyard path only); `restart_game` filters tokens; the
+`ShuffleSelfIntoLibrary` arm asks `resolving_spell` once; `bottom_self_cost` reads the source's zone. Everything else is
+catalog / pod seats / format validation. `release`, 4-core box (Xeon @ 2.30GHz), base `e52f7aad8` (the run's start) vs
+tip `cec493a0f`:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the base; determinism ok,
+                 thread_determinism ok (3 vs 1); peak_rss_mib 57.3
+pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: 367,206 / 213,898 / 522,778, 0 stalls —
+                 decision-identical base vs tip
+bench_ab.py      16 pairs: B/A median +0.04 %, mean +0.15 % (sd 3.36) — noise; no regression
+```
+
 ### 2026-11-01 (Commander run, `01WRuXc4Bu`) — guardrail; an any-kind counter registry, exile-zone grants
 
 Touched shared paths: `dispatch_triggers_for_events` walks the event list once more for `CounterAdded` /
