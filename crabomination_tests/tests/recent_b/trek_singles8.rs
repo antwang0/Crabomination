@@ -532,3 +532,44 @@ fn mists_of_lorien_bounces_a_mana_value() {
     assert!(g.players[0].hand.iter().any(|c| c.id == b));
     assert!(g.battlefield_find(giant).is_some());
 }
+
+/// CR 903.5c with Grizzlegom's Rulebreaker: any land card fits, an off-color
+/// nonland card doesn't. His attack pays out per basic land type.
+#[test]
+fn cr_903_5c_grizzlegom_rulebreaker_and_attack() {
+    let d = deck(
+        catalog::grizzlegom_hurloon_hero(),
+        vec![catalog::hallowed_fountain(), catalog::island(), catalog::counterspell()],
+        catalog::forest,
+    );
+    assert_eq!(off_identity(&d), vec!["Counterspell"]);
+    let mut g = pod(3);
+    let griz = ready(&mut g, 0, catalog::grizzlegom_hurloon_hero());
+    for land in [catalog::plains(), catalog::island(), catalog::swamp(), catalog::mountain(), catalog::forest()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    let (hand, life, opp) = (g.players[0].hand.len(), g.players[0].life, g.players[2].life);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: griz, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Soldier").count(), 1);
+    assert_eq!(g.players[0].hand.len(), hand + 1);
+    assert_eq!(g.players[2].life, opp - 1, "each opponent");
+    assert_eq!(g.battlefield_find(griz).map(|c| c.counter_count(CounterType::PlusOnePlusOne)), Some(1));
+    assert_eq!(g.players[0].life, life + 1);
+}
+
+/// Swampbenders: */* is the Swamps on the battlefield, its controller's
+/// lands counting once it makes them Swamps.
+#[test]
+fn swampbenders_counts_every_swamp() {
+    let mut g = pod(2);
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::forest());
+    }
+    g.add_card_to_battlefield(1, catalog::swamp());
+    let sb = ready(&mut g, 0, catalog::swampbenders());
+    let cp = g.computed_permanent(sb).unwrap();
+    assert_eq!((cp.power, cp.toughness), (3, 3));
+}

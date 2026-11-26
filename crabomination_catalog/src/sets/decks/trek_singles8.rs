@@ -667,3 +667,68 @@ pub fn mists_of_lorien() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Grizzlegom, Hurloon Hero — {5}{R}{G} legendary 4/4 Minotaur Warrior.
+/// Rulebreaker — a deck with this commander can have any land cards.
+/// Attacking: a 1/1 white Soldier per Plains you control, a card per Island,
+/// each opponent loses 1 per Swamp, a +1/+1 counter per Mountain, 1 life per
+/// Forest.
+pub fn grizzlegom_hurloon_hero() -> CardDefinition {
+    let yours = |lt: LandType| Value::CountOf(Box::new(Selector::EachPermanent(R::HasLandType(lt).and(R::ControlledByYou))));
+    let soldier = TokenDefinition {
+        name: "Soldier".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::White],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Soldier], ..Default::default() },
+        ..Default::default()
+    };
+    CardDefinition {
+        static_abilities: vec![StaticAbility {
+            description: "Rulebreaker — A deck with this commander can have any land cards.",
+            effect: StaticEffect::RulebreakerAnyColorIdentity { cards: crate::effect::RulebreakerCards::Lands },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+            effect: Effect::Seq(vec![
+                Effect::CreateToken { who: PlayerRef::You, count: yours(LandType::Plains), definition: std::sync::Arc::new(soldier) },
+                Effect::Draw { who: Selector::You, amount: yours(LandType::Island) },
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: yours(LandType::Swamp) },
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: yours(LandType::Mountain) },
+                Effect::GainLife { who: Selector::You, amount: yours(LandType::Forest) },
+            ]),
+        }],
+        ..legend(
+            "Grizzlegom, Hurloon Hero",
+            cost(&[generic(5), r(), g()]),
+            vec![CreatureType::Minotaur, CreatureType::Warrior],
+            4,
+            4,
+        )
+    }
+}
+
+/// Swampbenders — {4}{G}{G} */* Human Druid Ally, equal to the Swamps on the
+/// battlefield. Lands you control are Swamps in addition to their other types.
+pub fn swampbenders() -> CardDefinition {
+    CardDefinition {
+        name: "Swampbenders",
+        cost: cost(&[generic(4), g(), g()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Druid, CreatureType::Ally],
+            ..Default::default()
+        },
+        dynamic_pt: Some(crate::card::DynamicPt::LandsOfTypeOnBattlefield { land_type: LandType::Swamp }),
+        static_abilities: vec![StaticAbility {
+            description: "Lands you control are Swamps in addition to their other types.",
+            effect: StaticEffect::LandTypeChanger {
+                applies_to: Selector::EachPermanent(R::Land.and(R::ControlledByYou)),
+                land_type: LandType::Swamp,
+                replace: false,
+            },
+        }],
+        ..Default::default()
+    }
+}
