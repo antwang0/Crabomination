@@ -584,7 +584,7 @@ planner choices.
   (`effects/mod.rs`, where the causer is still set) for each `LifeLost` of the causer; Eminence exists
   (`TriggerZone::CommandZoneToo`). Itazura (opponents' secret numbers), Yume (granted assist + the assisting seat's
   choice), Miss Highwater (contract counters, lose-game token copies).
-- Closing gates: suite **29,603 / 2 / 14** (`CRAB_ANSWER_LOG=strict`, the per-seat pod test skipped) — the two were Massimo's printed toughness (3/2, guessed 3/3), fixed and re-run; the per-seat test both shards green; `--bench` byte-identical, cube / sos / sealed decision-identical, `bench_ab.py` +3.08 % median (noise) — PERF `01WRuXc5Gy`. Sweeps: TODO's Commander NEXT item 5. `cargo clippy --workspace --exclude crabomination_client --all-targets`: 5 pre-existing warnings fixed -> **0** (60 min cold).
+- Closing gates: suite **29,603 / 2 / 14** (`CRAB_ANSWER_LOG=strict`, the per-seat pod test skipped) — the two were Massimo's printed toughness (3/2, guessed 3/3), fixed and re-run; the per-seat test both shards green; `--bench` byte-identical, cube / sos / sealed decision-identical, `bench_ab.py` +3.08 % median (noise) — PERF `01WRuXc5Gy`. Sweeps: TODO's Commander NEXT item 5. `cargo clippy --workspace --exclude crabomination_client --all-targets`: 5 pre-existing warnings (fixed concurrently by `ea90ad631`) -> **0** (60 min cold).
 
 ## The Commander NEXT's lines as `01WRuXc5Gy` found them (moved verbatim, 2026-11-26)
 
