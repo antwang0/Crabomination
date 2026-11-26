@@ -19520,6 +19520,11 @@ static DECKS: &[Factory] = &[
     super::decks::cruel_bargain,
     super::decks::daniels_temporal_agent,
     super::decks::stray_from_history,
+    super::decks::tasha_yar_out_of_time,
+    super::decks::riveteers_requisitioner,
+    super::decks::neelix_moral_support,
+    super::decks::genesis_device,
+    super::decks::tea_earl_grey_hot,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

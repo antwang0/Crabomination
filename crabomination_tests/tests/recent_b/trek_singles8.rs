@@ -253,3 +253,112 @@ fn stray_from_history_returns_two_creatures() {
     assert!(g.players[0].hand.iter().any(|c| c.id == a));
     assert!(g.players[0].hand.iter().any(|c| c.id == b));
 }
+
+/// Tasha Yar: from the graveyard she returns as a token copy that is
+/// sacrificed at the end step — and its death exiles your top card to play.
+#[test]
+fn tasha_yar_returns_as_a_token_for_one_turn() {
+    let mut g = pod(2);
+    let tasha = g.add_card_to_graveyard(0, catalog::tasha_yar_out_of_time());
+    g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].library.rotate_right(1);
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tasha,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate from graveyard");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == tasha), "exiled as the cost");
+    let token = g.battlefield.iter().find(|c| c.is_token && c.definition.name == "Tasha Yar, Out of Time");
+    assert!(token.is_some_and(|c| c.controller == 0));
+    g.step = TurnStep::PostCombatMain;
+    while g.step != TurnStep::End {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Tasha Yar, Out of Time"), "sacrificed");
+    assert!(g.exile.iter().any(|c| c.definition.name == "Grizzly Bears"), "her dies trigger exiled the top card");
+}
+
+/// Riveteers Requisitioner leaves a Treasure when it dies.
+#[test]
+fn riveteers_requisitioner_dies_into_a_treasure() {
+    let mut g = pod(2);
+    let req = ready(&mut g, 0, catalog::riveteers_requisitioner());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(crabomination::game::types::Target::Permanent(req)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Treasure"));
+}
+
+/// Neelix: his Food's life gain grows him.
+#[test]
+fn neelix_grows_from_his_own_food() {
+    let mut g = pod(2);
+    let neelix = g.add_card_to_hand(0, catalog::neelix_moral_support());
+    flood(&mut g, 0);
+    cast(&mut g, neelix);
+    let food = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.name == "Food").map(|c| c.id);
+    let food = food.expect("a Food");
+    g.clear_sickness(food);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: food,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("eat");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(neelix).map(|c| c.counter_count(CounterType::PlusOnePlusOne)), Some(1));
+}
+
+/// Genesis Device: entering fetches a basic land, tapped.
+#[test]
+fn genesis_device_fetches_a_tapped_basic() {
+    let mut g = pod(2);
+    let dev = g.add_card_to_hand(0, catalog::genesis_device());
+    flood(&mut g, 0);
+    cast(&mut g, dev);
+    let land = g.battlefield.iter().find(|c| c.controller == 0 && c.definition.is_land());
+    assert!(land.is_some_and(|c| c.tapped));
+}
+
+/// Tea, Earl Grey, Hot: entering draws; sacrificed, it deals 2 to an opponent.
+#[test]
+fn tea_earl_grey_hot_draws_then_burns() {
+    let mut g = pod(3);
+    let tea = g.add_card_to_hand(0, catalog::tea_earl_grey_hot());
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    cast(&mut g, tea);
+    assert_eq!(g.players[0].hand.len(), hand, "cast one, drew one");
+    let life = g.players[2].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: tea,
+        ability_index: 0,
+        target: Some(crabomination::game::types::Target::Player(2)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: Some(0),
+    })
+    .expect("sacrifice");
+    drain_stack(&mut g);
+    assert_eq!(g.players[2].life, life - 2);
+    assert!(g.battlefield_find(tea).is_none());
+}

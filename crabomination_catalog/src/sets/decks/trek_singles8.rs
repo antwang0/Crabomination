@@ -1,14 +1,14 @@
 //! Star Trek (TRK/TRC) — the eighth batch of EDHREC Star Trek closers: six
 //! commanders whose single-commander average decks miss only the commander,
-//! and Georgiou's and Daniels' two-card gaps (scan of 2026-11-26). Tests in
-//! `tests/recent_b/trek_singles8.rs`.
+//! Georgiou's, Daniels' and Tasha Yar's two-card gaps, and Neelix's three
+//! (scan of 2026-11-26). Tests in `tests/recent_b/trek_singles8.rs`.
 
 use crate::card::{
     ActivatedAbility, ArtifactSubtype, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec,
-    Keyword, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes, Supertype,
+    Keyword, LandType, MayPlayDuration, Predicate, SelectionRequirement as R, Selector, StaticAbility, Subtypes, Supertype,
     TokenDefinition, TriggeredAbility, Value, Zone,
 };
-use crate::effect::shortcut::{add_any_one_color, etb, investigate, target_filtered};
+use crate::effect::shortcut::{add_any_one_color, blitz, etb, investigate, mint_treasures, on_dies, target_filtered};
 use crate::effect::{Duration, Effect, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{Color, ManaCost, b, cost, g, generic, hybrid, r, u};
@@ -315,6 +315,154 @@ pub fn stray_from_history() -> CardDefinition {
                 face_down: false,
             },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Tasha Yar, Out of Time — {1}{R} legendary 2/1 Human Officer, haste. Dying,
+/// exile your top card; you may play it until the end of your next turn.
+/// {2}{R}, exile this card from your graveyard: a token copy of it, sacrificed
+/// at the next end step. Sorcery speed.
+pub fn tasha_yar_out_of_time() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Haste],
+        triggered_abilities: vec![on_dies(Effect::ExileTopAndGrantMayPlay {
+            who: PlayerRef::You,
+            count: Value::ONE,
+            duration: MayPlayDuration::EndOfControllersNextTurn,
+            pay_any_color: false,
+            max_mana_value: None,
+            pay_own_cost: true,
+            uncast_penalty: None,
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2), r()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            sorcery_speed: true,
+            effect: Effect::Seq(vec![
+                Effect::CreateTokenCopyOf {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    source: Selector::This,
+                    extra_creature_types: vec![],
+                    extra_card_types: vec![],
+                    override_pt: None,
+                    override_colors: None,
+                    enters_tapped: false,
+                    non_legendary: false,
+                    legendary: false,
+                    extra_keywords: vec![],
+                    no_mana_cost: false,
+                    enters_with_counters: None,
+                    remove_keywords: vec![],
+                },
+                Effect::SacrificeAtNextEndStep { what: Selector::LastCreatedTokens },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Tasha Yar, Out of Time",
+            cost(&[generic(1), r()]),
+            vec![CreatureType::Human, CreatureType::Officer],
+            2,
+            1,
+        )
+    }
+}
+
+/// Riveteers Requisitioner — {1}{R} 3/1 Lizard Rogue. Dying, create a
+/// Treasure. Blitz {2}{R}.
+pub fn riveteers_requisitioner() -> CardDefinition {
+    CardDefinition {
+        name: "Riveteers Requisitioner",
+        cost: cost(&[generic(1), r()]),
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Lizard, CreatureType::Rogue], ..Default::default() },
+        power: 3,
+        toughness: 1,
+        triggered_abilities: vec![on_dies(mint_treasures(1))],
+        alternative_cost: Some(blitz(cost(&[generic(2), r()]))),
+        ..Default::default()
+    }
+}
+
+/// Neelix, Moral Support — {1}{G} legendary 1/1 Talaxian Advisor. Entering,
+/// create a Food. Whenever you gain life, a +1/+1 counter on Neelix.
+pub fn neelix_moral_support() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                definition: std::sync::Arc::new(crabomination_base::tokens::food_token()),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::LifeGained, EventScope::YourControl),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+        ],
+        ..legend(
+            "Neelix, Moral Support",
+            cost(&[generic(1), g()]),
+            vec![CreatureType::Talaxian, CreatureType::Advisor],
+            1,
+            1,
+        )
+    }
+}
+
+/// Genesis Device — {2}{G} legendary artifact. Entering, search for a basic
+/// land or Planet card, put it onto the battlefield tapped. {3}{G}{G}, {T},
+/// sacrifice it: sacrifice any number of lands, then search for up to that
+/// many land cards, onto the battlefield tapped. Sorcery speed.
+pub fn genesis_device() -> CardDefinition {
+    let tapped = || ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true };
+    CardDefinition {
+        name: "Genesis Device",
+        cost: cost(&[generic(2), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Artifact],
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: R::IsBasicLand.or(R::HasLandType(LandType::Planet)),
+            to: tapped(),
+        })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3), g(), g()]),
+            tap_cost: true,
+            sac_cost: true,
+            sorcery_speed: true,
+            effect: Effect::SacrificeAnyNumber {
+                who: PlayerRef::You,
+                filter: R::Land,
+                per_each: Box::new(Effect::Search { who: PlayerRef::You, filter: R::Land, to: tapped() }),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tea, Earl Grey, Hot — {2} artifact — Food. Entering, draw a card. {2},
+/// {T}, sacrifice it: choose one — 2 damage to target opponent; or gain 3.
+pub fn tea_earl_grey_hot() -> CardDefinition {
+    CardDefinition {
+        name: "Tea, Earl Grey, Hot",
+        cost: cost(&[generic(2)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Food], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Draw { who: Selector::You, amount: Value::ONE })],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            tap_cost: true,
+            sac_cost: true,
+            effect: Effect::ChooseMode(vec![
+                Effect::DealDamage { to: target_filtered(R::OpponentPlayer), amount: Value::Const(2) },
+                Effect::GainLife { who: Selector::You, amount: Value::Const(3) },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

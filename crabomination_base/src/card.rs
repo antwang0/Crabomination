@@ -435,6 +435,8 @@ pub enum CreatureType {
     Edosian,
     // Star Trek (Rok-Tahk, Budding Scientist).
     Brikar,
+    // Star Trek (Neelix, Moral Support).
+    Talaxian,
 }
 
 /// Land subtypes (basic land types + others).
