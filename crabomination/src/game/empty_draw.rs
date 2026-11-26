@@ -14,7 +14,7 @@ impl GameState {
     pub(crate) fn counters_instead_of_empty_draw(&mut self, p: usize) -> bool {
         let Some((id, kind, amount)) = self.battlefield.iter().find_map(|c| {
             (c.controller == p).then_some(())?;
-            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::CountersInsteadOfDrawFromEmpty { .. })) {
                 Some(StaticEffect::CountersInsteadOfDrawFromEmpty { kind, amount }) => Some((c.id, *kind, *amount)),
                 _ => None,
             })
@@ -35,7 +35,7 @@ impl GameState {
         let Some(source) = self.battlefield.iter().find_map(|c| {
             (c.controller == p
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(self.active_static(&sa.effect, c), Some(StaticEffect::ReanimateInsteadOfDrawFromEmpty))
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::ReanimateInsteadOfDrawFromEmpty))
                 }))
             .then_some(c.id)
         }) else {

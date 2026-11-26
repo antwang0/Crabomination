@@ -791,10 +791,7 @@ impl GameState {
         self.battlefield.iter().any(|src| {
             let q = src.controller;
             src.definition.static_abilities.iter().any(|sa| {
-                matches!(
-                    self.active_static(&sa.effect, src),
-                    Some(StaticEffect::CreaturesAttackYourOpponentsAsThoughHaste)
-                )
+                self.static_active_is(&sa.effect, src, |e| matches!(e, StaticEffect::CreaturesAttackYourOpponentsAsThoughHaste))
             }) && match defender {
                 Some(d) => d != p && !self.same_team(q, d),
                 None => (0..self.players.len()).any(|d| {
@@ -3901,11 +3898,8 @@ impl GameState {
         if !self.acted_on_their_last_turn(d)
             && self.battlefield.iter().any(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, c),
-                        Some(crate::effect::StaticEffect::
-                            PlayersCantBeAttackedUnlessTheyActedLastTurn)
-                    )
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::
+                            PlayersCantBeAttackedUnlessTheyActedLastTurn))
                 })
             })
         {
@@ -3931,7 +3925,12 @@ impl GameState {
             .iter()
             .filter(|c| c.controller == d)
             .flat_map(|c| c.definition.static_abilities.iter().map(move |sa| (c, sa)))
-            .filter_map(|(c, sa)| self.active_static(&sa.effect, c).map(|e| (c.id, e)))
+            .filter_map(|(c, sa)| {
+                self.active_static_where(&sa.effect, c, |e| {
+                    matches!(e, crate::effect::StaticEffect::CreaturesCantAttackController { .. })
+                })
+                .map(|e| (c.id, e))
+            })
             .any(|(src, e)| match e {
                 crate::effect::StaticEffect::CreaturesCantAttackController {
                     protect_planeswalkers,
@@ -4039,7 +4038,7 @@ impl GameState {
         }
         self.battlefield.iter().any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
-                match self.active_static(&sa.effect, c) {
+                match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::CreaturesCantAttackController { .. } | StaticEffect::PlayersCantBeAttackedUnlessTheyActedLastTurn)) {
                     Some(StaticEffect::CreaturesCantAttackController { filter: None, .. }) => {
                         c.controller == defender
                     }
@@ -5801,7 +5800,7 @@ impl GameState {
     ) -> Option<(crate::card::CounterType, crate::effect::DamageToCounters, usize)> {
         self.battlefield_find(id)
             .and_then(|c| {
-                c.definition.static_abilities.iter().find_map(|s| match self.active_static(&s.effect, c) {
+                c.definition.static_abilities.iter().find_map(|s| match self.active_static_where(&s.effect, c, |e| matches!(e, crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters { .. })) {
                     Some(crate::effect::StaticEffect::ReplaceDamageToSelfWithCounters { kind, how }) => {
                         Some((*kind, *how, c.controller))
                     }
@@ -5878,10 +5877,7 @@ impl GameState {
                         .static_abilities
                         .iter()
                         .filter(|sa| {
-                            matches!(
-                                self.active_static(&sa.effect, c),
-                                Some(crate::effect::StaticEffect::SelfDealsDoubleCombatDamageToPlayers)
-                            )
+                            self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::SelfDealsDoubleCombatDamageToPlayers))
                         })
                         .count()
                 });
@@ -6019,11 +6015,7 @@ impl GameState {
         self.battlefield.iter().any(|c| {
             c.controller == controller
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, c),
-                        Some(crate::effect::StaticEffect::CombatDamageToPlayersBecomesMill { filter })
-                            if self.evaluate_requirement_static(filter, &Target::Permanent(attacker), controller, Some(c.id))
-                    )
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::CombatDamageToPlayersBecomesMill { filter } if self.evaluate_requirement_static(filter, &Target::Permanent(attacker), controller, Some(c.id))))
                 })
         })
     }
@@ -6763,7 +6755,7 @@ impl GameState {
     /// Dalek), if any. Several such Equipment still want only one blocker.
     pub(crate) fn must_be_blocked_by(&self, attacker: CardId) -> Option<crate::card::SelectionRequirement> {
         self.battlefield.iter().filter(|c| c.attached_to == Some(attacker)).find_map(|c| {
-            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static_where(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::EquippedMustBeBlockedByIfAble { .. })) {
                 Some(crate::effect::StaticEffect::EquippedMustBeBlockedByIfAble { filter }) => Some(filter.clone()),
                 _ => None,
             })

@@ -1740,11 +1740,8 @@ impl GameState {
                 c.controller == victim
                     && !c.tapped
                     && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            self.active_static(&sa.effect, c),
-                            Some(crate::effect::StaticEffect::
-                                RedirectArtifactDamageToSourceWhileUntapped)
-                        )
+                        self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::
+                                RedirectArtifactDamageToSourceWhileUntapped))
                     })
             })
         {
@@ -1833,10 +1830,7 @@ impl GameState {
             && !self.prevention_off()
             && self.battlefield_find(tgt).is_some_and(|c| {
                 c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, c),
-                        Some(crate::effect::StaticEffect::PreventAllDamageToThisFromCreatures)
-                    )
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::PreventAllDamageToThisFromCreatures))
                 })
             })
             && self.battlefield_find(src).is_some_and(|s| self.computed_is_creature(s))

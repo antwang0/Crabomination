@@ -12,7 +12,7 @@ impl GameState {
     pub(crate) fn crew_loyalty_source(&self, vehicle: CardId) -> Option<CardId> {
         let v = self.battlefield.find_by_id(vehicle)?;
         let alt = v.definition.static_abilities.iter().any(|sa| {
-            matches!(self.active_static(&sa.effect, v), Some(StaticEffect::CrewByRemovingLoyaltyCounter))
+            self.static_active_is(&sa.effect, v, |e| matches!(e, StaticEffect::CrewByRemovingLoyaltyCounter))
         });
         if !alt {
             return None;

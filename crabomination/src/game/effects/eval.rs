@@ -2562,13 +2562,7 @@ impl GameState {
             // Selvala, Eager Trailblazer — distinct computed powers.
             Value::DistinctPowersAmongCreaturesControlled(p) => {
                 let Some(seat) = self.resolve_player(p, ctx) else { return 0 };
-                let powers: crate::fxhash::HashSet<i32> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == seat && self.computed_is_creature(c))
-                    .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
-                    .collect();
-                powers.len() as i32
+                self.distinct_creature_powers(seat, usize::MAX) as i32
             }
             Value::PoisonCountersOf(p) => self
                 .resolve_player(p, ctx)
@@ -2853,6 +2847,28 @@ impl GameState {
                 })
             })
             .map(|c| c.definition.printed_colors())
+    }
+
+    /// Distinct computed powers among `seat`'s creatures, counted up to `cap`
+    /// (coven asks for 3). Stops at the cap: coven is read inside the gather of
+    /// a coven-gated static, so a full walk there is per-permanent board² work
+    /// (Loot pod seed 0xad8: over an hour in debug).
+    pub(crate) fn distinct_creature_powers(&self, seat: usize, cap: usize) -> usize {
+        let mut seen: smallvec::SmallVec<[i32; 8]> = smallvec::SmallVec::new();
+        for c in self.battlefield.iter() {
+            if seen.len() >= cap {
+                break;
+            }
+            if c.controller != seat || !self.computed_is_creature(c) {
+                continue;
+            }
+            if let Some(cp) = self.computed_permanent_on(c)
+                && !seen.contains(&cp.power)
+            {
+                seen.push(cp.power);
+            }
+        }
+        seen.len()
     }
 
     pub fn evaluate_predicate(&self, p: &Predicate, ctx: &EffectContext) -> bool {
@@ -4569,13 +4585,7 @@ impl GameState {
             }
             Predicate::CovenActive { who } => {
                 let Some(p) = self.resolve_player(who, ctx) else { return false };
-                let powers: crate::fxhash::HashSet<i32> = self
-                    .battlefield
-                    .iter()
-                    .filter(|c| c.controller == p && self.computed_is_creature(c))
-                    .filter_map(|c| self.computed_permanent(c.id).map(|cp| cp.power))
-                    .collect();
-                powers.len() >= 3
+                self.distinct_creature_powers(p, 3) >= 3
             }
             Predicate::OilActivityThisTurn { who } => self
                 .resolve_player(who, ctx)

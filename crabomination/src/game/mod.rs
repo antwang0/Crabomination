@@ -6856,10 +6856,7 @@ impl GameState {
             self.battlefield.has_life_static()
                 || !self.battlefield.iter().any(|c| {
                     c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            self.active_static(&sa.effect, c),
-                            Some(
-                                crate::effect::StaticEffect::LifeGainBecomesLoss { .. }
+                        self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::LifeGainBecomesLoss { .. }
                                     | crate::effect::StaticEffect::LifeGainBecomesDraw
                                     | crate::effect::StaticEffect::LifeGainBonus { .. }
                                     | crate::effect::StaticEffect::LifeGainMultiplier { .. }
@@ -6867,9 +6864,7 @@ impl GameState {
                                     | crate::effect::StaticEffect::ControllerLifeGainDoubledAtOrBelow { .. }
                                     | crate::effect::StaticEffect::PlayerCannotGainLife { .. }
                                     | crate::effect::StaticEffect::PlayerCannotLoseLife { .. }
-                                    | crate::effect::StaticEffect::OpponentLifeLossDoubledDuringYourTurn
-                            )
-                        )
+                                    | crate::effect::StaticEffect::OpponentLifeLossDoubledDuringYourTurn))
                     })
                 }),
             "card_has_life_static missed a static adjust_life reads: a lane that reads clear would skip it",
@@ -7893,10 +7888,7 @@ impl GameState {
         let esix = self.battlefield.iter().find(|c| {
             c.controller == seat
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, c),
-                        Some(StaticEffect::FirstTokensOnYourTurnBecomeCopiesOfChosen)
-                    )
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::FirstTokensOnYourTurnBecomeCopiesOfChosen))
                 })
         })?;
         let mut picks: Vec<(u32, CardId)> = self
@@ -7925,10 +7917,7 @@ impl GameState {
                     .static_abilities
                     .iter()
                     .filter(|sa| {
-                        matches!(
-                            self.active_static(&sa.effect, c),
-                            Some(crate::effect::StaticEffect::DoubleCounters)
-                        )
+                        self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::DoubleCounters))
                     })
                     .count() as u32
             })
@@ -7965,6 +7954,34 @@ impl GameState {
             .iter()
             .filter(|c| c.controller == seat && self.permanent_is_creature(c.id))
             .count()
+    }
+
+    /// [`Self::active_static`] asked only when the innermost effect passes
+    /// `want`: a gate (a coven walk, a `WhileCondition` layer read) is never
+    /// evaluated for a static of a kind the caller would discard (Augur of
+    /// Autumn's coven was read per static per attack check).
+    #[inline]
+    pub(crate) fn active_static_where<'a>(
+        &self,
+        effect: &'a crate::effect::StaticEffect,
+        card: &CardInstance,
+        want: impl Fn(&crate::effect::StaticEffect) -> bool,
+    ) -> Option<&'a crate::effect::StaticEffect> {
+        if !want(effect.ungated()) {
+            return None;
+        }
+        self.active_static(effect, card)
+    }
+
+    /// [`Self::active_static_where`] as a yes/no.
+    #[inline]
+    pub(crate) fn static_active_is(
+        &self,
+        effect: &crate::effect::StaticEffect,
+        card: &CardInstance,
+        want: impl Fn(&crate::effect::StaticEffect) -> bool,
+    ) -> bool {
+        self.active_static_where(effect, card, want).is_some()
     }
 
     /// Peel the gating wrappers (`WhileClassLevelAtLeast`, `WhileYourTurn`,
@@ -8142,7 +8159,7 @@ impl GameState {
         let (mut doubles, mut halves) = (0u32, 0u32);
         for c in self.battlefield.iter() {
             for sa in &c.definition.static_abilities {
-                match self.active_static(&sa.effect, c) {
+                match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::CountersByPlacerDoubledOpponentsHalved | StaticEffect::CountersByPlacerDoubled)) {
                     Some(StaticEffect::CountersByPlacerDoubledOpponentsHalved) => {
                         if c.controller == placer {
                             doubles += 1;
@@ -9639,10 +9656,7 @@ impl GameState {
             .filter(|c| {
                 c.controller != p
                     && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            self.active_static(&sa.effect, c),
-                            Some(StaticEffect::OpponentLandsEnterThenSacrifice)
-                        )
+                        self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::OpponentLandsEnterThenSacrifice))
                     })
                     && mine > lands(self, c.controller)
             })
@@ -9998,10 +10012,7 @@ impl GameState {
         e: &crate::effect::StaticEffect,
         card: &CardInstance,
     ) -> bool {
-        matches!(
-            self.active_static(e, card),
-            Some(crate::effect::StaticEffect::PreventAllDamageToThis)
-        )
+        self.static_active_is(e, card, |e| matches!(e, crate::effect::StaticEffect::PreventAllDamageToThis))
     }
 
     /// CR 615.12 — is damage prevention switched off right now: the turn's
@@ -10145,7 +10156,7 @@ impl GameState {
             && c.definition.static_abilities.iter().any(|sa| {
                 matches!(sa.effect, SE::PreventAllCombatDamageToThis)
                     || self.self_static_prevents_all_damage_active(&sa.effect, c)
-                    || matches!(self.active_static(&sa.effect, c), Some(SE::PreventAllDamageToThisFromCreatures))
+                    || self.static_active_is(&sa.effect, c, |e| matches!(e, SE::PreventAllDamageToThisFromCreatures))
             })
         {
             return true;
@@ -11247,7 +11258,7 @@ impl GameState {
     pub(crate) fn graveyard_sneak_cost(&self, p: usize) -> Option<crate::mana::ManaCost> {
         use crate::effect::StaticEffect;
         self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
-            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::GraveyardCreaturesHaveSneak { .. })) {
                 Some(StaticEffect::GraveyardCreaturesHaveSneak { cost }) => Some(cost.clone()),
                 _ => None,
             })
@@ -11849,10 +11860,7 @@ impl GameState {
             && self.battlefield.iter().any(|c| {
                 c.controller == counterer
                     && c.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            self.active_static(&sa.effect, c),
-                            Some(crate::effect::StaticEffect::CounterBecomesExileFreePlay)
-                        )
+                        self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::CounterBecomesExileFreePlay))
                     })
             })
         {
@@ -12439,10 +12447,7 @@ impl GameState {
             || self.battlefield.iter().any(|src| {
                 src.controller == seat
                     && src.definition.static_abilities.iter().any(|sa| {
-                        matches!(
-                            self.active_static(&sa.effect, src),
-                            Some(StaticEffect::ControllerDoesntLoseForZeroLife)
-                        )
+                        self.static_active_is(&sa.effect, src, |e| matches!(e, StaticEffect::ControllerDoesntLoseForZeroLife))
                     })
             })
     }
@@ -12622,10 +12627,7 @@ impl GameState {
         self.battlefield.has_life_static() && self.battlefield.iter().any(|src| {
             src.controller == seat
                 && src.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, src),
-                        Some(StaticEffect::LifeGainBecomesDraw)
-                    )
+                    self.static_active_is(&sa.effect, src, |e| matches!(e, StaticEffect::LifeGainBecomesDraw))
                 })
         })
     }
@@ -15105,7 +15107,7 @@ impl GameState {
                     // The per-counter anthem (Crescendo of War's "attacking
                     // creatures get +1/+0 for each strife counter") rides the
                     // same live pass — it was dropped whole over a combat filter.
-                    let (applies_to, power, toughness) = match self.active_static(&sa.effect, card) {
+                    let (applies_to, power, toughness) = match self.active_static_where(&sa.effect, card, |e| matches!(e, crate::effect::StaticEffect::PumpPT { .. } | crate::effect::StaticEffect::PumpPTPerCounterOnSource { .. })) {
                         Some(crate::effect::StaticEffect::PumpPT { applies_to, power, toughness }) => {
                             (applies_to, *power, *toughness)
                         }
@@ -22649,10 +22651,7 @@ impl GameState {
     fn player_may_tutor_instead_of_drawing(&self, p: usize) -> bool {
         self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
-                matches!(
-                    self.active_static(&sa.effect, c),
-                    Some(crate::effect::StaticEffect::MayReplaceDrawWithTutor)
-                )
+                self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::MayReplaceDrawWithTutor))
             })
         })
     }
@@ -22665,10 +22664,7 @@ impl GameState {
                 .static_abilities
                 .iter()
                 .any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, c),
-                        Some(crate::effect::StaticEffect::MayDrawFromSourceExilePile)
-                    )
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::MayDrawFromSourceExilePile))
                 })
                 .then_some(c.id)
         })
@@ -22678,10 +22674,7 @@ impl GameState {
     fn controller_may_skip_draws(&self, p: usize) -> bool {
         self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
-                matches!(
-                    self.active_static(&sa.effect, c),
-                    Some(crate::effect::StaticEffect::ControllerMaySkipDraws)
-                )
+                self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::ControllerMaySkipDraws))
             })
         })
     }
@@ -22690,10 +22683,7 @@ impl GameState {
     fn player_may_reveal_until_kind_instead_of_drawing(&self, p: usize) -> bool {
         self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
-                matches!(
-                    self.active_static(&sa.effect, c),
-                    Some(crate::effect::StaticEffect::MayReplaceDrawWithRevealUntilKind)
-                )
+                self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::MayReplaceDrawWithRevealUntilKind))
             })
         })
     }
@@ -22703,7 +22693,7 @@ impl GameState {
     /// counter it takes.
     fn counter_instead_of_drawing(&self, p: usize) -> Option<(crate::card::CardId, crate::card::CounterType)> {
         self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
-            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static_where(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::MayReplaceDrawWithCounter { .. })) {
                 Some(crate::effect::StaticEffect::MayReplaceDrawWithCounter { kind, stop_at })
                     if c.counter_count(*kind) < *stop_at =>
                 {
@@ -22718,7 +22708,7 @@ impl GameState {
     fn first_draw_mills_one_of_two(&self, p: usize) -> bool {
         self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
-                matches!(self.active_static(&sa.effect, c), Some(crate::effect::StaticEffect::FirstDrawEachTurnMillsOneOfTwo))
+                self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::FirstDrawEachTurnMillsOneOfTwo))
             })
         })
     }
@@ -22728,7 +22718,7 @@ impl GameState {
     fn look_instead_of_drawing(&self, p: usize) -> Option<(u32, bool)> {
         self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
             c.definition.static_abilities.iter().find_map(|sa| {
-                match self.active_static(&sa.effect, c) {
+                match self.active_static_where(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::ReplaceDrawWithLookN { .. })) {
                     Some(crate::effect::StaticEffect::ReplaceDrawWithLookN { count, rest_to_graveyard }) => {
                         Some((*count, *rest_to_graveyard))
                     }
@@ -22742,7 +22732,7 @@ impl GameState {
     /// Tormented Prophet).
     fn impulse_instead_of_drawing(&self, p: usize) -> Option<u32> {
         self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
-            c.definition.static_abilities.iter().find_map(|sa| match self.active_static(&sa.effect, c) {
+            c.definition.static_abilities.iter().find_map(|sa| match self.active_static_where(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::ReplaceDrawWithImpulse { .. })) {
                 Some(crate::effect::StaticEffect::ReplaceDrawWithImpulse { count }) => Some(*count),
                 _ => None,
             })
@@ -22757,10 +22747,7 @@ impl GameState {
                 .static_abilities
                 .iter()
                 .any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, c),
-                        Some(crate::effect::StaticEffect::ReplaceDrawWithExileFaceDownWithSource)
-                    )
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::ReplaceDrawWithExileFaceDownWithSource))
                 })
                 .then_some(c.id)
         })
@@ -22770,10 +22757,7 @@ impl GameState {
     fn graveyard_return_instead_of_drawing(&self, p: usize) -> bool {
         self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
-                matches!(
-                    self.active_static(&sa.effect, c),
-                    Some(crate::effect::StaticEffect::ReplaceDrawWithGraveyardReturn)
-                )
+                self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::ReplaceDrawWithGraveyardReturn))
             })
         })
     }
@@ -22782,10 +22766,7 @@ impl GameState {
     fn creature_draws_to_graveyard(&self, p: usize) -> bool {
         self.battlefield.iter().filter(|c| c.controller == p).any(|c| {
             c.definition.static_abilities.iter().any(|sa| {
-                matches!(
-                    self.active_static(&sa.effect, c),
-                    Some(crate::effect::StaticEffect::ReplaceDrawCreaturesToGraveyard)
-                )
+                self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::ReplaceDrawCreaturesToGraveyard))
             })
         })
     }
@@ -23847,10 +23828,7 @@ impl GameState {
         self.battlefield.iter().any(|c| {
             c.controller == player
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, c),
-                        Some(crate::effect::StaticEffect::ControllerEquipAtInstantSpeed)
-                    )
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, crate::effect::StaticEffect::ControllerEquipAtInstantSpeed))
                 })
         })
     }

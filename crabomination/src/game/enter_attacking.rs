@@ -181,10 +181,7 @@ impl GameState {
             s.controller == seat
                 && s.id != id
                 && s.definition.static_abilities.iter().any(|sa| {
-                    matches!(
-                        self.active_static(&sa.effect, s),
-                        Some(crate::effect::StaticEffect::YourCreaturesEnterAttacking)
-                    )
+                    self.static_active_is(&sa.effect, s, |e| matches!(e, crate::effect::StaticEffect::YourCreaturesEnterAttacking))
                 })
         });
         if !replaces {

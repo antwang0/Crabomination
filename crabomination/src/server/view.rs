@@ -704,15 +704,7 @@ fn project_player(
             state.battlefield_find(id).map(|c| (id, c.definition.name.to_string()))
         });
     // Coven — three or more controlled creatures with different (computed) powers.
-    let coven_active = {
-        let powers: crate::fxhash::HashSet<i32> = state
-            .battlefield
-            .iter()
-            .filter(|c| c.controller == player_seat && c.definition.is_creature())
-            .filter_map(|c| state.computed_permanent(c.id).map(|cp| cp.power))
-            .collect();
-        powers.len() >= 3
-    };
+    let coven_active = state.distinct_creature_powers(player_seat, 3) >= 3;
     // Ability-word conditions (mirror `crate::game::effects::eval`).
     let threshold_active = player.graveyard.len() >= 7;
     let metalcraft_active = state

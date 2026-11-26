@@ -16,7 +16,7 @@ impl GameState {
             c.controller != seat
                 && (self.teams.is_empty() || self.team_of(c.controller) != self.team_of(seat))
                 && c.definition.static_abilities.iter().any(|sa| {
-                    matches!(self.active_static(&sa.effect, c), Some(StaticEffect::OpponentsVentureOncePerTurn))
+                    self.static_active_is(&sa.effect, c, |e| matches!(e, StaticEffect::OpponentsVentureOncePerTurn))
                 })
         })
     }
