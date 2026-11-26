@@ -3136,6 +3136,23 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-26 (Commander run, `01WRuXc5Gy`) — guardrail; coven early exit, gated statics skip the wrong kind
+
+Touched shared paths: `active_static_where` / `static_active_is` (74 call sites: `ungated()` + the caller's kind test
+before any gate is evaluated); `distinct_creature_powers` (coven stops at 3). Everything else is a CR re-pin (comments,
+test names), one card and one pod seat. `release`, 4-core box (Xeon @ 2.30GHz), base `4bd2d2953` (the run's start) vs
+tip `ade1f5e28`:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the base; determinism ok,
+                 thread_determinism ok (3 vs 1); peak_rss_mib 50.9
+pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: 367,206 / 213,898 / 522,778, 0 stalls —
+                 decision-identical to the base
+bench_ab.py      16 pairs: B/A median +3.08 %, mean +2.13 % (sd 7.69) — noise; no regression
+pod seat game    Loot, Exuberant Explorer seed 0xad8 (`overflow`): 26 s -> 5.6 s, same 59 turns / 5,499 actions;
+                 the per-seat test, both `CRAB_SEAT_SHARD` halves: 220 s + 207 s (6,206 seats, all decided)
+```
+
 ### 2026-11-26 (Commander run, `01WRuXc3U3`) — guardrail; restart and shuffle-self fixes, land-play static read
 
 Touched shared paths: `player_may_play_lands_from_graveyard` reads each static through `active_static` (one call per
