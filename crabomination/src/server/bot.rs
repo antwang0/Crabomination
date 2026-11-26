@@ -4286,6 +4286,7 @@ impl HeuristicBot {
                     .or_else(|| super::spell_response::pick_punish_response(state, seat))
                     .or_else(|| super::spell_response::pick_substitution_response(state, seat, &self.weights))
                     .or_else(|| pick_combat_only_instant(state, seat, &self.weights))
+                    .or_else(|| pick_their_combat_cast(state, seat, self.scored, &self.weights))
                     .or_else(|| super::lethal_pump::pick_lethal_pump(state, seat, &self.weights))
                     .or_else(|| super::channel::pick_hand_ability(state, seat, &self.weights))
                     .or_else(|| super::pre_combat_tap::pick_pre_combat_tap(state, seat))
@@ -5861,6 +5862,50 @@ fn pick_copy_response(state: &GameState, seat: usize, w: &EvalWeights) -> Option
         .find(|a| state.would_accept(a.clone()))
         .or_else(|| super::spell_response::graveyard_copy_casts(state, seat, spell_id, effect_copies_target_spell))
         .or_else(|| super::spell_response::ability_copy_activations(state, seat, spell_id, effect_copies_target_spell))
+}
+
+/// `RF_TIMING`: the casts [`waits_for_their_turn`] held, made once the
+/// opponent has declared attackers at us — a flash creature in time to block,
+/// a non-attacker-rider instant at an attacker. The main enumerator picks and
+/// aims; only its pick of such a cast is taken, and an instant only when its
+/// target is attacking. Anything left goes at their end step.
+fn pick_their_combat_cast(state: &GameState, seat: usize, scored: bool, w: &EvalWeights) -> Option<GameAction> {
+    if w.rating_fixes & RF_TIMING == 0
+        || state.players.len() != 2
+        || state.active_player_idx == seat
+        || !state.stack.is_empty()
+        || state.step != TurnStep::DeclareAttackers
+        || !state.attacking().iter().any(|a| state.defender_for(a.target) == Some(seat))
+    {
+        return None;
+    }
+    let held = |c: &crate::card::CardInstance| {
+        waits_for_their_turn(state, seat, &GameAction::CastSpell {
+            card_id: c.id,
+            target: None,
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    if !state.players[seat].hand.iter().any(held) {
+        return None;
+    }
+    let action = main_phase_action_with(state, seat, scored, w).action;
+    if !waits_for_their_turn(state, seat, &action) {
+        return None;
+    }
+    if let GameAction::CastSpell { card_id, target, .. } = &action
+        && state.players[seat].hand.iter().any(|c| {
+            c.id == *card_id && c.definition.card_types.contains(&crate::card::CardType::Instant)
+        })
+    {
+        let at_attacker = matches!(target, Some(Target::Permanent(id)) if state.attacking().iter().any(|a| a.attacker == *id));
+        if !at_attacker {
+            return None;
+        }
+    }
+    Some(action)
 }
 
 /// CR 601.3 — an instant castable only during combat on an opponent's turn
@@ -11881,7 +11926,11 @@ fn main_phase_action_with(
                 menu_census::add(25, pool_len as u64);
             }
             let mut rest: Vec<(i32, Finalist)> = Vec::new();
-            let want_rest = w.hold_sick_next || menu_census::on();
+            let timing = w.rating_fixes & RF_TIMING != 0
+                && state.players.len() == 2
+                && state.active_player_idx == seat
+                && matches!(state.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain);
+            let want_rest = w.hold_sick_next || menu_census::on() || timing;
             if let Some(mut best) = pick_by_outcome_with_cut(
                 state,
                 seat,
@@ -11900,6 +11949,39 @@ fn main_phase_action_with(
                 // every candidate this way would have the bot pick some
                 // lesser non-creature line now and then have no mana left
                 // for the creature it actually wanted in the second main.
+                // `RF_TIMING`: a winner that is worth the same on the
+                // opponent's turn (see [`waits_for_their_turn`]) waits for
+                // it. Unlike the holds below it does not pass the tick: the
+                // best other line that still leaves its mana is played, and
+                // with none the ability sinks run.
+                if timing
+                    && waits_for_their_turn(state, seat, &best.action)
+                    // A flash body with an enters effect that pays now is
+                    // cast now; the rider instant always "pays now" (it is
+                    // removal) and is held regardless.
+                    && (is_rider_instant_cast(state, seat, &best.action)
+                        || !improves_this_turn(state, seat, &best.action, best.settled.as_deref(), w))
+                {
+                    let cmc_of = |a: &GameAction| match a {
+                        GameAction::CastSpell { card_id, .. } => state.players[seat]
+                            .hand
+                            .iter()
+                            .find(|c| c.id == *card_id)
+                            .map_or(0, |c| c.definition.cost.cmc()),
+                        _ => 0,
+                    };
+                    let budget = have_mana.get().total.saturating_sub(cmc_of(&best.action));
+                    let baseline = eval_material(state, seat, w);
+                    let other = rest.iter().position(|(ev, f)| {
+                        *ev > baseline
+                            && !waits_for_their_turn(state, seat, &f.action)
+                            && cmc_of(&f.action) <= budget
+                    });
+                    match other {
+                        Some(i) => best = rest.swap_remove(i).1,
+                        None => return main_phase_sinks(state, seat, w, &have_mana),
+                    }
+                }
                 let own_main = state.active_player_idx == seat
                     && matches!(
                         state.step,
@@ -12773,6 +12855,21 @@ fn pick_card_draw_ability(state: &GameState, seat: usize, w: &EvalWeights) -> Op
             }
             if sink_sacrifice_cost(ab, w) {
                 continue; // don't spend a permanent just to draw
+            }
+            // `RF_TIMING`: a tap-to-draw on a creature that could attack
+            // waits for the second main, so the attack is still on offer
+            // (Arni, Humble Scribe looted precombat 114 times in 197).
+            if w.rating_fixes & RF_TIMING != 0
+                && ab.tap_cost
+                && state.active_player_idx == seat
+                && state.step == TurnStep::PreCombatMain
+                && !card.tapped
+                && state.computed_is_creature(card)
+                && card.power() > 0
+                && (!card.summoning_sick || card.has_keyword(&crate::card::Keyword::Haste))
+                && !card.has_keyword(&crate::card::Keyword::Defender)
+            {
+                continue;
             }
             // A draw counted off a target (Volo's Journal's noted types).
             let target = if ab.effect.requires_target() {
@@ -22490,6 +22587,50 @@ fn follow_up_candidates(g: &GameState, seat: usize, w: &EvalWeights) -> Vec<Game
 /// sorcery-timed, so "wait" means "wait a whole turn", which is a very
 /// different trade from "wait until their end step". Deliberately narrow —
 /// it gates *not acting*, and a false positive there costs a real play.
+/// `RF_TIMING`: is `action` a cast that loses nothing by waiting for the
+/// opponent's turn? A creature with flash is as ready to attack cast at their
+/// end step as cast now, and cast once they have declared attackers it also
+/// ambushes (Divining Duelist: 0 of 117 casts at instant speed). An instant
+/// with a rider on a non-attacking target (Prophesied End: "if it wasn't
+/// attacking, its controller draws a card", 149 of 149 casts on a
+/// non-attacker) wants an attacker.
+fn waits_for_their_turn(state: &GameState, seat: usize, action: &GameAction) -> bool {
+    use crate::card::{CardType, Keyword};
+    let GameAction::CastSpell { card_id, .. } = action else { return false };
+    let Some(card) = state.players[seat].hand.iter().find(|c| c.id == *card_id) else {
+        return false;
+    };
+    let def = &card.definition;
+    (def.card_types.contains(&CardType::Creature) && def.keywords.has_kw(&Keyword::Flash))
+        || (def.card_types.contains(&CardType::Instant) && has_non_attacker_rider(&def.effect))
+}
+
+fn is_rider_instant_cast(state: &GameState, seat: usize, action: &GameAction) -> bool {
+    let GameAction::CastSpell { card_id, .. } = action else { return false };
+    state.players[seat].hand.iter().any(|c| {
+        c.id == *card_id
+            && c.definition.card_types.contains(&crate::card::CardType::Instant)
+            && has_non_attacker_rider(&c.definition.effect)
+    })
+}
+
+/// Does `eff` pay the opponent when its target was not attacking: an
+/// `If { Not(target is attacking) }` whose body is not a no-op?
+fn has_non_attacker_rider(eff: &Effect) -> bool {
+    use crate::card::SelectionRequirement as R;
+    use crate::effect::{Predicate, Selector};
+    match eff {
+        Effect::Seq(v) => v.iter().any(has_non_attacker_rider),
+        Effect::If { cond: Predicate::Not(inner), then, .. } => {
+            matches!(
+                &**inner,
+                Predicate::EntityMatches { what: Selector::Target(_), filter: R::IsAttacking }
+            ) && !matches!(**then, Effect::Noop)
+        }
+        _ => false,
+    }
+}
+
 fn castable_at_instant_speed(state: &GameState, seat: usize, action: &GameAction) -> bool {
     use crate::card::{CardType, Keyword};
     let card_id = match action {
@@ -33335,6 +33476,110 @@ mod stack_response_tests {
             matches!(next, GameAction::CastSpell { card_id, .. } if card_id == removal),
             "the runner-up that improves this turn is played: {next:?}"
         );
+    }
+
+    /// `RF_TIMING`: a flash creature is not cast in our own main phase
+    /// (another line that leaves its mana is played instead), and is cast
+    /// once the opponent attacks or at their end step.
+    #[test]
+    fn a_flash_creature_waits_for_the_opponents_turn_under_the_timing_fix() {
+        let on = EvalWeights { rating_fixes: RF_TIMING, ..EvalWeights::fra_fixes_on() };
+        let off = EvalWeights::fra_fixes_on();
+        let fixture = |step: TurnStep, active: usize| {
+            let mut g = two_player_game();
+            g.active_player_idx = active;
+            g.step = step;
+            g.priority.player_with_priority = 0;
+            let duelist = g.add_card_to_hand(0, catalog::divining_duelist());
+            let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+            g.add_card_to_library(0, catalog::island());
+            g.players[0].mana_pool.add(crate::mana::Color::Blue, 3);
+            g.players[0].mana_pool.add(crate::mana::Color::Green, 2);
+            (g, duelist, bear)
+        };
+        let (g, duelist, bear) = fixture(TurnStep::PostCombatMain, 0);
+        let a = main_phase_action_with(&g, 0, true, &off).action;
+        assert!(
+            matches!(a, GameAction::CastSpell { card_id, .. } if card_id == duelist),
+            "off: the flash creature is cast in our main: {a:?}"
+        );
+        let a = main_phase_action_with(&g, 0, true, &on).action;
+        assert!(
+            matches!(a, GameAction::CastSpell { card_id, .. } if card_id == bear),
+            "on: the other creature is cast and the flash one's mana is left: {a:?}"
+        );
+        // Their end step: the flash creature is the pick.
+        let (g, duelist, _) = fixture(TurnStep::End, 1);
+        let a = main_phase_action_with(&g, 0, true, &on).action;
+        assert!(
+            matches!(a, GameAction::CastSpell { card_id, .. } if card_id == duelist),
+            "on: cast at their end step: {a:?}"
+        );
+        // They attack us: cast in time to block.
+        let (mut g, duelist, _) = fixture(TurnStep::DeclareAttackers, 1);
+        let atk = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        g.clear_sickness(atk);
+        g.attacking.push(crate::game::types::Attack {
+            attacker: atk,
+            target: crate::game::types::AttackTarget::Player(0),
+        });
+        let a = pick_their_combat_cast(&g, 0, true, &on);
+        assert!(
+            matches!(a, Some(GameAction::CastSpell { card_id, .. }) if card_id == duelist),
+            "on: cast once attackers are declared: {a:?}"
+        );
+        assert!(pick_their_combat_cast(&g, 0, true, &off).is_none(), "off: no such window");
+    }
+
+    /// `RF_TIMING`: Prophesied End ("if it wasn't attacking, its controller
+    /// draws a card") is held in our own main and aimed at an attacker.
+    #[test]
+    fn a_non_attacker_rider_instant_waits_for_an_attacker_under_the_timing_fix() {
+        let on = EvalWeights { rating_fixes: RF_TIMING, ..EvalWeights::fra_fixes_on() };
+        let off = EvalWeights::fra_fixes_on();
+        let fixture = |step: TurnStep, active: usize| {
+            let mut g = two_player_game();
+            g.active_player_idx = active;
+            g.step = step;
+            g.priority.player_with_priority = 0;
+            let end = g.add_card_to_hand(0, catalog::prophesied_end());
+            let angel = g.add_card_to_battlefield(1, catalog::serra_angel());
+            g.clear_sickness(angel);
+            g.add_card_to_library(1, catalog::island());
+            g.players[0].mana_pool.add(crate::mana::Color::White, 2);
+            (g, end, angel)
+        };
+        let (g, end, _) = fixture(TurnStep::PostCombatMain, 0);
+        let a = main_phase_action_with(&g, 0, true, &off).action;
+        assert!(matches!(a, GameAction::CastSpell { card_id, .. } if card_id == end), "off: cast in our main: {a:?}");
+        let a = main_phase_action_with(&g, 0, true, &on).action;
+        assert!(!matches!(a, GameAction::CastSpell { .. }), "on: held in our main: {a:?}");
+        let (mut g, end, angel) = fixture(TurnStep::DeclareAttackers, 1);
+        g.attacking.push(crate::game::types::Attack {
+            attacker: angel,
+            target: crate::game::types::AttackTarget::Player(0),
+        });
+        let a = pick_their_combat_cast(&g, 0, true, &on);
+        assert!(
+            matches!(a, Some(GameAction::CastSpell { card_id, target: Some(Target::Permanent(t)), .. }) if card_id == end && t == angel),
+            "on: aimed at the attacker: {a:?}"
+        );
+    }
+
+    /// `RF_TIMING`: a tap-to-loot on a creature that could attack waits for
+    /// the second main phase.
+    #[test]
+    fn a_tap_loot_on_an_attacker_waits_for_the_second_main_under_the_timing_fix() {
+        let on = EvalWeights { rating_fixes: RF_TIMING, ..EvalWeights::fra_fixes_on() };
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        let arni = g.add_card_to_battlefield(0, catalog::arni_humble_scribe());
+        g.clear_sickness(arni);
+        g.add_card_to_library(0, catalog::island());
+        assert!(pick_card_draw_ability(&g, 0, &EvalWeights::fra_fixes_on()).is_some(), "off: loots precombat");
+        assert!(pick_card_draw_ability(&g, 0, &on).is_none(), "on: waits precombat");
+        g.step = TurnStep::PostCombatMain;
+        assert!(pick_card_draw_ability(&g, 0, &on).is_some(), "on: loots in the second main");
     }
 
     /// Round 77 census: the cut candidates are priced by the pick's rule
