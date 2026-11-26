@@ -19208,6 +19208,13 @@ impl GameState {
         self.resolving_spell(id).map(|snap| &*snap.definition)
     }
 
+    /// Is `ctx`'s source the spell now resolving? The post-resolution routing
+    /// flags (`ShuffleSelfIntoLibrary`, `ReturnResolvingSpellToHand`, …) are
+    /// set only then.
+    pub(crate) fn is_resolving_spell(&self, ctx: &crate::game::effects::EffectContext) -> bool {
+        ctx.source.is_some_and(|s| self.resolving_spell(s).is_some())
+    }
+
     /// The snapshot of the spell being resolved, when `id` is it (see
     /// [`resolving_spell_def`](Self::resolving_spell_def)).
     pub(crate) fn resolving_spell(&self, id: CardId) -> Option<&ResolvingSpell> {

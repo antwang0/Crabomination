@@ -32180,19 +32180,26 @@ impl GameState {
                 // A source in neither zone and not the resolving spell is gone
                 // (CR 400.7): flagging then shuffled the next spell to resolve
                 // (pod seed 29444 game 101, a kicked Consult the Star Charts).
-                if self.resolving_spell(src).is_some() {
+                if self.is_resolving_spell(ctx) {
                     self.shuffle_resolving_spell_into_library = true;
                 }
                 Ok(())
             }
 
+            // These four route the resolving spell after it resolves; from
+            // anything else (a trigger whose source left) the flag would wait
+            // for the NEXT spell — `ShuffleSelfIntoLibrary`'s pod bug.
             Effect::ReturnResolvingSpellToHand => {
-                self.return_resolving_spell_to_hand = true;
+                if self.is_resolving_spell(ctx) {
+                    self.return_resolving_spell_to_hand = true;
+                }
                 Ok(())
             }
 
             Effect::ExileResolvingSpell => {
-                self.exile_resolving_spell = true;
+                if self.is_resolving_spell(ctx) {
+                    self.exile_resolving_spell = true;
+                }
                 Ok(())
             }
             Effect::EndMayPlayOnCardsExiledWithSource => {
@@ -32249,13 +32256,17 @@ impl GameState {
             Effect::PutResolvingSpellInLibraryFromTop(n) => {
                 // Approach of the Second Sun — consumed by the post-resolution
                 // routing instead of the graveyard trip.
-                self.resolving_spell_library_from_top = Some(*n);
+                if self.is_resolving_spell(ctx) {
+                    self.resolving_spell_library_from_top = Some(*n);
+                }
                 Ok(())
             }
 
             Effect::PutResolvingSpellOnBattlefieldTransformed { counter } => {
                 // Esper Origins — same shape, battlefield-bound and flipped.
-                self.resolving_spell_to_battlefield_transformed = Some(*counter);
+                if self.is_resolving_spell(ctx) {
+                    self.resolving_spell_to_battlefield_transformed = Some(*counter);
+                }
                 Ok(())
             }
 

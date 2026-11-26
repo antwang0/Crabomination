@@ -569,9 +569,9 @@ planner choices.
   the battlefield nor in a graveyard (a dead token copy of Cavalier of Gales) set `shuffle_resolving_spell_into_library`;
   the flag waited for the next spell to resolve and shuffled it away, kicker still set (seed 29444, 8 seats, game 101,
   a kicked Consult the Star Charts). Now set only for the resolving spell (CR 400.7).
-  `cr_400_7_a_gone_tokens_shuffle_self_does_not_take_the_next_spell`. ⚠ Same shape, not hit: `return_resolving_spell_to_hand`
-  / `exile_resolving_spell` / `resolving_spell_library_from_top` are set only by spell-printed effects today; a trigger
-  printing one would leak the same way.
+  `cr_400_7_a_gone_tokens_shuffle_self_does_not_take_the_next_spell`. ✅ The class: all five routing flags
+  (`return_resolving_spell_to_hand`, `exile_resolving_spell`, `resolving_spell_library_from_top`,
+  `resolving_spell_to_battlefield_transformed`, the shuffle) are set only when `GameState::is_resolving_spell(ctx)`.
 - ✅ `bottom_self_cost` from the graveyard (Daniels); `MayPlayLandsFromGraveyard` read through `active_static` (Nog's
   Officer statics); `RulebreakerSpellsOneExtraColor` (Tolabow) and `RulebreakerCards::Lands` (Grizzlegom);
   `DynamicPt::LandsOfTypeOnBattlefield` (Swampbenders, computed types via `lands_of_computed_type`).
