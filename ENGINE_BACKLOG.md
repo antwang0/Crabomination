@@ -562,9 +562,9 @@ planner choices.
   index, deck count). Every earlier sweep seated the first N decks, so 6,195 seats had one game each (the precon test).
   An undecided game prints `--pod-decks .. --first I --games 1`; a panic hook prints the same line before an optimized
   build aborts. The first 9,000 random games (seeds 29443-29444, 3-8 seats) found the two bugs below.
-- ✅ **CR 727.2 restart carried tokens** — `restart_game` gathered every `CardInstance`, so a token (or a spell copy) on
+- ✅ **CR 728.2 restart carried tokens** — `restart_game` gathered every `CardInstance`, so a token (or a spell copy) on
   the battlefield became a nontoken card in its owner's new library (seed 29443, 5 seats, game 259: a Go-Shintai Shrine
-  after Karn Liberated). `cr_727_2_a_restart_leaves_tokens_behind`.
+  after Karn Liberated). `cr_728_2_a_restart_leaves_tokens_behind`.
 - ✅ **`ShuffleSelfIntoLibrary` from a gone source shuffled the next spell** — a dies trigger whose source was neither on
   the battlefield nor in a graveyard (a dead token copy of Cavalier of Gales) set `shuffle_resolving_spell_into_library`;
   the flag waited for the next spell to resolve and shuffled it away, kicker still set (seed 29444, 8 seats, game 101,
@@ -578,9 +578,9 @@ planner choices.
 - 🟡 Inside the layer pass every other land-type CDA reads printed types (`permanent_has_land_type` under
   `layer_reads_are_printed`): Squelching Leeches and kin miss an Urborg-made Swamp. `lands_of_computed_type` is the
   device; route the land-type `DynamicPt` arms through it.
-- OPEN cards (Commander-legal EDHREC singles short only their commander): Massimo, Itazura, Yume, Miss Highwater, Sahir —
+- OPEN cards (Commander-legal EDHREC singles short only their commander): Itazura, Yume, Miss Highwater, Sahir —
   each a new primitive (DECK_FEATURES `01WRuXc3U3`). Chief Montgomery Scott's deck moved to five missing.
-- ⚠ **The CR moved under the pinned file.** The 2026-11-06 CR inserts 713 Meld Cards (713-733 shift +1: Monarch 726,
+- ✅ *re-pinned by `01WRuXc5Gy` (`6117678c2`)* — **The CR moved under the pinned file.** The 2026-11-06 CR inserts 713 Meld Cards (713-733 shift +1: Monarch 726,
   Initiative 727, Restarting 728 …) and a new 903.5e (rules-modifying commanders; sideboards are 903.5f). The tree cites the
   pinned `MagicCompRules_20260925.txt`; re-pin with `scripts/cr_diff.py` and sweep `scripts/audit_cr_citations.py` as one
   commit.
