@@ -17209,6 +17209,10 @@ impl GameState {
                         .count() as i32;
                     (base_p + n, base_t)
                 }
+                crate::card::DynamicPt::LandsOfTypeOnBattlefield { land_type } => {
+                    let n = (0..self.players.len()).map(|p| self.lands_of_computed_type(p, land_type)).sum();
+                    (n, n)
+                }
                 crate::card::DynamicPt::ControllerLife => {
                     let n = self.players[card.controller].life;
                     (n, n)

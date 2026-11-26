@@ -5322,4 +5322,6 @@ pub enum RulebreakerCards {
     ArtifactCreaturesAndEquipment,
     /// Aura cards (The Unluckiest Planeswalker).
     Auras,
+    /// Land cards (Grizzlegom, Hurloon Hero: "can have any land cards").
+    Lands,
 }

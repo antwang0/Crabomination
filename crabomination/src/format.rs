@@ -830,6 +830,7 @@ fn rulebreaker_allows(cards: &crate::effect::RulebreakerCards, card: &CardDefini
                 || card.subtypes.artifact_subtypes.contains(&crate::card::ArtifactSubtype::Equipment)
         }
         RC::Auras => card.is_aura(),
+        RC::Lands => card.is_land(),
     }
 }
 

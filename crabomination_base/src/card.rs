@@ -7296,6 +7296,9 @@ pub enum DynamicPt {
         base_t: i32,
         filter: Box<SelectionRequirement>,
     },
+    /// `*/*` = the lands of `land_type` on the battlefield, by computed type
+    /// (Swampbenders' Swamps, its own "lands you control are Swamps" counted).
+    LandsOfTypeOnBattlefield { land_type: LandType },
     /// `base_p`/`base_t` plus the number of permanents matching `filter` the
     /// controller's *opponents* control (Gaea's Avenger).
     BasePlusOpponentsMatching {
