@@ -1384,7 +1384,8 @@ fn parse_args() -> Result<Args, String> {
                      --pod-decks I,J,.. with --commander seats exactly those target\n\
                      decks (1-based, the tally's numbering) instead of the first N.\n\
                      --pod-random with --commander draws each game's --seats decks from\n\
-                     every target deck by (seed, game index); replay one with --first I.\n\
+                     every target deck by (seed, game index, deck count); replay one with\n\
+                     the --pod-decks .. --first I --games 1 line it prints.\n\
                      --commander with --b is a pod A/B: --a in one seat, --b in every\n\
                      other, each deal played once with --a in each seat; reports --a's\n\
                      share of wins against the 1/N a mirror gives."
@@ -1735,7 +1736,8 @@ fn run_commander_pods(args: &Args, threads: usize) -> i32 {
 }
 
 /// `--pod-random`'s draw: `seats` distinct indices into `all`, a pure function
-/// of `(seed, game)` so `--first I --games 1` replays game `I`.
+/// of `(seed, game, all)`. Appending a seat moves every draw, so the stable
+/// replay is the printed `--pod-decks .. --first I --games 1`.
 fn random_pod(all: usize, seats: usize, seed: u64, game: u32) -> Vec<usize> {
     let mut x = seed ^ u64::from(game).wrapping_mul(0xD1B5_4A32_D192_ED03);
     let mut next = || {
@@ -1784,11 +1786,11 @@ fn run_random_pods(
     for i in first..first.saturating_add(count) {
         let ix = random_pod(all.len(), seats, seed, i);
         let decks = ix.iter().map(|k| (k + 1).to_string()).collect::<Vec<_>>().join(",");
-        POD_GAME.with(|g| *g.borrow_mut() = format!("game {i} (--pod-random --first {i} --games 1; --pod-decks {decks})"));
+        POD_GAME.with(|g| *g.borrow_mut() = format!("game {i} (replay: --pod-decks {decks} --first {i} --games 1)"));
         let field: Vec<_> = ix.iter().map(|&k| all[k]).collect();
         let t = crabomination::pod::run_pod_games(&field, i, 1, seed, max_actions, pilot);
         if t.undecided() > 0 {
-            println!("  undecided game {i}: --pod-decks {decks}");
+            println!("  undecided game {i}: --pod-decks {decks} --first {i} --games 1");
         }
         tally.merge(&t);
     }
