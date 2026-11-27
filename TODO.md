@@ -437,8 +437,13 @@ No training run without the user's go-ahead.
 **Status 2026-11-26: seven fixes built behind `EvalWeights::rating_fixes`
 (off), all pass the head-to-head gate; `fixes+rf:all` is +2.8 on FRA, +1.5 SOS,
 +1.6 cube over `fra-fixes`, nearly all from the discard ranker. See ML_NOTES
-"Six experiments ... seven bot fixes". Owed before adoption: the blunder
-tripwire and the set-played re-rate (`.ladder/rf/`). Still open from the
+"Six experiments ... seven bot fixes". Blunder tripwire passes (scored 65.0 vs 64.0 of 75,
+client pilot 69.0 vs 69.0). Set-played re-rate (400 decks a card, both arms):
+Tinybones +1.4 -> -0.2, Rank Rat +0.7 -> 0.0, Rise of the Deathbringer
+-2.8 -> -0.4, Arni Humble Scribe -2.9 -> -1.1, Prophesied End -2.1 -> -0.8;
+only Rise clears its own +-1.6 interval, and the self-discard cards
+(Witness, Cryomancer) and Liliana did not move. Adoption into `fra-fixes` is
+the user's call. Still open from the
 lists below: engine-chosen discard costs (Murmuring Volume, Cryomancer's
 pitch), Jace's Machinations at instant speed, general instant removal on the
 opponent's turn, −X / destroy loyalty aims, Paradox Shaper / Fblthp, and the

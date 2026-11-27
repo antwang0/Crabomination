@@ -10600,3 +10600,37 @@ activations); general instant removal on the opponent's turn (`hold_instants`
 was rejected 2026-11-17, only the two narrow shapes above are held); −X
 loyalty damage and destroy/exile minuses keep the engine's aim; scry still
 bins by mana value.
+
+**Tripwire and re-rate (2026-11-27).** Blunder benchmark: `fra-fixes` 64.0/75,
+`fixes+rf:all` 65.0/75 (gains `flash_in_the_blocker`, loses none); client
+pilot 69.0 with and without the bits. Passes.
+
+Set-played re-rate, `fra_card_eval --set-played --sample-decks 1000 --per-card
+400 --pairs 4 --seed 43`, `fra-fixes` against `fixes+rf:all`
+(`.ladder/rf/set_played_*`). Played gain, before -> after:
+
+| Card | Wanted | Before | After | Δ (± joint CI) |
+|---|---|---|---|---|
+| Tinybones, Pocket Nuisance | down | +1.37 | −0.23 | −1.60 ±1.68 |
+| Rank Rat | down | +0.68 | +0.01 | −0.67 ±1.59 |
+| Rise of the Deathbringer | up | −2.79 | −0.39 | +2.40 ±1.60 |
+| Arni, Humble Scribe | up | −2.91 | −1.07 | +1.84 ±1.90 |
+| Prophesied End | up | −2.14 | −0.83 | +1.31 ±1.69 |
+| Murmuring Volume | up | −4.81 | −3.82 | +0.99 ±1.55 |
+| Divining Duelist | up | −2.38 | −1.50 | +0.88 ±1.90 |
+| Last Gasp | up | −0.51 | +0.20 | +0.70 ±1.45 |
+| Unsummon | up | −2.21 | −1.65 | +0.57 ±1.90 |
+| Pia, Aether Ascetic | up | −2.41 | −2.03 | +0.38 ±1.63 |
+| Undulating Witness | up | +0.36 | +0.23 | −0.13 ±1.84 |
+| Seasoned Cryomancer | up | +0.82 | +0.40 | −0.42 ±1.97 |
+| Multiply by Zero | up | +0.15 | −0.42 | −0.57 ±1.52 |
+| Liliana the Faultless | up | 0.00 | −0.58 | −0.58 ±1.60 |
+
+Ten of fourteen move the wanted way, but only Rise of the Deathbringer clears
+its own interval; across all 260 cards the between-run difference has sd 0.81
+with a mean joint CI of ±2.2, so a single card's move under ~1.7 is not
+distinguishable from re-run noise. Read: the two forced-discard cards lose
+their top-third rating and the removal/timing targets recover 1–2 points; the
+self-discard cards and Liliana's shield show nothing at this n. Chandra
+(0.93 both) and Clash of Elements (n = 14) are unreadable. The deck-level gain
+(+2.8 FRA) is the solid evidence; the per-card table is directional.
