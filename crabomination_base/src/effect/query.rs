@@ -1077,6 +1077,7 @@ impl Effect {
             | Effect::ReturnSelfAttachedToChoiceOf { .. }
             | Effect::EachPlayerNamesCard { .. }
             | Effect::EachPlayerRevealTopKeepIfNamed { .. }
+            | Effect::RevealTopNamedToHandElse { .. }
             | Effect::SectorBlockLockThisTurn
             | Effect::SearchTheCityReturn
             | Effect::LinkLastMovedExilesToSource

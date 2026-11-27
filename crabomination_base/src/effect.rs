@@ -4847,6 +4847,10 @@ pub enum Effect {
     /// Conundrum Sphinx: each player reveals their top card; the named one goes
     /// to hand, otherwise bottom (names from `EachPlayerNamesCard`).
     EachPlayerRevealTopKeepIfNamed { who: PlayerRef },
+    /// Vexing Arcanix: each `who` reveals their top card; the one they named
+    /// (`EachPlayerNamesCard`) goes to their hand, otherwise it goes to their
+    /// graveyard and `miss` runs.
+    RevealTopNamedToHandElse { who: PlayerRef, miss: Box<Effect> },
     /// Controller loses `amount` life, a different selector gains it.
     Drain { from: Selector, to: Selector, amount: Value },
     /// "Each opponent loses N. You gain life equal to the life lost this way"

@@ -30119,6 +30119,27 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RevealTopNamedToHandElse { who, miss } => {
+                for p in self.resolve_players(who, ctx) {
+                    let Some(top) = self.players[p].library.first().map(|c| c.id) else { continue };
+                    let Some(card) = Self::take_card(&mut self.players[p].library, top) else { continue };
+                    let hit = self.scratch.names_this_resolution.get(&p).is_some_and(|n| n == card.definition.name);
+                    events.push(GameEvent::TopCardRevealed {
+                        player: p,
+                        card_name: card.definition.name,
+                        is_land: card.definition.is_land(),
+                    });
+                    if hit {
+                        self.put_in_hand(p, card, crate::card::Zone::Library);
+                    } else {
+                        self.players[p].library.insert(0, card);
+                        self.move_card_to(top, &crate::effect::ZoneDest::Graveyard, ctx, events);
+                        self.run_effect(miss, ctx, events)?;
+                    }
+                }
+                Ok(())
+            }
+
             Effect::NameCardRevealTop { count } => {
                 // Tamiyo +1: choose a nonland card name, reveal the top N —
                 // matching names to hand, the rest to the graveyard.

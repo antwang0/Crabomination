@@ -3180,6 +3180,7 @@ pub fn ability_effect_label(effect: &Effect) -> &'static str {
         Effect::NameCardExileMatchingAllZones => "Name & exile all copies",
         Effect::EachPlayerNamesCard { .. } => "Each player names a card",
         Effect::EachPlayerRevealTopKeepIfNamed { .. } => "Reveal top; keep if named",
+        Effect::RevealTopNamedToHandElse { .. } => "Reveal top; named to hand",
         Effect::ReturnSelfAttachedToChoiceOf { .. } => "Return attached to their choice",
         Effect::ChooseTypeRevealTopPartition { .. } => "Reveal & sort by type",
         Effect::FertileImagination { .. } => "Saprolings per type",
