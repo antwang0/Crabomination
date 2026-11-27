@@ -4414,6 +4414,9 @@ pub enum StaticEffect {
     /// "[filter] spells you cast have convoke" (CR 702.51 — Chief Engineer).
     /// Consulted by the convoke cast path alongside the printed keyword.
     GrantConvokeToSpells { filter: SelectionRequirement },
+    /// "[filter] spells you cast have assist" (CR 702.132a — Yume, Chronicler
+    /// of Valor, gated to the first spell of your turn). Read by `game::assist`.
+    GrantAssistToSpells { filter: SelectionRequirement },
     /// "Creature spells you cast gain offspring {cost} as you cast them"
     /// (CR 702.175 — Zinnia, Valley's Voice). Read by the kicked cast path
     /// (`GameState::granted_offspring_cost`) for a creature spell with no

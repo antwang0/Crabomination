@@ -11704,6 +11704,13 @@ impl GameState {
             return Ok(vec![]);
         }
 
+        // CR 702.132a — the assister pays before the caster (not with convoke
+        // or delve, whose credit was sized to the whole cost).
+        let assist = if convoke_creatures.is_empty() && delve_cards.is_empty() && no_mana_float.is_none() {
+            self.take_assist(p, &card, &mut cost)
+        } else {
+            None
+        };
         let paid = match no_mana_float {
             Some(float) => self.pay_without_mana(p, &cost, &spell_kind, float, snapshot),
             None => self.try_pay_after_snapshot_mode(p, &cost, snapshot, forced_only, &spell_kind, spend_float_choice),
@@ -11712,10 +11719,12 @@ impl GameState {
             Ok(r) => r,
             Err(e) => {
                 cast_census::rollback(line!());
+                self.undo_assist(assist);
                 self.players[p].hand.push(card);
                 return Err(e);
             }
         };
+        self.record_assist(card_id, assist);
         // Bumped before the mana riders: Opal Palace counts the cast in
         // progress (ruling 2020-11-10).
         if commander_hop {
@@ -15587,6 +15596,7 @@ impl GameState {
         let forced_only = self.players[p].manual_mana;
         let spell_kind = self.spell_kind_for(p, &card);
         // "You can't spend mana to cast this spell": with no helpers, nothing pays.
+        let assist = if card.definition.no_mana_spend { None } else { self.take_assist(p, &card, &mut cost) };
         let paid = if card.definition.no_mana_spend {
             let snapshot = self.snapshot_payment_state(p);
             let float = std::mem::take(&mut self.players[p].mana_pool);
@@ -15597,11 +15607,13 @@ impl GameState {
         let receipt = match paid {
             Ok(r) => r,
             Err(e) => {
+                self.undo_assist(assist);
                 self.players[p].command.push(card);
                 self.offboard_keyword_grants = true;
                 return Err(e);
             }
         };
+        self.record_assist(card_id, assist);
                 self.pay_life_cost(p, receipt.side_effects.life_lost + tax_life);
         self.note_cast_payment_riders(&receipt, &spell_kind);
         let converged_value = converge_count(&receipt.pool_before, &self.players[p].mana_pool);

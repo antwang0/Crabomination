@@ -181,6 +181,7 @@ fn player_ref_selector(p: &PlayerRef) -> Option<&Selector> {
         | PlayerRef::Target(_)
         | PlayerRef::CounteredSpellController
         | PlayerRef::AcceptingPlayer
+        | PlayerRef::AssisterOfTriggerSpell
         | PlayerRef::CurrentVoter
         | PlayerRef::You
         | PlayerRef::EachOpponent

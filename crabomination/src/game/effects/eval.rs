@@ -3220,6 +3220,11 @@ impl GameState {
                         c.cast_snow_colors & own != 0
                     })
                 }),
+            Predicate::SpellWasAssisted { what } => self
+                .resolve_selector(what, ctx)
+                .into_iter()
+                .filter_map(|e| e.as_card_id())
+                .any(|id| self.assister_of(id).is_some()),
             Predicate::CastWithTreasureMana { what } => self
                 .resolve_selector(what, ctx)
                 .into_iter()

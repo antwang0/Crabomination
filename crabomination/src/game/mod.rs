@@ -224,6 +224,7 @@ mod trigger_time;
 mod trigger_slots;
 mod probing_telepathy;
 mod cast_watch;
+mod assist;
 mod cascade_grant;
 // Rod of Absorption / River Song's Diary, fixed at cast.
 mod absorb;
@@ -1474,6 +1475,10 @@ pub struct TurnRegistries {
     /// counter on this turn". Cleared at cleanup.
     #[serde(default)]
     pub(crate) counter_put_this_turn: Vec<(CardId, u8)>,
+    /// CR 702.132a — (spell, assister) for each spell another player paid
+    /// toward with assist this turn. Read by `PlayerRef::AssisterOfTriggerSpell`.
+    #[serde(default)]
+    pub(crate) assisted_spells: Vec<(CardId, u8)>,
     /// Seats whose creature or planeswalker was dealt excess damage this
     /// turn (CR 120.4a/120.10 — Rith, Liberated Primeval). Cleared at cleanup.
     #[serde(default)]
@@ -35192,6 +35197,7 @@ fn static_effect_to_effects(
             | StaticEffect::MostPermanentsCantPlay
             | StaticEffect::OpponentsWithMoreCantPlayThatType
             | StaticEffect::GrantConvokeToSpells { .. }
+            | StaticEffect::GrantAssistToSpells { .. }
             | StaticEffect::EquippedMustBeBlockedByIfAble { .. }
             | StaticEffect::GrantStaticAbility { .. }
             | StaticEffect::CreatureSpellsGainOffspring { .. }

@@ -30,6 +30,9 @@ pub enum PlayerRef {
     /// offer (the punisher family's "have this deal damage to *them*").
     /// Resolves to `GameState.accepting_player`.
     AcceptingPlayer,
+    /// CR 702.132a — the player who paid toward the triggering spell's cost
+    /// with assist (Yume's "you and that player each draw a card").
+    AssisterOfTriggerSpell,
     /// CR 701.38 — the player who cast the vote a `VoteTally::PerVote` body is
     /// running for ("choose a permanent owned by the voter" — Expropriate).
     /// Falls back to the controller outside a ballot.
@@ -1895,6 +1898,9 @@ pub enum Predicate {
     /// (Alchemist's Talent, Rain of Riches — on a `SpellCast` trigger,
     /// `Selector::TriggerSource`).
     CastWithTreasureMana { what: Selector },
+    /// CR 702.132a — another player paid part of the generic cost of the
+    /// spell `what` resolves to (Yume's "if another player spent mana to cast it").
+    SpellWasAssisted { what: Selector },
     /// Snow mana of one of the spell's own colours was spent on `what`
     /// (`CardData::cast_snow_colors`). Boreal Outrider.
     SnowOfItsColorSpentToCast { what: Selector },

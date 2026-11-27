@@ -47418,6 +47418,10 @@ impl GameState {
                 .map(|c| c.owner),
             PlayerRef::CounteredSpellController => self.countered_spell_controller,
             PlayerRef::AcceptingPlayer => self.accepting_player,
+            PlayerRef::AssisterOfTriggerSpell => match ctx.trigger_source {
+                Some(EntityRef::Card(id)) => self.assister_of(id),
+                _ => None,
+            },
             // ⚠ CR 800.4a — a player who left the game is no longer a player,
             // so every extremum walks `living_seats`, not `0..players.len()`:
             // an eliminated seat stays in the vector at ≤ 0 life and was always
