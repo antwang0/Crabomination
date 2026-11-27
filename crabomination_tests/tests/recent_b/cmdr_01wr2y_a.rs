@@ -151,3 +151,67 @@ fn type_2_phaser_taps_and_stuns_on_entry() {
     assert!(b.tapped);
     assert_eq!(b.counter_count(CounterType::Stun), 1);
 }
+
+/// Worf's cost taps two untapped artifacts and/or creatures you control —
+/// Worf himself may be one, summoning sick or not (no {T} symbol, CR 302.6).
+#[test]
+fn worf_taps_himself_and_an_artifact_for_a_counter() {
+    let mut g = pod(2);
+    let worf = g.add_card_to_battlefield(0, catalog::worf_honor_bound_warrior());
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    activate(&mut g, worf, None).expect("tap two");
+    assert!(g.battlefield_find(worf).is_some_and(|c| c.tapped));
+    assert!(g.battlefield_find(rock).is_some_and(|c| c.tapped));
+    assert_eq!(pt(&g, worf), (2, 2));
+}
+
+/// Shields Up! on a creature: indestructible through a Doom Blade-style
+/// destroy and a +1/+1 counter; on a noncreature artifact, no counter.
+#[test]
+fn shields_up_counters_only_a_creature() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let rock = g.add_card_to_battlefield(0, catalog::sol_ring());
+    for (id, counters) in [(bears, 1), (rock, 0)] {
+        let s = g.add_card_to_hand(0, catalog::shields_up());
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::White, 2);
+        cast(&mut g, s, Some(Target::Permanent(id)), None);
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne), counters);
+    }
+    let blade = g.add_card_to_hand(1, catalog::murder());
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Black, 3);
+    let _ = g.perform_action(GameAction::CastSpell {
+        card_id: blade,
+        target: Some(Target::Permanent(bears)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    });
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some(), "hexproof or indestructible keeps it");
+}
+
+/// The Measure of a Man: chapter I exiles an opponent's creature, chapter III
+/// returns it under its owner's control (and the Saga's controller gains 2).
+#[test]
+fn the_measure_of_a_man_returns_the_exiled_card_to_its_owner() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = pod(3);
+    let saga = g.add_card_to_battlefield(0, catalog::the_measure_of_a_man());
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    let def = catalog::the_measure_of_a_man();
+    let chapter = |n: u32| def.saga_chapters.iter().find(|(k, _)| *k == n).unwrap().1.clone();
+    let mut ctx = EffectContext::for_spell(0, Some(Target::Permanent(bears)), 0, 0);
+    ctx.source = Some(saga);
+    g.resolve_effect(&chapter(1), &ctx).expect("I");
+    assert!(g.exile.iter().any(|c| c.id == bears));
+    let life = g.players[0].life;
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(saga);
+    g.resolve_effect(&chapter(3), &ctx).expect("III");
+    assert!(g.battlefield_find(bears).is_some_and(|c| c.controller == 2));
+    assert_eq!(g.players[0].life, life + 2);
+}

@@ -38317,6 +38317,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SELA_COMMANDERS,
             main: decks::SELA_MAIN,
         },
+        // Seat 6312: Rutherford, Upgraded Ensign's EDHREC average deck. `--pod-decks 6312`.
+        PodDeck {
+            name: "Rutherford, Upgraded Ensign (W)",
+            commanders: decks::RUTHERFORD_COMMANDERS,
+            main: decks::RUTHERFORD_MAIN,
+        },
+        // Seat 6313: Worf, Honor-Bound Warrior's EDHREC average deck. `--pod-decks 6313`.
+        PodDeck {
+            name: "Worf, Honor-Bound Warrior (WR)",
+            commanders: decks::WORF_6_COMMANDERS,
+            main: decks::WORF_6_MAIN,
+        },
     ]
 }
 
@@ -46598,6 +46610,8 @@ mod tests {
             ("Martok, Hero of the Empire", &[0x22A5]),
             ("Dr. Pulaski, Cynical Clinician", &[0x22A6]),
             ("Sela, Tal Shiar Paradox", &[0x22A7]),
+            ("Rutherford, Upgraded Ensign", &[0x22A8]),
+            ("Worf, Honor-Bound Warrior", &[0x22A9]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

@@ -19644,6 +19644,12 @@ static DECKS: &[Factory] = &[
     super::decks::rogue_artificial_intelligence,
     super::decks::salt_vampire,
     super::decks::a_good_day_to_die,
+    super::decks::worf_honor_bound_warrior,
+    super::decks::kirk_commanding_officer,
+    super::decks::shields_up,
+    super::decks::test_of_identity,
+    super::decks::u_s_s_cerritos_following_up,
+    super::decks::the_measure_of_a_man,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

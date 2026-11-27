@@ -177319,3 +177319,62 @@ pub const SELA_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const RUTHERFORD_COMMANDERS: &[CardFactory] = &[rutherford_upgraded_ensign];
+
+/// **Rutherford, Upgraded Ensign**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Rutherford, Upgraded Ensign (EDHREC, fetched 2026-11-27).
+pub const RUTHERFORD_MAIN: &[CardFactory] = &[
+    arcane_signet, class_4_tactical_cube, class_f_shuttlecraft, command_chair, deep_space_9,
+    hedron_archive, lumen_class_frigate, malfunctioning_holodeck, maturation_chamber,
+    oberth_class_starship, pearl_medallion, pinnacle_kill_ship, shuttlecraft_galileo, sol_ring,
+    starship_enterprise, stonespeaker_crystal, the_seriema, thought_vessel, tricorder,
+    type_03_borg_vessel, u_s_s_cerritos_following_up, u_s_s_defiant_tough_little_ship,
+    u_s_s_enterprise_a_free_spirit, uss_enterprise_d_galaxy_class, u_s_s_enterprise_e_sovereign,
+    uss_excelsior_cutting_edge, u_s_s_prometheus_prototype, warp_core, wayfarers_bauble,
+    wedgelight_rammer, wurmwall_sweeper, command_tower, exotic_orchard, mistveil_plains,
+    nykthos_shrine_to_nyx, path_of_ancestry, reliquary_tower, spire_of_industry, coretapper,
+    cybernetic_specialist, enduring_innocence, firemane_commando, foundry_inspector,
+    free_borg_revolutionaries, gold_myr, hologram_janeway, loran_of_the_third_path,
+    miles_obrien_transporter_ops, ornithopter_of_paradise, paladin_danse_steel_maverick,
+    patrolling_peacemaker, reconnaissance_partition, solemn_simulacrum, spirited_companion,
+    spot_felis_catus, sulu_space_swashbuckler, supplementation_node, vexing_drone,
+    ghostly_prison, smothering_tithe, smugglers_share, the_measure_of_a_man, dispatch,
+    generous_gift, path_to_exile, shields_up, swords_to_plowshares, command_decision,
+    damning_verdict,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const WORF_6_COMMANDERS: &[CardFactory] = &[worf_honor_bound_warrior];
+
+/// **Worf, Honor-Bound Warrior**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 11 Mountains + 10 Plains = 99.
+/// Worf, Honor-Bound Warrior (EDHREC, fetched 2026-11-27).
+pub const WORF_6_MAIN: &[CardFactory] = &[
+    arcane_signet, bloodforged_battle_axe, boros_signet, brotherhood_regalia, colossus_hammer,
+    d_7_battle_cruiser, howling_mine, lightning_greaves, loxodon_warhammer,
+    masterwork_of_ingenuity, mithril_coat, skullclamp, sol_ring, swiftfoot_boots,
+    sword_of_vengeance, sword_of_the_animist, talisman_of_conviction, the_aetherspark,
+    the_reaver_cleaver, thran_power_suit, wayfarers_bauble, ancient_den, battlefield_forge,
+    clifftop_retreat, command_tower, furycalm_snarl, path_of_ancestry, radiant_summit,
+    rogues_passage, rugged_prairie, sacred_foundry, spectator_seating, sunbillow_verge,
+    sundown_pass, sunscorched_divide, akiri_fearless_voyager, ambassador_kehleyr,
+    beckett_mariner_impetuous_ensign, beverly_crusher_ships_doctor, brad_boimler_eager_ensign,
+    codsworth_handy_helper, combat_celebrant, dr_pulaski_cynical_clinician,
+    ensign_harry_kim_operations, julian_bashir_frontier_doctor, kargan_intimidator,
+    kediss_emberclaw_familiar, kirk_commanding_officer, puresteel_paladin, raiyuu_storms_edge,
+    reyav_master_smith, ro_laren_double_agent, rom_and_leeta_unlikely_pair,
+    sram_senior_edificer, troubling_tribbles, worf_intelligence_contractor, worf_son_of_mogh,
+    aggravated_assault, fighter_class, grim_reapers_sprint, sigardas_aid, boros_charm, bulk_up,
+    dispatch, generous_gift, legion_leadership, path_to_exile, shields_up, swords_to_plowshares,
+    test_of_identity, untimely_malfunction, valorous_stance, command_decision, jolted_awake,
+    open_the_armory, seize_the_spoils, steelshapers_gift, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
