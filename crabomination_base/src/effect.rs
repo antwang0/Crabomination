@@ -3616,6 +3616,10 @@ pub enum KeywordAct {
     /// CR 702.159b — a player claimed an Attraction's prize; the player is the
     /// actor, the Attraction the subject.
     ClaimedPrize,
+    /// Chira, All In — the actor discarded at random, chose modes at random,
+    /// flipped coins or rolled dice: one event per kind of act per player per
+    /// resolution (`GameEvent::DidAtRandom`), only while a listener is out.
+    DidAtRandom,
 }
 
 /// The four bending actions [`KeywordAct::Bent`] tells apart.

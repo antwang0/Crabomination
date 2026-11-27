@@ -3691,6 +3691,7 @@ impl GameState {
                 events.push(GameEvent::LifeLostToOwnEffect { player: me, amount });
             }
             self.push_opponent_library_exiles(me, mark, &mut events);
+            self.push_random_flips_and_rolls(mark, &mut events);
         }
         *out = events;
         Ok(())
@@ -11305,11 +11306,15 @@ impl GameState {
                         // doesn't care which card). The discard itself (zone move,
                         // CardDiscarded, counters, Madness CR 702.35) lives in
                         // `discard_card`.
+                        let had = self.players[p].hand.len();
                         for _ in 0..n {
                             let Some(cid) = self.players[p].hand.first().map(|c| c.id) else {
                                 break;
                             };
                             self.discard_card(p, cid, events);
+                        }
+                        if had > self.players[p].hand.len() {
+                            self.note_did_at_random(p, events);
                         }
                         continue;
                     }
@@ -11370,6 +11375,7 @@ impl GameState {
                         .collect();
                     if let Some(&cid) = pool.choose(&mut self.rng.draw()) {
                         self.discard_card(p, cid, events);
+                        self.note_did_at_random(p, events);
                     }
                 }
                 Ok(())

@@ -25,6 +25,7 @@ impl GameState {
         }
         let idx = self.rng.draw().random_range(0..modes.len());
         let mode = &modes[idx];
+        self.note_did_at_random(ctx.controller, events);
         // The mode is only known now, so a targeted one takes the
         // auto-picker's target as it resolves.
         if mode.requires_target() {

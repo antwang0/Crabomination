@@ -2975,6 +2975,9 @@ pub enum GameEventWire {
     /// Wire mirror of `GameEvent::LifeLostToOwnEffect` (engine-internal: it
     /// repeats a `LifeLost`, so `wire_events` drops it).
     LifeLostToOwnEffect { player: usize, amount: u32 },
+    /// Wire mirror of `GameEvent::DidAtRandom` (engine-internal, filtered out
+    /// like `LifeLostToOwnEffect`).
+    DidAtRandom { player: usize },
     /// Wire mirror of `GameEvent::ExcessCombatDamage` (CR 120.10).
     ExcessCombatDamage { card_id: CardId, controller: usize, amount: u32 },
 }
@@ -2983,7 +2986,9 @@ pub enum GameEventWire {
 pub fn wire_events(events: &[GameEvent]) -> Vec<GameEventWire> {
     events
         .iter()
-        .filter(|e| !matches!(e, GameEvent::DeathStepEnded | GameEvent::LifeLostToOwnEffect { .. }))
+        .filter(|e| {
+            !matches!(e, GameEvent::DeathStepEnded | GameEvent::LifeLostToOwnEffect { .. } | GameEvent::DidAtRandom { .. })
+        })
         .map(Into::into)
         .collect()
 }
@@ -3450,6 +3455,7 @@ impl From<&GameEvent> for GameEventWire {
             }
             GameEvent::GameOver { winner } => GameEventWire::GameOver { winner: *winner },
             GameEvent::DeathStepEnded => GameEventWire::DeathStepEnded,
+            GameEvent::DidAtRandom { player } => GameEventWire::DidAtRandom { player: *player },
             GameEvent::LifeLostToOwnEffect { player, amount } => {
                 GameEventWire::LifeLostToOwnEffect { player: *player, amount: *amount }
             }
@@ -3486,7 +3492,7 @@ impl GameEventWire {
             E::AttractionOpened { card_id, player } => format!("{} opened {}", pn(*player), name(*card_id)),
             E::PrizeClaimed { card_id, player } => format!("{} claimed the prize of {}", pn(*player), name(*card_id)),
             // Engine-internal; the server never sends it.
-            E::DeathStepEnded | E::LifeLostToOwnEffect { .. } => String::new(),
+            E::DeathStepEnded | E::LifeLostToOwnEffect { .. } | E::DidAtRandom { .. } => String::new(),
             E::TurnStarted { player, turn } => format!("Turn {turn} — {}", pn(*player)),
             E::CardDrawn { player, card_id } => format!("{} drew {}", pn(*player), name(*card_id)),
             E::CardDiscarded { player, card_id } => {

@@ -1203,3 +1203,48 @@ impl GameState {
         }
     }
 }
+
+impl GameState {
+    /// Whether a permanent hears `KeywordAct::DidAtRandom` (Chira, All In):
+    /// the gate on every emission, so other games' event streams are unchanged.
+    fn hears_did_at_random(&self) -> bool {
+        use crate::effect::{EventKind, KeywordAct};
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .triggered_abilities
+                .iter()
+                .any(|t| matches!(t.event.kind, EventKind::Performed(KeywordAct::DidAtRandom)))
+        })
+    }
+
+    /// `seat` discarded at random or chose a mode at random.
+    pub(crate) fn note_did_at_random(&self, seat: usize, events: &mut Vec<crate::game::types::GameEvent>) {
+        if self.hears_did_at_random() {
+            events.push(crate::game::types::GameEvent::DidAtRandom { player: seat });
+        }
+    }
+
+    /// After an outermost resolution: one `DidAtRandom` per player who flipped
+    /// one or more coins, and one per player who rolled one or more dice.
+    pub(crate) fn push_random_flips_and_rolls(&self, mark: usize, events: &mut Vec<crate::game::types::GameEvent>) {
+        use crate::game::types::GameEvent;
+        let Some(slice) = events.get(mark..) else { return };
+        let mut flips: Vec<usize> = Vec::new();
+        let mut rolls: Vec<usize> = Vec::new();
+        for e in slice {
+            match e {
+                GameEvent::CoinFlipWon { player } | GameEvent::CoinFlipLost { player } if !flips.contains(player) => {
+                    flips.push(*player)
+                }
+                GameEvent::DiceRolled { player, .. } if !rolls.contains(player) => rolls.push(*player),
+                _ => {}
+            }
+        }
+        if (flips.is_empty() && rolls.is_empty()) || !self.hears_did_at_random() {
+            return;
+        }
+        for player in flips.into_iter().chain(rolls) {
+            events.push(GameEvent::DidAtRandom { player });
+        }
+    }
+}

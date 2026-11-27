@@ -2794,6 +2794,8 @@ pub enum GameEvent {
     AttractionOpened { card_id: CardId, player: usize },
     /// CR 702.159b — `player` claimed the prize of the Attraction `card_id`.
     PrizeClaimed { card_id: CardId, player: usize },
+    /// `KeywordAct::DidAtRandom` — `player` did something at random (Chira).
+    DidAtRandom { player: usize },
     /// A card was put into exile from the battlefield, a graveyard or a library
     /// (CR 400.7 — the origin matters to Ketramose and Laelia). `from` is one
     /// [`crate::effect::exile_from`] bit; `player` is the zone's player (the
