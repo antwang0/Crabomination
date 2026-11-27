@@ -596,7 +596,10 @@ planner choices.
   `edhrec_scan_top.py` (~10 min of fetches) and `edhrec_scan_pairs.py --legal --max 1`. Identity check before seating a
   pair: union the commanders' `color_identity` from `oracle_cards.jsonl.gz`, count `avg/<slug>.json` cards outside it.
 - ⚠ The scan resolves names by slug, so an apostrophe name it can't slug (Sol'Kanar) reads as missing though seated.
-- Sweeps and gates: TODO's Commander NEXT item 5, PERF `01WRuXc3os`. The suite / clippy line is below.
+- Sweeps and gates: TODO's Commander NEXT item 5, PERF `01WRuXc3os`. Closing gates at `3c63092b9`: suite **29,658 / 0 / 14**
+  (`CRAB_ANSWER_LOG=strict`, the per-seat pod test skipped; the first run's 5 failures were the double trigger and four
+  audit ratchets, all fixed); `cargo clippy --workspace --exclude crabomination_client --all-targets` **0** (71 min cold;
+  its one `items_after_test_module` was fixed upstream in `d1e16dc81`).
 - OPEN: Yume (the last commander-only single); Mohiam (+ Nix), Benjamin Sisko (+ Final Frontier) one short. Sash and
   Waistcoat, Chira, Glava, Matoc and The Madcap Jester were closed concurrently by `01WRuXc5RU` (`decks::cmdr_nov27`) —
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
