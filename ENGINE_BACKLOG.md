@@ -20,6 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, Radha](#fixedopen-2026-11-27-commander-run-01wruxc2yt--a-land-type-recursion-two-residuals-radha) | 16 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `modern_decks` second) — bot waterbend, dilemmas, 19 seats](#fixedopen-2026-11-27-commander-run-modern_decks-second--bot-waterbend-dilemmas-19-seats) | 23 |
 | Bugs & robustness | [The Commander NEXT's lines as `modern_decks` (second run) found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-modern_decks-second-run-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc4uj`) — Assist, random discard, an optional-loop cap, 3 seats](#fixedopen-2026-11-27-commander-run-01wruxc4uj--assist-random-discard-an-optional-loop-cap-3-seats) | 18 |
@@ -607,6 +608,21 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, Radha
+
+Seat 6308 (Radha, Coalition Warlord; `decks::cmdr_01wr2y_a`, tests `recent_b::cmdr_01wr2y_a`).
+- ✅ **Bug: stack overflow** (abort) in pods, seed 29565 8 seats (Verdeloth's deck): a mid-gather land-type check
+  (Dungrove Elder's Forest count) walked Life and Limb's "All Forests" granter filter without bound.
+  `GameState::land_type_granted_to` walks granters one ply deep.
+- ✅ Hew the Entwood (nonland picks enter before the tapped lands); Aurora Awakener ("any number":
+  `RevealUntilMatchingToBattlefield { any_number }`, headless takes all). Both were 5-seat sole residuals.
+- ✅ `edhrec_deck.py` read a quoted phrase in a factory's line comment as its printed name (Sol'Kanar showed as an
+  unseated one-card gap).
+- CLAIMED: Martok, Hero of the Empire (Type-2 Phaser, Hologram Janeway, 70,000 Light-Years from Home); Dr. Pulaski
+  (Disruptor Pistol, Free Borg Revolutionaries, Shuttle Crew); Sela, Tal Shiar Paradox (Rogue Artificial
+  Intelligence, Salt Vampire, A Good Day to Die).
+- OPEN (PERF candidate 2026-11-27): Sword of the Squeak on a ~300-token board, 5-8 s an action.
+
 ## FIXED/OPEN 2026-11-27 (Commander run, `modern_decks` second) — bot waterbend, dilemmas, 19 seats
 
 Seats 6289-6307 (the EDHREC rescan's legal decks at <= 4 short; DECK_FEATURES has the list). 50 cards, mostly

@@ -20728,6 +20728,18 @@ is a `--bench` reading and none of it belongs in the Baseline.
 
 ## Perf candidates
 
+### 2026-11-27 — Sword of the Squeak's base-P/T count costs 5-8 s an action on a ~300-token board (Commander only)
+
+2-seat pod `--commander --pod-random --seats 2 --seed 29561 --first 454 --games 1 --threads 1`, `release`: **383 s**,
+decided at turn 17 in 1,276 actions; turn 17 alone is 750 actions (a Squirrel/Food engine with Essence Warden: life
+64 → 351 in one main phase). Six gdb samples, all in `affected_includes_gated` ← `compute_permanent_second_pass` ←
+`base_pt_of` ← `evaluate_value` ← `gather_continuous_effects_inner`, under an SBA pass or a token mint inside the
+bot's `evaluate_action_sequence` sims: the Sword's "+1/+1 for each creature you control with base power or
+toughness 1" applies the partial layer list to every creature per gather (O(board × effects)), and each sim
+resolution re-gathers. Not built. Cheapest lead: a base-P/T fast path — with no layer-1/7a/7b effect in the partial
+list (copy, CDA, P/T setting) a candidate's base P/T is its printed P/T, one list scan per gather instead of one
+pass per candidate.
+
 ### 2026-11-01 — `stamp_ability_id` scans the whole stack per push (O(n²) on a big trigger batch)
 
 `stack_ability.rs::stamp_ability_id` takes the max ability id over every stack item (and its targets) on each
