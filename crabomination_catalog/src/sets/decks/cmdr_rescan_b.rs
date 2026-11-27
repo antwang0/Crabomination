@@ -742,19 +742,8 @@ pub fn captain_marvel_earths_protector() -> CardDefinition {
 
 /// Flying Drone — {1}{U} 1/2 artifact Robot Scout; flying, vigilance. {1}{U},
 /// {T}: draw, then discard; it costs {1}{U} less if another creature with
-/// flying entered under your control this turn — written as the full-price
-/// loot gated off that and a free one gated on it. (Vulture.)
+/// flying entered under your control this turn. (Vulture.)
 pub fn flying_drone() -> CardDefinition {
-    let flyer_entered = Predicate::CreatureEnteredThisTurnMatching {
-        who: PlayerRef::You,
-        filter: R::HasKeyword(Keyword::Flying).and(R::OtherThanSource),
-    };
-    let loot = || {
-        Effect::Seq(vec![
-            draw(1),
-            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
-        ])
-    };
     CardDefinition {
         name: "Flying Drone",
         cost: cost(&[generic(1), u()]),
@@ -763,16 +752,22 @@ pub fn flying_drone() -> CardDefinition {
         power: 1,
         toughness: 2,
         keywords: vec![Keyword::Flying, Keyword::Vigilance],
-        activated_abilities: vec![
-            ActivatedAbility {
-                tap_cost: true,
-                mana_cost: cost(&[generic(1), u()]),
-                effect: loot(),
-                condition: Some(Predicate::Not(Box::new(flyer_entered.clone()))),
-                ..Default::default()
-            },
-            ActivatedAbility { tap_cost: true, effect: loot(), condition: Some(flyer_entered), ..Default::default() },
-        ],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(1), u()]),
+            cost_reduction_if_mana: Some((
+                Predicate::CreatureEnteredThisTurnMatching {
+                    who: PlayerRef::You,
+                    filter: R::HasKeyword(Keyword::Flying).and(R::OtherThanSource),
+                },
+                cost(&[generic(1), u()]),
+            )),
+            effect: Effect::Seq(vec![
+                draw(1),
+                Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+            ]),
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

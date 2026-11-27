@@ -2109,7 +2109,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Doctor Jane Foster~~ ✅ | fixed 2026-10-27: with life gained this turn the card moves graveyard → battlefield in one move (`If` picks the destination) | — |
 | 🟡 Trelane, Squire of Gothos | no `Q` creature type in the engine, so it has no creature type | vigilance / ward {2} / unblockable |
 | 🟡 Sensation Gorger | the top card is checked before you choose to look; a non-sharing top card is never offered | `If` over `SharesCreatureTypeWithSource`, then `MayDo` |
-| 🟡 Flying Drone | "costs {1}{U} less to activate if …" is two abilities: the full-price loot gated off the condition and a free one gated on it | two `ActivatedAbility::condition` arms |
 | 🟡 Lightmine Field | "each of those creatures" / "the number of attacking creatures" read every attacker as the trigger resolves, not the declaration that triggered it | `YouAttack` + `IsAttacking` |
 | 🟡 Pick Up the Pace | "cards exiled with this enchantment" stay playable after the enchantment leaves (the permission is not tied to it, like Neyali's) | `ExileTopAndGrantMayPlay { TurnsHolderAttacks }` |
 | 🟡 Volcano Hellion | "an amount of damage of your choice" is offered up to the target creature's toughness, not without limit | `PlayerChoosesNumber { max: ToughnessOf(Target(0)) }` |

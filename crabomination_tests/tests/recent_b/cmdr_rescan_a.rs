@@ -634,14 +634,14 @@ fn flying_drone_loots_free_after_a_flyer() {
     g.add_card_to_library(0, catalog::island());
     let drone = ready(&mut g, 0, catalog::flying_drone());
     assert!(g.perform_action(GameAction::ActivateAbility {
-        card_id: drone, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
-    }).is_err(), "no flyer entered yet");
+        card_id: drone, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    }).is_err(), "full price with no flyer entered and no mana");
     let angel = g.add_card_to_hand(0, catalog::serra_angel());
     cast_with(&mut g, angel, None, vec![], None);
     g.players[0].mana_pool.empty();
     g.priority.player_with_priority = 0;
     g.perform_action(GameAction::ActivateAbility {
-        card_id: drone, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None,
+        card_id: drone, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
     })
     .expect("free loot");
 }
