@@ -38314,18 +38314,47 @@ struct RepeatGuard {
     /// Duplicate-legend casts by (seat, name); see
     /// [`POD_DUPLICATE_LEGEND_CASTS_PER_TURN`].
     legends: Vec<(usize, &'static str, u32)>,
+    /// Accepted optional target picks by (seat, source name); see
+    /// [`RepeatGuard::admit_optional_pick`].
+    picks: Vec<(usize, &'static str, u32)>,
 }
 
 impl RepeatGuard {
-    /// Count a cast of a legend `seat` already controls a copy of; `false`
-    /// past [`POD_DUPLICATE_LEGEND_CASTS_PER_TURN`] this turn.
-    fn admit_duplicate_legend(&mut self, turn: u32, seat: usize, name: &'static str) -> bool {
+    /// A new turn clears every count.
+    fn roll(&mut self, turn: u32) {
         if turn != self.turn {
             self.turn = turn;
             self.seen.clear();
             self.names.clear();
             self.legends.clear();
+            self.picks.clear();
         }
+    }
+
+    /// CR 733.1b / 733.2a — count an accepted "up to one target" pick of a trigger
+    /// from a source named `name`; `false` past [`POD_SAME_ACTIVATION_PER_TURN`]
+    /// this turn, and the seat declines. Token copies share the name, so a
+    /// copy-and-blink loop (Preston, the Vanisher + Wispweaver Angel: 17,000
+    /// blinks in one end step, seed 29552 game 105) stops.
+    fn admit_optional_pick(&mut self, turn: u32, seat: usize, name: &'static str) -> bool {
+        self.roll(turn);
+        let n = match self.picks.iter_mut().find(|r| r.0 == seat && r.1 == name) {
+            Some(r) => {
+                r.2 += 1;
+                r.2
+            }
+            None => {
+                self.picks.push((seat, name, 1));
+                1
+            }
+        };
+        n <= POD_SAME_ACTIVATION_PER_TURN
+    }
+
+    /// Count a cast of a legend `seat` already controls a copy of; `false`
+    /// past [`POD_DUPLICATE_LEGEND_CASTS_PER_TURN`] this turn.
+    fn admit_duplicate_legend(&mut self, turn: u32, seat: usize, name: &'static str) -> bool {
+        self.roll(turn);
         let n = match self.legends.iter_mut().find(|r| r.0 == seat && r.1 == name) {
             Some(r) => {
                 r.2 += 1;
@@ -38370,12 +38399,7 @@ impl RepeatGuard {
                 None => return true,
             },
         };
-        if turn != self.turn {
-            self.turn = turn;
-            self.seen.clear();
-            self.names.clear();
-            self.legends.clear();
-        }
+        self.roll(turn);
         if let Some(name) = name.filter(|_| ability_index == usize::MAX) {
             let n = match self.names.iter_mut().find(|r| r.0 == seat && r.1 == name) {
                 Some(r) => {
@@ -38799,6 +38823,16 @@ pub(crate) fn play_pod_game_observed(
                 || token_blowup(&g, seat, &action)
             {
                 action = crate::game::GameAction::PassPriority;
+                settled = None;
+            }
+            // An accepted optional target pick, counted per source name.
+            if let crate::game::GameAction::SubmitDecision(crate::decision::DecisionAnswer::Target(_)) = action
+                && let Some(pd) = g.pending_decision.as_ref()
+                && let crate::decision::Decision::ChooseTarget { source, optional: true, .. } = pd.decision
+                && let Some(name) = g.find_card_anywhere(source).map(|c| c.definition.name)
+                && !repeats.admit_optional_pick(g.turn_number, seat, name)
+            {
+                action = crate::game::GameAction::SubmitDecision(crate::decision::DecisionAnswer::DeclineTarget);
                 settled = None;
             }
             // CR 724.5 — a controlled seat plays the controller's policy; an
@@ -46604,6 +46638,21 @@ mod tests {
         assert!(guard.admit_duplicate_legend(5, 1, "Memnarch, the Warden"), "another name");
         assert!(guard.admit_duplicate_legend(5, 2, "The Eternity Elevator"), "another seat");
         assert!(guard.admit_duplicate_legend(6, 1, "The Eternity Elevator"), "a new turn resets it");
+    }
+
+    /// CR 733.1b / 733.2a — an optional copy-and-blink loop (Preston, the
+    /// Vanisher + Wispweaver Angel's token copies: 17,000 blinks in one end
+    /// step, seed 29552 game 105) stops after the cap per source name. Bug fix.
+    #[test]
+    fn cr_733_2a_a_seat_stops_accepting_one_names_optional_target_past_the_cap() {
+        let mut guard = RepeatGuard::default();
+        for _ in 0..POD_SAME_ACTIVATION_PER_TURN {
+            assert!(guard.admit_optional_pick(33, 1, "Wispweaver Angel"));
+        }
+        assert!(!guard.admit_optional_pick(33, 1, "Wispweaver Angel"), "the 65th pick declines");
+        assert!(guard.admit_optional_pick(33, 1, "Glimmerpoint Stag"), "another name");
+        assert!(guard.admit_optional_pick(33, 2, "Wispweaver Angel"), "another seat");
+        assert!(guard.admit_optional_pick(34, 1, "Wispweaver Angel"), "a new turn resets it");
     }
 
     /// The pod loop is reproducible: same seed, same outcome. Cross-process
