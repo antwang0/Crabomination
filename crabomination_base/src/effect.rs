@@ -7687,11 +7687,9 @@ pub enum Effect {
     /// on the stack (Unbound Flourishing's cast trigger) — the stack item's
     /// X doubles, so an "enters with X counters" reads the doubled value.
     DoubleXOfSpell { what: Selector },
-    /// Glava, Five-Advents Mage — "you may have the value of X become `to`. Do
-    /// this only once each turn": the triggering spell's (or activation's) X
-    /// becomes `to` when that raises it and the source hasn't this turn
-    /// (`sources_marked_this_turn`). A lower X is never taken.
-    RaiseXOfTriggeringOncePerTurn { to: u32 },
+    /// Glava, Five-Advents Mage — "the value of X becomes `to`" for the
+    /// triggering spell (or activation); a higher X is left alone.
+    RaiseXOfTriggering { to: u32 },
     /// CR 705 — Desperate Gambit: choose your source and flip; win: its next
     /// damage this turn doubles, lose: it is prevented.
     CoinFlipDoubleOrPreventNextDamage { filter: SelectionRequirement },

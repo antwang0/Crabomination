@@ -1248,3 +1248,18 @@ impl GameState {
         }
     }
 }
+
+impl GameState {
+    /// Whether any permanent or command-zone card (Sahir's eminence) listens
+    /// for a self-caused life loss — the gate on synthesizing
+    /// `LifeLostToOwnEffect`, so no other game's event stream carries it.
+    pub(crate) fn hears_self_caused_life_loss(&self) -> bool {
+        let listens = |c: &CardInstance| {
+            c.definition
+                .triggered_abilities
+                .iter()
+                .any(|t| t.event.self_caused && matches!(t.event.kind, crate::effect::EventKind::LifeLost))
+        };
+        self.battlefield.iter().any(listens) || self.players.iter().any(|p| p.command.iter().any(listens))
+    }
+}

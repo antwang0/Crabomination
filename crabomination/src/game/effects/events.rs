@@ -208,6 +208,10 @@ fn event_payload_matches(
             spec.scope,
             EventScope::YouOrYourPermanentTargetedByOpponent | EventScope::PlayerOrPermanentTargetedByYourAbility
         ),
+        // Bug fix: the self-caused twin is heard only by a self-caused
+        // listener (Sahir); a plain "whenever you lose life" fired twice.
+        (EventKind::LifeLost, GameEvent::LifeLost { .. }) => !spec.self_caused,
+        (EventKind::LifeLost, GameEvent::LifeLostToOwnEffect { .. }) => spec.self_caused,
         (
             EventKind::CreatureOrArtifactDied,
             GameEvent::PermanentDied { is_creature, is_artifact, .. },

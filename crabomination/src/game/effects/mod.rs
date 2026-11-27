@@ -3669,7 +3669,7 @@ impl GameState {
         // "A spell or ability you control causes you to lose life" (Sahir): the
         // outermost resolution's losses of its own controller, less those that
         // were damage (a damage loss follows its `DamageDealt` directly).
-        if self.resolution_depth == 0 {
+        if self.resolution_depth == 0 && self.hears_self_caused_life_loss() {
             let me = ctx.controller;
             let own: Vec<u32> = events[mark..]
                 .iter()
@@ -3690,7 +3690,9 @@ impl GameState {
             for amount in own {
                 events.push(GameEvent::LifeLostToOwnEffect { player: me, amount });
             }
-            self.push_opponent_library_exiles(me, mark, &mut events);
+        }
+        if self.resolution_depth == 0 {
+            self.push_opponent_library_exiles(ctx.controller, mark, &mut events);
             self.push_random_flips_and_rolls(mark, &mut events);
         }
         *out = events;
@@ -27681,7 +27683,7 @@ impl GameState {
                     .library
                     .iter()
                     .take(2)
-                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.is_creature(), c.definition.cost.cmc()))
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.card_types.contains(&crate::card::CardType::Creature), c.definition.cost.cmc()))
                     .collect();
                 let Some(auto) = top.iter().max_by_key(|c| (c.2, c.3)).map(|c| c.0) else { return Ok(()) };
                 let chosen = if top.len() == 1 {
@@ -37322,11 +37324,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RaiseXOfTriggeringOncePerTurn { to } => {
-                let Some(src) = ctx.source else { return Ok(()) };
-                if self.sources_marked_this_turn.contains(&src) {
-                    return Ok(());
-                }
+            Effect::RaiseXOfTriggering { to } => {
                 let owner = match ctx.trigger_source {
                     Some(EntityRef::Permanent(id)) | Some(EntityRef::Card(id)) => id,
                     _ => return Ok(()),
@@ -37344,10 +37342,7 @@ impl GameState {
                     });
                 let Some(at) = at else { return Ok(()) };
                 let (StackItem::Spell { x_value: x, .. } | StackItem::Trigger { x_value: x, .. }) = &mut self.stack[at];
-                if *x < *to {
-                    *x = *to;
-                    self.sources_marked_this_turn.push(src);
-                }
+                *x = (*x).max(*to);
                 Ok(())
             }
             Effect::DoubleXOfSpell { what } => {
