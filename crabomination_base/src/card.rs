@@ -3551,6 +3551,9 @@ pub enum SelectionRequirement {
     /// The candidate shares a name with some permanent on the battlefield
     /// (Mitotic Manipulation). A permanent matches itself.
     SameNameAsAPermanent,
+    /// Shares a name with a creature the evaluating player controls (Pattern
+    /// Matcher's search).
+    SameNameAsACreatureYouControl,
     /// Shares a name with a nontoken permanent on the battlefield (Bazaar of
     /// Wonders). A permanent matches itself.
     SameNameAsANontokenPermanent,
@@ -3872,6 +3875,9 @@ pub enum SelectionRequirement {
     /// Bearer's "with a legendary Equipment attached to it"). Battlefield-only;
     /// the filter is read from the evaluating controller's view.
     EquippedByMatching(Box<SelectionRequirement>),
+    /// Any permanent attached to it matches the filter (Marooned's "can't be
+    /// beamed up").
+    AttachedByMatching(Box<SelectionRequirement>),
     /// CR 701.60 — true while the candidate creature is suspected (has the
     /// `suspected` flag). Powers "Sacrifice a suspected creature" costs
     /// (Rune-Brand Juggler) and suspected-creature payoffs.

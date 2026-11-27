@@ -3455,6 +3455,9 @@ impl GameState {
             Predicate::YouHaveBegunAnExtraTurnThisGame => {
                 self.players.get(ctx.controller).is_some_and(|p| p.extra_turns_begun > 0)
             }
+            Predicate::YourStartingDeckHadAtLeast(n) => {
+                self.players.get(ctx.controller).is_some_and(|p| p.starting_deck_size >= *n)
+            }
             Predicate::SourceIsMonstrous => ctx
                 .source
                 .and_then(|cid| self.battlefield.find_by_id(cid))
@@ -6753,7 +6756,8 @@ impl GameState {
                     R::SameNameAsAPermanent => {
                         self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
                     }
-                    R::SameNameAsANontokenPermanent => self.same_name_as_a_nontoken_permanent(card),
+                    R::SameNameAsACreatureYouControl => self.same_name_as_a_creature_of(card, controller),
+            R::SameNameAsANontokenPermanent => self.same_name_as_a_nontoken_permanent(card),
                     R::SameNameAsAGraveyardCard => self.same_name_as_a_graveyard_card(card),
                     R::IsBasicLand => card.definition.is_land() && self.is_basic_card(card),
                     R::HasAwaken => card.definition.alternative_cost.as_ref().is_some_and(|a| a.awaken),
@@ -6834,6 +6838,7 @@ impl GameState {
                     // CR 301.5 — "equipped" = an Equipment is attached.
                     R::IsEquipped => self.attached_equipment_count(*cid) > 0,
                     R::EquippedByMatching(filter) => self.equipped_by_matching(*cid, filter, controller),
+                    R::AttachedByMatching(filter) => self.attached_by_matching(*cid, filter, controller),
                     // CR 701.60 — suspected.
                     R::IsSuspected => card.suspected,
                     R::IsRenowned => card.renowned,
@@ -7965,6 +7970,7 @@ impl GameState {
             R::SameNameAsAPermanent => {
                 self.battlefield.iter().any(|p| p.definition.name == card.definition.name)
             }
+            R::SameNameAsACreatureYouControl => self.same_name_as_a_creature_of(card, controller),
             R::SameNameAsANontokenPermanent => self.same_name_as_a_nontoken_permanent(card),
             R::SameNameAsAGraveyardCard => self.same_name_as_a_graveyard_card(card),
             R::HasPhyrexianManaInCost => card.definition.cost.has_phyrexian(),
@@ -8514,6 +8520,7 @@ impl GameState {
             // tap-an-equipped-creature cost).
             R::IsEquipped => self.attached_equipment_count(card.id) > 0,
             R::EquippedByMatching(filter) => self.equipped_by_matching(card.id, filter, controller),
+            R::AttachedByMatching(filter) => self.attached_by_matching(card.id, filter, controller),
             // Counters live on the instance, so they read in any zone (a
             // library/graveyard card simply has none) — Eluge's flood-counter
             // land scope resolves through this path.
@@ -8571,6 +8578,13 @@ impl GameState {
     /// A nontoken permanent shares `card`'s name (Bazaar of Wonders).
     fn same_name_as_a_nontoken_permanent(&self, card: &CardInstance) -> bool {
         self.battlefield.iter().any(|p| !p.is_token && p.definition.name == card.definition.name)
+    }
+
+    /// A creature `seat` controls, other than `card`, shares its name.
+    fn same_name_as_a_creature_of(&self, card: &CardInstance, seat: usize) -> bool {
+        self.battlefield.iter().any(|p| {
+            p.id != card.id && p.controller == seat && p.definition.name == card.definition.name && self.permanent_is_creature(p.id)
+        })
     }
 
     /// A card in any graveyard shares `card`'s name (Bazaar of Wonders).

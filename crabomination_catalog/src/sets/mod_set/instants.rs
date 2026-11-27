@@ -1764,8 +1764,9 @@ pub fn comeuppance() -> CardDefinition {
         card_types: vec![CardType::Instant],
         // You and your planeswalkers, not a fog for the table.
         effect: Effect::Seq(vec![
-            Effect::PreventOpposingDamageThisTurnReflecting { target: Selector::You },
+            Effect::PreventOpposingDamageThisTurnReflecting { target: Selector::You, reflect_to: None },
             Effect::PreventOpposingDamageThisTurnReflecting {
+                reflect_to: None,
                 target: Selector::EachPermanent(SelectionRequirement::Planeswalker.and(SelectionRequirement::ControlledByYou)),
             },
         ]),

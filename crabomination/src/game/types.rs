@@ -2619,6 +2619,9 @@ pub struct PreventionShield {
     /// source's controller.
     #[serde(default)]
     pub reflect_by: Option<crate::card::CardId>,
+    /// Channel Harm — `reflect_by`'s damage goes to this creature instead.
+    #[serde(default)]
+    pub reflect_to: Option<crate::card::CardId>,
     /// "Prevent all but `all_but` of that damage" (Forcefield): an
     /// unbudgeted shield that lets this much through. 0 = prevent it all.
     #[serde(default)]

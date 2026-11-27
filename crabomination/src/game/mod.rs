@@ -6830,6 +6830,11 @@ impl GameState {
         })
     }
 
+    /// A permanent attached to `id` matches `filter` (`R::AttachedByMatching`).
+    pub(crate) fn attached_by_matching(&self, id: CardId, filter: &crate::card::SelectionRequirement, viewer: usize) -> bool {
+        self.battlefield.iter().any(|c| c.attached_to == Some(id) && self.evaluate_requirement_on_card(filter, c, viewer))
+    }
+
     /// Number of Equipment currently attached to permanent `id` (CR 301.5).
     /// The single source of truth for equipped-state checks — `IsEquipped`,
     /// `EquippedByAtLeast`, `SourceIsEquipped`, and the per-Equipment CDA all
@@ -36348,7 +36353,7 @@ fn requirement_live_leaves(req: &SelectionRequirement) -> u8 {
     use SelectionRequirement as R;
     match req {
         R::IsModified => 1,
-        R::IsEquipped | R::EquippedByAtLeast(_) | R::EquippedByMatching(_) => 2,
+        R::IsEquipped | R::EquippedByAtLeast(_) | R::EquippedByMatching(_) | R::AttachedByMatching(_) => 2,
         R::IsAttacking | R::IsAttackingYou | R::IsAttackingYouOrYourPlaneswalker | R::IsAttackingAnOpponent | R::IsAttackingOpponentPlayer | R::IsAttackingBattle | R::IsAttackingChosenPlayerOfSource | R::IsAttackingTriggerPlayer => 4,
         // Leaves that read other live state or the source (a blocker, an enchanted
         // creature, the commander designation, a name, the source's choice). None

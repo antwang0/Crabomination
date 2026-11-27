@@ -1359,7 +1359,7 @@ impl GameState {
         } else {
             None
         };
-        let mut reflected_by: Vec<(crate::card::CardId, u32)> = Vec::new();
+        let mut reflected_by: Vec<(crate::card::CardId, u32, Option<crate::card::CardId>)> = Vec::new();
         // CR 614.5 — shields already redirecting this event's damage.
         let chain: Option<Vec<RedirectKey>> =
             REDIRECT_CHAIN.with(|c| (!c.borrow().is_empty()).then(|| c.borrow().clone()));
@@ -1430,7 +1430,7 @@ impl GameState {
                 }
             }
             if soak > 0 && let Some(by) = shield.reflect_by {
-                reflected_by.push((by, soak));
+                reflected_by.push((by, soak, shield.reflect_to));
                 redirect_keys.push(redirect_key(shield));
             }
             if soak > 0 && let Some(dst) = shield.redirect_to {
@@ -1531,7 +1531,13 @@ impl GameState {
             }
         }
         // Comeuppance — back at a creature source, else at its controller.
-        for (by, amt) in reflected_by {
+        for (by, amt, aim) in reflected_by {
+            if let Some(dst) = aim {
+                if self.battlefield_find(dst).is_some() {
+                    self.deal_damage_to_from(EntityRef::Permanent(dst), amt, Some(by), events);
+                }
+                continue;
+            }
             let creature = source.filter(|&src| self.permanent_is_creature(src));
             if let Some(src) = creature {
                 self.deal_damage_to_from(EntityRef::Permanent(src), amt, Some(by), events);

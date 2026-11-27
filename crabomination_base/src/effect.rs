@@ -2021,6 +2021,9 @@ pub enum Predicate {
     /// Bounty's "haven't begun an extra turn this game", negated). Backed by
     /// `Player.extra_turns_begun`.
     YouHaveBegunAnExtraTurnThisGame,
+    /// The controller's starting deck held at least N cards (Whtz, the
+    /// Bibliophile). Backed by `Player.starting_deck_size`.
+    YourStartingDeckHadAtLeast(u32),
     /// CR 701.37 — the source permanent is monstrous. Backed by
     /// `CardInstance.monstrous`. Powers "as long as this is monstrous, …"
     /// statics (Fleecemane Lion's hexproof + indestructible).
@@ -7104,6 +7107,10 @@ pub enum Effect {
     /// library, reveals that many cards, battlefields every artifact, creature
     /// and land, then every enchantment, and bottoms the rest.
     WarpWorld,
+    /// Over the Top — each player reveals cards off their library's top equal
+    /// to the nonland permanents they control, battlefields the permanent
+    /// cards and puts the rest into their graveyard.
+    OverTheTop,
     /// Memory Leak: exile a `filter` card from `who`'s graveyard or hand, your
     /// choice. Headless: priciest, and from your own cards one with an activated
     /// ability first.
@@ -11573,8 +11580,13 @@ pub enum Effect {
     PreventAllDamageThisTurnWithCounters { target: Selector },
     /// CR 615 — Comeuppance: prevent damage to `target` this turn from sources
     /// you don't control; this deals that much to a creature source, or to a
-    /// noncreature source's controller, as a new event.
-    PreventOpposingDamageThisTurnReflecting { target: Selector },
+    /// noncreature source's controller, as a new event. `reflect_to` aims it
+    /// at a chosen creature instead (Channel Harm).
+    PreventOpposingDamageThisTurnReflecting {
+        target: Selector,
+        #[serde(default)]
+        reflect_to: Option<Selector>,
+    },
 
     /// CR 615 — "Prevent all damage that `from` would deal to `to` this turn."
     /// A source-restricted fog (Stonewise Fortifier's "prevent all damage that

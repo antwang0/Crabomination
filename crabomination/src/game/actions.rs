@@ -14463,7 +14463,10 @@ impl GameState {
             // "Scotty can't be beamed up to cast a spell this way."
             use crate::card::SelectionRequirement as R;
             flashback_additional.push(crate::card::AdditionalCastCost::ReturnToHand {
-                filter: R::Creature.and(R::ControlledByYou).and(R::HasName("Scotty, Miracle Worker".into()).negate()),
+                filter: R::Creature
+                    .and(R::ControlledByYou)
+                    .and(R::HasName("Scotty, Miracle Worker".into()).negate())
+                    .and(R::AttachedByMatching(Box::new(R::HasName("Marooned".into()))).negate()),
                 count: 1,
                 count_x: false,
             });

@@ -23239,6 +23239,48 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::OverTheTop => {
+                // Counts first: every player reveals at once (CR 101.4 APNAP
+                // only orders the moves).
+                let seats = self.apnap_sort(self.living_seats().collect());
+                let revealed: Vec<(usize, Vec<CardId>)> = seats
+                    .into_iter()
+                    .map(|p| {
+                        let n = self
+                            .battlefield
+                            .iter()
+                            .filter(|c| {
+                                c.controller == p
+                                    && !self.computed_permanent_on(c).map_or(c.definition.is_land(), |cp| {
+                                        cp.card_types().contains(&crate::card::CardType::Land)
+                                    })
+                            })
+                            .count();
+                        (p, self.players[p].library.iter().take(n).map(|c| c.id).collect())
+                    })
+                    .collect();
+                for put_permanents in [true, false] {
+                    for (p, ids) in &revealed {
+                        for &cid in ids {
+                            let Some(perm) =
+                                self.players[*p].library.iter().find(|c| c.id == cid).map(|c| c.definition.is_permanent())
+                            else {
+                                continue;
+                            };
+                            if perm != put_permanents {
+                                continue;
+                            }
+                            let dest = if perm {
+                                crate::effect::ZoneDest::Battlefield { controller: crate::effect::PlayerRef::Seat(*p), tapped: false }
+                            } else {
+                                crate::effect::ZoneDest::Graveyard
+                            };
+                            self.move_card_to(cid, &dest, ctx, events);
+                        }
+                    }
+                }
+                Ok(())
+            }
             Effect::WarpWorld => {
                 // CR 701.24 — every player shuffles their permanents in, then
                 // reveals that many and redeploys in two waves so an Aura has
@@ -42277,12 +42319,21 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::PreventOpposingDamageThisTurnReflecting { target } => {
+            Effect::PreventOpposingDamageThisTurnReflecting { target, reflect_to } => {
+                let aim = reflect_to.as_ref().map(|sel| {
+                    self.resolve_selector(sel, ctx).into_iter().find_map(|e| match e {
+                        EntityRef::Permanent(c) => Some(c),
+                        _ => None,
+                    })
+                });
+                // Channel Harm with its target gone reflects nothing.
+                let reflect_by = if matches!(aim, Some(None)) { None } else { ctx.source };
                 for s in self.prevention_targets(target, ctx) {
                     self.turn.prevention_shields.push(crate::game::types::PreventionShield {
                         target: s,
                         not_from_controller: Some(ctx.controller),
-                        reflect_by: ctx.source,
+                        reflect_by,
+                        reflect_to: aim.flatten(),
                         ..Default::default()
                     });
                 }

@@ -1519,6 +1519,10 @@ pub struct PlayerData {
     /// CR 500.7 — extra turns this player has begun this game (H.M.S. Bounty).
     #[serde(default)]
     pub extra_turns_begun: u32,
+    /// CR 903.5a — cards in this player's starting deck, commanders included
+    /// (Whtz, the Bibliophile's 200-card discount). Set by the pod builder.
+    #[serde(default)]
+    pub starting_deck_size: u32,
     /// Bit `i` marks the extra turn at bank depth `i` as power-up-locked
     /// (Kang the Conqueror); the newest extra turn is taken first (CR 500.7).
     #[serde(default)]
@@ -2037,6 +2041,7 @@ impl Player {
             firebending_kept_red: 0,
             extra_turns: 0,
             extra_turns_begun: 0,
+            starting_deck_size: 0,
             power_up_locked_extra: 0,
             power_up_locked_turn: None,
             turns_begun: 0,

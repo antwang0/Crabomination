@@ -105,7 +105,7 @@ fn cr_614_5_two_comeuppances_do_not_reflect_forever() {
     let mine = g.add_card_to_hand(1, catalog::comeuppance());
     for (card, seat) in [(theirs, 0), (mine, 1)] {
         let ctx = EffectContext::for_ability(card, seat, None);
-        g.resolve_effect(&Effect::PreventOpposingDamageThisTurnReflecting { target: Selector::You }, &ctx).unwrap();
+        g.resolve_effect(&Effect::PreventOpposingDamageThisTurnReflecting { target: Selector::You, reflect_to: None }, &ctx).unwrap();
     }
     let dctx = EffectContext::for_ability(theirs, 0, Some(Target::Player(1)));
     g.resolve_effect(&Effect::DealDamage { to: Selector::Target(0), amount: Value::Const(3) }, &dctx).unwrap();

@@ -2257,6 +2257,7 @@ impl Effect {
             | Effect::ReturnLinkedExilesToBattlefieldAttached { .. }
             | Effect::SacrificeEnchantedForExtraCombat
             | Effect::WarpWorld
+            | Effect::OverTheTop
             | Effect::ReturnSelfDeployBlocker
             | Effect::TokenUnlessOpponentLetsYouDraw { .. } => false,
             Effect::CopySpellForEachOtherLegalCreature { what, .. }
@@ -2672,9 +2673,11 @@ impl Effect {
             | Effect::TurnFaceDown { what: target }
             | Effect::TurnFaceDownAs { what: target, .. }
             | Effect::PreventAllDamageThisTurnWithCounters { target }
-            | Effect::PreventOpposingDamageThisTurnReflecting { target }
             | Effect::PreventAllDamageFromChosenColorThisTurn { target }
             | Effect::PreventDamageToAndByUntilYourNextTurn { target } => sel_has_target(target),
+            Effect::PreventOpposingDamageThisTurnReflecting { target, reflect_to } => {
+                sel_has_target(target) || reflect_to.as_ref().is_some_and(sel_has_target)
+            }
             Effect::PreventAllDamageBetweenThisTurn { from, to }
             | Effect::RedirectAllDamageBetweenThisTurn { from, to, .. } => {
                 sel_has_target(from) || sel_has_target(to)
@@ -5460,7 +5463,6 @@ impl Effect {
                 | Effect::PreventNextDamageAndGainLife { target, .. }
                 | Effect::PreventAllDamageThisTurn { target, .. }
                 | Effect::PreventAllDamageThisTurnWithCounters { target }
-                | Effect::PreventOpposingDamageThisTurnReflecting { target }
                 | Effect::PreventAllDamageFromChosenColorThisTurn { target }
                 | Effect::PreventDamageToAndByUntilYourNextTurn { target }
                 | Effect::ReplaceNextDamageWithDestroy { target }
@@ -5468,6 +5470,9 @@ impl Effect {
                 | Effect::PreventCombatDamageToTargetThisTurn { target }
                 | Effect::PreventCombatDamageByTargetThisTurn { target }
             | Effect::PreventAllDamageByTargetThisTurn { target } => sel_find(target, slot),
+                Effect::PreventOpposingDamageThisTurnReflecting { target, reflect_to } => {
+                    sel_find(target, slot).or_else(|| reflect_to.as_ref().and_then(|t| sel_find(t, slot)))
+                }
                 Effect::PreventAllDamageBetweenThisTurn { from, to }
                 | Effect::RedirectAllDamageBetweenThisTurn { from, to, .. } => {
                     sel_find(from, slot).or_else(|| sel_find(to, slot))
@@ -5726,6 +5731,7 @@ impl Effect {
                 | Effect::FlickerHostWithAuras
                 | Effect::SacrificeEnchantedForExtraCombat
                 | Effect::WarpWorld
+                | Effect::OverTheTop
                 | Effect::ReturnSelfDeployBlocker
                 | Effect::TokenUnlessOpponentLetsYouDraw { .. } => None,
                 Effect::CopySpellForEachOtherLegalCreature { what, .. }
