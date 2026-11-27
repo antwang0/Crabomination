@@ -6226,6 +6226,10 @@ impl GameState {
                 };
                 self.players[owner].poison_counters >= 3
             }
+            // "Any other target": a player is never the source (Matoc,
+            // Lavamancer; the three earlier `any_target().and(OtherThanSource)`
+            // pingers couldn't aim at a player).
+            R::OtherThanSource if matches!(target, Target::Player(_)) => true,
             _ => {
                 let Target::Permanent(cid) = target else { return false; };
                 // Battlefield first, then graveyards, exile and the stack, so
