@@ -5290,6 +5290,9 @@ impl GameState {
             if pl.dilemmas_faced_this_turn != 0 {
                 pl.dilemmas_faced_this_turn = 0;
             }
+            if pl.returned_to_hand_this_turn != 0 {
+                pl.returned_to_hand_this_turn = 0;
+            }
             // "For the first time each turn" life-gain gates key on the same
             // turn boundary.
             pl.gained_life_earlier_this_turn = false;

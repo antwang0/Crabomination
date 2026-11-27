@@ -1198,3 +1198,88 @@ pub fn colossal_clone_master() -> CardDefinition {
         ..creature("Colossal Clone Master", cost(&[generic(5), u()]), vec![CreatureType::Giant], 0, 0)
     }
 }
+
+// ── Beverly Crusher's and Sulu, Space Swashbuckler's EDHREC gaps ────────────
+
+/// Miles O'Brien, Transporter Ops — {2}{W} legendary 3/3 Human Artificer.
+/// Entering, return up to one other target creature or artifact you control
+/// to its owner's hand. At the beginning of each end step, if a permanent was
+/// returned to your hand from the battlefield this turn, draw a card.
+pub fn miles_obrien_transporter_ops() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            etb(Effect::OptionalTargets {
+                min: 0,
+                body: Box::new(Effect::Move {
+                    what: target_filtered(
+                        R::Creature.or(R::Artifact).and(R::ControlledByYou).and(R::OtherThanSource),
+                    ),
+                    to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
+            }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(
+                    Predicate::ValueAtLeast(Value::ReturnedToHandThisTurn(PlayerRef::You), Value::ONE),
+                ),
+                effect: draw(Value::ONE),
+            },
+        ],
+        ..legend(
+            "Miles O'Brien, Transporter Ops",
+            cost(&[generic(2), w()]),
+            vec![CreatureType::Human, CreatureType::Artificer],
+            3,
+            3,
+        )
+    }
+}
+
+/// Sulu, Space Swashbuckler — {1}{W} legendary 2/2 Human Pilot, first strike.
+/// Whenever he becomes tapped, if an Equipment or Spacecraft entered under
+/// your control this turn, draw a card (read off those still on the
+/// battlefield — INCOMPLETE_CARDS).
+pub fn sulu_space_swashbuckler() -> CardDefinition {
+    let entered = R::HasArtifactSubtype(ArtifactSubtype::Equipment)
+        .or(R::HasArtifactSubtype(ArtifactSubtype::Spacecraft))
+        .and(R::ControlledByYou)
+        .and(R::EnteredThisTurn);
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource).with_filter(
+                Predicate::SelectorCountAtLeast { sel: Selector::EachPermanent(entered), n: Value::ONE },
+            ),
+            effect: draw(Value::ONE),
+        }],
+        ..legend("Sulu, Space Swashbuckler", cost(&[generic(1), w()]), vec![CreatureType::Human, CreatureType::Pilot], 2, 2)
+    }
+}
+
+/// Vexing Drone — {1}{W} 2/2 Borg artifact creature. Entering, tap target
+/// creature an opponent controls.
+pub fn vexing_drone() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![etb(Effect::Tap {
+            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+        })],
+        ..creature("Vexing Drone", cost(&[generic(1), w()]), vec![CreatureType::Borg], 2, 2)
+    }
+}
+
+/// U.S.S. Excelsior, Cutting Edge — {3}{W} legendary Spacecraft. Entering,
+/// destroy target tapped creature an opponent controls. Station; 8+: flying
+/// 4/4.
+pub fn uss_excelsior_cutting_edge() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::Destroy {
+            what: target_filtered(R::Creature.and(R::Tapped).and(R::ControlledByOpponent)),
+        })],
+        ..spacecraft(
+            "U.S.S. Excelsior, Cutting Edge",
+            cost(&[generic(3), w()]),
+            vec![StationBand { min: 8, keywords: vec![Keyword::Flying], pt: Some((4, 4)), ..Default::default() }],
+        )
+    }
+}

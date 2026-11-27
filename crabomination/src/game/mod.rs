@@ -25456,6 +25456,13 @@ impl GameState {
                 pl.rad_counters = pl.rad_counters.saturating_add(n);
             }
         }
+        for e in events {
+            if let GameEvent::PermanentReturnedToHand { player, .. } = *e
+                && let Some(pl) = self.players.get_mut(player)
+            {
+                pl.returned_to_hand_this_turn += 1;
+            }
+        }
         // CR 700.2a — casting a modal spell chooses its modes ("whenever you
         // face a dilemma"). Queued for the pending-event dispatch below.
         for e in events {

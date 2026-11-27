@@ -176981,3 +176981,61 @@ pub const CHIEF_MONTGOMERY_SCOTT_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, forest, island, island, island, island,
 ];
+
+pub const BEVERLY_CRUSHER_COMMANDERS: &[CardFactory] = &[beverly_crusher_ships_doctor];
+
+/// **Beverly Crusher, Ship's Doctor**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Beverly Crusher, Ship's Doctor (EDHREC, fetched 2026-11-27).
+pub const BEVERLY_CRUSHER_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, astral_cornucopia, commanders_sphere,
+    everflowing_chalice, hedron_archive, minds_eye, skullclamp, sol_ring, stonespeaker_crystal,
+    the_immortal_sun, the_one_ring, the_ozolith, thought_vessel, wayfarers_bauble,
+    castle_ardenvale, command_tower, emeria_the_sky_ruin, myriad_landscape, reliquary_tower,
+    spire_of_industry, war_room, abzan_falconer, ambassador_kehleyr, angel_of_vitality,
+    cybernetic_specialist, daxos_blessed_by_the_sun, deanna_troi_psychic_counsel,
+    enduring_innocence, ensign_harry_kim_operations, firemane_commando, giver_of_runes,
+    guinan_ancient_advisor, julian_bashir_frontier_doctor, kor_cartographer,
+    loran_of_the_third_path, mentor_of_the_meek, mikaeus_the_lunarch,
+    miles_obrien_transporter_ops, mother_of_runes, reconnaissance_partition, restoration_angel,
+    rumor_gatherer, soul_warden, spirited_companion, spot_felis_catus, sulu_space_swashbuckler,
+    sun_titan, vexing_drone, wall_of_omens, welcoming_vampire, dawn_of_a_new_age,
+    felidar_retreat, hoofprints_of_the_stag, smothering_tithe, tocasias_welcome,
+    together_forever, wedding_announcement, generous_gift, path_to_exile, stroke_of_midnight,
+    swords_to_plowshares, valorous_stance, your_temple_is_under_attack, austere_command,
+    cut_a_deal, secret_rendezvous, test_of_conviction, wrath_of_god,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const SULU_COMMANDERS: &[CardFactory] = &[sulu_space_swashbuckler];
+
+/// **Sulu, Space Swashbuckler**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Sulu, Space Swashbuckler (EDHREC, fetched 2026-11-27).
+pub const SULU_MAIN: &[CardFactory] = &[
+    adaptive_omnitool, arcane_signet, astral_cornucopia, bilbos_ring, class_f_shuttlecraft,
+    coalition_relic, darksteel_reactor, dawnsire_sunstar_dreadnought, goldvein_pick,
+    infused_arrows, lumen_class_frigate, lux_artillery, lux_cannon, mask_of_memory,
+    moxite_refinery, prying_blade, sol_ring, solar_array, staff_of_compleation,
+    starship_enterprise, thaumaton_torpedo, the_eternity_elevator, the_seriema,
+    type_03_borg_vessel, u_s_s_enterprise_a_free_spirit, u_s_s_enterprise_c_time_tossed,
+    uss_enterprise_d_galaxy_class, u_s_s_enterprise_e_sovereign, uss_excelsior_cutting_edge,
+    u_s_s_prometheus_prototype, u_s_s_stargazer_here_and_there, warp_core, weather_maker,
+    wedgelight_rammer, wurmwall_sweeper, zephyr_boots, adagia_windswept_bastion, buried_ruin,
+    command_tower, exotic_orchard, karns_bastion, myriad_landscape, path_of_ancestry,
+    reliquary_tower, rogues_passage, baird_steward_of_argive, brad_boimler_eager_ensign,
+    captain_jean_luc_picard, cloud_midgar_mercenary, coretapper, crystalline_crawler,
+    dauntless_scrapbot, guinan_ancient_advisor, loran_of_the_third_path,
+    miles_obrien_transporter_ops, norns_choirmaster, patrolling_peacemaker, pulsar_squadron_ace,
+    reconnaissance_partition, spot_felis_catus, surge_conductor, vexing_drone,
+    peace_in_our_time, resourceful_defense, smothering_tithe, dispatch, emergency_eject,
+    path_to_exile, swords_to_plowshares, valorous_stance, austere_command, open_the_armory,
+    sculpted_sunburst,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];

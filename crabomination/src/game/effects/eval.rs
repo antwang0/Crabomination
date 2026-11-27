@@ -898,6 +898,9 @@ impl GameState {
                 })
                 .unwrap_or(0),
             Value::LifeGainedThisTurn(p) => self.resolve_player(p, ctx).map(|p| self.players[p].life_gained_this_turn as i32).unwrap_or(0),
+            Value::ReturnedToHandThisTurn(p) => {
+                self.resolve_player(p, ctx).map_or(0, |p| self.players[p].returned_to_hand_this_turn as i32)
+            }
             Value::DilemmasFacedThisTurn(p) => {
                 self.resolve_player(p, ctx).map_or(0, |p| self.players[p].dilemmas_faced_this_turn as i32)
             }

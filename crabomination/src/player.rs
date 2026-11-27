@@ -1095,6 +1095,11 @@ pub struct PlayerData {
     /// for every seat as each turn begins.
     #[serde(default)]
     pub dilemmas_faced_this_turn: u32,
+    /// Permanents returned to this player's hand from the battlefield this
+    /// turn (Miles O'Brien, Transporter Ops), tallied off
+    /// `GameEvent::PermanentReturnedToHand` at dispatch. Reset each turn.
+    #[serde(default)]
+    pub returned_to_hand_this_turn: u32,
     /// CR 702.16 — "you gain protection from the color of your choice until
     /// end of turn" (Seht's Tiger): sources of these colors can't target this
     /// player and their damage to them is prevented. Cleared at cleanup.
@@ -1924,6 +1929,7 @@ impl Player {
             hand_locked_until_turn_of: None,
             nonmana_activations_this_turn: 0,
             dilemmas_faced_this_turn: 0,
+            returned_to_hand_this_turn: 0,
             protection_colors_eot: crate::mana::ColorSet::empty(),
             protected_from_seats_eot: 0,
             protected_from_seats_until_next_turn: 0,

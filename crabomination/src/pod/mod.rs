@@ -38245,6 +38245,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CHIEF_MONTGOMERY_SCOTT_COMMANDERS,
             main: decks::CHIEF_MONTGOMERY_SCOTT_MAIN,
         },
+        // Seat 6300: Beverly Crusher, Ship's Doctor's EDHREC average deck. `--pod-decks 6300`.
+        PodDeck {
+            name: "Beverly Crusher, Ship's Doctor (W)",
+            commanders: decks::BEVERLY_CRUSHER_COMMANDERS,
+            main: decks::BEVERLY_CRUSHER_MAIN,
+        },
+        // Seat 6301: Sulu, Space Swashbuckler's EDHREC average deck. `--pod-decks 6301`.
+        PodDeck {
+            name: "Sulu, Space Swashbuckler (W)",
+            commanders: decks::SULU_COMMANDERS,
+            main: decks::SULU_MAIN,
+        },
     ]
 }
 
@@ -46514,6 +46526,8 @@ mod tests {
             ("Data, Professor of Humanities", &[0x2299]),
             ("Scotty, Miracle Worker", &[0x229A]),
             ("Chief Montgomery Scott", &[0x229B]),
+            ("Beverly Crusher, Ship's Doctor", &[0x229C]),
+            ("Sulu, Space Swashbuckler", &[0x229D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

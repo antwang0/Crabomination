@@ -19608,6 +19608,10 @@ static DECKS: &[Factory] = &[
     super::decks::open_communications,
     super::decks::chief_montgomery_scott,
     super::decks::colossal_clone_master,
+    super::decks::miles_obrien_transporter_ops,
+    super::decks::sulu_space_swashbuckler,
+    super::decks::vexing_drone,
+    super::decks::uss_excelsior_cutting_edge,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

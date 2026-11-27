@@ -769,6 +769,9 @@ pub enum Value {
     /// CR 700.2 — the dilemmas `who` faced this turn (mode choices for a spell
     /// or ability; `Player.dilemmas_faced_this_turn`). The Caretaker.
     DilemmasFacedThisTurn(PlayerRef),
+    /// Permanents returned to `who`'s hand from the battlefield this turn
+    /// (`Player.returned_to_hand_this_turn`). Miles O'Brien.
+    ReturnedToHandThisTurn(PlayerRef),
     /// Life lost this turn (CR 119.3), max over seats, so `EachOpponent` reads the
     /// most any opponent lost (Spinerock Knoll). `Player.life_lost_this_turn`.
     LifeLostThisTurn(PlayerRef),

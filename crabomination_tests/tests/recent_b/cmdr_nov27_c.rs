@@ -300,3 +300,45 @@ fn chief_montgomery_scott_deploys_with_land_name_counters() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bear).map(|c| c.power), Some(5));
 }
+
+/// Miles O'Brien: his own blink-to-hand of a creature counts as a permanent
+/// returned to your hand this turn, so the end step draws.
+#[test]
+fn miles_obrien_draws_after_a_permanent_returned_to_hand() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let miles = g.add_card_to_hand(0, catalog::miles_obrien_transporter_ops());
+    g.players[0].mana_pool.add(Color::White, 3);
+    cast(&mut g, miles, None, None);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert_eq!(g.players[0].returned_to_hand_this_turn, 1);
+    to_end_step(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2, "the bear and the draw");
+}
+
+/// Sulu, Space Swashbuckler: tapping draws only after a Spacecraft entered
+/// under your control this turn.
+#[test]
+fn sulu_draws_on_tap_after_a_spacecraft_entered() {
+    let mut g = pod(2);
+    let sulu = g.add_card_to_battlefield(0, catalog::sulu_space_swashbuckler());
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let tap = |g: &mut GameState| {
+        let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(sulu)), 0, 0);
+        let evs = g.resolve_effect(&crabomination::effect::Effect::Tap { what: crabomination::effect::Selector::Target(0) }, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    };
+    tap(&mut g);
+    assert_eq!(g.players[0].hand.len(), 0);
+    g.battlefield_find_mut(sulu).unwrap().tapped = false;
+    let ship = g.add_card_to_hand(0, catalog::oberth_class_starship());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.priority.player_with_priority = 0;
+    cast(&mut g, ship, None, None);
+    tap(&mut g);
+    assert_eq!(g.players[0].hand.len(), 1);
+}
