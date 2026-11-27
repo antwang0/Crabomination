@@ -1,10 +1,11 @@
 //! CR 702.132a — Assist: another player the caster chooses may pay any amount
-//! of the spell's generic mana before the caster pays the rest.
+//! of the spell's generic mana before the caster pays the rest. Also CR 701.9b
+//! random discards.
 
 use crabomination::card::CardId;
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::GameAction;
+use crabomination::game::types::{GameAction, Target};
 use crabomination::game::*;
 use crabomination::TurnStep;
 
@@ -72,4 +73,36 @@ fn cr_702_132a_a_headless_opponent_does_not_assist_for_nothing() {
     let (mut g, duo) = table(4, 3, 4);
     assert!(cast(&mut g, duo).is_err());
     assert!((1..4).all(|q| untapped(&g, q) == 4));
+}
+
+/// CR 701.9b — a random discard draws its cards off the seeded RNG (bug fix:
+/// `Effect::Discard { random: true }` always took the first cards in hand).
+/// Over a few seeds Hymn to Tourach hits the back of the hand, and a seed
+/// replays its pick exactly.
+#[test]
+fn cr_701_9b_a_random_discard_is_random_and_seeded() {
+    let hymn = |seed: u64| {
+        let mut g = multi_player_game(2);
+        g.rng = crabomination::game::rng::GameRng::seeded(seed);
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        g.step = TurnStep::PreCombatMain;
+        let hand: Vec<CardId> = (0..4).map(|_| g.add_card_to_hand(1, catalog::grizzly_bears())).collect();
+        let h = g.add_card_to_hand(0, catalog::hymn_to_tourach());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Black, 2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: h,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        let kept: Vec<usize> = (0..4).filter(|&i| g.players[1].hand.iter().any(|c| c.id == hand[i])).collect();
+        assert_eq!(kept.len(), 2);
+        kept
+    };
+    assert!((0..16).any(|s| hymn(s) != vec![2, 3]), "some seed discards from the back of the hand");
+    assert_eq!(hymn(7), hymn(7));
 }

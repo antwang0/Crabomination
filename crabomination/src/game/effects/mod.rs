@@ -11304,15 +11304,19 @@ impl GameState {
                         continue;
                     }
                     if *random {
-                        // Random discard is deterministic-first here (the bot harness
-                        // doesn't care which card). The discard itself (zone move,
-                        // CardDiscarded, counters, Madness CR 702.35) lives in
-                        // `discard_card`.
+                        // CR 701.9b — each card is chosen at random, off the game's
+                        // seeded RNG (it used to take `hand.first()`). The discard
+                        // itself (zone move, CardDiscarded, Madness CR 702.35) lives
+                        // in `discard_card`.
+                        use rand::RngExt;
                         let had = self.players[p].hand.len();
                         for _ in 0..n {
-                            let Some(cid) = self.players[p].hand.first().map(|c| c.id) else {
+                            let len = self.players[p].hand.len();
+                            if len == 0 {
                                 break;
-                            };
+                            }
+                            let idx = self.rng.draw().random_range(0..len);
+                            let cid = self.players[p].hand[idx].id;
                             self.discard_card(p, cid, events);
                         }
                         if had > self.players[p].hand.len() {
