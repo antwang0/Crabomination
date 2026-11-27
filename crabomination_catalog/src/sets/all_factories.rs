@@ -19540,6 +19540,18 @@ static DECKS: &[Factory] = &[
     super::decks::peace_in_our_time,
     super::decks::creeping_dread,
     super::decks::dominion_infiltration,
+    // cmdr_nov26_c (Star Trek EDHREC decks short two or three)
+    super::decks::romulan_bird_of_prey,
+    super::decks::anthropological_mission,
+    super::decks::boarding_action,
+    super::decks::planetary_bombardment,
+    super::decks::horta,
+    super::decks::brazen_bluff,
+    super::decks::mress_crew_coordinator,
+    super::decks::shuttlecraft_galileo,
+    super::decks::subspace_anomaly,
+    super::decks::academy_instructor,
+    super::decks::rutherford_upgraded_ensign,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

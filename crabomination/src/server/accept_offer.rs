@@ -111,7 +111,8 @@ mod tests {
 /// `CantAttackThisTurn` body — Peace in Our Time). The generic screen sees no
 /// self-cost and takes every draw, so no one ever attacked into it. The
 /// source's controller takes it (its counter is their win); anyone else takes
-/// it only with no creature ready to attack.
+/// it only with no creature ready to attack. A "may exile your spell, or else"
+/// ask (Brazen Bluff) is declined: the seat keeps its spell.
 pub(super) fn stand_down_answer(state: &GameState, seat: usize, source: CardId, description: &str) -> Option<bool> {
     fn stands_down(e: &Effect, desc: &str) -> bool {
         match e {
@@ -121,6 +122,28 @@ pub(super) fn stand_down_answer(state: &GameState, seat: usize, source: CardId, 
             Effect::Seq(v) => v.iter().any(|x| stands_down(x, desc)),
             _ => false,
         }
+    }
+    // "That player may exile [their spell]. If they don't, you may cast …"
+    // (Brazen Bluff): the asked seat keeps its spell.
+    fn gives_up_spell(e: &Effect, desc: &str) -> bool {
+        match e {
+            Effect::MayDoBy { description, body, .. } if description == desc => {
+                matches!(&**body, Effect::MoveSpellToZone { .. })
+            }
+            Effect::Seq(v) => v.iter().any(|x| gives_up_spell(x, desc)),
+            _ => false,
+        }
+    }
+    let on_stack = state.stack.iter().find_map(|si| match si {
+        crate::game::types::StackItem::Spell { card, .. } if card.id == source => Some(&**card.definition),
+        _ => None,
+    });
+    let resolving = match state.pending_decision.as_ref().map(|d| &d.resume) {
+        Some(crate::game::types::ResumeContext::Spell { card, .. }) if card.id == source => Some(&**card.definition),
+        _ => None,
+    };
+    if on_stack.or(resolving).is_some_and(|d| gives_up_spell(&d.effect, description)) {
+        return Some(false);
     }
     let c = state.battlefield.find_by_id(source)?;
     if !c.definition.triggered_abilities.iter().any(|t| stands_down(&t.effect, description)) {

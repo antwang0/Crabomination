@@ -226,3 +226,132 @@ fn bot_stands_down_for_peace_only_without_an_attack() {
     g.clear_sickness(bear);
     assert!(!ask(&g, 0), "an attacker ready: decline");
 }
+
+// ── decks::cmdr_nov26_c ──────────────────────────────────────────────────────
+
+/// Romulan Bird-of-Prey: hexproof and charging off noncreature spells while it
+/// isn't a creature; at eight counters it is a 4/4 flier and both stop.
+/// Anthropological Mission: quest counter + loot, a pure draw from three on.
+#[test]
+fn bird_of_prey_cloaks_and_charges_and_mission_loots_then_draws() {
+    let mut g = pod(2);
+    let bird = g.add_card_to_battlefield(0, catalog::romulan_bird_of_prey());
+    let mission = g.add_card_to_battlefield(0, catalog::anthropological_mission());
+    assert!(g.computed_permanent(bird).unwrap().keywords().contains(&Keyword::Hexproof));
+    for _ in 0..3 {
+        g.add_card_to_hand(0, catalog::island());
+    }
+    for i in 0..4 {
+        let opt = g.add_card_to_hand(0, catalog::opt());
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        let hand = g.players[0].hand.len();
+        cast(&mut g, opt);
+        // Opt (-1) scries and draws (+1); the Mission draws (+1) and, below
+        // three quest counters, discards (-1).
+        let looted = if i < 2 { 0 } else { 1 };
+        assert_eq!(g.players[0].hand.len(), hand + looted, "cast {i}");
+    }
+    assert_eq!(g.battlefield_find(mission).unwrap().counter_count(CounterType::Quest), 4);
+    let c = g.battlefield_find(bird).unwrap().counter_count(CounterType::Charge);
+    assert_eq!(c, 8, "two a spell until it is a creature");
+    let cp = g.computed_permanent(bird).unwrap();
+    assert!(cp.card_types().contains(&crabomination::card::CardType::Creature) && cp.keywords().contains(&Keyword::Flying));
+    assert!(!cp.keywords().contains(&Keyword::Hexproof), "a creature: decloaked");
+}
+
+/// Planetary Bombardment deals 4 once a creature died this turn, else 2;
+/// Boarding Action makes a hasty 2/1 Klingon Warrior.
+#[test]
+fn planetary_bombardment_scales_on_a_death_and_boarding_action_makes_a_warrior() {
+    let mut g = pod(2);
+    let ogre = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let bomb = g.add_card_to_hand(0, catalog::planetary_bombardment());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bomb, target: Some(Target::Permanent(ogre)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ogre).is_some(), "2 damage doesn't kill a 3/3");
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bolt, target: Some(Target::Permanent(bear)), additional_targets: vec![], mode: None, x_value: None }).expect("bolt");
+    drain_stack(&mut g);
+    let ogre2 = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let bomb = g.add_card_to_hand(0, catalog::planetary_bombardment());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    g.perform_action(GameAction::CastSpell { card_id: bomb, target: Some(Target::Permanent(ogre2)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(ogre2).is_none(), "4 after a death");
+
+    let ba = g.add_card_to_hand(0, catalog::boarding_action());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    cast(&mut g, ba);
+    let tok = g.battlefield.iter().find(|c| c.controller == 0 && c.is_token).expect("token");
+    assert_eq!((tok.definition.power, tok.definition.toughness), (2, 1));
+    assert!(tok.definition.keywords.contains(&Keyword::Haste));
+}
+
+/// Brazen Bluff: when the targeted spell's controller declines to exile it,
+/// the Bluff's caster casts a noncreature spell from hand free; when they
+/// exile it, nothing is cast.
+#[test]
+fn brazen_bluff_exiles_or_grants_a_free_spell() {
+    for exile in [false, true] {
+        let mut g = pod(2);
+        let divination = g.add_card_to_hand(1, catalog::divination());
+        let growth = g.add_card_to_hand(0, catalog::opt());
+        g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(exile), DecisionAnswer::Cards(vec![growth]), DecisionAnswer::Bool(true)]));
+        let bluff = g.add_card_to_hand(0, catalog::brazen_bluff());
+        g.active_player_idx = 1;
+        g.priority.player_with_priority = 1;
+        g.players[1].mana_pool.add(Color::Blue, 3);
+        g.perform_action(GameAction::CastSpell { card_id: divination, target: None, additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::Red, 2);
+        g.perform_action(GameAction::CastSpell { card_id: bluff, target: Some(Target::Permanent(divination)), additional_targets: vec![], mode: None, x_value: None }).expect("bluff");
+        drain_stack(&mut g);
+        assert_eq!(g.exile.iter().any(|c| c.id == divination), exile, "exile={exile}");
+        assert_eq!(g.players[0].hand.iter().any(|c| c.id == growth), exile, "free cast iff not exiled");
+    }
+}
+
+/// Officer makers: M'Ress's landfall makes two, Galileo's one; Academy
+/// Instructor counts Officer tokens and makes one per noncreature spell;
+/// Subspace Anomaly sacrifices for two Officers and a tapped New Planet.
+#[test]
+fn officer_makers_and_the_instructor_count_officer_tokens() {
+    let officers = |g: &GameState| g.battlefield.iter().filter(|c| c.controller == 0 && c.is_token && c.definition.name == "Officer").count();
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::mress_crew_coordinator());
+    g.add_card_to_battlefield(0, catalog::shuttlecraft_galileo());
+    let inst = g.add_card_to_battlefield(0, catalog::academy_instructor());
+    let land = g.add_card_to_hand(0, catalog::plains());
+    g.perform_action(GameAction::PlayLand(land)).expect("land");
+    drain_stack(&mut g);
+    assert_eq!(officers(&g), 3, "two from M'Ress, one from Galileo");
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    cast(&mut g, opt);
+    assert_eq!(officers(&g), 4);
+    assert_eq!(g.computed_permanent(inst).unwrap().power, 4);
+
+    let mut g = pod(2);
+    let anomaly = g.add_card_to_battlefield(0, catalog::subspace_anomaly());
+    g.players[0].mana_pool.add(Color::White, 5);
+    g.perform_action(GameAction::ActivateAbility { card_id: anomaly, ability_index: 1, target: None, additional_targets: vec![], x_value: None, mode: None }).expect("sac");
+    drain_stack(&mut g);
+    assert_eq!(officers(&g), 2);
+    let planet = g.battlefield.iter().find(|c| c.definition.name == "New Planet").expect("planet");
+    assert!(planet.tapped && g.battlefield_find(anomaly).is_none());
+}
+
+/// Rutherford: casting a Spacecraft spell puts a +1/+1 counter on target
+/// creature.
+#[test]
+fn rutherford_counters_on_spacecraft_casts() {
+    let mut g = pod(2);
+    let ruth = g.add_card_to_battlefield(0, catalog::rutherford_upgraded_ensign());
+    let bird = g.add_card_to_hand(0, catalog::romulan_bird_of_prey());
+    g.players[0].mana_pool.add(Color::Blue, 2);
+    cast(&mut g, bird);
+    assert_eq!(plus_ones(&g, ruth), 1);
+}
