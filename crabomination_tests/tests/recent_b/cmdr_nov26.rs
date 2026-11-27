@@ -579,3 +579,42 @@ fn tribbles_multiply_and_gul_dukat_doubles_the_turns_loss() {
     assert_eq!(g.players[2].life, l2, "lost nothing this turn");
     assert_eq!(g.players[0].life, me + 3);
 }
+
+/// Sash and Waistcoat: an opponent may activate the manifest ability (it
+/// manifests from the activator's own library, CR 602.2), and a face-down
+/// creature attacking one of Sash's opponents — anyone's — can't be blocked.
+#[test]
+fn sash_and_waistcoat_lets_anyone_manifest_and_face_downs_slip_past() {
+    let mut g = pod(3);
+    let sash = g.add_card_to_battlefield(0, catalog::sash_and_waistcoat_unmen());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    g.players[1].mana_pool.add(Color::Blue, 3);
+    g.perform_action(GameAction::ActivateAbility { card_id: sash, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None })
+        .expect("seat 1 activates Sash's ability");
+    drain_stack(&mut g);
+    let fd = g.battlefield.iter().find(|c| c.face_down).expect("manifested");
+    assert_eq!(fd.controller, 1, "the activator manifests from their own library");
+    let fd = fd.id;
+    g.battlefield.iter_mut().for_each(|c| c.summoning_sick = false);
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: fd, target: AttackTarget::Player(2) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert!(g.computed_permanent(fd).unwrap().keywords().contains(&Keyword::Unblockable));
+}
+
+/// Write into Being: one of the top two is manifested (a creature card when
+/// there is one), the other stays in the library.
+#[test]
+fn write_into_being_manifests_one_of_two() {
+    let mut g = multi_player_game(2);
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let island = g.add_card_to_library(0, catalog::island());
+    let w = g.add_card_to_hand(0, catalog::write_into_being());
+    g.players[0].mana_pool.add(Color::Blue, 3);
+    cast(&mut g, w);
+    assert!(g.battlefield.iter().any(|c| c.id == bears && c.face_down));
+    assert!(g.players[0].library.iter().any(|c| c.id == island));
+}

@@ -19567,6 +19567,8 @@ static DECKS: &[Factory] = &[
     super::decks::cardassia_prime,
     super::decks::gul_dukat_colonial_prefect,
     super::decks::unexplored_territory,
+    super::decks::sash_and_waistcoat_unmen,
+    super::decks::write_into_being,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

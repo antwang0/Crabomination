@@ -2,10 +2,10 @@
 //! 2026-11-27): Itazura, Lingering Wick; Miss Highwater. Tests in `tests/recent_b/cmdr_nov26.rs`.
 
 use crate::card::{
-    CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, Selector, Subtypes, Supertype, TriggeredAbility,
 };
-use crate::effect::{Effect, PlayerRef, Value, ZoneDest};
+use crate::effect::{Duration, Effect, PlayerRef, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, generic, r, u};
 
@@ -69,6 +69,53 @@ pub fn miss_highwater() -> CardDefinition {
                 ])),
             },
         }],
+        ..Default::default()
+    }
+}
+
+/// Sash and Waistcoat, Unmen — {1}{U} legendary 2/2 Insect Rogue. Whenever a
+/// face-down creature attacks one of your opponents, it can't be blocked this
+/// combat. {3}: manifest the top card of your library — any player may
+/// activate it, as a sorcery (the activator is "you").
+pub fn sash_and_waistcoat_unmen() -> CardDefinition {
+    CardDefinition {
+        name: "Sash and Waistcoat, Unmen",
+        cost: cost(&[generic(1), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Insect, CreatureType::Rogue], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Attacks, EventScope::AnyPlayer).with_filter(Predicate::EntityMatches {
+                what: Selector::TriggerSource,
+                filter: R::FaceDown.and(R::IsAttackingOpponentPlayer),
+            }),
+            effect: Effect::GrantKeyword {
+                what: Selector::TriggerSource,
+                keyword: Keyword::Unblockable,
+                duration: Duration::EndOfTurn,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            any_player: true,
+            sorcery_speed: true,
+            effect: Effect::Manifest { who: PlayerRef::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Write into Being — {2}{U} sorcery. Look at the top two cards of your
+/// library; manifest one, put the other on the top or bottom.
+pub fn write_into_being() -> CardDefinition {
+    CardDefinition {
+        name: "Write into Being",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ManifestOneOfTopTwoRestTopOrBottom { who: PlayerRef::You },
         ..Default::default()
     }
 }
