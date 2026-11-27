@@ -19569,6 +19569,8 @@ static DECKS: &[Factory] = &[
     super::decks::unexplored_territory,
     super::decks::sash_and_waistcoat_unmen,
     super::decks::write_into_being,
+    super::decks::glava_five_advents_mage,
+    super::decks::savage_summoning,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

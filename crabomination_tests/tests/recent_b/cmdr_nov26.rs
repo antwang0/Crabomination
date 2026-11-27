@@ -618,3 +618,40 @@ fn write_into_being_manifests_one_of_two() {
     assert!(g.battlefield.iter().any(|c| c.id == bears && c.face_down));
     assert!(g.players[0].library.iter().any(|c| c.id == island));
 }
+
+fn cast_x(g: &mut GameState, id: CardId, x: u32) {
+    g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: Some(x) })
+        .expect("cast");
+    drain_stack(g);
+}
+
+/// Glava: the first {X} permanent spell of the turn has X become 5; the
+/// second keeps its own X (once each turn).
+#[test]
+fn glava_makes_the_first_x_five_once_each_turn() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::glava_five_advents_mage());
+    let a = g.add_card_to_hand(0, catalog::endless_one());
+    let b = g.add_card_to_hand(0, catalog::endless_one());
+    g.players[0].mana_pool.add_colorless(2);
+    cast_x(&mut g, a, 1);
+    cast_x(&mut g, b, 1);
+    assert_eq!(plus_ones(&g, a), 5, "X became 5");
+    assert_eq!(plus_ones(&g, b), 1, "only once each turn");
+}
+
+/// Savage Summoning: the next creature spell has flash (cast on an opponent's
+/// turn) and enters with an additional +1/+1 counter.
+#[test]
+fn savage_summoning_flashes_in_a_bigger_creature() {
+    let mut g = pod(2);
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 0;
+    let s = g.add_card_to_hand(0, catalog::savage_summoning());
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Green, 3);
+    cast(&mut g, s);
+    g.priority.player_with_priority = 0;
+    cast(&mut g, bear);
+    assert_eq!(plus_ones(&g, bear), 1);
+}

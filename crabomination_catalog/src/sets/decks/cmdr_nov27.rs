@@ -2,12 +2,12 @@
 //! 2026-11-27): Itazura, Lingering Wick; Miss Highwater. Tests in `tests/recent_b/cmdr_nov26.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
     SelectionRequirement as R, Selector, Subtypes, Supertype, TriggeredAbility,
 };
 use crate::effect::{Duration, Effect, PlayerRef, Value, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{b, cost, generic, r, u};
+use crate::mana::{b, cost, g, generic, r, u};
 
 /// Itazura, Lingering Wick — {2}{U}{R} legendary 1/5 Spirit. At the beginning
 /// of your upkeep, exile the top three cards of your library; each opponent
@@ -116,6 +116,56 @@ pub fn write_into_being() -> CardDefinition {
         cost: cost(&[generic(2), u()]),
         card_types: vec![CardType::Sorcery],
         effect: Effect::ManifestOneOfTopTwoRestTopOrBottom { who: PlayerRef::You },
+        ..Default::default()
+    }
+}
+
+/// Glava, Five-Advents Mage — {5}{G}{G} legendary 5/5 Human Wizard. Whenever
+/// you cast a permanent spell with {X} in its mana cost or activate a non-mana
+/// ability with {X} in its cost, you may have X become 5, once each turn
+/// (taken when it raises X).
+pub fn glava_five_advents_mage() -> CardDefinition {
+    let five = || Effect::RaiseXOfTriggeringOncePerTurn { to: 5 };
+    CardDefinition {
+        name: "Glava, Five-Advents Mage",
+        cost: cost(&[generic(5), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Wizard], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                    Predicate::CastSpellHasX,
+                    Predicate::CastSpellMatches(R::PermanentCard),
+                ])),
+                effect: five(),
+            },
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
+                    .with_filter(Predicate::ActivationCostHasX),
+                effect: five(),
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Savage Summoning — {G} instant; can't be countered. Your next creature
+/// spell this turn has flash, can't be countered, and enters with an
+/// additional +1/+1 counter.
+pub fn savage_summoning() -> CardDefinition {
+    CardDefinition {
+        name: "Savage Summoning",
+        cost: cost(&[g()]),
+        card_types: vec![CardType::Instant],
+        keywords: vec![Keyword::CantBeCountered],
+        effect: Effect::Seq(vec![
+            Effect::NextCreatureSpellHasFlashThisTurn,
+            Effect::NextSpellCantBeCountered { filter: R::Creature },
+            Effect::GrantNextCreatureSpellCounters { kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        ]),
         ..Default::default()
     }
 }
