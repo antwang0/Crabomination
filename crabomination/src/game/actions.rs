@@ -6868,6 +6868,9 @@ impl GameState {
                         if self.graveyard_grant_enters_tapped(grant) {
                             self.graveyard_cast_enters_tapped.insert(card_id);
                         }
+                        if self.graveyard_grant_finality(grant) {
+                            self.stamp_spell_finality(card_id);
+                        }
                         if let Some(rider) = self.graveyard_play_rider_of(grant) {
                             self.graveyard_play_riders.push((card_id, rider));
                         }
@@ -7224,6 +7227,30 @@ impl GameState {
                 )
             })
         })
+    }
+
+    /// Overflow Submatrix — does the graveyard-cast grant on `grant` stamp a
+    /// finality counter on the permanent it lets you cast?
+    fn graveyard_grant_finality(&self, grant: CardId) -> bool {
+        self.battlefield.find_by_id(grant).is_some_and(|c| {
+            c.definition.static_abilities.iter().any(|sa| {
+                matches!(
+                    sa.effect.ungated(),
+                    crate::effect::StaticEffect::GraveyardCastOncePerTurn { finality: true, .. }
+                )
+            })
+        })
+    }
+
+    /// The spell `card_id` on the stack enters with a finality counter.
+    fn stamp_spell_finality(&mut self, card_id: CardId) {
+        for item in self.stack.iter_mut() {
+            if let StackItem::Spell { card, .. } = item
+                && card.id == card_id
+            {
+                card.pending_etb_counters.push((crate::card::CounterType::Finality, 1));
+            }
+        }
     }
 
     /// The rider a `GraveyardPlayOncePerTurnWithRider` grant on `grant`
@@ -22822,7 +22849,7 @@ impl GameState {
                 ability.life_cost.saturating_add(self.evaluate_value(v, &ctx).max(0) as u32)
             }
         };
-        if !self.cost_life_payable(p, self.players[p].life, life_cost) {
+        if !self.cost_life_payable_for(p, self.players[p].life, life_cost, is_mana_ability(&ability.effect)) {
             return Err(GameError::InsufficientLife);
         }
         // Pre-flight variable life-cost gate ("Pay X life", CR 107.16): the

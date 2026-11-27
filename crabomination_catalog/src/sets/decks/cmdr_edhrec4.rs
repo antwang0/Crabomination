@@ -470,7 +470,7 @@ pub fn rivaz_of_the_claw() -> CardDefinition {
                 filter: dragon_creature(),
                 exile_after: false,
                 mv_at_most_counters: None,
-                enters_tapped: false,
+                enters_tapped: false, finality: false,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {

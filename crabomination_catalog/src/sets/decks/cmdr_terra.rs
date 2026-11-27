@@ -128,7 +128,7 @@ pub fn banon_the_returners_leader() -> CardDefinition {
                     .and(R::PutIntoGraveyardThisTurn)
                     .and(R::Not(Box::new(R::PutIntoGraveyardFromBattlefieldThisTurn))),
                 exile_after: false,
-                enters_tapped: false,
+                enters_tapped: false, finality: false,
             },
         }],
         triggered_abilities: vec![TriggeredAbility {
@@ -253,7 +253,7 @@ pub fn edgar_master_machinist() -> CardDefinition {
                 mv_at_most_counters: None,
                 filter: R::Artifact,
                 exile_after: false,
-                enters_tapped: true,
+                enters_tapped: true, finality: false,
             },
         }],
         triggered_abilities: vec![on_attack(Effect::PumpPT {

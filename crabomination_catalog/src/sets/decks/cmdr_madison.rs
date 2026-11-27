@@ -213,7 +213,7 @@ pub fn arcade_gannon() -> CardDefinition {
                 filter: R::Artifact.or(R::HasCreatureType(CreatureType::Human)),
                 exile_after: false,
                 mv_at_most_counters: Some(CounterType::Quest),
-                enters_tapped: false,
+                enters_tapped: false, finality: false,
             },
         }],
         ..legendary(creature(

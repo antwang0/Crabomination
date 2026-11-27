@@ -17212,6 +17212,16 @@ impl GameState {
                     }).count() as i32;
                     (base_p, base_t + n)
                 }
+                crate::card::DynamicPt::PermanentsControlledMatchingPower { base_p, base_t, ref filter } => {
+                    let gates = crate::game::effects::PrintedGates::default();
+                    let n = self.battlefield.iter().filter(|c| {
+                        c.controller == card.controller
+                            && self.requirement_on_permanent(
+                                filter, c, card.controller, None, &gates,
+                            )
+                    }).count() as i32;
+                    (base_p + n, base_t)
+                }
                 crate::card::DynamicPt::PermanentsOnBattlefieldMatchingToughness {
                     base_p,
                     base_t,
@@ -35476,6 +35486,7 @@ fn static_effect_to_effects(
             | StaticEffect::PlayerCannotLoseLife { .. }
             // Angel of Jubilation — read by the cost gates in `cast_cost.rs`.
             | StaticEffect::PlayersCantPayLifeOrSacrificeCreaturesForCosts
+            | StaticEffect::PlayersCantPayLifeForNonManaCosts
             // LifeGainBecomesLoss — consulted dynamically by adjust_life via
             // life_gain_becomes_loss_now (Tainted Remedy); no layer effect.
             | StaticEffect::LifeGainBecomesLoss { .. }

@@ -1221,15 +1221,19 @@ pub(crate) fn effect_is_modal(effect: &crate::effect::Effect) -> bool {
 }
 
 impl GameState {
-    /// Whether a permanent hears `KeywordAct::FacedDilemma` (Elim Garak).
+    /// Whether a permanent (Elim Garak), or a graveyard card whose trigger
+    /// works from there (Gabriel Lorca, Mirror Menace), hears
+    /// `KeywordAct::FacedDilemma`.
     fn hears_faced_dilemma(&self) -> bool {
-        use crate::effect::{EventKind, KeywordAct};
-        self.battlefield.iter().any(|c| {
-            c.definition
-                .triggered_abilities
-                .iter()
-                .any(|t| matches!(t.event.kind, EventKind::Performed(KeywordAct::FacedDilemma)))
-        })
+        use crate::effect::{EventKind, EventScope, KeywordAct};
+        let hears = |c: &crate::card::CardInstance, graveyard: bool| {
+            c.definition.triggered_abilities.iter().any(|t| {
+                matches!(t.event.kind, EventKind::Performed(KeywordAct::FacedDilemma))
+                    && graveyard == matches!(t.event.scope, EventScope::FromYourGraveyard)
+            })
+        };
+        self.battlefield.iter().any(|c| hears(c, false))
+            || self.players.iter().any(|p| p.graveyard.iter().any(|c| hears(c, true)))
     }
 
     /// CR 700.2 — `seat` chose modes for a spell or ability: queue a

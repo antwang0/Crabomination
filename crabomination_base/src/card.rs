@@ -444,8 +444,10 @@ pub enum CreatureType {
     // Star Trek (Cleveland Booker, Empath; Xindi Surveyors).
     Kwejian,
     Xindi,
-    // Star Trek (Melkotian Adjudicator).
+    // Star Trek (Melkotian Adjudicator; Una Chin-Riley; Phlox).
     Melkotian,
+    Illyrian,
+    Denobulan,
 }
 
 /// Land subtypes (basic land types + others).
@@ -7290,6 +7292,14 @@ pub enum DynamicPt {
     /// permanents matching `filter` the controller controls. The `*`-toughness
     /// sibling of `PermanentsControlledMatching` (Treefolk Seedlings, `2/*`).
     PermanentsControlledMatchingToughness {
+        base_p: i32,
+        base_t: i32,
+        filter: Box<SelectionRequirement>,
+    },
+    /// The `*`-power sibling: power = `base_p` + the number of permanents
+    /// matching `filter` the controller controls; toughness is the fixed
+    /// `base_t` (Collective Drone, `*/2`).
+    PermanentsControlledMatchingPower {
         base_p: i32,
         base_t: i32,
         filter: Box<SelectionRequirement>,

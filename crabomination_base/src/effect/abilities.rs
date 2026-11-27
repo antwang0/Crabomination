@@ -1219,6 +1219,10 @@ pub enum StaticEffect {
     /// cast spells or activate abilities" (Angel of Jubilation). Read by
     /// `GameState::cost_life_payable` / `sacrificeable_for_cost`; no layer.
     PlayersCantPayLifeOrSacrificeCreaturesForCosts,
+    /// CR 119.4b — "Players can't pay life to cast spells or to activate
+    /// abilities that aren't mana abilities" (Karn's Sylex). Read by
+    /// `GameState::cost_life_payable_for`; a mana ability's life cost is exempt.
+    PlayersCantPayLifeForNonManaCosts,
     /// CR 105.3 / 613.1e — "All cards that aren't on the battlefield, spells,
     /// and permanents are the chosen color in addition to their other colors"
     /// (Painter's Servant). Permanents through a layer-5 `AddColor`; cards in
@@ -2831,6 +2835,10 @@ pub enum StaticEffect {
         /// (Edgar, Master Machinist).
         #[serde(default)]
         enters_tapped: bool,
+        /// "…that artifact creature enters with a finality counter on it"
+        /// (Overflow Submatrix).
+        #[serde(default)]
+        finality: bool,
     },
     /// "Once during each of your turns, you may cast a [filter] spell from your
     /// graveyard by sacrificing a [sacrifice] in addition to paying its other

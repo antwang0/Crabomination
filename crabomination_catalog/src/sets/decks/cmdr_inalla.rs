@@ -247,7 +247,7 @@ pub fn kess_dissident_mage() -> CardDefinition {
             description: "Once during each of your turns, you may cast an instant or sorcery spell \
                           from your graveyard. If a spell cast this way would be put into your \
                           graveyard, exile it instead.",
-            effect: StaticEffect::GraveyardCastOncePerTurn { mv_at_most_counters: None, filter: instant_or_sorcery(), exile_after: true, enters_tapped: false },
+            effect: StaticEffect::GraveyardCastOncePerTurn { mv_at_most_counters: None, filter: instant_or_sorcery(), exile_after: true, enters_tapped: false, finality: false },
         }],
         ..creature(
             "Kess, Dissident Mage",

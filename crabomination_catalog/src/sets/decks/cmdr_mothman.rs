@@ -576,7 +576,7 @@ pub fn raul_trouble_shooter() -> CardDefinition {
                 mv_at_most_counters: None,
                 filter: R::Nonland.and(R::PutIntoGraveyardFromLibraryThisTurn),
                 exile_after: false,
-                enters_tapped: false,
+                enters_tapped: false, finality: false,
             },
         }],
         activated_abilities: vec![ActivatedAbility {

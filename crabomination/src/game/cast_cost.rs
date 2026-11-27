@@ -110,8 +110,30 @@ impl GameState {
     /// activates: also barred by CR 119.4b (Angel of Jubilation) and CR 119.8
     /// ("can't lose life" — Platinum Emperion). Paying 0 is always legal.
     pub(crate) fn cost_life_payable(&self, p: usize, life: i32, amount: u32) -> bool {
+        self.cost_life_payable_for(p, life, amount, false)
+    }
+
+    /// [`Self::cost_life_payable`] knowing whether the cost is a mana
+    /// ability's, which Karn's Sylex exempts.
+    pub(crate) fn cost_life_payable_for(&self, p: usize, life: i32, amount: u32, mana_ability: bool) -> bool {
         amount == 0
-            || (life_payable(life, amount) && !self.cost_payments_restricted() && !self.player_cannot_lose_life_now(p))
+            || (life_payable(life, amount)
+                && !self.cost_payments_restricted()
+                && (mana_ability || !self.nonmana_life_costs_banned())
+                && !self.player_cannot_lose_life_now(p))
+    }
+
+    /// Karn's Sylex on the battlefield: no life payments for spells or
+    /// non-mana abilities.
+    fn nonmana_life_costs_banned(&self) -> bool {
+        use crate::effect::StaticEffect;
+        self.battlefield.has_life_static()
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| {
+                    self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::PlayersCantPayLifeForNonManaCosts))
+                        .is_some()
+                })
+            })
     }
 
     /// [`Self::cost_life_payable`] for a payment whose `kind` may say it is

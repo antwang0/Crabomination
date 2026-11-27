@@ -45848,7 +45848,7 @@ pub fn lurrus_of_the_dream_den() -> CardDefinition {
                 filter: SelectionRequirement::PermanentCard.and(SelectionRequirement::ManaValueAtMost(2)),
                 exile_after: false,
                 mv_at_most_counters: None,
-                enters_tapped: false,
+                enters_tapped: false, finality: false,
             },
         }],
         ..Default::default()

@@ -996,6 +996,7 @@ fn static_effect_touches_life(e: &crate::effect::StaticEffect) -> bool {
         | S::PlayerCannotLoseLife { .. }
         | S::PlayersCantPayLifeOrSacrificeCreaturesForCosts
         | S::PlayersCantPayLifeOrSacrificeNonlandForCosts
+        | S::PlayersCantPayLifeForNonManaCosts
         // Painter's Servant shares the lane: `painted_colors` is gated on it
         // (one rare card; the lane word has no field to spare, see below).
         | S::ChosenColorEverywhere
