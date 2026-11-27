@@ -22,6 +22,8 @@ the handoff.
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc3os`) — 18 seats, five primitives, two bot asks](#fixedopen-2026-11-27-commander-run-01wruxc3os--18-seats-five-primitives-two-bot-asks) | 30 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc3os-found-them-moved-verbatim-2026-11-27) | 3 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc5RU` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc5ru-found-them-moved-verbatim-2026-11-27) | 4 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc5RU`) — seven closers' primitives, two walker bugs](#fixedopen-2026-11-27-commander-run-01wruxc5ru--seven-closers-primitives-two-walker-bugs) | 14 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc5Gy`) — coven / gated-static cost, CR re-pin, Massimo](#fixedopen-2026-11-26-commander-run-01wruxc5gy--coven--gated-static-cost-cr-re-pin-massimo) | 24 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc5Gy` found them (moved verbatim, 2026-11-26)](#the-commander-nexts-lines-as-01wruxc5gy-found-them-moved-verbatim-2026-11-26) | 4 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc3U3`) — `--pod-random`, two pod bugs, 17 seats, two Rulebreakers](#fixedopen-2026-11-26-commander-run-01wruxc3u3----pod-random-two-pod-bugs-17-seats-two-rulebreakers) | 32 |
@@ -598,10 +600,38 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc5RU`) — seven closers' primitives, two walker bugs
+
+Seats 6271-6272 (Itazura, Miss Highwater — short only their commanders), 6279-6282 (Sash and Waistcoat, Glava,
+Matoc, The Madcap Jester — two-card gaps), 6283 (Chira). Cards in `decks::cmdr_nov27`, tests in
+`recent_b::cmdr_nov26`. A concurrent session (`01WRuXc3os`) seated 6265-6270 and 6273-6278 meanwhile; the seat race
+cost three rebases (procedure in TODO's Commander NEXT item 1 held each time).
+- ✅ `Effect::OpponentsBidDamageForFreeCast` (Itazura), `Effect::GiveContractCounter` + `PlayerCold::contracts` +
+  `queue_contract_copies` from the CR 800.4a leave pass (Miss Highwater), `Effect::ManifestOneOfTopTwoRestTopOrBottom`
+  (Write into Being), `Effect::RaiseXOfTriggeringOncePerTurn` (Glava), `exile_from::OPPONENT_LIBRARY_BY_YOU` (The Madcap
+  Jester), `KeywordAct::DidAtRandom` (Chira). The last two are synthesized after an outermost resolution beside Sahir's
+  `LifeLostToOwnEffect` and gated on a listener being on the battlefield, so no other game's event stream moves.
+- ✅ **Bug class: "any other target" never reached a player** — `any_target().and(OtherThanSource)` fell to the
+  permanent arm of `evaluate_requirement_static_hinted` for a player and answered false (Red Hulk, Arzakon's +2, Iron
+  Fist's granted tap). A player is never the source.
+- ✅ `PlayerBecameTarget` had no event actor, so "that player" (`TriggerEventPlayer`) read None for a targeted player.
+- ✅ A search that exiles from a library never pushed `CardExiledFrom(LIBRARY)` (CR 400.7; Laelia-style listeners).
+- OPEN: **Assist (CR 702.132)** blocks Yume, Chronicler of Valor (her deck is short only her) and Out of Bounds.
+  `Keyword::Assist` is inert. Design: at the cast's payment, after the total cost is locked (CR 601.2f), the caster
+  names an assister; the assister pays N ≤ the generic part through `try_pay_with_auto_tap_kind` (as `MayPayBy`); the
+  caster's cost drops by N; the spell records the assister for Yume's "if another player spent mana". Every cast path
+  in `actions.rs` pays separately (`cast_spell`, convoke, retrace, foretell …) — hook the shared payment, not each.
+  Bot: an assister pays {1} only when a card is in it for them (Yume) and they keep a spare untapped source.
+- OPEN: `Effect::Discard { random: true }` takes `hand.first()`, not a random card (pre-existing; "the bot harness
+  doesn't care which card"). Chira's deck lives on random discards; fixing it moves every random-discard game.
+- OPEN: Chira's "select targets at random" — `Selector::RandomOf` / `RandomAmong` / `TakeRandom` have no event path.
+
+## The Commander NEXT's lines as `01WRuXc5RU` found them (moved verbatim, 2026-11-27)
 
 3. **State (2026-11-26, `01WRuXc3U3`): 6,260 seats** — 6189-6205 singles closed by `trek_singles8`, 6206 Massimo (`01WRuXc5Gy`), 6207-6251 the 45 complete legal pair decks no one had seated, 6252-6260 the nine chosen-color pairs whose average fits one color (the other 62 mix two or more — filter on Scryfall identities before seating). DECK_FEATURES `01WRuXc3U3`. Commander rules: every row of FEATURE_ROADMAP's Commander status is ✅ save the bot's waterbend cast; Rulebreaker now has five allowances.
 5. **Sweeps this run (audit build):** seeds 29443-29445 × 3/4/5/6/8 seats, ~11,400 random games: 2 invariant panics (both fixed, ENGINE_BACKLOG `01WRuXc3U3`), undecided 0.1-0.4 % (CR 104.4a draws and board caps); then 29446-29449 (9,150 more incl. 600 × 8 and 150 × 10 seats, 0 panics). **Next seed 29450.** Closing gates: suite 29,604 / 0 / 14 (`CRAB_ANSWER_LOG=strict`, per-seat test skipped); clippy 0 (`--workspace --exclude crabomination_client --all-targets`); `--bench` 196,176 / 27.64 / 613.0 byte-identical, cube / sos / sealed decision-identical (PERF).
 6. **Next decks** (`edhrec_scan_top.py /tmp/crab_commander` after `commander_backlog.py`'s `load_commanders` with `COMMANDER_PAGES = 68`; check `legalities.commander` — Unfinity / Secret Lair / Dune commanders are not legal): four singles short only their commander — Itazura, Yume, Miss Highwater, Sahir — each a primitive (Massimo seated as 6206 by `01WRuXc5Gy`); four two-card gaps (Sash and Waistcoat, Chira, Glava, Matoc). Chief Montgomery Scott is five short now. Sahir's primitive is the life loss's cause (design: ENGINE_BACKLOG `01WRuXc5Gy`).
+8. **Gotchas:** inside the layer pass land types read printed except through `lands_of_computed_type`; `ShuffleSelfIntoLibrary` sets the resolving-spell flag only for the resolving spell; a random pod's draw depends on the deck count, so a seat append moves every `--pod-random` game (replay by `--pod-decks`).
 
 ## FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc5Gy`) — coven / gated-static cost, CR re-pin, Massimo
 
