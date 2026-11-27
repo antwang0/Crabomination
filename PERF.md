@@ -3136,6 +3136,19 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-27 (Commander run, `modern_decks` second) — guardrail; dilemmas, assist paths, bot waterbend
+
+Touched shared paths: the trigger dispatch (one `SpellCast` arm: a stack scan + `effect_is_modal` per cast, a battlefield
+listener walk only for a modal one; one `PermanentReturnedToHand` arm), `pick_trigger_mode` (one modal check),
+`cast_flashback` / `cast_foretold` / `cast_spell_alternative_from` (`take_assist`), the activation path (one modal check).
+Bot additions are pods-only. `release`, 4-core box, base `f26577b68` (the run's start) vs the closing tip:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical; determinism ok
+bench_ab.py      6 pairs: median +1.16 %, mean +1.42 %, sd 4.69 (noise); an earlier mid-run 8 pairs read -2.97 / -0.00 / 6.90
+⚠ contended      a --bench taken while clippy ran read 231 games/s against 297 — never bench beside a build
+```
+
 ### 2026-11-27 (Commander run, `01WRuXc4uj`) — guardrail; assist on the cast path, random discard, an optional-pick cap
 
 Touched shared paths: `cast_spell_with_convoke` / `cast_from_command_zone_as` (`take_assist`: a `generic == 0 ||` test,

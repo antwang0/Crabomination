@@ -20,6 +20,8 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `modern_decks` second) — bot waterbend, dilemmas, 19 seats](#fixedopen-2026-11-27-commander-run-modern_decks-second--bot-waterbend-dilemmas-19-seats) | 23 |
+| Bugs & robustness | [The Commander NEXT's lines as `modern_decks` (second run) found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-modern_decks-second-run-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc4uj`) — Assist, random discard, an optional-loop cap, 3 seats](#fixedopen-2026-11-27-commander-run-01wruxc4uj--assist-random-discard-an-optional-loop-cap-3-seats) | 18 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4uj` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc4uj-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc3os`) — 18 seats, five primitives, two bot asks](#fixedopen-2026-11-27-commander-run-01wruxc3os--18-seats-five-primitives-two-bot-asks) | 30 |
@@ -605,6 +607,41 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED/OPEN 2026-11-27 (Commander run, `modern_decks` second) — bot waterbend, dilemmas, 19 seats
+
+Seats 6289-6307 (the EDHREC rescan's legal decks at <= 4 short; DECK_FEATURES has the list). 50 cards, mostly
+`decks::trek_singles2`; tests `recent_b::cmdr_nov27_c`, `core_rules::cr_recent122`, `server::helper_cast`.
+- ✅ Bot: `server/helper_cast.rs::pick_waterbend_cast` (CR 701.67) — the last ⏳ of FEATURE_ROADMAP's Commander status.
+- ✅ CR 702.132a assist on flashback / foretell / alternative-cost casts (`take_assist` before each payment).
+- ✅ CR 700.2 "face a dilemma": `GameEvent::FacedDilemma` (gated on a listener; queued via `pending_cost_events`)
+  from a modal spell's `SpellCast` in dispatch, `pick_trigger_mode` and a modal activation;
+  `Player::dilemmas_faced_this_turn` counts every one. OPEN: Gabriel Lorca / Tell Me What You See (graveyard and
+  bounce-self listeners), Captain Benjamin Sisko (19 short).
+- ✅ Primitives: `RevealTopNPutMatchingToBattlefield.all_tapped`, `ExileLibraryCardsNamedLikeExiledThisResolution.all_zones`,
+  `DynamicPt::DistinctLandNamesPower`, `EntersAsCopy::override_dynamic_pt`, `StaticEffect::GraveyardInstantsSorceriesHaveBeamMeUp`
+  (Scotty), `Value::{DilemmasFacedThisTurn, ReturnedToHandThisTurn}`, `CreatureType::Medusan`.
+- ✅ Bug: `ExileFromHandTaxed` (Elite Spellbinder, Invasion of Gobakhan) lapsed after the owner's next turn; now
+  `MayPlayDuration::WhileExiled` per the printed "for as long as it remains exiled".
+- ✅ Bug (debug-assert caught): the bot's `GY_LOOP` gate skipped Lier / Scotty graveyard grants — pods now offer them
+  (`graveyard_specialties` + the GY_LOOP block; two-player pools unchanged).
+- Sweeps (release, closing tip): seeds 29601-29606 × 2/3/4/5/6/8 seats, 2,400 games + 420 `random_pods.sh MIN=6289`
+  games: 0 panics, 1 board cap (The Sixth Doctor and Yasmin Khan's copy tokens, `--seats 3 --pod-decks 6267,688,5346
+  --seed 29602 --first 92`). Mid-run: 29564-29565, 29573-29578, 29581-29585 (3,300 games) + 180 `MIN=6289` fuzz games: 0 panics, 4 CR 104.4a draws.
+- `--bench` decisions 196,176 / 27.64 / 613.0 byte-identical to the start tip `f26577b68`; `bench_ab.py` (release,
+  closing tip vs start) 6 pairs median +1.16 %, mean +1.42 %, sd 4.7 (noise); clippy 0 (87 min cold).
+
+## The Commander NEXT's lines as `modern_decks` (second run) found them (moved verbatim, 2026-11-27)
+
+1. ⚠ **Several sessions share this branch:** fetch before you start and before every push; rebase, never force; `cargo check -p crabomination_catalog` after each rebase. Seat numbers race: after a conflicted rebase, checkout `--ours` of `pod/decks.rs` + `pod/mod.rs`, re-run `scripts/seat_decks.py` on top of the other session's seats, run `cr_903_5a_target_decks_are_legal_commander_decks`. New seats go at the end of `target_decks()`. ⚠ `scripts/gen_factory_lists.py` rewrites all of `all_factories.rs` — append by hand.
+2. ⚠ **One optimized build at a time; `CARGO_INCREMENTAL=0`.** A git worktree with its own `CARGO_TARGET_DIR` (scratchpad) lets you keep editing while the release build runs (`01WRuXc4uj`: 14 min cold). Audit binary and per-seat test: ENGINE_BACKLOG `01WRuXc5RU` lines (moved verbatim). `seat_decks.py CACHE slug` wants `CACHE/avg/<slug>.json` — one `curl` of `json.edhrec.com/pages/average-decks/<slug>.json` per deck is enough.
+3. **State (2026-11-27, `01WRuXc4uj`): 6,288 seats** — 6286 Yume, 6287 Benjamin Sisko Besieged, 6288 Grakk the Pacifist. **Commander rules: every FEATURE_ROADMAP Commander-status row ✅ save the bot's waterbend cast** (Assist landed: `game/assist.rs`). ⏳ Assist is offered on the hand / command-zone paths only (not flashback / foretell / alternative costs, not with convoke or delve).
+4. **The smoke test is `--pod-random`** (`bot_ladder --commander --pod-random --seats N --games G --seed S`). A failure prints `--pod-decks .. --first I --games 1`; replay under `CRAB_POD_TRACE=0` and count repeated lines (`awk '{$1=""} …' | sort | uniq -c`) — that is how this run's loop was found.
+5. **Sweeps this run** (release): seeds 29545-29553 × 3/4/5/6/8 seats, 3,430 games: 0 panics; 5 undecided (2 CR 104.4a draws, 2 board caps, 1 action cap = the Preston + Wispweaver optional loop, fixed: `RepeatGuard::admit_optional_pick`). Final tip `0bda7be80`, seeds 29554-29559 × 2/3/4/5/6/8, 2,300 games: 0 panics, 3 undecided, all CR 104.4a draws (0.13 %). Gates: suite 29,662 / 0 / 14 strict, clippy 0 (95 min cold), `--bench` and pools invariant, `bench_ab.py` +1.26 % (noise) — PERF `01WRuXc4uj`. **Next seed 29560.**
+6. **Next decks:** the one-short queue is empty (Mohiam is Dune, not legal). Rescan with `edhrec_scan_top.py` (cache rebuild in ENGINE_BACKLOG `01WRuXc3os`) for two-short decks; Captain Benjamin Sisko is 24 short (Star Trek planets / sagas).
+7. **The CR is pinned at 2026-11-06** — 713 Meld inserted (Monarch 726, initiative 727, restart 728, optional loops 733.1b/733.2a). Re-pin procedure: ENGINE_BACKLOG `01WRuXc5Gy`.
+8. **Gotchas:** a random pod's draw depends on the deck count, so a seat append moves every `--pod-random` game (replay by `--pod-decks`). `add_card_to_library` adds at the *bottom* — clear the library before testing a top-of-library effect. A cast-time ask that can't suspend (gift, assist) takes the scripted decider when there is one, else the headless policy.
+9. **Earlier runs' NEXT lines** are in ENGINE_BACKLOG ("The Commander NEXT's lines as … found them", latest `01WRuXc4uj`).
+
 ## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc4uj`) — Assist, random discard, an optional-loop cap, 3 seats
 
 Seats 6286-6288 (Yume, Benjamin Sisko Besieged, Grakk the Pacifist). Cards in `decks::cmdr_nov27_b`, tests in
