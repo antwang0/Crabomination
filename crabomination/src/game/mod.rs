@@ -11731,17 +11731,38 @@ impl GameState {
         p: usize,
         land_type: crate::card::LandType,
     ) -> i32 {
-        let granters = self.land_type_granters(land_type);
         self.battlefield
             .iter()
             .filter(|c| c.controller == p && c.definition.is_land())
-            .filter(|c| {
-                self.permanent_has_land_type(c, land_type)
-                    || granters
-                        .iter()
-                        .any(|req| self.evaluate_requirement_on_card(req, c, c.controller))
-            })
+            .filter(|c| self.permanent_has_land_type(c, land_type) || self.land_type_granted_to(c, land_type))
             .count() as i32
+    }
+
+    /// Whether a battlefield static's `EachPermanent` filter adds `land_type`
+    /// to `card` (see [`Self::land_type_granters`]). One ply: a filter that
+    /// itself asks for a land type (Life and Limb's "All Forests … are Forest
+    /// lands") reads the printed line inside the walk instead of re-entering
+    /// it — unguarded, that was a stack overflow in pods (seed 29565).
+    pub(crate) fn land_type_granted_to(&self, card: &CardInstance, land_type: crate::card::LandType) -> bool {
+        thread_local! {
+            static IN_GRANTER_WALK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+        }
+        if IN_GRANTER_WALK.with(|w| w.get()) {
+            return false;
+        }
+        let granters = self.land_type_granters(land_type);
+        if granters.is_empty() {
+            return false;
+        }
+        struct Reset;
+        impl Drop for Reset {
+            fn drop(&mut self) {
+                IN_GRANTER_WALK.with(|w| w.set(false));
+            }
+        }
+        IN_GRANTER_WALK.with(|w| w.set(true));
+        let _reset = Reset;
+        granters.iter().any(|req| self.evaluate_requirement_on_card(req, card, card.controller))
     }
 
     /// The `EachPermanent` filters of every battlefield static that adds

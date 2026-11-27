@@ -404,6 +404,22 @@ fn life_and_limb_makes_forests_saprolings_and_saprolings_forests() {
     assert!(t.card_types().contains(&CardType::Land) && t.subtypes().land_types.contains(&LandType::Forest));
 }
 
+/// Bug fix (pod seed 29565, 8 seats, game 404 — Verdeloth's deck): Dungrove
+/// Elder counts Forests inside the layer gather (a CDA, CR 604.3), and for a
+/// land that isn't one that check walked Life and Limb's own "all Forests"
+/// filter forever — a stack overflow. Two Forests (the Island isn't one).
+#[test]
+fn life_and_limb_with_dungrove_elder_counts_forests_without_recursing() {
+    let mut g = pod(2);
+    ready(&mut g, 0, catalog::life_and_limb());
+    ready(&mut g, 0, catalog::island());
+    ready(&mut g, 0, catalog::forest());
+    ready(&mut g, 0, catalog::forest());
+    let elder = ready(&mut g, 0, catalog::dungrove_elder());
+    let e = g.computed_permanent(elder).unwrap();
+    assert_eq!((e.power, e.toughness), (2, 2));
+}
+
 /// Savage Thallid: sacrificing a Saproling (an activation cost) regenerates
 /// target Fungus.
 #[test]

@@ -6377,11 +6377,7 @@ impl GameState {
                         // Swamps reach Squelching Leeches).
                         None => {
                             card.definition.subtypes.land_types.contains(lt)
-                                || (card.definition.is_land()
-                                    && self
-                                        .land_type_granters(*lt)
-                                        .iter()
-                                        .any(|req| self.evaluate_requirement_on_card(req, card, card.controller)))
+                                || (card.definition.is_land() && self.land_type_granted_to(card, *lt))
                         }
                     }
                 };
