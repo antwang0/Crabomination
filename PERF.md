@@ -3136,6 +3136,19 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-27 (Commander run, `01WRuXc6sk`) — guardrail; crew/station factor, a non-mana life ban, a graveyard dilemma walk
+
+Touched shared paths: `crew` / the Station cost / the bot crew pick (one static walk of the crewing creature for
+`SelfCrewsStationsPowerTimes`); `cost_life_payable` (one more `has_life_static`-gated battlefield walk for
+`PlayersCantPayLifeForNonManaCosts`); `note_faced_dilemma` (graveyards walked only when a dilemma is faced). `release`,
+4-core box (Xeon @ 2.10GHz), base `43016871e` (the run's start) vs the closing tip:
+
+```
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok
+callgrind        --bench --decks fixed --games 6 --threads 1: 1,074,989,567 Ir base vs 1,075,081,895 tip (+0.009 %)
+games_per_s      350 / 397 on two tip runs (the host's usual spread; the Ir read is the signal)
+```
+
 ### 2026-11-27 (Commander run, `01WRuXc2yT`) — guardrail; a land-type granter guard, a LookPick reorder, an extra-turn count
 
 Touched shared paths: `lands_of_computed_type` / the mid-gather `has_ltype` fallback (`land_type_granted_to`: one
