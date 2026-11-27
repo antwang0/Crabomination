@@ -38485,6 +38485,48 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BORG_QUEEN_COMMANDERS,
             main: decks::BORG_QUEEN_MAIN,
         },
+        // Seat 6340: Curzon Dax, Bound by Blood's EDHREC average deck. `--pod-decks 6340`.
+        PodDeck {
+            name: "Curzon Dax, Bound by Blood (WR)",
+            commanders: decks::CURZON_DAX_COMMANDERS,
+            main: decks::CURZON_DAX_MAIN,
+        },
+        // Seat 6341: Gowron, Eager for Battle's EDHREC average deck. `--pod-decks 6341`.
+        PodDeck {
+            name: "Gowron, Eager for Battle (BR)",
+            commanders: decks::GOWRON_COMMANDERS,
+            main: decks::GOWRON_MAIN,
+        },
+        // Seat 6342: Kruge, Genesis Seeker's EDHREC average deck. `--pod-decks 6342`.
+        PodDeck {
+            name: "Kruge, Genesis Seeker (R)",
+            commanders: decks::KRUGE_COMMANDERS,
+            main: decks::KRUGE_MAIN,
+        },
+        // Seat 6343: McCoy, Not a Bricklayer's EDHREC average deck. `--pod-decks 6343`.
+        PodDeck {
+            name: "McCoy, Not a Bricklayer (WG)",
+            commanders: decks::MCCOY_COMMANDERS,
+            main: decks::MCCOY_MAIN,
+        },
+        // Seat 6344: Phlox, Unorthodox Doctor's EDHREC average deck. `--pod-decks 6344`.
+        PodDeck {
+            name: "Phlox, Unorthodox Doctor (WG)",
+            commanders: decks::PHLOX_COMMANDERS,
+            main: decks::PHLOX_MAIN,
+        },
+        // Seat 6345: Saru, Unthreatened's EDHREC average deck. `--pod-decks 6345`.
+        PodDeck {
+            name: "Saru, Unthreatened (G)",
+            commanders: decks::SARU_COMMANDERS,
+            main: decks::SARU_MAIN,
+        },
+        // Seat 6346: Captain Benjamin Sisko's EDHREC average deck. `--pod-decks 6346`.
+        PodDeck {
+            name: "Captain Benjamin Sisko (WUBRG)",
+            commanders: decks::CAPTAIN_BENJAMIN_SISKO_COMMANDERS,
+            main: decks::CAPTAIN_BENJAMIN_SISKO_MAIN,
+        },
     ]
 }
 
@@ -46794,6 +46836,13 @@ mod tests {
             ("Lore, Positronic Provocateur", &[0x22C1]),
             ("Gabriel Lorca, Mirror Menace", &[0x22C2]),
             ("Borg Queen, Perfection Manifest", &[0x22C3]),
+            ("Curzon Dax, Bound by Blood", &[0x22C4]),
+            ("Gowron, Eager for Battle", &[0x22C5]),
+            ("Kruge, Genesis Seeker", &[0x22C6]),
+            ("McCoy, Not a Bricklayer", &[0x22C7]),
+            ("Phlox, Unorthodox Doctor", &[0x22C8]),
+            ("Saru, Unthreatened", &[0x22C9]),
+            ("Captain Benjamin Sisko", &[0x22CA]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

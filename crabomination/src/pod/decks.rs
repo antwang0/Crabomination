@@ -178149,3 +178149,209 @@ pub const BORG_QUEEN_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const CURZON_DAX_COMMANDERS: &[CardFactory] = &[curzon_dax_bound_by_blood];
+
+/// **Curzon Dax, Bound by Blood**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 11 Mountains + 8 Plains = 99.
+/// Curzon Dax, Bound by Blood (EDHREC, fetched 2026-11-27).
+pub const CURZON_DAX_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, boros_signet, commanders_sphere, conjurers_mantle,
+    d_7_battle_cruiser, fellwar_stone, mind_stone, skullclamp, sol_ring, talisman_of_conviction,
+    the_sword_of_kahless, wayfarers_bauble, arid_mesa, battlefield_forge, clifftop_retreat,
+    command_tower, dalkovan_encampment, exotic_orchard, furycalm_snarl, needleverge_pathway,
+    path_of_ancestry, plateau, radiant_summit, rugged_prairie, sacred_foundry,
+    scavenger_grounds, spectator_seating, sunbaked_canyon, alexander_ships_fool,
+    ambassador_kehleyr, aurelia_the_warleader, brighthearth_banneret, combat_celebrant,
+    dahar_master, etali_primal_storm, ezri_dax_newly_joined, ferocious_colonist, gagh_slinger,
+    gornog_the_red_reaper, grilka_widowed_warrior, imperial_hullbreachers, indelicate_healer,
+    kang_suspicious_captain, kargan_intimidator, klingon_strike_force,
+    martok_hero_of_the_empire, munitions_enthusiast, professional_face_breaker,
+    qonos_quartermaster, quark_humble_proprietor, shock_brigade, stadium_headliner, sun_titan,
+    targ_wrangler, voice_of_victory, weathered_wayfarer, winota_joiner_of_forces,
+    worf_honor_bound_warrior, worf_intelligence_contractor, zealous_conscripts,
+    fanatical_devotion, goblin_bombardment, martyrs_cause, outpost_siege, rite_of_ascension,
+    warleaders_call, brought_back, chaos_warp, continue_card, generous_gift, path_to_exile,
+    secure_the_wastes, swords_to_plowshares, test_of_identity, austere_command, blasphemous_act,
+    boarding_action, kindred_judgment, sevinnes_reclamation,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const GOWRON_COMMANDERS: &[CardFactory] = &[gowron_eager_for_battle];
+
+/// **Gowron, Eager for Battle**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 10 Mountains + 10 Swamps = 99.
+/// Gowron, Eager for Battle (EDHREC, fetched 2026-11-27).
+pub const GOWRON_MAIN: &[CardFactory] = &[
+    arcane_signet, d_7_battle_cruiser, heralds_horn, i_k_s_neghvar_imperial_flagship,
+    kvort_class_raider, lightning_greaves, rakdos_signet, skullclamp, sol_ring, swiftfoot_boots,
+    talisman_of_indulgence, the_beacon_of_kahless, the_sword_of_kahless, blackcleave_cliffs,
+    blazemire_verge, blood_crypt, bojuka_bog, canyon_slough, command_tower, dragonskull_summit,
+    exotic_orchard, foreboding_ruins, haunted_ridge, luxury_suite, path_of_ancestry,
+    rogues_passage, smoldering_marsh, sulfurous_springs, temple_of_malice,
+    battle_scarred_survivalist, blood_sport_champion, chadich_investigator, dghor_bloodletter,
+    ferocious_colonist, gagh_slinger, galvanizing_tenor, general_chang_cold_warrior,
+    grand_nagus_zek, grilka_widowed_warrior, kang_suspicious_captain, klingon_strike_force,
+    koloth_tribble_hunter, kruge_genesis_seeker, kurn_son_of_mogh, lrell_fierce_visionary,
+    mayhem_devil, morbid_opportunist, munitions_enthusiast, pitiless_plunderer,
+    professional_face_breaker, qonos_quartermaster, storied_veteran, targ_wrangler,
+    the_duras_sisters, voq_torchbearer, worf_intelligence_contractor, zulaport_cutthroat,
+    bastion_of_remembrance, black_market_connections, glory_to_the_empire, grave_pact,
+    sins_of_the_father, vengeance_mission, a_good_day_to_die, abrade, chaos_warp, dark_ritual,
+    deadly_dispute, rakdos_charm, terminate, test_of_identity, blasphemous_act, boarding_action,
+    disrupt_decorum, feed_the_swarm, own_the_day, the_promise_of_kahless, vandalblast, victimize,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const KRUGE_COMMANDERS: &[CardFactory] = &[kruge_genesis_seeker];
+
+/// **Kruge, Genesis Seeker**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 23 Mountains = 99.
+/// Kruge, Genesis Seeker (EDHREC, fetched 2026-11-27).
+pub const KRUGE_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, embercleave, everflowing_chalice, fellwar_stone,
+    fire_diamond, hedron_archive, helm_of_the_host, lightning_greaves, maskwood_nexus,
+    mind_stone, ruby_medallion, skullclamp, sol_ring, stonespeaker_crystal, swiftfoot_boots,
+    sword_of_the_animist, thought_vessel, uss_enterprise_d_galaxy_class, wayfarers_bauble,
+    ancient_tomb, command_tower, exotic_orchard, myriad_landscape, path_of_ancestry,
+    shinka_the_bloodsoaked_keep, spinerock_knoll, spire_of_industry,
+    valakut_the_molten_pinnacle, bloodline_pretender, combat_celebrant, dahar_master,
+    defense_force_aggressor, etali_primal_storm, ferocious_colonist, gagh_slinger,
+    galvanizing_tenor, goblin_rabblemaster, grilka_widowed_warrior, imperial_recruiter,
+    kang_suspicious_captain, karlach_fury_of_avernus, klingon_strike_force,
+    koloth_tribble_hunter, legion_warboss, magus_of_the_moon, mekleth_berserker,
+    moraug_fury_of_akoum, munitions_enthusiast, port_razer, professional_face_breaker,
+    qonos_quartermaster, ragavan_nimble_pilferer, targ_wrangler, taurean_mauler,
+    urabrask_the_hidden, warship_flight_crew, worf_intelligence_contractor, aggravated_assault,
+    berserkers_onslaught, city_on_fire, fervor, impact_tremors, rising_of_the_day,
+    shared_animosity, abrade, chaos_warp, deflecting_swat, lightning_bolt, valakut_awakening,
+    blasphemous_act, boarding_action, jeskas_will, seize_the_day, vandalblast, world_at_war,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const MCCOY_COMMANDERS: &[CardFactory] = &[mccoy_not_a_bricklayer];
+
+/// **McCoy, Not a Bricklayer**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 10 Forests + 9 Plains = 99.
+/// McCoy, Not a Bricklayer (EDHREC, fetched 2026-11-27).
+pub const MCCOY_MAIN: &[CardFactory] = &[
+    arcane_signet, heralds_horn, ozolith_the_shattered_spire, sickbay, sol_ring,
+    the_earth_crystal, the_great_henge, the_ozolith, the_wind_crystal, abandoned_air_temple,
+    bountiful_promenade, brushland, canopy_vista, command_tower, exotic_orchard,
+    federation_outpost, fortified_village, gavony_township, hushwood_verge, karns_bastion,
+    overgrown_farmland, path_of_ancestry, q_continuum, sunpetal_grove, temple_garden,
+    temple_of_plenty, abzan_falconer, aerith_gainsborough, archangel_of_thune,
+    beverly_crusher_ships_doctor, chomping_changeling, christine_chapel_combat_medic,
+    conclave_mentor, culber_and_stamets_star_crossed, deanna_troi_psychic_counsel,
+    doc_samson_super_psychiatrist, doctor_jane_foster, doctor_strange_surgeon,
+    dominion_supervisor, donald_blake_guise_of_thor, dr_beverly_crusher, dr_joseph_mbenga,
+    dr_leonard_bones_mccoy, dr_mccoy_surly_surgeon, dr_pulaski_cynical_clinician,
+    emergency_medical_hologram, exemplar_of_light, federation_field_medic,
+    haliya_guided_by_light, julian_bashir_frontier_doctor, kami_of_whispered_hopes,
+    night_nurse_healer_of_heroes, phlox_unorthodox_doctor, photosynthetic_physician,
+    realmwalker, roaming_throne, sickbay_orderly, the_doctor_emh, branching_evolution,
+    cleric_class, guardian_project, hardened_scales, innkeepers_talent, sphere_grid,
+    terrasymbiosis, the_inner_light, beast_within, generous_gift, heroic_intervention,
+    im_a_doctor_not_a, inspiring_call, path_to_exile, swords_to_plowshares, vigorbloom_charm,
+    austere_command, cultivate, farseek, natures_lore, rampant_growth, the_five_doctors,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const PHLOX_COMMANDERS: &[CardFactory] = &[phlox_unorthodox_doctor];
+
+/// **Phlox, Unorthodox Doctor**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Forests + 11 Plains = 99.
+/// Phlox, Unorthodox Doctor (EDHREC, fetched 2026-11-27).
+pub const PHLOX_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, ozolith_the_shattered_spire, sickbay, sol_ring,
+    swiftfoot_boots, the_earth_crystal, the_great_henge, abandoned_air_temple,
+    bountiful_promenade, brushland, canopy_vista, command_tower, fortified_village,
+    gavony_township, hushwood_verge, karns_bastion, overgrown_farmland, reliquary_tower,
+    sungrass_prairie, sunpetal_grove, temple_garden, abzan_falconer, avacyns_pilgrim,
+    birds_of_paradise, brad_boimler_eager_ensign, bushmaster_coiled_henchman,
+    champion_of_lambholt, conclave_mentor, deanna_troi_psychic_counsel,
+    doc_samson_super_psychiatrist, dominion_supervisor, dr_joseph_mbenga,
+    dr_leonard_bones_mccoy, dr_mccoy_surly_surgeon, emergency_medical_hologram,
+    envoy_of_the_ancestors, esper_sentinel, essence_warden, exemplar_of_light,
+    federation_field_medic, forgotten_ancient, good_fortune_unicorn, heliod_sun_crowned,
+    kutzil_malamet_exemplar, llanowar_elves, mccoy_not_a_bricklayer, mikaeus_the_lunarch,
+    neelix_moral_support, rishkar_peema_renegade, soul_warden, souls_attendant, the_doctor_emh,
+    branching_evolution, fight_rigging, garruks_uprising, hardened_scales, heroic_feast,
+    support_mission, the_inner_light, beast_within, generous_gift, im_a_doctor_not_a,
+    inspiring_call, path_to_exile, shields_up, swords_to_plowshares, unbreakable_formation,
+    austere_command, damning_verdict, farseek, natures_lore, rampant_growth, requisition_raid,
+    thirsting_roots, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const SARU_COMMANDERS: &[CardFactory] = &[saru_unthreatened];
+
+/// **Saru, Unthreatened**'s EDHREC average deck, card for card:
+/// 81 nonbasic cards + 18 Forests = 99.
+/// Saru, Unthreatened (EDHREC, fetched 2026-11-27).
+pub const SARU_MAIN: &[CardFactory] = &[
+    bear_trap, guac_and_marshmallow_pizza, hidden_blade, instant_ramen, adventurers_inn,
+    adventurers_guildhouse, arcane_lighthouse, arena, ba_sing_se, baldurs_gate, basilisk_gate,
+    blighted_woodland, brokers_hideout, cabaretti_courtyard, gateway_plaza, gond_gate,
+    heap_gate, manor_gate, maze_of_ith, talon_gates_of_madara, thran_portal, adaptive_shimmerer,
+    ambush_viper, ambush_wolf, ancient_stone_idol, ashaya_soul_of_the_wild, ashcoat_bear,
+    bounding_wolf, bristly_bill_spine_sower, dr_leonard_bones_mccoy, edgar_moonlit_sovereign,
+    ghalta_stampede_tyrant, greensleeves_maro_sorcerer, kona_rescue_beastie,
+    liberator_urzas_battlethopter, lumra_bellow_of_the_woods, old_gnawbone,
+    omnath_locus_of_mana, radagast_of_rhosgobel, sandman_shifting_scoundrel,
+    the_unbeatable_squirrel_girl, tifa_lockhart, tigra_feline_fury, vorinclex_monstrous_raider,
+    vorinclex_voice_of_hunger, yeva_natures_herald, accelerated_evolution, aether_web,
+    airtight_alibi, armor_of_thorns, creeping_crystal_coating, epic_proportions,
+    feral_invocation, frantic_strength, gilt_leafs_embrace, howl_of_the_hunt, serpent_skin,
+    silken_strength, blinding_fog, blossoming_defense, bombadils_song, defend_the_rider,
+    gaeas_gift, hapatras_mark, heroic_intervention, legolass_quick_reflexes, sheltering_word,
+    snakeskin_veil, tamiyos_safekeeping, tyvars_stand, veil_of_summer, acorn_harvest,
+    boundless_realms, circuitous_route, colossal_collision, cultivate, environmental_sciences,
+    fork_in_the_road, harvest_season, kodamas_reach, many_partings,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest,
+];
+
+pub const CAPTAIN_BENJAMIN_SISKO_COMMANDERS: &[CardFactory] = &[captain_benjamin_sisko];
+
+/// **Captain Benjamin Sisko**'s EDHREC average deck, card for card:
+/// 89 nonbasic cards + 2 Forests + 2 Islands + 2 Mountains + 3 Plains + 1 Swamp = 99.
+/// Captain Benjamin Sisko (EDHREC, fetched 2026-11-27).
+pub const CAPTAIN_BENJAMIN_SISKO_MAIN: &[CardFactory] = &[
+    arcane_signet, chromatic_lantern, deep_space_9, fellwar_stone, shuttlecraft_galileo,
+    sol_ring, u_s_s_defiant_tough_little_ship, u_s_s_discovery_at_black_alert,
+    u_s_s_enterprise_a_free_spirit, uss_enterprise_d_galaxy_class, bajor, blood_crypt,
+    breeding_pool, cardassia_prime, command_tower, earth_sector_001, exotic_orchard,
+    federation_outpost, ferenginar, flooded_strand, godless_shrine, hallowed_fountain,
+    ni_var_science_academy, overgrown_tomb, path_of_ancestry, q_continuum, quarks_bar, risa,
+    sacred_foundry, starfleet_academy, steam_vents, stomping_ground, temple_garden,
+    the_unicomplex, vulcan, watery_grave, windswept_heath, academy_instructor,
+    birds_of_paradise, caesar_legions_emperor, captain_james_t_kirk, captain_janeway_endgame,
+    captain_jean_luc_picard, captain_kathryn_janeway, captain_pike_fullness_of_time,
+    constable_odo, elim_garak_simple_tailor, excalbian_gamemaster, federation_probe,
+    gala_greeters, galadriel_light_of_valinor, jadzia_dax_living_legacy, mress_crew_coordinator,
+    obsidian_order_operative, riku_of_many_paths, seven_of_nine, seven_of_nine_unassimilated,
+    tal_shiar_operative, the_caretaker, wesley_crusher_starfleet_cadet, worf_son_of_mogh,
+    black_market_connections, felidar_retreat, retreat_to_coralhelm, stable_wormhole,
+    tell_me_what_you_see, warp_speed, abrade, akromas_will, boros_charm,
+    consider_the_prime_directive, cryptic_command, dathon_and_picard_at_el_adrel,
+    encounter_the_unknown, impossible_choice, set_phasers_to, swords_to_plowshares,
+    test_of_courage, test_of_priorities, untimely_malfunction, austere_command,
+    command_decision, farseek, hull_breach, make_it_so, natures_lore, resistance_is_futile,
+    test_of_conviction, test_of_loyalty,
+    // Basics
+    forest, forest, island, island, mountain, mountain, plains, plains, plains, swamp,
+];

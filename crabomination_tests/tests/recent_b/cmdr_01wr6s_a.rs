@@ -334,3 +334,66 @@ fn collective_drone_counts_artifact_creatures() {
     let c = g.computed_permanent(drone).unwrap();
     assert_eq!((c.power, c.toughness), (2, 2));
 }
+
+/// Captain Benjamin Sisko's activation casts the exiled spells whose mana
+/// value is at most his Officers (two here): Grizzly Bears, not Shivan Dragon.
+#[test]
+fn captain_sisko_casts_exiled_spells_up_to_his_officer_count() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let dragon = g.add_card_to_library(0, catalog::shivan_dragon());
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::forest());
+    }
+    let sisko = ready(&mut g, catalog::captain_benjamin_sisko());
+    g.add_card_to_battlefield(0, catalog::tactical_officer());
+    activate(&mut g, sisko, None).expect("activate");
+    assert!(g.battlefield_find(bears).is_some(), "MV 2 cast free");
+    assert!(g.exile.iter().any(|c| c.id == dragon), "MV 6 stays exiled");
+}
+
+/// Sickbay: a creature entering gains 1 life, then at the beginning of combat
+/// its target gets 1 + (life gained this turn) +1/+1 counters.
+#[test]
+fn sickbay_scales_its_combat_counters_with_life_gained() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::sickbay());
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    cast(&mut g, bears, None, None);
+    assert_eq!(g.players[0].life, life + 1);
+    g.step = TurnStep::BeginCombat;
+    g.fire_step_triggers(TurnStep::BeginCombat);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(bears).unwrap().counter_count(CounterType::PlusOnePlusOne), 2);
+}
+
+/// Vengeance Mission: each creature death drains its target opponent by 1
+/// and adds a quest counter; at seven counters the drain is 2.
+#[test]
+fn vengeance_mission_drains_per_death_and_steps_up_at_seven() {
+    let mut g = pod(3);
+    let vm = g.add_card_to_battlefield(0, catalog::vengeance_mission());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    let before: i32 = (1..3).map(|s| g.players[s].life).sum();
+    cast(&mut g, bolt, Some(Target::Permanent(bears)), None);
+    assert_eq!(g.battlefield_find(vm).unwrap().counter_count(CounterType::Quest), 1);
+    assert_eq!((1..3).map(|s| g.players[s].life).sum::<i32>(), before - 1, "one opponent lost 1");
+    g.battlefield_find_mut(vm).unwrap().add_counters(CounterType::Quest, 5);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Permanent(bears)), None);
+    assert_eq!((1..3).map(|s| g.players[s].life).sum::<i32>(), before - 3, "the seventh counter drains 2");
+}
+
+/// Hapatra's Mark strips every -1/-1 counter from its target.
+#[test]
+fn hapatras_mark_removes_all_minus_counters() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    g.battlefield_find_mut(giant).unwrap().add_counters(CounterType::MinusOneMinusOne, 2);
+    let mark = g.add_card_to_hand(0, catalog::hapatras_mark());
+    cast(&mut g, mark, Some(Target::Permanent(giant)), None);
+    assert_eq!(g.battlefield_find(giant).unwrap().counter_count(CounterType::MinusOneMinusOne), 0);
+}

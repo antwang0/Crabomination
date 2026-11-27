@@ -1500,3 +1500,9 @@ pub use cmdr_01wr6s_b::*;
 #[path = "../../../src/sets/decks/cmdr_01wr6s_c.rs"]
 mod cmdr_01wr6s_c;
 pub use cmdr_01wr6s_c::*;
+#[path = "../../../src/sets/decks/cmdr_01wr6s_d.rs"]
+mod cmdr_01wr6s_d;
+pub use cmdr_01wr6s_d::*;
+#[path = "../../../src/sets/decks/cmdr_01wr6s_e.rs"]
+mod cmdr_01wr6s_e;
+pub use cmdr_01wr6s_e::*;
