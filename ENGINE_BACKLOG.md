@@ -618,9 +618,10 @@ Seat 6308 (Radha, Coalition Warlord; `decks::cmdr_01wr2y_a`, tests `recent_b::cm
   `RevealUntilMatchingToBattlefield { any_number }`, headless takes all). Both were 5-seat sole residuals.
 - ✅ `edhrec_deck.py` read a quoted phrase in a factory's line comment as its printed name (Sol'Kanar showed as an
   unseated one-card gap).
-- CLAIMED: Martok, Hero of the Empire (Type-2 Phaser, Hologram Janeway, 70,000 Light-Years from Home); Dr. Pulaski
-  (Disruptor Pistol, Free Borg Revolutionaries, Shuttle Crew); Sela, Tal Shiar Paradox (Rogue Artificial
-  Intelligence, Salt Vampire, A Good Day to Die).
+- ✅ Seats 6309-6313: Martok, Dr. Pulaski, Sela (`cmdr_01wr2y_b`), Rutherford, Worf Honor-Bound (`cmdr_01wr2y_c`).
+- CLAIMED: Chekov and McCoy, Zefram Cochrane, H.M.S. Bounty (the deck) — H.M.S. Bounty needs "haven't begun an
+  extra turn this game"; U.S.S. Defiant, Test of Courage, Cetacean Ops, Flying Dolphin-Fish, Humpback Whales,
+  Long-Finned Skywhale.
 - OPEN (PERF candidate 2026-11-27): Sword of the Squeak on a ~300-token board, 5-8 s an action.
 
 ## FIXED/OPEN 2026-11-27 (Commander run, `modern_decks` second) — bot waterbend, dilemmas, 19 seats
