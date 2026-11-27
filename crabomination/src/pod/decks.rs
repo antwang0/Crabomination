@@ -176522,3 +176522,57 @@ pub const CHIRA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const GALE_29_COMMANDERS: &[CardFactory] = &[gale_waterdeep_prodigy, feywild_visitor];
+
+/// **Gale, Waterdeep Prodigy and Feywild Visitor**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Islands = 98.
+/// Gale, Waterdeep Prodigy and Feywild Visitor (EDHREC, fetched 2026-11-27).
+pub const GALE_29_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, decanter_of_endless_water, sapphire_medallion, sol_ring,
+    thought_vessel, agna_qela, castle_vantress, hexhaven_dueling_arena, mystic_sanctuary,
+    riptide_laboratory, aether_channeler, archmage_emeritus, archmage_of_runes,
+    baral_chief_of_compliance, docent_of_perfection, fblthp_impossibly_lost,
+    geist_of_saint_thalia, haughty_djinn, hermes_overseer_of_elpis, mocking_sprite,
+    murmuring_mystic, muse_seeker, samut_tyrant_of_naktamun, sash_and_waistcoat_unmen,
+    snapcaster_mage, sphinx_of_false_conclusions, talrand_sky_summoner, uthros_psionicist,
+    valley_floodcaller, yuriko_hope_from_the_shadows, gossips_talent, jaces_sanctum,
+    rhystic_study, roll_roll_roll_roll, secrets_of_the_dead, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, archmages_charm, brainstorm, consider,
+    counterspell, flare_of_denial, flusterstorm, frantic_search, high_tide, negate, opt,
+    pongify, rapid_hybridization, reality_shift, silundi_vision, snap, swan_song,
+    jace_memory_adept, barals_expertise, candlekeep_inspiration, curse_of_the_swine, flow_state,
+    gitaxian_probe, personal_tutor, ponder, preordain, ravenform, serum_visions,
+    solve_the_equation, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
+
+pub const ALORA_29_COMMANDERS: &[CardFactory] = &[alora_merry_thief, flaming_fist];
+
+/// **Alora, Merry Thief and Flaming Fist**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 12 Islands + 14 Plains = 98.
+/// Alora, Merry Thief and Flaming Fist (EDHREC, fetched 2026-11-27).
+pub const ALORA_29_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, goggles_of_night, greatsword_of_tyr, haunted_cloak,
+    lavaspur_boots, liquimetal_torque, nettlecyst, sol_ring, swiftfoot_boots,
+    talisman_of_progress, the_blackstaff_of_waterdeep, wayfarers_bauble, command_tower,
+    deserted_beach, glacial_fortress, hallowed_fountain, meticulous_archive, port_town,
+    prairie_stream, sea_of_clouds, temple_of_enlightenment, temple_of_the_false_god,
+    agent_13_sharon_carter, animating_faerie, auriok_windwalker, bilbo_luckwearer,
+    enduring_curiosity, entity_tracker, fog_bank, geist_of_saint_thalia, inquisitive_glimmer,
+    karn_silver_golem, kenku_artificer, loyal_warhound, mesa_enchantress, moon_blessed_cleric,
+    sash_and_waistcoat_unmen, skilled_animator, starfield_mystic, trinket_mage,
+    unctuss_retrofitter, willie_lumpkin_postman, workshop_elders, all_that_glitters,
+    ethereal_armor, ghostly_prison, gleaming_splendor, land_tax, michikos_reign_of_truth,
+    monk_class, mystic_remora, opalescence, propaganda, rhystic_study, starfield_of_nyx,
+    behind_the_mask, counterspell, dovins_veto, ephemerate, generous_gift, mana_drain, negate,
+    path_to_exile, relics_roar, swords_to_plowshares, tezzeret_betrayer_of_flesh,
+    abuelos_awakening, dance_of_the_manse, idyllic_tutor, open_the_armory, rise_and_shine,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];

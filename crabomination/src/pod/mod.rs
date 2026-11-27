@@ -38149,6 +38149,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CHIRA_COMMANDERS,
             main: decks::CHIRA_MAIN,
         },
+        // Seat 6284: Gale, Waterdeep Prodigy and Feywild Visitor's EDHREC average deck. `--pod-decks 6284`.
+        PodDeck {
+            name: "Gale, Waterdeep Prodigy and Feywild Visitor (U)",
+            commanders: decks::GALE_29_COMMANDERS,
+            main: decks::GALE_29_MAIN,
+        },
+        // Seat 6285: Alora, Merry Thief and Flaming Fist's EDHREC average deck. `--pod-decks 6285`.
+        PodDeck {
+            name: "Alora, Merry Thief and Flaming Fist (WU)",
+            commanders: decks::ALORA_29_COMMANDERS,
+            main: decks::ALORA_29_MAIN,
+        },
     ]
 }
 
@@ -46368,6 +46380,8 @@ mod tests {
             ("Matoc, Lavamancer", &[0x2289]),
             ("The Madcap Jester", &[0x228A]),
             ("Chira, All In", &[0x228B]),
+            ("Gale, Waterdeep Prodigy and Feywild Visitor", &[0x228C]),
+            ("Alora, Merry Thief and Flaming Fist", &[0x228D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
