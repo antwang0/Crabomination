@@ -38649,6 +38649,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FIRST_DOCTOR_23_COMMANDERS,
             main: decks::THE_FIRST_DOCTOR_23_MAIN,
         },
+        // Seat 6366: Livaan, Cultist of Tiamat and Faceless One's EDHREC average deck. `--pod-decks 6366`.
+        PodDeck {
+            name: "Livaan, Cultist of Tiamat and Faceless One (R)",
+            commanders: decks::LIVAAN_30_COMMANDERS,
+            main: decks::LIVAAN_30_MAIN,
+        },
     ]
 }
 
@@ -46991,6 +46997,7 @@ mod tests {
             ("The Eighth Doctor and Yasmin Khan", &[0x22DB]),
             ("The Sixth Doctor and Rose Tyler", &[0x22DC]),
             ("The First Doctor and Rose Noble", &[0x22DD]),
+            ("Livaan, Cultist of Tiamat and Faceless One", &[0x22DE]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

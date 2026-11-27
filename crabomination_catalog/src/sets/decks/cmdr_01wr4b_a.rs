@@ -263,3 +263,31 @@ pub fn weakstones_subjugation() -> CardDefinition {
 pub fn marooned() -> CardDefinition {
     pay_to_tap_lock_aura("Marooned")
 }
+
+/// Spellweaver Volute — {3}{U}{U} Aura: enchant instant card in a graveyard.
+/// Whenever you cast a sorcery, copy the enchanted card; you may cast the
+/// copy free, and if you do, exile the card and move to another instant
+/// card in a graveyard. The enchanted card is a link (`Effect::
+/// SpellweaverVolute`); with none to move to, the Aura goes to the graveyard.
+pub fn spellweaver_volute() -> CardDefinition {
+    CardDefinition {
+        name: "Spellweaver Volute",
+        cost: cost(&[generic(3), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Aura], ..Default::default() },
+        cast_condition: Some(Predicate::SelectorExists(Selector::CardsInZone {
+            who: PlayerRef::EachPlayer,
+            zone: crate::card::Zone::Graveyard,
+            filter: R::HasCardType(CardType::Instant),
+        })),
+        triggered_abilities: vec![
+            etb(Effect::SpellweaverVolute { attach: true }),
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                    .with_filter(Predicate::EntityMatches { what: Selector::TriggerSource, filter: R::HasCardType(CardType::Sorcery) }),
+                effect: Effect::SpellweaverVolute { attach: false },
+            },
+        ],
+        ..Default::default()
+    }
+}

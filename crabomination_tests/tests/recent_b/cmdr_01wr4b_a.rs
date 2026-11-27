@@ -173,3 +173,28 @@ fn pay_to_tap_auras_tap_only_when_paid() {
         assert!(g.players[0].graveyard.is_empty() && g.players[0].hand.is_empty());
     }
 }
+
+/// Spellweaver Volute — enters on the priciest instant card in a graveyard;
+/// casting a sorcery casts that card's copy free, exiles the card and moves
+/// the Aura to the next instant card. With none left, it goes to the
+/// graveyard.
+#[test]
+fn spellweaver_volute_casts_its_card_and_moves_on() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let opp_life = g.players[1].life;
+    g.add_card_to_graveyard(1, catalog::lightning_bolt());
+    let volute = g.add_card_to_hand(0, catalog::spellweaver_volute());
+    cast(&mut g, volute, None);
+    assert!(g.battlefield_find(volute).is_some_and(|c| c.chosen_permanent.is_some()));
+    g.add_card_to_graveyard(0, catalog::shock());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let sorcery = g.add_card_to_hand(0, catalog::divination());
+    cast(&mut g, sorcery, None);
+    assert!(g.exile.iter().any(|c| c.definition.name == "Lightning Bolt"), "the cast card is exiled");
+    assert!(g.players[1].life < opp_life, "the free Bolt copy hit the opponent");
+    let shock = g.players[0].graveyard.iter().find(|c| c.definition.name == "Shock").map(|c| c.id);
+    assert_eq!(g.battlefield_find(volute).and_then(|c| c.chosen_permanent), shock, "moved on to Shock");
+}

@@ -19763,6 +19763,7 @@ static DECKS: &[Factory] = &[
     super::decks::sparring_mummy,
     super::decks::weakstones_subjugation,
     super::decks::marooned,
+    super::decks::spellweaver_volute,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

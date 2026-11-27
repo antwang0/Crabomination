@@ -2121,6 +2121,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Shah of Naar Isle | "up to three" is three yes/no draws | `EachPlayerDoes` + `MayDo` |
 | 🟡 The Kingpin of Crime | the attack trigger's "creatures with toughness greater than their power" is the set as it resolves; a creature that qualifies later in the turn doesn't assign by toughness (CR 611.2c) | `GrantKeyword { AssignsCombatDamageByToughness, EndOfTurn }` |
 | 🟡 Channel Harm | "you may have it deal that much damage" is always taken; "permanents you control" are the ones you control as it resolves | `PreventOpposingDamageThisTurnReflecting { reflect_to }` |
+| 🟡 Spellweaver Volute | the enchanted card is a link, not an attachment: CR 704.5m (its card left the graveyard) is checked when the sorcery trigger resolves, and "enchanted"/Aura-count effects don't see it | `Effect::SpellweaverVolute` |
 | 🟡 Safe Passage | "creatures you control" are the ones you control as it resolves; a creature that enters later this turn is unshielded | two `PreventAllDamageThisTurn` |
 | 🟡 Mordor on the March | "exile a creature card from your graveyard" is a target (a hexproof-from-graveyard effect would stop it); each storm copy re-aims at another card | `CreateTokenCopyOf` + `Exile` + `DelayUntil` |
 | 🟡 Aragorn, Company Leader | "one of each of those kinds" is one trigger per kind put, so two kinds at once may land on two different creatures | `AddCounterOfTriggerKind` on `YouPutCounters` |

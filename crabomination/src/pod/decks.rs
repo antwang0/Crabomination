@@ -178911,3 +178911,30 @@ pub const THE_FIRST_DOCTOR_23_MAIN: &[CardFactory] = &[
     island, island, island, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains, plains,
 ];
+
+pub const LIVAAN_30_COMMANDERS: &[CardFactory] = &[livaan_cultist_of_tiamat, faceless_one];
+
+/// **Livaan, Cultist of Tiamat and Faceless One**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 10 Islands + 12 Mountains = 98.
+/// Livaan, Cultist of Tiamat and Faceless One (EDHREC, fetched 2026-11-27).
+pub const LIVAAN_30_MAIN: &[CardFactory] = &[
+    arcane_signet, coveted_jewel, everflowing_chalice, izzet_signet, mind_stone,
+    resonating_lute, sol_ring, sol_talisman, tablet_of_discovery, thought_vessel, ancient_tomb,
+    command_tower, ferrous_lake, forge_of_heroes, frostboil_snarl, izzet_boilerworks,
+    riverglide_pathway, seat_of_the_synod, shivan_reef, steam_vents, stormcarved_coast,
+    sulfur_falls, witchs_clinic, wooded_foothills, abstract_paintmage, bloodsworn_steward,
+    colorstorm_stallion, drillworks_mole, electro_assaulting_battery, flamekin_herald,
+    gloin_the_mighty, loyal_drake, molten_core_maestro, stormsurge_kraken, thunderclap_drake,
+    tyrants_familiar, clout_of_the_dominus, dictate_of_the_twin_gods, font_of_magic,
+    omniscience, shameless_charlatan, spellweaver_volute, sword_coast_sailor, tavern_brawler,
+    active_volcano, brainsurge, brush_off, chaos_warp, cleansing_beam, commanders_insight,
+    flame_javelin, sos_flashback_instant, fling, gush, homesickness, insidious_will,
+    lightning_bolt, magmatic_sinkhole, nexus_of_fate, opt, quick_study, see_double,
+    seething_song, siege_smash, temur_battle_rage, dack_fayden, artistic_process,
+    blasphemous_act, boltwave, duel_tactics, gandalfs_sanction, mana_geyser, maximize_altitude,
+    preordain, rapturous_moment, will_of_the_jeskai,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
