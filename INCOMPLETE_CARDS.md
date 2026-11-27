@@ -2371,3 +2371,4 @@ approximated):
 | 🟡 Leyline of Combustion | "whenever you and/or at least one permanent you control becomes the target" | once per such target, not once per spell or ability |
 | 🟡 Glava, Five-Advents Mage | "you may have the value of X become 5" | taken whenever it raises X, never declined, never lowers it |
 | 🟡 Itazura, Lingering Wick | "each opponent secretly chooses a number 0 or greater" | the ask's maximum is the best exiled spell's mana value (a higher bid buys nothing a bot can see); bots bid as a life payment |
+| 🟡 Chira, All In | "select one or more targets at random" | not heard: random selectors (`RandomOf`, `RandomAmong`, `TakeRandom`) resolve without an event path; discards, modes, coins and dice are, once per kind per resolution |
