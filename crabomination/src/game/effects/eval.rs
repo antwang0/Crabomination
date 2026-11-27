@@ -3452,6 +3452,9 @@ impl GameState {
                 .map(|c| c.attacked_this_turn)
                 .unwrap_or(false),
             Predicate::IsExtraTurn => self.current_turn_is_extra,
+            Predicate::YouHaveBegunAnExtraTurnThisGame => {
+                self.players.get(ctx.controller).is_some_and(|p| p.extra_turns_begun > 0)
+            }
             Predicate::SourceIsMonstrous => ctx
                 .source
                 .and_then(|cid| self.battlefield.find_by_id(cid))

@@ -5939,6 +5939,7 @@ impl GameState {
         }
         if takes_extra && !denied {
             self.players[active].extra_turns -= 1;
+            self.players[active].extra_turns_begun += 1;
             self.current_turn_is_extra = true;
             self.turn_number += 1;
             if locked {

@@ -1516,6 +1516,9 @@ pub struct PlayerData {
     /// -7 coin-flip emblem). `#[serde(default)]` for snapshot back-compat.
     #[serde(default)]
     pub extra_turns: u32,
+    /// CR 500.7 — extra turns this player has begun this game (H.M.S. Bounty).
+    #[serde(default)]
+    pub extra_turns_begun: u32,
     /// Bit `i` marks the extra turn at bank depth `i` as power-up-locked
     /// (Kang the Conqueror); the newest extra turn is taken first (CR 500.7).
     #[serde(default)]
@@ -2033,6 +2036,7 @@ impl Player {
             creatures_dont_untap_next_untap: 0,
             firebending_kept_red: 0,
             extra_turns: 0,
+            extra_turns_begun: 0,
             power_up_locked_extra: 0,
             power_up_locked_turn: None,
             turns_begun: 0,

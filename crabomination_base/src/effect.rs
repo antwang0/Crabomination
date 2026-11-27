@@ -2017,6 +2017,10 @@ pub enum Predicate {
     /// `GameState.current_turn_is_extra`. Medomai the Ageless's
     /// "can't attack during extra turns".
     IsExtraTurn,
+    /// CR 500.7 — the controller has begun an extra turn this game (H.M.S.
+    /// Bounty's "haven't begun an extra turn this game", negated). Backed by
+    /// `Player.extra_turns_begun`.
+    YouHaveBegunAnExtraTurnThisGame,
     /// CR 701.37 — the source permanent is monstrous. Backed by
     /// `CardInstance.monstrous`. Powers "as long as this is monstrous, …"
     /// statics (Fleecemane Lion's hexproof + indestructible).
