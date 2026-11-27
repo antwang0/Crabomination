@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
-| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — Sulu / Spock / Seven, new Trek commanders](#fixedopen-2026-11-27-commander-run-01wruxc6sk--sulu--spock--seven-new-trek-commanders) | 7 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — 39 Star Trek seats, six primitives](#fixedopen-2026-11-27-commander-run-01wruxc6sk--39-star-trek-seats-six-primitives) | 18 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, 10 seats](#fixedopen-2026-11-27-commander-run-01wruxc2yt--a-land-type-recursion-two-residuals-10-seats) | 17 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc2yT` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc2yt-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `modern_decks` second) — bot waterbend, dilemmas, 19 seats](#fixedopen-2026-11-27-commander-run-modern_decks-second--bot-waterbend-dilemmas-19-seats) | 23 |
@@ -610,13 +610,24 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
-## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — Sulu / Spock / Seven, new Trek commanders
+## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — 39 Star Trek seats, six primitives
 
-- CLAIMED: seats 6318-6320 (Sulu Heroic Helmsman, Commander Spock, Seven of Nine; `decks::cmdr_01wr6s_a`, LANDED);
-  the 2026-11-13 Trek zero-gap decks (Will Riker Assuming Command, Commander Raffi Musiker, Culber and Stamets,
-  U.S.S. Defiant Tough Little Ship, U.S.S. Cerritos Following Up); one-short closers Tactical Officer (Picard,
-  Janeway Endgame), Kirk Man of Action, Evasive Maneuvers (Miles O'Brien), Collector's Case (Enterprise NX-01),
-  Fulgent Distraction (Excelsior), Karn's Sylex (Defiant Mirror Migrant), D'Ghor Bloodletter + Midnight Charm (Elim Garak).
+Seats 6318-6356 (EDHREC averages fetched 2026-11-27; DECK_FEATURES has the list). 109 cards in
+`decks::cmdr_01wr6s_a`..`_g`; tests `recent_b::cmdr_01wr6s_a` (27). The 2026-11-13 Trek commanders (ranks 6814-6997)
+were new to the 70-page `commanders/year.json` fetch; five were zero-gap.
+- ✅ Primitives: `StaticEffect::SelfCrewsStationsPowerTimes` (Sulu: crew + Station cost + bot crew pick),
+  `Effect::RevealTopCastOrLandElseDraw` (Commander Spock), `StaticEffect::PlayersCantPayLifeForNonManaCosts`
+  (Karn's Sylex, CR 119.4b; `cost_life_payable_for` exempts mana abilities), `GraveyardCastOncePerTurn.finality`
+  (Overflow Submatrix), `DynamicPt::PermanentsControlledMatchingPower` (Collective Drone `*/2`),
+  `Effect::RevealTopNamedToHandElse` (Vexing Arcanix, after `EachPlayerNamesCard`); `hears_faced_dilemma` walks
+  graveyards for `FromYourGraveyard` dilemma triggers (Gabriel Lorca, Mirror Menace — closes the 2026-11-27 OPEN);
+  `CreatureType::{Melkotian, Illyrian, Denobulan, Kelpien, Germ}`.
+- ✅ `CRAB_SEAT` takes `|`-separated prefixes (one run of the per-seat pod test over a batch).
+- OPEN: The Eighth Doctor // Yasmin Khan needs Over the Top (each player reveals per nonland permanent, permanents
+  enter, the rest to graveyards). ~17 zero-gap Doctor / companion / Background pairs (`edhrec_scan_pairs.py --legal
+  --max 0`, ranks 3407-6963) stay unseated per the earlier policy. Lava Coil (cube, frozen) still approximates its
+  exile rider with a toughness check; `Effect::ExileIfWouldDieThisTurn` is the exact shape (Khaaaaaaaaaaaannn!).
+- Sweeps: see TODO's Commander NEXT item 5.
 
 ## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, 10 seats
 
