@@ -12178,6 +12178,10 @@ fn main_phase_action_with(
     if let Some(step) = super::helper_cast::pick_helper_cast(state, seat) {
         return step;
     }
+    // Commander games: a waterbend paid with helpers (CR 701.67).
+    if let Some(step) = super::helper_cast::pick_waterbend_cast(state, seat) {
+        return step;
+    }
 
     // Everything castable this tick — see `cast_candidates`.
     let pool = cast_candidates(state, seat, w, Some(&have_mana));

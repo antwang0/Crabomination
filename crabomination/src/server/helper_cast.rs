@@ -64,6 +64,85 @@ pub(super) fn pick_helper_cast(state: &GameState, seat: usize) -> Option<BotStep
     None
 }
 
+/// CR 701.67 — Commander games only: a hand spell's waterbend paid with
+/// helpers. An optional "you may waterbend {N}" (Katara, Seeking Revenge;
+/// Secret of Bloodbending) is taken whenever affordable; a mandatory one only
+/// when the plain (mana-only) cast is not. Precombat, ready creatures stay
+/// home for the attack.
+pub(super) fn pick_waterbend_cast(state: &GameState, seat: usize) -> Option<BotStep> {
+    let pl = &state.players[seat];
+    if pl.commanders.is_empty()
+        || state.active_player_idx != seat
+        || !matches!(state.step, TurnStep::PreCombatMain | TurnStep::PostCombatMain)
+        || !state.stack.is_empty()
+    {
+        return None;
+    }
+    for card in pl.hand.iter().filter(|c| c.definition.waterbend.is_some()) {
+        let Some((amt, optional)) = crate::game::actions::waterbend_amount(&card.definition, None) else { continue };
+        if amt == 0 {
+            continue;
+        }
+        let effect = &card.definition.effect;
+        let (target, additional_targets) = if effect.requires_target() {
+            let (t, extras) = state.auto_targets_for_effect_all_slots_kicked(effect, seat, None, false, Some(card.id));
+            if t.is_none() {
+                continue;
+            }
+            (t, extras)
+        } else {
+            (None, Vec::new())
+        };
+        if !optional {
+            let plain = GameAction::CastSpell {
+                card_id: card.id,
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode: None,
+                x_value: None,
+            };
+            if GameState::would_accept_on(state, plain) {
+                continue;
+            }
+        }
+        let precombat = state.step == TurnStep::PreCombatMain;
+        // Ready attackers last, then mana sources (a rock taps for more than
+        // the {1} a helper pays), weakest first.
+        let mut ranked: Vec<(bool, bool, i32, CardId)> = state
+            .battlefield
+            .iter()
+            .filter(|h| h.controller == seat && !h.tapped && h.id != card.id)
+            .filter_map(|h| {
+                let creature = state.computed_is_creature(h);
+                if !creature && !state.computed_has_card_type(h, crate::card::CardType::Artifact) {
+                    return None;
+                }
+                let attacker = creature && !h.summoning_sick;
+                let mana = h.definition.activated_abilities.iter().any(|a| crate::game::actions::is_mana_ability(&a.effect));
+                (!(precombat && attacker)).then_some((attacker, mana, if creature { h.power() } else { -1 }, h.id))
+            })
+            .collect();
+        ranked.sort_unstable();
+        let most = ranked.len().min(amt as usize);
+        let mut tries = vec![most, most / 2, 0];
+        tries.dedup();
+        for n in tries {
+            let action = GameAction::CastSpellWaterbend {
+                card_id: card.id,
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode: None,
+                x_value: None,
+                helpers: ranked[..n].iter().map(|r| r.3).collect(),
+            };
+            if let Some(g) = GameState::accept_on(state, action.clone()) {
+                return Some(BotStep { action, settled: Some(Box::new(g)) });
+            }
+        }
+    }
+    None
+}
+
 fn plain(card_id: CardId) -> GameAction {
     GameAction::CastFromCommandZone {
         card_id,
@@ -165,6 +244,35 @@ mod tests {
         assert!(convoke_creatures.contains(&knight) && convoke_creatures.contains(&second));
         assert!(step.settled.is_some_and(|s| s.stack.iter().any(|i| matches!(i,
             crate::game::types::StackItem::Spell { card, .. } if card.id == hogaak))));
+    }
+
+    /// CR 701.67 — the bot pays Katara, Seeking Revenge's optional waterbend
+    /// {2} with a summoning-sick creature and an artifact, so her ETB draw
+    /// isn't followed by a discard; with only mana for her base cost it casts
+    /// nothing here (the plain cast is `cast_candidates`').
+    #[test]
+    fn cr_701_67_the_bot_pays_an_optional_waterbend_with_helpers() {
+        use crate::mana::Color;
+        let mut g = crate::game::game_with_format(crate::format::Format::Commander, 3);
+        g.seat_commanders(0, vec![crate::catalog::llanowar_elves()]);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        let katara = g.add_card_to_hand(0, crate::catalog::katara_seeking_revenge());
+        let ready = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.battlefield.find_by_id_mut(ready).unwrap().summoning_sick = false;
+        g.players[0].mana_pool.add(Color::Blue, 4);
+        assert!(pick_waterbend_cast(&g, 0).is_none(), "a ready attacker stays home precombat");
+        let sick = g.add_card_to_battlefield(0, crate::catalog::grizzly_bears());
+        g.battlefield.find_by_id_mut(sick).unwrap().summoning_sick = true;
+        let rock = g.add_card_to_battlefield(0, crate::catalog::sol_ring());
+        let step = pick_waterbend_cast(&g, 0).expect("payable");
+        let GameAction::CastSpellWaterbend { card_id, helpers, .. } = &step.action else { panic!("{:?}", step.action) };
+        assert_eq!(*card_id, katara);
+        assert!(helpers.contains(&rock) && helpers.contains(&sick), "{helpers:?}");
+        let settled = step.settled.expect("dry run");
+        assert!(settled.stack.iter().any(|i| matches!(i,
+            crate::game::types::StackItem::Spell { card, .. } if card.id == katara && card.cast_via_waterbend)));
     }
 
     /// CR 903.9a — the owner's "may": the bot keeps a commander that went on
