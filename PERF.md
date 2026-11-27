@@ -3136,6 +3136,24 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-27 (Commander run, `01WRuXc3os`) — guardrail; resolution-end life-loss synthesis, counter adders
+
+Touched shared paths: `resolve_effect_into_kind` (an outermost resolution scans its own events for the controller's
+non-damage `LifeLost`), `deal_damage_to_from` (a command-zone source's owner, read only when the source is neither on the
+battlefield nor the resolving spell), `extra_permanent_adders_for` (+ the seat's `extra_counters_this_turn`), the bot's
+`MayBody` screen (`stand_down_answer`). `release`, 4-core box (Xeon @ 2.10GHz), base `84b357c83` (the run's start) vs tip
+`3f998789a` (includes concurrent sessions' engine and bot-rating commits):
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok,
+                 thread_determinism ok (3 vs 1); peak_rss_mib 51.7
+pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: 367,206 / 213,898 / 522,778, 0 stalls —
+                 decision-identical to the invariant
+callgrind Ir     --games 6 --threads 1 --seed 1: fixed 226,313,783 -> 226,560,127 (+0.11 %); cube 508,218,575 ->
+                 508,666,777 (+0.09 %)
+bench_ab.py      16 pairs: B/A median -4.77 %, mean -4.35 % (sd 5.53) — the Ir says host drift; no regression filed
+```
+
 ### 2026-11-26 (Commander run, `01WRuXc5Gy`) — guardrail; coven early exit, gated statics skip the wrong kind
 
 Touched shared paths: `active_static_where` / `static_active_is` (74 call sites: `ungated()` + the caller's kind test

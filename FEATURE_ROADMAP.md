@@ -21,7 +21,7 @@ the shipped CR text (now `crabomination/MagicCompRules_20261106.txt`, re-pinned
 2026-11-26: 713 Meld inserted, 713-733 cited as 714-734, 903.5e / 903.5f). Don't re-audit; update rows as they
 move. Per-deck card completion lives in `DECK_FEATURES.md`; what each Commander
 session changed lives in ENGINE_BACKLOG under its session id. Last touched
-2026-11-26 by `01WRuXc5Gy` (the CR re-pin; the Rulebreaker row cites 903.5e).
+2026-11-27 by `01WRuXc3os` (eminence damage is its owner's — the eminence row; no row changed state).
 
 ### Format core (CR 903)
 | Feature | State | Where |
@@ -198,7 +198,7 @@ session changed lives in ENGINE_BACKLOG under its session id. Last touched
 | Monarch, the initiative, goad, myriad, melee, voting / council's dilemma, tempting offer, join forces | ✅ *piloted* | `effect.rs` (`IsMonarch`, `HasInitiative`, `Goad` — read only through `GameState::goaders` (`game/goad.rs`; CR 611.2b; `AttachedIsGoaded`), `Myriad`, `MeleeOpponentCount`, `VoteTally`, `TemptingOffer`, `JoinForces`), `dungeons.rs`. Piloted by `pod::decks::ADRIANA_MAIN` (27 such cards); `cr_702_122_the_multiplayer_native_seat_plays_a_pod_game` asserts they stay in the 99 |
 | "Whenever a player attacks one of your opponents" (CR 508.1) | ✅ | `EventScope::OpponentOfYoursAttacked`, after the declaration: once per attacked player per listener that player opposes; attacker in `Target(0)`, attacked opponent as `Triggerer`. Breena, Combat Calligrapher (`recent_b/cmdr_breena.rs`) |
 | Join forces | ✅ | `Effect::JoinForces` (CR 207.2c) over `ask_seat_amount` — turn order from the controller, every ask before every payment; Minds Aglow / Collective Voyage / Mana-Charged Dragon |
-| Eminence (abilities that function from the command zone) | ✅ | CR 113.6b: triggers via `EventSpec.zone: TriggerZone::{Printed, CommandZoneToo, CommandZoneOnly}` (step gather in `stack.rs`, SpellCast dispatch in `actions.rs`, event dispatcher in `mod.rs`, the "whenever you attack" walk in `combat.rs`); statics via `CardDefinition.statics_in_command_zone` + `CardInstance::command_zone_statics_active`. Edgar Markov / Arahbo / Oloro / The Ur-Dragon / Sidar Jabari |
+| Eminence (abilities that function from the command zone) | ✅ | CR 113.6b: triggers via `EventSpec.zone: TriggerZone::{Printed, CommandZoneToo, CommandZoneOnly}` (step gather in `stack.rs`, SpellCast dispatch in `actions.rs`, event dispatcher in `mod.rs`, the "whenever you attack" walk in `combat.rs`); statics via `CardDefinition.statics_in_command_zone` + `CardInstance::command_zone_statics_active`. Edgar Markov / Arahbo / Oloro / The Ur-Dragon / Sidar Jabari; a command-zone damage source is attributed to its owner (`deal_damage_to_from`, Sahir) |
 | Commander ninjutsu | ✅ *piloted since 2026-09-20* | `Keyword::CommanderNinjutsu` (CR 702.49d) + `move_card_to`'s CR 408 command-zone arm; Yuriko is a pod deck. The cost auto-taps (CR 602.2b); bot candidate `pick_ninjutsu` |
 | Lieutenant / "if you control your commander" | ✅ | `Predicate::ControlsOwnCommander`; Thunderfoot Baloth, Loyal Apprentice (`TriggeredAbility` has no intervening-`if` field, so the gate is an `Effect::If` inside the body; its Thopter gains haste via `Selector::LastCreatedToken`) |
 | "Commander creatures you control …" as a static filter | ✅ | `SelectionRequirement::IsCommander` — a board fact, reads a commander under anyone's control. Falthis, Bastion Protector (also `R::Creature`: a planeswalker commander gets nothing) |

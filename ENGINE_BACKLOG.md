@@ -20,6 +20,8 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc3os`) — 18 seats, five primitives, two bot asks](#fixedopen-2026-11-27-commander-run-01wruxc3os--18-seats-five-primitives-two-bot-asks) | 30 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc3os-found-them-moved-verbatim-2026-11-27) | 3 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc5Gy`) — coven / gated-static cost, CR re-pin, Massimo](#fixedopen-2026-11-26-commander-run-01wruxc5gy--coven--gated-static-cost-cr-re-pin-massimo) | 24 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc5Gy` found them (moved verbatim, 2026-11-26)](#the-commander-nexts-lines-as-01wruxc5gy-found-them-moved-verbatim-2026-11-26) | 4 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc3U3`) — `--pod-random`, two pod bugs, 17 seats, two Rulebreakers](#fixedopen-2026-11-26-commander-run-01wruxc3u3----pod-random-two-pod-bugs-17-seats-two-rulebreakers) | 32 |
@@ -557,6 +559,49 @@ planner choices.
 ## The Commander NEXT's line 9 as `01WRuXc4hq` found it (moved verbatim, 2026-10-31)
 
 9. **`01WRuXc48R` (2026-10-30, no seats; ENGINE_BACKLOG `01WRuXc48R`): residual rank, `audit_up_to_one --pod`, a literal-cap census.** ⚠ **CR 903.5a bug class: eleven "reveal until" effects were `cap: 60` (a 60-card library's depth) and stopped 60 cards into a 99-card library** — now `1000` (Chaos Wand, Dazzling Sphinx, Gríma, Page, Plargg, Sacred Guide, Spinner of Souls, Thicket Elemental, Clifftop Lookout, The Regalia, Warrior of Light), plus Selective Memory / The Bath Song's "any number"; **grep `Const(60)` in any new card**. Four "up to one" slots hit their own side (Koh, Psychic Pickpocket, Rhino's Rampage, Sol'Kanar → `OptionalTargets { min: 0 }`; `ExileLinked`/`ExileWithSource` now hostile in `permanent_slot_is_hostile`); Koh's re-choice keeps other grants; Aesir chapter I is a pick. Gates: suite **29,360 / 0 / 8** (strict), clippy **0** (84 min cold on 4 cores — budget it), `--bench` **196,176 / 613.0 / 0 stalls byte-identical**, determinism ok. Pods: start-tree 29400 (4 seats, 1,500 games) and 29700 (6 seats, 600); closing-tree 29800/29900/30000/30100 at 3/5/8/4 seats, 1,550 games — **3,650 games, 0 panics, 3 finite board caps** (Rabble Rousing's Citizens `--pod-decks 650,750,4954,5239 --seed 29686 --first 1`; Innkeeper's Talent + The Great Henge `312,1517,3440,5168 --seed 30174 --first 1`; Eidolon of Blossoms / Shizuko `588,2548,3003,3883,5827 --seed 29939 --first 0`), no stalls, no draws. **Next seed 30200.** Next: the rank top is choice-exposure only (Dawnhand's blight is a cost — needs cost-payment plumbing; Queen Kayla needs a simultaneous put across per-MV picks); `audit_up_to_one` false positives come from `dump_cards --effects` not dumping station / granted triggers (Dawnsire, Baseball Bat) — widen the dump, not the regex.
+
+## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc3os`) — 18 seats, five primitives, two bot asks
+
+- ✅ **Seats 6261-6270, 6273-6278** (16 EDHREC averages, fetched 2026-11-26/27): Sahir, Ambassador K'Ehleyr, Armus, Grilka
+  (`decks::cmdr_nov26_b`); Lt. Cmdr. Data, Kang, Erica Ortegas, M'Ress, Worf Son of Mogh, Brad Boimler, Tuvok, Salinae
+  (`cmdr_nov26_c`); The Sixth Doctor // Nyssa, The War Doctor // Dan Lewis, Jaheira // Noble Heritage, Sengir // Tymna
+  (`cmdr_nov27_b`); 6284-6285 Gale // Feywild Visitor, Alora // Flaming Fist (closed by the concurrent session's Sash and
+  Waistcoat). 28 cards. Seats 6271-6272 and 6279-6283 are `01WRuXc5RU`'s.
+- ✅ **Bug (found by this run's suite, fixed concurrently by `01WRuXc5RU` in `84b20c96e`):** the live payload matcher
+  defaults a bit-matched kind to `true`, and the `LifeLost` guard arms had gone into the reference table only, so every
+  plain "whenever you lose life" trigger fired twice on a self-caused loss. `variant_and_payload_halves_agree_with_the_
+  reference_table` caught it; regression test `a_self_caused_loss_triggers_ordinary_life_loss_listeners_once` (Lich's
+  Tomb). ⚠ A new event that shares a kind's bit needs its arm in `event_payload_matches`, not only the reference table.
+- ✅ Primitives: `GameEvent::LifeLostToOwnEffect` (synthesized at the end of the outermost resolution for each non-damage
+  `LifeLost` of its controller; matched only by `self_caused` `LifeLost` specs — Sahir), `EventScope::YourSourceDamagedYou`,
+  command-zone damage attributed to the card's owner (CR 113.6b eminence), `Predicate::DiscardedSharesCardTypeWith`
+  (Creeping Dread), `Effect::GrantExtraCountersThisTurn` (Brad Boimler: +1 of each kind on your permanents this turn),
+  `Effect::CopySpellAsOneOne { creature_type }` (Donal's Spirit copy generalized; Salinae's Fish adds Creature to an
+  artifact copy). `CounterType::Peace`; `CreatureType::Bolian`, `Cardassian`.
+- ✅ Bot: `accept_offer::stand_down_answer` — Peace in Our Time's "draw; if you do you can't attack" is taken by the source's
+  controller and by a seat with no ready attacker, declined otherwise (the generic screen took every one, so nobody attacked
+  into it); Brazen Bluff's "exile your spell, or else" is declined by the asked seat.
+- ⚠ **Pair averages built around a color-chooser mix colors** — every Clara Oswald pair but the Eleventh Doctor's (seated
+  earlier), and Vhal + Sword Coast Sailor (Ley Weaver), fail CR 903.4. `edhrec_scan_pairs.py --legal --max 0` lists them as
+  complete; filter on Scryfall identities first (the one-liner: union the commanders' `color_identity`, count average cards
+  outside it). McCoy and There's Coffee in that Nebula were written for two such decks and are finished cards anyway.
+- ⚠ A test that scripts a free cast from hand answers three asks: the may, `ChooseCards` (the pick), then
+  `OptionalTrigger { CastFree }` ("Cast without paying?").
+- Cache rebuild (fresh container): `mkdir /tmp/crab_commander`, then in Python import `scripts/commander_backlog.py`, set
+  `COMMANDER_PAGES = 68`, call `load_commanders(Path('/tmp/crab_commander'), False)` and `load_scryfall(...)`; then
+  `edhrec_scan_top.py` (~10 min of fetches) and `edhrec_scan_pairs.py --legal --max 1`. Identity check before seating a
+  pair: union the commanders' `color_identity` from `oracle_cards.jsonl.gz`, count `avg/<slug>.json` cards outside it.
+- ⚠ The scan resolves names by slug, so an apostrophe name it can't slug (Sol'Kanar) reads as missing though seated.
+- Sweeps and gates: TODO's Commander NEXT item 5, PERF `01WRuXc3os`. The suite / clippy line is below.
+- OPEN: Yume (the last commander-only single); Mohiam (+ Nix), Benjamin Sisko (+ Final Frontier) one short. Sash and
+  Waistcoat, Chira, Glava, Matoc and The Madcap Jester were closed concurrently by `01WRuXc5RU` (`decks::cmdr_nov27`) —
+  this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
+
+## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+
+3. **State (2026-11-26, `01WRuXc3U3`): 6,260 seats** — 6189-6205 singles closed by `trek_singles8`, 6206 Massimo (`01WRuXc5Gy`), 6207-6251 the 45 complete legal pair decks no one had seated, 6252-6260 the nine chosen-color pairs whose average fits one color (the other 62 mix two or more — filter on Scryfall identities before seating). DECK_FEATURES `01WRuXc3U3`. Commander rules: every row of FEATURE_ROADMAP's Commander status is ✅ save the bot's waterbend cast; Rulebreaker now has five allowances.
+5. **Sweeps this run (audit build):** seeds 29443-29445 × 3/4/5/6/8 seats, ~11,400 random games: 2 invariant panics (both fixed, ENGINE_BACKLOG `01WRuXc3U3`), undecided 0.1-0.4 % (CR 104.4a draws and board caps); then 29446-29449 (9,150 more incl. 600 × 8 and 150 × 10 seats, 0 panics). **Next seed 29450.** Closing gates: suite 29,604 / 0 / 14 (`CRAB_ANSWER_LOG=strict`, per-seat test skipped); clippy 0 (`--workspace --exclude crabomination_client --all-targets`); `--bench` 196,176 / 27.64 / 613.0 byte-identical, cube / sos / sealed decision-identical (PERF).
+6. **Next decks** (`edhrec_scan_top.py /tmp/crab_commander` after `commander_backlog.py`'s `load_commanders` with `COMMANDER_PAGES = 68`; check `legalities.commander` — Unfinity / Secret Lair / Dune commanders are not legal): four singles short only their commander — Itazura, Yume, Miss Highwater, Sahir — each a primitive (Massimo seated as 6206 by `01WRuXc5Gy`); four two-card gaps (Sash and Waistcoat, Chira, Glava, Matoc). Chief Montgomery Scott is five short now. Sahir's primitive is the life loss's cause (design: ENGINE_BACKLOG `01WRuXc5Gy`).
 
 ## FIXED/OPEN 2026-11-26 (Commander run, `01WRuXc5Gy`) — coven / gated-static cost, CR re-pin, Massimo
 
