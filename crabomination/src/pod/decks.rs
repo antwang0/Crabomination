@@ -176383,3 +176383,114 @@ pub const SENGIR_12_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const SASH_AND_WAISTCOAT_COMMANDERS: &[CardFactory] = &[sash_and_waistcoat_unmen];
+
+/// **Sash and Waistcoat, Unmen**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Sash and Waistcoat, Unmen (EDHREC, fetched 2026-11-27).
+pub const SASH_AND_WAISTCOAT_MAIN: &[CardFactory] = &[
+    arcane_signet, bident_of_thassa, conjurers_closet, forsaken_monument, heartstone,
+    illusionists_bracers, lens_of_clarity, sapphire_medallion, scroll_of_fate,
+    senseis_divining_top, sol_ring, the_enigma_jewel, thought_vessel, thran_dynamo,
+    branch_of_vitu_ghazi, halimar_depths, muraganda_raceway, mystic_sanctuary,
+    otawara_soaring_city, reliquary_tower, rivendell, zoetic_cavern, abhorrent_oculus,
+    aphetto_runecaster, brine_elemental, chromeshell_crab, displacer_kitten, enduring_curiosity,
+    exit_specialist, glaring_fleshraker, glitch_interpreter, grazilaxx_illithid_scholar,
+    ixidor_reality_sculptor, ixidron, kadenas_silencer, kheru_spellsnatcher,
+    kozilek_the_broken_reality, mischievous_quanar, omen_hawker, riptide_entrancer, starwinder,
+    stratus_dancer, thassa_deep_dwelling, the_reality_chip, thousand_winds,
+    vesuvan_shapeshifter, voidmage_apprentice, willbender, yshtola_rhul, gossips_talent,
+    primordial_mist, propaganda, reconnaissance_mission, they_came_from_the_pipes,
+    training_grounds, ugins_mastery, an_offer_you_cant_refuse, brainstorm, brainsurge,
+    counterspell, cyber_conversion, displace, essence_flux, ghostly_flicker,
+    hide_on_the_ceiling, pongify, rapid_hybridization, reality_shift, ugin_the_ineffable,
+    ponder, preordain, write_into_being,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
+
+pub const GLAVA_COMMANDERS: &[CardFactory] = &[glava_five_advents_mage];
+
+/// **Glava, Five-Advents Mage**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Forests = 99.
+/// Glava, Five-Advents Mage (EDHREC, fetched 2026-11-27).
+pub const GLAVA_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, brass_infiniscope, elementalists_palette,
+    emerald_medallion, sol_ring, the_earth_crystal, the_great_henge, the_ozolith,
+    vedalken_orrery, boseiju_who_endures, castle_garenbrig, evendo_waking_haven,
+    lair_of_the_hydra, mosswort_bridge, nykthos_shrine_to_nyx, reliquary_tower, treasure_vault,
+    aberrant, benevolent_hydra, elvish_mystic, fanatic_of_rhonas, genesis_hydra, goldvein_hydra,
+    hangarback_walker, hungering_hydra, hydra_broodmaster, kinetic_ooze, lifeblood_hydra,
+    llanowar_elves, magus_of_the_candelabra, marketback_walker, nev_the_practical_dean,
+    neverwinter_hydra, nexos, primordial_hydra, radagast_of_rhosgobel, rampaging_yao_guai,
+    sporocyst, steelbane_hydra, stonecoil_serpent, termagant_swarm, tervigon, tyrant_guard,
+    voracious_hydra, walking_ballista, yeva_natures_herald, branching_evolution,
+    doubling_season, garruks_uprising, helix_pinnacle, lattice_library, springleaf_parade,
+    terrasymbiosis, tribute_to_the_world_tree, unbound_flourishing, beast_within,
+    heroic_intervention, inspiring_call, savage_summoning, silkguard, tyvars_stand, cultivate,
+    exponential_growth, gelatinous_genesis, kodamas_reach, natures_lore, pest_infestation,
+    rampant_growth, skyshroud_claim, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest,
+];
+
+pub const MATOC_COMMANDERS: &[CardFactory] = &[matoc_lavamancer];
+
+/// **Matoc, Lavamancer**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Mountains = 99.
+/// Matoc, Lavamancer (EDHREC, fetched 2026-11-27).
+pub const MATOC_MAIN: &[CardFactory] = &[
+    ankh_of_mishra, arcane_signet, dingus_staff, fellwar_stone, fire_diamond, lightning_greaves,
+    mind_stone, ruby_medallion, sol_ring, tablet_of_discovery, ancient_tomb, barbarian_ring,
+    nykthos_shrine_to_nyx, ramunap_ruins, war_room, ashling_flame_dancer,
+    birgi_god_of_storytelling, bonecrusher_giant, cemetery_gatekeeper,
+    eidolon_of_the_great_revel, electro_assaulting_battery, grim_lavamancer, guttersnipe,
+    harmonic_prodigy, harsh_mentor, hearthborn_battler, hexing_squelcher, longshot_rebel_bowman,
+    memory_worm, nico_minoru_runaway, party_thrasher, pinnacle_monk, runaway_steam_kin,
+    storm_kiln_artist, zo_zu_the_punisher, advanced_reconstruction, fiery_inscription,
+    leyline_of_combustion, passionate_archaeologist, spellshock, sulfuric_vortex,
+    virtue_of_courage, burst_lightning, chaos_warp, delayed_blast_fireball, desperate_ritual,
+    magma_jet, play_with_fire, punishing_fire, pyretic_ritual, return_the_favor, seething_song,
+    shock, tarfire, untimely_malfunction, wild_slash, chandra_torch_of_defiance,
+    blasphemous_act, channeled_dragonfire, faithless_looting, fiery_confluence, firebolt,
+    grab_the_prize, jeskas_will, mana_geyser, pillar_of_flame, pyroclasm, vandalblast,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain,
+];
+
+pub const THE_MADCAP_JESTER_COMMANDERS: &[CardFactory] = &[the_madcap_jester];
+
+/// **The Madcap Jester**'s EDHREC average deck, card for card:
+/// 85 nonbasic cards + 5 Islands + 4 Mountains + 5 Swamps = 99.
+/// The Madcap Jester (EDHREC, fetched 2026-11-27).
+pub const THE_MADCAP_JESTER_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, dragons_smile, fellwar_stone, jesters_cap, jesters_scepter,
+    lightning_greaves, memory_vessel, sol_ring, swiftfoot_boots, talisman_of_creativity,
+    talisman_of_dominance, talisman_of_indulgence, uba_mask, blood_crypt, bloodstained_mire,
+    bojuka_bog, command_tower, crumbling_necropolis, dragonskull_summit, drowned_catacomb,
+    exotic_orchard, luxury_suite, morphic_pool, polluted_delta, scalding_tarn, shivan_reef,
+    steam_vents, stormcarved_coast, sulfur_falls, sulfurous_springs, training_center,
+    underground_river, watery_grave, xanders_lounge, bilbo_thief_in_the_night,
+    black_widow_super_spy, circu_dimir_lobotomist, dauthi_voidwalker, don_andres_the_renegade,
+    fathom_feeder, gonti_night_minister, jabs_mistress_of_mockery, laughing_jasper_flint,
+    nalfeshnee, nightscape_familiar, oblivion_sower, party_thrasher, plargg_and_nassari,
+    prosper_tome_bound, ragavan_nimble_pilferer, raven_guild_master, sire_of_stagnation,
+    thief_of_sanity, thieving_varmint, wild_magic_sorcerer, charred_foyer_warped_space,
+    cunning_rhetoric, fortune_tellers_talent, passionate_archaeologist, psychic_surgery,
+    rhystic_study, an_offer_you_cant_refuse, arcane_denial, chaos_warp, counterspell,
+    dark_ritual, deadly_rollick, deflecting_swat, mana_drain, mana_sculpt, swan_song,
+    you_find_some_prisoners, ashiok_nightmare_weaver, bitter_ordeal, blasphemous_act,
+    dream_harvest, ensnared_by_the_mara, extract, inside_information, jeskas_will,
+    praetors_grasp, sadistic_sacrament, tashas_hideous_laughter, toxic_deluge,
+    // Basics
+    island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
+    swamp, swamp, swamp, swamp,
+];

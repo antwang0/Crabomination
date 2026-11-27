@@ -38119,6 +38119,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SENGIR_12_COMMANDERS,
             main: decks::SENGIR_12_MAIN,
         },
+        // Seat 6279: Sash and Waistcoat, Unmen's EDHREC average deck. `--pod-decks 6279`.
+        PodDeck {
+            name: "Sash and Waistcoat, Unmen (U)",
+            commanders: decks::SASH_AND_WAISTCOAT_COMMANDERS,
+            main: decks::SASH_AND_WAISTCOAT_MAIN,
+        },
+        // Seat 6280: Glava, Five-Advents Mage's EDHREC average deck. `--pod-decks 6280`.
+        PodDeck {
+            name: "Glava, Five-Advents Mage (G)",
+            commanders: decks::GLAVA_COMMANDERS,
+            main: decks::GLAVA_MAIN,
+        },
+        // Seat 6281: Matoc, Lavamancer's EDHREC average deck. `--pod-decks 6281`.
+        PodDeck {
+            name: "Matoc, Lavamancer (R)",
+            commanders: decks::MATOC_COMMANDERS,
+            main: decks::MATOC_MAIN,
+        },
+        // Seat 6282: The Madcap Jester's EDHREC average deck. `--pod-decks 6282`.
+        PodDeck {
+            name: "The Madcap Jester (UBR)",
+            commanders: decks::THE_MADCAP_JESTER_COMMANDERS,
+            main: decks::THE_MADCAP_JESTER_MAIN,
+        },
     ]
 }
 
@@ -46333,6 +46357,10 @@ mod tests {
             ("The War Doctor and Dan Lewis", &[0x2284]),
             ("Jaheira, Friend of the Forest and Noble Heritage", &[0x2285]),
             ("Sengir, the Dark Baron and Tymna the Weaver", &[0x2286]),
+            ("Sash and Waistcoat, Unmen", &[0x2287]),
+            ("Glava, Five-Advents Mage", &[0x2288]),
+            ("Matoc, Lavamancer", &[0x2289]),
+            ("The Madcap Jester", &[0x228A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
