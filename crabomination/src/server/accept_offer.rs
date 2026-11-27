@@ -70,42 +70,6 @@ fn accepter_life_cost(e: &Effect) -> i32 {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::catalog;
-    use crate::game::types::{GameAction, Target};
-
-    /// The bots of a cube pair took Browbeat's 5 at 2 and 4 life and drew
-    /// the game: the caster turns its own offer down, an opponent takes it
-    /// only with life to spare.
-    #[test]
-    fn browbeat_is_taken_only_with_life_to_spare() {
-        let mut g = crate::game::two_player_game();
-        g.players[0].wants_ui = true;
-        let bb = g.add_card_to_hand(0, catalog::browbeat());
-        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
-        g.players[0].mana_pool.add_colorless(2);
-        g.perform_action(GameAction::CastSpell {
-            card_id: bb,
-            target: Some(Target::Player(0)),
-            additional_targets: vec![],
-            mode: None,
-            x_value: None,
-        })
-        .expect("cast");
-        g.players[1].wants_ui = true;
-        g.resolve_top_of_stack().expect("resolve");
-        assert!(g.stack.is_empty() && g.pending_decision.is_some(), "asked mid-resolution");
-        let ask = "Have Browbeat deal 5 damage to you?";
-        assert_eq!(accept_offer_answer(&g, 0, bb, ask), Some(false), "the caster wants the draw");
-        g.players[1].life = 20;
-        assert_eq!(accept_offer_answer(&g, 1, bb, ask), Some(true), "20 life buys the denial");
-        g.players[1].life = 4;
-        assert_eq!(accept_offer_answer(&g, 1, bb, ask), Some(false), "4 life does not");
-    }
-}
-
 /// `Some(answer)` for a "you may [draw]; if you do, you can't attack this turn"
 /// ask another seat's permanent puts to the active player (`MayDoBy` with a
 /// `CantAttackThisTurn` body — Peace in Our Time). The generic screen sees no
@@ -187,4 +151,40 @@ pub(super) fn contract_answer(state: &GameState, seat: usize, source: CardId, de
     }
     let p = state.players.get(seat)?;
     Some(p.hand.len() <= 2 && p.library.len() >= 14)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::catalog;
+    use crate::game::types::{GameAction, Target};
+
+    /// The bots of a cube pair took Browbeat's 5 at 2 and 4 life and drew
+    /// the game: the caster turns its own offer down, an opponent takes it
+    /// only with life to spare.
+    #[test]
+    fn browbeat_is_taken_only_with_life_to_spare() {
+        let mut g = crate::game::two_player_game();
+        g.players[0].wants_ui = true;
+        let bb = g.add_card_to_hand(0, catalog::browbeat());
+        g.players[0].mana_pool.add(crate::mana::Color::Red, 1);
+        g.players[0].mana_pool.add_colorless(2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: bb,
+            target: Some(Target::Player(0)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        g.players[1].wants_ui = true;
+        g.resolve_top_of_stack().expect("resolve");
+        assert!(g.stack.is_empty() && g.pending_decision.is_some(), "asked mid-resolution");
+        let ask = "Have Browbeat deal 5 damage to you?";
+        assert_eq!(accept_offer_answer(&g, 0, bb, ask), Some(false), "the caster wants the draw");
+        g.players[1].life = 20;
+        assert_eq!(accept_offer_answer(&g, 1, bb, ask), Some(true), "20 life buys the denial");
+        g.players[1].life = 4;
+        assert_eq!(accept_offer_answer(&g, 1, bb, ask), Some(false), "4 life does not");
+    }
 }
