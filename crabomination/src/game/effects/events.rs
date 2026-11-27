@@ -1636,6 +1636,8 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         // OpponentControl scope checks (Tenured Concocter wants
         // OpponentControl → caster is opponent of source's controller).
         GameEvent::BecameTarget { caster, .. } => Some(*caster),
+        // A player target's caster too: "that player" (Leyline of Combustion).
+        GameEvent::PlayerBecameTarget { caster, .. } => Some(*caster),
         GameEvent::ChoseTargets { chooser, .. } => Some(*chooser),
         // CR 605 — the player who tapped the land (Price of Glory's off-turn
         // gate reads "that player's turn").
