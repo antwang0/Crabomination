@@ -2258,6 +2258,7 @@ impl Effect {
             | Effect::SacrificeEnchantedForExtraCombat
             | Effect::WarpWorld
             | Effect::OverTheTop
+            | Effect::SpellweaverVolute { .. }
             | Effect::ReturnSelfDeployBlocker
             | Effect::TokenUnlessOpponentLetsYouDraw { .. } => false,
             Effect::CopySpellForEachOtherLegalCreature { what, .. }
@@ -5732,6 +5733,7 @@ impl Effect {
                 | Effect::SacrificeEnchantedForExtraCombat
                 | Effect::WarpWorld
                 | Effect::OverTheTop
+                | Effect::SpellweaverVolute { .. }
                 | Effect::ReturnSelfDeployBlocker
                 | Effect::TokenUnlessOpponentLetsYouDraw { .. } => None,
                 Effect::CopySpellForEachOtherLegalCreature { what, .. }

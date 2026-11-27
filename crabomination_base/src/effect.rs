@@ -7111,6 +7111,10 @@ pub enum Effect {
     /// to the nonland permanents they control, battlefields the permanent
     /// cards and puts the rest into their graveyard.
     OverTheTop,
+    /// Spellweaver Volute: `attach` picks the enchanted instant card in a
+    /// graveyard (the Aura's `chosen_permanent`); otherwise copy it, offer
+    /// the copy free, and on a cast exile it and move to another one.
+    SpellweaverVolute { attach: bool },
     /// Memory Leak: exile a `filter` card from `who`'s graveyard or hand, your
     /// choice. Headless: priciest, and from your own cards one with an activated
     /// ability first.

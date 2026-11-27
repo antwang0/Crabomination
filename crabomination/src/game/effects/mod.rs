@@ -48,6 +48,7 @@ mod token_riders;
 mod token_triggers;
 mod copy_redirect;
 mod damage_draw;
+mod volute;
 mod exile_power;
 mod delayed;
 mod eval;
@@ -23239,6 +23240,7 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::SpellweaverVolute { attach } => self.spellweaver_volute(*attach, ctx, events, effect),
             Effect::OverTheTop => {
                 // Counts first: every player reveals at once (CR 101.4 APNAP
                 // only orders the moves).
