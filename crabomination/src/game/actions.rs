@@ -3136,6 +3136,8 @@ pub(crate) mod cast_static {
     /// `OpponentsCantCastNamesExiledWithSource` — the three name locks at the
     /// very top of the cast (Meddling Mage, Ashiok's Erasure, Circu).
     pub const NAME_LOCK: u32 = 1 << 6;
+    /// `GrantAssistToSpells` (Yume, Chronicler of Valor).
+    pub const GRANT_ASSIST: u32 = 1 << 7;
 }
 
 /// See [`cast_static`]. One battlefield walk; `u32::MAX` is the ungated
@@ -3178,6 +3180,7 @@ pub(crate) fn cast_cost_scan(state: &crate::game::GameState) -> u32 {
                 SE::NamedSpellCantBeCast
                 | SE::OpponentsCantCastNamed
                 | SE::OpponentsCantCastNamesExiledWithSource => cast_static::NAME_LOCK,
+                SE::GrantAssistToSpells { .. } => cast_static::GRANT_ASSIST,
                 _ => 0,
             };
         }
@@ -11707,7 +11710,7 @@ impl GameState {
         // CR 702.132a — the assister pays before the caster (not with convoke
         // or delve, whose credit was sized to the whole cost).
         let assist = if convoke_creatures.is_empty() && delve_cards.is_empty() && no_mana_float.is_none() {
-            self.take_assist(p, &card, &mut cost)
+            self.take_assist(p, &card, &mut cost, cost_statics & cast_static::GRANT_ASSIST != 0)
         } else {
             None
         };
@@ -15596,7 +15599,7 @@ impl GameState {
         let forced_only = self.players[p].manual_mana;
         let spell_kind = self.spell_kind_for(p, &card);
         // "You can't spend mana to cast this spell": with no helpers, nothing pays.
-        let assist = if card.definition.no_mana_spend { None } else { self.take_assist(p, &card, &mut cost) };
+        let assist = if card.definition.no_mana_spend { None } else { self.take_assist(p, &card, &mut cost, true) };
         let paid = if card.definition.no_mana_spend {
             let snapshot = self.snapshot_payment_state(p);
             let float = std::mem::take(&mut self.players[p].mana_pool);

@@ -19,10 +19,11 @@ pub(crate) struct AssistPaid {
 
 impl GameState {
     /// CR 702.132a — does `card`, as `p` casts it now, have assist? Printed,
-    /// or granted by a `GrantAssistToSpells` static `p` controls.
-    pub(crate) fn spell_has_assist(&self, p: usize, card: &CardInstance) -> bool {
+    /// or granted by a `GrantAssistToSpells` static `p` controls (walked only
+    /// when `grants`, the cast-cost scan's bit, says one may be out).
+    pub(crate) fn spell_has_assist(&self, p: usize, card: &CardInstance, grants: bool) -> bool {
         card.definition.keywords.has_kw(&Keyword::Assist)
-            || self.battlefield.iter().any(|c| {
+            || grants && self.battlefield.iter().any(|c| {
                 c.controller == p
                     && c.definition.static_abilities.iter().any(|sa| {
                         match self.active_static_where(&sa.effect, c, |e| matches!(e, StaticEffect::GrantAssistToSpells { .. })) {
@@ -67,9 +68,15 @@ impl GameState {
     /// CR 702.132a — offer `p`'s spell's generic mana to an assister, who pays
     /// with their own mana; `cost` loses what they paid. `None` when the spell
     /// has no assist, no generic component, or nobody pays.
-    pub(crate) fn take_assist(&mut self, p: usize, card: &CardInstance, cost: &mut ManaCost) -> Option<AssistPaid> {
+    pub(crate) fn take_assist(
+        &mut self,
+        p: usize,
+        card: &CardInstance,
+        cost: &mut ManaCost,
+        grants: bool,
+    ) -> Option<AssistPaid> {
         let generic = cost.generic_total();
-        if generic == 0 || !self.spell_has_assist(p, card) {
+        if generic == 0 || !self.spell_has_assist(p, card, grants) {
             return None;
         }
         let seats: Vec<usize> =
