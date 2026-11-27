@@ -38227,6 +38227,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::JETT_RENO_COMMANDERS,
             main: decks::JETT_RENO_MAIN,
         },
+        // Seat 6297: Data, Professor of Humanities's EDHREC average deck. `--pod-decks 6297`.
+        PodDeck {
+            name: "Data, Professor of Humanities (U)",
+            commanders: decks::DATA_3_COMMANDERS,
+            main: decks::DATA_3_MAIN,
+        },
+        // Seat 6298: Scotty, Miracle Worker's EDHREC average deck. `--pod-decks 6298`.
+        PodDeck {
+            name: "Scotty, Miracle Worker (U)",
+            commanders: decks::SCOTTY_2_COMMANDERS,
+            main: decks::SCOTTY_2_MAIN,
+        },
     ]
 }
 
@@ -46493,6 +46505,8 @@ mod tests {
             ("The Traveler", &[0x2296]),
             ("The Caretaker", &[0x2297]),
             ("Jett Reno, Problem Solver", &[0x2298]),
+            ("Data, Professor of Humanities", &[0x2299]),
+            ("Scotty, Miracle Worker", &[0x229A]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

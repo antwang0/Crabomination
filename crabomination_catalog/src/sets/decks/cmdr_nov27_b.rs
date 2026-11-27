@@ -405,3 +405,37 @@ pub fn the_traveler() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Scotty, Miracle Worker — {1}{U}{U} legendary 2/3 Human Artificer. During
+/// your main phase, each instant and sorcery card in your graveyard has beam
+/// me up at its mana cost; Scotty can't be the creature returned.
+pub fn scotty_miracle_worker() -> CardDefinition {
+    CardDefinition {
+        name: "Scotty, Miracle Worker",
+        cost: cost(&[generic(1), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Artificer], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        static_abilities: vec![StaticAbility {
+            description: "During your main phase, each instant and sorcery card in your graveyard has beam me up equal to its mana cost.",
+            effect: StaticEffect::GraveyardInstantsSorceriesHaveBeamMeUp,
+        }],
+        ..Default::default()
+    }
+}
+
+/// Open Communications — {U} sorcery. Draw a card. Beam me up {2}{U}.
+pub fn open_communications() -> CardDefinition {
+    beam_me_up(
+        CardDefinition {
+            name: "Open Communications",
+            cost: cost(&[u()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+            ..Default::default()
+        },
+        cost(&[generic(2), u()]),
+    )
+}

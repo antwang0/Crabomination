@@ -176896,3 +176896,58 @@ pub const JETT_RENO_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island,
 ];
+
+pub const DATA_3_COMMANDERS: &[CardFactory] = &[data_professor_of_humanities];
+
+/// **Data, Professor of Humanities**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Islands = 99.
+/// Data, Professor of Humanities (EDHREC, fetched 2026-11-27).
+pub const DATA_3_MAIN: &[CardFactory] = &[
+    arcane_signet, benders_waterskin, bident_of_thassa, heraldic_banner, midnight_clock,
+    mind_stone, patchwork_banner, sapphire_medallion, skullclamp, sol_ring, swiftfoot_boots,
+    thopter_fabricator, thought_vessel, throne_of_eldraine, uthros_scanship,
+    desert_of_the_mindful, fountainport, lonely_sandbar, mystic_sanctuary, otawara_soaring_city,
+    reliquary_tower, remote_isle, ancient_silver_dragon, archmage_emeritus,
+    baral_chief_of_compliance, consecrated_sphinx, curiosity_crafter, data_exploring_humanity,
+    data_new_life, emrakuls_messenger, faerie_mastermind, krang_the_all_powerful,
+    lieutenant_commander_data, mischievous_mystic, mr_spock_science_officer, psychosis_crawler,
+    quantum_riddler, reed_richards_smartest_man, scion_of_oona, scotty_miracle_worker,
+    the_unagi_of_kyoshi_island, wavebreak_hippocamp, favorable_winds, kindred_discovery,
+    mystic_remora, rhystic_study, teferis_ageless_insight, wizard_class,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, brainsurge, cerulean_wisps, consider,
+    consider_the_prime_directive, counterspell, cryptic_command, fierce_guardianship,
+    frantic_search, mana_drain, mental_modulation, opt, peek, pongify, rapid_hybridization,
+    refute, sink_into_stupor, swan_song, jace_wielder_of_mysteries, notorious_throng, ponder,
+    preordain, serum_visions,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island,
+];
+
+pub const SCOTTY_2_COMMANDERS: &[CardFactory] = &[scotty_miracle_worker];
+
+/// **Scotty, Miracle Worker**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Scotty, Miracle Worker (EDHREC, fetched 2026-11-27).
+pub const SCOTTY_2_MAIN: &[CardFactory] = &[
+    arcane_signet, extraplanar_lens, fellwar_stone, mind_stone, sapphire_medallion, sky_diamond,
+    sol_ring, swiftfoot_boots, thought_vessel, agna_qela, cephalid_coliseum, myriad_landscape,
+    mystic_sanctuary, nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower, war_room,
+    aether_channeler, archaeomancer, archmage_emeritus, archmage_of_runes,
+    bilbo_thief_in_the_night, brazen_borrower, cloistered_telepath, cloud_of_faeries,
+    dour_port_mage, exhibition_tidecaller, federation_probe, geist_of_saint_thalia, memnite,
+    merfolk_secretkeeper, most_decrepit_old_bird, murmuring_mystic, neerdiv_devious_diver,
+    ornithopter, peregrine_drake, phyrexian_walker, picklock_prankster, spellseeker,
+    talrand_sky_summoner, case_of_the_ransacked_lab, fortune_tellers_talent,
+    secrets_of_the_dead, shark_typhoon, an_offer_you_cant_refuse, arcane_denial, brain_freeze,
+    brainstorm, consider, counterspell, frantic_search, high_tide, negate, opt,
+    plunder_the_trollshaws, pongify, rapid_hybridization, reality_shift, repeal,
+    sink_into_stupor, snap, test_of_priorities, thought_scour, chandra_chill_of_compliance,
+    curse_of_the_swine, gitaxian_probe, hard_evidence, open_communications, ponder, preordain,
+    stock_up, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];

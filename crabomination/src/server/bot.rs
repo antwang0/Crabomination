@@ -9234,6 +9234,15 @@ fn graveyard_specialties(state: &GameState, seat: usize) -> u32 {
     if state.players[seat].graveyard.iter().any(|c| !c.definition.is_land()) && state.grants_graveyard_mayhem(seat) {
         m |= spec::GY_RECAST;
     }
+    // Pods: Lier's flashback / Scotty's beam me up grant (`cast_candidates`'
+    // GY_LOOP block asks the same two).
+    if !state.players[seat].commanders.is_empty()
+        && state.players[seat].graveyard.iter().any(|c| {
+            state.graveyard_flashback_grant(seat, c).is_some() || state.graveyard_beam_me_up_grant(seat, c)
+        })
+    {
+        m |= spec::GY_RECAST;
+    }
     for c in state.players[seat].graveyard.iter() {
         let def = &c.definition;
         for kw in &def.keywords {
@@ -11053,7 +11062,12 @@ fn cast_candidates_all<'a>(
         let recastable = c.effective_flashback().is_some()
             || c.has_jump_start()
             || (facts.grants_jump_start && state.effective_jump_start(c, seat))
-            || c.definition.keywords.has_kw(&Keyword::GraveyardCast);
+            || c.definition.keywords.has_kw(&Keyword::GraveyardCast)
+            // Pods: a static's graveyard grant (Lier's flashback, Scotty's
+            // beam me up); two-player pools keep their trace.
+            || (!state.players[seat].commanders.is_empty()
+                && (state.graveyard_flashback_grant(seat, c).is_some()
+                    || state.graveyard_beam_me_up_grant(seat, c)));
         if recastable {
             let (target, additional_targets) = if c.definition.effect.requires_target() {
                 let (t, extras) =

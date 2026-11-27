@@ -1595,6 +1595,11 @@ pub enum StaticEffect {
     /// the Drowned. Consulted by the flashback-cast path and surfaced in the
     /// graveyard view so the UI offers the recast.
     GraveyardInstantsSorceriesHaveFlashback,
+    /// Scotty, Miracle Worker: during your main phase, each instant and
+    /// sorcery card in your graveyard has beam me up at its mana cost — a
+    /// flashback that also returns another creature you control (not this
+    /// one) to its owner's hand.
+    GraveyardInstantsSorceriesHaveBeamMeUp,
     /// "Each [filter] card in your graveyard has flashback [cost]" — `None`
     /// is "equal to that card's mana cost". Iroh, Grand Lotus: non-Lesson
     /// instants and sorceries at their mana cost, Lessons at {1} (each under

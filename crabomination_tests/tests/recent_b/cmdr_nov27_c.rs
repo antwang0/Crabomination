@@ -223,3 +223,35 @@ fn the_traveler_counts_land_names_for_power_only() {
     let cp = g.computed_permanent(t).unwrap();
     assert_eq!((cp.power, cp.toughness), (3, 3));
 }
+
+/// Scotty, Miracle Worker: in your main phase a graveyard sorcery is cast for
+/// its mana cost by returning another creature (never Scotty) — then exiled;
+/// outside the main phase, or with only Scotty to return, it can't be.
+#[test]
+fn scotty_beams_up_a_graveyard_sorcery_in_the_main_phase() {
+    let mut g = pod(2);
+    let scotty = g.add_card_to_battlefield(0, catalog::scotty_miracle_worker());
+    let bolt_like = g.add_card_to_graveyard(0, catalog::hymn_to_tourach());
+    let beam = |g: &mut GameState| {
+        g.players[0].mana_pool.add(Color::Black, 2);
+        g.perform_action(GameAction::CastFlashback {
+            card_id: bolt_like,
+            target: Some(Target::Player(1)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+    };
+    assert!(beam(&mut g).is_err(), "Scotty can't be beamed up");
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.step = TurnStep::BeginCombat;
+    g.players[0].mana_pool = Default::default();
+    assert!(beam(&mut g).is_err(), "main phase only");
+    g.step = TurnStep::PreCombatMain;
+    g.players[0].mana_pool = Default::default();
+    beam(&mut g).expect("beamed up");
+    drain_stack(&mut g);
+    assert!(g.players[0].hand.iter().any(|c| c.id == bear));
+    assert!(g.battlefield_find(scotty).is_some());
+    assert!(g.exile.iter().any(|c| c.id == bolt_like), "exiled after");
+}

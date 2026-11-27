@@ -19604,6 +19604,8 @@ static DECKS: &[Factory] = &[
     super::decks::the_caretaker,
     super::decks::federation_probe,
     super::decks::kobayashi_maru_scenario,
+    super::decks::scotty_miracle_worker,
+    super::decks::open_communications,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

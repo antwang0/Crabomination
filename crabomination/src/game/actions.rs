@@ -3928,6 +3928,24 @@ impl crate::game::GameState {
         (granted || strip).then(|| card.definition.cost.clone())
     }
 
+    /// Scotty, Miracle Worker: during `seat`'s own main phase an instant or
+    /// sorcery `card` with no flashback of its own has beam me up (its mana
+    /// cost, plus returning another creature) while `seat` controls the grant.
+    pub fn graveyard_beam_me_up_grant(&self, seat: usize, card: &crate::card::CardInstance) -> bool {
+        use crate::effect::StaticEffect;
+        self.active_player_idx == seat
+            && matches!(self.step, crate::TurnStep::PreCombatMain | crate::TurnStep::PostCombatMain)
+            && card.effective_flashback().is_none()
+            && (card.definition.is_instant() || card.definition.is_sorcery())
+            && self.seat_static_sources(seat).any(|src| {
+                src.definition.static_abilities.iter().any(|sa| {
+                    self.static_active_is(&sa.effect, src, |e| {
+                        matches!(e, StaticEffect::GraveyardInstantsSorceriesHaveBeamMeUp)
+                    })
+                })
+            })
+    }
+
     /// CR 702.97 — the extra activated abilities a card in `owner`'s graveyard
     /// has by grant (Varolz grants scavenge, cost = mana cost, to that player's
     /// creature cards). Surfaced as virtual `from_graveyard` abilities at
@@ -14332,6 +14350,13 @@ impl GameState {
         let lier_cost = (card.effective_flashback().is_none() && !jumpstart && !mayhem && !gy_cast)
             .then(|| self.graveyard_flashback_grant(p, &card))
             .flatten();
+        // Scotty — "beam me up" at the card's mana cost, during your main phase.
+        let beam = card.effective_flashback().is_none()
+            && !jumpstart
+            && !mayhem
+            && !gy_cast
+            && lier_cost.is_none()
+            && self.graveyard_beam_me_up_grant(p, &card);
         // Conditional graveyard casting (Viral Spawning's Corrupted gate;
         // Undead Sprinter's "if a non-Zombie creature died this turn"). The
         // gate applies to every graveyard-cast flavor, not just flashback.
@@ -14352,6 +14377,7 @@ impl GameState {
             }
             None => match lier_cost {
                 Some(c) => c,
+                None if beam => card.definition.cost.clone(),
                 None => return Err(GameError::SorcerySpeedOnly),
             },
         };
@@ -14405,6 +14431,15 @@ impl GameState {
             flashback_additional_costs(&card.definition, x_value.unwrap_or(0));
         if jumpstart {
             flashback_additional.push(crate::card::AdditionalCastCost::Discard { count: 1, filter: None });
+        }
+        if beam {
+            // "Scotty can't be beamed up to cast a spell this way."
+            use crate::card::SelectionRequirement as R;
+            flashback_additional.push(crate::card::AdditionalCastCost::ReturnToHand {
+                filter: R::Creature.and(R::ControlledByYou).and(R::HasName("Scotty, Miracle Worker".into()).negate()),
+                count: 1,
+                count_x: false,
+            });
         }
         // CR 601.2f — "you may cast this card from your graveyard" is an
         // ordinary cast from another zone, so the card's own additional costs
