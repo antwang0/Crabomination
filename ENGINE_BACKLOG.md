@@ -629,6 +629,9 @@ Seats 6289-6307 (the EDHREC rescan's legal decks at <= 4 short; DECK_FEATURES ha
   --seed 29602 --first 92`). Mid-run: 29564-29565, 29573-29578, 29581-29585 (3,300 games) + 180 `MIN=6289` fuzz games: 0 panics, 4 CR 104.4a draws.
 - `--bench` decisions 196,176 / 27.64 / 613.0 byte-identical to the start tip `f26577b68`; `bench_ab.py` (release,
   closing tip vs start) 6 pairs median +1.16 %, mean +1.42 %, sd 4.7 (noise); clippy 0 (87 min cold).
+- Suite (`CRAB_ANSWER_LOG=strict`): 29,683 run, 29,681 passed, 13 skipped; the one failure was this run's Open
+  Communications missing from `catalog_registration`'s `ALLOWED_MODELLING` (beam me up = flashback; fixed, re-run
+  green); the per-seat pod test was stopped at 44 min as usual — the 19 new seats each ran alone and passed.
 
 ## The Commander NEXT's lines as `modern_decks` (second run) found them (moved verbatim, 2026-11-27)
 
