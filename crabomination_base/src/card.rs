@@ -6492,6 +6492,11 @@ pub struct EntersAsCopy {
     /// P/T (Lazotep Convert).
     #[serde(default)]
     pub override_pt: Option<(i32, i32)>,
+    /// "…and it has 'This creature's power and toughness are each equal to
+    /// …'" (Colossal Clone Master): a characteristic-defining P/T the copy
+    /// gains, replacing the copied P/T (CR 707.9b).
+    #[serde(default)]
+    pub override_dynamic_pt: Option<DynamicPt>,
     /// "…and its power and toughness are equal to this creature's power and
     /// toughness" (Hulking Metamorph): the copier's own base P/T as it
     /// enters — its prototype size when cast prototyped (CR 702.160 +

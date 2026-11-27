@@ -255,3 +255,48 @@ fn scotty_beams_up_a_graveyard_sorcery_in_the_main_phase() {
     assert!(g.battlefield_find(scotty).is_some());
     assert!(g.exile.iter().any(|c| c.id == bolt_like), "exiled after");
 }
+
+/// Colossal Clone Master copies a legend without the legend rule biting
+/// (CR 707.9b: not legendary) and takes the land-name P/T in place of the
+/// copied one.
+#[test]
+fn colossal_clone_master_copies_a_legend_at_land_names_size() {
+    let mut g = pod(2);
+    let gowron = g.add_card_to_battlefield(1, catalog::gowron_eager_for_battle());
+    for land in [catalog::forest(), catalog::island()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    let clone = g.add_card_to_hand(0, catalog::colossal_clone_master());
+    g.players[0].mana_pool.add(Color::Blue, 6);
+    cast(&mut g, clone, None, None);
+    let cp = g.computed_permanent(clone).expect("on the battlefield");
+    assert_eq!(g.battlefield_find(clone).unwrap().definition.name, "Gowron, Eager for Battle");
+    assert_eq!((cp.power, cp.toughness), (2, 2));
+    assert!(!g.battlefield_find(clone).unwrap().definition.supertypes.contains(&crabomination::card::Supertype::Legendary));
+    assert!(g.battlefield_find(gowron).is_some());
+}
+
+/// Chief Montgomery Scott puts a creature from hand onto the battlefield with
+/// a +1/+1 counter per differently named land.
+#[test]
+fn chief_montgomery_scott_deploys_with_land_name_counters() {
+    let mut g = pod(2);
+    let scott = g.add_card_to_battlefield(0, catalog::chief_montgomery_scott());
+    g.battlefield_find_mut(scott).unwrap().summoning_sick = false;
+    for land in [catalog::forest(), catalog::island(), catalog::swamp()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    let bear = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add_colorless(6);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: scott,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bear).map(|c| c.power), Some(5));
+}

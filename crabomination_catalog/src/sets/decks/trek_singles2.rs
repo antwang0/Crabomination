@@ -1140,3 +1140,61 @@ pub fn kobayashi_maru_scenario() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Chief Montgomery Scott's EDHREC gaps (scan of 2026-11-27) ───────────────
+
+/// Chief Montgomery Scott — {2}{G}{U} legendary 3/3 Human Artificer. Strange
+/// new worlds — {6}, {T}: you may put a creature or Spacecraft card from your
+/// hand onto the battlefield; it gets X +1/+1 counters if a creature and X
+/// charge counters if a Spacecraft (X = differently named lands you control).
+/// The counters are placed as it lands, not as it enters (INCOMPLETE_CARDS).
+pub fn chief_montgomery_scott() -> CardDefinition {
+    let spacecraft = || R::HasArtifactSubtype(ArtifactSubtype::Spacecraft);
+    let counters_if = |filter: R, kind: CounterType| Effect::If {
+        cond: Predicate::EntityMatches { what: Selector::LastMoved, filter },
+        then: Box::new(Effect::AddCounter { what: Selector::LastMoved, kind, amount: land_names() }),
+        else_: Box::new(Effect::Noop),
+    };
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(6)]),
+            effect: Effect::PutFromHandOntoBattlefield {
+                who: PlayerRef::You,
+                filter: R::Creature.or(spacecraft()),
+                count: Value::ONE,
+                tapped: false,
+                haste: false,
+                sacrifice_eot: false,
+                return_eot: false,
+                then: Some(Box::new(Effect::Seq(vec![
+                    counters_if(R::Creature, CounterType::PlusOnePlusOne),
+                    counters_if(spacecraft(), CounterType::Charge),
+                ]))),
+            },
+            ..Default::default()
+        }],
+        ..legend(
+            "Chief Montgomery Scott",
+            cost(&[generic(2), g(), u()]),
+            vec![CreatureType::Human, CreatureType::Artificer],
+            3,
+            3,
+        )
+    }
+}
+
+/// Colossal Clone Master — {5}{U} 0/0 Giant. Strange new worlds — it may enter
+/// as a copy of any creature on the battlefield, except it isn't legendary and
+/// its power and toughness each equal your differently named lands.
+pub fn colossal_clone_master() -> CardDefinition {
+    CardDefinition {
+        enters_as_copy: Some(crate::card::EntersAsCopy {
+            filter: R::Creature,
+            non_legendary: true,
+            override_dynamic_pt: Some(crate::card::DynamicPt::DistinctLandNamesControlled),
+            ..Default::default()
+        }),
+        ..creature("Colossal Clone Master", cost(&[generic(5), u()]), vec![CreatureType::Giant], 0, 0)
+    }
+}

@@ -2369,3 +2369,4 @@ approximated):
 | 🟡 Glava, Five-Advents Mage | "you may have the value of X become 5" | never lowers X (a take on a higher X is a no-op that still spends the turn's use); the bot takes the first offer |
 | 🟡 Itazura, Lingering Wick | "each opponent secretly chooses a number 0 or greater" | the ask's maximum is the best exiled spell's mana value (a higher bid buys nothing a bot can see); bots bid as a life payment |
 | 🟡 Chira, All In | "select one or more targets at random" | not heard: random selectors (`RandomOf`, `RandomAmong`, `TakeRandom`) resolve without an event path; discards, modes, coins and dice are, once per kind per resolution |
+| 🟡 Chief Montgomery Scott | "It enters with X additional +1/+1 / charge counters" | the counters are added just after the card lands (`PutFromHandOntoBattlefield.then`), so its own ETB triggers and a Spacecraft's station bands see them a beat late |

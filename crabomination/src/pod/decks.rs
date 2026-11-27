@@ -176951,3 +176951,33 @@ pub const SCOTTY_2_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island,
 ];
+
+pub const CHIEF_MONTGOMERY_SCOTT_COMMANDERS: &[CardFactory] = &[chief_montgomery_scott];
+
+/// **Chief Montgomery Scott**'s EDHREC average deck, card for card:
+/// 92 nonbasic cards + 3 Forests + 4 Islands = 99.
+/// Chief Montgomery Scott (EDHREC, fetched 2026-11-27).
+pub const CHIEF_MONTGOMERY_SCOTT_MAIN: &[CardFactory] = &[
+    arcane_signet, deep_space_9, exploration_broodship, heartstone, lightning_greaves,
+    sledge_class_seedship, sol_ring, starship_enterprise, swiftfoot_boots, thousand_year_elixir,
+    u_s_s_discovery_at_black_alert, u_s_s_farragut_bold_explorer, u_s_s_voyager_lone_wanderer,
+    barkchannel_pathway, boseiju_who_endures, breeding_pool, command_tower, dreamroot_cascade,
+    earth_sector_001, exotic_orchard, flooded_grove, hedge_maze, hinterland_harbor,
+    minamo_school_at_waters_edge, misty_rainforest, mosswort_bridge, overflowing_basin,
+    rain_slicked_copse, reflecting_pool, rejuvenating_springs, reliquary_tower, rogues_passage,
+    seat_of_the_synod, shore_leave_planet, snow_covered_forest, snow_covered_island,
+    sodden_verdure, temple_of_mystery, tree_of_tales, turbulent_wilderness, willowrush_verge,
+    yavimaya_coast, yavimaya_cradle_of_growth, aesi_tyrant_of_gyre_strait,
+    ashaya_soul_of_the_wild, biomancers_familiar, birds_of_paradise, canopy_gargantuan,
+    captain_pike_fullness_of_time, colossal_clone_master, cultivator_colossus,
+    famished_worldsire, ghalta_the_unstoppable, ghalta_stampede_tyrant, giant_ankheg,
+    kogla_the_titan_ape, llanowar_elves, lotus_cobra, lt_arex_ever_adapting, nyxbloom_ancient,
+    planet_killer, prime_speaker_zegana, seedborn_muse, selvala_heart_of_the_wilds,
+    tatyova_benthic_druid, the_traveler, ulvenwald_hydra, vaultborn_tyrant, verdant_kraken,
+    worldspine_wurm, exploration, garruks_uprising, guardian_project, simic_ascendancy,
+    spelunking, training_grounds, arcane_denial, beast_within, counterspell, growth_spiral,
+    heroic_intervention, negate, pongify, reality_shift, return_of_the_wildspeaker, cultivate,
+    deep_space_scan, farseek, natures_lore, rishkars_expertise, skyshroud_claim, three_visits,
+    // Basics
+    forest, forest, forest, island, island, island, island,
+];

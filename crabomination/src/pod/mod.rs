@@ -38239,6 +38239,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SCOTTY_2_COMMANDERS,
             main: decks::SCOTTY_2_MAIN,
         },
+        // Seat 6299: Chief Montgomery Scott's EDHREC average deck. `--pod-decks 6299`.
+        PodDeck {
+            name: "Chief Montgomery Scott (UG)",
+            commanders: decks::CHIEF_MONTGOMERY_SCOTT_COMMANDERS,
+            main: decks::CHIEF_MONTGOMERY_SCOTT_MAIN,
+        },
     ]
 }
 
@@ -46507,6 +46513,7 @@ mod tests {
             ("Jett Reno, Problem Solver", &[0x2298]),
             ("Data, Professor of Humanities", &[0x2299]),
             ("Scotty, Miracle Worker", &[0x229A]),
+            ("Chief Montgomery Scott", &[0x229B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

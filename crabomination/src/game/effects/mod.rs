@@ -2762,6 +2762,7 @@ impl GameState {
             || spec.non_legendary
             || spec.not_a_creature
             || spec.override_pt.is_some()
+            || spec.override_dynamic_pt.is_some()
             || spec.keep_own_pt
             || !spec.add_colors.is_empty()
             || spec.keep_own_colors
@@ -2811,6 +2812,9 @@ impl GameState {
                 def.power = p;
                 def.toughness = t;
                 def.dynamic_pt = None;
+            }
+            if let Some(dpt) = &spec.override_dynamic_pt {
+                def.dynamic_pt = Some(dpt.clone());
             }
             // "…black in addition to its other colors" (Lazotep Convert).
             if spec.keep_own_colors {
