@@ -27668,6 +27668,35 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::ManifestOneOfTopTwoRestTopOrBottom { who } => {
+                let Some(p) = self.resolve_player(who, ctx) else { return Ok(()) };
+                let top: Vec<(CardId, String, bool, u32)> = self.players[p]
+                    .library
+                    .iter()
+                    .take(2)
+                    .map(|c| (c.id, c.definition.name.to_string(), c.definition.is_creature(), c.definition.cost.cmc()))
+                    .collect();
+                let Some(auto) = top.iter().max_by_key(|c| (c.2, c.3)).map(|c| c.0) else { return Ok(()) };
+                let chosen = if top.len() == 1 {
+                    auto
+                } else {
+                    let names = top.iter().map(|c| (c.0, c.1.clone())).collect();
+                    let src = ctx.source.unwrap_or(CardId(0));
+                    let Some(pick) =
+                        self.choose_up_to_cards(p, "Manifest which card?".into(), src, names, 1, PickValue::Gain, effect, vec![auto])
+                    else {
+                        return Ok(());
+                    };
+                    pick.first().copied().unwrap_or(auto)
+                };
+                let other = top.iter().map(|c| c.0).find(|id| *id != chosen);
+                self.manifest_card(chosen, p, ctx, events);
+                if let Some(o) = other {
+                    let dest = ZoneDest::Library { who: PlayerRef::Seat(p), pos: crate::effect::LibraryPosition::OwnerChoice };
+                    self.move_card_to(o, &dest, ctx, events);
+                }
+                Ok(())
+            }
             Effect::ManifestDread { who } => {
                 use crate::decision::{Decision, DecisionAnswer};
                 let Some(p) = self.resolve_player(who, ctx) else { return Ok(()); };

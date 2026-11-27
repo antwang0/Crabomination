@@ -10064,6 +10064,10 @@ pub enum Effect {
     /// library, put one onto the battlefield face down as a 2/2 creature, and
     /// the other into their graveyard.
     ManifestDread { who: PlayerRef },
+    /// "Look at the top two cards of your library. Manifest one of those
+    /// cards, then put the other on the top or bottom of your library" (Write
+    /// into Being). A headless seat manifests a creature card when it can.
+    ManifestOneOfTopTwoRestTopOrBottom { who: PlayerRef },
 
     /// Valgavoth's Onslaught: manifest dread `count` times, then `counters`
     /// +1/+1 on each; self-contained so the set doesn't leak into
