@@ -37315,6 +37315,34 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::RaiseXOfTriggeringOncePerTurn { to } => {
+                let Some(src) = ctx.source else { return Ok(()) };
+                if self.sources_marked_this_turn.contains(&src) {
+                    return Ok(());
+                }
+                let owner = match ctx.trigger_source {
+                    Some(EntityRef::Permanent(id)) | Some(EntityRef::Card(id)) => id,
+                    _ => return Ok(()),
+                };
+                // The cast spell itself, else the newest activation of the
+                // trigger's subject (as `CopyActivatedAbilityMayChooseTargets`).
+                let at = self
+                    .stack
+                    .iter()
+                    .rposition(|si| matches!(si, StackItem::Spell { card, .. } if card.id == owner))
+                    .or_else(|| {
+                        self.stack.iter().rposition(
+                            |si| matches!(si, StackItem::Trigger { source, activated: true, .. } if *source == owner),
+                        )
+                    });
+                let Some(at) = at else { return Ok(()) };
+                let (StackItem::Spell { x_value: x, .. } | StackItem::Trigger { x_value: x, .. }) = &mut self.stack[at];
+                if *x < *to {
+                    *x = *to;
+                    self.sources_marked_this_turn.push(src);
+                }
+                Ok(())
+            }
             Effect::DoubleXOfSpell { what } => {
                 for ent in self.resolve_selector(what, ctx) {
                     let (EntityRef::Card(cid) | EntityRef::Permanent(cid)) = ent else { continue };
