@@ -20,6 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [CLAIMED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs](#claimed-2026-11-27-commander-run-01wruxc4b7--whtz-and-nine-legal-gap-pairs) | 8 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — 39 Star Trek seats, six primitives](#fixedopen-2026-11-27-commander-run-01wruxc6sk--39-star-trek-seats-six-primitives) | 18 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc6sk` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc6sk-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, 10 seats](#fixedopen-2026-11-27-commander-run-01wruxc2yt--a-land-type-recursion-two-residuals-10-seats) | 17 |
@@ -611,6 +612,16 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## CLAIMED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs
+
+- Whtz, the Bibliophile (254-card Rulebreaker average; the 200-card discount gets modelled).
+- Chooser pairs whose average needs exactly one colour past the fixed half (CR 903.4 + the chosen colour): Faceless One //
+  Raised by Giants (Blossom Dryad), Silas Renn // Prismatic Piper (Scroll of Griselbrand), Faceless One // Folk Hero
+  (Channel Harm), Livaan // Faceless One (Spellweaver Volute, Maximize Altitude), Esior // Prismatic Piper (Vantress
+  Paladin, Startling Development), Alora // Faceless One (Pattern Matcher, Tomebound Lich).
+- Doctor pairs: The Eighth Doctor // Yasmin Khan (Over the Top), The Sixth Doctor // Rose Tyler (Alaborn Musketeer, Sparring
+  Mummy), The First Doctor // Rose Noble (Marooned, Weakstone's Subjugation).
+
 ## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — 39 Star Trek seats, six primitives
 
 Seats 6318-6356 (EDHREC averages fetched 2026-11-27; DECK_FEATURES has the list). 109 cards in
