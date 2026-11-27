@@ -2,9 +2,10 @@
 //! 2026-11-27): Itazura, Lingering Wick; Miss Highwater. Tests in `tests/recent_b/cmdr_nov26.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, Predicate,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration, Predicate,
     SelectionRequirement as R, Selector, Subtypes, Supertype, TriggeredAbility,
 };
+use crate::effect::shortcut::target_filtered;
 use crate::effect::{Duration, Effect, PlayerRef, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u};
@@ -166,6 +167,68 @@ pub fn savage_summoning() -> CardDefinition {
             Effect::NextSpellCantBeCountered { filter: R::Creature },
             Effect::GrantNextCreatureSpellCounters { kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
         ]),
+        ..Default::default()
+    }
+}
+
+/// Matoc, Lavamancer — {3}{R} legendary 2/3 Human Barbarian Wizard. Whenever a
+/// source you control deals damage, if a permanent or player was dealt exactly
+/// 2 of it, exile your top card; you may play it until the end of your next
+/// turn. {R}, {T}, exile two cards from your graveyard: 2 damage to any other
+/// target.
+pub fn matoc_lavamancer() -> CardDefinition {
+    CardDefinition {
+        name: "Matoc, Lavamancer",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes {
+            creature_types: vec![CreatureType::Human, CreatureType::Barbarian, CreatureType::Wizard],
+            ..Default::default()
+        },
+        power: 2,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsDamage, EventScope::YourControl)
+                .with_filter(Predicate::ValueEquals(Value::TriggerEventAmount, Value::Const(2))),
+            effect: Effect::ExileTopAndGrantMayPlay {
+                who: PlayerRef::You,
+                count: Value::ONE,
+                duration: MayPlayDuration::EndOfControllersNextTurn,
+                pay_any_color: false,
+                max_mana_value: None,
+                pay_own_cost: true,
+                uncast_penalty: None,
+            },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[r()]),
+            tap_cost: true,
+            exile_other_filter: Some((R::Any, 2)),
+            effect: Effect::DealDamage {
+                to: target_filtered(R::any_target().and(R::OtherThanSource)),
+                amount: Value::Const(2),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Leyline of Combustion — {2}{R}{R} enchantment; may start the game in play.
+/// Whenever you or a permanent you control becomes the target of a spell or
+/// ability an opponent controls, it deals 2 damage to that player (once per
+/// such target).
+pub fn leyline_of_combustion() -> CardDefinition {
+    CardDefinition {
+        name: "Leyline of Combustion",
+        opening_hand: Some(crate::effect::OpeningHandEffect::StartInPlay { tapped: false, extra: Effect::Noop }),
+        cost: cost(&[generic(2), r(), r()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YouOrYourPermanentTargetedByOpponent),
+            effect: Effect::DealDamage { to: Selector::Player(PlayerRef::TriggerEventPlayer), amount: Value::Const(2) },
+        }],
         ..Default::default()
     }
 }

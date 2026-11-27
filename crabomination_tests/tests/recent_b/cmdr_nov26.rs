@@ -655,3 +655,54 @@ fn savage_summoning_flashes_in_a_bigger_creature() {
     cast(&mut g, bear);
     assert_eq!(plus_ones(&g, bear), 1);
 }
+
+/// Matoc: its own ability (exile two graveyard cards) deals exactly 2, so its
+/// trigger exiles the top card with a play permission. Bug fix: "any other
+/// target" (`any_target().and(OtherThanSource)`) rejected every player.
+#[test]
+fn matoc_pings_for_two_and_impulses_off_it() {
+    let mut g = pod(2);
+    let m = g.add_card_to_battlefield(0, catalog::matoc_lavamancer());
+    g.battlefield.iter_mut().for_each(|c| c.summoning_sick = false);
+    g.add_card_to_graveyard(0, catalog::island());
+    g.add_card_to_graveyard(0, catalog::island());
+    let top = g.players[0].library[0].id;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    let life = g.players[1].life;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: m,
+        ability_index: 0,
+        target: Some(Target::Player(1)),
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, life - 2);
+    assert!(g.players[0].graveyard.is_empty(), "two cards exiled as the cost");
+    assert!(g.exile.iter().any(|c| c.id == top && c.may_play_until.is_some()));
+}
+
+/// Leyline of Combustion: an opponent's Lightning Bolt aimed at you costs its
+/// caster 2.
+#[test]
+fn leyline_of_combustion_burns_whoever_targets_you() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::leyline_of_combustion());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.players[1].mana_pool.add(Color::Red, 1);
+    let (mine, theirs) = (g.players[0].life, g.players[1].life);
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("bolt");
+    drain_stack(&mut g);
+    assert_eq!((g.players[0].life, g.players[1].life), (mine - 3, theirs - 2));
+}

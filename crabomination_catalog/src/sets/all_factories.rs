@@ -19571,6 +19571,8 @@ static DECKS: &[Factory] = &[
     super::decks::write_into_being,
     super::decks::glava_five_advents_mage,
     super::decks::savage_summoning,
+    super::decks::matoc_lavamancer,
+    super::decks::leyline_of_combustion,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
