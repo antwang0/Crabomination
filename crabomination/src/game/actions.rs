@@ -24190,6 +24190,12 @@ impl GameState {
                 effective_mana_cost.reduce_generic(*n);
             }
         }
+        if let Some((cond, less)) = &ability.cost_reduction_if_mana {
+            let ctx = crate::game::effects::EffectContext::for_trigger(card_id, p, None, 0);
+            if self.evaluate_predicate(cond, &ctx) {
+                effective_mana_cost.reduce_by_cost(less);
+            }
+        }
         // CR 702.193a/b — power-up costs the source's mana cost less the
         // turn it entered.
         if ability.power_up {

@@ -4854,6 +4854,10 @@ pub struct ActivatedAbility {
     /// nonbasic lands"). Defaults to None.
     #[serde(default)]
     pub cost_reduction_if: Option<(crate::effect::Predicate, u32)>,
+    /// [`Self::cost_reduction_if`] by a mana cost, coloured pips included
+    /// (Flying Drone's "{1}{U} less if …").
+    #[serde(default)]
+    pub cost_reduction_if_mana: Option<(crate::effect::Predicate, crate::mana::ManaCost)>,
     /// "This ability costs {1} less to activate for each [Value]" (Mariposa
     /// Military Base's rad counters). Generic-only, evaluated for the
     /// activator at payment time.
