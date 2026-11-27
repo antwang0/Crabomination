@@ -268,3 +268,102 @@ pub fn yume_chronicler_of_valor() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Benjamin Sisko, Besieged — {4}{G}{G} legendary 5/5 Human Officer. Play with
+/// the top card of your library revealed; you may play lands and cast creature
+/// spells from it.
+pub fn benjamin_sisko_besieged() -> CardDefinition {
+    CardDefinition {
+        name: "Benjamin Sisko, Besieged",
+        cost: cost(&[generic(4), g(), g()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Officer], ..Default::default() },
+        power: 5,
+        toughness: 5,
+        static_abilities: vec![
+            StaticAbility { description: "Play with the top card of your library revealed.", effect: StaticEffect::TopOfLibraryRevealed },
+            StaticAbility {
+                description: "You may play lands and cast creature spells from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: R::Land.or(R::Creature) },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Final Frontier — {2}{G} sorcery. Search for a basic land or Planet card,
+/// onto the battlefield tapped. Beam me up {1}{G}.
+pub fn final_frontier() -> CardDefinition {
+    beam_me_up(
+        CardDefinition {
+            name: "Final Frontier",
+            cost: cost(&[generic(2), g()]),
+            card_types: vec![CardType::Sorcery],
+            effect: Effect::Search {
+                who: PlayerRef::You,
+                filter: R::IsBasicLand.or(R::HasLandType(LandType::Planet)),
+                to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+            },
+            ..Default::default()
+        },
+        cost(&[generic(1), g()]),
+    )
+}
+
+/// Grakk the Pacifist — {1}{W} legendary 4/3 Orc. Can't attack or block.
+/// Whenever you cast an Aura spell that targets a creature an opponent
+/// controls, draw a card; only once each turn.
+pub fn grakk_the_pacifist() -> CardDefinition {
+    CardDefinition {
+        name: "Grakk the Pacifist",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Orc], ..Default::default() },
+        power: 4,
+        toughness: 3,
+        keywords: vec![Keyword::CantAttack, Keyword::CantBlock],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::All(vec![
+                    Predicate::EntityMatches {
+                        what: Selector::TriggerSource,
+                        filter: R::HasEnchantmentSubtype(crate::card::EnchantmentSubtype::Aura),
+                    },
+                    Predicate::CastSpellTargetsMatch(R::Creature.and(R::ControlledByOpponent)),
+                ]))
+                .once_per_turn(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::Const(1) },
+        }],
+        ..Default::default()
+    }
+}
+
+fn aura(name: &'static str, mana: crate::mana::ManaCost, filter: R, keywords: Vec<Keyword>) -> CardDefinition {
+    CardDefinition {
+        name,
+        cost: mana,
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![crate::card::EnchantmentSubtype::Aura], ..Default::default() },
+        effect: Effect::Attach { what: Selector::This, to: Selector::TargetFiltered { slot: 0, filter } },
+        equipped_bonus: Some(crate::card::EquipBonus { keywords, ..Default::default() }),
+        ..Default::default()
+    }
+}
+
+/// Guard Duty — {W} Aura. Enchanted creature has defender.
+pub fn guard_duty() -> CardDefinition {
+    aura("Guard Duty", cost(&[w()]), R::Creature, vec![Keyword::Defender])
+}
+
+/// Realmbreaker's Grasp — {1}{W} Aura, enchant artifact or creature. It can't
+/// attack or block, and its non-mana activated abilities can't be activated.
+pub fn realmbreakers_grasp() -> CardDefinition {
+    aura(
+        "Realmbreaker's Grasp",
+        cost(&[generic(1), w()]),
+        R::Artifact.or(R::Creature),
+        vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateNonManaAbilities],
+    )
+}

@@ -312,6 +312,7 @@ const ALLOWED_MODELLING: &[(&str, &str)] = &[
     // you control to its owner's hand: the keyword carries the graveyard cast.
     ("Boarding Action", "flashback"),
     ("There's Coffee in that Nebula", "flashback"),
+    ("Final Frontier", "flashback"),
     // "can't be blocked by creatures with greater power" is skulk's reminder
     // text, printed without the keyword (CR 702.118a).
     ("Locke, Treasure Hunter", "skulk"),

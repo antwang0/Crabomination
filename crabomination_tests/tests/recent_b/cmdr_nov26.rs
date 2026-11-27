@@ -813,3 +813,61 @@ fn yume_grants_assist_to_the_first_spell_and_both_players_draw() {
     cast(&mut g, second);
     assert_eq!(untapped(&g, 1), 2, "the second spell has no assist");
 }
+
+/// Benjamin Sisko casts a creature off the top but not a noncreature spell.
+#[test]
+fn benjamin_sisko_casts_creatures_from_the_top_only() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::benjamin_sisko_besieged());
+    g.players[0].library.retain(|_| false);
+    g.players[0].mana_pool.add(Color::Blue, 1);
+    let opt = g.add_card_to_library(0, catalog::opt());
+    let try_cast = |g: &mut GameState, id| {
+        g.perform_action(GameAction::CastSpell { card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None })
+    };
+    assert!(try_cast(&mut g, opt).is_err(), "an instant on top isn't castable");
+    g.players[0].library.retain(|c| c.id != opt);
+    g.players[0].mana_pool.add(Color::Green, 2);
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    cast(&mut g, bear);
+    assert!(g.battlefield_find(bear).is_some());
+}
+
+/// Grakk draws once a turn, for an Aura cast at an opponent's creature only.
+#[test]
+fn grakk_draws_once_a_turn_for_an_aura_on_an_opponents_creature() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::grakk_the_pacifist());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let duty = |g: &mut GameState, at: CardId| {
+        let id = g.add_card_to_hand(0, catalog::guard_duty());
+        g.players[0].mana_pool.add(Color::White, 1);
+        g.perform_action(GameAction::CastSpell { card_id: id, target: Some(Target::Permanent(at)), additional_targets: vec![], mode: None, x_value: None })
+            .expect("cast");
+        drain_stack(g);
+    };
+    let h = g.players[0].hand.len();
+    duty(&mut g, mine);
+    assert_eq!(g.players[0].hand.len(), h, "own creature: no draw");
+    duty(&mut g, theirs);
+    assert_eq!(g.players[0].hand.len(), h + 1);
+    duty(&mut g, theirs);
+    assert_eq!(g.players[0].hand.len(), h + 1, "once each turn");
+    assert!(g.computed_permanent(theirs).unwrap().keywords().contains(&Keyword::Defender));
+}
+
+/// Realmbreaker's Grasp enchants an artifact and stops its non-mana abilities.
+#[test]
+fn realmbreakers_grasp_locks_an_artifacts_activated_abilities() {
+    let mut g = pod(2);
+    let relic = g.add_card_to_battlefield(1, catalog::mind_stone());
+    let grasp = g.add_card_to_hand(0, catalog::realmbreakers_grasp());
+    g.players[0].mana_pool.add(Color::White, 2);
+    g.perform_action(GameAction::CastSpell { card_id: grasp, target: Some(Target::Permanent(relic)), additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast at an artifact");
+    drain_stack(&mut g);
+    let cp = g.computed_permanent(relic).unwrap();
+    let kws = cp.keywords();
+    assert!(kws.contains(&Keyword::CantActivateNonManaAbilities) && kws.contains(&Keyword::CantBlock));
+}
