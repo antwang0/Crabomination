@@ -38329,6 +38329,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WORF_6_COMMANDERS,
             main: decks::WORF_6_MAIN,
         },
+        // Seat 6314: Chekov and McCoy's EDHREC average deck. `--pod-decks 6314`.
+        PodDeck {
+            name: "Chekov and McCoy (UG)",
+            commanders: decks::CHEKOV_AND_MCCOY_COMMANDERS,
+            main: decks::CHEKOV_AND_MCCOY_MAIN,
+        },
+        // Seat 6315: Zefram Cochrane, Warp Pioneer's EDHREC average deck. `--pod-decks 6315`.
+        PodDeck {
+            name: "Zefram Cochrane, Warp Pioneer (U)",
+            commanders: decks::ZEFRAM_COCHRANE_COMMANDERS,
+            main: decks::ZEFRAM_COCHRANE_MAIN,
+        },
+        // Seat 6316: H.M.S. Bounty, Unlikely Timeship's EDHREC average deck. `--pod-decks 6316`.
+        PodDeck {
+            name: "H.M.S. Bounty, Unlikely Timeship (U)",
+            commanders: decks::H_M_S_BOUNTY_COMMANDERS,
+            main: decks::H_M_S_BOUNTY_MAIN,
+        },
     ]
 }
 
@@ -46612,6 +46630,9 @@ mod tests {
             ("Sela, Tal Shiar Paradox", &[0x22A7]),
             ("Rutherford, Upgraded Ensign", &[0x22A8]),
             ("Worf, Honor-Bound Warrior", &[0x22A9]),
+            ("Chekov and McCoy", &[0x22AA]),
+            ("Zefram Cochrane, Warp Pioneer", &[0x22AB]),
+            ("H.M.S. Bounty, Unlikely Timeship", &[0x22AC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

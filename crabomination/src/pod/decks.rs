@@ -177378,3 +177378,90 @@ pub const WORF_6_MAIN: &[CardFactory] = &[
     mountain, mountain, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const CHEKOV_AND_MCCOY_COMMANDERS: &[CardFactory] = &[chekov_and_mccoy];
+
+/// **Chekov and McCoy**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Forests + 11 Islands = 99.
+/// Chekov and McCoy (EDHREC, fetched 2026-11-27).
+pub const CHEKOV_AND_MCCOY_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, fellwar_stone, genesis_device,
+    h_m_s_bounty_unlikely_timeship, hedron_archive, mind_stone, simic_signet, skullclamp,
+    sol_ring, stonespeaker_crystal, tea_earl_grey_hot, barkchannel_pathway, breeding_pool,
+    command_tower, dreamroot_cascade, earth_sector_001, hinterland_harbor, maze_of_ith,
+    misty_rainforest, shore_leave_planet, spire_of_industry, terramorphic_expanse,
+    vineglimmer_snarl, windswept_heath, yavimaya_coast, culber_and_stamets_star_crossed,
+    deadeye_navigator, dr_leonard_bones_mccoy, dreamtide_whale, elvish_mystic, evolution_sage,
+    fathom_mage, forgotten_ancient, geordi_la_forge_innovator, gyre_sage, incubation_druid,
+    kalonian_hydra, kami_of_whispered_hopes, la_forge_perceptive_engineer, llanowar_elves,
+    managorger_hydra, mr_spock_science_officer, reconnaissance_partition,
+    rishkar_peema_renegade, seven_of_nine_tertiary_adjunct, spock_voice_of_reason,
+    stonecoil_serpent, suus_mahna_practitioner, sylvia_tilly_joy_of_discovery, triskelion,
+    vger_the_intruder, vorel_of_the_hull_clade, vorinclex_monstrous_raider, branching_evolution,
+    freed_from_the_real, guardian_project, hardened_scales, rhystic_study, beast_within,
+    consider_the_prime_directive, counterspell, heroic_intervention, highly_illogical,
+    inspiring_call, pongify, reality_shift, refute, return_of_the_wildspeaker, test_of_courage,
+    cultivate, kodamas_reach, natures_lore, rampant_growth, rishkars_expertise, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, island, island, island, island, island, island, island, island, island, island,
+    island,
+];
+
+pub const ZEFRAM_COCHRANE_COMMANDERS: &[CardFactory] = &[zefram_cochrane_warp_pioneer];
+
+/// **Zefram Cochrane, Warp Pioneer**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Islands = 99.
+/// Zefram Cochrane, Warp Pioneer (EDHREC, fetched 2026-11-27).
+pub const ZEFRAM_COCHRANE_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, borg_scout_sphere, class_4_tactical_cube,
+    class_f_shuttlecraft, dawnsire_sunstar_dreadnought, deep_space_9, enterprise_nx_01,
+    everflowing_chalice, extinguisher_battleship, h_m_s_bounty_unlikely_timeship,
+    pinnacle_kill_ship, romulan_bird_of_prey, sol_ring, specimen_freighter, starship_enterprise,
+    suurok_class_science_vessel, synthesizer_labship, thaumaton_torpedo, the_eternity_elevator,
+    thought_vessel, transwarp_hub, u_s_s_defiant_mirror_migrant,
+    u_s_s_defiant_tough_little_ship, uss_enterprise_d_galaxy_class, u_s_s_prometheus_prototype,
+    u_s_s_stargazer_here_and_there, unwinding_clock, uthros_research_craft, uthros_scanship,
+    warp_core, academy_ruins, archway_of_innovation, buried_ruin, halimar_depths, karns_bastion,
+    seat_of_the_synod, shore_leave_planet, urzas_mine, urzas_power_plant, urzas_tower,
+    urzas_workshop, uthros_titanic_godcore, chief_miles_obrien, emry_lurker_of_the_loch,
+    etherium_sculptor, filigree_sages, flux_channeler, foundry_inspector,
+    geordi_la_forge_innovator, jhoiras_familiar, la_forge_perceptive_engineer,
+    lt_cmdr_geordi_la_forge, oaka_traveling_merchant, optimization_annex,
+    padeem_consul_of_innovation, sai_master_thopterist, seven_of_nine_tertiary_adjunct,
+    shuri_wakandan_inventor, surge_conductor, vox_child_of_the_collective, artificer_class,
+    inexorable_tide, counterspell, experimental_augury, negate, pongify, radstorm,
+    rapid_hybridization, reality_shift, ripples_of_potential, steady_progress, contentious_plan,
+    expansion_algorithm, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island,
+];
+
+pub const H_M_S_BOUNTY_COMMANDERS: &[CardFactory] = &[h_m_s_bounty_unlikely_timeship];
+
+/// **H.M.S. Bounty, Unlikely Timeship**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// H.M.S. Bounty, Unlikely Timeship (EDHREC, fetched 2026-11-27).
+pub const H_M_S_BOUNTY_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, deep_space_9, everflowing_chalice, fellwar_stone,
+    insight_engine, lightning_greaves, midnight_clock, mind_stone, sapphire_medallion, sol_ring,
+    the_eternity_elevator, the_lunar_whale, thought_vessel, thran_dynamo, urzas_incubator,
+    uthros_research_craft, academy_ruins, karns_bastion, mystic_sanctuary,
+    nykthos_shrine_to_nyx, otawara_soaring_city, reliquary_tower, rogues_passage,
+    seat_of_the_synod, uthros_titanic_godcore, aethertide_whale, cetacean_ops, colossal_whale,
+    dreamtide_whale, ethereal_forager, flying_dolphin_fish, glasspool_mimic, great_whale,
+    horned_loch_whale, humpback_whales, killer_whale, long_finned_skywhale, narwhal,
+    omni_changeling, orvar_the_all_form, phase_dolphin, phyrexian_metamorph, pursued_whale,
+    salinae_the_ocean_mother, silver_myr, star_whale, starbreach_whale, steelfin_whale,
+    waker_of_waves, kindred_discovery, propaganda, reflections_of_littjara,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell, frantic_search,
+    ghostly_flicker, high_tide, negate, planar_incision, pongify, rapid_hybridization,
+    sink_into_stupor, swan_song, the_theorist_jace_beleren, contentious_plan, ponder, preordain,
+    raise_the_palisade, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];

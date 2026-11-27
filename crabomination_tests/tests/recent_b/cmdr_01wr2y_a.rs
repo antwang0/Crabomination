@@ -215,3 +215,79 @@ fn the_measure_of_a_man_returns_the_exiled_card_to_its_owner() {
     assert!(g.battlefield_find(bears).is_some_and(|c| c.controller == 2));
     assert_eq!(g.players[0].life, life + 2);
 }
+
+/// CR 500.7 — H.M.S. Bounty's combat-damage trigger (station 8+) takes an
+/// extra turn only while you control a Whale and haven't begun one this game;
+/// beginning the extra turn is what spends it.
+#[test]
+fn cr_500_7_hms_bounty_takes_an_extra_turn_once_per_game() {
+    use crabomination::game::effects::EffectContext;
+    let mut g = pod(3);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let ship = g.add_card_to_battlefield(0, catalog::h_m_s_bounty_unlikely_timeship());
+    let def = catalog::h_m_s_bounty_unlikely_timeship();
+    let warp = def.station[0].triggers[0].effect.clone();
+    let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+    ctx.source = Some(ship);
+    g.resolve_effect(&warp, &ctx).expect("no Whale");
+    assert_eq!(g.players[0].extra_turns, 0, "no Whale, no extra turn");
+    g.add_card_to_battlefield(0, catalog::flying_dolphin_fish());
+    g.resolve_effect(&warp, &ctx).expect("Whale");
+    assert_eq!(g.players[0].extra_turns, 1);
+    // End the turn: seat 0 begins the extra turn.
+    let turn = g.turn_number;
+    while g.turn_number == turn {
+        let _ = g.advance_step(Vec::new());
+        drain_stack(&mut g);
+    }
+    assert!(g.current_turn_is_extra && g.active_player_idx == 0);
+    assert_eq!(g.players[0].extra_turns_begun, 1);
+    g.resolve_effect(&warp, &ctx).expect("second hit");
+    assert_eq!(g.players[0].extra_turns, 0, "one extra turn a game");
+}
+
+/// Chekov and McCoy draws as many cards as the counters you put on it, once
+/// a turn: a second Shields Up! the same turn draws nothing.
+#[test]
+fn chekov_and_mccoy_draws_per_counter_once_each_turn() {
+    let mut g = pod(2);
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let cm = g.add_card_to_battlefield(0, catalog::chekov_and_mccoy());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true), DecisionAnswer::Bool(true)]));
+    for drawn in [1, 1] {
+        let s = g.add_card_to_hand(0, catalog::shields_up());
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::White, 2);
+        cast(&mut g, s, Some(Target::Permanent(cm)), None);
+        assert_eq!(g.players[0].hand.len(), drawn);
+    }
+}
+
+/// Zefram Cochrane: a Spacecraft you control enters with two more charge
+/// counters (U.S.S. Cerritos, cast from hand).
+#[test]
+fn zefram_cochrane_spacecraft_enter_with_two_charge_counters() {
+    use crabomination::card::CounterType;
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::zefram_cochrane_warp_pioneer());
+    let ship = g.add_card_to_hand(0, catalog::u_s_s_cerritos_following_up());
+    g.players[0].mana_pool.add_colorless(5);
+    cast(&mut g, ship, None, None);
+    assert_eq!(g.battlefield_find(ship).unwrap().counter_count(CounterType::Charge), 2);
+}
+
+/// U.S.S. Defiant phases out with up to one creature you control (CR 702.26).
+#[test]
+fn uss_defiant_phases_out_with_a_creature() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ship = g.add_card_to_hand(0, catalog::u_s_s_defiant_mirror_migrant());
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, ship, None, None);
+    assert!(g.battlefield_find(ship).is_none() && g.battlefield_find(bears).is_none());
+    assert!(g.phased_out.iter().any(|c| c.id == ship) && g.phased_out.iter().any(|c| c.id == bears));
+}

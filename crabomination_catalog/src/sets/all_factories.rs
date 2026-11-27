@@ -19650,6 +19650,15 @@ static DECKS: &[Factory] = &[
     super::decks::test_of_identity,
     super::decks::u_s_s_cerritos_following_up,
     super::decks::the_measure_of_a_man,
+    super::decks::h_m_s_bounty_unlikely_timeship,
+    super::decks::u_s_s_defiant_mirror_migrant,
+    super::decks::zefram_cochrane_warp_pioneer,
+    super::decks::chekov_and_mccoy,
+    super::decks::test_of_courage,
+    super::decks::cetacean_ops,
+    super::decks::flying_dolphin_fish,
+    super::decks::humpback_whales,
+    super::decks::long_finned_skywhale,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
