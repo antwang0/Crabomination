@@ -4,7 +4,7 @@
 //! Planetary Bombardment), Erica Ortegas, Plucky Pilot (Horta, Brazen Bluff);
 //! three short three: M'Ress, Crew Coordinator (+ Shuttlecraft Galileo, Subspace
 //! Anomaly), Worf, Son of Mogh (Galileo, Academy Instructor, M'Ress), Brad
-//! Boimler (Rutherford, Upgraded Ensign; Brad himself still open).
+//! Boimler (Rutherford, Upgraded Ensign, and Brad).
 //! Tests in `tests/recent_b/cmdr_nov26.rs`.
 
 use std::sync::Arc;
@@ -346,6 +346,27 @@ pub fn rutherford_upgraded_ensign() -> CardDefinition {
                 },
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Brad Boimler, Eager Ensign — {1}{W} legendary 2/2 Human Officer, lifelink.
+/// Whenever it becomes tapped, until end of turn counters put on permanents you
+/// control come one extra of each kind (`GrantExtraCountersThisTurn`).
+pub fn brad_boimler_eager_ensign() -> CardDefinition {
+    CardDefinition {
+        name: "Brad Boimler, Eager Ensign",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Officer], ..Default::default() },
+        power: 2,
+        toughness: 2,
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+            effect: Effect::GrantExtraCountersThisTurn { who: PlayerRef::You },
+        }],
         ..Default::default()
     }
 }

@@ -355,3 +355,24 @@ fn rutherford_counters_on_spacecraft_casts() {
     cast(&mut g, bird);
     assert_eq!(plus_ones(&g, ruth), 1);
 }
+
+/// Brad Boimler: once tapped, each counter placement on your permanents this
+/// turn gets one more of its kind — +1/+1 on a creature, charge on a
+/// noncreature Spacecraft — and the bonus ends at cleanup.
+#[test]
+fn brad_boimler_tapped_adds_one_of_each_kind_this_turn() {
+    let mut g = pod(2);
+    let brad = g.add_card_to_battlefield(0, catalog::brad_boimler_eager_ensign());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let ship = g.add_card_to_battlefield(0, catalog::shuttlecraft_galileo());
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let tap = g.resolve_effect(&Effect::Tap { what: Selector::ExactObjects(vec![brad]) }, &ctx).expect("tap");
+    g.dispatch_triggers_for_events(&tap);
+    drain_stack(&mut g);
+    for (id, kind) in [(bear, CounterType::PlusOnePlusOne), (ship, CounterType::Charge)] {
+        g.resolve_effect(&Effect::AddCounter { what: Selector::ExactObjects(vec![id]), kind, amount: Value::ONE }, &ctx)
+            .expect("counter");
+        assert_eq!(g.battlefield_find(id).unwrap().counter_count(kind), 2, "{kind:?}: one plus one");
+    }
+    assert_eq!(g.players[0].extra_counters_this_turn, 1);
+}

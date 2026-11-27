@@ -19552,6 +19552,7 @@ static DECKS: &[Factory] = &[
     super::decks::subspace_anomaly,
     super::decks::academy_instructor,
     super::decks::rutherford_upgraded_ensign,
+    super::decks::brad_boimler_eager_ensign,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
