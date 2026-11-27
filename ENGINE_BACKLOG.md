@@ -20,6 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — Sulu / Spock / Seven, new Trek commanders](#fixedopen-2026-11-27-commander-run-01wruxc6sk--sulu--spock--seven-new-trek-commanders) | 7 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, 10 seats](#fixedopen-2026-11-27-commander-run-01wruxc2yt--a-land-type-recursion-two-residuals-10-seats) | 17 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc2yT` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc2yt-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `modern_decks` second) — bot waterbend, dilemmas, 19 seats](#fixedopen-2026-11-27-commander-run-modern_decks-second--bot-waterbend-dilemmas-19-seats) | 23 |
@@ -609,6 +610,14 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — Sulu / Spock / Seven, new Trek commanders
+
+- CLAIMED: seats 6318-6320 (Sulu Heroic Helmsman, Commander Spock, Seven of Nine; `decks::cmdr_01wr6s_a`, LANDED);
+  the 2026-11-13 Trek zero-gap decks (Will Riker Assuming Command, Commander Raffi Musiker, Culber and Stamets,
+  U.S.S. Defiant Tough Little Ship, U.S.S. Cerritos Following Up); one-short closers Tactical Officer (Picard,
+  Janeway Endgame), Kirk Man of Action, Evasive Maneuvers (Miles O'Brien), Collector's Case (Enterprise NX-01),
+  Fulgent Distraction (Excelsior), Karn's Sylex (Defiant Mirror Migrant), D'Ghor Bloodletter + Midnight Charm (Elim Garak).
+
 ## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, 10 seats
 
 Seats 6308-6317 (EDHREC averages fetched 2026-11-27): Radha (`decks::cmdr_01wr2y_a`); Martok, Dr. Pulaski, Sela
