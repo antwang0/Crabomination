@@ -1,12 +1,15 @@
 //! EDHREC single-commander average decks short only their commander (scan of
-//! 2026-11-27): Itazura, Lingering Wick; Miss Highwater. Tests in `tests/recent_b/cmdr_nov26.rs`.
+//! 2026-11-27) and the two-card gaps' closers: Itazura, Miss Highwater, Sash
+//! and Waistcoat, Glava, Matoc, The Madcap Jester, Chira. Tests in
+//! `tests/recent_b/cmdr_nov26.rs`.
 
 use crate::card::{
-    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword, MayPlayDuration, Predicate,
-    SelectionRequirement as R, Selector, Subtypes, Supertype, TriggeredAbility,
+    ActivatedAbility, CardDefinition, CardType, CounterType, CreatureType, EventKind, EventScope, EventSpec, Keyword,
+    LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, Subtypes,
+    Supertype, TokenDefinition, TriggeredAbility,
 };
 use crate::effect::shortcut::target_filtered;
-use crate::effect::{Duration, Effect, PlayerRef, Value, ZoneDest};
+use crate::effect::{Duration, Effect, KeywordAct, PlayerRef, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u};
 
@@ -284,6 +287,81 @@ pub fn bitter_ordeal() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         keywords: vec![Keyword::Gravestorm],
         effect: Effect::Search { who: PlayerRef::Target(0), filter: R::Any, to: ZoneDest::Exile },
+        ..Default::default()
+    }
+}
+
+/// Chira, All In — {3}{R} legendary 3/3 Human Rogue. Whenever you discard at
+/// random, choose modes at random, flip coins or roll dice, put a +1/+1
+/// counter on Chira and create a tapped Treasure (`KeywordAct::DidAtRandom`:
+/// once per kind of act per resolution).
+pub fn chira_all_in() -> CardDefinition {
+    CardDefinition {
+        name: "Chira, All In",
+        cost: cost(&[generic(3), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Rogue], ..Default::default() },
+        power: 3,
+        toughness: 3,
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::Performed(KeywordAct::DidAtRandom), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+                Effect::CreateToken {
+                    who: PlayerRef::You,
+                    count: Value::ONE,
+                    definition: std::sync::Arc::new(TokenDefinition {
+                        tapped: true,
+                        ..crabomination_base::tokens::treasure_token()
+                    }),
+                },
+            ]),
+        }],
+        ..Default::default()
+    }
+}
+
+/// Tibalt, the Fiend-Blooded — {R}{R} legendary planeswalker, loyalty 2.
+/// +1: draw a card, then discard a card at random. −4: damage to target player
+/// equal to the cards in their hand. −6: gain control of all creatures until
+/// end of turn, untap them, they gain haste.
+pub fn tibalt_the_fiend_blooded() -> CardDefinition {
+    let all = || Selector::EachPermanent(R::Creature);
+    CardDefinition {
+        name: "Tibalt, the Fiend-Blooded",
+        cost: cost(&[r(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Planeswalker],
+        subtypes: Subtypes { planeswalker_subtypes: vec![PlaneswalkerSubtype::Tibalt], ..Default::default() },
+        base_loyalty: 2,
+        loyalty_abilities: vec![
+            LoyaltyAbility {
+                loyalty_cost: 1,
+                effect: Effect::Seq(vec![
+                    Effect::Draw { who: Selector::You, amount: Value::ONE },
+                    Effect::Discard { who: Selector::You, amount: Value::ONE, random: true },
+                ]),
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -4,
+                effect: Effect::DealDamage {
+                    to: target_filtered(R::Player),
+                    amount: Value::HandSizeOf(PlayerRef::Target(0)),
+                },
+                ..Default::default()
+            },
+            LoyaltyAbility {
+                loyalty_cost: -6,
+                effect: Effect::Seq(vec![
+                    Effect::GainControl { what: all(), to: None, duration: Duration::EndOfTurn },
+                    Effect::Untap { what: all(), up_to: None },
+                    Effect::GrantKeyword { what: all(), keyword: Keyword::Haste, duration: Duration::EndOfTurn },
+                ]),
+                ..Default::default()
+            },
+        ],
         ..Default::default()
     }
 }

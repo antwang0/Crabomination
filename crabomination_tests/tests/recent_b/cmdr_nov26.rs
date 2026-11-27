@@ -741,3 +741,33 @@ fn madcap_jester_plays_what_your_effects_exile_from_opponents_libraries() {
     let granted = g.exile.iter().filter(|c| c.owner == 2 && c.may_play_until.is_some()).count();
     assert_eq!(granted, 2, "the searched card too");
 }
+
+fn treasures(g: &GameState, seat: usize) -> usize {
+    g.battlefield.iter().filter(|c| c.controller == seat && c.definition.name == "Treasure").count()
+}
+
+/// Chira: Tibalt's +1 (draw, then discard at random) is one random act — a
+/// counter and a tapped Treasure; one effect flipping three coins is one more
+/// ("one or more coins"). A plain draw is none.
+#[test]
+fn chira_grows_on_random_acts_once_each() {
+    let mut g = pod(2);
+    let chira = g.add_card_to_battlefield(0, catalog::chira_all_in());
+    let tibalt = g.add_card_to_battlefield(0, catalog::tibalt_the_fiend_blooded());
+    g.perform_action(GameAction::ActivateLoyaltyAbility { card_id: tibalt, ability_index: 0, target: None, x_value: None })
+        .expect("+1");
+    drain_stack(&mut g);
+    assert_eq!(plus_ones(&g, chira), 1, "discarded at random");
+    assert_eq!(treasures(&g, 0), 1);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "Treasure" && c.tapped));
+    let ctx = EffectContext::for_spell(0, None, 0, 0);
+    let flips = Effect::FlipCoin { count: Value::Const(3), on_heads: Box::new(Effect::Noop), on_tails: Box::new(Effect::Noop) };
+    let ev = g.resolve_effect(&flips, &ctx).expect("flip");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(plus_ones(&g, chira), 2, "three coins in one effect: one trigger");
+    let ev = g.resolve_effect(&Effect::Draw { who: Selector::You, amount: Value::ONE }, &ctx).expect("draw");
+    g.dispatch_triggers_for_events(&ev);
+    drain_stack(&mut g);
+    assert_eq!(plus_ones(&g, chira), 2);
+}

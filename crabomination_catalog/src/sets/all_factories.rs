@@ -19575,6 +19575,8 @@ static DECKS: &[Factory] = &[
     super::decks::leyline_of_combustion,
     super::decks::the_madcap_jester,
     super::decks::bitter_ordeal,
+    super::decks::chira_all_in,
+    super::decks::tibalt_the_fiend_blooded,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
