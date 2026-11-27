@@ -501,3 +501,49 @@ fn giant_space_amoeba_shrinks_a_defender_and_copies_itself() {
     let amoebas = g.battlefield.iter().filter(|c| c.definition.name == "Giant Space Amoeba").count();
     assert_eq!(amoebas, 2, "a token copy");
 }
+
+/// Kai Winn names Lightning Bolt: an opponent casting one loses 3 life; a
+/// different spell costs nothing.
+#[test]
+fn kai_winn_punishes_the_chosen_name() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(3);
+    let kai = g.add_card_to_hand(0, catalog::kai_winn_faithless_leader());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard("Lightning Bolt".into())]));
+    cast(&mut g, kai, None, None);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    let shock = g.add_card_to_hand(1, catalog::shock());
+    let life = g.players[1].life;
+    for (spell, lost) in [(shock, 0), (bolt, 3)] {
+        g.players[1].mana_pool.add(Color::Red, 1);
+        g.priority.player_with_priority = 1;
+        g.perform_action(GameAction::CastSpell {
+            card_id: spell,
+            target: Some(Target::Player(2)),
+            additional_targets: vec![],
+            mode: None,
+            x_value: None,
+        })
+        .expect("cast");
+        drain_stack(&mut g);
+        assert_eq!(g.players[1].life, life - lost);
+    }
+}
+
+/// Vexing Arcanix: the target player names their likeliest card; a miss is
+/// milled and costs them 2 life, a hit goes to hand.
+#[test]
+fn vexing_arcanix_rewards_a_named_top_card() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    for (name, hit) in [("Forest", true), ("Island", false)] {
+        let mut g = pod(2);
+        let top = g.add_card_to_library(1, catalog::forest());
+        let vex = ready(&mut g, catalog::vexing_arcanix());
+        g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::NamedCard(name.into())]));
+        let life = g.players[1].life;
+        activate(&mut g, vex, Some(Target::Player(1))).expect("activate");
+        assert_eq!(g.players[1].hand.iter().any(|c| c.id == top), hit);
+        assert_eq!(g.players[1].graveyard.iter().any(|c| c.id == top), !hit);
+        assert_eq!(g.players[1].life, if hit { life } else { life - 2 });
+    }
+}

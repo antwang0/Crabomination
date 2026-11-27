@@ -19744,6 +19744,12 @@ static DECKS: &[Factory] = &[
     super::decks::giant_space_amoeba,
     super::decks::cold_water_snapper,
     super::decks::stream_of_thought,
+    super::decks::kai_winn_faithless_leader,
+    super::decks::vexing_arcanix,
+    super::decks::fugitive_listener,
+    super::decks::rust_tick,
+    super::decks::in_the_pale_moonlight,
+    super::decks::shatter_assumptions,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

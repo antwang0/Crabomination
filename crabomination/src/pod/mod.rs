@@ -38581,6 +38581,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_FIFTH_DOCTOR_25_COMMANDERS,
             main: decks::THE_FIFTH_DOCTOR_25_MAIN,
         },
+        // Seat 6356: Kai Winn, Faithless Leader's EDHREC average deck. `--pod-decks 6356`.
+        PodDeck {
+            name: "Kai Winn, Faithless Leader (B)",
+            commanders: decks::KAI_WINN_COMMANDERS,
+            main: decks::KAI_WINN_MAIN,
+        },
     ]
 }
 
@@ -46906,6 +46912,7 @@ mod tests {
             ("Bruse Tarl, Boorish Herder and Sakashima of a Thousand Faces", &[0x22D1]),
             ("Brinelin, the Moon Kraken and Esior, Wardwing Familiar", &[0x22D2]),
             ("The Fifth Doctor and Ian Chesterton", &[0x22D3]),
+            ("Kai Winn, Faithless Leader", &[0x22D4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

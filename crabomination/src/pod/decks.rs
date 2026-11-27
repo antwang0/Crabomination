@@ -178610,3 +178610,30 @@ pub const THE_FIFTH_DOCTOR_25_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, plains, plains, plains,
     plains, plains, plains, plains, plains, plains, plains, plains, plains,
 ];
+
+pub const KAI_WINN_COMMANDERS: &[CardFactory] = &[kai_winn_faithless_leader];
+
+/// **Kai Winn, Faithless Leader**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Swamps = 99.
+/// Kai Winn, Faithless Leader (EDHREC, fetched 2026-11-27).
+pub const KAI_WINN_MAIN: &[CardFactory] = &[
+    arcane_signet, booby_trap, caged_sun, charcoal_diamond, golems_heart, heraldic_banner,
+    imi_statue, null_rod, sol_ring, storage_matrix, the_soul_stone, vexing_arcanix, bojuka_bog,
+    cabal_coffers, cabal_stronghold, mortuary_mire, nykthos_shrine_to_nyx, phyrexian_tower,
+    war_room, witchs_cottage, abyssal_specter, archon_of_cruelty, burglar_rat,
+    disciple_of_the_vault, fate_unraveler, fugitive_listener, gideon_the_oathless,
+    grave_robbers, gul_dukat_colonial_prefect, mindslicer, moriok_rigger, myr_landshaper,
+    phyrexian_gremlins, rust_tick, salt_vampire, sheoldred_the_apocalypse, tal_shiar_operative,
+    tinybones_trinket_thief, tomb_trawler, tourach_dread_cantor, vito_thorn_of_the_dusk_rose,
+    artifact_possession, brink_of_disaster, creeping_dread, in_the_pale_moonlight, megrim,
+    quest_for_the_nihil_stone, relic_bane, underworld_dreams, vengeance_mission,
+    burden_of_greed, cabal_ritual, dark_ritual, deadly_rollick, eject_the_warp_core,
+    fake_your_own_death, hes_dead_jim, call_to_the_netherworld, damnation, decree_of_pain,
+    demonic_tutor, diabolic_intent, forbidden_ritual, mind_twist, nights_whisper, scrounge,
+    shatter_assumptions, sign_in_blood, stray_from_history, syphon_mind,
+    the_destruction_of_praxis,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];

@@ -319,3 +319,152 @@ pub fn stream_of_thought() -> CardDefinition {
         )
     }
 }
+
+/// Kai Winn, Faithless Leader — {1}{B} legendary 3/1 Bajoran Cleric. As she
+/// enters, choose a nonland card name. Whenever an opponent casts a spell
+/// with the chosen name or activates an ability of a source with it, that
+/// player loses 3 life.
+pub fn kai_winn_faithless_leader() -> CardDefinition {
+    let punish = |kind: EventKind| TriggeredAbility {
+        event: EventSpec::new(kind, EventScope::OpponentControl)
+            .with_filter(Predicate::EntityMatchesAny { what: Selector::TriggerSource, filter: R::NamedBySource }),
+        effect: Effect::LoseLife { who: Selector::Player(PlayerRef::Triggerer), amount: Value::Const(3) },
+    };
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        as_enters_effect: Some(Effect::NameCard { what: Selector::This, restrict_to: Some(R::Not(Box::new(R::Land))) }),
+        triggered_abilities: vec![punish(EventKind::SpellCast), punish(EventKind::AbilityActivated)],
+        ..creature(
+            "Kai Winn, Faithless Leader",
+            cost(&[generic(1), crate::mana::b()]),
+            vec![CreatureType::Bajoran, CreatureType::Cleric],
+            3,
+            1,
+        )
+    }
+}
+
+/// Vexing Arcanix — {4} artifact. {3}, {T}: target player chooses a card
+/// name and reveals their top card; the named card goes to their hand,
+/// otherwise to their graveyard and this deals 2 damage to them.
+pub fn vexing_arcanix() -> CardDefinition {
+    CardDefinition {
+        name: "Vexing Arcanix",
+        cost: cost(&[generic(4)]),
+        card_types: vec![CardType::Artifact],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(3)]),
+            tap_cost: true,
+            effect: Effect::TargetPlayerThen {
+                filter: R::Player,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::EachPlayerNamesCard { who: PlayerRef::Target(0) },
+                    Effect::RevealTopNamedToHandElse {
+                        who: PlayerRef::Target(0),
+                        miss: Box::new(damage(Selector::Player(PlayerRef::Target(0)), 2)),
+                    },
+                ])),
+            },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// Fugitive Listener — {2}{B} 3/1 El-Aurian Scout. ETB: each opponent
+/// discards a card.
+pub fn fugitive_listener() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(Effect::Discard {
+            who: Selector::Player(PlayerRef::EachOpponent),
+            amount: Value::ONE,
+            random: false,
+        })],
+        ..creature(
+            "Fugitive Listener",
+            cost(&[generic(2), crate::mana::b()]),
+            vec![CreatureType::ElAurian, CreatureType::Scout],
+            3,
+            1,
+        )
+    }
+}
+
+/// Rust Tick — {3} 1/3 artifact Insect. You may choose not to untap it. {1},
+/// {T}: tap target artifact; it doesn't untap for as long as Rust Tick stays
+/// tapped.
+pub fn rust_tick() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::MayChooseNotToUntap],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1)]),
+            tap_cost: true,
+            effect: Effect::TapAndUntapLock { what: target_filtered(R::Artifact) },
+            ..Default::default()
+        }],
+        ..creature("Rust Tick", cost(&[generic(3)]), vec![CreatureType::Insect], 1, 3)
+    }
+}
+
+/// In the Pale Moonlight — {3}{B}{B} Saga. I — each opponent sacrifices a
+/// nontoken creature. II — investigate. III — you may sacrifice an artifact
+/// or creature; if you do, two 2/2 black Romulan tokens.
+pub fn in_the_pale_moonlight() -> CardDefinition {
+    let romulan = Arc::new(TokenDefinition {
+        name: "Romulan".into(),
+        power: 2,
+        toughness: 2,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Black],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Romulan], ..Default::default() },
+        ..Default::default()
+    });
+    CardDefinition {
+        name: "In the Pale Moonlight",
+        cost: cost(&[generic(3), crate::mana::b(), crate::mana::b()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Sacrifice {
+                    who: Selector::Player(PlayerRef::EachOpponent),
+                    count: Value::ONE,
+                    filter: R::Creature.and(R::Not(Box::new(R::IsToken))),
+                },
+            ),
+            (2, investigate(1)),
+            (
+                3,
+                Effect::MaySacrifice {
+                    description: "Sacrifice an artifact or creature for two 2/2 Romulans?".into(),
+                    filter: R::Artifact.or(R::Creature),
+                    count: Value::ONE,
+                    then: Box::new(Effect::CreateToken { who: PlayerRef::You, count: Value::Const(2), definition: romulan }),
+                    else_: None,
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}
+
+/// Shatter Assumptions — {1}{B}{B} sorcery. Choose one — target opponent
+/// reveals their hand and discards all colorless nonland cards; or all
+/// multicolored cards.
+pub fn shatter_assumptions() -> CardDefinition {
+    let discard_all = |filter: R| Effect::TargetPlayerThen {
+        filter: R::OpponentPlayer,
+        then: Box::new(Effect::RevealHandDiscardAllMatching { who: PlayerRef::Target(0), filter }),
+    };
+    spell(
+        "Shatter Assumptions",
+        cost(&[generic(1), crate::mana::b(), crate::mana::b()]),
+        CardType::Sorcery,
+        Effect::ChooseMode(vec![
+            discard_all(R::Colorless.and(R::Not(Box::new(R::Land)))),
+            discard_all(R::Multicolored),
+        ]),
+    )
+}
