@@ -625,8 +625,8 @@ fn cast_x(g: &mut GameState, id: CardId, x: u32) {
     drain_stack(g);
 }
 
-/// Glava: the first {X} permanent spell of the turn has X become 5; the
-/// second keeps its own X (once each turn).
+/// Glava: taking the may on the first {X} permanent spell of the turn makes X
+/// 5; the second keeps its own X (once each turn, spent by the take).
 #[test]
 fn glava_makes_the_first_x_five_once_each_turn() {
     let mut g = pod(2);
@@ -634,6 +634,7 @@ fn glava_makes_the_first_x_five_once_each_turn() {
     let a = g.add_card_to_hand(0, catalog::endless_one());
     let b = g.add_card_to_hand(0, catalog::endless_one());
     g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
     cast_x(&mut g, a, 1);
     cast_x(&mut g, b, 1);
     assert_eq!(plus_ones(&g, a), 5, "X became 5");

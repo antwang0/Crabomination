@@ -8,7 +8,7 @@ use crate::card::{
     LoyaltyAbility, MayPlayDuration, PlaneswalkerSubtype, Predicate, SelectionRequirement as R, Selector, Subtypes,
     Supertype, TokenDefinition, TriggeredAbility,
 };
-use crate::effect::shortcut::target_filtered;
+use crate::effect::shortcut::{once_each_turn_on_take, target_filtered};
 use crate::effect::{Duration, Effect, KeywordAct, PlayerRef, Value, ZoneDest};
 use crate::game::types::TurnStep;
 use crate::mana::{b, cost, g, generic, r, u};
@@ -126,10 +126,18 @@ pub fn write_into_being() -> CardDefinition {
 
 /// Glava, Five-Advents Mage — {5}{G}{G} legendary 5/5 Human Wizard. Whenever
 /// you cast a permanent spell with {X} in its mana cost or activate a non-mana
-/// ability with {X} in its cost, you may have X become 5, once each turn
-/// (taken when it raises X).
+/// ability with {X} in its cost, you may have X become 5; do this only once
+/// each turn (spent where the may is taken, `once_each_turn_on_take`).
 pub fn glava_five_advents_mage() -> CardDefinition {
-    let five = || Effect::RaiseXOfTriggeringOncePerTurn { to: 5 };
+    let five = |event: EventSpec| {
+        once_each_turn_on_take(TriggeredAbility {
+            event,
+            effect: Effect::MayDo {
+                description: "Have the value of X become 5?".into(),
+                body: Box::new(Effect::RaiseXOfTriggering { to: 5 }),
+            },
+        })
+    };
     CardDefinition {
         name: "Glava, Five-Advents Mage",
         cost: cost(&[generic(5), g(), g()]),
@@ -139,18 +147,11 @@ pub fn glava_five_advents_mage() -> CardDefinition {
         power: 5,
         toughness: 5,
         triggered_abilities: vec![
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
-                    Predicate::CastSpellHasX,
-                    Predicate::CastSpellMatches(R::PermanentCard),
-                ])),
-                effect: five(),
-            },
-            TriggeredAbility {
-                event: EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl)
-                    .with_filter(Predicate::ActivationCostHasX),
-                effect: five(),
-            },
+            five(EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(vec![
+                Predicate::CastSpellHasX,
+                Predicate::CastSpellMatches(R::PermanentCard),
+            ]))),
+            five(EventSpec::new(EventKind::AbilityActivated, EventScope::YourControl).with_filter(Predicate::ActivationCostHasX)),
         ],
         ..Default::default()
     }

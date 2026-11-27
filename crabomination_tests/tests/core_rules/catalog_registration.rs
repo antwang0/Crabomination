@@ -308,6 +308,10 @@ const KEYWORD_WORD: &[(&str, &str)] = &[
 /// is a claim that the engine is right and the oracle text is only spelling
 /// the same rule a longer way; it is not a place to park a defect.
 const ALLOWED_MODELLING: &[(&str, &str)] = &[
+    // "Beam me up {cost}" (Star Trek) is flashback plus returning a creature
+    // you control to its owner's hand: the keyword carries the graveyard cast.
+    ("Boarding Action", "flashback"),
+    ("There's Coffee in that Nebula", "flashback"),
     // "can't be blocked by creatures with greater power" is skulk's reminder
     // text, printed without the keyword (CR 702.118a).
     ("Locke, Treasure Hunter", "skulk"),
