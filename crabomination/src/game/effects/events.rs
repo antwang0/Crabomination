@@ -689,6 +689,11 @@ pub(crate) fn event_kind_fans_out(kind: &EventKind) -> bool {
             // fires once per discarding player (Tinybones, Pocket Nuisance —
             // "each opponent discards" read as one trigger).
             | EventKind::DiscardedOneOrMore
+    ) || matches!(
+        // One grant per card (The Madcap Jester's "those cards"); the plain
+        // origin bits keep Ketramose's "one or more" at one per batch.
+        kind,
+        EventKind::CardExiledFrom(crate::effect::exile_from::OPPONENT_LIBRARY_BY_YOU)
     )
 }
 

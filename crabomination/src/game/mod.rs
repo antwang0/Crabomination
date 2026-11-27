@@ -30626,6 +30626,13 @@ impl GameState {
                             self.exile_found_for_hijacker(card, h, &mut events);
                         } else if let Some(card) = taken {
                             self.place_card_in_dest(card, player, &to, &mut events);
+                            // CR 400.7 — a searched card exiled from a library
+                            // announces its origin (Laelia; The Madcap Jester).
+                            if !matches!(from_zone, crate::card::Zone::Graveyard | crate::card::Zone::Hand)
+                                && self.exile.iter().any(|c| c.id == *card_id)
+                            {
+                                self.note_exiled_from_library(player, *card_id, &mut events);
+                            }
                             // CR 303.4f — a searched Aura put onto the battlefield
                             // enters attached to something it can enchant (the
                             // headless pick; a search resolves without a prompt).

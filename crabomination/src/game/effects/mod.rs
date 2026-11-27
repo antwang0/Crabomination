@@ -3690,6 +3690,7 @@ impl GameState {
             for amount in own {
                 events.push(GameEvent::LifeLostToOwnEffect { player: me, amount });
             }
+            self.push_opponent_library_exiles(me, mark, &mut events);
         }
         *out = events;
         Ok(())

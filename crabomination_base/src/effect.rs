@@ -3710,6 +3710,12 @@ pub mod exile_from {
     /// Set beside `BATTLEFIELD` on a permanent exiled to pay a craft cost
     /// ("exiled from the battlefield while you're activating a craft ability").
     pub const CRAFT: u8 = 8;
+    /// Alone, never beside `LIBRARY`: a synthesized second event for a card a
+    /// resolution exiled from one of its controller's opponents' libraries,
+    /// the controller as `player` ("whenever a spell or ability you control
+    /// causes cards to be exiled from an opponent's library" — The Madcap
+    /// Jester). Emitted only while such a listener is on the battlefield.
+    pub const OPPONENT_LIBRARY_BY_YOU: u8 = 16;
 }
 
 /// Whose events does this trigger listen for?

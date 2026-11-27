@@ -1165,3 +1165,41 @@ impl GameState {
         }
     }
 }
+
+impl GameState {
+    /// The Madcap Jester — after an outermost resolution controlled by `me`,
+    /// each card it exiled from an opponent's library gets a second
+    /// `CardExiledFrom` with `exile_from::OPPONENT_LIBRARY_BY_YOU` and `me` as
+    /// the player. Only while a permanent listens for that bit, so no other
+    /// game's event stream changes.
+    pub(crate) fn push_opponent_library_exiles(
+        &self,
+        me: usize,
+        mark: usize,
+        events: &mut Vec<crate::game::types::GameEvent>,
+    ) {
+        use crate::effect::exile_from::{LIBRARY, OPPONENT_LIBRARY_BY_YOU};
+        use crate::game::types::GameEvent;
+        let theirs = |e: &GameEvent| match e {
+            GameEvent::CardExiledFrom { card_id, player, from } if from & LIBRARY != 0 && !self.same_team(*player, me) => {
+                Some(*card_id)
+            }
+            _ => None,
+        };
+        if !events.get(mark..).is_some_and(|s| s.iter().any(|e| theirs(e).is_some())) {
+            return;
+        }
+        let listens = self.battlefield.iter().any(|c| {
+            c.definition.triggered_abilities.iter().any(
+                |t| matches!(t.event.kind, crate::effect::EventKind::CardExiledFrom(m) if m & OPPONENT_LIBRARY_BY_YOU != 0),
+            )
+        });
+        if !listens {
+            return;
+        }
+        let ids: Vec<CardId> = events[mark..].iter().filter_map(theirs).collect();
+        for card_id in ids {
+            events.push(GameEvent::CardExiledFrom { card_id, player: me, from: OPPONENT_LIBRARY_BY_YOU });
+        }
+    }
+}
