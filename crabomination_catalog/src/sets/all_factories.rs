@@ -19553,6 +19553,9 @@ static DECKS: &[Factory] = &[
     super::decks::academy_instructor,
     super::decks::rutherford_upgraded_ensign,
     super::decks::brad_boimler_eager_ensign,
+    // cmdr_nov27 (EDHREC singles short only their commander, 2026-11-27)
+    super::decks::itazura_lingering_wick,
+    super::decks::miss_highwater,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

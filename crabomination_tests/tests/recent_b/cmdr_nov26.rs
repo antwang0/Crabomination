@@ -376,3 +376,92 @@ fn brad_boimler_tapped_adds_one_of_each_kind_this_turn() {
     }
     assert_eq!(g.players[0].extra_counters_this_turn, 1);
 }
+
+/// Itazura: three cards are exiled, the opponents bid (APNAP: seat 1, seat 2);
+/// the highest bidder takes that much damage from Itazura and casts its pick
+/// free, and Itazura's controller keeps a card that wasn't cast. The third
+/// card stays in exile.
+#[test]
+fn itazura_sells_a_free_spell_to_the_highest_bidder() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let opt = g.add_card_to_library(0, catalog::opt());
+    let island = g.add_card_to_library(0, catalog::island());
+    for seat in 0..3 {
+        for _ in 0..5 {
+            g.add_card_to_library(seat, catalog::island());
+        }
+    }
+    g.add_card_to_battlefield(0, catalog::itazura_lingering_wick());
+    let (one, two) = (g.players[1].life, g.players[2].life);
+    g.decider = Box::new(ScriptedDecider::new(vec![
+        DecisionAnswer::Amount(2),
+        DecisionAnswer::Amount(1),
+        DecisionAnswer::Cards(vec![bears]),
+        DecisionAnswer::Cards(vec![opt]),
+        DecisionAnswer::Bool(true),
+    ]));
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].life, g.players[2].life), (one - 2, two), "the high bid is the damage");
+    let b = g.battlefield.iter().find(|c| c.id == bears).expect("bears cast free");
+    assert_eq!(b.controller, 1);
+    assert!(g.players[0].hand.iter().any(|c| c.id == opt), "the controller keeps Opt");
+    assert!(g.exile.iter().any(|c| c.id == island), "the third card stays exiled");
+}
+
+/// Itazura with a headless (Auto) decider: both opponents bid 0, the tie goes
+/// to the lower life total, nobody is damaged, and the winner still casts.
+#[test]
+fn itazura_ties_go_to_the_lowest_life_and_zero_deals_nothing() {
+    let mut g = multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = TurnStep::Upkeep;
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::opt());
+    g.add_card_to_library(0, catalog::island());
+    g.add_card_to_battlefield(0, catalog::itazura_lingering_wick());
+    g.players[2].life -= 3;
+    let (one, two) = (g.players[1].life, g.players[2].life);
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!((g.players[1].life, g.players[2].life), (one, two));
+    assert_eq!(g.battlefield.iter().find(|c| c.id == bears).map(|c| c.controller), Some(2));
+    assert_eq!(g.players[0].hand.len(), 1, "one card kept");
+}
+
+/// Miss Highwater: combat damage offers the wheel; accepting draws seven and
+/// takes a contract counter, so the next hit doesn't trigger. When the
+/// contracted player loses (CR 800.4a — before their objects leave), Highwater's
+/// controller gets a token copy of each artifact and creature they controlled;
+/// their lands are not copied.
+#[test]
+fn miss_highwater_collects_on_a_contract_when_the_player_loses() {
+    let mut g = pod(3);
+    let hw = g.add_card_to_battlefield(0, catalog::miss_highwater());
+    g.battlefield.iter_mut().for_each(|c| c.summoning_sick = false);
+    for _ in 0..3 {
+        g.add_card_to_hand(1, catalog::island());
+    }
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    hit(&mut g, hw, 1);
+    assert_eq!(g.players[1].hand.len(), 7, "wheeled into seven");
+    assert_eq!(g.players[1].graveyard.len(), 3);
+    assert_eq!(g.players[1].contracts.len(), 1);
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Bool(true)]));
+    g.battlefield.iter_mut().for_each(|c| c.tapped = false);
+    hit(&mut g, hw, 1);
+    assert_eq!(g.players[1].hand.len(), 7, "a contract holder isn't offered again");
+    g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.add_card_to_battlefield(1, catalog::forest());
+    g.players[1].life = 0;
+    g.check_state_based_actions();
+    assert!(!g.players[1].is_alive());
+    drain_stack(&mut g);
+    let mine = |name: &str| g.battlefield.iter().any(|c| c.controller == 0 && c.is_token && c.definition.name == name);
+    assert!(mine("Grizzly Bears") && mine("Sol Ring"), "the creature and the artifact are copied");
+    assert!(!mine("Forest"), "lands are not");
+}
