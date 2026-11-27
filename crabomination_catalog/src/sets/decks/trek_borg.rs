@@ -763,14 +763,14 @@ pub fn queens_diamond() -> CardDefinition {
 }
 
 /// Reconnaissance Partition — {4} 3/3 Borg artifact creature, entering with
-/// two charge counters. {T}, remove a counter: fetch a basic land tapped, or
-/// draw a card.
+/// two charge counters. {T}, remove a counter of any kind from it: fetch a
+/// basic land tapped, or draw a card.
 pub fn reconnaissance_partition() -> CardDefinition {
     CardDefinition {
         enters_with_counters: Some((CounterType::Charge, Value::Const(2))),
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
-            remove_counter_cost: Some((CounterType::Charge, 1)),
+            remove_counter_among_filter: Some((None, 1, R::OtherThanSource.negate())),
             effect: Effect::ChooseMode(vec![
                 Effect::Search {
                     who: PlayerRef::You,

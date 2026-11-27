@@ -198,3 +198,27 @@ fn spellweaver_volute_casts_its_card_and_moves_on() {
     let shock = g.players[0].graveyard.iter().find(|c| c.definition.name == "Shock").map(|c| c.id);
     assert_eq!(g.battlefield_find(volute).and_then(|c| c.chosen_permanent), shock, "moved on to Shock");
 }
+
+/// Reconnaissance Partition's "remove a counter" takes any kind: with its
+/// charge counters gone, a +1/+1 counter pays (bug: only charge paid).
+#[test]
+fn reconnaissance_partition_pays_with_any_counter_kind() {
+    let mut g = pod(2);
+    g.add_card_to_library(0, catalog::island());
+    let rp = ready(&mut g, catalog::reconnaissance_partition());
+    let c = g.battlefield_find_mut(rp).unwrap();
+    let charge = c.counter_count(crabomination::card::CounterType::Charge);
+    c.remove_counters(crabomination::card::CounterType::Charge, charge);
+    c.add_counters(crabomination::card::CounterType::PlusOnePlusOne, 1);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: rp,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: Some(1),
+    })
+    .expect("a +1/+1 counter pays");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(rp).unwrap().counter_count(crabomination::card::CounterType::PlusOnePlusOne), 0);
+}
