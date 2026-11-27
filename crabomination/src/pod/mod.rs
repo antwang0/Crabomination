@@ -38371,6 +38371,120 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SEVEN_OF_NINE_3_COMMANDERS,
             main: decks::SEVEN_OF_NINE_3_MAIN,
         },
+        // Seat 6321: Will Riker, Assuming Command's EDHREC average deck. `--pod-decks 6321`.
+        PodDeck {
+            name: "Will Riker, Assuming Command (W)",
+            commanders: decks::WILL_RIKER_2_COMMANDERS,
+            main: decks::WILL_RIKER_2_MAIN,
+        },
+        // Seat 6322: Commander Raffi Musiker's EDHREC average deck. `--pod-decks 6322`.
+        PodDeck {
+            name: "Commander Raffi Musiker (B)",
+            commanders: decks::COMMANDER_RAFFI_MUSIKER_COMMANDERS,
+            main: decks::COMMANDER_RAFFI_MUSIKER_MAIN,
+        },
+        // Seat 6323: Culber and Stamets, Star-Crossed's EDHREC average deck. `--pod-decks 6323`.
+        PodDeck {
+            name: "Culber and Stamets, Star-Crossed (G)",
+            commanders: decks::CULBER_AND_STAMETS_COMMANDERS,
+            main: decks::CULBER_AND_STAMETS_MAIN,
+        },
+        // Seat 6324: U.S.S. Defiant, Tough Little Ship's EDHREC average deck. `--pod-decks 6324`.
+        PodDeck {
+            name: "U.S.S. Defiant, Tough Little Ship (C)",
+            commanders: decks::U_S_S_DEFIANT_COMMANDERS,
+            main: decks::U_S_S_DEFIANT_MAIN,
+        },
+        // Seat 6325: U.S.S. Cerritos, Following Up's EDHREC average deck. `--pod-decks 6325`.
+        PodDeck {
+            name: "U.S.S. Cerritos, Following Up (C)",
+            commanders: decks::U_S_S_CERRITOS_COMMANDERS,
+            main: decks::U_S_S_CERRITOS_MAIN,
+        },
+        // Seat 6326: Captain Jean-Luc Picard's EDHREC average deck. `--pod-decks 6326`.
+        PodDeck {
+            name: "Captain Jean-Luc Picard (W)",
+            commanders: decks::CAPTAIN_JEAN_LUC_PICARD_COMMANDERS,
+            main: decks::CAPTAIN_JEAN_LUC_PICARD_MAIN,
+        },
+        // Seat 6327: Captain Janeway, Endgame's EDHREC average deck. `--pod-decks 6327`.
+        PodDeck {
+            name: "Captain Janeway, Endgame (WUR)",
+            commanders: decks::CAPTAIN_JANEWAY_COMMANDERS,
+            main: decks::CAPTAIN_JANEWAY_MAIN,
+        },
+        // Seat 6328: Captain Kirk, Boldly Going's EDHREC average deck. `--pod-decks 6328`.
+        PodDeck {
+            name: "Captain Kirk, Boldly Going (WUG)",
+            commanders: decks::CAPTAIN_KIRK_COMMANDERS,
+            main: decks::CAPTAIN_KIRK_MAIN,
+        },
+        // Seat 6329: Miles O'Brien, Transporter Ops's EDHREC average deck. `--pod-decks 6329`.
+        PodDeck {
+            name: "Miles O'Brien, Transporter Ops (W)",
+            commanders: decks::MILES_OBRIEN_COMMANDERS,
+            main: decks::MILES_OBRIEN_MAIN,
+        },
+        // Seat 6330: Enterprise NX-01's EDHREC average deck. `--pod-decks 6330`.
+        PodDeck {
+            name: "Enterprise NX-01 (U)",
+            commanders: decks::ENTERPRISE_NX_01_COMMANDERS,
+            main: decks::ENTERPRISE_NX_01_MAIN,
+        },
+        // Seat 6331: U.S.S. Excelsior, Cutting Edge's EDHREC average deck. `--pod-decks 6331`.
+        PodDeck {
+            name: "U.S.S. Excelsior, Cutting Edge (W)",
+            commanders: decks::U_S_S_EXCELSIOR_COMMANDERS,
+            main: decks::U_S_S_EXCELSIOR_MAIN,
+        },
+        // Seat 6332: U.S.S. Defiant, Mirror Migrant's EDHREC average deck. `--pod-decks 6332`.
+        PodDeck {
+            name: "U.S.S. Defiant, Mirror Migrant (C)",
+            commanders: decks::U_S_S_DEFIANT_2_COMMANDERS,
+            main: decks::U_S_S_DEFIANT_2_MAIN,
+        },
+        // Seat 6333: Elim Garak, Simple Tailor's EDHREC average deck. `--pod-decks 6333`.
+        PodDeck {
+            name: "Elim Garak, Simple Tailor (B)",
+            commanders: decks::ELIM_GARAK_COMMANDERS,
+            main: decks::ELIM_GARAK_MAIN,
+        },
+        // Seat 6334: Una Chin-Riley, Number One's EDHREC average deck. `--pod-decks 6334`.
+        PodDeck {
+            name: "Una Chin-Riley, Number One (W)",
+            commanders: decks::UNA_CHIN_RILEY_COMMANDERS,
+            main: decks::UNA_CHIN_RILEY_MAIN,
+        },
+        // Seat 6335: Hologram Janeway's EDHREC average deck. `--pod-decks 6335`.
+        PodDeck {
+            name: "Hologram Janeway (W)",
+            commanders: decks::HOLOGRAM_JANEWAY_COMMANDERS,
+            main: decks::HOLOGRAM_JANEWAY_MAIN,
+        },
+        // Seat 6336: Kirk, Man of Action's EDHREC average deck. `--pod-decks 6336`.
+        PodDeck {
+            name: "Kirk, Man of Action (WUG)",
+            commanders: decks::KIRK_2_COMMANDERS,
+            main: decks::KIRK_2_MAIN,
+        },
+        // Seat 6337: Lore, Positronic Provocateur's EDHREC average deck. `--pod-decks 6337`.
+        PodDeck {
+            name: "Lore, Positronic Provocateur (UB)",
+            commanders: decks::LORE_COMMANDERS,
+            main: decks::LORE_MAIN,
+        },
+        // Seat 6338: Gabriel Lorca, Mirror Menace's EDHREC average deck. `--pod-decks 6338`.
+        PodDeck {
+            name: "Gabriel Lorca, Mirror Menace (B)",
+            commanders: decks::GABRIEL_LORCA_COMMANDERS,
+            main: decks::GABRIEL_LORCA_MAIN,
+        },
+        // Seat 6339: Borg Queen, Perfection Manifest's EDHREC average deck. `--pod-decks 6339`.
+        PodDeck {
+            name: "Borg Queen, Perfection Manifest (B)",
+            commanders: decks::BORG_QUEEN_COMMANDERS,
+            main: decks::BORG_QUEEN_MAIN,
+        },
     ]
 }
 
@@ -46661,13 +46775,32 @@ mod tests {
             ("Sulu, Heroic Helmsman", &[0x22AE]),
             ("Commander Spock", &[0x22AF]),
             ("Seven of Nine", &[0x22B0]),
+            ("Will Riker, Assuming Command", &[0x22B1]),
+            ("Commander Raffi Musiker", &[0x22B2]),
+            ("Culber and Stamets, Star-Crossed", &[0x22B3]),
+            ("U.S.S. Defiant, Tough Little Ship", &[0x22B4]),
+            ("U.S.S. Cerritos, Following Up", &[0x22B5]),
+            ("Captain Jean-Luc Picard", &[0x22B6]),
+            ("Captain Janeway, Endgame", &[0x22B7]),
+            ("Captain Kirk, Boldly Going", &[0x22B8]),
+            ("Miles O'Brien, Transporter Ops", &[0x22B9]),
+            ("Enterprise NX-01", &[0x22BA]),
+            ("U.S.S. Excelsior, Cutting Edge", &[0x22BB]),
+            ("U.S.S. Defiant, Mirror Migrant", &[0x22BC]),
+            ("Elim Garak, Simple Tailor", &[0x22BD]),
+            ("Una Chin-Riley, Number One", &[0x22BE]),
+            ("Hologram Janeway", &[0x22BF]),
+            ("Kirk, Man of Action", &[0x22C0]),
+            ("Lore, Positronic Provocateur", &[0x22C1]),
+            ("Gabriel Lorca, Mirror Menace", &[0x22C2]),
+            ("Borg Queen, Perfection Manifest", &[0x22C3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
         // changes nothing. `RUST_MIN_STACK` (`.cargo/config.toml`) sizes the
         // workers' stacks. `CRAB_SEAT_SHARD=i/n` runs every n-th job from the
         // i-th (0-based), so the list can be checked in pieces; `CRAB_SEAT=<name
-        // prefix>` runs one seat, and `CRAB_SEAT_LOG=1` times each game
+        // prefix>[|<prefix>…]` runs those seats, and `CRAB_SEAT_LOG=1` times each game
         // (Loot seed 0xad8, once over an hour in debug, was Augur of Autumn's
         // coven re-walked per static read: 26 s -> 5.6 s on `overflow`).
         let shard = std::env::var("CRAB_SEAT_SHARD").ok().and_then(|v| {
@@ -46680,7 +46813,7 @@ mod tests {
             .flat_map(|(name, seeds)| seeds.iter().map(move |&seed| (*name, seed)))
             .enumerate()
             .filter(|(k, _)| shard.is_none_or(|(i, n)| k % n == i))
-            .filter(|(_, (name, _))| only.as_deref().is_none_or(|p| name.starts_with(p)))
+            .filter(|(_, (name, _))| only.as_deref().is_none_or(|p| p.split('|').any(|q| name.starts_with(q))))
             .map(|(_, j)| j)
             .collect();
         let next = std::sync::atomic::AtomicUsize::new(0);

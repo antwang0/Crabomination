@@ -178,3 +178,159 @@ fn tell_me_what_you_see_punishes_or_draws() {
     assert!(drew != lost, "exactly one branch: drew {drew}, lost {lost}");
     assert_eq!(g.players[2].life, g.players[2].starting_life, "only the target");
 }
+
+/// CR 119.4b — under Karn's Sylex, Greed's "pay 2 life" can't be paid, but
+/// Mana Confluence's mana ability still can; {X}, {T}, exile it destroys
+/// each nonland permanent with mana value X or less.
+#[test]
+fn cr_119_4b_karns_sylex_bans_nonmana_life_costs_then_sweeps() {
+    let mut g = pod(2);
+    let sylex = g.add_card_to_battlefield(0, catalog::karns_sylex());
+    let greed = g.add_card_to_battlefield(0, catalog::greed());
+    let confluence = g.add_card_to_battlefield(0, catalog::mana_confluence());
+    g.add_card_to_library(0, catalog::forest());
+    let life = g.players[0].life;
+    assert!(activate(&mut g, greed, None).is_err(), "Greed's life cost is banned");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: confluence,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })
+    .expect("a mana ability may still pay life");
+    assert_eq!(g.players[0].life, life - 1);
+
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+    g.battlefield_find_mut(sylex).unwrap().tapped = false;
+    flood(&mut g);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sylex,
+        ability_index: 0,
+        target: None,
+        additional_targets: vec![],
+        x_value: Some(4),
+        mode: None,
+    })
+    .expect("sweep");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == sylex), "exiled as a cost");
+    assert!(g.battlefield_find(bears).is_none() && g.battlefield_find(greed).is_none());
+    assert!(g.battlefield_find(dragon).is_some(), "mana value 6 survives X=4");
+    assert!(g.battlefield_find(confluence).is_some(), "lands survive");
+}
+
+/// Kirk, Man of Action pumps other Officers and Spacecraft creatures, not
+/// other creatures or himself.
+#[test]
+fn kirk_man_of_action_pumps_his_crew() {
+    let mut g = pod(2);
+    let kirk = g.add_card_to_battlefield(0, catalog::kirk_man_of_action());
+    let officer = g.add_card_to_battlefield(0, catalog::tactical_officer());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let pt = |g: &GameState, id| {
+        let c = g.computed_permanent(id).unwrap();
+        (c.power, c.toughness)
+    };
+    assert_eq!(pt(&g, officer), (4, 3));
+    assert_eq!(pt(&g, bears), (2, 2));
+    assert_eq!(pt(&g, kirk), (3, 3));
+}
+
+/// Fulgent Distraction taps both targets and knocks their Equipment off.
+#[test]
+fn fulgent_distraction_taps_and_unequips_two_creatures() {
+    let mut g = pod(2);
+    let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let b = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let sword = g.add_card_to_battlefield(1, catalog::bonesplitter());
+    g.battlefield_find_mut(sword).unwrap().attached_to = Some(b);
+    let spell = g.add_card_to_hand(0, catalog::fulgent_distraction());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(a)),
+        additional_targets: vec![Target::Permanent(b)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(a).unwrap().tapped && g.battlefield_find(b).unwrap().tapped);
+    assert_eq!(g.battlefield_find(sword).unwrap().attached_to, None);
+}
+
+/// D'Ghor Bloodletter's second mode: each of four players sacrifices a
+/// creature (the Bloodletter is its controller's only one).
+#[test]
+fn dghor_bloodletter_edicts_every_seat() {
+    let mut g = pod(4);
+    let victims: Vec<_> = (1..4).map(|s| g.add_card_to_battlefield(s, catalog::grizzly_bears())).collect();
+    let dg = g.add_card_to_hand(0, catalog::dghor_bloodletter());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell { card_id: dg, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("cast");
+    // The ETB's mode is picked as the trigger goes on the stack: answer 1.
+    g.decider = Box::new(crabomination::decision::ScriptedDecider::new([crabomination::decision::DecisionAnswer::Mode(1)]));
+    drain_stack(&mut g);
+    assert!(victims.iter().all(|&v| g.battlefield_find(v).is_none()), "every opponent sacrificed");
+    assert!(g.battlefield_find(dg).is_none(), "its controller sacrificed it");
+}
+
+/// Collector's Case stuns its ETB target: tapped with two stun counters.
+#[test]
+fn collectors_case_stuns_on_entry() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let case = g.add_card_to_hand(0, catalog::collectors_case());
+    cast(&mut g, case, None, None);
+    let c = g.battlefield_find(bears).unwrap();
+    assert!(c.tapped);
+    assert_eq!(c.counter_count(CounterType::Stun), 2);
+}
+
+/// CR 700.2 — Gabriel Lorca hears a dilemma from the graveyard: pay {B} and
+/// he returns to hand.
+#[test]
+fn cr_700_2_gabriel_lorca_returns_from_the_graveyard_on_a_dilemma() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let lorca = g.add_card_to_graveyard(0, catalog::gabriel_lorca_mirror_menace());
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::resistance_is_futile());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, spell, Some(Target::Permanent(bears)), Some(0));
+    assert!(g.players[0].hand.iter().any(|c| c.id == lorca), "paid {{B}}, back in hand");
+}
+
+/// Overflow Submatrix: one artifact creature cast from the graveyard each
+/// of your turns, entering with a finality counter.
+#[test]
+fn overflow_submatrix_casts_from_the_graveyard_with_finality() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::overflow_submatrix());
+    let a = g.add_card_to_graveyard(0, catalog::ornithopter());
+    let b = g.add_card_to_graveyard(0, catalog::memnite());
+    cast(&mut g, a, None, None);
+    let c = g.battlefield_find(a).expect("cast from the graveyard");
+    assert_eq!(c.counter_count(CounterType::Finality), 1);
+    g.priority.player_with_priority = 0;
+    let again = g.perform_action(GameAction::CastSpell { card_id: b, target: None, additional_targets: vec![], mode: None, x_value: None });
+    assert!(again.is_err(), "once each turn");
+}
+
+/// Collective Drone's power counts the artifact creatures you control
+/// (itself included); toughness stays 2.
+#[test]
+fn collective_drone_counts_artifact_creatures() {
+    let mut g = pod(2);
+    let drone = g.add_card_to_battlefield(0, catalog::collective_drone());
+    g.add_card_to_battlefield(0, catalog::ornithopter());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_battlefield(1, catalog::ornithopter());
+    let c = g.computed_permanent(drone).unwrap();
+    assert_eq!((c.power, c.toughness), (2, 2));
+}
