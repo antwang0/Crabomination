@@ -829,6 +829,7 @@ fn a_once_per_turn_graveyard_cast_can_exile_the_spell() {
             filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)),
             exile_after: true,
             enters_tapped: false,
+            finality: false,
         },
     }];
     let mut g = commander_game();
