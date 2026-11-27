@@ -177123,3 +177123,87 @@ pub const SAAVIK_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const IXIDOR_COMMANDERS: &[CardFactory] = &[ixidor_reality_sculptor];
+
+/// **Ixidor, Reality Sculptor**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Islands = 99.
+/// Ixidor, Reality Sculptor (EDHREC, fetched 2026-11-27).
+pub const IXIDOR_MAIN: &[CardFactory] = &[
+    arcane_signet, cloud_key, cryptic_coat, crystal_shard, dream_chisel, forsaken_monument,
+    heartstone, mind_stone, panoptic_projektor, scroll_of_fate, sol_ring, thought_vessel,
+    thran_dynamo, branch_of_vitu_ghazi, myriad_landscape, mystic_sanctuary, reliquary_tower,
+    riptide_laboratory, shrine_of_the_forsaken_gods, temple_of_the_false_god,
+    tomb_of_the_spirit_dragon, zoetic_cavern, abhorrent_oculus, aphetto_alchemist,
+    aphetto_runecaster, brine_elemental, chromeshell_crab, disruptive_pitmage, echo_tracer,
+    fathom_seer, glitch_interpreter, ixidron, kadenas_silencer, kheru_spellsnatcher,
+    kozilek_the_broken_reality, master_of_the_veil, mischievous_quanar, mistfire_weaver,
+    monastery_loremaster, riptide_entrancer, riptide_survivor, sash_and_waistcoat_unmen,
+    silumgar_spell_eater, stratus_dancer, thousand_winds, unblinking_bleb, vesuvan_shapeshifter,
+    voidmage_apprentice, voidmage_prodigy, weaver_of_lies, willbender, cloudform, equilibrium,
+    primordial_mist, they_came_from_the_pipes, training_grounds, ugins_mastery, aetherize,
+    backslide, become_anonymous, brainstorm, counterspell, cyber_conversion, high_tide,
+    mana_sculpt, reality_shift, twist_reality, ugin_the_ineffable, all_is_dust, ponder,
+    unnerving_grasp, write_into_being,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island,
+];
+
+pub const VOX_COMMANDERS: &[CardFactory] = &[vox_child_of_the_collective];
+
+/// **Võx, Child of the Collective**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 23 Islands = 99.
+/// Võx, Child of the Collective (EDHREC, fetched 2026-11-27).
+pub const VOX_MAIN: &[CardFactory] = &[
+    arcane_signet, borg_scout_sphere, class_4_tactical_cube, dawnsire_sunstar_dreadnought,
+    deep_space_9, enterprise_nx_01, extinguisher_battleship, kvort_class_raider, mind_stone,
+    pinnacle_kill_ship, planar_atlas, queens_diamond, sol_ring, specimen_freighter,
+    starship_enterprise, suurok_class_science_vessel, the_eternity_elevator, thought_vessel,
+    transwarp_hub, uss_enterprise_d_galaxy_class, uthros_research_craft, uthros_scanship,
+    abstergo_entertainment, academy_ruins, archway_of_innovation, arid_archway, command_beacon,
+    darksteel_citadel, fomori_vault, horizon_of_progress, inventors_fair, nykthos_shrine_to_nyx,
+    otawara_soaring_city, pit_of_offerings, archive_arbiter, canoptek_scarab_swarm,
+    canoptek_spyder, crystalline_entity, darksteel_angel, dauntless_scrapbot,
+    emry_lurker_of_the_loch, esperzoa, etherium_sculptor, foundry_inspector, herbie_scout_unit,
+    herbie_lovable_robot, interstellar_effigy, iron_man_bleeding_edge, jhoiras_familiar,
+    mechan_assembler, memnarch_the_warden, meneldor_swift_savior, meteor_golem, mycosynth_golem,
+    ornithopter_of_paradise, palladium_myr, repulsor_bots, scampering_surveyor,
+    sicarian_infiltrator, silver_myr, solemn_simulacrum, thought_monitor,
+    ultron_artificial_malevolence, rhystic_study, an_offer_you_cant_refuse, arcane_denial, blur,
+    counterspell, displace, essence_flux, ghostly_flicker, hide_on_the_ceiling,
+    illusionists_stratagem, pongify, consuming_tide, splash_portal,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island,
+];
+
+pub const GEORDI_LA_FORGE_COMMANDERS: &[CardFactory] = &[geordi_la_forge_innovator];
+
+/// **Geordi La Forge, Innovator**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Islands = 99.
+/// Geordi La Forge, Innovator (EDHREC, fetched 2026-11-27).
+pub const GEORDI_LA_FORGE_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, alhammarrets_archive, arcane_signet, astral_cornucopia,
+    class_f_shuttlecraft, commanders_sphere, enterprise_nx_01, hedron_archive, mind_stone,
+    romulan_bird_of_prey, senseis_divining_top, skullclamp, sol_ring, starship_enterprise,
+    stonespeaker_crystal, suurok_class_science_vessel, synthesizer_labship, tea_earl_grey_hot,
+    the_immortal_sun, uss_enterprise_d_galaxy_class, uthros_research_craft, warp_core,
+    command_tower, exotic_orchard, minamo_school_at_waters_edge, mystic_sanctuary,
+    path_of_ancestry, rivendell, spire_of_industry, archmage_emeritus, chief_miles_obrien,
+    co_option_adjutant, data_exploring_humanity, data_professor_of_humanities,
+    foundry_inspector, grand_architect, kappa_cannoneer, kes_evolving_telepath, memnite,
+    ornithopter, padeem_consul_of_innovation, reconnaissance_partition, sai_master_thopterist,
+    seven_of_nine_tertiary_adjunct, spock_voice_of_reason, subcommander_t_pol,
+    suus_mahna_practitioner, trinket_mage, trophy_mage, uhura_xenolinguist, walking_ballista,
+    mystic_remora, rhystic_study, thopter_spy_network, arcane_denial, brainstorm, consider,
+    counterspell, cryptic_command, frantic_search, opt, pongify, rapid_hybridization, refute,
+    swan_song, jace_wielder_of_mysteries, tezzeret_artifice_master, cloak_and_phaser,
+    deep_space_scan, open_communications, thoughtcast,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island,
+];

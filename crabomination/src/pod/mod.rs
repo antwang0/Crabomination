@@ -38275,6 +38275,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SAAVIK_COMMANDERS,
             main: decks::SAAVIK_MAIN,
         },
+        // Seat 6305: Ixidor, Reality Sculptor's EDHREC average deck. `--pod-decks 6305`.
+        PodDeck {
+            name: "Ixidor, Reality Sculptor (U)",
+            commanders: decks::IXIDOR_COMMANDERS,
+            main: decks::IXIDOR_MAIN,
+        },
+        // Seat 6306: Võx, Child of the Collective's EDHREC average deck. `--pod-decks 6306`.
+        PodDeck {
+            name: "Võx, Child of the Collective (U)",
+            commanders: decks::VOX_COMMANDERS,
+            main: decks::VOX_MAIN,
+        },
+        // Seat 6307: Geordi La Forge, Innovator's EDHREC average deck. `--pod-decks 6307`.
+        PodDeck {
+            name: "Geordi La Forge, Innovator (U)",
+            commanders: decks::GEORDI_LA_FORGE_COMMANDERS,
+            main: decks::GEORDI_LA_FORGE_MAIN,
+        },
     ]
 }
 
@@ -46549,6 +46567,9 @@ mod tests {
             ("Subcommander T'Pol", &[0x229E]),
             ("Chancellor Gorkon", &[0x229F]),
             ("Saavik, Stoic Student", &[0x22A0]),
+            ("Ixidor, Reality Sculptor", &[0x22A1]),
+            ("Võx, Child of the Collective", &[0x22A2]),
+            ("Geordi La Forge, Innovator", &[0x22A3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

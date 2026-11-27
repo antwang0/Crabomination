@@ -1478,3 +1478,186 @@ pub fn ghost_of_illyria() -> CardDefinition {
         ..creature("Ghost of Illyria", cost(&[generic(3), w()]), vec![CreatureType::Elemental, CreatureType::Spirit], 3, 3)
     }
 }
+
+// ── Võx's and Geordi La Forge's EDHREC gaps (scan of 2026-11-27) ────────────
+
+/// Enterprise NX-01 — {3}{U} legendary Spacecraft. Entering, tap target
+/// creature an opponent controls and put a stun counter on it. Station; 6+:
+/// flying, vigilance 4/3.
+pub fn enterprise_nx_01() -> CardDefinition {
+    CardDefinition {
+        supertypes: vec![Supertype::Legendary],
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) },
+            Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+        ]))],
+        ..spacecraft(
+            "Enterprise NX-01",
+            cost(&[generic(3), u()]),
+            vec![StationBand {
+                min: 6,
+                keywords: vec![Keyword::Flying, Keyword::Vigilance],
+                pt: Some((4, 3)),
+                ..Default::default()
+            }],
+        )
+    }
+}
+
+/// Suurok-Class Science Vessel — {2}{U} Spacecraft. Entering draws a card.
+/// Station; 5+: flying 3/2.
+pub fn suurok_class_science_vessel() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![etb(draw(Value::ONE))],
+        ..spacecraft(
+            "Suurok-Class Science Vessel",
+            cost(&[generic(2), u()]),
+            vec![StationBand { min: 5, keywords: vec![Keyword::Flying], pt: Some((3, 2)), ..Default::default() }],
+        )
+    }
+}
+
+/// Esperzoa — {2}{U} 4/3 flying Jellyfish artifact creature. At the beginning
+/// of your upkeep, return an artifact you control to its owner's hand.
+pub fn esperzoa() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::ReturnOneYouControl { filter: R::Artifact, keep_best: false },
+        }],
+        ..creature("Esperzoa", cost(&[generic(2), u()]), vec![CreatureType::Jellyfish], 4, 3)
+    }
+}
+
+/// Interstellar Effigy — {4}{U} 4/3 Construct artifact creature. Entering,
+/// return target creature an opponent controls to its owner's hand.
+pub fn interstellar_effigy() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        triggered_abilities: vec![etb(Effect::Move {
+            what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
+            to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+        })],
+        ..creature("Interstellar Effigy", cost(&[generic(4), u()]), vec![CreatureType::Construct], 4, 3)
+    }
+}
+
+/// Suus Mahna Practitioner — {2}{U} 3/2 Vulcan Officer. Strange new worlds —
+/// {4}{U}, {T}: tap target creature; costs {X} less (X = differently named
+/// lands you control).
+pub fn suus_mahna_practitioner() -> CardDefinition {
+    CardDefinition {
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            mana_cost: cost(&[generic(4), u()]),
+            cost_reduction_value: Some(land_names()),
+            effect: Effect::Tap { what: target_filtered(R::Creature) },
+            ..Default::default()
+        }],
+        ..creature(
+            "Suus Mahna Practitioner",
+            cost(&[generic(2), u()]),
+            vec![CreatureType::Vulcan, CreatureType::Officer],
+            3,
+            2,
+        )
+    }
+}
+
+/// Cloak and Phaser — {8}{U} sorcery, costs {X} less (X = differently named
+/// lands you control). Two 2/2 black Romulans; draw two, then discard one.
+pub fn cloak_and_phaser() -> CardDefinition {
+    CardDefinition {
+        name: "Cloak and Phaser",
+        cost: cost(&[generic(8), u()]),
+        card_types: vec![CardType::Sorcery],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast, where X is the number of differently named lands you control.",
+            effect: StaticEffect::SelfCostReducedByValue { amount: land_names() },
+        }],
+        effect: Effect::Seq(vec![
+            Effect::CreateToken {
+                who: PlayerRef::You,
+                count: Value::Const(2),
+                definition: Arc::new(TokenDefinition {
+                    name: "Romulan".into(),
+                    power: 2,
+                    toughness: 2,
+                    card_types: vec![CardType::Creature],
+                    colors: vec![Color::Black],
+                    subtypes: Subtypes { creature_types: vec![CreatureType::Romulan], ..Default::default() },
+                    ..Default::default()
+                }),
+            },
+            draw(Value::Const(2)),
+            Effect::Discard { who: Selector::You, amount: Value::ONE, random: false },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Ixidor, Reality Sculptor's EDHREC gaps (scan of 2026-11-27) ─────────────
+
+/// "When this creature is turned face up, [effect]" (CR 708.8).
+fn on_turned_up(effect: Effect) -> TriggeredAbility {
+    TriggeredAbility { event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource), effect }
+}
+
+/// Mistfire Weaver — {3}{U} 3/1 flying Djinn Wizard, morph {2}{U}. Turned face
+/// up: target creature you control gains hexproof until end of turn.
+pub fn mistfire_weaver() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying, Keyword::Morph(cost(&[generic(2), u()]))],
+        triggered_abilities: vec![on_turned_up(Effect::GrantKeyword {
+            what: target_filtered(R::Creature.and(R::ControlledByYou)),
+            keyword: Keyword::Hexproof,
+            duration: Duration::EndOfTurn,
+        })],
+        ..creature("Mistfire Weaver", cost(&[generic(3), u()]), vec![CreatureType::Djinn, CreatureType::Wizard], 3, 1)
+    }
+}
+
+/// Monastery Loremaster — {3}{U} 3/2 Djinn Wizard, megamorph {5}{U}. Turned
+/// face up: return target noncreature, nonland card from your graveyard to
+/// your hand.
+pub fn monastery_loremaster() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Megamorph(cost(&[generic(5), u()]))],
+        triggered_abilities: vec![on_turned_up(Effect::Move {
+            what: target_filtered(R::Noncreature.and(R::Nonland).and(R::InYourGraveyard)),
+            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+        })],
+        ..creature("Monastery Loremaster", cost(&[generic(3), u()]), vec![CreatureType::Djinn, CreatureType::Wizard], 3, 2)
+    }
+}
+
+/// Silumgar Spell-Eater — {2}{U} 2/3 Snake Wizard, megamorph {4}{U}. Turned
+/// face up: counter target spell unless its controller pays {3}.
+pub fn silumgar_spell_eater() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Megamorph(cost(&[generic(4), u()]))],
+        triggered_abilities: vec![on_turned_up(Effect::CounterUnlessPaid {
+            what: target_filtered(R::IsSpellOnStack),
+            mana_cost: cost(&[generic(3)]),
+            exile: false,
+            extra_generic: None,
+            if_paid: None,
+        })],
+        ..creature("Silumgar Spell-Eater", cost(&[generic(2), u()]), vec![CreatureType::Snake, CreatureType::Wizard], 2, 3)
+    }
+}
+
+/// Unblinking Bleb — {3}{U} 1/3 Illusion, morph {2}{U}. Whenever it or another
+/// permanent is turned face up, you may scry 2.
+pub fn unblinking_bleb() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Morph(cost(&[generic(2), u()]))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::AnyPlayer),
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+        }],
+        ..creature("Unblinking Bleb", cost(&[generic(3), u()]), vec![CreatureType::Illusion], 1, 3)
+    }
+}

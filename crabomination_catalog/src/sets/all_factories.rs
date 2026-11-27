@@ -19621,6 +19621,16 @@ static DECKS: &[Factory] = &[
     super::decks::saavik_stoic_student,
     super::decks::survivor_of_korlis,
     super::decks::ghost_of_illyria,
+    super::decks::enterprise_nx_01,
+    super::decks::suurok_class_science_vessel,
+    super::decks::esperzoa,
+    super::decks::interstellar_effigy,
+    super::decks::suus_mahna_practitioner,
+    super::decks::cloak_and_phaser,
+    super::decks::mistfire_weaver,
+    super::decks::monastery_loremaster,
+    super::decks::silumgar_spell_eater,
+    super::decks::unblinking_bleb,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

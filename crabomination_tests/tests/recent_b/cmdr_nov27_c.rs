@@ -372,3 +372,21 @@ fn test_of_loyalty_exiles_from_an_opponents_graveyard() {
     assert!(g.exile.iter().any(|c| c.id == theirs));
     assert_eq!(g.players[0].hand.len(), 1);
 }
+
+/// Cloak and Phaser costs {X} less, X = differently named lands: with three
+/// names {5}{U} casts it (two Romulans).
+#[test]
+fn cloak_and_phaser_costs_less_per_land_name() {
+    let mut g = pod(2);
+    for land in [catalog::forest(), catalog::island(), catalog::swamp(), catalog::swamp()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    for _ in 0..2 {
+        g.add_card_to_library(0, catalog::island());
+    }
+    let cp = g.add_card_to_hand(0, catalog::cloak_and_phaser());
+    g.players[0].mana_pool.add(Color::Blue, 6);
+    cast(&mut g, cp, None, None);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Romulan").count(), 2);
+    assert_eq!(g.players[0].mana_pool.total(), 0);
+}
