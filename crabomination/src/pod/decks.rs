@@ -177066,3 +177066,60 @@ pub const SUBCOMMANDER_TPOL_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island, island, island, island,
 ];
+
+pub const CHANCELLOR_GORKON_COMMANDERS: &[CardFactory] = &[chancellor_gorkon];
+
+/// **Chancellor Gorkon**'s EDHREC average deck, card for card:
+/// 82 nonbasic cards + 8 Plains + 9 Swamps = 99.
+/// Chancellor Gorkon (EDHREC, fetched 2026-11-27).
+pub const CHANCELLOR_GORKON_MAIN: &[CardFactory] = &[
+    arcane_signet, ashnods_altar, astral_cornucopia, fellwar_stone, hedron_archive, mind_stone,
+    nim_deathmantle, orzhov_signet, phyrexian_altar, skullclamp, sol_ring, stonespeaker_crystal,
+    talisman_of_hierarchy, the_one_ring, brightclimb_pathway, cabal_coffers, caves_of_koilos,
+    command_tower, concealed_courtyard, exotic_orchard, fetid_heath, flooded_strand,
+    godless_shrine, high_market, isolated_chapel, marsh_flats, phyrexian_tower, polluted_delta,
+    shattered_sanctum, spire_of_industry, takenuma_abandoned_mire, urborg_tomb_of_yawgmoth,
+    vault_of_champions, ambassador_kehleyr, athreos_god_of_passage, blood_artist,
+    carrion_feeder, commander_raffi_musiker, cruel_celebrant, elas_il_kor_sadistic_pilgrim,
+    ensign_harry_kim_operations, grand_nagus_zek, karmic_guide, loran_of_the_third_path,
+    luminous_broodmoth, mikaeus_the_unhallowed, priest_of_fell_rites, ratadrabik_of_urborg,
+    reclamation_specialist, reconnaissance_partition, sulu_space_swashbuckler, sun_titan,
+    teysa_karlov, troi_winging_it, viscera_seer, weathered_wayfarer, woe_strider,
+    yawgmoth_thran_physician, zulaport_cutthroat, animate_dead, anointed_procession,
+    bastion_of_remembrance, gift_of_immortality, grave_pact, necromancy, smothering_tithe,
+    anguished_unmaking, enlightened_tutor, entomb, hes_dead_jim, malakir_rebirth, path_to_exile,
+    swords_to_plowshares, teferis_protection, buried_alive, command_decision, damn,
+    demonic_tutor, reanimate, sevinnes_reclamation, test_of_loyalty, victimize,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp,
+];
+
+pub const SAAVIK_COMMANDERS: &[CardFactory] = &[saavik_stoic_student];
+
+/// **Saavik, Stoic Student**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 23 Plains = 99.
+/// Saavik, Stoic Student (EDHREC, fetched 2026-11-27).
+pub const SAAVIK_MAIN: &[CardFactory] = &[
+    arcane_signet, citizens_crowbar, command_chair, crystal_ball, defense_grid,
+    malfunctioning_holodeck, mana_geode, manascape_refractor, marble_diamond, mind_stone,
+    pearl_medallion, planetarium_of_wan_shi_tong, queens_diamond, sol_ring, sunset_pyramid,
+    u_s_s_enterprise_c_time_tossed, uss_enterprise_d_galaxy_class, uss_excelsior_cutting_edge,
+    witches_eye, abstergo_entertainment, command_beacon, demolition_field,
+    eiganjo_seat_of_the_empire, idyllic_grange, myriad_landscape, northampton_farm,
+    nykthos_shrine_to_nyx, rogues_passage, secluded_steppe, starfleet_academy, urzas_cave,
+    zhalfirin_void, caravan_escort, clergy_of_the_holy_nimbus, cliffside_lookout,
+    clockwork_droid, compassionate_healer, curious_farm_animals, distinguished_conjurer,
+    faithful_pikemaster, ghost_of_illyria, goldmeadow_nomad, grand_abolisher, herbie_scout_unit,
+    nurturing_pixie, operations_officer, ori_plate_stacker, prehistoric_pet, rumor_gatherer,
+    saheeli_consul_of_oversight, senu_keen_eyed_protector, spirited_companion, splitskin_doll,
+    stockpiling_celebrant, sulu_space_swashbuckler, survivor_of_korlis, unyielding_gatekeeper,
+    four_knocks, gleaming_splendor, omen_of_the_sun, peace_in_our_time, redemption_arc,
+    acrobatic_maneuver, bilbos_gambit, cloudshift, guiding_bolt, justiciars_portal, mana_tithe,
+    path_to_exile, reprieve, scrollshift, shining_shoal, swords_to_plowshares,
+    approach_of_the_second_sun, introduction_to_prophecy, theres_coffee_in_that_nebula,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];

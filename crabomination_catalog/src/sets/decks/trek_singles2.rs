@@ -1369,3 +1369,112 @@ pub fn those_old_scientists() -> CardDefinition {
         ..Default::default()
     }
 }
+
+// ── Chancellor Gorkon's and Saavik's EDHREC gaps (scan of 2026-11-27) ───────
+
+/// He's Dead, Jim — {3}{B} instant. Destroy target creature. Surveil 1.
+pub fn hes_dead_jim() -> CardDefinition {
+    CardDefinition {
+        name: "He's Dead, Jim",
+        cost: cost(&[generic(3), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Destroy { what: target_filtered(R::Creature) },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Command Decision — {1}{W} sorcery. Choose one — destroy target creature
+/// with power 4 or greater; or draw a card.
+pub fn command_decision() -> CardDefinition {
+    CardDefinition {
+        name: "Command Decision",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Destroy { what: target_filtered(R::Creature.and(R::PowerAtLeast(4))) },
+            draw(Value::ONE),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Test of Loyalty — {B} sorcery. Choose one — exile target card from a
+/// graveyard and draw a card; or return target creature card from your
+/// graveyard to your hand.
+pub fn test_of_loyalty() -> CardDefinition {
+    use crate::effect::ZoneDest;
+    CardDefinition {
+        name: "Test of Loyalty",
+        cost: cost(&[b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::Move { what: target_filtered(R::InGraveyard), to: ZoneDest::Exile },
+                draw(Value::ONE),
+            ]),
+            Effect::Move {
+                what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+                to: ZoneDest::Hand(PlayerRef::You),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Saavik, Stoic Student — {4}{W} legendary 2/2 Vulcan Advisor, flash.
+/// Federation — entering, she deals X damage to target attacking or blocking
+/// creature an opponent controls (X = creature types among your non-Borg
+/// creatures).
+pub fn saavik_stoic_student() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flash],
+        triggered_abilities: vec![etb(Effect::DealDamage {
+            to: target_filtered(
+                R::Creature.and(R::IsAttacking.or(R::IsBlocking)).and(R::ControlledByOpponent),
+            ),
+            amount: federation(),
+        })],
+        ..legend(
+            "Saavik, Stoic Student",
+            cost(&[generic(4), w()]),
+            vec![CreatureType::Vulcan, CreatureType::Advisor],
+            2,
+            2,
+        )
+    }
+}
+
+/// Survivor of Korlis — {W} 1/1 Human Soldier, first strike. {1}{W}, exile it
+/// from your graveyard: scry 2.
+pub fn survivor_of_korlis() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::FirstStrike],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(1), w()]),
+            from_graveyard: true,
+            exile_self_cost: true,
+            effect: Effect::Scry { who: PlayerRef::You, amount: Value::Const(2) },
+            ..Default::default()
+        }],
+        ..creature("Survivor of Korlis", cost(&[w()]), vec![CreatureType::Human, CreatureType::Soldier], 1, 1)
+    }
+}
+
+/// Ghost of Illyria — {3}{W} 3/3 flying Elemental Spirit. Entering, exile up
+/// to one other target nonland permanent you control; it returns under its
+/// owner's control at the beginning of the next end step.
+pub fn ghost_of_illyria() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ApplyToTargets {
+            max_targets: 1,
+            min_targets: 0,
+            filter: R::Nonland.and(R::ControlledByYou).and(R::OtherThanSource),
+            effect: Box::new(Effect::ExileReturnToOwnerNextEndStep { what: Selector::Target(0), tapped: false }),
+        })],
+        ..creature("Ghost of Illyria", cost(&[generic(3), w()]), vec![CreatureType::Elemental, CreatureType::Spirit], 3, 3)
+    }
+}

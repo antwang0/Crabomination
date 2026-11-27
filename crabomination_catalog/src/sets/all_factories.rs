@@ -19615,6 +19615,12 @@ static DECKS: &[Factory] = &[
     super::decks::tricorder,
     super::decks::cryogenic_stasis,
     super::decks::those_old_scientists,
+    super::decks::hes_dead_jim,
+    super::decks::command_decision,
+    super::decks::test_of_loyalty,
+    super::decks::saavik_stoic_student,
+    super::decks::survivor_of_korlis,
+    super::decks::ghost_of_illyria,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

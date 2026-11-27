@@ -38263,6 +38263,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SUBCOMMANDER_TPOL_COMMANDERS,
             main: decks::SUBCOMMANDER_TPOL_MAIN,
         },
+        // Seat 6303: Chancellor Gorkon's EDHREC average deck. `--pod-decks 6303`.
+        PodDeck {
+            name: "Chancellor Gorkon (WB)",
+            commanders: decks::CHANCELLOR_GORKON_COMMANDERS,
+            main: decks::CHANCELLOR_GORKON_MAIN,
+        },
+        // Seat 6304: Saavik, Stoic Student's EDHREC average deck. `--pod-decks 6304`.
+        PodDeck {
+            name: "Saavik, Stoic Student (W)",
+            commanders: decks::SAAVIK_COMMANDERS,
+            main: decks::SAAVIK_MAIN,
+        },
     ]
 }
 
@@ -46535,6 +46547,8 @@ mod tests {
             ("Beverly Crusher, Ship's Doctor", &[0x229C]),
             ("Sulu, Space Swashbuckler", &[0x229D]),
             ("Subcommander T'Pol", &[0x229E]),
+            ("Chancellor Gorkon", &[0x229F]),
+            ("Saavik, Stoic Student", &[0x22A0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

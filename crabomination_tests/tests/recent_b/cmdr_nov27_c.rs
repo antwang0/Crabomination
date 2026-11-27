@@ -358,3 +358,17 @@ fn those_old_scientists_shuffles_graveyard_cards_home() {
     assert!(g.players[1].library.iter().any(|c| c.id == a));
     assert!(g.players[2].library.iter().any(|c| c.id == b));
 }
+
+/// Test of Loyalty's Plain, Simple Garak exiles a card from any graveyard
+/// (an opponent's here) and draws.
+#[test]
+fn test_of_loyalty_exiles_from_an_opponents_graveyard() {
+    let mut g = pod(2);
+    let theirs = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let tol = g.add_card_to_hand(0, catalog::test_of_loyalty());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, tol, Some(Target::Permanent(theirs)), Some(0));
+    assert!(g.exile.iter().any(|c| c.id == theirs));
+    assert_eq!(g.players[0].hand.len(), 1);
+}
