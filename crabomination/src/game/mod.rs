@@ -30781,6 +30781,16 @@ impl GameState {
                         }
                     }
                 }
+                // Hew the Entwood: "put all nonland cards chosen this way onto
+                // the battlefield, then put all land cards … tapped" — when
+                // both routes deploy, nonland picks enter first.
+                if picked_lands_to_battlefield && picked_matching_to_battlefield.is_some() {
+                    let lib = &self.players[player].library;
+                    let is_land = |id: &CardId| lib.iter().find(|c| c.id == *id).is_some_and(|c| c.definition.is_land());
+                    let (lands, nonlands): (Vec<CardId>, Vec<CardId>) = picks.iter().partition(|id| is_land(id));
+                    picks = nonlands;
+                    picks.extend(lands);
+                }
                 let mut events = vec![];
                 // Chrome Courier — check the picks against the rider filter
                 // while they're still library objects.

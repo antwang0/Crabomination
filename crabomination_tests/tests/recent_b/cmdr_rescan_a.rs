@@ -1073,6 +1073,10 @@ fn hew_the_entwood_trades_lands_for_revealed_artifacts() {
     assert!(g.battlefield_find(citadel).is_some_and(|c| c.tapped));
     assert!(g.battlefield_find(ring).is_some_and(|c| !c.tapped));
     assert!(g.battlefield_find(bolt).is_none() && !g.players[0].hand.iter().any(|c| c.id == bolt));
+    // "Put all nonland cards chosen this way onto the battlefield, then put
+    // all land cards": the Ring enters before the Citadel, picked first.
+    let at = |id| g.battlefield.iter().position(|c| c.id == id).unwrap();
+    assert!(at(ring) < at(citadel));
 }
 
 /// Hawkeye: becoming tapped lets you pay up to {3} and choose that many modes

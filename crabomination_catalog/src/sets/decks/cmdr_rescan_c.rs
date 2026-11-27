@@ -749,9 +749,8 @@ pub fn tomik_orzhov_lawmage() -> CardDefinition {
 
 /// Hew the Entwood — {3}{R}{R} sorcery. Sacrifice any number of lands, reveal
 /// that many, and put any number of the revealed artifact and/or land cards
-/// onto the battlefield (lands tapped); the rest go to the bottom at random.
-/// Approximation: chosen cards enter one at a time in pick order rather than
-/// all nonlands first, then all lands. (Koth, the Geomancer; Marwyn.)
+/// onto the battlefield — nonlands first, then lands tapped; the rest go to
+/// the bottom at random. (Koth, the Geomancer; Marwyn.)
 pub fn hew_the_entwood() -> CardDefinition {
     CardDefinition {
         name: "Hew the Entwood",
