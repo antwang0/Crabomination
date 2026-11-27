@@ -11731,10 +11731,11 @@ impl GameState {
         p: usize,
         land_type: crate::card::LandType,
     ) -> i32 {
+        let granters = self.land_type_granters(land_type);
         self.battlefield
             .iter()
             .filter(|c| c.controller == p && c.definition.is_land())
-            .filter(|c| self.permanent_has_land_type(c, land_type) || self.land_type_granted_to(c, land_type))
+            .filter(|c| self.permanent_has_land_type(c, land_type) || self.granted_by(&granters, c))
             .count() as i32
     }
 
@@ -11744,14 +11745,16 @@ impl GameState {
     /// lands") reads the printed line inside the walk instead of re-entering
     /// it — unguarded, that was a stack overflow in pods (seed 29565).
     pub(crate) fn land_type_granted_to(&self, card: &CardInstance, land_type: crate::card::LandType) -> bool {
+        self.granted_by(&self.land_type_granters(land_type), card)
+    }
+
+    /// [`Self::land_type_granted_to`] over granters the caller already holds
+    /// (a whole-board count walks them once, not once per land).
+    fn granted_by(&self, granters: &[&SelectionRequirement], card: &CardInstance) -> bool {
         thread_local! {
             static IN_GRANTER_WALK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
         }
-        if IN_GRANTER_WALK.with(|w| w.get()) {
-            return false;
-        }
-        let granters = self.land_type_granters(land_type);
-        if granters.is_empty() {
+        if granters.is_empty() || IN_GRANTER_WALK.with(|w| w.get()) {
             return false;
         }
         struct Reset;
