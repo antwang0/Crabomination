@@ -441,6 +441,9 @@ pub enum CreatureType {
     Talaxian,
     // Star Trek (Zero, Incorporeal Sensate).
     Medusan,
+    // Star Trek (Cleveland Booker, Empath; Xindi Surveyors).
+    Kwejian,
+    Xindi,
 }
 
 /// Land subtypes (basic land types + others).

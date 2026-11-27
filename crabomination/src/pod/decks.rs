@@ -177465,3 +177465,31 @@ pub const H_M_S_BOUNTY_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island,
 ];
+
+pub const CLEVELAND_BOOKER_COMMANDERS: &[CardFactory] = &[cleveland_booker_empath];
+
+/// **Cleveland Booker, Empath**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 12 Forests + 8 Mountains = 99.
+/// Cleveland Booker, Empath (EDHREC, fetched 2026-11-27).
+pub const CLEVELAND_BOOKER_MAIN: &[CardFactory] = &[
+    arcane_signet, crucible_of_worlds, deep_space_9, exploration_broodship, genesis_device,
+    idol_of_oblivion, sol_ring, starship_enterprise, cabaretti_courtyard, cinder_glade,
+    command_tower, evolving_wilds, exotic_orchard, fabled_passage, game_trail, gruul_turf,
+    myriad_landscape, quarks_bar, reliquary_tower, rockfall_vale, rootbound_crag, spire_garden,
+    stomping_ground, temporal_anomaly, terramorphic_expanse, wooded_foothills,
+    ancient_greenwarden, azusa_lost_but_seeking, bristly_bill_spine_sower,
+    captain_kathryn_janeway, captain_michael_burnham, captain_pike_fullness_of_time,
+    dal_rel_augment_orphan, hexhaven_invigorator, icetill_explorer, kodama_of_the_east_tree,
+    lotus_cobra, mina_and_denn_wildborn, moraug_fury_of_akoum, mossborn_hydra,
+    omnath_locus_of_rage, oracle_of_mul_daya, rampaging_baloths, sabotender, sakura_tribe_elder,
+    saurian_explorer, scute_swarm, syndicate_liquidators, tannuk_memorial_ensign,
+    tireless_provisioner, tireless_tracker, traveling_chocobo, xindi_surveyors, exploration,
+    garruks_uprising, hit_it, impact_tremors, parallel_lives, stable_wormhole,
+    valakut_exploration, zendikars_roil, beast_within, chaos_warp, crop_rotation, harrow,
+    heroic_intervention, krosan_grip, natures_claim, tamiyos_safekeeping, awaken_the_woods,
+    blasphemous_act, cultivate, explore, farseek, final_frontier, kodamas_reach, natures_lore,
+    rampant_growth, vandalblast,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];

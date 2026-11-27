@@ -291,3 +291,56 @@ fn uss_defiant_phases_out_with_a_creature() {
     assert!(g.battlefield_find(ship).is_none() && g.battlefield_find(bears).is_none());
     assert!(g.phased_out.iter().any(|c| c.id == ship) && g.phased_out.iter().any(|c| c.id == bears));
 }
+
+/// Hit It!: of the top five, a land enters tapped and the other four are
+/// milled; creatures you control have haste.
+#[test]
+fn hit_it_puts_a_land_from_the_top_five_and_mills_the_rest() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    let forest = g.add_card_to_library(0, catalog::forest());
+    for _ in 0..4 {
+        g.add_card_to_library(0, catalog::grizzly_bears());
+    }
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let hit = g.add_card_to_hand(0, catalog::hit_it());
+    g.players[0].mana_pool.add(Color::Red, 2);
+    g.players[0].mana_pool.add(Color::Green, 1);
+    cast(&mut g, hit, None, None);
+    assert!(g.battlefield_find(forest).is_some_and(|c| c.tapped));
+    assert_eq!(g.players[0].graveyard.len(), 4);
+    assert!(g.computed_permanent(bears).unwrap().keywords().contains(&Keyword::Haste));
+}
+
+/// Temporal Anomaly: mill four, a permanent card among them returns to hand,
+/// and a tapped New Planet land token enters.
+#[test]
+fn temporal_anomaly_mills_four_keeps_a_permanent_and_makes_a_planet() {
+    let mut g = pod(2);
+    g.players[0].library.clear();
+    for _ in 0..3 {
+        g.add_card_to_library(0, catalog::lightning_bolt());
+    }
+    let bears = g.add_card_to_library(0, catalog::grizzly_bears());
+    let anomaly = g.add_card_to_battlefield(0, catalog::temporal_anomaly());
+    g.players[0].mana_pool.add(Color::Green, 4);
+    activate_at(&mut g, anomaly, 1).expect("activate");
+    assert!(g.players[0].hand.iter().any(|c| c.id == bears));
+    assert_eq!(g.players[0].graveyard.iter().filter(|c| c.definition.name == "Lightning Bolt").count(), 3);
+    assert!(g.battlefield.iter().any(|c| c.definition.name == "New Planet" && c.tapped));
+}
+
+fn activate_at(g: &mut GameState, id: CardId, idx: usize) -> Result<(), GameError> {
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: id,
+        ability_index: idx,
+        target: None,
+        additional_targets: vec![],
+        x_value: None,
+        mode: None,
+    })?;
+    drain_stack(g);
+    Ok(())
+}

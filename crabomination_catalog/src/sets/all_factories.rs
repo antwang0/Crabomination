@@ -19659,6 +19659,10 @@ static DECKS: &[Factory] = &[
     super::decks::flying_dolphin_fish,
     super::decks::humpback_whales,
     super::decks::long_finned_skywhale,
+    super::decks::cleveland_booker_empath,
+    super::decks::temporal_anomaly,
+    super::decks::xindi_surveyors,
+    super::decks::hit_it,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

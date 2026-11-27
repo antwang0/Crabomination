@@ -38347,6 +38347,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::H_M_S_BOUNTY_COMMANDERS,
             main: decks::H_M_S_BOUNTY_MAIN,
         },
+        // Seat 6317: Cleveland Booker, Empath's EDHREC average deck. `--pod-decks 6317`.
+        PodDeck {
+            name: "Cleveland Booker, Empath (RG)",
+            commanders: decks::CLEVELAND_BOOKER_COMMANDERS,
+            main: decks::CLEVELAND_BOOKER_MAIN,
+        },
     ]
 }
 
@@ -46633,6 +46639,7 @@ mod tests {
             ("Chekov and McCoy", &[0x22AA]),
             ("Zefram Cochrane, Warp Pioneer", &[0x22AB]),
             ("H.M.S. Bounty, Unlikely Timeship", &[0x22AC]),
+            ("Cleveland Booker, Empath", &[0x22AD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
