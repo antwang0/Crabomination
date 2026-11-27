@@ -38071,6 +38071,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::BRAD_BOIMLER_COMMANDERS,
             main: decks::BRAD_BOIMLER_MAIN,
         },
+        // Seat 6271: Itazura, Lingering Wick's EDHREC average deck. `--pod-decks 6271`.
+        PodDeck {
+            name: "Itazura, Lingering Wick (UR)",
+            commanders: decks::ITAZURA_COMMANDERS,
+            main: decks::ITAZURA_MAIN,
+        },
+        // Seat 6272: Miss Highwater's EDHREC average deck. `--pod-decks 6272`.
+        PodDeck {
+            name: "Miss Highwater (B)",
+            commanders: decks::MISS_HIGHWATER_COMMANDERS,
+            main: decks::MISS_HIGHWATER_MAIN,
+        },
     ]
 }
 
@@ -46277,6 +46289,8 @@ mod tests {
             ("M'Ress, Crew Coordinator", &[0x227C]),
             ("Worf, Son of Mogh", &[0x227D]),
             ("Brad Boimler, Eager Ensign", &[0x227E]),
+            ("Itazura, Lingering Wick", &[0x227F]),
+            ("Miss Highwater", &[0x2280]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

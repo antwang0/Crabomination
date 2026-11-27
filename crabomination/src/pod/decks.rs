@@ -176158,3 +176158,58 @@ pub const BRAD_BOIMLER_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const ITAZURA_COMMANDERS: &[CardFactory] = &[itazura_lingering_wick];
+
+/// **Itazura, Lingering Wick**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 9 Mountains = 99.
+/// Itazura, Lingering Wick (EDHREC, fetched 2026-11-27).
+pub const ITAZURA_MAIN: &[CardFactory] = &[
+    arcane_signet, coveted_jewel, fellwar_stone, izzet_signet, lightning_greaves, mind_stone,
+    scroll_rack, senseis_divining_top, sol_ring, talisman_of_creativity, thought_vessel,
+    cascade_bluffs, command_tower, exotic_orchard, frostboil_snarl, homeward_path,
+    reliquary_tower, riverpyre_verge, scalding_tarn, shivan_reef, steam_vents,
+    stormcarved_coast, sulfur_falls, temple_of_epiphany, thundering_falls, training_center,
+    alexios_deimos_of_kosmos, alicia_masters_skilled_sculptor, ancient_copper_dragon,
+    ancient_silver_dragon, blightsteel_colossus, braids_conjurer_adept, coveted_falcon,
+    etali_primal_storm, humble_defector, kozilek_butcher_of_truth, perplexing_chimera,
+    plargg_and_nassari, red_death_shipwrecker, roaming_throne, spark_double,
+    sphinx_of_the_second_sun, the_ninth_doctor, wandering_archaic, zaffai_and_the_tempests,
+    descent_into_avernus, omniscience, one_with_the_multiverse, paradox_haze, propaganda,
+    shadow_of_the_second_sun, weftwalking, arcane_denial, brainstorm, brand, chaos_warp,
+    counterspell, hide_on_the_ceiling, invert_polarity, mana_drain, narsets_reversal,
+    planar_incision, release_to_the_wind, return_the_favor, sink_into_stupor, spaceshift,
+    tempt_with_mayhem, aminatous_augury, beacon_of_tomorrows, blasphemous_act, brasss_bounty,
+    dance_with_calamity, hit_the_mother_lode, improvisation_capstone, jeskas_will, ponder,
+    prisoners_dilemma, sea_gate_restoration, windfall,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const MISS_HIGHWATER_COMMANDERS: &[CardFactory] = &[miss_highwater];
+
+/// **Miss Highwater**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 27 Swamps = 99.
+/// Miss Highwater (EDHREC, fetched 2026-11-27).
+pub const MISS_HIGHWATER_MAIN: &[CardFactory] = &[
+    arcane_signet, crawlspace, jet_medallion, lightning_greaves, pendant_of_prosperity,
+    sol_ring, swiftfoot_boots, tempting_contract, the_darkness_crystal, the_soul_stone,
+    thought_vessel, vorpal_sword, whispersilk_cloak, wishclaw_talisman, bojuka_bog,
+    cabal_coffers, cabal_stronghold, geier_reach_sanitarium, nykthos_shrine_to_nyx,
+    rogues_passage, shizo_deaths_storehouse, urborg_tomb_of_yawgmoth, aclazotz_deepest_betrayal,
+    archfiend_of_despair, crypt_ghast, gix_yawgmoth_praetor, gonti_night_minister,
+    gray_merchant_of_asphodel, keen_duelist, kuroki_thief_of_talents, master_of_the_feast,
+    oft_nabbed_goat, ophiomancer, rankle_master_of_pranks, sangromancer, scrawling_crawler,
+    seizan_perverter_of_truth, sheoldred_the_apocalypse, sower_of_discord, summon_primal_odin,
+    tree_of_perdition, zenith_chronicler, black_market_connections, cunning_rhetoric,
+    curse_of_vengeance, koskun_falls, no_mercy, painful_quandary, parker_luck, phyrexian_arena,
+    waste_not, baleful_mastery, dark_ritual, darkness, deadly_rollick, defile, imps_mischief,
+    malakir_rebirth, withering_torment, liliana_of_the_veil, dark_deal, decorum_dissertation,
+    exsanguinate, feed_the_swarm, infernal_offering, reanimate, scheming_symmetry,
+    sign_in_blood, syphon_mind, tempt_with_immortality, toxic_deluge, virtuss_maneuver,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp,
+];
