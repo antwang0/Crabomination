@@ -314,6 +314,8 @@ const ALLOWED_MODELLING: &[(&str, &str)] = &[
     ("There's Coffee in that Nebula", "flashback"),
     ("Final Frontier", "flashback"),
     ("Open Communications", "flashback"),
+    ("Pure Energy", "flashback"),
+    ("Energize", "flashback"),
     // "can't be blocked by creatures with greater power" is skulk's reminder
     // text, printed without the keyword (CR 702.118a).
     ("Locke, Treasure Hunter", "skulk"),
