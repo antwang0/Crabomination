@@ -115,6 +115,21 @@ fn sahir_grows_on_exactly_one_from_your_own_sources() {
     assert_eq!(plus_ones(&g, sahir), 2, "not exactly 1, or not your ability");
 }
 
+/// Bug fix (`LifeLostToOwnEffect`): the synthesized twin of a self-caused
+/// loss reaches only "causes you to lose life" listeners — Lich's Tomb's
+/// "whenever you lose life, sacrifice a permanent per life" fires once, not
+/// twice.
+#[test]
+fn a_self_caused_loss_triggers_ordinary_life_loss_listeners_once() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::lichs_tomb());
+    for _ in 0..4 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    lose(&mut g, 0, PlayerRef::You, 1);
+    assert_eq!(g.battlefield.iter().filter(|c| c.controller == 0).count(), 4, "one sacrifice for one life");
+}
+
 /// CR 113.6b — Sahir's eminence pings from the command zone, and the damage is
 /// attributed to its owner (a source they control).
 #[test]
