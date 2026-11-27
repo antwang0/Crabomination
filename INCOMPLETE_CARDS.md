@@ -2362,3 +2362,12 @@ approximated):
 | Card | Printed | Approximation |
 |---|---|---|
 | 🟡 Romulan Bird-of-Prey | "as long as this Spacecraft isn't a creature" (hexproof; the charge trigger's intervening if) | read as "fewer than eight charge counters" (its creature band): an effect that animates it below 8 keeps the hexproof |
+
+`decks::cmdr_nov27`:
+
+| Card | Printed | Approximation |
+|---|---|---|
+| 🟡 Matoc, Lavamancer | "whenever a source you control deals damage, if at least one permanent or player was dealt exactly 2 of that damage" | `DealsDamage` per damaged recipient with amount 2: a combat hit on two blockers for 2 each triggers twice, and a noncombat batch reads its total (2 to each of two creatures is 4, no trigger) |
+| 🟡 Leyline of Combustion | "whenever you and/or at least one permanent you control becomes the target" | once per such target, not once per spell or ability |
+| 🟡 Glava, Five-Advents Mage | "you may have the value of X become 5" | taken whenever it raises X, never declined, never lowers it |
+| 🟡 Itazura, Lingering Wick | "each opponent secretly chooses a number 0 or greater" | the ask's maximum is the best exiled spell's mana value (a higher bid buys nothing a bot can see); bots bid as a life payment |
