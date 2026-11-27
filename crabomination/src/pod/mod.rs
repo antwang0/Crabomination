@@ -38527,6 +38527,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CAPTAIN_BENJAMIN_SISKO_COMMANDERS,
             main: decks::CAPTAIN_BENJAMIN_SISKO_MAIN,
         },
+        // Seat 6347: The Duras Sisters's EDHREC average deck. `--pod-decks 6347`.
+        PodDeck {
+            name: "The Duras Sisters (BR)",
+            commanders: decks::THE_DURAS_SISTERS_COMMANDERS,
+            main: decks::THE_DURAS_SISTERS_MAIN,
+        },
+        // Seat 6348: L'Rell, Fierce Visionary's EDHREC average deck. `--pod-decks 6348`.
+        PodDeck {
+            name: "L'Rell, Fierce Visionary (BR)",
+            commanders: decks::LRELL_COMMANDERS,
+            main: decks::LRELL_MAIN,
+        },
     ]
 }
 
@@ -46843,6 +46855,8 @@ mod tests {
             ("Phlox, Unorthodox Doctor", &[0x22C8]),
             ("Saru, Unthreatened", &[0x22C9]),
             ("Captain Benjamin Sisko", &[0x22CA]),
+            ("The Duras Sisters", &[0x22CB]),
+            ("L'Rell, Fierce Visionary", &[0x22CC]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

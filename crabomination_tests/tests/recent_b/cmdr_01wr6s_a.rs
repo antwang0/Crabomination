@@ -397,3 +397,57 @@ fn hapatras_mark_removes_all_minus_counters() {
     cast(&mut g, mark, Some(Target::Permanent(giant)), None);
     assert_eq!(g.battlefield_find(giant).unwrap().counter_count(CounterType::MinusOneMinusOne), 0);
 }
+
+/// The Destruction of Praxis: -X/-X with X = differently named lands; at six
+/// names it also makes two hasty Klingon Warriors.
+#[test]
+fn destruction_of_praxis_scales_with_land_names() {
+    let mut g = pod(2);
+    for land in [catalog::forest(), catalog::plains(), catalog::island(), catalog::swamp(), catalog::mountain()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let dragon = g.add_card_to_battlefield(1, catalog::shivan_dragon());
+    let praxis = g.add_card_to_hand(0, catalog::the_destruction_of_praxis());
+    cast(&mut g, praxis, None, None);
+    assert!(g.battlefield_find(giant).is_none(), "3/3 under -5/-5");
+    assert!(g.battlefield_find(dragon).is_none(), "5/5 under -5/-5");
+    assert!(!g.battlefield.iter().any(|c| c.definition.name == "Klingon Warrior"), "five names: no tokens");
+
+    let mut g = pod(2);
+    for land in [catalog::forest(), catalog::plains(), catalog::island(), catalog::swamp(), catalog::mountain(), catalog::qonos()] {
+        g.add_card_to_battlefield(0, land);
+    }
+    let praxis = g.add_card_to_hand(0, catalog::the_destruction_of_praxis());
+    cast(&mut g, praxis, None, None);
+    let warriors = g.battlefield.iter().filter(|c| c.definition.name == "Klingon Warrior").count();
+    assert_eq!(warriors, 2, "six names: two tokens, made after the -6/-6");
+}
+
+/// Red Alert! costs {2} less while a creature attacks you: {R} alone casts
+/// it then.
+#[test]
+fn red_alert_is_cheap_while_you_are_attacked() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    let spell = g.add_card_to_hand(0, catalog::red_alert());
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.players[0].mana_pool.add(Color::Red, 1);
+    assert!(
+        g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+            .is_err(),
+        "full price unpaid"
+    );
+    let attacker = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    g.clear_sickness(attacker);
+    g.active_player_idx = 1;
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 1;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker, target: AttackTarget::Player(0) }]))
+        .expect("attack");
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::CastSpell { card_id: spell, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("{R} is enough while attacked");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(bears).unwrap().power, 4);
+}

@@ -178355,3 +178355,61 @@ pub const CAPTAIN_BENJAMIN_SISKO_MAIN: &[CardFactory] = &[
     // Basics
     forest, forest, island, island, mountain, mountain, plains, plains, plains, swamp,
 ];
+
+pub const THE_DURAS_SISTERS_COMMANDERS: &[CardFactory] = &[the_duras_sisters];
+
+/// **The Duras Sisters**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 12 Mountains + 12 Swamps = 99.
+/// The Duras Sisters (EDHREC, fetched 2026-11-27).
+pub const THE_DURAS_SISTERS_MAIN: &[CardFactory] = &[
+    arcane_signet, chainsaw, d_7_battle_cruiser, hammer_of_purphoros, rakdos_signet, replicator,
+    sickbay, sol_ring, bloodstained_mire, bojuka_bog, command_tower, hells_kitchen,
+    luxury_suite, qonos, quarks_bar, reliquary_tower, rogues_passage, smoldering_marsh,
+    terramorphic_expanse, the_unicomplex, agent_venom, aspiring_champion,
+    battle_scarred_survivalist, bloodcrusher_of_khorne, chadich_investigator,
+    defense_force_aggressor, fearsome_goblin_pair, general_chang_cold_warrior,
+    gowron_eager_for_battle, gut_true_soul_zealot, hammerhead_maggia_boss,
+    lrell_fierce_visionary, mahadi_emporium_master, mirkwood_bats, munitions_enthusiast,
+    pitiless_plunderer, rampaging_classmate, sanguinary_priest, slash_reptile_rampager,
+    sloppity_bilepiper, spider_man_web_spinner, sycorax_commander, thanos_deaths_consort,
+    vashta_nerada, venomcrawler, warship_flight_crew, ajanis_anguish,
+    case_of_the_stashed_skeleton, goblin_bombardment, hour_of_victory, mass_hysteria,
+    rising_of_the_day, abrade, bedevil, dark_ritual, deadly_dispute, decoy_ploy, fling,
+    improvised_club, infernal_rebirth, last_gasp, lightning_strike, nasty_end,
+    perils_of_the_past, run_amok, seething_song, boarding_action, cruel_tutor, diabolic_tutor,
+    feed_the_swarm, gintak_charge, grim_tutor, masterminds_acquisition, nights_whisper,
+    the_destruction_of_praxis,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp,
+];
+
+pub const LRELL_COMMANDERS: &[CardFactory] = &[lrell_fierce_visionary];
+
+/// **L'Rell, Fierce Visionary**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 11 Mountains + 12 Swamps = 99.
+/// L'Rell, Fierce Visionary (EDHREC, fetched 2026-11-27).
+pub const LRELL_MAIN: &[CardFactory] = &[
+    arcane_signet, batleth, d_7_battle_cruiser, i_k_s_neghvar_imperial_flagship,
+    ktinga_class_battle_cruiser, rakdos_signet, replicator, sarcophagus_ship_of_the_dead,
+    skullclamp, sol_ring, talisman_of_indulgence, the_sword_of_kahless, artificial_anomaly,
+    blood_crypt, canyon_slough, command_tower, dragonskull_summit, foreboding_ruins, qonos,
+    quarks_bar, rogues_passage, smoldering_marsh, temple_of_malice, the_unicomplex,
+    automated_warfare_system, battle_scarred_survivalist, chadich_investigator,
+    combat_celebrant, dghor_bloodletter, dahar_master, gagh_slinger, garna_bloodfist_of_keld,
+    general_chang_cold_warrior, gnarling_targ, gowron_eager_for_battle, grilka_widowed_warrior,
+    kang_suspicious_captain, koloth_tribble_hunter, kurn_son_of_mogh, mirkwood_bats,
+    morbid_opportunist, munitions_enthusiast, pitiless_plunderer, professional_face_breaker,
+    qonos_quartermaster, savvy_profiteer, storied_veteran, targ_wrangler, the_duras_sisters,
+    voq_torchbearer, worf_intelligence_contractor, bastion_of_remembrance, glory_to_the_empire,
+    impact_tremors, shared_animosity, sins_of_the_father, the_wrath_of_khan, vengeance_mission,
+    a_good_day_to_die, deadly_dispute, eject_the_warp_core, genesis_effect, impossible_choice,
+    perils_of_the_past, red_alert, terminate, test_of_identity, blasphemous_act,
+    boarding_action, nights_whisper, own_the_day, planetary_bombardment, stray_from_history,
+    test_of_loyalty, the_destruction_of_praxis, world_at_war,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp,
+];

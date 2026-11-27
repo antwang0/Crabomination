@@ -19718,6 +19718,16 @@ static DECKS: &[Factory] = &[
     super::decks::ferenginar,
     super::decks::dathon_and_picard_at_el_adrel,
     super::decks::captain_benjamin_sisko,
+    super::decks::qonos,
+    super::decks::perils_of_the_past,
+    super::decks::gintak_charge,
+    super::decks::the_destruction_of_praxis,
+    super::decks::eject_the_warp_core,
+    super::decks::the_wrath_of_khan,
+    super::decks::batleth,
+    super::decks::savvy_profiteer,
+    super::decks::genesis_effect,
+    super::decks::red_alert,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,
