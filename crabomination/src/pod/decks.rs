@@ -176576,3 +176576,32 @@ pub const ALORA_29_MAIN: &[CardFactory] = &[
     island, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const YUME_COMMANDERS: &[CardFactory] = &[yume_chronicler_of_valor];
+
+/// **Yume, Chronicler of Valor**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Yume, Chronicler of Valor (EDHREC, fetched 2026-11-27).
+pub const YUME_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, pearl_medallion, pendant_of_prosperity, sol_ring,
+    tempting_contract, the_mind_stone, thought_vessel, throne_of_eldraine, victory_chimes,
+    wedding_ring, abandoned_air_temple, adagia_windswept_bastion, eiganjo_seat_of_the_empire,
+    emeria_the_sky_ruin, mikokoro_center_of_the_sea, myriad_landscape, nykthos_shrine_to_nyx,
+    reliquary_tower, war_room, angel_of_the_ruins, arbiter_of_knollridge,
+    black_widow_intel_expert, curious_colossus, dawnbreak_reclaimer, flumph, joined_researchers,
+    keeper_of_the_accord, loran_of_the_third_path, mangara_the_diplomat, master_of_ceremonies,
+    nils_discipline_enforcer, scrawling_crawler, silverquill_lecturer, summon_yojimbo,
+    tataru_taru, the_sentry_golden_guardian, the_warring_triad, windborn_muse, witch_enchanter,
+    yes_man_personal_securitron, ghostly_prison, gleaming_splendor, land_tax,
+    love_song_of_night_and_day, monologue_tax, overwhelming_splendor, smugglers_share,
+    tenuous_truce, the_legend_of_yangchen, benevolent_offering, bilbos_gambit, dawns_truce,
+    erode, everybody_lives, generous_gift, immortal_obligation, path_to_exile, perch_protection,
+    reprieve, stroke_of_midnight, swords_to_plowshares, your_temple_is_under_attack,
+    teyo_geometric_tactician, approach_of_the_second_sun, cut_a_deal, excavation_technique,
+    jailbreak, promise_of_loyalty, reverse_the_sands, secret_rendezvous, starfall_invocation,
+    tempt_with_bunnies,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];

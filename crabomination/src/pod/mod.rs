@@ -38161,6 +38161,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ALORA_29_COMMANDERS,
             main: decks::ALORA_29_MAIN,
         },
+        // Seat 6286: Yume, Chronicler of Valor's EDHREC average deck. `--pod-decks 6286`.
+        PodDeck {
+            name: "Yume, Chronicler of Valor (W)",
+            commanders: decks::YUME_COMMANDERS,
+            main: decks::YUME_MAIN,
+        },
     ]
 }
 
@@ -46382,6 +46388,7 @@ mod tests {
             ("Chira, All In", &[0x228B]),
             ("Gale, Waterdeep Prodigy and Feywild Visitor", &[0x228C]),
             ("Alora, Merry Thief and Flaming Fist", &[0x228D]),
+            ("Yume, Chronicler of Valor", &[0x228E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
