@@ -177039,3 +177039,30 @@ pub const SULU_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const SUBCOMMANDER_TPOL_COMMANDERS: &[CardFactory] = &[subcommander_t_pol];
+
+/// **Subcommander T'Pol**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 31 Islands = 99.
+/// Subcommander T'Pol (EDHREC, fetched 2026-11-27).
+pub const SUBCOMMANDER_TPOL_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, astral_cornucopia, command_chair, commanders_sphere,
+    everflowing_chalice, hedron_archive, mind_stone, skullclamp, sol_ring, stonespeaker_crystal,
+    thought_vessel, tricorder, uss_enterprise_d_galaxy_class, wayfarers_bauble, command_tower,
+    exotic_orchard, myriad_landscape, ni_var_science_academy, path_of_ancestry,
+    shore_leave_planet, adric_mathematical_genius, ambulatory_reactor, archaeomancer,
+    archmage_emeritus, cloud_of_faeries, co_option_adjutant, cybernetic_specialist,
+    data_new_life, deadeye_navigator, fear_of_sleep_paralysis, federation_probe, flux_channeler,
+    hydro_man_fluid_felon, la_forge_perceptive_engineer, lieutenant_commander_data, mulldrifter,
+    peregrine_drake, reconnaissance_partition, seven_of_nine_tertiary_adjunct,
+    seven_of_nine_unassimilated, sister_of_silence, tishanas_tidebinder, vger_the_intruder,
+    venser_shaper_savant, amphibian_downpour, anthropological_mission, curiosity,
+    lost_in_the_maze, those_old_scientists, arcane_denial, blur, consider_the_prime_directive,
+    counterspell, cryogenic_stasis, cryptic_command, disallow, displace, essence_flux,
+    ghostly_flicker, hide_on_the_ceiling, planar_incision, refute, spider_sense, stifle,
+    test_of_priorities, ponder, stock_up,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island,
+];

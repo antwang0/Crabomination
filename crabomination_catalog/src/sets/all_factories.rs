@@ -19612,6 +19612,9 @@ static DECKS: &[Factory] = &[
     super::decks::sulu_space_swashbuckler,
     super::decks::vexing_drone,
     super::decks::uss_excelsior_cutting_edge,
+    super::decks::tricorder,
+    super::decks::cryogenic_stasis,
+    super::decks::those_old_scientists,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

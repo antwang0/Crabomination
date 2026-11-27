@@ -38257,6 +38257,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::SULU_COMMANDERS,
             main: decks::SULU_MAIN,
         },
+        // Seat 6302: Subcommander T'Pol's EDHREC average deck. `--pod-decks 6302`.
+        PodDeck {
+            name: "Subcommander T'Pol (U)",
+            commanders: decks::SUBCOMMANDER_TPOL_COMMANDERS,
+            main: decks::SUBCOMMANDER_TPOL_MAIN,
+        },
     ]
 }
 
@@ -46528,6 +46534,7 @@ mod tests {
             ("Chief Montgomery Scott", &[0x229B]),
             ("Beverly Crusher, Ship's Doctor", &[0x229C]),
             ("Sulu, Space Swashbuckler", &[0x229D]),
+            ("Subcommander T'Pol", &[0x229E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

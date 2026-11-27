@@ -1283,3 +1283,89 @@ pub fn uss_excelsior_cutting_edge() -> CardDefinition {
         )
     }
 }
+
+// ── Subcommander T'Pol's EDHREC gaps (scan of 2026-11-27) ───────────────────
+
+/// Tricorder — {1} Equipment, equip {1}. +1/+1 and "whenever this creature
+/// attacks, surveil 1".
+pub fn tricorder() -> CardDefinition {
+    CardDefinition {
+        name: "Tricorder",
+        cost: cost(&[generic(1)]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Equipment], ..Default::default() },
+        keywords: vec![Keyword::Equip(cost(&[generic(1)]))],
+        equipped_bonus: Some(crate::card::EquipBonus {
+            power: 1,
+            toughness: 1,
+            triggered_abilities: vec![on_attack(Effect::Surveil { who: PlayerRef::You, amount: Value::ONE })],
+            ..Default::default()
+        }),
+        ..Default::default()
+    }
+}
+
+/// Cryogenic Stasis — {1}{U} instant. Tap target creature, put a stun counter
+/// on it, draw a card.
+pub fn cryogenic_stasis() -> CardDefinition {
+    CardDefinition {
+        name: "Cryogenic Stasis",
+        cost: cost(&[generic(1), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::Seq(vec![
+            Effect::Tap { what: target_filtered(R::Creature) },
+            Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+            draw(Value::ONE),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Those Old Scientists — {2}{U} Saga. I — draw two, then discard two. II —
+/// return up to one target artifact, instant or sorcery card from your
+/// graveyard to your hand. III — up to two target cards in graveyards are
+/// shuffled into their owners' libraries.
+pub fn those_old_scientists() -> CardDefinition {
+    use crate::card::EnchantmentSubtype;
+    use crate::effect::{LibraryPosition, ZoneDest};
+    CardDefinition {
+        name: "Those Old Scientists",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Enchantment],
+        subtypes: Subtypes { enchantment_subtypes: vec![EnchantmentSubtype::Saga], ..Default::default() },
+        saga_chapters: vec![
+            (
+                1,
+                Effect::Seq(vec![
+                    draw(Value::Const(2)),
+                    Effect::Discard { who: Selector::You, amount: Value::Const(2), random: false },
+                ]),
+            ),
+            (
+                2,
+                Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Move {
+                        what: target_filtered(
+                            R::Artifact.or(R::HasCardType(CardType::Instant)).or(R::HasCardType(CardType::Sorcery)).and(R::InYourGraveyard),
+                        ),
+                        to: ZoneDest::Hand(PlayerRef::You),
+                    }),
+                },
+            ),
+            (
+                3,
+                Effect::ApplyToTargets {
+                    max_targets: 2,
+                    min_targets: 0,
+                    filter: R::InGraveyard,
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Library { who: PlayerRef::OwnerOfMoved, pos: LibraryPosition::Shuffled },
+                    }),
+                },
+            ),
+        ],
+        ..Default::default()
+    }
+}

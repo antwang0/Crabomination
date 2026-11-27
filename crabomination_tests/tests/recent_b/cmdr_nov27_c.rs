@@ -342,3 +342,19 @@ fn sulu_draws_on_tap_after_a_spacecraft_entered() {
     tap(&mut g);
     assert_eq!(g.players[0].hand.len(), 1);
 }
+
+/// Those Old Scientists III: two target cards in any graveyards go back into
+/// their owners' libraries.
+#[test]
+fn those_old_scientists_shuffles_graveyard_cards_home() {
+    let mut g = pod(3);
+    let a = g.add_card_to_graveyard(1, catalog::grizzly_bears());
+    let b = g.add_card_to_graveyard(2, catalog::lightning_bolt());
+    let def = catalog::those_old_scientists();
+    let (_, chapter) = def.saga_chapters.iter().find(|(n, _)| *n == 3).expect("III").clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(a)), 0, 0);
+    ctx.targets.push(Target::Permanent(b));
+    g.resolve_effect(&chapter, &ctx).expect("resolve");
+    assert!(g.players[1].library.iter().any(|c| c.id == a));
+    assert!(g.players[2].library.iter().any(|c| c.id == b));
+}
