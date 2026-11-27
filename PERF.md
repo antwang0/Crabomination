@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-27 (Commander run, `01WRuXc2yT`) — guardrail; a land-type granter guard, a LookPick reorder, an extra-turn count
+
+Touched shared paths: `lands_of_computed_type` / the mid-gather `has_ltype` fallback (`land_type_granted_to`: one
+thread-local read per granted-type check, granters still collected once per count); `ImpulsePending` (a branch, only
+taken when both deploy routes are set — Hew); `RevealUntilMatchingToBattlefield` (one bool); `end_turn` (one `+= 1`
+when an extra turn begins). `release`, 4-core box (Xeon @ 2.10GHz), base `b3637d308` vs tip:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok
+pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: 367,206 / 213,898 / 522,778 —
+                 decision-identical, base and tip
+callgrind        --bench --decks fixed --games 6 --threads 1: 1,061,233,518 Ir base vs 1,061,224,952 tip (-0.001 %)
+bench_ab.py      12 pairs: B/A median -7.01 %, mean -4.43 % (sd 11.73) — a noisy host (single runs 223-378); the Ir
+                 read is the signal at this size and it is flat
+```
+
 ### 2026-11-27 (Commander run, `modern_decks` second) — guardrail; dilemmas, assist paths, bot waterbend
 
 Touched shared paths: the trigger dispatch (one `SpellCast` arm: a stack scan + `effect_is_modal` per cast, a battlefield

@@ -20,7 +20,8 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
-| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, Radha](#fixedopen-2026-11-27-commander-run-01wruxc2yt--a-land-type-recursion-two-residuals-radha) | 16 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, 10 seats](#fixedopen-2026-11-27-commander-run-01wruxc2yt--a-land-type-recursion-two-residuals-10-seats) | 17 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc2yT` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc2yt-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `modern_decks` second) — bot waterbend, dilemmas, 19 seats](#fixedopen-2026-11-27-commander-run-modern_decks-second--bot-waterbend-dilemmas-19-seats) | 23 |
 | Bugs & robustness | [The Commander NEXT's lines as `modern_decks` (second run) found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-modern_decks-second-run-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc4uj`) — Assist, random discard, an optional-loop cap, 3 seats](#fixedopen-2026-11-27-commander-run-01wruxc4uj--assist-random-discard-an-optional-loop-cap-3-seats) | 18 |
@@ -608,21 +609,35 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
-## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, Radha
+## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, 10 seats
 
-Seat 6308 (Radha, Coalition Warlord; `decks::cmdr_01wr2y_a`, tests `recent_b::cmdr_01wr2y_a`).
+Seats 6308-6317 (EDHREC averages fetched 2026-11-27): Radha (`decks::cmdr_01wr2y_a`); Martok, Dr. Pulaski, Sela
+(`_b`); Rutherford, Worf Honor-Bound (`_c`); Chekov and McCoy, Zefram Cochrane, H.M.S. Bounty (`_d`); Cleveland
+Booker (`_e`). 32 cards, tests `recent_b::cmdr_01wr2y_a`.
 - ✅ **Bug: stack overflow** (abort) in pods, seed 29565 8 seats (Verdeloth's deck): a mid-gather land-type check
   (Dungrove Elder's Forest count) walked Life and Limb's "All Forests" granter filter without bound.
-  `GameState::land_type_granted_to` walks granters one ply deep.
+  `GameState::land_type_granted_to` walks granters one ply deep; `lands_of_computed_type` collects them once.
 - ✅ Hew the Entwood (nonland picks enter before the tapped lands); Aurora Awakener ("any number":
   `RevealUntilMatchingToBattlefield { any_number }`, headless takes all). Both were 5-seat sole residuals.
+- ✅ `Predicate::YouHaveBegunAnExtraTurnThisGame` + `Player.extra_turns_begun` (CR 500.7, H.M.S. Bounty);
+  `CreatureType::{Kwejian, Xindi}`.
 - ✅ `edhrec_deck.py` read a quoted phrase in a factory's line comment as its printed name (Sol'Kanar showed as an
   unseated one-card gap).
-- ✅ Seats 6309-6313: Martok, Dr. Pulaski, Sela (`cmdr_01wr2y_b`), Rutherford, Worf Honor-Bound (`cmdr_01wr2y_c`).
-- CLAIMED: Chekov and McCoy, Zefram Cochrane, H.M.S. Bounty (the deck) — H.M.S. Bounty needs "haven't begun an
-  extra turn this game"; U.S.S. Defiant, Test of Courage, Cetacean Ops, Flying Dolphin-Fish, Humpback Whales,
-  Long-Finned Skywhale.
 - OPEN (PERF candidate 2026-11-27): Sword of the Squeak on a ~300-token board, 5-8 s an action.
+- OPEN: Zefram's "once during each of your turns" is `WhileYourTurn` around Johann's once-each-turn grant — exact.
+  Salt Vampire's "may" is asked after the look (`LookAtHand` then `MayDo`) — exact.
+
+## The Commander NEXT's lines as `01WRuXc2yT` found them (moved verbatim, 2026-11-27)
+
+1. ⚠ **Several sessions share this branch:** fetch before you start and before every push; rebase, never force; `cargo check -p crabomination_catalog` after each rebase. Seat numbers race: after a conflicted rebase, checkout `--ours` of `pod/decks.rs` + `pod/mod.rs`, re-run `scripts/seat_decks.py` on top of the other session's seats, run `cr_903_5a_target_decks_are_legal_commander_decks`. New seats go at the end of `target_decks()`. ⚠ `scripts/gen_factory_lists.py` rewrites all of `all_factories.rs` — append by hand. ⚠ `seat_decks.py` needs every commander in `scripts/.scryfall_cache.json` — `scripts/fetch_cards.py "Name" …` first.
+2. ⚠ **One optimized build at a time; `CARGO_INCREMENTAL=0`.** A git worktree in the scratchpad with its own `CARGO_TARGET_DIR` lets you keep editing while the release build runs (15-22 min cold here). Never bench while clippy or a build runs (a contended `--bench` read 231 vs 297 games/s). Per-seat test: `CRAB_SEAT=<name prefix> cargo nextest run -p crabomination --lib -E 'test(cr_903_5a_the_official_precon_seats_play_pod_games)' --run-ignored all`.
+3. **State (2026-11-27, `modern_decks` second run): 6,307 seats** — 6289-6307 this run (19 Star Trek / Ixidor averages; DECK_FEATURES). **Commander rules: every FEATURE_ROADMAP Commander-status row ✅** (bot waterbend landed; assist rides every cast path but convoke / delve; CR 700.2 dilemmas ✅).
+4. **The smoke test is `--pod-random`** (`bot_ladder --commander --pod-random --seats N --games G --seed S`); `scripts/random_pods.sh` with `MIN=<first new seat>` fuzzes new seats. A failure prints `--pod-decks .. --first I --games 1`; replay under `CRAB_POD_TRACE=0`.
+5. **Sweeps this run** (release): 5,700 games over seeds 29564-29606 + 600 new-seat fuzz games: 0 panics; undecided ~0.1 % (4 CR 104.4a draws, 1 board cap — The Sixth Doctor's copy tokens). Gates: ENGINE_BACKLOG `modern_decks` second. **Next seed 29620.**
+6. **Next decks** (rescan with `edhrec_scan_top.py` + `edhrec_rank_closers.py`; cache rebuild in ENGINE_BACKLOG `01WRuXc3os`): four short — Radha (Coalition Warlord), Cleveland Booker, Borg Queen, Worf (Honor-Bound), Sulu (Heroic Helmsman), Chekov and McCoy; Command Decision / Test of Loyalty already landed. Captain Benjamin Sisko (19 short) wants planets + the dilemma count (`Value::DilemmasFacedThisTurn` is there).
+7. **The CR is pinned at 2026-11-06** — 713 Meld inserted (Monarch 726, initiative 727, restart 728). Re-pin procedure: ENGINE_BACKLOG `01WRuXc5Gy`.
+8. **Gotchas:** a random pod's draw depends on the deck count, so a seat append moves every `--pod-random` game (replay by `--pod-decks`). `add_card_to_battlefield` doesn't stamp "entered this turn" — cast the card in a test that reads it. A new bot candidate block needs its `cast_candidates` gate bit too (`graveyard_specialties`), or a debug pod panics "gate skipped a real candidate".
+9. **Earlier runs' NEXT lines** are in ENGINE_BACKLOG ("The Commander NEXT's lines as … found them", latest `modern_decks` second).
 
 ## FIXED/OPEN 2026-11-27 (Commander run, `modern_decks` second) — bot waterbend, dilemmas, 19 seats
 
