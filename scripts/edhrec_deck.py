@@ -49,7 +49,10 @@ def by_printed_name():
     for p in glob.glob(os.path.join(ROOT, "crabomination_catalog", "src", "**", "*.rs"), recursive=True):
         text = open(p, encoding="utf-8").read()
         for m in re.finditer(r"pub fn (\w+)\(\) -> (?:crate::card::)?CardDefinition \{(.*?)\n\}", text, re.S):
-            lit = re.search(r'\bname: "((?:[^"\\]|\\.)*)"', m.group(2)) or re.search(r'"((?:[^"\\]|\\.)*)"', m.group(2))
+            # Line comments dropped first: a quoted phrase in one (`// "Up to
+            # one": …`) would otherwise be read as the card's name.
+            body = re.sub(r"//[^\n]*", "", m.group(2))
+            lit = re.search(r'\bname: "((?:[^"\\]|\\.)*)"', body) or re.search(r'"((?:[^"\\]|\\.)*)"', body)
             if lit:
                 out.setdefault(lit.group(1), m.group(1))
     return out
