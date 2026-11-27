@@ -706,3 +706,38 @@ fn leyline_of_combustion_burns_whoever_targets_you() {
     drain_stack(&mut g);
     assert_eq!((g.players[0].life, g.players[1].life), (mine - 3, theirs - 2));
 }
+
+/// The Madcap Jester: its attack exiles each opponent's top card, and since
+/// its own ability did it, Jester's controller may play each. Bitter Ordeal
+/// (searching an opponent's library — CR 400.7, the search now announces the
+/// library origin) is "a spell you control" too.
+#[test]
+fn madcap_jester_plays_what_your_effects_exile_from_opponents_libraries() {
+    let mut g = pod(3);
+    let j = g.add_card_to_battlefield(0, catalog::the_madcap_jester());
+    g.battlefield.iter_mut().for_each(|c| c.summoning_sick = false);
+    let (t1, t2) = (g.players[1].library[0].id, g.players[2].library[0].id);
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: j, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    for t in [t1, t2] {
+        let c = g.exile.iter().find(|c| c.id == t).expect("exiled");
+        assert!(c.may_play_until.is_some(), "playable by Jester's controller");
+    }
+    let ordeal = g.add_card_to_hand(0, catalog::bitter_ordeal());
+    g.step = TurnStep::PostCombatMain;
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Black, 3);
+    g.perform_action(GameAction::CastSpell {
+        card_id: ordeal,
+        target: Some(Target::Player(2)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    })
+    .expect("ordeal");
+    drain_stack(&mut g);
+    let granted = g.exile.iter().filter(|c| c.owner == 2 && c.may_play_until.is_some()).count();
+    assert_eq!(granted, 2, "the searched card too");
+}

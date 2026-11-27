@@ -232,3 +232,58 @@ pub fn leyline_of_combustion() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// The Madcap Jester — {1}{U}{B}{R} legendary 3/2 Clown Wizard. Whenever it
+/// attacks, each opponent exiles their top card. Whenever a spell or ability
+/// you control exiles cards from an opponent's library, you may play them
+/// until the end of your next turn, spending mana as any type
+/// (`exile_from::OPPONENT_LIBRARY_BY_YOU`).
+pub fn the_madcap_jester() -> CardDefinition {
+    CardDefinition {
+        name: "The Madcap Jester",
+        cost: cost(&[generic(1), u(), b(), r()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Clown, CreatureType::Wizard], ..Default::default() },
+        power: 3,
+        toughness: 2,
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Attacks, EventScope::SelfSource),
+                effect: Effect::Move {
+                    what: Selector::TopOfLibrary { who: PlayerRef::EachOpponent, count: Value::ONE },
+                    to: ZoneDest::Exile,
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::CardExiledFrom(crate::effect::exile_from::OPPONENT_LIBRARY_BY_YOU),
+                    EventScope::AnyPlayer,
+                )
+                .with_filter(Predicate::SamePlayer(PlayerRef::TriggerEventPlayer, PlayerRef::You)),
+                effect: Effect::GrantMayPlay {
+                    what: Selector::TriggerSource,
+                    duration: MayPlayDuration::EndOfControllersNextTurn,
+                    to_owner: false,
+                    exile_after: false,
+                    pay_own_cost: true,
+                    any_color: true,
+                },
+            },
+        ],
+        ..Default::default()
+    }
+}
+
+/// Bitter Ordeal — {2}{B} sorcery with gravestorm. Search target player's
+/// library for a card and exile it; then they shuffle.
+pub fn bitter_ordeal() -> CardDefinition {
+    CardDefinition {
+        name: "Bitter Ordeal",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        keywords: vec![Keyword::Gravestorm],
+        effect: Effect::Search { who: PlayerRef::Target(0), filter: R::Any, to: ZoneDest::Exile },
+        ..Default::default()
+    }
+}
