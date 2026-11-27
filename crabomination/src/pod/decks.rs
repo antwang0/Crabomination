@@ -176494,3 +176494,31 @@ pub const THE_MADCAP_JESTER_MAIN: &[CardFactory] = &[
     island, island, island, island, island, mountain, mountain, mountain, mountain, swamp,
     swamp, swamp, swamp, swamp,
 ];
+
+pub const CHIRA_COMMANDERS: &[CardFactory] = &[chira_all_in];
+
+/// **Chira, All In**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Mountains = 99.
+/// Chira, All In (EDHREC, fetched 2026-11-27).
+pub const CHIRA_MAIN: &[CardFactory] = &[
+    amulet_of_vigor, arcane_signet, component_pouch, krarks_thumb, lightning_greaves,
+    ruby_medallion, sol_ring, swiftfoot_boots, sword_of_hours, the_deck_of_many_things,
+    treasure_chest, vexing_puzzlebox, wand_of_wonder, arena_of_glory, nykthos_shrine_to_nyx,
+    rogues_passage, the_gold_saucer, underdark_rift, valakut_the_molten_pinnacle, war_room,
+    academy_manufactor, ancient_copper_dragon, casey_jones_vigilante, chaos_channeler,
+    chaos_dragon, chaotic_goo, curse_marred_demon, delina_wild_mage, goblin_archaeologist,
+    goblin_traprunner, goldspan_dragon, hoarding_ogre, karplusan_minotaur, krark_the_thumbless,
+    okaun_eye_of_chaos, professional_face_breaker, tavern_scoundrel, umaro_raging_yeti,
+    wildfire_devils, wyll_blade_of_frontiers, xorn, zurzoth_chaos_rider, barbarian_class,
+    chance_encounter, goblin_bomb, grip_of_chaos, maddening_hex, mirror_march, planar_chaos,
+    berserkers_frenzy, big_score, chaos_warp, chefs_kiss, desperate_gambit, fighting_chance,
+    tibalts_trickery, unexpected_windfall, wylls_reversal, tibalt_the_fiend_blooded,
+    blasphemous_act, burning_inquiry, control_of_the_court, fiery_gambit, gamble, game_of_chaos,
+    goblin_lore, kindle_the_carnage, mana_clash, molten_birth, reckless_endeavor,
+    reckless_handling,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain,
+];

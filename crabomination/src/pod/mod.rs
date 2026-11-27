@@ -38143,6 +38143,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::THE_MADCAP_JESTER_COMMANDERS,
             main: decks::THE_MADCAP_JESTER_MAIN,
         },
+        // Seat 6283: Chira, All In's EDHREC average deck. `--pod-decks 6283`.
+        PodDeck {
+            name: "Chira, All In (R)",
+            commanders: decks::CHIRA_COMMANDERS,
+            main: decks::CHIRA_MAIN,
+        },
     ]
 }
 
@@ -46361,6 +46367,7 @@ mod tests {
             ("Glava, Five-Advents Mage", &[0x2288]),
             ("Matoc, Lavamancer", &[0x2289]),
             ("The Madcap Jester", &[0x228A]),
+            ("Chira, All In", &[0x228B]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
