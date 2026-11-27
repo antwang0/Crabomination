@@ -367,3 +367,41 @@ pub fn realmbreakers_grasp() -> CardDefinition {
         vec![Keyword::CantAttack, Keyword::CantBlock, Keyword::CantActivateNonManaAbilities],
     )
 }
+
+/// Earth, Sector 001 — Land — Planet. Enters tapped; when it enters, you gain
+/// 1 life. {T}: {G} or {U}. (The Traveler's deck.)
+pub fn earth_sector_001() -> CardDefinition {
+    CardDefinition { name: "Earth, Sector 001", ..planet_pair(Color::Green, Color::Blue) }
+}
+
+/// A tapped, life-gain Planet dual (the TRK Planet cycle's shape).
+fn planet_pair(a: Color, b: Color) -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Land],
+        subtypes: Subtypes { land_types: vec![LandType::Planet], ..Default::default() },
+        static_abilities: vec![enters_tapped()],
+        triggered_abilities: vec![etb_gain_one()],
+        activated_abilities: vec![ActivatedAbility {
+            tap_cost: true,
+            effect: Effect::AddMana { who: PlayerRef::You, pool: ManaPayload::OfColors(vec![a, b], Value::ONE) },
+            ..Default::default()
+        }],
+        ..Default::default()
+    }
+}
+
+/// The Traveler — {G}{U} legendary */3 Scout with reach and vigilance; power =
+/// differently named lands you control (strange new worlds).
+pub fn the_traveler() -> CardDefinition {
+    CardDefinition {
+        name: "The Traveler",
+        cost: cost(&[g(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Scout], ..Default::default() },
+        toughness: 3,
+        keywords: vec![Keyword::Reach, Keyword::Vigilance],
+        dynamic_pt: Some(crate::card::DynamicPt::DistinctLandNamesPower { base_t: 3 }),
+        ..Default::default()
+    }
+}

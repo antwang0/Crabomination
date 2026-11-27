@@ -271,3 +271,16 @@ pub fn q_your_illustrious_host() -> CardDefinition {
         )
     }
 }
+
+/// The Unicomplex — land, {T}: {B}; entering untapped: put target creature
+/// card from your graveyard on top of your library, or surveil 1. (Zero's deck.)
+pub fn the_unicomplex() -> CardDefinition {
+    campus(
+        "The Unicomplex",
+        Color::Black,
+        Effect::Move {
+            what: target_filtered(R::Creature.and(R::InYourGraveyard)),
+            to: ZoneDest::Library { who: PlayerRef::You, pos: crate::effect::LibraryPosition::Top },
+        },
+    )
+}

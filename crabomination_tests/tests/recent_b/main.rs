@@ -402,3 +402,4 @@ mod trek_singles6;
 mod trek_singles7;
 mod trek_singles8;
 mod cmdr_nov26;
+mod cmdr_nov27_c;

@@ -869836,5 +869836,2614 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=917828&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Grakk+the+Pacifist&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Oberth-Class Starship": {
+    "object": "card",
+    "id": "7efe3788-ecf7-4b56-8970-bc324092941c",
+    "oracle_id": "fb5e53cf-e12e-469b-b9ea-9debc967e77e",
+    "multiverse_ids": [],
+    "resource_id": "17E3C1215D9CFA1087E518AD0F10531184CD670E893E61536EFF5CD3DCB96154",
+    "mtgo_id": 158192,
+    "tcgplayer_id": 728487,
+    "cardmarket_id": 919794,
+    "name": "Oberth-Class Starship",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/7efe3788-ecf7-4b56-8970-bc324092941c",
+    "scryfall_uri": "https://scryfall.com/card/trk/26/oberth-class-starship?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-30T11:53:07Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.jpg?1793361187",
+      "normal": "https://cards.scryfall.io/normal/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.jpg?1793361187",
+      "large": "https://cards.scryfall.io/large/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.jpg?1793361187",
+      "png": "https://cards.scryfall.io/png/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.png?1793361187",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.jpg?1793361187",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.jpg?1793361187",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.webp?1793361187",
+      "grid": "https://cards.scryfall.io/grid/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.webp?1793361187",
+      "display": "https://cards.scryfall.io/display/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.webp?1793361187",
+      "art": "https://cards.scryfall.io/art/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.webp?1793361187",
+      "crop": "https://cards.scryfall.io/crop/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.webp?1793361187",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/e/7efe3788-ecf7-4b56-8970-bc324092941c.jpg?1793361187"
+    },
+    "mana_cost": "{1}{W}",
+    "cmc": 2.0,
+    "type_line": "Artifact — Spacecraft",
+    "oracle_text": "When this Spacecraft enters, search your library for a basic Plains card, reveal it, put it into your hand, then shuffle.\nStation (Tap another creature you control: Put charge counters equal to its power on this Spacecraft. Station only as a sorcery. It's an artifact creature at 6+.)\n6+ | Flying",
+    "power": "2",
+    "toughness": "2",
+    "colors": [
+      "W"
+    ],
+    "color_identity": [
+      "W"
+    ],
+    "keywords": [
+      "Station"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/7efe3788-ecf7-4b56-8970-bc324092941c/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Afb5e53cf-e12e-469b-b9ea-9debc967e77e&unique=prints",
+    "collector_number": "26",
+    "digital": false,
+    "rarity": "common",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Jessica Rossier",
+    "artist_ids": [
+      "8ecdb26a-31a7-4f62-88cd-ac98c6e3430b"
+    ],
+    "illustration_id": "572ddb0b-2713-4e68-ab95-3b0190a42c10",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 23671,
+    "preview": {
+      "source": "Collider",
+      "source_uri": "https://collider.com/star-trek-magic-the-gathering-sarek-cards-images/",
+      "previewed_at": "2026-10-28"
+    },
+    "prices": {
+      "usd": "0.17",
+      "usd_foil": "0.24",
+      "usd_etched": null,
+      "eur": "0.11",
+      "eur_foil": "0.18",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DOberth-Class%2BStarship",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DOberth-Class%2BStarship",
+      "edhrec": "https://edhrec.com/route/?cc=Oberth-Class+Starship"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F728487%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=919794&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158192?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Gowron, Eager for Battle": {
+    "object": "card",
+    "id": "d60613c2-5655-4051-babd-fc0f3a73fc77",
+    "oracle_id": "40616029-e1a8-4e7c-bc7b-e381779c57cc",
+    "multiverse_ids": [],
+    "resource_id": "CBAB82E001A4A2EBC47DF6E9E655B9AEE868169D10DE6299826034F5D4275EB7",
+    "mtgo_id": 158614,
+    "tcgplayer_id": 725034,
+    "cardmarket_id": 918562,
+    "name": "Gowron, Eager for Battle",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/d60613c2-5655-4051-babd-fc0f3a73fc77",
+    "scryfall_uri": "https://scryfall.com/card/trk/237/gowron-eager-for-battle?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-20T14:58:52Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.jpg?1792508332",
+      "normal": "https://cards.scryfall.io/normal/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.jpg?1792508332",
+      "large": "https://cards.scryfall.io/large/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.jpg?1792508332",
+      "png": "https://cards.scryfall.io/png/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.png?1792508332",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.jpg?1792508332",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.jpg?1792508332",
+      "thumb": "https://cards.scryfall.io/thumb/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.webp?1792508332",
+      "grid": "https://cards.scryfall.io/grid/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.webp?1792508332",
+      "display": "https://cards.scryfall.io/display/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.webp?1792508332",
+      "art": "https://cards.scryfall.io/art/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.webp?1792508332",
+      "crop": "https://cards.scryfall.io/crop/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.webp?1792508332",
+      "jpeg": "https://cards.scryfall.io/normal/front/d/6/d60613c2-5655-4051-babd-fc0f3a73fc77.jpg?1792508332"
+    },
+    "mana_cost": "{2}{B}{R}",
+    "cmc": 4.0,
+    "type_line": "Legendary Creature — Klingon Warrior",
+    "oracle_text": "Whenever another creature dies, put a +1/+1 counter on Gowron.\nSacrifice another creature: Gowron gains trample until end of turn. If you sacrificed a Klingon this way, you draw a card and lose 1 life.",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "B",
+      "R"
+    ],
+    "color_identity": [
+      "B",
+      "R"
+    ],
+    "keywords": [],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/d60613c2-5655-4051-babd-fc0f3a73fc77/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A40616029-e1a8-4e7c-bc7b-e381779c57cc&unique=prints",
+    "collector_number": "237",
+    "digital": false,
+    "rarity": "rare",
+    "flavor_text": "\"If you lack the courage to fight an uphill battle, then perhaps you should retire to your bed.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Grant Griffin",
+    "artist_ids": [
+      "a8bcc520-bdcd-472e-a764-d2c36215a937"
+    ],
+    "illustration_id": "73d12ea3-30ef-4520-bbb1-2aa0546dd061",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 27296,
+    "prices": {
+      "usd": "0.25",
+      "usd_foil": "0.31",
+      "usd_etched": null,
+      "eur": "0.17",
+      "eur_foil": "0.29",
+      "tix": "0.02"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DGowron%252C%2BEager%2Bfor%2BBattle",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DGowron%252C%2BEager%2Bfor%2BBattle",
+      "edhrec": "https://edhrec.com/route/?cc=Gowron%2C+Eager+for+Battle"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725034%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918562&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158614?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "L'Rell, Fierce Visionary": {
+    "object": "card",
+    "id": "7b06bbb9-7c6d-4889-b55a-1de77c27fd18",
+    "oracle_id": "ea684e78-483c-4b89-b184-b2aeede83cc7",
+    "multiverse_ids": [],
+    "resource_id": "1791F6C60FDA49E1B2B9BD4280381D2DC3A97CF6772F68C2244178DA1AAD2627",
+    "mtgo_id": 158634,
+    "tcgplayer_id": 725152,
+    "cardmarket_id": 918570,
+    "name": "L'Rell, Fierce Visionary",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/7b06bbb9-7c6d-4889-b55a-1de77c27fd18",
+    "scryfall_uri": "https://scryfall.com/card/trk/247/lrell-fierce-visionary?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-20T14:59:37Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.jpg?1792508377",
+      "normal": "https://cards.scryfall.io/normal/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.jpg?1792508377",
+      "large": "https://cards.scryfall.io/large/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.jpg?1792508377",
+      "png": "https://cards.scryfall.io/png/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.png?1792508377",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.jpg?1792508377",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.jpg?1792508377",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.webp?1792508377",
+      "grid": "https://cards.scryfall.io/grid/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.webp?1792508377",
+      "display": "https://cards.scryfall.io/display/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.webp?1792508377",
+      "art": "https://cards.scryfall.io/art/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.webp?1792508377",
+      "crop": "https://cards.scryfall.io/crop/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.webp?1792508377",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/b/7b06bbb9-7c6d-4889-b55a-1de77c27fd18.jpg?1792508377"
+    },
+    "mana_cost": "{1}{B}{R}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Klingon Warrior",
+    "oracle_text": "At the beginning of combat on your turn, create a 2/1 red Klingon Warrior creature token with haste. Sacrifice it at the beginning of the next end step.\n{2}, Sacrifice another creature or artifact: Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
+    "power": "1",
+    "toughness": "4",
+    "colors": [
+      "B",
+      "R"
+    ],
+    "color_identity": [
+      "B",
+      "R"
+    ],
+    "keywords": [
+      "Surveil"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "51161805-0955-49b7-97f3-20b002c9b86e",
+        "component": "combo_piece",
+        "name": "L'Rell, Fierce Visionary",
+        "type_line": "Legendary Creature — Klingon Warrior",
+        "uri": "https://api.scryfall.com/cards/51161805-0955-49b7-97f3-20b002c9b86e"
+      },
+      {
+        "object": "related_card",
+        "id": "b7897f31-509e-4099-b9b4-c6214b80f29d",
+        "component": "token",
+        "name": "Klingon Warrior",
+        "type_line": "Token Creature — Klingon Warrior",
+        "uri": "https://api.scryfall.com/cards/b7897f31-509e-4099-b9b4-c6214b80f29d"
+      }
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/7b06bbb9-7c6d-4889-b55a-1de77c27fd18/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Aea684e78-483c-4b89-b184-b2aeede83cc7&unique=prints",
+    "collector_number": "247",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "\"Conquer us, or we will never relent.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Patricia Pria",
+    "artist_ids": [
+      "54058ae5-0892-472b-8796-7375ccee8216"
+    ],
+    "illustration_id": "c6ccf073-0284-418c-bb6c-bafdabfe7f73",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 25513,
+    "prices": {
+      "usd": "0.15",
+      "usd_foil": "0.23",
+      "usd_etched": null,
+      "eur": "0.04",
+      "eur_foil": "0.20",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DL%2527Rell%252C%2BFierce%2BVisionary",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DL%2527Rell%252C%2BFierce%2BVisionary",
+      "edhrec": "https://edhrec.com/route/?cc=L%27Rell%2C+Fierce+Visionary"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725152%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918570&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158634?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "The Duras Sisters": {
+    "object": "card",
+    "id": "7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb",
+    "oracle_id": "03973bad-1b3c-4488-a23e-232b192c95cc",
+    "multiverse_ids": [],
+    "resource_id": "260D6528D55C24115229AA3015D94D99ADE640D2D802846603C51F46F3DC82F7",
+    "mtgo_id": 158610,
+    "tcgplayer_id": 725145,
+    "cardmarket_id": 918560,
+    "name": "The Duras Sisters",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb",
+    "scryfall_uri": "https://scryfall.com/card/trk/235/the-duras-sisters?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-20T14:58:41Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.jpg?1792508321",
+      "normal": "https://cards.scryfall.io/normal/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.jpg?1792508321",
+      "large": "https://cards.scryfall.io/large/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.jpg?1792508321",
+      "png": "https://cards.scryfall.io/png/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.png?1792508321",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.jpg?1792508321",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.jpg?1792508321",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.webp?1792508321",
+      "grid": "https://cards.scryfall.io/grid/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.webp?1792508321",
+      "display": "https://cards.scryfall.io/display/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.webp?1792508321",
+      "art": "https://cards.scryfall.io/art/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.webp?1792508321",
+      "crop": "https://cards.scryfall.io/crop/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.webp?1792508321",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/e/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb.jpg?1792508321"
+    },
+    "mana_cost": "{B/R}{B/R}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Klingon Warrior",
+    "oracle_text": "When The Duras Sisters die, create a 2/1 red Klingon Warrior creature token with haste.",
+    "power": "3",
+    "toughness": "2",
+    "colors": [
+      "B",
+      "R"
+    ],
+    "color_identity": [
+      "B",
+      "R"
+    ],
+    "keywords": [],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "fc44d954-dc08-4071-8e2b-e65090de65dc",
+        "component": "combo_piece",
+        "name": "The Duras Sisters",
+        "type_line": "Legendary Creature — Klingon Warrior",
+        "uri": "https://api.scryfall.com/cards/fc44d954-dc08-4071-8e2b-e65090de65dc"
+      },
+      {
+        "object": "related_card",
+        "id": "b7897f31-509e-4099-b9b4-c6214b80f29d",
+        "component": "token",
+        "name": "Klingon Warrior",
+        "type_line": "Token Creature — Klingon Warrior",
+        "uri": "https://api.scryfall.com/cards/b7897f31-509e-4099-b9b4-c6214b80f29d"
+      }
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/7eb112eb-2abf-4ba3-b9bd-b45ffa80f7eb/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A03973bad-1b3c-4488-a23e-232b192c95cc&unique=prints",
+    "collector_number": "235",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "B'Etor glowered at her impatient sister. \"Lursa, you fool! You were supposed to kill him *after* we got our payment!\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Harkalé Linaï",
+    "artist_ids": [
+      "e00998ce-e1b4-40d3-967e-1c99e89bd3a9"
+    ],
+    "illustration_id": "89290268-9b4a-4a79-af7a-ef4649eced06",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 28557,
+    "prices": {
+      "usd": "0.12",
+      "usd_foil": "0.27",
+      "usd_etched": null,
+      "eur": "0.12",
+      "eur_foil": "0.18",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DThe%2BDuras%2BSisters",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DThe%2BDuras%2BSisters",
+      "edhrec": "https://edhrec.com/route/?cc=The+Duras+Sisters"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725145%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918560&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158610?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Captain Pike, Fullness of Time": {
+    "object": "card",
+    "id": "743be4c4-5c91-42bb-9942-115e903041a9",
+    "oracle_id": "745633e6-8635-4d99-8a4e-edc5d500bb3d",
+    "multiverse_ids": [],
+    "resource_id": "C8F59C710956ED7D85B704E6FD48A8B849B249F454AE3E4970C52019D4EA70DF",
+    "mtgo_id": 158516,
+    "tcgplayer_id": 725030,
+    "cardmarket_id": 918551,
+    "name": "Captain Pike, Fullness of Time",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/743be4c4-5c91-42bb-9942-115e903041a9",
+    "scryfall_uri": "https://scryfall.com/card/trk/188/captain-pike-fullness-of-time?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-20T14:57:42Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.jpg?1792508262",
+      "normal": "https://cards.scryfall.io/normal/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.jpg?1792508262",
+      "large": "https://cards.scryfall.io/large/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.jpg?1792508262",
+      "png": "https://cards.scryfall.io/png/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.png?1792508262",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.jpg?1792508262",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.jpg?1792508262",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.webp?1792508262",
+      "grid": "https://cards.scryfall.io/grid/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.webp?1792508262",
+      "display": "https://cards.scryfall.io/display/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.webp?1792508262",
+      "art": "https://cards.scryfall.io/art/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.webp?1792508262",
+      "crop": "https://cards.scryfall.io/crop/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.webp?1792508262",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/4/743be4c4-5c91-42bb-9942-115e903041a9.jpg?1792508262"
+    },
+    "mana_cost": "{1}{G}{G}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Human Officer Scout",
+    "oracle_text": "Strange new worlds — Captain Pike's power and toughness are each equal to the number of differently named lands you control.\nYou may look at the top card of your library any time.\nYou may play lands from the top of your library.",
+    "power": "*",
+    "toughness": "*",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Strange new worlds"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/743be4c4-5c91-42bb-9942-115e903041a9/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A745633e6-8635-4d99-8a4e-edc5d500bb3d&unique=prints",
+    "collector_number": "188",
+    "digital": false,
+    "rarity": "rare",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Joel Chaim Holtzman",
+    "artist_ids": [
+      "315ae651-bcb1-46f1-a7b0-d999d5987e2d"
+    ],
+    "illustration_id": "05d71d38-7fa5-423b-b4a3-7e46a97a4eca",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 22292,
+    "prices": {
+      "usd": "0.35",
+      "usd_foil": "0.50",
+      "usd_etched": null,
+      "eur": "0.17",
+      "eur_foil": "0.46",
+      "tix": "0.04"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DCaptain%2BPike%252C%2BFullness%2Bof%2BTime",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DCaptain%2BPike%252C%2BFullness%2Bof%2BTime",
+      "edhrec": "https://edhrec.com/route/?cc=Captain+Pike%2C+Fullness+of+Time"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725030%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918551&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158516?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Branching Timeline": {
+    "object": "card",
+    "id": "4a2231ff-677d-4041-9413-b8d683846920",
+    "oracle_id": "6e13c619-706d-4c77-bc7d-187df0fd054a",
+    "multiverse_ids": [],
+    "resource_id": "DE3C510D44AACB085F2F5583853840CB8265C2C8336AA13E7BFCE456949E00AB",
+    "mtgo_id": 158510,
+    "tcgplayer_id": 725945,
+    "cardmarket_id": 919319,
+    "name": "Branching Timeline",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/4a2231ff-677d-4041-9413-b8d683846920",
+    "scryfall_uri": "https://scryfall.com/card/trk/185/branching-timeline?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-26T11:14:09Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.jpg?1793013249",
+      "normal": "https://cards.scryfall.io/normal/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.jpg?1793013249",
+      "large": "https://cards.scryfall.io/large/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.jpg?1793013249",
+      "png": "https://cards.scryfall.io/png/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.png?1793013249",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.jpg?1793013249",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.jpg?1793013249",
+      "thumb": "https://cards.scryfall.io/thumb/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.webp?1793013249",
+      "grid": "https://cards.scryfall.io/grid/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.webp?1793013249",
+      "display": "https://cards.scryfall.io/display/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.webp?1793013249",
+      "art": "https://cards.scryfall.io/art/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.webp?1793013249",
+      "crop": "https://cards.scryfall.io/crop/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.webp?1793013249",
+      "jpeg": "https://cards.scryfall.io/normal/front/4/a/4a2231ff-677d-4041-9413-b8d683846920.jpg?1793013249"
+    },
+    "mana_cost": "{6}{G}{G}",
+    "cmc": 8.0,
+    "type_line": "Sorcery",
+    "oracle_text": "Strange new worlds — Reveal the top X cards of your library, where X is the number of differently named lands you control. Put all permanent cards revealed this way onto the battlefield tapped and the rest on the bottom of your library in a random order.",
+    "colors": [
+      "G"
+    ],
+    "color_identity": [
+      "G"
+    ],
+    "keywords": [
+      "Strange new worlds"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/4a2231ff-677d-4041-9413-b8d683846920/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A6e13c619-706d-4c77-bc7d-187df0fd054a&unique=prints",
+    "collector_number": "185",
+    "digital": false,
+    "rarity": "rare",
+    "flavor_text": "What might have been is the horizon of what could be.",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Borja Pindado",
+    "artist_ids": [
+      "1624a1a8-3492-4c0b-9abc-83dcf2653111"
+    ],
+    "illustration_id": "1d5f1820-283b-41f3-9569-e630d4b1e333",
+    "border_color": "black",
+    "frame": "2015",
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 23182,
+    "preview": {
+      "source": "Magic Small White",
+      "source_uri": "https://www.bilibili.com/opus/1262988412473835528",
+      "previewed_at": "2026-10-24"
+    },
+    "prices": {
+      "usd": "0.28",
+      "usd_foil": "0.37",
+      "usd_etched": null,
+      "eur": "0.02",
+      "eur_foil": "0.24",
+      "tix": "0.04"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DBranching%2BTimeline",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DBranching%2BTimeline",
+      "edhrec": "https://edhrec.com/route/?cc=Branching+Timeline"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725945%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=919319&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158510?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "The Unicomplex": {
+    "object": "card",
+    "id": "4c881efb-d55b-45fe-9e5a-8a61aec6fbbb",
+    "oracle_id": "b38fcf9a-464a-432a-b13c-9a206d52dcd9",
+    "multiverse_ids": [],
+    "resource_id": "E88014849B38061974A74526CDB5BFE1C9A16E807CA9F2C4C571FBB806691A50",
+    "mtgo_id": 158748,
+    "tcgplayer_id": 725042,
+    "cardmarket_id": 918594,
+    "name": "The Unicomplex",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb",
+    "scryfall_uri": "https://scryfall.com/card/trk/304/the-unicomplex?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-22T01:36:18Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.jpg?1792632978",
+      "normal": "https://cards.scryfall.io/normal/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.jpg?1792632978",
+      "large": "https://cards.scryfall.io/large/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.jpg?1792632978",
+      "png": "https://cards.scryfall.io/png/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.png?1792632978",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.jpg?1792632978",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.jpg?1792632978",
+      "thumb": "https://cards.scryfall.io/thumb/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.webp?1792632978",
+      "grid": "https://cards.scryfall.io/grid/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.webp?1792632978",
+      "display": "https://cards.scryfall.io/display/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.webp?1792632978",
+      "art": "https://cards.scryfall.io/art/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.webp?1792632978",
+      "crop": "https://cards.scryfall.io/crop/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.webp?1792632978",
+      "jpeg": "https://cards.scryfall.io/normal/front/4/c/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb.jpg?1792632978"
+    },
+    "mana_cost": "",
+    "cmc": 0.0,
+    "type_line": "Land",
+    "oracle_text": "This land enters tapped unless you control two or more other lands.\nWhen this land enters untapped, choose one —\n• Put target creature card from your graveyard on top of your library.\n• Surveil 1.\n{T}: Add {B}.",
+    "colors": [],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [
+      "Surveil"
+    ],
+    "produced_mana": [
+      "B"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/4c881efb-d55b-45fe-9e5a-8a61aec6fbbb/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ab38fcf9a-464a-432a-b13c-9a206d52dcd9&unique=prints",
+    "collector_number": "304",
+    "digital": false,
+    "rarity": "rare",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "JB Casacop",
+    "artist_ids": [
+      "d857cc2b-790d-4ab0-8884-ac3234d05806"
+    ],
+    "illustration_id": "b37f26a1-36b0-4f2e-ab75-9b39c1a51cbb",
+    "border_color": "black",
+    "frame": "2015",
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 15377,
+    "prices": {
+      "usd": "1.66",
+      "usd_foil": "1.58",
+      "usd_etched": null,
+      "eur": "0.91",
+      "eur_foil": "2.94",
+      "tix": "0.07"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DThe%2BUnicomplex",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DThe%2BUnicomplex",
+      "edhrec": "https://edhrec.com/route/?cc=The+Unicomplex"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725042%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918594&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158748?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Elim Garak, Simple Tailor": {
+    "object": "card",
+    "id": "113bd51a-dfbb-4106-adf3-e567057fcd06",
+    "oracle_id": "c83465bd-f95f-4c57-b9ce-925a85b45276",
+    "multiverse_ids": [],
+    "resource_id": "26A4537B6FDE925B94C8C4248369B41DE65F57B8AE6FF280164C5E57941BD37B",
+    "mtgo_id": 158352,
+    "tcgplayer_id": 725416,
+    "cardmarket_id": 918736,
+    "name": "Elim Garak, Simple Tailor",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/113bd51a-dfbb-4106-adf3-e567057fcd06",
+    "scryfall_uri": "https://scryfall.com/card/trk/106/elim-garak-simple-tailor?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-22T11:30:00Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.jpg?1792668600",
+      "normal": "https://cards.scryfall.io/normal/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.jpg?1792668600",
+      "large": "https://cards.scryfall.io/large/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.jpg?1792668600",
+      "png": "https://cards.scryfall.io/png/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.png?1792668600",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.jpg?1792668600",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.jpg?1792668600",
+      "thumb": "https://cards.scryfall.io/thumb/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.webp?1792668600",
+      "grid": "https://cards.scryfall.io/grid/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.webp?1792668600",
+      "display": "https://cards.scryfall.io/display/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.webp?1792668600",
+      "art": "https://cards.scryfall.io/art/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.webp?1792668600",
+      "crop": "https://cards.scryfall.io/crop/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.webp?1792668600",
+      "jpeg": "https://cards.scryfall.io/normal/front/1/1/113bd51a-dfbb-4106-adf3-e567057fcd06.jpg?1792668600"
+    },
+    "mana_cost": "{2}{B}",
+    "cmc": 3.0,
+    "type_line": "Legendary Creature — Cardassian Rogue",
+    "oracle_text": "Menace\nWhenever you face a dilemma, each opponent loses 2 life and you gain 2 life. (You face a dilemma as you choose one or more modes for a spell or ability.)",
+    "power": "3",
+    "toughness": "3",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [
+      "Face a dilemma",
+      "Menace"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/113bd51a-dfbb-4106-adf3-e567057fcd06/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ac83465bd-f95f-4c57-b9ce-925a85b45276&unique=prints",
+    "collector_number": "106",
+    "digital": false,
+    "rarity": "rare",
+    "flavor_text": "\"I never tell the truth because I don't believe there is such a thing. That's why I prefer the straight-line simplicity of cutting cloth.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Alexander Gering",
+    "artist_ids": [
+      "c6e77ba4-e891-4688-bca8-41b3f5f89dc6"
+    ],
+    "illustration_id": "14dd2433-8037-4731-b100-7a42ff138b46",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 23262,
+    "prices": {
+      "usd": "0.26",
+      "usd_foil": "0.37",
+      "usd_etched": null,
+      "eur": "0.22",
+      "eur_foil": "0.41",
+      "tix": "0.07"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DElim%2BGarak%252C%2BSimple%2BTailor",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DElim%2BGarak%252C%2BSimple%2BTailor",
+      "edhrec": "https://edhrec.com/route/?cc=Elim+Garak%2C+Simple+Tailor"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725416%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918736&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158352?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Obsidian Order Operative": {
+    "object": "card",
+    "id": "17a7b0a8-baaf-4e6a-8536-f511c796a713",
+    "oracle_id": "7145e1b7-b991-4651-b21d-0620cb017090",
+    "multiverse_ids": [],
+    "resource_id": "06EED77F95656FFF056E1D388CC302BDD40B3D6F9ECE36E8F2508BC8A4404DF7",
+    "mtgo_id": 158380,
+    "tcgplayer_id": 725815,
+    "cardmarket_id": 918737,
+    "name": "Obsidian Order Operative",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/17a7b0a8-baaf-4e6a-8536-f511c796a713",
+    "scryfall_uri": "https://scryfall.com/card/trk/120/obsidian-order-operative?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-30T11:54:49Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.jpg?1793361289",
+      "normal": "https://cards.scryfall.io/normal/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.jpg?1793361289",
+      "large": "https://cards.scryfall.io/large/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.jpg?1793361289",
+      "png": "https://cards.scryfall.io/png/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.png?1793361289",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.jpg?1793361289",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.jpg?1793361289",
+      "thumb": "https://cards.scryfall.io/thumb/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.webp?1793361289",
+      "grid": "https://cards.scryfall.io/grid/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.webp?1793361289",
+      "display": "https://cards.scryfall.io/display/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.webp?1793361289",
+      "art": "https://cards.scryfall.io/art/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.webp?1793361289",
+      "crop": "https://cards.scryfall.io/crop/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.webp?1793361289",
+      "jpeg": "https://cards.scryfall.io/normal/front/1/7/17a7b0a8-baaf-4e6a-8536-f511c796a713.jpg?1793361289"
+    },
+    "mana_cost": "{3}{B}",
+    "cmc": 4.0,
+    "type_line": "Creature — Cardassian Officer Spy",
+    "oracle_text": "Whenever you face a dilemma, each opponent loses 1 life and you gain 1 life. (You face a dilemma as you choose one or more modes for a spell or ability.)",
+    "power": "2",
+    "toughness": "5",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [
+      "Face a dilemma"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/17a7b0a8-baaf-4e6a-8536-f511c796a713/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A7145e1b7-b991-4651-b21d-0620cb017090&unique=prints",
+    "collector_number": "120",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"Your resistance is wasted energy, and in time you'll wish you hadn't wasted it.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Wero Gallo",
+    "artist_ids": [
+      "33e6c6ee-0d21-4834-a575-4dfefa5d77ce"
+    ],
+    "illustration_id": "acf64116-3934-4ae1-9354-f17398e325ff",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 24830,
+    "preview": {
+      "source": "Polygon",
+      "source_uri": "https://www.polygon.com/magic-the-gathering-star-trek-exclusive-reveal/",
+      "previewed_at": "2026-10-22"
+    },
+    "prices": {
+      "usd": "0.12",
+      "usd_foil": "0.17",
+      "usd_etched": null,
+      "eur": "0.10",
+      "eur_foil": "0.17",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DObsidian%2BOrder%2BOperative",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DObsidian%2BOrder%2BOperative",
+      "edhrec": "https://edhrec.com/route/?cc=Obsidian+Order+Operative"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725815%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918737&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158380?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Impossible Choice": {
+    "object": "card",
+    "id": "6c5a87cf-7790-4335-8497-ff793bbdcb05",
+    "oracle_id": "e277ed07-2113-4465-a45c-a64490814c1d",
+    "multiverse_ids": [],
+    "resource_id": "DF029777718FC02B177BBF0AA98D5995383F19DCCF376F421941571C56642864",
+    "mtgo_id": 158372,
+    "tcgplayer_id": 725927,
+    "cardmarket_id": 918925,
+    "name": "Impossible Choice",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/6c5a87cf-7790-4335-8497-ff793bbdcb05",
+    "scryfall_uri": "https://scryfall.com/card/trk/116/impossible-choice?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-26T11:12:37Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.jpg?1793013157",
+      "normal": "https://cards.scryfall.io/normal/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.jpg?1793013157",
+      "large": "https://cards.scryfall.io/large/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.jpg?1793013157",
+      "png": "https://cards.scryfall.io/png/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.png?1793013157",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.jpg?1793013157",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.jpg?1793013157",
+      "thumb": "https://cards.scryfall.io/thumb/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.webp?1793013157",
+      "grid": "https://cards.scryfall.io/grid/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.webp?1793013157",
+      "display": "https://cards.scryfall.io/display/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.webp?1793013157",
+      "art": "https://cards.scryfall.io/art/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.webp?1793013157",
+      "crop": "https://cards.scryfall.io/crop/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.webp?1793013157",
+      "jpeg": "https://cards.scryfall.io/normal/front/6/c/6c5a87cf-7790-4335-8497-ff793bbdcb05.jpg?1793013157"
+    },
+    "mana_cost": "{2}{B}",
+    "cmc": 3.0,
+    "type_line": "Instant",
+    "oracle_text": "Choose one —\n• Surgical Separation — Destroy target creature. Its controller creates two 1/1 red Officer creature tokens.\n• Remain Fused — You draw two cards and each player loses 2 life.",
+    "colors": [
+      "B"
+    ],
+    "color_identity": [
+      "B"
+    ],
+    "keywords": [
+      "Surgical Separation",
+      "Remain Fused"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "6c5a87cf-7790-4335-8497-ff793bbdcb05",
+        "component": "combo_piece",
+        "name": "Impossible Choice",
+        "type_line": "Instant",
+        "uri": "https://api.scryfall.com/cards/6c5a87cf-7790-4335-8497-ff793bbdcb05"
+      },
+      {
+        "object": "related_card",
+        "id": "012b04de-d9a5-4b12-afc8-cdf54bc42fc9",
+        "component": "token",
+        "name": "Officer",
+        "type_line": "Token Creature — Officer",
+        "uri": "https://api.scryfall.com/cards/012b04de-d9a5-4b12-afc8-cdf54bc42fc9"
+      }
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/6c5a87cf-7790-4335-8497-ff793bbdcb05/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ae277ed07-2113-4465-a45c-a64490814c1d&unique=prints",
+    "collector_number": "116",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "Saving Neelix and Tuvok meant destroying the person they'd become.",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Douglas Shuler",
+    "artist_ids": [
+      "a9ddb513-51c7-455c-ab8f-5b90aae9f75b"
+    ],
+    "illustration_id": "90c08bc5-b00c-4c01-b999-eea13fd0457a",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 21874,
+    "preview": {
+      "source": "Ella Lowgren",
+      "source_uri": "https://www.instagram.com/p/De2lNxlGVav",
+      "previewed_at": "2026-10-23"
+    },
+    "prices": {
+      "usd": "0.17",
+      "usd_foil": "0.30",
+      "usd_etched": null,
+      "eur": "0.02",
+      "eur_foil": "0.22",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DImpossible%2BChoice",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DImpossible%2BChoice",
+      "edhrec": "https://edhrec.com/route/?cc=Impossible+Choice"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725927%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918925&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158372?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Earth, Sector 001": {
+    "object": "card",
+    "id": "5278d354-97c4-4c21-a902-2f9252b151eb",
+    "oracle_id": "c75d87b0-7de9-4c50-b781-9749d67c1e07",
+    "multiverse_ids": [],
+    "resource_id": "3A53372C260A5D35D34979D9212949C4EDE56888C3C3547A1555438FD2A1BFB6",
+    "mtgo_id": 158702,
+    "tcgplayer_id": 725178,
+    "cardmarket_id": 918585,
+    "name": "Earth, Sector 001",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/5278d354-97c4-4c21-a902-2f9252b151eb",
+    "scryfall_uri": "https://scryfall.com/card/trk/281/earth-sector-001?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-22T01:35:43Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.jpg?1792632943",
+      "normal": "https://cards.scryfall.io/normal/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.jpg?1792632943",
+      "large": "https://cards.scryfall.io/large/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.jpg?1792632943",
+      "png": "https://cards.scryfall.io/png/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.png?1792632943",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.jpg?1792632943",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.jpg?1792632943",
+      "thumb": "https://cards.scryfall.io/thumb/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.webp?1792632943",
+      "grid": "https://cards.scryfall.io/grid/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.webp?1792632943",
+      "display": "https://cards.scryfall.io/display/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.webp?1792632943",
+      "art": "https://cards.scryfall.io/art/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.webp?1792632943",
+      "crop": "https://cards.scryfall.io/crop/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.webp?1792632943",
+      "jpeg": "https://cards.scryfall.io/normal/front/5/2/5278d354-97c4-4c21-a902-2f9252b151eb.jpg?1792632943"
+    },
+    "mana_cost": "",
+    "cmc": 0.0,
+    "type_line": "Land — Planet",
+    "oracle_text": "This land enters tapped.\nWhen this land enters, you gain 1 life.\n{T}: Add {G} or {U}.",
+    "colors": [],
+    "color_identity": [
+      "G",
+      "U"
+    ],
+    "keywords": [],
+    "produced_mana": [
+      "G",
+      "U"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/5278d354-97c4-4c21-a902-2f9252b151eb/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ac75d87b0-7de9-4c50-b781-9749d67c1e07&unique=prints",
+    "collector_number": "281",
+    "digital": false,
+    "rarity": "common",
+    "flavor_text": "\"Subcommander's log: We approach the human homeworld. I am curious to witness it myself. Perhaps it will yield insight into their illogical yet accomplished culture.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Colin Searle",
+    "artist_ids": [
+      "5035c63e-7c86-4557-90c1-b58b187057b5"
+    ],
+    "illustration_id": "19bb1146-77e9-442f-b7cd-155db99bfdf2",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 21091,
+    "prices": {
+      "usd": "0.16",
+      "usd_foil": "0.17",
+      "usd_etched": null,
+      "eur": "0.08",
+      "eur_foil": "0.23",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DEarth%252C%2BSector%2B001",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DEarth%252C%2BSector%2B001",
+      "edhrec": "https://edhrec.com/route/?cc=Earth%2C+Sector+001"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725178%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918585&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158702?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "The Traveler": {
+    "object": "card",
+    "id": "171932ba-26da-48e9-b8a2-c71aafe5c6a6",
+    "oracle_id": "b61718eb-dc6a-4199-b7c7-42eccf4158e8",
+    "multiverse_ids": [],
+    "resource_id": "34053A4FD506CB1E7027E5F714305E807EA2BEF99C3202481F87B6A7F0DEE8C0",
+    "mtgo_id": 158648,
+    "tcgplayer_id": 725155,
+    "cardmarket_id": 918573,
+    "name": "The Traveler",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/171932ba-26da-48e9-b8a2-c71aafe5c6a6",
+    "scryfall_uri": "https://scryfall.com/card/trk/254/the-traveler?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-20T14:59:56Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.jpg?1792508396",
+      "normal": "https://cards.scryfall.io/normal/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.jpg?1792508396",
+      "large": "https://cards.scryfall.io/large/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.jpg?1792508396",
+      "png": "https://cards.scryfall.io/png/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.png?1792508396",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.jpg?1792508396",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.jpg?1792508396",
+      "thumb": "https://cards.scryfall.io/thumb/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.webp?1792508396",
+      "grid": "https://cards.scryfall.io/grid/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.webp?1792508396",
+      "display": "https://cards.scryfall.io/display/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.webp?1792508396",
+      "art": "https://cards.scryfall.io/art/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.webp?1792508396",
+      "crop": "https://cards.scryfall.io/crop/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.webp?1792508396",
+      "jpeg": "https://cards.scryfall.io/normal/front/1/7/171932ba-26da-48e9-b8a2-c71aafe5c6a6.jpg?1792508396"
+    },
+    "mana_cost": "{G}{U}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Scout",
+    "oracle_text": "Reach, vigilance\nStrange new worlds — The Traveler's power is equal to the number of differently named lands you control.",
+    "power": "*",
+    "toughness": "3",
+    "colors": [
+      "G",
+      "U"
+    ],
+    "color_identity": [
+      "G",
+      "U"
+    ],
+    "keywords": [
+      "Reach",
+      "Vigilance",
+      "Strange new worlds"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/171932ba-26da-48e9-b8a2-c71aafe5c6a6/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Ab61718eb-dc6a-4199-b7c7-42eccf4158e8&unique=prints",
+    "collector_number": "254",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "\"You do understand, don't you, that thought is the basis of all reality. The energy of thought, to put it in your terms, is very powerful.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Ioannis Fiore",
+    "artist_ids": [
+      "0af22200-d1b0-41dc-bb3f-386e661c3ad5"
+    ],
+    "illustration_id": "b119acae-b77c-495d-b63e-f12277b7ee61",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 27926,
+    "prices": {
+      "usd": "0.16",
+      "usd_foil": "0.26",
+      "usd_etched": null,
+      "eur": "0.11",
+      "eur_foil": "0.23",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DThe%2BTraveler",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DThe%2BTraveler",
+      "edhrec": "https://edhrec.com/route/?cc=The+Traveler"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725155%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918573&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158648?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Jett Reno, Problem Solver": {
+    "object": "card",
+    "id": "6dc34d44-397a-4dda-a8e3-0c2ff7da110f",
+    "oracle_id": "492ba01e-c0fa-414c-95fd-df5b59212d2a",
+    "multiverse_ids": [],
+    "resource_id": "8012D14DE74A20F9F75B6EA76595F30EBFCAC4B2AC14CE01CBDAC9368F18383D",
+    "mtgo_id": 158274,
+    "tcgplayer_id": 725914,
+    "cardmarket_id": 920682,
+    "name": "Jett Reno, Problem Solver",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/6dc34d44-397a-4dda-a8e3-0c2ff7da110f",
+    "scryfall_uri": "https://scryfall.com/card/trk/67/jett-reno-problem-solver?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-11-01T05:42:56Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.jpg?1793511776",
+      "normal": "https://cards.scryfall.io/normal/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.jpg?1793511776",
+      "large": "https://cards.scryfall.io/large/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.jpg?1793511776",
+      "png": "https://cards.scryfall.io/png/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.png?1793511776",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.jpg?1793511776",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.jpg?1793511776",
+      "thumb": "https://cards.scryfall.io/thumb/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.webp?1793511776",
+      "grid": "https://cards.scryfall.io/grid/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.webp?1793511776",
+      "display": "https://cards.scryfall.io/display/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.webp?1793511776",
+      "art": "https://cards.scryfall.io/art/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.webp?1793511776",
+      "crop": "https://cards.scryfall.io/crop/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.webp?1793511776",
+      "jpeg": "https://cards.scryfall.io/normal/front/6/d/6dc34d44-397a-4dda-a8e3-0c2ff7da110f.jpg?1793511776"
+    },
+    "mana_cost": "{1}{U}",
+    "cmc": 2.0,
+    "type_line": "Legendary Creature — Human Artificer",
+    "oracle_text": "Whenever Jett Reno becomes tapped, surveil 1. If her power is 4 or greater, instead draw a card.\nWhenever you face a dilemma, put a +1/+1 counter on Jett Reno. (You face a dilemma as you choose one or more modes for a spell or ability.)",
+    "power": "1",
+    "toughness": "2",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Surveil",
+      "Face a dilemma"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/6dc34d44-397a-4dda-a8e3-0c2ff7da110f/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A492ba01e-c0fa-414c-95fd-df5b59212d2a&unique=prints",
+    "collector_number": "67",
+    "digital": false,
+    "rarity": "uncommon",
+    "flavor_text": "\"Awesome. I know. I built them.\"",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Riccardo Federici",
+    "artist_ids": [
+      "3ce2a17a-a7c4-4a29-a1d1-43a49a7aadc2"
+    ],
+    "illustration_id": "1b27aa37-a14f-469e-b13b-4bacd7f5e3f6",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 26396,
+    "preview": {
+      "source": "Der Standard",
+      "source_uri": "https://www.derstandard.de/story/3000000345741/magic-the-gathering-exklusive-kartenpreview-im-universum-von-star-trek",
+      "previewed_at": "2026-10-23"
+    },
+    "prices": {
+      "usd": "0.13",
+      "usd_foil": "0.24",
+      "usd_etched": null,
+      "eur": "0.13",
+      "eur_foil": "0.12",
+      "tix": "0.02"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DJett%2BReno%252C%2BProblem%2BSolver",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DJett%2BReno%252C%2BProblem%2BSolver",
+      "edhrec": "https://edhrec.com/route/?cc=Jett+Reno%2C+Problem+Solver"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725914%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=920682&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158274?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Consider the Prime Directive": {
+    "object": "card",
+    "id": "4e8f75b8-cca7-4ed3-90db-bcac02e74611",
+    "oracle_id": "9f1d416c-60de-4796-a513-097d1d9a2305",
+    "multiverse_ids": [],
+    "resource_id": "90515D6DFBB16129AA01736F36810AC7C6E51CD173272D20E34F1F8A97EC6B91",
+    "mtgo_id": 158242,
+    "tcgplayer_id": 706149,
+    "cardmarket_id": 917726,
+    "name": "Consider the Prime Directive",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/4e8f75b8-cca7-4ed3-90db-bcac02e74611",
+    "scryfall_uri": "https://scryfall.com/card/trk/51/consider-the-prime-directive?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-07-14T13:45:51Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.jpg?1784036751",
+      "normal": "https://cards.scryfall.io/normal/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.jpg?1784036751",
+      "large": "https://cards.scryfall.io/large/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.jpg?1784036751",
+      "png": "https://cards.scryfall.io/png/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.png?1784036751",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.jpg?1784036751",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.jpg?1784036751",
+      "thumb": "https://cards.scryfall.io/thumb/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.webp?1784036751",
+      "grid": "https://cards.scryfall.io/grid/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.webp?1784036751",
+      "display": "https://cards.scryfall.io/display/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.webp?1784036751",
+      "art": "https://cards.scryfall.io/art/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.webp?1784036751",
+      "crop": "https://cards.scryfall.io/crop/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.webp?1784036751",
+      "jpeg": "https://cards.scryfall.io/normal/front/4/e/4e8f75b8-cca7-4ed3-90db-bcac02e74611.jpg?1784036751"
+    },
+    "mana_cost": "{2}{U}",
+    "cmc": 3.0,
+    "type_line": "Instant",
+    "oracle_text": "Choose one —\n• Interfere — Counter target spell unless its controller pays {3}.\n• Observe — Tap up to one target creature and put a stun counter on it. Draw a card. (If a permanent with a stun counter would become untapped, remove one from it instead.)",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Observe",
+      "Interfere"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/4e8f75b8-cca7-4ed3-90db-bcac02e74611/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A9f1d416c-60de-4796-a513-097d1d9a2305&unique=prints",
+    "collector_number": "51",
+    "digital": false,
+    "rarity": "common",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Zoltan Boros",
+    "artist_ids": [
+      "1885e6cb-c827-4896-994e-3d0a027d602f"
+    ],
+    "illustration_id": "de3a5448-1d49-4973-b189-0ca4de81b6f5",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 21621,
+    "prices": {
+      "usd": "0.15",
+      "usd_foil": "0.12",
+      "usd_etched": null,
+      "eur": "0.08",
+      "eur_foil": "0.13",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DConsider%2Bthe%2BPrime%2BDirective",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DConsider%2Bthe%2BPrime%2BDirective",
+      "edhrec": "https://edhrec.com/route/?cc=Consider+the+Prime+Directive"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F706149%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=917726&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158242?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Make It So": {
+    "object": "card",
+    "id": "7149df19-4833-47ca-8add-b897f55b930c",
+    "oracle_id": "a9368972-4697-4a10-97e3-324149a26fba",
+    "multiverse_ids": [],
+    "resource_id": "DF8521A4B431B46ADE8C0A6685AE719EFBF856F2A2FF230C441D5FB8F4171CE7",
+    "mtgo_id": 158282,
+    "tcgplayer_id": 725915,
+    "cardmarket_id": 919299,
+    "name": "Make It So",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/7149df19-4833-47ca-8add-b897f55b930c",
+    "scryfall_uri": "https://scryfall.com/card/trk/71/make-it-so?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-26T11:19:01Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.jpg?1793013541",
+      "normal": "https://cards.scryfall.io/normal/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.jpg?1793013541",
+      "large": "https://cards.scryfall.io/large/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.jpg?1793013541",
+      "png": "https://cards.scryfall.io/png/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.png?1793013541",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.jpg?1793013541",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.jpg?1793013541",
+      "thumb": "https://cards.scryfall.io/thumb/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.webp?1793013541",
+      "grid": "https://cards.scryfall.io/grid/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.webp?1793013541",
+      "display": "https://cards.scryfall.io/display/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.webp?1793013541",
+      "art": "https://cards.scryfall.io/art/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.webp?1793013541",
+      "crop": "https://cards.scryfall.io/crop/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.webp?1793013541",
+      "jpeg": "https://cards.scryfall.io/normal/front/7/1/7149df19-4833-47ca-8add-b897f55b930c.jpg?1793013541"
+    },
+    "mana_cost": "{3}{U}",
+    "cmc": 4.0,
+    "type_line": "Sorcery",
+    "oracle_text": "Choose one —\n• Untap target permanent you control. Target player draws two cards.\n• Create a 1/1 red Officer creature token and draw two cards.",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "7149df19-4833-47ca-8add-b897f55b930c",
+        "component": "combo_piece",
+        "name": "Make It So",
+        "type_line": "Sorcery",
+        "uri": "https://api.scryfall.com/cards/7149df19-4833-47ca-8add-b897f55b930c"
+      },
+      {
+        "object": "related_card",
+        "id": "012b04de-d9a5-4b12-afc8-cdf54bc42fc9",
+        "component": "token",
+        "name": "Officer",
+        "type_line": "Token Creature — Officer",
+        "uri": "https://api.scryfall.com/cards/012b04de-d9a5-4b12-afc8-cdf54bc42fc9"
+      }
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/7149df19-4833-47ca-8add-b897f55b930c/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Aa9368972-4697-4a10-97e3-324149a26fba&unique=prints",
+    "collector_number": "71",
+    "digital": false,
+    "rarity": "common",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Javier Charro",
+    "artist_ids": [
+      "8fd2d5fa-3b94-4e48-9cec-9d148acc8180"
+    ],
+    "illustration_id": "a9b7c374-cd81-4c40-8fff-9363ed7cf057",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 23752,
+    "prices": {
+      "usd": "0.09",
+      "usd_foil": "0.18",
+      "usd_etched": null,
+      "eur": "0.12",
+      "eur_foil": "0.18",
+      "tix": "0.01"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DMake%2BIt%2BSo",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DMake%2BIt%2BSo",
+      "edhrec": "https://edhrec.com/route/?cc=Make+It+So"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725915%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=919299&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158282?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "The Caretaker": {
+    "object": "card",
+    "id": "ec6a1967-78fc-4ef4-9816-6d9a9dde61fb",
+    "oracle_id": "f77ea393-4142-4c06-8bb3-589ca74a7338",
+    "multiverse_ids": [],
+    "resource_id": "D159BBC5B6543C581FA8B534FC4521B9413DC1DD6D91190B001C37A108F756BD",
+    "mtgo_id": 158234,
+    "tcgplayer_id": 725912,
+    "cardmarket_id": 919296,
+    "name": "The Caretaker",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb",
+    "scryfall_uri": "https://scryfall.com/card/trk/47/the-caretaker?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-11-01T13:12:11Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.jpg?1793538731",
+      "normal": "https://cards.scryfall.io/normal/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.jpg?1793538731",
+      "large": "https://cards.scryfall.io/large/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.jpg?1793538731",
+      "png": "https://cards.scryfall.io/png/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.png?1793538731",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.jpg?1793538731",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.jpg?1793538731",
+      "thumb": "https://cards.scryfall.io/thumb/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.webp?1793538731",
+      "grid": "https://cards.scryfall.io/grid/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.webp?1793538731",
+      "display": "https://cards.scryfall.io/display/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.webp?1793538731",
+      "art": "https://cards.scryfall.io/art/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.webp?1793538731",
+      "crop": "https://cards.scryfall.io/crop/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.webp?1793538731",
+      "jpeg": "https://cards.scryfall.io/normal/front/e/c/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb.jpg?1793538731"
+    },
+    "mana_cost": "{5}{U}",
+    "cmc": 6.0,
+    "type_line": "Legendary Creature — Elemental",
+    "oracle_text": "Vigilance, ward {2}\nAt the beginning of each end step, if you faced a dilemma this turn, target opponent exiles cards from the top of their library until they exile a nonland card. You may cast that card without paying its mana cost. (You face a dilemma as you choose one or more modes for a spell or ability.)",
+    "power": "5",
+    "toughness": "6",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Vigilance",
+      "Face a dilemma",
+      "Ward"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/ec6a1967-78fc-4ef4-9816-6d9a9dde61fb/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3Af77ea393-4142-4c06-8bb3-589ca74a7338&unique=prints",
+    "collector_number": "47",
+    "digital": false,
+    "rarity": "rare",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Sam Kennedy",
+    "artist_ids": [
+      "7728937a-fcc9-4ed4-a225-c73a51c66e42"
+    ],
+    "illustration_id": "910b7a92-8e61-4cb9-bcff-f5bae6f958c8",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 24226,
+    "prices": {
+      "usd": "0.23",
+      "usd_foil": "0.34",
+      "usd_etched": null,
+      "eur": "0.02",
+      "eur_foil": "0.51",
+      "tix": "0.02"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DThe%2BCaretaker",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DThe%2BCaretaker",
+      "edhrec": "https://edhrec.com/route/?cc=The+Caretaker"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725912%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=919296&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158234?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Federation Probe": {
+    "object": "card",
+    "id": "f988ba84-fc78-41a2-b2f2-eebf78cee591",
+    "oracle_id": "6fc7401f-66fe-4d17-be2f-afcf892be740",
+    "multiverse_ids": [],
+    "resource_id": "415F9F4C8611CE883B3760BFCBB55BD2B9219E4D4D101F6040D1E3AA3AA70007",
+    "mtgo_id": 158258,
+    "tcgplayer_id": 729593,
+    "cardmarket_id": 917728,
+    "name": "Federation Probe",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/f988ba84-fc78-41a2-b2f2-eebf78cee591",
+    "scryfall_uri": "https://scryfall.com/card/trk/59/federation-probe?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-08-06T01:56:45Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.jpg?1785981405",
+      "normal": "https://cards.scryfall.io/normal/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.jpg?1785981405",
+      "large": "https://cards.scryfall.io/large/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.jpg?1785981405",
+      "png": "https://cards.scryfall.io/png/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.png?1785981405",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.jpg?1785981405",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.jpg?1785981405",
+      "thumb": "https://cards.scryfall.io/thumb/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.webp?1785981405",
+      "grid": "https://cards.scryfall.io/grid/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.webp?1785981405",
+      "display": "https://cards.scryfall.io/display/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.webp?1785981405",
+      "art": "https://cards.scryfall.io/art/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.webp?1785981405",
+      "crop": "https://cards.scryfall.io/crop/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.webp?1785981405",
+      "jpeg": "https://cards.scryfall.io/normal/front/f/9/f988ba84-fc78-41a2-b2f2-eebf78cee591.jpg?1785981405"
+    },
+    "mana_cost": "{U}",
+    "cmc": 1.0,
+    "type_line": "Artifact Creature — Construct",
+    "oracle_text": "Flying\nWhen this creature enters, choose one —\n• Target creature gets +1/+1 until end of turn.\n• Surveil 1. (Look at the top card of your library. You may put it into your graveyard.)",
+    "power": "1",
+    "toughness": "1",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Flying",
+      "Surveil"
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "legal",
+      "vintage": "legal",
+      "penny": "legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/f988ba84-fc78-41a2-b2f2-eebf78cee591/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A6fc7401f-66fe-4d17-be2f-afcf892be740&unique=prints",
+    "collector_number": "59",
+    "digital": false,
+    "rarity": "common",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Racrufi",
+    "artist_ids": [
+      "7633403b-8eb3-4e02-9a81-bb5346552529"
+    ],
+    "illustration_id": "7b88533b-a2b1-4d57-acf3-9312799ec335",
+    "border_color": "black",
+    "frame": "2015",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 24278,
+    "prices": {
+      "usd": "0.13",
+      "usd_foil": "0.19",
+      "usd_etched": null,
+      "eur": "0.11",
+      "eur_foil": "0.25",
+      "tix": "0.02"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DFederation%2BProbe",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DFederation%2BProbe",
+      "edhrec": "https://edhrec.com/route/?cc=Federation+Probe"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F729593%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=917728&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158258?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
+  },
+  "Kobayashi Maru Scenario": {
+    "object": "card",
+    "id": "c7fb72cc-1bc6-4774-9798-44824de46c72",
+    "oracle_id": "2b7ac3e8-0a7d-4b8a-a6a6-4cacc9b4f9de",
+    "multiverse_ids": [],
+    "resource_id": "012A4DA3515E1AA965D568B87C6AAC836B433EC7D4CCAC3D4AA233D200682003",
+    "mtgo_id": 158276,
+    "tcgplayer_id": 725016,
+    "cardmarket_id": 918535,
+    "name": "Kobayashi Maru Scenario",
+    "lang": "en",
+    "released_at": "2026-11-13",
+    "uri": "https://api.scryfall.com/cards/c7fb72cc-1bc6-4774-9798-44824de46c72",
+    "scryfall_uri": "https://scryfall.com/card/trk/68/kobayashi-maru-scenario?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-10-20T14:56:12Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.jpg?1792508172",
+      "normal": "https://cards.scryfall.io/normal/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.jpg?1792508172",
+      "large": "https://cards.scryfall.io/large/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.jpg?1792508172",
+      "png": "https://cards.scryfall.io/png/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.png?1792508172",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.jpg?1792508172",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.jpg?1792508172",
+      "thumb": "https://cards.scryfall.io/thumb/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.webp?1792508172",
+      "grid": "https://cards.scryfall.io/grid/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.webp?1792508172",
+      "display": "https://cards.scryfall.io/display/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.webp?1792508172",
+      "art": "https://cards.scryfall.io/art/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.webp?1792508172",
+      "crop": "https://cards.scryfall.io/crop/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.webp?1792508172",
+      "jpeg": "https://cards.scryfall.io/normal/front/c/7/c7fb72cc-1bc6-4774-9798-44824de46c72.jpg?1792508172"
+    },
+    "mana_cost": "{1}{U}{U}",
+    "cmc": 3.0,
+    "type_line": "Enchantment",
+    "oracle_text": "At the beginning of your upkeep, choose one that hasn't been chosen —\n• Hail — Return up to one target creature an opponent controls with mana value 3 or less to its owner's hand.\n• Sensors — Draw two cards.\n• Transport — Create two 1/1 red Officer creature tokens.\n• Abandon Ship — You lose the game.",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Sensors",
+      "Abandon Ship",
+      "Hail",
+      "Transport"
+    ],
+    "all_parts": [
+      {
+        "object": "related_card",
+        "id": "d557515e-bf1d-4781-aa44-eb2638cfe1ba",
+        "component": "combo_piece",
+        "name": "Kobayashi Maru Scenario",
+        "type_line": "Enchantment",
+        "uri": "https://api.scryfall.com/cards/d557515e-bf1d-4781-aa44-eb2638cfe1ba"
+      },
+      {
+        "object": "related_card",
+        "id": "012b04de-d9a5-4b12-afc8-cdf54bc42fc9",
+        "component": "token",
+        "name": "Officer",
+        "type_line": "Token Creature — Officer",
+        "uri": "https://api.scryfall.com/cards/012b04de-d9a5-4b12-afc8-cdf54bc42fc9"
+      }
+    ],
+    "legalities": {
+      "standard": "legal",
+      "future": "legal",
+      "historic": "legal",
+      "timeless": "legal",
+      "gladiator": "legal",
+      "pioneer": "legal",
+      "modern": "legal",
+      "legacy": "legal",
+      "pauper": "not_legal",
+      "vintage": "legal",
+      "penny": "not_legal",
+      "commander": "legal",
+      "oathbreaker": "legal",
+      "standardbrawl": "legal",
+      "brawl": "legal",
+      "competitivebrawl": "legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set": "trk",
+    "set_name": "Star Trek",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/b47039dc-da5a-448c-8feb-e77d458108a6",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Atrk&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/trk?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/c7fb72cc-1bc6-4774-9798-44824de46c72/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A2b7ac3e8-0a7d-4b8a-a6a6-4cacc9b4f9de&unique=prints",
+    "collector_number": "68",
+    "digital": false,
+    "rarity": "mythic",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Kevin Glint",
+    "artist_ids": [
+      "1d9ddf35-c50d-4fc7-987c-4e2bf909f75a"
+    ],
+    "illustration_id": "f919d672-eea9-4759-b426-684c5b85d053",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "enchantment"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "promo_types": [
+      "universesbeyond"
+    ],
+    "edhrec_rank": 25466,
+    "prices": {
+      "usd": "0.96",
+      "usd_foil": "1.16",
+      "usd_etched": null,
+      "eur": "0.71",
+      "eur_foil": "2.74",
+      "tix": "0.33"
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DKobayashi%2BMaru%2BScenario",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DKobayashi%2BMaru%2BScenario",
+      "edhrec": "https://edhrec.com/route/?cc=Kobayashi+Maru+Scenario"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F725016%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918535&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards/158276?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }

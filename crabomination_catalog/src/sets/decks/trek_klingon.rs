@@ -15,7 +15,7 @@ use crate::card::{
 use crate::effect::shortcut::{battle_cry, etb, on_attack, on_dies, on_you_attack, squad_etb, station, target_filtered};
 use crate::effect::{Duration, Effect, GoadLasts, ManaPayload, PlayerRef, StaticEffect, ZoneDest};
 use crate::game::types::TurnStep;
-use crate::mana::{Color, ManaCost, b, cost, generic, r, w};
+use crate::mana::{Color, ManaCost, b, cost, generic, hybrid, r, w};
 
 fn legend(name: &'static str, mana: ManaCost, types: Vec<CreatureType>, p: i32, t: i32) -> CardDefinition {
     CardDefinition { supertypes: vec![Supertype::Legendary], ..creature(name, mana, types, p, t) }
@@ -925,6 +925,90 @@ pub fn chadich_investigator() -> CardDefinition {
             vec![CreatureType::Klingon, CreatureType::Warrior],
             4,
             4,
+        )
+    }
+}
+
+// ── Kor, Cause of Vengeance's EDHREC gaps (scan of 2026-11-27) ──────────────
+
+/// Gowron, Eager for Battle — {2}{B}{R} legendary 3/3 Klingon Warrior. Another
+/// creature dying puts a +1/+1 counter on it. Sacrifice another creature: it
+/// gains trample until end of turn; a sacrificed Klingon also draws you a card
+/// and costs you 1 life.
+pub fn gowron_eager_for_battle() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::CreatureDied, EventScope::AnyPlayer)
+                .with_filter(Predicate::Not(Box::new(Predicate::TriggerSourceIsSelf))),
+            effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            sac_other_filter: Some((R::Creature.and(R::OtherThanSource), 1)),
+            effect: Effect::Seq(vec![
+                Effect::GrantKeyword { what: Selector::This, keyword: Keyword::Trample, duration: Duration::EndOfTurn },
+                Effect::If {
+                    cond: Predicate::EntityMatches {
+                        what: Selector::SacrificedCard,
+                        filter: R::HasCreatureType(CreatureType::Klingon),
+                    },
+                    then: Box::new(Effect::Seq(vec![
+                        Effect::Draw { who: Selector::You, amount: Value::ONE },
+                        Effect::LoseLife { who: Selector::You, amount: Value::ONE },
+                    ])),
+                    else_: Box::new(Effect::Noop),
+                },
+            ]),
+            ..Default::default()
+        }],
+        ..legend(
+            "Gowron, Eager for Battle",
+            cost(&[generic(2), b(), r()]),
+            vec![CreatureType::Klingon, CreatureType::Warrior],
+            3,
+            3,
+        )
+    }
+}
+
+/// L'Rell, Fierce Visionary — {1}{B}{R} legendary 1/4 Klingon Warrior. At the
+/// beginning of combat on your turn, a hasty 2/1 Klingon Warrior sacrificed at
+/// the next end step. {2}, sacrifice another creature or artifact: surveil 1.
+pub fn lrell_fierce_visionary() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::BeginCombat), EventScope::YourControl),
+            effect: Effect::Seq(vec![
+                warriors(Value::ONE),
+                Effect::SacrificeAtNextEndStep { what: Selector::LastCreatedTokens },
+            ]),
+        }],
+        activated_abilities: vec![ActivatedAbility {
+            mana_cost: cost(&[generic(2)]),
+            sac_other_filter: Some(((R::Creature.or(R::Artifact)).and(R::OtherThanSource), 1)),
+            effect: Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+            ..Default::default()
+        }],
+        ..legend(
+            "L'Rell, Fierce Visionary",
+            cost(&[generic(1), b(), r()]),
+            vec![CreatureType::Klingon, CreatureType::Warrior],
+            1,
+            4,
+        )
+    }
+}
+
+/// The Duras Sisters — {B/R}{B/R} legendary 3/2 Klingon Warrior. When they
+/// die, a hasty 2/1 Klingon Warrior.
+pub fn the_duras_sisters() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![on_dies(warriors(Value::ONE))],
+        ..legend(
+            "The Duras Sisters",
+            cost(&[hybrid(Color::Black, Color::Red), hybrid(Color::Black, Color::Red)]),
+            vec![CreatureType::Klingon, CreatureType::Warrior],
+            3,
+            2,
         )
     }
 }

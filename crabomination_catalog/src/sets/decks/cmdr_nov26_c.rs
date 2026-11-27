@@ -433,3 +433,22 @@ pub fn invasion_of_kamigawa() -> CardDefinition {
         ..Default::default()
     }
 }
+
+/// Oberth-Class Starship — {1}{W} Spacecraft. Entering searches for a basic
+/// Plains to hand. Station; 6+: flying 2/2. (Shuttlecraft Galileo's deck.)
+pub fn oberth_class_starship() -> CardDefinition {
+    CardDefinition {
+        name: "Oberth-Class Starship",
+        cost: cost(&[generic(1), w()]),
+        card_types: vec![CardType::Artifact],
+        subtypes: Subtypes { artifact_subtypes: vec![ArtifactSubtype::Spacecraft], ..Default::default() },
+        triggered_abilities: vec![etb(Effect::Search {
+            who: PlayerRef::You,
+            filter: R::IsBasicLand.and(R::HasLandType(LandType::Plains)),
+            to: crate::effect::ZoneDest::Hand(PlayerRef::You),
+        })],
+        activated_abilities: vec![station()],
+        station: vec![StationBand { min: 6, keywords: vec![Keyword::Flying], pt: Some((2, 2)), ..Default::default() }],
+        ..Default::default()
+    }
+}

@@ -38179,6 +38179,54 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GRAKK_THE_PACIFIST_COMMANDERS,
             main: decks::GRAKK_THE_PACIFIST_MAIN,
         },
+        // Seat 6289: Shuttlecraft Galileo's EDHREC average deck. `--pod-decks 6289`.
+        PodDeck {
+            name: "Shuttlecraft Galileo (W)",
+            commanders: decks::SHUTTLECRAFT_GALILEO_COMMANDERS,
+            main: decks::SHUTTLECRAFT_GALILEO_MAIN,
+        },
+        // Seat 6290: Captain Pike, Fullness of Time's EDHREC average deck. `--pod-decks 6290`.
+        PodDeck {
+            name: "Captain Pike, Fullness of Time (G)",
+            commanders: decks::CAPTAIN_PIKE_COMMANDERS,
+            main: decks::CAPTAIN_PIKE_MAIN,
+        },
+        // Seat 6291: Kor, Cause of Vengeance's EDHREC average deck. `--pod-decks 6291`.
+        PodDeck {
+            name: "Kor, Cause of Vengeance (WBR)",
+            commanders: decks::KOR_COMMANDERS,
+            main: decks::KOR_MAIN,
+        },
+        // Seat 6292: Gul Dukat, Colonial Prefect's EDHREC average deck. `--pod-decks 6292`.
+        PodDeck {
+            name: "Gul Dukat, Colonial Prefect (B)",
+            commanders: decks::GUL_DUKAT_COMMANDERS,
+            main: decks::GUL_DUKAT_MAIN,
+        },
+        // Seat 6293: Zero, Incorporeal Sensate's EDHREC average deck. `--pod-decks 6293`.
+        PodDeck {
+            name: "Zero, Incorporeal Sensate (WB)",
+            commanders: decks::ZERO_COMMANDERS,
+            main: decks::ZERO_MAIN,
+        },
+        // Seat 6294: The Traveler's EDHREC average deck. `--pod-decks 6294`.
+        PodDeck {
+            name: "The Traveler (UG)",
+            commanders: decks::THE_TRAVELER_COMMANDERS,
+            main: decks::THE_TRAVELER_MAIN,
+        },
+        // Seat 6295: The Caretaker's EDHREC average deck. `--pod-decks 6295`.
+        PodDeck {
+            name: "The Caretaker (U)",
+            commanders: decks::THE_CARETAKER_COMMANDERS,
+            main: decks::THE_CARETAKER_MAIN,
+        },
+        // Seat 6296: Jett Reno, Problem Solver's EDHREC average deck. `--pod-decks 6296`.
+        PodDeck {
+            name: "Jett Reno, Problem Solver (U)",
+            commanders: decks::JETT_RENO_COMMANDERS,
+            main: decks::JETT_RENO_MAIN,
+        },
     ]
 }
 
@@ -46437,6 +46485,14 @@ mod tests {
             ("Yume, Chronicler of Valor", &[0x228E]),
             ("Benjamin Sisko, Besieged", &[0x228F]),
             ("Grakk the Pacifist", &[0x2290]),
+            ("Shuttlecraft Galileo", &[0x2291]),
+            ("Captain Pike, Fullness of Time", &[0x2292]),
+            ("Kor, Cause of Vengeance", &[0x2293]),
+            ("Gul Dukat, Colonial Prefect", &[0x2294]),
+            ("Zero, Incorporeal Sensate", &[0x2295]),
+            ("The Traveler", &[0x2296]),
+            ("The Caretaker", &[0x2297]),
+            ("Jett Reno, Problem Solver", &[0x2298]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

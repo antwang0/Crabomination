@@ -83,20 +83,20 @@ fn federation() -> Value {
     Value::DistinctCreatureTypesAmongYourNonBorgCreatures
 }
 
+fn officer_token() -> Arc<TokenDefinition> {
+    Arc::new(TokenDefinition {
+        name: "Officer".into(),
+        power: 1,
+        toughness: 1,
+        card_types: vec![CardType::Creature],
+        colors: vec![Color::Red],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Officer], ..Default::default() },
+        ..Default::default()
+    })
+}
+
 fn officers(count: Value) -> Effect {
-    Effect::CreateToken {
-        who: PlayerRef::You,
-        count,
-        definition: Arc::new(TokenDefinition {
-            name: "Officer".into(),
-            power: 1,
-            toughness: 1,
-            card_types: vec![CardType::Creature],
-            colors: vec![Color::Red],
-            subtypes: Subtypes { creature_types: vec![CreatureType::Officer], ..Default::default() },
-            ..Default::default()
-        }),
-    }
+    Effect::CreateToken { who: PlayerRef::You, count, definition: officer_token() }
 }
 
 fn sac_at_end_step(make: Effect) -> Effect {
@@ -793,5 +793,350 @@ pub fn quark_humble_proprietor() -> CardDefinition {
             effect: crate::effect::shortcut::mint_treasures(1),
         }],
         ..legend("Quark, Humble Proprietor", cost(&[generic(2), r()]), vec![CreatureType::Ferengi, CreatureType::Rogue], 1, 2)
+    }
+}
+
+// ── Captain Pike, Fullness of Time's EDHREC gaps (scan of 2026-11-27) ───────
+
+/// Captain Pike, Fullness of Time — {1}{G}{G} legendary */* Human Officer
+/// Scout; P/T = differently named lands you control. You may look at the top
+/// card of your library any time and play lands from it.
+pub fn captain_pike_fullness_of_time() -> CardDefinition {
+    CardDefinition {
+        dynamic_pt: Some(crate::card::DynamicPt::DistinctLandNamesControlled),
+        static_abilities: vec![
+            StaticAbility {
+                description: "You may look at the top card of your library any time.",
+                effect: StaticEffect::MayLookAtOwnLibraryTop,
+            },
+            StaticAbility {
+                description: "You may play lands from the top of your library.",
+                effect: StaticEffect::PlayFromLibraryTop { filter: R::Land },
+            },
+        ],
+        ..legend(
+            "Captain Pike, Fullness of Time",
+            cost(&[generic(1), g(), g()]),
+            vec![CreatureType::Human, CreatureType::Officer, CreatureType::Scout],
+            0,
+            0,
+        )
+    }
+}
+
+/// Awakened Amalgam — {4} */* Golem artifact creature; P/T = differently named
+/// lands you control.
+pub fn awakened_amalgam() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        dynamic_pt: Some(crate::card::DynamicPt::DistinctLandNamesControlled),
+        ..creature("Awakened Amalgam", cost(&[generic(4)]), vec![CreatureType::Golem], 0, 0)
+    }
+}
+
+/// Branching Timeline — {6}{G}{G} sorcery. Strange new worlds — reveal the top
+/// X (X = differently named lands you control); every permanent card enters
+/// tapped, the rest go to the bottom in a random order.
+pub fn branching_timeline() -> CardDefinition {
+    CardDefinition {
+        name: "Branching Timeline",
+        cost: cost(&[generic(6), g(), g()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::RevealTopNPutMatchingToBattlefield {
+            who: PlayerRef::You,
+            count: land_names(),
+            filter: R::PermanentCard,
+            all_tapped: true,
+        },
+        ..Default::default()
+    }
+}
+
+// ── Zero, Incorporeal Sensate's EDHREC gaps (scan of 2026-11-27) ────────────
+
+/// Zero, Incorporeal Sensate — {1}{W/B}{W/B} legendary 2/2 Medusan Scientist
+/// artifact creature with lifelink. Entering, look at target opponent's hand
+/// and exile a nonland card from it; its owner may play it for {2} more for as
+/// long as it remains exiled.
+pub fn zero_incorporeal_sensate() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Lifelink],
+        triggered_abilities: vec![etb(Effect::ExileFromHandTaxed {
+            from: target_filtered(R::OpponentPlayer),
+            count: Value::ONE,
+            filter: R::Nonland,
+            extra_cost: 2,
+        })],
+        ..artifact_legend(
+            "Zero, Incorporeal Sensate",
+            cost(&[generic(1), hybrid(Color::White, Color::Black), hybrid(Color::White, Color::Black)]),
+            vec![CreatureType::Medusan, CreatureType::Scientist],
+            2,
+            2,
+        )
+    }
+}
+
+/// Pick the Brain — {2}{B} sorcery. Target opponent reveals their hand; you
+/// exile a nonland card from it. Delirium — also exile every card with that
+/// name from their graveyard, hand and library; they shuffle.
+pub fn pick_the_brain() -> CardDefinition {
+    CardDefinition {
+        name: "Pick the Brain",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::Seq(vec![
+            Effect::ExileChosenFromHand {
+                from: target_filtered(R::OpponentPlayer),
+                count: Value::ONE,
+                filter: R::Nonland,
+                link_to_source: false,
+                face_down: false,
+            },
+            Effect::If {
+                cond: Predicate::DeliriumActive { who: PlayerRef::You },
+                then: Box::new(Effect::ExileLibraryCardsNamedLikeExiledThisResolution {
+                    who: PlayerRef::Target(0),
+                    all_zones: true,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── Gul Dukat, Colonial Prefect's EDHREC gaps (scan of 2026-11-27) ──────────
+
+/// "Whenever you face a dilemma" (CR 700.2 — you choose modes for a spell or
+/// ability): each opponent loses `n` life and you gain `n`.
+fn dilemma_drain(n: i32) -> TriggeredAbility {
+    TriggeredAbility {
+        event: EventSpec::new(EventKind::Performed(crate::effect::KeywordAct::FacedDilemma), EventScope::YourControl),
+        effect: Effect::Seq(vec![
+            Effect::LoseLife { who: Selector::Player(PlayerRef::EachOpponent), amount: Value::Const(n) },
+            Effect::GainLife { who: Selector::You, amount: Value::Const(n) },
+        ]),
+    }
+}
+
+/// Elim Garak, Simple Tailor — {2}{B} legendary 3/3 Cardassian Rogue with
+/// menace. Whenever you face a dilemma, each opponent loses 2 life and you
+/// gain 2 life.
+pub fn elim_garak_simple_tailor() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Menace],
+        triggered_abilities: vec![dilemma_drain(2)],
+        ..legend(
+            "Elim Garak, Simple Tailor",
+            cost(&[generic(2), b()]),
+            vec![CreatureType::Cardassian, CreatureType::Rogue],
+            3,
+            3,
+        )
+    }
+}
+
+/// Obsidian Order Operative — {3}{B} 2/5 Cardassian Officer Spy. Whenever you
+/// face a dilemma, each opponent loses 1 life and you gain 1 life.
+pub fn obsidian_order_operative() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![dilemma_drain(1)],
+        ..creature(
+            "Obsidian Order Operative",
+            cost(&[generic(3), b()]),
+            vec![CreatureType::Cardassian, CreatureType::Officer, CreatureType::Spy],
+            2,
+            5,
+        )
+    }
+}
+
+/// Impossible Choice — {2}{B} instant. Choose one — destroy target creature
+/// and its controller creates two 1/1 red Officers; or you draw two cards and
+/// each player loses 2 life.
+pub fn impossible_choice() -> CardDefinition {
+    CardDefinition {
+        name: "Impossible Choice",
+        cost: cost(&[generic(2), b()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::Destroy { what: target_filtered(R::Creature) },
+                // "Its controller" reads the destroyed creature's LKI (CR 608.2h).
+                Effect::CreateToken {
+                    who: PlayerRef::ControllerOf(Box::new(Selector::Target(0))),
+                    count: Value::Const(2),
+                    definition: officer_token(),
+                },
+            ]),
+            Effect::Seq(vec![
+                Effect::Draw { who: Selector::You, amount: Value::Const(2) },
+                Effect::LoseLife { who: Selector::Player(PlayerRef::EachPlayer), amount: Value::Const(2) },
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+// ── The Caretaker's and Jett Reno's EDHREC gaps (scan of 2026-11-27) ────────
+
+/// Jett Reno, Problem Solver — {1}{U} legendary 1/2 Human Artificer. Whenever
+/// she becomes tapped, surveil 1 — or draw instead if her power is 4 or
+/// greater. Whenever you face a dilemma, put a +1/+1 counter on her.
+pub fn jett_reno_problem_solver() -> CardDefinition {
+    CardDefinition {
+        triggered_abilities: vec![
+            TriggeredAbility {
+                event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
+                effect: Effect::If {
+                    cond: Predicate::ValueAtLeast(Value::PowerOf(Box::new(Selector::This)), Value::Const(4)),
+                    then: Box::new(draw(Value::ONE)),
+                    else_: Box::new(Effect::Surveil { who: PlayerRef::You, amount: Value::ONE }),
+                },
+            },
+            TriggeredAbility {
+                event: EventSpec::new(
+                    EventKind::Performed(crate::effect::KeywordAct::FacedDilemma),
+                    EventScope::YourControl,
+                ),
+                effect: Effect::AddCounter { what: Selector::This, kind: CounterType::PlusOnePlusOne, amount: Value::ONE },
+            },
+        ],
+        ..legend(
+            "Jett Reno, Problem Solver",
+            cost(&[generic(1), u()]),
+            vec![CreatureType::Human, CreatureType::Artificer],
+            1,
+            2,
+        )
+    }
+}
+
+/// Consider the Prime Directive — {2}{U} instant. Choose one — counter target
+/// spell unless its controller pays {3}; or tap up to one target creature, put
+/// a stun counter on it, and draw a card.
+pub fn consider_the_prime_directive() -> CardDefinition {
+    CardDefinition {
+        name: "Consider the Prime Directive",
+        cost: cost(&[generic(2), u()]),
+        card_types: vec![CardType::Instant],
+        effect: Effect::ChooseMode(vec![
+            Effect::CounterUnlessPaid {
+                what: target_filtered(R::IsSpellOnStack),
+                mana_cost: cost(&[generic(3)]),
+                exile: false,
+                extra_generic: None,
+                if_paid: None,
+            },
+            Effect::Seq(vec![
+                Effect::OptionalTargets {
+                    min: 0,
+                    body: Box::new(Effect::Seq(vec![
+                        Effect::Tap { what: target_filtered(R::Creature) },
+                        Effect::AddCounter { what: Selector::Target(0), kind: CounterType::Stun, amount: Value::ONE },
+                    ])),
+                },
+                draw(Value::ONE),
+            ]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// Make It So — {3}{U} sorcery. Choose one — untap target permanent you
+/// control and target player draws two cards; or create a 1/1 red Officer and
+/// draw two cards.
+pub fn make_it_so() -> CardDefinition {
+    CardDefinition {
+        name: "Make It So",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Sorcery],
+        effect: Effect::ChooseMode(vec![
+            Effect::Seq(vec![
+                Effect::Untap { what: target_filtered(R::ControlledByYou), up_to: None },
+                Effect::Draw {
+                    who: Selector::TargetFiltered { slot: 1, filter: R::Player },
+                    amount: Value::Const(2),
+                },
+            ]),
+            Effect::Seq(vec![officers(Value::ONE), draw(Value::Const(2))]),
+        ]),
+        ..Default::default()
+    }
+}
+
+/// The Caretaker — {5}{U} legendary 5/6 Elemental with vigilance and ward {2}.
+/// At the beginning of each end step, if you faced a dilemma this turn, target
+/// opponent exiles cards from the top of their library until they exile a
+/// nonland card; you may cast it without paying its mana cost.
+pub fn the_caretaker() -> CardDefinition {
+    use crate::card::WardCost;
+    CardDefinition {
+        keywords: vec![Keyword::Vigilance, Keyword::Ward(WardCost::Mana(cost(&[generic(2)])))],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::End), EventScope::AnyPlayer).with_filter(
+                Predicate::ValueAtLeast(Value::DilemmasFacedThisTurn(PlayerRef::You), Value::ONE),
+            ),
+            effect: Effect::TargetPlayerThen {
+                filter: R::OpponentPlayer,
+                then: Box::new(Effect::Seq(vec![
+                    Effect::ExileTopUntilNonland { who: PlayerRef::Target(0) },
+                    Effect::CastExiledFree { what: Selector::ExiledThisResolution { filter: R::Nonland } },
+                ])),
+            },
+        }],
+        ..legend("The Caretaker", cost(&[generic(5), u()]), vec![CreatureType::Elemental], 5, 6)
+    }
+}
+
+/// Federation Probe — {U} 1/1 flying Construct artifact creature. Entering,
+/// choose one — target creature gets +1/+1 until end of turn; or surveil 1.
+pub fn federation_probe() -> CardDefinition {
+    CardDefinition {
+        card_types: vec![CardType::Artifact, CardType::Creature],
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![etb(Effect::ChooseMode(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature),
+                power: Value::ONE,
+                toughness: Value::ONE,
+                duration: Duration::EndOfTurn,
+            },
+            Effect::Surveil { who: PlayerRef::You, amount: Value::ONE },
+        ]))],
+        ..creature("Federation Probe", cost(&[u()]), vec![CreatureType::Construct], 1, 1)
+    }
+}
+
+/// Kobayashi Maru Scenario — {1}{U}{U} enchantment. At the beginning of your
+/// upkeep, choose one that hasn't been chosen — return up to one target
+/// creature an opponent controls with mana value 3 or less to its owner's
+/// hand; draw two; two 1/1 red Officers; or you lose the game.
+pub fn kobayashi_maru_scenario() -> CardDefinition {
+    CardDefinition {
+        name: "Kobayashi Maru Scenario",
+        cost: cost(&[generic(1), u(), u()]),
+        card_types: vec![CardType::Enchantment],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::StepBegins(TurnStep::Upkeep), EventScope::YourControl),
+            effect: Effect::ChooseUnchosenMode {
+                modes: vec![
+                    Effect::OptionalTargets {
+                        min: 0,
+                        body: Box::new(Effect::Move {
+                            what: target_filtered(
+                                R::Creature.and(R::ControlledByOpponent).and(R::ManaValueAtMost(3)),
+                            ),
+                            to: crate::effect::ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                        }),
+                    },
+                    draw(Value::Const(2)),
+                    officers(Value::Const(2)),
+                    Effect::LoseGame { who: PlayerRef::You },
+                ],
+            },
+        }],
+        ..Default::default()
     }
 }
