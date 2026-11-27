@@ -132,4 +132,54 @@ impl GameState {
         self.bottom_in_random_order(p, &rest);
         Ok(())
     }
+
+    /// Commander Spock's "strange new worlds": the offer is made where the
+    /// card lies (a re-run on a prompting seat's answer sees the same top
+    /// card), then "if that card is still on top of your library, draw a card".
+    pub(super) fn reveal_top_cast_or_land_else_draw(
+        &mut self,
+        max_mv: &Value,
+        ctx: &EffectContext,
+        effect: &Effect,
+        events: &mut Vec<GameEvent>,
+    ) -> Result<(), GameError> {
+        let p = ctx.controller;
+        let Some(top) = self.players[p].library.first() else { return Ok(()) };
+        let (cid, name, is_land) = (top.id, top.definition.name, top.definition.is_land());
+        let cap = self.evaluate_value(max_mv, ctx).max(0) as u32;
+        let offer = is_land || self.zone_mana_value(top) <= cap;
+        events.push(GameEvent::TopCardRevealed { player: p, card_name: name, is_land });
+        if offer {
+            let prompt = if is_land {
+                "Put the revealed land onto the battlefield tapped?"
+            } else {
+                "Cast the revealed card without paying its mana cost?"
+            };
+            let Some(picked) = self.choose_up_to_cards(
+                p,
+                prompt.into(),
+                ctx.source.unwrap_or(CardId(0)),
+                vec![(cid, name.to_string())],
+                1,
+                PickValue::Gain,
+                effect,
+                vec![cid],
+            ) else {
+                return Ok(());
+            };
+            if picked.first() == Some(&cid) {
+                if is_land {
+                    let to = crate::effect::ZoneDest::Battlefield { controller: crate::effect::PlayerRef::You, tapped: true };
+                    self.move_card_to(cid, &to, ctx, events);
+                } else if let Some(def) = self.find_card_anywhere(cid).map(|c| c.definition.arc()) {
+                    let target = self.auto_target_for_effect_avoiding(&def.effect, p, Some(cid));
+                    events.extend(self.cast_card_for_free(p, cid, Zone::Library, target, vec![], None, None, false)?);
+                }
+            }
+        }
+        if self.players[p].library.first().is_some_and(|c| c.id == cid) {
+            self.run_effect(&crate::effect::shortcut::draw(1), ctx, events)?;
+        }
+        Ok(())
+    }
 }

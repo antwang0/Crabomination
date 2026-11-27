@@ -4572,6 +4572,10 @@ pub enum StaticEffect {
     /// `SelfCrewsSaddlesWithToughness`'s crew-only sibling: "crews Vehicles
     /// using its toughness rather than its power" (Giant Ox).
     SelfCrewsWithToughness,
+    /// CR 702.122 / 702.184a — "stations Spacecraft and crews Vehicles as
+    /// though its power were multiplied by `factor`" (Sulu, Heroic Helmsman:
+    /// 3). Read by `crew`, the Station cost and the bot's crew pick.
+    SelfCrewsStationsPowerTimes { factor: i32 },
     /// CR 702.184a — "Each creature you control with toughness greater than
     /// its power stations permanents using its toughness rather than its
     /// power" (Tapestry Warden): a Station cost's tapped creature matching

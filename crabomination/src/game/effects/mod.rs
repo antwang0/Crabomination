@@ -44389,6 +44389,9 @@ impl GameState {
             Effect::RevealUntilMayCastFree { max_mv, filter } => {
                 self.reveal_until_may_cast_free(max_mv, filter.as_ref(), ctx, effect, events)
             }
+            Effect::RevealTopCastOrLandElseDraw { max_mv } => {
+                self.reveal_top_cast_or_land_else_draw(max_mv, ctx, effect, events)
+            }
             Effect::RevealTopMayCastFreeKeepOnTop { filter } => self.reveal_top_may_cast_one_free(
                 &crate::effect::Value::ONE,
                 &crate::effect::Value::Const(i32::MAX),

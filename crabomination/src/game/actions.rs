@@ -25555,6 +25555,8 @@ impl GameState {
             tap_other_power = self.battlefield_find(other_cid).map(|c| {
                 if station && self.stations_with_toughness(other_cid) {
                     self.effective_toughness_on(c)
+                } else if station {
+                    self.effective_power_on(c).saturating_mul(self.crew_station_power_factor(other_cid))
                 } else {
                     self.effective_power_on(c)
                 }

@@ -2407,6 +2407,7 @@ impl Effect {
             Effect::Ripple { .. } => false,
             Effect::RevealTopMayCastOneFree { .. }
             | Effect::RevealTopMayCastFreeKeepOnTop { .. }
+            | Effect::RevealTopCastOrLandElseDraw { .. }
             | Effect::RevealUntilMayCastFree { .. } => false,
             Effect::EachPlayerDrawsDamageTheyDealtToSource => false,
             Effect::CopySpellOntoAnotherOpponentsPermanent { .. } | Effect::CopySpellForEachOtherOpponent { .. } => false,

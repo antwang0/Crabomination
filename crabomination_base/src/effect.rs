@@ -9335,6 +9335,10 @@ pub enum Effect {
     /// "Reveal the top card; you may cast it free if it matches `filter`" — a
     /// declined or unmatched card stays on top (Powerbalance, via `WithX`).
     RevealTopMayCastFreeKeepOnTop { filter: SelectionRequirement },
+    /// Reveal the top card: a nonland with mana value ≤ `max_mv` may be cast
+    /// free, a land may enter tapped; if that card is still on top, draw a
+    /// card (Commander Spock).
+    RevealTopCastOrLandElseDraw { max_mv: Value },
     /// Reveal until a nonland card with mana value ≤ `max_mv` (and `filter`), may
     /// cast it free, bottom the rest at random — revealed, not exiled (Treasure
     /// Keeper).

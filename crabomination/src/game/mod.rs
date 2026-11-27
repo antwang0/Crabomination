@@ -24386,6 +24386,18 @@ impl GameState {
             })
     }
 
+    /// `SelfCrewsStationsPowerTimes` (Sulu, Heroic Helmsman): the factor
+    /// `cid`'s power is multiplied by when it crews or stations; 1 otherwise.
+    pub fn crew_station_power_factor(&self, cid: crate::card::CardId) -> i32 {
+        use crate::effect::StaticEffect;
+        self.battlefield.find_by_id(cid).map_or(1, |c| {
+            c.definition.static_abilities.iter().fold(1, |f, sa| match sa.effect {
+                StaticEffect::SelfCrewsStationsPowerTimes { factor } => f.saturating_mul(factor),
+                _ => f,
+            })
+        })
+    }
+
     /// CR 702.184a — does a `StationsWithToughness` static (Tapestry Warden)
     /// make `cid` station with its toughness?
     pub(crate) fn stations_with_toughness(&self, cid: crate::card::CardId) -> bool {
@@ -24514,6 +24526,7 @@ impl GameState {
                 return Err(GameError::CardIsTapped(cid));
             }
             let base = if self.crew_saddle_uses_toughness(cid, false) { cp.toughness } else { cp.power };
+            let base = base.saturating_mul(self.crew_station_power_factor(cid));
             total_power = total_power
                 .saturating_add(base.saturating_add(self.crew_saddle_power_bonus(cid, false)).max(0));
         }
@@ -35547,6 +35560,7 @@ fn static_effect_to_effects(
             | StaticEffect::SelfCrewsSaddlesWithToughness
             | StaticEffect::CrewPowerBonus { .. }
             | StaticEffect::SelfCrewsWithToughness
+            | StaticEffect::SelfCrewsStationsPowerTimes { .. }
             // Read by the Station cost in `activate_ability`.
             | StaticEffect::StationsWithToughness { .. }
             // GrantTriggeredAbility — surfaced by `statics_granted_triggers_for`
