@@ -1473,3 +1473,6 @@ pub use cmdr_nov26_c::*;
 #[path = "../../../src/sets/decks/cmdr_nov27.rs"]
 mod cmdr_nov27;
 pub use cmdr_nov27::*;
+#[path = "../../../src/sets/decks/cmdr_nov27_b.rs"]
+mod cmdr_nov27_b;
+pub use cmdr_nov27_b::*;

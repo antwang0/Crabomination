@@ -501,3 +501,79 @@ fn invasion_of_kamigawa_taps_and_stuns() {
     let b = g.battlefield_find(bear).unwrap();
     assert!(b.tapped && b.counter_count(CounterType::Stun) == 1);
 }
+
+// ── decks::cmdr_nov27_b ───────────────────────────────────────────────────────
+
+/// McCoy: his entry (and a Doctor's) puts a +1/+1 counter on each of your
+/// creatures, and your creatures with counters have lifelink.
+#[test]
+fn mccoy_counters_the_team_and_grants_lifelink_to_countered_creatures() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mccoy = g.add_card_to_hand(0, catalog::mccoy_not_a_bricklayer());
+    g.players[0].mana_pool.add(Color::Green, 1);
+    g.players[0].mana_pool.add(Color::White, 1);
+    g.players[0].mana_pool.add_colorless(3);
+    cast(&mut g, mccoy);
+    assert_eq!(plus_ones(&g, bear), 1);
+    assert_eq!(plus_ones(&g, mccoy), 1);
+    assert!(g.computed_permanent(bear).unwrap().keywords().contains(&Keyword::Lifelink));
+    let fresh = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    assert!(!g.computed_permanent(fresh).unwrap().keywords().contains(&Keyword::Lifelink), "no counter, no lifelink");
+}
+
+/// Gone Missing tops the target on its owner's library and investigates.
+#[test]
+fn gone_missing_tops_a_permanent_and_makes_a_clue() {
+    let mut g = pod(2);
+    let ogre = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let gm = g.add_card_to_hand(0, catalog::gone_missing());
+    g.players[0].mana_pool.add(Color::Blue, 5);
+    g.perform_action(GameAction::CastSpell { card_id: gm, target: Some(Target::Permanent(ogre)), additional_targets: vec![], mode: None, x_value: None }).expect("cast");
+    drain_stack(&mut g);
+    assert!(g.players[1].library.iter().any(|c| c.id == ogre));
+    assert!(g.battlefield.iter().any(|c| c.controller == 0 && c.definition.name == "Clue"));
+}
+
+/// The Needs of the Many: sacrifice a creature; the rest become indestructible
+/// and hexproof, damage to you is prevented, and the spell is exiled.
+#[test]
+fn the_needs_of_the_many_shields_the_team_and_exiles_itself() {
+    let mut g = pod(2);
+    let fodder = g.add_card_to_battlefield(0, catalog::llanowar_elves());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let spell = g.add_card_to_hand(0, catalog::the_needs_of_the_many());
+    g.decider = Box::new(ScriptedDecider::new(vec![DecisionAnswer::Cards(vec![fodder])]));
+    g.players[0].mana_pool.add(Color::White, 2);
+    cast(&mut g, spell);
+    assert!(g.battlefield_find(fodder).is_none() && g.battlefield_find(bear).is_some(), "one creature sacrificed");
+    let kws = g.computed_permanent(bear).unwrap().keywords().to_vec();
+    assert!(kws.contains(&Keyword::Indestructible) && kws.contains(&Keyword::Hexproof));
+    assert!(g.exile.iter().any(|c| c.id == spell), "exiled on resolution");
+    let life = g.players[0].life;
+    let mut ev = Vec::new();
+    g.deal_damage_to_from(EntityRef::Player(0), 3, None, &mut ev);
+    assert_eq!(g.players[0].life, life, "damage to you prevented");
+}
+
+/// Troubling Tribbles copies itself each upkeep; Gul Dukat doubles an
+/// opponent's life loss this turn at the end step and drains it.
+#[test]
+fn tribbles_multiply_and_gul_dukat_doubles_the_turns_loss() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::troubling_tribbles());
+    g.fire_step_triggers(TurnStep::Upkeep);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield.iter().filter(|c| c.definition.name == "Troubling Tribbles").count(), 2);
+
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::gul_dukat_colonial_prefect());
+    lose(&mut g, 0, PlayerRef::Seat(1), 3);
+    let (me, l1, l2) = (g.players[0].life, g.players[1].life, g.players[2].life);
+    g.step = TurnStep::End;
+    g.fire_step_triggers(TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, l1 - 3);
+    assert_eq!(g.players[2].life, l2, "lost nothing this turn");
+    assert_eq!(g.players[0].life, me + 3);
+}

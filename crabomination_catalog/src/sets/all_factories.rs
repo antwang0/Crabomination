@@ -19558,6 +19558,15 @@ static DECKS: &[Factory] = &[
     super::decks::miss_highwater,
     super::decks::salinae_the_ocean_mother,
     super::decks::invasion_of_kamigawa,
+    // cmdr_nov27_b (one-card closers, pair decks)
+    super::decks::mccoy_not_a_bricklayer,
+    super::decks::theres_coffee_in_that_nebula,
+    super::decks::gone_missing,
+    super::decks::the_needs_of_the_many,
+    super::decks::troubling_tribbles,
+    super::decks::cardassia_prime,
+    super::decks::gul_dukat_colonial_prefect,
+    super::decks::unexplored_territory,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

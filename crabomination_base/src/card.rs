@@ -391,6 +391,7 @@ pub enum CreatureType {
     Officer,
     // Star Trek (Sickbay Orderly).
     Caitian,
+    Cardassian,
     Bolian,
     // Marvel (Thanos, Death's Consort).
     Eternal,
