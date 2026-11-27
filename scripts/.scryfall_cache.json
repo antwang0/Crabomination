@@ -868314,5 +868314,139 @@
       "cardmarket": "https://www.cardmarket.com/en/Magic/Products?idProduct=918874&referrer=scryfall&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
       "cardhoarder": "https://www.cardhoarder.com/cards/158204?affiliate_id=scryfall&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
     }
+  },
+  "Salinae, the Ocean Mother": {
+    "object": "card",
+    "id": "1ae63298-f198-4304-acca-d867835130d4",
+    "oracle_id": "763382f5-146b-45aa-a306-03406dd6abd6",
+    "multiverse_ids": [],
+    "tcgplayer_id": 733518,
+    "name": "Salinae, the Ocean Mother",
+    "lang": "en",
+    "released_at": "2027-02-05",
+    "uri": "https://api.scryfall.com/cards/1ae63298-f198-4304-acca-d867835130d4",
+    "scryfall_uri": "https://scryfall.com/card/nau/70/salinae-the-ocean-mother?utm_source=api",
+    "layout": "normal",
+    "highres_image": true,
+    "image_status": "highres_scan",
+    "image_updated_at": "2026-11-13T14:21:57Z",
+    "image_uris": {
+      "small": "https://cards.scryfall.io/small/front/1/a/1ae63298-f198-4304-acca-d867835130d4.jpg?1794579717",
+      "normal": "https://cards.scryfall.io/normal/front/1/a/1ae63298-f198-4304-acca-d867835130d4.jpg?1794579717",
+      "large": "https://cards.scryfall.io/large/front/1/a/1ae63298-f198-4304-acca-d867835130d4.jpg?1794579717",
+      "png": "https://cards.scryfall.io/png/front/1/a/1ae63298-f198-4304-acca-d867835130d4.png?1794579717",
+      "art_crop": "https://cards.scryfall.io/art_crop/front/1/a/1ae63298-f198-4304-acca-d867835130d4.jpg?1794579717",
+      "border_crop": "https://cards.scryfall.io/border_crop/front/1/a/1ae63298-f198-4304-acca-d867835130d4.jpg?1794579717",
+      "thumb": "https://cards.scryfall.io/thumb/front/1/a/1ae63298-f198-4304-acca-d867835130d4.webp?1794579717",
+      "grid": "https://cards.scryfall.io/grid/front/1/a/1ae63298-f198-4304-acca-d867835130d4.webp?1794579717",
+      "display": "https://cards.scryfall.io/display/front/1/a/1ae63298-f198-4304-acca-d867835130d4.webp?1794579717",
+      "art": "https://cards.scryfall.io/art/front/1/a/1ae63298-f198-4304-acca-d867835130d4.webp?1794579717",
+      "crop": "https://cards.scryfall.io/crop/front/1/a/1ae63298-f198-4304-acca-d867835130d4.webp?1794579717",
+      "jpeg": "https://cards.scryfall.io/normal/front/1/a/1ae63298-f198-4304-acca-d867835130d4.jpg?1794579717"
+    },
+    "mana_cost": "{6}{U}{U}",
+    "cmc": 8.0,
+    "type_line": "Legendary Creature — Whale God",
+    "oracle_text": "This spell costs {X} less to cast, where X is your devotion to blue. (Each {U} in the mana costs of permanents you control counts toward your devotion to blue.)\nTrample\nWhenever you cast an artifact or creature spell, copy it, except the copy is a 1/1 Fish creature in addition to its other types. (The copy becomes a token.)",
+    "power": "5",
+    "toughness": "7",
+    "colors": [
+      "U"
+    ],
+    "color_identity": [
+      "U"
+    ],
+    "keywords": [
+      "Trample"
+    ],
+    "legalities": {
+      "standard": "not_legal",
+      "future": "legal",
+      "historic": "not_legal",
+      "timeless": "not_legal",
+      "gladiator": "not_legal",
+      "pioneer": "not_legal",
+      "modern": "not_legal",
+      "legacy": "not_legal",
+      "pauper": "not_legal",
+      "vintage": "not_legal",
+      "penny": "not_legal",
+      "commander": "not_legal",
+      "oathbreaker": "not_legal",
+      "standardbrawl": "not_legal",
+      "brawl": "not_legal",
+      "competitivebrawl": "not_legal",
+      "alchemy": "not_legal",
+      "paupercommander": "not_legal",
+      "duel": "not_legal",
+      "oldschool": "not_legal",
+      "premodern": "not_legal",
+      "predh": "not_legal",
+      "tlr": "not_legal"
+    },
+    "games": [
+      "paper",
+      "mtgo",
+      "arena"
+    ],
+    "reserved": false,
+    "game_changer": false,
+    "foil": true,
+    "nonfoil": true,
+    "finishes": [
+      "nonfoil",
+      "foil"
+    ],
+    "oversized": false,
+    "promo": false,
+    "reprint": false,
+    "variation": false,
+    "set_id": "8e82e106-d6c8-4360-8c83-f6b4f8c5ecd1",
+    "set": "nau",
+    "set_name": "Nauctis: The Sunken Realm",
+    "set_type": "expansion",
+    "set_uri": "https://api.scryfall.com/sets/8e82e106-d6c8-4360-8c83-f6b4f8c5ecd1",
+    "set_search_uri": "https://api.scryfall.com/cards/search?order=set&q=e%3Anau&unique=prints",
+    "scryfall_set_uri": "https://scryfall.com/sets/nau?utm_source=api",
+    "rulings_uri": "https://api.scryfall.com/cards/1ae63298-f198-4304-acca-d867835130d4/rulings",
+    "prints_search_uri": "https://api.scryfall.com/cards/search?order=released&q=oracleid%3A763382f5-146b-45aa-a306-03406dd6abd6&unique=prints",
+    "collector_number": "70",
+    "digital": false,
+    "rarity": "mythic",
+    "card_back_id": "0aeebaf5-8c7d-4636-9e82-8c27447861f7",
+    "artist": "Alexander Ostrowski",
+    "artist_ids": [
+      "3c278fce-4a9d-4b16-8c84-d29addc394f5"
+    ],
+    "illustration_id": "6729608a-bfdd-476c-8e43-40114d542020",
+    "border_color": "black",
+    "frame": "2015",
+    "frame_effects": [
+      "legendary"
+    ],
+    "security_stamp": "oval",
+    "full_art": false,
+    "textless": false,
+    "booster": false,
+    "story_spotlight": false,
+    "edhrec_rank": 25046,
+    "prices": {
+      "usd": null,
+      "usd_foil": null,
+      "usd_etched": null,
+      "eur": null,
+      "eur_foil": null,
+      "tix": null
+    },
+    "related_uris": {
+      "tcgplayer_infinite_articles": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Farticles&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Farticles%3FproductLineName%3Dmagic%26q%3DSalinae%252C%2Bthe%2BOcean%2BMother",
+      "tcgplayer_infinite_decks": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&trafcat=tcgplayer.com%2Fsearch%2Fdecks&u=https%3A%2F%2Fwww.tcgplayer.com%2Fsearch%2Fdecks%3FproductLineName%3Dmagic%26q%3DSalinae%252C%2Bthe%2BOcean%2BMother",
+      "edhrec": "https://edhrec.com/route/?cc=Salinae%2C+the+Ocean+Mother"
+    },
+    "purchase_uris": {
+      "tcgplayer": "https://partner.tcgplayer.com/c/4931599/1830156/21018?subId1=api&u=https%3A%2F%2Fwww.tcgplayer.com%2Fproduct%2F733518%3Fpage%3D1",
+      "cardmarket": "https://www.cardmarket.com/en/Magic/Products/Search?referrer=scryfall&searchString=Salinae%2C+the+Ocean+Mother&utm_campaign=card_prices&utm_medium=text&utm_source=scryfall",
+      "cardhoarder": "https://www.cardhoarder.com/cards?affiliate_id=scryfall&data%5Bsearch%5D=Salinae%2C+the+Ocean+Mother&ref=card-profile&utm_campaign=affiliate&utm_medium=card&utm_source=scryfall"
+    }
   }
 }

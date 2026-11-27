@@ -464,4 +464,40 @@ fn miss_highwater_collects_on_a_contract_when_the_player_loses() {
     let mine = |name: &str| g.battlefield.iter().any(|c| c.controller == 0 && c.is_token && c.definition.name == name);
     assert!(mine("Grizzly Bears") && mine("Sol Ring"), "the creature and the artifact are copied");
     assert!(!mine("Forest"), "lands are not");
+/// Salinae: an artifact spell's copy resolves as a 1/1 Fish artifact creature
+/// token (CR 707.9b), and devotion to blue discounts her.
+#[test]
+fn salinae_copies_an_artifact_spell_as_a_one_one_fish() {
+    use crabomination::card::{CardType, CreatureType};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::salinae_the_ocean_mother());
+    let ring = g.add_card_to_hand(0, catalog::sol_ring());
+    g.players[0].mana_pool.add_colorless(1);
+    cast(&mut g, ring);
+    let fish = g.battlefield.iter().find(|c| c.controller == 0 && c.is_token).expect("copy token");
+    let cp = g.computed_permanent(fish.id).unwrap();
+    assert!(cp.card_types().contains(&CardType::Artifact) && cp.card_types().contains(&CardType::Creature));
+    assert!(fish.definition.subtypes.creature_types.contains(&CreatureType::Fish));
+    assert_eq!((cp.power, cp.toughness), (1, 1));
+
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_battlefield(0, catalog::merfolk_of_the_pearl_trident());
+    }
+    let sal = g.add_card_to_hand(0, catalog::salinae_the_ocean_mother());
+    g.players[0].mana_pool.add(Color::Blue, 5);
+    cast(&mut g, sal);
+    assert!(g.battlefield_find(sal).is_some(), "eight less three devotion");
+}
+
+/// Invasion of Kamigawa taps an opponent's creature and stuns it.
+#[test]
+fn invasion_of_kamigawa_taps_and_stuns() {
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let inv = g.add_card_to_hand(0, catalog::invasion_of_kamigawa());
+    g.players[0].mana_pool.add(Color::Blue, 4);
+    cast(&mut g, inv);
+    let b = g.battlefield_find(bear).unwrap();
+    assert!(b.tapped && b.counter_count(CounterType::Stun) == 1);
 }

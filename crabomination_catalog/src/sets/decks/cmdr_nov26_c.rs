@@ -4,7 +4,8 @@
 //! Planetary Bombardment), Erica Ortegas, Plucky Pilot (Horta, Brazen Bluff);
 //! three short three: M'Ress, Crew Coordinator (+ Shuttlecraft Galileo, Subspace
 //! Anomaly), Worf, Son of Mogh (Galileo, Academy Instructor, M'Ress), Brad
-//! Boimler (Rutherford, Upgraded Ensign, and Brad).
+//! Boimler (Rutherford, Upgraded Ensign, and Brad); Tuvok, Chief Tactical
+//! Officer (Invasion of Kamigawa, Salinae, the Ocean Mother).
 //! Tests in `tests/recent_b/cmdr_nov26.rs`.
 
 use std::sync::Arc;
@@ -367,6 +368,68 @@ pub fn brad_boimler_eager_ensign() -> CardDefinition {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource),
             effect: Effect::GrantExtraCountersThisTurn { who: PlayerRef::You },
         }],
+        ..Default::default()
+    }
+}
+
+/// Salinae, the Ocean Mother — {6}{U}{U} legendary 5/7 Whale God, trample;
+/// costs {X} less (X your devotion to blue). Whenever you cast an artifact or
+/// creature spell, copy it as a 1/1 Fish creature in addition to its other
+/// types (CR 707.9b).
+pub fn salinae_the_ocean_mother() -> CardDefinition {
+    CardDefinition {
+        name: "Salinae, the Ocean Mother",
+        cost: cost(&[generic(6), u(), u()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Whale, CreatureType::God], ..Default::default() },
+        power: 5,
+        toughness: 7,
+        keywords: vec![Keyword::Trample],
+        static_abilities: vec![StaticAbility {
+            description: "This spell costs {X} less to cast, where X is your devotion to blue.",
+            effect: StaticEffect::SelfCostReducedByDevotion { colors: vec![Color::Blue] },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl)
+                .with_filter(Predicate::CastSpellMatches(R::Artifact.or(R::Creature))),
+            effect: Effect::CopySpellAsOneOne { what: Selector::TriggerSource, creature_type: CreatureType::Fish },
+        }],
+        ..Default::default()
+    }
+}
+
+/// Invasion of Kamigawa // Rooftop Saboteurs — {3}{U} Siege, defense 4. ETB:
+/// tap target artifact or creature an opponent controls and put a stun counter
+/// on it. Back: a blue 2/3 Moonfolk Ninja, flying, drawing a card whenever it
+/// deals combat damage to a player or battle.
+pub fn invasion_of_kamigawa() -> CardDefinition {
+    let saboteurs = CardDefinition {
+        name: "Rooftop Saboteurs",
+        card_types: vec![CardType::Creature],
+        color_indicator: vec![Color::Blue],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Moonfolk, CreatureType::Ninja], ..Default::default() },
+        power: 2,
+        toughness: 3,
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource).or_battle(),
+            effect: Effect::Draw { who: Selector::You, amount: Value::ONE },
+        }],
+        ..Default::default()
+    };
+    let victim = || target_filtered(R::Artifact.or(R::Creature).and(R::ControlledByOpponent));
+    CardDefinition {
+        name: "Invasion of Kamigawa",
+        cost: cost(&[generic(3), u()]),
+        card_types: vec![CardType::Battle],
+        subtypes: Subtypes { battle_subtypes: vec![crate::card::BattleSubtype::Siege], ..Default::default() },
+        defense: 4,
+        triggered_abilities: vec![etb(Effect::Seq(vec![
+            Effect::Tap { what: victim() },
+            Effect::AddCounter { what: victim(), kind: CounterType::Stun, amount: Value::ONE },
+        ]))],
+        back_face: Some(Box::new(saboteurs)),
         ..Default::default()
     }
 }
