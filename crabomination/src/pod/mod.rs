@@ -38083,6 +38083,42 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::MISS_HIGHWATER_COMMANDERS,
             main: decks::MISS_HIGHWATER_MAIN,
         },
+        // Seat 6273: Tuvok, Chief Tactical Officer's EDHREC average deck. `--pod-decks 6273`.
+        PodDeck {
+            name: "Tuvok, Chief Tactical Officer (U)",
+            commanders: decks::TUVOK_COMMANDERS,
+            main: decks::TUVOK_MAIN,
+        },
+        // Seat 6274: Salinae, the Ocean Mother's EDHREC average deck. `--pod-decks 6274`.
+        PodDeck {
+            name: "Salinae, the Ocean Mother (U)",
+            commanders: decks::SALINAE_COMMANDERS,
+            main: decks::SALINAE_MAIN,
+        },
+        // Seat 6275: The Sixth Doctor and Nyssa of Traken's EDHREC average deck. `--pod-decks 6275`.
+        PodDeck {
+            name: "The Sixth Doctor and Nyssa of Traken (UG)",
+            commanders: decks::THE_SIXTH_DOCTOR_23_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_23_MAIN,
+        },
+        // Seat 6276: The War Doctor and Dan Lewis's EDHREC average deck. `--pod-decks 6276`.
+        PodDeck {
+            name: "The War Doctor and Dan Lewis (WR)",
+            commanders: decks::THE_WAR_DOCTOR_24_COMMANDERS,
+            main: decks::THE_WAR_DOCTOR_24_MAIN,
+        },
+        // Seat 6277: Jaheira, Friend of the Forest and Noble Heritage's EDHREC average deck. `--pod-decks 6277`.
+        PodDeck {
+            name: "Jaheira, Friend of the Forest and Noble Heritage (WG)",
+            commanders: decks::JAHEIRA_28_COMMANDERS,
+            main: decks::JAHEIRA_28_MAIN,
+        },
+        // Seat 6278: Sengir, the Dark Baron and Tymna the Weaver's EDHREC average deck. `--pod-decks 6278`.
+        PodDeck {
+            name: "Sengir, the Dark Baron and Tymna the Weaver (WB)",
+            commanders: decks::SENGIR_12_COMMANDERS,
+            main: decks::SENGIR_12_MAIN,
+        },
     ]
 }
 
@@ -46291,6 +46327,12 @@ mod tests {
             ("Brad Boimler, Eager Ensign", &[0x227E]),
             ("Itazura, Lingering Wick", &[0x227F]),
             ("Miss Highwater", &[0x2280]),
+            ("Tuvok, Chief Tactical Officer", &[0x2281]),
+            ("Salinae, the Ocean Mother", &[0x2282]),
+            ("The Sixth Doctor and Nyssa of Traken", &[0x2283]),
+            ("The War Doctor and Dan Lewis", &[0x2284]),
+            ("Jaheira, Friend of the Forest and Noble Heritage", &[0x2285]),
+            ("Sengir, the Dark Baron and Tymna the Weaver", &[0x2286]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
