@@ -20,7 +20,8 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
-| Bugs & robustness | [CLAIMED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs](#claimed-2026-11-27-commander-run-01wruxc4b7--whtz-and-nine-legal-gap-pairs) | 8 |
+| Bugs & robustness | [FIXED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs](#fixed-2026-11-27-commander-run-01wruxc4b7--whtz-and-nine-legal-gap-pairs) | 14 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4b7` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc4b7-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — 39 Star Trek seats, six primitives](#fixedopen-2026-11-27-commander-run-01wruxc6sk--39-star-trek-seats-six-primitives) | 18 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc6sk` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc6sk-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc2yT`) — a land-type recursion, two residuals, 10 seats](#fixedopen-2026-11-27-commander-run-01wruxc2yt--a-land-type-recursion-two-residuals-10-seats) | 17 |
@@ -612,15 +613,30 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
-## CLAIMED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs
+## FIXED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs
 
-- Whtz, the Bibliophile (254-card Rulebreaker average; the 200-card discount gets modelled).
-- Chooser pairs whose average needs exactly one colour past the fixed half (CR 903.4 + the chosen colour): Faceless One //
-  Raised by Giants (Blossom Dryad), Silas Renn // Prismatic Piper (Scroll of Griselbrand), Faceless One // Folk Hero
-  (Channel Harm), Livaan // Faceless One (Spellweaver Volute, Maximize Altitude), Esior // Prismatic Piper (Vantress
-  Paladin, Startling Development), Alora // Faceless One (Pattern Matcher, Tomebound Lich).
-- Doctor pairs: The Eighth Doctor // Yasmin Khan (Over the Top), The Sixth Doctor // Rose Tyler (Alaborn Musketeer, Sparring
-  Mummy), The First Doctor // Rose Noble (Marooned, Weakstone's Subjugation).
+- ✅ Seats 6357-6366 (DECK_FEATURES has the list); 14 cards in `decks::cmdr_01wr4b_a`, tests `recent_b::cmdr_01wr4b_a`.
+- ✅ Primitives: `Player.starting_deck_size` + `Predicate::YourStartingDeckHadAtLeast` (Whtz, CR 903.5a); `PreventOpposing
+  DamageThisTurnReflecting.reflect_to` (Channel Harm); `Effect::OverTheTop`; `Effect::SpellweaverVolute` (`game/effects/
+  volute.rs`: the enchanted graveyard card is the Aura's `chosen_permanent`); `R::SameNameAsACreatureYouControl` (Pattern
+  Matcher); `R::AttachedByMatching` (Marooned out of Scotty's beam-me-up cost).
+- ✅ The legality and per-seat pod tests read `PodDeck::no_max_deck_size` (a Rulebreaker seat is > 100 cards).
+- Scan: the 70-page `edhrec_scan_top.py` has one legal unseated single (Whtz). Chooser-pair identity check (scratch
+  `ident.py` shape: union the fixed half's identity, count average cards per colour outside it) — one extra colour is
+  legal with the chosen colour (`format::chosen_commander_color`), two or more is not.
+- ⚠ Don't edit the tree while the suite compiles: a mid-build edit fails it as a compile error (cost one suite run).
+
+## The Commander NEXT's lines as `01WRuXc4b7` found them (moved verbatim, 2026-11-27)
+
+1. ⚠ **Several sessions share this branch:** fetch before you start and before every push; rebase, never force; `cargo check -p crabomination_catalog` after each rebase. Seat numbers race: after a conflicted rebase, checkout `--ours` of `pod/decks.rs` + `pod/mod.rs`, re-run `scripts/seat_decks.py` on top of the other session's seats, run `cr_903_5a_target_decks_are_legal_commander_decks`. New seats go at the end of `target_decks()`. ⚠ `scripts/gen_factory_lists.py` rewrites all of `all_factories.rs` — append by hand. Claim a deck in ENGINE_BACKLOG (and push the claim) before writing its cards.
+2. ⚠ **One optimized build at a time; `CARGO_INCREMENTAL=0`** (release 12-19 min here; build in a scratchpad worktree with its own `CARGO_TARGET_DIR` and keep editing). Per-seat test over a batch: `CRAB_SEAT="<prefix>|<prefix>…" cargo nextest run -p crabomination --lib -E 'test(cr_903_5a_the_official_precon_seats_play_pod_games)' --run-ignored all`. ⚠ The full suite runs that test over **every** seat in debug (hours) — kill it and rely on the per-batch runs.
+3. **State (2026-11-27, `01WRuXc6sk`): 6,356 seats** — 6318-6356 this run (39: the 2026-11-13 Trek commanders + five pairs; DECK_FEATURES). **Commander rules: every FEATURE_ROADMAP Commander-status row ✅**; new: CR 119.4b non-mana life ban (Karn's Sylex), CR 700.2 dilemma triggers from the graveyard (Gabriel Lorca).
+4. **The smoke test is `--pod-random`** (`bot_ladder --commander --pod-random --seats N --games G --seed S`); `scripts/random_pods.sh` with `MIN=<first new seat>` fuzzes new seats. A failure prints `--pod-decks .. --first I --games 1`; `CRAB_CAP_DIAG=1` dumps a capped board.
+5. **Sweeps this run** (release): seeds 29624-29627 × 3/4/5/6 × 300 + 29630-29635 × 2/3/4/5/6/8 × 500 = 4,200 games, 0 panics, 4 undecided (0.1 %: 3 board caps — a ~900-token Renari copy flood, legit — 1 CR 104.4a draw); `random_pods.sh MIN=6318/6318/6353` 2,800 more games, 0 hits. Gates: suite 29,725 / 0 (2 ratchet failures fixed) / 13 skipped, clippy 0, `--bench` byte-identical, callgrind +0.009 % (PERF `01WRuXc6sk`). **Next seed 29636.**
+6. **Next decks:** the EDHREC 70-page rescan's legal singles are all seated. Left: The Eighth Doctor // Yasmin Khan (Over the Top: each player reveals per nonland permanent, permanents enter, the rest to graveyards); ~17 zero-gap Doctor / companion / Background pairs (`edhrec_scan_pairs.py --legal --max 0`) unseated by policy — revisit the policy before seating. New sets: rerun the 70-page fetch (ENGINE_BACKLOG `01WRuXc3os` recipe).
+7. **Residual lane:** `scripts/pod_residuals.py --rank` — The One Ring (cube-frozen) first; then Dawnhand Dissident 9, Hawkeye 8, Battletide Alchemist 8, Mikey & Don 6 (choice-exposure rows).
+8. **Gotchas:** a new `Effect` wrapper with a nested body must join `for_each_inner` (`target_walkers` ratchet); a beam-me-up card needs its `ALLOWED_MODELLING` flashback row; a new `GraveyardCastOncePerTurn` field touches ten catalog literals and `core_rules::commander_cards`. `audit_panics` now reads 10 bare (`selfplay.rs`, `server/blunder.rs`, `server/honest.rs` — not Commander code; triage).
+9. **Earlier runs' NEXT lines** are in ENGINE_BACKLOG ("The Commander NEXT's lines as … found them", latest `01WRuXc6sk`).
 
 ## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — 39 Star Trek seats, six primitives
 

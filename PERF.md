@@ -3136,6 +3136,17 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-27 (Commander run, `01WRuXc4b7`) — guardrail; a reflect target, a starting-deck count
+
+Touched shared paths: the prevention-shield pass (`PreventionShield.reflect_to`, one more `Option<CardId>` in a `Copy`
+struct; the reflect list carries it); `Player.starting_deck_size` (4 bytes, set once by the pod builder); two
+`SelectionRequirement` leaves; Scotty's beam filter. `release`, same box, tip `048a2f893`; base = `01WRuXc6sk`'s tip read:
+
+```
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok
+callgrind        --bench --decks fixed --games 6 --threads 1: 1,075,081,895 Ir (01WRuXc6sk tip) vs 1,075,142,587 (+0.006 %)
+```
+
 ### 2026-11-27 (Commander run, `01WRuXc6sk`) — guardrail; crew/station factor, a non-mana life ban, a graveyard dilemma walk
 
 Touched shared paths: `crew` / the Station cost / the bot crew pick (one static walk of the crewing creature for
