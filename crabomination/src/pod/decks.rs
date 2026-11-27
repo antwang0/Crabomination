@@ -176130,3 +176130,31 @@ pub const WORF_5_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains,
 ];
+
+pub const BRAD_BOIMLER_COMMANDERS: &[CardFactory] = &[brad_boimler_eager_ensign];
+
+/// **Brad Boimler, Eager Ensign**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Plains = 99.
+/// Brad Boimler, Eager Ensign (EDHREC, fetched 2026-11-27).
+pub const BRAD_BOIMLER_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, dawnsire_sunstar_dreadnought, empowered_autogenerator,
+    everflowing_chalice, halo_fountain, honor_worn_shaku, lumen_class_frigate, lux_artillery,
+    lux_cannon, mobile_garrison, patriars_seal, power_conduit, recon_craft_theta,
+    relic_of_legends, royal_talon_fighter_jet, sol_ring, springleaf_drum, starship_enterprise,
+    the_eternity_elevator, the_seriema, thousand_year_elixir, u_s_s_enterprise_a_free_spirit,
+    abandoned_air_temple, adagia_windswept_bastion, federation_outpost, holdout_settlement,
+    karns_bastion, maze_of_ith, nesting_grounds, nykthos_shrine_to_nyx, survivors_encampment,
+    abzan_falconer, ainok_bond_kin, bulwark_ox, captain_jean_luc_picard, coretapper,
+    dr_mccoy_surly_surgeon, drumbellower, dusk_legion_duelist, envoy_of_the_ancestors,
+    esper_sentinel, filigree_vector, generous_pup, grateful_apparition, guinan_ancient_advisor,
+    laezel_vlaakiths_champion, loran_of_the_third_path, metastatic_evangel, mikaeus_the_lunarch,
+    patrolling_peacemaker, rutherford_upgraded_ensign, surge_conductor, felidar_retreat,
+    peace_in_our_time, pursuit_of_knowledge, reconnaissance, resourceful_defense,
+    trouble_in_pairs, dispatch, duty_beyond_death, generous_gift, get_lost, light_the_way,
+    path_to_exile, swords_to_plowshares, basri_ket, elspeth_resplendent, elspeth_suns_champion,
+    austere_command, collective_effort, join_the_collective, requisition_raid,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];

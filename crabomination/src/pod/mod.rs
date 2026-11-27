@@ -38065,6 +38065,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::WORF_5_COMMANDERS,
             main: decks::WORF_5_MAIN,
         },
+        // Seat 6270: Brad Boimler, Eager Ensign's EDHREC average deck. `--pod-decks 6270`.
+        PodDeck {
+            name: "Brad Boimler, Eager Ensign (W)",
+            commanders: decks::BRAD_BOIMLER_COMMANDERS,
+            main: decks::BRAD_BOIMLER_MAIN,
+        },
     ]
 }
 
@@ -46270,6 +46276,7 @@ mod tests {
             ("Erica Ortegas, Plucky Pilot", &[0x227B]),
             ("M'Ress, Crew Coordinator", &[0x227C]),
             ("Worf, Son of Mogh", &[0x227D]),
+            ("Brad Boimler, Eager Ensign", &[0x227E]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
