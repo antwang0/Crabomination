@@ -178413,3 +178413,116 @@ pub const LRELL_MAIN: &[CardFactory] = &[
     mountain, mountain, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp,
 ];
+
+pub const KHAN_2_COMMANDERS: &[CardFactory] = &[khan_despot_by_design];
+
+/// **Khan, Despot by Design**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Khan, Despot by Design (EDHREC, fetched 2026-11-27).
+pub const KHAN_2_MAIN: &[CardFactory] = &[
+    arcane_signet, batterbone, chainsaw, d_7_battle_cruiser, kvort_class_raider,
+    ktinga_class_battle_cruiser, lightning_greaves, mind_stone, quietus_spike, ruby_medallion,
+    sol_ring, stonespeaker_crystal, swiftfoot_boots, the_beacon_of_kahless,
+    the_sword_of_kahless, uss_enterprise_d_galaxy_class, arcane_lighthouse, command_tower,
+    dwarven_mine, quarks_bar, reliquary_tower, rogues_passage, spatial_anomaly,
+    beckett_mariner_impetuous_ensign, bloodsworn_steward, captain_james_t_kirk,
+    captain_michael_burnham, combat_celebrant, delina_wild_mage, dualcaster_mage,
+    ferocious_colonist, gagh_slinger, galvanizing_tenor, gimli_counter_of_kills, gnarling_targ,
+    kirk_enterprising_captain, klingon_strike_force, kruge_genesis_seeker, munitions_enthusiast,
+    pah_wraith, professional_face_breaker, purphoros_god_of_the_forge, qonos_quartermaster,
+    ro_laren_double_agent, rom_and_leeta_unlikely_pair, tal_shiar_analyst,
+    worf_intelligence_contractor, glory_to_the_empire, impact_tremors, leyline_of_combustion,
+    leyline_of_resonance, repercussion, shared_animosity, the_wrath_of_khan, brazen_bluff,
+    deflecting_swat, delayed_blast_fireball, khaaaaaaaaaaaannn, lightning_bolt,
+    perils_of_the_past, seething_song, arrow_storm, banefire, blasphemous_act, boltwave,
+    cinder_storm, disrupt_decorum, fiery_confluence, jeskas_will, own_the_day,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const KIRK_3_COMMANDERS: &[CardFactory] = &[kirk_commanding_officer];
+
+/// **Kirk, Commanding Officer**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 12 Mountains + 11 Plains = 99.
+/// Kirk, Commanding Officer (EDHREC, fetched 2026-11-27).
+pub const KIRK_3_MAIN: &[CardFactory] = &[
+    arcane_signet, class_f_shuttlecraft, commanders_sphere, junk_jet, lightning_greaves,
+    mind_stone, oberth_class_starship, sarcophagus_ship_of_the_dead, sol_ring,
+    talisman_of_conviction, u_s_s_enterprise_a_free_spirit, battlefield_forge, clifftop_retreat,
+    command_beacon, command_tower, exotic_orchard, furycalm_snarl, lorehold_campus,
+    path_of_ancestry, radiant_summit, sacred_foundry, spectator_seating, starfleet_academy,
+    sundown_pass, academy_instructor, bastion_protector, captain_james_t_kirk,
+    ennis_debate_moderator, goblin_sharpshooter, heirs_of_stromkirk, hologram_janeway,
+    kirk_enterprising_captain, minotaur_sureshot, rehearsed_debater, savvy_profiteer,
+    skirk_alarmist, skirk_commando, skirk_fire_marshal, skirk_marauder, skirk_outrider,
+    skirk_shaman, skirk_volcanist, spikeshot_elder, starfleet_security, stromkirk_noble,
+    stun_sniper, taii_wakeen_perfect_shot, tal_shiar_analyst, twinshot_sniper,
+    una_chin_riley_number_one, aggravated_assault, death_to_our_enemies, grim_reapers_sprint,
+    political_triumph, the_naked_time, brazen_bluff, generous_gift, heated_argument,
+    heated_debate, kill_shot, neck_snap, path_to_exile, red_alert, smite_the_deathless,
+    swords_to_plowshares, trick_shot, chandra_dressed_to_kill, blasphemous_act, coward_killer,
+    explosive_shot, hawkeyes_shot, mark_for_death, molten_duplication, one_last_job,
+    scorching_shot, stunning_shot,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains,
+];
+
+pub const THE_FUGITIVE_DOCTOR_25_COMMANDERS: &[CardFactory] = &[the_fugitive_doctor, adric_mathematical_genius];
+
+/// **The Fugitive Doctor and Adric, Mathematical Genius**'s EDHREC average deck, card for card:
+/// 80 nonbasic cards + 6 Forests + 6 Islands + 6 Mountains = 98.
+/// The Fugitive Doctor and Adric, Mathematical Genius (EDHREC, fetched 2026-11-27).
+pub const THE_FUGITIVE_DOCTOR_25_MAIN: &[CardFactory] = &[
+    arcane_signet, fellwar_stone, primal_amulet, sol_ring, strionic_resonator,
+    talisman_of_creativity, the_one_ring, twinning_staff, bountiful_landscape, brokers_hideout,
+    cabaretti_courtyard, command_tower, dining_room, elven_passage, evolving_wilds,
+    exotic_orchard, fabled_passage, frontier_bivouac, hobbit_hole, kitchen, library,
+    maestros_theater, path_of_ancestry, riveteers_overlook, temporal_anomaly,
+    terramorphic_expanse, absorbing_man, baral_chief_of_compliance, dreamscape_artist,
+    eternal_witness, ethereal_investigator, goblin_anarchomancer, goblin_electromancer,
+    hexing_squelcher, kellan_inquisitive_prodigy, lake_town_mariners, lotus_cobra, martha_jones,
+    osgood_operation_double, pah_wraith, sakura_tribe_elder, tatyova_benthic_druid,
+    thunderclap_drake, tireless_tracker, victor_timely_wily_tycoon, font_of_magic,
+    khalni_heart_expedition, roll_roll_roll_roll, trail_of_evidence, way_of_the_cryomancer,
+    big_score, complete_the_circuit, demand_answers, dual_strike, galvanic_iteration, harrow,
+    reality_shift, repeated_reverberation, storm_kings_thunder, teach_by_example,
+    temporal_tribulation, thrill_of_possibility, twinferno, unexpected_windfall,
+    ral_storm_conduit, aminatous_augury, blasphemous_act, branching_timeline, brasss_bounty,
+    cathartic_reunion, clone_legion, cultivate, doublecast, hit_the_mother_lode,
+    howl_of_the_horde, kodamas_reach, prisoners_dilemma, seize_the_spoils, time_stretch,
+    treacherous_terrain,
+    // Basics
+    forest, forest, forest, forest, forest, forest, island, island, island, island, island,
+    island, mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const ARMIX_46_COMMANDERS: &[CardFactory] = &[armix_filigree_thrasher, falthis_shadowcat_familiar];
+
+/// **Armix, Filigree Thrasher and Falthis, Shadowcat Familiar**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 25 Swamps = 98.
+/// Armix, Filigree Thrasher and Falthis, Shadowcat Familiar (EDHREC, fetched 2026-11-27).
+pub const ARMIX_46_MAIN: &[CardFactory] = &[
+    arcane_signet, basilisk_collar, blackblade_reforged, charcoal_diamond, commanders_sphere,
+    cranial_plating, jet_medallion, krark_clan_ironworks, lashwrithe, lichs_relic,
+    lightning_greaves, mask_of_memory, mind_stone, mystic_forge, pact_weapon, shadowspear,
+    skullclamp, sol_ring, swiftfoot_boots, tarrians_soulcleaver, thought_vessel, thran_dynamo,
+    wayfarers_bauble, bojuka_bog, buried_ruin, cabal_coffers, cabal_stronghold,
+    castle_locthwain, darksteel_citadel, inventors_fair, mortuary_mire, reliquary_tower,
+    vault_of_whispers, witchs_cottage, anrakyr_the_traveller, borg_queen_perfection_manifest,
+    burnished_hart, chief_of_the_foundry, chronomancer, collective_drone, containment_construct,
+    darksteel_angel, disciple_of_the_vault, foundry_inspector, leaden_myr,
+    marionette_apprentice, myr_retriever, noxious_gearhulk, organic_avulsion_unit, psychomancer,
+    relentless_drednok, scrap_trawler, shimmer_myr, skorpekh_lord, solemn_simulacrum,
+    steel_overseer, workshop_assistant, black_market, black_market_connections, phyrexian_arena,
+    costly_plunder, dark_ritual, deadly_dispute, defile, fell_the_profane, heros_downfall,
+    malakir_rebirth, demonic_tutor, emergency_weld, feed_the_swarm, reanimate,
+    resourceful_return, toxic_deluge,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

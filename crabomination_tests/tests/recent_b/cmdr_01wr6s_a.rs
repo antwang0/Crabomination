@@ -451,3 +451,36 @@ fn red_alert_is_cheap_while_you_are_attacked() {
     drain_stack(&mut g);
     assert_eq!(g.computed_permanent(bears).unwrap().power, 4);
 }
+
+/// Khaaaaaaaaaaaannn! deals twice X and exiles the creature it kills.
+#[test]
+fn khaaan_deals_twice_x_and_exiles_the_dead() {
+    let mut g = pod(2);
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let spell = g.add_card_to_hand(0, catalog::khaaaaaaaaaaaannn());
+    flood(&mut g);
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell,
+        target: Some(Target::Permanent(giant)),
+        additional_targets: vec![],
+        mode: None,
+        x_value: Some(2),
+    })
+    .expect("cast");
+    drain_stack(&mut g);
+    assert!(g.exile.iter().any(|c| c.id == giant), "4 damage kills the 3/3, which is exiled");
+    assert!(!g.players[1].graveyard.iter().any(|c| c.id == giant));
+}
+
+/// Tal Shiar Analyst pings each opponent and untaps on a noncreature cast.
+#[test]
+fn tal_shiar_analyst_pings_and_untaps_on_noncreature_spells() {
+    let mut g = pod(3);
+    let tsa = ready(&mut g, catalog::tal_shiar_analyst());
+    activate(&mut g, tsa, None).expect("ping");
+    assert!((1..3).all(|s| g.players[s].life == g.players[s].starting_life - 1));
+    assert!(g.battlefield_find(tsa).unwrap().tapped);
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    cast(&mut g, bolt, Some(Target::Player(1)), None);
+    assert!(!g.battlefield_find(tsa).unwrap().tapped, "untapped by a noncreature spell");
+}

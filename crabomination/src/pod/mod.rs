@@ -38539,6 +38539,30 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LRELL_COMMANDERS,
             main: decks::LRELL_MAIN,
         },
+        // Seat 6349: Khan, Despot by Design's EDHREC average deck. `--pod-decks 6349`.
+        PodDeck {
+            name: "Khan, Despot by Design (R)",
+            commanders: decks::KHAN_2_COMMANDERS,
+            main: decks::KHAN_2_MAIN,
+        },
+        // Seat 6350: Kirk, Commanding Officer's EDHREC average deck. `--pod-decks 6350`.
+        PodDeck {
+            name: "Kirk, Commanding Officer (WR)",
+            commanders: decks::KIRK_3_COMMANDERS,
+            main: decks::KIRK_3_MAIN,
+        },
+        // Seat 6351: The Fugitive Doctor and Adric, Mathematical Genius's EDHREC average deck. `--pod-decks 6351`.
+        PodDeck {
+            name: "The Fugitive Doctor and Adric, Mathematical Genius (URG)",
+            commanders: decks::THE_FUGITIVE_DOCTOR_25_COMMANDERS,
+            main: decks::THE_FUGITIVE_DOCTOR_25_MAIN,
+        },
+        // Seat 6352: Armix, Filigree Thrasher and Falthis, Shadowcat Familiar's EDHREC average deck. `--pod-decks 6352`.
+        PodDeck {
+            name: "Armix, Filigree Thrasher and Falthis, Shadowcat Familiar (B)",
+            commanders: decks::ARMIX_46_COMMANDERS,
+            main: decks::ARMIX_46_MAIN,
+        },
     ]
 }
 
@@ -46857,6 +46881,10 @@ mod tests {
             ("Captain Benjamin Sisko", &[0x22CA]),
             ("The Duras Sisters", &[0x22CB]),
             ("L'Rell, Fierce Visionary", &[0x22CC]),
+            ("Khan, Despot by Design", &[0x22CD]),
+            ("Kirk, Commanding Officer", &[0x22CE]),
+            ("The Fugitive Doctor and Adric, Mathematical Genius", &[0x22CF]),
+            ("Armix, Filigree Thrasher and Falthis, Shadowcat Familiar", &[0x22D0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
