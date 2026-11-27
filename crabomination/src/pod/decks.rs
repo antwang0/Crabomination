@@ -178526,3 +178526,87 @@ pub const ARMIX_46_MAIN: &[CardFactory] = &[
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
     swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
 ];
+
+pub const BRUSE_TARL_48_COMMANDERS: &[CardFactory] = &[bruse_tarl_boorish_herder, sakashima_of_a_thousand_faces];
+
+/// **Bruse Tarl, Boorish Herder and Sakashima of a Thousand Faces**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 6 Islands + 4 Mountains + 4 Plains = 98.
+/// Bruse Tarl, Boorish Herder and Sakashima of a Thousand Faces (EDHREC, fetched
+/// 2026-11-27).
+pub const BRUSE_TARL_48_MAIN: &[CardFactory] = &[
+    arcane_signet, azorius_signet, boros_signet, cursed_mirror, fellwar_stone, izzet_signet,
+    mirror_box, sol_ring, swiftfoot_boots, talisman_of_conviction, talisman_of_creativity,
+    talisman_of_progress, adarkar_wastes, arid_mesa, battlefield_forge, clifftop_retreat,
+    command_tower, exotic_orchard, flooded_strand, glacial_fortress, hallowed_fountain,
+    mystic_monastery, prairie_stream, raugrin_triome, sacred_foundry, scalding_tarn,
+    sea_of_clouds, shivan_reef, spectator_seating, steam_vents, sulfur_falls, training_center,
+    auton_soldier, cadric_soul_kindler, clever_impersonator, clone_card, colossal_clone_master,
+    dacks_duplicate, displacer_kitten, duke_ulder_ravengard, esper_sentinel, giant_space_amoeba,
+    gisela_blade_of_goldnight, glasspool_mimic, imperial_recruiter, kira_nerys_firebrand,
+    loran_of_the_third_path, mirrorhall_mimic, mulldrifter, orthion_hero_of_lavabrink,
+    phantasmal_image, phyrexian_metamorph, pinnacle_monk, sakashima_the_impostor,
+    solemn_simulacrum, spark_double, stunt_double, sun_titan, the_jolly_balloon_man,
+    witch_enchanter, extravagant_replication, frostcliff_siege, mystic_remora, rhystic_study,
+    smothering_tithe, vesuvan_duplimancy, an_offer_you_cant_refuse, arcane_denial,
+    cackling_counterpart, chaos_warp, counterspell, dovins_veto, ephemerate, generous_gift,
+    mana_drain, path_to_exile, swords_to_plowshares, venser_visionary_traveler, blasphemous_act,
+    echocasting_symposium, irenicuss_vile_duplication, quasiduplicate, rite_of_replication,
+    stolen_identity,
+    // Basics
+    island, island, island, island, island, island, mountain, mountain, mountain, mountain,
+    plains, plains, plains, plains,
+];
+
+pub const BRINELIN_44_COMMANDERS: &[CardFactory] = &[brinelin_the_moon_kraken, esior_wardwing_familiar];
+
+/// **Brinelin, the Moon Kraken and Esior, Wardwing Familiar**'s EDHREC average deck, card for card:
+/// 68 nonbasic cards + 30 Islands = 98.
+/// Brinelin, the Moon Kraken and Esior, Wardwing Familiar (EDHREC, fetched 2026-11-27).
+pub const BRINELIN_44_MAIN: &[CardFactory] = &[
+    arcane_signet, explorers_scope, mind_stone, sapphire_medallion, sisays_ring, sky_diamond,
+    sol_ring, the_water_crystal, thought_vessel, thran_dynamo, wayfarers_bauble,
+    darksteel_citadel, memorial_to_genius, mystic_sanctuary, reliquary_tower,
+    anticausal_vestige, archive_arbiter, cold_water_snapper, frost_titan, hullbreaker_horror,
+    humpback_whales, laboratory_maniac, marang_river_regent, nimbleclaw_adept, palladium_myr,
+    phyrexian_metamorph, psychosis_crawler, scourge_of_fleets, scrapdiver_serpent,
+    shipbreaker_kraken, shuri_wakandan_inventor, silver_myr, slinn_voda_the_rising_deep,
+    solemn_simulacrum, stormtide_leviathan, sturmgeist, thryx_the_sudden_storm, trench_behemoth,
+    vizier_of_tumbling_sands, wonder, imprisoned_in_the_moon, ominous_seas,
+    quest_for_ulas_temple, reconnaissance_mission, teferis_ageless_insight, wizard_class,
+    aetherize, archmages_charm, counterspell, cyclonic_rift, disdainful_stroke,
+    fierce_guardianship, frantic_search, keep_safe, negate, neutralize, no_escape, pongify,
+    rapid_hybridization, jace_wielder_of_mysteries, echo_storm, finale_of_revelation,
+    flow_of_ideas, jaces_triumph, ponder, spectral_deluge, whelming_wave, winged_words,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island,
+];
+
+pub const THE_FIFTH_DOCTOR_25_COMMANDERS: &[CardFactory] = &[the_fifth_doctor, ian_chesterton];
+
+/// **The Fifth Doctor and Ian Chesterton**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 8 Islands + 12 Plains = 98.
+/// The Fifth Doctor and Ian Chesterton (EDHREC, fetched 2026-11-27).
+pub const THE_FIFTH_DOCTOR_25_MAIN: &[CardFactory] = &[
+    arcane_signet, lightning_greaves, pearl_medallion, sol_ring, swiftfoot_boots,
+    thrumming_stone, celestial_colonnade, command_tower, deserted_beach, flooded_strand,
+    floodfarm_verge, glacial_fortress, hallowed_fountain, hengegate_pathway, meticulous_archive,
+    port_town, restless_anchorage, sea_of_clouds, seachrome_coast, elesh_norn_grand_cenobite,
+    greymond_avacyns_stalwart, mentor_of_the_meek, odric_master_tactician,
+    recruiter_of_the_guard, sephara_skys_blade, stoneforge_mystic, summon_knights_of_round,
+    surging_sentinels, tempest_hawk, tempest_hawk, tempest_hawk, tempest_hawk, tempest_hawk,
+    tempest_hawk, tempest_hawk, tempest_hawk, tempest_hawk, tempest_hawk, tempest_hawk,
+    tempest_hawk, tempest_hawk, tempest_hawk, tempest_hawk, templar_knight, templar_knight,
+    templar_knight, templar_knight, templar_knight, templar_knight, templar_knight,
+    templar_knight, templar_knight, templar_knight, templar_knight, templar_knight,
+    templar_knight, templar_knight, templar_knight, battle_at_the_helvault,
+    elspeth_conquers_death, era_of_enlightenment, flowering_of_the_white_tree, glorious_anthem,
+    history_of_benalia, honor_of_the_pure, love_song_of_night_and_day, michikos_reign_of_truth,
+    paladin_class, the_girl_in_the_fireplace, enlightened_tutor, lose_focus,
+    swords_to_plowshares, thunderheads, mass_calcify, mists_of_lorien, stream_of_thought,
+    train_of_thought, vacuumelt,
+    // Basics
+    island, island, island, island, island, island, island, island, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains,
+];

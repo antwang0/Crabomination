@@ -38563,6 +38563,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::ARMIX_46_COMMANDERS,
             main: decks::ARMIX_46_MAIN,
         },
+        // Seat 6353: Bruse Tarl, Boorish Herder and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 6353`.
+        PodDeck {
+            name: "Bruse Tarl, Boorish Herder and Sakashima of a Thousand Faces (WUR)",
+            commanders: decks::BRUSE_TARL_48_COMMANDERS,
+            main: decks::BRUSE_TARL_48_MAIN,
+        },
+        // Seat 6354: Brinelin, the Moon Kraken and Esior, Wardwing Familiar's EDHREC average deck. `--pod-decks 6354`.
+        PodDeck {
+            name: "Brinelin, the Moon Kraken and Esior, Wardwing Familiar (U)",
+            commanders: decks::BRINELIN_44_COMMANDERS,
+            main: decks::BRINELIN_44_MAIN,
+        },
+        // Seat 6355: The Fifth Doctor and Ian Chesterton's EDHREC average deck. `--pod-decks 6355`.
+        PodDeck {
+            name: "The Fifth Doctor and Ian Chesterton (WU)",
+            commanders: decks::THE_FIFTH_DOCTOR_25_COMMANDERS,
+            main: decks::THE_FIFTH_DOCTOR_25_MAIN,
+        },
     ]
 }
 
@@ -46885,6 +46903,9 @@ mod tests {
             ("Kirk, Commanding Officer", &[0x22CE]),
             ("The Fugitive Doctor and Adric, Mathematical Genius", &[0x22CF]),
             ("Armix, Filigree Thrasher and Falthis, Shadowcat Familiar", &[0x22D0]),
+            ("Bruse Tarl, Boorish Herder and Sakashima of a Thousand Faces", &[0x22D1]),
+            ("Brinelin, the Moon Kraken and Esior, Wardwing Familiar", &[0x22D2]),
+            ("The Fifth Doctor and Ian Chesterton", &[0x22D3]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

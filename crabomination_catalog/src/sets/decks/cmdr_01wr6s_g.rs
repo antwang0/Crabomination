@@ -269,3 +269,53 @@ pub fn neck_snap() -> CardDefinition {
         Effect::Destroy { what: target_filtered(R::Creature.and(R::IsAttacking.or(R::IsBlocking))) },
     )
 }
+
+/// Giant Space Amoeba — {4}{U} 3/3 flying Germ. Attacks: target creature
+/// defending player controls gets -3/-0 until end of turn, then a token copy
+/// of this creature.
+pub fn giant_space_amoeba() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Flying],
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::PumpPT {
+                what: target_filtered(R::Creature.and(R::ControlledByDefendingPlayer)),
+                power: Value::Const(-3),
+                toughness: Value::ZERO,
+                duration: Duration::EndOfTurn,
+            },
+            crate::effect::shortcut::token_copy_of(PlayerRef::You, Value::ONE, Selector::This),
+        ]))],
+        ..creature("Giant Space Amoeba", cost(&[generic(4), crate::mana::u()]), vec![CreatureType::Germ], 3, 3)
+    }
+}
+
+/// Cold-Water Snapper — {5}{U} 4/5 Turtle, hexproof.
+pub fn cold_water_snapper() -> CardDefinition {
+    CardDefinition {
+        keywords: vec![Keyword::Hexproof],
+        ..creature("Cold-Water Snapper", cost(&[generic(5), crate::mana::u()]), vec![CreatureType::Turtle], 4, 5)
+    }
+}
+
+/// Stream of Thought — {U} sorcery. Target player mills four; you shuffle up
+/// to four cards from your graveyard into your library. Replicate {2}{U}{U}.
+pub fn stream_of_thought() -> CardDefinition {
+    use crate::mana::u;
+    CardDefinition {
+        keywords: vec![Keyword::Replicate(cost(&[generic(2), u(), u()]))],
+        ..spell(
+            "Stream of Thought",
+            cost(&[u()]),
+            CardType::Sorcery,
+            Effect::Seq(vec![
+                Effect::Mill { who: target_filtered(R::Player), amount: Value::Const(4) },
+                Effect::ShuffleGraveyardCardsIntoLibrary {
+                    who: PlayerRef::You,
+                    filter: R::Any,
+                    max: Value::Const(4),
+                    to_top: false,
+                },
+            ]),
+        )
+    }
+}

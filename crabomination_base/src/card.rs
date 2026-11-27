@@ -448,8 +448,9 @@ pub enum CreatureType {
     Melkotian,
     Illyrian,
     Denobulan,
-    // Star Trek (Saru, Unthreatened).
+    // Star Trek (Saru, Unthreatened; Giant Space Amoeba).
     Kelpien,
+    Germ,
 }
 
 /// Land subtypes (basic land types + others).

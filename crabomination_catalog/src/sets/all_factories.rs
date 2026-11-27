@@ -19741,6 +19741,9 @@ static DECKS: &[Factory] = &[
     super::decks::stun_sniper,
     super::decks::the_naked_time,
     super::decks::neck_snap,
+    super::decks::giant_space_amoeba,
+    super::decks::cold_water_snapper,
+    super::decks::stream_of_thought,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

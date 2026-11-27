@@ -484,3 +484,20 @@ fn tal_shiar_analyst_pings_and_untaps_on_noncreature_spells() {
     cast(&mut g, bolt, Some(Target::Player(1)), None);
     assert!(!g.battlefield_find(tsa).unwrap().tapped, "untapped by a noncreature spell");
 }
+
+/// Giant Space Amoeba's attack shrinks a defending creature and copies
+/// itself.
+#[test]
+fn giant_space_amoeba_shrinks_a_defender_and_copies_itself() {
+    use crabomination::game::types::{Attack, AttackTarget};
+    let mut g = pod(2);
+    let amoeba = ready(&mut g, catalog::giant_space_amoeba());
+    let giant = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.step = TurnStep::DeclareAttackers;
+    g.perform_action(GameAction::DeclareAttackers(vec![Attack { attacker: amoeba, target: AttackTarget::Player(1) }]))
+        .expect("attack");
+    drain_stack(&mut g);
+    assert_eq!(g.computed_permanent(giant).unwrap().power, 0);
+    let amoebas = g.battlefield.iter().filter(|c| c.definition.name == "Giant Space Amoeba").count();
+    assert_eq!(amoebas, 2, "a token copy");
+}
