@@ -464,6 +464,8 @@ fn miss_highwater_collects_on_a_contract_when_the_player_loses() {
     let mine = |name: &str| g.battlefield.iter().any(|c| c.controller == 0 && c.is_token && c.definition.name == name);
     assert!(mine("Grizzly Bears") && mine("Sol Ring"), "the creature and the artifact are copied");
     assert!(!mine("Forest"), "lands are not");
+}
+
 /// Salinae: an artifact spell's copy resolves as a 1/1 Fish artifact creature
 /// token (CR 707.9b), and devotion to blue discounts her.
 #[test]
