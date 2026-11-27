@@ -444,6 +444,8 @@ pub enum CreatureType {
     // Star Trek (Cleveland Booker, Empath; Xindi Surveyors).
     Kwejian,
     Xindi,
+    // Star Trek (Melkotian Adjudicator).
+    Melkotian,
 }
 
 /// Land subtypes (basic land types + others).

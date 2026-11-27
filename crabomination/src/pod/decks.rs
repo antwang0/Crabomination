@@ -177493,3 +177493,93 @@ pub const CLEVELAND_BOOKER_MAIN: &[CardFactory] = &[
     forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
     forest, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const SULU_2_COMMANDERS: &[CardFactory] = &[sulu_heroic_helmsman];
+
+/// **Sulu, Heroic Helmsman**'s EDHREC average deck, card for card:
+/// 69 nonbasic cards + 30 Plains = 99.
+/// Sulu, Heroic Helmsman (EDHREC, fetched 2026-11-27).
+pub const SULU_2_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, class_4_tactical_cube, class_f_shuttlecraft, cloud_key,
+    colossal_plow, consulate_dreadnought, dawnsire_sunstar_dreadnought, deep_space_9,
+    extinguisher_battleship, kvort_class_raider, lumen_class_frigate, oberth_class_starship,
+    parhelion_ii, patriars_seal, pearl_medallion, queens_diamond, reaver_titan, s_s_botany_bay,
+    salvation_engine, shuttlecraft_galileo, sol_ring, starship_enterprise,
+    the_eternity_elevator, the_seriema, type_03_borg_vessel, u_s_s_defiant_mirror_migrant,
+    u_s_s_defiant_tough_little_ship, u_s_s_enterprise_a_free_spirit,
+    uss_enterprise_d_galaxy_class, u_s_s_enterprise_e_sovereign, u_s_s_prometheus_prototype,
+    u_s_s_stargazer_here_and_there, adagia_windswept_bastion, buried_ruin, emeria_the_sky_ruin,
+    idyllic_grange, inventors_fair, ishgard_the_holy_see, war_room, captain_jean_luc_picard,
+    command_subadjunct, dot_7_repair_squad, esper_sentinel, foundry_inspector,
+    loran_of_the_third_path, losheel_clockwork_scholar, primary_unimatrix_adjunct,
+    pulsar_squadron_ace, rutherford_upgraded_ensign, sram_senior_edificer, starnheim_courser,
+    steel_overseer, sulu_space_swashbuckler, supplementation_node, voyager_quickwelder,
+    flowering_of_the_white_tree, land_tax, trouble_in_pairs, dispatch, emergency_regeneration,
+    generous_gift, path_to_exile, swords_to_plowshares, to_arms,
+    seventy_thousand_light_years_from_home, austere_command, federation_resupply,
+    organic_extinction,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const COMMANDER_SPOCK_COMMANDERS: &[CardFactory] = &[commander_spock];
+
+/// **Commander Spock**'s EDHREC average deck, card for card:
+/// 94 nonbasic cards + 3 Forests + 1 Island + 1 Plains = 99.
+/// Commander Spock (EDHREC, fetched 2026-11-27).
+pub const COMMANDER_SPOCK_MAIN: &[CardFactory] = &[
+    arcane_signet, jefferies_tube, shuttlecraft_galileo, sol_ring, starfleet_communicator,
+    starship_enterprise, u_s_s_defiant_mirror_migrant, u_s_s_farragut_bold_explorer,
+    breeding_pool, canopy_vista, command_tower, earth_sector_001, evolving_wilds,
+    exotic_orchard, fabled_passage, fortified_village, glacial_fortress, hallowed_fountain,
+    hinterland_harbor, irrigated_farmland, mosswort_bridge, path_of_ancestry, port_town,
+    prairie_stream, rain_slicked_copse, reliquary_tower, risa, scattered_groves, sea_of_clouds,
+    seaside_citadel, shore_leave_planet, snow_covered_forest, snow_covered_island,
+    snow_covered_plains, sodden_verdure, sunpetal_grove, temple_garden, temple_of_mystery,
+    terramorphic_expanse, tranquil_landscape, vineglimmer_snarl, vulcan,
+    amanda_grayson_logics_link, ancient_greenwarden, augur_of_autumn, captain_kathryn_janeway,
+    captain_kirk_boldly_going, captain_pike_fullness_of_time, chief_kyle_transporter_tech,
+    chief_montgomery_scott, christine_chapel_combat_medic, colossal_clone_master,
+    displacer_kitten, flickering_hound, janice_rand_essential_aide, lieutenant_hikaru_sulu,
+    lieutenant_nyota_uhura, lotus_cobra, lt_arex_ever_adapting, mress_crew_coordinator,
+    mccoy_not_a_bricklayer, pavel_chekov_first_posting, planet_killer, scute_swarm, soulherder,
+    starfield_vocalist, sun_titan, syndicate_liquidators, tatyova_benthic_druid,
+    tireless_tracker, balance_of_terror, exploration, guardian_project, teleportation_circle,
+    warp_speed, beast_within, brainstorm, cloudshift, ephemerate, growth_spiral,
+    heroic_intervention, merciful_mandate, path_to_exile, reality_shift, swords_to_plowshares,
+    temporal_tribulation, austere_command, cultivate, farseek, natures_lore, ponder,
+    rampant_growth, three_visits, wrath_of_god,
+    // Basics
+    forest, forest, forest, island, plains,
+];
+
+pub const SEVEN_OF_NINE_3_COMMANDERS: &[CardFactory] = &[seven_of_nine];
+
+/// **Seven of Nine**'s EDHREC average deck, card for card:
+/// 79 nonbasic cards + 11 Islands + 9 Swamps = 99.
+/// Seven of Nine (EDHREC, fetched 2026-11-27).
+pub const SEVEN_OF_NINE_3_MAIN: &[CardFactory] = &[
+    arcane_signet, dimir_signet, fellwar_stone, kimoyo_beads, lost_jitte, mind_stone,
+    pip_boy_3000, sol_ring, talisman_of_dominance, thought_vessel, bojuka_bog, choked_estuary,
+    command_tower, drowned_catacomb, gloomlake_verge, morphic_pool, ni_var_science_academy,
+    polluted_delta, reliquary_tower, shipwreck_marsh, sunken_hollow, tainted_isle,
+    the_unicomplex, undercity_sewers, underground_river, watery_grave, aether_channeler,
+    blizzard_specter, dread_presence, dreamshackle_geist, elim_garak_simple_tailor,
+    elven_raft_steerer, emrakuls_messenger, ertai_resurrected, graviton_fundamental_force,
+    homunculus_horde, hullbreaker_horror, jett_reno_problem_solver, melkotian_adjudicator,
+    obsidian_order_operative, psychosis_crawler, rankle_master_of_pranks, silent_hallcreeper,
+    tal_shiar_operative, the_caretaker, the_vision, vision_synthezoid_avenger,
+    black_market_connections, retreat_to_coralhelm, retreat_to_hagra, tell_me_what_you_see,
+    triskaidekaphobia, amazing_acrobatics, archenemys_charm, archmages_charm,
+    consider_the_prime_directive, cryptic_command, dimir_charm, drown_in_the_loch,
+    heartless_act, impossible_choice, professors_warning, reverse_the_polarity,
+    sheoldreds_edict, sublime_epiphany, test_of_priorities, theorix_charm, three_steps_ahead,
+    tyrants_scorn, you_find_the_villains_lair, you_see_a_guard_approach,
+    ember_island_production, fantastic_elasticity, final_act, insatiable_avarice,
+    resistance_is_futile, season_of_weaving, test_of_loyalty, will_of_the_abzan,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

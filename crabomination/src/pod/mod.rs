@@ -38353,6 +38353,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::CLEVELAND_BOOKER_COMMANDERS,
             main: decks::CLEVELAND_BOOKER_MAIN,
         },
+        // Seat 6318: Sulu, Heroic Helmsman's EDHREC average deck. `--pod-decks 6318`.
+        PodDeck {
+            name: "Sulu, Heroic Helmsman (W)",
+            commanders: decks::SULU_2_COMMANDERS,
+            main: decks::SULU_2_MAIN,
+        },
+        // Seat 6319: Commander Spock's EDHREC average deck. `--pod-decks 6319`.
+        PodDeck {
+            name: "Commander Spock (WUG)",
+            commanders: decks::COMMANDER_SPOCK_COMMANDERS,
+            main: decks::COMMANDER_SPOCK_MAIN,
+        },
+        // Seat 6320: Seven of Nine's EDHREC average deck. `--pod-decks 6320`.
+        PodDeck {
+            name: "Seven of Nine (UB)",
+            commanders: decks::SEVEN_OF_NINE_3_COMMANDERS,
+            main: decks::SEVEN_OF_NINE_3_MAIN,
+        },
     ]
 }
 
@@ -46640,6 +46658,9 @@ mod tests {
             ("Zefram Cochrane, Warp Pioneer", &[0x22AB]),
             ("H.M.S. Bounty, Unlikely Timeship", &[0x22AC]),
             ("Cleveland Booker, Empath", &[0x22AD]),
+            ("Sulu, Heroic Helmsman", &[0x22AE]),
+            ("Commander Spock", &[0x22AF]),
+            ("Seven of Nine", &[0x22B0]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

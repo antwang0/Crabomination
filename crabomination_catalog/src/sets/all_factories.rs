@@ -19663,6 +19663,17 @@ static DECKS: &[Factory] = &[
     super::decks::temporal_anomaly,
     super::decks::xindi_surveyors,
     super::decks::hit_it,
+    super::decks::sulu_heroic_helmsman,
+    super::decks::dot_7_repair_squad,
+    super::decks::commander_spock,
+    super::decks::risa,
+    super::decks::vulcan,
+    super::decks::captain_kirk_boldly_going,
+    super::decks::seven_of_nine,
+    super::decks::melkotian_adjudicator,
+    super::decks::tal_shiar_operative,
+    super::decks::tell_me_what_you_see,
+    super::decks::resistance_is_futile,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

@@ -396,6 +396,7 @@ mod trek_borg;
 mod trek_singles;
 mod trek_singles2;
 mod cmdr_01wr2y_a;
+mod cmdr_01wr6s_a;
 mod trek_singles3;
 mod trek_singles4;
 mod trek_singles5;
