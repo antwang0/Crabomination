@@ -1682,9 +1682,8 @@ pub fn great_gilded_boat() -> CardDefinition {
 }
 
 /// Whtz, the Bibliophile — {1}{W}{U} legendary 1/3 Homunculus. Rulebreaker:
-/// no maximum deck size. {3}, {T}: draw a card and gain 1 life. (The "{3}
-/// less with a 200-card starting deck" discount is not modelled —
-/// INCOMPLETE_CARDS.)
+/// no maximum deck size. {3}, {T}: draw a card and gain 1 life; it costs {3}
+/// less if your starting deck had 200 or more cards.
 pub fn whtz_the_bibliophile() -> CardDefinition {
     CardDefinition {
         cost: cost(&[generic(1), w(), u()]),
@@ -1695,6 +1694,7 @@ pub fn whtz_the_bibliophile() -> CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             tap_cost: true,
             mana_cost: cost(&[generic(3)]),
+            cost_reduction_if: Some((Predicate::YourStartingDeckHadAtLeast(200), 3)),
             effect: Effect::Seq(vec![
                 Effect::Draw { who: Selector::You, amount: Value::ONE },
                 Effect::GainLife { who: Selector::You, amount: Value::ONE },

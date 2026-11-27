@@ -2120,9 +2120,9 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Fall of the Impostor | a tie for greatest power exiles the first in battlefield order, not the controller's choice | `TakeGreatestPower` |
 | 🟡 Shah of Naar Isle | "up to three" is three yes/no draws | `EachPlayerDoes` + `MayDo` |
 | 🟡 The Kingpin of Crime | the attack trigger's "creatures with toughness greater than their power" is the set as it resolves; a creature that qualifies later in the turn doesn't assign by toughness (CR 611.2c) | `GrantKeyword { AssignsCombatDamageByToughness, EndOfTurn }` |
+| 🟡 Channel Harm | "you may have it deal that much damage" is always taken; "permanents you control" are the ones you control as it resolves | `PreventOpposingDamageThisTurnReflecting { reflect_to }` |
 | 🟡 Safe Passage | "creatures you control" are the ones you control as it resolves; a creature that enters later this turn is unshielded | two `PreventAllDamageThisTurn` |
 | 🟡 Mordor on the March | "exile a creature card from your graveyard" is a target (a hexproof-from-graveyard effect would stop it); each storm copy re-aims at another card | `CreateTokenCopyOf` + `Exile` + `DelayUntil` |
-| 🟡 Whtz, the Bibliophile | the "{3} less with 200 or more cards in your starting deck" discount isn't modelled (no starting-deck size is kept; every seated deck has 100) | `ActivatedAbility` |
 | 🟡 Aragorn, Company Leader | "one of each of those kinds" is one trigger per kind put, so two kinds at once may land on two different creatures | `AddCounterOfTriggerKind` on `YouPutCounters` |
 | 🟡 Touch of Moonglove | the granted "a creature it damaged dies" trigger doesn't look back (CR 603.10a) when the pumped creature dies in the same event as its victim | `GrantTriggeredAbility { EndOfTurn }` |
 | 🟡 Ib Halfheart, Goblin Tactician | the blocked Goblin deals its 4 just before it is sacrificed (the blockers leave the block map with it), and only while it is still yours | `DealDamageFrom` + `SacrificeSelected` |

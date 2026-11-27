@@ -37,9 +37,17 @@ pub struct PodDeck {
 }
 
 impl PodDeck {
-    /// CR 903.5a — the deck is exactly 100 cards, commanders included.
+    /// CR 903.5a — the deck's cards, commanders included (exactly 100 unless
+    /// [`no_max_deck_size`](Self::no_max_deck_size)).
     pub fn card_count(&self) -> usize {
         self.commanders.len() + self.main.len()
+    }
+
+    /// A commander's Rulebreaker lifts the 100-card maximum (Whtz).
+    pub fn no_max_deck_size(&self) -> bool {
+        self.commanders.iter().any(|f| {
+            f().static_abilities.iter().any(|sa| matches!(sa.effect, crate::effect::StaticEffect::RulebreakerNoMaxDeckSize))
+        })
     }
 }
 
@@ -38587,6 +38595,60 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::KAI_WINN_COMMANDERS,
             main: decks::KAI_WINN_MAIN,
         },
+        // Seat 6357: Whtz, the Bibliophile's EDHREC average deck. `--pod-decks 6357`.
+        PodDeck {
+            name: "Whtz, the Bibliophile (WU)",
+            commanders: decks::WHTZ_COMMANDERS,
+            main: decks::WHTZ_MAIN,
+        },
+        // Seat 6358: Faceless One and Raised by Giants's EDHREC average deck. `--pod-decks 6358`.
+        PodDeck {
+            name: "Faceless One and Raised by Giants (G)",
+            commanders: decks::FACELESS_ONE_8_COMMANDERS,
+            main: decks::FACELESS_ONE_8_MAIN,
+        },
+        // Seat 6359: Silas Renn, Seeker Adept and The Prismatic Piper's EDHREC average deck. `--pod-decks 6359`.
+        PodDeck {
+            name: "Silas Renn, Seeker Adept and The Prismatic Piper (UB)",
+            commanders: decks::SILAS_RENN_9_COMMANDERS,
+            main: decks::SILAS_RENN_9_MAIN,
+        },
+        // Seat 6360: Faceless One and Folk Hero's EDHREC average deck. `--pod-decks 6360`.
+        PodDeck {
+            name: "Faceless One and Folk Hero (W)",
+            commanders: decks::FACELESS_ONE_9_COMMANDERS,
+            main: decks::FACELESS_ONE_9_MAIN,
+        },
+        // Seat 6361: Esior, Wardwing Familiar and The Prismatic Piper's EDHREC average deck. `--pod-decks 6361`.
+        PodDeck {
+            name: "Esior, Wardwing Familiar and The Prismatic Piper (U)",
+            commanders: decks::ESIOR_45_COMMANDERS,
+            main: decks::ESIOR_45_MAIN,
+        },
+        // Seat 6362: Alora, Merry Thief and Faceless One's EDHREC average deck. `--pod-decks 6362`.
+        PodDeck {
+            name: "Alora, Merry Thief and Faceless One (U)",
+            commanders: decks::ALORA_30_COMMANDERS,
+            main: decks::ALORA_30_MAIN,
+        },
+        // Seat 6363: The Eighth Doctor and Yasmin Khan's EDHREC average deck. `--pod-decks 6363`.
+        PodDeck {
+            name: "The Eighth Doctor and Yasmin Khan (WUR)",
+            commanders: decks::THE_EIGHTH_DOCTOR_24_COMMANDERS,
+            main: decks::THE_EIGHTH_DOCTOR_24_MAIN,
+        },
+        // Seat 6364: The Sixth Doctor and Rose Tyler's EDHREC average deck. `--pod-decks 6364`.
+        PodDeck {
+            name: "The Sixth Doctor and Rose Tyler (WUG)",
+            commanders: decks::THE_SIXTH_DOCTOR_24_COMMANDERS,
+            main: decks::THE_SIXTH_DOCTOR_24_MAIN,
+        },
+        // Seat 6365: The First Doctor and Rose Noble's EDHREC average deck. `--pod-decks 6365`.
+        PodDeck {
+            name: "The First Doctor and Rose Noble (WU)",
+            commanders: decks::THE_FIRST_DOCTOR_23_COMMANDERS,
+            main: decks::THE_FIRST_DOCTOR_23_MAIN,
+        },
     ]
 }
 
@@ -38634,6 +38696,7 @@ pub fn build_pod_template_from(decks: &[SeatDeck<'_>]) -> GameState {
             g.add_card_to_library(seat, crate::cube::card_arc(f));
         }
         g.seat_commanders(seat, deck.commanders.iter().map(|f| f()).collect());
+        g.players[seat].starting_deck_size = (deck.main.len() + deck.commanders.len()) as u32;
         if deck.commanders.iter().chain(deck.main).any(|f| opens_attractions(&f())) {
             g.seat_attraction_deck(seat, POD_ATTRACTIONS.iter().map(|f| f()).collect());
         }
@@ -40392,7 +40455,13 @@ mod tests {
     #[test]
     fn cr_903_5a_target_decks_are_legal_commander_decks() {
         for d in target_decks() {
-            assert_eq!(d.card_count(), 100, "{}: deck size", d.name);
+            // CR 903.5a; a Rulebreaker "no maximum deck size" commander (Whtz)
+            // only sets the floor.
+            if d.no_max_deck_size() {
+                assert!(d.card_count() >= 100, "{}: deck size", d.name);
+            } else {
+                assert_eq!(d.card_count(), 100, "{}: deck size", d.name);
+            }
             let deck = crate::format::Deck {
                 main: d.main.iter().map(|f| f()).collect(),
                 commanders: d.commanders.iter().map(|f| f()).collect(),
@@ -46913,6 +46982,15 @@ mod tests {
             ("Brinelin, the Moon Kraken and Esior, Wardwing Familiar", &[0x22D2]),
             ("The Fifth Doctor and Ian Chesterton", &[0x22D3]),
             ("Kai Winn, Faithless Leader", &[0x22D4]),
+            ("Whtz, the Bibliophile", &[0x22D5]),
+            ("Faceless One and Raised by Giants", &[0x22D6]),
+            ("Silas Renn, Seeker Adept and The Prismatic Piper", &[0x22D7]),
+            ("Faceless One and Folk Hero", &[0x22D8]),
+            ("Esior, Wardwing Familiar and The Prismatic Piper", &[0x22D9]),
+            ("Alora, Merry Thief and Faceless One", &[0x22DA]),
+            ("The Eighth Doctor and Yasmin Khan", &[0x22DB]),
+            ("The Sixth Doctor and Rose Tyler", &[0x22DC]),
+            ("The First Doctor and Rose Noble", &[0x22DD]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
@@ -46942,10 +47020,10 @@ mod tests {
                 s.spawn(|| {
                     while let Some(&(name, seed)) = jobs.get(next.fetch_add(1, std::sync::atomic::Ordering::Relaxed)) {
                         let precon = *field.iter().find(|d| d.name.starts_with(name)).expect("the precon seat");
-                        assert_eq!(precon.card_count(), 100);
+                        assert!(precon.card_count() == 100 || precon.no_max_deck_size() && precon.card_count() > 100);
                         let decks = vec![precon, field[0], field[1], field[2]];
                         let t = build_pod_template(&decks);
-                        assert_eq!(t.players[0].library.len(), 100 - precon.commanders.len());
+                        assert_eq!(t.players[0].library.len(), precon.card_count() - precon.commanders.len());
                         let pilots = vec![Pilot::default(); 4];
                         let log = std::env::var_os("CRAB_SEAT_LOG").is_some();
                         if log {
