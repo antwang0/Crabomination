@@ -20,6 +20,8 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc4uj`) — Assist, random discard, an optional-loop cap, 3 seats](#fixedopen-2026-11-27-commander-run-01wruxc4uj--assist-random-discard-an-optional-loop-cap-3-seats) | 18 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4uj` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc4uj-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc3os`) — 18 seats, five primitives, two bot asks](#fixedopen-2026-11-27-commander-run-01wruxc3os--18-seats-five-primitives-two-bot-asks) | 30 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc3os-found-them-moved-verbatim-2026-11-27) | 3 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc5RU` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc5ru-found-them-moved-verbatim-2026-11-27) | 4 |
@@ -600,6 +602,36 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc4uj`) — Assist, random discard, an optional-loop cap, 3 seats
+
+Seats 6286-6288 (Yume, Benjamin Sisko Besieged, Grakk the Pacifist). Cards in `decks::cmdr_nov27_b`, tests in
+`recent_b::cmdr_nov26` and `core_rules::cr_recent122`.
+- ✅ **Assist (CR 702.132a)** — `game/assist.rs`: before the caster pays, a scripted decider names an assister and an
+  amount; headless, a teammate pays what it can, an opponent pays {1} only when the caster's board rewards it (a
+  `SpellCast` trigger gated on `Predicate::SpellWasAssisted`) and keeps a source spare. A failed caster payment restores the
+  assister. `StaticEffect::GrantAssistToSpells` (gated by `cast_cost_scan`'s `GRANT_ASSIST` bit),
+  `PlayerRef::AssisterOfTriggerSpell`, `TurnRegistries::assisted_spells`. Game Plan / Out of Bounds now print it.
+- ✅ **Bug: `Effect::Discard { random: true }` took `hand.first()`** (201 cards). Seeded `random_range` per pick (CR 701.9b).
+- ✅ **Bug: optional copy-and-blink loop** — Preston, the Vanisher's Illusion copies of Wispweaver Angel blink a nontoken
+  creature Preston copies again (seed 29552 6-seat game 105: 78,396 actions / 33 turns). `RepeatGuard::admit_optional_pick`
+  declines past 64 accepted optional target picks of one source name a turn (CR 733.1b / 733.2a). Pods only.
+- OPEN: Assist on the other cast paths (flashback, foretell, alternative costs); with convoke / delve it is not offered.
+- OPEN: Chira's "select targets at random" (`Selector::RandomOf` / `RandomAmong` / `TakeRandom` have no event path).
+- Gates: suite 29,662 / 0 / 14 (`CRAB_ANSWER_LOG=strict`, per-seat test skipped; seats 6286-6288 run alone, decided); `--bench`
+  byte-identical, pools decision-identical, `bench_ab.py` +1.26 % (noise) — PERF `01WRuXc4uj`. Sweeps: TODO's Commander NEXT item 5.
+
+## The Commander NEXT's lines as `01WRuXc4uj` found them (moved verbatim, 2026-11-27)
+
+1. ⚠ **Several sessions share this branch:** fetch before you start and before every push; rebase, never force; `cargo check -p crabomination_catalog` after each rebase. Seat numbers race: after a conflicted rebase, checkout `--ours` of `pod/decks.rs` + `pod/mod.rs`, re-run `scripts/seat_decks.py` on top of the other session's seats, run `cr_903_5a_target_decks_are_legal_commander_decks`. New seats go at the end of `target_decks()`. ⚠ `scripts/gen_factory_lists.py` rewrites all of `all_factories.rs` in a new order — append your factories by hand instead.
+2. ⚠ **One optimized build at a time; `CARGO_INCREMENTAL=0`; never edit the tree while one compiles** (an edit mid-build broke `target-audit` once this run). The audit binary: `RUSTFLAGS="-C debug-assertions=yes" CARGO_TARGET_DIR=target-audit cargo build --profile overflow -p crabomination --bin bot_ladder` (~10 min warm) — it checks the pod invariants. `cr_903_5a_the_official_precon_seats_play_pod_games` plays one game a seat: skip it in the suite, run it alone (`CRAB_SEAT=<prefix>`, `CRAB_SEAT_SHARD=i/n`).
+3. **State (2026-11-27, `01WRuXc3os`): 6,285 seats** — `01WRuXc3os` added 6261-6270, 6273-6278, 6284-6285 (Sahir, K'Ehleyr, Armus, Grilka, Data, Kang, Erica Ortegas, M'Ress, Worf, Brad Boimler, Tuvok, Salinae and six pairs; `cmdr_nov26_b`/`_c`, `cmdr_nov27_b`); a concurrent session (`01WRuXc5RU`) added 6271-6272 and 6279-6283 (Itazura, Miss Highwater, Sash and Waistcoat, Glava, Matoc, The Madcap Jester, Chira; `cmdr_nov27`). ⚠ Both sessions wrote Sash and Waistcoat + Write into Being within the hour — claim a deck in ENGINE_BACKLOG before writing its cards. Commander rules: every FEATURE_ROADMAP Commander-status row ✅ save the bot's waterbend cast. **`01WRuXc5RU` (concurrent):** seated 6271-6272 (Itazura, Miss Highwater) and 6279-6283 (Sash and Waistcoat, Glava, Matoc, The Madcap Jester, Chira); **Assist (CR 702.132) is ❌** and blocks Yume — design in ENGINE_BACKLOG `01WRuXc5RU`.
+4. **The smoke test is `--pod-random`** (`bot_ladder --commander --pod-random --seats N --games G --seed S`): each game draws its pod from every deck. `--seats N` alone replays the first N decks — keep it only for the golden-outcome seeds. A failure prints `--pod-decks .. --first I --games 1`; replay under `CRAB_POD_TRACE=0` and, for state, a throwaway `#[ignore]` test in `pod/mod.rs` driving `play_pod_game_observed` with an observer (how both bugs this run were found).
+5. **Sweeps this run:** audit build, seeds 29450-29453 × 3/4/5/6 seats (1,500 games): 0 panics, 1 board cap; release, seeds 29454-29458 × 3/4/5/6/8 (2,450) + 240 new-seat fuzz games (`random_pods.sh`, `MIN=6261`): 0 panics, 2 CR 104.4a draws, 1 board cap (a long draw-heavy pod, not Troubling Tribbles). Undecided ~0.1 %. **Next seed 29545.** Gates: ENGINE_BACKLOG `01WRuXc3os`, PERF `01WRuXc3os`. `01WRuXc5RU`: suite 29,652 / 0 / 14 strict after its fixes (a LifeLost double trigger, see ENGINE_BACKLOG).
+6. **Next decks** (`edhrec_scan_top.py` / `edhrec_scan_pairs.py --legal`, cache rebuilt as in ENGINE_BACKLOG `01WRuXc3os`): Yume is the last commander-only single; one short: Mohiam (+ Nix), Benjamin Sisko (+ Final Frontier). ⚠ A chooser-pair average (Clara Oswald, Piper, Faceless One, and Vhal + Sword Coast Sailor) passes `--max 0` but fails CR 903.4 — count the average's cards outside the commanders' Scryfall identity before seating (one-liner in ENGINE_BACKLOG `01WRuXc3os`). Also legal and three short with existing primitives: Grakk the Pacifist (+ Guard Duty, Realmbreaker's Grasp).
+7. **The CR is pinned at 2026-11-06** (`6117678c2`, `01WRuXc5Gy`): 713 Meld Cards inserted, so Monarch is 726, the initiative 727, restarting 728; Rulebreaker is 903.5e, sideboards 903.5f. Cite those. **Re-pinning the next edition:** `scripts/cr_diff.py`, then map old->new by rule-text equality with references normalized (the 2026-11-26 map: ENGINE_BACKLOG `01WRuXc5Gy`) and rewrite every `CR …` citation run and `cr_N_` test name in ONE pass over pristine files — a second pass re-shifts what the first moved (`pod/controlled.rs` went 723.5 -> 725.5 once). New code that filters statics by kind: `active_static_where` / `static_active_is`, not `matches!(active_static(..), Some(K))` — the latter evaluates a gate (coven, `WhileCondition`) for statics it then discards.
+8. **Gotchas:** inside the layer pass land types read printed except through `lands_of_computed_type`; `ShuffleSelfIntoLibrary` sets the resolving-spell flag only for the resolving spell; a random pod's draw depends on the deck count, so a seat append moves every `--pod-random` game (replay by `--pod-decks`). A synthesized post-resolution event (`LifeLostToOwnEffect`, `CardExiledFrom(OPPONENT_LIBRARY_BY_YOU)`, `DidAtRandom`) is pushed in `resolve_effect_into_kind` at depth 0, gated on a listener, and needs a fast-path payload arm plus the reference table entry in `events.rs`.
+9. **Earlier runs' NEXT lines** are in ENGINE_BACKLOG ("The Commander NEXT's lines as `01WRuXc3G1` / `01WRuXc4Bu` / `01WRuXc3U3` / `01WRuXc5Gy` / `01WRuXc3os` / `01WRuXc5RU` found them").
+
 ## FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc5RU`) — seven closers' primitives, two walker bugs
 
 Seats 6271-6272 (Itazura, Miss Highwater — short only their commanders), 6279-6282 (Sash and Waistcoat, Glava,
@@ -616,13 +648,13 @@ cost three rebases (procedure in TODO's Commander NEXT item 1 held each time).
   Fist's granted tap). A player is never the source.
 - ✅ `PlayerBecameTarget` had no event actor, so "that player" (`TriggerEventPlayer`) read None for a targeted player.
 - ✅ A search that exiles from a library never pushed `CardExiledFrom(LIBRARY)` (CR 400.7; Laelia-style listeners).
-- OPEN: **Assist (CR 702.132)** blocks Yume, Chronicler of Valor (her deck is short only her) and Out of Bounds.
+- ✅ (`01WRuXc4uj`) **Assist (CR 702.132)** blocks Yume, Chronicler of Valor (her deck is short only her) and Out of Bounds.
   `Keyword::Assist` is inert. Design: at the cast's payment, after the total cost is locked (CR 601.2f), the caster
   names an assister; the assister pays N ≤ the generic part through `try_pay_with_auto_tap_kind` (as `MayPayBy`); the
   caster's cost drops by N; the spell records the assister for Yume's "if another player spent mana". Every cast path
   in `actions.rs` pays separately (`cast_spell`, convoke, retrace, foretell …) — hook the shared payment, not each.
   Bot: an assister pays {1} only when a card is in it for them (Yume) and they keep a spare untapped source.
-- OPEN: `Effect::Discard { random: true }` takes `hand.first()`, not a random card (pre-existing; "the bot harness
+- ✅ (`01WRuXc4uj`) `Effect::Discard { random: true }` takes `hand.first()`, not a random card (pre-existing; "the bot harness
   doesn't care which card"). Chira's deck lives on random discards; fixing it moves every random-discard game.
 - OPEN: Chira's "select targets at random" — `Selector::RandomOf` / `RandomAmong` / `TakeRandom` have no event path.
 

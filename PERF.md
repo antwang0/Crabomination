@@ -3136,6 +3136,22 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-27 (Commander run, `01WRuXc4uj`) — guardrail; assist on the cast path, random discard, an optional-pick cap
+
+Touched shared paths: `cast_spell_with_convoke` / `cast_from_command_zone_as` (`take_assist`: a `generic == 0 ||` test,
+then the printed keyword, then the battlefield only under `cast_cost_scan`'s new `GRANT_ASSIST` bit); `cast_cost_scan` (one
+more arm); `Effect::Discard { random: true }` (one RNG draw per card); the pod loop's `RepeatGuard` (one pending-decision read
+per optional target answer, pods only). `release`, 4-core box (Xeon @ 2.10GHz), base `d1e16dc81` (the run's start) vs tip
+`0bda7be80`:
+
+```
+--bench          decisions 196,176 / 27.64 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok;
+                 peak_rss_mib 51.6
+pools            --bench --decks cube / sos / sealed --games 100 --seed 28200: 367,206 / 213,898 / 522,778, 0 stalls —
+                 decision-identical to the invariant
+bench_ab.py      16 pairs: B/A median +1.26 %, mean +0.08 % (sd 4.56) — noise; no regression
+```
+
 ### 2026-11-27 (Commander run, `01WRuXc3os`) — guardrail; resolution-end life-loss synthesis, counter adders
 
 Touched shared paths: `resolve_effect_into_kind` (an outermost resolution scans its own events for the controller's

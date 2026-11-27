@@ -21,7 +21,7 @@ the shipped CR text (now `crabomination/MagicCompRules_20261106.txt`, re-pinned
 2026-11-26: 713 Meld inserted, 713-733 cited as 714-734, 903.5e / 903.5f). Don't re-audit; update rows as they
 move. Per-deck card completion lives in `DECK_FEATURES.md`; what each Commander
 session changed lives in ENGINE_BACKLOG under its session id. Last touched
-2026-11-27 by `01WRuXc3os` (eminence damage is its owner's — the eminence row; no row changed state).
+2026-11-27 by `01WRuXc4uj` (Assist ✅).
 
 ### Format core (CR 903)
 | Feature | State | Where |
@@ -210,7 +210,7 @@ session changed lives in ENGINE_BACKLOG under its session id. Last touched
 | "Any player may activate" as a sorcery; the activator is "you" (CR 602.2) | ✅ | `ActivatedAbility::any_player` + `sorcery_speed`; Sash and Waistcoat (seat 6279) |
 | "A spell or ability you control causes cards to be exiled from an opponent's library" | ✅ *2026-11-27* | `exile_from::OPPONENT_LIBRARY_BY_YOU`, synthesized after an outermost resolution, listener-gated, fans out per card; searches now announce their library exiles (CR 400.7); The Madcap Jester (seat 6282) |
 | "Whenever you … at random" (discard, modes, coins, dice) | 🟡 *2026-11-27* | `KeywordAct::DidAtRandom` (`effects/commander.rs`), once per kind per resolution; random *targets* are not heard (INCOMPLETE_CARDS); Chira, All In (seat 6283) |
-| Assist (CR 702.132) | ❌ | `Keyword::Assist` is inert — no seat is offered the payment. Blocks Yume, Chronicler of Valor's deck (short only Yume) and Out of Bounds. Design: ENGINE_BACKLOG `01WRuXc5RU` |
+| Assist (CR 702.132) | ✅ *since 2026-11-27 (`01WRuXc4uj`)* | `game/assist.rs` (`take_assist`, hooked before the caster's payment in `cast_spell_with_convoke` and `cast_from_command_zone_as`; not with convoke / delve). Headless: a teammate pays what it can; an opponent pays {1} only for a reward (`Predicate::SpellWasAssisted` trigger — Yume) with a source spare. `StaticEffect::GrantAssistToSpells`, `PlayerRef::AssisterOfTriggerSpell`. Tests `core_rules::cr_recent122`. ⏳ the other zone cast paths (flashback, foretell, alternative costs) don't offer it |
 | Most-built commanders and top-1000 staples in the catalog | 🟡 *2026-09-26* | `decks::cmdr_legends`, `decks::cmdr_legends2`, `decks::cmdr_top1000`. Coverage: `COMMANDER_BACKLOG.md` (re-run `scripts/commander_backlog.py`). Rounded-off parts in INCOMPLETE_CARDS' session `015BCEt5` table |
 | Sneak permanents enter attacking (CR 702.190b) | ✅ *2026-10-11* | `AlternativeCost::sneak` + `GameState::sneak_defenders` (Raphael, the Nightwatcher; Dark Leo & Shredder; seat 393) |
 | Granted and land mayhem (CR 702.187) | ✅ *2026-10-11* | `StaticEffect::GraveyardNonlandHaveMayhem` via `GameState::effective_mayhem_cost`; a land with mayhem is played from the graveyard the turn it was discarded (Green Goblin, Oscorp Industries; seat 394) |
