@@ -38633,7 +38633,7 @@ impl GameState {
                 self.secret_council_permanent_vote(filter, on_most, Some(on_none), effect, ctx, events)
             }
 
-            Effect::CopySpellAsOneOneSpirit { what }
+            Effect::CopySpellAsOneOne { what, .. }
             | Effect::CopySpellNotLegendary { what }
             | Effect::CopySpellAddingTypes { what, .. } => {
                 let ids: Vec<CardId> = match what {
@@ -38654,10 +38654,9 @@ impl GameState {
                         })
                         .collect(),
                 };
-                let spirit = matches!(effect, Effect::CopySpellAsOneOneSpirit { .. });
                 for cid in ids {
-                    if spirit {
-                        self.copy_spell_as_one_one_spirit(cid, events);
+                    if let Effect::CopySpellAsOneOne { creature_type, .. } = effect {
+                        self.copy_spell_as_one_one(cid, *creature_type, events);
                     } else if let Effect::CopySpellAddingTypes { types, .. } = effect {
                         self.copy_spell_adding_types(cid, ctx.controller, types, events);
                     } else {

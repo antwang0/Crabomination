@@ -9020,9 +9020,10 @@ pub enum Effect {
         #[serde(default)]
         may_choose_new_targets: bool,
     },
-    /// CR 707.9b — Donal, Herald of Wings: copy the spell as a 1/1 Spirit in
-    /// addition to its types, kept by the token it becomes.
-    CopySpellAsOneOneSpirit { what: Selector },
+    /// CR 707.9b — copy the spell as a 1/1 `creature_type` creature in addition
+    /// to its other types, kept by the token it becomes (Donal's Spirit,
+    /// Salinae's Fish; an artifact spell's copy becomes an artifact creature).
+    CopySpellAsOneOne { what: Selector, creature_type: crate::card::CreatureType },
     /// CR 707.9b — copy the spell `what` once, "except it isn't legendary if
     /// the spell is legendary" (Double Major); the token it resolves into
     /// keeps the exception.

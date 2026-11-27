@@ -2366,7 +2366,7 @@ impl Effect {
             | Effect::CopySpellMayChooseTargets { what, count } => {
                 sel_has_target(what) || value_has_target(count)
             }
-            Effect::CopySpellAsOneOneSpirit { what }
+            Effect::CopySpellAsOneOne { what, .. }
             | Effect::CopySpellNotLegendary { what }
             | Effect::CopySpellAddingTypes { what, .. } => sel_has_target(what),
             Effect::CopySpellForPlayer { what, who } => sel_has_target(what) || player_has_target(who),
@@ -3039,7 +3039,7 @@ impl Effect {
             | Effect::CastImmediatePayingExtra { what, .. }
             | Effect::CopySpell { what, .. }
             | Effect::CopySpellWithRiders { what, .. }
-            | Effect::CopySpellAsOneOneSpirit { what }
+            | Effect::CopySpellAsOneOne { what, .. }
             | Effect::CopySpellNotLegendary { what }
             | Effect::CopySpellAddingTypes { what, .. }
             | Effect::Connive { what, .. }
@@ -5884,7 +5884,7 @@ impl Effect {
                 | Effect::AttachSourcesFormerEquipmentTo { host: target } => sel_find(target, slot),
                 Effect::CopySpell { what, .. }
                 | Effect::CopySpellWithRiders { what, .. }
-                | Effect::CopySpellAsOneOneSpirit { what }
+                | Effect::CopySpellAsOneOne { what, .. }
                 | Effect::CopySpellNotLegendary { what }
                 | Effect::CopySpellAddingTypes { what, .. }
                 | Effect::Connive { what, .. }

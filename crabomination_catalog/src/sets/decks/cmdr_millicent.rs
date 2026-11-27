@@ -180,7 +180,7 @@ pub fn donal_herald_of_wings() -> CardDefinition {
                 R::Creature.and(R::HasSupertype(Supertype::Legendary).negate()).and(R::HasKeyword(Keyword::Flying)),
             )),
             "Copy that spell as a 1/1 Spirit?",
-            Effect::CopySpellAsOneOneSpirit { what: Selector::TriggerSource },
+            Effect::CopySpellAsOneOne { what: Selector::TriggerSource, creature_type: CreatureType::Spirit },
         )],
         ..creature(
             "Donal, Herald of Wings",

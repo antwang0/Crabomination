@@ -1,5 +1,5 @@
-//! CR 707.9b — a spell copy "except it's a 1/1 Spirit in addition to its
-//! other types" (Donal, Herald of Wings), or "except it isn't legendary"
+//! CR 707.9b — a spell copy "except it's a 1/1 Spirit / Fish in addition to
+//! its other types" (Donal, Herald of Wings; Salinae), or "except it isn't legendary"
 //! (Double Major), or "except it's an artifact in addition" (Tawnos, the
 //! Toymaker). The exception is a copiable value,
 //! so it is written into the copy's own definition and the token the copy
@@ -10,8 +10,9 @@ use crate::game::types::{GameEvent, StackItem};
 use crate::game::GameState;
 
 impl GameState {
-    /// Copy the spell `cid` once and make the copy a 1/1 Spirit.
-    pub(crate) fn copy_spell_as_one_one_spirit(&mut self, cid: CardId, events: &mut Vec<GameEvent>) {
+    /// Copy the spell `cid` once and make the copy a 1/1 `kind` creature in
+    /// addition to its other types.
+    pub(crate) fn copy_spell_as_one_one(&mut self, cid: CardId, kind: CreatureType, events: &mut Vec<GameEvent>) {
         let before = self.stack.len();
         self.copy_stack_spell_controlled(cid, 1, true, None, None, events);
         for item in self.stack.iter_mut().skip(before) {
@@ -19,8 +20,11 @@ impl GameState {
                 let def = card.definition_make_mut();
                 def.power = 1;
                 def.toughness = 1;
-                if !def.subtypes.creature_types.contains(&CreatureType::Spirit) {
-                    def.subtypes.creature_types.push(CreatureType::Spirit);
+                if !def.card_types.contains(&crate::card::CardType::Creature) {
+                    def.card_types.push(crate::card::CardType::Creature);
+                }
+                if !def.subtypes.creature_types.contains(&kind) {
+                    def.subtypes.creature_types.push(kind);
                 }
             }
         }
