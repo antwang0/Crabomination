@@ -35428,8 +35428,8 @@ impl GameState {
             Effect::RevealUntilSharesCardTypeToBattlefield { with } => {
                 self.reveal_until_shares_card_type_to_battlefield(with, ctx, events)
             }
-            Effect::RevealUntilMatchingToBattlefield { filter, count, rest_bottom } => {
-                self.reveal_until_matching_to_battlefield(filter, count, *rest_bottom, ctx, events)
+            Effect::RevealUntilMatchingToBattlefield { filter, count, rest_bottom, any_number } => {
+                self.reveal_until_matching_to_battlefield(filter, count, *rest_bottom, *any_number, ctx, events, effect)
             }
 
             Effect::RevealUntilLandsToBattlefield { count, tapped } => {

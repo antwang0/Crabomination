@@ -9638,11 +9638,15 @@ pub enum Effect {
     /// "Reveal until `count` `filter` cards, put them all onto the battlefield,
     /// shuffle the rest in" (Synthetic Destiny); stops on an empty library.
     /// `rest_bottom` bottoms the rest at random instead (Empty the Laboratory).
+    /// `any_number`: "put any number of those" — the controller picks which
+    /// hits enter, the others join the rest (Aurora Awakener).
     RevealUntilMatchingToBattlefield {
         filter: SelectionRequirement,
         count: Value,
         #[serde(default)]
         rest_bottom: bool,
+        #[serde(default)]
+        any_number: bool,
     },
     /// Lukka, Coppercoat Outcast's −2:
     /// [`Self::RevealUntilOneToBattlefieldRestBottom`] over creatures with

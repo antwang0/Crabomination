@@ -161,13 +161,18 @@ impl GameState {
 
     /// Synthetic Destiny's end-step half: every revealed `filter` card onto
     /// the battlefield under the controller, the rest shuffled back in.
+    /// `any_number` asks which hits enter before anything moves (the hits are
+    /// read by position, so a re-run replays the answer).
+    #[allow(clippy::too_many_arguments)]
     pub(super) fn reveal_until_matching_to_battlefield(
         &mut self,
         filter: &SelectionRequirement,
         count: &Value,
         rest_bottom: bool,
+        any_number: bool,
         ctx: &EffectContext,
         events: &mut Vec<GameEvent>,
+        effect: &crate::effect::Effect,
     ) -> Result<(), GameError> {
         use rand::seq::SliceRandom;
         let p = ctx.controller;
@@ -175,8 +180,43 @@ impl GameState {
         if need == 0 {
             return Ok(());
         }
-        let (hits, mut rest) =
+        let chosen: Option<Vec<CardId>> = if any_number {
+            let candidates: Vec<(CardId, String)> = self.players[p]
+                .library
+                .iter()
+                .filter(|c| self.evaluate_requirement_on_card(filter, c, p))
+                .take(need as usize)
+                .map(|c| (c.id, c.definition.name.to_string()))
+                .collect();
+            let all: Vec<CardId> = candidates.iter().map(|(id, _)| *id).collect();
+            let max = all.len() as u32;
+            let mut cursor = 0;
+            let Some(ids) = self.ask_seat_cards_logged(
+                &mut cursor,
+                p,
+                "Put any number of them onto the battlefield".into(),
+                ctx.source.unwrap_or(CardId(0)),
+                candidates,
+                0,
+                max,
+                crate::decision::PickValue::Gain,
+                effect,
+                all,
+            ) else {
+                return Ok(());
+            };
+            self.clear_answer_log();
+            Some(ids)
+        } else {
+            None
+        };
+        let (mut hits, mut rest) =
             self.reveal_until_n(p, need, |g, c| g.evaluate_requirement_on_card(filter, c, p));
+        if let Some(keep) = chosen {
+            let (kept, declined): (Vec<_>, Vec<_>) = hits.into_iter().partition(|c| keep.contains(&c.id));
+            hits = kept;
+            rest.extend(declined);
+        }
         if rest_bottom {
             rest.shuffle(&mut self.rng.draw());
         }
@@ -283,6 +323,6 @@ impl GameState {
         else {
             return Ok(());
         };
-        self.reveal_until_matching_to_battlefield(&filter, &Value::ONE, true, ctx, events)
+        self.reveal_until_matching_to_battlefield(&filter, &Value::ONE, true, false, ctx, events, &crate::effect::Effect::Noop)
     }
 }

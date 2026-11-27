@@ -83,6 +83,27 @@ fn aurora_awakener_reveals_per_color() {
     assert!(g.battlefield_find(id).is_some());
 }
 
+/// Aurora Awakener: "put any number of those permanent cards onto the
+/// battlefield" — with two colors two cards are revealed, and the one the
+/// controller declines goes to the bottom with the rest.
+#[test]
+fn aurora_awakener_puts_only_the_chosen_cards() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::goblin_guide());
+    let giant = g.next_id();
+    g.players[0].add_to_library_top(giant, catalog::hill_giant());
+    let bears = g.next_id();
+    g.players[0].add_to_library_top(bears, catalog::grizzly_bears());
+    let a = g.add_card_to_hand(0, catalog::aurora_awakener());
+    flood(&mut g, 0);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![giant])]));
+    cast(&mut g, a, None).expect("awakener");
+    assert!(g.battlefield_find(giant).is_some());
+    assert!(g.battlefield_find(bears).is_none());
+    assert_eq!(g.players[0].library.last().map(|c| c.id), Some(bears));
+}
+
 /// Back for More: the returned creature fights the target (CR 701.14), and
 /// with no enemy creature the reflexive fight is just declined.
 #[test]

@@ -223,6 +223,7 @@ pub fn empty_the_laboratory() -> CardDefinition {
                 filter: R::Creature.and(zombie()),
                 count: Value::SacrificedThisResolutionBy { who: PlayerRef::You, filter: zombie() },
                 rest_bottom: true,
+                any_number: false,
             },
         ]),
     )

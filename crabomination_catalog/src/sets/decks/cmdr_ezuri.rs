@@ -266,6 +266,7 @@ pub fn synthetic_destiny() -> CardDefinition {
                         filter: R::Creature,
                         count: Value::XFromCost,
                         rest_bottom: false,
+                        any_number: false,
                     }),
                 },
             ])),

@@ -118,6 +118,7 @@ pub fn dack_fayden_helping_hand() -> CardDefinition {
                 filter: R::Creature,
                 count: Value::OpponentCount,
                 rest_bottom: false,
+                any_number: false,
             },
             Effect::GoadForTheGame { what: Selector::LastMoved },
             Effect::DistributeControlAmongOpponents { what: Selector::LastMoved },

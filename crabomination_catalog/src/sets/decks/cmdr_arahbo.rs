@@ -205,6 +205,7 @@ pub fn kindred_summons() -> CardDefinition {
                     chosen().and(R::ControlledByYou),
                 ))),
                 rest_bottom: false,
+                any_number: false,
             }),
         },
         ..Default::default()

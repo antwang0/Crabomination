@@ -157,7 +157,7 @@ pub fn aspiring_champion() -> CardDefinition {
             Effect::If {
                 cond: Predicate::PlayerSacrificedThisResolution(PlayerRef::You),
                 then: Box::new(Effect::Seq(vec![
-                    Effect::RevealUntilMatchingToBattlefield { filter: R::Creature, count: Value::ONE, rest_bottom: false },
+                    Effect::RevealUntilMatchingToBattlefield { filter: R::Creature, count: Value::ONE, rest_bottom: false, any_number: false },
                     Effect::If {
                         cond: Predicate::EntityMatches { what: Selector::LastMoved, filter: demon() },
                         then: Box::new(Effect::DealDamageEqualToPowerToEach {

@@ -44,8 +44,8 @@ pub fn chronomantic_escape() -> CardDefinition {
 }
 
 /// Aurora Awakener — {6}{G} 7/7 trample Giant Druid. Vivid — ETB: reveal until
-/// X permanent cards (X = colors among permanents you control); put them onto
-/// the battlefield ("any number" — all of them), the rest on the bottom.
+/// X permanent cards (X = colors among permanents you control); put any number
+/// of them onto the battlefield, the rest on the bottom.
 pub fn aurora_awakener() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Trample],
@@ -53,6 +53,7 @@ pub fn aurora_awakener() -> CardDefinition {
             filter: R::Permanent,
             count: Value::DistinctColorsAmong(Box::new(Selector::EachPermanent(R::ControlledByYou))),
             rest_bottom: true,
+            any_number: true,
         })],
         ..creature("Aurora Awakener", cost(&[generic(6), g()]), vec![CreatureType::Giant, CreatureType::Druid], 7, 7)
     }
