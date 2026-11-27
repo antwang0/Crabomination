@@ -38167,6 +38167,18 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::YUME_COMMANDERS,
             main: decks::YUME_MAIN,
         },
+        // Seat 6287: Benjamin Sisko, Besieged's EDHREC average deck. `--pod-decks 6287`.
+        PodDeck {
+            name: "Benjamin Sisko, Besieged (G)",
+            commanders: decks::BENJAMIN_SISKO_COMMANDERS,
+            main: decks::BENJAMIN_SISKO_MAIN,
+        },
+        // Seat 6288: Grakk the Pacifist's EDHREC average deck. `--pod-decks 6288`.
+        PodDeck {
+            name: "Grakk the Pacifist (W)",
+            commanders: decks::GRAKK_THE_PACIFIST_COMMANDERS,
+            main: decks::GRAKK_THE_PACIFIST_MAIN,
+        },
     ]
 }
 
@@ -46389,6 +46401,8 @@ mod tests {
             ("Gale, Waterdeep Prodigy and Feywild Visitor", &[0x228C]),
             ("Alora, Merry Thief and Flaming Fist", &[0x228D]),
             ("Yume, Chronicler of Valor", &[0x228E]),
+            ("Benjamin Sisko, Besieged", &[0x228F]),
+            ("Grakk the Pacifist", &[0x2290]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

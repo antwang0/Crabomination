@@ -176605,3 +176605,59 @@ pub const YUME_MAIN: &[CardFactory] = &[
     plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
     plains, plains, plains, plains,
 ];
+
+pub const BENJAMIN_SISKO_COMMANDERS: &[CardFactory] = &[benjamin_sisko_besieged];
+
+/// **Benjamin Sisko, Besieged**'s EDHREC average deck, card for card:
+/// 74 nonbasic cards + 25 Forests = 99.
+/// Benjamin Sisko, Besieged (EDHREC, fetched 2026-11-27).
+pub const BENJAMIN_SISKO_MAIN: &[CardFactory] = &[
+    arcane_signet, conduit_of_worlds, deep_space_9, emerald_medallion, lightning_greaves,
+    sol_ring, swiftfoot_boots, u_s_s_discovery_at_black_alert, boseiju_who_endures,
+    castle_garenbrig, evendo_waking_haven, evolving_wilds, fabled_passage, mosswort_bridge,
+    myriad_landscape, nykthos_shrine_to_nyx, reliquary_tower, terramorphic_expanse,
+    unexplored_territory, yavimaya_cradle_of_growth, arbor_elf, avenger_of_zendikar,
+    azusa_lost_but_seeking, beast_whisperer, birds_of_paradise, boreal_druid,
+    captain_jonathan_archer, captain_kathryn_janeway, copperhorn_scout, craterhoof_behemoth,
+    defiler_of_vigor, delighted_halfling, dr_joseph_mbenga, dryad_of_the_ilysian_grove,
+    elvish_mystic, fanatic_of_rhonas, fauna_shaman, fyndhorn_elves, icetill_explorer,
+    jadzia_dax_living_legacy, jake_sisko_war_correspondent, llanowar_elves,
+    loot_exuberant_explorer, lotus_cobra, mole_man_moloid_master, oracle_of_mul_daya,
+    radagast_of_rhosgobel, rampaging_baloths, reclamation_sage, sakura_tribe_elder, scute_swarm,
+    scythecat_cub, somberwald_sage, tireless_provisioner, tireless_tracker,
+    titania_natures_force, wayward_swordtooth, xenobotanist, case_of_the_locked_hothouse,
+    exploration, garruks_uprising, guardian_project, kenriths_transformation, sylvan_library,
+    archdruids_charm, beast_within, heroic_intervention, seedship_impact, bala_ged_recovery,
+    explore, final_frontier, green_suns_zenith, natures_lore, three_visits,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest,
+];
+
+pub const GRAKK_THE_PACIFIST_COMMANDERS: &[CardFactory] = &[grakk_the_pacifist];
+
+/// **Grakk the Pacifist**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Grakk the Pacifist (EDHREC, fetched 2026-11-27).
+pub const GRAKK_THE_PACIFIST_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, pearl_medallion, sol_ring, springleaf_drum,
+    thought_vessel, vedalken_orrery, adagia_windswept_bastion, emeria_the_sky_ruin,
+    hall_of_heliods_generosity, ishgard_the_holy_see, maze_of_ith, reliquary_tower, war_room,
+    ajanis_chosen, archon_of_suns_grace, crystal_barricade, danitha_capashen, dawnhart_geist,
+    esper_sentinel, felidar_sovereign, heliods_pilgrim, kor_spiritdancer, mesa_enchantress,
+    ondu_spiritdancer, pearl_ear_imperial_advisor, psemilla_meletian_poet, sram_senior_edificer,
+    starfield_mystic, transcendent_envoy, windborn_muse, all_that_glitters, arrest,
+    authority_of_the_consuls, bound_in_gold, cage_of_hands, candletrap, cooped_up,
+    cowed_by_wisdom, darksteel_mutation, detained_by_legionnaires, dog_umbra, ethereal_armor,
+    ghostly_prison, guard_duty, pacifism, pariah, peace_in_our_time, petrify, planar_disruption,
+    prison_sentence, prison_term, realmbreakers_grasp, redemption_arc, reprobation,
+    sages_reverie, sigardas_aid, sigil_of_the_empty_throne, sphere_of_safety, spirit_link,
+    temporal_isolation, enlightened_tutor, generous_gift, mandate_of_peace, path_to_exile,
+    reprieve, swords_to_plowshares, approach_of_the_second_sun, brilliant_restoration,
+    open_the_armory, retether,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
