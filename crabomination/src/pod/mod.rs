@@ -38299,6 +38299,24 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::RADHA_3_COMMANDERS,
             main: decks::RADHA_3_MAIN,
         },
+        // Seat 6309: Martok, Hero of the Empire's EDHREC average deck. `--pod-decks 6309`.
+        PodDeck {
+            name: "Martok, Hero of the Empire (W)",
+            commanders: decks::MARTOK_COMMANDERS,
+            main: decks::MARTOK_MAIN,
+        },
+        // Seat 6310: Dr. Pulaski, Cynical Clinician's EDHREC average deck. `--pod-decks 6310`.
+        PodDeck {
+            name: "Dr. Pulaski, Cynical Clinician (W)",
+            commanders: decks::DR_PULASKI_COMMANDERS,
+            main: decks::DR_PULASKI_MAIN,
+        },
+        // Seat 6311: Sela, Tal Shiar Paradox's EDHREC average deck. `--pod-decks 6311`.
+        PodDeck {
+            name: "Sela, Tal Shiar Paradox (B)",
+            commanders: decks::SELA_COMMANDERS,
+            main: decks::SELA_MAIN,
+        },
     ]
 }
 
@@ -46577,6 +46595,9 @@ mod tests {
             ("Võx, Child of the Collective", &[0x22A2]),
             ("Geordi La Forge, Innovator", &[0x22A3]),
             ("Radha, Coalition Warlord", &[0x22A4]),
+            ("Martok, Hero of the Empire", &[0x22A5]),
+            ("Dr. Pulaski, Cynical Clinician", &[0x22A6]),
+            ("Sela, Tal Shiar Paradox", &[0x22A7]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

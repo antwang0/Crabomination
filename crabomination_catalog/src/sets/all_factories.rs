@@ -19635,6 +19635,15 @@ static DECKS: &[Factory] = &[
     super::decks::bramblesnap,
     super::decks::veterans_voice,
     super::decks::encounter_the_unknown,
+    super::decks::type_2_phaser,
+    super::decks::hologram_janeway,
+    super::decks::seventy_thousand_light_years_from_home,
+    super::decks::disruptor_pistol,
+    super::decks::free_borg_revolutionaries,
+    super::decks::shuttle_crew,
+    super::decks::rogue_artificial_intelligence,
+    super::decks::salt_vampire,
+    super::decks::a_good_day_to_die,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

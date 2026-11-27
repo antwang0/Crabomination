@@ -177235,3 +177235,87 @@ pub const RADHA_3_MAIN: &[CardFactory] = &[
     forest, forest, forest, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain, mountain, mountain, mountain, mountain, mountain, mountain,
 ];
+
+pub const MARTOK_COMMANDERS: &[CardFactory] = &[martok_hero_of_the_empire];
+
+/// **Martok, Hero of the Empire**'s EDHREC average deck, card for card:
+/// 71 nonbasic cards + 28 Plains = 99.
+/// Martok, Hero of the Empire (EDHREC, fetched 2026-11-27).
+pub const MARTOK_MAIN: &[CardFactory] = &[
+    akromas_memorial, arcane_signet, astral_cornucopia, commanders_sphere, hedron_archive,
+    mind_stone, oketras_monument, pearl_medallion, skullclamp, sol_ring, stonespeaker_crystal,
+    tricorder, type_2_phaser, uss_enterprise_d_galaxy_class, uss_excelsior_cutting_edge,
+    warp_core, command_tower, emeria_the_sky_ruin, exotic_orchard, idyllic_grange, minas_tirith,
+    spire_of_industry, war_room, windbrisk_heights, abzan_falconer, adeline_resplendent_cathar,
+    ambassador_kehleyr, boromir_warden_of_the_tower, deanna_troi_psychic_counsel,
+    esper_sentinel, guinan_ancient_advisor, hero_of_bladehold, hologram_janeway,
+    hopeful_initiate, julian_bashir_frontier_doctor, knight_of_the_white_orchid,
+    leonin_warleader, lion_sash, loran_of_the_third_path, luminarch_aspirant,
+    mangara_the_diplomat, mikaeus_the_lunarch, miles_obrien_transporter_ops,
+    mondrak_glory_dominus, mother_of_runes, odric_lunarch_marshal, reconnaissance_partition,
+    resolute_reinforcements, saavik_stoic_student, spot_felis_catus, sulu_space_swashbuckler,
+    vexing_drone, welcoming_vampire, anointed_procession, flowering_of_the_white_tree,
+    smothering_tithe, tocasias_welcome, akromas_will, flawless_maneuver, generous_gift,
+    kabira_takedown, path_to_exile, sejiri_shelter, swords_to_plowshares, teferis_protection,
+    the_wandering_emperor, seventy_thousand_light_years_from_home, command_decision, farewell,
+    test_of_conviction, winds_of_abandon,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains,
+];
+
+pub const DR_PULASKI_COMMANDERS: &[CardFactory] = &[dr_pulaski_cynical_clinician];
+
+/// **Dr. Pulaski, Cynical Clinician**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Plains = 99.
+/// Dr. Pulaski, Cynical Clinician (EDHREC, fetched 2026-11-27).
+pub const DR_PULASKI_MAIN: &[CardFactory] = &[
+    aetherflux_reservoir, alhammarrets_archive, arcane_signet, astral_cornucopia, command_chair,
+    commanders_sphere, disruptor_pistol, everflowing_chalice, hedron_archive, howling_mine,
+    malfunctioning_holodeck, mind_stone, minds_eye, pearl_medallion, skullclamp, sol_ring,
+    temple_bell, thought_vessel, tricorder, uss_enterprise_d_galaxy_class, warp_core,
+    wayfarers_bauble, command_tower, eiganjo_seat_of_the_empire, exotic_orchard,
+    path_of_ancestry, scavenger_grounds, spire_of_industry, war_room, ajanis_pridemate,
+    archangel_of_thune, captain_jean_luc_picard, cybernetic_specialist, felidar_sovereign,
+    free_borg_revolutionaries, guide_of_souls, guinan_ancient_advisor, heliod_sun_crowned,
+    loran_of_the_third_path, operations_officer, resplendent_angel, righteous_valkyrie,
+    saavik_stoic_student, shuttle_crew, soul_warden, souls_attendant, spot_felis_catus,
+    sun_titan, valkyrie_harbinger, voice_of_the_blessed, anointed_procession, cleric_class,
+    dawn_of_hope, land_tax, smothering_tithe, dispatch, enlightened_tutor, heliods_intervention,
+    march_of_otherworldly_light, path_to_exile, renewed_faith, revitalize, stroke_of_midnight,
+    swords_to_plowshares, union_of_the_third_path, elspeth_suns_champion,
+    seventy_thousand_light_years_from_home, austere_command, command_decision,
+    test_of_conviction,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains,
+];
+
+pub const SELA_COMMANDERS: &[CardFactory] = &[sela_tal_shiar_paradox];
+
+/// **Sela, Tal Shiar Paradox**'s EDHREC average deck, card for card:
+/// 73 nonbasic cards + 26 Swamps = 99.
+/// Sela, Tal Shiar Paradox (EDHREC, fetched 2026-11-27).
+pub const SELA_MAIN: &[CardFactory] = &[
+    alhammarrets_archive, arcane_signet, astral_cornucopia, commanders_sphere, desecrated_tomb,
+    dino_dna, everflowing_chalice, ghost_vacuum, hedron_archive, lightning_greaves, mind_stone,
+    skullclamp, sol_ring, swiftfoot_boots, sword_of_light_and_shadow, the_ooze, tricorder,
+    u_s_s_enterprise_c_time_tossed, wayfarers_bauble, cabal_stronghold, command_tower,
+    exotic_orchard, great_arashin_city, hostile_hostel, memorial_to_folly, mortuary_mire,
+    the_unicomplex, war_room, ashnod_flesh_mechanist, assimilation_assessor,
+    automated_warfare_system, black_widow_daring_operative, blastoneuron, boggart_trawler,
+    commander_raffi_musiker, gallia_tragic_host, gorex_the_tombshell, grave_researcher,
+    khan_vengeful_heart, kozilek_butcher_of_truth, mirkwood_bats, reconnaissance_partition,
+    redemptor_dreadnought, relentless_drednok, rogue_artificial_intelligence, salt_vampire,
+    sauron_the_necromancer, screeching_scorchbeast, stitchers_supplier, syr_konrad_the_grim,
+    unshakable_tail, voq_torchbearer, young_necromancer, black_market, call_of_the_ring,
+    death_is_irrelevant, ripples_of_undeath, the_meathook_massacre, the_war_in_heaven,
+    a_good_day_to_die, bitter_triumph, hes_dead_jim, impossible_choice, shoot_the_sheriff,
+    undying_evil, withering_torment, dread_return, nights_whisper, profane_tutor, reanimate,
+    test_of_loyalty, toxic_deluge, victimize,
+    // Basics
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+    swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp, swamp,
+];

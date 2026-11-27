@@ -1,7 +1,8 @@
-//! Radha, Coalition Warlord's deck (`decks::cmdr_01wr2y_a`).
+//! Radha's, Martok's, Dr. Pulaski's and Sela's decks (`decks::cmdr_01wr2y_a` / `_b`).
 
 use crabomination::card::CardId;
 use crabomination::catalog;
+use crabomination::decision::{DecisionAnswer, ScriptedDecider};
 use crabomination::game::types::{GameAction, Target, TurnStep};
 use crabomination::game::*;
 use crabomination::mana::Color;
@@ -83,4 +84,70 @@ fn encounter_the_unknown_shoot_to_kill_hits_every_seat() {
     cast(&mut g, spell, None, Some(1));
     assert!(g.players.iter().zip(before).all(|(p, b)| p.life == b - 2));
     assert!(g.battlefield_find(bears).is_none());
+}
+
+/// 70,000 Light-Years from Home at four seats: the exiled creature's
+/// controller (seat 2), not the caster, searches for the basic.
+#[test]
+fn seventy_thousand_light_years_gives_the_basic_to_the_exiled_creatures_controller() {
+    let mut g = pod(4);
+    let bears = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+    g.add_card_to_library(2, catalog::plains());
+    let spell = g.add_card_to_hand(0, catalog::seventy_thousand_light_years_from_home());
+    g.players[0].mana_pool.add(Color::White, 2);
+    cast(&mut g, spell, Some(Target::Permanent(bears)), None);
+    assert!(g.exile.iter().any(|c| c.id == bears));
+    assert!(g.players[2].hand.iter().any(|c| c.definition.name == "Plains"));
+    assert!(g.players[0].hand.is_empty());
+}
+
+/// Salt Vampire: the chosen nonland card is exiled and its owner draws a
+/// replacement; the land stays in hand.
+#[test]
+fn salt_vampire_exiles_a_nonland_card_and_its_owner_draws() {
+    let mut g = pod(2);
+    let bolt = g.add_card_to_hand(1, catalog::lightning_bolt());
+    g.add_card_to_hand(1, catalog::mountain());
+    g.add_card_to_library(1, catalog::island());
+    let vamp = g.add_card_to_hand(0, catalog::salt_vampire());
+    g.players[0].mana_pool.add(Color::Black, 2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    cast(&mut g, vamp, None, None);
+    assert!(g.exile.iter().any(|c| c.id == bolt));
+    let names: Vec<&str> = g.players[1].hand.iter().map(|c| c.definition.name).collect();
+    assert_eq!(names.len(), 2);
+    assert!(names.contains(&"Mountain") && names.contains(&"Island"));
+}
+
+/// A Good Day to Die: +2/+0, and when that creature dies this turn its
+/// caster draws.
+#[test]
+fn a_good_day_to_die_draws_when_the_creature_dies() {
+    let mut g = pod(2);
+    let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.add_card_to_library(0, catalog::island());
+    let spell = g.add_card_to_hand(0, catalog::a_good_day_to_die());
+    let bolt = g.add_card_to_hand(0, catalog::lightning_bolt());
+    g.players[0].mana_pool.add(Color::Black, 1);
+    cast(&mut g, spell, Some(Target::Permanent(bears)), None);
+    assert_eq!(pt(&g, bears), (4, 2));
+    g.priority.player_with_priority = 0;
+    g.players[0].mana_pool.add(Color::Red, 1);
+    cast(&mut g, bolt, Some(Target::Permanent(bears)), None);
+    assert!(g.battlefield_find(bears).is_none());
+    assert!(g.players[0].hand.iter().any(|c| c.definition.name == "Island"));
+}
+
+/// Type-2 Phaser's entry taps an opposing creature and stuns it (CR 122.1d).
+#[test]
+fn type_2_phaser_taps_and_stuns_on_entry() {
+    use crabomination::card::CounterType;
+    let mut g = pod(3);
+    let bears = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let phaser = g.add_card_to_hand(0, catalog::type_2_phaser());
+    g.players[0].mana_pool.add_colorless(2);
+    cast(&mut g, phaser, None, None);
+    let b = g.battlefield_find(bears).unwrap();
+    assert!(b.tapped);
+    assert_eq!(b.counter_count(CounterType::Stun), 1);
 }
