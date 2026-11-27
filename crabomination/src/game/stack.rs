@@ -6280,6 +6280,7 @@ impl GameState {
         // matter which rule or effect put them out.
         self.players[p].left_game = true;
         self.queue_enchanted_player_left_triggers(p);
+        self.queue_contract_copies(p);
         // CR 506.4 / 800.4a — a creature that leaves the battlefield is removed
         // from combat, and so is an attacker whose defending player left the
         // game. Doing the `retain` alone left `attacking` and `block_map`

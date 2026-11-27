@@ -36847,6 +36847,17 @@ impl GameState {
                 }
             }
 
+            Effect::GiveContractCounter { who, beneficiary } => {
+                if let (Some(p), Some(b)) = (self.resolve_player(who, ctx), self.resolve_player(beneficiary, ctx)) {
+                    let src = ctx.source.unwrap_or(CardId(0));
+                    self.players[p].contracts.push((b, src));
+                }
+                Ok(())
+            }
+            Effect::OpponentsBidDamageForFreeCast { what } => {
+                self.opponents_bid_damage_for_free_cast(what, ctx, effect, events)
+            }
+
             Effect::EnchantedPlayerPaysPerArtifactOrNoAttacks => {
                 let Some(p) = ctx.source.and_then(|s| self.battlefield_find(s)).and_then(|c| c.attached_to_player)
                 else {

@@ -2564,6 +2564,9 @@ impl GameState {
                 let Some(seat) = self.resolve_player(p, ctx) else { return 0 };
                 self.distinct_creature_powers(seat, usize::MAX) as i32
             }
+            Value::ContractCountersOf(p) => {
+                self.resolve_player(p, ctx).map_or(0, |p| self.players[p].contracts.len() as i32)
+            }
             Value::PoisonCountersOf(p) => self
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].poison_counters as i32)

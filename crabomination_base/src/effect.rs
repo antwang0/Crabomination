@@ -1473,6 +1473,8 @@ pub enum Value {
     /// The player's poison counters (Vraska's −9 "counters equal to the
     /// difference" top-up).
     PoisonCountersOf(PlayerRef),
+    /// The player's contract counters (Miss Highwater).
+    ContractCountersOf(PlayerRef),
     /// CR 122.1f — the poison counters of every player `who` resolves to,
     /// summed (Vishgraz's "for each poison counter your opponents have").
     /// `PoisonCountersOf` reads one player.
@@ -7594,6 +7596,15 @@ pub enum Effect {
         #[serde(default)]
         fresh: bool,
     },
+    /// Itazura, Lingering Wick — each opponent secretly chooses a number 0 or
+    /// greater; the source deals the highest to an opponent who chose it (the
+    /// controller breaks a tie), who may cast a spell from among `what` free;
+    /// the controller puts one card of `what` that wasn't cast into hand.
+    OpponentsBidDamageForFreeCast { what: Selector },
+    /// Miss Highwater — `who` gets a contract counter for `beneficiary`: while
+    /// they have it, when they lose the game the beneficiary creates a token
+    /// copy of each artifact and creature they controlled.
+    GiveContractCounter { who: PlayerRef, beneficiary: PlayerRef },
     /// Volo's Journal: note one of the first `what` spell's unnoted creature
     /// types (changelings offer the suggested types) in the source's
     /// `CardCold::noted_creature_types`.

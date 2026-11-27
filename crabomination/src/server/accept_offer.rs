@@ -166,3 +166,25 @@ pub(super) fn stand_down_answer(state: &GameState, seat: usize, source: CardId, 
     });
     Some(!ready)
 }
+
+/// Miss Highwater's offer — "discard your hand, draw seven, take a contract
+/// counter". The generic screen prices the draw and not the contract, so it
+/// took every wheel. Taken only from a hand of two or fewer cards with a
+/// library deep enough that seven draws can't deck the seat.
+pub(super) fn contract_answer(state: &GameState, seat: usize, source: CardId, description: &str) -> Option<bool> {
+    fn contracts(e: &Effect, desc: &str) -> bool {
+        match e {
+            Effect::MayDoBy { description, body, .. } if description == desc => {
+                matches!(&**body, Effect::Seq(v) if v.iter().any(|x| matches!(x, Effect::GiveContractCounter { .. })))
+            }
+            Effect::Seq(v) => v.iter().any(|x| contracts(x, desc)),
+            _ => false,
+        }
+    }
+    let c = state.battlefield.find_by_id(source)?;
+    if !c.definition.triggered_abilities.iter().any(|t| contracts(&t.effect, description)) {
+        return None;
+    }
+    let p = state.players.get(seat)?;
+    Some(p.hand.len() <= 2 && p.library.len() >= 14)
+}

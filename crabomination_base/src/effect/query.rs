@@ -1570,6 +1570,8 @@ impl Effect {
             Effect::ExchangePlayerLifeWithSourceToughness { .. } => false,
             Effect::RadOnCastUntilEndOfTheirNextTurn { .. } => false,
             Effect::NoteCreatureTypeOf { what } => sel_has_target(what),
+            Effect::OpponentsBidDamageForFreeCast { .. } => false,
+            Effect::GiveContractCounter { .. } => false,
             Effect::SecretNumbersMatch { on_match, on_miss, .. } => {
                 on_match.requires_target() || on_miss.requires_target()
             }

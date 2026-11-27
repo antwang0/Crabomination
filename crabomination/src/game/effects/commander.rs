@@ -973,3 +973,195 @@ impl GameState {
                     .any(|sa| matches!(sa.effect, crate::effect::StaticEffect::RegeneratesInsteadOfDestroyed)))
     }
 }
+
+impl GameState {
+    /// `Effect::OpponentsBidDamageForFreeCast` (Itazura, Lingering Wick). Every
+    /// ask comes first on one cursor — the bids in APNAP order, the tie, the
+    /// winner's cast pick, the controller's hand pick — so a suspend re-runs
+    /// them from the log; nothing moves until the last is answered. A bid is a
+    /// life payment capped at the best spell's mana value (a bot keeps its
+    /// buffer); the controller breaks a tie toward the lowest life.
+    pub(crate) fn opponents_bid_damage_for_free_cast(
+        &mut self,
+        what: &crate::effect::Selector,
+        ctx: &crate::game::effects::EffectContext,
+        effect: &Effect,
+        events: &mut Vec<crate::game::types::GameEvent>,
+    ) -> Result<(), crate::game::GameError> {
+        use crate::decision::{AmountKind, PickValue};
+        use crate::effect::{Selector, ZoneDest};
+        use crate::game::types::Target;
+        let me = ctx.controller;
+        let src = ctx.source.unwrap_or(CardId(0));
+        let pool: Vec<(CardId, String, u32, bool)> = self
+            .resolve_selector(what, ctx)
+            .into_iter()
+            .filter_map(|e| e.as_card_id())
+            .filter_map(|id| self.exile.iter().find(|c| c.id == id))
+            .map(|c| (c.id, c.definition.name.to_string(), c.definition.cost.cmc(), c.definition.is_land()))
+            .collect();
+        if pool.is_empty() {
+            return Ok(());
+        }
+        let best = pool.iter().filter(|c| !c.3).map(|c| c.2).max().unwrap_or(0);
+        let opps = {
+            let o = self.opponents_of(me);
+            self.apnap_sort(o)
+        };
+        if opps.is_empty() {
+            return Ok(());
+        }
+        let mut cursor = 0;
+        let mut bids: Vec<(usize, u32)> = Vec::with_capacity(opps.len());
+        for &o in &opps {
+            let n = if best == 0 {
+                0
+            } else {
+                let prompt = "Secretly choose a number: the highest takes that much damage and a free spell".to_string();
+                let Some(n) = self.ask_seat_amount(&mut cursor, o, prompt, src, best, AmountKind::Life, effect) else {
+                    return Ok(());
+                };
+                n
+            };
+            bids.push((o, n));
+        }
+        let high = bids.iter().map(|b| b.1).max().unwrap_or(0);
+        let mut tied: Vec<usize> = bids.iter().filter(|b| b.1 == high).map(|b| b.0).collect();
+        tied.sort_by_key(|&s| self.effective_life(s));
+        let winner = if tied.len() > 1 {
+            let names = tied.iter().map(|&s| format!("Player {}", s + 1)).collect();
+            let Some(i) = self.ask_seat_option(&mut cursor, me, "Choose an opponent with the highest number".into(), src, names, effect)
+            else {
+                return Ok(());
+            };
+            tied[i.min(tied.len() - 1)]
+        } else {
+            tied[0]
+        };
+        let spells: Vec<(CardId, String)> = pool.iter().filter(|c| !c.3).map(|c| (c.0, c.1.clone())).collect();
+        let cast = if spells.is_empty() {
+            None
+        } else {
+            let auto = pool.iter().filter(|c| !c.3).max_by_key(|c| c.2).map(|c| c.0).into_iter().collect();
+            let Some(pick) = self.ask_seat_cards_logged(
+                &mut cursor,
+                winner,
+                "Cast a spell from among the exiled cards without paying its mana cost?".into(),
+                src,
+                spells,
+                0,
+                1,
+                PickValue::Gain,
+                effect,
+                auto,
+            ) else {
+                return Ok(());
+            };
+            pick.first().copied()
+        };
+        let rest: Vec<(CardId, String)> =
+            pool.iter().filter(|c| Some(c.0) != cast).map(|c| (c.0, c.1.clone())).collect();
+        let keep = if rest.is_empty() {
+            None
+        } else {
+            let auto = pool.iter().filter(|c| Some(c.0) != cast).max_by_key(|c| (!c.3, c.2)).map(|c| c.0);
+            let Some(pick) = self.ask_seat_cards_logged(
+                &mut cursor,
+                me,
+                "Put a card from among them into your hand".into(),
+                src,
+                rest.clone(),
+                1,
+                1,
+                PickValue::Gain,
+                effect,
+                auto.into_iter().collect(),
+            ) else {
+                return Ok(());
+            };
+            pick.first().copied().or(rest.first().map(|r| r.0))
+        };
+        self.clear_answer_log();
+        if high > 0 {
+            let damage = Effect::DealDamage {
+                to: Selector::Player(PlayerRef::Seat(winner)),
+                amount: Value::Const(high as i32),
+            };
+            self.run_effect(&damage, ctx, events)?;
+        }
+        // The hand pick moves before the cast so a parked target pick can't
+        // strand it; the spell is on the stack either way.
+        if let Some(id) = keep {
+            let c = crate::game::effects::EffectContext { targets: vec![Target::Permanent(id)], ..ctx.clone() };
+            self.run_effect(&Effect::Move { what: Selector::Target(0), to: ZoneDest::Hand(PlayerRef::You) }, &c, events)?;
+        }
+        if let Some(id) = cast.filter(|id| self.exile.iter().any(|c| c.id == *id))
+            && self.players.get(winner).is_some_and(|p| p.is_alive())
+        {
+            let c = crate::game::effects::EffectContext {
+                controller: winner,
+                targets: vec![Target::Permanent(id)],
+                ..ctx.clone()
+            };
+            let free = Effect::CastWithoutPayingImmediate {
+                what: Selector::Target(0),
+                source_zone: crate::card::Zone::Exile,
+                exile_after: false,
+                copy: false,
+                reduce_generic: 0,
+                pay_own_cost: false,
+            };
+            self.run_effect(&free, &c, events)?;
+        }
+        Ok(())
+    }
+}
+
+impl GameState {
+    /// Miss Highwater — `lost` is leaving the game holding contract counters:
+    /// each beneficiary still in the game gets a trigger creating a token copy
+    /// of every artifact and creature `lost` controlled. Read before the
+    /// departing seat's objects go (CR 800.4a); their last-known objects ride
+    /// `captured_token_lki` for the copies (CR 608.2h).
+    pub(crate) fn queue_contract_copies(&mut self, lost: usize) {
+        use crate::card::CardType;
+        if self.players.get(lost).is_none_or(|p| p.contracts.is_empty()) {
+            return;
+        }
+        let mut contracts = std::mem::take(&mut self.players[lost].contracts);
+        contracts.dedup_by_key(|c| c.0);
+        let lki: Vec<CardInstance> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == lost)
+            .filter(|c| self.computed_has_card_type(c, CardType::Artifact) || self.computed_has_card_type(c, CardType::Creature))
+            .cloned()
+            .collect();
+        if lki.is_empty() {
+            return;
+        }
+        let ids: Vec<CardId> = lki.iter().map(|c| c.id).collect();
+        for c in lki {
+            if !self.captured_token_lki.iter().any(|k| k.id == c.id) {
+                self.captured_token_lki.push(c);
+            }
+        }
+        for (beneficiary, source) in contracts {
+            if beneficiary == lost || !self.players.get(beneficiary).is_some_and(|p| p.is_alive()) {
+                continue;
+            }
+            let body = Effect::Seq(
+                ids.iter()
+                    .map(|&id| {
+                        crate::effect::shortcut::token_copy_of(
+                            PlayerRef::You,
+                            Value::ONE,
+                            crate::effect::Selector::ExactObjects(vec![id]),
+                        )
+                    })
+                    .collect(),
+            );
+            self.push_stack(TriggerPush::new(source, beneficiary, body).build());
+        }
+    }
+}

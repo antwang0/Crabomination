@@ -241,6 +241,11 @@ pub struct PlayerCold {
     /// pass; `None` while it is in. Written once a game, so it lives here.
     #[serde(default)]
     pub departure: Option<Departure>,
+    /// Miss Highwater's contract counters, one entry per counter: (the
+    /// beneficiary seat, the granting source). While any is held, losing the
+    /// game copies this seat's artifacts and creatures for each beneficiary.
+    #[serde(default)]
+    pub contracts: Vec<(usize, CardId)>,
     /// CR 603.7e — pending "your next creature spell this turn enters with these
     /// keywords" riders (Summon: Brynhildr's "Gestalt Mode" haste). Applied to
     /// the next creature spell's permanent as it enters and cleared at cleanup.
