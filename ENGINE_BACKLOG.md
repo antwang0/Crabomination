@@ -624,8 +624,11 @@ Booker (`_e`). 32 cards, tests `recent_b::cmdr_01wr2y_a`.
 - ✅ `edhrec_deck.py` read a quoted phrase in a factory's line comment as its printed name (Sol'Kanar showed as an
   unseated one-card gap).
 - OPEN (PERF candidate 2026-11-27): Sword of the Squeak on a ~300-token board, 5-8 s an action.
-- OPEN: Zefram's "once during each of your turns" is `WhileYourTurn` around Johann's once-each-turn grant — exact.
-  Salt Vampire's "may" is asked after the look (`LookAtHand` then `MayDo`) — exact.
+- Notes: Zefram's "once during each of your turns" is `WhileYourTurn` around Johann's once-each-turn grant; Salt
+  Vampire's "may" is asked after the look (`LookAtHand` then `MayDo`).
+- Gates: suite 29,700 / 0 / 14 (`CRAB_ANSWER_LOG=strict`, per-seat test skipped; seats 6308-6317 run alone, green);
+  `cargo clippy --workspace --exclude crabomination_client --all-targets` 0 (74 min cold); `--bench` and pools
+  decision-identical; sweeps: TODO's Commander NEXT item 5.
 
 ## The Commander NEXT's lines as `01WRuXc2yT` found them (moved verbatim, 2026-11-27)
 
