@@ -38293,6 +38293,12 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GEORDI_LA_FORGE_COMMANDERS,
             main: decks::GEORDI_LA_FORGE_MAIN,
         },
+        // Seat 6308: Radha, Coalition Warlord's EDHREC average deck. `--pod-decks 6308`.
+        PodDeck {
+            name: "Radha, Coalition Warlord (RG)",
+            commanders: decks::RADHA_3_COMMANDERS,
+            main: decks::RADHA_3_MAIN,
+        },
     ]
 }
 
@@ -46570,6 +46576,7 @@ mod tests {
             ("Ixidor, Reality Sculptor", &[0x22A1]),
             ("Võx, Child of the Collective", &[0x22A2]),
             ("Geordi La Forge, Innovator", &[0x22A3]),
+            ("Radha, Coalition Warlord", &[0x22A4]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

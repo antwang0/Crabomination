@@ -19631,6 +19631,10 @@ static DECKS: &[Factory] = &[
     super::decks::monastery_loremaster,
     super::decks::silumgar_spell_eater,
     super::decks::unblinking_bleb,
+    super::decks::radha_coalition_warlord,
+    super::decks::bramblesnap,
+    super::decks::veterans_voice,
+    super::decks::encounter_the_unknown,
 ];
 static DGM: &[Factory] = &[
     super::dgm::azorius_cluestone,

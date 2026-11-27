@@ -177207,3 +177207,31 @@ pub const GEORDI_LA_FORGE_MAIN: &[CardFactory] = &[
     island, island, island, island, island, island, island, island, island, island, island,
     island, island, island, island, island, island,
 ];
+
+pub const RADHA_3_COMMANDERS: &[CardFactory] = &[radha_coalition_warlord];
+
+/// **Radha, Coalition Warlord**'s EDHREC average deck, card for card:
+/// 72 nonbasic cards + 14 Forests + 13 Mountains = 99.
+/// Radha, Coalition Warlord (EDHREC, fetched 2026-11-27).
+pub const RADHA_3_MAIN: &[CardFactory] = &[
+    arcane_signet, kvort_class_raider, navigators_compass, patriars_seal, relic_of_legends,
+    sarcophagus_ship_of_the_dead, sol_ring, springleaf_drum, u_s_s_defiant_tough_little_ship,
+    u_s_s_voyager_lone_wanderer, cinder_glade, command_tower, evolving_wilds,
+    holdout_settlement, kessig_wolf_run, rockfall_vale, rootbound_crag, sheltered_thicket,
+    survivors_encampment, thran_portal, unstable_frontier, bramblesnap, briar_hydra,
+    copperhorn_scout, dryad_of_the_ilysian_grove, elmar_ulvenwald_informant, frenzied_baloth,
+    goblin_anarchomancer, grizzlegom_hurloon_hero, halana_and_alena, jaspera_sentinel,
+    kona_rescue_beastie, llanowar_elves, loam_dryad, nishoba_brawler,
+    overlord_of_the_hauntwoods, pia_aether_ascetic, quirion_ranger, saryth_the_vipers_fang,
+    scryb_ranger, seeker_of_skybreak, syr_faren_the_hengehammer, territorial_kavu,
+    tuya_bearclaw, tyvar_the_pummeler, wild_beastmaster, wildgrowth_archaic,
+    xenagos_god_of_revels, garruks_uprising, instill_energy, nyleas_presence, prismatic_omen,
+    rhythm_of_the_wild, veterans_voice, abrade, beast_within, chaos_warp, encounter_the_unknown,
+    energybending, gaeas_might, heroic_intervention, return_of_the_wildspeaker,
+    return_to_nature, blasphemous_act, cultivate, hull_breach, kodamas_reach, natures_lore,
+    rampant_growth, rishkars_expertise, sylvan_scrying, tromp_the_domains,
+    // Basics
+    forest, forest, forest, forest, forest, forest, forest, forest, forest, forest, forest,
+    forest, forest, forest, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+];
