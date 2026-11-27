@@ -7258,6 +7258,9 @@ pub enum Effect {
     /// Prairie Dog: this turn, +1/+1 counters on your creatures get one extra
     /// (`Player.extra_plus_one_counters_this_turn`).
     GrantExtraPlusOneCountersThisTurn { who: PlayerRef },
+    /// Brad Boimler: this turn, counters of any kind put on `who`'s permanents
+    /// get one extra each (`Player.extra_counters_this_turn`).
+    GrantExtraCountersThisTurn { who: PlayerRef },
     /// Combine Guildmage: this turn your creatures enter with an extra +1/+1
     /// counter (stacks; `Player.extra_etb_p1p1_counters_this_turn`). Unlike
     /// `GrantExtraPlusOneCountersThisTurn`, which amplifies placement.

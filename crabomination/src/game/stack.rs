@@ -5547,6 +5547,7 @@ impl GameState {
                 || player.next_face_down_discount_this_turn != 0
                 || player.face_down_spells_cast_this_turn != 0
                 || player.extra_plus_one_counters_this_turn != 0
+                || player.extra_counters_this_turn != 0
                 || player.extra_etb_p1p1_counters_this_turn != 0;
             if !stale_grants && !stale_scalars {
                 continue;
@@ -5575,6 +5576,7 @@ impl GameState {
                 player.face_down_spells_cast_this_turn = 0;
                 // "Until end of turn" +1/+1 counter bonus (Prairie Dog) ends.
                 player.extra_plus_one_counters_this_turn = 0;
+                player.extra_counters_this_turn = 0;
                 player.extra_etb_p1p1_counters_this_turn = 0;
             }
         }

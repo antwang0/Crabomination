@@ -1198,6 +1198,12 @@ pub struct PlayerData {
     /// Dog's {4}{W}). Adds to `plus_counter_adders_for`; cleared at cleanup.
     #[serde(default)]
     pub extra_plus_one_counters_this_turn: u32,
+    /// "Until end of turn, if one or more counters would be put on a permanent
+    /// you control, that many plus one of each kind" (Brad Boimler): adds to
+    /// every placement on this player's permanents, whoever places; cleared at
+    /// cleanup.
+    #[serde(default)]
+    pub extra_counters_this_turn: u32,
     /// Combine Guildmage — "this turn, each creature you control enters with an
     /// additional +1/+1 counter." Read at the ETB-counter site; cleared at
     /// cleanup. Distinct from `extra_plus_one_counters_this_turn` (which
@@ -1927,6 +1933,7 @@ impl Player {
             played_land_not_from_hand_this_turn: false,
             instants_sorceries_cast_from_graveyard_this_turn: 0,
             extra_plus_one_counters_this_turn: 0,
+            extra_counters_this_turn: 0,
             extra_etb_p1p1_counters_this_turn: 0,
             extra_etb_p1p1_until_your_turn: 0,
             creature_flash_until_your_turn: false,

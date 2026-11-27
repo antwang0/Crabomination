@@ -8407,6 +8407,7 @@ impl GameState {
                 _ => false,
             })
             .count() as u32
+            + self.players.get(seat).map_or(0, |p| p.extra_counters_this_turn)
     }
 
     /// The noncreature half of those adders for permanent `cid` of `seat`'s:

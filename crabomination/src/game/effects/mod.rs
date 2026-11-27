@@ -16984,6 +16984,13 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::GrantExtraCountersThisTurn { who } => {
+                if let Some(p) = self.resolve_player(who, ctx) {
+                    self.players[p].extra_counters_this_turn = self.players[p].extra_counters_this_turn.saturating_add(1);
+                }
+                Ok(())
+            }
+
             Effect::CreaturesEnterWithExtraCounterUntilYourNextTurn { who } => {
                 if let Some(p) = self.resolve_player(who, ctx) {
                     let pl = &mut self.players[p];

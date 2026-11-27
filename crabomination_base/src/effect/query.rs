@@ -1093,6 +1093,7 @@ impl Effect {
             | Effect::TapAnyNumberThenDraw { .. }
             | Effect::TapAnyNumberThen { .. }
             | Effect::GrantExtraPlusOneCountersThisTurn { .. }
+            | Effect::GrantExtraCountersThisTurn { .. }
             // Amount is a scratch read (CounteredSpellManaSpent), no slots.
             | Effect::AddManaAtNextMainPhase { .. }
             // Free-cast offers pick their own targets at cast time.
