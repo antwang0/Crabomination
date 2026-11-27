@@ -2796,6 +2796,9 @@ pub enum GameEvent {
     PrizeClaimed { card_id: CardId, player: usize },
     /// `KeywordAct::DidAtRandom` — `player` did something at random (Chira).
     DidAtRandom { player: usize },
+    /// `KeywordAct::FacedDilemma` — `player` chose one or more modes for a
+    /// spell or ability (Elim Garak).
+    FacedDilemma { player: usize },
     /// A card was put into exile from the battlefield, a graveyard or a library
     /// (CR 400.7 — the origin matters to Ketramose and Laelia). `from` is one
     /// [`crate::effect::exile_from`] bit; `player` is the zone's player (the

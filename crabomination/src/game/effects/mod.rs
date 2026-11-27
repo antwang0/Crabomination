@@ -38,7 +38,7 @@ mod combat_damage_watch;
 mod connive;
 mod distribute;
 mod seat_mode;
-mod commander;
+pub(crate) mod commander;
 mod attach_choice;
 mod aura_search;
 mod face_down_exile;
@@ -22724,7 +22724,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who } => {
+            Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who, all_zones } => {
                 // Haunting Echoes' second half: every library card sharing a
                 // name with something exiled earlier in this resolution goes
                 // too, then the searched player shuffles.
@@ -22738,6 +22738,26 @@ impl GameState {
                     return Ok(());
                 }
                 for p in self.resolve_players(who, ctx) {
+                    if *all_zones {
+                        // CR 400.7 — graveyard and hand first, each a reported exit.
+                        let in_yard: Vec<CardId> = self.players[p].graveyard.iter()
+                            .filter(|c| names.contains(c.definition.name)).map(|c| c.id).collect();
+                        let in_hand: Vec<CardId> = self.players[p].hand.iter()
+                            .filter(|c| names.contains(c.definition.name)).map(|c| c.id).collect();
+                        for id in in_yard {
+                            if let Some(card) = Self::take_card(&mut self.players[p].graveyard, id) {
+                                self.exile.push(card);
+                                self.note_exiled_from_graveyard(p, id, events);
+                                events.push(GameEvent::PermanentExiled { card_id: id });
+                            }
+                        }
+                        for id in in_hand {
+                            if let Some(card) = Self::take_card(&mut self.players[p].hand, id) {
+                                self.exile.push(card);
+                                events.push(GameEvent::PermanentExiled { card_id: id });
+                            }
+                        }
+                    }
                     let hits: Vec<CardId> = self.players[p]
                         .library
                         .iter()
@@ -34377,7 +34397,7 @@ impl GameState {
                 Ok(())
             }
 
-            Effect::RevealTopNPutMatchingToBattlefield { who, count, filter } => {
+            Effect::RevealTopNPutMatchingToBattlefield { who, count, filter, all_tapped } => {
                 let n = self.evaluate_value(count, ctx).max(0) as usize;
                 if n == 0 { return Ok(()); }
                 // "Put any number of [filter] cards from among them onto the
@@ -34397,6 +34417,8 @@ impl GameState {
                         .collect();
                     let chosen = if matching.is_empty() {
                         Vec::new()
+                    } else if *all_tapped {
+                        matching.iter().map(|(id, _)| *id).collect()
                     } else {
                         let all: Vec<CardId> = matching.iter().map(|(id, _)| *id).collect();
                         let max = all.len() as u32;
@@ -34431,11 +34453,17 @@ impl GameState {
                     for &cid in &to_bf {
                         self.move_card_to(
                             cid,
-                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: false },
+                            &ZoneDest::Battlefield { controller: PlayerRef::Seat(p), tapped: *all_tapped },
                             ctx, events,
                         );
                     }
-                    for cid in top_ids.into_iter().filter(|c| !to_bf.contains(c)) {
+                    let mut rest: Vec<CardId> = top_ids.into_iter().filter(|c| !to_bf.contains(c)).collect();
+                    if *all_tapped {
+                        // "The rest on the bottom of your library in a random order."
+                        use rand::seq::SliceRandom;
+                        rest.shuffle(&mut self.rng.draw());
+                    }
+                    for cid in rest {
                         self.move_card_to(
                             cid,
                             &ZoneDest::Library { who: PlayerRef::Seat(p), pos: crate::effect::LibraryPosition::Bottom },

@@ -1204,7 +1204,45 @@ impl GameState {
     }
 }
 
+/// CR 700.2 — a modal spell or ability's effect: one whose casting or putting
+/// on the stack chooses modes ("you face a dilemma", Star Trek).
+pub(crate) fn effect_is_modal(effect: &crate::effect::Effect) -> bool {
+    use crate::effect::Effect as E;
+    match effect {
+        E::ChooseMode(_)
+        | E::ChooseModesCast { .. }
+        | E::ChooseModesByPoints { .. }
+        | E::ChooseN { .. }
+        | E::ChooseUnchosenMode { .. }
+        | E::ChooseUnchosenModeThisTurn { .. } => true,
+        E::Seq(steps) => steps.iter().any(effect_is_modal),
+        _ => false,
+    }
+}
+
 impl GameState {
+    /// Whether a permanent hears `KeywordAct::FacedDilemma` (Elim Garak).
+    fn hears_faced_dilemma(&self) -> bool {
+        use crate::effect::{EventKind, KeywordAct};
+        self.battlefield.iter().any(|c| {
+            c.definition
+                .triggered_abilities
+                .iter()
+                .any(|t| matches!(t.event.kind, EventKind::Performed(KeywordAct::FacedDilemma)))
+        })
+    }
+
+    /// CR 700.2 — `seat` chose modes for a spell or ability: queue a
+    /// `FacedDilemma` for the next dispatch, only while a listener is out.
+    pub(crate) fn note_faced_dilemma(&mut self, seat: usize) {
+        if let Some(pl) = self.players.get_mut(seat) {
+            pl.dilemmas_faced_this_turn += 1;
+        }
+        if self.hears_faced_dilemma() {
+            self.scratch.pending_cost_events.push(crate::game::types::GameEvent::FacedDilemma { player: seat });
+        }
+    }
+
     /// Whether a permanent hears `KeywordAct::DidAtRandom` (Chira, All In):
     /// the gate on every emission, so other games' event streams are unchanged.
     fn hears_did_at_random(&self) -> bool {

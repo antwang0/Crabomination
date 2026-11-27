@@ -17304,16 +17304,11 @@ impl GameState {
                     (base + n, base + n)
                 }
                 crate::card::DynamicPt::DistinctLandNamesControlled => {
-                    let mut names: Vec<&str> = self
-                        .battlefield
-                        .iter()
-                        .filter(|c| c.controller == card.controller && c.definition.is_land())
-                        .map(|c| c.definition.name)
-                        .collect();
-                    names.sort_unstable();
-                    names.dedup();
-                    let n = names.len() as i32;
+                    let n = self.distinct_land_names(card.controller);
                     (n, n)
+                }
+                crate::card::DynamicPt::DistinctLandNamesPower { base_t } => {
+                    (self.distinct_land_names(card.controller), base_t)
                 }
                 crate::card::DynamicPt::LandsControlledPower { base_p, base_t } => {
                     let n = self.battlefield.iter().filter(|c| {
@@ -25461,6 +25456,17 @@ impl GameState {
                 pl.rad_counters = pl.rad_counters.saturating_add(n);
             }
         }
+        // CR 700.2a — casting a modal spell chooses its modes ("whenever you
+        // face a dilemma"). Queued for the pending-event dispatch below.
+        for e in events {
+            if let GameEvent::SpellCast { player, card_id, .. } = *e
+                && self.stack.iter().any(|i| matches!(i,
+                    crate::game::types::StackItem::Spell { card, .. }
+                        if card.id == card_id && crate::game::effects::commander::effect_is_modal(&card.definition.effect)))
+            {
+                self.note_faced_dilemma(player);
+            }
+        }
         // "Whenever you cast or copy an instant or sorcery spell" (Magecraft):
         // a copy isn't cast (CR 707.10), so the cast walk never sees it — run
         // it once per copy for the `EventSpec::or_copy` listeners.
@@ -31166,6 +31172,7 @@ impl GameState {
                         card.face_down = face_down;
                         self.exile.push(card);
                         self.scratch.last_moved_cards.push(*cid);
+                        self.scratch.exiled_card_ids_this_resolution.push(*cid);
                         events.push(GameEvent::PermanentExiled { card_id: *cid });
                     }
                 }
@@ -31206,7 +31213,7 @@ impl GameState {
                         card.may_play_until = Some(crate::card::MayPlayPermission { cast_only: false, locks_further_casts: false, one_cast_group: None,
                             player: owner,
                             granted_turn: turn,
-                            duration: crate::card::MayPlayDuration::EndOfControllersNextTurn,
+                            duration: crate::card::MayPlayDuration::WhileExiled,
                             exile_after: false,
                             miracle: false,
                             pay_life: false,
@@ -33171,6 +33178,20 @@ impl GameState {
     /// `(-207)`'s lane), so the common path is a word load and the printed read,
     /// cheap enough for a `filter` over the whole battlefield.
     #[inline]
+    /// Star Trek's strange new worlds: how many differently named lands
+    /// `seat` controls.
+    fn distinct_land_names(&self, seat: usize) -> i32 {
+        let mut names: Vec<&str> = self
+            .battlefield
+            .iter()
+            .filter(|c| c.controller == seat && c.definition.is_land())
+            .map(|c| c.definition.name)
+            .collect();
+        names.sort_unstable();
+        names.dedup();
+        names.len() as i32
+    }
+
     pub(crate) fn computed_is_creature(&self, card: &CardInstance) -> bool {
         if self.layer_reads_are_printed()
             || (!card.bestowed && !self.card_type_change_in_scope())

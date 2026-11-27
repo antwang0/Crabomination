@@ -5594,8 +5594,7 @@ pub fn descendant_of_storms() -> CardDefinition {
 
 /// Elite Spellbinder — {2}{W} 3/1 Human Cleric. Flash, Flying. ETB: look at
 /// target opponent's hand, exile a nonland card; its owner may play it and it
-/// costs {2} more while exiled. (The "for as long as exiled" window is modeled
-/// as a may-play grant through the owner's next turn.)
+/// costs {2} more for as long as it remains exiled.
 pub fn elite_spellbinder() -> CardDefinition {
     CardDefinition {
         name: "Elite Spellbinder",

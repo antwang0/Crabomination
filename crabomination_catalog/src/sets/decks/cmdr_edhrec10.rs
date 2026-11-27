@@ -1703,6 +1703,7 @@ pub fn majestic_genesis() -> CardDefinition {
             who: PlayerRef::You,
             count: Value::GreatestCommanderManaValueInPlayOrCommandZone(PlayerRef::You),
             filter: R::PermanentCard,
+            all_tapped: false,
         },
     )
 }

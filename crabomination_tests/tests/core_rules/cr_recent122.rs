@@ -106,3 +106,23 @@ fn cr_701_9b_a_random_discard_is_random_and_seeded() {
     assert!((0..16).any(|s| hymn(s) != vec![2, 3]), "some seed discards from the back of the hand");
     assert_eq!(hymn(7), hymn(7));
 }
+
+/// CR 702.132a — assist rides every cast, not only the hand's: a teammate
+/// pays the {2} of a flashback cost ({2}{U}), the caster only the {U}.
+#[test]
+fn cr_702_132a_assist_applies_to_a_flashback_cast() {
+    let mut g = multi_player_game(4);
+    g.assign_teams(vec![vec![0, 2], vec![1, 3]]).unwrap();
+    g.active_player_idx = 0;
+    g.priority.player_with_priority = 0;
+    g.step = TurnStep::PreCombatMain;
+    for seat in [0, 2, 2] {
+        g.add_card_to_battlefield(seat, catalog::island());
+    }
+    let mut def = catalog::think_twice();
+    def.keywords.push(crabomination::card::Keyword::Assist);
+    let tt = g.add_card_to_graveyard(0, def);
+    g.perform_action(GameAction::CastFlashback { card_id: tt, target: None, additional_targets: vec![], mode: None, x_value: None })
+        .expect("assisted flashback");
+    assert_eq!((untapped(&g, 0), untapped(&g, 2)), (0, 0));
+}

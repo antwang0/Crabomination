@@ -86,6 +86,7 @@ mod tests {
             who: PlayerRef::You,
             count: Value::Const(2),
             filter: SelectionRequirement::Creature,
+            all_tapped: false,
         };
         let ctx = crate::game::effects::EffectContext::for_spell(0, None, 0, 0);
         g.resolve_effect(&Effect::Seq(vec![reveal.clone(), reveal]), &ctx).expect("resolves");

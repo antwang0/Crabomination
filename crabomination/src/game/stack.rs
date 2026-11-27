@@ -202,11 +202,24 @@ impl GameState {
             // CR 603.7 — a modal buried behind a reflexive payment (Voltstorm
             // Angel's "pay {E}{E}. When you do, choose one …"), a haunt body,
             // or one branch of an `If`.
-            _ => Self::governing_modal(effect)?,
+            _ => match Self::governing_modal(effect) {
+                Some(modes) => modes,
+                None => {
+                    // A modal picked at resolution (Kobayashi Maru Scenario's
+                    // "one that hasn't been chosen") still faces its dilemma
+                    // as it goes on the stack (CR 700.2b).
+                    if crate::game::effects::commander::effect_is_modal(effect) {
+                        self.note_faced_dilemma(controller);
+                    }
+                    return None;
+                }
+            },
         };
         if modes.is_empty() {
             return None;
         }
+        // CR 700.2b — choosing the mode as it goes on the stack (Elim Garak).
+        self.note_faced_dilemma(controller);
         // Deferral hands the pick to resolution time. A targeting mode can
         // never defer — target slots are assigned at push time, before a
         // deferred pick exists — so those fall through to the synchronous
@@ -5273,6 +5286,9 @@ impl GameState {
             pl.life_at_turn_start = pl.life;
             if pl.nonmana_activations_this_turn != 0 {
                 pl.nonmana_activations_this_turn = 0;
+            }
+            if pl.dilemmas_faced_this_turn != 0 {
+                pl.dilemmas_faced_this_turn = 0;
             }
             // "For the first time each turn" life-gain gates key on the same
             // turn boundary.

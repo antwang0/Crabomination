@@ -1090,6 +1090,11 @@ pub struct PlayerData {
     /// Reset for every seat as each turn begins.
     #[serde(default)]
     pub nonmana_activations_this_turn: u32,
+    /// CR 700.2 — the dilemmas (mode choices for a spell or ability) this
+    /// player faced this turn (The Caretaker, Captain Benjamin Sisko). Reset
+    /// for every seat as each turn begins.
+    #[serde(default)]
+    pub dilemmas_faced_this_turn: u32,
     /// CR 702.16 — "you gain protection from the color of your choice until
     /// end of turn" (Seht's Tiger): sources of these colors can't target this
     /// player and their damage to them is prevented. Cleared at cleanup.
@@ -1918,6 +1923,7 @@ impl Player {
             attackable_only_by_until_next_turn: None,
             hand_locked_until_turn_of: None,
             nonmana_activations_this_turn: 0,
+            dilemmas_faced_this_turn: 0,
             protection_colors_eot: crate::mana::ColorSet::empty(),
             protected_from_seats_eot: 0,
             protected_from_seats_until_next_turn: 0,

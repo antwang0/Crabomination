@@ -9199,7 +9199,21 @@ impl GameState {
         // The spell's own kind, so spend-restricted mana (Niko's "cast spells
         // that have foretell", a creature-only mana source) sees what it funds.
         let kind = self.spell_kind_for(p, &self.exile[pos]);
-        let receipt = self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind)?;
+        // CR 702.132a — a foretold cast is a cast: assist applies.
+        let assist = if cost.generic_total() > 0 {
+            let foretold = self.exile[pos].clone();
+            self.take_assist(p, &foretold, &mut cost, true)
+        } else {
+            None
+        };
+        let receipt = match self.try_pay_with_auto_tap_kind(p, &cost, forced_only, &kind) {
+            Ok(r) => r,
+            Err(e) => {
+                self.undo_assist(assist);
+                return Err(e);
+            }
+        };
+        self.record_assist(card_id, assist);
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         let mana_spent = receipt
             .pool_before
@@ -14501,9 +14515,18 @@ impl GameState {
         }
         let forced_only = self.players[p].manual_mana;
         let snapshot = self.snapshot_payment_state(p);
-        let mut receipt = self.try_pay_after_snapshot_mode(
+        // CR 702.132a — a flashback cast is a cast: assist applies.
+        let assist = self.take_assist(p, &card, &mut cost, true);
+        let mut receipt = match self.try_pay_after_snapshot_mode(
             p, &cost, snapshot, forced_only, &spell_kind, spend_float,
-        )?;
+        ) {
+            Ok(r) => r,
+            Err(e) => {
+                self.undo_assist(assist);
+                return Err(e);
+            }
+        };
+        self.record_assist(card_id, assist);
         self.queue_payment_events(std::mem::take(&mut receipt.auto_events));
         self.pay_life_cost(p, receipt.side_effects.life_lost);
         self.note_cast_payment_riders(&receipt, &spell_kind);
@@ -16198,15 +16221,19 @@ impl GameState {
         }
         let forced_only = self.players[p].manual_mana;
         let alt_snapshot = self.snapshot_payment_state(p);
+        // CR 702.132a — assist applies to the cost being paid, alternative or not.
+        let assist = self.take_assist(p, &card, &mut mana_cost, true);
         let receipt = match self.try_pay_after_snapshot_mode(
             p, &mana_cost, alt_snapshot, forced_only, &spell_kind, spend_float,
         ) {
             Ok(r) => r,
             Err(e) => {
+                self.undo_assist(assist);
                 self.return_from_alt_cast(p, zone, card);
                 return Err(e);
             }
         };
+        self.record_assist(card_id, assist);
         self.note_cast_payment_riders(&receipt, &spell_kind);
         self.pay_life_cost(p, receipt.side_effects.life_lost + tax_life);
         let alt_mana_spent = receipt
@@ -24701,6 +24728,11 @@ impl GameState {
         }
         if !ability_is_mana {
             self.players[p].nonmana_activations_this_turn += 1;
+            // CR 700.2b — a modal activated ability chooses its modes as it's
+            // activated ("whenever you face a dilemma").
+            if crate::game::effects::commander::effect_is_modal(&ability.effect) {
+                self.note_faced_dilemma(p);
+            }
         }
         if !ability_is_mana || !ability.tap_cost {
             events.push(GameEvent::AbilityActivated {

@@ -3985,6 +3985,7 @@ pub fn muxus_goblin_grandee() -> CardDefinition {
                 who: PlayerRef::You,
                 count: Value::Const(6),
                 filter: R::Creature.and(R::HasCreatureType(CreatureType::Goblin)).and(R::ManaValueAtMost(5)),
+                all_tapped: false,
             }),
             on_attack(Effect::PumpPT { what: Selector::This, power: others(), toughness: others(), duration: Duration::EndOfTurn }),
         ],

@@ -1535,7 +1535,7 @@ fn cr_608_2_a_reveal_pick_and_a_counter_count_spend_their_answers() {
     };
     let mut asked = 0;
     for effect in [
-        Effect::RevealTopNPutMatchingToBattlefield { who: PlayerRef::You, count: Value::Const(2), filter: R::Creature },
+        Effect::RevealTopNPutMatchingToBattlefield { who: PlayerRef::You, count: Value::Const(2), filter: R::Creature, all_tapped: false },
         Effect::AddCountersUpTo {
             what: Selector::ExactObjects(vec![ox]),
             kind: CounterType::PlusOnePlusOne,

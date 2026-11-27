@@ -439,6 +439,8 @@ pub enum CreatureType {
     Brikar,
     // Star Trek (Neelix, Moral Support).
     Talaxian,
+    // Star Trek (Zero, Incorporeal Sensate).
+    Medusan,
 }
 
 /// Land subtypes (basic land types + others).
@@ -7471,6 +7473,9 @@ pub enum DynamicPt {
     /// named lands the controller controls (Star Trek's strange new worlds:
     /// Lt. Arex, Ever-Adapting).
     DistinctLandNamesControlled,
+    /// Power only: differently named lands; toughness the printed `base_t`
+    /// (The Traveler, `*/3`).
+    DistinctLandNamesPower { base_t: i32 },
     /// Power = `base_p` + the lands the controller controls; toughness is
     /// the fixed `base_t`. `*`-power Vehicles whose power tracks lands
     /// while toughness is printed (Lumbering Worldwagon, `*/8`).

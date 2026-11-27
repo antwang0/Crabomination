@@ -3500,6 +3500,7 @@ fn gishath_reveals_and_drops_dinosaurs() {
         count: crabomination::card::Value::Const(3),
         filter: crabomination::card::SelectionRequirement::Creature
             .and(crabomination::card::SelectionRequirement::HasCreatureType(crabomination::card::CreatureType::Dinosaur)),
+        all_tapped: false,
     }, &ctx).unwrap();
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);
@@ -3520,6 +3521,7 @@ fn gishath_reveals_and_drops_dinosaurs() {
         count: crabomination::card::Value::Const(1),
         filter: crabomination::card::SelectionRequirement::Creature
             .and(crabomination::card::SelectionRequirement::HasCreatureType(crabomination::card::CreatureType::Dinosaur)),
+        all_tapped: false,
     }, &ctx).unwrap();
     g.dispatch_triggers_for_events(&evs);
     drain_stack(&mut g);

@@ -106,6 +106,7 @@ pub(crate) fn event_kind_bits(event: &GameEvent) -> u128 {
         | E::AttractionOpened { .. }
         | E::PrizeClaimed { .. }
         | E::DidAtRandom { .. }
+        | E::FacedDilemma { .. }
         | E::CardsPutIntoLibrary { .. }
         | E::TappedForTeamwork { .. } => {
             bits!(K::Performed(crate::effect::KeywordAct::Exploited))
@@ -330,6 +331,7 @@ fn keyword_act_matches(act: crate::effect::KeywordAct, event: &GameEvent) -> boo
         (A::OpenedAttraction, GameEvent::AttractionOpened { .. }) => true,
         (A::ClaimedPrize, GameEvent::PrizeClaimed { .. }) => true,
         (A::DidAtRandom, GameEvent::DidAtRandom { .. }) => true,
+        (A::FacedDilemma, GameEvent::FacedDilemma { .. }) => true,
         (A::CardsPutIntoLibrary, GameEvent::CardsPutIntoLibrary { .. }) => true,
         (A::TappedForTeamwork, GameEvent::TappedForTeamwork { .. }) => true,
         (A::ScryBottomed, GameEvent::ScryPerformed { bottomed, .. }) => *bottomed > 0,
@@ -1580,6 +1582,7 @@ fn event_player(event: &GameEvent) -> Option<usize> {
         | GameEvent::EchoPaid { controller: player, .. }
         | GameEvent::StickerPlaced { player, .. }
         | GameEvent::DidAtRandom { player }
+        | GameEvent::FacedDilemma { player }
         | GameEvent::AttractionOpened { player, .. }
         | GameEvent::PrizeClaimed { player, .. }
         | GameEvent::CardsPutIntoLibrary { player, .. }
@@ -2164,6 +2167,7 @@ mod tests {
             E::AttractionOpened { card_id: c, player: 0 },
             E::PrizeClaimed { card_id: c, player: 0 },
             E::DidAtRandom { player: 0 },
+            E::FacedDilemma { player: 0 },
             E::CardsPutIntoLibrary { player: 0, count: 1 },
             E::TappedForTeamwork { card_id: c, controller: 0 },
             E::CardsExiledFromHandOrBy { player: 0, count: 1 },
@@ -2362,6 +2366,7 @@ mod tests {
             K::Performed(crate::effect::KeywordAct::OpenedAttraction),
             K::Performed(crate::effect::KeywordAct::ClaimedPrize),
             K::Performed(crate::effect::KeywordAct::DidAtRandom),
+            K::Performed(crate::effect::KeywordAct::FacedDilemma),
             K::Performed(crate::effect::KeywordAct::CardsPutIntoLibrary),
             K::Performed(crate::effect::KeywordAct::TappedForTeamwork),
             K::Performed(crate::effect::KeywordAct::ScryBottomed),

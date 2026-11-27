@@ -106,6 +106,7 @@ pub fn undercity() -> DungeonDefinition {
                     who: PlayerRef::You,
                     count: Value::Const(10),
                     filter: R::Creature,
+                    all_tapped: false,
                 },
                 next: &[],
             },

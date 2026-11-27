@@ -6783,6 +6783,7 @@ pub fn gishath_suns_avatar() -> CardDefinition {
                 filter: SelectionRequirement::Creature.and(SelectionRequirement::HasCreatureType(
                     CreatureType::Dinosaur,
                 )),
+                all_tapped: false,
             },
         }],
         ..Default::default()

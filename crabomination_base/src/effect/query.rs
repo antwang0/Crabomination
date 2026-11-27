@@ -2536,7 +2536,7 @@ impl Effect {
             Effect::ExileAllGraveyards { .. } => false,
             Effect::LivingEnd => false,
             Effect::ExilePlayerGraveyard { who, .. }
-            | Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who } => {
+            | Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who, .. } => {
                 player_has_target(who)
             }
             Effect::AddFirstSpellTax { who, count } => {
@@ -5741,7 +5741,7 @@ impl Effect {
                 Effect::ClashWithOpponent { on_win, on_lose, .. } => eff_find(on_win, slot, mode, kicked)
                     .or_else(|| on_lose.as_ref().and_then(|e| eff_find(e, slot, mode, kicked))),
                 Effect::ExilePlayerGraveyard { who, .. }
-                | Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who }
+                | Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who, .. }
                 | Effect::ExileHand { who }
                 | Effect::ShuffleGraveyardCardsIntoLibrary { who, .. }
                 | Effect::NameCardThenExileFromZones { who, .. }

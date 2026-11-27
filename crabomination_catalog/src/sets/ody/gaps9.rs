@@ -220,7 +220,7 @@ pub fn haunting_echoes() -> CardDefinition {
                 who: PlayerRef::Target(0),
                 filter: Some(R::Not(Box::new(R::IsBasicLand))),
             },
-            Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who: PlayerRef::Target(0) },
+            Effect::ExileLibraryCardsNamedLikeExiledThisResolution { who: PlayerRef::Target(0), all_zones: false },
         ]),
     )
 }

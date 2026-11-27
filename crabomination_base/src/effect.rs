@@ -766,6 +766,9 @@ pub enum Value {
     /// Life `who` has gained this turn (CR 119.3; `Player.life_gained_this_turn`).
     /// Accomplished Alchemist.
     LifeGainedThisTurn(PlayerRef),
+    /// CR 700.2 — the dilemmas `who` faced this turn (mode choices for a spell
+    /// or ability; `Player.dilemmas_faced_this_turn`). The Caretaker.
+    DilemmasFacedThisTurn(PlayerRef),
     /// Life lost this turn (CR 119.3), max over seats, so `EachOpponent` reads the
     /// most any opponent lost (Spinerock Knoll). `Player.life_lost_this_turn`.
     LifeLostThisTurn(PlayerRef),
@@ -3626,6 +3629,10 @@ pub enum KeywordAct {
     /// flipped coins or rolled dice: one event per kind of act per player per
     /// resolution (`GameEvent::DidAtRandom`), only while a listener is out.
     DidAtRandom,
+    /// "Whenever you face a dilemma" — you chose one or more modes for a
+    /// spell or ability (`GameEvent::FacedDilemma`), only while a listener is
+    /// out. Star Trek: Elim Garak, Obsidian Order Operative.
+    FacedDilemma,
 }
 
 /// The four bending actions [`KeywordAct::Bent`] tells apart.
@@ -7041,8 +7048,13 @@ pub enum Effect {
     /// (may have left the battlefield), put it onto the battlefield, shuffle.
     SearchSameNameToBattlefield { who: PlayerRef, what: Selector },
     /// Haunting Echoes: exile every library card named like a card exiled
-    /// earlier this resolution, then shuffle.
-    ExileLibraryCardsNamedLikeExiledThisResolution { who: PlayerRef },
+    /// earlier this resolution, then shuffle. `all_zones`: their graveyard and
+    /// hand too (Pick the Brain's delirium).
+    ExileLibraryCardsNamedLikeExiledThisResolution {
+        who: PlayerRef,
+        #[serde(default)]
+        all_zones: bool,
+    },
     /// Development — "create a 3/1 red Elemental token unless any opponent has
     /// you draw a card", `times` times. Each iteration asks an opponent.
     TokenUnlessOpponentLetsYouDraw { token: std::sync::Arc<TokenDefinition>, times: u32 },
@@ -9741,8 +9753,16 @@ pub enum Effect {
         extra_types: Vec<crate::card::CardType>,
     },
     /// Gishath, Sun's Avatar: reveal the top `count`; every `filter` card enters
-    /// under `who`, the rest are bottomed ("any number" = all).
-    RevealTopNPutMatchingToBattlefield { who: PlayerRef, count: Value, filter: SelectionRequirement },
+    /// under `who`, the rest are bottomed ("any number" = all). `all_tapped`:
+    /// "put all [filter] cards … onto the battlefield tapped and the rest on
+    /// the bottom in a random order" — no choice (Branching Timeline).
+    RevealTopNPutMatchingToBattlefield {
+        who: PlayerRef,
+        count: Value,
+        filter: SelectionRequirement,
+        #[serde(default)]
+        all_tapped: bool,
+    },
 
     /// Reveal `who`'s top card: a land enters (`tapped`: Risen Reef), otherwise
     /// to hand — or with `nonland_stays` it stays on top (Explorer's Scope).
@@ -10358,8 +10378,7 @@ pub enum Effect {
         filter: SelectionRequirement,
     },
     /// Elite Spellbinder: exile a `filter` card from `from`'s hand; its owner may
-    /// play it for `extra_cost` more. Approximated as a may-play through their
-    /// next turn rather than "as long as it remains exiled".
+    /// play it for `extra_cost` more for as long as it remains exiled.
     ExileFromHandTaxed {
         from: Selector,
         count: Value,
