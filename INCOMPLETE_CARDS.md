@@ -2073,7 +2073,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Zethi, Arcane Blademaster | the ETB chooses its instants (the cheapest) instead of targeting them | `Effect::ExileFromGraveyard` with `Value::TimesKicked`; an ETB's auto-targeting fills one slot of a `CapTargetsAt` |
 | ~~Yasharn, Implacable Earth~~ ✅ | fixed 2026-10-24: emerge, offering, casualty and bargain sacrifices ask `sacrificeable_for_cost` like the additional-cost and alternative-cost paths | — |
 | 🟡 Rootweaver Druid | the land given away is the engine's pick among the searched ones, not the searching opponent's | `Selector::one_of(LastMoved)` |
-| 🟡 Game Plan | no assist: nobody else may pay toward it | there is no assist keyword |
 | 🟡 Baba Lysaga, Night Witch | can't sacrifice itself; a headless seat sacrifices a full three-type batch or nothing | `sac_any_number_filter` excludes the source; `distinct_type_sac_batch` is the auto-line |
 | 🟡 Sheltering Ancient | every counter of an upkeep goes on the opponents' smallest creature (the engine's pick) | `CumulativeUpkeepCost::PutCounterOnOpponentCreature` auto-pays |
 | 🟡 Tolarian Contempt | the owner's top-or-bottom choice is the engine's | `LibraryPosition::OwnerChoice` auto-picks |
@@ -2190,7 +2189,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Sol'Kanar the Tainted | the donation's opponent is the engine's ranked hostile opponent, not asked | `GainControl { to: HostileOpponent }` |
 | 🟡 Tyrannical Pitlord | the leaves trigger sacrifices the chosen creature by whoever controls it (a stolen one is the thief's sacrifice, where the printed "you" does nothing) | `SacrificePermanent { ChosenPermanentOfSource }` |
 | 🟡 Realm Razer | the two printed triggers are one "until it leaves" exile: a Razer gone before its ETB resolves exiles nothing, where the printed wording exiles the lands for good | `ExileUntilSourceLeaves` |
-| 🟡 Out of Bounds | assist (another player paying up to {3} of the cost) is not modeled | an `AdditionalCastCost::Assist` with a per-seat payment ask |
 | ~~Consecrate Land~~ ✅ | fixed 2026-10-27: `EquipBonus.no_other_auras` sheds every other Aura on the land (CR 704.5m; Anti-Magic Aura shares it) | — |
 | 🟡 The End | the name sweep and the refund read the permanent's owner's zones, not "its controller's" (a stolen permanent differs) | an `ExileSameNameAsTarget` keyed on the controller |
 | 🟡 The Celestial Toymaker | the attack trigger's face-down pile is face down to no one: a headless defender reads its names when picking | a hidden-pile option in `run_separate_into_piles` |
@@ -2206,7 +2204,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Magma Pummeler | its "counters removed this way" trigger fires on any +1/+1 counter removal, not only the damage-prevention one | a prevention-sourced removal event |
 | 🟡 Turtle Tracks | only the caster searches ("any number of target players" — the caster would target themselves) | an any-number player target slot |
 | 🟡 Farrel's Mantle | "assigns no combat damage" also prevents combat damage dealt to the creature (`PreventAllCombatDamageInvolving`, as Ophidian) | an assign-no-combat-damage flag |
-| 🟡 Assist (The Crowd Goes Wild, Spellweaver Duo) | no other player is offered the assist payment; the caster pays it all (CR 702.132a — every opponent declining is legal) | a seat-routed payment offer at cast time |
 | 🟡 Sacellum Godspeaker | always reveals every power-5+ creature card in hand | a reveal-count choice |
 | 🟡 Blessed Alliance | the untap mode untaps one target creature, not "up to two" | a multi-slot mode inside `ChooseModesCast` |
 | 🟡 Vedalken Squirrel-Whacker | the d6 exchange is never asked: every seat (a human's too) takes the headless rule — a 1 or 2 traded for a base stat of 5+ — inside `roll_one_die` | a seat-routed ask outside an effect |

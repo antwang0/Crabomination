@@ -3,7 +3,8 @@
 //! Lewis), Troubling Tribbles (Jaheira // Noble Heritage), Cardassia Prime
 //! (Sengir // Tymna); Gul Dukat and Unexplored Territory toward Mohiam's and
 //! Benjamin Sisko's decks; McCoy and There's Coffee in that Nebula (their Clara
-//! Oswald averages mix colors, so those decks never seat). Tests in
+//! Oswald averages mix colors, so those decks never seat); Yume, Chronicler of
+//! Valor (assist). Tests in
 //! `tests/recent_b/cmdr_nov26.rs`.
 
 use crate::card::{
@@ -229,6 +230,41 @@ pub fn unexplored_territory() -> CardDefinition {
                 ..Default::default()
             },
         ],
+        ..Default::default()
+    }
+}
+
+/// Yume, Chronicler of Valor — {1}{W} legendary 1/2 Human Druid. The first
+/// spell you cast during each of your turns has assist (CR 702.132a); when you
+/// cast it, if another player spent mana on it, you and that player each draw.
+pub fn yume_chronicler_of_valor() -> CardDefinition {
+    let first_on_your_turn = |n: i32| {
+        vec![Predicate::IsTurnOf(PlayerRef::You), Predicate::SpellsCastThisTurnEquals { who: PlayerRef::You, count: Value::Const(n) }]
+    };
+    CardDefinition {
+        name: "Yume, Chronicler of Valor",
+        cost: cost(&[generic(1), w()]),
+        supertypes: vec![Supertype::Legendary],
+        card_types: vec![CardType::Creature],
+        subtypes: Subtypes { creature_types: vec![CreatureType::Human, CreatureType::Druid], ..Default::default() },
+        power: 1,
+        toughness: 2,
+        static_abilities: vec![StaticAbility {
+            description: "The first spell you cast during each of your turns has assist.",
+            effect: StaticEffect::WhileCondition {
+                condition: Predicate::All(first_on_your_turn(0)),
+                inner: Box::new(StaticEffect::GrantAssistToSpells { filter: R::Any }),
+            },
+        }],
+        triggered_abilities: vec![TriggeredAbility {
+            event: EventSpec::new(EventKind::SpellCast, EventScope::YourControl).with_filter(Predicate::All(
+                [vec![Predicate::SpellWasAssisted { what: Selector::TriggerSource }], first_on_your_turn(1)].concat(),
+            )),
+            effect: Effect::Seq(vec![
+                Effect::Draw { who: Selector::Player(PlayerRef::You), amount: Value::Const(1) },
+                Effect::Draw { who: Selector::Player(PlayerRef::AssisterOfTriggerSpell), amount: Value::Const(1) },
+            ]),
+        }],
         ..Default::default()
     }
 }

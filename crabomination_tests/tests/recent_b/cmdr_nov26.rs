@@ -787,3 +787,29 @@ fn chira_grows_on_random_acts_once_each() {
     drain_stack(&mut g);
     assert_eq!(plus_ones(&g, chira), 2);
 }
+
+/// Yume, Chronicler of Valor: the first spell of your turn has assist; an
+/// opponent pays {1} of it and you each draw. The second spell has no assist.
+#[test]
+fn yume_grants_assist_to_the_first_spell_and_both_players_draw() {
+    let mut g = pod(3);
+    g.add_card_to_battlefield(0, catalog::yume_chronicler_of_valor());
+    for _ in 0..3 {
+        g.add_card_to_battlefield(1, catalog::island());
+    }
+    for _ in 0..2 {
+        g.add_card_to_battlefield(0, catalog::island());
+    }
+    let first = g.add_card_to_hand(0, catalog::divination());
+    let second = g.add_card_to_hand(0, catalog::opt());
+    let hand = |g: &GameState, s: usize| g.players[s].hand.len();
+    let (h0, h1) = (hand(&g, 0), hand(&g, 1));
+    cast(&mut g, first);
+    let untapped = |g: &GameState, s: usize| g.battlefield.iter().filter(|c| c.controller == s && !c.tapped && c.definition.name == "Island").count();
+    assert_eq!((untapped(&g, 0), untapped(&g, 1)), (0, 2), "the opponent paid {{1}} of Divination");
+    // Divination (-1 + 2) and Yume's draw; the assister draws one.
+    assert_eq!((hand(&g, 0), hand(&g, 1)), (h0 + 2, h1 + 1));
+    g.add_card_to_battlefield(0, catalog::island());
+    cast(&mut g, second);
+    assert_eq!(untapped(&g, 1), 2, "the second spell has no assist");
+}

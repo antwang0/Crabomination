@@ -788,12 +788,15 @@ pub fn realm_razer() -> CardDefinition {
 /// Out of Bounds — {3}{U} instant. Assist. Counter target spell. (Assist —
 /// another player paying up to {3} of the cost — is not modeled.)
 pub fn out_of_bounds() -> CardDefinition {
-    spell(
-        "Out of Bounds",
-        cost(&[generic(3), crate::mana::u()]),
-        CardType::Instant,
-        Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
-    )
+    CardDefinition {
+        keywords: vec![crate::card::Keyword::Assist],
+        ..spell(
+            "Out of Bounds",
+            cost(&[generic(3), crate::mana::u()]),
+            CardType::Instant,
+            Effect::CounterSpell { what: target_filtered(R::IsSpellOnStack) },
+        )
+    }
 }
 
 /// Consecrate Land — {W} Aura, enchant land. Enchanted land has

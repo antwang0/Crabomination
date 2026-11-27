@@ -934,6 +934,7 @@ pub fn fascination() -> CardDefinition {
 pub fn game_plan() -> CardDefinition {
     CardDefinition {
         exile_on_resolve: true,
+        keywords: vec![crate::card::Keyword::Assist],
         ..spell(
             "Game Plan",
             cost(&[generic(5), u()]),
