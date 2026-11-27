@@ -2356,3 +2356,9 @@ approximated):
 |---|---|---|
 | 🟡 Dominion Infiltration | X target creatures | `CapTargetsAtX` over eight slots (Glimpse the Sun God's shape): an X above 8 copies eight |
 | 🟡 Sahir, Visitor in Darkness | "a spell or ability you control causes you to lose exactly 1 life" | read as non-damage loss only (no ruling; a ping is the damage half's trigger, not both), and only losses during a resolution — life paid as a cost never counts |
+
+`decks::cmdr_nov26_c`:
+
+| Card | Printed | Approximation |
+|---|---|---|
+| 🟡 Romulan Bird-of-Prey | "as long as this Spacecraft isn't a creature" (hexproof; the charge trigger's intervening if) | read as "fewer than eight charge counters" (its creature band): an effect that animates it below 8 keeps the hexproof |

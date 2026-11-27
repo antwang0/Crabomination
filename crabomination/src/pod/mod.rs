@@ -38035,6 +38035,36 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::GRILKA_COMMANDERS,
             main: decks::GRILKA_MAIN,
         },
+        // Seat 6265: Lieutenant Commander Data's EDHREC average deck. `--pod-decks 6265`.
+        PodDeck {
+            name: "Lieutenant Commander Data (U)",
+            commanders: decks::LIEUTENANT_COMMANDER_DATA_COMMANDERS,
+            main: decks::LIEUTENANT_COMMANDER_DATA_MAIN,
+        },
+        // Seat 6266: Kang, Suspicious Captain's EDHREC average deck. `--pod-decks 6266`.
+        PodDeck {
+            name: "Kang, Suspicious Captain (R)",
+            commanders: decks::KANG_2_COMMANDERS,
+            main: decks::KANG_2_MAIN,
+        },
+        // Seat 6267: Erica Ortegas, Plucky Pilot's EDHREC average deck. `--pod-decks 6267`.
+        PodDeck {
+            name: "Erica Ortegas, Plucky Pilot (R)",
+            commanders: decks::ERICA_ORTEGAS_COMMANDERS,
+            main: decks::ERICA_ORTEGAS_MAIN,
+        },
+        // Seat 6268: M'Ress, Crew Coordinator's EDHREC average deck. `--pod-decks 6268`.
+        PodDeck {
+            name: "M'Ress, Crew Coordinator (W)",
+            commanders: decks::MRESS_COMMANDERS,
+            main: decks::MRESS_MAIN,
+        },
+        // Seat 6269: Worf, Son of Mogh's EDHREC average deck. `--pod-decks 6269`.
+        PodDeck {
+            name: "Worf, Son of Mogh (WR)",
+            commanders: decks::WORF_5_COMMANDERS,
+            main: decks::WORF_5_MAIN,
+        },
     ]
 }
 
@@ -46235,6 +46265,11 @@ mod tests {
             ("Ambassador K'Ehleyr", &[0x2276]),
             ("Armus, Skin of Evil", &[0x2277]),
             ("Grilka, Widowed Warrior", &[0x2278]),
+            ("Lieutenant Commander Data", &[0x2279]),
+            ("Kang, Suspicious Captain", &[0x227A]),
+            ("Erica Ortegas, Plucky Pilot", &[0x227B]),
+            ("M'Ress, Crew Coordinator", &[0x227C]),
+            ("Worf, Son of Mogh", &[0x227D]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order

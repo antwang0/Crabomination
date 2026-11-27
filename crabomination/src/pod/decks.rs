@@ -175986,3 +175986,147 @@ pub const GRILKA_MAIN: &[CardFactory] = &[
     mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
     mountain,
 ];
+
+pub const LIEUTENANT_COMMANDER_DATA_COMMANDERS: &[CardFactory] = &[lieutenant_commander_data];
+
+/// **Lieutenant Commander Data**'s EDHREC average deck, card for card:
+/// 75 nonbasic cards + 24 Islands = 99.
+/// Lieutenant Commander Data (EDHREC, fetched 2026-11-27).
+pub const LIEUTENANT_COMMANDER_DATA_MAIN: &[CardFactory] = &[
+    arcane_signet, astral_cornucopia, benders_waterskin, everflowing_chalice, lightning_greaves,
+    midnight_clock, mind_stone, mox_amber, mox_opal, romulan_bird_of_prey, sapphire_medallion,
+    sol_ring, swiftfoot_boots, the_eternity_elevator, the_one_ring, thought_vessel,
+    unwinding_clock, uthros_research_craft, academy_ruins, karns_bastion,
+    minamo_school_at_waters_edge, mystic_sanctuary, otawara_soaring_city, reliquary_tower,
+    rogues_passage, seat_of_the_synod, urzas_saga, uthros_titanic_godcore, ambling_stormshell,
+    baxter_fly_in_the_ointment, chasm_skulker, chief_miles_obrien, chronozoa, danny_pink,
+    data_exploring_humanity, data_new_life, diamond_knight, dreamtide_whale, flux_channeler,
+    geist_of_saint_thalia, glen_elendra_archmage, iron_man_armored_avenger, kid_loki,
+    lyla_holographic_assistant, mr_spock_science_officer, pensive_professor, surge_conductor,
+    the_watcher_in_the_water, thrummingbird, wan_shi_tong_librarian, anthropological_mission,
+    mystic_remora, profts_eidetic_memory, rhystic_study, wizard_class, aetherize,
+    an_offer_you_cant_refuse, arcane_denial, brainstorm, counterspell, experimental_augury,
+    fierce_guardianship, frantic_search, negate, pongify, rapid_hybridization,
+    ripples_of_potential, sink_into_stupor, snap, swan_song, tezzeret_cruel_captain,
+    contentious_plan, ponder, sea_gate_restoration, tezzerets_gambit,
+    // Basics
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island, island, island, island, island, island, island, island, island, island,
+    island, island,
+];
+
+pub const KANG_2_COMMANDERS: &[CardFactory] = &[kang_suspicious_captain];
+
+/// **Kang, Suspicious Captain**'s EDHREC average deck, card for card:
+/// 70 nonbasic cards + 29 Mountains = 99.
+/// Kang, Suspicious Captain (EDHREC, fetched 2026-11-27).
+pub const KANG_2_MAIN: &[CardFactory] = &[
+    arcane_signet, commanders_sphere, d_7_battle_cruiser, embercleave, hedron_archive,
+    lightning_greaves, mind_stone, ruby_medallion, shadowspear, skullclamp, sol_ring,
+    stonespeaker_crystal, the_one_ring, the_sword_of_kahless, thought_vessel,
+    uss_enterprise_d_galaxy_class, buried_ruin, command_tower, exotic_orchard, fabled_passage,
+    myriad_landscape, spinerock_knoll, spire_of_industry, valakut_the_molten_pinnacle,
+    agitator_ant, arcbound_ravager, beckett_mariner_impetuous_ensign, combat_celebrant,
+    crashing_drawbridge, emberwilde_captain, etali_primal_storm, ferocious_colonist,
+    frontier_warmonger, galvanizing_tenor, geode_rager, goblin_rabblemaster,
+    godo_bandit_warlord, grenzo_havoc_raiser, hangarback_walker, iron_myr,
+    karlach_fury_of_avernus, krenko_mob_boss, legion_warboss, neheb_the_eternal, palladium_myr,
+    professional_face_breaker, steel_overseer, stonecoil_serpent, torbran_thane_of_red_fell,
+    vengeful_ancestor, walking_ballista, city_on_fire, fiery_emancipation, outpost_siege,
+    shiny_impetus, vow_of_lightning, abrade, bolt_bend, chaos_warp, deflecting_swat, fury_storm,
+    lightning_bolt, thrill_of_possibility, chandra_torch_of_defiance, blasphemous_act,
+    boarding_action, disrupt_decorum, jeskas_will, planetary_bombardment, spectacular_showdown,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain,
+];
+
+pub const ERICA_ORTEGAS_COMMANDERS: &[CardFactory] = &[erica_ortegas_plucky_pilot];
+
+/// **Erica Ortegas, Plucky Pilot**'s EDHREC average deck, card for card:
+/// 84 nonbasic cards + 15 Mountains = 99.
+/// Erica Ortegas, Plucky Pilot (EDHREC, fetched 2026-11-27).
+pub const ERICA_ORTEGAS_MAIN: &[CardFactory] = &[
+    amulet_of_vigor, conquerors_galleon, cultivators_caravan, ebony_horse, everflowing_chalice,
+    expedition_map, magewrights_stone, mobile_garrison, patriars_seal, puppet_strings,
+    ruby_medallion, seers_sundial, sol_ring, starfleet_communicator, starship_enterprise,
+    sting_the_glinting_dagger, storm_cauldron, sundial_of_the_infinite, thaumatic_compass,
+    thousand_year_elixir, wayfarers_bauble, weather_maker, world_map, conduit_pylons,
+    crystal_grotto, dwarven_mine, hidden_grotto, maze_of_ith, myriad_landscape, quarks_bar,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, snow_covered_mountain,
+    snow_covered_mountain, snow_covered_mountain, snow_covered_mountain, sunscorched_desert,
+    survivors_encampment, treasure_vault, valakut_the_molten_pinnacle, zhalfirin_void,
+    akoum_hellkite, captain_michael_burnham, cosis_ravager, geode_rager, grilka_widowed_warrior,
+    horta, koth_the_geomancer, moraug_fury_of_akoum, nesting_dragon, pupu_ufo, sabotender,
+    scaretiller, solemn_simulacrum, spitfire_lagac, territorial_bruntar,
+    toggo_goblin_weaponsmith, tunneling_geopede, walking_atlas, will_riker_first_in_the_field,
+    zell_dincht, zenith_chronicler, count_on_luck, exploratory_mission, valakut_exploration,
+    zektar_shrine_expedition, big_score, brazen_bluff, return_the_favor, searing_blaze,
+    thrill_of_possibility, unexpected_windfall, koth_fire_of_resistance, cleansing_wildfire,
+    highway_robbery, light_up_the_stage, reckless_impulse, seize_the_spoils, wrangle,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain,
+    mountain, mountain, mountain, mountain, mountain, mountain,
+];
+
+pub const MRESS_COMMANDERS: &[CardFactory] = &[mress_crew_coordinator];
+
+/// **M'Ress, Crew Coordinator**'s EDHREC average deck, card for card:
+/// 76 nonbasic cards + 23 Plains = 99.
+/// M'Ress, Crew Coordinator (EDHREC, fetched 2026-11-27).
+pub const MRESS_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, crucible_of_worlds, expedition_map, idol_of_oblivion,
+    lumen_class_frigate, mind_stone, pearl_medallion, shuttlecraft_galileo, skullclamp,
+    sol_ring, starship_enterprise, sword_of_the_animist, wayfarers_bauble, zuran_orb, arid_mesa,
+    brokers_hideout, cabaretti_courtyard, emeria_the_sky_ruin, escape_tunnel, evolving_wilds,
+    fabled_passage, lotus_field, myriad_landscape, obscura_storefront, prismatic_vista,
+    subspace_anomaly, terramorphic_expanse, vibrant_cityscape, war_room,
+    bennie_bracks_zoologist, burnished_hart, canyon_jerboa, captain_jean_luc_picard,
+    claim_jumper, elesh_norn_mother_of_machines, emeria_angel, emeria_shepherd,
+    enduring_innocence, glyph_elemental, keeper_of_the_accord, koth_of_the_homestead,
+    moonshaker_cavalry, mother_of_runes, ojer_taq_deepest_foundation, prowling_felidar,
+    ruin_ghost, solemn_simulacrum, sun_titan, troop_of_ponies, weathered_wayfarer,
+    welcoming_vampire, anointed_procession, divine_visitation, felidar_retreat,
+    inspiring_leader, intangible_virtue, land_tax, retreat_to_emeria, smothering_tithe,
+    tocasias_welcome, akromas_will, enlightened_tutor, faiths_reward, flawless_maneuver,
+    generous_gift, path_to_exile, stroke_of_midnight, swords_to_plowshares, teferis_protection,
+    elspeth_storm_slayer, austere_command, cut_a_deal, gift_of_estates, hour_of_reckoning,
+    sevinnes_reclamation,
+    // Basics
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
+
+pub const WORF_5_COMMANDERS: &[CardFactory] = &[worf_son_of_mogh];
+
+/// **Worf, Son of Mogh**'s EDHREC average deck, card for card:
+/// 78 nonbasic cards + 8 Mountains + 13 Plains = 99.
+/// Worf, Son of Mogh (EDHREC, fetched 2026-11-27).
+pub const WORF_5_MAIN: &[CardFactory] = &[
+    arcane_signet, archaeomancers_map, boros_signet, heraldic_banner, idol_of_oblivion,
+    mind_stone, oketras_monument, shuttlecraft_galileo, sol_ring, staff_of_the_storyteller,
+    talisman_of_conviction, the_mind_stone, thought_vessel, u_s_s_enterprise_a_free_spirit,
+    battlefield_forge, clifftop_retreat, command_tower, elegant_parlor, fabled_passage,
+    minas_tirith, nykthos_shrine_to_nyx, path_of_ancestry, radiant_summit, reliquary_tower,
+    sacred_foundry, spectator_seating, sunbillow_verge, sundown_pass, turbulent_steppe,
+    war_room, academy_instructor, belladonna_took, beverly_crusher_ships_doctor,
+    black_widow_agile_avenger, captain_james_t_kirk, captain_jean_luc_picard, claim_jumper,
+    commander_william_riker, enduring_innocence, ensign_harry_kim_operations, firemane_commando,
+    flickering_hound, generous_pup, helpful_hunter, julian_bashir_frontier_doctor,
+    loran_of_the_third_path, mress_crew_coordinator, mangara_the_diplomat,
+    mondrak_glory_dominus, neyali_suns_vanguard, operations_officer, ornithopter_of_paradise,
+    roaming_throne, serra_redeemer, solemn_simulacrum, subira_tulzidi_caravanner, tataru_taru,
+    the_queen_of_dale, anointed_procession, caretakers_talent, champions_from_beyond,
+    gleaming_splendor, trouble_in_pairs, warleaders_call, big_score, boros_charm,
+    demand_answers, flawless_maneuver, generous_gift, lorehold_command, path_to_exile, reprieve,
+    stroke_of_midnight, swords_to_plowshares, thrill_of_possibility, unexpected_windfall,
+    chain_reaction, jeskas_will,
+    // Basics
+    mountain, mountain, mountain, mountain, mountain, mountain, mountain, mountain, plains,
+    plains, plains, plains, plains, plains, plains, plains, plains, plains, plains, plains,
+    plains,
+];
