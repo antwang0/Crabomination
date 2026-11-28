@@ -1109,6 +1109,26 @@ fn smeagol_steals_a_land_when_the_ring_tempts() {
     assert!(g.players[1].graveyard.iter().any(|c| c.id == bolt));
 }
 
+/// Sméagol's "target opponent" is a target (CR 115.1): an opponent with
+/// hexproof (Leyline of Sanctity) can't be chosen, so the other one reveals.
+#[test]
+fn smeagol_targets_an_opponent_without_hexproof() {
+    let mut g = pod(3);
+    let land1 = g.add_card_to_library(1, catalog::forest());
+    let land2 = g.add_card_to_library(2, catalog::forest());
+    g.players[1].library.retain(|c| c.id == land1);
+    g.players[2].library.retain(|c| c.id == land2);
+    ready(&mut g, 1, catalog::leyline_of_sanctity());
+    ready(&mut g, 0, catalog::smeagol_helpful_guide());
+    let evs = g
+        .resolve_effect(&Effect::RingTempts { who: PlayerRef::You }, &EffectContext::for_spell(0, None, 0, 0))
+        .unwrap();
+    g.dispatch_triggers_for_events(&evs);
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(land2).is_some_and(|l| l.controller == 0), "seat 2 was targeted");
+    assert!(g.battlefield_find(land1).is_none(), "the hexproof seat wasn't");
+}
+
 /// The Destined Thief loots once when creatures connect with two different
 /// players in the same damage step (CR 603.2c "one or more players").
 #[test]

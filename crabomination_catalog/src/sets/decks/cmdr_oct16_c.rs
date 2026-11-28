@@ -1056,8 +1056,7 @@ pub fn rhinos_rampage() -> CardDefinition {
 
 /// Sméagol, Helpful Guide — {1}{B}{G} legendary 4/2 Halfling Horror. Your end
 /// step, if a creature of yours died this turn: the Ring tempts you. Whenever
-/// the Ring tempts you, an opponent (the most hostile, not targeted) reveals
-/// until a land; you get the land tapped, the rest go to their graveyard.
+/// the Ring tempts you, target opponent reveals until a land; you get the land tapped, the rest go to their graveyard.
 pub fn smeagol_helpful_guide() -> CardDefinition {
     CardDefinition {
         supertypes: vec![Supertype::Legendary],
@@ -1071,7 +1070,7 @@ pub fn smeagol_helpful_guide() -> CardDefinition {
             TriggeredAbility {
                 event: EventSpec::new(EventKind::RingTempted, EventScope::YourControl),
                 effect: Effect::RevealUntilFind {
-                    who: PlayerRef::HostileOpponent,
+                    who: PlayerRef::ControllerOf(Box::new(target_filtered(R::OpponentPlayer))),
                     find: R::Land,
                     to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
                     cap: Value::Const(1000),

@@ -2137,7 +2137,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Patch Up | the three cards are picked cheapest-first at resolution, not targeted | `MoveWithinTotalManaValue` |
 | ~~Cantankerous Keepers~~ ✅ | fixed 2026-10-28: `Mill` then `Move` of every Elf among `LastMoved` — no pick | — |
 | 🟡 Wonder Man, Hollywood Hero | two Wonder Men still allow only one extra activation (it's legendary) | `StaticEffect::PowerUpOnceMore` |
-| 🟡 Sméagol, Helpful Guide | "target opponent" is the most hostile opponent, not a target (no ward/hexproof check) | `RevealUntilFind { who: HostileOpponent }` |
 | 🟡 Glamerdye / Sleight of Mind | the color-word swap targets a permanent only; "target spell" isn't offered | `ReplaceColorWord` |
 | 🟡 Kargan Intimidator | the mode and its target are picked at resolution (auto-targeted), not as the ability is activated (CR 700.2) | `ChooseUnchosenModeThisTurn` |
 | 🟡 Obsidian Battle-Axe | the attach offer fires only for Warriors entering under your control (attaching to an opponent's is legal, never wanted) | `EventScope::YourControl` + `MayDo(Attach)` |
@@ -2208,7 +2207,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Mindlink Mech | "becomes crewed for the first time each turn" is `once_per_turn` on the crew trigger; the copy's Vehicle subtype is an indefinite `SetArtifactSubtypes` (harmless — the Mech is a Vehicle) | a first-time-this-turn crew event |
 | 🟡 Kor Dirge | Kor Dirge's "source of your choice" is the headless first hostile source (`choose_damage_prevention_source`) | a ranked source pick |
 | 🟡 Start // Finish | Finish sacrifices its creature on resolution, not as an additional cost (`SplitHalf` carries no additional cost) | an additional-cost field on `SplitHalf` |
-| 🟡 Graven Abomination | exiles a card from any opponent's graveyard, not specifically the defending player's | a defending-player graveyard target filter |
 | 🟡 Suncleanser | the opponent mode removes their counters but not the "can't get counters" lock | a player-scoped counter lock |
 | 🟡 Moonlace | only permanents are offered as targets (not spells) | a spell-color layer |
 | ~~Bound by Moonsilver~~ ✅ | fixed 2026-10-27: `StaticEffect::CantTransform { IsHostOfSource }` | — |
