@@ -2800,6 +2800,14 @@ impl GameState {
                 }
             }
             for (src, ctrl, effect, filter) in you_attack {
+                // CR 603.2c — "each of those creatures": the batch is the
+                // declaration's attackers, fixed now (Lightmine Field's ruling).
+                let effect = match effect {
+                    Effect::OverTriggerBatch { body, .. } => {
+                        Effect::OverTriggerBatch { body, ids: self.attacking.iter().map(|a| a.attacker).collect() }
+                    }
+                    e => e,
+                };
                 // CR 603.2 — the "whenever you attack with …" rider is a
                 // trigger-time gate read off the finished attack declaration.
                 if let Some(predicate) = filter {

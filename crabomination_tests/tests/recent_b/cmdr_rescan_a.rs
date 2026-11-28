@@ -556,6 +556,27 @@ fn lightmine_field_punishes_attackers() {
     assert!(g.battlefield_find(a).is_none() && g.battlefield_find(b).is_none(), "2 damage each");
 }
 
+/// Lightmine Field's 2010-06-15 rulings: the declared attackers are the ones
+/// dealt damage, the count is taken as it resolves — one removed from combat
+/// meanwhile is still hit but no longer counted.
+#[test]
+fn lightmine_field_hits_the_declared_attackers_for_those_still_attacking() {
+    let mut g = pod(2);
+    ready(&mut g, 1, catalog::lightmine_field());
+    let a = ready(&mut g, 0, catalog::hill_giant());
+    let b = ready(&mut g, 0, catalog::hill_giant());
+    g.step = TurnStep::DeclareAttackers;
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::DeclareAttackers(
+        [a, b].into_iter().map(|attacker| Attack { attacker, target: AttackTarget::Player(1) }).collect(),
+    ))
+    .expect("attack");
+    g.attacking.retain(|at| at.attacker != b);
+    drain_stack(&mut g);
+    let dmg = |g: &GameState, id| g.battlefield_find(id).unwrap().damage;
+    assert_eq!((dmg(&g, a), dmg(&g, b)), (1, 1), "both declared attackers, one still attacking");
+}
+
 /// Unforgiving One returns a creature card up to its modified-creature count.
 #[test]
 fn unforgiving_one_reanimates_by_modified_count() {

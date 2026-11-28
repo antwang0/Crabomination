@@ -458,8 +458,8 @@ pub fn chief_magistrate_of_mercadia() -> CardDefinition {
 }
 
 /// Lightmine Field — {2}{W}{W} enchantment. Whenever one or more creatures
-/// attack, it deals damage to each attacker equal to the number attacking.
-/// (Basandra.)
+/// attack, it deals damage to each of those creatures (the declared batch)
+/// equal to the number attacking as it resolves (2010-06-15 rulings). (Basandra.)
 pub fn lightmine_field() -> CardDefinition {
     let attackers = || Selector::EachPermanent(R::Creature.and(R::IsAttacking));
     CardDefinition {
@@ -468,7 +468,10 @@ pub fn lightmine_field() -> CardDefinition {
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::YouAttack, EventScope::AnyPlayer),
-            effect: Effect::DealDamage { to: attackers(), amount: Value::count(attackers()) },
+            effect: Effect::OverTriggerBatch {
+                body: Box::new(Effect::DealDamage { to: Selector::TriggerBatch, amount: Value::count(attackers()) }),
+                ids: vec![],
+            },
         }],
         ..Default::default()
     }
