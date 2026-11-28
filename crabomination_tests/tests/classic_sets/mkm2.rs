@@ -905,6 +905,35 @@ fn kaya_spirits_justice_copies_the_exiled_creature_onto_a_token() {
     assert!(cp.keywords().contains(&Keyword::Flying));
 }
 
+/// CR 601.2c — Kaya's −2: "for each other player, exile up to one target
+/// creature that player controls" — in a four-seat pod one creature leaves
+/// from each opponent, never two from the same one.
+#[test]
+fn cr_601_2c_kaya_minus_two_takes_one_creature_per_other_player() {
+    let mut g = multi_player_game(4);
+    g.active_player_idx = 0;
+    g.step = TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    let kaya = g.add_card_to_battlefield(0, catalog::kaya_spirits_justice());
+    let mine = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let theirs: Vec<Vec<CardId>> = (1..4)
+        .map(|seat| (0..2).map(|_| g.add_card_to_battlefield(seat, catalog::grizzly_bears())).collect())
+        .collect();
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: kaya,
+        ability_index: 2,
+        target: Some(Target::Permanent(mine)),
+        x_value: None,
+    })
+    .expect("−2");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(mine).is_none(), "your creature is exiled");
+    for (i, ids) in theirs.iter().enumerate() {
+        let left = ids.iter().filter(|id| g.battlefield_find(**id).is_some()).count();
+        assert_eq!(left, 1, "seat {} loses exactly one creature", i + 1);
+    }
+}
+
 /// The free-cast affordance surfaces the hand cards Conspiracy Unraveler's
 /// evidence swap makes playable, and drops them once the graveyard is short.
 #[test]

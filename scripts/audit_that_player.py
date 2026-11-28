@@ -46,7 +46,7 @@ for p in root.rglob('*.rs'):
         t = text.lower()
         if 'that player' not in t or 'each opponent' in t or 'target opponent' in t or 'target player' in t:
             continue
-        if re.search(r'EachOpponent|ControlledByOpponent\b|InOpponentGraveyard', body) and not re.search(r'TriggerEventPlayer|TriggerPlayer|DefendingPlayer|Triggerer|ControllerOf|OwnerOf|Target\(|CombatDamagerController|OpponentPlayer', body):
+        if re.search(r'EachOpponent|ControlledByOpponent\b|InOpponentGraveyard', body) and not re.search(r'TriggerEventPlayer|TriggerPlayer|DefendingPlayer|Triggerer|ControllerOf|OwnerOf|Target\(|CombatDamagerController|OpponentPlayer|SameControllerAsTargetSlot|DifferentControllerFromTargetSlot|SameGraveyardAsTargetSlot|ExileSameNameAsTarget|ForEachOpponentTarget|ForEachPlayerTarget', body):
             rows.append((nm, mm.group(1), str(p).split('sets/')[-1]))
 rows.sort()
 print(f"{len(rows)} cards print \"that player\" and read every opponent instead\n")

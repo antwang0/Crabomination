@@ -337,6 +337,34 @@ mod recent239 {
         assert!(g.computed_permanent(b).unwrap().keywords().contains(&Keyword::CantBlock));
     }
 
+    /// CR 601.2c — Trial of Agony's two targets are "controlled by the same
+    /// opponent": in a pod, a creature of each of two opponents is no pair.
+    #[test]
+    fn cr_601_2c_trial_of_agony_needs_one_opponents_creatures() {
+        use crabomination::card::CardId;
+        use crabomination::game::{GameState, multi_player_game};
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.players[0].mana_pool.add(Color::Red, 1);
+        let a = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+        let b = g.add_card_to_battlefield(2, catalog::grizzly_bears());
+        let c = g.add_card_to_battlefield(1, catalog::serra_angel());
+        let spell = g.add_card_to_hand(0, catalog::trial_of_agony());
+        let cast = |g: &mut GameState, second: CardId| {
+            g.perform_action(GameAction::CastSpell {
+                card_id: spell,
+                target: Some(Target::Permanent(a)),
+                additional_targets: vec![Target::Permanent(second)],
+                mode: None,
+                x_value: None,
+            })
+        };
+        assert!(cast(&mut g, b).is_err(), "two different opponents' creatures");
+        cast(&mut g, c).expect("both seat 1's");
+    }
+
     /// Getaway Glamer's first mode blinks a creature (exiles it now).
     #[test]
     fn getaway_glamer_blink_mode() {

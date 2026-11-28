@@ -1127,9 +1127,9 @@ pub fn paranormal_analyst() -> CardDefinition {
 }
 
 /// Trial of Agony — {R} Sorcery. Two target creatures an opponent controls: 5
-/// damage to one, the other can't block this turn. (The "same opponent" and
-/// "that player chooses" clauses are collapsed to the caster's pick, matching
-/// the catalog's other opponent-choice removal.)
+/// damage to one, the other can't block this turn. Both share a controller;
+/// "that player chooses" is collapsed to the caster's pick, matching the
+/// catalog's other opponent-choice removal.
 pub fn trial_of_agony() -> CardDefinition {
     let opp_creature = || R::Creature.and(R::ControlledByOpponent);
     CardDefinition {
@@ -1147,7 +1147,9 @@ pub fn trial_of_agony() -> CardDefinition {
             Effect::GrantKeyword {
                 what: Selector::TargetFiltered {
                     slot: 1,
-                    filter: opp_creature(),
+                    // CR 601.2c — "two target creatures controlled by the same
+                    // opponent".
+                    filter: opp_creature().and(R::SameControllerAsTargetSlot(0)).and(R::OtherThanTargetSlot(0)),
                 },
                 keyword: Keyword::CantBlock,
                 duration: Duration::EndOfTurn,

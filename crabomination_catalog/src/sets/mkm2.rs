@@ -1432,22 +1432,26 @@ pub fn kaya_spirits_justice() -> CardDefinition {
             },
             crate::card::LoyaltyAbility {
                 loyalty_cost: -2,
+                // CR 601.2c — "for each other player, up to one target creature
+                // that player controls": slots 1.. each need a controller no
+                // earlier opponent slot has, so a pod of up to eight gets one
+                // per other player.
                 effect: Effect::OptionalTargets {
                     min: 1,
-                    body: Box::new(Effect::Seq(vec![
-                        Effect::Exile {
+                    body: Box::new(Effect::Seq(
+                        std::iter::once(Effect::Exile {
+                            what: Selector::TargetFiltered { slot: 0, filter: R::Creature.and(R::ControlledByYou) },
+                        })
+                        .chain((1u8..8).map(|slot| Effect::Exile {
                             what: Selector::TargetFiltered {
-                                slot: 0,
-                                filter: R::Creature.and(R::ControlledByYou),
+                                slot,
+                                filter: (1..slot).fold(R::Creature.and(R::ControlledByOpponent), |f, prev| {
+                                    f.and(R::DifferentControllerFromTargetSlot(prev))
+                                }),
                             },
-                        },
-                        Effect::Exile {
-                            what: Selector::TargetFiltered {
-                                slot: 1,
-                                filter: R::Creature.and(R::ControlledByOpponent),
-                            },
-                        },
-                    ])),
+                        }))
+                        .collect(),
+                    )),
                 },
                 ..Default::default()
             },
