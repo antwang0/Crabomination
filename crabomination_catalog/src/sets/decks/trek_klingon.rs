@@ -539,8 +539,8 @@ pub fn grilka_widowed_warrior() -> CardDefinition {
 }
 
 /// Kang, Suspicious Captain — {3}{R} legendary 4/4 Klingon Warrior Officer.
-/// Entering goads him and target creature an opponent controls while he
-/// stays. One or more goaded creatures attacking puts a +1/+1 counter on
+/// Entering goads him and target creature an opponent controls for as long
+/// as you control him. One or more goaded creatures attacking puts a +1/+1 counter on
 /// target creature you control.
 pub fn kang_suspicious_captain() -> CardDefinition {
     CardDefinition {
@@ -548,9 +548,9 @@ pub fn kang_suspicious_captain() -> CardDefinition {
             etb(Effect::Seq(vec![
                 Effect::GoadWhile {
                     what: target_filtered(R::Creature.and(R::ControlledByOpponent)),
-                    hold: GoadLasts::WhileSourceOnBattlefield,
+                    hold: GoadLasts::WhileYouControlSource,
                 },
-                Effect::GoadWhile { what: Selector::This, hold: GoadLasts::WhileSourceOnBattlefield },
+                Effect::GoadWhile { what: Selector::This, hold: GoadLasts::WhileYouControlSource },
             ])),
             TriggeredAbility {
                 event: EventSpec {

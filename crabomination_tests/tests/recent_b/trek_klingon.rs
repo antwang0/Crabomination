@@ -221,3 +221,31 @@ fn martok_counters_are_capped_by_battlefront() {
         .sum::<u32>();
     assert_eq!(total, 1, "one opponent attacked: one counter");
 }
+
+/// Kang, Suspicious Captain: he and the target are goaded "for as long as you
+/// control Kang" — CR 611.2b: once Kang changes control both goads end for
+/// good, even when he comes back.
+#[test]
+fn kang_goads_only_while_you_control_him() {
+    use crabomination::effect::{Duration, Effect, PlayerRef, Selector};
+    use crabomination::game::effects::EffectContext;
+    let mut g = pod(3);
+    flood(&mut g, 0);
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    let kang = g.add_card_to_hand(0, catalog::kang_suspicious_captain());
+    cast(&mut g, kang, Some(Target::Permanent(bear)));
+    let goaded = |g: &GameState, id| g.is_goaded(g.battlefield_find(id).unwrap());
+    assert!(goaded(&g, kang) && goaded(&g, bear), "both goaded while Kang is ours");
+    let take = |g: &mut GameState, to: usize| {
+        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+        ctx.source = Some(kang);
+        let fx = Effect::GainControl { what: Selector::This, to: Some(PlayerRef::Seat(to)), duration: Duration::Permanent };
+        let ev = g.resolve_effect(&fx, &ctx).expect("control");
+        g.dispatch_triggers_for_events(&ev);
+        drain_stack(g);
+    };
+    take(&mut g, 2);
+    assert!(!goaded(&g, kang) && !goaded(&g, bear), "Kang left our control");
+    take(&mut g, 0);
+    assert!(!goaded(&g, kang) && !goaded(&g, bear), "the goads lapsed for good");
+}

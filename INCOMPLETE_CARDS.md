@@ -2298,7 +2298,6 @@ The three TRC precons (seats 6094-6096, `decks::trek_federation` / `trek_klingon
 | ~~Guinan, Ancient Advisor~~ ✅ | fixed 2026-11-28: the draw counts the counters the ability put (`Effect::IfCountersPut`; doublers and Solemnity count) — `guinan_counts_the_counters_actually_put` | — |
 | 🟡 Cmdr. Troi, Outgoing Empath | the opponent's free spell is copied | a UI opponent whose target pick parks the cast loses the copy rider (`PlayerMayCastFromHandFree`); headless seats are exact |
 | 🟡 Right of Vengeance | "whenever a creature deals combat damage to you" | a creature's damage to you during a combat damage step (a this-turn emblem can't hear the combat path's own `DealsCombatDamageToPlayer`), so a creature's noncombat ping in that step also triggers it |
-| 🟡 Kang, Suspicious Captain | goaded "for as long as you control Kang" | held while Kang is on the battlefield (`GoadLasts::WhileSourceOnBattlefield`) — differs only if Kang changes control |
 | 🟡 Martok, Hero of the Empire; Galvanizing Tenor | up to X targets | `CapTargetsAt` over a seven-slot ceiling, so an eight-seat game's seventh opponent is the most it can reach |
 | 🟡 Võx, Child of the Collective | undaunted counts opponents as the spell is cast | the count is fixed when the grant resolves (`GrantNextMatchingSpellUndauntedThisTurn`) |
 | 🟡 The Borg Queen | the opponent "exiles" cards until a creature | they are revealed (the rest go to the bottom either way; nothing sees them exiled) |

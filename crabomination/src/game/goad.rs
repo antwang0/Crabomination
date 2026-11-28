@@ -123,16 +123,29 @@ impl GameState {
             GoadHold::WhileOnBattlefield(src) => self.battlefield_find(src).is_some(),
             GoadHold::Obligation(kind) => c.counter_count(kind) > 0,
             GoadHold::WhileControlledBy(seat) => c.controller == usize::from(seat),
+            GoadHold::WhileSourceControlledBy(src, seat) => {
+                self.battlefield_find(src).is_some_and(|s| s.controller == usize::from(seat))
+            }
             GoadHold::ForTheGame => true,
         }
     }
 
     /// CR 611.2b — "for as long as they control it" ends for good once
     /// control moves: drop the hold, so getting the creature back doesn't
-    /// re-arm it (Vislor Turlough).
+    /// re-arm it (Vislor Turlough). Likewise "for as long as you control
+    /// [source]" once the source moves (Kang).
     pub(crate) fn release_lapsed_control_goads(&mut self, events: &[GameEvent]) {
         for ev in events {
             let GameEvent::ControlChanged { card_id, .. } = ev else { continue };
+            if let Some(now) = self.battlefield_find(*card_id).map(|c| c.controller) {
+                let src = *card_id;
+                let lapsed = |h: GoadHold| matches!(h, GoadHold::WhileSourceControlledBy(s, q) if s == src && usize::from(q) != now);
+                for c in self.battlefield.iter_mut() {
+                    if c.cold_any(|k| k.goad_holds.iter().any(|&(_, h)| lapsed(h))) {
+                        c.goad_holds.retain(|&(_, h)| !lapsed(h));
+                    }
+                }
+            }
             let lapsed = |c: &CardInstance| {
                 c.cold_any(|k| {
                     k.goad_holds.iter().any(|&(_, h)| matches!(h, GoadHold::WhileControlledBy(s) if usize::from(s) != c.controller))

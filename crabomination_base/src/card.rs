@@ -9243,6 +9243,9 @@ pub enum GoadHold {
     /// While the goaded creature's controller is still this seat (Vislor
     /// Turlough's "for as long as they control it").
     WhileControlledBy(u8),
+    /// While this permanent stays on the battlefield under this seat's control
+    /// (Kang's "for as long as you control Kang").
+    WhileSourceControlledBy(CardId, u8),
     /// "Goaded for the rest of the game" (Nettling Nuisance's Pirate): this
     /// goader's entry never lapses; another goader's ordinary goad still does.
     ForTheGame,

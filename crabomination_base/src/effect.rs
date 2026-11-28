@@ -12305,6 +12305,10 @@ pub enum GoadLasts {
     /// "It's goaded for as long as they control it" (Vislor Turlough): held
     /// while the creature stays with the controller it had as this resolved.
     WhileControllerKeepsIt,
+    /// "For as long as you control [this]" (Kang, Suspicious Captain): held
+    /// while the source stays under the goader's control; lapses for good once
+    /// it doesn't (CR 611.2b).
+    WhileYouControlSource,
 }
 
 /// The one piece of resolver scratch an [`Effect::BindScratch`] pins.

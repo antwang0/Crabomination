@@ -13480,6 +13480,14 @@ impl GameState {
                         };
                         crate::card::GoadHold::WhileOnBattlefield(src)
                     }
+                    crate::effect::GoadLasts::WhileYouControlSource => {
+                        let Some(src) =
+                            ctx.source.filter(|s| self.battlefield_find(*s).is_some_and(|c| c.controller == goader))
+                        else {
+                            return Ok(());
+                        };
+                        crate::card::GoadHold::WhileSourceControlledBy(src, goader as u8)
+                    }
                     crate::effect::GoadLasts::Obligation(kind) => crate::card::GoadHold::Obligation(*kind),
                     // Re-stamped per creature below with its controller now.
                     crate::effect::GoadLasts::WhileControllerKeepsIt => crate::card::GoadHold::WhileControlledBy(0),
