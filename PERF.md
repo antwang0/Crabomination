@@ -3136,6 +3136,20 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-28 (Commander run, `01WRuXc6wB`) — guardrail; a draw-step flag, one entry-tally helper, cost picks
+
+Touched shared paths: `draw_one_outcome` (one `Player.drew_in_own_draw_step` read per draw, a write once per draw step);
+the three entry routes now call `tally_kind_entry` (two subtype scans per entering permanent, as before on two of them);
+`release_lapsed_control_goads` (one battlefield walk per `ControlChanged` batch); the activation prelude (two
+`take_opt_scratch!` reads). `release`, 4-core box, base `496622b9c` (the run's start) vs tip `77f8f0516`:
+
+```
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok,
+                 thread_determinism ok (3 vs 1)
+callgrind        --bench --decks fixed --games 6 --threads 1: 1,075,343,241 Ir base vs 1,075,494,579 tip (+0.014 %)
+games_per_s      236 on one tip run (contended: a pod sweep shared the box)
+```
+
 ### 2026-11-27 (Commander run, `01WRuXc4b7`) — guardrail; a reflect target, a starting-deck count
 
 Touched shared paths: the prevention-shield pass (`PreventionShield.reflect_to`, one more `Option<CardId>` in a `Copy`

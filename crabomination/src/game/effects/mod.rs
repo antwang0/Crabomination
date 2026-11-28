@@ -38475,7 +38475,7 @@ impl GameState {
                     }
                     for t in creature_types {
                         if !d.subtypes.creature_types.contains(t) {
-                            d.subtypes.creature_types.push(t.clone());
+                            d.subtypes.creature_types.push(*t);
                         }
                     }
                     c.set_copiable_definition(std::sync::Arc::new(d));
