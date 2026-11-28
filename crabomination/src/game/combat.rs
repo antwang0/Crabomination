@@ -5918,7 +5918,8 @@ impl GameState {
                 // prevented" and "for each damage prevented this way" read it.
                 if self.all_damage_to_player_prevented(p)
                     || !self.prevention_off()
-                        && self.combat_damage_prevented_to_players_this_turn.contains(&p)
+                        && (self.combat_damage_prevented_to_players_this_turn.contains(&p)
+                            || self.combat_damage_prevented_to_players_this_combat.contains(&p))
                 {
                     if amount > 0 {
                         events.push(GameEvent::DamagePrevented { amount, to_player: Some(p), to_card: None });

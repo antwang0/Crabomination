@@ -11377,6 +11377,9 @@ pub enum Effect {
     /// (`GameState.combat_damage_prevented_to_players_this_turn`). Druid's
     /// Deliverance.
     PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef },
+    /// CR 615 / 511.3 — the same shield for the current combat only
+    /// (Suppressor Skyguard); cleared as the end of combat step begins.
+    PreventAllCombatDamageToPlayerThisCombat { who: PlayerRef },
     /// Take the Bait — "prevent all combat damage that would be dealt to you
     /// and planeswalkers you control this turn".
     PreventAllCombatDamageToPlayerAndWalkersThisTurn { who: PlayerRef },

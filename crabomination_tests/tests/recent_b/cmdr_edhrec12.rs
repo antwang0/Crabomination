@@ -171,6 +171,29 @@ fn cr_506_2_suppressor_skyguard_shields_a_singled_out_player() {
     assert_eq!(g.players[0].life, life - 2, "everyone was attacked: no shield");
 }
 
+/// CR 511.3 — Suppressor Skyguard's shield is "this combat": once the end of
+/// combat step begins it is gone, so an additional combat that attacks every
+/// opponent deals damage (it was a this-turn shield).
+#[test]
+fn cr_511_3_suppressor_skyguard_shield_ends_with_the_combat() {
+    let mut g = pod(3);
+    ready(&mut g, 0, catalog::suppressor_skyguard());
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::grizzly_bears());
+    let life = g.players[0].life;
+    declare(&mut g, 1, &[(a, 0), (b, 0)]).expect("attack");
+    combat_damage(&mut g);
+    assert_eq!(g.players[0].life, life, "shielded this combat");
+    let _ = g.advance_step(Vec::new());
+    assert_eq!(g.step, TurnStep::EndCombat);
+    g.attacking.clear();
+    let c = ready(&mut g, 1, catalog::grizzly_bears());
+    let d = ready(&mut g, 1, catalog::grizzly_bears());
+    declare(&mut g, 1, &[(c, 0), (d, 2)]).expect("second combat");
+    combat_damage(&mut g);
+    assert_eq!(g.players[0].life, life - 2, "the first combat's shield is gone");
+}
+
 /// Zethi: multikicked twice, it exiles two instants with kick counters; an
 /// attack copies them and casts the copies.
 #[test]

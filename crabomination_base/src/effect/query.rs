@@ -2624,6 +2624,7 @@ impl Effect {
             Effect::ReplaceYourNextDrawThisTurn { .. } => false,
             Effect::PreventCombatDamageExceptDealtBy { .. } => false,
             Effect::PreventAllCombatDamageToPlayerThisTurn { .. }
+            | Effect::PreventAllCombatDamageToPlayerThisCombat { .. }
             | Effect::PreventAllCombatDamageToPlayerAndWalkersThisTurn { .. }
             | Effect::PreventAllDamageToPlayerThisTurn { .. }
             | Effect::PreventAllDamageToPlayerUntilTheirNextTurn { .. }

@@ -771,7 +771,7 @@ pub fn aurelias_vindicator() -> CardDefinition {
                 effect: Effect::TargetsExactlyX {
                     body: Box::new(Effect::ApplyToTargets {
                         min_targets: 0,
-                        max_targets: 5,
+                        max_targets: 20,
                         filter: R::Creature
                             .and(R::OtherThanSource)
                             .or(R::Creature.and(R::InGraveyard)),

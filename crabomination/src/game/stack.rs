@@ -1224,6 +1224,8 @@ impl GameState {
                 if self.turn.block_chooser_this_combat.is_some() {
                     self.turn.block_chooser_this_combat = None;
                 }
+                // CR 511.3 — "this combat" prevention shields end with it.
+                clear_cold!(self.combat_damage_prevented_to_players_this_combat);
                 // CR 511.1 — "at end of combat" triggers, including the
                 // `DelayedKind::EndOfCombat` queue (Triton Tactics, Fortune).
                 self.fire_step_triggers(TurnStep::EndCombat);
@@ -5814,6 +5816,7 @@ impl GameState {
             self.pile_or_guess_effects_this_turn = 0;
         }
         clear_cold!(self.combat_damage_prevented_to_players_this_turn);
+        clear_cold!(self.combat_damage_prevented_to_players_this_combat);
         clear_cold!(self.combat_damage_prevented_to_walkers_this_turn);
         clear_cold!(self.auras_at_death);
         clear_cold!(self.creature_etb_steal_this_turn);

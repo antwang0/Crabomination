@@ -2066,6 +2066,10 @@ pub struct ColdState {
     /// `prevent_combat_to_target` for the player-target case. Cleared at cleanup.
     #[serde(default)]
     pub(crate) combat_damage_prevented_to_players_this_turn: Vec<usize>,
+    /// The same for "this combat" (Suppressor Skyguard). Cleared as the end
+    /// of combat step begins, and at cleanup.
+    #[serde(default)]
+    pub(crate) combat_damage_prevented_to_players_this_combat: Vec<usize>,
     /// Take the Bait's other half — players whose planeswalkers take no
     /// combat damage this turn. Cleared at cleanup.
     #[serde(default)]

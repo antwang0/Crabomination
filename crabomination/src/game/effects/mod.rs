@@ -40256,6 +40256,15 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::PreventAllCombatDamageToPlayerThisCombat { who } => {
+                for p in self.resolve_players(who, ctx) {
+                    if !self.combat_damage_prevented_to_players_this_combat.contains(&p) {
+                        self.combat_damage_prevented_to_players_this_combat.push(p);
+                    }
+                }
+                Ok(())
+            }
+
             Effect::SacrificeSourceUnlessPayManaValue => {
                 // CR 701.16 — Soul Tithe: the source's controller pays its
                 // mana value or sacrifices it.

@@ -19,6 +19,7 @@ fn is_fog_leaf(e: &Effect) -> bool {
         Effect::PreventAllCombatDamageThisTurn
             | Effect::PreventAllDamageFromChosenColorGlobally
             | Effect::PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef::You }
+            | Effect::PreventAllCombatDamageToPlayerThisCombat { who: PlayerRef::You }
             | Effect::PreventAllCombatDamageToPlayerAndWalkersThisTurn { who: PlayerRef::You }
     )
 }

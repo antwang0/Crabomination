@@ -236,7 +236,7 @@ pub fn suppressor_skyguard() -> CardDefinition {
             // Read as the trigger resolves, against the whole declared batch.
             effect: Effect::If {
                 cond: Predicate::AttackingPlayerLeftAnotherOpponentUnattacked,
-                then: Box::new(Effect::PreventAllCombatDamageToPlayerThisTurn { who: PlayerRef::You }),
+                then: Box::new(Effect::PreventAllCombatDamageToPlayerThisCombat { who: PlayerRef::You }),
                 else_: Box::new(Effect::Noop),
             },
         }],

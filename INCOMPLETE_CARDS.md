@@ -2069,7 +2069,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Hama, the Bloodbender | the exiled card is cast for its mana value in any mana — your artifacts and creatures can't help pay (CR 701.67). Your-turn-only and "for as long as you control Hama" are modelled since 2026-10-28 | `GrantMayPlay { pay_own_cost, any_color }` + `WhileHolderControlsSource { your_turn }` |
 | ~~Myojin of Blooming Dawn~~ ✅ | fixed 2026-10-24: gated on `WasCastFromHand` (a table test covers all ten Myojins: hand, reanimated, cast from exile) | — |
 | 🟡 Primal Surge | after each card put onto the battlefield it asks "repeat?" separately from "put it?" (declining either stops), and a seat past 150 permanents stops putting | `Effect::RepeatWhileMay` re-asks each loop; the board bound is the engine's, not the card's |
-| 🟡 Suppressor Skyguard | the shield lasts the turn, not just that combat | `PreventAllCombatDamageToPlayerThisTurn` has no per-combat duration |
 | 🟡 Zethi, Arcane Blademaster | the ETB chooses its instants (the cheapest) instead of targeting them | `Effect::ExileFromGraveyard` with `Value::TimesKicked`; an ETB's auto-targeting fills one slot of a `CapTargetsAt` |
 | ~~Yasharn, Implacable Earth~~ ✅ | fixed 2026-10-24: emerge, offering, casualty and bargain sacrifices ask `sacrificeable_for_cost` like the additional-cost and alternative-cost paths | — |
 | 🟡 Rootweaver Druid | the land given away is the engine's pick among the searched ones, not the searching opponent's | `Selector::one_of(LastMoved)` |

@@ -5495,9 +5495,8 @@ general "any player may …, if no one does …" shape, with
   is stamped; other keywords on a spell would need their own read sites. ⏳
 - ✅ **Coveted Falcon's unmask targets its opponent** (2026-11-28):
   `OptionalTargets` with a player slot 0 and permanent slots 1..=8.
-- **Aurelia's Vindicator caps its exile at five slots.** `TargetsExactlyX`
-  truncates to the paid X, but the static slot ceiling is a constant; a very
-  large X under-delivers. ⏳
+- **Aurelia's Vindicator caps its exile at 20 slots** (5 until 2026-11-28).
+  `TargetsExactlyX` truncates to the paid X; the static ceiling is a constant. ⏳
 - **Doppelgang caps at six target permanents** for the same reason. ⏳
 - **`AnthemForFilter` still spells out eight fields at every call site**
   (~hundreds). `LookPickToHand` got the boxing treatment; this one
