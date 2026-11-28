@@ -4746,3 +4746,18 @@ fn herald_of_leshrac_steals_and_returns_lands() {
     drain_stack(&mut g);
     assert_eq!(g.battlefield_find(stolen[0]).unwrap().controller, 1, "back to its owner");
 }
+
+/// Nimble Hobbit: "sacrifice a Food or pay {2}{W}" is the attacker's choice —
+/// declining the Food still offers the mana, and paying it taps the target.
+#[test]
+fn nimble_hobbit_may_pay_mana_with_a_food_out() {
+    let mut g = pod(2);
+    let hobbit = ready(&mut g, 0, catalog::nimble_hobbit());
+    let food = g.add_token_to_battlefield(0, &crabomination::game::effects::food_token());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    flood(&mut g);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false), DecisionAnswer::Bool(true)]));
+    declare(&mut g, vec![(hobbit, 1)]);
+    assert!(g.battlefield_find(food).is_some(), "the Food was kept");
+    assert!(g.battlefield_find(bear).unwrap().tapped, "paid {{2}}{{W}} instead");
+}
