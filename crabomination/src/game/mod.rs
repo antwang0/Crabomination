@@ -9625,7 +9625,10 @@ impl GameState {
             let pos = self.exile.iter().position(|c| c.id == id).expect("just found");
             let card = self.exile_remove_at(pos);
             let owner = card.owner;
-            self.players[owner].graveyard.push(card);
+            // CR 614.6 — a graveyard-hate static keeps it in exile.
+            let mut moved = Vec::new();
+            self.route_to_graveyard(card, &mut moved);
+            events.append(&mut moved);
             let ctx = crate::game::effects::EffectContext::for_ability(id, owner, None);
             if let Ok(mut evs) = self.resolve_effect_driven(&fuse.effect, &ctx) {
                 events.append(&mut evs);
@@ -23307,7 +23310,8 @@ impl GameState {
                 } else if let Some(pos) = self.players[p].hand.iter().position(|c| c.id == drawn) {
                     let card = self.players[p].hand.remove(pos);
                     let cid = card.id;
-                    self.players[p].graveyard.push(card);
+                    // CR 614.6 — discarded even when Rest in Peace exiles it.
+                    self.route_to_graveyard(card, events);
                     events.push(GameEvent::CardDiscarded { player: p, card_id: cid });
                 }
             }

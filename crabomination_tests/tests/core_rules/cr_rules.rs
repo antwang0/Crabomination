@@ -2325,6 +2325,30 @@ fn cr_700_4_exiled_instead_creatures_do_not_die() {
     assert_eq!(g.players[1].life, opp, "…and no drain");
 }
 
+/// CR 614.6 — "put into a graveyard" from the library is replaced too: every
+/// bespoke mill (Grenzo's bottom card, Charmed Pendant's top card) is exiled
+/// under Rest in Peace, and Grenzo can't then deploy a card that never
+/// reached the graveyard.
+#[test]
+fn cr_614_6_bespoke_mills_honor_rest_in_peace() {
+    let mut g = two_player_game();
+    g.add_card_to_battlefield(0, catalog::rest_in_peace());
+    let grenzo = g.add_card_to_battlefield(0, catalog::grenzo_dungeon_warden());
+    g.battlefield_find_mut(grenzo).unwrap().add_counters(crabomination::card::CounterType::PlusOnePlusOne, 2);
+    let pendant = g.add_card_to_battlefield(0, catalog::charmed_pendant());
+    let top = g.add_card_to_library(0, catalog::lightning_bolt());
+    let bottom = g.add_card_to_library(0, catalog::grizzly_bears());
+    for id in [grenzo, pendant] {
+        let ab = g.battlefield_find(id).unwrap().definition.activated_abilities[0].effect.clone();
+        let ctx = EffectContext::for_ability(id, 0, None);
+        g.resolve_effect(&ab, &ctx).unwrap();
+    }
+    for id in [top, bottom] {
+        assert!(g.exile.iter().any(|c| c.id == id), "exiled instead");
+    }
+    assert!(g.battlefield_find(bottom).is_none(), "Grenzo deploys nothing");
+}
+
 /// Persist can't return a creature whose death-placement went to exile.
 #[test]
 fn cr_700_4_persist_does_not_return_from_exile_redirect() {

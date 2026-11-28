@@ -4446,7 +4446,12 @@ impl GameState {
                 if pay {
                     self.adjust_life_emit(ctx.controller, -crate::game::life_amount(*life), events);
                     let card = self.players[p].library.remove(0);
-                    self.players[p].graveyard.push(card);
+                    let cid = card.id;
+                    // CR 614.6 — Rest in Peace exiles it instead.
+                    if !self.route_to_graveyard(card, events) {
+                        self.note_milled(p, cid);
+                        events.push(GameEvent::CardMilled { player: p, card_id: cid });
+                    }
                 }
                 Ok(())
             }
@@ -10890,8 +10895,9 @@ impl GameState {
                         )
                     });
                     for id in ranked.into_iter().take(k) {
-                        if let Some(card) = Self::take_card(&mut self.players[p].library, id) {
-                            self.players[p].graveyard.push(card);
+                        if let Some(card) = Self::take_card(&mut self.players[p].library, id)
+                            && !self.route_to_graveyard(card, events)
+                        {
                             self.note_milled(p, id);
                             events.push(GameEvent::CardMilled { player: p, card_id: id });
                         }
@@ -10967,8 +10973,9 @@ impl GameState {
                         .first()
                         .map(|c| c.definition.cost.colored_symbols().collect())
                         .unwrap_or_default();
-                    if let Some(card) = Self::take_card(&mut self.players[p].library, top) {
-                        self.players[p].graveyard.push(card);
+                    if let Some(card) = Self::take_card(&mut self.players[p].library, top)
+                        && !self.route_to_graveyard(card, events)
+                    {
                         self.note_milled(p, top);
                         events.push(GameEvent::CardMilled { player: p, card_id: top });
                     }
@@ -16567,10 +16574,12 @@ impl GameState {
                 let id = card.id;
                 let deployable = card.definition.is_creature()
                     && card.definition.power <= self.evaluate_value(max_power, ctx);
-                self.players[seat].graveyard.push(card);
-                self.note_milled(seat, id);
-                events.push(GameEvent::CardMilled { player: seat, card_id: id });
-                if deployable {
+                let exiled = self.route_to_graveyard(card, events);
+                if !exiled {
+                    self.note_milled(seat, id);
+                    events.push(GameEvent::CardMilled { player: seat, card_id: id });
+                }
+                if deployable && !exiled {
                     self.move_card_to(
                         id,
                         &ZoneDest::Battlefield { controller: PlayerRef::You, tapped: false },
