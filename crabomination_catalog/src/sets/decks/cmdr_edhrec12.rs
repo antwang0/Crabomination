@@ -937,7 +937,7 @@ pub fn fascination() -> CardDefinition {
     )
 }
 
-/// Game Plan — {5}{U} sorcery, assist (not modelled — INCOMPLETE_CARDS). Each
+/// Game Plan — {5}{U} sorcery, assist (CR 702.132a). Each
 /// player shuffles their hand and graveyard into their library, then draws
 /// seven cards. Exile Game Plan.
 pub fn game_plan() -> CardDefinition {
