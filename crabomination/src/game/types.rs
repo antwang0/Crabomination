@@ -1872,9 +1872,11 @@ pub enum ResumeContext {
     /// of a "remove N counters from among creatures you control" cost comes
     /// off (Dawnhand Dissident's exile cast). Answer `Cards([id])`, appended
     /// to `pending_cast_counter_plan`; `action` replays (and may ask again).
+    /// Also an activation's drain cost (Hopeful Initiate). `legal`: the posed ids.
     ActionCounterPick {
         actor: usize,
         action: Box<GameAction>,
+        legal: Vec<CardId>,
     },
     /// CR 614.12a — a land drop's as-enters replacement asks its `wants_ui`
     /// controller (Cavern of Souls). Not a replay: the land is already in

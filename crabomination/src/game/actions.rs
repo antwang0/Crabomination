@@ -15489,10 +15489,16 @@ impl GameState {
                 mode,
                 x_value,
             };
-            if self.pose_counter_drain_pick(p, n, card_id, action) {
+            let holders = self.counter_drain_holders(p, &self.counter_plan_named());
+            let have = self.creature_counters_controlled(p);
+            if self.pose_counter_drain_pick(p, n, have, card_id, holders, action) {
                 return Ok(vec![]);
             }
         }
+        let counter_named = match counter_toll {
+            Some(_) => self.scratch.pending_cast_counter_plan.take().map(|(_, f)| f).unwrap_or_default(),
+            None => Vec::new(),
+        };
         // Pay the miracle alt-cost up front, if any. Failure leaves the
         // permission intact so the controller can retry once they have the
         // mana.
@@ -15538,8 +15544,7 @@ impl GameState {
             None => Vec::new(),
         };
         if let Some(n) = counter_toll.take() {
-            let named = self.scratch.pending_cast_counter_plan.take().map(|(_, f)| f).unwrap_or_default();
-            self.drain_creature_counters_named(p, n, &named, &mut events);
+            self.drain_creature_counters_named(p, n, &counter_named, &mut events);
         }
         events.extend(self.cast_card_from_zone_spending(
             p,
@@ -24081,6 +24086,30 @@ impl GameState {
             if have < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
+            // CR 602.2b — a prompting activator names each counter's permanent
+            // (suspended cards stay automatic).
+            if self.players[p].manual_mana && !ability.remove_counter_among_or_suspended {
+                let named = self.counter_plan_named();
+                let holders: Vec<(CardId, String)> = self
+                    .battlefield
+                    .iter()
+                    .filter(|c| c.controller == p)
+                    .filter(|c| self.evaluate_requirement_static_on(&filter, c, p, Some(card_id)))
+                    .filter(|c| drainable_counters(c, kinds.as_deref()) as usize > named.iter().filter(|&&f| f == c.id).count())
+                    .map(|c| (c.id, c.definition.name.to_string()))
+                    .collect();
+                let action = GameAction::ActivateAbility {
+                    card_id,
+                    ability_index,
+                    target: target.clone(),
+                    additional_targets: additional_targets.clone(),
+                    x_value,
+                    mode: chosen_mode,
+                };
+                if self.pose_counter_drain_pick(p, count, have, card_id, holders, action) {
+                    return Ok(());
+                }
+            }
         }
 
         // Pre-flight variable remove-counters-from-among gate (Ooze Flux): the
@@ -25494,6 +25523,19 @@ impl GameState {
             let mut left = count;
             if ability.remove_counter_among_or_suspended {
                 left -= self.drain_suspended_counters(p, kinds.as_deref(), left, events);
+            }
+            // The activator's named permanents first, one counter each.
+            for id in self.scratch.pending_cast_counter_plan.take().map(|(_, f)| f).unwrap_or_default() {
+                let Some(c) = self.battlefield.find_by_id_mut(id).filter(|_| left > 0) else { continue };
+                let k = match kinds.as_deref() {
+                    Some(ks) => ks.iter().copied().find(|k| c.counter_count(*k) > 0),
+                    None => c.counters.iter().find(|(_, n)| **n > 0).map(|(k, _)| *k),
+                };
+                if let Some(k) = k {
+                    c.remove_counters(k, 1);
+                    events.push(GameEvent::CounterRemoved { card_id: id, counter_type: k, count: 1 });
+                    left -= 1;
+                }
             }
             for (cid, _) in picks {
                 if left == 0 { break; }

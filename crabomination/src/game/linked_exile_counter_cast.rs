@@ -51,30 +51,41 @@ impl GameState {
             .collect()
     }
 
-    /// CR 601.2b — pose `p`'s next "remove a counter from which creature"
-    /// pick toward `n`, replaying `action` with the answer, when a real choice
-    /// is left (the named picks so far ride `pending_cast_counter_plan`).
-    pub(crate) fn pose_counter_drain_pick(&mut self, p: usize, n: u32, source: crate::card::CardId, action: super::GameAction) -> bool {
-        let named = self.scratch.pending_cast_counter_plan.as_ref().map(|(_, f)| f.clone()).unwrap_or_default();
-        if !self.players[p].manual_mana || named.len() as u32 >= n || self.creature_counters_controlled(p) <= n {
-            return false;
-        }
-        let holders = self.counter_drain_holders(p, &named);
-        if holders.len() < 2 {
+    /// The counter picks named so far by `ActionCounterPick` answers.
+    pub(crate) fn counter_plan_named(&self) -> Vec<crate::card::CardId> {
+        self.scratch.pending_cast_counter_plan.as_ref().map(|(_, f)| f.clone()).unwrap_or_default()
+    }
+
+    /// CR 601.2b / 602.2b — pose `p`'s next "remove a counter from which
+    /// permanent" pick toward `n` among `holders` (those with a counter not yet
+    /// spoken for), replaying `action` with the answer. Only a `manual_mana`
+    /// seat with a real choice is asked: `have` counters in all, above `n`.
+    pub(crate) fn pose_counter_drain_pick(
+        &mut self,
+        p: usize,
+        n: u32,
+        have: u32,
+        source: crate::card::CardId,
+        holders: Vec<(crate::card::CardId, String)>,
+        action: super::GameAction,
+    ) -> bool {
+        let named = self.counter_plan_named().len() as u32;
+        if !self.players[p].manual_mana || named >= n || have <= n || holders.len() < 2 {
             return false;
         }
         let name = self.find_card_anywhere(source).map(|c| c.definition.name.to_string()).unwrap_or_default();
+        let legal = holders.iter().map(|h| h.0).collect();
         self.pending_decision = Some(Box::new(super::types::PendingDecision {
             decision: crate::decision::Decision::ChooseCards {
                 source,
-                prompt: format!("{name}: remove a counter from ({} of {n})", named.len() + 1),
+                prompt: format!("{name}: remove a counter from ({} of {n})", named + 1),
                 candidates: holders,
                 min: 1,
                 max: 1,
                 eligible: None,
                 value: crate::decision::PickValue::Cost,
             },
-            resume: super::types::ResumeContext::ActionCounterPick { actor: p, action: Box::new(action) },
+            resume: super::types::ResumeContext::ActionCounterPick { actor: p, action: Box::new(action), legal },
         }));
         true
     }

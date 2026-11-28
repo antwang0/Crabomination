@@ -114,6 +114,35 @@ fn dawnhand_dissident_asks_a_prompting_seat_which_counters_to_remove() {
     assert_eq!(minus(&g, giant), 1, "one off the Giant");
 }
 
+/// CR 602.2b — an activation's "remove two +1/+1 counters from among
+/// creatures you control" is the activator's to divide (Hopeful Initiate):
+/// a prompting seat names each counter's creature (the automatic drain would
+/// take both off the Bears and spare the Initiate's own).
+#[test]
+fn hopeful_initiate_asks_a_prompting_seat_which_counters_to_remove() {
+    let mut g = pod(2);
+    let hi = ready(&mut g, 0, catalog::hopeful_initiate());
+    let bear = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(hi).unwrap().add_counters(CounterType::PlusOnePlusOne, 1);
+    g.battlefield_find_mut(bear).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    let ring = g.add_card_to_battlefield(1, catalog::sol_ring());
+    g.players[0].manual_mana = true;
+    g.players[0].mana_pool.add(Color::White, 3);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: hi, ability_index: 0, target: Some(Target::Permanent(ring)), additional_targets: vec![],
+        x_value: None, mode: None,
+    })
+    .expect("suspends for the first pick");
+    for pick in [bear, hi] {
+        assert!(g.pending_decision.is_some(), "asked where a counter comes from");
+        g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![pick]))).expect("answer");
+    }
+    drain_stack(&mut g);
+    let plus = |g: &GameState, id| g.battlefield_find(id).unwrap().counter_count(CounterType::PlusOnePlusOne);
+    assert_eq!((plus(&g, hi), plus(&g, bear)), (0, 1), "one off each, as named");
+    assert!(g.battlefield_find(ring).is_none(), "the ability resolved");
+}
+
 /// CR 701.68 — blight 1 alone: the Dissident is the only creature and
 /// survives as a 0/1 after surveilling.
 #[test]
