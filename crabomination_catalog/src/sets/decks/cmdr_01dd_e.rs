@@ -66,7 +66,12 @@ pub fn tyrannical_pitlord() -> CardDefinition {
         ],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::PermanentLeavesBattlefield, EventScope::SelfSource),
-            effect: Effect::SacrificePermanent { what: Selector::ChosenPermanentOfSource },
+            // "Sacrifice" is yours: a chosen creature someone stole stays.
+            effect: Effect::If {
+                cond: Predicate::EntityMatches { what: Selector::ChosenPermanentOfSource, filter: R::ControlledByYou },
+                then: Box::new(Effect::SacrificePermanent { what: Selector::ChosenPermanentOfSource }),
+                else_: Box::new(Effect::Noop),
+            },
         }],
         ..Default::default()
     }

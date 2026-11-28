@@ -380,6 +380,25 @@ fn tyrannical_pitlord_links_the_chosen_creature() {
     assert!(g.battlefield_find(bears).is_none(), "the chosen creature was sacrificed");
 }
 
+/// Tyrannical Pitlord: "sacrifice the chosen creature" is its controller's
+/// sacrifice — a chosen creature an opponent has since stolen stays (CR 701.21a:
+/// you can sacrifice only a permanent you control).
+#[test]
+fn tyrannical_pitlord_cant_sacrifice_a_stolen_chosen_creature() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let pitlord = g.add_card_to_hand(0, catalog::tyrannical_pitlord());
+    flood(&mut g, 0);
+    cast(&mut g, pitlord, None).expect("cast");
+    g.battlefield_find_mut(bears).unwrap().controller = 1;
+    let murder = g.add_card_to_hand(0, catalog::murder());
+    flood(&mut g, 0);
+    cast(&mut g, murder, Some(Target::Permanent(pitlord))).expect("murder");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(pitlord).is_none());
+    assert_eq!(g.battlefield_find(bears).map(|c| c.controller), Some(1), "the thief keeps it");
+}
+
 /// Circle of Affliction drains when a source of the chosen color damages you.
 #[test]
 fn circle_of_affliction_drains_off_chosen_color_damage() {

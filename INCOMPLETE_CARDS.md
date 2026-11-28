@@ -2181,7 +2181,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Illusory Gains | "you control enchanted creature" is an ETB/re-attach trigger holding the steal while attached (Control Magic's shape), not a layer-2 static | `GainControlWhileSourceAttached` |
 | ~~Enduring Angel~~ ✅ | fixed 2026-10-27: the funnel's `Transformed` event waits in `pending_cost_events` and dispatches with the action (Neglected Heirloom follows it) | — |
 | 🟡 Sol'Kanar the Tainted | the donation's opponent is the engine's ranked hostile opponent, not asked | `GainControl { to: HostileOpponent }` |
-| 🟡 Tyrannical Pitlord | the leaves trigger sacrifices the chosen creature by whoever controls it (a stolen one is the thief's sacrifice, where the printed "you" does nothing) | `SacrificePermanent { ChosenPermanentOfSource }` |
 | 🟡 Realm Razer | the two printed triggers are one "until it leaves" exile: a Razer gone before its ETB resolves exiles nothing, where the printed wording exiles the lands for good | `ExileUntilSourceLeaves` |
 | ~~Consecrate Land~~ ✅ | fixed 2026-10-27: `EquipBonus.no_other_auras` sheds every other Aura on the land (CR 704.5m; Anti-Magic Aura shares it) | — |
 | 🟡 The End | the name sweep and the refund read the permanent's owner's zones, not "its controller's" (a stolen permanent differs) | an `ExileSameNameAsTarget` keyed on the controller |
