@@ -4217,6 +4217,10 @@ pub enum StaticEffect {
     /// instead" (Possessed Portal). Global draw replacement consulted in
     /// `draw_one`.
     PlayersSkipDraws,
+    /// CR 121.3 — "Players can't draw cards" (Omen Machine): a draw is
+    /// skipped as under [`PlayersSkipDraws`](Self::PlayersSkipDraws), and a
+    /// choice to draw — a cumulative upkeep of "draw a card" — can't be taken.
+    PlayersCantDraw,
     /// Titania's Song — each noncreature artifact loses all abilities. Pairs
     /// with `NoncreatureArtifactsAreCreatures` for the animation half.
     NoncreatureArtifactsLoseAbilities,

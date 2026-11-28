@@ -9183,6 +9183,8 @@ impl GameState {
                     });
                     true
                 }
+                // CR 121.3 — a player who can't draw can't choose to pay it.
+                CumulativeUpkeepCost::Draw(_) if self.players_cant_draw() => false,
                 CumulativeUpkeepCost::Draw(per) => {
                     self.draw_n(active, (per * n) as usize, &mut events);
                     true
@@ -22876,6 +22878,14 @@ impl GameState {
         }
     }
 
+    /// CR 121.3 — a "players can't draw cards" static is on the battlefield.
+    pub(crate) fn players_cant_draw(&self) -> bool {
+        self.battlefield.has_draw_static()
+            && self.battlefield.iter().any(|c| {
+                c.definition.static_abilities.iter().any(|sa| sa.effect == crate::effect::StaticEffect::PlayersCantDraw)
+            })
+    }
+
     /// [`draw_one`](Self::draw_one), saying WHY a draw did not happen.
     ///
     /// ⚠ A plain `false` once meant both "tried to draw from an empty library"
@@ -22955,7 +22965,9 @@ impl GameState {
                     c.definition.static_abilities.iter().any(|sa| sa.effect == *want)
                 })
         };
-        if global_static(&crate::effect::StaticEffect::PlayersSkipDraws) {
+        if global_static(&crate::effect::StaticEffect::PlayersSkipDraws)
+            || global_static(&crate::effect::StaticEffect::PlayersCantDraw)
+        {
             return DrawOutcome::Skipped;
         }
         // CR 121.2a — Obstinate Familiar: "you may skip that draw instead."
@@ -36074,6 +36086,7 @@ fn static_effect_to_effects(
             | StaticEffect::MayReplaceDrawWithRevealUntilKind
             | StaticEffect::ControllerAssignsAttackersCombatDamage
             | StaticEffect::PlayersSkipDraws
+            | StaticEffect::PlayersCantDraw
             | StaticEffect::ChainsOfMephistopheles
             // Cursed Rack — read by `max_hand_size_for`; Martyrs of Korlis —
             // read in the damage funnel. Neither is a layer effect.

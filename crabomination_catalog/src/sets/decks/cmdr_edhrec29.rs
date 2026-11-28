@@ -61,7 +61,7 @@ fn draw_step_tutor() -> TriggeredAbility {
 }
 
 fn no_draws() -> StaticAbility {
-    StaticAbility { description: "Players can't draw cards.", effect: StaticEffect::PlayersSkipDraws }
+    StaticAbility { description: "Players can't draw cards.", effect: StaticEffect::PlayersCantDraw }
 }
 
 // ── Ojer Pakpatiq, Deepest Epoch ─────────────────────────────────────────────

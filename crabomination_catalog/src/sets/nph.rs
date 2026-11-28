@@ -2271,7 +2271,7 @@ pub fn omen_machine() -> CardDefinition {
     CardDefinition {
         static_abilities: vec![StaticAbility {
             description: "Players can't draw cards.",
-            effect: StaticEffect::PlayersSkipDraws,
+            effect: StaticEffect::PlayersCantDraw,
         }],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(

@@ -1039,6 +1039,7 @@ fn card_has_draw_static(c: &CardInstance) -> bool {
         matches!(
             sa.effect.ungated(),
             S::PlayersSkipDraws
+                | S::PlayersCantDraw
                 | S::SharedFate
                 | S::PlayersDrawExiledPlayable
                 | S::ControllerMaySkipDraws

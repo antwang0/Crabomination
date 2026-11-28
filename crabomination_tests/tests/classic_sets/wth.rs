@@ -342,6 +342,25 @@ fn psychic_vortex_draws_instead_of_paying_mana() {
     assert_eq!(g.players[0].hand.len(), before + 1);
 }
 
+/// CR 121.3 — under Omen Machine ("players can't draw cards") the "draw a
+/// card" cumulative upkeep can't be chosen, so Psychic Vortex is sacrificed;
+/// Possessed Portal only replaces draws, so the cost is still paid there.
+#[test]
+fn cr_121_3_psychic_vortex_cant_pay_its_draw_under_omen_machine() {
+    for (cant, kept) in [(true, false), (false, true)] {
+        let mut g = two_player_game();
+        let vortex = ready(&mut g, 0, catalog::psychic_vortex());
+        ready(&mut g, 1, if cant { catalog::omen_machine() } else { catalog::possessed_portal() });
+        for _ in 0..5 {
+            g.add_card_to_library(0, catalog::forest());
+        }
+        let before = g.players[0].hand.len();
+        to_upkeep(&mut g, 0);
+        assert_eq!(g.battlefield_find(vortex).is_some(), kept, "can't draw: {cant}");
+        assert_eq!(g.players[0].hand.len(), before, "no card drawn either way");
+    }
+}
+
 /// Mwonvuli Ooze's body is 1 plus twice its age counters.
 #[test]
 fn mwonvuli_ooze_grows_two_per_age_counter() {
