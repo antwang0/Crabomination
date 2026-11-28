@@ -5493,10 +5493,8 @@ general "any player may …, if no one does …" shape, with
 - **`Effect::GrantKeywordsToSpell` only reaches lifelink and deathtouch.**
   The grant is recorded per stack item and read where `resolving_spell_*_seat`
   is stamped; other keywords on a spell would need their own read sites. ⏳
-- **Coveted Falcon's unmask hands permanents to `EachOpponent`**, not to a
-  chosen target opponent — the printed line pairs one player slot with any
-  number of permanent slots, which the multi-kind target machinery can express
-  but `ApplyToTargets` can't thread through. ⏳
+- ✅ **Coveted Falcon's unmask targets its opponent** (2026-11-28):
+  `OptionalTargets` with a player slot 0 and permanent slots 1..=8.
 - **Aurelia's Vindicator caps its exile at five slots.** `TargetsExactlyX`
   truncates to the paid X, but the static slot ceiling is a constant; a very
   large X under-delivers. ⏳
