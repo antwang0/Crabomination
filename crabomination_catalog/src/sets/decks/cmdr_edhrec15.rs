@@ -2690,13 +2690,13 @@ pub fn fabrication_module() -> CardDefinition {
 
 /// Primal Prayers — {2}{G}{G} enchantment. ETB: {E}{E}. You may cast creature
 /// spells with mana value 3 or less by paying {E} rather than their mana
-/// costs (the "as though it had flash" rider isn't modeled).
+/// costs; a spell cast this way may be cast as though it had flash.
 pub fn primal_prayers() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::AddEnergy(Value::Const(2)))],
         static_abilities: vec![static_ab(
-            "You may cast creature spells with mana value 3 or less by paying {E} rather than paying their mana costs.",
-            StaticEffect::EnergyAlternativeCostForFilter { filter: R::Creature.and(R::ManaValueAtMost(3)), energy: 1 },
+            "You may cast creature spells with mana value 3 or less by paying {E} rather than paying their mana costs. If you cast a spell this way, you may cast it as though it had flash.",
+            StaticEffect::EnergyAlternativeCostForFilter { filter: R::Creature.and(R::ManaValueAtMost(3)), energy: 1, flash: true },
         )],
         ..permanent("Primal Prayers", cost(&[generic(2), g(), g()]), CardType::Enchantment)
     }

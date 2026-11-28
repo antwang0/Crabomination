@@ -775,16 +775,16 @@ impl GameState {
         // spells (CR 118.9); only offered when the seat has the energy.
         let energy_alt = self.battlefield.iter().filter(|c| c.controller == p).find_map(|c| {
             c.definition.static_abilities.iter().find_map(|sa| match &sa.effect {
-                crate::effect::StaticEffect::EnergyAlternativeCostForFilter { filter, energy }
+                crate::effect::StaticEffect::EnergyAlternativeCostForFilter { filter, energy, flash }
                     if self.players[p].energy >= *energy && self.evaluate_requirement_on_card(filter, card, p) =>
                 {
-                    Some(*energy)
+                    Some((*energy, *flash))
                 }
                 _ => None,
             })
         });
-        if let Some(energy) = energy_alt {
-            return Some(crate::card::AlternativeCost { energy_cost: energy, ..Default::default() });
+        if let Some((energy, flash)) = energy_alt {
+            return Some(crate::card::AlternativeCost { energy_cost: energy, flash, ..Default::default() });
         }
         // Marshland Bloodcaster — the next spell this turn may be paid for
         // with life equal to its mana value.

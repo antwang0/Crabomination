@@ -84,6 +84,37 @@ fn nissa_casts_permanents_for_energy() {
     assert_eq!(g.players[0].energy, 1);
 }
 
+/// Primal Prayers (CR 118.9 + CR 702.8a): a creature spell cast for {E} may be
+/// cast as though it had flash — on an opponent's turn here. Nissa's energy
+/// cast carries no such rider, so it stays sorcery-speed.
+#[test]
+fn primal_prayers_energy_cast_has_flash_nissas_does_not() {
+    let alt = |id| GameAction::CastSpellAlternative {
+        card_id: id,
+        pitch_card: None,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    let mut g = main_phase(2);
+    g.active_player_idx = 1;
+    g.add_card_to_battlefield(0, catalog::primal_prayers());
+    g.players[0].energy = 1;
+    let bears = g.add_card_to_hand(0, catalog::grizzly_bears());
+    g.perform_action(alt(bears)).expect("flash via Primal Prayers");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bears).is_some());
+    assert_eq!(g.players[0].energy, 0);
+
+    let mut g = main_phase(2);
+    g.active_player_idx = 1;
+    g.add_card_to_battlefield(0, catalog::nissa_worldsoul_speaker());
+    g.players[0].energy = 9;
+    let wurm = g.add_card_to_hand(0, catalog::craw_wurm());
+    assert!(g.perform_action(alt(wurm)).is_err(), "Nissa's energy cast is sorcery-speed");
+}
+
 /// Stridehangar Automaton: a Treasure comes with a Thopter, which it pumps.
 #[test]
 fn stridehangar_adds_a_thopter_to_artifact_tokens() {

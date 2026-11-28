@@ -3379,8 +3379,14 @@ pub enum StaticEffect {
     GrantWebSlingingToSpells { filter: SelectionRequirement, cost: crate::mana::ManaCost },
     /// CR 118.9 — "You may pay `energy` {E} rather than pay the mana cost for
     /// [filter] spells you cast" (Nissa, Worldsoul Speaker). Read by
-    /// `effective_alternative_cost`.
-    EnergyAlternativeCostForFilter { filter: SelectionRequirement, energy: u32 },
+    /// `effective_alternative_cost`. `flash`: "if you cast a spell this way,
+    /// you may cast it as though it had flash" (Primal Prayers).
+    EnergyAlternativeCostForFilter {
+        filter: SelectionRequirement,
+        energy: u32,
+        #[serde(default)]
+        flash: bool,
+    },
     /// CR 118.9 — "Once during each of your turns, you may cast a [filter]
     /// spell by paying life equal to its mana value rather than paying its
     /// mana cost" (Demon of Fate's Design). Read by

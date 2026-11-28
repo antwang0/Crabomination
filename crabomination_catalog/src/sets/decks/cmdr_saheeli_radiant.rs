@@ -392,7 +392,7 @@ pub fn nissa_worldsoul_speaker() -> CardDefinition {
         triggered_abilities: vec![landfall(energy(2))],
         static_abilities: vec![StaticAbility {
             description: "You may pay eight {E} rather than pay the mana cost for permanent spells you cast.",
-            effect: StaticEffect::EnergyAlternativeCostForFilter { filter: R::Permanent, energy: 8 },
+            effect: StaticEffect::EnergyAlternativeCostForFilter { filter: R::Permanent, energy: 8, flash: false },
         }],
         ..legendary(creature(
             "Nissa, Worldsoul Speaker",
