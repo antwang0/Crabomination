@@ -6,12 +6,17 @@ fan-out is invisible in two-player games and wrong in every pod. Lists the
 cards whose printed text names a target opponent while the body reaches
 `EachOpponent` and never an opponent target (`OpponentPlayer`, a player
 `Target(..)` slot).
+
+`--picked`: the sibling class — the body reaches `HostileOpponent` (the
+engine's pick, so ward / hexproof / shroud never apply) instead of a target.
 """
 import json, re, pathlib, sys
 sys.path.insert(0, 'scripts')
 root = pathlib.Path('crabomination_catalog/src')
 fn_re = re.compile(r'^pub fn (\w+)\(\) -> CardDefinition', re.M)
-name_re = re.compile(r'name:\s*"((?:[^"\\]|\\.)*)"')
+name_re = re.compile(r'(?:name:\s*|[a-z_]+\(\s*)"((?:[^"\\]|\\.)*)"')
+PICKED = '--picked' in sys.argv
+FANOUT = 'HostileOpponent' if PICKED else 'EachOpponent'
 
 def body_of(src, start):
     i = src.index("{", start); depth = 0
@@ -43,11 +48,12 @@ for p in root.rglob('*.rs'):
             continue
         seen.add(nm)
         text = PAREN.sub('', oracle(e))
-        if 'target opponent' not in text.lower() or 'each opponent' in text.lower():
+        if 'target opponent' not in text.lower() or (not PICKED and 'each opponent' in text.lower()):
             continue
-        if 'EachOpponent' in body and not TARGET.search(body):
+        if FANOUT in body and not TARGET.search(body):
             rows.append((nm, mm.group(1), str(p).split('sets/')[-1]))
 rows.sort()
-print(f"{len(rows)} cards print \"target opponent\" and fan out to each opponent instead\n")
+what = "pick the most hostile opponent" if PICKED else "fan out to each opponent"
+print(f"{len(rows)} cards print \"target opponent\" and {what} instead\n")
 for nm, ident, f in rows:
     print(f"- {nm}  [{f}::{ident}]")
