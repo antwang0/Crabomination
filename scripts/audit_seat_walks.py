@@ -88,6 +88,12 @@ PICK = re.compile(
 # the number-naming duels); the input is `living_seats()`.
 APNAP_ALL = re.compile(r"apnap_sort\(\s*\(0\s*\.\.\s*(?:self\.)?players\.len\(\)\)\s*\.collect\(\)")
 PICK_EXEMPT = re.compile(r"\.iter\(\)\.any\(\|c\||card_id|\.id ==")
+# Two `apnap_sort` over every seat are sound: a RANK table (`order.iter()
+# .position(..)` — a departed seat owns nothing to rank), and a walk whose
+# alive check is a LOGGED gate (`logged_gate(.., is_alive())`), which must
+# see every seat so a seat leaving between asks can't shift the replay
+# cursor (politics.rs).
+APNAP_EXEMPT = re.compile(r"\.position\(\|&s\| s ==|logged_gate\(&mut cursor, \|g\| g\.players\[q\]\.is_alive\(\)")
 
 
 def body_of(src, start):
@@ -139,6 +145,8 @@ def main():
                 findings.append((rel, line, enclosing_arm(src, m.start()), m.group(0).strip()))
 
         for m in APNAP_ALL.finditer(src):
+            if APNAP_EXEMPT.search(src[m.end() : m.end() + 1000]):
+                continue
             line = src[: m.start()].count("\n") + 1
             findings.append((rel, line, enclosing_arm(src, m.start()), m.group(0).strip()))
 
