@@ -7809,6 +7809,15 @@ pub enum Effect {
     /// for `duration` (layer-4 `AddCreatureType`), unlike `BecomeCreatureType`
     /// (Jenova, Ancient Calamity).
     AddCreatureTypes { what: Selector, creature_types: Vec<crate::card::CreatureType>, duration: Duration },
+    /// CR 707.9b — a copy effect's "it's a [types] in addition to its other
+    /// types": run right after the copy, it writes the types into each `what`'s
+    /// copiable values, so a copy of the copy has them too and the copy's
+    /// revert removes them (Shore Leave Planet's "Robot artifact").
+    CopyExceptionAddTypes {
+        what: Selector,
+        card_types: Vec<crate::card::CardType>,
+        creature_types: Vec<crate::card::CreatureType>,
+    },
     /// CR 205.3 — "gains all creature types" for `duration`: a layer-4
     /// `Modification::EveryCreatureType`, ordered against type-setting
     /// effects by timestamp (Amoeboid Changeling).

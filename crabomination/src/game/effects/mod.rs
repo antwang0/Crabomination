@@ -38463,6 +38463,26 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::CopyExceptionAddTypes { what, card_types, creature_types } => {
+                for ent in self.resolve_selector(what, ctx) {
+                    let Some(cid) = ent.as_permanent_id() else { continue };
+                    let Some(c) = self.battlefield.find_by_id_mut(cid) else { continue };
+                    let mut d = (*c.copiable_definition()).clone();
+                    for t in card_types {
+                        if !d.card_types.contains(t) {
+                            d.card_types.push(t.clone());
+                        }
+                    }
+                    for t in creature_types {
+                        if !d.subtypes.creature_types.contains(t) {
+                            d.subtypes.creature_types.push(t.clone());
+                        }
+                    }
+                    c.set_copiable_definition(std::sync::Arc::new(d));
+                }
+                Ok(())
+            }
+
             Effect::BecomeCopyOfFor { what, source, duration, non_legendary } => {
                 // CR 707.2 — continuous copy: swap the definition now and
                 // schedule the revert (`temporary_copies`), mirroring the

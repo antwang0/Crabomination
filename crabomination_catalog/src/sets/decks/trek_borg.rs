@@ -805,11 +805,10 @@ pub fn shore_leave_planet() -> CardDefinition {
                         duration: Duration::EndOfTurn,
                         non_legendary: true,
                     },
-                    Effect::AddCardTypeIndefinitely { what: Selector::This, card_type: CardType::Artifact, until_eot: true },
-                    Effect::AddCreatureTypes {
+                    Effect::CopyExceptionAddTypes {
                         what: Selector::This,
+                        card_types: vec![CardType::Artifact],
                         creature_types: vec![CreatureType::Robot],
-                        duration: Duration::EndOfTurn,
                     },
                 ]),
                 ..Default::default()

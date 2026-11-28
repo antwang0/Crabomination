@@ -2220,6 +2220,7 @@ impl Effect {
             | Effect::BecomeCreatureType { what, .. }
             | Effect::SwitchPowerToughness { what, .. }
             | Effect::AddCreatureTypes { what, .. }
+            | Effect::CopyExceptionAddTypes { what, .. }
             | Effect::GainAllCreatureTypes { what, .. }
             | Effect::LoseCreatureType { what, .. }
             | Effect::ReplaceColorWord { what, .. }
@@ -3522,6 +3523,7 @@ impl Effect {
             | Effect::BecomeCreatureType { what, .. }
             | Effect::SwitchPowerToughness { what, .. }
             | Effect::AddCreatureTypes { what, .. }
+            | Effect::CopyExceptionAddTypes { what, .. }
             | Effect::GainAllCreatureTypes { what, .. }
             | Effect::LoseCreatureType { what, .. }
             | Effect::GrantMayPlay { what, .. }
@@ -5979,6 +5981,7 @@ impl Effect {
                 | Effect::BecomeCreatureType { what, .. }
                 | Effect::SwitchPowerToughness { what, .. }
                 | Effect::AddCreatureTypes { what, .. }
+                | Effect::CopyExceptionAddTypes { what, .. }
                 | Effect::GainAllCreatureTypes { what, .. }
                 | Effect::LoseCreatureType { what, .. }
                 | Effect::ReplaceColorWord { what, .. }

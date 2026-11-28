@@ -2301,7 +2301,7 @@ The three TRC precons (seats 6094-6096, `decks::trek_federation` / `trek_klingon
 | 🟡 Martok, Hero of the Empire; Galvanizing Tenor | up to X targets | `CapTargetsAt` over a seven-slot ceiling, so an eight-seat game's seventh opponent is the most it can reach |
 | 🟡 Võx, Child of the Collective | undaunted counts opponents as the spell is cast | the count is fixed when the grant resolves (`GrantNextMatchingSpellUndauntedThisTurn`) |
 | 🟡 The Borg Queen | the opponent "exiles" cards until a creature | they are revealed (the rest go to the bottom either way; nothing sees them exiled) |
-| 🟡 Shore Leave Planet | "a Robot artifact in addition" is a copy exception | layer-4 additions until end of turn beside a nonlegendary layer-1 copy, so a copy of the copy lacks them |
+| ~~Shore Leave Planet~~ ✅ | fixed 2026-11-28: "a Robot artifact in addition" is written into the copiable values (`Effect::CopyExceptionAddTypes`, CR 707.9b) — `shore_leave_planet_copy_exceptions_are_copiable` | — |
 
 ## Star Trek EDHREC closers, third batch (2026-11-01, `01WRuXc3G1`)
 

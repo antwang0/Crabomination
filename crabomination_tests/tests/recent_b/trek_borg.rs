@@ -218,3 +218,39 @@ fn vox_grants_undaunted_to_the_next_artifact_creature() {
         "the grant is spent"
     );
 }
+
+/// CR 707.9b — Shore Leave Planet's "it's a Robot artifact in addition" is a
+/// copy exception, so it is part of the copiable values: a creature that then
+/// copies the Planet is a Robot artifact too. Both end with the turn.
+#[test]
+fn shore_leave_planet_copy_exceptions_are_copiable() {
+    use crabomination::effect::{Effect, Selector};
+    let mut g = pod(2);
+    let planet = g.add_card_to_battlefield(0, catalog::shore_leave_planet());
+    g.battlefield_find_mut(planet).unwrap().tapped = false;
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    flood(&mut g, 0);
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: planet, ability_index: 1, target: Some(Target::Permanent(bear)), additional_targets: vec![],
+        x_value: None, mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    let is = |g: &GameState, id| {
+        let cp = g.computed_permanent(id).unwrap();
+        (cp.card_types().contains(&CardType::Artifact), cp.subtypes().creature_types.contains(&CreatureType::Robot))
+    };
+    assert_eq!(g.battlefield_find(planet).unwrap().definition.name, "Grizzly Bears");
+    assert_eq!(is(&g, planet), (true, true), "a Robot artifact Bear");
+    let clone = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    let copy = Effect::BecomeCopyOf {
+        what: Selector::ExactObjects(vec![clone]),
+        source: Selector::ExactObjects(vec![planet]),
+        extra_creature_types: vec![],
+        keep_own_triggered: false,
+        keep_own_activated: false,
+        keep_name: false,
+    };
+    g.resolve_effect(&copy, &EffectContext::for_spell(0, None, 0, 0)).expect("copy");
+    assert_eq!(is(&g, clone), (true, true), "the copy of the copy keeps the exception");
+}
