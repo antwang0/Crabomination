@@ -403,6 +403,31 @@ fn evelyn_collects_each_top_card_and_casts_one_a_turn() {
     );
 }
 
+/// Evelyn's "once each turn, you may play a card" counts a land: playing an
+/// exiled Forest spends the turn's one, so an exiled bear can't follow it.
+#[test]
+fn evelyn_land_play_is_the_turns_one_card() {
+    let mut g = pod(2);
+    let forest = g.add_card_to_library(1, catalog::forest());
+    g.players[1].library.rotate_right(1);
+    let bear = g.add_card_to_library(0, catalog::grizzly_bears());
+    g.players[0].library.rotate_right(1);
+    assert_eq!((g.players[1].library[0].id, g.players[0].library[0].id), (forest, bear));
+    flood(&mut g);
+    let evelyn = g.add_card_to_hand(0, catalog::evelyn_the_covetous());
+    cast(&mut g, evelyn, None);
+    g.perform_action(GameAction::PlayLand(forest)).expect("the exiled Forest");
+    assert!(g.battlefield_find(forest).is_some());
+    let cast_bear = GameAction::CastFromZoneWithoutPaying {
+        card_id: bear,
+        target: None,
+        additional_targets: vec![],
+        mode: None,
+        x_value: None,
+    };
+    assert!(g.perform_action(cast_bear).is_err(), "the land was this turn's card");
+}
+
 /// Garza Zol grows when a creature it damaged this turn dies.
 #[test]
 fn garza_zol_grows_off_its_kills() {

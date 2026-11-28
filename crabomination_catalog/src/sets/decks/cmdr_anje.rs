@@ -490,6 +490,7 @@ pub fn hedonists_trove() -> CardDefinition {
                     source: crate::card::CardId(0),
                     one_spell_a_turn: true,
                     follows_control: true,
+                    counts_lands: false,
                 },
                 to_owner: false,
                 exile_after: false,

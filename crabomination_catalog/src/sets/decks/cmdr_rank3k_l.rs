@@ -189,6 +189,7 @@ fn while_rona() -> MayPlayDuration {
         source: crate::card::CardId(0),
         one_spell_a_turn: false,
         follows_control: true,
+        counts_lands: false,
     }
 }
 

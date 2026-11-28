@@ -555,6 +555,7 @@ pub fn evelyn_the_covetous() -> CardDefinition {
                         source: crate::card::CardId(0),
                         one_spell_a_turn: true,
                         follows_control: false,
+                        counts_lands: true,
                     },
                     to_owner: false,
                     exile_after: false,

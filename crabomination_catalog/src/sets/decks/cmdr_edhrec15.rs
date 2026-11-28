@@ -4186,6 +4186,7 @@ pub fn intrepid_paleontologist() -> CardDefinition {
                             source: crate::card::CardId(0),
                             one_spell_a_turn: false,
                             follows_control: false,
+                            counts_lands: false,
                         },
                         to_owner: false,
                         exile_after: false,

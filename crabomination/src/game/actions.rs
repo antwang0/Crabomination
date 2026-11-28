@@ -5382,6 +5382,16 @@ impl GameState {
             if let Some(group) = card.may_play_until.and_then(|m| m.one_cast_group) {
                 self.spend_one_cast_group(group);
             }
+            // Evelyn — "once each turn, play a card": the land is the turn's one.
+            if let Some(crate::card::MayPlayDuration::WhileSourceOnBattlefield {
+                source,
+                one_spell_a_turn: true,
+                counts_lands: true,
+                ..
+            }) = card.may_play_until.map(|m| m.duration)
+            {
+                self.park_source_bound_spell_grants(source);
+            }
             if card.may_play_until.is_some() {
                 self.fire_played_this_way(card.id);
             }

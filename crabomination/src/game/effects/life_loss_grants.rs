@@ -227,17 +227,18 @@ impl GameState {
     /// through one of `source`'s capped grants parks its other spell grants
     /// until the turn ends. Land grants stay live — the cap is on spells.
     pub(crate) fn park_source_bound_spell_grants(&mut self, source: crate::card::CardId) {
+        let land = |c: &crate::card::CardInstance| c.definition.is_land();
         let hit = |c: &crate::card::CardInstance| {
-            !c.definition.is_land()
-                && c.cold_any(|k| {
-                    k.may_play_until.as_ref().is_some_and(|m| {
-                        m.player != MAY_PLAY_DORMANT
-                            && matches!(
-                                m.duration,
-                                MayPlayDuration::WhileSourceOnBattlefield { source: s, one_spell_a_turn: true, .. } if s == source
-                            )
-                    })
+            c.cold_any(|k| {
+                k.may_play_until.as_ref().is_some_and(|m| {
+                    m.player != MAY_PLAY_DORMANT
+                        && matches!(
+                            m.duration,
+                            MayPlayDuration::WhileSourceOnBattlefield { source: s, one_spell_a_turn: true, counts_lands, .. }
+                                if s == source && (counts_lands || !land(c))
+                        )
                 })
+            })
         };
         if !self.exile.iter().any(hit) {
             return;

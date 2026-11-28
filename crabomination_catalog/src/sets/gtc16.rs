@@ -68,6 +68,7 @@ pub fn nightveil_specter() -> CardDefinition {
                     source: crate::card::CardId(0),
                     one_spell_a_turn: false,
                     follows_control: true,
+                    counts_lands: false,
                 },
                 pay_any_color: false,
                 max_mana_value: None,
