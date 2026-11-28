@@ -38655,54 +38655,6 @@ pub fn target_decks() -> Vec<PodDeck> {
             commanders: decks::LIVAAN_30_COMMANDERS,
             main: decks::LIVAAN_30_MAIN,
         },
-        // Seat 6367: Gilanra, Caller of Wirewood and Sakashima of a Thousand Faces's EDHREC average deck. `--pod-decks 6367`.
-        PodDeck {
-            name: "Gilanra, Caller of Wirewood and Sakashima of a Thousand Faces (UG)",
-            commanders: decks::GILANRA_39_COMMANDERS,
-            main: decks::GILANRA_39_MAIN,
-        },
-        // Seat 6368: Ellyn Harbreeze, Busybody and Inspiring Leader's EDHREC average deck. `--pod-decks 6368`.
-        PodDeck {
-            name: "Ellyn Harbreeze, Busybody and Inspiring Leader (W)",
-            commanders: decks::ELLYN_HARBREEZE_27_COMMANDERS,
-            main: decks::ELLYN_HARBREEZE_27_MAIN,
-        },
-        // Seat 6369: Wyll, Blade of Frontiers and Far Traveler's EDHREC average deck. `--pod-decks 6369`.
-        PodDeck {
-            name: "Wyll, Blade of Frontiers and Far Traveler (WR)",
-            commanders: decks::WYLL_30_COMMANDERS,
-            main: decks::WYLL_30_MAIN,
-        },
-        // Seat 6370: The Fifth Doctor and Jamie McCrimmon's EDHREC average deck. `--pod-decks 6370`.
-        PodDeck {
-            name: "The Fifth Doctor and Jamie McCrimmon (WUG)",
-            commanders: decks::THE_FIFTH_DOCTOR_26_COMMANDERS,
-            main: decks::THE_FIFTH_DOCTOR_26_MAIN,
-        },
-        // Seat 6371: The Ninth Doctor and Adric, Mathematical Genius's EDHREC average deck. `--pod-decks 6371`.
-        PodDeck {
-            name: "The Ninth Doctor and Adric, Mathematical Genius (UR)",
-            commanders: decks::THE_NINTH_DOCTOR_25_COMMANDERS,
-            main: decks::THE_NINTH_DOCTOR_25_MAIN,
-        },
-        // Seat 6372: Kraum, Ludevic's Opus and Sengir, the Dark Baron's EDHREC average deck. `--pod-decks 6372`.
-        PodDeck {
-            name: "Kraum, Ludevic's Opus and Sengir, the Dark Baron (UBR)",
-            commanders: decks::KRAUM_27_COMMANDERS,
-            main: decks::KRAUM_27_MAIN,
-        },
-        // Seat 6373: The Fourteenth Doctor and Nardole, Resourceful Cyborg's EDHREC average deck. `--pod-decks 6373`.
-        PodDeck {
-            name: "The Fourteenth Doctor and Nardole, Resourceful Cyborg (WURG)",
-            commanders: decks::THE_FOURTEENTH_DOCTOR_26_COMMANDERS,
-            main: decks::THE_FOURTEENTH_DOCTOR_26_MAIN,
-        },
-        // Seat 6374: The Twelfth Doctor and Martha Jones's EDHREC average deck. `--pod-decks 6374`.
-        PodDeck {
-            name: "The Twelfth Doctor and Martha Jones (UR)",
-            commanders: decks::THE_TWELFTH_DOCTOR_26_COMMANDERS,
-            main: decks::THE_TWELFTH_DOCTOR_26_MAIN,
-        },
     ]
 }
 
@@ -47046,14 +46998,6 @@ mod tests {
             ("The Sixth Doctor and Rose Tyler", &[0x22DC]),
             ("The First Doctor and Rose Noble", &[0x22DD]),
             ("Livaan, Cultist of Tiamat and Faceless One", &[0x22DE]),
-            ("Gilanra, Caller of Wirewood and Sakashima of a Thousand Faces", &[0x22DF]),
-            ("Ellyn Harbreeze, Busybody and Inspiring Leader", &[0x22E0]),
-            ("Wyll, Blade of Frontiers and Far Traveler", &[0x22E1]),
-            ("The Fifth Doctor and Jamie McCrimmon", &[0x22E2]),
-            ("The Ninth Doctor and Adric, Mathematical Genius", &[0x22E3]),
-            ("Kraum, Ludevic's Opus and Sengir, the Dark Baron", &[0x22E4]),
-            ("The Fourteenth Doctor and Nardole, Resourceful Cyborg", &[0x22E5]),
-            ("The Twelfth Doctor and Martha Jones", &[0x22E6]),
         ];
         // One work item per (seat, seed), pulled by a worker per core (this
         // test is the suite's long pole); every game is seeded, so order
