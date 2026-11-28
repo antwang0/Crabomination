@@ -635,6 +635,10 @@ newly filed (4 decks). Ran concurrently with `01WRuXc6wB` (its NEXT already cred
   Mimeofacture is off the pod).
 - ✅ `audit_seat_walks.py` read 5 since 2026-10-04 (TODO said 0): two `apnap_sort` rank tables and three replay-safe
   logged `is_alive` gates (`politics.rs`). Exempted by shape; 0 again.
+- ✅ Cephalid Constable: "up to that many **target** permanents that player controls" was an untargeted first-N
+  `Take`; now `CapTargetsAt(TriggerEventAmount)` over `ApplyToTargets` (`ControlledByTriggerPlayer`). A scan of
+  "target … that player / they control" bodies with no target leaf finds nothing else open (Magus of the Abyss's
+  "of their choice" target is the one shape left: a target another seat picks).
 - Stale 🟡 row dropped: Graven Abomination (`OwnedByDefendingPlayer` shipped).
 - Read, not changed: Portal Manipulator (a targeted rewrite fits `SlotGroups` + `DifferentControllerFromTargetSlot(0)`,
   but the bot's hostile player pick would name the attacker — whose creatures are then illegal — so the card goes
