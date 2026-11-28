@@ -20,7 +20,7 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
-| Bugs & robustness | [FIXED 2026-11-28 (Commander run, `01WRuXc6wB`) — seven residuals, four primitives](#fixed-2026-11-28-commander-run-01wruxc6wb--seven-residuals-four-primitives) | 18 |
+| Bugs & robustness | [FIXED 2026-11-28 (Commander run, `01WRuXc6wB`) — six residuals, four primitives](#fixed-2026-11-28-commander-run-01wruxc6wb--seven-residuals-four-primitives) | 18 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc6wB` found them (moved verbatim, 2026-11-28)](#the-commander-nexts-lines-as-01wruxc6wb-found-them-moved-verbatim-2026-11-28) | 9 |
 | Bugs & robustness | [FIXED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs](#fixed-2026-11-27-commander-run-01wruxc4b7--whtz-and-nine-legal-gap-pairs) | 14 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4b7` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc4b7-found-them-moved-verbatim-2026-11-27) | 9 |
@@ -615,9 +615,9 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
-## FIXED 2026-11-28 (Commander run, `01WRuXc6wB`) — seven residuals, four primitives
+## FIXED 2026-11-28 (Commander run, `01WRuXc6wB`) — six residuals, four primitives
 
-No seats. Clean decks 5,601 → 5,623 (`pod_residuals.py --summary`).
+No seats. Clean decks 5,601 → 5,627 (with `01WRuXc6d1`'s concurrent fixes) (`pod_residuals.py --summary`).
 - ✅ `AbilityCostChoice::Blight` / `::BounceOther` (`game/blight_cost.rs::pose_ability_cost_pick`): a prompting seat picks
   the Blight creature (CR 701.68a) and a one-permanent "return a [filter] you control" cost (CR 602.5b). Bots keep the
   auto-pick, so traces don't move. Closes Zareth San; half of Dawnhand Dissident (its cast drain is the other half).
@@ -626,7 +626,8 @@ No seats. Clean decks 5,601 → 5,623 (`pod_residuals.py --summary`).
 - ✅ **Bug class: entry tallies.** A resolving Vehicle spell (`entry_tally.rs`) never bumped
   `mounts_vehicles_entered_this_turn` (Cloudspire Coordinator). `tally_kind_entry` is now the one subtype tally all three
   entry routes call; `equipment_spacecraft_entered_this_turn` + `Value::EquipmentSpacecraftEnteredThisTurn` (Sulu).
-- ✅ `GoadLasts::WhileYouControlSource` / `GoadHold::WhileSourceControlledBy` (Kang, CR 611.2b: ends for good).
+- Kang (`GoadLasts::WhileYouControlSource`) was closed concurrently by `01WRuXc6d1` under the same names; this
+  session's duplicate commit was dropped at the rebase.
 - ✅ `Effect::CopyExceptionAddTypes` (CR 707.9b, copy exceptions are copiable): Shore Leave Planet, Mirror of the Forebears.
 - Read, not changed: Hawkeye's reflexive modes, Kargan Intimidator's resolution-time mode (activation-time
   `ChooseUnchosenModeThisTurn` is a project), Primal Surge's double ask (the prompting-seat path re-enters through

@@ -34,7 +34,7 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
-Commander run `01WRuXc6wB` (2026-11-28): **no new seats; residual-free decks 5,601 → 5,623 / 6,366.** Closed: Zareth San, Guinan, Reed Richards, Sulu (Space Swashbuckler), Kang, Shore Leave Planet, the Blight half of Dawnhand Dissident; Mirror of the Forebears's copy exception (ENGINE_BACKLOG `01WRuXc6wB`).
+Commander run `01WRuXc6wB` (2026-11-28): **no new seats; residual-free decks 5,601 → 5,627 / 6,366.** Closed: Zareth San, Guinan, Reed Richards, Sulu (Space Swashbuckler), Shore Leave Planet, the Blight half of Dawnhand Dissident; Mirror of the Forebears's copy exception (ENGINE_BACKLOG `01WRuXc6wB`).
 
 Commander run `01WRuXc4b7` (2026-11-27): **10 new seats, 6357-6366** (EDHREC averages fetched 2026-11-27): Whtz, the Bibliophile (254 cards, Rulebreaker); chooser pairs whose average needs exactly one chosen colour (CR 903.4) — Faceless One // Raised by Giants, Silas Renn // Prismatic Piper, Faceless One // Folk Hero, Esior // Prismatic Piper, Alora // Faceless One, Livaan // Faceless One; The Eighth Doctor // Yasmin Khan, The Sixth Doctor // Rose Tyler, The First Doctor // Rose Noble. 14 cards (`decks::cmdr_01wr4b_a`; Channel Harm and Spellweaver Volute carry 🟡 rows). The 70-page EDHREC scan has no legal unseated single left; the other chooser-pair averages mix two or more colours (illegal), and the zero-gap pairs stay unseated by policy.
 

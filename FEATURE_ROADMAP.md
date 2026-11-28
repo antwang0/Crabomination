@@ -21,7 +21,7 @@ the shipped CR text (now `crabomination/MagicCompRules_20261106.txt`, re-pinned
 2026-11-26: 713 Meld inserted, 713-733 cited as 714-734, 903.5e / 903.5f). Don't re-audit; update rows as they
 move. Per-deck card completion lives in `DECK_FEATURES.md`; what each Commander
 session changed lives in ENGINE_BACKLOG under its session id. Last touched
-2026-11-27 by `01WRuXc4uj` (Assist ✅), then by the `modern_decks` run of 2026-11-27 (bot waterbend ✅, assist on flashback / foretell / alternative costs, CR 700.2 "face a dilemma"), then by `01WRuXc2yT` (CR 500.7 extra turns begun; the land-type granter recursion), then by `01WRuXc6sk` (CR 119.4b non-mana life-payment ban; CR 700.2 dilemma triggers from the graveyard; 39 Trek seats), then by `01WRuXc4b7` (a Rulebreaker 254-card seat; starting-deck size), then by `01WRuXc6wB` (no rows moved: Kang's control-scoped goad, CR 707.9b copiable copy exceptions, prompting-seat cost picks).
+2026-11-27 by `01WRuXc4uj` (Assist ✅), then by the `modern_decks` run of 2026-11-27 (bot waterbend ✅, assist on flashback / foretell / alternative costs, CR 700.2 "face a dilemma"), then by `01WRuXc2yT` (CR 500.7 extra turns begun; the land-type granter recursion), then by `01WRuXc6sk` (CR 119.4b non-mana life-payment ban; CR 700.2 dilemma triggers from the graveyard; 39 Trek seats), then by `01WRuXc4b7` (a Rulebreaker 254-card seat; starting-deck size), then by `01WRuXc6wB` (no rows moved: CR 707.9b copiable copy exceptions, prompting-seat cost picks).
 
 ### Format core (CR 903)
 | Feature | State | Where |
