@@ -20,6 +20,8 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [FIXED 2026-11-28 (Commander run, `01WRuXc4cX`) — Falcon's target, a combat-scoped fog, CR 121.3](#fixed-2026-11-28-commander-run-01wruxc4cx--falcons-target-a-combat-scoped-fog-cr-1213) | 30 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4cX` found them (moved verbatim, 2026-11-28)](#the-commander-nexts-lines-as-01wruxc4cx-found-them-moved-verbatim-2026-11-28) | 9 |
 | Bugs & robustness | [FIXED 2026-11-28 (Commander run, `01WRuXc6d1`) — multiplayer slot wording, two ratchets green](#fixed-2026-11-28-commander-run-01wruxc6d1--multiplayer-slot-wording-two-ratchets-green) | 22 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc6d1` found them (moved verbatim, 2026-11-28)](#the-commander-nexts-lines-as-01wruxc6d1-found-them-moved-verbatim-2026-11-28) | 9 |
 | Bugs & robustness | [FIXED 2026-11-28 (Commander run, `01WRuXc6wB`) — six residuals, four primitives](#fixed-2026-11-28-commander-run-01wruxc6wb--seven-residuals-four-primitives) | 18 |
@@ -617,6 +619,53 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED 2026-11-28 (Commander run, `01WRuXc4cX`) — Falcon's target, a combat-scoped fog, CR 121.3
+
+No seats. Clean decks 5,623 → 5,630 / 6,366 (`pod_residuals.py --summary`).
+- ✅ **CR 115.1 Coveted Falcon:** the unmasking "target opponent" was `HostileOpponent` (ward / hexproof ignored) —
+  now `OptionalTargets { min: 1 }`: slot 0 `ControllerOf(TargetFiltered(OpponentPlayer))`, slots 1..=8 the permanents
+  (source included, as printed), one draw per permanent that changed control. `audit_target_opponent --picked` 2 → 1.
+- ✅ **CR 511.3 Suppressor Skyguard:** "this combat" was a this-turn shield — `Effect::PreventAllCombatDamageToPlayerThisCombat`
+  over `ColdState.combat_damage_prevented_to_players_this_combat`, cleared as `EndCombat` begins and at cleanup.
+- ✅ **CR 121.3 "can't draw" vs "skip that draw":** Omen Machine / Maralen of the Mornsong / Mornsong Aria shared
+  Possessed Portal's `PlayersSkipDraws`, so a cumulative upkeep of "draw a card" (Psychic Vortex) was "paid" under
+  Omen Machine. `StaticEffect::PlayersCantDraw` skips draws the same way and makes the choice untakeable
+  (`GameState::players_cant_draw`). Found by the pod sweep's one action cap (below).
+- ✅ **Bot: a player whose damage comes back to us is no target** (`decide_choose_target`): Black Panther (indestructible
+  via Hammer of Nazahn) wore the last opponent's Pariah's Shield, hit that player, was dealt the damage back and fired
+  again 4,737 times to the action cap (seed 29693, 5 seats, `--pod-decks 5776,2312,4004,2177,5861 --first 401`;
+  lifelink grew a life total each pass, so the no-progress watch never saw a repeat). The shielded-last rank from
+  Brash Taunter (seed 21091) only reorders opponents; now a seat whose redirect lands on one of the bot's permanents
+  is skipped while one of its own permanents is legal.
+- Aurelia's Vindicator's X-target ceiling 5 → 20.
+- Sweeps: 60,000 release pod games (seeds 29680-29699 × 2/3/4/5/6/8 seats × 500), 0 panics, 45 undecided (27 draws, 16
+  board caps, 2 action caps — the two fixes above). Gates in TODO's Commander NEXT line 5.
+- Tooling: `audit_dropped_may.py` read a resolver arm through a fixed 4000-char window and lost `MillThenToHandN`'s
+  `min: 0` (325 → 318 findings); it now brace-matches the arm.
+- Filed, cube-frozen: Spoils of the Vault (misses to the graveyard, 10-card cap). A `RevealUntilFind` miss-destination
+  scan over every catalog body found no other.
+- ⚠ **The sweep's one action cap is a real lock, not an engine loop:** seed 29682, 8 seats, `--pod-decks
+  3319,5275,3600,6224,311,605,1160,3474 --first 257` — four survivors, Intruder Alarm (no untaps) + Hushbringer (no ETB
+  triggers, so the Alarm never untaps anything) + Omen Machine (no draws) + empty libraries: no player can attack or
+  lose, 7,661 turns. Psychic Vortex's age counters grew every turn (the CR 121.3 bug), so the no-progress watch never
+  saw a repeat; with the fix the Vortex is sacrificed. Nothing in the CR ends such a game (CR 104.4b is mandatory
+  loops only); the action cap is the right outcome.
+- Read, not changed: Portal Manipulator / Hawkeye / Kira Nerys (`01WRuXc6d1`'s notes stand), Genesis Device (one
+  search vs per-land search: outcome-identical for the bot), Elemental Teachings' denial heuristic (MV ties on lands
+  fall to library order), Huatli's −X (a loyalty `GameAction` carries one target — a human-seat gap only).
+
+## The Commander NEXT's lines as `01WRuXc4cX` found them (moved verbatim, 2026-11-28)
+
+1. ⚠ **Several sessions share this branch:** fetch before you start and before every push; rebase, never force; `cargo check -p crabomination_catalog` after each rebase. Seat numbers race: after a conflicted rebase, checkout `--ours` of `pod/decks.rs` + `pod/mod.rs`, re-run `scripts/seat_decks.py` on top of the other session's seats, run `cr_903_5a_target_decks_are_legal_commander_decks`. New seats go at the end of `target_decks()`. ⚠ `scripts/gen_factory_lists.py` rewrites all of `all_factories.rs` — append by hand. Claim a deck or a residual in ENGINE_BACKLOG (and push the claim) before writing it — two sessions wrote the same Kang fix on 2026-11-28.
+2. ⚠ **One build at a time; `CARGO_INCREMENTAL=0`; never edit the tree while the suite or a release build compiles.** Build release in a scratchpad worktree with its own `CARGO_TARGET_DIR` (16 min) and keep editing. `CRAB_ANSWER_LOG=strict` on the suite command rebuilds the workspace — build with it set. Full suite: `-E 'not test(cr_903_5a_the_official_precon_seats_play_pod_games)'`, 29,747 / 0 / 14 strict in ~7 min once built.
+3. **State (2026-11-28, `01WRuXc6d1`): 6,366 seats, no new ones; 5,623 / 6,366 residual-free** (Coveted Falcon newly filed). **Commander rules: every FEATURE_ROADMAP Commander-status row ✅.** This run: multiplayer slot wording — Kaya's per-other-player −2, Trial of Agony's same-controller pair, Sméagol / Wumpus "target opponent" targeted (ENGINE_BACKLOG `01WRuXc6d1`).
+4. **The smoke test is `--pod-random`** (`bot_ladder --commander --pod-random --seats N --games G --seed S`); `scripts/random_pods.sh` with `MIN=<first new seat>` fuzzes new seats. A failure prints `--pod-decks .. --first I --games 1`; `CRAB_CAP_DIAG=1` dumps a capped board.
+5. **Sweeps this run** (release): seeds 29650-29652 × 2/3/4/5/6/8 × 300 + 29653-29656 × 2..8 × 500 + closing 29660-29662 × 2..8 × 500 on the tip = 26,400 games, then on the final tip (Cephalid Constable) 600 games over the 20 seats holding this run's cards + seed 29675 × 3/4/6 × 500 — 28,500 in all, 0 panics, 31 undecided (0.11 %: 16 CR 104.4a draws, 15 board caps — token engines past 1,000 permanents: Ojer Taq Citizens, Adrix and Nev copies, The Ooze + Earth Crystal Mutagens). Gates: suite 29,747 / 0 / 14 strict; clippy 0 (four crates, all targets, 72 min); `--bench` byte-identical, cube / sos / sealed decision-identical (PERF `01WRuXc6d1`). **Next seed 29680.**
+6. **Next decks: the candidate lanes are dry** (unchanged from `01WRuXc4b7`; ENGINE_BACKLOG has the check). Star Trek / FRA / MSH / Hobbit Commander products are covered (`scripts/set_gaps.py trc msc frc hoc`: only Jumpstart-style commons left). New EDHREC commanders: rerun the fetch (recipe ENGINE_BACKLOG `01WRuXc3os`) after new sets.
+7. **Residual lane:** `scripts/pod_residuals.py --rank` — The One Ring (287 sole) is cube-frozen; Dawnhand Dissident 9 (the cast's three-counter drain: no "remove N counters from among" decision, Hopeful Initiate shares it), Hawkeye 8, Battletide Alchemist 8, Mikey & Don 6, then Portal Manipulator (a targeted rewrite needs the bot's player pick to avoid the attacker — ENGINE_BACKLOG `01WRuXc6d1`) and Coveted Falcon (a player slot beside `ApplyToTargets`).
+8. **Ratchets that must read clean:** `audit_seat_walks` 0, `audit_target_opponent` 1 (Ral Zarek, SOS) and `--picked` 2, `audit_that_player` 2 (both sound), `audit_defending_player` 0. A cross-slot "that player controls" pair is `SameControllerAsTargetSlot` / `DifferentControllerFromTargetSlot`; `ForEachOpponentTarget` can't sit beside a "you control" slot (it counts every slot).
+9. **Earlier runs' NEXT lines** are in ENGINE_BACKLOG ("The Commander NEXT's lines as … found them", latest `01WRuXc6d1`).
+
 ## FIXED 2026-11-28 (Commander run, `01WRuXc6d1`) — multiplayer slot wording, two ratchets green
 
 No seats. Clean decks 5,627 → 5,623 (`pod_residuals.py --summary`): Sméagol closed, Coveted Falcon's dropped target

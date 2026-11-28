@@ -3136,6 +3136,23 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-28 (Commander run, `01WRuXc4cX`) — guardrail; a this-combat player fog, a can't-draw static
+
+Touched shared paths: the player combat-damage prevention check (one more `contains` on an empty `ColdState` list,
+behind the existing `prevention_off` read); `EndCombat` entry (a guarded `clear_cold!`); `draw_one_outcome` (one more
+static compare inside the existing draw-static lane, so a clear lane still pays one word load); cumulative upkeep's
+draw arm (one lane read). `release`, 4-core box, base `5a649a2f1` (engine identical to the run's start) vs tip
+`ce38810cc`:
+
+```
+--bench          decisions 196,176 / 27.64 turns / 0 stalls — byte-identical to the committed invariant; determinism ok
+games_per_s      base 223.8 247.7 261.5 269.5 274.4 275.6 / tip 234.7 238.1 243.8 261.3 273.8 277.4 (interleaved,
+                 contended by nothing; ~1 s runs) — means 258.8 / 254.8, noise
+pools            --decks cube / sos --games 150 --seed 29700: outcome tables identical base vs tip
+closing tip      e043e134b (+ decide_choose_target's self-redirect skip): --bench 196,176 / 27.64 / 0 stalls byte-identical,
+                 231.5 games/s (one run); cube / sos outcome tables identical to base
+```
+
 ### 2026-11-28 (Commander run, `01WRuXc6d1`) — guardrail; a goad hold, one `requires_target` arm, catalog slots
 
 Touched shared paths: `release_lapsed_control_goads` (one more battlefield walk per `ControlChanged` batch, only when

@@ -34,6 +34,8 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
+Commander run `01WRuXc4cX` (2026-11-28): **no new seats; residual-free decks 5,623 → 5,630 / 6,366** — closed Coveted Falcon (targeted opponent) and Suppressor Skyguard (this-combat shield); fixed Omen Machine / Maralen / Mornsong Aria's "can't draw" (CR 121.3) (ENGINE_BACKLOG `01WRuXc4cX`).
+
 Commander run `01WRuXc6d1` (2026-11-28, concurrent with `01WRuXc6wB`): **no new seats; residual-free decks 5,623 / 6,366** after `01WRuXc6wB`'s 5,627 — closed Sméagol, Helpful Guide (targeted reveal), Kang, Rhino's Rampage; filed Coveted Falcon (its "target opponent" is the engine's pick, 4 decks). Multiplayer slot fixes outside the residual scan: Kaya, Spirits' Justice's −2 (one creature per other player), Trial of Agony (same-controller pair), Wumpus Aberration (targeted). ENGINE_BACKLOG `01WRuXc6d1`.
 
 Commander run `01WRuXc6wB` (2026-11-28): **no new seats; residual-free decks 5,601 → 5,627 / 6,366.** Closed: Zareth San, Guinan, Reed Richards, Sulu (Space Swashbuckler), Shore Leave Planet, the Blight half of Dawnhand Dissident; Mirror of the Forebears's copy exception (ENGINE_BACKLOG `01WRuXc6wB`).
