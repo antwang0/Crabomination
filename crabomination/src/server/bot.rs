@@ -7481,20 +7481,27 @@ pub fn decide_choose_target(
     // Ahead of our own permanents: Boros Reckoner's "any target" facing an
     // opponent with no creatures hit the bot's own Reckoner instead — forever,
     // once it was indestructible.
-    let best_player = legal
-        .iter()
-        .filter_map(|t| match t {
+    let redirect = |p: usize| state.damage_redirect_target(crate::game::effects::EntityRef::Player(p));
+    let players = || {
+        legal.iter().filter_map(|t| match t {
             Target::Player(p) if *p != seat => Some(*p),
             _ => None,
         })
-        // A seat whose damage lands on a creature (Pariah) is last: Brash
-        // Taunter wearing an opponent's Pariah hit that opponent, took the
-        // damage itself and fired again 5,697 times (seed 21091, game 48).
-        .min_by_key(|p| {
-            let shielded = state.damage_redirect_target(crate::game::effects::EntityRef::Player(*p)).is_some();
-            (shielded, state.players[*p].life)
-        });
-    if let Some(p) = best_player {
+    };
+    // A seat whose damage lands on a creature (Pariah) is last: Brash
+    // Taunter wearing an opponent's Pariah hit that opponent, took the
+    // damage itself and fired again 5,697 times (seed 21091, game 48).
+    let rank = |p: &usize| (redirect(*p).is_some(), state.players[*p].life);
+    // A seat whose damage lands on one of OUR permanents is no target while
+    // one of ours is legal: Black Panther (indestructible) hit the last
+    // opponent, whose Pariah's Shield it wore, and was dealt the damage back
+    // 4,737 times to the pod's action cap (seed 29693, 5 seats, game 401).
+    let hits_us = |p: &usize| redirect(*p).and_then(|c| state.battlefield_find(c)).is_some_and(|c| c.controller == seat);
+    if let Some(p) = players().filter(|p| !hits_us(p)).min_by_key(rank) {
+        return DecisionAnswer::Target(Target::Player(p));
+    }
+    let any_own = legal.iter().any(|t| matches!(t, Target::Permanent(id) if owner(*id) == Some(seat)));
+    if !any_own && let Some(p) = players().min_by_key(rank) {
         return DecisionAnswer::Target(Target::Player(p));
     }
     // Only our own permanents are legal — give up the least valuable to keep
@@ -30682,6 +30689,35 @@ mod tests {
         let pending = g.pending_decision.clone().expect("the Taunter asks for its target");
         let answer = decide_pending_policy(&g, me, &EvalWeights::default(), &pending.decision, true);
         assert_eq!(answer, crate::decision::DecisionAnswer::Target(Target::Player(2)), "{:?}", pending.decision);
+    }
+
+    /// Black Panther wearing the last opponent's Pariah: damage to that player
+    /// comes back to the Panther and fires it again (4,737 times to the pod's
+    /// action cap, seed 29693 game 401). With one of the bot's own permanents
+    /// legal, that is the target; with none, the Pariah seat still is.
+    #[test]
+    fn black_panther_doesnt_hit_a_player_whose_damage_comes_back() {
+        for with_bears in [true, false] {
+            let mut g = two_player_game();
+            let me = 0;
+            g.players[me].wants_ui = true;
+            let panther = g.add_card_to_battlefield(me, catalog::black_panther_most_dangerous());
+            let bears = with_bears.then(|| g.add_card_to_battlefield(me, catalog::grizzly_bears()));
+            let pariah = g.add_card_to_battlefield(1, catalog::pariah());
+            g.battlefield_find_mut(pariah).unwrap().attached_to = Some(panther);
+            let ctx = crate::game::effects::EffectContext::for_spell(1, None, 0, 0);
+            let evs = g
+                .resolve_effect(
+                    &Effect::DealDamage { to: crate::effect::Selector::ExactObjects(vec![panther]), amount: crate::card::Value::Const(1) },
+                    &ctx,
+                )
+                .expect("damage");
+            g.dispatch_triggers_for_events(&evs);
+            let pending = g.pending_decision.clone().expect("the Panther asks for its target");
+            let answer = decide_pending_policy(&g, me, &EvalWeights::default(), &pending.decision, true);
+            let want = bears.map_or(Target::Player(1), Target::Permanent);
+            assert_eq!(answer, crate::decision::DecisionAnswer::Target(want), "{:?}", pending.decision);
+        }
     }
 
     /// A ballot is judged by what it does to the voter. Facing Tyrant's
