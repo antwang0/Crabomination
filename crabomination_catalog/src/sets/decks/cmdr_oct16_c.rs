@@ -1012,7 +1012,7 @@ pub fn training_compound() -> CardDefinition {
 /// Rhino's Rampage — {R/G} sorcery. Target creature you control gets +1/+0
 /// and fights target creature an opponent controls; when excess damage is
 /// dealt to the latter this way, destroy up to one target noncreature
-/// artifact with mana value 3 or less.
+/// artifact with mana value 3 or less (only this fight's excess counts).
 pub fn rhinos_rampage() -> CardDefinition {
     let theirs = || Selector::TargetFiltered { slot: 1, filter: R::Creature.and(R::ControlledByOpponent) };
     CardDefinition {
@@ -1021,19 +1021,31 @@ pub fn rhinos_rampage() -> CardDefinition {
         card_types: vec![CardType::Sorcery],
         effect: Effect::Seq(vec![
             Effect::PumpPT { what: your_creature(), power: Value::ONE, toughness: Value::ZERO, duration: Duration::EndOfTurn },
-            Effect::Fight { attacker: Selector::Target(0), defender: theirs() },
-            Effect::If {
-                cond: Predicate::ValueAtLeast(Value::ExcessDamageDealtThisTurnTo(Box::new(Selector::Target(1))), Value::ONE),
-                then: Box::new(Effect::ReflexiveTrigger {
-                    // "Up to one": optional, so it never destroys its controller's own.
-                    body: Box::new(Effect::OptionalTargets {
-                        min: 0,
-                        body: Box::new(Effect::Destroy {
-                            what: target_filtered(R::Artifact.and(R::Not(Box::new(R::Creature))).and(R::ManaValueAtMost(3))),
+            // "This way": X snapshots the victim's excess-damage tally before
+            // the fight, so excess dealt to it earlier this turn doesn't count.
+            Effect::WithX {
+                x: Value::ExcessDamageDealtThisTurnTo(Box::new(Selector::Target(1))),
+                body: Box::new(Effect::Seq(vec![
+                    Effect::Fight { attacker: Selector::Target(0), defender: theirs() },
+                    Effect::If {
+                        cond: Predicate::ValueAtLeast(
+                            Value::ExcessDamageDealtThisTurnTo(Box::new(Selector::Target(1))),
+                            Value::Sum(vec![Value::XFromCost, Value::ONE]),
+                        ),
+                        then: Box::new(Effect::ReflexiveTrigger {
+                            // "Up to one": optional, so it never destroys its controller's own.
+                            body: Box::new(Effect::OptionalTargets {
+                                min: 0,
+                                body: Box::new(Effect::Destroy {
+                                    what: target_filtered(
+                                        R::Artifact.and(R::Not(Box::new(R::Creature))).and(R::ManaValueAtMost(3)),
+                                    ),
+                                }),
+                            }),
                         }),
-                    }),
-                }),
-                else_: Box::new(Effect::Noop),
+                        else_: Box::new(Effect::Noop),
+                    },
+                ])),
             },
         ]),
         ..Default::default()

@@ -1071,6 +1071,22 @@ fn rhinos_rampage_spares_its_own_artifact() {
     assert!(g.battlefield_find(mine).is_some(), "own Sol Ring survives");
 }
 
+/// Rhino's Rampage's "excess damage is dealt … this way" (CR 120.4a): excess
+/// dealt to the victim earlier this turn doesn't count — an exactly-lethal
+/// fight on a creature already carrying a tally destroys nothing.
+#[test]
+fn rhinos_rampage_counts_only_this_fights_excess() {
+    let mut g = pod(2);
+    let bears = ready(&mut g, 0, catalog::grizzly_bears());
+    let courser = ready(&mut g, 1, catalog::centaur_courser());
+    let ring = ready(&mut g, 1, catalog::sol_ring());
+    g.battlefield_find_mut(courser).unwrap().excess_damage_this_turn = 2;
+    let spell = g.add_card_to_hand(0, catalog::rhinos_rampage());
+    cast_with(&mut g, spell, Some(Target::Permanent(bears)), vec![Target::Permanent(courser)]).expect("cast");
+    assert!(g.battlefield_find(courser).is_none(), "3 power is exactly lethal");
+    assert!(g.battlefield_find(ring).is_some(), "no excess this way → Sol Ring stays");
+}
+
 /// Sméagol: Mirrormere Guardian dying tempts you, so an opponent reveals until
 /// a land — the land is yours tapped, the cards above it go to their graveyard.
 #[test]
