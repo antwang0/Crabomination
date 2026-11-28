@@ -6256,7 +6256,7 @@ pub fn farrels_mantle() -> CardDefinition {
                         to: target_filtered(R::Creature.and(R::IsAttacking.negate())),
                         amount: Value::Sum(vec![Value::PowerOf(Box::new(host())), Value::Const(2)]),
                     },
-                    Effect::PreventAllCombatDamageInvolving { target: host() },
+                    Effect::GrantKeyword { what: host(), keyword: Keyword::DealsNoCombatDamage, duration: Duration::EndOfTurn },
                 ])),
             },
         }],

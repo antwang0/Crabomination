@@ -292,6 +292,39 @@ fn rabid_wombat_grows_per_aura() {
     assert_eq!(g.computed_permanent(wombat).unwrap().power, 2);
 }
 
+/// "Whenever enchanted creature deals damage" fires off the host's damage, not
+/// damage dealt to it: Spirit Link gains its controller the amount; Guilty
+/// Conscience hits the host back for it.
+#[test]
+fn enchanted_deals_damage_triggers_read_the_hosts_damage() {
+    use crabomination::effect::{Effect, PlayerRef, Selector, Value};
+    let deal = |g: &mut GameState, from: CardId, to: Selector, n: i32| {
+        let mut ctx = EffectContext::for_spell(0, None, 0, 0);
+        ctx.source = Some(from);
+        let fx = Effect::DealDamageFrom { source: Selector::ExactObjects(vec![from]), to, amount: Value::Const(n) };
+        let evs = g.resolve_effect(&fx, &ctx).unwrap();
+        g.dispatch_triggers_for_events(&evs);
+        drain_stack(g);
+    };
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let link = g.add_card_to_hand(0, catalog::spirit_link());
+    cast(&mut g, 0, link, Some(Target::Permanent(giant)));
+    let ogre = g.add_card_to_battlefield(1, catalog::hill_giant());
+    let life = g.players[0].life;
+    deal(&mut g, ogre, Selector::ExactObjects(vec![giant]), 2);
+    assert_eq!(g.players[0].life, life, "damage dealt TO the host gains nothing");
+    deal(&mut g, giant, Selector::Player(PlayerRef::Seat(1)), 2);
+    assert_eq!(g.players[0].life, life + 2, "the host's damage links");
+
+    let mut g = main_phase();
+    let giant = g.add_card_to_battlefield(0, catalog::hill_giant());
+    let gc = g.add_card_to_hand(0, catalog::guilty_conscience());
+    cast(&mut g, 0, gc, Some(Target::Permanent(giant)));
+    deal(&mut g, giant, Selector::Player(PlayerRef::Seat(1)), 2);
+    assert_eq!(g.battlefield_find(giant).map(|c| c.damage), Some(2), "dealt 2 back");
+}
+
 // ── Enchantments ───────────────────────────────────────────────────────────
 
 /// The Abyss eats a nonartifact creature at each upkeep.

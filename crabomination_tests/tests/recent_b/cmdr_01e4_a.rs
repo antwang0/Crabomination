@@ -4031,3 +4031,28 @@ fn bound_by_moonsilver_stops_transforming() {
     g.transform_permanent(delver, &mut evs);
     assert!(g.battlefield_find(delver).unwrap().transformed, "unlocked");
 }
+
+/// Farrel's Mantle (bug: `EnchantedBySource` never matched an unblocked
+/// attacker, so it never fired): taking the trigger has the unblocked host deal its power
+/// plus 2 to another creature, and the host then assigns no combat damage —
+/// the defending player loses nothing.
+#[test]
+fn farrels_mantle_trades_combat_damage_for_a_shot() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = pod(2);
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let mantle = g.add_card_to_hand(0, catalog::farrels_mantle());
+    cast(&mut g, mantle, Some(Target::Permanent(bear)));
+    assert_eq!(g.battlefield_find(mantle).and_then(|c| c.attached_to), Some(bear));
+    let wall = g.add_card_to_battlefield(1, catalog::hill_giant());
+    g.battlefield_find_mut(wall).unwrap().tapped = true;
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let life = g.players[1].life;
+    attack_with(&mut g, &[bear]);
+    while g.step != TurnStep::PostCombatMain {
+        g.perform_action(GameAction::PassPriority).expect("pass");
+    }
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(wall).is_none(), "4 damage killed the Hill Giant");
+    assert_eq!(g.players[1].life, life, "no combat damage assigned");
+}

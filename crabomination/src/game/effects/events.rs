@@ -1402,7 +1402,10 @@ fn event_matches_spec_rest(
             // "When enchanted creature is turned face up" (Fatal Mutation).
             // "Whenever you activate a loyalty ability of enchanted
             // planeswalker" (Elspeth's Talent) — the host is the activator.
+            // "Whenever enchanted creature attacks and isn't blocked" (Farrel's
+            // Mantle; unmatched until 2026-11-28, so it never fired).
             GameEvent::AttackerDeclared(cid)
+            | GameEvent::AttackerWentUnblocked { attacker: cid }
             | GameEvent::TurnedFaceUp { card_id: cid }
             | GameEvent::PermanentTapped { card_id: cid, .. }
             | GameEvent::AbilityActivated { source: cid, .. } => {

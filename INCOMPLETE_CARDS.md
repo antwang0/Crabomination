@@ -2194,7 +2194,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Liberating Combustion | "search your library and/or graveyard" takes a graveyard Chandra, Pyrogenius when there is one and searches the library only when there is none — no choice (as Grand Master of Flowers) | `search_library_and_or_graveyard` |
 | 🟡 Magma Pummeler | its "counters removed this way" trigger fires on any +1/+1 counter removal, not only the damage-prevention one | a prevention-sourced removal event |
 | 🟡 Turtle Tracks | only the caster searches ("any number of target players" — the caster would target themselves) | an any-number player target slot |
-| 🟡 Farrel's Mantle | "assigns no combat damage" also prevents combat damage dealt to the creature (`PreventAllCombatDamageInvolving`, as Ophidian) | an assign-no-combat-damage flag |
 | 🟡 Sacellum Godspeaker | always reveals every power-5+ creature card in hand | a reveal-count choice |
 | 🟡 Blessed Alliance | the untap mode untaps one target creature, not "up to two" | a multi-slot mode inside `ChooseModesCast` |
 | 🟡 Vedalken Squirrel-Whacker | the d6 exchange is never asked: every seat (a human's too) takes the headless rule — a 1 or 2 traded for a base stat of 5+ — inside `roll_one_die` | a seat-routed ask outside an effect |
