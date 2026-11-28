@@ -4416,8 +4416,8 @@ pub fn circle_of_power() -> CardDefinition {
 }
 
 /// Unexpected Request — {2}{R} Sorcery. Gain control of target creature until end
-/// of turn, untap it, and it gains haste. (The optional Equipment-attach rider
-/// is omitted.)
+/// of turn, untap it, and it gains haste. You may attach an Equipment you
+/// control to it; if you do, unattach it at the beginning of the next end step.
 pub fn unexpected_request() -> CardDefinition {
     CardDefinition {
         name: "Unexpected Request",
@@ -4437,6 +4437,25 @@ pub fn unexpected_request() -> CardDefinition {
                 what: Selector::Target(0),
                 keyword: Keyword::Haste,
                 duration: Duration::EndOfTurn,
+            },
+            Effect::MayDo {
+                description: "Attach an Equipment you control to it?".into(),
+                body: Box::new(Effect::ChooseOneAmong {
+                    what: Selector::EachPermanent(
+                        SelectionRequirement::HasArtifactSubtype(crate::card::ArtifactSubtype::Equipment)
+                            .and(SelectionRequirement::ControlledByYou),
+                    ),
+                    chooser: PlayerRef::You,
+                    chosen: Box::new(Effect::Seq(vec![
+                        Effect::Attach { what: Selector::SeparatedPile { chosen: true }, to: Selector::Target(0) },
+                        Effect::DelayUntilWithCapture {
+                            kind: crate::effect::DelayedTriggerKind::NextEndStep,
+                            capture: Selector::SeparatedPile { chosen: true },
+                            body: Box::new(Effect::Unattach { what: Selector::Target(0) }),
+                        },
+                    ])),
+                    other: Box::new(Effect::Noop),
+                }),
             },
         ]),
         ..Default::default()

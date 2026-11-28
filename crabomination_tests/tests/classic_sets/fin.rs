@@ -2424,6 +2424,31 @@ fn unexpected_request_steals_creature() {
     assert!(g.computed_permanent(foe).unwrap().keywords().contains(&Keyword::Haste), "gained haste");
 }
 
+/// Unexpected Request's rider: an Equipment you control goes onto the stolen
+/// creature, and comes off at the beginning of the next end step.
+#[test]
+fn unexpected_request_lends_an_equipment_until_the_end_step() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    g.step = TurnStep::PreCombatMain;
+    let foe = g.add_card_to_battlefield(1, catalog::grizzly_bears());
+    let axe = g.add_card_to_battlefield(0, catalog::bonesplitter());
+    let spell = g.add_card_to_hand(0, catalog::unexpected_request());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Red, 1);
+    g.players[0].mana_pool.add_colorless(2);
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    g.perform_action(GameAction::CastSpell {
+        card_id: spell, target: Some(Target::Permanent(foe)),
+        additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast Unexpected Request");
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, Some(foe), "lent the Equipment");
+    assert_eq!(g.computed_permanent(foe).unwrap().power, 4);
+    advance_to(&mut g, TurnStep::End);
+    drain_stack(&mut g);
+    assert_eq!(g.battlefield_find(axe).unwrap().attached_to, None, "unattached at the end step");
+}
+
 /// Resentful Revelation puts one of the top three into hand and the rest in the
 /// graveyard.
 #[test]
