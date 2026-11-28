@@ -20,6 +20,8 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [FIXED 2026-11-28 (Commander run, `01WRuXc6wB`) — seven residuals, four primitives](#fixed-2026-11-28-commander-run-01wruxc6wb--seven-residuals-four-primitives) | 18 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc6wB` found them (moved verbatim, 2026-11-28)](#the-commander-nexts-lines-as-01wruxc6wb-found-them-moved-verbatim-2026-11-28) | 9 |
 | Bugs & robustness | [FIXED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs](#fixed-2026-11-27-commander-run-01wruxc4b7--whtz-and-nine-legal-gap-pairs) | 14 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc4b7` found them (moved verbatim, 2026-11-27)](#the-commander-nexts-lines-as-01wruxc4b7-found-them-moved-verbatim-2026-11-27) | 9 |
 | Bugs & robustness | [FIXED/OPEN 2026-11-27 (Commander run, `01WRuXc6sk`) — 39 Star Trek seats, six primitives](#fixedopen-2026-11-27-commander-run-01wruxc6sk--39-star-trek-seats-six-primitives) | 18 |
@@ -613,6 +615,37 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED 2026-11-28 (Commander run, `01WRuXc6wB`) — seven residuals, four primitives
+
+No seats. Clean decks 5,601 → 5,623 (`pod_residuals.py --summary`).
+- ✅ `AbilityCostChoice::Blight` / `::BounceOther` (`game/blight_cost.rs::pose_ability_cost_pick`): a prompting seat picks
+  the Blight creature (CR 701.68a) and a one-permanent "return a [filter] you control" cost (CR 602.5b). Bots keep the
+  auto-pick, so traces don't move. Closes Zareth San; half of Dawnhand Dissident (its cast drain is the other half).
+- ✅ `Effect::IfCountersPut { body, kind, at_least, then }`: counts the `CounterAdded` events `body` pushed (Guinan).
+- ✅ `Player.drew_in_own_draw_step` (Reed Richards: a skipped draw step excepts nothing).
+- ✅ **Bug class: entry tallies.** A resolving Vehicle spell (`entry_tally.rs`) never bumped
+  `mounts_vehicles_entered_this_turn` (Cloudspire Coordinator). `tally_kind_entry` is now the one subtype tally all three
+  entry routes call; `equipment_spacecraft_entered_this_turn` + `Value::EquipmentSpacecraftEnteredThisTurn` (Sulu).
+- ✅ `GoadLasts::WhileYouControlSource` / `GoadHold::WhileSourceControlledBy` (Kang, CR 611.2b: ends for good).
+- ✅ `Effect::CopyExceptionAddTypes` (CR 707.9b, copy exceptions are copiable): Shore Leave Planet, Mirror of the Forebears.
+- Read, not changed: Hawkeye's reflexive modes, Kargan Intimidator's resolution-time mode (activation-time
+  `ChooseUnchosenModeThisTurn` is a project), Primal Surge's double ask (the prompting-seat path re-enters through
+  `MayDo`; dropping the "repeat?" needs the body's own suspend to resume the loop), Battletide's per-event prompt.
+- ⚠ `audit_decision_plumbing.py`'s one `DEAD` (`effects/mod.rs`, `GuessTopCardKind`) is a false positive: both arms
+  stay reachable on a `false` guess.
+
+## The Commander NEXT's lines as `01WRuXc6wB` found them (moved verbatim, 2026-11-28)
+
+1. ⚠ **Several sessions share this branch:** fetch before you start and before every push; rebase, never force; `cargo check -p crabomination_catalog` after each rebase. Seat numbers race: after a conflicted rebase, checkout `--ours` of `pod/decks.rs` + `pod/mod.rs`, re-run `scripts/seat_decks.py` on top of the other session's seats, run `cr_903_5a_target_decks_are_legal_commander_decks`. New seats go at the end of `target_decks()`. ⚠ `scripts/gen_factory_lists.py` rewrites all of `all_factories.rs` — append by hand. Claim a deck in ENGINE_BACKLOG (and push the claim) before writing its cards.
+2. ⚠ **One build at a time; `CARGO_INCREMENTAL=0`; never edit the tree while the suite or a release build compiles** (a mid-build edit fails it). Release 15 min here. Per-seat test over a batch: `CRAB_SEAT="<prefix>|<prefix>…" cargo nextest run -p crabomination --lib -E 'test(cr_903_5a_the_official_precon_seats_play_pod_games)' --run-ignored all`. The full suite skips that test (`-E 'not test(…)'`, 29,734 / 0 / 14 strict in ~8 min once built).
+3. **State (2026-11-27, `01WRuXc4b7`): 6,366 seats** — 6357-6366 this run (Whtz at 254 cards; six chooser pairs; three Doctor pairs; DECK_FEATURES). **Commander rules: every FEATURE_ROADMAP Commander-status row ✅**; new: Rulebreaker >100-card seat piloted, `Player.starting_deck_size`.
+4. **The smoke test is `--pod-random`** (`bot_ladder --commander --pod-random --seats N --games G --seed S`); `scripts/random_pods.sh` with `MIN=<first new seat>` fuzzes new seats. A failure prints `--pod-decks .. --first I --games 1`; `CRAB_CAP_DIAG=1` dumps a capped board.
+5. **Sweeps this run** (release): seeds 29636 × 3/4/5/6 × 150 + 29637-29641 × 2/3/4/5/6/8 × 500 = 15,600 games, 0 panics, 10 undecided (0.07 %: 7 CR 104.4a draws, 3 board caps); `random_pods.sh MIN=6357` 600 games, 0 hits. Gates: suite 29,734 / 0 / 14 strict, clippy 0 (workspace, 81 min cold), `--bench` byte-identical, callgrind +0.006 % (PERF `01WRuXc4b7`). **Next seed 29650.**
+6. **Next decks: the candidate lanes are dry.** The 70-page scan's legal singles are all seated; every gap pair left is a chooser-pair average mixing ≥ 2 extra colours (illegal; ENGINE_BACKLOG `01WRuXc4b7` has the check). Zero-gap pairs stay unseated by policy. New EDHREC commanders: rerun the fetch (recipe ENGINE_BACKLOG `01WRuXc3os`) after new sets.
+7. **Residual lane:** `scripts/pod_residuals.py --rank` — The One Ring (283 sole) is cube-frozen; then choice-exposure rows (Dawnhand Dissident 9, Hawkeye 8, Battletide Alchemist 8, Mikey & Don 6). Flying Drone closed (`cost_reduction_if_mana`). Reconnaissance Partition closed (any-kind counter cost: `remove_counter_among_filter`).
+8. **Gotchas:** a new `Effect` wrapper with a nested body must join `for_each_inner`; a beam-me-up card needs its `ALLOWED_MODELLING` flashback row. Graveyard-attached Auras are links (`effects/volute.rs`), not attachments. `audit_panics` 10 bare, triaged `01WRuXc4b7`: all are `expect`s on compiled-in data (`selfplay.rs` deck-policy parses), scripted blunder-puzzle fixtures (`server/blunder.rs`) or an env-var path (`honest.rs`) — none reachable from seeded play.
+9. **Earlier runs' NEXT lines** are in ENGINE_BACKLOG ("The Commander NEXT's lines as … found them", latest `01WRuXc4b7`).
+
 ## FIXED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs
 
 - ✅ Seats 6357-6366 (DECK_FEATURES has the list); 14 cards in `decks::cmdr_01wr4b_a`, tests `recent_b::cmdr_01wr4b_a`.
