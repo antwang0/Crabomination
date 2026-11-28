@@ -619,6 +619,32 @@ fn soulfire_grand_master_buys_back() {
     assert!(g.players[0].hand.iter().any(|c| c.id == s), "returned to hand");
 }
 
+/// Soulfire Grand Master's rider watches only a cast "from your hand": a
+/// flashback cast neither returns nor uses it up, so the next hand cast does.
+#[test]
+fn soulfire_grand_master_skips_a_cast_from_the_graveyard() {
+    let mut g = pod(2);
+    let sgm = ready(&mut g, 0, catalog::soulfire_grand_master());
+    flood(&mut g, 0);
+    g.priority.player_with_priority = 0;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: sgm, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("activate");
+    drain_stack(&mut g);
+    g.add_card_to_library(0, catalog::island());
+    let fb = g.add_card_to_graveyard(0, catalog::think_twice());
+    g.perform_action(GameAction::CastFlashback {
+        card_id: fb, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("flashback");
+    drain_stack(&mut g);
+    assert!(!g.players[0].hand.iter().any(|c| c.id == fb), "a flashback cast isn't caught");
+    let s = g.add_card_to_hand(0, catalog::lightning_strike());
+    cast(&mut g, s, &[Target::Player(1)]).expect("strike");
+    assert!(g.players[0].hand.iter().any(|c| c.id == s), "the hand cast still is");
+}
+
 /// March of Swirling Mist phases out up to X creatures.
 #[test]
 fn march_of_swirling_mist_phases_out() {

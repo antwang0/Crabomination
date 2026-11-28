@@ -2079,7 +2079,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Irencrag Feat~~ ✅ | stale row (checked 2026-10-24): `Effect::CapSpellsThisTurn` sets `spell_cap_this_turn` as the spell resolves; `irencrag_feat_allows_one_more_spell` | — |
 | ~~Ochre Jelly~~ ✅ | fixed 2026-10-24: the count is a `WithX` snapshot at death, and `DelayUntilWithCapture` now carries it to the end-step copy | — |
 | ~~Hooded Blightfang~~ ✅ | fixed 2026-10-24: `DealsDamage` (combat or not) gated on a planeswalker in slot 0; the noncombat funnel now fires it for planeswalker / battle hits | — |
-| 🟡 Soulfire Grand Master | the buyback rider catches the next instant or sorcery cast from any zone, not only from your hand, and rides a trigger | `Effect::OnYourNextInstantSorceryThisTurn` + `SpellReturnsToHandOnResolve` |
+| 🟡 Soulfire Grand Master | the buyback rider rides a delayed trigger (a Stifle on it leaves the spell to the graveyard); cast-from-hand only since 2026-11-28 | `Effect::OnYourNextSpellMatchingThisTurn { WasCastFromHand }` + `SpellReturnsToHandOnResolve` |
 | ~~Altar of the Wretched // Wretched Bonemass~~ ✅ | fixed 2026-10-24: twelve `SelfHasKeywordWhilePredicate` statics read the exiled crafting cards (protection, parametrized, is not copied) | — |
 | 🟡 The Creation of Avacyn | the tutored card is exiled face up (the face-down hiding isn't modelled) | `ZoneDest::ExileWithSourceStamp` |
 | 🟡 Magar of the Magic Strings | a snapshot reload rebuilds the face-down puppet as a plain 2/2 (as it does Missy's Cybermen) | the serde wire stores only `face_down_permanent` |

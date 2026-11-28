@@ -1053,8 +1053,8 @@ pub fn hinata_dawn_crowned() -> CardDefinition {
 
 /// Soulfire Grand Master — {1}{W} 2/2 Human Monk, lifelink. Instant and
 /// sorcery spells you control have lifelink. {2}{U/R}{U/R}: the next instant
-/// or sorcery spell you cast this turn returns to your hand as it resolves
-/// (from any zone, not only your hand — INCOMPLETE_CARDS).
+/// or sorcery spell you cast from your hand this turn returns to your hand as
+/// it resolves (stamped by a delayed trigger — INCOMPLETE_CARDS).
 pub fn soulfire_grand_master() -> CardDefinition {
     let ur = || hybrid(Color::Blue, Color::Red);
     CardDefinition {
@@ -1065,7 +1065,8 @@ pub fn soulfire_grand_master() -> CardDefinition {
         }],
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(2), ur(), ur()]),
-            effect: Effect::OnYourNextInstantSorceryThisTurn {
+            effect: Effect::OnYourNextSpellMatchingThisTurn {
+                filter: R::HasCardType(CardType::Instant).or(R::HasCardType(CardType::Sorcery)).and(R::WasCastFromHand),
                 body: Box::new(Effect::SpellReturnsToHandOnResolve { what: Selector::TriggerSource }),
             },
             ..Default::default()
