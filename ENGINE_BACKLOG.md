@@ -619,6 +619,43 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED 2026-11-28 (Commander run, `01WRuXc2ke`) — a dead Aura trigger, seven residuals, no seats
+
+No seats. Clean decks 5,651 → 5,666 / 6,366 (`pod_residuals.py --summary`).
+- ✅ **Bug: `EventScope::EnchantedBySource` had no `AttackerWentUnblocked` arm**, so "whenever enchanted creature
+  attacks and isn't blocked" never fired (Farrel's Mantle, the only such Aura). The Mantle now grants
+  `DealsNoCombatDamage` for the turn instead of preventing combat damage both ways. Class check: every kind the
+  catalog pairs with `EnchantedBySource` (16) has an arm or a dedicated path; `DealsDamage` (Spirit Link, Guilty
+  Conscience) rides the damage path — pinned by `leg4::enchanted_deals_damage_triggers_read_the_hosts_damage`.
+- ✅ CR 603.2c Leyline of Combustion: "you and/or at least one permanent you control" is one trigger per targeting
+  announcement (`once_per_batch`); Twin Bolt at you and your bear burned its caster 4. Leovold / Rayne stay per target.
+- ✅ Primal Prayers' "as though it had flash": `EnergyAlternativeCostForFilter { flash }` (serde-default) → the
+  alt cost's `flash`.
+- ✅ Evelyn, the Covetous: `MayPlayDuration::WhileSourceOnBattlefield { counts_lands }` — a land played through the
+  grant spends the turn's one card (and a spell parks the lands). Hedonist's Trove keeps live land grants.
+- ✅ Nimble Hobbit: declining the Food offers {2}{W} (`MaySacrifice.else_`). Tyrannical Pitlord: a stolen chosen
+  creature isn't sacrificed (CR 701.21a). Unexpected Request: the Equipment-attach rider, unattached at the next end step.
+- Stale rows / docs closed: Kotose (already one card ever via `OneCastAmongGranted`), Game Plan (assist is wired),
+  Liberating Combustion (its row now names `search_library_and_or_graveyard`'s no-choice approximation).
+- Seated then reverted (`f347b422e` / `552311654`): eight zero-gap pairs — Gilanra // Sakashima, Ellyn Harbreeze //
+  Inspiring Leader, Wyll // Far Traveler, Fifth Doctor // Jamie, Ninth Doctor // Adric, Kraum // Sengir, Fourteenth
+  Doctor // Nardole, Twelfth Doctor // Martha Jones. Legal (cr_903_5a) and 1,200 fuzzed pod games clean, but the
+  convention seats only decks a session's own cards close. ⚠ Vhal // Sword Coast Sailor reads 0-outside in a name-level
+  identity check yet fails CR 903.4 (Ley Weaver): the legality test is the gate.
+- Checked, not changed: the singles scan (`edhrec_scan_top.py`, 68 pages) lists 18 commander-only gaps — every one
+  Commander-illegal today (Unfinity, Secret Lair Dune / Marvel releasing 2026-11-30+, NAU / MDD 2027 spoilers). Rerun
+  after 2026-11-30 for the Dune Secret Lair commanders (Irulan, Paul, Jessica, Shaddam, Chani + Shai-Hulud).
+- Read, not changed (low value or frozen): Hide in Plain Sight (cube), Quantum Riddler's draw replacement (the
+  `fixed` bench pool's Goryo deck — a fix changes `--bench`), Kraven's simultaneous-death look-back (needs the batch in
+  the filter), Aragorn's per-batch kinds, Chief Montgomery Scott (an enters-with rider on `PutFromHandOntoBattlefield`
+  needs a field on 133 literals or a scratch wrapper — `pending_etb_counters` is the device).
+
+## The Commander NEXT's lines as `01WRuXc2ke` found them (moved verbatim, 2026-11-28)
+
+3. **State (2026-11-28, `01WRuXc6mu`): 6,366 seats, no new ones; 5,651 / 6,366 residual-free.** **Commander rules: every FEATURE_ROADMAP Commander-status row ✅.** This run: counter-drain picks for a prompting payer (`ResumeContext::ActionCounterPick` — Dawnhand Dissident, Hopeful Initiate), Lightmine Field / Rootweaver Druid / Soulfire / Reno and Rude real-play fixes, and a Rest in Peace bypass class (six bespoke mills; Grenzo deployed exiled cards) — ENGINE_BACKLOG `01WRuXc6mu`.
+5. **Sweeps this run** (release): seeds 29680-29683 × 2..8 × 1,000 on the start engine (19,200 games), 29684-29685 on `bc1221209` (12,000), 29700-29701 on the closing tip `986e9a9ad` (12,000) = 43,200 games, 0 panics, 25 undecided (0.058 %: 14 CR 104.4a draws, 11 board caps — token engines: Krenko + Cathars' Crusade hit 979 Goblins). Gates: suite 29,760 / 0 / 14 strict; clippy 0 (workspace `--exclude crabomination_client --all-targets`, 88 min cold); `--bench` 196,176 byte-identical, cube / sos / sealed identical (PERF `01WRuXc6mu`). **Next seed 29710.**
+6. **Next decks: the candidate lanes are dry** (unchanged from `01WRuXc4b7`; ENGINE_BACKLOG has the check). New EDHREC commanders: rerun the fetch (recipe ENGINE_BACKLOG `01WRuXc3os`) after new sets.
+7. **Residual lane:** `scripts/pod_residuals.py --rank` — The One Ring (cube-frozen); Hawkeye 8, Battletide Alchemist 8, Mikey & Don 6 are choice-exposure rows (the bot plays them sensibly). Real-play gaps hide in rows that look like UI asks and in stale docs (Huatli's was): read the card body, then test before fixing. Open shapes: Quilled Greatwurm / Falco Spara's casting-hop counter drain (no `ActionCounterPick` yet), Chief Montgomery Scott's counters a beat late (no "enters with" on `PutFromHandOntoBattlefield`).
 ## FIXED 2026-11-28 (Commander run, `01WRuXc6mu`) — counter-drain picks, five real-play residuals, a Rest in Peace bypass class
 
 - ✅ **"Remove N counters from among creatures you control" is the payer's choice** (CR 601.2b / 602.2b):

@@ -34,6 +34,8 @@ name a gap, with the cards; a deck absent from the table carries none.
 Snapshot 2026-10-07 (Commander routine, 183/183; 179 at the 2026-10-06 routine; 169 at `01CyDrsA`; 162 at `01G3AuwS` — the scan now also counts open INCOMPLETE_CARDS rows; the scan also flags collapsed "may"s and resolution-picked targets). The per-deck narratives below predate the script — where
 they call a deck 🟡, the table wins.
 
+Commander run `01WRuXc2ke` (2026-11-28): **no new seats; residual-free decks 5,651 → 5,666 / 6,366** — closed Farrel's Mantle (its trigger never fired: an `EnchantedBySource` scope gap), Leyline of Combustion (once per spell), Primal Prayers (flash), Evelyn (a land is the turn's card), Nimble Hobbit, Tyrannical Pitlord, Unexpected Request; stale rows Kotose, Game Plan, Liberating Combustion. Eight zero-gap pairs were seated and reverted per convention (ENGINE_BACKLOG `01WRuXc2ke`).
+
 Commander run `01WRuXc6mu` (2026-11-28, concurrent with `01WRuXc4cX`): **no new seats; residual-free decks 5,651 / 6,366** — closed Dawnhand Dissident's counter picks (with Hopeful Initiate's), Lightmine Field, Rootweaver Druid (its land now enters under your control), Soulfire Grand Master's hand-only rider, Reno and Rude, and Huatli's stale row; a Rest in Peace bypass class (Grenzo, Charmed Pendant, Wand of Denial) (ENGINE_BACKLOG `01WRuXc6mu`).
 
 Commander run `01WRuXc4cX` (2026-11-28): **no new seats; residual-free decks 5,623 → 5,630 / 6,366** — closed Coveted Falcon (targeted opponent) and Suppressor Skyguard (this-combat shield); fixed Omen Machine / Maralen / Mornsong Aria's "can't draw" (CR 121.3) (ENGINE_BACKLOG `01WRuXc4cX`).

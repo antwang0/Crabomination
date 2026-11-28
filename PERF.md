@@ -3136,6 +3136,20 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-28 (Commander run, `01WRuXc2ke`) — guardrail; an Aura scope arm, a may-play park, an energy alt flag
+
+Touched shared paths: `EventScope::EnchantedBySource`'s match (one more pattern arm); a land play from exile (one
+`matches!` on its may-play duration); `park_source_bound_spell_grants` (the land test moved inside the grant read);
+the energy alternative cost (a `bool` copied onto the `AlternativeCost`). `release`, 4-core box, A = `c12a7ab08`
+(the run's first engine commit) vs B = `f347b422e` (the closing engine):
+
+```
+--bench          decisions 196,176 / 27.64 turns / 613.0 / 0 stalls — byte-identical (A and B); determinism ok;
+                 thread_determinism ok (3 vs 1)
+games_per_s      A 364.3 280.4 309.2 / B 329.8 269.9 364.4 (interleaved) — means 318.0 / 321.4, noise
+pools            --decks cube / sos / sealed --games 150 --seed 29700: identical A vs B
+```
+
 ### 2026-11-28 (Commander run, `01WRuXc6mu`) — guardrail; counter-drain picks, a YouAttack batch, search dests
 
 Touched shared paths: the activation's counter-drain pre-flight (one `manual_mana` read when the ability has a drain
