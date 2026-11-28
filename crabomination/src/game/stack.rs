@@ -5313,6 +5313,9 @@ impl GameState {
             if pl.cards_drawn_this_turn != 0 {
                 pl.cards_drawn_this_turn = 0;
             }
+            if pl.drew_in_own_draw_step {
+                pl.drew_in_own_draw_step = false;
+            }
             // The same "this turn" tallies, read at instant speed and in other
             // players' end steps (a Lorehold "a card left your graveyard this
             // turn" instant on an opponent's turn, revolt, morbid-style

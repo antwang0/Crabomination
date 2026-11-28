@@ -23343,16 +23343,15 @@ impl GameState {
             }
             // Reed Richards — the turn's first draw other than the drawer's
             // own draw-step draw becomes `count`. The draw has happened, so
-            // "first" is one qualifying draw on the counter.
-            let own_step_draw = if self.active_player_idx != p {
-                0
-            } else {
-                match self.step {
-                    crate::game::TurnStep::Untap | crate::game::TurnStep::Upkeep => 0,
-                    crate::game::TurnStep::Draw => self.players[p].cards_drawn_this_step.min(1),
-                    _ => 1,
-                }
-            };
+            // "first" is one qualifying draw on the counter; a skipped or
+            // empty draw step excludes nothing.
+            if self.active_player_idx == p
+                && self.step == crate::game::TurnStep::Draw
+                && !self.players[p].drew_in_own_draw_step
+            {
+                self.players[p].drew_in_own_draw_step = true;
+            }
+            let own_step_draw = self.players[p].drew_in_own_draw_step as u32;
             if self.players[p].cards_drawn_this_turn.saturating_sub(own_step_draw) == 1 {
                 let extra = self
                     .battlefield

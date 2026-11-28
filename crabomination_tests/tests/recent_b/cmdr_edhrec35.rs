@@ -87,11 +87,24 @@ fn reed_richards_first_extra_draw_is_four() {
     ready(&mut g, 0, catalog::reed_richards_smartest_man());
     // This turn's draw-step draw has happened.
     g.players[0].cards_drawn_this_turn = 1;
+    g.players[0].drew_in_own_draw_step = true;
     let opt = g.add_card_to_hand(0, catalog::opt());
     cast(&mut g, opt, &[]).expect("opt");
     assert_eq!(g.players[0].hand.len(), 4);
     let opt = g.add_card_to_hand(0, catalog::opt());
     cast(&mut g, opt, &[]).expect("opt");
     assert_eq!(g.players[0].hand.len(), 5, "only the first one each turn");
+}
+
+/// Reed Richards: a draw step that drew nothing (skipped) excepts nothing,
+/// so the turn's first draw, in the main phase, is still four.
+#[test]
+fn reed_richards_counts_a_skipped_draw_step() {
+    let mut g = pod(2);
+    library(&mut g, 0, 10);
+    ready(&mut g, 0, catalog::reed_richards_smartest_man());
+    let opt = g.add_card_to_hand(0, catalog::opt());
+    cast(&mut g, opt, &[]).expect("opt");
+    assert_eq!(g.players[0].hand.len(), 4);
 }
 

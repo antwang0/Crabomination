@@ -718,6 +718,11 @@ pub struct PlayerData {
     /// step" trigger gates (Orcish Bowmasters, CR 603.3).
     #[serde(default)]
     pub cards_drawn_this_step: u32,
+    /// Whether this player drew during their own draw step this turn, reset
+    /// with `cards_drawn_this_turn`: Reed Richards' "except the first card you
+    /// draw during each of your draw steps" when that step drew nothing.
+    #[serde(default)]
+    pub drew_in_own_draw_step: bool,
     /// Times a card left this graveyard this turn, reset in `do_untap`
     /// (Lorehold payoffs: Living History, Primary Research, Wilt in the
     /// Heat). Bumped by `move_card_to`'s `CardLeftGraveyard` emission.
@@ -1846,6 +1851,7 @@ impl Player {
             scry_batches_this_turn: 0,
             cards_drawn_this_turn: 0,
             cards_drawn_this_step: 0,
+            drew_in_own_draw_step: false,
             cards_left_graveyard_this_turn: 0,
             creature_cards_left_graveyard_this_turn: 0,
             creatures_died_this_turn: 0,
