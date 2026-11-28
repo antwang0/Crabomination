@@ -4,7 +4,7 @@ use crabomination::TurnStep;
 use crabomination::card::{CardId, CounterType, Keyword};
 use crabomination::catalog;
 use crabomination::decision::{DecisionAnswer, ScriptedDecider};
-use crabomination::game::types::Target;
+use crabomination::game::types::{StackItem, Target};
 use crabomination::game::*;
 use crabomination::game::{drain_stack, two_player_game};
 use crabomination::mana::Color;
@@ -307,6 +307,39 @@ fn coveted_falcon_reclaims_what_you_own() {
     g.battlefield_find_mut(stolen).unwrap().controller = 1;
     attack_with(&mut g, falcon);
     assert_eq!(g.battlefield_find(stolen).unwrap().controller, 0, "clawed back");
+}
+
+/// CR 115.1 — Coveted Falcon's unmasking "target opponent" is targeted: a
+/// hexproof opponent (Leyline of Sanctity) can't be the recipient, and it
+/// draws one card per permanent that changed control.
+#[test]
+fn cr_115_1_coveted_falcon_targets_its_opponent() {
+    for shrouded in [1usize, 2] {
+        let mut g = multi_player_game(3);
+        g.active_player_idx = 0;
+        g.step = TurnStep::PreCombatMain;
+        g.priority.player_with_priority = 0;
+        g.add_card_to_battlefield(shrouded, catalog::leyline_of_sanctity());
+        let falcon = g.add_card_to_battlefield(0, catalog::coveted_falcon());
+        g.battlefield_find_mut(falcon).unwrap().turn_face_down();
+        let bears = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+        for _ in 0..3 {
+            g.add_card_to_library(0, catalog::island());
+        }
+        g.players[0].mana_pool.add(Color::Blue, 1);
+        g.players[0].mana_pool.add_colorless(1);
+        let hand = g.players[0].hand.len();
+        g.perform_action(GameAction::TurnFaceUp { card_id: falcon }).expect("disguise");
+        let picked = g.stack.iter().find_map(|it| match it {
+            StackItem::Trigger { source, target: Some(Target::Player(p)), .. } if *source == falcon => Some(*p),
+            _ => None,
+        });
+        assert_eq!(picked, Some(3 - shrouded), "the hexproof seat {shrouded} isn't a legal target");
+        drain_stack(&mut g);
+        let given = [falcon, bears].iter().filter(|id| g.battlefield_find(**id).unwrap().controller != 0).count();
+        assert!([falcon, bears].iter().all(|id| g.battlefield_find(*id).unwrap().controller != shrouded));
+        assert_eq!(g.players[0].hand.len(), hand + given, "one draw per permanent handed over");
+    }
 }
 
 /// Yarus returns a dead face-down creature and flips it face up.

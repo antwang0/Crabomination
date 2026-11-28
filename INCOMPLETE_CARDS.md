@@ -2142,7 +2142,6 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Obsidian Battle-Axe | the attach offer fires only for Warriors entering under your control (attaching to an opponent's is legal, never wanted) | `EventScope::YourControl` + `MayDo(Attach)` |
 | ~~Planar Atlas~~ ✅ | fixed 2026-10-28: an optional look that keeps up to one LAND on top (`LookPick { pick_filter: Land, keep_on_top }`), the rest bottomed at random | — |
 | 🟡 Portal Manipulator | the player and the attackers are picked as the trigger resolves, not targeted as it triggers; every attack on you that you could redirect moves (CR 115.1) | `AttackersNowAttackChosenPlayer` |
-| 🟡 Coveted Falcon | the turned-face-up "target opponent" is the most hostile opponent, not a target (no ward/hexproof check) | `ApplyToTargets` rebinds every slot to the permanents, so the player has no slot; `GainControl { to: HostileOpponent }` |
 | ~~Tetsuo, Imperial Champion~~ ✅ | fixed 2026-10-30: N is the greatest mana value among attached *Equipment* (`MatchingAmong` over `AttachedToMe`), so an Aura no longer counts | — |
 | 🟡 Wicked Slumber | with two targets the two stun counters go one each; "both on either" isn't offered | `ApplyToTargets` + `If(count(AllTargets) <= 1)` |
 | 🟡 Arc Spitter | the granted ping may also aim at a creature the wearer is blocking, not only one blocking it | `R::BlockingOrBlockedBySource` |

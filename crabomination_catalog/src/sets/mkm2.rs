@@ -422,8 +422,8 @@ pub fn hustle_bustle() -> CardDefinition {
 }
 
 /// Coveted Falcon — {1}{U}{U} 1/4 flier with disguise {1}{U}. Attacking claws
-/// back a permanent you own but don't control; unmasking it hands an opponent
-/// up to three of your permanents and draws that many.
+/// back a permanent you own but don't control; unmasking it hands a target
+/// opponent up to eight target permanents you control and draws that many.
 pub fn coveted_falcon() -> CardDefinition {
     CardDefinition {
         card_types: vec![CardType::Artifact, CardType::Creature],
@@ -436,18 +436,37 @@ pub fn coveted_falcon() -> CardDefinition {
             }),
             TriggeredAbility {
                 event: EventSpec::new(EventKind::TurnedFaceUp, EventScope::SelfSource),
-                effect: Effect::ApplyToTargets {
-                    min_targets: 0,
-                    max_targets: 3,
-                    filter: R::Permanent.and(R::ControlledByYou).and(R::OtherThanSource),
-                    effect: Box::new(Effect::Seq(vec![
-                        Effect::GainControl {
-                            what: target_n(0),
-                            to: Some(PlayerRef::HostileOpponent),
-                            duration: Duration::Permanent,
-                        },
-                        draw(1),
-                    ])),
+                // Slot 0 is the target opponent (CR 115.1: ward / hexproof
+                // apply); slots 1..=8 are the optional permanents.
+                effect: Effect::OptionalTargets {
+                    min: 1,
+                    body: Box::new(Effect::Seq(
+                        (1u8..=8)
+                            .flat_map(|slot| {
+                                [
+                                    Effect::GainControl {
+                                        what: Selector::TargetFiltered {
+                                            slot,
+                                            filter: R::Permanent.and(R::ControlledByYou),
+                                        },
+                                        to: Some(PlayerRef::ControllerOf(Box::new(target_filtered(
+                                            R::OpponentPlayer,
+                                        )))),
+                                        duration: Duration::Permanent,
+                                    },
+                                    // "for each one they gained control of this way"
+                                    Effect::If {
+                                        cond: Predicate::EntityMatches {
+                                            what: Selector::Target(slot),
+                                            filter: R::ControlledByOpponent,
+                                        },
+                                        then: Box::new(draw(1)),
+                                        else_: Box::new(Effect::Noop),
+                                    },
+                                ]
+                            })
+                            .collect(),
+                    )),
                 },
             },
         ],
