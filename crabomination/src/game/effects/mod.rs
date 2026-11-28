@@ -20563,6 +20563,19 @@ impl GameState {
                 Ok(())
             }
 
+            Effect::IfCountersPut { body, kind, at_least, then } => {
+                let mark = events.len();
+                self.run_effect(body, ctx, events)?;
+                let put: u32 = events[mark..]
+                    .iter()
+                    .filter_map(|e| match e {
+                        GameEvent::CounterAdded { counter_type, count, .. } if counter_type == kind => Some(*count),
+                        _ => None,
+                    })
+                    .sum();
+                if put >= *at_least { self.run_effect(then, ctx, events) } else { Ok(()) }
+            }
+
             Effect::BlightThen { n, then } => {
                 let Some(blighted) = self.blight(n, ctx, events, effect)? else { return Ok(()) };
                 self.scratch.last_moved_cards = vec![blighted];

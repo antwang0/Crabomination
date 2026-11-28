@@ -7947,6 +7947,10 @@ pub enum Effect {
     /// counters, reading it as `Selector::LastMoved` (Grub, Notorious
     /// Auntie's attacking copy of the blighted creature).
     BlightThen { n: Value, then: Box<Effect> },
+    /// "[body]. If you put `at_least` or more `kind` counters on permanents
+    /// this way, [then]" — counts the placements `body` made, after
+    /// replacement (Guinan, Ancient Advisor; CR 614.16 doubling counts).
+    IfCountersPut { body: Box<Effect>, kind: CounterType, at_least: u32, then: Box<Effect> },
     /// CR 701.66 — *earthbend N*: target land you control becomes a 0/0 land
     /// creature with haste (in addition to its other types) and gets N +1/+1
     /// counters; a delayed trigger returns it tapped when it dies or is exiled.

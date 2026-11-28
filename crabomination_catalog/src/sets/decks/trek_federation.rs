@@ -276,21 +276,19 @@ pub fn ezri_dax_newly_joined() -> CardDefinition {
 
 /// Guinan, Ancient Advisor — {2}{W} legendary 1/4 El-Aurian Advisor. {1}, {T}:
 /// a +1/+1 counter on each creature you control that entered this turn; two
-/// or more counters placed draws a card.
+/// or more counters placed (doublers count) draws a card.
 pub fn guinan_ancient_advisor() -> CardDefinition {
     let entered = || R::Creature.and(R::ControlledByYou).and(R::EnteredThisTurn);
     CardDefinition {
         activated_abilities: vec![ActivatedAbility {
             mana_cost: cost(&[generic(1)]),
             tap_cost: true,
-            effect: Effect::Seq(vec![
-                counters(Selector::EachPermanent(entered()), CounterType::PlusOnePlusOne, 1),
-                Effect::If {
-                    cond: Predicate::SelectorCountAtLeast { sel: Selector::EachPermanent(entered()), n: Value::Const(2) },
-                    then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
-                    else_: Box::new(Effect::Noop),
-                },
-            ]),
+            effect: Effect::IfCountersPut {
+                body: Box::new(counters(Selector::EachPermanent(entered()), CounterType::PlusOnePlusOne, 1)),
+                kind: CounterType::PlusOnePlusOne,
+                at_least: 2,
+                then: Box::new(Effect::Draw { who: Selector::You, amount: Value::ONE }),
+            },
             ..Default::default()
         }],
         ..legend(

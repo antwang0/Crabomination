@@ -394,6 +394,10 @@ impl Effect {
             Effect::SecretCouncilPermanentVote { per_vote, .. } => f(per_vote),
             Effect::EnlistThen { then } => f(then),
             Effect::BlightThen { then, .. } => f(then),
+            Effect::IfCountersPut { body, then, .. } => {
+                f(body);
+                f(then);
+            }
             Effect::ReattachPlayerAurasToOpponents { then: Some(then), .. } => f(then),
             // Magar's puppet's on-hit body runs later, under the puppet.
             Effect::PutFaceDownAsNotedSpell { on_hit, .. } => f(on_hit),
@@ -919,6 +923,7 @@ impl Effect {
             | Effect::ChooseOpponentThen { then }
             | Effect::ChooseOpponentLedBy { then, .. } => then.requires_target(),
             Effect::AsPlayer { who, body } => player_has_target(who) || body.requires_target(),
+            Effect::IfCountersPut { body, then, .. } => body.requires_target() || then.requires_target(),
             Effect::DealDamageToPlayerOrPlaneswalker { who, .. } => player_has_target(who),
             Effect::LoseUnspentMana { who } => player_has_target(who),
             Effect::SetArtifactSubtypes { what, .. } | Effect::BecomeArtifactSubtypesFor { what, .. } => sel_has_target(what),

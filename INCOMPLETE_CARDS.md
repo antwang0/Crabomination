@@ -2296,7 +2296,7 @@ The three TRC precons (seats 6094-6096, `decks::trek_federation` / `trek_klingon
 
 | Card | Printed | Approximation |
 |---|---|---|
-| 🟡 Guinan, Ancient Advisor | draws "if you put two or more +1/+1 counters" | draws when two or more of your creatures entered this turn — differs only when a counter can't be placed |
+| ~~Guinan, Ancient Advisor~~ ✅ | fixed 2026-11-28: the draw counts the counters the ability put (`Effect::IfCountersPut`; doublers and Solemnity count) — `guinan_counts_the_counters_actually_put` | — |
 | 🟡 Cmdr. Troi, Outgoing Empath | the opponent's free spell is copied | a UI opponent whose target pick parks the cast loses the copy rider (`PlayerMayCastFromHandFree`); headless seats are exact |
 | 🟡 Right of Vengeance | "whenever a creature deals combat damage to you" | a creature's damage to you during a combat damage step (a this-turn emblem can't hear the combat path's own `DealsCombatDamageToPlayer`), so a creature's noncombat ping in that step also triggers it |
 | 🟡 Kang, Suspicious Captain | goaded "for as long as you control Kang" | held while Kang is on the battlefield (`GoadLasts::WhileSourceOnBattlefield`) — differs only if Kang changes control |

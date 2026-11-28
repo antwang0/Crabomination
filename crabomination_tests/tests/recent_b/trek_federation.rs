@@ -298,6 +298,37 @@ fn guinan_rewards_creatures_that_entered_this_turn() {
     assert_eq!(g.players[0].hand.len(), hand + 1, "two counters: draw");
 }
 
+/// Guinan counts counters, not creatures (CR 614.16 — a modified placement
+/// is still "put this way"): Hardened Scales makes one entered creature's
+/// counter two, which draws; Solemnity lets none be put on two, which doesn't.
+#[test]
+fn guinan_counts_the_counters_actually_put() {
+    let mut g = pod(2);
+    let guinan = ready(&mut g, 0, catalog::guinan_ancient_advisor());
+    g.battlefield_find_mut(guinan).unwrap().entered_turn = None;
+    g.add_card_to_battlefield(0, catalog::hardened_scales());
+    let a = g.add_card_to_battlefield(0, catalog::savannah_lions());
+    g.battlefield_find_mut(a).unwrap().entered_turn = Some(g.turn_number);
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    activate(&mut g, guinan, 0, None).expect("activate");
+    assert_eq!(counters(&g, a, CounterType::PlusOnePlusOne), 2);
+    assert_eq!(g.players[0].hand.len(), hand + 1, "one creature, two counters: draw");
+
+    let mut g = pod(2);
+    let guinan = ready(&mut g, 0, catalog::guinan_ancient_advisor());
+    g.battlefield_find_mut(guinan).unwrap().entered_turn = None;
+    g.add_card_to_battlefield(1, catalog::solemnity());
+    for _ in 0..2 {
+        let c = g.add_card_to_battlefield(0, catalog::savannah_lions());
+        g.battlefield_find_mut(c).unwrap().entered_turn = Some(g.turn_number);
+    }
+    flood(&mut g, 0);
+    let hand = g.players[0].hand.len();
+    activate(&mut g, guinan, 0, None).expect("activate");
+    assert_eq!(g.players[0].hand.len(), hand, "two creatures, no counters: no draw");
+}
+
 /// Reg Barclay's copy is a hasty, nonlegendary Illusion artifact (CR 707.9b)
 /// and is exiled at the next end step.
 #[test]
