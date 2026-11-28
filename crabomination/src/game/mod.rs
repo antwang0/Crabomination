@@ -2792,6 +2792,14 @@ pub struct ResolutionScratch {
     /// Equipment from [this]" (`unattach_equipment_cost` — Captain America).
     #[serde(skip, default)]
     pub(crate) pending_ability_unattach: Option<CardId>,
+    /// Transient sibling of [`pending_ability_sac_other`] for a `blight_cost`
+    /// creature the activator chose (CR 701.68a).
+    #[serde(skip, default)]
+    pub(crate) pending_ability_blight: Option<CardId>,
+    /// Transient sibling of [`pending_ability_sac_other`] for a one-permanent
+    /// `bounce_other_filter` the activator chose.
+    #[serde(skip, default)]
+    pub(crate) pending_ability_bounce_other: Option<CardId>,
     /// Transient sibling of [`pending_ability_sac_other`] for "Put a [filter]
     /// card exiled with this into its owner's graveyard" (Shelob).
     #[serde(skip, default)]
@@ -30183,6 +30191,17 @@ impl GameState {
                         // `activate_ability` re-checks it is still attached.
                         self.scratch.pending_ability_unattach = Some(id);
                     }
+                    K::Blight | K::BounceOther => {
+                        let DecisionAnswer::Target(Target::Permanent(id)) = answer else {
+                            return Err(GameError::DecisionAnswerMismatch);
+                        };
+                        // `activate_ability` re-checks the pick is a legal one.
+                        if matches!(kind, K::Blight) {
+                            self.scratch.pending_ability_blight = Some(id);
+                        } else {
+                            self.scratch.pending_ability_bounce_other = Some(id);
+                        }
+                    }
                     K::Discard => {
                         let DecisionAnswer::Cards(ids) = answer else {
                             return Err(GameError::DecisionAnswerMismatch);
@@ -30301,6 +30320,8 @@ impl GameState {
         if self.scratch.pending_ability_unattach.is_some() {
             self.scratch.pending_ability_unattach = None;
         }
+        clear_opt_scratch!(self.pending_ability_blight);
+        clear_opt_scratch!(self.pending_ability_bounce_other);
         r
     }
 

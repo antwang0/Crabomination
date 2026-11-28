@@ -21832,6 +21832,8 @@ impl GameState {
         let chosen_sac_any = take_opt_scratch!(self.pending_ability_sac_any);
         let chosen_exile_permanent = take_opt_scratch!(self.pending_ability_exile_permanent);
         let chosen_unattach = take_opt_scratch!(self.pending_ability_unattach);
+        let chosen_blight = take_opt_scratch!(self.pending_ability_blight);
+        let chosen_bounce_other = take_opt_scratch!(self.pending_ability_bounce_other);
         let chosen_exiled_with = take_opt_scratch!(self.pending_ability_exiled_with);
         let chosen_discard = take_opt_scratch!(self.pending_ability_discard);
         // CR 601.2g float-spend choice (None until answered; consumed up front
@@ -23663,7 +23665,7 @@ impl GameState {
         // control to its owner's hand:"). Confirm `count` battlefield
         // permanents (other than the source) the activator controls match the
         // filter; auto-pick the lowest-power match. Quirion Ranger, Wirewood
-        // Symbiote. (No interactive picker yet — bots/auto only.)
+        // Symbiote.
         let bounce_other_picks: Vec<CardId> = if let Some((filter, count)) =
             ability.bounce_other_filter.as_ref()
         {
@@ -23678,7 +23680,26 @@ impl GameState {
             if candidates.len() < count {
                 return Err(GameError::SelectionRequirementViolated);
             }
-            self.auto_pick_lowest_power(&candidates, count)
+            // CR 602.5b — the activator chooses; a prompting seat with a real
+            // one-permanent choice is asked (`AbilityCostChoice::BounceOther`).
+            if let Some(id) = chosen_bounce_other.filter(|id| count == 1 && candidates.contains(id)) {
+                vec![id]
+            } else if count == 1 && candidates.len() > 1 && self.players[p].manual_mana {
+                self.pose_ability_cost_pick(
+                    p,
+                    card_id,
+                    ability_index,
+                    target,
+                    &additional_targets,
+                    x_value,
+                    candidates,
+                    "choose a permanent to return to its owner's hand (cost)".into(),
+                    crate::game::types::AbilityCostChoice::BounceOther,
+                );
+                return Ok(());
+            } else {
+                self.auto_pick_lowest_power(&candidates, count)
+            }
         } else {
             Vec::new()
         };
@@ -23999,10 +24020,35 @@ impl GameState {
             }
         }
 
-        // CR 701.68 — a blight cost needs a creature to put the counters on.
-        if ability.blight_cost > 0 && !self.can_pay_blight(p) {
-            return Err(GameError::SelectionRequirementViolated);
-        }
+        // CR 701.68 — a blight cost needs a creature to put the counters on;
+        // CR 701.68a — the activator chooses it, so a prompting seat with a
+        // real choice is asked (`AbilityCostChoice::Blight`).
+        let blight_pick: Option<CardId> = if ability.blight_cost > 0 {
+            let cands = self.blight_candidates(p);
+            if cands.is_empty() {
+                return Err(GameError::SelectionRequirementViolated);
+            }
+            if let Some(id) = chosen_blight.filter(|id| cands.contains(id)) {
+                Some(id)
+            } else if cands.len() > 1 && self.players[p].manual_mana {
+                self.pose_ability_cost_pick(
+                    p,
+                    card_id,
+                    ability_index,
+                    target,
+                    &additional_targets,
+                    x_value,
+                    cands,
+                    format!("blight {}: choose a creature you control (cost)", ability.blight_cost),
+                    crate::game::types::AbilityCostChoice::Blight,
+                );
+                return Ok(());
+            } else {
+                None
+            }
+        } else {
+            None
+        };
 
         // Pre-flight remove-counters-from-among gate (Hopeful Initiate): the
         // matching permanents you control must together carry `count` counters.
@@ -25372,7 +25418,7 @@ impl GameState {
 
         // CR 701.68 — Blight N (`game/blight_cost.rs`), pre-flight checked.
         if ability.blight_cost > 0 {
-            self.pay_blight(p, ability.blight_cost, events);
+            self.pay_blight(p, ability.blight_cost, blight_pick, events);
         }
 
         // CR 701.43a — "Exert this creature" as a cost.

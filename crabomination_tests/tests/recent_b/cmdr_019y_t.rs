@@ -92,6 +92,50 @@ fn dawnhand_dissident_blights_itself_to_surveil() {
     assert_eq!(minus(&g, dd), 1);
 }
 
+/// CR 701.68a — the blighting player chooses the creature: a prompting seat
+/// is asked for a Blight cost (the auto-pick would spare the 1/2 Dissident
+/// and blight the 3/3), and its answer is the one that takes the counter.
+#[test]
+fn dawnhand_dissident_asks_a_prompting_seat_which_creature_to_blight() {
+    let mut g = pod(2);
+    g.players[0].manual_mana = true;
+    let dd = ready(&mut g, 0, catalog::dawnhand_dissident());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: dd, ability_index: 0, target: None, additional_targets: vec![], x_value: None, mode: None,
+    })
+    .expect("suspends for the pick");
+    assert!(g.pending_decision.is_some(), "asked which creature to blight");
+    assert!(!g.battlefield_find(dd).unwrap().tapped, "nothing paid before the answer");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(dd)))).expect("answer");
+    drain_stack(&mut g);
+    assert_eq!((minus(&g, dd), minus(&g, giant)), (1, 0), "the chosen creature took it");
+    assert!(g.battlefield_find(dd).unwrap().tapped, "{{T}} paid with it");
+}
+
+/// CR 602.5b — "Return a Forest you control to its owner's hand:" is the
+/// activator's pick; a prompting seat chooses which Forest goes (Quirion
+/// Ranger; Zareth San's returned Rogue shares the cost).
+#[test]
+fn a_bounce_another_cost_asks_a_prompting_seat_which_permanent() {
+    let mut g = pod(2);
+    g.players[0].manual_mana = true;
+    let f1 = g.add_card_to_battlefield(0, catalog::forest());
+    let f2 = g.add_card_to_battlefield(0, catalog::forest());
+    let ranger = ready(&mut g, 0, catalog::quirion_ranger());
+    g.battlefield_find_mut(ranger).unwrap().tapped = true;
+    g.perform_action(GameAction::ActivateAbility {
+        card_id: ranger, ability_index: 0, target: Some(Target::Permanent(ranger)), additional_targets: vec![],
+        x_value: None, mode: None,
+    })
+    .expect("suspends for the pick");
+    assert!(g.pending_decision.is_some(), "asked which Forest to return");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(f2)))).expect("answer");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(f1).is_some() && g.battlefield_find(f2).is_none(), "the chosen Forest went");
+    assert!(!g.battlefield_find(ranger).unwrap().tapped, "the ability resolved");
+}
+
 /// CR 903.4 / 106.1 — Cryptic Spires makes only its circled colors, which
 /// for a two-color Commander deck are its commander's identity (Siani and
 /// Yoshimaru: white and blue); it enters tapped, and it is colorless for

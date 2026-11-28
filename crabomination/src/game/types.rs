@@ -1696,6 +1696,12 @@ pub enum AbilityCostChoice {
     /// card, Fauna Shaman's creature card). Answered as `Cards`; a seat that
     /// isn't asked still discards the cheapest matches.
     Discard,
+    /// `blight_cost` — CR 701.68a: the activator chooses the creature that
+    /// takes the -1/-1 counters. Answered as a battlefield `Target`.
+    Blight,
+    /// `bounce_other_filter` with a count of one — "Return a [filter] you
+    /// control to its owner's hand:" (Zareth San). A battlefield `Target`.
+    BounceOther,
 }
 
 impl ResumeContext {

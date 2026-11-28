@@ -823,8 +823,7 @@ pub fn hawkeye_master_marksman() -> CardDefinition {
 /// attacking (a ninjutsu-shaped ability that isn't ninjutsu, so ninjutsu
 /// reducers skip it; you choose the defender, CR 508.4). Combat damage to a
 /// player: you may put target permanent card from their graveyard onto the
-/// battlefield under your control. Approximation: the returned Rogue is
-/// auto-picked. (Krydle of Baldur's Gate.)
+/// battlefield under your control. (Krydle of Baldur's Gate.)
 pub fn zareth_san_the_trickster() -> CardDefinition {
     CardDefinition {
         keywords: vec![Keyword::Flash],
