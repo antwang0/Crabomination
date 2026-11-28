@@ -723,6 +723,31 @@ fn leyline_of_combustion_burns_whoever_targets_you() {
     assert_eq!((g.players[0].life, g.players[1].life), (mine - 3, theirs - 2));
 }
 
+/// Leyline of Combustion: "you and/or at least one permanent you control"
+/// becoming the target of one spell is one trigger — Twin Bolt aimed at you
+/// and your bear costs its caster 2, not 4.
+#[test]
+fn leyline_of_combustion_fires_once_per_spell_not_per_target() {
+    let mut g = pod(2);
+    g.add_card_to_battlefield(0, catalog::leyline_of_combustion());
+    let bear = g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    g.active_player_idx = 1;
+    g.priority.player_with_priority = 1;
+    let bolt = g.add_card_to_hand(1, catalog::twin_bolt());
+    g.players[1].mana_pool.add(Color::Red, 2);
+    let theirs = g.players[1].life;
+    g.perform_action(GameAction::CastSpell {
+        card_id: bolt,
+        target: Some(Target::Player(0)),
+        additional_targets: vec![Target::Permanent(bear)],
+        mode: None,
+        x_value: None,
+    })
+    .expect("twin bolt");
+    drain_stack(&mut g);
+    assert_eq!(g.players[1].life, theirs - 2);
+}
+
 /// The Madcap Jester: its attack exiles each opponent's top card, and since
 /// its own ability did it, Jester's controller may play each. Bitter Ordeal
 /// (searching an opponent's library — CR 400.7, the search now announces the

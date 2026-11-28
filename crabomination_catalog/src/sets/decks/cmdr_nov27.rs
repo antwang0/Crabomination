@@ -230,7 +230,7 @@ pub fn leyline_of_combustion() -> CardDefinition {
         cost: cost(&[generic(2), r(), r()]),
         card_types: vec![CardType::Enchantment],
         triggered_abilities: vec![TriggeredAbility {
-            event: EventSpec::new(EventKind::BecameTarget, EventScope::YouOrYourPermanentTargetedByOpponent),
+            event: EventSpec::new(EventKind::BecameTarget, EventScope::YouOrYourPermanentTargetedByOpponent).once_per_batch(),
             effect: Effect::DealDamage { to: Selector::Player(PlayerRef::TriggerEventPlayer), amount: Value::Const(2) },
         }],
         ..Default::default()
