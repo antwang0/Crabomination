@@ -215,3 +215,31 @@ fn spare_supplies_draws_twice() {
     activate(&mut g, ss, 0, None).expect("sac");
     assert_eq!(g.players[0].hand.len(), hand + 1);
 }
+
+/// CR 601.2c / 606.6 — Huatli, Warrior Poet's −X "up to five target
+/// creatures": a prompting seat names each target past the first, then
+/// divides the X damage among them.
+#[test]
+fn huatli_warrior_poet_asks_a_prompting_seat_for_each_target() {
+    use crabomination::card::Keyword;
+    let mut g = pod(2);
+    let h = ready(&mut g, 0, catalog::huatli_warrior_poet());
+    g.battlefield_find_mut(h).unwrap().add_counters(CounterType::Loyalty, 2);
+    let a = ready(&mut g, 1, catalog::grizzly_bears());
+    let b = ready(&mut g, 1, catalog::grizzly_bears());
+    g.players[0].wants_ui = true;
+    g.perform_action(GameAction::ActivateLoyaltyAbility {
+        card_id: h, ability_index: 2, target: Some(Target::Permanent(a)), x_value: Some(2),
+    })
+    .expect("activate");
+    assert!(g.pending_decision.is_some(), "asked for a second target");
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Target(Target::Permanent(b)))).expect("b");
+    assert!(g.pending_decision.is_none(), "no third creature to name");
+    drain_stack(&mut g);
+    g.perform_action(GameAction::SubmitDecision(DecisionAnswer::DamageDivision(vec![1, 1]))).expect("divide");
+    drain_stack(&mut g);
+    for id in [a, b] {
+        assert_eq!(g.battlefield_find(id).unwrap().damage, 1, "one each");
+        assert!(g.computed_permanent(id).is_some_and(|c| c.keywords().contains(&Keyword::CantBlock)), "both chosen");
+    }
+}

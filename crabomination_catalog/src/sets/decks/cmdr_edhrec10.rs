@@ -2467,7 +2467,7 @@ pub fn knight_of_the_stampede() -> CardDefinition {
 /// Huatli, Warrior Poet — {3}{R}{W}, loyalty 3. +2: gain life equal to the
 /// greatest power among your creatures. 0: a 3/3 trample Dinosaur. −X: X
 /// damage divided among up to five target creatures; they can't block this
-/// turn. Residual: the −X's targets past the first are the engine's pick.
+/// turn.
 pub fn huatli_warrior_poet() -> CardDefinition {
     let dino = TokenDefinition {
         keywords: vec![Keyword::Trample],

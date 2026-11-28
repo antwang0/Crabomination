@@ -2043,7 +2043,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | ~~Lara Croft, Tomb Raider~~ ✅ | fixed 2026-10-27: the grants form one `OneCastAmongGranted` group — one play, a land drop included | — |
 | ~~Loki, God of Mischief~~ ✅ | fixed 2026-10-28: listens to `BecameTarget` under `EventScope::PlayerOrPermanentTargetedByYourAbility` (battlefield permanents and players only) | — |
 | ~~Wernog, Rider's Chaplain~~ ✅ | fixed 2026-10-24: `TemptingOffer::declined` runs "loses 1 life" under each opponent who declined | — |
-| 🟡 Huatli, Warrior Poet | the −X's targets past the first are the engine's pick | a loyalty activation carries one target (`GameAction::ActivateLoyaltyAbility`) |
+| ~~Huatli, Warrior Poet~~ ✅ | stale row, closed 2026-11-28: a prompting seat names each −X target (`LoyaltyExtraTargetPick`) and divides the damage — `huatli_warrior_poet_asks_a_prompting_seat_for_each_target` | — |
 | ~~Nine Lives~~ ✅ | fixed 2026-10-28: its replacement (and The Mindskinner's) is a prevention — unpreventable damage is dealt (CR 615.12) | — |
 | ~~Roshan, Hidden Magister~~ ✅ | fixed 2026-10-28: creature spells and owned cards off the battlefield are Assassins too (`OwnedCardsOffBattlefieldAreTypeToo`) | — |
 | ~~Gandalf the White~~ ✅ | fixed 2026-10-24: `StaticEffect::DoubleControllerLeaveTriggers` doubles a trigger a leaving legendary permanent or artifact causes | — |
