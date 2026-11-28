@@ -3141,7 +3141,7 @@ re-takes its own base rather than diffing against one of them.
 Touched shared paths: `release_lapsed_control_goads` (one more battlefield walk per `ControlChanged` batch, only when
 the moved card is on the battlefield); `requires_target` / the slot-filter walk gain a `PutFromHandOntoBattlefield`
 arm (was a constant `false`); four catalog bodies. `release`, 4-core box, base `99f7dd73c` (this run's first push)
-vs tip `f063354be`:
+vs tip `f063354be` (re-read at `b2eab1f5e`, Cephalid Constable: same invariant, pools identical):
 
 ```
 --bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok,
