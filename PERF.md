@@ -3136,6 +3136,20 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-28 (Commander run, `01WRuXc6mu`) — guardrail; counter-drain picks, a YouAttack batch, search dests
+
+Touched shared paths: the activation's counter-drain pre-flight (one `manual_mana` read when the ability has a drain
+cost) and payment (one `Option::take` of the scratch plan); the `YouAttack` trigger loop (one `match` per listener;
+the attacker list is collected only for an `OverTriggerBatch` body); `Search`'s dest (one `matches!` per search);
+six bespoke mills via `route_to_graveyard`. `release`, 4-core box, base `e043e134b` (the run's start) vs tip
+`986e9a9ad`:
+
+```
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical to base; determinism ok
+games_per_s      base 210.7 / 258.1, tip 254.3 / 251.8 (interleaved, uncontended) — noise
+pools            --decks cube / sos / sealed --games 150: identical base vs tip (tip at 3 threads, base at 2)
+```
+
 ### 2026-11-28 (Commander run, `01WRuXc4cX`) — guardrail; a this-combat player fog, a can't-draw static
 
 Touched shared paths: the player combat-damage prevention check (one more `contains` on an empty `ColdState` list,

@@ -619,6 +619,33 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED 2026-11-28 (Commander run, `01WRuXc6mu`) — counter-drain picks, five real-play residuals, a Rest in Peace bypass class
+
+- ✅ **"Remove N counters from among creatures you control" is the payer's choice** (CR 601.2b / 602.2b):
+  `ResumeContext::ActionCounterPick { actor, action, legal }` poses one `ChooseCards` per counter to a `manual_mana`
+  seat with a real choice, replays the action, and the named picks ride `pending_cast_counter_plan`
+  (`game/linked_exile_counter_cast.rs`). Dawnhand Dissident's exile cast and every activation drain cost (Hopeful
+  Initiate) share it. ⚠ Quilled Greatwurm's graveyard cast and Falco Spara's library-top counter (both
+  `AdditionalCastCost::RemoveCountersFromCreatures` on a casting hop) still drain automatically.
+- ✅ Soulfire Grand Master's rider watches only casts from hand (`OnYourNextSpellMatchingThisTurn { WasCastFromHand }`).
+- ✅ Lightmine Field: a `YouAttack` trigger's `OverTriggerBatch` binds the declared attackers (2010-06-15 rulings).
+- ✅ Reno and Rude exiles the top card with or without the sacrifice.
+- ✅ Rootweaver Druid: a search's `ControllerOf(..)` battlefield destination resolves in the effect's context (it
+  resolved against the searched player, so the given land entered under the searcher and changed control — the
+  wrong landfall saw it).
+- ✅ **Bug class: inline graveyard pushes bypassed `route_to_graveyard`** (CR 614.6) — Wand of Denial, the
+  reveal-and-bin mill, Charmed Pendant, Grenzo's bottom card (deployed a card Rest in Peace should have exiled),
+  the exile-countdown fuse, the pay-life-or-discard draw. The remaining `graveyard.push` sites are cast hops'
+  put-backs. The 67 `hand.push` sites read the same: cast hops and failed-cast put-backs, draws, and
+  `explore_once`'s land (no commander is a land, so CR 903.9b can't arise there).
+- Stale row closed: Huatli, Warrior Poet's −X already asks each target (`LoyaltyExtraTargetPick`).
+
+## The Commander NEXT's lines as `01WRuXc6mu` found them (moved verbatim, 2026-11-28)
+
+3. **State (2026-11-28, `01WRuXc4cX`): 6,366 seats, no new ones; 5,630 / 6,366 residual-free** (5,623 at the start; 5,642 with the concurrent session's fixes). **Commander rules: every FEATURE_ROADMAP Commander-status row ✅.** This run: Coveted Falcon's target opponent (CR 115.1), Suppressor Skyguard's this-combat shield (CR 511.3), "players can't draw" vs "skip that draw" (CR 121.3, `StaticEffect::PlayersCantDraw`), and a bot damage-target fix for a redirect loop (ENGINE_BACKLOG `01WRuXc4cX`).
+5. **Sweeps this run** (release): seeds 29680-29689 × 2/3/4/5/6/8 × 500 on the start engine, 29690-29694 on `ce38810cc`, 29695-29699 on the closing tip `e043e134b` = **60,000 games, 0 panics, 45 undecided (0.075 %): 27 CR 104.4a draws, 16 board caps (token doublers — 19 Exalted Sunborn + Bramble Sovereign hit 994 permanents by turn 25), 2 action caps — both fixed** (Omen Machine's CR 121.3 lock now ends as a no-progress draw; Black Panther's Pariah loop is a bot target fix). Closing tip: 0 action caps in 15,000. Gates: suite 29,752 / 0 / 14 strict; clippy 0 (workspace all-targets 79 min, then engine/base/catalog lib+tests 55 min after the last engine edits); `--bench` 196,176 byte-identical, cube / sos outcome-identical (PERF `01WRuXc4cX`). **Next seed 29700.**
+7. **Residual lane:** `scripts/pod_residuals.py --rank` — The One Ring (cube-frozen); Dawnhand Dissident / Hopeful Initiate's counter picks and Soulfire Grand Master were closed by a concurrent session (`249eda21d`..`e5d1559b0`); then Hawkeye 8, Battletide Alchemist 8, Mikey & Don 6 — all choice-exposure or headless-pick rows: the bot already plays them sensibly, a human seat isn't asked. Real-play gaps left are one- or two-deck rows; read INCOMPLETE's 🟡 rows for "never" / "always" before picking.
+
 ## FIXED 2026-11-28 (Commander run, `01WRuXc4cX`) — Falcon's target, a combat-scoped fog, CR 121.3
 
 No seats. Clean decks 5,623 → 5,630 / 6,366 (`pod_residuals.py --summary`).
