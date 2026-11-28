@@ -2209,18 +2209,27 @@ pub fn nimble_hobbit() -> CardDefinition {
         body: Box::new(Effect::Tap { what: target_filtered(R::Creature.and(R::ControlledByOpponent)) }),
     };
     CardDefinition {
-        triggered_abilities: vec![on_attack(Effect::MaySacrifice {
-            description: "Sacrifice a Food to tap a creature an opponent controls?".into(),
-            filter: food(),
-            count: Value::ONE,
-            then: Box::new(tap()),
-            else_: Some(Box::new(Effect::MayPay {
-                description: "Pay {2}{W} to tap a creature an opponent controls?".into(),
-                mana_cost: cost(&[generic(2), w()]),
-                body: Box::new(tap()),
+        // Two sibling asks, not one nested in the other's `else_` (one answer
+        // channel: a parked inner ask would replay the outer's answer).
+        triggered_abilities: vec![on_attack(Effect::Seq(vec![
+            Effect::MaySacrifice {
+                description: "Sacrifice a Food to tap a creature an opponent controls?".into(),
+                filter: food(),
+                count: Value::ONE,
+                then: Box::new(tap()),
                 else_: None,
-            })),
-        })],
+            },
+            Effect::If {
+                cond: Predicate::ValueAtMost(Value::SacrificedCount, Value::Const(0)),
+                then: Box::new(Effect::MayPay {
+                    description: "Pay {2}{W} to tap a creature an opponent controls?".into(),
+                    mana_cost: cost(&[generic(2), w()]),
+                    body: Box::new(tap()),
+                    else_: None,
+                }),
+                else_: Box::new(Effect::Noop),
+            },
+        ]))],
         ..creature("Nimble Hobbit", cost(&[generic(1), w()]), vec![CreatureType::Halfling, CreatureType::Peasant], 1, 3)
     }
 }

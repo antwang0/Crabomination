@@ -4761,3 +4761,17 @@ fn nimble_hobbit_may_pay_mana_with_a_food_out() {
     assert!(g.battlefield_find(food).is_some(), "the Food was kept");
     assert!(g.battlefield_find(bear).unwrap().tapped, "paid {{2}}{{W}} instead");
 }
+
+/// Nimble Hobbit: sacrificing the Food taps the target and doesn't also offer
+/// the mana.
+#[test]
+fn nimble_hobbit_sacrificing_the_food_skips_the_mana() {
+    let mut g = pod(2);
+    let hobbit = ready(&mut g, 0, catalog::nimble_hobbit());
+    let food = g.add_token_to_battlefield(0, &crabomination::game::effects::food_token());
+    let bear = ready(&mut g, 1, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    declare(&mut g, vec![(hobbit, 1)]);
+    assert!(g.battlefield_find(food).is_none(), "the Food was sacrificed");
+    assert!(g.battlefield_find(bear).unwrap().tapped);
+}
