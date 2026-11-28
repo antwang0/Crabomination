@@ -104,20 +104,24 @@ pub fn grave_consequences() -> CardDefinition {
     )
 }
 
-/// Cephalid Constable — connects and bounces one permanent per damage.
+/// Cephalid Constable — combat damage to a player: return up to that many
+/// target permanents that player controls to their owners' hands (CR 115.1:
+/// targeted, so hexproof and shroud hold).
 pub fn cephalid_constable() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::DealsCombatDamageToPlayer, EventScope::SelfSource),
-            effect: Effect::Move {
-                what: Selector::Take {
-                    inner: Box::new(Selector::ControlledBy {
-                        who: PlayerRef::TriggerEventPlayer,
-                        filter: R::Permanent,
+            effect: Effect::CapTargetsAt {
+                amount: Value::TriggerEventAmount,
+                body: Box::new(Effect::ApplyToTargets {
+                    max_targets: 15,
+                    min_targets: 0,
+                    filter: R::Permanent.and(R::ControlledByTriggerPlayer),
+                    effect: Box::new(Effect::Move {
+                        what: Selector::Target(0),
+                        to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
                     }),
-                    count: Box::new(Value::TriggerEventAmount),
-                },
-                to: ZoneDest::Hand(PlayerRef::OwnerOfMoved),
+                }),
             },
         }],
         ..creature(

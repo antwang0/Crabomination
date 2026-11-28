@@ -1020,6 +1020,19 @@ fn cephalid_constable_bounces_per_damage() {
     assert_eq!(g.players[1].hand.len(), 1, "1 power, one permanent home");
 }
 
+/// Cephalid Constable's permanents are targets (CR 115.1): with 1 damage dealt
+/// it returns one, and a hexproof Slippery Bogle can't be the one.
+#[test]
+fn cephalid_constable_targets_what_it_returns() {
+    let mut g = main_phase();
+    let cop = g.add_card_to_battlefield(0, catalog::cephalid_constable());
+    let bogle = g.add_card_to_battlefield(1, catalog::slippery_bogle());
+    let forest = g.add_card_to_battlefield(1, catalog::forest());
+    combat_damage_to_player(&mut g, cop, 1);
+    assert!(g.battlefield_find(bogle).is_some(), "hexproof stays");
+    assert!(g.battlefield_find(forest).is_none(), "the one legal target goes home");
+}
+
 /// Planar Chaos counters a spell whose caster loses the flip.
 #[test]
 fn planar_chaos_counters_on_a_lost_flip() {
