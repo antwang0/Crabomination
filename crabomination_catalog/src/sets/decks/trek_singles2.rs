@@ -1236,18 +1236,13 @@ pub fn miles_obrien_transporter_ops() -> CardDefinition {
 
 /// Sulu, Space Swashbuckler — {1}{W} legendary 2/2 Human Pilot, first strike.
 /// Whenever he becomes tapped, if an Equipment or Spacecraft entered under
-/// your control this turn, draw a card (read off those still on the
-/// battlefield — INCOMPLETE_CARDS).
+/// your control this turn, draw a card (one that entered and left counts).
 pub fn sulu_space_swashbuckler() -> CardDefinition {
-    let entered = R::HasArtifactSubtype(ArtifactSubtype::Equipment)
-        .or(R::HasArtifactSubtype(ArtifactSubtype::Spacecraft))
-        .and(R::ControlledByYou)
-        .and(R::EnteredThisTurn);
     CardDefinition {
         keywords: vec![Keyword::FirstStrike],
         triggered_abilities: vec![TriggeredAbility {
             event: EventSpec::new(EventKind::Tapped, EventScope::SelfSource).with_filter(
-                Predicate::SelectorCountAtLeast { sel: Selector::EachPermanent(entered), n: Value::ONE },
+                Predicate::ValueAtLeast(Value::EquipmentSpacecraftEnteredThisTurn(PlayerRef::You), Value::ONE),
             ),
             effect: draw(Value::ONE),
         }],

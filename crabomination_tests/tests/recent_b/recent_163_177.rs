@@ -2184,6 +2184,26 @@ mod recent173 {
         let pilots = g.battlefield.iter().filter(|c| c.definition.name == "Pilot").count();
         assert_eq!(pilots, 2, "two Mounts/Vehicles entered → two Pilot tokens");
     }
+
+    /// Bug fix (2026-11-28): a Vehicle *spell* resolving (CR 608.3) counts
+    /// toward "Mounts and/or Vehicles that entered this turn" — only zone
+    /// moves and tokens did, so a cast Smuggler's Copter minted no Pilot.
+    #[test]
+    fn a_resolving_vehicle_spell_counts_as_an_entered_vehicle() {
+        let mut g = two_player_game();
+        g.step = TurnStep::PreCombatMain;
+        g.active_player_idx = 0;
+        g.priority.player_with_priority = 0;
+        let copter = g.add_card_to_hand(0, catalog::smugglers_copter());
+        g.players[0].mana_pool.add(crabomination::mana::Color::Red, 2);
+        g.perform_action(GameAction::CastSpell {
+            card_id: copter, target: None, additional_targets: vec![], mode: None, x_value: None,
+        })
+        .expect("cast the Copter");
+        drain_stack(&mut g);
+        assert!(g.battlefield_find(copter).is_some());
+        assert_eq!(g.players[0].mounts_vehicles_entered_this_turn, 1);
+    }
 }
 
 mod recent174 {

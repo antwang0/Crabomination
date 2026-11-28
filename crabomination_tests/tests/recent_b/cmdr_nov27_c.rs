@@ -341,6 +341,13 @@ fn sulu_draws_on_tap_after_a_spacecraft_entered() {
     cast(&mut g, ship, None, None);
     tap(&mut g);
     assert_eq!(g.players[0].hand.len(), 1);
+    // "entered … this turn" holds after the Spacecraft has left again.
+    let ctx = crabomination::game::effects::EffectContext::for_spell(0, Some(Target::Permanent(ship)), 0, 0);
+    g.resolve_effect(&crabomination::effect::Effect::Destroy { what: crabomination::effect::Selector::Target(0) }, &ctx).unwrap();
+    assert!(g.battlefield_find(ship).is_none());
+    g.battlefield_find_mut(sulu).unwrap().tapped = false;
+    tap(&mut g);
+    assert_eq!(g.players[0].hand.len(), 2, "it entered this turn, gone or not");
 }
 
 /// Those Old Scientists III: two target cards in any graveyards go back into

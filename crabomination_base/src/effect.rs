@@ -1462,6 +1462,9 @@ pub enum Value {
     /// (`Player.mounts_vehicles_entered_this_turn`) — Cloudspire Coordinator's
     /// X token count.
     MountsVehiclesEnteredThisTurn(PlayerRef),
+    /// Equipment and/or Spacecraft that entered under the player's control
+    /// this turn, including any that left since (Sulu, Space Swashbuckler).
+    EquipmentSpacecraftEnteredThisTurn(PlayerRef),
     /// Other creatures of the given type that entered under the controller this
     /// turn (Geralf, the Fleshwright).
     OtherCreaturesOfTypeEnteredThisTurn(crate::card::CreatureType),

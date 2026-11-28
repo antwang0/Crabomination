@@ -3444,11 +3444,7 @@ impl GameState {
                 } else {
                     self.players[p].nonland_permanents_entered_this_turn += 1;
                 }
-                if card.definition.has_creature_type(crate::card::CreatureType::Mount)
-                    || card.definition.is_vehicle()
-                {
-                    self.players[p].mounts_vehicles_entered_this_turn += 1;
-                }
+                self.tally_kind_entry(p, &card.definition);
                 // A permanent entering the battlefield from another zone is
                 // a brand-new object (rule 400.7): `enter_as_new_object` is
                 // the one list every entry route shares.

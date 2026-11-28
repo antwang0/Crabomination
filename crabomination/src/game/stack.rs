@@ -5904,6 +5904,7 @@ impl GameState {
             pl.planeswalkers_entered_this_turn = 0;
             pl.nonland_permanents_entered_this_turn = 0;
             pl.mounts_vehicles_entered_this_turn = 0;
+            pl.equipment_spacecraft_entered_this_turn = 0;
         }
         // CR 500.7 — extra turns. If the active player banked an extra
         // turn (Time Walk, Ral Zarek's -7 emblem), keep the turn instead

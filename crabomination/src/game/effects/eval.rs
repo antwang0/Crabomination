@@ -2525,6 +2525,10 @@ impl GameState {
                 .resolve_player(p, ctx)
                 .map(|p| self.players[p].mounts_vehicles_entered_this_turn as i32)
                 .unwrap_or(0),
+            Value::EquipmentSpacecraftEnteredThisTurn(p) => self
+                .resolve_player(p, ctx)
+                .map(|p| self.players[p].equipment_spacecraft_entered_this_turn as i32)
+                .unwrap_or(0),
             // Geralf, the Fleshwright — count this turn's arrivals of a type,
             // excluding the trigger's own subject. The entrant may have left,
             // so look it up anywhere rather than on the battlefield.

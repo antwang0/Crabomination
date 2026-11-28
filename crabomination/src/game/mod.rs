@@ -11530,11 +11530,7 @@ impl GameState {
         } else {
             self.players[ctrl].nonland_permanents_entered_this_turn += 1;
         }
-        if inst.definition.has_creature_type(crate::card::CreatureType::Mount)
-            || inst.definition.is_vehicle()
-        {
-            self.players[ctrl].mounts_vehicles_entered_this_turn += 1;
-        }
+        self.tally_kind_entry(ctrl, &inst.definition);
         // CR 613.7d — its timestamp is its entry time; the dispatch restamps it.
         inst.battlefield_timestamp = self.next_timestamp();
         self.battlefield.push(inst);
