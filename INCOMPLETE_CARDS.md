@@ -2072,7 +2072,7 @@ Ardenn and Elrond were closed 2026-10-11 late (CR 701.3b host legality;
 | 🟡 Primal Surge | after each card put onto the battlefield it asks "repeat?" separately from "put it?" (declining either stops), and a seat past 150 permanents stops putting | `Effect::RepeatWhileMay` re-asks each loop; the board bound is the engine's, not the card's |
 | 🟡 Zethi, Arcane Blademaster | the ETB chooses its instants (the cheapest) instead of targeting them | `Effect::ExileFromGraveyard` with `Value::TimesKicked`; an ETB's auto-targeting fills one slot of a `CapTargetsAt` |
 | ~~Yasharn, Implacable Earth~~ ✅ | fixed 2026-10-24: emerge, offering, casualty and bargain sacrifices ask `sacrificeable_for_cost` like the additional-cost and alternative-cost paths | — |
-| 🟡 Rootweaver Druid | the land given away is the engine's pick among the searched ones, not the searching opponent's | `Selector::one_of(LastMoved)` |
+| ~~Rootweaver Druid~~ ✅ | fixed 2026-11-28: the searcher names the land that enters under the Druid controller's control (it enters there — their landfall), then up to two more for themselves — `rootweaver_druid_gives_its_land_as_it_enters` | — |
 | 🟡 Baba Lysaga, Night Witch | can't sacrifice itself; a headless seat sacrifices a full three-type batch or nothing | `sac_any_number_filter` excludes the source; `distinct_type_sac_batch` is the auto-line |
 | 🟡 Sheltering Ancient | every counter of an upkeep goes on the opponents' smallest creature (the engine's pick) | `CumulativeUpkeepCost::PutCounterOnOpponentCreature` auto-pays |
 | 🟡 Tolarian Contempt | the owner's top-or-bottom choice is the engine's | `LibraryPosition::OwnerChoice` auto-picks |

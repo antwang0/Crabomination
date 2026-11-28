@@ -398,6 +398,25 @@ fn rootweaver_druid_takes_a_cut() {
     assert_eq!((forests(0), forests(1)), (1, 2));
 }
 
+/// Rootweaver Druid's given land enters under the Druid controller's control
+/// (CR 110.2a — "put onto the battlefield under your control"): their
+/// landfall sees it, the searcher's sees only their own two.
+#[test]
+fn rootweaver_druid_gives_its_land_as_it_enters() {
+    let mut g = pod(2);
+    for _ in 0..3 {
+        g.add_card_to_library(1, catalog::forest());
+    }
+    let mine = ready(&mut g, 0, catalog::steppe_lynx());
+    let theirs = ready(&mut g, 1, catalog::steppe_lynx());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(true)]));
+    let d = g.add_card_to_hand(0, catalog::rootweaver_druid());
+    cast(&mut g, d, &[]).expect("cast");
+    drain_stack(&mut g);
+    let power = |g: &GameState, id| g.computed_permanent(id).unwrap().power;
+    assert_eq!((power(&g, mine), power(&g, theirs)), (2, 4), "one landfall here, two there");
+}
+
 /// Haytham Kenway: one creature per opponent exiled until it leaves.
 #[test]
 fn haytham_kenway_holds_a_creature_per_opponent() {

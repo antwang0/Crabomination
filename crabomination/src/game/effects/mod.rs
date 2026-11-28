@@ -28121,7 +28121,11 @@ impl GameState {
                 // later resolves refs against the *searched* player (which is
                 // what a plain `Search` wants: Path to Exile's basic enters
                 // under the searching player's control).
-                let to = if picker_ref.is_some() {
+                // "Under your control" from inside a per-opponent body (Rootweaver
+                // Druid's `ControllerOf(This)`) names a seat now, as the picker's.
+                let pre_resolve = picker_ref.is_some()
+                    || matches!(to, crate::effect::ZoneDest::Battlefield { controller: crate::effect::PlayerRef::ControllerOf(_), .. });
+                let to = if pre_resolve {
                     match to.clone() {
                         crate::effect::ZoneDest::Battlefield { controller, tapped } => {
                             let seat = self.resolve_player(&controller, ctx).unwrap_or(p);

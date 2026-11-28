@@ -588,7 +588,8 @@ pub fn thunderous_snapper() -> CardDefinition {
 
 /// Rootweaver Druid — {2}{G} 2/1 Elf Druid. When it enters, each opponent may
 /// search for up to three basic lands; each puts one onto the battlefield
-/// tapped under your control and the rest tapped under their own.
+/// tapped under your control (it enters under yours — your landfall, not
+/// theirs) and the rest tapped under their own. The searcher names yours first.
 pub fn rootweaver_druid() -> CardDefinition {
     CardDefinition {
         triggered_abilities: vec![etb(Effect::EachPlayerDoes {
@@ -599,13 +600,21 @@ pub fn rootweaver_druid() -> CardDefinition {
                     Effect::SearchUpToN {
                         who: PlayerRef::You,
                         filter: R::IsBasicLand,
-                        to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
-                        count: Value::Const(3),
+                        to: ZoneDest::Battlefield {
+                            controller: PlayerRef::ControllerOf(Box::new(Selector::This)),
+                            tapped: true,
+                        },
+                        count: Value::ONE,
                     },
-                    Effect::GainControl {
-                        what: Selector::one_of(Selector::LastMoved),
-                        to: Some(PlayerRef::ControllerOf(Box::new(Selector::This))),
-                        duration: Duration::Permanent,
+                    Effect::If {
+                        cond: Predicate::SelectorCountAtLeast { sel: Selector::LastMoved, n: Value::ONE },
+                        then: Box::new(Effect::SearchUpToN {
+                            who: PlayerRef::You,
+                            filter: R::IsBasicLand,
+                            to: ZoneDest::Battlefield { controller: PlayerRef::You, tapped: true },
+                            count: Value::Const(2),
+                        }),
+                        else_: Box::new(Effect::Noop),
                     },
                 ])),
             }),
