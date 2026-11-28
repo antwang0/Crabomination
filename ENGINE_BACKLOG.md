@@ -20,6 +20,8 @@ the handoff.
 | Part | Section | Lines |
 | --- | --- | --- |
 | Bugs & robustness | [FIXED/OPEN 2026-11-22 (FRA card-rating run) — equip never paid, shape-classified targets, bot trigger answers](#fixedopen-2026-11-22-fra-card-rating-run--equip-never-paid-shape-classified-targets-bot-trigger-answers) | 141 |
+| Bugs & robustness | [FIXED 2026-11-28 (Commander run, `01WRuXc6d1`) — multiplayer slot wording, two ratchets green](#fixed-2026-11-28-commander-run-01wruxc6d1--multiplayer-slot-wording-two-ratchets-green) | 22 |
+| Bugs & robustness | [The Commander NEXT's lines as `01WRuXc6d1` found them (moved verbatim, 2026-11-28)](#the-commander-nexts-lines-as-01wruxc6d1-found-them-moved-verbatim-2026-11-28) | 9 |
 | Bugs & robustness | [FIXED 2026-11-28 (Commander run, `01WRuXc6wB`) — six residuals, four primitives](#fixed-2026-11-28-commander-run-01wruxc6wb--seven-residuals-four-primitives) | 18 |
 | Bugs & robustness | [The Commander NEXT's lines as `01WRuXc6wB` found them (moved verbatim, 2026-11-28)](#the-commander-nexts-lines-as-01wruxc6wb-found-them-moved-verbatim-2026-11-28) | 9 |
 | Bugs & robustness | [FIXED 2026-11-27 (Commander run, `01WRuXc4b7`) — Whtz and nine legal gap pairs](#fixed-2026-11-27-commander-run-01wruxc4b7--whtz-and-nine-legal-gap-pairs) | 14 |
@@ -615,6 +617,42 @@ planner choices.
   this session's duplicate Sash / Write into Being / `ManifestOneOfTopTwo` were dropped before push.
 
 ## The Commander NEXT's lines as `01WRuXc3os` found them (moved verbatim, 2026-11-27)
+## FIXED 2026-11-28 (Commander run, `01WRuXc6d1`) — multiplayer slot wording, two ratchets green
+
+No seats. Clean decks 5,627 → 5,623 (`pod_residuals.py --summary`): Sméagol closed, Coveted Falcon's dropped target
+newly filed (4 decks). Ran concurrently with `01WRuXc6wB` (its NEXT already credits Kang / Rhino's Rampage here).
+- ✅ Rhino's Rampage: `WithX` snapshots the victim's excess tally before the fight; only this fight's excess counts.
+- ✅ Kang: `GoadLasts::WhileYouControlSource` / `GoadHold::WhileSourceControlledBy` (CR 611.2b, lapses for good).
+- ✅ **CR 115.1 "target opponent" picked, not targeted** (ward / hexproof / shroud ignored): Sméagol, Helpful Guide's
+  reveal reads `ControllerOf(TargetFiltered(OpponentPlayer))`; `PutFromHandOntoBattlefield`'s `who` is a target slot in
+  `requires_target` / the slot-filter walk (Wumpus Aberration). Ratchet: `audit_target_opponent.py --picked` (2 left:
+  Coveted Falcon — `ApplyToTargets` leaves the player no slot; Ral Zarek — SOS pool).
+- ✅ **CR 601.2c cross-slot controllers in pods:** Kaya, Spirits' Justice's −2 ("for each other player, up to one
+  target creature that player controls") took one creature in all — now slots 1..8 chain
+  `DifferentControllerFromTargetSlot`; Trial of Agony's pair must share a controller (`SameControllerAsTargetSlot`).
+  `ForEachOpponentTarget` can't carry a leading "you control" slot (it counts every slot against the opponent count).
+  `audit_that_player.py` accepts the cross-slot filters: 2 left, both sound (Tainted Remedy reads the gainer,
+  Mimeofacture is off the pod).
+- ✅ `audit_seat_walks.py` read 5 since 2026-10-04 (TODO said 0): two `apnap_sort` rank tables and three replay-safe
+  logged `is_alive` gates (`politics.rs`). Exempted by shape; 0 again.
+- Stale 🟡 row dropped: Graven Abomination (`OwnedByDefendingPlayer` shipped).
+- Read, not changed: Portal Manipulator (a targeted rewrite fits `SlotGroups` + `DifferentControllerFromTargetSlot(0)`,
+  but the bot's hostile player pick would name the attacker — whose creatures are then illegal — so the card goes
+  dead until the pick knows the shape); Hawkeye (multi-mode reflexive needs a mode set on the stack item); Volcano
+  Hellion (the toughness cap is the bot's safety); The One Ring (cube-frozen).
+
+## The Commander NEXT's lines as `01WRuXc6d1` found them (moved verbatim, 2026-11-28)
+
+1. ⚠ **Several sessions share this branch:** fetch before you start and before every push; rebase, never force; `cargo check -p crabomination_catalog` after each rebase. Seat numbers race: after a conflicted rebase, checkout `--ours` of `pod/decks.rs` + `pod/mod.rs`, re-run `scripts/seat_decks.py` on top of the other session's seats, run `cr_903_5a_target_decks_are_legal_commander_decks`. New seats go at the end of `target_decks()`. ⚠ `scripts/gen_factory_lists.py` rewrites all of `all_factories.rs` — append by hand. Claim a deck in ENGINE_BACKLOG (and push the claim) before writing its cards.
+2. ⚠ **One build at a time; `CARGO_INCREMENTAL=0`; never edit the tree while the suite or a release build compiles.** Build release in a scratchpad worktree with its own `CARGO_TARGET_DIR` (17 min) and keep editing. ⚠ `CRAB_ANSWER_LOG=strict` on the suite command rebuilds the workspace (~10 min) — build with it set. Full suite: `-E 'not test(cr_903_5a_the_official_precon_seats_play_pod_games)'`, 29,740 / 0 / 14 strict in ~8 min once built.
+3. **State (2026-11-28, `01WRuXc6wB`): 6,366 seats, no new ones; 5,627 / 6,366 residual-free (5,601 at the start; Rhino's Rampage by `01WRuXc6d1`).** **Commander rules: every FEATURE_ROADMAP Commander-status row ✅.** This run was the residual lane: six residuals closed on four primitives (Kang and Rhino's Rampage by the concurrent `01WRuXc6d1`) (ENGINE_BACKLOG `01WRuXc6wB`).
+4. **The smoke test is `--pod-random`** (`bot_ladder --commander --pod-random --seats N --games G --seed S`); `scripts/random_pods.sh` with `MIN=<first new seat>` fuzzes new seats. A failure prints `--pod-decks .. --first I --games 1`; `CRAB_CAP_DIAG=1` dumps a capped board.
+5. **Sweeps this run** (release): seeds 29650-29652 × 3/4/5/6 × 300 + 29653-29659 × 2/3/4/5/6/8 × 300 = 16,200 games (the last 3,600 on the closing tip), 0 panics, 15 undecided (0.09 %: 8 CR 104.4a draws, 7 board caps — each a token engine that crossed 1,000 permanents the turn it eliminated seats; seat 650 Thalisse is in three). Gates: suite 29,740 / 0 / 14 strict; clippy 0 (four crates, all targets, 95 min); `--bench` byte-identical, callgrind +0.014 % (PERF `01WRuXc6wB`). **Next seed 29660.**
+6. **Next decks: the candidate lanes are dry** (unchanged from `01WRuXc4b7`; ENGINE_BACKLOG has the check). New EDHREC commanders: rerun the fetch (recipe ENGINE_BACKLOG `01WRuXc3os`) after new sets.
+7. **Residual lane:** `scripts/pod_residuals.py --rank` — The One Ring (287 sole) is cube-frozen; then Dawnhand Dissident 9 (only the cast's three-counter drain is left: no "remove N counters from among" decision, Hopeful Initiate shares it), Hawkeye 8, Battletide Alchemist 8, Mikey & Don 6 (the engine already takes the permission that adds the counter — a candidate to reclassify), Obsidian Battle-Axe, Elemental Teachings, Primal Surge (a headless repeat cap of 30), Wonder Man.
+8. **Gotchas:** a new `Effect` wrapper with a nested body must join `for_each_inner` and `requires_target`; a new cost pick goes through `pose_ability_cost_pick` (`game/blight_cost.rs`) with a `take_opt_scratch!` stash and a `clear_scratch` line. ⚠ Replays of a cost-choice suspend don't carry earlier picks: an ability with two choosable costs re-asks the first (none seated today). Entry tallies keyed on subtypes go in `entry_tally.rs::tally_kind_entry` — all three entry routes call it.
+9. **Earlier runs' NEXT lines** are in ENGINE_BACKLOG ("The Commander NEXT's lines as … found them", latest `01WRuXc6wB`).
+
 ## FIXED 2026-11-28 (Commander run, `01WRuXc6wB`) — six residuals, four primitives
 
 No seats. Clean decks 5,601 → 5,627 (with `01WRuXc6d1`'s concurrent fixes) (`pod_residuals.py --summary`).

@@ -3136,6 +3136,20 @@ the A/B base. ⚠ **Every reading below this line was taken on 1.95.0** — no
 1.99.0 baseline has been taken yet, so the first perf row on the new pin
 re-takes its own base rather than diffing against one of them.
 
+### 2026-11-28 (Commander run, `01WRuXc6d1`) — guardrail; a goad hold, one `requires_target` arm, catalog slots
+
+Touched shared paths: `release_lapsed_control_goads` (one more battlefield walk per `ControlChanged` batch, only when
+the moved card is on the battlefield); `requires_target` / the slot-filter walk gain a `PutFromHandOntoBattlefield`
+arm (was a constant `false`); four catalog bodies. `release`, 4-core box, base `99f7dd73c` (this run's first push)
+vs tip `f063354be`:
+
+```
+--bench          decisions 196,176 / 613.0 / 0 stalls — byte-identical to the committed invariant; determinism ok,
+                 thread_determinism ok (3 vs 1 threads identical)
+games_per_s      base 243.9 / 259.3 / 316.0, tip 294.9 / 244.6 / 321.1 (interleaved, uncontended) — noise
+pools            --decks cube / sos / sealed --games 150: decision-identical base vs tip
+```
+
 ### 2026-11-28 (Commander run, `01WRuXc6wB`) — guardrail; a draw-step flag, one entry-tally helper, cost picks
 
 Touched shared paths: `draw_one_outcome` (one `Player.drew_in_own_draw_step` read per draw, a write once per draw step);
