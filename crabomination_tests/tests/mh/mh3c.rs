@@ -797,6 +797,29 @@ fn wumpus_aberration_no_colorless_opponent_free_drops() {
     assert_eq!(dropped.unwrap().controller, 1, "it enters under the opponent's control");
 }
 
+/// Wumpus Aberration's "target opponent" is a target (CR 115.1): in a pod,
+/// the opponent with hexproof (Leyline of Sanctity) can't be the one.
+#[test]
+fn wumpus_aberration_targets_an_opponent_without_hexproof() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = crabomination::game::multi_player_game(3);
+    g.active_player_idx = 0;
+    g.step = crabomination::game::types::TurnStep::PreCombatMain;
+    g.priority.player_with_priority = 0;
+    g.add_card_to_battlefield(1, catalog::leyline_of_sanctity());
+    g.players[0].mana_pool.add(crabomination::mana::Color::Green, 4);
+    let hexproof_bear = g.add_card_to_hand(1, catalog::grizzly_bears());
+    let bear = g.add_card_to_hand(2, catalog::grizzly_bears());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Cards(vec![bear])]));
+    let id = g.add_card_to_hand(0, catalog::wumpus_aberration());
+    g.perform_action(GameAction::CastSpell {
+        card_id: id, target: None, additional_targets: vec![], mode: None, x_value: None,
+    }).expect("cast without {C}");
+    drain_stack(&mut g);
+    assert!(g.battlefield_find(bear).is_some_and(|c| c.controller == 2), "seat 2 was the target");
+    assert!(g.battlefield_find(hexproof_bear).is_none(), "the hexproof seat wasn't");
+}
+
 /// With {C} spent, Wumpus Aberration's cast trigger does nothing.
 #[test]
 fn wumpus_aberration_colorless_spent_no_drop() {

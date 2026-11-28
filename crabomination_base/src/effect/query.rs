@@ -1482,9 +1482,9 @@ impl Effect {
             Effect::ExileTopWithCounters { .. } => false,
             Effect::GrantPlayFromTopThisTurn | Effect::GrantPlayFromTopPayLifeThisTurn => false,
             Effect::HoneFromHand { .. } => false,
-            Effect::PutFromHandOntoBattlefield { .. }
-            | Effect::PutFromHandOrCommandZoneOntoBattlefield { .. }
-            | Effect::OverTriggerBatch { .. } => false,
+            // "Target opponent may put …" (Wumpus Aberration) rides `who`.
+            Effect::PutFromHandOntoBattlefield { who, .. } => player_has_target(who),
+            Effect::PutFromHandOrCommandZoneOntoBattlefield { .. } | Effect::OverTriggerBatch { .. } => false,
             Effect::DeployCreatureFromHandAttacking { .. } => false,
             Effect::LockCreatureAndPlaneswalkerCasts => false,
             Effect::ExileTopFaceDownTokenReturns { .. } => false,
@@ -5765,6 +5765,7 @@ impl Effect {
                 | Effect::NameCardThenExileFromZones { who, .. }
                 | Effect::RevealUntilFind { who, .. }
                 | Effect::RevealUntilNFound { who, .. }
+                | Effect::PutFromHandOntoBattlefield { who, .. }
                 | Effect::RearrangeTop { who, .. }
                 | Effect::OrderLibraryBottom { who, .. }
                 | Effect::ShuffleHandsDrawSame { who }

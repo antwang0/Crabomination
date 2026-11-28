@@ -1261,11 +1261,10 @@ pub fn wumpus_aberration() -> CardDefinition {
         keywords: vec![Keyword::Devoid, Keyword::Trample],
         triggered_abilities: vec![on_cast(Effect::If {
             cond: Predicate::CastSpellColorlessManaSpent { spent: false },
-            // "TARGET opponent may put a creature card …" — one seat, and a
-            // chosen one; the each-opponent fan-out is the whole table in a
-            // pod and the first seat by index in the arm that reads it.
+            // "TARGET opponent may put a creature card …" — one seat, targeted
+            // as the cast trigger goes on the stack (CR 115.1).
             then: Box::new(Effect::PutFromHandOntoBattlefield {
-                who: PlayerRef::HostileOpponent,
+                who: PlayerRef::ControllerOf(Box::new(target_filtered(R::OpponentPlayer))),
                 filter: R::Creature,
                 count: Value::Const(1),
                 tapped: false,
