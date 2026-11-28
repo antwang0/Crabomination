@@ -5114,6 +5114,24 @@ fn reno_and_rude_impulses_from_victim_library() {
     assert!(exiled.may_play_until.is_some(), "you may play the exiled card");
 }
 
+/// Reno and Rude's oracle exiles the top card before the sacrifice is
+/// offered: declining it still exiles the card, with no permission to play it.
+#[test]
+fn reno_and_rude_exiles_even_without_the_sacrifice() {
+    use crabomination::decision::{DecisionAnswer, ScriptedDecider};
+    let mut g = two_player_game();
+    let reno = g.add_card_to_battlefield(0, catalog::reno_and_rude());
+    g.add_card_to_battlefield(0, catalog::grizzly_bears());
+    let loot = g.add_card_to_library(1, catalog::lightning_bolt());
+    g.decider = Box::new(ScriptedDecider::new([DecisionAnswer::Bool(false)]));
+    let eff = catalog::reno_and_rude().triggered_abilities[0].effect.clone();
+    let mut ctx = crabomination::game::effects::EffectContext::for_trigger(reno, 0, Some(Target::Player(1)), 0);
+    ctx.targets = vec![Target::Player(1)];
+    g.resolve_effect(&eff, &ctx).unwrap();
+    let exiled = g.exile.iter().find(|c| c.id == loot).expect("exiled anyway");
+    assert!(exiled.may_play_until.is_none(), "no sacrifice, no permission");
+}
+
 /// Eden's {5},{T} mills two, then (on the may-sacrifice) returns a permanent
 /// card from your graveyard to hand.
 #[test]

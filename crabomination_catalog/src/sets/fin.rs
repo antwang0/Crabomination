@@ -8819,8 +8819,8 @@ pub fn eden_seat_of_the_sanctum() -> CardDefinition {
 /// combat damage to a player, you may sacrifice another creature or artifact;
 /// if you do, exile the top card of that player's library and you may play it
 /// this turn, spending mana of any type to cast it.
-/// (Approximation: the printed order exiles first, then gates play on the
-/// sacrifice; here the exile+play grant is gated on the sacrifice together.)
+/// The card is exiled either way; the sacrifice is decided before it is seen
+/// (the printed order exiles first; the outcome is the same).
 pub fn reno_and_rude() -> CardDefinition {
     use crate::card::MayPlayDuration;
     CardDefinition {
@@ -8853,7 +8853,12 @@ pub fn reno_and_rude() -> CardDefinition {
                     pay_own_cost: false,
                     uncast_penalty: None,
                 }),
-                else_: None,
+                else_: Some(Box::new(Effect::ExileTopOfLibrary {
+                    who: Selector::Player(PlayerRef::Target(0)),
+                    amount: Value::ONE,
+                    link_to_source: false,
+                    face_down: false,
+                })),
             },
         }],
         ..Default::default()
