@@ -30142,6 +30142,21 @@ impl GameState {
                     None => result,
                 };
             }
+            ResumeContext::ActionCounterPick { actor, action } => {
+                let DecisionAnswer::Cards(ids) = &answer else { return Err(GameError::DecisionAnswerMismatch) };
+                let Some(&id) = ids.first() else { return Err(GameError::DecisionAnswerMismatch) };
+                let prior = self.scratch.pending_cast_counter_plan.as_ref().map(|(_, f)| f.clone()).unwrap_or_default();
+                if !self.counter_drain_holders(actor, &prior).iter().any(|h| h.0 == id) {
+                    return Err(GameError::DecisionAnswerMismatch);
+                }
+                self.scratch.pending_cast_counter_plan.get_or_insert_with(|| (0, Vec::new())).1.push(id);
+                let r = self.perform_action(*action);
+                // The plan outlives a replay that asked its next question, and nothing else.
+                if self.pending_decision.is_none() && self.scratch.pending_cast_counter_plan.is_some() {
+                    self.scratch.pending_cast_counter_plan = None;
+                }
+                return r;
+            }
             ResumeContext::ActionSearchPick { actor, action } => {
                 // CR 702.29e — the cycler picked which card to fetch. Stash
                 // and replay the originating action.

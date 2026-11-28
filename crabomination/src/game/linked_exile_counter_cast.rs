@@ -3,8 +3,10 @@
 //! from among creatures you control in addition to paying their other
 //! costs." (`StaticEffect::CastLinkedExiledCreaturesForCounters`.) The cast
 //! is a paid cast from exile (`cast_from_zone_without_paying` bills the
-//! card's own cost); the counters are drained after the mana is paid,
-//! -1/-1 counters first, weakest creature first.
+//! card's own cost); the counters are drained after the mana is paid. A
+//! prompting caster names the creature each counter comes off (CR 601.2b,
+//! `ResumeContext::ActionCounterPick`); the rest drain -1/-1 counters first,
+//! weakest creature first.
 
 use super::GameState;
 use super::types::GameEvent;
@@ -38,8 +40,87 @@ impl GameState {
             .sum()
     }
 
+    /// Counters on `p`'s creatures still free once `named` (one counter per
+    /// entry) are spoken for: the creatures a further pick could name.
+    pub(crate) fn counter_drain_holders(&self, p: usize, named: &[crate::card::CardId]) -> Vec<(crate::card::CardId, String)> {
+        self.battlefield
+            .iter()
+            .filter(|c| c.controller == p && self.computed_is_creature(c))
+            .filter(|c| c.total_counters() as usize > named.iter().filter(|&&f| f == c.id).count())
+            .map(|c| (c.id, c.definition.name.to_string()))
+            .collect()
+    }
+
+    /// CR 601.2b — pose `p`'s next "remove a counter from which creature"
+    /// pick toward `n`, replaying `action` with the answer, when a real choice
+    /// is left (the named picks so far ride `pending_cast_counter_plan`).
+    pub(crate) fn pose_counter_drain_pick(&mut self, p: usize, n: u32, source: crate::card::CardId, action: super::GameAction) -> bool {
+        let named = self.scratch.pending_cast_counter_plan.as_ref().map(|(_, f)| f.clone()).unwrap_or_default();
+        if !self.players[p].manual_mana || named.len() as u32 >= n || self.creature_counters_controlled(p) <= n {
+            return false;
+        }
+        let holders = self.counter_drain_holders(p, &named);
+        if holders.len() < 2 {
+            return false;
+        }
+        let name = self.find_card_anywhere(source).map(|c| c.definition.name.to_string()).unwrap_or_default();
+        self.pending_decision = Some(Box::new(super::types::PendingDecision {
+            decision: crate::decision::Decision::ChooseCards {
+                source,
+                prompt: format!("{name}: remove a counter from ({} of {n})", named.len() + 1),
+                candidates: holders,
+                min: 1,
+                max: 1,
+                eligible: None,
+                value: crate::decision::PickValue::Cost,
+            },
+            resume: super::types::ResumeContext::ActionCounterPick { actor: p, action: Box::new(action) },
+        }));
+        true
+    }
+
+    /// Remove one counter from `cid` (-1/-1 first, then printed kinds, then
+    /// keyword counters); whether one came off.
+    fn remove_one_counter(&mut self, cid: crate::card::CardId, events: &mut Vec<GameEvent>) -> bool {
+        let Some(c) = self.battlefield.find_by_id_mut(cid) else { return false };
+        let mut kinds: Vec<CounterType> = c.counters.iter().filter(|(_, n)| **n > 0).map(|(k, _)| *k).collect();
+        kinds.sort_by_key(|k| *k != CounterType::MinusOneMinusOne);
+        if let Some(&k) = kinds.first() {
+            c.remove_counters(k, 1);
+            events.push(GameEvent::CounterRemoved { card_id: cid, counter_type: k, count: 1 });
+            return true;
+        }
+        let kw = c.keyword_counters.iter().map(|(k, _)| k.clone()).next();
+        kw.is_some_and(|kw| c.keyword_counters.remove_up_to(&kw, 1) > 0)
+    }
+
+    /// Remove `n` counters from among creatures `p` controls: one off each
+    /// creature in `named` (the caster's picks) first, the rest automatic.
+    pub(crate) fn drain_creature_counters_named(
+        &mut self,
+        p: usize,
+        n: u32,
+        named: &[crate::card::CardId],
+        events: &mut Vec<GameEvent>,
+    ) {
+        let mut left = n;
+        for &id in named {
+            if left == 0 {
+                break;
+            }
+            let mine = self.battlefield.find_by_id(id).is_some_and(|c| c.controller == p && self.computed_is_creature(c));
+            if mine && self.remove_one_counter(id, events) {
+                left -= 1;
+            }
+        }
+        self.drain_creature_counters(p, left, events);
+    }
+
     /// Remove `n` counters from among creatures `p` controls.
     pub(crate) fn drain_creature_counters(&mut self, p: usize, n: u32, events: &mut Vec<GameEvent>) {
+        if n == 0 {
+            return;
+        }
         let mut picks: Vec<(crate::card::CardId, i32)> = self
             .battlefield
             .iter()

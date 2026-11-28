@@ -82,6 +82,38 @@ fn dawnhand_dissident_blights_and_recasts_its_exiles() {
     assert_eq!(g.players[0].mana_pool.total(), 0, "its mana cost was paid");
 }
 
+/// CR 601.2b — the caster chooses how to pay "removing three counters from
+/// among creatures you control": a prompting seat names the creature each
+/// counter comes off, one pick at a time, before anything is paid (the
+/// automatic drain would take the Giant's -1/-1 counters first).
+#[test]
+fn dawnhand_dissident_asks_a_prompting_seat_which_counters_to_remove() {
+    let mut g = pod(2);
+    let dd = ready(&mut g, 0, catalog::dawnhand_dissident());
+    let giant = ready(&mut g, 0, catalog::hill_giant());
+    let bear = g.add_card_to_graveyard(0, catalog::grizzly_bears());
+    assert!(activate(&mut g, dd, 1, Some(Target::Permanent(bear))), "{{T}}, Blight 2");
+    let elf = ready(&mut g, 0, catalog::grizzly_bears());
+    g.battlefield_find_mut(elf).unwrap().add_counters(CounterType::PlusOnePlusOne, 2);
+    g.players[0].manual_mana = true;
+    g.players[0].mana_pool.add(Color::Green, 2);
+    g.perform_action(GameAction::CastFromZoneWithoutPaying {
+        card_id: bear, target: None, additional_targets: vec![], mode: None, x_value: None,
+    })
+    .expect("suspends for the first pick");
+    for pick in [giant, elf, elf] {
+        assert!(g.pending_decision.is_some(), "asked where a counter comes from");
+        assert_eq!(g.players[0].mana_pool.total(), 2, "nothing paid before the last answer");
+        g.perform_action(GameAction::SubmitDecision(DecisionAnswer::Cards(vec![pick]))).expect("answer");
+    }
+    assert!(g.pending_decision.is_none(), "three picks pay three counters");
+    assert_eq!(g.players[0].mana_pool.total(), 0, "and the mana");
+    drain_stack(&mut g);
+    assert!(g.battlefield.iter().any(|c| c.id == bear), "the creature resolved");
+    assert_eq!(g.battlefield_find(elf).unwrap().counter_count(CounterType::PlusOnePlusOne), 0, "both off the 2/2");
+    assert_eq!(minus(&g, giant), 1, "one off the Giant");
+}
+
 /// CR 701.68 — blight 1 alone: the Dissident is the only creature and
 /// survives as a 0/1 after surveilling.
 #[test]

@@ -1499,6 +1499,7 @@ impl PendingDecision {
             ResumeContext::CastAdditionalCost { caster, .. } => *caster,
             ResumeContext::ActionFloatConfirm { actor, .. } => *actor,
             ResumeContext::ActionSearchPick { actor, .. } => *actor,
+            ResumeContext::ActionCounterPick { actor, .. } => *actor,
             ResumeContext::ActivateAbilityChoice { activator, .. } => *activator,
             ResumeContext::CastExtraTargetPick { caster, .. } => *caster,
             ResumeContext::CastXPick { caster, .. } => *caster,
@@ -1719,6 +1720,7 @@ impl ResumeContext {
             ResumeContext::CastAdditionalCost { .. }
                 | ResumeContext::ActionFloatConfirm { .. }
                 | ResumeContext::ActionSearchPick { .. }
+                | ResumeContext::ActionCounterPick { .. }
                 | ResumeContext::ActivateAbilityChoice { .. }
                 | ResumeContext::CastExtraTargetPick { .. }
                 | ResumeContext::CastXPick { .. }
@@ -1863,6 +1865,14 @@ pub enum ResumeContext {
     /// replayed verbatim with the choice in `pending_cast_spend_float`
     /// (`Bool(true)` = spend the float).
     ActionFloatConfirm {
+        actor: usize,
+        action: Box<GameAction>,
+    },
+    /// CR 601.2b — a `manual_mana` caster names the creature the next counter
+    /// of a "remove N counters from among creatures you control" cost comes
+    /// off (Dawnhand Dissident's exile cast). Answer `Cards([id])`, appended
+    /// to `pending_cast_counter_plan`; `action` replays (and may ask again).
+    ActionCounterPick {
         actor: usize,
         action: Box<GameAction>,
     },

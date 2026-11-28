@@ -15479,6 +15479,20 @@ impl GameState {
         if must_be_sorcery_speed && !self.can_cast_sorcery_speed(p) {
             return Err(GameError::SorcerySpeedOnly);
         }
+        // CR 601.2b — a prompting caster names where each toll counter comes
+        // from, before anything is paid (the answer replays this cast).
+        if let Some(n) = counter_toll {
+            let action = GameAction::CastFromZoneWithoutPaying {
+                card_id,
+                target: target.clone(),
+                additional_targets: additional_targets.clone(),
+                mode,
+                x_value,
+            };
+            if self.pose_counter_drain_pick(p, n, card_id, action) {
+                return Ok(vec![]);
+            }
+        }
         // Pay the miracle alt-cost up front, if any. Failure leaves the
         // permission intact so the controller can retry once they have the
         // mana.
@@ -15524,7 +15538,8 @@ impl GameState {
             None => Vec::new(),
         };
         if let Some(n) = counter_toll.take() {
-            self.drain_creature_counters(p, n, &mut events);
+            let named = self.scratch.pending_cast_counter_plan.take().map(|(_, f)| f).unwrap_or_default();
+            self.drain_creature_counters_named(p, n, &named, &mut events);
         }
         events.extend(self.cast_card_from_zone_spending(
             p,
