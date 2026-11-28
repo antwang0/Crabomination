@@ -129,10 +129,23 @@ def resolver_optional():
                 if depth == 0:
                     break
             i += 1
-        # The arm body runs from the pattern's close to the next `Effect::`
-        # at the same level; a window is enough for a containment test and
-        # cannot reach the next variant's helper by accident at this size.
-        arm = src[i : i + 4000]
+        # The arm body is the brace-matched block after the pattern's `=>`
+        # (a fixed 4000-char window lost `MillThenToHandN`'s `min: 0` once
+        # the arm grew a colour-fixing pick).
+        j = src.find("=>", i)
+        k = j + 2
+        while k < len(src) and src[k].isspace():
+            k += 1
+        if src[k] == "{":
+            depth, e = 0, k
+            while e < len(src):
+                depth += {"{": 1, "}": -1}.get(src[e], 0)
+                if depth == 0:
+                    break
+                e += 1
+            arm = src[k : e + 1]
+        else:
+            arm = src[k : src.find("\n", k)]
         if helper not in arm:
             print(
                 f"# exemption REFUSED: `Effect::{variant}`'s arm no longer calls "
