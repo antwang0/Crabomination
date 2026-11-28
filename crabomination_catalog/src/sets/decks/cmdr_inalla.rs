@@ -368,10 +368,11 @@ pub fn mirror_of_the_forebears() -> CardDefinition {
                     duration: Duration::EndOfTurn,
                     non_legendary: false,
                 },
-                Effect::AddCardTypeIndefinitely {
+                // CR 707.9b — "an artifact in addition" is a copy exception.
+                Effect::CopyExceptionAddTypes {
                     what: Selector::This,
-                    card_type: CardType::Artifact,
-                    until_eot: true,
+                    card_types: vec![CardType::Artifact],
+                    creature_types: vec![],
                 },
             ]),
             ..Default::default()
